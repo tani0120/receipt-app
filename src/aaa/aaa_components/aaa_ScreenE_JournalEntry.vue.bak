@@ -1,0 +1,389 @@
+
+<template>
+  <div class="h-full flex flex-col bg-white overflow-hidden text-[#333] font-sans">
+    <!-- 1. Header -->
+    <header class="shrink-0 z-50 transition-all duration-300">
+      <div class="h-14 border-b border-gray-200 bg-white flex items-center justify-between px-4 shadow-sm">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center text-[11px] text-gray-500 font-medium">
+            <span class="text-gray-900 font-bold">{{ client?.companyName }} ({{ client?.clientCode }})</span>
+            <div class="h-4 w-[1px] bg-gray-300 mx-4"></div>
+            <div class="flex gap-2">
+              <button @click="goBack" class="px-3 py-1 bg-[#F1F3F5] text-gray-700 border border-gray-300 rounded text-[10px] font-bold flex items-center gap-1 hover:bg-gray-200 transition active:scale-95 shadow-sm">
+                <i class="fa-solid fa-arrow-left"></i> 戻る
+              </button>
+              <button @click="goNext" :disabled="currentIndex >= jobs.length - 1" class="px-3 py-1 bg-[#2271E1] text-white rounded text-[10px] font-bold flex items-center gap-1 hover:bg-[#1a5bbd] transition active:scale-95 shadow-sm animate-pulse-action disabled:bg-gray-400">
+                次へ <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <!-- Header Mode Indicator -->
+          <div :class="[
+            'flex items-center rounded-md pl-1 pr-4 py-1.5 shadow-sm group relative overflow-hidden transition-all duration-500 hover:shadow-md border border-gray-100',
+            pageMode === 'remand' ? 'bg-[#FFF5F5] text-orange-800' : (pageMode === 'approved' ? 'bg-[#FFF5F7] text-pink-800' : 'bg-[#EBF8FF] text-blue-800')
+          ]">
+              <div :class="[
+                  'h-8 w-8 flex items-center justify-center rounded mr-3 backdrop-blur-sm',
+                  pageMode === 'remand' ? 'bg-orange-100 text-[#DD6B20]' : (pageMode === 'approved' ? 'bg-pink-100 text-[#D53F8C]' : 'bg-blue-100 text-[#3182CE]')
+              ]">
+                  <i :class="pageMode === 'remand' ? 'fa-solid fa-triangle-exclamation' : (pageMode === 'approved' ? 'fa-solid fa-gavel' : 'fa-solid fa-pen-to-square')"></i>
+              </div>
+              <div class="flex flex-col">
+                  <span class="text-[13px] font-bold tracking-wider">
+                    {{ getModeLabel(pageMode) }} (残: {{ pendingCount }}件)
+                  </span>
+              </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 2. Main Content Grid -->
+    <main class="flex-1 flex overflow-hidden">
+        <!-- Left Column: Form -->
+        <section class="w-[56%] flex flex-col bg-white border-r border-gray-200">
+            <div class="flex-1 overflow-y-auto custom-scrollbar">
+
+            <!-- Alert Area -->
+            <div class="p-3 space-y-2 shrink-0" v-if="selectedJob">
+                <div v-if="selectedJob.invoiceValidationLog && !selectedJob.invoiceValidationLog.isValid"
+                     class="bg-red-50 border border-red-200 p-2.5 rounded flex items-center gap-3 text-red-700 shadow-sm">
+                    <i class="fa-solid fa-ban"></i>
+                    <span class="text-xs font-bold leading-tight">インボイス登録番号が無効または確認できません ({{ selectedJob.invoiceValidationLog.registrationNumber }})</span>
+                </div>
+                 <div v-if="selectedJob.status === 'remanded'"
+                     class="bg-orange-50 border border-orange-200 p-2.5 rounded flex items-center gap-3 text-orange-700 shadow-sm">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span class="text-xs font-bold leading-tight">差戻し理由: {{ selectedJob.errorMessage || '理由未記入' }}</span>
+                </div>
+            </div>
+
+            <!-- Main Form Area -->
+            <div class="flex-1 px-3 space-y-4" v-if="selectedJob">
+                <div class="border border-gray-200 rounded p-3 bg-white shadow-sm">
+                    <!-- Header Fields -->
+                    <div class="mb-4">
+                        <label class="block text-[10px] text-gray-500 font-bold mb-1">摘要 (Primary Line)</label>
+                        <input type="text" v-model="primaryDescription" class="w-full border border-gray-300 rounded px-2.5 py-2 text-[13px] font-bold bg-[#F9FBFF] outline-none">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-[10px] text-gray-500 font-bold mb-1">取引日付</label>
+                            <input type="date" v-model="transactionDateStr" class="w-full border border-gray-300 rounded px-2.5 py-2 text-[13px] font-bold outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-500 font-bold mb-1">合計金額(税込)</label>
+                            <div class="flex items-center gap-2">
+                                <span class="bg-gray-100 border border-gray-300 rounded px-2.5 py-2 text-[13px] font-bold font-mono text-right flex-1">{{ totalAmount.toLocaleString() }}</span>
+                                <span v-if="isBalanced" class="bg-[#E6FFFA] text-[#047481] text-[10px] font-bold px-3 py-2 rounded border border-[#B2F5EA] flex items-center gap-1 animate-fade-in shrink-0">
+                                    <i class="fa-solid fa-circle-check"></i> 貸借一致
+                                </span>
+                                <span v-else class="bg-[#FFF5F5] text-[#E53E3E] text-[10px] font-bold px-3 py-2 rounded border border-[#FED7D7] flex items-center gap-1 shadow-sm animate-pulse shrink-0">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> 差額: {{ balanceDiff.toLocaleString() }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Journal Lines Editor (Simplified for standard cases) -->
+                    <div class="grid grid-cols-2 gap-3 mt-6">
+                        <!-- Debit Section -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center border-b border-gray-100 pb-1">
+                                <h3 class="text-[#2271E1] text-[11px] font-black flex items-center gap-1">
+                                    <i class="fa-solid fa-right-to-bracket rotate-180"></i> 借方 (費用)
+                                </h3>
+                                <button @click="addDebitRow" class="text-[9px] font-bold text-blue-500 hover:text-blue-700 transition flex items-center gap-1">
+                                    <i class="fa-solid fa-plus-circle"></i> 行を追加
+                                </button>
+                            </div>
+
+                            <div v-for="(row, idx) in debitRows" :key="'debit-'+idx" class="bg-[#F8FBFF] border border-[#D0E7FF] p-2.5 rounded space-y-2 relative transition-all">
+                                <button v-if="debitRows.length > 1" @click="removeDebitRow(idx)" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">
+                                    <i class="fa-solid fa-trash-can text-[10px]"></i>
+                                </button>
+
+                                <div>
+                                    <label class="block text-[9px] text-gray-400 font-bold uppercase">勘定科目</label>
+                                    <input type="text" v-model="row.drAccount" class="w-full border border-blue-400 rounded px-2.5 py-1.5 text-sm font-bold bg-white">
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-[9px] text-gray-400 font-bold uppercase">補助科目</label>
+                                        <input type="text" v-model="row.drSubAccount" class="w-full border border-gray-200 bg-white rounded px-2 py-1 text-xs text-gray-600">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] text-gray-400 font-bold uppercase">税区分</label>
+                                        <select v-model="row.drTaxClass" class="w-full border border-gray-200 bg-white rounded px-2 py-1 text-[10px] font-bold">
+                                            <option>課対仕入10%</option>
+                                            <option>課対仕入8%</option>
+                                            <option>対象外</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[9px] text-gray-400 font-bold uppercase">金額</label>
+                                    <input type="number" v-model="row.drAmount" class="w-full border border-gray-200 rounded px-2 py-1 text-xs font-bold text-right font-mono">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Credit Section (Usually 1 line: Payment Method) -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center border-b border-gray-100 pb-1">
+                                <button @click="addCreditRow" class="text-[9px] font-bold text-emerald-500 hover:text-emerald-700 transition flex items-center gap-1">
+                                    <i class="fa-solid fa-plus-circle"></i> 行を追加
+                                </button>
+                                <h3 class="text-[#059669] text-[11px] font-black flex items-center gap-1">
+                                    貸方 (決済) <i class="fa-solid fa-right-to-bracket"></i>
+                                </h3>
+                            </div>
+
+                            <div v-for="(row, idx) in creditRows" :key="'credit-'+idx" class="bg-[#F0FDF4] border border-[#DCFCE7] p-2.5 rounded space-y-2 relative transition-all">
+                                <button v-if="creditRows.length > 1" @click="removeCreditRow(idx)" class="absolute top-2 left-2 text-gray-300 hover:text-red-500">
+                                    <i class="fa-solid fa-trash-can text-[10px]"></i>
+                                </button>
+                                <div>
+                                    <label class="block text-[9px] text-gray-400 font-bold uppercase text-right">勘定科目</label>
+                                    <input type="text" v-model="row.crAccount" class="w-full border border-emerald-400 rounded px-2.5 py-1.5 text-sm font-bold bg-white text-right">
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-[9px] text-gray-400 font-bold uppercase text-right">税区分</label>
+                                        <select v-model="row.crTaxClass" class="w-full border border-gray-200 bg-white rounded px-2 py-1 text-[10px] font-bold">
+                                            <option>対象外</option>
+                                            <option>課対仕入10%</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] text-gray-400 font-bold uppercase text-right">補助科目</label>
+                                        <input type="text" v-model="row.crSubAccount" class="w-full border border-gray-200 bg-white rounded px-2 py-1 text-xs text-gray-600 text-right">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[9px] text-gray-400 font-bold uppercase text-right">金額</label>
+                                    <input type="number" v-model="row.crAmount" class="w-full border border-gray-200 rounded px-2 py-1 text-xs font-bold text-right font-mono">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div v-else class="p-8 text-center text-gray-400 font-bold">
+                データがありません。
+            </div>
+
+            </div>
+
+            <!-- Bottom Buttons -->
+            <div class="p-3 border-t border-gray-100 bg-white z-10 grid grid-cols-3 gap-3 shrink-0" v-if="selectedJob">
+                <button @click="handleAction('waiting_approval')" class="py-3 rounded-md font-bold text-[13px] bg-gray-100 text-gray-500 hover:bg-gray-200">
+                     <i class="fa-solid fa-clock"></i> 保留 / スキップ
+                </button>
+                <button @click="handleAction('excluded')" class="py-3 rounded-md font-bold text-[13px] bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">
+                     <i class="fa-solid fa-ban"></i> 除外
+                </button>
+                <button @click="handleAction('approved')" :disabled="!isBalanced"
+                    :class="['py-3 rounded-md font-bold text-[13px] text-white shadow-md transition', isBalanced ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed']">
+                     <i class="fa-solid fa-check"></i> 承認/確定
+                </button>
+            </div>
+        </section>
+
+        <!-- Right Column (Viewer) -->
+        <section class="w-[44%] bg-[#1A1F2B] flex flex-col relative z-20">
+             <!-- Viewer Placeholder for Image -->
+             <div class="flex-1 flex items-center justify-center p-8">
+                 <div class="bg-white shadow-2xl p-8 w-full max-w-[320px] aspect-[1/1.414] flex flex-col items-center">
+                    <div class="text-gray-400 font-bold mb-4">Image Viewer</div>
+                    <div class="text-xs text-gray-500 bg-gray-100 px-4 py-2 rounded">{{ selectedJob?.driveFileId || 'No File ID' }}</div>
+
+                    <div v-if="selectedJob?.aiAnalysisRaw" class="mt-8 border-t border-gray-200 pt-4 w-full">
+                         <div class="text-[10px] font-bold text-gray-500 mb-1">AI解析レシート:</div>
+                         <pre class="text-[9px] text-left break-all bg-gray-50 p-2 rounded max-h-40 overflow-auto">{{ selectedJob.aiAnalysisRaw }}</pre>
+                    </div>
+                 </div>
+             </div>
+        </section>
+    </main>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useAccountingSystem, type Job, type JournalLine, type JobStatus } from '@/composables/useAccountingSystem';
+import { Timestamp } from 'firebase/firestore';
+
+const route = useRoute();
+const router = useRouter();
+const { jobs, fetchClients, getClientByCode, currentJob } = useAccountingSystem();
+
+// -- State --
+const selectedJob = ref<Job | null>(null);
+const currentIndex = ref(0);
+const client = ref<any>(null);
+
+// Temporary Rows State for Editing
+const debitRows = ref<JournalLine[]>([]);
+const creditRows = ref<JournalLine[]>([]);
+
+const pageMode = computed(() => (route.query.mode as string) || 'details');
+
+const getModeLabel = (mode: string) => {
+    switch(mode) {
+        case 'remand': return '差戻し対応';
+        case 'approved': return '承認不要確認';
+        default: return '詳細編集モード';
+    }
+};
+
+const pendingCount = computed(() => jobs.value.filter(j => j.status !== 'approved' && j.status !== 'excluded').length);
+
+// -- Computed Fields --
+
+// Date String Wrapper for Timestamp
+const transactionDateStr = computed({
+    get: () => {
+        if (!selectedJob.value?.transactionDate) return new Date().toISOString().split('T')[0];
+        try {
+            return selectedJob.value.transactionDate.toDate().toISOString().split('T')[0];
+        } catch(e) { return "" }
+    },
+    set: (v: string) => {
+        if (selectedJob.value) {
+            selectedJob.value.transactionDate = Timestamp.fromDate(new Date(v));
+        }
+    }
+});
+
+const primaryDescription = computed({
+    get: () => debitRows.value[0]?.description || '',
+    set: (v: string) => {
+        // Sync all rows description for convenience
+        debitRows.value.forEach(r => r.description = v);
+        creditRows.value.forEach(r => r.description = v);
+    }
+});
+
+const totalAmount = computed(() => {
+    return debitRows.value.reduce((sum, r) => sum + (Number(r.drAmount) || 0), 0);
+});
+
+const creditTotal = computed(() => {
+    return creditRows.value.reduce((sum, r) => sum + (Number(r.crAmount) || 0), 0);
+});
+
+const isBalanced = computed(() => Math.abs(totalAmount.value - creditTotal.value) < 1 && totalAmount.value > 0);
+const balanceDiff = computed(() => totalAmount.value - creditTotal.value);
+
+// -- Lifecycle --
+onMounted(async () => {
+    // Attempt to match job from route
+    const initJobId = route.params.jobId as string;
+
+    // For mock purposes, if useAccountingSystem has jobs, use them.
+    if (jobs.value.length > 0) {
+        if (initJobId) {
+           const idx = jobs.value.findIndex(j => j.id === initJobId);
+           if (idx !== -1) selectJob(idx);
+           else selectJob(0);
+        } else {
+           selectJob(0);
+        }
+    }
+
+    // Fetch Client info for Header
+    if (selectedJob.value?.clientCode) {
+        client.value = getClientByCode(selectedJob.value.clientCode);
+    }
+});
+
+watch(selectedJob, (newJob) => {
+    if (newJob?.clientCode) {
+        client.value = getClientByCode(newJob.clientCode);
+    }
+});
+
+// -- Methods --
+
+function selectJob(index: number) {
+    if (index >= 0 && index < jobs.value.length) {
+        currentIndex.value = index;
+        const job = jobs.value[index];
+        selectedJob.value = job;
+
+        // Deep copy lines to break reference while editing row structure
+        // If lines are empty or invalid, create default
+        const lines = job.lines && job.lines.length > 0 ? job.lines : [{
+            lineNo: 1,
+            drAccount: '', drAmount: 0, drTaxClass: '課対仕入10%',
+            crAccount: '', crAmount: 0, crTaxClass: '対象外',
+            description: ''
+        } as JournalLine];
+
+        debitRows.value = JSON.parse(JSON.stringify(lines));
+        creditRows.value = JSON.parse(JSON.stringify(lines));
+    }
+}
+
+function addDebitRow() {
+    debitRows.value.push({
+        lineNo: debitRows.value.length + 1,
+        drAccount: '', drAmount: 0, drTaxClass: '課対仕入10%',
+        crAccount: '未払金', crAmount: 0, crTaxClass: '対象外', // Default credit side for balancing
+        description: primaryDescription.value
+    } as any);
+}
+function removeDebitRow(idx: number) { debitRows.value.splice(idx, 1); }
+
+function addCreditRow() {
+    creditRows.value.push({
+        lineNo: creditRows.value.length + 1,
+        drAccount: '', drAmount: 0, drTaxClass: '対象外',
+        crAccount: '', crAmount: 0, crTaxClass: '対象外',
+        description: primaryDescription.value
+    } as any);
+}
+function removeCreditRow(idx: number) { creditRows.value.splice(idx, 1); }
+
+function goNext() {
+    if (currentIndex.value < jobs.value.length - 1) selectJob(currentIndex.value + 1);
+}
+
+function goBack() {
+    if (currentIndex.value > 0) selectJob(currentIndex.value - 1);
+}
+
+function handleAction(status: JobStatus) {
+    if (!selectedJob.value) return;
+
+    // Consolidate Rows back to Lines
+    // Simplistic logical mapping: Map Debits 1:1 to Credits if count matches.
+    // If not, just store Debits and assume backend handles imbalance or store as-is.
+    // Spec says 'lines: JournalLine[]'.
+
+    // We will save the Debit Rows as the primary record, enforcing checking of Credit side.
+    const newLines: JournalLine[] = debitRows.value.map((dRow, i) => {
+        const cRow = creditRows.value[i] || creditRows.value[0];
+        return {
+            ...dRow,
+            crAccount: cRow?.crAccount || '',
+            crSubAccount: cRow?.crSubAccount,
+            crAmount: dRow.drAmount, // Force auto-balance amount for now
+            crTaxClass: cRow?.crTaxClass
+        };
+    });
+
+    selectedJob.value.lines = newLines;
+    selectedJob.value.status = status;
+
+    // Auto-advance
+    goNext();
+}
+
+</script>

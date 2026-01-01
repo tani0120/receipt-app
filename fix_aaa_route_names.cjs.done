@@ -1,0 +1,60 @@
+const fs = require('fs');
+const path = require('path');
+
+const targetDir = path.join(__dirname, 'src', 'aaa');
+
+const replacements = [
+    { from: /['"]ScreenA['"]/g, to: "'aaa_ScreenA'" },
+    { from: /['"]ScreenA_Detail['"]/g, to: "'aaa_ScreenA_Detail'" },
+    { from: /['"]ScreenB_Status['"]/g, to: "'aaa_ScreenB_Status'" },
+    { from: /['"]ScreenC['"]/g, to: "'aaa_ScreenC'" },
+    { from: /['"]ScreenC_Detail['"]/g, to: "'aaa_ScreenC_Detail'" },
+    { from: /['"]ScreenD['"]/g, to: "'aaa_ScreenD'" },
+    { from: /['"]ScreenE['"]/g, to: "'aaa_ScreenE'" },
+    { from: /['"]ScreenZ['"]/g, to: "'aaa_ScreenZ'" },
+    { from: /['"]DataConversion['"]/g, to: "'aaa_DataConversion'" },
+    { from: /['"]TaskDashboard['"]/g, to: "'aaa_TaskDashboard'" },
+
+    // Debug Routes
+    { from: /['"]ScreenE_VersionCheck['"]/g, to: "'aaa_ScreenE_VersionCheck'" },
+    { from: /['"]ScreenA_Spec_Test['"]/g, to: "'aaa_ScreenA_Spec_Test'" },
+    { from: /['"]ScreenC_Spec_Test['"]/g, to: "'aaa_ScreenC_Spec_Test'" },
+    { from: /['"]ScreenD_Spec_Test['"]/g, to: "'aaa_ScreenD_Spec_Test'" },
+    { from: /['"]ScreenG_Spec_Test['"]/g, to: "'aaa_ScreenG_Spec_Test'" },
+    { from: /['"]ScreenH_Spec_Test['"]/g, to: "'aaa_ScreenH_Spec_Test'" },
+    { from: /['"]Admin_Spec_Test['"]/g, to: "'aaa_Admin_Spec_Test'" },
+
+    // Also internal component names if they match exactly might be affected,
+    // but usually component names are not quoted in the same way or it's fine to rename them too.
+];
+
+function processDir(dir) {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+
+        if (entry.isDirectory()) {
+            processDir(fullPath);
+        } else if (entry.isFile() && (entry.name.endsWith('.ts') || entry.name.endsWith('.vue') || entry.name.endsWith('.js'))) {
+            let content = fs.readFileSync(fullPath, 'utf8');
+            let updated = false;
+
+            for (const rep of replacements) {
+                if (rep.from.test(content)) {
+                    content = content.replace(rep.from, rep.to);
+                    updated = true;
+                }
+            }
+
+            if (updated) {
+                fs.writeFileSync(fullPath, content, 'utf8');
+                console.log(`Updated: ${fullPath}`);
+            }
+        }
+    }
+}
+
+console.log('--- Starting Route Name Fix ---');
+processDir(targetDir);
+console.log('--- Fix Complete ---');

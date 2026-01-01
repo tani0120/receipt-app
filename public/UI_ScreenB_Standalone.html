@@ -1,0 +1,2586 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI経理プラットフォーム Ver.10.17 (完全統合版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.47/dist/vue.global.prod.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/ja.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.2s;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+
+        .toast-enter-active,
+        .toast-leave-active {
+            transition: all 0.3s ease;
+        }
+
+        .toast-enter-from,
+        .toast-leave-to {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: 2px solid #3b82f6;
+            outline-offset: -1px;
+        }
+
+        .grab {
+            cursor: grab;
+        }
+
+        .grabbing {
+            cursor: grabbing;
+        }
+
+        .modal-mask {
+            position: fixed;
+            z-index: 9998;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.3s ease;
+        }
+
+        [v-cloak] {
+            display: none;
+        }
+
+        .scrolling-table-wrapper {
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            background: white;
+        }
+
+        .scrolling-table-header {
+            background-color: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: bold;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .scrolling-table-row {
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 11px;
+        }
+
+        .scrolling-table-row:last-child {
+            border-bottom: none;
+        }
+
+        .bg-diagonal {
+            background-image: linear-gradient(45deg, #f1f5f9 25%, #ffffff 25%, #ffffff 50%, #f1f5f9 50%, #f1f5f9 75%, #ffffff 75%, #ffffff 100%);
+            background-size: 8px 8px;
+        }
+
+        /* Drive Link Compact Style */
+        .drive-link-compact {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            font-size: 10px;
+            color: #2563eb;
+            text-decoration: none;
+            padding: 2px 4px;
+            border-radius: 2px;
+            transition: background-color 0.2s;
+        }
+
+        .drive-link-compact:hover {
+            background-color: #eff6ff;
+            text-decoration: none;
+        }
+
+        .drive-link-compact span {
+            text-decoration: underline;
+            text-decoration-color: #93c5fd;
+        }
+
+        /* Keyboard Shortcut Icon */
+        .shortcut-icon {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 50;
+            transition: all 0.3s;
+        }
+
+        .shortcut-icon:hover {
+            background: rgba(0, 0, 0, 0.8);
+            transform: scale(1.1);
+        }
+
+        .shortcut-popup {
+            position: absolute;
+            bottom: 50px;
+            right: 0;
+            width: 250px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .shortcut-icon:hover .shortcut-popup {
+            opacity: 1;
+        }
+
+        .key-badge {
+            display: inline-block;
+            background: #444;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-right: 5px;
+            border: 1px solid #666;
+        }
+
+        /* --- Ver.10.17 Admin Specific Styles --- */
+        .grid-pattern {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 2px;
+        }
+
+        .grid-cell {
+            aspect-ratio: 1;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+
+        .grid-cell:hover {
+            transform: scale(1.2);
+            z-index: 10;
+            border: 1px solid #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        .kill-switch-active {
+            animation: pulse-red 2s infinite;
+            background-color: #dc2626 !important;
+            border-color: #991b1b !important;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-700 font-sans h-screen flex flex-col overflow-hidden">
+
+    <div id="app" class="flex flex-col h-full" @click="closeMenus" v-cloak>
+
+        <nav
+            class="bg-white border-b border-gray-200 px-6 py-2 flex justify-between items-center shadow-sm z-50 shrink-0">
+            <div class="flex items-center gap-6">
+                <div class="font-bold text-lg text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-robot text-blue-600"></i> AI経理プラットフォーム
+                    <span class="text-[10px] bg-slate-800 text-white px-2 py-0.5 rounded border">Ver.10.17</span>
+                </div>
+                <div class="flex space-x-1">
+                    <button @click="changeScreen('A')"
+                        :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2', (screen === 'A' || screen === 'A_DETAIL') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']"><i
+                            class="fa-solid fa-users"></i> A:顧問先管理</button>
+                    <button @click="changeScreen('B')"
+                        :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2', screen === 'B' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']"><i
+                            class="fa-solid fa-calculator"></i> B:全社仕訳</button>
+                    <button @click="changeScreen('C')"
+                        :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2', (screen === 'C' || screen === 'C_DETAIL') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']"><i
+                            class="fa-solid fa-calendar-days"></i> C:全社回収</button>
+                    <button @click="changeScreen('D')"
+                        :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 relative', screen === 'D' ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-500' : 'text-gray-500 hover:bg-gray-50']"><i
+                            class="fa-solid fa-brain"></i> D:AIルール <span
+                            class="bg-red-500 text-white text-[9px] px-1.5 rounded-full ml-1">3</span></button>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button @click="activateKillSwitch"
+                    :class="['text-xs font-bold px-4 py-2 rounded-full transition flex items-center gap-2 border', isEmergencyStopped ? 'bg-red-600 text-white border-red-700 kill-switch-active' : 'bg-white text-red-600 border-red-200 hover:bg-red-50']">
+                    <i class="fa-solid fa-power-off"></i> {{ isEmergencyStopped ? '緊急停止中 (解除)' : '緊急停止' }}
+                </button>
+
+                <div class="text-xs text-right mr-2">
+                    <div class="font-bold">{{ currentUser.name }}</div>
+                    <div class="text-[10px] text-gray-400">{{ currentUser.email }}</div>
+                </div>
+                <button @click="accessAdmin"
+                    :class="['text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-2', screen.startsWith('ADMIN') ? 'bg-slate-800 text-white' : 'bg-white border text-slate-600 hover:bg-slate-100']">
+                    <i class="fa-solid fa-screwdriver-wrench"></i> 管理者用
+                </button>
+            </div>
+        </nav>
+
+        <main class="flex-1 overflow-hidden relative bg-slate-100 p-4">
+
+            <div v-if="screen === 'A'"
+                class="h-full flex flex-col bg-white rounded-lg shadow border border-gray-200 overflow-hidden animate-fade-in">
+                <div class="p-4 border-b border-gray-200 bg-slate-50 flex justify-between items-center shrink-0">
+                    <div class="font-bold text-slate-700 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-users text-blue-500"></i> 顧問先管理一覧
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            <i class="fa-solid fa-search absolute left-2 top-2 text-gray-400 text-xs"></i>
+                            <input type="text" v-model="filters.masterSearch" placeholder="会社名 / ID で検索"
+                                class="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded w-64 focus:border-blue-500">
+                        </div>
+                        <button @click="openClientModal('new')"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-xs font-bold shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> 新規顧問先登録
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-auto flex-1 p-0">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-100 text-gray-500 text-xs uppercase sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="p-3 border-b font-bold w-24 text-center">設定状況</th>
+                                <th class="p-3 border-b font-bold w-20">ID</th>
+                                <th class="p-3 border-b font-bold">会社名</th>
+                                <th class="p-3 border-b font-bold w-32">担当</th>
+                                <th class="p-3 border-b font-bold w-16 text-center">連絡</th>
+                                <th class="p-3 border-b font-bold w-24">決算月</th>
+                                <th class="p-3 border-b font-bold w-40">ソフト/税/基準</th>
+                                <th class="p-3 border-b font-bold">Drive連携</th>
+                                <th class="p-3 border-b font-bold w-16 text-center">編集</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 text-xs">
+                            <tr v-for="client in sortedMasterClients" :key="client.id"
+                                class="hover:bg-blue-50/30 transition group">
+                                <td class="p-3 text-center"><span
+                                        class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-green-200">稼働中</span>
+                                </td>
+                                <td class="p-3 font-mono font-bold text-slate-500">{{ client.code }}</td>
+                                <td class="p-3">
+                                    <a @click.prevent="goToClientDashboard(client)" href="#"
+                                        class="font-bold text-blue-600 hover:underline text-sm flex items-center gap-2">
+                                        {{ client.name }} <i
+                                            class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                                    </a>
+                                </td>
+                                <td class="p-3">{{ client.rep }}</td>
+                                <td class="p-3 text-center">
+                                    <a v-if="client.chatwork" :href="client.chatwork" target="_blank"
+                                        class="text-red-500 hover:text-red-700 text-lg" title="Chatworkを開く"><i
+                                            class="fa-brands fa-rocketchat"></i></a>
+                                    <span v-else class="text-gray-300">-</span>
+                                </td>
+                                <td class="p-3 font-bold">{{ client.type === 'individual' ? '個人 (12月)' :
+                                    client.fiscal_month + '月決算' }}</td>
+                                <td class="p-3 text-[10px] text-gray-500">
+                                    <div>{{ client.settings.software }}</div>
+                                    <div>{{ client.settings.taxMethod === 'inclusive' ? '税込' : '税抜' }} / {{
+                                        client.settings.calcMethod }}</div>
+                                </td>
+                                <td class="p-3">
+                                    <div class="flex flex-wrap gap-x-3 gap-y-1">
+                                        <a href="#" class="drive-link-compact"><i
+                                                class="fa-regular fa-folder-open"></i><span>顧客保管</span></a>
+                                        <a href="#" class="drive-link-compact"><i
+                                                class="fa-solid fa-file-export"></i><span>仕訳出力</span></a>
+                                        <a href="#" class="drive-link-compact text-gray-500"><i
+                                                class="fa-solid fa-trash-can"></i><span>仕訳除外</span></a>
+                                        <a href="#" class="drive-link-compact text-purple-600"><i
+                                                class="fa-solid fa-book"></i><span>過去仕訳等保管</span></a>
+                                    </div>
+                                </td>
+                                <td class="p-3 text-center">
+                                    <button @click="openClientModal('edit', client)"
+                                        class="text-gray-400 hover:text-blue-600 transition"><i
+                                            class="fa-solid fa-pen"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-if="screen === 'A_DETAIL'" class="h-full flex flex-col bg-slate-50 overflow-y-auto animate-fade-in">
+                <div class="max-w-6xl mx-auto w-full p-6">
+                    <button @click="screen='A'"
+                        class="text-xs text-gray-500 hover:text-blue-500 mb-4 flex items-center"><i
+                            class="fa-solid fa-arrow-left mr-1"></i> 顧問先一覧に戻る</button>
+
+                    <div class="flex justify-between items-end mb-6">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="bg-white p-3 rounded shadow-sm border border-gray-200 text-2xl font-bold text-slate-700 font-mono">
+                                {{ currentClient.code }}</div>
+                            <div>
+                                <h1 class="text-2xl font-bold text-slate-800">{{ currentClient.name }}</h1>
+                                <div class="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                                    <span
+                                        class="bg-green-100 text-green-700 px-2 py-0.5 rounded border border-green-200 font-bold">稼働中</span>
+                                    <span>{{ currentClient.type === 'individual' ? '個人事業主 (12月決算)' : '法人 (' +
+                                        currentClient.fiscal_month + '月決算)' }}</span>
+                                    <span class="border-l pl-3">担当: {{ currentClient.rep }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-bold text-blue-900">第 {{ currentTermLabel }} 期</div>
+                            <div class="text-xs text-gray-500">{{ fiscalYearRange }}</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div
+                            class="bg-white p-6 rounded-lg shadow-sm border-t-4 border-t-blue-500 border-x border-b border-gray-200 hover:shadow-md transition">
+                            <h2 class="font-bold text-slate-700 mb-4 flex items-center"><i
+                                    class="fa-solid fa-folder-open text-blue-500 mr-2"></i> 資料回収状況</h2>
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="text-xs text-gray-500">
+                                    <div class="mb-1">領収書: <span class="font-bold text-green-600">受領済 (11/25)</span>
+                                    </div>
+                                    <div>請求書: <span class="font-bold text-red-500">未着 (10月分)</span></div>
+                                </div>
+                                <div class="text-right">
+                                    <span
+                                        class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-200 animate-pulse">⚠️
+                                        未回収あり</span>
+                                </div>
+                            </div>
+                            <button @click="goToCollectionDetail(currentClient)"
+                                class="w-full bg-blue-600 text-white py-3 rounded font-bold shadow hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-folder-open"></i> 資料回収状況を確認
+                            </button>
+                        </div>
+
+                        <div
+                            class="bg-white p-6 rounded-lg shadow-sm border-t-4 border-t-indigo-500 border-x border-b border-gray-200 hover:shadow-md transition">
+                            <h2 class="font-bold text-slate-700 mb-4 flex items-center"><i
+                                    class="fa-solid fa-calculator text-indigo-500 mr-2"></i> 仕訳業務ステータス</h2>
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="text-xs text-gray-500">
+                                    <div class="mb-1">現在の工程: <span class="font-bold text-slate-800">{{
+                                            getStatusLabel(currentClient.action) }}</span></div>
+                                    <div>最終更新: 2024/11/26 14:30</div>
+                                </div>
+                                <div class="text-right">
+                                    <span
+                                        class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold border border-indigo-200">
+                                        {{ currentClient.action === 'approve' ? '承認待ち' : '未処理' }}:
+                                        <span class="text-lg">{{ currentClient.action === 'approve' ?
+                                            currentClient.approveCount : '42' }}</span> 件
+                                    </span>
+                                </div>
+                            </div>
+                            <button @click="goToWork(currentClient, currentClient.action)"
+                                :class="['w-full text-white py-3 rounded font-bold shadow transition flex items-center justify-center gap-2', currentClient.action === 'approve' ? 'bg-pink-600 hover:bg-pink-700' : 'bg-indigo-600 hover:bg-indigo-700']">
+                                <i
+                                    :class="currentClient.action === 'approve' ? 'fa-solid fa-stamp' : 'fa-solid fa-pen-to-square'"></i>
+                                {{ currentClient.action === 'approve' ? '最終承認画面へ' : '1次仕訳を入力' }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                            <h3 class="font-bold text-sm text-slate-700 mb-4 border-b pb-2">基本情報設定</h3>
+                            <div class="space-y-3 text-xs">
+                                <div class="flex justify-between"><span class="text-gray-500">会計ソフト</span><span
+                                        class="font-bold">{{ currentClient.settings.software }}</span></div>
+                                <div class="flex justify-between"><span class="text-gray-500">税区分</span><span
+                                        class="font-bold">{{ currentClient.settings.taxMethod === 'inclusive' ? '税込' :
+                                        '税抜' }}</span></div>
+                                <div class="flex justify-between"><span class="text-gray-500">計上基準</span><span
+                                        class="font-bold">{{ currentClient.settings.calcMethod }}</span></div>
+                                <div class="flex justify-between"><span class="text-gray-500">消費税</span><span
+                                        class="font-bold">{{ currentClient.settings.taxType }}</span></div>
+                                <div class="pt-2 border-t mt-2">
+                                    <a v-if="currentClient.chatwork" :href="currentClient.chatwork" target="_blank"
+                                        class="text-red-600 hover:underline flex items-center gap-2 font-bold"><i
+                                            class="fa-brands fa-rocketchat"></i> Chatworkを開く</a>
+                                    <span v-else class="text-gray-400 text-[10px]">Chatwork未設定</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <a href="#"
+                                class="bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded p-3 flex flex-col items-center justify-center text-center transition group h-32">
+                                <i
+                                    class="fa-regular fa-folder-open text-2xl text-blue-500 mb-2 group-hover:scale-110 transition"></i>
+                                <div class="font-bold text-blue-800 text-xs">顧客保管</div>
+                                <div class="text-[9px] text-blue-400 mt-1">証憑原本</div>
+                            </a>
+                            <a href="#"
+                                class="bg-green-50 hover:bg-green-100 border border-green-200 rounded p-3 flex flex-col items-center justify-center text-center transition group h-32">
+                                <i
+                                    class="fa-solid fa-file-export text-2xl text-green-500 mb-2 group-hover:scale-110 transition"></i>
+                                <div class="font-bold text-green-800 text-xs">仕訳出力</div>
+                                <div class="text-[9px] text-green-400 mt-1">CSV保存先</div>
+                            </a>
+                            <a href="#"
+                                class="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded p-3 flex flex-col items-center justify-center text-center transition group h-32">
+                                <i
+                                    class="fa-solid fa-trash-can text-2xl text-gray-400 mb-2 group-hover:scale-110 transition"></i>
+                                <div class="font-bold text-gray-600 text-xs">仕訳除外</div>
+                                <div class="text-[9px] text-gray-400 mt-1">アーカイブ</div>
+                            </a>
+                            <a href="#"
+                                class="bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded p-3 flex flex-col items-center justify-center text-center transition group h-32">
+                                <i
+                                    class="fa-solid fa-book text-2xl text-purple-500 mb-2 group-hover:scale-110 transition"></i>
+                                <div class="font-bold text-purple-800 text-xs">過去仕訳等保管</div>
+                                <div class="text-[9px] text-purple-400 mt-1">AI学習ソース</div>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-100 rounded border border-gray-300 p-4">
+                        <h3 class="font-bold text-xs text-gray-500 mb-2"><i class="fa-solid fa-lock mr-1"></i> AI知識プロンプト
+                            (閲覧のみ)</h3>
+                        <textarea readonly
+                            class="w-full bg-slate-200 border border-slate-300 rounded p-2 text-[10px] font-mono text-gray-600 h-24 resize-none focus:outline-none">
+【固有ルール】
+・Amazonの領収書は「消耗品費」ではなく、金額5万円以上なら「工具器具備品」として提案すること。
+・「カフェ・ベローチェ」は会議費として処理する。
+・インボイス登録番号のないタクシー利用は「旅費交通費(免税)」とすること。
+                    </textarea>
+                    </div>
+                </div>
+            </div>
+            <div v-if="screen === 'B'"
+                class="h-full flex flex-col bg-white rounded-lg shadow border border-gray-200 overflow-hidden animate-fade-in">
+                <div class="p-3 border-b border-gray-200 bg-slate-50 flex justify-between items-center shrink-0">
+                    <div class="text-xs text-gray-500 flex items-center gap-2"><i
+                            class="fa-solid fa-calculator text-blue-400"></i><span>全クライアントの月次処理進捗を一元管理します。</span></div>
+                    <div class="flex items-center gap-2">
+                        <select v-model="filters.status" @change="updateUrl"
+                            class="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:border-blue-500 font-bold text-slate-600">
+                            <option value="all">全てのアクション</option>
+                            <option value="rescue">エラー確認</option>
+                            <option value="work">1次仕訳</option>
+                            <option value="approve">承認</option>
+                            <option value="remand">差戻し対応</option>
+                            <option value="export">CSV出力</option>
+                            <option value="archive">仕訳対象外を移動</option>
+                            <option value="complete">すべて完了</option>
+                        </select>
+                        <div class="relative">
+                            <i class="fa-solid fa-search absolute left-2 top-1.5 text-gray-400 text-xs"></i>
+                            <input type="text" v-model="filters.search" @input="updateUrl" placeholder="ID / 会社名で検索"
+                                class="pl-7 pr-2 py-1 text-xs border border-gray-300 rounded w-48 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="bg-white border-b border-gray-200 flex text-[10px] sm:text-xs font-bold text-slate-600 shrink-0 shadow-sm z-10">
+                    <div class="p-2 w-56 border-r flex-shrink-0 flex items-center bg-slate-50">顧問先情報</div>
+                    <div class="flex-1 grid grid-cols-7 min-w-[700px]">
+                        <div class="p-2 text-center border-r bg-blue-50/30 flex items-center justify-center">STEP
+                            1<br>資料受領</div>
+                        <div class="p-2 text-center border-r bg-blue-50/30 flex items-center justify-center">STEP
+                            2<br>AI解析</div>
+                        <div
+                            class="p-2 text-center border-r bg-indigo-50 text-indigo-800 border-b-4 border-indigo-400 flex items-center justify-center">
+                            STEP 3<br>1次仕訳</div>
+                        <div
+                            class="p-2 text-center border-r bg-pink-50 text-pink-800 border-b-4 border-pink-400 flex items-center justify-center">
+                            STEP 4<br>最終承認</div>
+                        <div
+                            class="p-2 text-center border-r bg-orange-50 text-orange-800 border-b-4 border-orange-400 flex items-center justify-center">
+                            STEP 5<br>差戻対応</div>
+                        <div
+                            class="p-2 text-center border-r bg-green-50 text-green-800 border-b-4 border-green-500 flex items-center justify-center">
+                            STEP 6<br>CSV出力</div>
+                        <div class="p-2 text-center border-r bg-gray-50 flex items-center justify-center">STEP 7<br>原本整理
+                        </div>
+                    </div>
+                    <div
+                        class="p-2 w-40 bg-slate-100 text-center flex-shrink-0 flex items-center justify-center shadow-inner">
+                        次のアクション</div>
+                </div>
+                <div class="overflow-y-auto flex-1">
+                    <div v-for="client in sortedClients" :key="client.id"
+                        :class="['flex border-b border-gray-100 transition items-center h-24 group', client.rowClass]">
+                        <div @click="goToClientDashboard(client)"
+                            class="p-3 w-56 border-r border-gray-100 flex flex-col justify-center h-full flex-shrink-0 transition cursor-pointer hover:bg-blue-50/50">
+                            <div class="flex items-center gap-2"><span
+                                    :class="['font-bold text-sm truncate', client.done ? 'text-gray-500' : 'text-slate-800']">{{
+                                    client.name }}</span><span v-if="client.isNew"
+                                    class="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded animate-pulse shadow">🆕
+                                    新着</span></div>
+                            <div class="flex gap-1 mt-1 flex-wrap"><span
+                                    :class="['text-[9px] px-1 rounded font-mono', client.done ? 'bg-gray-200 text-gray-500' : 'bg-slate-200 text-slate-600']">{{
+                                    client.code }}</span><span
+                                    :class="['text-[9px] px-1 rounded border font-bold', client.done ? 'bg-gray-100 text-gray-400 border-gray-200' : client.taxClass]">{{
+                                    client.tax }}</span><span class="text-[9px] text-gray-400">{{ client.type ===
+                                    'individual' ? '個人(12月)' : client.fiscal }}</span></div>
+                        </div>
+                        <div class="flex-1 grid grid-cols-7 min-w-[700px] h-full">
+                            <div class="border-r border-gray-100 flex items-center justify-center text-lg"><i
+                                    v-if="client.step1==='done'"
+                                    class="fa-solid fa-circle-check text-green-500"></i><span v-else>-</span></div>
+                            <div class="border-r border-gray-100 flex items-center justify-center text-lg">
+                                <div v-if="client.isAnalysing"
+                                    class="text-gray-500 font-bold flex flex-col items-center animate-pulse"><i
+                                        class="fa-solid fa-spinner fa-spin text-xl mb-1"></i><span
+                                        class="text-[9px]">解析中...</span></div>
+                                <div v-else-if="client.step2==='error'"
+                                    class="text-red-600 font-bold flex flex-col items-center"><i
+                                        class="fa-solid fa-ban text-xl mb-1"></i><span class="text-[9px]">停止中</span>
+                                </div>
+                                <i v-else-if="client.step2==='done'"
+                                    class="fa-solid fa-circle-check text-green-500"></i><span v-else>-</span>
+                            </div>
+                            <div class="border-r border-gray-100 flex items-center justify-center px-2">
+                                <div v-if="client.step3 === 'pending'" @click="goToWork(client, 'work')"
+                                    class="cursor-pointer w-full bg-indigo-50 border border-indigo-200 rounded overflow-hidden shadow-sm hover:shadow-md transition">
+                                    <div class="bg-indigo-400 text-white text-[9px] font-bold text-center py-0.5">{{
+                                        client.msg1 }}</div>
+                                    <div class="text-indigo-600 text-[10px] font-bold text-center py-1.5">{{ client.msg2
+                                        }}</div>
+                                </div>
+                                <i v-else-if="client.step3 === 'done'"
+                                    class="fa-solid fa-circle-check text-green-500 text-lg"></i><span v-else
+                                    class="text-gray-300">-</span>
+                            </div>
+                            <div class="border-r border-gray-100 flex items-center justify-center px-2">
+                                <div v-if="client.step4 === 'pending'" @click="goToWork(client, 'approve')"
+                                    class="cursor-pointer w-full bg-pink-50 border border-pink-200 rounded overflow-hidden shadow-sm hover:shadow-md transition">
+                                    <div class="bg-pink-400 text-white text-[9px] font-bold text-center py-0.5">未承認
+                                    </div>
+                                    <div class="text-pink-600 text-[10px] font-bold text-center py-1.5">{{
+                                        client.approveCount }}件</div>
+                                </div>
+                                <i v-else-if="client.step4 === 'done'"
+                                    class="fa-solid fa-circle-check text-green-500 text-lg"></i><span v-else
+                                    class="text-gray-300">-</span>
+                            </div>
+                            <div class="border-r border-gray-100 flex items-center justify-center px-2">
+                                <div v-if="client.step5 === 'pending'" @click="goToWork(client, 'remand')"
+                                    class="cursor-pointer w-full bg-orange-50 border border-orange-200 rounded overflow-hidden shadow-sm hover:shadow-md transition">
+                                    <div class="bg-orange-400 text-white text-[9px] font-bold text-center py-0.5">差戻対応
+                                    </div>
+                                    <div class="text-orange-600 text-[10px] font-bold text-center py-1.5">残 {{
+                                        client.remandCount }}件</div>
+                                </div>
+                                <i v-else-if="client.step5 === 'done'"
+                                    class="fa-solid fa-circle-check text-green-500 text-lg"></i><span v-else
+                                    class="text-gray-300">-</span>
+                            </div>
+                            <div class="border-r border-gray-100 flex items-center justify-center px-2">
+                                <button v-if="client.step6 === 'ready'"
+                                    class="w-full bg-white border border-green-500 text-green-600 rounded py-1 text-[10px] font-bold hover:bg-green-50 shadow-sm transition"><i
+                                        class="fa-solid fa-download mr-1"></i> 未出力</button>
+                                <div v-else-if="client.step6 === 'done'"
+                                    class="text-[10px] font-bold flex flex-col items-center text-gray-400"><i
+                                        class="fa-solid fa-file-csv text-base mb-1"></i> 出力済</div><span v-else
+                                    class="text-gray-300">-</span>
+                            </div>
+                            <div class="border-r border-gray-100 flex items-center justify-center px-2">
+                                <div v-if="client.step7 === 'ready'"
+                                    class="flex items-center gap-1 text-[9px] bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 w-full justify-center">
+                                    <i class="fa-solid fa-box-open"></i> 残({{client.excludedCount}})</div>
+                                <a v-else-if="client.step7 === 'link'" href="#"
+                                    class="text-[9px] text-blue-500 hover:underline"><i
+                                        class="fa-solid fa-box-open"></i> 対象外({{client.excludedCount}})</a>
+                                <i v-else-if="client.step7 === 'done'" class="fa-solid fa-check text-gray-400"></i><span
+                                    v-else class="text-gray-300">-</span>
+                            </div>
+                        </div>
+                        <div
+                            class="p-3 w-40 flex-shrink-0 flex flex-col items-center justify-center gap-1 border-l border-gray-100 bg-slate-50/50">
+                            <button v-if="client.isAnalysing"
+                                class="w-32 bg-gray-300 text-white px-4 py-1.5 rounded text-xs font-bold cursor-not-allowed"><i
+                                    class="fa-solid fa-spinner fa-spin mr-1"></i> 解析待機</button>
+                            <button v-else-if="client.action === 'rescue'" @click="showRescue = true"
+                                class="w-32 bg-red-600 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-red-700 shadow-sm animate-pulse transition"><i
+                                    class="fa-solid fa-wrench mr-1"></i> エラー確認</button>
+                            <button v-else-if="client.action === 'work'" @click="goToWork(client, 'work')"
+                                class="w-32 bg-indigo-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-indigo-700 shadow-sm animate-pulse transition flex items-center justify-center gap-2"><i
+                                    class="fa-solid fa-file-invoice-dollar"></i> 1次仕訳</button>
+                            <button v-else-if="client.action === 'approve'" @click="goToWork(client, 'approve')"
+                                class="w-32 bg-pink-500 text-white px-4 py-2 rounded text-xs font-bold hover:bg-pink-600 shadow-sm animate-pulse transition"><i
+                                    class="fa-solid fa-stamp mr-1"></i> 最終承認</button>
+                            <button v-else-if="client.action === 'remand'" @click="goToWork(client, 'remand')"
+                                class="w-32 bg-orange-500 text-white px-4 py-2 rounded text-xs font-bold hover:bg-orange-600 shadow-sm animate-pulse transition"><i
+                                    class="fa-solid fa-rotate-left mr-1"></i> 差戻対応</button>
+                            <button v-else-if="client.action === 'export'" @click="openCsvModal(client)"
+                                class="w-32 bg-green-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-green-700 shadow-sm animate-pulse transition"><i
+                                    class="fa-solid fa-download mr-1"></i> CSV出力</button>
+                            <div v-else-if="client.action === 'archive'" class="flex flex-col items-center gap-1">
+                                <button @click="openArchiveModal(client)"
+                                    class="w-32 bg-slate-600 text-white px-2 py-2 rounded text-[10px] font-bold hover:bg-slate-700 shadow-sm animate-pulse transition flex items-center justify-center"><i
+                                        class="fa-solid fa-box-open mr-1"></i> 仕訳対象外を移動</button></div>
+                            <button v-else-if="client.action === 'complete_all'"
+                                class="bg-gray-300 text-white px-4 py-2 rounded text-xs font-bold cursor-not-allowed shadow-none w-32 flex justify-center items-center gap-1"><i
+                                    class="fa-solid fa-check-double"></i> すべて完了</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="screen === 'C'"
+                class="h-full flex flex-col bg-white rounded-lg shadow border border-gray-200 overflow-hidden animate-fade-in">
+                <div class="p-3 border-b border-gray-200 flex justify-between items-center bg-slate-50 shrink-0">
+                    <div class="flex items-center gap-4">
+                        <div class="font-bold text-slate-700 text-sm flex items-center gap-2 mr-4">
+                            <i class="fa-solid fa-calendar-days text-blue-500"></i> 全社資料回収状況
+                        </div>
+                        <div class="flex items-center bg-white rounded p-0.5 text-xs border border-gray-200 shadow-sm">
+                            <button @click="changeYear('prev')"
+                                class="px-3 py-1 hover:bg-gray-100 rounded-l text-gray-500"><i
+                                    class="fa-solid fa-backward"></i> 過去</button>
+                            <span class="px-3 font-bold text-slate-700 border-x border-gray-200 bg-white">2025年 〜
+                                2026年</span>
+                            <button @click="changeYear('next')"
+                                class="px-3 py-1 hover:bg-gray-100 rounded-r text-gray-500">未来 <i
+                                    class="fa-solid fa-forward"></i></button>
+                        </div>
+                    </div>
+                    <div
+                        class="flex gap-4 text-[10px] text-gray-500 bg-white px-3 py-1.5 rounded border border-gray-200 shadow-sm">
+                        <span class="flex items-center"><i
+                                class="fa-solid fa-circle-check text-green-500 mr-1"></i>完了</span>
+                        <span class="flex items-center"><i class="fa-solid fa-xmark text-red-500 mr-1"></i>未着</span>
+                        <span class="flex items-center"><i
+                                class="fa-solid fa-triangle-exclamation text-yellow-500 mr-1"></i>一部</span>
+                        <span class="border-l pl-3 ml-2 flex items-center"><span
+                                class="w-0.5 h-3 bg-blue-500 mr-1 block"></span> 決算月</span>
+                    </div>
+                </div>
+
+                <div class="overflow-auto flex-1 p-0 relative">
+                    <div v-if="isCalendarLoading"
+                        class="absolute inset-0 bg-white/80 z-50 flex items-center justify-center">
+                        <div class="text-blue-500 font-bold"><i class="fa-solid fa-circle-notch fa-spin text-3xl"></i>
+                        </div>
+                    </div>
+
+                    <table class="w-full border-collapse text-xs min-w-[1500px]">
+                        <thead class="sticky top-0 z-30 shadow-sm">
+                            <tr
+                                class="bg-slate-100 text-gray-600 text-[10px] font-bold uppercase h-6 border-b border-gray-300">
+                                <th class="p-0 w-64 text-left sticky left-0 z-20 bg-slate-50 border-r border-gray-200">
+                                    <div class="px-3 py-1">クライアント情報</div>
+                                </th>
+                                <th colspan="12"
+                                    class="border-r border-gray-300 text-center bg-slate-200 text-slate-700">2025年</th>
+                                <th colspan="12" class="text-center bg-slate-100 text-slate-500">2026年</th>
+                            </tr>
+                            <tr class="bg-slate-50 text-gray-500 text-[9px] font-bold border-b border-gray-300 h-6">
+                                <th class="sticky left-0 z-20 bg-slate-50 border-r border-gray-200"></th>
+                                <th v-for="m in 24" class="w-8 border-r text-center align-middle relative">
+                                    <span
+                                        class="text-[7px] absolute top-0 left-0 text-gray-400 transform scale-75 origin-top-left">'{{
+                                        m <= 12 ? '25' : '26' }}</span>
+                                            {{ m <= 12 ? m : m - 12 }} </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr v-for="client in sortedCalendarDocs" :key="client.id"
+                                class="hover:bg-blue-50/10 transition h-10">
+                                <td class="p-0 sticky left-0 z-20 border-r border-gray-200 align-middle bg-white group">
+                                    <div class="flex items-stretch h-10" @click="goToCollectionDetail(client)">
+                                        <div
+                                            class="w-10 bg-slate-100 flex items-center justify-center border-r border-slate-200 text-[10px] font-mono font-bold text-slate-500 shrink-0">
+                                            {{ client.code }}</div>
+                                        <div
+                                            class="flex-1 px-3 flex flex-col justify-center min-w-0 cursor-pointer hover:bg-blue-50">
+                                            <div class="font-bold text-slate-700 text-xs truncate">{{ client.name }}
+                                            </div>
+                                            <div class="flex gap-1"><span class="text-[9px] text-blue-600 font-bold">{{
+                                                    client.type === 'individual' ? '個人(12月)' : client.fiscal_month +
+                                                    '月決算' }}</span></div>
+                                        </div>
+                                        <div
+                                            class="w-8 flex items-center justify-center border-l border-slate-100 shrink-0">
+                                            <i class="fa-solid fa-folder-open text-slate-300 hover:text-blue-600"></i>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td v-for="m in 24" :key="m"
+                                    :class="['w-8 h-10 border-r border-b border-gray-200 text-center align-middle relative', getPeriodStatus(client, m).class]">
+                                    <div v-if="getPeriodStatus(client, m).isFiscal"
+                                        class="absolute right-0 top-0 bottom-0 border-r-2 border-blue-500 z-0"><span
+                                            class="absolute bottom-0 right-0 bg-blue-500 text-white text-[8px] px-0.5 leading-none rounded-tl shadow-sm">決</span>
+                                    </div>
+                                    <i v-if="getPeriodStatus(client, m).val === 1"
+                                        class="fa-solid fa-circle-check text-green-500 relative z-10 text-sm"></i>
+                                    <i v-if="getPeriodStatus(client, m).val === 0"
+                                        class="fa-solid fa-xmark text-red-500 relative z-10 text-sm"></i>
+                                    <div v-if="getPeriodStatus(client, m).val === 2"
+                                        class="relative z-10 group/tip flex justify-center cursor-help">
+                                        <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-sm"></i>
+                                        <div
+                                            class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover/tip:block bg-slate-800 text-white text-[10px] p-2 rounded whitespace-nowrap shadow-lg z-50">
+                                            <div class="font-bold border-b border-gray-600 mb-1 pb-1">未回収あり</div>
+                                            <div>・楽天カード</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-if="screen === 'C_DETAIL'"
+                class="h-full flex flex-col bg-slate-50 overflow-hidden animate-fade-in relative">
+                <div class="p-6 max-w-7xl mx-auto w-full overflow-y-auto">
+                    <button @click="screen='C'"
+                        class="text-xs text-gray-500 hover:text-blue-500 mb-4 flex items-center"><i
+                            class="fa-solid fa-arrow-left mr-1"></i> 全社回収一覧に戻る</button>
+
+                    <div
+                        class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-3 mb-2">
+                                <span
+                                    class="bg-slate-100 text-slate-600 text-sm px-2 py-1 rounded font-mono font-bold">{{
+                                    currentClient.code }}</span>
+                                <h1 class="text-2xl font-bold text-slate-800">{{ currentClient.name }}</h1>
+                                <span class="text-xs bg-slate-100 px-2 py-1 rounded border text-slate-500">{{
+                                    currentClient.type === 'individual' ? '個人' : '法人' }} ({{ currentClient.fiscal_month
+                                    }}月決算)</span>
+                            </div>
+                            <div
+                                class="flex items-center gap-3 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 inline-flex">
+                                <i class="fa-solid fa-calendar-check text-blue-500"></i>
+                                <span class="text-sm text-blue-800 font-bold">第 {{ currentTermLabel }} 期 ({{
+                                    fiscalYearRange }})</span>
+                                <span class="text-xs text-blue-400 border-l border-blue-200 pl-3">現在 8ヶ月目</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end gap-2">
+                            <button @click="openReportModal"
+                                class="bg-slate-700 text-white px-4 py-2 rounded text-sm font-bold hover:bg-slate-800 shadow-sm flex items-center gap-2">
+                                <i class="fa-regular fa-copy"></i> 報告文作成
+                            </button>
+                            <p class="text-[10px] text-gray-400">設定に基づきリアルタイム生成します</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 grid grid-cols-2 gap-4">
+                            <div
+                                class="flex flex-col justify-between p-4 rounded-lg border shadow-sm h-36 relative transition bg-green-50 border-green-200 text-green-800">
+                                <div>
+                                    <div class="flex justify-between">
+                                        <div class="font-bold text-sm"><i class="fa-solid fa-receipt mr-1"></i> 領収書
+                                        </div><span
+                                            class="text-[10px] bg-green-100 px-1.5 py-0.5 rounded text-green-700 font-bold">必須</span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-2">最新受領日:</div>
+                                    <div class="text-lg font-bold text-slate-700">2025/11/25</div>
+                                </div>
+                                <div class="flex justify-between items-end border-t border-green-100 pt-2"><span
+                                        class="text-xs text-green-600 font-bold"><i class="fa-solid fa-check"></i>
+                                        順調</span></div>
+                            </div>
+                            <div
+                                class="flex flex-col justify-between p-4 rounded-lg border shadow-sm h-36 relative transition bg-green-50 border-green-200 text-green-800">
+                                <div>
+                                    <div class="flex justify-between">
+                                        <div class="font-bold text-sm"><i class="fa-solid fa-building-columns mr-1"></i>
+                                            みずほ銀行</div><span
+                                            class="text-[10px] bg-green-100 px-1.5 py-0.5 rounded text-green-700 font-bold">必須</span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-2">受領期間:</div>
+                                    <div class="text-sm font-bold text-slate-700">10/01 〜 10/31</div>
+                                </div>
+                                <div class="flex justify-between items-end border-t border-green-100 pt-2"><span
+                                        class="text-xs text-green-600 font-bold"><i class="fa-solid fa-check"></i>
+                                        順調</span></div>
+                            </div>
+                            <div
+                                class="flex flex-col justify-between p-4 rounded-lg border shadow-sm h-36 relative transition bg-red-50 border-red-200 text-red-800">
+                                <div>
+                                    <div class="flex justify-between">
+                                        <div class="font-bold text-sm text-red-800"><i
+                                                class="fa-brands fa-cc-visa mr-1"></i> 楽天カード</div><span
+                                            class="text-[10px] bg-red-100 px-1.5 py-0.5 rounded text-red-700 font-bold">必須</span>
+                                    </div>
+                                    <div class="text-xs text-red-500 mt-2 font-bold">9月末で停止 (45日経過)</div>
+                                    <div
+                                        class="text-xs bg-white text-red-600 px-1 py-0.5 rounded border border-red-100 inline-block mt-1 font-bold">
+                                        10月分 未着</div>
+                                </div>
+                                <div class="flex justify-between items-end border-t border-red-100 pt-2"><span
+                                        class="text-xs text-red-600 font-bold"><i
+                                            class="fa-solid fa-triangle-exclamation"></i> 遅延あり</span></div>
+                            </div>
+
+                            <div
+                                :class="['flex flex-col justify-between p-4 rounded-lg border shadow-sm h-36 relative transition', c_config.cash ? 'bg-gray-50 border-gray-300 text-gray-600' : 'bg-gray-50 border-gray-200 text-gray-400 opacity-60']">
+                                <div>
+                                    <div class="flex justify-between">
+                                        <div class="font-bold text-sm"><i class="fa-solid fa-book mr-1"></i> 現金出納帳</div>
+                                        <span
+                                            class="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded text-gray-500">任意</span>
+                                    </div>
+                                    <div class="text-xs mt-2">{{ c_config.cash ? '受領: 10月分まで' : '設定: 監視OFF' }}</div>
+                                </div>
+                                <div class="flex justify-between items-end border-t border-gray-200 pt-2"><span
+                                        class="text-xs">{{ c_config.cash ? '未回収あり' : '対象外' }}</span></div>
+                            </div>
+
+                            <div
+                                :class="['flex flex-col justify-between p-4 rounded-lg border shadow-sm h-36 relative transition', c_config.payroll ? 'bg-green-50 border-green-200 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-400 opacity-60']">
+                                <div>
+                                    <div class="flex justify-between">
+                                        <div class="font-bold text-sm"><i
+                                                class="fa-solid fa-file-invoice-dollar mr-1"></i> 給与台帳</div><span
+                                            class="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded text-gray-500">任意</span>
+                                    </div>
+                                    <div class="text-xs mt-2">{{ c_config.payroll ? '受領: 11月分まで' : '設定: 監視OFF' }}</div>
+                                </div>
+                                <div class="flex justify-between items-end border-t border-gray-200 pt-2"><span
+                                        class="text-xs">{{ c_config.payroll ? '順調' : '対象外' }}</span></div>
+                            </div>
+
+                            <div
+                                :class="['flex flex-col justify-between p-4 rounded-lg border shadow-sm h-36 relative transition', c_config.social ? 'bg-green-50 border-green-200 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-400 opacity-60']">
+                                <div>
+                                    <div class="flex justify-between">
+                                        <div class="font-bold text-sm"><i class="fa-solid fa-id-card mr-1"></i> 社会保険通知
+                                        </div><span
+                                            class="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded text-gray-500">任意</span>
+                                    </div>
+                                    <div class="text-xs mt-2">{{ c_config.social ? '受領済み' : '設定: 監視OFF' }}</div>
+                                </div>
+                                <div class="flex justify-between items-end border-t border-gray-200 pt-2"><span
+                                        class="text-xs">{{ c_config.social ? '順調' : '対象外' }}</span></div>
+                            </div>
+
+                            <div
+                                :class="['flex flex-col justify-between p-4 rounded-lg border shadow-sm h-36 relative transition', c_config.invoice ? 'bg-red-50 border-red-200 text-red-800' : 'bg-gray-50 border-gray-200 text-gray-400 opacity-60']">
+                                <div>
+                                    <div class="flex justify-between">
+                                        <div class="font-bold text-sm"><i class="fa-solid fa-file-invoice mr-1"></i> 請求書
+                                        </div><span
+                                            class="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded text-gray-500">任意</span>
+                                    </div>
+                                    <div class="text-xs mt-2">{{ c_config.invoice ? '受領: 9月分まで' : '設定: 監視OFF' }}</div>
+                                    <div v-if="c_config.invoice"
+                                        class="text-xs bg-white text-red-600 px-1 py-0.5 rounded border border-red-100 inline-block mt-1 font-bold">
+                                        10月分 未着</div>
+                                </div>
+                                <div class="flex justify-between items-end border-t border-gray-200 pt-2"><span
+                                        class="text-xs">{{ c_config.invoice ? '遅延あり' : '対象外' }}</span></div>
+                            </div>
+
+                        </div>
+
+                        <div class="lg:col-span-1 bg-white rounded-lg border border-gray-200 p-4 h-fit shadow-sm">
+                            <h3 class="text-sm font-bold text-slate-700 mb-4 flex items-center"><i
+                                    class="fa-solid fa-sliders mr-2 text-gray-400"></i> クイック設定</h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center pb-2 border-b border-gray-100">
+                                    <div class="flex items-center gap-2"><i
+                                            class="fa-solid fa-book text-gray-400"></i><span
+                                            class="text-sm text-gray-600">現金出納帳</span></div>
+                                    <div
+                                        class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                        <input type="checkbox" v-model="c_config.cash" id="tg1"
+                                            class="absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer peer checked:right-0 checked:border-green-400" /><label
+                                            for="tg1"
+                                            class="block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer peer-checked:bg-green-400"></label>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center pb-2 border-b border-gray-100">
+                                    <div class="flex items-center gap-2"><i
+                                            class="fa-solid fa-file-invoice-dollar text-gray-400"></i><span
+                                            class="text-sm text-gray-600">給与台帳</span></div>
+                                    <div
+                                        class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                        <input type="checkbox" v-model="c_config.payroll" id="tg2"
+                                            class="absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer peer checked:right-0 checked:border-green-400" /><label
+                                            for="tg2"
+                                            class="block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer peer-checked:bg-green-400"></label>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center pb-2 border-b border-gray-100">
+                                    <div class="flex items-center gap-2"><i
+                                            class="fa-solid fa-id-card text-gray-400"></i><span
+                                            class="text-sm text-gray-600">社会保険通知</span></div>
+                                    <div
+                                        class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                        <input type="checkbox" v-model="c_config.social" id="tg3"
+                                            class="absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer peer checked:right-0 checked:border-green-400" /><label
+                                            for="tg3"
+                                            class="block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer peer-checked:bg-green-400"></label>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center pb-2 border-b border-gray-100">
+                                    <div class="flex items-center gap-2"><i
+                                            class="fa-solid fa-file-invoice text-gray-400"></i><span
+                                            class="text-sm text-gray-600">請求書</span></div>
+                                    <div
+                                        class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                        <input type="checkbox" v-model="c_config.invoice" id="tg4"
+                                            class="absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer peer checked:right-0 checked:border-green-400" /><label
+                                            for="tg4"
+                                            class="block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer peer-checked:bg-green-400"></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <button @click="saveCConfig"
+                                :class="['mt-6 w-full py-2 rounded text-xs font-bold text-white transition flex justify-center items-center gap-2 shadow-sm', c_isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700']"><i
+                                    v-if="c_isSaving" class="fa-solid fa-circle-notch fa-spin"></i><span v-else><i
+                                        class="fa-solid fa-save"></i> 設定を保存</span></button>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="showCReportModal"
+                    class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden">
+                        <div class="bg-slate-800 text-white px-4 py-3 font-bold flex justify-between items-center">
+                            <span><i class="fa-regular fa-envelope mr-2"></i> 報告文プレビュー</span><button
+                                @click="showCReportModal = false" class="text-gray-400 hover:text-white">✕</button>
+                        </div>
+                        <div class="p-4"><textarea v-model="c_reportText"
+                                class="w-full h-64 border border-gray-300 rounded p-2 text-xs font-mono focus:border-blue-500 outline-none resize-none"></textarea>
+                        </div>
+                        <div class="bg-gray-100 px-4 py-3 flex justify-end gap-2"><button
+                                @click="showCReportModal = false"
+                                class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded text-xs font-bold hover:bg-gray-50">キャンセル</button><button
+                                @click="copyCReport"
+                                class="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-blue-700 shadow-sm"><i
+                                    class="fa-regular fa-copy mr-1"></i> コピー</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="screen === 'D'"
+                class="h-full flex flex-col bg-white rounded-lg shadow border border-gray-200 overflow-hidden animate-fade-in">
+                <div class="p-4 border-b bg-purple-50 flex justify-between items-center">
+                    <h2 class="font-bold text-slate-800"><i
+                            class="fa-solid fa-brain text-purple-500 mr-2"></i>AI提案ルール承認待ち</h2>
+                    <span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">{{
+                        rules.length }}件</span>
+                </div>
+                <div class="flex-1 overflow-auto p-4">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead class="bg-slate-100 text-slate-500 font-bold uppercase">
+                            <tr>
+                                <th class="p-3 border-b">クライアント</th>
+                                <th class="p-3 border-b">取引先</th>
+                                <th class="p-3 border-b">条件</th>
+                                <th class="p-3 border-b">提案内容</th>
+                                <th class="p-3 border-b w-40 text-center">アクション</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            <tr v-for="rule in rules" :key="rule.id" class="hover:bg-purple-50/30">
+                                <td class="p-3 font-bold">{{ rule.client }}</td>
+                                <td class="p-3">{{ rule.vendor }}</td>
+                                <td class="p-3 font-mono text-slate-500 bg-slate-50">{{ rule.condition }} <button
+                                        @click="editRule(rule)" class="ml-2 text-gray-400 hover:text-blue-600"><i
+                                            class="fa-solid fa-pencil"></i></button></td>
+                                <td class="p-3"><span class="line-through text-red-400 mr-2">{{ rule.old_acct
+                                        }}</span><i
+                                        class="fa-solid fa-arrow-right text-gray-400 text-[10px] mr-2"></i><span
+                                        class="font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">{{
+                                        rule.new_acct }}</span></td>
+                                <td class="p-3 text-center"><button
+                                        class="bg-green-500 text-white px-3 py-1.5 rounded text-xs font-bold shadow-sm hover:bg-green-600 transition"
+                                        @click="approveRule(rule.id)">承認</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div v-if="screen === 'E'" class="h-full flex flex-col bg-white overflow-hidden animate-fade-in relative"
+                @keyup.enter="handleShortcut('enter')" @keyup.delete="handleShortcut('delete')"
+                @keyup.left="prevTransaction" @keyup.right="nextTransaction" tabindex="0">
+
+                <div
+                    :class="['p-3 border-b shadow-sm transition-colors duration-300 sticky top-0 z-30 shrink-0 flex justify-between items-center', headerClass]">
+                    <div class="flex items-center gap-4 w-full">
+                        <div class="text-xs font-bold flex items-center gap-1 shrink-0"
+                            :class="currentClient.action === 'remand' ? 'text-red-900' : (currentClient.action === 'approve' ? 'text-pink-900' : 'text-gray-500')">
+                            <button @click="screen='B'" class="hover:underline">全社仕訳 (リンク)</button>
+                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                            <span>{{ currentClient.code }} {{ currentClient.name }}</span>
+                        </div>
+                        <div class="h-4 w-px bg-gray-300 mx-1"></div>
+                        <div class="flex gap-2 shrink-0">
+                            <button @click="prevTransaction"
+                                class="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded transition shadow-sm border bg-white text-slate-700 hover:bg-slate-100 border-gray-300"><i
+                                    class="fa-solid fa-arrow-left"></i> 一つ戻る</button>
+                            <button @click="nextTransaction"
+                                class="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded transition bg-blue-600 text-white shadow-sm hover:bg-blue-700 border border-blue-600">次に進む
+                                (New) <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>
+
+                        <div class="ml-4 flex-1 flex items-center justify-end">
+                            <div v-if="currentClient.action === 'work'"
+                                class="bg-blue-600 text-white px-6 py-2 rounded text-base font-bold shadow-md flex items-center gap-2">
+                                <i class="fa-solid fa-pen-to-square"></i> 🟦 １次仕訳入力モード (未処理: {{ remainingApprovalCount
+                                }}件)
+                            </div>
+                            <div v-if="currentClient.action === 'remand'"
+                                class="bg-red-600 text-white px-6 py-2 rounded text-base font-bold shadow-md flex items-center gap-2 animate-pulse">
+                                <i class="fa-solid fa-triangle-exclamation"></i> 🟥 ⚠ 差戻し対応モード (残数: {{
+                                remainingApprovalCount }}件)
+                            </div>
+                            <div v-if="currentClient.action === 'approve'"
+                                class="bg-pink-600 text-white px-6 py-2 rounded text-base font-bold shadow-md flex items-center gap-2">
+                                <i class="fa-solid fa-stamp"></i> 🟪 最終承認決済モード (承認待ち: {{ remainingApprovalCount }}件)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative ml-4">
+                        <button @click.stop="showHistory = !showHistory"
+                            class="text-xs text-slate-600 font-bold hover:text-blue-600 flex items-center gap-1"><i
+                                class="fa-solid fa-clock-rotate-left"></i> 処理履歴 ({{ historyStack.length }})</button>
+                        <transition name="fade">
+                            <div v-if="showHistory"
+                                class="absolute right-0 top-full mt-2 w-64 bg-white rounded shadow-xl border border-gray-200 p-2 z-40">
+                                <div v-if="historyStack.length === 0" class="text-xs text-gray-400 p-2 text-center">
+                                    履歴はありません</div>
+                                <ul v-else class="space-y-1">
+                                    <li v-for="(item, i) in historyStack" :key="i"
+                                        class="text-xs p-2 hover:bg-slate-50 cursor-pointer rounded border-b border-gray-50 last:border-0">
+                                        <div class="font-bold text-blue-600">{{ item.label }}</div>
+                                        <div class="truncate text-gray-500">{{ item.vendor }}</div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </transition>
+                    </div>
+                </div>
+
+                <div v-if="isLocked"
+                    class="bg-yellow-100 border-b border-yellow-200 text-yellow-800 text-xs font-bold py-1 px-4 flex items-center justify-center animate-pulse">
+                    <i class="fa-solid fa-user-pen mr-2"></i> 👨‍💼 他のユーザー (鈴木 一郎) が現在この取引を編集中です
+                </div>
+
+                <div class="flex-1 flex overflow-hidden">
+                    <div
+                        class="w-3/5 flex flex-col bg-white border-r border-slate-300 overflow-y-auto p-4 pb-2 relative">
+
+                        <div class="space-y-1 mb-3">
+                            <div v-if="currentClient.action === 'remand'"
+                                class="bg-red-50 text-red-800 text-xs px-3 py-2 rounded border border-red-200 flex items-center font-bold shadow-sm animate-pulse mb-2">
+                                <i class="fa-solid fa-triangle-exclamation mr-2 text-red-600 text-lg"></i>
+                                <div>⚠ この仕訳は承認者により差し戻されました。内容を確認し、修正してください。</div>
+                            </div>
+
+                            <div v-if="currentTransaction.hasDuplicate"
+                                class="bg-red-50 text-red-800 text-xs px-3 py-1.5 rounded border border-red-200 flex items-center font-bold shadow-sm animate-bounce">
+                                <i class="fa-solid fa-triangle-exclamation mr-2 text-red-600"></i>
+                                <div><span class="block text-red-700">重複の可能性！ 同一バッチ内(今回分)に類似データがあります</span></div>
+                            </div>
+                            <div v-if="currentTransaction.isExcluded"
+                                class="bg-gray-100 text-gray-700 text-xs px-3 py-1.5 rounded border border-gray-300 flex items-center font-bold">
+                                <i class="fa-solid fa-ban mr-2 text-gray-500"></i>計算期間対象外としてマークされています（処理対象から除外）</div>
+                            <div v-if="currentTransaction.mode === 'new'"
+                                class="bg-purple-100 text-purple-900 text-xs px-3 py-1.5 rounded border border-purple-200 flex items-center font-bold">
+                                <i
+                                    class="fa-solid fa-circle-exclamation mr-2 text-purple-600"></i>新規取引です。科目が正しいか必ず確認してください。
+                            </div>
+                            <div v-if="currentTransaction.mode === 'history'"
+                                class="bg-blue-100 text-blue-900 text-xs px-3 py-1.5 rounded border border-blue-200 flex items-center font-bold">
+                                <i class="fa-solid fa-circle-info mr-2 text-blue-600"></i>過去に取引実績があります<span
+                                    v-if="currentTransaction.history">（{{ currentTransaction.history[0].count
+                                    }}回）</span>。</div>
+                        </div>
+
+                        <div
+                            class="bg-slate-100 p-2 rounded border border-slate-200 mb-3 flex items-center gap-3 text-[10px]">
+                            <span class="font-bold text-gray-500">デバッグ操作:</span>
+                            <button @click="switchMode('history')"
+                                :class="['px-2 py-1 rounded transition', currentTransaction.mode === 'history' ? 'bg-blue-600 text-white font-bold' : 'bg-white border text-gray-600']">実績あり</button>
+                            <button @click="switchMode('new')"
+                                :class="['px-2 py-1 rounded transition', currentTransaction.mode === 'new' ? 'bg-purple-600 text-white font-bold' : 'bg-white border text-gray-600']">初取引</button>
+                            <div class="h-4 w-px bg-gray-300 mx-1"></div>
+                            <label
+                                class="flex items-center gap-1 cursor-pointer hover:bg-white px-1 rounded transition">
+                                <input type="checkbox" v-model="currentTransaction.hasDuplicate" class="accent-red-500">
+                                重複
+                            </label>
+                            <label
+                                class="flex items-center gap-1 cursor-pointer hover:bg-white px-1 rounded transition">
+                                <input type="checkbox" v-model="currentTransaction.isExcluded" class="accent-gray-500">
+                                計算期間対象外
+                            </label>
+                            <div class="h-4 w-px bg-gray-300 mx-1"></div>
+                            <label
+                                class="flex items-center gap-1 cursor-pointer hover:bg-white px-1 rounded transition">
+                                <input type="checkbox" v-model="isLocked" class="accent-yellow-500"> 他人編集(テスト)
+                            </label>
+                        </div>
+
+                        <div class="bg-white border border-slate-300 rounded-lg p-4 shadow-sm space-y-3">
+                            <div><label class="block text-[10px] text-gray-500 font-bold mb-1">摘要 <span
+                                        class="font-normal">(全行共通)</span></label><input type="text"
+                                    v-model="form.summary"
+                                    class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-sm text-slate-800 focus:bg-white transition">
+                            </div>
+                            <div class="grid grid-cols-12 gap-3">
+                                <div class="col-span-4"><label
+                                        class="block text-[10px] text-gray-500 font-bold mb-1">取引日付</label><input
+                                        type="date" v-model="form.date"
+                                        class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-sm font-mono">
+                                </div>
+                                <div class="col-span-4"><label
+                                        class="block text-[10px] text-gray-500 font-bold mb-1">合計金額 (税込)</label><input
+                                        type="text" :value="totalAmount" disabled
+                                        class="w-full bg-gray-100 border border-slate-300 rounded px-2 py-1.5 text-sm font-mono text-right text-gray-600">
+                                </div>
+                                <div class="col-span-4 flex items-end justify-end pb-1">
+                                    <div v-if="isBalanced"
+                                        class="text-xs font-bold text-green-600 flex items-center bg-green-50 px-2 py-1 rounded border border-green-200">
+                                        <i class="fa-solid fa-check-circle mr-1"></i> 貸借一致</div>
+                                    <div v-else
+                                        class="text-xs font-bold text-red-600 flex items-center bg-red-50 px-2 py-1 rounded border border-red-200 animate-pulse">
+                                        <i class="fa-solid fa-scale-unbalanced mr-1"></i> 差額: {{ balanceDiff }}</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                                <div class="relative">
+                                    <div class="text-xs font-bold text-blue-600 flex items-center mb-2"><i
+                                            class="fa-solid fa-arrow-right-to-bracket mr-1"></i> 借方 (費用)</div>
+                                    <div v-for="(row, idx) in form.debit" :key="idx"
+                                        class="mb-3 relative group bg-blue-50/30 p-2 rounded border border-blue-100">
+                                        <button v-if="form.debit.length > 1" @click="removeRow('debit', idx)"
+                                            class="absolute -right-2 -top-2 bg-white rounded-full border border-gray-200 p-1 text-gray-400 hover:text-red-500 shadow-sm z-10 w-5 h-5 flex items-center justify-center text-[10px]"><i
+                                                class="fa-solid fa-trash"></i></button>
+                                        <label class="block text-[10px] text-gray-500 mb-0.5">勘定科目</label><input
+                                            type="text" v-model="row.acct"
+                                            class="w-full border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-800 mb-2"
+                                            placeholder="科目">
+                                        <label class="block text-[10px] text-gray-500 mb-0.5">補助科目</label><input
+                                            type="text" v-model="row.sub"
+                                            class="w-full border border-slate-300 rounded px-2 py-1 text-xs mb-2"
+                                            placeholder="(指定なし)">
+                                        <label class="block text-[10px] text-gray-500 mb-0.5">税区分</label>
+                                        <select v-model="row.tax"
+                                            class="w-full border border-slate-300 rounded px-1 py-1 text-[10px] bg-white mb-2">
+                                            <option value="tax_10">課対仕入10%</option>
+                                            <option value="tax_8">軽減8%</option>
+                                            <option value="tax_none">対象外</option>
+                                        </select>
+                                        <label class="block text-[10px] text-gray-500 mb-0.5">金額</label>
+                                        <div class="relative"><input type="number" v-model.number="row.amount"
+                                                class="w-full border border-slate-300 rounded px-2 py-1 text-sm font-mono text-right bg-white">
+                                            <div v-if="row.tax !== 'tax_none'"
+                                                class="text-[9px] text-gray-400 text-right mt-1">(内税 {{
+                                                Math.floor(row.amount * 10/110).toLocaleString() }})</div>
+                                        </div>
+                                    </div>
+                                    <button @click="addRow('debit')"
+                                        class="text-[10px] text-blue-500 hover:text-blue-700 flex items-center font-bold mt-1"><i
+                                            class="fa-solid fa-plus-circle mr-1"></i> 行を追加</button>
+                                </div>
+                                <div class="relative">
+                                    <div class="text-xs font-bold text-green-600 flex items-center justify-end mb-2">貸方
+                                        (決済) <i class="fa-solid fa-arrow-right-from-bracket ml-1"></i></div>
+                                    <div v-for="(row, idx) in form.credit" :key="idx"
+                                        class="mb-3 relative group bg-green-50/30 p-2 rounded border border-green-100">
+                                        <button v-if="form.credit.length > 1" @click="removeRow('credit', idx)"
+                                            class="absolute -left-2 -top-2 bg-white rounded-full border border-gray-200 p-1 text-gray-400 hover:text-red-500 shadow-sm z-10 w-5 h-5 flex items-center justify-center text-[10px]"><i
+                                                class="fa-solid fa-trash"></i></button>
+                                        <label
+                                            class="block text-[10px] text-gray-500 mb-0.5 text-right">勘定科目</label><input
+                                            type="text" v-model="row.acct"
+                                            class="w-full border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-800 mb-2 text-right"
+                                            placeholder="科目">
+                                        <label
+                                            class="block text-[10px] text-gray-500 mb-0.5 text-right">補助科目</label><input
+                                            type="text" v-model="row.sub"
+                                            class="w-full border border-slate-300 rounded px-2 py-1 text-xs mb-2 text-right"
+                                            placeholder="(指定なし)">
+                                        <label class="block text-[10px] text-gray-500 mb-0.5 text-right">税区分</label>
+                                        <select v-model="row.tax"
+                                            class="w-full border border-slate-300 rounded px-1 py-1 text-[10px] bg-white mb-2">
+                                            <option value="tax_none">対象外</option>
+                                            <option value="tax_10">課対仕入10%</option>
+                                        </select>
+                                        <label
+                                            class="block text-[10px] text-gray-500 mb-0.5 text-right">金額</label><input
+                                            type="number" v-model.number="row.amount"
+                                            class="w-full border border-slate-300 rounded px-2 py-1 text-sm font-mono text-right bg-white">
+                                    </div>
+                                    <button @click="addRow('credit')"
+                                        class="text-[10px] text-green-500 hover:text-green-700 flex items-center font-bold justify-end w-full mt-1">行を追加
+                                        <i class="fa-solid fa-plus-circle ml-1"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex-1">
+                            <div v-if="currentTransaction.mode === 'history'"
+                                class="bg-blue-50 border border-blue-200 rounded-lg p-3 animate-fade-in">
+                                <div class="flex justify-between items-center mb-2">
+                                    <div class="text-xs font-bold text-blue-800"><i
+                                            class="fa-solid fa-database mr-1"></i> 過去の実績 (クリックで反映)</div>
+                                    <div
+                                        class="text-[9px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded border border-blue-200">
+                                        前回: 2024/10/20</div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button v-for="(h, i) in currentTransaction.history" :key="i"
+                                        @click="applyTemplate(h)"
+                                        class="bg-white hover:bg-blue-100 border border-blue-200 p-2 rounded shadow-sm text-left relative overflow-hidden transition group">
+                                        <div
+                                            class="absolute top-0 right-0 bg-blue-600 text-white text-[8px] px-1 rounded-bl font-bold">
+                                            {{ i+1 }}位</div>
+                                        <div class="flex justify-between mb-1"><span
+                                                class="font-bold text-blue-700 text-xs">{{ h.debit_acct }}</span><span
+                                                class="text-[9px] bg-blue-100 text-blue-600 px-1 rounded">{{ h.count
+                                                }}回</span></div>
+                                        <div class="text-[9px] text-gray-500 group-hover:text-blue-600">貸: {{
+                                            h.credit_acct }}</div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div v-else class="bg-purple-50 border border-purple-200 rounded-lg p-3 animate-fade-in">
+                                <div class="text-xs font-bold text-purple-800 mb-2"><i
+                                        class="fa-solid fa-robot mr-1"></i> AI推論 (Reasoning)</div>
+                                <div class="text-[10px] text-purple-900 mb-2 leading-relaxed bg-white/50 p-2 rounded">{{
+                                    currentTransaction.ai_reason }}</div>
+                                <button @click="applyTemplate(currentTransaction.ai_proposal)"
+                                    class="w-full bg-purple-600 hover:bg-purple-700 text-white p-1.5 rounded text-xs font-bold shadow-sm mb-2 transition">AI提案を採用</button>
+                            </div>
+                        </div>
+
+                        <div
+                            class="p-4 bg-white border-t border-slate-300 sticky bottom-0 z-20 shadow-[0_-5px_10px_rgba(0,0,0,0.05)] mt-auto">
+
+                            <div class="flex gap-3 text-sm h-12">
+                                <button v-if="currentClient.action === 'approve'" @click="toggleDecision('remand')"
+                                    :class="['flex-1 rounded-lg font-bold transition shadow-sm flex items-center justify-center text-lg border', currentDecision === 'remand' ? 'bg-yellow-500 text-white border-yellow-600 ring-2 ring-yellow-300 opacity-100' : (currentDecision ? 'bg-yellow-400 text-yellow-900 opacity-30 border-yellow-500 hover:opacity-80' : 'bg-yellow-400 hover:bg-yellow-500 text-yellow-900 border-yellow-500 opacity-90')]">
+                                    <i v-if="currentDecision === 'remand'" class="fa-solid fa-check mr-2"></i>
+                                    <i v-else class="fa-solid fa-rotate-left mr-2"></i> 差戻し
+                                </button>
+                                <button v-else @click="toggleDecision('unknown')"
+                                    :class="['flex-1 rounded-lg font-bold transition shadow-sm flex items-center justify-center text-lg border', currentDecision === 'unknown' ? 'bg-yellow-500 text-white border-yellow-600 ring-2 ring-yellow-300 opacity-100' : (currentDecision ? 'bg-yellow-400 text-yellow-900 opacity-30 border-yellow-500 hover:opacity-80' : 'bg-yellow-400 hover:bg-yellow-500 text-yellow-900 border-yellow-500 opacity-90')]">
+                                    <i v-if="currentDecision === 'unknown'" class="fa-solid fa-check mr-2"></i>
+                                    <i v-else class="fa-solid fa-circle-question mr-2"></i> 不明仕訳あり
+                                </button>
+
+                                <button @click="toggleDecision('exclude')"
+                                    :class="['flex-1 rounded-lg font-bold transition shadow-sm flex items-center justify-center text-lg border', currentDecision === 'exclude' ? 'bg-red-700 text-white border-red-800 ring-2 ring-red-400 opacity-100' : (currentDecision ? 'bg-red-600 text-white opacity-30 border-red-700 hover:opacity-80' : 'bg-red-600 hover:bg-red-700 text-white border-red-700 opacity-90')]">
+                                    <i v-if="currentDecision === 'exclude'" class="fa-solid fa-check mr-2"></i>
+                                    <i v-else class="fa-solid fa-ban mr-2"></i> 仕訳から除外
+                                </button>
+
+                                <button v-if="currentClient.action === 'approve'" @click="toggleDecision('csv')"
+                                    :disabled="!isBalanced && currentTransaction.status !== 'excluded'"
+                                    :class="['flex-1 rounded-lg font-bold transition shadow-sm flex items-center justify-center text-lg border', (isBalanced || currentTransaction.status === 'excluded') ? (currentDecision === 'csv' ? 'bg-blue-800 text-white border-blue-900 ring-2 ring-blue-400 opacity-100' : (currentDecision ? 'bg-blue-600 text-white opacity-30 border-blue-700 hover:opacity-80' : 'bg-blue-600 hover:bg-blue-700 text-white opacity-90')) : 'bg-gray-300 cursor-not-allowed border-gray-300']">
+                                    <i v-if="currentDecision === 'csv'" class="fa-solid fa-check mr-2"></i>
+                                    <i v-else class="fa-solid fa-file-csv mr-2"></i> 仕訳CSV化
+                                </button>
+                                <button v-else @click="toggleDecision('confirmed')" :disabled="!isBalanced"
+                                    :class="['flex-1 rounded-lg font-bold transition shadow-sm flex items-center justify-center text-lg border', isBalanced ? (currentDecision === 'confirmed' ? 'bg-blue-800 text-white border-blue-900 ring-2 ring-blue-400 opacity-100' : (currentDecision ? 'bg-blue-600 text-white opacity-30 border-blue-700 hover:opacity-80' : 'bg-blue-600 hover:bg-blue-700 text-white opacity-90')) : 'bg-gray-300 cursor-not-allowed border-gray-300']">
+                                    <i v-if="currentDecision === 'confirmed'" class="fa-solid fa-check mr-2"></i>
+                                    <i v-else class="fa-solid fa-check-circle mr-2"></i> 仕訳確定済み
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div
+                        class="w-2/5 bg-slate-800 relative overflow-hidden border-l border-slate-600 select-none flex items-center justify-center">
+                        <div
+                            class="absolute top-0 left-0 right-0 h-10 bg-black/50 backdrop-blur-sm z-20 flex items-center justify-center gap-2 px-2 shadow-sm">
+                            <span
+                                class="text-[11px] text-slate-800 font-bold bg-white/90 px-2 py-1 rounded shadow-sm border border-white">{{
+                                currentClient.settings.fiscalMonth }}月決算</span>
+                            <span
+                                class="text-[11px] text-slate-800 font-bold bg-white/90 px-2 py-1 rounded shadow-sm border border-white">{{
+                                currentClient.settings.software }}</span>
+                            <span
+                                class="text-[11px] text-slate-800 font-bold bg-white/90 px-2 py-1 rounded shadow-sm border border-white">{{
+                                currentClient.settings.taxMethod === 'inclusive' ? '税込' : '税抜' }}</span>
+                            <span
+                                class="text-[11px] text-slate-800 font-bold bg-white/90 px-2 py-1 rounded shadow-sm border border-white">{{
+                                currentClient.settings.calcMethod }}</span>
+                            <span
+                                class="text-[11px] text-slate-800 font-bold bg-white/90 px-2 py-1 rounded shadow-sm border border-white">{{
+                                currentClient.settings.taxType }}</span>
+                        </div>
+
+                        <div class="absolute top-12 left-4 z-20 flex flex-col gap-1">
+                            <button @click="zoomIn"
+                                class="bg-black/50 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-black/70 transition"><i
+                                    class="fa-solid fa-plus"></i></button>
+                            <button @click="zoomOut"
+                                class="bg-black/50 text-white w-8 h-8 rounded flex items-center justify-center hover:bg-black/70 transition"><i
+                                    class="fa-solid fa-minus"></i></button>
+                            <div
+                                class="bg-black/50 text-white text-[10px] px-1 py-0.5 rounded text-center font-mono mt-1">
+                                {{ Math.round(scale * 100) }}%</div>
+                        </div>
+
+                        <div class="shortcut-icon group">
+                            <i class="fa-regular fa-keyboard"></i>
+                            <div class="shortcut-popup">
+                                <div class="font-bold mb-2 border-b border-gray-600 pb-1">キーボードショートカット</div>
+                                <div class="mb-1"><span class="key-badge">Enter</span> 確定 / CSV化</div>
+                                <div class="mb-1"><span class="key-badge">Del</span> 仕訳から除外</div>
+                                <div class="mb-1"><span class="key-badge">R</span> 差戻し / 不明</div>
+                                <div class="mb-1"><span class="key-badge">←</span> <span class="key-badge">→</span>
+                                    前後へ移動</div>
+                                <div><span class="key-badge">Wheel</span> 画像拡大縮小</div>
+                            </div>
+                        </div>
+
+                        <div class="w-full h-full cursor-grab active:cursor-grabbing flex items-center justify-center overflow-hidden"
+                            @mousedown="startDrag" @mousemove="onDrag" @mouseup="stopDrag" @mouseleave="stopDrag"
+                            @wheel.prevent="onWheel">
+                            <div :style="{ transform: `translate(${posX}px, ${posY}px) scale(${scale})`, transition: isDragging ? 'none' : 'transform 0.1s' }"
+                                class="bg-white shadow-2xl p-8 text-xs w-[400px] h-[500px] origin-center">
+                                <div class="text-center font-bold text-xl mb-6 border-b-2 border-black pb-2">{{
+                                    currentTransaction.imageTitle }}</div>
+                                <div class="flex justify-between mb-6">
+                                    <div class="text-sm">様</div>
+                                    <div class="text-right">
+                                        <div class="font-bold">{{ currentTransaction.vendor }}</div>
+                                        <div class="text-[10px] text-gray-500">T-XXXX-XXXX-XXXX</div>
+                                    </div>
+                                </div>
+                                <div class="text-right font-bold text-xl mb-6 bg-slate-100 p-2">¥{{
+                                    currentTransaction.amount.toLocaleString() }}-</div>
+                                <table class="w-full border collapse mb-4">
+                                    <tr class="bg-gray-100">
+                                        <th class="border p-2 w-2/3">品名</th>
+                                        <th class="border p-2">金額</th>
+                                    </tr>
+                                    <tr>
+                                        <td class="border p-2">{{ currentTransaction.item }}</td>
+                                        <td class="border p-2 text-right">{{ Math.floor(currentTransaction.amount /
+                                            1.1).toLocaleString() }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="border p-2">消費税 (10%)</td>
+                                        <td class="border p-2 text-right">{{ Math.floor(currentTransaction.amount * 0.1
+                                            / 1.1).toLocaleString() }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="screen.startsWith('ADMIN')" class="h-full flex flex-col bg-slate-800 text-white overflow-hidden">
+                <div class="p-4 bg-slate-900 border-b border-slate-700 flex justify-between items-center shrink-0">
+                    <h2 class="font-bold text-lg flex items-center gap-2">
+                        <i class="fa-solid fa-screwdriver-wrench text-blue-400"></i> 管理者メニュー
+                        <span class="text-xs bg-slate-700 px-2 py-0.5 rounded text-gray-400">Ver.10.17</span>
+                    </h2>
+                    <div class="flex items-center gap-4">
+                        <button v-if="screen === 'ADMIN'" @click="activateKillSwitch"
+                            :class="['text-xs font-bold px-4 py-2 rounded-full transition flex items-center gap-2 border', isEmergencyStopped ? 'bg-red-600 text-white border-red-700 kill-switch-active' : 'bg-slate-700 text-red-400 border-slate-600 hover:bg-slate-600']">
+                            <i class="fa-solid fa-power-off"></i> {{ isEmergencyStopped ? '緊急停止中 (解除)' : '緊急停止' }}
+                        </button>
+
+                        <button v-if="screen !== 'ADMIN'" @click="screen='ADMIN'"
+                            class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition"><i
+                                class="fa-solid fa-arrow-left mr-1"></i> メニューへ戻る</button>
+                    </div>
+                </div>
+
+                <div v-if="screen === 'ADMIN'" class="flex-1 overflow-y-auto p-6 bg-slate-50 text-slate-700">
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-sm text-gray-500">コスト & 品質</h3>
+                                <i class="fa-solid fa-coins text-yellow-500 bg-yellow-50 p-2 rounded-full"></i>
+                            </div>
+                            <div class="space-y-2">
+                                <div>
+                                    <div class="text-xs text-gray-400">登録顧問先数</div>
+                                    <div class="text-xl font-bold">{{ adminData.kpi.registrations }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-400">今月のAPI予測</div>
+                                    <div class="text-xl font-bold font-mono">{{ adminData.kpi.apiPrediction }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-400">AI修正率</div>
+                                    <div class="flex items-center gap-2">
+                                        <div class="text-xl font-bold text-blue-600">{{ adminData.kpi.aiCorrectionRate
+                                            }}</div>
+                                        <div class="text-xs text-green-500 font-bold"><i
+                                                class="fa-solid fa-arrow-trend-down"></i> 前月比 ↘️</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex flex-col">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-sm text-gray-500">生産性 (年間仕訳数)</h3>
+                                <i class="fa-solid fa-bolt text-blue-500 bg-blue-50 p-2 rounded-full"></i>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-between">
+                                <div class="text-2xl font-bold mb-2">{{ adminData.kpi.annualJournals }} <span
+                                        class="text-sm font-normal text-gray-400">件</span></div>
+                                <div class="grid-pattern w-full">
+                                    <div v-for="(val, i) in adminData.kpi.monthlyTrend" :key="i"
+                                        :class="['grid-cell relative group', getHeatmapColor(val)]"
+                                        :title="i+1 + '月: ' + val + '件'"></div>
+                                </div>
+                                <div class="flex justify-between text-[9px] text-gray-400 mt-1">
+                                    <span>Jan</span><span>Dec</span></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-sm text-gray-500">ファイル処理ファネル</h3>
+                                <i class="fa-solid fa-filter text-purple-500 bg-purple-50 p-2 rounded-full"></i>
+                            </div>
+                            <div class="flex flex-col gap-2 mt-4">
+                                <div class="flex justify-between text-xs font-bold"><span>受信</span><span>{{
+                                        adminData.kpi.funnel.received }}</span></div>
+                                <div class="h-2 bg-gray-100 rounded overflow-hidden">
+                                    <div class="h-full bg-blue-400 w-full"></div>
+                                </div>
+                                <div class="flex justify-center"><i
+                                        class="fa-solid fa-arrow-down text-gray-300 text-xs"></i></div>
+                                <div class="flex justify-between text-xs font-bold"><span>CSV化</span><span>{{
+                                        adminData.kpi.funnel.csv }}</span></div>
+                                <div class="h-2 bg-gray-100 rounded overflow-hidden">
+                                    <div class="h-full bg-green-500 w-[88%]"></div>
+                                </div>
+                                <div class="flex justify-center"><i
+                                        class="fa-solid fa-arrow-down text-gray-300 text-xs"></i></div>
+                                <div class="flex justify-between text-xs font-bold text-gray-400">
+                                    <span>除外</span><span>{{ adminData.kpi.funnel.excluded }}</span></div>
+                                <div class="h-2 bg-gray-100 rounded overflow-hidden">
+                                    <div class="h-full bg-gray-400 w-[12%]"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+                        <div class="p-3 bg-slate-50 border-b border-gray-200 font-bold text-sm text-slate-700"><i
+                                class="fa-solid fa-user-clock text-orange-500 mr-2"></i> 業務滞留・担当者分析</div>
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 text-gray-500 font-bold uppercase">
+                                <tr>
+                                    <th class="p-3">担当者名</th>
+                                    <th class="p-3 text-center">1次仕訳</th>
+                                    <th class="p-3 text-center">差戻し</th>
+                                    <th class="p-3 text-center">承認</th>
+                                    <th class="p-3 text-right">合計滞留</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <tr v-for="staff in adminData.staff" :key="staff.name">
+                                    <td class="p-3 font-bold">{{ staff.name }}</td>
+                                    <td class="p-3 text-center"><span
+                                            :class="{'text-red-600 font-bold': staff.firstDraft_curr > staff.firstDraft_avg}">{{
+                                            staff.firstDraft_curr }}</span> <span class="text-gray-400">/ {{
+                                            staff.firstDraft_avg }}</span><i
+                                            v-if="staff.firstDraft_curr > staff.firstDraft_avg"
+                                            class="fa-solid fa-triangle-exclamation text-red-500 ml-1"></i></td>
+                                    <td class="p-3 text-center"><span
+                                            :class="{'text-red-600 font-bold': staff.remand_curr > staff.remand_avg}">{{
+                                            staff.remand_curr }}</span> <span class="text-gray-400">/ {{
+                                            staff.remand_avg }}</span><i v-if="staff.remand_curr > staff.remand_avg"
+                                            class="fa-solid fa-triangle-exclamation text-red-500 ml-1"></i></td>
+                                    <td class="p-3 text-center">{{ staff.approve_curr }} <span class="text-gray-400">/
+                                            {{ staff.approve_avg }}</span></td>
+                                    <td class="p-3 text-right font-bold">{{ staff.totalBacklog }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+                        <div
+                            class="p-3 bg-slate-50 border-b border-gray-200 font-bold text-sm text-slate-700 flex justify-between">
+                            <div><i class="fa-solid fa-chart-pie text-indigo-500 mr-2"></i> 顧問先別コスト・効率分析</div>
+                            <div class="text-xs text-gray-400">ヘッダーをクリックしてソート</div>
+                        </div>
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 text-gray-500 font-bold uppercase cursor-pointer select-none">
+                                <tr>
+                                    <th class="p-3 hover:bg-slate-200 transition" @click="sortClients('id')">ID/会社名 ▼
+                                    </th>
+                                    <th class="p-3 text-right hover:bg-slate-200 transition"
+                                        @click="sortClients('journals')">累計仕訳数 ▼</th>
+                                    <th class="p-3 text-right hover:bg-slate-200 transition"
+                                        @click="sortClients('apiCost')">累計API費用 ▼</th>
+                                    <th class="p-3 text-right bg-indigo-50 text-indigo-700 border-b-2 border-indigo-200 hover:bg-indigo-100 transition"
+                                        @click="sortClients('unitCost')">平均単価 (Cost/J) ▼</th>
+                                    <th class="p-3 text-right hover:bg-slate-200 transition"
+                                        @click="sortClients('docLag')">資料滞留 ▼</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <tr v-for="client in sortedAdminClients" :key="client.id" class="hover:bg-slate-50">
+                                    <td class="p-3"><span class="font-mono bg-slate-100 px-1 rounded mr-2">{{ client.id
+                                            }}</span><span class="font-bold">{{ client.name }}</span></td>
+                                    <td class="p-3 text-right font-mono">{{ client.journals.toLocaleString() }}</td>
+                                    <td class="p-3 text-right font-mono">¥{{ client.apiCost.toLocaleString() }}</td>
+                                    <td class="p-3 text-right font-mono font-bold text-indigo-700 bg-indigo-50/30">¥{{
+                                        client.unitCost.toFixed(2) }}</td>
+                                    <td class="p-3 text-right"><span
+                                            :class="{'text-red-600 font-bold bg-red-50 px-1 rounded': parseFloat(client.docLag) >= 10}">{{
+                                            client.docLag }}</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="font-bold text-sm text-slate-700 mb-2">マスタ設定</h3>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button @click="screen='ADMIN_MASTER_PROP'"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded shadow transition flex flex-col items-center justify-center gap-2"><i
+                                        class="fa-solid fa-file-csv text-xl"></i><span
+                                        class="text-xs font-bold">独自マスタ登録</span></button>
+                                <button @click="screen='ADMIN_MASTER_RULE'"
+                                    class="bg-yellow-500 hover:bg-yellow-600 text-white p-4 rounded shadow transition flex flex-col items-center justify-center gap-2"><i
+                                        class="fa-solid fa-scale-balanced text-xl"></i><span
+                                        class="text-xs font-bold">統一ルール編集</span></button>
+                                <button @click="screen='ADMIN_PROMPT'"
+                                    class="bg-slate-800 hover:bg-slate-900 text-white p-4 rounded shadow transition flex flex-col items-center justify-center gap-2"><i
+                                        class="fa-solid fa-robot text-xl"></i><span
+                                        class="text-xs font-bold">AIプロンプト</span></button>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded border border-gray-200 overflow-hidden flex flex-col h-40">
+                            <div class="flex border-b bg-slate-100">
+                                <button @click="logTab='error'"
+                                    :class="['px-4 py-2 text-xs font-bold flex-1', logTab==='error'?'bg-white text-red-600 border-t-2 border-t-red-500':'text-gray-500']">🔴
+                                    システムエラー</button>
+                                <button @click="logTab='audit'"
+                                    :class="['px-4 py-2 text-xs font-bold flex-1', logTab==='audit'?'bg-white text-blue-600 border-t-2 border-t-blue-500':'text-gray-500']">🛡️
+                                    操作ログ/監査</button>
+                            </div>
+                            <div class="flex-1 overflow-y-auto p-0">
+                                <table v-if="logTab==='error'" class="w-full text-left text-xs">
+                                    <tbody class="divide-y">
+                                        <tr class="hover:bg-red-50">
+                                            <td class="p-2 text-gray-500">14:00</td>
+                                            <td class="p-2 text-red-600 font-bold">CRITICAL</td>
+                                            <td class="p-2">PDF Password Protected</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <table v-if="logTab==='audit'" class="w-full text-left text-xs">
+                                    <tbody class="divide-y">
+                                        <tr class="hover:bg-blue-50">
+                                            <td class="p-2 text-gray-500">14:30</td>
+                                            <td class="p-2">鈴木</td>
+                                            <td class="p-2">AMT 仕訳確定 (42件)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="screen === 'ADMIN_SETTINGS'" class="flex-1 overflow-y-auto p-6 bg-slate-800">
+                    <div class="max-w-4xl mx-auto">
+                        <div class="flex items-center gap-4 mb-6 pb-4 border-b border-slate-700">
+                            <div
+                                class="bg-blue-600 text-white w-12 h-12 rounded flex items-center justify-center font-bold text-xl">
+                                {{ adminEditingClient.code }}</div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-white">{{ adminEditingClient.name }}</h2>
+                                <p class="text-gray-400 text-sm">個別詳細設定・ドライブ連携</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-700 border border-slate-600 rounded p-4 mb-8">
+                            <h4 class="font-bold text-white mb-3 text-sm"><i
+                                    class="fa-solid fa-building mr-2"></i>基本情報設定</h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-xs text-gray-400 mb-1">設立(開業)年月日</label><input type="date"
+                                        v-model="adminEditingClient.establishmentDate"
+                                        class="w-full bg-slate-800 border border-slate-500 rounded px-2 py-1.5 text-sm text-white">
+                                </div>
+                            </div>
+                        </div>
+
+                        <h3 class="font-bold text-lg mb-4 text-white"><i
+                                class="fa-brands fa-google-drive mr-2 text-green-400"></i>Google Drive 連携</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                            <div
+                                class="bg-slate-700 border border-slate-600 rounded p-4 flex flex-col hover:border-blue-500 transition cursor-pointer group">
+                                <div class="flex justify-between items-start mb-2"><i
+                                        class="fa-solid fa-folder-open text-3xl text-blue-400 group-hover:text-blue-300"></i><i
+                                        class="fa-solid fa-arrow-up-right-from-square text-gray-500 group-hover:text-white"></i>
+                                </div>
+                                <h4 class="font-bold text-white mb-1">顧問先保管 Drive</h4>
+                                <p class="text-xs text-gray-400 mb-3">証憑原本のアップロード先</p>
+                                <div
+                                    class="mt-auto text-xs bg-slate-800 p-1.5 rounded text-blue-400 truncate font-mono">
+                                    drive.google.com/fo...</div>
+                            </div>
+                            <div
+                                class="bg-slate-700 border border-slate-600 rounded p-4 flex flex-col hover:border-green-500 transition cursor-pointer group">
+                                <div class="flex justify-between items-start mb-2"><i
+                                        class="fa-solid fa-file-export text-3xl text-green-400 group-hover:text-green-300"></i><i
+                                        class="fa-solid fa-arrow-up-right-from-square text-gray-500 group-hover:text-white"></i>
+                                </div>
+                                <h4 class="font-bold text-white mb-1">仕訳出力 Drive</h4>
+                                <p class="text-xs text-gray-400 mb-3">CSV出力ファイルの保存先</p>
+                                <div
+                                    class="mt-auto text-xs bg-slate-800 p-1.5 rounded text-green-400 truncate font-mono">
+                                    drive.google.com/fo...</div>
+                            </div>
+                            <div
+                                class="bg-slate-700 border border-slate-600 rounded p-4 flex flex-col hover:border-gray-400 transition cursor-pointer group">
+                                <div class="flex justify-between items-start mb-2"><i
+                                        class="fa-solid fa-trash-can text-3xl text-gray-400 group-hover:text-gray-300"></i><i
+                                        class="fa-solid fa-arrow-up-right-from-square text-gray-500 group-hover:text-white"></i>
+                                </div>
+                                <h4 class="font-bold text-white mb-1">仕訳対象外 Drive</h4>
+                                <p class="text-xs text-gray-400 mb-3">除外データのアーカイブ先</p>
+                                <div
+                                    class="mt-auto text-xs bg-slate-800 p-1.5 rounded text-gray-400 truncate font-mono">
+                                    drive.google.com/fo...</div>
+                            </div>
+                        </div>
+
+                        <h3 class="font-bold text-lg mb-4 text-white"><i
+                                class="fa-solid fa-ban mr-2 text-red-400"></i>インボイス登録なし取引先</h3>
+                        <div class="bg-slate-700 p-6 rounded border border-slate-600 mb-8">
+                            <div class="space-y-3">
+                                <div v-for="(vendor, index) in adminEditingClient.nonInvoiceList" :key="index"
+                                    class="flex gap-2"><input type="text"
+                                        v-model="adminEditingClient.nonInvoiceList[index]"
+                                        class="flex-1 bg-slate-800 border border-slate-500 rounded px-3 py-2 text-sm text-white"><button
+                                        @click="removeVendorRow(index)"
+                                        class="text-red-300 border border-red-800 rounded px-3"><i
+                                            class="fa-solid fa-trash"></i></button></div>
+                            </div>
+                            <button @click="addVendorRow"
+                                class="mt-4 w-full py-2 border-2 border-dashed border-slate-500 text-slate-400 hover:text-white rounded text-sm"><i
+                                    class="fa-solid fa-plus mr-1"></i> 行を追加</button>
+                        </div>
+                        <div class="flex justify-end gap-3"><button @click="screen='ADMIN'"
+                                class="px-6 py-2 rounded text-sm font-bold text-gray-300 hover:bg-slate-700">キャンセル</button><button
+                                @click="showToast('設定を保存しました', 'success'); screen='ADMIN'"
+                                class="px-6 py-2 rounded text-sm font-bold bg-blue-600 text-white hover:bg-blue-500 shadow-lg">保存する</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="screen === 'ADMIN_PROMPT'" class="p-6">
+                    <h3 class="font-bold mb-4 text-yellow-400"><i class="fa-solid fa-lock mr-2"></i>閲覧専用: AIプロンプト定義</h3>
+                    <div
+                        class="bg-slate-900 p-4 rounded font-mono text-xs text-gray-300 h-96 overflow-auto border border-slate-600">
+                        <pre>const SYSTEM_PROMPT = `You are an expert accountant...`;</pre>
+                    </div>
+                </div>
+            </div>
+
+            <transition name="fade">
+                <div v-if="showRescue" class="modal-mask">
+                    <div class="bg-white rounded-lg w-full max-w-2xl shadow-xl overflow-hidden animate-fade-in">
+                        <div class="bg-red-600 text-white p-3 font-bold flex justify-between items-center"><span><i
+                                    class="fa-solid fa-triangle-exclamation mr-2"></i> エラー詳細: エンドレス建設</span><button
+                                @click="showRescue = false" class="text-white">✕</button></div>
+                        <div class="p-6">
+                            <p class="text-red-600 font-bold mb-2">原因: PDFパスワード保護</p>
+                            <div class="bg-gray-100 p-4 rounded text-center border-2 border-dashed border-gray-300">
+                                <button @click="performRescue"
+                                    class="bg-white border px-4 py-2 rounded font-bold shadow-sm">再アップロード</button></div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <transition name="fade">
+                <div v-if="showCompletionPopup" class="modal-mask">
+                    <div
+                        class="bg-white rounded-lg shadow-2xl p-8 text-center animate-fade-in max-w-sm w-full relative">
+                        <div class="text-5xl mb-4">🎉</div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-2">全ての確認が完了しました</h3>
+                        <p class="text-gray-500 mb-6">未承認件数: <span class="font-bold text-slate-800">0件</span></p>
+                        <div class="flex gap-3"><button @click="showCompletionPopup = false; prevTransaction()"
+                                class="flex-1 border border-gray-300 text-gray-600 py-2 rounded font-bold hover:bg-gray-50">戻る</button><button
+                                @click="openBatchModal"
+                                class="flex-1 bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700 shadow-md">最終確認へ進む</button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <transition name="fade">
+                <div v-if="showRevertConfirmModal" class="modal-mask">
+                    <div class="bg-white rounded-lg shadow-xl p-6 text-center animate-fade-in max-w-xs w-full">
+                        <h3 class="text-md font-bold text-slate-800 mb-2">ステータス解除の確認</h3>
+                        <p class="text-xs text-gray-500 mb-4">この仕訳のステータスを解除して、未処理に戻しますか？</p>
+                        <div class="flex gap-2"><button @click="showRevertConfirmModal = false"
+                                class="flex-1 border border-gray-300 text-gray-600 py-2 rounded text-xs font-bold hover:bg-gray-50">いいえ</button><button
+                                @click="confirmRevert"
+                                class="flex-1 bg-red-600 text-white py-2 rounded text-xs font-bold hover:bg-red-700 shadow-sm">はい（解除）</button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <transition name="fade">
+                <div v-if="showBatchModal" class="modal-mask">
+                    <div
+                        class="bg-white rounded-lg w-full max-w-4xl shadow-2xl overflow-hidden animate-fade-in flex flex-col max-h-[90vh]">
+                        <div class="bg-slate-800 text-white p-4 font-bold flex justify-between items-center shrink-0">
+                            <span class="text-lg"><i class="fa-solid fa-layer-group mr-2"></i>処理を実行しますか？</span>
+                            <button @click="showBatchModal = false" class="text-gray-400 hover:text-white"><i
+                                    class="fa-solid fa-xmark text-xl"></i></button>
+                        </div>
+                        <div class="p-6 overflow-y-auto bg-slate-50 flex-1">
+                            <p class="text-sm text-gray-600 mb-4 font-bold">以下の内容で確定し、各フォルダへ移動・ファイル出力を行います。</p>
+
+                            <div class="mb-6">
+                                <h4 class="font-bold text-blue-700 mb-2 flex items-center"><i
+                                        class="fa-solid fa-file-csv mr-2"></i>{{ currentClient.action === 'approve' ?
+                                    '【仕訳CSV化】' : '【仕訳確定済み】' }} {{ approvalQueue.filter(i => i.decision === 'csv' ||
+                                    i.decision === 'confirmed').length }}件</h4>
+                                <div class="scrolling-table-wrapper h-48 overflow-y-auto">
+                                    <table class="w-full text-left">
+                                        <thead class="scrolling-table-header sticky top-0">
+                                            <tr>
+                                                <th class="p-2 w-8 text-center"><i class="fa-solid fa-check"></i></th>
+                                                <th class="p-2">理由</th>
+                                                <th class="p-2">日付</th>
+                                                <th class="p-2 text-right">合計金額</th>
+                                                <th class="p-2">借方科目</th>
+                                                <th class="p-2">貸方科目</th>
+                                                <th class="p-2">摘要</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(item, idx) in approvalQueue.filter(i => i.decision === 'csv' || i.decision === 'confirmed')"
+                                                :key="idx" class="scrolling-table-row bg-white">
+                                                <td class="p-2 text-center"><input type="checkbox"
+                                                        v-model="item.selected" class="cursor-pointer"></td>
+                                                <td class="p-2 text-gray-400">-</td>
+                                                <td class="p-2 font-mono">{{ item.date }}</td>
+                                                <td class="p-2 text-right font-mono">{{ item.amount }}</td>
+                                                <td class="p-2 font-bold text-blue-600">{{ item.debit }}</td>
+                                                <td class="p-2">{{ item.credit }}</td>
+                                                <td class="p-2 text-xs truncate max-w-[150px]">{{ item.summary }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="mb-6">
+                                <h4 class="font-bold text-yellow-700 mb-2 flex items-center"><i
+                                        class="fa-solid fa-rotate-left mr-2"></i>{{ currentClient.action === 'approve' ?
+                                    '【差戻し】' : '【不明仕訳あり】' }} {{ approvalQueue.filter(i => i.decision === 'remand' ||
+                                    i.decision === 'unknown').length }}件</h4>
+                                <div class="scrolling-table-wrapper h-32 overflow-y-auto">
+                                    <table class="w-full text-left">
+                                        <thead class="scrolling-table-header sticky top-0">
+                                            <tr>
+                                                <th class="p-2 w-8 text-center"><i class="fa-solid fa-check"></i></th>
+                                                <th class="p-2">理由</th>
+                                                <th class="p-2">日付</th>
+                                                <th class="p-2 text-right">合計金額</th>
+                                                <th class="p-2">借方科目</th>
+                                                <th class="p-2">貸方科目</th>
+                                                <th class="p-2">摘要</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(item, idx) in approvalQueue.filter(i => i.decision === 'remand' || i.decision === 'unknown')"
+                                                :key="idx" class="scrolling-table-row bg-yellow-50/50">
+                                                <td class="p-2 text-center"><input type="checkbox"
+                                                        v-model="item.selected" class="cursor-pointer"></td>
+                                                <td class="p-2 text-yellow-600 font-bold text-xs">{{
+                                                    currentClient.action === 'approve' ? '差戻し' : '不明' }}</td>
+                                                <td class="p-2 font-mono">{{ item.date }}</td>
+                                                <td class="p-2 text-right font-mono">{{ item.amount }}</td>
+                                                <td class="p-2">{{ item.debit }}</td>
+                                                <td class="p-2">{{ item.credit }}</td>
+                                                <td class="p-2 text-xs truncate max-w-[150px]">{{ item.summary }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="mb-6">
+                                <h4 class="font-bold text-red-700 mb-2 flex items-center"><i
+                                        class="fa-solid fa-ban mr-2"></i>【仕訳から除外】 {{
+                                    approvalQueue.filter(i=>i.decision==='exclude').length }}件</h4>
+                                <div class="scrolling-table-wrapper h-32 overflow-y-auto">
+                                    <table class="w-full text-left">
+                                        <thead class="scrolling-table-header sticky top-0">
+                                            <tr>
+                                                <th class="p-2 w-8 text-center"><i class="fa-solid fa-check"></i></th>
+                                                <th class="p-2">理由</th>
+                                                <th class="p-2">日付</th>
+                                                <th class="p-2 text-right">合計金額</th>
+                                                <th class="p-2">借方科目</th>
+                                                <th class="p-2">貸方科目</th>
+                                                <th class="p-2">摘要</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(item, idx) in approvalQueue.filter(i=>i.decision==='exclude')"
+                                                :key="idx" class="scrolling-table-row bg-red-50/50">
+                                                <td class="p-2 text-center"><input type="checkbox"
+                                                        v-model="item.selected" class="cursor-pointer"></td>
+                                                <td class="p-2 text-red-500 font-bold text-xs">除外</td>
+                                                <td class="p-2 font-mono">{{ item.date }}</td>
+                                                <td class="p-2 text-right font-mono">{{ item.amount }}</td>
+                                                <td class="p-2">{{ item.debit }}</td>
+                                                <td class="p-2">{{ item.credit }}</td>
+                                                <td class="p-2 text-xs truncate max-w-[150px]">{{ item.summary }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white border-t border-slate-200 p-4 flex justify-between shrink-0">
+                            <div class="flex gap-2"><button @click="showBatchModal = false"
+                                    class="px-6 py-3 rounded-lg font-bold text-gray-500 hover:bg-gray-100 transition">キャンセル</button><button
+                                    @click="revertItems"
+                                    class="px-4 py-3 rounded-lg font-bold text-red-600 border border-red-200 hover:bg-red-50 transition flex items-center"><i
+                                        class="fa-solid fa-rotate-left mr-2"></i> チェックした項目を未承認に戻す</button></div>
+                            <button @click="executeBatch"
+                                class="px-8 py-3 rounded-lg font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-lg transition flex items-center"><i
+                                    class="fa-solid fa-check-double mr-2"></i> 確定して実行</button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <transition name="fade">
+                <div v-if="showClientModal" class="modal-mask">
+                    <div class="bg-white rounded-lg w-full max-w-lg shadow-xl overflow-hidden animate-fade-in">
+                        <div class="bg-slate-800 text-white p-4 font-bold flex justify-between items-center">
+                            <span><i class="fa-solid fa-building mr-2"></i>{{ clientModalMode === 'new' ? '新規顧問先登録' :
+                                '顧問先情報の編集' }}</span>
+                            <button @click="showClientModal = false" class="text-gray-400 hover:text-white">✕</button>
+                        </div>
+                        <div class="p-6 overflow-y-auto max-h-[70vh]">
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label class="block text-xs font-bold text-gray-500 mb-1">3コード</label><input
+                                            type="text" v-model="clientForm.code"
+                                            class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                                            placeholder="ABC"></div>
+                                    <div><label class="block text-xs font-bold text-gray-500 mb-1">担当者</label><input
+                                            type="text" v-model="clientForm.rep"
+                                            class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                                            placeholder="担当名"></div>
+                                </div>
+                                <div><label class="block text-xs font-bold text-gray-500 mb-1">会社名</label><input
+                                        type="text" v-model="clientForm.name"
+                                        class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                                        placeholder="会社名を入力"></div>
+                                <div><label class="block text-xs font-bold text-gray-500 mb-1">連絡先 (Chatwork
+                                        URL)</label><input type="text" v-model="clientForm.chatwork"
+                                        class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                                        placeholder="https://www.chatwork.com/..."></div>
+
+                                <div class="border-t border-gray-200 pt-4 mt-2">
+                                    <div class="grid grid-cols-2 gap-4 mb-4">
+                                        <div><label class="block text-xs font-bold text-gray-500 mb-1">決算月 /
+                                                種別</label><select v-model="clientForm.fiscal_month"
+                                                class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white">
+                                                <option :value="12" class="font-bold">個人 (12月)</option>
+                                                <option v-for="m in 12" :key="m" :value="m">{{ m }}月決算 (法人)</option>
+                                            </select></div>
+                                        <div><label
+                                                class="block text-xs font-bold text-gray-500 mb-1">設立年月日</label><input
+                                                type="date" v-model="clientForm.establishmentDate"
+                                                class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"></div>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div><label
+                                                class="block text-xs font-bold text-gray-500 mb-1">会計ソフト</label><select
+                                                v-model="clientForm.settings.software"
+                                                class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs">
+                                                <option>MFクラウド</option>
+                                                <option>freee</option>
+                                                <option>弥生会計</option>
+                                            </select></div>
+                                        <div><label
+                                                class="block text-xs font-bold text-gray-500 mb-1">税区分</label><select
+                                                v-model="clientForm.settings.taxMethod"
+                                                class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs">
+                                                <option value="inclusive">税込</option>
+                                                <option value="exclusive">税抜</option>
+                                            </select></div>
+                                        <div><label
+                                                class="block text-xs font-bold text-gray-500 mb-1">計上基準</label><select
+                                                v-model="clientForm.settings.calcMethod"
+                                                class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs">
+                                                <option>発生主義</option>
+                                                <option>現金主義</option>
+                                            </select></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-100 px-6 py-4 flex justify-end gap-3">
+                            <button @click="showClientModal = false"
+                                class="text-gray-500 font-bold text-sm hover:bg-gray-200 px-4 py-2 rounded transition">キャンセル</button>
+                            <button @click="saveClient"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-6 py-2 rounded shadow transition">保存する</button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <transition name="toast">
+                <div v-if="toast.visible"
+                    :class="['fixed bottom-24 left-4 z-[100] px-6 py-3 rounded-full shadow-xl font-bold text-sm flex items-center gap-4 transition', toast.type==='error'?'bg-red-600 text-white':'bg-slate-800 text-white']">
+                    <span><i class="fa-solid mr-2"
+                            :class="toast.type==='error'?'fa-triangle-exclamation':'fa-check'"></i> {{ toast.message
+                        }}</span>
+                    <button v-if="toast.isUndo" @click="performUndo"
+                        class="bg-slate-600 hover:bg-slate-500 text-white px-3 py-1 rounded text-xs uppercase font-bold tracking-wide">元に戻す</button>
+                </div>
+            </transition>
+
+        </main>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed, onMounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                // ========================================================================
+                // 🧠 Core State (共通)
+                // ========================================================================
+                const screen = ref('B'); // 初期画面: 全社仕訳 (B)
+                const currentUser = reactive({ name: '管理者 太郎', email: 'admin@sugu-suru.com' });
+
+                // Toast Notification System
+                const toast = reactive({ visible: false, message: '', isUndo: false, type: 'normal' });
+                let toastTimeout;
+                const showToast = (msg, type = 'normal') => {
+                    clearTimeout(toastTimeout);
+                    toast.message = msg;
+                    toast.isUndo = (type === 'undo');
+                    toast.type = type;
+                    toast.visible = true;
+                    toastTimeout = setTimeout(() => toast.visible = false, type === 'undo' ? 5000 : 3000);
+                };
+
+                // ========================================================================
+                // 🛑 Admin Dashboard Ver.10.17 Logic (新規実装部分)
+                // ========================================================================
+                const isEmergencyStopped = ref(false);
+                const logTab = ref('error');
+
+                // 1. Admin Data Store (Ver.10.17)
+                const adminData = reactive({
+                    kpi: {
+                        registrations: 12,
+                        apiPrediction: '¥1,850',
+                        aiCorrectionRate: '12.5%',
+                        annualJournals: '12,450',
+                        monthlyTrend: [1000, 1050, 980, 1100, 1200, 1150, 1080, 1020, 1300, 1100, 1050, 1420],
+                        funnel: { received: 3500, csv: 3100, excluded: 400 }
+                    },
+                    staff: [
+                        { name: "鈴木 一郎", firstDraft_curr: 42, firstDraft_avg: 155, remand_curr: 2, remand_avg: 150, approve_curr: 40, approve_avg: 197, totalBacklog: 197 },
+                        { name: "管理者 太郎", firstDraft_curr: 0, firstDraft_avg: 50, remand_curr: 1, remand_avg: 12, approve_curr: 10, approve_avg: 12, totalBacklog: 12 }
+                    ],
+                    clients: [
+                        { id: 'AMT', name: 'アマテラス商事', journals: 4500, apiCost: 800, docLag: '2.5日' },
+                        { id: 'EDL', name: 'エンドレス建設', journals: 120, apiCost: 50, docLag: '35.0日' },
+                        { id: 'GLB', name: 'グローバルテック', journals: 2300, apiCost: 450, docLag: '1.2日' },
+                        { id: 'TNK', name: '田中 歯科医院', journals: 150, apiCost: 30, docLag: '0.5日' },
+                        { id: 'BST', name: 'バリスタサービス', journals: 800, apiCost: 150, docLag: '5.0日' },
+                        { id: 'SUN', name: 'サントーリ', journals: 1200, apiCost: 200, docLag: '1.0日' }
+                    ]
+                });
+
+                // 2. Client Analysis Sorting & Unit Cost Calculation
+                const adminSortKey = ref('unitCost');
+                const adminSortAsc = ref(false); // Descending default
+
+                const sortedAdminClients = computed(() => {
+                    const list = adminData.clients.map(c => ({
+                        ...c,
+                        unitCost: c.journals > 0 ? (c.apiCost / c.journals) : 0
+                    }));
+                    return list.sort((a, b) => {
+                        let valA = a[adminSortKey.value];
+                        let valB = b[adminSortKey.value];
+                        // Handle "日" suffix for sorting
+                        if (typeof valA === 'string' && valA.includes('日')) valA = parseFloat(valA);
+                        if (typeof valB === 'string' && valB.includes('日')) valB = parseFloat(valB);
+
+                        if (valA < valB) return adminSortAsc.value ? -1 : 1;
+                        if (valA > valB) return adminSortAsc.value ? 1 : -1;
+                        return 0;
+                    });
+                });
+
+                const sortClients = (key) => {
+                    if (adminSortKey.value === key) adminSortAsc.value = !adminSortAsc.value;
+                    else { adminSortKey.value = key; adminSortAsc.value = false; }
+                };
+
+                // 3. Actions
+                const activateKillSwitch = () => {
+                    isEmergencyStopped.value = !isEmergencyStopped.value;
+                    showToast(isEmergencyStopped.value ? '⛔ 全AI処理・API通信を緊急停止しました (Demo)' : '✅ 緊急停止を解除しました。通常稼働に戻ります。', isEmergencyStopped.value ? 'error' : 'success');
+                };
+
+                const getHeatmapColor = (val) => {
+                    if (val > 1300) return 'bg-blue-800 border-blue-900';
+                    if (val > 1100) return 'bg-blue-600 border-blue-700';
+                    if (val > 1000) return 'bg-blue-400 border-blue-500';
+                    return 'bg-blue-200 border-blue-300';
+                };
+
+                // Excel Report Export (Manual Trigger)
+                const manualReport = () => {
+                    // Check if XLSX is available (CDN loaded)
+                    if (typeof XLSX === 'undefined') {
+                        showToast('Excelライブラリが読み込まれていません', 'error');
+                        return;
+                    }
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([adminData.kpi]), "経営KPI");
+                    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sortedAdminClients.value), "顧問先コスト分析");
+                    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(adminData.staff), "スタッフ稼働");
+                    XLSX.writeFile(wb, `月次レポート_${new Date().toISOString().slice(0, 10)}.xlsx`);
+                    showToast('Excelレポートをダウンロードしました', 'success');
+                };
+
+
+                // ========================================================================
+                // 🔒 Existing Logic for Screen A-E (Ver.10.16 完全維持)
+                // ========================================================================
+
+                // --- UI States ---
+                const showRescue = ref(false);
+                const showBatchModal = ref(false);
+                const showCompletionPopup = ref(false);
+                const showRevertConfirmModal = ref(false);
+                const showClientModal = ref(false);
+                const pendingRevertId = ref(null);
+
+                // Filters
+                const filters = reactive({ status: 'all', search: '', masterSearch: '' });
+
+                // Screen B: Calendar State
+                const currentCalendarYear = ref(2025);
+                const isCalendarLoading = ref(false);
+
+                // Screen C: Report & Config
+                const showCReportModal = ref(false);
+                const c_reportText = ref('');
+                const c_config = ref({ cash: false, payroll: false, social: false, invoice: false });
+                const c_isSaving = ref(false);
+
+                // Screen E: Locking & Undo
+                const isLocked = ref(false);
+                const lastAction = ref(null);
+
+                // Admin: Client Settings (Sub-screen logic reused for new Admin)
+                const adminEditingClient = ref({ code: '', name: '', establishmentDate: '2021-04-01', nonInvoiceList: [] });
+
+                // Client Master Modal
+                const clientModalMode = ref('new');
+                const clientForm = reactive({ code: '', name: '', rep: '', chatwork: '', fiscal_month: 3, type: 'corp', establishmentDate: '2020-04-01', settings: { software: 'MFクラウド', taxMethod: 'inclusive', calcMethod: '発生主義', taxType: '青色' } });
+
+                // --- Data: Unified Client List (Ver.10.16 Data - Fully Preserved) ---
+                const journalClients = ref([
+                    { id: 'AMT', name: 'アマテラス商事', code: 'AMT', type: 'corp', rep: '鈴木 一郎', chatwork: 'https://chatwork.com', fiscal: '3月決算', fiscal_month: 3, tax: '[青色]', taxClass: 'bg-indigo-100 text-indigo-700 border-indigo-200', isNew: true, rowClass: 'hover:bg-indigo-50', step1: 'done', step2: 'done', step3: 'pending', step4: 'none', step5: 'none', step6: 'none', step7: 'none', msg1: '残り 42件', msg2: '未着手', action: 'work', approveCount: 0, establishmentDate: '2021-04-01', isAnalysing: false, settings: { software: 'MFクラウド', fiscalMonth: 3, taxMethod: 'inclusive', calcMethod: '発生主義', taxType: '青色' } },
+                    { id: 'GLB', name: 'グローバルテック', code: 'GLB', type: 'corp', rep: '佐藤 花子', chatwork: '', fiscal: '6月決算', fiscal_month: 6, tax: '[白色]', taxClass: 'bg-gray-100 text-gray-500 border-gray-200', isNew: false, rowClass: 'hover:bg-orange-50', step1: 'done', step2: 'done', step3: 'done', step4: 'done', step5: 'pending', step6: 'none', step7: 'none', remandCount: 5, action: 'remand', approveCount: 0, establishmentDate: '2019-06-01', isAnalysing: false, settings: { software: 'freee', fiscalMonth: 6, taxMethod: 'exclusive', calcMethod: '発生主義', taxType: '白色' } },
+                    { id: 'EDL', name: 'エンドレス建設', code: 'EDL', type: 'corp', rep: '鈴木 一郎', chatwork: 'https://chatwork.com', fiscal: '9月決算', fiscal_month: 9, tax: '[青色]', taxClass: 'bg-indigo-100 text-indigo-700 border-indigo-200', isNew: false, rowClass: 'bg-red-50 hover:bg-red-100 border-l-4 border-l-red-500', step1: 'done', step2: 'error', step3: 'none', step4: 'none', step5: 'none', step6: 'none', step7: 'none', action: 'rescue', approveCount: 0, establishmentDate: '2015-09-01', isAnalysing: false, settings: { software: '弥生会計', fiscalMonth: 9, taxMethod: 'inclusive', calcMethod: '現金主義', taxType: '青色' } },
+                    { id: 'TNK', name: '田中 歯科医院', code: '個人', type: 'individual', rep: '田中 医師', chatwork: '', fiscal: '12月決算', fiscal_month: 12, tax: '個人', taxClass: 'bg-green-100 text-green-700 border-green-200', isNew: false, rowClass: 'hover:bg-blue-50', step1: 'done', step2: 'done', step3: 'done', step4: 'done', step5: 'done', step6: 'done', step7: 'ready', excludedCount: 3, action: 'archive', approveCount: 0, establishmentDate: '2010-01-01', isAnalysing: false, settings: { software: 'MFクラウド', fiscalMonth: 12, taxMethod: 'inclusive', calcMethod: '現金主義', taxType: '青色' } },
+                    { id: 'BST', name: 'バリスタサービス', code: 'BST', type: 'corp', rep: '鈴木 一郎', chatwork: '', fiscal: '2月決算', fiscal_month: 2, tax: '[青色]', taxClass: 'bg-indigo-100 text-indigo-700 border-indigo-200', isNew: false, rowClass: 'hover:bg-pink-50', step1: 'done', step2: 'done', step3: 'done', step4: 'pending', step5: 'none', step6: 'none', step7: 'none', approveCount: 20, action: 'approve', establishmentDate: '2023-02-01', isAnalysing: false, settings: { software: 'freee', fiscalMonth: 2, taxMethod: 'inclusive', calcMethod: '発生主義', taxType: '青色' } },
+                    { id: 'SUN', name: 'サントーリ', code: 'SUN', type: 'corp', rep: '山田 太郎', chatwork: '', fiscal: '12月決算', fiscal_month: 12, tax: '[青色]', taxClass: 'bg-indigo-100 text-indigo-700 border-indigo-200', isNew: false, rowClass: 'hover:bg-green-50', step1: 'done', step2: 'done', step3: 'done', step4: 'done', step5: 'done', step6: 'ready', step7: 'none', action: 'export', approveCount: 0, establishmentDate: '2020-12-01', isAnalysing: false, settings: { software: '弥生会計', fiscalMonth: 12, taxMethod: 'inclusive', calcMethod: '発生主義', taxType: '青色' } }
+                ]);
+
+                // URL Persistence Logic
+                onMounted(() => {
+                    const params = new URLSearchParams(window.location.search);
+                    if (params.has('tab')) filters.status = params.get('tab');
+                    if (params.has('search')) filters.search = params.get('search');
+                });
+
+                const updateUrl = () => {
+                    const params = new URLSearchParams();
+                    if (filters.status !== 'all') params.set('tab', filters.status);
+                    if (filters.search) params.set('search', filters.search);
+                    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+                };
+
+                const sortedMasterClients = computed(() => {
+                    let list = [...journalClients.value].sort((a, b) => a.code.localeCompare(b.code));
+                    if (filters.masterSearch) {
+                        const low = filters.masterSearch.toLowerCase();
+                        list = list.filter(c => c.name.toLowerCase().includes(low) || c.code.toLowerCase().includes(low));
+                    }
+                    return list;
+                });
+
+                const sortedClients = computed(() => {
+                    let list = journalClients.value;
+                    if (filters.status !== 'all') {
+                        if (filters.status === 'rescue') list = list.filter(c => c.action === 'rescue');
+                        if (filters.status === 'work') list = list.filter(c => c.action === 'work');
+                        if (filters.status === 'approve') list = list.filter(c => c.action === 'approve');
+                        if (filters.status === 'remand') list = list.filter(c => c.action === 'remand');
+                    }
+                    if (filters.search) {
+                        const low = filters.search.toLowerCase();
+                        list = list.filter(c => c.name.toLowerCase().includes(low) || c.code.toLowerCase().includes(low));
+                    }
+                    return list;
+                });
+
+                // Data: Screen B
+                const sortedCalendarDocs = computed(() => {
+                    return [...journalClients.value].sort((a, b) => {
+                        if (a.type !== b.type) return a.type === 'corp' ? -1 : 1;
+                        if (a.fiscal_month !== b.fiscal_month) return a.fiscal_month - b.fiscal_month;
+                        return a.code.localeCompare(b.code);
+                    });
+                });
+
+                // Screen B: Infinite Scroll Simulation
+                const changeYear = (dir) => {
+                    isCalendarLoading.value = true;
+                    setTimeout(() => {
+                        showToast(dir === 'next' ? '2027年を表示' : '2024年を表示');
+                        isCalendarLoading.value = false;
+                    }, 600);
+                };
+
+                // Data: Screen D (Rules)
+                const rules = ref([
+                    { id: 'R001', client: 'AMT', vendor: 'Amazon', condition: '金額 > 100,000', old_acct: '消耗品費', new_acct: '工具器具備品' },
+                    { id: 'R002', client: 'GLB', vendor: 'Google Cloud', condition: '全件', old_acct: '通信費', new_acct: '支払手数料' }
+                ]);
+
+                // Data: Screen E (Transactions) - Fully Preserved
+                const transactions = [
+                    { id: 1, mode: 'history', hasDuplicate: true, isExcluded: false, status: 'unknown', imageTitle: '御請求書', vendor: '有限会社トラスティーサービス', item: '火災警報器取替', amount: 21450, history: [{ debit_acct: '修繕費', credit_acct: '未払金', count: 11, amount: 21450 }, { debit_acct: '消耗品費', credit_acct: '現金', count: 2, amount: 21450 }], ai_proposal: { d: '修繕費', c: '未払金', amount: 21450 }, ai_reason: '明細「火災報知器取替」より修繕費を提案。' },
+                    { id: 2, mode: 'new', hasDuplicate: false, isExcluded: false, status: 'confirmed', imageTitle: '領収書', vendor: 'Amazon.co.jp', item: 'PCモニター', amount: 35000, history: [{ debit_acct: '消耗品費', credit_acct: '現金', count: 11, amount: 35000 }], ai_proposal: { d: '消耗品費', c: '未払金', amount: 35000 }, ai_reason: '明細「PCモニター」および金額3.5万円より消耗品費を提案。' },
+                    { id: 3, mode: 'new', hasDuplicate: false, isExcluded: true, status: 'excluded', imageTitle: '領収書(不明瞭)', vendor: '不明', item: 'ー', amount: 10000, history: [], ai_proposal: { d: '仮払金', c: '現金', amount: 10000 }, ai_reason: '画像不鮮明のため。' }
+                ];
+
+                const currentTxIndex = ref(0);
+                const currentTransaction = computed(() => transactions[currentTxIndex.value] || {});
+                const currentClient = ref({ settings: { fiscalMonth: '-', software: '-', taxMethod: '-', calcMethod: '-', taxType: '-' } });
+
+                // Screen E: Editor State
+                const historyStack = ref([]);
+                const form = reactive({ date: '2024-11-12', summary: '', debit: [{ acct: '', sub: '', tax: 'tax_10', amount: 0 }], credit: [{ acct: '', sub: '', tax: 'tax_none', amount: 0 }] });
+                const isBalanced = computed(() => form.debit.reduce((s, r) => s + r.amount, 0) === form.credit.reduce((s, r) => s + r.amount, 0));
+                const balanceDiff = computed(() => Math.abs(form.debit.reduce((s, r) => s + r.amount, 0) - form.credit.reduce((s, r) => s + r.amount, 0)));
+                const totalAmount = computed(() => form.debit.reduce((s, r) => s + r.amount, 0).toLocaleString());
+
+                // Image Zoom State
+                const scale = ref(1);
+                const posX = ref(0);
+                const posY = ref(0);
+                const isDragging = ref(false);
+
+                // Queue System
+                const approvalQueue = ref([]);
+                const remainingApprovalCount = computed(() => transactions.length - approvalQueue.value.length);
+
+                // Computed for UI Highlights
+                const currentDecision = computed(() => {
+                    if (!currentTransaction.value) return null;
+                    const found = approvalQueue.value.find(q => q.id === currentTransaction.value.id);
+                    return found ? found.decision : null;
+                });
+
+                // Screen C Logic
+                const currentTermLabel = computed(() => {
+                    if (!currentClient.value.establishmentDate) return '-';
+                    const estDate = new Date(currentClient.value.establishmentDate);
+                    const now = new Date();
+                    const diffYears = now.getFullYear() - estDate.getFullYear();
+                    return diffYears + 1;
+                });
+                const fiscalYearRange = computed(() => `2025/04 〜 2026/03`);
+
+                const headerClass = computed(() => {
+                    if (currentClient.value.action === 'approve') return 'bg-pink-50 border-pink-200';
+                    if (currentClient.value.action === 'remand') return 'bg-red-50 border-red-200';
+                    return 'bg-blue-50 border-blue-200';
+                });
+
+                // --- Methods ---
+
+                const changeScreen = (s) => { screen.value = s; };
+
+                const nextTransaction = () => { currentTxIndex.value = (currentTxIndex.value + 1) % transactions.length; applyCurrentTransactionData(); };
+                const prevTransaction = () => { currentTxIndex.value = (currentTxIndex.value - 1 + transactions.length) % transactions.length; applyCurrentTransactionData(); };
+
+                const applyTemplate = (data) => {
+                    form.debit = [{ acct: data.debit_acct || data.d, sub: '', tax: 'tax_10', amount: data.amount }];
+                    form.credit = [{ acct: data.credit_acct || data.c, sub: '', tax: 'tax_none', amount: data.amount }];
+                    form.summary = currentTransaction.value.vendor;
+                };
+
+                const applyCurrentTransactionData = () => {
+                    const tx = currentTransaction.value;
+                    if (!tx || !tx.ai_proposal) return;
+                    applyTemplate(tx.ai_proposal);
+                    tx.isExcluded = (tx.status === 'excluded');
+                };
+
+                const switchMode = (newMode) => {
+                    currentTxIndex.value = (newMode === 'history' ? 0 : 1);
+                    applyCurrentTransactionData();
+                };
+
+                // Image Zoom Logic
+                const zoomIn = () => scale.value += 0.1;
+                const zoomOut = () => { if (scale.value > 0.2) scale.value -= 0.1; };
+                const onWheel = (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        scale.value -= e.deltaY * 0.01;
+                    } else {
+                        scale.value -= e.deltaY * 0.001;
+                    }
+                    if (scale.value < 0.2) scale.value = 0.2;
+                    if (scale.value > 5) scale.value = 5;
+                };
+                const startDrag = (e) => { isDragging.value = true; };
+                const onDrag = (e) => { if (!isDragging.value) return; posX.value += e.movementX; posY.value += e.movementY; };
+                const stopDrag = () => { isDragging.value = false; };
+
+                const addRow = (side) => { form[side].push({ acct: '', sub: '', tax: side === 'debit' ? 'tax_10' : 'tax_none', amount: 0 }); };
+                const removeRow = (side, idx) => { form[side].splice(idx, 1); };
+
+                const submitFirstStage = (status) => {
+                    showToast(`ステータス「${status === 'excluded' ? '除外' : (status === 'unknown' ? '不明' : '確定')}」で申請しました`);
+                    nextTransaction();
+                };
+
+                // --- Toggle Decision Logic (Upsert & Revert) ---
+                const toggleDecision = (decision) => {
+                    const txId = currentTransaction.value.id;
+                    const existing = approvalQueue.value.find(q => q.id === txId);
+
+                    if (existing && existing.decision === decision) {
+                        pendingRevertId.value = txId;
+                        showRevertConfirmModal.value = true;
+                        return;
+                    }
+
+                    addToQueue(decision);
+                };
+
+                const confirmRevert = () => {
+                    if (pendingRevertId.value) {
+                        approvalQueue.value = approvalQueue.value.filter(q => q.id !== pendingRevertId.value);
+                        showToast('ステータスを解除し、未処理に戻しました');
+                        showRevertConfirmModal.value = false;
+                        pendingRevertId.value = null;
+                        showCompletionPopup.value = false;
+                    }
+                };
+
+                const addToQueue = (decision) => {
+                    const txId = currentTransaction.value.id;
+                    const record = {
+                        id: txId,
+                        decision: decision,
+                        date: form.date,
+                        amount: totalAmount.value,
+                        debit: form.debit[0].acct,
+                        credit: form.credit[0].acct,
+                        summary: form.summary,
+                        selected: false
+                    };
+
+                    const existingIdx = approvalQueue.value.findIndex(q => q.id === txId);
+                    if (existingIdx !== -1) {
+                        approvalQueue.value[existingIdx] = record;
+                    } else {
+                        approvalQueue.value.push(record);
+                    }
+
+                    lastAction.value = { id: txId, decision: decision };
+
+                    let label = '';
+                    if (decision === 'csv') label = '仕訳CSV化';
+                    else if (decision === 'exclude') label = '除外';
+                    else if (decision === 'remand') label = '差戻し';
+                    else if (decision === 'confirmed') label = '確定';
+                    else if (decision === 'unknown') label = '不明';
+
+                    showToast(`『${label}』しました`, 'undo');
+
+                    if (approvalQueue.value.length >= transactions.length) {
+                        showCompletionPopup.value = true;
+                    } else {
+                        nextTransaction();
+                    }
+                };
+
+                const performUndo = () => {
+                    if (lastAction.value) {
+                        approvalQueue.value = approvalQueue.value.filter(q => q.id !== lastAction.value.id);
+                        showToast('直前の操作を取り消しました');
+                        showCompletionPopup.value = false;
+
+                        const idx = transactions.findIndex(t => t.id === lastAction.value.id);
+                        if (idx !== -1) currentTxIndex.value = idx;
+
+                        lastAction.value = null;
+                    }
+                };
+
+                const handleShortcut = (key) => {
+                    if (screen.value !== 'E') return;
+                    if (showRevertConfirmModal.value || showBatchModal.value || showCompletionPopup.value) return;
+
+                    if (key === 'enter') {
+                        if (currentClient.value.action === 'approve') toggleDecision('csv');
+                        else toggleDecision('confirmed');
+                    } else if (key === 'delete') {
+                        toggleDecision('exclude');
+                    }
+                };
+                window.addEventListener('keydown', (e) => {
+                    if (screen.value !== 'E') return;
+                    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleShortcut('enter');
+                    if (e.key === 'Delete' || e.key === 'Backspace') handleShortcut('delete');
+                    if (e.key === 'r' || e.key === 'R') {
+                        if (currentClient.value.action === 'approve') toggleDecision('remand');
+                        else toggleDecision('unknown');
+                    }
+                    if (e.key === 'ArrowRight') nextTransaction();
+                    if (e.key === 'ArrowLeft') prevTransaction();
+                });
+
+                // Standard Modal Logic
+                const openBatchModal = () => { showCompletionPopup.value = false; showBatchModal.value = true; };
+                const revertItems = () => {
+                    const kept = approvalQueue.value.filter(item => !item.selected);
+                    const removedCount = approvalQueue.value.length - kept.length;
+                    if (removedCount === 0) { alert('戻す項目を選択してください'); return; }
+                    approvalQueue.value = kept;
+                    showBatchModal.value = false;
+                    showToast(`${removedCount}件を未承認に戻しました`);
+                    currentTxIndex.value = 0;
+                    applyCurrentTransactionData();
+                };
+                const executeBatch = () => {
+                    showBatchModal.value = false;
+                    showToast('全件の処理が完了しました。フォルダへ移動しました。', 'success');
+                    approvalQueue.value = [];
+                    screen.value = 'B';
+                };
+
+                const goToWork = (client, action) => {
+                    currentClient.value = { ...client, action: action };
+                    approvalQueue.value = [];
+                    screen.value = 'E';
+                    applyCurrentTransactionData();
+                };
+                const goToCollectionDetail = (client) => {
+                    currentClient.value = client;
+                    screen.value = 'C_DETAIL';
+                };
+                const goToClientDashboard = (client) => {
+                    currentClient.value = client;
+                    screen.value = 'A_DETAIL';
+                };
+
+                const openClientModal = (mode, client = null) => {
+                    clientModalMode.value = mode;
+                    if (mode === 'edit' && client) {
+                        Object.assign(clientForm, JSON.parse(JSON.stringify(client)));
+                    } else {
+                        Object.assign(clientForm, { code: '', name: '', rep: '', chatwork: '', fiscal_month: 3, type: 'corp', establishmentDate: '2020-04-01', settings: { software: 'MFクラウド', taxMethod: 'inclusive', calcMethod: '発生主義', taxType: '青色' } });
+                    }
+                    showClientModal.value = true;
+                };
+                const saveClient = () => {
+                    showToast('顧問先情報を保存しました', 'success');
+                    showClientModal.value = false;
+                };
+
+                const approveRule = (id) => { rules.value = rules.value.filter(r => r.id !== id); showToast(`ルールID: ${id} を承認しました`); };
+                const editRule = (rule) => { const newCond = prompt('条件を編集', rule.condition); if (newCond) { rule.condition = newCond; showToast('条件を更新しました'); } };
+
+                const performRescue = () => {
+                    const edl = journalClients.value.find(c => c.id === 'EDL');
+                    if (edl) {
+                        showRescue.value = false;
+                        edl.step2 = 'loading';
+                        edl.isAnalysing = true;
+                        showToast('再アップロード完了。解析を開始しました。', 'success');
+
+                        setTimeout(() => {
+                            edl.isAnalysing = false;
+                            edl.step2 = 'done';
+                            edl.msg2 = '解析完了';
+                            edl.action = 'work';
+                            showToast('解析が完了しました。仕訳入力が可能です。', 'success');
+                        }, 3000);
+                    }
+                };
+
+                const accessAdmin = () => {
+                    if (currentUser.email !== 'admin@sugu-suru.com') { alert('権限がありません。管理者アカウントでログインしてください。'); return; }
+                    screen.value = 'ADMIN';
+                };
+
+                const goToAdminSettings = (client) => {
+                    adminEditingClient.value = { code: client.code, name: client.name, establishmentDate: '2021-04-01', nonInvoiceList: ['喫茶ルノアール', 'Uber Eats', '出前館'] };
+                    screen.value = 'ADMIN_SETTINGS';
+                };
+                const addVendorRow = () => { adminEditingClient.value.nonInvoiceList.push(''); };
+                const removeVendorRow = (index) => { adminEditingClient.value.nonInvoiceList.splice(index, 1); };
+                const saveCConfig = () => { c_isSaving.value = true; setTimeout(() => { c_isSaving.value = false; showToast('設定を保存しました'); }, 800); };
+
+                const openReportModal = () => {
+                    const deadline = new Date();
+                    deadline.setDate(deadline.getDate() + 30);
+                    const deadlineStr = `${deadline.getMonth() + 1}月${deadline.getDate()}日 (${['日', '月', '火', '水', '木', '金', '土'][deadline.getDay()]})`;
+
+                    let missingDocs = `[楽天カード]\n2025年10月利用分（11月引き落とし分）の明細が確認できておりません。\n\n`;
+                    if (c_config.value.cash) missingDocs += `[現金出納帳]\n10月分のデータまたはノートのコピーをお願いいたします。\n\n`;
+                    if (c_config.value.invoice) missingDocs += `[請求書]\n10月発行分の請求書控えが確認できておりません。\n\n`;
+
+                    c_reportText.value = `件名: 会計資料の未着に関する確認のお願い\n\nご担当者 様 \nお世話になっております。\n\n資料ご共有にご協力いただきまして、\nありがとうございます。\n\n現時点で、お預かりしている資料の状況をご報告いたします。また大変お手数ですが、以下の「⚠️ 未着資料」につきまして、\n【${deadlineStr}まで】をメドにお手配くださいませ。\n\n■ ご準備いただきたい資料（未着）\n${missingDocs}■ ✅ 受領済み・処理中の資料\n\n領収書：11/25付まで受領済み\nみずほ銀行：10月末まで受領済み\n\n資料のアップロードは、いつものGoogle Driveフォルダへお願いいたします。\n ご不明な点がございましたら、お気軽にご連絡ください。\n\nよろしくお願いいたします。`;
+                    showCReportModal.value = true;
+                };
+                const copyCReport = () => { navigator.clipboard.writeText(c_reportText.value).then(() => { showCReportModal.value = false; showToast('コピーしました'); }); };
+
+                const getStatusLabel = (action) => {
+                    if (action === 'work') return '1次仕訳入力中';
+                    if (action === 'approve') return '最終承認待ち';
+                    if (action === 'remand') return '差戻し対応中';
+                    if (action === 'export') return 'CSV出力待ち';
+                    return '完了';
+                };
+
+                const getPeriodStatus = (client, monthIndex) => {
+                    const year = monthIndex <= 12 ? 2025 : 2026;
+                    const month = monthIndex <= 12 ? monthIndex : monthIndex - 12;
+                    const isFiscal = (month === client.fiscal_month);
+
+                    let startIdx = client.fiscal_month + 1;
+                    let endIdx = startIdx + 11;
+                    const isActive = (monthIndex >= startIdx && monthIndex <= endIdx);
+
+                    let val = -1;
+                    if (isActive) {
+                        if (client.code === 'AMT') {
+                            if (monthIndex >= 4 && monthIndex <= 11) val = 1;
+                            if (monthIndex === 12) val = 0;
+                        } else if (client.code === 'GLB') {
+                            if (monthIndex >= 7 && monthIndex <= 12) val = 1;
+                        }
+                    }
+                    return { class: isActive ? 'bg-white' : 'bg-diagonal', isFiscal: isFiscal, val: val };
+                };
+
+                const closeMenus = () => { };
+
+                return {
+                    // Core
+                    screen, currentUser, toast, showToast,
+                    // Admin Ver.10.17
+                    adminData, sortedAdminClients, sortClients, isEmergencyStopped, activateKillSwitch, getHeatmapColor, manualReport, logTab,
+                    // App Logic (Ver.10.16)
+                    showRescue, showBatchModal, showCompletionPopup,
+                    filters, updateUrl, changeScreen,
+                    journalClients, sortedMasterClients, sortedClients, sortedCalendarDocs, rules,
+                    changeYear, isCalendarLoading,
+                    goToWork, goToCollectionDetail, goToClientDashboard,
+                    showClientModal, clientModalMode, clientForm, openClientModal, saveClient, getStatusLabel,
+                    approveRule, editRule, accessAdmin, closeMenus,
+                    currentTransaction, currentClient, form, isBalanced, balanceDiff, totalAmount, historyStack,
+                    zoomIn, zoomOut, startDrag, onDrag, stopDrag, onWheel, scale, posX, posY, addRow, removeRow, nextTransaction, prevTransaction, applyTemplate,
+                    switchMode, adminEditingClient, goToAdminSettings, addVendorRow, removeVendorRow,
+                    headerClass, submitFirstStage, addToQueue, executeBatch, approvalQueue, remainingApprovalCount,
+                    openBatchModal, revertItems, performRescue,
+                    showCReportModal, c_reportText, c_config, c_isSaving, saveCConfig, openReportModal, copyCReport,
+                    getPeriodStatus, currentTermLabel, fiscalYearRange,
+                    currentDecision, toggleDecision, showRevertConfirmModal, confirmRevert,
+                    handleShortcut, performUndo, isLocked
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>

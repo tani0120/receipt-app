@@ -1,0 +1,65 @@
+
+# UI Freeze Checklist & Configuration
+# Single Source of Truth for Verification Logic
+
+config:
+  freeze_dir: "freeze"
+  resolution: "1280x800"
+  browser: "chromium"
+
+gates:
+  gate_0:
+    name: "Visual Truth"
+    requirements:
+      - phaseA.visual_truth
+  gate_1:
+    name: "Non-Destructive Refactor"
+    requirements:
+      - phaseB.non_destructive
+  gate_2:
+    name: "Ironclad Contract"
+    requirements:
+      - phaseC.ironclad_contract
+  gate_3:
+    name: "Freeze Gate"
+    requirements:
+      - freeze.readme_exists
+      - freeze.version_assigned
+
+# Per-Screen Status (Updated Programmatically or Manually after Verification)
+screens:
+  ScreenA:
+    name: "Client List"
+    phaseA:
+      visual_truth: true
+      evidence: "golden_ui.png"
+    phaseB:
+      non_destructive: true # Skipped (Verified Identity)
+      evidence: "refactor_after.png"
+    phaseC:
+      ironclad_contract: true
+      evidence: ["stress_worst.png", "stress_longtext.png"]
+    freeze:
+      readme_exists: true
+      version: 2
+  
+  ScreenB:
+    name: "Journal Status"
+    phaseA: { visual_truth: true, evidence: "golden_ui.png" }
+    phaseB: { non_destructive: true, evidence: "refactor_after.png" }
+    phaseC: { ironclad_contract: false }
+    freeze: { readme_exists: false }
+
+  ScreenZ:
+    name: "Admin Dashboard"
+    phaseA: { visual_truth: false }
+    phaseB: { non_destructive: false }
+    phaseC: { ironclad_contract: false }
+    freeze: { readme_exists: false }
+
+  ScreenG:
+    name: "Data Conversion"
+    phaseA: { visual_truth: false }
+    phaseB: { non_destructive: false }
+    phaseC: { ironclad_contract: false }
+    freeze: { readme_exists: false }

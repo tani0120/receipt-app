@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mirror World (Sandbox)</title>
+    <style>
+        body::before {
+            content: "MIRROR WORLD";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: repeating-linear-gradient(45deg,
+                    #ff000022,
+                    #ff000022 10px,
+                    transparent 10px,
+                    transparent 20px);
+            height: 10px;
+            z-index: 9999;
+            pointer-events: none;
+            text-align: center;
+            font-size: 8px;
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module" src="/src/sandbox_mirror/Mirror_main.ts"></script>
+</body>
+
+</html>
