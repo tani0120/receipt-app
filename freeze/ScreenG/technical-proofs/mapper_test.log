@@ -1,0 +1,13 @@
+PASS src/aaa/aaa_composables/__tests__/aaa_DataConversionMapper.spec.ts
+  aaa_DataConversionMapper (Ironclad Fuzzing)
+    ✓ Should handle valid full data
+    ✓ Should handle null/undefined input
+    ✓ Should handle empty/partial object
+    ✓ Should handle wrong types (Fuzzing)
+    ✓ Should handle dangerous strings (XSS/Injection Sim)
+    ✓ Should handle extreme numbers
+    ✓ Should handle negative numbers
+
+Test Files  1 passed (1)
+     Tests  7 passed (7)
+      Time  1.10s

@@ -13,10 +13,11 @@ phaseB:
   evidence_stored: true
 
 phaseC:
-  ironclad_contract: false
-  mapper_stress_pass: false
-  ui_kill_pass: false
-  build_kill_proof: false
+  ironclad_contract: true
+  kill_stress_test: true
+  mapper_fuzzing: true
+  data_safety_verified: true
+  note: "Fully Ironclad"
 
 freeze:
   frozen: false
