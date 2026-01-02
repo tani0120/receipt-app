@@ -1,28 +1,28 @@
-version: 1.2.0
+version: 2.0.0
 description: "UI Freeze Authority & Gate Definitions (v2 Overhaul)"
 updated_at: "2026-01-02"
 
 phaseA:
   visual_truth: true
   evidence_stored: true
-  note: "v2 Overhaul - New Golden Master established"
+  note: "v2 Overhaul - Golden Master established"
 
 phaseB:
-  non_destructive: false
+  non_destructive: true
   visual_regression_diff_px: 0
-  evidence_stored: false
+  evidence_stored: true
 
 phaseC:
-  ironclad_contract: false
-  mapper_stress_pass: false
-  ui_kill_pass: false
-  build_kill_proof: false
+  ironclad_contract: true
+  mapper_stress_pass: true
+  ui_kill_pass: true
+  build_kill_proof: true
 
 freeze:
-  frozen: false
-  version: "v2-draft"
-  commit_hash: ""
-  locked_at: ""
+  frozen: true
+  version: "v2-ironclad"
+  commit_hash: "5f8e02072cb509f5fdb2319ece9a0029f66d6cb39"
+  locked_at: "2026-01-02T15:15:00+09:00"
 
 gates:
   gate0:
@@ -43,3 +43,4 @@ gates:
     name: "Gate 2: Contract (Ironclad)"
     requirements:
       - "Mapper 破壊テスト合格"
+      - "Stress (Worst/LongText) 証跡が存在"

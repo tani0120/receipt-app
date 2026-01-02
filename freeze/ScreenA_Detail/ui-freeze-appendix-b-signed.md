@@ -10,7 +10,7 @@
 | プロジェクト名 | AI Accounting System | Yes |
 | Screen 名 | ScreenA Detail | Yes |
 | Phase | Phase A - C | Yes |
-| チェック実施日 | 2026-01-02 13:42 | Yes |
+| チェック実施日 | 2026-01-02 15:15 | Yes |
 | 実施者 | AI Assistant | Yes |
 | Reviewer | User | Yes |
 
@@ -25,8 +25,8 @@
 ### 3.2 データフロー固定
 | 項目 | 必須条件 | 記載 |
 | :--- | :--- | :--- |
-| API → Mapper → UI | 一方向 | フロー図パス: `src/aaa/aaa_composables/aaa_ClientDetailMapper.ts` |
-| UI 直接 API 参照 | 禁止 | grep 結果: `technical-proofs/audit_any.log` (None) |
+| API → Mapper → UI | 一方向 | フロー図パス: `freeze/ScreenA_Detail/technical-proofs/data_flow_map.txt` |
+| UI 直接 API 参照 | 禁止 | grep 結果: `freeze/ScreenA_Detail/technical-proofs/grep_results.log` (Clean) |
 
 ## 4. Phase B：Mapper 完全性チェック
 ### 4.1 Mapper 基本要件
@@ -42,21 +42,24 @@
 | :--- | :--- | :--- |
 | null / undefined | Yes | test 名: `technical-proofs/mapper_test.log` |
 | 型不一致 | Yes | test 名: `technical-proofs/mapper_test.log` |
-| 長文 | Yes | test 名: `technical-proofs/mapper_test.log` |
+| 長文 | Yes | 証跡: `stress_longtext.png` |
 
 ## 5. Phase C：ストレステスト実施チェック
 ### 5.1 Fuzz / 敵対的入力
 | レベル | 条件 | 証跡 |
 | :--- | :--- | :--- |
 | Lv1 | 欠損・null | test: `mapper_test.log` |
+| Lv4 | 敵対的入力 (Worst Case) | 証跡: `stress_worst.png` |
 
 ### 5.2 長文耐性
-Visual Tests (Screen A List) でカバー済とみなすか、Detail固有の撮影が必要だが、今回はListの堅牢性を継承。
+| 項目 | 条件 | 証跡 |
+| :--- | :--- | :--- |
+| 50,000文字 | 崩壊なきこと | 証跡: `stress_longtext.png` |
 
 ## 6. Contract 破壊耐性チェック
 | 項目 | 必須結果 | 証跡 |
 | :--- | :--- | :--- |
-| ビルド時検出 | 成功 | CI ログ: `technical-proofs/build_fail_detail.log` |
+| ビルド時検出 | 成功 | CI ログ: `technical-proofs/build_fail.log` |
 
 ## 10. 最終署名（必須）
 私は、本チェックリストの全項目が事実に基づき実施・確認されたことを保証します。
