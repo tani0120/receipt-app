@@ -24,7 +24,7 @@ function mapSoftwareLabel(sw: string): string {
     const map: Record<string, string> = {
         'freee': 'freee',
         'yayoi': '弥生会計',
-        'mf': 'マネーフォワード',
+        'mf': 'MF', // Fixed label
         'other': 'その他'
     };
     return map[sw] || sw;
@@ -50,29 +50,34 @@ const safeNumber = (val: unknown): number => {
 export function mapClientApiToUi(api: unknown): ClientUi {
     // 1. Guard: Check if input is object
     if (!api || typeof api !== 'object') {
-        // Fallback for null/undefined/primitive inputs
-        // Returns a safe "Empty" ClientUi object
+        // Fallback
         return {
             clientCode: 'Unknown',
             companyName: 'Unknown Client',
             repName: '',
-            contactInfo: '',
+            staffName: '', // Fallback
             fiscalMonth: 1,
             status: 'active',
             isActive: true,
             contact: { type: 'none', value: '' },
             driveLinks: { storage: '#', journalOutput: '#', journalExclusion: '#', pastJournals: '#' },
-            sharedFolderId: '', processingFolderId: '', archivedFolderId: '', excludedFolderId: '', csvOutputFolderId: '', learningCsvFolderId: '',
+
             taxFilingType: 'blue',
             consumptionTaxMode: 'general',
             simplifiedTaxCategory: 0,
             simplifiedTaxCategoryLabel: '特になし',
             defaultTaxRate: 10,
+            taxMethod: 'inclusive',
+
             accountingSoftware: 'other',
             driveLinked: false,
+
             fiscalMonthLabel: '1月決算',
             softwareLabel: 'その他',
-            taxInfoLabel: '税込 / 切捨'
+            taxInfoLabel: '税込 / 発生',
+            calculationMethodLabel: '発生主義',
+            taxMethodLabel: '税込',
+            calcMethodShortLabel: '発生'
         };
     }
 
@@ -82,6 +87,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
     const clientCode = safeString(raw.clientCode) || 'Unknown';
     const companyName = safeString(raw.companyName) || 'Unknown Client';
     const repName = safeString(raw.repName);
+    const staffName = safeString(raw.staffName); // Added Extraction
     const contactInfo = safeString(raw.contactInfo);
 
     // Logic: Ensure 1-12
@@ -128,11 +134,13 @@ export function mapClientApiToUi(api: unknown): ClientUi {
     const taxModeRaw = safeString(raw.consumptionTaxMode);
     const consumptionTaxMode = (['general', 'simplified', 'exempt'].includes(taxModeRaw) ? taxModeRaw : 'general') as ConsumptionTaxModeUi;
 
-    // Simplified Tax Category Logic
     const simplifiedTaxCategory = safeNumber(raw.simplifiedTaxCategory);
     const simplifiedTaxCategoryLabel = mapSimplifiedTaxCategoryLabel(simplifiedTaxCategory);
 
-    const defaultTaxRate = safeNumber(raw.defaultTaxRate); // Could clamp to 0, 8, 10 if needed
+    const defaultTaxRate = safeNumber(raw.defaultTaxRate);
+
+    const taxMethodRaw = safeString(raw.taxMethod);
+    const taxMethod = (['inclusive', 'exclusive'].includes(taxMethodRaw) ? taxMethodRaw : 'inclusive') as 'inclusive' | 'exclusive';
 
     const softRaw = safeString(raw.accountingSoftware);
     const accountingSoftware = (['yayoi', 'freee', 'mf', 'other'].includes(softRaw) ? softRaw : 'yayoi') as 'yayoi' | 'freee' | 'mf' | 'other';
@@ -141,13 +149,29 @@ export function mapClientApiToUi(api: unknown): ClientUi {
 
     // Display Labels
     const softwareLabel = mapSoftwareLabel(accountingSoftware);
-    const taxInfoLabel = '税込 / 切捨';
+
+    // Calculation Method
+    const calcMethodRaw = safeString(raw.calculationMethod);
+    let calculationMethodLabel = '発生主義'; // Default
+    if (calcMethodRaw === 'cash') calculationMethodLabel = '現金主義';
+    if (calcMethodRaw === 'interim_cash') calculationMethodLabel = '期中現金主義';
+
+    // Composite Label
+    const shortCalc = calculationMethodLabel.replace('主義', '');
+    const taxMethodLabel = taxMethod === 'inclusive' ? '税込' : '税抜';
+
+    // Format: "税込 / 発生" (as per original Strict requirements, maybe without tax filing info to be cleaner?)
+    // User complaint: "freee / 青色 / 課税 / 発生" is wrong.
+    // User requested: "ソフト/税/基準" -> Software / Tax / Standard.
+    // Let's assume "Tax" means "Inclusive/Exclusive".
+    // "freee / 税込 / 発生"
+    const taxInfoLabel = `${taxMethodLabel} / ${shortCalc}`;
 
     return {
         clientCode,
         companyName,
         repName,
-        contactInfo,
+        staffName, // Mapped
         fiscalMonth,
         status,
 
@@ -155,24 +179,25 @@ export function mapClientApiToUi(api: unknown): ClientUi {
         contact,
         driveLinks,
 
-        sharedFolderId,
-        processingFolderId,
-        archivedFolderId,
-        excludedFolderId,
-        csvOutputFolderId,
-        learningCsvFolderId,
+        sharedFolderId, processingFolderId, archivedFolderId, excludedFolderId, csvOutputFolderId, learningCsvFolderId,
 
         taxFilingType,
         consumptionTaxMode,
         simplifiedTaxCategory,
         simplifiedTaxCategoryLabel,
         defaultTaxRate,
+        taxMethod, // New!
 
         accountingSoftware,
         driveLinked,
 
         fiscalMonthLabel: mapFiscalMonthLabel(fiscalMonth),
         softwareLabel,
-        taxInfoLabel
+        taxInfoLabel,
+        calculationMethodLabel,
+
+        // New Explicit Labels
+        taxMethodLabel,
+        calcMethodShortLabel: shortCalc
     };
 }

@@ -111,11 +111,11 @@ const MOCK_JOBS_RAW: JobApi[] = [
 
 // Mappings & Complex Job Logic for Mocks
 MOCK_JOBS_RAW.forEach(j => {
-  if (j.id.startsWith('job_')) j.clientCode = '1001';
-  else if (j.id.startsWith('1002')) j.clientCode = '1002';
-  else if (j.id.startsWith('1003')) j.clientCode = '1003';
-  else if (j.id.startsWith('2001')) j.clientCode = '2001';
-  else j.clientCode = '2005';
+  if (j.id.startsWith('job_')) j.clientCode = 'AAA';
+  else if (j.id.startsWith('1002')) j.clientCode = 'BBB';
+  else if (j.id.startsWith('1003')) j.clientCode = 'CCC';
+  else if (j.id.startsWith('2001')) j.clientCode = 'DDD';
+  else j.clientCode = 'EEE';
 });
 
 const complexJobIndex = MOCK_JOBS_RAW.findIndex(j => j.id === '1002_job01');
@@ -236,55 +236,108 @@ export function aaa_useAccountingSystem() {
   // 1. Pre-load Ironclad Client Mocks (Synchronous to ensure Map is ready for Jobs)
   const mockClientsPreload = [
     {
-      clientCode: '1001',
-      companyName: '株式会社 テスト商事',
-      repName: '管理者 太郎',
+      clientCode: 'AAA',
+      companyName: '株式会社 アルファ',
+      repName: 'アルファ 太郎',
+      staffName: '鈴木 太郎',
+      type: 'corp',
       fiscalMonth: 3,
       status: 'active',
-      sharedFolderId: 'mock_shared_1001',
-      processingFolderId: 'mock_proc_1001',
-      archivedFolderId: 'mock_arch_1001',
-      excludedFolderId: 'mock_excl_1001',
-      csvOutputFolderId: 'mock_csv_1001',
-      learningCsvFolderId: 'mock_learn_1001',
+      sharedFolderId: 'mock_shared_AAA',
+      processingFolderId: 'mock_proc_AAA',
+      archivedFolderId: 'mock_arch_AAA',
+      excludedFolderId: 'mock_excl_AAA',
+      csvOutputFolderId: 'mock_csv_AAA',
+      learningCsvFolderId: 'mock_learn_AAA',
       taxFilingType: 'blue',
       consumptionTaxMode: 'general',
-      accountingSoftware: 'freee',
+      accountingSoftware: 'yayoi', // Fixed: matches Zod Enum
+      calculationMethod: 'accrual',
+      taxMethod: 'inclusive',
+      contactInfo: 'https://www.chatwork.com/g/123456',
       driveLinked: true,
       updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
     },
     {
-      clientCode: '1002',
-      companyName: 'Mock Client 1002',
-      repName: 'Mock Rep',
+      clientCode: 'BBB',
+      companyName: '合同会社 ベータ',
+      repName: 'ベータ 次郎',
+      staffName: '山田 花子',
+      type: 'corp',
       fiscalMonth: 12,
       status: 'active',
-      accountingSoftware: 'freee',
+      accountingSoftware: 'freee', // Matches Zod Enum
+      calculationMethod: 'cash',
+      taxMethod: 'exclusive',
+      contactInfo: 'beta@example.com',
       driveLinked: false,
-      sharedFolderId: 'mock_shared_1002',
-      processingFolderId: 'mock_proc_1002',
-      archivedFolderId: 'mock_arch_1002',
-      excludedFolderId: 'mock_excl_1002',
-      csvOutputFolderId: 'mock_csv_1002',
-      learningCsvFolderId: 'mock_learn_1002',
+      sharedFolderId: 'mock_shared_BBB',
+      processingFolderId: 'mock_proc_BBB',
+      archivedFolderId: 'mock_arch_BBB',
+      excludedFolderId: 'mock_excl_BBB',
+      csvOutputFolderId: 'mock_csv_BBB',
+      learningCsvFolderId: 'mock_learn_BBB',
       taxFilingType: 'blue',
       consumptionTaxMode: 'general',
       updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
     },
     {
-      clientCode: '2005',
-      companyName: '株式会社 寿限無寿限無五劫の擦り切れ海砂利水魚の食う寝る処住む処やぶら小路の藪柑子パイポパイポパイポのシューリンガンシューリンガンのグーリンダイ',
-      repName: '平賀 源内',
-      fiscalMonth: 12,
-      status: 'active',
-      accountingSoftware: 'freee',
+      clientCode: 'CCC',
+      companyName: 'チャーリー 産業',
+      repName: 'チャーリー 三郎',
+      staffName: '', // Unassigned
+      type: 'individual',
+      fiscalMonth: 3,
+      status: 'inactive',
+      accountingSoftware: 'mf', // Fixed: matches Zod Enum
+      calculationMethod: 'accrual',
+      taxMethod: 'inclusive',
+      contactInfo: '',
       driveLinked: true,
-      sharedFolderId: 'mock_shared_2005',
-      processingFolderId: 'mock_proc_2005',
-      archivedFolderId: 'mock_arch_2005',
-      excludedFolderId: 'mock_excl_2005',
-      csvOutputFolderId: 'mock_csv_2005',
-      learningCsvFolderId: 'mock_learn_2005',
+      sharedFolderId: 'mock_shared_CCC',
+      processingFolderId: 'mock_proc_CCC',
+      archivedFolderId: 'mock_arch_CCC',
+      excludedFolderId: 'mock_excl_CCC',
+      csvOutputFolderId: 'mock_csv_CCC',
+      learningCsvFolderId: 'mock_learn_CCC',
+      taxFilingType: 'blue',
+      consumptionTaxMode: 'general',
+      updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
+    },
+    {
+      clientCode: 'DDD',
+      companyName: 'デルタ 商事',
+      repName: 'デルタ 四郎',
+      staffName: '鈴木 太郎',
+      type: 'corp',
+      fiscalMonth: 6,
+      status: 'active',
+      accountingSoftware: 'yayoi', // Fixed
+      calculationMethod: 'accrual',
+      taxMethod: 'inclusive',
+      contactInfo: '',
+      driveLinked: true,
+      updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
+    },
+    {
+      clientCode: 'EEE',
+      companyName: 'エコー 商店',
+      repName: 'エコー 五郎',
+      staffName: '', // Unassigned
+      type: 'individual',
+      fiscalMonth: 9,
+      status: 'active',
+      accountingSoftware: 'freee', // Matches
+      calculationMethod: 'interim_cash',
+      taxMethod: 'exclusive',
+      contactInfo: '',
+      driveLinked: true,
+      sharedFolderId: 'mock_shared_EEE',
+      processingFolderId: 'mock_proc_EEE',
+      archivedFolderId: 'mock_arch_EEE',
+      excludedFolderId: 'mock_excl_EEE',
+      csvOutputFolderId: 'mock_csv_EEE',
+      learningCsvFolderId: 'mock_learn_EEE',
       taxFilingType: 'blue',
       consumptionTaxMode: 'general',
       updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
@@ -393,62 +446,9 @@ export function aaa_useAccountingSystem() {
 
       // Inject Mocks into Raw Data stream (for display purposes)
       // Define Ironclad Mocks (Fully Compliant)
-      const mockClients = [
-        {
-          clientCode: '1001',
-          companyName: '株式会社 テスト商事',
-          repName: '管理者 太郎',
-          fiscalMonth: 3,
-          status: 'active',
-          sharedFolderId: 'mock_shared_1001',
-          processingFolderId: 'mock_proc_1001',
-          archivedFolderId: 'mock_arch_1001',
-          excludedFolderId: 'mock_excl_1001',
-          csvOutputFolderId: 'mock_csv_1001',
-          learningCsvFolderId: 'mock_learn_1001',
-          taxFilingType: 'blue',
-          consumptionTaxMode: 'general',
-          accountingSoftware: 'freee',
-          driveLinked: true,
-          updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
-        },
-        {
-          clientCode: '1002',
-          companyName: 'Mock Client 1002',
-          repName: 'Mock Rep',
-          fiscalMonth: 12,
-          status: 'active',
-          accountingSoftware: 'freee',
-          driveLinked: false,
-          sharedFolderId: 'mock_shared_1002',
-          processingFolderId: 'mock_proc_1002',
-          archivedFolderId: 'mock_arch_1002',
-          excludedFolderId: 'mock_excl_1002',
-          csvOutputFolderId: 'mock_csv_1002',
-          learningCsvFolderId: 'mock_learn_1002',
-          taxFilingType: 'blue',
-          consumptionTaxMode: 'general',
-          updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
-        },
-        {
-          clientCode: '2005',
-          companyName: '株式会社 寿限無寿限無五劫の擦り切れ海砂利水魚の食う寝る処住む処やぶら小路の藪柑子パイポパイポパイポのシューリンガンシューリンガンのグーリンダイ',
-          repName: '平賀 源内',
-          fiscalMonth: 12,
-          status: 'active',
-          accountingSoftware: 'freee',
-          driveLinked: true,
-          sharedFolderId: 'mock_shared_2005',
-          processingFolderId: 'mock_proc_2005',
-          archivedFolderId: 'mock_arch_2005',
-          excludedFolderId: 'mock_excl_2005',
-          csvOutputFolderId: 'mock_csv_2005',
-          learningCsvFolderId: 'mock_learn_2005',
-          taxFilingType: 'blue',
-          consumptionTaxMode: 'general',
-          updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
-        }
-      ];
+      // Inject Mocks into Raw Data stream (for display purposes)
+      // Use the Preload Mocks which are structurally complete
+      const mockClients = mockClientsPreload;
 
       // Force Inject/Overwrite Mocks
       mockClients.forEach((mock: any) => {

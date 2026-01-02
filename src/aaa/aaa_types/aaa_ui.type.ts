@@ -44,7 +44,11 @@ export type TaxRateUi =
   | 10
   | 8
   | 0
+  | 0
   | 'unknown';
+
+export type TaxFilingTypeUi = 'blue' | 'white';
+export type ConsumptionTaxModeUi = 'general' | 'simplified' | 'exempt';
 
 export type StepStateUi = 'pending' | 'processing' | 'done' | 'error' | 'ready' | 'none';
 
@@ -173,6 +177,8 @@ export interface ClientUi {
   readonly clientCode: string;
   readonly companyName: string;
   readonly repName: string;
+  readonly staffName: string; // Added
+  readonly type: 'corp' | 'individual'; // Added
   readonly fiscalMonth: number;
   readonly status: 'active' | 'inactive' | 'suspension';
 
@@ -189,6 +195,7 @@ export interface ClientUi {
   readonly fiscalMonthLabel: string;
   readonly softwareLabel: string;
   readonly taxInfoLabel: string;
+  readonly calculationMethodLabel: string;
 
   // Drive
   readonly driveLinked: boolean;

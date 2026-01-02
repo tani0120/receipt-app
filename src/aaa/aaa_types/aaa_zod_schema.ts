@@ -44,7 +44,9 @@ export const AccountingSoftwareSchema = z.enum(['yayoi', 'freee', 'mf', 'other']
 export const ClientSchema = z.object({
   clientCode: z.string(),
   companyName: z.string(),
+  type: z.enum(['corp', 'individual']).optional(), // Added type
   repName: z.string().optional(),
+  staffName: z.string().optional(), // Added staffName
   contactInfo: z.string().optional(),
   fiscalMonth: z.number().int().min(1).max(12),
   status: z.enum(['active', 'inactive', 'suspension']),
@@ -62,10 +64,12 @@ export const ClientSchema = z.object({
   consumptionTaxMode: ConsumptionTaxModeSchema,
   simplifiedTaxCategory: SimplifiedTaxCategorySchema.optional(),
   defaultTaxRate: z.number().optional(),
+  taxMethod: z.enum(['inclusive', 'exclusive']).optional(),
 
   accountingSoftware: AccountingSoftwareSchema,
   aiKnowledgePrompt: z.string().optional(),
   defaultPaymentMethod: z.enum(['cash', 'credit_card', 'bank_transfer']).optional(),
+  calculationMethod: z.enum(['accrual', 'cash', 'interim_cash']).optional(),
 
   driveLinked: z.boolean(),
   updatedAt: TimestampSchema

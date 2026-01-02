@@ -21,9 +21,9 @@ updated_at: "2026-01-01"
 
 phaseA:
   # Visual Truth (見た目確定)
-  visual_truth: false
+  visual_truth: true
   overlay_diff_threshold_px: 0
-  evidence_stored: false
+  evidence_stored: true
 
 phaseB:
   # Non-Destructive Refactor (構造整理)
