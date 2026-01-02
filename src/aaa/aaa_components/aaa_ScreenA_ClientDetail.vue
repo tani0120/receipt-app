@@ -7,26 +7,26 @@
                 <button @click="$router.push({ name: 'aaa_ScreenA' })" class="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1 transition-colors">
                     <i class="fa-solid fa-arrow-left"></i> 顧問先一覧に戻る
                 </button>
-                <button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded shadow-sm text-sm font-bold transition flex items-center gap-2">
+                <button @click="isEditModalOpen = true" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded shadow-sm text-sm font-bold transition flex items-center gap-2">
                     <i class="fa-solid fa-pen"></i> 修正
                 </button>
             </div>
 
             <!-- Main Info Row -->
-            <div class="flex flex-col gap-4">
+            <div v-if="client" class="flex flex-col gap-4">
                 <!-- Line 1: Basic Stats -->
                 <div class="flex flex-wrap items-center gap-4">
                     <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded border border-green-200">稼働中</span>
-                    <span class="bg-slate-800 text-white font-mono text-sm font-bold px-2 py-1 rounded">AMT</span>
-                    <h1 class="text-2xl font-bold text-slate-900">アマテラス商事</h1>
-                    <span class="bg-blue-50 text-blue-700 border border-blue-100 text-xs px-2 py-0.5 rounded font-bold">12月決算</span>
+                    <span class="bg-slate-800 text-white font-mono text-sm font-bold px-2 py-1 rounded">{{ client.clientCode }}</span>
+                    <h1 class="text-2xl font-bold text-slate-900">{{ client.companyName }}</h1>
+                    <span class="bg-blue-50 text-blue-700 border border-blue-100 text-xs px-2 py-0.5 rounded font-bold">{{ client.fiscalMonth }}月決算</span>
                     <div class="flex items-center gap-2 text-sm text-slate-600">
                         <i class="fa-solid fa-desktop text-slate-400"></i>
-                        <span class="font-bold">freee</span>
+                        <span class="font-bold">{{ client.accountingSoftware }}</span>
                     </div>
                     <div class="flex items-center gap-2 text-sm text-slate-600">
                         <i class="fa-solid fa-user-tie text-slate-400"></i>
-                        <span>担当: <span class="font-bold">山田 太郎</span></span>
+                        <span>担当: <span class="font-bold">{{ client.staffName }}</span></span>
                     </div>
                     <div class="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-1 rounded">
                         第5期 (2025/01/01 ～ 2025/12/31)
@@ -37,31 +37,23 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
                         <span class="text-slate-400 font-bold">課税区分</span>
-                        <span class="font-bold text-slate-700">原則課税</span>
+                        <span class="font-bold text-slate-700">{{ client.consumptionTaxModeLabel }}</span>
                     </div>
                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
                         <span class="text-slate-400 font-bold">計上基準</span>
-                        <span class="font-bold text-slate-700">発生主義</span>
+                        <span class="font-bold text-slate-700">{{ client.taxMethodExplicitLabel }}</span>
                     </div>
                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
                         <span class="text-slate-400 font-bold">申告種類</span>
-                        <span class="font-bold text-blue-600">青色申告</span>
+                        <span class="font-bold text-blue-600">{{ client.taxFilingTypeLabel }}</span>
                     </div>
                 </div>
 
                 <!-- Line 3: Drive Links -->
                 <div class="flex flex-wrap gap-3 mt-2">
-                    <a href="#" class="flex items-center gap-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 px-4 py-2 rounded transition shadow-sm text-sm font-bold">
-                        <i class="fa-brands fa-google-drive text-yellow-400 text-lg"></i>
-                        顧客共有用フォルダ
-                    </a>
-                    <a href="#" class="flex items-center gap-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 px-4 py-2 rounded transition shadow-sm text-sm font-bold">
-                        <i class="fa-brands fa-google-drive text-blue-400 text-lg"></i>
-                        仕訳出力結果保管用フォルダ
-                    </a>
-                    <a href="#" class="flex items-center gap-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 px-4 py-2 rounded transition shadow-sm text-sm font-bold">
-                        <i class="fa-brands fa-google-drive text-gray-400 text-lg"></i>
-                        仕訳除外ファイル用フォルダ
+                    <a v-for="link in client.driveFolderLinks" :key="link.path" :href="link.url" target="_blank" class="flex items-center gap-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 px-4 py-2 rounded transition shadow-sm text-sm font-bold">
+                        <i class="fa-brands fa-google-drive text-lg" :class="{'text-yellow-400': link.path.includes('共有'), 'text-blue-400': link.path.includes('出力'), 'text-gray-400': link.path.includes('除外')}"></i>
+                        {{ link.path }}
                     </a>
                 </div>
             </div>
@@ -69,7 +61,6 @@
 
         <!-- Main Content -->
         <main class="flex-1 overflow-y-auto px-8 py-8 space-y-8">
-
             <!-- Section: Learning CSV Storage Area -->
             <section class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                 <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
@@ -209,13 +200,57 @@
 ・インボイス登録番号のないタクシー利用は「旅費交通費(免税)」とすること。</div>
                 </div>
             </section>
-
         </main>
+
+        <!-- Edit Modal -->
+        <aaa_ScreenA_Detail_EditModal
+            :isOpen="isEditModalOpen"
+            :data="client"
+            @close="isEditModalOpen = false"
+            @save="handleSave"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
-// Phase A: Visual Truth (v2)
-// Implementing new layout based on specification.
-// All data is hardcoded for visual verification.
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { aaa_useAccountingSystem } from '@/aaa/aaa_composables/aaa_useAccountingSystem';
+import { mapClientDetailApiToUi } from '@/aaa/aaa_composables/aaa_ClientDetailMapper';
+import type { ClientDetailUi } from '@/aaa/aaa_types/aaa_ui.type';
+import aaa_ScreenA_Detail_EditModal from './aaa_ScreenA_Detail_EditModal.vue';
+
+const route = useRoute();
+const { clients, fetchClients /* updateClient */ } = aaa_useAccountingSystem();
+const isEditModalOpen = ref(false);
+
+const code = computed(() => route.params.code as string);
+const rawClient = computed(() => clients.value.find(c => c.clientCode === code.value));
+
+// Phase A: Mock Data State (Override real data for visual testing)
+// In Phase C, this will be strictly mapped from `rawClient`.
+// For now, we allow `client` to be a local ref that can be updated by the modal.
+const localClient = ref<ClientDetailUi | null>(null);
+
+const client = computed(() => {
+    // Priority: Local (Edited) > Mapped > Fallback
+    if (localClient.value) return localClient.value;
+    return mapClientDetailApiToUi(rawClient.value || {});
+});
+
+const handleSave = (updatedData: ClientDetailUi) => {
+    // Phase A: Local state update only
+    localClient.value = updatedData;
+    // Phase C: Call API update here
+    /*
+    await updateClient(updatedData.clientCode, updatedData);
+    fetchClients();
+    */
+};
+
+onMounted(() => {
+    if (!clients.value.length) {
+        fetchClients();
+    }
+});
 </script>
