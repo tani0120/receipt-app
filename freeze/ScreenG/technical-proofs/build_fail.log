@@ -1,0 +1,5 @@
+[ERROR] TS2322: Type 'string' is not assignable to type 'number'.
+    at src/aaa/aaa_mappers/aaa_DataConversionMapper.ts:32:15
+[ERROR] TS2339: Property 'unknownField' does not exist on type 'DataConversionUi'.
+    at src/aaa/aaa_components/aaa_ScreenG_DataConversion.vue:50:20
+BUILD FAILED
