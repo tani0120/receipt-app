@@ -1,4 +1,4 @@
-﻿# UI Freeze Evidence: ScreenB
-- Freeze Version: v1
-- Captured At: 2026-01-01 14:48:59
-- Commit Hash: 570edca28d0343749c6c64433ee2eca4cf191d5b
+﻿# UI Freeze Evidence: ScreenB (Journal Status)
+- Freeze Version: v2-draft
+- Captured At: 2026-01-02 16:04:00
+- Commit Hash: Pending
