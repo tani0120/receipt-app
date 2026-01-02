@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
-import type { ConversionLogUi } from '@/aaa/aaa_types/aaa_ui.type';
-import { mapConversionLogUi } from '@/aaa/aaa_composables/aaa_mapper';
+import type { ConversionLogUi } from '@/aaa/aaa_types/aaa_ScreenG_ui.type';
+import { mapConversionLogApiToUi } from '@/aaa/aaa_composables/aaa_DataConversionMapper'; // Updated import
 
 // Internal Type Definition
 type InternalConversionLog = {
@@ -50,7 +50,7 @@ export function aaa_useDataConversion() {
 
     // Return strictly typed UI data using Central Mapper
     const logs = computed<ConversionLogUi[]>(() =>
-        conversionHistory.value.map(mapConversionLogUi)
+        conversionHistory.value.map(mapConversionLogApiToUi)
     );
 
     const removeLog = (id: string) => {

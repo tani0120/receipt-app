@@ -17,26 +17,29 @@
         <div class="font-bold text-sm text-slate-800 mb-2 pl-2">{{ log.clientName }}</div>
 
         <div class="flex items-center gap-2 mb-3 pl-2">
-            <!-- Source Label: Plain style, no hover button effect -->
-            <span class="text-xs font-bold bg-gray-100 px-2 py-1 rounded text-gray-700 cursor-default">{{ log.sourceSoftware }}</span>
-            <i class="fa-solid fa-arrow-right text-gray-400 text-xs"></i>
-            <span class="text-xs font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded">{{ log.targetSoftwareLabel }}</span>
+            <div>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">{{ log.sourceSoftwareLabel }}</span>
+                <i class="fa-solid fa-arrow-right text-gray-300 text-xs"></i>
+                <span class="text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">{{ log.targetSoftwareLabel }}</span>
+            </div>
+            <div class="font-bold text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-2" @click="$emit('download', log.id)">
+               <i class="fa-regular fa-file-csv"></i> {{ log.fileName }}
+            </div>
+            <div class="text-[10px] text-gray-400 mt-1 flex items-center gap-3">
+                <span><i class="fa-regular fa-clock"></i> {{ log.timestamp }}</span>
+                <span>{{ log.fileSize }}</span>
+            </div>
+        </div>
         </div>
 
-        <a :href="log.downloadUrl" :download="log.fileName" @click="$emit('download', log.id)" class="bg-slate-50 rounded p-2 pl-3 flex items-center justify-between group-hover:bg-slate-100 transition text-decoration-none">
-            <div class="flex items-center gap-2 overflow-hidden">
-                <i class="fa-solid fa-file-csv text-green-600"></i>
-                <span class="text-xs font-mono text-gray-600 truncate flex-1">{{ log.fileName }}</span>
-                <span class="text-[10px] text-gray-400 shrink-0 ml-2 border-l border-gray-200 pl-2">{{ log.fileSizeLabel }}</span>
-            </div>
-            <i class="fa-solid fa-download text-gray-400 group-hover:text-blue-500 transition"></i>
-        </a>
+
     </div>
 </template>
 
 <script setup lang="ts">
 import aaa_G_StatusBadge from './aaa_G_StatusBadge.vue';
-import type { ConversionLogUi } from '@/aaa/aaa_types/aaa_ui.type'; // Updated import
+import type { ConversionLogUi } from '@/aaa/aaa_types/aaa_ScreenG_ui.type';
 
 defineProps<{
     log: ConversionLogUi

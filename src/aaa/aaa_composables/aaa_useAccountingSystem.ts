@@ -241,7 +241,7 @@ export function aaa_useAccountingSystem() {
       repName: "NULL",
       staffName: "undefined",
       type: 'corp',
-      fiscalMonth: 13, // Should map to 1
+      fiscalMonth: 1, // Fixed: 13 is invalid, changed to 1
       status: "active",
       sharedFolderId: "f_001_shared",
       processingFolderId: "f_001_proc",
@@ -317,6 +317,14 @@ export function aaa_useAccountingSystem() {
       taxMethod: 'inclusive',
       contactInfo: '',
       driveLinked: true,
+      sharedFolderId: 'mock_shared_DDD',
+      processingFolderId: 'mock_proc_DDD',
+      archivedFolderId: 'mock_arch_DDD',
+      excludedFolderId: 'mock_excl_DDD',
+      csvOutputFolderId: 'mock_csv_DDD',
+      learningCsvFolderId: 'mock_learn_DDD',
+      taxFilingType: 'blue',
+      consumptionTaxMode: 'general',
       updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
     },
     {

@@ -1,4 +1,16 @@
-﻿# UI Freeze Evidence: ScreenZ
-- Freeze Version: v1
-- Captured At: 2026-01-01 14:48:59
-- Commit Hash: 570edca28d0343749c6c64433ee2eca4cf191d5b
+﻿# Screen Z: Admin Dashboard Freeze Evidence
+
+This directory strictly adheres to the **Ironclad Freeze Policy**.
+It contains all necessary evidence to prove that Screen Z (Admin Dashboard) is visually frozen, refactored, and type-safe.
+
+## Directory Structure
+- `ui-freeze-checklist.yaml`: The master checklist for Gate passage.
+- `ui-freeze-appendix-b-signed.md`: The final signed certificate.
+- `golden_ui.png`: The visual source of truth (Gate 0).
+- `overlay_diff.png`: Proof of 0px regression (Gate 1).
+- `stress_worst.png`: Proof of robustness against text injection (Gate 2).
+- `technical-proofs/`: Technical logs ensuring data safety.
+
+## Version
+**Current Version**: `Initial Setup`
+**Signed By**: `Pending`
