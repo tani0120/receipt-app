@@ -49,139 +49,17 @@
                   </div>
               </div>
 
-              <!-- Steps Grid -->
-              <div class="flex-1 grid grid-cols-7 min-w-[700px] h-full">
-                  <!-- Step 1 -->
-                  <div class="border-r border-gray-100 flex items-center justify-center text-lg">
-                      <UI_StatusIcon :status="job.steps.receipt.state" />
-                  </div>
+              <!-- Steps Grid Component -->
+              <aaa_ScreenB_JobSteps
+                :job="job"
+                @action="(p) => $emit('action', p)"
+              />
 
-                  <!-- Step 2 -->
-                  <div class="border-r border-gray-100 flex items-center justify-center text-lg">
-                      <div v-if="job.steps.aiAnalysis.state === 'processing'" class="text-gray-500 font-bold flex flex-col items-center animate-pulse">
-                          <i class="fa-solid fa-spinner fa-spin text-xl mb-1"></i><span class="text-[9px]">解析中...</span>
-                      </div>
-                      <div v-else-if="job.steps.aiAnalysis.state === 'error'" class="text-red-600 font-bold flex flex-col items-center">
-                          <i class="fa-solid fa-ban text-xl mb-1"></i><span class="text-[9px]">停止中</span>
-                      </div>
-                      <UI_StatusIcon v-else :status="job.steps.aiAnalysis.state" />
-                  </div>
-
-                  <!-- Step 3 (Journal Entry) -->
-                  <div class="border-r border-gray-100 flex items-center justify-center px-2">
-                      <UI_StepBox
-                          v-if="job.steps.journalEntry.state === 'pending'"
-                          color="indigo"
-                          top-label="1次仕訳"
-                          :bottom-label="`残${job.steps.journalEntry.count}件`"
-                          @click="$emit('action', { job, type: 'work' })"
-                      />
-                      <UI_StatusIcon v-else :status="job.steps.journalEntry.state" />
-                  </div>
-
-                  <!-- Step 4 (Approval) -->
-                  <div class="border-r border-gray-100 flex items-center justify-center px-2">
-                       <UI_StepBox
-                          v-if="job.steps.approval.state === 'pending'"
-                          color="pink"
-                          top-label="未承認"
-                          :bottom-label="`残${job.steps.approval.count}件`"
-                          @click="$emit('action', { job, type: 'approve' })"
-                      />
-                      <UI_StatusIcon v-else :status="job.steps.approval.state" />
-                  </div>
-
-                  <!-- Step 5 (Remand) -->
-                  <div class="border-r border-gray-100 flex items-center justify-center px-2">
-                      <UI_StepBox
-                          v-if="job.steps.remand.state === 'pending'"
-                          color="orange"
-                          top-label="差戻対応"
-                          :bottom-label="`残 ${job.steps.remand.count}件`"
-                          @click="$emit('action', { job, type: 'remand' })"
-                      />
-                      <UI_StatusIcon v-else :status="job.steps.remand.state" />
-                  </div>
-
-                  <!-- Step 6 (Export) -->
-                  <div class="border-r border-gray-100 flex items-center justify-center px-2">
-                      <button v-if="job.steps.export.state === 'ready'" @click="$emit('action', { job, type: 'export' })" class="w-full bg-white border border-green-500 text-green-600 rounded py-1 text-[10px] font-bold hover:bg-green-50 shadow-sm transition"><i class="fa-solid fa-download mr-1"></i> 未出力</button>
-                      <button v-else-if="job.steps.export.state === 'done'" @click="$emit('action', { job, type: 'export' })" class="w-full text-[10px] font-bold flex flex-col items-center text-gray-400 hover:text-green-600 cursor-pointer"><i class="fa-solid fa-file-csv text-base mb-1"></i> 出力済</button>
-                      <UI_StatusIcon v-else :status="job.steps.export.state" />
-                  </div>
-
-                  <!-- Step 7 (Archive -> Move to Excluded) -->
-                  <div class="border-r border-gray-100 flex items-center justify-center px-2">
-                      <div v-if="job.steps.archive.state === 'ready'" @click="$emit('action', { job, type: 'archive' })" class="flex items-center gap-1 text-[9px] bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 w-full justify-center cursor-pointer hover:bg-blue-100 transition">
-                          <i class="fa-solid fa-box-open"></i> 未移動{{ job.steps.archive.count }}件
-                      </div>
-                      <div v-else-if="job.steps.archive.state === 'done'" @click="$emit('action', { job, type: 'archive' })" class="cursor-pointer hover:text-blue-500 transition">
-                           <i class="fa-solid fa-check text-gray-400"></i>
-                      </div>
-                      <UI_StatusIcon v-else :status="job.steps.archive.state" />
-                  </div>
-              </div>
-
-              <!-- Action Column -->
-              <div class="p-3 w-40 flex-shrink-0 flex flex-col items-center justify-center gap-1 border-l border-gray-100 bg-slate-50/50">
-                   <!-- Analysis Wait -->
-                  <UI_ActionButton
-                    v-if="job.steps.aiAnalysis.state === 'processing'"
-                    variant="processing"
-                    icon="fa-solid fa-spinner fa-spin"
-                    label="解析待機"
-                    disabled
-                  />
-
-                  <!-- Primary Actions -->
-                  <UI_ActionButton
-                    v-else-if="job.primaryAction.type === 'work'"
-                    variant="work"
-                    icon="fa-solid fa-file-invoice-dollar"
-                    label="1次仕訳"
-                    @click="$emit('action', { job, type: 'work' })"
-                  />
-
-                  <UI_ActionButton
-                    v-else-if="job.nextAction.type === 'approve'"
-                    variant="approve"
-                    icon="fa-solid fa-stamp"
-                    label="最終承認"
-                    @click="$emit('action', { job, type: 'approve' })"
-                  />
-
-                  <UI_ActionButton
-                    v-else-if="job.nextAction.type === 'remand'"
-                    variant="remand"
-                    icon="fa-solid fa-rotate-left"
-                    label="差戻対応"
-                    @click="$emit('action', { job, type: 'remand' })"
-                  />
-
-                  <UI_ActionButton
-                    v-else-if="job.primaryAction.type === 'rescue'"
-                    variant="rescue"
-                    icon="fa-solid fa-triangle-exclamation"
-                    label="エラー確認"
-                    @click="$emit('action', { job, type: 'rescue_error' })"
-                  />
-
-                  <UI_ActionButton
-                    v-else-if="job.primaryAction.type === 'archive'"
-                    variant="archive"
-                    icon="fa-solid fa-box-open"
-                    label="仕訳外移動"
-                    @click="$emit('action', { job, type: 'archive' })"
-                  />
-
-                  <!-- Fallback: Complete -->
-                  <UI_ActionButton
-                    v-else-if="job.nextAction.type === 'complete_all'"
-                    variant="complete"
-                    icon="fa-solid fa-check-double"
-                    label="すべて完了"
-                  />
-              </div>
+              <!-- Action Column Component -->
+              <aaa_ScreenB_ActionCell
+                :job="job"
+                @action="(p) => $emit('action', p)"
+              />
           </div>
       </div>
   </div>
@@ -189,9 +67,8 @@
 
 <script setup lang="ts">
 import type { JobUi } from '@/aaa/aaa_types/aaa_ui.type';
-import UI_StatusIcon from '@/aaa/aaa_components/aaa_UI_StatusIcon.vue';
-import UI_StepBox from '@/aaa/aaa_components/aaa_UI_StepBox.vue';
-import UI_ActionButton from '@/aaa/aaa_components/aaa_UI_ActionButton.vue';
+import aaa_ScreenB_JobSteps from '@/aaa/aaa_components/aaa_ScreenB_JobSteps.vue';
+import aaa_ScreenB_ActionCell from '@/aaa/aaa_components/aaa_ScreenB_ActionCell.vue';
 
 // Phase B Refactor (Componentized)
 defineProps<{
