@@ -24,7 +24,7 @@
               <div class="p-2 text-center border-r bg-pink-50 text-pink-800 border-b-4 border-pink-400 flex items-center justify-center">STEP 4<br>最終承認</div>
               <div class="p-2 text-center border-r bg-orange-50 text-orange-800 border-b-4 border-orange-400 flex items-center justify-center">STEP 5<br>差戻対応</div>
               <div class="p-2 text-center border-r bg-green-50 text-green-800 border-b-4 border-green-500 flex items-center justify-center">STEP 6<br>CSV出力</div>
-              <div class="p-2 text-center border-r bg-gray-50 flex items-center justify-center">STEP 7<br>原本整理</div>
+              <div class="p-2 text-center border-r bg-gray-50 flex items-center justify-center">STEP 7<br>仕訳外移動</div>
           </div>
           <div class="p-2 w-40 bg-slate-100 text-center flex-shrink-0 flex items-center justify-center shadow-inner">次のアクション</div>
       </div>
@@ -72,8 +72,9 @@
                       <UI_StepBox
                           v-if="job.steps.journalEntry.state === 'pending'"
                           color="indigo"
-                          :top-label="`残り ${job.steps.journalEntry.count}件`"
-                          :bottom-label="job.steps.journalEntry.label"
+                          top-label="1次仕訳"
+                          :bottom-label="`残${job.steps.journalEntry.count}件`"
+                          @click="$emit('action', { job, type: 'work' })"
                       />
                       <UI_StatusIcon v-else :status="job.steps.journalEntry.state" />
                   </div>
@@ -84,7 +85,8 @@
                           v-if="job.steps.approval.state === 'pending'"
                           color="pink"
                           top-label="未承認"
-                          :bottom-label="`${job.steps.approval.count}件`"
+                          :bottom-label="`残${job.steps.approval.count}件`"
+                          @click="$emit('action', { job, type: 'approve' })"
                       />
                       <UI_StatusIcon v-else :status="job.steps.approval.state" />
                   </div>
@@ -96,23 +98,26 @@
                           color="orange"
                           top-label="差戻対応"
                           :bottom-label="`残 ${job.steps.remand.count}件`"
+                          @click="$emit('action', { job, type: 'remand' })"
                       />
                       <UI_StatusIcon v-else :status="job.steps.remand.state" />
                   </div>
 
                   <!-- Step 6 (Export) -->
                   <div class="border-r border-gray-100 flex items-center justify-center px-2">
-                      <button v-if="job.steps.export.state === 'ready'" class="w-full bg-white border border-green-500 text-green-600 rounded py-1 text-[10px] font-bold hover:bg-green-50 shadow-sm transition"><i class="fa-solid fa-download mr-1"></i> 未出力</button>
-                      <div v-else-if="job.steps.export.state === 'done'" class="text-[10px] font-bold flex flex-col items-center text-gray-400"><i class="fa-solid fa-file-csv text-base mb-1"></i> 出力済</div>
+                      <button v-if="job.steps.export.state === 'ready'" @click="$emit('action', { job, type: 'export' })" class="w-full bg-white border border-green-500 text-green-600 rounded py-1 text-[10px] font-bold hover:bg-green-50 shadow-sm transition"><i class="fa-solid fa-download mr-1"></i> 未出力</button>
+                      <button v-else-if="job.steps.export.state === 'done'" @click="$emit('action', { job, type: 'export' })" class="w-full text-[10px] font-bold flex flex-col items-center text-gray-400 hover:text-green-600 cursor-pointer"><i class="fa-solid fa-file-csv text-base mb-1"></i> 出力済</button>
                       <UI_StatusIcon v-else :status="job.steps.export.state" />
                   </div>
 
-                  <!-- Step 7 (Archive) -->
+                  <!-- Step 7 (Archive -> Move to Excluded) -->
                   <div class="border-r border-gray-100 flex items-center justify-center px-2">
-                      <div v-if="job.steps.archive.state === 'ready'" class="flex items-center gap-1 text-[9px] bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 w-full justify-center">
-                          <i class="fa-solid fa-box-open"></i> 残({{ job.steps.archive.count }})
+                      <div v-if="job.steps.archive.state === 'ready'" @click="$emit('action', { job, type: 'archive' })" class="flex items-center gap-1 text-[9px] bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 w-full justify-center cursor-pointer hover:bg-blue-100 transition">
+                          <i class="fa-solid fa-box-open"></i> 未移動{{ job.steps.archive.count }}件
                       </div>
-                      <i v-else-if="job.steps.archive.state === 'done'" class="fa-solid fa-check text-gray-400"></i>
+                      <div v-else-if="job.steps.archive.state === 'done'" @click="$emit('action', { job, type: 'archive' })" class="cursor-pointer hover:text-blue-500 transition">
+                           <i class="fa-solid fa-check text-gray-400"></i>
+                      </div>
                       <UI_StatusIcon v-else :status="job.steps.archive.state" />
                   </div>
               </div>
@@ -165,7 +170,7 @@
                     v-else-if="job.primaryAction.type === 'archive'"
                     variant="archive"
                     icon="fa-solid fa-box-open"
-                    label="原本整理"
+                    label="仕訳外移動"
                     @click="$emit('action', { job, type: 'archive' })"
                   />
 
