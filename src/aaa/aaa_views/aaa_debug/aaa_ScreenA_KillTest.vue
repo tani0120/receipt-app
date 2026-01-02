@@ -60,8 +60,8 @@ const runWorst = () => {
 const runLong = () => {
     ready.value = false;
     setTimeout(() => {
-        const longStr = "A".repeat(10000);
-        const longName = "株式会社 " + "長い名前".repeat(500);
+        const longStr = "A".repeat(50000);
+        const longName = "株式会社 " + "長い名前".repeat(2500);
 
         // @ts-ignore
         debugInjectClients([

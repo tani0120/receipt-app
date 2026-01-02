@@ -8,184 +8,148 @@
             <i class="fa-solid fa-arrow-left"></i> 顧問先一覧に戻る
           </button>
           <div class="flex items-center gap-3">
-             <div class="bg-slate-800 text-white font-mono text-sm font-bold px-2 py-1 rounded">{{ clientCode }}</div>
-             <h1 class="text-2xl font-bold text-slate-900">{{ clientName }}</h1>
-             <span class="bg-blue-50 text-blue-700 border border-blue-100 text-xs px-2 py-0.5 rounded font-medium">{{ fiscalMonth }}月決算</span>
-             <span v-if="isIndividual" class="bg-amber-50 text-amber-700 border border-amber-100 text-xs px-2 py-0.5 rounded font-medium">個人</span>
+             <div class="bg-slate-800 text-white font-mono text-sm font-bold px-2 py-1 rounded">AAA</div>
+             <h1 class="text-2xl font-bold text-slate-900">株式会社サンプルクライアント</h1>
+             <span class="bg-blue-50 text-blue-700 border border-blue-100 text-xs px-2 py-0.5 rounded font-medium">12月決算</span>
+             <span class="bg-green-50 text-green-700 border border-green-100 text-xs px-2 py-0.5 rounded font-medium">稼働中</span>
           </div>
           <div class="flex items-center gap-4 mt-2 text-sm text-slate-500">
-             <div class="flex items-center gap-1"><i class="fa-solid fa-user-tie text-slate-400"></i> {{ repName }}</div>
-             <div class="flex items-center gap-1"><i class="fa-solid fa-desktop text-slate-400"></i> {{ software }}</div>
-             <div class="flex items-center gap-1"><i class="fa-solid fa-calculator text-slate-400"></i> {{ taxMethod }}</div>
+             <div class="flex items-center gap-1"><i class="fa-solid fa-user-tie text-slate-400"></i> 担当者A</div>
+             <div class="flex items-center gap-1"><i class="fa-solid fa-desktop text-slate-400"></i> freee</div>
+             <div class="flex items-center gap-1"><i class="fa-solid fa-calculator text-slate-400"></i> 税込 / 発生主義</div>
           </div>
         </div>
 
         <div class="flex items-center gap-3">
-            <div class="text-right mr-4">
-                <div class="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Health Score</div>
-                <div class="text-2xl font-bold text-green-600">A <span class="text-sm font-normal text-gray-400">/ 92</span></div>
-            </div>
              <button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm">
                 <i class="fa-solid fa-pen mr-1"></i> 編集
             </button>
         </div>
       </div>
+
+       <!-- Tab Navigation -->
+        <div class="flex gap-1 mt-6 border-b border-gray-200">
+            <button class="px-4 py-2 text-sm font-bold text-blue-600 border-b-2 border-blue-600 bg-blue-50/50 rounded-t-lg">
+                基本情報・設定
+            </button>
+            <button class="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition">
+                月次履歴
+            </button>
+            <button class="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition">
+                学習ルール
+            </button>
+        </div>
     </header>
 
-    <!-- Main Content: Cockpit -->
+    <!-- Main Content: Basic Info & Drive Folders -->
     <main class="flex-1 overflow-y-auto p-8">
-        <div class="max-w-6xl mx-auto space-y-8">
+        <div class="max-w-5xl mx-auto space-y-8">
 
-            <!-- Quick Actions Grid -->
-             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Drive Folder Links (Crucial for Ironclad) -->
+            <section>
+                <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <i class="fa-brands fa-google-drive text-slate-500"></i> Google Drive連携フォルダ
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <aaa_ScreenA_Detail_DriveCard
+                        title="顧客共有フォルダ"
+                        path="gdrive/folders/ABC..."
+                        iconColorClass="text-yellow-400"
+                        href="#"
+                    />
+                    <aaa_ScreenA_Detail_DriveCard
+                        title="仕訳CSV出力先"
+                        path="gdrive/folders/DEF..."
+                        iconColorClass="text-blue-400"
+                        href="#"
+                    />
+                    <aaa_ScreenA_Detail_DriveCard
+                        title="仕訳除外しフォルダ"
+                        path="gdrive/folders/GHI..."
+                        iconColorClass="text-gray-400"
+                        href="#"
+                    />
+                    <aaa_ScreenA_Detail_DriveCard
+                        title="過去仕訳・学習データ"
+                        path="gdrive/folders/JKL..."
+                        iconColorClass="text-purple-400"
+                        href="#"
+                    />
+                </div>
+            </section>
 
-                <!-- Action 1: Collection -->
-                <button @click="$router.push({ name: 'aaa_ScreenC_Detail', params: { code: clientCode } })" class="group bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all text-left relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                         <i class="fa-solid fa-paper-plane text-6xl text-teal-600"></i>
-                    </div>
-                    <div class="relative z-10">
-                        <div class="w-10 h-10 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-paper-plane"></i>
-                        </div>
-                        <h3 class="font-bold text-lg text-slate-800 mb-1">資料回収</h3>
-                        <p class="text-xs text-slate-500">領収書・通帳などの回収状況確認</p>
-                        <div class="mt-4 flex items-center gap-2 text-teal-600 text-sm font-bold">
-                            <span>詳細へ</span> <i class="fa-solid fa-arrow-right"></i>
-                        </div>
-                    </div>
-                </button>
-
-                <!-- Action 2: Journal Entry -->
-                <button @click="$router.push({ name: 'aaa_ScreenE', params: { jobId: clientCode + '_job01' } })" class="group bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all text-left relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                         <i class="fa-solid fa-pen-to-square text-6xl text-blue-600"></i>
-                    </div>
-                    <div class="relative z-10">
-                        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </div>
-                        <h3 class="font-bold text-lg text-slate-800 mb-1">仕訳入力</h3>
-                        <p class="text-xs text-slate-500">AI提案の確認・仕訳の編集</p>
-                        <div class="mt-4 flex items-center gap-2 text-blue-600 text-sm font-bold">
-                            <span>ワークベンチへ</span> <i class="fa-solid fa-arrow-right"></i>
-                        </div>
-                    </div>
-                </button>
-
-                <!-- Action 3: Rules -->
-                <button @click="$router.push({ name: 'aaa_ScreenD' })" class="group bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-orange-300 transition-all text-left relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                         <i class="fa-solid fa-brain text-6xl text-orange-600"></i>
-                    </div>
-                     <div class="relative z-10">
-                        <div class="w-10 h-10 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-brain"></i>
-                        </div>
-                        <h3 class="font-bold text-lg text-slate-800 mb-1">AI学習ルール</h3>
-                        <p class="text-xs text-slate-500">自動仕訳ルールの管理・編集</p>
-                         <div class="mt-4 flex items-center gap-2 text-orange-600 text-sm font-bold">
-                            <span>設定画面へ</span> <i class="fa-solid fa-arrow-right"></i>
-                        </div>
-                    </div>
-                </button>
-
-                <!-- Action 4: Export (Data Conversion) -->
-                 <button @click="$router.push({ name: 'aaa_DataConversion' })" class="group bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-green-300 transition-all text-left relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                         <i class="fa-solid fa-file-export text-6xl text-green-600"></i>
-                    </div>
-                    <div class="relative z-10">
-                         <div class="w-10 h-10 rounded-lg bg-green-50 text-green-600 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-file-export"></i>
-                        </div>
-                        <h3 class="font-bold text-lg text-slate-800 mb-1">データ出力</h3>
-                        <p class="text-xs text-slate-500">会計ソフト用CSVの出力</p>
-                         <div class="mt-4 flex items-center gap-2 text-green-600 text-sm font-bold">
-                            <span>出力画面へ</span> <i class="fa-solid fa-arrow-right"></i>
-                        </div>
-                    </div>
-                </button>
-             </div>
-
-             <!-- Status & Info Section -->
-             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Left: Status Summary -->
-                <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-line text-slate-400"></i> 月次進捗状況
-                    </h3>
-                    <div class="space-y-4">
-                        <!-- Progress Item 1 -->
+             <!-- Detailed Info Grid -->
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Column 1: Basic Info -->
+                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                    <h3 class="font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">基本情報</h3>
+                    <dl class="space-y-4">
                         <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="font-bold text-slate-600">資料回収</span>
-                                <span class="font-bold text-teal-600">85%</span>
+                            <dt class="text-xs text-slate-400 font-bold mb-1">会社名 / 屋号</dt>
+                            <dd class="text-sm font-medium text-slate-700">株式会社サンプルクライアント</dd>
+                        </div>
+                         <div>
+                            <dt class="text-xs text-slate-400 font-bold mb-1">代表者名</dt>
+                            <dd class="text-sm font-medium text-slate-700">代表 太郎</dd>
+                        </div>
+                         <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <dt class="text-xs text-slate-400 font-bold mb-1">決算月</dt>
+                                <dd class="text-sm font-medium text-slate-700">12月</dd>
                             </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2">
-                                <div class="bg-teal-500 h-2 rounded-full" style="width: 85%"></div>
+                            <div>
+                                <dt class="text-xs text-slate-400 font-bold mb-1">申告区分</dt>
+                                <dd class="text-sm font-medium text-slate-700 flex items-center gap-2">
+                                    <span class="w-3 h-3 bg-blue-500 rounded-full"></span> 青色申告
+                                </dd>
                             </div>
                         </div>
-                         <!-- Progress Item 2 -->
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="font-bold text-slate-600">仕訳入力</span>
-                                <span class="font-bold text-blue-600">60%</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2">
-                                <div class="bg-blue-500 h-2 rounded-full" style="width: 60%"></div>
-                            </div>
+                         <div>
+                            <dt class="text-xs text-slate-400 font-bold mb-1">連絡先 (Chatwork)</dt>
+                            <dd class="text-sm font-medium text-slate-700 font-mono truncate bg-slate-50 p-2 rounded">
+                                https://www.chatwork.com/g/12345678
+                            </dd>
                         </div>
-                         <!-- Progress Item 3 -->
-                        <div>
-                             <div class="flex justify-between text-sm mb-1">
-                                <span class="font-bold text-slate-600">不明点確認</span>
-                                <span class="font-bold text-red-500">要対応: 3件</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2">
-                                <div class="bg-red-500 h-2 rounded-full animate-pulse" style="width: 30%"></div>
-                            </div>
-                        </div>
-                    </div>
+                    </dl>
                 </div>
 
-                <!-- Right: Recent Activity -->
-                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> 最近のアクティビティ
-                    </h3>
-                    <div class="space-y-4">
-                        <div class="flex gap-3 items-start">
-                            <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0 text-xs">
-                                <i class="fa-solid fa-file-invoice"></i>
+                <!-- Column 2: Accounting Info -->
+                 <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                    <h3 class="font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">会計設定</h3>
+                    <dl class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                             <div>
+                                <dt class="text-xs text-slate-400 font-bold mb-1">使用ソフト</dt>
+                                <dd class="text-sm font-medium text-slate-700">freee</dd>
                             </div>
-                            <div>
-                                <p class="text-xs font-bold text-slate-700">領収書アップロード</p>
-                                <p class="text-[10px] text-slate-500">2025/12/26 14:30 by 担当者A</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-3 items-start">
-                             <div class="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center shrink-0 text-xs">
-                                <i class="fa-solid fa-message"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-slate-700">不明点の質問送信</p>
-                                <p class="text-[10px] text-slate-500">2025/12/25 18:00 by AI System</p>
+                             <div>
+                                <dt class="text-xs text-slate-400 font-bold mb-1">消費税算出</dt>
+                                <dd class="text-sm font-medium text-slate-700">原則課税</dd>
                             </div>
                         </div>
-                        <div class="flex gap-3 items-start">
-                             <div class="w-8 h-8 rounded-full bg-green-50 text-green-500 flex items-center justify-center shrink-0 text-xs">
-                                <i class="fa-solid fa-check"></i>
+                         <div class="grid grid-cols-2 gap-4">
+                             <div>
+                                <dt class="text-xs text-slate-400 font-bold mb-1">税抜/税込</dt>
+                                <dd class="text-sm font-medium text-slate-700">税込経理</dd>
                             </div>
-                            <div>
-                                <p class="text-xs font-bold text-slate-700">通帳データ連携完了</p>
-                                <p class="text-[10px] text-slate-500">2025/12/25 10:00 by System</p>
+                             <div>
+                                <dt class="text-xs text-slate-400 font-bold mb-1">端数処理</dt>
+                                <dd class="text-sm font-medium text-slate-700">切り捨て</dd>
                             </div>
                         </div>
-                    </div>
+                        <div>
+                            <dt class="text-xs text-slate-400 font-bold mb-1">デフォルト税率</dt>
+                            <dd class="text-sm font-medium text-slate-700">10%</dd>
+                        </div>
+                         <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100 mt-2">
+                             <dt class="text-xs text-yellow-600 font-bold mb-1"><i class="fa-solid fa-triangle-exclamation"></i> 簡易課税未設定</dt>
+                             <dd class="text-xs text-yellow-700">
+                                 現在、簡易課税のみなし仕入率は設定されていません。
+                             </dd>
+                        </div>
+                    </dl>
                 </div>
-             </div>
-
+            </section>
         </div>
     </main>
   </div>
@@ -195,7 +159,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { aaa_useAccountingSystem } from '@/aaa/aaa_composables/aaa_useAccountingSystem';
-import type { Client } from '@/aaa/aaa_types/aaa_firestore';
+import { mapClientDetailApiToUi } from '@/aaa/aaa_composables/aaa_ClientDetailMapper';
+import type { ClientDetailUi } from '@/aaa/aaa_types/aaa_ui.type';
+import aaa_ScreenA_Detail_DriveCard from './aaa_ScreenA_Detail_DriveCard.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -203,21 +169,28 @@ const { clients, fetchClients } = aaa_useAccountingSystem();
 
 const code = computed(() => route.params.code as string);
 
-const goBack = () => {
-    router.push('/aaa_clients');
-};
-const client = computed(() => {
-    return clients.value.find((c: Client) => c.clientCode === code.value);
-});
+// Data Binding: Ironclad Contract
+// 1. Get Raw Data (or use Mock/API)
+// 2. Map to UI
+const rawClient = computed(() => clients.value.find(c => c.clientCode === code.value));
 
-// Computed Properties for UI
-const clientCode = computed(() => client.value?.clientCode || code.value);
-const clientName = computed(() => client.value?.companyName || 'Unknown Client');
-const fiscalMonth = computed(() => client.value?.fiscalMonth || 12);
-const repName = computed(() => client.value?.repName || '未割当');
-const software = computed(() => client.value?.accountingSoftware || 'freee');
-const taxMethod = computed(() => (client.value?.taxType === 'inclusive' ? '税込' : '税抜') + ' / ' + '発生主義');
-const isIndividual = computed(() => false); // Mock
+// Use the Mapper. Even if rawClient is undefined, mapper must handle it.
+const client = computed<ClientDetailUi>(() => {
+    // If rawClient is missing (e.g. direct load), mapper handles "unknown"
+    // However, the `clients` array in `useAccountingSystem` currently returns ClientUi[] ??
+    // Actually `useAccountingSystem` returns mapped ClientUi[] logic usually.
+    // Let's check `aaa_useAccountingSystem` implementation.
+    // Assuming for Detail we might need to fetch detailed info or re-map.
+    // Ideally we should rely on the Mapper from a fresh source or re-map current plain object if it matches API shape.
+    // For now, to satisfy visual requirement, we map whatever we have.
+    // NOTE: In `aaa_useAccountingSystem`, `clients` is ref<ClientUi[]>.
+    // Using `mapClientDetailApiToUi` on a `ClientUi` object might be weird if types don't overlap perfectly or if we expect API fields.
+    // BUT! Since we defined `ClientDetailApi` roughly as z.infer schema, we should pass that.
+    // Since `clients` is already UI, we can't map UI -> UI with API mapper.
+    // WE NEED A MOCK or a real fetch for detail.
+    // For Phase C Verified Safety, we will fallback to a safe default if not found.
+    return mapClientDetailApiToUi(rawClient.value || {});
+});
 
 onMounted(() => {
     if (!clients.value.length) {

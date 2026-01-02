@@ -16,9 +16,9 @@ describe('ClientMapper Constitution (Ironclad Rules)', () => {
         expect(ui.clientCode).toBe('CLI');
         expect(ui.companyName).toBe('Test Corp');
         expect(ui.repName).toBe('');
-        expect(ui.contactInfo).toBe('');
+        expect(ui.contact.value).toBe('');
         expect(ui.fiscalMonth).toBe(1); // Default to 1
-        expect(ui.displayFiscalMonth).toBe('1月決算'); // UI helper
+        expect(ui.fiscalMonthLabel).toBe('1月決算'); // UI helper
         expect(ui.status).toBe('active'); // Safe default
     });
 

@@ -236,27 +236,27 @@ export function aaa_useAccountingSystem() {
   // 1. Pre-load Ironclad Client Mocks (Synchronous to ensure Map is ready for Jobs)
   const mockClientsPreload = [
     {
-      clientCode: 'AAA',
-      companyName: '株式会社 アルファ',
-      repName: 'アルファ 太郎',
-      staffName: '鈴木 太郎',
+      clientCode: "AAA",
+      companyName: "<script>alert('XSS')</script>",
+      repName: "NULL",
+      staffName: "undefined",
       type: 'corp',
-      fiscalMonth: 3,
-      status: 'active',
-      sharedFolderId: 'mock_shared_AAA',
-      processingFolderId: 'mock_proc_AAA',
-      archivedFolderId: 'mock_arch_AAA',
-      excludedFolderId: 'mock_excl_AAA',
-      csvOutputFolderId: 'mock_csv_AAA',
-      learningCsvFolderId: 'mock_learn_AAA',
-      taxFilingType: 'blue',
-      consumptionTaxMode: 'general',
-      accountingSoftware: 'yayoi', // Fixed: matches Zod Enum
+      fiscalMonth: 13, // Should map to 1
+      status: "active",
+      sharedFolderId: "f_001_shared",
+      processingFolderId: "f_001_proc",
+      archivedFolderId: "f_001_arch",
+      excludedFolderId: "f_001_excl",
+      csvOutputFolderId: "f_001_csv",
+      learningCsvFolderId: "f_001_learn",
+      taxFilingType: "blue",
+      consumptionTaxMode: "general",
+      accountingSoftware: "freee",
       calculationMethod: 'accrual',
       taxMethod: 'inclusive',
       contactInfo: 'https://www.chatwork.com/g/123456',
       driveLinked: true,
-      updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
+      updatedAt: Timestamp.now()
     },
     {
       clientCode: 'BBB',
