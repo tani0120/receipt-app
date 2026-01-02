@@ -73,12 +73,12 @@
 </template>
 
 <script setup lang="ts">
-import type { JobUi } from '@/aaa/aaa_types/aaa_ui.type';
+import type { JournalStatusUi } from '@/aaa/aaa_types/aaa_ScreenB_ui.type';
 import UI_StatusIcon from '@/aaa/aaa_components/aaa_UI_StatusIcon.vue';
 import UI_StepBox from '@/aaa/aaa_components/aaa_UI_StepBox.vue';
 
 defineProps<{
-  job: JobUi
+  job: JournalStatusUi
 }>();
 
 defineEmits(['action']);

@@ -61,11 +61,11 @@
 </template>
 
 <script setup lang="ts">
-import type { JobUi } from '@/aaa/aaa_types/aaa_ui.type';
+import type { JournalStatusUi } from '@/aaa/aaa_types/aaa_ScreenB_ui.type';
 import UI_ActionButton from '@/aaa/aaa_components/aaa_UI_ActionButton.vue';
 
 defineProps<{
-  job: JobUi
+  job: JournalStatusUi
 }>();
 
 defineEmits(['action']);

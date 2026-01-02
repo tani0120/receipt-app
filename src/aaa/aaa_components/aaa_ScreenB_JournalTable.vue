@@ -66,13 +66,13 @@
 </template>
 
 <script setup lang="ts">
-import type { JobUi } from '@/aaa/aaa_types/aaa_ui.type';
+import type { JournalStatusUi } from '@/aaa/aaa_types/aaa_ScreenB_ui.type';
 import aaa_ScreenB_JobSteps from '@/aaa/aaa_components/aaa_ScreenB_JobSteps.vue';
 import aaa_ScreenB_ActionCell from '@/aaa/aaa_components/aaa_ScreenB_ActionCell.vue';
 
 // Phase B Refactor (Componentized)
 defineProps<{
-jobs: JobUi[]
+jobs: JournalStatusUi[]
 }>();
 
 defineEmits(['action']);

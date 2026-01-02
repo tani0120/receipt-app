@@ -69,7 +69,8 @@ import { reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 // Import from Mirror Composables safely
 import { aaa_useAccountingSystem } from '@/aaa/aaa_composables/aaa_useAccountingSystem';
-import type { JobUi } from '@/aaa/aaa_types/aaa_ui.type'; // Import correct UI type if needed, but composed 'jobs' is JobUi[] via mapper
+import type { JournalStatusUi } from '@/aaa/aaa_types/aaa_ScreenB_ui.type';
+import { mapJournalStatusApiToUi } from '@/aaa/aaa_composables/aaa_JournalStatusMapper';
 import aaa_ScreenB_JournalTable from '@/aaa/aaa_components/aaa_ScreenB_JournalTable.vue';
 
 const router = useRouter();
@@ -92,9 +93,13 @@ const modal = reactive({
     data: {} as any
 });
 
-// Ironclad: Pure Filter & Sort Logic. No data transformation.
-const sortedJobs = computed(() => {
-    let list = jobs.value;
+// Ironclad: Pure Filter & Sort Logic. With Mapper Transformation.
+const sortedJobs = computed<JournalStatusUi[]>(() => {
+    const listProp = jobs.value || [];
+
+    // 1. Map FIRST (Ironclad Requirement: UI only sees JournalStatusUi)
+    // Note: jobs.value is JobUi[] currently, so we map it to JournalStatusUi
+    let list: JournalStatusUi[] = listProp.map(j => mapJournalStatusApiToUi(j));
 
     // Filter Logic
     if (filters.actionStatus) {
@@ -117,7 +122,7 @@ const sortedJobs = computed(() => {
 });
 
 // Handler for events emitted by the Table Component
-const handleTableAction = (payload: { job: JobUi, type: string }) => {
+const handleTableAction = (payload: { job: JournalStatusUi, type: string }) => {
     const { job, type } = payload;
     if (['work', 'approve', 'remand'].includes(type)) {
         router.push({

@@ -118,6 +118,11 @@ export const routes: RouteRecordRaw[] = [
     path: '/aaa_debug/screen-a-kill',
     name: 'aaa_debug_screen_a_kill',
     component: () => import('../aaa_views/aaa_debug/aaa_ScreenA_KillTest.vue')
+  },
+  {
+    path: '/aaa_debug/screen-b-kill',
+    name: 'aaa_debug_screen_b_kill',
+    component: () => import('../aaa_components/aaa_ScreenB_KillTest.vue')
   }
 ]
 
