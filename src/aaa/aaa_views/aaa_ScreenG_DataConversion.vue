@@ -142,13 +142,11 @@ const aaa_G_BrandRadio = defineAsyncComponent(() => import('@/aaa/aaa_components
 const aaa_G_HistoryItem = defineAsyncComponent(() => import('@/aaa/aaa_components/aaa_ScreenG/aaa_G_HistoryItem.vue'));
 
 // Composable
-const { logs, addLog, markAsDownloaded, removeLog } = aaa_useDataConversion();
+const { logs, markAsDownloaded, removeLog, startDataConversion, processFile, isProcessing, loadingStatus } = aaa_useDataConversion();
 
 // State
 const isDragging = ref(false);
-const isProcessing = ref(false);
 const uploadedFile = ref<File | null>(null);
-const loadingStatus = ref('');
 const form = ref({
     clientName: '',
     sourceSoftware: '',
@@ -160,7 +158,7 @@ const canConvert = computed(() => {
     return !!(form.value.clientName && form.value.targetSoftware && uploadedFile.value);
 });
 
-// Sorting Logic
+// Sorting Logic (Moved logic to View, keeping UI specific sort here or move to composable? Keep here for now as UI pref)
 const sortedLogs = computed(() => {
     return [...logs.value].sort((a, b) => {
         if (a.isDownloaded !== b.isDownloaded) {
@@ -169,14 +167,6 @@ const sortedLogs = computed(() => {
         return b.timestamp.localeCompare(a.timestamp);
     });
 });
-
-// Helpers
-const SOFTWARE_LABELS = {
-    'Yayoi': '弥生会計',
-    'MF': 'マネーフォワード',
-    'Freee': 'freee',
-    'Unknown': '不明'
-} as const;
 
 const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -202,7 +192,7 @@ const handleDrop = (e: DragEvent) => {
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
         const file = files[0];
-        if (file) processFile(file);
+        if (file) validateAndSetFile(file);
     }
 };
 
@@ -210,64 +200,34 @@ const handleFileSelect = (e: Event) => {
     const target = e.target as HTMLInputElement;
     if (target.files && target.files.length > 0) {
         const file = target.files[0];
-        if (file) processFile(file);
+        if (file) validateAndSetFile(file);
     }
 };
 
-const processFile = (file: File) => {
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-        alert('CSVファイルのみ対応しています');
-        return;
-    }
-    uploadedFile.value = file;
-    if (!form.value.sourceSoftware) {
-        setTimeout(() => {
-            form.value.sourceSoftware = '会計王';
-        }, 500);
+const validateAndSetFile = async (file: File) => {
+    try {
+        await processFile(file);
+        uploadedFile.value = file;
+        if (!form.value.sourceSoftware) {
+            setTimeout(() => {
+                form.value.sourceSoftware = '会計王';
+            }, 500);
+        }
+    } catch (e: any) {
+        alert(e.message);
     }
 };
 
-const startConversion = () => {
-    if (!canConvert.value) return;
-    isProcessing.value = true;
-    loadingStatus.value = 'CSVファイルを解析中...';
-    setTimeout(() => { loadingStatus.value = 'フォーマットを標準化しています...'; }, 1000);
-    setTimeout(() => { loadingStatus.value = `${SOFTWARE_LABELS[form.value.targetSoftware as keyof typeof SOFTWARE_LABELS]}形式へ変換中...`; }, 2000);
-    setTimeout(() => { loadingStatus.value = 'ファイルを生成しています...'; }, 3000);
-    setTimeout(() => {
-        completeConversion();
-    }, 4000);
-};
+const startConversion = async () => {
+    if (!canConvert.value || !uploadedFile.value) return;
 
-// Helper: Generate Random 3-Char ID
-const generateId = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let result = '';
-    for (let i = 0; i < 3; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-};
+    const fileName = await startDataConversion(
+        form.value.clientName,
+        form.value.sourceSoftware,
+        form.value.targetSoftware,
+        uploadedFile.value
+    );
 
-const completeConversion = () => {
-    isProcessing.value = false;
-    const today = new Date();
-    const yyyymmdd = today.toISOString().slice(0,10).replace(/-/g, '');
-    const fileName = `${form.value.clientName}_${form.value.sourceSoftware}_変換後${form.value.targetSoftware}_${yyyymmdd}.csv`;
-    const content = '日付,借方勘定科目,借方金額,貸方勘定科目,貸方金額,摘要\n' +
-                    `2024/12/26,消耗品費,1000,現金,1000,変換テストデータ\n`;
-    const blob = new Blob([content], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    addLog({
-        id: generateId(),
-        timestamp: today.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
-        clientName: form.value.clientName,
-        sourceSoftware: form.value.sourceSoftware,
-        targetSoftware: form.value.targetSoftware,
-        fileName: fileName,
-        downloadUrl: url,
-        isDownloaded: false
-    });
     uploadedFile.value = null;
     alert(`${fileName} の生成が完了しました！`);
 };

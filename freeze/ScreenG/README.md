@@ -1,4 +1,18 @@
-﻿# UI Freeze Evidence: ScreenG
-- Freeze Version: v1
-- Captured At: 2026-01-01 14:48:59
-- Commit Hash: 570edca28d0343749c6c64433ee2eca4cf191d5b
+﻿# Screen G (Data Conversion) - UI Freeze
+
+## Overview
+This directory governs the UI Freeze process for **Screen G: Data Conversion**.
+Strict adherence to the Ironclad Architecture is required.
+
+## Status
+- **Phase A (Visual Truth)**: [IN PROGRESS]
+- **Phase B (Refactoring)**: [PENDING]
+- **Phase C (Ironclad Contract)**: [PENDING]
+- **Frozen**: [FALSE]
+
+## Directory Structure
+- `ui-freeze-checklist.yaml`: Authority Checklist
+- `golden_ui.png`: Visual Truth (Gate 0)
+- `overlay_diff.png`: Refactoring Proof (Gate 1)
+- `stress_*.png`: Kill Test Evidence (Gate 2)
+- `technical-proofs/`: Logs and Type Definitions
