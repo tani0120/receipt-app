@@ -6,7 +6,7 @@ It contains all necessary evidence to prove that Screen Z (Admin Dashboard) is v
 ## Directory Structure
 - `ui-freeze-checklist.yaml`: The master checklist for Gate passage.
 - `ui-freeze-appendix-b-signed.md`: The final signed certificate.
-- `golden_ui.png`: The visual source of truth (Gate 0).
+- `screenshots/settings_overview_default.png`: The visual source of truth (Gate 0).
 - `overlay_diff.png`: Proof of 0px regression (Gate 1).
 - `stress_worst.png`: Proof of robustness against text injection (Gate 2).
 - `technical-proofs/`: Technical logs ensuring data safety.

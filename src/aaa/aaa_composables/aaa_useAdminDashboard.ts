@@ -50,17 +50,52 @@ export interface ClientAnalysis {
 }
 
 export interface DashboardData {
-  config: {
+  // Detailed System Config (22 items from User Request)
+  settings: {
+    // API & Roots
+    geminiApiKey: string; // GEMINI_API_KEY
+    invoiceApiKey: string; // 国税局アプリケーションID
+    systemRootId: string; // SYSTEM_ROOT_ID
+    masterSsId: string; // MASTER_SS_ID
+
+    // Environment
+    modelName: string; // 使用モデル名
+    systemSettingsSsId: string; // システム設定SS ID
+    rulesSsId: string; // 統一ルールSS ID
+    systemDbId: string; // システムDB ID
+    queueId: string; // 処理待ちキューID
+    dashboardId: string; // 改善ダッシュボードID
+
+    // Price & Cost (USD/1M Tokens)
+    apiPriceInput: number; // 入力単価($/1M)
+    apiPriceOutput: number; // 出力単価($/1M)
+    exchangeRate: number; // 為替レート(円/ドル)
+
+    // Scheduler Intervals (Minutes/Days)
+    intervalDispatchMin: number; // ジョブ登録間隔(分)
+    intervalWorkerMin: number; // ジョブ実行間隔(分)
+    intervalLearnerMin: number; // 学習処理間隔(分)
+    intervalValidatorMin: number; // 最終確認整形間隔(分)
+    intervalOptimizerDays: number; // 知識最適化間隔(日)
+
+    // Config & Limits
+    notifyHours: string; // 完了通知時刻
+    maxBatchSize: number; // 最大処理件数/1回
+    gasTimeoutLimit: number; // タイムアウト秒
+    maxAttemptLimit: number; // 最大リトライ回数
+    maxOptBatch: number; // 最適化処理数/1回
+    dataRetentionDays: number; // データ保存期間(日)
+    debugMode: boolean; // デバッグモード
+
+    // System Status (Keep for logic)
     systemStatus: 'ACTIVE' | 'PAUSE' | 'EMERGENCY_STOP';
   };
-  // System Configuration (Mirror Spec - Kept for Settings View, synchronized with config.systemStatus if needed)
-  systemStatus: 'ACTIVE' | 'Maintenance';
+
   apiKeys: {
+    // Keep for backward compatibility or remove if fully migrated to settings
     geminiApiKey: string;
     invoiceApiKey: string;
   };
-
-  // KPI (Mirror Spec)
   kpi: {
     monthlyJournals: number;
     autoConversionRate: number;
@@ -71,8 +106,6 @@ export interface DashboardData {
     };
     monthlyTrend: number[];
   };
-
-  // Legacy KPI (Required by aaa_ScreenZ_Dashboard.vue and Container)
   kpiCostQuality: {
     registeredClients: number;
     activeClients: number;
@@ -116,8 +149,6 @@ export interface DashboardData {
     };
   };
   staffList: Staff[];
-
-  // Performance (Mirror Spec) - Kept for potential future use or Settings, but Container uses staffAnalysis?
   performance: {
     staff: {
       name: string;
@@ -125,7 +156,6 @@ export interface DashboardData {
       velocity: { draftAvg: number };
     }[];
   };
-
   staffAnalysis: StaffAnalysis[];
   clientAnalysis: ClientAnalysis[];
   systemLogs: {
@@ -138,15 +168,6 @@ export interface DashboardData {
     ai: { id: string; name: string; value: string }[];
     gas: { id: string; name: string; value: string }[];
   };
-  // Re-implementing Detailed Settings
-  settings: {
-    companyName: string;
-    adminEmail: string;
-    slackWebhook: string;
-    taxRounding: 'floor' | 'ceil' | 'round';
-    maintenanceMode: boolean;
-    allowedIp: string;
-  };
   rules: {
     ai: RuleCategory;
     taxYayoi: RuleCategory;
@@ -158,29 +179,46 @@ export interface DashboardData {
   };
 }
 
-export interface RuleHistory {
-  date: string;
-  actor: 'AI' | 'Admin';
-  action: string;
-}
 
-export interface RuleCategory {
-  id: string;
-  name: string;
-  description: string;
-  history: RuleHistory[];
-}
-
-// Mock Data (Static for Phase C)
+// Mock Data (Updated to User Request Spec)
 const MOCK_DATA: DashboardData = {
-  config: {
+  apiKeys: { geminiApiKey: '', invoiceApiKey: '' }, // Legacy ref
+
+  settings: {
+    geminiApiKey: '',
+    invoiceApiKey: '',
+    systemRootId: '1ZWiIS73fPVaS5MrxI0-9lw_RTj43wZyG',
+    masterSsId: '1XyZ...',
+
+    modelName: 'models/gemini-3.0-flash',
+    systemSettingsSsId: '(自動取得)',
+    rulesSsId: '(入力待)',
+    systemDbId: '(入力待)',
+    queueId: '(入力待)',
+    queueId: '(入力待)',
+    dashboardId: '(入力待)',
+
+    apiPriceInput: 0.50,
+    apiPriceOutput: 3.00,
+    exchangeRate: 150,
+
+    intervalDispatchMin: 15,
+    intervalWorkerMin: 5,
+    intervalLearnerMin: 60,
+    intervalValidatorMin: 5,
+    intervalOptimizerDays: 30,
+
+    notifyHours: '9,12,15,18',
+    maxBatchSize: 3,
+    gasTimeoutLimit: 270,
+    maxAttemptLimit: 3,
+    maxOptBatch: 1,
+    dataRetentionDays: 30,
+    debugMode: false,
+
     systemStatus: 'ACTIVE'
   },
-  systemStatus: 'ACTIVE',
-  apiKeys: {
-    geminiApiKey: '',
-    invoiceApiKey: ''
-  },
+
   kpi: {
     monthlyJournals: 18542,
     autoConversionRate: 98.2,
@@ -349,14 +387,7 @@ const MOCK_DATA: DashboardData = {
       { id: 'G-001', name: 'Drive連携', value: '指定フォルダのファイルを検知し...' }
     ]
   },
-  settings: {
-    companyName: '株式会社 AI Accounting',
-    adminEmail: 'admin@sugu-suru.com',
-    slackWebhook: 'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX',
-    taxRounding: 'floor',
-    maintenanceMode: false,
-    allowedIp: '192.168.1.1/32'
-  },
+
   rules: {
     ai: {
       id: 'RULE_AI', name: 'AI処理ルール', description: 'AIによる自動仕訳生成の基本ルール設定',

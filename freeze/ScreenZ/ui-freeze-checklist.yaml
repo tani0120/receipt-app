@@ -3,7 +3,7 @@ updated_at: "2026-01-02"
 phaseA:
   visual_truth: true
   evidence_stored: true
-  note: "Visual Truth Captured"
+  note: "Visual Truth Captured: settings_overview_default.png, settings_pricing_pro.png"
 
 phaseB:
   non_destructive: false

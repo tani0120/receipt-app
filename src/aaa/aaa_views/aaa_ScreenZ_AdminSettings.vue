@@ -9,11 +9,11 @@
             </h1>
             <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 shadow-sm">
                 <span class="w-2 h-2 rounded-full" :class="{
-                    'bg-emerald-500': data.config.systemStatus === 'ACTIVE',
-                    'bg-amber-500': data.config.systemStatus === 'PAUSE',
-                    'bg-rose-500 animate-pulse': data.config.systemStatus === 'EMERGENCY_STOP'
+                    'bg-emerald-500': data.settings.systemStatus === 'ACTIVE',
+                    'bg-amber-500': data.settings.systemStatus === 'PAUSE',
+                    'bg-rose-500 animate-pulse': data.settings.systemStatus === 'EMERGENCY_STOP'
                 }"></span>
-                <span class="font-bold font-mono text-xs text-slate-600">{{ data.config.systemStatus }}</span>
+                <span class="font-bold font-mono text-xs text-slate-600">{{ data.settings.systemStatus }}</span>
             </div>
         </div>
 
@@ -95,7 +95,7 @@
                     <i class="fa-solid fa-cogs"></i>
                 </div>
                 <div>
-                    <div class="font-bold text-sm">システム設定・環境設定</div>
+                    <div class="font-bold text-sm">システム設計・環境設定</div>
                     <div class="text-[10px] text-gray-400">API Key, システム定数</div>
                 </div>
             </button>
@@ -126,6 +126,25 @@
                     <div class="text-[10px] text-gray-400">AIプロンプト, GASプロンプト</div>
                 </div>
             </button>
+
+            <div class="pt-4 mt-4 border-t border-gray-100">
+                <div class="text-xs font-bold text-gray-400 px-2 mb-2 uppercase">External Links</div>
+                <a :href="`https://docs.google.com/spreadsheets/d/${data.settings.masterSsId}`" target="_blank" class="w-full text-left p-2 rounded-lg flex items-center gap-3 hover:bg-emerald-50 hover:text-emerald-700 transition group text-slate-600">
+                    <i class="fa-solid fa-table w-5 text-center text-emerald-500"></i>
+                    <span class="text-xs font-bold">MASTER SS (本体)</span>
+                    <i class="fa-solid fa-external-link-alt ml-auto text-[10px] opacity-0 group-hover:opacity-100"></i>
+                </a>
+                <a :href="`https://drive.google.com/drive/folders/${data.settings.systemRootId}`" target="_blank" class="w-full text-left p-2 rounded-lg flex items-center gap-3 hover:bg-blue-50 hover:text-blue-700 transition group text-slate-600">
+                    <i class="fa-brands fa-google-drive w-5 text-center text-blue-500"></i>
+                    <span class="text-xs font-bold">システムROOT</span>
+                    <i class="fa-solid fa-external-link-alt ml-auto text-[10px] opacity-0 group-hover:opacity-100"></i>
+                </a>
+                <a href="https://script.google.com" target="_blank" class="w-full text-left p-2 rounded-lg flex items-center gap-3 hover:bg-yellow-50 hover:text-yellow-700 transition group text-slate-600">
+                    <i class="fa-solid fa-code w-5 text-center text-yellow-500"></i>
+                    <span class="text-xs font-bold">Google Apps Script</span>
+                    <i class="fa-solid fa-external-link-alt ml-auto text-[10px] opacity-0 group-hover:opacity-100"></i>
+                </a>
+            </div>
         </nav>
         <div class="p-4 bg-gray-50 border-t border-gray-200 text-center">
             <button @click="switchView('dashboard')" class="text-xs font-bold text-gray-500 hover:text-blue-600 flex items-center justify-center gap-2 w-full py-2 hover:bg-gray-100 rounded">
@@ -204,7 +223,7 @@ const activeComponent = computed(() => {
 
 const viewTitle = computed(() => {
     switch(currentView.value) {
-        case 'settings': return 'システム設定・環境設定';
+        case 'settings': return 'システム設計・環境設定';
         case 'masters': return '標準科目等マスタ推移';
         case 'rules': return '共通処理ルール編集';
         case 'prompts': return 'プロンプト編集';
@@ -215,6 +234,7 @@ const viewTitle = computed(() => {
 });
 
 const switchView = (view: ViewType) => {
+    console.log('Switching view to:', view); // Debug Log
     currentView.value = view;
     isNavOpen.value = false;
 };
@@ -260,14 +280,14 @@ const handlePromptSave = (newContent: string) => {
 
 // Emergency Stop Mock
 const toggleEmergency = () => {
-    if (data.value.config.systemStatus === 'EMERGENCY_STOP') {
+    if (data.value.settings.systemStatus === 'EMERGENCY_STOP') {
         if(confirm('緊急停止を解除し、システムをACTIVEにしますか？')) {
-            data.value.config.systemStatus = 'ACTIVE';
+            data.value.settings.systemStatus = 'ACTIVE';
         }
     } else {
         const input = prompt('緊急停止を実行しますか？実行する場合は "EMERGENCY" と入力してください。');
         if (input === 'EMERGENCY') {
-            data.value.config.systemStatus = 'EMERGENCY_STOP';
+            data.value.settings.systemStatus = 'EMERGENCY_STOP';
         }
     }
 };
