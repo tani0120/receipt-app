@@ -1,22 +1,16 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 
 import aaa_ScreenB_Restore_Mock from '@/aaa/aaa_views/aaa_debug/aaa_ScreenB_Restore_Mock.vue';
-import aaa_ScreenB_Dashboard from '@/aaa/aaa_views/aaa_ScreenB_Dashboard.vue';
 
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/aaa_dashboard'
+    redirect: '/aaa_journal-status'
   },
   {
     path: '/aaa_screen_b_mock',
     name: 'aaa_ScreenB_Restore_Mock',
     component: aaa_ScreenB_Restore_Mock
-  },
-  {
-    path: '/aaa_dashboard',
-    name: 'Dashboard',
-    component: aaa_ScreenB_Dashboard
   },
   {
     path: '/aaa_clients',
@@ -54,7 +48,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/aaa_ai-rules',
     name: 'ScreenD',
-    component: () => import('../aaa_components/aaa_ScreenD_AIRules.vue')
+    component: () => import('@/aaa/aaa_views/aaa_ScreenD_AIRules.vue')
   },
   {
     path: '/aaa_journal-entry/:jobId',

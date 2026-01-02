@@ -7,6 +7,29 @@ phaseA:
   evidence_stored: true
   note: "v2 Overhaul - Golden Master established"
 
+artifacts_required:
+  # 1. Main View (Entry Point)
+  - file: "golden_ui_detail.png"
+    description: "Client Detail Main View"
+    status: "pass"
+
+  # 2. Sub-pages (State Transitions)
+  # (Currently none, single page app structure)
+
+  # 3. Modals (All Dialogs)
+  - file: "golden_ui_modal_edit.png"
+    description: "Client Edit Modal"
+    status: "pass"
+  - file: "golden_ui_modal_confirm.png"
+    description: "Confirmation Modal (Approve/Reject)"
+    status: "pass"
+  - file: "golden_ui_modal_proposal_edit.png"
+    description: "AI Proposal Edit Modal"
+    status: "pass"
+  - file: "golden_ui_modal_knowledge_edit.png"
+    description: "AI Knowledge Edit Modal"
+    status: "pass"
+
 phaseB:
   non_destructive: true
   visual_regression_diff_px: 0

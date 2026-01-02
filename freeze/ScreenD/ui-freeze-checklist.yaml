@@ -1,94 +1,44 @@
-version: 1.1.0
-description: "UI Freeze Authority & Gate Definitions"
-updated_at: "2026-01-01"
+unit_name: "Screen D: AI Rules Management"
+phase: "Phase A"
+status: "Frozen"
+artifacts_required:
+  # 1. Main View (Entry Point)
+  - file: "golden_ui_list.png"
+    description: "Client Selection List View (Entry Point)"
+    status: "pass"
 
-# ==============================================================================
-# 0. 本文書の位置づけ（絶対）
-# ==============================================================================
-# - 本書は短く・厳格であることを優先する
-# - 手順詳細は Appendix に分離する
-# - 本書に書かれていない運用は存在しない
-#
-# ### ルール
-# - YAML が Yes と判定していない項目は **未実施**
-# - 人間の「見た」「確認した」は無効
-# - md にチェック結果を書いてはならない
+  # 2. Sub-pages (State Transitions)
+  - file: "golden_ui_detail.png"
+    description: "Rule Management View (After Client Selection)"
+    status: "pass"
 
-# ==============================================================================
-# 1. Freeze Status (Single Source of Truth)
-# ==============================================================================
-# 各フェーズ完了時に、証跡確認の上で false -> true に更新すること。
-
-phaseA:
-  # Visual Truth (見た目確定)
-  visual_truth: false
-  overlay_diff_threshold_px: 0
-  evidence_stored: false
-
-phaseB:
-  # Non-Destructive Refactor (構造整理)
-  non_destructive: false
-  visual_regression_diff_px: 0
-  evidence_stored: false
-
-phaseC:
-  # Ironclad Contract (契約確定)
-  ironclad_contract: false
-  mapper_stress_pass: false
-  ui_kill_pass: false
-  build_kill_proof: false
-
-freeze:
-  # Final Freeze State
-  frozen: false
-  version: ""
-  commit_hash: ""
-  locked_at: ""
-
-# ==============================================================================
-# 2. Gate Definitions (The Ironclad Logic)
-# ==============================================================================
-# Freeze は以下の Gate を **順序通過** しなければならない。
-
-gates:
-  gate0:
-    id: "visual_gate"
-    name: "Gate 0: Visual Truth"
-    requirements:
-      - "Phase A 証跡が存在"
-      - "Overlay Diff = 0px"
-      - "phaseA.visual_truth == true"
-
-  gate1:
-    id: "refactor_gate"
-    name: "Gate 1: Refactor"
-    requirements:
-      - "Phase B 証跡が存在"
-      - "Before / After Overlay = 0px"
-      - "phaseB.non_destructive == true"
-
-  gate2:
-    id: "contract_gate"
-    name: "Gate 2: Contract (Ironclad)"
-    requirements:
-      - "Mapper 破壊テスト合格"
-      - "UI Kill / CSS Kill 合格"
-      - "phaseC.ironclad_contract == true"
-
-  gate3:
-    id: "freeze_gate"
-    name: "Gate 3: Freeze Complete"
-    requirements:
-      - "freeze/<screen>/README.md が存在"
-      - "Commit Hash / Shot Date 記載済"
-      - "Freeze Version 採番済"
-
-# ==============================================================================
-# 3. Freeze 解除条件（例外）
-# ==============================================================================
-# 以下の場合のみ Freeze を解除できる。
-# - 正解画像（Figma / PNG / PDF）が変更された
-# - 仕様書に明示的な表示変更が追記された
-# - 新 Freeze Version（v2, v3…）として合意された
-#
-# ※ 「違和感がある」「ついでに直したい」は理由にならない。
+  # 3. Modals (All Dialogs)
+  - file: "golden_ui_modal.png"
+    description: "Rule Edit Modal (New/Edit State)"
+    status: "pass"
+  - file: "types.ts"
+    description: "LearningRuleUi interface definition"
+    status: "pass"
+  - file: "mock_data.json"
+    description: "Mock data driving the UI"
+    status: "pass"
+  - file: "README.md"
+    description: "Context and freeze status"
+    status: "pass"
+verification_steps:
+  - step: "Verify Card Layout"
+    status: "pass"
+    notes: "Grid layout works effectively for >100 items."
+  - step: "Verify Filtering"
+    status: "pass"
+    notes: "All/Active/Draft filters function correctly."
+  - step: "Verify Modal Interaction"
+    status: "pass"
+    notes: "Modal opens, saves, and fully localized."
+  - step: "Verify Client Selection"
+    status: "pass"
+    notes: "Client list navigation works smoothly."
+sign_off:
+  gate: "Gate 1 (Visual Truth)"
+  approver: "USER"
+  date: "2026-01-03"

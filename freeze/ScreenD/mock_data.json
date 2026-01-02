@@ -1,0 +1,74 @@
+[
+    {
+        "id": "rule-001",
+        "clientId": "client-abc",
+        "priority": 1,
+        "status": "active",
+        "trigger": {
+            "type": "description",
+            "keyword": "タクシー"
+        },
+        "result": {
+            "debitAccount": "旅費交通費",
+            "targetTaxClass": "課対仕入10%"
+        },
+        "confidence": 0.98,
+        "hitCount": 142,
+        "generatedBy": "ai",
+        "lastUsedAt": "2025-12-28"
+    },
+    {
+        "id": "rule-002",
+        "clientId": "client-abc",
+        "priority": 2,
+        "status": "active",
+        "trigger": {
+            "type": "vendor",
+            "keyword": "Amazon",
+            "amountRange": {
+                "min": 50000
+            }
+        },
+        "result": {
+            "debitAccount": "消耗品費"
+        },
+        "confidence": 0.85,
+        "hitCount": 56,
+        "generatedBy": "human",
+        "lastUsedAt": "2025-12-25"
+    },
+    {
+        "id": "rule-003",
+        "clientId": "client-abc",
+        "priority": 3,
+        "status": "draft",
+        "trigger": {
+            "type": "description",
+            "keyword": "コーヒー"
+        },
+        "result": {
+            "debitAccount": "会議費"
+        },
+        "confidence": 0.72,
+        "hitCount": 0,
+        "generatedBy": "ai",
+        "lastUsedAt": null
+    },
+    {
+        "id": "rule-004",
+        "clientId": "client-abc",
+        "priority": 5,
+        "status": "inactive",
+        "trigger": {
+            "type": "description",
+            "keyword": "振込手数料"
+        },
+        "result": {
+            "debitAccount": "支払手数料"
+        },
+        "confidence": 0.99,
+        "hitCount": 890,
+        "generatedBy": "ai",
+        "lastUsedAt": "2025-11-30"
+    }
+]

@@ -9,24 +9,24 @@
                 <span class="text-[10px] bg-slate-800 text-white px-2 py-0.5 rounded border">Ver.10.17</span>
             </div>
             <div class="flex space-x-1">
-                <button @click="$router.push('/clients')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2', isActive('/clients') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
+                <button @click="$router.push('/aaa_clients')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2', isActive('/aaa_clients') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
                     <i class="fa-solid fa-users"></i> A:顧問先管理
                 </button>
-                <button @click="$router.push('/journal-status')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2', isActive('/journal-status') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
+                <button @click="$router.push('/aaa_journal-status')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2', isActive('/aaa_journal-status') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
                     <i class="fa-solid fa-calculator"></i> B:全社仕訳
                 </button>
-                <button @click="$router.push('/collection-status')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2', isActive('/collection-status') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
+                <button @click="$router.push('/aaa_collection-status')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2', isActive('/aaa_collection-status') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
                     <i class="fa-solid fa-calendar-days"></i> C:全社回収
                 </button>
-                <button @click="$router.push('/ai-rules')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 relative', isActive('/ai-rules') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
+                <button @click="$router.push('/aaa_ai-rules')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 relative', isActive('/aaa_ai-rules') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
                     <i class="fa-solid fa-brain"></i> D:AIルール
                     <span class="bg-red-500 text-white text-[9px] px-1.5 rounded-full ml-1">3</span>
                 </button>
-                <button @click="$router.push('/data-conversion')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 relative', isActive('/data-conversion') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
+                <button @click="$router.push('/aaa_data-conversion')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 relative', isActive('/aaa_data-conversion') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
                     <i class="fa-solid fa-arrow-right-arrow-left"></i> G:会計ソフト変換
                     <span v-if="pendingDownloadCount > 0" class="bg-red-500 text-white text-[9px] px-1.5 rounded-full ml-1">{{ pendingDownloadCount }}</span>
                 </button>
-                <button @click="$router.push('/task-dashboard')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 relative', isActive('/task-dashboard') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
+                <button @click="$router.push('/aaa_task-dashboard')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 relative', isActive('/aaa_task-dashboard') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
                     <i class="fa-solid fa-list-check"></i> H:全社タスク
                 </button>
             </div>
@@ -46,7 +46,7 @@
             >
               <i class="fa-solid fa-database mr-1"></i>Seed Job
             </button>
-            <button @click="$router.push('/admin')" class="text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-2 bg-white border text-slate-600 hover:bg-slate-100">
+            <button @click="$router.push('/aaa_admin-settings')" class="text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-2 bg-white border text-slate-600 hover:bg-slate-100">
                 <i class="fa-solid fa-screwdriver-wrench"></i> 管理者用
             </button>
         </div>

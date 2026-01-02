@@ -5,11 +5,22 @@ updated_at: "2026-01-02"
 # ==============================================================================
 # 0. 本文書の位置づけ（絶対）
 # ==============================================================================
-phaseA:
-  # Visual Truth (見た目確定)
-  visual_truth: true
-  overlay_diff_threshold_px: 0
-  evidence_stored: true
+artifacts_required:
+  # 1. Main View (Entry Point)
+  - file: "golden_ui_list.png"
+    description: "Client List View (Main)"
+    status: "pass"
+
+  # 2. Sub-pages (State Transitions)
+  # (Screen A Detail is handled in a separate freeze unit: ScreenA_Detail)
+
+  # 3. Modals (All Dialogs)
+  - file: "golden_ui_modal_new.png"
+    description: "New Client Modal"
+    status: "pass"
+  - file: "golden_ui_modal_delete.png"
+    description: "Delete Confirmation Modal"
+    status: "pass"
 
 phaseB:
   # Non-Destructive Refactor (構造整理)

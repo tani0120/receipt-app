@@ -103,7 +103,7 @@ export function aaa_useJournalEditor() {
             }
 
             // Redirect back to dashboard (Mirror)
-            router.push('/aaa_dashboard');
+            router.push('/aaa_journal-status');
         } catch (err) {
             console.error(err);
             alert('完了処理に失敗しました');

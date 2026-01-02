@@ -338,6 +338,11 @@ export const mapJobApiToUi = (
     confidenceScore: safeNumber(api.confidenceScore),
     hasAiResult: !!api.aiAnalysisRaw,
 
+    // Populating Screen B Helpers
+    primaryDescription: Array.isArray(api.lines) && api.lines.length > 0 ? safeText(api.lines[0]?.description) : '摘要なし',
+    aiConfidenceLabel: api.confidenceScore ? `AI信頼度: ${(api.confidenceScore * 100).toFixed(0)}%` : 'AI未解析',
+    transactionDateLabel: formatTimestamp(api.transactionDate),
+
     errorMessage: safeText(api.errorMessage),
 
     lines: Array.isArray(api.lines) ? api.lines.map(mapJournalLine) : [],

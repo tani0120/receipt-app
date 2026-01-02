@@ -7,7 +7,7 @@
     <!-- [UI_Structure] Line:7 -->
     <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shrink-0 relative z-10">
       <div class="flex items-center gap-4">
-        <div @click="$router.push('/aaa_dashboard')" class="bg-green-100 p-2 rounded-lg cursor-pointer hover:bg-green-200 transition">
+        <div @click="$router.push('/aaa_journal-status')" class="bg-green-100 p-2 rounded-lg cursor-pointer hover:bg-green-200 transition">
           <i class="fa-solid fa-arrow-right-arrow-left text-green-600 text-xl"></i>
         </div>
         <div>

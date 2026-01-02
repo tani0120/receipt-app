@@ -115,6 +115,11 @@ export type JobUi = {
 
   readonly errorMessage: string;
 
+  // Screen B Dashboard Helpers
+  readonly primaryDescription: string;
+  readonly aiConfidenceLabel: string;
+  readonly transactionDateLabel: string; // Alias for formatted date
+
   /**
    * [CONTRACT] 仕訳行
    * - 必ず配列として存在する (空配列可)

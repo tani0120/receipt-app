@@ -3,7 +3,35 @@ updated_at: "2026-01-02"
 phaseA:
   visual_truth: true
   evidence_stored: true
-  note: "Visual Truth Captured: settings_overview_default.png, settings_pricing_pro.png"
+  note: "v2 Overhaul - Golden Master established"
+
+artifacts_required:
+  # 1. Main View (Entry Point)
+  - file: "golden_ui_dashboard.png"
+    description: "Admin Dashboard Main View"
+    status: "pass"
+
+  # 2. Sub-pages (SPA Views)
+  - file: "golden_ui_masters.png"
+    description: "Masters View (Standard Accounts)"
+    status: "pass"
+  - file: "golden_ui_rules.png"
+    description: "Rules View (Common Processing)"
+    status: "pass"
+  - file: "golden_ui_prompts.png"
+    description: "Prompts View (AI/GAS)"
+    status: "pass"
+  - file: "golden_ui_settings.png"
+    description: "Settings View (System Config)"
+    status: "pass"
+
+  # 3. Modals
+  - file: "golden_ui_modal_staff.png"
+    description: "Staff Registration Modal"
+    status: "pass"
+  - file: "golden_ui_modal_csv.png"
+    description: "CSV Export Confirmation Modal"
+    status: "pass"
 
 phaseB:
   non_destructive: false

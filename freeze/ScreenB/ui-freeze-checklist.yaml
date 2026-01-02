@@ -1,11 +1,23 @@
-version: 1.2.0
-description: "UI Freeze Authority & Gate Definitions (v2 Overhaul)"
-updated_at: "2026-01-02"
+version: 2.1.0
+description: "UI Freeze Authority & Gate Definitions (v2.1 Ironclad)"
+updated_at: "2026-01-03"
 
 phaseA:
   visual_truth: true
   evidence_stored: true
-  note: "v2 Overhaul - Golden Master established"
+  note: "v2.1 Ironclad - Dashboard Removed, Unified to JournalStatus"
+
+artifacts_required:
+  # 1. Main View (Entry Point)
+  - file: "golden_ui.png"
+    description: "Journal Status (Phase A Rebuild)"
+    status: "pass"
+
+  # 2. Sub-pages (State Transitions)
+  # (Linked screens like Journal Entry are external freeze units)
+
+  # 3. Modals (All Dialogs)
+  # (No internal modals in this dashboard)
 
 phaseB:
   non_destructive: true

@@ -5,7 +5,19 @@ updated_at: "2026-01-02"
 phaseA:
   visual_truth: true
   evidence_stored: true
-  note: "Golden Master established"
+  note: "v2 Overhaul - Golden Master established"
+
+artifacts_required:
+  # 1. Main View (Entry Point)
+  - file: "golden_ui_conversion.png"
+    description: "Data Conversion Main View"
+    status: "pass"
+
+  # 2. Sub-pages
+  # (Single page utility)
+
+  # 3. Modals
+  # (Uses native browser dialogs, no custom UI modals to freeze)
 
 phaseB:
   non_destructive: true

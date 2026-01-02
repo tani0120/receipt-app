@@ -116,7 +116,7 @@ const getPath = (key: string) => {
         case 'D': return isMirror.value ? '/aaa_ai-rules' : '/ai-rules';
         case 'G': return isMirror.value ? '/aaa_data-conversion' : '/data-conversion';
         case 'H': return isMirror.value ? '/aaa_task-dashboard' : '/task-dashboard';
-        default: return isMirror.value ? '/aaa_dashboard' : '/';
+        default: return isMirror.value ? '/aaa_journal-status' : '/';
     }
 };
 

@@ -3,7 +3,7 @@
     <!-- Top Nav -->
     <header class="bg-white border-b border-slate-200 h-14 flex items-center justify-between px-4 shrink-0 z-20">
       <div class="flex items-center gap-4">
-        <button @click="$router.push('/aaa_dashboard')" class="text-slate-500 hover:text-slate-800 transition-colors">
+        <button @click="$router.push('/aaa_journal-status')" class="text-slate-500 hover:text-slate-800 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>

@@ -568,6 +568,7 @@ export function aaa_useAccountingSystem() {
     },
 
     runAIInference: determineAccountItem,
-    debugInjectClients: (data: any[]) => { clients.value = data; }
+    debugInjectClients: (data: any[]) => { clients.value = data; },
+    toggleEmergencyStop: () => { isEmergencyStopped.value = !isEmergencyStopped.value; }
   };
 }
