@@ -1,7 +1,8 @@
 <template>
-    <div class="h-full flex flex-col bg-slate-50 font-sans text-slate-800">
+    <!-- Root: Whole page scrollable (h-full + overflow-y-auto) -->
+    <div class="h-full bg-slate-50 font-sans text-slate-800 overflow-y-auto">
         <!-- Header Area -->
-        <header class="bg-white border-b border-gray-200 px-8 py-6 shadow-sm shrink-0">
+        <header class="bg-white border-b border-gray-200 px-8 py-6 shadow-sm">
             <!-- Top Row: Navigation & Edit -->
             <div class="flex items-center justify-between mb-4">
                 <button @click="$router.push({ name: 'aaa_ScreenA' })" class="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1 transition-colors">
@@ -22,7 +23,12 @@
                     <span class="bg-blue-50 text-blue-700 border border-blue-100 text-xs px-2 py-0.5 rounded font-bold">{{ client.fiscalMonth }}月決算</span>
                     <div class="flex items-center gap-2 text-sm text-slate-600">
                         <i class="fa-solid fa-desktop text-slate-400"></i>
-                        <span class="font-bold">{{ client.accountingSoftware }}</span>
+                        <!-- Custom Display for Software -->
+                        <span class="font-bold">{{
+                            client.accountingSoftware === 'freee' ? 'Freee' :
+                            client.accountingSoftware === '弥生会計' ? '弥生' :
+                            client.accountingSoftware === 'MFクラウド' ? 'MF' : client.accountingSoftware
+                        }}</span>
                     </div>
                     <div class="flex items-center gap-2 text-sm text-slate-600">
                         <i class="fa-solid fa-user-tie text-slate-400"></i>
@@ -51,17 +57,27 @@
 
                 <!-- Line 3: Drive Links -->
                 <div class="flex flex-wrap gap-3 mt-2">
-                    <a v-for="link in client.driveFolderLinks" :key="link.path" :href="link.url" target="_blank" class="flex items-center gap-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 px-4 py-2 rounded transition shadow-sm text-sm font-bold">
-                        <i class="fa-brands fa-google-drive text-lg" :class="{'text-yellow-400': link.path.includes('共有'), 'text-blue-400': link.path.includes('出力'), 'text-gray-400': link.path.includes('除外')}"></i>
-                        {{ link.path }}
+                    <!-- Updated Names and Structure for future linking -->
+                    <a href="https://drive.google.com/drive/folders/mock1" target="_blank" class="flex items-center gap-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 px-4 py-2 rounded transition shadow-sm text-sm font-bold">
+                        <i class="fa-brands fa-google-drive text-yellow-400 text-lg"></i>
+                        顧客共有用
+                    </a>
+                    <a href="https://drive.google.com/drive/folders/mock2" target="_blank" class="flex items-center gap-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 px-4 py-2 rounded transition shadow-sm text-sm font-bold">
+                        <i class="fa-brands fa-google-drive text-blue-400 text-lg"></i>
+                        仕訳後CSV
+                    </a>
+                    <a href="https://drive.google.com/drive/folders/mock3" target="_blank" class="flex items-center gap-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 px-4 py-2 rounded transition shadow-sm text-sm font-bold">
+                        <i class="fa-brands fa-google-drive text-gray-400 text-lg"></i>
+                        仕訳から除外
                     </a>
                 </div>
             </div>
         </header>
 
-        <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto px-8 py-8 space-y-8">
-            <!-- Section: Learning CSV Storage Area -->
+        <!-- Main Content (No internal scroll, flows naturally) -->
+        <main class="px-8 py-8 space-y-8">
+
+            <!-- Learning CSV Area -->
             <section class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                 <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
                     <i class="fa-solid fa-database text-indigo-500"></i> 学習用CSV保管エリア
@@ -86,16 +102,16 @@
                     <!-- File List -->
                     <div class="flex-1 space-y-4">
                         <!-- Group: General Ledger -->
-                        <div>
+                         <div>
                             <h3 class="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1">
                                 <i class="fa-solid fa-list-ol"></i> 総勘定元帳CSV
                             </h3>
                             <div class="space-y-2">
-                                <div class="flex items-center justify-between bg-white border border-slate-200 p-3 rounded text-sm hover:border-indigo-200 transition">
-                                    <div class="flex items-center gap-3">
+                                <div v-for="i in 3" :key="'gl-'+i" class="flex items-center justify-between bg-white border border-slate-200 p-3 rounded text-sm hover:border-indigo-200 transition">
+                                    <a :href="'/mock/gl_csv_'+i+'.csv'" download class="flex items-center gap-3 hover:underline decoration-slate-400 underline-offset-4">
                                         <i class="fa-solid fa-file-csv text-green-500 text-lg"></i>
-                                        <span class="font-mono text-slate-700">2024年12月決算_総勘定元帳CSV_20240101-20241231.csv</span>
-                                    </div>
+                                        <span class="font-mono text-slate-700">202{{i}}年12月決算_総勘定元帳CSV_202{{i}}0101-202{{i}}1231.csv</span>
+                                    </a>
                                     <button class="text-slate-400 hover:text-red-500 transition px-2">
                                         <i class="fa-solid fa-trash-can"></i>
                                     </button>
@@ -109,11 +125,11 @@
                                 <i class="fa-solid fa-book"></i> 仕訳帳CSV
                             </h3>
                             <div class="space-y-2">
-                                <div class="flex items-center justify-between bg-white border border-slate-200 p-3 rounded text-sm hover:border-indigo-200 transition">
-                                    <div class="flex items-center gap-3">
+                                <div v-for="i in 3" :key="'j-'+i" class="flex items-center justify-between bg-white border border-slate-200 p-3 rounded text-sm hover:border-indigo-200 transition">
+                                    <a :href="'/mock/journal_csv_'+i+'.csv'" download class="flex items-center gap-3 hover:underline decoration-slate-400 underline-offset-4">
                                         <i class="fa-solid fa-file-csv text-blue-500 text-lg"></i>
-                                        <span class="font-mono text-slate-700">2024年12月決算_仕訳帳CSV_20240101-20241231.csv</span>
-                                    </div>
+                                        <span class="font-mono text-slate-700">202{{i}}年12月決算_仕訳帳CSV_202{{i}}0101-202{{i}}1231.csv</span>
+                                    </a>
                                     <button class="text-slate-400 hover:text-red-500 transition px-2">
                                         <i class="fa-solid fa-trash-can"></i>
                                     </button>
@@ -122,16 +138,16 @@
                         </div>
 
                          <!-- Group: PDF -->
-                         <div>
+                        <div>
                             <h3 class="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1">
                                 <i class="fa-solid fa-file-pdf"></i> 決算書一式PDF
                             </h3>
                             <div class="space-y-2">
-                                <div class="flex items-center justify-between bg-white border border-slate-200 p-3 rounded text-sm hover:border-indigo-200 transition">
-                                    <div class="flex items-center gap-3">
+                                <div v-for="i in 3" :key="'pdf-'+i" class="flex items-center justify-between bg-white border border-slate-200 p-3 rounded text-sm hover:border-indigo-200 transition">
+                                    <a :href="'/mock/final_report_'+i+'.pdf'" download class="flex items-center gap-3 hover:underline decoration-slate-400 underline-offset-4">
                                         <i class="fa-solid fa-file-pdf text-red-500 text-lg"></i>
-                                        <span class="font-mono text-slate-700">2024年12月決算_決算申告書.pdf</span>
-                                    </div>
+                                        <span class="font-mono text-slate-700">202{{i}}年12月決算_決算申告書.pdf</span>
+                                    </a>
                                     <button class="text-slate-400 hover:text-red-500 transition px-2">
                                         <i class="fa-solid fa-trash-can"></i>
                                     </button>
@@ -171,13 +187,12 @@
                                     </td>
                                     <td class="px-4 py-3 align-top">
                                         <div class="flex flex-col gap-1.5">
-                                            <button class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded font-bold transition">承認</button>
-                                            <button class="px-2 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs rounded transition">修正</button>
-                                            <button class="px-2 py-1 text-slate-400 hover:text-red-500 text-xs transition">却下</button>
+                                            <button @click="openConfirm('approve')" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded font-bold transition">承認</button>
+                                            <button @click="openProposalEdit('ドールト社の領収書は駐車場だが、過去仕訳では3回「旅費交通費」で計上。次回から「旅費交通費」で統一する。')" class="px-2 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs rounded transition">修正</button>
+                                            <button @click="openConfirm('reject')" class="px-2 py-1 bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs rounded font-bold transition">却下</button>
                                         </div>
                                     </td>
                                 </tr>
-                                <!-- More mock rows if needed -->
                             </tbody>
                         </table>
                     </div>
@@ -189,25 +204,43 @@
                         <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">
                             <i class="fa-solid fa-scroll text-emerald-500"></i> 現時点のAI知識プロンプト
                         </h2>
-                        <button class="text-xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-full font-bold transition">
+                        <button @click="openKnowledgeEdit" class="text-xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-full font-bold transition">
                             <i class="fa-solid fa-pen mr-1"></i> 修正
                         </button>
                     </div>
 
-                    <div class="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-4 font-mono text-sm leading-relaxed text-slate-700 overflow-y-auto whitespace-pre-wrap">【固有ルール】
-・Amazonの領収書は「消耗品費」ではなく、金額5万円以上なら「工具器具備品」として提案すること。
-・「カフェ・ベローチェ」は会議費として処理する。
-・インボイス登録番号のないタクシー利用は「旅費交通費(免税)」とすること。</div>
+                    <div class="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-4 font-mono text-sm leading-relaxed text-slate-700 overflow-y-auto whitespace-pre-wrap">{{ currentKnowledge }}</div>
                 </div>
             </section>
         </main>
 
-        <!-- Edit Modal -->
+        <!-- Modals -->
         <aaa_ScreenA_Detail_EditModal
-            :isOpen="isEditModalOpen"
-            :data="client"
+            :visible="isEditModalOpen"
+            :initialData="client"
             @close="isEditModalOpen = false"
             @save="handleSave"
+        />
+
+        <aaa_ScreenA_Detail_ConfirmModal
+            :visible="confirmModal.visible"
+            :type="confirmModal.type"
+            @cancel="confirmModal.visible = false"
+            @confirm="handleConfirm"
+        />
+
+        <aaa_ScreenA_Detail_AIProposalEditModal
+            :visible="proposalEditModal.visible"
+            :initialContent="proposalEditModal.content"
+            @close="proposalEditModal.visible = false"
+            @save="handleProposalSave"
+        />
+
+        <aaa_ScreenA_Detail_AIKnowledgeEditModal
+             :visible="knowledgeEditModal.visible"
+             :initialContent="currentKnowledge"
+             @close="knowledgeEditModal.visible = false"
+             @save="handleKnowledgeSave"
         />
     </div>
 </template>
@@ -219,33 +252,89 @@ import { aaa_useAccountingSystem } from '@/aaa/aaa_composables/aaa_useAccounting
 import { mapClientDetailApiToUi } from '@/aaa/aaa_composables/aaa_ClientDetailMapper';
 import type { ClientDetailUi } from '@/aaa/aaa_types/aaa_ui.type';
 import aaa_ScreenA_Detail_EditModal from './aaa_ScreenA_Detail_EditModal.vue';
+import aaa_ScreenA_Detail_ConfirmModal from './aaa_ScreenA_Detail_ConfirmModal.vue';
+import aaa_ScreenA_Detail_AIProposalEditModal from './aaa_ScreenA_Detail_AIProposalEditModal.vue';
+import aaa_ScreenA_Detail_AIKnowledgeEditModal from './aaa_ScreenA_Detail_AIKnowledgeEditModal.vue';
 
 const route = useRoute();
-const { clients, fetchClients /* updateClient */ } = aaa_useAccountingSystem();
+const { clients, fetchClients } = aaa_useAccountingSystem();
 const isEditModalOpen = ref(false);
+
+// Confirm Modal State
+const confirmModal = ref({
+    visible: false,
+    type: 'approve' as 'approve' | 'reject'
+});
+
+// Proposal Edit Modal State
+const proposalEditModal = ref({
+    visible: false,
+    content: ''
+});
+
+// Knowledge Edit Modal State
+const knowledgeEditModal = ref({
+    visible: false
+});
+
+// Mock knowledge data
+const currentKnowledge = ref(`【固有ルール】
+・Amazonの領収書は「消耗品費」ではなく、金額5万円以上なら「工具器具備品」として提案すること。
+・「カフェ・ベローチェ」は会議費として処理する。
+・インボイス登録番号のないタクシー利用は「旅費交通費(免税)」とすること。`);
+
 
 const code = computed(() => route.params.code as string);
 const rawClient = computed(() => clients.value.find(c => c.clientCode === code.value));
 
-// Phase A: Mock Data State (Override real data for visual testing)
-// In Phase C, this will be strictly mapped from `rawClient`.
-// For now, we allow `client` to be a local ref that can be updated by the modal.
-const localClient = ref<ClientDetailUi | null>(null);
+const localClient = ref<any>(null);
 
 const client = computed(() => {
-    // Priority: Local (Edited) > Mapped > Fallback
-    if (localClient.value) return localClient.value;
+    if (localClient.value) {
+        const form = localClient.value;
+        const base = mapClientDetailApiToUi(rawClient.value || {});
+        return {
+            ...base,
+            companyName: form.name,
+            clientCode: form.code,
+            staffName: form.staffName,
+            fiscalMonth: form.fiscalMonth,
+            accountingSoftware: form.settings.software,
+        };
+    }
     return mapClientDetailApiToUi(rawClient.value || {});
 });
 
-const handleSave = (updatedData: ClientDetailUi) => {
-    // Phase A: Local state update only
-    localClient.value = updatedData;
-    // Phase C: Call API update here
-    /*
-    await updateClient(updatedData.clientCode, updatedData);
-    fetchClients();
-    */
+const handleSave = (updatedForm: any) => {
+    localClient.value = updatedForm;
+};
+
+// AI Action Handlers
+const openConfirm = (type: 'approve' | 'reject') => {
+    confirmModal.value = { visible: true, type };
+};
+
+const handleConfirm = () => {
+    // Process approve/reject here (Phase C will call API)
+    console.log(`Action confirmed: ${confirmModal.value.type}`);
+    confirmModal.value.visible = false;
+};
+
+const openProposalEdit = (content: string) => {
+    proposalEditModal.value = { visible: true, content };
+};
+
+const handleProposalSave = (newContent: string) => {
+    console.log(`Proposal updated: ${newContent}`);
+    // Update local proposal state here
+};
+
+const openKnowledgeEdit = () => {
+    knowledgeEditModal.value.visible = true;
+};
+
+const handleKnowledgeSave = (newContent: string) => {
+    currentKnowledge.value = newContent;
 };
 
 onMounted(() => {
