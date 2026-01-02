@@ -1,0 +1,33 @@
+﻿
+src\aaa\aaa_composables\aaa_
+useAccountingSystem.ts:408: 
+     if (!data.clientCode) t
+hrow new Error("Client Code 
+is required");
+src\aaa\aaa_composables\aaa_
+useAccountingSystem.ts:436: 
+     throw e;
+src\aaa\aaa_composables\aaa_
+useJournalEditor.ts:32:     
+       if (!data) throw new 
+Error('Journal not found');
+src\aaa\aaa_services\aaa_Cli
+entService.ts:44:           
+ throw error;
+src\aaa\aaa_services\aaa_fir
+estoreRepository.ts:59:     
+       throw new Error("Clie
+nt code already exists");
+src\aaa\aaa_services\aaa_Gen
+eralLedgerService.ts:26:    
+    if (!sheetName) throw ne
+w Error('No sheet found');
+src\aaa\aaa_services\aaa_Gen
+eralLedgerService.ts:28:    
+    if (!sheet) throw new Er
+ror('Sheet is empty');
+src\aaa\aaa_services\aaa_Jou
+rnalService.ts:42:          
+  throw error;
+
+

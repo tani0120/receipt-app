@@ -21,7 +21,7 @@ phaseC:
 freeze:
   frozen: true
   version: "v2-ironclad"
-  commit_hash: "5f8e02072cb509f5fdb2319ece9a0029f66d6cb39"
+  commit_hash: "59dec651546aeaa940e0bc66d338222fb043673e1"
   locked_at: "2026-01-02T15:15:00+09:00"
 
 gates:

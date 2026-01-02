@@ -1,0 +1,184 @@
+﻿
+src\aaa\aaa_components\aaa_S
+creenB_JournalStatus.vue:92:
+    data: {} as any
+src\aaa\aaa_components\aaa_S
+creenE_LogicMaster.vue:451: 
+   debit: [] as any[], // { 
+acct, sub, tax, amount }
+src\aaa\aaa_components\aaa_S
+creenE_LogicMaster.vue:452: 
+   credit: [] as any[]
+src\aaa\aaa_composables\__te
+sts__\aaa_ClientMapper.spec.
+ts:12:        } as any;
+src\aaa\aaa_composables\__te
+sts__\aaa_ClientMapper.spec.
+ts:30:        } as any;
+src\aaa\aaa_composables\__te
+sts__\aaa_ClientMapper.spec.
+ts:41:            simplified
+TaxCategory: 3 as any, // 3r
+d category
+src\aaa\aaa_composables\__te
+sts__\aaa_ClientMapper.spec.
+ts:42:        } as any;
+src\aaa\aaa_composables\__te
+sts__\aaa_ClientMapper.spec.
+ts:54:            simplified
+TaxCategory: null as any, //
+ Explicit null
+src\aaa\aaa_composables\__te
+sts__\aaa_ClientMapper.spec.
+ts:55:        } as any;
+src\aaa\aaa_composables\__te
+sts__\aaa_JobMapper.spec.ts:
+23:    } as any; // Force ca
+st to simulate runtime incom
+pleteness despite Types
+src\aaa\aaa_composables\__te
+sts__\aaa_LearningRuleMapper
+.spec.ts:11:        } as any
+;
+src\aaa\aaa_composables\__te
+sts__\aaa_LearningRuleMapper
+.spec.ts:39:        } as any
+;
+src\aaa\aaa_composables\__te
+sts__\aaa_LearningRuleMapper
+.spec.ts:50:            targ
+etField: 'super_field' as an
+y,
+src\aaa\aaa_composables\__te
+sts__\aaa_LearningRuleMapper
+.spec.ts:51:        } as any
+;
+src\aaa\aaa_composables\aaa_
+LearningRuleMapper.ts:8:    
+if (typeof (ts as any).toDat
+e === 'function') {
+src\aaa\aaa_composables\aaa_
+LearningRuleMapper.ts:11:   
+ if (typeof (ts as any).seco
+nds === 'number') {
+src\aaa\aaa_composables\aaa_
+LearningRuleMapper.ts:12:   
+     return new Timestamp((t
+s as any).seconds, (ts as an
+y).nanoseconds).toDate();
+src\aaa\aaa_composables\aaa_
+mapper.ts:64:  if (typeof ts
+ === 'object' && ts !== null
+ && 'toDate' in ts && typeof
+ (ts as any).toDate === 'fun
+ction') {
+src\aaa\aaa_composables\aaa_
+mapper.ts:74:  if (typeof ts
+ === 'object' && ts !== null
+ && 'seconds' in ts && typeo
+f (ts as any).seconds === 'n
+umber') {
+src\aaa\aaa_composables\aaa_
+mapper.ts:76:      const sec
+onds = (ts as any).seconds a
+s number;
+src\aaa\aaa_composables\aaa_
+mapper.ts:282:      taxRate:
+ mapTaxRate((d as any).taxDe
+tails?.rate), // Safe enough
+ via mapTaxRate
+src\aaa\aaa_composables\aaa_
+mapper.ts:289:      taxRate:
+ mapTaxRate((d as any).taxDe
+tails?.rate),
+src\aaa\aaa_composables\aaa_
+mapper.ts:387:  const d = (i
+nput && typeof input === 'ob
+ject') ? (input as any) : {}
+;
+src\aaa\aaa_composables\aaa_
+useAccountingSystem.ts:73:  
+    type: taxConf.type as an
+y,
+src\aaa\aaa_composables\aaa_
+useAccountingSystem.ts:124: 
+ (MOCK_JOBS_RAW[complexJobIn
+dex] as any).lines = [
+src\aaa\aaa_composables\aaa_
+useAccountingSystem.ts:552: 
+     await FirestoreReposito
+ry.updateJobStatus(jobId, st
+atus as any);
+src\aaa\aaa_mocks\aaa_test_s
+cenarios.ts:116:    // Easie
+st is to mock it via propert
+y injection in the test file
+, casting as any.
+src\aaa\aaa_mocks\aaa_test_s
+cenarios.ts:128:    } as any
+,
+src\aaa\aaa_services\aaa_Jou
+rnalService.ts:37:          
+      remandCount: (data as 
+any).remandCount || 0, // DB
+にない場合は0
+src\aaa\aaa_types\aaa_zod_sc
+hema.ts:16:    typeof (data 
+as any).seconds === 'number'
+ &&
+src\aaa\aaa_types\aaa_zod_sc
+hema.ts:18:    typeof (data 
+as any).nanoseconds === 'num
+ber'
+src\aaa\aaa_views\aaa_debug\
+aaa_ScreenA_TestPage_Strict.
+vue:147:                taxM
+ethod: (c as any).taxType ||
+ 'inclusive',
+src\aaa\aaa_views\aaa_debug\
+aaa_ScreenB_Restore_Mock.vue
+:239:    data: {} as any
+src\aaa\aaa_views\aaa_debug\
+aaa_ScreenH_TestPage_Strict.
+vue:512:        const val = 
+(client as any)[activeFilter
+.value!];
+src\aaa\aaa_views\aaa_Screen
+H_TaskDashboard.vue:512:    
+    const val = (client as a
+ny)[activeFilter.value!];
+src\aaa\__tests__\aaa_Client
+Mapper.test.ts:38:        co
+nst result = mapClientApiToU
+i(null as any);
+src\aaa\__tests__\aaa_Client
+Mapper.test.ts:42:        co
+nst result2 = mapClientApiTo
+Ui(undefined as any);
+src\aaa\__tests__\aaa_Client
+Mapper.test.ts:45:        co
+nst result3 = mapClientApiTo
+Ui({} as any);
+src\aaa\__tests__\aaa_Client
+Mapper.test.ts:56:        } 
+as any);
+src\aaa\__tests__\aaa_Client
+Mapper.test.ts:66:        } 
+as any);
+src\aaa\__tests__\aaa_Client
+Mapper.test.ts:82:          
+  } as any);
+src\aaa\__tests__\aaa_Client
+Mapper.test.ts:91:        } 
+as any);
+src\aaa\__tests__\aaa_JobMap
+per.test.ts:58:        } as 
+any);
+src\aaa\__tests__\aaa_JobMap
+per.test.ts:71:        } as 
+any);
+src\aaa\__tests__\aaa_JobMap
+per.test.ts:82:        } as 
+any);
+
+

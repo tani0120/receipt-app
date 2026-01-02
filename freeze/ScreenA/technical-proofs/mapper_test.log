@@ -1,0 +1,6 @@
+﻿ src/aaa/aaa_composables/__tests__/aaa_ClientMapper.spec.ts (4 tests) 2ms
+    ClientMapper Constitution (Ironclad Rules) (4)   
+      Ironclad Rule 1: Exterminate Null/Undefined - Should return safe defaults 1ms
+      Ironclad Rule 2: Folder IDs Preservation - Should never return null/undefined for folders 0ms
+      Ironclad Rule 3: Enum & Logic Mapping - Should handle Tax Categories safely 0ms
+      Ironclad Rule 3b: Enum Fallback - Should handle unknown/null Tax Categories 0ms
