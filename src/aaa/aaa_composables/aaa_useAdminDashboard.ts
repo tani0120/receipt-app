@@ -1,6 +1,13 @@
 import { ref } from 'vue';
+import {
+  AI_PROMPTS,
+  GAS_LOGIC_DEFINITIONS
+} from '@/aaa/aaa_composables/aaa_useAccountingSystem';
 
-// Define strict types for the dashboard data structure (Contract)
+// ========================================================================
+// 📊 Dashboard Interfaces (Strict Typed Contract)
+// ========================================================================
+
 export interface BacklogStatus {
   waiting: number;
   processed: number;
@@ -23,8 +30,7 @@ export interface StaffPerformance {
 export interface StaffAnalysis {
   name: string;
   performance: StaffPerformance & { velocity: { draftAvg: number } };
-  backlogs: { total: number; draft: number }; // Simplified for Mirror Spec match
-  // Keeping extended properties optional for backward compatibility if needed
+  backlogs: { total: number; draft: number };
   backlog?: Record<string, BacklogStatus>;
 }
 
@@ -49,50 +55,55 @@ export interface ClientAnalysis {
   };
 }
 
+export interface RuleHistory {
+  date: string;
+  actor: string;
+  action: string;
+}
+
+export interface RuleCategory {
+  id: string;
+  name: string;
+  description: string;
+  history: RuleHistory[];
+}
+
+export interface PromptItem {
+  id: string;
+  name: string;
+  value: string;
+}
+
 export interface DashboardData {
-  // Detailed System Config (22 items from User Request)
   settings: {
-    // API & Roots
-    geminiApiKey: string; // GEMINI_API_KEY
-    invoiceApiKey: string; // 国税局アプリケーションID
-    systemRootId: string; // SYSTEM_ROOT_ID
-    masterSsId: string; // MASTER_SS_ID
-
-    // Environment
-    modelName: string; // 使用モデル名
-    systemSettingsSsId: string; // システム設定SS ID
-    rulesSsId: string; // 統一ルールSS ID
-    systemDbId: string; // システムDB ID
-    queueId: string; // 処理待ちキューID
-    dashboardId: string; // 改善ダッシュボードID
-
-    // Price & Cost (USD/1M Tokens)
-    apiPriceInput: number; // 入力単価($/1M)
-    apiPriceOutput: number; // 出力単価($/1M)
-    exchangeRate: number; // 為替レート(円/ドル)
-
-    // Scheduler Intervals (Minutes/Days)
-    intervalDispatchMin: number; // ジョブ登録間隔(分)
-    intervalWorkerMin: number; // ジョブ実行間隔(分)
-    intervalLearnerMin: number; // 学習処理間隔(分)
-    intervalValidatorMin: number; // 最終確認整形間隔(分)
-    intervalOptimizerDays: number; // 知識最適化間隔(日)
-
-    // Config & Limits
-    notifyHours: string; // 完了通知時刻
-    maxBatchSize: number; // 最大処理件数/1回
-    gasTimeoutLimit: number; // タイムアウト秒
-    maxAttemptLimit: number; // 最大リトライ回数
-    maxOptBatch: number; // 最適化処理数/1回
-    dataRetentionDays: number; // データ保存期間(日)
-    debugMode: boolean; // デバッグモード
-
-    // System Status (Keep for logic)
+    geminiApiKey: string;
+    invoiceApiKey: string;
+    systemRootId: string;
+    masterSsId: string;
+    modelName: string;
+    systemSettingsSsId: string;
+    rulesSsId: string;
+    systemDbId: string;
+    queueId: string;
+    dashboardId: string;
+    apiPriceInput: number;
+    apiPriceOutput: number;
+    exchangeRate: number;
+    intervalDispatchMin: number;
+    intervalWorkerMin: number;
+    intervalLearnerMin: number;
+    intervalValidatorMin: number;
+    intervalOptimizerDays: number;
+    notifyHours: string;
+    maxBatchSize: number;
+    gasTimeoutLimit: number;
+    maxAttemptLimit: number;
+    maxOptBatch: number;
+    dataRetentionDays: number;
+    debugMode: boolean;
     systemStatus: 'ACTIVE' | 'PAUSE' | 'EMERGENCY_STOP';
   };
-
   apiKeys: {
-    // Keep for backward compatibility or remove if fully migrated to settings
     geminiApiKey: string;
     invoiceApiKey: string;
   };
@@ -165,8 +176,8 @@ export interface DashboardData {
     solution: string;
   }[];
   prompts: {
-    ai: { id: string; name: string; value: string }[];
-    gas: { id: string; name: string; value: string }[];
+    ai: PromptItem[];
+    gas: PromptItem[];
   };
   rules: {
     ai: RuleCategory;
@@ -179,10 +190,12 @@ export interface DashboardData {
   };
 }
 
+// ========================================================================
+// 📊 Mock Data
+// ========================================================================
 
-// Mock Data (Updated to User Request Spec)
 const MOCK_DATA: DashboardData = {
-  apiKeys: { geminiApiKey: '', invoiceApiKey: '' }, // Legacy ref
+  apiKeys: { geminiApiKey: '', invoiceApiKey: '' },
 
   settings: {
     geminiApiKey: '',
@@ -194,8 +207,7 @@ const MOCK_DATA: DashboardData = {
     systemSettingsSsId: '(自動取得)',
     rulesSsId: '(入力待)',
     systemDbId: '(入力待)',
-    queueId: '(入力待)',
-    queueId: '(入力待)',
+    queueId: '(入力待)', // Only one queueId
     dashboardId: '(入力待)',
 
     apiPriceInput: 0.50,
@@ -380,11 +392,26 @@ const MOCK_DATA: DashboardData = {
   ],
   prompts: {
     ai: [
-      { id: 'P-001', name: '一般仕訳生成', value: '以下の取引内容から勘定科目を推論し、適切な仕訳を出力してください。\n\n[税区分スキーマ]\n${TAX_SCHEMA_TEXT}\n\n[出力形式]\n..."' },
-      { id: 'P-002', name: '異常値検知', value: '過去の取引履歴と比較し、金額が異常な取引を検知してください。\n\n参照ルール:\n${TAX_SCHEMA_TEXT}' }
+      { id: 'P-001', name: 'WORKER: 解析メイン (Phase 1)', value: AI_PROMPTS.WORKER },
+      { id: 'P-002', name: 'LEARNER: ルール生成 (Phase 2)', value: AI_PROMPTS.LEARNER },
+      { id: 'P-003', name: 'UPDATER: 知識更新 (Phase 3)', value: AI_PROMPTS.UPDATER },
+      { id: 'P-004', name: 'BUILDER: 初期知識生成 (Phase 0)', value: AI_PROMPTS.BUILDER },
+      { id: 'P-005', name: 'OPTIMIZER: 知識最適化 (Batch)', value: AI_PROMPTS.OPTIMIZER },
+      { id: 'P-006', name: 'AUDITOR: 知識監査 (Safety)', value: AI_PROMPTS.AUDITOR }
     ],
     gas: [
-      { id: 'G-001', name: 'Drive連携', value: '指定フォルダのファイルを検知し...' }
+      { id: 'G-001', name: 'File Rescue & Dispatch', value: GAS_LOGIC_DEFINITIONS.FILE_RESCUE },
+      { id: 'G-002', name: 'Deduplication Logic', value: GAS_LOGIC_DEFINITIONS.DEDUPLICATION },
+      { id: 'G-003', name: 'Out of Period Check', value: GAS_LOGIC_DEFINITIONS.OUT_OF_PERIOD },
+      { id: 'G-004', name: 'Knowledge Injection', value: GAS_LOGIC_DEFINITIONS.KNOWLEDGE_INJECTION },
+      { id: 'G-005', name: 'Tax Validation (1 Yen)', value: GAS_LOGIC_DEFINITIONS.TAX_VALIDATION },
+      { id: 'G-006', name: 'System Complement', value: GAS_LOGIC_DEFINITIONS.COMPLEMENT },
+      { id: 'G-007', name: 'Image Optimization', value: GAS_LOGIC_DEFINITIONS.IMAGE_OPTIMIZATION },
+      { id: 'G-008', name: 'Watchdog & Recovery', value: GAS_LOGIC_DEFINITIONS.WATCHDOG },
+      { id: 'G-009', name: 'Tax Code Translation', value: GAS_LOGIC_DEFINITIONS.TAX_TRANSLATION },
+      { id: 'G-010', name: 'Inference Logic (New/History)', value: GAS_LOGIC_DEFINITIONS.INFERENCE_LOGIC },
+      { id: 'G-011', name: 'Difference Analysis', value: GAS_LOGIC_DEFINITIONS.DIFFERENCE_ANALYSIS },
+      { id: 'G-012', name: 'Sandwich Defense', value: GAS_LOGIC_DEFINITIONS.SANDWICH_DEFENSE }
     ]
   },
 
@@ -435,8 +462,3 @@ export function aaa_useAdminDashboard() {
   // Re-export types if needed by components
   return { data, downloadCsv };
 }
-
-export type { RuleCategory, PromptItem } from '@/aaa/aaa_views/aaa_ScreenZ_AdminSettings.vue'; // This might be circular, better define here or ignore for now.
-// Defining types here to avoid circular dependency if possible or just use any for now to unblock.
-export interface RuleCategory { id: string; name: string; description: string; }
-export interface PromptItem { id: string; name: string; value: string; }

@@ -30,7 +30,7 @@ export const realRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/ScreenD_AIRules.vue')
     },
     {
-        path: '/workbench',
+        path: '/workbench/:id',
         name: 'Real_ScreenE',
         component: () => import('@/views/ScreenE_Workbench.vue')
     },

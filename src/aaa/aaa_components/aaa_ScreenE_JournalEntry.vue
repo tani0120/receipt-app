@@ -131,7 +131,7 @@
                         <!-- Debit Side -->
                         <div class="relative flex-1 flex flex-col">
                             <div class="text-xs font-bold text-blue-600 flex items-center mb-2"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> 借方 (費用)</div>
-                            <div v-for="(row, idx) in debitRows" :key="'dr-'+idx" class="mb-3 relative group bg-blue-50/30 p-2 rounded border border-blue-100">
+                            <div v-for="(row, idx) in debitRows" :key="'dr-'+idx" class="mb-3 relative group bg-blue-50/30 p-2 rounded border border-blue-100 flex flex-col gap-2">
                                 <button v-if="currentJob?.canEdit && debitRows.length > 1" @click="removeDebitRow(idx)" class="absolute -right-2 -top-2 bg-white rounded-full border border-gray-200 p-1 text-gray-400 hover:text-red-500 shadow-sm z-10 w-5 h-5 flex items-center justify-center text-[10px]"><i class="fa-solid fa-trash"></i></button>
 
                                 <label class="block text-[10px] text-gray-500 mb-0.5">勘定科目</label>
@@ -142,15 +142,15 @@
 
                                 <label class="block text-[10px] text-gray-500 mb-0.5">税区分</label>
                                 <select v-model="row.drTaxClass" :disabled="!currentJob?.canEdit" class="w-full border border-slate-300 rounded px-1 py-1 text-[10px] bg-white mb-2">
-                                    <option value="tax_10">課対仕入10%</option>
-                                    <option value="tax_8">軽減8%</option>
-                                    <option value="tax_none">対象外</option>
+                                    <option v-for="opt in filteredDebitTaxOptions" :key="opt.code" :value="opt.code">
+                                        {{ opt.label }}
+                                    </option>
                                 </select>
 
                                 <label class="block text-[10px] text-gray-500 mb-0.5">金額</label>
                                 <div class="relative">
                                     <input type="number" v-model.number="row.drAmount" :disabled="!currentJob?.canEdit" class="w-full border border-slate-300 rounded px-2 py-1 text-sm font-mono text-right bg-white">
-                                    <div v-if="row.drTaxClass !== 'tax_none'" class="text-[9px] text-gray-400 text-right mt-1">(内税 val)</div>
+                                    <div v-if="row.drTaxClass !== 'TAX_PURCHASE_NONE' && row.drTaxClass !== 'TAX_SALES_NONE'" class="text-[9px] text-gray-400 text-right mt-1">(内税 val)</div>
                                 </div>
                             </div>
                             <button v-if="currentJob?.canEdit" @click="addDebitRow" class="text-[10px] text-blue-500 hover:text-blue-700 flex items-center font-bold mt-1"><i class="fa-solid fa-plus-circle mr-1"></i> 行を追加</button>
@@ -159,7 +159,7 @@
                         <!-- Credit Side -->
                         <div class="relative flex-1 flex flex-col">
                             <div class="text-xs font-bold text-green-600 flex items-center justify-end mb-2">貸方 (決済) <i class="fa-solid fa-arrow-right-from-bracket ml-1"></i></div>
-                            <div v-for="(row, idx) in creditRows" :key="'cr-'+idx" class="mb-3 relative group bg-green-50/30 p-2 rounded border border-green-100">
+                            <div v-for="(row, idx) in creditRows" :key="'cr-'+idx" class="mb-3 relative group bg-green-50/30 p-2 rounded border border-green-100 flex flex-col gap-2">
                                 <button v-if="currentJob?.canEdit && creditRows.length > 1" @click="removeCreditRow(idx)" class="absolute -left-2 -top-2 bg-white rounded-full border border-gray-200 p-1 text-gray-400 hover:text-red-500 shadow-sm z-10 w-5 h-5 flex items-center justify-center text-[10px]"><i class="fa-solid fa-trash"></i></button>
 
                                 <label class="block text-[10px] text-gray-500 mb-0.5 text-right">勘定科目</label>
@@ -170,8 +170,9 @@
 
                                 <label class="block text-[10px] text-gray-500 mb-0.5 text-right">税区分</label>
                                 <select v-model="row.crTaxClass" :disabled="!currentJob?.canEdit" class="w-full border border-slate-300 rounded px-1 py-1 text-[10px] bg-white mb-2">
-                                    <option value="tax_none">対象外</option>
-                                    <option value="tax_10">課対仕入10%</option>
+                                    <option v-for="opt in filteredCreditTaxOptions" :key="opt.code" :value="opt.code">
+                                        {{ opt.label }}
+                                    </option>
                                 </select>
 
                                 <label class="block text-[10px] text-gray-500 mb-0.5 text-right">金額</label>
@@ -415,7 +416,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { aaa_useAccountingSystem, type JobUi, type JournalLineUi, type ClientUi } from '@/aaa/aaa_composables/aaa_useAccountingSystem';
+import { aaa_useAccountingSystem, type JobUi, type JournalLineUi, type ClientUi, TAX_OPTIONS } from '@/aaa/aaa_composables/aaa_useAccountingSystem';
 
 const route = useRoute();
 const router = useRouter();
@@ -430,6 +431,13 @@ const currentJob = computed(() => selectedJob.value); // Alias for Template
 const currentIndex = ref(0);
 const client = ref<ClientUi | null>(null);
 const showHistory = ref(false);
+
+const filteredDebitTaxOptions = computed(() => {
+    return TAX_OPTIONS.filter(opt => opt.type === 'purchase' || opt.code === 'TAX_SALES_NONE');
+});
+const filteredCreditTaxOptions = computed(() => {
+    return TAX_OPTIONS.filter(opt => opt.type === 'sales' || opt.code === 'TAX_PURCHASE_NONE');
+});
 
 // Modals & Queue Logic
 const showCompletionPopup = ref(false);
@@ -469,7 +477,7 @@ const transactionDateStr = computed({
     set: (v: string) => {
         if (selectedJob.value) {
             // JobUi.transactionDate is string
-            selectedJob.value.transactionDate = v;
+            (selectedJob.value as any).transactionDate = v;
         }
     }
 });
@@ -549,8 +557,8 @@ function selectJob(index: number) {
                 // Empty Default
                 return {
                     lineNo: 1,
-                    drAccount: '', drSubAccount: '', drSub: '', drAmount: 0, drTaxClass: 'tax_10', drTaxAmount: 0,
-                    crAccount: '', crSubAccount: '', crSub: '', crAmount: 0, crTaxClass: 'tax_none', crTaxAmount: 0,
+                    drAccount: '', drSubAccount: '', drSub: '', drAmount: 0, drTaxClass: 'TAX_PURCHASE_10', drTaxAmount: 0,
+                    crAccount: '', crSubAccount: '', crSub: '', crAmount: 0, crTaxClass: 'TAX_PURCHASE_NONE', crTaxAmount: 0,
                     description: '', departmentCode: '', note: '', invoiceIssuer: 'unknown',
                     taxRate: 10, isReducedRate: false, isAutoMaster: false, isTenThousandYen: false, isSocialExpense: false, isTaxDiff: false
                 };
@@ -562,13 +570,13 @@ function selectJob(index: number) {
                 drSubAccount: l.debit.subAccount,
                 drSub: l.debit.subAccount,
                 drAmount: l.debit.amount,
-                drTaxClass: String(l.debit.taxRate), // Assuming string compatible like 'tax_10'
+                drTaxClass: l.debit.taxCode || 'TAX_PURCHASE_10',
                 drTaxAmount: 0,
                 crAccount: l.credit.account,
                 crSubAccount: l.credit.subAccount,
                 crSub: l.credit.subAccount,
                 crAmount: l.credit.amount,
-                crTaxClass: String(l.credit.taxRate),
+                crTaxClass: l.credit.taxCode || 'TAX_PURCHASE_NONE',
                 crTaxAmount: 0,
                 description: l.description,
                 departmentCode: '', note: '', invoiceIssuer: 'unknown',
@@ -595,8 +603,8 @@ const selectedJobSummary = ref('');
 function addDebitRow() {
     debitRows.value.push({
         lineNo: debitRows.value.length + 1,
-        drAccount: '', drSubAccount: '', drSub: '', drAmount: 0, drTaxClass: 'tax_10', drTaxAmount: 0,
-        crAccount: '', crSubAccount: '', crSub: '', crAmount: 0, crTaxClass: 'tax_none', crTaxAmount: 0,
+        drAccount: '', drSubAccount: '', drSub: '', drAmount: 0, drTaxClass: 'TAX_PURCHASE_10', drTaxAmount: 0,
+        crAccount: '', crSubAccount: '', crSub: '', crAmount: 0, crTaxClass: 'TAX_PURCHASE_NONE', crTaxAmount: 0,
         description: selectedJobSummary.value,
         departmentCode: '', note: '', invoiceIssuer: 'unknown',
         taxRate: 10, isReducedRate: false, isAutoMaster: false, isTenThousandYen: false, isSocialExpense: false, isTaxDiff: false
@@ -607,8 +615,8 @@ function removeDebitRow(idx: number) { debitRows.value.splice(idx, 1); }
 function addCreditRow() {
     creditRows.value.push({
         lineNo: creditRows.value.length + 1,
-        drAccount: '', drSubAccount: '', drSub: '', drAmount: 0, drTaxClass: 'tax_10', drTaxAmount: 0,
-        crAccount: '', crSubAccount: '', crSub: '', crAmount: 0, crTaxClass: 'tax_none', crTaxAmount: 0,
+        drAccount: '', drSubAccount: '', drSub: '', drAmount: 0, drTaxClass: 'TAX_PURCHASE_10', drTaxAmount: 0,
+        crAccount: '', crSubAccount: '', crSub: '', crAmount: 0, crTaxClass: 'TAX_PURCHASE_NONE', crTaxAmount: 0,
         description: selectedJobSummary.value,
         departmentCode: '', note: '', invoiceIssuer: 'unknown',
         taxRate: 10, isReducedRate: false, isAutoMaster: false, isTenThousandYen: false, isSocialExpense: false, isTaxDiff: false
@@ -635,9 +643,9 @@ function goBack() {
 // Actions
 function toggleLock() {
     if (selectedJob.value) {
-        selectedJob.value.isLocked = !selectedJob.value.isLocked;
-        if (selectedJob.value.isLocked) selectedJob.value.journalEditMode = 'locked';
-        else selectedJob.value.journalEditMode = 'work';
+        (selectedJob.value as any).isLocked = !selectedJob.value.isLocked;
+        if (selectedJob.value.isLocked) (selectedJob.value as any).journalEditMode = 'locked';
+        else (selectedJob.value as any).journalEditMode = 'work';
     }
 }
 
@@ -649,8 +657,8 @@ function applyAIProposal() {
     // Helper to create valid EditableJournalLine from Partial
     const createEmptyRow = (lineNo: number): EditableJournalLine => ({
         lineNo,
-        drAccount: '', drSubAccount: '', drSub: '', drAmount: 0, drTaxClass: 'tax_10', drTaxAmount: 0,
-        crAccount: '', crSubAccount: '', crSub: '', crAmount: 0, crTaxClass: 'tax_none', crTaxAmount: 0,
+        drAccount: '', drSubAccount: '', drSub: '', drAmount: 0, drTaxClass: 'TAX_PURCHASE_10', drTaxAmount: 0,
+        crAccount: '', crSubAccount: '', crSub: '', crAmount: 0, crTaxClass: 'TAX_PURCHASE_NONE', crTaxAmount: 0,
         description: p.summary || '',
         departmentCode: '', note: '', invoiceIssuer: 'unknown',
         taxRate: 10, isReducedRate: false, isAutoMaster: false, isTenThousandYen: false, isSocialExpense: false, isTaxDiff: false
@@ -665,8 +673,9 @@ function applyAIProposal() {
             row.drSubAccount = d.subAccount;
             row.drSub = d.subAccount;
             row.drAmount = d.amount || 0;
+            row.drAmount = d.amount || 0;
             // Map generic tax rate to UI specific string if needed
-            row.drTaxClass = d.taxRate === 0 ? 'tax_none' : (d.taxRate === 8 ? 'tax_8' : 'tax_10');
+            row.drTaxClass = d.taxRate === 0 ? 'TAX_PURCHASE_NONE' : (d.taxRate === 8 ? 'TAX_PURCHASE_8_RED' : 'TAX_PURCHASE_10');
             newDebitRows.push(row);
         });
     } else {
@@ -683,7 +692,7 @@ function applyAIProposal() {
             row.crSubAccount = c.subAccount;
             row.crSub = c.subAccount;
             row.crAmount = c.amount || 0;
-            row.crTaxClass = c.taxRate === 0 ? 'tax_none' : (c.taxRate === 8 ? 'tax_8' : 'tax_10');
+            row.crTaxClass = c.taxRate === 0 ? 'TAX_PURCHASE_NONE' : (c.taxRate === 8 ? 'TAX_PURCHASE_8_RED' : 'TAX_PURCHASE_10');
             newCreditRows.push(row);
         });
     } else {
@@ -709,7 +718,7 @@ function toggleDecision(decision: string) {
              pendingRevertId.value = txId;
              showRevertConfirmModal.value = true;
          } else if (item) {
-             approvalQueue.value[ existingIdx ].decision = decision; // safe access
+             (approvalQueue.value[ existingIdx ] as any).decision = decision; // safe access
              lastAction.value = { id: txId, decision };
              goNext();
          }

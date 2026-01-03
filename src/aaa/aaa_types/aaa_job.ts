@@ -22,6 +22,9 @@ export interface Job extends Omit<FirestoreJob, 'status'> {
   primaryCompletedAt?: Timestamp;
   finalCompletedAt?: Timestamp;
   remandReason?: string;
+
+  // UI Display Helper
+  clientName?: string;
 }
 
 /**

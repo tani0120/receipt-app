@@ -91,6 +91,11 @@
 
               <!-- Client -->
               <td class="px-6 py-4 whitespace-nowrap">
+                <!-- Client Name (Top) -->
+                <div class="text-sm text-slate-800 font-bold mb-1">
+                    {{ job.clientName }}
+                </div>
+                <!-- Client Code (Bottom) -->
                 <span class="font-mono font-bold text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
                   {{ job.clientCode }}
                 </span>

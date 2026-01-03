@@ -146,6 +146,45 @@ const mapTaxRate = (rate: unknown): TaxRateUi => {
   return 'unknown';
 };
 
+// --- Deep Dive Tax Translation Logic ---
+const translateTaxCode = (code: unknown, client: Partial<ClientApi>, side: 'debit' | 'credit'): string => {
+  const raw = String(code || '');
+  if (!raw) return '';
+
+  const mode = client.consumptionTaxMode || 'general';
+
+  // 1. Exempt (免税)
+  // AIが何を推論しても、システム側で強制的に TAX_EXEMPT (非課税/対象外)
+  if (mode === 'exempt') {
+    return 'TAX_NONE'; // Schema: TAX_NONE: 対象外/不課税
+  }
+
+  // 2. Simplified (簡易)
+  if (mode === 'simplified') {
+    // 売上 (Credit)
+    if (side === 'credit') {
+      // AI check: Specifically Taxable Sales (10% or 8%)
+      // Caution: Do NOT capture TAX_SALES_EXPORT or TAX_SALES_NON_TAXABLE here
+      if (raw.includes('TAX_SALES_10') || raw.includes('TAX_SALES_8') || raw.includes('課税売上')) {
+        const cat = client.simplifiedTaxCategory || 3; // Default 3rd
+        const isReduced = raw.includes('8_RED') || raw.includes('軽減');
+        const rate = isReduced ? '8%' : '10%';
+        const kanji = ['一', '二', '三', '四', '五', '六'][cat - 1] || '三';
+        return `簡易${kanji}売 ${rate}`;
+      }
+      // Export/Exempt/None passes through as is (e.g., TAX_SALES_EXPORT)
+      return raw;
+    } else {
+      // 仕入 (Debit) -> 対象外
+      return '対象外';
+    }
+  }
+
+  // 3. General (本則)
+  // AI推論結果をそのまま使用
+  return raw;
+};
+
 // --- Step Logic ---
 
 const createStep = (state: StepStateUi = 'none', label = '', count = 0): JobStepUi => ({
@@ -266,7 +305,7 @@ const calculateActions = (api: Partial<JobApi>): { primary: JobActionUi, next: J
  * ============================================================
  */
 
-const mapJournalLine = (api: unknown): JournalLineUi => {
+const mapJournalLine = (api: unknown, client: Partial<ClientApi>): JournalLineUi => {
   const d = (api && typeof api === 'object') ? (api as Record<string, any>) : {};
 
   // TaxDetails Safety
@@ -280,6 +319,7 @@ const mapJournalLine = (api: unknown): JournalLineUi => {
       subAccount: safeText(d.drSubAccount),
       amount: safeNumber(d.drAmount),
       taxRate: mapTaxRate((d as any).taxDetails?.rate), // Safe enough via mapTaxRate
+      taxCode: translateTaxCode(d.drTaxClass, client, 'debit'),
     },
 
     credit: {
@@ -287,6 +327,7 @@ const mapJournalLine = (api: unknown): JournalLineUi => {
       subAccount: safeText(d.crSubAccount),
       amount: safeNumber(d.crAmount),
       taxRate: mapTaxRate((d as any).taxDetails?.rate),
+      taxCode: translateTaxCode(d.crTaxClass, client, 'credit'),
     },
 
     description: safeText(d.description),
@@ -345,7 +386,7 @@ export const mapJobApiToUi = (
 
     errorMessage: safeText(api.errorMessage),
 
-    lines: Array.isArray(api.lines) ? api.lines.map(mapJournalLine) : [],
+    lines: Array.isArray(api.lines) ? api.lines.map(l => mapJournalLine(l, client)) : [],
 
     isLocked: !!api.lockedByUserId,
 

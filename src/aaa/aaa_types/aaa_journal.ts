@@ -25,6 +25,11 @@ export interface JournalEntry {
     // メタデータ (Jobとのリンク)
     clientCode: string;
     status: JobStatus;
+
+    // Client Tax Settings (For Validations)
+    consumptionTaxMode: 'general' | 'simplified' | 'exempt';
+    simplifiedTaxCategory?: 1 | 2 | 3 | 4 | 5 | 6;
+
     transactionDate: Date; // TimestampをDateに変換して保持することを推奨
 
     // 差戻し対応

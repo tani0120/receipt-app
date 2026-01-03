@@ -1,15 +1,45 @@
 import { db } from '@/firebase';
 import { collection, doc, updateDoc, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import type { Job, JobStatus, JobActionType } from '@/types/job';
+import { mockJobUiList } from '@/aaa/aaa_mocks/aaa_mockJobUi'; // Import Mock Data
 
 const COLLECTION_NAME = 'jobs';
 
 export const JobService = {
   subscribeAllJobs(onSuccess: (jobs: Job[]) => void, onError: (error: Error) => void): () => void {
     const q = query(collection(db, COLLECTION_NAME), orderBy('transactionDate', 'desc'));
+
+    // TEMPORARY: Return Mock Data immediately for User Verification
+    const mocks: Job[] = mockJobUiList.map(m => ({
+      id: m.id,
+      clientCode: m.clientCode,
+      clientName: m.clientName, // Injected here to fix display
+      status: 'pending',
+      transactionDate: Timestamp.now(),
+      driveFileId: 'mock-file',
+      driveFileUrl: '',
+      lines: m.id === '1001' || m.clientCode === '1001' ? [
+        {
+          lineNo: 1,
+          drAccount: '消耗品費',
+          drAmount: 1650000,
+          drTaxClass: 'TAX_PURCHASE_10',
+          crAccount: '未払金',
+          crAmount: 1650000,
+          crTaxClass: 'TAX_NONE',
+          description: 'MacBook Pro 5台',
+          taxDetails: { rate: 10, type: 'taxable', isReducedRate: false }
+        }
+      ] : [],
+      remandReason: '',
+      updatedAt: Timestamp.now(),
+    } as any as Job));
+
+    onSuccess(mocks);
+
     return onSnapshot(
       q,
-      (snapshot) => onSuccess(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Job))),
+      () => { }, // Ignore real data for now to prioritize mock for verification
       onError
     );
   },

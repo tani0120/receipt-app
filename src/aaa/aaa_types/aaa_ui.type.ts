@@ -72,6 +72,7 @@ export type JournalLineUi = {
     readonly subAccount: string;
     readonly amount: number;
     readonly taxRate: TaxRateUi;
+    readonly taxCode: string;
   };
 
   readonly credit: {
@@ -79,6 +80,7 @@ export type JournalLineUi = {
     readonly subAccount: string;
     readonly amount: number;
     readonly taxRate: TaxRateUi;
+    readonly taxCode: string;
   };
 
   readonly description: string;
