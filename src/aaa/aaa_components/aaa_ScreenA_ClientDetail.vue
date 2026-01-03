@@ -40,14 +40,37 @@
                 </div>
 
                 <!-- Line 2: Tax & Accounting Details -->
+                <!-- Line 2: Tax & Accounting Details -->
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
-                        <span class="text-slate-400 font-bold">課税区分</span>
+                        <span class="text-slate-400 font-bold">消費税</span>
                         <span class="font-bold text-slate-700">{{ client.consumptionTaxModeLabel }}</span>
+                    </div>
+                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <span class="text-slate-400 font-bold">計算方式</span>
+                        <span class="font-bold text-slate-700">{{ client.taxCalculationMethodLabel }}</span>
+                    </div>
+                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <span class="text-slate-400 font-bold">端数処理</span>
+                        <span class="font-bold text-slate-700">{{ client.roundingSettingsLabel }}</span>
+                    </div>
+                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <span class="text-slate-400 font-bold">インボイス</span>
+                        <span :class="['font-bold', client.isInvoiceRegistered ? 'text-blue-600' : 'text-slate-500']">
+                            {{ client.invoiceRegistrationLabel }}
+                            <span v-if="client.isInvoiceRegistered" class="ml-1 text-[10px] font-mono bg-blue-50 px-1 rounded">{{ client.invoiceRegistrationNumber }}</span>
+                        </span>
+                    </div>
+
+                    <div class="w-px h-4 bg-slate-300 mx-1"></div>
+
+                    <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <span class="text-slate-400 font-bold">経理方式</span>
+                        <span class="font-bold text-slate-700">{{ client.taxMethodExplicitLabel }}</span>
                     </div>
                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
                         <span class="text-slate-400 font-bold">計上基準</span>
-                        <span class="font-bold text-slate-700">{{ client.taxMethodExplicitLabel }}</span>
+                        <span class="font-bold text-slate-700">{{ client.calculationMethodLabel }}</span>
                     </div>
                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
                         <span class="text-slate-400 font-bold">申告種類</span>
@@ -144,7 +167,7 @@ import aaa_ScreenA_Detail_AIProposalCard from './aaa_ScreenA_Detail_AIProposalCa
 import aaa_ScreenA_Detail_AIKnowledgeCard from './aaa_ScreenA_Detail_AIKnowledgeCard.vue';
 
 const route = useRoute();
-const { clients, fetchClients } = aaa_useAccountingSystem();
+const { clients, fetchClients, updateClient } = aaa_useAccountingSystem();
 const isEditModalOpen = ref(false);
 
 // Confirm Modal State (Fixed Type Definition for Delete)
@@ -192,8 +215,56 @@ const client = computed(() => {
     return mapClientDetailApiToUi(rawClient.value || {});
 });
 
-const handleSave = (updatedForm: any) => {
-    localClient.value = updatedForm;
+const handleSave = async (formData: any) => {
+    // Helper to map consumption tax composite
+    let consumptionTaxMode = 'general';
+    let simplifiedTaxCategory: number | undefined = undefined;
+
+    if (formData.settings.consumptionTax === 'exempt') {
+        consumptionTaxMode = 'exempt';
+    } else if (formData.settings.consumptionTax && formData.settings.consumptionTax.startsWith('simplified_')) {
+        consumptionTaxMode = 'simplified';
+        simplifiedTaxCategory = Number(formData.settings.consumptionTax.split('_')[1]);
+    }
+
+    const payload = {
+        clientCode: formData.code,
+        companyName: formData.name,
+        repName: formData.rep,
+        staffName: formData.staffName,
+        type: formData.type || 'corp',
+        fiscalMonth: Number(formData.fiscalMonth),
+        status: (formData.isActive ? 'active' : 'inactive') as 'active' | 'inactive' | 'suspension',
+        accountingSoftware: formData.settings.software,
+
+        contactInfo: formData.contact.value,
+
+        // Tax Settings
+        taxFilingType: (formData.settings.taxType === '青色' ? 'blue' : 'white') as 'blue' | 'white',
+        consumptionTaxMode: consumptionTaxMode as 'general' | 'simplified' | 'exempt',
+        simplifiedTaxCategory: simplifiedTaxCategory as 1 | 2 | 3 | 4 | 5 | 6 | undefined,
+
+        defaultTaxRate: 10, // Default if not in form
+        taxMethod: formData.settings.taxMethod as 'inclusive' | 'exclusive',
+
+        // New Fields
+        taxCalculationMethod: formData.settings.taxCalculationMethod as 'stack' | 'back',
+        roundingSettings: formData.settings.roundingSettings as 'floor' | 'round' | 'ceil',
+        isInvoiceRegistered: Boolean(formData.settings.isInvoiceRegistered),
+        invoiceRegistrationNumber: formData.settings.invoiceRegistrationNumber,
+
+        calculationMethod: (formData.settings.calcMethod === '発生主義' ? 'accrual' : (formData.settings.calcMethod === '現金主義' ? 'cash' : 'interim_cash')) as 'accrual' | 'cash' | 'interim_cash',
+    };
+
+    try {
+        await updateClient(payload.clientCode, payload);
+        isEditModalOpen.value = false;
+        // localClient logic removed as updateClient updates the source of truth
+        localClient.value = null;
+    } catch (e) {
+        console.error(e);
+        alert('更新に失敗しました');
+    }
 };
 
 // AI Action Handlers

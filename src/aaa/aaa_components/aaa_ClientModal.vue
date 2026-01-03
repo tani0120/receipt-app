@@ -108,12 +108,53 @@
                         </select>
                     </div>
                     <div>
-                         <label class="block text-xs font-bold text-gray-500 mb-1">課税区分</label>
+                         <label class="block text-xs font-bold text-gray-500 mb-1">申告種類</label>
+                         <select v-model="form.settings.taxType" class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:border-blue-500 outline-none">
+                             <option value="青色">青色申告</option>
+                             <option value="白色">白色申告</option>
+                         </select>
+                    </div>
+
+                    <!-- Row 2: Consumption Tax & Tax Calculation -->
+                    <div>
+                         <label class="block text-xs font-bold text-gray-500 mb-1">消費税区分</label>
+                         <select v-model="form.settings.consumptionTax" class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:border-blue-500 outline-none">
+                             <option value="general">原則課税</option>
+                             <option value="exempt">免税</option>
+                             <option value="simplified_1">簡易1種 (卸売)</option>
+                             <option value="simplified_2">簡易2種 (小売)</option>
+                             <option value="simplified_3">簡易3種 (製造)</option>
+                             <option value="simplified_4">簡易4種 (その他)</option>
+                             <option value="simplified_5">簡易5種 (サービス)</option>
+                             <option value="simplified_6">簡易6種 (不動産)</option>
+                         </select>
+                    </div>
+                    <div>
+                         <label class="block text-xs font-bold text-gray-500 mb-1">消費税計算方式</label>
+                         <select v-model="form.settings.taxCalculationMethod" class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:border-blue-500 outline-none">
+                             <option value="stack">積上計算</option>
+                             <option value="back">割戻計算</option>
+                         </select>
+                    </div>
+
+                    <!-- Row 3: Tax Method & Rounding -->
+                    <div>
+                         <label class="block text-xs font-bold text-gray-500 mb-1">経理方式</label>
                          <select v-model="form.settings.taxMethod" class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:border-blue-500 outline-none">
                              <option value="inclusive">税込経理</option>
                              <option value="exclusive">税抜経理</option>
                          </select>
                     </div>
+                     <div>
+                         <label class="block text-xs font-bold text-gray-500 mb-1">端数処理</label>
+                         <select v-model="form.settings.roundingSettings" class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:border-blue-500 outline-none">
+                             <option value="floor">切り捨て</option>
+                             <option value="round">四捨五入</option>
+                             <option value="ceil">切り上げ</option>
+                         </select>
+                    </div>
+
+                    <!-- Row 4: Calculation Standard & Invoice -->
                     <div>
                          <label class="block text-xs font-bold text-gray-500 mb-1">計上基準</label>
                          <select v-model="form.settings.calcMethod" class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:border-blue-500 outline-none">
@@ -122,12 +163,28 @@
                              <option value="現金主義">現金主義</option>
                          </select>
                     </div>
-                    <div>
-                         <label class="block text-xs font-bold text-gray-500 mb-1">申告種類</label>
-                         <select v-model="form.settings.taxType" class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:border-blue-500 outline-none">
-                             <option value="青色">青色申告</option>
-                             <option value="白色">白色申告</option>
-                         </select>
+
+                    <div class="col-span-2 border-t border-dashed border-gray-200 mt-2 pt-2">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="text-xs font-bold text-gray-500">インボイス登録</label>
+                            <div class="flex items-center gap-4">
+                                <label class="flex items-center gap-1 cursor-pointer">
+                                    <input type="radio" v-model="form.settings.isInvoiceRegistered" :value="true" class="text-blue-600 focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700">あり</span>
+                                </label>
+                                <label class="flex items-center gap-1 cursor-pointer">
+                                    <input type="radio" v-model="form.settings.isInvoiceRegistered" :value="false" class="text-gray-600 focus:ring-gray-500">
+                                    <span class="text-sm text-gray-700">なし</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div v-if="form.settings.isInvoiceRegistered">
+                             <label class="block text-[10px] font-bold text-gray-400 mb-1">登録番号 (T番号)</label>
+                             <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-500 text-sm">T</span>
+                                <input type="text" v-model="form.settings.invoiceRegistrationNumber" class="w-full border border-gray-300 rounded pl-7 pr-3 py-2 text-sm focus:border-blue-500 outline-none" placeholder="1234567890123" maxlength="13">
+                             </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -174,7 +231,14 @@ const defaultForm = {
         software: '弥生会計',
         taxMethod: 'inclusive',
         calcMethod: '発生主義',
-        taxType: '青色'
+        taxType: '青色',
+
+        // New Fields
+        consumptionTax: 'general', // 'general', 'exempt', 'simplified_1' ~ 'simplified_6'
+        taxCalculationMethod: 'stack', // 'stack', 'back'
+        roundingSettings: 'floor', // 'floor', 'round', 'ceil'
+        isInvoiceRegistered: false,
+        invoiceRegistrationNumber: ''
     },
     driveLinks: {
         storage: '',
@@ -213,7 +277,6 @@ watch(() => props.visible, (newVal) => {
             state.form.fiscalMonth = d.fiscalMonth || 3;
             state.form.isActive = d.isActive !== undefined ? d.isActive : true;
             state.form.establishmentDate = ''; // Not in UI, leave empty or need to fetch?
-            state.form.type = 'corp'; // Not in UI, default to corp
 
             // Contact
             state.form.contact = {
@@ -226,6 +289,20 @@ watch(() => props.visible, (newVal) => {
             state.form.settings.taxMethod = d.taxMethod || 'inclusive';
             state.form.settings.calcMethod = d.calculationMethodLabel || '発生主義';
             state.form.settings.taxType = (d.taxFilingType === 'white') ? '白色' : '青色';
+
+             // New Fields Mapping
+            let cTax = 'general';
+            if (d.consumptionTaxMode === 'exempt') cTax = 'exempt';
+            else if (d.consumptionTaxMode === 'simplified') {
+                cTax = `simplified_${d.simplifiedTaxCategory || 1}`;
+            }
+            state.form.settings.consumptionTax = cTax;
+
+            state.form.settings.taxCalculationMethod = d.taxCalculationMethod || 'stack';
+            state.form.settings.roundingSettings = d.roundingSettings || 'floor';
+            state.form.settings.isInvoiceRegistered = !!d.isInvoiceRegistered;
+            state.form.settings.invoiceRegistrationNumber = d.invoiceRegistrationNumber || '';
+
 
             // Links
             if (d.driveLinks) {

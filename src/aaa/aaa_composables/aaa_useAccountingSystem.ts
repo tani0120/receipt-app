@@ -135,6 +135,26 @@ if (complexJobIndex !== -1) {
   ];
 }
 
+// Case 9: Multi-line AI Proposal Mock (Real Invoice Simulation)
+const case9Index = MOCK_JOBS_RAW.findIndex(j => j.id === 'case9_job01');
+if (case9Index === -1) {
+  const case9 = createMockJob('case9_job01', '2025-01-15', 'Amazon.co.jp', 'Case 9: 多行AI提案テスト (家賃+共益費)', 110000, 'ready_for_work', '地代家賃');
+  // Inject Multi-line AI Proposal Raw JSON
+  (case9 as any).aiAnalysisRaw = JSON.stringify({
+    summary: '家賃および共益費の計上',
+    reason: '契約書に基づき、家賃と共益費を按分して計上します。',
+    confidenceScore: 0.98,
+    debits: [
+      { account: '地代家賃', subAccount: '本社家賃', amount: 100000, taxRate: 10 },
+      { account: '共益費', subAccount: '本社共益費', amount: 10000, taxRate: 10 }
+    ],
+    credits: [
+      { account: '未払金', subAccount: 'Amazon.co.jp', amount: 110000, taxRate: 0 }
+    ]
+  });
+  MOCK_JOBS_RAW.push(case9);
+}
+
 
 // ========================================================================
 // 📊 Admin Dashboard Data Types
@@ -278,7 +298,13 @@ export function aaa_useAccountingSystem() {
       csvOutputFolderId: 'mock_csv_BBB',
       learningCsvFolderId: 'mock_learn_BBB',
       taxFilingType: 'blue',
-      consumptionTaxMode: 'general',
+      consumptionTaxMode: 'simplified', // Varied
+      simplifiedTaxCategory: 3, // Varied
+      taxCalculationMethod: 'back', // Varied
+      roundingSettings: 'round', // Varied
+      isInvoiceRegistered: true, // Varied
+      invoiceRegistrationNumber: '1234567890123', // Varied
+
       updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
     },
     {
@@ -289,7 +315,7 @@ export function aaa_useAccountingSystem() {
       type: 'individual',
       fiscalMonth: 3,
       status: 'inactive',
-      accountingSoftware: 'mf', // Fixed: matches Zod Enum
+      accountingSoftware: 'mf',
       calculationMethod: 'accrual',
       taxMethod: 'inclusive',
       contactInfo: '',
@@ -300,8 +326,13 @@ export function aaa_useAccountingSystem() {
       excludedFolderId: 'mock_excl_CCC',
       csvOutputFolderId: 'mock_csv_CCC',
       learningCsvFolderId: 'mock_learn_CCC',
-      taxFilingType: 'blue',
-      consumptionTaxMode: 'general',
+      taxFilingType: 'white', // Varied
+      consumptionTaxMode: 'exempt', // Varied
+      taxCalculationMethod: 'stack',
+      roundingSettings: 'floor',
+      isInvoiceRegistered: false,
+      invoiceRegistrationNumber: '',
+
       updatedAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
     },
     {
@@ -420,6 +451,8 @@ export function aaa_useAccountingSystem() {
         clientCode: data.clientCode,
         companyName: data.companyName || "",
         repName: data.repName || "",
+        staffName: data.staffName || "",
+        type: data.type || "corp",
         fiscalMonth: data.fiscalMonth || 3,
         status: data.status || 'active',
         sharedFolderId: "mock_shared_" + data.clientCode,
@@ -428,9 +461,19 @@ export function aaa_useAccountingSystem() {
         excludedFolderId: "mock_excl_" + data.clientCode,
         csvOutputFolderId: "mock_csv_" + data.clientCode,
         learningCsvFolderId: "mock_learn_" + data.clientCode,
+
         taxFilingType: data.taxFilingType || 'blue',
         consumptionTaxMode: data.consumptionTaxMode || 'general',
+        simplifiedTaxCategory: data.simplifiedTaxCategory,
         accountingSoftware: data.accountingSoftware || 'freee',
+        defaultTaxRate: data.defaultTaxRate || 10,
+        taxMethod: data.taxMethod || 'inclusive',
+        taxCalculationMethod: data.taxCalculationMethod || 'stack',
+        isInvoiceRegistered: !!data.isInvoiceRegistered,
+        invoiceRegistrationNumber: data.invoiceRegistrationNumber || "",
+        roundingSettings: data.roundingSettings || 'floor',
+
+        contactInfo: data.contactInfo || "",
         driveLinked: false,
         updatedAt: Timestamp.now()
       };
@@ -441,6 +484,28 @@ export function aaa_useAccountingSystem() {
       await fetchClients();
     } catch (e: any) {
       error.value = e.message;
+      throw e;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function updateClient(clientCode: string, data: Partial<ClientApi>) {
+    isLoading.value = true;
+    try {
+      // 1. Update DB (Mock)
+      await FirestoreRepository.updateClient(clientCode, data);
+
+      // 2. Optimistic Update Local State
+      const idx = clients.value.findIndex(c => c.clientCode === clientCode);
+      if (idx !== -1) {
+        // Re-fetch or merge? Ideally re-fetch or run pipeline logic again.
+        // For Mock Phase, simplest is re-fetch to ensure pipeline consistency.
+        await fetchClients();
+      }
+    } catch (e: any) {
+      console.error("Update Client Failed", e);
+      error.value = "更新に失敗しました";
       throw e;
     } finally {
       isLoading.value = false;
@@ -526,6 +591,7 @@ export function aaa_useAccountingSystem() {
     fetchJobById,
     createNewJob,
     createClient,
+    updateClient,
     fetchClients,
     subscribeToClientJobs,
     subscribeToAllJobs(callback?: (jobs: JobUi[]) => void) {
@@ -569,6 +635,17 @@ export function aaa_useAccountingSystem() {
 
     runAIInference: determineAccountItem,
     debugInjectClients: (data: any[]) => { clients.value = data; },
-    toggleEmergencyStop: () => { isEmergencyStopped.value = !isEmergencyStopped.value; }
+    toggleEmergencyStop: () => { isEmergencyStopped.value = !isEmergencyStopped.value; },
+
+    // GAS Integration Mock
+    mockGasIntegration: async () => {
+      console.log('GAS Integration: Verifying Tax Schema...');
+      return new Promise<{ success: boolean; message: string }>((resolve) => {
+        setTimeout(() => {
+          console.log('GAS Integration: Verification Complete.');
+          resolve({ success: true, message: 'Tax Schema Verified by GAS' });
+        }, 800);
+      });
+    }
   };
 }

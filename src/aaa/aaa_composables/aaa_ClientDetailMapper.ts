@@ -1,6 +1,6 @@
 import type { ClientDetailUi, DriveLinkUi } from '@/aaa/aaa_types/aaa_ui.type';
 import { mapClientApiToUi } from './aaa_ClientMapper';
-import type { ClientApi } from '@/aaa/aaa_types/aaa_zod.type';
+
 
 // Ironclad Helpers
 const safeString = (val: unknown, fallback = ''): string => {
@@ -41,21 +41,27 @@ export function mapClientDetailApiToUi(api: unknown): ClientDetailUi {
     ];
 
     // 3. Tax & Accounting Labels
+    // Re-use logic from baseUi where possible, or enhance it.
+
+    // consumptionTaxModeLabel is not in baseUi, so keep logic but fix it to use raw or base
     const consumptionTaxModeLabel = (raw.consumptionTaxMode === 'simplified') ? '簡易課税'
         : (raw.consumptionTaxMode === 'exempt') ? '免税'
             : '原則課税';
 
-    const taxMethodExplicitLabel = (raw.taxMethod === 'exclusive') ? '税抜経理' : '税込経理';
+    // baseUi already has taxMethodLabel ('税込' / '税抜') but detail might want Explicit '税込経理'
+    const taxMethodExplicitLabel = (baseUi.taxMethod === 'exclusive') ? '税抜経理' : '税込経理';
 
-    // Mocking unknown/undefined behavior for resilience
-    const fractionAdjustmentLabel = '切り捨て'; // Currently hardcoded/default
+    // fractionAdjustmentLabel -> Use baseUi.roundingSettingsLabel
+    const fractionAdjustmentLabel = baseUi.roundingSettingsLabel;
+
     const defaultTaxRateLabel = safeNumber(raw.defaultTaxRate, 10) + '%';
 
-    const simplifiedTaxCategory = safeNumber(raw.simplifiedTaxCategory, 0);
-    const hasSimplifiedTaxWarning = (raw.consumptionTaxMode === 'simplified' && simplifiedTaxCategory === 0);
+    // Warning logic: if mode is simplified but category is missing (0 or undefined)
+    const hasSimplifiedTaxWarning = (baseUi.consumptionTaxMode === 'simplified' && !baseUi.simplifiedTaxCategory);
+
     const simplifiedTaxCategoryMessage = hasSimplifiedTaxWarning
         ? '現在、簡易課税のみなし仕入率は設定されていません。'
-        : (simplifiedTaxCategory > 0 ? `第${simplifiedTaxCategory}種` : '設定なし');
+        : (baseUi.simplifiedTaxCategory ? `第${baseUi.simplifiedTaxCategory}種` : '設定なし');
 
     // 4. Mock Statistics (In real app, this might come from a separate specialized API or be calculated)
     const stats = {

@@ -360,14 +360,37 @@ export const mapJobApiToUi = (
     alerts: [],
     canEdit: ['ready_for_work', 'remanded', 'error_retry'].includes(jobStatus),
 
-    aiProposal: {
-      hasProposal: false,
-      reason: '',
-      confidenceLabel: '',
-      account: '',
-      subAccount: '',
-      summary: ''
-    },
+    aiProposal: (() => {
+      let parsed: any = null;
+      if (api.aiAnalysisRaw) {
+        try {
+          parsed = JSON.parse(api.aiAnalysisRaw);
+        } catch (e) { /* ignore */ }
+      }
+
+      const hasProposal = !!parsed;
+
+      return {
+        hasProposal,
+        reason: hasProposal ? safeText(parsed.reason) : '',
+        confidenceLabel: hasProposal ? (api.confidenceScore ? `信頼度: ${(api.confidenceScore * 100).toFixed(0)}%` : '高') : '',
+        summary: hasProposal ? safeText(parsed.summary) : '',
+
+        debits: (hasProposal && Array.isArray(parsed.debits)) ? parsed.debits.map((d: any) => ({
+          account: safeText(d.account),
+          subAccount: safeText(d.subAccount),
+          amount: safeNumber(d.amount),
+          taxRate: mapTaxRate(d.taxRate)
+        })) : [],
+
+        credits: (hasProposal && Array.isArray(parsed.credits)) ? parsed.credits.map((c: any) => ({
+          account: safeText(c.account),
+          subAccount: safeText(c.subAccount),
+          amount: safeNumber(c.amount),
+          taxRate: mapTaxRate(c.taxRate)
+        })) : []
+      };
+    })(),
 
     // Ironclad Rule 4: Deep Logic
     invoiceValidationLog: {

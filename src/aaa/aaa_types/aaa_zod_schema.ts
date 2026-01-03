@@ -38,6 +38,9 @@ export const InvoiceIssuerTypeSchema = z.enum(['qualified', 'transitional_80', '
 
 export const AccountingSoftwareSchema = z.enum(['yayoi', 'freee', 'mf', 'other']);
 
+export const TaxCalculationMethodSchema = z.enum(['stack', 'back']);
+export const RoundingSettingsSchema = z.enum(['floor', 'round', 'ceil']);
+
 // ============================================================================
 // 1. Client Schema
 // ============================================================================
@@ -65,6 +68,12 @@ export const ClientSchema = z.object({
   simplifiedTaxCategory: SimplifiedTaxCategorySchema.optional(),
   defaultTaxRate: z.number().optional(),
   taxMethod: z.enum(['inclusive', 'exclusive']).optional(),
+
+  // New Fields
+  taxCalculationMethod: TaxCalculationMethodSchema.optional(),
+  isInvoiceRegistered: z.boolean().optional(),
+  roundingSettings: RoundingSettingsSchema.optional(),
+  invoiceRegistrationNumber: z.string().optional(), // For storing T-Number if needed
 
   accountingSoftware: AccountingSoftwareSchema,
   aiKnowledgePrompt: z.string().optional(),

@@ -380,8 +380,8 @@ const MOCK_DATA: DashboardData = {
   ],
   prompts: {
     ai: [
-      { id: 'P-001', name: '一般仕訳生成', value: '以下の取引内容から勘定科目を推論し...' },
-      { id: 'P-002', name: '異常値検知', value: '過去の取引履歴と比較し、金額が...' }
+      { id: 'P-001', name: '一般仕訳生成', value: '以下の取引内容から勘定科目を推論し、適切な仕訳を出力してください。\n\n[税区分スキーマ]\n${TAX_SCHEMA_TEXT}\n\n[出力形式]\n..."' },
+      { id: 'P-002', name: '異常値検知', value: '過去の取引履歴と比較し、金額が異常な取引を検知してください。\n\n参照ルール:\n${TAX_SCHEMA_TEXT}' }
     ],
     gas: [
       { id: 'G-001', name: 'Drive連携', value: '指定フォルダのファイルを検知し...' }

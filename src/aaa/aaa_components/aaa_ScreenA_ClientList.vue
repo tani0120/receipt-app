@@ -202,7 +202,7 @@ import aaa_ClientModal from './aaa_ClientModal.vue';
 import type { ClientUi } from '@/aaa/aaa_types/aaa_ui.type'; // Import UI type
 
 const router = useRouter();
-const { clients, fetchClients, createClient } = aaa_useAccountingSystem();
+const { clients, fetchClients, createClient, updateClient } = aaa_useAccountingSystem();
 
 // --- State ---
 const searchQuery = ref('');
@@ -335,21 +335,49 @@ const navigateToDetail = (code: string) => {
 };
 
 const handleSave = async (formData: any) => {
+    // Helper to map consumption tax composite
+    let consumptionTaxMode = 'general';
+    let simplifiedTaxCategory: number | undefined = undefined;
+
+    if (formData.settings.consumptionTax === 'exempt') {
+        consumptionTaxMode = 'exempt';
+    } else if (formData.settings.consumptionTax && formData.settings.consumptionTax.startsWith('simplified_')) {
+        consumptionTaxMode = 'simplified';
+        simplifiedTaxCategory = Number(formData.settings.consumptionTax.split('_')[1]);
+    }
+
+    const payload = {
+        clientCode: formData.code,
+        companyName: formData.name,
+        repName: formData.rep,
+        staffName: formData.staffName, // Added
+        type: formData.type || 'corp', // Added
+        fiscalMonth: Number(formData.fiscalMonth),
+        status: (formData.isActive ? 'active' : 'inactive') as 'active' | 'inactive' | 'suspension',
+        accountingSoftware: formData.settings.software,
+
+        contactInfo: formData.contact.value, // Simplified mapping
+
+        // Tax Settings
+        taxFilingType: (formData.settings.taxType === '青色' ? 'blue' : 'white') as 'blue' | 'white',
+        consumptionTaxMode: consumptionTaxMode as 'general' | 'simplified' | 'exempt',
+        simplifiedTaxCategory: simplifiedTaxCategory as 1 | 2 | 3 | 4 | 5 | 6 | undefined,
+        taxMethod: formData.settings.taxMethod as 'inclusive' | 'exclusive',
+
+        // New Fields
+        taxCalculationMethod: formData.settings.taxCalculationMethod as 'stack' | 'back',
+        roundingSettings: formData.settings.roundingSettings as 'floor' | 'round' | 'ceil',
+        isInvoiceRegistered: Boolean(formData.settings.isInvoiceRegistered),
+        invoiceRegistrationNumber: formData.settings.invoiceRegistrationNumber,
+
+        calculationMethod: (formData.settings.calcMethod === '発生主義' ? 'accrual' : (formData.settings.calcMethod === '現金主義' ? 'cash' : 'interim_cash')) as 'accrual' | 'cash' | 'interim_cash',
+    };
+
     if (modalMode.value === 'new') {
         try {
-            // Map Form Data to ClientApi Partial
             await createClient({
-                clientCode: formData.code, // 3 letter code from modal
-                companyName: formData.name,
-                repName: formData.rep,
-                fiscalMonth: Number(formData.fiscalMonth),
-                status: formData.isActive ? 'active' : 'inactive',
-                accountingSoftware: formData.settings.software,
-
-                // New Fields
-                calculationMethod: formData.settings.calcMethod === '発生主義' ? 'accrual' : (formData.settings.calcMethod === '現金主義' ? 'cash' : 'interim_cash'),
-                consumptionTaxMode: 'general', // Default or from form options if added
-                taxFilingType: formData.settings.taxType === '青色' ? 'blue' : 'white'
+                ...payload,
+                status: (formData.isActive ? 'active' : 'inactive') as 'active' | 'inactive' | 'suspension'
             });
             closeModal();
         } catch (e) {
@@ -357,8 +385,14 @@ const handleSave = async (formData: any) => {
             alert('登録に失敗しました');
         }
     } else {
-        console.log('Edit Save Not Implemented Fully in Mock', formData);
-        closeModal();
+        // Edit Mode - Should update existing client
+        try {
+            await updateClient(payload.clientCode, payload);
+            closeModal();
+        } catch (e) {
+            console.error(e);
+            alert('更新に失敗しました');
+        }
     }
 };
 

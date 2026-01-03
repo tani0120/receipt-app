@@ -646,37 +646,54 @@ function applyAIProposal() {
     if (!job?.aiProposal?.hasProposal) return;
     const p = job.aiProposal;
 
-    // Populate Debit
-    // Ironclad Map Nested JobUi Lines to Flat Editable Lines
-    const mappedRows: EditableJournalLine[] = job.lines.map(l => ({
-        lineNo: l.lineNo,
+    // Helper to create valid EditableJournalLine from Partial
+    const createEmptyRow = (lineNo: number): EditableJournalLine => ({
+        lineNo,
+        drAccount: '', drSubAccount: '', drSub: '', drAmount: 0, drTaxClass: 'tax_10', drTaxAmount: 0,
+        crAccount: '', crSubAccount: '', crSub: '', crAmount: 0, crTaxClass: 'tax_none', crTaxAmount: 0,
+        description: p.summary || '',
+        departmentCode: '', note: '', invoiceIssuer: 'unknown',
+        taxRate: 10, isReducedRate: false, isAutoMaster: false, isTenThousandYen: false, isSocialExpense: false, isTaxDiff: false
+    });
 
-        // Debit
-        drAccount: l.debit.account,
-        drSubAccount: l.debit.subAccount,
-        drSub: l.debit.subAccount,
-        drAmount: l.debit.amount,
-        drTaxClass: String(l.debit.taxRate), // TaxRateUi is number|string
-        drTaxAmount: 0,
+    // 1. Populate Debit Rows
+    const newDebitRows: EditableJournalLine[] = [];
+    if (p.debits && p.debits.length > 0) {
+        p.debits.forEach((d, i) => {
+            const row = createEmptyRow(i + 1);
+            row.drAccount = d.account;
+            row.drSubAccount = d.subAccount;
+            row.drSub = d.subAccount;
+            row.drAmount = d.amount || 0;
+            // Map generic tax rate to UI specific string if needed
+            row.drTaxClass = d.taxRate === 0 ? 'tax_none' : (d.taxRate === 8 ? 'tax_8' : 'tax_10');
+            newDebitRows.push(row);
+        });
+    } else {
+        // Fallback or empty
+        newDebitRows.push(createEmptyRow(1));
+    }
 
-        // Credit
-        crAccount: l.credit.account,
-        crSubAccount: l.credit.subAccount,
-        crSub: l.credit.subAccount,
-        crAmount: l.credit.amount,
-        crTaxClass: String(l.credit.taxRate),
-        crTaxAmount: 0,
+    // 2. Populate Credit Rows
+    const newCreditRows: EditableJournalLine[] = [];
+    if (p.credits && p.credits.length > 0) {
+        p.credits.forEach((c, i) => {
+            const row = createEmptyRow(i + 1);
+            row.crAccount = c.account;
+            row.crSubAccount = c.subAccount;
+            row.crSub = c.subAccount;
+            row.crAmount = c.amount || 0;
+            row.crTaxClass = c.taxRate === 0 ? 'tax_none' : (c.taxRate === 8 ? 'tax_8' : 'tax_10');
+            newCreditRows.push(row);
+        });
+    } else {
+        newCreditRows.push(createEmptyRow(1));
+    }
 
-        description: l.description,
-        isTaxDiff: false,
-        departmentCode: '', note: '', invoiceIssuer: 'unknown', taxRate: 10, isReducedRate: false, isAutoMaster: false, isTenThousandYen: false, isSocialExpense: false
-    }));
+    debitRows.value = newDebitRows;
+    creditRows.value = newCreditRows;
 
-    debitRows.value = mappedRows;
-    // Populate Credit (Clone for N:M split view)
-    creditRows.value = mappedRows.map(r => ({...r}));
-
-    selectedJobSummary.value = p.summary;
+    selectedJobSummary.value = p.summary || '';
 }
 
 // Queue / Decision Logic

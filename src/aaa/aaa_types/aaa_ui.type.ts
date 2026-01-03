@@ -154,8 +154,9 @@ export type JobUi = {
     readonly hasProposal: boolean;
     readonly reason: string;
     readonly confidenceLabel: string;
-    readonly account: string;
-    readonly subAccount: string;
+    // Multi-line support
+    readonly debits: readonly { readonly account: string; readonly subAccount: string; readonly amount?: number; readonly taxRate?: TaxRateUi; }[];
+    readonly credits: readonly { readonly account: string; readonly subAccount: string; readonly amount?: number; readonly taxRate?: TaxRateUi; }[];
     readonly summary: string;
   };
 
@@ -210,6 +211,82 @@ export interface ClientUi {
     readonly journalExclusion: string;
     readonly pastJournals: string;
   };
+
+  // Folder IDs
+  readonly sharedFolderId: string;
+  readonly processingFolderId: string;
+  readonly archivedFolderId: string;
+  readonly excludedFolderId: string;
+  readonly csvOutputFolderId: string;
+  readonly learningCsvFolderId: string;
+
+  // New Fields
+  readonly accountingSoftware: 'yayoi' | 'freee' | 'mf' | 'other';
+  readonly defaultTaxRate: number;
+  readonly taxMethod: 'inclusive' | 'exclusive';
+  readonly taxCalculationMethod: 'stack' | 'back';
+  readonly isInvoiceRegistered: boolean;
+  readonly roundingSettings: 'floor' | 'round' | 'ceil';
+  readonly invoiceRegistrationNumber: string;
+
+  // Tax Raw Data (Required for Edit)
+  readonly consumptionTaxMode: ConsumptionTaxModeUi;
+  readonly simplifiedTaxCategory?: 1 | 2 | 3 | 4 | 5 | 6;
+  readonly taxFilingType: TaxFilingTypeUi;
+
+  // New Labels
+  readonly taxCalculationMethodLabel: string;
+  readonly roundingSettingsLabel: string;
+  readonly invoiceRegistrationLabel: string;
+  readonly simplifiedTaxCategoryLabel: string;
+  readonly typeLabel: string;
+
+  readonly taxMethodLabel: string;
+  readonly calcMethodShortLabel: string;
+}
+
+export type TaxCalculationMethodUi = 'stack' | 'back';
+export type RoundingSettingsUi = 'floor' | 'round' | 'ceil';
+
+/* ============================================================
+ * Detail UI 型 (Screen A Detail)
+ * ============================================================
+ */
+export type DriveLinkUi = {
+  readonly title: string;
+  readonly path: string;
+  readonly url: string;
+  readonly iconColorClass: string;
+  readonly isLinked: boolean;
+};
+
+export interface ClientDetailUi extends ClientUi {
+  readonly healthScore: number;
+  readonly healthScoreLabel: string;
+
+  // Detail Specific Labels (Override or Additions)
+  readonly consumptionTaxModeLabel: string;
+  readonly taxMethodExplicitLabel: string;
+  readonly fractionAdjustmentLabel: string;
+  readonly defaultTaxRateLabel: string;
+
+  readonly simplifiedTaxCategoryMessage: string;
+  readonly hasSimplifiedTaxWarning: boolean;
+
+  readonly driveFolderLinks: readonly DriveLinkUi[];
+
+  readonly stats: {
+    readonly collectionRate: number;
+    readonly journalEntryRate: number;
+    readonly infoPendingCount: number;
+  };
+
+  readonly recentActivities: readonly {
+    readonly icon: string;
+    readonly iconColorClass: string;
+    readonly title: string;
+    readonly dateLabel: string;
+  }[];
 }
 
 

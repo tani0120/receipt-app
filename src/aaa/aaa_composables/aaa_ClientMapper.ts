@@ -1,4 +1,3 @@
-import type { ClientApi } from '@/aaa/aaa_types/aaa_zod.type';
 import type { ClientUi, TaxFilingTypeUi, ConsumptionTaxModeUi } from '@/aaa/aaa_types/aaa_ui.type';
 
 // Helpers
@@ -55,19 +54,34 @@ export function mapClientApiToUi(api: unknown): ClientUi {
             clientCode: 'Unknown',
             companyName: 'Unknown Client',
             repName: '',
-            staffName: '', // Fallback
+            staffName: '',
             fiscalMonth: 1,
+            type: 'corp',
             status: 'active',
             isActive: true,
             contact: { type: 'none', value: '' },
             driveLinks: { storage: '#', journalOutput: '#', journalExclusion: '#', pastJournals: '#' },
 
+            // Folder IDs
+            sharedFolderId: '',
+            processingFolderId: '',
+            archivedFolderId: '',
+            excludedFolderId: '',
+            csvOutputFolderId: '',
+            learningCsvFolderId: '',
+
             taxFilingType: 'blue',
             consumptionTaxMode: 'general',
-            simplifiedTaxCategory: 0,
+            simplifiedTaxCategory: undefined,
             simplifiedTaxCategoryLabel: '特になし',
             defaultTaxRate: 10,
             taxMethod: 'inclusive',
+
+            // New Fields
+            taxCalculationMethod: 'stack',
+            isInvoiceRegistered: false,
+            invoiceRegistrationNumber: '',
+            roundingSettings: 'floor',
 
             accountingSoftware: 'other',
             driveLinked: false,
@@ -77,7 +91,13 @@ export function mapClientApiToUi(api: unknown): ClientUi {
             taxInfoLabel: '税込 / 発生',
             calculationMethodLabel: '発生主義',
             taxMethodLabel: '税込',
-            calcMethodShortLabel: '発生'
+            calcMethodShortLabel: '発生',
+
+            // New Labels
+            taxCalculationMethodLabel: '積上計算',
+            invoiceRegistrationLabel: '無',
+            roundingSettingsLabel: '切り捨て',
+            typeLabel: '法人'
         };
     }
 
@@ -134,8 +154,14 @@ export function mapClientApiToUi(api: unknown): ClientUi {
     const taxModeRaw = safeString(raw.consumptionTaxMode);
     const consumptionTaxMode = (['general', 'simplified', 'exempt'].includes(taxModeRaw) ? taxModeRaw : 'general') as ConsumptionTaxModeUi;
 
-    const simplifiedTaxCategory = safeNumber(raw.simplifiedTaxCategory);
-    const simplifiedTaxCategoryLabel = mapSimplifiedTaxCategoryLabel(simplifiedTaxCategory);
+    const simplifiedTaxCategoryRaw = safeNumber(raw.simplifiedTaxCategory);
+    const simplifiedTaxCategory = (
+        [1, 2, 3, 4, 5, 6].includes(simplifiedTaxCategoryRaw) ? simplifiedTaxCategoryRaw : undefined
+    ) as 1 | 2 | 3 | 4 | 5 | 6 | undefined;
+
+    // safeNumber returns 0 for invalid, so 0 maps to '特になし' but in UI type it is undefined optional.
+    // For label mapping:
+    const simplifiedTaxCategoryLabel = mapSimplifiedTaxCategoryLabel(simplifiedTaxCategoryRaw);
 
     const defaultTaxRate = safeNumber(raw.defaultTaxRate);
 
@@ -156,6 +182,29 @@ export function mapClientApiToUi(api: unknown): ClientUi {
     if (calcMethodRaw === 'cash') calculationMethodLabel = '現金主義';
     if (calcMethodRaw === 'interim_cash') calculationMethodLabel = '期中現金主義';
 
+    // New Fields Mapping
+    const typeRaw = safeString(raw.type);
+    const type = (['corp', 'individual'].includes(typeRaw) ? typeRaw : 'corp') as 'corp' | 'individual';
+    const typeLabel = type === 'corp' ? '法人' : '個人';
+
+    const taxCalcMethodRaw = safeString(raw.taxCalculationMethod);
+    const taxCalculationMethod = (['stack', 'back'].includes(taxCalcMethodRaw) ? taxCalcMethodRaw : 'stack') as 'stack' | 'back';
+    const taxCalculationMethodLabel = taxCalculationMethod === 'stack' ? '積上計算' : '割戻計算';
+
+    const isInvoiceRegistered = Boolean(raw.isInvoiceRegistered);
+    const invoiceRegistrationNumber = safeString(raw.invoiceRegistrationNumber);
+    const invoiceRegistrationLabel = isInvoiceRegistered ? '有' : '無';
+
+    const roundingSettingsRaw = safeString(raw.roundingSettings);
+    const roundingSettings = (['floor', 'round', 'ceil'].includes(roundingSettingsRaw) ? roundingSettingsRaw : 'floor') as 'floor' | 'round' | 'ceil';
+    const roundingSettingsLabel = (() => {
+        if (roundingSettings === 'floor') return '切り捨て';
+        if (roundingSettings === 'round') return '四捨五入';
+        if (roundingSettings === 'ceil') return '切り上げ';
+        return '切り捨て';
+    })();
+
+
     // Composite Label
     const shortCalc = calculationMethodLabel.replace('主義', '');
     const taxMethodLabel = taxMethod === 'inclusive' ? '税込' : '税抜';
@@ -171,7 +220,8 @@ export function mapClientApiToUi(api: unknown): ClientUi {
         clientCode,
         companyName,
         repName,
-        staffName, // Mapped
+        staffName,
+        type, // Added
         fiscalMonth,
         status,
 
@@ -179,25 +229,39 @@ export function mapClientApiToUi(api: unknown): ClientUi {
         contact,
         driveLinks,
 
+        // Folder IDs (Keep raw for editing)
         sharedFolderId, processingFolderId, archivedFolderId, excludedFolderId, csvOutputFolderId, learningCsvFolderId,
 
+        // Tax Raw Data
         taxFilingType,
         consumptionTaxMode,
         simplifiedTaxCategory,
-        simplifiedTaxCategoryLabel,
         defaultTaxRate,
-        taxMethod, // New!
+        taxMethod,
+
+        // New Fields
+        taxCalculationMethod,
+        isInvoiceRegistered,
+        invoiceRegistrationNumber,
+        roundingSettings,
 
         accountingSoftware,
         driveLinked,
 
+        // Labels
         fiscalMonthLabel: mapFiscalMonthLabel(fiscalMonth),
+        simplifiedTaxCategoryLabel,
         softwareLabel,
         taxInfoLabel,
         calculationMethodLabel,
 
-        // New Explicit Labels
         taxMethodLabel,
-        calcMethodShortLabel: shortCalc
+        calcMethodShortLabel: shortCalc,
+
+        // New Labels
+        taxCalculationMethodLabel,
+        invoiceRegistrationLabel,
+        roundingSettingsLabel,
+        typeLabel
     };
 }
