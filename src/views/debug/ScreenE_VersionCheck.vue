@@ -291,7 +291,7 @@ interface FormRow {
 }
 
 // --- LOCAL MOCK DATA (Self-contained) ---
-// This data allows us to verify UI logic without touching useAccountingSystem.ts
+// This data allows us to verify UI logic without touching aaa_useAccountingSystem.ts
 const MOCK_DB: Record<string, MockJob> = {
   'draft': {
       id: 'job_draft',

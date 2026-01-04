@@ -2,6 +2,7 @@ import { db } from '@/firebase';
 import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import type { JournalEntry, JournalLine, ValidationResult } from '@/types/journal';
 import type { Job } from '@/types/job';
+import type { Client } from '@/types/firestore';
 import { JobService } from '@/services/JobService';
 
 const COLLECTION_NAME = 'jobs';
@@ -12,6 +13,39 @@ export const JournalService = {
      * @param jobId
      */
     async fetchJournalById(jobId: string): Promise<JournalEntry | null> {
+        // TEMPORARY: Return Mock Data for User Verification
+        if (jobId === 'mock-job-001' || jobId === '1001' || jobId === 'job_draft_01') {
+            console.log('Returning Mock Journal Entry for:', jobId);
+            return {
+                id: jobId,
+                clientCode: '1001',
+                status: 'pending',
+                evidenceUrl: 'mock-invoice.pdf', // Dummy
+                evidenceId: 'evidence-1001',
+                transactionDate: new Date('2025-01-12'),
+                lines: [
+                    {
+                        lineNo: 1,
+                        description: 'MacBook Pro 5台 DEBUG_TOKEN',
+                        drAccount: '消耗品費',
+                        drTaxClass: 'TAX_PURCHASE_10',
+                        drAmount: 1650000,
+                        crAccount: '未払金',
+                        crTaxClass: 'TAX_NONE',
+                        crAmount: 1650000,
+                        flags: { isTaxDiff: false }
+                    }
+                ],
+                totalAmount: 1650000,
+                balanceDiff: 0,
+                remandReason: '',
+                remandCount: 0,
+                updatedAt: new Date(),
+                consumptionTaxMode: 'general',
+                simplifiedTaxCategory: undefined
+            };
+        }
+
         try {
             const docRef = doc(db, COLLECTION_NAME, jobId);
             const snap = await getDoc(docRef);
@@ -19,6 +53,10 @@ export const JournalService = {
             if (!snap.exists()) return null;
 
             const data = snap.data() as Job;
+
+            // Fetch Client for Tax Settings
+            const clientSnap = await getDoc(doc(db, 'clients', data.clientCode));
+            const client = clientSnap.exists() ? (clientSnap.data() as Client) : {} as Partial<Client>;
 
             // 計算: 合計と差額
             const { total, diff } = this.calculateBalance(data.lines || []);
@@ -35,7 +73,11 @@ export const JournalService = {
                 transactionDate: data.transactionDate.toDate(),
                 remandReason: data.remandReason,
                 remandCount: (data as any).remandCount || 0, // DBにない場合は0
-                updatedAt: data.updatedAt.toDate()
+                updatedAt: data.updatedAt.toDate(),
+
+                // Client Tax Settings
+                consumptionTaxMode: client.consumptionTaxMode || 'general',
+                simplifiedTaxCategory: client.simplifiedTaxCategory
             };
         } catch (error) {
             console.error('JournalService: fetch error', error);

@@ -3,12 +3,12 @@
     <!-- Top Nav -->
     <header class="bg-white border-b border-slate-200 h-14 flex items-center justify-between px-4 shrink-0 z-20">
       <div class="flex items-center gap-4">
-        <button @click="$router.back()" class="text-slate-500 hover:text-slate-800 transition-colors">
+        <button @click="$router.push('/journal-status')" class="text-slate-500 hover:text-slate-800 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
-        <span class="font-bold text-slate-700">仕訳ワークベンチ</span>
+        <span class="font-bold text-slate-700">仕訳ワークベンチ (Mirror)</span>
         <span v-if="entry" class="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-mono">{{ entry.clientCode }}</span>
       </div>
       <div>
@@ -84,7 +84,21 @@
                          <!-- Debit Side -->
                          <td class="py-2 pr-2">
                              <input v-model="line.drAccount" placeholder="科目" class="w-full border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1" />
-                             <!-- Tax Select could go here -->
+                              <!-- Tax Select (Debit) -->
+                             <select v-model="line.drTaxClass" class="w-full text-xs text-slate-700 border border-slate-300 bg-white outline-none mt-1 cursor-pointer hover:bg-slate-50 focus:ring-1 focus:ring-blue-300 rounded shadow-sm py-1 px-1">
+                                 <option value="" disabled>税区分</option>
+                                 <optgroup label="仕入区分">
+                                     <option v-for="opt in TAX_OPTIONS.filter(o => o.type === 'purchase')"
+                                             :key="opt.code"
+                                             :value="opt.code"
+                                             :disabled="isOptionDisabled(opt.code, 'purchase')"
+                                             class="text-slate-700 disabled:text-slate-300 disabled:bg-slate-50">
+                                         {{ opt.code }} ({{ opt.label }})
+                                     </option>
+                                 </optgroup>
+                                 <optgroup label="売上区分 (例外)">
+                                 </optgroup>
+                             </select>
                          </td>
                          <td class="py-2 pr-2">
                              <input v-model.number="line.drAmount" type="number" class="w-full text-right border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1 font-mono" />
@@ -93,6 +107,19 @@
                          <!-- Credit Side -->
                          <td class="py-2 pr-2 border-l border-slate-100 pl-2">
                              <input v-model="line.crAccount" placeholder="科目" class="w-full border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1" />
+                             <!-- Tax Select (Credit) -->
+                             <select v-model="line.crTaxClass" class="w-full text-xs text-slate-500 border-none bg-transparent outline-none mt-1 cursor-pointer hover:bg-slate-50 focus:ring-1 focus:ring-blue-100 rounded">
+                                 <option value="" disabled>税区分</option>
+                                 <optgroup label="売上区分">
+                                     <option v-for="opt in TAX_OPTIONS.filter(o => o.type === 'sales')"
+                                             :key="opt.code"
+                                             :value="opt.code"
+                                             :disabled="isOptionDisabled(opt.code, 'sales')"
+                                             class="text-slate-700 disabled:text-slate-300 disabled:bg-slate-50">
+                                         {{ opt.code }} ({{ opt.label }})
+                                     </option>
+                                 </optgroup>
+                             </select>
                          </td>
                          <td class="py-2 pr-2">
                              <input v-model.number="line.crAmount" type="number" class="w-full text-right border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1 font-mono" />
@@ -182,7 +209,8 @@
 </template>
 
 <script setup lang="ts">
-import { useJournalEditor } from '@/composables/useJournalEditor';
+import { aaa_useJournalEditor } from '@/composables/useJournalEditor';
+import { TAX_OPTIONS } from '@/composables/useAccountingSystem';
 
 const {
     entry,
@@ -194,5 +222,32 @@ const {
     handleSave,
     handleSubmit,
     primaryActionButtonLabel
-} = useJournalEditor();
+} = aaa_useJournalEditor();
+
+// Helper: Dynamic Gray-out Logic
+const isOptionDisabled = (optionCode: string, side: 'sales' | 'purchase') => {
+    if (!entry.value) return false;
+    const mode = entry.value.consumptionTaxMode || 'general';
+
+    // 1. Exempt (免税): All Taxable/Export codes are disabled. Only None/Exempt allowed.
+    if (mode === 'exempt') {
+        const allowed = ['TAX_NONE', 'TAX_EXEMPT', 'TAX_SALES_NONE', 'TAX_SALES_NON_TAXABLE', 'TAX_PURCHASE_NONE', 'TAX_PURCHASE_FROM_EXEMPT'];
+        return !allowed.includes(optionCode);
+    }
+
+    // 2. Simplified (簡易):
+    if (mode === 'simplified') {
+        if (side === 'purchase') {
+            // Purchase: Taxable Purchase (10/8) is effectively useless/converted to None.
+            const taxablePurchases = ['TAX_PURCHASE_10', 'TAX_PURCHASE_8_RED'];
+            if (taxablePurchases.includes(optionCode)) return true;
+        }
+        // Sales: Allow all (Standard codes are converted to Simplified Class by system)
+    }
+
+    // 3. General (本則): All enabled.
+    return false;
+};
 </script>
+F o r c i n g   a   f i l e   t o u c h   t o   t r i g g e r   H M R  
+ 

@@ -1,219 +1,298 @@
 <template>
-  <div class="h-full flex flex-col bg-slate-50 font-sans text-slate-800">
-    <!-- Header: Client ID & Basic Info -->
-    <header class="bg-white border-b border-gray-200 px-8 py-6 shadow-sm shrink-0">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-           <button @click="$router.push({ name: 'ScreenA' })" class="text-xs text-slate-500 hover:text-blue-600 mb-2 flex items-center gap-1 transition-colors">
-            <i class="fa-solid fa-arrow-left"></i> 顧問先一覧に戻る
-          </button>
-          <div class="flex items-center gap-3">
-             <div class="bg-slate-800 text-white font-mono text-sm font-bold px-2 py-1 rounded">{{ clientCode }}</div>
-             <h1 class="text-2xl font-bold text-slate-900">{{ clientName }}</h1>
-             <span class="bg-blue-50 text-blue-700 border border-blue-100 text-xs px-2 py-0.5 rounded font-medium">{{ fiscalMonth }}月決算</span>
-             <span v-if="isIndividual" class="bg-amber-50 text-amber-700 border border-amber-100 text-xs px-2 py-0.5 rounded font-medium">個人</span>
-          </div>
-          <div class="flex items-center gap-4 mt-2 text-sm text-slate-500">
-             <div class="flex items-center gap-1"><i class="fa-solid fa-user-tie text-slate-400"></i> {{ repName }}</div>
-             <div class="flex items-center gap-1"><i class="fa-solid fa-desktop text-slate-400"></i> {{ software }}</div>
-             <div class="flex items-center gap-1"><i class="fa-solid fa-calculator text-slate-400"></i> {{ taxMethod }}</div>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-3">
-            <div class="text-right mr-4">
-                <div class="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Health Score</div>
-                <div class="text-2xl font-bold text-green-600">A <span class="text-sm font-normal text-gray-400">/ 92</span></div>
+    <!-- Root: Whole page scrollable (h-full + overflow-y-auto) -->
+    <div class="h-full bg-slate-50 font-sans text-slate-800 overflow-y-auto">
+        <!-- Header Area -->
+        <header class="bg-white border-b border-gray-200 px-8 py-6 shadow-sm">
+            <!-- Top Row: Navigation & Edit -->
+            <div class="flex items-center justify-between mb-4">
+                <button @click="$router.push({ name: 'ScreenA' })" class="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1 transition-colors">
+                    <i class="fa-solid fa-arrow-left"></i> 顧問先一覧に戻る
+                </button>
+                <button @click="isEditModalOpen = true" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded shadow-sm text-sm font-bold transition flex items-center gap-2">
+                    <i class="fa-solid fa-pen"></i> 修正
+                </button>
             </div>
-             <button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm">
-                <i class="fa-solid fa-pen mr-1"></i> 編集
-            </button>
-        </div>
-      </div>
-    </header>
 
-    <!-- Main Content: Cockpit -->
-    <main class="flex-1 overflow-y-auto p-8">
-        <div class="max-w-6xl mx-auto space-y-8">
-
-            <!-- Quick Actions Grid -->
-             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
-                <!-- Action 1: Collection -->
-                <button @click="$router.push({ name: 'ScreenC_Detail', params: { code: clientCode } })" class="group bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all text-left relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                         <i class="fa-solid fa-paper-plane text-6xl text-teal-600"></i>
+            <!-- Main Info Row -->
+            <div v-if="client" class="flex flex-col gap-4">
+                <!-- Line 1: Basic Stats -->
+                <div class="flex flex-wrap items-center gap-4">
+                    <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded border border-green-200">稼働中</span>
+                    <span class="bg-slate-800 text-white font-mono text-sm font-bold px-2 py-1 rounded">{{ client.clientCode }}</span>
+                    <h1 class="text-2xl font-bold text-slate-900">{{ client.companyName }}</h1>
+                    <span class="bg-blue-50 text-blue-700 border border-blue-100 text-xs px-2 py-0.5 rounded font-bold">{{ client.fiscalMonth }}月決算</span>
+                    <div class="flex items-center gap-2 text-sm text-slate-600">
+                        <i class="fa-solid fa-desktop text-slate-400"></i>
+                        <!-- Custom Display for Software -->
+                        <span class="font-bold">{{
+                            client.accountingSoftware === 'freee' ? 'Freee' :
+                            client.accountingSoftware === '弥生会計' ? '弥生' :
+                            client.accountingSoftware === 'MFクラウド' ? 'MF' : client.accountingSoftware
+                        }}</span>
                     </div>
-                    <div class="relative z-10">
-                        <div class="w-10 h-10 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-paper-plane"></i>
-                        </div>
-                        <h3 class="font-bold text-lg text-slate-800 mb-1">資料回収</h3>
-                        <p class="text-xs text-slate-500">領収書・通帳などの回収状況確認</p>
-                        <div class="mt-4 flex items-center gap-2 text-teal-600 text-sm font-bold">
-                            <span>詳細へ</span> <i class="fa-solid fa-arrow-right"></i>
-                        </div>
+                    <div class="flex items-center gap-2 text-sm text-slate-600">
+                        <i class="fa-solid fa-user-tie text-slate-400"></i>
+                        <span>担当: <span class="font-bold">{{ client.staffName }}</span></span>
                     </div>
-                </button>
-
-                <!-- Action 2: Journal Entry -->
-                <button @click="$router.push({ name: 'ScreenE', params: { jobId: clientCode + '_job01' } })" class="group bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all text-left relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                         <i class="fa-solid fa-pen-to-square text-6xl text-blue-600"></i>
-                    </div>
-                    <div class="relative z-10">
-                        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </div>
-                        <h3 class="font-bold text-lg text-slate-800 mb-1">仕訳入力</h3>
-                        <p class="text-xs text-slate-500">AI提案の確認・仕訳の編集</p>
-                        <div class="mt-4 flex items-center gap-2 text-blue-600 text-sm font-bold">
-                            <span>ワークベンチへ</span> <i class="fa-solid fa-arrow-right"></i>
-                        </div>
-                    </div>
-                </button>
-
-                <!-- Action 3: Rules -->
-                <button @click="$router.push({ name: 'ScreenD' })" class="group bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-orange-300 transition-all text-left relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                         <i class="fa-solid fa-brain text-6xl text-orange-600"></i>
-                    </div>
-                     <div class="relative z-10">
-                        <div class="w-10 h-10 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-brain"></i>
-                        </div>
-                        <h3 class="font-bold text-lg text-slate-800 mb-1">AI学習ルール</h3>
-                        <p class="text-xs text-slate-500">自動仕訳ルールの管理・編集</p>
-                         <div class="mt-4 flex items-center gap-2 text-orange-600 text-sm font-bold">
-                            <span>設定画面へ</span> <i class="fa-solid fa-arrow-right"></i>
-                        </div>
-                    </div>
-                </button>
-
-                <!-- Action 4: Export (Data Conversion) -->
-                 <button @click="$router.push({ name: 'DataConversion' })" class="group bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-green-300 transition-all text-left relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                         <i class="fa-solid fa-file-export text-6xl text-green-600"></i>
-                    </div>
-                    <div class="relative z-10">
-                         <div class="w-10 h-10 rounded-lg bg-green-50 text-green-600 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-file-export"></i>
-                        </div>
-                        <h3 class="font-bold text-lg text-slate-800 mb-1">データ出力</h3>
-                        <p class="text-xs text-slate-500">会計ソフト用CSVの出力</p>
-                         <div class="mt-4 flex items-center gap-2 text-green-600 text-sm font-bold">
-                            <span>出力画面へ</span> <i class="fa-solid fa-arrow-right"></i>
-                        </div>
-                    </div>
-                </button>
-             </div>
-
-             <!-- Status & Info Section -->
-             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Left: Status Summary -->
-                <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-line text-slate-400"></i> 月次進捗状況
-                    </h3>
-                    <div class="space-y-4">
-                        <!-- Progress Item 1 -->
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="font-bold text-slate-600">資料回収</span>
-                                <span class="font-bold text-teal-600">85%</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2">
-                                <div class="bg-teal-500 h-2 rounded-full" style="width: 85%"></div>
-                            </div>
-                        </div>
-                         <!-- Progress Item 2 -->
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="font-bold text-slate-600">仕訳入力</span>
-                                <span class="font-bold text-blue-600">60%</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2">
-                                <div class="bg-blue-500 h-2 rounded-full" style="width: 60%"></div>
-                            </div>
-                        </div>
-                         <!-- Progress Item 3 -->
-                        <div>
-                             <div class="flex justify-between text-sm mb-1">
-                                <span class="font-bold text-slate-600">不明点確認</span>
-                                <span class="font-bold text-red-500">要対応: 3件</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2">
-                                <div class="bg-red-500 h-2 rounded-full animate-pulse" style="width: 30%"></div>
-                            </div>
-                        </div>
+                    <div class="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-1 rounded">
+                        第5期 (2025/01/01 ～ 2025/12/31)
                     </div>
                 </div>
 
-                <!-- Right: Recent Activity -->
-                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> 最近のアクティビティ
-                    </h3>
-                    <div class="space-y-4">
-                        <div class="flex gap-3 items-start">
-                            <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0 text-xs">
-                                <i class="fa-solid fa-file-invoice"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-slate-700">領収書アップロード</p>
-                                <p class="text-[10px] text-slate-500">2025/12/26 14:30 by 担当者A</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-3 items-start">
-                             <div class="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center shrink-0 text-xs">
-                                <i class="fa-solid fa-message"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-slate-700">不明点の質問送信</p>
-                                <p class="text-[10px] text-slate-500">2025/12/25 18:00 by AI System</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-3 items-start">
-                             <div class="w-8 h-8 rounded-full bg-green-50 text-green-500 flex items-center justify-center shrink-0 text-xs">
-                                <i class="fa-solid fa-check"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-slate-700">通帳データ連携完了</p>
-                                <p class="text-[10px] text-slate-500">2025/12/25 10:00 by System</p>
-                            </div>
-                        </div>
+                <!-- Line 2: Tax & Accounting Details -->
+                <!-- Line 2: Tax & Accounting Details -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <span class="text-slate-400 font-bold">消費税</span>
+                        <span class="font-bold text-slate-700">{{ client.consumptionTaxModeLabel }}</span>
+                    </div>
+                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <span class="text-slate-400 font-bold">計算方式</span>
+                        <span class="font-bold text-slate-700">{{ client.taxCalculationMethodLabel }}</span>
+                    </div>
+                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <span class="text-slate-400 font-bold">端数処理</span>
+                        <span class="font-bold text-slate-700">{{ client.roundingSettingsLabel }}</span>
+                    </div>
+                     <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <span class="text-slate-400 font-bold">インボイス</span>
+                        <span :class="['font-bold', client.isInvoiceRegistered ? 'text-blue-600' : 'text-slate-500']">
+                            {{ client.invoiceRegistrationLabel }}
+                            <span v-if="client.isInvoiceRegistered" class="ml-1 text-[10px] font-mono bg-blue-50 px-1 rounded">{{ client.invoiceRegistrationNumber }}</span>
+                        </span>
+                    </div>
+
+                    <div class="w-px h-4 bg-slate-300 mx-1"></div>
+
+                    <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <span class="text-slate-400 font-bold">経理方式</span>
+                        <span class="font-bold text-slate-700">{{ client.taxMethodExplicitLabel }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <span class="text-slate-400 font-bold">計上基準</span>
+                        <span class="font-bold text-slate-700">{{ client.calculationMethodLabel }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <span class="text-slate-400 font-bold">申告種類</span>
+                        <span class="font-bold text-blue-600">{{ client.taxFilingTypeLabel }}</span>
                     </div>
                 </div>
-             </div>
 
-        </div>
-    </main>
-  </div>
+                <!-- Line 3: Drive Links -->
+                <div class="flex flex-wrap gap-3 mt-2">
+                    <a href="https://drive.google.com/drive/folders/mock1" target="_blank" class="flex items-center gap-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 px-4 py-2 rounded transition shadow-sm text-sm font-bold">
+                        <i class="fa-brands fa-google-drive text-yellow-400 text-lg"></i>
+                        顧客共有用
+                    </a>
+                    <a href="https://drive.google.com/drive/folders/mock2" target="_blank" class="flex items-center gap-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 px-4 py-2 rounded transition shadow-sm text-sm font-bold">
+                        <i class="fa-brands fa-google-drive text-blue-400 text-lg"></i>
+                        仕訳後CSV
+                    </a>
+                    <a href="https://drive.google.com/drive/folders/mock3" target="_blank" class="flex items-center gap-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 px-4 py-2 rounded transition shadow-sm text-sm font-bold">
+                        <i class="fa-brands fa-google-drive text-gray-400 text-lg"></i>
+                        仕訳から除外
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content (Refactored) -->
+        <main class="px-8 py-8 space-y-8">
+
+            <!-- Learning CSV Area -->
+            <ScreenA_Detail_FileStorage
+                @delete-file="openConfirm('delete')"
+            />
+
+            <!-- Section: AI Interaction Area -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Left: AI Proposals -->
+                <ScreenA_Detail_AIProposalCard
+                    @approve="openConfirm('approve')"
+                    @reject="openConfirm('reject')"
+                    @edit="openProposalEdit"
+                />
+
+                <!-- Right: Knowledge Prompt -->
+                <ScreenA_Detail_AIKnowledgeCard
+                    :content="currentKnowledge"
+                    @edit="openKnowledgeEdit"
+                />
+            </section>
+        </main>
+
+        <!-- Modals -->
+        <ScreenA_Detail_EditModal
+            :visible="isEditModalOpen"
+            :initialData="client"
+            @close="isEditModalOpen = false"
+            @save="handleSave"
+        />
+
+        <ScreenA_Detail_ConfirmModal
+            :visible="confirmModal.visible"
+            :type="confirmModal.type"
+            @cancel="confirmModal.visible = false"
+            @confirm="handleConfirm"
+        />
+
+        <ScreenA_Detail_AIProposalEditModal
+            :visible="proposalEditModal.visible"
+            :initialContent="proposalEditModal.content"
+            @close="proposalEditModal.visible = false"
+            @save="handleProposalSave"
+        />
+
+        <ScreenA_Detail_AIKnowledgeEditModal
+             :visible="knowledgeEditModal.visible"
+             :initialContent="currentKnowledge"
+             @close="knowledgeEditModal.visible = false"
+             @save="handleKnowledgeSave"
+        />
+    </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { useAccountingSystem } from '@/composables/useAccountingSystem';
-import type { Client } from '@/types/firestore';
+import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
+import { mapClientDetailApiToUi } from '@/composables/ClientDetailMapper';
+import ScreenA_Detail_EditModal from './ScreenA_Detail_EditModal.vue';
+import ScreenA_Detail_ConfirmModal from './ScreenA_Detail_ConfirmModal.vue';
+import ScreenA_Detail_AIProposalEditModal from './ScreenA_Detail_AIProposalEditModal.vue';
+import ScreenA_Detail_AIKnowledgeEditModal from './ScreenA_Detail_AIKnowledgeEditModal.vue';
+// Refactored components
+import ScreenA_Detail_FileStorage from './ScreenA_Detail_FileStorage.vue';
+import ScreenA_Detail_AIProposalCard from './ScreenA_Detail_AIProposalCard.vue';
+import ScreenA_Detail_AIKnowledgeCard from './ScreenA_Detail_AIKnowledgeCard.vue';
 
 const route = useRoute();
-const { clients, fetchClients } = useAccountingSystem();
+const { clients, fetchClients, updateClient } = aaa_useAccountingSystem();
+const isEditModalOpen = ref(false);
 
-const code = computed(() => route.params.code as string);
-
-const client = computed(() => {
-    return clients.value.find((c: Client) => c.clientCode === code.value);
+// Confirm Modal State (Fixed Type Definition for Delete)
+const confirmModal = ref({
+    visible: false,
+    type: 'approve' as 'approve' | 'reject' | 'delete'
 });
 
-// Computed Properties for UI
-const clientCode = computed(() => client.value?.clientCode || code.value);
-const clientName = computed(() => client.value?.companyName || 'Unknown Client');
-const fiscalMonth = computed(() => client.value?.fiscalMonth || 12);
-const repName = computed(() => client.value?.repName || '未割当');
-const software = computed(() => client.value?.accountingSoftware || 'freee');
-const taxMethod = computed(() => (client.value?.taxType === 'inclusive' ? '税込' : '税抜') + ' / ' + '発生主義');
-const isIndividual = computed(() => false); // Mock
+// Proposal Edit Modal State
+const proposalEditModal = ref({
+    visible: false,
+    content: ''
+});
+
+// Knowledge Edit Modal State
+const knowledgeEditModal = ref({
+    visible: false
+});
+
+// Mock knowledge data
+const currentKnowledge = ref(`【固有ルール】
+・Amazonの領収書は「消耗品費」ではなく、金額5万円以上なら「工具器具備品」として提案すること。
+・「カフェ・ベローチェ」は会議費として処理する。
+・インボイス登録番号のないタクシー利用は「旅費交通費(免税)」とすること。`);
+
+
+const code = computed(() => route.params.code as string);
+const rawClient = computed(() => clients.value.find(c => c.clientCode === code.value));
+
+const localClient = ref<any>(null);
+
+const client = computed(() => {
+    if (localClient.value) {
+        const form = localClient.value;
+        const base = mapClientDetailApiToUi(rawClient.value || {});
+        return {
+            ...base,
+            companyName: form.name,
+            clientCode: form.code,
+            staffName: form.staffName,
+            fiscalMonth: form.fiscalMonth,
+            accountingSoftware: form.settings.software,
+        };
+    }
+    return mapClientDetailApiToUi(rawClient.value || {});
+});
+
+const handleSave = async (formData: any) => {
+    // Helper to map consumption tax composite
+    let consumptionTaxMode = 'general';
+    let simplifiedTaxCategory: number | undefined = undefined;
+
+    if (formData.settings.consumptionTax === 'exempt') {
+        consumptionTaxMode = 'exempt';
+    } else if (formData.settings.consumptionTax && formData.settings.consumptionTax.startsWith('simplified_')) {
+        consumptionTaxMode = 'simplified';
+        simplifiedTaxCategory = Number(formData.settings.consumptionTax.split('_')[1]);
+    }
+
+    const payload = {
+        clientCode: formData.code,
+        companyName: formData.name,
+        repName: formData.rep,
+        staffName: formData.staffName,
+        type: formData.type || 'corp',
+        fiscalMonth: Number(formData.fiscalMonth),
+        status: (formData.isActive ? 'active' : 'inactive') as 'active' | 'inactive' | 'suspension',
+        accountingSoftware: formData.settings.software,
+
+        contactInfo: formData.contact.value,
+
+        // Tax Settings
+        taxFilingType: (formData.settings.taxType === '青色' ? 'blue' : 'white') as 'blue' | 'white',
+        consumptionTaxMode: consumptionTaxMode as 'general' | 'simplified' | 'exempt',
+        simplifiedTaxCategory: simplifiedTaxCategory as 1 | 2 | 3 | 4 | 5 | 6 | undefined,
+
+        defaultTaxRate: 10, // Default if not in form
+        taxMethod: formData.settings.taxMethod as 'inclusive' | 'exclusive',
+
+        // New Fields
+        taxCalculationMethod: formData.settings.taxCalculationMethod as 'stack' | 'back',
+        roundingSettings: formData.settings.roundingSettings as 'floor' | 'round' | 'ceil',
+        isInvoiceRegistered: Boolean(formData.settings.isInvoiceRegistered),
+        invoiceRegistrationNumber: formData.settings.invoiceRegistrationNumber,
+
+        calculationMethod: (formData.settings.calcMethod === '発生主義' ? 'accrual' : (formData.settings.calcMethod === '現金主義' ? 'cash' : 'interim_cash')) as 'accrual' | 'cash' | 'interim_cash',
+    };
+
+    try {
+        await updateClient(payload.clientCode, payload);
+        isEditModalOpen.value = false;
+        // localClient logic removed as updateClient updates the source of truth
+        localClient.value = null;
+    } catch (e) {
+        console.error(e);
+        alert('更新に失敗しました');
+    }
+};
+
+// AI Action Handlers
+const openConfirm = (type: 'approve' | 'reject' | 'delete') => {
+    confirmModal.value = { visible: true, type };
+};
+
+const handleConfirm = () => {
+    console.log(`Action confirmed: ${confirmModal.value.type}`);
+    confirmModal.value.visible = false;
+};
+
+const openProposalEdit = (content: string) => {
+    proposalEditModal.value = { visible: true, content };
+};
+
+const handleProposalSave = (newContent: string) => {
+    console.log(`Proposal updated: ${newContent}`);
+    // Update local proposal state here
+};
+
+const openKnowledgeEdit = () => {
+    knowledgeEditModal.value.visible = true;
+};
+
+const handleKnowledgeSave = (newContent: string) => {
+    currentKnowledge.value = newContent;
+};
 
 onMounted(() => {
     if (!clients.value.length) {

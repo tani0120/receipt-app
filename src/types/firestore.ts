@@ -325,3 +325,35 @@ export interface SystemSettings {
 
   updatedAt: Timestamp;
 }
+
+// ============================================================================
+// 6. Bank Fingerprints (銀行特定フィンガープリント)
+// ============================================================================
+export interface BankFingerprint {
+  bankName: string;
+  primaryColor: string;
+  keywords: string[];
+  layoutType: string;
+}
+
+// ============================================================================
+// 7. Sub-Resources (Bank Accounts / Credit Cards)
+// ============================================================================
+export interface BankAccount {
+  id: string;
+  bankName: string;
+  branchName?: string;
+  accountType: 'ordinary' | 'current';
+  accountNumber: string;
+  accountHolder: string;
+  updatedAt: Timestamp;
+}
+
+export interface CreditCard {
+  id: string;
+  cardName: string;
+  cardHolder: string;
+  last4Digits: string;
+  paymentAccountBankId?: string; // Link to BankAccount
+  updatedAt: Timestamp;
+}

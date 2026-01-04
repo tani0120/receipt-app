@@ -1,8 +1,9 @@
+
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { ClientService } from '@/services/ClientService';
 import type { Client } from '@/types/client';
 
-export function useClientList() {
+export function aaa_useClientList() {
     // State
     const clients = ref<Client[]>([]);
     const loading = ref(false);
@@ -102,6 +103,14 @@ export function useClientList() {
         }
     };
 
+    /**
+     * [DEBUG ONLY] Inject adversarial data for Stress Testing (Phase C)
+     * This bypasses the API and sets the state directly.
+     */
+    const debugInjectClients = (badData: any[]) => {
+        clients.value = badData;
+    };
+
     return {
         // State
         clients,
@@ -121,6 +130,7 @@ export function useClientList() {
         openEditModal,
         closeEditModal,
         handleUpdateClient,
+        debugInjectClients,
 
         // UI Helpers
         isStatusActive,

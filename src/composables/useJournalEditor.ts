@@ -1,9 +1,10 @@
+
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { JournalService } from '@/services/JournalService';
 import type { JournalEntry, JournalLine, ValidationResult } from '@/types/journal';
 
-export function useJournalEditor() {
+export function aaa_useJournalEditor() {
     const route = useRoute();
     const router = useRouter();
     const id = route.params.id as string;
@@ -101,8 +102,8 @@ export function useJournalEditor() {
                 await JournalService.resolveRemand(entry.value.id);
             }
 
-            // Redirect back to dashboard
-            router.push('/dashboard');
+            // Redirect back to dashboard (Mirror)
+            router.push('/journal-status');
         } catch (err) {
             console.error(err);
             alert('完了処理に失敗しました');

@@ -376,7 +376,7 @@ const goBack = () => {
     mockRouteParamsCode.value = '';
 };
 
- 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const goToCollectionDetail = (client: any) => {
     mockRouteParamsCode.value = client.code;
     mockIsDetailView.value = true;
@@ -392,7 +392,7 @@ const getDateForCell = (m: number) => {
     return moment(`${year}-${String(month).padStart(2, '0')}-01`);
 };
 
- 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getFiscalTermEnd = (client: any, targetDate: moment.Moment) => {
     const fiscalMonth = client.type === 'individual' ? 12 : client.fiscalMonth;
     const month = targetDate.month() + 1;
@@ -403,7 +403,7 @@ const getFiscalTermEnd = (client: any, targetDate: moment.Moment) => {
     return moment(`${year}-${String(fiscalMonth).padStart(2, '0')}-01`).endOf('month');
 };
 
- 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActiveTerm1End = (client: any) => {
     const checkDate = currentDateMock.clone().subtract(2, 'years');
     const today = currentDateMock;
@@ -421,7 +421,7 @@ const getActiveTerm1End = (client: any) => {
     return getFiscalTermEnd(client, today);
 };
 
- 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getCellStyle = (client: any, m: number) => {
     const cellDate = getDateForCell(m);
 
@@ -441,7 +441,7 @@ const getCellStyle = (client: any, m: number) => {
     return 'bg-diagonal'; // Inactive
 };
 
- 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isFiscalMonth = (client: any, m: number) => {
      const displayMonth = m <= 12 ? m : m - 12;
      // Handle individual case if hardcoded in logic (usually 12)
@@ -449,7 +449,7 @@ const isFiscalMonth = (client: any, m: number) => {
      return fiscalMonth === displayMonth;
 };
 
- 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const shouldShowIcon = (client: any, m: number) => {
     // 1. Must be Active Period
     if (getCellStyle(client, m) === 'bg-diagonal') return false;
@@ -464,7 +464,7 @@ const shouldShowIcon = (client: any, m: number) => {
     return true;
 };
 
- 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getPeriodStatus = (client: any, m: number) => {
     // Mimic Source: (client.jobId.charCodeAt(2) || 0) + m
     // Mock clients have jobId = clientCode e.g. '1001'

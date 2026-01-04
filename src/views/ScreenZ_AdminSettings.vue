@@ -1,181 +1,327 @@
 <template>
-  <div class="h-full flex flex-col bg-slate-100 p-8 overflow-y-auto animate-fade-in">
-    <div class="max-w-6xl mx-auto w-full">
-        <!-- Header -->
-        <h1 class="text-3xl font-bold text-slate-800 mb-2">AI Accounting Platform <span class="text-sm font-normal text-slate-500 ml-2">v0.1.0</span></h1>
-        <p class="text-slate-500 mb-8">管理コンソールへようこそ。全社の業務状況を確認できます。</p>
+  <div class="h-full flex flex-col bg-slate-100 overflow-hidden text-slate-800 font-sans">
 
-        <!-- KPI Cards -->
-        <div class="grid grid-cols-4 gap-4 mb-8">
-            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">月間仕訳数</div>
-                <div class="text-2xl font-bold text-gray-800 font-mono">{{ adminData?.kpi.monthlyJournals.toLocaleString() }} <span class="text-xs text-gray-400 font-normal">件</span></div>
-                <div class="mt-2 h-1 bg-gray-100 rounded overflow-hidden">
-                    <div class="h-full bg-blue-500 w-[70%]"></div>
-                </div>
-            </div>
-             <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">AI 自動化率</div>
-                <div class="text-2xl font-bold text-indigo-600 font-mono">{{ adminData?.kpi.autoConversionRate }}<span class="text-sm">%</span></div>
-                <div class="text-[10px] text-gray-400 mt-1">前月比 +2.4% <i class="fa-solid fa-arrow-trend-up text-green-500"></i></div>
-            </div>
-             <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">AI 精度 (修正無)</div>
-                <div class="text-2xl font-bold text-purple-600 font-mono">{{ adminData?.kpi.aiAccuracy }}<span class="text-sm">%</span></div>
-                <div class="text-[10px] text-gray-400 mt-1">信頼度: High</div>
-            </div>
-             <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">進捗状況 (Process)</div>
-                <div class="flex items-end gap-1">
-                    <div class="text-xl font-bold text-emerald-600 font-mono">{{ adminData?.kpi.funnel.exported }}</div>
-                    <div class="text-xs text-gray-400 mb-1">/ {{ adminData?.kpi.funnel.received }}</div>
-                </div>
-                <div class="text-[10px] text-gray-400 mt-1">完了率 88%</div>
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-gray-200 h-20 shrink-0 flex items-center justify-between px-8 z-10 sticky top-0">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-3 cursor-pointer tracking-tight" @click="currentView = 'dashboard'">
+                管理者専用画面 <span class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">AI Accounting Platform</span>
+            </h1>
+            <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 shadow-sm">
+                <span class="w-2 h-2 rounded-full" :class="{
+                    'bg-emerald-500': data.settings.systemStatus === 'ACTIVE',
+                    'bg-amber-500': data.settings.systemStatus === 'PAUSE',
+                    'bg-rose-500 animate-pulse': data.settings.systemStatus === 'EMERGENCY_STOP'
+                }"></span>
+                <span class="font-bold font-mono text-xs text-slate-600">{{ data.settings.systemStatus }}</span>
             </div>
         </div>
 
-        <div class="grid grid-cols-12 gap-8">
-            <!-- Navigation -->
-            <div class="col-span-8 grid grid-cols-2 gap-6">
-                 <!-- Card 1: Client Management -->
-                <div @click="$router.push('/clients')" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition cursor-pointer group hover:-translate-y-1">
-                    <div class="w-12 h-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition">
-                        <i class="fa-solid fa-users text-xl"></i>
-                    </div>
-                    <h3 class="font-bold text-gray-800 text-lg mb-2">顧問先管理 (Screen A)</h3>
-                    <p class="text-sm text-gray-500">
-                        顧問先一覧の確認、新規登録、ステータス管理を行います。
-                    </p>
-                </div>
+        <div class="flex items-center gap-4">
+            <button @click="toggleEmergency" class="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-600 hover:text-white transition px-5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2 group shadow-sm">
+                <i class="fa-solid fa-power-off"></i> 緊急停止
+            </button>
+            <button @click="isCsvModalOpen = true" class="bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-600 hover:text-white transition px-5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg shadow-indigo-100">
+                <i class="fa-solid fa-file-csv"></i> 一括CSV出力
+            </button>
+            <button @click="isNavOpen = true" class="bg-slate-800 text-white hover:bg-slate-700 transition px-5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg shadow-slate-200">
+                <i class="fa-solid fa-sliders"></i> 環境設定等
+            </button>
+        </div>
+    </header>
 
-                <!-- Card 2: Journal Status -->
-                <div @click="$router.push('/journal-status')" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition cursor-pointer group hover:-translate-y-1">
-                    <div class="w-12 h-12 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4 group-hover:bg-indigo-600 group-hover:text-white transition">
-                        <i class="fa-solid fa-chart-line text-xl"></i>
-                    </div>
-                    <h3 class="font-bold text-gray-800 text-lg mb-2">仕訳進捗 (Screen B)</h3>
-                    <p class="text-sm text-gray-500">
-                        全社の仕訳作業の進捗状況、KPI、担当者負荷を確認します。
-                    </p>
-                </div>
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-6 relative">
+        <ScreenZ_Dashboard
+            v-if="currentView === 'dashboard'"
+            @open-staff-modal="isStaffModalOpen = true"
+        />
 
-                <!-- Card 3: Collection Status -->
-                <div @click="$router.push('/collection-status')" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition cursor-pointer group hover:-translate-y-1">
-                    <div class="w-12 h-12 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4 group-hover:bg-emerald-600 group-hover:text-white transition">
-                        <i class="fa-solid fa-calendar-check text-xl"></i>
-                    </div>
-                    <h3 class="font-bold text-gray-800 text-lg mb-2">資料回収 (Screen C)</h3>
-                    <p class="text-sm text-gray-500">
-                        月次の資料回収状況の管理、督促対象の確認を行います。
-                    </p>
-                </div>
-
-                <!-- Card 4: AI Rules -->
-                <div @click="$router.push('/ai-rules')" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition cursor-pointer group hover:-translate-y-1">
-                    <div class="w-12 h-12 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center mb-4 group-hover:bg-purple-600 group-hover:text-white transition">
-                        <i class="fa-solid fa-brain text-xl"></i>
-                    </div>
-                     <h3 class="font-bold text-gray-800 text-lg mb-2">AIルール設定 (Screen D)</h3>
-                    <p class="text-sm text-gray-500">
-                        自動仕訳の推論ルール、キーワード設定を管理します。
-                    </p>
-                </div>
-            </div>
-
-            <!-- Staff Performance List -->
-            <div class="col-span-4 bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-                <div class="font-bold text-gray-700 mb-4 border-b border-gray-100 pb-2">担当者パフォーマンス</div>
-                <div class="space-y-4">
-                    <div v-for="(staff, idx) in adminData?.staff" :key="idx" class="flex flex-col gap-1">
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-sm text-gray-700">{{ staff.name }}</span>
-                            <span class="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">残 {{ staff.backlogs.total }}件</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-[10px] text-gray-400 mt-1">
-                             <div class="flex-1 bg-gray-100 rounded h-1.5 overflow-hidden">
-                                  <div class="bg-indigo-400 h-full" :style="`width: ${(staff.backlogs.draft / staff.backlogs.total) * 100}%`"></div>
-                             </div>
-                             <span>処理速度: {{ staff.velocity.draftAvg }}/h</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div v-else-if="currentView === 'rules_detail'" class="max-w-[1230px] mx-auto">
+            <ScreenZ_RuleDetail
+                v-if="currentRule"
+                :rule-id="currentRule.id"
+                :rule-name="currentRule.name"
+                :initial-content="currentRule.description"
+                @back="currentView = 'rules'"
+                @save="handleRuleSave"
+            />
         </div>
 
-        <!-- NEW: System Configuration (Appended Detail) -->
-        <hr class="my-8 border-gray-200 border-dashed">
+        <div v-else-if="currentView === 'prompts_detail'" class="max-w-[1230px] mx-auto">
+            <ScreenZ_PromptDetail
+                v-if="currentPrompt"
+                :prompt-id="currentPrompt.id"
+                :prompt-name="currentPrompt.name"
+                :initial-content="currentPrompt.value"
+                @back="currentView = 'prompts'"
+                @save="handlePromptSave"
+            />
+        </div>
 
-        <section class="opacity-80 hover:opacity-100 transition-opacity">
-           <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
-             <i class="fa-solid fa-cogs"></i> システム環境設定 (Advanced)
-           </h2>
-
-           <!-- System Status -->
-           <div class="bg-white rounded-lg border border-gray-200 p-4 mb-4 flex items-center justify-between">
-              <div>
-                  <div class="font-bold text-gray-700">システム稼働状態</div>
-                  <div class="text-xs text-gray-400">緊急時の停止スイッチ</div>
-              </div>
-              <div class="flex items-center gap-4">
-                  <span class="font-mono font-bold" :class="systemStatus === 'ACTIVE' ? 'text-emerald-500' : 'text-red-500'">{{ systemStatus }}</span>
-                  <button @click="toggleSystemStatus" class="text-xs bg-gray-100 px-3 py-1.5 rounded font-bold border border-gray-300 hover:bg-gray-200">切り替え</button>
-              </div>
-           </div>
-
-           <!-- API Keys (Collapsed-ish) -->
-            <div class="bg-white rounded-lg border border-gray-200 p-4">
-                 <div class="font-bold text-gray-700 mb-2">API連携 (Secrets)</div>
-                 <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[10px] text-gray-400 uppercase font-bold">Gemini API Key</label>
-                        <input type="password" v-model="form.geminiApiKey" class="border rounded px-2 py-1 text-xs font-mono" placeholder="AIza...">
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[10px] text-gray-400 uppercase font-bold">NTA Invoice App ID</label>
-                         <input type="password" v-model="form.invoiceApiKey" class="border rounded px-2 py-1 text-xs font-mono" placeholder="ApplicationID...">
-                    </div>
-                 </div>
-                 <div class="mt-2 text-right">
-                    <button class="bg-blue-600 text-white text-xs font-bold px-4 py-1.5 rounded hover:bg-blue-700" @click="saveSettings">保存</button>
-                 </div>
+        <div v-else class="max-w-[1230px] mx-auto">
+            <div class="flex items-center gap-2 text-sm mb-6 text-gray-500">
+                <span class="hover:text-blue-600 cursor-pointer" @click="currentView = 'dashboard'"><i class="fa-solid fa-home"></i> Dashboard</span>
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+                <span class="font-bold text-slate-700">{{ viewTitle }}</span>
             </div>
-        </section>
 
+            <component
+                :is="activeComponent"
+                @select-rule="handleSelectRule"
+                @select-prompt="handleSelectPrompt"
+                @create-prompt="handleCreatePrompt"
+            />
+        </div>
+    </main>
+
+    <!-- Navigation Drawer -->
+    <div v-if="isNavOpen" @click="isNavOpen = false" class="fixed inset-0 bg-black/20 z-40 backdrop-blur-sm transition-opacity"></div>
+    <div class="fixed top-0 right-0 bottom-0 w-80 bg-white shadow-2xl z-50 transform transition-transform duration-300 flex flex-col"
+         :class="isNavOpen ? 'translate-x-0' : 'translate-x-full'">
+
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-slate-50">
+            <h2 class="font-bold text-slate-700 text-lg flex items-center gap-2">
+                <i class="fa-solid fa-sliders text-gray-400"></i> 設定メニュー
+            </h2>
+            <button @click="isNavOpen = false" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <button @click="switchView('settings')" class="w-full text-left p-3 rounded-lg flex items-center gap-3 hover:bg-blue-50 hover:text-blue-600 transition group" :class="{'bg-blue-50 text-blue-600 border border-blue-100': currentView === 'settings'}">
+                <div class="w-8 h-8 rounded bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-blue-200 group-hover:text-blue-600 transition">
+                    <i class="fa-solid fa-cogs"></i>
+                </div>
+                <div>
+                    <div class="font-bold text-sm">システム設計・環境設定</div>
+                    <div class="text-[10px] text-gray-400">API Key, システム定数</div>
+                </div>
+            </button>
+            <button @click="switchView('masters')" class="w-full text-left p-3 rounded-lg flex items-center gap-3 hover:bg-green-50 hover:text-green-600 transition group" :class="{'bg-green-50 text-green-600 border border-green-100': currentView === 'masters'}">
+                 <div class="w-8 h-8 rounded bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-green-200 group-hover:text-green-600 transition">
+                    <i class="fa-solid fa-book"></i>
+                </div>
+                <div>
+                    <div class="font-bold text-sm">標準科目等マスタ</div>
+                    <div class="text-[10px] text-gray-400">推移先ページの設定</div>
+                </div>
+            </button>
+            <button @click="switchView('rules')" class="w-full text-left p-3 rounded-lg flex items-center gap-3 hover:bg-orange-50 hover:text-orange-600 transition group" :class="{'bg-orange-50 text-orange-600 border border-orange-100': currentView === 'rules'}">
+                 <div class="w-8 h-8 rounded bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-orange-200 group-hover:text-orange-600 transition">
+                    <i class="fa-solid fa-gavel"></i>
+                </div>
+                <div>
+                    <div class="font-bold text-sm">共通処理ルール編集</div>
+                    <div class="text-[10px] text-gray-400">AIルール, 税区分, 出力形式</div>
+                </div>
+            </button>
+            <button @click="switchView('prompts')" class="w-full text-left p-3 rounded-lg flex items-center gap-3 hover:bg-purple-50 hover:text-purple-600 transition group" :class="{'bg-purple-50 text-purple-600 border border-purple-100': currentView === 'prompts'}">
+                 <div class="w-8 h-8 rounded bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-purple-200 group-hover:text-purple-600 transition">
+                    <i class="fa-solid fa-terminal"></i>
+                </div>
+                <div>
+                    <div class="font-bold text-sm">プロンプト編集</div>
+                    <div class="text-[10px] text-gray-400">AIプロンプト, GASプロンプト</div>
+                </div>
+            </button>
+
+            <div class="pt-4 mt-4 border-t border-gray-100">
+                <div class="text-xs font-bold text-gray-400 px-2 mb-2 uppercase">External Links</div>
+                <a :href="`https://docs.google.com/spreadsheets/d/${data.settings.masterSsId}`" target="_blank" class="w-full text-left p-2 rounded-lg flex items-center gap-3 hover:bg-emerald-50 hover:text-emerald-700 transition group text-slate-600">
+                    <i class="fa-solid fa-table w-5 text-center text-emerald-500"></i>
+                    <span class="text-xs font-bold">MASTER SS (本体)</span>
+                    <i class="fa-solid fa-external-link-alt ml-auto text-[10px] opacity-0 group-hover:opacity-100"></i>
+                </a>
+                <a :href="`https://drive.google.com/drive/folders/${data.settings.systemRootId}`" target="_blank" class="w-full text-left p-2 rounded-lg flex items-center gap-3 hover:bg-blue-50 hover:text-blue-700 transition group text-slate-600">
+                    <i class="fa-brands fa-google-drive w-5 text-center text-blue-500"></i>
+                    <span class="text-xs font-bold">システムROOT</span>
+                    <i class="fa-solid fa-external-link-alt ml-auto text-[10px] opacity-0 group-hover:opacity-100"></i>
+                </a>
+                <a href="https://script.google.com" target="_blank" class="w-full text-left p-2 rounded-lg flex items-center gap-3 hover:bg-yellow-50 hover:text-yellow-700 transition group text-slate-600">
+                    <i class="fa-solid fa-code w-5 text-center text-yellow-500"></i>
+                    <span class="text-xs font-bold">Google Apps Script</span>
+                    <i class="fa-solid fa-external-link-alt ml-auto text-[10px] opacity-0 group-hover:opacity-100"></i>
+                </a>
+            </div>
+        </nav>
+        <div class="p-4 bg-gray-50 border-t border-gray-200 text-center">
+            <button @click="switchView('dashboard')" class="text-xs font-bold text-gray-500 hover:text-blue-600 flex items-center justify-center gap-2 w-full py-2 hover:bg-gray-100 rounded">
+                <i class="fa-solid fa-home"></i> ダッシュボードに戻る
+            </button>
+        </div>
     </div>
+
+    <!-- Modals -->
+    <aaa_Z_StaffModal
+        :visible="isStaffModalOpen"
+        @close="isStaffModalOpen = false"
+        @save="handleStaffSave"
+        @delete="handleStaffDelete"
+    />
+
+    <!-- CSV Confirmation Modal -->
+    <div v-if="isCsvModalOpen" class="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center backdrop-blur-sm p-4 animate-fade-in">
+        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
+            <div class="p-6 text-center">
+                <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-file-csv text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">ダウンロードしますか？</h3>
+                <p class="text-slate-500 text-sm mb-6">すべての詳細データをCSV形式で出力します。<br>この操作はログに記録されます。</p>
+                <div class="flex gap-3">
+                    <button @click="isCsvModalOpen = false" class="flex-1 px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 transition">
+                        いいえ
+                    </button>
+                    <button @click="handleCsvDownload" class="flex-1 px-4 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition flex items-center justify-center gap-2" :disabled="isDownloading">
+                        <i v-if="isDownloading" class="fa-solid fa-circle-notch fa-spin"></i>
+                        <span v-else>はい</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import { useAccountingSystem } from '@/composables/useAccountingSystem';
-const { adminData } = useAccountingSystem();
+import { ref, computed } from 'vue';
+import { aaa_useAdminDashboard } from '@/composables/useAdminDashboard';
+import type { RuleCategory, PromptItem } from '@/composables/useAdminDashboard';
 
-// --- New Logic for Settings ---
-const systemStatus = ref<'ACTIVE' | 'EMERGENCY_STOP'>('ACTIVE');
-const isSaving = ref(false);
-const form = reactive({ geminiApiKey: '', invoiceApiKey: '' });
-const apiSettings = reactive({ unitCostIn: 0.15, unitCostOut: 0.60 });
+// Components
+import ScreenZ_Dashboard from './ScreenZ/ScreenZ_Dashboard.vue';
+import ScreenZ_Settings from './ScreenZ/ScreenZ_Settings.vue';
+import ScreenZ_Masters from './ScreenZ/ScreenZ_Masters.vue';
+import ScreenZ_Rules from './ScreenZ/ScreenZ_Rules.vue';
+import ScreenZ_Prompts from './ScreenZ/ScreenZ_Prompts.vue';
+import ScreenZ_RuleDetail from './ScreenZ/ScreenZ_RuleDetail.vue';
+import ScreenZ_PromptDetail from './ScreenZ/ScreenZ_PromptDetail.vue';
+import aaa_Z_StaffModal from './ScreenZ/Z_StaffModal.vue';
 
-function toggleSystemStatus() {
-    if (confirm('ステータスを変更しますか？')) {
-        systemStatus.value = systemStatus.value === 'ACTIVE' ? 'EMERGENCY_STOP' : 'ACTIVE';
+const { data } = aaa_useAdminDashboard();
+
+// View State
+type ViewType = 'dashboard' | 'settings' | 'masters' | 'rules' | 'prompts' | 'rules_detail' | 'prompts_detail';
+const currentView = ref<ViewType>('dashboard');
+const currentRule = ref<RuleCategory | null>(null);
+const currentPrompt = ref<PromptItem | null>(null);
+const isNavOpen = ref(false);
+const isStaffModalOpen = ref(false);
+
+const activeComponent = computed(() => {
+    switch(currentView.value) {
+        case 'settings': return ScreenZ_Settings;
+        case 'masters': return ScreenZ_Masters;
+        case 'rules': return ScreenZ_Rules;
+        case 'prompts': return ScreenZ_Prompts;
+        default: return ScreenZ_Dashboard;
     }
-}
+});
 
-async function saveSettings() {
-    isSaving.value = true;
-    await new Promise(r => setTimeout(r, 800));
-    isSaving.value = false;
-    alert('設定を保存しました');
-}
+const viewTitle = computed(() => {
+    switch(currentView.value) {
+        case 'settings': return 'システム設計・環境設定';
+        case 'masters': return '標準科目等マスタ推移';
+        case 'rules': return '共通処理ルール編集';
+        case 'prompts': return 'プロンプト編集';
+        case 'rules_detail': return '共通処理ルール編集 - 詳細';
+        case 'prompts_detail': return 'プロンプト編集 - 詳細';
+        default: return 'Dashboard';
+    }
+});
+
+const switchView = (view: ViewType) => {
+    console.log('Switching view to:', view); // Debug Log
+    currentView.value = view;
+    isNavOpen.value = false;
+};
+
+// --- Handlers ---
+
+const handleSelectRule = (rule: RuleCategory) => {
+    currentRule.value = rule;
+    currentView.value = 'rules_detail';
+};
+const handleRuleSave = (newContent: string) => {
+    alert('ルール定義を保存しました: ' + newContent.substring(0, 20) + '...');
+    currentView.value = 'rules';
+};
+
+const handleSelectPrompt = (prompt: PromptItem) => {
+    currentPrompt.value = prompt;
+    currentView.value = 'prompts_detail';
+};
+
+const handleCreatePrompt = (type: 'AI' | 'GAS') => {
+    // Auto Generate ID
+    const list = type === 'AI' ? data.value.prompts.ai : data.value.prompts.gas;
+    const prefix = type === 'AI' ? 'P' : 'G';
+    const maxNum = list
+        .map(p => parseInt(p.id.split('-')[1] || '0'))
+        .reduce((a, b) => Math.max(a, b), 0);
+    const newId = `${prefix}-${String(maxNum + 1).padStart(3, '0')}`;
+
+    // Set new prompt state
+    currentPrompt.value = {
+        id: newId,
+        name: `新規${type}プロンプト`,
+        value: ''
+    };
+    currentView.value = 'prompts_detail';
+};
+
+const handlePromptSave = (newContent: string) => {
+    alert('プロンプト内容を保存しました: ' + newContent.substring(0, 20) + '...');
+    currentView.value = 'prompts';
+};
+
+// Emergency Stop Mock
+const toggleEmergency = () => {
+    if (data.value.settings.systemStatus === 'EMERGENCY_STOP') {
+        if(confirm('緊急停止を解除し、システムをACTIVEにしますか？')) {
+            data.value.settings.systemStatus = 'ACTIVE';
+        }
+    } else {
+        const input = prompt('緊急停止を実行しますか？実行する場合は "EMERGENCY" と入力してください。');
+        if (input === 'EMERGENCY') {
+            data.value.settings.systemStatus = 'EMERGENCY_STOP';
+        }
+    }
+};
+
+// Staff Mock Actions
+const handleStaffSave = (staffData: Record<string, unknown> & { name: string; email: string }) => {
+    alert(`担当者登録: ${staffData.name} (${staffData.email})`);
+    isStaffModalOpen.value = false;
+};
+const handleStaffDelete = () => {
+    alert(`担当者を削除しました`);
+    isStaffModalOpen.value = false;
+};
+
+// CSV Export
+const isCsvModalOpen = ref(false);
+const isDownloading = ref(false);
+const { downloadCsv } = aaa_useAdminDashboard();
+
+const handleCsvDownload = async () => {
+    isDownloading.value = true;
+    const success = await downloadCsv();
+    isDownloading.value = false;
+    isCsvModalOpen.value = false;
+    if(success) alert('CSVダウンロードが完了しました');
+};
 </script>
 
 <style scoped>
-.animate-fade-in {
-    animation: fadeIn 0.5s ease-out forwards;
+nav::-webkit-scrollbar {
+    width: 4px;
 }
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+nav::-webkit-scrollbar-thumb {
+    background-color: #e2e8f0;
+    border-radius: 4px;
 }
 </style>
