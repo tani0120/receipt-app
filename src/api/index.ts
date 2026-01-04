@@ -9,11 +9,12 @@ import journalStatusRoute from './routes/journal-status'
 import journalEntry from './routes/journal-entry'
 import collection from './routes/collection'
 import aiRules from './routes/ai-rules'
+import aiModels from './routes/ai-models'
 import admin from './routes/admin'
 
 const app = new Hono()
 
-// Enable CORS for all routes (necessary when frontend (5173) calls backend (3000))
+// Enable CORS
 app.use('/*', cors())
 
 // --- Data Models ---
@@ -53,6 +54,7 @@ const routes = app
     .route('/api/collection', collection)
     .route('/api/ai-rules', aiRules)
     .route('/api/admin', admin)
+    .route('/api/ai', aiModels)
     .get('/api/tax-options', (c) => {
         const rawData = [
             { label: '課税売上 10%', value: 'tax_10', rate: 0.1, code: '110' },

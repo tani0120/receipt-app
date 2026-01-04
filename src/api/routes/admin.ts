@@ -2,7 +2,24 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 
+import { zValidator } from '@hono/zod-validator'
+
 const app = new Hono()
+
+// --- Config Schemas ---
+const PhaseConfigSchema = z.object({
+    provider: z.enum(['vertex_ai', 'ai_studio', 'gemini', 'vertex']),
+    mode: z.enum(['realtime', 'batch', 'normal']),
+    model: z.string().optional(),
+    modelName: z.string().optional()
+})
+
+const PhaseSettingsSchema = z.object({
+    ocr: PhaseConfigSchema,
+    learning: PhaseConfigSchema,
+    conversion: PhaseConfigSchema,
+    optimization: PhaseConfigSchema
+})
 
 // --- Data Models ---
 const DashboardKpiSchema = z.object({
@@ -54,5 +71,48 @@ const route = app
     .get('/dashboard', (c) => {
         return c.json(MOCK_ADMIN_DATA)
     })
+    .get('/config', async (c) => {
+        try {
+            const { db } = await import('../lib/firebase')
+            const doc = await db.collection('system_configs').doc('ai_phase_settings').get()
+            const data = doc.data() || {}
+            return c.json(data)
+        } catch (e: any) {
+            console.error('Failed to fetch config:', e)
+            return c.json({}, 500)
+        }
+    })
+    .patch('/config',
+        zValidator('json', z.object({ aiPhases: PhaseSettingsSchema }).passthrough(), (result, c) => {
+            if (!result.success) {
+                return c.json({ success: false, message: 'Invalid config format', errors: result.error }, 400)
+            }
+        }),
+        async (c) => {
+            try {
+                const { db } = await import('../lib/firebase')
+                const payload = c.req.valid('json')
+
+                const mapPhase = (p: any) => ({
+                    provider: p.provider === 'gemini' ? 'ai_studio' : 'vertex_ai',
+                    mode: p.mode === 'normal' ? 'realtime' : 'batch',
+                    model: p.modelName || p.model
+                })
+
+                const docData = {
+                    ocr: mapPhase(payload.aiPhases.ocr),
+                    learning: mapPhase(payload.aiPhases.learning),
+                    conversion: mapPhase(payload.aiPhases.conversion),
+                    optimization: mapPhase(payload.aiPhases.optimization)
+                }
+
+                await db.collection('system_configs').doc('ai_phase_settings').set(docData, { merge: true })
+                return c.json({ success: true, saved: docData })
+            } catch (e: any) {
+                console.error('Failed to save config:', e)
+                return c.json({ success: false, error: e.message }, 500)
+            }
+        }
+    )
 
 export default route

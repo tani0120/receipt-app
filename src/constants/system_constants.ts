@@ -528,3 +528,29 @@ export const SYSTEM_CONFIG = {
 export const AI_PROMPT_GENERATION_DEFAULT = AI_PROMPTS.WORKER;
 export const AI_PROMPT_ANOMALY_DEFAULT = GAS_LOGIC_DEFINITIONS.DIFFERENCE_ANALYSIS;
 export const GAS_PROMPT_DRIVE_DEFAULT = GAS_LOGIC_DEFINITIONS.FILE_RESCUE;
+
+export const AI_LOGIC_MAP_TREE = {
+    name: "AI Accounting System",
+    children: [
+        {
+            name: "Phase 1: Pre-processing",
+            children: ["Duplicate Check", "Period Check", "Virus Scan"]
+        },
+        {
+            name: "Phase 2: B/S Judgment",
+            children: [
+                { name: "Funds Transfer", type: "out_of_scope" },
+                { name: "Credit Card Payment", type: "out_of_scope" }
+            ]
+        },
+        {
+            name: "Phase 3: Tax Judgment",
+            children: [
+                { name: "Input Tax (10%)", type: "taxable" },
+                { name: "Reduced Tax (8%)", type: "reduced" },
+                { name: "Exempt", type: "exempt" },
+                { name: "Non-Taxable", type: "non_taxable" }
+            ]
+        }
+    ]
+};

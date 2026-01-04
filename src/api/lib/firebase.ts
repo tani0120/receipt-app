@@ -3,9 +3,11 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { config } from '../config';
 
 // Singleton initialization
+// Singleton initialization
 if (!admin.apps.length) {
     try {
         if (config.FIREBASE_PROJECT_ID && config.FIREBASE_PRIVATE_KEY) {
+            console.log('[Firebase] Initializing with Env Vars (PrivateKey found).');
             admin.initializeApp({
                 credential: admin.credential.cert({
                     projectId: config.FIREBASE_PROJECT_ID,
@@ -13,20 +15,23 @@ if (!admin.apps.length) {
                     privateKey: config.FIREBASE_PRIVATE_KEY,
                 }),
             });
-            console.log('[Firebase] Admin SDK initialized with Env Vars.');
         } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-            // Fallback to Service Account File (Standard)
+            console.log(`[Firebase] Initializing with Application Default Credentials (path: ${process.env.GOOGLE_APPLICATION_CREDENTIALS}).`);
             admin.initializeApp({
                 credential: admin.credential.applicationDefault(),
-                projectId: config.FIREBASE_PROJECT_ID // Ensure project ID is set
+                projectId: config.FIREBASE_PROJECT_ID
             });
-            console.log('[Firebase] Admin SDK initialized via GOOGLE_APPLICATION_CREDENTIALS.');
         } else {
-            // Fallback for dev without creds (Mock mode support)
-            console.warn('[Firebase] Credentials missing. Running in Mock-Compatible mode (Real DB calls will fail).');
+            console.error('[Firebase] Critical: No credentials found.');
+            // For checking environment variables
+            console.error('DEBUG: FIREBASE_PROJECT_ID=', config.FIREBASE_PROJECT_ID ? 'SET' : 'MISSING');
+            console.error('DEBUG: FIREBASE_PRIVATE_KEY=', config.FIREBASE_PRIVATE_KEY ? 'SET' : 'MISSING');
+            throw new Error('Firebase Credentials Missing! Cannot start in Real Mode.');
         }
     } catch (e) {
-        console.error('[Firebase] Initialization failed:', e);
+        console.error('[Firebase] Initialization Failed:', e);
+        // Do not swallow error - let server crash so user knows setup is wrong
+        throw e;
     }
 }
 

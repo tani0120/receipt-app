@@ -30,46 +30,51 @@ function formatFileSize(bytes: number): string {
 
 // --- 3. Route Definition ---
 const route = app.get('/', (c) => {
-    // Mock Data Source (Simulating DB)
-    const rawData = [
-        {
-            id: 'XYZ',
-            timestamp: '2024/12/25 14:30',
-            clientName: '株式会社サンプル商事',
-            sourceSoftware: '弥生会計',
-            targetSoftware: 'Freee',
-            fileName: 'サンプル商事_弥生_変換後Freee_20241225.csv',
-            size: 1572864, // 1.5MB
-            downloadUrl: '#',
-            isDownloaded: false
-        }
-    ]
-
-    // Validate & Transform (BFF Pattern)
-    const safeData = z.array(ConversionLogSchema).parse(rawData)
-
-    // Map to UI-ready structure (The heavy lifting)
-    const uiData = safeData.map(item => ({
-        id: item.id,
-        timestamp: item.timestamp,
-        clientName: item.clientName,
-        sourceSoftwareLabel: item.sourceSoftware, // Simple mapping here
-        targetSoftwareLabel: item.targetSoftware,
-        fileName: item.fileName,
-        fileSize: formatFileSize(item.size), // Calculated on Server
-        downloadUrl: item.downloadUrl,
-        isDownloaded: item.isDownloaded,
-        isDownloadable: Boolean(item.downloadUrl && item.downloadUrl !== '#'),
-        rowStyle: item.isDownloaded ? 'bg-gray-50 opacity-70' : 'bg-white', // UI Style logic on Server (BFF)
-
-        // Actions (BFF Standard)
-        actions: [
-            { type: 'download', label: 'ダウンロード', isEnabled: true },
-            { type: 'delete', label: '削除', isEnabled: true }
+    try {
+        // Mock Data Source (Simulating DB)
+        const rawData = [
+            {
+                id: 'XYZ',
+                timestamp: '2024/12/25 14:30',
+                clientName: '株式会社サンプル商事',
+                sourceSoftware: '弥生会計',
+                targetSoftware: 'Freee',
+                fileName: 'サンプル商事_弥生_変換後Freee_20241225.csv',
+                size: 1572864, // 1.5MB
+                downloadUrl: '#',
+                isDownloaded: false
+            }
         ]
-    }))
 
-    return c.json(uiData)
+        // Validate & Transform (BFF Pattern)
+        const safeData = z.array(ConversionLogSchema).parse(rawData)
+
+        // Map to UI-ready structure (The heavy lifting)
+        const uiData = safeData.map(item => ({
+            id: item.id,
+            timestamp: item.timestamp,
+            clientName: item.clientName,
+            sourceSoftwareLabel: item.sourceSoftware, // Simple mapping here
+            targetSoftwareLabel: item.targetSoftware,
+            fileName: item.fileName,
+            fileSize: formatFileSize(item.size), // Calculated on Server
+            downloadUrl: item.downloadUrl,
+            isDownloaded: item.isDownloaded,
+            isDownloadable: Boolean(item.downloadUrl && item.downloadUrl !== '#'),
+            rowStyle: item.isDownloaded ? 'bg-gray-50 opacity-70' : 'bg-white', // UI Style logic on Server (BFF)
+
+            // Actions (BFF Standard)
+            actions: [
+                { type: 'download', label: 'ダウンロード', isEnabled: true },
+                { type: 'delete', label: '削除', isEnabled: true }
+            ]
+        }))
+
+        return c.json(uiData)
+    } catch (e: any) {
+        console.error('[API Error] conversion get:', e);
+        return c.json({ error: e.message }, 500);
+    }
 })
     .delete('/:id', async (c) => {
         const id = c.req.param('id');
@@ -78,11 +83,37 @@ const route = app.get('/', (c) => {
         return c.json({ success: true, message: `Log ${id} deleted` });
     })
     .post('/', async (c) => {
-        // Mock Start Conversion
-        // In real app, we'd use zValidator('form') or 'json'
-        const body = await c.req.parseBody();
-        console.log('[BFF] Starting conversion', body);
-        return c.json({ success: true, fileName: 'mock_converted.csv' });
+        try {
+            const body = await c.req.parseBody();
+            const file = body['file'];
+
+            if (!file || typeof file === 'string') {
+                return c.json({ success: false, message: 'No file uploaded' }, 400);
+            }
+
+            // Real Storage Integration
+            const { StorageService } = await import('../lib/storage');
+            const buffer = await (file as Blob).arrayBuffer();
+            const nodeBuffer = Buffer.from(buffer);
+
+            // Generate path: conversions/<timestamp>_<filename>
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const path = `conversions/${timestamp}_${(file as File).name}`;
+
+            const gsUrl = await StorageService.uploadImage(nodeBuffer, path, (file as File).type);
+            console.log('[BFF] File uploaded to GCS:', gsUrl);
+
+            // Mock Conversion returning the GCS Link
+            return c.json({
+                success: true,
+                fileName: (file as File).name,
+                gsUrl: gsUrl, // The Chain: This URI should be passed to AI
+                message: 'File uploaded to GCS. Conversion Service (Screen G) pending.'
+            });
+        } catch (e: any) {
+            console.error('[BFF] Upload Error:', e);
+            return c.json({ success: false, message: e.message }, 500);
+        }
     })
 
 export default route
