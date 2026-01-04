@@ -15,7 +15,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/clients',
     name: 'ScreenA',
-    component: () => import('../components/ScreenA_ClientList.vue')
+    component: () => import('../views/ScreenA_Clients.vue')
   },
   {
     path: '/clients/:code',
