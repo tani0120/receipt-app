@@ -60,10 +60,29 @@ const route = app.get('/', (c) => {
         downloadUrl: item.downloadUrl,
         isDownloaded: item.isDownloaded,
         isDownloadable: Boolean(item.downloadUrl && item.downloadUrl !== '#'),
-        rowStyle: item.isDownloaded ? 'bg-gray-50 opacity-70' : 'bg-white' // UI Style logic on Server (BFF)
+        rowStyle: item.isDownloaded ? 'bg-gray-50 opacity-70' : 'bg-white', // UI Style logic on Server (BFF)
+
+        // Actions (BFF Standard)
+        actions: [
+            { type: 'download', label: 'ダウンロード', isEnabled: true },
+            { type: 'delete', label: '削除', isEnabled: true }
+        ]
     }))
 
     return c.json(uiData)
 })
+    .delete('/:id', async (c) => {
+        const id = c.req.param('id');
+        console.log(`[BFF] Deleting conversion log ${id}`);
+        // Mock deletion success
+        return c.json({ success: true, message: `Log ${id} deleted` });
+    })
+    .post('/', async (c) => {
+        // Mock Start Conversion
+        // In real app, we'd use zValidator('form') or 'json'
+        const body = await c.req.parseBody();
+        console.log('[BFF] Starting conversion', body);
+        return c.json({ success: true, fileName: 'mock_converted.csv' });
+    })
 
 export default route

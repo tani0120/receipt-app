@@ -1,6 +1,7 @@
 
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { zValidator } from '@hono/zod-validator'
 
 const app = new Hono()
 
@@ -81,6 +82,13 @@ const ClientUiSchema = z.object({
     accountingSoftware: z.enum(['yayoi', 'freee', 'mf', 'other']).default('other'),
     driveLinked: z.boolean().default(false),
 
+    // Standard Action Schema
+    actions: z.array(z.object({
+        type: z.enum(['edit', 'delete']),
+        label: z.string(),
+        isEnabled: z.boolean().default(true)
+    })).default([]),
+
     // Labels
     fiscalMonthLabel: z.string(),
     simplifiedTaxCategoryLabel: z.string(),
@@ -96,129 +104,165 @@ const ClientUiSchema = z.object({
 })
 
 // --- 2. BFF Route ---
-const route = app.get('/', (c) => {
-    // Mock Data from DB (Simulating raw DB response)
-    const rawClients = [
-        {
-            clientCode: 'CLI001',
-            companyName: '株式会社エーアイシステム',
-            repName: '山田 太郎',
-            fiscalMonth: 3,
-            status: 'active',
-            contactInfo: 'yamada@example.com',
-            accountingSoftware: 'freee',
-            taxFilingType: 'blue',
-            consumptionTaxMode: 'general',
-            isInvoiceRegistered: true,
-            invoiceRegistrationNumber: 'T1234567890123'
-        },
-        {
-            clientCode: 'CLI002',
-            companyName: '合同会社テックイノベーション',
-            repName: '鈴木 次郎',
-            fiscalMonth: 12,
-            status: 'active',
-            contactInfo: 'https://chatwork.com/g/12345',
-            accountingSoftware: 'yayoi',
-            taxFilingType: 'blue',
-            consumptionTaxMode: 'simplified',
-            simplifiedTaxCategory: 3,
-            isInvoiceRegistered: false
-        },
-        {
-            clientCode: 'CLI999',
-            companyName: '（解約済みクライアント）',
-            status: 'inactive'
-        }
-    ];
-
-    // Transformation Logic (Ported from ClientMapper.ts)
-    const processedClients = rawClients.map((raw: any) => {
-        const fiscalMonth = Math.max(1, Math.min(12, raw.fiscalMonth || 1));
-        const software = raw.accountingSoftware || 'other';
-        const taxMethod = raw.taxMethod === 'exclusive' ? 'exclusive' : 'inclusive';
-        const taxMethodLabel = taxMethod === 'inclusive' ? '税込' : '税抜';
-        const calculationMethodLabel = raw.calculationMethod === 'cash' ? '現金主義' : '発生主義';
-        const shortCalc = calculationMethodLabel.replace('主義', '');
-
-        // Contact Type Logic
-        let contactType = 'none';
-        if ((raw.contactInfo || '').includes('@')) contactType = 'email';
-        else if ((raw.contactInfo || '').startsWith('http')) contactType = 'chatwork';
-
-        // Simplified Tax
-        const simpTaxRaw = raw.simplifiedTaxCategory || 0;
-        const simplifiedTaxCategory = [1, 2, 3, 4, 5, 6].includes(simpTaxRaw) ? simpTaxRaw : undefined;
-
-        // Rounding
-        const rounding = raw.roundingSettings || 'floor';
-        const roundingLabel = rounding === 'round' ? '四捨五入' : (rounding === 'ceil' ? '切り上げ' : '切り捨て');
-
-        // Logic: Drive Links (Mock for now)
-        const driveLinks = {
-            storage: '#',
-            journalOutput: '#',
-            journalExclusion: '#',
-            pastJournals: '#'
-        };
-
-        return {
-            clientCode: raw.clientCode,
-            companyName: raw.companyName,
-            repName: raw.repName || '',
-            staffName: raw.staffName || '',
-            type: raw.type || 'corp',
-            fiscalMonth: fiscalMonth,
-            status: raw.status || 'active',
-            isActive: raw.status !== 'inactive' && raw.status !== 'suspension',
-            contact: {
-                type: contactType as 'email' | 'chatwork' | 'none',
-                value: raw.contactInfo || ''
+const route = app
+    .get('/', (c) => {
+        // Mock Data from DB (Simulating raw DB response)
+        const rawClients = [
+            {
+                clientCode: 'CLI001',
+                companyName: '株式会社エーアイシステム',
+                repName: '山田 太郎',
+                fiscalMonth: 3,
+                status: 'active',
+                contactInfo: 'yamada@example.com',
+                accountingSoftware: 'freee',
+                taxFilingType: 'blue',
+                consumptionTaxMode: 'general',
+                isInvoiceRegistered: true,
+                invoiceRegistrationNumber: 'T1234567890123'
             },
+            {
+                clientCode: 'CLI002',
+                companyName: '合同会社テックイノベーション',
+                repName: '鈴木 次郎',
+                fiscalMonth: 12,
+                status: 'active',
+                contactInfo: 'https://chatwork.com/g/12345',
+                accountingSoftware: 'yayoi',
+                taxFilingType: 'blue',
+                consumptionTaxMode: 'simplified',
+                simplifiedTaxCategory: 3,
+                isInvoiceRegistered: false
+            },
+            {
+                clientCode: 'CLI999',
+                companyName: '（解約済みクライアント）',
+                status: 'inactive'
+            }
+        ];
 
-            driveLinks,
+        // Transformation Logic (Ported from ClientMapper.ts)
+        const processedClients = rawClients.map((raw: any) => {
+            const fiscalMonth = Math.max(1, Math.min(12, raw.fiscalMonth || 1));
+            const software = raw.accountingSoftware || 'other';
+            const taxMethod = raw.taxMethod === 'exclusive' ? 'exclusive' : 'inclusive';
+            const taxMethodLabel = taxMethod === 'inclusive' ? '税込' : '税抜';
+            const calculationMethodLabel = raw.calculationMethod === 'cash' ? '現金主義' : '発生主義';
+            const shortCalc = calculationMethodLabel.replace('主義', '');
 
-            accountingSoftware: software,
-            taxFilingType: raw.taxFilingType || 'blue',
-            consumptionTaxMode: raw.consumptionTaxMode || 'general',
-            simplifiedTaxCategory,
-            defaultTaxRate: raw.defaultTaxRate || 10,
-            taxMethod: taxMethod,
+            // Contact Type Logic
+            let contactType = 'none';
+            if ((raw.contactInfo || '').includes('@')) contactType = 'email';
+            else if ((raw.contactInfo || '').startsWith('http')) contactType = 'chatwork';
 
-            isInvoiceRegistered: Boolean(raw.isInvoiceRegistered),
-            invoiceRegistrationNumber: raw.invoiceRegistrationNumber || '',
+            // Simplified Tax
+            const simpTaxRaw = raw.simplifiedTaxCategory || 0;
+            const simplifiedTaxCategory = [1, 2, 3, 4, 5, 6].includes(simpTaxRaw) ? simpTaxRaw : undefined;
 
-            // New Fields that might be missing in raw
-            taxCalculationMethod: raw.taxCalculationMethod || 'stack',
-            roundingSettings: rounding,
-            driveLinked: Boolean(raw.driveLinked),
+            // Rounding
+            const rounding = raw.roundingSettings || 'floor';
+            const roundingLabel = rounding === 'round' ? '四捨五入' : (rounding === 'ceil' ? '切り上げ' : '切り捨て');
 
-            // Labels
-            fiscalMonthLabel: mapFiscalMonthLabel(fiscalMonth),
-            simplifiedTaxCategoryLabel: mapSimplifiedTaxCategoryLabel(simpTaxRaw),
-            softwareLabel: mapSoftwareLabel(software),
-            taxInfoLabel: `${taxMethodLabel} / ${shortCalc}`,
-            calculationMethodLabel,
-            taxMethodLabel,
-            calcMethodShortLabel: shortCalc,
-            taxCalculationMethodLabel: raw.taxCalculationMethod === 'back' ? '割戻計算' : '積上計算',
-            invoiceRegistrationLabel: raw.isInvoiceRegistered ? '有' : '無',
-            roundingSettingsLabel: roundingLabel,
-            typeLabel: raw.type === 'individual' ? '個人' : '法人',
+            // Logic: Drive Links (Mock for now)
+            const driveLinks = {
+                storage: '#',
+                journalOutput: '#',
+                journalExclusion: '#',
+                pastJournals: '#'
+            };
 
-            // ID Placeholders
-            sharedFolderId: '',
-            processingFolderId: '',
-            archivedFolderId: '',
-            excludedFolderId: '',
-            csvOutputFolderId: '',
-            learningCsvFolderId: ''
-        };
-    });
+            // Logic: Actions (Standardization)
+            // Example: Only active clients can be edited
+            const actions = [];
+            if (raw.status !== 'inactive') {
+                actions.push({ type: 'edit', label: '編集', isEnabled: true });
+            }
 
-    // Final Validation
-    const validated = z.array(ClientUiSchema).parse(processedClients);
-    return c.json(validated);
-})
+            return {
+                clientCode: raw.clientCode,
+                companyName: raw.companyName,
+                repName: raw.repName || '',
+                staffName: raw.staffName || '',
+                type: raw.type || 'corp',
+                fiscalMonth: fiscalMonth,
+                status: raw.status || 'active',
+                isActive: raw.status !== 'inactive' && raw.status !== 'suspension',
+                contact: {
+                    type: contactType as 'email' | 'chatwork' | 'none',
+                    value: raw.contactInfo || ''
+                },
+
+                driveLinks,
+                actions, // Added
+
+                accountingSoftware: software,
+                taxFilingType: raw.taxFilingType || 'blue',
+                consumptionTaxMode: raw.consumptionTaxMode || 'general',
+                simplifiedTaxCategory,
+                defaultTaxRate: raw.defaultTaxRate || 10,
+                taxMethod: taxMethod,
+
+                isInvoiceRegistered: Boolean(raw.isInvoiceRegistered),
+                invoiceRegistrationNumber: raw.invoiceRegistrationNumber || '',
+
+                // New Fields that might be missing in raw
+                taxCalculationMethod: raw.taxCalculationMethod || 'stack',
+                roundingSettings: rounding,
+                driveLinked: Boolean(raw.driveLinked),
+
+                // Labels
+                fiscalMonthLabel: mapFiscalMonthLabel(fiscalMonth),
+                simplifiedTaxCategoryLabel: mapSimplifiedTaxCategoryLabel(simpTaxRaw),
+                softwareLabel: mapSoftwareLabel(software),
+                taxInfoLabel: `${taxMethodLabel} / ${shortCalc}`,
+                calculationMethodLabel,
+                taxMethodLabel,
+                calcMethodShortLabel: shortCalc,
+                taxCalculationMethodLabel: raw.taxCalculationMethod === 'back' ? '割戻計算' : '積上計算',
+                invoiceRegistrationLabel: raw.isInvoiceRegistered ? '有' : '無',
+                roundingSettingsLabel: roundingLabel,
+                typeLabel: raw.type === 'individual' ? '個人' : '法人',
+
+                // ID Placeholders
+                sharedFolderId: '',
+                processingFolderId: '',
+                archivedFolderId: '',
+                excludedFolderId: '',
+                csvOutputFolderId: '',
+                learningCsvFolderId: ''
+            };
+        });
+
+        // Final Validation
+        const validated = z.array(ClientUiSchema).parse(processedClients);
+        return c.json(validated);
+    })
+    // Implement PUT (Update)
+    // Implement PUT (Update)
+    .put(
+        '/:code',
+        zValidator('json', z.object({
+            // Partial schema for updates. Using loose schema for now to avoid strict validation errors on mock.
+            // Ideally should be Partial<ClientUi>
+            companyName: z.string().optional(),
+            repName: z.string().optional(),
+            clientCode: z.string(),
+            // Allow other props
+        }).passthrough()),
+        async (c) => {
+            const code = c.req.param('code');
+            const body = c.req.valid('json');
+
+            console.log(`[BFF] Updating client ${code}`, body);
+
+            // Validation simulation
+            if (!body.companyName && !body.repName) {
+                // If it was a real update, we'd check essential fields.
+                // For now, accept whatever.
+            }
+
+            return c.json({ success: true, message: `Client ${code} updated successfully`, data: body });
+        }
+    );
 
 export default route

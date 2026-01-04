@@ -214,6 +214,13 @@ export interface ClientUi {
     readonly pastJournals: string;
   };
 
+  // Actions (BFF)
+  readonly actions: readonly {
+    readonly type: 'edit' | 'delete';
+    readonly label: string;
+    readonly isEnabled: boolean;
+  }[];
+
   // Folder IDs
   readonly sharedFolderId: string;
   readonly processingFolderId: string;
@@ -321,5 +328,12 @@ export type ConversionLogUi = {
 
   /** [CONTRACT] "未DL", "済" などの表示用ステータス */
   readonly statusLabel: string;
+
+  // Actions (BFF)
+  readonly actions: readonly {
+    readonly type: 'download' | 'delete';
+    readonly label: string;
+    readonly isEnabled: boolean;
+  }[];
 };
 

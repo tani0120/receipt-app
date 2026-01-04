@@ -59,10 +59,23 @@ export function aaa_useDataConversion() {
         }
     };
 
-    const removeLog = (id: string) => {
-        const index = logs.value.findIndex(l => l.id === id);
-        if (index !== -1) {
-            logs.value.splice(index, 1);
+    // Updated: DELETE via RPC
+    const removeLog = async (id: string) => {
+        try {
+            const res = await client.api.conversion[':id'].$delete({
+                param: { id }
+            });
+            if (res.ok) {
+                // Update local state on success
+                const index = logs.value.findIndex(l => l.id === id);
+                if (index !== -1) {
+                    logs.value.splice(index, 1);
+                }
+            } else {
+                console.error('Failed to delete log');
+            }
+        } catch (e) {
+            console.error('Delete error:', e);
         }
     };
 

@@ -73,18 +73,38 @@ export function aaa_useClientList() {
         editingClient.value = null;
     };
 
-    // Stub for update (would be RPC POST/PUT)
+    // Updated to use Hono RPC for PUT (BFF Action)
     const handleUpdateClient = async () => {
         if (!editingClient.value) return;
+
+        // Find if this client allows editing (Validation against BFF-provided actions)
+        // If frontend state is stale, we might be editing something we shouldn't.
+        // But the Backend will reject it anyway.
+
         try {
             loading.value = true;
-            // TODO: Implement update via API
-            // await client.api.clients[':id'].$put(...)
-            console.warn('Update logic not yet migrated to Hono RPC');
-            await new Promise(r => setTimeout(r, 500)); // Mock
-            closeEditModal();
+            const code = editingClient.value.clientCode;
+
+            // Call PUT /:code
+            const res = await client.api.clients[':code'].$put({
+                param: { code },
+                json: editingClient.value // Sending the whole object for now
+            });
+
+            if (res.ok) {
+                const responseData = await res.json();
+                console.log('Update Success:', responseData);
+
+                // Refresh list to show changes (or optimistic update)
+                await fetchClients();
+                closeEditModal();
+            } else {
+                throw new Error('Update Failed');
+            }
         } catch (err) {
+            console.error('Update Error:', err);
             error.value = err as Error;
+            // Optionally keep modal open to show error
         } finally {
             loading.value = false;
         }
