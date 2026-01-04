@@ -68,6 +68,12 @@ export interface RuleCategory {
   history: RuleHistory[];
 }
 
+export interface AiPhaseConfig {
+  provider: 'gemini' | 'vertex';
+  mode: 'normal' | 'batch';
+  modelName: string;
+}
+
 export interface PromptItem {
   id: string;
   name: string;
@@ -81,11 +87,7 @@ export interface DashboardData {
     systemRootId: string;
     masterSsId: string;
     modelName: string;
-    systemSettingsSsId: string;
-    rulesSsId: string;
-    systemDbId: string;
-    queueId: string;
-    dashboardId: string;
+
     apiPriceInput: number;
     apiPriceOutput: number;
     exchangeRate: number;
@@ -101,7 +103,15 @@ export interface DashboardData {
     maxOptBatch: number;
     dataRetentionDays: number;
     debugMode: boolean;
-    systemStatus: 'ACTIVE' | 'PAUSE' | 'EMERGENCY_STOP';
+    slackWebhookUrl?: string; // Added for notifications
+    systemStatus: 'ACTIVE' | 'PAUSE' | 'MAINTENANCE';
+    lastUpdated: string;
+    aiPhases: {
+      ocr: AiPhaseConfig;
+      learning: AiPhaseConfig;
+      conversion: AiPhaseConfig;
+      optimization: AiPhaseConfig;
+    };
   };
   apiKeys: {
     geminiApiKey: string;
@@ -204,31 +214,32 @@ const MOCK_DATA: DashboardData = {
     masterSsId: '1XyZ...',
 
     modelName: 'models/gemini-3.0-flash',
-    systemSettingsSsId: '(自動取得)',
-    rulesSsId: '(入力待)',
-    systemDbId: '(入力待)',
-    queueId: '(入力待)', // Only one queueId
-    dashboardId: '(入力待)',
 
     apiPriceInput: 0.50,
     apiPriceOutput: 3.00,
     exchangeRate: 150,
 
-    intervalDispatchMin: 15,
+    intervalDispatchMin: 5, // Recommended: 5min
     intervalWorkerMin: 5,
     intervalLearnerMin: 60,
     intervalValidatorMin: 5,
     intervalOptimizerDays: 30,
 
     notifyHours: '9,12,15,18',
-    maxBatchSize: 3,
+    maxBatchSize: 20, // Recommended: 20
     gasTimeoutLimit: 270,
     maxAttemptLimit: 3,
     maxOptBatch: 1,
     dataRetentionDays: 30,
     debugMode: false,
-
-    systemStatus: 'ACTIVE'
+    slackWebhookUrl: '',
+    systemStatus: 'ACTIVE',
+    aiPhases: {
+      ocr: { provider: 'gemini', mode: 'normal', modelName: 'models/gemini-3-pro-001' },
+      learning: { provider: 'gemini', mode: 'batch', modelName: 'models/gemini-3-deep-think-001' },
+      conversion: { provider: 'gemini', mode: 'batch', modelName: 'models/gemini-3-flash-001' },
+      optimization: { provider: 'gemini', mode: 'batch', modelName: 'models/gemini-3-deep-think-001' }
+    }
   },
 
   kpi: {
@@ -459,6 +470,57 @@ export function useAdminDashboard() {
     });
   };
 
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/admin/config');
+      if (!res.ok) throw new Error('Failed to fetch config');
+      const backendConfig = await res.json();
+
+      if (!backendConfig.ocr) return; // Empty or invalid
+
+      // Map Backend -> UI
+      const mapToUi = (p: any) => ({
+        provider: p.provider === 'ai_studio' ? 'gemini' : 'vertex',
+        mode: p.mode === 'realtime' ? 'normal' : 'batch',
+        modelName: p.model || p.modelName
+      });
+
+      data.value.settings.aiPhases = {
+        ocr: mapToUi(backendConfig.ocr),
+        learning: mapToUi(backendConfig.learning),
+        conversion: mapToUi(backendConfig.conversion),
+        optimization: mapToUi(backendConfig.optimization),
+      } as any;
+
+      console.log('Settings loaded from backend');
+    } catch (e) {
+      console.error('Error loading settings:', e);
+    }
+  };
+
+  const saveAiSettings = async () => {
+    try {
+      const payload = {
+        ...data.value.settings
+      };
+
+      const res = await fetch('/api/admin/config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Save failed');
+      }
+      return true;
+    } catch (e) {
+      console.error('Error saving settings:', e);
+      throw e;
+    }
+  };
+
   // Re-export types if needed by components
-  return { data, downloadCsv };
+  return { data, downloadCsv, fetchSettings, saveAiSettings };
 }
