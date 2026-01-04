@@ -228,7 +228,7 @@
 </template>
 
 <script setup lang="ts">
-import { aaa_useClientList } from '@/composables/useClientList';
+import { aaa_useClientList } from '@/composables/useClientListRPC';
 
 // Logic is strictly imported from the Composable
 const {

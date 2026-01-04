@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import conversionRoute from './routes/conversion'
+import clientsRoute from './routes/clients'
 
 const app = new Hono()
 
@@ -41,6 +42,7 @@ const routes = app
         })
     })
     .route('/api/conversion', conversionRoute) // Mount data conversion route
+    .route('/api/clients', clientsRoute) // Mount Clients BFF
     .get('/api/tax-options', (c) => {
         const rawData = [
             { label: '課税売上 10%', value: 'tax_10', rate: 0.1, code: '110' },
