@@ -26,12 +26,12 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/journal-status',
     name: 'ScreenB_Status',
-    component: () => import('../components/ScreenB_JournalStatus.vue')
+    component: () => import('../views/ScreenB_JournalStatus.vue')
   },
   {
     path: '/jobs/:code',
     name: 'ScreenB_JournalStatus',
-    component: () => import('../components/ScreenB_JournalStatus.vue'),
+    component: () => import('../views/ScreenB_JournalStatus.vue'),
     props: true
   },
   {

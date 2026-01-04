@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import conversionRoute from './routes/conversion'
 import clientsRoute from './routes/clients'
+import journalStatusRoute from './routes/journal-status'
 
 const app = new Hono()
 
@@ -21,7 +22,7 @@ const TaxOptionSchema = z.object({
 
 const JournalDataSchema = z.object({
     id: z.string(),
-    date: z.string().default(() => new Date().toISOString().split('T')[0]),
+    date: z.string().default(new Date().toISOString().split('T')[0] || ''),
     debit: z.array(z.object({
         account: z.string(),
         amount: z.number().int(),
@@ -43,6 +44,7 @@ const routes = app
     })
     .route('/api/conversion', conversionRoute) // Mount data conversion route
     .route('/api/clients', clientsRoute) // Mount Clients BFF
+    .route('/api/journal-status', journalStatusRoute) // Mount Journal Status BFF (Screen B)
     .get('/api/tax-options', (c) => {
         const rawData = [
             { label: '課税売上 10%', value: 'tax_10', rate: 0.1, code: '110' },
