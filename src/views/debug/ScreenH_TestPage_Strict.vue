@@ -422,10 +422,10 @@ function navigateToTask(client: MockClient, type: FilterType) {
             router.push({ name: 'ScreenB_Status' });
             break;
         case 'exportCount':
-            router.push({ name: 'aaa_DataConversion' });
+            router.push({ name: 'DataConversion' });
             break;
         case 'filingCount':
-            router.push({ name: 'aaa_DataConversion' });
+            router.push({ name: 'DataConversion' });
             break;
         case 'learningCount':
             router.push({ name: 'ScreenD' });
@@ -508,7 +508,7 @@ const allClients = ref<MockClient[]>([
 const filteredClients = computed(() => {
     if (!activeFilter.value) return allClients.value;
     return allClients.value.filter(client => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const val = (client as any)[activeFilter.value!];
         return typeof val === 'number' && val > 0;
     });

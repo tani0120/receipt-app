@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import {
   AI_PROMPTS,
   GAS_LOGIC_DEFINITIONS
-} from '@/composables/useAccountingSystem';
+} from '@/constants/system_constants';
 
 // ========================================================================
 // 📊 Dashboard Interfaces (Strict Typed Contract)
@@ -447,7 +447,7 @@ const MOCK_DATA: DashboardData = {
   }
 };
 
-export function aaa_useAdminDashboard() {
+export function useAdminDashboard() {
   const data = ref<DashboardData>(MOCK_DATA);
   const downloadCsv = async () => {
     // Mock CSV Download

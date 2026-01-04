@@ -228,7 +228,7 @@
 </template>
 
 <script setup lang="ts">
-import { aaa_useClientList } from '@/composables/useClientListRPC';
+import { useClientListRPC } from '@/composables/useClientListRPC';
 
 // Logic is strictly imported from the Composable
 const {
@@ -251,5 +251,5 @@ const {
     // UI Helpers
     getStatusLabel,
     getStatusClass
-} = aaa_useClientList();
+} = useClientListRPC();
 </script>

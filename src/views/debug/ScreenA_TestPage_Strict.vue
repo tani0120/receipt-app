@@ -78,7 +78,7 @@
       </table>
     </div>
     <!-- Modal Logic included in Spec Part 3 -->
-    <aaa_ClientModal
+    <ClientModal
         :visible="isClientModalVisible"
         :mode="clientModalMode"
         :initial-data="selectedClient"
@@ -92,14 +92,14 @@
 // [Internal_Import_Dependency] Line:92 - 96
 import { ref, reactive, computed, inject, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
+import { useAccountingSystem } from '@/composables/useAccountingSystem';
 import type { Client } from '@/types/firestore';
-import aaa_ClientModal from '../../components/ClientModal.vue'; // Adjusted relative path for debug view
+import ClientModal from '../../components/ClientModal.vue'; // Adjusted relative path for debug view
 
 // [Internal_Logic_Flow] Lines 98-106
 const router = useRouter();
-const { clients, fetchClients } = aaa_useAccountingSystem();
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const { clients, fetchClients } = useAccountingSystem();
+
 const showToast = inject<any>('showToast');
 
 onMounted(() => {
@@ -120,7 +120,7 @@ const selectedClient = ref<Client | null>(null);
 // [Internal_Computed_Logic] Line:119 - sortedMasterClients
 const sortedMasterClients = computed(() => {
     // [Internal_Function_Definition] Line:121
-    const mappedList = (clients.value || []).map((c: Client) => {
+    const mappedList = (clients.value || []).map((c: any) => {
         const code = c.clientCode || '???';
         const name = c.companyName || '（名称未設定）';
 
@@ -177,19 +177,19 @@ const sortedMasterClients = computed(() => {
 });
 
 // [Internal_Function_Definition] Method Actions
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const goToClientDashboard = (client: any) => {
     router.push({ name: 'ScreenA_Detail', params: { code: client.code } });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const openClientModal = (mode: 'new' | 'edit', client: any | null = null) => {
     clientModalMode.value = mode;
     selectedClient.value = client;
     isClientModalVisible.value = true;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const handleClientSave = (formData: any) => {
     console.log('Save requested', formData);
     if (showToast) showToast('機能実装中: 保存処理', 'info');

@@ -7,7 +7,7 @@
 
         <div class="flex justify-between items-start mb-2 pl-2">
             <div class="flex items-center gap-2 mb-1">
-                <aaa_G_StatusBadge :isDownloaded="log.isDownloaded" />
+                <G_StatusBadge :isDownloaded="log.isDownloaded" />
                 <span class="text-slate-400 font-mono text-xs font-bold">{{ log.id }}</span>
             </div>
             <!-- Date is secondary info now -->
@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import aaa_G_StatusBadge from './G_StatusBadge.vue';
+import G_StatusBadge from './G_StatusBadge.vue';
 import type { ConversionLogUi } from '@/types/ScreenG_ui.type';
 
 defineProps<{

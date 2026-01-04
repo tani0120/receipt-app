@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
-const { adminData } = aaa_useAccountingSystem();
+import { onMounted } from 'vue';
+import { useAdminDashboardRPC } from '@/composables/useAdminDashboardRPC';
+
+const { adminData, fetchAdminData } = useAdminDashboardRPC();
+
+onMounted(() => {
+    fetchAdminData();
+});
 </script>
 
 <template>

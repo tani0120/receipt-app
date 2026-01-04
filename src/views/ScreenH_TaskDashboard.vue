@@ -422,10 +422,10 @@ function navigateToTask(client: MockClient, type: FilterType) {
             router.push({ name: 'ScreenB_Status' });
             break;
         case 'exportCount':
-            router.push({ name: 'aaa_DataConversion' });
+            router.push({ name: 'DataConversion' });
             break;
         case 'filingCount':
-            router.push({ name: 'aaa_DataConversion' });
+            router.push({ name: 'DataConversion' });
             break;
         case 'learningCount':
             router.push({ name: 'ScreenD' });

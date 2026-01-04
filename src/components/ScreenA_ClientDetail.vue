@@ -155,8 +155,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
-import { mapClientDetailApiToUi } from '@/composables/ClientDetailMapper';
+import { useClientListRPC } from '@/composables/useClientListRPC';
 import ScreenA_Detail_EditModal from './ScreenA_Detail_EditModal.vue';
 import ScreenA_Detail_ConfirmModal from './ScreenA_Detail_ConfirmModal.vue';
 import ScreenA_Detail_AIProposalEditModal from './ScreenA_Detail_AIProposalEditModal.vue';
@@ -165,12 +164,13 @@ import ScreenA_Detail_AIKnowledgeEditModal from './ScreenA_Detail_AIKnowledgeEdi
 import ScreenA_Detail_FileStorage from './ScreenA_Detail_FileStorage.vue';
 import ScreenA_Detail_AIProposalCard from './ScreenA_Detail_AIProposalCard.vue';
 import ScreenA_Detail_AIKnowledgeCard from './ScreenA_Detail_AIKnowledgeCard.vue';
+import type { ClientUi } from '@/types/ui.type';
 
 const route = useRoute();
-const { clients, fetchClients, updateClient } = aaa_useAccountingSystem();
+const { clients, fetchClients, editingClient, handleUpdateClient } = useClientListRPC();
 const isEditModalOpen = ref(false);
 
-// Confirm Modal State (Fixed Type Definition for Delete)
+// Confirm Modal State
 const confirmModal = ref({
     visible: false,
     type: 'approve' as 'approve' | 'reject' | 'delete'
@@ -195,25 +195,8 @@ const currentKnowledge = ref(`【固有ルール】
 
 
 const code = computed(() => route.params.code as string);
-const rawClient = computed(() => clients.value.find(c => c.clientCode === code.value));
+const client = computed(() => clients.value.find(c => c.clientCode === code.value) || null);
 
-const localClient = ref<any>(null);
-
-const client = computed(() => {
-    if (localClient.value) {
-        const form = localClient.value;
-        const base = mapClientDetailApiToUi(rawClient.value || {});
-        return {
-            ...base,
-            companyName: form.name,
-            clientCode: form.code,
-            staffName: form.staffName,
-            fiscalMonth: form.fiscalMonth,
-            accountingSoftware: form.settings.software,
-        };
-    }
-    return mapClientDetailApiToUi(rawClient.value || {});
-});
 
 const handleSave = async (formData: any) => {
     // Helper to map consumption tax composite
@@ -227,7 +210,7 @@ const handleSave = async (formData: any) => {
         simplifiedTaxCategory = Number(formData.settings.consumptionTax.split('_')[1]);
     }
 
-    const payload = {
+    const payload: ClientUi = {
         clientCode: formData.code,
         companyName: formData.name,
         repName: formData.rep,
@@ -244,7 +227,13 @@ const handleSave = async (formData: any) => {
         consumptionTaxMode: consumptionTaxMode as 'general' | 'simplified' | 'exempt',
         simplifiedTaxCategory: simplifiedTaxCategory as 1 | 2 | 3 | 4 | 5 | 6 | undefined,
 
-        defaultTaxRate: 10, // Default if not in form
+        // Defaulting missing fields to match ClientUi type (as we are constructing a full object)
+        // If the API allows partial updates, we might need a different approach, but useClientListRPC expects full object in editingClient usually for the modal.
+        // Actually handleUpdateClient sends whatever is in editingClient.
+        // We should merge with existing client data to be safe.
+        ...(client.value || {}), // Merge existing
+
+        // Overwrite with form data
         taxMethod: formData.settings.taxMethod as 'inclusive' | 'exclusive',
 
         // New Fields
@@ -254,13 +243,12 @@ const handleSave = async (formData: any) => {
         invoiceRegistrationNumber: formData.settings.invoiceRegistrationNumber,
 
         calculationMethod: (formData.settings.calcMethod === '発生主義' ? 'accrual' : (formData.settings.calcMethod === '現金主義' ? 'cash' : 'interim_cash')) as 'accrual' | 'cash' | 'interim_cash',
-    };
+    } as ClientUi;
 
     try {
-        await updateClient(payload.clientCode, payload);
+        editingClient.value = payload;
+        await handleUpdateClient();
         isEditModalOpen.value = false;
-        // localClient logic removed as updateClient updates the source of truth
-        localClient.value = null;
     } catch (e) {
         console.error(e);
         alert('更新に失敗しました');

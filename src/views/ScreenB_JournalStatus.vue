@@ -2,9 +2,13 @@
   <div class="h-full flex flex-col bg-gray-50 font-sans text-slate-800">
      <!-- Container Component: Handles Data & Modals Only -->
      <ScreenB_JournalTable
+        v-if="!isLoading"
         :jobs="sortedJobs"
         @action="handleTableAction"
      />
+     <div v-else class="flex justify-center items-center h-64">
+        <i class="fa-solid fa-spinner fa-spin text-3xl text-blue-500"></i>
+     </div>
 
     <!-- Modals (Kept in Container) -->
     <!-- Rescue Modal -->
@@ -68,16 +72,19 @@
 import { reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 // Import from Mirror Composables safely
-import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
+import { useJournalStatusRPC } from '@/composables/useJournalStatusRPC';
 import type { JournalStatusUi } from '@/types/ScreenB_ui.type';
-import { mapJournalStatusApiToUi } from '@/composables/JournalStatusMapper';
+// Mapper is internal to RPC now, or handled by the view if needed.
+// But useJournalStatusRPC should return "journalStatusList" which is already UI type.
 import ScreenB_JournalTable from '@/components/ScreenB_JournalTable.vue';
 
 const router = useRouter();
-const { jobs, fetchClients } = aaa_useAccountingSystem();
+const { journalStatusList, fetchJournalStatus, isLoading } = useJournalStatusRPC();
+
+// Alias for compatibility (Removed as unused)
 
 onMounted(() => {
-    fetchClients();
+    fetchJournalStatus();
 });
 
 const filters = reactive({
@@ -93,13 +100,13 @@ const modal = reactive({
     data: {} as any
 });
 
-// Ironclad: Pure Filter & Sort Logic. With Mapper Transformation.
+// Ironclad: Pure Filter & Sort Logic.
 const sortedJobs = computed<JournalStatusUi[]>(() => {
-    const listProp = jobs.value || [];
+    const listProp = journalStatusList.value || [];
 
-    // 1. Map FIRST (Ironclad Requirement: UI only sees JournalStatusUi)
-    // Note: jobs.value is JobUi[] currently, so we map it to JournalStatusUi
-    let list: JournalStatusUi[] = listProp.map(j => mapJournalStatusApiToUi(j));
+    // 1. Map FIRST (RPC returns UI types directly now, so no mapping needed if RPC is correct)
+    // If useJournalStatusRPC returns JournalStatusUi[], we use it directly.
+    let list: JournalStatusUi[] = listProp;
 
     // Filter Logic
     if (filters.actionStatus) {

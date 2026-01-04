@@ -244,10 +244,10 @@
 <script setup lang="ts">
 import { reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { aaa_useAccountingSystem, ClientActionType } from '@/composables/useAccountingSystem';
+import { useAccountingSystem, ClientActionType } from '@/composables/useAccountingSystem';
 
 const router = useRouter();
-const { clients, jobs, subscribeToAllJobs, fetchClients } = aaa_useAccountingSystem();
+const { clients, jobs, subscribeToAllJobs, fetchClients } = useAccountingSystem();
 
 // --- ViewModel Interface ---
 interface ClientViewModel {

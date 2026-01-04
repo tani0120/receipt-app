@@ -6,6 +6,10 @@ import { zValidator } from '@hono/zod-validator'
 import conversionRoute from './routes/conversion'
 import clientsRoute from './routes/clients'
 import journalStatusRoute from './routes/journal-status'
+import journalEntry from './routes/journal-entry'
+import collection from './routes/collection'
+import aiRules from './routes/ai-rules'
+import admin from './routes/admin'
 
 const app = new Hono()
 
@@ -42,9 +46,13 @@ const routes = app
             message: 'Hello form Hono!',
         })
     })
-    .route('/api/conversion', conversionRoute) // Mount data conversion route
-    .route('/api/clients', clientsRoute) // Mount Clients BFF
-    .route('/api/journal-status', journalStatusRoute) // Mount Journal Status BFF (Screen B)
+    .route('/api/conversion', conversionRoute)
+    .route('/api/clients', clientsRoute)
+    .route('/api/journal-status', journalStatusRoute)
+    .route('/api/journal-entry', journalEntry)
+    .route('/api/collection', collection)
+    .route('/api/ai-rules', aiRules)
+    .route('/api/admin', admin)
     .get('/api/tax-options', (c) => {
         const rawData = [
             { label: '課税売上 10%', value: 'tax_10', rate: 0.1, code: '110' },

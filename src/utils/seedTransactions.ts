@@ -2,7 +2,6 @@ import { FirestoreRepository } from '../services/firestoreRepository';
 import type { Job, JobStatus, JournalLine } from '../types/firestore';
 import { Timestamp } from 'firebase/firestore';
 
-// Copied from aaa_useAccountingSystem.ts to avoid modifying it
 const MOCK_JOURNAL_ENTRIES = [
     {
         id: 1,

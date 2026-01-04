@@ -95,13 +95,13 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
 import { ref } from 'vue';
-import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
+import { useGlobalState } from '@/composables/useGlobalState';
 import { seedRichJobs } from '@/utils/seedRichJobs';
-import { aaa_useDataConversion } from '@/composables/useDataConversion';
+import { useDataConversion } from '@/composables/useDataConversion';
 
 const route = useRoute();
-const { currentUser, isEmergencyStopped, toggleEmergencyStop } = aaa_useAccountingSystem();
-const { pendingDownloadCount } = aaa_useDataConversion();
+const { currentUser, isEmergencyStopped, toggleEmergencyStop } = useGlobalState();
+const { pendingDownloadCount } = useDataConversion();
 
 const isActive = (path: string) => route.path.startsWith(path);
 

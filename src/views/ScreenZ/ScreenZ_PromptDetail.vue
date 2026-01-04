@@ -6,7 +6,7 @@ import {
     SPECIFIC_RISK_RULES,
     SOFTWARE_TAX_MAPPINGS_TEXT,
     SOFTWARE_EXPORT_CSV_SCHEMAS
-} from '@/composables/useAccountingSystem';
+} from '@/constants/system_constants';
 
 const props = defineProps<{
     promptId: string;

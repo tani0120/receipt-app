@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { mapJournalStatusApiToUi } from '../JournalStatusMapper';
 import type { JournalStatusUi } from '../../types/ScreenB_ui.type';
 
-describe('aaa_JournalStatusMapper (Ironclad Fuzzing)', () => {
+describe('JournalStatusMapper (Ironclad Fuzzing)', () => {
 
     // ----------------------------------------------------------------
     // Happy Path

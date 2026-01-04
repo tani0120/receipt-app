@@ -56,7 +56,10 @@ const JournalStatusUiSchema = z.object({
     driveLinks: z.object({
         export: z.string().default(''),
         archive: z.string().default('')
-    })
+    }),
+
+    // Standardized Actions Array
+    actions: z.array(JournalStatusActionSchema).default([])
 });
 
 // --- 2. Helper Logic (Ported from Mapper & Business Logic) ---
@@ -165,11 +168,16 @@ const route = app.get('/', (c) => {
             primaryAction: mapAction(raw.primaryAction),
             nextAction: mapAction(raw.nextAction),
 
-            // Drive Links specific to this job context
             driveLinks: {
                 export: `https://drive.google.com/drive/folders/mock_${raw.clientCode}_export`,
                 archive: `https://drive.google.com/drive/folders/mock_${raw.clientCode}_archive`
-            }
+            },
+
+            // Standardized Actions Field (Union of primary and next)
+            actions: [
+                mapAction(raw.primaryAction),
+                mapAction(raw.nextAction)
+            ].filter(a => a.type !== 'none')
         };
     });
 

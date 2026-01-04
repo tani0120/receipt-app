@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col bg-white rounded-lg shadow border border-gray-200 overflow-hidden animate-fade-in">
+  <div class="h-full flex flex-col bg-white rounded-lg shadow border border-gray-200 overflow-hidden animate-fade-in relative">
 
     <!-- ========================================== -->
     <!-- VIEW: RULE EDITOR (DETAIL)                 -->
@@ -10,7 +10,7 @@
             <!-- Client Indicator -->
             <div class="px-4 py-2 bg-indigo-900 text-white flex justify-between items-center shadow-inner">
                 <div class="flex items-center gap-2">
-                    <button @click="currentMode = 'list'" class="mr-2 hover:bg-indigo-700 p-1 rounded transition text-indigo-200 hover:text-white">
+                    <button @click="goBack" class="mr-2 hover:bg-indigo-700 p-1 rounded transition text-indigo-200 hover:text-white">
                         <i class="fa-solid fa-arrow-left"></i>
                     </button>
                     <i class="fa-solid fa-building"></i>
@@ -30,7 +30,6 @@
                 <div class="font-bold text-slate-700 text-sm flex items-center gap-2">
                     <i class="fa-solid fa-robot text-purple-500"></i> AI自動仕訳ルール管理
                 </div>
-                <!-- Metrics (Mock) -->
                 <div class="hidden md:flex gap-3 text-xs">
                     <span class="bg-white border border-gray-200 px-2 py-0.5 rounded text-gray-600">
                         <span class="font-bold text-slate-800">{{ rules.length }}</span> 件
@@ -50,7 +49,7 @@
                         :class="filterStatus === 'all' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'"
                     >すべて</button>
                     <button
-                        @click="filterStatus === 'active'"
+                        @click="filterStatus = 'active'"
                         class="px-2 py-1 rounded transition"
                         :class="filterStatus === 'active' ? 'bg-white shadow text-emerald-600' : 'text-gray-500 hover:text-gray-700'"
                     >有効</button>
@@ -61,7 +60,7 @@
                     >ドラフト</button>
                 </div>
 
-                <button @click="handleNew" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-bold shadow-md transition flex items-center gap-2">
+                <button @click="openNewRuleModal" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-bold shadow-md transition flex items-center gap-2">
                     <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">新規ルール</span>
                 </button>
             </div>
@@ -84,7 +83,7 @@
                     v-for="rule in filteredRules"
                     :key="rule.id"
                     :rule="rule"
-                    @click="handleEdit(rule)"
+                    @edit="handleEdit(rule)"
                     @toggle="toggleStatus(rule)"
                 />
             </div>
@@ -109,14 +108,15 @@
                  <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                     <i class="fa-solid fa-building-user text-indigo-600"></i> AIルール管理 - 顧問先選択
                 </h2>
-                <p class="text-xs text-gray-500 mt-1">ルールを設定・管理する顧問先を選択してください</p>
+                <p class="text-xs text-gray-500 mt-1">ルールを設定・管理する顧問先を選択してください (BFF Mock Data)</p>
             </div>
+            <div v-if="loading" class="text-indigo-600"><i class="fa-solid fa-spinner fa-spin"></i></div>
         </div>
 
         <!-- Client Grid -->
         <div class="flex-1 overflow-auto p-6 bg-slate-50/50">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                 <div v-for="client in mockClients" :key="client.id"
+                 <div v-for="client in clients" :key="client.id"
                     @click="selectClient(client)"
                     class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition cursor-pointer group"
                 >
@@ -152,50 +152,84 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
-import { useAIRules } from '@/composables/useAIRules';
+import { onMounted, ref, computed } from 'vue';
+import { useAIRulesRPC, type ClientWithRulesUi } from '@/composables/useAIRulesRPC';
+import type { LearningRuleUi } from '@/types/LearningRuleUi';
 import RuleCard from '@/components/RuleCard.vue';
 import RuleDetailModal from '@/components/RuleDetailModal.vue';
-import type { LearningRuleUi } from '@/types/LearningRuleUi';
 
 // --- State ---
 type ViewMode = 'list' | 'detail';
 const currentMode = ref<ViewMode>('list');
-const selectedClient = ref<{id: string, name: string, activeRules: number, totalRules: number} | null>(null);
+const selectedClient = ref<ClientWithRulesUi | null>(null);
 
-// --- Mock Clients ---
-const mockClients = ref([
-    { id: 'C001', name: '株式会社サンプルクライアント', activeRules: 89, totalRules: 124 },
-    { id: 'C002', name: '合同会社テックイノベーション', activeRules: 12, totalRules: 15 },
-    { id: 'C003', name: '鈴木商店', activeRules: 45, totalRules: 48 },
-    { id: 'C004', name: 'グローバル貿易株式会社', activeRules: 204, totalRules: 230 },
-]);
+const { clients, rules, loading, fetchClients, fetchRules, createRule, updateRule } = useAIRulesRPC();
 
-// --- Rule Logic (Only active when client selected) ---
-const {
-    rules,
-    filterStatus,
-    filteredRules,
-    editingRule,
-    isModalOpen,
-    handleNew,
-    handleEdit,
-    handleSave,
-    toggleStatus,
-    loading,
-    fetchRules
-} = useAIRules();
+// --- Logic ---
+const filterStatus = ref<'all'|'active'|'draft'>('all');
+const editingRule = ref<LearningRuleUi|null>(null);
+const isModalOpen = ref(false);
 
-// --- Actions ---
-const selectClient = (client: typeof mockClients.value[0]) => {
+const filteredRules = computed(() => {
+    if (filterStatus.value === 'all') return rules.value;
+    return rules.value.filter(r => r.status === filterStatus.value);
+});
+
+onMounted(() => {
+    fetchClients();
+});
+
+const selectClient = async (client: ClientWithRulesUi) => {
     selectedClient.value = client;
-    // In a real app, we would load rules for this client here
+    await fetchRules(client.id);
     currentMode.value = 'detail';
 };
 
-onMounted(() => {
-    fetchRules('client-abc');
-});
+const goBack = () => {
+    currentMode.value = 'list';
+    selectedClient.value = null;
+    rules.value = [];
+};
+
+const openNewRuleModal = () => {
+    editingRule.value = null; // Create Mode
+    isModalOpen.value = true;
+};
+
+const handleEdit = (rule: LearningRuleUi) => {
+    editingRule.value = rule;
+    isModalOpen.value = true;
+};
+
+const handleSave = async (ruleData: LearningRuleUi) => {
+    if (!selectedClient.value) return;
+    try {
+        if (ruleData.id && ruleData.id.startsWith('new-')) {
+            // Create (strip ID prefix in reality, but RPC ignores it or we manually create without ID)
+            await createRule(selectedClient.value.id, ruleData);
+        } else if (ruleData.id) {
+            // Update
+            await updateRule(selectedClient.value.id, ruleData.id, ruleData);
+        } else {
+             await createRule(selectedClient.value.id, ruleData);
+        }
+        isModalOpen.value = false;
+        alert('保存しました');
+    } catch (e) {
+        alert('保存に失敗しました');
+    }
+};
+
+const toggleStatus = async (rule: LearningRuleUi) => {
+    if (!selectedClient.value) return;
+    const newStatus = rule.status === 'active' ? 'inactive' : 'active';
+    try {
+        await updateRule(selectedClient.value.id, rule.id, { status: newStatus });
+    } catch (e) {
+        alert('ステータス更新に失敗しました');
+    }
+};
+
 </script>
 
 <style scoped>

@@ -149,9 +149,9 @@
                         <div class="font-bold text-sm text-slate-800 mb-2 pl-2">{{ log.clientName }}</div>
 
                         <div class="flex items-center gap-2 mb-3 pl-2">
-                            <span class="text-xs font-bold bg-gray-100 px-2 py-1 rounded text-gray-700 transition hover:bg-gray-200">{{ log.sourceSoftware }}</span>
+                            <span class="text-xs font-bold bg-gray-100 px-2 py-1 rounded text-gray-700 transition hover:bg-gray-200">{{ log.sourceSoftwareLabel }}</span>
                             <i class="fa-solid fa-arrow-right text-gray-400 text-xs"></i>
-                            <span class="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded transition hover:bg-green-200">{{ log.targetSoftware === 'MF' ? 'マネーフォワード' : (log.targetSoftware === 'Freee' ? 'freee' : '弥生会計') }}</span>
+                            <span class="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded transition hover:bg-green-200">{{ log.targetSoftwareLabel === 'MF' ? 'マネーフォワード' : (log.targetSoftwareLabel === 'Freee' ? 'freee' : '弥生会計') }}</span>
                         </div>
 
                         <a :href="log.downloadUrl" :download="log.fileName" @click="handleDownload(log.id)" class="bg-slate-50 rounded p-2 pl-3 flex items-center justify-between group-hover:bg-slate-100 transition text-decoration-none">
@@ -174,10 +174,10 @@
 <script setup lang="ts">
 // [Internal_Import_Dependency] Line:204
 import { ref, computed } from 'vue';
-import { aaa_useDataConversion } from '@/composables/useDataConversion';
+import { useDataConversion } from '@/composables/useDataConversion';
 
 // [Internal_Logic_Flow] Line:207
-const { logs, addLog, markAsDownloaded } = aaa_useDataConversion();
+const { logs, addLog, markAsDownloaded } = useDataConversion();
 const isDragging = ref(false);
 const isProcessing = ref(false);
 const uploadedFile = ref<File | null>(null);

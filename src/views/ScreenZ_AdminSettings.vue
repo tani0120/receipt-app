@@ -154,7 +154,7 @@
     </div>
 
     <!-- Modals -->
-    <aaa_Z_StaffModal
+    <Z_StaffModal
         :visible="isStaffModalOpen"
         @close="isStaffModalOpen = false"
         @save="handleStaffSave"
@@ -188,7 +188,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { aaa_useAdminDashboard } from '@/composables/useAdminDashboard';
+import { useAdminDashboard } from '@/composables/useAdminDashboard';
 import type { RuleCategory, PromptItem } from '@/composables/useAdminDashboard';
 
 // Components
@@ -199,9 +199,9 @@ import ScreenZ_Rules from './ScreenZ/ScreenZ_Rules.vue';
 import ScreenZ_Prompts from './ScreenZ/ScreenZ_Prompts.vue';
 import ScreenZ_RuleDetail from './ScreenZ/ScreenZ_RuleDetail.vue';
 import ScreenZ_PromptDetail from './ScreenZ/ScreenZ_PromptDetail.vue';
-import aaa_Z_StaffModal from './ScreenZ/Z_StaffModal.vue';
+import Z_StaffModal from './ScreenZ/Z_StaffModal.vue';
 
-const { data } = aaa_useAdminDashboard();
+const { data } = useAdminDashboard();
 
 // View State
 type ViewType = 'dashboard' | 'settings' | 'masters' | 'rules' | 'prompts' | 'rules_detail' | 'prompts_detail';
@@ -305,7 +305,7 @@ const handleStaffDelete = () => {
 // CSV Export
 const isCsvModalOpen = ref(false);
 const isDownloading = ref(false);
-const { downloadCsv } = aaa_useAdminDashboard();
+const { downloadCsv } = useAdminDashboard();
 
 const handleCsvDownload = async () => {
     isDownloading.value = true;

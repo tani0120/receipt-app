@@ -36,8 +36,8 @@ export function useJournalStatusRPC() {
     };
 
     return {
-        jobs,
-        loading,
+        journalStatusList: jobs,
+        isLoading: loading,
         error,
         fetchJournalStatus
     };
