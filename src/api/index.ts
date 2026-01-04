@@ -1,16 +1,21 @@
 
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
+import conversionRoute from './routes/conversion'
 
 const app = new Hono()
 
-// --- Data Models (Shared, ideally moved to a separate file later) ---
+// Enable CORS for all routes (necessary when frontend (5173) calls backend (3000))
+app.use('/*', cors())
+
+// --- Data Models ---
 const TaxOptionSchema = z.object({
     label: z.string(),
     value: z.string(),
-    rate: z.number().default(0.1), // Fallback: default to 10%
-    code: z.string().default('unknown'), // Fallback: default code
+    rate: z.number().default(0.1),
+    code: z.string().default('unknown'),
 })
 
 const JournalDataSchema = z.object({
@@ -19,7 +24,7 @@ const JournalDataSchema = z.object({
     debit: z.array(z.object({
         account: z.string(),
         amount: z.number().int(),
-        taxType: z.string().default('10%'), // Fallback
+        taxType: z.string().default('10%'),
     })).default([]),
     credit: z.array(z.object({
         account: z.string(),
@@ -29,22 +34,18 @@ const JournalDataSchema = z.object({
 })
 
 // --- API Routes ---
-
 const routes = app
     .get('/api/hello', (c) => {
         return c.json({
             message: 'Hello form Hono!',
         })
     })
+    .route('/api/conversion', conversionRoute) // Mount data conversion route
     .get('/api/tax-options', (c) => {
-        // Mock data source (usually from DB)
-        // Here we ensure data strictly follows schema before sending
         const rawData = [
             { label: '課税売上 10%', value: 'tax_10', rate: 0.1, code: '110' },
             { label: '非課税', value: 'tax_free', rate: 0, code: '999' },
         ]
-
-        // Validate output with Zod to guarantee shape to frontend
         const validatedData = z.array(TaxOptionSchema).parse(rawData)
         return c.json(validatedData)
     })
@@ -52,7 +53,6 @@ const routes = app
         '/api/journal',
         zValidator('json', JournalDataSchema, (result, c) => {
             if (!result.success) {
-                // Fallback strategy on ERROR:
                 return c.json({ success: false, message: 'Invalid data', errors: result.error }, 400)
             }
         }),

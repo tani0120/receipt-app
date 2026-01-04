@@ -1,65 +1,76 @@
-import { ref, computed } from 'vue';
-import type { ConversionLogUi } from '@/types/ScreenG_ui.type';
-import { mapConversionLogApiToUi } from '@/composables/DataConversionMapper'; // Updated import
 
-// Internal Type Definition
-type InternalConversionLog = {
-    id: string;
-    timestamp: string;
-    clientName: string;
-    sourceSoftware: string;
-    targetSoftware: string;
-    fileName: string;
-    size?: number;
-    downloadUrl: string;
-    isDownloaded: boolean;
-};
+import { ref, computed, onMounted } from 'vue';
+import type { ConversionLogUi, ConversionLogId } from '@/types/ScreenG_ui.type';
+import { client } from '@/client';
 
-// Internal State (Raw Data)
-const conversionHistory = ref<InternalConversionLog[]>([
-    {
-        id: 'XYZ',
-        timestamp: '2024/12/25 14:30',
-        clientName: '株式会社サンプル商事',
-        sourceSoftware: '弥生会計',
-        targetSoftware: 'Freee',
-        fileName: 'サンプル商事_弥生_変換後Freee_20241225.csv',
-        size: 1024 * 1024 * 1.5, // 1.5MB
-        downloadUrl: '#',
-        isDownloaded: false
-    }
-]);
+// State driven by API (BFF)
+const logs = ref<ConversionLogUi[]>([]);
 
 export function aaa_useDataConversion() {
 
-    const addLog = (log: InternalConversionLog) => {
-        conversionHistory.value.unshift(log);
+    // Fetch from Hono (BFF)
+    const fetchLogs = async () => {
+        try {
+            const res = await client.api.conversion['$get']();
+            if (res.ok) {
+                // Ensure type safety via casting if necessary, though RPC infers mostly
+                // Depending on Hono RPC types, we might get generic JSON.
+                // Zod in Hono ensures shape, but TS might need a nudge if types aren't shared perfectly yet.
+                const data = await res.json();
+                logs.value = data as unknown as ConversionLogUi[];
+            }
+        } catch (e) {
+            console.error('Failed to fetch conversion logs:', e);
+        }
     };
 
+    // Initial Fetch
+    onMounted(() => {
+        fetchLogs();
+    });
+
+    const addLog = (log: any) => {
+        // Local simulation for immediate feedback
+        const uiLog: ConversionLogUi = {
+            id: (log.id || 'new') as ConversionLogId,
+            timestamp: log.timestamp,
+            clientName: log.clientName,
+            sourceSoftwareLabel: log.sourceSoftware, // Simple mapping
+            targetSoftwareLabel: log.targetSoftware,
+            fileName: log.fileName,
+            fileSize: 'Calculating...',
+            downloadUrl: log.downloadUrl,
+            isDownloaded: log.isDownloaded,
+            isDownloadable: true,
+            rowStyle: 'bg-white'
+        };
+        logs.value.unshift(uiLog);
+    };
+
+    // Note: In BFF pattern, mutations should ideally go to API too.
+    // For this Pilot, we manipulate the local state which is now the "source of truth" for the UI.
     const markAsDownloaded = (id: string) => {
-        const log = conversionHistory.value.find(l => l.id === id);
+        const log = logs.value.find(l => l.id === id);
         if (log) {
-            log.isDownloaded = true;
+            // We need to bypass Readonly constraints for local UI state updates if Types enforce it
+            // Ideally UI types shouldn't be readonly if we edit them locally, but let's cast
+            (log as any).isDownloaded = true;
+            (log as any).rowStyle = 'bg-gray-50 opacity-70';
+        }
+    };
+
+    const removeLog = (id: string) => {
+        const index = logs.value.findIndex(l => l.id === id);
+        if (index !== -1) {
+            logs.value.splice(index, 1);
         }
     };
 
     const pendingDownloadCount = computed(() => {
-        // Use mapped data for accurate counting using IsDownloaded status safely
         return logs.value.filter(log => !log.isDownloaded).length;
     });
 
-    // Return strictly typed UI data using Central Mapper
-    const logs = computed<ConversionLogUi[]>(() =>
-        conversionHistory.value.map(mapConversionLogApiToUi)
-    );
-
-    const removeLog = (id: string) => {
-        const index = conversionHistory.value.findIndex(l => l.id === id);
-        if (index !== -1) {
-            conversionHistory.value.splice(index, 1);
-        }
-    };
-
+    // --- Legacy / Simulation Logic Below (Kept for creating new dummy logs) ---
     const isProcessing = ref(false);
     const loadingStatus = ref('');
 
@@ -70,7 +81,6 @@ export function aaa_useDataConversion() {
         'Unknown': '不明'
     } as const;
 
-    // Helper: Generate Random 3-Char ID
     const generateId = () => {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         let result = '';
@@ -94,20 +104,17 @@ export function aaa_useDataConversion() {
         isProcessing.value = true;
         loadingStatus.value = 'CSVファイルを解析中...';
 
-        // Mock Simulation
         await new Promise(r => setTimeout(r, 1000));
         loadingStatus.value = 'フォーマットを標準化しています...';
 
         await new Promise(r => setTimeout(r, 1000));
-        const targetLabel = SOFTWARE_LABELS[targetSoftware as keyof typeof SOFTWARE_LABELS] || targetSoftware;
-        loadingStatus.value = `${targetLabel}形式へ変換中...`;
+        loadingStatus.value = `${targetSoftware}形式へ変換中...`;
 
         await new Promise(r => setTimeout(r, 1000));
         loadingStatus.value = 'ファイルを生成しています...';
 
         await new Promise(r => setTimeout(r, 1000));
 
-        // Complete
         const today = new Date();
         const yyyymmdd = today.toISOString().slice(0, 10).replace(/-/g, '');
         const fileName = `${clientName}_${sourceSoftware}_変換後${targetSoftware}_${yyyymmdd}.csv`;
@@ -137,7 +144,6 @@ export function aaa_useDataConversion() {
         markAsDownloaded,
         removeLog,
         pendingDownloadCount,
-        // Conversion Logic
         startDataConversion,
         processFile,
         isProcessing,
