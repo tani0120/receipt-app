@@ -2,6 +2,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
+import { JournalService, FinalizePayloadSchema } from '../services/JournalService'
 
 const app = new Hono()
 
@@ -80,7 +81,7 @@ const JournalEntrySchema = z.object({
 
     // Actions (BFF Driven)
     actions: z.array(z.object({
-        id: z.string(), // e.g. 'save', 'approve', 'remand'
+        id: z.string(), // e.g. 'finalize', 'ai_apply'
         label: z.string(),
         disabled: z.boolean().default(false),
         style: z.string().optional() // 'primary', 'danger', etc.
@@ -194,21 +195,35 @@ const route = app
     })
 
     // PUT /:id - Update Journal Entry
-    .put('/:id', zValidator('json', UpdateJournalEntrySchema), async (c) => {
+    // Action Dispatcher Endpoint (RPC Style)
+    .post('/:id/action', async (c) => {
         const id = c.req.param('id')
-        const data = c.req.valid('json')
+        const { action, payload } = await c.req.json()
 
-        console.log(`[BFF] Updating Journal Entry ${id}`, data)
+        console.log(`[BFF] Journal Action: ${action} for ${id}`, payload)
 
-        // Mock Update Logic
-        if (MOCK_JOURNAL_DB[id]) {
-            MOCK_JOURNAL_DB[id].lines = data.lines
-            MOCK_JOURNAL_DB[id].date = data.transactionDate
-            MOCK_JOURNAL_DB[id].summary = data.summary
-            if (data.status) MOCK_JOURNAL_DB[id].status = data.status
+        try {
+            switch (action) {
+                case 'finalize':
+                case 'confirmed': // Mapping UI action name if inconsistent
+                    // Validate payload
+                    const finalizeData = FinalizePayloadSchema.parse({
+                        jobId: id,
+                        lines: payload.lines,
+                        summary: payload.summary,
+                        transactionDate: payload.transactionDate
+                    });
+
+                    const result = await JournalService.finalize(finalizeData);
+                    return c.json(result);
+
+                default:
+                    return c.json({ success: false, message: 'Invalid Action' }, 400);
+            }
+        } catch (e: any) {
+            console.error('[BFF] Action Error:', e);
+            return c.json({ success: false, message: e.message || 'Action failed' }, 500);
         }
-
-        return c.json({ success: true, message: '保存しました', updatedId: id })
     })
 
 export default route
