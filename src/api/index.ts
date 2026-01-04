@@ -11,6 +11,7 @@ import collection from './routes/collection'
 import aiRules from './routes/ai-rules'
 import aiModels from './routes/ai-models'
 import admin from './routes/admin'
+import worker from './routes/worker'
 
 const app = new Hono()
 
@@ -54,6 +55,7 @@ const routes = app
     .route('/api/collection', collection)
     .route('/api/ai-rules', aiRules)
     .route('/api/admin', admin)
+    .route('/api/worker', worker)
     .route('/api/ai', aiModels)
     .get('/api/tax-options', (c) => {
         const rawData = [

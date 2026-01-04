@@ -143,13 +143,104 @@ export class JournalService {
   }
 
   /**
-   * Fetch a single journal entry (or return mock if missing in Real DB for pilot phase)
+   * Action Dispatcher (Central Command)
+   */
+  static async dispatchAction(jobId: string, action: string, payload?: any): Promise<any> {
+    switch (action) {
+      case 'save_draft':
+        return this.saveDraft(jobId, payload);
+      case 'finalize':
+      case 'confirmed':
+      case 'approve':
+        return this.approve(jobId, payload);
+      case 'request_approval':
+        return this.requestApproval(jobId, payload);
+      case 'remand':
+        return this.remand(jobId, payload);
+      case 'exclude':
+        return this.exclude(jobId, payload);
+      case 're_analyze':
+        return this.reAnalyze(jobId, payload);
+      default:
+        throw new Error(`Invalid Action: ${action}`);
+    }
+  }
+
+  /**
+   * Re-analyze a job using AI.
+   * This logic was moved from the router to the service.
+   */
+  static async reAnalyze(jobId: string, payload?: any) {
+    // 1. Get Job Data to find file URL
+    const jobRef = db.collection(this.COLLECTION).doc(jobId);
+    const doc = await jobRef.get();
+
+    if (!doc.exists) throw new Error('Job not found');
+    const data = doc.data();
+
+    // 2. Get GCS URI
+    // In a real scenario, this might be in data.sourceUrl or similar.
+    // For now, we look at payload or data.driveFileUrl (mock property)
+    const gcsUri = payload?.driveFileUrl || data?.driveFileUrl;
+
+    if (!gcsUri) {
+      // If we can't find a URL, we can't analyze.
+      // In a robust system, we might look up a separate 'files' collection.
+      // For this implementation, we'll log warning and return error.
+      throw new Error('No source file URI found for analysis.');
+    }
+
+    // 3. Status Check (Optional: Can we re-analyze from any state? Maybe only work/remand?)
+    // if (data?.status !== 'work' && data?.status !== 'remanded') throw ...
+
+    // 4. Perform AI Analysis
+    // Dynamic import to avoid circular deps if any
+    const { AIProviderFactory } = await import('../lib/ai/AIProviderFactory');
+    const provider = await AIProviderFactory.getProviderForPhase('ocr');
+    const analysisResult = await provider.analyzeReceipt(gcsUri);
+
+    // 5. Update Journal with Result
+    // We map analysis result to 'aiProposal' and maybe 'lines' if auto-apply is on.
+    const aiProposal = {
+      hasProposal: true,
+      confidenceLabel: 'High', // Todo: Map from result usageMetadata logic?
+      reason: 'AI Re-analysis',
+      summary: analysisResult.merchantName || 'AI Proposal',
+      debits: [], // Populate in real mapper
+      credits: []
+    };
+
+    return await db.runTransaction(async (t) => {
+      const currentDoc = await t.get(jobRef);
+      const currentData = currentDoc.data() || {};
+
+      const history = currentData.history || [];
+      history.push({
+        action: 're_analyze',
+        timestamp: new Date().toISOString(),
+        user: 'system', // or payload.user
+        details: 'AI Re-analysis completed'
+      });
+
+      t.set(jobRef, {
+        ...currentData,
+        aiProposal,
+        history,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      return { success: true, aiProposal, message: 'Re-analysis completed' };
+    });
+  }
+
+  /**
+   * Get Entry
    */
   static async getEntry(id: string) {
     const doc = await db.collection(this.COLLECTION).doc(id).get();
     if (doc.exists) {
       return doc.data();
     }
-    return null; // Signals caller to fall back to Mock if needed, or return 404
+    return null;
   }
 }

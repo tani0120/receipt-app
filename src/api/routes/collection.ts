@@ -42,7 +42,7 @@ const CollectionGridResponseSchema = z.object({
 // --- 2. Mock Data & Logic (Ported from Vue) ---
 
 // Mock Config Store
-let MOCK_CONFIG = {
+let mockConfig = {
     cash: false,
     invoice: false,
     payroll: false,
@@ -73,7 +73,7 @@ const MOCK_CLIENTS = [
 // CollectionGridResponseSchema is unused, but good for docs. I will keep it but export it or suppress unused.
 // Actually, I can just remove CollectionGridResponseSchema if it's not used.
 
-export { CollectionConfigSchema, CollectionClientSchema, CollectionDetailSchema };
+export { CollectionConfigSchema, CollectionClientSchema, CollectionDetailSchema, CollectionGridResponseSchema };
 
 // Logic Helpers (Server-Side Calculation)
 const currentDateMock = moment('2025-12-28'); // Fixed Date for Consistency
@@ -249,7 +249,7 @@ const route = app
         return c.json({
             viewYearStart,
             clients: clientData,
-            config: MOCK_CONFIG
+            config: mockConfig
         });
     })
 
@@ -277,8 +277,8 @@ const route = app
     // PUT /config - Update Config
     .put('/config', zValidator('json', CollectionConfigSchema), async (c) => {
         const data = c.req.valid('json');
-        MOCK_CONFIG = data;
-        return c.json({ success: true, config: MOCK_CONFIG });
+        mockConfig = data;
+        return c.json({ success: true, config: mockConfig });
     })
 
 export default route

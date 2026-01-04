@@ -479,7 +479,9 @@ export function useAdminDashboard() {
       if (!backendConfig.ocr) return; // Empty or invalid
 
       // Map Backend -> UI
-      const mapToUi = (p: any) => ({
+      // Map Backend -> UI
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mapToUi = (p: any): AiPhaseConfig => ({
         provider: p.provider === 'ai_studio' ? 'gemini' : 'vertex',
         mode: p.mode === 'realtime' ? 'normal' : 'batch',
         modelName: p.model || p.modelName
@@ -490,7 +492,7 @@ export function useAdminDashboard() {
         learning: mapToUi(backendConfig.learning),
         conversion: mapToUi(backendConfig.conversion),
         optimization: mapToUi(backendConfig.optimization),
-      } as any;
+      };
 
       console.log('Settings loaded from backend');
     } catch (e) {
