@@ -2,7 +2,7 @@
   <div class="h-full flex flex-col bg-white rounded-lg shadow border border-gray-200 overflow-hidden animate-fade-in relative">
       <!-- MOCK CONTROLS FOR TESTING -->
       <div v-if="testControls" class="bg-red-50 p-2 text-xs border-b border-red-200 flex gap-4 items-center shrink-0">
-          <span class="font-bold text-red-600">[MIRROR WORLD] Screen C (BFF)</span>
+          <span class="font-bold text-red-600">Screen C (BFF)</span>
           <label><input type="checkbox" v-model="mockIsDetailView"> 詳細モード</label>
       </div>
 

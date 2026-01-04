@@ -4,7 +4,7 @@
     <!-- Header Area -->
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
       <div>
-        <h1 class="text-3xl font-bold text-slate-900 tracking-tight">顧問先管理 (Mirror)</h1>
+        <h1 class="text-3xl font-bold text-slate-900 tracking-tight">顧問先管理</h1>
         <p class="text-slate-500 mt-1">顧問先の一覧確認と情報の編集が行えます。</p>
       </div>
 

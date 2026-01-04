@@ -71,7 +71,7 @@
 <script setup lang="ts">
 import { reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-// Import from Mirror Composables safely
+// Import from Composables safely
 import { useJournalStatusRPC } from '@/composables/useJournalStatusRPC';
 import type { JournalStatusUi } from '@/types/ScreenB_ui.type';
 // Mapper is internal to RPC now, or handled by the view if needed.

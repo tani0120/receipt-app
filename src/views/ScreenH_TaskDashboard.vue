@@ -4,7 +4,7 @@
     <!-- [UI_Structure] Line:4 -->
     <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
       <div class="flex items-center gap-3">
-        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">全社タスク管理 (Mirror)</h1>
+        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">全社タスク管理</h1>
         <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600 border border-gray-200">Strict Spec</span>
       </div>
 
