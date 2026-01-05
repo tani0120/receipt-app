@@ -3,7 +3,11 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import app from './api/index.ts'
 
 const port = Number(process.env.PORT) || 3000
-console.log(`Server is running on port ${port}`)
+console.log('--- SERVER STARTING ---');
+console.log('Node Version:', process.version);
+console.log('Environment:', process.env.NODE_ENV);
+console.log('PORT Env Var:', process.env.PORT);
+console.log(`Server is running on port ${port}`);
 
 // Serve static files from 'dist' folder
 app.use('/*', serveStatic({ root: './dist' }))
@@ -17,5 +21,6 @@ app.get('*', serveStatic({ path: './dist/index.html' }))
 
 serve({
     fetch: app.fetch,
-    port
+    port,
+    hostname: '0.0.0.0'
 })

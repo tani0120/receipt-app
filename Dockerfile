@@ -22,4 +22,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Start command
-CMD ["npm", "start"]
+CMD ["npx", "tsx", "src/server.ts"]

@@ -15,18 +15,15 @@ if (!admin.apps.length) {
                     privateKey: config.FIREBASE_PRIVATE_KEY,
                 }),
             });
-        } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-            console.log(`[Firebase] Initializing with Application Default Credentials (path: ${process.env.GOOGLE_APPLICATION_CREDENTIALS}).`);
-            admin.initializeApp({
-                credential: admin.credential.applicationDefault(),
-                projectId: config.FIREBASE_PROJECT_ID
-            });
         } else {
-            console.error('[Firebase] Critical: No credentials found.');
-            // For checking environment variables
-            console.error('DEBUG: FIREBASE_PROJECT_ID=', config.FIREBASE_PROJECT_ID ? 'SET' : 'MISSING');
-            console.error('DEBUG: FIREBASE_PRIVATE_KEY=', config.FIREBASE_PRIVATE_KEY ? 'SET' : 'MISSING');
-            throw new Error('Firebase Credentials Missing! Cannot start in Real Mode.');
+            console.log('[Firebase] Initializing with Application Default Credentials (ADC) for Cloud Environment.');
+            const firebaseConfig: any = {
+                credential: admin.credential.applicationDefault()
+            };
+            if (config.FIREBASE_PROJECT_ID) {
+                firebaseConfig.projectId = config.FIREBASE_PROJECT_ID;
+            }
+            admin.initializeApp(firebaseConfig);
         }
     } catch (e) {
         console.error('[Firebase] Initialization Failed:', e);
