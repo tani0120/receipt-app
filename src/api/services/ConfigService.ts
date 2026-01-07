@@ -1,29 +1,34 @@
 import { z } from 'zod';
-import { db } from '../lib/firebase'; // Assuming a singleton export exists or dynamic import
+
+
+// ------------------------------------------------------------------
+// 1. Scheduler Settings Schema (Strict Type Safety)
+// ------------------------------------------------------------------
+import { config } from '../config';
 
 // ------------------------------------------------------------------
 // 1. Scheduler Settings Schema (Strict Type Safety)
 // ------------------------------------------------------------------
 export const SchedulerSettingsSchema = z.object({
     intervals: z.object({
-        draft_monitoring: z.number().int().min(1).default(5),
-        batch_api_check: z.number().int().min(1).default(5),
-        learning: z.number().int().min(1).default(60),
-        final_formatting: z.number().int().min(1).default(5),
-        knowledge_optimization: z.number().int().min(1).default(30),
+        draft_monitoring: z.number().int().min(1).default(config.DRAFT_INTERVAL_MINUTES),
+        batch_api_check: z.number().int().min(1).default(config.BATCH_CHECK_INTERVAL_MINUTES),
+        learning: z.number().int().min(1).default(config.LEARNING_INTERVAL_MINUTES),
+        final_formatting: z.number().int().min(1).default(config.FORMATTING_CHECK_INTERVAL_MINUTES),
+        knowledge_optimization: z.number().int().min(1).default(config.KNOWLEDGE_OPTIMIZATION_DAYS), // Technically days logic needs conversion elsewhere if minutes required
     }),
     notifications: z.object({
-        target_hours: z.array(z.number().int().min(0).max(23)).default([9, 12, 15, 18]),
-        slack_webhook_url: z.string().optional(), // Added based on UI
+        target_hours: z.array(z.number().int().min(0).max(23)).default(config.NOTIFICATION_HOURS),
+        slack_webhook_url: z.string().optional(),
     }),
     processing: z.object({
-        batch_size: z.number().int().min(1).max(100).default(20),
-        timeout_seconds: z.number().int().min(30).default(270),
-        max_retries: z.number().int().min(0).default(3),
-        optimization_limit: z.number().int().min(1).default(1),
+        batch_size: z.number().int().min(1).max(100).default(config.BATCH_SIZE),
+        timeout_seconds: z.number().int().min(30).default(config.TIMEOUT_SECONDS),
+        max_retries: z.number().int().min(0).default(config.MAX_RETRIES),
+        optimization_limit: z.number().int().min(1).default(config.OPTIMIZATION_BATCH_SIZE),
     }),
     retention: z.object({
-        job_history_days: z.number().int().min(1).default(30),
+        job_history_days: z.number().int().min(1).default(config.JOB_HISTORY_DAYS),
     }),
 });
 

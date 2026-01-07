@@ -16,23 +16,41 @@ import worker from './routes/worker'
 const app = new Hono()
 
 // Enable CORS
-app.use('/*', cors())
+app.use('/*', cors({
+    origin: (origin) => {
+        // Allow localhost for development
+        if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+            return origin || '*'
+        }
+        // Allow production domain if needed (or keep strict)
+        return origin // For now reflect origin, or use specific allow list
+    },
+    allowHeaders: ['X-Custom-Header', 'Upgrade-Insecure-Requests', 'Content-Type', 'Authorization', 'X-Forwarded-For'],
+    allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE'],
+    exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
+    maxAge: 600,
+    credentials: true,
+}))
 
 // Safety: IP Restriction
 app.use('*', async (c, next) => {
-    // Skip IP check in local development
-    if (process.env.NODE_ENV === 'development' && !process.env.ALLOWED_IPS) {
+    // 1. ALWAYS allow local development flows
+    // 'unknown' often appears in local dev without proxy headers
+    if (process.env.NODE_ENV !== 'production') {
         return await next()
     }
 
-    const permitted = process.env.ALLOWED_IPS?.split(',').map(ip => ip.trim()) || []
+    // 2. Production Check
+    if (!process.env.ALLOWED_IPS) {
+        // Safe Default: If no IPs set, BLOCK EVERYTHING in Production
+        return c.text('403 Forbidden: No Access Configuration', 403)
+    }
 
-    // In Cloud Run, the real client IP is the first IP in X-Forwarded-For
+    const permitted = process.env.ALLOWED_IPS.split(',').map(ip => ip.trim())
     const forwardedFor = c.req.header('x-forwarded-for')
+    // Cloud Run: First IP is true client
     const clientIp = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown'
 
-    // Also check direct connection IP if available (c.req.ip might need config)
-    // For now, logging the access attempt for debugging
     console.log(`[IP_CHECK] Access from: ${clientIp} (Allowed: ${permitted.join(', ')})`)
 
     if (permitted.includes(clientIp) || permitted.includes('*')) {

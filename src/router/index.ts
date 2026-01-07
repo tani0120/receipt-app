@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+
 
 // Screen Components
 import ScreenA from '../views/ScreenA_Clients.vue'
@@ -65,6 +65,16 @@ export const routes: RouteRecordRaw[] = [
     name: 'AdminSettings',
     component: ScreenZ
   },
+  {
+    path: '/ai-rules',
+    name: 'ScreenD_AIRules',
+    component: () => import('../views/ScreenD_AIRules.vue')
+  },
+  {
+    path: '/data-conversion',
+    name: 'ScreenG_DataConversion',
+    component: () => import('../views/ScreenG_DataConversion.vue')
+  },
   // Task Dashboard (Mirror World)
   {
     path: '/task-dashboard',
@@ -83,12 +93,7 @@ router.beforeEach((to, from, next) => {
   // 1. Logging
   addLog(`[Router] Navigating to: ${to.fullPath}`);
 
-  // 2. Auth Check
-  const authStore = useAuthStore();
-  if (to.name !== 'Login' && !authStore.isLoggedIn) {
-    next({ name: 'Login' });
-    return;
-  }
+
 
   next();
 });
