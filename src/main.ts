@@ -6,6 +6,10 @@ import { createPinia } from 'pinia'
 
 import App from './App.vue'
 import router from './router/index'
+import { interceptConsole } from './api/lib/globalLogger'
+
+// Initialize Logger
+interceptConsole();
 
 const app = createApp(App)
 

@@ -72,5 +72,12 @@ const router = createRouter({
   routes
 })
 
+// Log navigation
+import { addLog } from '../api/lib/globalLogger'
+router.beforeEach((to, from, next) => {
+  addLog(`[Router] Navigating to: ${to.fullPath}`);
+  next();
+});
+
 export default router
 
