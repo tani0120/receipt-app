@@ -18,6 +18,30 @@ const app = new Hono()
 // Enable CORS
 app.use('/*', cors())
 
+// Safety: IP Restriction
+app.use('*', async (c, next) => {
+    // Skip IP check in local development
+    if (process.env.NODE_ENV === 'development' && !process.env.ALLOWED_IPS) {
+        return await next()
+    }
+
+    const permitted = process.env.ALLOWED_IPS?.split(',').map(ip => ip.trim()) || []
+
+    // In Cloud Run, the real client IP is the first IP in X-Forwarded-For
+    const forwardedFor = c.req.header('x-forwarded-for')
+    const clientIp = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown'
+
+    // Also check direct connection IP if available (c.req.ip might need config)
+    // For now, logging the access attempt for debugging
+    console.log(`[IP_CHECK] Access from: ${clientIp} (Allowed: ${permitted.join(', ')})`)
+
+    if (permitted.includes(clientIp) || permitted.includes('*')) {
+        return await next()
+    }
+
+    return c.text('403 Forbidden: Access Denied by Safety Filter', 403)
+})
+
 // --- Data Models ---
 const TaxOptionSchema = z.object({
     label: z.string(),
@@ -28,7 +52,7 @@ const TaxOptionSchema = z.object({
 
 const JournalDataSchema = z.object({
     id: z.string(),
-    date: z.string().default(new Date().toISOString().split('T')[0] || ''),
+    date: z.string().default(new Date().toISOString().split('T')[0] ?? ''),
     debit: z.array(z.object({
         account: z.string(),
         amount: z.number().int(),
