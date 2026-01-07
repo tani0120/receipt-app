@@ -1,6 +1,22 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+
+// Screen Components
+import ScreenA from '../views/ScreenA_Clients.vue'
+import ScreenB from '../views/ScreenB_JournalStatus.vue'
+import ScreenC from '../components/ScreenC_CollectionStatus.vue'
+import ScreenE from '../components/ScreenE_JournalEntry.vue'
+import ScreenZ from '../views/ScreenZ_AdminSettings.vue'
+
+// Import logger for navigation tracking
+import { addLog } from '../api/lib/globalLogger'
 
 export const routes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/LoginView.vue')
+  },
   {
     path: '/',
     redirect: '/journal-status'
@@ -8,7 +24,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/clients',
     name: 'ScreenA',
-    component: () => import('../views/ScreenA_Clients.vue')
+    component: ScreenA
   },
   {
     path: '/clients/:code',
@@ -19,51 +35,41 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/journal-status',
     name: 'ScreenB_Status',
-    component: () => import('../views/ScreenB_JournalStatus.vue')
+    component: ScreenB
   },
   {
     path: '/jobs/:code',
     name: 'ScreenB_JournalStatus',
-    component: () => import('../views/ScreenB_JournalStatus.vue'),
+    component: ScreenB,
     props: true
   },
   {
     path: '/collection-status',
     name: 'ScreenC',
-    component: () => import('../components/ScreenC_CollectionStatus.vue')
+    component: ScreenC
   },
   {
     path: '/collection-status/:code',
     name: 'ScreenC_Detail',
-    component: () => import('../components/ScreenC_CollectionStatus.vue'),
+    component: ScreenC,
     props: true
   },
   {
-    path: '/ai-rules',
-    name: 'ScreenD',
-    component: () => import('@/views/ScreenD_AIRules.vue')
-  },
-  {
-    path: '/journal-entry/:jobId',
-    name: 'ScreenE',
-    component: () => import('../components/ScreenE_JournalEntry.vue'),
+    path: '/workbench/:id',
+    name: 'JournalEditor',
+    component: ScreenE,
     props: true
   },
-
   {
     path: '/admin-settings',
-    name: 'ScreenZ',
-    component: () => import('../views/ScreenZ_AdminSettings.vue')
+    name: 'AdminSettings',
+    component: ScreenZ
   },
-  {
-    path: '/data-conversion',
-    name: 'DataConversion',
-    component: () => import('@/views/ScreenG_DataConversion.vue')
-  },
+  // Task Dashboard (Mirror World)
   {
     path: '/task-dashboard',
     name: 'TaskDashboard',
-    component: () => import('@/views/ScreenH_TaskDashboard.vue')
+    component: () => import('../views/ScreenH_TaskDashboard.vue')
   }
 ]
 
@@ -72,12 +78,19 @@ const router = createRouter({
   routes
 })
 
-// Log navigation
-import { addLog } from '../api/lib/globalLogger'
+// Navigation Guard for Global Logging and Authentication
 router.beforeEach((to, from, next) => {
+  // 1. Logging
   addLog(`[Router] Navigating to: ${to.fullPath}`);
+
+  // 2. Auth Check
+  const authStore = useAuthStore();
+  if (to.name !== 'Login' && !authStore.isLoggedIn) {
+    next({ name: 'Login' });
+    return;
+  }
+
   next();
 });
 
 export default router
-
