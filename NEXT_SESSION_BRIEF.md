@@ -736,13 +736,22 @@ AIは複雑な仕訳を勝手に確定させません。代わりに **「画像
     - [ ] 論理削除 ユーティリティの実装。
     - [ ] 監査タグ付け デコレータの実装。
 
-### Step 2: AI戦略 & ハイブリッド脳
-- [ ] **Gemini統合**:
-    - [ ] `VertexAIStrategy.ts` を階層型モデル (Flash/Pro/Thinking) にリファクタリング。
-    - [ ] 「ハイブリッド・コンテキスト注入」用のプロンプトテンプレート実装。
-- [ ] **適応学習**:
-    - [ ] 過去の「ズボラパターン」を照会する `HistoryService` の作成。
-    - [ ] Screen E における「Human-in-the-Loop」UIトリガーの実装。
+### Step 2: AI & データロジック実装 (Backend)
+
+- [ ] **型定義の更新 (`types.ts`)**
+    - [ ] `Universal_OCR_Schema` の実装 (Appendix A)。
+    - [ ] `document_type` enum の追加 (RECEIPT, BANK_STATEMENT, etc.)。
+    - [ ] `issuer`, `transaction_header`, `line_items` の追加 (Universal構造)。
+    - [ ] `validation` フィールドの追加 (`is_invoice_qualified`, `has_stamp_duty`)。
+    - [ ] `strategy` ロジック型の追加 (Universal Schemaからの `learningKey` 生成)。
+- [ ] **Vertex AI 戦略の更新 (`VertexAIStrategy.ts`)**
+    - [ ] `Universal OCR Schema` と **Logic Rules** (Appendix A) を使用したプロンプトの実装。
+    - [ ] **Prompt Annotation**: `line_items` の抽出モード切り替えロジック実装 (領収書 vs 通帳)。
+    - [ ] **Prompt Annotation**: `is_invoice_qualified` ロジック実装 (< 30,000円 ルール)。
+    - [ ] `Multi-dimensional Key` 生成の実装 (`issuer.name` + `transaction_header.total_amount` + `transaction_header.payment_method`)。
+    - [ ] Universal構造に基づいた `Zubora Rules` の実装。
+- [ ] **GAS ロジック更新 (Mock/Test)**
+    - [ ] Universal schema を使用した `Amount Range` 分類ロジックの検証。
 
 ### Step 3: フロントエンド統合
 - [ ] **Screen C (照合)**:
@@ -912,6 +921,117 @@ AIは必ず **「仮説」** と **「迷いの理由」** をセットで提示
     *   **UI Status**: `Screen C` implementation is **CANCELLED**.
     *   **Logic Status**: `9 Buckets Logic` is **APPROVED** for Backend/Filtering usage.
 
+
+
+### ◆実装計画に定義済み 5-1. Universal OCR Schema (L1 Output)
+
+レシート・通帳・カード明細を統一的に扱う万能スキーマの採用。
+`document_type` フィールドにより、後続の処理モードを厳格に分岐させる。
+
+#### A. 仕訳モード (Journal Mode)
+*   **処理対象**: `RECEIPT` (領収書), `INVOICE` (請求書), `OTHER`
+*   **目的**: 発生主義に基づく「単一の複合仕訳」を作成する。
+*   **L1 (OCR) の責務**:
+    *   `transaction_header` (合計金額、日付、支払方法) の精度を最優先する。
+    *   `tax_breakdown` (税率ごとの内訳) を正確に読み取る。
+    *   `line_items` (明細) は補助情報とし、OCR精度が低い場合は無視（空配列）してもよい。
+*   **L2/L3 (Backend/AI) の挙動**:
+    *   `issuer.name` から勘定科目を推論し、多次元キーを用いて仕訳テンプレートを適用する。
+
+#### B. 消込モード (Reconciliation Mode)
+*   **処理対象**: `BANK_STATEMENT` (通帳), `CARD_STATEMENT` (カード明細)
+*   **目的**: 資金移動の事実確認、および既存仕訳・未払計上との「消込（照合）」を行う。
+*   **L1 (OCR) の責務**:
+    *   **【必須】** 画像内の全ての行を `line_items` として漏れなく抽出する。1行でも欠落すればエラー扱いとする。
+    *   「入金」「出金」の列を正確に判別し、それぞれ `income_amount`, `expense_amount` にマッピングする。
+    *   `balance` (残高) を読み取り、前行との差分検算に使用する。
+*   **L2/L3 (Backend/AI) の挙動**:
+    *   各行の日付・金額をキーとして、既存の仕訳データ (Journal Modeで作成されたもの) を検索し、3点照合を行う。
+
+#### C. 共通・重要ロジック (Universal Logic Rules)
+*   **`line_items` の挙動**: レシートは任意（補助）、通帳・明細は必須（主役）として挙動を厳格に分ける。
+*   **`is_invoice_qualified` の判定**: T番号の有無に加え、「税込3万円未満」の実務的特例を自動判定する。
+
+#### 詳細定義:
+
+### 5-2. 詳細定義 (Detailed Definition: Screen E Appendix A)
+
+#### Universal OCR Schema (L1 Output)
+GAS (L1) から Backend/AI (L2/L3) へ渡される「正規化された一次データ」。
+領収書、請求書、通帳、カード明細など、あらゆる証憑を単一のフォーマットで表現する。
+
+```json
+{
+  "document_type": "RECEIPT | INVOICE | BANK_STATEMENT | CARD_STATEMENT | OTHER",
+  "meta": {
+    "scan_date": "YYYY-MM-DD",
+    "currency": "JPY",
+    "language": "ja"
+  },
+  "issuer": {
+    "name": "店舗名または発行者名 (正規化前)",
+    "name_reading": "フリガナ (ある場合)",
+    "registration_number": "T1234567890123 (インボイス番号)",
+    "phone_number": "03-xxxx-xxxx (マッチング用キー)",
+    "address": "住所文字列",
+    "is_handwritten": false
+  },
+  "recipient": {
+    "name": "宛名 (上様, 株式会社〇〇 etc.)"
+  },
+  "transaction_header": {
+    "date": "YYYY-MM-DD (取引日)",
+    "total_amount": 11000,
+    "total_tax_amount": 1000,
+    "payment_method": "CASH | CREDIT_CARD | E_MONEY | TRANSFER | UNKNOWN",
+    "summary": "全体の摘要 (例: 飲食代として)"
+  },
+  "tax_breakdown": [
+    {
+      "rate": 10,
+      "taxable_amount": 10000,
+      "tax_amount": 1000
+    },
+    {
+      "rate": 8,
+      "taxable_amount": 0,
+      "tax_amount": 0
+    }
+  ],
+  "line_items": [
+    {
+      "date": "YYYY-MM-DD (明細行の日付)",
+      "description": "商品名 または 摘要",
+      "amount": 5500,
+      "tax_rate": 10,
+      "type": "ITEM (商品) | TAX (税額) | DISCOUNT (値引)",
+      "income_amount": 0,  // 通帳の入金列用
+      "expense_amount": 5500, // 通帳の出金列用
+      "balance": 100000 // 通帳の残高列用 (検算用)
+    }
+  ],
+  "validation": {
+    "is_invoice_qualified": true, // T番号あり or 少額等の判定
+    "has_stamp_duty": false, // 収入印紙の有無
+    "notes": "特記事項や読み取り不明点"
+  }
+}
+```
+
+#### Universal Logic Rules (Prompt Annotations)
+スキーマ定義とセットで実装されるべき、AIへの重要指示事項。
+
+1.  **明細行 (line_items) の抽出ルール**:
+    *   **RECEIPT (領収書)**:
+        *   可能なら抽出する。ただし不明瞭な場合は空配列でも可とし、`total_amount` を優先する。
+    *   **BANK/CARD_STATEMENT (通帳・明細)**:
+        *   **【必須】** 全ての行を漏れなく抽出する。
+        *   入金列 → `income_amount`, 出金列 → `expense_amount` にマッピングする。
+        *   残高列 → `balance` にマッピングする。
+
+2.  **適格請求書 (is_invoice_qualified) の判定ルール**:
+    *   インボイス登録番号 (T+13桁) がある場合 → `true`
+    *   番号がない場合でも、税込合計金額が 30,000円未満の場合 → `true` (少額特例の実務的適用)
 
 ## 8. Screen E UIコンポーネント: ボタン一覧 (Detailed Button Definition)
 
