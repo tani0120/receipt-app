@@ -962,6 +962,11 @@ GAS (L1) から Backend/AI (L2/L3) へ渡される「正規化された一次デ
 
 ```json
 {
+  "accounting_judgment": {
+    "is_accounting_source": true,
+    "judgment_reason": "具体的な判定理由 (例: 日付、金額、発行者が明記された領収書であるため / 統計データであり決済の事実がないため)",
+    "document_category": "RECEIPT (領収書) | INVOICE (請求書) | BANK_STATEMENT (通帳) | CARD_STATEMENT (カード明細) | STATISTICAL_REPORT (統計) | OTHER (その他)"
+  },
   "document_type": "RECEIPT | INVOICE | BANK_STATEMENT | CARD_STATEMENT | OTHER",
   "meta": {
     "scan_date": "YYYY-MM-DD",
@@ -1005,33 +1010,44 @@ GAS (L1) から Backend/AI (L2/L3) へ渡される「正規化された一次デ
       "amount": 5500,
       "tax_rate": 10,
       "type": "ITEM (商品) | TAX (税額) | DISCOUNT (値引)",
-      "income_amount": 0,  // 通帳の入金列用
-      "expense_amount": 5500, // 通帳の出金列用
-      "balance": 100000 // 通帳の残高列用 (検算用)
+      "income_amount": 0,
+      "expense_amount": 5500,
+      "balance": 100000
     }
   ],
   "validation": {
-    "is_invoice_qualified": true, // T番号あり or 少額等の判定
-    "has_stamp_duty": false, // 収入印紙の有無
+    "is_invoice_qualified": true,
+    "has_stamp_duty": false,
     "notes": "特記事項や読み取り不明点"
   }
 }
 ```
 
 #### Universal Logic Rules (Prompt Annotations)
-スキーマ定義とセットで実装されるべき、AIへの重要指示事項。
+スキーマ定義とセットで実装されるべき、AIへの重要指示事項（Gatekeeper Logic）。
 
-1.  **明細行 (line_items) の抽出ルール**:
-    *   **RECEIPT (領収書)**:
-        *   可能なら抽出する。ただし不明瞭な場合は空配列でも可とし、`total_amount` を優先する。
-    *   **BANK/CARD_STATEMENT (通帳・明細)**:
-        *   **【必須】** 全ての行を漏れなく抽出する。
-        *   入金列 → `income_amount`, 出金列 → `expense_amount` にマッピングする。
-        *   残高列 → `balance` にマッピングする。
+##### OCRへの指示プロンプト:
+あなたはプロフェッショナルな経理担当AIです。
+提供された画像を解析し、経理システムへの入力データとして適切なJSONを出力してください。
 
-2.  **適格請求書 (is_invoice_qualified) の判定ルール**:
-    *   インボイス登録番号 (T+13桁) がある場合 → `true`
-    *   番号がない場合でも、税込合計金額が 30,000円未満の場合 → `true` (少額特例の実務的適用)
+**【重要な判定ルール】**
+最初に、その画像が「会計証憑（仕訳の根拠となる書類）」か、「それ以外の資料（統計、広告、単なるメモなど）」かを厳格に判定してください。
+
+1.  **会計証憑の場合** (領収書、請求書、通帳、カード明細など):
+    *   `accounting_judgment.is_accounting_source` を `true` に設定してください。
+    *   画像から詳細な取引情報を読み取り、各フィールドを埋めてください。
+
+2.  **対象外の場合** (統計レポート、概況報告、チラシ、未確定の試算表など):
+    *   `accounting_judgment.is_accounting_source` を `false` に設定してください。
+    *   `accounting_judgment.judgment_reason` に理由（例:「統計資料であり個別の取引証憑ではないため」）を記述してください。
+    *   その他の取引詳細フィールド（金額や日付など）は `null` または空配列にしてください。
+
+**【詳細抽出ルール】**
+1.  **明細行 (line_items)**:
+    *   **RECEIPT**: 可能なら抽出する。不明瞭なら空配列でも可。
+    *   **BANK/CARD**: **【必須】** 全行を漏れなく抽出する。
+2.  **適格請求書 (is_invoice_qualified)**:
+    *   T番号あり、または税込3万円未満の場合に `true` とする。
 
 ## 8. Screen E UIコンポーネント: ボタン一覧 (Detailed Button Definition)
 
@@ -1095,11 +1111,11 @@ AIが提示する選択肢や情報の根拠。
         *   **Inference Tags (ZuboraLogic)**:
             *   `suggestedTaxClass`: 対象外/課対仕入10% (海外ベンダー判定など)
             *   `isOverseas`: Google, AWS, Adobeなどを名寄せで判定
-    *   **モデル選定候補とコスト試算 (100枚あたり)**:
-        *   **Gemini 1.5 Flash-8B**: $0.003 (約0.45円) - 圧倒的最安。レシート高速処理の筆頭候補。
-        *   **Gemini 2.0 Flash / 2.5 Flash-Lite**: $0.008 (約1.2円) - 新世代のコストパフォーマンス機。
-        *   **Gemini 2.5 Flash**: $0.024 (約3.6円) - 以前の「Pro」相当の推理力。
-        *   **Gemini 3.0 Flash**: $0.040 (約6.0円) - 最新標準。難読・複雑な推論が必要な場合に利用。
+    *   **モデル選定決定 (Selected Model)**:
+        *   **Gemini 2.0 Flash / 2.5 Flash-Lite**: $0.008 (約1.2円) - **推奨・採用 (Accepted)**
+            *   理由: Flash-8Bに迫る低コストでありながら、複雑な「会計証憑の判定 (accounting_judgment)」に耐えうる性能を持つため。Gatekeeperとして最適。
+        *   ~~Gemini 1.5 Flash-8B~~: $0.003 - 安価だが、Gatekeeper判断には不安が残るため却下。
+        *   ~~Gemini 3.0 Flash~~: $0.040 - 高価すぎるため却下。
 *   **過去取引内容や取引自体の有無**: 履歴データそのもの。
 
 ### 3. 人間に提示するAIに係るUI (AI-Driven UI Components)

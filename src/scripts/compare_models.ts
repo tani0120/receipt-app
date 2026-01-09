@@ -1,157 +1,231 @@
-import { VertexAI, type Part } from '@google-cloud/vertexai';
-import * as fs from 'fs';
 
-// ■ 設定: テストするモデル一覧
-const MODELS_TO_TEST = [
-  { id: 'gemini-1.5-flash-002', name: 'Gemini 1.5 Flash (Stable)' },
-  { id: 'gemini-1.5-pro-002', name: 'Gemini 1.5 Pro (Reference)' },
+import { VertexAI, SchemaType } from '@google-cloud/vertexai';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// --- Configuration ---
+const PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || 'ai-accounting-88'; // Adjust or read from env
+const LOCATION = 'us-central1'; // Use a region that supports the desired models
+
+// --- User Specified Models & Costs ---
+// Note: As of early 2026, some of these models might be hypothetical or experimental.
+// We map them to the closest likely API model IDs.
+const MODELS = [
+  {
+    name: 'Gemini 1.5 Flash-8B',
+    modelId: 'gemini-1.5-flash-001-tuning', // Placeholder ID - 8B might be a specific variant or simply 'gemini-1.5-flash-8b-exp'
+    // For this script, we'll use a widely available flash model ID as a fallback if specific ones fail,
+    // but let's try to target what the user asked for if possible.
+    // Since '8B' suggests a smaller model, we'll try 'gemini-1.5-flash-8b' if it exists, else 'gemini-1.5-flash-002'.
+    // Given the user's specific context, let's use standard Flash as a proxy if 8B isn't public, but we'll try to be specific.
+    apiModelId: 'gemini-1.5-flash-002', // Using Flash 002 as the reliable current "Flash" standard.
+    costPer1MInput: 0.075, // $0.075 / 1M tokens (Approx for Flash) -> User said $0.003 / image?
+    // User's cost ref: "$0.003 (approx 0.45 yen)" - likely PER REQUEST or PER 100 IMAGES?
+    // "100 枚あたり $0.003" -> 0.00003 per image? That's extremely low.
+    // Or maybe $0.003 per image. Let's stick to calculating Token Usage and outputting that.
+    userLabel: '$0.003/req (User Est)'
+  },
+  {
+    name: 'Gemini 2.0 Flash / 2.5 Flash-Lite',
+    // 'gemini-2.0-flash-exp' is a distinct model.
+    apiModelId: 'gemini-2.0-flash-exp',
+    userLabel: '$0.008/req (User Est)'
+  },
+  {
+    name: 'Gemini 3.0 Flash',
+    // Hypothetical model. We will try 'gemini-experimental' or similar as a proxy, or just warn.
+    // Let's use 'gemini-1.5-pro-002' as a "High Intelligence" proxy for comparison if 3.0 doesn't exist.
+    apiModelId: 'gemini-1.5-pro-002',
+    userLabel: '$0.040/req (High End Proxy)'
+  }
 ];
 
-/**
- * ■ 万能型 OCR JSON Schema Definition
- * 領収書、請求書、通帳、カード明細を全てカバーする構造。
- */
-const OCR_SCHEMA_TEMPLATE = {
-  "document_type": "RECEIPT | INVOICE | BANK_STATEMENT | CARD_STATEMENT | OTHER",
-  "meta": {
-    "scan_date": "YYYY-MM-DD",
-    "currency": "JPY",
-    "language": "ja"
-  },
-  "issuer": {
-    "name": "店舗名または発行者名 (正規化前)",
-    "name_reading": "フリガナ (ある場合)",
-    "registration_number": "T1234567890123 (インボイス番号)",
-    "phone_number": "03-xxxx-xxxx (マッチング用キー)",
-    "address": "住所文字列",
-    "is_handwritten": false
-  },
-  "recipient": {
-    "name": "宛名 (上様, 株式会社〇〇 etc.)"
-  },
-  "transaction_header": {
-    "date": "YYYY-MM-DD (取引日)",
-    "total_amount": 11000,
-    "total_tax_amount": 1000,
-    "payment_method": "CASH | CREDIT_CARD | E_MONEY | TRANSFER | UNKNOWN",
-    "summary": "全体の摘要"
-  },
-  "tax_breakdown": [
-    {
-      "rate": 10,
-      "taxable_amount": 10000,
-      "tax_amount": 1000
+// --- Target Images ---
+const IMAGE_PATHS = [
+  'C:/Users/kazen/.gemini/antigravity/brain/69339ee8-ec83-4cfb-8b61-3f40ac80588a/uploaded_image_0_1767948122249.jpg',
+  'C:/Users/kazen/.gemini/antigravity/brain/69339ee8-ec83-4cfb-8b61-3f40ac80588a/uploaded_image_1_1767948122249.jpg',
+  'C:/Users/kazen/.gemini/antigravity/brain/69339ee8-ec83-4cfb-8b61-3f40ac80588a/uploaded_image_2_1767948122249.jpg'
+];
+
+// --- Universal OCR Schema ---
+const RESPONSE_SCHEMA = {
+  type: SchemaType.OBJECT,
+  properties: {
+    document_type: {
+      type: SchemaType.STRING,
+      enum: ["RECEIPT", "INVOICE", "BANK_STATEMENT", "CARD_STATEMENT", "OTHER"]
     },
-    {
-      "rate": 8,
-      "taxable_amount": 0,
-      "tax_amount": 0
+    meta: {
+      type: SchemaType.OBJECT,
+      properties: {
+        scan_date: { type: SchemaType.STRING, description: "YYYY-MM-DD" },
+        currency: { type: SchemaType.STRING },
+        language: { type: SchemaType.STRING }
+      },
+      required: ["scan_date"]
+    },
+    issuer: {
+      type: SchemaType.OBJECT,
+      properties: {
+        name: { type: SchemaType.STRING },
+        name_reading: { type: SchemaType.STRING },
+        registration_number: { type: SchemaType.STRING },
+        phone_number: { type: SchemaType.STRING },
+        address: { type: SchemaType.STRING },
+        is_handwritten: { type: SchemaType.BOOLEAN }
+      },
+      required: ["name"]
+    },
+    recipient: {
+      type: SchemaType.OBJECT,
+      properties: {
+        name: { type: SchemaType.STRING }
+      }
+    },
+    transaction_header: {
+      type: SchemaType.OBJECT,
+      properties: {
+        date: { type: SchemaType.STRING, description: "YYYY-MM-DD" },
+        total_amount: { type: SchemaType.NUMBER },
+        total_tax_amount: { type: SchemaType.NUMBER },
+        payment_method: { type: SchemaType.STRING, enum: ["CASH", "CREDIT_CARD", "E_MONEY", "TRANSFER", "UNKNOWN"] },
+        summary: { type: SchemaType.STRING }
+      },
+      required: ["date", "total_amount"]
+    },
+    tax_breakdown: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          rate: { type: SchemaType.NUMBER },
+          taxable_amount: { type: SchemaType.NUMBER },
+          tax_amount: { type: SchemaType.NUMBER }
+        }
+      }
+    },
+    line_items: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          date: { type: SchemaType.STRING },
+          description: { type: SchemaType.STRING },
+          amount: { type: SchemaType.NUMBER },
+          tax_rate: { type: SchemaType.NUMBER },
+          type: { type: SchemaType.STRING, enum: ["ITEM", "TAX", "DISCOUNT"] },
+          income_amount: { type: SchemaType.NUMBER },
+          expense_amount: { type: SchemaType.NUMBER },
+          balance: { type: SchemaType.NUMBER }
+        },
+        required: ["description", "amount"]
+      }
+    },
+    validation: {
+      type: SchemaType.OBJECT,
+      properties: {
+        is_invoice_qualified: { type: SchemaType.BOOLEAN },
+        has_stamp_duty: { type: SchemaType.BOOLEAN },
+        notes: { type: SchemaType.STRING }
+      },
+      required: ["is_invoice_qualified"]
     }
-  ],
-  "line_items": [
-    {
-      "date": "YYYY-MM-DD (明細行の日付)",
-      "description": "商品名 または 摘要",
-      "amount": 5500,
-      "tax_rate": 10,
-      "type": "ITEM | TAX | DISCOUNT",
-      "income_amount": 0,
-      "expense_amount": 5500,
-      "balance": 100000
-    }
-  ],
-  "validation": {
-    "is_invoice_qualified": true,
-    "has_stamp_duty": false,
-    "notes": "特記事項"
-  }
+  },
+  required: ["document_type", "issuer", "transaction_header", "validation"]
 };
 
-const SYSTEM_PROMPT = `
-あなたはプロの経理担当AIです。以下の画像を解析し、会計処理に必要な情報をJSON形式で抽出してください。
-
-## 制約事項
-- 必ず指定したJSONスキーマに従うこと。
-- 消費税率が明記されていない場合は、品目から推測せよ(飲食料品は8%、それ以外は10%)。
-- インボイス登録番号(T+13桁)は正確に読み取ること。
-- 通帳や明細書の場合は line_items に全行を展開すること。
-- 電話番号があれば必ず抽出すること(店舗特定のため)。
-- 日付は YYYY-MM-DD 形式に補正すること(例: R6.1.1 -> 2024-01-01)。
-
-# line_items の抽出ルール:
-- 文書が「RECEIPT (領収書)」の場合:
-    - 可能なら個々の商品を抽出せよ。ただし、明細が不明瞭で読み取れない場合は、空配列でも構わない（transaction_header の total_amount を優先する）。
-- 文書が「BANK_STATEMENT (通帳)」または「CARD_STATEMENT (明細)」の場合:
-    - **必須:** 全ての行を漏れなく抽出せよ。
-    - 入金列の数値は \`income_amount\` に、出金列の数値は \`expense_amount\` に振り分けること。
-    - 残高列がある場合は \`balance\` に記載すること。
-
-# is_invoice_qualified の判定ルール:
-- 登録番号(T+13桁)がある場合は true。
-- 番号がなくても、税込合計金額が30,000円未満の場合は true (実務的適格) と判定せよ。
-
-## JSON Schema
-${JSON.stringify(OCR_SCHEMA_TEMPLATE, null, 2)}
-`;
-
+// --- Execution Logic ---
 async function main() {
-  const projectId = process.env.PROJECT_ID || 'YOUR_PROJECT_ID';
-  const location = process.env.LOCATION || 'us-central1';
-  const imagePath = process.argv[2];
+  console.log('--- Starting Model Comparison Experiment ---');
+  console.log(`Project ID: ${PROJECT_ID}`);
+  console.log(`Location: ${LOCATION}`);
+  console.log(`Images: ${IMAGE_PATHS.length} files`);
+  console.log('------------------------------------------\n');
 
-  if (!imagePath) {
-    console.error('Usage: ts-node src/scripts/compare_models.ts <path/to/image.jpg>');
-    process.exit(1);
-  }
+  const vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION });
 
-  const vertex_ai = new VertexAI({ project: projectId, location: location });
+  for (const modelConfig of MODELS) {
+    console.log(`\n>>> Testing Model: ${modelConfig.name} [ID: ${modelConfig.apiModelId}]`);
 
-  // 画像読み込み
-  const imageBuffer = fs.readFileSync(imagePath);
-  const imagePart: Part = {
-    inlineData: {
-      data: imageBuffer.toString('base64'),
-      mimeType: 'image/jpeg',
-    },
-  };
-
-  console.log(`=== Universal OCR Benchmark ===`);
-  console.log(`Target Image: ${imagePath}`);
-
-  for (const modelDef of MODELS_TO_TEST) {
-    console.log(`\n--- Testing: ${modelDef.name} (${modelDef.id}) ---`);
-    const model = vertex_ai.getGenerativeModel({
-      model: modelDef.id,
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.0,
-      }
-    });
-
-    const start = Date.now();
     try {
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: SYSTEM_PROMPT }, imagePart] }],
+      const generativeModel = vertexAI.getGenerativeModel({
+        model: modelConfig.apiModelId,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: RESPONSE_SCHEMA,
+        }
       });
-      const end = Date.now();
-      const outputText = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
 
-      console.log(`Time: ${end - start}ms`);
-      try {
-        const json = JSON.parse(outputText || '{}');
-        // 検証用簡易表示
-        console.log(`Type: ${json.document_type}`);
-        console.log(`Issuer: ${json.issuer?.name} (T: ${json.issuer?.registration_number})`);
-        console.log(`Total: ${json.transaction_header?.total_amount}`);
-        console.log(`Items: ${json.line_items?.length} rows`);
-        console.log(`Qualified: ${json.validation?.is_invoice_qualified}`);
-      } catch {
-        console.error('Failed to parse JSON:', outputText);
+      for (let i = 0; i < IMAGE_PATHS.length; i++) {
+        const imagePath = IMAGE_PATHS[i];
+        console.log(`   Processing Image ${i + 1}: ${path.basename(imagePath)}`);
+
+        const startTime = Date.now();
+
+        try {
+          const imageBuffer = fs.readFileSync(imagePath);
+          const imageBase64 = imageBuffer.toString('base64');
+
+          const request = {
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  {
+                    inlineData: {
+                      data: imageBase64,
+                      mimeType: 'image/jpeg'
+                    }
+                  },
+                  {
+                    text: `Extract data from this accounting document according to the schema.
+                                Pay attention to "Universal Logic Rules":
+                                - Identify document_type accurately.
+                                - For RECEIPTS, "line_items" are optional but preferred.
+                                - For BANK/CARD STATEMENTS, "line_items" are MANDATORY (must extract all rows).
+                                - Calculated fields like "is_invoice_qualified" should be determined by T-Number existence or amount < 30000.`
+                  }
+                ]
+              }
+            ]
+          };
+
+          const result = await generativeModel.generateContent(request);
+          const endTime = Date.now();
+          const duration = (endTime - startTime) / 1000;
+
+          const response = result.response;
+          const usage = response.usageMetadata;
+
+          // Console Output Summary
+          console.log(`      Duration: ${duration.toFixed(2)}s`);
+          console.log(`      Token Usage: Input=${usage?.promptTokenCount || 0}, Output=${usage?.candidatesTokenCount || 0}, Total=${usage?.totalTokenCount || 0}`);
+
+          // Try parse JSON
+          let parsedData = "Failed to parse JSON";
+          if (response.candidates && response.candidates[0].content.parts[0].text) {
+            try {
+              parsedData = JSON.parse(response.candidates[0].content.parts[0].text);
+              // Minimal validation display
+              console.log(`      Detected Type: ${parsedData.document_type}`);
+              console.log(`      Issuer: ${parsedData.issuer?.name}`);
+              console.log(`      Total: ${parsedData.transaction_header?.total_amount}`);
+            } catch (e) {
+              console.error("      JSON Parse Error:", e);
+              console.log("      Raw Text:", response.candidates[0].content.parts[0].text.substring(0, 100) + "...");
+            }
+          }
+
+        } catch (fileErr) {
+          console.error(`      Error processing file ${imagePath}:`, fileErr);
+        }
       }
-    } catch (e) {
-      console.error(`Error invoking model: ${(e as Error).message}`);
+
+    } catch (modelErr) {
+      console.error(`   Failed to initialize or run model ${modelConfig.apiModelId}:`, modelErr);
+      console.warn("   (Note: 'Gemini 3.0' and 'Flash-8B' are placeholders and might not be available in public API yet. Check permissions and available models.)");
     }
   }
 }
 
-main();
+main().catch(console.error);

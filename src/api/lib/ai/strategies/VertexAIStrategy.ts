@@ -25,6 +25,12 @@ export class VertexAIStrategy implements AIProvider {
                 name: 'Vertex Gemini 1.5 Flash (002)',
                 provider: 'vertex_ai',
                 capabilities: { batch: true, image: true }
+            },
+            {
+                id: 'gemini-2.0-flash-001',
+                name: 'Vertex Gemini 2.0 Flash (001)',
+                provider: 'vertex_ai',
+                capabilities: { batch: true, image: true }
             }
         ];
     }

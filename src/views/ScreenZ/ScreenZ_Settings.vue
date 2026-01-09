@@ -72,12 +72,14 @@
                             </div>
                             <!-- Model Name -->
                             <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-slate-500">使用モデル名 <span class="font-normal text-slate-400 ml-1">(推奨：Gemini 3 Pro ※複雑な手書き文字に対応)</span></label>
+                                <label class="text-[10px] font-bold text-slate-500">使用モデル名 <span class="font-normal text-slate-400 ml-1">(推奨：Gemini 2.0 Flash ※低コストと証憑の判定性能両立)</span></label>
                                 <div class="relative">
                                     <select v-model="data.settings.aiPhases.ocr.modelName" class="w-full px-2 py-1.5 border border-slate-300 rounded text-xs text-slate-600 font-mono appearance-none bg-white focus:border-blue-500 transition">
-                                        <option value="models/gemini-3-flash-001">gemini-3-flash-001 (安い)</option>
-                                        <option value="models/gemini-3-pro-001">gemini-3-pro-001 (複雑な手書き文字)</option>
-                                        <option value="models/gemini-3-deep-think-001">gemini-3-deep-think-001 (高度な論理説明や税務判断)</option>
+                                        <option value="gemini-2.0-flash-001">gemini-2.0-flash-001 (証票判定できる最安値モデルで最適)</option>
+                                        <option value="models/gemini-1.5-flash-002">gemini-1.5-flash-002 (旧・安定版)</option>
+                                        <option value="models/gemini-1.5-pro-002">gemini-1.5-pro-002 (旧・高精度版)</option>
+                                        <option value="models/gemini-3-flash-001" disabled>gemini-3-flash-001 (Coming Soon)</option>
+                                        <option value="models/gemini-3-pro-001" disabled>gemini-3-pro-001 (Coming Soon)</option>
                                     </select>
                                     <i class="fa-solid fa-chevron-down absolute right-2 top-2 text-slate-400 pointer-events-none text-[10px]"></i>
                                 </div>

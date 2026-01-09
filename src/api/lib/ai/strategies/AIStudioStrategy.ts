@@ -23,6 +23,12 @@ export class AIStudioStrategy implements AIProvider {
                 name: 'AI Studio Gemini 1.5 Flash',
                 provider: 'ai_studio',
                 capabilities: { batch: false, image: true }
+            },
+            {
+                id: 'gemini-2.0-flash-001',
+                name: 'AI Studio Gemini 2.0 Flash (001)',
+                provider: 'ai_studio',
+                capabilities: { batch: false, image: true }
             }
         ];
     }

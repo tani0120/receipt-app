@@ -31,11 +31,12 @@
     - [ ] `validation` フィールドの追加 (`is_invoice_qualified`, `has_stamp_duty`)。
     - [ ] `strategy` ロジック型の追加 (Universal Schemaからの `learningKey` 生成)。
 - [ ] **Vertex AI 戦略の更新 (`VertexAIStrategy.ts`)**
-    - [ ] `Universal OCR Schema` と **Logic Rules** (Appendix A) を使用したプロンプトの実装。
+    - [ ] **モデル指定**: `gemini-2.0-flash-exp` (または同等クラス) を採用。
+    - [ ] **Gatekeeperロジック**: 画像が「会計証憑」か否かを判定する `accounting_judgment` プロンプトの実装。
+    - [ ] `Universal OCR Schema V2` (Gatekeeper付き) の適用。
     - [ ] **Prompt Annotation**: `line_items` の抽出モード切り替えロジック実装 (領収書 vs 通帳)。
     - [ ] **Prompt Annotation**: `is_invoice_qualified` ロジック実装 (< 30,000円 ルール)。
     - [ ] `Multi-dimensional Key` 生成の実装 (`issuer.name` + `transaction_header.total_amount` + `transaction_header.payment_method`)。
-    - [ ] Universal構造に基づいた `Zubora Rules` の実装。
 - [ ] **GAS ロジック更新 (Mock/Test)**
     - [ ] Universal schema を使用した `Amount Range` 分類ロジックの検証。
 - [ ] **結合テスト**: 「CSVアップロード」から「仕訳作成」までの一連フロー検証。
