@@ -1,4 +1,180 @@
-﻿# 次回タスク (Next Session Agenda)
+﻿# ファイルの運用方針
+
+*   **追加 (Append)**: 既存の文章や決定事項（過去の履歴）は一切変更せず、既存の内容を維持しつつ、末尾に追加する。
+*   **修正 (Modify)**: 既存の文章を削除し、最新の正解に書き換える。
+
+## 1. デスクトップ（ワークスペース）上
+*   **NEXT_SESSION_BRIEF.md** - **[追加 (Append)]**
+    *   `c:\Users\kazen\OneDrive\デスクトップ\ai_gogleanti\NEXT_SESSION_BRIEF.md`
+
+## 2. 内部ブレイン（アーティファクト）上
+*   **implementation_plan.md** - **[修正 (Modify)]**
+    *   `C:\Users\kazen\.gemini\antigravity\brain\69339ee8-ec83-4cfb-8b61-3f40ac80588a\implementation_plan.md`
+*   **implementation_plan.md.resolved** - **[修正 (Modify)]**
+    *   `C:\Users\kazen\.gemini\antigravity\brain\69339ee8-ec83-4cfb-8b61-3f40ac80588a\implementation_plan.md.resolved`
+*   **design_discussion.md** - **[追加 (Append)]**
+    *   `C:\Users\kazen\.gemini\.antigravity\brain\69339ee8-ec83-4cfb-8b61-3f40ac80588a\design_discussion.md`
+*   **design_discussion.md.resolved** - **[追加 (Append)]**
+    *   `C:\Users\kazen\.gemini\antigravity\brain\69339ee8-ec83-4cfb-8b61-3f40ac80588a\design_discussion.md.resolved`
+*   **screen_e_ui_spec.md** - **[修正 (Modify)]**
+    *   `C:\Users\kazen\.gemini\antigravity\brain\69339ee8-ec83-4cfb-8b61-3f40ac80588a\screen_e_ui_spec.md`
+*   **screen_e_ui_spec.md.resolved** - **[修正 (Modify)]**
+    *   `C:\Users\kazen\.gemini\antigravity\brain\69339ee8-ec83-4cfb-8b61-3f40ac80588a\screen_e_ui_spec.md.resolved`
+*   **NEXT_SESSION_BRIEF.md.resolved** - **[追加 (Append)]* (※デスクトップ同期)**
+    *   `C:\Users\kazen\.gemini\antigravity\brain\69339ee8-ec83-4cfb-8b61-3f40ac80588a\NEXT_SESSION_BRIEF.md.resolved`
+*   **task.md** - **[修正 (Modify)]**
+    *   `C:\Users\kazen\.gemini\antigravity\brain\69339ee8-ec83-4cfb-8b61-3f40ac80588a\task.md`
+*   **task.md.resolved** - **[修正 (Modify)]**
+    *   `C:\Users\kazen\.gemini\antigravity\brain\69339ee8-ec83-4cfb-8b61-3f40ac80588a\task.md.resolved`
+
+## 3. 例外 (Exception)
+*   **NEXT_SESSION_BRIEF.md** の以下のセクションについては、情報の陳腐化を防ぐため **[修正 (Modify)]** を許可する。
+
+### 5. ◆実装済み (Implemented)
+以下の項目は、プログラムコード (src/*) に既に反映されている。
+*   **A. 運用パラメータ (Operational Parameters)**
+    *   `src/api/config.ts` に実装済み。
+    *   ドラフト生成・監視間隔: 5分 (未処理検知)
+    *   Batch API結果確認間隔: 5分
+    *   学習処理間隔: 60分
+    *   最終確認整形間隔: 5分
+    *   知識最適化間隔: 30日
+    *   完了通知時刻: 9, 12, 15, 18時 (1日4回)
+    *   最大処理件数/1回 (Batch Size): 20件
+    *   Batch API推奨サイズ: 10~50件 (今回は20件採用)
+    *   タイムアウト: 270秒
+    *   最大リトライ回数: 3回
+    *   最適化処理数/1回: 1
+    *   ジョブ履歴保持期間: 30日
+
+### 6. ◆実装しないことが決定
+*   **B. Screen C: 9つのバケツ (Defined Schemas)**
+    すべてのデータを以下の9カテゴリに分類し、月次決算を完了させる。
+    | No. | リスト名 | 定義・アクション |
+    | :--- | :--- | :--- |
+    | 1 | ✅ 消込完了 (Matched) | 証憑と明細が一致。自動仕訳 [借]費用/[貸]預金 生成。 |
+    | 2 | 🧾 未払・未決済 (Unpaid) | 請求書あり・引落なし。期末に未払計上。 |
+    | 3 | 🔄 資金移動 (Funds) | 預金間移動・クレカ引落・現金引出。P/L除外 [借]預金/[貸]預金。 |
+    | 4 | 👥 給与・税金 (B/S Items) | 給与(額面/預り金)、借入返済(元本/利息)、租税公課。台帳取込へ誘導。 |
+    | 5 | ⏳ 資産・前払 (Deferrals) | 30万超の固定資産、年払いの前払費用(期間按分)。 |
+    | 6 | 🏛️ 源泉徴収 (Withholding) | 報酬・原稿料。支払調書/納付書作成用データとして集計。 |
+    | 7 | 🏠 家事按分 (Allocations) | 新規取引先の公私混同チェック。按分マスタへの登録。 |
+    | 8 | ❓ 使途不明 (Unknown) | 証憑なし出金、不明入金（仮受）。社長へのチャット質問対象。 |
+    | 9 | ⚠️ エラー (Errors) | 重複疑義、インボイス番号なし(非適格)、OCR不能。 |
+
+### 8. Screen E UIコンポーネント: ボタン一覧 (Detailed Button Definition)
+
+#### UIの整備対象ファイルと整備方針
+
+**触ってよいファイル (✅ Allowed)**
+
+*   **implementation_plan.md**
+    *   **理由**: 「いつ・何を・どう実装するか」の地図であり、今回の議論で確定した「型定義の追加」や「UIコンポーネントの実装順序」を、次回以降の作業指示書として明文化しておく必要があるため。
+*   **NEXT_SESSION_BRIEF.md**
+    *   **理由**: 今回の議論の結論（UI仕様、ロジック詳細）を、次回セッションへのコンテキストとして保存する唯一の場所であるため。
+*   **task.md**
+    *   **理由**: 現在のタスク進捗状況（計画フェーズ完了等）を正しく管理するため。
+*   **walkthrough.md**
+    *   **理由**: 今回のセッション成果（決定事項）を記録するため。
+*   **上記ファイルの .resolved 版**
+    *   **理由**: システムの内部整合性を保つため。
+
+**触ってはいけないファイル (❌ Prohibited)**
+
+*   **types.ts**
+*   **ZuboraLogic.ts**
+*   **VertexAIStrategy.ts**
+*   **全ての .vue ファイル** (例: ScreenE_JournalEntry.vue, App.vue 等)
+*   **上記以外の全ての .ts ファイル** (例: useAccountingSystem.ts, router/index.ts 等)
+*   **全ての .js ファイル** (例: config.js 等)
+*   **全ての .json ファイル** (例: package.json, tsconfig.json 等)
+    *   **理由**: 私は文脈記憶能力が低く愚かであるため、ロジックとUIの整合性が取れていない現段階でコードを一部でも触ると、次回以降「なぜこのコードが存在するのか（実験用か本番用か）」が分からなくなり、確実にバグや混乱の原因となるため。「コード変更」は次回の実装フェーズ（Phase 2/3）で、計画書に基づいて一気貫通で行うのが最も安全であるため。
+
+以下は、Screen E に実装すべき全ボタンのリストである。これを基に配置と優先度を深掘りする。
+
+#### 1. 意思決定・ステータス操作 (Primary Actions)
+仕訳の最終状態を決定し、次のアクションへ進むためのボタン群。
+
+*   **＜記帳 (Bookkeeping)＞** - 帳簿に「結果」を残すアクション
+    *   **[承認 (Approve)]**: 仕訳・消込を確定する。
+    *   **[対象外 (Exclude)]**: 帳簿外として処理完了とする（重複・対象外）。
+
+*   **＜ルール・学習 (Rules & Learning)＞** - AIを「教育」するアクション
+    *   **[ルール保存 (Save Rule)]**: 現在のパターンを将来のために記憶させる。
+
+*   **＜タスク (Tasks)＞** - 人間に「ボール」を渡すアクション
+    *   **[保留 (Hold)]**: 自分へのタスク（後でやる）。
+    *   **[質問 (Ask)]**: 社長へのタスク（使途不明などを聞く）。
+    *   **[資料依頼 (Request Doc)]**: 社長へのタスク（領収書ください）。
+
+#### 2. 人間に提示する選択肢の源泉 (Information Sources)
+AIが提示する選択肢や情報の根拠。
+
+*   **全社ルール (Company-wide Rules)**: すべてのクライアントに適用される基本方針。
+*   **個別会社ルール (Individual Company Rules)**: その会社特有のルールや例外。
+*   **ズボラ経理ルール**: 「1000円以下は雑費」などの全社ルール。
+*   **「知識」プロンプト**: 税務知識や一般的常識。
+*   **学習ルール**: 過去のユーザー修正履歴 (Individual Rules)。
+*   **9バケツロジック**: 強制突合、未払計上などのシステムロジック。
+*   **税務的な必須ルール**: 実装しないと違法になるもの。
+*   **外部API連携 (External APIs)**: 国税庁インボイスAPI（T番号の実在性・登録屋号）、法人番号マスタなど。
+*   **OCRメタデータ (Unique Metadata)**: Gemini Flashシリーズによる「意味理解」を含んだOCR。
+    *   **Standard**: `date`, `totalAmount`, `merchantName`, `items`
+    *   **Metadata (Planned)**: `merchantTel` (電話番号), `merchantAddress` (住所), `invoiceNumber` (T番号), `time` (時刻)
+    *   **Inference Tags**: `suggestedTaxClass` (対象外判定), `isOverseas` (名寄せ)
+*   **モデル選定候補とコスト試算 (100枚あたり)**:
+    *   Gemini 1.5 Flash-8B: $0.003 (約0.45円) - 最安。
+    *   Gemini 2.0/2.5 Flash: $0.008~$0.024 - バランス型。
+    *   Gemini 3.0 Flash: $0.040 - 難解な推論用。
+*   **過去取引内容や取引自体の有無**: 履歴データそのもの。
+
+#### 3. 人間に提示するAIに係るUI (AI-Driven UI Components)
+AIが思考した結果を人間にどう見せるか。
+
+*   **＜選択肢UI (Choice UI)＞** - AIが推奨する仕訳候補（3〜5つ程度）
+    *   **会議費でOK (今回だけ)**: 今回限りの例外処理。
+    *   **交際費に変更する (推奨)**: AIの自信度が高い推奨アクション。
+    *   **その他候補**: 過去取引の真実、重複・期間外、ズボラ適用結果、教科書的ルールからの提案。
+
+*   **＜警告・状態表示UI (Alerts & Status)＞** - 選択肢から独立した警告や補足情報
+    *   **重複**: 既に類似データが存在する。
+    *   **計算期間外**: 決算期をまたぐ。
+    *   **複数仕訳候補**: AIが迷っている。
+    *   **取引額30万円以上**: 資産計上の可能性。
+    *   **初取引**: 過去実績がない。
+    *   **資金移動可能性**: 口座間移動の疑い。
+    *   **過去仕訳が未統一**: 揺らぎの検知。
+
+*   **＜テキストUI (Reasoning Display)＞** - AIの思考プロセスの可視化
+    *   `[事実] -> [論理] -> [懸念] -> [視点(ズボラvs教科書)] -> [提案]`
+
+*   **＜複合仕訳の貸借UI (Multi-line Editor)＞** - 借方・貸方の編集エリア
+
+*   **＜ルールUI (Rule Management)＞** - ルール保存・管理
+    *   **ルール保存ボタン**: 現在の処理をルール化。
+    *   **自由記載**: メモや理由。
+    *   **ルールとして記憶する**: 次回以降も適用。
+    *   **ルールを上書きする**: 過去のルールを変更。
+    *   **ルールから除外する**: 過去の履歴を学習から外す。
+
+#### 4. ルール学習や知識プロンプト (Learning Triggers)
+どのようなアクションがAIの学習（フィードバック）となるか。
+
+*   **＜学習ロジックの結果、変更 (Implicit Learning)＞**
+    *   仕訳を承認、仕訳除外ボタンを押下した事実。
+    *   AIが提示した選択肢を選択して承認した事実。
+
+*   **＜ルールを直接変更 (Explicit Learning)＞**
+    *   ルール保存ボタンを明示的に押下する。
+
+#### 5. ナビゲーション (Navigation)
+*   **[一覧へ戻る (Back)]**: Screen B（カンバン）に戻る。
+*   **[元画像 (Show Image)]**: 領収書画像を拡大表示・別窓表示。
+*   **[PDF出力 (Download)]**: 証憑をダウンロード。
+
+---
+
+# 次回タスク (Next Session Agenda)
 
 > **⚠️ CRITICAL: Design is NOT finalized. Start here.**
 
@@ -43,74 +219,66 @@
     *   [types.ts](file:///c:/Users/kazen/OneDrive/%E3%83%87%E3%82%B9%E3%82%AF%E3%83%88%E3%83%83%E3%83%97/ai_gogleanti/src/api/lib/ai/types.ts): 会計ロジックに関するフィールドが一切ない。
 *   **あるべき姿 (Target)**:
     *   **複合仕訳対応 (Multi-line Journals)**: `debit: [{ account, amount, tax }]`, `credit: [...]` の構造が必要。
-### 3. 詳細ロジックと閾値 (Phase 2 Spec)
+### 3. ハイブリッド・アーキテクチャ & ロジック詳細 (Hybrid Architecture & Logic Specs)
+過去の議論に基づき再構築された、OCR(L1)からAI(L3)に至る実装計画の全貌。
 
-#### Category A: 照合エンジン (Reconciliation Engine)
-*   **A-1: 手数料判定 (Fee Handling)**
-    *   **Logic**: IF (引落額 - 領収書額) <= 1,000円 かつ 他に候補なし の場合、差額を 「支払手数料」 として自動計上する。
-    *   **Safety**: 差額が1,000円超の場合は「要確認」とする（一部入金や誤マッチの可能性があるため）。
-*   **A-2: 日付ウィンドウと重複 (Date Window & Duplicates)**
-    *   **Window**: 領収書日付 ±45日 (クレカ処理ラグを考慮)。
-    *   **Strict Check**: もし期間内に [同額 + 同一ベンダー] の候補が複数ある場合（サブスク等）、**自動マッチングを停止** し、ユーザーに選択させる。
-*   **A-3: 説明プロトコル (Explanation Protocol)**
-    *   **Format**: [事実] 差額/状況 -> [論理] 理由 -> [懸念] リスク -> [提案] アクション。
-    *   **Example**: 「候補が2件(1/1, 2/1)見つかりました。月ズレのリスクがあるため自動判定できません。手動で選択してください。」
+#### A. アーキテクチャ概要 (Concept)
+*   **L1: GAS Pre-processing**: 構造化・圧縮。`Normalized_Vendor` + `Amount_Range` + `Payment_Method` をキーに相関ルールを抽出。エイリアス辞書で名寄せ。
+*   **L2: Context Caching**: 知識保持。OCR/Backend生成の高密度ルール（ヒント）と直近生データをハイブリッドでキャッシュ。
+*   **L3: AI Reasoning**: 推論・補正。統計信頼度を入力とするが、最終判断はAI（例：画像事実に基づく補正）。
+*   **L4: Feedback Loop**: 自己修正。人間の修正を即座に減点方式でフィードバック。
 
-#### F. 照合・ロジックレイヤー (Finalized Spec)
-*   **ロジック適用ヒエラルキー (Rule Hierarchy)**:
-    1.  **User Override (手動修正)**: 人間がScreen Eでクリックした結果 (絶対的真実)。
-    2.  **Individual Rule (個別学習)**: 「Vendor X は常に Account Y」 (Screen Eで作成)。
-    3.  **Zubora Rule (全社設定)**: 「差額1000円未満は手数料」 (セーフティネット)。
-    4.  **AI Inference (推論)**: 「コーヒーっぽいから会議費...」 (最終手段)。
-*   **動的設定 (Dynamic Configuration)**:
-    *   ハードコーディング禁止。 `src/api/config.ts` で以下を管理する:
-        *   `AUTO_FEE_LIMIT` (Def: 1000)
-        *   `BUNDLE_WINDOW_DAYS` (Def: 5)
-        *   `AUTO_IGNORE_INVOICE_LIMIT` (Def: 3000)
-*   **安全指令 (Safety Mandate - Human Click Principle)**:
-    *   **Screen E (仕訳エディタ)**: AIは「コンシェルジュ」であり裁判官ではない。「合算」や「分割」を提案し、人間が「承認」をクリックするまで確定させない。
-    *   **自動処理許可**: 「支払手数料 <= 1000円」や「標準的な分類」のみ自動化OK。
-*   **拡張照合ルール (Zubora Extended)**:
-    *   **A-4: FX Variance (為替ズレ)**:
-        *   **Logic**: `IF 差額絶対値 <= AUTO_FEE_LIMIT`.
-        *   **Action**: 「支払手数料」 として自動処理。税区分: 親取引を継承 (海外なら対象外)。
-    *   **A-5: Bundle Payment (合算払い)**:
-        *   **Logic**: スマート総当たり。日付 ±BUNDLE_WINDOW_DAYS 内の 未消込領収書 を探索。
-        *   **Action**: Sum(領収書群) == 引落額 なら、Screen E に 「合算マッチ候補」 として提案。
-        *   **UI**: 「この8,500円の引落は、これら3枚の合計と一致します。承認しますか？」
-    *   **A-6: Points Usage (ポイント・値引き)**:
-        *   **Logic**: `IF (領収書額 > 引落額) (マイナス差額)。
-        *   **Action**: 複合仕訳。借方: 経費(全額), 貸方: 預金(実額), 貸方: 値引/ポイント(差額)。
-        *   **UI**: 差額を 緑/青の「ポイント利用」 として表示（エラーではない）。
-*   **重複排除**: 元帳(行指紋), 証憑(ハッシュ + 意味的)。
-*   **ステータスフロー**: Pending -> Work (ドラフト) -> Review (人間確認) -> Confirmed.
 
-#### Category B: ズボラ経理ルール (Practical Rules)
-*   **給与**: 手取り基準 (詳細定義済)。
-*   **前払費用**: 1年特例 (詳細定義済)。
-*   **現金**: 役員借入金 (詳細定義済)。
+### 3-2. 技術要素 (Technical Components)
 
-#### Category C: セーフティネット (Safety Nets)
-*   **論理削除**: `_TRASH/YYYYMM` フォルダ。
-*   **監査タグ**: `AUTO_TAX_FIX` 等。
-*   **アシストモード**: 曖昧なマッチに対する Human-in-the-Loop。
-    *   **推論根拠**: `reason_code` と `confidence_score` を返す。
-    *   **ルール適用**: プロンプト内で「全社ルール」「個別ルール」を優先順位付けして参照する。
+*   **多次元キー**: `Vendor` × `Amount` × `Method` の条件分岐を物理DB化。
+*   **Value構造**: 単一科目ではなく JSON Template `{"debit": [...], "credit": [...]}` を保存。
+*   **金額レンジ**: `1万(交際費)`, `5万(印紙)`, `10万(消耗品)`, `20万(少額資産)` で厳格区分。
+*   **エイリアス管理**: 未知ベンダーはLLMで自動マッピング更新。
+*   **マッチング強化**: `日付Window` + `金額完全一致` に加え、`音韻類似度(Phonetic)` と `電話番号` を活用。
 
-### B. アーキテクチャの決断
-*   **GAS (Triggers)**:
-*   **GAS (Triggers)**:
-    *   **Timing**: Time-driven Trigger (**5分間隔**) を採用する。 (Operational Parametersに準拠)
-    *   **理由**: Shared Driveの「変更通知」トリガーは技術的に不安定な場合があるため、定期ポーリング（Polling）が最も確実で実装も容易。2営業日SLAならこれで十分。
-    *   **Action**: 新規ファイルを検知し、処理用バケットへ転送 → Batch APIを叩く。
-*   **Backend**: 以下の最新モデル群を活用し、役割分担を行う "Ensemble AI" 構成を採用する。
-    *   **Gemini 3 Flash**: 高速レスポンス・一次仕訳生成（コスト効率重視）
-    *   **Gemini 3 Pro**: 複雑なルール適用・全体整合性チェック（精度重視）
-    *   **Deep Thinking (Thinking Model)**: 難解な複合仕訳・未知の取引パターンの推論（深い思考）
-*   **Processing Mode**: **Batch API (Async)** を採用する。
-    *   SLA: 共有フォルダ格納から「2営業日以内」に処理されればOK。
-    *   メリット: Vertex AI Batch推論によりコスト50%削減 & Rate Limit回避。
-    *   UIへの影響: ユーザーが画面を開いた時には既にAI処理が完了している状態を作る（待ち時間ゼロ）。
+#### C. ハイブリッド判定フロー (Hybrid Inference Flow)
+1.  **Dispatcher (OCR/Backend)**: 重複排除・正規化・統計データとの照合（スコアリング）。
+2.  **Worker (LLM)**:
+    *   **高信頼度 (Score 90+)**: AIを通さずOCR/Backendだけで確定（コスト・時間ゼロ）も視野に入れるが、初期はAIを通す。
+    *   **通常 (Score < 90)**: 統計データをプロンプトに注入し、AIが最終推論。
+3.  **Human Review**: 人間が確定。
+4.  **Learning**: 「人間が何を選ばなかったか（修正内容）」を統計DBに反映（Penalize/Reward）。
+
+#### D. 出納帳・口座連携 (Reconciliation Engine)
+領収書（借方）だけでなく、通帳・カード明細（貸方）を取り込み、自動突合を行う。
+*   **データソース (Input Sources)**:
+    *   **CSV (Primary)**: ネットバンキング/カード明細。最も信頼できる正解データ。Backend Parserで統一フォーマットに変換。
+    *   **Image (Secondary)**: 通帳のスクショ等。Gemini Flashで構造化データ(JSON)に変換し、合計検算を経て取り込む。
+*   **突合ロジック (Matching Logic)**:
+    *   **3点マッチング**: `Date` (±45日) + `Amount` (完全一致) + `Vendor` (類似度)。
+    *   **自動消込**: マッチしたら貸方を「未払金/預金」で確定し、「証憑あり」フラグを立てる。
+*   **証憑なき仕訳の推論 (Auto-Journaling)**:
+    *   領収書がない（振込手数料、サブスク等）明細について、「摘要統計エンジン」 を実装する。
+    *   **Logic**: `Normalized_Desc` + `Amount_Range` をキーに過去仕訳を検索。
+    *   **Result**: 信頼度80%以上で自動提案。
+
+#### E. ストレスフリー重複排除 (Universal Deduplication)
+目的: 経営者に「前回どこまで送ったか？」を確認させず、「とりあえず全部送る」運用を許容する。
+*   **銀行/カード (Ledger)**:
+    *   **行レベル指紋**: `Date` + `Desc` + `Amount` + `Balance` の4要素でユニークキー（指紋）を作成。
+    *   **挙動**: 過去の取り込み済みデータと指紋が一致する行は、完全に無視（スキップ）する。
+*   **領収書 (Receipts)**:
+    *   **Tier 1 (MD5)**: ファイル自体のハッシュ一致 → 即時削除（完全な二重送信）。
+    *   **Tier 2 (Semantic)**: [日付+店名+金額] が一致 → 「重複の疑い」警告を表示（同日同額のタクシー代の可能性があるため、勝手に消さない）。
+
+#### F. 拡張照合ルール (Zubora Extended)
+*   **A-4: FX Variance (為替ズレ)**:
+    *   **Logic**: `IF 差額絶対値 <= AUTO_FEE_LIMIT`.
+    *   **Action**: 「支払手数料」 として自動処理。税区分: 親取引を継承 (海外なら対象外)。
+*   **A-5: Bundle Payment (合算払い)**:
+    *   **Logic**: スマート総当たり。日付 ±BUNDLE_WINDOW_DAYS 内の 未消込領収書 を探索。
+    *   **Action**: `Sum(領収書群) == 引落額` なら、Screen E に 「合算マッチ候補」 として提案。
+    *   **UI**: 「この8,500円の引落は、これら3枚の合計と一致します。承認しますか？」
+*   **A-6: Points Usage (ポイント・値引き)**:
+    *   **Logic**: `IF (領収書額 > 引落額)`.
+    *   **Action**: 複合仕訳。借方: 経費(全額), 貸方: 預金(実額), 貸方: 値引/ポイント(差額)。
+    *   **UI**: 差額を 緑/青の「ポイント利用」 として表示（エラーではない）。
 
 
 **【決定事項】UI実装の前に「AI/GASロジック設計」を優先する**
@@ -139,110 +307,9 @@ Screen E で「なぜこの仕訳になったか」を表示するバッジや�
 
 次回起動時は、以下の手順で作業を開始せよ。
 
-1.  **コンテキスト読み込み (Context Loading)**:
-    *   **Dynamic Discovery (動的探索)**:
-        *   以下は「現時点の」重要ファイルである。フェーズ進行によりファイルは増減するため、必ず `brain` ディレクトリ内の最新状況を確認し、**関連する全ての仕様書・ログを読み込むこと**。
-    *   **Current Anchors (現在の重要ファイル)**:
-        *   [NEXT_SESSION_BRIEF.md](file:///C:/Users/kazen/.gemini/antigravity/brain/69339ee8-ec83-4cfb-8b61-3f40ac80588a/NEXT_SESSION_BRIEF.md) (Self)
-        *   [screen_e_ui_spec.md](file:///C:/Users/kazen/.gemini/antigravity/brain/69339ee8-ec83-4cfb-8b61-3f40ac80588a/screen_e_ui_spec.md) (UI Spec)
-        *   [task.md](file:///C:/Users/kazen/.gemini/antigravity/brain/69339ee8-ec83-4cfb-8b61-3f40ac80588a/task.md) (Status)
-        *   [design_discussion.md](file:///c:/Users/kazen/.gemini/antigravity/brain/69339ee8-ec83-4cfb-8b61-3f40ac80588a/design_discussion.md) (Logs)
-        *   [implementation_plan.md](file:///C:/Users/kazen/.gemini/antigravity/brain/69339ee8-ec83-4cfb-8b61-3f40ac80588a/implementation_plan.md) (Roadmap)
+1.  **コンテキスト読み込み**: 最新の `NEXT_SESSION_BRIEF.md`, `screen_e_ui_spec.md`, `implementation_plan.md` をロード。
+2.  **Implementation**: Phase 2 (AI/Data Logic) の実装を開始。特に `types.ts` と `VertexAIStrategy.ts` の刷新を行う。
 
-3.  **深堀り検討と提案 (Deep Dive Discovery) - [FIRST PRIORITY]**:
-    *   **"人間が求めるあるべき姿"** を定義するためのディスカッションを行う。
-    *   **AIからの技術的・思想的提案 (Technical & Philosophical Proposal)**:
-        *   **Context Caching**: 全社ルールや過去仕訳をRAGではなく、Geminiの巨大コンテキストに丸ごと載せる手法の是非。
-    *   **技術選定: RAG vs Context Caching**:
-        *   **RAG (検索)**:
-            *   **仕組み**: 膨大なデータから「関連しそうな部分だけ」を探してAIに読ませる。
-            *   **メリット**: コストが安い。データ量が無限でも対応可能。
-            *   **デメリット**: **「検索漏れ」が起きる。** マニアックな税法や、特殊な会社ルールが検索に引っかからないと、AIはそれを無視して間違える（会計では致命的）。
-        *   **Big Context (全乗せ)**:
-            *   **仕組み**: 全社ルール、過去帳簿(1年分)を**丸ごと**AIの脳内に展開する。
-            *   **メリット**: **「見落とし」がゼロ。** 全てのルールを俯瞰して判断できるため、複合的な推論に強い。
-            *   **デメリット**: 毎回トークンを送ると高い。→ **「Context Caching」** で解決（一度読ませたデータはキャッシュして使い回すので、通信費も時間もゼロになる）。
-        *   **結論**: **Context Caching を採用する**。会計の正確性には「全乗せ」が不可欠。
-
-    *   **コスト試算 (Context Caching Cost Analysis)**:
-        *   **前提**: 過去仕訳1万行 + 元帳1万行 = 計2万行。
-        *   **トークン換算**: 1行約50トークンと仮定 × 2万行 = **約1,000,000 (1M) トークン**。
-        *   **Gemini 1.5 Flash**:
-            *   キャッシュ保存料: ~$1.00 / 1M token / hour (1時間あたり約150円) → **高い**。
-            *   **戦略変更**: 24時間維持するのではなく、**「Batch処理が走る1時間だけキャッシュを作成し、終わったら破棄する」** 運用にする。
-            *   これなら **1回あたり数十円** で「全乗せ」の恩恵を受けられる。
-            *   **オプション (圧縮戦略)**:
-                *   ユーザー提案の通り、GASで統計処理（グルーピング）してからキャッシュすれば、トークン量を1/20以下に圧縮可能。
-                *   **メリット**: コストがさらに激安になる（数円レベル）。
-                *   **デメリット**: 「先月のこの取引」という個別履歴が見えなくなるため、「完全一致コピー」ができなくなる。また、GAS集計ロジックの開発工数が増える。
-                *   **推奨**: まずは「生データ全乗せ」で開発し、コストが問題になったら「圧縮」を検討する（Phase 2）。
-        *   **Gemini 3 Pro**: Flashより高いが、難問解決時のみ局所的に使う。基本はFlashで回すことでコストを抑制。
-        *   **Multi-modal Reasoning**: 文字情報だけでなく、「領収書のレイアウト」や「ロゴ」から業種を推定する能力について。
-        *   **"Brain" Architecture**: Gemini 3 Flash / Pro / Thinking をどう使い分けるか？（例：Flashで即答し、Thinkingで裏検証するなど）
-
-### C. 次回提示予定の具体案 (Draft Proposal to be Discussed)
-以下を次回議論のたたき台として用意した。
-
-#### テーマ: "Three-Tier Brain Model" (3層の頭脳モデル)
-Gemini 3 シリーズ（Flash, Pro, Thinking）の特性を活かし、単なる「OCRの延長」ではなく、**「人間の熟練経理担当者の思考プロセス」そのものを模倣するアーキテクチャ** を提案する。
-
-| 層 (Layer) | モデル (Model) | 役割 (Role) | 思考プロセス (Thought Process) |
-| :--- | :--- | :--- | :--- |
-| **1. Reflex (反射脳)** | **Gemini 3 Flash** | 一次仕訳、即答 | 「スタバだ、交際費だ」と瞬時に判断。ユーザーを待たせない爆速レスポンス担当。 |
-| **2. Logic (論理脳)** | **Gemini 3 Pro** | ルールチェック、整合性 | 「全社ルールに違反していないか？」「インボイス番号は有効か？」を裏で検閲。Context Cachingで全社ルールを記憶。 |
-| **3. Deep Thought (熟考脳)** | **Gemini 3 Thinking** | 例外解決、複合仕訳 | 「見たことない請求書だ…」「税区分が混在している…」等の難問に対し、仮説検証を行い解決策を導く。 |
-
-**【提案の核心】**
-「ボタンを押したら1つのAIが答える」ではなく、**「Flashが即答し、Proがルールチェックし、Thinkingが難問を解く」** という **チームプレー** をバックエンドに実装する。
-
-### D. 現場からの極めて重要な洞察 (Critical Domain Insights)
-ユーザー(税理士)より、以下の具体的な業務要件とAIへの期待値が提示された。これを設計の憲法とする。
-
-1.  **"難問"は10%以下だが、性質が特殊**:
-    *   科目が分からないケースは稀。
-    *   **本当の難問** = 「経費になるかどうかの境界線（税務リスク）」や「取引先名だけでは内容が不明（詳細確認が必要）」なケース。
-    *   **AIへの期待**: 答えを出すことより、「これは確認が必要です（忘れないで！）」とアラートを出すこと。
-
-2.  **80%は"反射"でいいが、"記憶"の補助が必須**:
-    *   人間は「前の仕訳なんだっけ？」を忘れる。これが非効率とブレの原因。
-    *   **重要**: AIは毎回ゼロから推論するのではなく、**「前回と同じ取引は、確実に前回と同じ科目にする（P/L連続性の担保）」** ことが最優先。推論はその"チェック役"に留める。
-
-3.  **暗黙知の言語化 (Rule Extraction)**:
-    *   「全社ルール」「標準科目」は明文化されていないことが多い。
-    *   **AIの新機能提案**: 仕訳処理のログから、「この会社、いつもこのパターンですね。ルール化しますか？」と**暗黙知をルールとして提案・整備する機能**が必要。
-
-4.  **インボイス**: 実務上は番号があればOKだが、実装は維持する。
-
-5.  **コミュニケーションとタスク管理 (Communication Integration)**:
-    *   **"顧客に確認"機能**: UI上でボタンを押すと、「この画像の件で確認」というタスクが立ち、画像とセットで一元管理される（散逸防止）。
-    *   **AIによる補完**:
-        *   **Web検索**: 未知の取引先名があれば、AIがネットで業態を調べ、「たぶん飲食店のようです」とヒントを出す。
-        *   **資料請求の推奨**: 「借入金」「修繕費」など、契約書や見積書が必須になる科目をAIが検知し、「契約書の徴求が必要です、依頼しますか？」と人間に促す（鋳型整備）。
-    *   **Human-in-the-Loopの高速化**:
-    *   **Human-in-the-Loopの高速化 (Sequential Flow)**:
-        *   **Event-Driven**: 共有ドライブに保存 → 即時にBatch Job投入（夜間バッチではない）。
-        *   **Async Processing**: AIは数時間〜半日程度で処理完了。順次データが出来上がる。
-        *   **User Action**: 人間は「処理が終わったものから」自分のタイミングで高速処理する。待ち時間ゼロ。
-
-
-### E. 次回のアクションプラン (Current)
-実装の前に、まだ議論すべき論点が残っている。徹底的に深堀りを行う。
-
-1.  **更なる深堀り (Deep Dive Continued) - [NOW ACTIVE]**:
-    *   JSONの形を決める前に、**「AIがどう振る舞えば、真に人間のパートナーになれるか？」** をさらに言語化する。
-    *   特に「暗黙知の抽出ロジック」や「タスク管理のUI/UX」について、ユーザーの理想を完全に引き出す。
-
-2.  **設計提案 (Design Proposal) - [PENDING]**:
-    *   議論が尽くされた後に、JSON Schemaを作成する。
-
-4.  **設計提案 (Design Proposal)**:
-    *   ユーザーに対して「理想のデータ構造 (JSON Schema)」を提示する。
-    *   **複合仕訳 (Debit/Credit)** に対応したType定義を作成する。
-    *   **合意が取れたら**、それを [implementation_plan.md](file:///C:/Users/kazen/.gemini/antigravity/brain/69339ee8-ec83-4cfb-8b61-3f40ac80588a/implementation_plan.md) に書き起こし、実装フェーズ (Phase 2) に移行する。
-
-## 4. ユーザーへのメッセージ (To User)
-PCをシャットダウンしても、このファイルが残ります。
-次回開始時に **「/load_context」** と入力（または指示）していただければ、私がこのファイルを読み込み、即座に「ロジック設計の続き」から再開できます。
 
 ## 5. ◆実装済み (Implemented)
 以下の項目は、プログラムコード (`src/*`) に既に反映されている。
@@ -837,3 +904,238 @@ AIは必ず **「仮説」** と **「迷いの理由」** をセットで提示
 以上で本セッションの議論を終了し、この結論を `NEXT_SESSION_BRIEF.md` に引き継ぎます。
 
 
+## 7. 新たな決定事項 (New Decisions)
+*   **日付**: 2026/01/09
+*   **決定**: **9つのバケツ (Defined Schemas)** は、UI画面 (Screen C) としては実装しない。
+*   **理由**: ModelとViewの分離。Screen E等で内部ロジック（ステータス定義）として活用する方が、実装工数を抑えつつAIの賢さ（フィルタリングやアラート）を最大化できるため。
+*   **方針**:
+    *   **UI Status**: `Screen C` implementation is **CANCELLED**.
+    *   **Logic Status**: `9 Buckets Logic` is **APPROVED** for Backend/Filtering usage.
+
+
+## 8. Screen E UIコンポーネント: ボタン一覧 (Detailed Button Definition)
+
+#### UIの整備対象ファイルと整備方針
+
+**触ってよいファイル (✅ Allowed)**
+
+*   **implementation_plan.md**
+    *   **理由**: 「いつ・何を・どう実装するか」の地図であり、今回の議論で確定した「型定義の追加」や「UIコンポーネントの実装順序」を、次回以降の作業指示書として明文化しておく必要があるため。
+*   **NEXT_SESSION_BRIEF.md**
+    *   **理由**: 今回の議論の結論（UI仕様、ロジック詳細）を、次回セッションへのコンテキストとして保存する唯一の場所であるため。
+*   **task.md**
+    *   **理由**: 現在のタスク進捗状況（計画フェーズ完了等）を正しく管理するため。
+*   **walkthrough.md**
+    *   **理由**: 今回のセッション成果（決定事項）を記録するため。
+*   **上記ファイルの .resolved 版**
+    *   **理由**: システムの内部整合性を保つため。
+
+**触ってはいけないファイル (❌ Prohibited)**
+
+*   **types.ts**
+*   **ZuboraLogic.ts**
+*   **VertexAIStrategy.ts**
+*   **全ての .vue ファイル** (例: ScreenE_JournalEntry.vue, App.vue 等)
+*   **上記以外の全ての .ts ファイル** (例: useAccountingSystem.ts, router/index.ts 等)
+*   **全ての .js ファイル** (例: config.js 等)
+*   **全ての .json ファイル** (例: package.json, tsconfig.json 等)
+    *   **理由**: 私は文脈記憶能力が低く愚かであるため、ロジックとUIの整合性が取れていない現段階でコードを一部でも触ると、次回以降「なぜこのコードが存在するのか（実験用か本番用か）」が分からなくなり、確実にバグや混乱の原因となるため。「コード変更」は次回の実装フェーズ（Phase 2/3）で、計画書に基づいて一気貫通で行うのが最も安全であるため。
+
+以下は、Screen E に実装すべき全ボタンのリストである。これを基に配置と優先度を深掘りする。
+
+### 1. 意思決定・ステータス操作 (Primary Actions)
+仕訳の最終状態を決定し、次のアクションへ進むためのボタン群。
+
+**＜記帳 (Bookkeeping)＞** - 帳簿に「結果」を残すアクション
+*   **[承認 (Approve)]**: 仕訳・消込を確定する。
+*   **[対象外 (Exclude)]**: 帳簿外として処理完了とする（重複・対象外）。
+
+**＜ルール・学習 (Rules & Learning)＞** - AIを「教育」するアクション
+*   **[ルール保存 (Save Rule)]**: 現在のパターンを将来のために記憶させる。
+
+**＜タスク (Tasks)＞** - 人間に「ボール」を渡すアクション
+*   **[保留 (Hold)]**: 自分へのタスク（後でやる）。
+*   **[質問 (Ask)]**: 社長へのタスク（使途不明などを聞く）。
+*   **[資料依頼 (Request Doc)]**: 社長へのタスク（領収書ください）。
+
+### 2. 人間に提示する選択肢の源泉 (Information Sources)
+AIが提示する選択肢や情報の根拠。
+*   **全社ルール (Company-wide Rules)**: すべてのクライアントに適用される基本方針。
+*   **個別会社ルール (Individual Company Rules)**: その会社特有のルールや例外。
+*   **ズボラ経理ルール**: 「1000円以下は雑費」などの全社ルール。
+*   **「知識」プロンプト**: 税務知識や一般的常識。
+*   **学習ルール**: 過去のユーザー修正履歴 (Individual Rules)。
+*   **9バケツロジック**: 強制突合、未払計上などのシステムロジック。
+*   **税務的な必須ルール**: 実装しないと違法になるもの。
+*   **外部API連携 (External APIs)**: 国税庁インボイスAPI（T番号の実在性・登録屋号）、法人番号マスタなど。
+*   **OCRメタデータ (Unique Metadata)**: Gemini Flashシリーズによる「意味理解」を含んだOCR。
+    *   **実装済み/計画済みフィールド**:
+        *   **Standard**: `date`, `totalAmount`, `merchantName`, `items` (品名/金額)
+        *   **Metadata (Planned)**: `merchantTel` (電話番号), `merchantAddress` (住所), `invoiceNumber` (T番号), `time` (時刻)
+        *   **Inference Tags (ZuboraLogic)**:
+            *   `suggestedTaxClass`: 対象外/課対仕入10% (海外ベンダー判定など)
+            *   `isOverseas`: Google, AWS, Adobeなどを名寄せで判定
+    *   **モデル選定候補とコスト試算 (100枚あたり)**:
+        *   **Gemini 1.5 Flash-8B**: $0.003 (約0.45円) - 圧倒的最安。レシート高速処理の筆頭候補。
+        *   **Gemini 2.0 Flash / 2.5 Flash-Lite**: $0.008 (約1.2円) - 新世代のコストパフォーマンス機。
+        *   **Gemini 2.5 Flash**: $0.024 (約3.6円) - 以前の「Pro」相当の推理力。
+        *   **Gemini 3.0 Flash**: $0.040 (約6.0円) - 最新標準。難読・複雑な推論が必要な場合に利用。
+*   **過去取引内容や取引自体の有無**: 履歴データそのもの。
+
+### 3. 人間に提示するAIに係るUI (AI-Driven UI Components)
+AIが思考した結果を人間にどう見せるか。
+
+**＜選択肢UI (Choice UI)＞** - AIが推奨する仕訳候補（3〜5つ程度）
+*   **会議費でOK (今回だけ)**: 今回限りの例外処理。
+*   **交際費に変更する (推奨)**: AIの自信度が高い推奨アクション。
+*   **その他候補**:
+    *   過去取引の真実
+    *   重複・計算期間外・初取引
+    *   ズボラ適用・9つバケツ適用
+    *   教科書的ルール・税務上ルール
+
+**＜警告・状態表示UI (Alerts & Status)＞** - 選択肢から独立した警告や補足情報
+*   **重複**: 既に類似データが存在する。
+*   **計算期間外**: 決算期をまたぐ日付である。
+*   **複数仕訳候補**: 候補が複数あり、AIが迷っている。
+*   **取引額30万円以上**: 資産計上の可能性アラート。
+*   **初取引**: 過去実績がない新規ベンダー。
+*   **資金移動可能性**: 経費ではなく口座間移動の疑い。
+*   **過去仕訳が未統一**: 過去に「会議費」と「交際費」の両方で処理されている。
+
+**＜テキストUI (Reasoning Display)＞** - AIの思考プロセスの可視化
+*   `[事実] -> [論理] -> [懸念] -> [視点(ズボラvs教科書)] -> [提案]`
+
+**＜複合仕訳の貸借UI (Multi-line Editor)＞** - 借方・貸方の編集エリア
+
+**＜ルールUI (Rule Management)＞** - ルール保存・管理
+*   **ルール保存ボタン**: 現在の処理をルール化する。
+*   **自由記載**: メモや理由を残す。
+*   **ルールとして記憶する**: 今後も同じ科目（例：交際費）にする。
+*   **ルールを上書きする**: 過去のルールを変えて、今後は別の科目（例：会議費）にする。
+*   **ルールから除外する**: 過去の履歴（例：仕訳XX）が間違いだったとして学習から外す。
+
+### 4. ルール学習や知識プロンプト (Learning Triggers)
+どのようなアクションがAIの学習（フィードバック）となるか。
+
+**＜学習ロジックの結果、変更 (Implicit Learning)＞**
+*   仕訳を承認、仕訳除外ボタンを押下した事実。
+*   AIが提示した選択肢を選択して承認した事実。
+
+**＜ルールを直接変更 (Explicit Learning)＞**
+*   ルール保存ボタンを明示的に押下する。
+*   **[一覧へ戻る (Back)]**: Screen B（カンバン）に戻る。
+*   **[元画像 (Show Image)]**: 領収書画像を拡大表示・別窓表示。
+*   **[PDF出力 (Download)]**: 証憑をダウンロード。
+
+
+
+## 5. 追加決定事項 (Additional Strategy Decisions)
+
+### 5-1. Universal OCR Schema (L1 Output)
+レシート・通帳・カード明細を統一的に扱う万能スキーマの採用。
+`document_type` フィールドにより、後続の処理モードを厳格に分岐させる。
+
+#### A. 仕訳モード (Journal Mode)
+*   **処理対象**: `RECEIPT` (領収書), `INVOICE` (請求書), `OTHER`
+*   **目的**: 発生主義に基づく「単一の複合仕訳」を作成する。
+*   **L1 (OCR) の責務**:
+    *   `transaction_header` (合計金額、日付、支払方法) の精度を最優先する。
+    *   `tax_breakdown` (税率ごとの内訳) を正確に読み取る。
+    *   `line_items` (明細) は補助情報とし、OCR精度が低い場合は無視（空配列）してもよい。
+*   **L2/L3 (Backend/AI) の挙動**:
+    *   `issuer.name` から勘定科目を推論し、多次元キーを用いて仕訳テンプレートを適用する。
+
+#### B. 消込モード (Reconciliation Mode)
+*   **処理対象**: `BANK_STATEMENT` (通帳), `CARD_STATEMENT` (カード明細)
+*   **目的**: 資金移動の事実確認、および既存仕訳・未払計上との「消込（照合）」を行う。
+*   **L1 (OCR) の責務**:
+    *   **【必須】** 画像内の全ての行を `line_items` として漏れなく抽出する。1行でも欠落すればエラー扱いとする。
+    *   「入金」「出金」の列を正確に判別し、それぞれ `income_amount`, `expense_amount` にマッピングする。
+    *   `balance` (残高) を読み取り、前行との差分検算に使用する。
+*   **L2/L3 (Backend/AI) の挙動**:
+    *   各行の日付・金額をキーとして、既存の仕訳データ (Journal Modeで作成されたもの) を検索し、3点照合を行う。
+
+#### C. 共通・重要ロジック (Universal Logic Rules)
+*   **`line_items` の挙動**: レシートは任意（補助）、通帳・明細は必須（主役）として挙動を厳格に分ける。
+*   **`is_invoice_qualified` の判定**: T番号の有無に加え、「税込3万円未満」の実務的特例を自動判定する。
+
+*   詳細定義:
+### 5-2. 詳細定義 (Detailed Definition: Screen E Appendix A)
+
+#### Universal OCR Schema (L1 Output)
+GAS (L1) から Backend/AI (L2/L3) へ渡される「正規化された一次データ」。
+領収書、請求書、通帳、カード明細など、あらゆる証憑を単一のフォーマットで表現する。
+
+```json
+{
+  "document_type": "RECEIPT | INVOICE | BANK_STATEMENT | CARD_STATEMENT | OTHER",
+  "meta": {
+    "scan_date": "YYYY-MM-DD",
+    "currency": "JPY",
+    "language": "ja"
+  },
+  "issuer": {
+    "name": "店舗名または発行者名 (正規化前)",
+    "name_reading": "フリガナ (ある場合)",
+    "registration_number": "T1234567890123 (インボイス番号)",
+    "phone_number": "03-xxxx-xxxx (マッチング用キー)",
+    "address": "住所文字列",
+    "is_handwritten": false
+  },
+  "recipient": {
+    "name": "宛名 (上様, 株式会社〇〇 etc.)"
+  },
+  "transaction_header": {
+    "date": "YYYY-MM-DD (取引日)",
+    "total_amount": 11000,
+    "total_tax_amount": 1000,
+    "payment_method": "CASH | CREDIT_CARD | E_MONEY | TRANSFER | UNKNOWN",
+    "summary": "全体の摘要 (例: 飲食代として)"
+  },
+  "tax_breakdown": [
+    {
+      "rate": 10,
+      "taxable_amount": 10000,
+      "tax_amount": 1000
+    },
+    {
+      "rate": 8,
+      "taxable_amount": 0,
+      "tax_amount": 0
+    }
+  ],
+  "line_items": [
+    {
+      "date": "YYYY-MM-DD (明細行の日付)",
+      "description": "商品名 または 摘要",
+      "amount": 5500,
+      "tax_rate": 10,
+      "type": "ITEM (商品) | TAX (税額) | DISCOUNT (値引)",
+      "income_amount": 0,  // 通帳の入金列用
+      "expense_amount": 5500, // 通帳の出金列用
+      "balance": 100000 // 通帳の残高列用 (検算用)
+    }
+  ],
+  "validation": {
+    "is_invoice_qualified": true, // T番号あり or 少額等の判定
+    "has_stamp_duty": false, // 収入印紙の有無
+    "notes": "特記事項や読み取り不明点"
+  }
+}
+```
+
+#### Universal Logic Rules (Prompt Annotations)
+スキーマ定義とセットで実装されるべき、AIへの重要指示事項。
+
+1.  **明細行 (line_items) の抽出ルール**:
+    *   **RECEIPT (領収書)**:
+        *   可能なら抽出する。ただし不明瞭な場合は空配列でも可とし、`total_amount` を優先する。
+    *   **BANK/CARD_STATEMENT (通帳・明細)**:
+        *   **【必須】** 全ての行を漏れなく抽出する。
+        *   入金列 → `income_amount`, 出金列 → `expense_amount` にマッピングする。
+        *   残高列 → `balance` にマッピングする。
+
+2.  **適格請求書 (is_invoice_qualified) の判定ルール**:
+    *   インボイス登録番号 (T+13桁) がある場合 → `true`
+    *   番号がない場合でも、税込合計金額が 30,000円未満の場合 → `true` (少額特例の実務的適用)
