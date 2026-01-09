@@ -6,10 +6,10 @@
 ## 1. デスクトップ（ワークスペース）上
 *   **NEXT_SESSION_BRIEF.md** - **[追加 (Append)]**
     *   `c:\Users\kazen\OneDrive\デスクトップ\ai_gogleanti\NEXT_SESSION_BRIEF.md`
+*   **implementation_plan.md** - **[修正 (Modify)]** (※マスター昇格)
+    *   `c:\Users\kazen\OneDrive\デスクトップ\ai_gogleanti\implementation_plan.md`
 
 ## 2. 内部ブレイン（アーティファクト）上
-*   **implementation_plan.md** - **[修正 (Modify)]**
-    *   `C:\Users\kazen\.gemini\antigravity\brain\69339ee8-ec83-4cfb-8b61-3f40ac80588a\implementation_plan.md`
 *   **implementation_plan.md.resolved** - **[修正 (Modify)]**
     *   `C:\Users\kazen\.gemini\antigravity\brain\69339ee8-ec83-4cfb-8b61-3f40ac80588a\implementation_plan.md.resolved`
 *   **design_discussion.md** - **[追加 (Append)]**
