@@ -123,9 +123,15 @@ AIが提示する選択肢や情報の根拠。
     *   **Metadata (Planned)**: `merchantTel` (電話番号), `merchantAddress` (住所), `invoiceNumber` (T番号), `time` (時刻)
     *   **Inference Tags**: `suggestedTaxClass` (対象外判定), `isOverseas` (名寄せ)
 *   **モデル選定候補とコスト試算 (100枚あたり)**:
-    *   Gemini 1.5 Flash-8B: $0.003 (約0.45円) - 最安。
-    *   Gemini 2.0/2.5 Flash: $0.008~$0.024 - バランス型。
-    *   Gemini 3.0 Flash: $0.040 - 難解な推論用。
+        *   **Gemini 1.5 Flash-8B**: $0.003 (約0.45円) - 圧倒的最安。レシート高速処理の筆頭候補。
+        *   **Gemini 2.0 Flash / 2.5 Flash-Lite**: $0.008 (約1.2円) - 新世代のコストパフォーマンス機。
+        *   **Gemini 2.5 Flash**: $0.024 (約3.6円) - 以前の「Pro」相当の推理力。
+        *   **Gemini 3.0 Flash**: $0.040 (約6.0円) - 最新標準。難読・複雑な推論が必要な場合に利用。
+    *   **モデル選定決定 (Selected Model)**:
+        *   **Gemini 2.0 Flash / 2.5 Flash-Lite**: $0.008 (約1.2円) - **推奨・採用 (Accepted)**
+            *   理由: Flash-8Bに迫る低コストでありながら、複雑な「会計証憑の判定 (accounting_judgment)」に耐えうる性能を持つため。Gatekeeperとして最適。
+        *   ~~Gemini 1.5 Flash-8B~~: $0.003 - 安価だが、Gatekeeper判断には不安が残るため却下。
+        *   ~~Gemini 3.0 Flash~~: $0.040 - 高価すぎるため却下。
 *   **過去取引内容や取引自体の有無**: 履歴データそのもの。
 
 #### 3. 人間に提示するAIに係るUI (AI-Driven UI Components)
