@@ -47,6 +47,17 @@
     *   最適化処理数/1回: 1
     *   ジョブ履歴保持期間: 30日
 
+*   **B. セキュリティ (Security)**
+    *   `src/router/index.ts` に実装済み。
+    *   **Admin Settings Protection**:
+        *   `/admin-settings` へのアクセスを `admin@sugu-suru.com` のみに制限する Navigation Guard を実装済み。
+        *   権限のないユーザーがアクセスしようとすると、警告アラートを表示し、ホームにリダイレクトする。
+*   **C. AI_OCRモデル**
+    *   **Schema V2 策定**: `accounting_judgment` による Gatekeeper ロジックを導入。
+    *   **モデル選定**: Gemini 2.0 Flash を OCR エンジンとして採用（設定画面・バックエンド実装済み）。
+    *   **コスト最適化**: トークン課金 × Batch API × ハイブリッド構成により、1社あたり原価100円以下を目指すモデルを確立。
+    *   **UI/UX改善**: 管理者設定画面へのモデル選択肢追加と、ブラウザでの動作検証完了。
+
 ### 6. ◆実装しないことが決定
 *   **B. Screen C: 9つのバケツ (Defined Schemas)**
     すべてのデータを以下の9カテゴリに分類し、月次決算を完了させる。
