@@ -27,15 +27,45 @@
 - [x] **スキーマ確定 (Schema V2)**: `accounting_judgment` Gatekeeperロジック導入完了。
 - [x] **AIモデル選定**: Gemini 2.0 Flash 正式採用。
 
-### Step 1: Firestoreデータ設計 (Design)
-*UIを作る前に「データの形」を確定させる。*
-- [ ] **Firestore Schema定義**:
-    - [ ] `clients` collection (企業設定, ズボラルール設定)。
-    - [ ] `documents` collection (取引データの本体, Universal Schema構造)。
-    - [ ] `ledger` collection (仕訳データ, 会計ソフト連携用)。
-- [ ] **型定義の実装 (`types.ts`)**:
-    - [ ] `Universal_OCR_Schema` の TypeScript化。
-    - [ ] `document_type` (RECEIPT, INVOICE, etc.)。
+### Step 1: Firestoreデータ設計 (Schema Definition V2.8)
+
+### 方針: 安全なマージ (Safe Merge Strategy)
+既存の `src/types.ts` を上書きせず、以下のV2.8要件を統合する形をとる。
+
+### 1. ユーザーマスタ (Staff)
+`path: /users/{userId}`
+* **目的:** 担当者の原価管理。
+* **必須フィールド:**
+    * `hourly_charge_rate_jpy`: number (標準チャージレート/時給)
+
+### 2. 企業マスタ (Client)
+`path: /companies/{companyId}`
+* **目的:** 顧問先の契約管理、予実管理、リアルタイム集計。
+* **必須フィールド:**
+    * `financials`:
+        * `annual_contract_fee_jpy`: number (年間報酬)
+        * `expected_journal_count_monthly`: number (契約上の想定仕訳数)
+        * `expected_work_hours_monthly`: number (契約上の想定工数)
+    * `current_month_stats`: (AIコスト、枚数、実働時間などの集計値)
+
+### 3. 日報・工数ログ (Work Logs)
+`path: /companies/{companyId}/work_logs/{logId}`
+* **目的:** システム外作業（電話、面談など）のコスト捕捉。
+* **必須フィールド:**
+    * `duration_mins`: number
+    * `category`: 'MEETING' | 'CALL' | etc.
+    * `cost_jpy`: number (スナップショット原価)
+
+### 4. 証憑データ (Receipts) - The Core
+`path: /companies/{companyId}/receipts/{receiptId}`
+* **Fact/Opinion分離:** `ocr_data` と `accounting_data` の分離構造を維持。
+* **System Meta:** `file_hash` (SHA-256) を追加し重複排除に対応。
+* **Analytics (Metrics):**
+    * `usage_logs`: 配列。`step`, `model`, `cost_usd`, `duration_ms` を記録し、工程別ボトルネック分析に対応。
+* **ROI (Human Analytics):**
+    * `review_duration_ms`: 画面滞在時間。
+    * `staff_hourly_rate_snapshot`: 承認時の時給を記録。
+    * `actual_human_cost_jpy`: 確定した労務コスト。
 
 ### Step 2: データ取り込みパイプライン (Backend Ingest)
 *Driveにファイルが置かれたらFirebaseに取り込む (Tracer Bullet)。*
