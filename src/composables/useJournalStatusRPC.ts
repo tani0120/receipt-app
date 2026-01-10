@@ -1,6 +1,7 @@
-
 import { ref } from 'vue';
-import { client } from '@/client'; // Hono RPC Client
+import { receiptRepository } from '@/repositories/receiptRepository';
+import { clientRepository } from '@/repositories/clientRepository';
+import { mapWorkLogToJournalStatus } from '@/libs/adapters/v2_to_ui';
 import type { JournalStatusUi } from '@/types/ScreenB_ui.type'; // Using the specific type for Screen B
 
 export function useJournalStatusRPC() {
@@ -13,20 +14,22 @@ export function useJournalStatusRPC() {
     const fetchJournalStatus = async () => {
         loading.value = true;
         try {
-            // RPC call to /api/journal-status
-            const res = await client.api['journal-status']['$get']();
+            // V2 Migration: Fetch WorkLogs AND Clients (for name resolution)
+            const [logs, clients] = await Promise.all([
+                receiptRepository.getWorkLogs(50),
+                clientRepository.getClients()
+            ]);
 
-            if (res.ok) {
-                // The API returns already mapped and validated JournalStatusUi[] objects
-                const data = await res.json();
+            // Build Client Map (ID -> Name)
+            const clientMap = new Map<string, string>();
+            clients.forEach(c => {
+                if (c.id) clientMap.set(c.id, c.name);
+            });
 
-                // Type assertion might be needed if RPC types aren't fully inferred yet,
-                // but Hono should provide good inference if client.ts is set up right.
-                // Assuming data matches JournalStatusUi[] based on backend Zod schema.
-                jobs.value = data as unknown as JournalStatusUi[];
-            } else {
-                throw new Error('Failed to fetch journal status');
-            }
+            // Map to UI
+            jobs.value = logs.map(log => mapWorkLogToJournalStatus(log, clientMap));
+
+            console.log('[useJournalStatus] Fetched from V2 Repo:', jobs.value.length);
         } catch (err) {
             console.error('API Error:', err);
             error.value = err as Error;

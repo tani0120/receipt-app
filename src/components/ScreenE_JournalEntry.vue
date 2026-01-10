@@ -339,7 +339,7 @@ const balanceDiff = computed(() => totalAmount.value - creditTotal.value);
 // Lifecycle
 onMounted(async () => {
     containerRef.value?.focus();
-    const routeJobId = route.params.jobId as string;
+    const routeJobId = route.params.id as string;
     if (routeJobId) {
         await fetchJournalEntry(routeJobId);
         initializeForm();

@@ -2,14 +2,14 @@
 import {
   doc,
   getDoc,
+  updateDoc,
+  writeBatch,
+  Timestamp,
   collection,
   query,
   orderBy,
   limit,
-  getDocs,
-  updateDoc,
-  writeBatch,
-  Timestamp
+  getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase'; // プロジェクトのFirebase初期化設定に合わせてパス調整
 import type {
@@ -111,5 +111,24 @@ export const receiptRepository = {
     batch.set(receiptRef, { ...receipt, updatedAt: Timestamp.now() }, { merge: true });
 
     await batch.commit();
+  },
+
+  /**
+   * Fetch WorkLogs for List View (Screen B)
+   * Ordered by updatedAt desc
+   */
+  async getWorkLogs(limitCount: number = 50): Promise<WorkLogDocument[]> {
+    try {
+      const q = query(
+        collection(db, COLLECTION_WORK_LOGS),
+        orderBy('updatedAt', 'desc'),
+        limit(limitCount)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map(d => d.data() as WorkLogDocument);
+    } catch (e) {
+      console.error('[ReceiptRepo] Failed to fetch list:', e);
+      return [];
+    }
   }
 };

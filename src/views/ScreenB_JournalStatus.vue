@@ -133,7 +133,7 @@ const handleTableAction = (payload: { job: JournalStatusUi, type: string }) => {
     const { job, type } = payload;
     if (['work', 'approve', 'remand'].includes(type)) {
         router.push({
-            path: `/journal-entry/${job.id}`,
+            path: `/workbench/${job.id}`,
             query: { mode: type }
         });
     } else if (type === 'rescue_error') { // Assuming type for error rescue

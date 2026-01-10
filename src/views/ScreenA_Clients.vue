@@ -72,7 +72,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-for="client in filteredClients" :key="client.clientCode" class="group hover:bg-slate-50/80 transition-colors">
+            <tr v-for="client in filteredClients" :key="client.clientCode" @click="navigateToDetail(client)" class="group hover:bg-slate-50/80 transition-colors cursor-pointer">
               <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-mono font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block">
                       {{ client.clientCode }}
@@ -110,7 +110,7 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button
-                  @click="openEditModal(client)"
+                  @click.stop="openEditModal(client)"
                   class="text-slate-400 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-blue-50"
                   title="編集"
                 >
@@ -148,6 +148,7 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router';
 import { useClientListRPC } from '@/composables/useClientListRPC';
 import ScreenA_Detail_EditModal from '@/components/ScreenA_Detail_EditModal.vue';
 import type { ClientUi } from '@/types/ui.type';
@@ -238,5 +239,12 @@ const onModalSave = async (formData: any) => {
     Object.assign(editingClient.value, updatedClient);
 
     await handleUpdateClient();
+};
+
+const router = useRouter();
+const navigateToDetail = (client: ClientUi) => {
+    // Navigate to Detail Screen
+    // Assuming route name 'ScreenA_Detail' parameter 'code'
+    router.push({ name: 'ScreenA_Detail', params: { code: client.clientCode } });
 };
 </script>

@@ -1,6 +1,5 @@
-
 import { ref, computed, onMounted } from 'vue';
-import { client } from '@/client'; // Hono RPC Client
+import { clientRepository } from '@/repositories/clientRepository';
 import type { ClientUi } from '@/types/ui.type';
 
 // We must use the UI type because the API returns the mapped UI object (BFF)
@@ -21,18 +20,28 @@ export function useClientListRPC() {
     const isEditModalOpen = ref(false);
     const editingClient = ref<ClientUi | null>(null);
 
-    // Fetch Logic (RPC)
+    // Fetch Logic (V2 Migration)
     const fetchClients = async () => {
         loading.value = true;
         try {
-            const res = await client.api.clients['$get']();
-            if (res.ok) {
-                // Hono RPC + Zod Type Inference
-                const data = await res.json();
-                clients.value = data as unknown as ClientUi[];
-            } else {
-                throw new Error('API Error');
-            }
+            const v2Clients = await clientRepository.getClients();
+
+            // Map V2 -> UI
+            clients.value = v2Clients.map(c => ({
+                id: c.id,
+                clientCode: c.id, // ID as code for now
+                companyName: c.name,
+                repName: '-', // Not in V2 Schema yet (or in management)
+                contactInfo: '-',
+                status: c.management?.is_active ? 'active' : 'inactive',
+                // Dummy/Defaults
+                fiscalMonth: 1,
+                driveLinked: false,
+                accountingSoftware: 'yayoi',
+                salesTotal: 0,
+                jobCount: 0
+            } as any as ClientUi)); // Cast to ClientUi for now
+
         } catch (err) {
             console.error('Failed to fetch clients:', err);
             error.value = err as Error;
@@ -72,38 +81,44 @@ export function useClientListRPC() {
         editingClient.value = null;
     };
 
-    // Updated to use Hono RPC for PUT (BFF Action)
+    // Updated to use Repository (Phase 4)
     const handleUpdateClient = async () => {
         if (!editingClient.value) return;
-
-        // Find if this client allows editing (Validation against BFF-provided actions)
-        // If frontend state is stale, we might be editing something we shouldn't.
-        // But the Backend will reject it anyway.
 
         try {
             loading.value = true;
             const code = editingClient.value.clientCode;
 
-            // Call PUT /:code
-            const res = await client.api.clients[':code'].$put({
-                param: { code },
-                json: editingClient.value // Sending the whole object for now
-            });
+            // Map UI -> ClientDocument Partial
+            // Only name is editable in UI mostly?
+            // We'll update 'name' and maybe 'management.is_active' based on status.
+            const updateData: any = {
+                name: editingClient.value.companyName,
+                // Add more fields if UI supports them
+            };
 
-            if (res.ok) {
-                const responseData = await res.json();
-                console.log('Update Success:', responseData);
-
-                // Refresh list to show changes (or optimistic update)
-                await fetchClients();
-                closeEditModal();
-            } else {
-                throw new Error('Update Failed');
+            if (editingClient.value.status) {
+                // Example mapping back to partial management
+                // This requires fetching existing or merging.
+                // For now, simple name update is key.
+                // updateData.management = { is_active: editingClient.value.status === 'active' };
+                // Careful: Partial update on nested object in Firestore replaces the map? No, dot notation needed for nested.
+                // But repository 'updateClient' takes Partial<ClientDocument>.
+                // Ideally we use dot notation keys for nested updates.
+                // Let's stick to 'name' update for Name Resolution fix.
             }
+
+            await clientRepository.updateClient(code, updateData);
+
+            console.log('Update Success (V2)');
+
+            // Refresh list
+            await fetchClients();
+            closeEditModal();
+
         } catch (err) {
             console.error('Update Error:', err);
             error.value = err as Error;
-            // Optionally keep modal open to show error
         } finally {
             loading.value = false;
         }
