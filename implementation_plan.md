@@ -14,35 +14,44 @@
 - [x] **デプロイ**: Cloud Run + Firebase Hosting (検証済)。
 - [x] **セキュリティ実装**: `src/router/index.ts` (Admin Guard) 実装済み。
 
-## Phase 2: AIロジック & バックエンド (次回セッション)
-**目標**: 「ハイブリッド・アーキテクチャ」と「照合エンジン」を高精度で実装する。
+## Phase 2: Firebase全面移行 & バックエンド実装 (Architecture Change)
+**方針**: 顧問先共有フォルダ(Drive)以外は全てFirebaseで実装する。
+**優先順位**: 設計(Schema) -> パイプライン(Ingest) -> UI接続(Frontend)
 
 ### Step 0: 詳細設計 & ロジック監査 (完了)
 - [x] **技術詳細定義**: `src/api/lib/ai/strategy/ZuboraLogic.ts` および `NEXT_SESSION_BRIEF.md` にて定義済。
-    - [x] L1 GAS層のための `ハッシュマップ関数`。
+    - [x] L1 GAS層のための `ハッシュマップ関数` (概念完了)。
     - [x] `重複排除フィンガープリント` アルゴリズム。
-    - [x] `論理削除` 用ディレクトリ構造。
-    - [x] `ズボラルール` 判定ロジック (A-1...A-6, B-1...B-6)。
-- [x] **スキーマ確定 (Schema V2)**: `accounting_judgment` Gatekeeperロジックを導入。
-- [x] **AIモデル選定**: Gemini 2.0 Flash を正式採用 (コスト/性能バランス)。
+    - [x] `論理削除` 用ディレクトリ構造 (Drive設計として完了)。
+    - [x] `ズボラルール` 判定ロジック。
+- [x] **スキーマ確定 (Schema V2)**: `accounting_judgment` Gatekeeperロジック導入完了。
+- [x] **AIモデル選定**: Gemini 2.0 Flash 正式採用。
 
-### Step 2: AI & データロジック実装 (Backend)
+### Step 1: Firestoreデータ設計 (Design)
+*UIを作る前に「データの形」を確定させる。*
+- [ ] **Firestore Schema定義**:
+    - [ ] `clients` collection (企業設定, ズボラルール設定)。
+    - [ ] `documents` collection (取引データの本体, Universal Schema構造)。
+    - [ ] `ledger` collection (仕訳データ, 会計ソフト連携用)。
+- [ ] **型定義の実装 (`types.ts`)**:
+    - [ ] `Universal_OCR_Schema` の TypeScript化。
+    - [ ] `document_type` (RECEIPT, INVOICE, etc.)。
 
-- [ ] **型定義の更新 (`types.ts`)**
-    - [ ] `Universal_OCR_Schema` の実装 (Appendix A)。
-    - [ ] `document_type` enum の追加 (RECEIPT, BANK_STATEMENT, etc.)。
-    - [ ] `issuer`, `transaction_header`, `line_items` の追加 (Universal構造)。
-    - [ ] `validation` フィールドの追加 (`is_invoice_qualified`, `has_stamp_duty`)。
-    - [ ] `strategy` ロジック型の追加 (Universal Schemaからの `learningKey` 生成)。
-- [ ] **Vertex AI 戦略の更新 (`VertexAIStrategy.ts`)**
-    - [ ] **モデル指定**: `gemini-2.0-flash-exp` を採用。
-    - [ ] **Gatekeeperロジック**: 画像が「会計証憑」か否かを判定する `accounting_judgment` プロンプトの実装。
-    - [ ] `Universal OCR Schema V2` (Gatekeeper付き) の適用。
-    - [ ] **Prompt Annotation**: `line_items` の抽出モード切り替えロジック実装 (領収書 vs 通帳)。
-    - [ ] **Prompt Annotation**: `is_invoice_qualified` ロジック実装 (< 30,000円 ルール)。
-    - [ ] `Multi-dimensional Key` 生成の実装 (`issuer.name` + `transaction_header.total_amount` + `transaction_header.payment_method`)。
-- [ ] **GAS ロジック更新 (Mock/Test)**
-    - [ ] Universal schema を使用した `Amount Range` 分類ロジックの検証。
-- [ ] **結合テスト**: 「CSVアップロード」から「仕訳作成」までの一連フロー検証。
-- [ ] **負荷テスト**: 大量の重複データセットを用いたバッチ処理検証。
-- [ ] **UX改善**: レスポンシブ確認とアニメーション調整。
+### Step 2: データ取り込みパイプライン (Backend Ingest)
+*Driveにファイルが置かれたらFirebaseに取り込む。*
+- [ ] **Cloud Functions (Triggers)**:
+    - [ ] Drive変更検知、またはGASからのWebhook受信。
+    - [ ] 画像ファイルの Storage への転送。
+- [ ] **AI処理パイプライン (`VertexAIStrategy.ts`)**:
+    - [ ] **Gatekeeper**: 会計証憑かどうかの判定 (Accounting Judgment)。
+    - [ ] **OCR/推論**: Gemini 2.0 Flash によるデータ抽出 (Schema V2)。
+    - [ ] **ズボラルール適用**: `ZuboraLogic` (ハイブリッド判定) の実行。
+    - [ ] **Firestore保存**: 結果を `documents` へ書き込み。
+
+### Step 3: UI接続 (Frontend Integration)
+*データが流れてくることを確認してからUIを繋ぐ。*
+- [ ] **Screen E (仕訳エディタ) 接続**:
+    - [ ] Firestore `documents` をリアルタイムリスン (`onSnapshot`)。
+    - [ ] 編集結果を Firestore へ書き戻す (`updateDoc`)。
+    - [ ] **9バケツロジック**: UIではなくバックエンドのフィルタとして実装。
+- [ ] **結合テスト**: ファイルアップロード -> AI解析 -> 画面表示 の一気通貫。

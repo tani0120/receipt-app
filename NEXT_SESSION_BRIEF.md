@@ -1292,3 +1292,18 @@ GAS (L1) から Backend/AI (L2/L3) へ渡される「正規化された一次デ
 2.  **適格請求書 (is_invoice_qualified) の判定ルール**:
     *   インボイス登録番号 (T+13桁) がある場合 → `true`
     *   番号がない場合でも、税込合計金額が 30,000円未満の場合 → `true` (少額特例の実務的適用)
+
+
+## 7. アーキテクチャ変更 (Architecture Update 2026/01/10)
+
+### Firebase全面移行 (Full Migration Strategy)
+*   **方針**: 顧問先共有フォルダのみGoogleドライブを利用し、それ以外のデータ管理システム動作は全て **Firebase (Firestore/Storage/Functions)** で実装する。
+*   **GASの利用制限**: GASは「Driveへのファイル着弾検知」等のトリガー用途に限定し、ロジックは持たない。
+
+### 開発優先順位 (Development Order)
+UI (ガワ) の作り込みを停止し、以下の順序でバックエンドを貫通させることを最優先とする。
+
+1.  **設計 (Design)**: Firestoreデータ構造の確定 (Schema V2 の JSON化)。
+2.  **パイプライン (Backend)**: Google Drive -> Firebase へのデータ取り込み (Ingest) 実装。
+3.  **UI反映 (Frontend)**: 実データ (Firestore) を Screen E に接続。
+
