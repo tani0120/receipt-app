@@ -14,76 +14,27 @@
 - [x] **デプロイ**: Cloud Run + Firebase Hosting (検証済)。
 - [x] **セキュリティ実装**: `src/router/index.ts` (Admin Guard) 実装済み。
 
-## Phase 2: Firebase全面移行 & バックエンド実装 (Architecture Change)
-**方針**: 顧問先共有フォルダ(Drive)以外は全てFirebaseで実装する。
-**優先順位**: 設計(Schema) -> パイプライン(Ingest) -> UI接続(Frontend)
+## Phase 2: Parallel Change Backend Preparation (Completed)
+- [x] **Schema V2.8 Definition**: Isolated `src/types/schema_v2.ts` created.
+- [x] **Legacy Survey**: Audited `firestore.ts` and `ui.type.ts`.
+- [x] **Migration Logic**:
+    - [x] **Adapter**: `legacy_to_v2.ts` implemented (Split Job -> WorkLog + Receipt).
+    - [x] **Service**: `migration_service.ts` created (Idempotent, Dry-Run).
+- [x] **Debugger**: `MigrationTester.vue` deployed to Admin Settings.
+- [x] **Verification**: Data Seeding & Dry Run verified.
 
-### Step 0: 詳細設計 & ロジック監査 (完了)
-- [x] **技術詳細定義**: `src/api/lib/ai/strategy/ZuboraLogic.ts` および `NEXT_SESSION_BRIEF.md` にて定義済。
-    - [x] L1 GAS層のための `ハッシュマップ関数` (概念完了)。
-    - [x] `重複排除フィンガープリント` アルゴリズム。
-    - [x] `論理削除` 用ディレクトリ構造 (Drive設計として完了)。
-    - [x] `ズボラルール` 判定ロジック。
-- [x] **スキーマ確定 (Schema V2)**: `accounting_judgment` Gatekeeperロジック導入完了。
-- [x] **AIモデル選定**: Gemini 2.0 Flash 正式採用。
+## Phase 3: UI Migration (Vertical Slice Strategy)
+- **Step 1: Pilot & Read Access (Target: Screen H)**
+  - [ ] Create `src/repositories/receiptRepository.ts` (Read-only first).
+  - [ ] Migrate `ScreenH` (Receipt Detail/Dashboard) to fetch from `receipts` collection.
+  - **Goal**: Validate V2 Schema visualization.
 
-### Step 1: Firestoreデータ設計 (Schema Definition V2.8)
+- **Step 2: Core Write Logic (Target: Screen E)**
+  - [ ] Implement Write methods in Repository.
+  - [ ] Update `ScreenE` (Journal Entry) to save data to `work_logs` & `receipts` (Split Write).
+  - **Goal**: Establish data integrity and "Parallel Change" write path.
 
-### 方針: 安全なマージ (Safe Merge Strategy)
-既存の `src/types.ts` を上書きせず、以下のV2.8要件を統合する形をとる。
+- **Step 3: Horizontal Expansion (Target: Screen A, B)**
+  - [ ] Migrate List views (`ScreenA`, `ScreenB`).
+  - [ ] Switch data source from `jobs` to `work_logs` + `receipts`.
 
-### 1. ユーザーマスタ (Staff)
-`path: /users/{userId}`
-* **目的:** 担当者の原価管理。
-* **必須フィールド:**
-    * `hourly_charge_rate_jpy`: number (標準チャージレート/時給)
-
-### 2. 企業マスタ (Client)
-`path: /companies/{companyId}`
-* **目的:** 顧問先の契約管理、予実管理、リアルタイム集計。
-* **必須フィールド:**
-    * `financials`:
-        * `annual_contract_fee_jpy`: number (年間報酬)
-        * `expected_journal_count_monthly`: number (契約上の想定仕訳数)
-        * `expected_work_hours_monthly`: number (契約上の想定工数)
-    * `current_month_stats`: (AIコスト、枚数、実働時間などの集計値)
-
-### 3. 日報・工数ログ (Work Logs)
-`path: /companies/{companyId}/work_logs/{logId}`
-* **目的:** システム外作業（電話、面談など）のコスト捕捉。
-* **必須フィールド:**
-    * `duration_mins`: number
-    * `category`: 'MEETING' | 'CALL' | etc.
-    * `cost_jpy`: number (スナップショット原価)
-
-### 4. 証憑データ (Receipts) - The Core
-`path: /companies/{companyId}/receipts/{receiptId}`
-* **Fact/Opinion分離:** `ocr_data` と `accounting_data` の分離構造を維持。
-* **System Meta:** `file_hash` (SHA-256) を追加し重複排除に対応。
-* **Analytics (Metrics):**
-    * `usage_logs`: 配列。`step`, `model`, `cost_usd`, `duration_ms` を記録し、工程別ボトルネック分析に対応。
-* **ROI (Human Analytics):**
-    * `review_duration_ms`: 画面滞在時間。
-    * `staff_hourly_rate_snapshot`: 承認時の時給を記録。
-    * `actual_human_cost_jpy`: 確定した労務コスト。
-
-### Step 2: データ取り込みパイプライン (Backend Ingest)
-*Driveにファイルが置かれたらFirebaseに取り込む (Tracer Bullet)。*
-- [ ] **Cloud Functions & GAS連携**:
-    - [ ] **GAS (Trigger)**: ファイル監視のみ。「ファイルID」と「会社ID」を Webhook で通知 (Payloadのみ)。
-    - [ ] **Cloud Functions (Ingest)**: Drive APIストリームを使用してバイパス転送 (GASメモリ回避)。
-- [ ] **Firestore構造化 (Subcollection)**:
-    - [ ] `companies/{id}/receipts/{docId}` パターンでの保存実装。
-- [ ] **AI処理パイプライン (Batch & Realtime)**:
-    - [ ] **Gatekeeper**: 会計証憑かどうかの判定 (Accounting Judgment)。
-    - [ ] **OCR/推論**: Gemini 2.0 Flash によるデータ抽出 (Schema V2)。
-    - [ ] **ズボラルール適用**: `ZuboraLogic` (ハイブリッド判定) の実行。
-    - [ ] **Batch構成**: Storage蓄積 -> Scheduler -> Batch API -> Firestore一括更新 (50%コスト減)。
-
-### Step 3: UI接続 (Frontend Integration)
-*データが流れてくることを確認してからUIを繋ぐ。*
-- [ ] **Screen E (仕訳エディタ) 接続**:
-    - [ ] Firestore `documents` をリアルタイムリスン (`onSnapshot`)。
-    - [ ] 編集結果を Firestore へ書き戻す (`updateDoc`)。
-    - [ ] **9バケツロジック**: UIではなくバックエンドのフィルタとして実装。
-- [ ] **結合テスト**: ファイルアップロード -> AI解析 -> 画面表示 の一気通貫。

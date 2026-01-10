@@ -1325,3 +1325,21 @@ UI (ガワ) の作り込みを停止し、以下の順序でバックエンド�
 *   **C. Batch APIフロー**: 
     *   Upload (Storage) -> Cloud Scheduler (夜間) -> JSONL生成 -> Batch API -> Firestore更新。
 
+# 現在のフォーカス: Phase 3 - Step 1 (パイロット移行)
+
+## 目的
+"Screen H (Task Dashboard / Receipt Detail)" を改修し、Repositoryパターンを用いて新しいV2コレクション (`work_logs`, `receipts`) からデータを読み込めるようにする。
+
+## 直近のタスク
+1. [ ] `src/repositories/receiptRepository.ts` の作成
+   - `getReceipt(id)` および `getWorkLog(id)` 関数の実装
+   - Firestoreのデータを `ReceiptDocument` / `WorkLogDocument` 型にマッピングする
+2. [ ] `ScreenH` (Dashboard/Detail) のリファクタリング
+   - コンポーネント内の直接的な Firestore 呼び出しを `receiptRepository` 経由に置き換える
+   - V2スキーマのデータが正しく表示されることを確認する
+
+## ステータス
+- Phase 2 (Backend Prep) は完了済み (COMPLETE)
+- Phase 3 (UI Migration) を「垂直スライス」方針で開始
+
+
