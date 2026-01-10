@@ -38,15 +38,17 @@
     - [ ] `document_type` (RECEIPT, INVOICE, etc.)。
 
 ### Step 2: データ取り込みパイプライン (Backend Ingest)
-*Driveにファイルが置かれたらFirebaseに取り込む。*
-- [ ] **Cloud Functions (Triggers)**:
-    - [ ] Drive変更検知、またはGASからのWebhook受信。
-    - [ ] 画像ファイルの Storage への転送。
-- [ ] **AI処理パイプライン (`VertexAIStrategy.ts`)**:
+*Driveにファイルが置かれたらFirebaseに取り込む (Tracer Bullet)。*
+- [ ] **Cloud Functions & GAS連携**:
+    - [ ] **GAS (Trigger)**: ファイル監視のみ。「ファイルID」と「会社ID」を Webhook で通知 (Payloadのみ)。
+    - [ ] **Cloud Functions (Ingest)**: Drive APIストリームを使用してバイパス転送 (GASメモリ回避)。
+- [ ] **Firestore構造化 (Subcollection)**:
+    - [ ] `companies/{id}/receipts/{docId}` パターンでの保存実装。
+- [ ] **AI処理パイプライン (Batch & Realtime)**:
     - [ ] **Gatekeeper**: 会計証憑かどうかの判定 (Accounting Judgment)。
     - [ ] **OCR/推論**: Gemini 2.0 Flash によるデータ抽出 (Schema V2)。
     - [ ] **ズボラルール適用**: `ZuboraLogic` (ハイブリッド判定) の実行。
-    - [ ] **Firestore保存**: 結果を `documents` へ書き込み。
+    - [ ] **Batch構成**: Storage蓄積 -> Scheduler -> Batch API -> Firestore一括更新 (50%コスト減)。
 
 ### Step 3: UI接続 (Frontend Integration)
 *データが流れてくることを確認してからUIを繋ぐ。*
