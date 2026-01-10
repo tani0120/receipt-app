@@ -176,7 +176,7 @@ export function convertLegacyJobToReceipt(old: LegacyJob): ReceiptDocument {
             merchant_name: '', // TODO: extract from OCR or User input
             currency: 'JPY',
 
-            invoice_registration_number: old.invoiceValidationLog?.registrationNumber,
+            invoice_registration_number: old.invoiceValidationLog?.registrationNumber || '',
             is_eligible_invoice: old.invoiceValidationLog?.isValid || false
         },
 
