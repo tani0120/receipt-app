@@ -1,0 +1,20 @@
+# Project Architecture Rules (Hono Migration Phase)
+
+このプロジェクトは現在、**Hono RPC (BFF) Architecture** への移行を強制しています。
+Vueフロントエンドの実装において、以下のルールを厳守してください。
+
+## 🚫 厳禁事項 (Strictly Prohibited)
+1. **Frontendからの直接Repository参照の禁止**
+   - `import ... from '@/repositories/...'` は、`src/api/*` 以外のファイルでは禁止です。
+   - `src/composables` や `src/screens` から Firestore SDK (`getDoc`, `doc` etc) を直接呼ばないでください。
+
+2. **Legacyパターンの使用禁止**
+   - 既存コードに Repository パターンが残っていても、それは「リファクタリング対象」です。真似しないでください。
+
+## ✅ 必須事項 (Mandatory)
+1. **Hono RPC Clientの使用**
+   - データ取得・更新は必ず `client.api.[route]...` 経由で行ってください。
+   - Type-safe RPC を活用し、`AppType` を通じて型安全性を担保してください。
+
+2. **Backend Logicの分離**
+   - ビジネスロジックやDB操作は `src/api/routes/*` (Hono Server側) に記述してください。
