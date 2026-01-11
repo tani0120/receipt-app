@@ -1425,7 +1425,7 @@ export function aaa_useAccountingSystem() {
       if (apiUpdates.transactionDate && typeof apiUpdates.transactionDate === 'string') {
         // If YYYY-MM-DD, convert to ISO
         if (/^\d{4}-\d{2}-\d{2}$/.test(apiUpdates.transactionDate)) {
-          apiUpdates.transactionDate = new Date(apiUpdates.transactionDate).toISOString();
+          apiUpdates.transactionDate = Timestamp.fromDate(new Date(apiUpdates.transactionDate));
         }
       }
 
