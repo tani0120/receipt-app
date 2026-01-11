@@ -13,9 +13,9 @@ export const TimestampSchema = z.custom<Timestamp>((data) => {
     typeof data === 'object' &&
     data !== null &&
     'seconds' in data &&
-    typeof (data as any).seconds === 'number' &&
+    typeof (data as Record<string, unknown>).seconds === 'number' &&
     'nanoseconds' in data &&
-    typeof (data as any).nanoseconds === 'number'
+    typeof (data as Record<string, unknown>).nanoseconds === 'number'
   );
 }, { message: "Invalid Firestore Timestamp" });
 
@@ -50,7 +50,10 @@ export const ClientSchema = z.object({
   type: z.enum(['corp', 'individual']).optional(), // Added type
   repName: z.string().optional(),
   staffName: z.string().optional(), // Added staffName
-  contactInfo: z.string().optional(),
+  contact: z.object({
+    type: z.enum(['email', 'chatwork', 'none']).optional(),
+    value: z.string().optional()
+  }).optional(),
   fiscalMonth: z.number().int().min(1).max(12),
   status: z.enum(['active', 'inactive', 'suspension']),
 
@@ -225,3 +228,16 @@ export const SystemSettingsSchema = z.object({
   dataRetentionDays: z.number(),
   updatedAt: TimestampSchema
 });
+
+// ============================================================================
+// 6. Inferred Types (Sacred Types)
+// ============================================================================
+export type ClientApi = z.infer<typeof ClientSchema>;
+export type JobApi = z.infer<typeof JobSchema>;
+export type JobStatusApi = z.infer<typeof JobStatusSchema>;
+export type JournalLineApi = z.infer<typeof JournalLineSchema>;
+export type TaxOptionApi = { label: string; value: string; rate: number; code: string }; // Manual definition as it's not a Zod Object in this file but exported as constant in schema_dictionary.
+// Wait, TaxOptionSchema was local in index.ts.
+// schema_dictionary exports the constant TAX_OPTIONS.
+// If I need a type for TaxOption, I should infer it from the constant or define it here.
+// But usage in jobRepository is JobApi.

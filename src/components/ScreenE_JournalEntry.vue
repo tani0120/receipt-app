@@ -416,7 +416,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { aaa_useAccountingSystem, type JobUi, type JournalLineUi, type ClientUi, TAX_OPTIONS } from '@/composables/useAccountingSystem';
+import { aaa_useAccountingSystem, type JobUi, type JournalLineUi, type ClientUi } from '@/composables/useAccountingSystem';
+import { TAX_OPTIONS } from '@/shared/schema_dictionary';
 
 const route = useRoute();
 const router = useRouter();

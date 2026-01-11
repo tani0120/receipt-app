@@ -98,6 +98,15 @@ export const FirestoreRepository = {
     },
 
     /**
+     * Get ALL Jobs (Snapshot) for API
+     */
+    async getAllJobs(): Promise<Job[]> {
+        const q = query(jobsRef, orderBy("updatedAt", "desc"));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Job));
+    },
+
+    /**
      * Subscribe to jobs for a specific client (Real-time)
      * @param clientCode
      * @param callback

@@ -13,18 +13,15 @@ import admin from './routes/admin'
 import worker from './routes/worker'
 import aiModels from './routes/ai-models'
 import jobs from './routes/jobs'
+import { TAX_OPTIONS } from '../shared/schema_dictionary'
 
 const app = new Hono()
 
 // ... (Existing middleware)
 
 // --- Data Models ---
-const TaxOptionSchema = z.object({
-    label: z.string(),
-    value: z.string(),
-    rate: z.number().default(0.1),
-    code: z.string().default('unknown'),
-})
+// --- Data Models ---
+// TaxOptionSchema removed (Using Shared Constant)
 
 const JournalDataSchema = z.object({}).passthrough()
 
@@ -46,12 +43,7 @@ const routes = app
     .route('/api/worker', worker)
     .route('/api/ai', aiModels)
     .get('/api/tax-options', (c) => {
-        const rawData = [
-            { label: '課税売上 10%', value: 'tax_10', rate: 0.1, code: '110' },
-            { label: '非課税', value: 'tax_free', rate: 0, code: '999' },
-        ]
-        const validatedData = z.array(TaxOptionSchema).parse(rawData)
-        return c.json(validatedData)
+        return c.json(TAX_OPTIONS)
     })
     .post(
         '/api/journal',
