@@ -12,139 +12,14 @@ import type { JobUi, ClientUi, JobStatusUi, JournalLineUi } from '@/types/ui.typ
 import { mapJobApiToUi } from '@/composables/mapper';
 import { mapClientApiToUi } from '@/composables/ClientMapper';
 
+import { TAX_SCHEMA_TEXT, TAX_OPTIONS, SHEET_IDS, FOLDER_IDS, COMMON_RULES_TEXT } from '@/shared/schema_dictionary';
+
 // ========================================================================
 // 📊 Spreadsheet Schema & Mock Data Definition (Deep Dive Compliant)
 // ========================================================================
 
 // --- System Constants (Truth) - DEEP DIVE LOGIC V2 ---
 
-export const TAX_SCHEMA_TEXT = `
-【売上区分】
-TAX_SALES_10: 課税売上 10%
-TAX_SALES_8_RED: 課税売上 8% (軽減)
-TAX_SALES_EXPORT: 輸出免税売上
-TAX_SALES_EXEMPT_OTHER: その他免税売上 (国際輸送等)
-TAX_SALES_NON_TAXABLE: 非課税売上
-TAX_SALES_NONE: 対象外/不課税売上
-
-【仕入区分】
-TAX_PURCHASE_10: 課税仕入 10%
-TAX_PURCHASE_8_RED: 課税仕入 8% (軽減)
-TAX_PURCHASE_NON_DEDUCTIBLE: 課税仕入 (控除対象外)
-TAX_PURCHASE_FOR_NON_TAXABLE_SALES: 非課税売上対応仕入 (控除不可)
-TAX_PURCHASE_FOR_EXEMPT_SALES: 免税売上対応仕入 (控除不可)
-TAX_PURCHASE_NO_INVOICE: インボイスなし仕入 (控除不可)
-TAX_PURCHASE_FROM_EXEMPT: 免税事業者からの仕入 (控除不可)
-TAX_PURCHASE_NONE: 対象外/不課税仕入
-`;
-
-export const TAX_OPTIONS = [
-  // 【売上区分】
-  { code: 'TAX_SALES_10', label: '課税売上 10%', type: 'sales' },
-  { code: 'TAX_SALES_8_RED', label: '課税売上 8% (軽減)', type: 'sales' },
-  { code: 'TAX_SALES_EXPORT', label: '輸出免税売上', type: 'sales' },
-  { code: 'TAX_SALES_EXEMPT_OTHER', label: 'その他免税売上', type: 'sales' },
-  { code: 'TAX_SALES_NON_TAXABLE', label: '非課税売上', type: 'sales' },
-  { code: 'TAX_SALES_NONE', label: '対象外/不課税売上', type: 'sales' },
-
-  // 【簡易課税売上】(第1種〜第6種)
-  { code: 'TAX_SIMPLIFIED_1', label: '簡易課税売上 (第1種)', type: 'sales' },
-  { code: 'TAX_SIMPLIFIED_2', label: '簡易課税売上 (第2種)', type: 'sales' },
-  { code: 'TAX_SIMPLIFIED_3', label: '簡易課税売上 (第3種)', type: 'sales' },
-  { code: 'TAX_SIMPLIFIED_4', label: '簡易課税売上 (第4種)', type: 'sales' },
-  { code: 'TAX_SIMPLIFIED_5', label: '簡易課税売上 (第5種)', type: 'sales' },
-  { code: 'TAX_SIMPLIFIED_6', label: '簡易課税売上 (第6種)', type: 'sales' },
-
-  // 【仕入区分】
-  { code: 'TAX_PURCHASE_10', label: '課税仕入 10%', type: 'purchase' },
-  { code: 'TAX_PURCHASE_8_RED', label: '課税仕入 8% (軽減)', type: 'purchase' },
-  { code: 'TAX_PURCHASE_NON_DEDUCTIBLE', label: '課税仕入 (控除対象外)', type: 'purchase' },
-  { code: 'TAX_PURCHASE_FOR_NON_TAXABLE_SALES', label: '非課税売上に対応する仕入 (控除不可)', type: 'purchase' },
-  { code: 'TAX_PURCHASE_FOR_EXEMPT_SALES', label: '免税売上に対応する仕入 (控除不可)', type: 'purchase' },
-  { code: 'TAX_PURCHASE_NO_INVOICE', label: 'インボイスなし仕入 (控除不可)', type: 'purchase' },
-  { code: 'TAX_PURCHASE_FROM_EXEMPT', label: '免税事業者からの仕入 (経過措置)', type: 'purchase' },
-  { code: 'TAX_PURCHASE_NONE', label: '対象外/不課税仕入', type: 'purchase' },
-];
-
-// ... (SHEET_IDS etc remain unchanged - omitted from replacement block for brevity if trying to do single chunk, but here I need to target two blocks or use multi-replace. I will use replace_file for schema first and then mapping if needed, or try to span if close... they are far apart (lines 19 vs 336).
-// Wait, replace_file_content is for SINGLE CONTIGUOUS BLOCK. I cannot edit Line 20 and Line 340 in one go unless I replace everything in between which is huge.
-// I will split this. Step 1: Update TAX_SCHEMA_TEXT. Step 2: Update Mappings.
-// This call is Step 1.
-
-
-
-export const SHEET_IDS = {
-  COMMON_RULES: "00_共通",
-  CLIENT_MASTER: "01_ClientMaster",
-  TAX_MASTER: "03_TaxMaster",
-  RULE_MASTER: "04_RuleMaster",
-  AUDIT_LOGS: "05_AuditLogs",
-  JOB_QUEUE: "06_JobQueue",
-  WORKBENCH: "10_ワークベンチ"
-};
-
-export const FOLDER_IDS = {
-  PRE_VALIDATION: "98_検証前フォルダ",
-  POST_VALIDATION: "99_検証後フォルダ",
-  TRASH_ID: "除外保管ID"
-};
-
-export const COMMON_RULES_TEXT = `
-■第1章：論理地図（分岐ツリー）
-[START] 全取引データ
-   │
-   ├─ phase1: 前処理 (重複チェック・期間外チェック)
-   │
-   ├─ phase2: BS取引判定 (Rule G)
-   │    ├── 自社口座間移動 ──> [対象外] 資金移動
-   │    └── クレカ引落/未払 ─> [対象外] 未払金消込
-   │
-   ├─ phase3: 国際/特殊判定 (Rule H)
-   │    ├── 輸出売上 ──────> [免税] 輸出免税売上
-   │    ├── 輸入消費税 ────> [課税] 輸入消費税等
-   │    └── リバースチャージ -> [課税] 広告宣伝費等(RC)
-   │
-   ├─ phase4: 給与/政策判定 (Rule I)
-   │    ├── 役員報酬 ──────> [不課税] 役員報酬
-   │    ├── 給与手当 ──────> [不課税] 給料手当
-   │    └── 法定福利 ──────> [非課税] 法定福利費(社保)
-   │
-   ├─ phase5: 特定リスク判定 (Rule B)
-   │    ├── 10万円以上資産 ──> [課税] 工具器具備品(要確認)
-   │    └── 個人/使途不明 ───> [課税] 会議費/交際費 or 仮払金
-   │
-   ├─ phase6: 一般AI推論 (Rule C)
-   │    └── 過去学習/辞書 ───> [判定] 推論された科目
-   │          │
-   │          └─ 税区分詳細判定
-   │                ├── 飲食料品/新聞 -> [軽減8%]
-   │                ├── 利息/保険/土地 -> [非課税]
-   │                └── 寄付/税金/慶弔 -> [不課税]
-   │
-   └─ phase7: フォールバック (Rule D)
-        └── 判定不能 ───────> [不明] 仮払金/仮受金 (要確認)
-
-■第2章：非課税・不課税の具体的範囲
-【非課税 (NON_TAXABLE)】
-・土地の譲渡・貸付（更地・地代。※駐車場・1ヶ月未満貸付は課税）
-・有価証券等の譲渡（株券・国債）
-・支払利息・保証料・保険料
-・切手・印紙・証紙（郵便局等での購入）
-・行政手数料（住民票・登記簿・役所への支払い）
-・社会保険医療、住宅の貸付（居住用社宅・寮）
-
-【不課税/対象外 (OUT_OF_SCOPE)】
-・給与・賞与・役員報酬
-・法定福利費（事業主負担の社保）
-・寄付金・贈与・お祝い金（香典・見舞金等、対価性がないもの）
-・損害賠償金・違約金
-・税金の支払い（法人税・住民税・延滞税・罰金）
-・株式配当金、減価償却費（内部取引）
-
-■第3章：特定リスク（Rule B）
-・10万円以上の購入：資産科目（工具器具備品等）とし、補助科目に「要確認／一括償却資産候補」等を付与。
-・交際費判定：5,000円超は交際費、以下は会議費。人数不明時は交際費とし「要確認」を摘要に追記。
-`;
 
 export const GAS_LOGIC_DEFINITIONS = {
   FILE_RESCUE: `1. 01_ClientMasterのACTIVE行をループし、共有フォルダID内をスキャン。
@@ -888,7 +763,7 @@ const currentUser = reactive({ name: '管理者 太郎', email: 'admin@sugu-suru
 // State uses UI Types ONLY
 const jobs = ref<JobUi[]>([]);
 const clients = ref<ClientUi[]>([]);
-const currentJob = ref<JobUi | null>(null);
+const _selectedJob = ref<JobUi | null>(null);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const adminData = reactive(MOCK_ADMIN_DATA);
@@ -1245,14 +1120,14 @@ export function aaa_useAccountingSystem() {
     try {
       const localJob = jobs.value.find(j => j.id === jobId);
       if (localJob) {
-        currentJob.value = localJob;
+        _selectedJob.value = localJob;
       } else {
         const res = await client.api.jobs[':id'].$get({ param: { id: jobId } });
         if (res.ok) {
           const rawDbJob = await res.json();
           const processed = processJobPipeline(rawDbJob, 'FetchById');
           if (processed) {
-            currentJob.value = processed;
+            _selectedJob.value = processed;
           } else {
             error.value = "ジョブデータが不正です (Adapter Rejection)";
           }
@@ -1421,7 +1296,7 @@ export function aaa_useAccountingSystem() {
   return {
     clients,
     jobs,
-    currentJob,
+    _selectedJob,
     currentUser,
     adminData,
     isEmergencyStopped,
