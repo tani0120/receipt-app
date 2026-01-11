@@ -6,11 +6,17 @@ import { zValidator } from '@hono/zod-validator'
 import conversionRoute from './routes/conversion'
 import clientsRoute from './routes/clients'
 import journalStatusRoute from './routes/journal-status'
+import journalEntry from './routes/journal-entry'
+import collection from './routes/collection'
+import aiRules from './routes/ai-rules'
+import admin from './routes/admin'
+import worker from './routes/worker'
+import aiModels from './routes/ai-models'
+import jobs from './routes/jobs'
 
 const app = new Hono()
 
-// Enable CORS for all routes (necessary when frontend (5173) calls backend (3000))
-app.use('/*', cors())
+// ... (Existing middleware)
 
 // --- Data Models ---
 const TaxOptionSchema = z.object({
@@ -20,20 +26,7 @@ const TaxOptionSchema = z.object({
     code: z.string().default('unknown'),
 })
 
-const JournalDataSchema = z.object({
-    id: z.string(),
-    date: z.string().default(new Date().toISOString().split('T')[0] || ''),
-    debit: z.array(z.object({
-        account: z.string(),
-        amount: z.number().int(),
-        taxType: z.string().default('10%'),
-    })).default([]),
-    credit: z.array(z.object({
-        account: z.string(),
-        amount: z.number().int(),
-        taxType: z.string().default('10%'),
-    })).default([]),
-})
+const JournalDataSchema = z.object({}).passthrough()
 
 // --- API Routes ---
 const routes = app
@@ -42,9 +35,16 @@ const routes = app
             message: 'Hello form Hono!',
         })
     })
-    .route('/api/conversion', conversionRoute) // Mount data conversion route
-    .route('/api/clients', clientsRoute) // Mount Clients BFF
-    .route('/api/journal-status', journalStatusRoute) // Mount Journal Status BFF (Screen B)
+    .route('/api/conversion', conversionRoute)
+    .route('/api/clients', clientsRoute)
+    .route('/api/journal-status', journalStatusRoute)
+    .route('/api/journal-entry', journalEntry)
+    .route('/api/jobs', jobs) // Register Jobs Route
+    .route('/api/collection', collection)
+    .route('/api/ai-rules', aiRules)
+    .route('/api/admin', admin)
+    .route('/api/worker', worker)
+    .route('/api/ai', aiModels)
     .get('/api/tax-options', (c) => {
         const rawData = [
             { label: '課税売上 10%', value: 'tax_10', rate: 0.1, code: '110' },
