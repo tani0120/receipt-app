@@ -1,23 +1,18 @@
-import {
-    doc,
-    getDoc,
-    updateDoc,
-    Timestamp
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import { Timestamp } from 'firebase-admin/firestore';
+import { db } from '../firebase-admin';
 import type { Job } from '../types/firestore';
 
 const COLLECTION_JOBS = 'jobs';
 
 export const jobRepository = {
     /**
-     * Fetch Job (Legacy)
+     * Fetch Job (Admin SDK)
      */
     async getJob(id: string): Promise<Job | null> {
         try {
-            const ref = doc(db, COLLECTION_JOBS, id);
-            const snap = await getDoc(ref);
-            if (snap.exists()) {
+            const docRef = db.collection(COLLECTION_JOBS).doc(id);
+            const snap = await docRef.get();
+            if (snap.exists) {
                 return { ...snap.data(), id: snap.id } as Job;
             }
             return null;
@@ -28,14 +23,14 @@ export const jobRepository = {
     },
 
     /**
-     * Save Job (Legacy Partial Update)
+     * Save Job (Admin SDK - Upsert)
      */
     async saveJob(id: string, data: Partial<Job>): Promise<void> {
-        const ref = doc(db, COLLECTION_JOBS, id);
+        const docRef = db.collection(COLLECTION_JOBS).doc(id);
         // Explicitly update updatedAt
-        await updateDoc(ref, {
+        await docRef.set({
             ...data,
             updatedAt: Timestamp.now()
-        });
+        }, { merge: true });
     }
 };

@@ -255,7 +255,8 @@
                  </div>
              </div>
         </section>
-    </main>
+   </main>
+    <SuccessModal :isOpen="isSuccessModalOpen" @close="handleSuccessClose" />
   </div>
 </template>
 
@@ -265,12 +266,13 @@ import { useRoute, useRouter } from 'vue-router';
 import { useJournalEntryRPC } from '@/composables/useJournalEntryRPC';
 import type { JournalLineUi } from '@/types/ui.type';
 import { TAX_OPTIONS } from '@/constants/options';
+import SuccessModal from '@/components/SuccessModal.vue'; // Import Modal
 
 const route = useRoute();
 const router = useRouter();
 const containerRef = ref<HTMLElement|null>(null);
 
-const { journalEntry, fetchJournalEntry, updateJournalEntry, isLoading, error } = useJournalEntryRPC();
+const { journalEntry, fetchJournalEntry, updateJournalEntry, isLoading, error, isSuccessModalOpen } = useJournalEntryRPC();
 
 // Alias for Template Compatibility
 const currentJob = computed(() => journalEntry.value);
@@ -442,15 +444,31 @@ async function toggleDecision(decision: string) {
             }))
         };
 
+        // Call API
         await updateJournalEntry(journalEntry.value.id, payload);
-        alert('保存しました');
-        goBack();
+
+        // if (payload.status !== 'confirmed' && payload.status !== 'approve') {
+           // For non-confirm actions, maybe show alert or modal?
+           // Request implied Modal for "Save" which usually means Confirm or Remand?
+           // Actually user request: "Screen E (Job編集) 保存処理... 成功モーダルが表示されません"
+           // Confirmed/Approve is the main save.
+           // User wants modal on ANY success?
+           // Composable sets isSuccessModalOpen=true on ANY update success.
+           // So I just remove alert.
+        // }
+        // alert('保存しました'); // Removed Legacy Alert
+        // goBack(); // Removed Immediate Redirect
     } catch (e) {
         console.error(e);
         alert('エラーが発生しました');
     } finally {
         isProcessing.value = false;
     }
+}
+
+function handleSuccessClose() {
+    // Navigate back when modal is closed
+    goBack();
 }
 
 function applyAIProposal() {

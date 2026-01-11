@@ -10,7 +10,6 @@
     "dev": "run-p dev:frontend dev:api",
     "dev:frontend": "vite",
     "dev:api": "tsx watch src/server.ts",
-    "dev:api": "tsx watch src/server.ts",
     "build": "vite build",
     "preview": "vite preview",
     "start": "tsx src/server.ts",

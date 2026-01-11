@@ -1,49 +1,77 @@
 import { ref } from 'vue';
-import { jobRepository } from '@/repositories/jobRepository';
-import { receiptRepository } from '@/repositories/receiptRepository';
-import { convertLegacyJobToWorkLog, convertLegacyJobToReceipt } from '@/libs/adapters/legacy_to_v2';
+import { client } from '@/client';
 import type { JournalEntryUi, JournalLineUi, JournalEntryActionUi } from '@/types/ui.type';
-import type { Job as LegacyJob } from '@/types/firestore';
+
+// Type from Backend (Approximate since we don't have shared DTOs fully set up yet)
+// We rely on 'any' for the response data for now, or infer from AppType if possible.
+// But for now, mapping logic handles the structure.
 
 export function useJournalEntryRPC() {
   const journalEntry = ref<JournalEntryUi | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
-  const mapJobToUi = (job: LegacyJob): JournalEntryUi => {
-    const statusLabelVal = job.status === 'completed' ? '完了' :
-      job.status === 'review' ? '承認待' :
-        job.status === 'in_progress' ? '作業中' : '未着手';
+  /**
+   * Helper: Map API Data to JournalEntryUi
+   */
+  const mapApiDataToUi = (job: any): JournalEntryUi => {
+    const status = job.status as string;
+    const statusLabelVal = status === 'completed' ? '完了' :
+      status === 'review' ? '承認待' :
+        status === 'in_progress' ? '作業中' : '未着手';
 
     const actions: JournalEntryActionUi[] = [];
-    if (job.status === 'draft' || job.status === 'in_progress') {
+    if (status === 'draft' || status === 'in_progress') {
       actions.push({ id: 'save', label: '保存', disabled: false, style: 'primary' });
-    } else if (job.status === 'review') {
+    } else if (status === 'review') {
       actions.push({ id: 'save', label: '修正保存', disabled: false, style: 'primary' });
       actions.push({ id: 'approve', label: '承認', disabled: false, style: 'secondary' });
     }
-    if (job.status !== 'completed' && job.status !== 'draft') {
+    if (status !== 'completed' && status !== 'draft') {
       actions.push({ id: 'remand', label: '差戻し', disabled: false, style: 'danger' });
     }
 
     return {
       id: job.id,
       clientCode: job.clientCode || 'UNKNOWN',
-      companyName: job.clientName || 'Unknown Client',
-      transactionDate: job.transactionDate ? new Date((job.transactionDate as any).seconds * 1000).toLocaleDateString('ja-JP') : '-',
+      companyName: 'Unknown Client (' + (job.clientCode || '?') + ')',
+      transactionDate: job.transactionDate && job.transactionDate.seconds
+        ? new Date(job.transactionDate.seconds * 1000).toLocaleDateString('ja-JP')
+        : (typeof job.transactionDate === 'string' ? job.transactionDate : ''),
+
       summary: job.summary || (job.lines && job.lines.length > 0 ? job.lines[0].description : ''),
-      status: job.status,
+      status: status,
       statusLabel: statusLabelVal,
-      isLocked: job.status === 'completed',
-      canEdit: job.status !== 'completed',
-      journalEditMode: job.status === 'review' ? 'approve' : 'work',
+
+      isLocked: status === 'completed',
+      canEdit: status !== 'completed',
+      journalEditMode: status === 'review' ? 'approve' : 'work',
+
+      // Map Flat or Nested (Backend returns Job)
+      // If Backend uses jobRepository.getJob, it returns Firestore Object.
+      // Firestore Object might be Flat (drAccount) or Nested (debit).
+      // We'll handle Flat as per previous verification.
       lines: (job.lines || []).map((l: any, idx: number) => ({
         lineNo: idx + 1,
-        debit: l.debit || { account: '', subAccount: '', amount: 0, taxRate: 10, taxCode: '' },
-        credit: l.credit || { account: '', subAccount: '', amount: 0, taxRate: 10, taxCode: '' },
+        debit: {
+          account: l.drAccount || l.debit?.account || '',
+          subAccount: l.drSubAccount || l.debit?.subAccount || '',
+          amount: l.drAmount || l.debit?.amount || 0,
+          taxRate: l.taxDetails?.rate || l.debit?.taxRate || 10,
+          taxCode: l.drTaxClass || l.debit?.taxCode || ''
+        },
+        credit: {
+          account: l.crAccount || l.credit?.account || '',
+          subAccount: l.crSubAccount || l.credit?.subAccount || '',
+          amount: l.crAmount || l.credit?.amount || 0,
+          taxRate: l.taxDetails?.rate || l.credit?.taxRate || 10,
+          taxCode: l.crTaxClass || l.credit?.taxCode || ''
+        },
         description: l.description || ''
       } as JournalLineUi)),
-      totalAmount: (job.lines || []).reduce((sum: number, l: any) => sum + (l.debit?.amount || 0), 0),
+
+      totalAmount: (job.lines || []).reduce((sum: number, l: any) => sum + (l.drAmount || l.debit?.amount || 0), 0),
+
       alerts: [],
       actions,
       driveFileUrl: '',
@@ -51,16 +79,24 @@ export function useJournalEntryRPC() {
     };
   };
 
+  // Fetch Entry (Hono RPC)
   const fetchJournalEntry = async (id: string) => {
     isLoading.value = true;
     error.value = null;
     try {
-      const job = await jobRepository.getJob(id);
-      if (job) {
-        journalEntry.value = mapJobToUi(job);
-      } else {
-        error.value = 'Failed to fetch journal entry (Not Found)';
+      const res = await client.api.jobs[':id'].$get({ param: { id } });
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          error.value = 'Job not found';
+        } else {
+          error.value = 'Failed to fetch job';
+        }
+        return;
       }
+
+      const job = await res.json();
+      journalEntry.value = mapApiDataToUi(job);
     } catch (e) {
       console.error(e);
       error.value = 'Network error';
@@ -69,20 +105,21 @@ export function useJournalEntryRPC() {
     }
   };
 
+  // Update Entry (Hono RPC)
   const updateJournalEntry = async (id: string, payload: any) => {
     isLoading.value = true;
     try {
-      await jobRepository.saveJob(id, payload);
-      try {
-        const updatedJob = await jobRepository.getJob(id);
-        if (updatedJob) {
-          const v2WorkLog = convertLegacyJobToWorkLog(updatedJob);
-          const v2Receipt = convertLegacyJobToReceipt(updatedJob);
-          await receiptRepository.saveDualEntry(v2WorkLog, v2Receipt);
-        }
-      } catch (syncError) {
-        console.error('[Dual_Write] V2 Sync Failed:', syncError);
+      // Backend handles partial update logic
+      const res = await client.api.jobs[':id'].$patch({
+        param: { id },
+        json: payload // Payload should match what backend expects (Partial<Job>)
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to save job');
       }
+
+      isSuccessModalOpen.value = true; // Trigger Modal
       return { success: true };
     } catch (e) {
       console.error(e);
@@ -92,5 +129,14 @@ export function useJournalEntryRPC() {
     }
   };
 
-  return { journalEntry, isLoading, error, fetchJournalEntry, updateJournalEntry };
+  const isSuccessModalOpen = ref(false);
+
+  return {
+    journalEntry,
+    isLoading,
+    error,
+    isSuccessModalOpen, // Exported state
+    fetchJournalEntry,
+    updateJournalEntry
+  };
 }
