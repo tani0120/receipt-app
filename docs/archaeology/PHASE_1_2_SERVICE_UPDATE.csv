@@ -1,0 +1,40 @@
+﻿ConfigService.ts,99,await db.collection(this.COLLECTION).doc(this.SCHEDULER_DOC_ID).set(settings, { merge: true });
+ConversionService.ts,45,await db.collection(this.COLLECTION).doc(logId).set(initialLog);
+ConversionService.ts,86,return {
+JournalService.ts,72,return { success: false, message: `Cannot ${action} from status: ${data?.status}` };
+JournalService.ts,101,return { success: true, message: `Journal ${action} successful (-> ${targetStatus})` };
+JournalService.ts,118,return { success: false, message: `Cannot save draft in status: ${data.status}` };
+JournalService.ts,141,return { success: true, message: 'Draft saved successfully' };
+JournalService.ts,232,return { success: true, aiProposal, message: 'Re-analysis completed' };
+WorkerService.ts,27,return { count: 0 };
+WorkerService.ts,65,return { jobId, status: 'success' };
+WorkerService.ts,69,return { jobId, status: 'error', error: error.message };
+WorkerService.ts,74,return {
+WorkerService.ts,90,return { message: 'Batch check skipped' };
+JournalService.ts,26,return {
+JournalService.ts,84,return { isValid, errors, balanceDiff: diff };
+JournalService.ts,99,return {
+AIRulesMapper.ts,51,return {
+ClientDetailMapper.ts,27,return {
+ClientDetailMapper.ts,74,return {
+ClientMapper.ts,53,return {
+ClientMapper.ts,219,return {
+DataConversionMapper.ts,44,return {
+JournalStatusMapper.ts,31,return {
+JournalStatusMapper.ts,66,if (!rawIs) return { state: 'none', label: '', count: 0 };
+JournalStatusMapper.ts,68,return {
+JournalStatusMapper.ts,76,if (!rawAc) return { type: 'none', label: '', isEnabled: false };
+JournalStatusMapper.ts,79,return {
+mapper.ts,253,return {
+mapper.ts,299,return { primary, next };
+mapper.ts,314,return {
+mapper.ts,361,return {
+mapper.ts,414,return {
+mapper.ts,483,return {
+Mirror_JournalService.ts,26,return {
+Mirror_JournalService.ts,84,return { isValid, errors, balanceDiff: diff };
+Mirror_JournalService.ts,99,return {
+JournalService.ts,19,return {
+JournalService.ts,64,return {
+JournalService.ts,126,return { isValid, errors, balanceDiff: diff };
+JournalService.ts,141,return {
