@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { JobSchema, JournalLineSchema } from './zod_schema';
+import { JobSchema, JournalLineSchema, ClientSchema } from './zod_schema';
 
 // ============================================================================
 // 🎯 規範UseCase (修正版): ExportJournalCSV（CSV形式変換器）
@@ -170,19 +170,81 @@ export type ValidateJournalBalanceInput = z.infer<typeof ValidateJournalBalanceI
 export type ValidateJournalBalanceOutput = z.infer<typeof ValidateJournalBalanceOutputSchema>;
 
 // ============================================================================
-// Phase 4.5 の成功パターン（3 UseCases確立）
+// 🎯 FormatClientMaster（クライアント情報整形）
+// ============================================================================
+//
+// 【UseCaseの責務（1行）】
+//   クライアント情報を表示用・エクスポート用の形式に整形する
+//
+// 【やること】
+//   ✓ 会社名の整形（株式会社の位置統一等）
+//   ✓ クライアントコードの正規化
+//   ✓ 決算月の表示形式変換
+//
+// 【やらないこと】
+//   ✗ クライアント情報の検証
+//   ✗ データの保存
+//   ✗ AI判定
+//
+// ============================================================================
+
+/**
+ * 🔵 FormatClientMaster Input Schema
+ */
+export const FormatClientMasterInputSchema = z.object({
+  /**
+   * 整形対象のクライアント情報
+   *
+   * Phase 4で確立したClientSchemaを使用
+   */
+  client: ClientSchema
+});
+
+/**
+ * 🟢 FormatClientMaster Output Schema
+ */
+export const FormatClientMasterOutputSchema = z.object({
+  /**
+   * 整形された会社名
+   *
+   * 例: "株式会社サンプル" → "サンプル（株）"
+   */
+  formattedName: z.string(),
+
+  /**
+   * 整形されたクライアントコード
+   *
+   * 例: "cli001" → "CLI001" (大文字統一)
+   */
+  formattedCode: z.string(),
+
+  /**
+   * 決算月の表示形式
+   *
+   * 例: 3 → "3月", 12 → "12月"
+   */
+  fiscalYearEnd: z.string()
+});
+
+export type FormatClientMasterInput = z.infer<typeof FormatClientMasterInputSchema>;
+export type FormatClientMasterOutput = z.infer<typeof FormatClientMasterOutputSchema>;
+
+// ============================================================================
+// Phase 4.5 の成功パターン（4 UseCases確立）
 // ============================================================================
 //
 // ✅ optional = 0
-// ✅ 判断なし（純変換・純検証）
+// ✅ 判断なし（純変換・純検証・純整形）
 // ✅ UI/AI/人間から完全分離
 // ✅ 責務が1行で説明できる
-// ✅ Phase 4スキーマ再利用（JobSchema, JournalLineSchema）
+// ✅ Phase 4スキーマ再利用（JobSchema, JournalLineSchema, ClientSchema）
 //
 // 確立したUseCase:
 // 1. ExportJournalCSV - CSV形式変換
 // 2. ImportJournalCSV - CSV形式逆変換
 // 3. ValidateJournalBalance - 貸借一致検証
+// 4. FormatClientMaster - クライアント情報整形
 //
 // この基準を満たすUseCaseだけをPhase 4.5で扱う
 // ============================================================================
+
