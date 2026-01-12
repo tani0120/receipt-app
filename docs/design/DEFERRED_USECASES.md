@@ -223,7 +223,105 @@ Phase 5以降で「UI表示用の派生値生成」として再定義可能。
 
 ---
 
+## FormatDateString（日付文字列形式変換）
+
+### 削除判断の経緯
+
+**削除日:** 2026-01-12  
+**Phase:** 4.5（UseCase Schema確立）
+
+### 削除理由
+
+1. **既存実装が存在する**
+   - `AIRulesMapper.formatDate()` (L12-24)
+   - 機能: Firestore Timestamp/Date → ISO形式（`YYYY-MM-DD`）
+   - 十分に機能している
+
+2. **GAS時代の遺物**
+   - 出典: 旧GAS設計書（日付標準化処理）
+   - 当時の問題: 領収書OCRで和暦・西暦混在
+   - 現在: Vision AI → 構造化データ直接取得
+   - 日付文字列の手動正規化は不要
+
+3. **必要な機能レベル = Phase 4.5不適**
+   - ユーザー回答: 「C（複雑：和暦、自動判定含む）」
+   - 和暦変換（令和6年 → 2024） = 判断を含む
+   - 自動判定（01/15/2024 → 月/日？日/月？） = 判断を含む
+   - ゼロパディング・形式推論 = 判断を含む
+
+4. **JavaScript標準で代替可能**
+   ```javascript
+   new Date('2024-01-15').toISOString().split('T')[0]  // ISO形式
+   new Date('2024-01-15').toLocaleDateString('ja-JP')  // 日本語形式
+   ```
+
+### 既存実装の詳細
+
+**場所:**
+- `src/composables/AIRulesMapper.ts` L12-24
+
+**機能:**
+```typescript
+const formatDate = (ts: unknown): string | undefined => {
+  // Firestore Timestamp → ISO形式
+  if (ts && typeof (ts as any).toDate === 'function') {
+    return (ts as any).toDate().toISOString().split('T')[0];
+  }
+  // raw seconds object → ISO形式
+  if (ts && typeof ts === 'object' && 'seconds' in ts) {
+    return new Date((ts as any).seconds * 1000).toISOString().split('T')[0];
+  }
+  return undefined;
+};
+```
+
+**使用箇所:**
+- AIRulesMapper（AI学習ルールの日付整形）
+
+### 正しい扱い
+
+#### ❌ やってはいけないこと
+- usecase_schemas.tsに新規UseCase追加
+- 既存実装を無視して別実装を作る
+- 「いつか必要かも」で箱を作る
+
+#### ✅ やったこと
+- Phase 4.5から完全削除
+- 既存実装の活用を推奨
+- 設計履歴として記録（本ファイル）
+
+### 再検討条件
+
+将来、以下の要求が出た場合に再検討:
+
+1. **和暦・西暦相互変換が必要**
+   - OCR精度向上で和暦混在が再発
+   - 帳票出力で和暦表示が必須
+
+2. **多様な形式の統一変換が必要**
+   - 会計ソフトごとに異なる日付形式
+   - CSV取込で形式不統一による実害
+
+3. **Phase 6以降で具体的な要求**
+   - UIで日付形式変換機能が必要
+   - 既存実装を拡張する必要性
+   - Input/Outputが確定
+
+### 補足: これは思想の否定ではない
+
+**削除の意味:**
+- ❌「昔の設計は間違いだった」
+- ✅「既存実装があり、Phase 4.5で新規作成する必然性がない」
+
+**削除が正解である理由:**
+- 既存実装を活用すべき（DRY原則）
+- Phase 4.5は「判断しない純変換」に集中
+- 必要になったら既存実装を拡張できる
+
+---
+
 ## 更新履歴
 
 - 2026-01-12: DetectBank削除、CalculateTotalAmount見送り記録
 - 2026-01-12: NormalizeAccountCode削除記録追加
+- 2026-01-12: FormatDateString削除記録追加
