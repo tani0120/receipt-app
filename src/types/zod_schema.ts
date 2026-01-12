@@ -106,7 +106,7 @@ export const ClientSchema = z.object({
   calculationMethod: z.enum(['accrual', 'cash', 'interim_cash']).optional(),
 
   driveLinked: z.boolean(),
-  updatedAt: TimestampSchema,
+  updatedAt: TimestampSchema.optional(), // Phase 5B: Optional to handle missing timestamps
 
   // Phase 4-1: Medium-frequency client properties (30-49 occurrences)
   isNew: z.boolean().optional(),
