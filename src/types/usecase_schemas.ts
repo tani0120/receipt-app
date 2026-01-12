@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { JobSchema, JournalLineSchema } from './zod_schema';
+import { JobSchema } from './zod_schema';
 
 // ============================================================================
 // 🎯 規範UseCase (修正版): ExportJournalCSV（CSV形式変換器）
@@ -107,82 +107,14 @@ export type ImportJournalCSVInput = z.infer<typeof ImportJournalCSVInputSchema>;
 export type ImportJournalCSVOutput = z.infer<typeof ImportJournalCSVOutputSchema>;
 
 // ============================================================================
-// 🎯 ValidateJournalBalance（仕訳貸借一致検証）
-// ============================================================================
-//
-// 【UseCaseの責務（1行）】
-//   仕訳明細の貸借一致を検証し、差額を返す
-//
-// 【やること】
-//   ✓ 借方合計・貸方合計の計算
-//   ✓ 貸借差額の算出
-//   ✓ 一致判定（差額 = 0）
-//
-// 【やらないこと】
-//   ✗ 仕訳の修正
-//   ✗ エラーの自動修正
-//   ✗ AI判定
-//
-// ============================================================================
-
-/**
- * 🔵 ValidateJournalBalance Input Schema
- */
-export const ValidateJournalBalanceInputSchema = z.object({
-  /**
-   * 検証対象の仕訳明細
-   *
-   * Phase 4で確立したJournalLineSchemaを使用
-   */
-  lines: z.array(JournalLineSchema)
-});
-
-/**
- * 🟢 ValidateJournalBalance Output Schema
- */
-export const ValidateJournalBalanceOutputSchema = z.object({
-  /**
-   * 貸借一致判定
-   *
-   * true: 貸借一致（差額 = 0）
-   * false: 貸借不一致
-   */
-  isValid: z.boolean(),
-
-  /**
-   * 貸借差額
-   *
-   * 計算: 借方合計 - 貸方合計
-   * 0なら一致
-   */
-  balanceDiff: z.number(),
-
-  /**
-   * エラーメッセージ
-   *
-   * 例: ["貸借が一致していません (差額: 1000円)"]
-   * 空配列 = 正常
-   */
-  errors: z.array(z.string())
-});
-
-export type ValidateJournalBalanceInput = z.infer<typeof ValidateJournalBalanceInputSchema>;
-export type ValidateJournalBalanceOutput = z.infer<typeof ValidateJournalBalanceOutputSchema>;
-
-// ============================================================================
-// Phase 4.5 の成功パターン（3 UseCases確立）
+// Phase 4.5 の成功パターン（ExportJournalCSV/ImportJournalCSVで確立）
 // ============================================================================
 //
 // ✅ optional = 0
-// ✅ 判断なし（純変換・純検証）
+// ✅ 判断なし（純変換）
 // ✅ UI/AI/人間から完全分離
 // ✅ 責務が1行で説明できる
-// ✅ Phase 4スキーマ再利用（JobSchema, JournalLineSchema）
-//
-// 確立したUseCase:
-// 1. ExportJournalCSV - CSV形式変換
-// 2. ImportJournalCSV - CSV形式逆変換
-// 3. ValidateJournalBalance - 貸借一致検証
+// ✅ Phase 4のスキーマを再利用（JobSchema）
 //
 // この基準を満たすUseCaseだけをPhase 4.5で扱う
 // ============================================================================
