@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { JobSchema } from './zod_schema';
+import { JobSchema, JournalLineSchema } from './zod_schema';
 
 // ============================================================================
 // 🎯 規範UseCase (修正版): ExportJournalCSV（CSV形式変換器）
@@ -103,18 +103,95 @@ export const ImportJournalCSVOutputSchema = z.object({
   rowCount: z.number().min(0)
 });
 
+
 export type ImportJournalCSVInput = z.infer<typeof ImportJournalCSVInputSchema>;
 export type ImportJournalCSVOutput = z.infer<typeof ImportJournalCSVOutputSchema>;
 
 // ============================================================================
-// Phase 4.5 の成功パターン（ExportJournalCSV/ImportJournalCSVで確立）
+// 🎯 ValidateJournalBalance（仕訳検証）
+// ============================================================================
+//
+// 【UseCaseの責務（1行）】
+//   仕訳明細の貸借一致と勘定科目必須を検証し、エラーを返す
+//
+// 【やること】
+//   ✓ 貸借一致チェック（借方合計 = 貸方合計）
+//   ✓ 勘定科目必須チェック（drAccount, crAccount）
+//
+// 【やらないこと】
+//   ✗ エラーの優先度付け
+//   ✗ 修正方法の提案
+//   ✗ 因果関係の解析
+//
+// 【既存実装】
+//   JournalService.validateJournal() (L111-127)
+//   JournalService.calculateBalance() (L132-145)
+//
+// ============================================================================
+
+/**
+ * 🔵 ValidateJournalBalance Input Schema
+ */
+export const ValidateJournalBalanceInputSchema = z.object({
+  /**
+   * 検証対象の仕訳明細
+   *
+   * Phase 4で確立したJournalLineSchemaを使用
+   */
+  lines: z.array(JournalLineSchema)
+});
+
+/**
+ * 🟢 ValidateJournalBalance Output Schema
+ */
+export const ValidateJournalBalanceOutputSchema = z.object({
+  /**
+   * 検証結果
+   *
+   * true: すべての検証に合格
+   * false: 1つ以上のエラーあり
+   */
+  isValid: z.boolean(),
+
+  /**
+   * 貸借差額
+   *
+   * 計算: 借方合計 - 貸方合計
+   * 0なら一致
+   */
+  balanceDiff: z.number(),
+
+  /**
+   * 検出されたエラーの一覧
+   *
+   * **重要:** 順序に意味はなく、優先度や因果関係を表さない
+   * 検出された事実を列挙するのみ
+   *
+   * 例:
+   * - []  （エラーなし）
+   * - ["貸借が一致していません (差額: 1000円)"]
+   * - ["貸借が一致していません (差額: 2000円)", "勘定科目が未入力の行があります"]
+   */
+  errors: z.array(z.string())
+});
+
+export type ValidateJournalBalanceInput = z.infer<typeof ValidateJournalBalanceInputSchema>;
+export type ValidateJournalBalanceOutput = z.infer<typeof ValidateJournalBalanceOutputSchema>;
+
+// ============================================================================
+// Phase 4.5 の成功パターン（3 UseCases確立）
 // ============================================================================
 //
 // ✅ optional = 0
-// ✅ 判断なし（純変換）
+// ✅ 判断なし（純変換・純検証）
 // ✅ UI/AI/人間から完全分離
 // ✅ 責務が1行で説明できる
-// ✅ Phase 4のスキーマを再利用（JobSchema）
+// ✅ Phase 4のスキーマを再利用（JobSchema, JournalLineSchema）
+//
+// 確立したUseCase:
+// 1. ExportJournalCSV - CSV形式変換
+// 2. ImportJournalCSV - CSV形式逆変換
+// 3. ValidateJournalBalance - 仕訳検証
 //
 // この基準を満たすUseCaseだけをPhase 4.5で扱う
 // ============================================================================
