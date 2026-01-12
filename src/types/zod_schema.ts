@@ -5,19 +5,41 @@ import { Timestamp } from 'firebase/firestore';
 // 0. Base Schemas & Enums
 // ============================================================================
 
-// Timestamp Validator: Checks for Firestore Timestamp instance or compatible object structure
-export const TimestampSchema = z.custom<Timestamp>((data) => {
-  if (data instanceof Timestamp) return true;
-  // Loose object check for serialization (seconds, nanoseconds)
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'seconds' in data &&
-    typeof (data as Record<string, unknown>).seconds === 'number' &&
-    'nanoseconds' in data &&
-    typeof (data as Record<string, unknown>).nanoseconds === 'number'
-  );
-}, { message: "Invalid Firestore Timestamp" });
+// Timestamp Validator: Flexible schema for Firestore Timestamps
+// Supports: Timestamp instances, serialized objects, Date, ISO strings
+// Phase 5 Fix: Handles Firestore data serialization across API boundaries
+export const TimestampSchema = z.union([
+  // Option 1: Native Firestore Timestamp instance
+  z.custom<Timestamp>((data) => data instanceof Timestamp, {
+    message: "Expected Firestore Timestamp instance"
+  }),
+
+  // Option 2: Serialized Timestamp object (from Firestore JSON)
+  z.object({
+    seconds: z.number(),
+    nanoseconds: z.number()
+  }).transform(data => {
+    try {
+      return new Timestamp(data.seconds, data.nanoseconds);
+    } catch {
+      // Fallback: return original if Timestamp constructor fails
+      return data as unknown as Timestamp;
+    }
+  }),
+
+  // Option 3: JavaScript Date object
+  z.date().transform(date => Timestamp.fromDate(date)),
+
+  // Option 4: ISO 8601 string
+  z.string().datetime().transform(str => {
+    try {
+      return Timestamp.fromDate(new Date(str));
+    } catch {
+      // Fallback to current time if parsing fails
+      return Timestamp.now();
+    }
+  })
+]);
 
 export const TaxFilingTypeSchema = z.enum(['blue', 'white']);
 export const ConsumptionTaxModeSchema = z.enum(['general', 'simplified', 'exempt']);
