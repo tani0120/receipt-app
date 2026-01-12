@@ -232,7 +232,7 @@ export const JobSchema = z.object({
   confidence: z.string().optional(), // May overlap with confidenceScore
   monthlyJournals: z.string().optional(),
   credit: z.string().optional(),
-  display: z.string().optional(), // UI control or business flag - TBD
+  display: z.string().optional(), // UI control or business visibility flag
   fileName: z.string().optional(),
   debit: z.string().optional(),
   softwareLabel: z.string().optional(),
@@ -280,14 +280,14 @@ export const JobSchema = z.object({
   taxRate: z.number().optional(),
   provider: z.string().optional(),
   exported: z.string().optional(),
-  visible: z.string().optional(), // UI control or business flag - TBD
+  visible: z.string().optional(), // UI visibility or business public/private flag
   errors: z.string().optional(),
 
   // Phase 4-4: Single-digit properties - Batch 1/40 (9 occurrences)
   tax: z.string().optional(),
-  selected: z.string().optional(), // Used in v-model
+  selected: z.string().optional(), // Used in v-model (item.selected)
   decision: z.string().optional(),
-  show: z.string().optional(),
+  show: z.string().optional(), // UI visibility flag
   subtitle: z.string().optional(),
   ai_reason: z.string().optional(),
   calcMethod: z.string().optional(),
@@ -306,7 +306,7 @@ export const JobSchema = z.object({
   set: z.string().optional(),
   source: z.string().optional(),
   closingBalance: z.string().optional(),
-  未処理: z.string().optional(), // ⚠️ Japanese property name
+  未処理: z.string().optional(), // ⚠️ Japanese property - rename recommended
   year: z.number().optional(),
   crSub: z.string().optional(),
   historyBalances: z.string().optional(),
@@ -319,7 +319,7 @@ export const JobSchema = z.object({
   showButton: z.string().optional(),
   invoiceLog: z.string().optional(),
   accountName: z.string().optional(),
-  表示件数: z.string().optional(), // ⚠️ Japanese property name
+  表示件数: z.string().optional(), // ⚠️ Japanese property - rename recommended
   accountId: z.string().optional(),
   get: z.string().optional(),
   sub: z.string().optional(),
