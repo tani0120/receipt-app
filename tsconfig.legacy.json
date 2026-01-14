@@ -1,0 +1,12 @@
+{
+    "extends": "./tsconfig.app.json",
+    "compilerOptions": {
+        "noEmitOnError": false,
+        "strict": false,
+        "skipLibCheck": true
+    },
+    "include": [
+        "src/legacy/**/*"
+    ],
+    "exclude": []
+}

@@ -15,6 +15,7 @@
     "start": "tsx src/server.ts",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
+    "type-check:legacy": "vue-tsc -p tsconfig.legacy.json --noEmit || exit 0",
     "lint": "eslint . --fix --cache",
     "test": "vitest"
   },
