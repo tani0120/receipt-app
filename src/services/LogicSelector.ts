@@ -125,10 +125,10 @@ export class LogicSelector {
         // GeminiToYayoi の形式
         const strategyCapitalized =
             this.ocrStrategy.charAt(0).toUpperCase() +
-            this.ocrStrategy.slice(1);
+            this.ocrStrategy.slice(1).toLowerCase();
         const formatCapitalized =
             this.exportFormat.charAt(0).toUpperCase() +
-            this.exportFormat.slice(1);
+            this.exportFormat.slice(1).toLowerCase();
 
         return `${strategyCapitalized}To${formatCapitalized}`;
     }

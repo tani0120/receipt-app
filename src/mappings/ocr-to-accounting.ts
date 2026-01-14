@@ -94,7 +94,7 @@ export const Mappings = {
   /**
    * Gemini → MF
    */
-  GeminiToMF: {
+  GeminiToMf: {
     vendor: 'supplier',
     totalAmount: 'price',
     date: 'date',
@@ -122,7 +122,7 @@ export const Mappings = {
   /**
    * Anthropic → MF
    */
-  AnthropicToMF: {
+  AnthropicToMf: {
     supplier: 'supplier',
     sum: 'price',
     issueDate: 'date',
