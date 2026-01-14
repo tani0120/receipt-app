@@ -110,8 +110,9 @@ export interface Client {
   /**
    * Accounting Software (Target for CSV)
    * Internal Symbol: ACCOUNTING_SOFT
+   * Week 3: Added 'tkc'
    */
-  accountingSoftware: 'yayoi' | 'freee' | 'mf' | 'other';
+  accountingSoftware: 'yayoi' | 'freee' | 'mf' | 'tkc' | 'other';
 
   /**
    * Prompt Injection for this specific client

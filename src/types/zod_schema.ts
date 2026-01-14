@@ -58,7 +58,7 @@ export const TaxTypeSchema = z.enum(['taxable', 'non_taxable', 'exempt', 'out_of
 
 export const InvoiceIssuerTypeSchema = z.enum(['qualified', 'transitional_80', 'transitional_50', 'non_qualified', 'unknown']);
 
-export const AccountingSoftwareSchema = z.enum(['yayoi', 'freee', 'mf', 'other']);
+export const AccountingSoftwareSchema = z.enum(['yayoi', 'freee', 'mf', 'tkc', 'other']); // Week 3: Added 'tkc'
 
 export const TaxCalculationMethodSchema = z.enum(['stack', 'back']);
 export const RoundingSettingsSchema = z.enum(['floor', 'round', 'ceil']);
