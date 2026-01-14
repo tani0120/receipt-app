@@ -55,14 +55,32 @@ export interface Client {
   /** Internal Symbol: COMPANY_NAME */
   companyName: string;
 
+  /** Week 3: Company Name Kana */
+  companyNameKana?: string;
+
+  /** Client Type */
+  type?: 'corp' | 'individual';
+
   /** Internal Symbol: REP_NAME */
   repName?: string;
+
+  /** Week 3: Representative Name Kana */
+  repNameKana?: string;
+
+  /** Staff Member */
+  staffName?: string;
 
   /** Internal Symbol: CONTACT_INFO */
   contactInfo?: string; // Slack webhook or email
 
+  /** Week 3: Phone Number */
+  phoneNumber?: string;
+
   /** Internal Symbol: FISCAL_MONTH (1-12) */
   fiscalMonth: number;
+
+  /** Week 3: Established Date (YYYYMMDD) */
+  establishedDate?: string;
 
   /** Internal Symbol: STATUS */
   status: 'active' | 'inactive' | 'suspension';
@@ -102,9 +120,28 @@ export interface Client {
   aiKnowledgePrompt?: string;
 
   /**
-   * Default Payment Method (Use for guessing 'Cash' vs 'Credit')
+   * Default Payment Method (Week 3: Updated)
+   * Use for guessing payment method when OCR cannot detect
    */
-  defaultPaymentMethod?: 'cash' | 'credit_card' | 'bank_transfer';
+  defaultPaymentMethod?: 'cash' | 'owner_loan' | 'accounts_payable';
+
+  /**
+   * Calculation Method
+   */
+  calculationMethod?: 'accrual' | 'cash' | 'interim_cash';
+
+  /**
+   * Week 3: Department Management
+   */
+  hasDepartmentManagement?: boolean;
+
+  /**
+   * Week 3: Fee Settings (Optional for backward compatibility)
+   */
+  advisoryFee?: number;      // 顧問報酬（月額）
+  bookkeepingFee?: number;   // 記帳代行（月額）
+  settlementFee?: number;    // 決算報酬（年次）
+  taxFilingFee?: number;     // 消費税申告報酬（年次）
 
   /** Google Drive Link Status */
   driveLinked: boolean;

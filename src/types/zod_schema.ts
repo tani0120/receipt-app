@@ -67,16 +67,25 @@ export const RoundingSettingsSchema = z.enum(['floor', 'round', 'ceil']);
 // 1. Client Schema
 // ============================================================================
 export const ClientSchema = z.object({
+  // Basic Information
   clientCode: z.string(),
   companyName: z.string(),
-  type: z.enum(['corp', 'individual']).optional(), // Added type
+  companyNameKana: z.string().optional(), // 会社名フリガナ (Week 3)
+  type: z.enum(['corp', 'individual']).optional(),
   repName: z.string().optional(),
-  staffName: z.string().optional(), // Added staffName
+  repNameKana: z.string().optional(), // 代表者名フリガナ (Week 3)
+  staffName: z.string().optional(),
+
+  // Contact Information
   contact: z.object({
     type: z.enum(['email', 'chatwork', 'none']).optional(),
     value: z.string().optional()
   }).optional(),
+  phoneNumber: z.string().optional(), // 電話番号 (Week 3)
+
+  // Fiscal Information
   fiscalMonth: z.number().int().min(1).max(12),
+  establishedDate: z.string().regex(/^\d{8}$/).optional(), // 設立年月日 YYYYMMDD (Week 3)
   status: z.enum(['active', 'inactive', 'suspension']),
 
   // Folder Rules
@@ -102,15 +111,41 @@ export const ClientSchema = z.object({
 
   accountingSoftware: AccountingSoftwareSchema,
   aiKnowledgePrompt: z.string().optional(),
-  defaultPaymentMethod: z.enum(['cash', 'credit_card', 'bank_transfer']).optional(),
+  defaultPaymentMethod: z.enum(['cash', 'owner_loan', 'accounts_payable']).optional(), // Week 3: 現金/社長借入金/未払金
   calculationMethod: z.enum(['accrual', 'cash', 'interim_cash']).optional(),
+  hasDepartmentManagement: z.boolean().optional(), // 部門管理 (Week 3)
+
+  // Fee Settings (Week 3)
+  advisoryFee: z.number().min(0).default(0), // 顧問報酬（月額）
+  bookkeepingFee: z.number().min(0).default(0), // 記帳代行（月額）
+  settlementFee: z.number().min(0).default(0), // 決算報酬（年次）
+  taxFilingFee: z.number().min(0).default(0), // 消費税申告報酬（年次）
 
   driveLinked: z.boolean(),
-  updatedAt: TimestampSchema.optional(), // Phase 5B: Optional to handle missing timestamps
+  updatedAt: TimestampSchema.optional(),
 
   // Phase 4-1: Medium-frequency client properties (30-49 occurrences)
   isNew: z.boolean().optional(),
   filingCount: z.number().optional()
+});
+
+/**
+ * ClientSchema with migration for legacy defaultPaymentMethod values
+ * Week 3: Automatically converts old values (credit_card, bank_transfer) to new values
+ */
+export const ClientSchemaWithMigration = ClientSchema.transform((data: z.infer<typeof ClientSchema> & { defaultPaymentMethod?: string }) => {
+  // Migrate old defaultPaymentMethod values
+  const paymentMethodMigration: Record<string, 'cash' | 'owner_loan' | 'accounts_payable'> = {
+    'credit_card': 'accounts_payable',
+    'bank_transfer': 'accounts_payable',
+    'cash': 'cash',
+  };
+
+  if (data.defaultPaymentMethod && paymentMethodMigration[data.defaultPaymentMethod]) {
+    data.defaultPaymentMethod = paymentMethodMigration[data.defaultPaymentMethod] as 'cash' | 'owner_loan' | 'accounts_payable';
+  }
+
+  return data;
 });
 
 // ============================================================================
