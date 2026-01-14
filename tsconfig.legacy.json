@@ -1,12 +1,42 @@
 {
-    "extends": "./tsconfig.app.json",
+    "extends": "@vue/tsconfig/tsconfig.dom.json",
     "compilerOptions": {
-        "noEmitOnError": false,
+        "composite": true,
         "strict": false,
-        "skipLibCheck": true
+        "noEmitOnError": false,
+        "skipLibCheck": true,
+        "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.legacy.tsbuildinfo",
+        "paths": {
+            "@/legacy/*": [
+                "./src/legacy/*"
+            ],
+            "@/composables/*": [
+                "./src/composables/*"
+            ],
+            "@/components/*": [
+                "./src/components/*"
+            ],
+            "@/views/*": [
+                "./src/views/*"
+            ],
+            "@/types/*": [
+                "./src/types/*"
+            ],
+            "@/utils/*": [
+                "./src/utils/*"
+            ],
+            "@/*": [
+                "./src/*"
+            ]
+        }
     },
     "include": [
-        "src/legacy/**/*"
+        "env.d.ts",
+        "src/**/*",
+        "src/**/*.vue"
     ],
-    "exclude": []
+    "exclude": [
+        "src/features/**/*",
+        "src/**/__tests__/*"
+    ]
 }

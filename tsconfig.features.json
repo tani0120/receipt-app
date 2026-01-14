@@ -1,0 +1,39 @@
+{
+    "extends": "@vue/tsconfig/tsconfig.dom.json",
+    "compilerOptions": {
+        "composite": true,
+        "strict": true,
+        "noEmitOnError": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "strictFunctionTypes": true,
+        "strictBindCallApply": true,
+        "strictPropertyInitialization": true,
+        "noImplicitThis": true,
+        "alwaysStrict": true,
+        "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.features.tsbuildinfo",
+        "paths": {
+            "@/features/*": [
+                "./src/features/*"
+            ],
+            "@/types/*": [
+                "./src/types/*"
+            ]
+        }
+    },
+    "include": [
+        "env.d.ts",
+        "src/features/**/*",
+        "src/types/zod_schema.ts"
+    ],
+    "exclude": [
+        "src/legacy/**/*",
+        "src/composables/**/*",
+        "src/components/**/*",
+        "src/views/**/*",
+        "src/api/**/*",
+        "src/utils/**/*",
+        "src/server.ts",
+        "src/**/__tests__/*"
+    ]
+}
