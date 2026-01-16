@@ -1,5 +1,10 @@
 # ADR-005: 防御層実装詳細（L1/L2/L3）
 
+**作成日**: 2026-01-16  
+**最終更新**: 2026-01-16  
+**ステータス**: Frozen  
+**関連ファイル**: ADR-004, ADR-006, Receipt/Client/Job/Staff実装
+
 **Status**: Accepted（Freeze）  
 **Date**: 2026-01-16  
 **Owner**: Human（最終責任）  

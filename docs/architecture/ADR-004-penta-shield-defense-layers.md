@@ -1,5 +1,10 @@
 # ADR-004: Penta-Shield（5層防御アーキテクチャ）
 
+**作成日**: 2026-01-16  
+**最終更新**: 2026-01-16  
+**ステータス**: Frozen  
+**関連ファイル**: ADR-005, ADR-006, TASK_PENTA_SHIELD.md, PHASE_1_COMPLETION.md
+
 **Status**: Accepted（Freeze）  
 **Date**: 2026-01-16  
 **Owner**: Human（最終責任）  
