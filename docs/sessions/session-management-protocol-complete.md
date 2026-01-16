@@ -103,7 +103,305 @@
 
 ---
 
-## 2. 今回のセッション（2026-01-16）で確立した重要な仕組み
+## 2. セッション終了プロトコル
+
+**最終更新**: 2026-01-17
+
+### 必須作業（完全チェックリスト）
+
+#### 1. ファイル作成・更新の記録
+- [ ] SESSION_YYYYMMDD.md作成
+  - セッション概要（目標・成果）
+  - **作成ファイル完全一覧**（ファイルパス）
+  - **更新ファイル一覧**
+  - **更新なしファイルの確認**
+  - git commit記録（hash, メッセージ）
+  - 確立した設計原則・哲学
+  - 次回セッション必読ファイル
+  - 次のアクション候補
+
+#### 2. メタデータ更新
+- [ ] 今日作成したファイルにメタデータ追加
+  ```markdown
+  **作成日**: YYYY-MM-DD  
+  **最終更新**: YYYY-MM-DD  
+  **ステータス**: Draft / Active / Frozen / Archived / Deprecated
+  ```
+- [ ] 今日更新したファイルの「最終更新日」を更新
+- [ ] ステータスの確認・更新
+
+#### 3. インデックス更新
+- [ ] [PROJECT_INDEX.md](file:///C:/Users/kazen/.gemini/antigravity/brain/129dd3c2-bc83-48ac-91da-9736f587788a/PROJECT_INDEX.md)更新
+  - 新規ファイル追加
+  - 更新日更新
+  - ステータス更新
+- [ ] [SESSION_INDEX.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/SESSION_INDEX.md)更新
+  - セッション一覧に追加
+  - 重要セッションセクションに詳細追加
+- [ ] [READING_INDEX.md](file:///C:/Users/kazen/.gemini/antigravity/brain/129dd3c2-bc83-48ac-91da-9736f587788a/READING_INDEX.md)確認
+  - 新規ADR/タスクを追加
+
+#### 4. タスク管理
+- [ ] [task.md](file:///C:/Users/kazen/.gemini/antigravity/brain/129dd3c2-bc83-48ac-91da-9736f587788a/task.md)更新
+  - 完了したタスクをマーク
+  - 次回タスクを明確化
+- [ ] 該当TASK_*.md更新
+  - 進捗状況を記録
+  - Phase完了をマーク
+
+#### 5. ファイル鮮度チェック
+- [ ] 今日更新されなかった重要ファイルをリスト化
+- [ ] 古いファイルの検出（2週間以上更新なし等）
+- [ ] 廃止候補の確認
+- [ ] ANALYSIS/ARTIFACTファイルのアーカイブ判定
+
+#### 6. 重要ADR/哲学の確認
+- [ ] 今日確立した原則がADRに記録されているか
+- [ ] 必要なら追記
+- [ ] CHANGELOG_SYSTEM_PHILOSOPHY.md更新（哲学変更があった場合）
+
+---
+
+## 3. メタプロトコル：ファイル管理のルール
+
+**最終更新**: 2026-01-17
+
+### ファイル4分類
+
+#### A. PROTOCOL（永続・人間が見る）
+```
+session-management-protocol-complete.md
+task.md
+TASK_*.md
+PROJECT_INDEX.md
+READING_INDEX.md
+```
+
+**特徴**:
+- 人間が読む
+- 常に最新に保つ
+- セッション間で参照
+- 削除・アーカイブ禁止
+
+---
+
+#### B. REPORT（永続・記録）
+```
+SESSION_YYYYMMDD.md
+PHASE_N_COMPLETION.md
+ADR-XXX.md
+```
+
+**特徴**:
+- 完了報告・決定記録
+- 参照専用
+- 更新しない（Frozen）
+- 削除禁止
+
+---
+
+#### C. ANALYSIS（一時・分析）
+```
+*-analysis-*.md
+*-gap-*.md
+*-protocol.md（分析用）
+```
+
+**特徴**:
+- 問題分析・検討用
+- **protocolへの反映が目的**
+- 反映後は**削除またはアーカイブ**
+
+**処理方法**:
+1. protocolに重要部分を反映
+2. `ARCHIVED_<filename>-YYYYMMDD.md`にリネーム
+
+---
+
+#### D. ARTIFACT（一時・作業用）
+```
+implementation_plan.md（上書きされる）
+その他セッション内作業ファイル
+```
+
+**特徴**:
+- セッション内で使い捨て
+- 完了後は削除またはアーカイブ
+
+---
+
+### 使い捨て判定基準
+
+**削除またはアーカイブ条件**:
+- カテゴリC（ANALYSIS） + protocolに反映済み
+- カテゴリD（ARTIFACT） + セッション完了
+
+**アーカイブ方法**:
+```
+ARCHIVED_<filename>-YYYYMMDD.md
+```
+
+**永続保存**:
+- カテゴリA（PROTOCOL）
+- カテゴリB（REPORT）
+
+---
+
+### タスク化の基準
+
+**タスクにする条件**:
+1. 複数セッションにまたがる
+2. Phase構成が必要
+3. 人間の意思決定が複数回必要
+
+**タスクにしない条件**:
+- 1セッションで完結
+- 単純な改善作業
+- 分析のみ
+
+**判定例**:
+- protocol-gap-analysis.md → **タスク化不要**（1セッションで完結）
+- Penta-Shield実装 → **タスク化必要**（Phase 1-5、複数セッション）
+
+---
+
+### Protocolへの集約原則
+
+**原則**: **すべてはprotocolに集約**
+
+**方法**:
+1. 分析ファイル（カテゴリC）で問題を整理
+2. session-management-protocol-complete.mdに重要部分を反映
+3. 分析ファイルを削除またはアーカイブ
+
+**例外**: 
+- 詳細すぎる内容は別ファイル化してprotocolからリンク
+- 教科書的なファイル（PHASE_X_COMPLETION.md等）は別ファイルとして保存
+
+---
+
+## 4. ファイル命名規則
+
+**最終更新**: 2026-01-17
+
+### 永続ドキュメント（ADR等）
+```
+ADR-XXX-<topic>-YYYYMMDD.md
+例: ADR-004-penta-shield-20260116.md
+```
+
+### タスクファイル
+```
+TASK_<NAME>_YYYYMMDD.md
+例: TASK_PENTA_SHIELD_20260116.md
+```
+
+### セッション記録
+```
+SESSION_YYYYMMDD.md
+```
+
+### 一時分析ファイル
+```
+<topic>-analysis-YYYYMMDD.md
+例: receipt-l1-l3-analysis-20260116.md
+```
+
+### 実装計画
+```
+<entity>-implementation-plan-YYYYMMDD.md
+例: client-implementation-plan-20260116.md
+```
+
+### アーカイブファイル
+```
+ARCHIVED_<filename>-YYYYMMDD.md
+```
+
+---
+
+## 5. ファイルメタデータ標準
+
+**すべての重要ファイルに必須**:
+
+```markdown
+**作成日**: YYYY-MM-DD  
+**最終更新**: YYYY-MM-DD  
+**ステータス**: Draft / Active / Frozen / Archived / Deprecated  
+**関連ファイル**: （オプション）
+```
+
+### ステータス定義
+
+| ステータス | 意味 | 更新可否 |
+|-----------|------|---------|
+| Draft | 作成中、レビュー前 | 可 |
+| Active | 使用中、更新中 | 可 |
+| Frozen | 確定、更新禁止 | 不可 |
+| Archived | 参照専用、古い情報 | 不可 |
+| Deprecated | 廃止予定、使用禁止 | 不可 |
+
+---
+
+## 6. インデックスファイル階層
+
+```
+READING_INDEX.md（必読ファイル一覧）
+  ├─ session-management-protocol-complete.md（このファイル）
+  ├─ PROJECT_INDEX.md（ファイル網羅）
+  ├─ SESSION_INDEX.md（セッション一覧）
+  └─ task.md（タスク管理）
+```
+
+---
+
+## 7. 関連ファイル最新性ルール
+
+**最終更新**: 2026-01-17
+
+### 原則
+
+**ファイルAを更新したら、Aを参照しているファイルBの「最終更新日」も更新する**
+
+### 理由
+
+- ファイルBのユーザーに「参照先が更新された」と通知
+- 古い情報を参照し続けるリスクを回避
+
+### 実施方法
+
+1. **ファイル更新時**:
+   - そのファイルを参照している他のファイルを確認
+   - 該当ファイルの「最終更新日」を今日の日付に更新
+
+2. **関連ファイルの見つけ方**:
+   - メタデータの「関連ファイル」欄を確認
+   - grep検索でファイル名を検索
+
+### 例
+
+**ADR-004を更新した場合**:
+```markdown
+# 更新すべきファイル
+- PHASE_1_COMPLETION.md（ADR-004を参照）
+- task.md（ADR-004に言及）
+- PROJECT_INDEX.md（ADR-004のステータス更新）
+```
+
+**更新内容**:
+```markdown
+**最終更新**: 2026-01-17  
+```
+
+### セッション終了プロトコルへの統合
+
+- [ ] **チェック項目「2. メタデータ更新」に含まれる**
+- 今日更新したファイルの「最終更新日」を更新
+- **参照元ファイルの「最終更新日」も更新**
+
+---
+
+## 8. 今回のセッション（2026-01-16）で確立した重要な仕組み
 
 ### 1. 正史確定（CANONICAL_SOURCES.md、archive分離）
 
