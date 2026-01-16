@@ -64,6 +64,7 @@
 
 ## 更新履歴
 
+- **2026-01-17**: セッション終了プロトコル再配置とADR-003準拠のファイル整理完了（git commit: 43e9179）
 - **2026-01-17**: SESSION_20260116.mdをプロジェクトディレクトリに移行、session-management-protocol-complete.mdリンク更新
 - **2026-01-16**: SESSION_20260116.mdを追加（Penta-Shield Phase 1-3完了）
 - **2026-01-15**: 初版作成、SESSION_20260115.mdを追加
