@@ -99,7 +99,7 @@ import aaa_ClientModal from '../../components/ClientModal.vue'; // Adjusted rela
 // [Internal_Logic_Flow] Lines 98-106
 const router = useRouter();
 const { clients, fetchClients } = aaa_useAccountingSystem();
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const showToast = inject<any>('showToast');
 
 onMounted(() => {
@@ -177,19 +177,19 @@ const sortedMasterClients = computed(() => {
 });
 
 // [Internal_Function_Definition] Method Actions
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const goToClientDashboard = (client: any) => {
     router.push({ name: 'ScreenA_Detail', params: { code: client.code } });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const openClientModal = (mode: 'new' | 'edit', client: any | null = null) => {
     clientModalMode.value = mode;
     selectedClient.value = client;
     isClientModalVisible.value = true;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const handleClientSave = (formData: any) => {
     console.log('Save requested', formData);
     if (showToast) showToast('機能実装中: 保存処理', 'info');

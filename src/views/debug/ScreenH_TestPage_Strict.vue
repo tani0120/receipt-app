@@ -508,7 +508,7 @@ const allClients = ref<MockClient[]>([
 const filteredClients = computed(() => {
     if (!activeFilter.value) return allClients.value;
     return allClients.value.filter(client => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const val = (client as any)[activeFilter.value!];
         return typeof val === 'number' && val > 0;
     });
