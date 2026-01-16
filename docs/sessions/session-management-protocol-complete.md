@@ -846,41 +846,104 @@ ARCHIVED_<filename>-YYYYMMDD.md
 
 ## 5. ファイル命名規則
 
-**最終更新**: 2026-01-16
+**最終更新**: 2026-01-17
 
-### 永続ドキュメント！EDR等！E
+> [!IMPORTANT]
+> **実際の運用状況に基づく命名規則**
+> 
+> 前セッション（2026-01-16）のimplementation-gap-analysis.mdで判明：
+> - 日付付き命名は**提案されたが実施されなかった**
+> - 実際のファイルは日付なしで運用されている
+> - この規則は実態を反映します
+
+---
+
+### ADR（Architecture Decision Record）
+
 ```
-ADR-XXX-<topic>-YYYYMMDD.md
-侁E ADR-004-penta-shield-20260116.md
+ADR-XXX-<topic>.md
+例: ADR-004-penta-shield-defense-layers.md
 ```
+
+**ルール**:
+- 日付は含めない
+- トピック名はケバブケース（kebab-case）
+- 番号は連番
+
+---
 
 ### タスクファイル
+
 ```
-TASK_<NAME>_YYYYMMDD.md
-侁E TASK_PENTA_SHIELD_20260116.md
+TASK_<NAME>.md
+例: TASK_PENTA_SHIELD.md
 ```
 
-### セチE��ョン記録
+**ルール**:
+- 日付は含めない
+- 名前はアンダースコア区切り大文字
+
+---
+
+### セッション記録（例外：日付あり）
+
 ```
 SESSION_YYYYMMDD.md
+例: SESSION_20260116.md
 ```
 
-### 一時�E析ファイル
+**ルール**:
+- **日付を含める**（唯一の例外）
+- 理由：時系列管理が必須
+
+---
+
+### 一時分析ファイル
+
 ```
-<topic>-analysis-YYYYMMDD.md
-侁E receipt-l1-l3-analysis-20260116.md
+<topic>-analysis.md
+例: receipt-l1-l3-analysis.md
 ```
 
-### 実裁E��画
+**ルール**:
+- 日付は含めない
+- ケバブケース
+- suffixに`-analysis`を付与
+
+---
+
+### 実装計画（アーティファクト）
+
 ```
-<entity>-implementation-plan-YYYYMMDD.md
-侁E client-implementation-plan-20260116.md
+implementation_plan.md
 ```
+
+**ルール**:
+- 固定ファイル名
+- 日付は含めない
+- 理由：セッションごとに上書きされる
+
+---
 
 ### アーカイブファイル
+
 ```
 ARCHIVED_<filename>-YYYYMMDD.md
+例: ARCHIVED_protocol-gap-analysis-20260116.md
 ```
+
+**ルール**:
+- プレフィックス: `ARCHIVED_`
+- アーカイブ日付を付与
+- 元ファイル名を保持
+
+---
+
+### 命名規則の変更履歴
+
+**2026-01-17**: 実態に基づき日付なし運用を明文化
+**2026-01-16**: 日付付き命名を提案（未実施）
+
 
 ---
 
