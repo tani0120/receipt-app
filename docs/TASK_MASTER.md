@@ -52,12 +52,30 @@
 
 ---
 
-### タスクA: 顧問先データ項目の現状調査
-→ 詳細: [TASK_CLIENT_DATA.md](file:///C:/Users/kazen/.gemini/antigravity/brain/129dd3c2-bc83-48ac-91da-9736f587788a/TASK_CLIENT_DATA.md)
+### タスクA: UI統合（Phase 5前の必須作業）
+→ 詳細: [TASK_UI_RECONCILIATION.md](file:///C:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/tasks/TASK_UI_RECONCILIATION.md)
 
-**現在のフェーズ**: 調査完了、次のアクション検討中
+**現在のフェーズ**: Phase 2完了 → **Phase 3: PENDING項目の判断依頼中**
 
-**状態**: [/] 調査中
+**状態**: [/] Phase 0/2完了、Phase 3ブロック中（ユーザー判断待ち）
+
+**完了内容**（2026-01-17）:
+- Phase 0: プロパティレベルチェックリスト作成（complete-property-checklist.md）
+  - 全8画面（Screen A-H + admin）のプロパティ抽出完了
+  - ソースコード解析（4レイヤー） + 公開URL観察
+- Phase 2: プロパティ統合マップ作成（property-integration-map.md）
+  - 全336プロパティを議論済み体系にマッピング
+  - Freeze可能範囲（Client基本17項目、Job全体80+項目、Screen C-H全体30+項目）を可視化
+  - PENDING項目（Admin/System 12項目、Client税務設定11項目）を可視化
+  - Implementation Plan作成（phase2-admin-integration-plan.md）
+
+**ブロッカー**: Admin/System設定のPENDING項目について、ユーザー判断が必要
+- `phase1_aiProvider`等（公開のみ）: ローカルに統合すべきか？
+- `jobRegistrationInterval`等（ローカルのみ）: 本番環境で必要か？
+- Client税務設定: UI反映すべきか？
+- `담당자Id`（韓国語）: 削除 or rename？
+
+**次のアクション**: ユーザー判断 → Full Freeze判定 → 実装
 
 ---
 
