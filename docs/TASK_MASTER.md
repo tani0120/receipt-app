@@ -55,27 +55,26 @@
 ### タスクA: UI統合（Phase 5前の必須作業）
 → 詳細: [TASK_UI_RECONCILIATION.md](file:///C:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/tasks/TASK_UI_RECONCILIATION.md)
 
-**現在のフェーズ**: Phase 2完了 → **Phase 3: PENDING項目の判断依頼中**
+**現在のフェーズ**: Phase 3-A準備完了 → **Phase 3-A作業開始**（利用シーン棚卸し）
 
-**状態**: [/] Phase 0/2完了、Phase 3ブロック中（ユーザー判断待ち）
+**状態**: [/] Phase 0/2完了、Phase 3-A準備完了
 
 **完了内容**（2026-01-17）:
 - Phase 0: プロパティレベルチェックリスト作成（complete-property-checklist.md）
-  - 全8画面（Screen A-H + admin）のプロパティ抽出完了
-  - ソースコード解析（4レイヤー） + 公開URL観察
 - Phase 2: プロパティ統合マップ作成（property-integration-map.md）
-  - 全336プロパティを議論済み体系にマッピング
-  - Freeze可能範囲（Client基本17項目、Job全体80+項目、Screen C-H全体30+項目）を可視化
-  - PENDING項目（Admin/System 12項目、Client税務設定11項目）を可視化
-  - Implementation Plan作成（phase2-admin-integration-plan.md）
+- Phase 3-A準備: TASK_UI_RECONCILIATION.md更新、usecase-workbook.mdテンプレート作成
 
-**ブロッカー**: Admin/System設定のPENDING項目について、ユーザー判断が必要
-- `phase1_aiProvider`等（公開のみ）: ローカルに統合すべきか？
-- `jobRegistrationInterval`等（ローカルのみ）: 本番環境で必要か？
-- Client税務設定: UI反映すべきか？
-- `담당자Id`（韓国語）: 削除 or rename？
+**Phase 3-Aの構造**（利用シーン棚卸し）:
+- **Step 1**: IDEが業務判断が匂う項目を抽出し、「問いの形」に変換
+- **Step 2**: 人間が業務を語る（現場を思い出し、自然言語で記述）
+- **Step 3**: IDEが清書（UseCaseフォーマットに落とす）
 
-**次のアクション**: ユーザー判断 → Full Freeze判定 → 実装
+**役割分担**:
+- IDE: プロパティ棚卸し、問いへの変換、UseCase整形
+- **人間: 業務の語り**（最重要）
+- 意味確定: Phase 3-C（UIモック後）
+
+**次のアクション**: 人間がusecase-workbook.mdにUseCaseを追記 → Phase 3-B（UIモック）
 
 ---
 
