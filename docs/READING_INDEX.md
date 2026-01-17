@@ -16,10 +16,11 @@
 1. [SYSTEM_PHILOSOPHY.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/SYSTEM_PHILOSOPHY.md)
 2. [CHANGELOG_SYSTEM_PHILOSOPHY.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/CHANGELOG_SYSTEM_PHILOSOPHY.md)
 3. [session-management-protocol-complete.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/session-management-protocol-complete.md)
+4. [TASK_MASTER.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/TASK_MASTER.md)
 
 **前回セッションからの続きの場合のみ**:
-4. [SESSION_INDEX.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/SESSION_INDEX.md)
-5. 該当の SESSION_YYYYMMDD.md
+5. [SESSION_INDEX.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/SESSION_INDEX.md)
+6. 該当の SESSION_YYYYMMDD.md
 
 ---
 
