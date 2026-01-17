@@ -275,17 +275,22 @@ archive配下の内容は、いかなる理由があっても
 - [x] archive/philosophy/ 作成
 - [x] archive/rejected/ 作成
 - [x] MIGRATION_LOG.md 作成
-- [ ] docs/SCHEMA_MASTER_LIST.md → archive/philosophy/へ移動
-- [ ] docs/FUNCTION_LIST.md → archive/philosophy/へ移動
-- [ ] docs/PHASE5_*.md → archive/rejected/へ移動
-- [ ] docs/archaeology/ → archive/archaeology/へ移動
-- [ ] docs/system_design.md → archive/へ移動
+- [x] docs/SCHEMA_MASTER_LIST.md → archive/philosophy/へ移動
+- [x] docs/FUNCTION_LIST.md → archive/philosophy/へ移動
+- [x] docs/PHASE5_*.md → archive/rejected/へ移動
+- [x] docs/archaeology/ → 存在しない（処理不要）
+- [x] docs/system_design.md → archive/へ移動
+
+**完了**: Phase 2すべて完了（2026-01-17）
 
 ### Phase 3: src/の整理
 
-- [ ] src/backup_before_ironclad_v1/ 削除
-- [ ] src/Mirror_sandbox/ 削除
-- [ ] src/legacy/ 段階的削除
+- [x] src/backup_before_ironclad_v1/ 削除
+- [x] src/Mirror_sandbox/ 削除
+- [x] src/mappings/ 削除
+- [ ] src/legacy/ 段階的削除（今後の課題）
+
+**完了**: Phase 3（mappingsまで）完了（2026-01-17）
 
 ---
 
