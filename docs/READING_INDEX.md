@@ -13,14 +13,15 @@
 
 **新規セッション・前回からの続き問わず必読**:
 
-1. [SYSTEM_PHILOSOPHY.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/SYSTEM_PHILOSOPHY.md)
-2. [CHANGELOG_SYSTEM_PHILOSOPHY.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/CHANGELOG_SYSTEM_PHILOSOPHY.md)
-3. [session-management-protocol-complete.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/session-management-protocol-complete.md)
-4. [TASK_MASTER.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/TASK_MASTER.md)
+1. [READING_INDEX.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/READING_INDEX.md) - このファイル（必読ファイルマスター）
+2. [TASK_MASTER.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/TASK_MASTER.md) - 現在のタスク・進行状況
+3. [session-management-protocol-complete.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/session-management-protocol-complete.md) - セッション管理プロトコル
+4. [SYSTEM_PHILOSOPHY.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/SYSTEM_PHILOSOPHY.md) - システム哲学（存在する場合）
+5. [CHANGELOG_SYSTEM_PHILOSOPHY.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/CHANGELOG_SYSTEM_PHILOSOPHY.md) - 変更履歴（存在する場合）
 
 **前回セッションからの続きの場合のみ**:
-5. [SESSION_INDEX.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/SESSION_INDEX.md)
-6. 該当の SESSION_YYYYMMDD.md
+6. [SESSION_INDEX.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/SESSION_INDEX.md)
+7. 該当の SESSION_YYYYMMDD.md
 
 ---
 
@@ -45,9 +46,10 @@
 ### Penta-Shield関連
 
 **必読順序**:
-1. [ADR-004](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-004-penta-shield-defense-layers.md) - 全体定義
+1. [ADR-004](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-004-penta-shield-defense-layers.md) - 全体定義、Staged Freeze Model、AI矯正ログ
 2. [ADR-005](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-005-defense-layer-implementation.md) - L1/L2/L3実装
 3. [ADR-006](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-006-ui-ci-integration.md) - L4/L5/UI/CI
+4. [TASK_MASTER.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/TASK_MASTER.md) - AI Rejection Log、Phase 6 Human Pain Log
 
 **実装コード**:
 - `src/features/receipt/` - Receipt L1-L3
@@ -91,5 +93,7 @@ READING_INDEX.md（このファイル）
 
 ## 更新履歴
 
+- **2026-01-17**: セッション開始時必読ファイルを最新化（READING_INDEX.md、TASK_MASTER.md を最優先に）
+- **2026-01-17**: AI矯正ログ、Staged Freeze Model反映
 - **2026-01-17**: プロジェクトディレクトリに移行、session-management-protocol-complete.mdのパス更新
 - **2026-01-16**: 初版作成（brain/129dd3c2）
