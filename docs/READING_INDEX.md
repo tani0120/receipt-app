@@ -40,11 +40,12 @@
 
 ### Penta-Shield関連ADR
 
-4. [ADR-004: Penta-Shield（5層防御）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-004-penta-shield-defense-layers.md)
-5. [ADR-005: 防御層実装詳細（L1/L2/L3）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-005-defense-layer-implementation.md)
-6. [ADR-006: UI・CI統合（L4/L5）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-006-ui-ci-integration.md)
+4. [ADR-004: Penta-Shield（5層防御）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-004-penta-shield-defense-layers.md) ⚠️ Superseded by ADR-009
+5. [ADR-005: 防御層実装詳細（L1/L2/L3）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-005-defense-layer-implementation.md) ⚠️ Superseded by ADR-009
+6. [ADR-006: UI・CI統合（L4/L5）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-006-ui-ci-integration.md) ⚠️ Superseded by ADR-009
 7. [ADR-007: Human Use-Case Table形式](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-007-human-usecase-table.md)
-8. [ADR-008: MVP戦略（小さく開発への方針転換）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-008-mvp-strategy.md)
+8. [ADR-008: MVP戦略（小さく開発への方針転換）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-008-mvp-strategy.md) ⚠️ Superseded by ADR-009
+9. [ADR-009: シンプルアーキテクチャへの回帰](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-009-simple-architecture.md) ✅ **現行**
 
 ---
 

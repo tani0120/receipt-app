@@ -1,9 +1,11 @@
 # ADR-008: MVP戦略（小さく開発への方針転換）
 
-**Status**: Accepted  
-**Date**: 2026-01-22  
+**Status**: Superseded by ADR-009  
+**Date**: 2026-01-22（作成・廃止、同日）  
 **Owner**: 司令官  
-**関連**: ADR-004, ADR-005, ADR-006, SESSION_20260122.md
+**関連**: ADR-004, ADR-005, ADR-006, ADR-009, SESSION_20260122.md
+
+> **⚠️ 廃止理由**: Layer A/B/C自体も過剰設計だった。シンプルな3層構成で十分。詳細は[ADR-009](./ADR-009-simple-architecture.md)を参照。
 
 ---
 
