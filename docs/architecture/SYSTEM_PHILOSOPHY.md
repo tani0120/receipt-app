@@ -135,7 +135,11 @@ SYSTEM_PHILOSOPHY.mdにADR-001, ADR-002の原則を参照する必要がある�
 *   **【拡張】Phase 1.5**: 支払い方法判定（クレカ領収書等の特定ロジック）
 
 ### Phase 2〜5: AI解析・推論
+
 *   **AIモデル**: Gemini 1.5 Flash (Vision) を採用（予定）
+    * **テスト環境**: Gemini API（ブラウザ直接呼び出し）
+    * **本番環境**: Vertex AI（Cloud Functions経由、守秘義務保証）
+    * **詳細**: [ADR-010: AI API移行戦略](./ADR-010-ai-api-migration.md)
 *   **知識注入 (RAG)**:
     *   **共通ルール**: 全社的な経理規定
     *   **個別ルール**: 顧問先ごとのマスタ（01-W）および過去の修正履歴（学習データ）

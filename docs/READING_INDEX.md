@@ -46,6 +46,11 @@
 7. [ADR-007: Human Use-Case Table形式](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-007-human-usecase-table.md)
 8. [ADR-008: MVP戦略（小さく開発への方針転換）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-008-mvp-strategy.md) ⚠️ Superseded by ADR-009
 9. [ADR-009: シンプルアーキテクチャへの回帰](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-009-simple-architecture.md) ✅ **現行**
+10. [ADR-010: AI API移行戦略（Gemini API → Vertex AI）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-010-ai-api-migration.md) ✅ **現行**
+    - [Part1: 環境比較](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-010-Part1-environment-comparison.md)
+    - [Part2: 実装手順](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-010-Part2-implementation.md)
+    - [Part3: チェックリスト](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-010-Part3-checklist.md)
+    - [Part4: コスト・セキュリティ](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-010-Part4-cost-security.md)
 
 ---
 
