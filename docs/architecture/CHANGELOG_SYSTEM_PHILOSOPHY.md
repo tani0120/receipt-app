@@ -4,6 +4,50 @@
 
 ---
 
+## v2.2 (2026-01-21): Firebase認証層の追加
+
+### 変更箇所
+- **Section 1.1**: アーキテクチャ構成に認証層を新規追加
+  - Firebase Authentication導入
+  - 開発環境と本番環境の認証フロー定義
+
+### 変更理由
+Firestoreセキュリティルール適用に伴い、認証層の実装が必要になった。開発環境では自動ログイン、本番環境ではログインUIによる認証フローを確立。
+
+### 議論の背景
+**実装内容**:
+- Firestoreセキュリティルール: 認証済みユーザーのみアクセス可能
+- テストユーザー: `admin@sugu-suru.com`（開発環境自動ログイン）
+- ログインUI: メール/パスワード + Google認証
+- 認証ガード: router/index.tsで本番環境のみ適用
+
+**判断**:
+- ADR作成は不要（Firebaseは既に採用済み、追加機能の利用）
+- SYSTEM_PHILOSOPHY.md更新で対応
+
+### 哲学の進化
+
+```
+v2.1 (2026-01-16):
+開発原則（型安全・段階的実装）を明文化
+
+v2.2 (2026-01-21):
+認証層の追加（セキュリティ強化）
+```
+
+**思想の補強**:
+- 人間承認・タスク化 + 型安全・段階的実装 + **セキュリティ** = 完全なシステム哲学
+
+### 影響範囲
+- Section 1.1: アーキテクチャ構成に認証層追加
+- 実装ファイル: LoginView.vue, auth.ts, router/index.ts等
+
+### 関連
+- [docs/FIREBASE_SECURITY_SETUP.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/FIREBASE_SECURITY_SETUP.md)
+- [brain/walkthrough.md](file:///C:/Users/kazen/.gemini/antigravity/brain/2826535e-a1b5-4cf1-899e-d11b8801f16d/walkthrough.md)
+
+---
+
 ## v2.1 (2026-01-16): 開発原則の追加
 
 ### 変更箇所

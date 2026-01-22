@@ -17,10 +17,29 @@
 【セッション開始プロトコル】
 会話の最初のターンで、必ず以下を実行すること：
 
-0. （オプション）前回セッションの確認
+**0. SESSION_CHECKLIST.md作成（最優先・必須）**
+   - brain/SESSION_CHECKLIST.mdを即座に作成
+   - 今回のセッションで実施すべきことをリスト化
+   - 以降、このファイルを「外部記憶」として使用
+   - 短期記憶が飛んでも、このファイルを読めば継続可能
+   - **理由**: AIの短期記憶は200k token制限があり、長いセッションでは必ず忘れる
+
+0.1. （オプション）前回セッションの確認
    - [SESSION_INDEX.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/SESSION_INDEX.md) を見て、前回のセッションを確認
    - 続きがある場合のみ、該当の SESSION_YYYYMMDD.md を読む
    - 新しい議題の場合は読まなくてよい
+
+0.5. **未解決議論の確認（必須・例外なし）**
+   - [UNRESOLVED_DISCUSSIONS.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/UNRESOLVED_DISCUSSIONS.md) を必ず読む
+   - 未解決議論が0件か確認
+   - 0件でなければ、ユーザーに確認:
+     ```
+     【未解決議論があります】
+     1. [項目1]
+     2. [項目2]
+     
+     今回のセッションで対応しますか？ [Yes/Later]
+     ```
 
 1. 必須ファイルを読む
    - [READING_INDEX.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/READING_INDEX.md) （必読ファイルマスター）
@@ -103,11 +122,79 @@
 
 ---
 
+## セッション記録
+
+### 2026-01-21: Firebase認証設定完了 + プロトコル改善
+
+**主な成果**:
+- Firebase認証ガード修正完了
+- セッション管理プロトコル改善提案作成（session-protocol-improvement.md）
+- SESSION_CHECKLIST.md導入（外部記憶として活用）
+- UNRESOLVED_DISCUSSIONS.md作成（未解決議論の明示的記録）
+
+**教訓**:
+- AIの短期記憶問題 → SESSION_CHECKLIST.mdで解決
+- 議論途中の放棄問題 → UNRESOLVED_DISCUSSIONS.mdで記録
+
+---
+
+## 1.5. セッション中プロトコル（重要な議論発生時）
+
+**最終更新**: 2026-01-21
+
+### 重要な議論を検知したら即座に記録
+
+**検知キーワード**:
+- アーキテクチャ、設計、技術選定
+- 原則、哲学、プロトコル
+- ADR、重要な決定
+
+**検知したら即座に実施**:
+
+1. **一旦停止**
+   ```
+   【重要な議論を検知】
+   キーワード: [具体的に]
+   
+   SESSION_CHECKLIST.mdに追記が必要です。
+   今すぐ記録しますか？ [Yes/Later]
+   ```
+
+2. **SESSION_CHECKLIST.mdに追記**
+   ```markdown
+   ## セッション中に記録すべきこと
+   - [ ] SYSTEM_PHILOSOPHY.md更新（Firebase認証層追加）
+   - [ ] CHANGELOG_SYSTEM_PHILOSOPHY.md更新
+   ```
+
+3. **議論が中断・保留した場合**
+   - UNRESOLVED_DISCUSSIONS.mdに記録
+   - 理由、再開条件、記録先を明記
+
+---
+
 ## 2. セッション終了プロトコル
 
 **最終更新**: 2026-01-17
 
 ### 必須作業（完全チェックリスト）
+
+#### 0. SESSION_CHECKLIST.md確認（最優先）
+
+**外部記憶の活用**:
+```
+1. brain/SESSION_CHECKLIST.mdを必ず読む
+2. 未実施項目（[ ]）を列挙
+3. ユーザーに確認
+4. すべて完了（[x]）になるまで終了しない
+```
+
+**理由**:
+- AIの短期記憶は飛ぶ
+- SESSION_CHECKLIST.mdが唯一の信頼できる記録
+- このファイルを読まずに終了すると、必ず漏れが発生
+
+---
 
 #### 1. ファイル作成・更新の記録
 - [ ] SESSION_YYYYMMDD.md作成
@@ -159,6 +246,29 @@
 - [ ] 今日確立した原則がADRに記録されているか
 - [ ] 必要なら追記
 - [ ] CHANGELOG_SYSTEM_PHILOSOPHY.md更新（哲学変更があった場合）
+
+#### 6.5. 未解決議論の確認と申し送り（必須）
+
+**目的**: 次回セッションへの確実な申し送り
+
+1. **UNRESOLVED_DISCUSSIONS.mdを読む**
+
+2. **各項目を分類**:
+   - [ ] 今回解決 → 削除
+   - [ ] 次回対応 → 次回SESSION_CHECKLISTに記載
+   - [ ] 長期保留 → TASK_MASTER.mdに転記
+
+3. **ユーザーに提示**:
+   ```
+   【未解決議論があります】
+   1. [項目1] - 再開条件: [条件]
+   2. [項目2] - 再開条件: [条件]
+   
+   次回対応しますか？ [Yes/Later/Archive]
+   ```
+
+4. **ユーザー承認後にセッション終了**
+   - 未解決議論の扱いが決まるまで終了しない
 
 #### 7. 重要ファイルのプロジェクトディレクトリへの移行
 

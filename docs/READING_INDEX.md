@@ -1,7 +1,7 @@
 # 必読ファイルマスター
 
 **作成日**: 2026-01-16  
-**最終更新**: 2026-01-17  
+**最終更新**: 2026-01-22  
 **ステータス**: Active  
 **配置**: プロジェクトディレクトリ（全セッション共有）  
 **関連ファイル**: PROJECT_INDEX.md, session-management-protocol-complete.md  
@@ -22,6 +22,11 @@
 **前回セッションからの続きの場合のみ**:
 6. [SESSION_INDEX.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/SESSION_INDEX.md)
 7. 該当の SESSION_YYYYMMDD.md
+8. **[UNRESOLVED_DISCUSSIONS.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/UNRESOLVED_DISCUSSIONS.md)** - 未解決議論の確認
+
+**最新セッション（2026-01-21）**:
+9. [SESSION_20260121.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/SESSION_20260121.md) - Firebase認証完了、プロトコル改善
+
 
 ---
 
@@ -38,6 +43,8 @@
 4. [ADR-004: Penta-Shield（5層防御）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-004-penta-shield-defense-layers.md)
 5. [ADR-005: 防御層実装詳細（L1/L2/L3）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-005-defense-layer-implementation.md)
 6. [ADR-006: UI・CI統合（L4/L5）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-006-ui-ci-integration.md)
+7. [ADR-007: Human Use-Case Table形式](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-007-human-usecase-table.md)
+8. [ADR-008: MVP戦略（小さく開発への方針転換）](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-008-mvp-strategy.md)
 
 ---
 
@@ -93,6 +100,7 @@ READING_INDEX.md（このファイル）
 
 ## 更新履歴
 
+- **2026-01-22**: ADR-008（MVP戦略）追加、最終更新日更新
 - **2026-01-17**: セッション開始時必読ファイルを最新化（READING_INDEX.md、TASK_MASTER.md を最優先に）
 - **2026-01-17**: AI矯正ログ、Staged Freeze Model反映
 - **2026-01-17**: プロジェクトディレクトリに移行、session-management-protocol-complete.mdのパス更新

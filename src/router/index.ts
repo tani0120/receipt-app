@@ -3,6 +3,13 @@ import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-rou
 import ScreenB_Restore_Mock from '@/views/debug/ScreenB_Restore_Mock.vue';
 
 export const routes: RouteRecordRaw[] = [
+  // ログインページ（認証不要）
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/LoginView.vue'),
+    meta: { requiresAuth: false }
+  },
   {
     path: '/',
     redirect: '/journal-status'
@@ -128,6 +135,51 @@ export const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHashHistory(),
   routes
+})
+
+// Firebase認証状態の読み込みを待つPromise
+let authInitialized = false;
+const authReadyPromise = new Promise<void>((resolve) => {
+  import('@/utils/auth').then(({ onAuthStateChanged }) => {
+    const unsubscribe = onAuthStateChanged(() => {
+      if (!authInitialized) {
+        authInitialized = true;
+        resolve();
+        unsubscribe();
+      }
+    });
+  });
+});
+
+// 認証ガード（本番環境のみ）
+router.beforeEach(async (to, from, next) => {
+  // 開発環境では認証チェックをスキップ（自動ログインが動作するため）
+  if (import.meta.env.DEV) {
+    next();
+    return;
+  }
+
+  // ログインページへのアクセスは常に許可
+  if (to.path === '/login') {
+    next();
+    return;
+  }
+
+  // Firebase認証状態の読み込みを待つ
+  await authReadyPromise;
+
+  // 認証状態をチェック
+  const { getCurrentUser } = await import('@/utils/auth');
+  const user = getCurrentUser();
+
+  if (!user) {
+    // 未ログインの場合、ログインページにリダイレクト
+    console.log('[router] 未認証のため、ログインページにリダイレクトします');
+    next('/login');
+  } else {
+    // ログイン済みの場合、通常通りアクセス許可
+    next();
+  }
 })
 
 export default router

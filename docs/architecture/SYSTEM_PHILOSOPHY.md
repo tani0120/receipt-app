@@ -86,6 +86,12 @@ SYSTEM_PHILOSOPHY.mdにADR-001, ADR-002の原則を参照する必要がある�
     *   **Firestore**: UI表示用の高速NoSQLデータベース。リアルタイム同期を担当
     *   **Google Spreadsheets/Drive**: 原本データの保管、およびGASバッチ処理の基盤
 
+*   **認証層 (Firebase Authentication)**
+    *   **役割**: ユーザー認証管理、Firestoreアクセス制御
+    *   **開発環境**: テストユーザー自動ログイン（`admin@sugu-suru.com`）
+    *   **本番環境**: ログインUIによるメール/パスワードまたはGoogle認証
+    *   **セキュリティ**: Firestoreセキュリティルールで認証済みユーザーのみアクセス可能
+
 ---
 
 ### 1.2 人間とAIの協働モデル
