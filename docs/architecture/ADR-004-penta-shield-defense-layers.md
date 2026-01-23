@@ -1,7 +1,43 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- CRITICAL: AI TYPE SAFETY RULES - MUST FOLLOW WITHOUT EXCEPTION             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- 
+【型安全性ルール - AI必須遵守事項】
+
+## ❌ 禁止事項（6項目）- NEVER DO THESE:
+1. Partial<T> + フォールバック値 (client.name || 'XXX') - TYPE CONTRACT DESTRUCTION
+2. any型（実装済み機能） - TYPE SYSTEM ABANDONMENT
+3. status フィールドの無視 - AUDIT TRAIL DESTRUCTION
+4. Zodスキーマでのany型 (z.any()) - SCHEMA LEVEL TYPE ABANDONMENT
+5. 型定義ファイルでのany型 (interface { field: any }) - INTERFACE LEVEL DESTRUCTION
+6. 型定義の二重管理（新旧スキーマ混在） - TYPE DEFINITION CONFLICT
+
+## ✅ 許可事項（3項目）- ALLOWED:
+1. 将来のフェーズ未実装機能でのeslint-disable + throw new Error()
+2. unknown型の使用（型ガードと組み合わせて）
+3. 必要最小限の型定義（Pick<T>, Omit<T>等）
+
+## 📋 類型分類（9種）:
+| 類型 | 今すぐ修正 | 将来Phase | 修正不要 |
+|------|-----------|----------|---------|
+| 1. Partial+フォールバック | ✅ | - | - |
+| 2. any型（実装済み） | ✅ | - | - |
+| 3. status未使用 | ✅ | - | - |
+| 4. eslint-disable | - | - | ✅ |
+| 5. Zod.strict()偽装 | ※1+2 | - | - |
+| 6. Zodスキーマany型 | ✅ | - | - |
+| 7. 型定義any型 | ✅ | - | - |
+| 8. 全体any型濫用 | - | ✅ | - |
+| 9. 型定義不整合 | ✅ | - | - |
+
+詳細: complete_evidence_no_cover_up.md
+-->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+
 # ADR-004: Penta-Shield（5層防御アーキテクチャ）
 
 **作成日**: 2026-01-16  
-**最終更新**: 2026-01-22（Status更新）  
+**最終更新**: 2026-01-24  
 **ステータス**: Superseded by ADR-009  
 **関連ファイル**: ADR-005, ADR-006, ADR-009, TASK_PENTA_SHIELD.md
 

@@ -1,13 +1,51 @@
-﻿# セッション管理プロトコル【完全版】
+﻿<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- CRITICAL: AI TYPE SAFETY RULES - MUST FOLLOW WITHOUT EXCEPTION             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- 
+【型安全性ルール - AI必須遵守事項】
+
+## ❌ 禁止事項（6項目）- NEVER DO THESE:
+1. Partial<T> + フォールバック値 (client.name || 'XXX') - TYPE CONTRACT DESTRUCTION
+2. any型（実装済み機能） - TYPE SYSTEM ABANDONMENT
+3. status フィールドの無視 - AUDIT TRAIL DESTRUCTION
+4. Zodスキーマでのany型 (z.any()) - SCHEMA LEVEL TYPE ABANDONMENT
+5. 型定義ファイルでのany型 (interface { field: any }) - INTERFACE LEVEL DESTRUCTION
+6. 型定義の二重管理（新旧スキーマ混在） - TYPE DEFINITION CONFLICT
+
+## ✅ 許可事項（3項目）- ALLOWED:
+1. 将来のフェーズ未実装機能でのeslint-disable + throw new Error()
+2. unknown型の使用（型ガードと組み合わせて）
+3. 必要最小限の型定義（Pick<T>, Omit<T>等）
+
+## 📋 類型分類（9種）:
+| 類型 | 今すぐ修正 | 将来Phase | 修正不要 |
+|------|-----------|----------|---------|
+| 1. Partial+フォールバック | ✅ | - | - |
+| 2. any型（実装済み） | ✅ | - | - |
+| 3. status未使用 | ✅ | - | - |
+| 4. eslint-disable | - | - | ✅ |
+| 5. Zod.strict()偽装 | ※1+2 | - | - |
+| 6. Zodスキーマany型 | ✅ | - | - |
+| 7. 型定義any型 | ✅ | - | - |
+| 8. 全体any型濫用 | - | ✅ | - |
+| 9. 型定義不整合 | ✅ | - | - |
+
+詳細: complete_evidence_no_cover_up.md
+-->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+
+# セッション管理プロトコル【完全版】
 
 **作成日**: 2026-01-15  
-**最終更新**: 2026-01-17  
+**最終更新**: 2026-01-24  
 **ステータス**: Active  
 **関連ファイル**: PROJECT_INDEX.md, READING_INDEX.md, task.md, SESSION_INDEX.md
 
 **策定日**: 2026-01-16  
 **Version**: 1.0  
 **目的**: セッション間での知識継続性の確保、AIの忘却防止、哲学・動機の保持
+
+**重要**: 本ドキュメントで使用する用語（Phase/Step等）の定義は [TERMINOLOGY.md](file:///C:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/TERMINOLOGY.md) を参照してください。
 
 ---
 
@@ -168,8 +206,178 @@
    ```
 
 3. **議論が中断・保留した場合**
-   - UNRESOLVED_DISCUSSIONS.mdに記録
    - 理由、再開条件、記録先を明記
+
+---
+
+## 1.7. Phase/Step/Milestone提示プロトコル（必須）
+
+**最終更新**: 2026-01-23  
+**目的**: 常に全体の見通しを提供し、現在地を明確にする
+
+### 必須提示タイミング
+
+以下のすべての場合に、Phase/Step/Milestoneの全体像を提示:
+
+1. ✅ **セッション開始時**
+   - セッション開始プロトコル実施後
+   - ユーザーに現在地と次のアクションを明示
+
+2. ✅ **タスク開始時**
+   - task_boundary呼び出し後
+   - 新しいタスクの位置付けを明示
+
+3. ✅ **ステップ完了時**
+   - Step完了報告と同時に
+   - 次のStepへの移行を明示
+
+4. ✅ **ユーザーから進捗確認があった時**
+   - 「未解決議論と次のタスクを出せ」等の要求
+   - 即座に全体像を提示
+
+5. ✅ **方向転換が必要な時**
+   - 計画と実際の乖離が発生した場合
+   - ユーザーに現在地と計画を再確認
+
+---
+
+### 提示フォーマット
+
+必ず以下の3つを含める:
+
+#### 1. ✅ 完了したフェーズ・ステップ
+- 既に終わった作業
+- 成果物へのファイルリンク
+- 完了日
+
+#### 2. 🔄 現在のフェーズ・ステップ
+- 今やっている作業
+- 次にやるべきステップ
+- 参照ドキュメントへのファイルリンク
+
+#### 3. ⏳ 将来のフェーズ・ステップ
+- まだ着手していない作業
+- 全体の見通し
+- 各Milestoneへのファイルリンク
+
+---
+
+### 参照ファイル
+
+常に以下を参照してリンクを提示:
+
+**Brain（セッション固有）**:
+- [implementation_plan.md](file:///C:/Users/kazen/.gemini/antigravity/brain/2826535e-a1b5-4cf1-899e-d11b8801f16d/implementation_plan.md) - Phase 1実装計画の詳細
+- [task.md](file:///C:/Users/kazen/.gemini/antigravity/brain/2826535e-a1b5-4cf1-899e-d11b8801f16d/task.md) - 進捗チェックリスト
+
+**Docs（プロジェクト全体）**:
+- [TASK_MASTER.md](file:///C:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/TASK_MASTER.md) - プロジェクト全体のタスク管理
+- [TERMINOLOGY.md](file:///C:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/TERMINOLOGY.md) - Phase/Step/Milestone定義
+
+---
+
+### テンプレート
+
+```markdown
+## 📋 Phase/Step/Milestoneの全体像（ファイルリンク付き）
+
+### 📚 参照ドキュメント
+- [implementation_plan.md](file://...) - Phase 1実装計画
+- [TASK_MASTER.md](file://...) - プロジェクト全体のタスク
+- [task.md](file://...) - 進捗チェックリスト
+
+### ✅ 既に完了したフェーズ・ステップ
+
+#### Phase 0: 準備・設計（完了）
+- ✅ [ADR-009](file://...)作成
+- ✅ [TERMINOLOGY.md](file://...)作成
+
+#### Phase 1 - Step 1（完了）
+- ✅ **Step 1: スコープ決定**（2026-01-22）
+  - [implementation_plan.md](file://...)作成
+
+---
+
+### 🔄 現在のフェーズ・ステップ
+
+#### Phase 1（テスト環境）- 進行中
+
+**環境**: Gemini API（無料版）、Firebase Spark Plan（無料版）
+
+**Milestone 1.1: OCR→仕訳表示（2-3日）** ← **現在ここ**
+
+**完了したStep**:
+- ✅ Step 1: スコープ決定
+
+**次のStep**（未着手）:
+- [ ] **Step 2: L1-3定義（2-3時間）** ← **次はこれ**
+  - src/features/journal/JournalEntrySchema.ts
+  - 参照: [implementation_plan.md L87-120](file://...)
+
+---
+
+### ⏳ 将来のフェーズ・ステップ
+
+#### Milestone 1.2: マスターデータ管理（2-3日）
+- [ ] Step 5: 顧問先CRUD実装
+- 参照: [implementation_plan.md L215-236](file://...)
+
+#### Milestone 1.3-1.4（省略）
+
+#### Phase 2（本番環境）- 未着手
+- 参照: [ADR-010](file://...)
+
+---
+
+## 📊 進捗サマリー
+
+| Phase | Milestone | 所要時間 | 進捗 | 参照 |
+|-------|----------|---------|------|------|
+| Phase 1 | Milestone 1.1 | 2-3日 | Step 1/4完了 | [L69-213](file://...) |
+| Phase 2 | - | 1-2週間 | 未着手 | [ADR-010](file://...) |
+
+---
+
+## 🎯 次のアクション（優先順位順）
+
+1. **Step 2: L1-3定義** ← **次はこれ**
+   - 所要時間: 2-3時間
+   - 参照: [implementation_plan.md L87-120](file://...)
+```
+
+---
+
+### 違反時の対応
+
+**提示を忘れた場合**:
+- ユーザーから「次のタスク」「進捗確認」等の要求があった場合
+- 即座に全体像を提示
+- 「提示が漏れていました」と明示
+
+---
+
+### 運用ルール
+
+#### ルール1: 簡潔性と完全性のバランス
+
+**簡潔に**:
+- 完了したフェーズは要約（詳細はファイルリンクで参照）
+- 現在のステップは詳細に記載
+
+**完全に**:
+- 将来のフェーズは全体を俯瞰できる程度に記載
+
+#### ルール2: ファイルリンクの徹底
+
+**すべてリンク化**:
+- ❌ 「implementation_plan.mdを参照」
+- ✅ 「[implementation_plan.md](file://...)を参照」
+
+#### ルール3: 進捗サマリーの更新
+
+**必ず最新に保つ**:
+- Step完了のたびに進捗率を更新
+- 所要時間の見積もりを更新
 
 ---
 

@@ -1,0 +1,92 @@
+name: Type Safety Policy Gate
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  type-safety-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+      
+      # ========== HARD FAIL: TypeScript型チェック ==========
+      - name: TypeScript type check
+        run: npm run type-check
+      
+      # ========== HARD FAIL: ASTベースPartial検知 ==========
+      - name: AST-based type safety check
+        run: npm run type-check:ast
+      
+      # ========== HARD FAIL: Domain層厳格チェック ==========
+      - name: Domain layer strict check
+        run: |
+          echo "🔍 Checking domain and features layers..."
+          if grep -r "Partial<\|:\s*any" src/domain src/features 2>/dev/null | grep -v "@type-audit"; then
+            echo "❌ Prohibited types in domain/features layer detected"
+            echo "📖 See docs/CONVENTIONS.md for correct patterns"
+            exit 1
+          fi
+          echo "✅ Domain layer check passed"
+      
+      # ========== WARN: DTO層警告 ==========
+      - name: DTO layer warning check (information only)
+        continue-on-error: true
+        run: |
+          echo "🔍 Checking API layer for any types..."
+          if grep -r ":\s*any" src/api 2>/dev/null > dto-any.log; then
+            echo "⚠️  Warning: any types found in API layer (review recommended)"
+            cat dto-any.log
+          else
+            echo "✅ No any types in API layer"
+            touch dto-any.log
+          fi
+      
+      # ========== HARD FAIL: 証跡コメントなしのany ==========
+      - name: Validate audit comments
+        run: |
+          echo "🔍 Validating @type-audit comments..."
+          if grep -r ":\s*any" src 2>/dev/null | grep -v "node_modules" | grep -v "@type-audit"; then
+            echo "❌ any type without @type-audit comment detected"
+            echo "Add // @type-audit: [reason] comment before any types"
+            echo "📖 See docs/CONVENTIONS.md for examples"
+            exit 1
+          fi
+          echo "✅ All any types have audit comments"
+      
+      # ========== 証跡保存（監査対応） ==========
+      - name: Save type audit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: type-audit-logs-${{ github.sha }}
+          path: "*.log"
+          retention-days: 90
+      
+      # ========== 成功時のサマリー ==========
+      - name: Type safety summary
+        if: success()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Type Safety Policy Gate: PASSED"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "All type safety checks passed:"
+          echo "  ✓ TypeScript compilation"
+          echo "  ✓ AST-based type validation"
+          echo "  ✓ Domain layer strict policy"
+          echo "  ✓ Audit comment validation"
+          echo ""

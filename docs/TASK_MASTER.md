@@ -1,7 +1,43 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- CRITICAL: AI TYPE SAFETY RULES - MUST FOLLOW WITHOUT EXCEPTION             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- 
+【型安全性ルール - AI必須遵守事項】
+
+## ❌ 禁止事項（6項目）- NEVER DO THESE:
+1. Partial<T> + フォールバック値 (client.name || 'XXX') - TYPE CONTRACT DESTRUCTION
+2. any型（実装済み機能） - TYPE SYSTEM ABANDONMENT
+3. status フィールドの無視 - AUDIT TRAIL DESTRUCTION
+4. Zodスキーマでのany型 (z.any()) - SCHEMA LEVEL TYPE ABANDONMENT
+5. 型定義ファイルでのany型 (interface { field: any }) - INTERFACE LEVEL DESTRUCTION
+6. 型定義の二重管理（新旧スキーマ混在） - TYPE DEFINITION CONFLICT
+
+## ✅ 許可事項（3項目）- ALLOWED:
+1. 将来のフェーズ未実装機能でのeslint-disable + throw new Error()
+2. unknown型の使用（型ガードと組み合わせて）
+3. 必要最小限の型定義（Pick<T>, Omit<T>等）
+
+## 📋 類型分類（9種）:
+| 類型 | 今すぐ修正 | 将来Phase | 修正不要 |
+|------|-----------|----------|---------|
+| 1. Partial+フォールバック | ✅ | - | - |
+| 2. any型（実装済み） | ✅ | - | - |
+| 3. status未使用 | ✅ | - | - |
+| 4. eslint-disable | - | - | ✅ |
+| 5. Zod.strict()偽装 | ※1+2 | - | - |
+| 6. Zodスキーマany型 | ✅ | - | - |
+| 7. 型定義any型 | ✅ | - | - |
+| 8. 全体any型濫用 | - | ✅ | - |
+| 9. 型定義不整合 | ✅ | - | - |
+
+詳細: complete_evidence_no_cover_up.md
+-->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+
 # タスクマスター
 
 **作成日**: 2026-01-16  
-**最終更新**: 2026-01-22  
+**最終更新**: 2026-01-24  
 **ステータス**: Active  
 **配置**: プロジェクトディレクトリ（全セッション共有）  
 **目的**: タスクの散逸防止、完了タスクの網羅性確保
@@ -127,6 +163,71 @@
 
 
 ## 🟡 中断中
+
+### タスクG: Phase 1実装（小さく開発）
+
+**作成日**: 2026-01-22  
+**最終更新**: 2026-01-23  
+**状態**: [/] Step 1完了、顧問先UI要件定義完了、本番環境調査完了、Step 2開始準備完了
+
+**Phase 1（テスト環境）**:
+- 環境: Gemini API（無料版）、Firebase Spark Plan（無料版）、手動アップロード
+- コスト: $0
+- 所要時間: 7-8日
+
+**実装する機能（3つ）**:
+1. 領収書手動アップロード → AI仕訳 → CSV出力
+2. 顧問先CRUD（既存Client L1-3活用）
+3. スタッフCRUD（既存Staff L1-3活用）
+
+**Step 1-9のスケジュール**:
+- [x] Step 1: スコープ決定（1-2時間）✅ 完了（2026-01-22）
+- [x] **顧問先UI要件定義** ✅ 完了（2026-01-23）
+  - client-ui-requirements.md作成（33項目、Drive連携、CRUD操作、UI仕様）
+- [x] **本番環境調査** ✅ 完了（2026-01-23）
+  - Firebase CLI再ログイン
+  - 本番環境パスワード特定（`pass1234`）
+  - Firestoreセキュリティルールデプロイ
+  - .env.local修正
+  - バックエンドAPI問題発見（Phase 2で解決）
+- [/] **Step 2: L1-3定義（2-3時間）** ← **現在のタスク**
+  - JournalEntry（19プロパティ）のスキーマ定義
+  - JournalLine（16プロパティ）のスキーマ定義
+  - 税額の三重構造（証憑値/計算値/最終値）
+  - ビジネスルール（二重記帳検証、税額判定）
+  - TaxResolutionService実装
+  - テストケース作成
+- [ ] Step 3: AI API実装（L1に従う、2-3時間）
+- [ ] Step 4: UIモック（4-6時間）
+- [ ] Step 5: 顧問先CRUD実装（1日）
+- [ ] Step 6: スタッフCRUD実装（1日）
+- [ ] Step 7: 仕訳入力画面実装（2日）
+- [ ] Step 8: CSV出力実装（1日）
+- [ ] Step 9: E2Eテスト（1日）
+
+**実装しない機能（Phase 2に延期）**:
+- Google Drive自動監視（GAS）
+- Vertex AI Batch API
+- 設定管理UI（デフォルト値使用）
+- バックエンドAPI（Cloud Run）の修復
+
+**詳細**: [implementation_plan.md](file:///C:/Users/kazen/.gemini/antigravity/brain/2826535e-a1b5-4cf1-899e-d11b8801f16d/implementation_plan.md)
+
+**原則**: 人間が主、AIが従（L1-3定義 → AI API実装の順序）
+
+**⚠️ 計画と実際の乖離（2026-01-23）**:
+- **計画**: Milestone 1.1（仕訳UI）を先に実施
+- **実際**: Milestone 1.2（顧問先UI要件定義）を先に実施してしまった
+- **原因**: 人間の提案が計画と違ったが、AIが指摘しなかった
+- **新ルール**: 人間の提案が計画と違う場合は必ず指摘する ✅
+
+**次のセッションでやること**: 
+- **正しい順序に従う**: Milestone 1.1の要件定義（仕訳UI、領収書アップロード、AI仕訳結果表示）
+- Step 2: L1-3定義開始（ローカル環境で開発）
+
+---
+
+
 
 ### AI Context Management Protocol
 → 詳細: [TASK_AI_CONTEXT.md](file:///C:/Users/kazen/.gemini/antigravity/brain/129dd3c2-bc83-48ac-91da-9736f587788a/TASK_AI_CONTEXT.md)
