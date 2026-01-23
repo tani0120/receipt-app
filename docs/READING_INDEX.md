@@ -63,11 +63,11 @@
 **重要プロトコル**:
 9. **[Phase/Step/Milestone提示プロトコル](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/session-management-protocol-complete.md#L178-L355)** - 必ず全体像を提示（セクション1.7）
 
-**最新セッション（2026-01-21）**:
-9. [SESSION_20260121.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/SESSION_20260121.md) - Firebase認証完了、プロトコル改善
+**最新セッション（2026-01-24）**:
+10. [SESSION_20260124.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/sessions/SESSION_20260124.md) - ADR-011実装完了、型安全防御アーキテクチャ構築
 
 **用語定義**:
-10. [TERMINOLOGY.md](file:///C:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/TERMINOLOGY.md) - プロジェクト用語定義（Phase/Step等）
+11. [TERMINOLOGY.md](file:///C:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/TERMINOLOGY.md) - プロジェクト用語定義（Phase/Step等）
 
 ---
 
@@ -92,6 +92,12 @@
     - [Part2: 実装手順](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-010-Part2-implementation.md)
     - [Part3: チェックリスト](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-010-Part3-checklist.md)
     - [Part4: コスト・セキュリティ](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-010-Part4-cost-security.md)
+11. [ADR-011: AI時代の型安全防御アーキテクチャ](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-011-ai-proof-type-safety.md) ✅ **現行**（2026-01-24）
+
+### 型安全性関連
+
+12. [CONVENTIONS.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/CONVENTIONS.md) - AI開発者向け型安全性規約
+13. [TECH-DEBT.md](file:///c:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/TECH-DEBT.md) - 技術的負債管理台帳
 
 ---
 
