@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
-import app from './api/index.ts'
+import app from './api/index.js'
 
 const port = Number(process.env.PORT) || 3000
 console.log('--- SERVER STARTING ---');
