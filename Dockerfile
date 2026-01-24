@@ -1,42 +1,47 @@
 FROM node:20-slim AS builder
 WORKDIR /app
 
-# 依存関係のインストール
 COPY package*.json ./
 RUN npm ci
 
-# ソースコードのコピー
 COPY . .
-
-# ビルド実行（個別に実行して重複を回避）
 RUN npm run build:frontend
 RUN npm run build:backend
 
-# ビルド結果の確認
-RUN ls -la dist/ && echo "=== dist/client ===" && ls -la dist/client/ || echo "No client dir"
+# ビルド結果の詳細確認
+RUN echo "=== Build Results ===" && \
+    ls -lah dist/ && \
+    echo "=== Server Bundle ===" && \
+    ls -lah dist/server.js && \
+    echo "=== Client Dir ===" && \
+    (ls -lah dist/client/ || echo "No client dir") && \
+    echo "=== Server Content Preview ===" && \
+    head -20 dist/server.js
 
-# --- Runtime ---
 FROM node:20-slim
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# 依存関係の定義ファイルをコピー
 COPY --from=builder /app/package*.json ./
-
-# 本番依存関係のインストール
 RUN npm ci --omit=dev
 
-# ビルド成果物をコピー
 COPY --from=builder /app/dist ./dist
 
-# インストール結果の確認
-RUN echo "=== Checking installation ===" && \
-    ls -la dist/ && \
-    ls -la node_modules/@hono/ && \
-    node --version
+# 実行環境の詳細確認
+RUN echo "=== Runtime Environment ===" && \
+    node --version && \
+    npm --version && \
+    echo "=== Hono Installation ===" && \
+    ls -lah node_modules/@hono/ && \
+    echo "=== Files to Run ===" && \
+    ls -lah dist/
 
 EXPOSE 8080
+
+# ヘルスチェック追加（Cloud Runが起動を確認できるように）
+HEALTHCHECK --interval=10s --timeout=3s --start-period=40s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:8080/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); });"
 
 CMD ["node", "dist/server.js"]
