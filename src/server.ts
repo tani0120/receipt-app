@@ -18,6 +18,12 @@ app.get('/health', (c) => {
     return c.text('OK')
 })
 
+// Simple API endpoint (Phase 1)
+app.get('/api/hello', (c) => {
+    console.log('API hello endpoint called')
+    return c.json({ message: 'Hello from Hono API!', status: 'running' })
+})
+
 app.get('/', (c) => {
     console.log('Root request received')
     return c.text('Receipt API is running')
