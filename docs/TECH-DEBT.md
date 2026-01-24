@@ -76,6 +76,90 @@ Phase 1の実装で必要なフィールドが型定義に含まれていない�
 
 ---
 
+### TD-002: 既存ファイルの型エラー（Phase 2以降で対処）
+
+**登録日**: 2026-01-24  
+**優先度**: Medium  
+**対応予定**: Phase 2以降（個別ファイルごとに対応）  
+**ステータス**: Open
+
+#### 概要
+
+TD-001（Journal System関連）の修正以前から存在していた、他のファイルの型エラー。
+これらはStep 3（Journal System）の実装とは無関係の既存エラーである。
+
+#### 影響箇所
+
+**確認されているエラー**:
+
+1. **src/AaaLayout.vue (L94)**
+   - エラー: `TS2724: '@/composables/useAIModels' does not exist on type 'Promise<AIProvider>'`
+   - 原因: composablesの型定義またはインポート問題
+
+2. **src/api/lib/ai/strategy/ZuboraLogic.ts**
+   - L75: 型エラー（詳細不明）
+   - L102: 型エラー（詳細不明）
+   - L156: 型エラー（詳細不明）
+   - 原因: ZuboraLogic実装時の型定義不足
+
+3. **src/api/routes/ai-models.ts (L12)**
+   - エラー: `TS2339: Property does not exist`
+   - 原因: AI models APIの型定義不足
+
+4. **src/api/routes/admin.ts (L90)**
+   - エラー: `TS7030: Not all code paths return a value`
+   - 原因: 関数の戻り値が不完全
+
+**合計**: 約6-10件のエラー（詳細は`npm run type-check`で確認可能）
+
+#### 根本原因
+
+- Screen E（Journal System）以外の機能は未完成
+- 過去の実装でTypeScript型チェックを完全に通していなかった
+- ADR-011（型安全防御）実装前の古いコード
+
+#### 対応方針
+
+**Phase 2以降で個別に対応**:
+
+1. **優先度付け**
+   - Critical: システムが動作しない → 即座
+   - High: Phase 2で使用する機能 → Phase 2冒頭
+   - Medium: 使用しない機能 → 適宜
+
+2. **ファイル別対応**
+   - AaaLayout.vue: composables修正
+   - ZuboraLogic.ts: 型定義追加
+   - ai-models.ts: API型定義整備
+   - admin.ts: 戻り値修正
+
+3. **検証**
+   - 各ファイル修正後に`npm run type-check`で確認
+   - ASTチェック（`npm run type-check:ast`）も実施
+
+#### なぜ今修正しないのか
+
+**スコープ外判定の理由**:
+
+1. **Step 3（Journal System）とは無関係**
+   - これらのエラーはJournal System実装前から存在
+   - TD-001修正の対象外
+
+2. **優先度の判断**
+   - Journal Systemは動作している
+   - 既存エラーは他機能の問題で、Phase 1で使用しない
+
+3. **技術的負債として管理すべき**
+   - 各ファイルの仕様確認が必要
+   - 個別に対応すべき（一括修正は危険）
+
+#### 参照
+
+- [TD-001: 型定義ミスマッチ](#td-001-型定義ミスマッチphase-2で対処)（Journal System関連）
+- [ADR-011: AI時代の型安全防御アーキテクチャ](file:///C:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/architecture/ADR-011-ai-proof-type-safety.md)
+
+---
+
 ## ✅ 解決済みの技術的負債
 
 （なし）
