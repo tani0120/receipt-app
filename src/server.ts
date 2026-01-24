@@ -1,44 +1,35 @@
+// src/server.ts - 超シンプル版（デバッグ用）
 import { serve } from '@hono/node-server'
-import { serveStatic } from '@hono/node-server/serve-static'
-import app from './api/index'
-import { access } from 'fs/promises'
+import { Hono } from 'hono'
 
-const port = Number(process.env.PORT) || 3000
+const app = new Hono()
+const port = parseInt(process.env.PORT || '8080')
 
-console.log('🚀 Starting server...')
-console.log('📁 Current directory:', process.cwd())
-console.log('Node Version:', process.version)
-console.log('Environment:', process.env.NODE_ENV)
-console.log('PORT Env Var:', process.env.PORT)
-console.log(`Server is running on port ${port}`)
+console.log('='.repeat(50))
+console.log('🚀 Server starting...')
+console.log('Node:', process.version)
+console.log('CWD:', process.cwd())
+console.log('PORT:', port)
+console.log('ENV:', process.env.NODE_ENV)
+console.log('='.repeat(50))
 
-// dist/client の存在確認
-try {
-    await access('./dist/client')
-    console.log('✅ dist/client exists')
-} catch {
-    console.log('❌ dist/client missing')
-}
+// まず最小限のエンドポイントだけ
+app.get('/health', (c) => c.text('OK'))
+app.get('/', (c) => c.text('Receipt API is running'))
 
-// Serve static files from 'dist/client' folder
-app.use('/*', serveStatic({
-    root: './dist/client',
-    onNotFound: (path, c) => {
-        console.log('⚠️  Static file not found:', path)
-    }
-}))
+// API routesは後で追加
+// import apiRoutes from './api/index.js';
+// app.route('/api', apiRoutes);
 
-// SPA wildcard fallback
-app.get('*', serveStatic({ path: './dist/client/index.html' }))
+// 静的ファイルも後で追加
+// app.use('/*', serveStatic({ root: './dist/client' }));
 
-try {
-    serve({
-        fetch: app.fetch,
-        port,
-        hostname: '0.0.0.0'
-    })
-    console.log(`✅ Server running on port ${port}`)
-} catch (error) {
-    console.error('❌ Failed to start server:', error)
-    process.exit(1)
-}
+console.log('🔧 Starting HTTP server...')
+
+serve({
+    fetch: app.fetch,
+    port,
+    hostname: '0.0.0.0',
+})
+
+console.log(`✅ Server listening on http://0.0.0.0:${port}`)
