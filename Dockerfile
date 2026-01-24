@@ -13,7 +13,7 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the frontend
+# Build frontend and backend
 RUN npm run build
 
 # Expose port
@@ -21,6 +21,7 @@ EXPOSE 8080
 
 # Set environment to production
 ENV NODE_ENV=production
+ENV PORT=8080
 
-# Start the server
-CMD ["npm", "start"]
+# Start the server with node (not tsx)
+CMD ["node", "dist/server.js"]
