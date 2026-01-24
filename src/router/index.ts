@@ -151,14 +151,8 @@ const authReadyPromise = new Promise<void>((resolve) => {
   });
 });
 
-// 認証ガード（本番環境のみ）
+// 認証ガード（全環境で有効）
 router.beforeEach(async (to, from, next) => {
-  // 開発環境では認証チェックをスキップ（自動ログインが動作するため）
-  if (import.meta.env.DEV) {
-    next();
-    return;
-  }
-
   // ログインページへのアクセスは常に許可
   if (to.path === '/login') {
     next();
