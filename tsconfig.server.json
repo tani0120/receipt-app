@@ -1,19 +1,20 @@
 {
-    "extends": "./tsconfig.json",
     "compilerOptions": {
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext",
-        "outDir": "./dist",
-        "rootDir": "./src",
-        "noEmit": false
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "skipLibCheck": true,
+        "strict": true,
+        "noEmit": true
     },
     "include": [
         "src/server.ts",
         "src/api/**/*"
     ],
     "exclude": [
-        "node_modules",
-        "dist",
+        "src/firebase.ts",
+        "src/utils/auth.ts",
+        "src/utils/testAuth.ts",
         "src/components",
         "src/views"
     ]

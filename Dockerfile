@@ -1,27 +1,43 @@
-# Use Node.js LTS
-FROM node:20-alpine
-
-# Set working directory
+# --- Build Stage ---
+FROM node:20-slim AS builder
 WORKDIR /app
 
-# Copy package files
+# ビルド時に外部から受け取る引数を定義
+ARG VITE_FIREBASE_API_KEY
+ARG VITE_FIREBASE_AUTH_DOMAIN
+ARG VITE_FIREBASE_PROJECT_ID
+ARG VITE_FIREBASE_STORAGE_BUCKET
+ARG VITE_FIREBASE_MESSAGING_SENDER_ID
+ARG VITE_FIREBASE_APP_ID
+ARG VITE_GEMINI_API_KEY
+
+# 引数を環境変数にセット（これで Vite がビルド中に参照できる）
+ENV VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY
+ENV VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN
+ENV VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID
+ENV VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET
+ENV VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID
+ENV VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID
+ENV VITE_GEMINI_API_KEY=$VITE_GEMINI_API_KEY
+
 COPY package*.json ./
-
-# Install dependencies (including devDependencies for build)
 RUN npm ci
-
-# Copy source code
 COPY . .
-
-# Build frontend and backend
 RUN npm run build
 
-# Expose port
-EXPOSE 8080
-
-# Set environment to production
+# --- Runtime Stage ---
+FROM node:20-slim
+WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Start the server with node (not tsx)
+# 本番に必要なファイルだけをコピー
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/dist ./dist
+# 重要: --packages=external を使ったので node_modules が必要
+RUN npm ci --omit=dev
+
+EXPOSE 8080
+
+# esbuildで出力したesmファイルを直接実行
 CMD ["node", "dist/server.js"]

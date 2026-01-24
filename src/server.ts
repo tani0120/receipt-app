@@ -1,6 +1,6 @@
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
-import app from './api/index.js'
+import app from './api/index'
 
 const port = Number(process.env.PORT) || 3000
 console.log('--- SERVER STARTING ---');
