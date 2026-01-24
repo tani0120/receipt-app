@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "run-p dev:frontend dev:api",
     "dev:frontend": "vite",
-    "dev:api": "tsx watch src/server.ts",
+    "dev:api": "tsx watch --env-file=.env.local src/server.ts",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "vite build --outDir dist/client",
     "build:backend": "esbuild src/server.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/server/server.js --external:fsevents",
