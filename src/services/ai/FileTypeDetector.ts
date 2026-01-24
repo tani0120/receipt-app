@@ -1,4 +1,4 @@
-import type { Client } from '@/features/client';
+import type { Client } from '@/types/client';
 
 /**
  * ファイル形式検出 + 仕訳生成サービス
@@ -121,9 +121,11 @@ JSON形式のみ。説明文は不要。
 
   /**
    * 会計期間を計算
+   *
+   * TD-001対応: Partial<Client>をPick<Client>に変更（ADR-011準拠）
    */
-  private static calculatePeriod(client: Partial<Client>): { periodStart: string; periodEnd: string } {
-    const fiscalMonth = client.fiscalMonth || 3;
+  private static calculatePeriod(client: Pick<Client, 'fiscalMonth'>): { periodStart: string; periodEnd: string } {
+    const fiscalMonth = client.fiscalMonth;
     const now = new Date();
     const year = now.getFullYear();
 

@@ -22,49 +22,44 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import type { Job, JournalLine as FirestoreJournalLine } from './firestore';
-import type { JobStatus } from './job';
-
-// Re-export or extend Firestore Line definition if needed
-export type JournalLine = FirestoreJournalLine;
-
 /**
- * Journal Entry (Workbench Data Model)
- * 画面Eで扱う、仕訳編集用のアグリゲートオブジェクト
+ * JournalEntry と JournalLine の型定義
+ *
+ * 重要: これらの型は JournalEntrySchema.ts の Zod スキーマから自動推論されます。
+ * 型の定義を変更する場合は、JournalEntrySchema.ts を変更してください。
+ *
+ * ADR-011: 型定義の一元化（Single Source of Truth）
+ * - Zodスキーマが唯一の真実（SSOT）
+ * - TypeScript型はZodスキーマから推論
+ * - 型定義の二重管理を防ぐ
+ *
+ * 修正履歴:
+ * - 2026-01-24: TD-001対応 - Zodスキーマからの推論に完全移行
+ *   独自のinterface定義を削除し、JournalEntrySchema.tsからの再エクスポートに変更
  */
-export interface JournalEntry {
-    id: string;
 
-    // 証憑関連
-    evidenceUrl?: string; // driveFileUrl
-    evidenceId: string;   // driveFileId
+// JournalEntrySchema.ts からの型推論（再エクスポート）
+export type {
+    JournalEntry,
+    JournalEntryDraft,
+    JournalLine,
+    JournalLineDraft,
+    AISourceType,
+    TaxType,
+    TaxCode,
+    InvoiceDeduction,
+    TaxAmountSource,
+    TaxDiscrepancySeverity,
+    FileType,
+} from '@/features/journal';
 
-    // 仕訳データ
-    lines: JournalLine[];
-
-    // 計算フィールド (UI用)
-    totalAmount: number;
-    balanceDiff: number; // 貸借差額 (0なら正常)
-
-    // メタデータ (Jobとのリンク)
-    clientCode: string;
-    status: JobStatus;
-
-    // Client Tax Settings (For Validations)
-    consumptionTaxMode: 'general' | 'simplified' | 'exempt';
-    simplifiedTaxCategory?: 1 | 2 | 3 | 4 | 5 | 6;
-
-    transactionDate: Date; // TimestampをDateに変換して保持することを推奨
-
-    // 差戻し対応
-    remandReason?: string;
-    remandCount: number; // 差戻し回数 (DBに追加が必要)
-
-    updatedAt: Date;
-}
+// JobStatus はFirestore型定義から取得
+export type { JobStatus } from './firestore';
 
 /**
- * バリデーション結果
+ * バリデーション結果の型定義
+ *
+ * 注意: この型はZodスキーマには含まれません（UI専用の型）
  */
 export interface ValidationResult {
     isValid: boolean;

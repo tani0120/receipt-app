@@ -73,6 +73,9 @@ export type InvoiceIssuerType =
 // Document ID: Client 3-letter Code (e.g., 'AMT')
 // ============================================================================
 export interface Client {
+  /** Document ID (Firestore auto-generated or clientCode) - TD-001対応 */
+  id?: string;
+
   /** Internal Symbol: CLIENT_CODE */
   clientCode: string;
 
@@ -154,6 +157,16 @@ export interface Client {
    * Calculation Method
    */
   calculationMethod?: 'accrual' | 'cash' | 'interim_cash';
+
+  /**
+   * Tax calculation method: inclusive (税込) / exclusive (税抜) - TD-001対応
+   */
+  taxMethod?: 'inclusive' | 'exclusive';
+
+  /**
+   * Invoice registration status (インボイス登録の有無) - TD-001対応
+   */
+  isInvoiceRegistered?: boolean;
 
   /**
    * Week 3: Department Management
@@ -284,6 +297,9 @@ export interface Job {
   invoiceValidationLog?: {
     registrationNumber?: string; // T123456...
     isValid: boolean;
+    // @type-audit: external-library (National Tax Agency API)
+    // @approved-by: CI/CD脆弱性修正
+    // @reason: 国税庁APIのレスポンス型が不完全
     apiResponse?: any; // Raw response from NTA API
     checkedAt: Timestamp;
   };
@@ -357,6 +373,9 @@ export interface AuditLog {
   targetId?: string;
 
   /** Diff Storage */
+  // @type-audit: audit-flexibility (監査ログ)
+  // @approved-by: CI/CD脆弱性修正
+  // @reason: 監査ログは任意のデータ構造を保存する必要がある
   previousData?: any;   // LOG_OLD_DATA
   newData?: any;        // LOG_NEW_DATA
 }
