@@ -91,6 +91,7 @@ SYSTEM_PHILOSOPHY.mdにADR-001, ADR-002の原則を参照する必要がある�
     *   **開発環境**: テストユーザー自動ログイン（`admin@sugu-suru.com`）
     *   **本番環境**: ログインUIによるメール/パスワードまたはGoogle認証
     *   **セキュリティ**: Firestoreセキュリティルールで認証済みユーザーのみアクセス可能
+    *   **強化（2026-01-25）**: 本番環境が誰でも閲覧可能な状態を解決。Router Guard、自動ログイン制御、Cloud Run認証統合を実施。詳細は [TASK_MASTER.md - Cloud Runデプロイ](file:///C:/Users/kazen/OneDrive/デスクトップ/ai_gogleanti/docs/TASK_MASTER.md) 参照
 
 ---
 
