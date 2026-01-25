@@ -5,7 +5,16 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN npm run build:frontend
+
+# フロントエンドビルド時にFirebase環境変数を設定（白画面問題の解決）
+RUN VITE_FIREBASE_API_KEY=***REMOVED*** \
+    VITE_FIREBASE_AUTH_DOMAIN=sugu-suru.firebaseapp.com \
+    VITE_FIREBASE_PROJECT_ID=sugu-suru \
+    VITE_FIREBASE_STORAGE_BUCKET=sugu-suru.firebasestorage.app \
+    VITE_FIREBASE_MESSAGING_SENDER_ID=985123156988 \
+    VITE_FIREBASE_APP_ID=1:985123156988:web:773345e9af06678e16f879 \
+    npm run build:frontend
+
 RUN npm run build:backend
 
 # ビルド結果の詳細確認
