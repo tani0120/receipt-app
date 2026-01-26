@@ -1,0 +1,54 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: sugu-suru
+  REGION: asia-northeast1
+  SERVICE_NAME: receipt-api
+  WORKLOAD_IDENTITY_PROVIDER: projects/985123156988/locations/global/workloadIdentityPools/github-actions/providers/github
+  SERVICE_ACCOUNT: 985123156988-compute@developer.gserviceaccount.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push Docker image
+        run: |
+          gcloud builds submit \
+            --tag gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --build-arg VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }} \
+            --build-arg VITE_FIREBASE_AUTH_DOMAIN=sugu-suru.firebaseapp.com \
+            --build-arg VITE_FIREBASE_PROJECT_ID=sugu-suru \
+            --build-arg VITE_FIREBASE_STORAGE_BUCKET=sugu-suru.firebasestorage.app \
+            --build-arg VITE_FIREBASE_MESSAGING_SENDER_ID=985123156988 \
+            --build-arg VITE_FIREBASE_APP_ID=1:985123156988:web:773345e9af06678e16f879 \
+            --build-arg VITE_GEMINI_API_KEY=${{ secrets.VITE_GEMINI_API_KEY }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated
