@@ -9,8 +9,6 @@ env:
   PROJECT_ID: sugu-suru
   REGION: asia-northeast1
   SERVICE_NAME: receipt-api
-  WORKLOAD_IDENTITY_PROVIDER: projects/985123156988/locations/global/workloadIdentityPools/github-actions/providers/github
-  SERVICE_ACCOUNT: github-actions-sa@sugu-suru.iam.gserviceaccount.com
 
 jobs:
   deploy:
@@ -18,7 +16,6 @@ jobs:
     
     permissions:
       contents: read
-      id-token: write
 
     steps:
       - name: Checkout code
@@ -27,8 +24,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
