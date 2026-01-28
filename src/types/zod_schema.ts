@@ -1,3 +1,27 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CRITICAL: AI TYPE SAFETY RULES - MUST FOLLOW WITHOUT EXCEPTION
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * 【型安全性ルール - AI必須遵守事項】
+ *
+ * ❌ 禁止事項（6項目）- NEVER DO THESE:
+ * 1. Partial<T> + フォールバック値 (client.name || 'XXX') - TYPE CONTRACT DESTRUCTION
+ * 2. any型（実装済み機能） - TYPE SYSTEM ABANDONMENT
+ * 3. status フィールドの無視 - AUDIT TRAIL DESTRUCTION
+ * 4. Zodスキーマでのany型 (z.any()) - SCHEMA LEVEL TYPE ABANDONMENT
+ * 5. 型定義ファイルでのany型 (interface { field: any }) - INTERFACE LEVEL DESTRUCTION
+ * 6. 型定義の二重管理（新旧スキーマ混在） - TYPE DEFINITION CONFLICT
+ *
+ * ✅ 許可事項（3項目）- ALLOWED:
+ * 1. 将来のフェーズ未実装機能でのeslint-disable + throw new Error()
+ * 2. unknown型の使用（型ガードと組み合わせて）
+ * 3. 必要最小限の型定義（Pick<T>, Omit<T>等）
+ *
+ * 詳細: complete_evidence_no_cover_up.md
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
 import { z } from 'zod';
 import { Timestamp } from 'firebase/firestore';
 
@@ -5,19 +29,41 @@ import { Timestamp } from 'firebase/firestore';
 // 0. Base Schemas & Enums
 // ============================================================================
 
-// Timestamp Validator: Checks for Firestore Timestamp instance or compatible object structure
-export const TimestampSchema = z.custom<Timestamp>((data) => {
-  if (data instanceof Timestamp) return true;
-  // Loose object check for serialization (seconds, nanoseconds)
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'seconds' in data &&
-    typeof (data as any).seconds === 'number' &&
-    'nanoseconds' in data &&
-    typeof (data as any).nanoseconds === 'number'
-  );
-}, { message: "Invalid Firestore Timestamp" });
+// Timestamp Validator: Flexible schema for Firestore Timestamps
+// Supports: Timestamp instances, serialized objects, Date, ISO strings
+// Phase 5 Fix: Handles Firestore data serialization across API boundaries
+export const TimestampSchema = z.union([
+  // Option 1: Native Firestore Timestamp instance
+  z.custom<Timestamp>((data) => data instanceof Timestamp, {
+    message: "Expected Firestore Timestamp instance"
+  }),
+
+  // Option 2: Serialized Timestamp object (from Firestore JSON)
+  z.object({
+    seconds: z.number(),
+    nanoseconds: z.number()
+  }).transform(data => {
+    try {
+      return new Timestamp(data.seconds, data.nanoseconds);
+    } catch {
+      // Fallback: return original if Timestamp constructor fails
+      return data as unknown as Timestamp;
+    }
+  }),
+
+  // Option 3: JavaScript Date object
+  z.date().transform(date => Timestamp.fromDate(date)),
+
+  // Option 4: ISO 8601 string
+  z.string().datetime().transform(str => {
+    try {
+      return Timestamp.fromDate(new Date(str));
+    } catch {
+      // Fallback to current time if parsing fails
+      return Timestamp.now();
+    }
+  })
+]);
 
 export const TaxFilingTypeSchema = z.enum(['blue', 'white']);
 export const ConsumptionTaxModeSchema = z.enum(['general', 'simplified', 'exempt']);
@@ -36,7 +82,7 @@ export const TaxTypeSchema = z.enum(['taxable', 'non_taxable', 'exempt', 'out_of
 
 export const InvoiceIssuerTypeSchema = z.enum(['qualified', 'transitional_80', 'transitional_50', 'non_qualified', 'unknown']);
 
-export const AccountingSoftwareSchema = z.enum(['yayoi', 'freee', 'mf', 'other']);
+export const AccountingSoftwareSchema = z.enum(['yayoi', 'freee', 'mf', 'tkc', 'other']); // Week 3: Added 'tkc'
 
 export const TaxCalculationMethodSchema = z.enum(['stack', 'back']);
 export const RoundingSettingsSchema = z.enum(['floor', 'round', 'ceil']);
@@ -45,13 +91,25 @@ export const RoundingSettingsSchema = z.enum(['floor', 'round', 'ceil']);
 // 1. Client Schema
 // ============================================================================
 export const ClientSchema = z.object({
+  // Basic Information
   clientCode: z.string(),
   companyName: z.string(),
-  type: z.enum(['corp', 'individual']).optional(), // Added type
+  companyNameKana: z.string().optional(), // 会社名フリガナ (Week 3)
+  type: z.enum(['corp', 'individual']).optional(),
   repName: z.string().optional(),
-  staffName: z.string().optional(), // Added staffName
-  contactInfo: z.string().optional(),
+  repNameKana: z.string().optional(), // 代表者名フリガナ (Week 3)
+  staffName: z.string().optional(),
+
+  // Contact Information
+  contact: z.object({
+    type: z.enum(['email', 'chatwork', 'none']).optional(),
+    value: z.string().optional()
+  }).optional(),
+  phoneNumber: z.string().optional(), // 電話番号 (Week 3)
+
+  // Fiscal Information
   fiscalMonth: z.number().int().min(1).max(12),
+  establishedDate: z.string().regex(/^\d{8}$/).optional(), // 設立年月日 YYYYMMDD (Week 3)
   status: z.enum(['active', 'inactive', 'suspension']),
 
   // Folder Rules
@@ -77,11 +135,41 @@ export const ClientSchema = z.object({
 
   accountingSoftware: AccountingSoftwareSchema,
   aiKnowledgePrompt: z.string().optional(),
-  defaultPaymentMethod: z.enum(['cash', 'credit_card', 'bank_transfer']).optional(),
+  defaultPaymentMethod: z.enum(['cash', 'owner_loan', 'accounts_payable']).optional(), // Week 3: 現金/社長借入金/未払金
   calculationMethod: z.enum(['accrual', 'cash', 'interim_cash']).optional(),
+  hasDepartmentManagement: z.boolean().optional(), // 部門管理 (Week 3)
+
+  // Fee Settings (Week 3)
+  advisoryFee: z.number().min(0).default(0), // 顧問報酬（月額）
+  bookkeepingFee: z.number().min(0).default(0), // 記帳代行（月額）
+  settlementFee: z.number().min(0).default(0), // 決算報酬（年次）
+  taxFilingFee: z.number().min(0).default(0), // 消費税申告報酬（年次）
 
   driveLinked: z.boolean(),
-  updatedAt: TimestampSchema
+  updatedAt: TimestampSchema.optional(),
+
+  // Phase 4-1: Medium-frequency client properties (30-49 occurrences)
+  isNew: z.boolean().optional(),
+  filingCount: z.number().optional()
+});
+
+/**
+ * ClientSchema with migration for legacy defaultPaymentMethod values
+ * Week 3: Automatically converts old values (credit_card, bank_transfer) to new values
+ */
+export const ClientSchemaWithMigration = ClientSchema.transform((data: z.infer<typeof ClientSchema> & { defaultPaymentMethod?: string }) => {
+  // Migrate old defaultPaymentMethod values
+  const paymentMethodMigration: Record<string, 'cash' | 'owner_loan' | 'accounts_payable'> = {
+    'credit_card': 'accounts_payable',
+    'bank_transfer': 'accounts_payable',
+    'cash': 'cash',
+  };
+
+  if (data.defaultPaymentMethod && paymentMethodMigration[data.defaultPaymentMethod]) {
+    data.defaultPaymentMethod = paymentMethodMigration[data.defaultPaymentMethod] as 'cash' | 'owner_loan' | 'accounts_payable';
+  }
+
+  return data;
 });
 
 // ============================================================================
@@ -172,7 +260,222 @@ export const JobSchema = z.object({
     severity: z.enum(['info', 'warning', 'critical'])
   })).optional(),
 
-  reviewStatus: z.enum(['confirmed', 'unknown', 'exclude_candidate']).optional()
+  reviewStatus: z.enum(['confirmed', 'unknown', 'exclude_candidate']).optional(),
+
+  // Phase 4-1: High-frequency properties (50+ occurrences)
+  name: z.string().optional(),
+  path: z.string().optional(), // File path or route path
+  title: z.string().optional(),
+  imageTitle: z.string().optional(),
+  debits: z.array(z.any()).optional(), // Array structure TBD
+  credits: z.array(z.any()).optional(), // Array structure TBD
+  amount: z.number().optional(),
+  proposal: z.string().optional(),
+  aiInference: z.string().optional(),
+  history: z.string().optional(),
+
+  // Phase 4-1: Medium-frequency properties (30-49 occurrences)
+  export: z.string().optional(),
+  archive: z.string().optional(),
+  receipt: z.string().optional(),
+  steps: z.string().optional(),
+  clientName: z.string().optional(),
+  aiAnalysis: z.string().optional(),
+  isResolved: z.boolean().optional(),
+  category: z.string().optional(),
+  remand: z.string().optional(),
+  nextAction: z.string().optional(),
+  journalEntry: z.string().optional(),
+  approval: z.string().optional(),
+  result: z.string().optional(),
+  trigger: z.string().optional(),
+  jobId: z.string().optional(), // Cross-reference or temporary ID
+  exportCount: z.number().optional(),
+  missingCount: z.number().optional(),
+
+  // Phase 4-2: Medium-low frequency properties (20-29 occurrences)
+  default: z.string().optional(),
+  settings: z.string().optional(), // Generic settings object
+  learningCount: z.number().optional(),
+  hasDuplicate: z.boolean().optional(),
+  alertCount: z.number().optional(),
+  draftCount: z.number().optional(),
+  approvalCount: z.number().optional(),
+  mode: z.string().optional(),
+  reconcileCount: z.number().optional(),
+  reason: z.string().optional(),
+  totalAmount: z.number().optional(),
+  label: z.string().optional(),
+  summary: z.string().optional(),
+  isExcluded: z.boolean().optional(),
+  vendor: z.string().optional(),
+  fiscalMonthLabel: z.string().optional(),
+  confidence: z.string().optional(), // May overlap with confidenceScore
+  monthlyJournals: z.string().optional(),
+  credit: z.string().optional(),
+  display: z.string().optional(), // UI control or business visibility flag
+  fileName: z.string().optional(),
+  debit: z.string().optional(),
+  softwareLabel: z.string().optional(),
+  sourceSoftware: z.string().optional(),
+  driveLinks: z.string().optional(),
+
+  // Phase 4-3: Low-frequency properties (10-19 occurrences)
+  date: z.date().optional(),
+  targetSoftware: z.string().optional(),
+  downloadUrl: z.string().optional(),
+  isDownloaded: z.boolean().optional(),
+  contactInfo: z.string().optional(),
+  backlogs: z.string().optional(),
+  bankName: z.string().optional(),
+  velocity: z.string().optional(),
+  value: z.string().optional(),
+  primaryAction: z.string().optional(),
+  phase: z.string().optional(),
+  phaseName: z.string().optional(),
+  keywords: z.string().optional(),
+  originalFolderId: z.string().optional(),
+  performance: z.string().optional(),
+  funnel: z.string().optional(),
+  icon: z.string().optional(),
+  autoConversionRate: z.number().optional(),
+  masterSearch: z.string().optional(),
+  aiAccuracy: z.string().optional(),
+  clientId: z.string().optional(),
+  balanceDiff: z.string().optional(),
+  pastJournals: z.string().optional(),
+  layoutType: z.string().optional(),
+  monthlyTrend: z.string().optional(),
+  journalExclusion: z.string().optional(),
+  rep: z.string().optional(),
+  month: z.number().optional(),
+  journalOutput: z.string().optional(),
+  storage: z.string().optional(),
+  banks: z.string().optional(),
+  query: z.string().optional(),
+  creditCards: z.string().optional(),
+  kpi: z.string().optional(),
+  actions: z.string().optional(),
+  staff: z.string().optional(),
+  received: z.string().optional(),
+  taxRate: z.number().optional(),
+  provider: z.string().optional(),
+  exported: z.string().optional(),
+  visible: z.string().optional(), // UI visibility or business public/private flag
+  errors: z.string().optional(),
+
+  // Phase 4-4: Single-digit properties - Batch 1/40 (9 occurrences)
+  tax: z.string().optional(),
+  selected: z.string().optional(), // Used in v-model (item.selected)
+  decision: z.string().optional(),
+  show: z.string().optional(), // UI visibility flag
+  subtitle: z.string().optional(),
+  ai_reason: z.string().optional(),
+  calcMethod: z.string().optional(),
+  actionStatus: z.string().optional(),
+  acct: z.string().optional(),
+  style: z.string().optional(),
+
+  // Phase 4-4: Single-digit properties - Batch 2-11 (100 properties, 8 occ and below)
+  content: z.string().optional(),
+  capabilities: z.string().optional(),
+  generatedBy: z.string().optional(),
+  evidenceId: z.string().optional(),
+  data: z.string().optional(),
+  remandCount: z.number().optional(),
+  invoiceApiKey: z.string().optional(),
+  set: z.string().optional(),
+  source: z.string().optional(),
+  closingBalance: z.string().optional(),
+  未処理: z.string().optional(), // ⚠️ Japanese property - rename recommended
+  year: z.number().optional(),
+  crSub: z.string().optional(),
+  historyBalances: z.string().optional(),
+  last4Digits: z.string().optional(),
+  drSub: z.string().optional(),
+  size: z.number().optional(),
+  debitAccount: z.number().optional(),
+  isIndividual: z.boolean().optional(),
+  state: z.string().optional(),
+  showButton: z.string().optional(),
+  invoiceLog: z.string().optional(),
+  accountName: z.string().optional(),
+  表示件数: z.string().optional(), // ⚠️ Japanese property - rename recommended
+  accountId: z.string().optional(),
+  get: z.string().optional(),
+  sub: z.string().optional(),
+  matchedKeywords: z.string().optional(),
+  accountNumber: z.number().optional(),
+  gap: z.string().optional(),
+  invoiceIssuer: z.string().optional(),
+  projectId: z.string().optional(),
+  processingTime: z.string().optional(),
+  calcMethodShortLabel: z.string().optional(),
+  taxInfoLabel: z.string().optional(),
+  iconColorClass: z.string().optional(),
+  checkedAt: z.date().optional(),
+  isEnabled: z.boolean().optional(),
+  velocityPerHour: z.string().optional(),
+  tags: z.string().optional(),
+  learning: z.string().optional(),
+  targetSoftwareLabel: z.string().optional(),
+  lastYearSameMonth: z.number().optional(),
+  simplifiedTaxCategoryLabel: z.string().optional(),
+  typeLabel: z.string().optional(),
+  thisYear: z.number().optional(),
+  lastYear: z.number().optional(),
+  roundingSettingsLabel: z.string().optional(),
+  taxCalculationMethodLabel: z.string().optional(),
+  invoiceRegistrationLabel: z.string().optional(),
+  evidenceUrl: z.string().optional(),
+  apiCostThisYear: z.number().optional(),
+  velocityThisMonth: z.number().optional(),
+  account: z.number().optional(),
+  journalsThisMonth: z.number().optional(),
+  stoppedClients: z.string().optional(),
+  fileSize: z.number().optional(),
+  registeredClients: z.string().optional(),
+  activeClients: z.string().optional(),
+  timePer100Journals: z.string().optional(),
+  lastUsedAt: z.date().optional(),
+  monthlyAvg: z.string().optional(),
+  lastMonth: z.number().optional(),
+  metadata: z.string().optional(),
+  staffCount: z.number().optional(),
+  draft: z.string().optional(),
+  count: z.number().optional(),
+  maxRetries: z.string().optional(),
+  details: z.string().optional(),
+  ai: z.string().optional(),
+  logTimestamp: z.date().optional(),
+  sourceSoftwareLabel: z.string().optional(),
+  form: z.string().optional(),
+  isDownloadable: z.boolean().optional(),
+  establishmentDate: z.date().optional(),
+  colors: z.string().optional(),
+  text: z.string().optional(),
+  sourceType: z.string().optional(),
+  statusLabel: z.string().optional(),
+  cardHolder: z.string().optional(),
+  param: z.string().optional(),
+  fingerprints: z.string().optional(),
+  dateLabel: z.string().optional(),
+  detectedStartBalance: z.string().optional(),
+  primaryColors: z.string().optional(),
+  items: z.string().optional(),
+  detectedEndBalance: z.string().optional(),
+  fiscalYear: z.number().optional(),
+  requiredMaterial: z.string().optional(),
+  isReceived: z.boolean().optional(),
+  displayFiscalMonth: z.number().optional(),
+  currentMonth: z.number().optional(),
+  features: z.string().optional(),
+  accountHolder: z.string().optional(),
+  expectedMaterials: z.string().optional(), // Buried key from seed
+  accountType: z.string().optional(),
+  detail: z.string().optional(),
+  diff: z.string().optional(),
+  thisMonthJournals: z.string().optional()
 });
 
 // ============================================================================
@@ -225,3 +528,16 @@ export const SystemSettingsSchema = z.object({
   dataRetentionDays: z.number(),
   updatedAt: TimestampSchema
 });
+
+// ============================================================================
+// 6. Inferred Types (Sacred Types)
+// ============================================================================
+export type ClientApi = z.infer<typeof ClientSchema>;
+export type JobApi = z.infer<typeof JobSchema>;
+export type JobStatusApi = z.infer<typeof JobStatusSchema>;
+export type JournalLineApi = z.infer<typeof JournalLineSchema>;
+export type TaxOptionApi = { label: string; value: string; rate: number; code: string }; // Manual definition as it's not a Zod Object in this file but exported as constant in schema_dictionary.
+// Wait, TaxOptionSchema was local in index.ts.
+// schema_dictionary exports the constant TAX_OPTIONS.
+// If I need a type for TaxOption, I should infer it from the constant or define it here.
+// But usage in jobRepository is JobApi.

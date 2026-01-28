@@ -1,0 +1,25 @@
+# 絶対除外キー（ABSOLUTE EXCLUDE KEYS）
+# これらはZodスキーマ定義から完全除外される
+
+## カテゴリ①: CSS専用語（13件）
+padding
+border
+flex
+transition
+animation
+background
+position
+top
+left
+bottom
+width
+height
+rowStyle
+
+## カテゴリ④: フレームワーク予約語（3件）
+component
+props
+modelValue
+
+# 合計: 16件
+# 検証済み: A2(v-model), A3(Firestore) ともに0件

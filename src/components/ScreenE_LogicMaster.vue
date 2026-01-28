@@ -388,13 +388,12 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useAccountingSystem } from '@/composables/useAccountingSystem';
-import type { JobUi, JobStatusUi } from '@/types/ui.type';
+import { aaa_useAccountingSystem, type Job, type JobStatus } from '@/composables/useAccountingSystem';
 import { Timestamp } from 'firebase/firestore';
 
 const route = useRoute();
 const router = useRouter();
-const { jobs, getClientByCode, updateJobStatus } = useAccountingSystem();
+const { jobs, getClientByCode, updateJobStatus } = aaa_useAccountingSystem();
 
 // -- HTML Compatibility State --
 const screen = computed({

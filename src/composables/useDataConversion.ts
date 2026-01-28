@@ -6,7 +6,7 @@ import { client } from '@/client';
 // State driven by API (BFF)
 const logs = ref<ConversionLogUi[]>([]);
 
-export function useDataConversion() {
+export function aaa_useDataConversion() {
 
     // Fetch from Hono (BFF)
     const fetchLogs = async () => {
@@ -86,6 +86,13 @@ export function useDataConversion() {
     // --- Legacy / Simulation Logic Below (Kept for creating new dummy logs) ---
     const isProcessing = ref(false);
     const loadingStatus = ref('');
+
+    const SOFTWARE_LABELS = {
+        'Yayoi': '弥生会計',
+        'MF': 'マネーフォワード',
+        'Freee': 'freee',
+        'Unknown': '不明'
+    } as const;
 
     const generateId = () => {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';

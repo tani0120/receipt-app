@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * ui.type.ts
+ * aaa_ui.type.ts
  * ------------------------------------------------------------
  * 役割:
  *   - UIが唯一参照する「完成形データ型」
@@ -337,62 +337,3 @@ export type ConversionLogUi = {
   }[];
 };
 
-
-/* ============================================================
- * Screen E: Journal Entry UI 型 (BFF Standard)
- * ============================================================
- */
-export type AiProposalUi = {
-  readonly hasProposal: boolean;
-  readonly confidenceLabel: string;
-  readonly reason: string;
-  readonly summary?: string;
-  readonly debits: readonly {
-    readonly account: string;
-    readonly subAccount: string;
-    readonly amount?: number;
-    readonly taxRate?: number;
-  }[];
-  readonly credits: readonly {
-    readonly account: string;
-    readonly subAccount: string;
-    readonly amount?: number;
-    readonly taxRate?: number;
-  }[];
-};
-
-export type JournalEntryActionUi = {
-  readonly id: string; // 'save', 'approve', etc.
-  readonly label: string;
-  readonly disabled: boolean;
-  readonly style?: string; // 'primary', 'secondary', 'danger'
-};
-
-export type JournalEntryAlertUi = {
-  readonly title: string;
-  readonly message: string;
-  readonly level: 'info' | 'warning' | 'error';
-};
-
-export type JournalEntryUi = {
-  readonly id: UiId;
-  readonly clientCode: string;
-  readonly companyName: string;
-  readonly transactionDate: UiDateTime;
-  readonly summary: string;
-  readonly status: string;
-  readonly statusLabel: string;
-
-  readonly isLocked: boolean;
-  readonly canEdit: boolean;
-  readonly journalEditMode: 'work' | 'approve' | 'remand' | 'locked';
-
-  readonly lines: readonly JournalLineUi[]; // Reuse existing
-  readonly totalAmount: number;
-
-  readonly aiProposal?: AiProposalUi;
-  readonly alerts: readonly JournalEntryAlertUi[];
-  readonly actions: readonly JournalEntryActionUi[];
-
-  readonly driveFileUrl: string;
-};

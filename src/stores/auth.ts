@@ -14,15 +14,11 @@ export const useAuthStore = defineStore('auth', () => {
         userEmail.value = localStorage.getItem('userEmail');
     }
 
-    const login = (email: string, password: string): boolean => {
-        // Simple hardcoded check for emergency security
-        if (email === 'admin@sugu-suru.com' && password === 'pass1234') {
-            isLoggedIn.value = true;
-            userEmail.value = email;
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userEmail', email);
-            return true;
-        }
+    const login = (_email: string, _password: string): boolean => {
+        // DEPRECATED: Hardcoded credentials removed for security
+        // This function is deprecated. Use Firebase Authentication instead.
+        // See: src/utils/auth.ts - signInWithEmail()
+        console.warn('[auth.ts] Deprecated login function called. Use Firebase Authentication.');
         return false;
     };
 

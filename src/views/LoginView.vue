@@ -1,40 +1,64 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h2>AI Accounting Platform</h2>
-      <p class="subtitle">Please sign in to continue</p>
+      <h1 class="login-title">AI会計システム</h1>
+      <p class="login-subtitle">ログイン</p>
 
-      <form @submit.prevent="handleLogin">
+      <!-- エラーメッセージ -->
+      <div v-if="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <!-- ローディング -->
+      <div v-if="isLoading" class="loading-message">
+        ログイン中...
+      </div>
+
+      <!-- ログインフォーム -->
+      <form v-else @submit.prevent="handleEmailLogin" class="login-form">
         <div class="form-group">
-          <label>Email</label>
+          <label for="email">メールアドレス</label>
           <input
+            id="email"
             v-model="email"
             type="email"
-            placeholder="admin@sugu-suru.com"
+            placeholder="メールアドレスを入力"
             required
-            class="input-field"
-          >
+            autocomplete="email"
+          />
         </div>
 
         <div class="form-group">
-          <label>Password</label>
+          <label for="password">パスワード</label>
           <input
+            id="password"
             v-model="password"
             type="password"
-            placeholder="Password"
+            placeholder="パスワードを入力"
             required
-            class="input-field"
-          >
+            autocomplete="current-password"
+          />
         </div>
 
-        <div v-if="error" class="error-message">
-          {{ error }}
-        </div>
-
-        <button type="submit" class="login-btn">
-          Sign In
+        <button type="submit" class="btn-login" :disabled="isLoading">
+          ログイン
         </button>
       </form>
+
+      <!-- 区切り線 -->
+      <div class="divider">
+        <span>または</span>
+      </div>
+
+      <!-- Googleログインボタン -->
+      <button
+        @click="handleGoogleLogin"
+        class="btn-google"
+        :disabled="isLoading"
+      >
+        <i class="fab fa-google"></i>
+        Googleでログイン
+      </button>
     </div>
   </div>
 </template>
@@ -42,22 +66,55 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { signInWithEmail, signInWithGoogle } from '@/utils/auth';
+
+const router = useRouter();
 
 const email = ref('');
 const password = ref('');
-const error = ref('');
-const router = useRouter();
-const authStore = useAuthStore();
+const errorMessage = ref('');
+const isLoading = ref(false);
 
-const handleLogin = () => {
-  error.value = '';
-  if (authStore.login(email.value, password.value)) {
-    router.push('/');
-  } else {
-    error.value = 'Invalid credentials. Access denied.';
+/**
+ * メール/パスワードでログイン
+ */
+async function handleEmailLogin() {
+  if (!email.value || !password.value) {
+    errorMessage.value = 'メールアドレスとパスワードを入力してください';
+    return;
   }
-};
+
+  errorMessage.value = '';
+  isLoading.value = true;
+
+  try {
+    await signInWithEmail(email.value, password.value);
+    // ログイン成功後、ホーム画面にリダイレクト
+    router.push('/');
+  } catch (error: any) {
+    errorMessage.value = error.message || 'ログインに失敗しました';
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+/**
+ * Googleアカウントでログイン
+ */
+async function handleGoogleLogin() {
+  errorMessage.value = '';
+  isLoading.value = true;
+
+  try {
+    await signInWithGoogle();
+    // ログイン成功後、ホーム画面にリダイレクト
+    router.push('/');
+  } catch (error: any) {
+    errorMessage.value = error.message || 'Googleログインに失敗しました';
+  } finally {
+    isLoading.value = false;
+  }
+}
 </script>
 
 <style scoped>
@@ -65,80 +122,153 @@ const handleLogin = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background-color: #f3f4f6;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .login-card {
   background: white;
-  padding: 2.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 3rem;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
+}
+
+.login-title {
+  font-size: 2rem;
+  font-weight: bold;
   text-align: center;
-}
-
-h2 {
-  color: #1f2937;
   margin-bottom: 0.5rem;
+  color: #333;
 }
 
-.subtitle {
-  color: #6b7280;
+.login-subtitle {
+  text-align: center;
+  color: #666;
   margin-bottom: 2rem;
+  font-size: 1.1rem;
+}
+
+.error-message {
+  background: #fee;
+  color: #c33;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #fcc;
+}
+
+.loading-message {
+  text-align: center;
+  padding: 2rem;
+  color: #667eea;
+  font-size: 1.1rem;
+}
+
+.login-form {
+  margin-bottom: 1.5rem;
 }
 
 .form-group {
   margin-bottom: 1.5rem;
-  text-align: left;
 }
 
-label {
+.form-group label {
   display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
   margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
 }
 
-.input-field {
+.form-group input {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.form-group input:focus {
   outline: none;
-  transition: border-color 0.2s;
+  border-color: #667eea;
 }
 
-.input-field:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.login-btn {
+.btn-login {
   width: 100%;
-  padding: 0.75rem;
-  background-color: #2563eb;
+  padding: 0.875rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.login-btn:hover {
-  background-color: #1d4ed8;
+.btn-login:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
 }
 
-.error-message {
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
-  padding: 0.5rem;
-  background-color: #fee2e2;
-  border-radius: 4px;
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.divider {
+  position: relative;
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e0e0e0;
+}
+
+.divider span {
+  position: relative;
+  background: white;
+  padding: 0 1rem;
+  color: #999;
+}
+
+.btn-google {
+  width: 100%;
+  padding: 0.875rem;
+  background: white;
+  color: #333;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-google:hover:not(:disabled) {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.btn-google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-google i {
+  font-size: 1.2rem;
 }
 </style>

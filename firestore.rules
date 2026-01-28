@@ -1,1 +1,66 @@
-rules_version = "2"; service cloud.firestore { match /databases/{database}/documents { match /{document=**} { allow read, write: if true; } } }
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ====================================
+    // 認証済みユーザーのみアクセス可能
+    // ====================================
+    
+    // 顧問先（Clients）
+    match /clients/{clientId} {
+      // 認証済みユーザーは全件読み取り可能
+      allow read: if request.auth != null;
+      
+      // 作成・更新・削除は認証済みユーザーのみ
+      allow create, update, delete: if request.auth != null;
+    }
+    
+    // ジョブ（Jobs）
+    match /jobs/{jobId} {
+      // 認証済みユーザーは全件読み取り可能
+      allow read: if request.auth != null;
+      
+      // 作成・更新・削除は認証済みユーザーのみ
+      allow create, update, delete: if request.auth != null;
+    }
+    
+    // スタッフ（Staff）
+    match /staff/{staffId} {
+      // 認証済みユーザーは全件読み取り可能
+      allow read: if request.auth != null;
+      
+      // 作成・更新・削除は認証済みユーザーのみ
+      allow create, update, delete: if request.auth != null;
+    }
+    
+    // レシート（Receipts）
+    match /receipts/{receiptId} {
+      // 認証済みユーザーは全件読み取り可能
+      allow read: if request.auth != null;
+      
+      // 作成・更新・削除は認証済みユーザーのみ
+      allow create, update, delete: if request.auth != null;
+    }
+    
+    // トランザクション（Transactions）
+    match /transactions/{transactionId} {
+      // 認証済みユーザーは全件読み取り可能
+      allow read: if request.auth != null;
+      
+      // 作成・更新・削除は認証済みユーザーのみ
+      allow create, update, delete: if request.auth != null;
+    }
+    
+    // ユーザー個別データ（将来的な拡張用）
+    match /users/{userId} {
+      // 自分自身のデータのみ読み書き可能
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // デフォルト: すべて拒否
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

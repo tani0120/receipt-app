@@ -4,7 +4,7 @@
     <!-- Header Area -->
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
       <div>
-        <h1 class="text-3xl font-bold text-slate-900 tracking-tight">顧問先管理</h1>
+        <h1 class="text-3xl font-bold text-slate-900 tracking-tight">顧問先管理 (Mirror)</h1>
         <p class="text-slate-500 mt-1">顧問先の一覧確認と情報の編集が行えます。</p>
       </div>
 
@@ -72,7 +72,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-for="client in filteredClients" :key="client.clientCode" @click="navigateToDetail(client)" class="group hover:bg-slate-50/80 transition-colors cursor-pointer">
+            <tr v-for="client in filteredClients" :key="client.clientCode" class="group hover:bg-slate-50/80 transition-colors">
               <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-mono font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block">
                       {{ client.clientCode }}
@@ -110,7 +110,7 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button
-                  @click.stop="openEditModal(client)"
+                  @click="openEditModal(client)"
                   class="text-slate-400 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-blue-50"
                   title="編集"
                 >
@@ -137,21 +137,98 @@
     </div>
 
     <!-- Edit Modal -->
-    <!-- Edit Modal (Component) -->
-    <ScreenA_Detail_EditModal
-        :visible="isEditModalOpen"
-        :initial-data="editingClient"
-        @close="closeEditModal"
-        @save="onModalSave"
-    />
+    <Teleport to="body">
+        <div v-if="isEditModalOpen" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
+            <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden transform transition-all">
+
+                <!-- Modal Header -->
+                <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded font-mono">{{ editingClient?.clientCode }}</span>
+                        <span>顧問先編集</span>
+                    </h2>
+                    <button @click="closeEditModal" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6 space-y-5" v-if="editingClient">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">会社名 <span class="text-red-500">*</span></label>
+                        <input
+                            v-model="editingClient.companyName"
+                            type="text"
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                        />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">代表者名</label>
+                            <input
+                                v-model="editingClient.repName"
+                                type="text"
+                                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            />
+                        </div>
+                         <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">決算月</label>
+                            <input
+                                v-model.number="editingClient.fiscalMonth"
+                                type="number"
+                                min="1" max="12"
+                                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">ステータス</label>
+                        <div class="relative">
+                            <select
+                                v-model="editingClient.status"
+                                class="w-full px-4 py-2 bg-white border border-slate-300 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            >
+                                <option value="active">契約中</option>
+                                <option value="inactive">解約</option>
+                                <option value="suspension">停止</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+                    <button
+                        @click="closeEditModal"
+                        class="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-100 transition-colors"
+                    >
+                        キャンセル
+                    </button>
+                    <button
+                        @click="handleUpdateClient"
+                        :disabled="loading"
+                        class="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2"
+                        :class="{ 'opacity-70 cursor-not-allowed': loading }"
+                    >
+                        <span v-if="loading" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                        <span>保存する</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-import { useClientListRPC } from '@/composables/useClientListRPC';
-import ScreenA_Detail_EditModal from '@/components/ScreenA_Detail_EditModal.vue';
-import type { ClientUi } from '@/types/ui.type';
+import { aaa_useClientList } from '@/composables/useClientListRPC';
 
 // Logic is strictly imported from the Composable
 const {
@@ -174,77 +251,5 @@ const {
     // UI Helpers
     getStatusLabel,
     getStatusClass
-} = useClientListRPC();
-
-// Mapping logic: Form (Component) -> ClientUi (API)
-const mapFormToClientUi = (original: ClientUi, form: any): ClientUi => {
-    return {
-        ...original,
-        clientCode: form.code,
-        companyName: form.name,
-        repName: form.rep,
-        staffName: form.staffName,
-        type: form.type,
-        fiscalMonth: form.fiscalMonth,
-        status: form.isActive ? 'active' : 'inactive', // Simple map
-
-        // Contact
-        contact: {
-            type: form.contact.type,
-            value: form.contact.value
-        },
-
-        // Settings
-        accountingSoftware: form.settings.software,
-        taxMethod: form.settings.taxMethod,
-        taxCalculationMethod: form.settings.taxCalculationMethod,
-        roundingSettings: form.settings.roundingSettings,
-
-        // Complex mappings
-        consumptionTaxMode: form.settings.consumptionTax === 'exempt' ? 'exempt' :
-                            form.settings.consumptionTax.startsWith('simplified') ? 'simplified' : 'general',
-        simplifiedTaxCategory: form.settings.consumptionTax.startsWith('simplified') ?
-                               parseInt(form.settings.consumptionTax.split('_')[1]) as any : undefined,
-
-        taxFilingType: form.settings.taxType === '青色' ? 'blue' : 'white',
-
-        isInvoiceRegistered: form.settings.isInvoiceRegistered,
-        invoiceRegistrationNumber: form.settings.invoiceRegistrationNumber,
-
-        // Label updates (Optional, but good for optimistic UI)
-        softwareLabel: form.settings.software,
-        calculationMethodLabel: form.settings.calcMethod,
-
-        // Preserve others
-        driveLinked: original.driveLinked,
-        driveLinks: original.driveLinks,
-        sharedFolderId: original.sharedFolderId,
-        processingFolderId: original.processingFolderId,
-        archivedFolderId: original.archivedFolderId,
-        excludedFolderId: original.excludedFolderId,
-        csvOutputFolderId: original.csvOutputFolderId,
-        learningCsvFolderId: original.learningCsvFolderId,
-        defaultTaxRate: original.defaultTaxRate,
-        actions: original.actions
-    };
-};
-
-const onModalSave = async (formData: any) => {
-    if (!editingClient.value) return;
-
-    // Map form data back to ClientUi structure
-    const updatedClient = mapFormToClientUi(editingClient.value, formData);
-
-    // Update the ref so handleUpdateClient picks it up
-    Object.assign(editingClient.value, updatedClient);
-
-    await handleUpdateClient();
-};
-
-const router = useRouter();
-const navigateToDetail = (client: ClientUi) => {
-    // Navigate to Detail Screen
-    // Assuming route name 'ScreenA_Detail' parameter 'code'
-    router.push({ name: 'ScreenA_Detail', params: { code: client.clientCode } });
-};
+} = aaa_useClientList();
 </script>

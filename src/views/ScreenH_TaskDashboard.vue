@@ -4,7 +4,7 @@
     <!-- [UI_Structure] Line:4 -->
     <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
       <div class="flex items-center gap-3">
-        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">全社タスク管理</h1>
+        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">全社タスク管理 (Mirror)</h1>
         <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600 border border-gray-200">Strict Spec</span>
       </div>
 
@@ -340,61 +340,6 @@
             </div>
            </div>
         </div>
-
-        <!-- [V2_Pilot] Recent Activity Section -->
-        <div class="bg-white rounded-xl border border-indigo-200 shadow-sm overflow-hidden flex flex-col h-[400px]">
-           <div class="px-6 py-4 border-b border-indigo-100 bg-indigo-50/30 flex items-center justify-between shrink-0">
-               <h2 class="text-lg font-bold text-indigo-800 flex items-center gap-2">
-                   <i class="fa-solid fa-clock-rotate-left"></i> Recent Activity (V2 Data Pilot)
-               </h2>
-               <div v-if="isLoadingLogs" class="text-xs text-indigo-500 font-bold animate-pulse">
-                   Fetching from Firestore...
-               </div>
-           </div>
-
-           <div class="flex-1 overflow-auto">
-               <table class="w-full text-left border-collapse">
-                   <thead class="sticky top-0 bg-indigo-50/80 backdrop-blur-sm z-10">
-                       <tr class="text-indigo-900 text-xs uppercase tracking-wider border-b border-indigo-100">
-                           <th class="px-4 py-3 font-semibold w-32">Updated</th>
-                           <th class="px-4 py-3 font-semibold">Title / Description</th>
-                           <th class="px-4 py-3 font-semibold w-24 text-center">Type</th>
-                           <th class="px-4 py-3 font-semibold w-24 text-center">Status</th>
-                           <th class="px-4 py-3 font-semibold w-24 text-right">Time</th>
-                       </tr>
-                   </thead>
-                   <tbody class="divide-y divide-indigo-50 text-sm">
-                       <tr v-for="log in recentLogs" :key="log.id" class="hover:bg-indigo-50/30 transition-colors">
-                           <td class="px-4 py-3 text-gray-500 whitespace-nowrap font-mono text-xs">
-                               {{ formatDate(log.updatedAt) }}
-                           </td>
-                           <td class="px-4 py-3 font-medium text-gray-800">
-                               <div>{{ log.title }}</div>
-                               <div class="text-xs text-gray-400 truncate max-w-md">{{ log.description }}</div>
-                           </td>
-                           <td class="px-4 py-3 text-center">
-                               <span class="px-2 py-0.5 rounded text-[10px] bg-gray-100 border border-gray-200 text-gray-600">
-                                   {{ log.type }}
-                               </span>
-                           </td>
-                           <td class="px-4 py-3 text-center">
-                               <span v-if="log.status === 'approved'" class="text-green-600 font-bold text-xs"><i class="fa-solid fa-check"></i> Approved</span>
-                               <span v-else-if="log.status === 'submitted'" class="text-blue-600 font-bold text-xs">Review</span>
-                               <span v-else class="text-gray-400 text-xs">{{ log.status }}</span>
-                           </td>
-                           <td class="px-4 py-3 text-right font-mono text-gray-600">
-                               {{ log.time_entry?.duration_minutes ?? '-' }} min
-                           </td>
-                       </tr>
-                       <tr v-if="recentLogs.length === 0 && !isLoadingLogs">
-                           <td colspan="5" class="px-4 py-8 text-center text-gray-400 italic">
-                               No recent activity found in Firestore V2.
-                           </td>
-                       </tr>
-                   </tbody>
-               </table>
-           </div>
-        </div>
       </div>
     </main>
   </div>
@@ -406,41 +351,6 @@ import { useRouter } from 'vue-router';
 
 // [Internal_Logic_Flow] Items 233-310 (Exact Copy)
 const router = useRouter();
-
-// ============================================
-// [V2_Pilot] Data Logic
-// ============================================
-import { onMounted } from 'vue';
-import { receiptRepository } from '../repositories/receiptRepository';
-import type { WorkLogDocument } from '../types/schema_v2';
-import { Timestamp } from 'firebase/firestore';
-
-const recentLogs = ref<WorkLogDocument[]>([]);
-const isLoadingLogs = ref(false);
-
-const formatDate = (ts: Timestamp | null | undefined) => {
-    if (!ts) return '-';
-    // Timestamp to Date
-    const d = ts.toDate();
-    return d.toLocaleString('ja-JP', {
-        month: 'numeric', day: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-    });
-};
-
-onMounted(async () => {
-    try {
-        isLoadingLogs.value = true;
-        recentLogs.value = await receiptRepository.getRecentWorkLogs(20);
-        console.log('[Pilot] Loaded logs:', recentLogs.value);
-    } catch (e) {
-        console.error('[Pilot] Error loading logs:', e);
-    } finally {
-        isLoadingLogs.value = false;
-    }
-});
-// ============================================
-
 
 type FilterType =
     | 'missingCount'
@@ -512,10 +422,10 @@ function navigateToTask(client: MockClient, type: FilterType) {
             router.push({ name: 'ScreenB_Status' });
             break;
         case 'exportCount':
-            router.push({ name: 'DataConversion' });
+            router.push({ name: 'aaa_DataConversion' });
             break;
         case 'filingCount':
-            router.push({ name: 'DataConversion' });
+            router.push({ name: 'aaa_DataConversion' });
             break;
         case 'learningCount':
             router.push({ name: 'ScreenD' });

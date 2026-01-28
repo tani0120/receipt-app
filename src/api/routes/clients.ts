@@ -263,6 +263,26 @@ const route = app
 
             return c.json({ success: true, message: `Client ${code} updated successfully`, data: body });
         }
+    )
+    // PATCH (Alias to Update)
+    .patch(
+        '/:code',
+        zValidator('json', z.object({}).passthrough()), // Loose schema for PATCH
+        async (c) => {
+            const code = c.req.param('code');
+            const body = c.req.valid('json');
+            console.log(`[BFF] Patching client ${code}`, body);
+            return c.json({ success: true, message: `Client ${code} patched successfully`, data: body });
+        }
+    )
+    .post(
+        '/',
+        zValidator('json', ClientUiSchema.passthrough()),
+        async (c) => {
+            const body = c.req.valid('json');
+            console.log('[BFF] Creating client', body);
+            return c.json({ success: true, message: 'Client created', data: body });
+        }
     );
 
-export default route
+export default route;

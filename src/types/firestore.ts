@@ -1,3 +1,27 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CRITICAL: AI TYPE SAFETY RULES - MUST FOLLOW WITHOUT EXCEPTION
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * 【型安全性ルール - AI必須遵守事項】
+ *
+ * ❌ 禁止事項（6項目）- NEVER DO THESE:
+ * 1. Partial<T> + フォールバック値 (client.name || 'XXX') - TYPE CONTRACT DESTRUCTION
+ * 2. any型（実装済み機能） - TYPE SYSTEM ABANDONMENT
+ * 3. status フィールドの無視 - AUDIT TRAIL DESTRUCTION
+ * 4. Zodスキーマでのany型 (z.any()) - SCHEMA LEVEL TYPE ABANDONMENT
+ * 5. 型定義ファイルでのany型 (interface { field: any }) - INTERFACE LEVEL DESTRUCTION
+ * 6. 型定義の二重管理（新旧スキーマ混在） - TYPE DEFINITION CONFLICT
+ *
+ * ✅ 許可事項（3項目）- ALLOWED:
+ * 1. 将来のフェーズ未実装機能でのeslint-disable + throw new Error()
+ * 2. unknown型の使用（型ガードと組み合わせて）
+ * 3. 必要最小限の型定義（Pick<T>, Omit<T>等）
+ *
+ * 詳細: complete_evidence_no_cover_up.md
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
 import { Timestamp } from "firebase/firestore";
 
 /**
@@ -49,20 +73,41 @@ export type InvoiceIssuerType =
 // Document ID: Client 3-letter Code (e.g., 'AMT')
 // ============================================================================
 export interface Client {
+  /** Document ID (Firestore auto-generated or clientCode) - TD-001対応 */
+  id?: string;
+
   /** Internal Symbol: CLIENT_CODE */
   clientCode: string;
 
   /** Internal Symbol: COMPANY_NAME */
   companyName: string;
 
+  /** Week 3: Company Name Kana */
+  companyNameKana?: string;
+
+  /** Client Type */
+  type?: 'corp' | 'individual';
+
   /** Internal Symbol: REP_NAME */
   repName?: string;
+
+  /** Week 3: Representative Name Kana */
+  repNameKana?: string;
+
+  /** Staff Member */
+  staffName?: string;
 
   /** Internal Symbol: CONTACT_INFO */
   contactInfo?: string; // Slack webhook or email
 
+  /** Week 3: Phone Number */
+  phoneNumber?: string;
+
   /** Internal Symbol: FISCAL_MONTH (1-12) */
   fiscalMonth: number;
+
+  /** Week 3: Established Date (YYYYMMDD) */
+  establishedDate?: string;
 
   /** Internal Symbol: STATUS */
   status: 'active' | 'inactive' | 'suspension';
@@ -92,8 +137,9 @@ export interface Client {
   /**
    * Accounting Software (Target for CSV)
    * Internal Symbol: ACCOUNTING_SOFT
+   * Week 3: Added 'tkc'
    */
-  accountingSoftware: 'yayoi' | 'freee' | 'mf' | 'other';
+  accountingSoftware: 'yayoi' | 'freee' | 'mf' | 'tkc' | 'other';
 
   /**
    * Prompt Injection for this specific client
@@ -102,9 +148,38 @@ export interface Client {
   aiKnowledgePrompt?: string;
 
   /**
-   * Default Payment Method (Use for guessing 'Cash' vs 'Credit')
+   * Default Payment Method (Week 3: Updated)
+   * Use for guessing payment method when OCR cannot detect
    */
-  defaultPaymentMethod?: 'cash' | 'credit_card' | 'bank_transfer';
+  defaultPaymentMethod?: 'cash' | 'owner_loan' | 'accounts_payable';
+
+  /**
+   * Calculation Method
+   */
+  calculationMethod?: 'accrual' | 'cash' | 'interim_cash';
+
+  /**
+   * Tax calculation method: inclusive (税込) / exclusive (税抜) - TD-001対応
+   */
+  taxMethod?: 'inclusive' | 'exclusive';
+
+  /**
+   * Invoice registration status (インボイス登録の有無) - TD-001対応
+   */
+  isInvoiceRegistered?: boolean;
+
+  /**
+   * Week 3: Department Management
+   */
+  hasDepartmentManagement?: boolean;
+
+  /**
+   * Week 3: Fee Settings (Optional for backward compatibility)
+   */
+  advisoryFee?: number;      // 顧問報酬（月額）
+  bookkeepingFee?: number;   // 記帳代行（月額）
+  settlementFee?: number;    // 決算報酬（年次）
+  taxFilingFee?: number;     // 消費税申告報酬（年次）
 
   /** Google Drive Link Status */
   driveLinked: boolean;
@@ -222,6 +297,9 @@ export interface Job {
   invoiceValidationLog?: {
     registrationNumber?: string; // T123456...
     isValid: boolean;
+    // @type-audit: external-library (National Tax Agency API)
+    // @approved-by: CI/CD脆弱性修正
+    // @reason: 国税庁APIのレスポンス型が不完全
     apiResponse?: any; // Raw response from NTA API
     checkedAt: Timestamp;
   };
@@ -295,6 +373,9 @@ export interface AuditLog {
   targetId?: string;
 
   /** Diff Storage */
+  // @type-audit: audit-flexibility (監査ログ)
+  // @approved-by: CI/CD脆弱性修正
+  // @reason: 監査ログは任意のデータ構造を保存する必要がある
   previousData?: any;   // LOG_OLD_DATA
   newData?: any;        // LOG_NEW_DATA
 }

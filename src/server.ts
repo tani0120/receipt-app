@@ -1,26 +1,107 @@
+// src/server.ts
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
-import app from './api/index.ts'
+import { Hono } from 'hono'
+import admin from 'firebase-admin'
+import conversionRoute from './api/routes/conversion'
+import clientsRoute from './api/routes/clients'
+import journalStatusRoute from './api/routes/journal-status'
+import journalEntryRoute from './api/routes/journal-entry'
+import aiRulesRoute from './api/routes/ai-rules'
+import adminRoute from './api/routes/admin'
+import workerRoute from './api/routes/worker'
+import aiModelsRoute from './api/routes/ai-models'
 
-const port = Number(process.env.PORT) || 3000
-console.log('--- SERVER STARTING ---');
-console.log('Node Version:', process.version);
-console.log('Environment:', process.env.NODE_ENV);
-console.log('PORT Env Var:', process.env.PORT);
-console.log(`Server is running on port ${port}`);
+// Phase 3: Firebase Admin SDK初期化
+if (!admin.apps.length) {
+    if (process.env.NODE_ENV === 'production') {
+        // Cloud Run環境: Application Default Credentials使用
+        admin.initializeApp({
+            credential: admin.credential.applicationDefault()
+        })
+        console.log('✅ Firebase Admin initialized (Cloud Run mode)')
+    } else {
+        // ローカル環境: サービスアカウントキー使用
+        try {
+            const serviceAccount = require('../service-account-key.json')
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount)
+            })
+            console.log('✅ Firebase Admin initialized (Local mode)')
+        } catch (error) {
+            console.warn('⚠️ Firebase Admin: service-account-key.json not found, skipping initialization')
+            console.warn('   Download from: https://console.firebase.google.com/project/sugu-suru/settings/serviceaccounts/adminsdk')
+        }
+    }
+}
 
-// Serve static files from 'dist' folder
-app.use('/*', serveStatic({ root: './dist' }))
+const app = new Hono()
+const port = parseInt(process.env.PORT || '8080')
 
-// SPA wildcard fallback (ensure this is last if possible, but Hono might match wildcard eagerly)
-// Since API routes are defined in 'app' before this file imports it, they take precedence?
-// Actually 'app' is imported with routes already attached.
-// So adding middleware here adds it to the END of the stack.
-// Perfect for static fallback.
-app.get('*', serveStatic({ path: './dist/index.html' }))
+console.log('='.repeat(50))
+console.log('🚀 Server starting...')
+console.log('Node:', process.version)
+console.log('CWD:', process.cwd())
+console.log('PORT:', port)
+console.log('ENV:', process.env.NODE_ENV)
+console.log('='.repeat(50))
 
-serve({
+// Phase 1: Health check
+app.get('/health', (c) => {
+    console.log('Health check received')
+    return c.text('OK')
+})
+
+// Simple API endpoint (Phase 1)
+app.get('/api/hello', (c) => {
+    console.log('API hello endpoint called')
+    return c.json({ message: 'Hello from Hono API!', status: 'running' })
+})
+
+// Phase 4 Step 1: Conversion Route
+app.route('/api/conversion', conversionRoute)
+
+// Phase 4 Step 2: Clients Route
+app.route('/api/clients', clientsRoute)
+
+// Phase 4 Step 3-4: Journal Routes
+app.route('/api/journal-status', journalStatusRoute)
+app.route('/api/journal-entry', journalEntryRoute)
+
+// Phase 4 Step 7-8: AI Rules and Admin Routes
+app.route('/api/ai-rules', aiRulesRoute)
+app.route('/api/admin', adminRoute)
+
+// Phase 4 Step 9-10: Worker and AI Routes (Final)
+app.route('/api/worker', workerRoute)
+app.route('/api/ai-models', aiModelsRoute)
+
+// Phase 2: 静的ファイル提供（フロントエンドUI）
+app.use('/*', serveStatic({ root: './dist/client' }))
+
+app.get('/', (c) => {
+    console.log('Root request received')
+    return c.text('Receipt API is running')
+})
+
+console.log('🔧 Starting HTTP server...')
+
+// ⚠️ CRITICAL: serve()の戻り値を保持してプロセスを維持
+const server = serve({
     fetch: app.fetch,
     port,
-    hostname: '0.0.0.0'
+    hostname: '0.0.0.0',
 })
+
+console.log(`✅ Server listening on http://0.0.0.0:${port}`)
+
+// プロセスが終了しないように維持
+process.on('SIGTERM', () => {
+    console.log('🛑 SIGTERM received, shutting down gracefully')
+    process.exit(0)
+})
+
+// Keep-aliveメッセージ（Cloud Runログで確認用）
+setInterval(() => {
+    console.log('💓 Server heartbeat - still running')
+}, 30000) // 30秒ごと

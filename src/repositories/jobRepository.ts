@@ -1,41 +1,33 @@
-import {
-    doc,
-    getDoc,
-    updateDoc,
-    Timestamp
-} from 'firebase/firestore';
-import { db } from '../firebase';
-import type { Job } from '../types/firestore';
+import { FirestoreRepository } from '../services/firestoreRepository';
+import type { JobApi } from '../types/zod_schema';
 
-const COLLECTION_JOBS = 'jobs';
-
+/**
+ * Job Repository Adapter
+ * Bridges the gap between the API layer (Legacy calls) and the FirestoreService.
+ */
 export const jobRepository = {
     /**
-     * Fetch Job (Legacy)
+     * Get a Job by ID
+     * Maps to FirestoreRepository.getJobById
      */
-    async getJob(id: string): Promise<Job | null> {
-        try {
-            const ref = doc(db, COLLECTION_JOBS, id);
-            const snap = await getDoc(ref);
-            if (snap.exists()) {
-                return { ...snap.data(), id: snap.id } as Job;
-            }
-            return null;
-        } catch (e) {
-            console.error('[JobRepo] Failed to fetch job:', e);
-            return null;
-        }
+    async getJob(id: string): Promise<JobApi | null> {
+        // Force Cast to Sacred Type to satisfy Hono Inference
+        return await FirestoreRepository.getJobById(id) as unknown as JobApi | null;
     },
 
     /**
-     * Save Job (Legacy Partial Update)
+     * Get All Jobs
+     * Maps to FirestoreRepository.getAllJobs
      */
-    async saveJob(id: string, data: Partial<Job>): Promise<void> {
-        const ref = doc(db, COLLECTION_JOBS, id);
-        // Explicitly update updatedAt
-        await updateDoc(ref, {
-            ...data,
-            updatedAt: Timestamp.now()
-        });
+    async getAllJobs(): Promise<JobApi[]> {
+        return await FirestoreRepository.getAllJobs() as unknown as JobApi[];
+    },
+
+    /**
+     * Save/Update a Job
+     * Maps to FirestoreRepository.updateJob
+     */
+    async saveJob(id: string, data: Partial<JobApi>): Promise<void> {
+        await FirestoreRepository.updateJob(id, data as any);
     }
 };

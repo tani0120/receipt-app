@@ -214,7 +214,7 @@
                             <td class="px-6 py-5 font-bold text-lg text-slate-700">{{ staff.name }}</td>
                             <td class="px-6 py-5 text-right text-xl font-extrabold text-indigo-600">{{ staff.performance.thisMonthJournals }}</td>
                             <td class="px-6 py-5 text-right text-lg text-slate-500">{{ staff.performance.monthlyAvgJournals }}</td>
-                            <td class="px-6 py-5 text-right text-lg text-indigo-600 font-extrabold">¥{{ ((staff.performance.annualApiCost ?? 0) / 1000).toFixed(0) }}千円</td>
+                            <td class="px-6 py-5 text-right text-lg text-indigo-600 font-extrabold">¥{{ (staff.performance.annualApiCost / 1000).toFixed(0) }}千円</td>
                             <td class="px-6 py-5 text-right text-lg font-mono font-extrabold text-indigo-600">{{ staff.performance.velocityThisMonth }}</td>
                             <td class="px-6 py-5 text-right text-lg font-mono text-slate-400">{{ staff.performance.velocityAvg }}</td>
                             <td class="px-6 py-5 text-right text-xl font-bold text-slate-700">{{ staff.performance.velocityPerHourAvg }} <span class="text-sm font-normal text-slate-400">件/h</span></td>
@@ -291,10 +291,10 @@
 </template>
 
 <script setup lang="ts">
-import { useAdminDashboard } from '@/composables/useAdminDashboard';
+import { aaa_useAdminDashboard } from '@/composables/useAdminDashboard';
 
 defineEmits(['open-staff-modal']);
-const { data } = useAdminDashboard();
+const { data } = aaa_useAdminDashboard();
 </script>
 
 <style scoped>

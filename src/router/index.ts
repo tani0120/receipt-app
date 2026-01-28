@@ -1,30 +1,28 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 
-
-// Screen Components
-import ScreenA from '../views/ScreenA_Clients.vue'
-import ScreenB from '../views/ScreenB_JournalStatus.vue'
-import ScreenC from '../components/ScreenC_CollectionStatus.vue'
-import ScreenE from '../components/ScreenE_JournalEntry.vue'
-import ScreenZ from '../views/ScreenZ_AdminSettings.vue'
-
-// Import logger for navigation tracking
-import { addLog } from '../api/lib/globalLogger'
+import ScreenB_Restore_Mock from '@/views/debug/ScreenB_Restore_Mock.vue';
 
 export const routes: RouteRecordRaw[] = [
+  // ログインページ（認証不要）
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../views/LoginView.vue')
+    component: () => import('../views/LoginView.vue'),
+    meta: { requiresAuth: false }
   },
   {
     path: '/',
     redirect: '/journal-status'
   },
   {
+    path: '/screen_b_mock',
+    name: 'ScreenB_Restore_Mock',
+    component: ScreenB_Restore_Mock
+  },
+  {
     path: '/clients',
     name: 'ScreenA',
-    component: ScreenA
+    component: () => import('../views/ScreenA_Clients.vue')
   },
   {
     path: '/clients/:code',
@@ -35,51 +33,102 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/journal-status',
     name: 'ScreenB_Status',
-    component: ScreenB
+    component: () => import('../views/ScreenB_JournalStatus.vue')
   },
   {
     path: '/jobs/:code',
     name: 'ScreenB_JournalStatus',
-    component: ScreenB,
+    component: () => import('../views/ScreenB_JournalStatus.vue'),
     props: true
   },
   {
     path: '/collection-status',
     name: 'ScreenC',
-    component: ScreenC
+    component: () => import('../components/ScreenC_CollectionStatus.vue')
   },
   {
     path: '/collection-status/:code',
     name: 'ScreenC_Detail',
-    component: ScreenC,
+    component: () => import('../components/ScreenC_CollectionStatus.vue'),
     props: true
-  },
-  {
-    path: '/workbench/:id',
-    name: 'JournalEditor',
-    component: ScreenE,
-    props: true
-  },
-  {
-    path: '/admin-settings',
-    name: 'AdminSettings',
-    component: ScreenZ
   },
   {
     path: '/ai-rules',
-    name: 'ScreenD_AIRules',
-    component: () => import('../views/ScreenD_AIRules.vue')
+    name: 'ScreenD',
+    component: () => import('@/views/ScreenD_AIRules.vue')
+  },
+  {
+    path: '/journal-entry/:jobId',
+    name: 'ScreenE',
+    component: () => import('../components/ScreenE_JournalEntry.vue'),
+    props: true
+  },
+
+  {
+    path: '/admin-settings',
+    name: 'ScreenZ',
+    component: () => import('../views/ScreenZ_AdminSettings.vue')
   },
   {
     path: '/data-conversion',
-    name: 'ScreenG_DataConversion',
-    component: () => import('../views/ScreenG_DataConversion.vue')
+    name: 'DataConversion',
+    component: () => import('@/views/ScreenG_DataConversion.vue')
   },
-  // Task Dashboard (Mirror World)
   {
     path: '/task-dashboard',
     name: 'TaskDashboard',
-    component: () => import('../views/ScreenH_TaskDashboard.vue')
+    component: () => import('@/views/ScreenH_TaskDashboard.vue')
+  },
+  // --- Phase 2: Isolation Debug Route (Authorized) ---
+  {
+    path: '/debug/version-check/screen-e',
+    name: 'ScreenE_VersionCheck',
+    component: () => import('../views/debug/ScreenE_VersionCheck.vue')
+  },
+  {
+    path: '/debug/screen-a-spec-test',
+    name: 'ScreenA_Spec_Test',
+    component: () => import('../views/debug/ScreenA_TestPage_Strict.vue')
+  },
+  {
+    path: '/debug/screen-c-spec-test',
+    name: 'ScreenC_Spec_Test',
+    component: () => import('../views/debug/ScreenC_TestPage_Strict.vue')
+  },
+  {
+    path: '/debug/screen-d-spec-test',
+    name: 'ScreenD_Spec_Test',
+    component: () => import('../views/debug/ScreenD_TestPage_Strict.vue')
+  },
+  {
+    path: '/debug/screen-g-spec-test',
+    name: 'ScreenG_Spec_Test',
+    component: () => import('../views/debug/ScreenG_TestPage_Strict.vue')
+  },
+  {
+    path: '/debug/screen-h-spec-test',
+    name: 'ScreenH_Spec_Test',
+    component: () => import('../views/debug/ScreenH_TestPage_Strict.vue')
+  },
+  {
+    path: '/debug/admin-spec-test',
+    name: 'Admin_Spec_Test',
+    component: () => import('../views/debug/Admin_TestPage_Strict.vue')
+  },
+  {
+    path: '/debug/screen-a-kill',
+    name: 'aaa_debug_screen_a_kill',
+    component: () => import('../views/debug/ScreenA_KillTest.vue')
+  },
+  {
+    path: '/debug/screen-b-kill',
+    name: 'aaa_debug_screen_b_kill',
+    component: () => import('../components/ScreenB_KillTest.vue')
+  },
+  {
+    path: '/debug/screen-g-kill',
+    name: 'aaa_debug_screen_g_kill',
+    component: () => import('../components/ScreenG_KillTest.vue')
   }
 ]
 
@@ -88,14 +137,44 @@ const router = createRouter({
   routes
 })
 
-// Navigation Guard for Global Logging and Authentication
-router.beforeEach((to, from, next) => {
-  // 1. Logging
-  addLog(`[Router] Navigating to: ${to.fullPath}`);
-
-
-
-  next();
+// Firebase認証状態の読み込みを待つPromise
+let authInitialized = false;
+const authReadyPromise = new Promise<void>((resolve) => {
+  import('@/utils/auth').then(({ onAuthStateChanged }) => {
+    const unsubscribe = onAuthStateChanged(() => {
+      if (!authInitialized) {
+        authInitialized = true;
+        resolve();
+        unsubscribe();
+      }
+    });
+  });
 });
 
+// 認証ガード（全環境で有効）
+router.beforeEach(async (to, from, next) => {
+  // ログインページへのアクセスは常に許可
+  if (to.path === '/login') {
+    next();
+    return;
+  }
+
+  // Firebase認証状態の読み込みを待つ
+  await authReadyPromise;
+
+  // 認証状態をチェック
+  const { getCurrentUser } = await import('@/utils/auth');
+  const user = getCurrentUser();
+
+  if (!user) {
+    // 未ログインの場合、ログインページにリダイレクト
+    console.log('[router] 未認証のため、ログインページにリダイレクトします');
+    next('/login');
+  } else {
+    // ログイン済みの場合、通常通りアクセス許可
+    next();
+  }
+})
+
 export default router
+

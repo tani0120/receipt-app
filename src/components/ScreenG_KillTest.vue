@@ -22,20 +22,20 @@
                   but since we are strictly testing the UI component, we might need a modified version or
                   just rely on the fact that we can manipulate the store if it was global.
                   However, here we are testing the VIEW.
-                  The view uses `useDataConversion`.
+                  The view uses `aaa_useDataConversion`.
                   To properly kill-test, we should probably mount a component that uses the *Mapper* directly
-                  or passes data to the sub-components (`G_HistoryItem`).
+                  or passes data to the sub-components (`aaa_G_HistoryItem`).
 
-                  Let's test the `G_HistoryItem` component in isolation with extreme data,
+                  Let's test the `aaa_G_HistoryItem` component in isolation with extreme data,
                   AND the full screen if we can mock the composable.
 
-                  For this Kill Test, we will render a list of `G_HistoryItem` with extreme props.
+                  For this Kill Test, we will render a list of `aaa_G_HistoryItem` with extreme props.
              -->
 
              <div class="bg-white h-full overflow-y-auto p-4">
-                <h3 class="font-bold mb-4">Component Isolation Test: G_HistoryItem</h3>
+                <h3 class="font-bold mb-4">Component Isolation Test: aaa_G_HistoryItem</h3>
                 <div class="flex flex-col gap-4">
-                    <G_HistoryItem
+                    <aaa_G_HistoryItem
                         v-for="log in stressLogs"
                         :key="log.id"
                         :log="log"
@@ -50,7 +50,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import G_HistoryItem from '@/components/ScreenG/G_HistoryItem.vue';
+import aaa_G_HistoryItem from '@/components/ScreenG/G_HistoryItem.vue';
 import type { ConversionLogUi } from '@/types/ScreenG_ui.type';
 
 const stressLogs = ref<ConversionLogUi[]>([]);

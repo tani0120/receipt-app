@@ -126,15 +126,6 @@
                     <div class="text-[10px] text-gray-400">AIプロンプト, GASプロンプト</div>
                 </div>
             </button>
-            <button @click="switchView('migration')" class="w-full text-left p-3 rounded-lg flex items-center gap-3 hover:bg-slate-50 hover:text-slate-600 transition group" :class="{'bg-slate-50 text-slate-600 border border-slate-100': currentView === 'migration'}">
-                 <div class="w-8 h-8 rounded bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-slate-200 group-hover:text-slate-600 transition">
-                    <i class="fa-solid fa-truck-fast"></i>
-                </div>
-                <div>
-                    <div class="font-bold text-sm">データ移行ツール (Dev)</div>
-                    <div class="text-[10px] text-gray-400">Migration Tester</div>
-                </div>
-            </button>
 
             <div class="pt-4 mt-4 border-t border-gray-100">
                 <div class="text-xs font-bold text-gray-400 px-2 mb-2 uppercase">External Links</div>
@@ -163,7 +154,7 @@
     </div>
 
     <!-- Modals -->
-    <Z_StaffModal
+    <aaa_Z_StaffModal
         :visible="isStaffModalOpen"
         @close="isStaffModalOpen = false"
         @save="handleStaffSave"
@@ -197,7 +188,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useAdminDashboard } from '@/composables/useAdminDashboard';
+import { aaa_useAdminDashboard } from '@/composables/useAdminDashboard';
 import type { RuleCategory, PromptItem } from '@/composables/useAdminDashboard';
 
 // Components
@@ -208,13 +199,12 @@ import ScreenZ_Rules from './ScreenZ/ScreenZ_Rules.vue';
 import ScreenZ_Prompts from './ScreenZ/ScreenZ_Prompts.vue';
 import ScreenZ_RuleDetail from './ScreenZ/ScreenZ_RuleDetail.vue';
 import ScreenZ_PromptDetail from './ScreenZ/ScreenZ_PromptDetail.vue';
-import Z_StaffModal from './ScreenZ/Z_StaffModal.vue';
-import MigrationTester from '@/components/debug/MigrationTester.vue';
+import aaa_Z_StaffModal from './ScreenZ/Z_StaffModal.vue';
 
-const { data } = useAdminDashboard();
+const { data } = aaa_useAdminDashboard();
 
 // View State
-type ViewType = 'dashboard' | 'settings' | 'masters' | 'rules' | 'prompts' | 'rules_detail' | 'prompts_detail' | 'migration';
+type ViewType = 'dashboard' | 'settings' | 'masters' | 'rules' | 'prompts' | 'rules_detail' | 'prompts_detail';
 const currentView = ref<ViewType>('dashboard');
 const currentRule = ref<RuleCategory | null>(null);
 const currentPrompt = ref<PromptItem | null>(null);
@@ -227,7 +217,6 @@ const activeComponent = computed(() => {
         case 'masters': return ScreenZ_Masters;
         case 'rules': return ScreenZ_Rules;
         case 'prompts': return ScreenZ_Prompts;
-        case 'migration': return MigrationTester;
         default: return ScreenZ_Dashboard;
     }
 });
@@ -240,7 +229,6 @@ const viewTitle = computed(() => {
         case 'prompts': return 'プロンプト編集';
         case 'rules_detail': return '共通処理ルール編集 - 詳細';
         case 'prompts_detail': return 'プロンプト編集 - 詳細';
-        case 'migration': return 'データ移行ツール (Migration Tester)';
         default: return 'Dashboard';
     }
 });
@@ -317,7 +305,7 @@ const handleStaffDelete = () => {
 // CSV Export
 const isCsvModalOpen = ref(false);
 const isDownloading = ref(false);
-const { downloadCsv } = useAdminDashboard();
+const { downloadCsv } = aaa_useAdminDashboard();
 
 const handleCsvDownload = async () => {
     isDownloading.value = true;

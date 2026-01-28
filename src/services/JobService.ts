@@ -29,7 +29,7 @@ export const JobService = {
       remandReason: '',
       updatedAt: Timestamp.now(),
       // Extra props for UI if allowed by type 'Job'?
-      // job.ts: interface Job extends Omit<FirestoreJob, 'status'> ...
+      // aaa_job.ts: interface Job extends Omit<FirestoreJob, 'status'> ...
       // FirestoreJob checks needed.
       // For now, let's just make sure the callback receives correct structure.
     } as any as Job));
