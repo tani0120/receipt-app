@@ -30,12 +30,15 @@ jobs:
         run: |
           ERROR_COUNT=$(npm run type-check 2>&1 | grep -oP 'Found \K\d+' || echo 0)
           echo "Current type errors: $ERROR_COUNT"
-          echo "Baseline: 282"
-          if [ $ERROR_COUNT -gt 282 ]; then
-            echo " Type errors increased: $ERROR_COUNT > 282"
+          # baseline=280（Phase 2で2個削減: accountingSoftware型定義修正）
+          # TS2724: 4件は技術的制約として別トラック管理
+          # 詳細: docs/type-assumptions.md
+          echo "Baseline: 280"
+          if [ $ERROR_COUNT -gt 280 ]; then
+            echo "❌ Type errors increased: $ERROR_COUNT > 280"
             exit 1
           fi
-          echo " Type Safety Policy Gate: PASS"
+          echo "✅ Type Safety Policy Gate: PASS"
       
       - name: Type error trend report
         run: |
