@@ -139,7 +139,7 @@ export interface Client {
    * Internal Symbol: ACCOUNTING_SOFT
    * Week 3: Added 'tkc'
    */
-  accountingSoftware: 'yayoi' | 'freee' | 'mf' | 'tkc' | 'other';
+  accountingSoftware: 'yayoi' | '弥生会計' | 'freee' | 'mf' | 'MFクラウド' | 'tkc' | 'other';
 
   /**
    * Prompt Injection for this specific client
