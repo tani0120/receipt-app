@@ -15,7 +15,7 @@ const SEED_CLIENTS: Client[] = [
         status: 'active',
         sharedFolderId: 'mock_AMT_shared_id',
         originalFolderId: 'mock_AMT_original_id',
-        accountingSoftware: 'MFクラウド',
+        accountingSoftware: 'mf',
         taxType: '青色',
         driveLinked: true,
         updatedAt: Timestamp.now()
@@ -43,7 +43,7 @@ const SEED_CLIENTS: Client[] = [
         status: 'suspension', // Assuming 'isActive: false' maps to suspension or inactive
         sharedFolderId: 'mock_EDL_shared_id',
         originalFolderId: 'mock_EDL_original_id',
-        accountingSoftware: '弥生会計',
+        accountingSoftware: 'yayoi',
         taxType: '青色',
         driveLinked: false,
         updatedAt: Timestamp.now()
@@ -57,7 +57,7 @@ const SEED_CLIENTS: Client[] = [
         status: 'active',
         sharedFolderId: 'mock_TNK_shared_id',
         originalFolderId: 'mock_TNK_original_id',
-        accountingSoftware: 'MFクラウド',
+        accountingSoftware: 'mf',
         taxType: '青色',
         driveLinked: true,
         updatedAt: Timestamp.now()
@@ -71,7 +71,7 @@ const SEED_CLIENTS: Client[] = [
         status: 'active',
         sharedFolderId: 'mock_SMP_shared_id',
         originalFolderId: 'mock_SMP_original_id',
-        accountingSoftware: '弥生会計',
+        accountingSoftware: 'yayoi',
         taxType: '青色',
         driveLinked: true,
         updatedAt: Timestamp.now()
