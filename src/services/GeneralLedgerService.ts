@@ -63,7 +63,7 @@ export class GeneralLedgerService {
         runningBalance += (monthlyChanges[m] || 0);
 
         const parts = key.split('::');
-        const acc = parts[0];
+        const acc = parts[0] || ''; // null guard: undefined -> ''
         const sub = parts[1];
 
         results.push({
