@@ -26,19 +26,38 @@ jobs:
         continue-on-error: true
         run: npm run type-check
       
-      - name: Type error baseline check
+      - name: Check error count
         run: |
-          ERROR_COUNT=$(npm run type-check 2>&1 | grep -oP 'Found \K\d+' || echo 0)
-          echo "Current type errors: $ERROR_COUNT"
-          # baseline=275（Phase 4 Part 1で5個削減: シードデータ修正）
-          # TS2724: 4件は技術的制約として別トラック管理
-          # 詳細: docs/type-assumptions.md
-          echo "Baseline: 275"
-          if [ $ERROR_COUNT -gt 275 ]; then
-            echo "❌ Type errors increased: $ERROR_COUNT > 275"
+          # Extract error count from log
+          # The previous step 'TypeScript type check' runs 'npm run type-check'.
+          # We need to capture its output to a file or re-run it to get the error count.
+          # For simplicity and to avoid re-running, we'll assume the output of the previous step
+          # is available or we re-run it here.
+          # The original script re-ran 'npm run type-check' to get the count.
+          # Let's adapt the PowerShell logic to capture output directly.
+          
+          # Re-run type check to capture output for error count extraction
+          # This assumes 'npm run type-check' outputs to stdout/stderr
+          ERROR_OUTPUT=$(npm run type-check 2>&1)
+          
+          # Use grep to extract the number of errors, similar to the original bash script
+          # This will work on ubuntu-latest which has grep
+          ERROR_COUNT=$(echo "$ERROR_OUTPUT" | grep -oP 'Found \K\d+' || echo 0)
+          
+          echo "Type errors found: $ERROR_COUNT"
+          
+          # Baseline: 261 errors (as of 2026-02-01, after Phase 4 Part 2 Layer 1 deletion)
+          # - Phase 2: 282 → 280 (-2 errors, OcrResult type refinement)
+          # - Phase 4 Part 1: 280 → 275 (-5 errors, seed data correction)
+          # - Phase 4 Part 2 Layer 1: 275 → 261 (-14 errors, 20 test/sample files deleted)
+          baseline=261
+          
+          if [ "$ERROR_COUNT" -gt "$baseline" ]; then
+            echo "❌ Type safety regressed! Found $ERROR_COUNT errors, baseline is $baseline"
             exit 1
           fi
-          echo "✅ Type Safety Policy Gate: PASS"
+          
+          echo "✅ Type safety check passed ($ERROR_COUNT <= $baseline)"
       
       - name: Type error trend report
         run: |
