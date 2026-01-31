@@ -1175,7 +1175,7 @@ export function aaa_useAccountingSystem() {
       };
 
       // Hono RPC
-      await client.api.clients.$post({ json: newClientRaw }); // Removed 'as any' to test schema
+      await client.api.clients.$post({ json: newClientRaw as ClientApi }); // Type assertion for RPC payload
       await fetchClients();
     } catch (e: unknown) {
       if (e instanceof Error) error.value = e.message;
