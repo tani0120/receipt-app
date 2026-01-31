@@ -546,7 +546,7 @@ watch(selectedJob, (newJob) => {
 function selectJob(index: number) {
     if (index >= 0 && index < jobs.value.length) {
         currentIndex.value = index;
-        selectedJob.value = jobs.value[index];
+        selectedJob.value = jobs.value[index] ?? null; // Guard: array access may return undefined
 
         // Reset Rows
         const job = selectedJob.value;
