@@ -1,0 +1,42 @@
+﻿7fa2fff 2026-01-30 docs: update security tasks - all 6 phases completed
+e001a28 2026-01-30 docs: add security implementation documentation for API key leak prevention
+a1a4ee7 2026-01-29 security: Remove hardcoded credentials from project files
+57a4f24 2026-01-27 fix: Cloud Build縺ｧ縺ｯ縺ｪ縺秀itHub Actions縺ｧ逶ｴ謗･Docker繝薙Ν繝・bab867c 2026-01-27 revert: 繧ｵ繝ｼ繝薙せ繧｢繧ｫ繧ｦ繝ｳ繝医く繝ｼ譁ｹ蠑上↓謌ｻ縺呻ｼ・orkload Identity Federation讓ｩ髯舌お繝ｩ繝ｼ縺ｮ縺溘ａ・・715982b 2026-01-27 trigger: 繧ｵ繝ｼ繝薙せ繧｢繧ｫ繧ｦ繝ｳ繝郁・蟾ｱ讓ｩ髯占ｿｽ蜉蠕後・蜀榊ｮ溯｡・dbcea0c 2026-01-27 trigger: Service Account Token Creator讓ｩ髯占ｿｽ蜉蠕後・GitHub Actions蜀榊ｮ溯｡・9b39391 2026-01-27 fix: 蟆ら畑繧ｵ繝ｼ繝薙せ繧｢繧ｫ繧ｦ繝ｳ繝・ithub-actions-sa繧剃ｽｿ逕ｨ
+8ab97a7 2026-01-27 trigger: 讓ｩ髯占ｨｭ螳壼ｾ後・GitHub Actions蜀榊ｮ溯｡・1c0bf59 2026-01-27 trigger: GitHub Actions蜀榊ｮ溯｡・94c3f75 2026-01-27 fix: gcloud builds submit縺九ｉ--build-arg繧貞炎髯､縲∫腸蠅・､画焚繧辰loud Run縺ｧ險ｭ螳・eeb6d7b 2026-01-27 feat: Workload Identity Federation繧剃ｽｿ逕ｨ縺励◆Cloud Run繝・・繝ｭ繧､險ｭ螳・6106c28 2026-01-11 Docs: Add .cursorrules to enforce Hono RPC architecture and forbid direct repository access
+bd88be8 2026-01-11 Fix: Restore missing constants in system_constants.ts and recover composables. Screen E works with Hono architecture.
+8418af6 2026-01-10 feat: Phase 4 Consolidation (V2 Repository Migration & Write Ops)
+20676db 2026-01-10 feat(phase3): Implement Pilot Screen H, Adapter Fix, and Repo Write Methods
+4a16d3b 2026-01-10 docs: Update Implementation Plan (Phase 2 Done, Phase 3 Vertical Slice Strategy)
+4265736 2026-01-10 feat(migration): Implement Phase 2 (Schema V2.8, Adapter, Tester)
+7fe605f 2026-01-10 docs: append NEXT_SESSION_BRIEF update for Schema V2.8 ROI and 5D Analytics
+d837d1b 2026-01-10 fix(ui): restore missing accounting fields in client edit modal and update docs
+f05a0b4 2026-01-10 docs: define technical implementation strategy (GAS trigger, Subcollection, Batch API)
+ffc3c26 2026-01-10 docs: finalize architecture strategy with full Firebase migration
+2758f6d 2026-01-10 docs: operationalize security, cancel screen C UI, and confirm AI model/schema
+00e9261 2026-01-10 docs: finalize NEXT_SESSION_BRIEF.md with strict formatting and model details
+a755a0a 2026-01-10 feat(core): Schema V2 adoption, Gemini 2.0 Flash integration, and cost optimization [skip ci]
+53d32d8 2026-01-09 Update file operation policy: promote implementation_plan.md to master file
+2899595 2026-01-09 Add implementation_plan.md as a tracked master file
+58d29b9 2026-01-09 Corrected formatting of NEXT_SESSION_BRIEF.md and translated Implementation Plan to Japanese
+e43b151 2026-01-09 Revert NEXT_SESSION_BRIEF.md to rich UI specification (commit ccaae69)
+d35de02 2026-01-09 Restore Rich UI Specification and Universal Logic Rules in NEXT_SESSION_BRIEF.md
+9f3c926 2026-01-09 Reorganize Universal OCR Schema definition in NEXT_SESSION_BRIEF.md
+8681cbb 2026-01-09 Mark Phase 2 as READY (Context Saved)
+ccaae69 2026-01-09 Add Universal OCR Schema & Logic definitions (Brief, Spec, Script)
+519c4b4 2026-01-09 docs: restore NEXT_SESSION_BRIEF.md and apply Japanese translations
+493b63e 2026-01-08 docs: Finalize Phase 2 Design Docs & Screen E UI Spec
+e74884b 2026-01-07 Fix: Restore Config, Relax IP/CORS for Local, Restore Routes D/G
+4006892 2026-01-07 feat: implement IP restriction and remove basic auth
+d85af04 2026-01-07 feat: Implement application-level authentication and fix production deployment
+2da8c7f 2026-01-07 Revert updated NEXT_SESSION_BRIEF.md to original technical version
+dd7cf99 2026-01-07 Update NEXT_SESSION_BRIEF.md: Status set to Environment Restored
+8b05ab7 2026-01-07 Restore workspace context and lost router/main configurations
+19adfb6 2026-01-06 Fix Cloud Run deployment: update server.ts, Dockerfile and Firebase config
+cc4f937 2026-01-05 Prepare for Cloud Run deployment
+a43a6d5 2026-01-05 fix: build config and server entry
+8f8af8b 2026-01-05 chore: Add Dockerfile for Cloud Run
+e591948 2026-01-05 feat: Implement worker infrastructure and fix lints
+4f94e5a 2026-01-05 docs: Update task.md and implementation_plan.md for Screen A
+0ebe46d 2026-01-05 feat(ScreenZ): Refine system settings and cleanup legacy IDs
+99b1a79 2026-01-04 chore: cleanup legacy code (mirror world, mocks, debug views) and remove mirror references
+62fbb6b 2026-01-04 feat(infra): setup firebase/gemini and implement action-driven journal finalize
