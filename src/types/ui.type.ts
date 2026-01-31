@@ -38,7 +38,14 @@ export type JobStatusUi =
   | 'completed'
   | 'error'
   | 'excluded'
-  | 'unknown';
+  | 'unknown'
+  // Layer 2 C型修正: ScreenB_LogicMaster.vue用の追加値
+  | 'ai_processing'      // AI処理中
+  | 'ready_for_work'     // 作業可能（1次仕訳待ち）
+  | 'primary_completed'  // 1次仕訳完了
+  | 'waiting_approval'   // 承認待ち
+  | 'remanded'           // 差戻し
+  | 'approved';          // 承認済み
 
 export type TaxRateUi =
   | 10
