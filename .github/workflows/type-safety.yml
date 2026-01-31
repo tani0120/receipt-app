@@ -46,11 +46,11 @@ jobs:
           
           echo "Type errors found: $ERROR_COUNT"
           
-          # Baseline: 261 errors (as of 2026-02-01, after Phase 4 Part 2 Layer 1 deletion)
+          # Baseline: 231 errors (as of 2026-02-01, after Phase 4 Part 2 Layer 1 deletion)
           # - Phase 2: 282 → 280 (-2 errors, OcrResult type refinement)
           # - Phase 4 Part 1: 280 → 275 (-5 errors, seed data correction)
           # - Phase 4 Part 2 Layer 1: 275 → 261 (-14 errors, 20 test/sample files deleted)
-          baseline=261
+          baseline=231
           
           if [ "$ERROR_COUNT" -gt "$baseline" ]; then
             echo "❌ Type safety regressed! Found $ERROR_COUNT errors, baseline is $baseline"
