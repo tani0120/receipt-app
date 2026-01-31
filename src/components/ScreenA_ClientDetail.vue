@@ -131,7 +131,7 @@
 
         <ScreenA_Detail_ConfirmModal
             :visible="confirmModal.visible"
-            :type="confirmModal.type"
+            :type="confirmModal.type as 'approve' | 'reject'"
             @cancel="confirmModal.visible = false"
             @confirm="handleConfirm"
         />
