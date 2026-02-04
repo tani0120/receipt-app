@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 
 import ScreenB_Restore_Mock from '@/views/debug/ScreenB_Restore_Mock.vue';
+import { mvpRoutes } from './routes/mvp';
 
 export const routes: RouteRecordRaw[] = [
   // ログインページ（認証不要）
@@ -12,6 +13,16 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: '/',
+    redirect: '/mode-select'
+  },
+  {
+    path: '/mode-select',
+    name: 'ModeSelect',
+    component: () => import('../views/ModeSelect.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/legacy',
     redirect: '/journal-status'
   },
   {
@@ -85,51 +96,9 @@ export const routes: RouteRecordRaw[] = [
     name: 'ScreenE_VersionCheck',
     component: () => import('../views/debug/ScreenE_VersionCheck.vue')
   },
-  {
-    path: '/debug/screen-a-spec-test',
-    name: 'ScreenA_Spec_Test',
-    component: () => import('../views/debug/ScreenA_TestPage_Strict.vue')
-  },
-  {
-    path: '/debug/screen-c-spec-test',
-    name: 'ScreenC_Spec_Test',
-    component: () => import('../views/debug/ScreenC_TestPage_Strict.vue')
-  },
-  {
-    path: '/debug/screen-d-spec-test',
-    name: 'ScreenD_Spec_Test',
-    component: () => import('../views/debug/ScreenD_TestPage_Strict.vue')
-  },
-  {
-    path: '/debug/screen-g-spec-test',
-    name: 'ScreenG_Spec_Test',
-    component: () => import('../views/debug/ScreenG_TestPage_Strict.vue')
-  },
-  {
-    path: '/debug/screen-h-spec-test',
-    name: 'ScreenH_Spec_Test',
-    component: () => import('../views/debug/ScreenH_TestPage_Strict.vue')
-  },
-  {
-    path: '/debug/admin-spec-test',
-    name: 'Admin_Spec_Test',
-    component: () => import('../views/debug/Admin_TestPage_Strict.vue')
-  },
-  {
-    path: '/debug/screen-a-kill',
-    name: 'aaa_debug_screen_a_kill',
-    component: () => import('../views/debug/ScreenA_KillTest.vue')
-  },
-  {
-    path: '/debug/screen-b-kill',
-    name: 'aaa_debug_screen_b_kill',
-    component: () => import('../components/ScreenB_KillTest.vue')
-  },
-  {
-    path: '/debug/screen-g-kill',
-    name: 'aaa_debug_screen_g_kill',
-    component: () => import('../components/ScreenG_KillTest.vue')
-  }
+
+  // --- Phase 6: MVP Routes (完全分離) ---
+  ...mvpRoutes,
 ]
 
 const router = createRouter({

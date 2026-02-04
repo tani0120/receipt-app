@@ -1,0 +1,8 @@
+﻿10,src/mocks/mockJobUi.ts
+6,src/views/debug/ScreenA_KillTest.vue
+5,src/services/JournalService.ts
+4,src/utils/dbSeeder.ts
+1,src/components/ScreenA_ClientDetail.vue
+1,src/composables/useAccountingSystem.ts
+1,src/components/ScreenE_JournalEntry.vue
+1,src/services/GeneralLedgerService.ts

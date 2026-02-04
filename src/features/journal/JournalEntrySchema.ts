@@ -268,7 +268,12 @@ export const JournalEntryDraftSchema = z.object({
 // 確定段階（ユーザー確認後）- optional禁止
 export const JournalEntrySchema = z.object({
   id: z.string().uuid(),
-  status: z.enum(['Submitted', 'Approved']),  // L1-3準拠
+  status: z.enum([
+    'Submitted',
+    'Approved',
+    'READY_FOR_WORK',  // Layer 2 C型修正: useJournalEditor.ts用
+    'REMANDED'         // Layer 2 C型修正: useJournalEditor.ts & ScreenE_Workbench.vue用
+  ]),  // L1-3準拠
 
   // 基本情報（必須）
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

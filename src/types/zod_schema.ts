@@ -91,6 +91,9 @@ export const RoundingSettingsSchema = z.enum(['floor', 'round', 'ceil']);
 // 1. Client Schema
 // ============================================================================
 export const ClientSchema = z.object({
+  // Unique Identifier (Phase 6.1: manual 4-char, Phase 7: ULID 26-char)
+  clientId: z.string(),
+
   // Basic Information
   clientCode: z.string(),
   companyName: z.string(),
