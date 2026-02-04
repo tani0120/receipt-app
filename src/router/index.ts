@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 
 import ScreenB_Restore_Mock from '@/views/debug/ScreenB_Restore_Mock.vue';
+import { mvpRoutes } from './routes/mvp';
 
 export const routes: RouteRecordRaw[] = [
   // ログインページ（認証不要）
@@ -12,6 +13,16 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: '/',
+    redirect: '/mode-select'
+  },
+  {
+    path: '/mode-select',
+    name: 'ModeSelect',
+    component: () => import('../views/ModeSelect.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/legacy',
     redirect: '/journal-status'
   },
   {
@@ -84,7 +95,10 @@ export const routes: RouteRecordRaw[] = [
     path: '/debug/version-check/screen-e',
     name: 'ScreenE_VersionCheck',
     component: () => import('../views/debug/ScreenE_VersionCheck.vue')
-  }
+  },
+
+  // --- Phase 6: MVP Routes (完全分離) ---
+  ...mvpRoutes,
 ]
 
 const router = createRouter({
