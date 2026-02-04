@@ -5,6 +5,8 @@
  * UI契約（props）の型定義
  */
 
+import type { Ref } from 'vue';
+
 /**
  * 顧問先の最小情報（DriveFileListUI用）
  */
@@ -34,7 +36,12 @@ export interface DriveFile {
 }
 
 /**
- * DriveFileListUI のコンポーネントプロパティ
+ * DriveFileListUI のコンポーネントプロパティ（UI契約 - 値のみ）
+ *
+ * 設計方針:
+ * - Props は値のみ（Ref / reactive を含めない）
+ * - Vue 依存を排除
+ * - 将来の再利用性を保証
  */
 export interface DriveFileListProps {
   // 顧問先（2社固定）
@@ -55,4 +62,27 @@ export interface DriveFileListProps {
   // イベント
   onSelectClient(clientId: string): void;
   onProcessFile(fileId: string): Promise<void>; // Gemini OCR実行
+}
+
+/**
+ * DriveFileListMock Composable の返り値（Ref を含む）
+ *
+ * Composable は状態管理に集中し、Ref を返してOK
+ * Adapter が UI契約（DriveFileListProps）に変換する
+ */
+export interface DriveFileListMockState {
+  // 顧問先（固定値）
+  clients: ClientStub[];
+
+  // リアクティブな状態（Ref）
+  selectedClientId: Ref<string | null>;
+  files: Ref<DriveFile[]>;
+  isLoadingFiles: Ref<boolean>;
+  processingFileId: Ref<string | null>;
+  createdJobId: Ref<string | null>;
+  error: Ref<string | null>;
+
+  // イベントハンドラ
+  onSelectClient(clientId: string): void;
+  onProcessFile(fileId: string): Promise<void>;
 }

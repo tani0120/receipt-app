@@ -9,14 +9,14 @@
  */
 
 import { ref } from 'vue';
-import type { DriveFileListProps, ClientStub, DriveFile } from '@/types/DriveFileList.types';
+import type { DriveFileListMockState, ClientStub, DriveFile } from '@/types/DriveFileList.types';
 
 /**
  * Mock Composable: DriveFileListUI
  *
- * @returns DriveFileListPropsを満たすオブジェクト
+ * @returns DriveFileListMockState（Refを含む）
  */
-export function useDriveFileListMock(): DriveFileListProps {
+export function useDriveFileListMock(): DriveFileListMockState {
   // ========================================
   // 1. 顧問先（2社固定）
   // ========================================
@@ -117,21 +117,19 @@ export function useDriveFileListMock(): DriveFileListProps {
   };
 
   // ========================================
-  // 5. UI契約を満たすオブジェクトを返す
+  // 5. 状態とイベントハンドラを返す（Refのまま）
   // ========================================
   return {
-    clients,
-    selectedClientId: selectedClientId.value,
-
-    files: files.value,
-    isLoadingFiles: isLoadingFiles.value,
-
-    processingFileId: processingFileId.value,
-
-    createdJobId: createdJobId.value,
-    error: error.value,
+    clients,              // 配列（固定値、変更なし）
+    selectedClientId,     // ref（リアクティブ）
+    files,                // ref（リアクティブ）
+    isLoadingFiles,       // ref（リアクティブ）
+    processingFileId,     // ref（リアクティブ）
+    createdJobId,         // ref（リアクティブ）
+    error,                // ref（リアクティブ）
 
     onSelectClient,
     onProcessFile,
   };
 }
+
