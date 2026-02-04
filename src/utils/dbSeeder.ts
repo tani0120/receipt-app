@@ -7,6 +7,7 @@ import type { Client } from "../types/firestore";
  */
 const SEED_CLIENTS: Client[] = [
     {
+        clientId: 'AMT1',
         clientCode: 'AMT',
         companyName: 'アマテラス商事',
         repName: '鈴木 一郎',
@@ -26,6 +27,7 @@ const SEED_CLIENTS: Client[] = [
         updatedAt: Timestamp.now()
     },
     {
+        clientId: 'GLB1',
         clientCode: 'GLB',
         companyName: 'グローバルテック',
         repName: '佐藤 花子',
@@ -45,6 +47,7 @@ const SEED_CLIENTS: Client[] = [
         updatedAt: Timestamp.now()
     },
     {
+        clientId: 'EDL1',
         clientCode: 'EDL',
         companyName: 'エンドレス建設',
         repName: '鈴木 一郎',
@@ -64,6 +67,7 @@ const SEED_CLIENTS: Client[] = [
         updatedAt: Timestamp.now()
     },
     {
+        clientId: 'TNK1',
         clientCode: 'TNK',
         companyName: '田中 歯科医院',
         repName: '田中 医師',
@@ -83,6 +87,7 @@ const SEED_CLIENTS: Client[] = [
         updatedAt: Timestamp.now()
     },
     {
+        clientId: 'SMP1',
         clientCode: 'SMP',
         companyName: 'サンプル株式会社',
         repName: '見本 太郎',

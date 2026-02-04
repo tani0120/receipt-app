@@ -189,6 +189,7 @@ export type JobUi = {
 };
 
 export interface ClientUi {
+  readonly clientId: string;
   readonly clientCode: string;
   readonly companyName: string;
   readonly repName: string;

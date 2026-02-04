@@ -51,6 +51,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
     if (!api || typeof api !== 'object') {
         // Fallback
         return {
+            clientId: 'UNKNOWN_ID',
             clientCode: 'Unknown',
             companyName: 'Unknown Client',
             repName: '',
@@ -97,13 +98,18 @@ export function mapClientApiToUi(api: unknown): ClientUi {
             taxCalculationMethodLabel: '積上計算',
             invoiceRegistrationLabel: '無',
             roundingSettingsLabel: '切り捨て',
-            typeLabel: '法人'
+            typeLabel: '法人',
+            actions: [
+                { type: 'edit' as const, label: '編集', isEnabled: true },
+                { type: 'delete' as const, label: '削除', isEnabled: false }
+            ]
         };
     }
 
     const raw = api as Record<string, unknown>;
 
     // Primitives with Safe Mapping
+    const clientId = safeString(raw.clientId) || 'UNKNOWN_ID';
     const clientCode = safeString(raw.clientCode) || 'Unknown';
     const companyName = safeString(raw.companyName) || 'Unknown Client';
     const repName = safeString(raw.repName);
@@ -217,6 +223,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
     const taxInfoLabel = `${taxMethodLabel} / ${shortCalc}`;
 
     return {
+        clientId,
         clientCode,
         companyName,
         repName,
@@ -262,6 +269,12 @@ export function mapClientApiToUi(api: unknown): ClientUi {
         taxCalculationMethodLabel,
         invoiceRegistrationLabel,
         roundingSettingsLabel,
-        typeLabel
+        typeLabel,
+
+        // Actions (BFF)
+        actions: [
+            { type: 'edit' as const, label: '編集', isEnabled: true },
+            { type: 'delete' as const, label: '削除', isEnabled: status === 'active' }
+        ]
     };
 }

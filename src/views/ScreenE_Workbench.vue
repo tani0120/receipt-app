@@ -1,4 +1,5 @@
 <template>
+  <!-- 🔴 Phase 6 動作確認マーカー 2026-02-01 10:20 UI・コード同期テスト中 -->
   <div class="h-screen flex flex-col bg-slate-100 font-sans overflow-hidden">
     <!-- Top Nav -->
     <header class="bg-white border-b border-slate-200 h-14 flex items-center justify-between px-4 shrink-0 z-20">
@@ -249,5 +250,6 @@ const isOptionDisabled = (optionCode: string, side: 'sales' | 'purchase') => {
     return false;
 };
 </script>
-F o r c i n g   a   f i l e   t o u c h   t o   t r i g g e r   H M R  
+F o r c i n g   a   f i l e   t o u c h   t o   t r i g g e r   H M R 
+ 
  

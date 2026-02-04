@@ -76,6 +76,9 @@ export interface Client {
   /** Document ID (Firestore auto-generated or clientCode) - TD-001対応 */
   id?: string;
 
+  /** Unique Identifier (Phase 6.1: manual 4-char, Phase 7: ULID 26-char) */
+  clientId: string;
+
   /** Internal Symbol: CLIENT_CODE */
   clientCode: string;
 
