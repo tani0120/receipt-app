@@ -21,7 +21,8 @@
     "type-check:features": "vue-tsc --build --force tsconfig.features.json",
     "type-check:legacy": "vue-tsc -p tsconfig.legacy.json --noEmit || exit 0",
     "lint": "eslint . --fix --cache",
-    "test": "vitest"
+    "test": "vitest",
+    "prepare": "husky"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.1.0",
@@ -55,6 +56,7 @@
     "esbuild": "^0.27.2",
     "eslint": "^9.39.1",
     "eslint-plugin-vue": "~10.5.1",
+    "husky": "^9.1.7",
     "jiti": "^2.6.1",
     "npm-run-all2": "^8.0.4",
     "postcss": "^8.5.6",

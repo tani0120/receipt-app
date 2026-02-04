@@ -1,0 +1,10 @@
+﻿#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# ggshield secret scan with full path
+if command -v ggshield \u003e/dev/null 2\u003e&1; then
+  ggshield secret scan pre-commit --verbose
+else
+  echo "Warning: ggshield not found, skipping secret scan"
+  exit 0
+fi
