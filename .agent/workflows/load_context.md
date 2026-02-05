@@ -2,7 +2,20 @@
 description: チャット開始時に設計書とルールを読み込む
 ---
 
-1. 以下のスクリプトを作成・実行して、Excel設計書の内容（シート一覧と重要な定義シート）を読み込みます。
+// turbo-all
+1. SESSION_START.md を読んで全体像を把握します。
+
+以下のファイルを view_file ツールで開いて確認してください:
+- `C:\Users\kazen\OneDrive\デスクトップ\ai_gogleanti\docs\sessions\SESSION_START.md`
+
+2. task.md を読んで現在のタスクを確認します。
+
+現在の会話の brain/ ディレクトリ内にある task.md を view_file ツールで確認してください。
+（会話IDごとに異なるため、具体的なパスは会話ID次第）
+
+3. （任意）Excel設計書の読み込み
+
+以下のスクリプトを作成・実行して、Excel設計書の内容（シート一覧と重要な定義シート）を読み込みます。
 
 ```javascript
 /* _read_context.cjs */
@@ -45,5 +58,5 @@ files.forEach(file => {
 });
 ```
 
-// turbo
-2. `node _read_context.cjs` を実行して、設計書の構造とルールをメモリにロードします。
+`node _read_context.cjs` を実行して、設計書の構造とルールをメモリにロードします。
+
