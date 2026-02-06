@@ -126,6 +126,21 @@ git -C C:\dev\receipt-app log --all --oneline --grep="api.*key|secret" --regexp-
 # チェック10: ハードコードされた本番URL/ID
 # ========================================
 git -C C:\dev\receipt-app diff HEAD | Select-String -Pattern "https://.*firebaseapp\.com|project.*id.*="
+
+# ========================================
+# チェック11: 未コミットファイルの妥当性確認
+# ========================================
+# 全未コミットファイルを確認
+git -C C:\dev\receipt-app status --short
+
+# 各ファイルの内容を確認してコミット要否を判断
+# - テストファイル（test_*.ts, test_*.jpg等）→ 除外
+# - 開発中ファイル（未実装機能）→ 除外
+# - ビルド成果物（dist/, node_modules/）→ 除外
+# - 本番コード修正 → コミット対象
+
+# 例: 差分確認
+git -C C:\dev\receipt-app diff HEAD [ファイル名]
 ```
 
 ---
@@ -164,9 +179,16 @@ pwd  # 期待値: C:\Users\kazen\OneDrive\デスクトップ\ai_gogleanti
 
 # チェック10: ハードコードされた本番URL/ID
 git -C C:\dev\receipt-app diff HEAD | Select-String -Pattern "https://.*firebaseapp\.com|project.*id.*="
+
+# ========================================
+# チェック11: 未コミットファイルの妥当性確認
+# ========================================
+git -C C:\dev\receipt-app status --short
+# 各ファイルがコミット対象か判断
+# テストファイル、開発中ファイルを除外
 ```
 
-**確認時間**: 10項目（約10分） → 6項目（約6分）、**40%削減** ✅
+**確認時間**: 10項目（約10分） → 7項目（約7分）、**30%削減** ✅
 
 ---
 
