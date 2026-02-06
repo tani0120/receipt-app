@@ -11,6 +11,7 @@ import aiRulesRoute from './api/routes/ai-rules'
 import adminRoute from './api/routes/admin'
 import workerRoute from './api/routes/worker'
 import aiModelsRoute from './api/routes/ai-models'
+import ocrRoute from './api/routes/ocr'
 
 // Phase 3: Firebase Admin SDK初期化
 if (!admin.apps.length) {
@@ -75,6 +76,9 @@ app.route('/api/admin', adminRoute)
 // Phase 4 Step 9-10: Worker and AI Routes (Final)
 app.route('/api/worker', workerRoute)
 app.route('/api/ai-models', aiModelsRoute)
+
+// Phase 6.3: OCR Route (Vertex AI)
+app.route('/api/ocr', ocrRoute)
 
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))

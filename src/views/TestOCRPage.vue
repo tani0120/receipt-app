@@ -1,6 +1,6 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref } from 'vue';
-import { executeOCRBrowser } from '@/api/gemini/ocr_service_browser';
+import { executeOCR } from '@/api/ocr/ocr_service';
 import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 
 // 単発テスト用
@@ -47,7 +47,7 @@ function onFileChange(event: Event) {
   }
 }
 
-async function executeOCR() {
+async function runOCR() {
   if (!selectedFile.value) {
     error.value = '画像ファイルを選択してください';
     return;
@@ -58,7 +58,7 @@ async function executeOCR() {
   result.value = null;
 
   try {
-    const ocrResult = await executeOCRBrowser(
+    const ocrResult = await executeOCR(
       selectedFile.value,
       'CL-001'
     );
@@ -109,7 +109,7 @@ async function run10TimesTest() {
 
       const startTime = performance.now();
 
-      const ocrResult = await executeOCRBrowser(
+      const ocrResult = await executeOCR(
         selectedFile.value,
         'CL-001'
       );
@@ -248,7 +248,7 @@ function calculateSummary(results: TestResult[]): TestSummary {
 
       <div class="action-section">
         <button
-          @click="executeOCR"
+          @click="runOCR"
           :disabled="!selectedFile || isProcessing"
           class="btn-primary"
         >

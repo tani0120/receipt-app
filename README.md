@@ -1,6 +1,14 @@
-# .
+# receipt-app
 
-This template should help get you started developing with Vue 3 in Vite.
+レシート画像をAIで解析し、会計仕訳を自動生成するWebアプリケーション
+
+## Vertex AI設定
+
+**本番環境モデル（2026-02-06確定）:**
+- モデル: `gemini-2.5-flash`
+- リージョン: `asia-northeast1`（東京）
+- 認証: ADC（Application Default Credentials）
+- サービスアカウント: `receipt-app-vertex@sugu-suru.iam.gserviceaccount.com`
 
 ## Recommended IDE Setup
 
