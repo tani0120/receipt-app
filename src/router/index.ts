@@ -99,6 +99,14 @@ export const routes: RouteRecordRaw[] = [
 
   // --- Phase 6: MVP Routes (完全分離) ---
   ...mvpRoutes,
+
+  // --- Phase 6.2-A: Gemini OCR Test (Browser) ---
+  {
+    path: '/test-ocr',
+    name: 'TestOCR',
+    component: () => import('@/views/TestOCRPage.vue'),
+    meta: { requiresAuth: true }
+  },
 ]
 
 const router = createRouter({
