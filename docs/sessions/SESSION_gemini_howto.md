@@ -1,8 +1,10 @@
 # Gemini 3 Flash 自律型会計監査システム完全ガイド
 
 **作成日**: 2026-02-05  
-**最終更新**: 2026-02-05 18:50  
+**最終更新**: 2026-02-07（Vertex AI SDK実装完了、Flash採用決定追記）  
 **目的**: Phase 6.2以降のBackend実装における、Gemini 3 Flash + Agentic Vision + Context Cachingの実装方法を網羅的に記録
+
+> **2026-02-07 更新**: Phase 6.3完了。Vertex AI SDK + Context Cache実装完了、Gemini 2.5 Flash採用（べき等性10/10達成）。
 
 ---
 
@@ -30,16 +32,20 @@
 **Phase 6.3以降**: 通帳・クレカ（連続証憑）
 
 ### **目標**
-- **処理単価**: 1枚5円以下（目標2〜3円）
+- **処理単価**: 1枚5円以下（目標2〜3円）→ **実測¥0.19/回達成**
 - **精度**: 95%以上（T番号一致時は99.9%）
-- **速度**: 1枚あたり3秒以内
+- **速度**: 1枚あたり3秒以内 → **実測17-22秒**（要改善）
 
-### **技術スタック**
-- **AI**: Gemini 3 Flash（速度・コスト重視）
-- **救済AI**: Gemini 3 Pro（複雑ケースのみ）
+### **技術スタック（Phase 6.3確定版）**
+- **AI**: Gemini 2.5 Flash（速度・コスト・べき等性のバランス最良）
+  - ❌ Gemini 2.5 Pro: コスト10倍でべき等性向上せず
+- **SDK**: `@google-cloud/vertexai`（Vertex AI SDK）
+  - ❌ `@google/generative-ai`: Gemini APIブラウザ版（Phase 6.2で使用）
 - **キャッシュ**: Context Caching（マスタデータ保持）
-- **検算**: Python code_execution（物理的な計算）
-- **自律修正**: Agentic Vision（ズーム再読み込み）
+  - TTL: 1時間
+  - キー形式: `client_id:master_file_path:model_name`
+- **認証**: ADC（Application Default Credentials）
+- **リージョン**: asia-northeast1（東京）
 
 ---
 

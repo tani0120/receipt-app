@@ -76,6 +76,19 @@ ggshield secret scan --verbose
 
 ```powershell
 # ========================================
+# チェック0: VS Codeワークスペース確認（最優先）
+# ========================================
+# VS Codeエクスプローラーで確認:
+# - 「未設定」のワークスペースセクションに `C:\dev\receipt-app` が表示されているか
+# - もし表示されていない場合:
+#   1. ファイル → フォルダーをワークスペースに追加
+#   2. C:\dev\receipt-app を選択
+#   3. 追加ボタンをクリック
+# 
+# 理由: ワークスペース未追加 → AIがC:\dev\receipt-app内のファイルにアクセス不可
+# 実施日: 2026-02-06にワークスペース追加完了
+
+# ========================================
 # チェック1: テストユーザーID/パスワード
 # ========================================
 git -C C:\dev\receipt-app diff HEAD | Select-String -Pattern "password|user.*id|admin@|test.*user" -Context 1
@@ -115,7 +128,8 @@ git -C C:\dev\receipt-app diff HEAD | Select-String -Pattern "//.*TODO|//.*FIXME
 # ========================================
 # チェック8: OneDrive配下での誤操作
 # ========================================
-pwd  # 期待値: C:\Users\kazen\OneDrive\デスクトップ\ai_gogleanti（ドキュメントのみ）
+pwd  # 期待値: C:\dev\receipt-app
+# ❌ C:\Users\kazen\OneDrive\デスクトップ\ai_gogleanti で git commit は禁止
 
 # ========================================
 # チェック9: Git履歴の機密情報
@@ -147,9 +161,15 @@ git -C C:\dev\receipt-app diff HEAD [ファイル名]
 
 ### **Phase 2: husky導入後（次のセッションから）**
 
-#### **簡略化されたチェックリスト（6項目のみ）**
+#### **簡略化されたチェックリスト（7項目のみ）**
 
 ```powershell
+# ========================================
+# 優先確認（チェック不要ではない）
+# ========================================
+# チェック0: VS Codeワークスペース確認
+# VS Codeエクスプローラーで C:\dev\receipt-app が表示されているか確認
+
 # ========================================
 # 自動化済み（チェック不要）
 # ========================================
@@ -175,7 +195,8 @@ git -C C:\dev\receipt-app diff HEAD .github/workflows/type-safety.yml | Select-S
 git -C C:\dev\receipt-app diff HEAD | Select-String -Pattern "//.*TODO|//.*FIXME"
 
 # チェック8: OneDrive配下での誤操作
-pwd  # 期待値: C:\Users\kazen\OneDrive\デスクトップ\ai_gogleanti
+pwd  # 期待値: C:\dev\receipt-app
+# ❌ C:\Users\kazen\OneDrive\デスクトップ\ai_gogleanti で git commit は禁止
 
 # チェック10: ハードコードされた本番URL/ID
 git -C C:\dev\receipt-app diff HEAD | Select-String -Pattern "https://.*firebaseapp\.com|project.*id.*="
@@ -188,7 +209,7 @@ git -C C:\dev\receipt-app status --short
 # テストファイル、開発中ファイルを除外
 ```
 
-**確認時間**: 10項目（約10分） → 7項目（約7分）、**30%削減** ✅
+**確認時間**: 11項目（約11分） → 7項目（約7分）、**36%削減** ✅
 
 ---
 
@@ -331,8 +352,8 @@ api.*key, API_KEY, secret, password, token
 **確認方法**:
 ```powershell
 pwd
-# 期待値: C:\Users\kazen\OneDrive\デスクトップ\ai_gogleanti（ドキュメントのみOK）
-# ❌ C:\dev\receipt-app で git commit は禁止
+# 期待値: C:\dev\receipt-app
+# ❌ C:\Users\kazen\OneDrive\デスクトップ\ai_gogleanti で git commit は禁止
 ```
 
 **husky導入後**: ⚠️ **人間の確認が必要**（作業ディレクトリ確認）
