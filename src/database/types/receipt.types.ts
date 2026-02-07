@@ -3,14 +3,8 @@
  * Streamed互換設計
  */
 
-export type ReceiptStatus =
-    | 'uploaded'
-    | 'preprocessed'
-    | 'ocr_done'
-    | 'suggested'
-    | 'reviewing'
-    | 'confirmed'
-    | 'rejected';
+import type { ReceiptStatus } from '@/shared/receiptStatus'
+
 
 export interface Receipt {
     id: string;

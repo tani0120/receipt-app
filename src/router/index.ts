@@ -107,6 +107,15 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/TestOCRPage.vue'),
     meta: { requiresAuth: true }
   },
+
+  // --- Phase 2: Receipt Detail (status駆動UI) ---
+  {
+    path: '/receipts/:id',
+    name: 'ReceiptDetail',
+    component: () => import('@/views/ReceiptDetail.vue'),
+    props: true,
+    meta: { requiresAuth: true }
+  },
 ]
 
 const router = createRouter({
