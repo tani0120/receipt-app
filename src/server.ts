@@ -11,7 +11,7 @@ import aiRulesRoute from './api/routes/ai-rules'
 import adminRoute from './api/routes/admin'
 import workerRoute from './api/routes/worker'
 import aiModelsRoute from './api/routes/ai-models'
-import ocrRoute from './api/routes/ocr'
+import receiptsRoute from './api/routes/receipts'
 
 // Phase 3: Firebase Admin SDK初期化
 if (!admin.apps.length) {
@@ -77,8 +77,17 @@ app.route('/api/admin', adminRoute)
 app.route('/api/worker', workerRoute)
 app.route('/api/ai-models', aiModelsRoute)
 
-// Phase 6.3: OCR Route (Vertex AI)
-app.route('/api/ocr', ocrRoute)
+// Phase 6.3: OCR Route (Vertex AI) - 遅延import
+if (process.env.ENABLE_OCR === 'true') {
+    const { default: ocrRoute } = await import('./api/routes/ocr')
+    app.route('/api/ocr', ocrRoute)
+    console.log('✅ OCR Route enabled')
+} else {
+    console.log('⚠️ OCR Route disabled (ENABLE_OCR not set to true)')
+}
+
+// Phase 1 Step 1.4: Receipts Route (PostgreSQL統合)
+app.route('/api/receipts', receiptsRoute)
 
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
