@@ -156,9 +156,24 @@ type JournalEntryStatus =
      evidenceUrl?: string
      totalDebit: number
      totalCredit: number
-     lines: JournalLine[]
+     lines: JournalLineVM[]
      // ... その他必須フィールド
    }
+   
+   // 🔒 Phase 4における鉄のルール: UI表示とUI状態判断に必要な最小単位
+   export interface JournalLineVM {
+     id: string                // key / diff用
+     accountCode: string       // UI必須
+     accountName?: string      // 可読性（optional）
+     debit: number             // UI状態判断
+     credit: number            // UI状態判断
+   }
+   
+   // ❌ Phase 4では含めない（Phase 5送り）:
+   // - subAccount（補助科目） → UI分岐複雑化、業務仕様UI
+   // - taxType（消費税区分） → 計算・検証ロジック、会計ロジック
+   // - taxRate → 同上
+   // - memo → 編集UX拡張
    ```
 
 3. [ ] `normalizeJournalEntry()`実装（Store層）
@@ -166,13 +181,34 @@ type JournalEntryStatus =
    - `totalDebit` / `totalCredit` を0で初期化
    - optional地獄を除去
 
+4. [ ] `normalizeJournalLine()`実装（鉄のルール）
+   ```typescript
+   function normalizeJournalLine(raw: any): JournalLineVM {
+     return {
+       id: raw.id ?? crypto.randomUUID(),
+       accountCode: raw.accountCode ?? 'unknown',
+       accountName: raw.accountName,  // あればそのまま
+       debit: Number(raw.debit ?? 0),
+       credit: Number(raw.credit ?? 0),
+     }
+   }
+   ```
+   
+   **鉄のルール**:
+   - ❌ 税判定しない
+   - ❌ 補助科目触らない
+   - ✅ UIが壊れないことだけ保証
+
 **完了条件**:
 - ✅ `journalEntryStatus.ts`作成
 - ✅ `JournalEntryViewModel`定義
+- ✅ `JournalLineVM`定義（最小構成）
 - ✅ `normalizeJournalEntry()`実装
+- ✅ `normalizeJournalLine()`実装
 - ✅ 型安全性確保
 
 **推定工数**: 小（3-5時間）
+
 
 ---
 
