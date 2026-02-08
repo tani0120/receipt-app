@@ -128,134 +128,264 @@ type JournalEntryStatus =
 
 **目的**: Phase 2パターンをJournal domainに適用
 
+**配置方針**: 選択肢A（journalStore.ts新規作成）を採用
+- Phase 2と同じパターン（receiptStore.ts → normalizeReceipt）
+- 将来のstate管理も同じファイルに追加可能
+- `stores/` = unknown → UI-safe な変換の防波堤
+- `adapters/` = domain ↔ UI の型安全な変換（役割が異なる）
+
 **タスク**:
-1. [ ] `journalEntryStatus.ts`作成（共有型定義）
-   ```typescript
-   export type JournalEntryStatus = 
-     | 'draft'
-     | 'suggested'
-     | 'reviewing'
-     | 'remanded'
-     | 'confirmed'
-     | 'excluded'
 
-   export type JournalUiMode =
-     | 'loading'
-     | 'editable'
-     | 'readonly'
-     | 'remanded'
-     | 'fallback'
-   ```
+#### 4.2.1: `journalEntryStatus.ts`作成
 
-2. [ ] `JournalEntryViewModel`作成
-   ```typescript
-   export interface JournalEntryViewModel {
-     id: string
-     clientCode: string
-     status: JournalEntryStatus
-     evidenceUrl?: string
-     totalDebit: number
-     totalCredit: number
-     lines: JournalLineVM[]
-     // ... その他必須フィールド
-   }
-   
-   // 🔒 Phase 4における鉄のルール: UI表示とUI状態判断に必要な最小単位
-   export interface JournalLineVM {
-     id: string                // key / diff用
-     accountCode: string       // UI必須
-     accountName?: string      // 可読性（optional）
-     debit: number             // UI状態判断
-     credit: number            // UI状態判断
-   }
-   
-   // ❌ Phase 4では含めない（Phase 5送り）:
-   // - subAccount（補助科目） → UI分岐複雑化、業務仕様UI
-   // - taxType（消費税区分） → 計算・検証ロジック、会計ロジック
-   // - taxRate → 同上
-   // - memo → 編集UX拡張
-   ```
+**ファイル**: `src/shared/journalEntryStatus.ts`
 
-3. [ ] `normalizeJournalEntry()`実装（Store層）
-   - 不正status → 'draft'にフォールバック
-   - `totalDebit` / `totalCredit` を0で初期化
-   - optional地獄を除去
+```typescript
+/**
+ * Journal Entry Status定義
+ * 
+ * 5つの状態:
+ * - Draft: OCR直後（編集中）
+ * - Submitted: 提出済み
+ * - Approved: 承認済み
+ * - READY_FOR_WORK: 1次作業待ち
+ * - REMANDED: 差戻し状態
+ * 
+ * 参照元: JournalEntrySchema.ts L271-276
+ */
 
-4. [ ] `normalizeJournalLine()`実装（鉄のルール）
-   ```typescript
-   function normalizeJournalLine(raw: any): JournalLineVM {
-     return {
-       id: raw.id ?? crypto.randomUUID(),
-       accountCode: raw.accountCode ?? 'unknown',
-       accountName: raw.accountName,  // あればそのまま
-       debit: Number(raw.debit ?? 0),
-       credit: Number(raw.credit ?? 0),
-     }
-   }
-   ```
-   
-   **鉄のルール**:
-   - ❌ 税判定しない
-   - ❌ 補助科目触らない
-   - ✅ UIが壊れないことだけ保証
+export const JOURNAL_ENTRY_STATUSES = [
+  'Draft',
+  'Submitted', 
+  'Approved',
+  'READY_FOR_WORK',
+  'REMANDED'
+] as const
+
+export type JournalEntryStatus = typeof JOURNAL_ENTRY_STATUSES[number]
+
+export function isJournalEntryStatus(value: unknown): value is JournalEntryStatus {
+  return typeof value === 'string' && JOURNAL_ENTRY_STATUSES.includes(value as JournalEntryStatus)
+}
+```
+
+---
+
+#### 4.2.2: `journalLineVM.ts`作成
+
+**ファイル**: `src/types/journalLineVM.ts`
+
+```typescript
+/**
+ * JournalLineVM (Journal Line View Model)
+ * 
+ * UI表示用の最小構成:
+ * - id: 識別子
+ * - accountCode: 勘定科目コード（必須）
+ * - accountName: 勘定科目名（オプショナル、UI表示用）
+ * - debit: 借方金額
+ * - credit: 貸方金額
+ * 
+ * Phase 5送り:
+ * - subAccount（補助科目）
+ * - taxType, taxRate（税区分・税率）
+ * - memo（メモ）
+ */
+
+export interface JournalLineVM {
+  id: string
+  accountCode: string
+  accountName?: string
+  debit: number
+  credit: number
+}
+```
+
+---
+
+#### 4.2.3: `journalEntryViewModel.ts`作成
+
+**ファイル**: `src/types/journalEntryViewModel.ts`
+
+```typescript
+import type { JournalEntryStatus } from '@/shared/journalEntryStatus'
+import type { JournalLineVM } from './JournalLineVM'
+
+/**
+ * JournalEntryViewModel
+ * 
+ * UI表示用のJournal Entry構造:
+ * - id: 識別子
+ * - status: 5つの状態（Draft, Submitted, Approved, READY_FOR_WORK, REMANDED）
+ * - clientId: 顧問先ID
+ * - lines: 仕訳明細行（JournalLineVMの配列）
+ */
+
+export interface JournalEntryViewModel {
+  id: string
+  status: JournalEntryStatus
+  clientId: string
+  lines: JournalLineVM[]
+}
+```
+
+---
+
+#### 4.2.4: `journalStore.ts`作成
+
+**ファイル**: `src/stores/journalStore.ts`
+
+```typescript
+/**
+ * journalStore
+ * 
+ * 責務:
+ * - unknown / 外部入力を UI-safe な ViewModel に正規化する
+ * - domain ↔ UI の型安全な変換は adapters 層の責務
+ * 
+ * Pattern:
+ * - Phase 2 の receiptStore.ts と同じパターン
+ * - Phase 5 で state管理を追加する場合もこのファイルに追加
+ */
+
+import type { JournalEntryViewModel } from '@/types/JournalEntryViewModel'
+import type { JournalLineVM } from '@/types/JournalLineVM'
+import { isJournalEntryStatus } from '@/shared/journalEntryStatus'
+
+/**
+ * unknown を JournalEntryViewModel に正規化
+ * 
+ * 防御的な実装:
+ * - 型が不正な場合はデフォルト値を使用
+ * - UIが壊れないことを最優先
+ */
+export function normalizeJournalEntry(raw: unknown): JournalEntryViewModel {
+  const rawObj = raw as Record<string, unknown>
+  
+  return {
+    id: String(rawObj.id ?? ''),
+    status: isJournalEntryStatus(rawObj.status) ? rawObj.status : 'Draft',
+    clientId: String(rawObj.clientId ?? ''),
+    lines: Array.isArray(rawObj.lines) 
+      ? rawObj.lines.map(normalizeJournalLine) 
+      : []
+  }
+}
+
+/**
+ * unknown を JournalLineVM に正規化
+ * 
+ * 鉄のルール:
+ * ❌ 税判定しない
+ * ❌ 補助科目触らない
+ * ✅ UIが壊れないことだけ保証
+ */
+export function normalizeJournalLine(raw: unknown): JournalLineVM {
+  const rawObj = raw as Record<string, unknown>
+  
+  return {
+    id: String(rawObj.id ?? ''),
+    accountCode: String(rawObj.accountCode ?? ''),
+    accountName: rawObj.accountName ? String(rawObj.accountName) : undefined,
+    debit: typeof rawObj.debit === 'number' ? rawObj.debit : 0,
+    credit: typeof rawObj.credit === 'number' ? rawObj.credit : 0
+  }
+}
+
+// NOTE: Phase 5以降で useJournalStore() を追加予定
+```
+
+---
 
 **完了条件**:
-- ✅ `journalEntryStatus.ts`作成
-- ✅ `JournalEntryViewModel`定義
-- ✅ `JournalLineVM`定義（最小構成）
-- ✅ `normalizeJournalEntry()`実装
-- ✅ `normalizeJournalLine()`実装
+- ✅ `src/shared/journalEntryStatus.ts` 作成
+- ✅ `src/types/journalLineVM.ts` 作成
+- ✅ `src/types/journalEntryViewModel.ts` 作成
+- ✅ `src/stores/journalStore.ts` 作成
 - ✅ 型安全性確保
+- ✅ Phase 2パターン完全踏襲
 
-**推定工数**: 小（3-5時間）
+**推定工数**: 小（2-3時間）
 
 
 ---
 
 ### Step 4.3: UI条件分岐（status駆動化）
 
-**目的**: ScreenE_Workbench.vueをstatus駆動UIに変換
+**目的**: ScreenE_Workbench.vueを完全なstatus駆動UIに変換
 
-**タスク**:
-1. [ ] `uiMode` computed プロパティ実装
-   ```typescript
-   const uiMode = computed<JournalUiMode>(() => {
-     if (!entry.value) return 'loading'
-     
-     switch (entry.value.status) {
-       case 'draft':
-       case 'suggested':
-         return 'editable'
-       case 'reviewing':
-       case 'confirmed':
-         return 'readonly'
-       case 'remanded':
-         return 'remanded'
-       default:
-         return 'fallback'
-     }
-   })
-   ```
+**方針**: モック段階だが、uiModeへの完全集約を達成し設計汚染を防ぐ
 
-2. [ ] UIコンポーネント分割（必要に応じて）
-   - EditableJournalView.vue
-   - ReadonlyJournalView.vue
-   - RemandedJournalView.vue
-   - または既存のScreenE_Workbench.vueを直接改修
+#### Status → UiMode マッピング（確定版）
 
-3. [ ] 暗黙ロジック除去
-   - ❌ `v-if="entry"` → ✅ `v-if="uiMode === 'editable'"`
-   - ❌ `entry.status === 'remanded'` → ✅ `uiMode === 'remanded'"`
-   - ❌ `entry.totalDebit?.toLocaleString()` → ✅ `entry.totalDebit.toLocaleString()`
-   - ❌ `v-if="entry.evidenceUrl"` → 子コンポーネントに隔離
+```typescript
+const uiMode = computed<JournalUiMode>(() => {
+  if (!entry.value) return 'loading'
+  
+  switch (entry.value.status) {
+    case 'READY_FOR_WORK':
+      return 'editable'
+    case 'REMANDED':
+      return 'remanded'
+    case 'Submitted':
+    case 'Approved':
+      return 'readonly'
+    default:
+      return 'fallback'  // Draft等、schema未定義の状態
+  }
+})
+```
 
-**完了条件**:
-- ✅ `uiMode` computed実装
-- ✅ status直接参照を除去
-- ✅ optional chaining除去
-- ✅ データ推測ロジック除去
+**注**: `Draft` status はJournalEntrySchemaに未定義のため `fallback` 扱い（Phase 5で決定）
 
-**推定工数**: 中（5-8時間）
+#### 実装タスク
+
+**実装する（承認済み）**:
+
+1. ✅ **Status Badge の uiMode 化**（L17-20）
+   - ❌ `entry.status === 'remanded' ? ... : ...`
+   - ✅ `:class="{ 'bg-green-100': uiMode === 'editable', ... }"`
+   - 4色の色分け: editable=緑、remanded=赤、readonly=青、fallback=グレー
+
+2. ✅ **totalCredit 表示の computed 化**（L175）
+   - ❌ `entry.totalCredit?.toLocaleString() || 0`
+   - ✅ `totalCredit.toLocaleString()`
+
+3. ✅ **入力フィールド disabled 制御**
+   - ヘッダー情報（3項目）: 取引日、取引先名、T番号
+   - 仕訳明細行（7項目/行）: 借方科目、借方税区分、借方金額、貸方科目、貸方税区分、貸方金額、摘要
+   - すべてに `:disabled="uiMode === 'readonly'"` を追加
+
+4. ✅ **行追加ボタン disabled 制御**（L144-146）
+   - 理由: readonly で行追加できると「追加後編集不可」という矛盾
+
+5. ✅ **削除ボタン（×）disabled 制御**（L136-138）
+   - 理由: 削除は編集の一種、readonly で可能だと破綻
+
+**実装しない（確定）**:
+
+- ❌ **一時保存/提出ボタンの制御変更**
+  - 理由: useJournalEditor の責務、UI側で二重制御すると混乱
+  - Phase 5のバックエンド実装時に判断
+
+#### 完了条件
+
+- ✅ `uiMode` computed 実装
+- ✅ status 直接参照ゼロ（`entry.status ===` なし）
+- ✅ optional chaining 除去（totalDebit/totalCredit）
+- ✅ すべての入力・ボタンが uiMode ベースで制御
+- ✅ readonly の意味が画面全体で一貫
+
+#### 設計的意義
+
+この実装により以下を達成:
+- **status 直接参照ゼロ** - UI条件はすべて uiMode ベース
+- **編集可否の完全集約** - 散らばった条件分岐を1箇所に
+- **readonly の一貫性** - 「触れないが見える」が画面全体で統一
+
+→ 「UI条件分岐を status 駆動にする」を思想・実装・UX すべてで達成
+
+**推定工数**: 中（2-3時間）
 
 ---
 
