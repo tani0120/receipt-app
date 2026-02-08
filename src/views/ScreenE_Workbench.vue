@@ -15,14 +15,19 @@
       <div>
          <!-- Status Indicator -->
          <span v-if="entry" class="text-sm font-bold px-3 py-1 rounded-full"
-            :class="entry.status === 'remanded' ? 'bg-red-100 text-red-700' : 'bg-blue-50 text-blue-700'">
+            :class="{
+              'bg-green-100 text-green-700': uiMode === 'editable',
+              'bg-red-100 text-red-700': uiMode === 'remanded',
+              'bg-blue-50 text-blue-700': uiMode === 'readonly',
+              'bg-gray-100 text-gray-700': uiMode === 'fallback'
+            }">
              {{ entry.status }}
          </span>
       </div>
     </header>
 
     <!-- Main Split View -->
-    <div class="flex-1 flex overflow-hidden" v-if="entry">
+    <div class="flex-1 flex overflow-hidden" v-if="uiMode !== 'loading'">
 
       <!-- Left: Evidence (PDF/Image Viewer) -->
       <div class="w-1/2 bg-slate-800 relative flex items-center justify-center border-r border-slate-300">
@@ -50,16 +55,19 @@
                  <!-- Simple Date Input binding to Date object might need formatting helper in v-model. Using ISO string for simple input type=date -->
                  <input type="date" :value="entry.transactionDate.toISOString().substr(0,10)"
                         @input="e => entry!.transactionDate = new Date((e.target as HTMLInputElement).value)"
+                        :disabled="uiMode === 'readonly'"
                         class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
              </div>
              <div>
                  <label class="block text-xs font-bold text-slate-500 mb-1">取引先名</label>
                  <input v-model="entry.vendorName" type="text"
+                        :disabled="uiMode === 'readonly'"
                         class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
              </div>
              <div>
                  <label class="block text-xs font-bold text-slate-500 mb-1">T番号</label>
                  <input v-model="entry.tNumber" type="text" placeholder="T0000000000000"
+                        :disabled="uiMode === 'readonly'"
                         class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" />
              </div>
         </div>
@@ -133,7 +141,7 @@
 
                          <!-- Actions -->
                          <td class="text-center">
-                             <button @click="removeRow(idx)" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                             <button @click="removeRow(idx)" :disabled="uiMode === 'readonly'" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
                                  ×
                              </button>
                          </td>
@@ -141,7 +149,7 @@
                  </tbody>
              </table>
 
-             <button @click="addRow" class="mt-4 text-blue-600 text-sm hover:underline flex items-center gap-1">
+             <button @click="addRow" :disabled="uiMode === 'readonly'" class="mt-4 text-blue-600 text-sm hover:underline flex items-center gap-1">
                  + 行を追加
              </button>
         </div>
@@ -168,11 +176,11 @@
                 <div class="flex gap-6 text-sm">
                     <div>
                         <span class="text-slate-500 block text-xs mb-0.5">借方合計</span>
-                        <span class="font-mono font-bold text-lg text-slate-700">{{ entry.totalDebit?.toLocaleString() || 0 }}</span>
+                        <span class="font-mono font-bold text-lg text-slate-700">{{ totalDebit.toLocaleString() }}</span>
                     </div>
                     <div>
                         <span class="text-slate-500 block text-xs mb-0.5">貸方合計</span>
-                        <span class="font-mono font-bold text-lg text-slate-700">{{ entry.totalCredit?.toLocaleString() || 0 }}</span>
+                        <span class="font-mono font-bold text-lg text-slate-700">{{ totalCredit.toLocaleString() }}</span>
                     </div>
                     <div>
                         <span class="text-slate-500 block text-xs mb-0.5">差額</span>
@@ -200,7 +208,7 @@
     </div>
 
     <!-- Loading State -->
-    <div v-else class="flex-1 flex items-center justify-center text-slate-400">
+    <div v-if="uiMode === 'loading'" class="flex-1 flex items-center justify-center text-slate-400">
         <div class="flex flex-col items-center">
             <span class="animate-spin h-8 w-8 border-4 border-slate-200 border-t-blue-500 rounded-full mb-3"></span>
             読み込み中...
@@ -210,8 +218,10 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { aaa_useJournalEditor } from '@/composables/useJournalEditor';
 import { TAX_OPTIONS } from '@/composables/useAccountingSystem';
+import type { JournalUiMode } from '@/shared/journalUiMode';
 
 const {
     entry,
@@ -224,6 +234,36 @@ const {
     handleSubmit,
     primaryActionButtonLabel
 } = aaa_useJournalEditor();
+
+// UI Mode: status駆動UIの基盤
+const uiMode = computed<JournalUiMode>(() => {
+  if (!entry.value) return 'loading';
+
+  switch (entry.value.status) {
+    case 'READY_FOR_WORK':
+      return 'editable';
+    case 'REMANDED':
+      return 'remanded';
+    case 'Submitted':
+    case 'Approved':
+      return 'readonly';
+    default:
+      return 'fallback';
+  }
+});
+
+// 借方合計（computed）
+const totalDebit = computed(() => {
+  if (!entry.value) return 0;
+  return entry.value.lines.reduce((sum, line) => sum + (line.drAmount || 0), 0);
+});
+
+// 貸方合計（computed）
+const totalCredit = computed(() => {
+  if (!entry.value) return 0;
+  return entry.value.lines.reduce((sum, line) => sum + (line.crAmount || 0), 0);
+});
+
 
 // Helper: Dynamic Gray-out Logic
 const isOptionDisabled = (optionCode: string, side: 'sales' | 'purchase') => {
@@ -250,6 +290,3 @@ const isOptionDisabled = (optionCode: string, side: 'sales' | 'purchase') => {
     return false;
 };
 </script>
-F o r c i n g   a   f i l e   t o u c h   t o   t r i g g e r   H M R 
- 
- 
