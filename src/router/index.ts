@@ -116,6 +116,12 @@ export const routes: RouteRecordRaw[] = [
     props: true,
     meta: { requiresAuth: true }
   },
+  // Phase 5 Mock
+  {
+    path: '/mock/journal-list',
+    name: 'JournalListMock',
+    component: () => import('@/mocks/components/JournalListLevel3Mock.vue')
+  },
 ]
 
 const router = createRouter({
