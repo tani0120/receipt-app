@@ -1,3 +1,5 @@
+import type { Yen } from '@/shared/types/yen'
+
 /**
  * Phase 5 仕訳モック型定義
  *
@@ -64,7 +66,7 @@ export type JournalLabelPhase5 =
 export interface JournalEntryLine {
   account: string;              // 勘定科目
   sub_account: string | null;   // 補助科目
-  amount: number;               // 金額
+  amount: Yen;          // 金額
   tax_category: string | null;  // 税区分
 }
 
