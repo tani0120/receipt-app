@@ -69,6 +69,25 @@ module.exports = {
                     }
                 ]
             }
+        },
+        {
+            // Domain層は絶対エラー（anyを物理的に禁止）
+            files: [
+                'src/database/**/*',
+                'src/shared/**/*',
+                'src/stores/**/*'
+            ],
+            rules: {
+                '@typescript-eslint/no-explicit-any': 'error',
+                '@typescript-eslint/ban-ts-comment': 'error'
+            }
+        },
+        {
+            // mocks層は緩和（モック作成中のため）
+            files: ['src/mocks/**/*'],
+            rules: {
+                '@typescript-eslint/no-explicit-any': 'warn'
+            }
         }
     ]
 };
