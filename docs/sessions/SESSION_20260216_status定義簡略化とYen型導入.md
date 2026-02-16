@@ -27,14 +27,14 @@
 ### フェーズ進捗
 | Phase | 内容 | 状態 |
 |---|---|---|
-| Phase A | スキーマ設計完了 | ✅ 完了 |
+| Phase A | ステータス・ラベル確定・UIモック | 🟡 進行中 |
 | Phase 5 | UIモック実装 | 🟡 進行中 |
 | Phase B | 型安全性の徹底 | 📝 計画中 |
 
 ### UIモック進捗
 - 対象ファイル: `JournalListLevel3Mock.vue`
-- 完了列数: 未実装（toggleNeed関数、要対応列が未追加）
-- 次の作業: 優先度2のドキュメント同期（保留中）
+- 完了列数: 約3列（any型発見により中断）
+- 次の作業: 4列目から再開
 
 ---
 
@@ -170,10 +170,11 @@ export type JournalLabelPhase5 =
 - **UIモック進捗**: 0列完了、JournalListLevel3Mock.vue に toggleNeed関数と要対応列を追加する必要あり
 
 - **参照すべきファイル（優先順）**:
-  1. `docs/genzai/04_mock/task_260214.md` - 統合タスクリスト
-  2. `docs/genzai/02_database_schema/journal/journal_v2_20260214.md` - 最新スキーマ定義
-  3. `src/mocks/types/journal_phase5_mock.type.ts` - Phase 5型定義
-  4. `docs/genzai/02_database_schema/journal/実装ノート.md` - 実装手順
+  1. `docs/genzai/04_mock/mock_development_guide.md` - モック開発ガイド（最優先・毎回参照）
+  2. `docs/genzai/04_mock/task_260214.md` - 統合タスクリスト
+  3. `docs/genzai/02_database_schema/journal/journal_v2_20260214.md` - 最新スキーマ定義
+  4. `src/mocks/types/journal_phase5_mock.type.ts` - Phase 5型定義
+  5. `docs/genzai/02_database_schema/journal/実装ノート.md` - 実装手順
   
 - **注意事項**:
   - status定義は `exported | null` のみ（協力機能は labels で実現）
