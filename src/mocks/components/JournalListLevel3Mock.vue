@@ -584,7 +584,7 @@ function onMouseUp() {
 }
 
 const journals = computed(() => {
-  let result = [...mockJournalsPhase5].sort((a, b) => {
+  const result = [...mockJournalsPhase5].sort((a, b) => {
     return new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime();
   });
 
