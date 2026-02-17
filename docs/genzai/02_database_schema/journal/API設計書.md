@@ -409,102 +409,7 @@ $$ LANGUAGE plpgsql;
 
 ---
 
-### 7. ラベル操作（要対応トグル）
-
-```typescript
-POST /api/journals/{id}/toggle-need
-```
-
-#### リクエスト
-
-```json
-{
-  "need_type": "DOCUMENT" | "CONFIRM" | "CONSULT"
-}
-```
-
-#### レスポンス
-
-```json
-{
-  "journal": { /* 更新後の仕訳 */ },
-  "added": true,  // ラベルを追加した場合true、削除した場合false
-  "success": true
-}
-```
-
-#### 実装
-
-```typescript
-export async function toggleNeed(
-  journalId: string,
-  needType: 'DOCUMENT' | 'CONFIRM' | 'CONSULT',
-  context: { userId: string }
-): Promise<{ journal: Journal; added: boolean }> {
-  // 1. 現在の仕訳を取得
-  const { data: current, error: fetchError } = await supabase
-    .from('journals')
-    .select('status, labels, deleted_at')
-    .eq('id', journalId)
-    .single();
-
-  if (fetchError) throw fetchError;
-
-  // ガード句1: exportedは編集不可
-  if (current.status === 'exported') {
-    throw new BusinessRuleError(
-      'CSV出力済みの仕訳は編集できません。',
-      'EXPORTED_JOURNAL_READONLY'
-    )
-  }
-
-  // ガード句2: ゴミ箱内は編集不可
-  if (current.deleted_at) {
-    throw new BusinessRuleError(
-      'ゴミ箱内の仕訳は編集できません。',
-      'DELETED_JOURNAL_READONLY'
-    );
-  }
-
-  // 2. ラベルトグル
-  const label = `NEED_${needType}`;
-  const currentLabels = current.labels || [];
-  let newLabels: string[];
-  let added: boolean;
-
-  if (currentLabels.includes(label)) {
-    // ラベル削除
-    newLabels = currentLabels.filter(l => l !== label);
-    added = false;
-  } else {
-    // ラベル追加
-    newLabels = [...currentLabels, label];
-    added = true;
-  }
-
-  // 3. 更新実行
-  const { data, error } = await supabase
-    .from('journals')
-    .update({
-      labels: newLabels,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', journalId)
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  return {
-    journal: data as Journal,
-    added
-  };
-}
-```
-
----
-
-### 8. 手動既読
+### 6. 手動既読
 
 ```typescript
 POST /api/journals/{id}/mark-read
@@ -544,7 +449,7 @@ export async function markAsRead(journalId: string): Promise<Journal> {
 
 ---
 
-### 9. 一括操作
+### 7. 一括操作
 
 #### 一括既読
 
@@ -751,7 +656,7 @@ src/
 
 ---
 
-## 8. 要対応フラグ切り替え
+### 8. 要対応フラグ切り替え
 
 ### エンドポイント
 
