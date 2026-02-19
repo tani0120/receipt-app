@@ -20,7 +20,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2024-07-29',
     description: '神戸相互タクシー',
     receipt_id: 'receipt-001',
-    status: null,  // 未出力
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -46,7 +46,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-20',
     description: 'VIVACE BEAUTYクリニック',
     receipt_id: 'receipt-001',
-    status: null,  // 未出力
+    status: 'exported',  // 出力済み
     is_read: false,  // 未読（黄色背景）
     labels: ['RECEIPT', 'RULE_AVAILABLE', 'INVOICE_NOT_QUALIFIED', 'NEED_DOCUMENT'],  // 資料が必要
     debit_entries: [
@@ -72,7 +72,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-21',
     description: 'コピー用紙',
     receipt_id: 'receipt-001',
-    status: null,  // 未出力
+    status: 'exported',  // 出力済み
     is_read: false,  // 未読（黄色背景）
     labels: ['RECEIPT', 'INVOICE_QUALIFIED', 'NEED_CONFIRM'],  // 確認が必要
     debit_entries: [
@@ -98,7 +98,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-22',
     description: '文房具セット',
     receipt_id: 'receipt-001',
-    status: null,  // 未出力
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['CREDIT_CARD', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -124,7 +124,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-23',
     description: 'タクシー代（不適格運送）',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['BANK_STATEMENT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_CONSULT'],  // 相談が必要
     debit_entries: [
@@ -150,7 +150,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-24',
     description: 'タクシー代',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -176,7 +176,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-25',
     description: '電気代 関西電力',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['INVOICE', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -202,7 +202,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-26',
     description: 'スターバックス',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -228,7 +228,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-27',
     description: '業務委託料',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['INVOICE', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -254,7 +254,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-28',
     description: 'JR神戸線',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_DOCUMENT', 'NEED_CONFIRM'],  // 複数フラグ
     debit_entries: [
@@ -280,7 +280,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-29',
     description: 'オフィス産科',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -306,7 +306,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-30',
     description: '消耗品費（ボールペン）',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['RECEIPT', 'RULE_AVAILABLE', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -332,7 +332,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-01-31',
     description: 'タクシー代（不適格運送）',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_NOT_QUALIFIED'],
     debit_entries: [
@@ -358,7 +358,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-02-01',
     description: 'NTTドコモ',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['INVOICE', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -384,7 +384,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-02-01',
     description: '手数料通帳費',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED', 'MULTI_TAX_RATE', 'EXPORT_EXCLUDE'],  // 出力対象外
     debit_entries: [
@@ -410,7 +410,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-02-02',
     description: '神戸皇居鎌タクシー',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -436,7 +436,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-02-02',
     description: '貴金に宗鹿釜交友貴',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -462,7 +462,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-02-02',
     description: '不可分抜き回',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -488,7 +488,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-02-03',
     description: '事例寿判上いは詮',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
@@ -514,7 +514,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     transaction_date: '2025-02-04',
     description: '広告宣伝費（銀行振込）',
     receipt_id: 'receipt-001',
-    status: null,
+    status: 'exported',  // 出力済み
     is_read: true,
     labels: ['BANK_STATEMENT', 'INVOICE_QUALIFIED', 'NEED_CONSULT', 'NEED_DOCUMENT'],  // 複数フラグ2
     debit_entries: [
@@ -571,7 +571,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '資料作成料',
     receipt_id: 'receipt-001',
     status: null,
-    is_read: false,
+    is_read: true,  // 既読
     labels: ['RECEIPT', 'OCR_LOW_CONFIDENCE'],
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 10000, tax_category: '課税仕入込10%' }
@@ -597,7 +597,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '不明な振り',
     receipt_id: 'receipt-001',
     status: null,
-    is_read: false,
+    is_read: true,  // 既読
     labels: ['TRANSPORT', 'DUPLICATE_SUSPECT'],
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 9000, tax_category: '課税仕入込10%' }

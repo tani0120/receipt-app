@@ -78,15 +78,17 @@
           <div v-if="rowIndex === 0" class="w-12 p-0.5 flex items-center justify-center border-r border-gray-200">
             <i v-if="journalIndex < 25"
                class="fa-solid fa-magnifying-glass text-[10px] text-gray-600 cursor-pointer"
-               title="過去仕訳（クリックで固定）"
-               @mouseenter="showImageModal(journal.id, journal.receipt_id)"
-               @mouseleave="hideImageModal"
-               @click="togglePinModal(journal.id, journal.receipt_id)"></i>
+               title="過去仕訳（クリックでピン留め）"
+               @mouseenter="showPastJournalSearchModal()"
+               @mouseleave="hidePastJournalSearchModal()"
+               @click="togglePastJournalSearchModalPin()"></i>
           </div>
           <div v-else class="w-12 border-r border-gray-200"></div>
 
           <!-- 4. コメント -->
           <div v-if="rowIndex === 0" class="w-12 p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5 relative group">
+            <!-- メモアイコン -->
+            <i v-if="journal.memo" class="fa-solid fa-note-sticky text-[10px] text-yellow-600 cursor-pointer"></i>
 
             <!-- ホバーメモ -->
             <div v-if="journal.memo" class="hidden group-hover:block absolute z-10 bg-yellow-50 border-2 border-yellow-400 rounded p-2 shadow-xl text-[10px] w-56 top-full left-0 mt-1">
@@ -283,14 +285,14 @@
 
     <!-- 過去仕訳検索モーダル -->
     <div v-if="showPastJournalModal"
-         class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
-         @click="showPastJournalModal = false">
-      <div class="bg-white rounded-lg shadow-2xl w-[90%] h-[80%] flex flex-col pointer-events-auto"
+         class="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"
+         >
+      <div class="bg-white rounded-lg shadow-2xl w-[600px] h-[600px] flex flex-col pointer-events-auto border-2 border-gray-300"
            @click.stop>
         <!-- モーダルヘッダー -->
         <div class="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
           <h2 class="text-sm font-bold">過去仕訳検索</h2>
-          <button @click="showPastJournalModal = false"
+          <button @click="closePastJournalModal()"
                   class="text-gray-500 hover:text-gray-700">
             <i class="fa-solid fa-xmark text-lg"></i>
           </button>
@@ -299,9 +301,9 @@
         <!-- 検索条件 -->
         <div class="p-4 border-b bg-gray-50">
           <div class="grid grid-cols-3 gap-4 mb-3">
-            <!-- 支払先 -->
+            <!-- 摘要 -->
             <div>
-              <label class="text-xs text-gray-700 block mb-1">支払先</label>
+              <label class="text-xs text-gray-700 block mb-1">摘要</label>
               <input type="text"
                      v-model="pastJournalSearch.vendor"
                      placeholder="パーク宝小路"
@@ -313,28 +315,32 @@
           <div class="mb-3">
             <label class="text-xs text-gray-700 block mb-1">日付</label>
             <div class="flex items-center gap-2">
-              <input type="text"
+              <input type="date"
                      v-model="pastJournalSearch.dateFrom"
-                     placeholder="yyyy/mm/dd"
                      class="w-40 px-2 py-1 text-xs border rounded">
               <span class="text-xs">〜</span>
-              <input type="text"
+              <input type="date"
                      v-model="pastJournalSearch.dateTo"
-                     placeholder="yyyy/mm/dd"
                      class="w-40 px-2 py-1 text-xs border rounded">
             </div>
           </div>
 
-          <!-- 金額 -->
+          <!-- 金額条件 -->
           <div class="mb-3">
-            <label class="text-xs text-gray-700 block mb-1">金額</label>
-            <select v-model="pastJournalSearch.amountCondition"
-                    class="w-40 px-2 py-1 text-xs border rounded">
-              <option value="">選択してください</option>
-              <option value="equal">等しい</option>
-              <option value="greater">以上</option>
-              <option value="less">以下</option>
-            </select>
+            <label class="text-xs text-gray-700 block mb-1">金額条件</label>
+            <div class="flex items-center gap-2">
+              <select v-model="pastJournalSearch.amountCondition"
+                      class="w-40 px-2 py-1 text-xs border rounded">
+                <option value="">選択してください</option>
+                <option value="equal">等しい</option>
+                <option value="greater">以上</option>
+                <option value="less">以下</option>
+              </select>
+              <input type="number"
+                     v-model.number="pastJournalSearch.amount"
+                     placeholder="金額を入力"
+                     class="w-32 px-2 py-1 text-xs border rounded">
+            </div>
           </div>
 
           <!-- 借方勘定科目、貸方勘定科目 -->
@@ -379,7 +385,7 @@
                       ? 'border-b-2 border-blue-500 text-blue-600'
                       : 'text-gray-600 hover:text-gray-800'
                   ]">
-            STREAMEDの過去仕訳
+            システム上の過去仕訳
           </button>
           <button @click="pastJournalTab = 'accounting'"
                   :class="[
@@ -396,8 +402,20 @@
         <div class="flex-1 overflow-auto p-4">
           <div class="text-xs text-gray-600 mb-2">
             行の背景色:
-            <span class="inline-block bg-blue-100 px-2 py-0.5 ml-2">未出力</span>
-            <span class="inline-block bg-green-100 px-2 py-0.5 ml-2">中出力</span>
+            <button @click="toggleOutputFilter('unexported')"
+                    :class="[
+                      'inline-block px-4 py-0.5 ml-2 text-xs cursor-pointer rounded',
+                      outputFilter === 'unexported' ? 'bg-blue-200 border-2 border-blue-500 font-bold' : 'bg-blue-50 border border-blue-300'
+                    ]">
+              未出力
+            </button>
+            <button @click="toggleOutputFilter('exported')"
+                    :class="[
+                      'inline-block px-4 py-0.5 ml-2 text-xs cursor-pointer rounded',
+                      outputFilter === 'exported' ? 'bg-gray-200 border-2 border-black font-bold' : 'bg-white border border-black'
+                    ]">
+              出力済み
+            </button>
           </div>
 
           <table class="w-full text-[10px] border-collapse">
@@ -415,9 +433,9 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(result, index) in ([] as JournalPhase5Mock[])"
+              <tr v-for="(result, index) in paginatedPastJournals"
                   :key="index"
-                  :class="index % 2 === 0 ? 'bg-blue-50' : 'bg-white'"
+                  :class="result.status === 'exported' ? 'bg-white' : 'bg-blue-50'"
                   class="hover:bg-blue-100 cursor-pointer">
                 <td class="border px-2 py-1 text-center">{{ formatDate(result.transaction_date) }}</td>
                 <td class="border px-2 py-1">{{ result.description }}</td>
@@ -433,13 +451,36 @@
                   <span v-if="result.labels.includes('INVOICE')">請</span>
                 </td>
               </tr>
-              <tr v-if="([] as JournalPhase5Mock[]).length === 0">
+              <tr v-if="paginatedPastJournals.length === 0">
                 <td colspan="9" class="border px-2 py-4 text-center text-gray-500">
                   検索結果がありません
                 </td>
               </tr>
             </tbody>
           </table>
+
+          <!-- ページネーション -->
+          <div v-if="totalPages > 1" class="flex items-center justify-center gap-1 mt-3">
+            <button @click="goToPage(pastJournalPage - 1)"
+                    :disabled="pastJournalPage <= 1"
+                    class="px-2 py-1 text-xs border rounded"
+                    :class="pastJournalPage <= 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100 cursor-pointer'">
+              &lt;
+            </button>
+            <button v-for="page in totalPages"
+                    :key="page"
+                    @click="goToPage(page)"
+                    class="px-2 py-1 text-xs border rounded min-w-[28px]"
+                    :class="page === pastJournalPage ? 'bg-blue-500 text-white border-blue-500 font-bold' : 'text-gray-600 hover:bg-gray-100 cursor-pointer'">
+              {{ page }}
+            </button>
+            <button @click="goToPage(pastJournalPage + 1)"
+                    :disabled="pastJournalPage >= totalPages"
+                    class="px-2 py-1 text-xs border rounded"
+                    :class="pastJournalPage >= totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100 cursor-pointer'">
+              &gt;
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -480,9 +521,124 @@ const pastJournalSearch = ref({
   dateFrom: '',
   dateTo: '',
   amountCondition: '',
+  amount: null as number | null,
   debitAccount: '',
   creditAccount: ''
 });
+
+const isPastJournalModalPinned = ref<boolean>(false);
+const outputFilter = ref<'all' | 'unexported' | 'exported'>('all');
+const pastJournalPage = ref<number>(1);
+const PAST_JOURNAL_PAGE_SIZE = 50;
+
+function showPastJournalSearchModal() {
+  showPastJournalModal.value = true;
+}
+
+function hidePastJournalSearchModal() {
+  if (!isPastJournalModalPinned.value) {
+    showPastJournalModal.value = false;
+  }
+}
+
+function togglePastJournalSearchModalPin() {
+  isPastJournalModalPinned.value = !isPastJournalModalPinned.value;
+  if (!isPastJournalModalPinned.value) {
+    showPastJournalModal.value = false;
+  }
+}
+
+function closePastJournalModal() {
+  showPastJournalModal.value = false;
+  isPastJournalModalPinned.value = false;
+}
+
+const filteredPastJournals = computed(() => {
+  let results = [...mockJournalsPhase5];
+
+  // 支払先フィルタ
+  if (pastJournalSearch.value.vendor) {
+    results = results.filter(j =>
+      j.description.includes(pastJournalSearch.value.vendor)
+    );
+  }
+
+  // 日付範囲フィルタ
+  if (pastJournalSearch.value.dateFrom) {
+    results = results.filter(j => j.transaction_date >= pastJournalSearch.value.dateFrom);
+  }
+  if (pastJournalSearch.value.dateTo) {
+    results = results.filter(j => j.transaction_date <= pastJournalSearch.value.dateTo);
+  }
+
+  // 金額フィルタ
+  if (pastJournalSearch.value.amount !== null && pastJournalSearch.value.amountCondition) {
+    results = results.filter(j => {
+      const debitTotal = j.debit_entries.reduce((sum, e) => sum + e.amount, 0);
+      const creditTotal = j.credit_entries.reduce((sum, e) => sum + e.amount, 0);
+      const amount = Math.max(debitTotal, creditTotal);
+
+      switch (pastJournalSearch.value.amountCondition) {
+        case 'equal': return amount === pastJournalSearch.value.amount;
+        case 'greater': return amount >= (pastJournalSearch.value.amount || 0);
+        case 'less': return amount <= (pastJournalSearch.value.amount || 0);
+        default: return true;
+      }
+    });
+  }
+
+  // 借方勘定科目フィルタ
+  if (pastJournalSearch.value.debitAccount) {
+    results = results.filter(j =>
+      j.debit_entries.some(e => e.account === pastJournalSearch.value.debitAccount)
+    );
+  }
+
+  // 貸方勘定科目フィルタ
+  if (pastJournalSearch.value.creditAccount) {
+    results = results.filter(j =>
+      j.credit_entries.some(e => e.account === pastJournalSearch.value.creditAccount)
+    );
+  }
+
+  // タブによる表示制御
+  if (pastJournalTab.value === 'accounting') {
+    return [];  // 会計ソフトデータは未実装
+  }
+
+  // 出力ステータスフィルタ
+  if (outputFilter.value === 'unexported') {
+    results = results.filter(j => j.status === null);
+  } else if (outputFilter.value === 'exported') {
+    results = results.filter(j => j.status === 'exported');
+  }
+
+  return results;
+});
+
+const paginatedPastJournals = computed(() => {
+  const start = (pastJournalPage.value - 1) * PAST_JOURNAL_PAGE_SIZE;
+  return filteredPastJournals.value.slice(start, start + PAST_JOURNAL_PAGE_SIZE);
+});
+
+const totalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredPastJournals.value.length / PAST_JOURNAL_PAGE_SIZE));
+});
+
+function toggleOutputFilter(filter: 'unexported' | 'exported') {
+  if (outputFilter.value === filter) {
+    outputFilter.value = 'all';
+  } else {
+    outputFilter.value = filter;
+  }
+  pastJournalPage.value = 1;
+}
+
+function goToPage(page: number) {
+  if (page >= 1 && page <= totalPages.value) {
+    pastJournalPage.value = page;
+  }
+}
 
 // 回転角度に応じてモーダルサイズを調整
 const actualModalWidth = computed(() => {
