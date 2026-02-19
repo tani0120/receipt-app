@@ -48,9 +48,9 @@ JournalListLevel3Mock.vue は22列中4列完了（No./写真/過去仕訳）、�
 `00_モック実装時のルール.md` §1 Phase A-0 の手順に従う。
 
 **今やる（確認 → 構築の順）:**
-- [ ] Yen型確定確認
-- [ ] journal_phase5_mock.type.ts 確認（JournalStatusPhase5, JournalLabelPhase5, JournalPhase5Mock）
-- [ ] journal_test_fixture_30cases.ts 確認（グリーン20/イエロー7/レッド3、全21ラベル網羅）
+- [x] Yen型確定確認（Phase Aとして確定。Phase BでBranded化予定）
+- [x] journal_phase5_mock.type.ts 確認（JournalStatusPhase5, JournalLabelPhase5, JournalPhase5Mock）
+- [x] journal_test_fixture_30cases.ts 確認（グリーン21/イエロー9/複合5、全21ラベル網羅）
 - [ ] journalColumns.ts 作成（列定義の単一ソース）
 - [ ] ヘッダー v-for化
 - [ ] ボディ v-for化

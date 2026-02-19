@@ -94,7 +94,7 @@ export interface JournalPhase5Mock {
   // 未読/既読（背景色管理）
   is_read: boolean;
 
-  // ラベル（17種類、非排他的）
+  // ラベル（21種類、非排他的）
   labels: JournalLabelPhase5[];
 
   // ルール関連（オプション）
