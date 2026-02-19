@@ -8,18 +8,18 @@
 import type { ReceiptMock } from '../types/receipt_mock.type'
 
 export const MOCK_RECEIPTS: ReceiptMock[] = [
-    {
-        id: 'receipt-001',
-        client_id: 'client-001',
-        image_url: '/mock-receipt.jpg',
-        uploaded_at: '2025-01-20T13:12:00Z',
-        file_name: 'まんがい天満商店_領収書_20250512.jpg'
-    }
+  {
+    id: 'receipt-001',
+    client_id: 'client-001',
+    image_url: '/images/cafe-veloce-receipt.jpg',
+    uploaded_at: '2025-01-20T13:12:00Z',
+    file_name: 'カフェベローチェ_領収書_20250219.jpg'
+  }
 ]
 
 // ヘルパー関数: receipt_idから画像URLを取得
 export function getReceiptImageUrl(receiptId: string | null): string | null {
-    if (!receiptId) return null
-    const receipt = MOCK_RECEIPTS.find(r => r.id === receiptId)
-    return receipt?.image_url || null
+  if (!receiptId) return null
+  const receipt = MOCK_RECEIPTS.find(r => r.id === receiptId)
+  return receipt?.image_url || null
 }
