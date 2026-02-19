@@ -51,7 +51,7 @@ JournalListLevel3Mock.vue は22列中4列完了（No./写真/過去仕訳）、�
 - [x] Yen型確定確認（Phase Aとして確定。Phase BでBranded化予定）
 - [x] journal_phase5_mock.type.ts 確認（JournalStatusPhase5, JournalLabelPhase5, JournalPhase5Mock）
 - [x] journal_test_fixture_30cases.ts 確認（グリーン21/イエロー9/複合5、全21ラベル網羅）
-- [ ] journalColumns.ts 作成（列定義の単一ソース）
+- [x] journalColumns.ts 作成（列定義の単一ソース）
 - [ ] ヘッダー v-for化
 - [ ] ボディ v-for化（getValue()導入 + ルール§3.4コード例を更新）
 
