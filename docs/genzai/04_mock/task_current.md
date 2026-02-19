@@ -53,7 +53,7 @@ JournalListLevel3Mock.vue は22列中4列完了（No./写真/過去仕訳）、�
 - [x] journal_test_fixture_30cases.ts 確認（グリーン21/イエロー9/複合5、全21ラベル網羅）
 - [ ] journalColumns.ts 作成（列定義の単一ソース）
 - [ ] ヘッダー v-for化
-- [ ] ボディ v-for化
+- [ ] ボディ v-for化（getValue()導入 + ルール§3.4コード例を更新）
 
 **後でやる（Phase A列実装が進んでから）:**
 - [ ] mocks/unsafe/ 作成（any許可の実験場）
@@ -121,6 +121,12 @@ JournalListLevel3Mock.vue は22列中4列完了（No./写真/過去仕訳）、�
 - [ ] npm run lint 通過
 - [ ] any増加ゼロ
 - [ ] ユーザーが「UX固定」と宣言
+
+## 5.1 Phase Bタスク（今はやらない）
+
+- [ ] 列表示ON/OFF（ユーザーが列を非表示にする機能）
+- [ ] カラムグループ化（借方/貸方のグループヘッダー）← 必須
+- [ ] セルコンポーネント化（ルール§3.4 Phase B参照）
 
 ---
 
