@@ -7,7 +7,7 @@
 | コンポーネント名 | PastJournalSearchModal |
 | ファイルパス | `src/mocks/components/JournalListLevel3Mock.vue` |
 | 作成日 | 2026-02-15 |
-| 最終更新 | 2026-02-15 |
+| 最終更新 | 2026-02-19 |
 
 ## 目的
 
@@ -38,19 +38,28 @@
 - 📌ピン留めアイコン
 
 #### 2. タブ
-- 「仕訳システムの過去仕訳」（デフォルト、実装済み）
+- 「システム上の過去仕訳」（デフォルト、実装済み）
 - 「会計ソフトの過去仕訳」（未実装）
 
 #### 3. 検索フォーム
-- **支払先**（テキスト入力）
-- **日付範囲**（カレンダー選択、デフォルト: 過去3ヶ月〜今日）
-- **金額**（条件プルダウン + 数値入力）
+- **摘要**（テキスト入力）
+- **日付範囲**（type="date"入力、デフォルト: 過去3ヶ月〜今日）
+- **金額条件**（条件プルダウン + 数値入力）
   - 条件: 選択してください / 等しい / 以上 / 以下
 - **借方勘定科目**（プルダウン）
 - **貸方勘定科目**（プルダウン）
 - **絞り込みボタン**
 
-#### 4. 結果表示テーブル
+#### 4. フィルタボタン（2026-02-19追加）
+- **未出力**ボタン: status=null の仕訳のみ表示（背景: 薄青）
+- **出力済み**ボタン: status='exported' の仕訳のみ表示（背景: 白）
+- トグル式（再クリックで解除、全件表示に戻る）
+
+#### 5. ページネーション（2026-02-19追加）
+- 50件/ページ
+- ページ番号ボタンで遷移
+
+#### 6. 結果表示テーブル
 列構成:
 - 日付
 - 摘要
@@ -68,7 +77,7 @@
 
 | フィルタ | 動作 | 実装 |
 |---------|------|------|
-| 支払先 | 摘要（`description`）に部分一致検索 | ✅ |
+| 摘要 | 摘要（`description`）に部分一致検索 | ✅ |
 | 日付範囲 | `transaction_date`が指定期間内 | ✅ |
 | 金額 | 等しい・以上・以下で絞り込み（借方・貸方の合計額） | ✅ |
 | 借方勘定科目 | `debit_entries`に完全一致するエントリが存在 | ✅ |
@@ -80,12 +89,15 @@
 const showPastJournalModal = ref<boolean>(false);                          // モーダル表示/非表示
 const isPastJournalModalPinned = ref<boolean>(false);                      // ピン留め状態
 const pastJournalTab = ref<'streamed' | 'accounting'>('streamed');         // 選択タブ
+const outputStatusFilter = ref<'unexported' | 'exported' | null>(null);    // 出力状態フィルタ
+const currentPage = ref(1);                                                 // ページネーション
+const pageSize = 50;                                                        // 1ページあたり件数
 const pastJournalSearch = ref({
-  vendor: '',                                                               // 支払先
+  vendor: '',                                                               // 摘要
   dateFrom: getThreeMonthsAgoString(),                                      // 開始日（過去3ヶ月）
   dateTo: getTodayString(),                                                 // 終了日（今日）
   amountCondition: '',                                                      // 金額条件
-  amount: null as number | null,                                            // 金額
+  amount: { condition: '', value: null as number | null },                   // 金額（条件+値）
   debitAccount: '',                                                         // 借方勘定科目
   creditAccount: ''                                                         // 貸方勘定科目
 });
@@ -216,7 +228,7 @@ API: `GET /api/journals/search`
 ```vue
 <div class="flex border-b">
   <button :class="['px-4 py-2 text-xs font-medium', pastJournalTab === 'streamed' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600']">
-    仕訳システムの過去仕訳
+    システム上の過去仕訳
   </button>
 </div>
 ```
@@ -240,9 +252,7 @@ API: `GET /api/journals/search`
 
 ### 追加が必要な機能
 
-1. **ページネーション**
-   - 結果が100件以上の場合
-   - 前へ/次へボタン
+1. ~~**ページネーション**~~ → ✅ モック実装済み（50件/ページ、ページ番号ボタン）
 
 2. **ソート機能**
    - 各列ヘッダーをクリックでソート

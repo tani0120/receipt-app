@@ -11,7 +11,7 @@
 ## 現在地
 
 Phase A（UX探索モード）進行中。
-JournalListLevel3Mock.vue は22列中2列完了、暴走による破壊箇所あり。
+JournalListLevel3Mock.vue は22列中4列完了（No./写真/過去仕訳）、§1 UI修復完了。
 
 ### 3階層UIの対応関係
 
@@ -34,12 +34,12 @@ JournalListLevel3Mock.vue は22列中2列完了、暴走による破壊箇所あ
 
 ## 1. UI修復（暴走修正）
 
-- [ ] JournalListLevel3Mock.vue hover復活（過去仕訳アイコン: showImageModal/hideImageModal/togglePinModal）
-- [ ] 600×600モーダル復旧（過去commit暴走で破壊）
-- [ ] 金額欄復旧（過去commit暴走で破壊）
-- [ ] ブラウザ確認で残り5%を洗い出し
-- [ ] receipt_mock_data.ts VueとセットでCommit
-- [ ] public/images/ Commitするか判断
+- [x] JournalListLevel3Mock.vue hover復活（過去仕訳アイコン: showImageModal/hideImageModal/togglePinModal）
+- [x] 600×600モーダル復旧（過去commit暴走で破壊）
+- [x] 金額欄復旧（過去commit暴走で破壊）
+- [x] ブラウザ確認で残り5%を洗い出し
+- [x] receipt_mock_data.ts VueとセットでCommit
+- [x] public/images/ Commitするか判断
 
 ---
 
@@ -63,7 +63,7 @@ JournalListLevel3Mock.vue は22列中2列完了、暴走による破壊箇所あ
 - [ ] 選（チェックボックス）
 - [x] No.
 - [x] 写真
-- [ ] 過去仕訳
+- [x] 過去仕訳
 - [ ] コメント
 - [ ] 要対応（NEED_DOCUMENT/NEED_CONFIRM/NEED_CONSULT）
 - [ ] 証票（TRANSPORT/RECEIPT/INVOICE/CREDIT_CARD/BANK_STATEMENT）
