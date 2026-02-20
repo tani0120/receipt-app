@@ -17,31 +17,26 @@
       </div>
     </div>
 
-    <!-- テーブルヘッダー（22列） -->
-    <div class="bg-[#1a1a1a] text-white text-[10px] flex border-b border-gray-800">
-      <div class="w-6 p-1 flex items-center justify-center border-r border-gray-700">選</div>
-      <div class="w-8 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('display_order')">No.</div>
-      <div class="w-12 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('has_photo')">写真</div>
-      <div class="w-12 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('past_journal')">過去仕訳</div>
-      <div class="w-12 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('status')">コメント</div>
-      <div class="w-12 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('requires_action')">要対応</div>
-      <div class="w-10 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('label_type')">証票</div>
-      <div class="w-10 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('warning')">警告</div>
-      <div class="w-8 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('rule')">学習</div>
-      <div class="w-8 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('tax_rate')">軽減</div>
-      <div class="w-8 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('memo')">メモ</div>
-      <div class="w-10 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('invoice')">適格</div>
-      <div class="w-16 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('transaction_date')">取引日</div>
-      <div class="flex-1 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('description')">摘要</div>
-      <div class="w-20 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('debit_account')">借方勘定科目</div>
-      <div class="w-16 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('debit_sub_account')">借方補助</div>
-      <div class="w-20 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('debit_tax')">借方税区分</div>
-      <div class="w-16 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('debit_amount')">借方金額</div>
-      <div class="w-20 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('credit_account')">貸方勘定科目</div>
-      <div class="w-16 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('credit_sub_account')">貸方補助</div>
-      <div class="w-20 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('credit_tax')">貸方税区分</div>
-      <div class="w-16 p-1 flex items-center justify-center border-r border-gray-700 cursor-pointer hover:bg-gray-700" @click="sortBy('credit_amount')">貸方金額</div>
-      <div class="w-8 p-1 flex items-center justify-center"><i class="fa-solid fa-trash text-[9px]"></i></div>
+    <!-- テーブルヘッダー（23列） -->
+    <div class="bg-[#1a1a1a] text-white text-[10px] flex border-b border-gray-800 pr-[8px]">
+      <div
+        v-for="col in journalColumns"
+        :key="col.key"
+        :class="[
+          col.width,
+          'p-1 flex items-center justify-center',
+          col.type !== 'action' ? 'border-r border-gray-700' : '',
+          col.sortKey ? 'cursor-pointer hover:bg-gray-700' : ''
+        ]"
+        @click="col.sortKey && sortBy(col.sortKey)"
+      >
+        <template v-if="col.type === 'action'">
+          <i class="fa-solid fa-trash text-[9px]"></i>
+        </template>
+        <template v-else>
+          {{ col.label }}
+        </template>
+      </div>
     </div>
 
     <!-- テーブルボディ -->
@@ -53,179 +48,172 @@
                getRowBackground(journal)
              ]">
 
-          <!-- 1. 選 -->
-          <div class="w-6 p-0.5 flex items-center justify-center border-r border-gray-200">
-            <input v-if="rowIndex === 0" type="checkbox" class="w-2.5 h-2.5">
-          </div>
+          <!-- 列定義駆動ボディ（v-for by journalColumns） -->
+          <template v-for="col in journalColumns" :key="col.key">
 
-          <!-- 2. No. -->
-          <div v-if="rowIndex === 0" class="w-8 p-0.5 flex items-center justify-center border-r border-gray-200 font-mono text-gray-600 text-[9px]">
-            {{ journalIndex + 1 }}
-          </div>
-          <div v-else class="w-8 border-r border-gray-200"></div>
-
-          <!-- 3. 写真 -->
-          <div v-if="rowIndex === 0" class="w-12 p-0.5 flex items-center justify-center border-r border-gray-200">
-            <i class="fa-solid fa-camera text-[10px] text-gray-800 cursor-pointer"
-               title="写真（クリックで固定）"
-               @mouseenter="showImageModal(journal.id, journal.receipt_id)"
-               @mouseleave="hideImageModal"
-               @click="togglePinModal(journal.id, journal.receipt_id)"></i>
-          </div>
-          <div v-else class="w-12 border-r border-gray-200"></div>
-
-          <!-- 過去仕訳 -->
-          <div v-if="rowIndex === 0" class="w-12 p-0.5 flex items-center justify-center border-r border-gray-200">
-            <i v-if="journalIndex < 25"
-               class="fa-solid fa-magnifying-glass text-[10px] text-gray-600 cursor-pointer"
-               title="過去仕訳（クリックでピン留め）"
-               @mouseenter="showPastJournalSearchModal()"
-               @mouseleave="hidePastJournalSearchModal()"
-               @click="togglePastJournalSearchModalPin()"></i>
-          </div>
-          <div v-else class="w-12 border-r border-gray-200"></div>
-
-          <!-- 4. コメント -->
-          <div v-if="rowIndex === 0" class="w-12 p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5 relative group">
-            <!-- メモアイコン -->
-            <i v-if="journal.memo" class="fa-solid fa-note-sticky text-[10px] text-yellow-600 cursor-pointer"></i>
-
-            <!-- ホバーメモ -->
-            <div v-if="journal.memo" class="hidden group-hover:block absolute z-10 bg-yellow-50 border-2 border-yellow-400 rounded p-2 shadow-xl text-[10px] w-56 top-full left-0 mt-1">
-              <div class="font-bold text-yellow-900"><i class="fa-solid fa-note-sticky text-xs"></i> {{ journal.memo }}</div>
-              <div class="text-gray-600 mt-1 text-[9px]">{{ journal.memo_author }}</div>
+            <!-- checkbox型 -->
+            <div v-if="col.type === 'checkbox'" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+              <input v-if="rowIndex === 0" type="checkbox" class="w-2.5 h-2.5">
             </div>
-          </div>
-          <div v-else class="w-12 border-r border-gray-200"></div>
 
-          <!-- 4. 要対応 -->
-          <div v-if="rowIndex === 0" class="w-16 p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5">
-            <button
-              @click="toggleNeed(journal.id, 'NEED_DOCUMENT')"
-              :class="journal.labels.includes('NEED_DOCUMENT') ? 'text-red-600' : 'text-gray-400 opacity-50'"
-              class="hover:scale-110 transition-transform text-sm"
-              :title="journal.labels.includes('NEED_DOCUMENT') ? '資料必要（ON）' : '資料必要（OFF）'"
-            >
-              📄
-            </button>
-            <button
-              @click="toggleNeed(journal.id, 'NEED_CONFIRM')"
-              :class="journal.labels.includes('NEED_CONFIRM') ? 'text-red-600' : 'text-gray-400 opacity-50'"
-              class="hover:scale-110 transition-transform text-sm"
-              :title="journal.labels.includes('NEED_CONFIRM') ? '確認必要（ON）' : '確認必要（OFF）'"
-            >
-              ✅
-            </button>
-            <button
-              @click="toggleNeed(journal.id, 'NEED_CONSULT')"
-              :class="journal.labels.includes('NEED_CONSULT') ? 'text-red-600' : 'text-gray-400 opacity-50'"
-              class="hover:scale-110 transition-transform text-sm"
-              :title="journal.labels.includes('NEED_CONSULT') ? '相談必要（ON）' : '相談必要（OFF）'"
-            >
-              💬
-            </button>
-          </div>
-          <div v-else class="w-16 border-r border-gray-200"></div>
+            <!-- index型 -->
+            <template v-else-if="col.type === 'index'">
+              <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 font-mono text-gray-600 text-[9px]']">
+                {{ journalIndex + 1 }}
+              </div>
+              <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+            </template>
 
-          <!-- 5. 証票 -->
-          <div v-if="rowIndex === 0" class="w-10 p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5">
-            <span v-if="journal.labels.includes('TRANSPORT')" class="text-[10px] font-bold text-gray-800" title="領収書">領</span>
-            <span v-if="journal.labels.includes('RECEIPT')" class="text-[10px] font-bold text-gray-800" title="レシート">レ</span>
-            <span v-if="journal.labels.includes('INVOICE')" class="text-[10px] font-bold text-gray-800" title="請求書">請</span>
-            <span v-if="journal.labels.includes('CREDIT_CARD')" class="text-[10px] font-bold text-gray-800" title="クレジットカード">ク</span>
-            <span v-if="journal.labels.includes('BANK_STATEMENT')" class="text-[10px] font-bold text-gray-800" title="銀行明細">銀</span>
-          </div>
-          <div v-else class="w-10 border-r border-gray-200"></div>
+            <!-- component型（col.key別に既存ロジック維持） -->
+            <template v-else-if="col.type === 'component'">
 
-          <!-- 5. 警告 -->
-          <div v-if="rowIndex === 0" class="w-10 p-0.5 flex items-center justify-center border-r border-gray-200 flex-wrap gap-0.5">
-            <i v-if="hasErrorLabels(journal.labels)" class="fa-solid fa-triangle-exclamation text-[10px] text-red-600" title="エラー"></i>
-            <i v-if="hasWarningLabels(journal.labels)" class="fa-solid fa-triangle-exclamation text-[10px] text-yellow-600" title="警告"></i>
-          </div>
-          <div v-else class="w-10 border-r border-gray-200"></div>
+              <!-- 写真 -->
+              <template v-if="col.key === 'photo'">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                  <i class="fa-solid fa-camera text-[10px] text-gray-800 cursor-pointer"
+                     title="写真（クリックで固定）"
+                     @mouseenter="showImageModal(journal.id, journal.receipt_id)"
+                     @mouseleave="hideImageModal"
+                     @click="togglePinModal(journal.id, journal.receipt_id)"></i>
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
 
-          <!-- 6. 学習 -->
-          <div v-if="rowIndex === 0" class="w-8 p-0.5 flex items-center justify-center border-r border-gray-200">
-            <i v-if="journal.labels.includes('RULE_APPLIED')" class="fa-solid fa-graduation-cap text-[10px] text-green-600" title="学習適用済み"></i>
-            <i v-if="journal.labels.includes('RULE_AVAILABLE')" class="fa-solid fa-lightbulb text-[10px] text-blue-500" title="学習できます"></i>
-          </div>
-          <div v-else class="w-8 border-r border-gray-200"></div>
+              <!-- 過去仕訳 -->
+              <template v-else-if="col.key === 'pastJournal'">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                  <i v-if="hasPastJournal(journal)"
+                     class="fa-solid fa-magnifying-glass text-[10px] text-gray-600 cursor-pointer"
+                     title="過去仕訳（クリックでピン留め）"
+                     @mouseenter="showPastJournalSearchModal()"
+                     @mouseleave="hidePastJournalSearchModal()"
+                     @click="togglePastJournalSearchModalPin()"></i>
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
 
-          <!-- 7. 軽減 -->
-          <div v-if="rowIndex === 0" class="w-8 p-0.5 flex items-center justify-center border-r border-gray-200">
-            <span v-if="journal.labels.includes('MULTI_TAX_RATE')" class="text-[9px] font-bold text-green-600 bg-green-50 px-1 rounded">軽</span>
-          </div>
-          <div v-else class="w-8 border-r border-gray-200"></div>
+              <!-- コメント -->
+              <template v-else-if="col.key === 'comment'">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5 relative group']">
+                  <i v-if="journal.memo" class="fa-solid fa-note-sticky text-[10px] text-yellow-600 cursor-pointer"></i>
+                  <div v-if="journal.memo" class="hidden group-hover:block absolute z-10 bg-yellow-50 border-2 border-yellow-400 rounded p-2 shadow-xl text-[10px] w-56 top-full left-0 mt-1">
+                    <div class="font-bold text-yellow-900"><i class="fa-solid fa-note-sticky text-xs"></i> {{ journal.memo }}</div>
+                    <div class="text-gray-600 mt-1 text-[9px]">{{ journal.memo_author }}</div>
+                  </div>
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
 
-          <!-- 8. メモ -->
-          <div v-if="rowIndex === 0" class="w-8 p-0.5 flex items-center justify-center border-r border-gray-200">
-            <i v-if="journal.labels.includes('HAS_MEMO')" class="fa-solid fa-pencil text-[10px] text-gray-600" title="メモあり"></i>
-          </div>
-          <div v-else class="w-8 border-r border-gray-200"></div>
+              <!-- 要対応 -->
+              <template v-else-if="col.key === 'needAction'">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5']">
+                  <button
+                    @click="toggleNeed(journal.id, 'NEED_DOCUMENT')"
+                    :class="journal.labels.includes('NEED_DOCUMENT') ? 'text-red-600' : 'text-gray-400 opacity-50'"
+                    class="hover:scale-110 transition-transform text-sm"
+                    :title="journal.labels.includes('NEED_DOCUMENT') ? '資料必要（ON）' : '資料必要（OFF）'"
+                  >📄</button>
+                  <button
+                    @click="toggleNeed(journal.id, 'NEED_CONFIRM')"
+                    :class="journal.labels.includes('NEED_CONFIRM') ? 'text-red-600' : 'text-gray-400 opacity-50'"
+                    class="hover:scale-110 transition-transform text-sm"
+                    :title="journal.labels.includes('NEED_CONFIRM') ? '確認必要（ON）' : '確認必要（OFF）'"
+                  >✅</button>
+                  <button
+                    @click="toggleNeed(journal.id, 'NEED_CONSULT')"
+                    :class="journal.labels.includes('NEED_CONSULT') ? 'text-red-600' : 'text-gray-400 opacity-50'"
+                    class="hover:scale-110 transition-transform text-sm"
+                    :title="journal.labels.includes('NEED_CONSULT') ? '相談必要（ON）' : '相談必要（OFF）'"
+                  >💬</button>
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
 
-          <!-- 9. 適格 -->
-          <div v-if="rowIndex === 0" class="w-10 p-0.5 flex items-center justify-center border-r border-gray-200">
-            <span v-if="journal.labels.includes('INVOICE_QUALIFIED')" class="text-green-600 text-sm font-bold">◯</span>
-            <span v-else-if="journal.labels.includes('INVOICE_NOT_QUALIFIED')" class="text-red-600 text-sm font-bold">✕</span>
-          </div>
-          <div v-else class="w-10 border-r border-gray-200"></div>
+              <!-- 証票 -->
+              <template v-else-if="col.key === 'labelType'">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5']">
+                  <span v-if="journal.labels.includes('TRANSPORT')" class="text-[10px] font-bold text-gray-800" title="領収書">領</span>
+                  <span v-if="journal.labels.includes('RECEIPT')" class="text-[10px] font-bold text-gray-800" title="レシート">レ</span>
+                  <span v-if="journal.labels.includes('INVOICE')" class="text-[10px] font-bold text-gray-800" title="請求書">請</span>
+                  <span v-if="journal.labels.includes('CREDIT_CARD')" class="text-[10px] font-bold text-gray-800" title="クレジットカード">ク</span>
+                  <span v-if="journal.labels.includes('BANK_STATEMENT')" class="text-[10px] font-bold text-gray-800" title="銀行明細">銀</span>
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
 
-          <!-- 10. 取引日 -->
-          <div v-if="rowIndex === 0" class="w-16 p-0.5 flex items-center justify-center border-r border-gray-200 text-[8px]">
-            {{ formatDate(journal.transaction_date) }}
-          </div>
-          <div v-else class="w-16 border-r border-gray-200"></div>
+              <!-- 警告 -->
+              <template v-else-if="col.key === 'warning'">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 flex-wrap gap-0.5']">
+                  <i v-if="hasErrorLabels(journal.labels)" class="fa-solid fa-triangle-exclamation text-[10px] text-red-600" title="エラー"></i>
+                  <i v-if="hasWarningLabels(journal.labels)" class="fa-solid fa-triangle-exclamation text-[10px] text-yellow-600" title="警告"></i>
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
 
-          <!-- 11. 摘要 -->
-          <div v-if="rowIndex === 0" class="flex-1 p-0.5 flex items-center border-r border-gray-200">
-            {{ journal.description }}
-          </div>
-          <div v-else class="flex-1 border-r border-gray-200"></div>
+              <!-- 学習 -->
+              <template v-else-if="col.key === 'rule'">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                  <i v-if="journal.labels.includes('RULE_APPLIED')" class="fa-solid fa-graduation-cap text-[10px] text-green-600" title="学習適用済み"></i>
+                  <i v-if="journal.labels.includes('RULE_AVAILABLE')" class="fa-solid fa-lightbulb text-[10px] text-blue-500" title="学習できます"></i>
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
 
-          <!-- 12. 借方勘定科目 -->
-          <div class="w-20 p-0.5 flex items-center border-r border-gray-200">
-            {{ row.debit?.account || '' }}
-          </div>
+              <!-- 軽減 -->
+              <template v-else-if="col.key === 'taxRate'">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                  <span v-if="journal.labels.includes('MULTI_TAX_RATE')" class="text-[9px] font-bold text-green-600 bg-green-50 px-1 rounded">軽</span>
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
 
-          <!-- 13. 借方補助 -->
-          <div class="w-16 p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px]">
-            {{ row.debit?.sub_account || '' }}
-          </div>
+              <!-- メモ -->
+              <template v-else-if="col.key === 'memo'">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                  <i v-if="journal.labels.includes('HAS_MEMO')" class="fa-solid fa-pencil text-[10px] text-gray-600" title="メモあり"></i>
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
 
-          <!-- 14. 借方税区分 -->
-          <div class="w-20 p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px]">
-            {{ row.debit?.tax_category || '' }}
-          </div>
+              <!-- 適格 -->
+              <template v-else-if="col.key === 'invoice'">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                  <span v-if="journal.labels.includes('INVOICE_QUALIFIED')" class="text-green-600 text-sm font-bold">◯</span>
+                  <span v-else-if="journal.labels.includes('INVOICE_NOT_QUALIFIED')" class="text-red-600 text-sm font-bold">✕</span>
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
 
-          <!-- 15. 借方金額 -->
-          <div class="w-16 p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px]">
-            {{ row.debit ? row.debit.amount.toLocaleString() : '' }}
-          </div>
+            </template>
 
-          <!-- 16. 貸方勘定科目 -->
-          <div class="w-20 p-0.5 flex items-center border-r border-gray-200">
-            {{ row.credit?.account || '' }}
-          </div>
+            <!-- text型 -->
+            <template v-else-if="col.type === 'text'">
+              <!-- journal-level（keyにドットなし）: rowIndex===0のみ表示 -->
+              <template v-if="!col.key.includes('.')">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center border-r border-gray-200', col.key === 'transaction_date' ? 'justify-center text-[8px]' : '']">
+                  {{ col.key === 'transaction_date' ? formatDate(String(getValue(journal, col.key))) : getValue(journal, col.key) }}
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
+              <!-- entry-level（keyにドットあり）: 全row表示 -->
+              <div v-else :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px]']">
+                {{ getValue(row, col.key) || '' }}
+              </div>
+            </template>
 
-          <!-- 17. 貸方補助 -->
-          <div class="w-16 p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px]">
-            {{ row.credit?.sub_account || '' }}
-          </div>
+            <!-- amount型 -->
+            <template v-else-if="col.type === 'amount'">
+              <div :class="[col.width, 'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px]']">
+                {{ getValue(row, col.key) != null ? Number(getValue(row, col.key)).toLocaleString() : '' }}
+              </div>
+            </template>
 
-          <!-- 18. 貸方税区分 -->
-          <div class="w-20 p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px]">
-            {{ row.credit?.tax_category || '' }}
-          </div>
+            <!-- action型 -->
+            <div v-else-if="col.type === 'action'" :class="[col.width, 'p-0.5 flex items-center justify-center']">
+              <i class="fa-solid fa-trash text-[9px] text-gray-400 hover:text-red-600 cursor-pointer" title="削除"></i>
+            </div>
 
-          <!-- 19. 貸方金額 -->
-          <div class="w-16 p-0.5 text-right border-r border-gray-200 text-[10px] font-mono">
-            {{ row.credit?.amount?.toLocaleString() || '' }}
-          </div>
-
-          <!-- 20. ゴミ箱 -->
-          <div class="w-8 p-0.5 flex items-center justify-center">
-            <i class="fa-solid fa-trash text-[9px] text-gray-400 hover:text-red-600 cursor-pointer" title="削除"></i>
-          </div>
+          </template>
         </div>
       </template>
     </div>
@@ -489,6 +477,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { journalColumns } from '@/mocks/columns/journalColumns';
 import { mockJournalsPhase5 } from '../data/journal_test_fixture_30cases';
 import { getReceiptImageUrl } from '../data/receipt_mock_data';
 import type { JournalPhase5Mock, JournalEntryLine } from '../types/journal_phase5_mock.type';
@@ -760,17 +749,12 @@ const journals = computed(() => {
           bVal = b.receipt_id ? 1 : 0;
           break;
         case 'status':
-          // TODO: status列のソートは未実装（現在の型定義では'exported' | nullのみ）
-          aVal = 0;
-          bVal = 0;
+          aVal = a.memo ? 1 : 0;
+          bVal = b.memo ? 1 : 0;
           break;
         case 'past_journal':
-          // 虎眼鏡アイコンの有無でソート（journalIndexが25未満）
-          const getPastJournalWeight = (index: number) => {
-            return index < 25 ? 1 : 0;
-          };
-          aVal = getPastJournalWeight(journals.value.indexOf(a));
-          bVal = getPastJournalWeight(journals.value.indexOf(b));
+          aVal = mockJournalsPhase5.findIndex(j => j.id === a.id) < 25 ? 1 : 0;
+          bVal = mockJournalsPhase5.findIndex(j => j.id === b.id) < 25 ? 1 : 0;
           break;
         case 'requires_action':
           aVal = a.display_order;
@@ -913,6 +897,15 @@ function hasErrorLabels(labels: string[]): boolean {
 function hasWarningLabels(labels: string[]): boolean {
   const warningLabels = ['DUPLICATE_SUSPECT', 'DATE_ANOMALY', 'AMOUNT_ANOMALY', 'OCR_LOW_CONFIDENCE'];
   return labels.some(label => warningLabels.includes(label));
+}
+
+function hasPastJournal(journal: JournalPhase5Mock): boolean {
+  return mockJournalsPhase5.findIndex(j => j.id === journal.id) < 25;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getValue(obj: any, path: string): unknown {
+  return path.split('.').reduce((o: any, key: string) => o?.[key], obj)
 }
 
 function formatDate(date: string): string {
