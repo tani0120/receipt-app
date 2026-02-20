@@ -1,32 +1,44 @@
 <template>
   <div class="h-full flex flex-col bg-gray-50 font-sans">
-    <!-- 緑ヘッダー -->
-    <div class="bg-[#2d5a3d] text-white px-3 py-1.5 flex justify-between items-center">
-      <h1 class="text-sm font-bold">仕訳一覧</h1>
+    <!-- 上部バー -->
+    <div class="bg-white px-3 py-1 flex justify-between items-center text-[10px] text-gray-700">
+      <!-- 表示条件ドロップダウン + チェックボックス -->
+      <div class="flex items-center gap-3">
+        <select class="border border-blue-400 text-blue-600 text-[10px] px-2 py-0.5 rounded cursor-pointer">
+          <option>表示条件</option>
+          <option>未読</option>
+          <option>メモ</option>
+          <option>エラー ⚠</option>
+          <option>重複</option>
+          <option>要確認</option>
+          <option>電子帳簿保存法</option>
+          <option>学習未適用</option>
+          <option>学習適用済</option>
+          <option>学習なし</option>
+        </select>
+        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showUnexported" class="w-2.5 h-2.5">未出力を表示</label>
+        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExported" class="w-2.5 h-2.5">出力済を表示</label>
+        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExcluded" class="w-2.5 h-2.5">出力対象外を表示</label>
+      </div>
+      <!-- 行の背景色 凡例 -->
       <div class="flex items-center gap-2">
-        <button class="w-6 h-6 rounded bg-white/90 text-gray-700 flex items-center justify-center text-xs hover:bg-white">
-          <i class="fa-solid fa-arrows-rotate"></i>
-        </button>
-        <button class="w-6 h-6 rounded bg-white/90 text-gray-700 flex items-center justify-center text-xs hover:bg-white">
-          <i class="fa-regular fa-calendar"></i>
-        </button>
-        <button class="w-6 h-6 rounded bg-white/90 text-gray-700 flex items-center justify-center text-xs hover:bg-white">
-          <i class="fa-solid fa-gear"></i>
-        </button>
-        <input type="text" placeholder="検索..." class="px-2 py-0.5 text-[10px] rounded w-24">
+        <span class="text-gray-600">行の背景色</span>
+        <span class="bg-yellow-100 border border-gray-400 px-2 py-0.5 text-gray-800 font-bold">未読</span>
+        <span class="bg-white border border-gray-400 px-2 py-0.5 text-gray-800">既読</span>
+        <span class="bg-gray-200 border border-gray-400 px-2 py-0.5 text-gray-800">出力済</span>
       </div>
     </div>
 
     <!-- テーブルヘッダー（23列） -->
-    <div class="bg-[#1a1a1a] text-white text-[10px] flex border-b border-gray-800 pr-[8px]">
+    <div class="bg-blue-100 text-gray-800 text-[10px] flex border-b border-gray-300 pr-[8px]">
       <div
         v-for="col in journalColumns"
         :key="col.key"
         :class="[
           col.width,
           'p-1 flex items-center justify-center',
-          col.type !== 'action' ? 'border-r border-gray-700' : '',
-          col.sortKey ? 'cursor-pointer hover:bg-gray-700' : ''
+          col.type !== 'action' ? 'border-r border-gray-300' : '',
+          col.sortKey ? 'cursor-pointer hover:bg-blue-200' : ''
         ]"
         @click="col.sortKey && sortBy(col.sortKey)"
       >
@@ -40,7 +52,7 @@
     </div>
 
     <!-- テーブルボディ -->
-    <div class="flex-1 overflow-y-auto">
+    <div class="flex-1 overflow-y-scroll">
       <template v-for="(journal, journalIndex) in journals" :key="journal.id">
         <div v-for="(row, rowIndex) in getCombinedRows(journal)" :key="`${journal.id}-${rowIndex}`"
              :class="[
@@ -482,6 +494,11 @@ import { mockJournalsPhase5 } from '../data/journal_test_fixture_30cases';
 import { getReceiptImageUrl } from '../data/receipt_mock_data';
 import type { JournalPhase5Mock, JournalEntryLine } from '../types/journal_phase5_mock.type';
 
+// フィルタリング状態（チェックボックス）
+const showUnexported = ref<boolean>(true);   // 未出力を表示（初期: ON）
+const showExported = ref<boolean>(false);    // 出力済を表示（初期: OFF）
+const showExcluded = ref<boolean>(false);    // 出力対象外を表示（初期: OFF）
+
 // ソート状態
 const sortColumn = ref<string | null>(null);
 const sortDirection = ref<'asc' | 'desc'>('asc');
@@ -861,7 +878,21 @@ const journals = computed(() => {
     });
   }
 
-  return result;
+  // チェックボックスフィルタリング
+  return result.filter(journal => {
+    const isExcluded = journal.labels.includes('EXPORT_EXCLUDE');
+    const isExported = journal.status === 'exported';
+    const isUnexported = journal.status === null && !isExcluded;
+
+    if (showUnexported.value && isUnexported) return true;
+    if (showExported.value && isExported) return true;
+    if (showExcluded.value && isExcluded) return true;
+
+    // すべてOFFの場合は全表示
+    if (!showUnexported.value && !showExported.value && !showExcluded.value) return true;
+
+    return false;
+  });
 });
 
 function sortBy(column: string) {
@@ -882,10 +913,15 @@ function getCombinedRows(journal: JournalPhase5Mock): Array<{ debit: JournalEntr
 }
 
 function getRowBackground(journal: JournalPhase5Mock): string {
-  // 行21-30を黄色ハイライト
-  if (journal.display_order >= 21 && journal.display_order <= 30) {
+  // 優先度1: 出力済み → グレー（未読より優先）
+  if (journal.status === 'exported') {
+    return 'bg-gray-200';
+  }
+  // 優先度2: 未読 → 黄色
+  if (!journal.is_read) {
     return 'bg-yellow-100';
   }
+  // 優先度3: 既読 → 白
   return 'bg-white';
 }
 
