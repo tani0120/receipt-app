@@ -251,54 +251,40 @@ Step 4.3.11: 明細disabled制御
 
 status/label/readonly の再定義待ち（Phase A）
 Phase Aの設計思想確立後に再開予定
-Phase A: Streamed互換設計思想（進行中）
-完了タスク
-Task A.0: Phase A概要ドキュメント作成 ✅
-concept_phaseA_overview_260208.md
-Streamed互換の定義、価値、設計原則
-進行中タスク
-Task A.0.1: 前文修正案作成（進行中）
+Phase A: UX探索モード（進行中）
+Phase A-0（準備）完了状況:
+- Step 1-3: Yen型・type定義・fixture確認 ✅
+- Step 4: journalColumns.ts作成（JournalColumn型+sortKey付き23列定義） ✅
+- Step 5: ヘッダーv-for化（pr-[8px]列ずれ修正、ソートバグ2件修正含む） ✅
+- Step 6: ボディ全体v-for化（全23列、6type分岐、getValue()導入） ✅
+- 次: 出力列追加（export_exclude設計判断に基づく）
 
-plan_phaseA_A01_final_revision_260210.md
-Task A.0.4: 機能要件と価値定義の整合性検証（検討中）
+確定済み設計:
+- status: exported + null（2値のみ）
+- labels: 21種類（Phase CでEXPORT_EXCLUDE廃止→20種類）
+- 背景色: is_readの2色（黄/白）。出力状態は出力列で表示
+- columns.ts = 構造定義の単一ソース。描画ロジックはVue側
 
-verification_A04_comparison.md
-提案: 1回ルール（明示的制御）vs 2回ルール（段階的信頼）
-確定済み内容
-価値定義（最終版）:
-
-AIは決定や推論に責任を持たない補助システム。人間が変更・正当化をコントロールし、選択するだけでタスクが完了する。
-
-核心原則:
-
-明示的制御: ユーザーが意識的に選択
-透明性: AIの推論根拠を提示
-例外処理: AIは境界を提示、人間が決定
-💼 現在の課題と議論ポイント
-1. Phase Aの残課題
-ルール閾値: 1回ルール vs 2回ルール の最終決定
-UI/UX仕様: Phase 4への具体的な設計反映方法
-MVP定義: Phase A完了後の開発優先度
+💼 現在の課題
+1. Phase A残タスク
+残り19列のUI実装（component列10本の動作実装が主）
+出力列追加（export_exclude, export_exclude_reason）
+30件テスト・摩擦レポート
 2. Phase 4への影響
-Phase Aの設計思想確定後、Journal UIの再設計再開
+Phase Aの設計思想確立後、Journal UIの再設計再開
 status/label/readonlyの定義をPhase Aから引き継ぐ
-3. Claude引き継ぎ時の検討事項
-プロジェクト全体の優先順位付け
-Phase A完了後のロードマップ策定
-技術的負債（TD-001等）の対処時期
 📂 重要ディレクトリ構造
 receipt-app/
 ├── docs/
 │   ├── genzai/
-│   │   ├── 00_ルール.md                    # ドキュメント管理規約
-│   │   ├── NEW/
-│   │   │   ├── phaseA_streamed_compatible_design_260208/  # Phase A（進行中）
-│   │   │   └── phase4_journal_ui_refactor_260208/         # Phase 4（保留中）
-│   │   └── OLD/
-│   │       ├── phase0_architecture_design_260205/         # Phase 0（完了）
-│   │       ├── phase1_postgresql_introduction_260207/     # Phase 1（完了）
-│   │       ├── phase2_receipt_ui_refactor_260207/         # Phase 2（完了）
-│   │       └── phase3_data_migration_skip_260207/         # Phase 3（完了）
+│   │   ├── 00_モック実装時のルール.md       # Phase体系・暴走防止・型安全ルール（最上位規範）
+│   │   ├── モック作成ガイド.md             # 指示テンプレート・型安全ルール・移行手順
+│   │   ├── 01_tools_and_setups/           # 本ファイル（技術スタック・セットアップ）
+│   │   ├── 02_database_schema/            # DB設計書（journal_v2, migration.sql, API設計書, 実装ノート）
+│   │   ├── 03_idea/                       # アイデア・検討中の設計
+│   │   ├── 04_mock/                       # モック関連タスク（task_current.md）
+│   │   ├── NEW/                           # 進行中Phase設計書
+│   │   └── OLD/                           # 完了済Phase設計書
 │   ├── _archive_legacy/
 │   │   └── kakunin/                        # 過去の設計書・技術資料
 │   └── sessions/                           # セッション記録
@@ -316,6 +302,11 @@ receipt-app/
 │   │   │   └── auditLogRepository.ts       # 監査ログ
 │   │   └── types/
 │   │       └── receipt.types.ts            # Receipt型定義
+│   ├── mocks/
+│   │   ├── columns/                        # journalColumns.ts（列定義の単一ソース）
+│   │   ├── components/                     # JournalListLevel3Mock.vue等
+│   │   ├── data/                           # journal_test_fixture_30cases.ts等
+│   │   └── types/                          # journal_phase5_mock.type.ts等
 │   ├── views/
 │   │   └── ReceiptDetail.vue               # Receipt詳細画面（Phase 2実装）
 │   ├── components/receipt/                 # Receipt UIコンポーネント（6種）

@@ -11,7 +11,7 @@
 ## 現在地
 
 Phase A（UX探索モード）進行中。
-JournalListLevel3Mock.vue は22列中4列完了（No./写真/過去仕訳）、§1 UI修復完了。
+JournalListLevel3Mock.vue は23列。ヘッダー・ボディ両方のv-for化完了。columns.tsが列定義の唯一ソース。ソートバグ2件修正済み（過去仕訳・コメント）。ヘッダー/ボディ列ずれ解消済み。次は出力列追加。
 
 ### 3階層UIの対応関係
 
@@ -52,8 +52,8 @@ JournalListLevel3Mock.vue は22列中4列完了（No./写真/過去仕訳）、�
 - [x] journal_phase5_mock.type.ts 確認（JournalStatusPhase5, JournalLabelPhase5, JournalPhase5Mock）
 - [x] journal_test_fixture_30cases.ts 確認（グリーン21/イエロー9/複合5、全21ラベル網羅）
 - [x] journalColumns.ts 作成（列定義の単一ソース）
-- [ ] ヘッダー v-for化
-- [ ] ボディ v-for化（getValue()導入 + ルール§3.4コード例を更新）
+- [x] ヘッダー v-for化（2026-02-20完了。columns.ts型定義正常化、as const→JournalColumn[]型注釈。スクロールバー8px列ずれ修正pr-[8px]。ソートバグ2件修正: コメント列memo有無、過去仕訳列findIndex+id比較。表示ロジック修正: journalIndex→hasPastJournal関数）
+- [x] ボディ v-for化（2026-02-20完了。全23列一括変換。type分岐: checkbox/index/component/text/amount/action。getValue()ユーティリティ追加。journal/entry判定はkey.includes('.')でVue側ロジック。component列10本はcol.key個別分岐。amount列!=nullチェック。needActionキー不一致修正。DOM実測H:23 B:23 ALL_ALIGNED確認済）
 - [ ] 出力列追加（export_exclude設計判断に基づく。v-for化完了が前提）
   - mock型にexport_exclude, export_exclude_reasonフィールド追加
   - journalColumns.tsに出力列定義追加
@@ -66,7 +66,7 @@ JournalListLevel3Mock.vue は22列中4列完了（No./写真/過去仕訳）、�
 
 ---
 
-## 3. UI列実装状況（22列）
+## 3. UI列実装状況（23列）
 
 - [ ] 選（チェックボックス）
 - [x] No.
@@ -118,7 +118,7 @@ JournalListLevel3Mock.vue は22列中4列完了（No./写真/過去仕訳）、�
 
 `00_モック実装時のルール.md` §1 Phase B移行条件を満たすこと。
 
-- [ ] 全22列がブラウザで正しく表示
+- [ ] 全23列がブラウザで正しく表示
 - [ ] ソート全項目動作確認
 - [ ] モーダル全種動作確認
 - [ ] トグル動作確認

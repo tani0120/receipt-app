@@ -598,7 +598,7 @@ describe('updateJournal', () => {
     const exportedJournalId = 'uuid-exported';
     
     await expect(
-      updateJournal(exportedJournalId, { status: 'pending' }, { userId: 'user1' })
+      updateJournal(exportedJournalId, { description: '修正テスト' }, { userId: 'user1' })
     ).rejects.toThrow('CSV出力済みの仕訳は編集できません');
   });
 });
@@ -611,8 +611,8 @@ describe('exportJournals', () => {
   it('should update all journals atomically', async () => {
     const clientId = 'client1';
     
-    // 出力前: pending状態
-    const before = await getJournals({ client_id: clientId, status: 'pending' });
+    // 出力前: 未出力状態（status = null）
+    const before = await getJournals({ client_id: clientId, status: null });
     expect(before.journals.length).toBeGreaterThan(0);
     
     // 出力実行

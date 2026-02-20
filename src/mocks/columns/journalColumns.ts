@@ -8,7 +8,15 @@
  * - key: text/amount型はデータパス、その他はUI識別子
  * - sortKey: ソート可能な列のキー名（ソート処理はVueコンポーネント側）
  */
-export const journalColumns = [
+type JournalColumn = {
+    key: string
+    label: string
+    width: string
+    type: 'checkbox' | 'index' | 'component' | 'text' | 'amount' | 'action'
+    sortKey?: string
+}
+
+export const journalColumns: JournalColumn[] = [
     // --- 操作 ---
     { key: "select", label: "選", width: "w-6", type: "checkbox" },
     { key: "no", label: "No.", width: "w-8", type: "index", sortKey: "display_order" },
@@ -41,4 +49,4 @@ export const journalColumns = [
 
     // --- 操作（末尾） ---
     { key: "trash", label: "🗑", width: "w-8", type: "action" },
-] as const;
+];
