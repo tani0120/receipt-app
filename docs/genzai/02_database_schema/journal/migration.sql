@@ -218,7 +218,7 @@ COMMENT ON TABLE journals IS 'Phase 5 仕訳テーブル（Streamed準拠、要�
 COMMENT ON COLUMN journals.status IS 'ステータス: NULL=未出力、exported=出力済';
 COMMENT ON COLUMN journals.is_read IS '未読/既読（背景色管理: 未読=黄色、既読=白）';
 COMMENT ON COLUMN journals.labels IS '21種類のラベル（要対応3個、出力制御1個、事故フラグ、OCR、証憑種類など）';
-COMMENT ON COLUMN journals.export_exclude IS '出力対象外フラグ（TRUE: CSV出力しない、EXPORT_EXCLUDEラベルと連動）';
+COMMENT ON COLUMN journals.export_exclude IS '出力対象外フラグ（TRUE: CSV出力しない。カラム管理。2026-02-20判断でEXPORT_EXCLUDEラベルとの連動を廃止）';
 
 -- ============================================================
 -- 完了

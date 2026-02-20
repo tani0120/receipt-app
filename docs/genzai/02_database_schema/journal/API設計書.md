@@ -336,7 +336,7 @@ export async function exportJournals(
     .select('*')
     .eq('client_id', clientId)
     .is('status', null)  // 未出力のみ
-    .not('labels', 'cs', '{EXPORT_EXCLUDE}')  // 出力対象外を除外
+    .not('labels', 'cs', '{EXPORT_EXCLUDE}')  // 出力対象外を除外 ⚠️ Phase Cで .eq('export_exclude', false) に変更予定（2026-02-20判断: カラム管理に統一）
     .is('deleted_at', null);
 
   if (fetchError) throw fetchError;
