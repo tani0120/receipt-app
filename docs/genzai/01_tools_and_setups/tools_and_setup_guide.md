@@ -257,18 +257,18 @@ Phase A-0（準備）完了状況:
 - Step 4: journalColumns.ts作成（JournalColumn型+sortKey付き23列定義） ✅
 - Step 5: ヘッダーv-for化（pr-[8px]列ずれ修正、ソートバグ2件修正含む） ✅
 - Step 6: ボディ全体v-for化（全23列、6type分岐、getValue()導入） ✅
-- 次: 出力列追加（export_exclude設計判断に基づく）
+- Step 7: 操作列（⋯）DD実装、ゴミ箱ソフトデリート（deleted_at方式）、フィルタ4種、4色背景 ✅
 
 確定済み設計:
 - status: exported + null（2値のみ）
 - labels: 21種類（Phase CでEXPORT_EXCLUDE廃止→20種類）
-- 背景色: is_readの2色（黄/白）。出力状態は出力列で表示
+- 背景色: 4色優先順位制（deleted_at→濃灰+白字(最優先) > exported→灰 > !is_read→黄 > 既読→白）
 - columns.ts = 構造定義の単一ソース。描画ロジックはVue側
 
 💼 現在の課題
 1. Phase A残タスク
 残り19列のUI実装（component列10本の動作実装が主）
-出力列追加（export_exclude, export_exclude_reason）
+一括操作バー実装（Gmail式チェック→アクション切替）
 30件テスト・摩擦レポート
 2. Phase 4への影響
 Phase Aの設計思想確立後、Journal UIの再設計再開
