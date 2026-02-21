@@ -2,26 +2,46 @@
   <div class="h-full flex flex-col bg-gray-50 font-sans" @click="closeDropdown">
     <!-- 上部バー -->
     <div class="bg-white px-3 py-1 flex justify-between items-center text-[10px] text-gray-700">
-      <!-- 表示条件ドロップダウン + チェックボックス -->
-      <div class="flex items-center gap-3">
-        <select class="border border-blue-400 text-blue-600 text-[10px] px-2 py-0.5 rounded cursor-pointer">
-          <option>表示条件</option>
-          <option>未読</option>
-          <option>メモ</option>
-          <option>エラー ⚠</option>
-          <option>重複</option>
-          <option>要確認</option>
-          <option>電子帳簿保存法</option>
-          <option>学習未適用</option>
-          <option>学習適用済</option>
-          <option>学習なし</option>
-        </select>
-        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showUnexported" class="w-2.5 h-2.5">未出力を表示</label>
-        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExported" class="w-2.5 h-2.5">出力済を表示</label>
-        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExcluded" class="w-2.5 h-2.5">出力対象外を表示</label>
-        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showTrashed" class="w-2.5 h-2.5">ゴミ箱を表示</label>
-      </div>
-      <!-- 行の背景色 凡例 -->
+      <!-- フィルタモード（通常時） -->
+      <template v-if="!isSelectionMode">
+        <div class="flex items-center gap-3">
+          <select class="border border-blue-400 text-blue-600 text-[10px] px-2 py-0.5 rounded cursor-pointer">
+            <option>表示条件</option>
+            <option>未読</option>
+            <option>メモ</option>
+            <option>エラー ⚠</option>
+            <option>重複</option>
+            <option>要確認</option>
+            <option>電子帳簿保存法</option>
+            <option>学習未適用</option>
+            <option>学習適用済</option>
+            <option>学習なし</option>
+          </select>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showUnexported" class="w-2.5 h-2.5">未出力を表示</label>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExported" class="w-2.5 h-2.5">出力済を表示</label>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExcluded" class="w-2.5 h-2.5">出力対象外を表示</label>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showTrashed" class="w-2.5 h-2.5">ゴミ箱を表示</label>
+        </div>
+      </template>
+      <!-- アクションモード（選択時） -->
+      <template v-else>
+        <div class="flex items-center gap-2">
+          <span class="text-blue-600 font-bold">{{ selectedIds.size }}件選択中</span>
+          <button @click="clearSelection" class="text-gray-500 hover:text-gray-700 px-1" title="選択解除">✖</button>
+          <div class="border-l border-gray-300 h-4 mx-1"></div>
+          <div class="flex border border-gray-300 rounded overflow-hidden">
+            <button @click="bulkSetReadStatus(false)" class="px-2 py-0.5 hover:bg-gray-100">📖 未読</button>
+            <button @click="bulkSetReadStatus(true)" class="px-2 py-0.5 hover:bg-gray-100 border-l border-gray-300">📖 既読</button>
+          </div>
+          <div class="flex border border-gray-300 rounded overflow-hidden">
+            <button @click="bulkSetExportExclude(true)" class="px-2 py-0.5 hover:bg-gray-100">📤 対象外</button>
+            <button @click="bulkSetExportExclude(false)" class="px-2 py-0.5 hover:bg-gray-100 border-l border-gray-300">📤 対象</button>
+          </div>
+          <button @click="showBulkCopyDialog" class="px-2 py-0.5 border border-gray-300 rounded hover:bg-gray-100">📋 コピー</button>
+          <button @click="showBulkTrashDialog" class="px-2 py-0.5 border border-red-300 rounded hover:bg-red-50 text-red-600">🗑 ゴミ箱</button>
+        </div>
+      </template>
+      <!-- 行の背景色 凡例（両モードで表示） -->
       <div class="flex items-center gap-2">
         <span class="text-gray-600">行の背景色</span>
         <span class="bg-yellow-100 border border-gray-400 px-2 py-0.5 text-gray-800 font-bold">未読</span>
@@ -29,6 +49,12 @@
         <span class="bg-gray-200 border border-gray-400 px-2 py-0.5 text-gray-800">出力済</span>
         <span class="bg-gray-600 border border-gray-400 px-2 py-0.5 text-white">ゴミ箱</span>
       </div>
+    </div>
+    <!-- 初回選択ヘルプ（fadeOut） -->
+    <div v-if="showSelectionHelp"
+         class="bg-blue-50 text-blue-700 text-[10px] px-3 py-1 text-center transition-opacity duration-1000"
+         :class="{ 'opacity-0': !showSelectionHelp }">
+      💡 チェックを入れると一括操作バーに切り替わります。全解除でフィルタに戻ります。
     </div>
 
     <!-- テーブルヘッダー（23列） -->
@@ -44,7 +70,13 @@
         ]"
         @click="col.sortKey && sortBy(col.sortKey)"
       >
-        {{ col.label }}
+        <!-- checkbox列ヘッダー: 全選択/全解除 -->
+        <template v-if="col.type === 'checkbox'">
+          <input type="checkbox" class="w-2.5 h-2.5 cursor-pointer" :checked="isAllSelected" @change="toggleSelectAll">
+        </template>
+        <template v-else>
+          {{ col.label }}
+        </template>
       </div>
     </div>
 
@@ -62,7 +94,8 @@
 
             <!-- checkbox型 -->
             <div v-if="col.type === 'checkbox'" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
-              <input v-if="rowIndex === 0" type="checkbox" class="w-2.5 h-2.5">
+              <input v-if="rowIndex === 0" type="checkbox" class="w-2.5 h-2.5 cursor-pointer"
+                     :checked="selectedIds.has(journal.id)" @change="toggleSelect(journal.id)">
             </div>
 
             <!-- index型 -->
@@ -570,10 +603,30 @@
       </div>
     </div>
   </div>
+
+    <!-- 確認ダイアログ（モーダル） -->
+    <div v-if="confirmDialog.show"
+         class="fixed inset-0 z-[100] flex items-center justify-center bg-black/30"
+         @click.self="confirmDialog.show = false">
+      <div class="bg-white rounded-lg shadow-xl p-4 w-72 text-sm" @click.stop>
+        <h3 class="font-bold mb-2 text-gray-800">{{ confirmDialog.title }}</h3>
+        <p class="text-gray-600 mb-4 whitespace-pre-line text-xs">{{ confirmDialog.message }}</p>
+        <div class="flex justify-end gap-2">
+          <button @click="confirmDialog.show = false"
+                  class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600">
+            キャンセル
+          </button>
+          <button @click="confirmDialog.onConfirm(); confirmDialog.show = false"
+                  class="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
+            実行
+          </button>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { journalColumns } from '@/mocks/columns/journalColumns';
 import { mockJournalsPhase5 as fixtureData } from '../data/journal_test_fixture_30cases';
 import { getReceiptImageUrl } from '../data/receipt_mock_data';
@@ -589,6 +642,21 @@ const showUnexported = ref<boolean>(true);   // 未出力を表示（初期: ON�
 const showExported = ref<boolean>(false);    // 出力済を表示（初期: OFF）
 const showExcluded = ref<boolean>(false);    // 出力対象外を表示（初期: OFF）
 const showTrashed = ref<boolean>(false);     // ゴミ箱を表示（初期: OFF）
+
+// ────── 選択状態管理（一括操作バー用） ──────
+const selectedIds = ref<Set<string>>(new Set());
+
+// 確認ダイアログ
+const confirmDialog = ref<{
+  show: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+}>({ show: false, title: '', message: '', onConfirm: () => {} });
+
+// 初回ヘルプ表示
+const showSelectionHelp = ref(false);
+const hasShownHelp = ref(false);
 
 // ドロップダウン制御
 const openDropdownId = ref<string | null>(null);
@@ -647,6 +715,11 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
   }
   console.log(`[DD] コピー作成: ${clone.id} (元: ${journal.id})`);
   closeDropdown();
+  confirmDialog.value = {
+    show: true, title: 'コピー完了',
+    message: '未出力にコピーしました。',
+    onConfirm: () => {}
+  };
 }
 
 function trashJournal(journal: JournalPhase5Mock) {
@@ -655,11 +728,17 @@ function trashJournal(journal: JournalPhase5Mock) {
     console.warn(`[DD] exported journal cannot be trashed: ${journal.id}`);
     return;
   }
-  const target = localJournals.value.find(j => j.id === journal.id);
-  if (!target) return;
-  target.deleted_at = new Date().toISOString();
-  console.log(`[DD] ゴミ箱: ${journal.id}`);
   closeDropdown();
+  confirmDialog.value = {
+    show: true, title: 'ゴミ箱に移動',
+    message: `「${journal.description}」をゴミ箱に移動しますか？`,
+    onConfirm: () => {
+      const target = localJournals.value.find(j => j.id === journal.id);
+      if (!target) return;
+      target.deleted_at = new Date().toISOString();
+      console.log(`[DD] ゴミ箱: ${journal.id}`);
+    }
+  };
 }
 
 function restoreJournal(journal: JournalPhase5Mock) {
@@ -668,6 +747,193 @@ function restoreJournal(journal: JournalPhase5Mock) {
   target.deleted_at = null;
   console.log(`[DD] 復活: ${journal.id}`);
   closeDropdown();
+  confirmDialog.value = {
+    show: true, title: '復活完了',
+    message: `「${journal.description}」を復活しました。`,
+    onConfirm: () => {}
+  };
+}
+
+// ────── 選択操作関数 ──────
+
+function toggleSelect(journalId: string) {
+  const newSet = new Set(selectedIds.value);
+  if (newSet.has(journalId)) {
+    newSet.delete(journalId);
+  } else {
+    newSet.add(journalId);
+  }
+  selectedIds.value = newSet;
+  // 初回チェック時ヘルプ
+  if (!hasShownHelp.value && newSet.size > 0) {
+    showSelectionHelp.value = true;
+    hasShownHelp.value = true;
+    setTimeout(() => { showSelectionHelp.value = false; }, 3000);
+  }
+}
+
+function clearSelection() {
+  selectedIds.value = new Set();
+}
+
+// ────── 一括操作関数（冪等 + 0件ガード） ──────
+
+function bulkSetReadStatus(value: boolean) {
+  const targets = selectedJournals.value.filter(j => j.is_read !== value);
+  // 0件ガード
+  if (targets.length === 0) {
+    confirmDialog.value = {
+      show: true, title: '実行不可',
+      message: `すべて既に${value ? '既読' : '未読'}状態です。`,
+      onConfirm: () => {}
+    };
+    return;
+  }
+  targets.forEach(j => { j.is_read = value; });
+  console.log(`[一括] ${value ? '既読' : '未読'}: ${targets.length}件変更`);
+  const count = targets.length;
+  clearSelection();
+  confirmDialog.value = {
+    show: true, title: '完了',
+    message: `${count}件を${value ? '既読' : '未読'}にしました。`,
+    onConfirm: () => {}
+  };
+}
+
+function bulkSetExportExclude(exclude: boolean) {
+  const all = selectedJournals.value;
+  const exportedCount = all.filter(j => j.status === 'exported').length;
+  const targets = all.filter(j => {
+    if (j.status === 'exported') return false;
+    return exclude !== j.labels.includes('EXPORT_EXCLUDE');
+  });
+  // 0件ガード
+  if (targets.length === 0) {
+    confirmDialog.value = {
+      show: true,
+      title: '実行不可',
+      message: exportedCount > 0
+        ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）\n実行可能な仕訳がありません。`
+        : '実行可能な仕訳がありません。',
+      onConfirm: () => {}
+    };
+    return;
+  }
+  // exported含む場合の制限メッセージ
+  if (exportedCount > 0) {
+    const capturedTargets = [...targets]; // クロージャキャプチャ
+    confirmDialog.value = {
+      show: true,
+      title: exclude ? '出力対象外に変更' : '出力対象に変更',
+      message: `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）/ 実行対象: ${capturedTargets.length}件`,
+      onConfirm: () => {
+        capturedTargets.forEach(j => {
+          if (exclude && !j.labels.includes('EXPORT_EXCLUDE')) {
+            j.labels.push('EXPORT_EXCLUDE');
+          } else if (!exclude) {
+            const idx = j.labels.indexOf('EXPORT_EXCLUDE');
+            if (idx >= 0) j.labels.splice(idx, 1);
+          }
+        });
+        console.log(`[一括] ${exclude ? '対象外' : '対象'}: ${capturedTargets.length}件変更`);
+        clearSelection();
+      }
+    };
+    return;
+  }
+  // exported含まない場合はそのまま実行
+  targets.forEach(j => {
+    if (exclude && !j.labels.includes('EXPORT_EXCLUDE')) {
+      j.labels.push('EXPORT_EXCLUDE');
+    } else if (!exclude) {
+      const idx = j.labels.indexOf('EXPORT_EXCLUDE');
+      if (idx >= 0) j.labels.splice(idx, 1);
+    }
+  });
+  console.log(`[一括] ${exclude ? '対象外' : '対象'}: ${targets.length}件変更`);
+  const count = targets.length;
+  clearSelection();
+  confirmDialog.value = {
+    show: true, title: '完了',
+    message: `${count}件を${exclude ? '出力対象外' : '出力対象'}にしました。`,
+    onConfirm: () => {}
+  };
+}
+
+function showBulkCopyDialog() {
+  const targets = [...selectedJournals.value]; // クロージャキャプチャ（コピーはexportedスキップなし）
+  confirmDialog.value = {
+    show: true,
+    title: 'コピー',
+    message: `${targets.length}件コピーしますか？`,
+    onConfirm: () => {
+      targets.forEach(j => {
+        const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(j));
+        clone.id = `copy-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        clone.display_order = j.display_order + 0.5;
+        clone.description = `★コピー ${j.description}`;
+        clone.is_read = false;
+        clone.status = null;
+        clone.labels = [];
+        clone.memo = null;
+        clone.memo_author = null;
+        clone.memo_target = null;
+        clone.memo_created_at = null;
+        clone.deleted_at = null;
+        const originalIndex = localJournals.value.findIndex(lj => lj.id === j.id);
+        if (originalIndex >= 0) {
+          localJournals.value.splice(originalIndex + 1, 0, clone);
+        }
+      });
+      console.log(`[一括] コピー: ${targets.length}件`);
+      clearSelection();
+      confirmDialog.value = {
+        show: true, title: 'コピー完了',
+        message: `${targets.length}件を未出力にコピーしました。`,
+        onConfirm: () => {}
+      };
+    }
+  };
+}
+
+function showBulkTrashDialog() {
+  const all = selectedJournals.value;
+  const exportedCount = all.filter(j => j.status === 'exported').length;
+  const targets = all.filter(j => j.status !== 'exported' && j.deleted_at === null);
+  // 0件ガード
+  if (targets.length === 0) {
+    confirmDialog.value = {
+      show: true,
+      title: '実行不可',
+      message: exportedCount > 0
+        ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）\n実行可能な仕訳がありません。`
+        : '実行可能な仕訳がありません。',
+      onConfirm: () => {}
+    };
+    return;
+  }
+  const capturedTargets = [...targets]; // クロージャキャプチャ
+  const msg = exportedCount > 0
+    ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）/ 実行対象: ${capturedTargets.length}件\nゴミ箱に移動しますか？`
+    : `${capturedTargets.length}件をゴミ箱に移動しますか？`;
+  confirmDialog.value = {
+    show: true,
+    title: 'ゴミ箱',
+    message: msg,
+    onConfirm: () => {
+      const now = new Date().toISOString();
+      capturedTargets.forEach(j => {
+        j.deleted_at = now;
+      });
+      console.log(`[一括] ゴミ箱: ${capturedTargets.length}件`);
+      clearSelection();
+      confirmDialog.value = {
+        show: true, title: '完了',
+        message: `${capturedTargets.length}件をゴミ箱に移動しました。`,
+        onConfirm: () => {}
+      };
+    }
+  };
 }
 
 // ソート状態
@@ -1068,6 +1334,37 @@ const journals = computed(() => {
 
     return false;
   });
+});
+
+// ────── journals依存のcomputed（journals computedの後に配置必須） ──────
+
+const visibleIds = computed(() => journals.value.map(j => j.id));
+
+const selectedJournals = computed(() =>
+  localJournals.value.filter(j => selectedIds.value.has(j.id))
+);
+
+const isSelectionMode = computed(() => selectedIds.value.size > 0);
+
+const isAllSelected = computed(() =>
+  visibleIds.value.length > 0 &&
+  visibleIds.value.every(id => selectedIds.value.has(id))
+);
+
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    selectedIds.value = new Set();
+  } else {
+    selectedIds.value = new Set(visibleIds.value);
+  }
+}
+
+// フィルタ変更時の選択prune（visibleIds依存 — ソート変更では発火しない）
+watch(visibleIds, (ids) => {
+  const visible = new Set(ids);
+  selectedIds.value = new Set(
+    [...selectedIds.value].filter(id => visible.has(id))
+  );
 });
 
 function sortBy(column: string) {
