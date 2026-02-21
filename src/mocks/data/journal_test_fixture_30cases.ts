@@ -7,6 +7,7 @@
  */
 
 import type { JournalPhase5Mock } from '../types/journal_phase5_mock.type';
+import { createEmptyStaffNotes } from '../types/staff_notes';
 
 export const mockJournalsPhase5: JournalPhase5Mock[] = [
   // ============================================================
@@ -37,7 +38,9 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: null,
     memo_author: null,
     memo_target: null,
-    memo_created_at: null
+    memo_created_at: null,
+    staff_notes: null,
+    staff_notes_author: null
   },
 
   // 行2: レシート、ルール適用可能、不適格請求書
@@ -50,7 +53,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     status: 'exported',  // 出力済み
     is_read: false,  // 未読（黄色背景）
     deleted_at: null,
-    labels: ['RECEIPT', 'RULE_AVAILABLE', 'INVOICE_NOT_QUALIFIED', 'NEED_DOCUMENT'],  // 資料が必要
+    labels: ['RECEIPT', 'RULE_AVAILABLE', 'INVOICE_NOT_QUALIFIED', 'NEED_DOCUMENT'],  // 書類が不足
     debit_entries: [
       { account: 'メンテナンス費', sub_account: null, amount: 11000, tax_category: '課税仕入込10%' }
     ],
@@ -64,7 +67,12 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: null,
     memo_author: null,
     memo_target: null,
-    memo_created_at: null
+    memo_created_at: null,
+    staff_notes: {
+      ...createEmptyStaffNotes(),
+      NEED_DOCUMENT: { enabled: true, text: '請求書の原本をお送りください', chatworkUrl: 'https://www.chatwork.com/#!rid00001' }
+    },
+    staff_notes_author: '山田太郎'
   },
 
   // 行3: レシート、ルール適用済み、適格請求書
@@ -77,7 +85,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     status: 'exported',  // 出力済み
     is_read: false,  // 未読（黄色背景）
     deleted_at: null,
-    labels: ['RECEIPT', 'INVOICE_QUALIFIED', 'NEED_CONFIRM'],  // 確認が必要
+    labels: ['RECEIPT', 'INVOICE_QUALIFIED', 'NEED_INFO'],  // 情報が不足（旧NEED_CONFIRM）
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 2500, tax_category: '課税仕入込10%' }
     ],
@@ -91,7 +99,12 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: null,
     memo_author: null,
     memo_target: null,
-    memo_created_at: null
+    memo_created_at: null,
+    staff_notes: {
+      ...createEmptyStaffNotes(),
+      NEED_INFO: { enabled: true, text: 'この仕訳の内容で合っていますか？', chatworkUrl: '' }
+    },
+    staff_notes_author: '佐藤花子'
   },
 
   // 行4: 文房具セット、ルール適用済み、適格請求書
@@ -118,7 +131,9 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: null,
     memo_author: null,
     memo_target: null,
-    memo_created_at: null
+    memo_created_at: null,
+    staff_notes: null,
+    staff_notes_author: null
   },
 
   // 行5: タクシー代（不適格運送）、ルール適用済み、適格請求書
@@ -131,7 +146,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
-    labels: ['BANK_STATEMENT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_CONSULT'],  // 相談が必要
+    labels: ['BANK_STATEMENT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_CONSULT'],  // 社内相談する
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 650, tax_category: '課税仕入込10%' }
     ],
@@ -145,7 +160,12 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: null,
     memo_author: null,
     memo_target: null,
-    memo_created_at: null
+    memo_created_at: null,
+    staff_notes: {
+      ...createEmptyStaffNotes(),
+      NEED_CONSULT: { enabled: true, text: '税務処理の判断に迷いがあります', chatworkUrl: 'https://www.chatwork.com/#!rid00005' }
+    },
+    staff_notes_author: '鈴木一郎'
   },
 
   // 行6: タクシー代、ルール適用済み、適格請求書
@@ -172,7 +192,9 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: null,
     memo_author: null,
     memo_target: null,
-    memo_created_at: null
+    memo_created_at: null,
+    staff_notes: null,
+    staff_notes_author: null
   },
 
   // 行7: 電気代（関西電力）、ルール適用済み、適格請求書Note: 適格請求書が発行されたため、適格請求書
@@ -199,7 +221,9 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: null,
     memo_author: null,
     memo_target: null,
-    memo_created_at: null
+    memo_created_at: null,
+    staff_notes: null,
+    staff_notes_author: null
   },
 
   // 行8: スターバックス、ルール適用済み、適格請求書
@@ -266,7 +290,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
-    labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_DOCUMENT', 'NEED_CONFIRM'],  // 複数フラグ
+    labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_DOCUMENT', 'NEED_INFO'],  // 複数フラグ
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 320, tax_category: '課税仕入込10%' }
     ],
@@ -280,7 +304,13 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: null,
     memo_author: null,
     memo_target: null,
-    memo_created_at: null
+    memo_created_at: null,
+    staff_notes: {
+      ...createEmptyStaffNotes(),
+      NEED_DOCUMENT: { enabled: true, text: '交通費の領収書をお送りください', chatworkUrl: 'https://www.chatwork.com/#!rid00010' },
+      NEED_INFO: { enabled: true, text: '行き先を教えてください', chatworkUrl: '' }
+    },
+    staff_notes_author: '山田太郎'
   },
 
   // 行11: オフィス産科、ルール適用済み、適格請求書
@@ -550,7 +580,13 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: null,
     memo_author: null,
     memo_target: null,
-    memo_created_at: null
+    memo_created_at: null,
+    staff_notes: {
+      ...createEmptyStaffNotes(),
+      NEED_CONSULT: { enabled: true, text: '広告宣伝費の計上について相談したい', chatworkUrl: 'https://www.chatwork.com/#!rid00020' },
+      NEED_DOCUMENT: { enabled: true, text: '契約書のコピーをお送りください', chatworkUrl: '' }
+    },
+    staff_notes_author: '佐藤花子'
   },
 
   // 行21: 業務委託料、適格請求書（出力済み）
@@ -716,7 +752,12 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: 'この仕訳が何かわかりません。助けてください。',
     memo_author: '山田太郎',
     memo_target: '佐藤花子',
-    memo_created_at: '2025-02-08T10:00:00Z'
+    memo_created_at: '2025-02-08T10:00:00Z',
+    staff_notes: {
+      ...createEmptyStaffNotes(),
+      NEED_CONSULT: { enabled: true, text: '勘定科目が不明です', chatworkUrl: '' }
+    },
+    staff_notes_author: '山田太郎'
   },
 
   // 行27: 相談（soudan）、メモあり、未読
@@ -743,7 +784,13 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: 'この金額で合っていますか？確認してください。',
     memo_author: '鈴木一郎',
     memo_target: '田中次郎',
-    memo_created_at: '2025-02-08T14:00:00Z'
+    memo_created_at: '2025-02-08T14:00:00Z',
+    staff_notes: {
+      ...createEmptyStaffNotes(),
+      NEED_CONSULT: { enabled: true, text: '金額の確認をお願いします', chatworkUrl: 'https://www.chatwork.com/#!rid00027' },
+      REMINDER: { enabled: true, text: '来月再確認', chatworkUrl: '' }
+    },
+    staff_notes_author: '鈴木一郎'
   },
 
   // 行28: 確認待ち（kakunin）、証憑欠落、メモあり、未読
@@ -770,7 +817,12 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo: '領収書が見つかりませんでした。再発行を依頼中です。',
     memo_author: '高橋美咲',
     memo_target: '伊藤健太',
-    memo_created_at: '2025-02-08T15:00:00Z'
+    memo_created_at: '2025-02-08T15:00:00Z',
+    staff_notes: {
+      ...createEmptyStaffNotes(),
+      NEED_DOCUMENT: { enabled: true, text: '領収書の再発行を依頼中です', chatworkUrl: 'https://www.chatwork.com/#!rid00028' }
+    },
+    staff_notes_author: '高橋美咲'
   },
 
   // 行29: 貸借不一致、未読

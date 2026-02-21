@@ -1,4 +1,5 @@
 import type { Yen } from '@/shared/types/yen'
+import type { StaffNotes } from './staff_notes'
 
 /**
  * Phase 5 仕訳モック型定義
@@ -48,10 +49,11 @@ export type JournalLabelPhase5 =
   | 'OCR_LOW_CONFIDENCE'     // OCR信頼度低
   | 'OCR_FAILED'             // OCR完全失敗
 
-  // 要対応（3個）
-  | 'NEED_DOCUMENT'          // 資料が必要
-  | 'NEED_CONFIRM'           // 確認が必要
-  | 'NEED_CONSULT'           // 相談が必要
+  // 要対応（4個）
+  | 'NEED_DOCUMENT'          // 書類が不足
+  | 'NEED_INFO'              // 情報が不足（旧NEED_CONFIRM）
+  | 'REMINDER'               // 備忘メモ
+  | 'NEED_CONSULT'           // 社内相談する
 
   // 出力制御（1個）
   | 'EXPORT_EXCLUDE'         // 出力対象外
@@ -111,9 +113,14 @@ export interface JournalPhase5Mock {
   invoice_status: 'qualified' | 'not_qualified' | null;  // インボイスステータス
   invoice_number: string | null;         // インボイス番号（T + 13桁）
 
-  // メモ関連（オプション）
+  // メモ関連（証票メモ: 顧問先が証票に記載したメモ）
   memo: string | null;                   // メモ内容
   memo_author: string | null;            // メモ作成者
   memo_target: string | null;            // メモ宛先
   memo_created_at: string | null;        // メモ作成日時（ISO 8601）
+
+  // スタッフノート（スタッフが自発的に記入するコメント）
+  // Phase B TODO: journal_staff_notesテーブルに分離
+  staff_notes?: StaffNotes | null;       // 4カテゴリの対応情報
+  staff_notes_author?: string | null;    // 担当者名
 }
