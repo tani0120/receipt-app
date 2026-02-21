@@ -24,7 +24,7 @@ export const journalColumns: JournalColumn[] = [
 
   // --- 特殊描画（component型: ボディはPhase A-0では直書き） ---
   { key: "photo", label: "写真", width: "w-12", type: "component", sortKey: "has_photo" },
-  { key: "pastJournal", label: "過去仕訳", width: "w-12", type: "component", sortKey: "past_journal" },
+  { key: "pastJournal", label: "過去仕訳", width: "w-14", type: "component", sortKey: "past_journal" },
   { key: "comment", label: "コメント", width: "w-12", type: "component", sortKey: "status" },
   { key: "needAction", label: "要対応", width: "w-16", type: "component", sortKey: "requires_action" },
   { key: "labelType", label: "証票", width: "w-10", type: "component", sortKey: "label_type" },
