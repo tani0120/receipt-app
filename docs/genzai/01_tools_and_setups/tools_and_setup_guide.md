@@ -262,14 +262,14 @@ Phase A-0（準備）完了状況:
 
 確定済み設計:
 - status: exported + null（2値のみ）
-- labels: 21種類（Phase CでEXPORT_EXCLUDE廃止→20種類）
+- labels: 18種類（要対応4種はstaff_notesに移行。Phase CでEXPORT_EXCLUDE廃止→labels実質17種類）
 - 背景色: 4色優先順位制（deleted_at→濃灰+白字(最優先) > exported→灰 > !is_read→黄 > 既読→白）
 - columns.ts = 構造定義の単一ソース。描画ロジックはVue側
 
 💼 現在の課題
 1. Phase A残タスク
-残り19列のUI実装（component列10本の動作実装が主）
-一括操作バー実装（Gmail式チェック→アクション切替）
+残り15列のUI実装（component列8本の動作実装が主）← comment/needAction/memo/actionsの4列は2026-02-21実装済
+一括操作バー実装（Gmail式チェック→アクション切替） ← 2026-02-21実装済
 30件テスト・摩擦レポート
 2. Phase 4への影響
 Phase Aの設計思想確立後、Journal UIの再設計再開
@@ -306,9 +306,9 @@ receipt-app/
 │   ├── mocks/
 │   │   ├── columns/                        # journalColumns.ts（列定義の単一ソース）
 │   │   ├── components/                     # JournalListLevel3Mock.vue等
-│   │   ├── composables/                    # useDraggable.ts等（共通composable）
+│   │   ├── composables/                    # useDraggable.ts, useCurrentUser.ts等（共通composable）
 │   │   ├── data/                           # journal_test_fixture_30cases.ts等
-│   │   └── types/                          # journal_phase5_mock.type.ts等
+│   │   └── types/                          # journal_phase5_mock.type.ts, staff_notes.ts等
 │   ├── views/
 │   │   └── ReceiptDetail.vue               # Receipt詳細画面（Phase 2実装）
 │   ├── components/receipt/                 # Receipt UIコンポーネント（6種）

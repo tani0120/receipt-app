@@ -90,13 +90,13 @@ JournalListLevel3Mock.vue は23列。ヘッダー・ボディ両方のv-for化�
 - [x] No.
 - [x] 写真（ドラッグ移動可能モーダル実装済み）
 - [x] 過去仕訳（ドラッグ移動可能モーダル実装済み）
-- [ ] コメント
-- [ ] 要対応（NEED_DOCUMENT/NEED_CONFIRM/NEED_CONSULT）
+- [x] コメント（2026-02-21完了。staff_notesベース4項目コメントモーダル。ドラッグ移動可能。空白行に薄アイコン表示。ソートstaff_notesベース。ヒントテキスト「✓を入れるとテキスト入力欄が表示されます」付き）
+- [x] 要対応（2026-02-21完了。4FAアイコン: NEED_DOCUMENT/NEED_INFO/REMINDER/NEED_CONSULT。ホバーポップアップ遅延付き。ソート重み付け8/4/2/1方式。Chatwork URL表示）
 - [ ] 証票（TRANSPORT/RECEIPT/INVOICE/CREDIT_CARD/BANK_STATEMENT）
 - [ ] 警告（DEBIT_CREDIT_MISMATCH等6種）
 - [ ] 学習（RULE_APPLIED/RULE_AVAILABLE）
 - [ ] 軽減（MULTI_TAX_RATE）
-- [ ] メモ（HAS_MEMO）
+- [x] 証票メモ（2026-02-21完了。memo有無アイコン表示+ソート）
 - [ ] 適格（INVOICE_QUALIFIED/INVOICE_NOT_QUALIFIED）
 - [ ] 取引日
 - [ ] 摘要
@@ -147,9 +147,66 @@ JournalListLevel3Mock.vue は23列。ヘッダー・ボディ両方のv-for化�
 
 ## 5.1 Phase Bタスク（今はやらない）
 
+> **ソース**: `00_モック実装時のルール.md`、`モック作成ガイド.md`、2026-02-22セッションでの発見事項
+
+### A. 型安全の厳格化
+
+| # | タスク | 現状 | Phase Bでの対応 |
+|---|--------|------|----------------|
+| A1 | `getValue()` の `any` 排除 | L1662: `eslint-disable` 付き `any` | `keyof` 制約 or 列定義型連動方式に書き換え |
+| A2 | `non-null assertion (!)` 解消 | 12箇所（`commentModalJournal!` 8件 + `staff_notes!` 4件） | computed保証 + `v-if` でガード → `!` 不要化 |
+| A3 | Domain型強制（ガイド ルール3） | Phase Aでは未適用 | `const mock: JournalPhase5Mock = createMockJournal()` 形式必須化 |
+| A4 | 生成関数化（ガイド ルール4） | Phase Aでは直書き許容 | `src/mocks/factories/journalFactory.ts` で Factory 必須化 |
+| A5 | `noUncheckedIndexedAccess` 追加 | tsconfig未設定 | 新規コード安定後に追加 |
+| A6 | `exactOptionalPropertyTypes` 追加 | tsconfig未設定 | 同上 |
+| A7 | `noPropertyAccessFromIndexSignature` 追加 | tsconfig未設定 | 同上 |
+| A8 | `api/components/composables` の `any` 160件修正 | warn状態 | 段階的にerrorへ引き上げ |
+| A9 | `unused-vars` 69件削除 | warn状態 | 削除（`@ts-expect-error` 不使用） |
+
+### B. コンポーネント分離
+
+| # | タスク | 現状 | Phase Bでの対応 |
+|---|--------|------|----------------|
+| B1 | CellComponent分離 | 全10列が `JournalListLevel3Mock.vue` に直書き | `PhotoCell`, `CommentCell`, `NeedActionCell` 等に分離 |
+| B2 | `getCellComponent` 方式導入 | v-if連鎖（§3.4 Phase B方式参照） | `cellComponents: Record<string, Component>` + 動的 `<component :is>` |
+| B3 | モーダル分離 | コメントモーダル・画像プレビュー等がVue内 | 各モーダルを独立コンポーネントに |
+
+### C. データ・Fixture管理
+
+| # | タスク | 現状 | Phase Bでの対応 |
+|---|--------|------|----------------|
+| C1 | Fixture完全凍結 | Phase Aでは1-2件変更可 | 凍結。新規はFactory経由のみ |
+| C2 | 拡張型のDomain型統合 | `journal_extensions.ts` 分離 | `JournalEntry` 本体に統合 → `journal_extensions.ts` 削除 |
+| C3 | `unsafe/` ディレクトリ廃止 | Phase Aでは実験場 | Phase C（Backend接続前）で完全廃止 |
+
+### D. ESLint・ビルド
+
+| # | タスク | 現状 | Phase Bでの対応 |
+|---|--------|------|----------------|
+| D1 | `unsafe/` import制限の物理ルール | 未設定 | `unsafe/` → `data/` `components/` へのimport → error |
+| D2 | `unsafe/` 以外の `any` → error | 現状warn | error化 |
+| D3 | `as any` → error | 現状warn | error化 |
+| D4 | flat config (`eslint.config.js`) 移行 | 旧形式 | Phase B以降で移行 |
+
+### E. テスト
+
+| # | タスク | 現状 | Phase Bでの対応 |
+|---|--------|------|----------------|
+| E1 | ソート全列動作テスト | 手動ブラウザ確認のみ | 自動テスト化 |
+| E2 | モーダル全種動作テスト | 同上 | 同上 |
+| E3 | トグル動作テスト | 同上 | 同上 |
+
+### F. 文書整備
+
+| # | タスク | 現状 | Phase Bでの対応 |
+|---|--------|------|----------------|
+| F1 | ルール文書にPhase B移行チェックリスト追加 | 移行条件は§1に記載あるが詳細なし | 本一覧をルール文書に組み込み |
+| F2 | `non-null assertion` 禁止ルール明文化 | 暗黙の許容 | 「新規 `!` 追加禁止」をルール§4に追加 |
+
+### G. UI追加機能（Phase B）
+
 - [ ] 列表示ON/OFF（ユーザーが列を非表示にする機能）
 - [ ] カラムグループ化（借方/貸方のグループヘッダー）← 必須
-- [ ] セルコンポーネント化（ルール§3.4 Phase B参照）
 
 ---
 
@@ -189,9 +246,11 @@ JournalListLevel3Mock.vue は23列。ヘッダー・ボディ両方のv-for化�
 
 ## 9. Phase B（構造固定）
 
-- [ ] CellComponent分離
-- [ ] Factory必須化
-- [ ] fixture完全凍結
+上記§5.1のA〜F全量が対象。主要3本柱：
+
+- [ ] CellComponent分離（B1-B3）
+- [ ] Factory必須化（A3-A4, C1）
+- [ ] fixture完全凍結（C1）
 
 ---
 
@@ -246,7 +305,7 @@ JournalListLevel3Mock.vue は23列。ヘッダー・ボディ両方のv-for化�
 ## 設計思想（要約）
 
 1. **実証設計**: スクショ→概念モデル→UIモック→30件テスト→摩擦レポート→DDL確定。想像でDDLを先に作らない。
-2. **定義B（2026-02-14確定、2026-02-20追記、2026-02-21追記）**: status = exported + null。labels = 21種類→Phase Cで20種類（EXPORT_EXCLUDE廃止）。背景色 = 4色優先順位制（deleted_at→灰+白字(最優先) > exported→灰 > !is_read→黄 > 既読→白）。出力状態は背景色+フィルタで表示。export_excludeはカラム管理（ラベルではない）。ゴミ箱=deleted_at(string|null)でDB設計書と統一。
+2. **定義B（2026-02-14確定、2026-02-20追記、2026-02-21追記）**: status = exported + null。labels = 18種類（要対応4種はstaff_notesに移行）→Phase CでEXPORT_EXCLUDE廃止→17種類。背景色 = 4色優先順位制（deleted_at→灰+白字(最優先) > exported→灰 > !is_read→黄 > 既読→白）。出力状態は背景色+フィルタで表示。export_excludeはカラム管理（ラベルではない）。ゴミ箱=deleted_at(string|null)でDB設計書と統一。
 3. **Streamed互換**: 出力=完了、背景色=未読管理、ゴミ箱30日（deleted_atベースで将来実装可能）。MFが会計の真実、本システムは業務効率レイヤー。
 
 ## 2026-02-20 確定: export_exclude設計判断
@@ -264,11 +323,12 @@ journals.exported_by（VARCHAR）とexport_batches.exported_by（UUID）の型�
 ### 判断2: export_exclude二重管理
 
 EXPORT_EXCLUDEがラベル（labels配列）とカラム（BOOLEAN）の両方で管理されている。API設計書ではラベルで検索（L339）、カラムで更新（L503）しており、同期ミスでバグが発生する。
-**判断: カラムのみ。EXPORT_EXCLUDEラベルはPhase Cで廃止（21→20個）。**
+**判断: カラムのみ。EXPORT_EXCLUDEラベルはPhase Cで廃止（18→17個）。**
 
 理由（レイヤー分離）:
 - **状態** = 何が起きたか（事実）→ statusカラム。例: exported
-- **特性** = 何であるか（分類）→ labels配列。例: RECEIPT, NEED_CONFIRM
+- **特性** = 何であるか（分類）→ labels配列。例: RECEIPT, INVOICE_QUALIFIED
+- **要対応** = 誰が何をすべきか（アクション）→ staff_notesオブジェクト（2026-02-21移行）
 - **制御** = どうするか（判断）→ export_excludeカラム。例: 出力しない
 
 export_excludeは「人間の業務判断」。理由が必要（CHECK制約）。ラベルには理由を持たせる仕組みがない。
@@ -301,14 +361,14 @@ export_excludeは「人間の業務判断」。理由が必要（CHECK制約）�
 
 | ファイル | 行 | 変更内容 |
 |---|---|---|
-| journal_v2 §2 L62 | L62 | 「21個」→「20個」 |
+| journal_v2 §2 L62 | L62 | ✅済: 「18個」（要対応3種はstaff_notesに移行済み） → Phase C廃止後「17個」 |
 | journal_v2 §2 L121-124 | L121-124 | EXPORT_EXCLUDEラベル削除 |
-| journal_v2 §13 L501 | L501 | 「21個」→「20個」 |
-| migration.sql L42 | L42 | 「21種類」→「20種類」 |
+| journal_v2 §13 L548 | L548 | ✅済: 「18個」に修正済み → Phase C廃止後「17個」 |
+| migration.sql L42 | L42 | 「21種類」→「17種類」（要対応3移行 + EXPORT_EXCLUDE廃止） |
 | migration.sql L43 | L43 | 「出力制御1個」→削除 |
-| migration.sql L220 | L220 | 「21種類」→「20種類」 |
+| migration.sql L220 | L220 | 「21種類」→「17種類」 |
 | API設計書 L339 | L339 | `.not('labels','cs','{EXPORT_EXCLUDE}')` → `.eq('export_exclude', false)` |
-| task_current L53 | L53 | 「全21ラベル」→「全20ラベル」 |
+| task_current L53 | L53 | 「全21ラベル」→「全18ラベル」（Phase C後17） |
 
 ### 未決定事項
 

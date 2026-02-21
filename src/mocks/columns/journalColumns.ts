@@ -25,13 +25,13 @@ export const journalColumns: JournalColumn[] = [
   // --- 特殊描画（component型: ボディはPhase A-0では直書き） ---
   { key: "photo", label: "写真", width: "w-12", type: "component", sortKey: "has_photo" },
   { key: "pastJournal", label: "過去仕訳", width: "w-14", type: "component", sortKey: "past_journal" },
-  { key: "comment", label: "コメント", width: "w-12", type: "component", sortKey: "status" },
-  { key: "needAction", label: "要対応", width: "w-16", type: "component", sortKey: "requires_action" },
+  { key: "comment", label: "コメント", width: "w-12", type: "component", sortKey: "staff_notes" },
+  { key: "needAction", label: "要対応", width: "w-20", type: "component", sortKey: "requires_action" },
   { key: "labelType", label: "証票", width: "w-10", type: "component", sortKey: "label_type" },
   { key: "warning", label: "警告", width: "w-10", type: "component", sortKey: "warning" },
   { key: "rule", label: "学習", width: "w-8", type: "component", sortKey: "rule" },
   { key: "taxRate", label: "軽減", width: "w-8", type: "component", sortKey: "tax_rate" },
-  { key: "memo", label: "メモ", width: "w-8", type: "component", sortKey: "memo" },
+  { key: "memo", label: "証票メモ", width: "w-8", type: "component", sortKey: "memo" },
   { key: "invoice", label: "適格", width: "w-10", type: "component", sortKey: "invoice" },
 
   // --- データ（journal-level: text型） ---

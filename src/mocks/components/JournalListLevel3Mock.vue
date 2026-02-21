@@ -157,39 +157,53 @@
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
 
-              <!-- コメント -->
+              <!-- コメント（staff_notesベース） -->
               <template v-else-if="col.key === 'comment'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5 relative group']">
-                  <i v-if="journal.memo" class="fa-solid fa-note-sticky text-[10px] text-yellow-600 cursor-pointer"></i>
-                  <div v-if="journal.memo" class="hidden group-hover:block absolute z-10 bg-yellow-50 border-2 border-yellow-400 rounded p-2 shadow-xl text-[10px] w-56 top-full left-0 mt-1">
-                    <div class="font-bold text-yellow-900"><i class="fa-solid fa-note-sticky text-xs"></i> {{ journal.memo }}</div>
-                    <div class="text-gray-600 mt-1 text-[9px]">{{ journal.memo_author }}</div>
-                  </div>
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 cursor-pointer']" @click="openCommentModal(journal.id)">
+                  <i v-if="hasAnyStaffNote(journal)" class="fa-solid fa-comment-dots text-[10px] text-emerald-600"></i>
+                  <i v-else class="fa-solid fa-comment-dots text-[10px] text-gray-300 opacity-50"></i>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
 
-              <!-- 要対応 -->
+              <!-- 要対応（4FAアイコン + ホバーポップアップ） -->
               <template v-else-if="col.key === 'needAction'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5']">
-                  <button
-                    @click="toggleNeed(journal.id, 'NEED_DOCUMENT')"
-                    :class="journal.labels.includes('NEED_DOCUMENT') ? 'text-red-600' : 'text-gray-400 opacity-50'"
-                    class="hover:scale-110 transition-transform text-sm"
-                    :title="journal.labels.includes('NEED_DOCUMENT') ? '資料必要（ON）' : '資料必要（OFF）'"
-                  >📄</button>
-                  <button
-                    @click="toggleNeed(journal.id, 'NEED_CONFIRM')"
-                    :class="journal.labels.includes('NEED_CONFIRM') ? 'text-red-600' : 'text-gray-400 opacity-50'"
-                    class="hover:scale-110 transition-transform text-sm"
-                    :title="journal.labels.includes('NEED_CONFIRM') ? '確認必要（ON）' : '確認必要（OFF）'"
-                  >✅</button>
-                  <button
-                    @click="toggleNeed(journal.id, 'NEED_CONSULT')"
-                    :class="journal.labels.includes('NEED_CONSULT') ? 'text-red-600' : 'text-gray-400 opacity-50'"
-                    class="hover:scale-110 transition-transform text-sm"
-                    :title="journal.labels.includes('NEED_CONSULT') ? '相談必要（ON）' : '相談必要（OFF）'"
-                  >💬</button>
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-1']">
+                  <template v-for="noteKey in staffNoteKeys" :key="noteKey">
+                    <div class="relative"
+                         @mouseenter="showNeedPopup(journal.id, noteKey)"
+                         @mouseleave="scheduleHideNeedPopup()">
+                      <button
+                        @click="toggleStaffNote(journal.id, noteKey)"
+                        :class="[
+                          getStaffNoteEnabled(journal, noteKey) ? staffNoteConfig[noteKey].activeColor : 'text-gray-300 opacity-50',
+                          'hover:scale-125 transition-transform text-[11px] cursor-pointer'
+                        ]"
+                        :title="staffNoteConfig[noteKey].label"
+                      >
+                        <i :class="['fa-solid', staffNoteConfig[noteKey].icon]"></i>
+                      </button>
+                      <!-- ホバーポップアップ（JS制御、マウスオーバーで消えない） -->
+                      <div v-if="needPopupJournalId === journal.id && needPopupKey === noteKey && getStaffNoteEnabled(journal, noteKey) && (getStaffNoteText(journal, noteKey) || getStaffNoteChatworkUrl(journal, noteKey))"
+                           class="absolute z-20 bg-blue-50 border-2 border-blue-400 rounded p-2 shadow-xl text-[10px] w-56 top-full left-1/2 -translate-x-1/2 mt-1"
+                           @mouseenter="cancelHideNeedPopup()"
+                           @mouseleave="scheduleHideNeedPopup()">
+                        <div class="font-bold text-blue-900 mb-1">
+                          <i :class="['fa-solid', staffNoteConfig[noteKey].icon, 'text-xs mr-1']" :style="{ color: staffNoteConfig[noteKey].hoverIconColor }"></i>
+                          {{ staffNoteConfig[noteKey].label }}
+                        </div>
+                        <div v-if="getStaffNoteText(journal, noteKey)" class="text-gray-700">{{ getStaffNoteText(journal, noteKey) }}</div>
+                        <div v-if="getStaffNoteChatworkUrl(journal, noteKey)" class="mt-1">
+                          <a :href="getStaffNoteChatworkUrl(journal, noteKey)" target="_blank" rel="noopener noreferrer"
+                             class="text-blue-600 underline hover:text-blue-800 break-all">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[8px] mr-0.5"></i>
+                            Chatworkで確認
+                          </a>
+                        </div>
+                        <div v-if="journal.staff_notes_author" class="text-gray-500 mt-1 text-[9px]">担当: {{ journal.staff_notes_author }}</div>
+                      </div>
+                    </div>
+                  </template>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -232,10 +246,10 @@
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
 
-              <!-- メモ -->
+              <!-- 証票メモ（journal.memo truthy判定、アイコンのみ） -->
               <template v-else-if="col.key === 'memo'">
                 <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
-                  <i v-if="journal.labels.includes('HAS_MEMO')" class="fa-solid fa-pencil text-[10px] text-gray-600" title="メモあり"></i>
+                  <i v-if="journal.memo" class="fa-solid fa-pencil text-[10px] text-gray-600" title="証票にメモあり（証票を確認してください）"></i>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -641,6 +655,88 @@
     </div>
   </div>
 
+    <!-- コメントモーダル -->
+    <div v-if="commentModalJournalId"
+         ref="commentModalRef"
+         class="fixed z-[90]"
+         :style="{ left: commentModalPos.left + 'px', top: commentModalPos.top + 'px', zIndex: commentModalZ }">
+      <div class="bg-white rounded-lg shadow-2xl border-2 border-blue-300 w-[480px]" @click.stop>
+        <!-- ドラッグ可能ヘッダー -->
+        <div @mousedown="startCommentDrag"
+             class="bg-blue-100 px-3 py-2 rounded-t-lg cursor-move flex items-center justify-between select-none">
+          <span class="text-xs font-bold text-blue-800">
+            <i class="fa-solid fa-comment-dots mr-1"></i>
+            コメントを記入 ※移動できます
+          </span>
+          <button @click="closeCommentModal()" class="text-gray-500 hover:text-red-500 text-sm">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- モーダル本体 -->
+        <div class="p-3 max-h-[500px] overflow-y-auto text-xs">
+          <!-- ヒントテキスト -->
+          <div class="text-xs text-gray-500 mb-3 bg-gray-50 rounded px-2 py-1 border border-gray-200">
+            <i class="fa-solid fa-circle-info text-blue-400 mr-1"></i>
+            ✓を入れるとテキスト入力欄が表示されます
+          </div>
+          <!-- ◆顧問先に確認 -->
+          <div class="font-bold text-gray-800 mb-2 text-[11px]">◆ 顧問先に確認</div>
+          <template v-for="noteKey in (['NEED_DOCUMENT', 'NEED_INFO'] as const)" :key="noteKey">
+            <div class="mb-3 ml-2">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox"
+                       :checked="getStaffNoteEnabled(commentModalJournal!, noteKey)"
+                       @change="toggleStaffNoteInModal(noteKey)"
+                       class="rounded border-gray-300">
+                <i :class="['fa-solid', staffNoteConfig[noteKey].icon, staffNoteConfig[noteKey].activeColor, 'text-[11px]']"></i>
+                <span class="text-gray-800">{{ staffNoteConfig[noteKey].label }}</span>
+              </label>
+              <div v-if="getStaffNoteEnabled(commentModalJournal!, noteKey)" class="ml-5 mt-1 space-y-1">
+                <textarea v-model="commentModalJournal!.staff_notes![noteKey].text"
+                          class="w-full border border-gray-300 rounded p-1.5 text-[10px] resize-none"
+                          rows="2" placeholder="テキストを入力..."></textarea>
+                <input v-model="commentModalJournal!.staff_notes![noteKey].chatworkUrl"
+                       type="text" class="w-full border border-gray-300 rounded p-1 text-[10px]"
+                       placeholder="Chatwork URL（任意）">
+              </div>
+            </div>
+          </template>
+
+          <!-- ◆社内で確認 -->
+          <div class="font-bold text-gray-800 mb-2 mt-3 text-[11px]">◆ 社内で確認</div>
+          <template v-for="noteKey in (['REMINDER', 'NEED_CONSULT'] as const)" :key="noteKey">
+            <div class="mb-3 ml-2">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox"
+                       :checked="getStaffNoteEnabled(commentModalJournal!, noteKey)"
+                       @change="toggleStaffNoteInModal(noteKey)"
+                       class="rounded border-gray-300">
+                <i :class="['fa-solid', staffNoteConfig[noteKey].icon, staffNoteConfig[noteKey].activeColor, 'text-[11px]']"></i>
+                <span class="text-gray-800">{{ staffNoteConfig[noteKey].label }}</span>
+              </label>
+              <div v-if="getStaffNoteEnabled(commentModalJournal!, noteKey)" class="ml-5 mt-1 space-y-1">
+                <textarea v-model="commentModalJournal!.staff_notes![noteKey].text"
+                          class="w-full border border-gray-300 rounded p-1.5 text-[10px] resize-none"
+                          rows="2" placeholder="テキストを入力..."></textarea>
+                <input v-model="commentModalJournal!.staff_notes![noteKey].chatworkUrl"
+                       type="text" class="w-full border border-gray-300 rounded p-1 text-[10px]"
+                       placeholder="Chatwork URL（任意）">
+              </div>
+            </div>
+          </template>
+
+          <!-- 担当名 -->
+          <div class="border-t border-gray-200 pt-2 mt-2">
+            <label class="text-[10px] text-gray-600 font-bold">担当名</label>
+            <select v-model="commentModalAuthor" class="ml-2 border border-gray-300 rounded p-1 text-[10px]">
+              <option v-for="staff in staffList" :key="staff" :value="staff">{{ staff }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 確認ダイアログ（モーダル） -->
     <div v-if="confirmDialog.show"
          class="fixed inset-0 z-[100] flex items-center justify-center bg-black/30"
@@ -665,10 +761,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useDraggable } from '@/mocks/composables/useDraggable';
+import { useCurrentUser, STAFF_LIST } from '@/mocks/composables/useCurrentUser';
 import { journalColumns } from '@/mocks/columns/journalColumns';
 import { mockJournalsPhase5 as fixtureData } from '../data/journal_test_fixture_30cases';
 import { getReceiptImageUrl } from '../data/receipt_mock_data';
 import type { JournalPhase5Mock, JournalEntryLine } from '../types/journal_phase5_mock.type';
+import { createEmptyStaffNotes, STAFF_NOTE_KEYS } from '../types/staff_notes';
+import type { StaffNoteKey } from '../types/staff_notes';
 
 // ローカル可変データ（fixtureの深いコピー、Phase A用）
 const localJournals = ref<JournalPhase5Mock[]>(
@@ -1073,6 +1172,10 @@ const { position: imageModalPos, zIndex: imageModalZ, startDrag: startImageDrag 
 // 過去仕訳検索モーダル用
 const pastJournalModalRef = ref<HTMLElement | null>(null);
 const { position: pastJournalPos, zIndex: pastJournalZ, startDrag: startPastJournalDrag } = useDraggable(pastJournalModalRef);
+
+// コメントモーダル用
+const commentModalRef = ref<HTMLElement | null>(null);
+const { position: commentModalPos, zIndex: commentModalZ, startDrag: startCommentDrag } = useDraggable(commentModalRef);
 const showPastJournalModal = ref<boolean>(false);
 const pastJournalTab = ref<'streamed' | 'accounting'>('streamed');
 const pastJournalSearch = ref({
@@ -1318,18 +1421,35 @@ const journals = computed(() => {
           aVal = a.receipt_id ? 1 : 0;
           bVal = b.receipt_id ? 1 : 0;
           break;
-        case 'status':
-          aVal = a.memo ? 1 : 0;
-          bVal = b.memo ? 1 : 0;
+        case 'staff_notes': {
+          // staff_notesのいずれかがenabledならソート上位
+          const hasNotes = (j: JournalPhase5Mock): number => {
+            if (!j.staff_notes) return 0;
+            return Object.values(j.staff_notes).some(n => n.enabled) ? 1 : 0;
+          };
+          aVal = hasNotes(a);
+          bVal = hasNotes(b);
           break;
+        }
         case 'past_journal':
           aVal = localJournals.value.findIndex(j => j.id === a.id) < 25 ? 1 : 0;
           bVal = localJournals.value.findIndex(j => j.id === b.id) < 25 ? 1 : 0;
           break;
-        case 'requires_action':
-          aVal = a.display_order;
-          bVal = b.display_order;
+        case 'requires_action': {
+          // staff_notesの重み付けソート: NEED_DOCUMENT(8) > NEED_INFO(4) > REMINDER(2) > NEED_CONSULT(1) > なし(0)
+          const getNeedWeight = (j: JournalPhase5Mock): number => {
+            if (!j.staff_notes) return 0;
+            let w = 0;
+            if (j.staff_notes.NEED_DOCUMENT?.enabled) w += 8;
+            if (j.staff_notes.NEED_INFO?.enabled) w += 4;
+            if (j.staff_notes.REMINDER?.enabled) w += 2;
+            if (j.staff_notes.NEED_CONSULT?.enabled) w += 1;
+            return w;
+          };
+          aVal = getNeedWeight(a);
+          bVal = getNeedWeight(b);
           break;
+        }
         case 'label_type':
           aVal = a.labels.join(',');
           bVal = b.labels.join(',');
@@ -1557,27 +1677,132 @@ function formatDate(date: string): string {
   return `${y}/${m}/${day}`;
 }
 
-// 要対応フラグの切り替え
-function toggleNeed(
-  journalId: string,
-  label: 'NEED_DOCUMENT' | 'NEED_CONFIRM' | 'NEED_CONSULT'
-) {
-  const journal = localJournals.value.find(j => j.id === journalId);
-  if (!journal) {
-    console.error(`Journal not found: ${journalId}`);
-    return;
+// 要対応フラグの切り替え（staff_notes同期付き）
+const staffNoteKeys = STAFF_NOTE_KEYS
+const staffNoteConfig: Record<StaffNoteKey, { label: string; icon: string; activeColor: string; hoverIconColor: string }> = {
+  NEED_DOCUMENT: { label: '書類が不足', icon: 'fa-file-circle-exclamation', activeColor: 'text-red-600', hoverIconColor: '#dc2626' },
+  NEED_INFO: { label: '情報が不足', icon: 'fa-circle-question', activeColor: 'text-amber-600', hoverIconColor: '#d97706' },
+  REMINDER: { label: '備忘メモ', icon: 'fa-thumbtack', activeColor: 'text-blue-600', hoverIconColor: '#2563eb' },
+  NEED_CONSULT: { label: '社内相談する', icon: 'fa-comments', activeColor: 'text-purple-600', hoverIconColor: '#9333ea' },
+}
+
+// 要対応ポップアップ制御（遅延付きshow/hide）
+const needPopupJournalId = ref<string | null>(null)
+const needPopupKey = ref<StaffNoteKey | null>(null)
+let needPopupHideTimer: ReturnType<typeof setTimeout> | null = null
+
+function showNeedPopup(journalId: string, key: StaffNoteKey) {
+  if (needPopupHideTimer) {
+    clearTimeout(needPopupHideTimer)
+    needPopupHideTimer = null
+  }
+  needPopupJournalId.value = journalId
+  needPopupKey.value = key
+}
+
+function scheduleHideNeedPopup() {
+  if (needPopupHideTimer) clearTimeout(needPopupHideTimer)
+  needPopupHideTimer = setTimeout(() => {
+    needPopupJournalId.value = null
+    needPopupKey.value = null
+    needPopupHideTimer = null
+  }, 1500)  // 1.5秒の遅延
+}
+
+function cancelHideNeedPopup() {
+  if (needPopupHideTimer) {
+    clearTimeout(needPopupHideTimer)
+    needPopupHideTimer = null
+  }
+}
+
+function hasAnyStaffNote(journal: JournalPhase5Mock): boolean {
+  if (!journal.staff_notes) return false
+  return STAFF_NOTE_KEYS.some(key => journal.staff_notes?.[key]?.enabled)
+}
+
+function getStaffNoteEnabled(journal: JournalPhase5Mock, key: StaffNoteKey): boolean {
+  return journal.staff_notes?.[key]?.enabled ?? false
+}
+
+function getStaffNoteText(journal: JournalPhase5Mock, key: StaffNoteKey): string {
+  return journal.staff_notes?.[key]?.text ?? ''
+}
+
+function getStaffNoteChatworkUrl(journal: JournalPhase5Mock, key: StaffNoteKey): string {
+  return journal.staff_notes?.[key]?.chatworkUrl ?? ''
+}
+
+// staff_notes → labels 同期関数
+function syncLabelsFromStaffNotes(journal: JournalPhase5Mock) {
+  const NEED_KEYS: readonly StaffNoteKey[] = STAFF_NOTE_KEYS
+  // NEED_*系を一旦除去
+  journal.labels = journal.labels.filter(l => !NEED_KEYS.includes(l as StaffNoteKey))
+  // enabledなものだけ追加
+  for (const key of NEED_KEYS) {
+    if (journal.staff_notes?.[key]?.enabled) {
+      journal.labels.push(key)
+    }
+  }
+}
+
+function toggleStaffNote(journalId: string, key: StaffNoteKey) {
+  const journal = localJournals.value.find(j => j.id === journalId)
+  if (!journal) return
+
+  // staff_notesがなければ初期化
+  if (!journal.staff_notes) {
+    journal.staff_notes = createEmptyStaffNotes()
   }
 
-  const index = journal.labels.indexOf(label);
-  if (index > -1) {
-    // 削除
-    journal.labels.splice(index, 1);
-    console.log(`Label removed: ${label} from ${journalId}`);
-  } else {
-    // 追加
-    journal.labels.push(label);
-    journal.is_read = false;  // 要対応フラグが立ったら未読にする
-    console.log(`Label added: ${label} to ${journalId}, set to unread`);
+  // トグル
+  journal.staff_notes[key].enabled = !journal.staff_notes[key].enabled
+
+  // 同期
+  syncLabelsFromStaffNotes(journal)
+
+  if (journal.staff_notes[key].enabled) {
+    journal.is_read = false  // フラグON時は未読にする
   }
+  console.log(`StaffNote toggled: ${key} = ${journal.staff_notes[key].enabled} for ${journalId}`)
+}
+
+// コメントモーダル
+const commentModalJournalId = ref<string | null>(null)
+const { userName: commentModalAuthor } = useCurrentUser()
+const staffList = STAFF_LIST
+
+const commentModalJournal = computed(() => {
+  if (!commentModalJournalId.value) return null
+  return localJournals.value.find(j => j.id === commentModalJournalId.value) ?? null
+})
+
+function openCommentModal(journalId: string) {
+  const journal = localJournals.value.find(j => j.id === journalId)
+  if (!journal) return
+
+  // staff_notesがなければ初期化
+  if (!journal.staff_notes) {
+    journal.staff_notes = createEmptyStaffNotes()
+  }
+
+  commentModalJournalId.value = journalId
+}
+
+function closeCommentModal() {
+  if (commentModalJournal.value) {
+    // 担当者名を保存
+    commentModalJournal.value.staff_notes_author = commentModalAuthor.value
+    // labels同期
+    syncLabelsFromStaffNotes(commentModalJournal.value)
+  }
+  commentModalJournalId.value = null
+}
+
+function toggleStaffNoteInModal(key: StaffNoteKey) {
+  if (!commentModalJournal.value || !commentModalJournal.value.staff_notes) return
+  commentModalJournal.value.staff_notes[key].enabled = !commentModalJournal.value.staff_notes[key].enabled
+  // labels即時同期
+  syncLabelsFromStaffNotes(commentModalJournal.value)
 }
 </script>

@@ -19,7 +19,7 @@ GET /api/journals?client_id={clientId}&status={status}&is_read={boolean}
 | client_id | UUID | ✅ | 顧問先ID |
 | status | string | ❌ | フィルタ（exported） |
 | is_read | boolean | ❌ | 未読/既読フィルタ |
-| labels | string[] | ❌ | ラベルフィルタ（NEED_DOCUMENT, NEED_CONFIRM等） |
+| labels | string[] | ❌ | ラベルフィルタ（NEED_DOCUMENT等）⚠️ 要対応ステータスは2026-02-21に`staff_notes`に移行 |
 | deleted | boolean | ❌ | ゴミ箱表示（デフォルト: false） |
 
 #### レスポンス
@@ -679,12 +679,16 @@ src/
 
 ---
 
-### 8. 要対応フラグ切り替え
+### 8. 要対応フラグ切り替え（2026-02-21更新: staff_notesベース）
+
+> **⚠️ 2026-02-21変更**: 要対応ステータスは`labels`配列から`staff_notes`オブジェクトに移行。
+> モック: `src/mocks/types/staff_notes.ts`（StaffNoteKey, StaffNote, StaffNotes）
+> 本番: `staff_notes`テーブル分離 or JSONB化はPhase Cで決定
 
 ### エンドポイント
 
 ```typescript
-POST /api/journals/{id}/toggle-need
+POST /api/journals/{id}/toggle-staff-note
 ```
 
 ### リクエスト
@@ -692,12 +696,12 @@ POST /api/journals/{id}/toggle-need
 | パラメータ | 型 | 必須 | 説明 |
 |-----------|----|----|------|
 | id | UUID | ✅ | 仕訳ID（パスパラメータ）|
-| label | string | ✅ | NEED_DOCUMENT, NEED_CONFIRM, NEED_CONSULT |
+| key | string | ✅ | NEED_DOCUMENT, NEED_INFO, REMINDER, NEED_CONSULT |
 
 **リクエストボディ**:
 ```json
 {
-  "label": "NEED_DOCUMENT"
+  "key": "NEED_DOCUMENT"
 }
 ```
 
@@ -706,8 +710,12 @@ POST /api/journals/{id}/toggle-need
 ```json
 {
   "id": "uuid",
-  "labels": ["TRANSPORT", "RECEIPT", "NEED_DOCUMENT"],
-  "is_read": false,
+  "staff_notes": {
+    "NEED_DOCUMENT": { "enabled": true, "text": "", "chatworkUrl": "" },
+    "NEED_INFO": { "enabled": false, "text": "", "chatworkUrl": "" },
+    "REMINDER": { "enabled": false, "text": "", "chatworkUrl": "" },
+    "NEED_CONSULT": { "enabled": false, "text": "", "chatworkUrl": "" }
+  },
   "updated_at": "2025-01-20T10:30:00Z"
 }
 ```
@@ -716,7 +724,7 @@ POST /api/journals/{id}/toggle-need
 
 | ステータス | 説明 |
 |-----------|------|
-| 400 | 無効なラベル種類 |
+| 400 | 無効なstaff_noteキー |
 | 403 | 出力済み仕訳は編集不可 |
 | 404 | 仕訳が見つからない |
 
@@ -731,12 +739,12 @@ if (journal.status === 'exported') {
   );
 }
 
-// 有効なラベルかチェック
-const validLabels = ['NEED_DOCUMENT', 'NEED_CONFIRM', 'NEED_CONSULT'];
-if (!validLabels.includes(label)) {
+// 有効なキーかチェック
+const validKeys = ['NEED_DOCUMENT', 'NEED_INFO', 'REMINDER', 'NEED_CONSULT'] as const;
+if (!validKeys.includes(key)) {
   throw new ValidationError(
-    '無効なラベル種類です',
-    'INVALID_LABEL'
+    '無効なstaff_noteキーです',
+    'INVALID_STAFF_NOTE_KEY'
   );
 }
 ```
@@ -744,15 +752,15 @@ if (!validLabels.includes(label)) {
 ### 実装例
 
 ```typescript
-export async function toggleNeedLabel(
+export async function toggleStaffNote(
   journalId: string,
-  label: 'NEED_DOCUMENT' | 'NEED_CONFIRM' | 'NEED_CONSULT',
+  key: 'NEED_DOCUMENT' | 'NEED_INFO' | 'REMINDER' | 'NEED_CONSULT',
   userId: string
 ): Promise<Journal> {
   // ガード句: 出力済みチェック
   const { data: current } = await supabase
     .from('journals')
-    .select('status, labels, is_read')
+    .select('status, staff_notes')
     .eq('id', journalId)
     .single();
   
@@ -767,29 +775,15 @@ export async function toggleNeedLabel(
     );
   }
   
-  // ラベルのトグル処理
-  const labels = current.labels || [];
-  const index = labels.indexOf(label);
-  
-  let newLabels: string[];
-  let newIsRead: boolean;
-  
-  if (index > -1) {
-    // 削除
-    newLabels = labels.filter(l => l !== label);
-    newIsRead = current.is_read;  // is_readは変更しない
-  } else {
-    // 追加
-    newLabels = [...labels, label];
-    newIsRead = false;  // 要対応フラグ追加時は未読に
-  }
+  // staff_notesのトグル処理
+  const notes = current.staff_notes || createEmptyStaffNotes();
+  notes[key].enabled = !notes[key].enabled;
   
   // 更新
   const { data, error } = await supabase
     .from('journals')
     .update({
-      labels: newLabels,
-      is_read: newIsRead,
+      staff_notes: notes,
       updated_at: new Date().toISOString(),
       updated_by: userId
     })
@@ -804,7 +798,7 @@ export async function toggleNeedLabel(
 
 ### テスト項目
 
-- [ ] フラグ追加時にis_readがfalseになることを確認
-- [ ] フラグ削除時にis_readが変更されないことを確認
+- [ ] staff_note有効化が正しく反映されることを確認
+- [ ] staff_note無効化が正しく反映されることを確認
 - [ ] 出力済み仕訳は403エラーになることを確認
-- [ ] 無効なラベルは400エラーになることを確認
+- [ ] 無効なキーは400エラーになることを確認
