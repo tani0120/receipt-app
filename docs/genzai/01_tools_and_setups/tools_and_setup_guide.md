@@ -306,6 +306,7 @@ receipt-app/
 │   ├── mocks/
 │   │   ├── columns/                        # journalColumns.ts（列定義の単一ソース）
 │   │   ├── components/                     # JournalListLevel3Mock.vue等
+│   │   ├── composables/                    # useDraggable.ts等（共通composable）
 │   │   ├── data/                           # journal_test_fixture_30cases.ts等
 │   │   └── types/                          # journal_phase5_mock.type.ts等
 │   ├── views/

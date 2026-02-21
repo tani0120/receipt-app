@@ -1,7 +1,30 @@
 <template>
   <div class="h-full flex flex-col bg-gray-50 font-sans" @click="closeDropdown">
+    <!-- L3ツールバー -->
+    <div class="bg-sky-600 px-3 py-1.5 flex items-center gap-4 text-[11px] tracking-[0.5px] text-white font-semibold" style="font-family: 'Noto Sans JP', sans-serif">
+      <button class="flex items-center gap-1 hover:text-sky-100 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+        ホーム
+      </button>
+      <button class="flex items-center gap-1 hover:text-sky-100 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        アップロード
+      </button>
+      <button class="flex items-center gap-1 hover:text-sky-100 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        出力
+      </button>
+      <button class="flex items-center gap-1 hover:text-sky-100 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        学習
+      </button>
+      <button class="flex items-center gap-1 hover:text-sky-100 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        設定
+      </button>
+    </div>
     <!-- 上部バー -->
-    <div class="bg-white px-3 py-1 flex justify-between items-center text-[10px] text-gray-700">
+    <div class="bg-white px-3 py-[5.2px] flex justify-between items-center text-[10px] text-gray-700">
       <!-- フィルタモード（通常時） -->
       <template v-if="!isSelectionMode">
         <div class="flex items-center gap-3">
@@ -280,13 +303,17 @@
                   <!-- 未読/既読トグル（並列濃淡） -->
                   <div class="flex border-b border-gray-200">
                     <button @click="setReadStatus(journal, false)"
-                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
-                                     !journal.is_read ? 'font-bold text-gray-800' : 'text-gray-400']">
+                            :disabled="journal.status === 'exported'"
+                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1',
+                                     journal.status === 'exported' ? 'text-gray-300 cursor-not-allowed' :
+                                     !journal.is_read ? 'font-bold text-gray-800 hover:bg-gray-100' : 'text-gray-400 hover:bg-gray-100']">
                       📖 未読
                     </button>
                     <button @click="setReadStatus(journal, true)"
-                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
-                                     journal.is_read ? 'font-bold text-gray-800' : 'text-gray-400']">
+                            :disabled="journal.status === 'exported'"
+                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1',
+                                     journal.status === 'exported' ? 'text-gray-300 cursor-not-allowed' :
+                                     journal.is_read ? 'font-bold text-gray-800 hover:bg-gray-100' : 'text-gray-400 hover:bg-gray-100']">
                       📖 既読
                     </button>
                   </div>
@@ -294,13 +321,17 @@
                   <!-- 対象/対象外トグル（並列濃淡） -->
                   <div class="flex border-b border-gray-200">
                     <button @click="setExportExclude(journal, false)"
-                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
-                                     !journal.labels.includes('EXPORT_EXCLUDE') ? 'font-bold text-gray-800' : 'text-gray-400']">
+                            :disabled="journal.status === 'exported'"
+                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1',
+                                     journal.status === 'exported' ? 'text-gray-300 cursor-not-allowed' :
+                                     !journal.labels.includes('EXPORT_EXCLUDE') ? 'font-bold text-gray-800 hover:bg-gray-100' : 'text-gray-400 hover:bg-gray-100']">
                       📤 対象
                     </button>
                     <button @click="setExportExclude(journal, true)"
-                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
-                                     journal.labels.includes('EXPORT_EXCLUDE') ? 'font-bold text-gray-800' : 'text-gray-400']">
+                            :disabled="journal.status === 'exported'"
+                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1',
+                                     journal.status === 'exported' ? 'text-gray-300 cursor-not-allowed' :
+                                     journal.labels.includes('EXPORT_EXCLUDE') ? 'font-bold text-gray-800 hover:bg-gray-100' : 'text-gray-400 hover:bg-gray-100']">
                       📤 対象外
                     </button>
                   </div>
@@ -355,61 +386,68 @@
 
     <!-- 画像モーダル -->
     <div v-if="modalImageUrl"
-         class="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"
+         class="fixed inset-0 z-40 pointer-events-none"
          @click="hideImageModal">
-      <div :style="{ width: `${actualModalWidth}px`, height: `${actualModalHeight}px` }" class="relative bg-white rounded-lg shadow-2xl flex flex-col pointer-events-auto">
-        <!-- 回転ボタン -->
-        <button @click.stop="rotationAngle = (rotationAngle + 90) % 360"
-                class="absolute top-2 right-2 z-10 bg-blue-500 hover:bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg transition-colors"
-                title="90度回転">
-          <i class="fa-solid fa-rotate-right text-sm"></i>
-        </button>
-        <!-- 閉じるボタン -->
+    </div>
+    <div v-if="modalImageUrl"
+         ref="imageModalRef"
+         :style="{ width: `${actualModalWidth}px`, height: `${actualModalHeight}px`, top: imageModalPos.top + 'px', left: imageModalPos.left + 'px', zIndex: imageModalZ }"
+         class="fixed bg-white rounded-lg shadow-2xl flex flex-col pointer-events-auto">
+      <!-- ドラッグハンドル（ヘッダー） -->
+      <div class="bg-blue-100 px-3 py-1.5 flex justify-between items-center cursor-move rounded-t-lg select-none"
+           @mousedown="startImageDrag">
+        <span class="text-xs font-bold text-gray-900">画像プレビュー <span class="font-normal text-amber-600">※移動できます</span></span>
         <button @click="closeModal"
-                class="absolute top-2 left-2 z-10 bg-gray-500 hover:bg-gray-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg transition-colors"
-                title="閉じる">
+                class="text-gray-500 hover:text-gray-700">
           <i class="fa-solid fa-xmark text-sm"></i>
         </button>
-        <!-- ズームインボタン -->
+      </div>
+      <!-- ツールバー -->
+      <div class="flex items-center gap-1 px-2 py-1 bg-gray-100 border-b border-gray-200">
+        <button @click.stop="rotationAngle = (rotationAngle + 90) % 360"
+                class="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
+                title="90度回転">
+          <i class="fa-solid fa-rotate-right text-xs"></i>
+        </button>
         <button @click.stop="zoomIn"
-                class="absolute top-12 right-2 z-10 bg-green-500 hover:bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg transition-colors"
+                class="bg-green-500 hover:bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
                 title="拡大">
-          <i class="fa-solid fa-magnifying-glass-plus text-sm"></i>
+          <i class="fa-solid fa-magnifying-glass-plus text-xs"></i>
         </button>
-        <!-- ズームアウトボタン -->
         <button @click.stop="zoomOut"
-                class="absolute top-22 right-2 z-10 bg-orange-500 hover:bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg transition-colors"
+                class="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
                 title="縮小">
-          <i class="fa-solid fa-magnifying-glass-minus text-sm"></i>
+          <i class="fa-solid fa-magnifying-glass-minus text-xs"></i>
         </button>
-        <!-- 画像表示エリア -->
-        <div class="flex-1 flex items-center justify-center overflow-hidden">
-          <img :src="modalImageUrl"
-               alt="領収書"
-               :style="{
-                 transform: `translate(${offsetX}px, ${offsetY}px) rotate(${rotationAngle}deg) scale(${zoomScale})`,
-                 imageOrientation: 'from-image',
-                 cursor: isDragging ? 'grabbing' : 'grab'
-               }"
-               class="max-w-full max-h-full object-contain transition-transform duration-300"
-               @load="onImageLoad"
-               @mousedown="onMouseDown"
-               @mousemove="onMouseMove"
-               @mouseup="onMouseUp"
-               @mouseleave="onMouseUp" />
-        </div>
+      </div>
+      <!-- 画像表示エリア -->
+      <div class="flex-1 flex items-center justify-center overflow-hidden rounded-b-lg">
+        <img :src="modalImageUrl"
+             alt="領収書"
+             :style="{
+               transform: `translate(${offsetX}px, ${offsetY}px) rotate(${rotationAngle}deg) scale(${zoomScale})`,
+               imageOrientation: 'from-image',
+               cursor: isDragging ? 'grabbing' : 'grab'
+             }"
+             class="max-w-full max-h-full object-contain transition-transform duration-300"
+             @load="onImageLoad"
+             @mousedown="onMouseDown"
+             @mousemove="onMouseMove"
+             @mouseup="onMouseUp"
+             @mouseleave="onMouseUp" />
       </div>
     </div>
 
     <!-- 過去仕訳検索モーダル -->
     <div v-if="showPastJournalModal"
-         class="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"
-         >
-      <div class="bg-white rounded-lg shadow-2xl w-[600px] h-[600px] flex flex-col pointer-events-auto border-2 border-gray-300"
-           @click.stop>
-        <!-- モーダルヘッダー -->
-        <div class="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
-          <h2 class="text-sm font-bold">過去仕訳検索</h2>
+         ref="pastJournalModalRef"
+         :style="{ top: pastJournalPos.top + 'px', left: pastJournalPos.left + 'px', zIndex: pastJournalZ }"
+         class="fixed bg-white rounded-lg shadow-2xl w-[600px] h-[600px] flex flex-col pointer-events-auto border-2 border-gray-300"
+         @click.stop>
+        <!-- モーダルヘッダー（ドラッグハンドル） -->
+        <div class="bg-blue-100 px-4 py-3 border-b flex justify-between items-center cursor-move select-none rounded-t-lg"
+             @mousedown="startPastJournalDrag">
+          <h2 class="text-sm font-bold text-gray-900">過去仕訳検索 <span class="font-normal text-xs text-amber-600">※移動できます</span></h2>
           <button @click="closePastJournalModal()"
                   class="text-gray-500 hover:text-gray-700">
             <i class="fa-solid fa-xmark text-lg"></i>
@@ -600,7 +638,6 @@
             </button>
           </div>
         </div>
-      </div>
     </div>
   </div>
 
@@ -627,6 +664,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useDraggable } from '@/mocks/composables/useDraggable';
 import { journalColumns } from '@/mocks/columns/journalColumns';
 import { mockJournalsPhase5 as fixtureData } from '../data/journal_test_fixture_30cases';
 import { getReceiptImageUrl } from '../data/receipt_mock_data';
@@ -724,7 +762,7 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
   confirmDialog.value = {
     show: true,
     title: 'コピー',
-    message: `「${journal.description}」をコピーしますか？`,
+    message: `「${journal.description}」を未出力にコピーしますか？`,
     onConfirm: () => {
       const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(journal));
       clone.id = `copy-${Date.now()}`;
@@ -821,22 +859,29 @@ function clearSelection() {
 // ────── 一括操作関数（冪等 + 0件ガード） ──────
 
 function bulkSetReadStatus(value: boolean) {
-  const targets = selectedJournals.value.filter(j => j.is_read !== value);
+  const all = selectedJournals.value;
+  const exportedCount = all.filter(j => j.status === 'exported').length;
+  const targets = all.filter(j => j.status !== 'exported' && j.is_read !== value);
   // 0件ガード
   if (targets.length === 0) {
     confirmDialog.value = {
       show: true, title: '実行不可',
-      message: `すべて既に${value ? '既読' : '未読'}状態です。`,
+      message: exportedCount > 0
+        ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）\n実行可能な仕訳がありません。`
+        : `すべて既に${value ? '既読' : '未読'}状態です。`,
       onConfirm: () => {}
     };
     return;
   }
   // 確認ダイアログ
   const capturedTargets = [...targets];
+  const confirmMsg = exportedCount > 0
+    ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）/ 実行対象: ${capturedTargets.length}件`
+    : `${capturedTargets.length}件を${value ? '既読' : '未読'}にしますか？`;
   confirmDialog.value = {
     show: true,
     title: value ? '既読にする' : '未読にする',
-    message: `${capturedTargets.length}件を${value ? '既読' : '未読'}にしますか？`,
+    message: confirmMsg,
     onConfirm: () => {
       capturedTargets.forEach(j => { j.is_read = value; });
       console.log(`[一括] ${value ? '既読' : '未読'}: ${capturedTargets.length}件変更`);
@@ -930,7 +975,7 @@ function showBulkCopyDialog() {
   confirmDialog.value = {
     show: true,
     title: 'コピー',
-    message: `${targets.length}件コピーしますか？`,
+    message: `${targets.length}件を未出力にコピーしますか？`,
     onConfirm: () => {
       targets.forEach(j => {
         const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(j));
@@ -1014,14 +1059,20 @@ const zoomScale = ref<number>(1);
 const baseModalWidth = ref<number>(300);
 const baseModalHeight = ref<number>(400);
 
-// 画像ドラッグ用
+// 画像ドラッグ用（画像パン操作）
 const offsetX = ref<number>(0);
 const offsetY = ref<number>(0);
 const isDragging = ref<boolean>(false);
 const dragStartX = ref<number>(0);
 const dragStartY = ref<number>(0);
 
+// 画像モーダル ドラッグ移動用
+const imageModalRef = ref<HTMLElement | null>(null);
+const { position: imageModalPos, zIndex: imageModalZ, startDrag: startImageDrag } = useDraggable(imageModalRef);
+
 // 過去仕訳検索モーダル用
+const pastJournalModalRef = ref<HTMLElement | null>(null);
+const { position: pastJournalPos, zIndex: pastJournalZ, startDrag: startPastJournalDrag } = useDraggable(pastJournalModalRef);
 const showPastJournalModal = ref<boolean>(false);
 const pastJournalTab = ref<'streamed' | 'accounting'>('streamed');
 const pastJournalSearch = ref({

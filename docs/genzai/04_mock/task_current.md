@@ -74,9 +74,9 @@ JournalListLevel3Mock.vue は23列。ヘッダー・ボディ両方のv-for化�
   - [x] 初回チェック時ヘルプ「✓をすべて外すと元の画面に戻ります」fadeOut表示（showSelectionHelp）
   - [x] 確認ダイアログ（コピー「N件を未出力にコピーしますか？」、対象外「N件を出力対象外にしますか？」、ゴミ箱「N件をゴミ箱に移動しますか？」。exported行スキップ方式）
   - [x] 冪等処理（同じ状態への重ね掛けはエラーにしない）
-- [ ] L3ツールバー追加（L4バーの上に新設。[アップロード][CSV出力][画像出力][学習][設定]）
-  - 詳細仕様の決定
-  - 詳細仕様に基づくUI実装
+- [x] L3ツールバー新設（2026-02-21完了。ホーム・アップロード・出力・学習・設定の5ボタン。bg-sky-600/白字。SVGアイコン付き）
+- [x] useDraggable composable新規作成（2026-02-21完了。src/mocks/composables/useDraggable.ts。方式B: elRef watch、getBoundingClientRect clamp、z-indexグローバルカウンタ、body userSelect制御、onUnmountedクリーンアップ）
+- [x] ドラッグ可能モーダル実装（2026-02-21完了。画像プレビュー・過去仕訳検索の両モーダルにドラッグハンドル付きヘッダー追加。bg-blue-100/黒字。「※移動できます」表示。中央初期配置、画面外clamp）
 
 **後でやる（Phase A列実装が進んでから）:**
 - [ ] mocks/unsafe/ 作成（any許可の実験場）
@@ -86,10 +86,10 @@ JournalListLevel3Mock.vue は23列。ヘッダー・ボディ両方のv-for化�
 
 ## 3. UI列実装状況（23列）
 
-- [ ] 選（チェックボックス）
+- [x] ▢（チェックボックス）
 - [x] No.
-- [x] 写真
-- [x] 過去仕訳
+- [x] 写真（ドラッグ移動可能モーダル実装済み）
+- [x] 過去仕訳（ドラッグ移動可能モーダル実装済み）
 - [ ] コメント
 - [ ] 要対応（NEED_DOCUMENT/NEED_CONFIRM/NEED_CONSULT）
 - [ ] 証票（TRANSPORT/RECEIPT/INVOICE/CREDIT_CARD/BANK_STATEMENT）
