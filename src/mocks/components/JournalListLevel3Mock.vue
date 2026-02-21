@@ -674,9 +674,21 @@ function closeDropdown() {
 function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
   const target = localJournals.value.find(j => j.id === journal.id);
   if (!target || target.is_read === value) return; // 同じ状態なら何もしない
-  target.is_read = value;
-  console.log(`[DD] 既読変更: ${journal.id} → is_read=${value}`);
   closeDropdown();
+  confirmDialog.value = {
+    show: true,
+    title: value ? '既読にする' : '未読にする',
+    message: `「${journal.description}」を${value ? '既読' : '未読'}にしますか？`,
+    onConfirm: () => {
+      target.is_read = value;
+      console.log(`[DD] 既読変更: ${journal.id} → is_read=${value}`);
+      confirmDialog.value = {
+        show: true, title: '完了',
+        message: `${value ? '既読' : '未読'}にしました。`,
+        onConfirm: () => {}
+      };
+    }
+  };
 }
 
 function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
@@ -684,41 +696,59 @@ function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
   if (!target) return;
   const hasLabel = target.labels.includes('EXPORT_EXCLUDE');
   if (exclude === hasLabel) return; // 同じ状態なら何もしない
-  if (exclude) {
-    target.labels.push('EXPORT_EXCLUDE');
-    console.log(`[DD] 出力対象外に変更: ${journal.id}`);
-  } else {
-    const idx = target.labels.indexOf('EXPORT_EXCLUDE');
-    if (idx >= 0) target.labels.splice(idx, 1);
-    console.log(`[DD] 出力対象に変更: ${journal.id}`);
-  }
   closeDropdown();
+  confirmDialog.value = {
+    show: true,
+    title: exclude ? '出力対象外にする' : '出力対象にする',
+    message: `「${journal.description}」を${exclude ? '出力対象外' : '出力対象'}にしますか？`,
+    onConfirm: () => {
+      if (exclude) {
+        target.labels.push('EXPORT_EXCLUDE');
+        console.log(`[DD] 出力対象外に変更: ${journal.id}`);
+      } else {
+        const idx = target.labels.indexOf('EXPORT_EXCLUDE');
+        if (idx >= 0) target.labels.splice(idx, 1);
+        console.log(`[DD] 出力対象に変更: ${journal.id}`);
+      }
+      confirmDialog.value = {
+        show: true, title: '完了',
+        message: `${exclude ? '出力対象外' : '出力対象'}にしました。`,
+        onConfirm: () => {}
+      };
+    }
+  };
 }
 
 function copyJournal(journal: JournalPhase5Mock, _index: number) {
-  const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(journal));
-  clone.id = `copy-${Date.now()}`;
-  clone.display_order = journal.display_order + 0.5;
-  clone.description = `★コピー ${journal.description}`;
-  clone.is_read = false;
-  clone.status = null;
-  clone.labels = [];
-  clone.memo = null;
-  clone.memo_author = null;
-  clone.memo_target = null;
-  clone.memo_created_at = null;
-  clone.deleted_at = null;  // コピーは新規レコード → ゴミ箱状態を引き継がない
-  // 元の直後に挿入
-  const originalIndex = localJournals.value.findIndex(j => j.id === journal.id);
-  if (originalIndex >= 0) {
-    localJournals.value.splice(originalIndex + 1, 0, clone);
-  }
-  console.log(`[DD] コピー作成: ${clone.id} (元: ${journal.id})`);
   closeDropdown();
   confirmDialog.value = {
-    show: true, title: 'コピー完了',
-    message: '未出力にコピーしました。',
-    onConfirm: () => {}
+    show: true,
+    title: 'コピー',
+    message: `「${journal.description}」をコピーしますか？`,
+    onConfirm: () => {
+      const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(journal));
+      clone.id = `copy-${Date.now()}`;
+      clone.display_order = journal.display_order + 0.5;
+      clone.description = `★コピー ${journal.description}`;
+      clone.is_read = false;
+      clone.status = null;
+      clone.labels = [];
+      clone.memo = null;
+      clone.memo_author = null;
+      clone.memo_target = null;
+      clone.memo_created_at = null;
+      clone.deleted_at = null;
+      const originalIndex = localJournals.value.findIndex(j => j.id === journal.id);
+      if (originalIndex >= 0) {
+        localJournals.value.splice(originalIndex + 1, 0, clone);
+      }
+      console.log(`[DD] コピー作成: ${clone.id} (元: ${journal.id})`);
+      confirmDialog.value = {
+        show: true, title: 'コピー完了',
+        message: '未出力にコピーしました。',
+        onConfirm: () => {}
+      };
+    }
   };
 }
 
@@ -737,6 +767,11 @@ function trashJournal(journal: JournalPhase5Mock) {
       if (!target) return;
       target.deleted_at = new Date().toISOString();
       console.log(`[DD] ゴミ箱: ${journal.id}`);
+      confirmDialog.value = {
+        show: true, title: '完了',
+        message: `「${journal.description}」をゴミ箱に移動しました。`,
+        onConfirm: () => {}
+      };
     }
   };
 }
@@ -744,13 +779,20 @@ function trashJournal(journal: JournalPhase5Mock) {
 function restoreJournal(journal: JournalPhase5Mock) {
   const target = localJournals.value.find(j => j.id === journal.id);
   if (!target || target.deleted_at === null) return;
-  target.deleted_at = null;
-  console.log(`[DD] 復活: ${journal.id}`);
   closeDropdown();
   confirmDialog.value = {
-    show: true, title: '復活完了',
-    message: `「${journal.description}」を復活しました。`,
-    onConfirm: () => {}
+    show: true,
+    title: '復活',
+    message: `「${journal.description}」を復活しますか？`,
+    onConfirm: () => {
+      target.deleted_at = null;
+      console.log(`[DD] 復活: ${journal.id}`);
+      confirmDialog.value = {
+        show: true, title: '復活完了',
+        message: `「${journal.description}」を復活しました。`,
+        onConfirm: () => {}
+      };
+    }
   };
 }
 
@@ -789,14 +831,23 @@ function bulkSetReadStatus(value: boolean) {
     };
     return;
   }
-  targets.forEach(j => { j.is_read = value; });
-  console.log(`[一括] ${value ? '既読' : '未読'}: ${targets.length}件変更`);
-  const count = targets.length;
-  clearSelection();
+  // 確認ダイアログ
+  const capturedTargets = [...targets];
   confirmDialog.value = {
-    show: true, title: '完了',
-    message: `${count}件を${value ? '既読' : '未読'}にしました。`,
-    onConfirm: () => {}
+    show: true,
+    title: value ? '既読にする' : '未読にする',
+    message: `${capturedTargets.length}件を${value ? '既読' : '未読'}にしますか？`,
+    onConfirm: () => {
+      capturedTargets.forEach(j => { j.is_read = value; });
+      console.log(`[一括] ${value ? '既読' : '未読'}: ${capturedTargets.length}件変更`);
+      const count = capturedTargets.length;
+      clearSelection();
+      confirmDialog.value = {
+        show: true, title: '完了',
+        message: `${count}件を${value ? '既読' : '未読'}にしました。`,
+        onConfirm: () => {}
+      };
+    }
   };
 }
 
@@ -836,27 +887,41 @@ function bulkSetExportExclude(exclude: boolean) {
           }
         });
         console.log(`[一括] ${exclude ? '対象外' : '対象'}: ${capturedTargets.length}件変更`);
+        const count = capturedTargets.length;
         clearSelection();
+        confirmDialog.value = {
+          show: true, title: '完了',
+          message: `${count}件を${exclude ? '出力対象外' : '出力対象'}にしました。`,
+          onConfirm: () => {}
+        };
       }
     };
     return;
   }
-  // exported含まない場合はそのまま実行
-  targets.forEach(j => {
-    if (exclude && !j.labels.includes('EXPORT_EXCLUDE')) {
-      j.labels.push('EXPORT_EXCLUDE');
-    } else if (!exclude) {
-      const idx = j.labels.indexOf('EXPORT_EXCLUDE');
-      if (idx >= 0) j.labels.splice(idx, 1);
-    }
-  });
-  console.log(`[一括] ${exclude ? '対象外' : '対象'}: ${targets.length}件変更`);
-  const count = targets.length;
-  clearSelection();
+  // exported含まない場合も確認ダイアログ
+  const capturedTargets = [...targets];
   confirmDialog.value = {
-    show: true, title: '完了',
-    message: `${count}件を${exclude ? '出力対象外' : '出力対象'}にしました。`,
-    onConfirm: () => {}
+    show: true,
+    title: exclude ? '出力対象外にする' : '出力対象にする',
+    message: `${capturedTargets.length}件を${exclude ? '出力対象外' : '出力対象'}にしますか？`,
+    onConfirm: () => {
+      capturedTargets.forEach(j => {
+        if (exclude && !j.labels.includes('EXPORT_EXCLUDE')) {
+          j.labels.push('EXPORT_EXCLUDE');
+        } else if (!exclude) {
+          const idx = j.labels.indexOf('EXPORT_EXCLUDE');
+          if (idx >= 0) j.labels.splice(idx, 1);
+        }
+      });
+      console.log(`[一括] ${exclude ? '対象外' : '対象'}: ${capturedTargets.length}件変更`);
+      const count = capturedTargets.length;
+      clearSelection();
+      confirmDialog.value = {
+        show: true, title: '完了',
+        message: `${count}件を${exclude ? '出力対象外' : '出力対象'}にしました。`,
+        onConfirm: () => {}
+      };
+    }
   };
 }
 
