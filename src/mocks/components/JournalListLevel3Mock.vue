@@ -19,6 +19,7 @@
         <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showUnexported" class="w-2.5 h-2.5">未出力を表示</label>
         <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExported" class="w-2.5 h-2.5">出力済を表示</label>
         <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExcluded" class="w-2.5 h-2.5">出力対象外を表示</label>
+        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showTrashed" class="w-2.5 h-2.5">ゴミ箱を表示</label>
       </div>
       <!-- 行の背景色 凡例 -->
       <div class="flex items-center gap-2">
@@ -26,6 +27,7 @@
         <span class="bg-yellow-100 border border-gray-400 px-2 py-0.5 text-gray-800 font-bold">未読</span>
         <span class="bg-white border border-gray-400 px-2 py-0.5 text-gray-800">既読</span>
         <span class="bg-gray-200 border border-gray-400 px-2 py-0.5 text-gray-800">出力済</span>
+        <span class="bg-gray-600 border border-gray-400 px-2 py-0.5 text-white">ゴミ箱</span>
       </div>
     </div>
 
@@ -230,67 +232,81 @@
                    class="absolute right-full top-0 z-50 w-44 bg-white border border-gray-300 rounded shadow-lg text-[10px] whitespace-nowrap"
                    @click.stop>
 
-                <!-- ────── セクション1: 状態トグル（軽い操作） ────── -->
-
-                <!-- 未読/既読トグル（並列濃淡） -->
-                <div class="flex border-b border-gray-200">
-                  <button @click="setReadStatus(journal, false)"
-                          :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
-                                   !journal.is_read ? 'font-bold text-gray-800' : 'text-gray-400']">
-                    📖 未読
+                <!-- ゴミ箱状態 → 復活のみ -->
+                <template v-if="journal.deleted_at !== null">
+                  <button @click="restoreJournal(journal)"
+                          class="w-full px-2 py-1.5 text-left hover:bg-green-50 text-green-700 font-bold flex items-center gap-1">
+                    ♻️ 復活
                   </button>
-                  <button @click="setReadStatus(journal, true)"
-                          :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
-                                   journal.is_read ? 'font-bold text-gray-800' : 'text-gray-400']">
-                    📖 既読
+                </template>
+
+                <!-- 通常状態 → フルメニュー -->
+                <template v-else>
+                  <!-- ────── セクション1: 状態トグル（軽い操作） ────── -->
+
+                  <!-- 未読/既読トグル（並列濃淡） -->
+                  <div class="flex border-b border-gray-200">
+                    <button @click="setReadStatus(journal, false)"
+                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
+                                     !journal.is_read ? 'font-bold text-gray-800' : 'text-gray-400']">
+                      📖 未読
+                    </button>
+                    <button @click="setReadStatus(journal, true)"
+                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
+                                     journal.is_read ? 'font-bold text-gray-800' : 'text-gray-400']">
+                      📖 既読
+                    </button>
+                  </div>
+
+                  <!-- 対象/対象外トグル（並列濃淡） -->
+                  <div class="flex border-b border-gray-200">
+                    <button @click="setExportExclude(journal, false)"
+                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
+                                     !journal.labels.includes('EXPORT_EXCLUDE') ? 'font-bold text-gray-800' : 'text-gray-400']">
+                      📤 対象
+                    </button>
+                    <button @click="setExportExclude(journal, true)"
+                            :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
+                                     journal.labels.includes('EXPORT_EXCLUDE') ? 'font-bold text-gray-800' : 'text-gray-400']">
+                      📤 対象外
+                    </button>
+                  </div>
+
+                  <!-- ────── セクション2: 単発操作（中の重さ） ────── -->
+
+                  <button @click="copyJournal(journal, journalIndex)"
+                          class="w-full px-2 py-1.5 text-left hover:bg-gray-100 flex items-center gap-1 border-b border-gray-200">
+                    📋 コピー
                   </button>
-                </div>
 
-                <!-- 対象/対象外トグル（並列濃淡） -->
-                <div class="flex border-b border-gray-200">
-                  <button @click="setExportExclude(journal, false)"
-                          :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
-                                   !journal.labels.includes('EXPORT_EXCLUDE') ? 'font-bold text-gray-800' : 'text-gray-400']">
-                    📤 対象
+                  <!-- ────── セクション3: 破壊操作（重い・赤・心理的距離） ────── -->
+                  <!-- 制約: exported行はゴミ箱不可 -->
+
+                  <button @click="trashJournal(journal)"
+                          :disabled="journal.status === 'exported'"
+                          :class="['w-full px-2 py-1.5 text-left flex items-center gap-1 border-b border-gray-200',
+                                   journal.status === 'exported' ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-red-50 text-red-600']">
+                    🗑 ゴミ箱
                   </button>
-                  <button @click="setExportExclude(journal, true)"
-                          :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
-                                   journal.labels.includes('EXPORT_EXCLUDE') ? 'font-bold text-gray-800' : 'text-gray-400']">
-                    📤 対象外
+
+                  <!-- ────── セクション4: 拡張メニュー（プレースホルダー） ────── -->
+
+                  <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
+                    ① 拡張メニュー
                   </button>
-                </div>
-
-                <!-- ────── セクション2: 単発操作（中の重さ） ────── -->
-
-                <button @click="copyJournal(journal, journalIndex)"
-                        class="w-full px-2 py-1.5 text-left hover:bg-gray-100 flex items-center gap-1 border-b border-gray-200">
-                  📋 コピー
-                </button>
-
-                <!-- ────── セクション3: 破壊操作（重い・赤・心理的距離） ────── -->
-
-                <button @click="trashJournal(journal)"
-                        class="w-full px-2 py-1.5 text-left hover:bg-red-50 text-red-600 flex items-center gap-1 border-b border-gray-200">
-                  🗑 ゴミ箱
-                </button>
-
-                <!-- ────── セクション4: 拡張メニュー（プレースホルダー） ────── -->
-
-                <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
-                  ① 拡張メニュー
-                </button>
-                <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
-                  ② 拡張メニュー
-                </button>
-                <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
-                  ③ 拡張メニュー
-                </button>
-                <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
-                  ④ 拡張メニュー
-                </button>
-                <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
-                  ⑤ 拡張メニュー
-                </button>
+                  <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
+                    ② 拡張メニュー
+                  </button>
+                  <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
+                    ③ 拡張メニュー
+                  </button>
+                  <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
+                    ④ 拡張メニュー
+                  </button>
+                  <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
+                    ⑤ 拡張メニュー
+                  </button>
+                </template>
               </div>
             </div>
 
@@ -572,6 +588,7 @@ const localJournals = ref<JournalPhase5Mock[]>(
 const showUnexported = ref<boolean>(true);   // 未出力を表示（初期: ON）
 const showExported = ref<boolean>(false);    // 出力済を表示（初期: OFF）
 const showExcluded = ref<boolean>(false);    // 出力対象外を表示（初期: OFF）
+const showTrashed = ref<boolean>(false);     // ゴミ箱を表示（初期: OFF）
 
 // ドロップダウン制御
 const openDropdownId = ref<string | null>(null);
@@ -622,6 +639,7 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
   clone.memo_author = null;
   clone.memo_target = null;
   clone.memo_created_at = null;
+  clone.deleted_at = null;  // コピーは新規レコード → ゴミ箱状態を引き継がない
   // 元の直後に挿入
   const originalIndex = localJournals.value.findIndex(j => j.id === journal.id);
   if (originalIndex >= 0) {
@@ -632,11 +650,23 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
 }
 
 function trashJournal(journal: JournalPhase5Mock) {
-  const idx = localJournals.value.findIndex(j => j.id === journal.id);
-  if (idx >= 0) {
-    localJournals.value.splice(idx, 1);
-    console.log(`[DD] ゴミ箱: ${journal.id}`);
+  // 制約: 出力済みはゴミ箱不可
+  if (journal.status === 'exported') {
+    console.warn(`[DD] exported journal cannot be trashed: ${journal.id}`);
+    return;
   }
+  const target = localJournals.value.find(j => j.id === journal.id);
+  if (!target) return;
+  target.deleted_at = new Date().toISOString();
+  console.log(`[DD] ゴミ箱: ${journal.id}`);
+  closeDropdown();
+}
+
+function restoreJournal(journal: JournalPhase5Mock) {
+  const target = localJournals.value.find(j => j.id === journal.id);
+  if (!target || target.deleted_at === null) return;
+  target.deleted_at = null;
+  console.log(`[DD] 復活: ${journal.id}`);
   closeDropdown();
 }
 
@@ -1021,6 +1051,9 @@ const journals = computed(() => {
 
   // チェックボックスフィルタリング
   return result.filter(journal => {
+    // ゴミ箱フィルタ（AND条件: OFFならtrashed非表示）
+    if (journal.deleted_at !== null && !showTrashed.value) return false;
+
     const isExcluded = journal.labels.includes('EXPORT_EXCLUDE');
     const isExported = journal.status === 'exported';
     const isUnexported = journal.status === null && !isExcluded;
@@ -1028,9 +1061,10 @@ const journals = computed(() => {
     if (showUnexported.value && isUnexported) return true;
     if (showExported.value && isExported) return true;
     if (showExcluded.value && isExcluded) return true;
+    if (showTrashed.value && journal.deleted_at !== null) return true;
 
-    // すべてOFFの場合は全表示
-    if (!showUnexported.value && !showExported.value && !showExcluded.value) return true;
+    // すべてOFFの場合は全表示（trashed除外済み）
+    if (!showUnexported.value && !showExported.value && !showExcluded.value && !showTrashed.value) return true;
 
     return false;
   });
@@ -1054,16 +1088,32 @@ function getCombinedRows(journal: JournalPhase5Mock): Array<{ debit: JournalEntr
   }));
 }
 
+/**
+ * 行背景色の優先順位
+ *
+ * 1. deleted_at!=null : 濃グレー+白字（ワークフロー終了・最優先）
+ * 2. status=exported : 薄グレー（出力完了）
+ * 3. !is_read        : 黄色（未読・注意）
+ * 4. それ以外        : 白（通常）
+ *
+ * 制約: exported && deleted_at は禁止（trashJournalでガード）
+ * 許可: export_exclude && deleted_at は許可（外部未出力のため）
+ * フィルタ: showTrashed=ONは「追加表示型」（通常+ゴミ箱）
+ */
 function getRowBackground(journal: JournalPhase5Mock): string {
-  // 優先度1: 出力済み → グレー（未読より優先）
+  // 優先度1: ゴミ箱 → 濃グレー+白字（最優先）
+  if (journal.deleted_at !== null) {
+    return 'bg-gray-600 text-white';
+  }
+  // 優先度2: 出力済み → 薄グレー
   if (journal.status === 'exported') {
     return 'bg-gray-200';
   }
-  // 優先度2: 未読 → 黄色
+  // 優先度3: 未読 → 黄色
   if (!journal.is_read) {
     return 'bg-yellow-100';
   }
-  // 優先度3: 既読 → 白
+  // 優先度4: 通常 → 白
   return 'bg-white';
 }
 

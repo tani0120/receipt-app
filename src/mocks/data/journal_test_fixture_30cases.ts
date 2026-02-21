@@ -22,6 +22,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 800, tax_category: '課税仕入込10%' }
@@ -48,6 +49,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: false,  // 未読（黄色背景）
+    deleted_at: null,
     labels: ['RECEIPT', 'RULE_AVAILABLE', 'INVOICE_NOT_QUALIFIED', 'NEED_DOCUMENT'],  // 資料が必要
     debit_entries: [
       { account: 'メンテナンス費', sub_account: null, amount: 11000, tax_category: '課税仕入込10%' }
@@ -74,6 +76,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: false,  // 未読（黄色背景）
+    deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED', 'NEED_CONFIRM'],  // 確認が必要
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 2500, tax_category: '課税仕入込10%' }
@@ -100,6 +103,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['CREDIT_CARD', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 3200, tax_category: '課税仕入込10%' }
@@ -126,6 +130,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['BANK_STATEMENT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_CONSULT'],  // 相談が必要
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 650, tax_category: '課税仕入込10%' }
@@ -152,6 +157,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 1500, tax_category: '課税仕入込10%' }
@@ -178,6 +184,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['INVOICE', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '水道光熱費', sub_account: '電気代', amount: 12000, tax_category: '課税仕入込10%' }
@@ -204,6 +211,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '会議費', sub_account: null, amount: 1200, tax_category: '課税仕入込10%' }
@@ -230,6 +238,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['INVOICE', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '外注費', sub_account: null, amount: 150000, tax_category: '課税仕入込10%' }
@@ -256,6 +265,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_DOCUMENT', 'NEED_CONFIRM'],  // 複数フラグ
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 320, tax_category: '課税仕入込10%' }
@@ -282,6 +292,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '地代家賃', sub_account: 'ガリツリ', amount: 6000, tax_category: 'クレジットカード' }
@@ -308,6 +319,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['RECEIPT', 'RULE_AVAILABLE', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 800, tax_category: '課税仕入込10%' }
@@ -334,6 +346,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_NOT_QUALIFIED'],
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 750, tax_category: '課税仕入込10%' }
@@ -360,6 +373,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['INVOICE', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '通信費', sub_account: null, amount: 8000, tax_category: '課税仕入込10%' }
@@ -386,6 +400,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED', 'MULTI_TAX_RATE', 'EXPORT_EXCLUDE'],  // 出力対象外
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 0, tax_category: '課税仕入込10%' }
@@ -412,6 +427,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 800, tax_category: '課税仕入込10%' }
@@ -438,6 +454,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 500000, tax_category: '課税仕入込10%' }
@@ -464,6 +481,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '飲出羽', sub_account: null, amount: 20000, tax_category: '課税仕入込10%' }
@@ -490,6 +508,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '消耗品費', sub_account: '現金', amount: 50000, tax_category: '課税仕入込10%' }
@@ -516,6 +535,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
+    deleted_at: null,
     labels: ['BANK_STATEMENT', 'INVOICE_QUALIFIED', 'NEED_CONSULT', 'NEED_DOCUMENT'],  // 複数フラグ2
     debit_entries: [
       { account: '広告宣伝費', sub_account: '銀行', amount: 100000, tax_category: '課税仕入込10%' }
@@ -542,6 +562,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: 'exported',
     is_read: true,
+    deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '外注費', sub_account: null, amount: 8000, tax_category: '課税仕入込10%' }
@@ -572,6 +593,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: true,  // 既読
+    deleted_at: '2026-02-21T00:00:00Z',  // ゴミ箱（検証用）
     labels: ['RECEIPT', 'OCR_LOW_CONFIDENCE'],
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 10000, tax_category: '課税仕入込10%' }
@@ -598,6 +620,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: true,  // 既読
+    deleted_at: '2026-02-21T00:00:00Z',  // ゴミ箱（検証用）
     labels: ['TRANSPORT', 'DUPLICATE_SUSPECT'],
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 9000, tax_category: '課税仕入込10%' }
@@ -624,6 +647,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: false,
+    deleted_at: null,
     labels: ['RECEIPT', 'DATE_ANOMALY'],
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 11000, tax_category: '課税仕入込10%' }
@@ -650,6 +674,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: false,
+    deleted_at: null,
     labels: ['RECEIPT', 'AMOUNT_ANOMALY'],
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 1000000, tax_category: '課税仕入込10%' }
@@ -676,6 +701,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: false,
+    deleted_at: null,
     labels: ['RECEIPT', 'HAS_MEMO', 'NEED_CONSULT'],  // 旧help → 相談が必要
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 8000, tax_category: '課税仕入込10%' }
@@ -702,6 +728,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: false,
+    deleted_at: null,
     labels: ['INVOICE', 'HAS_MEMO', 'NEED_CONSULT'],  // 旧soudan → 相談が必要
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 11000, tax_category: '課税仕入込10%' }
@@ -728,6 +755,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: false,
+    deleted_at: null,
     labels: ['RECEIPT', 'MISSING_RECEIPT', 'HAS_MEMO', 'NEED_DOCUMENT'],  // 旧kakunin → 資料が必要
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 5000, tax_category: '課税仕入込10%' }
@@ -754,6 +782,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: false,
+    deleted_at: null,
     labels: ['RECEIPT', 'DEBIT_CREDIT_MISMATCH'],
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 5000, tax_category: '課税仕入込10%' }
@@ -780,6 +809,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: false,
+    deleted_at: null,
     labels: ['INVOICE', 'TAX_CALCULATION_ERROR'],
     debit_entries: [
       { account: '消耗品費', sub_account: null, amount: 10000, tax_category: '課税仕入込10%' }
@@ -810,6 +840,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: true,
+    deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '旅費交通費', sub_account: null, amount: 5000, tax_category: '課税仕入込10%' }
@@ -837,6 +868,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: true,
+    deleted_at: null,
     labels: ['CREDIT_CARD', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '旅費交通費', sub_account: '交通費', amount: 8000, tax_category: '課税仕入込10%' },
@@ -864,6 +896,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: true,
+    deleted_at: null,
     labels: ['BANK_STATEMENT', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '給料手当', sub_account: null, amount: 300000, tax_category: '対象外' }
@@ -892,6 +925,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: true,
+    deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '経費精算', sub_account: null, amount: 55000, tax_category: '課税仕入込10%' }
@@ -927,6 +961,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     receipt_id: 'receipt-001',
     status: null,
     is_read: true,
+    deleted_at: null,
     labels: ['INVOICE', 'INVOICE_QUALIFIED'],
     debit_entries: [
       { account: '売上原価', sub_account: '材料費', amount: 100000, tax_category: '課税仕入込10%' },
