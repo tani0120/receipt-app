@@ -258,6 +258,7 @@ Phase A-0（準備）完了状況:
 - Step 5: ヘッダーv-for化（pr-[8px]列ずれ修正、ソートバグ2件修正含む） ✅
 - Step 6: ボディ全体v-for化（全23列、6type分岐、getValue()導入） ✅
 - Step 7: 操作列（⋯）DD実装、ゴミ箱ソフトデリート（deleted_at方式）、フィルタ4種、4色背景 ✅
+- Step 8: 確認ダイアログ（コピー「未出力にコピー」メッセージ）、exported行制限（個別DD disabled化+一括スキップ方式） ✅
 
 確定済み設計:
 - status: exported + null（2値のみ）

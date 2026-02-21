@@ -478,21 +478,29 @@ POST /api/journals/bulk/exclude-from-export
 
 #### ガード句
 
+> **2026-02-21確定: スキップ方式**
+> モックUIでは、一括操作時にexported行をエラーではなく「スキップ」する方式を採用。
+> - 全件exportedの場合: 「実行不可」メッセージ表示（実行ボタンなし）
+> - 混在の場合: exported行をスキップし、残りの未出力分のみ実行（確認ダイアログ付き）
+> - 本番APIでもこの方式に合わせてガード句を調整する予定
+
 ```typescript
 export async function bulkExcludeFromExport(
   journalIds: string[],
   reason: string
 ): Promise<void> {
-  // ガード句: exportedは変更不可
+  // ガード句: exportedは変更不可（スキップ方式）
   const { data: statuses } = await supabase
     .from('journals')
     .select('id, status')
     .in('id', journalIds);
 
   const exportedIds = statuses?.filter(j => j.status === 'exported').map(j => j.id);
-  if (exportedIds && exportedIds.length > 0) {
+  const targetIds = statuses?.filter(j => j.status !== 'exported').map(j => j.id) || [];
+
+  if (targetIds.length === 0) {
     throw new BusinessRuleError(
-      `${exportedIds.length}件の出力済み仕訳が含まれています。出力済みの仕訳は変更できません。`,
+      `実行不可 選択: ${journalIds.length}件 / 出力済み: ${exportedIds?.length || 0}件（スキップ） 実行可能な仕訳がありません。`,
       'EXPORTED_JOURNALS_IN_SELECTION'
     );
   }
@@ -503,11 +511,26 @@ export async function bulkExcludeFromExport(
       export_exclude: true,
       export_exclude_reason: reason
     })
-    .in('id', journalIds);
+    .in('id', targetIds);  // exportedをスキップして残りのみ実行
 
   if (error) throw error;
 }
 ```
+
+#### 一括コピー
+
+```typescript
+POST /api/journals/bulk/copy
+```
+
+```json
+{
+  "journal_ids": ["uuid1", "uuid2"]
+}
+```
+
+> **コピー操作はexported行にも許可**。コピー先は常に `status = null`（未出力）で作成される。
+> 確認メッセージ: 「N件を未出力にコピーしますか？」
 
 ---
 
