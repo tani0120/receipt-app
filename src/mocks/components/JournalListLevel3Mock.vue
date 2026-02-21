@@ -42,12 +42,7 @@
         ]"
         @click="col.sortKey && sortBy(col.sortKey)"
       >
-        <template v-if="col.type === 'action'">
-          <i class="fa-solid fa-trash text-[9px]"></i>
-        </template>
-        <template v-else>
-          {{ col.label }}
-        </template>
+        {{ col.label }}
       </div>
     </div>
 
@@ -222,7 +217,7 @@
 
             <!-- action型 -->
             <div v-else-if="col.type === 'action'" :class="[col.width, 'p-0.5 flex items-center justify-center']">
-              <i class="fa-solid fa-trash text-[9px] text-gray-400 hover:text-red-600 cursor-pointer" title="削除"></i>
+              <span class="text-gray-500 hover:text-blue-600 cursor-pointer text-xs font-bold" :title="col.label">{{ col.icon }}</span>
             </div>
 
           </template>
