@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col bg-gray-50 font-sans">
+  <div class="h-full flex flex-col bg-gray-50 font-sans" @click="closeDropdown">
     <!-- 上部バー -->
     <div class="bg-white px-3 py-1 flex justify-between items-center text-[10px] text-gray-700">
       <!-- 表示条件ドロップダウン + チェックボックス -->
@@ -215,9 +215,83 @@
               </div>
             </template>
 
-            <!-- action型 -->
-            <div v-else-if="col.type === 'action'" :class="[col.width, 'p-0.5 flex items-center justify-center']">
-              <span class="text-gray-500 hover:text-blue-600 cursor-pointer text-xs font-bold" :title="col.label">{{ col.icon }}</span>
+            <!-- action型（ワークフローハブ） -->
+            <div v-else-if="col.type === 'action'" :class="[col.width, 'p-0.5 flex items-center justify-center relative']">
+              <!-- ⋮ ボタン（rowIndex===0のみ活性） -->
+              <span v-if="rowIndex === 0"
+                    class="text-gray-500 hover:text-blue-600 cursor-pointer text-xs font-bold"
+                    :title="col.label"
+                    @click.stop="toggleDropdown(journal.id)">
+                {{ col.icon }}
+              </span>
+
+              <!-- ドロップダウンメニュー（w-44固定、拡張対応） -->
+              <div v-if="rowIndex === 0 && openDropdownId === journal.id"
+                   class="absolute right-full top-0 z-50 w-44 bg-white border border-gray-300 rounded shadow-lg text-[10px] whitespace-nowrap"
+                   @click.stop>
+
+                <!-- ────── セクション1: 状態トグル（軽い操作） ────── -->
+
+                <!-- 未読/既読トグル（並列濃淡） -->
+                <div class="flex border-b border-gray-200">
+                  <button @click="setReadStatus(journal, false)"
+                          :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
+                                   !journal.is_read ? 'font-bold text-gray-800' : 'text-gray-400']">
+                    📖 未読
+                  </button>
+                  <button @click="setReadStatus(journal, true)"
+                          :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
+                                   journal.is_read ? 'font-bold text-gray-800' : 'text-gray-400']">
+                    📖 既読
+                  </button>
+                </div>
+
+                <!-- 対象/対象外トグル（並列濃淡） -->
+                <div class="flex border-b border-gray-200">
+                  <button @click="setExportExclude(journal, false)"
+                          :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
+                                   !journal.labels.includes('EXPORT_EXCLUDE') ? 'font-bold text-gray-800' : 'text-gray-400']">
+                    📤 対象
+                  </button>
+                  <button @click="setExportExclude(journal, true)"
+                          :class="['flex-1 px-2 py-1.5 text-left flex items-center gap-1 hover:bg-gray-100',
+                                   journal.labels.includes('EXPORT_EXCLUDE') ? 'font-bold text-gray-800' : 'text-gray-400']">
+                    📤 対象外
+                  </button>
+                </div>
+
+                <!-- ────── セクション2: 単発操作（中の重さ） ────── -->
+
+                <button @click="copyJournal(journal, journalIndex)"
+                        class="w-full px-2 py-1.5 text-left hover:bg-gray-100 flex items-center gap-1 border-b border-gray-200">
+                  📋 コピー
+                </button>
+
+                <!-- ────── セクション3: 破壊操作（重い・赤・心理的距離） ────── -->
+
+                <button @click="trashJournal(journal)"
+                        class="w-full px-2 py-1.5 text-left hover:bg-red-50 text-red-600 flex items-center gap-1 border-b border-gray-200">
+                  🗑 ゴミ箱
+                </button>
+
+                <!-- ────── セクション4: 拡張メニュー（プレースホルダー） ────── -->
+
+                <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
+                  ① 拡張メニュー
+                </button>
+                <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
+                  ② 拡張メニュー
+                </button>
+                <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
+                  ③ 拡張メニュー
+                </button>
+                <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
+                  ④ 拡張メニュー
+                </button>
+                <button disabled class="w-full px-2 py-1.5 text-left text-gray-300 cursor-not-allowed flex items-center gap-1">
+                  ⑤ 拡張メニュー
+                </button>
+              </div>
             </div>
 
           </template>
@@ -485,14 +559,86 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { journalColumns } from '@/mocks/columns/journalColumns';
-import { mockJournalsPhase5 } from '../data/journal_test_fixture_30cases';
+import { mockJournalsPhase5 as fixtureData } from '../data/journal_test_fixture_30cases';
 import { getReceiptImageUrl } from '../data/receipt_mock_data';
 import type { JournalPhase5Mock, JournalEntryLine } from '../types/journal_phase5_mock.type';
+
+// ローカル可変データ（fixtureの深いコピー、Phase A用）
+const localJournals = ref<JournalPhase5Mock[]>(
+  JSON.parse(JSON.stringify(fixtureData))
+);
 
 // フィルタリング状態（チェックボックス）
 const showUnexported = ref<boolean>(true);   // 未出力を表示（初期: ON）
 const showExported = ref<boolean>(false);    // 出力済を表示（初期: OFF）
 const showExcluded = ref<boolean>(false);    // 出力対象外を表示（初期: OFF）
+
+// ドロップダウン制御
+const openDropdownId = ref<string | null>(null);
+
+function toggleDropdown(journalId: string) {
+  openDropdownId.value = openDropdownId.value === journalId ? null : journalId;
+}
+
+function closeDropdown() {
+  openDropdownId.value = null;
+}
+
+// ────── ワークフローハブ操作（レベル②ローカル状態変更） ──────
+
+function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
+  const target = localJournals.value.find(j => j.id === journal.id);
+  if (!target || target.is_read === value) return; // 同じ状態なら何もしない
+  target.is_read = value;
+  console.log(`[DD] 既読変更: ${journal.id} → is_read=${value}`);
+  closeDropdown();
+}
+
+function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
+  const target = localJournals.value.find(j => j.id === journal.id);
+  if (!target) return;
+  const hasLabel = target.labels.includes('EXPORT_EXCLUDE');
+  if (exclude === hasLabel) return; // 同じ状態なら何もしない
+  if (exclude) {
+    target.labels.push('EXPORT_EXCLUDE');
+    console.log(`[DD] 出力対象外に変更: ${journal.id}`);
+  } else {
+    const idx = target.labels.indexOf('EXPORT_EXCLUDE');
+    if (idx >= 0) target.labels.splice(idx, 1);
+    console.log(`[DD] 出力対象に変更: ${journal.id}`);
+  }
+  closeDropdown();
+}
+
+function copyJournal(journal: JournalPhase5Mock, _index: number) {
+  const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(journal));
+  clone.id = `copy-${Date.now()}`;
+  clone.display_order = journal.display_order + 0.5;
+  clone.description = `★コピー ${journal.description}`;
+  clone.is_read = false;
+  clone.status = null;
+  clone.labels = [];
+  clone.memo = null;
+  clone.memo_author = null;
+  clone.memo_target = null;
+  clone.memo_created_at = null;
+  // 元の直後に挿入
+  const originalIndex = localJournals.value.findIndex(j => j.id === journal.id);
+  if (originalIndex >= 0) {
+    localJournals.value.splice(originalIndex + 1, 0, clone);
+  }
+  console.log(`[DD] コピー作成: ${clone.id} (元: ${journal.id})`);
+  closeDropdown();
+}
+
+function trashJournal(journal: JournalPhase5Mock) {
+  const idx = localJournals.value.findIndex(j => j.id === journal.id);
+  if (idx >= 0) {
+    localJournals.value.splice(idx, 1);
+    console.log(`[DD] ゴミ箱: ${journal.id}`);
+  }
+  closeDropdown();
+}
 
 // ソート状態
 const sortColumn = ref<string | null>(null);
@@ -555,7 +701,7 @@ function closePastJournalModal() {
 }
 
 const filteredPastJournals = computed(() => {
-  let results = [...mockJournalsPhase5];
+  let results = [...localJournals.value];
 
   // 支払先フィルタ
   if (pastJournalSearch.value.vendor) {
@@ -741,7 +887,7 @@ function onMouseUp() {
 }
 
 const journals = computed(() => {
-  const result = [...mockJournalsPhase5].sort((a, b) => {
+  const result = [...localJournals.value].sort((a, b) => {
     return new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime();
   });
 
@@ -765,8 +911,8 @@ const journals = computed(() => {
           bVal = b.memo ? 1 : 0;
           break;
         case 'past_journal':
-          aVal = mockJournalsPhase5.findIndex(j => j.id === a.id) < 25 ? 1 : 0;
-          bVal = mockJournalsPhase5.findIndex(j => j.id === b.id) < 25 ? 1 : 0;
+          aVal = localJournals.value.findIndex(j => j.id === a.id) < 25 ? 1 : 0;
+          bVal = localJournals.value.findIndex(j => j.id === b.id) < 25 ? 1 : 0;
           break;
         case 'requires_action':
           aVal = a.display_order;
@@ -891,6 +1037,7 @@ const journals = computed(() => {
 });
 
 function sortBy(column: string) {
+  closeDropdown();
   if (sortColumn.value === column) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
   } else {
@@ -931,7 +1078,7 @@ function hasWarningLabels(labels: string[]): boolean {
 }
 
 function hasPastJournal(journal: JournalPhase5Mock): boolean {
-  return mockJournalsPhase5.findIndex(j => j.id === journal.id) < 25;
+  return localJournals.value.findIndex(j => j.id === journal.id) < 25;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -952,7 +1099,7 @@ function toggleNeed(
   journalId: string,
   label: 'NEED_DOCUMENT' | 'NEED_CONFIRM' | 'NEED_CONSULT'
 ) {
-  const journal = mockJournalsPhase5.find(j => j.id === journalId);
+  const journal = localJournals.value.find(j => j.id === journalId);
   if (!journal) {
     console.error(`Journal not found: ${journalId}`);
     return;
