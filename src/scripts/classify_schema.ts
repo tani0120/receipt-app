@@ -13,6 +13,11 @@
  *       - journal_entry_suggestions 配列化
  *       - receipt_items / payment_method / issuer_branch / bank_name_evidence 追加
  *       - has_multiple_vouchers / is_composite_transaction / handwritten_memo_content 追加
+ *   v3.1: 確定スキーマ完全対応
+ *       - A30: is_credit_card_payment 追加
+ *       - G1: sub_account（補助科目）追加
+ *       - G2: tax_category（税区分 8値enum）追加
+ *       - PostProcessResult に labels[] 追加
  */
 
 import { SchemaType } from '@google-cloud/vertexai';
@@ -40,6 +45,17 @@ export type PaymentMethod =
     | 'QR_PAY'          // QR決済
     | 'OTHER';          // その他
 
+/** 税区分（マネーフォワード互換8値） */
+export type TaxCategory =
+    | 'TAXABLE_PURCHASE_10'    // 課税仕入10%
+    | 'TAXABLE_PURCHASE_8'     // 課税仕入8%（軽減）
+    | 'NON_TAXABLE_PURCHASE'   // 非課税仕入
+    | 'OUT_OF_SCOPE_PURCHASE'  // 対象外（仕入）
+    | 'TAXABLE_SALES_10'       // 課税売上10%
+    | 'TAXABLE_SALES_8'        // 課税売上8%（軽減）
+    | 'NON_TAXABLE_SALES'      // 非課税売上
+    | 'OUT_OF_SCOPE_SALES';    // 対象外売上
+
 /** 分類ステータス（コード側で判定。Geminiには出力させない） */
 export type ClassificationStatus =
     | 'auto_confirmed'    // 高信頼度で自動確定
@@ -56,9 +72,11 @@ export interface TaxEntry {
 /** 仕訳候補エントリ（配列の1要素） */
 export interface JournalSuggestionEntry {
     entry_type: 'debit' | 'credit';
-    account: string;        // 勘定科目（リストから選択）
+    account: string;            // 勘定科目（リストから選択）
+    sub_account: string | null; // 補助科目（G1: 銀行名等。不明ならnull）
+    tax_category: TaxCategory;  // 税区分（G2: 8値enum）
     amount: number;
-    description: string;    // 摘要
+    description: string;        // 摘要
 }
 
 /** 商品明細（レシート用） */
@@ -139,6 +157,9 @@ export interface GeminiClassifyResponse {
 
     // === A29: 通帳/カード明細行 ===
     line_items: LineItem[] | null;
+
+    // === A30: クレジットカード払い（v3.1追加）===
+    is_credit_card_payment: boolean;
 }
 
 // ============================================================
@@ -156,6 +177,7 @@ export interface PostProcessResult {
     debit_credit_mismatch: boolean;
     debit_credit_detail: string;          // 検算式
     estimated_cost_usd: number;
+    labels: string[];                     // 自動生成ラベル（22種から該当分）
 }
 
 /** 最終結果（層A + 層B統合） */
@@ -169,6 +191,12 @@ export interface ClassifyResult {
         completion_tokens: number;
         thinking_tokens: number;
         preprocessed: boolean;            // A/Bテスト識別用
+        cost_breakdown: {
+            prompt_cost_usd: number;
+            completion_cost_usd: number;
+            thinking_cost_usd: number;
+            total_cost_usd: number;
+        };
     };
 }
 
@@ -300,10 +328,25 @@ export const CLASSIFY_RESPONSE_SCHEMA = {
                         description: '借方(debit)または貸方(credit)'
                     },
                     account: { type: SchemaType.STRING, description: '勘定科目（提供リストから選択）' },
+                    sub_account: {
+                        type: SchemaType.STRING,
+                        nullable: true,
+                        description: '補助科目（銀行名、カード名等。不明ならnull）'
+                    },
+                    tax_category: {
+                        type: SchemaType.STRING,
+                        enum: [
+                            'TAXABLE_PURCHASE_10', 'TAXABLE_PURCHASE_8',
+                            'NON_TAXABLE_PURCHASE', 'OUT_OF_SCOPE_PURCHASE',
+                            'TAXABLE_SALES_10', 'TAXABLE_SALES_8',
+                            'NON_TAXABLE_SALES', 'OUT_OF_SCOPE_SALES'
+                        ],
+                        description: '税区分（課税仕入10%/8%、非課税仕入、対象外等）'
+                    },
                     amount: { type: SchemaType.NUMBER, description: '金額' },
                     description: { type: SchemaType.STRING, description: '摘要' }
                 },
-                required: ['entry_type', 'account', 'amount', 'description']
+                required: ['entry_type', 'account', 'tax_category', 'amount', 'description']
             },
             description: '仕訳候補。借方・貸方を各エントリで表現。対象外の場合は空配列'
         },
@@ -380,6 +423,12 @@ export const CLASSIFY_RESPONSE_SCHEMA = {
                 required: ['description', 'amount']
             },
             description: '明細行（通帳・カード明細の場合）。該当しない場合はnull'
+        },
+
+        // --- A30: クレジットカード払い（v3.1追加） ---
+        is_credit_card_payment: {
+            type: SchemaType.BOOLEAN,
+            description: 'クレジットカード払いか。カード会社ロゴ、「カード」テキスト、下4桁番号等を検出した場合true。voucher_typeとは独立'
         }
     },
     required: [
@@ -397,6 +446,7 @@ export const CLASSIFY_RESPONSE_SCHEMA = {
         'has_handwritten_memo',
         'is_medical_expense',
         'is_not_applicable',
-        'has_multiple_vouchers'
+        'has_multiple_vouchers',
+        'is_credit_card_payment'
     ]
 };

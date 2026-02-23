@@ -26,11 +26,13 @@ import type {
 const FISCAL_YEAR_START = '2025-04-01';
 const FISCAL_YEAR_END = '2026-03-31';
 
-/** Gemini 2.5 Flash料金（$/token、2026-02時点概算） */
+/** Gemini 2.5 Flash料金（$/token、公式料金 2026-02）
+ *  https://cloud.google.com/vertex-ai/generative-ai/pricing
+ */
 const PRICING = {
-    promptTokens: 0.075 / 1_000_000,
-    completionTokens: 0.30 / 1_000_000,
-    thinkingTokens: 0.35 / 1_000_000,
+    promptTokens: 0.30 / 1_000_000,      // $0.30/M tokens
+    completionTokens: 2.50 / 1_000_000,  // $2.50/M tokens
+    thinkingTokens: 2.50 / 1_000_000,    // $2.50/M tokens（出力と同額）
 };
 
 // ============================================================
@@ -240,11 +242,87 @@ export interface TokenUsage {
     thoughtsTokenCount?: number;
 }
 
-export function estimateCost(usage: TokenUsage): number {
-    const promptCost = usage.promptTokenCount * PRICING.promptTokens;
-    const completionCost = usage.candidatesTokenCount * PRICING.completionTokens;
-    const thinkingCost = (usage.thoughtsTokenCount || 0) * PRICING.thinkingTokens;
-    return promptCost + completionCost + thinkingCost;
+export interface CostBreakdown {
+    prompt_cost_usd: number;
+    completion_cost_usd: number;
+    thinking_cost_usd: number;
+    total_cost_usd: number;
+}
+
+export function estimateCost(usage: TokenUsage): CostBreakdown {
+    const prompt_cost_usd = usage.promptTokenCount * PRICING.promptTokens;
+    const completion_cost_usd = usage.candidatesTokenCount * PRICING.completionTokens;
+    const thinking_cost_usd = (usage.thoughtsTokenCount || 0) * PRICING.thinkingTokens;
+    return {
+        prompt_cost_usd,
+        completion_cost_usd,
+        thinking_cost_usd,
+        total_cost_usd: prompt_cost_usd + completion_cost_usd + thinking_cost_usd,
+    };
+}
+
+// ============================================================
+// ラベル自動生成（22種から該当分）
+// ============================================================
+
+/**
+ * Gemini出力 + PostProcess結果からlabels[]配列を生成。
+ * ラベル定義: パイプライン対応表（人間用）Part 1 採用ラベル22個より。
+ * RULE_APPLIED/RULE_AVAILABLEは層C依存のためスキップ。
+ */
+export function generateLabels(
+    r: GeminiClassifyResponse,
+    taxMismatch: boolean,
+    dateAnomaly: boolean,
+    duplicateSuspect: boolean,
+    dcMismatch: boolean,
+): string[] {
+    const labels: string[] = [];
+
+    // --- 証票ラベル（7種）: voucher_typeそのまま ---
+    labels.push(r.voucher_type);
+
+    // --- 警告ラベル（10種） ---
+    // 1. DEBIT_CREDIT_MISMATCH
+    if (dcMismatch) labels.push('DEBIT_CREDIT_MISMATCH');
+    // 2. TAX_CALCULATION_ERROR
+    if (taxMismatch) labels.push('TAX_CALCULATION_ERROR');
+    // 3. MISSING_FIELD: 値null + unreadable=false（欄自体が存在しない）
+    if (r.date === null && !r.date_unreadable) labels.push('MISSING_FIELD');
+    if (r.total_amount === null && !r.amount_unreadable) labels.push('MISSING_FIELD');
+    if (r.issuer_name === null && !r.issuer_unreadable) labels.push('MISSING_FIELD');
+    // 重複除去（複数フィールドで同じラベルが付く可能性）
+    // 4. UNREADABLE_FAILED: unreadable=true + 値null
+    if (r.date_unreadable && r.date === null) labels.push('UNREADABLE_FAILED');
+    if (r.amount_unreadable && r.total_amount === null) labels.push('UNREADABLE_FAILED');
+    if (r.issuer_unreadable && r.issuer_name === null) labels.push('UNREADABLE_FAILED');
+    // 5. DUPLICATE_CONFIRMED: SHA256ハッシュ比較（層B内でのファイルハッシュ比較は別途実装予定）
+    // → 現時点ではrunPostProcess内では未実装。ファイルハッシュの比較はclassify_test.ts側で行う必要あり。
+    // 6. MULTIPLE_VOUCHERS
+    if (r.has_multiple_vouchers) labels.push('MULTIPLE_VOUCHERS');
+    // 7. DUPLICATE_SUSPECT
+    if (duplicateSuspect) labels.push('DUPLICATE_SUSPECT');
+    // 8. DATE_OUT_OF_RANGE
+    if (dateAnomaly) labels.push('DATE_OUT_OF_RANGE');
+    // 9. UNREADABLE_ESTIMATED: unreadable=true + 値あり（AIが推測で埋めた）
+    if (r.date_unreadable && r.date !== null) labels.push('UNREADABLE_ESTIMATED');
+    if (r.amount_unreadable && r.total_amount !== null) labels.push('UNREADABLE_ESTIMATED');
+    if (r.issuer_unreadable && r.issuer_name !== null) labels.push('UNREADABLE_ESTIMATED');
+    // 10. MEMO_DETECTED
+    if (r.has_handwritten_memo) labels.push('MEMO_DETECTED');
+
+    // --- 制度ラベル（3種） ---
+    // INVOICE_QUALIFIED / INVOICE_NOT_QUALIFIED（排他）
+    if (r.invoice_registration_number !== null && r.invoice_registration_number !== '') {
+        labels.push('INVOICE_QUALIFIED');
+    } else {
+        labels.push('INVOICE_NOT_QUALIFIED');
+    }
+    // MULTI_TAX_RATE
+    if (r.has_multiple_tax_rates) labels.push('MULTI_TAX_RATE');
+
+    // 重複除去して返す
+    return [...new Set(labels)];
 }
 
 // ============================================================
@@ -262,7 +340,14 @@ export function runPostProcess(
     const dupCheck = checkDuplicates(geminiResult, currentIndex, allResults);
     const dcCheck = checkDebitCreditMismatch(geminiResult);
     const status = determineStatus(geminiResult);
-    const cost = estimateCost(tokenUsage);
+    const costBreakdown = estimateCost(tokenUsage);
+    const labels = generateLabels(
+        geminiResult,
+        taxCheck.mismatch,
+        dateCheck.anomaly,
+        dupCheck.suspect,
+        dcCheck.mismatch,
+    );
 
     return {
         classification_status: status,
@@ -274,6 +359,7 @@ export function runPostProcess(
         duplicate_suspect_detail: dupCheck.detail,
         debit_credit_mismatch: dcCheck.mismatch,
         debit_credit_detail: dcCheck.detail,
-        estimated_cost_usd: cost,
+        estimated_cost_usd: costBreakdown.total_cost_usd,
+        labels,
     };
 }
