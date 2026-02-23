@@ -43,6 +43,9 @@ CREATE TABLE journals (
   -- 証憑種類5個、ルール2個、インボイス3個、事故フラグ6個、OCR2個、要対応3個、出力制御1個、その他1個
   labels TEXT[] DEFAULT '{}',
   
+  -- クレジットカード払い判定（Gemini層A）
+  is_credit_card_payment BOOLEAN NOT NULL DEFAULT FALSE,
+  
   -- ルール関連（オプション）
   rule_id UUID NULL REFERENCES journal_rules(id),
   rule_confidence NUMERIC(3,2) NULL CHECK (rule_confidence BETWEEN 0 AND 1),

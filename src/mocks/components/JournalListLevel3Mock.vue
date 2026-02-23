@@ -98,7 +98,65 @@
           <input type="checkbox" class="w-2.5 h-2.5 cursor-pointer" :checked="isAllSelected" @change="toggleSelectAll">
         </template>
         <template v-else>
-          {{ col.label }}
+          <span class="flex items-center gap-0.5">
+            {{ col.label }}
+            <span v-if="col.key === 'labelType' || col.key === 'warning'"
+                  class="relative inline-flex"
+                  @mouseenter="legendModalType = col.key as any"
+                  @mouseleave="legendModalType = null">
+              <span class="inline-flex items-center justify-center w-3 h-3 rounded-full bg-gray-800 text-white text-[7px] font-bold cursor-pointer hover:bg-blue-600 shrink-0">?</span>
+              <!-- 証票ポップオーバー -->
+              <div v-if="legendModalType === 'labelType' && col.key === 'labelType'"
+                   class="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-[110] transform scale-[0.9] origin-top">
+                <div class="bg-gray-900/90 rounded-xl shadow-2xl w-56 overflow-hidden border border-gray-700">
+                  <div class="flex items-center justify-between px-3 py-2 border-b border-gray-700">
+                    <span class="text-white font-bold text-[13px] flex items-center gap-1">📋 証票種類</span>
+                  </div>
+                  <div class="p-2 space-y-0.5">
+                     <div v-for="item in labelTypeLegend" :key="item.short"
+                          class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-800/60 transition-colors">
+                      <span class="inline-flex items-center justify-center w-5 h-5 rounded text-[11px] font-bold text-white"
+                            :class="item.bgClass">{{ item.short }}</span>
+                      <span class="text-gray-200 text-[12px]">{{ item.label }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- 警告ポップオーバー -->
+              <div v-if="legendModalType === 'warning' && col.key === 'warning'"
+                   class="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-[110] transform scale-[0.9] origin-top">
+                <div class="bg-gray-900/90 rounded-xl shadow-2xl w-60 overflow-hidden border border-gray-700">
+                  <div class="flex items-center justify-between px-3 py-2 border-b border-gray-700">
+                    <span class="text-white font-bold text-[13px] flex items-center gap-1">⚠️ 警告ラベル一覧</span>
+                  </div>
+                  <div class="p-2">
+                    <div class="mb-2">
+                       <div class="flex items-center gap-1 px-1.5 py-0.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                        <span class="text-red-400 text-[14px] font-bold">エラー（赤）</span>
+                      </div>
+                      <div v-for="[, item] in errorLegend" :key="item.label"
+                           class="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-800/60 transition-colors">
+                        <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+                        <span class="text-gray-200 text-[12px]">{{ item.label }}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1 px-1.5 py-0.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+                        <span class="text-yellow-400 text-[14px] font-bold">注意（黄）</span>
+                      </div>
+                      <div v-for="[, item] in warnLegend" :key="item.label"
+                           class="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-800/60 transition-colors">
+                        <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 shrink-0"></span>
+                        <span class="text-gray-200 text-[12px]">{{ item.label }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </span>
+          </span>
         </template>
       </div>
     </div>
@@ -211,11 +269,12 @@
               <!-- 証票 -->
               <template v-else-if="col.key === 'labelType'">
                 <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5']">
-                  <span v-if="journal.labels.includes('TRANSPORT')" class="text-[10px] font-bold text-gray-800" title="領収書">領</span>
-                  <span v-if="journal.labels.includes('RECEIPT')" class="text-[10px] font-bold text-gray-800" title="レシート">レ</span>
-                  <span v-if="journal.labels.includes('INVOICE')" class="text-[10px] font-bold text-gray-800" title="請求書">請</span>
-                  <span v-if="journal.labels.includes('CREDIT_CARD')" class="text-[10px] font-bold text-gray-800" title="クレジットカード">ク</span>
-                  <span v-if="journal.labels.includes('BANK_STATEMENT')" class="text-[10px] font-bold text-gray-800" title="銀行明細">銀</span>
+                  <template v-for="label in journal.labels" :key="label">
+                    <span v-if="labelKeyMap[label]"
+                          class="inline-flex items-center justify-center w-4 h-4 rounded text-[8px] font-bold text-white"
+                          :class="labelKeyMap[label].bgClass"
+                          :title="labelKeyMap[label].label">{{ labelKeyMap[label].short }}</span>
+                  </template>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -223,8 +282,11 @@
               <!-- 警告 -->
               <template v-else-if="col.key === 'warning'">
                 <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 flex-wrap gap-0.5']">
-                  <i v-if="hasErrorLabels(journal.labels)" class="fa-solid fa-triangle-exclamation text-[10px] text-red-600" title="エラー"></i>
-                  <i v-if="hasWarningLabels(journal.labels)" class="fa-solid fa-triangle-exclamation text-[10px] text-yellow-600" title="警告"></i>
+                  <template v-for="wLabel in journal.labels.filter((l: string) => warningLabelMap[l]).slice(0, 3)" :key="wLabel">
+                    <i class="fa-solid fa-triangle-exclamation text-[10px]"
+                       :class="warningLabelMap[wLabel]?.color"
+                       :title="warningLabelMap[wLabel]?.label"></i>
+                  </template>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -234,6 +296,14 @@
                 <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <i v-if="journal.labels.includes('RULE_APPLIED')" class="fa-solid fa-graduation-cap text-[10px] text-green-600" title="学習適用済み"></i>
                   <i v-if="journal.labels.includes('RULE_AVAILABLE')" class="fa-solid fa-lightbulb text-[10px] text-blue-500" title="学習できます"></i>
+                </div>
+                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              </template>
+
+              <!-- クレ払い -->
+              <template v-else-if="col.key === 'creditCardPayment'">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                  <span v-if="journal.is_credit_card_payment" class="text-[12px]" title="クレジットカード払い">💳</span>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -756,6 +826,8 @@
         </div>
       </div>
     </div>
+
+
 </template>
 
 <script setup lang="ts">
@@ -797,6 +869,49 @@ const hasShownHelp = ref(false);
 
 // ドロップダウン制御
 const openDropdownId = ref<string | null>(null);
+
+// 凡例モーダル
+const legendModalType = ref<'labelType' | 'warning' | null>(null);
+
+const labelTypeLegend = [
+  { short: 'レ', label: 'レシート・領収証', bgClass: 'bg-emerald-600' },
+  { short: '請', label: '請求書', bgClass: 'bg-blue-600' },
+  { short: '交', label: '交通費', bgClass: 'bg-cyan-600' },
+  { short: 'ク', label: 'クレジットカード', bgClass: 'bg-purple-600' },
+  { short: '銀', label: '銀行明細', bgClass: 'bg-indigo-600' },
+  { short: '医', label: '医療費', bgClass: 'bg-pink-600' },
+  { short: '外', label: '仕訳対象外', bgClass: 'bg-gray-600' },
+];
+
+// ボディ用: ラベル名→バッジ情報マッピング
+const labelKeyMap: Record<string, { short: string; label: string; bgClass: string }> = {
+  RECEIPT:        { short: 'レ', label: 'レシート・領収証', bgClass: 'bg-emerald-600' },
+  INVOICE:        { short: '請', label: '請求書', bgClass: 'bg-blue-600' },
+  TRANSPORT:      { short: '交', label: '交通費', bgClass: 'bg-cyan-600' },
+  CREDIT_CARD:    { short: 'ク', label: 'クレジットカード', bgClass: 'bg-purple-600' },
+  BANK_STATEMENT: { short: '銀', label: '銀行明細', bgClass: 'bg-indigo-600' },
+  MEDICAL:        { short: '医', label: '医療費', bgClass: 'bg-pink-600' },
+  NOT_JOURNAL:    { short: '外', label: '仕訳対象外', bgClass: 'bg-gray-600' },
+};
+
+// 警告ラベルマップ: Single Source of Truth
+// level: 'error'(赤) | 'warn'(黄) / label: 日本語定義 / color: アイコン色 / weight: ソート優先度
+const warningLabelMap: Record<string, { level: 'error' | 'warn'; label: string; color: string; weight: number }> = {
+  DEBIT_CREDIT_MISMATCH: { level: 'error', label: '借方貸方の合計額不一致', color: 'text-red-600', weight: 17 },
+  TAX_CALCULATION_ERROR: { level: 'error', label: '税抜と消費税額の合計不一致', color: 'text-red-600', weight: 16 },
+  MISSING_FIELD:         { level: 'error', label: '必須項目なし（証憑不備）', color: 'text-red-600', weight: 15 },
+  UNREADABLE_FAILED:     { level: 'error', label: '判読不能（読取失敗）', color: 'text-red-600', weight: 14 },
+  DUPLICATE_CONFIRMED:   { level: 'error', label: '完全重複（同一画像）', color: 'text-red-600', weight: 13 },
+  MULTIPLE_VOUCHERS:     { level: 'error', label: '複数の証票あり', color: 'text-red-600', weight: 12 },
+  DUPLICATE_SUSPECT:     { level: 'warn', label: '重複疑い', color: 'text-yellow-600', weight: 6 },
+  DATE_OUT_OF_RANGE:     { level: 'warn', label: '期間外日付', color: 'text-yellow-600', weight: 5 },
+  UNREADABLE_ESTIMATED:  { level: 'warn', label: '判読困難（AI推測値）', color: 'text-yellow-600', weight: 4 },
+  MEMO_DETECTED:         { level: 'warn', label: '手書きメモ検出', color: 'text-yellow-600', weight: 3 },
+};
+
+// ポップオーバー凡例: warningLabelMapから動的生成
+const errorLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level === 'error');
+const warnLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level === 'warn');
 
 function toggleDropdown(journalId: string) {
   openDropdownId.value = openDropdownId.value === journalId ? null : journalId;
@@ -1457,16 +1572,10 @@ const journals = computed(() => {
         case 'warning':
           // 事故フラグの有無と重み付け: 赤色（エラー）＞黄色（警告）の順
           const getWarningWeight = (labels: string[]) => {
-            // 赤色（エラー）- 10点台
-            if (labels.includes('DEBIT_CREDIT_MISMATCH')) return 16;
-            if (labels.includes('TAX_CALCULATION_ERROR')) return 15;
-            if (labels.includes('MISSING_RECEIPT')) return 14;
-            if (labels.includes('OCR_FAILED')) return 13;
-            // 黄色（警告）- 1点台
-            if (labels.includes('DUPLICATE_SUSPECT')) return 4;
-            if (labels.includes('DATE_ANOMALY')) return 3;
-            if (labels.includes('AMOUNT_ANOMALY')) return 2;
-            if (labels.includes('OCR_LOW_CONFIDENCE')) return 1;
+            for (const l of labels) {
+              const entry = warningLabelMap[l];
+              if (entry) return entry.weight;
+            }
             return 0;
           };
           aVal = getWarningWeight(a.labels);
@@ -1481,6 +1590,10 @@ const journals = computed(() => {
           };
           aVal = getRuleWeight(a.labels);
           bVal = getRuleWeight(b.labels);
+          break;
+        case 'is_credit_card_payment':
+          aVal = a.is_credit_card_payment ? 1 : 0;
+          bVal = b.is_credit_card_payment ? 1 : 0;
           break;
         case 'tax_rate':
           // 軽減税率アイコン(MULTI_TAX_RATEラベル)の有無でソート
@@ -1648,16 +1761,6 @@ function getRowBackground(journal: JournalPhase5Mock): string {
   }
   // 優先度4: 通常 → 白
   return 'bg-white';
-}
-
-function hasErrorLabels(labels: string[]): boolean {
-  const errorLabels = ['DEBIT_CREDIT_MISMATCH', 'TAX_CALCULATION_ERROR', 'MISSING_RECEIPT', 'OCR_FAILED'];
-  return labels.some(label => errorLabels.includes(label));
-}
-
-function hasWarningLabels(labels: string[]): boolean {
-  const warningLabels = ['DUPLICATE_SUSPECT', 'DATE_ANOMALY', 'AMOUNT_ANOMALY', 'OCR_LOW_CONFIDENCE'];
-  return labels.some(label => warningLabels.includes(label));
 }
 
 function hasPastJournal(journal: JournalPhase5Mock): boolean {

@@ -36,6 +36,7 @@ GET /api/journals?client_id={clientId}&status={status}&is_read={boolean}
       "status": null,
       "is_read": false,
       "labels": ["TRANSPORT", "RECEIPT", "NEED_DOCUMENT"],
+      "is_credit_card_payment": false,
       "debit_entries": [
         {
           "account": "旅費交通費",

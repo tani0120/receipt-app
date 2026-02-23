@@ -18,48 +18,50 @@ export type JournalStatusPhase5 =
 
 // ============================================================
 // ラベル定義（21種類）
+// 準拠: journal_v2_20260214.md §2（2026-02-23更新）
 // ============================================================
 
 export type JournalLabelPhase5 =
-  // 証憑種類（5個）
-  | 'TRANSPORT'              // 領収書
-  | 'RECEIPT'                // レシート
+  // 証憑種類（7個）
+  | 'RECEIPT'                // レシート・領収証
   | 'INVOICE'                // 請求書
+  | 'TRANSPORT'              // 交通費
   | 'CREDIT_CARD'            // クレジットカード明細
   | 'BANK_STATEMENT'         // 銀行明細
+  | 'MEDICAL'                // 医療費
+  | 'NOT_APPLICABLE'         // 仕訳対象外
+
+  // 警告ラベル（9個）
+  | 'DEBIT_CREDIT_MISMATCH'  // 借方貸方の合計額不一致
+  | 'TAX_CALCULATION_ERROR'  // 税抜と消費税額の合計不一致
+  | 'MISSING_FIELD'          // 必須項目なし（証憑不備）← 旧MISSING_RECEIPT
+  | 'UNREADABLE_FAILED'      // 判読不能（読取失敗）← 旧OCR_FAILED
+  | 'DUPLICATE_CONFIRMED'    // 完全重複（同一画像）
+  | 'MULTIPLE_VOUCHERS'      // 複数の証票あり（1画像に2枚以上）
+  | 'DUPLICATE_SUSPECT'      // 重複疑い（定期支払等の可能性有）
+  | 'DATE_OUT_OF_RANGE'      // 会計期間外または未来日付 ← 旧DATE_ANOMALY
+  | 'UNREADABLE_ESTIMATED'   // 判読困難（AI推測値）← 旧OCR_LOW_CONFIDENCE
+  | 'MEMO_DETECTED'          // 証票に手書きメモあり ← 旧HAS_MEMO昇格
+
+  // 制度系（3個）
+  | 'MULTI_TAX_RATE'         // 軽減税率対象の有無
+  | 'INVOICE_QUALIFIED'      // 適格請求書
+  | 'INVOICE_NOT_QUALIFIED'  // 非適格請求書
 
   // ルール（2個）
-  | 'RULE_APPLIED'           // ルール適用済み
-  | 'RULE_AVAILABLE'         // ルール適用可能
+  | 'RULE_APPLIED'           // 学習ルール適用済み
+  | 'RULE_AVAILABLE'         // 学習ルール適用可能
 
-  // インボイス（3個）
-  | 'INVOICE_QUALIFIED'      // 適格請求書
-  | 'INVOICE_NOT_QUALIFIED'  // 不適格請求書
-  | 'MULTI_TAX_RATE'         // 複数税率
+  // --- 以下はPhase B/Cで除去予定（現在のモックで使用中） ---
 
-  // 事故フラグ（6個）
-  | 'DEBIT_CREDIT_MISMATCH'  // 貸借不一致
-  | 'TAX_CALCULATION_ERROR'  // 税計算誤差
-  | 'DUPLICATE_SUSPECT'      // 重複疑い
-  | 'DATE_ANOMALY'           // 日付異常
-  | 'AMOUNT_ANOMALY'         // 金額異常
-  | 'MISSING_RECEIPT'        // 証憑欠落
-
-  // OCR（2個）
-  | 'OCR_LOW_CONFIDENCE'     // OCR信頼度低
-  | 'OCR_FAILED'             // OCR完全失敗
-
-  // 要対応（4個）
+  // 要対応（4個）— staff_notesに移行済み。syncLabelsFromStaffNotes()が書き戻し中（B4で廃止）
   | 'NEED_DOCUMENT'          // 書類が不足
-  | 'NEED_INFO'              // 情報が不足（旧NEED_CONFIRM）
+  | 'NEED_INFO'              // 情報が不足
   | 'REMINDER'               // 備忘メモ
   | 'NEED_CONSULT'           // 社内相談する
 
-  // 出力制御（1個）
-  | 'EXPORT_EXCLUDE'         // 出力対象外
-
-  // その他（1個）
-  | 'HAS_MEMO';              // メモあり
+  // 出力制御（1個）— Phase Cでexport_excludeカラムに移行予定
+  | 'EXPORT_EXCLUDE';        // 出力対象外
 
 // ============================================================
 // 仕訳行定義（N対N複合仕訳対応）
@@ -104,6 +106,9 @@ export interface JournalPhase5Mock {
 
   // ラベル（21種類、非排他的）
   labels: JournalLabelPhase5[];
+
+  // クレジットカード払い判定（Gemini層A、独立カラム）
+  is_credit_card_payment: boolean;
 
   // ルール関連（オプション）
   rule_id: string | null;                // ルールID
