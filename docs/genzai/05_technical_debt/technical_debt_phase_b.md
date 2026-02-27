@@ -122,6 +122,38 @@
 
 ---
 
+## 🟡 B-12: 計画的TODO（Phase B対象 4件）
+
+以下は計画済み・問題なしと判定されたが、Phase B中に対処するTODO:
+
+| ファイル | 行 | 内容 |
+|---------|:---:|------|
+| [classify_test.ts](file:///C:/dev/receipt-app/src/scripts/classify_test.ts) | L304 | SDK公式サポート待ち |
+| [journal_phase5_mock.type.ts](file:///C:/dev/receipt-app/src/mocks/types/journal_phase5_mock.type.ts) | L100 | Phase Bで分離予定 |
+| [staff_notes.ts](file:///C:/dev/receipt-app/src/mocks/staff_notes.ts) | L8 | Phase B計画 |
+| [useCurrentUser.ts](file:///C:/dev/receipt-app/src/composables/useCurrentUser.ts) | L7 | Phase Bで差し替え予定 |
+
+---
+
+## 🔴 B-13: `syncLabelsFromStaffNotes()`廃止
+
+- **ファイル**: `JournalListLevel3Mock.vue`
+- **問題**: `syncLabelsFromStaffNotes()`がstaff_notes→labelsに書き戻し。人間ラベル（NEED_DOCUMENT等）がAI特性配列（labels）に汚染される**設計違反**
+- **影響**: labelsの意味が「AI分類結果」から「AI分類 + 人間操作の混合」に崩壊。将来のバリデーション・統計が不正確になる
+- **解決策**: `syncLabelsFromStaffNotes()`を完全削除。ソートは既にstaff_notes直接参照なので同期不要
+- **前提**: B4②④⑤（構造改善部分）は [refactoring_phase_b.md](file:///C:/dev/receipt-app/docs/genzai/06_refactoring/refactoring_phase_b.md) で管理
+
+---
+
+## 🔴 B-14: fixture labels汚染データ除去
+
+- **ファイル**: `journal_test_fixture_30cases.ts`
+- **問題**: fixtureのlabels配列にNEED_DOCUMENT, NEED_INFO, REMINDER, NEED_CONSULTが混入。これらはAI特性ではなく人間操作なのでstaff_notesに存在すべき
+- **影響**: テストデータが設計違反状態のため、Phase B以降のテストで誤った前提になる
+- **解決策**: fixture内のlabels配列からNEED_*を全て除去。staff_notesオブジェクトに対応する値があることを確認
+
+---
+
 ## チェックリスト
 
 - [ ] B-1: handwritten_flag精度計測（Run B後）
@@ -135,3 +167,6 @@
 - [ ] B-9: useBankLogic マジックナンバー定数化
 - [ ] B-10: transformToJournalMock scripts→mocks依存解消
 - [ ] B-11: VALID_JOURNAL_LABELS自動生成化
+- [ ] B-12: 計画的TODO対処（4件）
+- [ ] B-13: syncLabelsFromStaffNotes()廃止
+- [ ] B-14: fixture labels汚染データ除去

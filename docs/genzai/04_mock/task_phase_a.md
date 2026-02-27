@@ -112,7 +112,7 @@
 - [x] 警告（2026-02-23完了。DEBIT_CREDIT_MISMATCH等10種警告アイコン。ホバーポップアップ。ソート重み付け対応済み）
 - [x] クレ払い（2026-02-23完了。is_credit_card_payment==trueで💳アイコン表示。ソート対応済み）
 - [x] 軽減（2026-02-23完了。MULTI_TAX_RATE時に軽減バッジ表示。ソート対応済み）
-- [] 証票メモ（2026-02-21完了。memo有無アイコン表示+ソート+ホバーでNON_MEANINGFUL　MEANINGFUL＝メモ内容を表示）
+- [ ] 証票メモ（memo有無アイコン表示+ソート+ホバーでNON_MEANINGFUL／MEANINGFUL＝メモ内容を表示。未実装）
 - [x] 適格（2026-02-23完了。INVOICE_QUALIFIED/INVOICE_NOT_QUALIFIED 2種バッジ。ホバーポップアップ。ソート対応済み）
 - [ ] 取引日
 - [ ] 摘要
@@ -161,69 +161,13 @@
 - [ ] any増加ゼロ
 - [ ] ユーザーが「UX固定」と宣言
 
-## 5.1 Phase Bタスク（今はやらない）
+## 5.1 Phase Bタスク
 
-> **ソース**: `00_モック実装時のルール.md`、`モック作成ガイド.md`、2026-02-22セッションでの発見事項
-
-### A. 型安全の厳格化
-
-| # | タスク | 現状 | Phase Bでの対応 |
-|---|--------|------|----------------|
-| A1 | `getValue()` の `any` 排除 | L1662: `eslint-disable` 付き `any` | `keyof` 制約 or 列定義型連動方式に書き換え |
-| A2 | `non-null assertion (!)` 解消 | 12箇所（`commentModalJournal!` 8件 + `staff_notes!` 4件） | computed保証 + `v-if` でガード → `!` 不要化 |
-| A3 | Domain型強制（ガイド ルール3） | Phase Aでは未適用 | `const mock: JournalPhase5Mock = createMockJournal()` 形式必須化 |
-| A4 | 生成関数化（ガイド ルール4） | Phase Aでは直書き許容 | `src/mocks/factories/journalFactory.ts` で Factory 必須化 |
-| A5 | `noUncheckedIndexedAccess` 追加 | tsconfig未設定 | 新規コード安定後に追加 |
-| A6 | `exactOptionalPropertyTypes` 追加 | tsconfig未設定 | 同上 |
-| A7 | `noPropertyAccessFromIndexSignature` 追加 | tsconfig未設定 | 同上 |
-| A8 | `api/components/composables` の `any` 160件修正 | warn状態 | 段階的にerrorへ引き上げ |
-| A9 | `unused-vars` 69件削除 | warn状態 | 削除（`@ts-expect-error` 不使用） |
-
-### B. コンポーネント分離
-
-| # | タスク | 現状 | Phase Bでの対応 |
-|---|--------|------|----------------|
-| B1 | CellComponent分離 | 全10列が `JournalListLevel3Mock.vue` に直書き | `PhotoCell`, `CommentCell`, `NeedActionCell` 等に分離 |
-| B2 | `getCellComponent` 方式導入 | v-if連鎖（§3.4 Phase B方式参照） | `cellComponents: Record<string, Component>` + 動的 `<component :is>` |
-| B3 | モーダル分離 | コメントモーダル・画像プレビュー等がVue内 | 各モーダルを独立コンポーネントに |
-| B4 | staff_notes と labels の完全分離 | `syncLabelsFromStaffNotes()` が staff_notes→labels に書き戻し（設計違反: 人間ラベルがAI特性配列に汚染）。ソートは既に staff_notes 直接参照なので同期は不要だが、Vue フィルタ等で labels 前提の分岐が残存する可能性あり | ① `syncLabelsFromStaffNotes` 廃止 ② NEED_* を `JournalLabelPhase5` 型から削除 ③ fixture の labels 配列から NEED_* 除去 ④ Vue フィルタの参照先を staff_notes に変更 ⑤ 全動作検証 |
-
-### C. データ・Fixture管理
-
-| # | タスク | 現状 | Phase Bでの対応 |
-|---|--------|------|----------------|
-| C1 | Fixture完全凍結 | Phase Aでは1-2件変更可 | 凍結。新規はFactory経由のみ |
-| C2 | 拡張型のDomain型統合 | `journal_extensions.ts` 分離 | `JournalEntry` 本体に統合 → `journal_extensions.ts` 削除 |
-| C3 | `unsafe/` ディレクトリ廃止 | Phase Aでは実験場 | Phase C（Backend接続前）で完全廃止 |
-
-### D. ESLint・ビルド
-
-| # | タスク | 現状 | Phase Bでの対応 |
-|---|--------|------|----------------|
-| D1 | `unsafe/` import制限の物理ルール | 未設定 | `unsafe/` → `data/` `components/` へのimport → error |
-| D2 | `unsafe/` 以外の `any` → error | 現状warn | error化 |
-| D3 | `as any` → error | 現状warn | error化 |
-| D4 | flat config (`eslint.config.js`) 移行 | 旧形式 | Phase B以降で移行 |
-
-### E. テスト
-
-| # | タスク | 現状 | Phase Bでの対応 |
-|---|--------|------|----------------|
-| E1 | ソート全列動作テスト | 手動ブラウザ確認のみ | 自動テスト化 |
-| E2 | モーダル全種動作テスト | 同上 | 同上 |
-| E3 | トグル動作テスト | 同上 | 同上 |
-
-### F. 文書整備
-
-| # | タスク | 現状 | Phase Bでの対応 |
-|---|--------|------|----------------|
-| F1 | ルール文書にPhase B移行チェックリスト追加 | 移行条件は§1に記載あるが詳細なし | 本一覧をルール文書に組み込み |
-| F2 | `non-null assertion` 禁止ルール明文化 | 暗黙の許容 | 「新規 `!` 追加禁止」をルール§4に追加 |
-
-### G. UI追加機能（Phase B）
-
-- [ ] 列表示ON/OFF（ユーザーが列を非表示にする機能）
-- [ ] カラムグループ化（借方/貸方のグループヘッダー）← 必須
+> **移管済み**（2026-02-27）
+>
+> - リファクタリング → [refactoring_phase_b.md](file:///C:/dev/receipt-app/docs/genzai/06_refactoring/refactoring_phase_b.md)
+> - テスト自動化 → [test_automation.md](file:///C:/dev/receipt-app/docs/genzai/07_test_plan/test_automation.md)
+> - 設計違反（B4①③）→ [technical_debt_phase_b.md](file:///C:/dev/receipt-app/docs/genzai/05_technical_debt/technical_debt_phase_b.md) B-13, B-14
 
 ### H. Pipeline層 → 本番移行（Phase A-2）
 
@@ -414,23 +358,13 @@
 
 ## 9. Phase B（構造固定）
 
-上記§5.1のA〜F全量が対象。主要3本柱：
-
-- [ ] CellComponent分離（B1-B3）
-- [ ] Factory必須化（A3-A4, C1）
-- [ ] fixture完全凍結（C1）
+> **移管済み**（2026-02-27）→ [refactoring_phase_b.md](file:///C:/dev/receipt-app/docs/genzai/06_refactoring/refactoring_phase_b.md)
 
 ---
 
 ## 10. Phase C（Backend接続）
 
-- [ ] DDL確定（摩擦レポート結果 → 型・制約・インデックス決定。CHECK制約4つを含む）
-- [ ] journal_rulesテーブル作成
-- [ ] Supabase Mapper導入（モック→本番切り替え）
-- [ ] RLSポリシー本番化（client_idフィルタリング。開発環境は設定済み）
-- [ ] GINインデックス（labels配列検索用）
-- [ ] モック差し替え
-- [ ] unsafe/ 廃止
+> **移管済み**（2026-02-27）→ [refactoring_phase_c.md](file:///C:/dev/receipt-app/docs/genzai/06_refactoring/refactoring_phase_c.md)
 
 ---
 

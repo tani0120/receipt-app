@@ -123,7 +123,47 @@
   - [useJournalEntries.ts](file:///C:/dev/receipt-app/src/hooks/useJournalEntries.ts) L32, L78, L105, L126（4件）
   - [features/receipt/index.ts](file:///C:/dev/receipt-app/src/features/receipt/index.ts) L78
   - [features/client/index.ts](file:///C:/dev/receipt-app/src/features/client/index.ts) L78
+  - [ReceiptDetail.vue](file:///C:/dev/receipt-app/src/views/ReceiptDetail.vue) L102（`// TODO: API呼び出し`）
 - **解決策**: Supabase移行時に実装
+
+---
+
+## 🟡 C-11: テストコード `as any`（14件）
+
+監査で「許容」と判定したが、記録として管理する。
+
+| ファイル | 件数 |
+|---------|:---:|
+| [JobMapper.test.ts](file:///C:/dev/receipt-app/src/__tests__/JobMapper.test.ts) | 3件 |
+| [ClientMapper.test.ts](file:///C:/dev/receipt-app/src/__tests__/ClientMapper.test.ts) | 7件 |
+| [schema-mapper.spec.ts](file:///C:/dev/receipt-app/src/utils/__tests__/schema-mapper.spec.ts) | 3件 |
+| [test_scenarios.ts](file:///C:/dev/receipt-app/src/mocks/test_scenarios.ts) | 1件 |
+
+- **判定**: テストコード内のas anyは型安全性への影響が限定的。本番コード優先
+- **解決策**: 各テストのmockデータを正しい型で構築し直す
+
+---
+
+## 🟡 C-12: 責務混在（4件）
+
+機械検出だけでは判定できないため、個別確認が必要な候補:
+
+| # | ファイル | 問題 | 深刻度 |
+|---|---------|------|:---:|
+| 1 | [ScreenE_JournalEntry.vue](file:///C:/dev/receipt-app/src/components/ScreenE_JournalEntry.vue) L481 | `transactionDate`直接書き換え → 業務ロジックがVue内 | 🟠 |
+| 2 | [ScreenE_JournalEntry.vue](file:///C:/dev/receipt-app/src/components/ScreenE_JournalEntry.vue) L647-649 | `isLocked`/`journalEditMode`制御 → ステート管理がVue内 | 🟠 |
+| 3 | [mapper.ts](file:///C:/dev/receipt-app/src/composables/mapper.ts) L321,329 | `taxDetails?.rate`直接アクセス → 税計算ロジックがMapper内 | 🟡 |
+| 4 | [useBankLogic.ts](file:///C:/dev/receipt-app/src/composables/useBankLogic.ts) L60 | 信頼度スコア計算 → 業務判定ロジックがcomposable内 | 🟡 |
+
+- **解決策**: UI再定義時にロジックをcomposable/serviceに分離
+
+---
+
+## 🟡 C-13: 計画的TODO（Phase C対象 1件）
+
+| ファイル | 行 | 内容 |
+|---------|:---:|------|
+| [JournalListLevel3Mock.vue](file:///C:/dev/receipt-app/src/mocks/components/JournalListLevel3Mock.vue) | L612 | 過去仕訳検索（未実装機能） |
 
 ---
 
@@ -133,6 +173,24 @@
 - **問題**: `enum: ['NONE', 'NON_MEANINGFUL', 'MEANINGFUL']` — Gemini APIへの送信用JSONスキーマ定義
 - **現状判断**: API送信用のJSON定義なので文字列は技術的に必要。ただし`Object.values(HandwrittenFlag)`から自動生成すれば定数連動可能
 - **解決策**: `enum: Object.values(HandwrittenFlag)`に変更してdomain定数と連動
+
+---
+
+## 🟡 C-14: sharp CJS/ESM問題
+
+- **出典**: [証票分類パイプライン設計書.md](file:///C:/dev/receipt-app/docs/genzai/02_database_schema/証票分類パイプライン設計書.md) §10-4
+- **問題**: `import sharp from 'sharp'`が`esModuleInterop`に依存。CJS/ESMの相互運用問題
+- **影響**: `tsconfig.pipeline.json`作成時（RC-2）に顕在化する可能性
+- **解決策**: `import sharp from 'sharp'` → `import * as sharp from 'sharp'`、または`tsconfig.pipeline.json`で`esModuleInterop: true`を明示設定
+
+---
+
+## 🟡 C-15: receiptsテーブルRLSポリシーが過剰に許可的
+
+- **出典**: [supabase_security_report_260214.md](file:///C:/dev/receipt-app/docs/genzai/01_tools_and_setups/supabase_security_report_260214.md)
+- **問題**: `receipts`テーブルのRLSポリシーが警告レベル。アクセス制御が不十分
+- **影響**: 本番環境でデータ漏洩のリスク
+- **解決策**: client_idベースのフィルタリングポリシーに修正（RC-6 RLS本番化時に同時対処）
 
 ---
 
@@ -163,3 +221,8 @@
 - [ ] C-8: UI層 as any除去
 - [ ] C-9: Firestore→Supabase TODO実装
 - [ ] C-10: classify_schema.ts HandwrittenFlag定数連動
+- [ ] C-11: テストコード as any対処
+- [ ] C-12: 責務混在分離
+- [ ] C-13: 計画的TODO対処（1件）
+- [ ] C-14: sharp CJS/ESM問題
+- [ ] C-15: receiptsテーブルRLSポリシー修正
