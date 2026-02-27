@@ -72,7 +72,7 @@ export const JournalService = {
                 status: data.status,
                 transactionDate: data.transactionDate.toDate(),
                 remandReason: data.remandReason,
-                remandCount: (data as any).remandCount || 0, // DBにない場合は0
+                remandCount: data.remandCount ?? 0,
                 updatedAt: data.updatedAt.toDate(),
 
                 // Client Tax Settings
@@ -93,7 +93,7 @@ export const JournalService = {
     async saveJournal(id: string, entry: Partial<JournalEntry>): Promise<void> {
         const docRef = doc(db, COLLECTION_NAME, id);
 
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
             updatedAt: Timestamp.now()
         };
 

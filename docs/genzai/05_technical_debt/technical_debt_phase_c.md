@@ -1,0 +1,165 @@
+# Phase C 技術的負債
+
+**作成日**: 2026-02-27
+**目的**: アーキテクチャ・型統一・本番化に関わる構造的負債を管理
+**解決時期**: Phase C実装開始時（本番昇格前）
+
+---
+
+## 振り分け基準（Phase B / C 共通）
+
+| 分類 | Phase B | Phase C |
+|------|---------|---------|
+| **性質** | テスト精度・挙動に影響 | アーキテクチャ・型統一・本番化 |
+| **放置リスク** | 中（精度測定が歪む） | 高（構造崩壊） |
+| **対象** | 精度改善、学習ロジック、警告ロジック、軽微整合 | スキーマ統一、型移行、RPC実装、as any全除去、API層zod整合 |
+| **判断基準** | Run B〜学習ロジック設計に影響するか？ | 本番昇格に必要か？ |
+
+> [!CAUTION]
+> Phase Cに入るまで、新規コードで旧firestore型（`drAccount`, `lineNo`等）を**絶対に使わない**こと。
+> zodスキーマ（`@/features/journal`）が唯一のSSOT。
+
+---
+
+## 🔴 C-1: JournalService.ts 新旧スキーマ統一
+
+- **ファイル**: [JournalService.ts](file:///C:/dev/receipt-app/src/services/JournalService.ts) 全体
+- **問題**: `types/journal.ts`がzodスキーマからの推論型に移行済みだが、`JournalService.ts`は旧`firestore.ts`の`JournalLine`フィールド（`drAccount`, `crAccount`, `lineNo`, `drAmount`, `crAmount`）を使用
+- **影響**: 14件のコンパイルエラー。型の二重管理（`types/journal.ts`自身のコメントで禁止事項に明記）
+- **根本原因**: 旧Firestoreスキーマ → 新zodスキーマの移行が不完全
+- **解決策**:
+  1. `JournalService.ts`のmockデータを新型に合わせて再構築
+  2. `calculateBalance()`を新フィールド（`debit`, `credit`）で計算
+  3. `validateJournal()`を新フィールド（`accountCode`）で検証
+  4. `status`のenum値を新型（`'Submitted'|'Approved'|'READY_FOR_WORK'|'REMANDED'`）に統一
+  5. `transactionDate`/`updatedAt`をstring型に変更（新型はISO文字列）
+- **影響範囲**: JournalService.ts内で完結（外部からの呼び出しは型が変わる）
+
+---
+
+## 🔴 C-2: firestore.ts 旧JournalLine型の廃止
+
+- **ファイル**: [firestore.ts](file:///C:/dev/receipt-app/src/types/firestore.ts) L199-L244
+- **問題**: 旧`JournalLine`が残存。新型は`@/features/journal`のzodスキーマ由来
+- **影響**: 旧型を参照するコードが新旧混在を引き起こす
+- **解決策**: C-1完了後に旧`JournalLine`を`@deprecated`マーク → 参照0件を確認して削除
+- **前提**: C-1が先に完了していること
+
+---
+
+## 🟠 C-3: jobRepository.ts `as unknown as Record`
+
+- **ファイル**: [jobRepository.ts](file:///C:/dev/receipt-app/src/repositories/jobRepository.ts) L31
+- **問題**: `data as unknown as Record<string, unknown>` — P0+P1修正で`as any`を除去したが、本質的には`FirestoreRepository.updateJob`の引数型と`Partial<JobApi>`の乖離が原因
+- **解決策**: `FirestoreRepository.updateJob`の引数型を`Partial<JobApi>`に合わせるか、アダプター層で正しく変換
+
+---
+
+## 🟠 C-4: api/routes/jobs.ts `as any` + `catch (e: any)`
+
+- **ファイル**: [jobs.ts](file:///C:/dev/receipt-app/src/api/routes/jobs.ts)
+- **問題**:
+  - L50: `data as any` — zodバリデーション結果を`Partial<JobApi>`にキャスト
+  - L16, L30: `catch (e: any)` — エラーハンドリングでany使用（2箇所）
+- **解決策**:
+  - L50: `JobSchema.partial()`の推論結果と`Partial<JobApi>`を整合させる
+  - L16,30: `catch (e: unknown)` + `e instanceof Error`型ガード
+
+---
+
+## 🟠 C-5: legacy_to_v2.ts TODO残骸（6件）
+
+- **ファイル**: [legacy_to_v2.ts](file:///C:/dev/receipt-app/src/libs/adapters/legacy_to_v2.ts)
+- **問題**: 仮値TODOが6件残存
+  - L68: `person_in_charge_id: 'unknown_staff'`
+  - L69: `contract_start_date: old.updatedAt`
+  - L117: `type: 'development'`
+  - L127: `applied_hourly_rate: 0`
+  - L128: `calculated_cost: 0`
+  - L176: `merchant_name: ''`
+- **影響**: 本番データで仮値が混入する
+- **解決策**: 各フィールドの正しいマッピング元を特定して実装
+
+---
+
+## 🟠 C-6: useJournalEntryRPC.ts 空実装
+
+- **ファイル**: [useJournalEntryRPC.ts](file:///C:/dev/receipt-app/src/composables/useJournalEntryRPC.ts) L10-26
+- **問題**: 3関数が全てTODO（`console.log`のみ）
+- **影響**: RPC呼び出しが動作しない
+- **解決策**: Supabase RPC実装
+
+---
+
+## 🟡 C-7: Composable層 `as any`（13件）
+
+- **ファイル**:
+  - [AIRulesMapper.ts](file:///C:/dev/receipt-app/src/composables/AIRulesMapper.ts) L14-20（3件: Firestore Timestamp変換）
+  - [DataConversionMapper.ts](file:///C:/dev/receipt-app/src/composables/DataConversionMapper.ts) L13（1件: raw as any）
+  - [mapper.ts](file:///C:/dev/receipt-app/src/composables/mapper.ts) L64-76, L321-329, L456（6件: Timestamp + taxDetails）
+  - [useAIRules.ts](file:///C:/dev/receipt-app/src/composables/useAIRules.ts) L108（1件: window拡張）
+  - [useDataConversion.ts](file:///C:/dev/receipt-app/src/composables/useDataConversion.ts) L57-58（2件: プロパティ注入）
+- **解決策**: Firestore→Supabase移行時にTimestamp型がなくなるため自然解決する部分が多い
+
+---
+
+## 🟡 C-8: UI層 `as any`（9件）
+
+- **ファイル**:
+  - [ScreenH_TaskDashboard.vue](file:///C:/dev/receipt-app/src/views/ScreenH_TaskDashboard.vue) L512
+  - [ScreenB_JournalStatus.vue](file:///C:/dev/receipt-app/src/views/ScreenB_JournalStatus.vue) L93
+  - [ReceiptDetail.vue](file:///C:/dev/receipt-app/src/views/ReceiptDetail.vue) L91
+  - [ScreenB_Restore_Mock.vue](file:///C:/dev/receipt-app/src/views/debug/ScreenB_Restore_Mock.vue) L239
+  - [ScreenE_JournalEntry.vue](file:///C:/dev/receipt-app/src/components/ScreenE_JournalEntry.vue) L481, L647-649, L722
+  - [ScreenE_LogicMaster.vue](file:///C:/dev/receipt-app/src/components/ScreenE_LogicMaster.vue) L451-452
+  - [JournalListLevel3Mock.vue](file:///C:/dev/receipt-app/src/mocks/components/JournalListLevel3Mock.vue) L105
+- **解決策**: UI再定義時に型を正しく定義。一部はPhase Cのmock→本番切替で解消
+
+---
+
+## 🟡 C-9: Firestore接続TODO（6件）
+
+- **ファイル**:
+  - [useJournalEntries.ts](file:///C:/dev/receipt-app/src/hooks/useJournalEntries.ts) L32, L78, L105, L126（4件）
+  - [features/receipt/index.ts](file:///C:/dev/receipt-app/src/features/receipt/index.ts) L78
+  - [features/client/index.ts](file:///C:/dev/receipt-app/src/features/client/index.ts) L78
+- **解決策**: Supabase移行時に実装
+
+---
+
+## 🟡 C-10: classify_schema.ts Geminiスキーマ内HandwrittenFlag文字列
+
+- **ファイル**: [classify_schema.ts](file:///C:/dev/receipt-app/src/scripts/classify_schema.ts) L359
+- **問題**: `enum: ['NONE', 'NON_MEANINGFUL', 'MEANINGFUL']` — Gemini APIへの送信用JSONスキーマ定義
+- **現状判断**: API送信用のJSON定義なので文字列は技術的に必要。ただし`Object.values(HandwrittenFlag)`から自動生成すれば定数連動可能
+- **解決策**: `enum: Object.values(HandwrittenFlag)`に変更してdomain定数と連動
+
+---
+
+## 解決済み（2026-02-27に対処完了）
+
+| 項目 | 対処 |
+|------|------|
+| `as any as Job` 二重キャスト | Job型で直接構築に変更 |
+| `JournalService.ts` `(data as any).remandCount` | Job型にremandCount追加 |
+| `ai-rules.ts` 4箇所のas any | zodスキーマとLearningRuleUi整合 |
+| `LogicSelector.ts` | 削除（import先不在で壊れていたため） |
+| `has_handwritten_memo` → `handwritten_flag` | 全ファイル移行完了 |
+| domain層新設 | `src/domain/types/journal.ts` |
+| `JournalLabelPhase5` → `JournalLabel` | リネーム+mocks層で`JournalLabelMock`に分離 |
+| `classify_postprocess.ts` HandwrittenFlag | 定数参照に変更済み |
+
+---
+
+## チェックリスト
+
+- [ ] C-1: JournalService.ts 新zodスキーマ移行
+- [ ] C-2: firestore.ts 旧JournalLine廃止
+- [ ] C-3: jobRepository.ts 型整合
+- [ ] C-4: jobs.ts as any + catch any除去
+- [ ] C-5: legacy_to_v2.ts TODO解消
+- [ ] C-6: useJournalEntryRPC.ts RPC実装
+- [ ] C-7: Composable as any除去
+- [ ] C-8: UI層 as any除去
+- [ ] C-9: Firestore→Supabase TODO実装
+- [ ] C-10: classify_schema.ts HandwrittenFlag定数連動

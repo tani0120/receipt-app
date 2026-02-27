@@ -12,27 +12,25 @@ export const JobService = {
     // TEMPORARY: Return Mock Data immediately for User Verification
     // Because we need to show "株式会社エーアイシステム" which is in mockJobUiList.
     // We map mockJobUiList (UI type) to Job (Domain type).
-    const mocks: Job[] = mockJobUiList.map(m => ({
-      id: m.id,
-      clientCode: m.clientCode,
-      clientName: m.clientName, // NOTE: Job interface doesn't usually have clientName (it's fetched), but UI needs it. We might need to extend it or simple let it be.
-      // ScreenB uses clientCode to fetch name? No, ScreenB_Dashboard.vue displays job.clientCode.
-      // Wait, ScreenB_Dashboard.ts line 94 displays job.clientCode.
-      // But the user complained about "Client Name" missing?
-      // Let's ensure ID 1001 exists.
-
-      status: 'pending', // Default
-      transactionDate: Timestamp.now(), // Dummy
-      driveFileId: 'mock-file',
-      driveFileUrl: '',
-      lines: [],
-      remandReason: '',
-      updatedAt: Timestamp.now(),
-      // Extra props for UI if allowed by type 'Job'?
-      // aaa_job.ts: interface Job extends Omit<FirestoreJob, 'status'> ...
-      // FirestoreJob checks needed.
-      // For now, let's just make sure the callback receives correct structure.
-    } as any as Job));
+    const mocks: Job[] = mockJobUiList.map(m => {
+      const job: Job = {
+        id: m.id,
+        clientCode: m.clientCode,
+        clientName: m.clientName,
+        status: 'pending',
+        transactionDate: Timestamp.now(),
+        driveFileId: 'mock-file',
+        driveFileUrl: '',
+        lines: [],
+        remandReason: '',
+        updatedAt: Timestamp.now(),
+        createdAt: Timestamp.now(),
+        priority: 'normal',
+        retryCount: 0,
+        confidenceScore: 0,
+      };
+      return job;
+    });
 
     // Execute callback with Mocks immediately
     onSuccess(mocks);
@@ -55,7 +53,7 @@ export const JobService = {
     const now = Timestamp.now();
 
     let nextStatus: JobStatus | null = null;
-    const updateData: any = { updatedAt: now };
+    const updateData: Record<string, unknown> = { updatedAt: now };
 
     switch (action) {
       case 'COMPLETE_PRIMARY':

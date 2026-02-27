@@ -17,14 +17,15 @@ import type {
     ClassificationStatus,
     PostProcessResult,
 } from './classify_schema';
+import { HandwrittenFlag } from './classify_schema';
 
 // ============================================================
 // 定数
 // ============================================================
 
-/** 会計期間 */
-const FISCAL_YEAR_START = '2025-04-01';
-const FISCAL_YEAR_END = '2026-03-31';
+/** 会計期間（個人事業主・暦年） */
+const FISCAL_YEAR_START = '2025-01-01';
+const FISCAL_YEAR_END = '2025-12-31';
 
 /** Gemini 2.5 Flash料金（$/token、公式料金 2026-02）
  *  https://cloud.google.com/vertex-ai/generative-ai/pricing
@@ -308,8 +309,8 @@ export function generateLabels(
     if (r.date_unreadable && r.date !== null) labels.push('UNREADABLE_ESTIMATED');
     if (r.amount_unreadable && r.total_amount !== null) labels.push('UNREADABLE_ESTIMATED');
     if (r.issuer_unreadable && r.issuer_name !== null) labels.push('UNREADABLE_ESTIMATED');
-    // 10. MEMO_DETECTED
-    if (r.has_handwritten_memo) labels.push('MEMO_DETECTED');
+    // 10. MEMO_DETECTED（MEANINGFULのみ発火）
+    if (r.handwritten_flag === HandwrittenFlag.MEANINGFUL) labels.push('MEMO_DETECTED');
 
     // --- 制度ラベル（3種） ---
     // INVOICE_QUALIFIED / INVOICE_NOT_QUALIFIED（排他）

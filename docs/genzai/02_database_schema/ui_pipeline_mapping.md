@@ -116,10 +116,10 @@ function mapVoucherTypeToLabel(voucherType: VoucherType): string {
 // 将来: 会計期間をテナント設定から取得
 ```
 
-#### 10. MEMO_DETECTED（Gemini出力そのまま）
+#### 10. MEMO_DETECTED（handwritten_flag===MEANINGFULのみ発火）
 ```typescript
-// 層A: has_handwritten_memo==true → labels[]に'MEMO_DETECTED'追加
-// 層Bロジック不要（Geminiの出力をそのままラベル変換）
+// 層A: handwritten_flag==='MEANINGFUL' → labels[]に'MEMO_DETECTED'追加
+// NON_MEANINGFUL/NONEは警告なし。角印・受領印・スタンプは手書きに含めない
 ```
 
 ### 出力先
@@ -188,21 +188,23 @@ function checkMultiTaxRate(taxEntries: TaxEntry[]): boolean {
 ## 証票メモ列（memo）
 
 ### 入力
-- Geminiフィールド: `GeminiClassifyResponse.has_handwritten_memo` (boolean)
+- Geminiフィールド: `GeminiClassifyResponse.handwritten_flag` (enum: 'NONE' | 'NON_MEANINGFUL' | 'MEANINGFUL')
 - Geminiフィールド: `GeminiClassifyResponse.handwritten_memo_content` (string | null)
 
 ### 変換ルール
 ```typescript
-// has_handwritten_memo==true の場合:
+// handwritten_flag==='MEANINGFUL' の場合:
 //   → labels[]に'MEMO_DETECTED'追加（警告列にも表示される）
 //   → handwritten_memo_content をDBに格納
-// has_handwritten_memo==false の場合:
+// handwritten_flag==='NON_MEANINGFUL' の場合:
+//   → 警告なし。contentがあればDBに格納（ホバー表示用）
+// handwritten_flag==='NONE' の場合:
 //   → 何もしない
 ```
 
 ### 出力先
 - DB: `journals.handwritten_memo_content` (TEXT, nullable)
-- UI: memo列でhas_handwritten_memo==trueならメモアイコン表示、ホバーでcontent表示
+- UI: memo列でhandwritten_flag!=='NONE'ならメモアイコン表示、ホバーでcontent表示
 
 ### 注意
 - 証票上の手書きメモ（Geminiが画像解析で検出）と、担当者メモ（staff_notes.memo）は別物

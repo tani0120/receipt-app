@@ -22,6 +22,7 @@ export interface Job extends Omit<FirestoreJob, 'status'> {
   primaryCompletedAt?: Timestamp;
   finalCompletedAt?: Timestamp;
   remandReason?: string;
+  remandCount?: number;  // 差戻し回数（業務ワークフロー追跡用）
 
   // UI Display Helper
   clientName?: string;

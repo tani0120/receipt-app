@@ -103,17 +103,17 @@ app.post(
             id: `rule-${Date.now()}`,
             clientId,
             priority: data.priority ?? 3,
-            status: (data.status as any) ?? 'active',
-            trigger: data.trigger as any,
+            status: data.status ?? 'active',
+            trigger: {
+                type: data.trigger.type,
+                keyword: data.trigger.keyword,
+                ...(data.trigger.amountRange ? { amountRange: data.trigger.amountRange } : {}),
+            },
             result: data.result,
-            confidence: 1.0, // Manual creation = 100% confidence
+            confidence: 1.0,
             hitCount: 0,
-            generatedBy: (data.generatedBy as any) ?? 'human',
+            generatedBy: data.generatedBy ?? 'human',
             lastUsedAt: new Date().toISOString().split('T')[0],
-            actions: [
-                { type: 'edit', label: '編集', isEnabled: true },
-                { type: 'delete', label: '削除', isEnabled: true }
-            ]
         };
 
         if (!MOCK_RULES[clientId]) MOCK_RULES[clientId] = [];
@@ -150,14 +150,14 @@ app.put(
         const currentRule = rules[index];
         const wasActive = currentRule.status === 'active';
 
-        const updatedRule = {
+        const updatedRule: LearningRuleUi = {
             ...currentRule,
             ...data,
             trigger: data.trigger ? { ...currentRule.trigger, ...data.trigger } : currentRule.trigger,
             result: data.result ? { ...currentRule.result, ...data.result } : currentRule.result
         };
 
-        rules[index] = updatedRule as any;
+        rules[index] = updatedRule;
 
         // Update Stats if status changed
         const client = MOCK_CLIENTS.find(c => c.id === clientId);

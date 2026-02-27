@@ -28,6 +28,6 @@ export const jobRepository = {
      * Maps to FirestoreRepository.updateJob
      */
     async saveJob(id: string, data: Partial<JobApi>): Promise<void> {
-        await FirestoreRepository.updateJob(id, data as any);
+        await FirestoreRepository.updateJob(id, data as unknown as Record<string, unknown>);
     }
 };
