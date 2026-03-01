@@ -57,9 +57,12 @@ export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod];
 
 // ============================================================
 // 税区分（マネーフォワード互換8値）
+// @deprecated 新規コードでは shared/types/tax-category.ts の TaxCategory 型と
+//             shared/data/tax-category-master.ts の概念IDを使用すること。
+//             旧ID → 新IDの対応は TaxCodeMapper.ts で管理。
 // ============================================================
 
-export const TaxCategory = {
+export const LegacyTaxCategory = {
     TAXABLE_PURCHASE_10: 'TAXABLE_PURCHASE_10',
     TAXABLE_PURCHASE_8: 'TAXABLE_PURCHASE_8',
     NON_TAXABLE_PURCHASE: 'NON_TAXABLE_PURCHASE',
@@ -70,7 +73,12 @@ export const TaxCategory = {
     OUT_OF_SCOPE_SALES: 'OUT_OF_SCOPE_SALES',
 } as const;
 
-export type TaxCategory = typeof TaxCategory[keyof typeof TaxCategory];
+export type LegacyTaxCategory = typeof LegacyTaxCategory[keyof typeof LegacyTaxCategory];
+
+/** @deprecated LegacyTaxCategory を使用してください */
+export const TaxCategory = LegacyTaxCategory;
+/** @deprecated LegacyTaxCategory を使用してください */
+export type TaxCategory = LegacyTaxCategory;
 
 // ============================================================
 // 勘定科目コード（30科目）

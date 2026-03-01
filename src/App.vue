@@ -127,4 +127,3 @@ const executeSeed = async () => {
 <style>
 /* Global styles are imported in main.ts */
 </style>
-```

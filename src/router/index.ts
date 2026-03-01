@@ -76,6 +76,16 @@ export const routes: RouteRecordRaw[] = [
   },
 
   {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../mocks/views/MockSettingsPage.vue')
+  },
+  {
+    path: '/settings/accounts',
+    name: 'AccountSettings',
+    component: () => import('../views/ScreenS_AccountSettings.vue')
+  },
+  {
     path: '/admin-settings',
     name: 'ScreenZ',
     component: () => import('../views/ScreenZ_AdminSettings.vue')

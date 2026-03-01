@@ -22,33 +22,54 @@ export class TaxCodeMapper {
         invoiceDeduction?: string
     ): { taxCode: string; invoiceFlag: string } {
 
-        // 税区分マッピング
+        // 税区分マッピング（MF正式名称。省略名ではマッチしない）
+        // 旧ID（domain/types/journal.ts）と新ID（tax-category-master.ts）の両方に対応
         const taxMapping: Record<string, string> = {
+            // === 旧ID（後方互換） ===
             // 売上
-            'TAXABLE_SALES_10': '課売 10%',
-            'TAXABLE_SALES_REDUCED_8': '課売 (軽)8%',
-            'NON_TAXABLE_SALES': '非売',
-            'OUT_OF_SCOPE_SALES': '対象外売',
+            'TAXABLE_SALES_10': '課税売上 10%',
+            'TAXABLE_SALES_8': '課税売上 8%',
+            'TAXABLE_SALES_REDUCED_8': '課税売上 (軽)8%',
+            'NON_TAXABLE_SALES': '非課税売上',
+            'OUT_OF_SCOPE_SALES': '対象外売上',
 
             // 仕入
-            'TAXABLE_PURCHASE_10': '課仕 10%',
-            'TAXABLE_PURCHASE_REDUCED_8': '課仕 (軽)8%',
-            'COMMON_TAXABLE_PURCHASE_10': '共-課仕 10%',
-            'NON_TAXABLE_PURCHASE': '非仕',
+            'TAXABLE_PURCHASE_10': '課税仕入 10%',
+            'TAXABLE_PURCHASE_8': '課税仕入 8%',
+            'TAXABLE_PURCHASE_REDUCED_8': '課税仕入 (軽)8%',
+            'COMMON_TAXABLE_PURCHASE_10': '共通課税仕入 10%',
+            'NON_TAXABLE_PURCHASE': '非課税仕入',
             'OUT_OF_SCOPE_PURCHASE': '対象外',
 
             // 特殊
-            'REVERSE_CHARGE': '課仕 10%',  // リバースチャージ（MFでは通常課仕として扱う）
-            'IMPORT_TAX': '課仕 10%',      // 輸入消費税
+            'REVERSE_CHARGE': '課税仕入 10%',
+            'IMPORT_TAX': '課税仕入 10%',
+
+            // === 新ID（tax-category-master.ts準拠） ===
+            // 売上
+            'SALES_TAXABLE_10': '課税売上 10%',
+            'SALES_TAXABLE_8': '課税売上 8%',
+            'SALES_REDUCED_8': '課税売上 (軽)8%',
+            'SALES_NON_TAXABLE': '非課税売上',
+            'SALES_EXEMPT': '対象外売上',
+
+            // 仕入
+            'PURCHASE_TAXABLE_10': '課税仕入 10%',
+            'PURCHASE_TAXABLE_8': '課税仕入 8%',
+            'PURCHASE_REDUCED_8': '課税仕入 (軽)8%',
+            'PURCHASE_COMMON_10': '共通課税仕入 10%',
+            'PURCHASE_NON_TAXABLE': '非課税仕入',
+            'PURCHASE_EXEMPT': '対象外仕入',
+            'COMMON_EXEMPT': '対象外',
         };
 
         // インボイスフラグマッピング（MFは別列で指定）
         const invoiceMapping: Record<string, string> = {
             'QUALIFIED': '適格',
             'DEDUCTION_80': '80%控除',
-            'DEDUCTION_70': '70%控除',  // Phase 2（2026/10/01～）
-            'DEDUCTION_50': '50%控除',  // Phase 2
-            'DEDUCTION_30': '30%控除',  // Phase 2
+            'DEDUCTION_70': '70%控除',
+            'DEDUCTION_50': '50%控除',
+            'DEDUCTION_30': '30%控除',
             'DEDUCTION_NONE': '控除不可',
         };
 
