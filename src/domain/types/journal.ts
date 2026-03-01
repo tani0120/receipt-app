@@ -170,5 +170,6 @@ export interface JournalEntryLine {
     account: string;
     sub_account: string | null;
     amount: Yen;
-    tax_category: string | null;
+    /** 税区分の概念ID（例: PURCHASE_TAXABLE_10）。表示時はマスタからnameを取得 */
+    tax_category_id: string | null;
 }

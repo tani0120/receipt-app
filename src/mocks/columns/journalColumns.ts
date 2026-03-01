@@ -42,11 +42,11 @@ export const journalColumns: JournalColumn[] = [
   // --- データ（entry-level: text/amount型） ---
   { key: "debit.account", label: "借方勘定科目", width: "w-20", type: "text", sortKey: "debit_account" },
   { key: "debit.sub_account", label: "借方補助", width: "w-16", type: "text", sortKey: "debit_sub_account" },
-  { key: "debit.tax_category", label: "借方税区分", width: "w-20", type: "text", sortKey: "debit_tax" },
+  { key: "debit.tax_category_id", label: "借方税区分", width: "w-20", type: "text", sortKey: "debit_tax" },
   { key: "debit.amount", label: "借方金額", width: "w-16", type: "amount", sortKey: "debit_amount" },
   { key: "credit.account", label: "貸方勘定科目", width: "w-20", type: "text", sortKey: "credit_account" },
   { key: "credit.sub_account", label: "貸方補助", width: "w-16", type: "text", sortKey: "credit_sub_account" },
-  { key: "credit.tax_category", label: "貸方税区分", width: "w-20", type: "text", sortKey: "credit_tax" },
+  { key: "credit.tax_category_id", label: "貸方税区分", width: "w-20", type: "text", sortKey: "credit_tax" },
   { key: "credit.amount", label: "貸方金額", width: "w-16", type: "amount", sortKey: "credit_amount" },
 
   // --- 操作（末尾） ---

@@ -660,10 +660,10 @@
                 <td class="border px-2 py-1">{{ result.description }}</td>
                 <td class="border px-2 py-1">{{ result.debit_entries[0]?.account || '' }}</td>
                 <td class="border px-2 py-1">{{ result.debit_entries[0]?.sub_account || '' }}</td>
-                <td class="border px-2 py-1 text-center">{{ result.debit_entries[0]?.tax_category || '' }}</td>
+                <td class="border px-2 py-1 text-center">{{ resolveTaxCategoryName(result.debit_entries[0]?.tax_category_id) }}</td>
                 <td class="border px-2 py-1">{{ result.credit_entries[0]?.account || '' }}</td>
                 <td class="border px-2 py-1">{{ result.credit_entries[0]?.sub_account || '' }}</td>
-                <td class="border px-2 py-1 text-center">{{ result.credit_entries[0]?.tax_category || '' }}</td>
+                <td class="border px-2 py-1 text-center">{{ resolveTaxCategoryName(result.credit_entries[0]?.tax_category_id) }}</td>
                 <td class="border px-2 py-1 text-center">
                   <span v-if="result.labels.includes('TRANSPORT')">領</span>
                   <span v-if="result.labels.includes('RECEIPT')">レ</span>
@@ -811,6 +811,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
 import { useDraggable } from '@/mocks/composables/useDraggable';
 import { useCurrentUser, STAFF_LIST } from '@/mocks/composables/useCurrentUser';
 import { journalColumns } from '@/mocks/columns/journalColumns';
@@ -1611,8 +1612,8 @@ const journals = computed(() => {
           bVal = b.debit_entries[0]?.sub_account || '';
           break;
         case 'debit_tax':
-          aVal = a.debit_entries[0]?.tax_category || '';
-          bVal = b.debit_entries[0]?.tax_category || '';
+          aVal = a.debit_entries[0]?.tax_category_id || '';
+          bVal = b.debit_entries[0]?.tax_category_id || '';
           break;
         case 'debit_amount':
           aVal = a.debit_entries[0]?.amount || 0;
@@ -1627,8 +1628,8 @@ const journals = computed(() => {
           bVal = b.credit_entries[0]?.sub_account || '';
           break;
         case 'credit_tax':
-          aVal = a.credit_entries[0]?.tax_category || '';
-          bVal = b.credit_entries[0]?.tax_category || '';
+          aVal = a.credit_entries[0]?.tax_category_id || '';
+          bVal = b.credit_entries[0]?.tax_category_id || '';
           break;
         case 'credit_amount':
           aVal = a.credit_entries[0]?.amount || 0;
@@ -1749,7 +1750,19 @@ function hasPastJournal(journal: JournalPhase5Mock): boolean {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getValue(obj: any, path: string): unknown {
-  return path.split('.').reduce((o: any, key: string) => o?.[key], obj)
+  const raw = path.split('.').reduce((o: any, key: string) => o?.[key], obj)
+  // 概念ID → MF正式名称に変換（tax_category_idキーの場合）
+  if (path.endsWith('tax_category_id') && typeof raw === 'string') {
+    return resolveTaxCategoryName(raw)
+  }
+  return raw
+}
+
+/** 概念IDからMF正式名称を取得。マスタになければIDをそのまま返す */
+function resolveTaxCategoryName(id: string | null | undefined): string {
+  if (!id) return ''
+  const entry = TAX_CATEGORY_MASTER.find(tc => tc.id === id)
+  return entry ? entry.name : id
 }
 
 function formatDate(date: string): string {
