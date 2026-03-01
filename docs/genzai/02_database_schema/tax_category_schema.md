@@ -62,3 +62,33 @@
 - 顧問先ごとの表示/非表示は `client_tax_settings` で管理
 - 税率はカラムに持たない（エンジンの責務外）
 - 税区分のCSV出力は `name` をそのまま使用
+
+---
+
+## 実装状況（2026-03-02時点）
+
+| コンポーネント | ファイル | 状態 |
+|---|---|---|
+| 税区分マスタデータ（151件） | `src/shared/data/tax-category-master.ts` | ✅ 実装済み |
+| TaxCategory型定義 | `src/shared/types/tax-category.ts` | ✅ 実装済み |
+| Account型定義 | `src/shared/types/account.ts` | ✅ 実装済み |
+| SimpleTaxRule型定義 | `src/shared/types/simple-tax-rule.ts` | ✅ 実装済み |
+| TaxCodeMapper（概念ID→MF正式名称） | `src/features/journal/services/TaxCodeMapper.ts` | ✅ 実装済み |
+| domain型 JournalEntryLine.tax_category_id | `src/domain/types/journal.ts` | ✅ 実装済み |
+| fixtureデータ（概念ID化） | `src/mocks/data/journal_test_fixture_30cases.ts` | ✅ 実装済み |
+| UI表示変換（概念ID→名称） | `src/mocks/components/JournalListLevel3Mock.vue` | ✅ 実装済み |
+| 設定画面（税区分タブ） | `src/views/ScreenS_AccountSettings.vue` | ✅ 実装済み |
+| DBテーブル作成 | PostgreSQL migration | ⬜ 未着手（Phase C） |
+
+### 概念IDフロー
+
+```
+fixtureデータ → tax_category_id: 'PURCHASE_TAXABLE_10'
+       ↓
+getText()    → resolveTaxCategoryName() でマスタからname取得
+       ↓
+UI表示       → 「課税仕入 10%」（MF正式名称）
+       ↓
+CSV出力      → TaxCodeMapper.toMF() で正式名称に変換
+```
+
