@@ -37,7 +37,9 @@ const __dirname = path.dirname(__filename);
 // 設定
 // ============================================================
 
-
+const PROJECT_ID = 'sugu-suru';
+const LOCATION = 'asia-northeast1';
+const MODEL_ID = 'gemini-2.5-flash';
 
 const TEST_IMAGES_DIR = path.join(__dirname, 'test_images');
 const RESULTS_DIR = path.join(__dirname, 'test_results');
