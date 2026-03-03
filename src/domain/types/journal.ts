@@ -169,18 +169,30 @@ export type JournalLabel =
 export interface JournalEntryLine {
     /**
      * 勘定科目
-     * nullable: AIが勘定科目を判定できない場合null
-     * CSV必須: MFインポートで必須。nullならCSV出力前に警告
+     * nullable（null許容）: AIが勘定科目を判定できない場合null
+     * CSV必須: MF（マネーフォワード）インポートで必須。nullならCSV出力前に警告
      */
     account: string | null;
+    /**
+     * 勘定科目の項目存在フラグ
+     * false（項目なし）+ null → MISSING_FIELD（必須項目なし）
+     * true（項目あり）+ null → UNREADABLE_FAILED（判読不能）
+     */
+    account_field_present: boolean;
     /** 補助科目（なしは正常） */
     sub_account: string | null;
     /**
      * 金額
-     * nullable: 証憑から金額が読み取れない場合null
-     * CSV必須: MFインポートで必須。nullならCSV出力前に警告
+     * nullable（null許容）: 証憑から金額が読み取れない場合null
+     * CSV必須: MF（マネーフォワード）インポートで必須。nullならCSV出力前に警告
      */
     amount: Yen | null;
+    /**
+     * 金額の項目存在フラグ
+     * false（項目なし）+ null → MISSING_FIELD（必須項目なし）
+     * true（項目あり）+ null → UNREADABLE_FAILED（判読不能）
+     */
+    amount_field_present: boolean;
     /** 税区分の概念ID（例: PURCHASE_TAXABLE_10）。表示時はマスタからnameを取得 */
     tax_category_id: string | null;
 }

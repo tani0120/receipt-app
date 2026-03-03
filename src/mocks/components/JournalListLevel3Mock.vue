@@ -258,14 +258,13 @@
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
 
-              <!-- 警告 -->
+              <!-- 警告（STREAMED風: 赤△！統一、連結ホバー） -->
               <template v-else-if="col.key === 'warning'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 flex-wrap gap-0.5']">
-                  <template v-for="wLabel in journal.labels.filter((l: string) => warningLabelMap[l]).slice(0, 3)" :key="wLabel">
-                    <i class="fa-solid fa-triangle-exclamation text-[10px]"
-                       :class="warningLabelMap[wLabel]?.color"
-                       :title="warningLabelMap[wLabel]?.label"></i>
-                  </template>
+                <div v-if="rowIndex === 0"
+                     :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']"
+                     :title="journal.labels.filter((l: string) => warningLabelMap[l]).map((l: string) => warningLabelMap[l]?.label).join('\n')">
+                  <i v-if="journal.labels.some((l: string) => warningLabelMap[l])"
+                     class="fa-solid fa-triangle-exclamation text-[10px] text-red-600"></i>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -656,7 +655,7 @@
                   :key="index"
                   :class="result.status === 'exported' ? 'bg-white' : 'bg-blue-50'"
                   class="hover:bg-blue-100 cursor-pointer">
-                <td class="border px-2 py-1 text-center">{{ formatDate(result.transaction_date) }}</td>
+                <td class="border px-2 py-1 text-center">{{ result.transaction_date ? formatDate(result.transaction_date) : '-' }}</td>
                 <td class="border px-2 py-1">{{ result.description }}</td>
                 <td class="border px-2 py-1">{{ result.debit_entries[0]?.account || '' }}</td>
                 <td class="border px-2 py-1">{{ result.debit_entries[0]?.sub_account || '' }}</td>
@@ -876,14 +875,17 @@ const labelKeyMap: Record<string, { short: string; label: string; bgClass: strin
 };
 
 // 警告ラベルマップ: Single Source of Truth
-// level: 'error'(赤) | 'warn'(黄) / label: 日本語定義 / color: アイコン色 / weight: ソート優先度
+// 統合版: MISSING_FIELD/UNREADABLE_FAILED/TAX_CALCULATION_ERROR を削除し、フィールド別ラベルに分離
+// level: 'error'(赤) | 'warn'(黄) / label: 日本語定義（ホバーメッセージ） / color: アイコン色 / weight: ソート優先度
 const warningLabelMap: Record<string, { level: 'error' | 'warn'; label: string; color: string; weight: number }> = {
+  // エラー（赤）
   DEBIT_CREDIT_MISMATCH: { level: 'error', label: '借方貸方の合計額不一致', color: 'text-red-600', weight: 17 },
-  TAX_CALCULATION_ERROR: { level: 'error', label: '税抜と消費税額の合計不一致', color: 'text-red-600', weight: 16 },
-  MISSING_FIELD:         { level: 'error', label: '必須項目なし（証憑不備）', color: 'text-red-600', weight: 15 },
-  UNREADABLE_FAILED:     { level: 'error', label: '判読不能（読取失敗）', color: 'text-red-600', weight: 14 },
+  DATE_UNKNOWN:          { level: 'error', label: '日付が不明', color: 'text-red-600', weight: 16 },
+  ACCOUNT_UNKNOWN:       { level: 'error', label: '勘定科目が不明', color: 'text-red-600', weight: 15 },
   DUPLICATE_CONFIRMED:   { level: 'error', label: '完全重複（同一画像）', color: 'text-red-600', weight: 13 },
   MULTIPLE_VOUCHERS:     { level: 'error', label: '複数の証票あり', color: 'text-red-600', weight: 12 },
+  // 注意（黄）
+  AMOUNT_UNCLEAR:        { level: 'warn', label: '内訳が不明瞭な金額あり', color: 'text-yellow-600', weight: 7 },
   DUPLICATE_SUSPECT:     { level: 'warn', label: '重複疑い', color: 'text-yellow-600', weight: 6 },
   DATE_OUT_OF_RANGE:     { level: 'warn', label: '期間外日付', color: 'text-yellow-600', weight: 5 },
   UNREADABLE_ESTIMATED:  { level: 'warn', label: '判読困難（AI推測値）', color: 'text-yellow-600', weight: 4 },
@@ -1323,17 +1325,17 @@ const filteredPastJournals = computed(() => {
 
   // 日付範囲フィルタ
   if (pastJournalSearch.value.dateFrom) {
-    results = results.filter(j => j.transaction_date >= pastJournalSearch.value.dateFrom);
+    results = results.filter(j => j.transaction_date !== null && j.transaction_date >= pastJournalSearch.value.dateFrom);
   }
   if (pastJournalSearch.value.dateTo) {
-    results = results.filter(j => j.transaction_date <= pastJournalSearch.value.dateTo);
+    results = results.filter(j => j.transaction_date !== null && j.transaction_date <= pastJournalSearch.value.dateTo);
   }
 
   // 金額フィルタ
   if (pastJournalSearch.value.amount !== null && pastJournalSearch.value.amountCondition) {
     results = results.filter(j => {
-      const debitTotal = j.debit_entries.reduce((sum, e) => sum + e.amount, 0);
-      const creditTotal = j.credit_entries.reduce((sum, e) => sum + e.amount, 0);
+      const debitTotal = j.debit_entries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+      const creditTotal = j.credit_entries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
       const amount = Math.max(debitTotal, creditTotal);
 
       switch (pastJournalSearch.value.amountCondition) {
@@ -1499,7 +1501,7 @@ function onMouseUp() {
 
 const journals = computed(() => {
   const result = [...localJournals.value].sort((a, b) => {
-    return new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime();
+    return new Date(a.transaction_date ?? '9999-12-31').getTime() - new Date(b.transaction_date ?? '9999-12-31').getTime();
   });
 
   if (sortColumn.value) {
@@ -1596,8 +1598,8 @@ const journals = computed(() => {
           bVal = getInvoiceWeight(b.labels);
           break;
         case 'transaction_date':
-          aVal = new Date(a.transaction_date).getTime();
-          bVal = new Date(b.transaction_date).getTime();
+          aVal = a.transaction_date ? new Date(a.transaction_date).getTime() : Infinity;
+          bVal = b.transaction_date ? new Date(b.transaction_date).getTime() : Infinity;
           break;
         case 'description':
           aVal = a.description;

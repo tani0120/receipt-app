@@ -18,7 +18,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j001',
     display_order: 1,
-    transaction_date: '2024-07-29',
+    transaction_date: '2024-07-29', date_field_present: true,
     description: '神戸相互タクシー',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -26,10 +26,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '旅費交通費', sub_account: null, amount: 800, tax_category_id: '課税仕入 10%' }
+      { account: '旅費交通費', account_field_present: true, sub_account: null, amount: 800, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 800, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 800, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: 'r001',
     rule_confidence: 0.95,
@@ -48,7 +48,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j002',
     display_order: 2,
-    transaction_date: '2025-01-20',
+    transaction_date: '2025-01-20', date_field_present: true,
     description: 'VIVACE BEAUTYクリニック',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -56,10 +56,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'RULE_AVAILABLE', 'INVOICE_NOT_QUALIFIED', 'NEED_DOCUMENT'],  // 書類が不足
     debit_entries: [
-      { account: 'メンテナンス費', sub_account: null, amount: 11000, tax_category_id: '課税仕入 10%' }
+      { account: 'メンテナンス費', account_field_present: true, sub_account: null, amount: 11000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 11000, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 11000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -81,7 +81,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j003',
     display_order: 3,
-    transaction_date: '2025-01-21',
+    transaction_date: '2025-01-21', date_field_present: true,
     description: 'コピー用紙',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -89,10 +89,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED', 'NEED_INFO'],  // 情報が不足（旧NEED_CONFIRM）
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 2500, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 2500, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 2500, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 2500, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -114,7 +114,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j004',
     display_order: 4,
-    transaction_date: '2025-01-22',
+    transaction_date: '2025-01-22', date_field_present: true,
     description: '文房具セット',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -122,10 +122,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['CREDIT_CARD', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 3200, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 3200, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '未払金', sub_account: null, amount: 3200, tax_category_id: '対象外' }
+      { account: '未払金', account_field_present: true, sub_account: null, amount: 3200, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -144,7 +144,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j005',
     display_order: 5,
-    transaction_date: '2025-01-23',
+    transaction_date: '2025-01-23', date_field_present: true,
     description: 'タクシー代（不適格運送）',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -152,10 +152,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['BANK_STATEMENT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_CONSULT'],  // 社内相談する
     debit_entries: [
-      { account: '旅費交通費', sub_account: null, amount: 650, tax_category_id: '課税仕入 10%' }
+      { account: '旅費交通費', account_field_present: true, sub_account: null, amount: 650, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '普通預金', sub_account: '三菱UFJ', amount: 650, tax_category_id: '対象外' }
+      { account: '普通預金', account_field_present: true, sub_account: '三菱UFJ', amount: 650, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: 'r003',
     rule_confidence: 0.88,
@@ -177,7 +177,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j006',
     display_order: 6,
-    transaction_date: '2025-01-24',
+    transaction_date: '2025-01-24', date_field_present: true,
     description: 'タクシー代',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -185,10 +185,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '旅費交通費', sub_account: null, amount: 1500, tax_category_id: '課税仕入 10%' }
+      { account: '旅費交通費', account_field_present: true, sub_account: null, amount: 1500, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 1500, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 1500, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: 'r004',
     rule_confidence: 0.92,
@@ -207,7 +207,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j007',
     display_order: 7,
-    transaction_date: '2025-01-25',
+    transaction_date: '2025-01-25', date_field_present: true,
     description: '電気代 関西電力',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -215,10 +215,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['INVOICE', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '水道光熱費', sub_account: '電気代', amount: 12000, tax_category_id: '課税仕入 10%' }
+      { account: '水道光熱費', account_field_present: true, sub_account: '電気代', amount: 12000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '普通預金', sub_account: '三菱UFJ', amount: 12000, tax_category_id: '対象外' }
+      { account: '普通預金', account_field_present: true, sub_account: '三菱UFJ', amount: 12000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: 'r005',
     rule_confidence: 0.97,
@@ -237,7 +237,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j008',
     display_order: 8,
-    transaction_date: '2025-01-26',
+    transaction_date: '2025-01-26', date_field_present: true,
     description: 'スターバックス',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -245,10 +245,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '会議費', sub_account: null, amount: 1200, tax_category_id: '課税仕入 10%' }
+      { account: '会議費', account_field_present: true, sub_account: null, amount: 1200, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 1200, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 1200, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -265,7 +265,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j009',
     display_order: 9,
-    transaction_date: '2025-01-27',
+    transaction_date: '2025-01-27', date_field_present: true,
     description: '業務委託料',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -273,10 +273,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['INVOICE', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '外注費', sub_account: null, amount: 150000, tax_category_id: '課税仕入 10%' }
+      { account: '外注費', account_field_present: true, sub_account: null, amount: 150000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '普通預金', sub_account: '三菱UFJ', amount: 150000, tax_category_id: '対象外' }
+      { account: '普通預金', account_field_present: true, sub_account: '三菱UFJ', amount: 150000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -293,7 +293,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j010',
     display_order: 10,
-    transaction_date: '2025-01-28',
+    transaction_date: '2025-01-28', date_field_present: true,
     description: 'JR神戸線',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -301,10 +301,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_DOCUMENT', 'NEED_INFO'],  // 複数フラグ
     debit_entries: [
-      { account: '旅費交通費', sub_account: null, amount: 320, tax_category_id: '課税仕入 10%' }
+      { account: '旅費交通費', account_field_present: true, sub_account: null, amount: 320, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 320, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 320, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: 'r008',
     rule_confidence: 0.93,
@@ -327,7 +327,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j011',
     display_order: 11,
-    transaction_date: '2025-01-29',
+    transaction_date: '2025-01-29', date_field_present: true,
     description: 'オフィス産科',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -335,10 +335,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '地代家賃', sub_account: 'ガリツリ', amount: 6000, tax_category_id: 'クレジットカード' }
+      { account: '地代家賃', account_field_present: true, sub_account: 'ガリツリ', amount: 6000, amount_field_present: true, tax_category_id: 'クレジットカード' }
     ],
     credit_entries: [
-      { account: '未払金', sub_account: null, amount: 6000, tax_category_id: '対象外' }
+      { account: '未払金', account_field_present: true, sub_account: null, amount: 6000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -355,7 +355,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j012',
     display_order: 12,
-    transaction_date: '2025-01-30',
+    transaction_date: '2025-01-30', date_field_present: true,
     description: '消耗品費（ボールペン）',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -363,10 +363,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'RULE_AVAILABLE', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 800, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 800, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 800, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 800, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -383,7 +383,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j013',
     display_order: 13,
-    transaction_date: '2025-01-31',
+    transaction_date: '2025-01-31', date_field_present: true,
     description: 'タクシー代（不適格運送）',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -391,10 +391,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_NOT_QUALIFIED'],
     debit_entries: [
-      { account: '旅費交通費', sub_account: null, amount: 750, tax_category_id: '課税仕入 10%' }
+      { account: '旅費交通費', account_field_present: true, sub_account: null, amount: 750, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 750, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 750, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: 'r011',
     rule_confidence: 0.85,
@@ -411,7 +411,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j014',
     display_order: 14,
-    transaction_date: '2025-02-01',
+    transaction_date: '2025-02-01', date_field_present: true,
     description: 'NTTドコモ',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -419,10 +419,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['INVOICE', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '通信費', sub_account: null, amount: 8000, tax_category_id: '課税仕入 10%' }
+      { account: '通信費', account_field_present: true, sub_account: null, amount: 8000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '普通預金', sub_account: '三菱UFJ', amount: 8000, tax_category_id: '対象外' }
+      { account: '普通預金', account_field_present: true, sub_account: '三菱UFJ', amount: 8000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -439,7 +439,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j015',
     display_order: 15,
-    transaction_date: '2025-02-01',
+    transaction_date: '2025-02-01', date_field_present: true,
     description: '手数料通帳費',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -447,10 +447,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED', 'MULTI_TAX_RATE', 'EXPORT_EXCLUDE'],  // 出力対象外
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 0, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 0, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 0, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 0, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -467,7 +467,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j016',
     display_order: 16,
-    transaction_date: '2025-02-02',
+    transaction_date: '2025-02-02', date_field_present: true,
     description: '神戸皇居鎌タクシー',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -475,10 +475,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '旅費交通費', sub_account: null, amount: 800, tax_category_id: '課税仕入 10%' }
+      { account: '旅費交通費', account_field_present: true, sub_account: null, amount: 800, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 800, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 800, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: 'r014',
     rule_confidence: 0.96,
@@ -495,7 +495,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j017',
     display_order: 17,
-    transaction_date: '2025-02-02',
+    transaction_date: '2025-02-02', date_field_present: true,
     description: '貴金に宗鹿釜交友貴',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -503,10 +503,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 500000, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 500000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '普通預金', sub_account: '三菱UFJ', amount: 500000, tax_category_id: '対象外' }
+      { account: '普通預金', account_field_present: true, sub_account: '三菱UFJ', amount: 500000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -523,7 +523,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j018',
     display_order: 18,
-    transaction_date: '2025-02-02',
+    transaction_date: '2025-02-02', date_field_present: true,
     description: '不可分抜き回',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -531,10 +531,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '飲出羽', sub_account: null, amount: 20000, tax_category_id: '課税仕入 10%' }
+      { account: '飲出羽', account_field_present: true, sub_account: null, amount: 20000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 20000, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 20000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -551,7 +551,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j019',
     display_order: 19,
-    transaction_date: '2025-02-03',
+    transaction_date: '2025-02-03', date_field_present: true,
     description: '事例寿判上いは詮',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -559,10 +559,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '消耗品費', sub_account: '現金', amount: 50000, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: '現金', amount: 50000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '普通預金', sub_account: '三菱UFJ', amount: 50000, tax_category_id: '対象外' }
+      { account: '普通預金', account_field_present: true, sub_account: '三菱UFJ', amount: 50000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -579,7 +579,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j020',
     display_order: 20,
-    transaction_date: '2025-02-04',
+    transaction_date: '2025-02-04', date_field_present: true,
     description: '広告宣伝費（銀行振込）',
     receipt_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -587,10 +587,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['BANK_STATEMENT', 'INVOICE_QUALIFIED', 'NEED_CONSULT', 'NEED_DOCUMENT'],  // 複数フラグ2
     debit_entries: [
-      { account: '広告宣伝費', sub_account: '銀行', amount: 100000, tax_category_id: '課税仕入 10%' }
+      { account: '広告宣伝費', account_field_present: true, sub_account: '銀行', amount: 100000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '普通預金', sub_account: '三菱UFJ', amount: 100000, tax_category_id: '対象外' }
+      { account: '普通預金', account_field_present: true, sub_account: '三菱UFJ', amount: 100000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -613,7 +613,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j021',
     display_order: 21,
-    transaction_date: '2025-02-05',
+    transaction_date: '2025-02-05', date_field_present: true,
     description: '業務委託料',
     receipt_id: 'receipt-001',
     status: 'exported',
@@ -621,10 +621,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '外注費', sub_account: null, amount: 8000, tax_category_id: '課税仕入 10%' }
+      { account: '外注費', account_field_present: true, sub_account: null, amount: 8000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '普通預金', sub_account: '三菱UFJ', amount: 8000, tax_category_id: '対象外' }
+      { account: '普通預金', account_field_present: true, sub_account: '三菱UFJ', amount: 8000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -645,7 +645,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j022',
     display_order: 22,
-    transaction_date: '2025-02-06',
+    transaction_date: '2025-02-06', date_field_present: true,
     description: '資料作成料',
     receipt_id: 'receipt-001',
     status: null,
@@ -653,10 +653,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: '2026-02-21T00:00:00Z',  // ゴミ箱（検証用）
     labels: ['RECEIPT', 'UNREADABLE_ESTIMATED'],
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 10000, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 10000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 10000, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 10000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -673,7 +673,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j023',
     display_order: 23,
-    transaction_date: '2025-02-07',
+    transaction_date: '2025-02-07', date_field_present: true,
     description: '不明な振り',
     receipt_id: 'receipt-001',
     status: null,
@@ -681,10 +681,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: '2026-02-21T00:00:00Z',  // ゴミ箱（検証用）
     labels: ['TRANSPORT', 'DUPLICATE_SUSPECT', 'DUPLICATE_CONFIRMED'],
     debit_entries: [
-      { account: '旅費交通費', sub_account: null, amount: 9000, tax_category_id: '課税仕入 10%' }
+      { account: '旅費交通費', account_field_present: true, sub_account: null, amount: 9000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 9000, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 9000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -701,7 +701,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j024',
     display_order: 24,
-    transaction_date: '2026-12-31',
+    transaction_date: '2026-12-31', date_field_present: true,
     description: '未来日付の仕訳',
     receipt_id: 'receipt-001',
     status: null,
@@ -709,10 +709,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'DATE_OUT_OF_RANGE'],
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 11000, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 11000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 11000, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 11000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -729,18 +729,18 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j025',
     display_order: 25,
-    transaction_date: '2025-02-08',
+    transaction_date: '2025-02-08', date_field_present: true,
     description: '異常金額',
     receipt_id: 'receipt-001',
     status: null,
     is_read: false,
     deleted_at: null,
-    labels: ['RECEIPT', 'UNREADABLE_FAILED', 'MULTIPLE_VOUCHERS'],
+    labels: ['RECEIPT', 'AMOUNT_UNCLEAR', 'MULTIPLE_VOUCHERS'],
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 1000000, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 1000000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 1000000, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 1000000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -757,7 +757,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j026',
     display_order: 26,
-    transaction_date: '2025-02-05',
+    transaction_date: '2025-02-05', date_field_present: true,
     description: '資料持ち',
     receipt_id: 'receipt-001',
     status: null,
@@ -765,10 +765,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'MEMO_DETECTED', 'NEED_CONSULT'],  // 旧help → 相談が必要
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 8000, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 8000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 8000, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 8000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -790,7 +790,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j027',
     display_order: 27,
-    transaction_date: '2025-02-07',
+    transaction_date: '2025-02-07', date_field_present: true,
     description: '材料費・調整等',
     receipt_id: 'receipt-001',
     status: null,
@@ -798,10 +798,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['INVOICE', 'MEMO_DETECTED', 'NEED_CONSULT'],  // 旧soudan → 相談が必要
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 11000, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 11000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 11000, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 11000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -824,18 +824,18 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j028',
     display_order: 28,
-    transaction_date: '2025-02-08',
+    transaction_date: '2025-02-08', date_field_present: true,
     description: '現金領収遅れせれ仮払い',
     receipt_id: 'receipt-001',
     status: null,
     is_read: false,
     deleted_at: null,
-    labels: ['RECEIPT', 'MISSING_FIELD', 'MEMO_DETECTED', 'NEED_DOCUMENT'],  // 旧kakunin → 資料が必要
+    labels: ['RECEIPT', 'DATE_UNKNOWN', 'MEMO_DETECTED', 'NEED_DOCUMENT'],  // 旧kakunin → 資料が必要
     debit_entries: [
-      { account: '旅費交通費', sub_account: null, amount: 5000, tax_category_id: '課税仕入 10%' }
+      { account: '旅費交通費', account_field_present: true, sub_account: null, amount: 5000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 5000, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 5000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -857,7 +857,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j029',
     display_order: 29,
-    transaction_date: '2025-02-09',
+    transaction_date: '2025-02-09', date_field_present: true,
     description: '入力ミス例',
     receipt_id: 'receipt-001',
     status: null,
@@ -865,10 +865,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'DEBIT_CREDIT_MISMATCH'],
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 5000, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 5000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 4999, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 4999, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -885,18 +885,18 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j030',
     display_order: 30,
-    transaction_date: '2025-02-10',
+    transaction_date: '2025-02-10', date_field_present: true,
     description: '計算誤差例',
     receipt_id: 'receipt-001',
     status: null,
     is_read: false,
     deleted_at: null,
-    labels: ['INVOICE', 'TAX_CALCULATION_ERROR'],
+    labels: ['INVOICE', 'ACCOUNT_UNKNOWN'],
     debit_entries: [
-      { account: '消耗品費', sub_account: null, amount: 10000, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_field_present: true, sub_account: null, amount: 10000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 10001, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 10001, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -917,7 +917,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j031',
     display_order: 31,
-    transaction_date: '2025-02-11',
+    transaction_date: '2025-02-11', date_field_present: true,
     description: 'タクシー代（経費精算）',
     receipt_id: 'receipt-001',
     status: null,
@@ -925,11 +925,11 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '旅費交通費', sub_account: null, amount: 5000, tax_category_id: '課税仕入 10%' }
+      { account: '旅費交通費', account_field_present: true, sub_account: null, amount: 5000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: null, amount: 3000, tax_category_id: '対象外' },
-      { account: '未払金', sub_account: 'クレジットカード', amount: 2000, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: null, amount: 3000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '未払金', account_field_present: true, sub_account: 'クレジットカード', amount: 2000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: 'r021',
     rule_confidence: 0.88,
@@ -946,7 +946,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j032',
     display_order: 32,
-    transaction_date: '2025-02-12',
+    transaction_date: '2025-02-12', date_field_present: true,
     description: '出張費用（交通費+宿泊費）',
     receipt_id: 'receipt-001',
     status: null,
@@ -954,11 +954,11 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['CREDIT_CARD', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '旅費交通費', sub_account: '交通費', amount: 8000, tax_category_id: '課税仕入 10%' },
-      { account: '旅費交通費', sub_account: '宿泊費', amount: 12000, tax_category_id: '課税仕入 10%' }
+      { account: '旅費交通費', account_field_present: true, sub_account: '交通費', amount: 8000, amount_field_present: true, tax_category_id: '課税仕入 10%' },
+      { account: '旅費交通費', account_field_present: true, sub_account: '宿泊費', amount: 12000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '未払金', sub_account: 'クレジットカード', amount: 20000, tax_category_id: '対象外' }
+      { account: '未払金', account_field_present: true, sub_account: 'クレジットカード', amount: 20000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -975,7 +975,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j033',
     display_order: 33,
-    transaction_date: '2025-02-13',
+    transaction_date: '2025-02-13', date_field_present: true,
     description: '給与支払（山田太郎）',
     receipt_id: 'receipt-001',
     status: null,
@@ -983,12 +983,12 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['BANK_STATEMENT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '給料手当', sub_account: null, amount: 300000, tax_category_id: '対象外' }
+      { account: '給料手当', account_field_present: true, sub_account: null, amount: 300000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     credit_entries: [
-      { account: '普通預金', sub_account: '三菱UFJ', amount: 250000, tax_category_id: '対象外' },
-      { account: '預り金', sub_account: '社会保険料', amount: 30000, tax_category_id: '対象外' },
-      { account: '預り金', sub_account: '源泉徴収税', amount: 20000, tax_category_id: '対象外' }
+      { account: '普通預金', account_field_present: true, sub_account: '三菱UFJ', amount: 250000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '預り金', account_field_present: true, sub_account: '社会保険料', amount: 30000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '預り金', account_field_present: true, sub_account: '源泉徴収税', amount: 20000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -1005,7 +1005,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j034',
     display_order: 34,
-    transaction_date: '2025-02-14',
+    transaction_date: '2025-02-14', date_field_present: true,
     description: '経費精算（明細10項目）',
     receipt_id: 'receipt-001',
     status: null,
@@ -1013,19 +1013,19 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '経費精算', sub_account: null, amount: 55000, tax_category_id: '課税仕入 10%' }
+      { account: '経費精算', account_field_present: true, sub_account: null, amount: 55000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', sub_account: '項目1', amount: 5000, tax_category_id: '対象外' },
-      { account: '現金', sub_account: '項目2', amount: 5000, tax_category_id: '対象外' },
-      { account: '現金', sub_account: '項目3', amount: 5000, tax_category_id: '対象外' },
-      { account: '現金', sub_account: '項目4', amount: 5000, tax_category_id: '対象外' },
-      { account: '現金', sub_account: '項目5', amount: 5000, tax_category_id: '対象外' },
-      { account: '現金', sub_account: '項目6', amount: 5000, tax_category_id: '対象外' },
-      { account: '現金', sub_account: '項目7', amount: 5000, tax_category_id: '対象外' },
-      { account: '現金', sub_account: '項目8', amount: 5000, tax_category_id: '対象外' },
-      { account: '現金', sub_account: '項目9', amount: 5000, tax_category_id: '対象外' },
-      { account: '現金', sub_account: '項目10', amount: 5000, tax_category_id: '対象外' }
+      { account: '現金', account_field_present: true, sub_account: '項目1', amount: 5000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '現金', account_field_present: true, sub_account: '項目2', amount: 5000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '現金', account_field_present: true, sub_account: '項目3', amount: 5000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '現金', account_field_present: true, sub_account: '項目4', amount: 5000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '現金', account_field_present: true, sub_account: '項目5', amount: 5000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '現金', account_field_present: true, sub_account: '項目6', amount: 5000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '現金', account_field_present: true, sub_account: '項目7', amount: 5000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '現金', account_field_present: true, sub_account: '項目8', amount: 5000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '現金', account_field_present: true, sub_account: '項目9', amount: 5000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '現金', account_field_present: true, sub_account: '項目10', amount: 5000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -1042,7 +1042,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'j035',
     display_order: 35,
-    transaction_date: '2025-02-15',
+    transaction_date: '2025-02-15', date_field_present: true,
     description: '決算仕訳（費用振替）',
     receipt_id: 'receipt-001',
     status: null,
@@ -1050,14 +1050,14 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['INVOICE', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '売上原価', sub_account: '材料費', amount: 100000, tax_category_id: '課税仕入 10%' },
-      { account: '売上原価', sub_account: '労務費', amount: 150000, tax_category_id: '対象外' },
-      { account: '売上原価', sub_account: '経費', amount: 50000, tax_category_id: '課税仕入 10%' }
+      { account: '売上原価', account_field_present: true, sub_account: '材料費', amount: 100000, amount_field_present: true, tax_category_id: '課税仕入 10%' },
+      { account: '売上原価', account_field_present: true, sub_account: '労務費', amount: 150000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '売上原価', account_field_present: true, sub_account: '経費', amount: 50000, amount_field_present: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '仕掛品', sub_account: '材料費', amount: 100000, tax_category_id: '対象外' },
-      { account: '仕掛品', sub_account: '労務費', amount: 150000, tax_category_id: '対象外' },
-      { account: '仕掛品', sub_account: '経費', amount: 50000, tax_category_id: '対象外' }
+      { account: '仕掛品', account_field_present: true, sub_account: '材料費', amount: 100000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '仕掛品', account_field_present: true, sub_account: '労務費', amount: 150000, amount_field_present: true, tax_category_id: '対象外' },
+      { account: '仕掛品', account_field_present: true, sub_account: '経費', amount: 50000, amount_field_present: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,

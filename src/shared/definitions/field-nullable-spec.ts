@@ -1,160 +1,59 @@
 /**
- * 仕訳フィールドのnullable定義表
+ * 仕訳フィールドのnull許容定義表
  *
  * 目的: 全フィールドのnull可否・警告ラベル対応・CSV出力時の扱いを一元管理
- * 準拠: journal_v2_20260214.md v2.1、tax_category_schema.md
+ * 準拠: journal_v2_20260214.md v2.1、10_nullable_field_present_plan.md
  *
  * ルール:
- *   - null = 「存在しない」または「読み取れない」（区別しない）
+ *   - null = 「存在しない」または「読み取れない」（field_presentで区別）
+ *   - field_present（項目存在フラグ）= false + null → 項目自体が証憑にない
+ *   - field_present（項目存在フラグ）= true  + null → 項目はあるが読み取れない
  *   - 保存時バリデーションなし（止めない）
  *   - CSV出力時: nullでも出力可。ただし件数警告を表示
  *   - MFインポート: エラーは行番号付きで提示されるため、事前に候補行を警告
+ *
+ * 警告ラベル統合（2026-03-04）:
+ *   - 削除: MISSING_FIELD / UNREADABLE_FAILED / TAX_CALCULATION_ERROR
+ *   - 追加: DATE_UNKNOWN / ACCOUNT_UNKNOWN / AMOUNT_UNCLEAR
  *
  * 更新日: 2026-03-04
  */
 
 // ============================================================
-// null可否の定義
+// null × field_present × 警告ラベル 相関表
 // ============================================================
 
 /**
- * フィールドのnull可否と警告ラベルの対応表
- *
- * nullable:
- *   true  = null許可（読み取れない場合がある）
- *   false = null禁止（必ず値がある。なければシステムエラー）
- *
- * warningLabel:
- *   nullの場合に付与すべき警告ラベル
- *
- * csvRequired:
- *   MF CSVインポートで必須かどうか
- *   true = MF側でエラーになる可能性あり → CSV出力前に警告
- *
- * uiDisplay:
- *   UIでnullの場合の表示方法
+ * field_present（項目存在）  | 値          | 警告ラベル          | 日本語
+ * false（項目なし）          | null        | DATE_UNKNOWN等      | 日付が不明 等
+ * true（項目あり）           | null        | DATE_UNKNOWN等      | 日付が不明 等
+ * true（項目あり）           | 値あり（低） | UNREADABLE_ESTIMATED | 判読困難（AI推測値）
+ * true（項目あり）           | 値あり（高） | —                   | 正常
  */
-export interface FieldNullableSpec {
-    /** フィールド名 */
-    field: string;
-    /** 日本語名（UI表示用） */
-    displayName: string;
-    /** null許可 */
-    nullable: boolean;
-    /** nullの場合に付与する警告ラベル */
-    warningLabel: 'MISSING_FIELD' | 'UNREADABLE_FAILED' | null;
-    /** MF CSV必須項目か */
-    csvRequired: boolean;
-    /** UIでのnull表示 */
-    uiNullDisplay: string;
-    /** 備考 */
-    note: string;
-}
 
 // ============================================================
-// 仕訳ヘッダのnullable定義
+// フィールド別の警告ラベルマッピング
 // ============================================================
 
-export const JOURNAL_HEADER_NULLABLE: FieldNullableSpec[] = [
-    {
-        field: 'id',
-        displayName: 'ID',
-        nullable: false,
-        warningLabel: null,
-        csvRequired: false,
-        uiNullDisplay: '-',
-        note: 'システム生成UUID。必ず存在する',
-    },
-    {
-        field: 'transaction_date',
-        displayName: '取引日',
-        nullable: true,
-        warningLabel: 'MISSING_FIELD',
-        csvRequired: true,
-        uiNullDisplay: '-',
-        note: '証憑から読み取れない場合null。MF CSVでは必須のためnullならCSV出力前警告',
-    },
-    {
-        field: 'description',
-        displayName: '摘要',
-        nullable: true,
-        warningLabel: 'UNREADABLE_FAILED',
-        csvRequired: true,
-        uiNullDisplay: '-',
-        note: 'AIが摘要を生成できない場合null。MF CSVでは空欄で通る可能性あり',
-    },
-    {
-        field: 'receipt_id',
-        displayName: '証票',
-        nullable: true,
-        warningLabel: null,
-        csvRequired: false,
-        uiNullDisplay: '-',
-        note: '証票なし仕訳は正常（手入力仕訳等）',
-    },
-    {
-        field: 'memo',
-        displayName: 'メモ',
-        nullable: true,
-        warningLabel: null,
-        csvRequired: false,
-        uiNullDisplay: '-',
-        note: 'メモなしは正常',
-    },
-];
+/** フィールドがnullの場合に付与するラベル */
+export const FIELD_NULL_WARNING_LABEL = {
+    transaction_date: 'DATE_UNKNOWN',    // 日付が不明
+    account: 'ACCOUNT_UNKNOWN', // 勘定科目が不明
+    amount: 'AMOUNT_UNCLEAR',  // 内訳が不明瞭な金額あり
+} as const;
 
 // ============================================================
-// 仕訳明細行（JournalEntryLine）のnullable定義
+// CSV出力前チェック: MF必須フィールド
 // ============================================================
 
-export const JOURNAL_ENTRY_NULLABLE: FieldNullableSpec[] = [
-    {
-        field: 'account',
-        displayName: '勘定科目',
-        nullable: true,
-        warningLabel: 'MISSING_FIELD',
-        csvRequired: true,
-        uiNullDisplay: '-',
-        note: 'AIが勘定科目を判定できない場合null。MF CSVでは必須',
-    },
-    {
-        field: 'sub_account',
-        displayName: '補助科目',
-        nullable: true,
-        warningLabel: null,
-        csvRequired: false,
-        uiNullDisplay: '-',
-        note: '補助科目なしは正常',
-    },
-    {
-        field: 'amount',
-        displayName: '金額',
-        nullable: true,
-        warningLabel: 'UNREADABLE_FAILED',
-        csvRequired: true,
-        uiNullDisplay: '-',
-        note: '金額が読み取れない場合null。MF CSVでは必須のため警告',
-    },
-    {
-        field: 'tax_category_id',
-        displayName: '税区分',
-        nullable: true,
-        warningLabel: null,
-        csvRequired: true,
-        uiNullDisplay: '-',
-        note: 'AIが税区分を判定できない場合null。既にnullable。MF CSVでは空欄で通る場合あり',
-    },
-];
-
-// ============================================================
-// CSV出力前チェック: MF必須フィールドのnullチェック
-// ============================================================
-
-/** CSV出力前にnullチェックすべきフィールド一覧 */
-export const CSV_REQUIRED_FIELDS = [
-    ...JOURNAL_HEADER_NULLABLE.filter(f => f.csvRequired),
-    ...JOURNAL_ENTRY_NULLABLE.filter(f => f.csvRequired),
-];
+/** MF CSV必須フィールド一覧（nullならCSV出力前に警告） */
+export const MF_CSV_REQUIRED_FIELDS = [
+    { field: 'transaction_date', displayName: '日付' },
+    { field: 'account', displayName: '勘定科目' },
+    { field: 'amount', displayName: '金額' },
+    { field: 'description', displayName: '摘要' },
+    { field: 'tax_category_id', displayName: '税区分' },
+] as const;
 
 // ============================================================
 // UI表示: null時の統一表示
@@ -162,13 +61,16 @@ export const CSV_REQUIRED_FIELDS = [
 
 /**
  * nullフィールドのUI表示
- * 全項目共通で「-」を表示する
+ * - 日付・勘定科目: 「未確定」
+ * - 金額: 空白（存在しない場合）/ 類推値（存在する場合）
+ * - その他: 「-」
  *
  * ソート時のnull扱い:
  *   昇順: nullは末尾
  *   降順: nullは先頭
  */
-export const NULL_DISPLAY = '-';
+export const NULL_DISPLAY_UNKNOWN = '未確定';
+export const NULL_DISPLAY_DASH = '-';
 
 /**
  * ソート時のnull比較関数
@@ -184,7 +86,7 @@ export function compareWithNull<T>(
     const bIsNull = b === null || b === undefined;
 
     if (aIsNull && bIsNull) return 0;
-    if (aIsNull) return direction === 'asc' ? 1 : -1; // null末尾(asc) or 先頭(desc)
+    if (aIsNull) return direction === 'asc' ? 1 : -1;
     if (bIsNull) return direction === 'asc' ? -1 : 1;
 
     return compareFn(a, b);
