@@ -1,0 +1,187 @@
+/**
+ * 勘定科目マスタデータ
+ *
+ * 根拠:
+ *   個人向け: MFクラウド確定申告 CSVエクスポート (indiv_items_download.csv) — ✅確認済み
+ *   法人向け: 手入力（MF法人アカウントなし） — ⚠️ 未確認
+ *   不動産所得: MFクラウド確定申告 CSVエクスポート — ✅確認済み
+ *
+ * 設計:
+ *   target: 'corp' = 法人のみ, 'individual' = 個人のみ, 'both' = 共通
+ *   category: BS/PL上の分類
+ *   aiSelectable: AI自動判定で選択可能な科目（STREAMEDの科目コード列に相当）
+ *   defaultTaxCategoryId: デフォルト税区分の概念ID
+ */
+
+import type { Account } from '@/shared/types/account'
+
+export const ACCOUNT_MASTER: readonly Account[] = [
+    // ======================================================
+    // 共通（法人・個人）
+    // ======================================================
+
+    // --- 資産 ---
+    { id: 'CASH', name: '現金', target: 'both', category: '現金及び預金', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 1 },
+    { id: 'ORDINARY_DEPOSIT', name: '普通預金', target: 'both', category: '現金及び預金', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 2 },
+    { id: 'CHECKING_DEPOSIT', name: '当座預金', target: 'both', category: '現金及び預金', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 3 },
+    { id: 'TIME_DEPOSIT', name: '定期預金', target: 'both', category: '現金及び預金', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 4 },
+    { id: 'NOTES_RECEIVABLE', name: '受取手形', target: 'both', category: '売上債権', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 5 },
+    { id: 'ACCOUNTS_RECEIVABLE', name: '売掛金', target: 'both', category: '売上債権', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 6 },
+    { id: 'SECURITIES', name: '有価証券', target: 'both', category: '有価証券', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 7 },
+    { id: 'ADVANCE_PAYMENTS', name: '前払金', target: 'both', category: 'その他流動資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 8 },
+    { id: 'TEMPORARY_PAYMENTS', name: '仮払金', target: 'both', category: 'その他流動資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 9 },
+    { id: 'BUILDINGS', name: '建物', target: 'both', category: '有形固定資産', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 10 },
+    { id: 'STRUCTURES', name: '構築物', target: 'both', category: '有形固定資産', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 11 },
+    { id: 'VEHICLES', name: '車両運搬具', target: 'both', category: '有形固定資産', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 12 },
+    { id: 'LAND', name: '土地', target: 'both', category: '有形固定資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 13 },
+    { id: 'TELEPHONE_RIGHTS', name: '電話加入権', target: 'both', category: '無形固定資産', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 14 },
+    { id: 'SECURITY_DEPOSITS', name: '敷金', target: 'both', category: '投資その他', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 15 },
+    { id: 'GUARANTEE_DEPOSITS', name: '差入保証金', target: 'both', category: '投資その他', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 16 },
+
+    // --- 負債 ---
+    { id: 'NOTES_PAYABLE', name: '支払手形', target: 'both', category: '仕入債務', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 20 },
+    { id: 'ACCOUNTS_PAYABLE', name: '買掛金', target: 'both', category: '仕入債務', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 21 },
+    { id: 'ACCRUED_EXPENSES', name: '未払金', target: 'both', category: 'その他流動負債', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 22 },
+    { id: 'DEPOSITS_RECEIVED', name: '預り金', target: 'both', category: 'その他流動負債', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 23 },
+    { id: 'ADVANCE_RECEIVED', name: '前受金', target: 'both', category: 'その他流動負債', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 24 },
+    { id: 'TEMPORARY_RECEIVED', name: '仮受金', target: 'both', category: 'その他流動負債', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 25 },
+    { id: 'LONG_TERM_BORROWINGS', name: '長期借入金', target: 'both', category: '固定負債', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 26 },
+
+    // --- 売上 ---
+    { id: 'SALES', name: '売上高', target: 'both', category: '売上', defaultTaxCategoryId: 'SALES_TAXABLE_10', aiSelectable: true, sortOrder: 30 },
+
+    // --- 経費（共通） ---
+    { id: 'WELFARE', name: '福利厚生費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 40 },
+    { id: 'LEGAL_WELFARE', name: '法定福利費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_NON_TAXABLE', aiSelectable: true, sortOrder: 41 },
+    { id: 'COMMUNICATION', name: '通信費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 42 },
+    { id: 'PACKING_SHIPPING', name: '荷造運賃', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 43 },
+    { id: 'UTILITIES', name: '水道光熱費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 44 },
+    { id: 'TRAVEL', name: '旅費交通費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 45 },
+    { id: 'ADVERTISING', name: '広告宣伝費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 46 },
+    { id: 'ENTERTAINMENT', name: '接待交際費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 47 },
+    { id: 'MEETING', name: '会議費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 48 },
+    { id: 'REPAIRS', name: '修繕費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 49 },
+    { id: 'RENT', name: '地代家賃', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 50 },
+    { id: 'TAXES_DUES', name: '租税公課', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_NON_TAXABLE', aiSelectable: true, sortOrder: 51 },
+    { id: 'FEES', name: '支払手数料', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 52 },
+    { id: 'DEPRECIATION', name: '減価償却費', target: 'both', category: '経費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 53 },
+    { id: 'MISCELLANEOUS', name: '雑費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 54 },
+    { id: 'VEHICLE_COSTS', name: '車両費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 55 },
+    { id: 'LEASE', name: 'リース料', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 56 },
+    { id: 'BOOKS_PERIODICALS', name: '新聞図書費', target: 'both', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 57 },
+    { id: 'DEFERRED_AMORTIZATION', name: '繰延資産償却', target: 'both', category: '経費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 58 },
+
+    // ======================================================
+    // 個人向け（MFクラウド確定申告） — ✅CSV確認済み
+    // ======================================================
+    { id: 'OTHER_DEPOSIT', name: 'その他の預金', target: 'individual', category: '現金及び預金', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 100 },
+    { id: 'MERCHANDISE', name: '商品', target: 'individual', category: '棚卸資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 101 },
+    { id: 'STORED_GOODS', name: '貯蔵品', target: 'individual', category: '棚卸資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 102 },
+    { id: 'MATERIALS', name: '材料', target: 'individual', category: '棚卸資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 103 },
+    { id: 'WORK_IN_PROGRESS', name: '仕掛品', target: 'individual', category: '棚卸資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 104 },
+    { id: 'PRODUCTS', name: '製品', target: 'individual', category: '棚卸資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 105 },
+    { id: 'LOANS', name: '貸付金', target: 'individual', category: 'その他流動資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 106 },
+    { id: 'ADVANCE_PAID', name: '立替金', target: 'individual', category: 'その他流動資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 107 },
+    { id: 'ACCRUED_REVENUE', name: '未収金', target: 'individual', category: 'その他流動資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 108 },
+    { id: 'FIXTURES', name: '工具器具備品', target: 'individual', category: '有形固定資産', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 109 },
+    { id: 'MACHINERY', name: '機械装置', target: 'individual', category: '有形固定資産', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 110 },
+    { id: 'STARTUP_COSTS', name: '開業費', target: 'individual', category: '繰延資産', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 111 },
+    { id: 'OWNER_DRAWING', name: '事業主貸', target: 'individual', category: '事業主貸', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 112 },
+    { id: 'OWNER_INVESTMENT', name: '事業主借', target: 'individual', category: '事業主借', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 113 },
+    { id: 'OWNER_CAPITAL', name: '元入金', target: 'individual', category: '資本の部', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 114 },
+    { id: 'BORROWINGS', name: '借入金', target: 'individual', category: 'その他流動負債', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 115 },
+    { id: 'ALLOWANCE_DOUBTFUL', name: '貸倒引当金', target: 'individual', category: 'その他流動負債', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 116 },
+    { id: 'UNCONFIRMED', name: '未確定勘定', target: 'individual', category: '諸口', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 117 },
+
+    // --- PL（個人） ---
+    { id: 'SALES_RETURNS', name: '売上値引・返品', target: 'individual', category: '売上', defaultTaxCategoryId: 'SALES_RETURN_10', aiSelectable: false, sortOrder: 120 },
+    { id: 'PERSONAL_CONSUMPTION', name: '家事消費等', target: 'individual', category: '売上', defaultTaxCategoryId: 'SALES_TAXABLE_10', aiSelectable: false, sortOrder: 121 },
+    { id: 'MISC_INCOME', name: '雑収入', target: 'individual', category: '売上', defaultTaxCategoryId: 'SALES_TAXABLE_10', aiSelectable: true, sortOrder: 122 },
+    { id: 'BEGINNING_INVENTORY', name: '期首商品棚卸高', target: 'individual', category: '売上原価', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 123 },
+    { id: 'PURCHASES', name: '仕入高', target: 'individual', category: '売上原価', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 124 },
+    { id: 'PURCHASE_RETURNS', name: '仕入値引・返品', target: 'individual', category: '売上原価', defaultTaxCategoryId: 'PURCHASE_RETURN_10', aiSelectable: false, sortOrder: 125 },
+    { id: 'ENDING_INVENTORY', name: '期末商品棚卸高', target: 'individual', category: '売上原価', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 126 },
+    { id: 'INSURANCE', name: '損害保険料', target: 'individual', category: '経費', defaultTaxCategoryId: 'PURCHASE_NON_TAXABLE', aiSelectable: true, sortOrder: 127 },
+    { id: 'SUPPLIES', name: '消耗品費', target: 'individual', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 128 },
+    { id: 'WAGES', name: '給料賃金', target: 'individual', category: '経費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 129 },
+    { id: 'RETIREMENT_PAY', name: '退職給与', target: 'individual', category: '経費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 130 },
+    { id: 'OUTSOURCING', name: '外注工賃', target: 'individual', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 131 },
+    { id: 'INTEREST_DISCOUNT', name: '利子割引料', target: 'individual', category: '経費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 132 },
+    { id: 'BAD_DEBT_LOSS', name: '貸倒金(損失)', target: 'individual', category: '経費', defaultTaxCategoryId: 'SALES_BAD_DEBT_10', aiSelectable: false, sortOrder: 133 },
+    { id: 'TRAINING', name: '研修採用費', target: 'individual', category: '経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 134 },
+    { id: 'BAD_DEBT_REVERSAL', name: '貸倒引当金戻入', target: 'individual', category: '繰戻額等', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 135 },
+    { id: 'FAMILY_EMPLOYEE_PAY', name: '専従者給与', target: 'individual', category: '繰入額等', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 136 },
+    { id: 'BAD_DEBT_PROVISION', name: '貸倒引当金繰入', target: 'individual', category: '繰入額等', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 137 },
+
+    // ======================================================
+    // 個人向け・不動産所得 — ✅CSV確認済み
+    // ======================================================
+    { id: 'RENTAL_INCOME', name: '賃貸料(不動産)', target: 'individual', category: '不動産収入', defaultTaxCategoryId: 'SALES_TAXABLE_10', aiSelectable: true, sortOrder: 200 },
+    { id: 'RENTAL_KEY_MONEY', name: '礼金・権利金更新料(不動産)', target: 'individual', category: '不動産収入', defaultTaxCategoryId: 'SALES_TAXABLE_10', aiSelectable: false, sortOrder: 201 },
+    { id: 'RENTAL_TRANSFER_FEE', name: '名義書換料その他(不動産)', target: 'individual', category: '不動産収入', defaultTaxCategoryId: 'SALES_TAXABLE_10', aiSelectable: false, sortOrder: 202 },
+    { id: 'RENTAL_TAXES', name: '租税公課(不動産)', target: 'individual', category: '不動産経費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 203 },
+    { id: 'RENTAL_INSURANCE', name: '損害保険料(不動産)', target: 'individual', category: '不動産経費', defaultTaxCategoryId: 'PURCHASE_NON_TAXABLE', aiSelectable: false, sortOrder: 204 },
+    { id: 'RENTAL_REPAIRS', name: '修繕費(不動産)', target: 'individual', category: '不動産経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 205 },
+    { id: 'RENTAL_DEPRECIATION', name: '減価償却費(不動産)', target: 'individual', category: '不動産経費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 206 },
+    { id: 'RENTAL_INTEREST', name: '借入金利子(不動産)', target: 'individual', category: '不動産経費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 207 },
+    { id: 'RENTAL_RENT', name: '地代家賃(不動産)', target: 'individual', category: '不動産経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 208 },
+    { id: 'RENTAL_WAGES', name: '給料賃金(不動産)', target: 'individual', category: '不動産経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 209 },
+    { id: 'RENTAL_OUTSOURCING', name: '外注管理費(不動産)', target: 'individual', category: '不動産経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 210 },
+    { id: 'RENTAL_TRAVEL', name: '旅費交通費(不動産)', target: 'individual', category: '不動産経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 211 },
+    { id: 'RENTAL_BOOKS', name: '新聞図書費(不動産)', target: 'individual', category: '不動産経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 212 },
+    { id: 'RENTAL_OTHER', name: 'その他の経費(不動産)', target: 'individual', category: '不動産経費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 213 },
+    { id: 'RENTAL_FAMILY_PAY', name: '専従者給与(不動産)', target: 'individual', category: '不動産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 214 },
+
+    // ======================================================
+    // 法人向け（MFクラウド会計）— ⚠️ 未確認
+    // ======================================================
+
+    // --- 法人固有 BS ---
+    { id: 'OTHER_DEPOSIT_CORP', name: 'その他の預金', target: 'corp', category: '現金及び預金', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 300 },
+    { id: 'MERCHANDISE_CORP', name: '商品', target: 'corp', category: '棚卸資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 301 },
+    { id: 'PRODUCTS_CORP', name: '製品', target: 'corp', category: '棚卸資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 302 },
+    { id: 'MATERIALS_CORP', name: '材料', target: 'corp', category: '棚卸資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 303 },
+    { id: 'WORK_IN_PROGRESS_CORP', name: '仕掛品', target: 'corp', category: '棚卸資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 304 },
+    { id: 'STORED_GOODS_CORP', name: '貯蔵品', target: 'corp', category: '棚卸資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 305 },
+    { id: 'PREPAID_EXPENSES', name: '前払費用', target: 'corp', category: 'その他流動資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 306 },
+    { id: 'SHORT_TERM_LOANS', name: '短期貸付金', target: 'corp', category: 'その他流動資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 307 },
+    { id: 'ACCRUED_REVENUE_CORP', name: '未収入金', target: 'corp', category: 'その他流動資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 308 },
+    { id: 'ADVANCE_PAID_CORP', name: '立替金', target: 'corp', category: 'その他流動資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 309 },
+    { id: 'ALLOWANCE_DOUBTFUL_CORP', name: '貸倒引当金', target: 'corp', category: 'その他流動資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 310 },
+    { id: 'BUILDING_EQUIPMENT_CORP', name: '建物附属設備', target: 'corp', category: '有形固定資産', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 311 },
+    { id: 'MACHINERY_CORP', name: '機械装置', target: 'corp', category: '有形固定資産', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 312 },
+    { id: 'FIXTURES_CORP', name: '器具備品', target: 'corp', category: '有形固定資産', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 313 },
+    { id: 'CONSTRUCTION_IN_PROGRESS', name: '建設仮勘定', target: 'corp', category: '有形固定資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 314 },
+    { id: 'SOFTWARE', name: 'ソフトウェア', target: 'corp', category: '無形固定資産', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 315 },
+    { id: 'INVESTMENT_SECURITIES', name: '投資有価証券', target: 'corp', category: '投資その他', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 316 },
+    { id: 'LONG_TERM_LOANS', name: '長期貸付金', target: 'corp', category: '投資その他', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 317 },
+    { id: 'LONG_TERM_PREPAID', name: '長期前払費用', target: 'corp', category: '投資その他', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 318 },
+    { id: 'SHORT_TERM_BORROWINGS', name: '短期借入金', target: 'corp', category: 'その他流動負債', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 319 },
+    { id: 'ACCRUED_LIABILITIES', name: '未払費用', target: 'corp', category: 'その他流動負債', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 320 },
+    { id: 'OFFICER_BORROWINGS', name: '役員借入金', target: 'corp', category: '固定負債', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 321 },
+    { id: 'RETIREMENT_ALLOWANCE', name: '退職給付引当金', target: 'corp', category: '固定負債', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 322 },
+    { id: 'CAPITAL', name: '資本金', target: 'corp', category: '純資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 323 },
+    { id: 'CAPITAL_RESERVE', name: '資本準備金', target: 'corp', category: '純資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 324 },
+    { id: 'RETAINED_EARNINGS', name: '繰越利益剰余金', target: 'corp', category: '純資産', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 325 },
+
+    // --- 法人固有 PL ---
+    { id: 'SALES_RETURNS_CORP', name: '売上値引・返品', target: 'corp', category: '売上', defaultTaxCategoryId: 'SALES_RETURN_10', aiSelectable: false, sortOrder: 330 },
+    { id: 'OUTSOURCING_CORP', name: '外注費', target: 'corp', category: '売上原価', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 331 },
+    { id: 'PURCHASES_CORP', name: '仕入高', target: 'corp', category: '売上原価', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 332 },
+    { id: 'OFFICER_COMPENSATION', name: '役員報酬', target: 'corp', category: '販管費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 333 },
+    { id: 'SALARIES', name: '給料手当', target: 'corp', category: '販管費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 334 },
+    { id: 'BONUSES', name: '賞与', target: 'corp', category: '販管費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 335 },
+    { id: 'COMMUTING', name: '通勤費', target: 'corp', category: '販管費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 336 },
+    { id: 'SUPPLIES_CORP', name: '消耗品費', target: 'corp', category: '販管費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 337 },
+    { id: 'INSURANCE_CORP', name: '保険料', target: 'corp', category: '販管費', defaultTaxCategoryId: 'PURCHASE_NON_TAXABLE', aiSelectable: true, sortOrder: 338 },
+    { id: 'LEASE_CORP', name: '賃借料', target: 'corp', category: '販管費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 339 },
+    { id: 'MEMBERSHIP_FEES', name: '諸会費', target: 'corp', category: '販管費', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: true, sortOrder: 340 },
+    { id: 'DONATIONS', name: '寄付金', target: 'corp', category: '販管費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 341 },
+    { id: 'BAD_DEBT_PROVISION_CORP', name: '貸倒引当金繰入額', target: 'corp', category: '販管費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 342 },
+    { id: 'BAD_DEBT_LOSS_CORP', name: '貸倒損失', target: 'corp', category: '販管費', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 343 },
+    { id: 'INTEREST_INCOME', name: '受取利息', target: 'corp', category: '営業外収益', defaultTaxCategoryId: 'SALES_NON_TAXABLE', aiSelectable: false, sortOrder: 344 },
+    { id: 'DIVIDEND_INCOME', name: '受取配当金', target: 'corp', category: '営業外収益', defaultTaxCategoryId: 'COMMON_EXEMPT', aiSelectable: false, sortOrder: 345 },
+    { id: 'MISC_INCOME_CORP', name: '雑収入', target: 'corp', category: '営業外収益', defaultTaxCategoryId: 'SALES_TAXABLE_10', aiSelectable: true, sortOrder: 346 },
+    { id: 'INTEREST_EXPENSE', name: '支払利息', target: 'corp', category: '営業外費用', defaultTaxCategoryId: 'PURCHASE_NON_TAXABLE', aiSelectable: false, sortOrder: 347 },
+    { id: 'MISC_LOSS', name: '雑損失', target: 'corp', category: '営業外費用', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10', aiSelectable: false, sortOrder: 348 },
+] as const

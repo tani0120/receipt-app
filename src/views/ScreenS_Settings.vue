@@ -130,6 +130,13 @@
                   <span>個人</span>
                 </label>
               </div>
+              <!-- 不動産所得（個人の場合のみ表示） -->
+              <div v-if="form.entityType === 'individual'" style="margin-top: 10px;">
+                <label class="panel-checkbox-label">
+                  <input type="checkbox" v-model="form.hasRealEstate">
+                  <span>不動産所得あり</span>
+                </label>
+              </div>
             </div>
 
             <!-- コード -->
@@ -192,6 +199,15 @@
               </div>
             </div>
 
+            <!-- インボイス登録事業者 -->
+            <div class="panel-field">
+              <label class="panel-checkbox-label">
+                <input type="checkbox" v-model="form.invoiceRegistered">
+                <span>インボイス登録事業者</span>
+                <i class="fa-solid fa-circle-question panel-help-icon" title="適格請求書発行事業者として登録済みの場合はチェックしてください"></i>
+              </label>
+            </div>
+
             <!-- 課税方式 -->
             <div class="panel-field">
               <label class="panel-label">課税方式</label>
@@ -241,8 +257,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useSettingsStore } from '@/stores/settingsStore';
+
+const settingsStore = useSettingsStore();
 
 const router = useRouter();
 
@@ -272,18 +291,29 @@ const businessCategoryOptions = [
 ];
 
 const form = reactive({
-  entityType: 'corporate',
+  entityType: settingsStore.entityType as string,
   code: '',
   clientName: '',
   fiscalMonth: 12,
   fiscalDay: '末日' as string | number,
   industry: '',
-  taxMethod: 'general',
+  taxMethod: settingsStore.taxMethod as string,
+  invoiceRegistered: settingsStore.invoiceRegistered,
+  hasRealEstate: settingsStore.hasRealEstate,
   businessCategories: [] as number[],
   staff: '',
   taxExempt: false,
   notifyCompletion: true,
 });
+
+// フォーム変更時にストアへ同期
+watch(() => form.entityType, (v) => {
+  settingsStore.entityType = v as 'corporate' | 'individual';
+  if (v === 'corporate') { form.hasRealEstate = false; settingsStore.hasRealEstate = false; }
+});
+watch(() => form.taxMethod, (v) => { settingsStore.taxMethod = v as 'general' | 'simplified' | 'exempt'; });
+watch(() => form.invoiceRegistered, (v) => { settingsStore.invoiceRegistered = v; });
+watch(() => form.hasRealEstate, (v) => { settingsStore.hasRealEstate = v; });
 
 const openPanel = (panel: string) => {
   activePanel.value = panel;

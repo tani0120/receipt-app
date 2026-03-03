@@ -167,9 +167,20 @@ export type JournalLabel =
 // ============================================================
 
 export interface JournalEntryLine {
-    account: string;
+    /**
+     * 勘定科目
+     * nullable: AIが勘定科目を判定できない場合null
+     * CSV必須: MFインポートで必須。nullならCSV出力前に警告
+     */
+    account: string | null;
+    /** 補助科目（なしは正常） */
     sub_account: string | null;
-    amount: Yen;
+    /**
+     * 金額
+     * nullable: 証憑から金額が読み取れない場合null
+     * CSV必須: MFインポートで必須。nullならCSV出力前に警告
+     */
+    amount: Yen | null;
     /** 税区分の概念ID（例: PURCHASE_TAXABLE_10）。表示時はマスタからnameを取得 */
     tax_category_id: string | null;
 }

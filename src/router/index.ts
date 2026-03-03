@@ -132,6 +132,18 @@ export const routes: RouteRecordRaw[] = [
     name: 'JournalListMock',
     component: () => import('@/mocks/components/JournalListLevel3Mock.vue')
   },
+  {
+    path: '/mock/settings-accounts',
+    name: 'SettingsAccountsMock',
+    component: () => import('@/views/ScreenS_AccountSettings.vue'),
+    props: { defaultTab: 'accounts' }
+  },
+  {
+    path: '/mock/settings-tax',
+    name: 'SettingsTaxMock',
+    component: () => import('@/views/ScreenS_AccountSettings.vue'),
+    props: { defaultTab: 'tax' }
+  },
 ]
 
 const router = createRouter({
@@ -154,6 +166,7 @@ const authReadyPromise = new Promise<void>((resolve) => {
 });
 
 // 認証ガード（全環境で有効）
+
 router.beforeEach(async (to, from, next) => {
   // ログインページへのアクセスは常に許可
   if (to.path === '/login') {

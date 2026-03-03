@@ -1,32 +1,90 @@
 # 税区分・勘定科目テーブル設計書
 
 > 作成日: 2026-03-02
-> 根拠: domain_type_design.md v2、streamed_design_policy.md
+> 更新日: 2026-03-03（設計決定統合: 新ID方式、effectiveFrom/To、rate保持、管理者UI、責任境界）
+> 根拠: domain_type_design.md v2、streamed_design_policy.md、ChatGPT設計議論（2026-03-03）
 
 ---
 
-## 1. tax_categories テーブル
+## 設計思想
+
+### 責任境界（確定）
+
+| 領域 | 責任 |
+|------|------|
+| システム | 選択肢制御（UI非表示で不正選択を防止） |
+| スタッフ | 顧問先単位の有効/無効制御、表示名調整 |
+| 管理者 | 税法改正時のマスタ更新、新税区分追加 |
+| MF | 最終整合性・インポート時警告 |
+
+### 基本方針
+
+- **制度保証システムではない。ミス低減システムである**
+- MFが会計の真実（Source of Truth）
+- 税率はnumberで保持（将来の検算復活用）
+- 保存時の強制バリデーションは行わない（UI選択制御のみ）
+
+### マスタ運用ルール（確定）
+
+- **新ID方式**: 税率変更時は既存IDを上書きしない。新IDを追加する
+- **イミュータブル原則**: 既存IDのrate/kind変更は禁止
+- **物理削除禁止**: `deprecated = true` で無効化
+- **管理者のみ操作可能**: 通常スタッフはマスタ編集不可
+
+---
+
+## 1. tax_categories テーブル（グローバルマスタ）
 
 | カラム | 型 | NOT NULL | デフォルト | 説明 |
 |---|---|:---:|:---:|---|
-| id | TEXT | ✅ | - | 概念ID（PK。例: `PURCHASE_TAXABLE_10`） |
+| id | TEXT | ✅ | - | 概念ID（PK。例: `PURCHASE_TAXABLE_10`）**不変** |
 | name | TEXT | ✅ | - | MF正式名称（CSV出力時にそのまま使用） |
 | short_name | TEXT | ✅ | - | 省略名（UI表示用） |
 | direction | TEXT | ✅ | - | `sales` / `purchase` / `common` |
+| rate | NUMERIC | ✅ | - | 税率（例: 10, 8, 0）。将来の検算用にnumber保持 |
 | qualified | BOOLEAN | ✅ | false | 適格判定対象 |
 | ai_selectable | BOOLEAN | ✅ | false | AI自動選択可否 |
 | active | BOOLEAN | ✅ | true | 新規利用可否 |
-| default_visible | BOOLEAN | ✅ | true | デフォルト表示 |
+| default_visible | BOOLEAN | ✅ | true | デフォルト表示（27件がtrue） |
 | display_order | INTEGER | ✅ | - | 表示順 |
+| effective_from | DATE | ✅ | - | 制度適用開始日（例: 2019-10-01） |
+| effective_to | DATE | - | NULL | 制度適用終了日（NULLなら現行有効） |
+| deprecated | BOOLEAN | ✅ | false | 非推奨（旧制度で使用終了） |
+| created_at | TIMESTAMP | ✅ | NOW() | 作成日時 |
 
 - **PK**: `id`（概念ID。不変）
 - **制約**: `direction IN ('sales', 'purchase', 'common')`
-- **削除禁止**: 物理削除しない。`active = false` で無効化
+- **削除禁止**: 物理削除しない。`deprecated = true` で無効化
 - **初期データ**: 151件（`tax-category-master.ts` と同一）
+
+### 税率変更時のフロー（新ID方式）
+
+```
+例: 標準税率 10% → 12%（仮）
+
+1. TAX_SALES_10 → deprecated = true, effective_to = '2027-03-31'
+2. TAX_SALES_12 → 新規追加, effective_from = '2027-04-01'
+3. 顧問先UIに新税区分表示
+4. 旧税区分は新規選択不可（過去仕訳表示のみ）
+```
+
+### 仕訳入力UIでの表示条件
+
+```
+deprecated = false
+AND active = true
+AND enabled = true（client_tax_settings）
+AND（伝票日がある場合のみ:
+  effective_from <= 伝票日
+  AND (effective_to IS NULL OR 伝票日 <= effective_to)
+）
+```
+
+> 伝票日がない場合は現行有効税区分のみ表示。
 
 ---
 
-## 2. accounts テーブル
+## 2. accounts テーブル（勘定科目マスタ）
 
 | カラム | 型 | NOT NULL | デフォルト | 説明 |
 |---|---|:---:|:---:|---|
@@ -42,30 +100,84 @@
 
 ---
 
-## 3. client_tax_settings テーブル（顧問先別税区分表示設定）
+## 3. client_tax_settings テーブル（顧問先別税区分設定）
 
 | カラム | 型 | NOT NULL | デフォルト | 説明 |
 |---|---|:---:|:---:|---|
 | client_id | UUID | ✅ | - | 顧問先ID |
 | tax_category_id | TEXT | ✅ | - | 税区分ID（FK → tax_categories.id） |
 | visible | BOOLEAN | ✅ | - | この顧問先で表示するか |
-| display_order | INTEGER | - | NULL | 顧問先固有の表示順（NULLなら税区分マスタの順） |
+| display_order | INTEGER | - | NULL | 顧問先固有の表示順（NULLならマスタ順） |
+| mf_name_override | TEXT | - | NULL | 名称変更時のMF向け名称 |
+| is_modified | BOOLEAN | ✅ | false | マスタから変更があるか |
 
 - **PK**: `(client_id, tax_category_id)`
 - **初期値**: 27件の `default_visible = true` の税区分を自動挿入
 
+### 名称変更時のMFインポート警告
+
+顧問先で `mf_name_override` を設定した場合:
+
+```
+UIメッセージ:
+「この名称を変更すると、MFインポート時に税区分警告が表示される可能性があります。
+対応はMFの指示に従ってください。」
+```
+
+### UI表示ルール
+
+| 状態 | 表示 |
+|------|------|
+| マスタ通り | 何も表示しない |
+| 名称変更あり (`is_modified = true`) | 🟡「名称変更あり」マーク |
+| deprecated | グレー表示（選択不可） |
+| 無効 (`visible = false`) | 非表示 |
+
 ---
 
-## 設計原則
+## 4. 管理者UI（新規設計必要）
 
-- 税区分マスタは**全顧問先共通**（151件固定）
+### 管理者の責務
+
+- 税法改正時の新税区分追加
+- 旧税区分の非推奨化（`deprecated = true`）
+- 表示名・MF正式名称の変更
+- 変更理由コメントの記録
+
+### 管理者UIの表示
+
+| 状態 | 表示 |
+|------|------|
+| 現行有効 | 通常表示 |
+| 非推奨 | バッジ付き表示 |
+| 未使用 | トグルで無効化可能 |
+
+### 変更履歴（最低限保持）
+
+```
+modified_at: TIMESTAMP
+modified_by: UUID
+change_comment: TEXT
+```
+
+> 税務系ではログ必須。
+
+---
+
+## 設計原則（確定）
+
+- 税区分マスタは**全顧問先共通**（151件＋将来追加分）
 - 顧問先ごとの表示/非表示は `client_tax_settings` で管理
-- 税率はカラムに持たない（エンジンの責務外）
-- 税区分のCSV出力は `name` をそのまま使用
+- **税率はrateカラムで保持**（将来の検算エンジン復活に備える）
+- 税区分のCSV出力は `name`（または `mf_name_override`）をそのまま使用
+- **新ID方式**: 既存IDは上書きしない。税率変更時は新ID追加
+- **管理者UIを別途設計**: 通常スタッフはマスタ編集不可
+- **effectiveFrom/To**: 制度の時間的境界として保持。UI制御のみに使用
+- **保存時バリデーションなし**: UIで物理的に選べなくすれば十分
 
 ---
 
-## 実装状況（2026-03-02時点）
+## 実装状況（2026-03-03時点）
 
 | コンポーネント | ファイル | 状態 |
 |---|---|---|
@@ -78,6 +190,10 @@
 | fixtureデータ（概念ID化） | `src/mocks/data/journal_test_fixture_30cases.ts` | ✅ 実装済み |
 | UI表示変換（概念ID→名称） | `src/mocks/components/JournalListLevel3Mock.vue` | ✅ 実装済み |
 | 設定画面（税区分タブ） | `src/views/ScreenS_AccountSettings.vue` | ✅ 実装済み |
+| 設定画面（勘定科目タブ） | `src/views/ScreenS_AccountSettings.vue` | ✅ 実装済み |
+| rate / effectiveFrom / deprecated追加 | 型定義への反映 | ⬜ 未着手 |
+| 管理者UI | 新規画面 | ⬜ 未着手 |
+| client_tax_settings UI | 顧問先設定への統合 | ✅ モック実装済み |
 | DBテーブル作成 | PostgreSQL migration | ⬜ 未着手（Phase C） |
 
 ### 概念IDフロー
@@ -91,4 +207,3 @@ UI表示       → 「課税仕入 10%」（MF正式名称）
        ↓
 CSV出力      → TaxCodeMapper.toMF() で正式名称に変換
 ```
-
