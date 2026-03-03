@@ -216,7 +216,7 @@
                           getStaffNoteEnabled(journal, noteKey) ? staffNoteConfig[noteKey].activeColor : 'text-gray-300 opacity-50',
                           'hover:scale-125 transition-transform text-[11px] cursor-pointer'
                         ]"
-                        :title="staffNoteConfig[noteKey].label"
+
                       >
                         <i :class="['fa-solid', staffNoteConfig[noteKey].icon]"></i>
                       </button>
@@ -250,21 +250,23 @@
                 <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5']">
                   <template v-for="label in journal.labels" :key="label">
                     <span v-if="labelKeyMap[label]"
-                          class="inline-flex items-center justify-center w-4 h-4 rounded text-[8px] font-bold text-white"
+                          class="inline-flex items-center justify-center w-4 h-4 rounded text-[8px] font-bold text-white cursor-default"
                           :class="labelKeyMap[label].bgClass"
-                          :title="labelKeyMap[label].label">{{ labelKeyMap[label].short }}</span>
+                          @mouseenter="showTooltip($event, labelKeyMap[label].label)"
+                          @mouseleave="hideTooltip()">{{ labelKeyMap[label].short }}</span>
                   </template>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
 
-              <!-- 警告（STREAMED風: 赤△！統一、連結ホバー） -->
+              <!-- 警告（STREAMED風: 赤△！統一、JS制御ツールチップ） -->
               <template v-else-if="col.key === 'warning'">
                 <div v-if="rowIndex === 0"
-                     :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']"
-                     :title="journal.labels.filter((l: string) => warningLabelMap[l]).map((l: string) => warningLabelMap[l]?.label).join('\n')">
+                     :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <i v-if="journal.labels.some((l: string) => warningLabelMap[l])"
-                     class="fa-solid fa-triangle-exclamation text-[10px] text-red-600"></i>
+                     class="fa-solid fa-triangle-exclamation text-[10px] text-red-600 cursor-default"
+                     @mouseenter="showWarningTooltip($event, journal.labels)"
+                     @mouseleave="hideTooltip()"></i>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -272,8 +274,12 @@
               <!-- 学習 -->
               <template v-else-if="col.key === 'rule'">
                 <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
-                  <i v-if="journal.labels.includes('RULE_APPLIED')" class="fa-solid fa-graduation-cap text-[10px] text-green-600" title="学習適用済み"></i>
-                  <i v-if="journal.labels.includes('RULE_AVAILABLE')" class="fa-solid fa-lightbulb text-[10px] text-blue-500" title="学習できます"></i>
+                  <i v-if="journal.labels.includes('RULE_APPLIED')" class="fa-solid fa-graduation-cap text-[10px] text-green-600 cursor-default"
+                     @mouseenter="showTooltip($event, '学習適用済み')"
+                     @mouseleave="hideTooltip()"></i>
+                  <i v-if="journal.labels.includes('RULE_AVAILABLE')" class="fa-solid fa-lightbulb text-[10px] text-blue-500 cursor-default"
+                     @mouseenter="showTooltip($event, '学習できます')"
+                     @mouseleave="hideTooltip()"></i>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -281,7 +287,9 @@
               <!-- クレ払い -->
               <template v-else-if="col.key === 'creditCardPayment'">
                 <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
-                  <span v-if="journal.is_credit_card_payment" class="text-[12px]" title="クレジットカード払い">💳</span>
+                  <span v-if="journal.is_credit_card_payment" class="text-[12px] cursor-default"
+                        @mouseenter="showTooltip($event, 'クレジットカード払い')"
+                        @mouseleave="hideTooltip()">💳</span>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -297,7 +305,9 @@
               <!-- 証票メモ（journal.memo truthy判定、アイコンのみ） -->
               <template v-else-if="col.key === 'memo'">
                 <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
-                  <i v-if="journal.memo" class="fa-solid fa-pencil text-[10px] text-gray-600" title="証票にメモあり（証票を確認してください）"></i>
+                  <i v-if="journal.memo" class="fa-solid fa-pencil text-[10px] text-gray-600 cursor-default"
+                     @mouseenter="showTooltip($event, '証票にメモあり')"
+                     @mouseleave="hideTooltip()"></i>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -804,6 +814,19 @@
         </div>
       </div>
     </div>
+    <!-- グローバルツールチップ（fixed、overflow親を越えて表示） -->
+    <Teleport to="body">
+      <div v-show="tooltipVisible"
+           class="fixed z-[9999] pointer-events-none transition-opacity duration-100"
+           :class="tooltipVisible ? 'opacity-100' : 'opacity-0'"
+           :style="{ left: tooltipX + 'px', top: tooltipY + 'px', transform: 'translateX(-50%)' }">
+        <div class="bg-gray-900/95 text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
+          <span v-if="tooltipText">{{ tooltipText }}</span>
+          <span v-else-if="tooltipHtml" class="flex flex-col gap-0.5" v-html="tooltipHtml"></span>
+        </div>
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full border-4 border-transparent border-b-gray-900/95"></div>
+      </div>
+    </Teleport>
 
 
 </template>
@@ -891,6 +914,40 @@ const warningLabelMap: Record<string, { level: 'error' | 'warn'; label: string; 
   UNREADABLE_ESTIMATED:  { level: 'warn', label: '判読困難（AI推測値）', color: 'text-yellow-600', weight: 4 },
   MEMO_DETECTED:         { level: 'warn', label: '手書きメモ検出', color: 'text-yellow-600', weight: 3 },
 };
+
+// ======== グローバルツールチップ（position:fixed、overflow親を越えて表示） ========
+const tooltipVisible = ref(false);
+const tooltipText = ref('');
+const tooltipHtml = ref('');
+const tooltipX = ref(0);
+const tooltipY = ref(0);
+
+function showTooltip(event: MouseEvent, text: string) {
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  tooltipText.value = text;
+  tooltipHtml.value = '';
+  tooltipX.value = rect.left + rect.width / 2;
+  tooltipY.value = rect.bottom + 6;
+  tooltipVisible.value = true;
+}
+
+function showWarningTooltip(event: MouseEvent, labels: string[]) {
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const warnings = labels.filter(l => warningLabelMap[l]);
+  tooltipHtml.value = warnings.map(l => {
+    const w = warningLabelMap[l];
+    const dotColor = w?.level === 'error' ? 'bg-red-400' : 'bg-yellow-400';
+    return `<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}"></span>${w?.label}</span>`;
+  }).join('');
+  tooltipText.value = '';
+  tooltipX.value = rect.left + rect.width / 2;
+  tooltipY.value = rect.bottom + 6;
+  tooltipVisible.value = true;
+}
+
+function hideTooltip() {
+  tooltipVisible.value = false;
+}
 
 // ポップオーバー凡例: warningLabelMapから動的生成
 const errorLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level === 'error');
