@@ -178,7 +178,7 @@ export interface JournalEntryLine {
      * false（項目なし）+ null → MISSING_FIELD（必須項目なし）
      * true（項目あり）+ null → UNREADABLE_FAILED（判読不能）
      */
-    account_field_present: boolean;
+    account_on_document: boolean;
     /** 補助科目（なしは正常） */
     sub_account: string | null;
     /**
@@ -192,7 +192,7 @@ export interface JournalEntryLine {
      * false（項目なし）+ null → MISSING_FIELD（必須項目なし）
      * true（項目あり）+ null → UNREADABLE_FAILED（判読不能）
      */
-    amount_field_present: boolean;
+    amount_on_document: boolean;
     /** 税区分の概念ID（例: PURCHASE_TAXABLE_10）。表示時はマスタからnameを取得 */
     tax_category_id: string | null;
 }

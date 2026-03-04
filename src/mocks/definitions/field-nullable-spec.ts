@@ -2,12 +2,12 @@
  * 仕訳フィールドのnull許容定義表
  *
  * 目的: 全フィールドのnull可否・警告ラベル対応・CSV出力時の扱いを一元管理
- * 準拠: journal_v2_20260214.md v2.1、10_nullable_field_present_plan.md
+ * 準拠: journal_v2_20260214.md v2.1、10_nullable_on_document_plan.md
  *
  * ルール:
- *   - null = 「存在しない」または「読み取れない」（field_presentで区別）
- *   - field_present（項目存在フラグ）= false + null → 項目自体が証憑にない
- *   - field_present（項目存在フラグ）= true  + null → 項目はあるが読み取れない
+ *   - null = 「存在しない」または「読み取れない」（on_documentで区別）
+ *   - on_document（項目存在フラグ）= false + null → 項目自体が証憑にない
+ *   - on_document（項目存在フラグ）= true  + null → 項目はあるが読み取れない
  *   - 保存時バリデーションなし（止めない）
  *   - CSV出力時: nullでも出力可。ただし件数警告を表示
  *   - MFインポート: エラーは行番号付きで提示されるため、事前に候補行を警告
@@ -20,11 +20,11 @@
  */
 
 // ============================================================
-// null × field_present × 警告ラベル 相関表
+// null × on_document × 警告ラベル 相関表
 // ============================================================
 
 /**
- * field_present（項目存在）  | 値          | 警告ラベル          | 日本語
+ * on_document（項目存在）  | 値          | 警告ラベル          | 日本語
  * false（項目なし）          | null        | DATE_UNKNOWN等      | 日付が不明 等
  * true（項目あり）           | null        | DATE_UNKNOWN等      | 日付が不明 等
  * true（項目あり）           | 値あり（低） | UNREADABLE_ESTIMATED | 判読困難（AI推測値）

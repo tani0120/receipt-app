@@ -83,10 +83,10 @@ function mapVoucherTypeToLabel(voucherType: VoucherType): string {
 #### 3. MISSING_FIELD / 4. UNREADABLE_FAILED / 8. UNREADABLE_ESTIMATED（判定マトリクス）
 ```typescript
 // 必須フィールド(date, amount等)ごとに判定:
-// field_present=false, value=null   → labels[]に'MISSING_FIELD'追加
-// field_present=true,  value=null   → labels[]に'UNREADABLE_FAILED'追加
-// field_present=true,  value!=null, confidence低 → labels[]に'UNREADABLE_ESTIMATED'追加
-// field_present=true,  value!=null, confidence高 → 正常（追加なし）
+// on_document=false, value=null   → labels[]に'MISSING_FIELD'追加
+// on_document=true,  value=null   → labels[]に'UNREADABLE_FAILED'追加
+// on_document=true,  value!=null, confidence低 → labels[]に'UNREADABLE_ESTIMATED'追加
+// on_document=true,  value!=null, confidence高 → 正常（追加なし）
 ```
 
 #### 5. DUPLICATE_CONFIRMED（新規ロジック）
@@ -127,7 +127,7 @@ function mapVoucherTypeToLabel(voucherType: VoucherType): string {
 - UI: warning列でlabels[]から10種を検索、赤(🔴)=1-6, 黄(🟡)=7-10 でアイコン表示
 
 ### 注意
-- スキーマ変更必要: `date_field_present: boolean`, `amount_field_present: boolean` を層Aに追加
+- スキーマ変更必要: `date_on_document: boolean`, `amount_on_document: boolean` を層Aに追加
 - 既存の `date_unreadable`, `amount_unreadable` はそのまま維持
 - 旧ラベル AMOUNT_ANOMALY, OCR_FAILED, MISSING_RECEIPT, OCR_LOW_CONFIDENCE, HAS_MEMO は廃止
 - HAS_MEMO → MEMO_DETECTED（警告#9）に昇格。担当者メモはコメント列（staff_notes.memo）で代用

@@ -77,11 +77,11 @@ export interface JournalPhase5Mock {
    */
   transaction_date: string | null;
   /**
-   * 日付の項目存在フラグ（date_field_present）
+   * 日付の項目存在フラグ（date_on_document）
    * false（項目なし）+ null → MISSING_FIELD（必須項目なし）
    * true（項目あり）+ null → UNREADABLE_FAILED（判読不能）
    */
-  date_field_present: boolean;
+  date_on_document: boolean;
   description: string;                   // 摘要
 
   // 領収書紐付け（スキーマ準拠）

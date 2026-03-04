@@ -13,16 +13,16 @@
 | `account`（勘定科目）のnull許容化 | ✅ 承認。nullの場合「未確定」と表記 |
 | `amount`（金額）のnull許容化 | ✅ 承認。存在しなければ空白。存在すれば不明瞭でも貸借を合わせるよう類推 |
 | `description`（摘要）のnull許容化 | ❌ 不要。nullは返さない |
-| `field_present`（項目存在フラグ） | ✅ 持たせる。プロンプト（AI指示文）にも必須 |
+| `on_document`（項目存在フラグ） | ✅ 持たせる。プロンプト（AI指示文）にも必須 |
 | 列名変更 | 取引日 → **日付** |
 | 警告ホバー | 3種: 「未入力項目あり」「内訳が不明瞭な金額あり」「日付が不明」 |
 | CSV出力 | 人間が修正前提。可否は後日MF仕様確認 |
 
 ---
 
-## null × field_present（項目存在フラグ） × 警告ラベル 相関表
+## null × on_document（項目存在フラグ） × 警告ラベル 相関表
 
-| field_present（項目存在） | 値 | 警告ラベル | 日本語 | ホバーメッセージ | 色 |
+| on_document（項目存在） | 値 | 警告ラベル | 日本語 | ホバーメッセージ | 色 |
 |:---:|:---:|------|------|------|:---:|
 | false（項目なし） | null | `MISSING_FIELD` | 必須項目なし | 「未入力項目あり」 | 🔴赤 |
 | true（項目あり） | null | `UNREADABLE_FAILED` | 判読不能 | 「日付が不明」「内訳が不明瞭な金額あり」 | 🔴赤 |
@@ -45,16 +45,16 @@
 
 | # | 対象ファイル | 作業内容 | 状態 |
 |---|------------|---------|:---:|
-| A1 | `src/domain/types/journal.ts`（ドメイン層の型定義） | `JournalEntryLine`（仕訳明細行）に `account_field_present`（勘定科目項目存在フラグ）、`amount_field_present`（金額項目存在フラグ）を追加 | ⬜ |
-| A2 | `src/mocks/types/journal_phase5_mock.type.ts`（モック層の型定義） | `date_field_present`（日付項目存在フラグ）を追加 | ⬜ |
-| A3 | `src/shared/definitions/field-nullable-spec.ts`（null許容定義表） | 承認内容に修正: `description`（摘要）除外、`field_present`（項目存在フラグ）追加、警告3種定義 | ⬜ |
+| A1 | `src/domain/types/journal.ts`（ドメイン層の型定義） | `JournalEntryLine`（仕訳明細行）に `account_on_document`（勘定科目項目存在フラグ）、`amount_on_document`（金額項目存在フラグ）を追加 | ⬜ |
+| A2 | `src/mocks/types/journal_phase5_mock.type.ts`（モック層の型定義） | `date_on_document`（日付項目存在フラグ）を追加 | ⬜ |
+| A3 | `src/shared/definitions/field-nullable-spec.ts`（null許容定義表） | 承認内容に修正: `description`（摘要）除外、`on_document`（項目存在フラグ）追加、警告3種定義 | ⬜ |
 
 ### 優先度2: 警告ラベルの整備（UIと相関表の整合）
 
 | # | 対象ファイル | 作業内容 | 状態 |
 |---|------------|---------|:---:|
-| B1 | `journal_v2_20260214.md`（仕訳スキーマ定義書）§2 | 警告ラベル定義に `field_present`（項目存在フラグ）との判定マトリクスを正式統合 | ⬜ |
-| B2 | `field-nullable-spec.ts`（null許容定義表） | `warningLabel`（警告ラベル）を `field_present`（項目存在フラグ）による2種分岐に対応 | ⬜ |
+| B1 | `journal_v2_20260214.md`（仕訳スキーマ定義書）§2 | 警告ラベル定義に `on_document`（項目存在フラグ）との判定マトリクスを正式統合 | ⬜ |
+| B2 | `field-nullable-spec.ts`（null許容定義表） | `warningLabel`（警告ラベル）を `on_document`（項目存在フラグ）による2種分岐に対応 | ⬜ |
 
 ### 優先度3: 一覧UIの変更
 
@@ -72,7 +72,7 @@
 | # | 対象ファイル | 作業内容 | 状態 |
 |---|------------|---------|:---:|
 | I1 | `journal_test_fixture_30cases.ts`（30件テストデータ） | null値を含むテストケース追加（日付null、勘定科目null、金額null各1件以上） | ⬜ |
-| I2 | 同上 | `field_present`（項目存在フラグ）の値をテストデータに追加 | ⬜ |
+| I2 | 同上 | `on_document`（項目存在フラグ）の値をテストデータに追加 | ⬜ |
 
 ### 優先度5: Geminiプロンプト（AI指示文）の変更
 
@@ -80,7 +80,7 @@
 |---|------------|---------|:---:|
 | G1 | Geminiプロンプト定義ファイル | `account`（勘定科目）: 「判定できない場合はnullを返せ」 | ⬜ |
 | G2 | 同上 | `amount`（金額）: 「読み取れない場合はnullを返せ」 | ⬜ |
-| G3 | 同上 | `field_present`（項目存在フラグ）: 「その項目が証憑に存在するかどうかも返せ」を追加 | ⬜ |
+| G3 | 同上 | `on_document`（項目存在フラグ）: 「その項目が証憑に存在するかどうかも返せ」を追加 | ⬜ |
 | G4 | 同上 | `transaction_date`（日付）: 「読み取れない場合はnullを返せ」 | ⬜ |
 | G5 | 同上 | 信頼度（confidence）: 推測で入れた値には低信頼度マークを付けさせる | ⬜ |
 
@@ -109,7 +109,7 @@
 
 | # | 対象ファイル | 作業内容 | 状態 |
 |---|------------|---------|:---:|
-| J1 | `journal_v2_20260214.md`（仕訳スキーマ定義書） | null許容化・field_present・警告ラベル相関を正式反映 | ⬜ |
+| J1 | `journal_v2_20260214.md`（仕訳スキーマ定義書） | null許容化・on_document・警告ラベル相関を正式反映 | ⬜ |
 
 ---
 
