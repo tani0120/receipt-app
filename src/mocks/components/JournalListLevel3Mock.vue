@@ -265,7 +265,7 @@
                      :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <i v-if="journal.labels.some((l: string) => warningLabelMap[l])"
                      class="fa-solid fa-triangle-exclamation text-[10px] text-red-600 cursor-default"
-                     @mouseenter="showWarningTooltip($event, journal.labels)"
+                     @mouseenter="showWarningTooltip($event, journal.labels, journal)"
                      @mouseleave="hideTooltip()"></i>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
@@ -328,13 +328,13 @@
               <!-- journal-level（keyにドットなし）: rowIndex===0のみ表示 -->
               <template v-if="!col.key.includes('.')">
                 <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center border-r border-gray-200', col.key === 'transaction_date' ? 'justify-center text-[8px]' : '']">
-                  {{ col.key === 'transaction_date' ? formatDate(String(getValue(journal, col.key))) : getValue(journal, col.key) }}
+                  {{ col.key === 'transaction_date' ? formatDate(getValue(journal, col.key)) : (getValue(journal, col.key) ?? NULL_DISPLAY_UNKNOWN) }}
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
               <!-- entry-level（keyにドットあり）: 全row表示 -->
               <div v-else :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px]']">
-                {{ getValue(row, col.key) || '' }}
+                {{ getValue(row, col.key) ?? '' }}
               </div>
             </template>
 
@@ -834,6 +834,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
+import { NULL_DISPLAY_UNKNOWN, compareWithNull } from '@/mocks/definitions/field-nullable-spec';
 import { useDraggable } from '@/mocks/composables/useDraggable';
 import { useCurrentUser, STAFF_LIST } from '@/mocks/composables/useCurrentUser';
 import { journalColumns } from '@/mocks/columns/journalColumns';
@@ -931,13 +932,26 @@ function showTooltip(event: MouseEvent, text: string) {
   tooltipVisible.value = true;
 }
 
-function showWarningTooltip(event: MouseEvent, labels: string[]) {
+function showWarningTooltip(event: MouseEvent, labels: string[], journal?: JournalPhase5Mock) {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
   const warnings = labels.filter(l => warningLabelMap[l]);
   tooltipHtml.value = warnings.map(l => {
     const w = warningLabelMap[l];
     const dotColor = w?.level === 'error' ? 'bg-red-400' : 'bg-yellow-400';
-    return `<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}"></span>${w?.label}</span>`;
+    // D4: on_document（項目存在フラグ）によるホバーメッセージ分岐
+    let msg = w?.label ?? l;
+    if (journal) {
+      if (l === 'DATE_UNKNOWN') {
+        msg = journal.date_on_document ? '日付の読み取りに失敗しました' : '証憑に日付の記載がありません';
+      } else if (l === 'ACCOUNT_UNKNOWN') {
+        const onDoc = journal.debit_entries[0]?.account_on_document ?? journal.credit_entries[0]?.account_on_document ?? false;
+        msg = onDoc ? '勘定科目の読み取りに失敗しました' : '証憑に勘定科目の記載がありません';
+      } else if (l === 'AMOUNT_UNCLEAR') {
+        const onDoc = journal.debit_entries[0]?.amount_on_document ?? journal.credit_entries[0]?.amount_on_document ?? false;
+        msg = onDoc ? '金額の読み取りに失敗しました' : '証憑に金額の記載がありません';
+      }
+    }
+    return `<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}"></span>${msg}</span>`;
   }).join('');
   tooltipText.value = '';
   tooltipX.value = rect.left + rect.width / 2;
@@ -1654,46 +1668,33 @@ const journals = computed(() => {
           aVal = getInvoiceWeight(a.labels);
           bVal = getInvoiceWeight(b.labels);
           break;
+        // D5: compareWithNull（null比較関数）で統一。null時は昇順=末尾、降順=先頭
         case 'transaction_date':
-          aVal = a.transaction_date ? new Date(a.transaction_date).getTime() : Infinity;
-          bVal = b.transaction_date ? new Date(b.transaction_date).getTime() : Infinity;
-          break;
+          return compareWithNull(
+            a.transaction_date ? new Date(a.transaction_date).getTime() : null,
+            b.transaction_date ? new Date(b.transaction_date).getTime() : null,
+            sortDirection.value, (x, y) => x - y
+          );
         case 'description':
           aVal = a.description;
           bVal = b.description;
           break;
         case 'debit_account':
-          aVal = a.debit_entries[0]?.account || '';
-          bVal = b.debit_entries[0]?.account || '';
-          break;
+          return compareWithNull(a.debit_entries[0]?.account, b.debit_entries[0]?.account, sortDirection.value, (x, y) => x.localeCompare(y));
         case 'debit_sub_account':
-          aVal = a.debit_entries[0]?.sub_account || '';
-          bVal = b.debit_entries[0]?.sub_account || '';
-          break;
+          return compareWithNull(a.debit_entries[0]?.sub_account, b.debit_entries[0]?.sub_account, sortDirection.value, (x, y) => x.localeCompare(y));
         case 'debit_tax':
-          aVal = a.debit_entries[0]?.tax_category_id || '';
-          bVal = b.debit_entries[0]?.tax_category_id || '';
-          break;
+          return compareWithNull(a.debit_entries[0]?.tax_category_id, b.debit_entries[0]?.tax_category_id, sortDirection.value, (x, y) => x.localeCompare(y));
         case 'debit_amount':
-          aVal = a.debit_entries[0]?.amount || 0;
-          bVal = b.debit_entries[0]?.amount || 0;
-          break;
+          return compareWithNull(a.debit_entries[0]?.amount, b.debit_entries[0]?.amount, sortDirection.value, (x, y) => x - y);
         case 'credit_account':
-          aVal = a.credit_entries[0]?.account || '';
-          bVal = b.credit_entries[0]?.account || '';
-          break;
+          return compareWithNull(a.credit_entries[0]?.account, b.credit_entries[0]?.account, sortDirection.value, (x, y) => x.localeCompare(y));
         case 'credit_sub_account':
-          aVal = a.credit_entries[0]?.sub_account || '';
-          bVal = b.credit_entries[0]?.sub_account || '';
-          break;
+          return compareWithNull(a.credit_entries[0]?.sub_account, b.credit_entries[0]?.sub_account, sortDirection.value, (x, y) => x.localeCompare(y));
         case 'credit_tax':
-          aVal = a.credit_entries[0]?.tax_category_id || '';
-          bVal = b.credit_entries[0]?.tax_category_id || '';
-          break;
+          return compareWithNull(a.credit_entries[0]?.tax_category_id, b.credit_entries[0]?.tax_category_id, sortDirection.value, (x, y) => x.localeCompare(y));
         case 'credit_amount':
-          aVal = a.credit_entries[0]?.amount || 0;
-          bVal = b.credit_entries[0]?.amount || 0;
-          break;
+          return compareWithNull(a.credit_entries[0]?.amount, b.credit_entries[0]?.amount, sortDirection.value, (x, y) => x - y);
         default:
           return 0;
       }
@@ -1824,8 +1825,10 @@ function resolveTaxCategoryName(id: string | null | undefined): string {
   return entry ? entry.name : id
 }
 
-function formatDate(date: string): string {
-  const d = new Date(date);
+function formatDate(date: unknown): string {
+  if (date == null || date === '') return NULL_DISPLAY_UNKNOWN;
+  const d = new Date(String(date));
+  if (isNaN(d.getTime())) return NULL_DISPLAY_UNKNOWN;
   const y = d.getFullYear().toString().slice(2);
   const m = (d.getMonth() + 1).toString().padStart(2, '0');
   const day = d.getDate().toString().padStart(2, '0');

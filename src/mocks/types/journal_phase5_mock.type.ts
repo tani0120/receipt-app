@@ -78,8 +78,8 @@ export interface JournalPhase5Mock {
   transaction_date: string | null;
   /**
    * 日付の項目存在フラグ（date_on_document）
-   * false（項目なし）+ null → MISSING_FIELD（必須項目なし）
-   * true（項目あり）+ null → UNREADABLE_FAILED（判読不能）
+   * false（項目なし）+ null → DATE_UNKNOWN（日付不明）ホバー「証憑に日付の記載がありません」
+   * true（項目あり）+ null → DATE_UNKNOWN（日付不明）ホバー「日付の読み取りに失敗しました」
    */
   date_on_document: boolean;
   description: string;                   // 摘要

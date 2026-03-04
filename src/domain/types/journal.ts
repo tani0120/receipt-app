@@ -141,17 +141,17 @@ export type JournalLabel =
     | 'MEDICAL'
     | 'NOT_APPLICABLE'
 
-    // 警告ラベル（10個）
-    | 'DEBIT_CREDIT_MISMATCH'
-    | 'TAX_CALCULATION_ERROR'
-    | 'MISSING_FIELD'
-    | 'UNREADABLE_FAILED'
-    | 'DUPLICATE_CONFIRMED'
-    | 'MULTIPLE_VOUCHERS'
-    | 'DUPLICATE_SUSPECT'
-    | 'DATE_OUT_OF_RANGE'
-    | 'UNREADABLE_ESTIMATED'
-    | 'MEMO_DETECTED'
+    // 警告ラベル（10個）— 赤6種 + 黄4種
+    | 'DEBIT_CREDIT_MISMATCH'   // 借方貸方不一致（赤）
+    | 'DATE_UNKNOWN'            // 日付不明（赤）
+    | 'ACCOUNT_UNKNOWN'         // 勘定科目不明（赤）
+    | 'AMOUNT_UNCLEAR'          // 金額不明瞭（赤）
+    | 'DUPLICATE_CONFIRMED'     // 完全重複確定（赤）
+    | 'MULTIPLE_VOUCHERS'       // 複数証票（赤）
+    | 'DUPLICATE_SUSPECT'       // 重複疑い（黄）
+    | 'DATE_OUT_OF_RANGE'       // 期間外日付（黄）
+    | 'UNREADABLE_ESTIMATED'    // 判読困難AI推測（黄）
+    | 'MEMO_DETECTED'           // 手書きメモ検出（黄）
 
     // 制度系（3個）
     | 'MULTI_TAX_RATE'
@@ -175,8 +175,8 @@ export interface JournalEntryLine {
     account: string | null;
     /**
      * 勘定科目の項目存在フラグ
-     * false（項目なし）+ null → MISSING_FIELD（必須項目なし）
-     * true（項目あり）+ null → UNREADABLE_FAILED（判読不能）
+     * false（項目なし）+ null → ACCOUNT_UNKNOWN（勘定科目不明）ホバー「証憑に勘定科目の記載がありません」
+     * true（項目あり）+ null → ACCOUNT_UNKNOWN（勘定科目不明）ホバー「勘定科目の読み取りに失敗しました」
      */
     account_on_document: boolean;
     /** 補助科目（なしは正常） */
@@ -189,8 +189,8 @@ export interface JournalEntryLine {
     amount: Yen | null;
     /**
      * 金額の項目存在フラグ
-     * false（項目なし）+ null → MISSING_FIELD（必須項目なし）
-     * true（項目あり）+ null → UNREADABLE_FAILED（判読不能）
+     * false（項目なし）+ null → AMOUNT_UNCLEAR（金額不明瞭）ホバー「証憑に金額の記載がありません」
+     * true（項目あり）+ null → AMOUNT_UNCLEAR（金額不明瞭）ホバー「金額の読み取りに失敗しました」
      */
     amount_on_document: boolean;
     /** 税区分の概念ID（例: PURCHASE_TAXABLE_10）。表示時はマスタからnameを取得 */

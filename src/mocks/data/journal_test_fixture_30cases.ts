@@ -725,7 +725,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     is_credit_card_payment: false
   },
 
-  // 行25: 判読不能（旧: 金額異常→廃止、UNREADABLE_FAILEDに変更）、未読
+  // 行25: 金額null（on_document=true: 項目はあるが読めなかった）、複数証票あり、未読
   {
     id: 'j025',
     display_order: 25,
@@ -737,10 +737,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'AMOUNT_UNCLEAR', 'MULTIPLE_VOUCHERS'],
     debit_entries: [
-      { account: '消耗品費', account_on_document: true, sub_account: null, amount: 1000000, amount_on_document: true, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_on_document: true, sub_account: null, amount: null, amount_on_document: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', account_on_document: true, sub_account: null, amount: 1000000, amount_on_document: true, tax_category_id: '対象外' }
+      { account: '現金', account_on_document: true, sub_account: null, amount: null, amount_on_document: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,
@@ -820,17 +820,17 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     is_credit_card_payment: false
   },
 
-  // 行28: 確認待ち（kakunin）、証憑欠落、メモあり、未読
+  // 行28: 日付null（on_document=true: 日付欄はあるが読めなかった）、メモあり、未読
   {
     id: 'j028',
     display_order: 28,
-    transaction_date: '2025-02-08', date_on_document: true,
+    transaction_date: null, date_on_document: true,
     description: '現金領収遅れせれ仮払い',
     receipt_id: 'receipt-001',
     status: null,
     is_read: false,
     deleted_at: null,
-    labels: ['RECEIPT', 'DATE_UNKNOWN', 'MEMO_DETECTED', 'NEED_DOCUMENT'],  // 旧kakunin → 資料が必要
+    labels: ['RECEIPT', 'DATE_UNKNOWN', 'MEMO_DETECTED', 'NEED_DOCUMENT'],  // 日付不明 + 手書きメモ + 資料が必要
     debit_entries: [
       { account: '旅費交通費', account_on_document: true, sub_account: null, amount: 5000, amount_on_document: true, tax_category_id: '課税仕入 10%' }
     ],
@@ -881,7 +881,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     is_credit_card_payment: false
   },
 
-  // 行30: 税計算誤差、未読
+  // 行30: 勘定科目null（on_document=false: 証憑に勘定科目の記載なし）、貸借不一致、未読
   {
     id: 'j030',
     display_order: 30,
@@ -891,12 +891,12 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     status: null,
     is_read: false,
     deleted_at: null,
-    labels: ['INVOICE', 'ACCOUNT_UNKNOWN'],
+    labels: ['INVOICE', 'ACCOUNT_UNKNOWN', 'DEBIT_CREDIT_MISMATCH'],
     debit_entries: [
-      { account: '消耗品費', account_on_document: true, sub_account: null, amount: 10000, amount_on_document: true, tax_category_id: '課税仕入 10%' }
+      { account: null, account_on_document: false, sub_account: null, amount: 10000, amount_on_document: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
-      { account: '現金', account_on_document: true, sub_account: null, amount: 10001, amount_on_document: true, tax_category_id: '対象外' }
+      { account: null, account_on_document: false, sub_account: null, amount: 10001, amount_on_document: true, tax_category_id: '対象外' }
     ],
     rule_id: null,
     rule_confidence: null,

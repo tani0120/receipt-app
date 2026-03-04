@@ -128,21 +128,26 @@ export const routes: RouteRecordRaw[] = [
   },
   // Phase 5 Mock
   {
-    path: '/mock/journal-list',
+    path: '/journal-list',
     name: 'JournalListMock',
     component: () => import('@/mocks/components/JournalListLevel3Mock.vue')
   },
   {
-    path: '/mock/settings-accounts',
+    path: '/settings-accounts',
     name: 'SettingsAccountsMock',
     component: () => import('@/views/ScreenS_AccountSettings.vue'),
     props: { defaultTab: 'accounts' }
   },
   {
-    path: '/mock/settings-tax',
+    path: '/settings-tax',
     name: 'SettingsTaxMock',
     component: () => import('@/views/ScreenS_AccountSettings.vue'),
     props: { defaultTab: 'tax' }
+  },
+  {
+    path: '/master',
+    name: 'MasterManagement',
+    component: () => import('@/mocks/views/MockSettingsPage.vue')
   },
 ]
 
@@ -167,10 +172,9 @@ const authReadyPromise = new Promise<void>((resolve) => {
 
 // 認証ガード（全環境で有効）
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to) => {
   // ログインページへのアクセスは常に許可
   if (to.path === '/login') {
-    next();
     return;
   }
 
@@ -184,11 +188,10 @@ router.beforeEach(async (to, from, next) => {
   if (!user) {
     // 未ログインの場合、ログインページにリダイレクト
     console.log('[router] 未認証のため、ログインページにリダイレクトします');
-    next('/login');
-  } else {
-    // ログイン済みの場合、通常通りアクセス許可
-    next();
+    return '/login';
   }
+  // ログイン済みの場合、通常通りアクセス許可
+  return true;
 })
 
 export default router
