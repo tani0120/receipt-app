@@ -13,8 +13,9 @@
  *   - MFインポート: エラーは行番号付きで提示されるため、事前に候補行を警告
  *
  * 警告ラベル統合（2026-03-04）:
- *   - 削除: MISSING_FIELD / UNREADABLE_FAILED / TAX_CALCULATION_ERROR
- *   - 追加: DATE_UNKNOWN / ACCOUNT_UNKNOWN / AMOUNT_UNCLEAR
+ *   - 廃止: TAX_CALCULATION_ERROR（税額は計算しない設計に変更）
+ *   - 廃止: MISSING_FIELD / UNREADABLE_FAILED（on_document（項目存在フラグ）に役割移譲）
+ *   - 採用: DATE_UNKNOWN（日付不明）/ ACCOUNT_UNKNOWN（勘定科目不明）/ AMOUNT_UNCLEAR（金額不明瞭）
  *
  * 更新日: 2026-03-04
  */
@@ -24,11 +25,11 @@
 // ============================================================
 
 /**
- * on_document（項目存在）  | 値          | 警告ラベル          | 日本語
- * false（項目なし）          | null        | DATE_UNKNOWN等      | 日付が不明 等
- * true（項目あり）           | null        | DATE_UNKNOWN等      | 日付が不明 等
- * true（項目あり）           | 値あり（低） | UNREADABLE_ESTIMATED | 判読困難（AI推測値）
- * true（項目あり）           | 値あり（高） | —                   | 正常
+ * on_document（項目存在）  | 値          | 警告ラベル          | 日本語              | ホバーメッセージ
+ * false（項目なし）          | null        | DATE_UNKNOWN等      | 日付が不明 等       | 「証憑に○○の記載がありません」
+ * true（項目あり）           | null        | DATE_UNKNOWN等      | 日付が不明 等       | 「○○の読み取りに失敗しました」
+ * true（項目あり）           | 値あり（低） | UNREADABLE_ESTIMATED | 判読困難（AI推測値） | 「判読困難（AI推測値）」
+ * true（項目あり）           | 値あり（高） | —                   | 正常               | —
  */
 
 // ============================================================
@@ -37,9 +38,9 @@
 
 /** フィールドがnullの場合に付与するラベル */
 export const FIELD_NULL_WARNING_LABEL = {
-    transaction_date: 'DATE_UNKNOWN',    // 日付が不明
-    account: 'ACCOUNT_UNKNOWN', // 勘定科目が不明
-    amount: 'AMOUNT_UNCLEAR',  // 内訳が不明瞭な金額あり
+  transaction_date: 'DATE_UNKNOWN',    // 日付が不明
+  account: 'ACCOUNT_UNKNOWN', // 勘定科目が不明
+  amount: 'AMOUNT_UNCLEAR',  // 内訳が不明瞭な金額あり
 } as const;
 
 // ============================================================
@@ -48,11 +49,11 @@ export const FIELD_NULL_WARNING_LABEL = {
 
 /** MF CSV必須フィールド一覧（nullならCSV出力前に警告） */
 export const MF_CSV_REQUIRED_FIELDS = [
-    { field: 'transaction_date', displayName: '日付' },
-    { field: 'account', displayName: '勘定科目' },
-    { field: 'amount', displayName: '金額' },
-    { field: 'description', displayName: '摘要' },
-    { field: 'tax_category_id', displayName: '税区分' },
+  { field: 'transaction_date', displayName: '日付' },
+  { field: 'account', displayName: '勘定科目' },
+  { field: 'amount', displayName: '金額' },
+  { field: 'description', displayName: '摘要' },
+  { field: 'tax_category_id', displayName: '税区分' },
 ] as const;
 
 // ============================================================
@@ -77,17 +78,17 @@ export const NULL_DISPLAY_DASH = '-';
  * nullを昇順=末尾、降順=先頭に配置する
  */
 export function compareWithNull<T>(
-    a: T | null | undefined,
-    b: T | null | undefined,
-    direction: 'asc' | 'desc',
-    compareFn: (a: T, b: T) => number
+  a: T | null | undefined,
+  b: T | null | undefined,
+  direction: 'asc' | 'desc',
+  compareFn: (a: T, b: T) => number
 ): number {
-    const aIsNull = a === null || a === undefined;
-    const bIsNull = b === null || b === undefined;
+  const aIsNull = a === null || a === undefined;
+  const bIsNull = b === null || b === undefined;
 
-    if (aIsNull && bIsNull) return 0;
-    if (aIsNull) return direction === 'asc' ? 1 : -1;
-    if (bIsNull) return direction === 'asc' ? -1 : 1;
+  if (aIsNull && bIsNull) return 0;
+  if (aIsNull) return direction === 'asc' ? 1 : -1;
+  if (bIsNull) return direction === 'asc' ? -1 : 1;
 
-    return compareFn(a, b);
+  return compareFn(a, b);
 }

@@ -907,8 +907,8 @@ const warningLabelMap: Record<string, { level: 'error' | 'warn'; label: string; 
   ACCOUNT_UNKNOWN:       { level: 'error', label: '勘定科目が不明', color: 'text-red-600', weight: 15 },
   DUPLICATE_CONFIRMED:   { level: 'error', label: '完全重複（同一画像）', color: 'text-red-600', weight: 13 },
   MULTIPLE_VOUCHERS:     { level: 'error', label: '複数の証票あり', color: 'text-red-600', weight: 12 },
+  AMOUNT_UNCLEAR:        { level: 'error', label: '内訳が不明瞭な金額あり', color: 'text-red-600', weight: 14 },
   // 注意（黄）
-  AMOUNT_UNCLEAR:        { level: 'warn', label: '内訳が不明瞭な金額あり', color: 'text-yellow-600', weight: 7 },
   DUPLICATE_SUSPECT:     { level: 'warn', label: '重複疑い', color: 'text-yellow-600', weight: 6 },
   DATE_OUT_OF_RANGE:     { level: 'warn', label: '期間外日付', color: 'text-yellow-600', weight: 5 },
   UNREADABLE_ESTIMATED:  { level: 'warn', label: '判読困難（AI推測値）', color: 'text-yellow-600', weight: 4 },
