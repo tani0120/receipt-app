@@ -34,4 +34,6 @@ export type Account = {
     effectiveTo: string | null
     /** 表示順 */
     sortOrder: number
+    /** カスタム科目フラグ（ユーザー追加=true、システム提供=false/undefined → ルール4） */
+    isCustom?: boolean
 }

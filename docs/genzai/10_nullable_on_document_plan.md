@@ -276,18 +276,19 @@
 | 6 | 分類列→補助科目列差替え（マスタ+顧問先設定） | ✅ | AI | 優先度3 |
 | 7 | マスタ設計ルール13項目確定 | ✅ | AI+人間 | master_design_rules.md |
 | — | **▼ 型定義変更（スキーマ反映）** | | | |
-| 8 | `account.ts` に `deprecated` / `effective_from` / `effective_to` / `ai_selectable` 追加 | ❌ | AI | tax_category_schema.md §2 |
-| 9 | `tax-category.ts` に `deprecated` / `effective_from` / `effective_to` 追加 | ❌ | AI | tax_category_schema.md §1 |
-| 10 | `account-master.ts` のデータに上記フィールドの値を設定 | ❌ | AI | tax_category_schema.md §2 |
-| 11 | `tax-category-master.ts` のデータに上記フィールドの値を設定 | ❌ | AI | tax_category_schema.md §1 |
-| — | **▼ マスタUI強化（ルール3,5,6,10準拠）** | | | |
-| 12 | 勘定科目マスタUI — `deprecated`行のグレーアウト表示（ルール3） | ❌ | AI | master_design_rules.md |
+| 8 | `account.ts` に `deprecated` / `effective_from` / `effective_to` / `ai_selectable` 追加 | ✅ | AI | tax_category_schema.md §2 |
+| 9 | `tax-category.ts` に `deprecated` / `effective_from` / `effective_to` 追加 | ✅ | AI | tax_category_schema.md §1 |
+| 10 | `account-master.ts` のデータに上記フィールドの値を設定 | ✅ | AI | tax_category_schema.md §2 |
+| 11 | `tax-category-master.ts` のデータに上記フィールドの値を設定 | ✅ | AI | tax_category_schema.md §1 |
+| — | **▼ マスタUI強化（ルール3,4,5,6,10準拠）** | | | |
+| 12 | 勘定科目マスタUI — `deprecated`行のグレーアウト表示（ルール3） | ✅ | AI | master_design_rules.md |
 | 13 | 税区分マスタUI — `deprecated`行のグレーアウト表示（ルール3） | ❌ | AI | master_design_rules.md |
-| 14 | 勘定科目マスタUI — `effective_from`/`effective_to`列の表示（ルール1） | ❌ | AI | master_design_rules.md |
+| 14 | 勘定科目マスタUI — `effective_from`/`effective_to`列の表示（ルール1） | ✅ | AI | master_design_rules.md |
 | 15 | 税区分マスタUI — `effective_from`/`effective_to`列の表示（ルール1） | ❌ | AI | master_design_rules.md |
-| 16 | マスタUI — インライン編集＋保存ボタンで確定（ルール6） | ❌ | AI | master_design_rules.md |
-| 17 | マスタUI — チェックボックス選択→削除・コピー・追加（ルール6） | ❌ | AI | master_design_rules.md |
-| 18 | マスタUI — ドラッグ並替え→`sort_order`更新→DB保存（ルール10） | ❌ | AI | master_design_rules.md |
+| 16 | マスタUI — インライン編集（カスタム科目のみ）＋保存ボタンで確定（ルール4,6） | ❌ | AI | master_design_rules.md |
+| 17 | マスタUI — チェックボックス選択→削除・コピー・追加・復元（ルール6） | ✅ | AI | master_design_rules.md |
+| 18 | マスタUI — ドラッグ並替え→`sort_order`更新→DB保存（ルール10） | ✅ | AI | master_design_rules.md |
+| 18a | マスタUI — デフォルト/カスタム科目の編集権限制御（ルール4） | ❌ | AI | master_design_rules.md |
 | 19 | 顧問先設定 税区分タブ — 修正方針の?マーク警告（ルール5） | ❌ | AI | master_design_rules.md |
 | — | **▼ スタッフ管理・顧問先管理・費用・正規化** | | | |
 | 20 | K6 スタッフ管理UI — スタッフ一覧表示 | ❌ | AI | 優先度11 |

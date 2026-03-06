@@ -25,6 +25,12 @@
           </div>
         </div>
 
+        <!-- 注意バナー -->
+        <div class="as-info-banner">
+          <i class="fa-solid fa-circle-info"></i>
+          デフォルト税区分（<i class="fa-solid fa-lock" style="font-size:14px;color:#666"></i>）の名称は編集できません。コピー・追加したカスタム税区分のみ編集可能です。
+        </div>
+
         <div class="as-toolbar" style="margin-top: 8px;">
           <div class="as-pagination">
             <span class="as-page-arrow" :class="{ disabled: taxPage <= 1 }" @click="taxPage = Math.max(1, taxPage - 1)">＜</span>
@@ -35,10 +41,20 @@
             >{{ p }}</span>
             <span class="as-page-arrow" :class="{ disabled: taxPage >= taxTotalPages }" @click="taxPage = Math.min(taxTotalPages, taxPage + 1)">＞</span>
             <span class="as-page-range">{{ taxPageStart }}~{{ taxPageEnd }} / {{ filteredTaxRows.length }}件</span>
+            <!-- チェック時の一括操作ボタン -->
+            <template v-if="checkedIds.length">
+              <span class="as-bulk-badge">{{ checkedIds.length }}件選択中</span>
+              <button class="as-bulk-btn" @click="showChecked"><i class="fa-solid fa-eye"></i> 表示化</button>
+              <button class="as-bulk-btn" @click="hideChecked"><i class="fa-solid fa-eye-slash"></i> 非表示化</button>
+              <button class="as-bulk-btn danger" @click="deleteChecked"><i class="fa-solid fa-trash-can"></i> 削除（復元できません）</button>
+              <button class="as-bulk-btn" @click="copyChecked"><i class="fa-solid fa-copy"></i> コピー</button>
+              <button class="as-bulk-btn" @click="addAfterChecked"><i class="fa-solid fa-plus"></i> 追加</button>
+            </template>
           </div>
           <div class="as-actions">
             <button class="as-action-btn" @click="resetTaxOrder"><i class="fa-solid fa-rotate"></i> デフォルト順</button>
             <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button>
+            <button class="as-action-btn save" @click="saveChanges"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
           </div>
         </div>
         <div class="as-table-wrap">
@@ -50,11 +66,11 @@
               <col style="width: auto;">
               <col style="width: 10%;">
               <col style="width: 8%;">
-              <col class="col-check">
+              <col style="width: 60px;">
             </colgroup>
             <thead>
               <tr>
-                <th class="as-th-check"><input type="checkbox"></th>
+                <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
                 <th class="sortable" @click="sortTax('qualified')">
                   適格判定対象 <i class="fa-solid fa-circle-question th-help" title="この税区分を使う際、取引先のインボイス登録番号の確認が必要かどうか。仕入側の課税取引にのみ○がつきます。"></i>
                   <i :class="getSortIcon('qualified')"></i>
@@ -73,14 +89,23 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in pagedTaxRows" :key="row.id">
-                <td class="as-td-check"><input type="checkbox"></td>
+              <tr v-for="row in pagedTaxRows" :key="row.id"
+                :class="{ 'row-deprecated': row.deprecated, 'row-custom': row.isCustom }"
+              >
+                <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
                 <td style="text-align: center;">{{ row.qualified ? '○' : '' }}</td>
                 <td class="td-direction" :class="'dir-' + row.direction">{{ directionLabel(row.direction) }}</td>
-                <td>{{ row.name }}</td>
+                <td>
+                  <i v-if="!row.isCustom" class="fa-solid fa-lock td-lock"></i>
+                  {{ row.name }}
+                </td>
                 <td style="text-align: center;">{{ extractRateFromName(row.name) || '-' }}</td>
                 <td class="td-ai">{{ row.aiSelectable ? '○' : '' }}</td>
-                <td class="as-td-check"><i class="fa-solid fa-trash-can td-trash"></i></td>
+                <td class="as-td-actions">
+                  <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
+                  <i v-if="row.deprecated" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
+                  <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -142,6 +167,118 @@ const taxPageEnd = computed(() => Math.min(taxPage.value * PAGE_SIZE, filteredTa
 const pagedTaxRows = computed(() => filteredTaxRows.value.slice(taxPageStart.value - 1, taxPageEnd.value));
 
 watch(filteredTaxRows, () => { if (taxPage.value > taxTotalPages.value) taxPage.value = 1; });
+
+// =============== チェックボックス ===============
+const checkedIds = ref<string[]>([]);
+function toggleAllChecked(e: Event) {
+  const checked = (e.target as HTMLInputElement).checked;
+  checkedIds.value = checked ? pagedTaxRows.value.map(r => r.id) : [];
+}
+
+// =============== 非表示化・表示化 ===============
+function hideRow(row: TaxCategory) {
+  const today = new Date().toISOString().slice(0, 10);
+  row.deprecated = true;
+  row.effectiveTo = today;
+}
+function showRow(row: TaxCategory) {
+  row.deprecated = false;
+  row.effectiveTo = null;
+}
+function hideChecked() {
+  const today = new Date().toISOString().slice(0, 10);
+  checkedIds.value.forEach(id => {
+    const row = allTaxRows.find(r => r.id === id);
+    if (row) { row.deprecated = true; row.effectiveTo = today; }
+  });
+  checkedIds.value = [];
+}
+function showChecked() {
+  checkedIds.value.forEach(id => {
+    const row = allTaxRows.find(r => r.id === id);
+    if (row) { row.deprecated = false; row.effectiveTo = null; }
+  });
+  checkedIds.value = [];
+}
+
+// =============== 物理削除（カスタムのみ） ===============
+function deleteRow(row: TaxCategory) {
+  if (!row.isCustom) return;
+  if (!confirm(`「${row.name}」を削除しますか？復元できません。`)) return;
+  const idx = allTaxRows.findIndex(r => r.id === row.id);
+  if (idx !== -1) allTaxRows.splice(idx, 1);
+}
+function deleteChecked() {
+  const customIds = checkedIds.value.filter(id => {
+    const row = allTaxRows.find(r => r.id === id);
+    return row?.isCustom;
+  });
+  if (!customIds.length) { alert('カスタム税区分のみ削除できます。'); return; }
+  if (!confirm(`${customIds.length}件のカスタム税区分を削除しますか？復元できません。`)) return;
+  customIds.forEach(id => {
+    const idx = allTaxRows.findIndex(r => r.id === id);
+    if (idx !== -1) allTaxRows.splice(idx, 1);
+  });
+  checkedIds.value = [];
+}
+
+// =============== コピー・追加 ===============
+let copyCounter = 0;
+function copyChecked() {
+  const ids = [...checkedIds.value];
+  ids.reverse().forEach(id => {
+    const srcIdx = allTaxRows.findIndex(r => r.id === id);
+    if (srcIdx === -1) return;
+    const src = allTaxRows[srcIdx];
+    if (!src) return;
+    copyCounter++;
+    const copy: TaxCategory = {
+      id: `${src.id}_COPY_${copyCounter}`,
+      name: `${src.name}（コピー）`,
+      shortName: `${src.shortName}（コピー）`,
+      direction: src.direction,
+      qualified: src.qualified,
+      aiSelectable: src.aiSelectable,
+      active: true,
+      deprecated: false,
+      effectiveFrom: src.effectiveFrom,
+      effectiveTo: null,
+      defaultVisible: true,
+      displayOrder: src.displayOrder + 0.5,
+      isCustom: true,
+    };
+    allTaxRows.splice(srcIdx + 1, 0, copy);
+  });
+  checkedIds.value = [];
+}
+function addAfterChecked() {
+  const ids = [...checkedIds.value];
+  const lastId = ids[ids.length - 1];
+  const insertIdx = lastId ? allTaxRows.findIndex(r => r.id === lastId) + 1 : allTaxRows.length;
+  copyCounter++;
+  const newRow: TaxCategory = {
+    id: `NEW_TAX_${copyCounter}`,
+    name: '新規税区分',
+    shortName: '新規',
+    direction: 'common',
+    qualified: false,
+    aiSelectable: false,
+    active: true,
+    deprecated: false,
+    effectiveFrom: new Date().toISOString().slice(0, 10),
+    effectiveTo: null,
+    defaultVisible: true,
+    displayOrder: insertIdx,
+    isCustom: true,
+  };
+  allTaxRows.splice(insertIdx, 0, newRow);
+  checkedIds.value = [];
+}
+
+// =============== 保存 ===============
+function saveChanges() {
+  alert('保存しました（モック）');
+}
 
 // =============== 共通ユーティリティ ===============
 function directionLabel(dir: TaxDirection): string {
@@ -233,7 +370,7 @@ function resetTaxOrder() {
 .as-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
 
 /* ========== ページネーション ========== */
-.as-pagination { display: flex; align-items: center; gap: 2px; font-size: 12px; }
+.as-pagination { display: flex; align-items: center; gap: 2px; font-size: 12px; flex-wrap: wrap; }
 .as-pagination.bottom { justify-content: center; padding: 8px 0 12px; }
 .as-page-arrow {
   padding: 4px 10px; cursor: pointer; color: #1976D2; font-weight: 600;
@@ -272,8 +409,6 @@ function resetTaxOrder() {
 .as-table tbody tr { cursor: grab; }
 .as-table tbody tr:hover { background: #f5f9ff; }
 
-.td-trash { color: #bbb; cursor: pointer; font-size: 12px; }
-.td-trash:hover { color: #e53935; }
 .td-ai { text-align: center; color: #1976D2; font-weight: 600; }
 .td-direction { text-align: center; font-size: 10px; font-weight: 600; }
 .dir-sales { color: #2e7d32; }
@@ -285,4 +420,60 @@ function resetTaxOrder() {
 .sort-icon { font-size: 9px; margin-left: 2px; color: #1976D2; }
 .sort-icon.inactive { color: #ccc; }
 .th-help { color: #999; font-size: 10px; cursor: help; margin-left: 2px; }
+
+/* 注意バナー */
+.as-info-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; margin: 8px 0; border-radius: 4px;
+  background: #e3f2fd; color: #1565c0;
+  font-size: 12px; border: 1px solid #bbdefb;
+}
+.as-info-banner i { font-size: 14px; flex-shrink: 0; }
+
+/* deprecated行のグレーアウト */
+.row-deprecated { opacity: 0.4; }
+.row-deprecated td { text-decoration: line-through; color: #999; }
+
+/* カスタム行の背景色（薄黄） */
+.row-custom { background: #fffde7; }
+.row-custom:hover { background: #fff9c4; }
+
+/* デフォルト行のロックアイコン（税区分名左） */
+.td-lock { color: #f9a825; font-size: 1em; margin-right: 4px; vertical-align: middle; }
+
+/* 非表示化アイコン（目マーク） */
+.td-hide { color: #999; cursor: pointer; font-size: 14px; }
+.td-hide:hover { color: #616161; }
+.td-show { color: #4caf50; cursor: pointer; font-size: 14px; }
+.td-show:hover { color: #2e7d32; }
+
+/* 物理削除アイコン（ゴミ箱・カスタムのみ） */
+.td-delete { color: #e53935; cursor: pointer; font-size: 14px; margin-right: 8px; }
+.td-delete:hover { color: #b71c1c; }
+
+/* アクション列 */
+.as-td-actions { white-space: nowrap; text-align: center; }
+
+/* 一括操作ボタン */
+.as-bulk-badge {
+  display: inline-block; margin-left: 12px;
+  padding: 2px 8px; border-radius: 10px;
+  background: #1976D2; color: #fff;
+  font-size: 11px; font-weight: 600;
+}
+.as-bulk-btn {
+  margin-left: 4px; padding: 3px 10px; border: 1px solid #ccc;
+  border-radius: 4px; background: #fff; color: #555;
+  font-size: 11px; cursor: pointer; white-space: nowrap;
+}
+.as-bulk-btn:hover { background: #f5f5f5; border-color: #999; }
+.as-bulk-btn.danger { color: #e53935; border-color: #e53935; }
+.as-bulk-btn.danger:hover { background: #ffebee; }
+
+/* 保存ボタン */
+.as-action-btn.save {
+  background: #4caf50; color: #fff; border: 1px solid #388e3c;
+  border-radius: 4px; padding: 3px 10px;
+}
+.as-action-btn.save:hover { background: #388e3c; }
 </style>

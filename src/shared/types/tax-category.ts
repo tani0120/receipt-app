@@ -39,6 +39,8 @@ export type TaxCategory = {
     defaultVisible: boolean
     /** 表示順（CSV並び順と一致） */
     displayOrder: number
+    /** カスタム税区分フラグ（ユーザー追加=true、システム提供=false/undefined → ルール4） */
+    isCustom?: boolean
 }
 
 /**

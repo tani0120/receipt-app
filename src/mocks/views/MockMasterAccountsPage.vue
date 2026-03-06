@@ -34,6 +34,13 @@
           <input type="text" v-model="accountFilter" placeholder="科目名で絞り込み" class="as-filter-input">
           <span class="as-page-info-text">全{{ filteredAccountRows.length }}件</span>
         </div>
+
+        <!-- 注意コメント -->
+        <div class="as-info-banner">
+          <i class="fa-solid fa-circle-info"></i>
+          デフォルト科目（<i class="fa-solid fa-lock" style="font-size:14px;color:#666"></i>）の勘定科目名・税区分は編集できません。コピー・追加したカスタム科目のみ編集可能です。
+        </div>
+
         <div class="as-toolbar">
           <div class="as-pagination">
             <span class="as-page-arrow" :class="{ disabled: accountPage <= 1 }" @click="accountPage = Math.max(1, accountPage - 1)">＜</span>
@@ -44,25 +51,37 @@
             >{{ p }}</span>
             <span class="as-page-arrow" :class="{ disabled: accountPage >= accountTotalPages }" @click="accountPage = Math.min(accountTotalPages, accountPage + 1)">＞</span>
             <span class="as-page-range">{{ accountPageStart }}~{{ accountPageEnd }} / {{ filteredAccountRows.length }}件</span>
+            <!-- チェック時の一括操作ボタン -->
+            <template v-if="checkedIds.length">
+              <span class="as-bulk-badge">{{ checkedIds.length }}件選択中</span>
+              <button class="as-bulk-btn" @click="showChecked"><i class="fa-solid fa-eye"></i> 表示化</button>
+              <button class="as-bulk-btn" @click="hideChecked"><i class="fa-solid fa-eye-slash"></i> 非表示化</button>
+              <button class="as-bulk-btn danger" @click="deleteChecked"><i class="fa-solid fa-trash-can"></i> 削除（復元できません）</button>
+              <button class="as-bulk-btn" @click="copyChecked"><i class="fa-solid fa-copy"></i> コピー</button>
+              <button class="as-bulk-btn" @click="addAfterChecked"><i class="fa-solid fa-plus"></i> 追加</button>
+            </template>
           </div>
           <div class="as-actions">
             <button class="as-action-btn" @click="resetAccountOrder"><i class="fa-solid fa-rotate"></i> デフォルト順</button>
             <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button>
+            <button class="as-action-btn save" @click="saveChanges"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
           </div>
         </div>
         <div class="as-table-wrap">
           <table class="as-table">
             <colgroup>
               <col class="col-check">
-              <col style="width: 25%;">
-              <col style="width: 25%;">
               <col style="width: 22%;">
+              <col style="width: 18%;">
+              <col style="width: 18%;">
               <col style="width: 8%;">
+              <col style="width: 10%;">
+              <col style="width: 10%;">
               <col class="col-check">
             </colgroup>
             <thead>
               <tr>
-                <th class="as-th-check"><input type="checkbox"></th>
+                <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
                 <th class="sortable" @click="sortAccounts('name')">
                   勘定科目 <i :class="getSortIcon('name')"></i>
                 </th>
@@ -73,17 +92,45 @@
                   税区分 <i :class="getSortIcon('defaultTaxCategoryId')"></i>
                 </th>
                 <th>AI</th>
+                <th class="sortable" @click="sortAccounts('effectiveFrom')">
+                  適用開始 <i :class="getSortIcon('effectiveFrom')"></i>
+                </th>
+                <th class="sortable" @click="sortAccounts('effectiveTo')">
+                  適用終了 <i :class="getSortIcon('effectiveTo')"></i>
+                </th>
                 <th class="as-th-check"></th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in pagedAccountRows" :key="row.id">
-                <td class="as-td-check"><input type="checkbox"></td>
-                <td>{{ row.name }}</td>
+              <tr
+                v-for="(row, idx) in pagedAccountRows" :key="row.id"
+                :class="{ 'row-deprecated': row.deprecated, 'row-dragging': dragIdx === idx, 'row-custom': row.isCustom }"
+                draggable="true"
+                @dragstart="onDragStart(idx, $event)"
+                @dragover.prevent="onDragOver(idx)"
+                @drop="onDrop(idx)"
+                @dragend="dragIdx = -1"
+              >
+                <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
+                <td @dblclick="row.isCustom && startEdit(row, 'name')" :class="{ 'td-editable': row.isCustom }">
+                  <template v-if="editingRow === row.id && editingField === 'name'">
+                    <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" ref="editInput" autofocus>
+                  </template>
+                  <template v-else>
+                    <i v-if="!row.isCustom" class="fa-solid fa-lock td-lock"></i>
+                    {{ row.name }}
+                  </template>
+                </td>
                 <td class="td-sub-account"></td>
                 <td>{{ getTaxCategoryName(row.defaultTaxCategoryId) }}</td>
                 <td class="td-ai">{{ row.aiSelectable ? '○' : '' }}</td>
-                <td class="as-td-check"><i class="fa-solid fa-trash-can td-trash"></i></td>
+                <td class="td-date">{{ row.effectiveFrom }}</td>
+                <td class="td-date">{{ row.effectiveTo ?? '現役' }}</td>
+                <td class="as-td-actions">
+                  <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
+                  <i v-if="row.deprecated" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
+                  <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -137,6 +184,145 @@ const accountPageEnd = computed(() => Math.min(accountPage.value * PAGE_SIZE, fi
 const pagedAccountRows = computed(() => filteredAccountRows.value.slice(accountPageStart.value - 1, accountPageEnd.value));
 
 watch(filteredAccountRows, () => { if (accountPage.value > accountTotalPages.value) accountPage.value = 1; });
+
+// =============== チェックボックス選択 ===============
+const checkedIds = ref<string[]>([]);
+function toggleAllChecked(e: Event) {
+  const checked = (e.target as HTMLInputElement).checked;
+  checkedIds.value = checked ? pagedAccountRows.value.map(r => r.id) : [];
+}
+function hideRow(row: Account) {
+  const today = new Date().toISOString().slice(0, 10);
+  row.deprecated = true;
+  row.effectiveTo = today;
+}
+function showRow(row: Account) {
+  row.deprecated = false;
+  row.effectiveTo = null;
+}
+function hideChecked() {
+  const today = new Date().toISOString().slice(0, 10);
+  checkedIds.value.forEach(id => {
+    const row = accountRows.find(r => r.id === id);
+    if (row) { row.deprecated = true; row.effectiveTo = today; }
+  });
+  checkedIds.value = [];
+}
+function showChecked() {
+  checkedIds.value.forEach(id => {
+    const row = accountRows.find(r => r.id === id);
+    if (row) { row.deprecated = false; row.effectiveTo = null; }
+  });
+  checkedIds.value = [];
+}
+function deleteRow(row: Account) {
+  if (!row.isCustom) return;
+  if (!confirm(`「${row.name}」を削除しますか？復元できません。`)) return;
+  const idx = accountRows.findIndex(r => r.id === row.id);
+  if (idx !== -1) accountRows.splice(idx, 1);
+}
+function deleteChecked() {
+  const customIds = checkedIds.value.filter(id => {
+    const row = accountRows.find(r => r.id === id);
+    return row?.isCustom;
+  });
+  if (!customIds.length) { alert('カスタム科目のみ削除できます。'); return; }
+  if (!confirm(`${customIds.length}件のカスタム科目を削除しますか？復元できません。`)) return;
+  customIds.forEach(id => {
+    const idx = accountRows.findIndex(r => r.id === id);
+    if (idx !== -1) accountRows.splice(idx, 1);
+  });
+  checkedIds.value = [];
+}
+let copyCounter = 0;
+function copyChecked() {
+  // チェック行を逆順にし、各行の直下にコピーを挿入
+  const ids = [...checkedIds.value];
+  ids.reverse().forEach(id => {
+    const srcIdx = accountRows.findIndex(r => r.id === id);
+    if (srcIdx === -1) return;
+    const src = accountRows[srcIdx];
+    if (!src) return;
+    copyCounter++;
+    const copy: Account = {
+      id: `${src.id}_COPY_${copyCounter}`,
+      name: `${src.name}（コピー）`,
+      target: src.target,
+      category: src.category,
+      defaultTaxCategoryId: src.defaultTaxCategoryId,
+      aiSelectable: src.aiSelectable,
+      deprecated: src.deprecated,
+      effectiveFrom: src.effectiveFrom,
+      effectiveTo: src.effectiveTo,
+      sortOrder: src.sortOrder + 0.5,
+      isCustom: true,
+    };
+    accountRows.splice(srcIdx + 1, 0, copy);
+  });
+  checkedIds.value = [];
+}
+function addAfterChecked() {
+  // 最後にチェックした行の直下に新規行を挿入
+  const ids = [...checkedIds.value];
+  const lastId = ids[ids.length - 1];
+  const insertIdx = lastId ? accountRows.findIndex(r => r.id === lastId) + 1 : accountRows.length;
+  copyCounter++;
+  const newRow: Account = {
+    id: `NEW_${copyCounter}`,
+    name: '新規科目',
+    target: accountBusinessType.value === 'corp' ? 'corp' : 'individual',
+    category: '経費',
+    defaultTaxCategoryId: 'COMMON_EXEMPT',
+    aiSelectable: false,
+    deprecated: false,
+    effectiveFrom: new Date().toISOString().slice(0, 10),
+    effectiveTo: null,
+    sortOrder: insertIdx,
+    isCustom: true,
+  };
+  accountRows.splice(insertIdx, 0, newRow);
+  checkedIds.value = [];
+}
+function saveChanges() {
+  alert('保存しました（モック）');
+}
+
+// =============== インライン編集 ===============
+const editingRow = ref('');
+const editingField = ref('');
+const editValue = ref('');
+function startEdit(row: Account, field: 'name') {
+  editingRow.value = row.id;
+  editingField.value = field;
+  editValue.value = row[field];
+}
+function commitEdit(row: Account) {
+  if (editingField.value === 'name' && row) { row.name = editValue.value; }
+  editingRow.value = '';
+  editingField.value = '';
+}
+
+// =============== ドラッグ並替え ===============
+const dragIdx = ref(-1);
+function onDragStart(idx: number, e: DragEvent) {
+  dragIdx.value = idx;
+  e.dataTransfer!.effectAllowed = 'move';
+}
+function onDragOver(_idx: number) {
+  // placeholder for future hover highlight
+}
+function onDrop(targetIdx: number) {
+  if (dragIdx.value === -1 || dragIdx.value === targetIdx) return;
+  const startIdx = (accountPage.value - 1) * PAGE_SIZE;
+  const srcGlobal = startIdx + dragIdx.value;
+  const dstGlobal = startIdx + targetIdx;
+  const removed = accountRows.splice(srcGlobal, 1);
+  if (removed.length > 0) {
+    accountRows.splice(dstGlobal, 0, removed[0]!);
+    accountRows.forEach((r, i) => { r.sortOrder = i + 1; });
+  }
+  dragIdx.value = -1;
+}
 
 // =============== 共通ユーティリティ ===============
 function getTaxCategoryName(id?: string): string {
@@ -299,9 +485,84 @@ function resetAccountOrder() {
   box-shadow: 0 2px 6px rgba(0,0,0,0.18);
 }
 .td-ai { text-align: center; color: #1976D2; font-weight: 600; }
+.td-date { text-align: center; color: #888; font-size: 10px; white-space: nowrap; }
+
+/* deprecated行のグレーアウト（ルール3） */
+.row-deprecated { opacity: 0.4; }
+.row-deprecated td { text-decoration: line-through; color: #999; }
+
+/* ドラッグ中の行 */
+.row-dragging { opacity: 0.5; background: #e3f2fd; }
+
+/* インライン編集 */
+.inline-edit {
+  width: 100%; border: 1px solid #1976D2; border-radius: 3px;
+  padding: 2px 6px; font-size: 12px; outline: none;
+  background: #fffde7;
+}
 
 .sortable { cursor: pointer; user-select: none; }
 .sortable:hover { background: #d0e8fc; }
 .sort-icon { font-size: 9px; margin-left: 2px; color: #1976D2; }
 .sort-icon.inactive { color: #ccc; }
+
+/* 注意コメントバナー */
+.as-info-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; margin: 0 0 8px; border-radius: 4px;
+  background: #e3f2fd; color: #1565c0;
+  font-size: 12px; border: 1px solid #bbdefb;
+}
+.as-info-banner i { font-size: 14px; flex-shrink: 0; }
+
+/* 一括操作ボタン */
+.as-bulk-badge {
+  display: inline-block; margin-left: 12px;
+  padding: 2px 8px; border-radius: 10px;
+  background: #1976D2; color: #fff;
+  font-size: 11px; font-weight: 600;
+}
+.as-bulk-btn {
+  margin-left: 4px; padding: 3px 10px; border: 1px solid #ccc;
+  border-radius: 4px; background: #fff; color: #555;
+  font-size: 11px; cursor: pointer; white-space: nowrap;
+}
+.as-bulk-btn:hover { background: #f5f5f5; border-color: #999; }
+.as-bulk-btn.danger { color: #e53935; border-color: #e53935; }
+.as-bulk-btn.danger:hover { background: #ffebee; }
+
+/* 復元アイコン */
+.td-restore { color: #4caf50; cursor: pointer; font-size: 12px; }
+.td-restore:hover { color: #2e7d32; }
+
+/* 非表示化アイコン（目マーク） */
+.td-hide { color: #999; cursor: pointer; font-size: 14px; }
+.td-hide:hover { color: #616161; }
+.td-show { color: #4caf50; cursor: pointer; font-size: 14px; }
+.td-show:hover { color: #2e7d32; }
+
+/* 物理削除アイコン（ゴミ箱・カスタムのみ） */
+.td-delete { color: #e53935; cursor: pointer; font-size: 14px; margin-right: 8px; }
+.td-delete:hover { color: #b71c1c; }
+
+/* アクション列 */
+.as-td-actions { white-space: nowrap; text-align: center; }
+
+/* カスタム行の背景色（薄黄） */
+.row-custom { background: #fffde7; }
+.row-custom:hover { background: #fff9c4; }
+
+/* デフォルト行のロックアイコン（科目名左） */
+.td-lock { color: #f9a825; font-size: 1em; margin-right: 4px; vertical-align: middle; }
+
+/* 編集可能セル */
+.td-editable { cursor: text; }
+.td-editable:hover { background: #fff9c4; outline: 1px dashed #fbc02d; }
+.td-edit-icon { font-size: 14px; color: #d84315; margin-right: 6px; }
+
+/* 保存ボタン */
+.as-action-btn.save {
+  background: #4caf50; color: #fff; border: 1px solid #388e3c;
+}
+.as-action-btn.save:hover { background: #388e3c; }
 </style>
