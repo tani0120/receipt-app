@@ -1,6 +1,6 @@
 # タスクインデックス
 
-**更新日**: 2026-02-27
+**更新日**: 2026-03-06
 
 ---
 
@@ -33,3 +33,10 @@
 ## インフラ・セキュリティ
 
 - [environment_security.md](file:///C:/dev/receipt-app/docs/genzai/08_infrastructure/environment_security.md) — Firebase CLI、ggshield、RLSポリシー（3項目）
+
+---
+
+## データベース設計
+
+- [tax_category_schema.md](file:///C:/dev/receipt-app/docs/genzai/02_database_schema/tax_category_schema.md) — 税区分・勘定科目テーブル設計書
+- [master_design_rules.md](file:///C:/dev/receipt-app/docs/genzai/02_database_schema/master_design_rules.md) — マスタ設計ルール確定版（13ルール、2026-03-06確定）

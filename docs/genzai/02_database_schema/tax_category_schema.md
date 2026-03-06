@@ -1,8 +1,8 @@
 # 税区分・勘定科目テーブル設計書
 
 > 作成日: 2026-03-02
-> 更新日: 2026-03-03（設計決定統合: 新ID方式、effectiveFrom/To、rate保持、管理者UI、責任境界）
-> 根拠: domain_type_design.md v2、streamed_design_policy.md、ChatGPT設計議論（2026-03-03）
+> 更新日: 2026-03-06（accounts テーブルに deprecated/effective_from/effective_to/ai_selectable 追加、管理者UI→モック実装済み、master_design_rules.md 13ルール確定、実装状況テーブル更新）
+> 根拠: domain_type_design.md v2、streamed_design_policy.md、ChatGPT設計議論（2026-03-03）、マスタ設計議論（2026-03-06）
 
 ---
 
@@ -93,10 +93,16 @@ AND（伝票日がある場合のみ:
 | sub | TEXT | - | NULL | 補助科目 |
 | default_tax_category_id | TEXT | - | NULL | デフォルト税区分（FK → tax_categories.id） |
 | sort_order | INTEGER | ✅ | - | 表示順 |
+| ai_selectable | BOOLEAN | ✅ | false | AI自動選択可否 |
+| deprecated | BOOLEAN | ✅ | false | 非推奨（論理削除用。UIではグレーアウト表示） |
+| effective_from | DATE | ✅ | - | 適用開始日 |
+| effective_to | DATE | - | NULL | 適用終了日（NULLなら現役） |
 | client_id | UUID | ✅ | - | 顧問先ID（FK → clients.id） |
 
 - **PK**: `id`（顧問先ごとに重複可のため、実運用では `(id, client_id)` が候補キー）
 - **FK**: `default_tax_category_id → tax_categories(id)`
+- **物理削除禁止**: `deprecated = true` で無効化（→ [master_design_rules.md](file:///c:/dev/receipt-app/docs/genzai/02_database_schema/master_design_rules.md) ルール3）
+- **適用期間**: 現役は `effective_to = NULL`（→ ルール1）
 
 ---
 
@@ -137,28 +143,36 @@ UIメッセージ:
 
 ## 4. 管理者UI（新規設計必要）
 
+> 詳細ルールは [master_design_rules.md](file:///c:/dev/receipt-app/docs/genzai/02_database_schema/master_design_rules.md) に集約
+
 ### 管理者の責務
 
-- 税法改正時の新税区分追加
+- 税法改正時の新税区分追加（全顧問先に**強制適用** → ルール12）
 - 旧税区分の非推奨化（`deprecated = true`）
+- 勘定科目の追加・非推奨化（顧問先への反映は**手動** → ルール8, 12）
 - 表示名・MF正式名称の変更
 - 変更理由コメントの記録
+- **マスタ管理権限がないスタッフはアクセス不可**（→ ルール2）
 
 ### 管理者UIの表示
 
 | 状態 | 表示 |
 |------|------|
 | 現行有効 | 通常表示 |
-| 非推奨 | バッジ付き表示 |
+| 非推奨 | **グレーアウト表示**（→ ルール3） |
 | 未使用 | トグルで無効化可能 |
 
-### 変更履歴（最低限保持）
+### 操作方式（→ ルール6）
 
-```
-modified_at: TIMESTAMP
-modified_by: UUID
-change_comment: TEXT
-```
+- **行内編集（インライン）**: セルを直接クリックして編集
+- **保存ボタン**で確定（即時保存ではない）
+- **チェックボックス（✓）選択** → 削除・コピー・追加
+- **ドラッグ＆ドロップ**で並び替え → `sort_order`（表示順）をDB保存（→ ルール10）
+
+### 変更履歴（→ ルール13）
+
+- **別テーブル**（`master_change_log`）で管理
+- 変更前後の値（before / after）をJSON保存
 
 > 税務系ではログ必須。
 
@@ -182,6 +196,7 @@ change_comment: TEXT
 | コンポーネント | ファイル | 状態 |
 |---|---|---|
 | 税区分マスタデータ（151件） | `src/shared/data/tax-category-master.ts` | ✅ 実装済み |
+| 勘定科目マスタデータ（79科目） | `src/shared/data/account-master.ts` | ✅ 実装済み |
 | TaxCategory型定義 | `src/shared/types/tax-category.ts` | ✅ 実装済み |
 | Account型定義 | `src/shared/types/account.ts` | ✅ 実装済み |
 | SimpleTaxRule型定義 | `src/shared/types/simple-tax-rule.ts` | ✅ 実装済み |
@@ -191,8 +206,11 @@ change_comment: TEXT
 | UI表示変換（概念ID→名称） | `src/mocks/components/JournalListLevel3Mock.vue` | ✅ 実装済み |
 | 設定画面（税区分タブ） | `src/views/ScreenS_AccountSettings.vue` | ✅ 実装済み |
 | 設定画面（勘定科目タブ） | `src/views/ScreenS_AccountSettings.vue` | ✅ 実装済み |
+| 勘定科目マスタUI | `src/mocks/views/MockMasterAccountsPage.vue`（`/master/accounts`） | ✅ モック実装済み（2026-03-06） |
+| 税区分マスタUI | `src/mocks/views/MockMasterTaxCategoriesPage.vue`（`/master/tax-categories`） | ✅ モック実装済み（2026-03-06） |
+| マスタハブUI | `src/mocks/views/MockMasterHubPage.vue`（`/master`） | ✅ モック実装済み（2026-03-06） |
 | rate / effectiveFrom / deprecated追加 | 型定義への反映 | ⬜ 未着手 |
-| 管理者UI | 新規画面 | ⬜ 未着手 |
+| マスタ設計ルール（13項目） | `master_design_rules.md` | ✅ 確定済み（2026-03-06） |
 | client_tax_settings UI | 顧問先設定への統合 | ✅ モック実装済み |
 | DBテーブル作成 | PostgreSQL migration | ⬜ 未着手（Phase C） |
 

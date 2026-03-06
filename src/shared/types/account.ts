@@ -24,8 +24,14 @@ export type Account = {
     category: string
     /** デフォルト税区分ID（TaxCategory.id への参照） */
     defaultTaxCategoryId?: string
-    /** AI自動選択可否 */
+    /** AI自動選択可否（マスタ初期値。顧問先単位で上書き可能 → ルール9） */
     aiSelectable: boolean
+    /** 非推奨フラグ（true=グレーアウト表示。物理削除禁止 → ルール3） */
+    deprecated: boolean
+    /** 適用開始日（ISO 8601形式。例: '2019-10-01'） */
+    effectiveFrom: string
+    /** 適用終了日（null=現役。終了した科目は日付を設定 → ルール1） */
+    effectiveTo: string | null
     /** 表示順 */
     sortOrder: number
 }

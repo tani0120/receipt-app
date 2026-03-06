@@ -55,9 +55,9 @@
         <table class="as-table">
           <colgroup>
             <col class="col-check">
-            <col style="width: 20%;">
-            <col style="width: 20%;">
-            <col style="width: 30%;">
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 22%;">
             <col style="width: 8%;">
             <col class="col-check">
           </colgroup>
@@ -67,8 +67,8 @@
               <th class="sortable" @click="sortAccounts('name')">
                 勘定科目 <i :class="getSortIcon('accounts', 'name')"></i>
               </th>
-              <th class="sortable" @click="sortAccounts('category')">
-                分類 <i :class="getSortIcon('accounts', 'category')"></i>
+              <th>
+                補助科目 <span class="th-help-wrap" data-tooltip="補助科目は顧問先ごとに個別に設定します。"><i class="fa-solid fa-circle-question th-help"></i></span>
               </th>
               <th class="sortable" @click="sortAccounts('defaultTaxCategoryId')">
                 税区分 <i :class="getSortIcon('accounts', 'defaultTaxCategoryId')"></i>
@@ -81,7 +81,7 @@
             <tr v-for="row in pagedAccountRows" :key="row.id">
               <td class="as-td-check"><input type="checkbox"></td>
               <td>{{ row.name }}</td>
-              <td class="td-category">{{ row.category }}</td>
+              <td class="td-sub-account">{{ row.sub || '' }}</td>
               <td>{{ getTaxCategoryName(row.defaultTaxCategoryId) }}</td>
               <td class="td-ai">{{ row.aiSelectable ? '○' : '' }}</td>
               <td class="as-td-check"><i class="fa-solid fa-trash-can td-trash"></i></td>
@@ -465,7 +465,30 @@ function resetTaxOrder() {
 
 .td-trash { color: #bbb; cursor: pointer; font-size: 12px; }
 .td-trash:hover { color: #e53935; }
-.td-category { color: #888; font-size: 11px; }
+.td-sub-account { color: #888; font-size: 11px; }
+
+/* カスタムツールチップ */
+.th-help-wrap {
+  position: relative;
+  cursor: help;
+}
+.th-help-wrap[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  padding: 6px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
 .td-ai { text-align: center; color: #1976D2; font-weight: 600; }
 .td-direction { text-align: center; font-size: 10px; font-weight: 600; }
 .dir-sales { color: #2e7d32; }

@@ -1,7 +1,7 @@
 <template>
   <div class="h-full flex flex-col bg-gray-50 font-sans">
     <!-- 共通ナビバー -->
-    <MockNavBar activeItem="settings" />
+    <MockNavBar />
     <!-- 設定コンテンツ -->
     <div class="flex-1 overflow-auto p-4">
       <ScreenS_Settings />

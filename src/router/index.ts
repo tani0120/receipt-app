@@ -146,8 +146,18 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: '/master',
-    name: 'MasterManagement',
-    component: () => import('@/mocks/views/MockSettingsPage.vue')
+    name: 'MasterHub',
+    component: () => import('@/mocks/views/MockMasterHubPage.vue')
+  },
+  {
+    path: '/master/accounts',
+    name: 'MasterAccounts',
+    component: () => import('@/mocks/views/MockMasterAccountsPage.vue')
+  },
+  {
+    path: '/master/tax-categories',
+    name: 'MasterTaxCategories',
+    component: () => import('@/mocks/views/MockMasterTaxCategoriesPage.vue')
   },
 ]
 

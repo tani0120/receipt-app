@@ -1,0 +1,307 @@
+<template>
+  <div class="h-full flex flex-col bg-gray-50 font-sans">
+    <!-- 共通ナビバー -->
+    <MockNavBar />
+    <!-- 勘定科目マスタ コンテンツ -->
+    <div class="flex-1 overflow-auto">
+      <div class="account-settings">
+        <!-- ヘッダー -->
+        <div class="as-header">
+          <router-link to="/master" class="as-back-link">
+            <i class="fa-solid fa-arrow-left"></i> マスタ管理
+          </router-link>
+          <span class="as-header-label">勘定科目マスタ（事務所共通）</span>
+        </div>
+
+        <!-- 切替セレクター -->
+        <div class="as-selectors-center">
+          <div class="as-selector-group-lg">
+            <span class="as-selector-label-lg">事業形態:</span>
+            <select v-model="accountBusinessType" class="as-selector-lg">
+              <option value="individual">個人事業主</option>
+              <option value="corp">法人</option>
+            </select>
+          </div>
+          <div class="as-selector-group-lg" v-if="accountBusinessType === 'individual'">
+            <label class="as-checkbox-label-lg">
+              <input type="checkbox" v-model="accountHasRealEstate" class="as-checkbox-lg">
+              <span>不動産所得あり</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="as-filters">
+          <input type="text" v-model="accountFilter" placeholder="科目名で絞り込み" class="as-filter-input">
+          <span class="as-page-info-text">全{{ filteredAccountRows.length }}件</span>
+        </div>
+        <div class="as-toolbar">
+          <div class="as-pagination">
+            <span class="as-page-arrow" :class="{ disabled: accountPage <= 1 }" @click="accountPage = Math.max(1, accountPage - 1)">＜</span>
+            <span
+              v-for="p in accountTotalPages" :key="p"
+              class="as-page-num" :class="{ active: accountPage === p }"
+              @click="accountPage = p"
+            >{{ p }}</span>
+            <span class="as-page-arrow" :class="{ disabled: accountPage >= accountTotalPages }" @click="accountPage = Math.min(accountTotalPages, accountPage + 1)">＞</span>
+            <span class="as-page-range">{{ accountPageStart }}~{{ accountPageEnd }} / {{ filteredAccountRows.length }}件</span>
+          </div>
+          <div class="as-actions">
+            <button class="as-action-btn" @click="resetAccountOrder"><i class="fa-solid fa-rotate"></i> デフォルト順</button>
+            <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button>
+          </div>
+        </div>
+        <div class="as-table-wrap">
+          <table class="as-table">
+            <colgroup>
+              <col class="col-check">
+              <col style="width: 25%;">
+              <col style="width: 25%;">
+              <col style="width: 22%;">
+              <col style="width: 8%;">
+              <col class="col-check">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="as-th-check"><input type="checkbox"></th>
+                <th class="sortable" @click="sortAccounts('name')">
+                  勘定科目 <i :class="getSortIcon('name')"></i>
+                </th>
+                <th>
+                  補助科目 <span class="th-help-wrap" data-tooltip="補助科目は顧問先ごとの設定で入力します。マスタでは空白です。"><i class="fa-solid fa-circle-question th-help"></i></span>
+                </th>
+                <th class="sortable" @click="sortAccounts('defaultTaxCategoryId')">
+                  税区分 <i :class="getSortIcon('defaultTaxCategoryId')"></i>
+                </th>
+                <th>AI</th>
+                <th class="as-th-check"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in pagedAccountRows" :key="row.id">
+                <td class="as-td-check"><input type="checkbox"></td>
+                <td>{{ row.name }}</td>
+                <td class="td-sub-account"></td>
+                <td>{{ getTaxCategoryName(row.defaultTaxCategoryId) }}</td>
+                <td class="td-ai">{{ row.aiSelectable ? '○' : '' }}</td>
+                <td class="as-td-check"><i class="fa-solid fa-trash-can td-trash"></i></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- 下部ページネーション -->
+        <div class="as-pagination bottom">
+          <span class="as-page-arrow" :class="{ disabled: accountPage <= 1 }" @click="accountPage = Math.max(1, accountPage - 1)">＜</span>
+          <span
+            v-for="p in accountTotalPages" :key="'b' + p"
+            class="as-page-num" :class="{ active: accountPage === p }"
+            @click="accountPage = p"
+          >{{ p }}</span>
+          <span class="as-page-arrow" :class="{ disabled: accountPage >= accountTotalPages }" @click="accountPage = Math.min(accountTotalPages, accountPage + 1)">＞</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, computed, watch } from 'vue';
+import type { Account } from '@/shared/types/account';
+import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
+import { ACCOUNT_MASTER } from '@/shared/data/account-master';
+import MockNavBar from '@/mocks/components/MockNavBar.vue';
+
+const PAGE_SIZE = 50;
+
+// =============== 勘定科目マスタ ===============
+const accountBusinessType = ref<'corp' | 'individual'>('individual');
+const accountHasRealEstate = ref(false);
+const accountFilter = ref('');
+const accountPage = ref(1);
+
+const accountRows: Account[] = reactive([...ACCOUNT_MASTER]);
+
+const filteredAccountRows = computed(() => {
+  return accountRows.filter(row => {
+    if (row.target !== 'both' && row.target !== accountBusinessType.value) return false;
+    if (accountBusinessType.value === 'individual' && !accountHasRealEstate.value) {
+      if (row.category === '不動産収入' || row.category === '不動産経費' || row.category === '不動産') return false;
+    }
+    if (accountFilter.value && !row.name.includes(accountFilter.value)) return false;
+    return true;
+  });
+});
+
+const accountTotalPages = computed(() => Math.max(1, Math.ceil(filteredAccountRows.value.length / PAGE_SIZE)));
+const accountPageStart = computed(() => (accountPage.value - 1) * PAGE_SIZE + 1);
+const accountPageEnd = computed(() => Math.min(accountPage.value * PAGE_SIZE, filteredAccountRows.value.length));
+const pagedAccountRows = computed(() => filteredAccountRows.value.slice(accountPageStart.value - 1, accountPageEnd.value));
+
+watch(filteredAccountRows, () => { if (accountPage.value > accountTotalPages.value) accountPage.value = 1; });
+
+// =============== 共通ユーティリティ ===============
+function getTaxCategoryName(id?: string): string {
+  if (!id) return '';
+  const found = TAX_CATEGORY_MASTER.find(tc => tc.id === id);
+  return found ? found.shortName : id;
+}
+
+function compareByKey<T>(arr: T[], key: keyof T, asc: boolean): void {
+  arr.sort((a, b) => {
+    const va = a[key]; const vb = b[key];
+    if (typeof va === 'boolean' && typeof vb === 'boolean') return asc ? (va === vb ? 0 : va ? -1 : 1) : (va === vb ? 0 : va ? 1 : -1);
+    return asc ? String(va ?? '').localeCompare(String(vb ?? ''), 'ja') : String(vb ?? '').localeCompare(String(va ?? ''), 'ja');
+  });
+}
+
+const sortState = reactive({ key: '' as keyof Account | '', asc: true });
+
+function getSortIcon(key: string) {
+  if (sortState.key !== key) return 'fa-solid fa-sort sort-icon inactive';
+  return sortState.asc ? 'fa-solid fa-sort-up sort-icon' : 'fa-solid fa-sort-down sort-icon';
+}
+
+function sortAccounts(key: keyof Account) {
+  if (sortState.key === key) { sortState.asc = !sortState.asc; } else { sortState.key = key; sortState.asc = true; }
+  compareByKey(accountRows, key, sortState.asc);
+}
+
+function resetAccountOrder() {
+  accountRows.splice(0, accountRows.length, ...ACCOUNT_MASTER);
+  sortState.key = '';
+}
+</script>
+
+<style scoped>
+.account-settings {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #333;
+  background: #ffffff;
+  padding: 0 16px;
+  overflow: auto;
+}
+
+.as-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 12px;
+}
+.as-back-link {
+  color: #1976D2;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.as-back-link:hover { text-decoration: underline; }
+.as-header-label { color: #1976D2; font-weight: 600; }
+
+/* ========== セレクター（中央・大きめ） ========== */
+.as-selectors-center {
+  display: flex; justify-content: center; align-items: center;
+  gap: 24px; padding: 14px 0; border-bottom: 1px solid #f0f0f0;
+}
+.as-selector-group-lg { display: flex; align-items: center; gap: 10px; }
+.as-selector-label-lg { font-size: 15px; color: #555; font-weight: 700; }
+.as-selector-lg {
+  padding: 8px 14px; font-size: 16px; border: 2px solid #ccc;
+  border-radius: 6px; background: #fff; color: #333; cursor: pointer; outline: none;
+  min-width: 160px;
+}
+.as-selector-lg:focus { border-color: #1976D2; }
+.as-checkbox-label-lg {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; color: #333; cursor: pointer;
+}
+.as-checkbox-lg { width: 18px; height: 18px; accent-color: #1976D2; cursor: pointer; }
+
+/* ========== フィルター等 ========== */
+.as-filters { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+.as-filter-input {
+  border: 1px solid #ccc; border-radius: 3px; padding: 4px 8px;
+  font-size: 11px; width: 200px; outline: none;
+}
+.as-filter-input:focus { border-color: #1976D2; }
+.as-page-info-text { margin-left: auto; color: #888; font-size: 11px; }
+
+.as-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+
+/* ========== ページネーション ========== */
+.as-pagination { display: flex; align-items: center; gap: 2px; font-size: 12px; }
+.as-pagination.bottom { justify-content: center; padding: 8px 0 12px; }
+.as-page-arrow {
+  padding: 4px 10px; cursor: pointer; color: #1976D2; font-weight: 600;
+  border-radius: 3px; user-select: none;
+}
+.as-page-arrow:hover { background: #e3f2fd; }
+.as-page-arrow.disabled { color: #ccc; pointer-events: none; }
+.as-page-num {
+  padding: 4px 10px; cursor: pointer; border-radius: 3px; color: #555;
+  min-width: 28px; text-align: center; user-select: none;
+}
+.as-page-num:hover { background: #e3f2fd; }
+.as-page-num.active { background: #1976D2; color: white; font-weight: 600; }
+.as-page-range { margin-left: 10px; color: #888; font-size: 11px; }
+
+.as-actions { display: flex; gap: 8px; }
+.as-action-btn {
+  background: none; border: none; color: #1976D2;
+  font-size: 11px; cursor: pointer; padding: 2px 4px;
+  display: flex; align-items: center; gap: 3px;
+}
+.as-action-btn:hover { text-decoration: underline; }
+.as-action-btn.primary { font-weight: 600; }
+
+/* ========== テーブル ========== */
+.as-table-wrap { overflow: auto; flex: 1; min-height: 0; }
+.as-table { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid #d0d7de; }
+.col-check { width: 38px; }
+.as-table thead { background: #e3f2fd; position: sticky; top: 0; z-index: 1; }
+.as-table th {
+  padding: 6px 10px; text-align: center; font-weight: 600;
+  color: #555; font-size: 11px; white-space: nowrap; border: 1px solid #d0d7de;
+}
+.as-th-check, .as-td-check { width: 38px; text-align: center; }
+.as-table td { padding: 5px 10px; border: 1px solid #e0e0e0; color: #333; }
+.as-table tbody tr { cursor: grab; }
+.as-table tbody tr:hover { background: #f5f9ff; }
+
+.td-trash { color: #bbb; cursor: pointer; font-size: 12px; }
+.td-trash:hover { color: #e53935; }
+.td-sub-account { color: #888; font-size: 11px; }
+
+/* カスタムツールチップ */
+.th-help-wrap {
+  position: relative;
+  cursor: help;
+}
+.th-help-wrap[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  padding: 6px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+.td-ai { text-align: center; color: #1976D2; font-weight: 600; }
+
+.sortable { cursor: pointer; user-select: none; }
+.sortable:hover { background: #d0e8fc; }
+.sort-icon { font-size: 9px; margin-left: 2px; color: #1976D2; }
+.sort-icon.inactive { color: #ccc; }
+</style>

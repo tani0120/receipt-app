@@ -27,7 +27,7 @@
 |------|---------|--------|---------|------|
 | 第1世代 | [schema_dictionary.ts](file:///c:/dev/receipt-app/src/shared/schema_dictionary.ts) | `TAX_SALES_10`等（独自16値） | なし | ❌ 死んだコード |
 | 第2世代 | [journal.ts](file:///c:/dev/receipt-app/src/domain/types/journal.ts) | `LegacyTaxCategory`（8値enum） | `AccountCode`（30値enum） | ⚠️ `@deprecated`済みだが依存あり |
-| 第3世代 | [tax-category.ts](file:///c:/dev/receipt-app/src/shared/types/tax-category.ts) + [tax-category-master.ts](file:///c:/dev/receipt-app/src/shared/data/tax-category-master.ts) | `TaxCategory`型（151件マスタ） | `Account`型（マスタ未作成） | ✅ 正解 |
+| 第3世代 | [tax-category.ts](file:///c:/dev/receipt-app/src/shared/types/tax-category.ts) + [tax-category-master.ts](file:///c:/dev/receipt-app/src/shared/data/tax-category-master.ts) | `TaxCategory`型（151件マスタ） | `Account`型（✅79科目マスタ作成済み） | ✅ 正解 |
 
 ### 1-3. フィクスチャの現状
 
@@ -59,15 +59,14 @@
 
 ## 2. 課題一覧
 
-### 課題A: 勘定科目マスターデータ未作成
+### 課題A: 勘定科目マスターデータ ~~未作成~~ ✅解決済み
 
 | 項目 | 詳細 |
 |------|------|
-| 現状 | `Account`型は定義済み。マスターデータ（`account-master.ts`）が存在しない |
-| 影響 | フィクスチャの科目名がハードコート。スキーマ駆動のUI表示ができない |
-| 規模 | 法人105科目 + 個人52科目 + 不動産10科目 = **推定120〜130科目**（重複除外後） |
+| 現状 | ✅ `src/shared/data/account-master.ts` 作成済み（79科目） |
+| マスタUI | ✅ `/master/accounts` 独立ページ化済み（2026-03-06） |
+| 設計ルール | ✅ [master_design_rules.md](file:///c:/dev/receipt-app/docs/genzai/02_database_schema/master_design_rules.md)（13ルール確定済み） |
 | 参照 | [mf_account_master_reference.md](file:///c:/dev/receipt-app/docs/genzai/09_streamed/mf_account_master_reference.md) |
-| 解決 | `src/shared/data/account-master.ts` を新規作成。`Account`型 + 概念ID + MF正式名称 |
 
 ### 課題B: AccountCodeの@deprecated化が未完了
 
@@ -169,16 +168,9 @@ tax-category-master.ts ←── フィクスチャの tax_category_id
 
 ### フェーズ2-0: スキーマ定義（前提作業）
 
-- [ ] **T1**: `src/shared/data/account-master.ts` 新規作成
-  - 法人105科目 + 個人52科目 + 不動産10科目（重複除外で推定120〜130件）
-  - 全量リスト: [mf_account_master_reference.md](file:///c:/dev/receipt-app/docs/genzai/09_streamed/mf_account_master_reference.md)
-  - `id`: 概念ID（`TRAVEL`, `SUPPLIES`等）
-  - `name`: MF正式科目名（`旅費交通費`, `消耗品費`等）
-  - `target`: `'corp' | 'individual' | 'both'`（法人/個人/共通）
-  - `defaultTaxCategoryId`: デフォルト税区分の概念ID
-  - `aiSelectable`: AI自動選択可否（現行Geminiプロンプトの27科目 = true）
-  - `sortOrder`: 表示順
-  - **設計判断**: 法人/個人を1マスタで管理するか、別マスタにするか（要決定）
+- [x] **T1**: `src/shared/data/account-master.ts` ✅作成済み（79科目、法人/個人1マスタ管理、`target`で分岐）
+  - マスタUI: `/master/accounts` 独立ページ化済み（2026-03-06）
+  - 設計ルール: [master_design_rules.md](file:///c:/dev/receipt-app/docs/genzai/02_database_schema/master_design_rules.md)
 - [ ] **T2**: `journal.ts`の`AccountCode`を`LegacyAccountCode`にリネーム + `@deprecated`
   - `LegacyTaxCategory`と同じパターン
   - 既存コードの参照は温存（壊さない）

@@ -1,7 +1,7 @@
 <template>
   <div class="h-full flex flex-col bg-gray-50 font-sans" @click="closeDropdown">
     <!-- L3ツールバー（共通ナビバー） -->
-    <MockNavBar activeItem="home" />
+    <MockNavBar />
     <!-- 上部バー -->
     <div class="bg-white px-3 py-[5.2px] flex justify-between items-center text-[10px] text-gray-700">
       <!-- フィルタモード（通常時） -->
@@ -1808,7 +1808,7 @@ function hasPastJournal(journal: JournalPhase5Mock): boolean {
   return localJournals.value.findIndex(j => j.id === journal.id) < 25;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function getValue(obj: any, path: string): unknown {
   const raw = path.split('.').reduce((o: any, key: string) => o?.[key], obj)
   // 概念ID → MF正式名称に変換（tax_category_idキーの場合）
