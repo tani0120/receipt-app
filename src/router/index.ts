@@ -128,7 +128,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/clients/:clientId/documents/:documentId',
     name: 'ClientDocument',
-    component: () => import('@/views/ReceiptDetail.vue'),
+    component: () => import('@/views/DocumentDetail.vue'),
     props: true,
     meta: { requiresAuth: true }
   },

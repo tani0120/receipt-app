@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import ReceiptDetail from '@/views/ReceiptDetail.vue'
+import DocumentDetail from '@/views/DocumentDetail.vue'
 import type { ReceiptViewModel } from '@/types/receiptViewModel'
 
 // vue-routerモック
@@ -14,25 +14,33 @@ vi.mock('vue-router', () => ({
   })
 }))
 
-describe('ReceiptDetail - uiMode mapping (Task 1)', () => {
+/**
+ * テスト用ヘルパー: ReceiptViewModelを生成
+ * 型キャストをこの1箇所に集約し、テスト本体では型安全に書ける
+ * overridesで不正データ（undefined, 不正ステータス等）を注入可能
+ */
+function createTestReceipt(overrides: Record<string, unknown> = {}): ReceiptViewModel {
+  return {
+    id: '1',
+    status: 'uploaded',
+    clientId: 'test',
+    driveFileId: 'test',
+    ...overrides,
+  } as ReceiptViewModel
+}
+
+describe('DocumentDetail - uiMode mapping (Task 1)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
   // Test 1: uploaded → loading
   it('should show loading for uploaded status', async () => {
-    const wrapper = mount(ReceiptDetail, {
+    const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    // receipt.valueを直接設定
-    const receipt: ReceiptViewModel = {
-      id: '1',
-      status: 'uploaded',
-      clientId: 'test',
-      driveFileId: 'test'
-    }
-    wrapper.vm.receipt = receipt
+    wrapper.vm.receipt = createTestReceipt({ status: 'uploaded' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('loading')
@@ -40,17 +48,11 @@ describe('ReceiptDetail - uiMode mapping (Task 1)', () => {
 
   // Test 2: preprocessed → loading
   it('should show loading for preprocessed status', async () => {
-    const wrapper = mount(ReceiptDetail, {
+    const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    const receipt: ReceiptViewModel = {
-      id: '1',
-      status: 'preprocessed',
-      clientId: 'test',
-      driveFileId: 'test'
-    }
-    wrapper.vm.receipt = receipt
+    wrapper.vm.receipt = createTestReceipt({ status: 'preprocessed' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('loading')
@@ -58,17 +60,11 @@ describe('ReceiptDetail - uiMode mapping (Task 1)', () => {
 
   // Test 3: ocr_done → ocr_preview
   it('should show ocr_preview for ocr_done status', async () => {
-    const wrapper = mount(ReceiptDetail, {
+    const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    const receipt: ReceiptViewModel = {
-      id: '1',
-      status: 'ocr_done',
-      clientId: 'test',
-      driveFileId: 'test'
-    }
-    wrapper.vm.receipt = receipt
+    wrapper.vm.receipt = createTestReceipt({ status: 'ocr_done' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('ocr_preview')
@@ -76,17 +72,11 @@ describe('ReceiptDetail - uiMode mapping (Task 1)', () => {
 
   // Test 4: suggested → editable
   it('should show editable for suggested status', async () => {
-    const wrapper = mount(ReceiptDetail, {
+    const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    const receipt: ReceiptViewModel = {
-      id: '1',
-      status: 'suggested',
-      clientId: 'test',
-      driveFileId: 'test'
-    }
-    wrapper.vm.receipt = receipt
+    wrapper.vm.receipt = createTestReceipt({ status: 'suggested' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('editable')
@@ -94,17 +84,11 @@ describe('ReceiptDetail - uiMode mapping (Task 1)', () => {
 
   // Test 5: reviewing → readonly
   it('should show readonly for reviewing status', async () => {
-    const wrapper = mount(ReceiptDetail, {
+    const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    const receipt: ReceiptViewModel = {
-      id: '1',
-      status: 'reviewing',
-      clientId: 'test',
-      driveFileId: 'test'
-    }
-    wrapper.vm.receipt = receipt
+    wrapper.vm.receipt = createTestReceipt({ status: 'reviewing' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('readonly')
@@ -112,17 +96,11 @@ describe('ReceiptDetail - uiMode mapping (Task 1)', () => {
 
   // Test 6: confirmed → readonly
   it('should show readonly for confirmed status', async () => {
-    const wrapper = mount(ReceiptDetail, {
+    const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    const receipt: ReceiptViewModel = {
-      id: '1',
-      status: 'confirmed',
-      clientId: 'test',
-      driveFileId: 'test'
-    }
-    wrapper.vm.receipt = receipt
+    wrapper.vm.receipt = createTestReceipt({ status: 'confirmed' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('readonly')
@@ -130,31 +108,25 @@ describe('ReceiptDetail - uiMode mapping (Task 1)', () => {
 
   // Test 7: rejected → rejected
   it('should show rejected for rejected status', async () => {
-    const wrapper = mount(ReceiptDetail, {
+    const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    const receipt: ReceiptViewModel = {
-      id: '1',
-      status: 'rejected',
-      clientId: 'test',
-      driveFileId: 'test'
-    }
-    wrapper.vm.receipt = receipt
+    wrapper.vm.receipt = createTestReceipt({ status: 'rejected' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('rejected')
   })
 })
 
-describe('ReceiptDetail - fallback behavior (Task 2)', () => {
+describe('DocumentDetail - fallback behavior (Task 2)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
   // Test 1: receipt = null → loading
   it('should show loading when receipt is null', () => {
-    const wrapper = mount(ReceiptDetail, {
+    const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
@@ -165,17 +137,11 @@ describe('ReceiptDetail - fallback behavior (Task 2)', () => {
 
   // Test 2: receipt.status = undefined → fallback
   it('should show fallback when status is undefined', async () => {
-    const wrapper = mount(ReceiptDetail, {
+    const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    const receipt: any = {
-      id: '1',
-      status: undefined,
-      clientId: 'test',
-      driveFileId: 'test'
-    }
-    wrapper.vm.receipt = receipt
+    wrapper.vm.receipt = createTestReceipt({ status: undefined })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('fallback')
@@ -183,17 +149,11 @@ describe('ReceiptDetail - fallback behavior (Task 2)', () => {
 
   // Test 3: receipt.status = unknown value → fallback + メッセージ検証
   it('should show fallback for unknown status value and display message', async () => {
-    const wrapper = mount(ReceiptDetail, {
+    const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    const receipt: any = {
-      id: '1',
-      status: 'INVALID_STATUS',
-      clientId: 'test',
-      driveFileId: 'test'
-    }
-    wrapper.vm.receipt = receipt
+    wrapper.vm.receipt = createTestReceipt({ status: 'INVALID_STATUS' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('fallback')
@@ -203,18 +163,11 @@ describe('ReceiptDetail - fallback behavior (Task 2)', () => {
 
   // Test 4: displaySnapshot = undefined でも壊れない
   it('should not break when displaySnapshot is undefined', async () => {
-    const wrapper = mount(ReceiptDetail, {
+    const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    const receipt: ReceiptViewModel = {
-      id: '1',
-      status: 'suggested',
-      clientId: 'test',
-      driveFileId: 'test',
-      displaySnapshot: undefined
-    }
-    wrapper.vm.receipt = receipt
+    wrapper.vm.receipt = createTestReceipt({ status: 'suggested', displaySnapshot: undefined })
     await wrapper.vm.$nextTick()
 
     // UIが表示されることを確認（エラーなし）

@@ -2,7 +2,7 @@
   <div class="h-screen flex flex-col bg-slate-100">
     <!-- Header -->
     <header class="bg-white border-b border-slate-200 h-14 flex items-center px-4 shrink-0">
-      <h1 class="text-lg font-semibold text-slate-800">Receipt Detail</h1>
+      <h1 class="text-lg font-semibold text-slate-800">証票詳細</h1>
       <div class="ml-auto flex items-center gap-2" v-if="receipt">
         <span class="px-3 py-1 rounded text-sm font-medium bg-blue-50 text-blue-700">
           {{ receipt.status }}
@@ -37,6 +37,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import type { ReceiptViewModel } from '@/types/receiptViewModel'
+import type { ReceiptStatus } from '@/shared/receiptStatus'
 import LoadingView from '@/components/receipt/LoadingView.vue'
 import OcrPreview from '@/components/receipt/OcrPreview.vue'
 import EditorView from '@/components/receipt/EditorView.vue'
@@ -84,11 +85,13 @@ const uiMode = computed<ReceiptUiMode>(() => {
 
 // 開発用: テストステータス切り替え
 function setTestStatus(status: string) {
+  // 開発用テストのため、不正ステータスも含めてReceiptStatus型にキャスト
+  // fallbackのテスト用途で意図的に型境界を超える
   receipt.value = {
     id: 'test-001',
     clientId: 'client-001',
     driveFileId: 'drive-file-001',
-    status: status as any,
+    status: status as ReceiptStatus,
     displaySnapshot: {
       ocrText: 'テストOCRテキスト\n株式会社サンプル\n¥1,234',
       amountGuess: 1234,
@@ -98,7 +101,7 @@ function setTestStatus(status: string) {
 }
 
 onMounted(async () => {
-  const receiptId = route.params.id as string
+  const _receiptId = route.params.id as string
   // TODO: API呼び出し
   // receipt.value = await fetchReceipt(receiptId)
 })
