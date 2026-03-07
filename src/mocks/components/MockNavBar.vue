@@ -2,8 +2,24 @@
   <div>
     <!-- 上段バー（白背景）ロゴ + 管理メニュー -->
     <div class="bg-white border-b border-gray-200 flex items-center justify-between px-3" style="height: 41px; font-family: 'Noto Sans JP', sans-serif">
-      <!-- 左: ロゴ -->
-      <img src="/sugu-suru-logo.png" alt="sugu-suru" style="height: 30px" />
+      <!-- 左: ロゴ + 旧ページリンク -->
+      <div class="flex items-center gap-3">
+        <img src="/sugu-suru-logo.png" alt="sugu-suru" style="height: 30px" />
+        <div class="relative">
+          <button
+            class="text-[11px] text-gray-400 hover:text-sky-600 transition-colors flex items-center gap-1"
+            @click="showLegacyMenu = !showLegacyMenu"
+          >
+            <i class="fa-solid fa-clock-rotate-left"></i>旧ページ
+            <i class="fa-solid fa-caret-down text-[9px]"></i>
+          </button>
+          <div v-if="showLegacyMenu" class="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-[180px] py-1">
+            <button v-for="item in legacyItems" :key="item.path" class="w-full text-left px-3 py-1.5 text-[11px] text-gray-600 hover:bg-sky-50 hover:text-sky-700 flex items-center gap-2" @click="goLegacy(item.path)">
+              <i :class="item.icon" class="text-[10px] w-3 text-center"></i>{{ item.label }}
+            </button>
+          </div>
+        </div>
+      </div>
       <!-- 右: 管理メニュー（データ駆動） -->
       <div class="flex items-center gap-1 text-[12px] font-medium text-gray-600">
         <template v-for="(item, index) in topItems" :key="item.key">
@@ -44,10 +60,26 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
 const router = useRouter();
 const route = useRoute();
+
+// --- 旧ページメニュー ---
+const showLegacyMenu = ref(false);
+const legacyItems = [
+  { label: 'B:仕訳ステータス', icon: 'fa-solid fa-calculator', path: '/clients/demo/journals' },
+  { label: 'C:回収状況',       icon: 'fa-solid fa-calendar-days', path: '/clients/demo/collection' },
+  { label: 'D:AIルール',       icon: 'fa-solid fa-brain', path: '/clients/demo/ai-rules' },
+  { label: 'G:データ変換',     icon: 'fa-solid fa-arrow-right-arrow-left', path: '/clients/demo/data-conversion' },
+  { label: 'H:タスク管理',     icon: 'fa-solid fa-list-check', path: '/clients/demo/tasks' },
+  { label: 'Z:管理者設定',     icon: 'fa-solid fa-screwdriver-wrench', path: '/settings/admin' },
+];
+const goLegacy = (path: string) => {
+  showLegacyMenu.value = false;
+  router.push(path);
+};
 
 // --- 上段バー: 管理メニュー項目定義 ---
 interface TopItem {

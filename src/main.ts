@@ -1,5 +1,6 @@
 import './assets/main.css'
 import '@fortawesome/fontawesome-free/css/all.css'
+import './firebase' // Firebase initializeApp() を最初に実行
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
