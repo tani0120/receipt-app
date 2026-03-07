@@ -17,8 +17,8 @@
  */
 
 import { ref, computed } from 'vue';
-import { JournalEntrySchema } from '@/features/journal';
-import type { JournalEntryDraft } from '@/features/journal';
+import { JournalEntryDraftSchema } from '@/core/journal';
+import type { JournalEntryDraft } from '@/core/journal';
 import type { JournalEntryUI, JournalEntrySummaryUI } from '@/types/JournalEntryUI';
 import { mapToUI, mapToSummaryUI } from '@/adapters/journalEntryAdapter';
 
@@ -42,7 +42,7 @@ export function useJournalEntries() {
             .map(raw => {
                 try {
                     // Zod boundary: ここで型安全性を確保
-                    return JournalEntrySchema.parse(raw);
+                    return JournalEntryDraftSchema.parse(raw);
                 } catch (e) {
                     console.error('[useJournalEntries] Zod parse failed:', e);
                     return null;
@@ -70,7 +70,7 @@ export function useJournalEntries() {
      *
      * @param clientId - 顧問先ID（オプション）
      */
-    async function fetchEntries(clientId?: string) {
+    async function fetchEntries(_clientId?: string) {
         loading.value = true;
         error.value = null;
 
@@ -100,7 +100,7 @@ export function useJournalEntries() {
     async function createEntry(entry: JournalEntryUI) {
         try {
             // Zod.parse()で確定型に変換
-            const confirmed = JournalEntrySchema.parse(entry);
+            const confirmed = JournalEntryDraftSchema.parse(entry);
 
             // TODO: Firestore実装
             // await db.collection('journalEntries').add(confirmed);
@@ -121,7 +121,7 @@ export function useJournalEntries() {
     async function updateEntry(id: string, entry: JournalEntryUI) {
         try {
             // Zod.parse()で確定型に変換
-            const confirmed = JournalEntrySchema.parse(entry);
+            const confirmed = JournalEntryDraftSchema.parse(entry);
 
             // TODO: Firestore実装
             // await db.collection('journalEntries').doc(id).update(confirmed);

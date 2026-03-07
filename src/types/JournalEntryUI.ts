@@ -13,7 +13,7 @@
  * - Domain 型の汚染を防ぐ
  */
 
-import type { JournalEntryDraft, JournalLineDraft } from '@/features/journal';
+import type { JournalEntryDraft, JournalLineDraft } from '@/core/journal';
 
 /**
  * 仕訳エントリのUI型（表示・編集用）

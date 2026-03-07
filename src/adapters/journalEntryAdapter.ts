@@ -16,7 +16,7 @@
 import type {
     JournalEntryDraft,
     JournalLineDraft
-} from '@/features/journal';
+} from '@/core/journal';
 import type {
     JournalEntryUI,
     JournalLineUI,
@@ -54,10 +54,10 @@ function formatAmount(amount: number | undefined): string {
 export function mapLineToUI(line: JournalLineDraft): JournalLineUI {
     return {
         ...line,
-        displayDebit: formatAmount(line.drAmount),
-        displayCredit: formatAmount(line.crAmount),
+        displayDebit: formatAmount(line.debit),
+        displayCredit: formatAmount(line.credit),
         displayTaxAmount: formatAmount(line.taxAmountFinal),
-        accountNameJa: line.drAccount || line.crAccount, // 簡易実装（後で拡張）
+        accountNameJa: line.accountName || '', // スキーマ準拠
         vendorNameSafe: line.vendorName || '取引先未設定',
     };
 }
@@ -71,7 +71,7 @@ export function mapLineToUI(line: JournalLineDraft): JournalLineUI {
 export function mapToUI(entry: JournalEntryDraft): JournalEntryUI {
     // 合計金額の計算（明細行の借方合計）
     const totalAmount = entry.lines?.reduce((sum, line) => {
-        return sum + (line.drAmount || 0);
+        return sum + (line.debit || 0);
     }, 0) || 0;
 
     return {
@@ -91,11 +91,11 @@ export function mapToUI(entry: JournalEntryDraft): JournalEntryUI {
 export function mapToSummaryUI(entry: JournalEntryDraft): JournalEntrySummaryUI {
     // 合計金額の計算
     const totalAmount = entry.lines?.reduce((sum, line) => {
-        return sum + (line.drAmount || 0);
+        return sum + (line.debit || 0);
     }, 0) || 0;
 
-    // 警告数のカウント（簡易実装）
-    const warningCount = entry.alerts?.length || 0;
+    // 警告数のカウント（簡易実装: JournalEntryDraftSchemaにalertsは未定義のため0固定）
+    const warningCount = 0;
 
     return {
         id: entry.id || 'unknown',
@@ -117,12 +117,12 @@ export function mapToSummaryUI(entry: JournalEntryDraft): JournalEntrySummaryUI 
  * 注意: UI専用フィールド（displayDate等）は除外される
  */
 export function mapToDomain(entryUI: JournalEntryUI): JournalEntryDraft {
-    const { displayDate, displayAmount, linesUI, ...domainEntry } = entryUI;
+    const { displayDate: _displayDate, displayAmount: _displayAmount, linesUI, ...domainEntry } = entryUI;
 
     return {
         ...domainEntry,
         lines: linesUI?.map(lineUI => {
-            const { displayDebit, displayCredit, displayTaxAmount, accountNameJa, vendorNameSafe, ...domainLine } = lineUI;
+            const { displayDebit: _dd, displayCredit: _dc, displayTaxAmount: _dta, accountNameJa: _anj, vendorNameSafe: _vns, ...domainLine } = lineUI;
             return domainLine;
         }),
     };

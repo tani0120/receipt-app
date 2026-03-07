@@ -18,6 +18,19 @@ export default defineConfigWithVueTs(
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
 
+  // Global Rules
+  {
+    name: 'app/global-rules',
+    files: ['**/*.{ts,mts,tsx,vue}'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+      }],
+    },
+  },
+
   // Ironclad Rules (Strict) - src/aaa only
   {
     name: 'app/ironclad-rules',

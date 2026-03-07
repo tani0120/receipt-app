@@ -1,7 +1,7 @@
-import type { JournalEntryDraft, FileType } from '@/features/journal';
+import type { JournalEntryDraft, FileType } from '@/core/journal';
 import type { Client } from '@/types/client';
-import { JournalEntryDraftSchema } from '@/features/journal';
-import { NormalizationService } from '@/features/journal';
+import { JournalEntryDraftSchema } from '@/core/journal';
+import { NormalizationService } from '@/core/journal';
 import { FileTypeDetector } from './FileTypeDetector';
 
 /**

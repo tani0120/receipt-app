@@ -51,7 +51,7 @@ export type {
     TaxAmountSource,
     TaxDiscrepancySeverity,
     FileType,
-} from '@/features/journal';
+} from '@/core/journal';
 
 // JobStatus はFirestore型定義から取得
 export type { JobStatus } from './firestore';
