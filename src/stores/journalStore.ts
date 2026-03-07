@@ -6,7 +6,7 @@
  * - domain ↔ UI の型安全な変換は adapters 層の責務
  *
  * Pattern:
- * - Phase 2 の receiptStore.ts と同じパターン
+ * - Phase 2 の documentStore.ts と同じパターン
  * - Phase 5 で state管理を追加する場合もこのファイルに追加
  */
 

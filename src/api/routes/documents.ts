@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { receiptRepository } from '../../database/repositories/receiptRepository'
+import { documentRepository } from '../../database/repositories/documentRepository'
 import admin from 'firebase-admin'
 
 const app = new Hono()
@@ -12,12 +12,12 @@ const UpdateStatusSchema = z.object({
     journal: z.any().optional() // confirmed時は必須（Repository層でチェック）
 })
 
-// POST /api/receipts/:id/status
+// POST /api/documents/:id/status
 // 状態変更API（Firestore + Supabase両方書き込み）
 app.post('/:id/status', async (c) => {
     try {
-        const receiptId = c.req.param('id')
-        console.log(`[API START] POST /receipts/${receiptId}/status`)
+        const documentId = c.req.param('id')
+        console.log(`[API START] POST /documents/${documentId}/status`)
 
         const body = await c.req.json()
         console.log('[API] Request body:', JSON.stringify(body))
@@ -30,14 +30,14 @@ app.post('/:id/status', async (c) => {
 
         if (ENABLE_FIRESTORE) {
             const db = admin.firestore()
-            await db.collection('receipt_events').add({
-                receiptId,
+            await db.collection('document_events').add({
+                documentId,
                 eventType: 'status_change',
                 newStatus: validated.newStatus,
                 actor: validated.actor,
                 timestamp: admin.firestore.FieldValue.serverTimestamp()
             })
-            console.log(`[Firestore] Event logged: ${receiptId} -> ${validated.newStatus}`)
+            console.log(`[Firestore] Event logged: ${documentId} -> ${validated.newStatus}`)
         } else {
             console.log('[API] Firestore disabled, skipping event log')
         }
@@ -50,25 +50,25 @@ app.post('/:id/status', async (c) => {
                 return c.json({ error: 'journal is required for confirmed status' }, 400)
             }
 
-            console.log('[API] Calling confirmReceipt...')
-            await receiptRepository.confirmReceipt(receiptId, validated.journal, validated.actor)
+            console.log('[API] Calling confirmDocument...')
+            await documentRepository.confirmDocument(documentId, validated.journal, validated.actor)
         } else {
             // 通常の状態変更
             console.log(`[API] Calling updateStatus with status: ${validated.newStatus}...`)
-            await receiptRepository.updateStatus(receiptId, validated.newStatus, validated.actor)
+            await documentRepository.updateStatus(documentId, validated.newStatus, validated.actor)
         }
         console.log('[API] Supabase operation completed')
 
         // 3. 成功レスポンス
         return c.json({
             success: true,
-            receiptId,
+            documentId,
             newStatus: validated.newStatus,
             message: 'Status updated in both Firestore and Supabase'
         })
 
     } catch (e: unknown) {
-        console.error('[API Error] receipts/:id/status:', e)
+        console.error('[API Error] documents/:id/status:', e)
         const errorMessage = e instanceof Error ? e.message : 'Unknown error'
         return c.json({ error: errorMessage }, 500)
     }

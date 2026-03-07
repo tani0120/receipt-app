@@ -3,14 +3,14 @@
  * Streamed互換設計
  */
 
-import type { ReceiptStatus } from '@/shared/receiptStatus'
+import type { DocumentStatus } from '@/shared/documentStatus'
 
 
-export interface Receipt {
+export interface Document {
     id: string;
     client_id: string;
     drive_file_id: string;
-    status: ReceiptStatus;
+    status: DocumentStatus;
     current_version: number;
     confirmed_journal: unknown | null;
     display_snapshot: unknown | null;

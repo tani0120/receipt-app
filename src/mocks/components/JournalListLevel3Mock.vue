@@ -839,7 +839,7 @@ import { useDraggable } from '@/mocks/composables/useDraggable';
 import { useCurrentUser, STAFF_LIST } from '@/mocks/composables/useCurrentUser';
 import { journalColumns } from '@/mocks/columns/journalColumns';
 import { mockJournalsPhase5 as fixtureData } from '../data/journal_test_fixture_30cases';
-import { getReceiptImageUrl } from '../data/receipt_mock_data';
+import { getDocumentImageUrl } from '../data/document_mock_data';
 import type { JournalPhase5Mock, JournalEntryLine } from '../types/journal_phase5_mock.type';
 import { createEmptyStaffNotes, STAFF_NOTE_KEYS } from '../types/staff_notes';
 import type { StaffNoteKey } from '../types/staff_notes';
@@ -1486,7 +1486,7 @@ const actualModalHeight = computed(() => {
 
 function showImageModal(journalId: string, receiptId: string | null) {
   hoveredJournalId.value = journalId;
-  modalImageUrl.value = getReceiptImageUrl(receiptId);
+  modalImageUrl.value = getDocumentImageUrl(receiptId);
   rotationAngle.value = 0; // リセット
   zoomScale.value = 1; // ズームリセット
   offsetX.value = 0; // 位置リセット
@@ -1510,7 +1510,7 @@ function togglePinModal(journalId: string, receiptId: string | null) {
     // 固定モードに切り替え
     isModalPinned.value = true;
     hoveredJournalId.value = journalId;
-    modalImageUrl.value = getReceiptImageUrl(receiptId);
+    modalImageUrl.value = getDocumentImageUrl(receiptId);
     rotationAngle.value = 0;
     zoomScale.value = 1; // ズームリセット
     offsetX.value = 0; // 位置リセット
@@ -1808,7 +1808,7 @@ function hasPastJournal(journal: JournalPhase5Mock): boolean {
   return localJournals.value.findIndex(j => j.id === journal.id) < 25;
 }
 
- 
+
 function getValue(obj: any, path: string): unknown {
   const raw = path.split('.').reduce((o: any, key: string) => o?.[key], obj)
   // 概念ID → MF正式名称に変換（tax_category_idキーの場合）

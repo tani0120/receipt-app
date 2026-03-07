@@ -11,7 +11,7 @@ import aiRulesRoute from './api/routes/ai-rules'
 import adminRoute from './api/routes/admin'
 import workerRoute from './api/routes/worker'
 import aiModelsRoute from './api/routes/ai-models'
-import receiptsRoute from './api/routes/receipts'
+import documentsRoute from './api/routes/documents'
 
 // Phase 3: Firebase Admin SDK初期化
 if (!admin.apps.length) {
@@ -86,15 +86,15 @@ if (process.env.ENABLE_OCR === 'true') {
     console.log('⚠️ OCR Route disabled (ENABLE_OCR not set to true)')
 }
 
-// Phase 1 Step 1.4: Receipts Route (PostgreSQL統合)
-app.route('/api/receipts', receiptsRoute)
+// Phase 1 Step 1.4: Documents Route (PostgreSQL統合)
+app.route('/api/documents', documentsRoute)
 
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
 
 app.get('/', (c) => {
     console.log('Root request received')
-    return c.text('Receipt API is running')
+    return c.text('Document API is running')
 })
 
 console.log('🔧 Starting HTTP server...')

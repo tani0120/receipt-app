@@ -7,7 +7,7 @@
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">OCRテキスト</label>
           <div class="bg-slate-50 p-4 rounded border border-slate-200 whitespace-pre-wrap font-mono text-sm">
-            {{ receipt?.displaySnapshot?.ocrText || 'OCR結果がありません' }}
+            {{ document?.displaySnapshot?.ocrText || 'OCR結果がありません' }}
           </div>
         </div>
 
@@ -15,14 +15,14 @@
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-2">推定金額</label>
             <div class="bg-slate-50 p-3 rounded border border-slate-200">
-              {{ receipt?.displaySnapshot?.amountGuess ? `¥${receipt.displaySnapshot.amountGuess.toLocaleString()}` : '---' }}
+              {{ document?.displaySnapshot?.amountGuess ? `¥${document.displaySnapshot.amountGuess.toLocaleString()}` : '---' }}
             </div>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-2">推定取引先</label>
             <div class="bg-slate-50 p-3 rounded border border-slate-200">
-              {{ receipt?.displaySnapshot?.merchantGuess || '---' }}
+              {{ document?.displaySnapshot?.merchantGuess || '---' }}
             </div>
           </div>
         </div>
@@ -38,12 +38,13 @@
 </template>
 
 <script setup lang="ts">
-import type { ReceiptViewModel } from '@/types/receiptViewModel'
+import type { DocumentViewModel } from '@/types/documentViewModel'
 
 defineProps<{
-  receipt: ReceiptViewModel | null
+  document: DocumentViewModel | null
 }>()
 
 // status: 'ocr_done'
 // displaySnapshotは表示のみ、UIロジックには使わない
 </script>
+

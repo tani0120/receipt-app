@@ -3,9 +3,9 @@
     <!-- Header -->
     <header class="bg-white border-b border-slate-200 h-14 flex items-center px-4 shrink-0">
       <h1 class="text-lg font-semibold text-slate-800">証票詳細</h1>
-      <div class="ml-auto flex items-center gap-2" v-if="receipt">
+      <div class="ml-auto flex items-center gap-2" v-if="document">
         <span class="px-3 py-1 rounded text-sm font-medium bg-blue-50 text-blue-700">
-          {{ receipt.status }}
+          {{ document.status }}
         </span>
       </div>
     </header>
@@ -13,11 +13,11 @@
     <!-- Main Content (uiMode駆動) -->
     <div class="flex-1 overflow-auto relative">
       <LoadingView v-if="uiMode === 'loading'" />
-      <OcrPreview v-else-if="uiMode === 'ocr_preview'" :receipt="receipt" />
-      <EditorView v-else-if="uiMode === 'editable'" :receipt="receipt" />
-      <ReadonlyView v-else-if="uiMode === 'readonly'" :receipt="receipt" />
-      <RejectedView v-else-if="uiMode === 'rejected'" :receipt="receipt" />
-      <FallbackView v-else :status="receipt?.status" />
+      <OcrPreview v-else-if="uiMode === 'ocr_preview'" :document="document" />
+      <EditorView v-else-if="uiMode === 'editable'" :document="document" />
+      <ReadonlyView v-else-if="uiMode === 'readonly'" :document="document" />
+      <RejectedView v-else-if="uiMode === 'rejected'" :document="document" />
+      <FallbackView v-else :status="document?.status" />
 
       <!-- 開発用テストパネル -->
       <div class="fixed top-20 right-4 bg-white border-2 border-gray-300 rounded-lg shadow-lg p-4 z-50">
@@ -36,16 +36,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import type { ReceiptViewModel } from '@/types/receiptViewModel'
-import type { ReceiptStatus } from '@/shared/receiptStatus'
-import LoadingView from '@/components/receipt/LoadingView.vue'
-import OcrPreview from '@/components/receipt/OcrPreview.vue'
-import EditorView from '@/components/receipt/EditorView.vue'
-import ReadonlyView from '@/components/receipt/ReadonlyView.vue'
-import RejectedView from '@/components/receipt/RejectedView.vue'
-import FallbackView from '@/components/receipt/FallbackView.vue'
+import type { DocumentViewModel } from '@/types/documentViewModel'
+import type { DocumentStatus } from '@/shared/documentStatus'
+import LoadingView from '@/components/document/LoadingView.vue'
+import OcrPreview from '@/components/document/OcrPreview.vue'
+import EditorView from '@/components/document/EditorView.vue'
+import ReadonlyView from '@/components/document/ReadonlyView.vue'
+import RejectedView from '@/components/document/RejectedView.vue'
+import FallbackView from '@/components/document/FallbackView.vue'
 
-type ReceiptUiMode =
+type DocumentUiMode =
   | 'loading'
   | 'ocr_preview'
   | 'editable'
@@ -54,13 +54,13 @@ type ReceiptUiMode =
   | 'fallback'
 
 const route = useRoute()
-const receipt = ref<ReceiptViewModel | null>(null)
+const document = ref<DocumentViewModel | null>(null)
 
 // ✅ status → uiMode 集約（1箇所のみ）
-const uiMode = computed<ReceiptUiMode>(() => {
-  if (!receipt.value) return 'loading'
+const uiMode = computed<DocumentUiMode>(() => {
+  if (!document.value) return 'loading'
 
-  switch (receipt.value.status) {
+  switch (document.value.status) {
     case 'uploaded':
     case 'preprocessed':
       return 'loading'
@@ -85,13 +85,13 @@ const uiMode = computed<ReceiptUiMode>(() => {
 
 // 開発用: テストステータス切り替え
 function setTestStatus(status: string) {
-  // 開発用テストのため、不正ステータスも含めてReceiptStatus型にキャスト
+  // 開発用テストのため、不正ステータスも含めてDocumentStatus型にキャスト
   // fallbackのテスト用途で意図的に型境界を超える
-  receipt.value = {
+  document.value = {
     id: 'test-001',
     clientId: 'client-001',
     driveFileId: 'drive-file-001',
-    status: status as ReceiptStatus,
+    status: status as DocumentStatus,
     displaySnapshot: {
       ocrText: 'テストOCRテキスト\n株式会社サンプル\n¥1,234',
       amountGuess: 1234,
@@ -101,8 +101,8 @@ function setTestStatus(status: string) {
 }
 
 onMounted(async () => {
-  const _receiptId = route.params.id as string
+  const _documentId = route.params.id as string
   // TODO: API呼び出し
-  // receipt.value = await fetchReceipt(receiptId)
+  // document.value = await fetchDocument(documentId)
 })
 </script>

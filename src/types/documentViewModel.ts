@@ -1,8 +1,8 @@
-import type { ReceiptStatus } from '@/shared/receiptStatus'
+import type { DocumentStatus } from '@/shared/documentStatus'
 
-export interface ReceiptViewModel {
+export interface DocumentViewModel {
     id: string
-    status: ReceiptStatus
+    status: DocumentStatus
     clientId: string
     driveFileId: string
 

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import DocumentDetail from '@/views/DocumentDetail.vue'
-import type { ReceiptViewModel } from '@/types/receiptViewModel'
+import type { DocumentViewModel } from '@/types/documentViewModel'
 
 // vue-routerモック
 vi.mock('vue-router', () => ({
@@ -15,18 +15,18 @@ vi.mock('vue-router', () => ({
 }))
 
 /**
- * テスト用ヘルパー: ReceiptViewModelを生成
+ * テスト用ヘルパー: DocumentViewModelを生成
  * 型キャストをこの1箇所に集約し、テスト本体では型安全に書ける
  * overridesで不正データ（undefined, 不正ステータス等）を注入可能
  */
-function createTestReceipt(overrides: Record<string, unknown> = {}): ReceiptViewModel {
+function createTestDocument(overrides: Record<string, unknown> = {}): DocumentViewModel {
   return {
     id: '1',
     status: 'uploaded',
     clientId: 'test',
     driveFileId: 'test',
     ...overrides,
-  } as ReceiptViewModel
+  } as DocumentViewModel
 }
 
 describe('DocumentDetail - uiMode mapping (Task 1)', () => {
@@ -40,7 +40,7 @@ describe('DocumentDetail - uiMode mapping (Task 1)', () => {
       props: { id: '1' }
     })
 
-    wrapper.vm.receipt = createTestReceipt({ status: 'uploaded' })
+    wrapper.vm.document = createTestDocument({ status: 'uploaded' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('loading')
@@ -52,7 +52,7 @@ describe('DocumentDetail - uiMode mapping (Task 1)', () => {
       props: { id: '1' }
     })
 
-    wrapper.vm.receipt = createTestReceipt({ status: 'preprocessed' })
+    wrapper.vm.document = createTestDocument({ status: 'preprocessed' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('loading')
@@ -64,7 +64,7 @@ describe('DocumentDetail - uiMode mapping (Task 1)', () => {
       props: { id: '1' }
     })
 
-    wrapper.vm.receipt = createTestReceipt({ status: 'ocr_done' })
+    wrapper.vm.document = createTestDocument({ status: 'ocr_done' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('ocr_preview')
@@ -76,7 +76,7 @@ describe('DocumentDetail - uiMode mapping (Task 1)', () => {
       props: { id: '1' }
     })
 
-    wrapper.vm.receipt = createTestReceipt({ status: 'suggested' })
+    wrapper.vm.document = createTestDocument({ status: 'suggested' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('editable')
@@ -88,7 +88,7 @@ describe('DocumentDetail - uiMode mapping (Task 1)', () => {
       props: { id: '1' }
     })
 
-    wrapper.vm.receipt = createTestReceipt({ status: 'reviewing' })
+    wrapper.vm.document = createTestDocument({ status: 'reviewing' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('readonly')
@@ -100,7 +100,7 @@ describe('DocumentDetail - uiMode mapping (Task 1)', () => {
       props: { id: '1' }
     })
 
-    wrapper.vm.receipt = createTestReceipt({ status: 'confirmed' })
+    wrapper.vm.document = createTestDocument({ status: 'confirmed' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('readonly')
@@ -112,7 +112,7 @@ describe('DocumentDetail - uiMode mapping (Task 1)', () => {
       props: { id: '1' }
     })
 
-    wrapper.vm.receipt = createTestReceipt({ status: 'rejected' })
+    wrapper.vm.document = createTestDocument({ status: 'rejected' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('rejected')
@@ -124,36 +124,36 @@ describe('DocumentDetail - fallback behavior (Task 2)', () => {
     setActivePinia(createPinia())
   })
 
-  // Test 1: receipt = null → loading
-  it('should show loading when receipt is null', () => {
+  // Test 1: document = null → loading
+  it('should show loading when document is null', () => {
     const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    // 初期状態でreceipt = null
-    expect(wrapper.vm.receipt).toBeNull()
+    // 初期状態でdocument = null
+    expect(wrapper.vm.document).toBeNull()
     expect(wrapper.vm.uiMode).toBe('loading')
   })
 
-  // Test 2: receipt.status = undefined → fallback
+  // Test 2: document.status = undefined → fallback
   it('should show fallback when status is undefined', async () => {
     const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    wrapper.vm.receipt = createTestReceipt({ status: undefined })
+    wrapper.vm.document = createTestDocument({ status: undefined })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('fallback')
   })
 
-  // Test 3: receipt.status = unknown value → fallback + メッセージ検証
+  // Test 3: document.status = unknown value → fallback + メッセージ検証
   it('should show fallback for unknown status value and display message', async () => {
     const wrapper = mount(DocumentDetail, {
       props: { id: '1' }
     })
 
-    wrapper.vm.receipt = createTestReceipt({ status: 'INVALID_STATUS' })
+    wrapper.vm.document = createTestDocument({ status: 'INVALID_STATUS' })
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.uiMode).toBe('fallback')
@@ -167,7 +167,7 @@ describe('DocumentDetail - fallback behavior (Task 2)', () => {
       props: { id: '1' }
     })
 
-    wrapper.vm.receipt = createTestReceipt({ status: 'suggested', displaySnapshot: undefined })
+    wrapper.vm.document = createTestDocument({ status: 'suggested', displaySnapshot: undefined })
     await wrapper.vm.$nextTick()
 
     // UIが表示されることを確認（エラーなし）

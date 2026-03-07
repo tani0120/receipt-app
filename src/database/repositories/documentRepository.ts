@@ -1,11 +1,11 @@
 import { supabase } from '../supabase/client';
-import type { Receipt, ReceiptStatus } from '../types/receipt.types';
+import type { Document, DocumentStatus } from '../types/document.types';
 
-export const receiptRepository = {
+export const documentRepository = {
     /**
-     * ステータスでReceipt一覧取得
+     * ステータスでDocument一覧取得
      */
-    async getByStatus(status: ReceiptStatus): Promise<Receipt[]> {
+    async getByStatus(status: DocumentStatus): Promise<Document[]> {
         const { data, error } = await supabase
             .from('receipts')
             .select('*')
@@ -16,12 +16,12 @@ export const receiptRepository = {
     },
 
     /**
-     * 🔴 修正② Receipt更新（SQL function使用でトランザクション保証）
+     * 🔴 修正② Document更新（SQL function使用でトランザクション保証）
      * race condition 完全防止、状態変更＋監査を原子的に実行
      */
     async updateStatus(
         id: string,
-        newStatus: ReceiptStatus,
+        newStatus: DocumentStatus,
         actor: string
     ): Promise<void> {
         const { error } = await supabase.rpc('update_receipt_status', {
@@ -34,9 +34,9 @@ export const receiptRepository = {
     },
 
     /**
-     * Receipt確定（confirmed_journal必須チェック付き）
+     * Document確定（confirmed_journal必須チェック付き）
      */
-    async confirmReceipt(
+    async confirmDocument(
         id: string,
         journal: unknown,
         actor: string

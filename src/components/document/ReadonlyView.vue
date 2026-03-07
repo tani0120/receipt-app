@@ -22,10 +22,10 @@
 </template>
 
 <script setup lang="ts">
-import type { ReceiptViewModel } from '@/types/receiptViewModel'
+import type { DocumentViewModel } from '@/types/documentViewModel'
 
 defineProps<{
-  receipt: ReceiptViewModel | null
+  document: DocumentViewModel | null
 }>()
 
 // status: 'reviewing', 'confirmed'

@@ -21,7 +21,7 @@ import type {
 const COLLECTION_WORK_LOGS = 'work_logs';
 const COLLECTION_RECEIPTS = 'receipts';
 
-export const receiptRepository = {
+export const documentRepository = {
   /**
    * Fetch a single WorkLog by ID
    * (Status, Time, Worker info)
@@ -32,7 +32,7 @@ export const receiptRepository = {
       const snap = await getDoc(ref);
       return snap.exists() ? (snap.data() as WorkLogDocument) : null;
     } catch (e) {
-      console.error('[ReceiptRepo] Failed to fetch WorkLog:', e);
+      console.error('[DocumentRepo] Failed to fetch WorkLog:', e);
       throw e;
     }
   },
@@ -47,7 +47,7 @@ export const receiptRepository = {
       const snap = await getDoc(ref);
       return snap.exists() ? (snap.data() as ReceiptDocument) : null;
     } catch (e) {
-      console.error('[ReceiptRepo] Failed to fetch Receipt:', e);
+      console.error('[DocumentRepo] Failed to fetch Receipt:', e);
       throw e;
     }
   },
@@ -66,7 +66,7 @@ export const receiptRepository = {
       const snap = await getDocs(q);
       return snap.docs.map(d => d.data() as WorkLogDocument);
     } catch (e) {
-      console.error('[ReceiptRepo] Failed to fetch recent logs:', e);
+      console.error('[DocumentRepo] Failed to fetch recent logs:', e);
       return [];
     }
   },
@@ -127,7 +127,7 @@ export const receiptRepository = {
       const snap = await getDocs(q);
       return snap.docs.map(d => d.data() as WorkLogDocument);
     } catch (e) {
-      console.error('[ReceiptRepo] Failed to fetch list:', e);
+      console.error('[DocumentRepo] Failed to fetch list:', e);
       return [];
     }
   }

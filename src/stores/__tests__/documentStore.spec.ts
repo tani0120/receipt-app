@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useReceiptStore } from '@/stores/receiptStore'
+import { useDocumentStore } from '@/stores/documentStore'
 
-describe('receiptStore - normalizeReceipt (Task 3)', () => {
+describe('documentStore - normalizeDocument (Task 3)', () => {
     beforeEach(() => {
         setActivePinia(createPinia())
     })
 
     // Test 1: 不正statusを'uploaded'に変換
     it('should default to uploaded for invalid status', () => {
-        const store = useReceiptStore()
+        const store = useDocumentStore()
         const raw = {
             id: '1',
             clientId: 'test',
@@ -17,14 +17,14 @@ describe('receiptStore - normalizeReceipt (Task 3)', () => {
             status: 'INVALID_STATUS' // 不正な値
         }
 
-        store.setReceipts([raw])
+        store.setDocuments([raw])
 
-        expect(store.receipts[0].status).toBe('uploaded')
+        expect(store.documents[0].status).toBe('uploaded')
     })
 
     // Test 2: statusがundefinedの場合
     it('should default to uploaded when status is undefined', () => {
-        const store = useReceiptStore()
+        const store = useDocumentStore()
         const raw = {
             id: '1',
             clientId: 'test',
@@ -32,14 +32,14 @@ describe('receiptStore - normalizeReceipt (Task 3)', () => {
             // status なし
         }
 
-        store.setReceipts([raw])
+        store.setDocuments([raw])
 
-        expect(store.receipts[0].status).toBe('uploaded')
+        expect(store.documents[0].status).toBe('uploaded')
     })
 
     // Test 3: 正常なstatusはそのまま
     it('should keep valid status unchanged', () => {
-        const store = useReceiptStore()
+        const store = useDocumentStore()
         const raw = {
             id: '1',
             clientId: 'test',
@@ -47,14 +47,14 @@ describe('receiptStore - normalizeReceipt (Task 3)', () => {
             status: 'suggested'
         }
 
-        store.setReceipts([raw])
+        store.setDocuments([raw])
 
-        expect(store.receipts[0].status).toBe('suggested')
+        expect(store.documents[0].status).toBe('suggested')
     })
 
     // Test 4: displaySnapshotがなくても動作
     it('should work without displaySnapshot', () => {
-        const store = useReceiptStore()
+        const store = useDocumentStore()
         const raw = {
             id: '1',
             clientId: 'test',
@@ -63,14 +63,14 @@ describe('receiptStore - normalizeReceipt (Task 3)', () => {
             // displaySnapshot なし
         }
 
-        store.setReceipts([raw])
+        store.setDocuments([raw])
 
-        expect(store.receipts[0].displaySnapshot).toBeUndefined()
+        expect(store.documents[0].displaySnapshot).toBeUndefined()
     })
 
     // Test 5: 必須フィールドの検証
     it('should have all required fields', () => {
-        const store = useReceiptStore()
+        const store = useDocumentStore()
         const raw = {
             id: '1',
             clientId: 'test',
@@ -78,12 +78,12 @@ describe('receiptStore - normalizeReceipt (Task 3)', () => {
             status: 'uploaded'
         }
 
-        store.setReceipts([raw])
-        const receipt = store.receipts[0]
+        store.setDocuments([raw])
+        const doc = store.documents[0]
 
-        expect(receipt.id).toBeDefined()
-        expect(receipt.clientId).toBeDefined()
-        expect(receipt.driveFileId).toBeDefined()
-        expect(receipt.status).toBeDefined()
+        expect(doc.id).toBeDefined()
+        expect(doc.clientId).toBeDefined()
+        expect(doc.driveFileId).toBeDefined()
+        expect(doc.status).toBeDefined()
     })
 })
