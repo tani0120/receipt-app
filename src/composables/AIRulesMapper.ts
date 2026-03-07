@@ -10,12 +10,15 @@ const safeNumber = (val: unknown, fallback = 0): number => {
 // Helper for Date Formatting
 const formatDate = (ts: unknown): string | undefined => {
     // Check for Firestore Timestamp
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (ts && typeof (ts as any).toDate === 'function') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const date = (ts as any).toDate();
         return date.toISOString().split('T')[0];
     }
     // Check for raw seconds object
     if (ts && typeof (ts as object) === 'object' && 'seconds' in ts) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const date = new Date((ts as any).seconds * 1000);
         return date.toISOString().split('T')[0];
     }

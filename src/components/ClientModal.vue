@@ -208,6 +208,7 @@ import { reactive, watch, toRefs, computed } from 'vue';
 const props = defineProps<{
   visible: boolean;
   mode: 'new' | 'edit';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   initialData?: any;
 }>();
 

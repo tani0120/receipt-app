@@ -63,10 +63,11 @@ export class WorkerService {
                 // For now, let's assume successful re_analyze means it's ready for review.
 
                 return { jobId, status: 'success' };
-            } catch (error: any) {
-                console.error(`[Worker] Job ${jobId} failed: ${error.message}`);
+            } catch (error: unknown) {
+                const msg = error instanceof Error ? error.message : String(error);
+                console.error(`[Worker] Job ${jobId} failed: ${msg}`);
                 // Retries?
-                return { jobId, status: 'error', error: error.message };
+                return { jobId, status: 'error', error: msg };
             }
         });
 

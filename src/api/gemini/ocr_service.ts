@@ -25,7 +25,7 @@ export interface OCRRequest {
   /** 画像ファイルパス */
   image_path: string;
   /** バッチ履歴（重複チェック用） */
-  batch_history?: any[];
+  batch_history?: unknown[];
 }
 
 
@@ -57,6 +57,7 @@ export async function executeOCR(request: OCRRequest): Promise<AIIntermediateOut
 
   console.log(`✅ OCR完了`);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return rawJSON as any; // 一旦any型で返す
 }
 
@@ -76,7 +77,7 @@ export async function executeOCR(request: OCRRequest): Promise<AIIntermediateOut
 async function callGeminiAPI(
   _cacheId: string,
   imagePath: string,
-  _batchHistory: any[]
+  _batchHistory: unknown[]
 ): Promise<string> {
   // 修正①: API Key取得（フォールバック対応）
   const API_KEY = process.env.GEMINI_API_KEY ?? process.env.VITE_GEMINI_API_KEY;

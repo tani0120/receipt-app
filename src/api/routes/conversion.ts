@@ -71,9 +71,9 @@ const route = app.get('/', (c) => {
         }))
 
         return c.json(uiData)
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error('[API Error] conversion get:', e);
-        return c.json({ error: e.message }, 500);
+        return c.json({ error: e instanceof Error ? e.message : String(e) }, 500);
     }
 })
     .delete('/:id', async (c) => {
@@ -110,9 +110,9 @@ const route = app.get('/', (c) => {
                 gsUrl: gsUrl, // The Chain: This URI should be passed to AI
                 message: 'File uploaded to GCS. Conversion Service (Screen G) pending.'
             });
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error('[BFF] Upload Error:', e);
-            return c.json({ success: false, message: e.message }, 500);
+            return c.json({ success: false, message: e instanceof Error ? e.message : String(e) }, 500);
         }
     })
 

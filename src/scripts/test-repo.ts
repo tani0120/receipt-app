@@ -6,10 +6,11 @@ async function main() {
     try {
         const job = await jobRepository.getJob('job_001');
         console.log('Job Result:', job);
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error('JobRepo Failure:', e);
-        if (e.code) console.error('Code:', e.code);
-        if (e.message) console.error('Message:', e.message);
+        const err = e instanceof Error ? e : new Error(String(e));
+        if ('code' in (e as Record<string, unknown>)) console.error('Code:', (e as Record<string, unknown>).code);
+        console.error('Message:', err.message);
     }
 }
 

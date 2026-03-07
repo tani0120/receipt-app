@@ -270,6 +270,7 @@ interface ClientViewModel {
         type: ClientActionType;
         label: string;
         icon: string;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         modalContext?: any;
     };
 }
@@ -459,6 +460,7 @@ const goToWorkbench = (jobId: string, mode: string = 'draft') => {
 /**
  * データに基づいたドライブ表示（Step 6/7 用）
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const openDrive = (stepKey: 'export' | 'archive', client: any) => {
     const step = client.steps[stepKey];
     if (!step?.drivePath) return;
@@ -475,6 +477,7 @@ const openDrive = (stepKey: 'export' | 'archive', client: any) => {
 /**
  * データに基づいたアクション実行（「次のアクション」ボタン用）
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleActionClick = (client: any) => {
     const action = client.nextAction;
 
@@ -512,6 +515,7 @@ const closeModal = () => {
     modal.show = false;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getRowBaseClass = (client: any) => {
     switch (client.nextAction.type) {
         case ClientActionType.Rescue:

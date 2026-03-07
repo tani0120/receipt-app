@@ -64,7 +64,7 @@ export class AIProviderFactory {
         try {
             const doc = await db.collection('system_configs').doc('ai_phase_settings').get();
             if (doc.exists) {
-                const data = doc.data() as any; // Typed as any for flexibility reading partials
+                const data = doc.data() as Record<string, unknown>; // Typed for flexibility reading partials
                 if (data && data[phase]) {
                     const freshConfig = data[phase] as PhaseConfig;
                     // Validate minimal fields

@@ -105,6 +105,7 @@ export function useAIRules() {
     };
 
     // Expose to window for manual testing
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).triggerRuleStressTest = triggerStressTest;
 
     const filteredRules = computed(() => {

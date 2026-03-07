@@ -12,7 +12,7 @@ const route = app
         try {
             const jobs = await jobRepository.getAllJobs()
             return c.json(jobs)
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error(e)
             return c.json({ error: 'Failed to fetch jobs' }, 500)
         }
@@ -26,13 +26,14 @@ const route = app
                 return c.json({ error: 'Job not found' }, 404)
             }
             return c.json(job)
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error(e)
             // Debug Mode: Return detailed error
+            const err = e instanceof Error ? e : new Error(String(e));
             return c.json({
                 error: 'Internal Server Error',
-                message: e.message,
-                stack: e.stack,
+                message: err.message,
+                stack: err.stack,
                 details: JSON.stringify(e)
             }, 500)
         }
@@ -46,6 +47,7 @@ const route = app
             const id = c.req.param('id')
             const data = c.req.valid('json')
             try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 await jobRepository.saveJob(id, data as any)
                 return c.json({ success: true, id })
             } catch (e) {

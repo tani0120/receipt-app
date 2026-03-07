@@ -91,8 +91,8 @@ async function handleEmailLogin() {
     await signInWithEmail(email.value, password.value);
     // ログイン成功後、ホーム画面にリダイレクト
     router.push('/');
-  } catch (error: any) {
-    errorMessage.value = error.message || 'ログインに失敗しました';
+  } catch (error: unknown) {
+    errorMessage.value = error instanceof Error ? error.message : 'ログインに失敗しました';
   } finally {
     isLoading.value = false;
   }
@@ -109,8 +109,8 @@ async function handleGoogleLogin() {
     await signInWithGoogle();
     // ログイン成功後、ホーム画面にリダイレクト
     router.push('/');
-  } catch (error: any) {
-    errorMessage.value = error.message || 'Googleログインに失敗しました';
+  } catch (error: unknown) {
+    errorMessage.value = error instanceof Error ? error.message : 'Googleログインに失敗しました';
   } finally {
     isLoading.value = false;
   }

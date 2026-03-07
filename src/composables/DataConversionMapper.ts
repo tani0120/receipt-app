@@ -10,7 +10,7 @@ import type { ConversionLogUi, ConversionLogId } from '@/types/ScreenG_ui.type';
  */
 
 export function mapConversionLogApiToUi(raw: unknown): ConversionLogUi {
-    const r = raw as any; // Safe strict casting inside boundary
+    const r = raw as Record<string, unknown>; // Safe strict casting inside boundary
     // 1. Safe ID
     const id = (typeof r?.id === 'string' ? r.id : 'unknown') as ConversionLogId;
 

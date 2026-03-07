@@ -26,9 +26,9 @@ export async function signInWithEmail(email: string, password: string): Promise<
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         console.log('[auth] ログインしました:', userCredential.user.email);
         return userCredential.user;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[auth] ログインエラー:', error);
-        throw new Error(`ログインに失敗しました: ${error.message}`);
+        throw new Error(`ログインに失敗しました: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
@@ -43,9 +43,9 @@ export async function signInWithGoogle(): Promise<User> {
         const userCredential = await signInWithPopup(auth, provider);
         console.log('[auth] Googleログインしました:', userCredential.user.email);
         return userCredential.user;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[auth] Googleログインエラー:', error);
-        throw new Error(`Googleログインに失敗しました: ${error.message}`);
+        throw new Error(`Googleログインに失敗しました: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
@@ -73,9 +73,9 @@ export async function signInTestUser(): Promise<User> {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         console.log('[testAuth] テストユーザーでログインしました:', userCredential.user.email);
         return userCredential.user;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[testAuth] ログインエラー:', error);
-        throw new Error(`テストユーザーのログインに失敗しました: ${error.message}`);
+        throw new Error(`テストユーザーのログインに失敗しました: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 

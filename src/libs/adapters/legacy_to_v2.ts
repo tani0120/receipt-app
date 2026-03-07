@@ -30,12 +30,13 @@ function ensureId(id: string): DocumentId {
     return id;
 }
 
-// 簡易的な合計計算ロジック（Legacyの型定義に依存しますが、安全にアクセスします）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function calculateLegacyAmount(lines: any[] | undefined): number {
     if (!lines || !Array.isArray(lines)) return 0;
     return lines.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function calculateLegacyTax(lines: any[] | undefined): number {
     if (!lines || !Array.isArray(lines)) return 0;
     return lines.reduce((sum, line) => sum + (Number(line.taxAmount) || 0), 0);

@@ -198,6 +198,7 @@ const currentKnowledge = ref(`【固有ルール】
 const code = computed(() => route.params.code as string);
 const rawClient = computed(() => clients.value.find(c => c.clientCode === code.value));
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const localClient = ref<any>(null);
 
 const client = computed(() => {
@@ -216,6 +217,7 @@ const client = computed(() => {
     return mapClientDetailApiToUi(rawClient.value || {});
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleSave = async (formData: any) => {
     // Helper to map consumption tax composite
     let consumptionTaxMode = 'general';

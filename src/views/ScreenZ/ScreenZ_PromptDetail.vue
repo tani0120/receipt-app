@@ -25,8 +25,10 @@ const confirmSave = () => {
 };
 
 // Helper: Format Schema Object to Text
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const formatSchema = (schemaArray: any[]) => {
     let text = "Index,項目名,内容\n";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     schemaArray.forEach((row: any) => {
         text += `${row.index},${row.name},${row.value}\n`;
     });

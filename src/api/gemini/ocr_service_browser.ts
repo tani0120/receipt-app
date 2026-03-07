@@ -88,7 +88,7 @@ async function fileToBase64(file: File): Promise<string> {
 async function callGeminiAPIBrowser(
     base64Image: string,
     mimeType: string,
-    _batchHistory: any[]
+    _batchHistory: unknown[]
 ): Promise<string> {
     // API Key取得（Vite環境変数）
     const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -203,6 +203,7 @@ async function callGeminiAPIBrowser(
  *
  * Geminiは ```json ... ``` 形式で返すことが多い
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function extractJSONFromResponse(responseText: string): any {
     // マークダウンコードブロックを削除
     const jsonMatch = responseText.match(/```json\s*\n([\s\S]*?)\n```/);

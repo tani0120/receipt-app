@@ -303,7 +303,7 @@ export interface Job {
     // @type-audit: external-library (National Tax Agency API)
     // @approved-by: CI/CD脆弱性修正
     // @reason: 国税庁APIのレスポンス型が不完全
-    apiResponse?: any; // Raw response from NTA API
+    apiResponse?: Record<string, unknown>; // Raw response from NTA API
     checkedAt: Timestamp;
   };
 
@@ -379,8 +379,8 @@ export interface AuditLog {
   // @type-audit: audit-flexibility (監査ログ)
   // @approved-by: CI/CD脆弱性修正
   // @reason: 監査ログは任意のデータ構造を保存する必要がある
-  previousData?: any;   // LOG_OLD_DATA
-  newData?: any;        // LOG_NEW_DATA
+  previousData?: Record<string, unknown>;   // LOG_OLD_DATA
+  newData?: Record<string, unknown>;        // LOG_NEW_DATA
 }
 
 // ============================================================================

@@ -326,6 +326,7 @@ function sortTax(key: keyof TaxCategory) {
 /** 税率の数値ソート */
 function sortTaxByRate() {
   const s = sortState.tax;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (s.key === '_rate' as any) { s.asc = !s.asc; } else { s.key = '_rate' as any; s.asc = true; }
   allTaxRows.sort((a, b) => {
     const pa = parseFloat(extractRateFromName(a.name));

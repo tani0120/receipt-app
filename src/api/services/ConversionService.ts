@@ -89,10 +89,10 @@ export class ConversionService {
                 summary: 'Conversion successful'
             };
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             await db.collection(this.COLLECTION).doc(logId).update({
                 status: 'error',
-                error: error.message
+                error: error instanceof Error ? error.message : String(error)
             });
             throw error;
         }

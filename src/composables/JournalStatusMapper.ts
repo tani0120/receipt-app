@@ -21,6 +21,7 @@ const safeNumber = (value: unknown, fallback: number = 0): number => {
  * Screen B 用マッパー
  * @param raw - Domain layer entity or API response (Currently compatible with JobUi structure)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const mapJournalStatusApiToUi = (raw: any): JournalStatusUi => {
     // 防御的コーディング: raw が null/undefined の場合
     if (!raw) {
@@ -61,6 +62,7 @@ export const mapJournalStatusApiToUi = (raw: any): JournalStatusUi => {
     };
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapStep = (rawIs: any): JournalStatusStepUi => {
     if (!rawIs) return { state: 'none', label: '', count: 0 };
 
@@ -71,6 +73,7 @@ const mapStep = (rawIs: any): JournalStatusStepUi => {
     };
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapAction = (rawAc: any): JournalStatusActionUi => {
     if (!rawAc) return { type: 'none', label: '', isEnabled: false };
 

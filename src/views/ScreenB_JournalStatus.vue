@@ -90,6 +90,7 @@ const modal = reactive({
     type: '', // 'error' | 'drive'
     title: '',
     subtitle: '',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: {} as any
 });
 

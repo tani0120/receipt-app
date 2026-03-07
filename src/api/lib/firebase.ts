@@ -17,7 +17,7 @@ if (!admin.apps.length) {
             });
         } else {
             console.log('[Firebase] Initializing with Application Default Credentials (ADC) for Cloud Environment.');
-            const firebaseConfig: any = {
+            const firebaseConfig: admin.AppOptions = {
                 credential: admin.credential.applicationDefault()
             };
             if (config.FIREBASE_PROJECT_ID) {

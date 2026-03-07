@@ -64,6 +64,7 @@ const JournalStatusUiSchema = z.object({
 
 // --- 2. Helper Logic (Ported from Mapper & Business Logic) ---
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapStep = (rawIs: any) => {
     if (!rawIs) return { state: 'none', label: '', count: 0 };
     return {
@@ -73,6 +74,7 @@ const mapStep = (rawIs: any) => {
     };
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapAction = (rawAc: any) => {
     if (!rawAc) return { type: 'none', label: '', isEnabled: false };
     const validTypes = ['rescue', 'work', 'approve', 'remand', 'export', 'archive', 'complete_all', 'none'];
@@ -144,6 +146,7 @@ const route = app.get('/', (c) => {
     ];
 
     // Transformation
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const processed = rawJobs.map((raw: any) => {
         return {
             id: raw.id,

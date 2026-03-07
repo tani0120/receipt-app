@@ -59,13 +59,13 @@ ocrRoute.post(
                 success: true,
                 data: result
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(`[OCR API] ❌ エラー:`, error);
 
             return c.json(
                 {
                     success: false,
-                    error: error.message || 'OCR処理に失敗しました'
+                    error: error instanceof Error ? error.message : 'OCR処理に失敗しました'
                 },
                 500
             );

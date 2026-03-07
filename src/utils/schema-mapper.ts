@@ -65,6 +65,7 @@ export function createMapper<
         const validatedInput = sourceSchema.parse(data);
 
         // 2. マッピング実行
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const result: any = {};
         for (const [sourceKey, targetKey] of Object.entries(mapping)) {
             if (targetKey && sourceKey in validatedInput) {
@@ -107,6 +108,7 @@ export type MappingWithTransform<
     keyof S,
     {
         target: keyof T;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         transform?: (value: any) => any;
     }
 >>;
@@ -124,6 +126,7 @@ export function createMapperWithTransform<
         const validatedInput = sourceSchema.parse(data);
 
         // 2. マッピングと変換を実行
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const result: any = {};
         for (const [sourceKey, config] of Object.entries(mapping)) {
             if (config && sourceKey in validatedInput) {

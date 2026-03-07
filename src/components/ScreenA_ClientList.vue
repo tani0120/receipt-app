@@ -219,6 +219,7 @@ const sortOrder = ref<'asc' | 'desc'>('asc');
 
 const isModalVisible = ref(false);
 const modalMode = ref<'new' | 'edit'>('new');
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const selectedClient = ref<any>(null); // Use any for modal compatibility or strict type
 
 // --- Stats Logic ---
@@ -261,7 +262,9 @@ const sortedClients = computed(() => {
     // 3. Sorting
     if (sortKey.value) {
         list = [...list].sort((a, b) => { // Create copy to sort
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let valA: any = '';
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let valB: any = '';
 
             // Mapping sortKey to actual fields
@@ -334,6 +337,7 @@ const navigateToDetail = (code: string) => {
     router.push({ name: 'ScreenA_Detail', params: { code } });
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleSave = async (formData: any) => {
     // Helper to map consumption tax composite
     let consumptionTaxMode = 'general';

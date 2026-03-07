@@ -93,6 +93,7 @@ export class CsvExportService {
   /**
    * オブジェクト配列をCSV文字列に変換
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private static convertToCsv(rows: Record<string, any>[]): string {
     if (rows.length === 0) return '';
 

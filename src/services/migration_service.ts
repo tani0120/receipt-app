@@ -24,6 +24,7 @@ export class MigrationService {
   /**
    * Migrate a single Client from Legacy to V2
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async migrateClient(clientId: string, dryRun: boolean = false): Promise<any | undefined> {
     const legacyRef = doc(db, LEGACY_COLLECTION_CLIENTS, clientId);
     const snapshot = await getDoc(legacyRef);
@@ -52,6 +53,7 @@ export class MigrationService {
   /**
    * Migrate a single Job from Legacy to V2 (Splits into WorkLog and Document)
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async migrateJob(jobId: string, dryRun: boolean = false): Promise<{ workLog: any, document: any } | undefined> {
     const legacyRef = doc(db, LEGACY_COLLECTION_JOBS, jobId);
     const snapshot = await getDoc(legacyRef);

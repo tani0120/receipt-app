@@ -6,6 +6,7 @@ import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 // 単発テスト用
 const selectedFile = ref<File | null>(null);
 const isProcessing = ref(false);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const result = ref<any>(null);
 const error = ref<string | null>(null);
 
@@ -65,8 +66,8 @@ async function runOCR() {
 
     result.value = ocrResult;
     console.log('✅ OCR成功:', ocrResult);
-  } catch (err: any) {
-    error.value = err.message || 'OCR実行エラー';
+  } catch (err: unknown) {
+    error.value = (err instanceof Error ? err.message : String(err)) || 'OCR実行エラー';
     console.error('❌ OCR失敗:', err);
   } finally {
     isProcessing.value = false;
@@ -76,6 +77,7 @@ async function runOCR() {
 /**
  * JSON比較（explanation除外）
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeForCompare(obj: AIIntermediateOutput): any {
   const { explanation, ...rest } = obj;
   return rest;
@@ -129,8 +131,8 @@ async function run10TimesTest() {
     testSummary.value = calculateSummary(results);
 
     console.log('✅ 10回テスト完了:', testSummary.value);
-  } catch (err: any) {
-    error.value = `10回テストエラー: ${err.message}`;
+  } catch (err: unknown) {
+    error.value = `10回テストエラー: ${err instanceof Error ? err.message : String(err)}`;
     console.error('❌ 10回テスト失敗:', err);
   } finally {
     isRunning10Test.value = false;

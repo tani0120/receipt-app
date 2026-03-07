@@ -23,7 +23,7 @@ export const interceptConsole = () => {
     const originalLog = console.log;
     const originalError = console.error;
 
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
         // 1. Standard output
         originalLog.apply(console, args);
         // 2. Buffer output (convert args to string)
@@ -37,7 +37,7 @@ export const interceptConsole = () => {
         }
     };
 
-    console.error = (...args: any[]) => {
+    console.error = (...args: unknown[]) => {
         originalError.apply(console, args);
         try {
             const msg = '[ERROR] ' + args.map(arg =>

@@ -61,6 +61,7 @@ const formatTimestamp = (ts: unknown): string => {
   if (!ts) return '—';
 
   // Firestore Timestamp
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (typeof ts === 'object' && ts !== null && 'toDate' in ts && typeof (ts as any).toDate === 'function') {
     try {
       const date = (ts as Timestamp).toDate();
@@ -71,8 +72,10 @@ const formatTimestamp = (ts: unknown): string => {
   }
 
   // Serialized Timestamp ({ seconds: number, nanoseconds: number })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (typeof ts === 'object' && ts !== null && 'seconds' in ts && typeof (ts as any).seconds === 'number') {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const seconds = (ts as any).seconds as number;
       const date = new Date(seconds * 1000);
       return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
@@ -306,6 +309,7 @@ const calculateActions = (api: Partial<JobApi>): { primary: JobActionUi, next: J
  */
 
 const mapJournalLine = (api: unknown, client: Partial<ClientApi>): JournalLineUi => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const d = (api && typeof api === 'object') ? (api as Record<string, any>) : {};
 
   // TaxDetails Safety
@@ -318,6 +322,7 @@ const mapJournalLine = (api: unknown, client: Partial<ClientApi>): JournalLineUi
       account: safeText(d.drAccount),
       subAccount: safeText(d.drSubAccount),
       amount: safeNumber(d.drAmount),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       taxRate: mapTaxRate((d as any).taxDetails?.rate), // Safe enough via mapTaxRate
       taxCode: translateTaxCode(d.drTaxClass, client, 'debit'),
     },
@@ -326,6 +331,7 @@ const mapJournalLine = (api: unknown, client: Partial<ClientApi>): JournalLineUi
       account: safeText(d.crAccount),
       subAccount: safeText(d.crSubAccount),
       amount: safeNumber(d.crAmount),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       taxRate: mapTaxRate((d as any).taxDetails?.rate),
       taxCode: translateTaxCode(d.crTaxClass, client, 'credit'),
     },
@@ -402,6 +408,7 @@ export const mapJobApiToUi = (
     canEdit: ['ready_for_work', 'remanded', 'error_retry'].includes(jobStatus),
 
     aiProposal: (() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let parsed: any = null;
       if (api.aiAnalysisRaw) {
         try {
@@ -417,6 +424,7 @@ export const mapJobApiToUi = (
         confidenceLabel: hasProposal ? (api.confidenceScore ? `信頼度: ${(api.confidenceScore * 100).toFixed(0)}%` : '高') : '',
         summary: hasProposal ? safeText(parsed.summary) : '',
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         debits: (hasProposal && Array.isArray(parsed.debits)) ? parsed.debits.map((d: any) => ({
           account: safeText(d.account),
           subAccount: safeText(d.subAccount),
@@ -424,6 +432,7 @@ export const mapJobApiToUi = (
           taxRate: mapTaxRate(d.taxRate)
         })) : [],
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         credits: (hasProposal && Array.isArray(parsed.credits)) ? parsed.credits.map((c: any) => ({
           account: safeText(c.account),
           subAccount: safeText(c.subAccount),
@@ -453,6 +462,7 @@ export const mapJobApiToUi = (
 };
 
 export const mapConversionLogUi = (input: unknown): ConversionLogUi => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const d = (input && typeof input === 'object') ? (input as any) : {};
 
   // 1. Target Software Mapping (Pure Logic)

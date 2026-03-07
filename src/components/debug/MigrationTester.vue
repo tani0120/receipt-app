@@ -9,6 +9,7 @@ const migrationService = new MigrationService();
 const clientId = ref('1001');
 const jobId = ref('1001_job01');
 const statusMessage = ref('');
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const debugResult = ref<any>(null);
 const isProcessing = ref(false);
 

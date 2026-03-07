@@ -478,6 +478,7 @@ const transactionDateStr = computed({
     set: (v: string) => {
         if (selectedJob.value) {
             // JobUi.transactionDate is string
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (selectedJob.value as any).transactionDate = v;
         }
     }
@@ -644,8 +645,11 @@ function goBack() {
 // Actions
 function toggleLock() {
     if (selectedJob.value) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (selectedJob.value as any).isLocked = !selectedJob.value.isLocked;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (selectedJob.value.isLocked) (selectedJob.value as any).journalEditMode = 'locked';
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         else (selectedJob.value as any).journalEditMode = 'work';
     }
 }
@@ -719,6 +723,7 @@ function toggleDecision(decision: string) {
              pendingRevertId.value = txId;
              showRevertConfirmModal.value = true;
          } else if (item) {
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
              (approvalQueue.value[ existingIdx ] as any).decision = decision; // safe access
              lastAction.value = { id: txId, decision };
              goNext();

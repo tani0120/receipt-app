@@ -213,8 +213,8 @@ const validateAndSetFile = async (file: File) => {
                 form.value.sourceSoftware = '会計王';
             }, 500);
         }
-    } catch (e: any) {
-        alert(e.message);
+    } catch (e: unknown) {
+        alert(e instanceof Error ? e.message : String(e));
     }
 };
 

@@ -22,6 +22,7 @@ export function useJournalEntryRPC() {
     // 将来実装予定
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateJournalEntry = async (id: string, payload: any) => {
     console.log('TODO: implement updateJournalEntry', id, payload);
     // 将来実装予定

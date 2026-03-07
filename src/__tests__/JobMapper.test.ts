@@ -55,6 +55,7 @@ describe('Phase C: JobMapper Ironclad Test (Screen B)', () => {
             clientCode: true,
             status: 999, // Unknown status
             lines: "Not an array"
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
         assertIroncladContract(result);
         expect(result.id).toBe('12345');
@@ -68,6 +69,7 @@ describe('Phase C: JobMapper Ironclad Test (Screen B)', () => {
                 inputTokens: Infinity,
                 estimatedCostUsd: NaN
             }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
         assertIroncladContract(result);
         expect(result.aiUsageStats.inputTokens).toBe(0); // Safe fallback
@@ -79,6 +81,7 @@ describe('Phase C: JobMapper Ironclad Test (Screen B)', () => {
             clientCode: '\u0000\u0000',
             clientName: 'DROP TABLE jobs;',
             status: 'admin_override'
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
         assertIroncladContract(result);
         expect(result.status).toBe('unknown'); // Invalid status enum

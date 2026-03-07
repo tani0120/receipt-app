@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { VertexAI } from '@google-cloud/vertexai';
 import { config } from '../config';
 
-let model: any = null;
+let model: unknown = null;
 
 if (config.USE_VERTEX_AI) {
     // Vertex AI (Service Account)

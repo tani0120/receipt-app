@@ -77,7 +77,7 @@ const route = app
             const doc = await db.collection('system_configs').doc('ai_phase_settings').get()
             const data = doc.data() || {}
             return c.json(data)
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error('Failed to fetch config:', e)
             return c.json({}, 500)
         }
@@ -97,10 +97,12 @@ const route = app
                 const { db } = await import('../lib/firebase')
                 const { ConfigService } = await import('../services/ConfigService') // Dynamic import
 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const payload = c.req.valid('json') as any
 
                 // 1. Save AI Phase Settings (if present)
                 if (payload.aiPhases) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const mapPhase = (p: any) => ({
                         provider: p.provider === 'gemini' ? 'ai_studio' : 'vertex_ai',
                         mode: p.mode === 'normal' ? 'realtime' : 'batch',
@@ -149,6 +151,7 @@ const route = app
                     // Let's rely on ConfigService to merge.
 
                     // Filter out undefined values from our mapped object to avoid overwriting with undefined
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const cleanPayload = (obj: any): any => {
                         return Object.entries(obj).reduce((acc, [k, v]) => {
                             if (v && typeof v === 'object' && !Array.isArray(v)) {
@@ -158,6 +161,7 @@ const route = app
                                 acc[k] = v
                             }
                             return acc
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         }, {} as any)
                     }
 

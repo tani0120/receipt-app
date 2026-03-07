@@ -219,7 +219,7 @@ async function callVertexAI(
  * @param responseText - レスポンステキスト
  * @returns JSON object
  */
-function extractJSONFromResponse(responseText: string): any {
+function extractJSONFromResponse(responseText: string): unknown {
     // パターン1: マークダウンコードブロック (```json ... ```)
     const jsonCodeBlockMatch = responseText.match(/```json\s*\n([\s\S]*?)\n```/);
     if (jsonCodeBlockMatch) {

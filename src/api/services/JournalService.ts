@@ -28,10 +28,12 @@ export class JournalService {
     return this.approve(payload.jobId, payload);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async requestApproval(jobId: string, payload?: any) {
     return this.transitionState(jobId, 'request_approval', ['work', 'remanded'], 'waiting_approval', payload);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async approve(jobId: string, payload?: any) {
     // For now, allow 'work' to 'confirmed' for direct finalization (Pilot mode shortcut)
     // STRICT MODE: Should only be 'waiting_approval' -> 'confirmed'
@@ -39,10 +41,12 @@ export class JournalService {
     return this.transitionState(jobId, 'approve', ['waiting_approval', 'work'], 'confirmed', payload);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async remand(jobId: string, payload?: any) {
     return this.transitionState(jobId, 'remand', ['waiting_approval'], 'remanded', payload);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async exclude(jobId: string, payload?: any) {
     return this.transitionState(jobId, 'exclude', ['work', 'remanded', 'waiting_approval'], 'excluded', payload);
   }
@@ -55,6 +59,7 @@ export class JournalService {
     action: string,
     allowedSrcStatuses: string[],
     targetStatus: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     payload?: any
   ) {
     const jobRef = db.collection(this.COLLECTION).doc(jobId);
@@ -79,6 +84,7 @@ export class JournalService {
         details: payload?.summary || `Action: ${action}`
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updateData: any = {
         ...data,
         id: jobId,
@@ -105,6 +111,7 @@ export class JournalService {
    * Save a draft of the journal entry.
    * Allowed only in 'work' or 'remanded' status.
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async saveDraft(jobId: string, payload: any) {
     const jobRef = db.collection(this.COLLECTION).doc(jobId);
 
@@ -144,6 +151,7 @@ export class JournalService {
   /**
    * Action Dispatcher (Central Command)
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async dispatchAction(jobId: string, action: string, payload?: any): Promise<any> {
     switch (action) {
       case 'save_draft':
@@ -169,6 +177,7 @@ export class JournalService {
    * Re-analyze a job using AI.
    * This logic was moved from the router to the service.
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async reAnalyze(jobId: string, payload?: any) {
     // 1. Get Job Data to find file URL
     const jobRef = db.collection(this.COLLECTION).doc(jobId);

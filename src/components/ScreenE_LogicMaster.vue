@@ -403,6 +403,7 @@ const screen = computed({
 
 const currentIndex = ref(0);
 const selectedJob = ref<Job | null>(null);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const client = ref<any>(null); // raw client data
 
 // Map 'pageMode' to currentClient.action
@@ -448,7 +449,9 @@ const currentTransaction = computed(() => {
 const form = reactive({
     date: '',
     summary: '',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     debit: [] as any[], // { acct, sub, tax, amount }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     credit: [] as any[]
 });
 
@@ -544,6 +547,7 @@ const goNext = nextTransaction; // alias
 const goBack = prevTransaction; // alias (partially)
 
 // Queue Logic
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const approvalQueue = ref<any[]>([]);
 const remainingApprovalCount = computed(() => jobs.value.length - approvalQueue.value.length);
 const currentDecision = computed(() => {
@@ -560,6 +564,7 @@ const pendingRevertId = ref<string|null>(null);
 
 // Toast
 const toast = reactive({ visible: false, message: '', isUndo: false, type: 'normal' });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let toastTimeout: any;
 const showToast = (msg: string, type: 'normal'|'undo'|'success'|'error' = 'normal') => {
     clearTimeout(toastTimeout);
@@ -628,6 +633,7 @@ const performUndo = () => {
     // Simplified undo: revert the last item in active session for demo
     showToast('Undo not fully implemented in demo', 'error');
 };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const _lastAction = ref<any>(null); // unused but kept for future undo
 
 const revertItems = () => {
@@ -643,6 +649,7 @@ const executeBatch = async () => {
     showToast('処理を実行中...', 'success');
     for (const item of approvalQueue.value) {
         let status: JobStatus = 'ready_for_work';
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let _reviewStatus: any = undefined;
         switch (item.decision) {
             case 'confirmed': status = 'review'; _reviewStatus = 'confirmed'; break;

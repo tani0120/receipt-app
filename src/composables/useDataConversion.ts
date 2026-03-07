@@ -29,6 +29,7 @@ export function aaa_useDataConversion() {
         fetchLogs();
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const addLog = (log: any) => {
         // Local simulation for immediate feedback
         const uiLog: ConversionLogUi = {
@@ -54,7 +55,9 @@ export function aaa_useDataConversion() {
         if (log) {
             // We need to bypass Readonly constraints for local UI state updates if Types enforce it
             // Ideally UI types shouldn't be readonly if we edit them locally, but let's cast
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (log as any).isDownloaded = true;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (log as any).rowStyle = 'bg-gray-50 opacity-70';
         }
     };

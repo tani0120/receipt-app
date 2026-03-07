@@ -49,9 +49,9 @@ export async function signInTestUser(): Promise<User> {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         console.log('[testAuth] テストユーザーでログインしました:', userCredential.user.email);
         return userCredential.user;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[testAuth] ログインエラー:', error);
-        throw new Error(`テストユーザーのログインに失敗しました: ${error.message}`);
+        throw new Error(`テストユーザーのログインに失敗しました: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
