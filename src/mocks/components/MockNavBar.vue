@@ -55,18 +55,19 @@ interface TopItem {
   label: string;
   icon: string;
   path: string | null;
+  managedPaths: string[];
 }
 
 const topItems: TopItem[] = [
-  { key: 'clients',  label: '顧問先管理',   icon: 'fa-solid fa-building',    path: null },
-  { key: 'staff',    label: 'スタッフ管理', icon: 'fa-solid fa-users',       path: null },
-  { key: 'master',   label: 'マスタ管理',   icon: 'fa-solid fa-database',    path: '/master' },
-  { key: 'cost',     label: '想定費用',     icon: 'fa-solid fa-calculator',  path: null },
-  { key: 'settings', label: '設定管理',     icon: 'fa-solid fa-gear',        path: null },
+  { key: 'clients',  label: '顧問先管理',   icon: 'fa-solid fa-building',    path: '/master/clients',  managedPaths: ['/master/clients'] },
+  { key: 'staff',    label: 'スタッフ管理', icon: 'fa-solid fa-users',       path: null,               managedPaths: ['/staff'] },
+  { key: 'master',   label: 'マスタ管理',   icon: 'fa-solid fa-database',    path: '/master/accounts', managedPaths: ['/master/accounts', '/master/tax-categories'] },
+  { key: 'cost',     label: '想定費用',     icon: 'fa-solid fa-calculator',  path: null,               managedPaths: ['/cost'] },
+  { key: 'settings', label: '設定管理',     icon: 'fa-solid fa-gear',        path: null,               managedPaths: ['/settings/admin'] },
 ];
 
 const isTopActive = (item: TopItem): boolean =>
-  item.path !== null && route.path.startsWith(item.path);
+  item.managedPaths.some(p => route.path.startsWith(p));
 
 const handleTopClick = (item: TopItem): void => {
   if (item.path) {

@@ -23,50 +23,58 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: '/legacy',
-    redirect: '/journal-status'
+    redirect: '/clients/demo/journals'
   },
+  // --- 旧パス互換リダイレクト（App.vue, AaaLayout.vue等から参照） ---
+  // Phase B で旧レイアウト廃止後に削除する
+  { path: '/journal-status', redirect: '/clients/demo/journals' },
+  { path: '/collection-status', redirect: '/clients/demo/collection' },
+  { path: '/collection-status/:code', redirect: '/clients/demo/collection' },
+  { path: '/ai-rules', redirect: '/clients/demo/ai-rules' },
+  { path: '/data-conversion', redirect: '/clients/demo/data-conversion' },
+  { path: '/task-dashboard', redirect: '/clients/demo/tasks' },
+  { path: '/admin-settings', redirect: '/settings/admin' },
+  { path: '/settings', redirect: '/clients/demo/settings' },
+  { path: '/journal-list', redirect: '/clients/demo/journals' },
   {
     path: '/screen_b_mock',
     name: 'ScreenB_Restore_Mock',
     component: ScreenB_Restore_Mock
   },
+  // 旧Screen Aは廃止。新構造: /master/clients（一覧）および /clients/:clientId/settings（個別）に統合。
   {
     path: '/clients',
-    name: 'ScreenA',
-    component: () => import('../views/ScreenA_Clients.vue')
+    redirect: '/master/clients'
   },
   {
-    path: '/clients/:code',
-    name: 'ScreenA_Detail',
-    component: () => import('../components/ScreenA_ClientDetail.vue'),
+    path: '/clients/:clientId/settings',
+    name: 'ClientSettings',
+    component: () => import('../mocks/views/MockSettingsPage.vue'),
     props: true
   },
   {
-    path: '/journal-status',
-    name: 'ScreenB_Status',
-    component: () => import('../views/ScreenB_JournalStatus.vue')
-  },
-  {
-    path: '/jobs/:code',
-    name: 'ScreenB_JournalStatus',
+    path: '/clients/:clientId/journals',
+    name: 'ClientJournals',
     component: () => import('../views/ScreenB_JournalStatus.vue'),
     props: true
   },
   {
-    path: '/collection-status',
-    name: 'ScreenC',
-    component: () => import('../components/ScreenC_CollectionStatus.vue')
+    path: '/clients/:clientId/jobs/:jobId',
+    name: 'ClientJob',
+    component: () => import('../views/ScreenB_JournalStatus.vue'),
+    props: true
   },
   {
-    path: '/collection-status/:code',
-    name: 'ScreenC_Detail',
+    path: '/clients/:clientId/collection',
+    name: 'ClientCollection',
     component: () => import('../components/ScreenC_CollectionStatus.vue'),
     props: true
   },
   {
-    path: '/ai-rules',
-    name: 'ScreenD',
-    component: () => import('@/views/ScreenD_AIRules.vue')
+    path: '/clients/:clientId/ai-rules',
+    name: 'ClientAIRules',
+    component: () => import('@/views/ScreenD_AIRules.vue'),
+    props: true
   },
   {
     path: '/journal-entry/:jobId',
@@ -75,30 +83,28 @@ export const routes: RouteRecordRaw[] = [
     props: true
   },
 
-  {
-    path: '/settings',
-    name: 'Settings',
-    component: () => import('../mocks/views/MockSettingsPage.vue')
-  },
+
   {
     path: '/settings/accounts',
     name: 'AccountSettings',
     component: () => import('../views/ScreenS_AccountSettings.vue')
   },
   {
-    path: '/admin-settings',
-    name: 'ScreenZ',
+    path: '/settings/admin',
+    name: 'AdminSettings',
     component: () => import('../views/ScreenZ_AdminSettings.vue')
   },
   {
-    path: '/data-conversion',
-    name: 'DataConversion',
-    component: () => import('@/views/ScreenG_DataConversion.vue')
+    path: '/clients/:clientId/data-conversion',
+    name: 'ClientDataConversion',
+    component: () => import('@/views/ScreenG_DataConversion.vue'),
+    props: true
   },
   {
-    path: '/task-dashboard',
-    name: 'TaskDashboard',
-    component: () => import('@/views/ScreenH_TaskDashboard.vue')
+    path: '/clients/:clientId/tasks',
+    name: 'ClientTasks',
+    component: () => import('@/views/ScreenH_TaskDashboard.vue'),
+    props: true
   },
   // --- Phase 2: Isolation Debug Route (Authorized) ---
   {
@@ -118,14 +124,16 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true }
   },
 
-  // --- Phase 2: Receipt Detail (status駆動UI) ---
+  // --- 証票詳細（receipt → document に統一予定） ---
   {
-    path: '/receipts/:id',
-    name: 'ReceiptDetail',
+    path: '/clients/:clientId/documents/:documentId',
+    name: 'ClientDocument',
     component: () => import('@/views/ReceiptDetail.vue'),
     props: true,
     meta: { requiresAuth: true }
   },
+  // 旧パス互換（Phase Bで削除）
+  { path: '/receipts/:id', redirect: '/clients/demo/documents/:id' },
   // Phase 5 Mock
   {
     path: '/journal-list',
@@ -146,8 +154,7 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: '/master',
-    name: 'MasterHub',
-    component: () => import('@/mocks/views/MockMasterHubPage.vue')
+    redirect: '/master/accounts'
   },
   {
     path: '/master/accounts',
@@ -158,6 +165,11 @@ export const routes: RouteRecordRaw[] = [
     path: '/master/tax-categories',
     name: 'MasterTaxCategories',
     component: () => import('@/mocks/views/MockMasterTaxCategoriesPage.vue')
+  },
+  {
+    path: '/master/clients',
+    name: 'MasterClients',
+    component: () => import('@/mocks/views/MockMasterClientsPage.vue')
   },
 ]
 

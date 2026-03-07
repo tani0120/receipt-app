@@ -2,6 +2,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
+import type { ClientRaw } from '../types/ClientRaw'
 
 const app = new Hono()
 
@@ -79,7 +80,7 @@ const ClientUiSchema = z.object({
     isInvoiceRegistered: z.boolean().default(false),
     invoiceRegistrationNumber: z.string().default(''),
     roundingSettings: z.enum(['floor', 'round', 'ceil']).default('floor'),
-    accountingSoftware: z.enum(['yayoi', 'freee', 'mf', 'other']).default('other'),
+    accountingSoftware: z.enum(['yayoi', 'freee', 'mf', 'tkc', 'other']).default('other'),
     driveLinked: z.boolean().default(false),
 
     // Standard Action Schema
@@ -107,7 +108,7 @@ const ClientUiSchema = z.object({
 const route = app
     .get('/', (c) => {
         // Mock Data from DB (Simulating raw DB response)
-        const rawClients = [
+        const rawClients: ClientRaw[] = [
             {
                 clientCode: 'CLI001',
                 companyName: '株式会社エーアイシステム',
@@ -142,7 +143,7 @@ const route = app
         ];
 
         // Transformation Logic (Ported from ClientMapper.ts)
-        const processedClients = rawClients.map((raw: any) => {
+        const processedClients = rawClients.map((raw: ClientRaw) => {
             const fiscalMonth = Math.max(1, Math.min(12, raw.fiscalMonth || 1));
             const software = raw.accountingSoftware || 'other';
             const taxMethod = raw.taxMethod === 'exclusive' ? 'exclusive' : 'inclusive';
@@ -150,10 +151,11 @@ const route = app
             const calculationMethodLabel = raw.calculationMethod === 'cash' ? '現金主義' : '発生主義';
             const shortCalc = calculationMethodLabel.replace('主義', '');
 
-            // Contact Type Logic
-            let contactType = 'none';
-            if ((raw.contactInfo || '').includes('@')) contactType = 'email';
-            else if ((raw.contactInfo || '').startsWith('http')) contactType = 'chatwork';
+            // 連絡手段の型判定
+            const contactValue = raw.contactInfo ?? '';
+            let contactType: 'email' | 'chatwork' | 'none' = 'none';
+            if (contactValue.includes('@')) contactType = 'email';
+            else if (contactValue.startsWith('http')) contactType = 'chatwork';
 
             // Simplified Tax
             const simpTaxRaw = raw.simplifiedTaxCategory || 0;
@@ -188,8 +190,8 @@ const route = app
                 status: raw.status || 'active',
                 isActive: raw.status !== 'inactive' && raw.status !== 'suspension',
                 contact: {
-                    type: contactType as 'email' | 'chatwork' | 'none',
-                    value: raw.contactInfo || ''
+                    type: contactType,
+                    value: contactValue
                 },
 
                 driveLinks,
@@ -238,7 +240,6 @@ const route = app
         return c.json(validated);
     })
     // Implement PUT (Update)
-    // Implement PUT (Update)
     .put(
         '/:code',
         zValidator('json', z.object({
@@ -267,7 +268,8 @@ const route = app
     // PATCH (Alias to Update)
     .patch(
         '/:code',
-        zValidator('json', z.object({}).passthrough()), // Loose schema for PATCH
+        // TODO Phase B: Replace with UpdateClientSchema
+        zValidator('json', z.object({}).passthrough()), // モック用の緋いスキーマ。Phase Bで UpdateClientSchema に置換する。
         async (c) => {
             const code = c.req.param('code');
             const body = c.req.valid('json');
