@@ -90,7 +90,7 @@ export function aaa_useDataConversion() {
     const isProcessing = ref(false);
     const loadingStatus = ref('');
 
-    const SOFTWARE_LABELS = {
+    const _SOFTWARE_LABELS = {
         'Yayoi': '弥生会計',
         'MF': 'マネーフォワード',
         'Freee': 'freee',
@@ -116,7 +116,7 @@ export function aaa_useDataConversion() {
         });
     };
 
-    const startDataConversion = async (clientName: string, sourceSoftware: string, targetSoftware: string, file: File) => {
+    const startDataConversion = async (clientName: string, sourceSoftware: string, targetSoftware: string, _file: File) => {
         isProcessing.value = true;
         loadingStatus.value = 'CSVファイルを解析中...';
 

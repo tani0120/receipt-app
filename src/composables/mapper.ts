@@ -10,7 +10,7 @@
  * ============================================================
  */
 
-import type { JobApi, JournalLineApi, ClientApi } from '../types/zod.type';
+import type { JobApi, ClientApi } from '../types/zod.type';
 import type {
   JobUi,
   JournalLineUi,
@@ -53,7 +53,7 @@ const safeNumber = (value: unknown, fallback = 0): number => {
   return fallback;
 };
 
-const safeBoolean = (value: unknown): boolean => {
+const _safeBoolean = (value: unknown): boolean => {
   return !!value;
 };
 
@@ -66,7 +66,7 @@ const formatTimestamp = (ts: unknown): string => {
     try {
       const date = (ts as Timestamp).toDate();
       return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
-    } catch (e) {
+    } catch {
       return 'Inv. Date';
     }
   }
@@ -79,7 +79,7 @@ const formatTimestamp = (ts: unknown): string => {
       const seconds = (ts as any).seconds as number;
       const date = new Date(seconds * 1000);
       return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
-    } catch (e) {
+    } catch {
       return 'Inv. Date';
     }
   }
@@ -313,7 +313,7 @@ const mapJournalLine = (api: unknown, client: Partial<ClientApi>): JournalLineUi
   const d = (api && typeof api === 'object') ? (api as Record<string, any>) : {};
 
   // TaxDetails Safety
-  const drTax = d.taxDetails?.rate; // unsafe access -> fixed
+  const _drTax = d.taxDetails?.rate; // unsafe access -> fixed (kept for reference)
 
   return {
     lineNo: safeNumber(d.lineNo),
@@ -413,7 +413,7 @@ export const mapJobApiToUi = (
       if (api.aiAnalysisRaw) {
         try {
           parsed = JSON.parse(api.aiAnalysisRaw);
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
       }
 
       const hasProposal = !!parsed;

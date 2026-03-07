@@ -225,7 +225,7 @@ import type { JournalUiMode } from '@/shared/journalUiMode';
 
 const {
     entry,
-    loading,
+    loading: _loading,
     isSaving,
     validation,
     addRow,

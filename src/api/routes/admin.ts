@@ -43,7 +43,7 @@ const StaffPerformanceSchema = z.object({
     })
 })
 
-const AdminDashboardSchema = z.object({
+const _AdminDashboardSchema = z.object({
     kpi: DashboardKpiSchema,
     staff: z.array(StaffPerformanceSchema)
 })

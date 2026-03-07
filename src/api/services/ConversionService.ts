@@ -13,7 +13,7 @@ export interface ConversionResult {
 }
 
 // Log Schema for Firestore
-const ConversionLogDbSchema = z.object({
+const _ConversionLogDbSchema = z.object({
     id: z.string(),
     clientId: z.string().optional(),
     fileName: z.string(),

@@ -27,7 +27,7 @@ export class WorkerService {
             return { count: 0 };
         }
 
-        const results = [];
+        const _results = [];
 
         // 2. Process each job
         // We process sequentially or in parallel? Parallel is faster but higher burst.
@@ -36,7 +36,7 @@ export class WorkerService {
 
         const tasks = snapshot.docs.map(async (doc) => {
             const jobId = doc.id;
-            const data = doc.data();
+            const _data = doc.data();
 
             // Concurrency Control: Check if already locked or processed?
             // Since we just fetched, it might be claimed by another worker if we scale out.

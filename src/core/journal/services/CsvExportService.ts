@@ -20,7 +20,7 @@ export class CsvExportService {
    */
   static async exportToMF(
     journalEntries: JournalEntry[],
-    client: Client
+    _client: Client
   ): Promise<Blob> {
 
     // 1. 制約チェック

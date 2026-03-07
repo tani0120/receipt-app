@@ -25,6 +25,7 @@ const app = new Hono()
 const JournalDataSchema = z.object({}).passthrough()
 
 // --- API Routes ---
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const routes = app
     .get('/api/hello', (c) => {
         return c.json({

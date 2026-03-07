@@ -407,3 +407,80 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 ### 理由:
 - B1 バッチAで150→58件に削減したが、残り58件を全件処理して`no-explicit-any`ルールを完全クリアにするため
 - 特にクライアントサイド(.vue)は実行時バグのリスクが高く、型安全性の向上が重要
+
+---
+
+## I. 【スコープ宣言】B2残存 — no-unused-vars 16件修正（2026-03-07 21:38）
+
+### 変更対象ファイル（9ファイル・16件）:
+
+| # | ファイル | 件数 | 箇所 |
+|---|---------|------|------|
+| 1 | `src/composables/mapper.ts` | 5 | `JournalLineApi`(L13), `safeBoolean`(L56), `e`(L69,L82,L416), `drTax`(L316) |
+| 2 | `src/api/services/WorkerService.ts` | 2 | `results`(L30), `data`(L39) |
+| 3 | `src/composables/useDataConversion.ts` | 2 | `SOFTWARE_LABELS`(L93), `file`(L119) |
+| 4 | `src/api/index.ts` | 1 | `routes`(L28) — 型のみ使用 |
+| 5 | `src/api/lib/ai/strategies/VertexAIStrategy.ts` | 1 | `_e`(L72) |
+| 6 | `src/api/routes/admin.ts` | 1 | `AdminDashboardSchema`(L46) |
+| 7 | `src/api/services/ConversionService.ts` | 1 | `ConversionLogDbSchema`(L16) |
+| 8 | `src/core/journal/services/CsvExportService.ts` | 1 | `client`(L23) |
+| 9 | `src/views/ScreenE_Workbench.vue` | 1 | `loading`(L228) |
+
+### 新規作成予定ファイル:
+- なし
+
+### 触らないファイル:
+- 上記9ファイル以外の全ファイル
+
+### 修正内容詳細:
+
+| パターン | 修正方法 | 該当件数 |
+|----------|---------|---------|
+| 未使用import (`JournalLineApi`) | import文から削除 | 1 |
+| 未使用変数 (`safeBoolean`, `drTax`, `SOFTWARE_LABELS`) | `_`prefix付与 or 削除 | 3 |
+| 未使用catch引数 (`e` ×3) | `catch` 引数省略 or `_e` | 3 |
+| 未使用destructure (`results`, `data`, `file`) | `_`prefix付与 | 3 |
+| 型としてのみ使用 (`routes`) | `type`修飾子追加 or `_`prefix | 1 |
+| 将来使用予定スキーマ (`AdminDashboardSchema`, `ConversionLogDbSchema`) | `_`prefix付与（削除リスク回避） | 2 |
+| 引数未使用 (`client`, `_e`) | `_`prefix付与 | 2 |
+| Vue composable destructure (`loading`) | `_loading`に変更（テンプレート未使用確認済み） | 1 |
+
+### 想定している問題:
+1. **`mapper.ts`の`safeBoolean`削除**: 他ファイルから参照されていないことを確認必要（grep済み、使用なし）
+2. **`AdminDashboardSchema`/`ConversionLogDbSchema`の削除**: 将来使用予定のため削除ではなく`_`prefix方針
+3. **`ScreenE_Workbench.vue`の`loading`**: composableのdestructureで取得しているが、テンプレートで使用していない。`_loading`にするとVueのreactivity警告が出る可能性
+4. **`WorkerService.ts`の`results`/`data`**: 実際のコードで使用されている可能性があるため要確認
+
+### 検証方法:
+1. `npx eslint src/ --ext .ts,.vue` — no-unused-vars 0件が目標
+2. `npx vue-tsc --noEmit` — 0エラー維持
+3. ブラウザ手動確認 — 主要画面の表示確認
+
+### 理由:
+- ESLint完全クリアを目指す（現在16件 → 0件）
+- `no-unused-vars`は死んだコードの蓄積を防ぎ、保守性を向上させる
+
+---
+
+## J. §I修正中に再確認した既存問題（2026-03-07 21:47追記）
+
+> §I（no-unused-vars 16件修正）中にIDEフィードバックから再確認。全て既存問題であり今回の修正で新規発生したものはない。§Gと重複する項目を含む。
+
+### J-1. 🔴 型エラー級
+
+| ID | ファイル | 行 | 問題 | §Gとの対応 |
+|----|---------|---|------|-----------|
+| J1 | `src/views/ScreenE_Workbench.vue` | 多数 | テンプレート内`entry.evidenceUrl`, `entry.transactionDate`, `entry.vendorName`, `entry.tNumber`等が`JournalEntryUi`型に存在しない（旧UI構造とスキーマの不整合） | 新規 |
+| J2 | `src/api/services/ConversionService.ts` | 71 | `generateContent`が型`{}`に存在しない（`gemini.ts`の`model`型`unknown`起因） | = G1 |
+| J3 | `src/core/journal/services/CsvExportService.ts` | 2 | `@/features/client`モジュールが見つからない（未実装モジュール参照） | 新規 |
+| J4 | `src/core/journal/services/CsvExportService.ts` | 101 | `Record<string,any> | undefined`を`{}`に割当不可（Object.keys引数型不一致） | 新規 |
+
+### J-2. 🟡 TypeScript warning級
+
+| ID | ファイル | 行 | 問題 | §Gとの対応 |
+|----|---------|---|------|-----------|
+| J5 | `src/api/index.ts` | 50 | 一部のコードパスは値を返しません（zValidatorコールバック） | 新規 |
+| J6 | `src/api/routes/admin.ts` | 90 | 一部のコードパスは値を返しません（同上） | 新規 |
+| J7 | `src/api/lib/ai/strategies/VertexAIStrategy.ts` | 7 | `private location`が宣言後未読み取り | 新規 |
+
+
