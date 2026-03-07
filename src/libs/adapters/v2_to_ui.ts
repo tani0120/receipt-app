@@ -33,7 +33,7 @@ export function mapWorkLogToJournalStatus(log: WorkLogDocument, clientMap?: Map<
 
     // Construct Steps based on status
     const steps = {
-        receipt: { state: 'done', label: '受領済', count: 1 } as JournalStatusStepUi, // Assume receipt is done if worklog exists
+        document: { state: 'done', label: '受領済', count: 1 } as JournalStatusStepUi, // Assume document is done if worklog exists
         aiAnalysis: { state: 'done', label: '解析済', count: 1 } as JournalStatusStepUi, // Assume AI is done
         journalEntry: defaultStep,
         approval: defaultStep,

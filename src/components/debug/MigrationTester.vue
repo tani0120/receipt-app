@@ -190,7 +190,7 @@ const handleJobMigration = async (dryRun: boolean) => {
 
     <!-- Job Migration Section -->
     <div>
-      <h3 class="text-lg font-semibold mb-3">2. Job Migration (Legacy -> WorkLog & Receipt)</h3>
+      <h3 class="text-lg font-semibold mb-3">2. Job Migration (Legacy -> WorkLog & Document)</h3>
       <div class="flex gap-4 items-end">
         <div class="flex-1">
           <label class="block text-sm font-medium text-gray-700 mb-1">Legacy Job ID</label>

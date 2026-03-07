@@ -3,7 +3,7 @@ import type { Client as LegacyClient, Job as LegacyJob, JobStatus as LegacyJobSt
 import type {
     ClientDocument,
     WorkLogDocument,
-    ReceiptDocument,
+    DocumentRecord,
     ProcessingStatus,
     DocumentId,
     UserId,
@@ -133,9 +133,9 @@ export function convertLegacyJobToWorkLog(old: LegacyJob): WorkLogDocument {
 }
 
 /**
- * Convert Legacy Job to V2 ReceiptDocument (Focus on Data/OCR)
+ * Convert Legacy Job to V2 DocumentRecord (Focus on Data/OCR)
  */
-export function convertLegacyJobToReceipt(old: LegacyJob): ReceiptDocument {
+export function convertLegacyJobToDocument(old: LegacyJob): DocumentRecord {
     // Try to aggregate lines for initial accounting data
     // @ts-ignore Legacy definition might vary, accessing loosely
     const lines = old.lines;

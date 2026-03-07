@@ -35,7 +35,7 @@ export type JournalStatusUi = {
 
     // Steps
     readonly steps: {
-        readonly receipt: JournalStatusStepUi;
+        readonly document: JournalStatusStepUi;
         readonly aiAnalysis: JournalStatusStepUi;
         readonly journalEntry: JournalStatusStepUi;
         readonly approval: JournalStatusStepUi;

@@ -124,7 +124,7 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true }
   },
 
-  // --- 証票詳細（receipt → document に統一予定） ---
+  // --- 証票詳細（receipt → document に統一済み） ---
   {
     path: '/clients/:clientId/documents/:documentId',
     name: 'ClientDocument',

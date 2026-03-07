@@ -211,13 +211,29 @@
 
 ## C. 修正順序（推奨）
 
-| ステップ | 内容 | 推定時間 |
-|---------|------|---------|
-| **1** | **コミット**: 現在のreceipt→documentリネーム（Phase A完了分） | 2分 |
-| **2** | **A2 (ドメインモデル層)**: 27ファイルのreceipt→document修正 | 30分 |
-| **3** | **A1 (コメント修正)**: 5ファイルのコメント・ログ修正 | 5分 |
-| **4** | **A5 (docs)**: tools_and_setup_guide.md修正 | 2分 |
-| **5** | **B2 (unused-vars)**: 29ファイルの未使用変数修正（_prefix付与 or 削除） | 15分 |
-| **6** | **B1 (any)**: 49ファイルのany型修正 | 60分 |
-| **7** | **B3 (その他)**: require, deprecated filter, ts-ignore | 5分 |
-| **8** | **検証**: vue-tsc + eslint + vitest | 10分 |
+| ステップ | 内容 | 推定時間 | 状態 |
+|---------|------|---------|------|
+| **1** | **コミット**: 現在のreceipt→documentリネーム（Phase A完了分） | 2分 | 未着手 |
+| **2** | **A2 (ドメインモデル層)**: 27ファイルのreceipt→document修正 | 30分 | ✅完了 |
+| **3** | **D1-D3 (既存型エラー)**: mockJobUi.ts, ScreenB_LogicMaster.vue, seedJobs.ts | 10分 | ✅完了 |
+| **4** | **A1 (コメント・関数名修正)**: documentRepository.tsの関数名リネーム + DBコメント追記 | 10分 | ✅完了 |
+| **5** | **A5 (docs)**: tools_and_setup_guide.mdのファイルツリーパス名修正（6箇所） | 5分 | ✅完了 |
+| **6** | **B2 (unused-vars + D4/D5)**: 29ファイルの未使用変数修正 ※D4/D5はここに統合 | 20分 | 未着手 |
+| **7** | **B1 (any)**: 49ファイルのany型修正 | 60分 | 未着手 |
+| **8** | **B3 (その他)**: require, deprecated filter, ts-ignore | 5分 | 未着手 |
+| **9** | **検証**: vue-tsc + eslint + vitest | 10分 | 未着手 |
+
+---
+
+## D. A2修正中に発見した既存型エラー（5件）
+
+> A2リネーム作業中に発見。リネームとは無関係だが、型安全性向上のため修正対象。
+> D4/D5はB2（unused-vars一括修正）に統合して実施する。
+
+| # | ファイル | エラー内容 | 修正方針 | 状態 |
+|---|---------|----------|---------|------|
+| 1 | `src/mocks/mockJobUi.ts` | `priority:'none'`型不整合、`type:'journalEntry'`型不整合、`showButton`未定義プロパティ、未使用import/変数 | モックデータを型に合わせ、`Partial<JobUi>[]`化 | ✅完了 |
+| 2 | `src/components/ScreenB_LogicMaster.vue` L429 | `string \| undefined` → `string` 引数型不一致 | `split('_')[0]`にフォールバック追加 | ✅完了 |
+| 3 | `src/utils/seedJobs.ts` | `subAccount` → 正しくは `drSubAccount`、`JobStatus` 未使用import | プロパティ名修正 + import削除 | ✅完了 |
+| 4 | `src/components/ScreenC_CollectionStatus.vue` | `code`/`name`不在、`openReportModal`未定義、未使用変数3件 | **B2に統合**（unused-vars一括修正で対応） | ⏸B2で実施 |
+| 5 | `src/components/ScreenE_LogicMaster.vue` | `Job`/`JobStatus` import不在、暗黙的any多数、未使用変数6件 | **B2に統合**（unused-vars一括修正で対応） | ⏸B2で実施 |

@@ -1,5 +1,5 @@
 import { supabase } from '../supabase/client';
-import type { AuditLog } from '../types/receipt.types';
+import type { AuditLog } from '../types/document.types';
 
 export const auditLogRepository = {
     /**

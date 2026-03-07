@@ -14,12 +14,12 @@ import {
 import { db } from '../firebase'; // プロジェクトのFirebase初期化設定に合わせてパス調整
 import type {
   WorkLogDocument,
-  ReceiptDocument,
+  DocumentRecord,
   DocumentId
 } from '../types/schema_v2';
 
 const COLLECTION_WORK_LOGS = 'work_logs';
-const COLLECTION_RECEIPTS = 'receipts';
+const COLLECTION_DOCUMENTS = 'receipts'; // Firestoreコレクション名はDB互換維持のため'receipts'のまま
 
 export const documentRepository = {
   /**
@@ -38,16 +38,16 @@ export const documentRepository = {
   },
 
   /**
-   * Fetch a single Receipt by ID
+   * Fetch a single Document by ID
    * (OCR data, Accounting amounts)
    */
-  async getReceipt(id: DocumentId): Promise<ReceiptDocument | null> {
+  async getDocument(id: DocumentId): Promise<DocumentRecord | null> {
     try {
-      const ref = doc(db, COLLECTION_RECEIPTS, id);
+      const ref = doc(db, COLLECTION_DOCUMENTS, id);
       const snap = await getDoc(ref);
-      return snap.exists() ? (snap.data() as ReceiptDocument) : null;
+      return snap.exists() ? (snap.data() as DocumentRecord) : null;
     } catch (e) {
-      console.error('[DocumentRepo] Failed to fetch Receipt:', e);
+      console.error('[DocumentRepo] Failed to fetch Document:', e);
       throw e;
     }
   },
@@ -84,10 +84,10 @@ export const documentRepository = {
   },
 
   /**
-   * Update Receipt
+   * Update Document
    */
-  async updateReceipt(id: DocumentId, data: Partial<ReceiptDocument>): Promise<void> {
-    const ref = doc(db, COLLECTION_RECEIPTS, id);
+  async updateDocument(id: DocumentId, data: Partial<DocumentRecord>): Promise<void> {
+    const ref = doc(db, COLLECTION_DOCUMENTS, id);
     const updateData = {
       ...data,
       updatedAt: Timestamp.now()
@@ -96,19 +96,19 @@ export const documentRepository = {
   },
 
   /**
-   * Save Dual Entry (WorkLog + Receipt)
+   * Save Dual Entry (WorkLog + Document)
    * atomic batch write
    */
-  async saveDualEntry(workLog: WorkLogDocument, receipt: ReceiptDocument): Promise<void> {
+  async saveDualEntry(workLog: WorkLogDocument, document: DocumentRecord): Promise<void> {
     const batch = writeBatch(db);
 
     // WorkLog
     const workLogRef = doc(db, COLLECTION_WORK_LOGS, workLog.id);
     batch.set(workLogRef, { ...workLog, updatedAt: Timestamp.now() }, { merge: true });
 
-    // Receipt
-    const receiptRef = doc(db, COLLECTION_RECEIPTS, receipt.id);
-    batch.set(receiptRef, { ...receipt, updatedAt: Timestamp.now() }, { merge: true });
+    // Document
+    const documentRef = doc(db, COLLECTION_DOCUMENTS, document.id);
+    batch.set(documentRef, { ...document, updatedAt: Timestamp.now() }, { merge: true });
 
     await batch.commit();
   },

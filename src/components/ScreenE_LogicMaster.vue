@@ -269,13 +269,13 @@
                   <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div class="origin-center transition-transform duration-100 ease-out shadow-2xl"
                           :style="{ transform: `translate(${posX}px, ${posY}px) scale(${scale})` }">
-                          <!-- Placeholder for Receipt Image -->
+                          <!-- Placeholder for Document Image -->
                           <div class="w-[400px] h-[550px] bg-white text-slate-300 flex flex-col items-center justify-center border border-slate-600 select-none pointer-events-auto">
                               <i class="fa-regular fa-image text-6xl mb-4 opacity-50"></i>
-                              <div class="text-sm font-bold">Receipt Image Preview</div>
+                              <div class="text-sm font-bold">Document Image Preview</div>
                               <div class="text-xs mt-2 opacity-50 text-center px-8">本番環境ではここにGoogle Driveの画像が表示されます<br>(ID: {{ currentTransaction.id }})</div>
 
-                              <!-- Emulate Receipt Content for visuals -->
+                              <!-- Emulate Document Content for visuals -->
                               <div class="mt-8 p-6 bg-slate-50 w-3/4 text-slate-500 font-mono text-[10px] space-y-2 opacity-50 blur-[1px]">
                                   <div class="flex justify-between border-b border-slate-300 pb-1"><span>Item A</span><span>10,000</span></div>
                                   <div class="flex justify-between"><span>Tax</span><span>1,000</span></div>

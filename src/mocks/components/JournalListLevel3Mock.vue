@@ -174,9 +174,9 @@
                 <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <i class="fa-solid fa-camera text-[10px] text-gray-800 cursor-pointer"
                      title="写真（クリックで固定）"
-                     @mouseenter="showImageModal(journal.id, journal.receipt_id)"
+                     @mouseenter="showImageModal(journal.id, journal.document_id)"
                      @mouseleave="hideImageModal"
-                     @click="togglePinModal(journal.id, journal.receipt_id)"></i>
+                     @click="togglePinModal(journal.id, journal.document_id)"></i>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -1484,9 +1484,9 @@ const actualModalHeight = computed(() => {
     : baseModalHeight.value;
 });
 
-function showImageModal(journalId: string, receiptId: string | null) {
+function showImageModal(journalId: string, documentId: string | null) {
   hoveredJournalId.value = journalId;
-  modalImageUrl.value = getDocumentImageUrl(receiptId);
+  modalImageUrl.value = getDocumentImageUrl(documentId);
   rotationAngle.value = 0; // リセット
   zoomScale.value = 1; // ズームリセット
   offsetX.value = 0; // 位置リセット
@@ -1500,7 +1500,7 @@ function hideImageModal() {
   }
 }
 
-function togglePinModal(journalId: string, receiptId: string | null) {
+function togglePinModal(journalId: string, documentId: string | null) {
   if (isModalPinned.value && hoveredJournalId.value === journalId) {
     // すでに固定されている場合は閉じる
     isModalPinned.value = false;
@@ -1510,7 +1510,7 @@ function togglePinModal(journalId: string, receiptId: string | null) {
     // 固定モードに切り替え
     isModalPinned.value = true;
     hoveredJournalId.value = journalId;
-    modalImageUrl.value = getDocumentImageUrl(receiptId);
+    modalImageUrl.value = getDocumentImageUrl(documentId);
     rotationAngle.value = 0;
     zoomScale.value = 1; // ズームリセット
     offsetX.value = 0; // 位置リセット
@@ -1587,8 +1587,8 @@ const journals = computed(() => {
           bVal = b.display_order;
           break;
         case 'has_photo':
-          aVal = a.receipt_id ? 1 : 0;
-          bVal = b.receipt_id ? 1 : 0;
+          aVal = a.document_id ? 1 : 0;
+          bVal = b.document_id ? 1 : 0;
           break;
         case 'staff_notes': {
           // staff_notesのいずれかがenabledならソート上位

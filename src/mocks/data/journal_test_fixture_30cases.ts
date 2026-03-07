@@ -20,7 +20,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 1,
     transaction_date: '2024-07-29', date_on_document: true,
     description: '神戸相互タクシー',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -50,7 +50,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 2,
     transaction_date: '2025-01-20', date_on_document: true,
     description: 'VIVACE BEAUTYクリニック',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: false,  // 未読（黄色背景）
     deleted_at: null,
@@ -83,7 +83,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 3,
     transaction_date: '2025-01-21', date_on_document: true,
     description: 'コピー用紙',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: false,  // 未読（黄色背景）
     deleted_at: null,
@@ -116,7 +116,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 4,
     transaction_date: '2025-01-22', date_on_document: true,
     description: '文房具セット',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -146,7 +146,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 5,
     transaction_date: '2025-01-23', date_on_document: true,
     description: 'タクシー代（不適格運送）',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -179,7 +179,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 6,
     transaction_date: '2025-01-24', date_on_document: true,
     description: 'タクシー代',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -209,7 +209,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 7,
     transaction_date: '2025-01-25', date_on_document: true,
     description: '電気代 関西電力',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -239,7 +239,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 8,
     transaction_date: '2025-01-26', date_on_document: true,
     description: 'スターバックス',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -267,7 +267,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 9,
     transaction_date: '2025-01-27', date_on_document: true,
     description: '業務委託料',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -295,7 +295,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 10,
     transaction_date: '2025-01-28', date_on_document: true,
     description: 'JR神戸線',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -329,7 +329,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 11,
     transaction_date: '2025-01-29', date_on_document: true,
     description: 'オフィス産科',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -357,7 +357,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 12,
     transaction_date: '2025-01-30', date_on_document: true,
     description: '消耗品費（ボールペン）',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -385,7 +385,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 13,
     transaction_date: '2025-01-31', date_on_document: true,
     description: 'タクシー代（不適格運送）',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -413,7 +413,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 14,
     transaction_date: '2025-02-01', date_on_document: true,
     description: 'NTTドコモ',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -441,7 +441,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 15,
     transaction_date: '2025-02-01', date_on_document: true,
     description: '手数料通帳費',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -469,7 +469,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 16,
     transaction_date: '2025-02-02', date_on_document: true,
     description: '神戸皇居鎌タクシー',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -497,7 +497,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 17,
     transaction_date: '2025-02-02', date_on_document: true,
     description: '貴金に宗鹿釜交友貴',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -525,7 +525,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 18,
     transaction_date: '2025-02-02', date_on_document: true,
     description: '不可分抜き回',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -553,7 +553,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 19,
     transaction_date: '2025-02-03', date_on_document: true,
     description: '事例寿判上いは詮',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -581,7 +581,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 20,
     transaction_date: '2025-02-04', date_on_document: true,
     description: '広告宣伝費（銀行振込）',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',  // 出力済み
     is_read: true,
     deleted_at: null,
@@ -615,7 +615,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 21,
     transaction_date: '2025-02-05', date_on_document: true,
     description: '業務委託料',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: 'exported',
     is_read: true,
     deleted_at: null,
@@ -647,7 +647,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 22,
     transaction_date: '2025-02-06', date_on_document: true,
     description: '資料作成料',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: null,
     is_read: true,  // 既読
     deleted_at: '2026-02-21T00:00:00Z',  // ゴミ箱（検証用）
@@ -675,7 +675,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 23,
     transaction_date: '2025-02-07', date_on_document: true,
     description: '不明な振り',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: null,
     is_read: true,  // 既読
     deleted_at: '2026-02-21T00:00:00Z',  // ゴミ箱（検証用）
@@ -703,7 +703,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 24,
     transaction_date: '2026-12-31', date_on_document: true,
     description: '未来日付の仕訳',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: null,
     is_read: false,
     deleted_at: null,
@@ -731,7 +731,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 25,
     transaction_date: '2025-02-08', date_on_document: true,
     description: '異常金額',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: null,
     is_read: false,
     deleted_at: null,
@@ -759,7 +759,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 26,
     transaction_date: '2025-02-05', date_on_document: true,
     description: '資料持ち',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: null,
     is_read: false,
     deleted_at: null,
@@ -792,7 +792,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 27,
     transaction_date: '2025-02-07', date_on_document: true,
     description: '材料費・調整等',
-    receipt_id: 'receipt-001',
+    document_id: 'receipt-001',
     status: null,
     is_read: false,
     deleted_at: null,

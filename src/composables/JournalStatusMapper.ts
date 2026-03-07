@@ -1,5 +1,4 @@
 import type { JournalStatusUi, JournalStatusStepUi, JournalStatusActionUi, StepStateUi } from '@/types/ScreenB_ui.type';
-import type { JobUi } from '@/types/ui.type'; // Assuming input is current JobUi for now, or raw.
 
 /**
  * 安全な文字列変換
@@ -40,7 +39,7 @@ export const mapJournalStatusApiToUi = (raw: any): JournalStatusUi => {
         status: raw.status || 'unknown', // Should ideally restrict to valid unions
 
         steps: {
-            receipt: mapStep(raw.steps?.receipt),
+            document: mapStep(raw.steps?.document),
             aiAnalysis: mapStep(raw.steps?.aiAnalysis),
             journalEntry: mapStep(raw.steps?.journalEntry),
             approval: mapStep(raw.steps?.approval),
@@ -93,7 +92,7 @@ const createEmptyJournalStatus = (): JournalStatusUi => ({
     fiscalMonthLabel: '',
     status: 'error',
     steps: {
-        receipt: { state: 'none', label: '', count: 0 },
+        document: { state: 'none', label: '', count: 0 },
         aiAnalysis: { state: 'none', label: '', count: 0 },
         journalEntry: { state: 'none', label: '', count: 0 },
         approval: { state: 'none', label: '', count: 0 },

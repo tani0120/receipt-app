@@ -280,7 +280,7 @@ export const JobSchema = z.object({
   // Phase 4-1: Medium-frequency properties (30-49 occurrences)
   export: z.string().optional(),
   archive: z.string().optional(),
-  receipt: z.string().optional(),
+  document: z.string().optional(),
   steps: z.string().optional(),
   clientName: z.string().optional(),
   aiAnalysis: z.string().optional(),

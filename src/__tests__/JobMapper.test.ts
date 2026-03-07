@@ -22,10 +22,10 @@ describe('Phase C: JobMapper Ironclad Test (Screen B)', () => {
 
         // Nested Steps
         expect(ui.steps).toBeDefined();
-        expect(ui.steps.receipt).toBeDefined();
+        expect(ui.steps.document).toBeDefined();
         expect(ui.steps.aiAnalysis).toBeDefined();
         // Verify a step
-        expect(typeof ui.steps.receipt.state).toBe('string');
+        expect(typeof ui.steps.document.state).toBe('string');
 
         // Actions
         expect(ui.primaryAction).toBeDefined();

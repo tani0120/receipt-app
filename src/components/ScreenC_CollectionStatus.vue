@@ -43,7 +43,7 @@
 
               <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div class="lg:col-span-2 grid grid-cols-2 gap-4">
-                        <!-- Receipt (Always Active) -->
+                        <!-- Document (Always Active) -->
                         <div class="flex flex-col justify-between p-4 rounded-lg border shadow-sm h-36 relative transition bg-green-50 border-green-200 text-green-800">
                             <div class="space-y-1">
                                 <div class="font-bold text-sm flex items-center gap-2">

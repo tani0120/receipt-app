@@ -8,7 +8,7 @@
  * import { Keys } from '@/types/schema_keys';
  *
  * // UIで使用
- * <input :name="Keys.Receipt.totalPrice" />
+ * <input :name="Keys.Document.totalPrice" />
  *
  * // マッピングで使用
  * const mapping = {
@@ -19,7 +19,7 @@
 
 import {
     // Core Schemas
-    ReceiptSchema,
+    DocumentSchema,
     ClientSchema,
     JobSchema,
     JournalLineSchema,
@@ -34,9 +34,6 @@ import {
     TaxFilingTypeSchema,
     ConsumptionTaxModeSchema,
     SimplifiedTaxCategorySchema,
-
-    // Timestamp
-    TimestampSchema,
 } from './zod_schema';
 
 /**
@@ -46,7 +43,7 @@ import {
  */
 export const Keys = {
     // Core Entities
-    Receipt: ReceiptSchema.keyof().enum,
+    Document: DocumentSchema.keyof().enum,
     Client: ClientSchema.keyof().enum,
     Job: JobSchema.keyof().enum,
     JournalLine: JournalLineSchema.keyof().enum,
@@ -60,7 +57,7 @@ export const Keys = {
  *
  * TypeScriptの型システムで使用可能
  */
-export type ReceiptKey = keyof typeof ReceiptSchema.shape;
+export type DocumentKey = keyof typeof DocumentSchema.shape;
 export type ClientKey = keyof typeof ClientSchema.shape;
 export type JobKey = keyof typeof JobSchema.shape;
 export type JournalLineKey = keyof typeof JournalLineSchema.shape;

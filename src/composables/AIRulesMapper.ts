@@ -1,6 +1,5 @@
 import type { LearningRuleUi } from '@/types/LearningRuleUi';
 import type { LearningRuleApi } from '@/types/zod.type';
-import { Timestamp } from 'firebase/firestore';
 
 // Helper for Safe Stats
 const safeNumber = (val: unknown, fallback = 0): number => {

@@ -64,10 +64,10 @@
 
             <!-- Steps Grid -->
             <div class="flex-1 grid grid-cols-7 min-w-[700px] h-full">
-                <!-- Step 1: Material Receipt -->
+                <!-- Step 1: Material Document -->
                 <div class="border-r border-gray-100 flex items-center justify-center text-lg">
-                    <i v-if="client.steps.receipt.state === 'done'" class="fa-solid fa-circle-check text-green-500"></i>
-                    <i v-else-if="client.steps.receipt.state === 'error'" class="fa-solid fa-circle-exclamation text-red-500"></i>
+                    <i v-if="client.steps.document.state === 'done'" class="fa-solid fa-circle-check text-green-500"></i>
+                    <i v-else-if="client.steps.document.state === 'error'" class="fa-solid fa-circle-exclamation text-red-500"></i>
                     <span v-else class="text-gray-300">-</span>
                 </div>
                 <!-- Step 2: AI Analysis -->
@@ -258,7 +258,7 @@ interface ClientViewModel {
     settings: { software: string };
     isNew: boolean;
     steps: {
-        receipt: { state: string };
+        document: { state: string };
         aiAnalysis: { state: string; errorMsg?: string };
         journalEntry: { state: string; count: number };
         approval: { state: string; count: number };
@@ -305,7 +305,7 @@ const filteredClients = computed(() => {
         const clientJobs = jobs.value.filter(j => j.clientCode === client.clientCode);
         // Default State
         const steps = {
-            receipt: { state: 'done' }, // Mock: Always done
+            document: { state: 'done' }, // Mock: Always done
             aiAnalysis: { state: 'done' }, // Mock: Always done
             journalEntry: { state: 'pending', count: 0 },
             approval: { state: 'pending', count: 0 },
@@ -426,7 +426,7 @@ const goToWorkbench = (jobId: string, mode: string = 'draft') => {
     // Ideally, we should pass the filter to Screen E, but Screen E takes a single ID.
     // Hack: Find a job matching the mode.
 
-    const client = filteredClients.value.find(c => c.jobId === jobId || c.jobId.startsWith(jobId.split('_')[0]));
+    const client = filteredClients.value.find(c => c.jobId === jobId || c.jobId.startsWith(jobId.split('_')[0] || ''));
     if (client) {
          // Re-scan jobs to find the correct one for the mode
          const cCode = client.code;

@@ -293,16 +293,16 @@ receipt-app/
 ├── src/
 │   ├── api/
 │   │   └── routes/
-│   │       └── receipts.ts                 # Receipt API（Phase 1実装）
+│   │       └── documents.ts                 # Document API（Phase 1実装、旧receipts.ts）
 │   ├── database/
 │   │   ├── supabase/
 │   │   │   ├── client.ts                   # Supabaseクライアント
 │   │   │   └── schema.sql                  # DDL定義
 │   │   ├── repositories/
-│   │   │   ├── receiptRepository.ts        # Receipt CRUD
+│   │   │   ├── documentRepository.ts       # Document CRUD（旧receiptRepository.ts）
 │   │   │   └── auditLogRepository.ts       # 監査ログ
 │   │   └── types/
-│   │       └── receipt.types.ts            # Receipt型定義
+│   │       └── document.types.ts           # Document型定義（旧receipt.types.ts）
 │   ├── mocks/
 │   │   ├── columns/                        # journalColumns.ts（列定義の単一ソース）
 │   │   ├── components/                     # JournalListLevel3Mock.vue等
@@ -310,12 +310,12 @@ receipt-app/
 │   │   ├── data/                           # journal_test_fixture_30cases.ts等
 │   │   └── types/                          # journal_phase5_mock.type.ts, staff_notes.ts等
 │   ├── views/
-│   │   └── ReceiptDetail.vue               # Receipt詳細画面（Phase 2実装）
-│   ├── components/receipt/                 # Receipt UIコンポーネント（6種）
+│   │   └── DocumentDetail.vue              # Document詳細画面（旧ReceiptDetail.vue）
+│   ├── components/document/                # Document UIコンポーネント（旧receipt/、6種）
 │   ├── stores/
-│   │   └── receiptStore.ts                 # Pinia Store
+│   │   └── documentStore.ts                # Pinia Store（旧receiptStore.ts）
 │   ├── shared/
-│   │   └── receiptStatus.ts                # 共有型定義
+│   │   └── documentStatus.ts               # 共有型定義（旧receiptStatus.ts）
 │   └── server.ts                           # Honoサーバー
 │
 ├── .env.local                              # 環境変数（APIキー、DB接続情報）

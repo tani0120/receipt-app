@@ -84,8 +84,8 @@ export interface JournalPhase5Mock {
   date_on_document: boolean;
   description: string;                   // 摘要
 
-  // 領収書紐付け（スキーマ準拠）
-  receipt_id: string | null;             // 領収書ID（receiptsテーブル参照）
+  // 証票紐付け（スキーマ準拠）
+  document_id: string | null;             // 証票ID（documentsテーブル参照）
 
   // N対N複合仕訳（無制限、UI上限15行）
   debit_entries: JournalEntryLine[];     // 借方明細（配列）

@@ -127,10 +127,10 @@ export interface WorkLogDocument extends BaseDocumentV2 {
 }
 
 // ============================================================================
-// 4. Receipt & AI Analysis Aggregate
+// 4. Document & AI Analysis Aggregate
 // ============================================================================
 
-export interface ReceiptDocument extends BaseDocumentV2 {
+export interface DocumentRecord extends BaseDocumentV2 {
     uploaderId: UserId;
 
     // System Metadata

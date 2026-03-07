@@ -1,5 +1,5 @@
 import { FirestoreRepository } from "@/services/firestoreRepository";
-import type { Job, JobStatus, JournalLine } from "@/types/firestore";
+import type { Job, JournalLine } from "@/types/firestore";
 import { Timestamp } from "firebase/firestore";
 
 export const seedRichJobs = async (clientCode: string = 'AMT') => {
@@ -17,7 +17,7 @@ export const seedRichJobs = async (clientCode: string = 'AMT') => {
             crAmount: crAmt,
             crTaxClass: '対象外',
             description: desc,
-            subAccount: sub,
+            drSubAccount: sub,
             note: ''
         }];
     };
@@ -33,7 +33,7 @@ export const seedRichJobs = async (clientCode: string = 'AMT') => {
             retryCount: 0,
             transactionDate: now,
             confidenceScore: 0.9,
-            aiAnalysisRaw: JSON.stringify({ reason: 'Receipt looks clear' }),
+            aiAnalysisRaw: JSON.stringify({ reason: 'Document looks clear' }),
             lines: createLine('消耗品費', 1100, '現金', 1100, '文房具代', 'アスクル'),
         },
         // Job 2 (履歴あり): ステータス pending, 借方「旅費交通費」, 金額 15000, 過去の仕訳履歴(history)あり

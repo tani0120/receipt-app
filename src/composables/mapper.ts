@@ -201,8 +201,8 @@ const calculateSteps = (api: Partial<JobApi>): JobUi['steps'] => {
   // Initialize all steps (Mutable logic, then return as readonly)
   // We calculate each step first
 
-  // Receipt
-  const receipt = createStep('done', '受領済');
+  // Document
+  const document = createStep('done', '受領済');
 
   // AI Analysis
   let aiAnalysis = createStep('none');
@@ -251,7 +251,7 @@ const calculateSteps = (api: Partial<JobApi>): JobUi['steps'] => {
   }
 
   return {
-    receipt,
+    document,
     aiAnalysis,
     journalEntry,
     approval,

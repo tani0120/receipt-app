@@ -140,7 +140,7 @@ export type JobUi = {
 
   // Screen B Grid Steps (Ironclad logic pre-calculated)
   readonly steps: {
-    readonly receipt: JobStepUi;
+    readonly document: JobStepUi;
     readonly aiAnalysis: JobStepUi;
     readonly journalEntry: JobStepUi;
     readonly approval: JobStepUi;

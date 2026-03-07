@@ -2,7 +2,7 @@
   <div class="flex-1 grid grid-cols-7 min-w-[700px] h-full">
       <!-- Step 1 -->
       <div class="border-r border-gray-100 flex items-center justify-center text-lg">
-          <UI_StatusIcon :status="job.steps.receipt.state" />
+          <UI_StatusIcon :status="job.steps.document.state" />
       </div>
 
       <!-- Step 2 -->

@@ -271,7 +271,7 @@
                      <button class="w-8 h-8 flex items-center justify-center text-white hover:bg-white/20 rounded"><i class="fa-solid fa-rotate-right"></i></button>
                  </div>
 
-                 <img v-if="selectedJob?.driveFileUrl" :src="selectedJob.driveFileUrl" class="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-200" alt="Receipt">
+                 <img v-if="selectedJob?.driveFileUrl" :src="selectedJob.driveFileUrl" class="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-200" alt="Document">
                  <div v-else class="text-gray-500 flex flex-col items-center">
                      <i class="fa-regular fa-image text-5xl mb-2"></i>
                      <span class="text-xs">画像未選択</span>

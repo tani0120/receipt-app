@@ -63,10 +63,10 @@
 
             <!-- Steps Grid -->
             <div class="flex-1 grid grid-cols-7 min-w-[700px] h-full">
-                <!-- Step 1: Material Receipt -->
+                <!-- Step 1: Material Document -->
                 <div class="border-r border-gray-100 flex items-center justify-center text-lg">
-                    <i v-if="client.steps.receipt === 'done'" class="fa-solid fa-circle-check text-green-500"></i>
-                    <i v-else-if="client.steps.receipt === 'error'" class="fa-solid fa-circle-exclamation text-red-500"></i>
+                    <i v-if="client.steps.document === 'done'" class="fa-solid fa-circle-check text-green-500"></i>
+                    <i v-else-if="client.steps.document === 'error'" class="fa-solid fa-circle-exclamation text-red-500"></i>
                     <span v-else class="text-gray-300">-</span>
                 </div>
                 <!-- Step 2: AI Analysis -->
@@ -249,7 +249,7 @@ const mockClients = [
         fiscalMonth: 3,
         isNew: true,
         steps: {
-            receipt: 'done',
+            document: 'done',
             aiAnalysis: { state: 'error', msg: 'フォーマット違反' },
             journalEntry: { state: 'pending', count: 0 },
             approval: { state: 'pending', count: 0 },
@@ -267,7 +267,7 @@ const mockClients = [
         fiscalMonth: 12,
         isNew: false,
         steps: {
-            receipt: 'done',
+            document: 'done',
             aiAnalysis: { state: 'done' },
             journalEntry: { state: 'pending', count: 124 },
             approval: { state: 'pending', count: 0 },
@@ -285,7 +285,7 @@ const mockClients = [
         fiscalMonth: 6,
         isNew: false,
         steps: {
-            receipt: 'done',
+            document: 'done',
             aiAnalysis: { state: 'done' },
             journalEntry: { state: 'done', count: 0 },
             approval: { state: 'pending', count: 15 },
@@ -303,7 +303,7 @@ const mockClients = [
         fiscalMonth: 9,
         isNew: false,
         steps: {
-            receipt: 'done',
+            document: 'done',
             aiAnalysis: { state: 'done' },
             journalEntry: { state: 'done', count: 0 },
             approval: { state: 'done', count: 0 },
@@ -321,7 +321,7 @@ const mockClients = [
         fiscalMonth: 3,
         isNew: false,
         steps: {
-            receipt: 'done',
+            document: 'done',
             aiAnalysis: { state: 'done' },
             journalEntry: { state: 'done', count: 0 },
             approval: { state: 'done', count: 0 },
@@ -339,7 +339,7 @@ const mockClients = [
         fiscalMonth: 12,
         isNew: false,
         steps: {
-            receipt: 'done',
+            document: 'done',
             aiAnalysis: { state: 'done' },
             journalEntry: { state: 'done', count: 0 },
             approval: { state: 'done', count: 0 },
@@ -357,7 +357,7 @@ const mockClients = [
         fiscalMonth: 3,
         isNew: false,
         steps: {
-            receipt: 'done',
+            document: 'done',
             aiAnalysis: { state: 'done' },
             journalEntry: { state: 'done', count: 0 },
             approval: { state: 'done', count: 0 },
