@@ -1,7 +1,5 @@
 <template>
   <div class="h-full flex flex-col bg-gray-50 font-sans">
-    <!-- 共通ナビバー -->
-    <MockNavBar />
     <!-- 勘定科目マスタ コンテンツ -->
     <div class="flex-1 overflow-auto">
       <div class="account-settings">
@@ -155,7 +153,6 @@ import { ref, reactive, computed, watch } from 'vue';
 import type { Account } from '@/shared/types/account';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
 import { ACCOUNT_MASTER } from '@/shared/data/account-master';
-import MockNavBar from '@/mocks/components/MockNavBar.vue';
 
 const PAGE_SIZE = 50;
 

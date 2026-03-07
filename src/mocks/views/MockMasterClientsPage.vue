@@ -344,7 +344,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
-import MockNavBar from '@/mocks/components/MockNavBar.vue';
 
 // --- 型定義 ---
 interface ClientRow {

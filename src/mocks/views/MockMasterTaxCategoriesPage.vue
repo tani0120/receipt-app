@@ -1,7 +1,5 @@
 <template>
   <div class="h-full flex flex-col bg-gray-50 font-sans">
-    <!-- 共通ナビバー -->
-    <MockNavBar />
     <!-- 税区分マスタ コンテンツ -->
     <div class="flex-1 overflow-auto">
       <div class="account-settings">
@@ -130,7 +128,6 @@ import { ref, reactive, computed, watch } from 'vue';
 import type { TaxCategory, TaxDirection } from '@/shared/types/tax-category';
 import { extractRateFromName } from '@/shared/types/tax-category';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
-import MockNavBar from '@/mocks/components/MockNavBar.vue';
 
 const PAGE_SIZE = 50;
 
