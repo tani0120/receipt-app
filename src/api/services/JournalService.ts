@@ -1,5 +1,4 @@
 import { db } from '../lib/firebase';
-import type { JournalLineUi } from '../../types/ui.type';
 import { z } from 'zod';
 
 // Types for Action Payloads

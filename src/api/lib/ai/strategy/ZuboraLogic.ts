@@ -1,4 +1,4 @@
-import { z } from 'zod';
+// ZuboraLogic - ズボラ仕訳ロジック
 
 // --- Types Data Structures ---
 
@@ -153,12 +153,12 @@ export class ZuboraLogic {
 
     // --- Helpers ---
 
-    private static isDateClose(d1: Date, d2: Date): boolean {
+    private static isDateClose(_d1: Date, _d2: Date): boolean {
         // ... (Same as before)
         return true;
     }
 
-    private static findBundleMatch(target: number, pool: EvidenceFile[], anchorDate: Date, windowDays: number): EvidenceFile[] | null {
+    private static findBundleMatch(_target: number, _pool: EvidenceFile[], _anchorDate: Date, _windowDays: number): EvidenceFile[] | null {
         // ... (Uses windowDays arg)
         return null;
     }

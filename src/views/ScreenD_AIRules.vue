@@ -152,11 +152,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useAIRules } from '@/composables/useAIRules';
 import RuleCard from '@/components/RuleCard.vue';
 import RuleDetailModal from '@/components/RuleDetailModal.vue';
-import type { LearningRuleUi } from '@/types/LearningRuleUi';
+
 
 // --- State ---
 type ViewMode = 'list' | 'detail';

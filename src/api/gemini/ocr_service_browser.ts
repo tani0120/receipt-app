@@ -10,8 +10,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { OCRRequest, AIIntermediateOutput } from './schemas';
-import { SYSTEM_INSTRUCTION } from './system_instruction';
+import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 
 /**
  * Gemini OCR実行（ブラウザ版）
@@ -32,7 +31,8 @@ export async function executeOCRBrowser(
     // Gemini API呼び出し
     const responseText = await callGeminiAPIBrowser(
         base64Image,
-        imageFile.type
+        imageFile.type,
+        [] // batchHistory: 現在未使用
     );
 
     // レスポンスJSON抽出
@@ -88,7 +88,7 @@ async function fileToBase64(file: File): Promise<string> {
 async function callGeminiAPIBrowser(
     base64Image: string,
     mimeType: string,
-    batchHistory: any[]
+    _batchHistory: any[]
 ): Promise<string> {
     // API Key取得（Vite環境変数）
     const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -214,7 +214,7 @@ function extractJSONFromResponse(responseText: string): any {
     // コードブロックがない場合は直接パース
     try {
         return JSON.parse(responseText);
-    } catch (error) {
+    } catch {
         console.error('JSON解析失敗:', responseText);
         throw new Error('Invalid JSON response from Gemini');
     }

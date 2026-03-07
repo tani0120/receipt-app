@@ -6,10 +6,6 @@ import type {
     DocumentRecord,
     ProcessingStatus,
     DocumentId,
-    UserId,
-    ClientId,
-    WorkLogType,
-    CurrencyCode
 } from '../../types/schema_v2';
 
 // ============================================================================
@@ -89,7 +85,7 @@ export function convertLegacyClient(old: LegacyClient): ClientDocument {
  * Convert Legacy Job to V2 WorkLogDocument (Focus on Time/Task)
  */
 export function convertLegacyJobToWorkLog(old: LegacyJob): WorkLogDocument {
-    const now = Timestamp.now();
+    const _now = Timestamp.now();
 
     // Map Status for WorkLog
     let status: WorkLogDocument['status'] = 'draft';
@@ -137,7 +133,6 @@ export function convertLegacyJobToWorkLog(old: LegacyJob): WorkLogDocument {
  */
 export function convertLegacyJobToDocument(old: LegacyJob): DocumentRecord {
     // Try to aggregate lines for initial accounting data
-    // @ts-ignore Legacy definition might vary, accessing loosely
     const lines = old.lines;
     const totalAmount = calculateLegacyAmount(lines);
     const totalTax = calculateLegacyTax(lines);

@@ -9,7 +9,7 @@
  * ② OCRErrorCode を使用（型安全性向上）
  */
 
-import type { AIIntermediateOutput, TaxItem, AuditResults, OCRErrorCode } from '@/types/GeminiOCR.types';
+import type { AIIntermediateOutput, OCRErrorCode } from '@/types/GeminiOCR.types';
 
 /**
  * バリデーションエラー

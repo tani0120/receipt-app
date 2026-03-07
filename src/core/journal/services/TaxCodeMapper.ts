@@ -90,8 +90,8 @@ export class TaxCodeMapper {
      * Phase 2で実装
      */
     static toFreee(
-        internalCode: string,
-        invoiceDeduction?: string
+        _internalCode: string,
+        _invoiceDeduction?: string
     ): string {
         // Phase 2で実装予定
 
@@ -108,8 +108,8 @@ export class TaxCodeMapper {
      * Phase 2で実装
      */
     static toYayoi(
-        internalCode: string,
-        invoiceDeduction?: string
+        _internalCode: string,
+        _invoiceDeduction?: string
     ): string {
         // Phase 2で実装予定
 

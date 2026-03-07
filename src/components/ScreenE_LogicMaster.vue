@@ -389,7 +389,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { aaa_useAccountingSystem, type Job, type JobStatus } from '@/composables/useAccountingSystem';
-import { Timestamp } from 'firebase/firestore';
+
 
 const route = useRoute();
 const router = useRouter();
@@ -508,7 +508,7 @@ const onWheel = (e: WheelEvent) => {
     if(scale.value < 0.2) scale.value = 0.2;
     if(scale.value > 5) scale.value = 5;
 };
-const startDrag = (e: MouseEvent) => { isDragging.value = true; };
+const startDrag = (_e: MouseEvent) => { isDragging.value = true; };
 const onDrag = (e: MouseEvent) => { if (!isDragging.value) return; posX.value += e.movementX; posY.value += e.movementY; };
 const stopDrag = () => { isDragging.value = false; };
 
@@ -628,7 +628,7 @@ const performUndo = () => {
     // Simplified undo: revert the last item in active session for demo
     showToast('Undo not fully implemented in demo', 'error');
 };
-const lastAction = ref<any>(null); // Add this
+const _lastAction = ref<any>(null); // unused but kept for future undo
 
 const revertItems = () => {
     // removal logic
@@ -643,11 +643,11 @@ const executeBatch = async () => {
     showToast('処理を実行中...', 'success');
     for (const item of approvalQueue.value) {
         let status: JobStatus = 'ready_for_work';
-        let reviewStatus: any = undefined;
+        let _reviewStatus: any = undefined;
         switch (item.decision) {
-            case 'confirmed': status = 'review'; reviewStatus = 'confirmed'; break;
-            case 'unknown': status = 'review'; reviewStatus = 'unknown'; break;
-            case 'exclude_candidate': status = 'review'; reviewStatus = 'exclude_candidate'; break;
+            case 'confirmed': status = 'review'; _reviewStatus = 'confirmed'; break;
+            case 'unknown': status = 'review'; _reviewStatus = 'unknown'; break;
+            case 'exclude_candidate': status = 'review'; _reviewStatus = 'exclude_candidate'; break;
             case 'remand': status = 'remanded'; break;
             case 'exclude': status = 'excluded'; break;
             case 'csv': status = 'approved'; break;
@@ -667,9 +667,7 @@ const addRow = (side: 'debit'|'credit') => {
 const removeRow = (side: 'debit'|'credit', idx: number) => {
     form[side].splice(idx, 1);
 };
-const applyTemplate = (data: any) => {
-    // ...
-};
+
 
 const openBatchModal = () => {
     showCompletionPopup.value = false;

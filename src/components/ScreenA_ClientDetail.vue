@@ -131,7 +131,7 @@
 
         <ScreenA_Detail_ConfirmModal
             :visible="confirmModal.visible"
-            :type="confirmModal.type as 'approve' | 'reject'"
+            :type="confirmModalType"
             @cancel="confirmModal.visible = false"
             @confirm="handleConfirm"
         />
@@ -175,6 +175,7 @@ const confirmModal = ref({
     visible: false,
     type: 'approve' as 'approve' | 'reject' | 'delete'
 });
+const confirmModalType = computed(() => confirmModal.value.type as 'approve' | 'reject');
 
 // Proposal Edit Modal State
 const proposalEditModal = ref({

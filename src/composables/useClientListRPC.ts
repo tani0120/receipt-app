@@ -1,5 +1,5 @@
 
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { client } from '@/client'; // Hono RPC Client
 import type { ClientUi } from '@/types/ui.type';
 
@@ -8,8 +8,7 @@ import type { ClientUi } from '@/types/ui.type';
 // We should check if 'Client' and 'ClientUi' are synonymous or if we need to align.
 // For now, assuming Screen A expects ClientUi structure (which the API sends).
 
-// Assuming ClientUi is the shape we want for 'clients'
-import type { Client } from '@/types/client'; // Keep for now if used elsewhere, but state will be ClientUi
+
 
 export function aaa_useClientList() {
     // State driven by API (BFF)

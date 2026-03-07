@@ -24,12 +24,13 @@ if (!admin.apps.length) {
     } else {
         // ローカル環境: サービスアカウントキー使用
         try {
-            const serviceAccount = require('../service-account-key.json')
+            const { readFileSync } = await import('fs');
+            const serviceAccount = JSON.parse(readFileSync('./service-account-key.json', 'utf-8'));
             admin.initializeApp({
                 credential: admin.credential.cert(serviceAccount)
             })
             console.log('✅ Firebase Admin initialized (Local mode)')
-        } catch (error) {
+        } catch {
             console.warn('⚠️ Firebase Admin: service-account-key.json not found, skipping initialization')
             console.warn('   Download from: https://console.firebase.google.com/project/sugu-suru/settings/serviceaccounts/adminsdk')
         }
@@ -100,7 +101,7 @@ app.get('/', (c) => {
 console.log('🔧 Starting HTTP server...')
 
 // ⚠️ CRITICAL: serve()の戻り値を保持してプロセスを維持
-const server = serve({
+const _server = serve({
     fetch: app.fetch,
     port,
     hostname: '0.0.0.0',

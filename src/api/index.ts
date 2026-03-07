@@ -1,6 +1,5 @@
 
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import conversionRoute from './routes/conversion'

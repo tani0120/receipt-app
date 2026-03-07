@@ -11,11 +11,10 @@
  */
 
 import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
-import { getOrCreateCache } from './cache_manager';
-import { validateAIIntermediateOutput, extractJSONFromResponse } from './schemas';
+// getOrCreateCache: Phase 6.2-Bでcache復活時にimport復元
+import { extractJSONFromResponse } from './schemas';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { readFileSync } from 'fs';
-import path from 'path';
 
 /**
  * OCRリクエストパラメータ
@@ -75,9 +74,9 @@ export async function executeOCR(request: OCRRequest): Promise<AIIntermediateOut
  * @returns レスポンステキスト
  */
 async function callGeminiAPI(
-  cacheId: string,
+  _cacheId: string,
   imagePath: string,
-  batchHistory: any[]
+  _batchHistory: any[]
 ): Promise<string> {
   // 修正①: API Key取得（フォールバック対応）
   const API_KEY = process.env.GEMINI_API_KEY ?? process.env.VITE_GEMINI_API_KEY;

@@ -313,7 +313,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import moment from 'moment';
 
 const testControls = ref(true);
@@ -498,9 +498,8 @@ const deleteBank = () => { if(confirm('Mock: Explore delete?')) alert('Mock: Del
 const deleteCard = () => { if(confirm('Mock: Explore delete?')) alert('Mock: Deleted'); };
 const saveCConfig = () => { c_isSaving.value = true; setTimeout(() => c_isSaving.value = false, 500); };
 const c_isSaving = ref(false);
-const c_reportText = ref('');
-const showCReportModal = ref(false);
-const copyCReport = () => { alert('Mock: Copy Report'); showCReportModal.value = false; };
+const openReportModal = () => { alert('Mock: Open Report Modal'); };
+
 
 </script>
 

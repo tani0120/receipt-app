@@ -14,8 +14,8 @@ export const JobService = {
     // We map mockJobUiList (UI type) to Job (Domain type).
     const mocks: Job[] = mockJobUiList.map(m => {
       const job: Job = {
-        id: m.id,
-        clientCode: m.clientCode,
+        id: m.id ?? `mock-${Math.random().toString(36).slice(2)}`,
+        clientCode: m.clientCode ?? 'UNKNOWN',
         clientName: m.clientName,
         status: 'pending',
         transactionDate: Timestamp.now(),
@@ -38,7 +38,7 @@ export const JobService = {
     // Also subscribe real DB if needed, but for "Show me the implementation", Mock is safer/faster.
     return onSnapshot(
       q,
-      (snapshot) => {
+      (_snapshot) => {
         // Merge real and mock? Or just use Real?
         // User said "AI System missing". Real DB is empty or lacks it.
         // We override with mocks for now.

@@ -69,7 +69,7 @@ export class VertexAIStrategy implements AIProvider {
 
         try {
             return JSON.parse(jsonStr) as ReceiptAnalysisResult;
-        } catch (unknown) {
+        } catch (_e) {
             console.error('Failed to parse AI response', jsonStr);
             throw new Error('AI Response was not valid JSON');
         }

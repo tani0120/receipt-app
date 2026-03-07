@@ -1,22 +1,20 @@
 import {
-  getFirestore,
   doc,
   getDoc,
   setDoc,
-  collection
 } from 'firebase/firestore';
 import { db } from '../firebase'; // Assuming initialized db export
 import type { Client as LegacyClient, Job as LegacyJob } from '../types/firestore';
 import {
   convertLegacyClient,
   convertLegacyJobToWorkLog,
-  convertLegacyJobToReceipt
+  convertLegacyJobToDocument
 } from '../libs/adapters/legacy_to_v2';
 
 // Standard V2 Collection Names
 const V2_COLLECTION_CLIENTS = 'clients_v2';
 const V2_COLLECTION_WORK_LOGS = 'work_logs';
-const V2_COLLECTION_RECEIPTS = 'receipts';
+const V2_COLLECTION_DOCUMENTS = 'receipts'; // コレクション名はDB互換維持
 
 // Legacy Collection Names
 const LEGACY_COLLECTION_CLIENTS = 'clients';
@@ -52,9 +50,9 @@ export class MigrationService {
   }
 
   /**
-   * Migrate a single Job from Legacy to V2 (Splits into WorkLog and Receipt)
+   * Migrate a single Job from Legacy to V2 (Splits into WorkLog and Document)
    */
-  async migrateJob(jobId: string, dryRun: boolean = false): Promise<{ workLog: any, receipt: any } | undefined> {
+  async migrateJob(jobId: string, dryRun: boolean = false): Promise<{ workLog: any, document: any } | undefined> {
     const legacyRef = doc(db, LEGACY_COLLECTION_JOBS, jobId);
     const snapshot = await getDoc(legacyRef);
 
@@ -65,13 +63,13 @@ export class MigrationService {
 
     const legacyData = snapshot.data() as LegacyJob;
     const workLogData = convertLegacyJobToWorkLog(legacyData);
-    const receiptData = convertLegacyJobToReceipt(legacyData);
+    const documentData = convertLegacyJobToDocument(legacyData);
 
     if (dryRun) {
       console.group(`[DRY-RUN] Migrate Job: ${jobId}`);
       console.log('Legacy:', legacyData);
       console.log('V2 WorkLog:', workLogData);
-      console.log('V2 Receipt:', receiptData);
+      console.log('V2 Document:', documentData);
       console.groupEnd();
     } else {
       // 1. Save WorkLog
@@ -79,12 +77,12 @@ export class MigrationService {
       await setDoc(workLogRef, workLogData, { merge: true });
 
       // 2. Save Receipt
-      const receiptRef = doc(db, V2_COLLECTION_RECEIPTS, receiptData.id);
-      await setDoc(receiptRef, receiptData, { merge: true });
+      const documentRef = doc(db, V2_COLLECTION_DOCUMENTS, documentData.id);
+      await setDoc(documentRef, documentData, { merge: true });
 
-      console.log(`[Migration] Job migrated: ${jobId} -> WorkLog & Receipt`);
+      console.log(`[Migration] Job migrated: ${jobId} -> WorkLog & Document`);
     }
 
-    return { workLog: workLogData, receipt: receiptData };
+    return { workLog: workLogData, document: documentData };
   }
 }

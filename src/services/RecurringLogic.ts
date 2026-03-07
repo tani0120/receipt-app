@@ -11,10 +11,10 @@ import type { JournalLine } from '@/types/firestore';
 export function analyzeRecurringTransactions(
     historyBalances: AccountBalance[],
     currentMonthLines: JournalLine[],
-    currentMonth: number
+    _currentMonth: number
 ): DetectionAlert[] {
     const alerts: DetectionAlert[] = [];
-    const missingCandidates: string[] = [];
+    const _missingCandidates: string[] = [];
 
     // 1. Identify Recurring Accounts from History
     // Logic: Look for accounts that have activity (non-zero change) in almost every month (e.g., > 80% of months or last 3 consecutive months)
@@ -31,7 +31,7 @@ export function analyzeRecurringTransactions(
             // But GeneralLedgerService returns accumulating balance.
             // We need to infer movement or update GeneralLedgerService to return 'monthlyTurnover'.
             // For now, let's assume if it exists in history, we check it.
-            const baseName = b.accountName.split('::')[0]; // Ignore sub-account for grouping? Or keep strictly?
+            const _baseName = b.accountName.split('::')[0]; // Ignore sub-account for grouping? Or keep strictly?
             // Let's use strict Account Name
             accountFrequency.set(b.accountName, (accountFrequency.get(b.accountName) || 0) + 1);
         }
