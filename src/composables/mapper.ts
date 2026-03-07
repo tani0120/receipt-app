@@ -504,6 +504,7 @@ export const mapConversionLogUi = (input: unknown): ConversionLogUi => {
 
     downloadUrl: safeText(d.downloadUrl, '#'),
     isDownloaded: isDownloaded,
-    statusLabel: statusLabel
+    statusLabel: statusLabel,
+    actions: []
   };
 };

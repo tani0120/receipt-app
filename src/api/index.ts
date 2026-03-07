@@ -51,6 +51,7 @@ const routes = app
             if (!result.success) {
                 return c.json({ success: false, message: 'Invalid data', errors: result.error }, 400)
             }
+            return undefined
         }),
         (c) => {
             const data = c.req.valid('json')

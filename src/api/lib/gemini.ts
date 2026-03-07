@@ -2,7 +2,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { VertexAI } from '@google-cloud/vertexai';
 import { config } from '../config';
 
-let model: unknown = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let model: any = null;
 
 if (config.USE_VERTEX_AI) {
     // Vertex AI (Service Account)

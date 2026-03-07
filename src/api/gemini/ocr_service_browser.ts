@@ -70,7 +70,7 @@ async function fileToBase64(file: File): Promise<string> {
             console.log('[fileToBase64] 成功', {
                 base64Length: base64?.length
             });
-            resolve(base64);
+            resolve(base64 ?? '');
         };
 
         reader.onerror = () => {
@@ -209,7 +209,7 @@ function extractJSONFromResponse(responseText: string): any {
     const jsonMatch = responseText.match(/```json\s*\n([\s\S]*?)\n```/);
 
     if (jsonMatch) {
-        return JSON.parse(jsonMatch[1]);
+        return JSON.parse(jsonMatch[1] ?? '{}');
     }
 
     // コードブロックがない場合は直接パース

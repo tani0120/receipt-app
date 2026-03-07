@@ -483,4 +483,81 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 | J6 | `src/api/routes/admin.ts` | 90 | 一部のコードパスは値を返しません（同上） | 新規 |
 | J7 | `src/api/lib/ai/strategies/VertexAIStrategy.ts` | 7 | `private location`が宣言後未読み取り | 新規 |
 
+---
+
+## K. 【スコープ宣言】§G/§J既存型問題13件修正（2026-03-07 21:57）
+
+> §G-1の8件 + §J新規6件 = 重複1件排除 → 計13件。ScreenE_Workbench.vue（J1）は旧UIモック全体の再設計が必要なためスコープ外。
+
+### 変更対象ファイル（9ファイル・13件）:
+
+| # | ファイル | 件数 | ID | 問題 |
+|---|---------|------|-----|------|
+| 1 | `src/composables/mapper.ts` | 1 | G6 | `actions`プロパティが`ConversionLogUi`で必須だが返却オブジェクトに欠落 |
+| 2 | `src/composables/AIRulesMapper.ts` | 1 | G8 | `{}`が`in`演算子の右オペランドとして不適切 |
+| 3 | `src/utils/schema-mapper.ts` | 1 | G7 | `ZodRawShape`を型import（`import type`）に変更 |
+| 4 | `src/api/services/ConversionService.ts` | 1 | G1/J2 | `generateContent`が型`{}`に存在しない（`getModel()`戻り値型修正） |
+| 5 | `src/api/vertex/ocr_service_vertex.ts` | 3 | G2,G3 | import不在 + string\|undefined型不一致2箇所 |
+| 6 | `src/api/gemini/ocr_service_browser.ts` | 2 | G4,G5 | string\|undefined型不一致2箇所 |
+| 7 | `src/core/journal/services/CsvExportService.ts` | 2 | J3,J4 | 未実装モジュール参照 + Object.keys型不一致 |
+| 8 | `src/api/index.ts` | 1 | J5 | zValidatorコールバックのreturn欠落 |
+| 9 | `src/api/routes/admin.ts` | 1 | J6 | zValidatorコールバックのreturn欠落 |
+
+### スコープ外:
+- `src/views/ScreenE_Workbench.vue`（J1）— 旧UIモック。テンプレートとスキーマの全面不整合。再設計が必要
+- `src/api/lib/ai/strategies/VertexAIStrategy.ts` L7（J7）— `private location`はコンストラクタで代入されており、class内部で使用予定の設計。削除は不適切
+
+### 新規作成予定ファイル:
+- なし
+
+### 触らないファイル:
+- 上記9ファイル以外の全ファイル
+
+### 修正内容詳細:
+
+| ID | 修正方法 |
+|----|---------|
+| G1/J2 | `src/api/lib/gemini.ts`の`getModel()`戻り値型を`unknown`→`GenerativeModel`に修正。または`ConversionService.ts`で`as`キャスト |
+| G2 | `schemas.ts`から`AIIntermediateOutput`をexport、またはvertex側のimport元変更 |
+| G3 | `?? ''`フォールバック追加（string\|undefined → string） |
+| G4,G5 | `?? ''`フォールバック追加（同上） |
+| G6 | `mapper.ts`のConversionLog変換で`actions: []`を返却オブジェクトに追加 |
+| G7 | `import { ZodRawShape }` → `import type { ZodRawShape }` |
+| G8 | `typeof raw === 'object' && raw !== null`ガード追加後に`in`演算子使用 |
+| J3 | `@/features/client`参照を正しいパスに変更、または型定義を直接import |
+| J4 | `Object.keys(obj ?? {})`でundefinedガード追加 |
+| J5,J6 | zValidatorコールバックに`return`文追加（バリデーション成功時のパス） |
+
+### 想定している問題:
+1. **G1**: `gemini.ts`の`getModel()`型変更は他の呼び出し元に影響する可能性
+2. **G2**: `schemas.ts`のexport変更は他のimport元に影響
+3. **J3**: `@/features/client`が未実装の場合、代替パスの特定が必要
+4. **J5/J6**: zValidatorの仕様上、成功時は`undefined`を返す設計かもしれない（仕様確認必要）
+
+### 検証方法:
+1. `npx vue-tsc --noEmit` — 0エラー維持
+2. `npx eslint src/ --ext .ts,.vue` — 0件維持
+3. ブラウザ手動確認 — 主要画面の表示確認
+
+### 理由:
+- IDEのTypeScriptフィードバック（ts-plugin）で報告される既存の型エラー・警告を解消し、開発体験を向上
+- vue-tscは通過するがIDE上で赤波線が出続ける状態を改善
+
+### §K 結果（2026-03-07 22:09追記）:
+- ✅完了（13件全件修正。ESLint 0件・vue-tsc 0エラー維持。ブラウザ正常動作確認済み）
+- §G-2の5件（G9-G13）は§I（no-unused-vars修正）で修正済み
+
+---
+
+## L. 残存問題（2026-03-07 22:09追記）
+
+> §K修正完了後に残る問題。全てスコープ外として記録。
+
+| ID | ファイル | 問題 | 対応方針 |
+|----|---------|------|---------|
+| J1 | `src/views/ScreenE_Workbench.vue` | テンプレートと`JournalEntryUi`型の全面不整合（`evidenceUrl`, `transactionDate`, `vendorName`, `tNumber`, `drAccount`, `crAccount`等 20箇所超） | 旧UIモック。Screen E全面再設計時に対応 |
+| J7 | `src/api/lib/ai/strategies/VertexAIStrategy.ts` L7 | `private location`が宣言後未読み取り | 設計上のprivateフィールド（コンストラクタで代入。将来API呼出しで使用予定）。削除は不適切 |
+
+
+
 

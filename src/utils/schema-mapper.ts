@@ -21,7 +21,8 @@
  * ```
  */
 
-import { z, ZodObject, ZodRawShape } from 'zod';
+import { z, ZodObject } from 'zod';
+import type { ZodRawShape } from 'zod';
 
 /**
  * マッピング定義の型

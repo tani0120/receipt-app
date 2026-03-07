@@ -17,7 +17,7 @@ const formatDate = (ts: unknown): string | undefined => {
         return date.toISOString().split('T')[0];
     }
     // Check for raw seconds object
-    if (ts && typeof (ts as object) === 'object' && 'seconds' in ts) {
+    if (ts && typeof ts === 'object' && ts !== null && 'seconds' in ts) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const date = new Date((ts as any).seconds * 1000);
         return date.toISOString().split('T')[0];

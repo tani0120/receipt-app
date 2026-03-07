@@ -9,7 +9,7 @@
 
 import { VertexAI } from '@google-cloud/vertexai';
 import { getOrCreateCache } from './cache_manager_vertex';
-import type { AIIntermediateOutput } from '../gemini/schemas';
+import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 
 /**
  * Vertex AI OCR実行
@@ -224,7 +224,7 @@ function extractJSONFromResponse(responseText: string): unknown {
     const jsonCodeBlockMatch = responseText.match(/```json\s*\n([\s\S]*?)\n```/);
     if (jsonCodeBlockMatch) {
         try {
-            return JSON.parse(jsonCodeBlockMatch[1]);
+            return JSON.parse(jsonCodeBlockMatch[1] ?? '{}');
         } catch {
             // パース失敗時は次のパターンへ
         }
@@ -234,7 +234,7 @@ function extractJSONFromResponse(responseText: string): unknown {
     const codeBlockMatch = responseText.match(/```\s*\n([\s\S]*?)\n```/);
     if (codeBlockMatch) {
         try {
-            return JSON.parse(codeBlockMatch[1]);
+            return JSON.parse(codeBlockMatch[1] ?? '{}');
         } catch {
             // パース失敗時は次のパターンへ
         }

@@ -1,5 +1,11 @@
 import type { JournalEntry } from '../JournalEntrySchema';
-import type { Client } from '@/features/client';
+// NOTE: @/features/client は未実装のため、必要最低限の型を直接定義
+interface Client {
+  id: string;
+  name: string;
+  accountingSoftware?: string;
+  [key: string]: unknown;
+}
 import { TaxCodeMapper } from './TaxCodeMapper';
 import { CsvValidator } from './CsvValidator';
 
@@ -98,7 +104,7 @@ export class CsvExportService {
     if (rows.length === 0) return '';
 
     // ヘッダー行
-    const headers = Object.keys(rows[0]);
+    const headers = Object.keys(rows[0] ?? {});
     const headerLine = headers.join(',');
 
     // データ行

@@ -91,6 +91,7 @@ const route = app
             if (!result.success) {
                 return c.json({ success: false, message: 'Invalid config format', errors: result.error }, 400)
             }
+            return undefined
         }),
         async (c) => {
             try {
