@@ -5,6 +5,11 @@
       <!-- 左: ロゴ + 旧ページリンク -->
       <div class="flex items-center gap-3">
         <img src="/sugu-suru-logo.png" alt="sugu-suru" style="height: 30px" />
+        <!-- クライアント名動的表示 -->
+        <div v-if="currentClient" class="flex items-center gap-1.5 text-[12px] font-medium text-gray-700 border-l border-gray-300 pl-3 ml-1">
+          <span class="bg-sky-100 text-sky-700 font-bold px-1.5 py-0.5 rounded text-[11px]">{{ currentClient.code }}</span>
+          <span>{{ currentClient.name }}</span>
+        </div>
         <div class="relative">
           <button
             class="text-[11px] text-gray-400 hover:text-sky-600 transition-colors flex items-center gap-1"
@@ -62,9 +67,13 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useClients } from '@/features/client-management/composables/useClients';
 
 const router = useRouter();
 const route = useRoute();
+
+// --- クライアント情報（useClients composableから取得） ---
+const { currentClient } = useClients();
 
 // --- 旧ページメニュー ---
 const showLegacyMenu = ref(false);
@@ -91,8 +100,9 @@ interface TopItem {
 }
 
 const topItems: TopItem[] = [
+  { key: 'client-list', label: '進捗管理', icon: 'fa-solid fa-bars-progress',   path: '/progress',    managedPaths: ['/clients/list', '/progress'] },
   { key: 'clients',  label: '顧問先管理',   icon: 'fa-solid fa-building',    path: '/master/clients',  managedPaths: ['/master/clients'] },
-  { key: 'staff',    label: 'スタッフ管理', icon: 'fa-solid fa-users',       path: null,               managedPaths: ['/staff'] },
+  { key: 'staff',    label: 'スタッフ管理', icon: 'fa-solid fa-users',       path: '/master/staff',    managedPaths: ['/master/staff'] },
   { key: 'master',   label: 'マスタ管理',   icon: 'fa-solid fa-database',    path: '/master/accounts', managedPaths: ['/master/accounts', '/master/tax-categories'] },
   { key: 'cost',     label: '想定費用',     icon: 'fa-solid fa-calculator',  path: null,               managedPaths: ['/cost'] },
   { key: 'settings', label: '設定管理',     icon: 'fa-solid fa-gear',        path: null,               managedPaths: ['/settings/admin'] },
@@ -122,7 +132,7 @@ const navItems: NavItem[] = [
     key: 'home',
     label: 'ホーム',
     svgPaths: ['M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4'],
-    path: '/journal-list',
+    path: '/mock/journal-list',
   },
   {
     key: 'upload',

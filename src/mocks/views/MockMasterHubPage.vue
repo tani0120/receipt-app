@@ -1,7 +1,5 @@
 <template>
   <div class="h-full flex flex-col bg-gray-50 font-sans">
-    <!-- 共通ナビバー -->
-    <MockNavBar />
     <!-- マスタ管理ハブ -->
     <div class="flex-1 overflow-auto p-6">
       <div class="master-hub">
@@ -31,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import MockNavBar from '@/mocks/components/MockNavBar.vue';
+
 </script>
 
 <style scoped>

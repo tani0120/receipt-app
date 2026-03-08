@@ -1,6 +1,5 @@
 <template>
   <div class="h-full flex flex-col bg-gray-50 font-sans">
-    <MockNavBar />
     <div class="flex-1 overflow-auto">
       <div class="cm-settings">
         <!-- ヘッダー -->
@@ -14,13 +13,12 @@
         <!-- ツールバー -->
         <div class="cm-toolbar">
           <div class="cm-toolbar-left">
-            <!-- ステータスフィルター -->
-            <select v-model="statusFilter" class="cm-filter-select">
-              <option value="all">全て</option>
-              <option value="active">稼働中</option>
-              <option value="inactive">契約終了</option>
-              <option value="suspension">休眠中</option>
-            </select>
+            <!-- ステータスフィルター（複数選択） -->
+            <div class="cm-filter-checkboxes">
+              <label class="cm-filter-cb"><input type="checkbox" value="active" v-model="statusFilters"><span class="cb-label status-active">稼働中</span></label>
+              <label class="cm-filter-cb"><input type="checkbox" value="suspension" v-model="statusFilters"><span class="cb-label status-suspension">休眠中</span></label>
+              <label class="cm-filter-cb"><input type="checkbox" value="inactive" v-model="statusFilters"><span class="cb-label status-inactive">契約終了</span></label>
+            </div>
             <span class="cm-page-info">全{{ filteredRows.length }}件</span>
           </div>
           <div class="cm-toolbar-right">
@@ -35,14 +33,16 @@
           <table class="cm-table">
             <colgroup>
               <col style="width: 70px;">
-              <col style="width: 70px;">
               <col style="width: 60px;">
-              <col style="width: 22%;">
-              <col style="width: 100px;">
-              <col style="width: 100px;">
+              <col style="width: 50px;">
+              <col style="width: 15%;">
+              <col style="width: 90px;">
               <col style="width: 80px;">
+              <col style="width: 90px;">
+              <col style="width: 110px;">
+              <col style="width: 13%;">
+              <col style="width: 13%;">
               <col style="width: 100px;">
-              <col style="width: 120px;">
             </colgroup>
             <thead>
               <tr>
@@ -65,10 +65,12 @@
                   会計ソフト <i :class="getSortIcon('accountingSoftware')"></i>
                 </th>
                 <th class="sortable" @click="sortBy('fiscalMonth')">
-                  決算月 <i :class="getSortIcon('fiscalMonth')"></i>
+                  決算日 <i :class="getSortIcon('fiscalMonth')"></i>
                 </th>
                 <th>電話番号</th>
-                <th>連絡手段</th>
+                <th>メール</th>
+                <th>チャットURL</th>
+                <th>主な連絡手段</th>
               </tr>
             </thead>
             <tbody>
@@ -76,25 +78,94 @@
                 v-for="row in pagedRows"
                 :key="row.id"
                 :class="{ 'row-inactive': row.status === 'inactive', 'row-suspension': row.status === 'suspension' }"
-                @click="openEditPanel(row)"
-                style="cursor: pointer;"
+                @click="delayedOpenEditPanel(row)"
               >
-                <td>
-                  <span class="cm-status-badge" :class="'status-' + row.status">
+                <!-- ステータス: select -->
+                <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'status', $event)">
+                  <select v-if="inlineEditId === row.id && inlineEditField === 'status'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                    <option value="active">稼働中</option>
+                    <option value="suspension">休眠中</option>
+                    <option value="inactive">契約終了</option>
+                  </select>
+                  <span v-else class="cm-status-badge" :class="'status-' + row.status">
                     {{ row.status === 'active' ? '稼働中' : row.status === 'suspension' ? '休眠中' : '契約終了' }}
                   </span>
                 </td>
-                <td class="cm-code">{{ row.clientCode }}</td>
-                <td>{{ row.type === 'corp' ? '法人' : '個人' }}</td>
-                <td class="cm-company-name">{{ row.companyName }}</td>
-                <td>{{ row.staffName || '—' }}</td>
-                <td>{{ softwareLabel(row.accountingSoftware) }}</td>
-                <td class="cm-fiscal">{{ row.fiscalMonth }}月</td>
-                <td>{{ row.phoneNumber || '—' }}</td>
-                <td>{{ contactLabel(row.contact) }}</td>
+                <td class="cm-code td-editable" @dblclick.stop="startInlineEdit(row, 'clientCode', $event)">
+                  <input v-if="inlineEditId === row.id && inlineEditField === 'clientCode'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <span v-else>{{ row.clientCode }}</span>
+                </td>
+                <!-- 種別: select -->
+                <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'type', $event)">
+                  <select v-if="inlineEditId === row.id && inlineEditField === 'type'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                    <option value="corp">法人</option>
+                    <option value="individual">個人</option>
+                  </select>
+                  <span v-else>{{ row.type === 'corp' ? '法人' : '個人' }}</span>
+                </td>
+                <td class="cm-company-name td-editable" @dblclick.stop="startInlineEdit(row, 'companyName', $event)">
+                  <input v-if="inlineEditId === row.id && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <span v-else>{{ row.companyName }}</span>
+                </td>
+                <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'staffName', $event)">
+                  <select v-if="inlineEditId === row.id && inlineEditField === 'staffName'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                    <option value="">未設定</option>
+                    <option v-for="s in staffList" :key="s.uuid" :value="s.name">{{ s.name }}</option>
+                  </select>
+                  <span v-else>{{ row.staffName || '—' }}</span>
+                </td>
+                <!-- 会計ソフト: select -->
+                <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'accountingSoftware', $event)">
+                  <select v-if="inlineEditId === row.id && inlineEditField === 'accountingSoftware'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                    <option value="mf">MF</option>
+                    <option value="freee">freee</option>
+                    <option value="yayoi">弥生</option>
+                    <option value="tkc">TKC</option>
+                    <option value="other">その他</option>
+                  </select>
+                  <span v-else>{{ softwareLabel(row.accountingSoftware) }}</span>
+                </td>
+                <!-- 決算日: 月select + 日select -->
+                <td class="cm-fiscal td-editable" @dblclick.stop="startInlineEdit(row, 'fiscalMonth', $event)">
+                  <template v-if="inlineEditId === row.id && inlineEditField === 'fiscalMonth'">
+                    <div class="cm-inline-fiscal-group">
+                      <select v-model="inlineEditValue" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop>
+                        <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
+                      </select>
+                      <span class="cm-inline-fiscal-sep">/</span>
+                      <select v-model="inlineEditFiscalDay" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop>
+                        <option value="末日">末日</option>
+                        <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
+                      </select>
+                      <button class="cm-inline-fiscal-ok" @click.stop="commitFiscalEdit(row)">✓</button>
+                    </div>
+                  </template>
+                  <span v-else>{{ row.fiscalMonth }}月/{{ row.fiscalDay === '末日' ? '末日' : row.fiscalDay + '日' }}</span>
+                </td>
+                <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'phoneNumber', $event)">
+                  <input v-if="inlineEditId === row.id && inlineEditField === 'phoneNumber'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <span v-else>{{ row.phoneNumber || '—' }}</span>
+                </td>
+                <td class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'email', $event)">
+                  <input v-if="inlineEditId === row.id && inlineEditField === 'email'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <span v-else>{{ row.email || '—' }}</span>
+                </td>
+                <td class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'chatRoomUrl', $event)">
+                  <input v-if="inlineEditId === row.id && inlineEditField === 'chatRoomUrl'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <span v-else>{{ row.chatRoomUrl || '—' }}</span>
+                </td>
+                <!-- 主な連絡手段: チャットワーク優先ロジック -->
+                <td class="cm-contact-cell">
+                  <span v-if="row.chatRoomUrl">チャットワーク</span>
+                  <span v-else-if="row.email" class="cm-contact-fallback">
+                    メール
+                    <i class="fa-solid fa-triangle-exclamation cm-contact-warn" title="チャットワークURLが空白です。メールを表示しています。"></i>
+                  </span>
+                  <span v-else>—</span>
+                </td>
               </tr>
               <tr v-if="pagedRows.length === 0">
-                <td colspan="9" class="cm-empty">該当する顧問先がありません</td>
+                <td colspan="11" class="cm-empty">該当する顧問先がありません</td>
               </tr>
             </tbody>
           </table>
@@ -175,11 +246,18 @@
                 <input type="text" v-model="panelForm.phoneNumber" class="cm-input" placeholder="03-1234-5678">
               </div>
               <div class="cm-field">
-                <label class="cm-label">連絡手段</label>
+                <label class="cm-label">メールアドレス</label>
+                <input type="email" v-model="panelForm.email" class="cm-input" placeholder="example@mail.com">
+              </div>
+              <div class="cm-field">
+                <label class="cm-label">チャットルームURL</label>
+                <input type="url" v-model="panelForm.chatRoomUrl" class="cm-input" placeholder="https://www.chatwork.com/#!rid...">
+              </div>
+              <div class="cm-field">
+                <label class="cm-label">主な連絡手段</label>
                 <div class="cm-radio-group">
                   <label class="cm-radio"><input type="radio" v-model="panelForm.contactType" value="email"><span>メール</span></label>
-                  <label class="cm-radio"><input type="radio" v-model="panelForm.contactType" value="chatwork"><span>Chatwork</span></label>
-                  <label class="cm-radio"><input type="radio" v-model="panelForm.contactType" value="none"><span>なし</span></label>
+                  <label class="cm-radio"><input type="radio" v-model="panelForm.contactType" value="chatwork"><span>チャットワーク</span></label>
                 </div>
               </div>
               <div v-if="panelForm.contactType !== 'none'" class="cm-field">
@@ -187,10 +265,17 @@
                 <input type="text" v-model="panelForm.contactValue" class="cm-input" :placeholder="panelForm.contactType === 'email' ? 'example@mail.com' : 'Chatwork ID'">
               </div>
               <div class="cm-field">
-                <label class="cm-label">決算月</label>
-                <select v-model="panelForm.fiscalMonth" class="cm-select">
-                  <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
-                </select>
+                <label class="cm-label">決算日</label>
+                <div class="cm-date-group">
+                  <select v-model="panelForm.fiscalMonth" class="cm-select">
+                    <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
+                  </select>
+                  <span class="cm-date-separator">/</span>
+                  <select v-model="panelForm.fiscalDay" class="cm-select">
+                    <option value="末日">末日</option>
+                    <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
+                  </select>
+                </div>
               </div>
               <div class="cm-field" style="position: relative;">
                 <label class="cm-label">業種</label>
@@ -343,70 +428,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import {
+  useClients,
+  emptyClientForm,
+  createClientId,
+  parseClientId,
+} from '@/features/client-management/composables/useClients';
+import type { Client, ClientForm } from '@/features/client-management/composables/useClients';
+import { useStaff } from '@/features/staff-management/composables/useStaff';
 
-// --- 型定義 ---
-interface ClientRow {
-  id: string;         // URL用ID: {3コード}-{UUID} 形式
-  uuid: string;       // 内部処理用: UUID部分のみ（Phase BでDB primary key）
-  clientCode: string; // UI表示用: 3コード
-  companyName: string;
-  companyNameKana: string;
-  type: 'corp' | 'individual';
-  repName: string;
-  repNameKana: string;
-  staffName: string;
-  phoneNumber: string;
-  contact: { type: 'email' | 'chatwork' | 'none'; value: string };
-  fiscalMonth: number;
-  industry: string;
-  establishedDate: string;
-  status: 'active' | 'inactive' | 'suspension';
-  accountingSoftware: 'mf' | 'freee' | 'yayoi' | 'tkc' | 'other';
-  taxFilingType: 'blue' | 'white';
-  consumptionTaxMode: 'general' | 'simplified' | 'exempt';
-  simplifiedTaxCategory?: number;
-  taxMethod: 'inclusive' | 'exclusive';
-  calculationMethod: 'accrual' | 'cash' | 'interim_cash';
-  defaultPaymentMethod: 'cash' | 'owner_loan' | 'accounts_payable';
-  isInvoiceRegistered: boolean;
-  invoiceRegistrationNumber: string;
-  hasDepartmentManagement: boolean;
-  advisoryFee: number;
-  bookkeepingFee: number;
-  settlementFee: number;
-  taxFilingFee: number;
-}
-
-// パネルフォーム用型（ClientRowからid/uuidを除き、contactをフラット化）
-interface ClientPanelForm extends Omit<ClientRow, 'id' | 'uuid' | 'contact'> {
-  contactType: 'email' | 'chatwork' | 'none';
-  contactValue: string;
-}
-
-// --- 顧問先ID生成（{3コード}-{UUID}形式） ---
-const generateUuid = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-};
-
-/** 顧問先IDを生成し、id（URL用）とuuid（内部用）を返す */
-const createClientId = (clientCode: string): { id: string; uuid: string } => {
-  const uuid = generateUuid();
-  return { id: `${clientCode}-${uuid}`, uuid };
-};
-
-/** URLのclientIdパラメータから3コードとUUIDを分離 */
-const parseClientId = (clientId: string): { clientCode: string; uuid: string } => {
-  const sep = clientId.indexOf('-');
-  return {
-    clientCode: clientId.substring(0, sep),
-    uuid: clientId.substring(sep + 1),
-  };
-};
+// --- クライアントデータ（composableから取得） ---
+const { clients } = useClients();
+const { staffList } = useStaff();
 
 // --- 業種リスト（ScreenS_Settings.vueと同一） ---
 const industryOptions: string[] = [
@@ -417,62 +451,8 @@ const industryOptions: string[] = [
   '清掃業', '教育業', '他サービス業', '官公庁・自治体', 'その他',
 ];
 
-// --- サンプルデータ ---
-const clients = ref<ClientRow[]>([
-  {
-    ...createClientId('ABC'), clientCode: 'ABC', companyName: '株式会社ABC商事', companyNameKana: 'カブシキガイシャエービーシーショウジ',
-    type: 'corp', repName: '山田 太郎', repNameKana: 'ヤマダ タロウ', staffName: '佐藤 花子',
-    phoneNumber: '03-1234-5678', contact: { type: 'email', value: 'info@abc-shoij.co.jp' },
-    fiscalMonth: 3, industry: '卸売業・小売業', establishedDate: '20100401', status: 'active',
-    accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
-    taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
-    isInvoiceRegistered: true, invoiceRegistrationNumber: 'T1234567890123',
-    hasDepartmentManagement: false, advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
-  },
-  {
-    ...createClientId('DEF'), clientCode: 'DEF', companyName: '有限会社DEF建設', companyNameKana: 'ユウゲンガイシャディーイーエフケンセツ',
-    type: 'corp', repName: '鈴木 一郎', repNameKana: 'スズキ イチロウ', staffName: '田中 次郎',
-    phoneNumber: '06-9876-5432', contact: { type: 'chatwork', value: 'def-kensetsu' },
-    fiscalMonth: 9, industry: '建設業', establishedDate: '20050915', status: 'active',
-    accountingSoftware: 'yayoi', taxFilingType: 'blue', consumptionTaxMode: 'simplified',
-    simplifiedTaxCategory: 3, taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'accounts_payable',
-    isInvoiceRegistered: true, invoiceRegistrationNumber: 'T9876543210987',
-    hasDepartmentManagement: true, advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 150000, taxFilingFee: 80000,
-  },
-  {
-    ...createClientId('GHI'), clientCode: 'GHI', companyName: '個人事業 高橋デザイン', companyNameKana: 'コジンジギョウ タカハシデザイン',
-    type: 'individual', repName: '高橋 美咲', repNameKana: 'タカハシ ミサキ', staffName: '佐藤 花子',
-    phoneNumber: '090-1111-2222', contact: { type: 'email', value: 'misaki@design.jp' },
-    fiscalMonth: 12, industry: 'IT・ソフトウェア関連', establishedDate: '20200101', status: 'active',
-    accountingSoftware: 'freee', taxFilingType: 'blue', consumptionTaxMode: 'exempt',
-    taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
-    isInvoiceRegistered: false, invoiceRegistrationNumber: '',
-    hasDepartmentManagement: false, advisoryFee: 20000, bookkeepingFee: 10000, settlementFee: 80000, taxFilingFee: 0,
-  },
-  {
-    ...createClientId('JKL'), clientCode: 'JKL', companyName: '医療法人社団 健康会', companyNameKana: 'イリョウホウジンシャダン ケンコウカイ',
-    type: 'corp', repName: '中村 健太', repNameKana: 'ナカムラ ケンタ', staffName: '田中 次郎',
-    phoneNumber: '03-5555-6666', contact: { type: 'none', value: '' },
-    fiscalMonth: 3, industry: '医療・福祉関係業', establishedDate: '19950601', status: 'inactive',
-    accountingSoftware: 'tkc', taxFilingType: 'blue', consumptionTaxMode: 'general',
-    taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
-    isInvoiceRegistered: true, invoiceRegistrationNumber: 'T5555666677778',
-    hasDepartmentManagement: true, advisoryFee: 80000, bookkeepingFee: 50000, settlementFee: 300000, taxFilingFee: 150000,
-  },
-  {
-    ...createClientId('MNO'), clientCode: 'MNO', companyName: '株式会社MNOフーズ', companyNameKana: 'カブシキガイシャエムエヌオーフーズ',
-    type: 'corp', repName: '小林 洋子', repNameKana: 'コバヤシ ヨウコ', staffName: '佐藤 花子',
-    phoneNumber: '045-7777-8888', contact: { type: 'email', value: 'info@mno-foods.co.jp' },
-    fiscalMonth: 6, industry: '飲食業', establishedDate: '20180301', status: 'suspension',
-    accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
-    taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
-    isInvoiceRegistered: true, invoiceRegistrationNumber: 'T7777888899990',
-    hasDepartmentManagement: false, advisoryFee: 35000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
-  },
-]);
-
-// --- ステータスフィルター ---
-const statusFilter = ref<'all' | 'active' | 'inactive' | 'suspension'>('all');
+// --- ステータスフィルター（複数選択） ---
+const statusFilters = ref<string[]>(['active']);
 
 // --- ソート ---
 const sortKey = ref<string>('companyName');
@@ -493,12 +473,12 @@ const getSortIcon = (key: string) => {
 };
 
 // --- フィルター＋ソート済みデータ ---
-const filteredRows = computed((): ClientRow[] => {
+const filteredRows = computed((): Client[] => {
   let rows = clients.value.slice();
-  if (statusFilter.value !== 'all') {
-    rows = rows.filter(r => r.status === statusFilter.value);
+  if (statusFilters.value.length > 0) {
+    rows = rows.filter(r => statusFilters.value.includes(r.status));
   }
-  const key = sortKey.value as keyof ClientRow;
+  const key = sortKey.value as keyof Client;
   rows.sort((a, b) => {
     const va = a[key] ?? '';
     const vb = b[key] ?? '';
@@ -518,31 +498,82 @@ const pagedRows = computed(() => {
   return filteredRows.value.slice(start, start + PAGE_SIZE);
 });
 
+// --- インライン編集 ---
+const inlineEditId = ref<string | null>(null);
+const inlineEditField = ref<string | null>(null);
+const inlineEditValue = ref<string | number>('');
+const inlineEditFiscalDay = ref<string | number>('末日');
+
+const startInlineEdit = (row: Client, field: string, event: Event) => {
+  event.stopPropagation();
+  inlineEditId.value = row.id;
+  inlineEditField.value = field;
+  inlineEditValue.value = (row as unknown as Record<string, string | number>)[field] ?? '';
+  if (field === 'fiscalMonth') {
+    inlineEditFiscalDay.value = row.fiscalDay ?? '末日';
+  }
+  if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+  nextTick(() => {
+    const el = document.querySelector('.cm-inline-input, .cm-inline-select') as HTMLElement;
+    if (el) el.focus();
+  });
+};
+
+const commitInlineEdit = (_row: Client) => {
+  if (inlineEditId.value && inlineEditField.value) {
+    const idx = clients.value.findIndex(c => c.id === inlineEditId.value);
+    if (idx >= 0) {
+      (clients.value[idx] as unknown as Record<string, string | number>)[inlineEditField.value!] = inlineEditValue.value;
+    }
+  }
+  cancelInlineEdit();
+};
+
+const commitFiscalEdit = (_row: Client) => {
+  if (inlineEditId.value) {
+    const idx = clients.value.findIndex(c => c.id === inlineEditId.value);
+    if (idx >= 0) {
+      const target = clients.value[idx]!;
+      target.fiscalMonth = Number(inlineEditValue.value);
+      target.fiscalDay = inlineEditFiscalDay.value;
+    }
+  }
+  cancelInlineEdit();
+};
+
+const cancelInlineEdit = () => {
+  inlineEditId.value = null;
+  inlineEditField.value = null;
+  inlineEditValue.value = '';
+  inlineEditFiscalDay.value = '末日';
+};
+
 // --- パネル ---
 const panelMode = ref<'add' | 'edit' | null>(null);
 const editingId = ref<string | null>(null);
 const showIndustryDropdown = ref(false);
 
-const emptyForm = (): ClientPanelForm => ({
-  clientCode: '', companyName: '', companyNameKana: '', type: 'corp',
-  repName: '', repNameKana: '', staffName: '', phoneNumber: '',
-  contactType: 'none', contactValue: '',
-  fiscalMonth: 3, industry: '', establishedDate: '', status: 'active',
-  accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
-  taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
-  isInvoiceRegistered: false, invoiceRegistrationNumber: '',
-  hasDepartmentManagement: false, advisoryFee: 0, bookkeepingFee: 0, settlementFee: 0, taxFilingFee: 0,
-});
+const panelForm = reactive<ClientForm>(emptyClientForm());
 
-const panelForm = reactive<ClientPanelForm>(emptyForm());
+// --- クリック/ダブルクリック競合回避 ---
+let clickTimer: ReturnType<typeof setTimeout> | null = null;
+
+const delayedOpenEditPanel = (row: Client) => {
+  if (inlineEditId.value) return; // インライン編集中はパネルを開かない
+  if (clickTimer) clearTimeout(clickTimer);
+  clickTimer = setTimeout(() => {
+    openEditPanel(row);
+    clickTimer = null;
+  }, 250);
+};
 
 const openAddPanel = () => {
-  Object.assign(panelForm, emptyForm());
+  Object.assign(panelForm, emptyClientForm());
   panelMode.value = 'add';
   editingId.value = null;
 };
 
-const openEditPanel = (row: ClientRow) => {
+const openEditPanel = (row: Client) => {
   const { id: _id, contact, ...rest } = row;
   Object.assign(panelForm, {
     ...rest,
@@ -568,7 +599,7 @@ const saveClient = () => {
   const ids = editingId.value
     ? { id: editingId.value, uuid: parseClientId(editingId.value).uuid }
     : createClientId(panelForm.clientCode);
-  const data: ClientRow = {
+  const data: Client = {
     ...fields,
     ...ids,
     contact: { type: contactType, value: contactValue },
@@ -610,11 +641,7 @@ const softwareLabel = (s: string) => {
   return map[s] || s;
 };
 
-const contactLabel = (c: { type: string; value: string }) => {
-  if (c.type === 'none') return '—';
-  if (c.type === 'email') return `✉ ${c.value}`;
-  return `💬 ${c.value}`;
-};
+
 
 const annualTotal = computed(() => {
   const monthly = panelForm.advisoryFee + panelForm.bookkeepingFee;
@@ -654,7 +681,7 @@ onUnmounted(() => document.removeEventListener('click', closeDropdowns));
 .cm-table thead th.sortable:hover { color: #3b82f6; }
 .cm-table tbody td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; white-space: nowrap; }
 .cm-table tbody tr:hover { background: #f8fafc; }
-.cm-table tbody tr.row-inactive { opacity: 0.5; }
+.cm-table tbody tr.row-inactive { opacity: 0.5; background: #f1f5f9; }
 .cm-code { font-weight: 700; letter-spacing: 1px; color: #1e293b; font-family: 'Menlo', monospace; }
 .cm-company-name { font-weight: 600; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 .cm-fiscal { text-align: center; }
@@ -667,7 +694,40 @@ onUnmounted(() => document.removeEventListener('click', closeDropdowns));
 .status-active { background: #dcfce7; color: #166534; }
 .status-inactive { background: #fee2e2; color: #991b1b; }
 .status-suspension { background: #fef3c7; color: #92400e; }
-.row-suspension { opacity: 0.6; }
+.row-suspension { opacity: 0.6; background: #fefce8; }
+
+/* 決算日セレクトグループ */
+.cm-date-group { display: flex; align-items: center; gap: 8px; }
+.cm-date-separator { font-size: 14px; color: #64748b; }
+
+/* 主な連絡手段セル */
+.cm-contact-cell { font-size: 11px; }
+.cm-contact-fallback { color: #64748b; }
+.cm-contact-warn { color: #f59e0b; font-size: 10px; margin-left: 4px; cursor: help; }
+
+/* フィルターチェックボックス */
+.cm-filter-checkboxes { display: flex; align-items: center; gap: 10px; }
+.cm-filter-cb { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
+.cm-filter-cb input[type="checkbox"] { accent-color: #3b82f6; }
+.cb-label { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+
+/* インライン編集 */
+.cm-inline-input { width: 100%; border: 1px solid #3b82f6; border-radius: 3px; padding: 4px 6px; font-size: 12px; color: #334155; outline: none; background: #eff6ff; box-sizing: border-box; }
+.cm-inline-select { width: 100%; border: 1px solid #3b82f6; border-radius: 3px; padding: 3px 4px; font-size: 12px; color: #334155; outline: none; background: #eff6ff; box-sizing: border-box; cursor: pointer; }
+
+/* 決算日インライン編集グループ */
+.cm-inline-fiscal-group { display: flex; align-items: center; gap: 2px; }
+.cm-inline-fiscal-sel { width: auto !important; min-width: 52px; padding: 2px 3px; font-size: 11px; }
+.cm-inline-fiscal-sep { font-size: 11px; color: #64748b; }
+.cm-inline-fiscal-ok { background: #3b82f6; color: white; border: none; border-radius: 3px; padding: 2px 6px; font-size: 11px; cursor: pointer; line-height: 1; }
+.cm-inline-fiscal-ok:hover { background: #2563eb; }
+
+/* 編集可能セルホバー（accounts準拠） */
+.td-editable { cursor: text; }
+.td-editable:hover { background: #fff9c4; outline: 1px dashed #fbc02d; }
+
+/* 省略表示 */
+.cm-ellipsis { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
 
 /* ページネーション */
 .cm-pagination { display: flex; justify-content: center; align-items: center; gap: 4px; margin-top: 16px; padding: 8px 0; }

@@ -141,6 +141,11 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/mocks/components/JournalListLevel3Mock.vue')
   },
   {
+    path: '/mock/journal-list',
+    name: 'MockJournalList',
+    component: () => import('@/mocks/components/JournalListLevel3Mock.vue')
+  },
+  {
     path: '/settings-accounts',
     name: 'SettingsAccountsMock',
     component: () => import('@/views/ScreenS_AccountSettings.vue'),
@@ -170,6 +175,21 @@ export const routes: RouteRecordRaw[] = [
     path: '/master/clients',
     name: 'MasterClients',
     component: () => import('@/mocks/views/MockMasterClientsPage.vue')
+  },
+  {
+    path: '/clients/list',
+    name: 'ClientList',
+    component: () => import('@/mocks/views/MockClientListPage.vue')
+  },
+  {
+    path: '/progress/:code?',
+    name: 'ProgressDetail',
+    component: () => import('@/mocks/views/MockProgressDetailPage.vue')
+  },
+  {
+    path: '/master/staff',
+    name: 'MasterStaff',
+    component: () => import('@/mocks/views/MockMasterStaffPage.vue')
   },
 ]
 
