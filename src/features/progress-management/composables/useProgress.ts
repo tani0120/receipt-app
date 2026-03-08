@@ -10,6 +10,23 @@ import { useMonthColumns } from '../utils/monthColumns';
 import type { ProgressRow, MonthColumn } from '../types';
 
 // =============================================
+// モックデータ定義（Phase B TODO: API化時に削除）
+// =============================================
+
+/** 顧問先ごとの仕訳数モックデータ（clientCodeで引く） */
+const MOCK_JOURNAL_DATA: Record<string, {
+    receivedDate: string;
+    unexported: number;
+    baseCount: number;
+    currentYearJournals: number;
+    lastYearJournals: number;
+}> = {
+    LDI: { receivedDate: '2026/03/01', unexported: 120, baseCount: 445, currentYearJournals: 445, lastYearJournals: 980 },
+    ANE: { receivedDate: '', unexported: 0, baseCount: 446, currentYearJournals: 2680, lastYearJournals: 3120 },
+    MHL: { receivedDate: '', unexported: 0, baseCount: 79, currentYearJournals: 79, lastYearJournals: 156 },
+};
+
+// =============================================
 // ヘルパー関数
 // =============================================
 
@@ -26,20 +43,6 @@ function generateMonthlyData(cols: MonthColumn[], baseCount: number): Record<str
     return data;
 }
 
-/** モック行ファクトリ（API化時に削除） */
-function mkRow(
-    id: string, code: string, fm: number, name: string,
-    staff: string, rd: string, unexp: number,
-    cols: MonthColumn[], base: number, cur: number, last: number,
-): ProgressRow {
-    return {
-        id, code, fiscalMonth: fm, companyName: name,
-        staffName: staff, receivedDate: rd, unexported: unexp,
-        monthlyJournals: generateMonthlyData(cols, base),
-        currentYearJournals: cur, lastYearJournals: last,
-    };
-}
-
 // =============================================
 // Composable
 // =============================================
@@ -50,48 +53,28 @@ export function useProgress() {
     const monthColumns = useMonthColumns(12);
     const isLoading = ref(false);
 
-    // Phase B TODO: Supabase API fetch に差し替え
+    // clientsからprogressRowsを生成（Single Source of Truth）
     const progressRows = computed<ProgressRow[]>(() => {
         const cols = monthColumns.value;
 
-        const existing: ProgressRow[] = allClients.value.map(c => ({
-            id: c.id,
-            code: c.clientCode,
-            fiscalMonth: c.fiscalMonth,
-            companyName: c.companyName,
-            staffName: c.staffName || '',
-            receivedDate: '',
-            unexported: 0,
-            monthlyJournals: generateMonthlyData(cols, 0),
-            currentYearJournals: 0,
-            lastYearJournals: 0,
-        }));
-
-        const imageRows = [
-            { id: 'JTR', code: 'JTR', fm: 3, name: 'JTR', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'AMT', code: 'AMT', fm: 12, name: 'AMT', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'ANE', code: 'ANE', fm: 9, name: 'ANE', staff: '', rd: '', unexp: 0, base: 446, cur: 2680, last: 3120 },
-            { id: 'ORDER', code: 'ORD', fm: 6, name: 'ORDER壱口店 吉井芳然', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'EDL', code: 'EDL', fm: 3, name: 'EDL', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'FPC', code: 'FPC', fm: 12, name: 'FPC', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'GAC', code: 'GAC', fm: 3, name: 'GAC', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'HIR', code: 'HIR', fm: 6, name: 'HIR', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'KFP', code: 'KFP', fm: 9, name: 'KFP', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'KHK', code: 'KHK', fm: 12, name: 'KHK', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'LDI', code: 'LDI', fm: 3, name: 'LDI', staff: '', rd: '2026/03/01', unexp: 120, base: 445, cur: 445, last: 980 },
-            { id: 'LIG', code: 'LIG', fm: 6, name: 'LIG', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'MHL', code: 'MHL', fm: 9, name: 'MHL', staff: '', rd: '', unexp: 0, base: 79, cur: 79, last: 156 },
-            { id: 'MUKU', code: 'MUK', fm: 12, name: 'MUKU', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'NDF', code: 'NDF', fm: 3, name: 'NDF', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'NOV', code: 'NOV', fm: 6, name: 'NOV', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-            { id: 'QRN', code: 'QRN', fm: 9, name: 'QRN', staff: '', rd: '', unexp: 0, base: 0, cur: 0, last: 0 },
-        ];
-
-        const imageData: ProgressRow[] = imageRows.map(r =>
-            mkRow(r.id, r.code, r.fm, r.name, r.staff, r.rd, r.unexp, cols, r.base, r.cur, r.last),
-        );
-
-        return [...existing, ...imageData];
+        return allClients.value.map(c => {
+            const mock = MOCK_JOURNAL_DATA[c.clientCode];
+            return {
+                id: c.id,
+                uuid: c.uuid,
+                code: c.clientCode,
+                status: c.status,
+                type: c.type,
+                fiscalMonth: c.fiscalMonth,
+                companyName: c.companyName,
+                staffName: c.staffName || '',
+                receivedDate: mock?.receivedDate ?? '',
+                unexported: mock?.unexported ?? 0,
+                monthlyJournals: generateMonthlyData(cols, mock?.baseCount ?? 0),
+                currentYearJournals: mock?.currentYearJournals ?? 0,
+                lastYearJournals: mock?.lastYearJournals ?? 0,
+            };
+        });
     });
 
     /** ソート値取得（月列 "month_2025-04" 形式に対応） */

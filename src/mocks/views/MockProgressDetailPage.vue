@@ -43,7 +43,7 @@
     <div class="pg-table-wrap">
       <table class="pg-table">
         <colgroup>
-          <col style="width: 30px;">
+          <col style="width: 60px;">
           <col style="width: 60px;">
           <col style="width: 60px;">
           <col>
@@ -56,7 +56,7 @@
         </colgroup>
         <thead>
           <tr>
-            <th class="pg-th-check"><input type="checkbox" v-model="checkAll" @change="toggleAll"></th>
+            <th class="sortable pg-th-status" @click="sortBy('status')">状態 <i :class="getSortIcon('status')"></i></th>
             <th class="sortable pg-th-narrow" @click="sortBy('code')">3コード <i :class="getSortIcon('code')"></i></th>
             <th class="sortable pg-th-narrow" @click="sortBy('fiscalMonth')">決算月 <i :class="getSortIcon('fiscalMonth')"></i></th>
             <th class="sortable" @click="sortBy('companyName')">顧問先 <i :class="getSortIcon('companyName')"></i></th>
@@ -73,8 +73,14 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in pagedRows" :key="row.id" class="pg-row">
-            <td class="pg-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
+          <tr v-for="row in pagedRows" :key="row.id" class="pg-row" :class="{ 'pg-row-inactive': row.status === 'inactive', 'pg-row-suspension': row.status === 'suspension' }" @click="goToJournalList(row)" style="cursor: pointer;">
+            <td class="pg-td-status">
+              <span class="pg-status-badge" :class="{
+                'pg-status-active': row.status === 'active',
+                'pg-status-suspension': row.status === 'suspension',
+                'pg-status-inactive': row.status === 'inactive'
+              }">{{ row.status === 'active' ? '稼働中' : row.status === 'suspension' ? '休眠中' : '契約終了' }}</span>
+            </td>
             <td class="pg-td-code">{{ row.code }}</td>
             <td class="pg-td-fiscal">{{ row.fiscalMonth }}月</td>
             <td class="pg-td-client">{{ row.companyName }}</td>
@@ -100,7 +106,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useProgress } from '@/features/progress-management/composables/useProgress';
+
+const router = useRouter();
 
 const { progressRows, monthColumns, staffList: allStaff, getSortValue } = useProgress();
 
@@ -110,8 +119,9 @@ const filterStaff = ref('');
 const onlyUnexported = ref(false);
 
 // --- ソート ---
-const sortKey = ref('unexported');
-const sortOrder = ref<'asc' | 'desc'>('desc');
+// ソート: デフォルトは多段ソート（ステータス→未出力降順→受取日昇順→3コード昇順）
+const sortKey = ref<string | null>(null);
+const sortOrder = ref<'asc' | 'desc'>('asc');
 
 const sortBy = (key: string) => {
   if (sortKey.value === key) {
@@ -127,6 +137,30 @@ const getSortIcon = (key: string) => {
   return sortOrder.value === 'asc'
     ? 'fa-solid fa-sort-up pg-sort-icon active'
     : 'fa-solid fa-sort-down pg-sort-icon active';
+};
+
+/** ステータス → ソート優先度（active=0, suspension=1, inactive=2） */
+const statusOrder = (s: string): number => s === 'active' ? 0 : s === 'suspension' ? 1 : 2;
+
+/** 決算月ソート値: 法人は月そのまま（1-12）、個人は13（法人12の後に来る） */
+const fiscalMonthSort = (row: { type: string; fiscalMonth: number }, asc: boolean): number => {
+  if (row.type === 'individual') return asc ? 13 : 13;
+  return row.fiscalMonth;
+};
+
+/** デフォルト多段ソート比較関数 */
+const defaultSort = (a: import('@/features/progress-management/types').ProgressRow, b: import('@/features/progress-management/types').ProgressRow): number => {
+  // 1. ステータス: active→suspension→inactive
+  const sa = statusOrder(a.status) - statusOrder(b.status);
+  if (sa !== 0) return sa;
+  // 2. 未出力: 降順（多い順）
+  if (a.unexported !== b.unexported) return b.unexported - a.unexported;
+  // 3. 資料受取日: 昇順（古い順、空白は最後）
+  const aDate = a.receivedDate || '\uffff';
+  const bDate = b.receivedDate || '\uffff';
+  if (aDate !== bDate) return aDate < bDate ? -1 : 1;
+  // 4. 3コード: 昇順
+  return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
 };
 
 // --- フィルタ+ソート ---
@@ -145,14 +179,31 @@ const filteredRows = computed(() => {
   if (onlyUnexported.value) {
     rows = rows.filter(r => r.unexported > 0);
   }
-  rows = [...rows].sort((a, b) => {
-    const aVal = getSortValue(a, sortKey.value);
-    const bVal = getSortValue(b, sortKey.value);
-    const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-    const primary = sortOrder.value === 'asc' ? cmp : -cmp;
-    if (primary !== 0) return primary;
-    return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
-  });
+  // ソート
+  if (sortKey.value === null) {
+    // デフォルト多段ソート
+    rows = [...rows].sort(defaultSort);
+  } else if (sortKey.value === 'fiscalMonth') {
+    // 決算月ソート: 法人1-12、個人13
+    rows = [...rows].sort((a, b) => {
+      const aVal = fiscalMonthSort(a, sortOrder.value === 'asc');
+      const bVal = fiscalMonthSort(b, sortOrder.value === 'asc');
+      const cmp = aVal - bVal;
+      const primary = sortOrder.value === 'asc' ? cmp : -cmp;
+      if (primary !== 0) return primary;
+      return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
+    });
+  } else {
+    // 通常ソート
+    rows = [...rows].sort((a, b) => {
+      const aVal = getSortValue(a, sortKey.value!);
+      const bVal = getSortValue(b, sortKey.value!);
+      const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      const primary = sortOrder.value === 'asc' ? cmp : -cmp;
+      if (primary !== 0) return primary;
+      return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
+    });
+  }
   return rows;
 });
 
@@ -172,16 +223,7 @@ const pagedRows = computed(() => {
   return filteredRows.value.slice(start, start + PAGE_SIZE);
 });
 
-// --- チェックボックス ---
-const checkedIds = ref<string[]>([]);
-const checkAll = ref(false);
-const toggleAll = () => {
-  if (checkAll.value) {
-    checkedIds.value = pagedRows.value.map(r => r.id);
-  } else {
-    checkedIds.value = [];
-  }
-};
+
 
 // --- メタ情報 ---
 const tagCount = ref(3);
@@ -190,6 +232,11 @@ const buildDate = ref(new Date().toLocaleString('ja-JP'));
 const refreshData = () => {
   buildDate.value = new Date().toLocaleString('ja-JP');
 };
+
+// --- 行クリック: 仕訳一覧へ遷移 ---
+function goToJournalList(row: { uuid: string }) {
+  router.push({ path: '/mock/journal-list', query: { client: row.uuid } });
+}
 </script>
 
 <style scoped>
@@ -230,7 +277,7 @@ const refreshData = () => {
 .pg-table th:last-child { border-right: none; }
 .pg-table th.sortable { cursor: pointer; }
 .pg-table th.sortable:hover { background: #3a8edd; }
-.pg-th-check { width: 30px; text-align: center; }
+.pg-th-status { width: 60px; text-align: center; }
 .pg-th-narrow { white-space: nowrap; }
 .pg-th-num { text-align: right; }
 .pg-th-month { text-align: center; font-size: 9px; padding: 6px 1px; }
@@ -244,8 +291,14 @@ const refreshData = () => {
 .pg-row:hover { background: #f0f7ff; }
 .pg-row:nth-child(even) { background: #fafbfc; }
 .pg-row:nth-child(even):hover { background: #f0f7ff; }
+.pg-row-inactive { opacity: 0.5; }
+.pg-row-suspension { opacity: 0.7; }
 
-.pg-td-check { text-align: center; width: 30px; }
+.pg-td-status { text-align: center; }
+.pg-status-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.pg-status-active { background: #dcfce7; color: #166534; }
+.pg-status-suspension { background: #fef9c3; color: #854d0e; }
+.pg-status-inactive { background: #fee2e2; color: #991b1b; }
 .pg-td-code { font-weight: 700; letter-spacing: 0.5px; color: #1e293b; font-family: 'Menlo', monospace; font-size: 11px; text-align: center; }
 .pg-td-fiscal { text-align: center; font-size: 12px; color: #555; }
 .pg-td-client { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }

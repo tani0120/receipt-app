@@ -39,8 +39,8 @@
         </template>
       </div>
     </div>
-    <!-- 下段バー（sky-600）ナビゲーション -->
-    <div class="bg-sky-600 px-3 py-1.5 flex items-center gap-4 text-[11px] tracking-[0.5px] text-white font-semibold" style="font-family: 'Noto Sans JP', sans-serif">
+    <!-- 下段バー（sky-600）ナビゲーション: 個別会社エリアのみ表示 -->
+    <div v-if="currentClient" class="bg-sky-600 px-3 py-1.5 flex items-center gap-4 text-[11px] tracking-[0.5px] text-white font-semibold" style="font-family: 'Noto Sans JP', sans-serif">
       <button
         v-for="item in navItems"
         :key="item.key"
