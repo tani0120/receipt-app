@@ -146,6 +146,27 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/mocks/components/JournalListLevel3Mock.vue')
   },
   {
+    path: '/mock/export',
+    name: 'MockExport',
+    component: () => import('@/mocks/views/MockExportPage.vue')
+  },
+  {
+    path: '/mock/export-history',
+    name: 'MockExportHistory',
+    component: () => import('@/mocks/views/MockExportHistoryPage.vue')
+  },
+  {
+    path: '/mock/export-detail/:historyId',
+    name: 'MockExportDetail',
+    component: () => import('@/mocks/views/MockExportDetailPage.vue'),
+    props: true
+  },
+  {
+    path: '/mock/drive-select',
+    name: 'MockDriveSelect',
+    component: () => import('@/mocks/views/MockDriveSelectPage.vue')
+  },
+  {
     path: '/settings-accounts',
     name: 'SettingsAccountsMock',
     component: () => import('@/views/ScreenS_AccountSettings.vue'),

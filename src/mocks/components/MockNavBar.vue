@@ -1,14 +1,14 @@
 <template>
   <div>
     <!-- 上段バー（白背景）ロゴ + 管理メニュー -->
-    <div class="bg-white border-b border-gray-200 flex items-center justify-between px-3" style="height: 41px; font-family: 'Noto Sans JP', sans-serif">
+    <div class="bg-white border-b border-gray-200 flex items-center justify-between px-3" style="height: 53px; font-family: 'Noto Sans JP', sans-serif">
       <!-- 左: ロゴ + 旧ページリンク -->
       <div class="flex items-center gap-3">
         <img src="/sugu-suru-logo.png" alt="sugu-suru" style="height: 30px" />
         <!-- クライアント名動的表示 -->
-        <div v-if="currentClient" class="flex items-center gap-1.5 text-[12px] font-medium text-gray-700 border-l border-gray-300 pl-3 ml-1">
-          <span class="bg-sky-100 text-sky-700 font-bold px-1.5 py-0.5 rounded text-[11px]">{{ currentClient.code }}</span>
-          <span>{{ currentClient.name }}</span>
+        <div v-if="currentClient" class="flex items-center gap-2 border-l-2 border-sky-400 pl-3 ml-2">
+          <span class="bg-sky-600 text-white font-extrabold px-2 py-0.5 rounded text-[13px] tracking-wider shadow-sm">{{ currentClient.code }}</span>
+          <span class="text-[14px] font-bold text-sky-800">{{ currentClient.name }}</span>
         </div>
         <div class="relative">
           <button
@@ -40,26 +40,29 @@
       </div>
     </div>
     <!-- 下段バー（sky-600）ナビゲーション: 個別会社エリアのみ表示 -->
-    <div v-if="currentClient" class="bg-sky-600 px-3 py-1.5 flex items-center gap-4 text-[11px] tracking-[0.5px] text-white font-semibold" style="font-family: 'Noto Sans JP', sans-serif">
-      <button
-        v-for="item in navItems"
-        :key="item.key"
-        class="flex items-center gap-1 transition-colors"
-        :class="isNavActive(item) ? 'text-sky-200 border-b-2 border-white pb-0.5' : 'hover:text-sky-100'"
-        @click="handleNavClick(item)"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            v-for="(d, i) in item.svgPaths"
-            :key="i"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            :d="d"
-          />
-        </svg>
-        {{ item.label }}
-      </button>
+    <div v-if="currentClient" class="bg-sky-600 px-3 py-1.5 flex items-center text-[11.5px] tracking-[0.5px] text-white font-semibold" style="font-family: 'Noto Sans JP', sans-serif">
+      <!-- 左: ナビ項目 -->
+      <div class="flex items-center gap-4">
+        <button
+          v-for="item in navItems"
+          :key="item.key"
+          class="flex items-center gap-1 transition-colors"
+          :class="isNavActive(item) ? 'text-sky-200 border-b-2 border-white pb-0.5' : 'hover:text-sky-100'"
+          @click="handleNavClick(item)"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              v-for="(d, i) in item.svgPaths"
+              :key="i"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              :d="d"
+            />
+          </svg>
+          {{ item.label }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -135,6 +138,12 @@ const navItems: NavItem[] = [
     path: '/mock/journal-list',
   },
   {
+    key: 'drive',
+    label: 'Drive資料選別',
+    svgPaths: ['M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z'],
+    path: '/mock/drive-select',
+  },
+  {
     key: 'upload',
     label: 'アップロード',
     svgPaths: ['M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12'],
@@ -144,7 +153,7 @@ const navItems: NavItem[] = [
     key: 'export',
     label: '出力',
     svgPaths: ['M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
-    path: null,
+    path: '/mock/export',
   },
   {
     key: 'learning',
@@ -168,7 +177,8 @@ const isNavActive = (item: NavItem): boolean =>
 
 const handleNavClick = (item: NavItem): void => {
   if (item.path) {
-    router.push(item.path);
+    // クエリパラメータ（?client=xxx）を引き継いで遷移
+    router.push({ path: item.path, query: route.query });
   } else {
     globalThis.alert(`${item.label}は未実装です`);
   }

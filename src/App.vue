@@ -6,9 +6,11 @@
 
     <!-- Main Content -->
     <main class="flex-1 overflow-hidden relative bg-slate-100 p-4">
-         <router-view v-slot="{ Component }">
+         <router-view v-slot="{ Component, route: viewRoute }">
             <transition name="fade" mode="out-in">
-              <component :is="Component" />
+              <div :key="viewRoute.path" class="h-full">
+                <component :is="Component" />
+              </div>
             </transition>
           </router-view>
     </main>
