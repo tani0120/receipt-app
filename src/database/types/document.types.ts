@@ -4,6 +4,7 @@
  */
 
 import type { DocumentStatus } from '@/shared/documentStatus'
+export type { DocumentStatus } from '@/shared/documentStatus'
 
 
 export interface Document {

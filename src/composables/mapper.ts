@@ -53,6 +53,7 @@ const safeNumber = (value: unknown, fallback = 0): number => {
   return fallback;
 };
 
+
 const _safeBoolean = (value: unknown): boolean => {
   return !!value;
 };
@@ -312,8 +313,7 @@ const mapJournalLine = (api: unknown, client: Partial<ClientApi>): JournalLineUi
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const d = (api && typeof api === 'object') ? (api as Record<string, any>) : {};
 
-  // TaxDetails Safety
-  const _drTax = d.taxDetails?.rate; // unsafe access -> fixed (kept for reference)
+  // TaxDetails Safety（drTaxの直接参照は326行のmapTaxRate経由に統合済み）
 
   return {
     lineNo: safeNumber(d.lineNo),

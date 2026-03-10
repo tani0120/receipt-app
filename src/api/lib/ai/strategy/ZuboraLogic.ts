@@ -72,6 +72,7 @@ export class ZuboraLogic {
 
         if (diffCandidates.length === 1) {
             const receipt = diffCandidates[0];
+            if (!receipt) return null; // TypeScript型ガード
             const diff = wAmount - receipt.amount;
 
             // A-1 & A-4: Payment Fee / FX Variance (Diff > 0)

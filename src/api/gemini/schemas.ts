@@ -158,7 +158,7 @@ export function extractJSONFromResponse(responseText: string): any {
     const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) ||
         responseText.match(/```\n([\s\S]*?)\n```/);
 
-    const jsonText = jsonMatch ? jsonMatch[1] : responseText;
+    const jsonText = jsonMatch?.[1] ?? responseText;
 
     try {
         return JSON.parse(jsonText);

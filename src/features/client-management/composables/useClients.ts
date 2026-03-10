@@ -35,6 +35,8 @@ export interface Client {
     isInvoiceRegistered: boolean;
     invoiceRegistrationNumber: string;
     hasDepartmentManagement: boolean;
+    /** 不動産所得あり（個人事業主の場合のみ有効。account-master.tsの不動産関連15科目の表示可否を制御） */
+    hasRentalIncome: boolean;
     advisoryFee: number;
     bookkeepingFee: number;
     settlementFee: number;
@@ -85,7 +87,8 @@ export const emptyClientForm = (): ClientForm => ({
     accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
     taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
     isInvoiceRegistered: false, invoiceRegistrationNumber: '',
-    hasDepartmentManagement: false, advisoryFee: 0, bookkeepingFee: 0, settlementFee: 0, taxFilingFee: 0,
+    hasDepartmentManagement: false, hasRentalIncome: false,
+    advisoryFee: 0, bookkeepingFee: 0, settlementFee: 0, taxFilingFee: 0,
 });
 
 // =============================================
@@ -104,7 +107,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T1234567890123',
-        hasDepartmentManagement: false, advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
     },
     {
         id: 'DEF-b0000002-0002-4000-8000-000000000002', uuid: 'b0000002-0002-4000-8000-000000000002',
@@ -116,7 +120,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'yayoi', taxFilingType: 'blue', consumptionTaxMode: 'simplified',
         simplifiedTaxCategory: 3, taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'accounts_payable',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T9876543210987',
-        hasDepartmentManagement: true, advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 150000, taxFilingFee: 80000,
+        hasDepartmentManagement: true, hasRentalIncome: false,
+        advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 150000, taxFilingFee: 80000,
     },
     {
         id: 'GHI-c0000003-0003-4000-8000-000000000003', uuid: 'c0000003-0003-4000-8000-000000000003',
@@ -128,7 +133,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'freee', taxFilingType: 'blue', consumptionTaxMode: 'exempt',
         taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
         isInvoiceRegistered: false, invoiceRegistrationNumber: '',
-        hasDepartmentManagement: false, advisoryFee: 20000, bookkeepingFee: 10000, settlementFee: 80000, taxFilingFee: 0,
+        hasDepartmentManagement: false, hasRentalIncome: true,
+        advisoryFee: 20000, bookkeepingFee: 10000, settlementFee: 80000, taxFilingFee: 0,
     },
     {
         id: 'JKL-d0000004-0004-4000-8000-000000000004', uuid: 'd0000004-0004-4000-8000-000000000004',
@@ -140,7 +146,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'tkc', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T5555666677778',
-        hasDepartmentManagement: true, advisoryFee: 80000, bookkeepingFee: 50000, settlementFee: 300000, taxFilingFee: 150000,
+        hasDepartmentManagement: true, hasRentalIncome: false,
+        advisoryFee: 80000, bookkeepingFee: 50000, settlementFee: 300000, taxFilingFee: 150000,
     },
     {
         id: 'MNO-e0000005-0005-4000-8000-000000000005', uuid: 'e0000005-0005-4000-8000-000000000005',
@@ -152,7 +159,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T7777888899990',
-        hasDepartmentManagement: false, advisoryFee: 35000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 35000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
     },
     // --- 以下: 進捗管理用に追加した顧問先（固定UUID） ---
     {
@@ -165,7 +173,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T2222333344440',
-        hasDepartmentManagement: false, advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 150000, taxFilingFee: 80000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 150000, taxFilingFee: 80000,
     },
     {
         id: 'AMT-f0000002-0002-4000-8000-000000000002', uuid: 'f0000002-0002-4000-8000-000000000002',
@@ -177,7 +186,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'freee', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T4444555566660',
-        hasDepartmentManagement: false, advisoryFee: 30000, bookkeepingFee: 15000, settlementFee: 120000, taxFilingFee: 60000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 30000, bookkeepingFee: 15000, settlementFee: 120000, taxFilingFee: 60000,
     },
     {
         id: 'ANE-f0000003-0003-4000-8000-000000000003', uuid: 'f0000003-0003-4000-8000-000000000003',
@@ -189,7 +199,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'yayoi', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'accounts_payable',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T6666777788880',
-        hasDepartmentManagement: true, advisoryFee: 60000, bookkeepingFee: 40000, settlementFee: 250000, taxFilingFee: 120000,
+        hasDepartmentManagement: true, hasRentalIncome: false,
+        advisoryFee: 60000, bookkeepingFee: 40000, settlementFee: 250000, taxFilingFee: 120000,
     },
     {
         id: 'ORD-f0000004-0004-4000-8000-000000000004', uuid: 'f0000004-0004-4000-8000-000000000004',
@@ -201,7 +212,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'simplified',
         simplifiedTaxCategory: 4, taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
         isInvoiceRegistered: false, invoiceRegistrationNumber: '',
-        hasDepartmentManagement: false, advisoryFee: 15000, bookkeepingFee: 10000, settlementFee: 60000, taxFilingFee: 0,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 15000, bookkeepingFee: 10000, settlementFee: 60000, taxFilingFee: 0,
     },
     {
         id: 'EDL-f0000005-0005-4000-8000-000000000005', uuid: 'f0000005-0005-4000-8000-000000000005',
@@ -213,7 +225,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T8888999900001',
-        hasDepartmentManagement: false, advisoryFee: 45000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 45000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
     },
     {
         id: 'FPC-f0000006-0006-4000-8000-000000000006', uuid: 'f0000006-0006-4000-8000-000000000006',
@@ -225,7 +238,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'freee', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T1111000011110',
-        hasDepartmentManagement: false, advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
     },
     {
         id: 'GAC-f0000007-0007-4000-8000-000000000007', uuid: 'f0000007-0007-4000-8000-000000000007',
@@ -237,7 +251,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'yayoi', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T2222333300001',
-        hasDepartmentManagement: false, advisoryFee: 35000, bookkeepingFee: 20000, settlementFee: 140000, taxFilingFee: 70000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 35000, bookkeepingFee: 20000, settlementFee: 140000, taxFilingFee: 70000,
     },
     {
         id: 'HIR-f0000008-0008-4000-8000-000000000008', uuid: 'f0000008-0008-4000-8000-000000000008',
@@ -249,7 +264,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'mf', taxFilingType: 'white', consumptionTaxMode: 'exempt',
         taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
         isInvoiceRegistered: false, invoiceRegistrationNumber: '',
-        hasDepartmentManagement: false, advisoryFee: 10000, bookkeepingFee: 5000, settlementFee: 50000, taxFilingFee: 0,
+        hasDepartmentManagement: false, hasRentalIncome: true,
+        advisoryFee: 10000, bookkeepingFee: 5000, settlementFee: 50000, taxFilingFee: 0,
     },
     {
         id: 'KFP-f0000009-0009-4000-8000-000000000009', uuid: 'f0000009-0009-4000-8000-000000000009',
@@ -261,7 +277,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'tkc', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T7777000088880',
-        hasDepartmentManagement: true, advisoryFee: 70000, bookkeepingFee: 40000, settlementFee: 280000, taxFilingFee: 140000,
+        hasDepartmentManagement: true, hasRentalIncome: false,
+        advisoryFee: 70000, bookkeepingFee: 40000, settlementFee: 280000, taxFilingFee: 140000,
     },
     {
         id: 'KHK-f0000010-0010-4000-8000-000000000010', uuid: 'f0000010-0010-4000-8000-000000000010',
@@ -273,7 +290,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'yayoi', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'accounts_payable',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T3333444455550',
-        hasDepartmentManagement: true, advisoryFee: 55000, bookkeepingFee: 35000, settlementFee: 220000, taxFilingFee: 110000,
+        hasDepartmentManagement: true, hasRentalIncome: false,
+        advisoryFee: 55000, bookkeepingFee: 35000, settlementFee: 220000, taxFilingFee: 110000,
     },
     {
         id: 'LDI-f0000011-0011-4000-8000-000000000011', uuid: 'f0000011-0011-4000-8000-000000000011',
@@ -285,7 +303,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T9999000011110',
-        hasDepartmentManagement: false, advisoryFee: 45000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 45000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
     },
     {
         id: 'LIG-f0000012-0012-4000-8000-000000000012', uuid: 'f0000012-0012-4000-8000-000000000012',
@@ -297,7 +316,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T0000111122220',
-        hasDepartmentManagement: false, advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 160000, taxFilingFee: 80000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 160000, taxFilingFee: 80000,
     },
     {
         id: 'MHL-f0000013-0013-4000-8000-000000000013', uuid: 'f0000013-0013-4000-8000-000000000013',
@@ -309,7 +329,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'tkc', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T1111222233330',
-        hasDepartmentManagement: false, advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
     },
     {
         id: 'MUK-f0000014-0014-4000-8000-000000000014', uuid: 'f0000014-0014-4000-8000-000000000014',
@@ -321,7 +342,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'freee', taxFilingType: 'blue', consumptionTaxMode: 'exempt',
         taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
         isInvoiceRegistered: false, invoiceRegistrationNumber: '',
-        hasDepartmentManagement: false, advisoryFee: 15000, bookkeepingFee: 8000, settlementFee: 50000, taxFilingFee: 0,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 15000, bookkeepingFee: 8000, settlementFee: 50000, taxFilingFee: 0,
     },
     {
         id: 'NDF-f0000015-0015-4000-8000-000000000015', uuid: 'f0000015-0015-4000-8000-000000000015',
@@ -333,7 +355,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T5555000066660',
-        hasDepartmentManagement: false, advisoryFee: 45000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 45000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
     },
     {
         id: 'NOV-f0000016-0016-4000-8000-000000000016', uuid: 'f0000016-0016-4000-8000-000000000016',
@@ -345,7 +368,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'freee', taxFilingType: 'blue', consumptionTaxMode: 'simplified',
         simplifiedTaxCategory: 5, taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T8888999900002',
-        hasDepartmentManagement: false, advisoryFee: 30000, bookkeepingFee: 15000, settlementFee: 120000, taxFilingFee: 60000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 30000, bookkeepingFee: 15000, settlementFee: 120000, taxFilingFee: 60000,
     },
     {
         id: 'QRN-f0000017-0017-4000-8000-000000000017', uuid: 'f0000017-0017-4000-8000-000000000017',
@@ -357,7 +381,8 @@ const clients = ref<Client[]>([
         accountingSoftware: 'yayoi', taxFilingType: 'blue', consumptionTaxMode: 'general',
         taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'accounts_payable',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T0000111100002',
-        hasDepartmentManagement: false, advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 150000, taxFilingFee: 80000,
+        hasDepartmentManagement: false, hasRentalIncome: false,
+        advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 150000, taxFilingFee: 80000,
     },
 ]);
 
@@ -369,20 +394,20 @@ export function useClients() {
     const route = useRoute();
 
     /** ルートパスまたはクエリパラメータから現在選択中のクライアントを動的に取得 */
-    const currentClient = computed<{ code: string; name: string } | null>(() => {
+    const currentClient = computed<{ code: string; name: string; uuid: string } | null>(() => {
         const path = route.path;
         // 1. /clients/:clientId/ パターンからclientId抽出（旧ページ互換）
         const match = path.match(/\/clients\/([^/]+)/);
         if (match && match[1]) {
             const clientId = match[1];
             const found = clients.value.find(c => c.clientCode.toLowerCase() === clientId.toLowerCase());
-            if (found) return { code: found.clientCode, name: found.companyName };
+            if (found) return { code: found.clientCode, name: found.companyName, uuid: found.uuid };
         }
         // 2. クエリパラメータ ?client=UUID から取得（進捗管理→仕訳一覧遷移）
         const clientQuery = route.query.client;
         if (clientQuery && typeof clientQuery === 'string') {
             const found = clients.value.find(c => c.uuid === clientQuery);
-            if (found) return { code: found.clientCode, name: found.companyName };
+            if (found) return { code: found.clientCode, name: found.companyName, uuid: found.uuid };
         }
         // 3. 該当なし → null（全体管理エリア: 進捗管理/顧問先管理/スタッフ管理等）
         return null;

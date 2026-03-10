@@ -194,7 +194,9 @@ function downloadCSV() {
  */
 function calculateSummary(results: TestResult[]): TestSummary {
   const times = results.map(r => r.processing_time_ms);
-  const baseJSON = results[0].json_output;
+  const first = results[0];
+  if (!first) return { total_runs: 0, identical_count: 0, time_min: 0, time_avg: 0, time_max: 0, estimated_cost_jpy: 0, variance_report: { vendor_unique: [], date_unique: [], amount_unique: [], category_unique: [] } };
+  const baseJSON = first.json_output;
 
   let identicalCount = 0;
   const vendors = new Set<string>();

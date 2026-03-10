@@ -85,7 +85,7 @@
                     :key="rule.id"
                     :rule="rule"
                     @click="handleEdit(rule)"
-                    @toggle="toggleStatus(rule)"
+                    @toggle="toggleStatus(rule.id)"
                 />
             </div>
         </div>

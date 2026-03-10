@@ -372,6 +372,14 @@
                   <span>部門管理あり</span>
                 </label>
               </div>
+              <!-- 不動産所得あり（個人事業主のみ表示） -->
+              <div v-if="panelForm.type === 'individual'" class="cm-field">
+                <label class="cm-checkbox-label">
+                  <input type="checkbox" v-model="panelForm.hasRentalIncome">
+                  <span>不動産所得あり</span>
+                </label>
+                <span class="cm-hint" style="margin-left: 22px;">有効にすると不動産関連15科目が選択可能になります</span>
+              </div>
             </div>
 
             <!-- 報酬設定セクション -->
@@ -428,7 +436,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import {
   useClients,
   emptyClientForm,
@@ -554,6 +562,13 @@ const editingId = ref<string | null>(null);
 const showIndustryDropdown = ref(false);
 
 const panelForm = reactive<ClientForm>(emptyClientForm());
+
+// B修正: 法人→個人切替時にhasRentalIncomeをリセット
+watch(() => panelForm.type, (newType) => {
+  if (newType === 'corp') {
+    panelForm.hasRentalIncome = false;
+  }
+});
 
 // --- クリック/ダブルクリック競合回避 ---
 let clickTimer: ReturnType<typeof setTimeout> | null = null;

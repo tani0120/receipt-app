@@ -91,7 +91,8 @@
           col.width,
           'p-1 flex items-center justify-center',
           col.type !== 'action' ? 'border-r border-gray-300' : '',
-          col.sortKey ? 'cursor-pointer hover:bg-blue-200' : ''
+          col.sortKey ? 'cursor-pointer hover:bg-blue-200' : '',
+          col.sortKey && sortColumn === col.sortKey ? 'bg-red-100 font-bold' : ''
         ]"
         @click="col.sortKey && sortBy(col.sortKey)"
       >
@@ -165,7 +166,7 @@
 
     <!-- テーブルボディ -->
     <div class="flex-1 overflow-y-scroll">
-      <template v-for="(journal, journalIndex) in journals" :key="journal.id">
+      <template v-for="(journal, journalIndex) in paginatedJournals" :key="journal.id">
         <div v-for="(row, rowIndex) in getCombinedRows(journal)" :key="`${journal.id}-${rowIndex}`"
              :class="[
                'flex text-[10px] border-b border-gray-200',
@@ -346,6 +347,38 @@
 
             </template>
 
+            <!-- account-dropdown型（検索ドロップダウン） -->
+            <template v-else-if="col.type === 'account-dropdown'">
+              <div :class="[col.width, 'p-0.5 relative border-r border-gray-200 text-[10px]']">
+                <div class="relative w-full">
+                  <input
+                    type="text"
+                    class="w-full h-full text-[9px] bg-white border border-gray-300 rounded outline-none cursor-pointer truncate hover:bg-gray-50 pl-0.5 pr-3"
+                    :value="searchDropdownId === `${journal.id}-${rowIndex}-${col.key}` ? searchDropdownQuery : (getRawValue(row, col.key) ?? '')"
+                    :placeholder="(getRawValue(row, col.key) as string) || '--'"
+                    @focus="openSearchDropdown(`${journal.id}-${rowIndex}-${col.key}`, (getRawValue(row, col.key) as string) ?? '', row, col.key)"
+                    @input="searchDropdownQuery = ($event.target as HTMLInputElement).value"
+                    @blur="closeSearchDropdownDelay()"
+                  />
+                  <span class="absolute right-0.5 top-1/2 -translate-y-1/2 text-[7px] text-gray-500 pointer-events-none">▼</span>
+                </div>
+                <div v-if="searchDropdownId === `${journal.id}-${rowIndex}-${col.key}`"
+                     class="absolute left-0 top-full z-50 bg-white border border-gray-300 shadow-lg rounded max-h-40 overflow-y-auto w-48">
+                  <div v-for="acc in searchAllAccounts" :key="acc.id"
+                       :class="[
+                         'px-2 py-0.5 text-[9px] truncate',
+                         acc.selectable ? 'hover:bg-blue-100 cursor-pointer text-gray-800' : 'text-gray-300 cursor-not-allowed'
+                       ]"
+                       @mousedown.prevent="acc.selectable && selectAccount(row, col.key, acc.name)">
+                    {{ acc.name }}
+                  </div>
+                  <div v-if="searchAllAccounts.length === 0" class="px-2 py-1 text-[9px] text-gray-400">該当なし</div>
+                </div>
+              </div>
+            </template>
+
+
+
             <!-- text型 -->
             <template v-else-if="col.type === 'text'">
               <!-- journal-level（keyにドットなし）: rowIndex===0のみ表示 -->
@@ -474,9 +507,22 @@
       </template>
     </div>
 
-    <!-- フッター -->
-    <div class="bg-gray-100 text-[9px] text-center py-1 border-t text-gray-600">
-      1-30 / 150件 > >|
+    <!-- フッター: ページネーション -->
+    <div class="bg-gray-100 text-[10px] py-1.5 px-3 border-t text-gray-700 flex items-center justify-center gap-2">
+      <button @click="journalCurrentPage > 1 && (journalCurrentPage--)" :disabled="journalCurrentPage <= 1" class="px-1.5 py-0.5 rounded border border-gray-300 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed">&lt;</button>
+      <template v-for="p in journalTotalPages" :key="p">
+        <button @click="journalCurrentPage = p"
+                :class="['px-2 py-0.5 rounded border', p === journalCurrentPage ? 'bg-blue-600 text-white border-blue-600 font-bold' : 'border-gray-300 hover:bg-white']">
+          {{ p }}
+        </button>
+      </template>
+      <button @click="journalCurrentPage < journalTotalPages && (journalCurrentPage++)" :disabled="journalCurrentPage >= journalTotalPages" class="px-1.5 py-0.5 rounded border border-gray-300 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed">&gt;</button>
+      <span class="ml-2 text-gray-500">{{ journalPageStart }}〜{{ journalPageEnd }} / 全{{ journalTotalCount }}件</span>
+      <select v-model="journalPageSize" class="ml-2 border border-gray-300 rounded text-[10px] px-1 py-0.5 cursor-pointer">
+        <option :value="30">30件</option>
+        <option :value="50">50件</option>
+        <option :value="100">100件</option>
+      </select>
     </div>
 
     <!-- 画像モーダル -->
@@ -857,6 +903,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
+import { ACCOUNT_MASTER } from '@/shared/data/account-master';
+import { useClients } from '@/features/client-management/composables/useClients';
 import { NULL_DISPLAY_UNKNOWN, compareWithNull } from '@/mocks/definitions/field-nullable-spec';
 import { useDraggable } from '@/mocks/composables/useDraggable';
 import { useCurrentUser, STAFF_LIST } from '@/mocks/composables/useCurrentUser';
@@ -872,6 +920,126 @@ import type { StaffNoteKey } from '../types/staff_notes';
 const localJournals = ref<JournalPhase5Mock[]>(
   JSON.parse(JSON.stringify(fixtureData))
 );
+
+// ────── 顧問先連動（勘定科目・税区分フィルタ） ──────
+const { clients, currentClient } = useClients();
+
+/** 選択中の顧問先の完全なClientオブジェクト */
+const activeClientFull = computed(() => {
+  if (!currentClient.value) return null;
+  return clients.value.find(c => c.uuid === currentClient.value!.uuid) ?? null;
+});
+
+/** 顧問先のtype/hasRentalIncomeでフィルタ済み勘定科目リスト */
+const filteredAccounts = computed(() => {
+  const client = activeClientFull.value;
+  const clientType = client?.type ?? 'corp';
+  const hasRental = client?.hasRentalIncome ?? false;
+
+  return ACCOUNT_MASTER
+    .filter(acc => {
+      // deprecated・無効は除外
+      if (acc.deprecated) return false;
+      // targetフィルタ
+      if (acc.target === 'both') return true;
+      if (acc.target === clientType) {
+        // 個人事業主で不動産所得なしの場合、不動産カテゴリを除外
+        if (clientType === 'individual' && !hasRental && acc.category.includes('不動産')) return false;
+        return true;
+      }
+      return false;
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+});
+
+
+/** ドットパスで生値を取得（税区分名称変換なし） */
+function getRawValue(obj: any, path: string): unknown {
+  return path.split('.').reduce((o: any, key: string) => o?.[key], obj);
+}
+
+// ────── 検索ドロップダウン状態管理 ──────
+const searchDropdownId = ref<string | null>(null);
+const searchDropdownQuery = ref('');
+const searchDropdownPrevValue = ref('');  // K: ブラー時の復元用
+let searchDropdownTimer: ReturnType<typeof setTimeout> | null = null;
+let searchDropdownTargetRow: any = null;  // K: 復元先のrowオブジェクト
+let searchDropdownTargetColKey: string = '';  // K: 復元先のcolKey
+
+/** 検索クエリでフィルタ済み勘定科目（searchAllAccountsで全件表示に移行済みだが互換性保持） */
+
+/** J: ACCOUNT_MASTER全件を検索フィルタし、selectableフラグ付きで返す */
+const searchAllAccounts = computed(() => {
+  const q = searchDropdownQuery.value.toLowerCase();
+  const selectableNames = new Set(filteredAccounts.value.map(a => a.name));
+  return ACCOUNT_MASTER
+    .filter(acc => !acc.deprecated)
+    .filter(acc => !q || acc.name.toLowerCase().includes(q))
+    .sort((a, b) => {
+      // 選択可能なものを先頭に
+      const aS = selectableNames.has(a.name) ? 0 : 1;
+      const bS = selectableNames.has(b.name) ? 0 : 1;
+      if (aS !== bS) return aS - bS;
+      return a.sortOrder - b.sortOrder;
+    })
+    .map(acc => ({ ...acc, selectable: selectableNames.has(acc.name) }));
+});
+
+
+function openSearchDropdown(id: string, _currentValue: string, row?: any, colKey?: string) {
+  searchDropdownId.value = id;
+  searchDropdownQuery.value = '';
+  searchDropdownPrevValue.value = _currentValue;  // K: 直前値保存
+  searchDropdownTargetRow = row ?? null;  // K: 復元先のrow
+  searchDropdownTargetColKey = colKey ?? '';  // K: 復元先のcolKey
+  if (searchDropdownTimer) { clearTimeout(searchDropdownTimer); searchDropdownTimer = null; }
+}
+
+/** K: blur時に入力値が有効な科目名でなければ直前値を復元 */
+function closeSearchDropdownDelay() {
+  searchDropdownTimer = setTimeout(() => {
+    // 復元判定: 入力値がfilteredAccountsに含まれない場合
+    if (searchDropdownTargetRow && searchDropdownTargetColKey) {
+      const side = searchDropdownTargetColKey.startsWith('debit') ? 'debit' : 'credit';
+      const entry = searchDropdownTargetRow[side];
+      if (entry) {
+        const currentVal = entry.account;
+        const isValid = filteredAccounts.value.some(a => a.name === currentVal);
+        if (!isValid) {
+          entry.account = searchDropdownPrevValue.value || null;
+        }
+      }
+    }
+    searchDropdownId.value = null;
+    searchDropdownQuery.value = '';
+    searchDropdownTargetRow = null;
+    searchDropdownTargetColKey = '';
+  }, 200);
+}
+
+/** 勘定科目選択: 科目名をセットし、デフォルト税区分を自動設定 */
+function selectAccount(row: any, colKey: string, accountName: string) {
+  const side = colKey.startsWith('debit') ? 'debit' : 'credit';
+  const entry = row[side];
+  if (!entry) return;
+
+  entry.account = accountName || null;
+
+  // デフォルト税区分を自動設定（MF名称で格納）
+  if (accountName) {
+    const acc = ACCOUNT_MASTER.find(a => a.name === accountName);
+    if (acc?.defaultTaxCategoryId) {
+      const tc = TAX_CATEGORY_MASTER.find(t => t.id === acc.defaultTaxCategoryId);
+      entry.tax_category_id = tc ? tc.name : acc.defaultTaxCategoryId;
+    }
+  }
+
+  searchDropdownId.value = null;
+  searchDropdownQuery.value = '';
+  searchDropdownTargetRow = null;
+  searchDropdownTargetColKey = '';
+}
+
 
 // フィルタリング状態（チェックボックス）
 const showUnexported = ref<boolean>(true);   // 未出力を表示（初期: ON）
@@ -1353,6 +1521,17 @@ function showBulkTrashDialog() {
 const sortColumn = ref<string | null>(null);
 const sortDirection = ref<'asc' | 'desc'>('asc');
 
+// ────── メイン仕訳ページネーション ──────
+const journalPageSize = ref(30);
+const journalCurrentPage = ref(1);
+const journalTotalCount = computed(() => journals.value.length);
+const journalTotalPages = computed(() => Math.max(1, Math.ceil(journalTotalCount.value / journalPageSize.value)));
+const journalPageStart = computed(() => (journalCurrentPage.value - 1) * journalPageSize.value + 1);
+const journalPageEnd = computed(() => Math.min(journalCurrentPage.value * journalPageSize.value, journalTotalCount.value));
+
+// ページサイズ変更時にページをリセット
+watch(journalPageSize, () => { journalCurrentPage.value = 1; });
+
 // 画像モーダル用
 const hoveredJournalId = ref<string | null>(null);
 const modalImageUrl = ref<string | null>(null);
@@ -1765,6 +1944,12 @@ const journals = computed(() => {
 });
 
 // ────── journals依存のcomputed（journals computedの後に配置必須） ──────
+
+/** ページネーション適用済み仕訳リスト */
+const paginatedJournals = computed(() => {
+  const start = (journalCurrentPage.value - 1) * journalPageSize.value;
+  return journals.value.slice(start, start + journalPageSize.value);
+});
 
 const visibleIds = computed(() => journals.value.map(j => j.id));
 

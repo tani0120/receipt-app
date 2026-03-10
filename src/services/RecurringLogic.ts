@@ -14,7 +14,6 @@ export function analyzeRecurringTransactions(
     _currentMonth: number
 ): DetectionAlert[] {
     const alerts: DetectionAlert[] = [];
-    const _missingCandidates: string[] = [];
 
     // 1. Identify Recurring Accounts from History
     // Logic: Look for accounts that have activity (non-zero change) in almost every month (e.g., > 80% of months or last 3 consecutive months)

@@ -180,7 +180,8 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: '/master',
-    redirect: '/master/accounts'
+    name: 'MasterHub',
+    component: () => import('@/mocks/views/MockMasterHubPage.vue')
   },
   {
     path: '/master/accounts',

@@ -154,6 +154,16 @@
 
 ---
 
+## 🟢 B-15: schema_keys.ts A2 #5リネーム不完全
+
+- **ファイル**: [schema_keys.ts](file:///C:/dev/receipt-app/src/types/schema_keys.ts)
+- **問題**: 11_remaining_issues A2 #5で`ReceiptSchema`→`DocumentSchema`リネーム指示があったが、参照先の`zod_schema.ts`に`DocumentSchema`が未定義。importが壊れている
+- **外部参照**: ゼロ（grep確認済み。どのファイルもschema_keys.tsをimportしていない）
+- **影響**: 未使用ファイルのためランタイム影響なし
+- **解決策**: Phase B以降でファイルが必要になった時点で`DocumentSchema`をzod_schema.tsに追加、または不要であればファイル削除
+
+---
+
 ## チェックリスト
 
 - [ ] B-1: handwritten_flag精度計測（Run B後）
@@ -170,3 +180,4 @@
 - [ ] B-12: 計画的TODO対処（4件）
 - [ ] B-13: syncLabelsFromStaffNotes()廃止
 - [ ] B-14: fixture labels汚染データ除去
+- [ ] B-15: schema_keys.ts A2 #5リネーム不完全（未使用ファイル）
