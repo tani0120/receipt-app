@@ -1,6 +1,6 @@
 # ✅ 残存修正項目一覧（2026-03-07）【全件完了】
 
-> **最終結果（2026-03-07 22:18）**: 全修正項目完了。ESLint **0件**、vue-tsc **0エラー**。
+> **最終結果（2026-03-12 00:30）**: §A-§L全件完了 + §M（2026-03-11スキーマ同期）全件完了。
 > 残存2件（J1: ScreenE旧モック再設計待ち、J7: 設計上のprivateフィールド）は対応不要として§Lに記録。
 
 > ~~本日中に全件修正する前提で、優先度・リスク・修正時期を整理。~~
@@ -561,6 +561,63 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 | J1 | `src/views/ScreenE_Workbench.vue` | テンプレートと`JournalEntryUi`型の全面不整合（`evidenceUrl`, `transactionDate`, `vendorName`, `tNumber`, `drAccount`, `crAccount`等 20箇所超） | 旧UIモック。Screen E全面再設計時に対応 |
 | J7 | `src/api/lib/ai/strategies/VertexAIStrategy.ts` L7 | `private location`が宣言後未読み取り | 設計上のprivateフィールド（コンストラクタで代入。将来API呼出しで使用予定）。削除は不適切 |
 
+---
 
+## M. スキーマ同期修正（2026-03-11/12追記）
 
+> migration.sql全面更新に伴い、TypeScript型定義・モックデータ・設計書を新スキーマに同期。
+> コミット: `5a8a9ff`, `7055d91`
 
+### M-1. migration.sql修正（9件）
+
+| # | 修正内容 | 状態 |
+|---|---------|:----:|
+| 1 | テーブル作成順序修正（documents→journals参照整合性） | ✅ |
+| 2 | SEQUENCE定義15個追加（接頭辞+連番ID用） | ✅ |
+| 3 | FOREIGN KEY TODOコメント3件追加（users, journal_rules未定義分） | ✅ |
+| 4 | RLSポリシー修正（auth.uid()::uuid→current_setting） | ✅ |
+| 5 | vendorsテーブルへのupdated_atトリガー追加 | ✅ |
+| 6 | labels数21→22種類に修正 | ✅ |
+| 7 | Phase 5ヘッダー・コメント復元 | ✅ |
+| 8 | セクション区切り線3箇所復活 | ✅ |
+| 9 | インデックスカウント更新（20個） | ✅ |
+
+### M-2. 設計書修正（3件）
+
+| # | 修正内容 | 状態 |
+|---|---------|:----:|
+| 1 | `document_id`型 VARCHAR(30)→VARCHAR(20)に統一 | ✅ |
+| 2 | §6セクション構成にSEQUENCE定義（1.5）追記 | ✅ |
+| 3 | §6を証票系→仕訳系の順序に修正 | ✅ |
+
+### M-3. TypeScript型定義修正（8件）
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `journal_phase5_mock.type.ts` | IDコメント修正 + ラベル数22 + 8カラム追加 | ✅ |
+| 2 | `transformToJournalMock.ts` | `receipt_id`→`document_id`, `tax_category`→`tax_category_id` | ✅ |
+| 3 | `transformToJournalMock.ts` | `date_on_document`, `account_on_document`, `amount_on_document`追加 | ✅ |
+| 4 | `transformToJournalMock.ts` | `crypto.randomUUID()`→`generateJournalId()`（jrn-連番） | ✅ |
+
+### M-4. モックデータ・Document型（3件）
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `journal_test_fixture_30cases.ts` | ID `j001`~`j035`→`jrn-00000001`~`jrn-00000035` | ✅ |
+| 2 | `document_mock.type.ts` | 5→17カラムに拡張 | ✅ |
+| 3 | `document_line_mock.type.ts` | **新規作成**（12カラム） | ✅ |
+
+### M-5. スタッフID形式統一（2件）
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `useStaff.ts` | UUID→`staff-0001`連番形式 | ✅ |
+| 2 | `MockMasterStaffPage.vue` | UUID列→「内部ID」列 | ✅ |
+
+### M-6. 未修正（スコープ外）
+
+| # | ファイル | 問題 | 対応方針 |
+|---|---------|------|---------|
+| 1 | `GeminiVisionService.ts` L126,139 | `crypto.randomUUID()`残存（Phase 1旧型体系） | Phase C廃止時に対応 |
+| 2 | Firebase | `localhost:5175`許可ドメイン未設定 | Firebaseコンソールで手動設定 |
+| 3 | `JournalEntrySchema.ts` | `receipt_id`残存（§A3 #15、DB連動FK） | Supabase移行時に変更 |
