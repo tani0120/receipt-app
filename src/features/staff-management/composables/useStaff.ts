@@ -33,10 +33,13 @@ export interface StaffForm {
 // ヘルパー関数
 // =============================================
 
-/** UUID自動発番 */
+/** スタッフ内部ID連番カウンター（物理削除なし前提、増加のみ） */
+let _staffIdCounter = 0
+
+/** スタッフ内部ID自動発番（staff-0001形式） */
 export function generateStaffUuid(): string {
-    const seg = () => Math.random().toString(36).substring(2, 6)
-    return `STF-${seg()}-${seg()}-${seg()}`
+    _staffIdCounter++
+    return `staff-${String(_staffIdCounter).padStart(4, '0')}`
 }
 
 /** 空のフォームを生成 */
@@ -57,27 +60,30 @@ export function emptyStaffForm(): StaffForm {
 
 const staffList = ref<Staff[]>([
     {
-        uuid: generateStaffUuid(),
+        uuid: 'staff-0001',
         name: '田中 太郎',
         email: 'tanaka@sugu-suru.com',
         role: 'admin',
         status: 'active',
     },
     {
-        uuid: generateStaffUuid(),
+        uuid: 'staff-0002',
         name: '佐藤 花子',
         email: 'sato@sugu-suru.com',
         role: 'general',
         status: 'active',
     },
     {
-        uuid: generateStaffUuid(),
+        uuid: 'staff-0003',
         name: '鈴木 一郎',
         email: 'suzuki@sugu-suru.com',
         role: 'general',
         status: 'inactive',
     },
 ])
+
+// 初期データ分のカウンターを設定
+_staffIdCounter = 3
 
 // =============================================
 // Composable

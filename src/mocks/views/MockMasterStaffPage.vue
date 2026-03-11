@@ -32,15 +32,18 @@
           <table class="cm-table">
             <colgroup>
               <col style="width: 80px;">
+              <col style="width: 160px;">
               <col style="width: 80px;">
               <col style="width: 25%;">
               <col style="width: 30%;">
-              <col style="width: auto;">
             </colgroup>
             <thead>
               <tr>
                 <th class="sortable" @click="sortBy('status')">
                   ステータス <i :class="getSortIcon('status')"></i>
+                </th>
+                <th class="sortable" @click="sortBy('uuid')">
+                  内部ID <i :class="getSortIcon('uuid')"></i>
                 </th>
                 <th class="sortable" @click="sortBy('role')">
                   権限 <i :class="getSortIcon('role')"></i>
@@ -51,7 +54,6 @@
                 <th class="sortable" @click="sortBy('email')">
                   メールアドレス <i :class="getSortIcon('email')"></i>
                 </th>
-                <th>UUID</th>
               </tr>
             </thead>
             <tbody>
@@ -71,6 +73,7 @@
                     {{ row.status === 'active' ? '有効' : '停止中' }}
                   </span>
                 </td>
+                <td class="cm-uuid">{{ row.uuid }}</td>
                 <!-- 権限: select -->
                 <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'role', $event)">
                   <select v-if="inlineEditId === row.uuid && inlineEditField === 'role'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit" @keydown.escape="cancelInlineEdit" @click.stop>
@@ -89,7 +92,6 @@
                   <input v-if="inlineEditId === row.uuid && inlineEditField === 'email'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit" @keydown.enter="commitInlineEdit" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.email }}</span>
                 </td>
-                <td class="cm-uuid">{{ row.uuid }}</td>
               </tr>
               <tr v-if="pagedRows.length === 0">
                 <td colspan="5" class="cm-empty">該当するスタッフがいません</td>
