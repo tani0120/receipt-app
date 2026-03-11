@@ -37,7 +37,7 @@
         <thead>
           <tr>
             <th class="sortable" @click="sortBy('status')">ステータス <i :class="getSortIcon('status')"></i></th>
-            <th class="sortable" @click="sortBy('clientCode')">コード <i :class="getSortIcon('clientCode')"></i></th>
+            <th class="sortable" @click="sortBy('threeCode')">3コード <i :class="getSortIcon('threeCode')"></i></th>
             <th class="sortable" @click="sortBy('type')">種別 <i :class="getSortIcon('type')"></i></th>
             <th class="sortable" @click="sortBy('companyName')">会社名 <i :class="getSortIcon('companyName')"></i></th>
             <th class="sortable" @click="sortBy('staffName')">担当者 <i :class="getSortIcon('staffName')"></i></th>
@@ -51,7 +51,7 @@
         <tbody>
           <tr
             v-for="row in pagedRows"
-            :key="row.id"
+            :key="row.clientId"
             :class="{ 'row-inactive': row.status === 'inactive', 'row-suspension': row.status === 'suspension' }"
             class="cl-row"
             @click="goToSettings(row)"
@@ -61,7 +61,7 @@
                 {{ row.status === 'active' ? '稼働中' : row.status === 'suspension' ? '休眠中' : '契約終了' }}
               </span>
             </td>
-            <td class="cl-code">{{ row.clientCode }}</td>
+            <td class="cl-code">{{ row.threeCode }}</td>
             <td>{{ row.type === 'corp' ? '法人' : '個人' }}</td>
             <td class="cl-company-name">{{ row.companyName }}</td>
             <td>{{ row.staffName || '—' }}</td>
@@ -145,7 +145,7 @@ const filteredRows = computed(() => {
     const q = searchQuery.value.trim().toLowerCase();
     rows = rows.filter(c =>
       c.companyName.toLowerCase().includes(q) ||
-      c.clientCode.toLowerCase().includes(q)
+      c.threeCode.toLowerCase().includes(q)
     );
   }
   rows.sort((a, b) => {
@@ -174,7 +174,7 @@ const softwareLabel = (s: string) => {
 
 // --- 行クリックで進捗詳細ページへ遷移 ---
 const goToSettings = (row: Client) => {
-  const code = row.clientCode.toLowerCase();
+  const code = row.threeCode.toLowerCase();
   router.push(`/progress/${code}`);
 };
 </script>

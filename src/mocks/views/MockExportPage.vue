@@ -3,7 +3,7 @@
     <!-- アクションボタン -->
     <div class="bg-white px-3 py-1.5 flex items-center gap-3 border-b border-gray-300">
       <button class="px-4 py-1 bg-blue-600 text-white rounded text-[10px] font-semibold hover:bg-blue-700" @click="showDownloadModal = true">CSV形式でダウンロード</button>
-      <router-link :to="'/mock/export-history?client=' + ($route.query.client ?? '')" class="px-4 py-1 border border-gray-300 rounded text-[10px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 no-underline">ダウンロード履歴</router-link>
+      <router-link :to="'/export-history/' + ($route.params.clientId ?? 'ABC-00001')" class="px-4 py-1 border border-gray-300 rounded text-[10px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 no-underline">ダウンロード履歴</router-link>
     </div>
 
     <!-- 出力形式行 + ダウンロードファイル名 -->
@@ -248,7 +248,7 @@ const allRows = computed<ExportRow[]>(() => {
       return {
         id: j.id,
         qualified: j.invoice_status === 'qualified' ? '○' : '',
-        date: formatDate(j.transaction_date),
+        date: formatDate(j.transaction_date ?? ''),
         description: j.description,
         debitAccount: debit?.account ?? '',
         debitSub: debit?.sub_account ?? '',

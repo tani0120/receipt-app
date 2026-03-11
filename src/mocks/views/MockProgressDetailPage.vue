@@ -73,7 +73,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in pagedRows" :key="row.id" class="pg-row" :class="{ 'pg-row-inactive': row.status === 'inactive', 'pg-row-suspension': row.status === 'suspension' }" @click="goToJournalList(row)" style="cursor: pointer;">
+          <tr v-for="row in pagedRows" :key="row.clientId" class="pg-row" :class="{ 'pg-row-inactive': row.status === 'inactive', 'pg-row-suspension': row.status === 'suspension' }" @click="goToJournalList(row)" style="cursor: pointer;">
             <td class="pg-td-status">
               <span class="pg-status-badge" :class="{
                 'pg-status-active': row.status === 'active',
@@ -234,8 +234,8 @@ const refreshData = () => {
 };
 
 // --- 行クリック: 仕訳一覧へ遷移 ---
-function goToJournalList(row: { uuid: string }) {
-  router.push({ path: '/mock/journal-list', query: { client: row.uuid } });
+function goToJournalList(row: { clientId: string }) {
+  router.push(`/journal-list/${row.clientId}`);
 }
 </script>
 

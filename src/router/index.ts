@@ -23,61 +23,67 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: '/legacy',
-    redirect: '/clients/demo/journals'
+    redirect: '/old/journals/demo'
   },
-  // --- 旧パス互換リダイレクト（App.vue, AaaLayout.vue等から参照） ---
-  // Phase B で旧レイアウト廃止後に削除する
-  { path: '/journal-status', redirect: '/clients/demo/journals' },
-  { path: '/collection-status', redirect: '/clients/demo/collection' },
-  { path: '/collection-status/:code', redirect: '/clients/demo/collection' },
-  { path: '/ai-rules', redirect: '/clients/demo/ai-rules' },
-  { path: '/data-conversion', redirect: '/clients/demo/data-conversion' },
-  { path: '/task-dashboard', redirect: '/clients/demo/tasks' },
-  { path: '/admin-settings', redirect: '/settings/admin' },
-  { path: '/settings', redirect: '/clients/demo/settings' },
-  { path: '/journal-list', redirect: '/clients/demo/journals' },
+  // --- 旧パス互換リダイレクト → /old/ 配下に統一 ---
+  // Phase B で旧レイアウト廃止後に一括削除する
+  { path: '/journal-status', redirect: '/old/journals/demo' },
+  { path: '/collection-status', redirect: '/old/collection/demo' },
+  { path: '/collection-status/:code', redirect: '/old/collection/demo' },
+  { path: '/ai-rules', redirect: '/old/ai-rules/demo' },
+  { path: '/data-conversion', redirect: '/old/data-conversion/demo' },
+  { path: '/task-dashboard', redirect: '/old/tasks/demo' },
+  { path: '/admin-settings', redirect: '/old/admin' },
+  { path: '/settings', redirect: '/settings/ABC-00001' },
+  { path: '/settings/accounts', redirect: '/accounts/ABC-00001' },
+  { path: '/journal-list', redirect: '/old/journals/demo' },
   {
-    path: '/screen_b_mock',
+    path: '/old/screen-b-mock',
     name: 'ScreenB_Restore_Mock',
     component: ScreenB_Restore_Mock
   },
-  // 旧Screen Aは廃止。新構造: /master/clients（一覧）および /clients/:clientId/settings（個別）に統合。
+  // 旧Screen Aは廃止。新構造: /master/clients（一覧）および /settings/:clientId（個別）に統合。
   {
     path: '/clients',
     redirect: '/master/clients'
   },
+  // 旧URL互換: /clients/:clientId/settings → /settings/:clientIdリダイレクト
   {
     path: '/clients/:clientId/settings',
+    redirect: (to) => `/settings/${to.params.clientId}`
+  },
+  {
+    path: '/settings/:clientId',
     name: 'ClientSettings',
     component: () => import('../mocks/views/MockSettingsPage.vue'),
     props: true
   },
   {
-    path: '/clients/:clientId/journals',
+    path: '/old/journals/:clientId',
     name: 'ClientJournals',
     component: () => import('../views/ScreenB_JournalStatus.vue'),
     props: true
   },
   {
-    path: '/clients/:clientId/jobs/:jobId',
+    path: '/old/jobs/:clientId/:jobId',
     name: 'ClientJob',
     component: () => import('../views/ScreenB_JournalStatus.vue'),
     props: true
   },
   {
-    path: '/clients/:clientId/collection',
+    path: '/old/collection/:clientId',
     name: 'ClientCollection',
     component: () => import('../components/ScreenC_CollectionStatus.vue'),
     props: true
   },
   {
-    path: '/clients/:clientId/ai-rules',
+    path: '/old/ai-rules/:clientId',
     name: 'ClientAIRules',
     component: () => import('@/views/ScreenD_AIRules.vue'),
     props: true
   },
   {
-    path: '/journal-entry/:jobId',
+    path: '/old/journal-entry/:jobId',
     name: 'ScreenE',
     component: () => import('../components/ScreenE_JournalEntry.vue'),
     props: true
@@ -85,23 +91,23 @@ export const routes: RouteRecordRaw[] = [
 
 
   {
-    path: '/settings/accounts',
+    path: '/old/settings-accounts',
     name: 'AccountSettings',
     component: () => import('../views/ScreenS_AccountSettings.vue')
   },
   {
-    path: '/settings/admin',
+    path: '/old/admin',
     name: 'AdminSettings',
     component: () => import('../views/ScreenZ_AdminSettings.vue')
   },
   {
-    path: '/clients/:clientId/data-conversion',
+    path: '/old/data-conversion/:clientId',
     name: 'ClientDataConversion',
     component: () => import('@/views/ScreenG_DataConversion.vue'),
     props: true
   },
   {
-    path: '/clients/:clientId/tasks',
+    path: '/old/tasks/:clientId',
     name: 'ClientTasks',
     component: () => import('@/views/ScreenH_TaskDashboard.vue'),
     props: true
@@ -126,82 +132,106 @@ export const routes: RouteRecordRaw[] = [
 
   // --- 証票詳細（receipt → document に統一済み） ---
   {
-    path: '/clients/:clientId/documents/:documentId',
+    path: '/old/documents/:clientId/:documentId',
     name: 'ClientDocument',
     component: () => import('@/views/DocumentDetail.vue'),
     props: true,
     meta: { requiresAuth: true }
   },
   // 旧パス互換（Phase Bで削除）
-  { path: '/receipts/:id', redirect: '/clients/demo/documents/:id' },
-  // Phase 5 Mock
+  { path: '/receipts/:id', redirect: '/old/documents/demo/:id' },
+  // /journal-list ルート定義は削除（L38のリダイレクトで /old/journals/demo に転送済み）
+  // --- 顧問先個別ページ（/xxx/:clientId パターンB） ---
   {
-    path: '/journal-list',
-    name: 'JournalListMock',
-    component: () => import('@/mocks/components/JournalListLevel3Mock.vue')
-  },
-  {
-    path: '/mock/journal-list',
+    path: '/journal-list/:clientId',
     name: 'MockJournalList',
-    component: () => import('@/mocks/components/JournalListLevel3Mock.vue')
+    component: () => import('@/mocks/components/JournalListLevel3Mock.vue'),
+    props: true
   },
   {
-    path: '/mock/export',
+    path: '/export/:clientId',
     name: 'MockExport',
-    component: () => import('@/mocks/views/MockExportPage.vue')
+    component: () => import('@/mocks/views/MockExportPage.vue'),
+    props: true
   },
   {
-    path: '/mock/export-history',
+    path: '/export-history/:clientId',
     name: 'MockExportHistory',
-    component: () => import('@/mocks/views/MockExportHistoryPage.vue')
+    component: () => import('@/mocks/views/MockExportHistoryPage.vue'),
+    props: true
   },
   {
-    path: '/mock/export-detail/:historyId',
+    path: '/export-detail/:clientId/:historyId',
     name: 'MockExportDetail',
     component: () => import('@/mocks/views/MockExportDetailPage.vue'),
     props: true
   },
   {
-    path: '/mock/drive-select',
+    path: '/drive-select/:clientId',
     name: 'MockDriveSelect',
-    component: () => import('@/mocks/views/MockDriveSelectPage.vue')
+    component: () => import('@/mocks/views/MockDriveSelectPage.vue'),
+    props: true
   },
+  // --- 旧URL互換リダイレクト ---
+  { path: '/mock/journal-list', redirect: '/journal-list/ABC-00001' },
+  { path: '/mock/drive-select', redirect: '/drive-select/ABC-00001' },
+  { path: '/mock/export', redirect: '/export/ABC-00001' },
+  { path: '/mock/export-history', redirect: '/export-history/ABC-00001' },
+  // /settings-accounts, /settings-tax は重複のため削除済み
+  // 勘定科目・税区分は設定配下
   {
-    path: '/settings-accounts',
-    name: 'SettingsAccountsMock',
-    component: () => import('@/views/ScreenS_AccountSettings.vue'),
-    props: { defaultTab: 'accounts' }
-  },
-  {
-    path: '/settings-tax',
-    name: 'SettingsTaxMock',
-    component: () => import('@/views/ScreenS_AccountSettings.vue'),
-    props: { defaultTab: 'tax' }
-  },
-  {
-    path: '/master',
-    name: 'MasterHub',
-    component: () => import('@/mocks/views/MockMasterHubPage.vue')
-  },
-  {
-    path: '/master/accounts',
+    path: '/settings/accounts/:clientId',
     name: 'MasterAccounts',
-    component: () => import('@/mocks/views/MockMasterAccountsPage.vue')
+    component: () => import('@/mocks/views/MockMasterAccountsPage.vue'),
+    props: true
   },
   {
-    path: '/master/tax-categories',
+    path: '/settings/tax/:clientId',
     name: 'MasterTaxCategories',
-    component: () => import('@/mocks/views/MockMasterTaxCategoriesPage.vue')
+    component: () => import('@/mocks/views/MockMasterTaxCategoriesPage.vue'),
+    props: true
   },
+  // アップロード・学習（仮ページ）
+  {
+    path: '/upload/:clientId',
+    name: 'Upload',
+    component: () => import('@/mocks/views/MockUploadPage.vue'),
+    props: true
+  },
+  {
+    path: '/learning/:clientId',
+    name: 'Learning',
+    component: () => import('@/mocks/views/MockLearningPage.vue'),
+    props: true
+  },
+  // 旧パスリダイレクト
+  { path: '/settings/accounts', redirect: '/settings/accounts/ABC-00001' },
+  { path: '/master/accounts', redirect: '/settings/accounts/ABC-00001' },
+  { path: '/master/tax', redirect: '/settings/tax/ABC-00001' },
+  { path: '/master/tax-categories', redirect: '/settings/tax/ABC-00001' },
+  { path: '/accounts/:clientId', redirect: (to) => `/settings/accounts/${to.params.clientId}` },
+  { path: '/tax/:clientId', redirect: (to) => `/settings/tax/${to.params.clientId}` },
   {
     path: '/master/clients',
     name: 'MasterClients',
     component: () => import('@/mocks/views/MockMasterClientsPage.vue')
   },
+  // 旧パスリダイレクト（/clients/list → /master/clients）
+  { path: '/clients/list', redirect: '/master/clients' },
+  // /master ハブは廃止 → 設定/勘定科目マスタにリダイレクト
   {
-    path: '/clients/list',
-    name: 'ClientList',
-    component: () => import('@/mocks/views/MockClientListPage.vue')
+    path: '/master',
+    redirect: '/settings/accounts/ABC-00001'
+  },
+  {
+    path: '/master/costs',
+    name: 'MasterCosts',
+    component: () => import('@/mocks/views/MockCostsPage.vue')
+  },
+  {
+    path: '/master/settings',
+    name: 'MasterSettings',
+    component: () => import('@/mocks/views/MockSettingsHubPage.vue')
   },
   {
     path: '/progress/:code?',

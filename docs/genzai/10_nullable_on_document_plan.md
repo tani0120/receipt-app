@@ -68,7 +68,7 @@
 | K1 | [account-master.ts](file:///c:/dev/receipt-app/src/shared/data/account-master.ts) | [x] 勘定科目マスター ✅ | 79科目。MF準拠。法人/個人1マスタ管理、`target`（`corp`/`individual`/`both`）で分岐。概念ID + MF正式名称 + デフォルト税区分 + AI可否 + 表示順 |
 | K2 | [tax-category-master.ts](file:///c:/dev/receipt-app/src/shared/data/tax-category-master.ts) | [x] 税区分マスター ✅ | 151件。MF正式名称完全一致。概念ID（例: `PURCHASE_TAXABLE_10`）方式。デフォルト表示27件 + 残りは顧問先単位で有効化 |
 | K3 | [MockMasterAccountsPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterAccountsPage.vue) | [x] 勘定科目マスタUI ✅ | `/master/accounts` に独立ページ化。「分類」列廃止→「補助科目」列追加。ヘルプアイコン（?マーク）でカスタムツールチップ表示（「補助科目は顧問先ごとの設定で入力します」） |
-| K4 | [MockMasterTaxCategoriesPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterTaxCategoriesPage.vue) | [x] 税区分マスタUI ✅ | `/master/tax-categories` に独立ページ化 |
+| K4 | [MockMasterTaxCategoriesPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterTaxCategoriesPage.vue) | [x] 税区分マスタUI ✅ | `/master/tax` に独立ページ化（旧`/master/tax-categories`から短縮、2026-03-11 N1で変更） |
 | K5 | [MockMasterHubPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterHubPage.vue) | [x] マスタハブUI ✅ | `/master` にハブページ。勘定科目マスタ・税区分マスタへのリンク |
 
 #### マスタ設計ルール（13ルール確定済み — 詳細は [master_design_rules.md](file:///c:/dev/receipt-app/docs/genzai/02_database_schema/master_design_rules.md)）
@@ -187,13 +187,19 @@
 
 #### 全管理ページ構成（2026-03-06 確定）
 
-| # | 管理ページ | URL（想定） | 説明 |
+| # | 管理ページ | URL | 説明 |
 |---|----------|------------|------|
-| 1 | 顧問先管理 | `/admin/clients` | 顧問先の追加・編集・停止。基本情報・業種・課税方式・経理方式 |
-| 2 | スタッフ管理 | `/admin/staff` | スタッフの追加・編集・停止。**管理権限の設定**（下記参照） |
-| 3 | マスタ管理 | `/master` | ✅実装済み。勘定科目マスタ・税区分マスタのハブ |
-| 4 | 想定費用 | `/admin/billing` | 顧問先ごとの報酬設定。月次報酬・決算報酬・消費税報酬 |
-| 5 | 設定管理 | `/settings` | ✅実装済み。顧問先単位の勘定科目・税区分設定 |
+| 1 | 顧問先管理 | `/master/clients` | ✅実装済み。顧問先の追加・編集・停止 |
+| 2 | スタッフ管理 | `/master/staff` | ✅実装済み。スタッフの追加・編集・停止 |
+| 3 | 勘定科目マスタ | `/settings/accounts/:clientId` | ✅実装済み。顧問先固有の勘定科目マスタ |
+| 4 | 税区分マスタ | `/settings/tax/:clientId` | ✅実装済み。顧問先固有の税区分マスタ |
+| 5 | 想定費用 | `/master/costs` | ✅ページ作成済み（未実装表示）。AI費用等の管理 |
+| 6 | 設定管理 | `/master/settings` | ✅ページ作成済み（未実装表示） |
+
+> **2026-03-11 N1適用**: 旧体系のURL（`/admin/clients`、`/master`ハブ、`/admin/billing`等）は全て上記に統一。
+> NavBar上段バーは上記6項目＋進捗管理（`/progress`）の計7項目。「マスタ管理」ハブは廃止。
+> 勘定科目・税区分は顧問先固有ページのため`/settings/`配下にclientId付きURLとして配置。
+> アップロード（`/upload/:clientId`）・学習（`/learning/:clientId`）は仮ページ作成済み。
 
 #### スタッフ管理UI（権限設定）— マスタ設計ルール2の前提
 
@@ -282,8 +288,8 @@
 | 1 | K1 勘定科目マスタデータ（79科目） | ✅ | AI | 優先度3 |
 | 2 | K2 税区分マスタデータ（151件） | ✅ | AI | 優先度3 |
 | 3 | K3 勘定科目マスタUI（`/master/accounts`） | ✅ | AI | 優先度3 |
-| 4 | K4 税区分マスタUI（`/master/tax-categories`） | ✅ | AI | 優先度3 |
-| 5 | K5 マスタハブUI（`/master`） | ✅ | AI | 優先度3 |
+| 4 | K4 税区分マスタUI（`/master/tax`） | ✅ | AI | 優先度3 |
+| 5 | K5 マスタハブUI（`/master` → 廃止。`/master/accounts`にリダイレクト） | ✅ | AI | 優先度3 |
 | 6 | 分類列→補助科目列差替え（マスタ+顧問先設定） | ✅ | AI | 優先度3 |
 | 7 | マスタ設計ルール13項目確定 | ✅ | AI+人間 | master_design_rules.md |
 | — | **▼ 型定義変更（スキーマ反映）** | | | |
@@ -434,3 +440,138 @@
 | フィルタ検索 | 「空欄」で検索・抽出可能 |
 | 勘定科目プルダウン | 先頭に「未確定（使用しない）」→ 以下通常科目 |
 | デフォルト税区分 | 勘定科目ごとに`自動判定(仕入)`等を設定 |
+
+---
+
+## 2026-03-11 セッション記録
+
+### 実装済み（コード変更確定）
+
+#### 1. `compareWithNull`のdirection修正
+- **ファイル**: `src/mocks/definitions/field-nullable-spec.ts` L93
+- **修正内容**: 非null値の比較に`direction`が反映されていなかったバグを修正
+- **影響範囲**: 全ソート列（日付・勘定科目・補助・税区分・金額）の降順ソートが正常動作するようになった
+```diff
+-  return compareFn(a, b);
++  const result = compareFn(a, b);
++  return direction === 'desc' ? -result : result;
+```
+
+#### 2. 金額列のソートを代表値方式に変更
+- **ファイル**: `src/mocks/components/JournalListLevel3Mock.vue` L1902-1930
+- **方針**: 文字列列（勘定科目・補助・税区分）は1行目の値、金額列は全エントリの合計
+- **修正内容**:
+  - `entries[0]?.amount`（1行目のみ）→ `entries.reduce(...)`（全エントリ合計）
+  - `|| null`（falsyチェック）→ `some(e => e.amount != null)`（明示的null判定）で金額0がnullに変換されるバグも同時修正
+  - 金額列のnull配置を独自実装：昇順=`null→0→1→2...`、降順=`...→2→1→0→null`
+
+#### 3. 代表値方式の設計根拠
+- **MF・弥生**: 金額ソート自体が存在しない。業界標準なし
+- **ストリームド**: 各項目クリックでソート可能（金額含む）。複合仕訳の金額ソートルール未確認
+- **本アプリの金額ソートは独自機能**。根拠は「ユーザーの直感」のみ
+
+### 発見した問題（未修正）
+
+#### A. 勘定科目マスタと仕訳一覧の不連携
+- **事実**: 以下のページがそれぞれ**独立して**`ACCOUNT_MASTER`をコピー・フィルタしており、相互に連携していない
+
+| ページ | URL | データソース | 連携 |
+|-------|-----|------------|------|
+| 事務所共通 勘定科目マスタ | `/master/accounts` | `MockMasterAccountsPage.vue` L165: `reactive([...ACCOUNT_MASTER])` | ❌独立 |
+| 事務所共通 税区分マスタ | `/master/tax` | `MockMasterTaxCategoriesPage.vue` | ❌独立 |
+| 顧問先別 勘定科目・税区分 | `/old/settings-accounts` | `ScreenS_AccountSettings.vue` L227: `reactive([...ACCOUNT_MASTER])`, L254: `reactive([...TAX_CATEGORY_MASTER])` | ❌独立 |
+| 仕訳一覧ドロップダウン | `/mock/journal-list`（個別CLページURL確定後に変更予定） | `JournalListLevel3Mock.vue` L934: `ACCOUNT_MASTER`直接フィルタ | ❌独立 |
+
+- **問題**: 顧問先別設定で科目を追加/非表示にしても、仕訳一覧のドロップダウンに反映されない
+- **問題**: `selectAccount`（L1030）が`ACCOUNT_MASTER.find(a => a.name === accountName)`で事務所共通マスタから直接検索。顧問先別の税区分カスタマイズが反映されない
+
+#### B. フィクスチャの勘定科目名がマスタに存在しない
+- `journal_test_fixture_30cases.ts`の仕訳データに、`ACCOUNT_MASTER`に存在しない科目名がハードコードされている
+  - L59: `メンテナンス費`（マスタに存在しない。「修繕費」が近い）
+  - L534: `飲出羽`（意味不明な文字列）
+- **根本原因**: フィクスチャの`account`が自由文字列で、マスタとの紐付けがない
+- **対応方針**: 共有composable実装後に、フィクスチャの科目名をマスタのnameに揃える（DB実装時にはDB側で整合性が保証されるため、モック段階の暫定対応）
+
+#### C. ドロップダウンの選択制御は実装済み
+- テンプレートL372: `@mousedown.prevent="acc.selectable && selectAccount(...)"`で`selectable: false`の科目はクリック不可
+- L370: CSSで`cursor-not-allowed text-gray-300`でグレーアウト表示
+- **この点は問題なし**
+
+### 次回セッション必須タスク（2026-03-11登録）
+
+> **注意**: このセクションは最新のタスクリストである。過去のセッションで合意した内容はここに集約される。
+> 古い「今すぐ着手すべきこと」（L395-403）は**このリストに統合済み**のため、矛盾する場合はこちらが優先。
+
+| ID | タスク | 登録日 | 状態 | 備考 |
+|:--:|--------|:------:|:----:|------|
+| N1 | **URL名の適正化** — 全ページのルーティングパスを再設計し、AIでも階層構造が一目で分かる命名に統一 | 03-11 | ✅完了 | 下記N1詳細参照 |
+| N1a | **settings/:clientId統一** — `/clients/:clientId/settings`を`/settings/:clientId`に統一。勘定科目・税区分を`/settings/accounts/:clientId`・`/settings/tax/:clientId`に配置 | 03-11 | ✅完了 | パターンB完全統一。旧URLは全てリダイレクト対応 |
+| N1b | **仮ページ作成** — アップロード(`/upload/:clientId`)・学習(`/learning/:clientId`)の仮ページ | 03-11 | ✅完了 | `MockUploadPage.vue`・`MockLearningPage.vue`新規作成 |
+| N1c | **formatDate型エラー修正** — ExportPage/ExportDetailPageの`formatDate(j.transaction_date)`にnullフォールバック追加 | 03-11 | ✅完了 | `?? ''`で型安全に |
+| N1d | **ProgressDetailPage `row.id`型エラー** — `:key="row.id"`を`row.clientId`に修正 | 03-11 | ✅完了 | ProgressRow型にidが存在しないため |
+| N2 | **共有composableのゼロベース再定義** — `useAccountSettings`を含む全composableの責務・相関を設計。相関図（mermaid）を本ドキュメントに作成 | 03-11 | ❌未着手 | 現状: 4ページが独立して`ACCOUNT_MASTER`をコピー。連携なし（問題Aの根本対応） |
+| N3 | **顧問先UUIDの見える化** — 顧問先管理画面に顧問先UUIDを編集不可で表示。3コード（`clientCode`）とUUID（`uuid`）の取り違え防止 | 03-11 | ❌未着手 | `useClients.ts`のClient型: `id`（3コード-UUID形式）、`uuid`（UUID部分）、`clientCode`（3コード）の3つが存在 |
+| N4 | **全UUIDの実装状況調査と紐付けロジック** — 顧問先UUID・担当UUID・証票単位UUID・仕訳単位UUIDの4種について、現在の実装状況を調査し、全てを紐付けするロジックを実装 | 03-11 | ❌未着手 | 仕訳フィクスチャの`id`は`j001`等の仮ID。証票は`document_id: 'receipt-001'`。本番用UUID未実装 |
+| N5 | **仕訳一覧の編集UX改善** — ①勘定科目セルのドラッグ&ドロップ移動 ②右下マス押下でコピー（会計ソフト形式/Excel式） ③仕訳行で行全体を編集有効化せず、セル単位で部分的に編集有効化 | 03-11 | ❌未着手 | 現状: ドロップダウン選択のみ。セルコピー・ドラッグ移動なし |
+| N6 | **5セグメント実装の適否確認** — 通帳・クレカ明細・売上・経費等の5つのセグメント分類が現在の設計と整合するか調査 | 03-11 | ❌未着手 | フィクスチャの`labels`に`RECEIPT`/`BANK_STATEMENT`/`CREDIT_CARD`/`TRANSPORT`/`MEDICAL`等のラベルが存在。5セグメントとの対応を確認 |
+| N7 | **共有composable `useAccountSettings`の実装** — 顧問先別勘定科目・税区分データを一元管理。N2の相関図確定後に着手 | 03-11 | ❌未着手 | 実装詳細は下記参照 |
+
+#### N7 実装詳細: `useAccountSettings`
+
+**目的**: 顧問先別勘定科目・税区分データを一元管理し、全ページで同じデータソースを参照する
+
+**実装内容**:
+1. **新規作成**: `src/composables/useAccountSettings.ts`（または`src/features/`配下）
+   - `ACCOUNT_MASTER`のreactiveコピーを保持
+   - `TAX_CATEGORY_MASTER`のreactiveコピーを保持
+   - 顧問先のclient type/hasRentalIncomeでフィルタしたcomputedを提供
+   - 科目追加/削除/非表示のメソッドを提供
+2. **修正**: `ScreenS_AccountSettings.vue`
+   - L227の`reactive([...ACCOUNT_MASTER])`を`useAccountSettings()`に置換
+   - L254の`reactive([...TAX_CATEGORY_MASTER])`を同composableに置換
+3. **修正**: `JournalListLevel3Mock.vue`
+   - L934-953の`filteredAccounts`を`useAccountSettings()`から取得に変更
+   - L1030の`ACCOUNT_MASTER.find(...)`を顧問先別データから検索に変更
+
+**メリット**:
+- 本番実装時に、composable内部の`reactive([...MASTER])`を`API呼び出し + reactive(データ)`に置換するだけで済む
+- PostgreSQL移行のデータソース切替ポイントが1箇所に集約される
+- モック段階で顧問先別設定⇔仕訳一覧の連携動作を検証できる
+
+#### N1 詳細: URL再構成（2026-03-11 完了）
+
+**変更ファイル一覧**（9件変更 + 2件新規）:
+- `router/index.ts` — ルート定義・リダイレクト
+- `MockNavBar.vue` — 上段/下段メニュー遷移ロジック
+- `useClients.ts` — パスマッチング正規表現
+- `ScreenS_Settings.vue` — 設定ページ遷移先
+- `MockMasterHubPage.vue` — ハブリンク
+- `useAuthStore.ts` — 管理者専用パス一覧
+- `MockExportPage.vue` — formatDate型エラー修正
+- `MockExportDetailPage.vue` — formatDate型エラー修正
+- `MockProgressDetailPage.vue` — row.id型エラー修正
+- **[NEW]** `MockUploadPage.vue` — アップロード仮ページ
+- **[NEW]** `MockLearningPage.vue` — 学習仮ページ
+
+**最終URL構成マップ**:
+
+```
+顧問先固有ページ（パターンB: /xxx/:clientId）:
+  /journal-list/:clientId                ← 仕訳一覧
+  /drive-select/:clientId                ← Drive資料選別
+  /upload/:clientId                      ← アップロード（仮ページ）
+  /export/:clientId                      ← 出力
+  /export-history/:clientId              ← ダウンロード履歴
+  /export-detail/:clientId/:historyId    ← 出力詳細
+  /learning/:clientId                    ← 学習（仮ページ）
+  /settings/:clientId                    ← 設定トップ
+  /settings/accounts/:clientId           ← 勘定科目マスタ
+  /settings/tax/:clientId                ← 税区分マスタ
+
+全社共通ページ（clientIdなし）:
+  /progress                              ← 全社進捗一覧
+  /master/clients                        ← 顧問先管理
+  /master/staff                          ← スタッフ管理
+  /master/costs                          ← 想定費用
+  /master/settings                       ← 設定管理
+```

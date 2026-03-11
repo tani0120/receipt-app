@@ -7,7 +7,7 @@
         <img src="/sugu-suru-logo.png" alt="sugu-suru" style="height: 30px" />
         <!-- クライアント名動的表示 -->
         <div v-if="currentClient" class="flex items-center gap-2 border-l-2 border-sky-400 pl-3 ml-2">
-          <span class="bg-sky-600 text-white font-extrabold px-2 py-0.5 rounded text-[13px] tracking-wider shadow-sm">{{ currentClient.code }}</span>
+          <span class="bg-sky-600 text-white font-extrabold px-2 py-0.5 rounded text-[13px] tracking-wider shadow-sm">{{ currentClient.threeCode }}</span>
           <span class="text-[14px] font-bold text-sky-800">{{ currentClient.name }}</span>
         </div>
         <div class="relative">
@@ -81,12 +81,12 @@ const { currentClient } = useClients();
 // --- 旧ページメニュー ---
 const showLegacyMenu = ref(false);
 const legacyItems = [
-  { label: 'B:仕訳ステータス', icon: 'fa-solid fa-calculator', path: '/clients/demo/journals' },
-  { label: 'C:回収状況',       icon: 'fa-solid fa-calendar-days', path: '/clients/demo/collection' },
-  { label: 'D:AIルール',       icon: 'fa-solid fa-brain', path: '/clients/demo/ai-rules' },
-  { label: 'G:データ変換',     icon: 'fa-solid fa-arrow-right-arrow-left', path: '/clients/demo/data-conversion' },
-  { label: 'H:タスク管理',     icon: 'fa-solid fa-list-check', path: '/clients/demo/tasks' },
-  { label: 'Z:管理者設定',     icon: 'fa-solid fa-screwdriver-wrench', path: '/settings/admin' },
+  { label: 'B:仕訳ステータス', icon: 'fa-solid fa-calculator', path: '/old/journals/demo' },
+  { label: 'C:回収状況',       icon: 'fa-solid fa-calendar-days', path: '/old/collection/demo' },
+  { label: 'D:AIルール',       icon: 'fa-solid fa-brain', path: '/old/ai-rules/demo' },
+  { label: 'G:データ変換',     icon: 'fa-solid fa-arrow-right-arrow-left', path: '/old/data-conversion/demo' },
+  { label: 'H:タスク管理',     icon: 'fa-solid fa-list-check', path: '/old/tasks/demo' },
+  { label: 'Z:管理者設定',     icon: 'fa-solid fa-screwdriver-wrench', path: '/old/admin' },
 ];
 const goLegacy = (path: string) => {
   showLegacyMenu.value = false;
@@ -103,12 +103,13 @@ interface TopItem {
 }
 
 const topItems: TopItem[] = [
-  { key: 'client-list', label: '進捗管理', icon: 'fa-solid fa-bars-progress',   path: '/progress',    managedPaths: ['/clients/list', '/progress'] },
-  { key: 'clients',  label: '顧問先管理',   icon: 'fa-solid fa-building',    path: '/master/clients',  managedPaths: ['/master/clients'] },
-  { key: 'staff',    label: 'スタッフ管理', icon: 'fa-solid fa-users',       path: '/master/staff',    managedPaths: ['/master/staff'] },
-  { key: 'master',   label: 'マスタ管理',   icon: 'fa-solid fa-database',    path: '/master',          managedPaths: ['/master', '/master/accounts', '/master/tax-categories'] },
-  { key: 'cost',     label: '想定費用',     icon: 'fa-solid fa-calculator',  path: null,               managedPaths: ['/cost'] },
-  { key: 'settings', label: '設定管理',     icon: 'fa-solid fa-gear',        path: null,               managedPaths: ['/settings/admin'] },
+  { key: 'progress', label: '進捗管理',       icon: 'fa-solid fa-bars-progress',   path: '/progress',          managedPaths: ['/progress'] },
+  { key: 'clients',  label: '顧問先管理',     icon: 'fa-solid fa-building',        path: '/master/clients',    managedPaths: ['/master/clients'] },
+  { key: 'staff',    label: 'スタッフ管理',   icon: 'fa-solid fa-users',           path: '/master/staff',      managedPaths: ['/master/staff'] },
+  { key: 'accounts', label: '勘定科目マスタ', icon: 'fa-solid fa-book',            path: '/settings/accounts',  managedPaths: ['/settings/accounts'] },
+  { key: 'tax',      label: '税区分マスタ',   icon: 'fa-solid fa-percent',         path: '/settings/tax',       managedPaths: ['/settings/tax'] },
+  { key: 'costs',    label: '想定費用',       icon: 'fa-solid fa-calculator',      path: '/master/costs',      managedPaths: ['/master/costs'] },
+  { key: 'settings', label: '設定管理',       icon: 'fa-solid fa-gear',            path: '/master/settings',   managedPaths: ['/master/settings'] },
 ];
 
 const isTopActive = (item: TopItem): boolean =>
@@ -116,7 +117,13 @@ const isTopActive = (item: TopItem): boolean =>
 
 const handleTopClick = (item: TopItem): void => {
   if (item.path) {
-    router.push(item.path);
+    // accounts/taxは顧問先固有ページ → clientId付きURLに遷移
+    if (item.key === 'accounts' || item.key === 'tax') {
+      const cid = currentClient.value?.clientId ?? 'ABC-00001';
+      router.push(`${item.path}/${cid}`);
+    } else {
+      router.push(item.path);
+    }
   } else {
     globalThis.alert(`${item.label}は未実装です`);
   }
@@ -135,31 +142,31 @@ const navItems: NavItem[] = [
     key: 'home',
     label: 'ホーム',
     svgPaths: ['M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4'],
-    path: '/mock/journal-list',
+    path: '/journal-list',
   },
   {
     key: 'drive',
     label: 'Drive資料選別',
     svgPaths: ['M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z'],
-    path: '/mock/drive-select',
+    path: '/drive-select',
   },
   {
     key: 'upload',
     label: 'アップロード',
     svgPaths: ['M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12'],
-    path: null,
+    path: '/upload',
   },
   {
     key: 'export',
     label: '出力',
     svgPaths: ['M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
-    path: '/mock/export',
+    path: '/export',
   },
   {
     key: 'learning',
     label: '学習',
     svgPaths: ['M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z'],
-    path: null,
+    path: '/learning',
   },
   {
     key: 'settings',
@@ -172,13 +179,18 @@ const navItems: NavItem[] = [
   },
 ];
 
-const isNavActive = (item: NavItem): boolean =>
-  item.path !== null && route.path === item.path;
+const isNavActive = (item: NavItem): boolean => {
+  if (item.path === null) return false;
+  // settingsトップは /settings/:clientId パターン
+  if (item.key === 'settings') return route.path.match(/^\/settings\/[^/]+$/) !== null;
+  return route.path.startsWith(item.path + '/');
+};
 
 const handleNavClick = (item: NavItem): void => {
   if (item.path) {
-    // クエリパラメータ（?client=xxx）を引き継いで遷移
-    router.push({ path: item.path, query: route.query });
+    const cid = currentClient.value?.clientId ?? 'ABC-00001';
+    // 全て /xxx/:clientId 形式に統一
+    router.push(`${item.path}/${cid}`);
   } else {
     globalThis.alert(`${item.label}は未実装です`);
   }

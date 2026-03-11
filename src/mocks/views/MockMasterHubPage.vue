@@ -6,7 +6,7 @@
         <h1 class="hub-title">マスタ管理</h1>
         <p class="hub-desc">事務所全体で共通のマスターデータを管理します。各顧問先の設定には「設定」画面をご利用ください。</p>
         <div class="hub-cards">
-          <router-link to="/master/accounts" class="hub-card">
+          <router-link :to="'/settings/accounts/' + (currentClient?.clientId ?? 'ABC-00001')" class="hub-card">
             <i class="fa-solid fa-book hub-card-icon"></i>
             <div class="hub-card-body">
               <span class="hub-card-title">勘定科目マスタ</span>
@@ -14,7 +14,7 @@
             </div>
             <i class="fa-solid fa-chevron-right hub-card-arrow"></i>
           </router-link>
-          <router-link to="/master/tax-categories" class="hub-card">
+          <router-link :to="'/settings/tax/' + (currentClient?.clientId ?? 'ABC-00001')" class="hub-card">
             <i class="fa-solid fa-receipt hub-card-icon"></i>
             <div class="hub-card-body">
               <span class="hub-card-title">税区分マスタ</span>
@@ -29,7 +29,9 @@
 </template>
 
 <script setup lang="ts">
+import { useClients } from '@/features/client-management/composables/useClients';
 
+const { currentClient } = useClients();
 </script>
 
 <style scoped>

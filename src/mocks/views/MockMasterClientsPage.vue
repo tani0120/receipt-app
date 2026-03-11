@@ -33,6 +33,7 @@
           <table class="cm-table">
             <colgroup>
               <col style="width: 70px;">
+              <col style="width: 100px;">
               <col style="width: 60px;">
               <col style="width: 50px;">
               <col style="width: 15%;">
@@ -49,8 +50,11 @@
                 <th class="sortable" @click="sortBy('status')">
                   ステータス <i :class="getSortIcon('status')"></i>
                 </th>
-                <th class="sortable" @click="sortBy('clientCode')">
-                  コード <i :class="getSortIcon('clientCode')"></i>
+                <th class="sortable" @click="sortBy('clientId')">
+                  内部ID <i :class="getSortIcon('clientId')"></i>
+                </th>
+                <th class="sortable" @click="sortBy('threeCode')">
+                  3コード <i :class="getSortIcon('threeCode')"></i>
                 </th>
                 <th class="sortable" @click="sortBy('type')">
                   種別 <i :class="getSortIcon('type')"></i>
@@ -76,13 +80,13 @@
             <tbody>
               <tr
                 v-for="row in pagedRows"
-                :key="row.id"
+                :key="row.clientId"
                 :class="{ 'row-inactive': row.status === 'inactive', 'row-suspension': row.status === 'suspension' }"
                 @click="delayedOpenEditPanel(row)"
               >
                 <!-- ステータス: select -->
                 <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'status', $event)">
-                  <select v-if="inlineEditId === row.id && inlineEditField === 'status'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <select v-if="inlineEditId === row.clientId && inlineEditField === 'status'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                     <option value="active">稼働中</option>
                     <option value="suspension">休眠中</option>
                     <option value="inactive">契約終了</option>
@@ -91,24 +95,25 @@
                     {{ row.status === 'active' ? '稼働中' : row.status === 'suspension' ? '休眠中' : '契約終了' }}
                   </span>
                 </td>
-                <td class="cm-code td-editable" @dblclick.stop="startInlineEdit(row, 'clientCode', $event)">
-                  <input v-if="inlineEditId === row.id && inlineEditField === 'clientCode'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                  <span v-else>{{ row.clientCode }}</span>
+                <td class="cm-client-id">{{ row.clientId }}</td>
+                <td class="cm-code td-editable" @dblclick.stop="startInlineEdit(row, 'threeCode', $event)">
+                  <input v-if="inlineEditId === row.clientId && inlineEditField === 'threeCode'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <span v-else>{{ row.threeCode }}</span>
                 </td>
                 <!-- 種別: select -->
                 <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'type', $event)">
-                  <select v-if="inlineEditId === row.id && inlineEditField === 'type'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <select v-if="inlineEditId === row.clientId && inlineEditField === 'type'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                     <option value="corp">法人</option>
                     <option value="individual">個人</option>
                   </select>
                   <span v-else>{{ row.type === 'corp' ? '法人' : '個人' }}</span>
                 </td>
                 <td class="cm-company-name td-editable" @dblclick.stop="startInlineEdit(row, 'companyName', $event)">
-                  <input v-if="inlineEditId === row.id && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <input v-if="inlineEditId === row.clientId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.companyName }}</span>
                 </td>
                 <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'staffName', $event)">
-                  <select v-if="inlineEditId === row.id && inlineEditField === 'staffName'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <select v-if="inlineEditId === row.clientId && inlineEditField === 'staffName'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                     <option value="">未設定</option>
                     <option v-for="s in staffList" :key="s.uuid" :value="s.name">{{ s.name }}</option>
                   </select>
@@ -116,7 +121,7 @@
                 </td>
                 <!-- 会計ソフト: select -->
                 <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'accountingSoftware', $event)">
-                  <select v-if="inlineEditId === row.id && inlineEditField === 'accountingSoftware'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <select v-if="inlineEditId === row.clientId && inlineEditField === 'accountingSoftware'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                     <option value="mf">MF</option>
                     <option value="freee">freee</option>
                     <option value="yayoi">弥生</option>
@@ -127,7 +132,7 @@
                 </td>
                 <!-- 決算日: 月select + 日select -->
                 <td class="cm-fiscal td-editable" @dblclick.stop="startInlineEdit(row, 'fiscalMonth', $event)">
-                  <template v-if="inlineEditId === row.id && inlineEditField === 'fiscalMonth'">
+                  <template v-if="inlineEditId === row.clientId && inlineEditField === 'fiscalMonth'">
                     <div class="cm-inline-fiscal-group">
                       <select v-model="inlineEditValue" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop>
                         <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
@@ -143,15 +148,15 @@
                   <span v-else>{{ row.fiscalMonth }}月/{{ row.fiscalDay === '末日' ? '末日' : row.fiscalDay + '日' }}</span>
                 </td>
                 <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'phoneNumber', $event)">
-                  <input v-if="inlineEditId === row.id && inlineEditField === 'phoneNumber'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <input v-if="inlineEditId === row.clientId && inlineEditField === 'phoneNumber'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.phoneNumber || '—' }}</span>
                 </td>
                 <td class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'email', $event)">
-                  <input v-if="inlineEditId === row.id && inlineEditField === 'email'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <input v-if="inlineEditId === row.clientId && inlineEditField === 'email'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.email || '—' }}</span>
                 </td>
                 <td class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'chatRoomUrl', $event)">
-                  <input v-if="inlineEditId === row.id && inlineEditField === 'chatRoomUrl'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <input v-if="inlineEditId === row.clientId && inlineEditField === 'chatRoomUrl'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.chatRoomUrl || '—' }}</span>
                 </td>
                 <!-- 主な連絡手段: チャットワーク優先ロジック -->
@@ -165,7 +170,7 @@
                 </td>
               </tr>
               <tr v-if="pagedRows.length === 0">
-                <td colspan="11" class="cm-empty">該当する顧問先がありません</td>
+                <td colspan="12" class="cm-empty">該当する顧問先がありません</td>
               </tr>
             </tbody>
           </table>
@@ -218,8 +223,12 @@
                 </div>
               </div>
               <div class="cm-field">
+                <label class="cm-label">内部ID</label>
+                <input type="text" :value="panelMode === 'edit' ? editingId : '（自動生成）'" class="cm-input cm-client-id-input" disabled>
+              </div>
+              <div class="cm-field">
                 <label class="cm-label">3コード <span class="cm-hint">※大文字アルファベット3文字</span></label>
-                <input type="text" v-model="panelForm.clientCode" class="cm-input cm-code-input" maxlength="3" placeholder="ABC" @input="panelForm.clientCode = panelForm.clientCode.toUpperCase().replace(/[^A-Z]/g, '')">
+                <input type="text" v-model="panelForm.threeCode" class="cm-input cm-code-input" maxlength="3" placeholder="ABC" @input="panelForm.threeCode = panelForm.threeCode.toUpperCase().replace(/[^A-Z]/g, '')">
               </div>
               <div class="cm-field">
                 <label class="cm-label">会社名 <span class="cm-required">*</span></label>
@@ -441,7 +450,6 @@ import {
   useClients,
   emptyClientForm,
   createClientId,
-  parseClientId,
 } from '@/features/client-management/composables/useClients';
 import type { Client, ClientForm } from '@/features/client-management/composables/useClients';
 import { useStaff } from '@/features/staff-management/composables/useStaff';
@@ -488,10 +496,16 @@ const filteredRows = computed((): Client[] => {
   }
   const key = sortKey.value as keyof Client;
   rows.sort((a, b) => {
-    const va = a[key] ?? '';
-    const vb = b[key] ?? '';
-    if (va < vb) return sortOrder.value === 'asc' ? -1 : 1;
-    if (va > vb) return sortOrder.value === 'asc' ? 1 : -1;
+    let va: unknown = a[key] ?? '';
+    let vb: unknown = b[key] ?? '';
+    // clientId: 数字部分(ハイフン以降)のみでソート
+    if (key === 'clientId') {
+      const na = parseInt((va as string).split('-').pop() || '0', 10);
+      const nb = parseInt((vb as string).split('-').pop() || '0', 10);
+      va = na; vb = nb;
+    }
+    if ((va as string | number) < (vb as string | number)) return sortOrder.value === 'asc' ? -1 : 1;
+    if ((va as string | number) > (vb as string | number)) return sortOrder.value === 'asc' ? 1 : -1;
     return 0;
   });
   return rows;
@@ -514,7 +528,7 @@ const inlineEditFiscalDay = ref<string | number>('末日');
 
 const startInlineEdit = (row: Client, field: string, event: Event) => {
   event.stopPropagation();
-  inlineEditId.value = row.id;
+  inlineEditId.value = row.clientId;
   inlineEditField.value = field;
   inlineEditValue.value = (row as unknown as Record<string, string | number>)[field] ?? '';
   if (field === 'fiscalMonth') {
@@ -529,7 +543,7 @@ const startInlineEdit = (row: Client, field: string, event: Event) => {
 
 const commitInlineEdit = (_row: Client) => {
   if (inlineEditId.value && inlineEditField.value) {
-    const idx = clients.value.findIndex(c => c.id === inlineEditId.value);
+    const idx = clients.value.findIndex(c => c.clientId === inlineEditId.value);
     if (idx >= 0) {
       (clients.value[idx] as unknown as Record<string, string | number>)[inlineEditField.value!] = inlineEditValue.value;
     }
@@ -539,7 +553,7 @@ const commitInlineEdit = (_row: Client) => {
 
 const commitFiscalEdit = (_row: Client) => {
   if (inlineEditId.value) {
-    const idx = clients.value.findIndex(c => c.id === inlineEditId.value);
+    const idx = clients.value.findIndex(c => c.clientId === inlineEditId.value);
     if (idx >= 0) {
       const target = clients.value[idx]!;
       target.fiscalMonth = Number(inlineEditValue.value);
@@ -589,14 +603,14 @@ const openAddPanel = () => {
 };
 
 const openEditPanel = (row: Client) => {
-  const { id: _id, contact, ...rest } = row;
+  const { clientId: _clientId, contact, ...rest } = row;
   Object.assign(panelForm, {
     ...rest,
     contactType: contact.type,
     contactValue: contact.value,
   });
   panelMode.value = 'edit';
-  editingId.value = row.id;
+  editingId.value = row.clientId;
 };
 
 const closePanel = () => {
@@ -611,19 +625,19 @@ const saveClient = () => {
     return;
   }
   const { contactType, contactValue, ...fields } = panelForm;
-  const ids = editingId.value
-    ? { id: editingId.value, uuid: parseClientId(editingId.value).uuid }
-    : createClientId(panelForm.clientCode);
+  const clientId = editingId.value
+    ? editingId.value
+    : createClientId(panelForm.threeCode, clients.value);
   const data: Client = {
     ...fields,
-    ...ids,
+    clientId,
     contact: { type: contactType, value: contactValue },
   };
   if (panelMode.value === 'add') {
     clients.value.push(data);
     globalThis.alert(`「${data.companyName}」を追加しました。\n\n勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。`);
   } else {
-    const idx = clients.value.findIndex(c => c.id === editingId.value);
+    const idx = clients.value.findIndex(c => c.clientId === editingId.value);
     if (idx >= 0) clients.value[idx] = data;
     globalThis.alert(`「${data.companyName}」を更新しました。`);
   }
@@ -670,7 +684,7 @@ onUnmounted(() => document.removeEventListener('click', closeDropdowns));
 </script>
 
 <style scoped>
-.cm-settings { max-width: 1200px; margin: 0 auto; padding: 20px 24px; }
+.cm-settings { max-width: 100%; margin: 0 auto; padding: 20px 24px; }
 .cm-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
 .cm-back-link { color: #3b82f6; font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 4px; }
 .cm-back-link:hover { text-decoration: underline; }
@@ -698,6 +712,8 @@ onUnmounted(() => document.removeEventListener('click', closeDropdowns));
 .cm-table tbody tr:hover { background: #f8fafc; }
 .cm-table tbody tr.row-inactive { opacity: 0.5; background: #f1f5f9; }
 .cm-code { font-weight: 700; letter-spacing: 1px; color: #1e293b; font-family: 'Menlo', monospace; }
+.cm-client-id { font-size: 10px; color: #64748b; font-family: 'Menlo', monospace; letter-spacing: 0.5px; }
+.cm-client-id-input { background: #f1f5f9 !important; color: #94a3b8 !important; cursor: not-allowed; font-family: 'Menlo', monospace; letter-spacing: 0.5px; }
 .cm-company-name { font-weight: 600; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 .cm-fiscal { text-align: center; }
 .cm-empty { text-align: center; color: #94a3b8; padding: 40px 12px !important; }

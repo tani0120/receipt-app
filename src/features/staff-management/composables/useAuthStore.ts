@@ -21,8 +21,8 @@ import type { Staff, StaffRole } from '@/features/staff-management/composables/u
 const ADMIN_ONLY_PATHS = [
     '/master/clients',
     '/master/staff',
-    '/master/accounts',
-    '/master/tax-categories',
+    '/settings/accounts',
+    '/settings/tax',
     '/master',
     '/cost',
     '/settings/admin',

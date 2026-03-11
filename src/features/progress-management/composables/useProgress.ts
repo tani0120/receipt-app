@@ -13,7 +13,7 @@ import type { ProgressRow, MonthColumn } from '../types';
 // モックデータ定義（Phase B TODO: API化時に削除）
 // =============================================
 
-/** 顧問先ごとの仕訳数モックデータ（clientCodeで引く） */
+/** 顧問先ごとの仕訳数モックデータ（threeCodeで引く） */
 const MOCK_JOURNAL_DATA: Record<string, {
     receivedDate: string;
     unexported: number;
@@ -58,11 +58,10 @@ export function useProgress() {
         const cols = monthColumns.value;
 
         return allClients.value.map(c => {
-            const mock = MOCK_JOURNAL_DATA[c.clientCode];
+            const mock = MOCK_JOURNAL_DATA[c.threeCode];
             return {
-                id: c.id,
-                uuid: c.uuid,
-                code: c.clientCode,
+                clientId: c.clientId,
+                code: c.threeCode,
                 status: c.status,
                 type: c.type,
                 fiscalMonth: c.fiscalMonth,

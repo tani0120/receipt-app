@@ -329,8 +329,10 @@ const saveBasicInfo = () => {
 };
 
 const navigateTo = (section: string) => {
+  // clientIdはルートパラメータから取得（/clients/:clientId/settings）
+  const clientId = (router.currentRoute.value.params.clientId as string) ?? 'ABC-00001';
   const routes: Record<string, string> = {
-    'accounting-software': '/settings/accounts',
+    'accounting-software': `/settings/accounts/${clientId}`,
   };
   if (routes[section]) {
     router.push(routes[section]);

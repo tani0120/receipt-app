@@ -71,30 +71,35 @@ jobs（作業単位）
 
 ---
 
-## URL構造
+## URL構造（2026-03-11 N1適用済み）
 
 ```
-# マスタ管理
-/master/clients                          ← 顧問先一覧管理
+# 上段バー（管理ページ）
+/progress/:code?                        ← 進捗管理
+/master/clients                          ← 顧問先管理
+/master/staff                            ← スタッフ管理
 /master/accounts                         ← 勘定科目マスタ
-/master/tax-categories                   ← 税区分マスタ
+/master/tax                              ← 税区分マスタ（旧 /master/tax-categories）
+/master/costs                            ← 想定費用（未実装）
+/master/settings                         ← 設定管理（未実装）
 
-# 顧問先個別
-/clients/:clientId/settings              ← 設定
-/clients/:clientId/journals              ← 仕訳一覧
-/clients/:clientId/journals/:journalId   ← 個別仕訳
-/clients/:clientId/jobs/:jobId           ← ジョブ詳細
-/clients/:clientId/documents/:documentId ← 証票詳細
-/clients/:clientId/collection            ← 回収状況
-/clients/:clientId/ai-rules              ← AI学習ルール
-/clients/:clientId/data-conversion       ← データ変換
-/clients/:clientId/tasks                 ← タスク管理
+# 顧問先個別（個別CLページURL体系 — 確定後に変更予定）
+/clients/:clientId/settings              ← 設定（新UI）
+# 以下は /mock/ 配下に残存（個別CLページURL確定後に /:clientId/ 形式に変更）
+/mock/journal-list                       ← 仕訳一覧
+/mock/export                             ← 出力
+/mock/drive-select                       ← Drive資料選別
 
-# スタッフ
-/staff/:staffId/...                      ← スタッフ管理（将来）
-
-# 全体設定
-/settings/admin                          ← 管理者設定
+# 旧ページ（/old/ 配下。Phase B完了後に一括削除）
+/old/journals/:clientId                  ← 旧Screen B 仕訳ステータス
+/old/collection/:clientId                ← 旧Screen C 回収状況
+/old/ai-rules/:clientId                  ← 旧Screen D AIルール
+/old/journal-entry/:jobId                ← 旧Screen E 仕訳入力
+/old/data-conversion/:clientId           ← 旧Screen G データ変換
+/old/tasks/:clientId                     ← 旧Screen H タスク管理
+/old/admin                               ← 旧Screen Z 管理者設定
+/old/settings-accounts                   ← 旧Screen S 顧問先別設定
+/old/documents/:clientId/:documentId     ← 旧 証票詳細
 ```
 
 ---
@@ -102,18 +107,20 @@ jobs（作業単位）
 ## 旧パス互換リダイレクト（Phase Bで削除）
 
 旧レイアウト（`App.vue`、`AaaLayout.vue` 等）からの参照を維持するため、
-暂定 clientId `demo` 経由で新URLにリダイレクト。
+暫定 clientId `demo` 経由で `/old/` 配下にリダイレクト。
 
 | 旧パス | リダイレクト先 |
 |--------|------------------|
-| `/journal-status` | `/clients/demo/journals` |
-| `/collection-status` | `/clients/demo/collection` |
-| `/ai-rules` | `/clients/demo/ai-rules` |
-| `/data-conversion` | `/clients/demo/data-conversion` |
-| `/task-dashboard` | `/clients/demo/tasks` |
-| `/admin-settings` | `/settings/admin` |
-| `/settings` | `/clients/demo/settings` |
-| `/journal-list` | `/clients/demo/journals` |
-| `/receipts/:id` | `/clients/demo/documents/:id` |
+| `/journal-status` | `/old/journals/demo` |
+| `/collection-status` | `/old/collection/demo` |
+| `/ai-rules` | `/old/ai-rules/demo` |
+| `/data-conversion` | `/old/data-conversion/demo` |
+| `/task-dashboard` | `/old/tasks/demo` |
+| `/admin-settings` | `/old/admin` |
+| `/settings` | `/clients/demo/settings`（新UIのため`/old/`にしない） |
+| `/journal-list` | `/old/journals/demo` |
+| `/receipts/:id` | `/old/documents/demo/:id` |
 | `/clients` | `/master/clients` |
-| `/master` | `/master/accounts` |
+| `/master` | `/master/accounts`（ハブ廃止） |
+| `/master/tax-categories` | `/master/tax`（短縮） |
+| `/clients/list` | `/master/clients` |

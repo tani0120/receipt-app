@@ -17,8 +17,7 @@ export interface MonthColumn {
 
 /** 進捗一覧行 */
 export interface ProgressRow {
-    id: string;
-    uuid: string;
+    clientId: string;
     code: string;
     status: 'active' | 'inactive' | 'suspension';
     type: 'corp' | 'individual';

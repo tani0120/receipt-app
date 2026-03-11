@@ -2,7 +2,7 @@
   <div class="h-full flex flex-col bg-gray-50 font-sans text-[12px] text-gray-700">
     <!-- 戻るリンク -->
     <div class="bg-white px-4 py-2 flex items-center gap-4 border-b border-gray-300">
-      <router-link :to="'/mock/export?client=' + clientId" class="text-blue-600 text-[12px] hover:underline flex items-center gap-1">
+      <router-link :to="'/export/' + clientId" class="text-blue-600 text-[12px] hover:underline flex items-center gap-1">
         <i class="fa-solid fa-arrow-left text-[10px]"></i> 出力ページに戻る
       </router-link>
       <span class="text-[15px] font-bold text-blue-700">ダウンロード履歴</span>
@@ -92,7 +92,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
 const router = useRouter();
-const clientId = computed(() => (route.query.client as string) ?? '');
+const clientId = computed(() => (route.params.clientId as string) ?? 'ABC-00001');
 
 // --- モックデータ（画像から11件） ---
 interface HistoryRow {
@@ -137,7 +137,7 @@ const pagedRows = computed(() => {
 const selectedId = ref('h10');
 const navigateToDetail = (id: string) => {
   selectedId.value = id;
-  router.push(`/mock/export-detail/${id}?client=${clientId.value}`);
+  router.push(`/export-detail/${clientId.value}/${id}`);
 };
 
 // --- チェックボックス ---

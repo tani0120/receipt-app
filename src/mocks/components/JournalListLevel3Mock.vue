@@ -927,7 +927,7 @@ const { clients, currentClient } = useClients();
 /** 選択中の顧問先の完全なClientオブジェクト */
 const activeClientFull = computed(() => {
   if (!currentClient.value) return null;
-  return clients.value.find(c => c.uuid === currentClient.value!.uuid) ?? null;
+  return clients.value.find(c => c.clientId === currentClient.value!.clientId) ?? null;
 });
 
 /** 顧問先のtype/hasRentalIncomeでフィルタ済み勘定科目リスト */
@@ -1899,16 +1899,34 @@ const journals = computed(() => {
           return compareWithNull(a.debit_entries[0]?.sub_account, b.debit_entries[0]?.sub_account, sortDirection.value, (x, y) => x.localeCompare(y));
         case 'debit_tax':
           return compareWithNull(a.debit_entries[0]?.tax_category_id, b.debit_entries[0]?.tax_category_id, sortDirection.value, (x, y) => x.localeCompare(y));
-        case 'debit_amount':
-          return compareWithNull(a.debit_entries[0]?.amount, b.debit_entries[0]?.amount, sortDirection.value, (x, y) => x - y);
+        case 'debit_amount': {
+          const aHasAny = a.debit_entries.some(e => e.amount != null);
+          const bHasAny = b.debit_entries.some(e => e.amount != null);
+          const aSum = aHasAny ? a.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0) : null;
+          const bSum = bHasAny ? b.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0) : null;
+          if (aSum === null && bSum === null) return 0;
+          if (aSum === null) return sortDirection.value === 'asc' ? -1 : 1;
+          if (bSum === null) return sortDirection.value === 'asc' ? 1 : -1;
+          const r = aSum - bSum;
+          return sortDirection.value === 'desc' ? -r : r;
+        }
         case 'credit_account':
           return compareWithNull(a.credit_entries[0]?.account, b.credit_entries[0]?.account, sortDirection.value, (x, y) => x.localeCompare(y));
         case 'credit_sub_account':
           return compareWithNull(a.credit_entries[0]?.sub_account, b.credit_entries[0]?.sub_account, sortDirection.value, (x, y) => x.localeCompare(y));
         case 'credit_tax':
           return compareWithNull(a.credit_entries[0]?.tax_category_id, b.credit_entries[0]?.tax_category_id, sortDirection.value, (x, y) => x.localeCompare(y));
-        case 'credit_amount':
-          return compareWithNull(a.credit_entries[0]?.amount, b.credit_entries[0]?.amount, sortDirection.value, (x, y) => x - y);
+        case 'credit_amount': {
+          const aHasAny = a.credit_entries.some(e => e.amount != null);
+          const bHasAny = b.credit_entries.some(e => e.amount != null);
+          const aSum = aHasAny ? a.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0) : null;
+          const bSum = bHasAny ? b.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0) : null;
+          if (aSum === null && bSum === null) return 0;
+          if (aSum === null) return sortDirection.value === 'asc' ? -1 : 1;
+          if (bSum === null) return sortDirection.value === 'asc' ? 1 : -1;
+          const r = aSum - bSum;
+          return sortDirection.value === 'desc' ? -r : r;
+        }
         default:
           return 0;
       }

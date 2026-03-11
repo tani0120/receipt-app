@@ -90,5 +90,6 @@ export function compareWithNull<T>(
   if (aIsNull) return direction === 'asc' ? 1 : -1;
   if (bIsNull) return direction === 'asc' ? -1 : 1;
 
-  return compareFn(a, b);
+  const result = compareFn(a, b);
+  return direction === 'desc' ? -result : result;
 }

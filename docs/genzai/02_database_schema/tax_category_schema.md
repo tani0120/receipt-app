@@ -222,8 +222,8 @@ UIメッセージ:
 | 設定画面（税区分タブ） | `src/views/ScreenS_AccountSettings.vue` | ✅ 実装済み |
 | 設定画面（勘定科目タブ） | `src/views/ScreenS_AccountSettings.vue` | ✅ 実装済み |
 | 勘定科目マスタUI | `src/mocks/views/MockMasterAccountsPage.vue`（`/master/accounts`） | ✅ モック実装済み（2026-03-06） |
-| 税区分マスタUI | `src/mocks/views/MockMasterTaxCategoriesPage.vue`（`/master/tax-categories`） | ✅ モック実装済み（2026-03-06） |
-| マスタハブUI | `src/mocks/views/MockMasterHubPage.vue`（`/master`） | ✅ モック実装済み（2026-03-06） |
+| 税区分マスタUI | `src/mocks/views/MockMasterTaxCategoriesPage.vue`（`/master/tax`） | ✅ モック実装済み（2026-03-06。旧`/master/tax-categories`から短縮、2026-03-11 N1） |
+| マスタハブUI | `src/mocks/views/MockMasterHubPage.vue`（`/master` → 廃止。`/master/accounts`にリダイレクト、2026-03-11 N1） | ✅ モック実装済み（2026-03-06） |
 | rate / effectiveFrom / deprecated追加 | 型定義への反映 | ⬜ 未着手 |
 | マスタ設計ルール（13項目） | `master_design_rules.md` | ✅ 確定済み（2026-03-06） |
 | client_tax_settings UI | 顧問先設定への統合 | ✅ モック実装済み |

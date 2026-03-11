@@ -2,7 +2,7 @@
   <div class="h-full flex flex-col bg-gray-50 font-sans text-[10px] text-gray-700">
     <!-- 戻るリンク -->
     <div class="bg-white px-3 py-1.5 flex items-center gap-3 border-b border-gray-300">
-      <router-link :to="'/mock/export-history?client=' + clientId" class="text-blue-600 text-[10px] hover:underline flex items-center gap-1">
+      <router-link :to="'/export-history/' + clientId" class="text-blue-600 text-[10px] hover:underline flex items-center gap-1">
         <i class="fa-solid fa-arrow-left text-[8px]"></i> ダウンロード履歴に戻る
       </router-link>
       <span class="text-[13px] font-bold text-blue-700">出力詳細：{{ historyFileName }}</span>
@@ -78,7 +78,7 @@ import { useRoute } from 'vue-router';
 import { mockJournalsPhase5 } from '../data/journal_test_fixture_30cases';
 
 const route = useRoute();
-const clientId = computed(() => (route.query.client as string) ?? '');
+const clientId = computed(() => (route.params.clientId as string) ?? 'ABC-00001');
 const historyId = computed(() => route.params.historyId as string);
 
 // 履歴IDからファイル名を解決（モック）
@@ -167,7 +167,7 @@ const allRows = computed<DetailRow[]>(() => {
       return {
         id: j.id,
         qualified: j.invoice_status === 'qualified' ? '○' : '',
-        date: formatDate(j.transaction_date),
+        date: formatDate(j.transaction_date ?? ''),
         description: j.description,
         debitAccount: debit?.account ?? '',
         debitSub: debit?.sub_account ?? '',
