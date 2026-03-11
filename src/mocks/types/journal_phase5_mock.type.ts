@@ -52,7 +52,7 @@ export type JournalLabelMock =
 
 export interface JournalPhase5Mock {
   // 基本情報
-  id: string;                           // UUID
+  id: string;                           // jrn-00000001形式
   display_order: number;                 // 表示順
   /**
    * 取引日（transaction_date）
@@ -86,6 +86,7 @@ export interface JournalPhase5Mock {
 
   // 証票紐付け（スキーマ準拠）
   document_id: string | null;             // 証票ID（documentsテーブル参照）
+  line_id: string | null;                 // 証票行ID（冗長だがクエリ高速化用）
 
   // N対N複合仕訳（無制限、UI上限15行）
   debit_entries: JournalEntryLine[];     // 借方明細（配列）
@@ -103,7 +104,7 @@ export interface JournalPhase5Mock {
   // 許可: export_exclude && deleted_at は許可（外部未出力のため）
   deleted_at: string | null;
 
-  // ラベル（21種類、非排他的）
+  // ラベル（22種類、非排他的）
   labels: JournalLabelMock[];
 
   // クレジットカード払い判定（Gemini層A、独立カラム）
@@ -127,4 +128,14 @@ export interface JournalPhase5Mock {
   // Phase B TODO: journal_staff_notesテーブルに分離
   staff_notes?: StaffNotes | null;       // 4カテゴリの対応情報
   staff_notes_author?: string | null;    // 担当者名
+
+  // 監査用（2026-03-11追加）
+  created_by?: string | null;             // 作成者（スタッフID or 'AI'）
+  updated_by?: string | null;             // 更新者
+
+  // AI推定関連（2026-03-11追加）
+  ai_completed_at?: string | null;        // AI仕訳生成完了日時
+  prediction_method?: string | null;      // 推定方法（keyword, alias, ai等）
+  prediction_score?: number | null;       // 推定信頼度
+  model_version?: string | null;          // 使用モデルバージョン
 }

@@ -16,6 +16,16 @@ import { type JournalLabel, VoucherType } from '@/domain/types/journal';
 import type { Yen } from '@/shared/types/yen';
 
 // ============================================================
+// ID生成（接頭辞+連番、モジュールスコープ）
+// ============================================================
+
+let journalCounter = 0;
+function generateJournalId(): string {
+    journalCounter++;
+    return 'jrn-' + String(journalCounter).padStart(8, '0');
+}
+
+// ============================================================
 // メイン変換関数
 // ============================================================
 
@@ -48,12 +58,14 @@ export function transformToJournalMock(
         : 'not_qualified' as const;
 
     return {
-        id: crypto.randomUUID(),
+        id: generateJournalId(),
         display_order: displayOrder,
         transaction_date: gemini.date ?? '',
+        date_on_document: true,
         description: gemini.description ?? '',
 
-        receipt_id: null,
+        document_id: null,
+        line_id: null,
 
         debit_entries: debitEntries,
         credit_entries: creditEntries,
@@ -94,9 +106,11 @@ function toEntryLine(entry: {
 }): JournalEntryLine {
     return {
         account: entry.account,
+        account_on_document: true,
         sub_account: entry.sub_account,
         amount: entry.amount as Yen,
-        tax_category: entry.tax_category,
+        amount_on_document: true,
+        tax_category_id: entry.tax_category,
     };
 }
 
