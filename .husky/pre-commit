@@ -6,5 +6,31 @@ if command -v ggshield >/dev/null 2>&1; then
   ggshield secret scan pre-commit --verbose
 else
   echo "Warning: ggshield not found, skipping secret scan"
-  exit 0
 fi
+
+# Shift-JIS検出（UTF-8以外のソースコードのコミットを拒否）
+node -e "
+const { execSync } = require('child_process');
+const fs = require('fs');
+const files = execSync('git diff --cached --name-only --diff-filter=ACM')
+  .toString().trim().split('\n').filter(Boolean);
+const targets = files.filter(f =>
+  /\.(ts|tsx|vue|js|jsx|css|md|json|html)$/.test(f) && fs.existsSync(f)
+);
+let bad = false;
+const decoder = new TextDecoder('utf-8', { fatal: true });
+for (const f of targets) {
+  const buf = fs.readFileSync(f);
+  try {
+    decoder.decode(buf);
+  } catch {
+    console.error('Shift-JIS検出: ' + f);
+    bad = true;
+  }
+}
+if (bad) {
+  console.error('UTF-8以外のファイルがあります。UTF-8に変換してからコミットしてください。');
+  process.exit(1);
+}
+"
+

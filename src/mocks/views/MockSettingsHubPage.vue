@@ -1,6 +1,5 @@
 <template>
   <div class="min-h-screen bg-gray-50" style="font-family: 'Noto Sans JP', sans-serif">
-    <MockNavBar />
     <div class="flex items-center justify-center" style="min-height: calc(100vh - 100px)">
       <div class="text-center">
         <i class="fa-solid fa-gear text-6xl text-gray-300 mb-4"></i>
@@ -13,5 +12,6 @@
 </template>
 
 <script setup lang="ts">
-import MockNavBar from '@/mocks/components/MockNavBar.vue';
+// MockNavBarはApp.vueで描画済みのため不要
 </script>
+

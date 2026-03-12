@@ -12,13 +12,23 @@
         <a class="card-link">設定する</a>
       </div>
 
-      <!-- カード2: 会計ソフト 勘定科目 -->
-      <div class="settings-card" @click="navigateTo('accounting-software')">
+      <!-- カード2: 顧問先用 勘定科目 -->
+      <div class="settings-card" @click="navigateTo('client-accounts')">
         <div class="settings-card-header">
-          <i class="fa-solid fa-calculator card-icon"></i>
-          <h3 class="card-title">勘定科目と税区分</h3>
+          <i class="fa-solid fa-book card-icon"></i>
+          <h3 class="card-title">顧問先用勘定科目</h3>
         </div>
-        <p class="card-description">勘定科目や税区分を設定します。</p>
+        <p class="card-description">この顧問先で使用する勘定科目を設定します。</p>
+        <a class="card-link">設定する</a>
+      </div>
+
+      <!-- カード2b: 顧問先用 税区分 -->
+      <div class="settings-card" @click="navigateTo('client-tax')">
+        <div class="settings-card-header">
+          <i class="fa-solid fa-percent card-icon"></i>
+          <h3 class="card-title">顧問先用税区分</h3>
+        </div>
+        <p class="card-description">この顧問先で使用する税区分を設定します。</p>
         <a class="card-link">設定する</a>
       </div>
 
@@ -329,10 +339,11 @@ const saveBasicInfo = () => {
 };
 
 const navigateTo = (section: string) => {
-  // clientIdはルートパラメータから取得（/clients/:clientId/settings）
+  // clientIdはルートパラメータから取得（/client/settings/:clientId）
   const clientId = (router.currentRoute.value.params.clientId as string) ?? 'ABC-00001';
   const routes: Record<string, string> = {
-    'accounting-software': `/settings/accounts/${clientId}`,
+    'client-accounts': `/client/settings/accounts/${clientId}`,
+    'client-tax': `/client/settings/tax/${clientId}`,
   };
   if (routes[section]) {
     router.push(routes[section]);

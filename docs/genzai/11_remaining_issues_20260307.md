@@ -621,3 +621,28 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 | 1 | `GeminiVisionService.ts` L126,139 | `crypto.randomUUID()`残存（Phase 1旧型体系） | Phase C廃止時に対応 |
 | 2 | Firebase | `localhost:5175`許可ドメイン未設定 | Firebaseコンソールで手動設定 |
 | 3 | `JournalEntrySchema.ts` | `receipt_id`残存（§A3 #15、DB連動FK） | Supabase移行時に変更 |
+
+---
+
+## N. エンコーディング文字化け修正（2026-03-12追記）
+
+> `journal_test_fixture_30cases.ts`がShift-JIS（CP932）で保存されており、
+> 仕訳一覧画面（`/journal-list/:clientId`）で全データ行が文字化けしていた。
+
+### N-1. 修正済み
+
+| # | ファイル | 問題 | 対応 | 状態 |
+|---|---------|------|------|:----:|
+| 1 | `journal_test_fixture_30cases.ts` | Shift-JIS（CP932）で保存されていた | Node.jsの`TextDecoder('shift-jis')`でUTF-8に変換 | ✅ |
+
+### N-2. 再発防止（構造的対策）
+
+| # | 対策 | 状態 | 備考 |
+|---|------|:----:|------|
+| 1 | `.editorconfig`にUTF-8強制ルール追加 | ❌ | 次コミットで対応 |
+| 2 | `.vscode/settings.json`にUTF-8設定追加 | ❌ | 次コミットで対応 |
+| 3 | huskyのpre-commitフックにShift-JIS検出追加 | ❌ | 次コミットで対応 |
+| 4 | `00_モック実装時のルール.md`§13-14に方針記載 | ✅ | エンコーディングルール+PowerShell使い分け |
+| 5 | `12_full_schema_design_20260311.md`§7に方針記載 | ✅ | CSV出力UTF-8 BOM付き |
+| 6 | `10_nullable_on_document_plan.md`H4に方針記載 | ✅ | CSV出力UTF-8 BOM付き |
+

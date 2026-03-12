@@ -163,6 +163,7 @@
 | H1 | [mf-csv-date.ts](file:///c:/dev/receipt-app/src/features/journal/services/mf-csv-date.ts)（MF CSV日付変換） | [x] 作成済み | — |
 | H2 | 新規作成 | [ ] CSV出力前null集計＋警告 | null（空値）フィールドの件数を集計し「N件のnull項目があります。出力しますか？」と警告表示 |
 | H3 | [journal_v2_20260214.md](file:///c:/dev/receipt-app/docs/genzai/02_database_schema/journal/journal_v2_20260214.md)§9 | [ ] CSV出力前警告の方針記載 | MF CSVインポート時のnull項目の挙動を確認し方針をドキュメントに記載 |
+| H4 | CSV出力ロジック | [ ] UTF-8 BOM付きで出力 | MFクラウドはUTF-8/Shift-JIS両対応。UTF-8 BOM付き（`\uFEFF`先頭付与）を採用。ExcelのShift-JIS誤判定を防ぐ（2026-03-12追加） |
 
 ### 優先度9: 個別仕訳ページ（画面未着手）
 

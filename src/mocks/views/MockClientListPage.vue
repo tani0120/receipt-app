@@ -175,7 +175,7 @@ const softwareLabel = (s: string) => {
 // --- 行クリックで進捗詳細ページへ遷移 ---
 const goToSettings = (row: Client) => {
   const code = row.threeCode.toLowerCase();
-  router.push(`/progress/${code}`);
+  router.push(`/master/progress/${code}`);
 };
 </script>
 
