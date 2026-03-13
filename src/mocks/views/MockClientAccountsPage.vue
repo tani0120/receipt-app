@@ -5,26 +5,23 @@
       <div class="account-settings">
         <!-- ヘッダー -->
         <div class="as-header">
-          <router-link to="/master" class="as-back-link">
-            <i class="fa-solid fa-arrow-left"></i> マスタ管理
+          <router-link to="/master/clients" class="as-back-link">
+            <i class="fa-solid fa-arrow-left"></i> 顧問先管理
           </router-link>
-          <span class="as-header-label">勘定科目マスタ（事務所共通）</span>
+          <span class="as-header-label">顧問先用勘定科目</span>
         </div>
 
         <!-- 切替セレクター -->
         <div class="as-selectors-center">
           <div class="as-selector-group-lg">
             <span class="as-selector-label-lg">事業形態:</span>
-            <select v-model="accountBusinessType" class="as-selector-lg">
-              <option value="individual">個人事業主</option>
-              <option value="corp">法人</option>
-            </select>
+            <span class="as-fixed-value">{{ clientBusinessTypeLabel }}</span>
           </div>
           <div class="as-selector-group-lg" v-if="accountBusinessType === 'individual'">
-            <label class="as-checkbox-label-lg">
-              <input type="checkbox" v-model="accountHasRealEstate" class="as-checkbox-lg">
-              <span>不動産所得あり</span>
-            </label>
+            <span class="as-fixed-label">
+              <i class="fa-solid" :class="accountHasRealEstate ? 'fa-square-check' : 'fa-square'" style="color:#1976D2"></i>
+              不動産所得あり
+            </span>
           </div>
         </div>
 
@@ -36,7 +33,14 @@
         <!-- 注意コメント -->
         <div class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
-          デフォルト科目（<i class="fa-solid fa-lock" style="font-size:14px;color:#666"></i>）の勘定科目名・税区分は編集できません。コピー・追加したカスタム科目のみ編集可能です。
+          デフォルト科目（<i class="fa-solid fa-building-columns" style="font-size:14px;color:#1976D2"></i>）の科目名は変更できません。補助科目・表示切替は編集可能です。カスタム科目は全項目を編集できます。
+        </div>
+
+        <!-- MF名称変更警告（ルール5） -->
+        <div v-if="mfWarningMessage" class="as-mf-warning">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          {{ mfWarningMessage }}
+          <button class="as-mf-warning-close" @click="mfWarningMessage = ''">&times;</button>
         </div>
 
         <div class="as-toolbar">
@@ -89,7 +93,7 @@
                 <th class="sortable" @click="sortAccounts('defaultTaxCategoryId')">
                   税区分 <i :class="getSortIcon('defaultTaxCategoryId')"></i>
                 </th>
-                <th>AI</th>
+                <th>税区分自動選択</th>
                 <th class="sortable" @click="sortAccounts('effectiveFrom')">
                   適用開始 <i :class="getSortIcon('effectiveFrom')"></i>
                 </th>
@@ -115,13 +119,13 @@
                     <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" ref="editInput" autofocus>
                   </template>
                   <template v-else>
-                    <i v-if="!row.isCustom" class="fa-solid fa-lock td-lock"></i>
+                    <i v-if="!row.isCustom" class="fa-solid fa-building-columns td-default-icon"></i>
                     {{ row.name }}
                   </template>
                 </td>
                 <td class="td-sub-account"></td>
-                <td>{{ getTaxCategoryName(row.defaultTaxCategoryId) }}</td>
-                <td class="td-ai">{{ row.aiSelectable ? '○' : '' }}</td>
+                <td>{{ row.taxDetermination === 'fixed' ? getTaxCategoryName(row.defaultTaxCategoryId) : row.taxDetermination === 'auto_sales' ? '自動選択（売上）' : '自動選択（仕入）' }}</td>
+                <td class="td-ai">{{ row.taxDetermination !== 'fixed' ? '○' : '' }}</td>
                 <td class="td-date">{{ row.effectiveFrom }}</td>
                 <td class="td-date">{{ row.effectiveTo ?? '現役' }}</td>
                 <td class="as-td-actions">
@@ -150,15 +154,25 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import type { Account } from '@/shared/types/account';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
 import { ACCOUNT_MASTER } from '@/shared/data/account-master';
+import { useClients } from '@/features/client-management/composables/useClients';
 
 const PAGE_SIZE = 50;
+const route = useRoute();
+const { clients } = useClients();
 
-// =============== 勘定科目マスタ ===============
-const accountBusinessType = ref<'corp' | 'individual'>('individual');
-const accountHasRealEstate = ref(false);
+// =============== 顧問先情報取得 ===============
+const clientId = computed(() => {
+  const match = route.path.match(/\/client\/settings\/accounts\/([^/]+)/);
+  return match ? match[1] : null;
+});
+const currentClientData = computed(() => clients.value.find(c => c.clientId === clientId.value) ?? null);
+const accountBusinessType = computed<'corp' | 'individual'>(() => currentClientData.value?.type === 'corp' ? 'corp' : 'individual');
+const accountHasRealEstate = computed(() => currentClientData.value?.hasRentalIncome ?? false);
+const clientBusinessTypeLabel = computed(() => accountBusinessType.value === 'corp' ? '法人' : '個人事業主');
 const accountFilter = ref('');
 const accountPage = ref(1);
 
@@ -247,7 +261,7 @@ function copyChecked() {
       target: src.target,
       category: src.category,
       defaultTaxCategoryId: src.defaultTaxCategoryId,
-      aiSelectable: src.aiSelectable,
+      taxDetermination: src.taxDetermination,
       deprecated: src.deprecated,
       effectiveFrom: src.effectiveFrom,
       effectiveTo: src.effectiveTo,
@@ -270,7 +284,7 @@ function addAfterChecked() {
     target: accountBusinessType.value === 'corp' ? 'corp' : 'individual',
     category: '経費',
     defaultTaxCategoryId: 'COMMON_EXEMPT',
-    aiSelectable: false,
+    taxDetermination: 'fixed',
     deprecated: false,
     effectiveFrom: new Date().toISOString().slice(0, 10),
     effectiveTo: null,
@@ -288,13 +302,21 @@ function saveChanges() {
 const editingRow = ref('');
 const editingField = ref('');
 const editValue = ref('');
+const editOriginalName = ref('');
 function startEdit(row: Account, field: 'name') {
   editingRow.value = row.id;
   editingField.value = field;
   editValue.value = row[field];
+  editOriginalName.value = row[field];
 }
+const mfWarningMessage = ref('');
 function commitEdit(row: Account) {
-  if (editingField.value === 'name' && row) { row.name = editValue.value; }
+  if (editingField.value === 'name' && row) {
+    row.name = editValue.value;
+    if (row.isCustom && editValue.value !== editOriginalName.value) {
+      mfWarningMessage.value = `⚠️ 「${editValue.value}」: この科目名を変更すると、MFインポート時に新しい勘定科目の登録または既存科目への変換を求められる可能性があります。`;
+    }
+  }
   editingRow.value = '';
   editingField.value = '';
 }
@@ -549,8 +571,32 @@ function resetAccountOrder() {
 .row-custom { background: #fffde7; }
 .row-custom:hover { background: #fff9c4; }
 
-/* デフォルト行のロックアイコン（科目名左） */
-.td-lock { color: #f9a825; font-size: 1em; margin-right: 4px; vertical-align: middle; }
+/* デフォルト科目のアイコン（科目名左） */
+.td-default-icon { color: #1976D2; font-size: 1em; margin-right: 4px; vertical-align: middle; }
+
+/* 固定値表示（編集不可） */
+.as-fixed-value {
+  font-size: 16px; font-weight: 700; color: #333;
+  padding: 8px 14px; background: #f5f5f5; border: 2px solid #e0e0e0;
+  border-radius: 6px; min-width: 160px; display: inline-block; text-align: center;
+}
+.as-fixed-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; color: #555;
+}
+
+/* MF名称変更警告バナー（ルール5） */
+.as-mf-warning {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; margin: 4px 0 8px; border-radius: 4px;
+  background: #fff3e0; color: #e65100;
+  font-size: 12px; border: 1px solid #ffcc80;
+}
+.as-mf-warning i { font-size: 14px; flex-shrink: 0; color: #f57c00; }
+.as-mf-warning-close {
+  margin-left: auto; background: none; border: none;
+  color: #e65100; font-size: 16px; cursor: pointer; padding: 0 4px;
+}
 
 /* 編集可能セル */
 .td-editable { cursor: text; }

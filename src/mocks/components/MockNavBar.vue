@@ -6,7 +6,7 @@
       <div class="flex items-center gap-3">
         <img src="/sugu-suru-logo.png" alt="sugu-suru" style="height: 30px" />
         <!-- クライアント名動的表示 -->
-        <div v-if="currentClient" class="flex items-center gap-2 border-l-2 border-sky-400 pl-3 ml-2">
+        <div v-if="currentClient && !isMasterPage" class="flex items-center gap-2 border-l-2 border-sky-400 pl-3 ml-2">
           <span class="bg-sky-600 text-white font-extrabold px-2 py-0.5 rounded text-[13px] tracking-wider shadow-sm">{{ currentClient.threeCode }}</span>
           <span class="text-[14px] font-bold text-sky-800">{{ currentClient.name }}</span>
         </div>
@@ -40,7 +40,7 @@
       </div>
     </div>
     <!-- 下段バー（sky-600）ナビゲーション: 個別会社エリアのみ表示 -->
-    <div v-if="currentClient" class="bg-sky-600 px-3 py-1.5 flex items-center text-[11.5px] tracking-[0.5px] text-white font-semibold" style="font-family: 'Noto Sans JP', sans-serif">
+    <div v-if="currentClient && !isMasterPage" class="bg-sky-600 px-3 py-1.5 flex items-center text-[11.5px] tracking-[0.5px] text-white font-semibold" style="font-family: 'Noto Sans JP', sans-serif">
       <!-- 左: ナビ項目 -->
       <div class="flex items-center gap-4">
         <button
@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useClients } from '@/features/client-management/composables/useClients';
 
@@ -77,6 +77,9 @@ const route = useRoute();
 
 // --- クライアント情報（useClients composableから取得） ---
 const { currentClient } = useClients();
+
+// マスタページ（/master/）では顧問先コンテキストを非表示にする
+const isMasterPage = computed(() => route.path.startsWith('/master/'));
 
 // --- 旧ページメニュー ---
 const showLegacyMenu = ref(false);

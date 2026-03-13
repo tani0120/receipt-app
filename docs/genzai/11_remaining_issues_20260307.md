@@ -627,7 +627,7 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 ## N. エンコーディング文字化け修正（2026-03-12追記）
 
 > `journal_test_fixture_30cases.ts`がShift-JIS（CP932）で保存されており、
-> 仕訳一覧画面（`/journal-list/:clientId`）で全データ行が文字化けしていた。
+> 仕訳一覧画面（`/client/journal-list/:clientId`）で全データ行が文字化けしていた。
 
 ### N-1. 修正済み
 

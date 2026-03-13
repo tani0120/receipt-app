@@ -73,7 +73,7 @@
               <th class="sortable" @click="sortAccounts('defaultTaxCategoryId')">
                 税区分 <i :class="getSortIcon('accounts', 'defaultTaxCategoryId')"></i>
               </th>
-              <th>AI</th>
+              <th>税区分自動選択</th>
               <th class="as-th-check"></th>
             </tr>
           </thead>
@@ -82,8 +82,8 @@
               <td class="as-td-check"><input type="checkbox"></td>
               <td>{{ row.name }}</td>
               <td class="td-sub-account">{{ row.sub || '' }}</td>
-              <td>{{ getTaxCategoryName(row.defaultTaxCategoryId) }}</td>
-              <td class="td-ai">{{ row.aiSelectable ? '○' : '' }}</td>
+              <td>{{ row.taxDetermination === 'fixed' ? getTaxCategoryName(row.defaultTaxCategoryId) : row.taxDetermination === 'auto_sales' ? '自動選択（売上）' : '自動選択（仕入）' }}</td>
+              <td class="td-ai">{{ row.taxDetermination !== 'fixed' ? '○' : '' }}</td>
               <td class="as-td-check"><i class="fa-solid fa-trash-can td-trash"></i></td>
             </tr>
           </tbody>

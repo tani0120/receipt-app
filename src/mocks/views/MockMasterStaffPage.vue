@@ -4,9 +4,6 @@
       <div class="cm-settings">
         <!-- ヘッダー -->
         <div class="cm-header">
-          <router-link to="/master" class="cm-back-link">
-            <i class="fa-solid fa-arrow-left"></i> マスタ管理
-          </router-link>
           <h1 class="cm-title">スタッフ管理</h1>
         </div>
 
@@ -315,7 +312,7 @@ const openEditPanel = (row: Staff) => {
   Object.assign(panelForm, {
     name: row.name,
     email: row.email,
-    password: row.password,
+    password: '',
     role: row.role,
     status: row.status,
   });
@@ -339,8 +336,8 @@ const saveStaff = () => {
     globalThis.alert('メールアドレスは必須です');
     return;
   }
-  if (!panelForm.password) {
-    globalThis.alert('パスワードは必須です');
+  if (panelMode.value === 'add' && !panelForm.password) {
+    globalThis.alert('新規作成時はパスワードが必須です');
     return;
   }
   const uuid = editingUuid.value ?? generateStaffUuid();
@@ -348,7 +345,6 @@ const saveStaff = () => {
     uuid,
     name: panelForm.name,
     email: panelForm.email,
-    password: panelForm.password,
     role: panelForm.role,
     status: panelForm.status,
   };

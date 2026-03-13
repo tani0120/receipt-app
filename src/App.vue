@@ -1,8 +1,8 @@
 
 <template>
   <div id="app" class="flex flex-col h-full bg-slate-50 text-slate-700 font-sans h-screen overflow-hidden">
-    <!-- 統一ナビバー -->
-    <MockNavBar />
+    <!-- 統一ナビバー（ログインページ以外） -->
+    <MockNavBar v-if="route.path !== '/login'" />
 
     <!-- Main Content -->
     <main class="flex-1 overflow-hidden relative bg-slate-100 p-4">
@@ -19,6 +19,9 @@
 
 <script setup lang="ts">
 import MockNavBar from '@/mocks/components/MockNavBar.vue';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
 </script>
 
 <style>

@@ -65,7 +65,7 @@
 
 | # | 対象ファイル | 作業内容 | 詳細 |
 |---|------------|---------|------|
-| K1 | [account-master.ts](file:///c:/dev/receipt-app/src/shared/data/account-master.ts) | [x] 勘定科目マスター ✅ | 79科目。MF準拠。法人/個人1マスタ管理、`target`（`corp`/`individual`/`both`）で分岐。概念ID + MF正式名称 + デフォルト税区分 + AI可否 + 表示順 |
+| K1 | [account-master.ts](file:///c:/dev/receipt-app/src/shared/data/account-master.ts) | [x] 勘定科目マスター ✅ | 79科目。MF準拠。法人/個人1マスタ管理、`target`（`corp`/`individual`/`both`）で分岐。概念ID + MF正式名称 + デフォルト税区分 + `taxDetermination`（税区分判定モード） + 表示順 |
 | K2 | [tax-category-master.ts](file:///c:/dev/receipt-app/src/shared/data/tax-category-master.ts) | [x] 税区分マスター ✅ | 151件。MF正式名称完全一致。概念ID（例: `PURCHASE_TAXABLE_10`）方式。デフォルト表示27件 + 残りは顧問先単位で有効化 |
 | K3 | [MockMasterAccountsPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterAccountsPage.vue) | [x] 勘定科目マスタUI ✅ | `/master/accounts` に独立ページ化。「分類」列廃止→「補助科目」列追加。ヘルプアイコン（?マーク）でカスタムツールチップ表示（「補助科目は顧問先ごとの設定で入力します」） |
 | K4 | [MockMasterTaxCategoriesPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterTaxCategoriesPage.vue) | [x] 税区分マスタUI ✅ | `/master/tax` に独立ページ化（旧`/master/tax-categories`から短縮、2026-03-11 N1で変更） |
@@ -83,7 +83,7 @@
 | 6 | 操作方式 | インライン編集 + 保存ボタンで確定。✓選択で削除・コピー・追加 |
 | 7 | 自動コピー | 新規顧問先作成時にマスタから自動コピー（連動） |
 | 8 | 変更伝播 | 新規追加→自動反映。変更・非推奨→手動（通知+スタッフ確認） |
-| 9 | AI可否 | マスタは初期値のみ。顧問先単位で上書き可能 |
+| 9 | 税区分判定モード（`taxDetermination`） | マスタは初期値のみ。顧問先単位で上書き可能。値: `auto_purchase`（自動判定:仕入）/ `auto_sales`（自動判定:売上）/ `fixed`（固定） |
 | 10 | ソート順永続化 | ドラッグ並替え→`sort_order`更新→DB保存。`ORDER BY sort_order ASC` |
 | 11 | デフォルト税区分連動 | ルール8に準じる（手動通知+スタッフ反映） |
 | 12 | 税制改正強制適用 | 税区分変更（=税制改正）のみ全顧問先に強制。勘定科目は全て手動 |
@@ -192,15 +192,15 @@
 |---|----------|------------|------|
 | 1 | 顧問先管理 | `/master/clients` | ✅実装済み。顧問先の追加・編集・停止 |
 | 2 | スタッフ管理 | `/master/staff` | ✅実装済み。スタッフの追加・編集・停止 |
-| 3 | 勘定科目マスタ | `/settings/accounts/:clientId` | ✅実装済み。顧問先固有の勘定科目マスタ |
-| 4 | 税区分マスタ | `/settings/tax/:clientId` | ✅実装済み。顧問先固有の税区分マスタ |
+| 3 | 勘定科目マスタ | `/client/settings/accounts/:clientId` | ✅実装済み。顧問先固有の勘定科目マスタ |
+| 4 | 税区分マスタ | `/client/settings/tax/:clientId` | ✅実装済み。顧問先固有の税区分マスタ |
 | 5 | 想定費用 | `/master/costs` | ✅ページ作成済み（未実装表示）。AI費用等の管理 |
 | 6 | 設定管理 | `/master/settings` | ✅ページ作成済み（未実装表示） |
 
 > **2026-03-11 N1適用**: 旧体系のURL（`/admin/clients`、`/master`ハブ、`/admin/billing`等）は全て上記に統一。
-> NavBar上段バーは上記6項目＋進捗管理（`/progress`）の計7項目。「マスタ管理」ハブは廃止。
-> 勘定科目・税区分は顧問先固有ページのため`/settings/`配下にclientId付きURLとして配置。
-> アップロード（`/upload/:clientId`）・学習（`/learning/:clientId`）は仮ページ作成済み。
+> NavBar上段バーは上記6項目＋進捗管理（`/master/progress`）の計7項目。「マスタ管理」ハブは廃止。
+> 勘定科目・税区分は顧問先固有ページのため`/client/settings/`配下にclientId付きURLとして配置。
+> アップロード（`/client/upload/:clientId`）・学習（`/client/learning/:clientId`）は仮ページ作成済み。
 
 #### スタッフ管理UI（権限設定）— マスタ設計ルール2の前提
 
@@ -254,7 +254,7 @@
 
 #### 進捗管理UI（Composable化・本番移行基盤）
 
-> 進捗管理ページ（`/progress`）のロジックをcomposable化し、本番API連携時の差分を最小化する。
+> 進捗管理ページ（`/master/progress`）のロジックをcomposable化し、本番API連携時の差分を最小化する。
 > **パターン**: `useClients` / `useStaff` と同一構成。
 
 | # | 対象ファイル | 作業内容 | 詳細 |
@@ -294,7 +294,7 @@
 | 6 | 分類列→補助科目列差替え（マスタ+顧問先設定） | ✅ | AI | 優先度3 |
 | 7 | マスタ設計ルール13項目確定 | ✅ | AI+人間 | master_design_rules.md |
 | — | **▼ 型定義変更（スキーマ反映）** | | | |
-| 8 | `account.ts` に `deprecated` / `effective_from` / `effective_to` / `ai_selectable` 追加 | ✅ | AI | tax_category_schema.md §2 |
+| 8 | `account.ts` に `deprecated` / `effective_from` / `effective_to` / `taxDetermination`（税区分判定モード） 追加 | ✅ | AI | tax_category_schema.md §2 |
 | 9 | `tax-category.ts` に `deprecated` / `effective_from` / `effective_to` 追加 | ✅ | AI | tax_category_schema.md §1 |
 | 10 | `account-master.ts` のデータに上記フィールドの値を設定 | ✅ | AI | tax_category_schema.md §2 |
 | 11 | `tax-category-master.ts` のデータに上記フィールドの値を設定 | ✅ | AI | tax_category_schema.md §1 |
@@ -440,7 +440,50 @@
 | 読み取り不能（軽微） | 🟡 黄アイコン（⚠） |
 | フィルタ検索 | 「空欄」で検索・抽出可能 |
 | 勘定科目プルダウン | 先頭に「未確定（使用しない）」→ 以下通常科目 |
-| デフォルト税区分 | 勘定科目ごとに`自動判定(仕入)`等を設定 |
+| 税区分判定モード | 勘定科目ごとに`taxDetermination`で制御。`auto_purchase`（自動判定:仕入）/ `auto_sales`（自動判定:売上）/ `fixed`（固定） |
+
+### AI自動判定の正式定義（2026-03-14 確定）
+
+> **重要**: AIは「推論」（自由生成）ではなく、マスタの**閉じたリスト**から1件を「選択」する。マスタ外の値は絶対に出力しない。
+
+```
+レシート/領収書 → AI処理
+
+├─ ① 勘定科目選択（ACCOUNT_MASTERから選択）
+│   AIが勘定科目マスタ（ACCOUNT_MASTER）の中から1件を選択
+│   候補 = deprecated=false かつ effectiveTo=null の科目のみ
+│   ※ 推論（自由生成）ではない。マスタ外の科目名を出力しない
+│
+└─ ② 税区分判定（選択された科目のtaxDeterminationに従属）
+    ├─ fixed（固定）→ defaultTaxCategoryIdをそのまま使用
+    │   例: 給料手当 → 常に「対象外」
+    │
+    ├─ auto_purchase（自動判定:仕入）
+    │   → TAX_CATEGORY_MASTERの direction='purchase' かつ aiSelectable=true から選択
+    │   候補: 課税仕入10%, 課税仕入(軽)8%, 課税仕入8%, 非課税仕入
+    │   例: 消耗品費 → OCR税率10% → 「課税仕入10%」を選択
+    │
+    └─ auto_sales（自動判定:売上）
+        → TAX_CATEGORY_MASTERの direction='sales' かつ aiSelectable=true から選択
+        候補: 課税売上10%, 課税売上(軽)8%, 課税売上8%, 非課税売上
+        例: 売上高 → 請求書の税率 → 「課税売上10%」を選択
+```
+
+#### 2つの`aiSelectable`の関係
+
+| 場所 | フィールド | 意味 |
+|------|-----------|------|
+| 勘定科目マスタ（`account-master.ts`） | `taxDetermination`（税区分判定モード） | その科目の税区分をAIに判定させるか。`auto_purchase`/`auto_sales`/`fixed`の3値 |
+| 税区分マスタ（`tax-category-master.ts`） | `aiSelectable`（AI選択候補） | その税区分がAI判定の**候補**になるか。`true`/`false` |
+
+#### 業種テンプレート（未実装・次フェーズ）
+
+| レイヤー | 役割 | 状態 |
+|---------|------|:----:|
+| `ACCOUNT_MASTER`（勘定科目マスタ：標準） | 一般業種のデフォルト税区分設定 | ✅ 正しい |
+| `TAX_CATEGORY_MASTER`（税区分マスタ：151件） | 税区分の選択肢一覧 | ✅ 十分 |
+| 業種テンプレート | 業種別の`defaultTaxCategoryId`（デフォルト税区分ID）上書きセット | ❌ 未実装 |
+| 顧問先設定（N7） | 個別顧問先の上書き | ❌ 未実装 |
 
 ---
 
@@ -480,8 +523,9 @@
 |-------|-----|------------|------|
 | 事務所共通 勘定科目マスタ | `/master/accounts` | `MockMasterAccountsPage.vue` L165: `reactive([...ACCOUNT_MASTER])` | ❌独立 |
 | 事務所共通 税区分マスタ | `/master/tax` | `MockMasterTaxCategoriesPage.vue` | ❌独立 |
-| 顧問先別 勘定科目・税区分 | `/old/settings-accounts` | `ScreenS_AccountSettings.vue` L227: `reactive([...ACCOUNT_MASTER])`, L254: `reactive([...TAX_CATEGORY_MASTER])` | ❌独立 |
-| 仕訳一覧ドロップダウン | `/mock/journal-list`（個別CLページURL確定後に変更予定） | `JournalListLevel3Mock.vue` L934: `ACCOUNT_MASTER`直接フィルタ | ❌独立 |
+| 顧問先別 勘定科目 | `/client/settings/accounts/:clientId` | `MockClientAccountsPage.vue`（`MockMasterAccountsPage.vue`のコピー、後で修正予定） | ❌独立 |
+| 顧問先別 税区分 | `/client/settings/tax/:clientId` | `MockClientTaxPage.vue`（`MockMasterTaxCategoriesPage.vue`のコピー、後で修正予定） | ❌独立 |
+| 仕訳一覧ドロップダウン | `/client/journal-list/:clientId` | `JournalListLevel3Mock.vue` L934: `ACCOUNT_MASTER`直接フィルタ | ❌独立 |
 
 - **問題**: 顧問先別設定で科目を追加/非表示にしても、仕訳一覧のドロップダウンに反映されない
 - **問題**: `selectAccount`（L1030）が`ACCOUNT_MASTER.find(a => a.name === accountName)`で事務所共通マスタから直接検索。顧問先別の税区分カスタマイズが反映されない
@@ -506,10 +550,20 @@
 | ID | タスク | 登録日 | 状態 | 備考 |
 |:--:|--------|:------:|:----:|------|
 | N1 | **URL名の適正化** — 全ページのルーティングパスを再設計し、AIでも階層構造が一目で分かる命名に統一 | 03-11 | ✅完了 | 下記N1詳細参照 |
-| N1a | **settings/:clientId統一** — `/clients/:clientId/settings`を`/settings/:clientId`に統一。勘定科目・税区分を`/settings/accounts/:clientId`・`/settings/tax/:clientId`に配置 | 03-11 | ✅完了 | パターンB完全統一。旧URLは全てリダイレクト対応 |
-| N1b | **仮ページ作成** — アップロード(`/upload/:clientId`)・学習(`/learning/:clientId`)の仮ページ | 03-11 | ✅完了 | `MockUploadPage.vue`・`MockLearningPage.vue`新規作成 |
+| N1a | **settings/:clientId統一** — `/clients/:clientId/settings`を`/client/settings/:clientId`に統一。勘定科目・税区分を`/client/settings/accounts/:clientId`・`/client/settings/tax/:clientId`に配置 | 03-11 | ✅完了 | パターンB完全統一。旧URLは全てリダイレクト対応 |
+| N1b | **仮ページ作成** — アップロード(`/client/upload/:clientId`)・学習(`/client/learning/:clientId`)の仮ページ | 03-11 | ✅完了 | `MockUploadPage.vue`・`MockLearningPage.vue`新規作成 |
 | N1c | **formatDate型エラー修正** — ExportPage/ExportDetailPageの`formatDate(j.transaction_date)`にnullフォールバック追加 | 03-11 | ✅完了 | `?? ''`で型安全に |
 | N1d | **ProgressDetailPage `row.id`型エラー** — `:key="row.id"`を`row.clientId`に修正 | 03-11 | ✅完了 | ProgressRow型にidが存在しないため |
+| N1e | **URL体系を`/client/`・`/master/`接頭辞に統一** — 顧問先固有ページに`/client/`、全社共通ページに`/master/`（含む`/master/progress`）を接頭辞として追加。NavBar・各コンポーネント内リンクも全更新 | 03-12 | ✅完了 | 旧パスからのリダイレクト整備済み |
+| N1f | **`useClients.ts`正規表現修正** — `currentClient`のURL解析正規表現を新URL体系（`/client/`接頭辞）に対応。フォールバック（常にABC-00001）を廃止し、該当なしは`null`を返すよう変更 | 03-13 | ✅完了 | 進捗管理→各顧問先クリック時に正しいclientIdが反映されるようになった |
+| N1g | **NavBarコンテキスト制御** — マスタページ（`/master/`）では顧問先名と下段バーを非表示、ログインページ（`/login`）ではNavBar全体を非表示に変更 | 03-13 | ✅完了 | `isMasterPage` computed追加、`App.vue`に`v-if`条件追加 |
+| N1h | **顧問先設定を独立ファイル化** — `MockClientAccountsPage.vue`（勘定科目）と`MockClientTaxPage.vue`（税区分）を`src/mocks/views/`に新規作成。ルーターの参照先を独立コンポーネントに変更 | 03-12 | ✅完了 | マスタページのコピーとして作成。後で顧問先用に修正予定 |
+| N1i | **pre-commitフック修正** — Shift-JIS検出ロジックがUTF-8マルチバイト文字を誤検出していたため、`TextDecoder('utf-8', { fatal: true })`方式に変更 | 03-12 | ✅完了 | バイトパターンチェック（0x81-0x9F）を廃止 |
+| N1j | **顧問先ページUI修正** — `MockClientAccountsPage.vue`・`MockClientTaxPage.vue`のパンくず・タイトル・事業形態固定表示・アイコン・説明文を顧問先コンテキストに修正。`useClients`連携追加 | 03-13 | ✅完了 | マスタのコピーから顧問先用に差別化完了 |
+| N1k | **マスタページのパンくず削除** — `MockMasterAccountsPage.vue`・`MockMasterTaxCategoriesPage.vue`・`MockMasterClientsPage.vue`・`MockMasterStaffPage.vue`の「← マスタ管理」リンクを削除（NavBarで直接遷移するため不要） | 03-13 | ✅完了 | 4ファイル修正 |
+| N1l | **password lintエラー修正** — `MockMasterStaffPage.vue`で`Staff`型に存在しない`password`参照を修正。編集時パスワード欄は空、新規作成時のみ必須チェック | 03-13 | ✅完了 | sensitive情報管理原則に準拠 |
+| N1m | **N2設計インプット追記** — `13_n2_design_input.md`に§5.5「共通設計原則」（sensitive情報管理、モック/本番差異）を追加 | 03-13 | ✅完了 | composable共通ルールとして策定 |
+| N1n | **MF名称変更警告実装** — 顧問先ページのカスタム科目名変更時にルール5準拠のMF警告バナーを表示。`×`ボタンで閉じ可能 | 03-13 | ✅完了 | 税区分ページはテンプレートのみ（インライン編集未実装のため） |
 | N2 | **共有composableのゼロベース再定義** — `useAccountSettings`を含む全composableの責務・相関を設計。相関図（mermaid）を本ドキュメントに作成 | 03-11 | ❌未着手 | 現状: 4ページが独立して`ACCOUNT_MASTER`をコピー。連携なし（問題Aの根本対応） |
 | N3 | **顧問先UUIDの見える化** — 顧問先管理画面に顧問先UUIDを編集不可で表示。3コード（`clientCode`）とUUID（`uuid`）の取り違え防止 | 03-11 | ❌未着手 | `useClients.ts`のClient型: `id`（3コード-UUID形式）、`uuid`（UUID部分）、`clientCode`（3コード）の3つが存在 |
 | N4 | **全UUIDの実装状況調査と紐付けロジック** — 顧問先UUID・担当UUID・証票単位UUID・仕訳単位UUIDの4種について、現在の実装状況を調査し、全てを紐付けするロジックを実装 | 03-11 | ❌未着手 | 仕訳フィクスチャの`id`は`j001`等の仮ID。証票は`document_id: 'receipt-001'`。本番用UUID未実装 |
@@ -557,22 +611,24 @@
 **最終URL構成マップ**:
 
 ```
-顧問先固有ページ（パターンB: /xxx/:clientId）:
-  /journal-list/:clientId                ← 仕訳一覧
-  /drive-select/:clientId                ← Drive資料選別
-  /upload/:clientId                      ← アップロード（仮ページ）
-  /export/:clientId                      ← 出力
-  /export-history/:clientId              ← ダウンロード履歴
-  /export-detail/:clientId/:historyId    ← 出力詳細
-  /learning/:clientId                    ← 学習（仮ページ）
-  /settings/:clientId                    ← 設定トップ
-  /settings/accounts/:clientId           ← 勘定科目マスタ
-  /settings/tax/:clientId                ← 税区分マスタ
+顧問先固有ページ（/client/ 接頭辞）:
+  /client/journal-list/:clientId                ← 仕訳一覧
+  /client/drive-select/:clientId                ← Drive資料選別
+  /client/upload/:clientId                      ← アップロード（仮ページ）
+  /client/export/:clientId                      ← 出力
+  /client/export-history/:clientId              ← ダウンロード履歴
+  /client/export-detail/:clientId/:historyId    ← 出力詳細
+  /client/learning/:clientId                    ← 学習（仮ページ）
+  /client/settings/:clientId                    ← 設定トップ
+  /client/settings/accounts/:clientId           ← 顧問先用勘定科目
+  /client/settings/tax/:clientId                ← 顧問先用税区分
 
-全社共通ページ（clientIdなし）:
-  /progress                              ← 全社進捗一覧
-  /master/clients                        ← 顧問先管理
-  /master/staff                          ← スタッフ管理
-  /master/costs                          ← 想定費用
-  /master/settings                       ← 設定管理
+全社共通ページ（/master/ 接頭辞）:
+  /master/progress                              ← 全社進捗一覧
+  /master/clients                               ← 顧問先管理
+  /master/staff                                 ← スタッフ管理
+  /master/accounts                              ← 勘定科目マスタ（事務所共通）
+  /master/tax                                   ← 税区分マスタ（事務所共通）
+  /master/costs                                 ← 想定費用
+  /master/settings                              ← 設定管理
 ```

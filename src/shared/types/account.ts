@@ -10,6 +10,9 @@
 /** 対象区分 */
 export type AccountTarget = 'corp' | 'individual' | 'both'
 
+/** 税区分判定モード（STREAMED準拠） */
+export type TaxDetermination = 'auto_purchase' | 'auto_sales' | 'fixed'
+
 /** 勘定科目 */
 export type Account = {
     /** 内部ID（不変） */
@@ -24,8 +27,8 @@ export type Account = {
     category: string
     /** デフォルト税区分ID（TaxCategory.id への参照） */
     defaultTaxCategoryId?: string
-    /** AI自動選択可否（マスタ初期値。顧問先単位で上書き可能 → ルール9） */
-    aiSelectable: boolean
+    /** 税区分判定モード: auto_purchase=自動判定（仕入）, auto_sales=自動判定（売上）, fixed=固定 */
+    taxDetermination: TaxDetermination
     /** 非推奨フラグ（true=グレーアウト表示。物理削除禁止 → ルール3） */
     deprecated: boolean
     /** 適用開始日（ISO 8601形式。例: '2019-10-01'） */
@@ -37,3 +40,4 @@ export type Account = {
     /** カスタム科目フラグ（ユーザー追加=true、システム提供=false/undefined → ルール4） */
     isCustom?: boolean
 }
+

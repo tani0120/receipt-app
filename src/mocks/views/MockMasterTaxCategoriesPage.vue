@@ -5,9 +5,6 @@
       <div class="account-settings">
         <!-- ヘッダー -->
         <div class="as-header">
-          <router-link to="/master" class="as-back-link">
-            <i class="fa-solid fa-arrow-left"></i> マスタ管理
-          </router-link>
           <span class="as-header-label">税区分マスタ（事務所共通）</span>
         </div>
 

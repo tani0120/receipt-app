@@ -4,9 +4,6 @@
       <div class="cm-settings">
         <!-- ヘッダー -->
         <div class="cm-header">
-          <router-link to="/master" class="cm-back-link">
-            <i class="fa-solid fa-arrow-left"></i> マスタ管理
-          </router-link>
           <h1 class="cm-title">顧問先管理</h1>
         </div>
 

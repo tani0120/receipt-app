@@ -223,8 +223,8 @@ export function useClients() {
     /** ルートパスまたはクエリパラメータから現在選択中のクライアントを動的に取得 */
     const currentClient = computed<{ threeCode: string; name: string; clientId: string } | null>(() => {
         const path = route.path;
-        // 1. パターンB: /journal-list/:clientId, /drive-select/:clientId, /export/:clientId 等
-        const patternB = path.match(/^\/(journal-list|drive-select|export|export-history|export-detail|settings\/accounts|settings\/tax|settings|upload|learning)\/([^/]+)/);
+        // 1. パターンB: /client/journal-list/:clientId, /client/drive-select/:clientId 等
+        const patternB = path.match(/^\/client\/(journal-list|drive-select|export|export-history|export-detail|settings\/accounts|settings\/tax|settings|upload|learning)\/([^/]+)/);
         if (patternB && patternB[2]) {
             const cid = patternB[2];
             const found = clients.value.find(c => c.clientId === cid);
@@ -243,9 +243,7 @@ export function useClients() {
             const found = clients.value.find(c => c.clientId === clientQuery);
             if (found) return { threeCode: found.threeCode, name: found.companyName, clientId: found.clientId };
         }
-        // 4. 該当なし → 先頭クライアントをデフォルト選択（全体管理ページ用）
-        const fallback = clients.value[0];
-        if (fallback) return { threeCode: fallback.threeCode, name: fallback.companyName, clientId: fallback.clientId };
+        // 4. 該当なし → null（マスタページ等ではcurrentClientなし）
         return null;
     });
 

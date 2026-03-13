@@ -5,9 +5,6 @@
       <div class="account-settings">
         <!-- ヘッダー -->
         <div class="as-header">
-          <router-link to="/master" class="as-back-link">
-            <i class="fa-solid fa-arrow-left"></i> マスタ管理
-          </router-link>
           <span class="as-header-label">勘定科目マスタ（事務所共通）</span>
         </div>
 
@@ -69,17 +66,18 @@
           <table class="as-table">
             <colgroup>
               <col class="col-check">
-              <col style="width: 22%;">
-              <col style="width: 18%;">
-              <col style="width: 18%;">
+              <col style="width: 8%;">
+              <col style="width: 20%;">
+              <col style="width: 16%;">
+              <col style="width: 16%;">
               <col style="width: 8%;">
               <col style="width: 10%;">
               <col style="width: 10%;">
-              <col class="col-check">
             </colgroup>
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
+                <th>デフォルトで表示</th>
                 <th class="sortable" @click="sortAccounts('name')">
                   勘定科目 <i :class="getSortIcon('name')"></i>
                 </th>
@@ -89,14 +87,13 @@
                 <th class="sortable" @click="sortAccounts('defaultTaxCategoryId')">
                   税区分 <i :class="getSortIcon('defaultTaxCategoryId')"></i>
                 </th>
-                <th>AI</th>
+                <th>税区分自動選択</th>
                 <th class="sortable" @click="sortAccounts('effectiveFrom')">
                   適用開始 <i :class="getSortIcon('effectiveFrom')"></i>
                 </th>
                 <th class="sortable" @click="sortAccounts('effectiveTo')">
                   適用終了 <i :class="getSortIcon('effectiveTo')"></i>
                 </th>
-                <th class="as-th-check"></th>
               </tr>
             </thead>
             <tbody>
@@ -110,6 +107,11 @@
                 @dragend="dragIdx = -1"
               >
                 <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
+                <td class="as-td-actions">
+                  <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
+                  <i v-if="row.deprecated" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
+                  <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
+                </td>
                 <td @dblclick="row.isCustom && startEdit(row, 'name')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'name'">
                     <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" ref="editInput" autofocus>
@@ -120,15 +122,10 @@
                   </template>
                 </td>
                 <td class="td-sub-account"></td>
-                <td>{{ getTaxCategoryName(row.defaultTaxCategoryId) }}</td>
-                <td class="td-ai">{{ row.aiSelectable ? '○' : '' }}</td>
+                <td>{{ row.taxDetermination === 'fixed' ? getTaxCategoryName(row.defaultTaxCategoryId) : row.taxDetermination === 'auto_sales' ? '自動選択（売上）' : '自動選択（仕入）' }}</td>
+                <td class="td-ai">{{ row.taxDetermination !== 'fixed' ? '○' : '' }}</td>
                 <td class="td-date">{{ row.effectiveFrom }}</td>
                 <td class="td-date">{{ row.effectiveTo ?? '現役' }}</td>
-                <td class="as-td-actions">
-                  <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
-                  <i v-if="row.deprecated" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
-                  <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
-                </td>
               </tr>
             </tbody>
           </table>
@@ -247,7 +244,7 @@ function copyChecked() {
       target: src.target,
       category: src.category,
       defaultTaxCategoryId: src.defaultTaxCategoryId,
-      aiSelectable: src.aiSelectable,
+      taxDetermination: src.taxDetermination,
       deprecated: src.deprecated,
       effectiveFrom: src.effectiveFrom,
       effectiveTo: src.effectiveTo,
@@ -270,7 +267,7 @@ function addAfterChecked() {
     target: accountBusinessType.value === 'corp' ? 'corp' : 'individual',
     category: '経費',
     defaultTaxCategoryId: 'COMMON_EXEMPT',
-    aiSelectable: false,
+    taxDetermination: 'fixed',
     deprecated: false,
     effectiveFrom: new Date().toISOString().slice(0, 10),
     effectiveTo: null,

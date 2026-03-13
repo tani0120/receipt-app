@@ -5,28 +5,31 @@
       <div class="account-settings">
         <!-- ヘッダー -->
         <div class="as-header">
-          <router-link to="/master" class="as-back-link">
-            <i class="fa-solid fa-arrow-left"></i> マスタ管理
+          <router-link to="/master/clients" class="as-back-link">
+            <i class="fa-solid fa-arrow-left"></i> 顧問先管理
           </router-link>
-          <span class="as-header-label">税区分マスタ（事務所共通）</span>
+          <span class="as-header-label">顧問先用税区分</span>
         </div>
 
         <!-- 切替セレクター -->
         <div class="as-selectors-center">
           <div class="as-selector-group-lg">
             <span class="as-selector-label-lg">課税方式:</span>
-            <select v-model="taxTabMethod" class="as-selector-lg">
-              <option value="general">本則課税</option>
-              <option value="simplified">簡易課税</option>
-              <option value="exempt">免税事業者</option>
-            </select>
+            <span class="as-fixed-value">{{ taxMethodLabel }}</span>
           </div>
         </div>
 
         <!-- 注意バナー -->
         <div class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
-          デフォルト税区分（<i class="fa-solid fa-lock" style="font-size:14px;color:#666"></i>）の名称は編集できません。コピー・追加したカスタム税区分のみ編集可能です。
+          デフォルト税区分（<i class="fa-solid fa-building-columns" style="font-size:14px;color:#1976D2"></i>）の名称は変更できません。表示切替は編集可能です。カスタム税区分は全項目を編集できます。
+        </div>
+
+        <!-- MF名称変更警告（ルール5） -->
+        <div v-if="mfWarningMessage" class="as-mf-warning">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          {{ mfWarningMessage }}
+          <button class="as-mf-warning-close" @click="mfWarningMessage = ''">&times;</button>
         </div>
 
         <div class="as-toolbar" style="margin-top: 8px;">
@@ -94,7 +97,7 @@
                 <td style="text-align: center;">{{ row.qualified ? '○' : '' }}</td>
                 <td class="td-direction" :class="'dir-' + row.direction">{{ directionLabel(row.direction) }}</td>
                 <td>
-                  <i v-if="!row.isCustom" class="fa-solid fa-lock td-lock"></i>
+                  <i v-if="!row.isCustom" class="fa-solid fa-building-columns td-default-icon"></i>
                   {{ row.name }}
                 </td>
                 <td style="text-align: center;">{{ extractRateFromName(row.name) || '-' }}</td>
@@ -125,15 +128,33 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import type { TaxCategory, TaxDirection } from '@/shared/types/tax-category';
 import { extractRateFromName } from '@/shared/types/tax-category';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
+import { useClients } from '@/features/client-management/composables/useClients';
 
 const PAGE_SIZE = 50;
+const route = useRoute();
+const { clients } = useClients();
 
-// =============== 税区分マスタ ===============
+// =============== 顧問先情報取得 ===============
+const clientId = computed(() => {
+  const match = route.path.match(/\/client\/settings\/tax\/([^/]+)/);
+  return match ? match[1] : null;
+});
+const currentClientData = computed(() => clients.value.find(c => c.clientId === clientId.value) ?? null);
+
 type TaxMethodType = 'general' | 'simplified' | 'exempt';
-const taxTabMethod = ref<TaxMethodType>('general');
+const taxTabMethod = computed<TaxMethodType>(() => currentClientData.value?.consumptionTaxMode ?? 'general');
+const taxMethodLabel = computed(() => {
+  switch (taxTabMethod.value) {
+    case 'general': return '本則課税';
+    case 'simplified': return '簡易課税';
+    case 'exempt': return '免税事業者';
+  }
+});
+const mfWarningMessage = ref('');
 const taxPage = ref(1);
 
 const allTaxRows: TaxCategory[] = reactive([...TAX_CATEGORY_MASTER]);
@@ -435,8 +456,15 @@ function resetTaxOrder() {
 .row-custom { background: #fffde7; }
 .row-custom:hover { background: #fff9c4; }
 
-/* デフォルト行のロックアイコン（税区分名左） */
-.td-lock { color: #f9a825; font-size: 1em; margin-right: 4px; vertical-align: middle; }
+/* デフォルト税区分のアイコン（税区分名左） */
+.td-default-icon { color: #1976D2; font-size: 1em; margin-right: 4px; vertical-align: middle; }
+
+/* 固定値表示（編集不可） */
+.as-fixed-value {
+  font-size: 16px; font-weight: 700; color: #333;
+  padding: 8px 14px; background: #f5f5f5; border: 2px solid #e0e0e0;
+  border-radius: 6px; min-width: 160px; display: inline-block; text-align: center;
+}
 
 /* 非表示化アイコン（目マーク） */
 .td-hide { color: #999; cursor: pointer; font-size: 14px; }
@@ -473,4 +501,17 @@ function resetTaxOrder() {
   border-radius: 4px; padding: 3px 10px;
 }
 .as-action-btn.save:hover { background: #388e3c; }
+
+/* MF名称変更警告バナー（ルール5） */
+.as-mf-warning {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; margin: 4px 0 8px; border-radius: 4px;
+  background: #fff3e0; color: #e65100;
+  font-size: 12px; border: 1px solid #ffcc80;
+}
+.as-mf-warning i { font-size: 14px; flex-shrink: 0; color: #f57c00; }
+.as-mf-warning-close {
+  margin-left: auto; background: none; border: none;
+  color: #e65100; font-size: 16px; cursor: pointer; padding: 0 4px;
+}
 </style>
