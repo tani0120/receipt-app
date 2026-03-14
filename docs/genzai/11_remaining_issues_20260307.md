@@ -1,6 +1,6 @@
 # ✅ 残存修正項目一覧（2026-03-07）【全件完了】
 
-> **最終結果（2026-03-12 00:30）**: §A-§L全件完了 + §M（2026-03-11スキーマ同期）全件完了。
+> **最終結果（2026-03-14 21:45）**: §A-§L全件完了 + §M（2026-03-11スキーマ同期）全件完了 + §N（エンコーディング修正）完了 + §O（staffName削除+設定パネル読み取り専用化）完了 + §P（勘定科目3属性列+同期修正）完了。
 > 残存2件（J1: ScreenE旧モック再設計待ち、J7: 設計上のprivateフィールド）は対応不要として§Lに記録。
 
 > ~~本日中に全件修正する前提で、優先度・リスク・修正時期を整理。~~
@@ -690,4 +690,74 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 | 8 | `zod_schema.ts` L251,L273,L274 | JobSchema z.any()使用（型安全ルール違反） | → Phase B H6 |
 | 9 | `zod_schema.ts` L220-481 | JobSchema肥大化（470+フィールド） | → Phase B H7 |
 | 10 | `useAccountingSystem.ts` | /api/clientsエンドポイント500エラー | → Phase C RC-9 |
+
+---
+
+## P. 勘定科目マスタ 3属性列追加 + マスタ→顧問先同期修正（2026-03-14追記）
+
+> 勘定科目マスタ（`MockMasterAccountsPage.vue`）と顧問先用勘定科目（`MockClientAccountsPage.vue`）に
+> 「区分」「税区分判定」「デフォルト税区分」の3列を追加し、インライン編集とマスタ→顧問先のデータ同期を実装。
+
+### P-1. 3属性列追加 + インライン編集
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `MockMasterAccountsPage.vue` | colgroup/thead/tbodyに区分/税区分判定/デフォルト税区分の3列追加 | ✅ |
+| 2 | `MockMasterAccountsPage.vue` | カスタム行のインライン編集（ダブルクリック→ドロップダウン） | ✅ |
+| 3 | `MockMasterAccountsPage.vue` | category変更時の税区分判定/デフォルト税区分自動連動 | ✅ |
+| 4 | `MockMasterAccountsPage.vue` | デフォルト税区分ドロップダウンのcategory連動フィルタリング | ✅ |
+| 5 | `MockClientAccountsPage.vue` | 同上1-4を顧問先ページにも実装 | ✅ |
+| 6 | `MockClientAccountsPage.vue` | `copyChecked`/`addAfterChecked`に`insertAfter`追加 | ✅ |
+| 7 | 両ファイル | CSS: `.inline-select`スタイル追加 | ✅ |
+
+### P-2. マスタ→顧問先データ同期
+
+| # | 修正内容 | 状態 |
+|---|---------|:----:|
+| 1 | `MockMasterAccountsPage.vue`の`saveChanges`でcomposableの`overrides`も同期 | ✅ |
+| 2 | `saveChanges`がカスタム科目+非表示IDを`sugu-suru:account-master:overrides`に保存 | ✅ |
+| 3 | `useClientAccounts`はcomposable経由でマスタのカスタム科目を取得 | ✅ |
+| 4 | 全顧問先（LDI-00008, GHI-00003等）でコピー行が反映されることを確認 | ✅ |
+
+### P-3. category連動ロジック
+
+| category変更後 | 税区分判定 | デフォルト税区分 |
+|---------------|----------|--------------|
+| 売上系（売上/不動産収入/営業外収益） | `auto_sales` | `SALES_TAXABLE_10` |
+| 仕入系（経費/売上原価/販管費/不動産経費/営業外費用） | `auto_purchase` | `PURCHASE_TAXABLE_10` |
+| BS系（現金及び預金/売上債権/...） | `fixed` | `COMMON_EXEMPT` |
+
+### P-5. 「デフォルトで表示」列の移動
+
+| # | 修正内容 | 状態 |
+|---|---------|:----:|
+| 1 | 右端のアクション列（🗑+👁）を左から2番目に移動。ヘッダー名「デフォルトで表示」 | ✅ |
+| 2 | デフォルト行: 👁アイコンのみ。カスタム行: 🗑+👁の両方 | ✅ |
+| 3 | 右端列は空で残留（将来の拡張用） | ✅ |
+| 4 | CSS: `.td-visibility`, `.th-visibility` 追加（中央揃え・フォントサイズ調整） | ✅ |
+
+### P-6. 補助科目ダブルクリック自由記載
+
+| # | 修正内容 | 状態 |
+|---|---------|:----:|
+| 1 | 補助科目セルをダブルクリック→`<input type="text">`で自由記載可能に | ✅ |
+| 2 | デフォルト科目・カスタム科目両方で編集可能（`subAccount`は科目種別を問わず顧問先固有） | ✅ |
+| 3 | `AccountEditField`型に`subAccount`追加。`startEdit`/`commitEdit`で対応 | ✅ |
+| 4 | ツールチップを「ダブルクリックで入力できます」に変更 | ✅ |
+
+### P-7. 保存ボタンlocalStorage永続化
+
+| # | 修正内容 | 状態 |
+|---|---------|:----:|
+| 1 | `saveChanges`が`sugu-suru:client-accounts:{clientId}`に全データを保存 | ✅ |
+| 2 | 保存内容: `hiddenIds`, `customAccounts`, `copiedMasterIds`, `subAccounts` | ✅ |
+| 3 | ページ読み込み時にlocalStorageから`subAccounts`を復元（リロード後も保持） | ✅ |
+| 4 | DEF-00002で補助科目「本店」入力→保存→リロード→復元を検証済み | ✅ |
+
+### P-8. 既存問題（本修正のスコープ外）
+
+| # | 問題 | 対応方針 |
+|---|------|--------|
+| 1 | `resetMasterToDefault`未使用（マスタページL197） | 前回報告済み |
+| 2 | マスタページリロード時の表示不整合（`rows`キーと`overrides`キーの二重管理） | N2（composable統合）で根本対応 |
 

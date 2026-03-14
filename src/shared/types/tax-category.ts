@@ -41,6 +41,8 @@ export type TaxCategory = {
     displayOrder: number
     /** カスタム税区分フラグ（ユーザー追加=true、システム提供=false/undefined → ルール4） */
     isCustom?: boolean
+    /** デフォルト順復元用: コピー/追加時の挿入位置直前の行ID */
+    insertAfter?: string
 }
 
 /**

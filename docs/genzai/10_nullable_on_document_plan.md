@@ -67,7 +67,7 @@
 |---|------------|---------|------|
 | K1 | [account-master.ts](file:///c:/dev/receipt-app/src/shared/data/account-master.ts) | [x] 勘定科目マスター ✅ | 79科目。MF準拠。法人/個人1マスタ管理、`target`（`corp`/`individual`/`both`）で分岐。概念ID + MF正式名称 + デフォルト税区分 + `taxDetermination`（税区分判定モード） + 表示順 |
 | K2 | [tax-category-master.ts](file:///c:/dev/receipt-app/src/shared/data/tax-category-master.ts) | [x] 税区分マスター ✅ | 151件。MF正式名称完全一致。概念ID（例: `PURCHASE_TAXABLE_10`）方式。デフォルト表示27件 + 残りは顧問先単位で有効化 |
-| K3 | [MockMasterAccountsPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterAccountsPage.vue) | [x] 勘定科目マスタUI ✅ | `/master/accounts` に独立ページ化。「分類」列廃止→「補助科目」列追加。ヘルプアイコン（?マーク）でカスタムツールチップ表示（「補助科目は顧問先ごとの設定で入力します」） |
+| K3 | [MockMasterAccountsPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterAccountsPage.vue) | [x] 勘定科目マスタUI ✅ | `/master/accounts` に独立ページ化。「分類」列廃止→「補助科目」列追加。ヘルプアイコン（?マーク）でカスタムツールチップ表示。**2026-03-14追加**: 「区分」「税区分判定」「デフォルト税区分」3列追加。カスタム行のインライン編集（ダブルクリック→ドロップダウン）。category変更時の税区分判定/デフォルト税区分自動連動。`saveChanges`でcomposableの`overrides`も同期（顧問先ページへの変更伝播） |
 | K4 | [MockMasterTaxCategoriesPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterTaxCategoriesPage.vue) | [x] 税区分マスタUI ✅ | `/master/tax` に独立ページ化（旧`/master/tax-categories`から短縮、2026-03-11 N1で変更） |
 | K5 | [MockMasterHubPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterHubPage.vue) | [x] マスタハブUI ✅ | `/master` にハブページ。勘定科目マスタ・税区分マスタへのリンク |
 
@@ -95,6 +95,7 @@
 |------|---------|---------|
 | 勘定科目タブ | [ScreenS_AccountSettings.vue](file:///c:/dev/receipt-app/src/views/ScreenS_AccountSettings.vue) | 「分類」列→「補助科目」列に差替え。ヘルプアイコン（?マーク）追加。カスタムツールチップ実装 |
 | 税区分タブ | 同上 | マスタ連動済み |
+| 顧問先勘定科目 | [MockClientAccountsPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockClientAccountsPage.vue) | **2026-03-14**: 「デフォルトで表示」列を左から2番目に移動。補助科目ダブルクリック自由記載。保存ボタンlocalStorage永続化 |
 
 ### 優先度4: 一覧UIの変更
 
@@ -303,7 +304,7 @@
 | 13 | 税区分マスタUI — `deprecated`行のグレーアウト表示（ルール3） | ✅ | AI | master_design_rules.md |
 | 14 | 勘定科目マスタUI — `effective_from`/`effective_to`列の表示（ルール1） | ✅ | AI | master_design_rules.md |
 | 15 | 税区分マスタUI — `effective_from`/`effective_to`列の表示（ルール1） | ❌ | AI | master_design_rules.md |
-| 16 | マスタUI — インライン編集（カスタム科目のみ）＋保存ボタンで確定（ルール4,6） | ❌ | AI | master_design_rules.md |
+| 16 | マスタUI — インライン編集（カスタム科目のみ）＋保存ボタンで確定（ルール4,6） | ✅ | AI | master_design_rules.md。2026-03-14: 勘定科目マスタ+顧問先ページに区分/税区分判定/デフォルト税区分のインライン編集実装。ダブルクリック→ドロップダウン方式 |
 | 17 | マスタUI — チェックボックス選択→削除・コピー・追加・復元（ルール6） | ✅ | AI | master_design_rules.md |
 | 18 | マスタUI — ドラッグ並替え→`sort_order`更新→DB保存（ルール10） | ✅ | AI | master_design_rules.md |
 | 18a | マスタUI — デフォルト/カスタム科目の編集権限制御（ルール4） | ✅ | AI | master_design_rules.md |
@@ -521,14 +522,14 @@
 
 | ページ | URL | データソース | 連携 |
 |-------|-----|------------|------|
-| 事務所共通 勘定科目マスタ | `/master/accounts` | `MockMasterAccountsPage.vue` L165: `reactive([...ACCOUNT_MASTER])` | ❌独立 |
+| 事務所共通 勘定科目マスタ | `/master/accounts` | `MockMasterAccountsPage.vue`: `reactive(loadAccountRows())` + `useAccountMaster()` | ✅composableのoverridesに同期（2026-03-14修正） |
 | 事務所共通 税区分マスタ | `/master/tax` | `MockMasterTaxCategoriesPage.vue` | ❌独立 |
-| 顧問先別 勘定科目 | `/client/settings/accounts/:clientId` | `MockClientAccountsPage.vue`（`MockMasterAccountsPage.vue`のコピー、後で修正予定） | ❌独立 |
+| 顧問先別 勘定科目 | `/client/settings/accounts/:clientId` | `MockClientAccountsPage.vue`: `useClientAccounts(clientId)` → `useAccountMaster()` | ✅composable経由でマスタのカスタム科目を取得（2026-03-14修正） |
 | 顧問先別 税区分 | `/client/settings/tax/:clientId` | `MockClientTaxPage.vue`（`MockMasterTaxCategoriesPage.vue`のコピー、後で修正予定） | ❌独立 |
 | 仕訳一覧ドロップダウン | `/client/journal-list/:clientId` | `JournalListLevel3Mock.vue` L934: `ACCOUNT_MASTER`直接フィルタ | ❌独立 |
 
-- **問題**: 顧問先別設定で科目を追加/非表示にしても、仕訳一覧のドロップダウンに反映されない
-- **問題**: `selectAccount`（L1030）が`ACCOUNT_MASTER.find(a => a.name === accountName)`で事務所共通マスタから直接検索。顧問先別の税区分カスタマイズが反映されない
+- **2026-03-14解決済み**: マスタページの`saveChanges`がcomposableの`overrides`（`sugu-suru:account-master:overrides`）にカスタム科目+非表示IDを同期保存するよう修正。顧問先ページ（`useClientAccounts`）はcomposable経由でマスタのカスタム科目を取得できるようになった
+- **未解決**: `selectAccount`（L1030）が`ACCOUNT_MASTER.find(a => a.name === accountName)`で事務所共通マスタから直接検索。顧問先別の税区分カスタマイズが反映されない（N7で対応予定）
 
 #### B. フィクスチャの勘定科目名がマスタに存在しない
 - `journal_test_fixture_30cases.ts`の仕訳データに、`ACCOUNT_MASTER`に存在しない科目名がハードコードされている
@@ -557,7 +558,7 @@
 | N1e | **URL体系を`/client/`・`/master/`接頭辞に統一** — 顧問先固有ページに`/client/`、全社共通ページに`/master/`（含む`/master/progress`）を接頭辞として追加。NavBar・各コンポーネント内リンクも全更新 | 03-12 | ✅完了 | 旧パスからのリダイレクト整備済み |
 | N1f | **`useClients.ts`正規表現修正** — `currentClient`のURL解析正規表現を新URL体系（`/client/`接頭辞）に対応。フォールバック（常にABC-00001）を廃止し、該当なしは`null`を返すよう変更 | 03-13 | ✅完了 | 進捗管理→各顧問先クリック時に正しいclientIdが反映されるようになった |
 | N1g | **NavBarコンテキスト制御** — マスタページ（`/master/`）では顧問先名と下段バーを非表示、ログインページ（`/login`）ではNavBar全体を非表示に変更 | 03-13 | ✅完了 | `isMasterPage` computed追加、`App.vue`に`v-if`条件追加 |
-| N1h | **顧問先設定を独立ファイル化** — `MockClientAccountsPage.vue`（勘定科目）と`MockClientTaxPage.vue`（税区分）を`src/mocks/views/`に新規作成。ルーターの参照先を独立コンポーネントに変更 | 03-12 | ✅完了 | マスタページのコピーとして作成。後で顧問先用に修正予定 |
+| N1h | **顧問先設定を独立ファイル化** — `MockClientAccountsPage.vue`（勘定科目）と`MockClientTaxPage.vue`（税区分）を`src/mocks/views/`に新規作成。ルーターの参照先を独立コンポーネントに変更。**2026-03-14追加**: 「デフォルトで表示」列を左から2番目に移動（🗑+👁）、補助科目ダブルクリック自由記載、保存ボタンlocalStorage永続化実装 | 03-14 | ✅完了 | マスタのコピーから顧問先用に完全差別化済み |
 | N1i | **pre-commitフック修正** — Shift-JIS検出ロジックがUTF-8マルチバイト文字を誤検出していたため、`TextDecoder('utf-8', { fatal: true })`方式に変更 | 03-12 | ✅完了 | バイトパターンチェック（0x81-0x9F）を廃止 |
 | N1j | **顧問先ページUI修正** — `MockClientAccountsPage.vue`・`MockClientTaxPage.vue`のパンくず・タイトル・事業形態固定表示・アイコン・説明文を顧問先コンテキストに修正。`useClients`連携追加 | 03-13 | ✅完了 | マスタのコピーから顧問先用に差別化完了 |
 | N1k | **マスタページのパンくず削除** — `MockMasterAccountsPage.vue`・`MockMasterTaxCategoriesPage.vue`・`MockMasterClientsPage.vue`・`MockMasterStaffPage.vue`の「← マスタ管理」リンクを削除（NavBarで直接遷移するため不要） | 03-13 | ✅完了 | 4ファイル修正 |

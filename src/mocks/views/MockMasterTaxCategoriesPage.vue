@@ -56,20 +56,19 @@
           <table class="as-table">
             <colgroup>
               <col class="col-check">
-              <col style="width: 8%;">
-              <col style="width: 10%;">
-              <col style="width: auto;">
-              <col style="width: 10%;">
-              <col style="width: 8%;">
               <col style="width: 60px;">
+              <col style="width: 8%;">
+              <col style="width: auto;">
+              <col style="width: 8%;">
+              <col style="width: 8%;">
+              <col style="width: 6%;">
+              <col style="width: 10%;">
+              <col style="width: 10%;">
             </colgroup>
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
-                <th class="sortable" @click="sortTax('qualified')">
-                  適格判定対象 <i class="fa-solid fa-circle-question th-help" title="この税区分を使う際、取引先のインボイス登録番号の確認が必要かどうか。仕入側の課税取引にのみ○がつきます。"></i>
-                  <i :class="getSortIcon('qualified')"></i>
-                </th>
+                <th class="as-th-check">デフォルトで表示</th>
                 <th class="sortable" @click="sortTax('direction')">
                   取引区分 <i :class="getSortIcon('direction')"></i>
                 </th>
@@ -79,8 +78,19 @@
                 <th class="sortable" @click="sortTaxByRate()">
                   税率 <i :class="getSortIcon('_rate')"></i>
                 </th>
-                <th>AI</th>
-                <th class="as-th-check"></th>
+                <th class="sortable" @click="sortTax('qualified')">
+                  適格判定対象 <i class="fa-solid fa-circle-question th-help" title="この税区分を使う際、取引先のインボイス登録番号の確認が必要かどうか。仕入側の課税取引にのみ○がつきます。"></i>
+                  <i :class="getSortIcon('qualified')"></i>
+                </th>
+                <th class="sortable" @click="sortTax('aiSelectable')">
+                  税区分自動選択 <i :class="getSortIcon('aiSelectable')"></i>
+                </th>
+                <th class="sortable" @click="sortTax('effectiveFrom')">
+                  適用開始日 <i :class="getSortIcon('effectiveFrom')"></i>
+                </th>
+                <th class="sortable" @click="sortTax('effectiveTo')">
+                  適用終了日 <i :class="getSortIcon('effectiveTo')"></i>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -88,19 +98,58 @@
                 :class="{ 'row-deprecated': row.deprecated, 'row-custom': row.isCustom }"
               >
                 <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
-                <td style="text-align: center;">{{ row.qualified ? '○' : '' }}</td>
-                <td class="td-direction" :class="'dir-' + row.direction">{{ directionLabel(row.direction) }}</td>
-                <td>
-                  <i v-if="!row.isCustom" class="fa-solid fa-lock td-lock"></i>
-                  {{ row.name }}
-                </td>
-                <td style="text-align: center;">{{ extractRateFromName(row.name) || '-' }}</td>
-                <td class="td-ai">{{ row.aiSelectable ? '○' : '' }}</td>
                 <td class="as-td-actions">
-                  <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
                   <i v-if="row.deprecated" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
                   <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
                 </td>
+                <!-- 取引区分 -->
+                <td class="td-direction" :class="'dir-' + row.direction" @dblclick="startEdit(row, 'direction')">
+                  <template v-if="isEditing(row.id, 'direction')">
+                    <select v-model="editValue" @change="commitEdit(row, 'direction')" @blur="cancelEdit()" class="inline-select" ref="editInput">
+                      <option value="common">共通</option>
+                      <option value="sales">売上</option>
+                      <option value="purchase">仕入</option>
+                    </select>
+                  </template>
+                  <template v-else>{{ directionLabel(row.direction) }}</template>
+                </td>
+                <!-- 税区分 -->
+                <td @dblclick="startEdit(row, 'name')">
+                  <i v-if="!row.isCustom" class="fa-solid fa-lock td-lock"></i>
+                  <template v-if="isEditing(row.id, 'name')">
+                    <input v-model="editValue" @keydown.enter="commitEdit(row, 'name')" @blur="commitEdit(row, 'name')" class="inline-input" ref="editInput" />
+                  </template>
+                  <template v-else>{{ row.name }}</template>
+                </td>
+                <!-- 税率 -->
+                <td style="text-align: center;" @dblclick="startEdit(row, 'rate')">
+                  <template v-if="isEditing(row.id, 'rate')">
+                    <input v-model="editValue" @input="onRateInput" @keydown.enter="commitEdit(row, 'rate')" @blur="commitEdit(row, 'rate')" class="inline-input rate-input" ref="editInput" placeholder="例: 10" />
+                  </template>
+                  <template v-else>{{ getRate(row) }}</template>
+                </td>
+                <!-- 適格判定対象 -->
+                <td style="text-align: center;" @dblclick="startEdit(row, 'qualified')">
+                  <template v-if="isEditing(row.id, 'qualified')">
+                    <select v-model="editValue" @change="commitEdit(row, 'qualified')" @blur="cancelEdit()" class="inline-select">
+                      <option value="true">○</option>
+                      <option value="false"></option>
+                    </select>
+                  </template>
+                  <template v-else>{{ row.qualified ? '○' : '' }}</template>
+                </td>
+                <!-- 税区分自動選択 -->
+                <td class="td-ai" @dblclick="startEdit(row, 'aiSelectable')">
+                  <template v-if="isEditing(row.id, 'aiSelectable')">
+                    <select v-model="editValue" @change="commitEdit(row, 'aiSelectable')" @blur="cancelEdit()" class="inline-select">
+                      <option value="true">○</option>
+                      <option value="false"></option>
+                    </select>
+                  </template>
+                  <template v-else>{{ row.aiSelectable ? '○' : '' }}</template>
+                </td>
+                <td class="td-date">{{ row.effectiveFrom || '—' }}</td>
+                <td class="td-date">{{ row.effectiveTo || '現役' }}</td>
               </tr>
             </tbody>
           </table>
@@ -128,6 +177,7 @@ import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
 import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster';
 
 const PAGE_SIZE = 50;
+const TAX_STORAGE_KEY = 'sugu-suru:tax-categories:rows';
 
 // =============== composable接続 ===============
 const { masterTaxCategories } = useTaxMaster();
@@ -137,7 +187,16 @@ type TaxMethodType = 'general' | 'simplified' | 'exempt';
 const taxTabMethod = ref<TaxMethodType>('general');
 const taxPage = ref(1);
 
-const allTaxRows: TaxCategory[] = reactive([...masterTaxCategories.value]);
+const allTaxRows: TaxCategory[] = reactive(loadTaxRows());
+
+/** localStorageから税区分データを復元。なければデフォルトを使用 */
+function loadTaxRows(): TaxCategory[] {
+  try {
+    const raw = localStorage.getItem(TAX_STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as TaxCategory[];
+  } catch { /* 破損データは無視 */ }
+  return [...masterTaxCategories.value];
+}
 
 const filteredTaxRows = computed(() => {
   return allTaxRows.filter(row => {
@@ -199,13 +258,8 @@ function showChecked() {
   checkedIds.value = [];
 }
 
-// =============== 物理削除（カスタムのみ） ===============
-function deleteRow(row: TaxCategory) {
-  if (!row.isCustom) return;
-  if (!confirm(`「${row.name}」を削除しますか？復元できません。`)) return;
-  const idx = allTaxRows.findIndex(r => r.id === row.id);
-  if (idx !== -1) allTaxRows.splice(idx, 1);
-}
+
+
 function deleteChecked() {
   const customIds = checkedIds.value.filter(id => {
     const row = allTaxRows.find(r => r.id === id);
@@ -239,11 +293,12 @@ function copyChecked() {
       aiSelectable: src.aiSelectable,
       active: true,
       deprecated: false,
-      effectiveFrom: src.effectiveFrom,
+      effectiveFrom: new Date().toISOString().slice(0, 10),
       effectiveTo: null,
       defaultVisible: true,
       displayOrder: src.displayOrder + 0.5,
       isCustom: true,
+      insertAfter: src.id,
     };
     allTaxRows.splice(srcIdx + 1, 0, copy);
   });
@@ -268,14 +323,93 @@ function addAfterChecked() {
     defaultVisible: true,
     displayOrder: insertIdx,
     isCustom: true,
+    insertAfter: lastId ?? allTaxRows[allTaxRows.length - 1]?.id,
   };
   allTaxRows.splice(insertIdx, 0, newRow);
   checkedIds.value = [];
 }
 
+// =============== インライン編集 ===============
+type EditableField = 'direction' | 'name' | 'rate' | 'qualified' | 'aiSelectable';
+const editingRowId = ref('');
+const editingFieldName = ref<EditableField | ''>('');
+const editValue = ref('');
+
+function isEditing(rowId: string, field: string): boolean {
+  return editingRowId.value === rowId && editingFieldName.value === field;
+}
+
+function startEdit(row: TaxCategory, field: EditableField) {
+  if (!row.isCustom) {
+    alert('デフォルト税区分は編集できません。コピーしてから編集してください。');
+    return;
+  }
+  editingRowId.value = row.id;
+  editingFieldName.value = field;
+  switch (field) {
+    case 'direction': editValue.value = row.direction; break;
+    case 'name': editValue.value = row.name; break;
+    case 'rate': editValue.value = extractRateFromName(row.name).replace('%', ''); break;
+    case 'qualified': editValue.value = String(row.qualified); break;
+    case 'aiSelectable': editValue.value = String(row.aiSelectable); break;
+  }
+}
+
+function commitEdit(row: TaxCategory, field: EditableField) {
+  switch (field) {
+    case 'direction':
+      row.direction = editValue.value as TaxDirection;
+      break;
+    case 'name':
+      if (!editValue.value.trim()) { alert('税区分名は空にできません。'); return; }
+      row.name = editValue.value;
+      row.shortName = editValue.value;
+      break;
+    case 'rate': {
+      // 税率を名前に反映（既存名の税率部分を置換、なければ末尾に追加）
+      const rateStr = editValue.value.trim();
+      if (rateStr) {
+        const existing = row.name.match(/[\d.]+%/);
+        if (existing) {
+          row.name = row.name.replace(/[\d.]+%/, rateStr + '%');
+        } else {
+          row.name = row.name + ' ' + rateStr + '%';
+        }
+        row.shortName = row.name;
+      }
+      break;
+    }
+    case 'qualified':
+      row.qualified = editValue.value === 'true';
+      break;
+    case 'aiSelectable':
+      row.aiSelectable = editValue.value === 'true';
+      break;
+  }
+  cancelEdit();
+}
+
+function cancelEdit() {
+  editingRowId.value = '';
+  editingFieldName.value = '';
+}
+
+function onRateInput(e: Event) {
+  const input = e.target as HTMLInputElement;
+  // 半角数字と小数点のみ許可
+  input.value = input.value.replace(/[^0-9.]/g, '');
+  editValue.value = input.value;
+}
+
+function getRate(row: TaxCategory): string {
+  const rate = extractRateFromName(row.name);
+  return rate || '-';
+}
+
 // =============== 保存 ===============
 function saveChanges() {
-  alert('保存しました（モック）');
+  localStorage.setItem(TAX_STORAGE_KEY, JSON.stringify(allTaxRows));
+  alert('保存しました——変更はlocalStorageに永続化済み');
 }
 
 // =============== 共通ユーティリティ ===============
@@ -315,7 +449,32 @@ function sortTaxByRate() {
 }
 
 function resetTaxOrder() {
-  allTaxRows.splice(0, allTaxRows.length, ...TAX_CATEGORY_MASTER);
+  // デフォルト行とカスタム行を分離
+  const defaults = allTaxRows.filter(r => !r.isCustom);
+  const customs = allTaxRows.filter(r => r.isCustom);
+  // デフォルト行をマスタ定義順にソート
+  const masterOrder = new Map(TAX_CATEGORY_MASTER.map((t, i) => [t.id, i]));
+  defaults.sort((a, b) => (masterOrder.get(a.id) ?? 9999) - (masterOrder.get(b.id) ?? 9999));
+  // カスタム行をinsertAfterの直後に差し込み
+  const customsByParent = new Map<string, TaxCategory[]>();
+  customs.forEach(c => {
+    const key = c.insertAfter ?? '';
+    if (!customsByParent.has(key)) customsByParent.set(key, []);
+    customsByParent.get(key)!.push(c);
+  });
+  const result: TaxCategory[] = [];
+  defaults.forEach(d => {
+    result.push(d);
+    const children = customsByParent.get(d.id);
+    if (children) result.push(...children);
+  });
+  // insertAfterが不明な行は末尾に追加
+  customsByParent.forEach((rows, key) => {
+    if (!defaults.some(d => d.id === key)) result.push(...rows);
+  });
+  // displayOrder振り直し
+  result.forEach((r, i) => { r.displayOrder = i + 1; });
+  allTaxRows.splice(0, allTaxRows.length, ...result);
   sortState.key = '';
 }
 </script>
@@ -474,4 +633,22 @@ function resetTaxOrder() {
   border-radius: 4px; padding: 3px 10px;
 }
 .as-action-btn.save:hover { background: #388e3c; }
+
+/* インライン編集 */
+.inline-input {
+  width: 100%; padding: 2px 4px; font-size: 12px;
+  border: 1px solid #1976D2; border-radius: 3px;
+  outline: none; box-sizing: border-box;
+}
+.inline-input:focus { box-shadow: 0 0 0 2px rgba(25,118,210,0.2); }
+.rate-input { width: 60px; text-align: center; }
+.inline-select {
+  padding: 2px 4px; font-size: 12px;
+  border: 1px solid #1976D2; border-radius: 3px;
+  outline: none; background: #fff; cursor: pointer;
+}
+.inline-select:focus { box-shadow: 0 0 0 2px rgba(25,118,210,0.2); }
+
+/* 適用終了日 */
+.td-date { white-space: nowrap; text-align: center; font-size: 11px; }
 </style>
