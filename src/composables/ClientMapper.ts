@@ -55,7 +55,6 @@ export function mapClientApiToUi(api: unknown): ClientUi {
             clientCode: 'Unknown',
             companyName: 'Unknown Client',
             repName: '',
-            staffName: '',
             fiscalMonth: 1,
             type: 'corp',
             status: 'active',
@@ -113,7 +112,6 @@ export function mapClientApiToUi(api: unknown): ClientUi {
     const clientCode = safeString(raw.clientCode) || 'Unknown';
     const companyName = safeString(raw.companyName) || 'Unknown Client';
     const repName = safeString(raw.repName);
-    const staffName = safeString(raw.staffName); // Added Extraction
     const contactInfo = safeString(raw.contactInfo);
 
     // Logic: Ensure 1-12
@@ -227,7 +225,6 @@ export function mapClientApiToUi(api: unknown): ClientUi {
         clientCode,
         companyName,
         repName,
-        staffName,
         type, // Added
         fiscalMonth,
         status,

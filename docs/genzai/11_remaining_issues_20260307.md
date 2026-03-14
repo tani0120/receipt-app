@@ -646,3 +646,41 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 | 5 | `12_full_schema_design_20260311.md`§7に方針記載 | ✅ | CSV出力UTF-8 BOM付き |
 | 6 | `10_nullable_on_document_plan.md`H4に方針記載 | ✅ | CSV出力UTF-8 BOM付き |
 
+---
+
+## O. staffName全削除 + 設定パネル読み取り専用化（2026-03-14追記）
+
+> 設定画面（`ScreenS_Settings.vue`）の基本情報パネルを読み取り専用化し、
+> 旧系統の`staffName`フィールドを全ファイルから削除。
+
+### O-1. 設定パネル読み取り専用化
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `ScreenS_Settings.vue` | パネルを元のフォームデザインに復元＋全要素disabled化。「顧問先情報の編集はこちら」リンク（左寄せ17px太字）＋×ボタン。panel-cancel/panel-save CSS削除 | ✅ |
+
+### O-2. staffName全削除
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `ui.type.ts` | ClientUi型からstaffName削除 | ✅ |
+| 2 | `ClientMapper.ts` | フォールバック・変数抽出・return文からstaffName削除（3箇所） | ✅ |
+| 3 | `useAdminDashboard.ts` | ClientAnalysis型＋モック3件からstaffName削除 | ✅ |
+| 4 | `useAccountingSystem.ts` | モック12件からstaffName削除 | ✅ |
+| 5 | `ScreenZ_Dashboard.vue` | テーブルの「担当者名」列（th+td）削除 | ✅ |
+
+### O-3. 型修正・警告修正
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `useAdminDashboard.ts` | `StaffPerformance`型6フィールドをoptional→必須化 | ✅ |
+| 2 | `useAccountingSystem.ts` | `createNewJob(file: File)` → `createNewJob(_file: File)` 未使用引数明示 | ✅ |
+
+### O-4. 未修正（スコープ外）
+
+| # | ファイル | 問題 | 対応方針 |
+|---|---------|------|---------| 
+| 1 | `useAccountingSystem.ts` | モックデータ12件にclientId/advisoryFee等5フィールド不足の型エラー | Phase B（Supabase移行）で型体系ごと再設計 |
+| 2 | `useAccountingSystem.ts` L1166 | updatedAt型不整合（string vs Timestamp）→ grepで不在確認、lintキャッシュ残骸 | 対応不要 |
+
+

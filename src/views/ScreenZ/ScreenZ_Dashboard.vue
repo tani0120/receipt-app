@@ -261,7 +261,6 @@
                         <tr>
                             <th class="px-6 py-3 w-16">コード</th>
                             <th class="px-6 py-3 w-1/4">会社名</th>
-                            <th class="px-6 py-3 w-1/6">担当者名</th>
                             <th class="px-6 py-3 text-right">今月仕訳数</th>
                             <th class="px-6 py-3 text-right">年度仕訳数</th>
                             <th class="px-6 py-3 text-right">昨年度仕訳数</th>
@@ -274,7 +273,6 @@
                         <tr v-for="client in data.clientAnalysis" :key="client.code" class="hover:bg-slate-50/50 transition">
                              <td class="px-6 py-5 font-mono text-lg font-bold text-slate-400">{{ client.code }}</td>
                              <td class="px-6 py-5 font-bold text-lg text-slate-700">{{ client.name }}</td>
-                             <td class="px-6 py-5 text-base text-slate-600">{{ client.staffName }}</td>
                              <td class="px-6 py-5 text-right text-xl font-extrabold text-indigo-600">{{ client.performance.journalsThisMonth }}</td>
                              <td class="px-6 py-5 text-right text-lg font-extrabold text-indigo-600">{{ client.performance.journalsThisYear }}</td>
                              <td class="px-6 py-5 text-right text-lg text-slate-400">{{ client.performance.journalsLastYear }}</td>

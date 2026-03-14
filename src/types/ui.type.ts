@@ -193,7 +193,6 @@ export interface ClientUi {
   readonly clientCode: string;
   readonly companyName: string;
   readonly repName: string;
-  readonly staffName: string; // Added
   readonly type: 'corp' | 'individual'; // Added
   readonly fiscalMonth: number;
   readonly status: 'active' | 'inactive' | 'suspension';

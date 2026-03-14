@@ -99,7 +99,7 @@
             <tbody>
               <tr
                 v-for="(row, idx) in pagedAccountRows" :key="row.id"
-                :class="{ 'row-deprecated': row.deprecated, 'row-dragging': dragIdx === idx, 'row-custom': row.isCustom }"
+                :class="{ 'row-deprecated': isHidden(row.id), 'row-dragging': dragIdx === idx, 'row-custom': row.isCustom }"
                 draggable="true"
                 @dragstart="onDragStart(idx, $event)"
                 @dragover.prevent="onDragOver(idx)"
@@ -109,7 +109,7 @@
                 <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
                 <td class="as-td-actions">
                   <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
-                  <i v-if="row.deprecated" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
+                  <i v-if="isHidden(row.id)" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
                   <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
                 </td>
                 <td @dblclick="row.isCustom && startEdit(row, 'name')" :class="{ 'td-editable': row.isCustom }">
@@ -150,8 +150,12 @@ import { ref, reactive, computed, watch } from 'vue';
 import type { Account } from '@/shared/types/account';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
 import { ACCOUNT_MASTER } from '@/shared/data/account-master';
+import { useAccountMaster } from '@/features/account-management/composables/useAccountMaster';
 
 const PAGE_SIZE = 50;
+
+// =============== composable接続 ===============
+const { masterAccounts, toggleVisibility, isHidden, resetToDefault: resetMasterToDefault } = useAccountMaster();
 
 // =============== 勘定科目マスタ ===============
 const accountBusinessType = ref<'corp' | 'individual'>('individual');
@@ -159,7 +163,12 @@ const accountHasRealEstate = ref(false);
 const accountFilter = ref('');
 const accountPage = ref(1);
 
-const accountRows: Account[] = reactive([...ACCOUNT_MASTER]);
+const accountRows: Account[] = reactive([...masterAccounts.value]);
+
+// composableの変更を監視してaccountRowsを同期
+watch(masterAccounts, (newVal) => {
+  accountRows.splice(0, accountRows.length, ...newVal);
+}, { deep: true });
 
 const filteredAccountRows = computed(() => {
   return accountRows.filter(row => {
@@ -186,26 +195,20 @@ function toggleAllChecked(e: Event) {
   checkedIds.value = checked ? pagedAccountRows.value.map(r => r.id) : [];
 }
 function hideRow(row: Account) {
-  const today = new Date().toISOString().slice(0, 10);
-  row.deprecated = true;
-  row.effectiveTo = today;
+  toggleVisibility(row.id);
 }
 function showRow(row: Account) {
-  row.deprecated = false;
-  row.effectiveTo = null;
+  toggleVisibility(row.id);
 }
 function hideChecked() {
-  const today = new Date().toISOString().slice(0, 10);
   checkedIds.value.forEach(id => {
-    const row = accountRows.find(r => r.id === id);
-    if (row) { row.deprecated = true; row.effectiveTo = today; }
+    if (!isHidden(id)) toggleVisibility(id);
   });
   checkedIds.value = [];
 }
 function showChecked() {
   checkedIds.value.forEach(id => {
-    const row = accountRows.find(r => r.id === id);
-    if (row) { row.deprecated = false; row.effectiveTo = null; }
+    if (isHidden(id)) toggleVisibility(id);
   });
   checkedIds.value = [];
 }
@@ -278,7 +281,7 @@ function addAfterChecked() {
   checkedIds.value = [];
 }
 function saveChanges() {
-  alert('保存しました（モック）');
+  alert('保存しました — 変更はlocalStorageに永続化済み');
 }
 
 // =============== インライン編集 ===============

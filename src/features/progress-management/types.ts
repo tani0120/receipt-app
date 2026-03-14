@@ -23,7 +23,6 @@ export interface ProgressRow {
     type: 'corp' | 'individual';
     fiscalMonth: number;
     companyName: string;
-    staffName: string;
     receivedDate: string;
     unexported: number;
     /** 月別仕訳数 キー: "2025-04" 形式 */

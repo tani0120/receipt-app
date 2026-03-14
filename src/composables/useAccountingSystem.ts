@@ -807,7 +807,6 @@ export function aaa_useAccountingSystem() {
       clientCode: "1001",
       companyName: "株式会社エーアイシステム",
       repName: "代表取締役",
-      staffName: "佐藤 健太",
       type: 'corp',
       fiscalMonth: 3,
       status: "active",
@@ -830,7 +829,6 @@ export function aaa_useAccountingSystem() {
       clientCode: 'AAA',
       companyName: 'アルファ 株式会社',
       repName: 'アルファ 太郎',
-      staffName: '佐藤 健太',
       type: 'corp',
       fiscalMonth: 9,
       status: 'active',
@@ -853,7 +851,6 @@ export function aaa_useAccountingSystem() {
       clientCode: 'BBB',
       companyName: '合同会社 ベータ',
       repName: 'ベータ 次郎',
-      staffName: '山田 花子',
       type: 'corp',
       fiscalMonth: 12,
       status: 'active',
@@ -881,7 +878,6 @@ export function aaa_useAccountingSystem() {
       clientCode: 'CCC',
       companyName: 'チャーリー 産業',
       repName: 'チャーリー 三郎',
-      staffName: '',
       type: 'individual',
       fiscalMonth: 3,
       status: 'inactive',
@@ -908,7 +904,6 @@ export function aaa_useAccountingSystem() {
       clientCode: 'DDD',
       companyName: 'デルタ 商事',
       repName: 'デルタ 四郎',
-      staffName: '鈴木 太郎',
       type: 'corp',
       fiscalMonth: 6,
       status: 'active',
@@ -931,7 +926,6 @@ export function aaa_useAccountingSystem() {
       clientCode: 'EEE',
       companyName: 'エコー 商店',
       repName: 'エコー 五郎',
-      staffName: '',
       type: 'individual',
       fiscalMonth: 9,
       status: 'active',
@@ -954,7 +948,6 @@ export function aaa_useAccountingSystem() {
       clientCode: 'TST',
       companyName: '株式会社 テスト商事',
       repName: 'テスト 太郎',
-      staffName: '佐藤 健太',
       type: 'corp',
       fiscalMonth: 3,
       status: 'active',
@@ -977,7 +970,6 @@ export function aaa_useAccountingSystem() {
       clientCode: 'SMP',
       companyName: 'サンプル合同会社',
       repName: 'サンプル 次郎',
-      staffName: '鈴木 花子',
       type: 'corp',
       fiscalMonth: 12,
       status: 'active',
@@ -1001,7 +993,6 @@ export function aaa_useAccountingSystem() {
       clientCode: 'TNK',
       companyName: '短期プロジェクト',
       repName: '短期 三郎',
-      staffName: '',
       type: 'individual',
       fiscalMonth: 6,
       status: 'active',
@@ -1024,7 +1015,6 @@ export function aaa_useAccountingSystem() {
       clientCode: 'AMT',
       companyName: 'アマテラス商事',
       repName: '天照 大御神',
-      staffName: '高天原',
       type: 'corp',
       fiscalMonth: 3,
       status: 'active',
@@ -1047,7 +1037,6 @@ export function aaa_useAccountingSystem() {
       clientCode: 'EDL',
       companyName: 'エンドレス開発',
       repName: '無限 ループ',
-      staffName: '再帰 呼び出し',
       type: 'corp',
       fiscalMonth: 12,
       status: 'active',
@@ -1070,7 +1059,6 @@ export function aaa_useAccountingSystem() {
       clientCode: 'GLB',
       companyName: 'グローバル貿易',
       repName: '世界 広',
-      staffName: '地球 一',
       type: 'corp',
       fiscalMonth: 1,
       status: 'active',
@@ -1135,7 +1123,7 @@ export function aaa_useAccountingSystem() {
     }
   }
 
-  async function createNewJob(file: File, clientCode: string): Promise<string | null> {
+  async function createNewJob(_file: File, clientCode: string): Promise<string | null> {
     const newId = "job_" + Date.now();
     // Create Raw Mock
     const newRawJob = createMockJob(newId, new Date().toISOString(), "新規アップロード", "解析中...", 0, 'ai_processing', "未確定");

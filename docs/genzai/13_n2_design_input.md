@@ -125,3 +125,33 @@ useAccountSettings (N7で新規作成)
 | [tax_category_schema.md](file:///c:/dev/receipt-app/docs/genzai/02_database_schema/tax_category_schema.md) | `client_tax_settings`テーブル（L110-119）、`mf_name_override`（L118） |
 | [10_nullable_on_document_plan.md](file:///c:/dev/receipt-app/docs/genzai/10_nullable_on_document_plan.md) | N1-N7タスク一覧、URL体系マップ（L561-577） |
 | [12_full_schema_design_20260311.md](file:///c:/dev/receipt-app/docs/genzai/12_full_schema_design_20260311.md) | accountsテーブル（L87-107）、is_customカラム（L100）
+
+---
+
+## 7. 設定パネル読み取り専用化の設計決定（2026-03-14確定）
+
+> 設定画面（`/client/settings/:clientId`）の「基本情報」パネルは、顧問先管理ページ（`/master/clients`）との機能重複を解消するため、**読み取り専用**とする。
+
+### 決定事項
+
+| 項目 | 決定 |
+|------|------|
+| パネルデザイン | 元のフォームデザインを維持し、全要素にdisabled属性を付与 |
+| ヘッダー | 「顧問先情報の編集はこちら」リンク（左寄せ、17px、太字600）＋×閉じるボタン |
+| キャンセル/保存ボタン | 削除 |
+| 編集先 | 顧問先管理ページ（`/master/clients`）の編集パネル |
+
+### データ一元化方針
+
+| データソース | 方針 |
+|-------------|------|
+| `staffName`（担当者名） | 旧系統フィールドとして全削除。composable(`useClients`)経由でのみ参照 |
+| 顧問先基本情報 | 設定画面は閲覧のみ。編集は顧問先管理ページに一元化 |
+| `currentClient` composable | 返却型を`Client | null`に変更済み（N1f）。フォールバック廃止 |
+
+### N2 composable設計への影響
+
+- `useAccountSettings`が返すデータに顧問先基本情報は含めない（`useClients`の責務）
+- 設定画面のパネルは`useClients`の`currentClient`から直接データバインド
+- 編集はcomposableの`updateClient()`メソッド経由（顧問先管理ページのみ）
+

@@ -64,7 +64,7 @@
             <td class="cl-code">{{ row.threeCode }}</td>
             <td>{{ row.type === 'corp' ? '法人' : '個人' }}</td>
             <td class="cl-company-name">{{ row.companyName }}</td>
-            <td>{{ row.staffName || '—' }}</td>
+            <td>{{ getStaffNameForClient(row.clientId) || '—' }}</td>
             <td>{{ softwareLabel(row.accountingSoftware) }}</td>
             <td class="cl-fiscal">{{ row.fiscalMonth }}月/{{ row.fiscalDay === '末日' ? '末日' : row.fiscalDay + '日' }}</td>
             <td>{{ row.phoneNumber || '—' }}</td>
@@ -105,7 +105,7 @@ import { useClients } from '@/features/client-management/composables/useClients'
 import type { Client } from '@/features/client-management/composables/useClients';
 
 const router = useRouter();
-const { clients } = useClients();
+const { clients, getStaffNameForClient } = useClients();
 
 // --- 検索 ---
 const searchQuery = ref('');
@@ -149,8 +149,15 @@ const filteredRows = computed(() => {
     );
   }
   rows.sort((a, b) => {
-    const aVal = (a as unknown as Record<string, string | number>)[sortKey.value] ?? '';
-    const bVal = (b as unknown as Record<string, string | number>)[sortKey.value] ?? '';
+    let aVal: string | number;
+    let bVal: string | number;
+    if (sortKey.value === 'staffName') {
+      aVal = getStaffNameForClient(a.clientId);
+      bVal = getStaffNameForClient(b.clientId);
+    } else {
+      aVal = (a as unknown as Record<string, string | number>)[sortKey.value] ?? '';
+      bVal = (b as unknown as Record<string, string | number>)[sortKey.value] ?? '';
+    }
     const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
     return sortOrder.value === 'asc' ? cmp : -cmp;
   });

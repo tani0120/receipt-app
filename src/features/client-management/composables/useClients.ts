@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useStaff } from '@/features/staff-management/composables/useStaff'
 
 // =============================================
 // 型定義
@@ -14,7 +15,6 @@ export interface Client {
     type: 'corp' | 'individual';
     repName: string;
     repNameKana: string;
-    staffName: string;
     phoneNumber: string;
     email: string;
     chatRoomUrl: string;
@@ -73,7 +73,7 @@ export const createClientId = (threeCode: string, existingClients: Client[]): st
 /** 空のフォームを生成 */
 export const emptyClientForm = (): ClientForm => ({
     threeCode: '', companyName: '', companyNameKana: '', type: 'corp',
-    repName: '', repNameKana: '', staffName: '', phoneNumber: '',
+    repName: '', repNameKana: '', phoneNumber: '',
     email: '', chatRoomUrl: '',
     contactType: 'email', contactValue: '',
     fiscalMonth: 3, fiscalDay: '末日', industry: '', establishedDate: '', status: 'active',
@@ -89,10 +89,24 @@ export const emptyClientForm = (): ClientForm => ({
 // Phase B TODO: Supabase APIに差し替え
 // =============================================
 
+// モック紐付け初期化（localStorageに未設定の場合のみ実行）
+function initMockAssignments(): void {
+    const STORAGE_KEY = 'sugu-suru:staff-assignments'
+    if (localStorage.getItem(STORAGE_KEY)) return // 既に設定済み
+    const { assignStaff } = useStaff()
+    // モックデータの初期紐付け
+    assignStaff('ABC-00001', 'staff-0002', 'main') // 佐藤 花子
+    assignStaff('DEF-00002', 'staff-0004', 'main') // 田中 次郎
+    assignStaff('GHI-00003', 'staff-0002', 'main') // 佐藤 花子
+    assignStaff('JKL-00004', 'staff-0004', 'main') // 田中 次郎
+    assignStaff('MNO-00005', 'staff-0002', 'main') // 佐藤 花子
+}
+initMockAssignments()
+
 const clients = ref<Client[]>([
     {
         clientId: 'ABC-00001', threeCode: 'ABC', companyName: '株式会社ABC商事', companyNameKana: 'カブシキガイシャエービーシーショウジ',
-        type: 'corp', repName: '山田 太郎', repNameKana: 'ヤマダ タロウ', staffName: '佐藤 花子',
+        type: 'corp', repName: '山田 太郎', repNameKana: 'ヤマダ タロウ',
         phoneNumber: '03-1234-5678', email: 'info@abc-shoij.co.jp', chatRoomUrl: '',
         contact: { type: 'email', value: 'info@abc-shoij.co.jp' },
         fiscalMonth: 3, fiscalDay: '末日', industry: '卸売業・小売業', establishedDate: '20100401', status: 'active',
@@ -104,7 +118,7 @@ const clients = ref<Client[]>([
     },
     {
         clientId: 'DEF-00002', threeCode: 'DEF', companyName: '有限会社DEF建設', companyNameKana: 'ユウゲンガイシャディーイーエフケンセツ',
-        type: 'corp', repName: '鈴木 一郎', repNameKana: 'スズキ イチロウ', staffName: '田中 次郎',
+        type: 'corp', repName: '鈴木 一郎', repNameKana: 'スズキ イチロウ',
         phoneNumber: '06-9876-5432', email: 'suzuki@def-kensetsu.co.jp', chatRoomUrl: 'https://www.chatwork.com/#!rid00001',
         contact: { type: 'chatwork', value: 'def-kensetsu' },
         fiscalMonth: 9, fiscalDay: '末日', industry: '建設業', establishedDate: '20050915', status: 'active',
@@ -116,7 +130,7 @@ const clients = ref<Client[]>([
     },
     {
         clientId: 'GHI-00003', threeCode: 'GHI', companyName: '個人事業 高橋デザイン', companyNameKana: 'コジンジギョウ タカハシデザイン',
-        type: 'individual', repName: '高橋 美咲', repNameKana: 'タカハシ ミサキ', staffName: '佐藤 花子',
+        type: 'individual', repName: '高橋 美咲', repNameKana: 'タカハシ ミサキ',
         phoneNumber: '090-1111-2222', email: 'misaki@design.jp', chatRoomUrl: '',
         contact: { type: 'email', value: 'misaki@design.jp' },
         fiscalMonth: 12, fiscalDay: '末日', industry: 'IT・ソフトウェア関連', establishedDate: '20200101', status: 'active',
@@ -128,7 +142,7 @@ const clients = ref<Client[]>([
     },
     {
         clientId: 'JKL-00004', threeCode: 'JKL', companyName: '医療法人社団 健康会', companyNameKana: 'イリョウホウジンシャダン ケンコウカイ',
-        type: 'corp', repName: '中村 健太', repNameKana: 'ナカムラ ケンタ', staffName: '田中 次郎',
+        type: 'corp', repName: '中村 健太', repNameKana: 'ナカムラ ケンタ',
         phoneNumber: '03-5555-6666', email: '', chatRoomUrl: '',
         contact: { type: 'none', value: '' },
         fiscalMonth: 3, fiscalDay: '末日', industry: '医療・福祉関係業', establishedDate: '19950601', status: 'inactive',
@@ -140,7 +154,7 @@ const clients = ref<Client[]>([
     },
     {
         clientId: 'MNO-00005', threeCode: 'MNO', companyName: '株式会社MNOフーズ', companyNameKana: 'カブシキガイシャエムエヌオーフーズ',
-        type: 'corp', repName: '小林 洋子', repNameKana: 'コバヤシ ヨウコ', staffName: '佐藤 花子',
+        type: 'corp', repName: '小林 洋子', repNameKana: 'コバヤシ ヨウコ',
         phoneNumber: '045-7777-8888', email: 'info@mno-foods.co.jp', chatRoomUrl: '',
         contact: { type: 'email', value: 'info@mno-foods.co.jp' },
         fiscalMonth: 6, fiscalDay: '末日', industry: '飲食業', establishedDate: '20180301', status: 'suspension',
@@ -153,7 +167,7 @@ const clients = ref<Client[]>([
     // --- 以下: 進捗管理用に追加した顧問先 ---
     {
         clientId: 'ANE-00006', threeCode: 'ANE', companyName: '有限会社ANE工業', companyNameKana: 'ユウゲンガイシャアネコウギョウ',
-        type: 'corp', repName: '佐々木 誠', repNameKana: 'ササキ マコト', staffName: '',
+        type: 'corp', repName: '佐々木 誠', repNameKana: 'ササキ マコト',
         phoneNumber: '048-6666-7777', email: 'sasaki@ane-kogyo.co.jp', chatRoomUrl: '',
         contact: { type: 'email', value: 'sasaki@ane-kogyo.co.jp' },
         fiscalMonth: 9, fiscalDay: '末日', industry: '製造業', establishedDate: '20000301', status: 'active',
@@ -165,7 +179,7 @@ const clients = ref<Client[]>([
     },
     {
         clientId: 'ORD-00007', threeCode: 'ORD', companyName: 'ORDER壱口店 吉井芳然', companyNameKana: 'オーダーイチグチテン ヨシイヨシノリ',
-        type: 'individual', repName: '吉井 芳然', repNameKana: 'ヨシイ ヨシノリ', staffName: '',
+        type: 'individual', repName: '吉井 芳然', repNameKana: 'ヨシイ ヨシノリ',
         phoneNumber: '090-3333-4444', email: 'yoshii@order.jp', chatRoomUrl: '',
         contact: { type: 'email', value: 'yoshii@order.jp' },
         fiscalMonth: 6, fiscalDay: '末日', industry: '飲食業', establishedDate: '20210801', status: 'active',
@@ -177,7 +191,7 @@ const clients = ref<Client[]>([
     },
     {
         clientId: 'LDI-00008', threeCode: 'LDI', companyName: '株式会社LDIデジタル', companyNameKana: 'カブシキガイシャエルディーアイデジタル',
-        type: 'corp', repName: '田村 智子', repNameKana: 'タムラ トモコ', staffName: '',
+        type: 'corp', repName: '田村 智子', repNameKana: 'タムラ トモコ',
         phoneNumber: '03-9999-0000', email: 'tamura@ldi-digital.co.jp', chatRoomUrl: '',
         contact: { type: 'email', value: 'tamura@ldi-digital.co.jp' },
         fiscalMonth: 3, fiscalDay: '末日', industry: 'IT・ソフトウェア関連', establishedDate: '20160301', status: 'active',
@@ -189,7 +203,7 @@ const clients = ref<Client[]>([
     },
     {
         clientId: 'MHL-00009', threeCode: 'MHL', companyName: '合同会社MHLメディカル', companyNameKana: 'ゴウドウガイシャエムエイチエルメディカル',
-        type: 'corp', repName: '橋本 恵子', repNameKana: 'ハシモト ケイコ', staffName: '',
+        type: 'corp', repName: '橋本 恵子', repNameKana: 'ハシモト ケイコ',
         phoneNumber: '045-1111-2222', email: 'hashimoto@mhl-med.co.jp', chatRoomUrl: '',
         contact: { type: 'email', value: 'hashimoto@mhl-med.co.jp' },
         fiscalMonth: 9, fiscalDay: '末日', industry: '医療・福祉関係業', establishedDate: '20110301', status: 'active',
@@ -201,7 +215,7 @@ const clients = ref<Client[]>([
     },
     {
         clientId: 'MUK-00010', threeCode: 'MUK', companyName: '個人事業 MUKU工房', companyNameKana: 'コジンジギョウ ムクコウボウ',
-        type: 'individual', repName: '村上 翔太', repNameKana: 'ムラカミ ショウタ', staffName: '',
+        type: 'individual', repName: '村上 翔太', repNameKana: 'ムラカミ ショウタ',
         phoneNumber: '090-7777-8888', email: 'murakami@muku.jp', chatRoomUrl: '',
         contact: { type: 'email', value: 'murakami@muku.jp' },
         fiscalMonth: 12, fiscalDay: '末日', industry: '製造業', establishedDate: '20230401', status: 'active',
@@ -221,34 +235,41 @@ export function useClients() {
     const route = useRoute();
 
     /** ルートパスまたはクエリパラメータから現在選択中のクライアントを動的に取得 */
-    const currentClient = computed<{ threeCode: string; name: string; clientId: string } | null>(() => {
+    const currentClient = computed<Client | null>(() => {
         const path = route.path;
         // 1. パターンB: /client/journal-list/:clientId, /client/drive-select/:clientId 等
         const patternB = path.match(/^\/client\/(journal-list|drive-select|export|export-history|export-detail|settings\/accounts|settings\/tax|settings|upload|learning)\/([^/]+)/);
         if (patternB && patternB[2]) {
             const cid = patternB[2];
             const found = clients.value.find(c => c.clientId === cid);
-            if (found) return { threeCode: found.threeCode, name: found.companyName, clientId: found.clientId };
+            if (found) return found;
         }
         // 2. /clients/:clientId/settings パターン（旧ページ互換）
         const clientsMatch = path.match(/\/clients\/([^/]+)/);
         if (clientsMatch && clientsMatch[1]) {
             const paramId = clientsMatch[1];
             const found = clients.value.find(c => c.threeCode.toLowerCase() === paramId.toLowerCase() || c.clientId === paramId);
-            if (found) return { threeCode: found.threeCode, name: found.companyName, clientId: found.clientId };
+            if (found) return found;
         }
         // 3. クエリパラメータ ?client=clientId から取得（互換用）
         const clientQuery = route.query.client;
         if (clientQuery && typeof clientQuery === 'string') {
             const found = clients.value.find(c => c.clientId === clientQuery);
-            if (found) return { threeCode: found.threeCode, name: found.companyName, clientId: found.clientId };
+            if (found) return found;
         }
         // 4. 該当なし → null（マスタページ等ではcurrentClientなし）
         return null;
     });
 
+    /** 顧問先IDから担当者名を取得（紐付けcomposable経由） */
+    function getStaffNameForClient(clientId: string): string {
+        const { getMainStaffName } = useStaff()
+        return getMainStaffName(clientId)
+    }
+
     return {
         clients,
         currentClient,
+        getStaffNameForClient,
     };
 }

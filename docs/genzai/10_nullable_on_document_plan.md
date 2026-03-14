@@ -564,6 +564,11 @@
 | N1l | **password lintエラー修正** — `MockMasterStaffPage.vue`で`Staff`型に存在しない`password`参照を修正。編集時パスワード欄は空、新規作成時のみ必須チェック | 03-13 | ✅完了 | sensitive情報管理原則に準拠 |
 | N1m | **N2設計インプット追記** — `13_n2_design_input.md`に§5.5「共通設計原則」（sensitive情報管理、モック/本番差異）を追加 | 03-13 | ✅完了 | composable共通ルールとして策定 |
 | N1n | **MF名称変更警告実装** — 顧問先ページのカスタム科目名変更時にルール5準拠のMF警告バナーを表示。`×`ボタンで閉じ可能 | 03-13 | ✅完了 | 税区分ページはテンプレートのみ（インライン編集未実装のため） |
+| N1o | **設定パネル読み取り専用化** — `ScreenS_Settings.vue`の基本情報パネルを元のフォームデザインに復元しつつ全要素にdisabled属性付与。「顧問先情報の編集はこちら」リンク（左寄せ17px太字）＋×ボタン。キャンセル/保存ボタン削除 | 03-14 | ✅完了 | 設定画面は閲覧のみ。編集は顧問先管理ページで行う方針 |
+| N1p | **staffName全削除** — 旧系統のstaffNameフィールドを全ファイルから削除。対象: `ui.type.ts`(ClientUi型)、`ClientMapper.ts`(3箇所)、`useAdminDashboard.ts`(ClientAnalysis型+モック3件)、`useAccountingSystem.ts`(モック12件)、`ScreenZ_Dashboard.vue`(担当者名列) | 03-14 | ✅完了 | composable経由のデータ参照に一元化。staffNameは全箇所削除済み |
+| N1q | **不要CSS削除** — `ScreenS_Settings.vue`の`.panel-cancel`/`.panel-save`クラスを削除（テンプレートで未使用） | 03-14 | ✅完了 | パネルdisabled化に伴う不要コード除去 |
+| N1r | **`StaffPerformance`型optional→必須化** — `useAdminDashboard.ts`の`StaffPerformance`型6フィールド（`thisMonthJournals`, `monthlyAvgJournals`, `annualApiCost`, `velocityThisMonth`, `velocityAvg`, `velocityPerHourAvg`）をoptional→必須に変更 | 03-14 | ✅完了 | モック全件に値が存在し、ダッシュボード表示で必須のため |
+| N1s | **未使用引数`file`→`_file`** — `useAccountingSystem.ts`の`createNewJob(file: File)`を`createNewJob(_file: File)`にリネーム | 03-14 | ✅完了 | 未使用引数の慣例的明示 |
 | N2 | **共有composableのゼロベース再定義** — `useAccountSettings`を含む全composableの責務・相関を設計。相関図（mermaid）を本ドキュメントに作成 | 03-11 | ❌未着手 | 現状: 4ページが独立して`ACCOUNT_MASTER`をコピー。連携なし（問題Aの根本対応） |
 | N3 | **顧問先UUIDの見える化** — 顧問先管理画面に顧問先UUIDを編集不可で表示。3コード（`clientCode`）とUUID（`uuid`）の取り違え防止 | 03-11 | ❌未着手 | `useClients.ts`のClient型: `id`（3コード-UUID形式）、`uuid`（UUID部分）、`clientCode`（3コード）の3つが存在 |
 | N4 | **全UUIDの実装状況調査と紐付けロジック** — 顧問先UUID・担当UUID・証票単位UUID・仕訳単位UUIDの4種について、現在の実装状況を調査し、全てを紐付けするロジックを実装 | 03-11 | ❌未着手 | 仕訳フィクスチャの`id`は`j001`等の仮ID。証票は`document_id: 'receipt-001'`。本番用UUID未実装 |

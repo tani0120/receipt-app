@@ -84,7 +84,7 @@
             <td class="pg-td-code">{{ row.code }}</td>
             <td class="pg-td-fiscal">{{ row.fiscalMonth }}月</td>
             <td class="pg-td-client">{{ row.companyName }}</td>
-            <td class="pg-td-narrow">{{ row.staffName || '' }}</td>
+            <td class="pg-td-narrow">{{ getStaffNameForClient(row.clientId) || '' }}</td>
             <td class="pg-td-narrow">{{ row.receivedDate || '—' }}</td>
             <td class="pg-td-num">{{ row.unexported > 0 ? row.unexported + '件' : '—' }}</td>
             <td
@@ -108,10 +108,12 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProgress } from '@/features/progress-management/composables/useProgress';
+import { useClients } from '@/features/client-management/composables/useClients';
 
 const router = useRouter();
 
 const { progressRows, monthColumns, staffList: allStaff, getSortValue } = useProgress();
+const { getStaffNameForClient } = useClients();
 
 // --- フィルター ---
 const filterClient = ref('');
@@ -174,7 +176,7 @@ const filteredRows = computed(() => {
     );
   }
   if (filterStaff.value) {
-    rows = rows.filter(r => r.staffName === filterStaff.value);
+    rows = rows.filter(r => getStaffNameForClient(r.clientId) === filterStaff.value);
   }
   if (onlyUnexported.value) {
     rows = rows.filter(r => r.unexported > 0);

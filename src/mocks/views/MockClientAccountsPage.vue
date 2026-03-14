@@ -106,7 +106,7 @@
             <tbody>
               <tr
                 v-for="(row, idx) in pagedAccountRows" :key="row.id"
-                :class="{ 'row-deprecated': row.deprecated, 'row-dragging': dragIdx === idx, 'row-custom': row.isCustom }"
+                :class="{ 'row-deprecated': isAccountHidden(row.id), 'row-dragging': dragIdx === idx, 'row-custom': row.isCustom }"
                 draggable="true"
                 @dragstart="onDragStart(idx, $event)"
                 @dragover.prevent="onDragOver(idx)"
@@ -130,7 +130,7 @@
                 <td class="td-date">{{ row.effectiveTo ?? '現役' }}</td>
                 <td class="as-td-actions">
                   <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
-                  <i v-if="row.deprecated" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
+                  <i v-if="isAccountHidden(row.id)" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
                   <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
                 </td>
               </tr>
@@ -159,6 +159,7 @@ import type { Account } from '@/shared/types/account';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
 import { ACCOUNT_MASTER } from '@/shared/data/account-master';
 import { useClients } from '@/features/client-management/composables/useClients';
+import { useClientAccounts } from '@/features/account-management/composables/useClientAccounts';
 
 const PAGE_SIZE = 50;
 const route = useRoute();
@@ -176,7 +177,26 @@ const clientBusinessTypeLabel = computed(() => accountBusinessType.value === 'co
 const accountFilter = ref('');
 const accountPage = ref(1);
 
-const accountRows: Account[] = reactive([...ACCOUNT_MASTER]);
+// =============== composable接続 ===============
+const clientAccountsComposable = clientId.value ? useClientAccounts(clientId.value) : null;
+const accountRows: Account[] = reactive(
+  clientAccountsComposable ? [...clientAccountsComposable.clientAccounts.value] : [...ACCOUNT_MASTER]
+);
+
+// composableの変更を監視してaccountRowsを同期（マスタ側の非表示変更が反映される）
+if (clientAccountsComposable) {
+  watch(clientAccountsComposable.clientAccounts, (newVal) => {
+    accountRows.splice(0, accountRows.length, ...newVal);
+  }, { deep: true });
+}
+
+/** 科目が非表示か（マスタ非表示 or 顧問先非表示） */
+function isAccountHidden(accountId: string): boolean {
+  if (!clientAccountsComposable) return false;
+  const entry = clientAccountsComposable.clientAccounts.value.find(a => a.id === accountId);
+  if (!entry) return false;
+  return entry.hiddenInClient || entry.hiddenInMaster;
+}
 
 const filteredAccountRows = computed(() => {
   return accountRows.filter(row => {
@@ -203,26 +223,20 @@ function toggleAllChecked(e: Event) {
   checkedIds.value = checked ? pagedAccountRows.value.map(r => r.id) : [];
 }
 function hideRow(row: Account) {
-  const today = new Date().toISOString().slice(0, 10);
-  row.deprecated = true;
-  row.effectiveTo = today;
+  if (clientAccountsComposable) clientAccountsComposable.toggleVisibility(row.id);
 }
 function showRow(row: Account) {
-  row.deprecated = false;
-  row.effectiveTo = null;
+  if (clientAccountsComposable) clientAccountsComposable.toggleVisibility(row.id);
 }
 function hideChecked() {
-  const today = new Date().toISOString().slice(0, 10);
   checkedIds.value.forEach(id => {
-    const row = accountRows.find(r => r.id === id);
-    if (row) { row.deprecated = true; row.effectiveTo = today; }
+    if (!isAccountHidden(id) && clientAccountsComposable) clientAccountsComposable.toggleVisibility(id);
   });
   checkedIds.value = [];
 }
 function showChecked() {
   checkedIds.value.forEach(id => {
-    const row = accountRows.find(r => r.id === id);
-    if (row) { row.deprecated = false; row.effectiveTo = null; }
+    if (isAccountHidden(id) && clientAccountsComposable) clientAccountsComposable.toggleVisibility(id);
   });
   checkedIds.value = [];
 }
@@ -371,7 +385,12 @@ function sortAccounts(key: keyof Account) {
 }
 
 function resetAccountOrder() {
-  accountRows.splice(0, accountRows.length, ...ACCOUNT_MASTER);
+  if (clientAccountsComposable) {
+    clientAccountsComposable.resetToDefault();
+    accountRows.splice(0, accountRows.length, ...clientAccountsComposable.clientAccounts.value);
+  } else {
+    accountRows.splice(0, accountRows.length, ...ACCOUNT_MASTER);
+  }
   sortState.key = '';
 }
 </script>

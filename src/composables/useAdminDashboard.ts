@@ -19,12 +19,12 @@ export interface StaffPerformance {
   monthlyJournals: number;
   processingTime: string;
   velocityPerHour: number;
-  thisMonthJournals?: number;
-  monthlyAvgJournals?: number;
-  annualApiCost?: number;
-  velocityThisMonth?: number;
-  velocityAvg?: number;
-  velocityPerHourAvg?: number;
+  thisMonthJournals: number;
+  monthlyAvgJournals: number;
+  annualApiCost: number;
+  velocityThisMonth: number;
+  velocityAvg: number;
+  velocityPerHourAvg: number;
 }
 
 export interface StaffAnalysis {
@@ -44,7 +44,6 @@ export interface Staff {
 export interface ClientAnalysis {
   code: string;
   name: string;
-  staffName: string;
   performance: {
     journalsThisMonth: number;
     journalsThisYear: number;
@@ -355,21 +354,21 @@ const MOCK_DATA: DashboardData = {
   ],
   clientAnalysis: [
     {
-      code: 'AAA', name: '株式会社 ＡＡＡ', staffName: '佐藤 健太',
+      code: 'AAA', name: '株式会社 ＡＡＡ',
       performance: {
         journalsThisMonth: 50, journalsThisYear: 600, journalsLastYear: 550,
         apiCostThisYear: 24000, velocityThisMonth: 25, velocityAvg: 24
       }
     },
     {
-      code: 'BBB', name: '合同会社 ＢＢＢ', staffName: '鈴木 美咲',
+      code: 'BBB', name: '合同会社 ＢＢＢ',
       performance: {
         journalsThisMonth: 30, journalsThisYear: 360, journalsLastYear: 300,
         apiCostThisYear: 15000, velocityThisMonth: 22, velocityAvg: 20
       }
     },
     {
-      code: 'CCC', name: 'ＣＣＣ 商店', staffName: '高橋 誠',
+      code: 'CCC', name: 'ＣＣＣ 商店',
       performance: {
         journalsThisMonth: 80, journalsThisYear: 960, journalsLastYear: 800,
         apiCostThisYear: 40000, velocityThisMonth: 28, velocityAvg: 26

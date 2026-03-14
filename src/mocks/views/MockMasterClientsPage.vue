@@ -109,12 +109,12 @@
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.companyName }}</span>
                 </td>
-                <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'staffName', $event)">
-                  <select v-if="inlineEditId === row.clientId && inlineEditField === 'staffName'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                <td class="td-editable" @dblclick.stop="startStaffInlineEdit(row, $event)">
+                  <select v-if="inlineEditId === row.clientId && inlineEditField === 'staffName'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitStaffEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                     <option value="">未設定</option>
-                    <option v-for="s in staffList" :key="s.uuid" :value="s.name">{{ s.name }}</option>
+                    <option v-for="s in staffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
                   </select>
-                  <span v-else>{{ row.staffName || '—' }}</span>
+                  <span v-else>{{ getStaffNameForClient(row.clientId) || '—' }}</span>
                 </td>
                 <!-- 会計ソフト: select -->
                 <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'accountingSoftware', $event)">
@@ -245,7 +245,10 @@
               </div>
               <div class="cm-field">
                 <label class="cm-label">担当者</label>
-                <input type="text" v-model="panelForm.staffName" class="cm-input" placeholder="担当者を入力">
+                <select v-model="panelStaffId" class="cm-select">
+                  <option value="">未設定</option>
+                  <option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
+                </select>
               </div>
               <div class="cm-field">
                 <label class="cm-label">電話番号</label>
@@ -452,8 +455,8 @@ import type { Client, ClientForm } from '@/features/client-management/composable
 import { useStaff } from '@/features/staff-management/composables/useStaff';
 
 // --- クライアントデータ（composableから取得） ---
-const { clients } = useClients();
-const { staffList } = useStaff();
+const { clients, getStaffNameForClient } = useClients();
+const { staffList, assignStaff, activeStaff: activeStaffList, getAssignedStaff } = useStaff();
 
 // --- 業種リスト（ScreenS_Settings.vueと同一） ---
 const industryOptions: string[] = [
@@ -493,8 +496,15 @@ const filteredRows = computed((): Client[] => {
   }
   const key = sortKey.value as keyof Client;
   rows.sort((a, b) => {
-    let va: unknown = a[key] ?? '';
-    let vb: unknown = b[key] ?? '';
+    let va: unknown;
+    let vb: unknown;
+    if (key === 'staffName') {
+      va = getStaffNameForClient(a.clientId);
+      vb = getStaffNameForClient(b.clientId);
+    } else {
+      va = a[key] ?? '';
+      vb = b[key] ?? '';
+    }
     // clientId: 数字部分(ハイフン以降)のみでソート
     if (key === 'clientId') {
       const na = parseInt((va as string).split('-').pop() || '0', 10);
@@ -573,6 +583,7 @@ const editingId = ref<string | null>(null);
 const showIndustryDropdown = ref(false);
 
 const panelForm = reactive<ClientForm>(emptyClientForm());
+const panelStaffId = ref(''); // パネル用スタッフID
 
 // B修正: 法人→個人切替時にhasRentalIncomeをリセット
 watch(() => panelForm.type, (newType) => {
@@ -595,6 +606,7 @@ const delayedOpenEditPanel = (row: Client) => {
 
 const openAddPanel = () => {
   Object.assign(panelForm, emptyClientForm());
+  panelStaffId.value = '';
   panelMode.value = 'add';
   editingId.value = null;
 };
@@ -606,6 +618,10 @@ const openEditPanel = (row: Client) => {
     contactType: contact.type,
     contactValue: contact.value,
   });
+  // 現在の紐付けからstaffIdを取得
+  const assigned = getAssignedStaff(row.clientId);
+  const main = assigned.find(s => s.assignmentRole === 'main');
+  panelStaffId.value = main?.uuid ?? '';
   panelMode.value = 'edit';
   editingId.value = row.clientId;
 };
@@ -632,10 +648,18 @@ const saveClient = () => {
   };
   if (panelMode.value === 'add') {
     clients.value.push(data);
+    // 紐付け設定
+    if (panelStaffId.value) {
+      assignStaff(clientId, panelStaffId.value, 'main');
+    }
     globalThis.alert(`「${data.companyName}」を追加しました。\n\n勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。`);
   } else {
     const idx = clients.value.findIndex(c => c.clientId === editingId.value);
     if (idx >= 0) clients.value[idx] = data;
+    // 紐付け更新
+    if (panelStaffId.value) {
+      assignStaff(clientId, panelStaffId.value, 'main');
+    }
     globalThis.alert(`「${data.companyName}」を更新しました。`);
   }
   closePanel();
@@ -673,6 +697,33 @@ const annualTotal = computed(() => {
   const monthly = panelForm.advisoryFee + panelForm.bookkeepingFee;
   return monthly * 12 + panelForm.settlementFee + panelForm.taxFilingFee;
 });
+
+// --- スタッフ紐付けインライン編集 ---
+const startStaffInlineEdit = (row: Client, event: Event) => {
+  event.stopPropagation();
+  inlineEditId.value = row.clientId;
+  inlineEditField.value = 'staffName';
+  // 現在の紐づけスタッフIDを取得
+  const { getAssignedStaff } = useStaff();
+  const assigned = getAssignedStaff(row.clientId);
+  const main = assigned.find(s => s.assignmentRole === 'main');
+  inlineEditValue.value = main?.uuid ?? '';
+  if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+  nextTick(() => {
+    const el = document.querySelector('.cm-inline-select') as HTMLElement;
+    if (el) el.focus();
+  });
+};
+
+const commitStaffEdit = (_row: Client) => {
+  if (inlineEditId.value) {
+    const staffId = inlineEditValue.value as string;
+    if (staffId) {
+      assignStaff(inlineEditId.value, staffId, 'main');
+    }
+  }
+  cancelInlineEdit();
+};
 
 // --- ドロップダウン外クリックで閉じる ---
 const closeDropdowns = () => { showIndustryDropdown.value = false; };

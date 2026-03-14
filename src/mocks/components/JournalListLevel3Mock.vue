@@ -905,6 +905,7 @@ import { computed, ref, watch } from 'vue';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
 import { ACCOUNT_MASTER } from '@/shared/data/account-master';
 import { useClients } from '@/features/client-management/composables/useClients';
+import { useClientAccounts } from '@/features/account-management/composables/useClientAccounts';
 import { NULL_DISPLAY_UNKNOWN, compareWithNull } from '@/mocks/definitions/field-nullable-spec';
 import { useDraggable } from '@/mocks/composables/useDraggable';
 import { useCurrentUser, STAFF_LIST } from '@/mocks/composables/useCurrentUser';
@@ -930,20 +931,28 @@ const activeClientFull = computed(() => {
   return clients.value.find(c => c.clientId === currentClient.value!.clientId) ?? null;
 });
 
+// 顧問先の勘定科目 composable（マスタ非表示・顧問先非表示を反映）
+const clientAccountsComposable = computed(() => {
+  if (!currentClient.value) return null;
+  return useClientAccounts(currentClient.value.clientId);
+});
+
 /** 顧問先のtype/hasRentalIncomeでフィルタ済み勘定科目リスト */
 const filteredAccounts = computed(() => {
   const client = activeClientFull.value;
   const clientType = client?.type ?? 'corp';
   const hasRental = client?.hasRentalIncome ?? false;
 
-  return ACCOUNT_MASTER
+  // composableがあればvisibleClientAccountsを使用（非表示科目除外済み）
+  const source = clientAccountsComposable.value
+    ? clientAccountsComposable.value.visibleClientAccounts.value
+    : ACCOUNT_MASTER;
+
+  return source
     .filter(acc => {
-      // deprecated・無効は除外
       if (acc.deprecated) return false;
-      // targetフィルタ
       if (acc.target === 'both') return true;
       if (acc.target === clientType) {
-        // 個人事業主で不動産所得なしの場合、不動産カテゴリを除外
         if (clientType === 'individual' && !hasRental && acc.category.includes('不動産')) return false;
         return true;
       }
@@ -968,15 +977,20 @@ let searchDropdownTargetColKey: string = '';  // K: 復元先のcolKey
 
 /** 検索クエリでフィルタ済み勘定科目（searchAllAccountsで全件表示に移行済みだが互換性保持） */
 
-/** J: ACCOUNT_MASTER全件を検索フィルタし、selectableフラグ付きで返す */
+/** J: 全科目を検索フィルタし、selectableフラグ付きで返す（非表示科目は除外） */
 const searchAllAccounts = computed(() => {
   const q = searchDropdownQuery.value.toLowerCase();
   const selectableNames = new Set(filteredAccounts.value.map(a => a.name));
-  return ACCOUNT_MASTER
+
+  // composableがあれば全科目（非表示含む）を使用、なければACCOUNT_MASTER
+  const allSource = clientAccountsComposable.value
+    ? clientAccountsComposable.value.clientAccounts.value
+    : ACCOUNT_MASTER;
+
+  return allSource
     .filter(acc => !acc.deprecated)
     .filter(acc => !q || acc.name.toLowerCase().includes(q))
     .sort((a, b) => {
-      // 選択可能なものを先頭に
       const aS = selectableNames.has(a.name) ? 0 : 1;
       const bS = selectableNames.has(b.name) ? 0 : 1;
       if (aS !== bS) return aS - bS;
@@ -1027,7 +1041,10 @@ function selectAccount(row: any, colKey: string, accountName: string) {
 
   // デフォルト税区分を自動設定（MF名称で格納）
   if (accountName) {
-    const acc = ACCOUNT_MASTER.find(a => a.name === accountName);
+    const allAccounts = clientAccountsComposable.value
+      ? clientAccountsComposable.value.clientAccounts.value
+      : ACCOUNT_MASTER;
+    const acc = allAccounts.find(a => a.name === accountName);
     if (acc?.defaultTaxCategoryId) {
       const tc = TAX_CATEGORY_MASTER.find(t => t.id === acc.defaultTaxCategoryId);
       entry.tax_category_id = tc ? tc.name : acc.defaultTaxCategoryId;

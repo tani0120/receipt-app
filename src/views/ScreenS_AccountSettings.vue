@@ -198,8 +198,11 @@ import { extractRateFromName } from '@/shared/types/tax-category';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
 import { ACCOUNT_MASTER } from '@/shared/data/account-master';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useClientAccounts } from '@/features/account-management/composables/useClientAccounts';
+import { useRoute } from 'vue-router';
 
 const settingsStore = useSettingsStore();
+const route = useRoute();
 
 const props = withDefaults(defineProps<{ defaultTab?: 'accounts' | 'tax' }>(), {
   defaultTab: 'accounts'
@@ -214,6 +217,13 @@ function storeEntityToMaster(entity: string): 'corp' | 'individual' {
   return entity === 'corporate' ? 'corp' : 'individual';
 }
 
+// =============== composable接続 ===============
+const clientIdFromRoute = computed(() => {
+  const match = route.path.match(/\/client\/settings\/(?:accounts|tax)\/([^/]+)/);
+  return match ? match[1] : null;
+});
+const clientAccountsComposable = clientIdFromRoute.value ? useClientAccounts(clientIdFromRoute.value) : null;
+
 // =============== 勘定科目タブ ===============
 const accountBusinessType = ref<'corp' | 'individual'>(storeEntityToMaster(settingsStore.entityType));
 const accountHasRealEstate = ref(settingsStore.hasRealEstate);
@@ -224,7 +234,9 @@ const accountPage = ref(1);
 watch(() => settingsStore.entityType, (v) => { accountBusinessType.value = storeEntityToMaster(v); });
 watch(() => settingsStore.hasRealEstate, (v) => { accountHasRealEstate.value = v; });
 
-const accountRows: Account[] = reactive([...ACCOUNT_MASTER]);
+const accountRows: Account[] = reactive(
+  clientAccountsComposable ? [...clientAccountsComposable.clientAccounts.value] : [...ACCOUNT_MASTER]
+);
 
 const filteredAccountRows = computed(() => {
   return accountRows.filter(row => {
@@ -339,7 +351,12 @@ function sortTaxByRate() {
 
 /** デフォルト順に戻す */
 function resetAccountOrder() {
-  accountRows.splice(0, accountRows.length, ...ACCOUNT_MASTER);
+  if (clientAccountsComposable) {
+    clientAccountsComposable.resetToDefault();
+    accountRows.splice(0, accountRows.length, ...clientAccountsComposable.clientAccounts.value);
+  } else {
+    accountRows.splice(0, accountRows.length, ...ACCOUNT_MASTER);
+  }
   sortState.accounts.key = '';
 }
 function resetTaxOrder() {

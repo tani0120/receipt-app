@@ -125,15 +125,19 @@ import { ref, reactive, computed, watch } from 'vue';
 import type { TaxCategory, TaxDirection } from '@/shared/types/tax-category';
 import { extractRateFromName } from '@/shared/types/tax-category';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
+import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster';
 
 const PAGE_SIZE = 50;
+
+// =============== composable接続 ===============
+const { masterTaxCategories } = useTaxMaster();
 
 // =============== 税区分マスタ ===============
 type TaxMethodType = 'general' | 'simplified' | 'exempt';
 const taxTabMethod = ref<TaxMethodType>('general');
 const taxPage = ref(1);
 
-const allTaxRows: TaxCategory[] = reactive([...TAX_CATEGORY_MASTER]);
+const allTaxRows: TaxCategory[] = reactive([...masterTaxCategories.value]);
 
 const filteredTaxRows = computed(() => {
   return allTaxRows.filter(row => {

@@ -133,6 +133,7 @@ import type { TaxCategory, TaxDirection } from '@/shared/types/tax-category';
 import { extractRateFromName } from '@/shared/types/tax-category';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
 import { useClients } from '@/features/client-management/composables/useClients';
+import { useClientTaxCategories } from '@/features/tax-management/composables/useClientTaxCategories';
 
 const PAGE_SIZE = 50;
 const route = useRoute();
@@ -157,7 +158,11 @@ const taxMethodLabel = computed(() => {
 const mfWarningMessage = ref('');
 const taxPage = ref(1);
 
-const allTaxRows: TaxCategory[] = reactive([...TAX_CATEGORY_MASTER]);
+// =============== composable接続 ===============
+const clientTaxComposable = clientId.value ? useClientTaxCategories(clientId.value) : null;
+const allTaxRows: TaxCategory[] = reactive(
+  clientTaxComposable ? [...clientTaxComposable.clientTaxCategories.value] : [...TAX_CATEGORY_MASTER]
+);
 
 const filteredTaxRows = computed(() => {
   return allTaxRows.filter(row => {
