@@ -804,8 +804,13 @@ export function aaa_useAccountingSystem() {
   // 1. Pre-load Ironclad Client Mocks (Synchronous to ensure Map is ready for Jobs)
   const mockClientsPreload: ClientApi[] = [
     {
+      clientId: 'client_1001',
       clientCode: "1001",
       companyName: "株式会社エーアイシステム",
+      advisoryFee: 50000,
+      bookkeepingFee: 30000,
+      settlementFee: 150000,
+      taxFilingFee: 80000,
       repName: "代表取締役",
       type: 'corp',
       fiscalMonth: 3,
@@ -826,8 +831,13 @@ export function aaa_useAccountingSystem() {
       updatedAt: Timestamp.now()
     },
     {
+      clientId: 'client_AAA',
       clientCode: 'AAA',
       companyName: 'アルファ 株式会社',
+      advisoryFee: 40000,
+      bookkeepingFee: 20000,
+      settlementFee: 120000,
+      taxFilingFee: 60000,
       repName: 'アルファ 太郎',
       type: 'corp',
       fiscalMonth: 9,
@@ -848,8 +858,13 @@ export function aaa_useAccountingSystem() {
       updatedAt: Timestamp.now()
     },
     {
+      clientId: 'client_BBB',
       clientCode: 'BBB',
       companyName: '合同会社 ベータ',
+      advisoryFee: 35000,
+      bookkeepingFee: 25000,
+      settlementFee: 100000,
+      taxFilingFee: 50000,
       repName: 'ベータ 次郎',
       type: 'corp',
       fiscalMonth: 12,
@@ -875,8 +890,13 @@ export function aaa_useAccountingSystem() {
       updatedAt: Timestamp.now()
     },
     {
+      clientId: 'client_CCC',
       clientCode: 'CCC',
       companyName: 'チャーリー 産業',
+      advisoryFee: 30000,
+      bookkeepingFee: 15000,
+      settlementFee: 80000,
+      taxFilingFee: 40000,
       repName: 'チャーリー 三郎',
       type: 'individual',
       fiscalMonth: 3,
@@ -901,8 +921,13 @@ export function aaa_useAccountingSystem() {
       updatedAt: Timestamp.now()
     },
     {
+      clientId: 'client_DDD',
       clientCode: 'DDD',
       companyName: 'デルタ 商事',
+      advisoryFee: 45000,
+      bookkeepingFee: 28000,
+      settlementFee: 130000,
+      taxFilingFee: 70000,
       repName: 'デルタ 四郎',
       type: 'corp',
       fiscalMonth: 6,
@@ -923,8 +948,13 @@ export function aaa_useAccountingSystem() {
       updatedAt: Timestamp.now()
     },
     {
+      clientId: 'client_EEE',
       clientCode: 'EEE',
       companyName: 'エコー 商店',
+      advisoryFee: 25000,
+      bookkeepingFee: 10000,
+      settlementFee: 60000,
+      taxFilingFee: 30000,
       repName: 'エコー 五郎',
       type: 'individual',
       fiscalMonth: 9,
@@ -945,8 +975,13 @@ export function aaa_useAccountingSystem() {
       updatedAt: Timestamp.now()
     },
     {
+      clientId: 'client_TST',
       clientCode: 'TST',
       companyName: '株式会社 テスト商事',
+      advisoryFee: 50000,
+      bookkeepingFee: 30000,
+      settlementFee: 150000,
+      taxFilingFee: 80000,
       repName: 'テスト 太郎',
       type: 'corp',
       fiscalMonth: 3,
@@ -967,8 +1002,13 @@ export function aaa_useAccountingSystem() {
       updatedAt: Timestamp.now()
     },
     {
+      clientId: 'client_SMP',
       clientCode: 'SMP',
       companyName: 'サンプル合同会社',
+      advisoryFee: 38000,
+      bookkeepingFee: 22000,
+      settlementFee: 110000,
+      taxFilingFee: 55000,
       repName: 'サンプル 次郎',
       type: 'corp',
       fiscalMonth: 12,
@@ -990,8 +1030,13 @@ export function aaa_useAccountingSystem() {
       updatedAt: Timestamp.now()
     },
     {
+      clientId: 'client_TNK',
       clientCode: 'TNK',
       companyName: '短期プロジェクト',
+      advisoryFee: 20000,
+      bookkeepingFee: 10000,
+      settlementFee: 50000,
+      taxFilingFee: 25000,
       repName: '短期 三郎',
       type: 'individual',
       fiscalMonth: 6,
@@ -1012,8 +1057,13 @@ export function aaa_useAccountingSystem() {
       updatedAt: Timestamp.now()
     },
     {
+      clientId: 'client_AMT',
       clientCode: 'AMT',
       companyName: 'アマテラス商事',
+      advisoryFee: 55000,
+      bookkeepingFee: 35000,
+      settlementFee: 180000,
+      taxFilingFee: 90000,
       repName: '天照 大御神',
       type: 'corp',
       fiscalMonth: 3,
@@ -1034,8 +1084,13 @@ export function aaa_useAccountingSystem() {
       updatedAt: Timestamp.now()
     },
     {
+      clientId: 'client_EDL',
       clientCode: 'EDL',
       companyName: 'エンドレス開発',
+      advisoryFee: 42000,
+      bookkeepingFee: 26000,
+      settlementFee: 120000,
+      taxFilingFee: 65000,
       repName: '無限 ループ',
       type: 'corp',
       fiscalMonth: 12,
@@ -1056,8 +1111,13 @@ export function aaa_useAccountingSystem() {
       updatedAt: Timestamp.now()
     },
     {
+      clientId: 'client_GLB',
       clientCode: 'GLB',
       companyName: 'グローバル貿易',
+      advisoryFee: 60000,
+      bookkeepingFee: 40000,
+      settlementFee: 200000,
+      taxFilingFee: 100000,
       repName: '世界 広',
       type: 'corp',
       fiscalMonth: 1,
@@ -1144,26 +1204,18 @@ export function aaa_useAccountingSystem() {
       if (!data.clientCode) throw new Error("Client Code is required");
 
       const newClientRaw = {
+        clientId: `client_${data.clientCode}`,
         contact: { type: 'none' as const, value: '' },
-        driveLinks: { storage: '#', journalOutput: '#', journalExclusion: '#', pastJournals: '#' },
-        actions: [],
-        fiscalMonthLabel: '',
-        simplifiedTaxCategoryLabel: '',
-        softwareLabel: '',
-        taxInfoLabel: '',
-        calculationMethodLabel: '',
-        taxMethodLabel: '',
-        calcMethodShortLabel: '',
-        taxCalculationMethodLabel: '',
-        invoiceRegistrationLabel: '',
-        roundingSettingsLabel: '',
-        typeLabel: '',
+        advisoryFee: 0,
+        bookkeepingFee: 0,
+        settlementFee: 0,
+        taxFilingFee: 0,
         ...data,
-        updatedAt: new Date().toISOString()
+        updatedAt: Timestamp.now()
       };
 
       // Hono RPC
-      await client.api.clients.$post({ json: newClientRaw as ClientApi }); // Type assertion for RPC payload
+      await client.api.clients.$post({ json: newClientRaw as unknown as ClientApi }); // Type assertion for RPC payload
       await fetchClients();
     } catch (e: unknown) {
       if (e instanceof Error) error.value = e.message;

@@ -676,11 +676,18 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 | 1 | `useAdminDashboard.ts` | `StaffPerformance`型6フィールドをoptional→必須化 | ✅ |
 | 2 | `useAccountingSystem.ts` | `createNewJob(file: File)` → `createNewJob(_file: File)` 未使用引数明示 | ✅ |
 
-### O-4. 未修正（スコープ外）
+### O-4. Phase B/C負債ドキュメントに移管（2026-03-14更新）
 
-| # | ファイル | 問題 | 対応方針 |
-|---|---------|------|---------| 
-| 1 | `useAccountingSystem.ts` | モックデータ12件にclientId/advisoryFee等5フィールド不足の型エラー | Phase B（Supabase移行）で型体系ごと再設計 |
-| 2 | `useAccountingSystem.ts` L1166 | updatedAt型不整合（string vs Timestamp）→ grepで不在確認、lintキャッシュ残骸 | 対応不要 |
-
+| # | ファイル | 問題 | 対応状況 |
+|---|---------|------|:--------:|
+| 1 | `useAccountingSystem.ts` | モックデータ12件にclientId/advisoryFee等5フィールド不足 | ✅ 修正済み |
+| 2 | `useAccountingSystem.ts` L1166 | updatedAt型不整合 → lintキャッシュ残骸 | 対応不要 |
+| 3 | `useAccountingSystem.ts` L1218 | Hono RPC $post型がUI用フィールド要求 | → Phase B H1 |
+| 4 | `useAccountingSystem.ts` | createClient/updateClient Zodパイプライン未通過 | → Phase B H2 |
+| 5 | `useAccountingSystem.ts` L1144 | mockClientsPreloadのダブルキャスト | → Phase B H3 |
+| 6 | `useAccountingSystem.ts` L1270-1283 | fetchClients内モック注入ロジック | → Phase B H4 |
+| 7 | `zod_schema.ts` L393,L406 | JobSchema日本語プロパティ名 | → Phase B H5 |
+| 8 | `zod_schema.ts` L251,L273,L274 | JobSchema z.any()使用（型安全ルール違反） | → Phase B H6 |
+| 9 | `zod_schema.ts` L220-481 | JobSchema肥大化（470+フィールド） | → Phase B H7 |
+| 10 | `useAccountingSystem.ts` | /api/clientsエンドポイント500エラー | → Phase C RC-9 |
 

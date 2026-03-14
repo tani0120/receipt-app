@@ -85,6 +85,28 @@
 
 ---
 
+## H. Hono RPC型・APIパイプライン整合（2026-03-14追記）
+
+| # | タスク | 現状 | 発見経緯 | 対応 |
+|---|--------|------|----------|------|
+| H1 | Hono RPC `$post` 型がUI用フィールドを要求 | `useAccountingSystem.ts` L1218: `client.api.clients.$post()` の型定義が `driveLinks`, `fiscalMonthLabel`, `softwareLabel` 等のUI用フィールド12個を要求。`as unknown as ClientApi` で回避中 | モック12件にclientId/報酬フィールド追加時に発見 | Hono API側の型定義を`ClientApi`と一致させる。UI用フィールドをAPI型から分離 |
+| H2 | `createClient`/`updateClient` がZodパイプライン未通過 | `createClient`はRPC直接呼び出し後`fetchClients()`→API 500→catch空処理で終了。clients.valueに反映されない | fetchClients内部フロー追跡で発見 | `processClientPipeline`経由でclients.value反映、またはローカルState更新ロジック追加 |
+| H3 | `mockClientsPreload`のダブルキャスト | L1144: `c as unknown as ClientApi` — `mockClientsPreload`は既に`ClientApi[]`型なのに二重キャスト。型安全性が損なわれる | モック12件修正時に発見 | `ClientApi[]`型が正しければキャスト不要。型エラーが出る場合はモックデータかスキーマ側を修正 |
+| H4 | `fetchClients`内モック注入ロジック | L1270-1283: API応答にモックデータを強制注入（`Force Inject/Overwrite Mocks`）。本番移行時に削除必要 | fetchClientsフロー追跡で発見 | Phase C（RC-8 モック差し替え）と同時に削除。削除忘れ防止のため`// TODO: Remove in Phase C`コメント追加推奨 |
+| H5 | `zod_schema.ts` JobSchemaの日本語プロパティ名 | L393: `未処理: z.string().optional()`, L406: `表示件数: z.string().optional()` — スキーマに日本語プロパティが混在 | スキーマ調査時に発見。`⚠️`コメント付きだが未修正 | `unprocessed`/`displayCount`等の英語名にリネーム。参照箇所の更新が必要 |
+| H6 | `zod_schema.ts` JobSchemaの`z.any()`使用 | L251: `apiResponse: z.any()`, L273: `debits: z.array(z.any())`, L274: `credits: z.array(z.any())` — 型安全ルール§①⑤違反 | スキーマ調査時に発見。ファイル先頭に「⛔ z.any()禁止」ルールがあるが違反状態 | `apiResponse`は`z.unknown()`、`debits`/`credits`は専用のLineSchema配列に置換 |
+| H7 | JobSchema肥大化（470+フィールド） | L220-481: Phase 4-1〜4-4で大量のoptionalフィールドが一括追加された。「optional地獄」の原因 | clientId調査でスキーマ全体を確認した際に再認識 | PostgreSQL移行設計（KI:「PostgreSQL移行設計」）でoptional 242個→20個に削減予定。Phase Cで解消 |
+
+> [!NOTE]
+> H1はAPI型定義の再設計（Phase C: RC-5 Supabase Mapper導入）と同時に解消すべき。
+> H2はAPI未接続のため現時点では実害なし（モック初期化のみで動作）。
+> H3はモックデータがClientApi型と完全一致すれば自動解消。
+> H4はRC-8（モック差し替え）と同時に解消。
+> H5-H6は型安全性ルール違反。ファイル先頭に禁止ルールが明記されており優先度高。
+> H7はPostgreSQL移行設計で既に計画済み。
+
+---
+
 ## チェックリスト
 
 - [ ] A1: getValue() any排除
@@ -105,3 +127,10 @@
 - [ ] F2: non-null assertion禁止明文化
 - [ ] G1: 列表示ON/OFF
 - [ ] G2: カラムグループ化（必須）
+- [ ] H1: Hono RPC $post型のUI用フィールド要求を解消
+- [ ] H2: createClient/updateClientのローカルState反映
+- [ ] H3: mockClientsPreloadのダブルキャスト解消
+- [ ] H4: fetchClients内モック注入ロジックにTODOコメント追加
+- [ ] H5: JobSchema日本語プロパティ名リネーム
+- [ ] H6: JobSchema z.any()をz.unknown()/専用型に置換
+- [ ] H7: JobSchema肥大化解消（PostgreSQL移行設計と連動）

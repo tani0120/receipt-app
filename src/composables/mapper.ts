@@ -61,12 +61,20 @@ const _safeBoolean = (value: unknown): boolean => {
 const formatTimestamp = (ts: unknown): string => {
   if (!ts) return '—';
 
+  // 共通: Date→0埋め文字列変換
+  const formatDate = (date: Date): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}/${m}/${d}`;
+  };
+
   // Firestore Timestamp
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (typeof ts === 'object' && ts !== null && 'toDate' in ts && typeof (ts as any).toDate === 'function') {
     try {
       const date = (ts as Timestamp).toDate();
-      return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+      return formatDate(date);
     } catch {
       return 'Inv. Date';
     }
@@ -79,7 +87,7 @@ const formatTimestamp = (ts: unknown): string => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const seconds = (ts as any).seconds as number;
       const date = new Date(seconds * 1000);
-      return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+      return formatDate(date);
     } catch {
       return 'Inv. Date';
     }
@@ -87,13 +95,12 @@ const formatTimestamp = (ts: unknown): string => {
 
   // String Date
   if (typeof ts === 'string') {
-    // Basic check if it looks like a date? Or just return it if standardized?
-    // For now, accept strings if they look like dates, or fallback
     return ts;
   }
 
   return '—';
 };
+
 
 /* ============================================================
  * 業務ルール (Business Rules)

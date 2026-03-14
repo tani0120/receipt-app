@@ -101,7 +101,6 @@ export const ClientSchema = z.object({
   type: z.enum(['corp', 'individual']).optional(),
   repName: z.string().optional(),
   repNameKana: z.string().optional(), // 代表者名フリガナ (Week 3)
-  staffName: z.string().optional(),
 
   // Contact Information
   contact: z.object({
