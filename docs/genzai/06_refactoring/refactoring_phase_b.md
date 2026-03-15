@@ -107,6 +107,19 @@
 
 ---
 
+## I. composable統合（2026-03-15追記）
+
+> N2保存キー統一（2026-03-15）で税区分のcomposable⇔ページ連携は解決済み。
+> 以下は残存する勘定科目側の負債と、`useAccountSettings`統一composableの新規作成。
+
+| # | タスク | 現状 | 対応 |
+|---|--------|------|------|
+| I1 | `useAccountSettings`新規作成 | 4つのcomposable（useAccountMaster/useClientAccounts/useTaxMaster/useClientTaxCategories）が個別に存在 | scope('master'\|'client')パラメータで統一したcomposableを作成。Phase B（Supabase API同時作成）で実施 |
+| I2 | 勘定科目マスタの`rows`キーと`overrides`キー二重管理 | `MockMasterAccountsPage`が`sugu-suru:account-master:rows`に全行保存、別途`sugu-suru:account-master:overrides`にも同期 | I1と同時にcomposable経由の一本化で解消 |
+| I3 | 仕訳一覧の`selectAccount`がACCOUNT_MASTER直接参照 | L1030: `ACCOUNT_MASTER.find(a => a.name === accountName)`で顧問先別設定が反映されない | I1の`useAccountSettings.effectiveAccounts()`経由に変更 |
+
+---
+
 ## チェックリスト
 
 - [ ] A1: getValue() any排除
@@ -134,3 +147,6 @@
 - [ ] H5: JobSchema日本語プロパティ名リネーム
 - [ ] H6: JobSchema z.any()をz.unknown()/専用型に置換
 - [ ] H7: JobSchema肥大化解消（PostgreSQL移行設計と連動）
+- [ ] I1: useAccountSettings新規作成（Phase B Supabase同時）
+- [ ] I2: 勘定科目マスタのrows/overridesキー二重管理解消
+- [ ] I3: 仕訳一覧selectAccountのACCOUNT_MASTER直接参照を解消

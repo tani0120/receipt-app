@@ -23,6 +23,8 @@ interface TaxMasterOverrides {
   hiddenIds: string[]
   /** defaultVisible を上書きしたID→値のマップ */
   visibilityOverrides: Record<string, boolean>
+  /** マスタページで追加されたカスタム税区分 */
+  customTaxCategories?: TaxCategory[]
 }
 
 // =============================================
@@ -34,7 +36,7 @@ function loadOverrides(): TaxMasterOverrides {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return JSON.parse(raw)
   } catch { /* 破損データは無視 */ }
-  return { hiddenIds: [], visibilityOverrides: {} }
+  return { hiddenIds: [], visibilityOverrides: {}, customTaxCategories: [] }
 }
 
 function saveOverrides(data: TaxMasterOverrides): void {
@@ -48,13 +50,21 @@ function saveOverrides(data: TaxMasterOverrides): void {
 
 const overrides = ref<TaxMasterOverrides>(loadOverrides())
 
-/** 全税区分（非表示フラグ適用済み） */
-const masterTaxCategories = computed<MasterTaxCategory[]>(() =>
-  TAX_CATEGORY_MASTER.map(tc => ({
+/** 全税区分（マスタデフォルト + カスタム追加分。非表示フラグ適用済み） */
+const masterTaxCategories = computed<MasterTaxCategory[]>(() => {
+  // ハードコードされたマスタ税区分
+  const defaultRows: MasterTaxCategory[] = TAX_CATEGORY_MASTER.map(tc => ({
     ...tc,
     hiddenInMaster: overrides.value.hiddenIds.includes(tc.id),
   }))
-)
+  // マスタページで追加されたカスタム税区分
+  const customRows: MasterTaxCategory[] = (overrides.value.customTaxCategories ?? []).map(tc => ({
+    ...tc,
+    hiddenInMaster: overrides.value.hiddenIds.includes(tc.id),
+    isCustom: true,
+  }))
+  return [...defaultRows, ...customRows]
+})
 
 /** デフォルト表示の税区分のみ */
 const visibleMasterTaxCategories = computed<MasterTaxCategory[]>(() =>
@@ -92,7 +102,7 @@ export function useTaxMaster() {
 
   /** デフォルト設定にリセット */
   function resetToDefault(): void {
-    overrides.value = { hiddenIds: [], visibilityOverrides: {} }
+    overrides.value = { hiddenIds: [], visibilityOverrides: {}, customTaxCategories: [] }
     saveOverrides(overrides.value)
   }
 

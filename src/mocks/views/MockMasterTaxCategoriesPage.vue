@@ -173,6 +173,7 @@
 import { ref, reactive, computed, watch } from 'vue';
 import type { TaxCategory, TaxDirection } from '@/shared/types/tax-category';
 import { extractRateFromName } from '@/shared/types/tax-category';
+import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
 import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster';
 
@@ -180,7 +181,7 @@ const PAGE_SIZE = 50;
 const TAX_STORAGE_KEY = 'sugu-suru:tax-categories:rows';
 
 // =============== composable接続 ===============
-const { masterTaxCategories } = useTaxMaster();
+const { masterTaxCategories, overrides: taxMasterOverrides } = useTaxMaster();
 
 // =============== 税区分マスタ ===============
 type TaxMethodType = 'general' | 'simplified' | 'exempt';
@@ -275,7 +276,7 @@ function deleteChecked() {
 }
 
 // =============== コピー・追加 ===============
-let copyCounter = 0;
+let copyCounter = getInitialCopyCounter(allTaxRows);
 function copyChecked() {
   const ids = [...checkedIds.value];
   ids.reverse().forEach(id => {
@@ -409,6 +410,15 @@ function getRate(row: TaxCategory): string {
 // =============== 保存 ===============
 function saveChanges() {
   localStorage.setItem(TAX_STORAGE_KEY, JSON.stringify(allTaxRows));
+  // composableのoverridesにも同期 → 顧問先ページに反映
+  const hiddenIds = allTaxRows.filter(r => r.deprecated).map(r => r.id);
+  const customTaxCategories = allTaxRows.filter(r => r.isCustom);
+  taxMasterOverrides.value = {
+    hiddenIds,
+    visibilityOverrides: taxMasterOverrides.value.visibilityOverrides,
+    customTaxCategories,
+  };
+  localStorage.setItem('sugu-suru:tax-master:overrides', JSON.stringify(taxMasterOverrides.value));
   alert('保存しました——変更はlocalStorageに永続化済み');
 }
 
@@ -448,6 +458,10 @@ function sortTaxByRate() {
   });
 }
 
+/** カスタム行をinsertAfterチェーンに従って再帰的に展開 */
+const expandTaxChildren = (parentId: string, customsByParent: Map<string, TaxCategory[]>) =>
+  expandInsertAfterChain(parentId, customsByParent);
+
 function resetTaxOrder() {
   // デフォルト行とカスタム行を分離
   const defaults = allTaxRows.filter(r => !r.isCustom);
@@ -462,15 +476,23 @@ function resetTaxOrder() {
     if (!customsByParent.has(key)) customsByParent.set(key, []);
     customsByParent.get(key)!.push(c);
   });
+  // 再帰的にinsertAfterチェーンを展開して結果配列を構築
   const result: TaxCategory[] = [];
+  const added = new Set<string>();
   defaults.forEach(d => {
     result.push(d);
-    const children = customsByParent.get(d.id);
-    if (children) result.push(...children);
+    added.add(d.id);
+    const expanded = expandTaxChildren(d.id, customsByParent);
+    expanded.forEach(c => { result.push(c); added.add(c.id); });
   });
-  // insertAfterが不明な行は末尾に追加
-  customsByParent.forEach((rows, key) => {
-    if (!defaults.some(d => d.id === key)) result.push(...rows);
+  // insertAfterがカスタム行を指しているがdefaultsチェーンに含まれなかった行を追加
+  customs.forEach(c => {
+    if (!added.has(c.id)) {
+      result.push(c);
+      added.add(c.id);
+      const expanded = expandTaxChildren(c.id, customsByParent);
+      expanded.forEach(cc => { if (!added.has(cc.id)) { result.push(cc); added.add(cc.id); } });
+    }
   });
   // displayOrder振り直し
   result.forEach((r, i) => { r.displayOrder = i + 1; });

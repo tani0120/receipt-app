@@ -75,13 +75,21 @@ useClients (既存)
   ├ client.hasRentalIncome → 不動産所得あり（個人のみ）固定表示
   └ client.consumptionTaxMode → 課税方式（general/simplified/exempt）固定表示
 
-useAccountSettings (N7で新規作成)
+useAccountSettings (N7で新規作成 → 設計書: 14_useAccountSettings_design.md)
   ├ scope: 'master' | 'client'
   ├ clientId?: string    → 顧問先ページの場合のみ
-  ├ accounts[]           → マスタ: ACCOUNT_MASTER / 顧問先: マスタ+カスタム
-  ├ taxCategories[]      → マスタ: TAX_CATEGORY_MASTER / 顧問先: マスタ+カスタム+override
-  ├ permissions           → scope依存の編集権限
-  └ effectiveAccounts()  → 合成済みマスタ（仕訳UIが使う）
+  ├ accounts[]           → UnifiedAccount[]  (hidden/source/isMasterCustom付き)
+  ├ visibleAccounts[]    → 非表示除外済み
+  ├ taxCategories[]      → UnifiedTaxCategory[]  (hidden/source/defaultVisible付き)
+  ├ visibleTaxCategories[] → 非表示除外済み
+  ├ subAccounts          → Record<string, string>  (scope='client'のみ)
+  ├ filteredTaxCategories(direction) → 税区分ドロップダウン用
+  ├ resolveTaxCategoryName(id) → 税区分ID→名称解決
+  ├ saveAccounts(rows, subAccounts?) → マスタ: overrides+rows保存 / 顧問先: composable.saveAll()委譲
+  ├ saveTaxCategories(rows) → 同上
+  ├ addCustomAccount / removeCustomAccount → scope='master'のみ
+  ├ defaultAccountOrder / defaultTaxOrder → デフォルト順ソート用Map
+  └ _accountMasterOverrides / _taxMasterOverrides → 内部overrides直接参照
 ```
 
 ---
@@ -129,6 +137,101 @@ useAccountSettings (N7で新規作成)
 | [tax_category_schema.md](file:///c:/dev/receipt-app/docs/genzai/02_database_schema/tax_category_schema.md) | `client_tax_settings`テーブル（L110-119）、`mf_name_override`（L118） |
 | [10_nullable_on_document_plan.md](file:///c:/dev/receipt-app/docs/genzai/10_nullable_on_document_plan.md) | N1-N7タスク一覧、URL体系マップ（L561-577） |
 | [12_full_schema_design_20260311.md](file:///c:/dev/receipt-app/docs/genzai/12_full_schema_design_20260311.md) | accountsテーブル（L87-107）、is_customカラム（L100）
+
+---
+
+## 8. N2/N7 実施計画（2026-03-15確定）
+
+> 実施日: 2026-03-15
+> 方針: 先送りしない。全項目を今回で完了させる
+
+### §5 UI修正項目の状況
+
+| # | 修正内容 | 状態 |
+|---|---------|------|
+| 1 | パンくず「← 顧問先管理」 | ✅ 対応済み |
+| 2 | タイトル変更 | ✅ 対応済み |
+| 3 | 事業形態の固定表示 | ✅ 対応済み |
+| 4 | 不動産所得の固定表示 | ✅ 対応済み |
+| 5 | アイコン変更（🔓→🏛） | ✅ 対応済み |
+| 6 | 説明文修正 | ✅ 対応済み |
+| 7 | MF名称変更警告 | ✅ 対応済み（両ページ） |
+
+### §1 composable問題の状況
+
+| # | 問題 | 状態 |
+|---|------|------|
+| 1 | useClients.ts正規表現 | ✅ 解決済み（L241） |
+| 2 | NavBarマスタ/顧問先分離 | ✅ NavBarはcurrentClientを直接使用していない |
+| 3 | フォールバックABC-00001 | ✅ 解決済み（L261でnull返却） |
+| 4 | composableとページの保存キー二重管理 | ✅ **解決済み** — 2026-03-15実施完了（§11_remaining §Q参照） |
+
+### 追加修正（2026-03-15 R節）
+
+| # | 修正内容 | 対象ファイル | 状態 |
+|---|---------|-------------|------|
+| R1 | TAX_CATEGORY_MASTERハードコード排除 | `JournalListLevel3Mock.vue` L966,1121,2489 | ✅ `useTaxMaster().masterTaxCategories`に変更 |
+| R2 | マスタカスタム/顧問先カスタム区別表示 | `useClientAccounts.ts`, `MockClientAccountsPage.vue` | ✅ `isMasterCustom`フラグ追加、テンプレート3分岐 |
+| R3 | 補助科目自動連動 | `useClientAccounts.ts`, `JournalListLevel3Mock.vue` L1106 | ✅ `subAccounts` ref公開、`selectAccount()`で自動セット |
+| R4 | useAccountSettings統一composable設計書 | `docs/genzai/14_useAccountSettings_design.md` | ✅ 全API・全関数・失敗防止チェックリスト付き設計書作成 |
+
+### 【スコープ宣言】保存キー統一
+
+#### 変更対象ファイル
+
+| ファイル | 変更理由 |
+|---------|---------|
+| `src/features/tax-management/composables/useClientTaxCategories.ts` | customTaxCategories対応・保存形式統一 |
+| `src/mocks/views/MockClientTaxPage.vue` | 保存キーを`sugu-suru:client-tax:`に統一 |
+| `src/mocks/views/MockClientAccountsPage.vue` | 応急clientTaxCategories computed削除→composable経由 |
+| `src/mocks/views/MockMasterTaxCategoriesPage.vue` | saveChangesでcomposableのoverridesにも同期 |
+
+#### 2026-03-15追加修正（Q節）
+
+| ファイル | 変更理由 |
+|---------|---------|
+| `src/features/account-management/composables/useClientAccounts.ts` | `saveAll()`関数追加。ページ→composable→localStorage統一保存 |
+| `src/mocks/views/MockClientAccountsPage.vue` | saveChanges()をcomposable.saveAll()経由に変更 |
+| `src/mocks/views/MockMasterAccountsPage.vue` | hiddenIds収集をrowsの`deprecated`/`effectiveTo`から導出に変更 |
+
+#### 触らないファイル
+
+- `useClients.ts` — 問題1,3解決済み
+- `useAccountMaster.ts` — MockMasterAccountsPageが既にcomposable同期済み（L346-349）
+- ~~`useClientAccounts.ts` — 保存キー一致済み~~ → 2026-03-15に`saveAll()`追加
+- `useTaxMaster.ts` — 読み込み専用で問題なし
+- `MockNavBar.vue` — currentClient未使用
+- ~~`MockMasterAccountsPage.vue` — composable同期済み~~ → 2026-03-15にhiddenIds導出修正
+
+#### 修正内容詳細
+
+| # | ファイル | 関数/行範囲 | 変更内容 |
+|---|---------|------------|---------|
+| 1 | `useClientTaxCategories.ts` L26-30 | `ClientTaxOverrides`型 | `customTaxCategories: TaxCategory[]`フィールド追加 |
+| 2 | `useClientTaxCategories.ts` L73-86 | `clientTaxCategories` computed | カスタム行を`overrides.value.customTaxCategories`から読み込み |
+| 3 | `useClientTaxCategories.ts` 新規 | `saveAll(rows)` | ページから全行データを受け取り、hiddenIds/customTaxCategories/aiSelectableOverrides分解して保存 |
+| 4 | `MockClientTaxPage.vue` L461-474 | `saveChanges()` | composableの`saveAll()`経由で保存。旧キー`sugu-suru:client-tax-page:`を削除 |
+| 5 | `MockClientTaxPage.vue` 初期化 | 旧キー移行 | `sugu-suru:client-tax-page:`のデータがあれば`sugu-suru:client-tax:`に移行して旧キー削除 |
+| 6 | `MockClientAccountsPage.vue` L224-238 | `clientTaxCategories` computed | 削除。composable経由で税区分リスト取得 |
+| 7 | `MockClientAccountsPage.vue` L204 | import | `useClientTaxCategories`をimport追加 |
+| 8 | `MockMasterTaxCategoriesPage.vue` L411-414 | `saveChanges()` | composableのoverridesキーにも同期（hiddenIds/カスタム行を抽出して保存） |
+
+#### 想定している問題
+
+| 問題 | 対策 |
+|------|------|
+| 既存localStorageの形式不一致 | load時に`customTaxCategories ?? []`でフォールバック |
+| 旧キーのデータ残留 | 初回起動時に旧キー→新キーへ移行して旧キー削除 |
+| composableのcomputed再計算タイミング | saveAll内でoverrides.valueを直接更新→リアクティブ連鎖 |
+
+#### 検証方法
+
+1. `vue-tsc --noEmit` — 0件
+2. ブラウザ: 顧問先税区分で追加→保存→勘定科目ページの選択肢に反映
+3. ブラウザ: マスタ税区分で変更→保存→composable同期確認
+4. localStorage: 旧キー`sugu-suru:client-tax-page:`消滅確認
+5. localStorage: `sugu-suru:client-tax:`に`customTaxCategories`含む形式で統一確認
+
 
 ---
 

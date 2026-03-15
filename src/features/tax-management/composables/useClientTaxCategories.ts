@@ -27,6 +27,8 @@ interface ClientTaxOverrides {
   hiddenIds: string[]
   aiSelectableOverrides: Record<string, boolean>
   copiedMasterIds: string[]
+  /** ページで追加されたカスタム税区分 */
+  customTaxCategories: TaxCategory[]
 }
 
 // =============================================
@@ -53,6 +55,7 @@ function createInitialCopy(): ClientTaxOverrides {
       .map(tc => tc.id),
     aiSelectableOverrides: {},
     copiedMasterIds: masterTaxCategories.value.map(tc => tc.id),
+    customTaxCategories: [],
   }
 }
 
@@ -70,20 +73,33 @@ export function useClientTaxCategories(clientId: string) {
 
   const { masterTaxCategories } = useTaxMaster()
 
-  const clientTaxCategories = computed<ClientTaxCategory[]>(() =>
-    TAX_CATEGORY_MASTER.map(tc => {
-      const masterEntry = masterTaxCategories.value.find(m => m.id === tc.id)
+  const clientTaxCategories = computed<ClientTaxCategory[]>(() => {
+    // マスタの税区分（デフォルト+カスタム追加分）をベースにする
+    const baseRows: ClientTaxCategory[] = masterTaxCategories.value.map(tc => {
       const aiOverride = overrides.value.aiSelectableOverrides[tc.id] ?? null
       return {
         ...tc,
         hiddenInClient: overrides.value.hiddenIds.includes(tc.id),
-        hiddenInMaster: masterEntry?.hiddenInMaster ?? false,
+        hiddenInMaster: tc.hiddenInMaster,
         aiSelectableOverride: aiOverride,
-        // 実効値: 上書きがあればそれ、なければマスタ値
         aiSelectable: aiOverride !== null ? aiOverride : tc.aiSelectable,
       }
     })
-  )
+
+    // 顧問先ページで独自に追加されたカスタム税区分（マスタにない行）
+    const masterIds = new Set(masterTaxCategories.value.map(tc => tc.id))
+    const clientCustomRows: ClientTaxCategory[] = (overrides.value.customTaxCategories ?? [])
+      .filter(tc => !masterIds.has(tc.id)) // マスタに既にあるものは除外
+      .map(tc => ({
+        ...tc,
+        hiddenInClient: overrides.value.hiddenIds.includes(tc.id),
+        hiddenInMaster: false,
+        aiSelectableOverride: overrides.value.aiSelectableOverrides[tc.id] ?? null,
+        isCustom: true,
+      }))
+
+    return [...baseRows, ...clientCustomRows]
+  })
 
   const visibleClientTaxCategories = computed<ClientTaxCategory[]>(() =>
     clientTaxCategories.value.filter(tc => !tc.hiddenInClient && !tc.hiddenInMaster)
@@ -110,11 +126,33 @@ export function useClientTaxCategories(clientId: string) {
     saveOverrides(clientId, overrides.value)
   }
 
+  /** ページから全行データを受け取り、composableの保存形式に分解して保存 */
+  function saveAll(allRows: TaxCategory[]): void {
+    const hiddenIds = allRows.filter(r => r.deprecated).map(r => r.id)
+    const customTaxCategories = allRows.filter(r => r.isCustom)
+    const aiSelectableOverrides: Record<string, boolean> = {}
+    // AI選択可否がマスタと異なる行を収集
+    allRows.forEach(r => {
+      const master = TAX_CATEGORY_MASTER.find(m => m.id === r.id)
+      if (master && r.aiSelectable !== master.aiSelectable) {
+        aiSelectableOverrides[r.id] = r.aiSelectable
+      }
+    })
+    overrides.value = {
+      hiddenIds,
+      customTaxCategories,
+      aiSelectableOverrides,
+      copiedMasterIds: TAX_CATEGORY_MASTER.map(t => t.id),
+    }
+    saveOverrides(clientId, overrides.value)
+  }
+
   return {
     clientTaxCategories,
     visibleClientTaxCategories,
     toggleVisibility,
     setAiSelectable,
     resetToDefault,
+    saveAll,
   }
 }

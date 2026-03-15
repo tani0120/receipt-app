@@ -1,5 +1,4 @@
 import { ref, computed } from 'vue'
-import { ACCOUNT_MASTER } from '@/shared/data/account-master'
 import { useAccountMaster } from './useAccountMaster'
 import type { Account } from '@/shared/types/account'
 
@@ -15,6 +14,8 @@ export interface ClientAccount extends Account {
   isCustom: boolean
   /** マスタレベルで非表示か（参照情報） */
   hiddenInMaster: boolean
+  /** マスタレベルで追加されたカスタム科目か（マスタカスタム vs 顧問先カスタムの区別用） */
+  isMasterCustom: boolean
 }
 
 // =============================================
@@ -75,6 +76,17 @@ export function useClientAccounts(clientId: string) {
     saveClientOverrides(clientId, overrides.value)
   }
 
+  // 補助科目マップ（科目ID → 補助科目名）
+  const subAccounts = ref<Record<string, string>>({})
+  // localStorageから補助科目情報を復元
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX + clientId)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed.subAccounts) subAccounts.value = parsed.subAccounts
+    }
+  } catch { /* 破損データは無視 */ }
+
   const { masterAccounts } = useAccountMaster()
 
   /** マスタから新規追加された科目を検出して自動反映（ルール8） */
@@ -83,38 +95,30 @@ export function useClientAccounts(clientId: string) {
     return masterAccounts.value.filter(a => !copiedIds.has(a.id) && !a.isCustom)
   })
 
-  /** 全科目リスト（マスタ＋マスタ新規＋顧問先カスタム） */
+  /** 全科目リスト（マスタデフォルト+マスタカスタム+顧問先カスタム） */
   const clientAccounts = computed<ClientAccount[]>(() => {
-    // マスタのデフォルト科目（コピー済み）
-    const defaultAccounts: ClientAccount[] = ACCOUNT_MASTER.map(a => {
-      const masterEntry = masterAccounts.value.find(m => m.id === a.id)
-      return {
-        ...a,
-        hiddenInClient: overrides.value.hiddenIds.includes(a.id),
-        isCustom: false,
-        hiddenInMaster: masterEntry?.hiddenInMaster ?? false,
-      }
-    })
+    // マスタの全科目（デフォルト+カスタム追加分）をベースにする
+    const baseAccounts: ClientAccount[] = masterAccounts.value.map(a => ({
+      ...a,
+      hiddenInClient: overrides.value.hiddenIds.includes(a.id),
+      isCustom: a.isCustom ?? false,
+      hiddenInMaster: a.hiddenInMaster,
+      isMasterCustom: a.isCustom ?? false,
+    }))
 
-    // マスタのカスタム科目（事務所で追加されたもの）
-    const masterCustom: ClientAccount[] = masterAccounts.value
-      .filter(a => a.isCustom)
+    // 顧問先固有のカスタム科目（マスタにない行のみ）
+    const masterIds = new Set(masterAccounts.value.map(a => a.id))
+    const clientCustom: ClientAccount[] = overrides.value.customAccounts
+      .filter(a => !masterIds.has(a.id)) // マスタに既にあるものは除外
       .map(a => ({
         ...a,
         hiddenInClient: overrides.value.hiddenIds.includes(a.id),
         isCustom: true,
-        hiddenInMaster: a.hiddenInMaster,
+        hiddenInMaster: false,
+        isMasterCustom: false,
       }))
 
-    // 顧問先固有のカスタム科目
-    const clientCustom: ClientAccount[] = overrides.value.customAccounts.map(a => ({
-      ...a,
-      hiddenInClient: overrides.value.hiddenIds.includes(a.id),
-      isCustom: true,
-      hiddenInMaster: false,
-    }))
-
-    return [...defaultAccounts, ...masterCustom, ...clientCustom]
+    return [...baseAccounts, ...clientCustom]
       .sort((a, b) => a.sortOrder - b.sortOrder)
   })
 
@@ -152,6 +156,24 @@ export function useClientAccounts(clientId: string) {
     saveClientOverrides(clientId, overrides.value)
   }
 
+  /** ページから全行データを受け取り、composableの保存形式に分解して保存 */
+  function saveAll(allRows: Account[], subAccountsInput?: Record<string, string>): void {
+    const masterIds = new Set(masterAccounts.value.map(a => a.id))
+    const hiddenIds = allRows.filter(r => r.deprecated).map(r => r.id)
+    const customAccounts = allRows.filter(r => r.isCustom && !masterIds.has(r.id))
+    const copiedMasterIds = allRows.filter(r => !r.isCustom).map(r => r.id)
+    overrides.value = {
+      hiddenIds,
+      customAccounts,
+      copiedMasterIds,
+    }
+    // subAccounts情報も含めて保存
+    const subs = subAccountsInput ?? subAccounts.value
+    subAccounts.value = subs
+    const data = { ...overrides.value, subAccounts: subs }
+    localStorage.setItem(STORAGE_PREFIX + clientId, JSON.stringify(data))
+  }
+
   return {
     /** 全科目（非表示含む） */
     clientAccounts,
@@ -162,5 +184,8 @@ export function useClientAccounts(clientId: string) {
     toggleVisibility,
     syncFromMaster,
     resetToDefault,
+    saveAll,
+    /** 補助科目マップ（科目ID → 補助科目名） */
+    subAccounts,
   }
 }

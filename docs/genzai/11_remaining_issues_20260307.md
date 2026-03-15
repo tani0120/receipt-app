@@ -1,6 +1,6 @@
 # ✅ 残存修正項目一覧（2026-03-07）【全件完了】
 
-> **最終結果（2026-03-14 21:45）**: §A-§L全件完了 + §M（2026-03-11スキーマ同期）全件完了 + §N（エンコーディング修正）完了 + §O（staffName削除+設定パネル読み取り専用化）完了 + §P（勘定科目3属性列+同期修正）完了。
+> **最終結果（2026-03-15 17:35）**: §A-§L全件完了 + §M（2026-03-11スキーマ同期）全件完了 + §N（エンコーディング修正）完了 + §O（staffName削除+設定パネル読み取り専用化）完了 + §P（勘定科目3属性列+同期修正）完了 + §Q（保存ボタンcomposable同期統一）完了 + §R（ハードコード排除+isMasterCustom+補助科目連動+useAccountSettings設計書）完了。
 > 残存2件（J1: ScreenE旧モック再設計待ち、J7: 設計上のprivateフィールド）は対応不要として§Lに記録。
 
 > ~~本日中に全件修正する前提で、優先度・リスク・修正時期を整理。~~
@@ -759,5 +759,102 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 | # | 問題 | 対応方針 |
 |---|------|--------|
 | 1 | `resetMasterToDefault`未使用（マスタページL197） | 前回報告済み |
-| 2 | マスタページリロード時の表示不整合（`rows`キーと`overrides`キーの二重管理） | N2（composable統合）で根本対応 |
+| 2 | ~~マスタページリロード時の表示不整合（`rows`キーと`overrides`キーの二重管理）~~ | ✅ **解決済み**（2026-03-15 Q節参照） |
 
+---
+
+## Q. N2/N7 保存ボタンcomposable同期統一（2026-03-15）
+
+> 4ページの保存ボタンがlocalStorageとcomposableのoverrides refを正しく同期するよう修正。
+
+### Q-1. 発覚した問題（3件）
+
+| # | 問題 | 根本原因 | 影響 |
+|---|------|---------|------|
+| 1 | 顧問先勘定科目の保存がcomposable未同期 | `MockClientAccountsPage.saveChanges()`がlocalStorage直書き | リロード後にマスタカスタム+クライアントカスタムでID重複 → チェックボックス複数選択バグ |
+| 2 | マスタ勘定科目のhiddenIds不整合 | `saveChanges()`がcomposableの`isHidden()`で収集（rowsの`deprecated`/`effectiveTo`と独立） | overrides.hiddenIdsがrowsの状態と矛盾 |
+| 3 | subagentブラウザの分離 | PlaywrightはlocalStorageがユーザーブラウザと別プロセス | テスト結果がユーザー環境と一致しない → 誤った「正常」報告 |
+
+### Q-2. 修正内容（3ファイル）
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `useClientAccounts.ts` | `saveAll(allRows, subAccounts)` 関数追加。ページの全行データからhiddenIds/customAccounts/copiedMasterIdsを分解してoverrides refに反映+保存 | ✅ |
+| 2 | `MockClientAccountsPage.vue` L437 | `saveChanges()`をcomposable.saveAll()経由に変更。localStorage直書き廃止 | ✅ |
+| 3 | `MockMasterAccountsPage.vue` L347 | hiddenIds収集を`isHidden(r.id)`→`r.deprecated \|\| r.effectiveTo`に変更。rowsの状態から直接導出 | ✅ |
+
+### Q-3. 4ページの保存ボタン最終状態（全✅）
+
+| # | ページ | 保存方法 | composable同期 |
+|---|-------|---------|:----:|
+| 1 | マスタ勘定科目 | rows保存 + rowsから導出したoverrides保存 | ✅ |
+| 2 | マスタ税区分 | rows保存 + rowsから導出したoverrides保存 | ✅ |
+| 3 | 顧問先勘定科目 | composable.saveAll()経由 | ✅ |
+| 4 | 顧問先税区分 | composable.saveAll()経由 | ✅ |
+
+### Q-4. 推奨される進め方
+
+| 項目 | 推奨 |
+|------|------|
+| コード検証 | `vue-tsc --noEmit` + コードレビュー |
+| ブラウザ動作確認 | ユーザー自身が操作。subagentのテストは参考程度 |
+| localStorage | 将来のSupabase/PostgreSQL移行でfetch API経由に差し替え。現段階ではlocalStorageベースが妥当 |
+| ルール追記 | `00_モック実装時のルール.md` §15にlocalStorage保存ルールを追加済み |
+
+### Q-5. 検証結果
+
+- `vue-tsc --noEmit`: 0件 ✅
+- ユーザーのブラウザ: 「マスタ由来」「マスタ由来2」が正常に保存・表示されている ✅
+
+
+## R. ハードコード排除＋isMasterCustom＋補助科目連動＋useAccountSettings設計書（2026-03-15）
+
+> TAX_CATEGORY_MASTERのハードコード参照を排除し、マスタカスタム/顧問先カスタムの区別表示を実装し、
+> 仕訳リストで補助科目を自動連動させた。さらにuseAccountSettings統一composableの設計書を作成。
+
+### R-1. TAX_CATEGORY_MASTERハードコード排除（3箇所）
+
+| # | ファイル | 行 | 修正前 | 修正後 | 状態 |
+|---|---------|---|--------|--------|:----:|
+| 1 | `JournalListLevel3Mock.vue` | L966 | `import { TAX_CATEGORY_MASTER }` | `import { useTaxMaster }` に変更 | ✅ |
+| 2 | `JournalListLevel3Mock.vue` | L1121 | `TAX_CATEGORY_MASTER.find(t => t.id === ...)` | `masterTaxCategories.value.find(...)` | ✅ |
+| 3 | `JournalListLevel3Mock.vue` | L2489 | `TAX_CATEGORY_MASTER.find(t => t.id === ...)` | `masterTaxCategories.value.find(...)` | ✅ |
+
+#### 残存ハードコード（正当理由あり）
+
+| ファイル | 理由 |
+|---------|------|
+| `useTaxMaster.ts` | composable自身がTAX_CATEGORY_MASTERを読み込む定義ファイル。正当 |
+| `useClientTaxCategories.ts` | composable自身が比較基準として使用。正当 |
+| `MockMasterTaxCategoriesPage.vue` | ソート基準（デフォルト順に戻す）で使用。正当 |
+| `MockClientTaxPage.vue` | フォールバック/ソート基準。正当 |
+| `ScreenS_AccountSettings.vue` | 旧画面（`/old/`ルート）。廃止予定。スコープ外 |
+
+### R-2. マスタカスタム/顧問先カスタム区別表示
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `useClientAccounts.ts` L10-18 | `ClientAccount`型に`isMasterCustom: boolean`フラグ追加 | ✅ |
+| 2 | `useClientAccounts.ts` L99-107 | `clientAccounts` computedでマスタカスタム行に`isMasterCustom: true`を設定 | ✅ |
+| 3 | `MockClientAccountsPage.vue` L132-136 | テンプレートの種別表示を3分岐に変更: 🏛マスタ / 🏛マスタ（カスタム）/ 顧問先独自 | ✅ |
+| 4 | `MockClientAccountsPage.vue` L293-300 | ヘルパ関数`isMasterCustomAccount(id)`追加 | ✅ |
+
+### R-3. 補助科目自動連動（仕訳リスト）
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `useClientAccounts.ts` L79-88 | `subAccounts` refを追加。localStorageから読み込み、composableから公開 | ✅ |
+| 2 | `useClientAccounts.ts` L188-189 | returnにsubAccounts追加 | ✅ |
+| 3 | `JournalListLevel3Mock.vue` L1106-1138 | `selectAccount()`で勘定科目選択時にsubAccounts[科目ID]を自動セット | ✅ |
+
+### R-4. useAccountSettings統一composable設計書
+
+| 項目 | 内容 |
+|------|------|
+| ファイル | [14_useAccountSettings_design.md](file:///c:/dev/receipt-app/docs/genzai/14_useAccountSettings_design.md) |
+| 内容 | §1-§9: 現状の問題、API設計（全メソッド）、統一型定義、実装コード（省略ゼロ）、全5ページの修正箇所一覧、localStorageキー変更なし、既存composable変更なし、失敗防止チェックリスト、実施順序14ステップ、省略箇所の正直な補足8項目 |
+| 次のアクション | 次の会話で14ステップの実装を開始 |
+
+### R-5. 検証結果
+
+- `vue-tsc --noEmit`: 0件 ✅

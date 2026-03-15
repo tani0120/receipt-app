@@ -74,6 +74,7 @@
             <colgroup>
               <col class="col-check">
               <col style="width: 60px;">
+              <col style="width: 70px;">
               <col style="width: 13%;">
               <col style="width: 10%;">
               <col style="width: 10%;">
@@ -82,12 +83,12 @@
               <col style="width: 6%;">
               <col style="width: 8%;">
               <col style="width: 8%;">
-              <col style="width: 40px;">
             </colgroup>
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
                 <th class="th-visibility">デフォルトで表示</th>
+                <th style="text-align:center;font-size:11px;">出典</th>
                 <th class="sortable" @click="sortAccounts('name')">
                   勘定科目 <i :class="getSortIcon('name')"></i>
                 </th>
@@ -110,7 +111,6 @@
                 <th class="sortable" @click="sortAccounts('effectiveTo')">
                   適用終了 <i :class="getSortIcon('effectiveTo')"></i>
                 </th>
-                <th class="as-th-check"></th>
               </tr>
             </thead>
             <tbody>
@@ -128,6 +128,11 @@
                   <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
                   <i v-if="isAccountHidden(row.id)" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
                   <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
+                </td>
+                <td style="text-align:center;font-size:11px;color:#666;">
+                  <span v-if="row.isCustom && !isMasterCustomAccount(row.id)" style="color:#E65100;">顧問先独自</span>
+                  <span v-else-if="isMasterCustomAccount(row.id)" style="color:#1976D2;"><i class="fa-solid fa-building-columns" style="font-size:12px;"></i> マスタ（カスタム）</span>
+                  <span v-else><i class="fa-solid fa-building-columns" style="color:#1976D2;font-size:12px;"></i> マスタ</span>
                 </td>
                 <td @dblclick="row.isCustom && startEdit(row, 'name')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'name'">
@@ -178,7 +183,6 @@
                 <td class="td-ai">{{ row.taxDetermination !== 'fixed' ? '○' : '' }}</td>
                 <td class="td-date">{{ row.effectiveFrom }}</td>
                 <td class="td-date">{{ row.effectiveTo ?? '現役' }}</td>
-                <td class="as-td-actions"></td>
               </tr>
             </tbody>
           </table>
@@ -199,13 +203,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue';
+import { ref, reactive, computed, watch, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import type { Account } from '@/shared/types/account';
-import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
+import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster';
 import { ACCOUNT_MASTER } from '@/shared/data/account-master';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { useClientAccounts } from '@/features/account-management/composables/useClientAccounts';
+import { useClientTaxCategories } from '@/features/tax-management/composables/useClientTaxCategories';
+import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
 
 const PAGE_SIZE = 50;
 const route = useRoute();
@@ -220,6 +226,14 @@ const currentClientData = computed(() => clients.value.find(c => c.clientId === 
 const accountBusinessType = computed<'corp' | 'individual'>(() => currentClientData.value?.type === 'corp' ? 'corp' : 'individual');
 const accountHasRealEstate = computed(() => currentClientData.value?.hasRentalIncome ?? false);
 const clientBusinessTypeLabel = computed(() => accountBusinessType.value === 'corp' ? '法人' : '個人事業主');
+
+// composable経由で顧問先税区分リストを取得（保存キー統一済み: sugu-suru:client-tax:）
+const clientTaxComposable = clientId.value ? useClientTaxCategories(clientId.value) : null;
+const clientTaxCategories = computed(() => {
+  if (!clientTaxComposable) return [...useTaxMaster().masterTaxCategories.value];
+  return clientTaxComposable.clientTaxCategories.value
+    .filter(tc => !tc.hiddenInClient && !tc.hiddenInMaster);
+});
 const accountFilter = ref('');
 const accountPage = ref(1);
 
@@ -246,11 +260,28 @@ if (clientId.value) {
   } catch { /* 破損データは無視 */ }
 }
 
-// composableの変更を監視してaccountRowsを同期（マスタ側の非表示変更が反映される）
+// composableの変更を監視して非表示フラグのみ同期（順序は維持）
 if (clientAccountsComposable) {
   watch(clientAccountsComposable.clientAccounts, (newVal) => {
-    accountRows.splice(0, accountRows.length, ...newVal);
-  }, { deep: true });
+    const today = new Date().toISOString().slice(0, 10);
+    const hiddenMap = new Map(newVal.map(r => [r.id, {
+      hiddenInClient: (r as any).hiddenInClient ?? false,
+      hiddenInMaster: (r as any).hiddenInMaster ?? false,
+    }]));
+    accountRows.forEach(row => {
+      const flags = hiddenMap.get(row.id);
+      if (flags) {
+        const isHidden = flags.hiddenInClient || flags.hiddenInMaster;
+        if (isHidden && !row.deprecated) {
+          row.effectiveTo = row.effectiveTo ?? today;
+          row.deprecated = true;
+        } else if (!isHidden && row.deprecated) {
+          row.effectiveTo = null;
+          row.deprecated = false;
+        }
+      }
+    });
+  }, { deep: true, immediate: true });
 }
 
 /** 科目が非表示か（マスタ非表示 or 顧問先非表示） */
@@ -259,6 +290,14 @@ function isAccountHidden(accountId: string): boolean {
   const entry = clientAccountsComposable.clientAccounts.value.find(a => a.id === accountId);
   if (!entry) return false;
   return entry.hiddenInClient || entry.hiddenInMaster;
+}
+
+/** マスタレベルで追加されたカスタム科目か */
+function isMasterCustomAccount(accountId: string): boolean {
+  if (!clientAccountsComposable) return false;
+  const entry = clientAccountsComposable.clientAccounts.value.find(a => a.id === accountId);
+  if (!entry) return false;
+  return entry.isMasterCustom;
 }
 
 const filteredAccountRows = computed(() => {
@@ -286,20 +325,51 @@ function toggleAllChecked(e: Event) {
   checkedIds.value = checked ? pagedAccountRows.value.map(r => r.id) : [];
 }
 function hideRow(row: Account) {
-  if (clientAccountsComposable) clientAccountsComposable.toggleVisibility(row.id);
+  const id = row.id;
+  const today = new Date().toISOString().slice(0, 10);
+  if (clientAccountsComposable) {
+    clientAccountsComposable.toggleVisibility(id);
+  }
+  // watch発火後のaccountRowsから対象を再取得して更新
+  nextTick(() => {
+    const target = accountRows.find(r => r.id === id);
+    if (target) { target.effectiveTo = today; target.deprecated = true; }
+  });
 }
 function showRow(row: Account) {
-  if (clientAccountsComposable) clientAccountsComposable.toggleVisibility(row.id);
+  const id = row.id;
+  if (clientAccountsComposable) {
+    clientAccountsComposable.toggleVisibility(id);
+  }
+  nextTick(() => {
+    const target = accountRows.find(r => r.id === id);
+    if (target) { target.effectiveTo = null; target.deprecated = false; }
+  });
 }
 function hideChecked() {
-  checkedIds.value.forEach(id => {
+  const today = new Date().toISOString().slice(0, 10);
+  const ids = [...checkedIds.value];
+  ids.forEach(id => {
     if (!isAccountHidden(id) && clientAccountsComposable) clientAccountsComposable.toggleVisibility(id);
+  });
+  nextTick(() => {
+    ids.forEach(id => {
+      const row = accountRows.find(r => r.id === id);
+      if (row) { row.effectiveTo = today; row.deprecated = true; }
+    });
   });
   checkedIds.value = [];
 }
 function showChecked() {
-  checkedIds.value.forEach(id => {
+  const ids = [...checkedIds.value];
+  ids.forEach(id => {
     if (isAccountHidden(id) && clientAccountsComposable) clientAccountsComposable.toggleVisibility(id);
+  });
+  nextTick(() => {
+    ids.forEach(id => {
+      const row = accountRows.find(r => r.id === id);
+      if (row) { row.effectiveTo = null; row.deprecated = false; }
+    });
   });
   checkedIds.value = [];
 }
@@ -322,7 +392,7 @@ function deleteChecked() {
   });
   checkedIds.value = [];
 }
-let copyCounter = 0;
+let copyCounter = getInitialCopyCounter(accountRows);
 function copyChecked() {
   // チェック行を逆順にし、各行の直下にコピーを挿入
   const ids = [...checkedIds.value];
@@ -340,8 +410,8 @@ function copyChecked() {
       defaultTaxCategoryId: src.defaultTaxCategoryId,
       taxDetermination: src.taxDetermination,
       deprecated: src.deprecated,
-      effectiveFrom: src.effectiveFrom,
-      effectiveTo: src.effectiveTo,
+      effectiveFrom: new Date().toISOString().slice(0, 10),
+      effectiveTo: null,
       sortOrder: src.sortOrder + 0.5,
       isCustom: true,
       insertAfter: src.id,
@@ -375,23 +445,15 @@ function addAfterChecked() {
 }
 function saveChanges() {
   if (!clientId.value) { alert('顧問先IDが不明です'); return; }
-  const storageKey = 'sugu-suru:client-accounts:' + clientId.value;
-  // 顧問先で追加したカスタム科目（マスタ由来でないもの）
-  const clientCustom = accountRows.filter(r => r.isCustom && !r.id.startsWith('CASH_COPY_'));
+  if (!clientAccountsComposable) { alert('composable未初期化'); return; }
   // subAccount情報を全行から収集
   const subAccounts: Record<string, string> = {};
   accountRows.forEach(r => {
     const sub = (r as Record<string, unknown>).subAccount;
     if (sub) subAccounts[r.id] = sub as string;
   });
-  // 非表示IDを収集
-  const hiddenIds = accountRows
-    .filter(r => clientAccountsComposable && clientAccountsComposable.clientAccounts.value.find(a => a.id === r.id)?.hiddenInClient)
-    .map(r => r.id);
-  // 全デフォルト科目IDをcopiedMasterIdsとして保存
-  const copiedMasterIds = accountRows.filter(r => !r.isCustom).map(r => r.id);
-  const data = { hiddenIds, customAccounts: clientCustom, copiedMasterIds, subAccounts };
-  localStorage.setItem(storageKey, JSON.stringify(data));
+  // composable経由で保存（overrides refも同時に更新される）
+  clientAccountsComposable.saveAll(accountRows, subAccounts);
   alert('保存しました — 変更はlocalStorageに永続化済み');
 }
 
@@ -485,7 +547,7 @@ function getCategoryDirection(category: string): 'sales' | 'purchase' | 'common'
 
 function filteredTaxCategories(category: string) {
   const dir = getCategoryDirection(category);
-  return TAX_CATEGORY_MASTER.filter(tc => {
+  return clientTaxCategories.value.filter(tc => {
     if (dir === 'sales') return tc.direction === 'sales' || tc.direction === 'common';
     if (dir === 'purchase') return tc.direction === 'purchase' || tc.direction === 'common';
     return tc.direction === 'common';
@@ -526,7 +588,7 @@ function onDrop(targetIdx: number) {
 // =============== 共通ユーティリティ ===============
 function getTaxCategoryName(id?: string): string {
   if (!id) return '';
-  const found = TAX_CATEGORY_MASTER.find(tc => tc.id === id);
+  const found = clientTaxCategories.value.find(tc => tc.id === id);
   return found ? found.shortName : id;
 }
 
@@ -550,13 +612,45 @@ function sortAccounts(key: keyof Account) {
   compareByKey(accountRows, key, sortState.asc);
 }
 
+/** カスタム行をinsertAfterチェーンに従って再帰的に展開 */
+const expandChildren = (parentId: string, customsByParent: Map<string, Account[]>) =>
+  expandInsertAfterChain(parentId, customsByParent);
+
 function resetAccountOrder() {
-  if (clientAccountsComposable) {
-    clientAccountsComposable.resetToDefault();
-    accountRows.splice(0, accountRows.length, ...clientAccountsComposable.clientAccounts.value);
-  } else {
-    accountRows.splice(0, accountRows.length, ...ACCOUNT_MASTER);
-  }
+  // デフォルト行とカスタム行を分離
+  const defaults = accountRows.filter(r => !r.isCustom);
+  const customs = accountRows.filter(r => r.isCustom);
+  // デフォルト行をマスタ定義順にソート
+  const masterOrder = new Map(ACCOUNT_MASTER.map((a, i) => [a.id, i]));
+  defaults.sort((a, b) => (masterOrder.get(a.id) ?? 9999) - (masterOrder.get(b.id) ?? 9999));
+  // カスタム行をinsertAfterの直後に差し込み
+  const customsByParent = new Map<string, Account[]>();
+  customs.forEach(c => {
+    const key = c.insertAfter ?? '';
+    if (!customsByParent.has(key)) customsByParent.set(key, []);
+    customsByParent.get(key)!.push(c);
+  });
+  // 再帰的にinsertAfterチェーンを展開して結果配列を構築
+  const result: Account[] = [];
+  const added = new Set<string>();
+  defaults.forEach(d => {
+    result.push(d);
+    added.add(d.id);
+    const expanded = expandChildren(d.id, customsByParent);
+    expanded.forEach(c => { result.push(c); added.add(c.id); });
+  });
+  // insertAfterがカスタム行を指しているがdefaultsチェーンに含まれなかった行を追加
+  customs.forEach(c => {
+    if (!added.has(c.id)) {
+      result.push(c);
+      added.add(c.id);
+      const expanded = expandChildren(c.id, customsByParent);
+      expanded.forEach(cc => { if (!added.has(cc.id)) { result.push(cc); added.add(cc.id); } });
+    }
+  });
+  // sortOrder振り直し
+  result.forEach((r, i) => { r.sortOrder = i + 1; });
+  accountRows.splice(0, accountRows.length, ...result);
   sortState.key = '';
 }
 </script>

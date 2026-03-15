@@ -186,15 +186,17 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
 import type { Account } from '@/shared/types/account';
-import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
+import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster';
 import { ACCOUNT_MASTER } from '@/shared/data/account-master';
 import { useAccountMaster } from '@/features/account-management/composables/useAccountMaster';
+import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
 
 const PAGE_SIZE = 50;
 const ACCOUNT_STORAGE_KEY = 'sugu-suru:account-master:rows';
 
 // =============== composable接続 ===============
-const { masterAccounts, overrides, toggleVisibility, isHidden, resetToDefault: resetMasterToDefault } = useAccountMaster();
+const { masterAccounts, overrides, toggleVisibility, isHidden, resetToDefault: _resetMasterToDefault } = useAccountMaster();
+const { masterTaxCategories } = useTaxMaster();
 
 // =============== 勘定科目マスタ ===============
 const accountBusinessType = ref<'corp' | 'individual'>('individual');
@@ -288,7 +290,7 @@ function deleteChecked() {
   });
   checkedIds.value = [];
 }
-let copyCounter = 0;
+let copyCounter = getInitialCopyCounter(accountRows);
 function copyChecked() {
   // チェック行を逆順にし、各行の直下にコピーを挿入
   const ids = [...checkedIds.value];
@@ -306,8 +308,8 @@ function copyChecked() {
       defaultTaxCategoryId: src.defaultTaxCategoryId,
       taxDetermination: src.taxDetermination,
       deprecated: src.deprecated,
-      effectiveFrom: src.effectiveFrom,
-      effectiveTo: src.effectiveTo,
+      effectiveFrom: new Date().toISOString().slice(0, 10),
+      effectiveTo: null,
       sortOrder: src.sortOrder + 0.5,
       isCustom: true,
       insertAfter: src.id,
@@ -342,8 +344,9 @@ function addAfterChecked() {
 function saveChanges() {
   localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(accountRows));
   // composable のoverridesも同期 → 顧問先ページに反映
+  // hiddenIdsはaccountRowsの deprecated/effectiveTo の状態から導出（composableのisHiddenに頼らない）
   const customRows = accountRows.filter(r => r.isCustom);
-  const hiddenIds = accountRows.filter(r => !r.isCustom && isHidden(r.id)).map(r => r.id);
+  const hiddenIds = accountRows.filter(r => r.deprecated || r.effectiveTo).map(r => r.id);
   overrides.value = { hiddenIds, customAccounts: customRows };
   localStorage.setItem('sugu-suru:account-master:overrides', JSON.stringify(overrides.value));
   alert('保存しました — 変更はlocalStorageに永続化済み');
@@ -431,7 +434,7 @@ function getCategoryDirection(category: string): 'sales' | 'purchase' | 'common'
 
 function filteredTaxCategories(category: string) {
   const dir = getCategoryDirection(category);
-  return TAX_CATEGORY_MASTER.filter(tc => {
+  return masterTaxCategories.value.filter(tc => {
     if (dir === 'sales') return tc.direction === 'sales' || tc.direction === 'common';
     if (dir === 'purchase') return tc.direction === 'purchase' || tc.direction === 'common';
     return tc.direction === 'common';
@@ -472,7 +475,7 @@ function onDrop(targetIdx: number) {
 // =============== 共通ユーティリティ ===============
 function getTaxCategoryName(id?: string): string {
   if (!id) return '';
-  const found = TAX_CATEGORY_MASTER.find(tc => tc.id === id);
+  const found = masterTaxCategories.value.find(tc => tc.id === id);
   return found ? found.shortName : id;
 }
 
@@ -496,6 +499,10 @@ function sortAccounts(key: keyof Account) {
   compareByKey(accountRows, key, sortState.asc);
 }
 
+/** カスタム行をinsertAfterチェーンに従って再帰的に展開 */
+const expandChildren = (parentId: string, customsByParent: Map<string, Account[]>) =>
+  expandInsertAfterChain(parentId, customsByParent);
+
 function resetAccountOrder() {
   // デフォルト行とカスタム行を分離
   const defaults = accountRows.filter(r => !r.isCustom);
@@ -510,15 +517,24 @@ function resetAccountOrder() {
     if (!customsByParent.has(key)) customsByParent.set(key, []);
     customsByParent.get(key)!.push(c);
   });
+  // 再帰的にinsertAfterチェーンを展開して結果配列を構築
   const result: Account[] = [];
+  // 収集済みIDを記録
+  const added = new Set<string>();
   defaults.forEach(d => {
     result.push(d);
-    const children = customsByParent.get(d.id);
-    if (children) result.push(...children);
+    added.add(d.id);
+    const expanded = expandChildren(d.id, customsByParent);
+    expanded.forEach(c => { result.push(c); added.add(c.id); });
   });
-  // insertAfterが不明な行は末尾に追加
-  customsByParent.forEach((rows, key) => {
-    if (!defaults.some(d => d.id === key)) result.push(...rows);
+  // insertAfterがカスタム行を指しているがdefaultsチェーンに含まれなかった行を追加
+  customs.forEach(c => {
+    if (!added.has(c.id)) {
+      result.push(c);
+      added.add(c.id);
+      const expanded = expandChildren(c.id, customsByParent);
+      expanded.forEach(cc => { if (!added.has(cc.id)) { result.push(cc); added.add(cc.id); } });
+    }
   });
   // sortOrder振り直し
   result.forEach((r, i) => { r.sortOrder = i + 1; });

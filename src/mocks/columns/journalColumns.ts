@@ -12,7 +12,7 @@ type JournalColumn = {
   key: string
   label: string
   width: string
-  type: 'checkbox' | 'index' | 'component' | 'text' | 'amount' | 'action' | 'account-dropdown'
+  type: 'checkbox' | 'index' | 'component' | 'text' | 'amount' | 'action' | 'account-dropdown' | 'category-dropdown'
   sortKey?: string
   icon?: string
 }
@@ -40,10 +40,12 @@ export const journalColumns: JournalColumn[] = [
   { key: "description", label: "摘要", width: "flex-1", type: "text", sortKey: "description" },
 
   // --- データ（entry-level: text/amount型） ---
+  { key: "debit.category", label: "借方区分", width: "w-16", type: "category-dropdown" },
   { key: "debit.account", label: "借方勘定科目", width: "w-20", type: "account-dropdown", sortKey: "debit_account" },
   { key: "debit.sub_account", label: "借方補助", width: "w-16", type: "text", sortKey: "debit_sub_account" },
   { key: "debit.tax_category_id", label: "借方税区分", width: "w-20", type: "text", sortKey: "debit_tax" },
   { key: "debit.amount", label: "借方金額", width: "w-16", type: "amount", sortKey: "debit_amount" },
+  { key: "credit.category", label: "貸方区分", width: "w-16", type: "category-dropdown" },
   { key: "credit.account", label: "貸方勘定科目", width: "w-20", type: "account-dropdown", sortKey: "credit_account" },
   { key: "credit.sub_account", label: "貸方補助", width: "w-16", type: "text", sortKey: "credit_sub_account" },
   { key: "credit.tax_category_id", label: "貸方税区分", width: "w-20", type: "text", sortKey: "credit_tax" },
