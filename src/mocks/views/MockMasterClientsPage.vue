@@ -494,22 +494,23 @@ const filteredRows = computed((): Client[] => {
   if (statusFilters.value.length > 0) {
     rows = rows.filter(r => statusFilters.value.includes(r.status));
   }
-  const key = sortKey.value as keyof Client;
+  const sortKeyValue = sortKey.value;
   rows.sort((a, b) => {
     let va: unknown;
     let vb: unknown;
-    if (key === 'staffName') {
+    if (sortKeyValue === 'staffName') {
       va = getStaffNameForClient(a.clientId);
       vb = getStaffNameForClient(b.clientId);
     } else {
+      const key = sortKeyValue as keyof Client;
       va = a[key] ?? '';
       vb = b[key] ?? '';
-    }
-    // clientId: 数字部分(ハイフン以降)のみでソート
-    if (key === 'clientId') {
-      const na = parseInt((va as string).split('-').pop() || '0', 10);
-      const nb = parseInt((vb as string).split('-').pop() || '0', 10);
-      va = na; vb = nb;
+      // clientId: 数字部分(ハイフン以降)のみでソート
+      if (key === 'clientId') {
+        const na = parseInt((va as string).split('-').pop() || '0', 10);
+        const nb = parseInt((vb as string).split('-').pop() || '0', 10);
+        va = na; vb = nb;
+      }
     }
     if ((va as string | number) < (vb as string | number)) return sortOrder.value === 'asc' ? -1 : 1;
     if ((va as string | number) > (vb as string | number)) return sortOrder.value === 'asc' ? 1 : -1;

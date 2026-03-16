@@ -272,7 +272,7 @@ const router = createRouter({
 
 // Firebase認証状態の読み込みを待つPromise
 let authInitialized = false;
-const authReadyPromise = new Promise<void>((resolve) => {
+const _authReadyPromise = new Promise<void>((resolve) => {
   import('@/utils/auth').then(({ onAuthStateChanged }) => {
     const unsubscribe = onAuthStateChanged(() => {
       if (!authInitialized) {
