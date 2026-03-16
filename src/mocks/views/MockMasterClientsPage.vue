@@ -494,15 +494,17 @@ const filteredRows = computed((): Client[] => {
   if (statusFilters.value.length > 0) {
     rows = rows.filter(r => statusFilters.value.includes(r.status));
   }
-  const sortKeyValue = sortKey.value;
+  const key = sortKey.value as keyof Client | 'staffName';
   rows.sort((a, b) => {
     let va: unknown;
     let vb: unknown;
-    if (sortKeyValue === 'staffName') {
-      va = getStaffNameForClient(a.clientId);
-      vb = getStaffNameForClient(b.clientId);
+    if (key === 'staffName') {
+      // staffId → staffListから名前を取得してソート
+      const nameA = a.staffId ? staffList.value.find(s => s.uuid === a.staffId)?.name : '';
+      const nameB = b.staffId ? staffList.value.find(s => s.uuid === b.staffId)?.name : '';
+      va = nameA ?? '';
+      vb = nameB ?? '';
     } else {
-      const key = sortKeyValue as keyof Client;
       va = a[key] ?? '';
       vb = b[key] ?? '';
       // clientId: 数字部分(ハイフン以降)のみでソート
@@ -645,6 +647,7 @@ const saveClient = () => {
   const data: Client = {
     ...fields,
     clientId,
+    staffId: panelStaffId.value || null,
     contact: { type: contactType, value: contactValue },
   };
   if (panelMode.value === 'add') {
