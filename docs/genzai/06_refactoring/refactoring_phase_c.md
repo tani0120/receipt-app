@@ -108,6 +108,14 @@
 
 ---
 
+## RC-11: useStaff副担当（M:N紐付け）の設計（2026-03-17追記）
+
+- **発見経緯**: useStaff紐付けテーブル削除時に、主担当（Client.staffId）のみSource of Truth化。sub担当は未使用だったため削除
+- **現状**: Client.staffIdが主担当の唯一のデータソース。副担当は存在しない
+- **修正案**: 本番では`client_staff_assignments`テーブル（FK: client_id + staff_id + role）でM:N対応。Phase C RC-5と同時に設計
+
+---
+
 ## チェックリスト
 
 - [ ] RC-1: unsafe/廃止
@@ -120,4 +128,5 @@
 - [ ] RC-8: モック差し替え
 - [ ] RC-9: /api/clients 500エラー解消 + fetchClientsフォールバック
 - [ ] RC-10: useAccountSettings.tsのACCOUNT_MASTER/TAX_CATEGORY_MASTER直接import解消（RC-5と同時）
+- [ ] RC-11: useStaff副担当（M:N紐付け）の設計（RC-5と同時）
 

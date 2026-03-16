@@ -120,6 +120,7 @@
 | I4 | `useAccountSettings.ts` L6-7: ACCOUNT_MASTER/TAX_CATEGORY_MASTER直接import | 未解決 | composable内部4箇所で使用（defaultOrder/defaultIds/saveAccounts/saveTaxCategories）。本番API移行時にuseAccountMaster/useTaxMasterから取得する方式に変更が必要。**Phase C RC-5と同時に解消** |
 | I5 | `useAccountSettings.ts` L343-344: `_accountMasterOverrides`/`_taxMasterOverrides`公開 | 未解決 | 内部composableのoverridesを外部に漏洩。MockMasterAccountsPage L199が直接参照。専用メソッド追加で代替すべき |
 | I6 | `ScreenS_AccountSettings.vue`: ルーター未登録の死んだコンポーネント | 未解決 | ACCOUNT_MASTER/TAX_CATEGORY_MASTERを直接importしたまま。router/index.tsに参照ゼロ。削除またはリファクタリングが必要 |
+| ~~I7~~ | ~~useStaff紐付けテーブル削除 + Client.staffId source of truth化~~ | ✅完了（2026-03-17） | useStaff.tsからassignments/localStorage/assignStaff/unassignStaff/getAssignedStaff/getMainStaffName全削除。Client.staffIdが主担当の唯一のデータソース。useClients.tsのinitMockAssignments削除、localStorage `sugu-suru:staff-assignments` クリーンアップ追加 |
 
 ---
 
@@ -156,3 +157,4 @@
 - [ ] I4: useAccountSettings.tsのACCOUNT_MASTER/TAX_CATEGORY_MASTER直接import解消（Phase C RC-5と同時）
 - [ ] I5: _overrides公開によるカプセル化破壊解消
 - [ ] I6: ScreenS_AccountSettings.vue死んだコンポーネントの削除/リファクタリング
+- [x] I7: useStaff紐付けテーブル削除 + Client.staffId source of truth化（✅ 2026-03-17完了）

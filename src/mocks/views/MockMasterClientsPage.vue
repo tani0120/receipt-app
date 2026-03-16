@@ -456,7 +456,7 @@ import { useStaff } from '@/features/staff-management/composables/useStaff';
 
 // --- クライアントデータ（composableから取得） ---
 const { clients, getStaffNameForClient } = useClients();
-const { staffList, assignStaff, activeStaff: activeStaffList, getAssignedStaff } = useStaff();
+const { staffList, activeStaff: activeStaffList } = useStaff();
 
 // --- 業種リスト（ScreenS_Settings.vueと同一） ---
 const industryOptions: string[] = [
@@ -621,10 +621,8 @@ const openEditPanel = (row: Client) => {
     contactType: contact.type,
     contactValue: contact.value,
   });
-  // 現在の紐付けからstaffIdを取得
-  const assigned = getAssignedStaff(row.clientId);
-  const main = assigned.find(s => s.assignmentRole === 'main');
-  panelStaffId.value = main?.uuid ?? '';
+  // Client.staffIdから直接取得
+  panelStaffId.value = row.staffId ?? '';
   panelMode.value = 'edit';
   editingId.value = row.clientId;
 };
@@ -652,18 +650,10 @@ const saveClient = () => {
   };
   if (panelMode.value === 'add') {
     clients.value.push(data);
-    // 紐付け設定
-    if (panelStaffId.value) {
-      assignStaff(clientId, panelStaffId.value, 'main');
-    }
     globalThis.alert(`「${data.companyName}」を追加しました。\n\n勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。`);
   } else {
     const idx = clients.value.findIndex(c => c.clientId === editingId.value);
     if (idx >= 0) clients.value[idx] = data;
-    // 紐付け更新
-    if (panelStaffId.value) {
-      assignStaff(clientId, panelStaffId.value, 'main');
-    }
     globalThis.alert(`「${data.companyName}」を更新しました。`);
   }
   closePanel();
@@ -707,11 +697,8 @@ const startStaffInlineEdit = (row: Client, event: Event) => {
   event.stopPropagation();
   inlineEditId.value = row.clientId;
   inlineEditField.value = 'staffName';
-  // 現在の紐づけスタッフIDを取得
-  const { getAssignedStaff } = useStaff();
-  const assigned = getAssignedStaff(row.clientId);
-  const main = assigned.find(s => s.assignmentRole === 'main');
-  inlineEditValue.value = main?.uuid ?? '';
+  // Client.staffIdから直接取得
+  inlineEditValue.value = row.staffId ?? '';
   if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
   nextTick(() => {
     const el = document.querySelector('.cm-inline-select') as HTMLElement;
@@ -722,8 +709,10 @@ const startStaffInlineEdit = (row: Client, event: Event) => {
 const commitStaffEdit = (_row: Client) => {
   if (inlineEditId.value) {
     const staffId = inlineEditValue.value as string;
-    if (staffId) {
-      assignStaff(inlineEditId.value, staffId, 'main');
+    // Client.staffIdを直接更新
+    const idx = clients.value.findIndex(c => c.clientId === inlineEditId.value);
+    if (idx >= 0 && clients.value[idx]) {
+      clients.value[idx].staffId = staffId || null;
     }
   }
   cancelInlineEdit();

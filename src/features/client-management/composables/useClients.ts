@@ -92,19 +92,9 @@ export const emptyClientForm = (): ClientForm => ({
 // Phase B TODO: Supabase APIに差し替え
 // =============================================
 
-// モック紐付け初期化（localStorageに未設定の場合のみ実行）
-function initMockAssignments(): void {
-    const STORAGE_KEY = 'sugu-suru:staff-assignments'
-    if (localStorage.getItem(STORAGE_KEY)) return // 既に設定済み
-    const { assignStaff } = useStaff()
-    // モックデータの初期紐付け
-    assignStaff('ABC-00001', 'staff-0002', 'main') // 佐藤 花子
-    assignStaff('DEF-00002', 'staff-0004', 'main') // 田中 次郎
-    assignStaff('GHI-00003', 'staff-0002', 'main') // 佐藤 花子
-    assignStaff('JKL-00004', 'staff-0004', 'main') // 田中 次郎
-    assignStaff('MNO-00005', 'staff-0002', 'main') // 佐藤 花子
-}
-initMockAssignments()
+// 旧useStaff紐付けテーブルのlocalStorageゴミデータをクリーンアップ
+// （Client.staffIdがsource of truthに移行したため不要）
+localStorage.removeItem('sugu-suru:staff-assignments')
 
 const clients = ref<Client[]>([
     {
@@ -274,10 +264,12 @@ export function useClients() {
         return null;
     });
 
-    /** 顧問先IDから担当者名を取得（紐付けcomposable経由） */
+    /** 顧問先IDから担当者名を取得（Client.staffIdから導出） */
     function getStaffNameForClient(clientId: string): string {
-        const { getMainStaffName } = useStaff()
-        return getMainStaffName(clientId)
+        const client = clients.value.find(c => c.clientId === clientId)
+        if (!client?.staffId) return ''
+        const { getStaffName } = useStaff()
+        return getStaffName(client.staffId)
     }
 
     return {
