@@ -1,7 +1,7 @@
 # null許容化・項目存在フラグ・警告ラベル整備計画
 
 > 作成日: 2026-03-04
-> 更新日: 2026-03-15（N2保存キー統一完了、MF警告実装完了、マスタ税区分→composable同期完了。全composable問題解決済み）
+> 更新日: 2026-03-16（useAccountSettings実装完了—全ページからACCOUNT_MASTER/TAX_CATEGORY_MASTERの直接import排除、composable経由に一本化）
 > 根拠: STREAMED（ストリームド）UI調査、ChatGPT設計議論（2026-03-03）、journal_v2_20260214.md
 > 承認: 2026-03-04 チャットにて承認済み
 
@@ -35,7 +35,7 @@
 
 | フィールド（日本語名） | null時の一覧UI表示 | ホバーメッセージ |
 |---------|------------|---------|
-| `transaction_date`（日付） | 「未確定」 | 「日付が不明」 |
+| `voucher_date`（日付） | 「未確定」 | 「日付が不明」 |
 | `account`（勘定科目） | 「未確定」 | 「未入力項目あり」 |
 | `amount`（金額） | 空白（存在しない場合）/ 類推値（存在する場合） | 「内訳が不明瞭な金額あり」 |
 
@@ -177,7 +177,7 @@
 | G1 | Geminiプロンプト定義ファイル | [ ] `account`（勘定科目）null許容化 | 「判定できない場合はnullを返せ」を追加。概念IDで返す（`account-master.ts`の`id`） |
 | G2 | 同上 | [ ] `amount`（金額）null許容化 | 「読み取れない場合はnullを返せ」を追加 |
 | G3 | 同上 | [ ] `on_document`（項目存在フラグ）追加 | 「その項目が証憑に存在するかどうかもbooleanで返せ」を追加 |
-| G4 | 同上 | [ ] `transaction_date`（日付）null許容化 | 「読み取れない場合はnullを返せ」を追加 |
+| G4 | 同上 | [ ] `voucher_date`（日付）null許容化 | 「読み取れない場合はnullを返せ」を追加 |
 | G5 | 同上 | [ ] 信頼度（confidence）低信頼度マーク | 推測で入れた値には低信頼度マークを付けさせる |
 
 ### 優先度7: 金額類推ロジック
@@ -558,8 +558,7 @@
 | 仕訳一覧ドロップダウン | `/client/journal-list/:clientId` | `JournalListLevel3Mock.vue` L934: `ACCOUNT_MASTER`直接フィルタ | ❌独立 |
 
 - **2026-03-14解決済み**: マスタ勘定科目ページの`saveChanges`がcomposableの`overrides`に同期保存。顧問先ページはcomposable経由でマスタのカスタム科目を取得
-- **2026-03-15解決済み（N2保存キー統一）**: マスタ税区分ページの`saveChanges`がcomposableのoverridesに同期。顧問先税区分ページは`useClientTaxCategories.saveAll()`経由で保存。顧問先勘定科目ページの税区分ドロップダウンもcomposable経由で取得。旧キー`sugu-suru:client-tax-page:`を廃止し`sugu-suru:client-tax:`に統一
-- **未解決**: `selectAccount`（L1030）が`ACCOUNT_MASTER.find(a => a.name === accountName)`で事務所共通マスタから直接検索。顧問先別の税区分カスタマイズが反映されない（`useAccountSettings`新規作成時に対応）
+- **2026-03-16解決済み（useAccountSettings実装）**: 全ページが`useAccountSettings`経由でデータ取得。`ACCOUNT_MASTER`/`TAX_CATEGORY_MASTER`の直接importは0件。`useClientAccounts`/`useTaxMaster`等の直接importもページから完全排除。仕訳リストも`masterSettings`/`clientSettings`経由で取得。詳細は[14_useAccountSettings_design.md](file:///c:/dev/receipt-app/docs/genzai/14_useAccountSettings_design.md)参照
 
 #### B. フィクスチャの勘定科目名がマスタに存在しない
 - `journal_test_fixture_30cases.ts`の仕訳データに、`ACCOUNT_MASTER`に存在しない科目名がハードコードされている
@@ -583,7 +582,7 @@
 | N1 | **URL名の適正化** — 全ページのルーティングパスを再設計し、AIでも階層構造が一目で分かる命名に統一 | 03-11 | ✅完了 | 下記N1詳細参照 |
 | N1a | **settings/:clientId統一** — `/clients/:clientId/settings`を`/client/settings/:clientId`に統一。勘定科目・税区分を`/client/settings/accounts/:clientId`・`/client/settings/tax/:clientId`に配置 | 03-11 | ✅完了 | パターンB完全統一。旧URLは全てリダイレクト対応 |
 | N1b | **仮ページ作成** — アップロード(`/client/upload/:clientId`)・学習(`/client/learning/:clientId`)の仮ページ | 03-11 | ✅完了 | `MockUploadPage.vue`・`MockLearningPage.vue`新規作成 |
-| N1c | **formatDate型エラー修正** — ExportPage/ExportDetailPageの`formatDate(j.transaction_date)`にnullフォールバック追加 | 03-11 | ✅完了 | `?? ''`で型安全に |
+| N1c | **formatDate型エラー修正** — ExportPage/ExportDetailPageの`formatDate(j.voucher_date)`にnullフォールバック追加 | 03-11 | ✅完了 | `?? ''`で型安全に |
 | N1d | **ProgressDetailPage `row.id`型エラー** — `:key="row.id"`を`row.clientId`に修正 | 03-11 | ✅完了 | ProgressRow型にidが存在しないため |
 | N1e | **URL体系を`/client/`・`/master/`接頭辞に統一** — 顧問先固有ページに`/client/`、全社共通ページに`/master/`（含む`/master/progress`）を接頭辞として追加。NavBar・各コンポーネント内リンクも全更新 | 03-12 | ✅完了 | 旧パスからのリダイレクト整備済み |
 | N1f | **`useClients.ts`正規表現修正** — `currentClient`のURL解析正規表現を新URL体系（`/client/`接頭辞）に対応。フォールバック（常にABC-00001）を廃止し、該当なしは`null`を返すよう変更 | 03-13 | ✅完了 | 進捗管理→各顧問先クリック時に正しいclientIdが反映されるようになった |
@@ -604,35 +603,26 @@
 | N1u | **`zod_schema.ts` staffNameスキーマ削除** — `ClientSchema`からoptionalの`staffName: z.string().optional()`を削除。N1p（全ファイルstaffName削除）で報告済みだが実際は残存していた矛盾を解消 | 03-14 | ✅完了 | optionalのため型エラーにはならなかったが、削除済みとの報告との矛盾を解消 |
 | N1v | **`createClient`関数修正** — `useAccountingSystem.ts`の`createClient`からUI用フィールド11個（`driveLinks`・`fiscalMonthLabel`等）を削除。代わりに`clientId`・報酬4フィールドを追加。`updatedAt`を`new Date().toISOString()`→`Timestamp.now()`に変更。RPC呼び出しを`as unknown as ClientApi`キャストに変更 | 03-14 | ✅完了 | UI用フィールドはClientApi型に不在。RPC型不整合（Phase B H1）は残存 |
 | N1w | **`mapper.ts` 日付0埋め修正** — `formatTimestamp`関数内の日付変換（L69,L82）で`getMonth()+1`/`getDate()`を`padStart(2,'0')`で0埋め。`formatDate`内部関数として共通化。影響箇所: 全日付表示（transactionDate/createdAt/updatedAt） | 03-14 | ✅完了 | `<input type="date">`が`yyyy-MM-dd`を要求。0埋めなし`2024/12/1`→ScreenEで`2024-12-1`→date inputが空表示になる問題を解消 |
-| N2 | **共有composableの保存キー統一** — composableとページの保存キー二重管理を解消。`useClientTaxCategories`にcustomTaxCategories対応+saveAll()追加。マスタ税区分ページにcomposable同期追加。旧キー`sugu-suru:client-tax-page:`を廃止 | 03-11 | ✅完了（03-15） | 4ファイル修正。§1の全4問題・§5の全7項目が解決済み。残り: `useAccountSettings`新規作成は別途 |
+| N2 | **共有composableの保存キー統一** — composableとページの保存キー二重管理を解消。`useClientTaxCategories`にcustomTaxCategories対応+saveAll()追加。マスタ税区分ページにcomposable同期追加。旧キー`sugu-suru:client-tax-page:`を廃止 | 03-11 | ✅完了（03-15） | 4ファイル修正。§1の全4問題・§5の全7項目が解決済み。`useAccountSettings`実装完了（03-16） |
 | N3 | **顧問先UUIDの見える化** — 顧問先管理画面に顧問先UUIDを編集不可で表示。3コード（`clientCode`）とUUID（`uuid`）の取り違え防止 | 03-11 | ❌未着手 | `useClients.ts`のClient型: `id`（3コード-UUID形式）、`uuid`（UUID部分）、`clientCode`（3コード）の3つが存在 |
 | N4 | **全UUIDの実装状況調査と紐付けロジック** — 顧問先UUID・担当UUID・証票単位UUID・仕訳単位UUIDの4種について、現在の実装状況を調査し、全てを紐付けするロジックを実装 | 03-11 | ❌未着手 | 仕訳フィクスチャの`id`は`j001`等の仮ID。証票は`document_id: 'receipt-001'`。本番用UUID未実装 |
 | N5 | **仕訳一覧の編集UX改善** — ①勘定科目セルのドラッグ&ドロップ移動 ②右下マス押下でコピー（会計ソフト形式/Excel式） ③仕訳行で行全体を編集有効化せず、セル単位で部分的に編集有効化 | 03-11 | 🟡一部完了 | フィルハンドル（下方向+上方向コピー）実装済み。ドラッグ移動・セル単位編集は未着手 |
 | N6 | **5セグメント実装の適否確認** — 通帳・クレカ明細・売上・経費等の5つのセグメント分類が現在の設計と整合するか調査 | 03-11 | ❌未着手 | フィクスチャの`labels`に`RECEIPT`/`BANK_STATEMENT`/`CREDIT_CARD`/`TRANSPORT`/`MEDICAL`等のラベルが存在。5セグメントとの対応を確認 |
-| N7 | **共有composable `useAccountSettings`の実装** — 顧問先別勘定科目・税区分データを一元管理。N2保存キー統一は完了済み。残りはPhase B移行時にSupabase APIと同時作成 | 03-11 | 🟡一部完了 | N2保存キー統一でcomposable経由のデータフロー確立済み。`useAccountSettings`そのものの新規作成は別途 |
+| N7 | **共有composable `useAccountSettings`の実装** — 顧問先別勘定科目・税区分データを一元管理。全ページからACCOUNT_MASTER/TAX_CATEGORY_MASTERの直接importを排除 | 03-11 | ✅完了（03-16） | composable本体+型定義作成済み、全ページリファクタリング完了。詳細は[14_useAccountSettings_design.md](file:///c:/dev/receipt-app/docs/genzai/14_useAccountSettings_design.md) |
 
-#### N7 実装詳細: `useAccountSettings`
+#### N7 実装詳細: `useAccountSettings` ✅完了（2026-03-16）
 
 **目的**: 顧問先別勘定科目・税区分データを一元管理し、全ページで同じデータソースを参照する
 
-**実装内容**:
-1. **新規作成**: `src/composables/useAccountSettings.ts`（または`src/features/`配下）
-   - `ACCOUNT_MASTER`のreactiveコピーを保持
-   - `TAX_CATEGORY_MASTER`のreactiveコピーを保持
-   - 顧問先のclient type/hasRentalIncomeでフィルタしたcomputedを提供
-   - 科目追加/削除/非表示のメソッドを提供
-   - **補助科目を配列形式で管理**（2026-03-14決定）: `subAccounts: string[]`。例: 普通預金 → `['みずほ銀行', '三井住友', 'ゆうちょ']`
-2. **修正**: `ScreenS_AccountSettings.vue`
-   - L227の`reactive([...ACCOUNT_MASTER])`を`useAccountSettings()`に置換
-   - L254の`reactive([...TAX_CATEGORY_MASTER])`を同composableに置換
-3. **修正**: `JournalListLevel3Mock.vue`
-   - L934-953の`filteredAccounts`を`useAccountSettings()`から取得に変更
-   - L1030の`ACCOUNT_MASTER.find(...)`を顧問先別データから検索に変更
-4. **補助科目の配列化設計**（2026-03-14決定）:
-   - 現在の`subAccount: string`（1対1）を`subAccounts: string[]`（1対多）に変更
-   - 顧問先設定ページ: 「普通預金」に「+追加」ボタンで補助科目を複数登録
-   - 仕訳一覧: 補助科目セルをドロップダウン化（登録済みの補助科目から選択）
-   - 方式C採用理由: 現在の1対1を仕訳に連携すると、配列化時に手戻りが発生
+**実装完了物**:
+1. **新規作成**: `src/features/account-settings/composables/useAccountSettings.ts`
+   - scope='master'または'client'で内部composableを接続
+   - UnifiedAccount/UnifiedTaxCategory型で統一的なデータ提供
+   - filteredTaxCategories/resolveTaxCategoryName等のユーティリティ
+   - saveAccounts/saveTaxCategoriesで保存一元化
+2. **新規作成**: `src/features/account-settings/types/account-settings.types.ts`
+3. **リファクタリング完了**: MockMasterAccountsPage, MockMasterTaxCategoriesPage, MockClientAccountsPage, MockClientTaxPage, JournalListLevel3Mock, MockExportPage
+4. **grep検証**: 旧import 0件、vue-tsc通過
 
 **メリット**:
 - 本番実装時に、composable内部の`reactive([...MASTER])`を`API呼び出し + reactive(データ)`に置換するだけで済む

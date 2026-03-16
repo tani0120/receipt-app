@@ -36,7 +36,7 @@ export const journalColumns: JournalColumn[] = [
   { key: "invoice", label: "適格", width: "w-10", type: "component", sortKey: "invoice" },
 
   // --- データ（journal-level: text型） ---
-  { key: "transaction_date", label: "日付", width: "w-16", type: "text", sortKey: "transaction_date" },
+  { key: "voucher_date", label: "日付", width: "w-16", type: "text", sortKey: "voucher_date" },
   { key: "description", label: "摘要", width: "flex-1", type: "text", sortKey: "description" },
 
   // --- データ（entry-level: text/amount型） ---

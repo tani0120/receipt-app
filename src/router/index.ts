@@ -287,24 +287,10 @@ const authReadyPromise = new Promise<void>((resolve) => {
 // 認証ガード（全環境で有効）
 
 router.beforeEach(async (to) => {
-  // ログインページへのアクセスは常に許可
+  // 開発環境: 認証ガード無効化（直接URLアクセス可能）
   if (to.path === '/login') {
     return;
   }
-
-  // Firebase認証状態の読み込みを待つ
-  await authReadyPromise;
-
-  // 認証状態をチェック
-  const { getCurrentUser } = await import('@/utils/auth');
-  const user = getCurrentUser();
-
-  if (!user) {
-    // 未ログインの場合、ログインページにリダイレクト
-    console.log('[router] 未認証のため、ログインページにリダイレクトします');
-    return '/login';
-  }
-  // ログイン済みの場合、通常通りアクセス許可
   return true;
 })
 

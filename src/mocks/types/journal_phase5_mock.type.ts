@@ -55,7 +55,7 @@ export interface JournalPhase5Mock {
   id: string;                           // jrn-00000001形式
   display_order: number;                 // 表示順
   /**
-   * 取引日（transaction_date）
+   * 取引日（voucher_date）
    *
    * 【3つの日付概念と本システムの方針】
    *   取引日: 経済活動が実際に起きた日（物の引渡日、サービスの提供完了日）
@@ -75,7 +75,7 @@ export interface JournalPhase5Mock {
    *   - MF CSV出力の「取引日」カラムと一致
    *   - 実務上99%は伝票日=取引日（中小企業）
    */
-  transaction_date: string | null;
+  voucher_date: string | null;
   /**
    * 日付の項目存在フラグ（date_on_document）
    * false（項目なし）+ null → DATE_UNKNOWN（日付不明）ホバー「証憑に日付の記載がありません」

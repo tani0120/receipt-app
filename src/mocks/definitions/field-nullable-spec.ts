@@ -38,7 +38,7 @@
 
 /** フィールドがnullの場合に付与するラベル */
 export const FIELD_NULL_WARNING_LABEL = {
-  transaction_date: 'DATE_UNKNOWN',    // 日付が不明
+  voucher_date: 'DATE_UNKNOWN',    // 日付が不明
   account: 'ACCOUNT_UNKNOWN', // 勘定科目が不明
   amount: 'AMOUNT_UNCLEAR',  // 内訳が不明瞭な金額あり
 } as const;
@@ -49,7 +49,7 @@ export const FIELD_NULL_WARNING_LABEL = {
 
 /** MF CSV必須フィールド一覧（nullならCSV出力前に警告） */
 export const MF_CSV_REQUIRED_FIELDS = [
-  { field: 'transaction_date', displayName: '日付' },
+  { field: 'voucher_date', displayName: '日付' },
   { field: 'account', displayName: '勘定科目' },
   { field: 'amount', displayName: '金額' },
   { field: 'description', displayName: '摘要' },

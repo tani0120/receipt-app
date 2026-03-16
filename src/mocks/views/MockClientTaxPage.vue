@@ -186,9 +186,8 @@ import { ref, reactive, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import type { TaxCategory, TaxDirection } from '@/shared/types/tax-category';
 import { extractRateFromName } from '@/shared/types/tax-category';
-import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
+import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useClients } from '@/features/client-management/composables/useClients';
-import { useClientTaxCategories } from '@/features/tax-management/composables/useClientTaxCategories';
 import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
 
 const PAGE_SIZE = 50;
@@ -214,39 +213,20 @@ const taxMethodLabel = computed(() => {
 const mfWarningMessage = ref('');
 const taxPage = ref(1);
 
-// =============== composable接続 ===============
-const clientTaxComposable = clientId.value ? useClientTaxCategories(clientId.value) : null;
+// =============== composable接続（useAccountSettings経由） ===============
+const settings = clientId.value ? useAccountSettings('client', clientId.value) : useAccountSettings('master');
 
-// 旧キーからのマイグレーション（sugu-suru:client-tax-page: → sugu-suru:client-tax:）
-if (clientId.value) {
-  const oldKey = 'sugu-suru:client-tax-page:' + clientId.value;
-  const oldData = localStorage.getItem(oldKey);
-  if (oldData && clientTaxComposable) {
-    try {
-      const parsed = JSON.parse(oldData);
-      // 旧キーのデータをcomposable経由で新キーに保存
-      const rows: TaxCategory[] = [...TAX_CATEGORY_MASTER];
-      if (parsed.customTaxCategories) {
-        rows.push(...parsed.customTaxCategories);
-      }
-      if (parsed.hiddenIds) {
-        rows.forEach(r => { if (parsed.hiddenIds.includes(r.id)) r.deprecated = true; });
-      }
-      clientTaxComposable.saveAll(rows);
-      localStorage.removeItem(oldKey);
-    } catch { /* 破損データは無視 */ }
-  }
-}
+// 旧キーマイグレーションはuseAccountSettings内部で実行済み
 
 /** composableから税区分一覧を取得し、ページ用の配列に変換 */
 function loadTaxRows(): TaxCategory[] {
-  if (!clientTaxComposable) return [...TAX_CATEGORY_MASTER];
-  // composableのclientTaxCategoriesにはマスタ+カスタム行が含まれている
-  const base = clientTaxComposable.clientTaxCategories.value.map(tc => ({
-    ...tc,
-    deprecated: tc.hiddenInClient,
+  // settings.taxCategoriesはUnifiedTaxCategory[]。
+  // UnifiedTaxCategory固有プロパティ(hidden, hiddenInMaster, visibilityOverride, source)を除外し、
+  // TaxCategoryのプロパティのみでクリーンなオブジェクトを返す。
+  return settings.taxCategories.value.map(({ hidden, hiddenInMaster, visibilityOverride, source, ...rest }) => ({
+    ...rest,
+    deprecated: hidden,
   }));
-  return base;
 }
 
 const allTaxRows: TaxCategory[] = reactive(loadTaxRows());
@@ -460,11 +440,8 @@ function getRate(row: TaxCategory): string {
 // =============== 保存 ===============
 function saveChanges() {
   if (!clientId.value) { alert('顧問先IDが不明です'); return; }
-  if (!clientTaxComposable) { alert('composableが初期化されていません'); return; }
-  // composable経由で保存（キー: sugu-suru:client-tax: + clientId）
-  clientTaxComposable.saveAll(allTaxRows);
-  // 旧キーが残っていたら削除
-  localStorage.removeItem('sugu-suru:client-tax-page:' + clientId.value);
+  // settings経由で保存（キー: sugu-suru:client-tax: + clientId）
+  settings.saveTaxCategories(allTaxRows);
   alert('保存しました — 変更はlocalStorageに永続化済み');
 }
 
@@ -513,7 +490,7 @@ function resetTaxOrder() {
   const defaults = allTaxRows.filter(r => !r.isCustom);
   const customs = allTaxRows.filter(r => r.isCustom);
   // デフォルト行をマスタ定義順にソート
-  const masterOrder = new Map(TAX_CATEGORY_MASTER.map((t, i) => [t.id, i]));
+  const masterOrder = settings.defaultTaxOrder.value;
   defaults.sort((a, b) => (masterOrder.get(a.id) ?? 9999) - (masterOrder.get(b.id) ?? 9999));
   // カスタム行をinsertAfterの直後に差し込み
   const customsByParent = new Map<string, TaxCategory[]>();

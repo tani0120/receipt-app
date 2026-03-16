@@ -186,17 +186,19 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
 import type { Account } from '@/shared/types/account';
-import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster';
-import { ACCOUNT_MASTER } from '@/shared/data/account-master';
-import { useAccountMaster } from '@/features/account-management/composables/useAccountMaster';
+import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
 
 const PAGE_SIZE = 50;
 const ACCOUNT_STORAGE_KEY = 'sugu-suru:account-master:rows';
 
-// =============== composable接続 ===============
-const { masterAccounts, overrides, toggleVisibility, isHidden, resetToDefault: _resetMasterToDefault } = useAccountMaster();
-const { masterTaxCategories } = useTaxMaster();
+// =============== composable接続（useAccountSettings経由） ===============
+const settings = useAccountSettings('master');
+// テンプレート互換用のローカル参照
+const masterAccounts = settings.accounts;
+const overrides = settings._accountMasterOverrides;
+function toggleVisibility(id: string) { settings.toggleAccountVisibility(id); }
+function isHidden(id: string) { return settings.isAccountHidden(id); }
 
 // =============== 勘定科目マスタ ===============
 const accountBusinessType = ref<'corp' | 'individual'>('individual');
@@ -434,11 +436,7 @@ function getCategoryDirection(category: string): 'sales' | 'purchase' | 'common'
 
 function filteredTaxCategories(category: string) {
   const dir = getCategoryDirection(category);
-  return masterTaxCategories.value.filter(tc => {
-    if (dir === 'sales') return tc.direction === 'sales' || tc.direction === 'common';
-    if (dir === 'purchase') return tc.direction === 'purchase' || tc.direction === 'common';
-    return tc.direction === 'common';
-  });
+  return settings.filteredTaxCategories(dir);
 }
 
 function taxDetLabel(td: string): string {
@@ -475,8 +473,7 @@ function onDrop(targetIdx: number) {
 // =============== 共通ユーティリティ ===============
 function getTaxCategoryName(id?: string): string {
   if (!id) return '';
-  const found = masterTaxCategories.value.find(tc => tc.id === id);
-  return found ? found.shortName : id;
+  return settings.resolveTaxCategoryShortName(id);
 }
 
 function compareByKey<T>(arr: T[], key: keyof T, asc: boolean): void {
@@ -508,7 +505,7 @@ function resetAccountOrder() {
   const defaults = accountRows.filter(r => !r.isCustom);
   const customs = accountRows.filter(r => r.isCustom);
   // デフォルト行をマスタ定義順にソート
-  const masterOrder = new Map(ACCOUNT_MASTER.map((a, i) => [a.id, i]));
+  const masterOrder = settings.defaultAccountOrder.value;
   defaults.sort((a, b) => (masterOrder.get(a.id) ?? 9999) - (masterOrder.get(b.id) ?? 9999));
   // カスタム行をinsertAfterの直後に差し込み
   const customsByParent = new Map<string, Account[]>();

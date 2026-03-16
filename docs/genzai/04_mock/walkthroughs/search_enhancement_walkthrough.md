@@ -60,10 +60,10 @@ const pastJournalSearch = ref({
 ```typescript
 // 日付範囲フィルタ
 if (pastJournalSearch.value.dateFrom) {
-  results = results.filter(j => j.transaction_date >= pastJournalSearch.value.dateFrom);
+  results = results.filter(j => j.voucher_date >= pastJournalSearch.value.dateFrom);
 }
 if (pastJournalSearch.value.dateTo) {
-  results = results.filter(j => j.transaction_date <= pastJournalSearch.value.dateTo);
+  results = results.filter(j => j.voucher_date <= pastJournalSearch.value.dateTo);
 }
 
 // 金額フィルタ

@@ -93,7 +93,7 @@ CREATE TABLE journals (
   document_id VARCHAR(20) REFERENCES documents(id),  -- 証票ID（旧receipt_id）
   line_id VARCHAR(40) NULL,                      -- 証票行ID（冗長だがクエリ高速化用）
   display_order INTEGER NOT NULL,                 -- 表示順
-  transaction_date DATE NOT NULL,                 -- 取引日
+  voucher_date DATE NOT NULL,                     -- 伝票日（証憑記載の日付=fact）
   description TEXT NOT NULL,                      -- 摘要
   
   -- ステータス管理（出力済みのみ）

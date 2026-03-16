@@ -167,7 +167,7 @@ const allRows = computed<DetailRow[]>(() => {
       return {
         id: j.id,
         qualified: j.invoice_status === 'qualified' ? '○' : '',
-        date: formatDate(j.transaction_date ?? ''),
+        date: formatDate(j.voucher_date ?? ''),
         description: j.description,
         debitAccount: debit?.account ?? '',
         debitSub: debit?.sub_account ?? '',

@@ -290,9 +290,9 @@ function goToJournalList(row: { clientId: string }) {
 .pg-table td { border-bottom: 1px solid #d0d7de; border-right: 1px solid #e8ecf0; padding: 5px 4px; font-size: 12px; color: #333; white-space: nowrap; }
 .pg-table td:last-child { border-right: none; }
 .pg-row { transition: background 0.1s; }
-.pg-row:hover { background: #f0f7ff; }
+.pg-row:hover { background: #fef3c7; }
 .pg-row:nth-child(even) { background: #fafbfc; }
-.pg-row:nth-child(even):hover { background: #f0f7ff; }
+.pg-row:nth-child(even):hover { background: #fef3c7; }
 .pg-row-inactive { opacity: 0.5; }
 .pg-row-suspension { opacity: 0.7; }
 

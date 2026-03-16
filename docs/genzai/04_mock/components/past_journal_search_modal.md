@@ -78,7 +78,7 @@
 | フィルタ | 動作 | 実装 |
 |---------|------|------|
 | 摘要 | 摘要（`description`）に部分一致検索 | ✅ |
-| 日付範囲 | `transaction_date`が指定期間内 | ✅ |
+| 日付範囲 | `voucher_date`が指定期間内 | ✅ |
 | 金額 | 等しい・以上・以下で絞り込み（借方・貸方の合計額） | ✅ |
 | 借方勘定科目 | `debit_entries`に完全一致するエントリが存在 | ✅ |
 | 貸方勘定科目 | `credit_entries`に完全一致するエントリが存在 | ✅ |
@@ -127,10 +127,10 @@ const filteredPastJournals = computed(() => {
 
   // 日付範囲フィルタ
   if (pastJournalSearch.value.dateFrom) {
-    results = results.filter(j => j.transaction_date >= pastJournalSearch.value.dateFrom);
+    results = results.filter(j => j.voucher_date >= pastJournalSearch.value.dateFrom);
   }
   if (pastJournalSearch.value.dateTo) {
-    results = results.filter(j => j.transaction_date <= pastJournalSearch.value.dateTo);
+    results = results.filter(j => j.voucher_date <= pastJournalSearch.value.dateTo);
   }
 
   // 金額フィルタ
@@ -283,8 +283,8 @@ async function searchPastJournals(params: SearchParams): Promise<SearchResult> {
       credit_entries:journal_entries!journal_id(*)
     `, { count: 'exact' })
     .eq('client_id', params.client_id)
-    .gte('transaction_date', params.date_from)
-    .lte('transaction_date', params.date_to)
+    .gte('voucher_date', params.date_from)
+    .lte('voucher_date', params.date_to)
     .range(params.offset, params.offset + params.limit - 1);
 
   if (error) throw error;

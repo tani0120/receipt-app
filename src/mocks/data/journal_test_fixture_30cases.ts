@@ -18,7 +18,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000001',
     display_order: 1,
-    transaction_date: '2024-07-29', date_on_document: true,
+    voucher_date: '2024-07-29', date_on_document: true,
     description: '神戸相互タクシー',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -48,7 +48,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000002',
     display_order: 2,
-    transaction_date: '2025-01-20', date_on_document: true,
+    voucher_date: '2025-01-20', date_on_document: true,
     description: 'VIVACE BEAUTYクリニック',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -81,7 +81,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000003',
     display_order: 3,
-    transaction_date: '2025-01-21', date_on_document: true,
+    voucher_date: '2025-01-21', date_on_document: true,
     description: 'コピー用紙',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -114,7 +114,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000004',
     display_order: 4,
-    transaction_date: '2025-01-22', date_on_document: true,
+    voucher_date: '2025-01-22', date_on_document: true,
     description: '文房具セット',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -144,7 +144,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000005',
     display_order: 5,
-    transaction_date: '2025-01-23', date_on_document: true,
+    voucher_date: '2025-01-23', date_on_document: true,
     description: 'タクシー代（不適格運送）',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -177,7 +177,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000006',
     display_order: 6,
-    transaction_date: '2025-01-24', date_on_document: true,
+    voucher_date: '2025-01-24', date_on_document: true,
     description: 'タクシー代',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -207,7 +207,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000007',
     display_order: 7,
-    transaction_date: '2025-01-25', date_on_document: true,
+    voucher_date: '2025-01-25', date_on_document: true,
     description: '電気代 関西電力',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -237,7 +237,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000008',
     display_order: 8,
-    transaction_date: '2025-01-26', date_on_document: true,
+    voucher_date: '2025-01-26', date_on_document: true,
     description: 'スターバックス',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -265,7 +265,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000009',
     display_order: 9,
-    transaction_date: '2025-01-27', date_on_document: true,
+    voucher_date: '2025-01-27', date_on_document: true,
     description: '業務委託料',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -293,7 +293,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000010',
     display_order: 10,
-    transaction_date: '2025-01-28', date_on_document: true,
+    voucher_date: '2025-01-28', date_on_document: true,
     description: 'JR神戸線',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -327,7 +327,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000011',
     display_order: 11,
-    transaction_date: '2025-01-29', date_on_document: true,
+    voucher_date: '2025-01-29', date_on_document: true,
     description: 'オフィス産科',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -355,7 +355,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000012',
     display_order: 12,
-    transaction_date: '2025-01-30', date_on_document: true,
+    voucher_date: '2025-01-30', date_on_document: true,
     description: '消耗品費（ボールペン）',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -383,7 +383,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000013',
     display_order: 13,
-    transaction_date: '2025-01-31', date_on_document: true,
+    voucher_date: '2025-01-31', date_on_document: true,
     description: 'タクシー代（不適格運送）',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -411,7 +411,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000014',
     display_order: 14,
-    transaction_date: '2025-02-01', date_on_document: true,
+    voucher_date: '2025-02-01', date_on_document: true,
     description: 'NTTドコモ',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -439,7 +439,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000015',
     display_order: 15,
-    transaction_date: '2025-02-01', date_on_document: true,
+    voucher_date: '2025-02-01', date_on_document: true,
     description: '手数料通帳費',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -467,7 +467,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000016',
     display_order: 16,
-    transaction_date: '2025-02-02', date_on_document: true,
+    voucher_date: '2025-02-02', date_on_document: true,
     description: '神戸皇居鎌タクシー',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -495,7 +495,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000017',
     display_order: 17,
-    transaction_date: '2025-02-02', date_on_document: true,
+    voucher_date: '2025-02-02', date_on_document: true,
     description: '貴金に宗鹿釜交友貴',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -523,7 +523,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000018',
     display_order: 18,
-    transaction_date: '2025-02-02', date_on_document: true,
+    voucher_date: '2025-02-02', date_on_document: true,
     description: '不可分抜き回',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -551,7 +551,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000019',
     display_order: 19,
-    transaction_date: '2025-02-03', date_on_document: true,
+    voucher_date: '2025-02-03', date_on_document: true,
     description: '事例寿判上いは詮',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -579,7 +579,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000020',
     display_order: 20,
-    transaction_date: '2025-02-04', date_on_document: true,
+    voucher_date: '2025-02-04', date_on_document: true,
     description: '広告宣伝費（銀行振込）',
     document_id: 'receipt-001',
     status: 'exported',  // 出力済み
@@ -613,7 +613,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000021',
     display_order: 21,
-    transaction_date: '2025-02-05', date_on_document: true,
+    voucher_date: '2025-02-05', date_on_document: true,
     description: '業務委託料',
     document_id: 'receipt-001',
     status: 'exported',
@@ -645,7 +645,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000022',
     display_order: 22,
-    transaction_date: '2025-02-06', date_on_document: true,
+    voucher_date: '2025-02-06', date_on_document: true,
     description: '資料作成料',
     document_id: 'receipt-001',
     status: null,
@@ -673,7 +673,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000023',
     display_order: 23,
-    transaction_date: '2025-02-07', date_on_document: true,
+    voucher_date: '2025-02-07', date_on_document: true,
     description: '不明な振り',
     document_id: 'receipt-001',
     status: null,
@@ -701,7 +701,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000024',
     display_order: 24,
-    transaction_date: '2026-12-31', date_on_document: true,
+    voucher_date: '2026-12-31', date_on_document: true,
     description: '未来日付の仕訳',
     document_id: 'receipt-001',
     status: null,
@@ -729,7 +729,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000025',
     display_order: 25,
-    transaction_date: '2025-02-08', date_on_document: true,
+    voucher_date: '2025-02-08', date_on_document: true,
     description: '異常金額',
     document_id: 'receipt-001',
     status: null,
@@ -757,7 +757,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000026',
     display_order: 26,
-    transaction_date: '2025-02-05', date_on_document: true,
+    voucher_date: '2025-02-05', date_on_document: true,
     description: '資料持ち',
     document_id: 'receipt-001',
     status: null,
@@ -790,7 +790,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000027',
     display_order: 27,
-    transaction_date: '2025-02-07', date_on_document: true,
+    voucher_date: '2025-02-07', date_on_document: true,
     description: '材料費・調整等',
     document_id: 'receipt-001',
     status: null,
@@ -824,7 +824,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000028',
     display_order: 28,
-    transaction_date: null, date_on_document: true,
+    voucher_date: null, date_on_document: true,
     description: '現金領収遅れせれ仮払い',
     document_id: 'receipt-001',
     status: null,
@@ -857,7 +857,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000029',
     display_order: 29,
-    transaction_date: '2025-02-09', date_on_document: true,
+    voucher_date: '2025-02-09', date_on_document: true,
     description: '入力ミス例',
     document_id: 'receipt-001',
     status: null,
@@ -885,7 +885,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000030',
     display_order: 30,
-    transaction_date: '2025-02-10', date_on_document: true,
+    voucher_date: '2025-02-10', date_on_document: true,
     description: '計算誤差例',
     document_id: 'receipt-001',
     status: null,
@@ -917,7 +917,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000031',
     display_order: 31,
-    transaction_date: '2025-02-11', date_on_document: true,
+    voucher_date: '2025-02-11', date_on_document: true,
     description: 'タクシー代（経費精算）',
     document_id: 'receipt-001',
     status: null,
@@ -946,7 +946,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000032',
     display_order: 32,
-    transaction_date: '2025-02-12', date_on_document: true,
+    voucher_date: '2025-02-12', date_on_document: true,
     description: '出張費用（交通費+宿泊費）',
     document_id: 'receipt-001',
     status: null,
@@ -975,7 +975,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000033',
     display_order: 33,
-    transaction_date: '2025-02-13', date_on_document: true,
+    voucher_date: '2025-02-13', date_on_document: true,
     description: '給与支払（山田太郎）',
     document_id: 'receipt-001',
     status: null,
@@ -1005,7 +1005,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000034',
     display_order: 34,
-    transaction_date: '2025-02-14', date_on_document: true,
+    voucher_date: '2025-02-14', date_on_document: true,
     description: '経費精算（明細10項目）',
     document_id: 'receipt-001',
     status: null,
@@ -1042,7 +1042,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
   {
     id: 'jrn-00000035',
     display_order: 35,
-    transaction_date: '2025-02-15', date_on_document: true,
+    voucher_date: '2025-02-15', date_on_document: true,
     description: '決算仕訳（費用振替）',
     document_id: 'receipt-001',
     status: null,

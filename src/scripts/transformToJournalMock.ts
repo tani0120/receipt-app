@@ -60,7 +60,7 @@ export function transformToJournalMock(
     return {
         id: generateJournalId(),
         display_order: displayOrder,
-        transaction_date: gemini.date ?? '',
+        voucher_date: gemini.date ?? '',
         date_on_document: true,
         description: gemini.description ?? '',
 

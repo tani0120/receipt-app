@@ -222,7 +222,7 @@ describe('Schema Mapper', () => {
         const YayoiSchema = z.object({
             vendor_name: z.string(),
             amount: z.number(),
-            transaction_date: z.string(),
+            voucher_date: z.string(),
             tax: z.number(),
         });
 
@@ -233,7 +233,7 @@ describe('Schema Mapper', () => {
                 {
                     vendor: 'vendor_name',
                     totalAmount: 'amount',
-                    date: 'transaction_date',
+                    date: 'voucher_date',
                     taxRate: 'tax',
                 }
             );
@@ -249,7 +249,7 @@ describe('Schema Mapper', () => {
 
             expect(yayoiInput.vendor_name).toBe('株式会社テスト');
             expect(yayoiInput.amount).toBe(10000);
-            expect(yayoiInput.transaction_date).toBe('2026-01-14');
+            expect(yayoiInput.voucher_date).toBe('2026-01-14');
             expect(yayoiInput.tax).toBe(10);
         });
     });

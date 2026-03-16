@@ -1,6 +1,6 @@
 # ✅ 残存修正項目一覧（2026-03-07）【全件完了】
 
-> **最終結果（2026-03-15 17:35）**: §A-§L全件完了 + §M（2026-03-11スキーマ同期）全件完了 + §N（エンコーディング修正）完了 + §O（staffName削除+設定パネル読み取り専用化）完了 + §P（勘定科目3属性列+同期修正）完了 + §Q（保存ボタンcomposable同期統一）完了 + §R（ハードコード排除+isMasterCustom+補助科目連動+useAccountSettings設計書）完了。
+> **最終結果（2026-03-16）**: §A-§R全件完了。useAccountSettings統一composable実装完了（全6ページからACCOUNT_MASTER/TAX_CATEGORY_MASTERの直接import排除、composable経由に一本化）。
 > 残存2件（J1: ScreenE旧モック再設計待ち、J7: 設計上のprivateフィールド）は対応不要として§Lに記録。
 
 > ~~本日中に全件修正する前提で、優先度・リスク・修正時期を整理。~~
@@ -826,8 +826,8 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 |---------|------|
 | `useTaxMaster.ts` | composable自身がTAX_CATEGORY_MASTERを読み込む定義ファイル。正当 |
 | `useClientTaxCategories.ts` | composable自身が比較基準として使用。正当 |
-| `MockMasterTaxCategoriesPage.vue` | ソート基準（デフォルト順に戻す）で使用。正当 |
-| `MockClientTaxPage.vue` | フォールバック/ソート基準。正当 |
+| `MockMasterTaxCategoriesPage.vue` | ~~ソート基準（デフォルト順に戻す）で使用。正当~~ → **2026-03-16: `useAccountSettings('master').defaultTaxOrder`経由に変更済み** |
+| `MockClientTaxPage.vue` | ~~フォールバック/ソート基準。正当~~ → **2026-03-16: `useAccountSettings('client', clientId)`経由に変更済み** |
 | `ScreenS_AccountSettings.vue` | 旧画面（`/old/`ルート）。廃止予定。スコープ外 |
 
 ### R-2. マスタカスタム/顧問先カスタム区別表示
@@ -852,8 +852,8 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 | 項目 | 内容 |
 |------|------|
 | ファイル | [14_useAccountSettings_design.md](file:///c:/dev/receipt-app/docs/genzai/14_useAccountSettings_design.md) |
-| 内容 | §1-§9: 現状の問題、API設計（全メソッド）、統一型定義、実装コード（省略ゼロ）、全5ページの修正箇所一覧、localStorageキー変更なし、既存composable変更なし、失敗防止チェックリスト、実施順序14ステップ、省略箇所の正直な補足8項目 |
-| 次のアクション | 次の会話で14ステップの実装を開始 |
+| 内容 | §1-§9: 現状の問題、API設計（全メソッド）、統一型定義、実装コード（省略ゼロ）、全6ページの修正箇所一覧、localStorageキー変更なし、既存composable変更なし、失敗防止チェックリスト、実施順序16ステップ、省略箇所の正直な補足8項目 |
+| 状態 | ✅ **実装完了**（2026-03-16）。composable本体+型定義作成済み、全6ページリファクタリング完了、grep検証+vue-tsc通過 |
 
 ### R-5. 検証結果
 

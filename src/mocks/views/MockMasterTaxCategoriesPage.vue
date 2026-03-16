@@ -174,14 +174,16 @@ import { ref, reactive, computed, watch } from 'vue';
 import type { TaxCategory, TaxDirection } from '@/shared/types/tax-category';
 import { extractRateFromName } from '@/shared/types/tax-category';
 import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
-import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
-import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster';
+import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 
 const PAGE_SIZE = 50;
 const TAX_STORAGE_KEY = 'sugu-suru:tax-categories:rows';
 
-// =============== composable接続 ===============
-const { masterTaxCategories, overrides: taxMasterOverrides } = useTaxMaster();
+// =============== composable接続（useAccountSettings経由） ===============
+const settings = useAccountSettings('master');
+// テンプレート互換用のローカル参照
+const masterTaxCategories = settings.taxCategories;
+const taxMasterOverrides = settings._taxMasterOverrides;
 
 // =============== 税区分マスタ ===============
 type TaxMethodType = 'general' | 'simplified' | 'exempt';
@@ -467,7 +469,7 @@ function resetTaxOrder() {
   const defaults = allTaxRows.filter(r => !r.isCustom);
   const customs = allTaxRows.filter(r => r.isCustom);
   // デフォルト行をマスタ定義順にソート
-  const masterOrder = new Map(TAX_CATEGORY_MASTER.map((t, i) => [t.id, i]));
+  const masterOrder = settings.defaultTaxOrder.value;
   defaults.sort((a, b) => (masterOrder.get(a.id) ?? 9999) - (masterOrder.get(b.id) ?? 9999));
   // カスタム行をinsertAfterの直後に差し込み
   const customsByParent = new Map<string, TaxCategory[]>();

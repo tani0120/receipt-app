@@ -104,7 +104,7 @@ null → exported
 | `document_id` | VARCHAR(20) | 既存（名称変更: receipt_id→document_id） | 証票ID |
 | `line_id` | VARCHAR(40) | **追加** | 証票行ID（冗長だがクエリ高速化用） |
 | `display_order` | INTEGER | 既存 | 表示順 |
-| `transaction_date` | DATE | 既存 | 伝票日 |
+| `voucher_date` | DATE | 既存（名称変更: transaction_date→voucher_date） | 伝票日（証憑に記載された日付=fact。税務会計上の取引日としての正しさはシステムは保証しない） |
 | `description` | TEXT | 既存 | 摘要 |
 | `status` | journal_status | 既存 | null / exported |
 | `status_updated_at` | TIMESTAMP | 既存 | ステータス更新日時 |

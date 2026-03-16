@@ -95,6 +95,19 @@
 
 ---
 
+## RC-10: useAccountSettings.tsのACCOUNT_MASTER/TAX_CATEGORY_MASTER直接import解消（2026-03-16追記）
+
+- **発見経緯**: useAccountSettings共有コンポーネント化作業の技術的負債調査で発見
+- **現状**: `useAccountSettings.ts` L6-7でACCOUNT_MASTER/TAX_CATEGORY_MASTERを直接import。composable内部4箇所（defaultAccountOrder, defaultTaxOrder, defaultAccountIds, defaultTaxIds）+ saveAccounts/saveTaxCategories内のカスタム行判定で使用
+- **問題**: 「データソース切替ポイントを1箇所に集約」という設計目標と矛盾。本番API移行時にuseAccountSettings.ts自体の変更が必要
+- **修正案**: useAccountMaster/useTaxMasterにdefaultOrder/defaultIdsを返すcomputedを追加し、useAccountSettings.tsからACCOUNT_MASTER/TAX_CATEGORY_MASTERの直接importを排除
+- **時期**: RC-5（Supabase Mapper導入）と同時実施
+
+> [!IMPORTANT]
+> RC-5でSupabase APIに切り替える際、useAccountSettings.tsが直接参照している4箇所も同時に修正すること。
+
+---
+
 ## チェックリスト
 
 - [ ] RC-1: unsafe/廃止
@@ -106,3 +119,5 @@
 - [ ] RC-7: GINインデックス
 - [ ] RC-8: モック差し替え
 - [ ] RC-9: /api/clients 500エラー解消 + fetchClientsフォールバック
+- [ ] RC-10: useAccountSettings.tsのACCOUNT_MASTER/TAX_CATEGORY_MASTER直接import解消（RC-5と同時）
+

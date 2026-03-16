@@ -471,7 +471,7 @@ const industryOptions: string[] = [
 const statusFilters = ref<string[]>(['active']);
 
 // --- ソート ---
-const sortKey = ref<string>('companyName');
+const sortKey = ref<string>('threeCode');
 const sortOrder = ref<'asc' | 'desc'>('asc');
 
 const sortBy = (key: string) => {

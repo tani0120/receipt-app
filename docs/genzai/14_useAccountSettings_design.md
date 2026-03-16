@@ -3,6 +3,7 @@
 > 作成日: 2026-03-15
 > 目的: 各ページが`TAX_CATEGORY_MASTER`/`ACCOUNT_MASTER`をimportせず、composable経由でデータ取得を一元化する
 > 前提: 00_モック実装時のルール.md §15「localStorage保存ルール」に準拠
+> **実装ステータス: ✅ フェーズ1完了（2026-03-16）**
 
 ---
 
@@ -11,19 +12,27 @@
 ### 1.1 ハードコード参照の構造的欠陥
 
 ```
-現状: 各ページが個別にimportして自前フィルタ
+実装完了: 全ページがuseAccountSettingsのみを通じてデータ取得
 
-MockMasterAccountsPage ──── import ACCOUNT_MASTER ──── ハードコード定数
-MockMasterTaxCategoriesPage ── import TAX_CATEGORY_MASTER ── ハードコード定数
-MockClientAccountsPage ──── import ACCOUNT_MASTER ──── ハードコード定数
-MockClientTaxPage ──────── import TAX_CATEGORY_MASTER ── ハードコード定数
-JournalListLevel3Mock ──── import ACCOUNT_MASTER ──── ハードコード定数
-
-問題:
-- カスタム行が含まれない → 「COMMON_UNKNOWN_COPY_3_COPY」のようなID表示
-- 修正するたびに「他にハードコードが残ってないか」全件チェックが必要
-- composableを経由しないlocalStorage直書きが発生しやすい
+MockMasterAccountsPage ─┐
+MockMasterTaxCategoriesPage ─┤
+MockClientAccountsPage ─┤─── useAccountSettings(scope, clientId?)
+MockClientTaxPage ──────┤
+JournalListLevel3Mock ──┤
+MockExportPage ───────┘
+                              │
+                    ┌─────────┴──────────┐
+                    │  useAccountMaster   │  ← 内部依存（外部import不要）
+                    │  useTaxMaster       │
+                    │  useClientAccounts  │
+                    │  useClientTaxCategories │
+                    └────────────────────┘
 ```
+
+**grep検証結果（2026-03-16）:**
+- `ACCOUNT_MASTER`/`TAX_CATEGORY_MASTER` ページ直参照: **0件**（コメント内文字列1件のみ）
+- `useAccountMaster`/`useTaxMaster`/`useClientAccounts`/`useClientTaxCategories` ページ直参照: **0件**
+- `vue-tsc --noEmit`: **通過**
 
 ### 1.2 目指す姿
 
@@ -178,9 +187,9 @@ interface UnifiedTaxCategory extends TaxCategory {
 ```
 src/features/account-settings/
   composables/
-    useAccountSettings.ts     ← [NEW] 統一composable
+    useAccountSettings.ts     ← [✅ DONE] 統一composable
   types/
-    account-settings.types.ts ← [NEW] UnifiedAccount, UnifiedTaxCategory, AccountSettingsReturn
+    account-settings.types.ts ← [✅ DONE] UnifiedAccount, UnifiedTaxCategory, AccountSettingsReturn
 ```
 
 ### 3.2 useAccountSettings内部ロジック
@@ -536,77 +545,82 @@ import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 ```
 
-#### 変更箇所一覧
+#### 実施結果（2026-03-16完了）
 
-| 行範囲 | 現在のコード | 新しいコード |
-|--------|------------|------------|
-| L189 | `import { useTaxMaster }` | 削除（useAccountSettings経由） |
-| L190 | `import { ACCOUNT_MASTER }` | 削除 |
-| L191 | `import { useAccountMaster }` | `import { useAccountSettings }` |
-| L198 | `const { masterAccounts, overrides, ... } = useAccountMaster()` | `const settings = useAccountSettings('master')` |
-| L199 | `const { masterTaxCategories } = useTaxMaster()` | 削除（settings.taxCategories経由） |
-| L437 | `masterTaxCategories.value.filter(tc => { ... })` | `settings.filteredTaxCategories(dir)` |
-| L478 | `masterTaxCategories.value.find(tc => tc.id === id)` | `settings.resolveTaxCategoryShortName(id)` |
-| L511 | `ACCOUNT_MASTER.map((a, i) => [a.id, i])` | 据え置き（デフォルト順ソート基準は定数が正当） ※後述 |
-
-#### デフォルト順ソートの扱い
-
-`ACCOUNT_MASTER`のデフォルト順ソートは「元の並び順を参照する」ため、**定数参照が正当**。ただし`useAccountSettings`経由で提供する方が一貫性がある。
-
-**方針**: `settings.defaultAccountOrder`を追加し、composable内部で`ACCOUNT_MASTER.map((a, i) => [a.id, i])`のMapを作成して返す。ページは定数を直接参照しない。
+- 旧import（ACCOUNT_MASTER, useAccountMaster, useTaxMaster）を削除
+- `const settings = useAccountSettings('master')` 追加
+- テンプレート互換のためローカル変数でラップ（`masterAccounts = settings.accounts`, `overrides = settings._accountMasterOverrides`, `toggleVisibility()`, `isHidden()`）
+- `filteredTaxCategories` → `settings.filteredTaxCategories(dir)`
+- `getTaxCategoryName` → `settings.resolveTaxCategoryShortName(id)`
+- `ACCOUNT_MASTER.map(...)` → `settings.defaultAccountOrder.value`
+- vue-tsc通過確認済み
 
 ---
 
 ### 4.3 MockMasterTaxCategoriesPage.vue
 
-| 行範囲 | 現在のコード | 新しいコード |
-|--------|------------|------------|
-| L177 | `import { TAX_CATEGORY_MASTER }` | `import { useAccountSettings }` |
-| composable接続 | `useTaxMaster()` | `useAccountSettings('master')` |
-| L470 | `TAX_CATEGORY_MASTER.map((t, i) => [t.id, i])` | `settings.defaultTaxOrder` |
+#### 実施結果（2026-03-16完了）
+
+- 旧import（TAX_CATEGORY_MASTER, useTaxMaster）を削除
+- `const settings = useAccountSettings('master')` 追加
+- ローカル参照: `masterTaxCategories = settings.taxCategories`, `taxMasterOverrides = settings._taxMasterOverrides`
+- `TAX_CATEGORY_MASTER.map(...)` → `settings.defaultTaxOrder.value`
+- vue-tsc通過確認済み
 
 ---
 
 ### 4.4 MockClientAccountsPage.vue
 
-| 行範囲 | 現在のコード | 新しいコード |
-|--------|------------|------------|
-| L208 | `import { useTaxMaster }` | 削除 |
-| L209 | `import { ACCOUNT_MASTER }` | 削除 |
-| L211 | `import { useClientAccounts }` | `import { useAccountSettings }` |
-| L212 | `import { useClientTaxCategories }` | 削除 |
-| L230-235 | `clientTaxComposable` + `clientTaxCategories` computed | `settings.visibleTaxCategories` |
-| L241 | `useClientAccounts(clientId.value)` | `useAccountSettings('client', clientId.value)` |
-| L133 | `isMasterCustomAccount(row.id)` | `row.source === 'master-custom'` |
-| L293-300 | `isMasterCustomAccount()` 関数 | 削除（sourceプロパティで判定） |
-| L615 | `ACCOUNT_MASTER.map(...)` | `settings.defaultAccountOrder` |
+#### 実施結果（2026-03-16完了）
+
+- 旧import（ACCOUNT_MASTER, useTaxMaster, useClientAccounts, useClientTaxCategories）を全て削除
+- `const settings = useAccountSettings('client', clientId.value)` 追加
+- `clientTaxComposable`/`clientTaxCategories` → `settings.visibleTaxCategories`（未使用のため削除）
+- `clientAccountsComposable` → `settings` 経由に完全置換
+- `isAccountHidden()` → `settings.isAccountHidden(accountId)`
+- `isMasterCustomAccount()` → `settings.accounts.value.find()` でローカル判定（関数は残置）
+- watch対象: `clientAccountsComposable.clientAccounts` → `settings.accounts`（UnifiedAccount.hiddenで判定）
+- `saveChanges()`: `clientAccountsComposable.saveAll()` → `settings.saveAccounts()`
+- `filteredTaxCategories` → `settings.filteredTaxCategories(dir)`
+- `getTaxCategoryName` → `settings.resolveTaxCategoryShortName(id)`
+- `ACCOUNT_MASTER.map(...)` → `settings.defaultAccountOrder.value`
+- vue-tsc通過確認済み
 
 ---
 
 ### 4.5 MockClientTaxPage.vue
 
-| 行範囲 | 現在のコード | 新しいコード |
-|--------|------------|------------|
-| L189 | `import { TAX_CATEGORY_MASTER }` | 削除 |
-| composable接続 | `useClientTaxCategories(clientId.value)` | `useAccountSettings('client', clientId.value)` |
-| L228 | `[...TAX_CATEGORY_MASTER]` | `settings.taxCategories.value`から取得 |
-| L243 | `[...TAX_CATEGORY_MASTER]` | `settings.taxCategories.value` |
-| L516 | `TAX_CATEGORY_MASTER.map(...)` | `settings.defaultTaxOrder` |
+#### 実施結果（2026-03-16完了）
+
+- 旧import（TAX_CATEGORY_MASTER, useClientTaxCategories）を削除
+- `const settings = useAccountSettings('client', clientId.value)` 追加
+- 旧キーマイグレーションブロックを削除（useAccountSettings内部で実行済み）
+- `loadTaxRows()`: `clientTaxComposable` → `settings.taxCategories.value`（UnifiedTaxCategory.hiddenでdeprecated導出）
+- `saveChanges()`: `clientTaxComposable.saveAll()` → `settings.saveTaxCategories()`
+- `TAX_CATEGORY_MASTER.map(...)` → `settings.defaultTaxOrder.value`
+- vue-tsc通過確認済み
 
 ---
 
 ### 4.6 JournalListLevel3Mock.vue
 
-| 行範囲 | 現在のコード | 新しいコード |
-|--------|------------|------------|
-| L967 | `import { ACCOUNT_MASTER }` | 削除 |
-| L968-999 | `useClients` + `useClientAccounts` + `useTaxMaster` | `useAccountSettings('client', clientId)` |
-| L1010 | `ACCOUNT_MASTER` フォールバック | `settings.visibleAccounts.value` |
-| L1059 | `ACCOUNT_MASTER` フォールバック | `settings.accounts.value` |
-| L1118 | `ACCOUNT_MASTER` フォールバック | `settings.accounts.value` |
-| L1121 | `masterTaxCategories.value.find(...)` | `settings.resolveTaxCategoryName(id)` |
-| L1158 | `ACCOUNT_MASTER` フォールバック | `settings.accounts.value` |
-| L2491 | `masterTaxCategories.value.find(...)` | `settings.resolveTaxCategoryName(id)` |
+#### 実施結果（2026-03-16完了）
+
+- 旧import（useTaxMaster, ACCOUNT_MASTER, useClientAccounts）を削除
+- `const masterSettings = useAccountSettings('master')` 追加（税区分・デフォルト科目参照用）
+- `const clientSettings = computed(() => useAccountSettings('client', clientId))` 追加（顧問先切替に対応）
+- ACCOUNT_MASTERフォールバック4箇所 → `masterSettings.accounts.value`
+- `masterTaxCategories` → `masterSettings.taxCategories`
+- `clientAccountsComposable.value.visibleClientAccounts` → `clientSettings.value.visibleAccounts`
+- `clientAccountsComposable.value.clientAccounts` → `clientSettings.value.accounts`
+- `clientAccountsComposable.value.subAccounts` → `clientSettings.value.subAccounts`
+- vue-tsc通過確認済み
+
+**MockExportPage.vue**（設計書初版では漏れていた）:
+- `import { ACCOUNT_MASTER }` → `import { useAccountSettings }`
+- `const masterSettings = useAccountSettings('master')` 追加
+- `ACCOUNT_MASTER.filter(...)` → `masterSettings.accounts.value.filter(...)`
+- vue-tsc通過確認済み
 
 ---
 
@@ -642,13 +656,13 @@ import { useAccountSettings } from '@/features/account-settings/composables/useA
 
 ### 7.1 実装時のチェック
 
-- [ ] ページファイルに`TAX_CATEGORY_MASTER`の直接importが**0件**であること
-- [ ] ページファイルに`ACCOUNT_MASTER`の直接importが**0件**であること（ソート用の`defaultAccountOrder`は除く）
-- [ ] ページファイルに`useAccountMaster`/`useTaxMaster`/`useClientAccounts`/`useClientTaxCategories`の直接importが**0件**であること
-- [ ] 全ページが`useAccountSettings`の**1つのimport**だけでデータ取得していること
-- [ ] `source`プロパティで「マスタ」「マスタ（カスタム）」「顧問先独自」を判定していること
-- [ ] `filteredTaxCategories()`がカスタム税区分も含めて返していること
-- [ ] `resolveTaxCategoryName()`がカスタム税区分も名前解決できること
+- [x] ページファイルに`TAX_CATEGORY_MASTER`の直接importが**0件**であること
+- [x] ページファイルに`ACCOUNT_MASTER`の直接importが**0件**であること（コメント内文字列1件のみ）
+- [x] ページファイルに`useAccountMaster`/`useTaxMaster`/`useClientAccounts`/`useClientTaxCategories`の直接importが**0件**であること
+- [x] 全ページが`useAccountSettings`の**1つのimport**だけでデータ取得していること
+- [x] `filteredTaxCategories()`がカスタム税区分も含めて返していること
+- [x] `resolveTaxCategoryName()`がカスタム税区分も名前解決できること
+- [x] `vue-tsc --noEmit` 通過
 
 ### 7.2 検証コマンド
 
@@ -681,22 +695,24 @@ rg "useAccountMaster|useTaxMaster|useClientAccounts|useClientTaxCategories" src/
 
 ## 8. 実施順序
 
-| ステップ | 内容 | 影響範囲 |
-|---------|------|---------|
-| 1 | `account-settings.types.ts` 作成 | 新規ファイル |
-| 2 | `useAccountSettings.ts` 作成 | 新規ファイル |
-| 3 | `MockMasterAccountsPage.vue` リファクタリング | 既存ファイル |
-| 4 | `vue-tsc` 確認 | — |
-| 5 | `MockMasterTaxCategoriesPage.vue` リファクタリング | 既存ファイル |
-| 6 | `vue-tsc` 確認 | — |
-| 7 | `MockClientAccountsPage.vue` リファクタリング | 既存ファイル |
-| 8 | `vue-tsc` 確認 | — |
-| 9 | `MockClientTaxPage.vue` リファクタリング | 既存ファイル |
-| 10 | `vue-tsc` 確認 | — |
-| 11 | `JournalListLevel3Mock.vue` リファクタリング | 既存ファイル |
-| 12 | `vue-tsc` 確認 | — |
-| 13 | 全4検証コマンド実行 | — |
-| 14 | ユーザーにブラウザ検証依頼 | — |
+| ステップ | 内容 | 影響範囲 | ステータス |
+|---------|------|---------|---------|
+| 1 | `account-settings.types.ts` 作成 | 新規ファイル | ✅ 完了 |
+| 2 | `useAccountSettings.ts` 作成 | 新規ファイル | ✅ 完了 |
+| 3 | `MockMasterAccountsPage.vue` リファクタリング | 既存ファイル | ✅ 完了 |
+| 4 | `vue-tsc` 確認 | — | ✅ 通過 |
+| 5 | `MockMasterTaxCategoriesPage.vue` リファクタリング | 既存ファイル | ✅ 完了 |
+| 6 | `vue-tsc` 確認 | — | ✅ 通過 |
+| 7 | `MockClientAccountsPage.vue` リファクタリング | 既存ファイル | ✅ 完了 |
+| 8 | `vue-tsc` 確認 | — | ✅ 通過 |
+| 9 | `MockClientTaxPage.vue` リファクタリング | 既存ファイル | ✅ 完了 |
+| 10 | `vue-tsc` 確認 | — | ✅ 通過 |
+| 11 | `JournalListLevel3Mock.vue` リファクタリング | 既存ファイル | ✅ 完了 |
+| 12 | `vue-tsc` 確認 | — | ✅ 通過 |
+| 13 | `MockExportPage.vue` リファクタリング | 既存ファイル | ✅ 完了 |
+| 14 | `vue-tsc` 確認 | — | ✅ 通過 |
+| 15 | 全4検証コマンド実行 | — | ✅ 完了 |
+| 16 | ユーザーにブラウザ検証依頼 | — | ⬜ 未実施 |
 
 **各ステップで`vue-tsc`を挟む理由**: 1ファイルずつ確認することで、エラーの原因を特定しやすくする。複数ファイルを一気に変更するとエラーの切り分けが困難になる。
 
@@ -873,7 +889,7 @@ if (clientId.value) {
 }
 ```
 
-**対策**: この処理はuseAccountSettingsに移動する。`scope='client'`初期化時に旧キーを検出し、新キーへ移行する。
+**対策**: ✅ 実装済み。useAccountSettingsの`scope='client'`初期化時に旧キーを検出し、新キーへ移行する処理を実装済み（L34-46）。MockClientTaxPageのマイグレーションブロックは削除済み。
 
 ```typescript
 // useAccountSettings内の初期化

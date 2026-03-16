@@ -134,12 +134,13 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { mockJournalsPhase5 } from '../data/journal_test_fixture_30cases';
-import { ACCOUNT_MASTER } from '@/shared/data/account-master';
+import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 
+const masterSettings = useAccountSettings('master');
 
 // --- 勘定科目マスタから科目名リスト（deprecated除外） ---
 const accountNames = computed(() => {
-  const names = ACCOUNT_MASTER
+  const names = masterSettings.accounts.value
     .filter(a => !a.deprecated)
     .map(a => a.name);
   return [...new Set(names)];
@@ -248,7 +249,7 @@ const allRows = computed<ExportRow[]>(() => {
       return {
         id: j.id,
         qualified: j.invoice_status === 'qualified' ? '○' : '',
-        date: formatDate(j.transaction_date ?? ''),
+        date: formatDate(j.voucher_date ?? ''),
         description: j.description,
         debitAccount: debit?.account ?? '',
         debitSub: debit?.sub_account ?? '',

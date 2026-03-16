@@ -86,6 +86,10 @@
     <div class="flex-1 overflow-x-auto overflow-y-scroll">
 
     <!-- テーブルヘッダー（25列） -->
+    <div v-if="sortColumn" class="bg-yellow-50 px-3 py-0.5 flex items-center gap-2 border-b border-yellow-200">
+      <span class="text-[10px] text-yellow-700">ソート中: {{ journalColumns.find(c => c.sortKey === sortColumn)?.label ?? sortColumn }}</span>
+      <button class="px-2 py-0.5 bg-gray-200 hover:bg-gray-300 text-[10px] rounded" @click="resetToDefaultOrder">デフォルト順</button>
+    </div>
     <div class="bg-blue-100 text-gray-800 text-[10px] flex border-b border-gray-300 min-w-[1400px] sticky top-0 z-10">
       <div
         v-for="col in journalColumns"
@@ -109,7 +113,7 @@
             {{ col.label }}
             <span v-if="col.key === 'labelType' || col.key === 'warning'"
                   class="relative inline-flex"
-                  @mouseenter="legendModalType = col.key as any"
+                  @mouseenter="legendModalType = col.key as 'labelType' | 'warning'"
                   @mouseleave="legendModalType = null">
               <span class="inline-flex items-center justify-center w-3 h-3 rounded-full bg-gray-800 text-white text-[7px] font-bold cursor-pointer hover:bg-blue-600 shrink-0">?</span>
               <!-- 証票ポップオーバー -->
@@ -296,9 +300,8 @@
                 <div v-if="rowIndex === 0"
                      :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <i v-if="journal.labels.some((l: string) => warningLabelMap[l])"
-                     class="fa-solid fa-triangle-exclamation text-[10px] text-red-600 cursor-default"
-                     @mouseenter="showWarningTooltip($event, journal.labels, journal)"
-                     @mouseleave="hideTooltip()"></i>
+                     class="fa-solid fa-triangle-exclamation text-[10px] text-red-600 cursor-pointer"
+                     @click.stop="showWarningTooltip($event, journal.labels, journal)"></i>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -346,7 +349,7 @@
 
               <!-- 適格 -->
               <template v-else-if="col.key === 'invoice'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 cursor-pointer hover:bg-blue-50 relative']" @dblclick.stop="startCellEdit(journal.id, rowIndex, 'invoice', journal.labels.includes('INVOICE_QUALIFIED') ? '◯' : journal.labels.includes('INVOICE_NOT_QUALIFIED') ? '✕' : '')">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 cursor-pointer hover:bg-yellow-100 relative']" @dblclick.stop="startCellEdit(journal.id, rowIndex, 'invoice', journal.labels.includes('INVOICE_QUALIFIED') ? '◯' : journal.labels.includes('INVOICE_NOT_QUALIFIED') ? '✕' : '')">
                   <template v-if="isEditing(journal.id, rowIndex, 'invoice')">
                     <select class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" style="height:100%;min-height:0;line-height:1;" v-model="editingValue" @change="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()">
                       <option value="">　</option>
@@ -419,9 +422,9 @@
             <template v-else-if="col.type === 'text'">
               <!-- journal-level（keyにドットなし）: rowIndex===0のみ表示 -->
               <template v-if="!col.key.includes('.')">
-                <div v-if="rowIndex === 0" :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 flex items-center border-r border-gray-200 cursor-pointer hover:bg-blue-50 relative', col.key === 'transaction_date' ? 'justify-center text-[8px]' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(journal, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(journal, col.key), $event)">
+                <div v-if="rowIndex === 0" :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 flex items-center border-r border-gray-200 cursor-pointer hover:bg-yellow-100 relative', col.key === 'voucher_date' ? 'justify-center text-[8px]' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(journal, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(journal, col.key), $event)">
                   <!-- 日付: 編集中はdate input -->
-                  <template v-if="col.key === 'transaction_date' && isEditing(journal.id, rowIndex, col.key)">
+                  <template v-if="col.key === 'voucher_date' && isEditing(journal.id, rowIndex, col.key)">
                     <input type="date" class="inline-edit-input w-full text-[8px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" v-model="editingValue" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
                   </template>
                   <!-- 摘要: 編集中はtext input -->
@@ -430,14 +433,14 @@
                   </template>
                   <!-- 非編集中 -->
                   <template v-else>
-                    {{ col.key === 'transaction_date' ? formatDate(getValue(journal, col.key)) : (getValue(journal, col.key) ?? NULL_DISPLAY_UNKNOWN) }}
+                    {{ col.key === 'voucher_date' ? formatDate(getValue(journal, col.key)) : (getValue(journal, col.key) ?? NULL_DISPLAY_UNKNOWN) }}
                   </template>
                   <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key)" class="absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getValue(journal, col.key), $event)"></span>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
               <!-- entry-level（keyにドットあり）: 補助科目等 -->
-              <div v-else :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] cursor-pointer hover:bg-blue-50 relative', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
+              <div v-else :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] cursor-pointer hover:bg-yellow-100 relative', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <input type="text" class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" v-model="editingValue" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
                 </template>
@@ -450,7 +453,7 @@
 
             <!-- amount型 -->
             <template v-else-if="col.type === 'amount'">
-              <div :class="[col.width, 'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px] cursor-pointer hover:bg-blue-50', col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))">
+              <div :class="[col.width, 'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px] cursor-pointer hover:bg-yellow-100', col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <input type="text" inputmode="numeric" class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0 text-right font-mono" v-model="editingValue" @input="onAmountInput($event)" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
                 </template>
@@ -795,7 +798,7 @@
                   :key="index"
                   :class="result.status === 'exported' ? 'bg-white' : 'bg-blue-50'"
                   class="hover:bg-blue-100 cursor-pointer">
-                <td class="border px-2 py-1 text-center">{{ result.transaction_date ? formatDate(result.transaction_date) : '-' }}</td>
+                <td class="border px-2 py-1 text-center">{{ result.voucher_date ? formatDate(result.voucher_date) : '-' }}</td>
                 <td class="border px-2 py-1">{{ result.description }}</td>
                 <td class="border px-2 py-1">{{ result.debit_entries[0]?.account || '' }}</td>
                 <td class="border px-2 py-1">{{ result.debit_entries[0]?.sub_account || '' }}</td>
@@ -963,17 +966,15 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster';
-import { ACCOUNT_MASTER } from '@/shared/data/account-master';
+import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useClients } from '@/features/client-management/composables/useClients';
-import { useClientAccounts } from '@/features/account-management/composables/useClientAccounts';
 import { NULL_DISPLAY_UNKNOWN, compareWithNull } from '@/mocks/definitions/field-nullable-spec';
 import { useDraggable } from '@/mocks/composables/useDraggable';
 import { useCurrentUser, STAFF_LIST } from '@/mocks/composables/useCurrentUser';
 import { journalColumns } from '@/mocks/columns/journalColumns';
 import { mockJournalsPhase5 as fixtureData } from '../data/journal_test_fixture_30cases';
 import { getDocumentImageUrl } from '../data/document_mock_data';
-import type { JournalPhase5Mock, JournalEntryLine } from '../types/journal_phase5_mock.type';
+import type { JournalPhase5Mock, JournalEntryLine, JournalLabelMock } from '../types/journal_phase5_mock.type';
 import { createEmptyStaffNotes, STAFF_NOTE_KEYS } from '../types/staff_notes';
 import type { StaffNoteKey } from '../types/staff_notes';
 
@@ -992,14 +993,15 @@ const activeClientFull = computed(() => {
   return clients.value.find(c => c.clientId === currentClient.value!.clientId) ?? null;
 });
 
-// 顧問先の勘定科目 composable（マスタ非表示・顧問先非表示を反映）
-const clientAccountsComposable = computed(() => {
+// 顧問先の勘定科目 composable（useAccountSettings経由）
+const clientSettings = computed(() => {
   if (!currentClient.value) return null;
-  return useClientAccounts(currentClient.value.clientId);
+  return useAccountSettings('client', currentClient.value.clientId);
 });
 
-// 税区分composable（マスタ税区分 + カスタム税区分を含む）
-const { masterTaxCategories } = useTaxMaster();
+// マスタ設定（税区分・デフォルト科目参照用）
+const masterSettings = useAccountSettings('master');
+const masterTaxCategories = masterSettings.taxCategories;
 
 /** 顧問先のtype/hasRentalIncomeでフィルタ済み勘定科目リスト */
 const filteredAccounts = computed(() => {
@@ -1007,10 +1009,10 @@ const filteredAccounts = computed(() => {
   const clientType = client?.type ?? 'corp';
   const hasRental = client?.hasRentalIncome ?? false;
 
-  // composableがあればvisibleClientAccountsを使用（非表示科目除外済み）
-  const source = clientAccountsComposable.value
-    ? clientAccountsComposable.value.visibleClientAccounts.value
-    : ACCOUNT_MASTER;
+  // composableがあればvisibleAccountsを使用（非表示科目除外済み）
+  const source = clientSettings.value
+    ? clientSettings.value.visibleAccounts.value
+    : masterSettings.accounts.value;
 
   return source
     .filter(acc => {
@@ -1056,10 +1058,10 @@ const searchAllAccounts = computed(() => {
     }
   }
 
-  // composableがあれば全科目（非表示含む）を使用、なければACCOUNT_MASTER
-  const allSource = clientAccountsComposable.value
-    ? clientAccountsComposable.value.clientAccounts.value
-    : ACCOUNT_MASTER;
+  // composableがあれば全科目（非表示含む）を使用
+  const allSource = clientSettings.value
+    ? clientSettings.value.accounts.value
+    : masterSettings.accounts.value;
 
   return allSource
     .filter(acc => !acc.deprecated)
@@ -1116,9 +1118,9 @@ function selectAccount(row: any, colKey: string, accountName: string) {
 
   // デフォルト税区分を自動設定（MF名称で格納）
   if (accountName) {
-    const allAccounts = clientAccountsComposable.value
-      ? clientAccountsComposable.value.clientAccounts.value
-      : ACCOUNT_MASTER;
+    const allAccounts = clientSettings.value
+      ? clientSettings.value.accounts.value
+      : masterSettings.accounts.value;
     const acc = allAccounts.find(a => a.name === accountName);
     if (acc?.defaultTaxCategoryId) {
       const tc = masterTaxCategories.value.find(t => t.id === acc.defaultTaxCategoryId);
@@ -1126,8 +1128,8 @@ function selectAccount(row: any, colKey: string, accountName: string) {
     }
 
     // 補助科目を自動設定（顧問先の設定から取得）
-    if (acc && clientAccountsComposable.value) {
-      const sub = clientAccountsComposable.value.subAccounts.value[acc.id];
+    if (acc && clientSettings.value) {
+      const sub = clientSettings.value.subAccounts.value[acc.id];
       entry.sub_account = sub || null;
     }
   } else {
@@ -1164,9 +1166,9 @@ function getCategoryForEntry(row: Record<string, unknown>, colKey: string): stri
   // なければ勘定科目名からcategoryを逆引き
   const accountName = entry.account as string | null;
   if (!accountName) return '';
-  const allAccounts = clientAccountsComposable.value
-    ? clientAccountsComposable.value.clientAccounts.value
-    : ACCOUNT_MASTER;
+  const allAccounts = clientSettings.value
+    ? clientSettings.value.accounts.value
+    : masterSettings.accounts.value;
   const acc = allAccounts.find(a => a.name === accountName);
   return acc?.category ?? '';
 }
@@ -1222,10 +1224,10 @@ function commitCellEdit(): void {
 
   // journal-level（keyにドットなし）
   if (!e.colKey.includes('.')) {
-    if (e.colKey === 'transaction_date') {
-      (journal as any)[e.colKey] = parseDateInput(val);
+    if (e.colKey === 'voucher_date') {
+      (journal as unknown as Record<string, unknown>)[e.colKey] = parseDateInput(val);
     } else {
-      (journal as any)[e.colKey] = val;
+      (journal as unknown as Record<string, unknown>)[e.colKey] = val;
     }
   } else {
     // entry-level（debit.amount → row.debit.amount）
@@ -1236,12 +1238,12 @@ function commitCellEdit(): void {
       const side = parts[0];
       const field = parts[1];
       if (side && field) {
-        const entry = (row as any)[side];
+        const entry = row[side as 'debit' | 'credit'];
         if (entry) {
           if (field === 'amount') {
-            entry[field] = val ? Number(val) : null;
+            entry[field as keyof JournalEntryLine] = (val ? Number(val) : null) as never;
           } else {
-            entry[field] = val;
+            (entry as unknown as Record<string, unknown>)[field] = val;
           }
         }
       }
@@ -1345,7 +1347,7 @@ function endFillDrag(): void {
 function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unknown): void {
   if (!colKey.includes('.')) {
     // journal-level (description)
-    (journal as any)[colKey] = value;
+    (journal as unknown as Record<string, unknown>)[colKey] = value;
   } else {
     // entry-level: 最初のentryに適用
     const rows = getCombinedRows(journal);
@@ -1355,13 +1357,13 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
     const side = parts[0];
     const field = parts[1];
     if (side && field) {
-      const entry = (row as any)[side];
+      const entry = row[side as 'debit' | 'credit'];
       if (entry) {
         if (colKey.endsWith('.category')) {
           // 区分変更: selectedCategoryを更新
-          entry.selectedCategory = value || null;
+          (entry as unknown as Record<string, unknown>).selectedCategory = value || null;
         } else {
-          entry[field] = value;
+          (entry as unknown as Record<string, unknown>)[field] = value;
         }
       }
     }
@@ -2041,10 +2043,10 @@ const filteredPastJournals = computed(() => {
 
   // 日付範囲フィルタ
   if (pastJournalSearch.value.dateFrom) {
-    results = results.filter(j => j.transaction_date !== null && j.transaction_date >= pastJournalSearch.value.dateFrom);
+    results = results.filter(j => j.voucher_date !== null && j.voucher_date >= pastJournalSearch.value.dateFrom);
   }
   if (pastJournalSearch.value.dateTo) {
-    results = results.filter(j => j.transaction_date !== null && j.transaction_date <= pastJournalSearch.value.dateTo);
+    results = results.filter(j => j.voucher_date !== null && j.voucher_date <= pastJournalSearch.value.dateTo);
   }
 
   // 金額フィルタ
@@ -2217,7 +2219,7 @@ function onMouseUp() {
 
 const journals = computed(() => {
   const result = [...localJournals.value].sort((a, b) => {
-    return new Date(a.transaction_date ?? '9999-12-31').getTime() - new Date(b.transaction_date ?? '9999-12-31').getTime();
+    return new Date(a.voucher_date ?? '9999-12-31').getTime() - new Date(b.voucher_date ?? '9999-12-31').getTime();
   });
 
   if (sortColumn.value) {
@@ -2314,10 +2316,10 @@ const journals = computed(() => {
           bVal = getInvoiceWeight(b.labels);
           break;
         // D5: compareWithNull（null比較関数）で統一。null時は昇順=末尾、降順=先頭
-        case 'transaction_date':
+        case 'voucher_date':
           return compareWithNull(
-            a.transaction_date ? new Date(a.transaction_date).getTime() : null,
-            b.transaction_date ? new Date(b.transaction_date).getTime() : null,
+            a.voucher_date ? new Date(a.voucher_date).getTime() : null,
+            b.voucher_date ? new Date(b.voucher_date).getTime() : null,
             sortDirection.value, (x, y) => x - y
           );
         case 'description':
@@ -2374,7 +2376,7 @@ const journals = computed(() => {
     if (journal.deleted_at !== null && !showTrashed.value) return false;
 
     // 証票種別フィルタ（AND条件: 選択時はそのラベルを含む仕訳のみ表示）
-    if (voucherFilter.value && !journal.labels.includes(voucherFilter.value as any)) return false;
+    if (voucherFilter.value && !journal.labels.includes(voucherFilter.value as JournalLabelMock)) return false;
 
     const isExcluded = journal.labels.includes('EXPORT_EXCLUDE');
     const isExported = journal.status === 'exported';
@@ -2437,6 +2439,11 @@ function sortBy(column: string) {
     sortColumn.value = column;
     sortDirection.value = 'asc';
   }
+}
+
+function resetToDefaultOrder() {
+  sortColumn.value = null;
+  sortDirection.value = 'asc';
 }
 
 function getCombinedRows(journal: JournalPhase5Mock): Array<{ debit: JournalEntryLine | null, credit: JournalEntryLine | null }> {
@@ -2540,7 +2547,7 @@ function scheduleHideNeedPopup() {
     needPopupJournalId.value = null
     needPopupKey.value = null
     needPopupHideTimer = null
-  }, 1500)  // 1.5秒の遅延
+  }, 500)  // 500msの遅延
 }
 
 function cancelHideNeedPopup() {
