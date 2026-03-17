@@ -272,7 +272,7 @@ const router = createRouter({
 
 // Firebase認証状態の読み込みを待つPromise
 let authInitialized = false;
-const _authReadyPromise = new Promise<void>((resolve) => {
+const authReadyPromise = new Promise<void>((resolve) => {
   import('@/utils/auth').then(({ onAuthStateChanged }) => {
     const unsubscribe = onAuthStateChanged(() => {
       if (!authInitialized) {
@@ -287,6 +287,9 @@ const _authReadyPromise = new Promise<void>((resolve) => {
 // 認証ガード（全環境で有効）
 
 router.beforeEach(async (to) => {
+  // 認証初期化を待つ（Firebase読み込み完了まで）
+  await authReadyPromise;
+
   // 開発環境: 認証ガード無効化（直接URLアクセス可能）
   if (to.path === '/login') {
     return;

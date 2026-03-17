@@ -858,3 +858,33 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 ### R-5. 検証結果
 
 - `vue-tsc --noEmit`: 0件 ✅
+
+
+## S. IDEエラー修正2件 + useAccountSettings巻き戻りチェック（2026-03-17）
+
+> line_idフィクスチャ欠落とauthReadyPromise未使用警告を修正。useAccountSettingsリファクタリング状態も検証。
+
+### S-1. line_idフィクスチャ修正（33件）
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `journal_test_fixture_30cases.ts` | 全33件のエントリに `line_id: null` を追加。DDL・スキーマ設計書・`JournalPhase5Mock`型・`transformToJournalMock.ts`（null出力）と整合 | ✅ |
+
+### S-2. authReadyPromise修正
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `router/index.ts` L272 | `_authReadyPromise` → `authReadyPromise` にリネーム | ✅ |
+| 2 | `router/index.ts` L286 | `beforeEach`ガード内に `await authReadyPromise;` を追加（認証初期化待機） | ✅ |
+
+### S-3. useAccountSettings巻き戻りチェック
+
+| チェック項目 | 結果 |
+|---|:---:|
+| `useAccountSettings` import（6ページ） | ✅ 全件あり |
+| `ACCOUNT_MASTER`/`TAX_CATEGORY_MASTER` 直接import（.vueファイル） | ✅ 0件 |
+| 旧composable直接参照（`useAccountMaster`/`useTaxMaster`/`useClientAccounts`/`useClientTaxCategories`） | ✅ 0件 |
+
+### S-4. 検証結果
+
+- `vue-tsc --noEmit`: 0件 ✅

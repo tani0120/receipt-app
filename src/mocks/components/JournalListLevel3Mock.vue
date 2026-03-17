@@ -18,8 +18,8 @@
             <option>学習適用済</option>
             <option>学習なし</option>
           </select>
-          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showUnexported" class="w-2.5 h-2.5">未出力を表示</label>
-          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExported" class="w-2.5 h-2.5">出力済を表示</label>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showUnexported" class="w-2.5 h-2.5">出力対象を表示</label>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExported" class="w-2.5 h-2.5">過去出力済を表示</label>
           <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExcluded" class="w-2.5 h-2.5">出力対象外を表示</label>
           <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showTrashed" class="w-2.5 h-2.5">ゴミ箱を表示</label>
           <div class="border-l-2 border-gray-400 h-4 mx-1"></div>
@@ -86,9 +86,9 @@
     <div class="flex-1 overflow-x-auto overflow-y-scroll">
 
     <!-- テーブルヘッダー（25列） -->
-    <div v-if="sortColumn" class="bg-yellow-50 px-3 py-0.5 flex items-center gap-2 border-b border-yellow-200">
-      <span class="text-[10px] text-yellow-700">ソート中: {{ journalColumns.find(c => c.sortKey === sortColumn)?.label ?? sortColumn }}</span>
-      <button class="px-2 py-0.5 bg-gray-200 hover:bg-gray-300 text-[10px] rounded" @click="resetToDefaultOrder">デフォルト順</button>
+    <div v-if="sortColumn" class="bg-orange-100 px-3 py-1.5 flex items-center justify-center gap-3 border-b-2 border-orange-300">
+      <span class="text-[15px] font-bold text-orange-800">ソート中: {{ journalColumns.find(c => c.sortKey === sortColumn)?.label ?? sortColumn }}</span>
+      <button class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[12px] font-bold rounded shadow-sm" @click="resetToDefaultOrder">デフォルト順</button>
     </div>
     <div class="bg-blue-100 text-gray-800 text-[10px] flex border-b border-gray-300 min-w-[1400px] sticky top-0 z-10">
       <div
@@ -181,8 +181,7 @@
                'flex text-[10px] min-w-[1400px]',
                getRowBackground(journal),
                journal.status === 'exported' ? 'border-b border-white' : 'border-b border-gray-200',
-               rowIndex === 0 && journalIndex > 0 ? 'border-t-2 border-t-gray-300' : '',
-               isFillTarget(journalIndex) ? 'fill-target-row' : ''
+               rowIndex === 0 && journalIndex > 0 ? 'border-t-2 border-t-gray-300' : ''
              ]">
 
           <!-- 列定義駆動ボディ（v-for by journalColumns） -->
@@ -230,9 +229,12 @@
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
 
-              <!-- コメント（staff_notesベース） -->
+              <!-- コメント（staff_notesベース: ホバーでモーダル表示、クリックで固定） -->
               <template v-else-if="col.key === 'comment'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 cursor-pointer']" @click="openCommentModal(journal.id)">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 cursor-pointer relative']"
+                     @mouseenter="hoverOpenCommentModal(journal)"
+                     @mouseleave="scheduleHoverCloseCommentModal()"
+                     @click.stop="openCommentModal(journal.id); pinCommentModal()">
                   <i v-if="hasAnyStaffNote(journal)" class="fa-solid fa-comment-dots text-[10px] text-emerald-600"></i>
                   <i v-else class="fa-solid fa-comment-dots text-[10px] text-gray-300 opacity-50"></i>
                 </div>
@@ -301,7 +303,9 @@
                      :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <i v-if="journal.labels.some((l: string) => warningLabelMap[l])"
                      class="fa-solid fa-triangle-exclamation text-[10px] text-red-600 cursor-pointer"
-                     @click.stop="showWarningTooltip($event, journal.labels, journal)"></i>
+                     @mouseenter="showWarningTooltip($event, journal.labels, journal)"
+                     @mouseleave="hideTooltip()"
+                     @click.stop="openWarningConfirmModal(journal)"></i>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
@@ -349,7 +353,7 @@
 
               <!-- 適格 -->
               <template v-else-if="col.key === 'invoice'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 cursor-pointer hover:bg-yellow-100 relative']" @dblclick.stop="startCellEdit(journal.id, rowIndex, 'invoice', journal.labels.includes('INVOICE_QUALIFIED') ? '◯' : journal.labels.includes('INVOICE_NOT_QUALIFIED') ? '✕' : '')">
+                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 relative jl-editable']" @dblclick.stop="startCellEdit(journal.id, rowIndex, 'invoice', journal.labels.includes('INVOICE_QUALIFIED') ? '◯' : journal.labels.includes('INVOICE_NOT_QUALIFIED') ? '✕' : '')">
                   <template v-if="isEditing(journal.id, rowIndex, 'invoice')">
                     <select class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" style="height:100%;min-height:0;line-height:1;" v-model="editingValue" @change="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()">
                       <option value="">　</option>
@@ -369,25 +373,25 @@
 
             <!-- category-dropdown型（区分ドロップダウン） -->
             <template v-else-if="col.type === 'category-dropdown'">
-              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 border-r border-gray-200 text-[10px] relative', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @mousedown="startCellDrag(col.key, getCategoryForEntry(row, col.key), $event)">
+              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 border-r border-gray-200 text-[10px] relative jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @mousedown="startCellDrag(col.key, getCategoryForEntry(row, col.key), $event)">
                 <select
                   class="w-full text-[9px] bg-white border border-gray-300 rounded outline-none cursor-pointer hover:bg-gray-50 pl-0.5 pr-3 py-0"
                   style="height: 100%; min-height: 0; line-height: 1;"
                   :value="getCategoryForEntry(row, col.key)"
-                  @change="setCategoryForEntry(row, col.key, ($event.target as HTMLSelectElement).value)"
+                  @change="setCategoryForEntry(row, col.key, ($event.target as HTMLSelectElement).value); journal.is_read = true"
                 >
                   <option value="">--</option>
                   <optgroup v-for="g in categoryGroupsForJournal" :key="g.label" :label="g.label">
                     <option v-for="c in g.items" :key="c" :value="c">{{ c }}</option>
                   </optgroup>
                 </select>
-                <span v-if="isFillable(col.key)" class="absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getCategoryForEntry(row, col.key), $event)"></span>
+                <span v-if="isFillable(col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getCategoryForEntry(row, col.key), $event)"></span>
               </div>
             </template>
 
             <!-- account-dropdown型（検索ドロップダウン） -->
             <template v-else-if="col.type === 'account-dropdown'">
-              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 relative border-r border-gray-200 text-[10px]', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @mousedown="startCellDrag(col.key, getRawValue(row, col.key), $event)">
+              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 relative border-r border-gray-200 text-[10px] jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @mousedown="startCellDrag(col.key, getRawValue(row, col.key), $event)">
                 <div class="relative w-full">
                   <input
                     type="text"
@@ -412,7 +416,7 @@
                   </div>
                   <div v-if="searchAllAccounts.length === 0" class="px-2 py-1 text-[9px] text-gray-400">該当なし</div>
                 </div>
-                <span v-if="isFillable(col.key)" class="absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getRawValue(row, col.key) as string, $event)"></span>
+                <span v-if="isFillable(col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getRawValue(row, col.key) as string, $event)"></span>
               </div>
             </template>
 
@@ -422,7 +426,7 @@
             <template v-else-if="col.type === 'text'">
               <!-- journal-level（keyにドットなし）: rowIndex===0のみ表示 -->
               <template v-if="!col.key.includes('.')">
-                <div v-if="rowIndex === 0" :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 flex items-center border-r border-gray-200 cursor-pointer hover:bg-yellow-100 relative', col.key === 'voucher_date' ? 'justify-center text-[8px]' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(journal, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(journal, col.key), $event)">
+                <div v-if="rowIndex === 0" :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 flex items-center border-r border-gray-200 relative jl-editable', col.key === 'voucher_date' ? 'justify-center text-[8px]' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(journal, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(journal, col.key), $event)">
                   <!-- 日付: 編集中はdate input -->
                   <template v-if="col.key === 'voucher_date' && isEditing(journal.id, rowIndex, col.key)">
                     <input type="date" class="inline-edit-input w-full text-[8px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" v-model="editingValue" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
@@ -435,25 +439,37 @@
                   <template v-else>
                     {{ col.key === 'voucher_date' ? formatDate(getValue(journal, col.key)) : (getValue(journal, col.key) ?? NULL_DISPLAY_UNKNOWN) }}
                   </template>
-                  <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key)" class="absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getValue(journal, col.key), $event)"></span>
+                  <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getValue(journal, col.key), $event)"></span>
                 </div>
                 <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
               </template>
-              <!-- entry-level（keyにドットあり）: 補助科目等 -->
-              <div v-else :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] cursor-pointer hover:bg-yellow-100 relative', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
+              <!-- entry-level（keyにドットあり）: 補助科目・税区分等 -->
+              <div v-else :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
-                  <input type="text" class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" v-model="editingValue" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
+                  <!-- F4: 税区分はプルダウン -->
+                  <select v-if="col.key.endsWith('.tax_category_id')"
+                    class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0"
+                    style="height:100%;min-height:0;line-height:1;"
+                    v-model="editingValue"
+                    @change="commitCellEdit(); journal.is_read = true"
+                    @keydown.escape="cancelCellEdit()"
+                    @blur="commitCellEdit()">
+                    <option value="">--</option>
+                    <option v-for="tc in masterTaxCategories" :key="tc.id" :value="tc.name">{{ tc.name }}</option>
+                  </select>
+                  <!-- その他はテキスト入力 -->
+                  <input v-else type="text" class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" v-model="editingValue" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
                 </template>
                 <template v-else>
                   {{ getValue(row, col.key) ?? '' }}
                 </template>
-                <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key)" class="absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getValue(row, col.key), $event)"></span>
+                <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getValue(row, col.key), $event)"></span>
               </div>
             </template>
 
             <!-- amount型 -->
             <template v-else-if="col.type === 'amount'">
-              <div :class="[col.width, 'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px] cursor-pointer hover:bg-yellow-100', col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))">
+              <div :class="[col.width, 'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px] jl-editable', col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <input type="text" inputmode="numeric" class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0 text-right font-mono" v-model="editingValue" @input="onAmountInput($event)" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
                 </template>
@@ -850,7 +866,9 @@
     <div v-if="commentModalJournalId"
          ref="commentModalRef"
          class="fixed z-[90]"
-         :style="{ left: commentModalPos.left + 'px', top: commentModalPos.top + 'px', zIndex: commentModalZ }">
+         :style="{ left: commentModalPos.left + 'px', top: commentModalPos.top + 'px', zIndex: commentModalZ }"
+         @mouseenter="cancelHoverCloseCommentModal()"
+         @mouseleave="scheduleHoverCloseCommentModal()">
       <div class="bg-white rounded-lg shadow-2xl border-2 border-blue-300 w-[480px]" @click.stop>
         <!-- ドラッグ可能ヘッダー -->
         <div @mousedown="startCommentDrag"
@@ -1136,6 +1154,9 @@ function selectAccount(row: any, colKey: string, accountName: string) {
     entry.sub_account = null;
   }
 
+  // A: 入力で既読化
+  const journalForRead = localJournals.value.find(j => j.id === searchDropdownId.value);
+  if (journalForRead) journalForRead.is_read = true;
   searchDropdownId.value = null;
   searchDropdownQuery.value = '';
   searchDropdownTargetRow = null;
@@ -1218,6 +1239,7 @@ function commitCellEdit(): void {
     if (idx2 >= 0) labels.splice(idx2, 1);
     if (val === '◯') labels.push('INVOICE_QUALIFIED');
     else if (val === '✕') labels.push('INVOICE_NOT_QUALIFIED');
+    journal.is_read = true;
     editingCell.value = null;
     return;
   }
@@ -1249,6 +1271,7 @@ function commitCellEdit(): void {
       }
     }
   }
+  journal.is_read = true;
   editingCell.value = null;
 }
 
@@ -1346,10 +1369,8 @@ function endFillDrag(): void {
 
 function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unknown): void {
   if (!colKey.includes('.')) {
-    // journal-level (description)
     (journal as unknown as Record<string, unknown>)[colKey] = value;
   } else {
-    // entry-level: 最初のentryに適用
     const rows = getCombinedRows(journal);
     const row = rows[0];
     if (!row) return;
@@ -1360,8 +1381,23 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
       const entry = row[side as 'debit' | 'credit'];
       if (entry) {
         if (colKey.endsWith('.category')) {
-          // 区分変更: selectedCategoryを更新
           (entry as unknown as Record<string, unknown>).selectedCategory = value || null;
+        } else if (colKey.endsWith('.account')) {
+          // C: 勘定科目フィル時に補助科目も連動
+          (entry as unknown as Record<string, unknown>)[field] = value;
+          const accountName = value as string;
+          if (accountName) {
+            const allAccounts = clientSettings.value
+              ? clientSettings.value.accounts.value
+              : masterSettings.accounts.value;
+            const acc = allAccounts.find(a => a.name === accountName);
+            if (acc && clientSettings.value) {
+              const sub = clientSettings.value.subAccounts.value[acc.id];
+              entry.sub_account = sub || null;
+            }
+          } else {
+            entry.sub_account = null;
+          }
         } else {
           (entry as unknown as Record<string, unknown>)[field] = value;
         }
@@ -1370,9 +1406,9 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
   }
 }
 
-function isFillTarget(journalIndex: number): boolean {
+function isFillTargetCell(journalIndex: number, colKey: string): boolean {
   if (!fillHandle.value) return false;
-  return fillHandle.value.targetJournalIndices.includes(journalIndex);
+  return fillHandle.value.targetJournalIndices.includes(journalIndex) && fillHandle.value.colKey === colKey;
 }
 
 // ────── セル間ドラッグ&ドロップ ──────
@@ -1597,6 +1633,23 @@ function showWarningTooltip(event: MouseEvent, labels: string[], journal?: Journ
 
 function hideTooltip() {
   tooltipVisible.value = false;
+}
+
+/** B2: 警告モーダル — 確認済みとして警告ラベルを除去するか確認 */
+function openWarningConfirmModal(journal: JournalPhase5Mock) {
+  const warningKeys = Object.keys(warningLabelMap);
+  const warnings = journal.labels.filter(l => warningKeys.includes(l));
+  if (warnings.length === 0) return;
+  hideTooltip();
+  const warningText = warnings.map(l => warningLabelMap[l]?.label ?? l).join('\n');
+  confirmDialog.value = {
+    show: true,
+    title: '警告確認',
+    message: `以下の警告があります:\n${warningText}\n\n確認済みとして警告を解除し、出力対象にしますか？`,
+    onConfirm: () => {
+      journal.labels = journal.labels.filter(l => !warningKeys.includes(l) && l !== 'EXPORT_EXCLUDE');
+    }
+  };
 }
 
 // ポップオーバー凡例: warningLabelMapから動的生成
@@ -2444,6 +2497,23 @@ function sortBy(column: string) {
 function resetToDefaultOrder() {
   sortColumn.value = null;
   sortDirection.value = 'asc';
+  // 3キーソート: document_idグループの最小日付 → 同一証票内日付昇順 → id昇順
+  const minDateMap = new Map<string, string>();
+  localJournals.value.forEach(j => {
+    const docId = j.document_id ?? '';
+    const date = j.voucher_date ?? '\uffff';
+    const cur = minDateMap.get(docId);
+    if (!cur || date < cur) minDateMap.set(docId, date);
+  });
+  localJournals.value.sort((a, b) => {
+    const da = minDateMap.get(a.document_id ?? '') ?? '\uffff';
+    const db = minDateMap.get(b.document_id ?? '') ?? '\uffff';
+    if (da !== db) return da < db ? -1 : 1;
+    const va = a.voucher_date ?? '\uffff';
+    const vb = b.voucher_date ?? '\uffff';
+    if (va !== vb) return va < vb ? -1 : 1;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
 }
 
 function getCombinedRows(journal: JournalPhase5Mock): Array<{ debit: JournalEntryLine | null, credit: JournalEntryLine | null }> {
@@ -2471,9 +2541,9 @@ function getRowBackground(journal: JournalPhase5Mock): string {
   if (journal.deleted_at !== null) {
     return 'bg-gray-600 text-white';
   }
-  // 優先度2: 出力対象外 → 薄赤
+  // 優先度2: 出力対象外 → 薄緑
   if ((journal.labels as string[]).includes('EXPORT_EXCLUDE')) {
-    return 'bg-red-50';
+    return 'bg-green-50';
   }
   // 優先度3: 出力済み → 薄グレー + exported-rowクラス
   if (journal.status === 'exported') {
@@ -2557,6 +2627,43 @@ function cancelHideNeedPopup() {
   }
 }
 
+// B: コメント列ホバー制御（ホバーでフルモーダル、クリックで固定）
+const commentModalPinned = ref(false)
+let commentHoverCloseTimer: ReturnType<typeof setTimeout> | null = null
+
+function hoverOpenCommentModal(journal: JournalPhase5Mock) {
+  if (commentModalPinned.value) return;
+  if (commentHoverCloseTimer) {
+    clearTimeout(commentHoverCloseTimer)
+    commentHoverCloseTimer = null
+  }
+  openCommentModal(journal.id)
+}
+
+function pinCommentModal() {
+  commentModalPinned.value = true
+  if (commentHoverCloseTimer) {
+    clearTimeout(commentHoverCloseTimer)
+    commentHoverCloseTimer = null
+  }
+}
+
+function scheduleHoverCloseCommentModal() {
+  if (commentModalPinned.value) return;
+  if (commentHoverCloseTimer) clearTimeout(commentHoverCloseTimer)
+  commentHoverCloseTimer = setTimeout(() => {
+    closeCommentModal()
+    commentHoverCloseTimer = null
+  }, 500)
+}
+
+function cancelHoverCloseCommentModal() {
+  if (commentHoverCloseTimer) {
+    clearTimeout(commentHoverCloseTimer)
+    commentHoverCloseTimer = null
+  }
+}
+
 function hasAnyStaffNote(journal: JournalPhase5Mock): boolean {
   if (!journal.staff_notes) return false
   return STAFF_NOTE_KEYS.some(key => journal.staff_notes?.[key]?.enabled)
@@ -2632,12 +2739,11 @@ function openCommentModal(journalId: string) {
 
 function closeCommentModal() {
   if (commentModalJournal.value) {
-    // 担当者名を保存
     commentModalJournal.value.staff_notes_author = commentModalAuthor.value
-    // labels同期
     syncLabelsFromStaffNotes(commentModalJournal.value)
   }
   commentModalJournalId.value = null
+  commentModalPinned.value = false
 }
 
 function toggleStaffNoteInModal(key: StaffNoteKey) {
@@ -2653,9 +2759,14 @@ function toggleStaffNoteInModal(key: StaffNoteKey) {
 .exported-row > div {
   border-right-color: white !important;
 }
-/* フィルハンドルドラッグ中のハイライト */
-.fill-target-row {
-  outline: 2px solid rgba(59, 130, 246, 0.4);
-  background-color: rgba(59, 130, 246, 0.08) !important;
+/* E: フィル対象セルのみハイライト（行全体ではなくセル単位） */
+.fill-target-cell {
+  background: #fef9c3 !important;
+  outline: 2px dashed #2563eb;
 }
+/* 編集可能セル共通スタイル（B3統一） */
+.jl-editable { background: #fff5f5; cursor: text; }
+.jl-editable:hover { background: #fef3c7 !important; outline: 1px dashed #22c55e; }
+/* D: フィルハンドル判定拡大 */
+.fill-handle::after { content: ''; position: absolute; inset: -3px; cursor: crosshair; }
 </style>
