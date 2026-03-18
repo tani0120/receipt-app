@@ -371,52 +371,69 @@
 
             </template>
 
-            <!-- category-dropdown型（区分ドロップダウン） -->
+            <!-- category-dropdown型（区分: ダブルクリック→検索付きoptgroup→テキスト戻り） -->
             <template v-else-if="col.type === 'category-dropdown'">
-              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 border-r border-gray-200 text-[10px] relative jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @mousedown="startCellDrag(col.key, getCategoryForEntry(row, col.key), $event)">
-                <select
-                  class="w-full text-[9px] bg-white border border-gray-300 rounded outline-none cursor-pointer hover:bg-gray-50 pl-0.5 pr-3 py-0"
-                  style="height: 100%; min-height: 0; line-height: 1;"
-                  :value="getCategoryForEntry(row, col.key)"
-                  @change="setCategoryForEntry(row, col.key, ($event.target as HTMLSelectElement).value); journal.is_read = true"
-                >
-                  <option value="">--</option>
-                  <optgroup v-for="g in categoryGroupsForJournal" :key="g.label" :label="g.label">
-                    <option v-for="c in g.items" :key="c" :value="c">{{ c }}</option>
-                  </optgroup>
-                </select>
-                <span v-if="isFillable(col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getCategoryForEntry(row, col.key), $event)"></span>
+              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 border-r border-gray-200 text-[10px] relative jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getCategoryForEntry(row, col.key))" @mousedown="startCellDrag(col.key, getCategoryForEntry(row, col.key), $event)">
+                <template v-if="isEditing(journal.id, rowIndex, col.key)">
+                  <div class="relative">
+                    <input
+                      type="text"
+                      class="inline-edit-input w-full text-[9px] bg-white border border-blue-400 rounded outline-none pl-0.5 pr-3 py-0"
+                      v-model="editingValue"
+                      placeholder="検索..."
+                      @keydown.escape="cancelCellEdit()"
+                      @blur="blurCategoryEdit(journal, row, col.key)"
+                    />
+                    <div class="absolute left-0 top-full z-50 bg-white border border-gray-300 shadow-lg rounded max-h-40 overflow-y-auto w-48">
+                      <template v-for="g in filterCategoryGroups(editingValue)" :key="g.label">
+                        <div class="px-2 py-0.5 text-[8px] font-bold text-gray-500 bg-gray-100 sticky top-0">{{ g.label }}</div>
+                        <div v-for="c in g.items" :key="c"
+                             class="px-2 py-0.5 text-[9px] hover:bg-blue-100 cursor-pointer"
+                             @mousedown.prevent="selectCategoryItem(journal, row, col.key, c)">
+                          {{ c }}
+                        </div>
+                      </template>
+                      <div v-if="filterCategoryGroups(editingValue).length === 0" class="px-2 py-1 text-[9px] text-gray-400">該当なし</div>
+                    </div>
+                  </div>
+                </template>
+                <template v-else>
+                  {{ getCategoryForEntry(row, col.key) || '--' }}
+                </template>
+                <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getCategoryForEntry(row, col.key), $event)"></span>
               </div>
             </template>
 
-            <!-- account-dropdown型（検索ドロップダウン） -->
+            <!-- account-dropdown型（勘定科目: ダブルクリック→検索付きoptgroup→テキスト戻り） -->
             <template v-else-if="col.type === 'account-dropdown'">
-              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 relative border-r border-gray-200 text-[10px] jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @mousedown="startCellDrag(col.key, getRawValue(row, col.key), $event)">
-                <div class="relative w-full">
-                  <input
-                    type="text"
-                    class="w-full h-full text-[9px] bg-white border border-gray-300 rounded outline-none cursor-pointer truncate hover:bg-gray-50 pl-0.5 pr-3"
-                    :value="searchDropdownId === `${journal.id}-${rowIndex}-${col.key}` ? searchDropdownQuery : (getRawValue(row, col.key) ?? '')"
-                    :placeholder="(getRawValue(row, col.key) as string) || '--'"
-                    @focus="openSearchDropdown(`${journal.id}-${rowIndex}-${col.key}`, (getRawValue(row, col.key) as string) ?? '', row, col.key)"
-                    @input="searchDropdownQuery = ($event.target as HTMLInputElement).value"
-                    @blur="closeSearchDropdownDelay()"
-                  />
-                  <span class="absolute right-0.5 top-1/2 -translate-y-1/2 text-[7px] text-gray-500 pointer-events-none">▼</span>
-                </div>
-                <div v-if="searchDropdownId === `${journal.id}-${rowIndex}-${col.key}`"
-                     class="absolute left-0 top-full z-50 bg-white border border-gray-300 shadow-lg rounded max-h-40 overflow-y-auto w-48">
-                  <div v-for="acc in searchAllAccounts" :key="acc.id"
-                       :class="[
-                         'px-2 py-0.5 text-[9px] truncate',
-                         acc.selectable ? 'hover:bg-blue-100 cursor-pointer text-gray-800' : 'text-gray-300 cursor-not-allowed'
-                       ]"
-                       @mousedown.prevent="acc.selectable && selectAccount(row, col.key, acc.name)">
-                    {{ acc.name }}
+              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 relative border-r border-gray-200 text-[10px] jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, (getRawValue(row, col.key) as string) ?? '')" @mousedown="startCellDrag(col.key, getRawValue(row, col.key), $event)">
+                <template v-if="isEditing(journal.id, rowIndex, col.key)">
+                  <div class="relative">
+                    <input
+                      type="text"
+                      class="inline-edit-input w-full text-[9px] bg-white border border-blue-400 rounded outline-none pl-0.5 pr-3 py-0"
+                      v-model="editingValue"
+                      placeholder="検索..."
+                      @keydown.escape="cancelCellEdit()"
+                      @blur="blurAccountEdit(journal, row, col.key)"
+                    />
+                    <div class="absolute left-0 top-full z-50 bg-white border border-gray-300 shadow-lg rounded max-h-40 overflow-y-auto w-48">
+                      <template v-for="g in filterAccountGroups(editingValue)" :key="g.label">
+                        <div class="px-2 py-0.5 text-[8px] font-bold text-gray-500 bg-gray-100 sticky top-0">{{ g.label }}</div>
+                        <div v-for="a in g.items" :key="a.name"
+                             class="px-2 py-0.5 text-[9px] hover:bg-blue-100 cursor-pointer truncate"
+                             @mousedown.prevent="selectAccountItem(journal, row, col.key, a.name)">
+                          {{ a.name }}
+                        </div>
+                      </template>
+                      <div v-if="filterAccountGroups(editingValue).length === 0" class="px-2 py-1 text-[9px] text-gray-400">該当なし</div>
+                    </div>
                   </div>
-                  <div v-if="searchAllAccounts.length === 0" class="px-2 py-1 text-[9px] text-gray-400">該当なし</div>
-                </div>
-                <span v-if="isFillable(col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getRawValue(row, col.key) as string, $event)"></span>
+                </template>
+                <template v-else>
+                  {{ (getRawValue(row, col.key) as string) || '--' }}
+                </template>
+                <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getRawValue(row, col.key) as string, $event)"></span>
               </div>
             </template>
 
@@ -446,17 +463,28 @@
               <!-- entry-level（keyにドットあり）: 補助科目・税区分等 -->
               <div v-else :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
-                  <!-- F4: 税区分はプルダウン -->
-                  <select v-if="col.key.endsWith('.tax_category_id')"
-                    class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0"
-                    style="height:100%;min-height:0;line-height:1;"
-                    v-model="editingValue"
-                    @change="commitCellEdit(); journal.is_read = true"
-                    @keydown.escape="cancelCellEdit()"
-                    @blur="commitCellEdit()">
-                    <option value="">--</option>
-                    <option v-for="tc in masterTaxCategories" :key="tc.id" :value="tc.name">{{ tc.name }}</option>
-                  </select>
+                  <!-- F4: 税区分は検索付きoptgroupコンボボックス（方向フィルタ） -->
+                  <div v-if="col.key.endsWith('.tax_category_id')" class="relative">
+                    <input
+                      type="text"
+                      class="inline-edit-input w-full text-[9px] bg-white border border-blue-400 rounded outline-none px-0.5 py-0"
+                      v-model="editingValue"
+                      placeholder="検索..."
+                      @keydown.escape="cancelCellEdit()"
+                      @blur="blurTaxEdit(journal)"
+                    />
+                    <div class="absolute left-0 top-full z-50 bg-white border border-gray-300 shadow-lg rounded max-h-40 overflow-y-auto w-48">
+                      <template v-for="g in filterTaxGroups(row, col.key, editingValue)" :key="g.label">
+                        <div class="px-2 py-0.5 text-[8px] font-bold text-gray-500 bg-gray-100 sticky top-0">{{ g.label }}</div>
+                        <div v-for="tc in g.items" :key="tc.id"
+                             class="px-2 py-0.5 text-[9px] hover:bg-blue-100 cursor-pointer truncate"
+                             @mousedown.prevent="selectTaxItem(journal, tc.name)">
+                          {{ tc.name }}
+                        </div>
+                      </template>
+                      <div v-if="filterTaxGroups(row, col.key, editingValue).length === 0" class="px-2 py-1 text-[9px] text-gray-400">該当なし</div>
+                    </div>
+                  </div>
                   <!-- その他はテキスト入力 -->
                   <input v-else type="text" class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" v-model="editingValue" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
                 </template>
@@ -1051,117 +1079,7 @@ function getRawValue(obj: any, path: string): unknown {
   return path.split('.').reduce((o: any, key: string) => o?.[key], obj);
 }
 
-// ────── 検索ドロップダウン状態管理 ──────
-const searchDropdownId = ref<string | null>(null);
-const searchDropdownQuery = ref('');
-const searchDropdownPrevValue = ref('');  // K: ブラー時の復元用
-let searchDropdownTimer: ReturnType<typeof setTimeout> | null = null;
-let searchDropdownTargetRow: any = null;  // K: 復元先のrowオブジェクト
-let searchDropdownTargetColKey: string = '';  // K: 復元先のcolKey
 
-/** 検索クエリでフィルタ済み勘定科目（searchAllAccountsで全件表示に移行済みだが互換性保持） */
-
-/** J: 全科目を検索フィルタし、selectableフラグ付きで返す（非表示科目は除外） */
-const searchAllAccounts = computed(() => {
-  const q = searchDropdownQuery.value.toLowerCase();
-  const selectableNames = new Set(filteredAccounts.value.map(a => a.name));
-
-  // 区分フィルタ: ドロップダウン対象行のselectedCategoryを取得
-  let categoryFilter: string | null = null;
-  if (searchDropdownTargetRow && searchDropdownTargetColKey) {
-    const side = searchDropdownTargetColKey.startsWith('debit') ? 'debit' : 'credit';
-    const entry = searchDropdownTargetRow[side];
-    if (entry?.selectedCategory) {
-      categoryFilter = entry.selectedCategory;
-    }
-  }
-
-  // composableがあれば全科目（非表示含む）を使用
-  const allSource = clientSettings.value
-    ? clientSettings.value.accounts.value
-    : masterSettings.accounts.value;
-
-  return allSource
-    .filter(acc => !acc.deprecated)
-    .filter(acc => !categoryFilter || acc.category === categoryFilter)
-    .filter(acc => !q || acc.name.toLowerCase().includes(q))
-    .sort((a, b) => {
-      const aS = selectableNames.has(a.name) ? 0 : 1;
-      const bS = selectableNames.has(b.name) ? 0 : 1;
-      if (aS !== bS) return aS - bS;
-      return a.sortOrder - b.sortOrder;
-    })
-    .map(acc => ({ ...acc, selectable: selectableNames.has(acc.name) }));
-});
-
-
-function openSearchDropdown(id: string, _currentValue: string, row?: any, colKey?: string) {
-  searchDropdownId.value = id;
-  searchDropdownQuery.value = '';
-  searchDropdownPrevValue.value = _currentValue;  // K: 直前値保存
-  searchDropdownTargetRow = row ?? null;  // K: 復元先のrow
-  searchDropdownTargetColKey = colKey ?? '';  // K: 復元先のcolKey
-  if (searchDropdownTimer) { clearTimeout(searchDropdownTimer); searchDropdownTimer = null; }
-}
-
-/** K: blur時に入力値が有効な科目名でなければ直前値を復元 */
-function closeSearchDropdownDelay() {
-  searchDropdownTimer = setTimeout(() => {
-    // 復元判定: 入力値がfilteredAccountsに含まれない場合
-    if (searchDropdownTargetRow && searchDropdownTargetColKey) {
-      const side = searchDropdownTargetColKey.startsWith('debit') ? 'debit' : 'credit';
-      const entry = searchDropdownTargetRow[side];
-      if (entry) {
-        const currentVal = entry.account;
-        const isValid = filteredAccounts.value.some(a => a.name === currentVal);
-        if (!isValid) {
-          entry.account = searchDropdownPrevValue.value || null;
-        }
-      }
-    }
-    searchDropdownId.value = null;
-    searchDropdownQuery.value = '';
-    searchDropdownTargetRow = null;
-    searchDropdownTargetColKey = '';
-  }, 200);
-}
-
-/** 勘定科目選択: 科目名をセットし、デフォルト税区分・補助科目を自動設定 */
-function selectAccount(row: any, colKey: string, accountName: string) {
-  const side = colKey.startsWith('debit') ? 'debit' : 'credit';
-  const entry = row[side];
-  if (!entry) return;
-
-  entry.account = accountName || null;
-
-  // デフォルト税区分を自動設定（MF名称で格納）
-  if (accountName) {
-    const allAccounts = clientSettings.value
-      ? clientSettings.value.accounts.value
-      : masterSettings.accounts.value;
-    const acc = allAccounts.find(a => a.name === accountName);
-    if (acc?.defaultTaxCategoryId) {
-      const tc = masterTaxCategories.value.find(t => t.id === acc.defaultTaxCategoryId);
-      entry.tax_category_id = tc ? tc.name : acc.defaultTaxCategoryId;
-    }
-
-    // 補助科目を自動設定（顧問先の設定から取得）
-    if (acc && clientSettings.value) {
-      const sub = clientSettings.value.subAccounts.value[acc.id];
-      entry.sub_account = sub || null;
-    }
-  } else {
-    entry.sub_account = null;
-  }
-
-  // A: 入力で既読化
-  const journalForRead = localJournals.value.find(j => j.id === searchDropdownId.value);
-  if (journalForRead) journalForRead.is_read = true;
-  searchDropdownId.value = null;
-  searchDropdownQuery.value = '';
-  searchDropdownTargetRow = null;
-  searchDropdownTargetColKey = '';
-}
 // ────── 区分ドロップダウン（D7a: category-first選択の起点） ──────
 const SALES_CATEGORIES = ['売上', '不動産収入', '営業外収益'];
 const PURCHASE_CATEGORIES = ['経費', '売上原価', '販管費', '不動産経費', '営業外費用'];
@@ -1176,6 +1094,73 @@ const categoryGroupsForJournal = [
   { label: '仕入系', items: PURCHASE_CATEGORIES },
   { label: 'BS系', items: BS_CATEGORIES },
 ];
+
+/** 仕訳入力用: 勘定科目をカテゴリでグルーピング */
+const accountGroupsForJournal = computed(() => {
+  const categoryMap = new Map<string, typeof filteredAccounts.value>();
+  for (const acc of filteredAccounts.value) {
+    const cat = acc.category;
+    if (!categoryMap.has(cat)) categoryMap.set(cat, []);
+    categoryMap.get(cat)!.push(acc);
+  }
+  const groups: { label: string; items: typeof filteredAccounts.value }[] = [];
+  for (const [label, items] of categoryMap) {
+    groups.push({ label, items });
+  }
+  return groups;
+});
+
+/** 仕訳入力用: 選択中の勘定科目の区分から方向判定し、税区分をフィルタ+グルーピング */
+function getTaxGroupsForEntry(row: Record<string, unknown>, colKey: string) {
+  const side = colKey.startsWith('debit') ? 'debit' : 'credit';
+  const entry = row[side] as Record<string, unknown> | undefined;
+  const accountName = entry?.account as string | null;
+
+  const settings = clientSettings.value ?? masterSettings;
+
+  if (!accountName) {
+    // 勘定科目未選択: 全表示税区分をグルーピング
+    const visible = settings.visibleTaxCategories.value;
+    return [
+      { label: '売上系', items: visible.filter(tc => tc.direction === 'sales') },
+      { label: '仕入系', items: visible.filter(tc => tc.direction === 'purchase') },
+      { label: '共通', items: visible.filter(tc => tc.direction === 'common') },
+    ].filter(g => g.items.length > 0);
+  }
+
+  const allAccounts = settings.accounts.value;
+  const acc = allAccounts.find(a => a.name === accountName);
+  if (!acc) {
+    const visible = settings.visibleTaxCategories.value;
+    return [
+      { label: '売上系', items: visible.filter(tc => tc.direction === 'sales') },
+      { label: '仕入系', items: visible.filter(tc => tc.direction === 'purchase') },
+      { label: '共通', items: visible.filter(tc => tc.direction === 'common') },
+    ].filter(g => g.items.length > 0);
+  }
+
+  const cat = acc.category;
+  let direction: 'sales' | 'purchase' | 'common';
+  if (SALES_CATEGORIES.includes(cat)) direction = 'sales';
+  else if (PURCHASE_CATEGORIES.includes(cat)) direction = 'purchase';
+  else direction = 'common';
+
+  const filtered = settings.filteredTaxCategories(direction);
+  if (direction === 'sales') {
+    return [
+      { label: '売上系', items: filtered.filter(tc => tc.direction === 'sales') },
+      { label: '共通', items: filtered.filter(tc => tc.direction === 'common') },
+    ].filter(g => g.items.length > 0);
+  } else if (direction === 'purchase') {
+    return [
+      { label: '仕入系', items: filtered.filter(tc => tc.direction === 'purchase') },
+      { label: '共通', items: filtered.filter(tc => tc.direction === 'common') },
+    ].filter(g => g.items.length > 0);
+  }
+  return [
+    { label: '共通', items: filtered },
+  ].filter(g => g.items.length > 0);
+}
 
 /** 仕訳行のentryから区分を取得（selectedCategory優先、なければ逆引き） */
 function getCategoryForEntry(row: Record<string, unknown>, colKey: string): string {
@@ -1202,6 +1187,124 @@ function setCategoryForEntry(row: Record<string, unknown>, colKey: string, categ
   entry.selectedCategory = category || null;
   // 区分変更時に勘定科目をクリア（フィルタ対象が変わるため）
   entry.account = null;
+}
+
+// ────── 検索付きコンボボックス: フィルタ関数 ──────
+
+/** 区分候補をテキストでフィルタ */
+function filterCategoryGroups(query: string) {
+  if (!query) return categoryGroupsForJournal;
+  const q = query.toLowerCase();
+  return categoryGroupsForJournal
+    .map(g => ({ ...g, items: g.items.filter(c => c.toLowerCase().includes(q)) }))
+    .filter(g => g.items.length > 0);
+}
+
+/** 勘定科目候補をテキストでフィルタ */
+function filterAccountGroups(query: string) {
+  if (!query) return accountGroupsForJournal.value;
+  const q = query.toLowerCase();
+  return accountGroupsForJournal.value
+    .map(g => ({ ...g, items: g.items.filter(a => a.name.toLowerCase().includes(q)) }))
+    .filter(g => g.items.length > 0);
+}
+
+/** 税区分候補をテキストでフィルタ（方向フィルタ済みグループに対してさらに検索） */
+function filterTaxGroups(row: Record<string, unknown>, colKey: string, query: string) {
+  const groups = getTaxGroupsForEntry(row, colKey);
+  if (!query) return groups;
+  const q = query.toLowerCase();
+  return groups
+    .map(g => ({ ...g, items: g.items.filter(tc => tc.name.toLowerCase().includes(q)) }))
+    .filter(g => g.items.length > 0);
+}
+
+// ────── 検索付きコンボボックス: 選択関数 ──────
+
+/** 区分アイテム選択: 区分セット + 勘定科目クリア + 既読化 + 編集モード解除 */
+function selectCategoryItem(journal: JournalPhase5Mock, row: Record<string, unknown>, colKey: string, category: string): void {
+  const currentVal = getCategoryForEntry(row, colKey);
+  if (category !== currentVal) {
+    setCategoryForEntry(row, colKey, category);
+    journal.is_read = true;
+  }
+  editingCell.value = null;
+}
+
+/** 勘定科目アイテム選択: 科目セット + デフォルト税区分/補助科目自動設定 + 既読化 */
+function selectAccountItem(journal: JournalPhase5Mock, row: Record<string, unknown>, colKey: string, accountName: string): void {
+  const side = colKey.startsWith('debit') ? 'debit' : 'credit';
+  const entry = row[side] as Record<string, unknown> | undefined;
+  if (!entry) { editingCell.value = null; return; }
+
+  entry.account = accountName || null;
+
+  if (accountName) {
+    const allAccounts = clientSettings.value
+      ? clientSettings.value.accounts.value
+      : masterSettings.accounts.value;
+    const acc = allAccounts.find(a => a.name === accountName);
+    if (acc?.defaultTaxCategoryId) {
+      const tc = masterTaxCategories.value.find(t => t.id === acc.defaultTaxCategoryId);
+      entry.tax_category_id = tc ? tc.name : acc.defaultTaxCategoryId;
+    }
+    if (acc && clientSettings.value) {
+      const sub = clientSettings.value.subAccounts.value[acc.id];
+      entry.sub_account = sub || null;
+    }
+  } else {
+    entry.sub_account = null;
+  }
+
+  journal.is_read = true;
+  editingCell.value = null;
+}
+
+/** 税区分アイテム選択: 税区分セット + 既読化 + 編集モード解除 */
+function selectTaxItem(journal: JournalPhase5Mock, taxName: string): void {
+  editingValue.value = taxName;
+  commitCellEdit();
+  journal.is_read = true;
+}
+
+// ────── 検索付きコンボボックス: blur関数 ──────
+
+/** 区分blur: 入力値が有効な区分名なら確定、そうでなければキャンセル */
+function blurCategoryEdit(journal: JournalPhase5Mock, row: Record<string, unknown>, colKey: string): void {
+  const val = editingValue.value;
+  const allCategories = categoryGroupsForJournal.flatMap(g => g.items);
+  if (allCategories.includes(val)) {
+    const currentVal = getCategoryForEntry(row, colKey);
+    if (val !== currentVal) {
+      setCategoryForEntry(row, colKey, val);
+      journal.is_read = true;
+    }
+  }
+  editingCell.value = null;
+}
+
+/** 勘定科目blur: 入力値が有効な科目名なら確定、そうでなければキャンセル */
+function blurAccountEdit(journal: JournalPhase5Mock, row: Record<string, unknown>, colKey: string): void {
+  const val = editingValue.value;
+  const isValid = filteredAccounts.value.some(a => a.name === val);
+  if (isValid) {
+    selectAccountItem(journal, row, colKey, val);
+    return;
+  }
+  editingCell.value = null;
+}
+
+/** 税区分blur: 入力値が有効な税区分名なら確定、そうでなければキャンセル */
+function blurTaxEdit(journal: JournalPhase5Mock): void {
+  const val = editingValue.value;
+  const settings = clientSettings.value ?? masterSettings;
+  const isValid = settings.visibleTaxCategories.value.some(tc => tc.name === val);
+  if (isValid) {
+    commitCellEdit();
+    journal.is_read = true;
+    return;
+  }
+  editingCell.value = null;
 }
 
 // ────── インライン編集（ダブルクリック） ──────
