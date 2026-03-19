@@ -462,7 +462,7 @@ POST /api/journals/bulk/mark-read
 
 ```json
 {
-  "journal_ids": ["uuid1", "uuid2", "uuid3"]
+  "journal_ids": ["jrn-00000001", "jrn-00000002", "jrn-00000003"]
 }
 ```
 
@@ -474,7 +474,7 @@ POST /api/journals/bulk/exclude-from-export
 
 ```json
 {
-  "journal_ids": ["uuid1", "uuid2"],
+  "journal_ids": ["jrn-00000001", "jrn-00000002"],
   "reason": "重複データのため"
 }
 ```
@@ -528,7 +528,7 @@ POST /api/journals/bulk/copy
 
 ```json
 {
-  "journal_ids": ["uuid1", "uuid2"]
+  "journal_ids": ["jrn-00000001", "jrn-00000002"]
 }
 ```
 
