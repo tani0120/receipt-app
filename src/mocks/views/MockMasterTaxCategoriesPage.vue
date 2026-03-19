@@ -53,43 +53,51 @@
           </div>
         </div>
         <div class="as-table-wrap">
-          <table class="as-table">
+          <table class="as-table" style="table-layout: fixed;">
             <colgroup>
-              <col class="col-check">
-              <col style="width: 60px;">
-              <col style="width: 8%;">
+              <col style="width: 38px;">
+              <col :style="{ width: taxColWidths['defaultVisible'] + 'px' }">
+              <col :style="{ width: taxColWidths['direction'] + 'px' }">
               <col style="width: auto;">
-              <col style="width: 8%;">
-              <col style="width: 8%;">
-              <col style="width: 6%;">
-              <col style="width: 10%;">
-              <col style="width: 10%;">
+              <col :style="{ width: taxColWidths['rate'] + 'px' }">
+              <col :style="{ width: taxColWidths['qualified'] + 'px' }">
+              <col :style="{ width: taxColWidths['aiSelectable'] + 'px' }">
+              <col :style="{ width: taxColWidths['effectiveFrom'] + 'px' }">
+              <col :style="{ width: taxColWidths['effectiveTo'] + 'px' }">
             </colgroup>
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
-                <th class="as-th-check">デフォルトで表示</th>
-                <th class="sortable" @click="sortTax('direction')">
+                <th class="as-th-check relative">デフォルトで表示
+                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('defaultVisible', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortTax('direction')">
                   取引区分 <i :class="getSortIcon('direction')"></i>
+                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('direction', $event)"></div>
                 </th>
                 <th class="sortable" @click="sortTax('name')">
                   税区分 <i :class="getSortIcon('name')"></i>
                 </th>
-                <th class="sortable" @click="sortTaxByRate()">
+                <th class="sortable relative" @click="sortTaxByRate()">
                   税率 <i :class="getSortIcon('_rate')"></i>
+                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('rate', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortTax('qualified')">
+                <th class="sortable relative" @click="sortTax('qualified')">
                   適格判定対象 <i class="fa-solid fa-circle-question th-help" title="この税区分を使う際、取引先のインボイス登録番号の確認が必要かどうか。仕入側の課税取引にのみ○がつきます。"></i>
                   <i :class="getSortIcon('qualified')"></i>
+                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('qualified', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortTax('aiSelectable')">
+                <th class="sortable relative" @click="sortTax('aiSelectable')">
                   税区分自動選択 <i :class="getSortIcon('aiSelectable')"></i>
+                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('aiSelectable', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortTax('effectiveFrom')">
+                <th class="sortable relative" @click="sortTax('effectiveFrom')">
                   適用開始日 <i :class="getSortIcon('effectiveFrom')"></i>
+                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('effectiveFrom', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortTax('effectiveTo')">
+                <th class="sortable relative" @click="sortTax('effectiveTo')">
                   適用終了日 <i :class="getSortIcon('effectiveTo')"></i>
+                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('effectiveTo', $event)"></div>
                 </th>
               </tr>
             </thead>
@@ -175,6 +183,19 @@ import type { TaxCategory, TaxDirection } from '@/shared/types/tax-category';
 import { extractRateFromName } from '@/shared/types/tax-category';
 import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
+import { useColumnResize } from '@/mocks/composables/useColumnResize';
+
+// 列幅カスタマイズ
+const taxDefaultWidths: Record<string, number> = {
+  defaultVisible: 60,
+  direction: 80,
+  rate: 60,
+  qualified: 80,
+  aiSelectable: 80,
+  effectiveFrom: 100,
+  effectiveTo: 100,
+};
+const { columnWidths: taxColWidths, onResizeStart: onTaxResizeStart } = useColumnResize('master-tax', taxDefaultWidths);
 
 const PAGE_SIZE = 50;
 const TAX_STORAGE_KEY = 'sugu-suru:tax-categories:rows';
@@ -675,4 +696,20 @@ function resetTaxOrder() {
 
 /* 適用終了日 */
 .td-date { white-space: nowrap; text-align: center; font-size: 11px; }
+
+/* リサイズハンドル */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 2;
+}
+.resize-handle:hover {
+  background: #1976D2;
+}
 </style>

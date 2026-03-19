@@ -43,7 +43,8 @@ MockMasterAccountsPage ─┐
 MockMasterTaxCategoriesPage ─┤
 MockClientAccountsPage ─┤─── useAccountSettings(scope, clientId?)
 MockClientTaxPage ──────┤
-JournalListLevel3Mock ──┘
+JournalListLevel3Mock ──┤
+MockExportPage ───────┘
                               │
                     ┌─────────┴──────────┐
                     │  useAccountMaster   │  ← 内部依存（外部import不要）
@@ -804,17 +805,20 @@ setTaxDefaultVisible: (taxCategoryId: string, visible: boolean) => void
 
 ### 9.4 仕訳リストのbusinessType/hasRentalIncomeフィルタ
 
-**省略していた事実**: 仕訳リスト（JournalListLevel3Mock）のfilteredAccountsは、顧問先のtypeとhasRentalIncomeで科目をフィルタしている（L1002-1023）。設計書の`visibleAccounts`にはこのフィルタが含まれていない。
+**省略していた事実**: 仕訳リスト（JournalListLevel3Mock）のfilteredAccountsは、顧問先のtypeとhasRentalIncomeで科目をフィルタしている。設計書の`visibleAccounts`にはこのフィルタが含まれていない。
 
 ```typescript
-// 現在のJournalListLevel3Mock L1002-1023
+// 現在のJournalListLevel3Mock（useAccountSettings経由にリファクタリング済み、2026-03-16）
+const masterSettings = useAccountSettings('master')
+const clientSettings = computed(() => useAccountSettings('client', clientId))
+
 const filteredAccounts = computed(() => {
   const client = activeClientFull.value;
   const clientType = client?.type ?? 'corp';
   const hasRental = client?.hasRentalIncome ?? false;
-  const source = clientAccountsComposable.value
-    ? clientAccountsComposable.value.visibleClientAccounts.value
-    : ACCOUNT_MASTER;
+  const source = clientSettings.value
+    ? clientSettings.value.visibleAccounts.value
+    : masterSettings.accounts.value;
   return source
     .filter(acc => {
       if (acc.deprecated) return false;
@@ -829,9 +833,7 @@ const filteredAccounts = computed(() => {
 });
 ```
 
-**決定が必要**: このフィルタをuseAccountSettingsに含めるか。
-
-**推奨**: 含めない。このフィルタはページ固有（仕訳リスト用）であり、マスタ/顧問先設定ページでは不要。`visibleAccounts`はhidden系フラグのフィルタのみ行い、businessType/hasRentalIncomeフィルタはページ側で追加適用する。
+**決定済み**: 含めない。このフィルタはページ固有（仕訳リスト用）であり、マスタ/顧問先設定ページでは不要。`visibleAccounts`はhidden系フラグのフィルタのみ行い、businessType/hasRentalIncomeフィルタはページ側で追加適用する。
 
 ```typescript
 // 仕訳リストでの使い方

@@ -43,32 +43,46 @@
     <div class="pg-table-wrap">
       <table class="pg-table">
         <colgroup>
-          <col style="width: 60px;">
-          <col style="width: 60px;">
-          <col style="width: 60px;">
+          <col :style="{ width: pgColWidths['status'] + 'px' }">
+          <col :style="{ width: pgColWidths['code'] + 'px' }">
+          <col :style="{ width: pgColWidths['fiscalMonth'] + 'px' }">
           <col>
-          <col style="width: 78px;">
-          <col style="width: 78px;">
-          <col style="width: 78px;">
+          <col :style="{ width: pgColWidths['staffName'] + 'px' }">
+          <col :style="{ width: pgColWidths['receivedDate'] + 'px' }">
+          <col :style="{ width: pgColWidths['unexported'] + 'px' }">
           <col v-for="m in monthColumns" :key="'col-'+m.key" style="width: 36px;">
-          <col style="width: 70px;">
-          <col style="width: 70px;">
+          <col :style="{ width: pgColWidths['currentYear'] + 'px' }">
+          <col :style="{ width: pgColWidths['lastYear'] + 'px' }">
         </colgroup>
         <thead>
           <tr>
-            <th class="sortable pg-th-status" @click="sortBy('status')">状態 <i :class="getSortIcon('status')"></i></th>
-            <th class="sortable pg-th-narrow" @click="sortBy('code')">3コード <i :class="getSortIcon('code')"></i></th>
-            <th class="sortable pg-th-narrow" @click="sortBy('fiscalMonth')">決算月 <i :class="getSortIcon('fiscalMonth')"></i></th>
+            <th class="sortable pg-th-status relative" @click="sortBy('status')">状態 <i :class="getSortIcon('status')"></i>
+              <div class="resize-handle" @mousedown.stop="onPgResizeStart('status', $event)"></div>
+            </th>
+            <th class="sortable pg-th-narrow relative" @click="sortBy('code')">3コード <i :class="getSortIcon('code')"></i>
+              <div class="resize-handle" @mousedown.stop="onPgResizeStart('code', $event)"></div>
+            </th>
+            <th class="sortable pg-th-narrow relative" @click="sortBy('fiscalMonth')">決算月 <i :class="getSortIcon('fiscalMonth')"></i>
+              <div class="resize-handle" @mousedown.stop="onPgResizeStart('fiscalMonth', $event)"></div>
+            </th>
             <th class="sortable" @click="sortBy('companyName')">顧問先 <i :class="getSortIcon('companyName')"></i></th>
-            <th class="sortable pg-th-narrow" @click="sortBy('staffName')">担当 <i :class="getSortIcon('staffName')"></i></th>
-            <th class="sortable pg-th-narrow" @click="sortBy('receivedDate')">資料受取日 <i :class="getSortIcon('receivedDate')"></i></th>
-            <th class="sortable pg-th-narrow pg-th-num" @click="sortBy('unexported')">未出力 <i :class="getSortIcon('unexported')"></i></th>
+            <th class="sortable pg-th-narrow relative" @click="sortBy('staffName')">担当 <i :class="getSortIcon('staffName')"></i>
+              <div class="resize-handle" @mousedown.stop="onPgResizeStart('staffName', $event)"></div>
+            </th>
+            <th class="sortable pg-th-narrow relative" @click="sortBy('receivedDate')">資料受取日 <i :class="getSortIcon('receivedDate')"></i>
+              <div class="resize-handle" @mousedown.stop="onPgResizeStart('receivedDate', $event)"></div>
+            </th>
+            <th class="sortable pg-th-narrow pg-th-num relative" @click="sortBy('unexported')">未出力 <i :class="getSortIcon('unexported')"></i>
+              <div class="resize-handle-light" @mousedown.stop="onPgResizeStart('unexported', $event)"></div>
+            </th>
             <th
               v-for="m in monthColumns" :key="'th-'+m.key"
               class="sortable pg-th-month"
               @click="sortBy('month_' + m.key)"
             >{{ m.label }} <i :class="getSortIcon('month_' + m.key)"></i></th>
-            <th class="sortable pg-th-num" @click="sortBy('currentYearJournals')">今期<br>累計 <i :class="getSortIcon('currentYearJournals')"></i></th>
+            <th class="sortable pg-th-num relative" @click="sortBy('currentYearJournals')">今期<br>累計 <i :class="getSortIcon('currentYearJournals')"></i>
+              <div class="resize-handle-light" @mousedown.stop="onPgResizeStart('currentYear', $event)"></div>
+            </th>
             <th class="sortable pg-th-num" @click="sortBy('lastYearJournals')">前期<br>合計 <i :class="getSortIcon('lastYearJournals')"></i></th>
           </tr>
         </thead>
@@ -109,6 +123,14 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProgress } from '@/features/progress-management/composables/useProgress';
 import { useClients } from '@/features/client-management/composables/useClients';
+import { useColumnResize } from '@/mocks/composables/useColumnResize';
+
+const pgDefaultWidths: Record<string, number> = {
+  status: 60, code: 60, fiscalMonth: 60,
+  staffName: 78, receivedDate: 78, unexported: 78,
+  currentYear: 70, lastYear: 70,
+};
+const { columnWidths: pgColWidths, onResizeStart: onPgResizeStart } = useColumnResize('progress', pgDefaultWidths);
 
 const router = useRouter();
 
@@ -311,4 +333,16 @@ function goToJournalList(row: { clientId: string }) {
 .pg-td-total { font-weight: 600; font-size: 12px; }
 
 .pg-empty { text-align: center; color: #94a3b8; padding: 40px 12px !important; }
+
+/* リサイズハンドル（青ヘッダー用: 白系） */
+.resize-handle {
+  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
+  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
+}
+.resize-handle:hover { background: rgba(255,255,255,0.5); }
+.resize-handle-light {
+  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
+  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
+}
+.resize-handle-light:hover { background: rgba(255,255,255,0.5); }
 </style>

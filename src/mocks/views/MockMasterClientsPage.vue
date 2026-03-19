@@ -27,50 +27,64 @@
 
         <!-- テーブル -->
         <div class="cm-table-wrap">
-          <table class="cm-table">
+          <table class="cm-table" style="table-layout: fixed;">
             <colgroup>
-              <col style="width: 70px;">
-              <col style="width: 100px;">
-              <col style="width: 60px;">
-              <col style="width: 50px;">
-              <col style="width: 15%;">
-              <col style="width: 90px;">
-              <col style="width: 80px;">
-              <col style="width: 90px;">
-              <col style="width: 110px;">
-              <col style="width: 13%;">
-              <col style="width: 13%;">
-              <col style="width: 100px;">
+              <col :style="{ width: clColWidths['status'] + 'px' }">
+              <col :style="{ width: clColWidths['clientId'] + 'px' }">
+              <col :style="{ width: clColWidths['threeCode'] + 'px' }">
+              <col :style="{ width: clColWidths['type'] + 'px' }">
+              <col :style="{ width: clColWidths['companyName'] + 'px' }">
+              <col :style="{ width: clColWidths['staffName'] + 'px' }">
+              <col :style="{ width: clColWidths['accountingSoftware'] + 'px' }">
+              <col :style="{ width: clColWidths['fiscalMonth'] + 'px' }">
+              <col :style="{ width: clColWidths['phoneNumber'] + 'px' }">
+              <col :style="{ width: clColWidths['email'] + 'px' }">
+              <col :style="{ width: clColWidths['chatRoomUrl'] + 'px' }">
+              <col style="width: auto;">
             </colgroup>
             <thead>
               <tr>
-                <th class="sortable" @click="sortBy('status')">
+                <th class="sortable relative" @click="sortBy('status')">
                   ステータス <i :class="getSortIcon('status')"></i>
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('status', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortBy('clientId')">
+                <th class="sortable relative" @click="sortBy('clientId')">
                   内部ID <i :class="getSortIcon('clientId')"></i>
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('clientId', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortBy('threeCode')">
+                <th class="sortable relative" @click="sortBy('threeCode')">
                   3コード <i :class="getSortIcon('threeCode')"></i>
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('threeCode', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortBy('type')">
+                <th class="sortable relative" @click="sortBy('type')">
                   種別 <i :class="getSortIcon('type')"></i>
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('type', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortBy('companyName')">
+                <th class="sortable relative" @click="sortBy('companyName')">
                   会社名 <i :class="getSortIcon('companyName')"></i>
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('companyName', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortBy('staffName')">
+                <th class="sortable relative" @click="sortBy('staffName')">
                   担当者 <i :class="getSortIcon('staffName')"></i>
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('staffName', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortBy('accountingSoftware')">
+                <th class="sortable relative" @click="sortBy('accountingSoftware')">
                   会計ソフト <i :class="getSortIcon('accountingSoftware')"></i>
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('accountingSoftware', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortBy('fiscalMonth')">
+                <th class="sortable relative" @click="sortBy('fiscalMonth')">
                   決算日 <i :class="getSortIcon('fiscalMonth')"></i>
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('fiscalMonth', $event)"></div>
                 </th>
-                <th>電話番号</th>
-                <th>メール</th>
-                <th>チャットURL</th>
+                <th class="relative">電話番号
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('phoneNumber', $event)"></div>
+                </th>
+                <th class="relative">メール
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('email', $event)"></div>
+                </th>
+                <th class="relative">チャットURL
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('chatRoomUrl', $event)"></div>
+                </th>
                 <th>主な連絡手段</th>
               </tr>
             </thead>
@@ -453,6 +467,23 @@ import {
 } from '@/features/client-management/composables/useClients';
 import type { Client, ClientForm } from '@/features/client-management/composables/useClients';
 import { useStaff } from '@/features/staff-management/composables/useStaff';
+import { useColumnResize } from '@/mocks/composables/useColumnResize';
+
+// 列幅カスタマイズ
+const clDefaultWidths: Record<string, number> = {
+  status: 70,
+  clientId: 100,
+  threeCode: 60,
+  type: 50,
+  companyName: 160,
+  staffName: 90,
+  accountingSoftware: 80,
+  fiscalMonth: 90,
+  phoneNumber: 110,
+  email: 140,
+  chatRoomUrl: 140,
+};
+const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnResize('master-clients', clDefaultWidths);
 
 // --- クライアントデータ（composableから取得） ---
 const { clients, getStaffNameForClient } = useClients();
@@ -872,4 +903,11 @@ onUnmounted(() => document.removeEventListener('click', closeDropdowns));
 .slide-panel-enter-from .cm-panel-container { transform: translateX(100%); }
 .slide-panel-leave-to { opacity: 0; }
 .slide-panel-leave-to .cm-panel-container { transform: translateX(100%); }
+
+/* リサイズハンドル */
+.resize-handle {
+  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
+  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
+}
+.resize-handle:hover { background: #3b82f6; }
 </style>

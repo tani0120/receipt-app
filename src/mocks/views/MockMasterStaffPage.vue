@@ -26,27 +26,31 @@
 
         <!-- テーブル -->
         <div class="cm-table-wrap">
-          <table class="cm-table">
+          <table class="cm-table" style="table-layout: fixed;">
             <colgroup>
-              <col style="width: 80px;">
-              <col style="width: 160px;">
-              <col style="width: 80px;">
-              <col style="width: 25%;">
-              <col style="width: 30%;">
+              <col :style="{ width: staffColWidths['status'] + 'px' }">
+              <col :style="{ width: staffColWidths['uuid'] + 'px' }">
+              <col :style="{ width: staffColWidths['role'] + 'px' }">
+              <col :style="{ width: staffColWidths['name'] + 'px' }">
+              <col style="width: auto;">
             </colgroup>
             <thead>
               <tr>
-                <th class="sortable" @click="sortBy('status')">
+                <th class="sortable relative" @click="sortBy('status')">
                   ステータス <i :class="getSortIcon('status')"></i>
+                  <div class="resize-handle" @mousedown.stop="onStaffResizeStart('status', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortBy('uuid')">
+                <th class="sortable relative" @click="sortBy('uuid')">
                   内部ID <i :class="getSortIcon('uuid')"></i>
+                  <div class="resize-handle" @mousedown.stop="onStaffResizeStart('uuid', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortBy('role')">
+                <th class="sortable relative" @click="sortBy('role')">
                   権限 <i :class="getSortIcon('role')"></i>
+                  <div class="resize-handle" @mousedown.stop="onStaffResizeStart('role', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortBy('name')">
+                <th class="sortable relative" @click="sortBy('name')">
                   名前 <i :class="getSortIcon('name')"></i>
+                  <div class="resize-handle" @mousedown.stop="onStaffResizeStart('name', $event)"></div>
                 </th>
                 <th class="sortable" @click="sortBy('email')">
                   メールアドレス <i :class="getSortIcon('email')"></i>
@@ -198,6 +202,16 @@ import {
   generateStaffUuid,
 } from '@/features/staff-management/composables/useStaff';
 import type { Staff, StaffForm } from '@/features/staff-management/composables/useStaff';
+import { useColumnResize } from '@/mocks/composables/useColumnResize';
+
+// 列幅カスタマイズ
+const staffDefaultWidths: Record<string, number> = {
+  status: 80,
+  uuid: 160,
+  role: 80,
+  name: 200,
+};
+const { columnWidths: staffColWidths, onResizeStart: onStaffResizeStart } = useColumnResize('master-staff', staffDefaultWidths);
 
 // --- スタッフデータ（composableから取得） ---
 const { staffList } = useStaff();
@@ -482,4 +496,11 @@ const restoreStaff = () => {
 .slide-panel-enter-from .cm-panel-container { transform: translateX(100%); }
 .slide-panel-leave-to { opacity: 0; }
 .slide-panel-leave-to .cm-panel-container { transform: translateX(100%); }
+
+/* リサイズハンドル */
+.resize-handle {
+  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
+  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
+}
+.resize-handle:hover { background: #3b82f6; }
 </style>

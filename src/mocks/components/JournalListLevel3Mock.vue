@@ -5,8 +5,8 @@
     <div class="bg-white px-3 py-[5.2px] flex justify-between items-center text-[10px] text-gray-700">
       <!-- フィルタモード（通常時） -->
       <template v-if="!isSelectionMode">
-        <div class="flex items-center gap-3">
-          <select class="border border-blue-400 text-blue-600 text-[10px] px-2 py-0.5 rounded cursor-pointer">
+        <div class="flex items-center gap-3 text-[11px]">
+          <select class="border border-blue-400 text-blue-600 text-[12px] px-2 py-0.5 rounded cursor-pointer">
             <option>表示条件</option>
             <option>未読</option>
             <option>メモ</option>
@@ -24,11 +24,11 @@
           <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showTrashed" class="w-2.5 h-2.5">ゴミ箱を表示</label>
           <div class="border-l-2 border-gray-400 h-4 mx-1"></div>
           <div class="flex items-center gap-0.5">
-            <span class="text-gray-400 text-[9px] mr-0.5">証票</span>
+            <span class="text-gray-400 text-[11px] mr-0.5">証票</span>
             <button v-for="vf in voucherFilterOptions" :key="vf.key"
                     @click="voucherFilter = voucherFilter === vf.key ? '' : vf.key"
                     :class="[
-                      'px-1.5 py-0.5 rounded text-[9px] border transition-colors',
+                      'px-1.5 py-0.5 rounded text-[11px] border transition-colors',
                       voucherFilter === vf.key
                         ? 'bg-blue-600 text-white border-blue-600 font-bold'
                         : 'border-gray-300 text-gray-500 hover:bg-gray-100'
@@ -68,6 +68,10 @@
       </template>
       <!-- 行の背景色 凡例（両モードで表示） -->
       <div class="flex items-center gap-2">
+        <button class="text-[13px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-0.5 transition-all"
+                @click="resetColWidths()" title="列幅をデフォルトに戻す">
+          <i class="fa-solid fa-arrows-left-right text-[10px]"></i>列幅リセット</button>
+        <span class="text-gray-300">|</span>
         <span class="text-gray-600">行の背景色</span>
         <span class="bg-yellow-100 border border-gray-400 px-2 py-0.5 text-gray-800 font-bold">未読</span>
         <span class="bg-white border border-gray-400 px-2 py-0.5 text-gray-800">既読</span>
@@ -95,13 +99,14 @@
         v-for="col in journalColumns"
         :key="col.key"
         :class="[
-          col.width,
-          'p-1 flex items-center justify-center',
+          col.defaultPx === 0 ? col.width : '',
+          'p-1 flex items-center justify-center relative',
           col.type !== 'action' ? 'border-r border-gray-300' : '',
           col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '',
           col.sortKey ? 'cursor-pointer hover:bg-blue-200' : '',
           col.sortKey && sortColumn === col.sortKey ? 'bg-red-100 font-bold' : ''
         ]"
+        :style="col.defaultPx > 0 ? { width: columnWidths[col.key] + 'px', flexShrink: 0 } : {}"
         @click="col.sortKey && sortBy(col.sortKey)"
       >
         <!-- checkbox列ヘッダー: 全選択/全解除 -->
@@ -169,6 +174,10 @@
             </span>
           </span>
         </template>
+        <!-- リサイズハンドル -->
+        <div v-if="col.defaultPx > 0 && col.key !== 'actions'"
+             class="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-400/60 z-20"
+             @mousedown="onResizeStart(col.key, $event)"></div>
       </div>
     </div>
 
@@ -188,17 +197,17 @@
           <template v-for="col in journalColumns" :key="col.key">
 
             <!-- checkbox型 -->
-            <div v-if="col.type === 'checkbox'" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+            <div v-if="col.type === 'checkbox'" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200']">
               <input v-if="rowIndex === 0" type="checkbox" class="w-2.5 h-2.5 cursor-pointer"
                      :checked="selectedIds.has(journal.id)" @change="toggleSelect(journal.id)">
             </div>
 
             <!-- index型 -->
             <template v-else-if="col.type === 'index'">
-              <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 font-mono text-gray-600 text-[9px]']">
+              <div v-if="rowIndex === 0" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200 font-mono text-gray-600 text-[9px]']">
                 {{ journalIndex + 1 }}
               </div>
-              <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+              <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
             </template>
 
             <!-- component型（col.key別に既存ロジック維持） -->
@@ -206,19 +215,19 @@
 
               <!-- 写真 -->
               <template v-if="col.key === 'photo'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                <div v-if="rowIndex === 0" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <i class="fa-solid fa-camera text-[10px] text-gray-800 cursor-pointer"
                      title="写真（クリックで固定）"
                      @mouseenter="showImageModal(journal.id, journal.document_id)"
                      @mouseleave="hideImageModal"
                      @click="togglePinModal(journal.id, journal.document_id)"></i>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
 
               <!-- 過去仕訳 -->
               <template v-else-if="col.key === 'pastJournal'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                <div v-if="rowIndex === 0" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <i v-if="hasPastJournal(journal)"
                      class="fa-solid fa-magnifying-glass text-[10px] text-gray-600 cursor-pointer"
                      title="過去仕訳（クリックでピン留め）"
@@ -226,24 +235,24 @@
                      @mouseleave="hidePastJournalSearchModal()"
                      @click="togglePastJournalSearchModalPin()"></i>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
 
               <!-- コメント（staff_notesベース: ホバーでモーダル表示、クリックで固定） -->
               <template v-else-if="col.key === 'comment'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 cursor-pointer relative']"
+                <div v-if="rowIndex === 0" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200 cursor-pointer relative']"
                      @mouseenter="hoverOpenCommentModal(journal)"
                      @mouseleave="scheduleHoverCloseCommentModal()"
                      @click.stop="openCommentModal(journal.id); pinCommentModal()">
                   <i v-if="hasAnyStaffNote(journal)" class="fa-solid fa-comment-dots text-[10px] text-emerald-600"></i>
                   <i v-else class="fa-solid fa-comment-dots text-[10px] text-gray-300 opacity-50"></i>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
 
               <!-- 要対応（4FAアイコン + ホバーポップアップ） -->
               <template v-else-if="col.key === 'needAction'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-1']">
+                <div v-if="rowIndex === 0" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-1']">
                   <template v-for="noteKey in staffNoteKeys" :key="noteKey">
                     <div class="relative"
                          @mouseenter="showNeedPopup(journal.id, noteKey)"
@@ -280,12 +289,12 @@
                     </div>
                   </template>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
 
               <!-- 証票 -->
               <template v-else-if="col.key === 'labelType'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5']">
+                <div v-if="rowIndex === 0" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200 gap-0.5']">
                   <template v-for="label in journal.labels" :key="label">
                     <span v-if="labelKeyMap[label]"
                           class="inline-flex items-center justify-center w-4 h-4 rounded text-[8px] font-bold text-white cursor-default"
@@ -294,25 +303,25 @@
                           @mouseleave="hideTooltip()">{{ labelKeyMap[label].short }}</span>
                   </template>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
 
               <!-- 警告（STREAMED風: 赤△！統一、JS制御ツールチップ） -->
               <template v-else-if="col.key === 'warning'">
                 <div v-if="rowIndex === 0"
-                     :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                     :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <i v-if="journal.labels.some((l: string) => warningLabelMap[l])"
                      class="fa-solid fa-triangle-exclamation text-[10px] text-red-600 cursor-pointer"
                      @mouseenter="showWarningTooltip($event, journal.labels, journal)"
                      @mouseleave="hideTooltip()"
                      @click.stop="openWarningConfirmModal(journal)"></i>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
 
               <!-- 学習 -->
               <template v-else-if="col.key === 'rule'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                <div v-if="rowIndex === 0" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <i v-if="journal.labels.includes('RULE_APPLIED')" class="fa-solid fa-graduation-cap text-[10px] text-green-600 cursor-default"
                      @mouseenter="showTooltip($event, '学習適用済み')"
                      @mouseleave="hideTooltip()"></i>
@@ -320,40 +329,40 @@
                      @mouseenter="showTooltip($event, '学習できます')"
                      @mouseleave="hideTooltip()"></i>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
 
               <!-- クレ払い -->
               <template v-else-if="col.key === 'creditCardPayment'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                <div v-if="rowIndex === 0" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <span v-if="journal.is_credit_card_payment" class="text-[12px] cursor-default"
                         @mouseenter="showTooltip($event, 'クレジットカード払い')"
                         @mouseleave="hideTooltip()">💳</span>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
 
               <!-- 軽減 -->
               <template v-else-if="col.key === 'taxRate'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                <div v-if="rowIndex === 0" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <span v-if="journal.labels.includes('MULTI_TAX_RATE')" class="text-[9px] font-bold text-green-600 bg-green-50 px-1 rounded">軽</span>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
 
               <!-- 証票メモ（journal.memo truthy判定、アイコンのみ） -->
               <template v-else-if="col.key === 'memo'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200']">
+                <div v-if="rowIndex === 0" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200']">
                   <i v-if="journal.memo" class="fa-solid fa-pencil text-[10px] text-gray-600 cursor-default"
                      @mouseenter="showTooltip($event, '証票にメモあり')"
                      @mouseleave="hideTooltip()"></i>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
 
               <!-- 適格 -->
               <template v-else-if="col.key === 'invoice'">
-                <div v-if="rowIndex === 0" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 relative jl-editable']" @dblclick.stop="startCellEdit(journal.id, rowIndex, 'invoice', journal.labels.includes('INVOICE_QUALIFIED') ? '◯' : journal.labels.includes('INVOICE_NOT_QUALIFIED') ? '✕' : '')">
+                <div v-if="rowIndex === 0" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200 relative jl-editable']" @dblclick.stop="startCellEdit(journal.id, rowIndex, 'invoice', journal.labels.includes('INVOICE_QUALIFIED') ? '◯' : journal.labels.includes('INVOICE_NOT_QUALIFIED') ? '✕' : '')">
                   <template v-if="isEditing(journal.id, rowIndex, 'invoice')">
                     <select class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" style="height:100%;min-height:0;line-height:1;" v-model="editingValue" @change="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()">
                       <option value="">　</option>
@@ -366,14 +375,14 @@
                     <span v-else-if="journal.labels.includes('INVOICE_NOT_QUALIFIED')" class="text-red-600 text-sm font-bold">✕</span>
                   </template>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
 
             </template>
 
             <!-- category-dropdown型（区分: ダブルクリック→検索付きoptgroup→テキスト戻り） -->
             <template v-else-if="col.type === 'category-dropdown'">
-              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 border-r border-gray-200 text-[10px] relative jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getCategoryForEntry(row, col.key))" @mousedown="startCellDrag(col.key, getCategoryForEntry(row, col.key), $event)">
+              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 border-r border-gray-200 text-[10px] relative jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getCategoryForEntry(row, col.key))" @mousedown="startCellDrag(col.key, getCategoryForEntry(row, col.key), $event)">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <div class="relative">
                     <input
@@ -386,9 +395,9 @@
                     />
                     <div class="absolute left-0 top-full z-50 bg-white border border-gray-300 shadow-lg rounded max-h-40 overflow-y-auto w-48">
                       <template v-for="g in filterCategoryGroups(editingValue)" :key="g.label">
-                        <div class="px-2 py-0.5 text-[8px] font-bold text-gray-500 bg-gray-100 sticky top-0">{{ g.label }}</div>
+                        <div class="px-2 py-0.5 text-[9px] font-bold text-gray-600 bg-gray-50">▼ {{ g.label }}</div>
                         <div v-for="c in g.items" :key="c"
-                             class="px-2 py-0.5 text-[9px] hover:bg-blue-100 cursor-pointer"
+                             class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-4"
                              @mousedown.prevent="selectCategoryItem(journal, row, col.key, c)">
                           {{ c }}
                         </div>
@@ -406,7 +415,7 @@
 
             <!-- account-dropdown型（勘定科目: ダブルクリック→検索付きoptgroup→テキスト戻り） -->
             <template v-else-if="col.type === 'account-dropdown'">
-              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 relative border-r border-gray-200 text-[10px] jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, (getRawValue(row, col.key) as string) ?? '')" @mousedown="startCellDrag(col.key, getRawValue(row, col.key), $event)">
+              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 relative border-r border-gray-200 text-[10px] jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, (getRawValue(row, col.key) as string) ?? '')" @mousedown="startCellDrag(col.key, getRawValue(row, col.key), $event)">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <div class="relative">
                     <input
@@ -418,15 +427,18 @@
                       @blur="blurAccountEdit(journal, row, col.key)"
                     />
                     <div class="absolute left-0 top-full z-50 bg-white border border-gray-300 shadow-lg rounded max-h-40 overflow-y-auto w-48">
-                      <template v-for="g in filterAccountGroups(editingValue)" :key="g.label">
-                        <div class="px-2 py-0.5 text-[8px] font-bold text-gray-500 bg-gray-100 sticky top-0">{{ g.label }}</div>
+                      <template v-for="g in filterAccountGroups(editingValue, row, col.key)" :key="g.label">
+                        <div class="px-2 py-0.5 text-[9px] font-bold text-gray-600 bg-gray-50 hover:bg-blue-50 cursor-pointer"
+                             @mousedown.prevent="drillDownCategory(journal, row, col.key, g.label)">
+                          ▼ {{ g.label }}
+                        </div>
                         <div v-for="a in g.items" :key="a.name"
-                             class="px-2 py-0.5 text-[9px] hover:bg-blue-100 cursor-pointer truncate"
+                             class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-4"
                              @mousedown.prevent="selectAccountItem(journal, row, col.key, a.name)">
                           {{ a.name }}
                         </div>
                       </template>
-                      <div v-if="filterAccountGroups(editingValue).length === 0" class="px-2 py-1 text-[9px] text-gray-400">該当なし</div>
+                      <div v-if="filterAccountGroups(editingValue, row, col.key).length === 0" class="px-2 py-1 text-[9px] text-gray-400">該当なし</div>
                     </div>
                   </div>
                 </template>
@@ -443,7 +455,7 @@
             <template v-else-if="col.type === 'text'">
               <!-- journal-level（keyにドットなし）: rowIndex===0のみ表示 -->
               <template v-if="!col.key.includes('.')">
-                <div v-if="rowIndex === 0" :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 flex items-center border-r border-gray-200 relative jl-editable', col.key === 'voucher_date' ? 'justify-center text-[8px]' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(journal, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(journal, col.key), $event)">
+                <div v-if="rowIndex === 0" :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center border-r border-gray-200 relative jl-editable', col.key === 'voucher_date' ? 'justify-center text-[8px]' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(journal, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(journal, col.key), $event)">
                   <!-- 日付: 編集中はdate input -->
                   <template v-if="col.key === 'voucher_date' && isEditing(journal.id, rowIndex, col.key)">
                     <input type="date" class="inline-edit-input w-full text-[8px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" v-model="editingValue" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
@@ -458,10 +470,10 @@
                   </template>
                   <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getValue(journal, col.key), $event)"></span>
                 </div>
-                <div v-else :class="[col.width, 'border-r border-gray-200']"></div>
+                <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
               <!-- entry-level（keyにドットあり）: 補助科目・税区分等 -->
-              <div v-else :data-drag-col="col.key" :data-drag-row="rowIndex" :class="[col.width, 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
+              <div v-else :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <!-- F4: 税区分は検索付きoptgroupコンボボックス（方向フィルタ） -->
                   <div v-if="col.key.endsWith('.tax_category_id')" class="relative">
@@ -475,9 +487,9 @@
                     />
                     <div class="absolute left-0 top-full z-50 bg-white border border-gray-300 shadow-lg rounded max-h-40 overflow-y-auto w-48">
                       <template v-for="g in filterTaxGroups(row, col.key, editingValue)" :key="g.label">
-                        <div class="px-2 py-0.5 text-[8px] font-bold text-gray-500 bg-gray-100 sticky top-0">{{ g.label }}</div>
+                        <div class="px-2 py-0.5 text-[9px] font-bold text-gray-600 bg-gray-50">▼ {{ g.label }}</div>
                         <div v-for="tc in g.items" :key="tc.id"
-                             class="px-2 py-0.5 text-[9px] hover:bg-blue-100 cursor-pointer truncate"
+                             class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-4"
                              @mousedown.prevent="selectTaxItem(journal, tc.name)">
                           {{ tc.name }}
                         </div>
@@ -497,7 +509,7 @@
 
             <!-- amount型 -->
             <template v-else-if="col.type === 'amount'">
-              <div :class="[col.width, 'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px] jl-editable', col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))">
+              <div :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px] jl-editable', col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <input type="text" inputmode="numeric" class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0 text-right font-mono" v-model="editingValue" @input="onAmountInput($event)" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
                 </template>
@@ -508,7 +520,7 @@
             </template>
 
             <!-- action型（ワークフローハブ） -->
-            <div v-else-if="col.type === 'action'" :class="[col.width, 'p-0.5 flex items-center justify-center relative']">
+            <div v-else-if="col.type === 'action'" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center relative']">
               <!-- ⋮ ボタン（rowIndex===0のみ活性） -->
               <span v-if="rowIndex === 0"
                     class="text-gray-500 hover:text-blue-600 cursor-pointer text-xs font-bold"
@@ -633,15 +645,17 @@
       </select>
     </div>
 
-    <!-- 画像モーダル -->
+    <!-- 画像モーダル（Teleportでbody直下に移動、ナビバーより前面に表示） -->
+    <Teleport to="body">
     <div v-if="modalImageUrl"
          class="fixed inset-0 z-40 pointer-events-none"
          @click="hideImageModal">
     </div>
     <div v-if="modalImageUrl"
          ref="imageModalRef"
-         :style="{ width: `${actualModalWidth}px`, height: `${actualModalHeight}px`, top: imageModalPos.top + 'px', left: imageModalPos.left + 'px', zIndex: imageModalZ }"
-         class="fixed bg-white rounded-lg shadow-2xl flex flex-col pointer-events-auto">
+         :style="{ top: imageModalPos.top + 'px', left: imageModalPos.left + 'px', zIndex: imageModalZ }"
+         class="fixed bg-white rounded-lg shadow-2xl flex flex-col pointer-events-auto overflow-auto cursor-move w-[300px] h-[400px]" style="resize: both; min-width: 200px; min-height: 200px;"
+         @mousedown="modalDrag(startImageDrag, $event)">
       <!-- ドラッグハンドル（ヘッダー） -->
       <div class="bg-blue-100 px-3 py-1.5 flex justify-between items-center cursor-move rounded-t-lg select-none"
            @mousedown="startImageDrag">
@@ -685,14 +699,19 @@
              @mouseup="onMouseUp"
              @mouseleave="onMouseUp" />
       </div>
+      <!-- リサイズグリップインジケーター -->
+      <div class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none" style="background: linear-gradient(135deg, transparent 50%, rgba(59,130,246,0.5) 50%, rgba(59,130,246,0.7) 100%); border-radius: 0 0 0.5rem 0;"></div>
     </div>
+    </Teleport>
 
-    <!-- 過去仕訳検索モーダル -->
+    <!-- 過去仕訳検索モーダル（Teleportでbody直下に移動） -->
+    <Teleport to="body">
     <div v-if="showPastJournalModal"
          ref="pastJournalModalRef"
          :style="{ top: pastJournalPos.top + 'px', left: pastJournalPos.left + 'px', zIndex: pastJournalZ }"
-         class="fixed bg-white rounded-lg shadow-2xl w-[600px] h-[600px] flex flex-col pointer-events-auto border-2 border-gray-300"
-         @click.stop>
+         class="fixed bg-white rounded-lg shadow-2xl flex flex-col pointer-events-auto border-2 border-gray-300 overflow-auto w-[600px] h-[600px] cursor-move" style="resize: both; min-width: 300px; min-height: 200px;"
+         @click.stop
+         @mousedown="modalDrag(startPastJournalDrag, $event)">
         <!-- モーダルヘッダー（ドラッグハンドル） -->
         <div class="bg-blue-100 px-4 py-3 border-b flex justify-between items-center cursor-move select-none rounded-t-lg"
              @mousedown="startPastJournalDrag">
@@ -887,17 +906,21 @@
             </button>
           </div>
         </div>
+      <!-- リサイズグリップインジケーター -->
+      <div class="sticky bottom-0 ml-auto w-5 h-5 pointer-events-none flex-shrink-0" style="background: linear-gradient(135deg, transparent 50%, rgba(59,130,246,0.5) 50%, rgba(59,130,246,0.7) 100%); border-radius: 0 0 0.5rem 0;"></div>
     </div>
-  </div>
+    </Teleport>
 
-    <!-- コメントモーダル -->
+  </div>
+    <!-- コメントモーダル（Teleportでbody直下に移動） -->
+    <Teleport to="body">
     <div v-if="commentModalJournalId"
          ref="commentModalRef"
          class="fixed z-[90]"
          :style="{ left: commentModalPos.left + 'px', top: commentModalPos.top + 'px', zIndex: commentModalZ }"
          @mouseenter="cancelHoverCloseCommentModal()"
          @mouseleave="scheduleHoverCloseCommentModal()">
-      <div class="bg-white rounded-lg shadow-2xl border-2 border-blue-300 w-[480px]" @click.stop>
+      <div class="bg-white rounded-lg shadow-2xl border-2 border-blue-300 w-[480px] overflow-auto flex flex-col cursor-move" style="resize: both; min-width: 200px; min-height: 150px;" @click.stop @mousedown="modalDrag(startCommentDrag, $event)">
         <!-- ドラッグ可能ヘッダー -->
         <div @mousedown="startCommentDrag"
              class="bg-blue-100 px-3 py-2 rounded-t-lg cursor-move flex items-center justify-between select-none">
@@ -972,7 +995,10 @@
           </div>
         </div>
       </div>
+      <!-- リサイズグリップインジケーター -->
+      <div class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none" style="background: linear-gradient(135deg, transparent 50%, rgba(59,130,246,0.5) 50%, rgba(59,130,246,0.7) 100%); border-radius: 0 0 0.5rem 0;"></div>
     </div>
+    </Teleport>
 
     <!-- 確認ダイアログ（モーダル） -->
     <div v-if="confirmDialog.show"
@@ -1017,13 +1043,26 @@ import { useClients } from '@/features/client-management/composables/useClients'
 import { NULL_DISPLAY_UNKNOWN, compareWithNull } from '@/mocks/definitions/field-nullable-spec';
 import { useDraggable } from '@/mocks/composables/useDraggable';
 import { useCurrentUser, STAFF_LIST } from '@/mocks/composables/useCurrentUser';
-import { journalColumns } from '@/mocks/columns/journalColumns';
+import { journalColumns, getDefaultColumnWidths } from '@/mocks/columns/journalColumns';
+import { useColumnResize } from '@/mocks/composables/useColumnResize';
 import { mockJournalsPhase5 as fixtureData } from '../data/journal_test_fixture_30cases';
 import { getDocumentImageUrl } from '../data/document_mock_data';
 import type { JournalPhase5Mock, JournalEntryLine, JournalLabelMock } from '../types/journal_phase5_mock.type';
 import { createEmptyStaffNotes, STAFF_NOTE_KEYS } from '../types/staff_notes';
 import type { StaffNoteKey } from '../types/staff_notes';
 
+
+// 列幅カスタマイズ
+const { columnWidths, onResizeStart, resetWidths: resetColWidths } = useColumnResize('journal-list', getDefaultColumnWidths());
+
+/** 列幅クラス（flex-1列はTailwindクラス、他は空） */
+function colWidthClass(col: { defaultPx: number; width: string }) {
+  return col.defaultPx === 0 ? col.width : '';
+}
+/** 列幅スタイル（px列はwidth+flexShrink、flex-1列は空） */
+function colWidthStyle(col: { defaultPx: number; key: string }) {
+  return col.defaultPx > 0 ? { width: columnWidths.value[col.key] + 'px', flexShrink: 0 } : {};
+}
 
 // ローカル可変データ（fixtureの深いコピー、Phase A用）
 const localJournals = ref<JournalPhase5Mock[]>(
@@ -1200,11 +1239,19 @@ function filterCategoryGroups(query: string) {
     .filter(g => g.items.length > 0);
 }
 
-/** 勘定科目候補をテキストでフィルタ */
-function filterAccountGroups(query: string) {
-  if (!query) return accountGroupsForJournal.value;
+/** 勘定科目候補をテキスト+区分でフィルタ */
+function filterAccountGroups(query: string, row?: Record<string, unknown>, colKey?: string) {
+  let groups = accountGroupsForJournal.value;
+  // 検索テキストが空の場合のみ区分フィルタ（テキスト入力中は全カテゴリから検索可能）
+  if (!query && row && colKey) {
+    const selectedCat = getCategoryForEntry(row, colKey);
+    if (selectedCat) {
+      groups = groups.filter(g => g.label === selectedCat);
+    }
+  }
+  if (!query) return groups;
   const q = query.toLowerCase();
-  return accountGroupsForJournal.value
+  return groups
     .map(g => ({ ...g, items: g.items.filter(a => a.name.toLowerCase().includes(q)) }))
     .filter(g => g.items.length > 0);
 }
@@ -1260,6 +1307,14 @@ function selectAccountItem(journal: JournalPhase5Mock, row: Record<string, unkno
   editingCell.value = null;
 }
 
+/** ドリルダウン: グループヘッダークリック→区分セット+検索テキストクリア→同カテゴリ配下のみ再表示 */
+function drillDownCategory(journal: JournalPhase5Mock, row: Record<string, unknown>, colKey: string, categoryLabel: string): void {
+  // 区分をセット
+  setCategoryForEntry(row, colKey, categoryLabel);
+  journal.is_read = true;
+  // 検索テキストをクリアして全候補再表示（filterAccountGroupsが区分フィルタ済みの候補を返す）
+  editingValue.value = '';
+}
 /** 税区分アイテム選択: 税区分セット + 既読化 + 編集モード解除 */
 function selectTaxItem(journal: JournalPhase5Mock, taxName: string): void {
   editingValue.value = taxName;
@@ -1271,6 +1326,7 @@ function selectTaxItem(journal: JournalPhase5Mock, taxName: string): void {
 
 /** 区分blur: 入力値が有効な区分名なら確定、そうでなければキャンセル */
 function blurCategoryEdit(journal: JournalPhase5Mock, row: Record<string, unknown>, colKey: string): void {
+  if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
   const val = editingValue.value;
   const allCategories = categoryGroupsForJournal.flatMap(g => g.items);
   if (allCategories.includes(val)) {
@@ -1285,6 +1341,7 @@ function blurCategoryEdit(journal: JournalPhase5Mock, row: Record<string, unknow
 
 /** 勘定科目blur: 入力値が有効な科目名なら確定、そうでなければキャンセル */
 function blurAccountEdit(journal: JournalPhase5Mock, row: Record<string, unknown>, colKey: string): void {
+  if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
   const val = editingValue.value;
   const isValid = filteredAccounts.value.some(a => a.name === val);
   if (isValid) {
@@ -1296,6 +1353,7 @@ function blurAccountEdit(journal: JournalPhase5Mock, row: Record<string, unknown
 
 /** 税区分blur: 入力値が有効な税区分名なら確定、そうでなければキャンセル */
 function blurTaxEdit(journal: JournalPhase5Mock): void {
+  if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
   const val = editingValue.value;
   const settings = clientSettings.value ?? masterSettings;
   const isValid = settings.visibleTaxCategories.value.some(tc => tc.name === val);
@@ -2141,6 +2199,17 @@ const dragStartY = ref<number>(0);
 const imageModalRef = ref<HTMLElement | null>(null);
 const { position: imageModalPos, zIndex: imageModalZ, startDrag: startImageDrag } = useDraggable(imageModalRef);
 
+/** モーダル全体ドラッグ用フィルタ（フォーム要素・リサイズ領域はドラッグ除外） */
+function modalDrag(startFn: (e: MouseEvent) => void, e: MouseEvent) {
+  const t = e.target as HTMLElement;
+  if (t.closest('input, select, button, textarea, a, [contenteditable], .fill-handle')) return;
+  // 右下角のリサイズ領域（20px）をドラッグから除外
+  const el = (e.currentTarget as HTMLElement);
+  const rect = el.getBoundingClientRect();
+  if (e.clientX > rect.right - 20 && e.clientY > rect.bottom - 20) return;
+  startFn(e);
+}
+
 // 過去仕訳検索モーダル用
 const pastJournalModalRef = ref<HTMLElement | null>(null);
 const { position: pastJournalPos, zIndex: pastJournalZ, startDrag: startPastJournalDrag } = useDraggable(pastJournalModalRef);
@@ -2148,6 +2217,7 @@ const { position: pastJournalPos, zIndex: pastJournalZ, startDrag: startPastJour
 // コメントモーダル用
 const commentModalRef = ref<HTMLElement | null>(null);
 const { position: commentModalPos, zIndex: commentModalZ, startDrag: startCommentDrag } = useDraggable(commentModalRef);
+
 const showPastJournalModal = ref<boolean>(false);
 const pastJournalTab = ref<'streamed' | 'accounting'>('streamed');
 const pastJournalSearch = ref({
@@ -2274,18 +2344,7 @@ function goToPage(page: number) {
   }
 }
 
-// 回転角度に応じてモーダルサイズを調整
-const actualModalWidth = computed(() => {
-  return (rotationAngle.value === 90 || rotationAngle.value === 270)
-    ? baseModalHeight.value
-    : baseModalWidth.value;
-});
-
-const actualModalHeight = computed(() => {
-  return (rotationAngle.value === 90 || rotationAngle.value === 270)
-    ? baseModalWidth.value
-    : baseModalHeight.value;
-});
+// baseModalWidth/baseModalHeight は画像読込時の初期サイズ記録用（CSS resize: bothで管理）
 
 function showImageModal(journalId: string, documentId: string | null) {
   hoveredJournalId.value = journalId;

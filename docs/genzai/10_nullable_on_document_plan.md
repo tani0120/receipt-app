@@ -1,7 +1,7 @@
 # null許容化・項目存在フラグ・警告ラベル整備計画
 
 > 作成日: 2026-03-04
-> 更新日: 2026-03-16（useAccountSettings実装完了—全ページからACCOUNT_MASTER/TAX_CATEGORY_MASTERの直接import排除、composable経由に一本化）
+> 更新日: 2026-03-19（useAccountSettings実装完了、useColumnResize全ページ適用、D7/D7a/D8 3列optgroupコンボボックス実装完了）
 > 根拠: STREAMED（ストリームド）UI調査、ChatGPT設計議論（2026-03-03）、journal_v2_20260214.md
 > 承認: 2026-03-04 チャットにて承認済み
 
@@ -107,9 +107,9 @@
 | D4 | 同上 | [x] 警告列のホバー: `on_document`（項目存在フラグ）分岐メッセージ実装済み | — |
 | D5 | 同上 | [x] ソート: `compareWithNull`（null比較関数）でnull末尾/先頭に統一 | — |
 | D6 | 同上 | [x] 金額null時の貸借合計計算: 既存の `?? 0` で対応済み | — |
-| D7 | 同上 | [ ] 勘定科目列をマスター連動プルダウンに変更 | K1✅完了 → **実装可能** |
-| D7a | 同上 | [ ] **区分列+ドロップダウン追加**（2026-03-14決定） | D7と同時実装。下記D7a詳細参照 |
-| D8 | 同上 | [ ] 税区分列をマスター連動プルダウンに変更 | K2✅完了 → **実装可能** |
+| D7 | 同上 | [x] 勘定科目列をマスター連動プルダウンに変更 | K1✅完了 → **2026-03-19実装完了**。ダブルクリック→検索付きoptgroupコンボボックス |
+| D7a | 同上 | [x] **区分列+ドロップダウン追加**（2026-03-14決定） | D7と同時実装。ダブルクリック→テキスト入力+optgroup候補リスト→選択確定 |
+| D8 | 同上 | [x] 税区分列をマスター連動プルダウンに変更 | K2✅完了 → **2026-03-19実装完了**。方向フィルタ+optgroup付き検索コンボボックス |
 | D9 | 同上 | [ ] null → 「未確定」科目への自動マッピング | K1✅完了 → **実装可能** |
 | D10 | 同上 | [ ] nullセルの赤枠表示（勘定科目null・金額nullのセルを `border-red` で強調） | — |
 
@@ -365,9 +365,9 @@
 | 38 | D4 警告列ホバー（on_document分岐） | ✅ | AI | 優先度4 |
 | 39 | D5 ソート（compareWithNull） | ✅ | AI | 優先度4 |
 | 40 | D6 金額null時の貸借合計 | ✅ | AI | 優先度4 |
-| 41 | D7 勘定科目列をマスター連動プルダウンに変更 | ❌ | AI | 優先度4 |
-| 41a | D7a **区分列+ドロップダウン追加**（category-firstカスケードの起点） | ❌ | AI | 優先度4。2026-03-14決定 |
-| 42 | D8 税区分列をマスター連動プルダウンに変更 | ❌ | AI | 優先度4 |
+| 41 | D7 勘定科目列をマスター連動プルダウンに変更 | ✅ | AI | 優先度4。2026-03-19実装。ダブルクリック→検索付きoptgroupコンボボックス |
+| 41a | D7a **区分列+ドロップダウン追加**（category-firstカスケードの起点） | ✅ | AI | 優先度4。2026-03-19実装 |
+| 42 | D8 税区分列をマスター連動プルダウンに変更 | ✅ | AI | 優先度4。2026-03-19実装。方向フィルタ+optgroup付き |
 | 43 | D9 null→「未確定」科目への自動マッピング | ❌ | AI | 優先度4 |
 | 44 | D10 nullセルの赤枠表示 | ❌ | AI | 優先度4 |
 | 45 | ① 取引日・摘要列の実装 | ❌ | AI | task_phase_a §① |
@@ -419,16 +419,16 @@
 ⑤新テスト → ②tax設計 → ③借方/貸方6列 → Phase A完了 → ⑥本番移行
 ```
 
-### 全64タスクのサマリー
+### 全70タスクのサマリー
 
 | フェーズ | タスク数 | ✅完了 | ❌未実施 |
 |---------|:---:|:---:|:---:|
 | 1（マスタ完成） | 39 | 25 | 14 |
-| 2（一覧UI） | 13 | 6 | 7 |
+| 2（一覧UI） | 13 | 9 | 4 |
 | 3（テスト） | 5 | 0 | 5 |
 | 4（借方/CSV） | 8 | 0 | 8 |
 | 5（本番移行） | 5 | 0 | 5 |
-| **合計** | **70** | **31** | **39** |
+| **合計** | **70** | **34** | **36** |
 
 ### 今すぐ着手すべきこと
 
@@ -446,7 +446,7 @@
 | 1（型定義） | ✅完了 | 他の全作業がこの型に依存する。最初に固めないと手戻り |
 | 2（警告ラベル） | ✅完了 | 型と警告の相関が整合しないとUI実装が矛盾する |
 | 3（マスター作成） | ✅完了 | K1-K5全完了。マスタデータ+独立ページ+設計ルール13項目確定 |
-| 4（一覧UI） | 🟡一部完了 | D1-D6✅完了。D7-D10❌はマスター完了につき**実装可能** |
+| 4（一覧UI） | 🟡一部完了 | D1-D6✅完了。D7/D7a/D8✅完了（2026-03-19、検索付きoptgroupコンボボックス）。D9-D10❌未着手 |
 | 5（テストデータ） | ✅完了 | I1-I2完了 |
 | 6（プロンプト） | ❌未着手 | マスタ定義完了後に着手（方針転換後はフェーズ3） |
 | 7（金額類推） | ❌未着手 | ③借方/貸方6列完了後に着手（フェーズ4） |
@@ -555,7 +555,7 @@
 | 事務所共通 税区分マスタ | `/master/tax` | `MockMasterTaxCategoriesPage.vue` | ✅composableのoverridesに同期（2026-03-15 N2修正） |
 | 顧問先別 勘定科目 | `/client/settings/accounts/:clientId` | `MockClientAccountsPage.vue`: `useClientAccounts(clientId)` → `useAccountMaster()` | ✅composable経由でマスタのカスタム科目を取得（2026-03-14修正） |
 | 顧問先別 税区分 | `/client/settings/tax/:clientId` | `MockClientTaxPage.vue`: `useClientTaxCategories(clientId)` | ✅composable経由で保存・読み込み。保存キー統一済み（2026-03-15 N2修正） |
-| 仕訳一覧ドロップダウン | `/client/journal-list/:clientId` | `JournalListLevel3Mock.vue` L934: `ACCOUNT_MASTER`直接フィルタ | ❌独立 |
+| 仕訳一覧ドロップダウン | `/client/journal-list/:clientId` | `JournalListLevel3Mock.vue`: `useAccountSettings('master')` + `useAccountSettings('client', clientId)` | ✅統合（2026-03-16 useAccountSettings実装完了） |
 
 - **2026-03-14解決済み**: マスタ勘定科目ページの`saveChanges`がcomposableの`overrides`に同期保存。顧問先ページはcomposable経由でマスタのカスタム科目を取得
 - **2026-03-16解決済み（useAccountSettings実装）**: 全ページが`useAccountSettings`経由でデータ取得。`ACCOUNT_MASTER`/`TAX_CATEGORY_MASTER`の直接importは0件。`useClientAccounts`/`useTaxMaster`等の直接importもページから完全排除。仕訳リストも`masterSettings`/`clientSettings`経由で取得。詳細は[14_useAccountSettings_design.md](file:///c:/dev/receipt-app/docs/genzai/14_useAccountSettings_design.md)参照
@@ -606,7 +606,7 @@
 | N2 | **共有composableの保存キー統一** — composableとページの保存キー二重管理を解消。`useClientTaxCategories`にcustomTaxCategories対応+saveAll()追加。マスタ税区分ページにcomposable同期追加。旧キー`sugu-suru:client-tax-page:`を廃止 | 03-11 | ✅完了（03-15） | 4ファイル修正。§1の全4問題・§5の全7項目が解決済み。`useAccountSettings`実装完了（03-16） |
 | N3 | **顧問先UUIDの見える化** — 顧問先管理画面に顧問先UUIDを編集不可で表示。3コード（`clientCode`）とUUID（`uuid`）の取り違え防止 | 03-11 | ❌未着手 | `useClients.ts`のClient型: `id`（3コード-UUID形式）、`uuid`（UUID部分）、`clientCode`（3コード）の3つが存在 |
 | N4 | **全UUIDの実装状況調査と紐付けロジック** — 顧問先UUID・担当UUID・証票単位UUID・仕訳単位UUIDの4種について、現在の実装状況を調査し、全てを紐付けするロジックを実装 | 03-11 | ❌未着手 | 仕訳フィクスチャの`id`は`j001`等の仮ID。証票は`document_id: 'receipt-001'`。本番用UUID未実装 |
-| N5 | **仕訳一覧の編集UX改善** — ①勘定科目セルのドラッグ&ドロップ移動 ②右下マス押下でコピー（会計ソフト形式/Excel式） ③仕訳行で行全体を編集有効化せず、セル単位で部分的に編集有効化 | 03-11 | 🟡一部完了 | フィルハンドル（下方向+上方向コピー）実装済み。ドラッグ移動・セル単位編集は未着手 |
+| N5 | **仕訳一覧の編集UX改善** — ①勘定科目セルのドラッグ&ドロップ移動 ②右下マス押下でコピー（会計ソフト形式/Excel式） ③仕訳行で行全体を編集有効化せず、セル単位で部分的に編集有効化 | 03-11 | 🟡一部完了 | フィルハンドル（下方向+上方向コピー）実装済み。2026-03-17: 区分・勘定科目・税区分列のダブルクリック編集パターン標準化済み。2026-03-19: 列幅ドラッグリサイズ（`useColumnResize`）全10ページ適用済み。ドラッグ移動・セル単位編集は未着手 |
 | N6 | **5セグメント実装の適否確認** — 通帳・クレカ明細・売上・経費等の5つのセグメント分類が現在の設計と整合するか調査 | 03-11 | ❌未着手 | フィクスチャの`labels`に`RECEIPT`/`BANK_STATEMENT`/`CREDIT_CARD`/`TRANSPORT`/`MEDICAL`等のラベルが存在。5セグメントとの対応を確認 |
 | N7 | **共有composable `useAccountSettings`の実装** — 顧問先別勘定科目・税区分データを一元管理。全ページからACCOUNT_MASTER/TAX_CATEGORY_MASTERの直接importを排除 | 03-11 | ✅完了（03-16） | composable本体+型定義作成済み、全ページリファクタリング完了。詳細は[14_useAccountSettings_design.md](file:///c:/dev/receipt-app/docs/genzai/14_useAccountSettings_design.md) |
 

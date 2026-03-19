@@ -888,3 +888,36 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 ### S-4. 検証結果
 
 - `vue-tsc --noEmit`: 0件 ✅
+
+## T. useColumnResize全ページ適用 + 3列optgroupコンボボックス統一（2026-03-19）
+
+> `useColumnResize` composableを全10ページに適用し、3列（区分・勘定科目・税区分）を検索付きoptgroupコンボボックスに統一。
+
+### T-1. useColumnResize全ページ適用（8ページ + 仕訳一覧 + 仕訳個別 = 10ページ）
+
+| # | ページ | pageKey | 状態 |
+|---|--------|---------|:----:|
+| 1 | 税区分マスタ | `master-tax` | ✅ |
+| 2 | 勘定科目マスタ | `master-accounts` | ✅ |
+| 3 | スタッフ | `master-staff` | ✅ |
+| 4 | 顧問先 | `master-clients` | ✅ |
+| 5 | 進捗 | `progress` | ✅ |
+| 6 | 出力 | `export` | ✅ |
+| 7 | 勘定科目設定 | `client-accounts` | ✅ |
+| 8 | 税区分設定 | `client-tax` | ✅ |
+
+共通パターン: `table-layout: fixed` + `colgroup`動的バインド + `<th>`リサイズハンドル + `localStorage`永続化
+
+### T-2. 3列optgroupコンボボックス統一（D7/D7a/D8完了）
+
+| # | 列 | 修正前 | 修正後 | 状態 |
+|---|-----|--------|--------|:----:|
+| 1 | 区分 | 常時表示select | ダブルクリック→テキスト入力+optgroup候補リスト→選択確定 | ✅ |
+| 2 | 勘定科目 | 検索input+フローティングドロップダウン | 同上パターンに統一 | ✅ |
+| 3 | 税区分 | フラットselect | optgroup付き検索コンボボックス（方向フィルタ対応） | ✅ |
+
+3列共通: `bg-white`背景、ダブルクリックで編集開始、blur時バリデーション+確定/キャンセル
+
+### T-3. 検証結果
+
+- `vue-tsc --noEmit`: 0件 ✅

@@ -63,44 +63,55 @@
           </div>
         </div>
         <div class="as-table-wrap">
-          <table class="as-table">
+          <table class="as-table" style="table-layout: fixed;">
             <colgroup>
-              <col class="col-check">
-              <col style="width: 60px;">
-              <col style="width: 14%;">
-              <col style="width: 10%;">
-              <col style="width: 10%;">
-              <col style="width: 10%;">
-              <col style="width: 10%;">
-              <col style="width: 6%;">
-              <col style="width: 8%;">
-              <col style="width: 8%;">
+              <col style="width: 38px;">
+              <col :style="{ width: acctColWidths['defaultVisible'] + 'px' }">
+              <col :style="{ width: acctColWidths['name'] + 'px' }">
+              <col :style="{ width: acctColWidths['subAccount'] + 'px' }">
+              <col :style="{ width: acctColWidths['category'] + 'px' }">
+              <col :style="{ width: acctColWidths['taxDetermination'] + 'px' }">
+              <col :style="{ width: acctColWidths['defaultTaxCategoryId'] + 'px' }">
+              <col :style="{ width: acctColWidths['aiSelectable'] + 'px' }">
+              <col :style="{ width: acctColWidths['effectiveFrom'] + 'px' }">
+              <col :style="{ width: acctColWidths['effectiveTo'] + 'px' }">
             </colgroup>
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
-                <th>デフォルトで表示</th>
-                <th class="sortable" @click="sortAccounts('name')">
+                <th class="relative">デフォルトで表示
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('defaultVisible', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortAccounts('name')">
                   勘定科目 <i :class="getSortIcon('name')"></i>
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('name', $event)"></div>
                 </th>
-                <th>
+                <th class="relative">
                   補助科目 <span class="th-help-wrap" data-tooltip="補助科目は顧問先ごとの設定で入力します。マスタでは空白です。"><i class="fa-solid fa-circle-question th-help"></i></span>
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('subAccount', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortAccounts('category')">
+                <th class="sortable relative" @click="sortAccounts('category')">
                   区分 <i :class="getSortIcon('category')"></i>
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('category', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortAccounts('taxDetermination')">
+                <th class="sortable relative" @click="sortAccounts('taxDetermination')">
                   税区分判定 <i :class="getSortIcon('taxDetermination')"></i>
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('taxDetermination', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortAccounts('defaultTaxCategoryId')">
+                <th class="sortable relative" @click="sortAccounts('defaultTaxCategoryId')">
                   デフォルト税区分 <i :class="getSortIcon('defaultTaxCategoryId')"></i>
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('defaultTaxCategoryId', $event)"></div>
                 </th>
-                <th>税区分自動選択</th>
-                <th class="sortable" @click="sortAccounts('effectiveFrom')">
+                <th class="relative">税区分自動選択
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('aiSelectable', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortAccounts('effectiveFrom')">
                   適用開始 <i :class="getSortIcon('effectiveFrom')"></i>
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('effectiveFrom', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortAccounts('effectiveTo')">
+                <th class="sortable relative" @click="sortAccounts('effectiveTo')">
                   適用終了 <i :class="getSortIcon('effectiveTo')"></i>
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('effectiveTo', $event)"></div>
                 </th>
               </tr>
             </thead>
@@ -188,6 +199,21 @@ import { ref, reactive, computed, watch } from 'vue';
 import type { Account } from '@/shared/types/account';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
+import { useColumnResize } from '@/mocks/composables/useColumnResize';
+
+// 列幅カスタマイズ
+const acctDefaultWidths: Record<string, number> = {
+  defaultVisible: 60,
+  name: 140,
+  subAccount: 100,
+  category: 100,
+  taxDetermination: 100,
+  defaultTaxCategoryId: 120,
+  aiSelectable: 60,
+  effectiveFrom: 80,
+  effectiveTo: 80,
+};
+const { columnWidths: acctColWidths, onResizeStart: onAcctResizeStart } = useColumnResize('master-accounts', acctDefaultWidths);
 
 const PAGE_SIZE = 50;
 const ACCOUNT_STORAGE_KEY = 'sugu-suru:account-master:rows';
@@ -755,4 +781,11 @@ function resetAccountOrder() {
   background: #4caf50; color: #fff; border: 1px solid #388e3c;
 }
 .as-action-btn.save:hover { background: #388e3c; }
+
+/* リサイズハンドル */
+.resize-handle {
+  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
+  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
+}
+.resize-handle:hover { background: #1976D2; }
 </style>

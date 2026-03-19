@@ -82,6 +82,7 @@
 |---|--------|------|------|
 | G1 | 列表示ON/OFF | 未実装 | ユーザーが列を非表示にする機能 |
 | G2 | カラムグループ化 | 未実装 | 借方/貸方のグループヘッダー（**必須**） |
+| ~~G3~~ | ~~列幅ドラッグリサイズ~~ | ✅完了（2026-03-19） | `useColumnResize` composableを全10ページに適用。列境界ドラッグ＋localStorage永続化。`table-layout: fixed` + `colgroup`動的バインド方式 |
 
 ---
 
@@ -144,6 +145,7 @@
 - [ ] F2: non-null assertion禁止明文化
 - [ ] G1: 列表示ON/OFF
 - [ ] G2: カラムグループ化（必須）
+- [x] G3: 列幅ドラッグリサイズ（✅ 2026-03-19完了。`useColumnResize` composable、全10ページ適用済み）
 - [ ] H1: Hono RPC $post型のUI用フィールド要求を解消
 - [ ] H2: createClient/updateClientのローカルState反映
 - [ ] H3: mockClientsPreloadのダブルキャスト解消

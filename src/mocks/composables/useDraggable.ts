@@ -55,7 +55,7 @@ export function useDraggable(elRef: Ref<HTMLElement | null>) {
         bringToFront()
     }
 
-    // --- 移動処理（clamp付き） ---
+    // --- 移動処理（緩いclamp: ヘッダー50pxだけ画面内維持） ---
     function onDrag(e: MouseEvent) {
         if (!isDragging.value) return
 
@@ -66,13 +66,10 @@ export function useDraggable(elRef: Ref<HTMLElement | null>) {
         const newLeft = e.clientX - dragOffset.value.x
         const newTop = e.clientY - dragOffset.value.y
 
-        // 画面外に出ないようclamp
-        const maxLeft = window.innerWidth - rect.width
-        const maxTop = window.innerHeight - rect.height
-
+        // ヘッダー部分だけ画面内に残す（完全に画面外に出ないよう緩く制約）
         position.value = {
-            left: Math.max(0, Math.min(newLeft, maxLeft)),
-            top: Math.max(0, Math.min(newTop, maxTop))
+            left: Math.max(-rect.width + 50, Math.min(newLeft, window.innerWidth - 50)),
+            top: Math.max(-rect.height + 30, Math.min(newTop, window.innerHeight - 30))
         }
     }
 

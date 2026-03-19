@@ -70,46 +70,59 @@
           </div>
         </div>
         <div class="as-table-wrap">
-          <table class="as-table">
+          <table class="as-table" style="table-layout: fixed;">
             <colgroup>
-              <col class="col-check">
-              <col style="width: 60px;">
-              <col style="width: 70px;">
-              <col style="width: 13%;">
-              <col style="width: 10%;">
-              <col style="width: 10%;">
-              <col style="width: 10%;">
-              <col style="width: 10%;">
-              <col style="width: 6%;">
-              <col style="width: 8%;">
-              <col style="width: 8%;">
+              <col style="width: 38px;">
+              <col :style="{ width: caColWidths['defaultVisible'] + 'px' }">
+              <col :style="{ width: caColWidths['source'] + 'px' }">
+              <col :style="{ width: caColWidths['name'] + 'px' }">
+              <col :style="{ width: caColWidths['subAccount'] + 'px' }">
+              <col :style="{ width: caColWidths['category'] + 'px' }">
+              <col :style="{ width: caColWidths['taxDetermination'] + 'px' }">
+              <col :style="{ width: caColWidths['defaultTaxCategoryId'] + 'px' }">
+              <col :style="{ width: caColWidths['aiSelectable'] + 'px' }">
+              <col :style="{ width: caColWidths['effectiveFrom'] + 'px' }">
+              <col :style="{ width: caColWidths['effectiveTo'] + 'px' }">
             </colgroup>
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
-                <th class="th-visibility">デフォルトで表示</th>
-                <th style="text-align:center;font-size:11px;">出典</th>
-                <th class="sortable" @click="sortAccounts('name')">
+                <th class="th-visibility relative">デフォルトで表示
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('defaultVisible', $event)"></div>
+                </th>
+                <th class="relative" style="text-align:center;font-size:11px;">出典
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('source', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortAccounts('name')">
                   勘定科目 <i :class="getSortIcon('name')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('name', $event)"></div>
                 </th>
-                <th>
+                <th class="relative">
                   補助科目 <span class="th-help-wrap" data-tooltip="ダブルクリックで入力できます"><i class="fa-solid fa-circle-question th-help"></i></span>
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('subAccount', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortAccounts('category')">
+                <th class="sortable relative" @click="sortAccounts('category')">
                   区分 <i :class="getSortIcon('category')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('category', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortAccounts('taxDetermination')">
+                <th class="sortable relative" @click="sortAccounts('taxDetermination')">
                   税区分判定 <i :class="getSortIcon('taxDetermination')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('taxDetermination', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortAccounts('defaultTaxCategoryId')">
+                <th class="sortable relative" @click="sortAccounts('defaultTaxCategoryId')">
                   デフォルト税区分 <i :class="getSortIcon('defaultTaxCategoryId')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('defaultTaxCategoryId', $event)"></div>
                 </th>
-                <th>税区分自動選択</th>
-                <th class="sortable" @click="sortAccounts('effectiveFrom')">
+                <th class="relative">税区分自動選択
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('aiSelectable', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortAccounts('effectiveFrom')">
                   適用開始 <i :class="getSortIcon('effectiveFrom')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('effectiveFrom', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortAccounts('effectiveTo')">
+                <th class="sortable relative" @click="sortAccounts('effectiveTo')">
                   適用終了 <i :class="getSortIcon('effectiveTo')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('effectiveTo', $event)"></div>
                 </th>
               </tr>
             </thead>
@@ -209,6 +222,22 @@ import type { Account } from '@/shared/types/account';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
+import { useColumnResize } from '@/mocks/composables/useColumnResize';
+
+// 列幅カスタマイズ
+const caDefaultWidths: Record<string, number> = {
+  defaultVisible: 60,
+  source: 70,
+  name: 140,
+  subAccount: 100,
+  category: 100,
+  taxDetermination: 100,
+  defaultTaxCategoryId: 120,
+  aiSelectable: 60,
+  effectiveFrom: 80,
+  effectiveTo: 80,
+};
+const { columnWidths: caColWidths, onResizeStart: onCaResizeStart } = useColumnResize('client-accounts', caDefaultWidths);
 
 const PAGE_SIZE = 50;
 const route = useRoute();
@@ -874,4 +903,11 @@ function resetAccountOrder() {
   background: #4caf50; color: #fff; border: 1px solid #388e3c;
 }
 .as-action-btn.save:hover { background: #388e3c; }
+
+/* リサイズハンドル */
+.resize-handle {
+  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
+  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
+}
+.resize-handle:hover { background: #1976D2; }
 </style>

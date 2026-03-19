@@ -1,5 +1,7 @@
 # Phase 5 API設計書
 
+> **更新日**: 2026-03-19（voucher_date / tax_category_id / 接頭辞+連番ID / ファイル名規則を最新スキーマに同期）
+
 ## 📋 目的
 
 仕訳管理APIのエンドポイント定義、ガード句、エラーハンドリングを記載
@@ -28,10 +30,10 @@ GET /api/journals?client_id={clientId}&status={status}&is_read={boolean}
 {
   "journals": [
     {
-      "id": "uuid",
-      "client_id": "uuid",
+      "id": "jrn-00000001",
+      "client_id": "ABC-00001",
       "display_order": 1,
-      "transaction_date": "2025-01-20",
+      "voucher_date": "2025-01-20",
       "description": "タクシー代",
       "status": null,
       "is_read": false,
@@ -42,7 +44,7 @@ GET /api/journals?client_id={clientId}&status={status}&is_read={boolean}
           "account": "旅費交通費",
           "sub_account": null,
           "amount": 2500,
-          "tax_category": "課税仕入込10%"
+          "tax_category_id": "PURCHASE_TAXABLE_10"
         }
       ],
       "credit_entries": [
@@ -50,7 +52,7 @@ GET /api/journals?client_id={clientId}&status={status}&is_read={boolean}
           "account": "現金",
           "sub_account": null,
           "amount": 2500,
-          "tax_category": null
+          "tax_category_id": "COMMON_EXEMPT"
         }
       ],
       "created_at": "2025-01-20T10:00:00Z",
@@ -74,10 +76,10 @@ export async function getJournals(params: GetJournalsParams): Promise<JournalsRe
     .select(`
       *,
       debit_entries:journal_entries!journal_id(
-        id, entry_type, line_number, account, sub_account, amount, tax_category
+        id, entry_type, line_number, account, sub_account, amount, tax_category_id
       ),
       credit_entries:journal_entries!journal_id(
-        id, entry_type, line_number, account, sub_account, amount, tax_category
+        id, entry_type, line_number, account, sub_account, amount, tax_category_id
       )
     `, { count: 'exact' })
     .eq('client_id', client_id)
@@ -349,8 +351,8 @@ export async function exportJournals(
   const csv = generateMFCSV(journals);
 
   // 3. ファイル名生成
-  const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
-  const filename = `${clientId}_${timestamp}_journals.csv`;
+  const dateStr = format(new Date(), 'yyyyMMdd');
+  const filename = `${clientId}_マネーフォワード_${dateStr}.csv`;  // §4準拠。同日2回目以降は _2, _3...
 
   // 4. トランザクション処理（RPC呼び出し）
   const { data, error } = await supabase.rpc('export_journals_transaction', {
@@ -379,11 +381,11 @@ export async function exportJournals(
 
 ```sql
 CREATE OR REPLACE FUNCTION export_journals_transaction(
-  p_client_id UUID,
-  p_user_id UUID,
-  p_journal_ids UUID[],
+  p_client_id VARCHAR(20),
+  p_user_id VARCHAR(20),
+  p_journal_ids VARCHAR(20)[],
   p_filename TEXT
-) RETURNS TABLE(batch_id UUID) AS $$
+) RETURNS TABLE(batch_id VARCHAR(20)) AS $$
 DECLARE
   v_batch_id UUID;
 BEGIN

@@ -59,45 +59,55 @@
           </div>
         </div>
         <div class="as-table-wrap">
-          <table class="as-table">
+          <table class="as-table" style="table-layout: fixed;">
             <colgroup>
-              <col class="col-check">
-              <col style="width: 60px;">
-              <col style="width: 70px;">
-              <col style="width: 8%;">
+              <col style="width: 38px;">
+              <col :style="{ width: ctColWidths['defaultVisible'] + 'px' }">
+              <col :style="{ width: ctColWidths['source'] + 'px' }">
+              <col :style="{ width: ctColWidths['direction'] + 'px' }">
               <col style="width: auto;">
-              <col style="width: 8%;">
-              <col style="width: 8%;">
-              <col style="width: 6%;">
-              <col style="width: 10%;">
-              <col style="width: 10%;">
+              <col :style="{ width: ctColWidths['rate'] + 'px' }">
+              <col :style="{ width: ctColWidths['qualified'] + 'px' }">
+              <col :style="{ width: ctColWidths['aiSelectable'] + 'px' }">
+              <col :style="{ width: ctColWidths['effectiveFrom'] + 'px' }">
+              <col :style="{ width: ctColWidths['effectiveTo'] + 'px' }">
             </colgroup>
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
-                <th class="as-th-check">デフォルトで表示</th>
-                <th style="text-align:center;font-size:11px;">出典</th>
-                <th class="sortable" @click="sortTax('direction')">
+                <th class="as-th-check relative">デフォルトで表示
+                  <div class="resize-handle" @mousedown.stop="onCtResizeStart('defaultVisible', $event)"></div>
+                </th>
+                <th class="relative" style="text-align:center;font-size:11px;">出典
+                  <div class="resize-handle" @mousedown.stop="onCtResizeStart('source', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortTax('direction')">
                   取引区分 <i :class="getSortIcon('direction')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCtResizeStart('direction', $event)"></div>
                 </th>
                 <th class="sortable" @click="sortTax('name')">
                   税区分 <i :class="getSortIcon('name')"></i>
                 </th>
-                <th class="sortable" @click="sortTaxByRate()">
+                <th class="sortable relative" @click="sortTaxByRate()">
                   税率 <i :class="getSortIcon('_rate')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCtResizeStart('rate', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortTax('qualified')">
+                <th class="sortable relative" @click="sortTax('qualified')">
                   適格判定対象 <i class="fa-solid fa-circle-question th-help" title="この税区分を使う際、取引先のインボイス登録番号の確認が必要かどうか。仕入側の課税取引にのみ○がつきます。"></i>
                   <i :class="getSortIcon('qualified')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCtResizeStart('qualified', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortTax('aiSelectable')">
+                <th class="sortable relative" @click="sortTax('aiSelectable')">
                   税区分自動選択 <i :class="getSortIcon('aiSelectable')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCtResizeStart('aiSelectable', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortTax('effectiveFrom')">
+                <th class="sortable relative" @click="sortTax('effectiveFrom')">
                   適用開始日 <i :class="getSortIcon('effectiveFrom')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCtResizeStart('effectiveFrom', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortTax('effectiveTo')">
+                <th class="sortable relative" @click="sortTax('effectiveTo')">
                   適用終了日 <i :class="getSortIcon('effectiveTo')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCtResizeStart('effectiveTo', $event)"></div>
                 </th>
               </tr>
             </thead>
@@ -189,6 +199,20 @@ import { extractRateFromName } from '@/shared/types/tax-category';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
+import { useColumnResize } from '@/mocks/composables/useColumnResize';
+
+// 列幅カスタマイズ
+const ctDefaultWidths: Record<string, number> = {
+  defaultVisible: 60,
+  source: 70,
+  direction: 80,
+  rate: 80,
+  qualified: 80,
+  aiSelectable: 60,
+  effectiveFrom: 100,
+  effectiveTo: 100,
+};
+const { columnWidths: ctColWidths, onResizeStart: onCtResizeStart } = useColumnResize('client-tax', ctDefaultWidths);
 
 const PAGE_SIZE = 50;
 const route = useRoute();
@@ -698,4 +722,11 @@ function resetTaxOrder() {
   margin-left: auto; background: none; border: none;
   color: #e65100; font-size: 16px; cursor: pointer; padding: 0 4px;
 }
+
+/* リサイズハンドル */
+.resize-handle {
+  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
+  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
+}
+.resize-handle:hover { background: #1976D2; }
 </style>

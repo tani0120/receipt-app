@@ -64,20 +64,26 @@
 
     <!-- テーブル -->
     <div class="flex-1 overflow-auto">
-      <table class="w-full border-collapse text-[10px]">
+      <table class="w-full border-collapse text-[10px]" style="table-layout: fixed;">
         <thead>
           <tr class="bg-blue-100 text-gray-800 sticky top-0">
             <!-- ダウンロード対象列（ソート対応） -->
-            <th class="w-[90px] p-1 border-r border-gray-300 text-center cursor-pointer hover:bg-blue-200 select-none" @click="handleSort('checked')">
+            <th class="p-1 border-r border-gray-300 text-center cursor-pointer hover:bg-blue-200 select-none relative"
+                :style="{ width: exColWidths['checked'] + 'px' }"
+                @click="handleSort('checked')">
               <div>ダウンロード対象 <span v-if="sortKey === 'checked'" class="text-[8px]">{{ sortDir === 'asc' ? '▲' : '▼' }}</span></div>
               <div class="mt-0.5"><input type="checkbox" class="w-2.5 h-2.5" :checked="isAllPageChecked" @change="toggleAll"></div>
+              <div class="resize-handle" @mousedown.stop="onExResizeStart('checked', $event)"></div>
             </th>
-            <th class="w-[35px] p-1 border-r border-gray-300 text-center">No</th>
+            <th class="p-1 border-r border-gray-300 text-center" style="width: 35px;">No</th>
             <th v-for="col in sortableColumns" :key="col.key"
-                :class="[col.width, 'p-1 border-r border-gray-300 cursor-pointer hover:bg-blue-200 select-none', col.align]"
+                class="p-1 border-r border-gray-300 cursor-pointer hover:bg-blue-200 select-none relative"
+                :class="[col.align]"
+                :style="{ width: exColWidths[col.key] + 'px' }"
                 @click="handleSort(col.key)">
               {{ col.label }}
               <span v-if="sortKey === col.key" class="text-[8px]">{{ sortDir === 'asc' ? '▲' : '▼' }}</span>
+              <div class="resize-handle" @mousedown.stop="onExResizeStart(col.key, $event)"></div>
             </th>
           </tr>
         </thead>
@@ -135,6 +141,17 @@
 import { ref, computed, watch } from 'vue';
 import { mockJournalsPhase5 } from '../data/journal_test_fixture_30cases';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
+import { useColumnResize } from '@/mocks/composables/useColumnResize';
+
+// 列幅カスタマイズ
+const exDefaultWidths: Record<string, number> = {
+  checked: 90,
+  qualified: 30, date: 70, description: 180,
+  debitAccount: 100, debitSub: 80, debitTax: 80, debitAmount: 80,
+  creditAccount: 100, creditSub: 80, creditTax: 80, creditAmount: 80,
+  importDate: 70,
+};
+const { columnWidths: exColWidths, onResizeStart: onExResizeStart } = useColumnResize('export', exDefaultWidths);
 
 const masterSettings = useAccountSettings('master');
 
@@ -375,3 +392,12 @@ const toggleAll = () => {
   checkedIds.value = next;
 };
 </script>
+
+<style scoped>
+/* リサイズハンドル */
+.resize-handle {
+  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
+  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
+}
+.resize-handle:hover { background: #1976D2; }
+</style>
