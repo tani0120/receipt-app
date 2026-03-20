@@ -62,6 +62,8 @@
 | MF警告（ルール5） | なし（マスタは正式名） | カスタム科目の名称変更時に?マーク警告表示 |
 | 「デフォルトで表示」列（2026-03-14追加） | なし（マスタは全件表示） | 左から2番目に配置。🗑削除+👁表示/非表示アイコン。デフォルト行は👁のみ、カスタム行は🗑+👁 |
 | 保存ボタンのlocalStorage永続化（2026-03-14追加） | `sugu-suru:account-master:overrides`に保存 | `sugu-suru:client-accounts:{clientId}`に保存。`subAccounts`マップ含む |
+| MF公式列（2026-03-20追加） | `<span class="td-mf-badge mf-official">MF公式</span>`バッジ表示。`isCustom=false`→MF公式、`isCustom=true`→MF非公式（⚠アイコン） | なし（マスタページのみ） |
+| 一括ボタン色分け（2026-03-20追加） | 青（MF公式/表示化/コピー/追加）・赤（MF非公式/非表示化/削除）+ 仕切り線 | 同左 |
 
 ---
 

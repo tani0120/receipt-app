@@ -116,6 +116,16 @@
 
 ---
 
+## RC-12: MFマスタCSVバリデーション（2026-03-20追記・保留）
+
+- **発見経緯**: MF公式/非公式表示修正時に、MFマスタデータの鮮度維持方法を調査
+- **現状**: `account-master.ts`（個人79+法人87件）と`tax-category-master.ts`（151件）はMFクラウド会計のCSVエクスポートを基に手動作成。税制改正時の更新手段がない
+- **調査結果**: MFクラウド会計APIはパートナー限定（一般開発者は利用不可）。APIによる自動取得は❌
+- **修正案**: `npm run validate:mf-master`スクリプトを作成。MFからエクスポートしたCSVと`tax-category-master.ts`/`account-master.ts`を差分比較し、追加・名称変更・廃止を検出
+- **時期**: ❌保留。税制改正が発生するまでは手動CSV更新で対応
+
+---
+
 ## チェックリスト
 
 - [ ] RC-1: unsafe/廃止
@@ -129,4 +139,5 @@
 - [ ] RC-9: /api/clients 500エラー解消 + fetchClientsフォールバック
 - [ ] RC-10: useAccountSettings.tsのACCOUNT_MASTER/TAX_CATEGORY_MASTER直接import解消（RC-5と同時）
 - [ ] RC-11: useStaff副担当（M:N紐付け）の設計（RC-5と同時）
+- [ ] RC-12: MFマスタCSVバリデーション（保留・税制改正時に実施）
 

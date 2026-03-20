@@ -122,6 +122,7 @@
 | I5 | `useAccountSettings.ts` L343-344: `_accountMasterOverrides`/`_taxMasterOverrides`公開 | 未解決 | 内部composableのoverridesを外部に漏洩。MockMasterAccountsPage L199が直接参照。専用メソッド追加で代替すべき |
 | I6 | `ScreenS_AccountSettings.vue`: ルーター未登録の死んだコンポーネント | 未解決 | ACCOUNT_MASTER/TAX_CATEGORY_MASTERを直接importしたまま。router/index.tsに参照ゼロ。削除またはリファクタリングが必要 |
 | ~~I7~~ | ~~useStaff紐付けテーブル削除 + Client.staffId source of truth化~~ | ✅完了（2026-03-17） | useStaff.tsからassignments/localStorage/assignStaff/unassignStaff/getAssignedStaff/getMainStaffName全削除。Client.staffIdが主担当の唯一のデータソース。useClients.tsのinitMockAssignments削除、localStorage `sugu-suru:staff-assignments` クリーンアップ追加 |
+| ~~I8~~ | ~~MF公式/非公式表示修正~~ | ✅完了（2026-03-20） | MockMasterAccountsPage: MF公式列バッジ化、一括ボタン色分け（青/赤）+仕切り線、`demoteFromMfChecked()`追加、`<th>MF公式</th>`閉じタグ修正。MockMasterTaxCategoriesPage: MF公式バッジ削除。MFマスタ鮮度維持は保留（API=パートナー限定、CSVバリデーション=保留） |
 
 ---
 
@@ -160,3 +161,4 @@
 - [ ] I5: _overrides公開によるカプセル化破壊解消
 - [ ] I6: ScreenS_AccountSettings.vue死んだコンポーネントの削除/リファクタリング
 - [x] I7: useStaff紐付けテーブル削除 + Client.staffId source of truth化（✅ 2026-03-17完了）
+- [x] I8: MF公式/非公式表示修正（✅ 2026-03-20完了。MFマスタ鮮度維持はAPI保留・CSVバリデーション保留）

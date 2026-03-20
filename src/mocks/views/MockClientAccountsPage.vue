@@ -33,7 +33,7 @@
         <!-- 注意コメント -->
         <div class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
-          デフォルト科目（<i class="fa-solid fa-building-columns" style="font-size:14px;color:#1976D2"></i>）の科目名は変更できません。補助科目・表示切替は編集可能です。カスタム科目は全項目を編集できます。
+          デフォルト科目（<i class="fa-solid fa-circle-check" style="font-size:14px;color:#4caf50"></i>）の科目名は変更できません。補助科目・表示切替は編集可能です。カスタム科目は全項目を編集できます。
         </div>
 
         <!-- MF名称変更警告（ルール5） -->
@@ -73,7 +73,7 @@
           <table class="as-table" style="table-layout: fixed;">
             <colgroup>
               <col style="width: 38px;">
-              <col :style="{ width: caColWidths['defaultVisible'] + 'px' }">
+              <col :style="{ width: caColWidths['mfCompliance'] + 'px' }">
               <col :style="{ width: caColWidths['source'] + 'px' }">
               <col :style="{ width: caColWidths['name'] + 'px' }">
               <col :style="{ width: caColWidths['subAccount'] + 'px' }">
@@ -87,8 +87,8 @@
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
-                <th class="th-visibility relative">デフォルトで表示
-                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('defaultVisible', $event)"></div>
+                <th class="th-visibility relative">MF準拠確認済み
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('mfCompliance', $event)"></div>
                 </th>
                 <th class="relative" style="text-align:center;font-size:11px;">出典
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('source', $event)"></div>
@@ -152,7 +152,7 @@
                     <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" ref="editInput" autofocus>
                   </template>
                   <template v-else>
-                    <i v-if="!row.isCustom" class="fa-solid fa-building-columns td-default-icon"></i>
+                    <i v-if="!row.isCustom" class="fa-solid fa-circle-check td-mf-ok"></i>
                     {{ row.name }}
                   </template>
                 </td>
@@ -226,7 +226,7 @@ import { useColumnResize } from '@/mocks/composables/useColumnResize';
 
 // 列幅カスタマイズ
 const caDefaultWidths: Record<string, number> = {
-  defaultVisible: 60,
+  mfCompliance: 60,
   source: 70,
   name: 140,
   subAccount: 100,

@@ -67,7 +67,7 @@
 |---|------------|---------|------|
 | K1 | [account-master.ts](file:///c:/dev/receipt-app/src/shared/data/account-master.ts) | [x] 勘定科目マスター ✅ | 79科目。MF準拠。法人/個人1マスタ管理、`target`（`corp`/`individual`/`both`）で分岐。概念ID + MF正式名称 + デフォルト税区分 + `taxDetermination`（税区分判定モード） + 表示順 |
 | K2 | [tax-category-master.ts](file:///c:/dev/receipt-app/src/shared/data/tax-category-master.ts) | [x] 税区分マスター ✅ | 151件。MF正式名称完全一致。概念ID（例: `PURCHASE_TAXABLE_10`）方式。デフォルト表示27件 + 残りは顧問先単位で有効化 |
-| K3 | [MockMasterAccountsPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterAccountsPage.vue) | [x] 勘定科目マスタUI ✅ | `/master/accounts` に独立ページ化。「分類」列廃止→「補助科目」列追加。ヘルプアイコン（?マーク）でカスタムツールチップ表示。**2026-03-14追加**: 「区分」「税区分判定」「デフォルト税区分」3列追加。カスタム行のインライン編集（ダブルクリック→ドロップダウン）。category変更時の税区分判定/デフォルト税区分自動連動。`saveChanges`でcomposableの`overrides`も同期（顧問先ページへの変更伝播） |
+| K3 | [MockMasterAccountsPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterAccountsPage.vue) | [x] 勘定科目マスタUI ✅ | `/master/accounts` に独立ページ化。「分類」列廃止→「補助科目」列追加。ヘルプアイコン（?マーク）でカスタムツールチップ表示。**2026-03-14追加**: 「区分」「税区分判定」「デフォルト税区分」3列追加。カスタム行のインライン編集（ダブルクリック→ドロップダウン）。category変更時の税区分判定/デフォルト税区分自動連動。`saveChanges`でcomposableの`overrides`も同期（顧問先ページへの変更伝播）。**2026-03-20追加**: MF公式列をバッジ表示（`<span class="td-mf-badge mf-official">MF公式</span>`）に変更。一括ボタン色分け（青/赤）+仕切り線追加。`demoteFromMfChecked()`関数追加 |
 | K4 | [MockMasterTaxCategoriesPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterTaxCategoriesPage.vue) | [x] 税区分マスタUI ✅ | `/master/tax` に独立ページ化（旧`/master/tax-categories`から短縮、2026-03-11 N1で変更） |
 | K5 | [MockMasterHubPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockMasterHubPage.vue) | [x] マスタハブUI ✅ | `/master` にハブページ。勘定科目マスタ・税区分マスタへのリンク |
 
@@ -332,7 +332,7 @@
 | 12 | 勘定科目マスタUI — `deprecated`行のグレーアウト表示（ルール3） | ✅ | AI | master_design_rules.md |
 | 13 | 税区分マスタUI — `deprecated`行のグレーアウト表示（ルール3） | ✅ | AI | master_design_rules.md |
 | 14 | 勘定科目マスタUI — `effective_from`/`effective_to`列の表示（ルール1） | ✅ | AI | master_design_rules.md |
-| 15 | 税区分マスタUI — `effective_from`/`effective_to`列の表示（ルール1） | ❌ | AI | master_design_rules.md |
+| 15 | 税区分マスタUI — `effective_from`/`effective_to`列の表示（ルール1） | ✅ | AI | master_design_rules.md |
 | 16 | マスタUI — インライン編集（カスタム科目のみ）＋保存ボタンで確定（ルール4,6） | ✅ | AI | master_design_rules.md。2026-03-14: 勘定科目マスタ+顧問先ページに区分/税区分判定/デフォルト税区分のインライン編集実装。ダブルクリック→ドロップダウン方式 |
 | 17 | マスタUI — チェックボックス選択→削除・コピー・追加・復元（ルール6） | ✅ | AI | master_design_rules.md |
 | 18 | マスタUI — ドラッグ並替え→`sort_order`更新→DB保存（ルール10） | ✅ | AI | master_design_rules.md |

@@ -22,7 +22,7 @@
         <!-- 注意バナー -->
         <div class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
-          デフォルト税区分（<i class="fa-solid fa-building-columns" style="font-size:14px;color:#1976D2"></i>）の名称は変更できません。表示切替は編集可能です。カスタム税区分は全項目を編集できます。
+          デフォルト税区分（<i class="fa-solid fa-circle-check" style="font-size:14px;color:#4caf50"></i>）の名称は変更できません。表示切替は編集可能です。カスタム税区分は全項目を編集できます。
         </div>
 
         <!-- MF名称変更警告（ルール5） -->
@@ -62,7 +62,7 @@
           <table class="as-table" style="table-layout: fixed;">
             <colgroup>
               <col style="width: 38px;">
-              <col :style="{ width: ctColWidths['defaultVisible'] + 'px' }">
+              <col :style="{ width: ctColWidths['mfCompliance'] + 'px' }">
               <col :style="{ width: ctColWidths['source'] + 'px' }">
               <col :style="{ width: ctColWidths['direction'] + 'px' }">
               <col style="width: auto;">
@@ -75,8 +75,8 @@
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
-                <th class="as-th-check relative">デフォルトで表示
-                  <div class="resize-handle" @mousedown.stop="onCtResizeStart('defaultVisible', $event)"></div>
+                <th class="as-th-check relative">MF準拠確認済み
+                  <div class="resize-handle" @mousedown.stop="onCtResizeStart('mfCompliance', $event)"></div>
                 </th>
                 <th class="relative" style="text-align:center;font-size:11px;">出典
                   <div class="resize-handle" @mousedown.stop="onCtResizeStart('source', $event)"></div>
@@ -121,8 +121,9 @@
                   <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
                 </td>
                 <td style="text-align:center;font-size:11px;color:#666;">
-                  <span v-if="row.isCustom" style="color:#E65100;">顧問先独自</span>
-                  <span v-else><i class="fa-solid fa-building-columns" style="color:#1976D2;font-size:12px;"></i> マスタ</span>
+                  <span v-if="row.isCustom && !isMasterCustomTax(row.id)" style="color:#E65100;">顧問先独自</span>
+                  <span v-else-if="isMasterCustomTax(row.id)" style="color:#1976D2;"><i class="fa-solid fa-circle-check" style="font-size:12px;color:#4caf50;"></i> マスタ（カスタム）</span>
+                  <span v-else><i class="fa-solid fa-circle-check" style="color:#4caf50;font-size:12px;"></i> マスタ</span>
                 </td>
                 <!-- 取引区分 -->
                 <td class="td-direction" :class="'dir-' + row.direction" @dblclick="startEdit(row, 'direction')">
@@ -137,7 +138,7 @@
                 </td>
                 <!-- 税区分 -->
                 <td @dblclick="startEdit(row, 'name')">
-                  <i v-if="!row.isCustom" class="fa-solid fa-building-columns td-default-icon"></i>
+                  <i v-if="!row.isCustom" class="fa-solid fa-circle-check td-mf-ok"></i>
                   <template v-if="isEditing(row.id, 'name')">
                     <input v-model="editValue" @keydown.enter="commitEdit(row, 'name')" @blur="commitEdit(row, 'name')" class="inline-input" ref="editInput" />
                   </template>
@@ -203,7 +204,7 @@ import { useColumnResize } from '@/mocks/composables/useColumnResize';
 
 // 列幅カスタマイズ
 const ctDefaultWidths: Record<string, number> = {
-  defaultVisible: 60,
+  mfCompliance: 60,
   source: 70,
   direction: 80,
   rate: 80,
@@ -241,6 +242,12 @@ const taxPage = ref(1);
 const settings = clientId.value ? useAccountSettings('client', clientId.value) : useAccountSettings('master');
 
 // 旧キーマイグレーションはuseAccountSettings内部で実行済み
+
+/** マスタレベルで追加されたカスタム税区分か */
+function isMasterCustomTax(taxId: string): boolean {
+  const entry = settings.taxCategories.value.find(t => t.id === taxId);
+  return entry ? entry.source === 'master-custom' : false;
+}
 
 /** composableから税区分一覧を取得し、ページ用の配列に変換 */
 function loadTaxRows(): TaxCategory[] {

@@ -921,3 +921,64 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 ### T-3. 検証結果
 
 - `vue-tsc --noEmit`: 0件 ✅
+
+## U. MF公式/非公式表示修正 + MFマスタ鮮度維持（2026-03-20）
+
+> MF公式列の表示をアイコンからバッジに変更し、一括ボタンに色分けと仕切り線を追加。
+> MFマスタデータの鮮度維持方法を調査。
+
+### U-1. MF公式表示修正（2ファイル）
+
+| # | ファイル | 修正内容 | 状態 |
+|---|---------|---------|:----:|
+| 1 | `MockMasterAccountsPage.vue` | MF公式列ヘッダーを「MF公式」テキストに変更。tbody: `<span class="td-mf-badge mf-official">MF公式</span>`バッジ化 | ✅ |
+| 2 | `MockMasterAccountsPage.vue` | 勘定科目名列のMF公式バッジ削除。MF公式列のゴミ箱アイコン削除 | ✅ |
+| 3 | `MockMasterAccountsPage.vue` | `<th>MF公式</th>`の閉じタグ欠落修正（Viteコンパイルエラー原因） | ✅ |
+| 4 | `MockMasterTaxCategoriesPage.vue` | 税区分名列のMF公式バッジ削除 | ✅ |
+
+### U-2. 一括ボタン色分け・仕切り（2ファイル）
+
+| # | 修正内容 | 状態 |
+|---|---------|:----:|
+| 1 | 一括ボタン色分け: `MF公式`/`表示化`/`コピー`/`追加`→青(#1976D2)、`MF非公式`/`非表示化`/`削除`→赤(#e53935) | ✅ |
+| 2 | `.as-bulk-divider`仕切り線（薄灰色縦線1px）をボタングループ間に追加 | ✅ |
+| 3 | `demoteFromMfChecked()`関数追加（確認ダイアログ付き） | ✅ |
+
+### U-3. CSSスタイル追加
+
+| クラス | 用途 |
+|--------|------|
+| `.td-mf-badge` / `.td-mf-badge.mf-official` | MF公式バッジ（緑背景`#e8f5e9`+緑文字`#2e7d32`） |
+| `.td-mf-unknown` | MF非公式アイコン（オレンジ`#ff9800`） |
+| `.as-bulk-btn.blue` / `.as-bulk-btn.red` | 一括ボタン色分け |
+| `.as-bulk-divider` | 仕切り線 |
+
+### U-4. MF公式判定の内部状態
+
+```
+isCustom = false → MF公式（デフォルト科目/税区分）
+isCustom = true  → MF非公式（カスタム科目/税区分）
+```
+
+- 専用の`isMfOfficial`フラグは存在しない。`isCustom`フラグで判定
+- CSV出力時は「名称」で照合されるため、名称がMF正式名称と完全一致していればインポート可能
+
+### U-5. MFマスタデータ鮮度維持（保留）
+
+| 方法 | 状態 | 備考 |
+|------|:----:|------|
+| MF API連携 | ❌保留 | MFクラウド会計APIは**パートナー限定**公開。`GET /api/external/v1/offices/{id}/account_items`（勘定科目）、`GET /api/external/v1/offices/{id}/excises`（税区分）。OAuth2認証必要 |
+| CSVバリデーションスクリプト | ❌保留 | `npm run validate:mf-master`でMFエクスポートCSVと`tax-category-master.ts`/`account-master.ts`を差分比較。追加・名称変更・廃止を検出 |
+| MF公式昇格時の名称バリデーション | ❌保留 | `promoteToMfChecked`実行時に`TAX_CATEGORY_MASTER.find(m => m.name === row.name)`で完全一致チェック |
+
+### U-6. 現在保持しているMFマスタデータ
+
+| ファイル | 件数 | 根拠 |
+|---------|------|------|
+| `tax-category-master.ts` | 151件 | MFクラウド会計 税区分設定CSV |
+| `account-master.ts` | 個人79件+法人87件 | MFクラウド確定申告CSVエクスポート |
+
+### U-7. 検証結果
+
+- `vue-tsc --noEmit`: 0件 ✅
+- ブラウザ確認: `/master/accounts`、`/master/tax` — MF公式バッジ・一括ボタン色・仕切り正常表示 ✅

@@ -23,7 +23,7 @@
         <!-- 注意バナー -->
         <div class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
-          デフォルト税区分（<i class="fa-solid fa-lock" style="font-size:14px;color:#666"></i>）の名称は編集できません。コピー・追加したカスタム税区分のみ編集可能です。
+          デフォルト税区分（<i class="fa-solid fa-circle-check" style="font-size:14px;color:#4caf50"></i>）の名称は編集できません。コピー・追加したカスタム税区分のみ編集可能です。
         </div>
 
         <div class="as-toolbar" style="margin-top: 8px;">
@@ -39,11 +39,15 @@
             <!-- チェック時の一括操作ボタン -->
             <template v-if="checkedIds.length">
               <span class="as-bulk-badge">{{ checkedIds.length }}件選択中</span>
-              <button class="as-bulk-btn" @click="showChecked"><i class="fa-solid fa-eye"></i> 表示化</button>
-              <button class="as-bulk-btn" @click="hideChecked"><i class="fa-solid fa-eye-slash"></i> 非表示化</button>
-              <button class="as-bulk-btn danger" @click="deleteChecked"><i class="fa-solid fa-trash-can"></i> 削除（復元できません）</button>
-              <button class="as-bulk-btn" @click="copyChecked"><i class="fa-solid fa-copy"></i> コピー</button>
-              <button class="as-bulk-btn" @click="addAfterChecked"><i class="fa-solid fa-plus"></i> 追加</button>
+              <button class="as-bulk-btn blue" @click="promoteToMfChecked"><i class="fa-solid fa-circle-check"></i> MF公式</button>
+              <button class="as-bulk-btn red" @click="demoteFromMfChecked"><i class="fa-solid fa-triangle-exclamation"></i> MF非公式</button>
+              <span class="as-bulk-divider"></span>
+              <button class="as-bulk-btn blue" @click="showChecked"><i class="fa-solid fa-eye"></i> 表示化</button>
+              <button class="as-bulk-btn red" @click="hideChecked"><i class="fa-solid fa-eye-slash"></i> 非表示化</button>
+              <span class="as-bulk-divider"></span>
+              <button class="as-bulk-btn red" @click="deleteChecked"><i class="fa-solid fa-trash-can"></i> 削除（復元できません）</button>
+              <button class="as-bulk-btn blue" @click="copyChecked"><i class="fa-solid fa-copy"></i> コピー</button>
+              <button class="as-bulk-btn blue" @click="addAfterChecked"><i class="fa-solid fa-plus"></i> 追加</button>
             </template>
           </div>
           <div class="as-actions">
@@ -56,7 +60,7 @@
           <table class="as-table" style="table-layout: fixed;">
             <colgroup>
               <col style="width: 38px;">
-              <col :style="{ width: taxColWidths['defaultVisible'] + 'px' }">
+              <col :style="{ width: taxColWidths['mfCompliance'] + 'px' }">
               <col :style="{ width: taxColWidths['direction'] + 'px' }">
               <col style="width: auto;">
               <col :style="{ width: taxColWidths['rate'] + 'px' }">
@@ -68,8 +72,8 @@
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
-                <th class="as-th-check relative">デフォルトで表示
-                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('defaultVisible', $event)"></div>
+                <th class="as-th-check relative" style="text-align:center;">MF公式
+                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('mfCompliance', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortTax('direction')">
                   取引区分 <i :class="getSortIcon('direction')"></i>
@@ -107,8 +111,8 @@
               >
                 <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
                 <td class="as-td-actions">
-                  <i v-if="row.deprecated" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
-                  <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
+                  <span v-if="!row.isCustom" class="td-mf-badge mf-official" title="MF公式">MF公式</span>
+                  <i v-else class="fa-solid fa-triangle-exclamation td-mf-unknown" title="MFインポート時に項目の紐付けが必要になる可能性があります"></i>
                 </td>
                 <!-- 取引区分 -->
                 <td class="td-direction" :class="'dir-' + row.direction" @dblclick="startEdit(row, 'direction')">
@@ -123,7 +127,6 @@
                 </td>
                 <!-- 税区分 -->
                 <td @dblclick="startEdit(row, 'name')">
-                  <i v-if="!row.isCustom" class="fa-solid fa-lock td-lock"></i>
                   <template v-if="isEditing(row.id, 'name')">
                     <input v-model="editValue" @keydown.enter="commitEdit(row, 'name')" @blur="commitEdit(row, 'name')" class="inline-input" ref="editInput" />
                   </template>
@@ -187,7 +190,7 @@ import { useColumnResize } from '@/mocks/composables/useColumnResize';
 
 // 列幅カスタマイズ
 const taxDefaultWidths: Record<string, number> = {
-  defaultVisible: 60,
+  mfCompliance: 60,
   direction: 80,
   rate: 60,
   qualified: 80,
@@ -256,21 +259,39 @@ function toggleAllChecked(e: Event) {
   checkedIds.value = checked ? pagedTaxRows.value.map(r => r.id) : [];
 }
 
-// =============== 非表示化・表示化 ===============
-function hideRow(row: TaxCategory) {
-  const today = new Date().toISOString().slice(0, 10);
-  row.deprecated = true;
-  row.effectiveTo = today;
-}
-function showRow(row: TaxCategory) {
-  row.deprecated = false;
-  row.effectiveTo = null;
-}
+
+
 function hideChecked() {
   const today = new Date().toISOString().slice(0, 10);
   checkedIds.value.forEach(id => {
     const row = allTaxRows.find(r => r.id === id);
     if (row) { row.deprecated = true; row.effectiveTo = today; }
+  });
+  checkedIds.value = [];
+}
+function promoteToMfChecked() {
+  const customIds = checkedIds.value.filter(id => {
+    const row = allTaxRows.find(r => r.id === id);
+    return row?.isCustom;
+  });
+  if (!customIds.length) { alert('カスタム税区分のみMF公式に変更できます。'); return; }
+  if (!confirm(`${customIds.length}件のカスタム税区分をMF公式に変更しますか？`)) return;
+  customIds.forEach(id => {
+    const row = allTaxRows.find(r => r.id === id);
+    if (row) row.isCustom = false;
+  });
+  checkedIds.value = [];
+}
+function demoteFromMfChecked() {
+  const officialIds = checkedIds.value.filter(id => {
+    const row = allTaxRows.find(r => r.id === id);
+    return row && !row.isCustom;
+  });
+  if (!officialIds.length) { alert('MF公式税区分のみMF非公式に変更できます。'); return; }
+  if (!confirm(`${officialIds.length}件の税区分をMF非公式に変更しますか？\nMFインポート時に項目の紐付けが必要になる可能性があります。`)) return;
+  officialIds.forEach(id => {
+    const row = allTaxRows.find(r => r.id === id);
+    if (row) row.isCustom = true;
   });
   checkedIds.value = [];
 }
@@ -696,6 +717,40 @@ function resetTaxOrder() {
 
 /* 適用終了日 */
 .td-date { white-space: nowrap; text-align: center; font-size: 11px; }
+
+/* MF公式バッジ */
+.td-mf-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+.td-mf-badge.mf-official {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+/* MF非公式アイコン */
+.td-mf-unknown { color: #ff9800; font-size: 14px; }
+
+/* MF公式一括ボタン */
+.as-bulk-btn.blue { color: #1976D2; border-color: #1976D2; }
+.as-bulk-btn.blue:hover { background: #e3f2fd; }
+/* MF非公式・削除等 */
+.as-bulk-btn.red { color: #e53935; border-color: #e53935; }
+.as-bulk-btn.red:hover { background: #ffebee; }
+/* 仕切り線 */
+.as-bulk-divider {
+  display: inline-block;
+  width: 1px; height: 18px;
+  background: #ccc;
+  margin: 0 6px;
+  vertical-align: middle;
+}
 
 /* リサイズハンドル */
 .resize-handle {

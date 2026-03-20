@@ -4,6 +4,7 @@
 > 目的: 各ページが`TAX_CATEGORY_MASTER`/`ACCOUNT_MASTER`をimportせず、composable経由でデータ取得を一元化する
 > 前提: 00_モック実装時のルール.md §15「localStorage保存ルール」に準拠
 > **実装ステータス: ✅ フェーズ1完了（2026-03-16）**
+> **追記（2026-03-20）**: MF公式/非公式表示修正完了。`isCustom=false`→MF公式（バッジ表示）、`isCustom=true`→MF非公式（⚠アイコン）。一括ボタン色分け（青/赤）+仕切り線追加。MFマスタ鮮度維持はAPI保留・CSVバリデーション保留
 
 ---
 
