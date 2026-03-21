@@ -62,7 +62,7 @@ const masterAccounts = computed<MasterAccount[]>(() => {
   const customAccounts: MasterAccount[] = overrides.value.customAccounts.map(a => ({
     ...a,
     hiddenInMaster: overrides.value.hiddenIds.includes(a.id),
-    isCustom: true,
+    isCustom: a.isCustom ?? true,
   }))
 
   return [...defaultAccounts, ...customAccounts].sort((a, b) => a.sortOrder - b.sortOrder)

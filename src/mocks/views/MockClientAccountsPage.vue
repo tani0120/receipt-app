@@ -11,17 +11,19 @@
           <span class="as-header-label">顧問先用勘定科目</span>
         </div>
 
-        <!-- 切替セレクター -->
+        <!-- 切替チェックボックス（編集不可） -->
         <div class="as-selectors-center">
           <div class="as-selector-group-lg">
             <span class="as-selector-label-lg">事業形態:</span>
-            <span class="as-fixed-value">{{ clientBusinessTypeLabel }}</span>
+            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="accountBusinessType === 'corp'" disabled class="as-checkbox-lg"><span>法人</span></label>
+            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="accountBusinessType === 'individual' && !accountHasRealEstate" disabled class="as-checkbox-lg"><span>個人事業</span></label>
+            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="accountBusinessType === 'individual' && accountHasRealEstate" disabled class="as-checkbox-lg"><span>個人事業(不動産所得あり)</span></label>
           </div>
-          <div class="as-selector-group-lg" v-if="accountBusinessType === 'individual'">
-            <span class="as-fixed-label">
-              <i class="fa-solid" :class="accountHasRealEstate ? 'fa-square-check' : 'fa-square'" style="color:#1976D2"></i>
-              不動産所得あり
-            </span>
+          <div class="as-selector-group-lg">
+            <span class="as-selector-label-lg">課税方式:</span>
+            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod === 'general'" disabled class="as-checkbox-lg"><span>本則</span></label>
+            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod === 'simplified'" disabled class="as-checkbox-lg"><span>簡易</span></label>
+            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod === 'exempt'" disabled class="as-checkbox-lg"><span>免税</span></label>
           </div>
         </div>
 
@@ -34,6 +36,11 @@
         <div class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
           デフォルト科目（<i class="fa-solid fa-circle-check" style="font-size:14px;color:#4caf50"></i>）の科目名は変更できません。補助科目・表示切替は編集可能です。カスタム科目は全項目を編集できます。
+        </div>
+        <!-- 簡易課税インフォバー -->
+        <div v-if="clientTaxMethod === 'simplified'" class="as-info-banner as-info-simplified">
+          <i class="fa-solid fa-circle-info"></i>
+          簡易課税モード — 仕入側の税区分は参考値です（消費税額はみなし仕入率から計算されるため、仕入側の税区分は申告計算に影響しません）。現在、顧問先の事業区分は1種類のみ暫定設定しています。勘定科目ごとの事業区分の使い分けが必要な場合は、MFクラウド会計側の勘定科目設定で適用してください。（★実装予定：AIで勘定科目単位の事業区分を仮算出）
         </div>
 
         <!-- MF名称変更警告（ルール5） -->
@@ -75,23 +82,26 @@
               <col style="width: 38px;">
               <col :style="{ width: caColWidths['mfCompliance'] + 'px' }">
               <col :style="{ width: caColWidths['source'] + 'px' }">
+              <col :style="{ width: caColWidths['aiSelectable'] + 'px' }">
               <col :style="{ width: caColWidths['name'] + 'px' }">
               <col :style="{ width: caColWidths['subAccount'] + 'px' }">
               <col :style="{ width: caColWidths['category'] + 'px' }">
               <col :style="{ width: caColWidths['taxDetermination'] + 'px' }">
               <col :style="{ width: caColWidths['defaultTaxCategoryId'] + 'px' }">
-              <col :style="{ width: caColWidths['aiSelectable'] + 'px' }">
               <col :style="{ width: caColWidths['effectiveFrom'] + 'px' }">
               <col :style="{ width: caColWidths['effectiveTo'] + 'px' }">
             </colgroup>
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
-                <th class="th-visibility relative">MF準拠確認済み
+                <th class="th-visibility relative">MF公式
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('mfCompliance', $event)"></div>
                 </th>
                 <th class="relative" style="text-align:center;font-size:11px;">出典
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('source', $event)"></div>
+                </th>
+                <th class="relative">税区分自動判定
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('aiSelectable', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('name')">
                   勘定科目 <i :class="getSortIcon('name')"></i>
@@ -102,7 +112,7 @@
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('subAccount', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('category')">
-                  区分 <i :class="getSortIcon('category')"></i>
+                  科目分類 <i :class="getSortIcon('category')"></i>
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('category', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('taxDetermination')">
@@ -112,9 +122,6 @@
                 <th class="sortable relative" @click="sortAccounts('defaultTaxCategoryId')">
                   デフォルト税区分 <i :class="getSortIcon('defaultTaxCategoryId')"></i>
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('defaultTaxCategoryId', $event)"></div>
-                </th>
-                <th class="relative">税区分自動選択
-                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('aiSelectable', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('effectiveFrom')">
                   適用開始 <i :class="getSortIcon('effectiveFrom')"></i>
@@ -147,6 +154,20 @@
                   <span v-else-if="isMasterCustomAccount(row.id)" style="color:#1976D2;"><i class="fa-solid fa-building-columns" style="font-size:12px;"></i> マスタ（カスタム）</span>
                   <span v-else><i class="fa-solid fa-building-columns" style="color:#1976D2;font-size:12px;"></i> マスタ</span>
                 </td>
+                <td class="td-ai" @dblclick="row.isCustom && startEdit(row, 'aiDetermination')" :class="{ 'td-editable': row.isCustom }">
+                  <template v-if="editingRow === row.id && editingField === 'aiDetermination'">
+                    <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
+                      <template v-if="getAllowedTaxDeterminations(row).length > 1">
+                        <option value="true">○</option>
+                        <option value="false"></option>
+                      </template>
+                      <template v-else>
+                        <option value="false"></option>
+                      </template>
+                    </select>
+                  </template>
+                  <template v-else>{{ getDisplayAiDet(row) }}</template>
+                </td>
                 <td @dblclick="row.isCustom && startEdit(row, 'name')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'name'">
                     <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" ref="editInput" autofocus>
@@ -162,7 +183,7 @@
                   </template>
                   <template v-else>{{ (row as any).subAccount ?? '' }}</template>
                 </td>
-                <!-- 区分 -->
+                <!-- 科目分類 -->
                 <td @dblclick="row.isCustom && startEdit(row, 'category')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'category'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
@@ -174,26 +195,23 @@
                   <template v-else>{{ row.category }}</template>
                 </td>
                 <!-- 税区分判定 -->
-                <td @dblclick="row.isCustom && startEdit(row, 'taxDetermination')" :class="{ 'td-editable': row.isCustom }">
+                <td @dblclick="row.isCustom && startEdit(row, 'taxDetermination')" :class="{ 'td-editable': row.isCustom, 'td-simplified-ref': clientTaxMethod === 'simplified' && isPurchaseSide(row) }">
                   <template v-if="editingRow === row.id && editingField === 'taxDetermination'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
-                      <option value="auto_purchase">自動(仕入)</option>
-                      <option value="auto_sales">自動(売上)</option>
-                      <option value="fixed">固定</option>
+                      <option v-for="td in getAllowedTaxDeterminations(row)" :key="td" :value="td">{{ taxDetLabel(td) }}</option>
                     </select>
                   </template>
-                  <template v-else>{{ taxDetLabel(row.taxDetermination) }}</template>
+                  <template v-else>{{ getDisplayTaxDet(row) }}</template>
                 </td>
                 <!-- デフォルト税区分 -->
-                <td @dblclick="row.isCustom && startEdit(row, 'defaultTaxCategoryId')" :class="{ 'td-editable': row.isCustom }">
+                <td @dblclick="row.isCustom && startEdit(row, 'defaultTaxCategoryId')" :class="{ 'td-editable': row.isCustom, 'td-simplified-ref': clientTaxMethod === 'simplified' && isPurchaseSide(row) }">
                   <template v-if="editingRow === row.id && editingField === 'defaultTaxCategoryId'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
                       <option v-for="tc in filteredTaxCategories(row.category)" :key="tc.id" :value="tc.id">{{ tc.shortName }}</option>
                     </select>
                   </template>
-                  <template v-else>{{ getTaxCategoryName(row.defaultTaxCategoryId) }}</template>
+                  <template v-else>{{ getDisplayDefaultTax(row) }}</template>
                 </td>
-                <td class="td-ai">{{ row.taxDetermination !== 'fixed' ? '○' : '' }}</td>
                 <td class="td-date">{{ row.effectiveFrom }}</td>
                 <td class="td-date">{{ row.effectiveTo ?? '現役' }}</td>
               </tr>
@@ -221,19 +239,20 @@ import { useRoute } from 'vue-router';
 import type { Account } from '@/shared/types/account';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useClients } from '@/features/client-management/composables/useClients';
-import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
+import { getInitialCopyCounter } from '@/shared/utils/copy-utils';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
+import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
 
 // 列幅カスタマイズ
 const caDefaultWidths: Record<string, number> = {
   mfCompliance: 60,
   source: 70,
+  aiSelectable: 80,
   name: 140,
   subAccount: 100,
   category: 100,
   taxDetermination: 100,
   defaultTaxCategoryId: 120,
-  aiSelectable: 60,
   effectiveFrom: 80,
   effectiveTo: 80,
 };
@@ -251,7 +270,7 @@ const clientId = computed(() => {
 const currentClientData = computed(() => clients.value.find(c => c.clientId === clientId.value) ?? null);
 const accountBusinessType = computed<'corp' | 'individual'>(() => currentClientData.value?.type === 'corp' ? 'corp' : 'individual');
 const accountHasRealEstate = computed(() => currentClientData.value?.hasRentalIncome ?? false);
-const clientBusinessTypeLabel = computed(() => accountBusinessType.value === 'corp' ? '法人' : '個人事業主');
+const clientTaxMethod = computed<'general' | 'simplified' | 'exempt'>(() => currentClientData.value?.consumptionTaxMode ?? 'general');
 
 // =============== composable接続（useAccountSettings経由） ===============
 const settings = clientId.value ? useAccountSettings('client', clientId.value) : useAccountSettings('master');
@@ -262,6 +281,9 @@ const accountPage = ref(1);
 const accountRows: Account[] = reactive(
   [...settings.accounts.value]
 );
+
+// 未保存変更ガード
+const { markDirty, markClean } = useUnsavedGuard(saveChanges);
 
 // subAccountをlocalStorageから復元
 if (clientId.value) {
@@ -370,6 +392,7 @@ function hideChecked() {
     });
   });
   checkedIds.value = [];
+  markDirty();
 }
 function showChecked() {
   const ids = [...checkedIds.value];
@@ -383,12 +406,14 @@ function showChecked() {
     });
   });
   checkedIds.value = [];
+  markDirty();
 }
 function deleteRow(row: Account) {
   if (!row.isCustom) return;
   if (!confirm(`「${row.name}」を削除しますか？復元できません。`)) return;
   const idx = accountRows.findIndex(r => r.id === row.id);
   if (idx !== -1) accountRows.splice(idx, 1);
+  markDirty();
 }
 function deleteChecked() {
   const customIds = checkedIds.value.filter(id => {
@@ -402,9 +427,12 @@ function deleteChecked() {
     if (idx !== -1) accountRows.splice(idx, 1);
   });
   checkedIds.value = [];
+  markDirty();
 }
 let copyCounter = getInitialCopyCounter(accountRows);
 function copyChecked() {
+  if (!checkedIds.value.length) return;
+  if (!confirm(`${checkedIds.value.length}件の科目をコピーしますか？`)) return;
   // チェック行を逆順にし、各行の直下にコピーを挿入
   const ids = [...checkedIds.value];
   ids.reverse().forEach(id => {
@@ -417,6 +445,7 @@ function copyChecked() {
       id: `${src.id}_COPY_${copyCounter}`,
       name: `${src.name}（コピー）`,
       target: src.target,
+      accountGroup: src.accountGroup,
       category: src.category,
       defaultTaxCategoryId: src.defaultTaxCategoryId,
       taxDetermination: src.taxDetermination,
@@ -430,8 +459,10 @@ function copyChecked() {
     accountRows.splice(srcIdx + 1, 0, copy);
   });
   checkedIds.value = [];
+  markDirty();
 }
 function addAfterChecked() {
+  if (!confirm('新規科目を追加しますか？')) return;
   // 最後にチェックした行の直下に新規行を挿入
   const ids = [...checkedIds.value];
   const lastId = ids[ids.length - 1];
@@ -441,6 +472,7 @@ function addAfterChecked() {
     id: `NEW_${copyCounter}`,
     name: '新規科目',
     target: accountBusinessType.value === 'corp' ? 'corp' : 'individual',
+    accountGroup: 'PL_EXPENSE',
     category: '経費',
     defaultTaxCategoryId: 'COMMON_EXEMPT',
     taxDetermination: 'fixed',
@@ -453,6 +485,7 @@ function addAfterChecked() {
   };
   accountRows.splice(insertIdx, 0, newRow);
   checkedIds.value = [];
+  markDirty();
 }
 function saveChanges() {
   if (!clientId.value) { alert('顧問先IDが不明です'); return; }
@@ -464,6 +497,7 @@ function saveChanges() {
   });
   // settings経由で保存（overrides refも同時に更新される）
   settings.saveAccounts(accountRows, subAccounts);
+  markClean();
   alert('保存しました — 変更はlocalStorageに永続化済み');
 }
 
@@ -473,7 +507,7 @@ const editingField = ref('');
 const editValue = ref('');
 const editOriginalName = ref('');
 
-type AccountEditField = 'name' | 'category' | 'taxDetermination' | 'defaultTaxCategoryId' | 'subAccount';
+type AccountEditField = 'name' | 'category' | 'taxDetermination' | 'defaultTaxCategoryId' | 'subAccount' | 'aiDetermination';
 
 function startEdit(row: Account, field: AccountEditField) {
   if (field !== 'subAccount' && !row.isCustom) {
@@ -488,6 +522,7 @@ function startEdit(row: Account, field: AccountEditField) {
     case 'taxDetermination': editValue.value = row.taxDetermination; break;
     case 'defaultTaxCategoryId': editValue.value = row.defaultTaxCategoryId ?? ''; break;
     case 'subAccount': editValue.value = (row as Record<string, unknown>).subAccount as string ?? ''; break;
+    case 'aiDetermination': editValue.value = String(row.taxDetermination !== 'fixed'); break;
   }
 }
 
@@ -503,6 +538,8 @@ function commitEdit(row: Account) {
       break;
     case 'category':
       row.category = editValue.value;
+      // category変更時にaccountGroup・taxDetermination・defaultTaxCategoryIdを自動設定
+      row.accountGroup = getCategoryAccountGroup(editValue.value);
       if (SALES_CATEGORIES.includes(editValue.value)) {
         row.taxDetermination = 'auto_sales';
         row.defaultTaxCategoryId = 'SALES_TAXABLE_10';
@@ -523,7 +560,18 @@ function commitEdit(row: Account) {
     case 'subAccount':
       (row as Record<string, unknown>).subAccount = editValue.value;
       break;
+    case 'aiDetermination':
+      if (editValue.value === 'true') {
+        if (row.taxDetermination === 'fixed') {
+          const dir = getCategoryDirection(row.category);
+          row.taxDetermination = dir === 'sales' ? 'auto_sales' : 'auto_purchase';
+        }
+      } else {
+        row.taxDetermination = 'fixed';
+      }
+      break;
   }
+  markDirty();
   cancelEdit();
 }
 
@@ -533,21 +581,78 @@ function cancelEdit() {
 }
 
 // =============== categoryグループ分類 ===============
-const SALES_CATEGORIES = ['売上', '不動産収入', '営業外収益'];
-const PURCHASE_CATEGORIES = ['経費', '売上原価', '販管費', '不動産経費', '営業外費用'];
-const BS_CATEGORIES = [
+import type { AccountGroup } from '@/shared/types/account';
+
+const SALES_CATEGORIES = ['売上', '不動産収入', '営業外収益', '特別利益'];
+const PURCHASE_CATEGORIES = ['経費', '売上原価', '販管費', '不動産経費', '営業外費用', '繰入額等', '特別損失'];
+const BS_ASSET_CATEGORIES = [
   '現金及び預金', '売上債権', '有価証券', 'その他流動資産', '有形固定資産',
   '無形固定資産', '投資その他', '棚卸資産', '繰延資産',
-  '仕入債務', 'その他流動負債', '固定負債', '純資産',
-  '事業主貸', '事業主借', '資本の部', '諸口',
-  '繰戻額等', '繰入額等', '不動産'
 ];
+const BS_LIABILITY_CATEGORIES = ['仕入債務', 'その他流動負債', '固定負債'];
+const BS_EQUITY_CATEGORIES = ['純資産', '事業主貸', '事業主借', '資本の部', '諸口'];
+const OTHER_PL_CATEGORIES = ['繰戻額等'];
+
+// BS_ASSET内でauto_purchaseを許可する中分類（資産取得の課税仕入）
+const BS_ASSET_PURCHASE_CATEGORIES = ['有形固定資産', '無形固定資産'];
 
 const categoryGroups = [
-  { label: '売上系', items: SALES_CATEGORIES },
-  { label: '仕入系', items: PURCHASE_CATEGORIES },
-  { label: 'BS系', items: BS_CATEGORIES },
+  { label: 'PL収益', items: SALES_CATEGORIES },
+  { label: 'PL費用', items: PURCHASE_CATEGORIES },
+  { label: 'BS資産', items: BS_ASSET_CATEGORIES },
+  { label: 'BS負債', items: BS_LIABILITY_CATEGORIES },
+  { label: 'BS純資産', items: BS_EQUITY_CATEGORIES },
+  { label: 'PLその他', items: OTHER_PL_CATEGORIES },
 ];
+
+/** categoryからaccountGroupを導出 */
+function getCategoryAccountGroup(category: string): AccountGroup {
+  if (SALES_CATEGORIES.includes(category)) return 'PL_REVENUE';
+  if (PURCHASE_CATEGORIES.includes(category) || OTHER_PL_CATEGORIES.includes(category)) return 'PL_EXPENSE';
+  if (BS_ASSET_CATEGORIES.includes(category)) return 'BS_ASSET';
+  if (BS_LIABILITY_CATEGORIES.includes(category)) return 'BS_LIABILITY';
+  if (BS_EQUITY_CATEGORIES.includes(category)) return 'BS_EQUITY';
+  return 'PL_EXPENSE';
+}
+
+/** 科目の大分類+中分類に基づいて許可されるtaxDetermination値を返す */
+function getAllowedTaxDeterminations(row: Account): string[] {
+  // 免税事業者: 全科目 fixed のみ
+  if (clientTaxMethod.value === 'exempt') return ['fixed'];
+  const group = row.accountGroup;
+  if (group === 'PL_REVENUE') return ['auto_sales', 'fixed'];
+  if (group === 'PL_EXPENSE') return ['auto_purchase', 'fixed'];
+  if (group === 'BS_ASSET' && BS_ASSET_PURCHASE_CATEGORIES.includes(row.category)) {
+    return ['auto_purchase', 'fixed'];
+  }
+  return ['fixed'];
+}
+
+/** 仕入系科目かどうか（簡易課税グレーアウト判定用） */
+function isPurchaseSide(row: Account): boolean {
+  const g = row.accountGroup;
+  if (g === 'PL_EXPENSE') return true;
+  if (g === 'BS_ASSET' && BS_ASSET_PURCHASE_CATEGORIES.includes(row.category)) return true;
+  return false;
+}
+
+/** 課税方式に応じた「税区分自動判定」列の表示値 */
+function getDisplayAiDet(row: Account): string {
+  if (clientTaxMethod.value === 'exempt') return '';
+  return row.taxDetermination !== 'fixed' ? '○' : '';
+}
+
+/** 課税方式に応じた「税区分判定」列の表示値 */
+function getDisplayTaxDet(row: Account): string {
+  if (clientTaxMethod.value === 'exempt') return '固定';
+  return taxDetLabel(row.taxDetermination);
+}
+
+/** 課税方式に応じた「デフォルト税区分」列の表示値 */
+function getDisplayDefaultTax(row: Account): string {
+  if (clientTaxMethod.value === 'exempt') return '対象外';
+  return getTaxCategoryName(row.defaultTaxCategoryId);
+}
 
 function getCategoryDirection(category: string): 'sales' | 'purchase' | 'common' {
   if (SALES_CATEGORIES.includes(category)) return 'sales';
@@ -587,6 +692,7 @@ function onDrop(targetIdx: number) {
   if (removed.length > 0) {
     accountRows.splice(dstGlobal, 0, removed[0]!);
     accountRows.forEach((r, i) => { r.sortOrder = i + 1; });
+    markDirty();
   }
   dragIdx.value = -1;
 }
@@ -617,45 +723,12 @@ function sortAccounts(key: keyof Account) {
   compareByKey(accountRows, key, sortState.asc);
 }
 
-/** カスタム行をinsertAfterチェーンに従って再帰的に展開 */
-const expandChildren = (parentId: string, customsByParent: Map<string, Account[]>) =>
-  expandInsertAfterChain(parentId, customsByParent);
+
+
 
 function resetAccountOrder() {
-  // デフォルト行とカスタム行を分離
-  const defaults = accountRows.filter(r => !r.isCustom);
-  const customs = accountRows.filter(r => r.isCustom);
-  // デフォルト行をマスタ定義順にソート
-  const masterOrder = settings.defaultAccountOrder.value;
-  defaults.sort((a, b) => (masterOrder.get(a.id) ?? 9999) - (masterOrder.get(b.id) ?? 9999));
-  // カスタム行をinsertAfterの直後に差し込み
-  const customsByParent = new Map<string, Account[]>();
-  customs.forEach(c => {
-    const key = c.insertAfter ?? '';
-    if (!customsByParent.has(key)) customsByParent.set(key, []);
-    customsByParent.get(key)!.push(c);
-  });
-  // 再帰的にinsertAfterチェーンを展開して結果配列を構築
-  const result: Account[] = [];
-  const added = new Set<string>();
-  defaults.forEach(d => {
-    result.push(d);
-    added.add(d.id);
-    const expanded = expandChildren(d.id, customsByParent);
-    expanded.forEach(c => { result.push(c); added.add(c.id); });
-  });
-  // insertAfterがカスタム行を指しているがdefaultsチェーンに含まれなかった行を追加
-  customs.forEach(c => {
-    if (!added.has(c.id)) {
-      result.push(c);
-      added.add(c.id);
-      const expanded = expandChildren(c.id, customsByParent);
-      expanded.forEach(cc => { if (!added.has(cc.id)) { result.push(cc); added.add(cc.id); } });
-    }
-  });
-  // sortOrder振り直し
-  result.forEach((r, i) => { r.sortOrder = i + 1; });
-  accountRows.splice(0, accountRows.length, ...result);
+  // sortOrderでソート（初期ロードと同じ並び順に復元）
+  accountRows.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
   sortState.key = '';
 }
 </script>
@@ -824,6 +897,13 @@ function resetAccountOrder() {
   font-size: 12px; border: 1px solid #bbdefb;
 }
 .as-info-banner i { font-size: 14px; flex-shrink: 0; }
+.as-info-simplified {
+  background: #fff8e1; border-color: #ffca28; color: #5d4037;
+}
+.td-simplified-ref {
+  opacity: 0.5;
+  background: #f5f5f5 !important;
+}
 
 /* 一括操作ボタン */
 .as-bulk-badge {

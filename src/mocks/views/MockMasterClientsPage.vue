@@ -33,6 +33,7 @@
               <col :style="{ width: clColWidths['clientId'] + 'px' }">
               <col :style="{ width: clColWidths['threeCode'] + 'px' }">
               <col :style="{ width: clColWidths['type'] + 'px' }">
+              <col :style="{ width: clColWidths['taxMode'] + 'px' }">
               <col :style="{ width: clColWidths['companyName'] + 'px' }">
               <col :style="{ width: clColWidths['staffName'] + 'px' }">
               <col :style="{ width: clColWidths['accountingSoftware'] + 'px' }">
@@ -59,6 +60,10 @@
                 <th class="sortable relative" @click="sortBy('type')">
                   種別 <i :class="getSortIcon('type')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('type', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortBy('consumptionTaxMode')">
+                  課税方式 <i :class="getSortIcon('consumptionTaxMode')"></i>
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('taxMode', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortBy('companyName')">
                   会社名 <i :class="getSortIcon('companyName')"></i>
@@ -119,6 +124,7 @@
                   </select>
                   <span v-else>{{ row.type === 'corp' ? '法人' : '個人' }}</span>
                 </td>
+                <td>{{ taxModeLabel(row.consumptionTaxMode) }}</td>
                 <td class="cm-company-name td-editable" @dblclick.stop="startInlineEdit(row, 'companyName', $event)">
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.companyName }}</span>
@@ -181,7 +187,7 @@
                 </td>
               </tr>
               <tr v-if="pagedRows.length === 0">
-                <td colspan="12" class="cm-empty">該当する顧問先がありません</td>
+                <td colspan="13" class="cm-empty">該当する顧問先がありません</td>
               </tr>
             </tbody>
           </table>
@@ -468,6 +474,7 @@ import {
 import type { Client, ClientForm } from '@/features/client-management/composables/useClients';
 import { useStaff } from '@/features/staff-management/composables/useStaff';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
+import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
 
 // 列幅カスタマイズ
 const clDefaultWidths: Record<string, number> = {
@@ -475,6 +482,7 @@ const clDefaultWidths: Record<string, number> = {
   clientId: 100,
   threeCode: 60,
   type: 50,
+  taxMode: 70,
   companyName: 160,
   staffName: 90,
   accountingSoftware: 80,
@@ -488,6 +496,11 @@ const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnR
 // --- クライアントデータ（composableから取得） ---
 const { clients, getStaffNameForClient } = useClients();
 const { staffList, activeStaff: activeStaffList } = useStaff();
+
+// 未保存変更ガード
+const { markDirty } = useUnsavedGuard(() => {
+  localStorage.setItem('sugu-suru:clients', JSON.stringify(clients.value));
+});
 
 // --- 業種リスト（ScreenS_Settings.vueと同一） ---
 const industryOptions: string[] = [
@@ -553,7 +566,7 @@ const filteredRows = computed((): Client[] => {
 });
 
 // --- ページネーション ---
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 50;
 const currentPage = ref(1);
 const totalPages = computed(() => Math.ceil(filteredRows.value.length / PAGE_SIZE));
 const pagedRows = computed(() => {
@@ -589,6 +602,7 @@ const commitInlineEdit = (_row: Client) => {
       (clients.value[idx] as unknown as Record<string, string | number>)[inlineEditField.value!] = inlineEditValue.value;
     }
   }
+  markDirty();
   cancelInlineEdit();
 };
 
@@ -601,6 +615,7 @@ const commitFiscalEdit = (_row: Client) => {
       target.fiscalDay = inlineEditFiscalDay.value;
     }
   }
+  markDirty();
   cancelInlineEdit();
 };
 
@@ -688,6 +703,7 @@ const saveClient = () => {
     globalThis.alert(`「${data.companyName}」を更新しました。`);
   }
   closePanel();
+  markDirty();
 };
 
 // --- K13: 休眠・契約終了 ---
@@ -714,6 +730,11 @@ const restoreClient = () => {
 const softwareLabel = (s: string) => {
   const map: Record<string, string> = { mf: 'MF', freee: 'freee', yayoi: '弥生', tkc: 'TKC', other: 'その他' };
   return map[s] || s;
+};
+
+const taxModeLabel = (mode: string) => {
+  const map: Record<string, string> = { general: '本則', simplified: '簡易', exempt: '免税' };
+  return map[mode] || mode;
 };
 
 
@@ -746,6 +767,7 @@ const commitStaffEdit = (_row: Client) => {
       clients.value[idx].staffId = staffId || null;
     }
   }
+  markDirty();
   cancelInlineEdit();
 };
 

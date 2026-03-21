@@ -271,6 +271,16 @@ onMounted(async () => {
 | 勘定科目マスタ | `useAccounts()` | ⬜未着手 |
 | 税区分マスタ | `useTaxCategories()` | ⬜未着手 |
 
+### 9-2. 簡易課税：勘定科目単位のAI事業区分判定（将来）
+
+| 項目 | 内容 |
+|------|------|
+| 現状 | 顧問先単位で1つの事業区分（`client.simplifiedTaxCategory`）。`mapper.ts`で全売上に同一事業区分を適用 |
+| 将来 | AIが勘定科目名・科目分類から第1〜6種を推定。売上科目の`defaultTaxCategoryId`に事業区分付きID（`SALES_TAXABLE_10_T3`等）を自動設定 |
+| インフォバー表示 | 「AIで勘定科目単位の事業区分を仮算出しています」 |
+| やらないこと | インボイス経過措置（80%→50%）の判定 → MF側の責務 |
+| 詳細 | [refactoring_phase_c.md RC-13](file:///c:/dev/receipt-app/docs/genzai/06_refactoring/refactoring_phase_c.md) |
+
 ---
 
 ## 10. Phase Bセキュリティチェックリスト

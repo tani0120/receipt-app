@@ -9,10 +9,6 @@ import type { Account } from '@/shared/types/account'
 import type { TaxCategory } from '@/shared/types/tax-category'
 import type { UnifiedAccount, UnifiedTaxCategory, AccountSettingsReturn } from '../types/account-settings.types'
 
-// localStorageキー（マスタページのrowsスナップショット用）
-const ACCOUNT_ROWS_KEY = 'sugu-suru:account-master:rows'
-const TAX_ROWS_KEY = 'sugu-suru:tax-categories:rows'
-
 export function useAccountSettings(scope: 'master'): AccountSettingsReturn
 export function useAccountSettings(scope: 'client', clientId: string): AccountSettingsReturn
 export function useAccountSettings(scope: 'master' | 'client', clientId?: string): AccountSettingsReturn {
@@ -120,7 +116,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       const masterCustomIds = new Set(
         (taxMaster.overrides.value.customTaxCategories ?? []).map(c => c.id)
       )
-      const isMasterCustom = masterCustomIds.has(tc.id)
+      const isMasterCustom = masterCustomIds.has(tc.id) && tc.isCustom
       const isClientCustom = tc.isCustom && !isMasterCustom
       const source: UnifiedTaxCategory['source'] = isMasterCustom ? 'master-custom' : isClientCustom ? 'client-custom' : 'default'
       return {
@@ -248,8 +244,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // ==============================
   function saveAccounts(allRows: Account[], subAccountsInput?: Record<string, string>): void {
     if (scope === 'master') {
-      // マスタスコープ: rowsスナップショット + overrides同期
-      localStorage.setItem(ACCOUNT_ROWS_KEY, JSON.stringify(allRows))
+      // マスタスコープ: overrides同期
       const hiddenIds = allRows
         .filter(r => !r.isCustom && (r.deprecated || r.effectiveTo))
         .map(r => r.id)
@@ -269,11 +264,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
 
   function saveTaxCategories(allRows: TaxCategory[]): void {
     if (scope === 'master') {
-      // マスタスコープ: rowsスナップショット + overrides同期
-      // 保存前にdisplayOrderを配列インデックスで更新（並び順を永続化）
-    // 引数を直接変異させず、コピーを作成して操作する
-    const rowsWithOrder = allRows.map((r, i) => ({ ...r, displayOrder: i }))
-    localStorage.setItem(TAX_ROWS_KEY, JSON.stringify(rowsWithOrder))
+      // マスタスコープ: overrides同期
       const hiddenIds = allRows.filter(r => r.deprecated).map(r => r.id)
       // TAX_CATEGORY_MASTERに存在しないID = カスタム追加された行（MF準拠昇格でisCustom=falseでも保持）
       const defaultTaxIds = new Set(TAX_CATEGORY_MASTER.map(t => t.id))

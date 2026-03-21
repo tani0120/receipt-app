@@ -203,6 +203,7 @@ import {
 } from '@/features/staff-management/composables/useStaff';
 import type { Staff, StaffForm } from '@/features/staff-management/composables/useStaff';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
+import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
 
 // 列幅カスタマイズ
 const staffDefaultWidths: Record<string, number> = {
@@ -216,11 +217,16 @@ const { columnWidths: staffColWidths, onResizeStart: onStaffResizeStart } = useC
 // --- スタッフデータ（composableから取得） ---
 const { staffList } = useStaff();
 
+// 未保存変更ガード
+const { markDirty } = useUnsavedGuard(() => {
+  localStorage.setItem('sugu-suru:staff', JSON.stringify(staffList.value));
+});
+
 // --- ステータスフィルター ---
 const statusFilter = ref<'all' | 'active' | 'inactive'>('active');
 
 // --- ソート ---
-const sortKey = ref<string>('name');
+const sortKey = ref<string>('uuid');
 const sortOrder = ref<'asc' | 'desc'>('asc');
 
 const sortBy = (key: string) => {
@@ -292,6 +298,7 @@ const commitInlineEdit = () => {
       (staffList.value[idx] as unknown as Record<string, string>)[inlineEditField.value!] = inlineEditValue.value;
     }
   }
+  markDirty();
   cancelInlineEdit();
 };
 
@@ -371,6 +378,7 @@ const saveStaff = () => {
     globalThis.alert(`「${data.name}」を更新しました。`);
   }
   closePanel();
+  markDirty();
 };
 
 // --- 停止・復元 ---

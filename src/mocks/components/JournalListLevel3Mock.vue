@@ -1045,6 +1045,7 @@ import { useDraggable } from '@/mocks/composables/useDraggable';
 import { useCurrentUser, STAFF_LIST } from '@/mocks/composables/useCurrentUser';
 import { journalColumns, getDefaultColumnWidths } from '@/mocks/columns/journalColumns';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
+import { useRoute } from 'vue-router';
 import { mockJournalsPhase5 as fixtureData } from '../data/journal_test_fixture_30cases';
 import { getDocumentImageUrl } from '../data/document_mock_data';
 import type { JournalPhase5Mock, JournalEntryLine, JournalLabelMock } from '../types/journal_phase5_mock.type';
@@ -1064,10 +1065,32 @@ function colWidthStyle(col: { defaultPx: number; key: string }) {
   return col.defaultPx > 0 ? { width: columnWidths.value[col.key] + 'px', flexShrink: 0 } : {};
 }
 
-// ローカル可変データ（fixtureの深いコピー、Phase A用）
-const localJournals = ref<JournalPhase5Mock[]>(
-  JSON.parse(JSON.stringify(fixtureData))
-);
+// ローカル可変データ（localStorage復元 or fixtureの深いコピー）
+const route = useRoute();
+const journalClientId = computed(() => (route.params.clientId as string) || 'default');
+
+function loadJournals(): JournalPhase5Mock[] {
+  const key = `sugu-suru:journals:${journalClientId.value}`;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw);
+  } catch { /* 破損データは無視 */ }
+  return JSON.parse(JSON.stringify(fixtureData));
+}
+
+const localJournals = ref<JournalPhase5Mock[]>(loadJournals());
+
+/** 変更操作後にlocalStorageへ自動保存（デバウンス） */
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+function autoSave() {
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    const key = `sugu-suru:journals:${journalClientId.value}`;
+    localStorage.setItem(key, JSON.stringify(localJournals.value));
+  }, 500);
+}
+// localJournalsの変更を検知して自動保存
+watch(localJournals, () => { autoSave(); }, { deep: true });
 
 // ────── 顧問先連動（勘定科目・税区分フィルタ） ──────
 const { clients, currentClient } = useClients();

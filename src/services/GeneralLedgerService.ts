@@ -1,5 +1,5 @@
 
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import type { AccountBalance } from '@/types/detection';
 import { db } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
@@ -15,18 +15,50 @@ interface LedgerRow {
   '摘要'?: string;
 }
 
+/** ヘッダー名からLedgerRowのキーへのマッピング用型 */
+type LedgerHeaderKey = keyof LedgerRow;
+
+/** 期待するヘッダー名一覧 */
+const EXPECTED_HEADERS: LedgerHeaderKey[] = [
+  '日付', '借方勘定科目', '借方補助科目', '借方金額',
+  '貸方勘定科目', '貸方補助科目', '貸方金額', '摘要',
+];
+
 export class GeneralLedgerService {
   /**
    * Parse General Ledger (or Journal) CSV/Excel and return AccountBalances
    */
   async parseLedgerFile(file: File, clientId: string, fiscalYear: number): Promise<AccountBalance[]> {
     const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data, { type: 'array' }); // xlsx handles encoding usually
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) throw new Error('No sheet found');
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet) throw new Error('Sheet is empty');
-    const rows: LedgerRow[] = XLSX.utils.sheet_to_json(sheet);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(data);
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) throw new Error('No sheet found');
+
+    // ヘッダー行（1行目）から列インデックスを特定
+    const headerRow = worksheet.getRow(1);
+    const columnMap = new Map<LedgerHeaderKey, number>();
+    headerRow.eachCell((cell, colNumber) => {
+      const value = String(cell.value ?? '').trim();
+      if (EXPECTED_HEADERS.includes(value as LedgerHeaderKey)) {
+        columnMap.set(value as LedgerHeaderKey, colNumber);
+      }
+    });
+
+    // データ行をLedgerRowに変換
+    const rows: LedgerRow[] = [];
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return; // ヘッダー行はスキップ
+      const entry: Record<string, string | number | undefined> = {};
+      for (const [key, colIdx] of columnMap) {
+        const cellValue = row.getCell(colIdx).value;
+        entry[key] = cellValue != null ? (cellValue as string | number) : undefined;
+      }
+      // 日付が存在する行のみ追加
+      if (entry['日付'] != null) {
+        rows.push(entry as unknown as LedgerRow);
+      }
+    });
 
     // Map to store balances: Key = AccountID_SubAccountID
     const balanceMap = new Map<string, { [month: number]: number }>();

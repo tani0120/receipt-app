@@ -13,6 +13,9 @@ export type AccountTarget = 'corp' | 'individual' | 'both'
 /** 税区分判定モード（STREAMED準拠） */
 export type TaxDetermination = 'auto_purchase' | 'auto_sales' | 'fixed'
 
+/** 大分類（財務諸表上の位置） */
+export type AccountGroup = 'BS_ASSET' | 'BS_LIABILITY' | 'BS_EQUITY' | 'PL_REVENUE' | 'PL_EXPENSE'
+
 /** 勘定科目 */
 export type Account = {
     /** 内部ID（不変） */
@@ -23,7 +26,9 @@ export type Account = {
     sub?: string
     /** 対象: 法人/個人/共通 */
     target: AccountTarget
-    /** BS/PL分類（例: '流動資産', '経費'） */
+    /** 大分類: BS資産/BS負債/BS純資産/PL収益/PL費用 */
+    accountGroup: AccountGroup
+    /** 科目分類（中分類。例: '現金及び預金', '経費'） */
     category: string
     /** デフォルト税区分ID（TaxCategory.id への参照） */
     defaultTaxCategoryId?: string

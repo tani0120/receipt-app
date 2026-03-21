@@ -98,7 +98,7 @@ export function useClientTaxCategories(clientId: string) {
         isCustom: true,
       }))
 
-    return [...baseRows, ...clientCustomRows]
+    return [...baseRows, ...clientCustomRows].sort((a, b) => (a.displayOrder ?? 9999) - (b.displayOrder ?? 9999))
   })
 
   const visibleClientTaxCategories = computed<ClientTaxCategory[]>(() =>

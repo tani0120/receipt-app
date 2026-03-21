@@ -8,15 +8,13 @@
           <span class="as-header-label">税区分マスタ（事務所共通）</span>
         </div>
 
-        <!-- 切替セレクター -->
+        <!-- 課税方式切替（排他選択） -->
         <div class="as-selectors-center">
           <div class="as-selector-group-lg">
             <span class="as-selector-label-lg">課税方式:</span>
-            <select v-model="taxTabMethod" class="as-selector-lg">
-              <option value="general">本則課税</option>
-              <option value="simplified">簡易課税</option>
-              <option value="exempt">免税事業者</option>
-            </select>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="general" class="as-checkbox-lg"><span>本則</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="simplified" class="as-checkbox-lg"><span>簡易</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="exempt" class="as-checkbox-lg"><span>免税</span></label>
           </div>
         </div>
 
@@ -61,11 +59,10 @@
             <colgroup>
               <col style="width: 38px;">
               <col :style="{ width: taxColWidths['mfCompliance'] + 'px' }">
+              <col :style="{ width: taxColWidths['qualified'] + 'px' }">
               <col :style="{ width: taxColWidths['direction'] + 'px' }">
               <col style="width: auto;">
               <col :style="{ width: taxColWidths['rate'] + 'px' }">
-              <col :style="{ width: taxColWidths['qualified'] + 'px' }">
-              <col :style="{ width: taxColWidths['aiSelectable'] + 'px' }">
               <col :style="{ width: taxColWidths['effectiveFrom'] + 'px' }">
               <col :style="{ width: taxColWidths['effectiveTo'] + 'px' }">
             </colgroup>
@@ -74,6 +71,11 @@
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
                 <th class="as-th-check relative" style="text-align:center;">MF公式
                   <div class="resize-handle" @mousedown.stop="onTaxResizeStart('mfCompliance', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortTax('qualified')">
+                  適格判定対象 <i class="fa-solid fa-circle-question th-help" title="この税区分を使う際、取引先のインボイス登録番号の確認が必要かどうか。仕入側の課税取引にのみ○がつきます。"></i>
+                  <i :class="getSortIcon('qualified')"></i>
+                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('qualified', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortTax('direction')">
                   取引区分 <i :class="getSortIcon('direction')"></i>
@@ -85,15 +87,6 @@
                 <th class="sortable relative" @click="sortTaxByRate()">
                   税率 <i :class="getSortIcon('_rate')"></i>
                   <div class="resize-handle" @mousedown.stop="onTaxResizeStart('rate', $event)"></div>
-                </th>
-                <th class="sortable relative" @click="sortTax('qualified')">
-                  適格判定対象 <i class="fa-solid fa-circle-question th-help" title="この税区分を使う際、取引先のインボイス登録番号の確認が必要かどうか。仕入側の課税取引にのみ○がつきます。"></i>
-                  <i :class="getSortIcon('qualified')"></i>
-                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('qualified', $event)"></div>
-                </th>
-                <th class="sortable relative" @click="sortTax('aiSelectable')">
-                  税区分自動選択 <i :class="getSortIcon('aiSelectable')"></i>
-                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('aiSelectable', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortTax('effectiveFrom')">
                   適用開始日 <i :class="getSortIcon('effectiveFrom')"></i>
@@ -113,6 +106,16 @@
                 <td class="as-td-actions">
                   <span v-if="!row.isCustom" class="td-mf-badge mf-official" title="MF公式">MF公式</span>
                   <i v-else class="fa-solid fa-triangle-exclamation td-mf-unknown" title="MFインポート時に項目の紐付けが必要になる可能性があります"></i>
+                </td>
+                <!-- 適格判定対象 -->
+                <td style="text-align: center;" @dblclick="startEdit(row, 'qualified')">
+                  <template v-if="isEditing(row.id, 'qualified')">
+                    <select v-model="editValue" @change="commitEdit(row, 'qualified')" @blur="cancelEdit()" class="inline-select">
+                      <option value="true">○</option>
+                      <option value="false"></option>
+                    </select>
+                  </template>
+                  <template v-else>{{ row.qualified ? '○' : '' }}</template>
                 </td>
                 <!-- 取引区分 -->
                 <td class="td-direction" :class="'dir-' + row.direction" @dblclick="startEdit(row, 'direction')">
@@ -139,26 +142,6 @@
                   </template>
                   <template v-else>{{ getRate(row) }}</template>
                 </td>
-                <!-- 適格判定対象 -->
-                <td style="text-align: center;" @dblclick="startEdit(row, 'qualified')">
-                  <template v-if="isEditing(row.id, 'qualified')">
-                    <select v-model="editValue" @change="commitEdit(row, 'qualified')" @blur="cancelEdit()" class="inline-select">
-                      <option value="true">○</option>
-                      <option value="false"></option>
-                    </select>
-                  </template>
-                  <template v-else>{{ row.qualified ? '○' : '' }}</template>
-                </td>
-                <!-- 税区分自動選択 -->
-                <td class="td-ai" @dblclick="startEdit(row, 'aiSelectable')">
-                  <template v-if="isEditing(row.id, 'aiSelectable')">
-                    <select v-model="editValue" @change="commitEdit(row, 'aiSelectable')" @blur="cancelEdit()" class="inline-select">
-                      <option value="true">○</option>
-                      <option value="false"></option>
-                    </select>
-                  </template>
-                  <template v-else>{{ row.aiSelectable ? '○' : '' }}</template>
-                </td>
                 <td class="td-date">{{ row.effectiveFrom || '—' }}</td>
                 <td class="td-date">{{ row.effectiveTo || '現役' }}</td>
               </tr>
@@ -184,24 +167,24 @@
 import { ref, reactive, computed, watch } from 'vue';
 import type { TaxCategory, TaxDirection } from '@/shared/types/tax-category';
 import { extractRateFromName } from '@/shared/types/tax-category';
-import { getInitialCopyCounter, expandInsertAfterChain } from '@/shared/utils/copy-utils';
+import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
+import { getInitialCopyCounter } from '@/shared/utils/copy-utils';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
+import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
 
 // 列幅カスタマイズ
 const taxDefaultWidths: Record<string, number> = {
   mfCompliance: 60,
+  qualified: 80,
   direction: 80,
   rate: 60,
-  qualified: 80,
-  aiSelectable: 80,
   effectiveFrom: 100,
   effectiveTo: 100,
 };
 const { columnWidths: taxColWidths, onResizeStart: onTaxResizeStart } = useColumnResize('master-tax', taxDefaultWidths);
 
 const PAGE_SIZE = 50;
-const TAX_STORAGE_KEY = 'sugu-suru:tax-categories:rows';
 
 // =============== composable接続（useAccountSettings経由） ===============
 const settings = useAccountSettings('master');
@@ -211,36 +194,32 @@ const taxMasterOverrides = settings._taxMasterOverrides;
 
 // =============== 税区分マスタ ===============
 type TaxMethodType = 'general' | 'simplified' | 'exempt';
-const taxTabMethod = ref<TaxMethodType>('general');
+const taxMethod = ref<TaxMethodType>('general');
 const taxPage = ref(1);
 
-const allTaxRows: TaxCategory[] = reactive(loadTaxRows());
+const allTaxRows: TaxCategory[] = reactive([...masterTaxCategories.value]);
 
-/** localStorageから税区分データを復元。なければデフォルトを使用 */
-function loadTaxRows(): TaxCategory[] {
-  try {
-    const raw = localStorage.getItem(TAX_STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as TaxCategory[];
-  } catch { /* 破損データは無視 */ }
-  return [...masterTaxCategories.value];
-}
+// 未保存変更ガード
+const { markDirty, markClean } = useUnsavedGuard(saveChanges);
 
 const filteredTaxRows = computed(() => {
+  const isT = (id: string) => /_T[1-6]$/.test(id);
   return allTaxRows.filter(row => {
-    if (!row.active) return false;
-    if (taxTabMethod.value === 'exempt') {
+    // --- 免税 ---
+    if (taxMethod.value === 'exempt') {
       return row.id === 'COMMON_EXEMPT';
     }
-    if (taxTabMethod.value === 'simplified') {
-      return row.defaultVisible && (
-        row.direction === 'common' ||
-        row.direction === 'sales' ||
-        row.id === 'PURCHASE_TAXABLE_10' ||
-        row.id === 'PURCHASE_REDUCED_8' ||
-        row.id === 'PURCHASE_NON_TAXABLE' ||
-        row.id === 'PURCHASE_EXEMPT'
-      );
+    // --- 簡易 ---
+    if (taxMethod.value === 'simplified') {
+      // active=falseでもT系（事業区分付き）は通す
+      if (!row.active && !isT(row.id)) return false;
+      // 事業区分なしの原則用売上を除外
+      if (row.direction === 'sales' && !isT(row.id)) return false;
+      // T系（事業区分付き売上）+ 仕入系 + 共通系を表示
+      return isT(row.id) || row.direction === 'purchase' || row.direction === 'common';
     }
+    // --- 本則 ---
+    if (!row.active) return false;
     return row.defaultVisible;
   });
 });
@@ -268,6 +247,7 @@ function hideChecked() {
     if (row) { row.deprecated = true; row.effectiveTo = today; }
   });
   checkedIds.value = [];
+  markDirty();
 }
 function promoteToMfChecked() {
   const customIds = checkedIds.value.filter(id => {
@@ -281,6 +261,7 @@ function promoteToMfChecked() {
     if (row) row.isCustom = false;
   });
   checkedIds.value = [];
+  markDirty();
 }
 function demoteFromMfChecked() {
   const officialIds = checkedIds.value.filter(id => {
@@ -294,6 +275,7 @@ function demoteFromMfChecked() {
     if (row) row.isCustom = true;
   });
   checkedIds.value = [];
+  markDirty();
 }
 function showChecked() {
   checkedIds.value.forEach(id => {
@@ -301,6 +283,7 @@ function showChecked() {
     if (row) { row.deprecated = false; row.effectiveTo = null; }
   });
   checkedIds.value = [];
+  markDirty();
 }
 
 
@@ -317,11 +300,14 @@ function deleteChecked() {
     if (idx !== -1) allTaxRows.splice(idx, 1);
   });
   checkedIds.value = [];
+  markDirty();
 }
 
 // =============== コピー・追加 ===============
 let copyCounter = getInitialCopyCounter(allTaxRows);
 function copyChecked() {
+  if (!checkedIds.value.length) return;
+  if (!confirm(`${checkedIds.value.length}件の税区分をコピーしますか？`)) return;
   const ids = [...checkedIds.value];
   ids.reverse().forEach(id => {
     const srcIdx = allTaxRows.findIndex(r => r.id === id);
@@ -348,8 +334,10 @@ function copyChecked() {
     allTaxRows.splice(srcIdx + 1, 0, copy);
   });
   checkedIds.value = [];
+  markDirty();
 }
 function addAfterChecked() {
+  if (!confirm('新規税区分を追加しますか？')) return;
   const ids = [...checkedIds.value];
   const lastId = ids[ids.length - 1];
   const insertIdx = lastId ? allTaxRows.findIndex(r => r.id === lastId) + 1 : allTaxRows.length;
@@ -372,10 +360,11 @@ function addAfterChecked() {
   };
   allTaxRows.splice(insertIdx, 0, newRow);
   checkedIds.value = [];
+  markDirty();
 }
 
 // =============== インライン編集 ===============
-type EditableField = 'direction' | 'name' | 'rate' | 'qualified' | 'aiSelectable';
+type EditableField = 'direction' | 'name' | 'rate' | 'qualified';
 const editingRowId = ref('');
 const editingFieldName = ref<EditableField | ''>('');
 const editValue = ref('');
@@ -396,7 +385,6 @@ function startEdit(row: TaxCategory, field: EditableField) {
     case 'name': editValue.value = row.name; break;
     case 'rate': editValue.value = extractRateFromName(row.name).replace('%', ''); break;
     case 'qualified': editValue.value = String(row.qualified); break;
-    case 'aiSelectable': editValue.value = String(row.aiSelectable); break;
   }
 }
 
@@ -427,10 +415,8 @@ function commitEdit(row: TaxCategory, field: EditableField) {
     case 'qualified':
       row.qualified = editValue.value === 'true';
       break;
-    case 'aiSelectable':
-      row.aiSelectable = editValue.value === 'true';
-      break;
   }
+  markDirty();
   cancelEdit();
 }
 
@@ -453,17 +439,19 @@ function getRate(row: TaxCategory): string {
 
 // =============== 保存 ===============
 function saveChanges() {
-  localStorage.setItem(TAX_STORAGE_KEY, JSON.stringify(allTaxRows));
-  // composableのoverridesにも同期 → 顧問先ページに反映
+  // composableのoverridesに同期 → 顧問先ページに反映
+  // TAX_CATEGORY_MASTERに存在しないID = カスタム追加された行（MF準拠昇格でisCustom=falseでも保持）
+  const defaultTaxIds = new Set(TAX_CATEGORY_MASTER.map(t => t.id));
   const hiddenIds = allTaxRows.filter(r => r.deprecated).map(r => r.id);
-  const customTaxCategories = allTaxRows.filter(r => r.isCustom);
+  const customTaxCategories = allTaxRows.filter(r => !defaultTaxIds.has(r.id));
   taxMasterOverrides.value = {
     hiddenIds,
     visibilityOverrides: taxMasterOverrides.value.visibilityOverrides,
     customTaxCategories,
   };
   localStorage.setItem('sugu-suru:tax-master:overrides', JSON.stringify(taxMasterOverrides.value));
-  alert('保存しました——変更はlocalStorageに永続化済み');
+  markClean();
+  alert('保存しました');
 }
 
 // =============== 共通ユーティリティ ===============
@@ -502,45 +490,12 @@ function sortTaxByRate() {
   });
 }
 
-/** カスタム行をinsertAfterチェーンに従って再帰的に展開 */
-const expandTaxChildren = (parentId: string, customsByParent: Map<string, TaxCategory[]>) =>
-  expandInsertAfterChain(parentId, customsByParent);
+
+
 
 function resetTaxOrder() {
-  // デフォルト行とカスタム行を分離
-  const defaults = allTaxRows.filter(r => !r.isCustom);
-  const customs = allTaxRows.filter(r => r.isCustom);
-  // デフォルト行をマスタ定義順にソート
-  const masterOrder = settings.defaultTaxOrder.value;
-  defaults.sort((a, b) => (masterOrder.get(a.id) ?? 9999) - (masterOrder.get(b.id) ?? 9999));
-  // カスタム行をinsertAfterの直後に差し込み
-  const customsByParent = new Map<string, TaxCategory[]>();
-  customs.forEach(c => {
-    const key = c.insertAfter ?? '';
-    if (!customsByParent.has(key)) customsByParent.set(key, []);
-    customsByParent.get(key)!.push(c);
-  });
-  // 再帰的にinsertAfterチェーンを展開して結果配列を構築
-  const result: TaxCategory[] = [];
-  const added = new Set<string>();
-  defaults.forEach(d => {
-    result.push(d);
-    added.add(d.id);
-    const expanded = expandTaxChildren(d.id, customsByParent);
-    expanded.forEach(c => { result.push(c); added.add(c.id); });
-  });
-  // insertAfterがカスタム行を指しているがdefaultsチェーンに含まれなかった行を追加
-  customs.forEach(c => {
-    if (!added.has(c.id)) {
-      result.push(c);
-      added.add(c.id);
-      const expanded = expandTaxChildren(c.id, customsByParent);
-      expanded.forEach(cc => { if (!added.has(cc.id)) { result.push(cc); added.add(cc.id); } });
-    }
-  });
-  // displayOrder振り直し
-  result.forEach((r, i) => { r.displayOrder = i + 1; });
-  allTaxRows.splice(0, allTaxRows.length, ...result);
+  // displayOrderでソート（初期ロードと同じ並び順に復元）
+  allTaxRows.sort((a, b) => (a.displayOrder ?? 9999) - (b.displayOrder ?? 9999));
   sortState.key = '';
 }
 </script>

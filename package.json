@@ -33,6 +33,7 @@
     "@hono/zod-validator": "^0.7.6",
     "@supabase/supabase-js": "^2.95.3",
     "dotenv": "^17.2.3",
+    "exceljs": "^4.4.0",
     "firebase": "^12.7.0",
     "firebase-admin": "^13.6.0",
     "hono": "^4.11.3",
@@ -42,7 +43,6 @@
     "tsx": "^4.21.0",
     "vue": "^3.5.25",
     "vue-router": "^4.6.3",
-    "xlsx": "^0.18.5",
     "zod": "^4.3.4"
   },
   "devDependencies": {

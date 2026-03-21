@@ -61,9 +61,9 @@ const masterTaxCategories = computed<MasterTaxCategory[]>(() => {
   const customRows: MasterTaxCategory[] = (overrides.value.customTaxCategories ?? []).map(tc => ({
     ...tc,
     hiddenInMaster: overrides.value.hiddenIds.includes(tc.id),
-    isCustom: true,
+    isCustom: tc.isCustom ?? true,
   }))
-  return [...defaultRows, ...customRows]
+  return [...defaultRows, ...customRows].sort((a, b) => (a.displayOrder ?? 9999) - (b.displayOrder ?? 9999))
 })
 
 /** デフォルト表示の税区分のみ */
