@@ -83,6 +83,7 @@ export interface JournalPhase5Mock {
    */
   date_on_document: boolean;
   description: string;                   // 摘要
+  voucher_type: string | null;           // 証票意味（売上/経費/給与/立替経費/振替/クレカ/クレカ引落/その他）
 
   // 証票紐付け（スキーマ準拠）
   document_id: string | null;             // 証票ID（documentsテーブル参照）
