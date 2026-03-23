@@ -35,6 +35,13 @@ export type JournalStatusPhase5 =
 export type JournalLabelMock =
   | JournalLabel
 
+  // --- 警告列バリデーション用（warningLabelMapと対応） ---
+  | 'CATEGORY_CONFLICT'       // 貸借科目矛盾（3大グループ）
+  | 'TAX_UNKNOWN'             // 税区分不明
+  | 'DESCRIPTION_UNKNOWN'     // 摘要不明
+  | 'VOUCHER_TYPE_CONFLICT'   // 証票意味矛盾
+  | 'TAX_ACCOUNT_MISMATCH'   // 税区分科目矛盾
+
   // --- 以下はPhase B/Cで除去予定（現在のモックで使用中） ---
 
   // 要対応（4個）— staff_notesに移行済み。syncLabelsFromStaffNotes()が書き戻し中（B4で廃止）

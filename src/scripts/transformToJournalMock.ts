@@ -63,6 +63,7 @@ export function transformToJournalMock(
         voucher_date: gemini.date ?? '',
         date_on_document: true,
         description: gemini.description ?? '',
+        voucher_type: gemini.voucher_type ?? null,
 
         document_id: null,
         line_id: null,

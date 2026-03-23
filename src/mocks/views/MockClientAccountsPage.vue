@@ -21,8 +21,7 @@
           </div>
           <div class="as-selector-group-lg">
             <span class="as-selector-label-lg">課税方式:</span>
-            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod === 'general'" disabled class="as-checkbox-lg"><span>本則</span></label>
-            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod === 'simplified'" disabled class="as-checkbox-lg"><span>簡易</span></label>
+            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod !== 'exempt'" disabled class="as-checkbox-lg"><span>課税（本則・簡易）</span></label>
             <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod === 'exempt'" disabled class="as-checkbox-lg"><span>免税</span></label>
           </div>
         </div>
@@ -35,12 +34,11 @@
         <!-- 注意コメント -->
         <div class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
-          デフォルト科目（<i class="fa-solid fa-circle-check" style="font-size:14px;color:#4caf50"></i>）の科目名は変更できません。補助科目・表示切替は編集可能です。カスタム科目は全項目を編集できます。
+          デフォルト科目（<i class="fa-solid fa-circle-check" style="font-size:14px;color:#4caf50"></i>）の科目名は変更できません。補助科目・表示切替は編集可能です。カスタム科目は全項目を編集できます。免税・本則・簡易の税額はMF側で計算されます。
         </div>
-        <!-- 簡易課税インフォバー -->
-        <div v-if="clientTaxMethod === 'simplified'" class="as-info-banner as-info-simplified">
+        <div class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
-          簡易課税モード — 仕入側の税区分は参考値です（消費税額はみなし仕入率から計算されるため、仕入側の税区分は申告計算に影響しません）。現在、顧問先の事業区分は1種類のみ暫定設定しています。勘定科目ごとの事業区分の使い分けが必要な場合は、MFクラウド会計側の勘定科目設定で適用してください。（★実装予定：AIで勘定科目単位の事業区分を仮算出）
+          簡易課税の場合、複数の事業種別があるときは売上に関する勘定科目または補助科目を分けて登録してください。（例：売上高（卸売）、売上高（小売）等）
         </div>
 
         <!-- MF名称変更警告（ルール5） -->
@@ -195,7 +193,7 @@
                   <template v-else>{{ row.category }}</template>
                 </td>
                 <!-- 税区分判定 -->
-                <td @dblclick="row.isCustom && startEdit(row, 'taxDetermination')" :class="{ 'td-editable': row.isCustom, 'td-simplified-ref': clientTaxMethod === 'simplified' && isPurchaseSide(row) }">
+                <td @dblclick="row.isCustom && startEdit(row, 'taxDetermination')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'taxDetermination'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
                       <option v-for="td in getAllowedTaxDeterminations(row)" :key="td" :value="td">{{ taxDetLabel(td) }}</option>
@@ -204,7 +202,7 @@
                   <template v-else>{{ getDisplayTaxDet(row) }}</template>
                 </td>
                 <!-- デフォルト税区分 -->
-                <td @dblclick="row.isCustom && startEdit(row, 'defaultTaxCategoryId')" :class="{ 'td-editable': row.isCustom, 'td-simplified-ref': clientTaxMethod === 'simplified' && isPurchaseSide(row) }">
+                <td @dblclick="row.isCustom && startEdit(row, 'defaultTaxCategoryId')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'defaultTaxCategoryId'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
                       <option v-for="tc in filteredTaxCategories(row.category)" :key="tc.id" :value="tc.id">{{ tc.shortName }}</option>
@@ -628,13 +626,7 @@ function getAllowedTaxDeterminations(row: Account): string[] {
   return ['fixed'];
 }
 
-/** 仕入系科目かどうか（簡易課税グレーアウト判定用） */
-function isPurchaseSide(row: Account): boolean {
-  const g = row.accountGroup;
-  if (g === 'PL_EXPENSE') return true;
-  if (g === 'BS_ASSET' && BS_ASSET_PURCHASE_CATEGORIES.includes(row.category)) return true;
-  return false;
-}
+
 
 /** 課税方式に応じた「税区分自動判定」列の表示値 */
 function getDisplayAiDet(row: Account): string {

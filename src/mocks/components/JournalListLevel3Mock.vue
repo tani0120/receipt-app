@@ -68,6 +68,15 @@
       </template>
       <!-- 行の背景色 凡例（両モードで表示） -->
       <div class="flex items-center gap-2">
+        <button :disabled="undoStack.length === 0"
+                :class="['text-[13px] font-bold flex items-center gap-0.5 transition-all', undoStack.length > 0 ? 'text-orange-600 hover:text-orange-800' : 'text-gray-300 cursor-not-allowed']"
+                @click="undo()" title="元に戻す (Ctrl+Z)">
+          <i class="fa-solid fa-rotate-left text-[10px]"></i>戻す</button>
+        <button :disabled="redoStack.length === 0"
+                :class="['text-[13px] font-bold flex items-center gap-0.5 transition-all', redoStack.length > 0 ? 'text-orange-600 hover:text-orange-800' : 'text-gray-300 cursor-not-allowed']"
+                @click="redo()" title="やり直し (Ctrl+Y)">
+          <i class="fa-solid fa-rotate-right text-[10px]"></i>進める</button>
+        <span class="text-gray-300">|</span>
         <button class="text-[13px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-0.5 transition-all"
                 @click="resetColWidths()" title="列幅をデフォルトに戻す">
           <i class="fa-solid fa-arrows-left-right text-[10px]"></i>列幅リセット</button>
@@ -310,11 +319,15 @@
               <template v-else-if="col.key === 'warning'">
                 <div v-if="rowIndex === 0"
                      :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200']">
-                  <i v-if="journal.labels.some((l: string) => warningLabelMap[l])"
-                     class="fa-solid fa-triangle-exclamation text-[10px] text-red-600 cursor-pointer"
-                     @mouseenter="showWarningTooltip($event, journal.labels, journal)"
-                     @mouseleave="hideTooltip()"
-                     @click.stop="openWarningConfirmModal(journal)"></i>
+                  <span v-if="journal.labels.some((l: string) => warningLabelMap[l])" class="relative inline-flex items-center">
+                    <i class="fa-solid fa-triangle-exclamation text-[10px] text-red-600 cursor-pointer"
+                       @mouseenter="showWarningTooltip($event, journal.labels, journal)"
+                       @mouseleave="hideTooltip()"
+                       @click.stop="openWarningConfirmModal(journal)"></i>
+                    <span v-if="journal.labels.filter((l: string) => warningLabelMap[l]).length >= 2"
+                          class="absolute -top-1.5 -right-2 bg-red-500 text-white text-[7px] font-bold rounded-full w-3 h-3 flex items-center justify-center"
+                          >{{ journal.labels.filter((l: string) => warningLabelMap[l]).length }}</span>
+                  </span>
                 </div>
                 <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
@@ -383,7 +396,7 @@
             <!-- voucher-type-dropdown型（証票意味: journal-levelデータ、ダブルクリック→ドロップダウン） -->
             <template v-else-if="col.type === 'voucher-type-dropdown'">
               <template v-if="rowIndex === 0">
-                <div :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 border-r border-gray-200 text-[10px] relative jl-editable']" @dblclick.stop="startCellEdit(journal.id, 0, col.key, journal.voucher_type || '')">
+                <div :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 border-r border-gray-200 text-[10px] relative jl-editable', getWarningCellClass(journal, col.key)]" @dblclick.stop="startCellEdit(journal.id, 0, col.key, journal.voucher_type || '')">
                   <template v-if="isEditing(journal.id, 0, col.key)">
                     <select
                       class="inline-edit-input w-full text-[9px] bg-white border border-blue-400 rounded outline-none px-0.5 py-0"
@@ -406,7 +419,7 @@
 
             <!-- account-dropdown型（勘定科目: ダブルクリック→検索付きoptgroup→テキスト戻り） -->
             <template v-else-if="col.type === 'account-dropdown'">
-              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 relative border-r border-gray-200 text-[10px] jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, (getRawValue(row, col.key) as string) ?? ''); expandedMegaGroup = null" @mousedown="startCellDrag(col.key, getRawValue(row, col.key), $event)">
+              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 relative border-r border-gray-200 text-[10px]', hasEntry(row, col.key) ? 'jl-editable' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '', getWarningCellClass(journal, col.key, (row[col.key.startsWith('debit') ? 'debit' : 'credit'] as unknown) as Record<string, unknown>)]" @dblclick.stop="hasEntry(row, col.key) && (startCellEdit(journal.id, rowIndex, col.key, (getRawValue(row, col.key) as string) ?? ''), expandedMegaGroup = null)" @mousedown="hasEntry(row, col.key) && startCellDrag(col.key, getRawValue(row, col.key), $event)">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <div class="relative">
                     <input
@@ -463,7 +476,7 @@
                 <template v-else>
                   {{ (getRawValue(row, col.key) as string) || '--' }}
                 </template>
-                <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getRawValue(row, col.key) as string, $event)"></span>
+                <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key) && !isCompoundJournal(journal)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getRawValue(row, col.key) as string, $event)"></span>
               </div>
             </template>
 
@@ -473,7 +486,7 @@
             <template v-else-if="col.type === 'text'">
               <!-- journal-level（keyにドットなし）: rowIndex===0のみ表示 -->
               <template v-if="!col.key.includes('.')">
-                <div v-if="rowIndex === 0" :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center border-r border-gray-200 relative jl-editable', col.key === 'voucher_date' ? 'justify-center text-[8px]' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(journal, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(journal, col.key), $event)">
+                <div v-if="rowIndex === 0" :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center border-r border-gray-200 relative jl-editable', col.key === 'voucher_date' ? 'justify-center text-[8px]' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '', getWarningCellClass(journal, col.key)]" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(journal, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(journal, col.key), $event)">
                   <!-- 日付: 編集中はdate input -->
                   <template v-if="col.key === 'voucher_date' && isEditing(journal.id, rowIndex, col.key)">
                     <input type="date" class="inline-edit-input w-full text-[8px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" v-model="editingValue" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
@@ -486,12 +499,12 @@
                   <template v-else>
                     {{ col.key === 'voucher_date' ? formatDate(getValue(journal, col.key)) : (getValue(journal, col.key) ?? NULL_DISPLAY_UNKNOWN) }}
                   </template>
-                  <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getValue(journal, col.key), $event)"></span>
+                  <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key) && !isCompoundJournal(journal)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getValue(journal, col.key), $event)"></span>
                 </div>
                 <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
               <!-- entry-level（keyにドットあり）: 補助科目・税区分等 -->
-              <div v-else :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative jl-editable', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
+              <div v-else :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative', hasEntry(row, col.key) ? 'jl-editable' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '', getWarningCellClass(journal, col.key, (row[col.key.split('.')[0] as 'debit' | 'credit'] as unknown) as Record<string, unknown>)]" @dblclick.stop="hasEntry(row, col.key) && startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="hasEntry(row, col.key) && isFillable(col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <!-- F4: 税区分は検索付きoptgroupコンボボックス（方向フィルタ） -->
                   <div v-if="col.key.endsWith('.tax_category_id')" class="relative">
@@ -521,13 +534,13 @@
                 <template v-else>
                   {{ getValue(row, col.key) ?? '' }}
                 </template>
-                <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getValue(row, col.key), $event)"></span>
+                <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key) && !isCompoundJournal(journal)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getValue(row, col.key), $event)"></span>
               </div>
             </template>
 
             <!-- amount型 -->
             <template v-else-if="col.type === 'amount'">
-              <div :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px] jl-editable', col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))">
+              <div :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px]', hasEntry(row, col.key) ? 'jl-editable' : '', col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '', getWarningCellClass(journal, col.key, (row[col.key.split('.')[0] as 'debit' | 'credit'] as unknown) as Record<string, unknown>)]" @dblclick.stop="hasEntry(row, col.key) && startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <input type="text" inputmode="numeric" class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0 text-right font-mono" v-model="editingValue" @input="onAmountInput($event)" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
                 </template>
@@ -1026,13 +1039,13 @@
         <h3 class="font-bold mb-2 text-gray-800">{{ confirmDialog.title }}</h3>
         <p class="text-gray-600 mb-4 whitespace-pre-line text-xs">{{ confirmDialog.message }}</p>
         <div class="flex justify-end gap-2">
-          <button @click="confirmDialog.show = false"
+          <button v-if="confirmDialog.showCancel !== false" @click="confirmDialog.show = false"
                   class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600">
             キャンセル
           </button>
           <button @click="confirmDialog.onConfirm(); confirmDialog.show = false"
                   class="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
-            実行
+            {{ confirmDialog.confirmLabel || '実行' }}
           </button>
         </div>
       </div>
@@ -1087,12 +1100,24 @@ function colWidthStyle(col: { defaultPx: number; key: string }) {
 const route = useRoute();
 const journalClientId = computed(() => (route.params.clientId as string) || 'default');
 
+/** フィクスチャデータのバージョン（フィクスチャ更新時にインクリメント） */
+const FIXTURE_VERSION = 4;
+
 function loadJournals(): JournalPhase5Mock[] {
   const key = `sugu-suru:journals:${journalClientId.value}`;
+  const versionKey = `sugu-suru:journals-version:${journalClientId.value}`;
   try {
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
+    const savedVersion = localStorage.getItem(versionKey);
+    if (savedVersion && Number(savedVersion) === FIXTURE_VERSION) {
+      const raw = localStorage.getItem(key);
+      if (raw) return JSON.parse(raw);
+    } else {
+      // バージョン不一致: 旧キャッシュを破棄
+      localStorage.removeItem(key);
+      localStorage.setItem(versionKey, String(FIXTURE_VERSION));
+    }
   } catch { /* 破損データは無視 */ }
+  localStorage.setItem(versionKey, String(FIXTURE_VERSION));
   return JSON.parse(JSON.stringify(fixtureData));
 }
 
@@ -1286,12 +1311,462 @@ function filterTaxGroups(row: Record<string, unknown>, colKey: string, query: st
     .filter(g => g.items.length > 0);
 }
 
+// ────── 貸借科目バリデーション（5分類 + 逆仕訳例外） ──────
+
+type MegaGroupType = 'sales' | 'expense' | 'bs_al' | 'bs_equity' | null;
+
+/** 逆仕訳科目: 借方に出ても正当な売上系科目（値引き・返品等） */
+const CONTRA_REVENUE_IDS = ['SALES_RETURNS', 'SALES_RETURNS_CORP'];
+/** 逆仕訳科目: 貸方に出ても正当な経費系科目（値引き・返品等） */
+const CONTRA_EXPENSE_IDS = ['PURCHASE_RETURNS', 'PURCHASE_RETURNS_CORP'];
+
+/** 勘定科目名から5分類グループを判定（accountGroupベース） */
+function getMegaGroup(accountName: string | null): MegaGroupType {
+  if (!accountName) return null;
+  const allAccounts = clientSettings.value
+    ? clientSettings.value.accounts.value
+    : masterSettings.accounts.value;
+  const acc = allAccounts.find(a => a.name === accountName);
+  if (!acc) return null;
+  if (acc.accountGroup === 'PL_REVENUE') return 'sales';
+  if (acc.accountGroup === 'PL_EXPENSE') return 'expense';
+  if (acc.accountGroup === 'BS_EQUITY') return 'bs_equity';
+  if (acc.accountGroup === 'BS_ASSET' || acc.accountGroup === 'BS_LIABILITY') return 'bs_al';
+  return null;
+}
+
+/** 勘定科目が逆仕訳科目かどうか判定 */
+function isContraAccount(accountName: string | null): { isContraRevenue: boolean; isContraExpense: boolean } {
+  if (!accountName) return { isContraRevenue: false, isContraExpense: false };
+  const allAccounts = clientSettings.value
+    ? clientSettings.value.accounts.value
+    : masterSettings.accounts.value;
+  const acc = allAccounts.find(a => a.name === accountName);
+  if (!acc) return { isContraRevenue: false, isContraExpense: false };
+  return {
+    isContraRevenue: CONTRA_REVENUE_IDS.includes(acc.id),
+    isContraExpense: CONTRA_EXPENSE_IDS.includes(acc.id),
+  };
+}
+
+/** 5分類グループの表示名 */
+function megaGroupLabel(group: MegaGroupType): string {
+  switch (group) {
+    case 'sales': return '売上';
+    case 'expense': return '経費・仕入';
+    case 'bs_al': return '資産・負債';
+    case 'bs_equity': return '純資産';
+    default: return '不明';
+  }
+}
+
+/**
+ * 借方/貸方の5分類バリデーション（逆仕訳例外付き）
+ *
+ * 正当な組み合わせ（借方×貸方）:
+ *   経費    × 資産負債  → 正常（通常の経費支払い）
+ *   資産負債 × 売上     → 正常（通常の売上計上）
+ *   資産負債 × 資産負債  → 正常（振替）
+ *   経費    × 純資産    → 正常（事業主借で経費支払い等）
+ *   純資産   × 資産負債  → 正常（事業主貸で出金等）
+ *   資産負債 × 経費     → 逆仕訳（戻入・返品のみ許容）
+ *   売上    × 資産負債  → 逆仕訳（値引き・返品のみ許容）
+ *
+ * 不正な組み合わせ:
+ *   売上 × 売上, 経費 × 経費, 売上 × 経費, 経費 × 売上
+ *   純資産 × 売上, 純資産 × 経費, 売上 × 純資産, 経費 × 純資産
+ *   純資産 × 純資産
+ *
+ * @returns null=正常、string=警告メッセージ
+ */
+function validateDebitCreditCombination(
+  debitGroup: MegaGroupType, creditGroup: MegaGroupType,
+  debitAccount?: string | null, creditAccount?: string | null
+): string | null {
+  if (!debitGroup || !creditGroup) return null;
+
+  // ── 正常パターン ──
+  if (debitGroup === 'expense' && creditGroup === 'bs_al') return null;
+  if (debitGroup === 'bs_al' && creditGroup === 'sales') return null;
+  if (debitGroup === 'bs_al' && creditGroup === 'bs_al') return null;
+  if (debitGroup === 'expense' && creditGroup === 'bs_equity') return null;
+  if (debitGroup === 'bs_equity' && creditGroup === 'bs_al') return null;
+  if (debitGroup === 'bs_al' && creditGroup === 'bs_equity') return null;
+
+  // ── 逆仕訳許容パターン（例外科目チェック） ──
+  // 売上 × 資産負債: 売上値引き・返品なら許容
+  if (debitGroup === 'sales' && creditGroup === 'bs_al') {
+    const { isContraRevenue } = isContraAccount(debitAccount ?? null);
+    if (isContraRevenue) return null;
+    return '売上は通常貸方です。返品・値引ですか？';
+  }
+  // 資産負債 × 経費: 仕入値引き・返品なら許容
+  if (debitGroup === 'bs_al' && creditGroup === 'expense') {
+    const { isContraExpense } = isContraAccount(creditAccount ?? null);
+    if (isContraExpense) return null;
+    return '経費は通常借方です。戻入・返品ですか？';
+  }
+
+  // ── 不正パターン ──
+  if (debitGroup === 'sales' && creditGroup === 'sales')
+    return '借方・貸方が同じ区分（売上×売上）です';
+  if (debitGroup === 'expense' && creditGroup === 'expense')
+    return '借方・貸方が同じ区分（経費×経費）です';
+  if (debitGroup === 'sales' && creditGroup === 'expense')
+    return '借方が売上、貸方が経費は通常あり得ません';
+  if (debitGroup === 'expense' && creditGroup === 'sales')
+    return '借方が経費、貸方が売上は通常あり得ません';
+  // 純資産 × PL系
+  if (debitGroup === 'bs_equity' && creditGroup === 'sales')
+    return '純資産×売上の組み合わせは通常あり得ません';
+  if (debitGroup === 'bs_equity' && creditGroup === 'expense')
+    return '純資産×経費の組み合わせは通常あり得ません';
+  if (debitGroup === 'sales' && creditGroup === 'bs_equity')
+    return '売上×純資産の組み合わせは通常あり得ません';
+  if (debitGroup === 'expense' && creditGroup === 'bs_equity')
+    return '経費×純資産の組み合わせは通常あり得ません';
+  if (debitGroup === 'bs_equity' && creditGroup === 'bs_equity')
+    return '純資産×純資産の組み合わせは通常あり得ません';
+
+  return null;
+}
+
+/** 勘定科目選択後の3大グループバリデーション実行 */
+function runAccountValidation(journal: JournalPhase5Mock): void {
+  // まず全警告ラベルを同期（CATEGORY_CONFLICT / VOUCHER_TYPE_CONFLICT含む）
+  syncWarningLabels(journal);
+
+  // 全借方×全貸方のクロスチェック（複合仕訳対応）
+  let warning: string | null = null;
+  let debitAccount: string | null = null;
+  let creditAccount: string | null = null;
+  let debitGroup: MegaGroupType = null;
+  let creditGroup: MegaGroupType = null;
+  for (const dEntry of journal.debit_entries) {
+    for (const cEntry of journal.credit_entries) {
+      const dAcct = dEntry.account ?? null;
+      const cAcct = cEntry.account ?? null;
+      const dGrp = getMegaGroup(dAcct);
+      const cGrp = getMegaGroup(cAcct);
+      const w = validateDebitCreditCombination(dGrp, cGrp, dAcct, cAcct);
+      if (w) {
+        warning = w;
+        debitAccount = dAcct;
+        creditAccount = cAcct;
+        debitGroup = dGrp;
+        creditGroup = cGrp;
+        break;
+      }
+    }
+    if (warning) break;
+  }
+
+  // Step 1: 5分類バリデーション（逆仕訳例外付き）→ モーダル表示のみ
+  if (warning) {
+    const debitLabel = debitAccount ? `${debitAccount}（${megaGroupLabel(debitGroup)}）` : '未設定';
+    const creditLabel = creditAccount ? `${creditAccount}（${megaGroupLabel(creditGroup)}）` : '未設定';
+    confirmDialog.value = {
+      show: true,
+      title: '⚠ 勘定科目の組み合わせ警告',
+      message: `${warning}\n\n借方: ${debitLabel}\n貸方: ${creditLabel}`,
+      onConfirm: () => {
+        // モーダルを閉じるのみ。CATEGORY_CONFLICTラベルは
+        // syncWarningLabelsが科目修正時に自動除去する
+      },
+      confirmLabel: '確認済み',
+      showCancel: false,
+    };
+    return; // 基本バリデーション警告があれば高度バリデーションはスキップ
+  }
+
+  // Step 2: 種別ごと高度バリデーション（voucher_typeベース）→ モーダル表示のみ
+  const voucherType = journal.voucher_type;
+  if (!voucherType || !debitAccount || !creditAccount) return;
+
+  const voucherWarning = validateByVoucherType(voucherType, journal);
+  if (voucherWarning) {
+    confirmDialog.value = {
+      show: true,
+      title: '⚠ 種別チェック警告',
+      message: `${voucherWarning}\n\n証票意味: ${voucherType}\n借方: ${debitAccount}\n貸方: ${creditAccount}`,
+      onConfirm: () => {
+        // モーダルを閉じるのみ。VOUCHER_TYPE_CONFLICTラベルは
+        // syncWarningLabelsが科目修正時に自動除去する
+      },
+      confirmLabel: '確認済み',
+      showCancel: false,
+    };
+  }
+}
+
+/**
+ * 段階A: 警告列バリデーション（双方向同期）
+ * 6条件を判定し、labels[]を自動的に追加/除去する。
+ * 新規追加されたラベルがあれば警告モーダルを表示する。
+ */
+function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
+  const labels = journal.labels as string[];
+  const addedLabels: string[] = [];
+  const removedLabels: string[] = [];
+
+  // ヘルパー: ラベル追加（重複なし）＋モーダル表示用記録（既存でも記録）
+  function addLabel(key: string) {
+    if (!labels.includes(key)) {
+      labels.push(key);
+    }
+    addedLabels.push(key);
+  }
+  // ヘルパー: ラベル除去（実際に除去した場合にremovedLabelsに記録）
+  function removeLabel(key: string) {
+    const idx = labels.indexOf(key);
+    if (idx >= 0) {
+      labels.splice(idx, 1);
+      removedLabels.push(key);
+    }
+  }
+
+  // 1. ACCOUNT_UNKNOWN（勘定科目不明）: 全エントリのaccountが非null
+  const allAccountsFilled = journal.debit_entries.every(e => e.account != null && e.account !== '')
+    && journal.credit_entries.every(e => e.account != null && e.account !== '');
+  if (allAccountsFilled) removeLabel('ACCOUNT_UNKNOWN');
+  else addLabel('ACCOUNT_UNKNOWN');
+
+  // 2. TAX_UNKNOWN（税区分不明）: 全エントリのtax_category_idが非null
+  const allTaxFilled = journal.debit_entries.every(e => e.tax_category_id != null && e.tax_category_id !== '')
+    && journal.credit_entries.every(e => e.tax_category_id != null && e.tax_category_id !== '');
+  if (allTaxFilled) removeLabel('TAX_UNKNOWN');
+  else addLabel('TAX_UNKNOWN');
+
+  // 3. DESCRIPTION_UNKNOWN（摘要不明）: descriptionが非null
+  if (journal.description != null && journal.description !== '') removeLabel('DESCRIPTION_UNKNOWN');
+  else addLabel('DESCRIPTION_UNKNOWN');
+
+  // 4. DATE_UNKNOWN（日付不明）: voucher_dateが非null
+  if (journal.voucher_date != null && journal.voucher_date !== '') removeLabel('DATE_UNKNOWN');
+  else addLabel('DATE_UNKNOWN');
+
+  // 5. AMOUNT_UNCLEAR（金額不明）: 全エントリのamountが非null
+  const allAmountsFilled = journal.debit_entries.every(e => e.amount != null)
+    && journal.credit_entries.every(e => e.amount != null);
+  if (allAmountsFilled) removeLabel('AMOUNT_UNCLEAR');
+  else addLabel('AMOUNT_UNCLEAR');
+
+  // 6. DEBIT_CREDIT_MISMATCH（貸借不一致）: 借方合計 = 貸方合計
+  const debitSum = journal.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
+  const creditSum = journal.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
+  if (debitSum === creditSum && debitSum > 0) removeLabel('DEBIT_CREDIT_MISMATCH');
+  else addLabel('DEBIT_CREDIT_MISMATCH');
+
+  // 7. CATEGORY_CONFLICT（貸借科目矛盾）: 5分類バリデーション（全借方×全貸方クロスチェック）
+  let hasCategoryConflict = false;
+  for (const dEntry of journal.debit_entries) {
+    for (const cEntry of journal.credit_entries) {
+      const dAcct = dEntry.account ?? null;
+      const cAcct = cEntry.account ?? null;
+      if (dAcct && cAcct && validateDebitCreditCombination(getMegaGroup(dAcct), getMegaGroup(cAcct), dAcct, cAcct)) {
+        hasCategoryConflict = true;
+        break;
+      }
+    }
+    if (hasCategoryConflict) break;
+  }
+  if (hasCategoryConflict) {
+    addLabel('CATEGORY_CONFLICT');
+  } else {
+    removeLabel('CATEGORY_CONFLICT');
+  }
+
+  // 8. VOUCHER_TYPE_CONFLICT（証票意味矛盾）: 証票タイプ別バリデーション
+  const voucherType = journal.voucher_type;
+  const firstDebit = journal.debit_entries?.[0]?.account ?? null;
+  const firstCredit = journal.credit_entries?.[0]?.account ?? null;
+  if (voucherType && firstDebit && firstCredit && validateByVoucherType(voucherType, journal)) {
+    addLabel('VOUCHER_TYPE_CONFLICT');
+  } else {
+    removeLabel('VOUCHER_TYPE_CONFLICT');
+  }
+
+  // 9. TAX_ACCOUNT_MISMATCH（税区分科目矛盾）: taxDeterminationベースの方向チェック
+  const allEntries = [...journal.debit_entries, ...journal.credit_entries];
+  let hasTaxAccountMismatch = false;
+  const settings = clientSettings.value ?? masterSettings;
+  const accounts = settings.accounts.value;
+  const taxCats = masterTaxCategories.value;
+  for (const entry of allEntries) {
+    if (!entry.account || !entry.tax_category_id) continue;
+    const acct = accounts.find(a => a.name === entry.account);
+    if (!acct) continue;
+    const taxCat = taxCats.find(t => t.name === entry.tax_category_id || t.shortName === entry.tax_category_id);
+    if (!taxCat) continue;
+    if (acct.taxDetermination === 'fixed') {
+      // 厳密一致: defaultTaxCategoryIdと一致必須
+      if (acct.defaultTaxCategoryId) {
+        const defaultTax = taxCats.find(t => t.id === acct.defaultTaxCategoryId);
+        if (defaultTax && taxCat.id !== defaultTax.id) {
+          hasTaxAccountMismatch = true;
+          break;
+        }
+      }
+    } else if (acct.taxDetermination === 'auto_purchase') {
+      // 方向一致: purchase/commonのみ正常
+      if (taxCat.direction === 'sales') {
+        hasTaxAccountMismatch = true;
+        break;
+      }
+    } else if (acct.taxDetermination === 'auto_sales') {
+      // 方向一致: sales/commonのみ正常
+      if (taxCat.direction === 'purchase') {
+        hasTaxAccountMismatch = true;
+        break;
+      }
+    }
+  }
+  if (hasTaxAccountMismatch) {
+    addLabel('TAX_ACCOUNT_MISMATCH');
+  } else {
+    removeLabel('TAX_ACCOUNT_MISMATCH');
+  }
+
+  // 新規追加されたラベルがあれば警告モーダルを表示（silentモードでは非表示）
+  if (addedLabels.length > 0 && !silent) {
+    const warningText = addedLabels
+      .map(l => warningLabelMap[l]?.label ?? l)
+      .join('\n');
+    confirmDialog.value = {
+      show: true,
+      title: '⚠ 警告が検出されました',
+      message: `以下の警告が検出されました：\n${warningText}`,
+      onConfirm: () => { /* 確認済み */ },
+      confirmLabel: '確認',
+      showCancel: false,
+    };
+  } else if (removedLabels.length > 0 && !silent) {
+    // 警告が解消された場合のフィードバック
+    const resolvedText = removedLabels
+      .map(l => warningLabelMap[l]?.label ?? l)
+      .join('\n');
+    confirmDialog.value = {
+      show: true,
+      title: '✅ 警告が解消されました',
+      message: `以下の警告が解消されました：\n${resolvedText}`,
+      onConfirm: () => { /* OK */ },
+      confirmLabel: 'OK',
+      showCancel: false,
+    };
+  }
+}
+
+/**
+ * 変更6: 対象セルの赤背景ハイライト
+ * 警告ラベルと列キーの対応を判定し、赤背景CSSクラスを返す。
+ */
+function getWarningCellClass(journal: JournalPhase5Mock, colKey: string, entry?: Record<string, unknown>): string {
+  const labels = journal.labels as string[];
+  /** 警告セルの共通背景CSSクラス（一箇所管理） */
+  const W = '!bg-red-400 !text-white';
+
+  // DEBIT_CREDIT_MISMATCH（貸借不一致）→ 全金額セル
+  if (colKey.includes('amount') && labels.includes('DEBIT_CREDIT_MISMATCH')) return W;
+
+  // AMOUNT_UNCLEAR（金額不明）→ nullの金額セルのみ
+  if (colKey.includes('amount') && labels.includes('AMOUNT_UNCLEAR') && entry) {
+    if (entry.amount == null) return W;
+  }
+
+  // ACCOUNT_UNKNOWN（勘定科目不明）→ nullの科目セルのみ
+  if (colKey.includes('account') && !colKey.includes('sub_account') && labels.includes('ACCOUNT_UNKNOWN') && entry) {
+    if (entry.account == null || entry.account === '') return W;
+  }
+
+  // TAX_UNKNOWN（税区分不明）→ nullの税区分セルのみ
+  if (colKey.includes('tax_category') && labels.includes('TAX_UNKNOWN') && entry) {
+    if (entry.tax_category_id == null || entry.tax_category_id === '') return W;
+  }
+
+  // CATEGORY_CONFLICT（貸借科目矛盾）→ 勘定科目セル
+  if (colKey.includes('account') && !colKey.includes('sub_account') && labels.includes('CATEGORY_CONFLICT')) return W;
+
+  // DATE_UNKNOWN（日付不明）→ 日付セル
+  if (colKey === 'voucher_date' && labels.includes('DATE_UNKNOWN')) return W;
+
+  // DESCRIPTION_UNKNOWN（摘要不明）→ 摘要セル
+  if (colKey === 'description' && labels.includes('DESCRIPTION_UNKNOWN')) return W;
+
+  // VOUCHER_TYPE_CONFLICT（証票意味矛盾）→ 証票意味セル
+  if (colKey === 'voucher_type' && labels.includes('VOUCHER_TYPE_CONFLICT')) return W;
+
+  // TAX_ACCOUNT_MISMATCH（税区分科目矛盾）→ 税区分セル
+  if (colKey.includes('tax_category') && labels.includes('TAX_ACCOUNT_MISMATCH')) return W;
+
+  return '';
+}
+
+/** 預り金系科目名パターン */
+const WITHHOLDING_ACCOUNTS = ['預り金', '所得税預り金', '住民税預り金', '社会保険料預り金'];
+/** 給与系科目名パターン */
+const SALARY_ACCOUNTS = ['給料手当', '役員報酬', '賞与', '雑給'];
+/** 未払金系科目名パターン */
+const UNPAID_ACCOUNTS = ['未払金', '未払費用'];
+/** 立替系科目名パターン */
+const ADVANCE_ACCOUNTS = ['立替金', '未収入金'];
+/** 預金系科目名パターン */
+const DEPOSIT_ACCOUNTS = ['普通預金', '当座預金', '定期預金'];
+
+/**
+ * 種別ごとの高度バリデーション
+ * @returns null=正常、string=警告メッセージ
+ */
+function validateByVoucherType(voucherType: string, journal: JournalPhase5Mock): string | null {
+  const debitAccounts = journal.debit_entries.map(e => e.account).filter(Boolean) as string[];
+  const creditAccounts = journal.credit_entries.map(e => e.account).filter(Boolean) as string[];
+
+  switch (voucherType) {
+    case '給与': {
+      // 貸方に預り金系科目がない
+      const hasWithholding = creditAccounts.some(a => WITHHOLDING_ACCOUNTS.includes(a));
+      if (!hasWithholding) return '給与仕訳ですが源泉/社保の預り金がありません';
+      // 借方が給与系科目でない
+      const hasSalary = debitAccounts.some(a => SALARY_ACCOUNTS.includes(a));
+      if (!hasSalary) return '給与仕訳ですが借方が給与系科目ではありません';
+      break;
+    }
+    case 'クレカ': {
+      // 貸方が未払金でない
+      const hasUnpaid = creditAccounts.some(a => UNPAID_ACCOUNTS.includes(a));
+      if (!hasUnpaid) return 'クレカ仕訳ですが貸方が未払金ではありません';
+      break;
+    }
+    case 'クレカ引落': {
+      // 借方が未払金でない
+      const hasUnpaid = debitAccounts.some(a => UNPAID_ACCOUNTS.includes(a));
+      if (!hasUnpaid) return 'クレカ引落ですが借方が未払金ではありません';
+      break;
+    }
+    case '立替経費': {
+      // 貸方が立替金/未収入金でない
+      const hasAdvance = creditAccounts.some(a => ADVANCE_ACCOUNTS.includes(a));
+      if (!hasAdvance) return '立替経費ですが貸方が立替系科目ではありません';
+      break;
+    }
+    case '振替': {
+      // 借方/貸方の両方が預金系でない
+      const debitDeposit = debitAccounts.some(a => DEPOSIT_ACCOUNTS.includes(a));
+      const creditDeposit = creditAccounts.some(a => DEPOSIT_ACCOUNTS.includes(a));
+      if (!debitDeposit || !creditDeposit) return '口座振替ですが片方が預金系ではありません';
+      break;
+    }
+  }
+  return null;
+}
+
 // ────── 検索付きコンボボックス: 選択関数 ──────
 
 
 
 /** 勘定科目アイテム選択: 科目セット + デフォルト税区分/補助科目自動設定 + 既読化 */
 function selectAccountItem(journal: JournalPhase5Mock, row: Record<string, unknown>, colKey: string, accountName: string): void {
+  // Undo記録: 変更前スナップショット
+  const beforeSnap = snapshotJournal(journal.id);
   const side = colKey.startsWith('debit') ? 'debit' : 'credit';
   const entry = row[side] as Record<string, unknown> | undefined;
   if (!entry) { editingCell.value = null; return; }
@@ -1321,6 +1796,14 @@ function selectAccountItem(journal: JournalPhase5Mock, row: Record<string, unkno
 
   journal.is_read = true;
   editingCell.value = null;
+
+  // 勘定科目選択確定後、3大グループバリデーションを実行
+  runAccountValidation(journal);
+  // Undo記録: 変更後スナップショット
+  if (beforeSnap) {
+    const afterSnap = snapshotJournal(journal.id);
+    if (afterSnap) pushUndo([beforeSnap], [afterSnap]);
+  }
 }
 
 /** 税区分アイテム選択: 税区分セット + 既読化 + 編集モード解除 */
@@ -1365,6 +1848,49 @@ const editingCell = ref<{ journalId: string; rowIndex: number; colKey: string } 
 const editingValue = ref<string>('');
 const editingOriginalValue = ref<string>('');
 
+// ────── Undo/Redo ──────
+interface UndoSnapshot { journalId: string; json: string; }
+interface UndoEntry { before: UndoSnapshot[]; after: UndoSnapshot[]; }
+const undoStack = ref<UndoEntry[]>([]);
+const redoStack = ref<UndoEntry[]>([]);
+const UNDO_MAX = 50;
+
+function snapshotJournal(journalId: string): UndoSnapshot | null {
+  const j = localJournals.value.find(x => x.id === journalId);
+  if (!j) return null;
+  return { journalId, json: JSON.stringify(j) };
+}
+
+function restoreSnapshot(snap: UndoSnapshot): void {
+  const idx = localJournals.value.findIndex(x => x.id === snap.journalId);
+  if (idx < 0) return;
+  localJournals.value[idx] = JSON.parse(snap.json) as JournalPhase5Mock;
+}
+
+function pushUndo(before: UndoSnapshot[], after: UndoSnapshot[]): void {
+  undoStack.value.push({ before, after });
+  if (undoStack.value.length > UNDO_MAX) undoStack.value.shift();
+  redoStack.value = []; // 新しい操作でredoスタックをクリア
+}
+
+function undo(): void {
+  const entry = undoStack.value.pop();
+  if (!entry) return;
+  // 復元前に現在状態をredoスタックに保存
+  const currentSnapshots = entry.before.map(s => snapshotJournal(s.journalId)).filter(Boolean) as UndoSnapshot[];
+  for (const snap of entry.before) restoreSnapshot(snap);
+  redoStack.value.push({ before: currentSnapshots, after: entry.before });
+}
+
+function redo(): void {
+  const entry = redoStack.value.pop();
+  if (!entry) return;
+  // 復元前に現在状態をundoスタックに保存
+  const currentSnapshots = entry.before.map(s => snapshotJournal(s.journalId)).filter(Boolean) as UndoSnapshot[];
+  for (const snap of entry.before) restoreSnapshot(snap);
+  undoStack.value.push({ before: currentSnapshots, after: entry.before });
+}
+
 function isEditing(journalId: string, rowIndex: number, colKey: string): boolean {
   const e = editingCell.value;
   return e !== null && e.journalId === journalId && e.rowIndex === rowIndex && e.colKey === colKey;
@@ -1388,6 +1914,9 @@ function commitCellEdit(): void {
   if (!journal) { editingCell.value = null; return; }
 
   const val = editingValue.value;
+
+  // Undo記録: 変更前スナップショット
+  const beforeSnap = snapshotJournal(journal.id);
 
   // 適格列の特殊処理
   if (e.colKey === 'invoice') {
@@ -1432,6 +1961,13 @@ function commitCellEdit(): void {
   }
   journal.is_read = true;
   editingCell.value = null;
+  // 変更4: セル編集確定時に警告列バリデーション（段階A: 双方向同期）を実行
+  syncWarningLabels(journal);
+  // Undo記録: 変更後スナップショット
+  if (beforeSnap) {
+    const afterSnap = snapshotJournal(journal.id);
+    if (afterSnap) pushUndo([beforeSnap], [afterSnap]);
+  }
 }
 
 function cancelCellEdit(): void {
@@ -1459,12 +1995,24 @@ function parseDateInput(val: string): string {
 
 // ────── フィルハンドル連続コピー ──────
 const FILL_HANDLE_COLS = new Set([
-  'description',
+  'voucher_date', 'description',
   'debit.category', 'debit.account', 'debit.sub_account', 'debit.tax_category_id',
   'credit.category', 'credit.account', 'credit.sub_account', 'credit.tax_category_id',
 ]);
 function isFillable(colKey: string): boolean {
   return FILL_HANDLE_COLS.has(colKey);
+}
+
+/** 複合仕訳判定（1対N or N対N） — フィルハンドル無効化に使用 */
+function isCompoundJournal(journal: JournalPhase5Mock): boolean {
+  return journal.debit_entries.length > 1 || journal.credit_entries.length > 1;
+}
+
+/** エントリが存在するか判定（複合仕訳の空セル無反応化に使用） */
+function hasEntry(row: { debit: JournalEntryLine | null, credit: JournalEntryLine | null }, colKey: string): boolean {
+  if (!colKey.includes('.')) return true; // journal-levelは常にtrue
+  const side = colKey.startsWith('debit') ? 'debit' : 'credit';
+  return row[side] != null;
 }
 
 const fillHandle = ref<{
@@ -1507,7 +2055,7 @@ function onFillMove(event: MouseEvent): void {
   for (let i = start; i <= end; i++) {
     if (i === src) continue; // ソース行はスキップ
     const j = paginatedJournals.value[i];
-    if (j && j.status !== 'exported' && j.deleted_at === null) {
+    if (j && j.status !== 'exported' && j.deleted_at === null && !isCompoundJournal(j)) {
       indices.push(i);
     }
   }
@@ -1518,10 +2066,24 @@ function onFillMove(event: MouseEvent): void {
 function endFillDrag(): void {
   if (!fillHandle.value) return;
   const { colKey, sourceValue, targetJournalIndices } = fillHandle.value;
+  // Undo記録: 変更前スナップショット（全対象ジャーナル）
+  const beforeSnaps = targetJournalIndices
+    .map(idx => paginatedJournals.value[idx])
+    .filter((x): x is JournalPhase5Mock => !!x)
+    .map(j => snapshotJournal(j.id))
+    .filter(Boolean) as UndoSnapshot[];
   for (const idx of targetJournalIndices) {
     const journal = paginatedJournals.value[idx];
     if (!journal) continue;
     applyFillValue(journal, colKey, sourceValue);
+    syncWarningLabels(journal);
+  }
+  // Undo記録: 変更後スナップショット
+  if (beforeSnaps.length > 0) {
+    const afterSnaps = beforeSnaps
+      .map(s => snapshotJournal(s.journalId))
+      .filter(Boolean) as UndoSnapshot[];
+    pushUndo(beforeSnaps, afterSnaps);
   }
   fillHandle.value = null;
 }
@@ -1530,36 +2092,34 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
   if (!colKey.includes('.')) {
     (journal as unknown as Record<string, unknown>)[colKey] = value;
   } else {
-    const rows = getCombinedRows(journal);
-    const row = rows[0];
-    if (!row) return;
     const parts = colKey.split('.');
-    const side = parts[0];
+    const side = parts[0] as 'debit' | 'credit';
     const field = parts[1];
-    if (side && field) {
-      const entry = row[side as 'debit' | 'credit'];
-      if (entry) {
-        if (colKey.endsWith('.category')) {
-          (entry as unknown as Record<string, unknown>).selectedCategory = value || null;
-        } else if (colKey.endsWith('.account')) {
-          // C: 勘定科目フィル時に補助科目も連動
-          (entry as unknown as Record<string, unknown>)[field] = value;
-          const accountName = value as string;
-          if (accountName) {
-            const allAccounts = clientSettings.value
-              ? clientSettings.value.accounts.value
-              : masterSettings.accounts.value;
-            const acc = allAccounts.find(a => a.name === accountName);
-            if (acc && clientSettings.value) {
-              const sub = clientSettings.value.subAccounts.value[acc.id];
-              entry.sub_account = sub || null;
-            }
-          } else {
-            entry.sub_account = null;
+    if (!side || !field) return;
+
+    // 複合仕訳対応: 該当側の全エントリに値を適用
+    const entries = side === 'debit' ? journal.debit_entries : journal.credit_entries;
+    for (const entry of entries) {
+      if (colKey.endsWith('.category')) {
+        (entry as unknown as Record<string, unknown>).selectedCategory = value || null;
+      } else if (colKey.endsWith('.account')) {
+        // 勘定科目フィル時に補助科目も連動
+        (entry as unknown as Record<string, unknown>)[field] = value;
+        const accountName = value as string;
+        if (accountName) {
+          const allAccounts = clientSettings.value
+            ? clientSettings.value.accounts.value
+            : masterSettings.accounts.value;
+          const acc = allAccounts.find(a => a.name === accountName);
+          if (acc && clientSettings.value) {
+            const sub = clientSettings.value.subAccounts.value[acc.id];
+            entry.sub_account = sub || null;
           }
         } else {
-          (entry as unknown as Record<string, unknown>)[field] = value;
+          entry.sub_account = null;
         }
+      } else {
+        (entry as unknown as Record<string, unknown>)[field] = value;
       }
     }
   }
@@ -1638,6 +2198,7 @@ function endCellDrag(): void {
     const journal = paginatedJournals.value[cellDrag.value.dropJournalIndex];
     if (journal && journal.status !== 'exported' && journal.deleted_at === null) {
       applyFillValue(journal, cellDrag.value.dropColKey, cellDrag.value.sourceValue);
+      syncWarningLabels(journal);
     }
   }
   document.body.style.cursor = '';
@@ -1663,6 +2224,8 @@ function onGlobalMouseUp() {
 onMounted(() => {
   document.addEventListener('mousemove', onGlobalMouseMove);
   document.addEventListener('mouseup', onGlobalMouseUp);
+  // 初回ロード時: 全仕訳に対して警告ラベルを同期（モーダルなし）
+  localJournals.value.forEach(j => syncWarningLabels(j, true));
 });
 onUnmounted(() => {
   document.removeEventListener('mousemove', onGlobalMouseMove);
@@ -1696,6 +2259,8 @@ const confirmDialog = ref<{
   title: string;
   message: string;
   onConfirm: () => void;
+  confirmLabel?: string;
+  showCancel?: boolean;
 }>({ show: false, title: '', message: '', onConfirm: () => {} });
 
 // 初回ヘルプ表示
@@ -1737,15 +2302,19 @@ const warningLabelMap: Record<string, { level: 'error' | 'warn'; label: string; 
   DEBIT_CREDIT_MISMATCH: { level: 'error', label: '借方貸方の合計額不一致', color: 'text-red-600', weight: 17 },
   DATE_UNKNOWN:          { level: 'error', label: '日付が不明', color: 'text-red-600', weight: 16 },
   ACCOUNT_UNKNOWN:       { level: 'error', label: '勘定科目が不明', color: 'text-red-600', weight: 15 },
+  TAX_UNKNOWN:           { level: 'error', label: '税区分が不明', color: 'text-red-600', weight: 14.5 },
   DUPLICATE_CONFIRMED:   { level: 'error', label: '完全重複（同一画像）', color: 'text-red-600', weight: 13 },
   MULTIPLE_VOUCHERS:     { level: 'error', label: '複数の証票あり', color: 'text-red-600', weight: 12 },
-  AMOUNT_UNCLEAR:        { level: 'error', label: '内訳が不明瞭な金額あり', color: 'text-red-600', weight: 14 },
+  AMOUNT_UNCLEAR:        { level: 'error', label: '金額が不明', color: 'text-red-600', weight: 14 },
   // 注意（黄）
   CATEGORY_CONFLICT:     { level: 'warn', label: '借方/貸方の区分が矛盾', color: 'text-yellow-600', weight: 7 },
+  VOUCHER_TYPE_CONFLICT: { level: 'warn', label: '証票意味と科目が不整合', color: 'text-yellow-600', weight: 6.5 },
+  TAX_ACCOUNT_MISMATCH:  { level: 'warn', label: '税区分と勘定科目が矛盾', color: 'text-yellow-600', weight: 7.5 },
   DUPLICATE_SUSPECT:     { level: 'warn', label: '重複疑い', color: 'text-yellow-600', weight: 6 },
   DATE_OUT_OF_RANGE:     { level: 'warn', label: '期間外日付', color: 'text-yellow-600', weight: 5 },
   UNREADABLE_ESTIMATED:  { level: 'warn', label: '判読困難（AI推測値）', color: 'text-yellow-600', weight: 4 },
   MEMO_DETECTED:         { level: 'warn', label: '手書きメモ検出', color: 'text-yellow-600', weight: 3 },
+  DESCRIPTION_UNKNOWN:   { level: 'warn', label: '摘要が不明', color: 'text-yellow-600', weight: 2 },
 };
 
 // ======== グローバルツールチップ（position:fixed、overflow親を越えて表示） ========
@@ -2913,6 +3482,22 @@ function toggleStaffNoteInModal(key: StaffNoteKey) {
   // labels即時同期
   syncLabelsFromStaffNotes(commentModalJournal.value)
 }
+// ────── キーボードショートカット: Ctrl+Z / Ctrl+Y ──────
+function handleUndoRedoKeydown(e: KeyboardEvent): void {
+  if (e.ctrlKey && e.key === 'z') {
+    e.preventDefault();
+    undo();
+  } else if (e.ctrlKey && e.key === 'y') {
+    e.preventDefault();
+    redo();
+  }
+}
+onMounted(() => {
+  window.addEventListener('keydown', handleUndoRedoKeydown);
+});
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleUndoRedoKeydown);
+});
 </script>
 
 <style scoped>
@@ -2930,4 +3515,6 @@ function toggleStaffNoteInModal(key: StaffNoteKey) {
 .jl-editable:hover { background: #fef3c7 !important; outline: 1px dashed #22c55e; }
 /* D: フィルハンドル判定拡大 */
 .fill-handle::after { content: ''; position: absolute; inset: -3px; cursor: crosshair; }
+/* 警告セル（赤背景白字）内の入力フィールドは黒字を保証 */
+.inline-edit-input { color: #111 !important; }
 </style>
