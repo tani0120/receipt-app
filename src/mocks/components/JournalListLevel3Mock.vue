@@ -1525,10 +1525,16 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
     }
   }
 
-  // 1. ACCOUNT_UNKNOWN（勘定科目不明）: 全エントリのaccountが非null
-  const allAccountsFilled = journal.debit_entries.every(e => e.account != null && e.account !== '')
-    && journal.credit_entries.every(e => e.account != null && e.account !== '');
-  if (allAccountsFilled) removeLabel('ACCOUNT_UNKNOWN');
+  // 1. ACCOUNT_UNKNOWN（勘定科目不明）: 全エントリのaccountが非null かつ マスタに存在
+  const allAccounts = clientSettings.value
+    ? clientSettings.value.accounts.value
+    : masterSettings.accounts.value;
+  const accountNames = new Set(allAccounts.map(a => a.name));
+  const isValidAccount = (name: string | null) =>
+    name != null && name !== '' && accountNames.has(name);
+  const allAccountsValid = journal.debit_entries.every(e => isValidAccount(e.account))
+    && journal.credit_entries.every(e => isValidAccount(e.account));
+  if (allAccountsValid) removeLabel('ACCOUNT_UNKNOWN');
   else addLabel('ACCOUNT_UNKNOWN');
 
   // 2. TAX_UNKNOWN（税区分不明）: 全エントリのtax_category_idが非null
@@ -1558,22 +1564,36 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
   else addLabel('DEBIT_CREDIT_MISMATCH');
 
   // 7. CATEGORY_CONFLICT（貸借科目矛盾）: 5分類バリデーション（全借方×全貸方クロスチェック）
-  let hasCategoryConflict = false;
+  const conflictDebitAccounts = new Set<string>();
+  const conflictCreditAccounts = new Set<string>();
   for (const dEntry of journal.debit_entries) {
     for (const cEntry of journal.credit_entries) {
       const dAcct = dEntry.account ?? null;
       const cAcct = cEntry.account ?? null;
       if (dAcct && cAcct && validateDebitCreditCombination(getMegaGroup(dAcct), getMegaGroup(cAcct), dAcct, cAcct)) {
-        hasCategoryConflict = true;
-        break;
+        conflictDebitAccounts.add(dAcct);
+        conflictCreditAccounts.add(cAcct);
       }
     }
-    if (hasCategoryConflict) break;
   }
-  if (hasCategoryConflict) {
+  if (conflictDebitAccounts.size > 0 || conflictCreditAccounts.size > 0) {
     addLabel('CATEGORY_CONFLICT');
+    categoryConflictMap.set(journal.id, { debit: conflictDebitAccounts, credit: conflictCreditAccounts });
   } else {
     removeLabel('CATEGORY_CONFLICT');
+    categoryConflictMap.delete(journal.id);
+  }
+
+  // 7b. SAME_ACCOUNT_BOTH_SIDES（借方貸方に同一科目）
+  const debitAccountSet = new Set(journal.debit_entries.map(e => e.account).filter(Boolean) as string[]);
+  const creditAccountSet = new Set(journal.credit_entries.map(e => e.account).filter(Boolean) as string[]);
+  const sameAccounts = [...debitAccountSet].filter(a => creditAccountSet.has(a));
+  if (sameAccounts.length > 0) {
+    addLabel('SAME_ACCOUNT_BOTH_SIDES');
+    sameAccountBothSidesMap.set(journal.id, new Set(sameAccounts));
+  } else {
+    removeLabel('SAME_ACCOUNT_BOTH_SIDES');
+    sameAccountBothSidesMap.delete(journal.id);
   }
 
   // 8. VOUCHER_TYPE_CONFLICT（証票意味矛盾）: 証票タイプ別バリデーション
@@ -1673,9 +1693,15 @@ function getWarningCellClass(journal: JournalPhase5Mock, colKey: string, entry?:
     if (entry.amount == null) return W;
   }
 
-  // ACCOUNT_UNKNOWN（勘定科目不明）→ nullの科目セルのみ
+  // ACCOUNT_UNKNOWN（勘定科目不明）→ null or マスタに存在しない科目セル
   if (colKey.includes('account') && !colKey.includes('sub_account') && labels.includes('ACCOUNT_UNKNOWN') && entry) {
     if (entry.account == null || entry.account === '') return W;
+    // マスタに存在しない科目も赤背景
+    const acctList = clientSettings.value
+      ? clientSettings.value.accounts.value
+      : masterSettings.accounts.value;
+    const acctNameSet = new Set(acctList.map(a => a.name));
+    if (!acctNameSet.has(entry.account as string)) return W;
   }
 
   // TAX_UNKNOWN（税区分不明）→ nullの税区分セルのみ
@@ -1683,8 +1709,20 @@ function getWarningCellClass(journal: JournalPhase5Mock, colKey: string, entry?:
     if (entry.tax_category_id == null || entry.tax_category_id === '') return W;
   }
 
-  // CATEGORY_CONFLICT（貸借科目矛盾）→ 勘定科目セル
-  if (colKey.includes('account') && !colKey.includes('sub_account') && labels.includes('CATEGORY_CONFLICT')) return W;
+  // CATEGORY_CONFLICT（貸借科目矛盾）→ 問題のある勘定科目セルのみ
+  if (colKey.includes('account') && !colKey.includes('sub_account') && labels.includes('CATEGORY_CONFLICT') && entry) {
+    const acctName = entry.account as string;
+    const side = colKey.startsWith('debit') ? 'debit' : 'credit';
+    const conflict = categoryConflictMap.get(journal.id);
+    if (conflict && ((side === 'debit' && conflict.debit.has(acctName)) || (side === 'credit' && conflict.credit.has(acctName)))) return W;
+  }
+
+  // SAME_ACCOUNT_BOTH_SIDES（借方貸方に同一科目）→ 該当科目セルのみ黄色
+  if (colKey.includes('account') && !colKey.includes('sub_account') && labels.includes('SAME_ACCOUNT_BOTH_SIDES') && entry) {
+    const acctName = entry.account as string;
+    const overlap = sameAccountBothSidesMap.get(journal.id);
+    if (overlap && overlap.has(acctName)) return '!bg-yellow-300 !text-black';
+  }
 
   // DATE_UNKNOWN（日付不明）→ 日付セル
   if (colKey === 'voucher_date' && labels.includes('DATE_UNKNOWN')) return W;
@@ -2015,6 +2053,11 @@ function hasEntry(row: { debit: JournalEntryLine | null, credit: JournalEntryLin
   return row[side] != null;
 }
 
+/** CATEGORY_CONFLICT: 問題のあるエントリ科目名を記録 */
+const categoryConflictMap = new Map<string, { debit: Set<string>, credit: Set<string> }>();
+/** SAME_ACCOUNT_BOTH_SIDES: 借方貸方の両方に存在する科目名を記録 */
+const sameAccountBothSidesMap = new Map<string, Set<string>>();
+
 const fillHandle = ref<{
   colKey: string;
   sourceJournalIndex: number;
@@ -2315,6 +2358,7 @@ const warningLabelMap: Record<string, { level: 'error' | 'warn'; label: string; 
   UNREADABLE_ESTIMATED:  { level: 'warn', label: '判読困難（AI推測値）', color: 'text-yellow-600', weight: 4 },
   MEMO_DETECTED:         { level: 'warn', label: '手書きメモ検出', color: 'text-yellow-600', weight: 3 },
   DESCRIPTION_UNKNOWN:   { level: 'warn', label: '摘要が不明', color: 'text-yellow-600', weight: 2 },
+  SAME_ACCOUNT_BOTH_SIDES: { level: 'warn', label: '同一科目が借方/貸方の両方に存在', color: 'text-yellow-600', weight: 6.7 },
 };
 
 // ======== グローバルツールチップ（position:fixed、overflow親を越えて表示） ========

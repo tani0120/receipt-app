@@ -1081,7 +1081,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: '経費精算', account_on_document: true, sub_account: null, amount: 55000, amount_on_document: true, tax_category_id: '課税仕入 10%' }
+      { account: '消耗品費', account_on_document: true, sub_account: null, amount: 55000, amount_on_document: true, tax_category_id: '課税仕入 10%' }
     ],
     credit_entries: [
       { account: '現金', account_on_document: true, sub_account: '項目1', amount: 5000, amount_on_document: true, tax_category_id: '対象外' },
