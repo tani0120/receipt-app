@@ -396,7 +396,7 @@
             <!-- voucher-type-dropdown型（証票意味: journal-levelデータ、ダブルクリック→ドロップダウン） -->
             <template v-else-if="col.type === 'voucher-type-dropdown'">
               <template v-if="rowIndex === 0">
-                <div :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 border-r border-gray-200 text-[10px] relative jl-editable', getWarningCellClass(journal, col.key)]" @dblclick.stop="startCellEdit(journal.id, 0, col.key, journal.voucher_type || '')">
+                <div :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 border-r border-gray-200 text-[10px] relative jl-editable', getWarningCellClass(journal, col.key), isDragOver(journalIndex, 0, col.key) ? 'ring-2 ring-blue-500 !bg-yellow-200 !text-black' : '', isDragCompatibleCol(col.key) ? '!bg-blue-50' : '', isDragIncompatibleCol(col.key) ? 'opacity-30' : '']" @dblclick.stop="startCellEdit(journal.id, 0, col.key, journal.voucher_type || '')" @mousedown="startCellDrag(col.key, journal.voucher_type || '', $event)">
                   <template v-if="isEditing(journal.id, 0, col.key)">
                     <select
                       class="inline-edit-input w-full text-[9px] bg-white border border-blue-400 rounded outline-none px-0.5 py-0"
@@ -419,7 +419,7 @@
 
             <!-- account-dropdown型（勘定科目: ダブルクリック→検索付きoptgroup→テキスト戻り） -->
             <template v-else-if="col.type === 'account-dropdown'">
-              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 relative border-r border-gray-200 text-[10px]', hasEntry(row, col.key) ? 'jl-editable' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '', getWarningCellClass(journal, col.key, (row[col.key.startsWith('debit') ? 'debit' : 'credit'] as unknown) as Record<string, unknown>)]" @dblclick.stop="hasEntry(row, col.key) && (startCellEdit(journal.id, rowIndex, col.key, (getRawValue(row, col.key) as string) ?? ''), expandedMegaGroup = null)" @mousedown="hasEntry(row, col.key) && startCellDrag(col.key, getRawValue(row, col.key), $event)">
+              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 relative border-r border-gray-200 text-[10px]', hasEntry(row, col.key) ? 'jl-editable' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-500 !bg-yellow-200 !text-black' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '', getWarningCellClass(journal, col.key, (row[col.key.startsWith('debit') ? 'debit' : 'credit'] as unknown) as Record<string, unknown>), isDragCompatibleCol(col.key) ? '!bg-blue-50' : '', isDragIncompatibleCol(col.key) ? 'opacity-30' : '']" @dblclick.stop="hasEntry(row, col.key) && (startCellEdit(journal.id, rowIndex, col.key, (getRawValue(row, col.key) as string) ?? ''), expandedMegaGroup = null)" @mousedown="hasEntry(row, col.key) && startCellDrag(col.key, getRawValue(row, col.key), $event)">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <div class="relative">
                     <input
@@ -438,7 +438,7 @@
                           <div class="px-2 py-0.5 text-[9px] font-bold text-gray-500 bg-gray-50">{{ g.label }}</div>
                           <div v-for="a in g.items" :key="a.name"
                                class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-4"
-                               @mousedown.prevent="selectAccountItem(journal, row, col.key, a.name)">
+                               @mousedown.prevent="selectAccountItem(journal, row, col.key, a.id)">
                             {{ a.name }}
                           </div>
                         </template>
@@ -450,7 +450,7 @@
                         <template v-if="(getRawValue(row, col.key) as string)">
                           <div class="px-2 py-1 text-[9px] font-bold text-blue-700 bg-blue-50 border-b border-blue-200 flex items-center gap-1">
                             <i class="fa-solid fa-check text-[7px]"></i>
-                            {{ (getRawValue(row, col.key) as string) }}
+                            {{ resolveAccountName(getRawValue(row, col.key) as string) }}
                           </div>
                         </template>
                         <template v-for="mega in MEGA_GROUPS" :key="mega.label">
@@ -464,7 +464,7 @@
                           <template v-if="expandedMegaGroup === mega.label">
                             <div v-for="a in getAccountsForMegaGroup(mega.label)" :key="a.name"
                                  class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-5"
-                                 @mousedown.prevent="selectAccountItem(journal, row, col.key, a.name)">
+                                 @mousedown.prevent="selectAccountItem(journal, row, col.key, a.id)">
                               {{ a.name }}
                             </div>
                           </template>
@@ -474,7 +474,7 @@
                   </div>
                 </template>
                 <template v-else>
-                  {{ (getRawValue(row, col.key) as string) || '--' }}
+                  {{ resolveAccountName(getRawValue(row, col.key) as string) || '--' }}
                 </template>
                 <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key) && !isCompoundJournal(journal)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getRawValue(row, col.key) as string, $event)"></span>
               </div>
@@ -486,7 +486,7 @@
             <template v-else-if="col.type === 'text'">
               <!-- journal-level（keyにドットなし）: rowIndex===0のみ表示 -->
               <template v-if="!col.key.includes('.')">
-                <div v-if="rowIndex === 0" :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center border-r border-gray-200 relative jl-editable', col.key === 'voucher_date' ? 'justify-center text-[8px]' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '', getWarningCellClass(journal, col.key)]" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(journal, col.key))" @mousedown="isFillable(col.key) && startCellDrag(col.key, getValue(journal, col.key), $event)">
+                <div v-if="rowIndex === 0" :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center border-r border-gray-200 relative jl-editable', col.key === 'voucher_date' ? 'justify-center text-[8px]' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-500 !bg-yellow-200 !text-black' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '', getWarningCellClass(journal, col.key), isDragCompatibleCol(col.key) ? '!bg-blue-50' : '', isDragIncompatibleCol(col.key) ? 'opacity-30' : '']" @dblclick.stop="startCellEdit(journal.id, rowIndex, col.key, getValue(journal, col.key))" @mousedown="startCellDrag(col.key, getValue(journal, col.key), $event)">
                   <!-- 日付: 編集中はdate input -->
                   <template v-if="col.key === 'voucher_date' && isEditing(journal.id, rowIndex, col.key)">
                     <input type="date" class="inline-edit-input w-full text-[8px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" v-model="editingValue" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
@@ -504,7 +504,7 @@
                 <div v-else :style="colWidthStyle(col)" :class="[colWidthClass(col), 'border-r border-gray-200']"></div>
               </template>
               <!-- entry-level（keyにドットあり）: 補助科目・税区分等 -->
-              <div v-else :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative', hasEntry(row, col.key) ? 'jl-editable' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-400 bg-blue-50' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '', getWarningCellClass(journal, col.key, (row[col.key.split('.')[0] as 'debit' | 'credit'] as unknown) as Record<string, unknown>)]" @dblclick.stop="hasEntry(row, col.key) && startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="hasEntry(row, col.key) && isFillable(col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
+              <div v-else :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative', hasEntry(row, col.key) ? 'jl-editable' : '', isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-500 !bg-yellow-200 !text-black' : '', isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '', getWarningCellClass(journal, col.key, (row[col.key.split('.')[0] as 'debit' | 'credit'] as unknown) as Record<string, unknown>), isDragCompatibleCol(col.key) ? '!bg-blue-50' : '', isDragIncompatibleCol(col.key) ? 'opacity-30' : '']" @dblclick.stop="hasEntry(row, col.key) && startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="hasEntry(row, col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <!-- F4: 税区分は検索付きoptgroupコンボボックス（方向フィルタ） -->
                   <div v-if="col.key.endsWith('.tax_category_id')" class="relative">
@@ -517,22 +517,39 @@
                       @blur="blurTaxEdit(journal)"
                     />
                     <div class="absolute left-0 top-full z-50 bg-white border border-gray-300 shadow-lg rounded max-h-40 overflow-y-auto w-48">
-                      <template v-for="g in filterTaxGroups(row, col.key, editingValue)" :key="g.label">
-                        <div class="px-2 py-0.5 text-[9px] font-bold text-gray-600 bg-gray-50">▼ {{ g.label }}</div>
-                        <div v-for="tc in g.items" :key="tc.id"
-                             class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-4"
-                             @mousedown.prevent="selectTaxItem(journal, tc.name)">
-                          {{ tc.name }}
-                        </div>
+                      <!-- テキストが元の値から変更された場合: 検索フィルタ -->
+                      <template v-if="editingValue !== editingOriginalValue">
+                        <template v-for="g in filterTaxGroups(row, col.key, editingValue)" :key="g.label">
+                          <div class="px-2 py-0.5 text-[9px] font-bold text-gray-600 bg-gray-50">▼ {{ g.label }}</div>
+                          <div v-for="tc in g.items" :key="tc.id"
+                               class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-4"
+                               @mousedown.prevent="selectTaxItem(journal, tc.id)">
+                            {{ tc.name }}
+                          </div>
+                        </template>
+                        <div v-if="filterTaxGroups(row, col.key, editingValue).length === 0" class="px-2 py-1 text-[9px] text-gray-400">該当なし</div>
                       </template>
-                      <div v-if="filterTaxGroups(row, col.key, editingValue).length === 0" class="px-2 py-1 text-[9px] text-gray-400">該当なし</div>
+                      <!-- 初期状態（ダブルクリック直後）: 全件グルーピング表示 -->
+                      <template v-else>
+                        <template v-for="g in filterTaxGroups(row, col.key, '')" :key="g.label">
+                          <div class="px-2 py-0.5 text-[9px] font-bold text-gray-600 bg-gray-50">▼ {{ g.label }}</div>
+                          <div v-for="tc in g.items" :key="tc.id"
+                               class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-4"
+                               @mousedown.prevent="selectTaxItem(journal, tc.id)">
+                            {{ tc.name }}
+                          </div>
+                        </template>
+                      </template>
                     </div>
                   </div>
                   <!-- その他はテキスト入力 -->
                   <input v-else type="text" class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0" v-model="editingValue" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
                 </template>
                 <template v-else>
-                  {{ getValue(row, col.key) ?? '' }}
+                  <span v-if="col.key.endsWith('.tax_category_id') && isTaxCategoryInvalid(getRawValue(row, col.key) as string)" class="text-red-600 font-bold" :title="'課税方式と不整合: ' + (activeClientFull?.consumptionTaxMode === 'exempt' ? '免税事業者は対象外のみ' : '本則課税に業種区分は不要')">
+                    ⚠ {{ getValue(row, col.key) ?? '' }}
+                  </span>
+                  <template v-else>{{ getValue(row, col.key) ?? '' }}</template>
                 </template>
                 <span v-if="isFillable(col.key) && !isEditing(journal.id, rowIndex, col.key) && !isCompoundJournal(journal)" class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10" @mousedown.stop.prevent="startFillDrag(journalIndex, col.key, getValue(row, col.key), $event)"></span>
               </div>
@@ -540,7 +557,7 @@
 
             <!-- amount型 -->
             <template v-else-if="col.type === 'amount'">
-              <div :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px]', hasEntry(row, col.key) ? 'jl-editable' : '', col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '', getWarningCellClass(journal, col.key, (row[col.key.split('.')[0] as 'debit' | 'credit'] as unknown) as Record<string, unknown>)]" @dblclick.stop="hasEntry(row, col.key) && startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))">
+              <div :data-drag-col="col.key" :data-drag-row="rowIndex" :style="colWidthStyle(col)" :class="[colWidthClass(col), 'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px]', hasEntry(row, col.key) ? 'jl-editable' : '', col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '', getWarningCellClass(journal, col.key, (row[col.key.split('.')[0] as 'debit' | 'credit'] as unknown) as Record<string, unknown>), isDragOver(journalIndex, rowIndex, col.key) ? 'ring-2 ring-blue-500 !bg-yellow-200 !text-black' : '', isDragCompatibleCol(col.key) ? '!bg-blue-50' : '', isDragIncompatibleCol(col.key) ? 'opacity-30' : '']" @dblclick.stop="hasEntry(row, col.key) && startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))" @mousedown="hasEntry(row, col.key) && startCellDrag(col.key, getValue(row, col.key), $event)">
                 <template v-if="isEditing(journal.id, rowIndex, col.key)">
                   <input type="text" inputmode="numeric" class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0 text-right font-mono" v-model="editingValue" @input="onAmountInput($event)" @keydown.enter="commitCellEdit()" @keydown.escape="cancelCellEdit()" @blur="commitCellEdit()" />
                 </template>
@@ -894,10 +911,10 @@
                   class="hover:bg-blue-100 cursor-pointer">
                 <td class="border px-2 py-1 text-center">{{ result.voucher_date ? formatDate(result.voucher_date) : '-' }}</td>
                 <td class="border px-2 py-1">{{ result.description }}</td>
-                <td class="border px-2 py-1">{{ result.debit_entries[0]?.account || '' }}</td>
+                <td class="border px-2 py-1">{{ resolveAccountName(result.debit_entries[0]?.account) || '' }}</td>
                 <td class="border px-2 py-1">{{ result.debit_entries[0]?.sub_account || '' }}</td>
                 <td class="border px-2 py-1 text-center">{{ resolveTaxCategoryName(result.debit_entries[0]?.tax_category_id) }}</td>
-                <td class="border px-2 py-1">{{ result.credit_entries[0]?.account || '' }}</td>
+                <td class="border px-2 py-1">{{ resolveAccountName(result.credit_entries[0]?.account) || '' }}</td>
                 <td class="border px-2 py-1">{{ result.credit_entries[0]?.sub_account || '' }}</td>
                 <td class="border px-2 py-1 text-center">{{ resolveTaxCategoryName(result.credit_entries[0]?.tax_category_id) }}</td>
                 <td class="border px-2 py-1 text-center">
@@ -1031,6 +1048,44 @@
     </div>
     </Teleport>
 
+    <!-- 税区分矛盾モーダル（非ブロッキング: 右上フローティング） -->
+    <div v-if="showTaxMismatchModal"
+         class="fixed top-20 right-4 z-[90] w-80 bg-white rounded-lg shadow-2xl border border-red-200 p-4 text-sm">
+      <h3 class="font-bold mb-2 text-red-600 flex items-center gap-1 text-xs">
+        <span class="text-base">⚠</span> 税区分の不整合
+        <button @click="showTaxMismatchModal = false" class="ml-auto text-gray-400 hover:text-gray-600 text-base leading-none">&times;</button>
+      </h3>
+      <p class="text-gray-600 mb-2 text-[11px]">
+        <span class="font-bold">{{ activeClientFull?.companyName }}</span>
+        （{{ activeClientFull?.consumptionTaxMode === 'exempt' ? '免税事業者' : activeClientFull?.consumptionTaxMode === 'simplified' ? '簡易課税' : '本則課税' }}）で
+        <span class="font-bold text-red-600">{{ taxMismatchSummary.total }}件</span> の不整合
+      </p>
+      <div class="border rounded bg-gray-50 p-1.5 mb-3 max-h-24 overflow-y-auto">
+        <div v-for="item in taxMismatchSummary.items" :key="item.from"
+             class="flex items-center text-[10px] py-0.5">
+          <span class="text-red-500">⚠ {{ item.from }}</span>
+          <span class="mx-1 text-gray-400">→</span>
+          <span class="text-green-600 font-bold">{{ item.to }}</span>
+          <span class="ml-auto text-gray-400">({{ item.count }}件)</span>
+        </div>
+      </div>
+      <div class="flex justify-end gap-1.5">
+        <button @click="showTaxMismatchModal = false"
+                class="px-2 py-1 text-[11px] border border-gray-300 rounded hover:bg-gray-100 text-gray-600">
+          閉じる
+        </button>
+        <button @click="showTaxMismatchModal = false"
+                class="px-2 py-1 text-[11px] border border-blue-300 rounded hover:bg-blue-50 text-blue-600">
+          個別に確認
+        </button>
+        <button @click="fixAllTaxMismatches(); showTaxMismatchModal = false"
+                class="px-2 py-1 text-[11px] bg-red-500 text-white rounded hover:bg-red-600 font-bold">
+          一括修正
+        </button>
+      </div>
+    </div>
+
+
     <!-- 確認ダイアログ（モーダル） -->
     <div v-if="confirmDialog.show"
          class="fixed inset-0 z-[100] flex items-center justify-center bg-black/30"
@@ -1061,6 +1116,14 @@
           <span v-else-if="tooltipHtml" class="flex flex-col gap-0.5" v-html="tooltipHtml"></span>
         </div>
         <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full border-4 border-transparent border-b-gray-900/95"></div>
+      </div>
+    </Teleport>
+    <!-- ドラッグコピー フローティングラベル -->
+    <Teleport to="body">
+      <div v-if="dragLabelVisible"
+           class="fixed z-[9999] pointer-events-none bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded shadow-lg whitespace-nowrap flex items-center gap-1"
+           :style="{ left: dragLabelX + 'px', top: dragLabelY + 'px' }">
+        📋 コピー: {{ dragLabelText || '--' }}
       </div>
     </Teleport>
 
@@ -1101,7 +1164,7 @@ const route = useRoute();
 const journalClientId = computed(() => (route.params.clientId as string) || 'default');
 
 /** フィクスチャデータのバージョン（フィクスチャ更新時にインクリメント） */
-const FIXTURE_VERSION = 4;
+const FIXTURE_VERSION = 6;
 
 function loadJournals(): JournalPhase5Mock[] {
   const key = `sugu-suru:journals:${journalClientId.value}`;
@@ -1118,7 +1181,10 @@ function loadJournals(): JournalPhase5Mock[] {
     }
   } catch { /* 破損データは無視 */ }
   localStorage.setItem(versionKey, String(FIXTURE_VERSION));
-  return JSON.parse(JSON.stringify(fixtureData));
+  // 顧問先IDでフィルタ（一致なしの場合は全データ表示）
+  const clientFiltered = fixtureData.filter(j => j.client_id === journalClientId.value);
+  const base = clientFiltered.length > 0 ? clientFiltered : fixtureData;
+  return JSON.parse(JSON.stringify(base));
 }
 
 const localJournals = ref<JournalPhase5Mock[]>(loadJournals());
@@ -1206,6 +1272,116 @@ const MEGA_GROUPS = [
 /** 証票意味選択肢 */
 const VOUCHER_TYPES = ['売上', '経費', '給与', '立替経費', '振替', 'クレカ', 'クレカ引落', 'その他'];
 
+/**
+ * 顧問先の課税方式に基づいて、デフォルト税区分名を変換する。
+ * - 免税: すべて「対象外」に強制変換
+ * - 本則/簡易: そのまま返す
+ */
+function resolveDefaultTaxForClient(defaultTaxName: string): string {
+  const taxMode = activeClientFull.value?.consumptionTaxMode;
+  if (taxMode === 'exempt') return 'COMMON_EXEMPT';
+  return defaultTaxName;
+}
+
+/**
+ * 税区分が顧問先の課税方式と矛盾しているかチェックする。
+ * - 免税: 「対象外」以外は不正
+ * - 本則: 業種区分付き（_T1〜_T6）は不正
+ * - 簡易: 不正なし
+ * @returns true = 矛盾あり（赤背景で警告すべき）
+ */
+function isTaxCategoryInvalid(taxCategoryId: string | null | undefined): boolean {
+  if (!taxCategoryId) return false;
+  const taxMode = activeClientFull.value?.consumptionTaxMode;
+  if (!taxMode) return false;
+
+  if (taxMode === 'exempt') {
+    return taxCategoryId !== 'COMMON_EXEMPT';
+  }
+  if (taxMode === 'general') {
+    // 概念IDで判定: 業種区分付きは _T1〜_T6 で終わる
+    return /_T[1-6]$/.test(taxCategoryId);
+  }
+  return false;
+}
+
+// ── 税区分矛盾モーダル ──
+const showTaxMismatchModal = ref(false);
+
+/** 矛盾サマリ: { total, items: [{ from, to, count }] } */
+const taxMismatchSummary = computed(() => {
+  const taxMode = activeClientFull.value?.consumptionTaxMode;
+  if (!taxMode) return { total: 0, items: [] as { from: string; to: string; count: number }[] };
+
+  const countMap = new Map<string, number>();
+  for (const j of localJournals.value) {
+    for (const e of [...j.debit_entries, ...j.credit_entries]) {
+      if (isTaxCategoryInvalid(e.tax_category_id)) {
+        countMap.set(e.tax_category_id!, (countMap.get(e.tax_category_id!) || 0) + 1);
+      }
+    }
+  }
+
+  const resolveTo = (from: string): string => {
+    if (taxMode === 'exempt') return 'COMMON_EXEMPT';
+    if (taxMode === 'general') return from.replace(/_T[1-6]$/, '');
+    return from;
+  };
+
+  const items = [...countMap.entries()].map(([from, count]) => ({
+    from: resolveTaxCategoryName(from),
+    to: resolveTaxCategoryName(resolveTo(from)),
+    count,
+  }));
+
+  return { total: items.reduce((s, i) => s + i.count, 0), items };
+});
+
+/** 一括修正: 全ての矛盾税区分を適切な値に変換（既存undo/redoで取り消し可能） */
+function fixAllTaxMismatches() {
+  const taxMode = activeClientFull.value?.consumptionTaxMode;
+  if (!taxMode) return;
+
+  // 修正対象の仕訳IDを収集
+  const targetJournalIds = new Set<string>();
+  for (const j of localJournals.value) {
+    for (const e of [...j.debit_entries, ...j.credit_entries]) {
+      if (e && isTaxCategoryInvalid(e.tax_category_id)) {
+        targetJournalIds.add(j.id);
+      }
+    }
+  }
+  if (targetJournalIds.size === 0) return;
+
+  // 修正前のスナップショットを保存
+  const beforeSnapshots = [...targetJournalIds]
+    .map(id => snapshotJournal(id))
+    .filter(Boolean) as UndoSnapshot[];
+
+  // 修正を適用
+  for (const j of localJournals.value) {
+    if (!targetJournalIds.has(j.id)) continue;
+    for (const e of [...j.debit_entries, ...j.credit_entries]) {
+      if (!e || !isTaxCategoryInvalid(e.tax_category_id)) continue;
+      if (taxMode === 'exempt') e.tax_category_id = 'COMMON_EXEMPT';
+      else if (taxMode === 'general') e.tax_category_id = (e.tax_category_id ?? '').replace(/_T[1-6]$/, '');
+    }
+  }
+
+  // 修正後のスナップショットを保存 → pushUndo
+  const afterSnapshots = [...targetJournalIds]
+    .map(id => snapshotJournal(id))
+    .filter(Boolean) as UndoSnapshot[];
+  pushUndo(beforeSnapshots, afterSnapshots);
+  autoSave();
+}
+
+// ページ初回表示時: 矛盾があればモーダルを自動表示
+watch(taxMismatchSummary, (summary) => {
+  if (summary.total > 0 && !showTaxMismatchModal.value) {
+    showTaxMismatchModal.value = true;
+  }
+}, { immediate: true });
 /** 仕訳入力用: 勘定科目をカテゴリでグルーピング */
 const accountGroupsForJournal = computed(() => {
   const categoryMap = new Map<string, typeof filteredAccounts.value>();
@@ -1256,7 +1432,8 @@ function getTaxGroupsForEntry(row: Record<string, unknown>, colKey: string) {
   else if (PURCHASE_CATEGORIES.includes(cat)) direction = 'purchase';
   else direction = 'common';
 
-  const filtered = settings.filteredTaxCategories(direction);
+  const taxMode = activeClientFull.value?.consumptionTaxMode;
+  const filtered = settings.filteredTaxCategories(direction, taxMode);
   if (direction === 'sales') {
     return [
       { label: '売上系', items: filtered.filter(tc => tc.direction === 'sales') },
@@ -1326,7 +1503,7 @@ function getMegaGroup(accountName: string | null): MegaGroupType {
   const allAccounts = clientSettings.value
     ? clientSettings.value.accounts.value
     : masterSettings.accounts.value;
-  const acc = allAccounts.find(a => a.name === accountName);
+  const acc = allAccounts.find(a => a.id === accountName);
   if (!acc) return null;
   if (acc.accountGroup === 'PL_REVENUE') return 'sales';
   if (acc.accountGroup === 'PL_EXPENSE') return 'expense';
@@ -1341,7 +1518,7 @@ function isContraAccount(accountName: string | null): { isContraRevenue: boolean
   const allAccounts = clientSettings.value
     ? clientSettings.value.accounts.value
     : masterSettings.accounts.value;
-  const acc = allAccounts.find(a => a.name === accountName);
+  const acc = allAccounts.find(a => a.id === accountName);
   if (!acc) return { isContraRevenue: false, isContraExpense: false };
   return {
     isContraRevenue: CONTRA_REVENUE_IDS.includes(acc.id),
@@ -1529,9 +1706,9 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
   const allAccounts = clientSettings.value
     ? clientSettings.value.accounts.value
     : masterSettings.accounts.value;
-  const accountNames = new Set(allAccounts.map(a => a.name));
-  const isValidAccount = (name: string | null) =>
-    name != null && name !== '' && accountNames.has(name);
+  const accountIds = new Set(allAccounts.map(a => a.id));
+  const isValidAccount = (id: string | null) =>
+    id != null && id !== '' && accountIds.has(id);
   const allAccountsValid = journal.debit_entries.every(e => isValidAccount(e.account))
     && journal.credit_entries.every(e => isValidAccount(e.account));
   if (allAccountsValid) removeLabel('ACCOUNT_UNKNOWN');
@@ -1614,9 +1791,9 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
   const taxCats = masterTaxCategories.value;
   for (const entry of allEntries) {
     if (!entry.account || !entry.tax_category_id) continue;
-    const acct = accounts.find(a => a.name === entry.account);
+    const acct = accounts.find(a => a.id === entry.account);
     if (!acct) continue;
-    const taxCat = taxCats.find(t => t.name === entry.tax_category_id || t.shortName === entry.tax_category_id);
+    const taxCat = taxCats.find(t => t.id === entry.tax_category_id);
     if (!taxCat) continue;
     if (acct.taxDetermination === 'fixed') {
       // 厳密一致: defaultTaxCategoryIdと一致必須
@@ -1700,8 +1877,8 @@ function getWarningCellClass(journal: JournalPhase5Mock, colKey: string, entry?:
     const acctList = clientSettings.value
       ? clientSettings.value.accounts.value
       : masterSettings.accounts.value;
-    const acctNameSet = new Set(acctList.map(a => a.name));
-    if (!acctNameSet.has(entry.account as string)) return W;
+    const acctIdSet = new Set(acctList.map(a => a.id));
+    if (!acctIdSet.has(entry.account as string)) return W;
   }
 
   // TAX_UNKNOWN（税区分不明）→ nullの税区分セルのみ
@@ -1802,23 +1979,23 @@ function validateByVoucherType(voucherType: string, journal: JournalPhase5Mock):
 
 
 /** 勘定科目アイテム選択: 科目セット + デフォルト税区分/補助科目自動設定 + 既読化 */
-function selectAccountItem(journal: JournalPhase5Mock, row: Record<string, unknown>, colKey: string, accountName: string): void {
+function selectAccountItem(journal: JournalPhase5Mock, row: Record<string, unknown>, colKey: string, accountId: string): void {
   // Undo記録: 変更前スナップショット
   const beforeSnap = snapshotJournal(journal.id);
   const side = colKey.startsWith('debit') ? 'debit' : 'credit';
   const entry = row[side] as Record<string, unknown> | undefined;
   if (!entry) { editingCell.value = null; return; }
 
-  entry.account = accountName || null;
+  entry.account = accountId || null;
 
-  if (accountName) {
+  if (accountId) {
     const allAccounts = clientSettings.value
       ? clientSettings.value.accounts.value
       : masterSettings.accounts.value;
-    const acc = allAccounts.find(a => a.name === accountName);
+    const acc = allAccounts.find(a => a.id === accountId);
     if (acc?.defaultTaxCategoryId) {
-      const tc = masterTaxCategories.value.find(t => t.id === acc.defaultTaxCategoryId);
-      entry.tax_category_id = tc ? tc.name : acc.defaultTaxCategoryId;
+      // デフォルト税区分IDを直接セット（免税時はCOMMON_EXEMPTに変換）
+      entry.tax_category_id = resolveDefaultTaxForClient(acc.defaultTaxCategoryId);
     }
     // 科目の区分をselectedCategoryに自動セット（区分列と連動）
     if (acc) {
@@ -1845,8 +2022,8 @@ function selectAccountItem(journal: JournalPhase5Mock, row: Record<string, unkno
 }
 
 /** 税区分アイテム選択: 税区分セット + 既読化 + 編集モード解除 */
-function selectTaxItem(journal: JournalPhase5Mock, taxName: string): void {
-  editingValue.value = taxName;
+function selectTaxItem(journal: JournalPhase5Mock, taxId: string): void {
+  editingValue.value = taxId;
   commitCellEdit();
   journal.is_read = true;
 }
@@ -1859,9 +2036,10 @@ function selectTaxItem(journal: JournalPhase5Mock, taxName: string): void {
 function blurAccountEdit(journal: JournalPhase5Mock, row: Record<string, unknown>, colKey: string): void {
   if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
   const val = editingValue.value;
-  const isValid = filteredAccounts.value.some(a => a.name === val);
-  if (isValid) {
-    selectAccountItem(journal, row, colKey, val);
+  // 入力値がID一致 or 名前一致する科目を検索
+  const matched = filteredAccounts.value.find(a => a.id === val || a.name === val);
+  if (matched) {
+    selectAccountItem(journal, row, colKey, matched.id);
     return;
   }
   editingCell.value = null;
@@ -1872,8 +2050,10 @@ function blurTaxEdit(journal: JournalPhase5Mock): void {
   if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
   const val = editingValue.value;
   const settings = clientSettings.value ?? masterSettings;
-  const isValid = settings.visibleTaxCategories.value.some(tc => tc.name === val);
-  if (isValid) {
+  // 入力値がID一致 or 名前一致する税区分を検索
+  const matched = settings.visibleTaxCategories.value.find(tc => tc.id === val || tc.name === val);
+  if (matched) {
+    editingValue.value = matched.id; // IDで保存
     commitCellEdit();
     journal.is_read = true;
     return;
@@ -2146,7 +2326,7 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
       if (colKey.endsWith('.category')) {
         (entry as unknown as Record<string, unknown>).selectedCategory = value || null;
       } else if (colKey.endsWith('.account')) {
-        // 勘定科目フィル時に補助科目も連動
+        // 勘定科目フィル時に税区分・区分・補助科目も連動（selectAccountItemと同じ挙動）
         (entry as unknown as Record<string, unknown>)[field] = value;
         const accountName = value as string;
         if (accountName) {
@@ -2154,6 +2334,17 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
             ? clientSettings.value.accounts.value
             : masterSettings.accounts.value;
           const acc = allAccounts.find(a => a.name === accountName);
+          // デフォルト税区分の自動設定
+          if (acc?.defaultTaxCategoryId) {
+            const tc = masterTaxCategories.value.find(t => t.id === acc.defaultTaxCategoryId);
+            const rawName = tc ? tc.name : acc.defaultTaxCategoryId;
+            entry.tax_category_id = resolveDefaultTaxForClient(rawName);
+          }
+          // 区分（selectedCategory）連動
+          if (acc) {
+            (entry as unknown as Record<string, unknown>).selectedCategory = acc.category;
+          }
+          // 補助科目連動
           if (acc && clientSettings.value) {
             const sub = clientSettings.value.subAccounts.value[acc.id];
             entry.sub_account = sub || null;
@@ -2173,43 +2364,79 @@ function isFillTargetCell(journalIndex: number, colKey: string): boolean {
   return fillHandle.value.targetJournalIndices.includes(journalIndex) && fillHandle.value.colKey === colKey;
 }
 
-// ────── セル間ドラッグ&ドロップ ──────
+// ────── セル間ドラッグ&ドロップ（長押し150ms方式） ──────
+const DRAG_HOLD_MS = 150; // 長押し判定ミリ秒
+
 const cellDrag = ref<{
   sourceColKey: string;
   sourceValue: unknown;
+  sourceLabel: string;  // フローティングラベル用の表示テキスト
   startX: number;
   startY: number;
-  dragging: boolean;  // 5px以上動いたらtrue
+  dragReady: boolean;   // 長押し完了でtrue
+  dragging: boolean;    // 5px以上動いたらtrue
   dropJournalIndex: number | null;
   dropRowIndex: number | null;
   dropColKey: string | null;
 } | null>(null);
 
+let dragTimerId: ReturnType<typeof setTimeout> | null = null;
+
+// フローティングラベル（ドラッグ中のコピー値表示）
+const dragLabelVisible = ref(false);
+const dragLabelText = ref('');
+const dragLabelX = ref(0);
+const dragLabelY = ref(0);
+
 function startCellDrag(colKey: string, value: unknown, event: MouseEvent): void {
   // 編集中は無視
   if (editingCell.value) return;
-  cellDrag.value = {
-    sourceColKey: colKey,
-    sourceValue: value,
-    startX: event.clientX,
-    startY: event.clientY,
-    dragging: false,
-    dropJournalIndex: null,
-    dropRowIndex: null,
-    dropColKey: null,
-  };
+  const x = event.clientX;
+  const y = event.clientY;
+  const label = value != null ? String(value) : '';
+  // 前回のタイマーをクリア
+  cancelDragTimer();
+  // 150ms長押しタイマー開始
+  dragTimerId = setTimeout(() => {
+    cellDrag.value = {
+      sourceColKey: colKey,
+      sourceValue: value,
+      sourceLabel: label,
+      startX: x,
+      startY: y,
+      dragReady: true,
+      dragging: false,
+      dropJournalIndex: null,
+      dropRowIndex: null,
+      dropColKey: null,
+    };
+    document.body.classList.add('cell-drag-ready');
+  }, DRAG_HOLD_MS);
+}
+
+function cancelDragTimer(): void {
+  if (dragTimerId !== null) {
+    clearTimeout(dragTimerId);
+    dragTimerId = null;
+  }
 }
 
 function onCellDragMove(event: MouseEvent): void {
-  if (!cellDrag.value) return;
+  if (!cellDrag.value || !cellDrag.value.dragReady) return;
   // 5px以上動いたらドラッグモード開始
   if (!cellDrag.value.dragging) {
     const dx = event.clientX - cellDrag.value.startX;
     const dy = event.clientY - cellDrag.value.startY;
     if (Math.sqrt(dx * dx + dy * dy) < 5) return;
     cellDrag.value = { ...cellDrag.value, dragging: true };
-    document.body.style.cursor = 'grabbing';
+    document.body.classList.remove('cell-drag-ready');
+    document.body.classList.add('cell-dragging');
   }
+  // フローティングラベル表示（マウス付近）
+  dragLabelText.value = cellDrag.value.sourceLabel;
+  dragLabelX.value = event.clientX + 14;
+  dragLabelY.value = event.clientY - 10;
+  dragLabelVisible.value = true;
   // ドロップ先セルを特定
   const el = document.elementFromPoint(event.clientX, event.clientY);
   if (!el) return;
@@ -2235,24 +2462,56 @@ function onCellDragMove(event: MouseEvent): void {
   }
 }
 
-function endCellDrag(): void {
-  if (!cellDrag.value) return;
-  if (cellDrag.value.dragging && cellDrag.value.dropJournalIndex !== null && cellDrag.value.dropColKey) {
-    const journal = paginatedJournals.value[cellDrag.value.dropJournalIndex];
-    if (journal && journal.status !== 'exported' && journal.deleted_at === null) {
-      applyFillValue(journal, cellDrag.value.dropColKey, cellDrag.value.sourceValue);
-      syncWarningLabels(journal);
-    }
-  }
-  document.body.style.cursor = '';
-  cellDrag.value = null;
+/** D&D列一致判定（借方↔貸方の同フィールドも許可） */
+function isDragColCompatible(sourceColKey: string, dropColKey: string): boolean {
+  if (sourceColKey === dropColKey) return true;
+  // 例: debit.account（借方勘定科目）→ credit.account（貸方勘定科目）を許可
+  const srcField = sourceColKey.includes('.') ? sourceColKey.split('.')[1] : sourceColKey;
+  const dstField = dropColKey.includes('.') ? dropColKey.split('.')[1] : dropColKey;
+  return srcField === dstField;
 }
 
+function endCellDrag(): void {
+  cancelDragTimer();
+  if (!cellDrag.value) return;
+  if (cellDrag.value.dragging && cellDrag.value.dropJournalIndex !== null && cellDrag.value.dropColKey
+      && isDragColCompatible(cellDrag.value.sourceColKey, cellDrag.value.dropColKey)) {
+    const journal = paginatedJournals.value[cellDrag.value.dropJournalIndex];
+    if (journal && journal.status !== 'exported' && journal.deleted_at === null) {
+      // Undo記録: 変更前スナップショット
+      const beforeSnap = snapshotJournal(journal.id);
+      applyFillValue(journal, cellDrag.value.dropColKey, cellDrag.value.sourceValue);
+      syncWarningLabels(journal);
+      // Undo記録: 変更後スナップショット
+      if (beforeSnap) {
+        const afterSnap = snapshotJournal(journal.id);
+        if (afterSnap) pushUndo([beforeSnap], [afterSnap]);
+      }
+    }
+  }
+  document.body.classList.remove('cell-drag-ready', 'cell-dragging');
+  cellDrag.value = null;
+  dragLabelVisible.value = false;
+}
+
+/** ドロップ先ホバー判定（特定セルのみ） */
 function isDragOver(journalIndex: number, rowIndex: number, colKey: string): boolean {
   if (!cellDrag.value || !cellDrag.value.dragging) return false;
   return cellDrag.value.dropJournalIndex === journalIndex &&
          cellDrag.value.dropRowIndex === rowIndex &&
          cellDrag.value.dropColKey === colKey;
+}
+
+/** ドラッグ中にドロップ可能列か判定（同フィールド全セル青背景用） */
+function isDragCompatibleCol(colKey: string): boolean {
+  if (!cellDrag.value || !cellDrag.value.dragging) return false;
+  return isDragColCompatible(cellDrag.value.sourceColKey, colKey);
+}
+
+/** ドラッグ中にドロップ不可列か判定（グレーアウト用） */
+function isDragIncompatibleCol(colKey: string): boolean {
+  if (!cellDrag.value || !cellDrag.value.dragging) return false;
+  return !isDragColCompatible(cellDrag.value.sourceColKey, colKey);
 }
 
 // グローバルイベント登録（フィルハンドル + ドラッグ&ドロップ統合）
@@ -2906,14 +3165,14 @@ const filteredPastJournals = computed(() => {
   // 借方勘定科目フィルタ
   if (pastJournalSearch.value.debitAccount) {
     results = results.filter(j =>
-      j.debit_entries.some(e => e.account === pastJournalSearch.value.debitAccount)
+      j.debit_entries.some(e => resolveAccountName(e.account) === pastJournalSearch.value.debitAccount || e.account === pastJournalSearch.value.debitAccount)
     );
   }
 
   // 貸方勘定科目フィルタ
   if (pastJournalSearch.value.creditAccount) {
     results = results.filter(j =>
-      j.credit_entries.some(e => e.account === pastJournalSearch.value.creditAccount)
+      j.credit_entries.some(e => resolveAccountName(e.account) === pastJournalSearch.value.creditAccount || e.account === pastJournalSearch.value.creditAccount)
     );
   }
 
@@ -3154,11 +3413,11 @@ const journals = computed(() => {
           bVal = b.description;
           break;
         case 'debit_account':
-          return compareWithNull(a.debit_entries[0]?.account, b.debit_entries[0]?.account, sortDirection.value, (x, y) => x.localeCompare(y));
+          return compareWithNull(resolveAccountName(a.debit_entries[0]?.account), resolveAccountName(b.debit_entries[0]?.account), sortDirection.value, (x, y) => x.localeCompare(y));
         case 'debit_sub_account':
           return compareWithNull(a.debit_entries[0]?.sub_account, b.debit_entries[0]?.sub_account, sortDirection.value, (x, y) => x.localeCompare(y));
         case 'debit_tax':
-          return compareWithNull(a.debit_entries[0]?.tax_category_id, b.debit_entries[0]?.tax_category_id, sortDirection.value, (x, y) => x.localeCompare(y));
+          return compareWithNull(resolveTaxCategoryName(a.debit_entries[0]?.tax_category_id), resolveTaxCategoryName(b.debit_entries[0]?.tax_category_id), sortDirection.value, (x, y) => x.localeCompare(y));
         case 'debit_amount': {
           const aHasAny = a.debit_entries.some(e => e.amount != null);
           const bHasAny = b.debit_entries.some(e => e.amount != null);
@@ -3171,11 +3430,11 @@ const journals = computed(() => {
           return sortDirection.value === 'desc' ? -r : r;
         }
         case 'credit_account':
-          return compareWithNull(a.credit_entries[0]?.account, b.credit_entries[0]?.account, sortDirection.value, (x, y) => x.localeCompare(y));
+          return compareWithNull(resolveAccountName(a.credit_entries[0]?.account), resolveAccountName(b.credit_entries[0]?.account), sortDirection.value, (x, y) => x.localeCompare(y));
         case 'credit_sub_account':
           return compareWithNull(a.credit_entries[0]?.sub_account, b.credit_entries[0]?.sub_account, sortDirection.value, (x, y) => x.localeCompare(y));
         case 'credit_tax':
-          return compareWithNull(a.credit_entries[0]?.tax_category_id, b.credit_entries[0]?.tax_category_id, sortDirection.value, (x, y) => x.localeCompare(y));
+          return compareWithNull(resolveTaxCategoryName(a.credit_entries[0]?.tax_category_id), resolveTaxCategoryName(b.credit_entries[0]?.tax_category_id), sortDirection.value, (x, y) => x.localeCompare(y));
         case 'credit_amount': {
           const aHasAny = a.credit_entries.some(e => e.amount != null);
           const bHasAny = b.credit_entries.some(e => e.amount != null);
@@ -3342,6 +3601,10 @@ function getValue(obj: any, path: string): unknown {
   if (path.endsWith('tax_category_id') && typeof raw === 'string') {
     return resolveTaxCategoryName(raw)
   }
+  // マスタID → 勘定科目名に変換（accountキーの場合）
+  if (path.endsWith('.account') && typeof raw === 'string') {
+    return resolveAccountName(raw)
+  }
   return raw
 }
 
@@ -3350,6 +3613,13 @@ function resolveTaxCategoryName(id: string | null | undefined): string {
   if (!id) return ''
   const entry = masterTaxCategories.value.find(tc => tc.id === id)
   return entry ? entry.name : id
+}
+
+/** マスタIDから勘定科目の表示名を取得。マスタになければIDをそのまま返す */
+function resolveAccountName(id: string | null | undefined): string {
+  if (!id) return ''
+  const account = masterSettings.accounts.value.find(a => a.id === id)
+  return account ? account.name : id
 }
 
 function formatDate(date: unknown): string {
@@ -3561,4 +3831,18 @@ onUnmounted(() => {
 .fill-handle::after { content: ''; position: absolute; inset: -3px; cursor: crosshair; }
 /* 警告セル（赤背景白字）内の入力フィールドは黒字を保証 */
 .inline-edit-input { color: #111 !important; }
+</style>
+
+<!-- ドラッグ中のカーソル強制（グローバル、scoped外） -->
+<style>
+body.cell-drag-ready,
+body.cell-drag-ready * {
+  cursor: grab !important;
+}
+body.cell-dragging,
+body.cell-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
 </style>

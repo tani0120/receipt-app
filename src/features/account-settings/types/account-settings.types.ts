@@ -61,7 +61,7 @@ export interface AccountSettingsReturn {
 
   // ============ 税区分ユーティリティ ============
   /** direction指定でフィルタ済み税区分を返す（勘定科目の税区分ドロップダウン用） */
-  filteredTaxCategories: (direction: 'sales' | 'purchase' | 'common') => UnifiedTaxCategory[]
+  filteredTaxCategories: (direction: 'sales' | 'purchase' | 'common', consumptionTaxMode?: 'general' | 'simplified' | 'exempt') => UnifiedTaxCategory[]
   /** 税区分IDからname（MF正式名称）を解決する。見つからなければIDをそのまま返す */
   resolveTaxCategoryName: (id: string | null | undefined) => string
   /** 税区分IDからshortName（短縮名）を解決する。見つからなければIDをそのまま返す */
