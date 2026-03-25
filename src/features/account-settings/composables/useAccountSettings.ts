@@ -141,12 +141,37 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // ==============================
   // 税区分ユーティリティ
   // ==============================
-  function filteredTaxCategories(direction: 'sales' | 'purchase' | 'common'): UnifiedTaxCategory[] {
+  function filteredTaxCategories(
+    direction: 'sales' | 'purchase' | 'common',
+    consumptionTaxMode?: 'general' | 'simplified' | 'exempt'
+  ): UnifiedTaxCategory[] {
     return taxCategories.value.filter(tc => {
       if (tc.hidden || tc.hiddenInMaster) return false
-      if (direction === 'sales') return tc.direction === 'sales' || tc.direction === 'common'
-      if (direction === 'purchase') return tc.direction === 'purchase' || tc.direction === 'common'
-      return tc.direction === 'common'
+
+      // 方向フィルタ（既存ロジック）
+      if (direction === 'sales' && tc.direction !== 'sales' && tc.direction !== 'common') return false
+      if (direction === 'purchase' && tc.direction !== 'purchase' && tc.direction !== 'common') return false
+      if (direction === 'common' && tc.direction !== 'common') return false
+
+      // 課税方式フィルタ（consumptionTaxMode省略時は従来動作）
+      if (!consumptionTaxMode) return true
+
+      // 免税事業者: 「対象外」のみ
+      if (consumptionTaxMode === 'exempt') return tc.id === 'COMMON_EXEMPT'
+
+      // 簡易課税判定: IDサフィックス _T1〜_T6
+      const isSimplifiedTaxCategory = /_T[1-6]$/.test(tc.id)
+
+      // 本則課税: 業種区分付き税区分を除外
+      if (consumptionTaxMode === 'general') return !isSimplifiedTaxCategory
+
+      // 簡易課税: 一般 + 業種区分付き（売上側のみ）
+      if (consumptionTaxMode === 'simplified') {
+        if (isSimplifiedTaxCategory && tc.direction !== 'sales') return false
+        return true
+      }
+
+      return true
     })
   }
 

@@ -1,7 +1,7 @@
 # MF デフォルト勘定科目マスター（参照用）
 
-> 作成日: 2026-03-02（CSV照合済み版）
-> 根拠: MFクラウド確定申告CSVエクスポート(`indiv_items_download.csv`) + 手入力リスト
+> 作成日: 2026-03-02（最終更新: 2026-03-25）
+> 根拠: MFクラウド確定申告CSVエクスポート(`indiv_items_download.csv`) + 手入力リスト + account-master.ts確認
 > 凡例: ✅確認済（CSV一致） / ⚠️未確認（法人のみ/CSVなし）
 
 ---
@@ -96,10 +96,10 @@
 | 74 | 減価償却費 | ✅ | 経費 | 対象外 | DEPRECIATION |
 | 75 | 福利厚生費 | ✅ | 経費 | 課仕 10% | WELFARE |
 | 76 | 法定福利費 | ✅ | 経費 | 対象外 | LEGAL_WELFARE |
-| 77 | 給料賃金 | ✅ | 経費 | 対象外仕 | WAGES |
-| 78 | 退職給与 | ✅ | 経費 | 対象外仕 | RETIREMENT_PAY |
+| 77 | 給料賃金 | ✅ | 経費 | 対象外 | WAGES |
+| 78 | 退職給与 | ✅ | 経費 | 対象外 | RETIREMENT_PAY |
 | 79 | 外注工賃 | ✅ | 経費 | 課仕 10% | OUTSOURCING |
-| 80 | 利子割引料 | ✅ | 経費 | 対象外 | INTEREST_DISCOUNT |
+| 80 | 利子割引料 | ✅ | 経費 | 非仕 | INTEREST_DISCOUNT |
 | 81 | 地代家賃 | ✅ | 経費 | 課仕 10% | RENT |
 | 82 | 貸倒金(損失) | ✅ | 経費 | 課売-貸倒 10% | BAD_DEBT_LOSS |
 | 83 | 車両費 | ✅ | 経費 | 課仕 10% | VEHICLE_COSTS |
@@ -111,7 +111,7 @@
 | 89 | 繰延資産償却 | ✅ | 経費 | 対象外 | DEFERRED_AMORTIZATION |
 | 90 | 雑費 | ✅ | 経費 | 課仕 10% | MISCELLANEOUS |
 | 91 | 貸倒引当金戻入 | ✅ | 繰戻額等 | 対象外 | BAD_DEBT_REVERSAL |
-| 92 | 専従者給与 | ✅ | 繰入額等 | 対象外仕 | FAMILY_EMPLOYEE_PAY |
+| 92 | 専従者給与 | ✅ | 繰入額等 | 対象外 | FAMILY_EMPLOYEE_PAY |
 | 93 | 貸倒引当金繰入 | ✅ | 繰入額等 | 対象外 | BAD_DEBT_PROVISION |
 
 ### 損益計算書（不動産所得）
@@ -125,14 +125,14 @@
 | 98 | 損害保険料(不動産) | ✅ | 必要経費 | 非仕 | RENTAL_INSURANCE |
 | 99 | 修繕費(不動産) | ✅ | 必要経費 | 課仕 10% | RENTAL_REPAIRS |
 | 100 | 減価償却費(不動産) | ✅ | 必要経費 | 対象外 | RENTAL_DEPRECIATION |
-| 101 | 借入金利子(不動産) | ✅ | 必要経費 | 対象外 | RENTAL_INTEREST |
+| 101 | 借入金利子(不動産) | ✅ | 必要経費 | 非仕 | RENTAL_INTEREST |
 | 102 | 地代家賃(不動産) | ✅ | 必要経費 | 課仕 10% | RENTAL_RENT |
-| 103 | 給料賃金(不動産) | ✅ | 必要経費 | 課仕 10% | RENTAL_WAGES |
+| 103 | 給料賃金(不動産) | ✅ | 必要経費 | 対象外 | RENTAL_WAGES |
 | 104 | 外注管理費(不動産) | ✅ | 必要経費 | 課仕 10% | RENTAL_OUTSOURCING |
 | 105 | 旅費交通費(不動産) | ✅ | 必要経費 | 課仕 10% | RENTAL_TRAVEL |
 | 106 | 新聞図書費(不動産) | ✅ | 必要経費 | 課仕 10% | RENTAL_BOOKS |
 | 107 | その他の経費(不動産) | ✅ | 必要経費 | 課仕 10% | RENTAL_OTHER |
-| 108 | 専従者給与(不動産) | ✅ | 専従者給与 | 対象外仕 | RENTAL_FAMILY_PAY |
+| 108 | 専従者給与(不動産) | ✅ | 専従者給与 | 対象外 | RENTAL_FAMILY_PAY |
 
 **個人向け合計: 108科目（全てCSV確認済み）**
 
@@ -297,4 +297,4 @@
 | 1 | 法人向け科目の正式名称 | MF法人テスト登録 → CSVエクスポート | ⬜ ユーザー検討中 |
 | 2 | STREAMED「備品・消耗品費」とMF「消耗品費」の関係 | STREAMED → MFインポート時の変換ルール確認 | ⬜ 未確認 |
 | 3 | STREAMED「業務委託料」とMF「外注工賃」の関係 | 同上 | ⬜ 未確認 |
-| 4 | 税区分の省略名（課仕、非仕等）と正式名称の対応 | `tax-category-master.ts`のshortNameと照合 | ⬜ 未確認 |
+| 4 | 税区分の省略名と正式名称の対応 | `tax-category-master.ts`のshortNameと照合 | ✅ 確認済（2026-03-25、MF公式ヘルプで半角スペース・半角括弧確認） |

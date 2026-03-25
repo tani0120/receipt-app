@@ -139,9 +139,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { mockJournalsPhase5 } from '../data/journal_test_fixture_30cases';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
+
+const route = useRoute();
+const clientId = computed(() => (route.params.clientId as string) ?? 'LDI-00008');
 
 // 列幅カスタマイズ
 const exDefaultWidths: Record<string, number> = {
@@ -254,10 +258,10 @@ const formatDate = (iso: string): string => {
   return `${yy}/${mm}/${dd}`;
 };
 
-// 全行（ゴミ箱のみ除外）
+// 全行（ゴミ箱のみ除外、顧問先フィルタ）
 const allRows = computed<ExportRow[]>(() => {
   return mockJournalsPhase5
-    .filter(j => j.deleted_at === null)
+    .filter(j => j.deleted_at === null && j.client_id === clientId.value)
     .map(j => {
       const debit = j.debit_entries[0];
       const credit = j.credit_entries[0];

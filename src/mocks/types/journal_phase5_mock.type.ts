@@ -60,6 +60,7 @@ export type JournalLabelMock =
 export interface JournalPhase5Mock {
   // 基本情報
   id: string;                           // jrn-00000001形式
+  client_id: string;                     // 顧問先ID（例: LDI-00008）
   display_order: number;                 // 表示順
   /**
    * 取引日（voucher_date）

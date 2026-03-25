@@ -157,10 +157,10 @@ const formatDate = (iso: string): string => {
   return `${yy}/${mm}/${dd}`;
 };
 
-// 全行（モック: 全仕訳をそのまま表示）
+// 全行（モック: 顧問先フィルタ適用）
 const allRows = computed<DetailRow[]>(() => {
   return mockJournalsPhase5
-    .filter(j => j.deleted_at === null)
+    .filter(j => j.deleted_at === null && j.client_id === clientId.value)
     .map(j => {
       const debit = j.debit_entries[0];
       const credit = j.credit_entries[0];

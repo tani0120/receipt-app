@@ -1,7 +1,7 @@
 # STREAMED型移行 調査結果・課題・タスク
 
-> 作成日: 2026-03-02
-> 根拠: 本会話でのコード全量調査 + streamed_design_policy.md + streamed_mf_csv_spec.md + domain_type_design.md
+> 作成日: 2026-03-02（最終更新: 2026-03-25）
+> 根拠: 本会話でのコード全量調査 + streamed_design_policy.md + streamed_mf_csv_spec.md + domain_type_design.md + マスタデータ確認
 
 ---
 
@@ -27,7 +27,7 @@
 |------|---------|--------|---------|------|
 | 第1世代 | [schema_dictionary.ts](file:///c:/dev/receipt-app/src/shared/schema_dictionary.ts) | `TAX_SALES_10`等（独自16値） | なし | ❌ 死んだコード |
 | 第2世代 | [journal.ts](file:///c:/dev/receipt-app/src/domain/types/journal.ts) | `LegacyTaxCategory`（8値enum） | `AccountCode`（30値enum） | ⚠️ `@deprecated`済みだが依存あり |
-| 第3世代 | [tax-category.ts](file:///c:/dev/receipt-app/src/shared/types/tax-category.ts) + [tax-category-master.ts](file:///c:/dev/receipt-app/src/shared/data/tax-category-master.ts) | `TaxCategory`型（151件マスタ） | `Account`型（✅79科目マスタ作成済み） | ✅ 正解 |
+| 第3世代 | [tax-category.ts](file:///c:/dev/receipt-app/src/shared/types/tax-category.ts) + [tax-category-master.ts](file:///c:/dev/receipt-app/src/shared/data/tax-category-master.ts) | `TaxCategory`型（151件マスタ） | `Account`型（✅約140科目マスタ作成済） | ✅ 正解 |
 
 ### 1-3. フィクスチャの現状
 
@@ -63,7 +63,7 @@
 
 | 項目 | 詳細 |
 |------|------|
-| 現状 | ✅ `src/shared/data/account-master.ts` 作成済み（79科目） |
+| 現状 | ✅ `src/shared/data/account-master.ts` 作成済（約140科目、個人/法人/不動産全対応） |
 | マスタUI | ✅ `/master/accounts` 独立ページ化済み（2026-03-06） |
 | 設計ルール | ✅ [master_design_rules.md](file:///c:/dev/receipt-app/docs/genzai/02_database_schema/master_design_rules.md)（13ルール確定済み） |
 | 参照 | [mf_account_master_reference.md](file:///c:/dev/receipt-app/docs/genzai/09_streamed/mf_account_master_reference.md) |
@@ -168,7 +168,7 @@ tax-category-master.ts ←── フィクスチャの tax_category_id
 
 ### フェーズ2-0: スキーマ定義（前提作業）
 
-- [x] **T1**: `src/shared/data/account-master.ts` ✅作成済み（79科目、法人/個人1マスタ管理、`target`で分岐）
+- [x] **T1**: `src/shared/data/account-master.ts` ✅作成済（約140科目、法人/個人1マスタ管理、`target`で分岐）
   - マスタUI: `/master/accounts` 独立ページ化済み（2026-03-06）
   - 設計ルール: [master_design_rules.md](file:///c:/dev/receipt-app/docs/genzai/02_database_schema/master_design_rules.md)
 - [ ] **T2**: `journal.ts`の`AccountCode`を`LegacyAccountCode`にリネーム + `@deprecated`
