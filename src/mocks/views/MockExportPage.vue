@@ -24,7 +24,7 @@
     <!-- セグメント + 合計金額中央 -->
     <div class="bg-white px-3 py-1.5 flex items-center border-b border-gray-200 text-[10px]">
       <div class="flex items-center gap-4 flex-wrap">
-        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showUnexported" class="w-2.5 h-2.5">未出力を表示</label>
+        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showTargetOnly" class="w-2.5 h-2.5">未出力を表示</label>
         <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExcluded" class="w-2.5 h-2.5">出力対象外を表示</label>
         <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showWarnings" class="w-2.5 h-2.5">警告を表示</label>
         <div class="border-l border-gray-300 h-4 mx-1"></div>
@@ -53,10 +53,10 @@
           class="px-1.5 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100"
           @click="currentPage = Math.min(totalPages, currentPage + 1)"
         >＞</button>
-        <span class="ml-2 text-[10px] text-gray-500">{{ pageStart }}~{{ pageEnd }} / 全{{ filteredRows.length }}件</span>
+        <span class="ml-2 text-[10px] text-gray-500">全{{ filteredJournalCount }}件（{{ filteredRows.length }}行）</span>
       </div>
       <div class="flex items-center gap-2">
-        <button class="px-2 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1">
+        <button class="px-2 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1" @click="showRealtimeUpdateMsg">
           <i class="fa-solid fa-arrows-rotate text-[8px]"></i> 更新
         </button>
       </div>
@@ -138,14 +138,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { mockJournalsPhase5 } from '../data/journal_test_fixture_30cases';
+import { useJournals } from '@/mocks/composables/useJournals';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
+import { validateForCsvExport, buildMfCsvContent, downloadMfCsv, EXCLUDE_LABELS } from '@/mocks/utils/exportMfCsv';
+import { syncWarningLabelsCore } from '@/mocks/utils/journalWarningSync';
+import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) ?? 'LDI-00008');
+const { journals } = useJournals(clientId);
 
 // 列幅カスタマイズ
 const exDefaultWidths: Record<string, number> = {
@@ -159,6 +163,13 @@ const { columnWidths: exColWidths, onResizeStart: onExResizeStart } = useColumnR
 
 const masterSettings = useAccountSettings('master');
 
+// 出力ページ初期化時: 全仕訳の警告ラベルを同期（一覧UIと同じバリデーション）
+onMounted(() => {
+  const accounts = masterSettings.accounts.value;
+  const taxCategories = masterSettings.taxCategories.value;
+  journals.value.forEach(j => syncWarningLabelsCore(j, accounts, taxCategories));
+});
+
 // --- 勘定科目マスタから科目名リスト（deprecated除外） ---
 const accountNames = computed(() => {
   const names = masterSettings.accounts.value
@@ -170,6 +181,18 @@ const accountNames = computed(() => {
 const debitAccountFilter = ref('');
 const creditAccountFilter = ref('');
 
+function resolveAccountName(id: string | null | undefined): string {
+  if (!id) return ''
+  const account = masterSettings.accounts.value.find(a => a.id === id)
+  return account ? account.name : id
+}
+
+function resolveTaxCategoryName(id: string | null | undefined): string {
+  if (!id) return ''
+  const entry = masterSettings.taxCategories.value.find(tc => tc.id === id)
+  return entry ? entry.name : id
+}
+
 
 // --- ダウンロードファイル名 ---
 const downloadFileName = ref('');
@@ -177,9 +200,10 @@ const showFileNameHelp = ref(false);
 
 // --- 変更ボタン ---
 const showNotImplemented = () => globalThis.alert('未実装です');
+const showRealtimeUpdateMsg = () => globalThis.alert('現在はリアルタイム更新です');
 
 // --- セグメント ---
-const showUnexported = ref(true);
+const showTargetOnly = ref(true);
 const showExcluded = ref(false);
 const showWarnings = ref(false);
 
@@ -188,14 +212,84 @@ const showDownloadModal = ref(false);
 const isDownloading = ref(false);
 const startDownload = () => {
   isDownloading.value = true;
+  // composableから仕訳データを取得
+  // checkedIdsは展開後のid（jrn-00000001-0）なので、元のjournal id（jrn-00000001）を抽出
+  const sourceJournals = journals.value;
+  const checkedJournalIds = new Set(
+    [...checkedIds.value].map(rid => rid.replace(/-\d+$/, ''))
+  );
+  const checkedJournals = sourceJournals.filter(
+    j => j.deleted_at === null && checkedJournalIds.has(j.id)
+  );
+  if (checkedJournals.length === 0) {
+    isDownloading.value = false;
+    showDownloadModal.value = false;
+    globalThis.alert('ダウンロード対象の仕訳がありません。');
+    return;
+  }
+  // バリデーション適用（警告付き仕訳を除外）
+  const { valid, excluded } = validateForCsvExport(checkedJournals);
+  if (valid.length === 0) {
+    isDownloading.value = false;
+    showDownloadModal.value = false;
+    globalThis.alert(`出力可能な仕訳がありません。\n除外: ${excluded.length}件`);
+    return;
+  }
+  // スピナー表示後、少し待ってからダウンロード
+  setTimeout(() => {
+    const csvContent = buildMfCsvContent(valid, resolveAccountName, resolveTaxCategoryName);
+    const clientCode = clientId.value.split('-')[0] ?? clientId.value.slice(0, 3);
+    const fname = downloadFileName.value || `${clientCode}_マネーフォワード_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+    downloadMfCsv(csvContent, `${fname}.csv`);
+    // 出力した仕訳のstatusをexportedに変更（二重出力防止）
+    const exportedAt = new Date().toISOString();
+    const historyId = `h-${Date.now()}`;
+    for (const v of valid) {
+      const target = journals.value.find(j => j.id === v.id);
+      if (target) {
+        target.status = 'exported';
+        target.exported_at = exportedAt;
+        target.exported_by = 'staff-0001'; // モック段階では固定
+        target.export_batch_id = historyId; // バッチIDを紐付け
+      }
+    }
+    // ダウンロード履歴をlocalStorageに保存
+    saveDownloadHistory(`${fname}.csv`, valid.length, historyId);
+    // CSVスナップショットをlocalStorageに保持（再ダウンロード用）
+    const csvKey = `sugu-suru:export-csv:${clientId.value}:${historyId}`;
+    localStorage.setItem(csvKey, JSON.stringify({
+      historyId,
+      fileName: fname,
+      exportDate: toMfCsvDate(new Date().toISOString().slice(0, 10)),
+      journalCount: valid.length,
+      csvContent,
+    }));
+    isDownloading.value = false;
+    showDownloadModal.value = false;
+  }, 500);
 };
+
+/** ダウンロード履歴をlocalStorageに保存 */
+function saveDownloadHistory(fileName: string, count: number, historyId: string) {
+  const key = `sugu-suru:export-history:${clientId.value}`;
+  const existing = JSON.parse(localStorage.getItem(key) || '[]');
+  const today = new Date();
+  existing.unshift({
+    id: historyId,
+    exportDate: toMfCsvDate(today.toISOString().slice(0, 10)),
+    fileName,
+    count,
+    status: '出力済',
+  });
+  localStorage.setItem(key, JSON.stringify(existing));
+}
 const cancelDownload = () => {
   showDownloadModal.value = false;
   isDownloading.value = false;
 };
 
 // --- テーブルカラム定義 ---
-const WARNING_LABELS = ['NEED_DOCUMENT', 'NEED_INFO', 'NEED_CONSULT', 'AMOUNT_UNCLEAR', 'DATE_OUT_OF_RANGE'];
+// 警告ラベルはexportMfCsv.tsのEXCLUDE_LABELSで一元管理
 
 interface Column {
   key: string;
@@ -248,54 +342,70 @@ interface ExportRow {
   importDate: string;
   isExcluded: boolean;
   isWarning: boolean;
+  isExported: boolean;
 }
 
-const formatDate = (iso: string): string => {
-  const d = new Date(iso);
-  const yy = String(d.getFullYear()).slice(2);
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yy}/${mm}/${dd}`;
-};
+// 日付表示はtoMfCsvDate（YYYY/MM/DD）に統一
 
-// 全行（ゴミ箱のみ除外、顧問先フィルタ）
+// 全行（composable経由、ゴミ箱除外。複合仕訳は全行展開）
 const allRows = computed<ExportRow[]>(() => {
-  return mockJournalsPhase5
-    .filter(j => j.deleted_at === null && j.client_id === clientId.value)
-    .map(j => {
-      const debit = j.debit_entries[0];
-      const credit = j.credit_entries[0];
-      const isWarning = j.labels.some(l => WARNING_LABELS.includes(l));
+  const rows: ExportRow[] = [];
+  journals.value
+    .filter(j => j.deleted_at === null && j.status !== 'exported')
+    .forEach(j => {
+      const dismissals = (j as any).warning_dismissals as string[] ?? [];
+      const isWarning = (j.labels as string[]).some(l =>
+        (EXCLUDE_LABELS as readonly string[]).includes(l) && !dismissals.includes(l)
+      );
       const isExcluded = j.labels.includes('EXPORT_EXCLUDE');
-      return {
-        id: j.id,
-        qualified: j.invoice_status === 'qualified' ? '○' : '',
-        date: formatDate(j.voucher_date ?? ''),
-        description: j.description,
-        debitAccount: debit?.account ?? '',
-        debitSub: debit?.sub_account ?? '',
-        debitTax: debit?.tax_category_id ?? '',
-        debitAmount: debit?.amount ?? null,
-        creditAccount: credit?.account ?? '',
-        creditSub: credit?.sub_account ?? '',
-        creditTax: credit?.tax_category_id ?? '',
-        creditAmount: credit?.amount ?? null,
-        importDate: '26/03/04',
-        isExcluded,
-        isWarning,
-      };
+      const isExported = j.status === 'exported';
+      const maxLen = Math.max(j.debit_entries.length, j.credit_entries.length);
+      for (let i = 0; i < maxLen; i++) {
+        const debit = j.debit_entries[i];
+        const credit = j.credit_entries[i];
+        rows.push({
+          id: `${j.id}-${i}`,
+          qualified: i === 0 ? (j.invoice_status === 'qualified' ? '○' : '') : '',
+          date: i === 0 ? toMfCsvDate(j.voucher_date ?? '') : '',
+          description: i === 0 ? j.description : '',
+          debitAccount: debit ? resolveAccountName(debit.account) : '',
+          debitSub: debit?.sub_account ?? '',
+          debitTax: debit ? resolveTaxCategoryName(debit.tax_category_id) : '',
+          debitAmount: debit?.amount ?? null,
+          creditAccount: credit ? resolveAccountName(credit.account) : '',
+          creditSub: credit?.sub_account ?? '',
+          creditTax: credit ? resolveTaxCategoryName(credit.tax_category_id) : '',
+          creditAmount: credit?.amount ?? null,
+          importDate: toMfCsvDate(j.created_at ?? ''),
+          isExcluded,
+          isWarning,
+          isExported,
+        });
+      }
     });
+  return rows;
 });
 
-// セグメントフィルタ
+// セグメントフィルタ（加算的：チェックONのカテゴリのみ表示）
 const filteredRows = computed<ExportRow[]>(() => {
   return allRows.value.filter(row => {
-    if (row.isExcluded && !showExcluded.value) return false;
-    if (row.isWarning && !showWarnings.value) return false;
+    // 各行のカテゴリを判定し、対応するチェックがONの場合のみ表示
+    const isTarget = !row.isExcluded && !row.isWarning;
+    if (isTarget && showTargetOnly.value) { /* 表示 */ }
+    else if (row.isExcluded && showExcluded.value) { /* 表示 */ }
+    else if (row.isWarning && showWarnings.value) { /* 表示 */ }
+    else return false;
+
     if (debitAccountFilter.value && row.debitAccount !== debitAccountFilter.value) return false;
     if (creditAccountFilter.value && row.creditAccount !== creditAccountFilter.value) return false;
     return true;
   });
+});
+
+// 仕訳単位の件数（行ではなく仕訳数。複合仕訳は1件としてカウント）
+const filteredJournalCount = computed(() => {
+  const ids = new Set(filteredRows.value.map(r => r.id.replace(/-\d+$/, '')));
+  return ids.size;
 });
 
 // ソート（checkedソート対応）
@@ -338,8 +448,6 @@ const displayPages = computed(() => {
   for (let i = 1; i <= Math.min(5, totalPages.value); i++) pages.push(i);
   return pages;
 });
-const pageStart = computed(() => (currentPage.value - 1) * PAGE_SIZE + 1);
-const pageEnd = computed(() => Math.min(currentPage.value * PAGE_SIZE, sortedRows.value.length));
 const pagedRows = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE;
   return sortedRows.value.slice(start, start + PAGE_SIZE);

@@ -55,12 +55,14 @@ export type JournalLabelMock =
 
 // ============================================================
 // Phase 5 仕訳モック定義
+// 準拠: 12_full_schema_design_20260311.md §5.1
 // ============================================================
 
 export interface JournalPhase5Mock {
   // 基本情報
-  id: string;                           // jrn-00000001形式
-  client_id: string;                     // 顧問先ID（例: LDI-00008）
+  // TODO Supabase: id→VARCHAR(20) PK, client_id→VARCHAR(20) FK
+  id: string;                           // jrn-00000001形式（接頭辞+連番、一意ID）
+  client_id: string;                     // 顧問先ID（例: LDI-00008、接頭辞+連番）
   display_order: number;                 // 表示順
   /**
    * 取引日（voucher_date）
@@ -83,6 +85,7 @@ export interface JournalPhase5Mock {
    *   - MF CSV出力の「取引日」カラムと一致
    *   - 実務上99%は伝票日=取引日（中小企業）
    */
+  // TODO Supabase: voucher_date→DATE型
   voucher_date: string | null;
   /**
    * 日付の項目存在フラグ（date_on_document）
@@ -98,6 +101,7 @@ export interface JournalPhase5Mock {
   line_id: string | null;                 // 証票行ID（冗長だがクエリ高速化用）
 
   // N対N複合仕訳（無制限、UI上限15行）
+  // TODO Supabase: debit_entries/credit_entries→journal_entriesテーブルに分離（§5.2）
   debit_entries: JournalEntryLine[];     // 借方明細（配列）
   credit_entries: JournalEntryLine[];    // 貸方明細（配列）
 
@@ -111,10 +115,26 @@ export interface JournalPhase5Mock {
   // null = 有効、non-null = ゴミ箱（削除日時）
   // 制約: exported && deleted_at は禁止（外部出力済みの仕訳はゴミ箱不可）
   // 許可: export_exclude && deleted_at は許可（外部未出力のため）
+  // TODO Supabase: deleted_at→TIMESTAMPTZ, deleted_by→VARCHAR(100)追加
   deleted_at: string | null;
 
   // ラベル（22種類、非排他的）
   labels: JournalLabelMock[];
+
+  // 警告確認済み（ユーザーが「確認済み」とした警告タイプを記録）
+  // syncWarningLabelsCoreで警告を再計算する際、ここに含まれるタイプはスキップされる
+  // TODO Supabase: journal_warning_dismissalsテーブルに分離（journal_id, warning_type, dismissed_by, dismissed_at）
+  warning_dismissals: string[];
+
+  // 警告の具体的理由（ホバーツールチップで表示）
+  // キー=警告ラベル名、値=日本語の詳細理由（例: 「借方合計5,000 ≠ 貸方合計3,000」）
+  // syncWarningLabelsCoreで自動設定される
+  warning_details: Record<string, string>;
+
+  // 出力バッチID（CSVダウンロード時に設定）
+  // どのバッチで出力されたかを記録し、ダウンロード履歴から仕訳を逆引き可能にする
+  // TODO Supabase: export_batch_items(batch_id, journal_id)テーブルに分離
+  export_batch_id: string | null;
 
   // クレジットカード払い判定（Gemini層A、独立カラム）
   is_credit_card_payment: boolean;
@@ -131,6 +151,7 @@ export interface JournalPhase5Mock {
   memo: string | null;                   // メモ内容
   memo_author: string | null;            // メモ作成者
   memo_target: string | null;            // メモ宛先
+  // TODO Supabase: memo_created_at→TIMESTAMPTZ
   memo_created_at: string | null;        // メモ作成日時（ISO 8601）
 
   // スタッフノート（スタッフが自発的に記入するコメント）
@@ -138,11 +159,20 @@ export interface JournalPhase5Mock {
   staff_notes?: StaffNotes | null;       // 4カテゴリの対応情報
   staff_notes_author?: string | null;    // 担当者名
 
-  // 監査用（2026-03-11追加）
+  // 出力関連（12_full_schema_design §5.1準拠）
+  exported_at?: string | null;            // CSV出力日時（ISO 8601）
+  exported_by?: string | null;            // CSV出力者（スタッフID）
+
+  // 監査用（12_full_schema_design §5.1準拠）
+  // TODO Supabase: created_at→TIMESTAMPTZ DEFAULT NOW(), updated_at→TIMESTAMPTZ DEFAULT NOW()
+  // TODO Supabase: status_updated_at/status_updated_by, read_at追加
+  created_at?: string | null;             // 作成日時（＝取込日）
+  updated_at?: string | null;             // 更新日時
   created_by?: string | null;             // 作成者（スタッフID or 'AI'）
   updated_by?: string | null;             // 更新者
 
   // AI推定関連（2026-03-11追加）
+  // TODO Supabase: ai_completed_at→TIMESTAMPTZ
   ai_completed_at?: string | null;        // AI仕訳生成完了日時
   prediction_method?: string | null;      // 推定方法（keyword, alias, ai等）
   prediction_score?: number | null;       // 推定信頼度

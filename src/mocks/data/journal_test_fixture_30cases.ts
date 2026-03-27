@@ -44,7 +44,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_created_at: null,
     staff_notes: null,
     staff_notes_author: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行2: レシート、ルール適用可能、不適格請求書
@@ -80,7 +83,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       NEED_DOCUMENT: { enabled: true, text: '請求書の原本をお送りください', chatworkUrl: 'https://www.chatwork.com/#!rid00001' }
     },
     staff_notes_author: '山田太郎',
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行3: レシート、ルール適用済み、適格請求書
@@ -116,7 +122,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       NEED_INFO: { enabled: true, text: 'この仕訳の内容で合っていますか？', chatworkUrl: '' }
     },
     staff_notes_author: '佐藤花子',
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行4: 文房具セット、ルール適用済み、適格請求書
@@ -149,7 +158,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_created_at: null,
     staff_notes: null,
     staff_notes_author: null,
-    is_credit_card_payment: true
+    is_credit_card_payment: true,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行5: タクシー代（不適格運送）、ルール適用済み、適格請求書
@@ -185,7 +197,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       NEED_CONSULT: { enabled: true, text: '税務処理の判断に迷いがあります', chatworkUrl: 'https://www.chatwork.com/#!rid00005' }
     },
     staff_notes_author: '鈴木一郎',
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行6: タクシー代、ルール適用済み、適格請求書
@@ -218,7 +233,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_created_at: null,
     staff_notes: null,
     staff_notes_author: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行7: 電気代（関西電力）、ルール適用済み、適格請求書Note: 適格請求書が発行されたため、適格請求書
@@ -251,7 +269,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_created_at: null,
     staff_notes: null,
     staff_notes_author: null,
-    is_credit_card_payment: true
+    is_credit_card_payment: true,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行8: スターバックス、ルール適用済み、適格請求書
@@ -282,7 +303,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行9: 業務委託料、ルール適用済み、適格請求書
@@ -313,7 +337,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行10: JR神戸線、ルール適用済み、適格請求書
@@ -350,7 +377,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       NEED_INFO: { enabled: true, text: '行き先を教えてください', chatworkUrl: '' }
     },
     staff_notes_author: '山田太郎',
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行11: オフィス産科、ルール適用済み、適格請求書
@@ -381,7 +411,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行12: 消耗品費（ボ・一儿ペン）、ルール適用可能、適格請求書
@@ -412,7 +445,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行13: タクシー代（不適格運送）、ルール適用済み、不適格請求書
@@ -443,7 +479,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行14: NTTドコモ、適格請求書
@@ -474,7 +513,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: true
+    is_credit_card_payment: true,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行15: 手数料通帳費、適格請求書、複数税率
@@ -505,7 +547,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行16: 神戸皇居鎌タクシー、ルール適用済み、適格請求書
@@ -536,7 +581,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行17: 買取に宗鹿釜交友貴、適格請求書
@@ -567,7 +615,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行18: 不可分抜き回、適格請求書
@@ -598,7 +649,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行19: 事例寿判上いは詮, 適格請求書
@@ -629,7 +683,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行20: 広告宣伝費（銀行振込）、適格請求書
@@ -666,7 +723,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       NEED_DOCUMENT: { enabled: true, text: '契約書のコピーをお送りください', chatworkUrl: '' }
     },
     staff_notes_author: '佐藤花子',
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行21: 業務委託料、適格請求書（出力済み）
@@ -697,7 +757,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // ============================================================
@@ -732,7 +795,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行23: 重複疑い、未読
@@ -763,7 +829,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行24: 日付異常、未読
@@ -794,7 +863,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行25: 金額null（on_document=true: 項目はあるが読めなかった）、複数証票あり、未読
@@ -825,7 +897,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行26: サポート依頼（help）、メモあり、未読
@@ -861,7 +936,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       NEED_CONSULT: { enabled: true, text: '勘定科目が不明です', chatworkUrl: '' }
     },
     staff_notes_author: '山田太郎',
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行27: 相談（soudan）、メモあり、未読
@@ -898,7 +976,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       REMINDER: { enabled: true, text: '来月再確認', chatworkUrl: '' }
     },
     staff_notes_author: '鈴木一郎',
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行28: 日付null（on_document=true: 日付欄はあるが読めなかった）、メモあり、未読
@@ -934,7 +1015,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       NEED_DOCUMENT: { enabled: true, text: '領収書の再発行を依頼中です', chatworkUrl: 'https://www.chatwork.com/#!rid00028' }
     },
     staff_notes_author: '高橋美咲',
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行29: 貸借不一致、未読
@@ -965,7 +1049,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行30: 勘定科目null（on_document=false: 証憑に勘定科目の記載なし）、貸借不一致、未読
@@ -996,7 +1083,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // ============================================================
@@ -1032,7 +1122,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行32: 2対1複合仕訳（交通費+宿泊費 → クレジットカード）
@@ -1064,7 +1157,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: true
+    is_credit_card_payment: true,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行33: 1対3複合仕訳（給与 → 現金+社会保険料+源泉徴収税）
@@ -1097,7 +1193,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行34: 1対10複合仕訳（経費精算 → 10項目の内訳）
@@ -1137,7 +1236,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // 行35: 3対3複合仕訳（N対N、決算仕訳）
@@ -1172,7 +1274,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     memo_author: null,
     memo_target: null,
     memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // ── テスト用: 意図的な税区分エラーデータ ──
@@ -1200,7 +1305,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     rule_id: null, rule_confidence: null,
     invoice_status: null, invoice_number: null,
     memo: null, memo_author: null, memo_target: null, memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
   // GHI-00003（免税）に「課税売上 10%」が入っている
   {
@@ -1225,7 +1333,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     rule_id: null, rule_confidence: null,
     invoice_status: null, invoice_number: null,
     memo: null, memo_author: null, memo_target: null, memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   },
 
   // LDI-00008（本則）に業種区分付き「課税売上 10% 三種」が入っている → 本則に業種区分は不正
@@ -1251,6 +1362,29 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     rule_id: null, rule_confidence: null,
     invoice_status: 'qualified', invoice_number: 'T9999999999999',
     memo: null, memo_author: null, memo_target: null, memo_created_at: null,
-    is_credit_card_payment: false
+    is_credit_card_payment: false,
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null
   }
 ];
+
+// ============================================================
+// created_at / updated_at / exported_at / exported_by の動的設定
+// 12_full_schema_design §5.1 準拠
+// フィクスチャ各行を個別修正せず、後処理で一括設定
+// ============================================================
+mockJournalsPhase5.forEach((j, i) => {
+  // created_at: voucher_dateの3〜7日後（決定論的: index % 5 + 3）
+  if (!j.created_at && j.voucher_date) {
+    const vd = new Date(j.voucher_date);
+    vd.setDate(vd.getDate() + 3 + (i % 5));
+    j.created_at = vd.toISOString().split('T')[0];
+    j.updated_at = j.created_at; // 初期状態は更新なし
+  }
+  // exported仕訳にはexported_at/exported_byを設定
+  if (j.status === 'exported' && !j.exported_at) {
+    j.exported_at = '2025-03-07';
+    j.exported_by = 'staff-0001';
+  }
+});
