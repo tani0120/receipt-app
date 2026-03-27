@@ -91,6 +91,10 @@ export function transformToJournalMock(
         memo_author: null,
         memo_target: null,
         memo_created_at: null,
+
+        warning_dismissals: [],
+        warning_details: {},
+        export_batch_id: null,
     };
 }
 
