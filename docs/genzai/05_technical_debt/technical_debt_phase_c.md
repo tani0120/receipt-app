@@ -194,6 +194,74 @@
 
 ---
 
+## 🟠 C-16: labels責務分離（classificationLabels / warningLabels / export_exclude）
+
+- **ファイル**: [JournalListLevel3Mock.vue](file:///C:/dev/receipt-app/src/mocks/components/JournalListLevel3Mock.vue)、[MockExportPage.vue](file:///C:/dev/receipt-app/src/mocks/views/MockExportPage.vue)、[journal_phase5_mock.type.ts](file:///C:/dev/receipt-app/src/mocks/types/journal_phase5_mock.type.ts)
+- **現状**: `journal.labels`に分類・警告・操作（EXPORT_EXCLUDE）が混在
+- **問題**:
+  - 責務不明確（入力データ / 計算結果 / ユーザー操作が同じ配列）
+  - `journal.labels.push()`による副作用的mutation
+  - 将来のcomputed化・ruleEngine化を阻害
+- **方針**:
+  - `classificationLabels`（不変、DB永続）: TRANSPORT, RECEIPT, INVOICE_QUALIFIED等
+  - `warningLabels`（計算結果、DBに持たない）: CATEGORY_CONFLICT, TAX_UNKNOWN等。`syncWarningLabelsCore()`で都度計算
+  - `export_exclude`（BOOLEAN、DB永続）: labelsから排除し独立カラム化
+- **解決策**:
+  1. `export_exclude`をDBカラム化し、labelsから`EXPORT_EXCLUDE`を排除
+  2. `labels` = classificationLabelsのみに純粋化
+  3. `useJournalValidation` composable導入（computed + pure function）
+  4. warningLabelsはwatch+mutationではなくcomputed生成に変更
+
+---
+
+## 🟡 C-17: syncWarningLabelsCore 対症療法の根本修正
+
+- **ファイル**: [journalWarningSync.ts](file:///C:/dev/receipt-app/src/mocks/utils/journalWarningSync.ts)、[MockExportPage.vue](file:///C:/dev/receipt-app/src/mocks/views/MockExportPage.vue)
+- **現状**: 出力ページの`onMounted`で`syncWarningLabelsCore()`を手動実行（対症療法）
+- **問題**: 新しいページが増えるたびに同じ呼び出しを追加する必要がある
+- **解決策**: C-16のuseJournalValidation導入により、全ページで自動的にバリデーション済みデータを取得可能にする。onMounted手動呼び出しは削除
+
+---
+
+## 🟡 C-18: Supabase型移行準備（V2計画残り16件）
+
+- **出典**: 実装計画V2 Step 1-3（J〜V拡張 + W〜AD）
+- **判断**: モック段階では実質的価値なし。Supabase接続時に実施
+- **対象**:
+
+### 型不一致（8件）
+
+| # | 項目 | モック型 | PostgreSQL型 |
+|:--|:---|:---|:---|
+| J拡張 | statusのnull→'pending'変更 | `'exported' \| null` | ENUM |
+| K拡張 | クライアントstatusのENUM化 | ✅ 実施済み（ClientStatus型追加） | — |
+| L拡張 | スタッフstatusのENUM化 | string | ENUM(active/inactive) |
+| O拡張 | voucher_dateの型準備 | ✅ TODOコメント追記済み | DATE |
+| P拡張 | document_idのUUID準備 | string | VARCHAR(20) |
+| Q拡張 | deleted_atの型準備 | ✅ TODOコメント追記済み | TIMESTAMPTZ |
+| R拡張 | memo_created_atの型準備 | ✅ TODOコメント追記済み | TIMESTAMPTZ |
+| V | rule_idのFK準備 | string \| null | VARCHAR(20) |
+
+### composable層（6件）
+
+| # | 項目 | 現状 | Supabase移行後 |
+|:--|:---|:---|:---|
+| W | useJournals repository差し替え | localStorage直接 | Supabase repository |
+| X | useClients repository差し替え | localStorage直接 | 同上 |
+| Y | useStaff repository差し替え | localStorage直接 | 同上 |
+| Z | useAccountSettings repository差し替え | localStorage直接 | 同上 |
+| AA | useProgress repository差し替え | localStorage直接 | 同上 |
+| AB | useUnsavedGuard ロジック変更 | localStorage依存 | Supabase対応 |
+
+### domain層（2件）
+
+| # | 項目 | 現状 | Supabase移行後 |
+|:--|:---|:---|:---|
+| AC | JournalEntryLineテーブル対応 | 埋め込みオブジェクト | 別テーブルの行 |
+| AD | JournalLabel/JournalLabelMock型対応 | TypeScript union型 | TEXT[]またはENUM配列 |
+
+---
+
 ## 解決済み（2026-02-27に対処完了）
 
 | 項目 | 対処 |
@@ -226,3 +294,6 @@
 - [ ] C-13: 計画的TODO対処（1件）
 - [ ] C-14: sharp CJS/ESM問題
 - [ ] C-15: receiptsテーブルRLSポリシー修正
+- [ ] C-16: labels責務分離（classificationLabels / warningLabels / export_exclude）
+- [ ] C-17: syncWarningLabelsCore対症療法の根本修正
+- [ ] C-18: Supabase型移行準備（16件）

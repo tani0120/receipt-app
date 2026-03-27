@@ -6,6 +6,9 @@ import { useStaff } from '@/features/staff-management/composables/useStaff'
 // 型定義
 // =============================================
 
+/** クライアントステータス */
+export type ClientStatus = 'active' | 'inactive' | 'suspension';
+
 /** クライアント（一覧・詳細で共通利用） */
 export interface Client {
     clientId: string;   // 不変。DB primary key。形式: {3コード}-{5桁連番}（例: ABC-00001）
@@ -23,7 +26,7 @@ export interface Client {
     fiscalDay: string | number;
     industry: string;
     establishedDate: string;
-    status: 'active' | 'inactive' | 'suspension';
+    status: ClientStatus;
     accountingSoftware: 'mf' | 'freee' | 'yayoi' | 'tkc' | 'other';
     taxFilingType: 'blue' | 'white';
     consumptionTaxMode: 'general' | 'simplified' | 'exempt';

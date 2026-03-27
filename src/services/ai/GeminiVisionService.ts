@@ -14,6 +14,9 @@ import { FileTypeDetector } from './FileTypeDetector';
  * - 正規化処理
  */
 export class GeminiVisionService {
+  // 仮ID用カウンター（AI生成時の一時ID。DB保存時に正式IDが割当てられる）
+  private static _nextJrnId = 90000001;
+  private static _nextLineId = 1;
 
   /**
    * ファイルを処理（形式判定 + 仕訳生成）
@@ -123,7 +126,7 @@ export class GeminiVisionService {
           }
 
           // 必須フィールドを設定
-          parsed.journalEntry.id = crypto.randomUUID();
+          parsed.journalEntry.id = `jrn-${String(GeminiVisionService._nextJrnId++).padStart(8, '0')}`;
           parsed.journalEntry.status = 'Draft';
           // TD-001対応: フォールバック値を削除（ADR-011準拠）
           parsed.journalEntry.clientId = client.id;
@@ -136,7 +139,7 @@ export class GeminiVisionService {
           if (parsed.journalEntry.lines && Array.isArray(parsed.journalEntry.lines)) {
             parsed.journalEntry.lines.forEach((line: unknown) => {
               if (typeof line === 'object' && line !== null) {
-                (line as { lineId?: string }).lineId = crypto.randomUUID();
+                (line as { lineId?: string }).lineId = `${parsed.journalEntry.id}-line-${String(GeminiVisionService._nextLineId++).padStart(3, '0')}`;
               }
             });
           }

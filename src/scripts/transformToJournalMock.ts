@@ -36,6 +36,7 @@ export function transformToJournalMock(
     gemini: GeminiClassifyResponse,
     postprocess: PostProcessResult,
     displayOrder: number,
+    clientId: string,
 ): JournalPhase5Mock {
     // --- entries[] → debit_entries[] / credit_entries[] 分離 ---
     const debitEntries = (gemini.journal_entry_suggestions ?? [])
@@ -58,6 +59,7 @@ export function transformToJournalMock(
         : 'not_qualified' as const;
 
     return {
+        client_id: clientId,
         id: generateJournalId(),
         display_order: displayOrder,
         voucher_date: gemini.date ?? '',

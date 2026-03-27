@@ -9,31 +9,31 @@
 
 | エンティティ | 日本語 | ID形式 | URLパラメータ名 | 例 |
 |------------|--------|--------|---------------|-----|
-| 顧問先 | 顧問先 | `{3コード}-{UUID}` | `:clientId` | `ABC-a1b2c3d4-e5f6-...` |
-| スタッフ | 担当者 | UUID | `:staffId` | `f8e7d6c5-b4a3-...` |
-| 証票 | 証票（ドキュメント） | UUID | `:documentId` | `d6123ee8-2d5d-...` |
-| 証票行 | 証票明細行 | UUID | `:lineId` | `c5dae3d8-1c4c-...` |
-| 仕訳 | 仕訳 | UUID | `:journalId` | `a3b8d1b6-0b3b-...` |
-| ジョブ | 処理ジョブ | UUID | `:jobId` | `b4c9e2c7-1c4c-...` |
+| 顧問先 | 顧問先 | `{3コード}-{5桁連番}` | `:clientId` | `ABC-00001` |
+| スタッフ | 担当者 | `staff-{4桁連番}` | `:staffId` | `staff-0001` |
+| 証票 | 証票（ドキュメント） | `doc-{8桁連番}` | `:documentId` | `doc-00000001` |
+| 証票行 | 証票明細行 | `{親doc ID}-line-{3桁連番}` | `:lineId` | `doc-00000001-line-003` |
+| 仕訳 | 仕訳 | `jrn-{8桁連番}` | `:journalId` | `jrn-00000001` |
+| ジョブ | 処理ジョブ | `job-{8桁連番}` | `:jobId` | `job-00000001` |
 
 ---
 
-## 顧問先IDの特殊ルール
+## 顧問先IDの構造
 
 ```
-client_id = {3コード}-{UUID}
-例: ABC-a1b2c3d4-e5f6-7890-abcd-ef1234567890
+client_id = {3コード}-{5桁連番}
+例: ABC-00001
 ```
 
 | 層 | フィールド | 例 | 用途 |
 |---|-----------|-----|------|
-| 内部処理（DB・API） | `uuid` | `a1b2c3d4-e5f6-7890-...` | Phase BでDB primary key |
-| URL | `id` | `ABC-a1b2c3d4-e5f6-7890-...` | ブックマーク、URL共有 |
-| UI表示 | `clientCode` | `ABC` | 一覧・ラベル表示 |
+| 内部処理（DB・API） | `clientId` | `ABC-00001` | DB primary key |
+| URL | `clientId` | `ABC-00001` | ブックマーク、URL共有 |
+| UI表示 | `threeCode` | `ABC` | 一覧・ラベル表示 |
 
 - ID生成タイミング: 顧問先作成時に1度だけ
 - clientCode変更時: **IDは変えない**（先頭3文字と現行コードが不一致になるが許容）
-- ヘルパー関数: `createClientId(code)` → `{ id, uuid }` / `parseClientId(id)` → `{ clientCode, uuid }`
+- ヘルパー関数: `createClientId(code)` → `{ clientId, threeCode }`
 
 ---
 
@@ -47,9 +47,9 @@ documents（証票）
 
 | テーブル | ID | 親 | 例 |
 |---------|-----|-----|-----|
-| documents | document_id (UUID) | client_id | 通帳PDF 1冊 = 1 document |
-| document_lines | line_id (UUID) | document_id | 通帳の各行 = 1 line |
-| journals | journal_id (UUID) | line_id | 各行に対する仕訳 |
+| documents | doc-{8桁連番} | client_id | 通帳PDF 1冊 = 1 document |
+| document_lines | {親doc ID}-line-{3桁連番} | document_id | 通帳の各行 = 1 line |
+| journals | jrn-{8桁連番} | line_id | 各行に対する仕訳 |
 
 ### 関係
 

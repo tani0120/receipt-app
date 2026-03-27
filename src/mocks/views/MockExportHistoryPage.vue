@@ -29,7 +29,7 @@
         <button v-if="checkedIds.size > 0" class="ml-3 px-3 py-1 bg-blue-600 text-white rounded text-[12px] font-semibold hover:bg-blue-700" @click="showDownloadModal = true">再ダウンロード</button>
       </div>
       <div class="flex items-center gap-2">
-        <button class="px-3 py-1 border border-gray-300 rounded text-[12px] bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1">
+        <button class="px-3 py-1 border border-gray-300 rounded text-[12px] bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1" @click="showRealtimeUpdateMsg">
           <i class="fa-solid fa-arrows-rotate text-[10px]"></i> 更新
         </button>
       </div>
@@ -89,12 +89,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
 
 const route = useRoute();
 const router = useRouter();
 const clientId = computed(() => (route.params.clientId as string) ?? 'ABC-00001');
 
-// --- モックデータ（画像から11件） ---
+// --- ダウンロード履歴（localStorageから読み込み） ---
 interface HistoryRow {
   id: string;
   exportDate: string;
@@ -103,34 +104,37 @@ interface HistoryRow {
   status: string;
 }
 
-const historyData: HistoryRow[] = [
-  { id: 'h01', exportDate: '25/3/7',  fileName: 'マネーフォワード_20250307',   count: 259, status: '出力済' },
-  { id: 'h02', exportDate: '25/3/7',  fileName: 'マネーフォワード_20250307_2', count: 315, status: '出力済' },
-  { id: 'h03', exportDate: '25/3/7',  fileName: 'マネーフォワード_20250307_3', count: 506, status: '出力済' },
-  { id: 'h04', exportDate: '24/8/7',  fileName: 'マネーフォワード_20240807',   count: 242, status: '出力済' },
-  { id: 'h05', exportDate: '24/7/31', fileName: 'マネーフォワード_20240731',   count: 425, status: '出力済' },
-  { id: 'h06', exportDate: '24/1/10', fileName: 'マネーフォワード_20240110',   count: 309, status: '出力済' },
-  { id: 'h07', exportDate: '24/1/10', fileName: 'マネーフォワード_20240110_2', count: 189, status: '出力済' },
-  { id: 'h08', exportDate: '24/1/9',  fileName: 'マネーフォワード_20240109',   count: 352, status: '出力済' },
-  { id: 'h09', exportDate: '24/1/9',  fileName: 'マネーフォワード_20240109_2', count: 672, status: '出力済' },
-  { id: 'h10', exportDate: '23/3/11', fileName: 'マネーフォワード_20230311',   count: 301, status: '出力済' },
-  { id: 'h11', exportDate: '23/3/11', fileName: 'マネーフォワード_20230311_2', count: 128, status: '出力済' },
-];
+const historyData = computed<HistoryRow[]>(() => {
+  const key = `sugu-suru:export-history:${clientId.value}`;
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch { /* 破損データは無視 */ }
+  // フォールバック：サンプル履歴（日付はtoMfCsvDateで統一）
+  return [
+    { id: 'h01', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307',   count: 259, status: '出力済' },
+    { id: 'h02', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_2', count: 315, status: '出力済' },
+    { id: 'h03', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_3', count: 506, status: '出力済' },
+  ];
+});
 
 // --- ページネーション（20件単位） ---
 const PAGE_SIZE = 20;
 const currentPage = ref(1);
-const totalPages = computed(() => Math.max(1, Math.ceil(historyData.length / PAGE_SIZE)));
+const totalPages = computed(() => Math.max(1, Math.ceil(historyData.value.length / PAGE_SIZE)));
 const displayPages = computed(() => {
   const pages: number[] = [];
   for (let i = 1; i <= Math.min(5, totalPages.value); i++) pages.push(i);
   return pages;
 });
 const pageStart = computed(() => (currentPage.value - 1) * PAGE_SIZE + 1);
-const pageEnd = computed(() => Math.min(currentPage.value * PAGE_SIZE, historyData.length));
+const pageEnd = computed(() => Math.min(currentPage.value * PAGE_SIZE, historyData.value.length));
 const pagedRows = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE;
-  return historyData.slice(start, start + PAGE_SIZE);
+  return historyData.value.slice(start, start + PAGE_SIZE);
 });
 
 // --- 行クリックで詳細ページへ遷移 ---
@@ -165,9 +169,39 @@ const showDownloadModal = ref(false);
 const isDownloading = ref(false);
 const startDownload = () => {
   isDownloading.value = true;
+  // 再ダウンロード: localStorageから保持済みCSVデータを取得してダウンロード
+  setTimeout(() => {
+    const checkedArr = [...checkedIds.value];
+    let downloadCount = 0;
+    for (const hid of checkedArr) {
+      const csvKey = `sugu-suru:export-csv:${clientId.value}:${hid}`;
+      try {
+        const saved = localStorage.getItem(csvKey);
+        if (saved) {
+          const snapshot = JSON.parse(saved);
+          const blob = new Blob(['\uFEFF' + snapshot.csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = snapshot.fileName + '.csv';
+          a.click();
+          URL.revokeObjectURL(url);
+          downloadCount++;
+        }
+      } catch { /* 破損データは無視 */ }
+    }
+    isDownloading.value = false;
+    showDownloadModal.value = false;
+    if (downloadCount === 0) {
+      globalThis.alert('保持済みのCSVデータが見つかりません。過去の出力データは保持されていない可能性があります。');
+    }
+  }, 800);
 };
 const cancelDownload = () => {
   showDownloadModal.value = false;
   isDownloading.value = false;
 };
+
+// --- 更新ボタン ---
+const showRealtimeUpdateMsg = () => globalThis.alert('現在はリアルタイム更新です');
 </script>

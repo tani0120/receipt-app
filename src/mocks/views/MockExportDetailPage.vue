@@ -25,7 +25,7 @@
         <span class="ml-2 text-[10px] text-gray-500">{{ pageStart }}~{{ pageEnd }} / 全{{ allRows.length }}件</span>
       </div>
       <div class="flex items-center gap-2">
-        <button class="px-2 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1">
+        <button class="px-2 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1" @click="showRealtimeUpdateMsg">
           <i class="fa-solid fa-arrows-rotate text-[8px]"></i> 更新
         </button>
       </div>
@@ -75,11 +75,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { mockJournalsPhase5 } from '../data/journal_test_fixture_30cases';
+import { useJournals } from '@/mocks/composables/useJournals';
+import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
+import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) ?? 'ABC-00001');
 const historyId = computed(() => route.params.historyId as string);
+const { journals } = useJournals(clientId);
 
 // 履歴IDからファイル名を解決（モック）
 const historyFileMap: Record<string, string> = {
@@ -149,37 +152,53 @@ interface DetailRow {
   importDate: string;
 }
 
-const formatDate = (iso: string): string => {
-  const d = new Date(iso ?? '');
-  const yy = String(d.getFullYear()).slice(2);
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yy}/${mm}/${dd}`;
-};
+// 日付表示はtoMfCsvDate（YYYY/MM/DD）に統一
 
-// 全行（モック: 顧問先フィルタ適用）
+// マスタ名前解決
+const masterSettings = useAccountSettings('master');
+
+function resolveAccountName(id: string | null | undefined): string {
+  if (!id) return ''
+  const account = masterSettings.accounts.value.find(a => a.id === id)
+  return account ? account.name : id
+}
+
+function resolveTaxCategoryName(id: string | null | undefined): string {
+  if (!id) return ''
+  const entry = masterSettings.taxCategories.value.find(tc => tc.id === id)
+  return entry ? entry.name : id
+}
+
+const showRealtimeUpdateMsg = () => globalThis.alert('現在はリアルタイム更新です');
+
+// 全行（composable経由、複合仕訳全行展開）
 const allRows = computed<DetailRow[]>(() => {
-  return mockJournalsPhase5
-    .filter(j => j.deleted_at === null && j.client_id === clientId.value)
-    .map(j => {
-      const debit = j.debit_entries[0];
-      const credit = j.credit_entries[0];
-      return {
-        id: j.id,
-        qualified: j.invoice_status === 'qualified' ? '○' : '',
-        date: formatDate(j.voucher_date ?? ''),
-        description: j.description,
-        debitAccount: debit?.account ?? '',
-        debitSub: debit?.sub_account ?? '',
-        debitTax: debit?.tax_category_id ?? '',
-        debitAmount: debit?.amount ?? null,
-        creditAccount: credit?.account ?? '',
-        creditSub: credit?.sub_account ?? '',
-        creditTax: credit?.tax_category_id ?? '',
-        creditAmount: credit?.amount ?? null,
-        importDate: '26/03/04',
-      };
+  const rows: DetailRow[] = [];
+  journals.value
+    .filter(j => j.deleted_at === null)
+    .forEach(j => {
+      const maxLen = Math.max(j.debit_entries.length, j.credit_entries.length);
+      for (let i = 0; i < maxLen; i++) {
+        const debit = j.debit_entries[i];
+        const credit = j.credit_entries[i];
+        rows.push({
+          id: `${j.id}-${i}`,
+          qualified: i === 0 ? (j.invoice_status === 'qualified' ? '○' : '') : '',
+          date: i === 0 ? toMfCsvDate(j.voucher_date ?? '') : '',
+          description: i === 0 ? j.description : '',
+          debitAccount: debit ? resolveAccountName(debit.account) : '',
+          debitSub: debit?.sub_account ?? '',
+          debitTax: debit ? resolveTaxCategoryName(debit.tax_category_id) : '',
+          debitAmount: debit?.amount ?? null,
+          creditAccount: credit ? resolveAccountName(credit.account) : '',
+          creditSub: credit?.sub_account ?? '',
+          creditTax: credit ? resolveTaxCategoryName(credit.tax_category_id) : '',
+          creditAmount: credit?.amount ?? null,
+          importDate: toMfCsvDate(j.created_at ?? ''),
+        });
+      }
     });
+  return rows;
 });
 
 // ソート

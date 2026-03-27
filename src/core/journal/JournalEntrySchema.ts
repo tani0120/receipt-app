@@ -105,7 +105,7 @@ export const FileTypeEnum = z.enum([
 
 // Draft段階（OCR直後）- optional許可
 export const JournalLineDraftSchema = z.object({
-  lineId: z.string().uuid(),
+  lineId: z.string(),  // 接頭辞+連番形式（例: jrn-00000001-line-001）
 
   // 勘定科目（optional許可）
   accountCode: z.string().optional(),
@@ -148,7 +148,7 @@ export const JournalLineDraftSchema = z.object({
 
 // 確定段階（ユーザー確認後）- optional禁止
 export const JournalLineSchema = z.object({
-  lineId: z.string().uuid(),
+  lineId: z.string(),  // 接頭辞+連番形式
 
   // 勘定科目（必須）
   accountCode: z.string().min(1),
@@ -195,7 +195,7 @@ export const JournalLineSchema = z.object({
 
 // Draft段階（OCR直後）- optional許可
 export const JournalEntryDraftSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),  // 接頭辞+連番形式（例: jrn-00000001）
   status: z.literal('Draft'),  // L1-3準拠
 
   // 基本情報（optional許可）
@@ -267,7 +267,7 @@ export const JournalEntryDraftSchema = z.object({
 
 // 確定段階（ユーザー確認後）- optional禁止
 export const JournalEntrySchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),  // 接頭辞+連番形式（例: jrn-00000001）
   status: z.enum([
     'Submitted',
     'Approved',

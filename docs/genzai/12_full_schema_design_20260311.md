@@ -105,6 +105,8 @@ null → exported
 | `line_id` | VARCHAR(40) | **追加** | 証票行ID（冗長だがクエリ高速化用） |
 | `display_order` | INTEGER | 既存 | 表示順 |
 | `voucher_date` | DATE | 既存（名称変更: transaction_date→voucher_date） | 伝票日（証憑に記載された日付=fact。税務会計上の取引日としての正しさはシステムは保証しない） |
+| `date_on_document` | BOOLEAN | **追加**（2026-03-27） | 日付の項目存在フラグ（false=証憑に日付記載なし、true=記載あり） |
+| `voucher_type` | VARCHAR(20) | **追加**（2026-03-27） | 証票意味（売上/経費/給与/立替経費/振替/クレカ/クレカ引落/その他） |
 | `description` | TEXT | 既存 | 摘要 |
 | `status` | journal_status | 既存 | null / exported |
 | `status_updated_at` | TIMESTAMP | 既存 | ステータス更新日時 |
