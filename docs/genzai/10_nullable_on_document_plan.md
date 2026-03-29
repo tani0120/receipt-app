@@ -1,7 +1,7 @@
 # null許容化・項目存在フラグ・警告ラベル整備計画
 
 > 作成日: 2026-03-04
-> 更新日: 2026-03-19（useAccountSettings実装完了、useColumnResize全ページ適用、D7/D7a/D8 3列optgroupコンボボックス実装完了）
+> 更新日: 2026-03-29（useAccountSettingsフォールバック内部化完了、レガシーScreenS_AccountSettings.vue削除、開発品質ルール策定）
 > 根拠: STREAMED（ストリームド）UI調査、ChatGPT設計議論（2026-03-03）、journal_v2_20260214.md
 > 承認: 2026-03-04 チャットにて承認済み
 
@@ -555,10 +555,11 @@
 | 事務所共通 税区分マスタ | `/master/tax` | `MockMasterTaxCategoriesPage.vue` | ✅composableのoverridesに同期（2026-03-15 N2修正） |
 | 顧問先別 勘定科目 | `/client/settings/accounts/:clientId` | `MockClientAccountsPage.vue`: `useClientAccounts(clientId)` → `useAccountMaster()` | ✅composable経由でマスタのカスタム科目を取得（2026-03-14修正） |
 | 顧問先別 税区分 | `/client/settings/tax/:clientId` | `MockClientTaxPage.vue`: `useClientTaxCategories(clientId)` | ✅composable経由で保存・読み込み。保存キー統一済み（2026-03-15 N2修正） |
-| 仕訳一覧ドロップダウン | `/client/journal-list/:clientId` | `JournalListLevel3Mock.vue`: `useAccountSettings('master')` + `useAccountSettings('client', clientId)` | ✅統合（2026-03-16 useAccountSettings実装完了） |
+| 仕訳一覧ドロップダウン | `/client/journal-list/:clientId` | `JournalListLevel3Mock.vue`: `useAccountSettings('client', clientId)` のみ | ✅統合（2026-03-16）→ フォールバック内部化完了（2026-03-29） |
 
 - **2026-03-14解決済み**: マスタ勘定科目ページの`saveChanges`がcomposableの`overrides`に同期保存。顧問先ページはcomposable経由でマスタのカスタム科目を取得
-- **2026-03-16解決済み（useAccountSettings実装）**: 全ページが`useAccountSettings`経由でデータ取得。`ACCOUNT_MASTER`/`TAX_CATEGORY_MASTER`の直接importは0件。`useClientAccounts`/`useTaxMaster`等の直接importもページから完全排除。仕訳リストも`masterSettings`/`clientSettings`経由で取得。詳細は[14_useAccountSettings_design.md](file:///c:/dev/receipt-app/docs/genzai/14_useAccountSettings_design.md)参照
+- **2026-03-16解決済み（useAccountSettings実装）**: 全ページが`useAccountSettings`経由でデータ取得。`ACCOUNT_MASTER`/`TAX_CATEGORY_MASTER`の直接importは0件。`useClientAccounts`/`useTaxMaster`等の直接importもページから完全排除
+- **2026-03-29解決済み（フォールバック内部化）**: 呼び出し側の`masterSettings`参照・三項演算子フォールバックを全て廃止。composable内部でscope='client'のデータ取得失敗時にマスタデータへフォールバック。computed内composable呼び出し（JournalListLevel3Mock）を解消。到達不能レガシー`ScreenS_AccountSettings.vue`を物理削除。開発品質ルール（`.agent/workflows/code_quality.md`）を策定。詳細は[14_useAccountSettings_design.md](file:///c:/dev/receipt-app/docs/genzai/14_useAccountSettings_design.md)参照
 
 #### B. フィクスチャの勘定科目名がマスタに存在しない
 - `journal_test_fixture_30cases.ts`の仕訳データに、`ACCOUNT_MASTER`に存在しない科目名がハードコードされている

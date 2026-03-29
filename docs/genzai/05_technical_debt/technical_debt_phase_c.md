@@ -103,7 +103,7 @@
 
 ---
 
-## 🟡 C-8: UI層 `as any`（9件）
+## 🟡 C-8: UI層 `as any`（8件）
 
 - **ファイル**:
   - [ScreenH_TaskDashboard.vue](file:///C:/dev/receipt-app/src/views/ScreenH_TaskDashboard.vue) L512
@@ -113,6 +113,7 @@
   - [ScreenE_JournalEntry.vue](file:///C:/dev/receipt-app/src/components/ScreenE_JournalEntry.vue) L481, L647-649, L722
   - [ScreenE_LogicMaster.vue](file:///C:/dev/receipt-app/src/components/ScreenE_LogicMaster.vue) L451-452
   - [JournalListLevel3Mock.vue](file:///C:/dev/receipt-app/src/mocks/components/JournalListLevel3Mock.vue) L105
+- **2026-03-29変更**: ~~ScreenS_AccountSettings.vue~~は到達不能レガシーとして物理削除済み。9件→8件に減少
 - **解決策**: UI再定義時に型を正しく定義。一部はPhase Cのmock→本番切替で解消
 
 ---
@@ -167,6 +168,27 @@
 
 ---
 
+## 🟠 C-16: labels責務分離（classificationLabels / warningLabels / export_exclude）
+
+- **ファイル**: [JournalListLevel3Mock.vue](file:///C:/dev/receipt-app/src/mocks/components/JournalListLevel3Mock.vue)、[MockExportPage.vue](file:///C:/dev/receipt-app/src/mocks/views/MockExportPage.vue)、[journal_phase5_mock.type.ts](file:///C:/dev/receipt-app/src/mocks/types/journal_phase5_mock.type.ts)、[journalWarningSync.ts](file:///C:/dev/receipt-app/src/mocks/utils/journalWarningSync.ts)
+- **現状**: `journal.labels`に分類・警告・操作（EXPORT_EXCLUDE）が混在
+- **2026-03-27進捗**: `syncWarningLabelsCore()`を[journalWarningSync.ts](file:///c:/dev/receipt-app/src/mocks/utils/journalWarningSync.ts)に抽出済み。JournalListLevel3MockとMockExportPageの両方で共有。warning_details/warning_dismissals追加済み。EXCLUDE_LABELSリストを[exportMfCsv.ts](file:///c:/dev/receipt-app/src/mocks/utils/exportMfCsv.ts)に一元定義済み
+- **問題**:
+  - 責務不明確（入力データ / 計算結果 / ユーザー操作が同じ配列）
+  - `journal.labels.push()`による副作用的mutation
+  - 将来のcomputed化・ruleEngine化を阻害
+- **方針**:
+  - `classificationLabels`（不変、DB永続）: TRANSPORT, RECEIPT, INVOICE_QUALIFIED等
+  - `warningLabels`（計算結果、DBに持たない）: CATEGORY_CONFLICT, TAX_UNKNOWN, VOUCHER_TYPE_CONFLICT, TAX_ACCOUNT_MISMATCH, SAME_ACCOUNT_BOTH_SIDES, DESCRIPTION_UNKNOWN等。`syncWarningLabelsCore()`で都度計算
+  - `export_exclude`（BOOLEAN、DB永続）: labelsから排除し独立カラム化
+- **解決策**:
+  1. `export_exclude`をDBカラム化し、labelsから`EXPORT_EXCLUDE`を排除
+  2. `labels` = classificationLabelsのみに純粋化
+  3. `useJournalValidation` composable導入（computed + pure function）
+  4. warningLabelsはwatch+mutationではなくcomputed生成に変更
+
+---
+
 ## 🟡 C-10: classify_schema.ts Geminiスキーマ内HandwrittenFlag文字列
 
 - **ファイル**: [classify_schema.ts](file:///C:/dev/receipt-app/src/scripts/classify_schema.ts) L359
@@ -194,30 +216,11 @@
 
 ---
 
-## 🟠 C-16: labels責務分離（classificationLabels / warningLabels / export_exclude）
-
-- **ファイル**: [JournalListLevel3Mock.vue](file:///C:/dev/receipt-app/src/mocks/components/JournalListLevel3Mock.vue)、[MockExportPage.vue](file:///C:/dev/receipt-app/src/mocks/views/MockExportPage.vue)、[journal_phase5_mock.type.ts](file:///C:/dev/receipt-app/src/mocks/types/journal_phase5_mock.type.ts)
-- **現状**: `journal.labels`に分類・警告・操作（EXPORT_EXCLUDE）が混在
-- **問題**:
-  - 責務不明確（入力データ / 計算結果 / ユーザー操作が同じ配列）
-  - `journal.labels.push()`による副作用的mutation
-  - 将来のcomputed化・ruleEngine化を阻害
-- **方針**:
-  - `classificationLabels`（不変、DB永続）: TRANSPORT, RECEIPT, INVOICE_QUALIFIED等
-  - `warningLabels`（計算結果、DBに持たない）: CATEGORY_CONFLICT, TAX_UNKNOWN等。`syncWarningLabelsCore()`で都度計算
-  - `export_exclude`（BOOLEAN、DB永続）: labelsから排除し独立カラム化
-- **解決策**:
-  1. `export_exclude`をDBカラム化し、labelsから`EXPORT_EXCLUDE`を排除
-  2. `labels` = classificationLabelsのみに純粋化
-  3. `useJournalValidation` composable導入（computed + pure function）
-  4. warningLabelsはwatch+mutationではなくcomputed生成に変更
-
----
-
 ## 🟡 C-17: syncWarningLabelsCore 対症療法の根本修正
 
 - **ファイル**: [journalWarningSync.ts](file:///C:/dev/receipt-app/src/mocks/utils/journalWarningSync.ts)、[MockExportPage.vue](file:///C:/dev/receipt-app/src/mocks/views/MockExportPage.vue)
-- **現状**: 出力ページの`onMounted`で`syncWarningLabelsCore()`を手動実行（対症療法）
+- **2026-03-27進捗**: syncWarningLabelsCoreをjournalWarningSync.tsに抽出済み。9種のバリデーション（ACCOUNT_UNKNOWN, TAX_UNKNOWN, DESCRIPTION_UNKNOWN, DATE_UNKNOWN, AMOUNT_UNCLEAR, DEBIT_CREDIT_MISMATCH, CATEGORY_CONFLICT, VOUCHER_TYPE_CONFLICT, TAX_ACCOUNT_MISMATCH, SAME_ACCOUNT_BOTH_SIDES）を実装。AccountForValidation/TaxCategoryForValidation型で最小依存。warning_details自動格納。warning_dismissals対応
+- **現状**: 出力ページの`onMounted`で`syncWarningLabelsCore()`を手動実行（対症療法は残存）
 - **問題**: 新しいページが増えるたびに同じ呼び出しを追加する必要がある
 - **解決策**: C-16のuseJournalValidation導入により、全ページで自動的にバリデーション済みデータを取得可能にする。onMounted手動呼び出しは削除
 
@@ -249,7 +252,7 @@
 | W | useJournals repository差し替え | localStorage直接 | Supabase repository |
 | X | useClients repository差し替え | localStorage直接 | 同上 |
 | Y | useStaff repository差し替え | localStorage直接 | 同上 |
-| Z | useAccountSettings repository差し替え | localStorage直接 | 同上 |
+| Z | useAccountSettings repository差し替え | localStorage直接。2026-03-29: フォールバック内部化完了（scope='client'データ取得失敗時にcomposable内部でマスタデータをフォールバック返却。呼び出し側のmasterSettings参照・三項演算子フォールバック全廃止）。開発品質ルール（`.agent/workflows/code_quality.md`）策定済み。到達不能レガシー`ScreenS_AccountSettings.vue`物理削除済み | Supabase repository |
 | AA | useProgress repository差し替え | localStorage直接 | 同上 |
 | AB | useUnsavedGuard ロジック変更 | localStorage依存 | Supabase対応 |
 

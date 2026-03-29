@@ -14,7 +14,7 @@ import type { JournalPhase5Mock } from '../types/journal_phase5_mock.type'
 // フィクスチャバージョン（フィクスチャ更新時にインクリメント）
 // FIXTURE_VERSIONはこのファイルのみで管理する
 // ────────────────────────────────────────────
-const FIXTURE_VERSION = 12
+const FIXTURE_VERSION = 13
 
 // ────────────────────────────────────────────
 // モジュールスコープキャッシュ（顧問先別シングルトン）

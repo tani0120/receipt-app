@@ -853,7 +853,7 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 |------|------|
 | ファイル | [14_useAccountSettings_design.md](file:///c:/dev/receipt-app/docs/genzai/14_useAccountSettings_design.md) |
 | 内容 | §1-§9: 現状の問題、API設計（全メソッド）、統一型定義、実装コード（省略ゼロ）、全6ページの修正箇所一覧、localStorageキー変更なし、既存composable変更なし、失敗防止チェックリスト、実施順序16ステップ、省略箇所の正直な補足8項目 |
-| 状態 | ✅ **実装完了**（2026-03-16）。composable本体+型定義作成済み、全6ページリファクタリング完了、grep検証+vue-tsc通過 |
+| 状態 | ✅ **実装完了**（2026-03-16）→ **フォールバック内部化完了**（2026-03-29）。composable本体+型定義作成済み、全6ページリファクタリング完了、grep検証+vue-tsc通過。呼び出し側の`masterSettings`参照・三項演算子フォールバックを全て廃止し、composable内部でマスタデータへのフォールバックを完結させる設計に変更 |
 
 ### R-5. 検証結果
 
@@ -884,6 +884,8 @@ npx vue-tsc --noEmit → 終了コード 0（エラーなし）✅
 | `useAccountSettings` import（6ページ） | ✅ 全件あり |
 | `ACCOUNT_MASTER`/`TAX_CATEGORY_MASTER` 直接import（.vueファイル） | ✅ 0件 |
 | 旧composable直接参照（`useAccountMaster`/`useTaxMaster`/`useClientAccounts`/`useClientTaxCategories`） | ✅ 0件 |
+| 呼び出し側での`masterSettings`フォールバック参照（2026-03-29追加） | ✅ 0件（composable内部に一元化済み） |
+| computed内でのcomposable呼び出し（2026-03-29追加） | ✅ 0件（setupトップレベルに移動済み） |
 
 ### S-4. 検証結果
 

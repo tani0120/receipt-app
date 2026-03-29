@@ -119,3 +119,5 @@ isCustom = true  → MF非公式（カスタム科目/税区分）
 |---------|---------|------|
 | `MockMasterAccountsPage.vue` | `hideRow`, `showRow`, `deleteRow` 未使用 | 一括操作で使用するが個別行からは未参照 |
 | `MockMasterTaxCategoriesPage.vue` | `hideRow`, `showRow` 未使用 | 同上 |
+
+> **2026-03-29**: 旧`ScreenS_AccountSettings.vue`（TAX_CATEGORY_MASTER直接参照4箇所）は到達不能レガシーとして物理削除済み。

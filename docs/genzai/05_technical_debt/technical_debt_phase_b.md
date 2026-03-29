@@ -142,6 +142,7 @@
 - **影響**: labelsの意味が「AI分類結果」から「AI分類 + 人間操作の混合」に崩壊。将来のバリデーション・統計が不正確になる
 - **解決策**: `syncLabelsFromStaffNotes()`を完全削除。ソートは既にstaff_notes直接参照なので同期不要
 - **前提**: B4②④⑤（構造改善部分）は [refactoring_phase_b.md](file:///C:/dev/receipt-app/docs/genzai/06_refactoring/refactoring_phase_b.md) で管理
+- **2026-03-27関連進捗**: 警告ラベル同期ロジックは`syncWarningLabelsCore()`として[journalWarningSync.ts](file:///c:/dev/receipt-app/src/mocks/utils/journalWarningSync.ts)に抽出済み。staff_notes系ラベルのlabels混入問題（B-13本体）は未解決
 
 ---
 

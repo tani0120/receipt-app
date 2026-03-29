@@ -809,18 +809,16 @@ setTaxDefaultVisible: (taxCategoryId: string, visible: boolean) => void
 **省略していた事実**: 仕訳リスト（JournalListLevel3Mock）のfilteredAccountsは、顧問先のtypeとhasRentalIncomeで科目をフィルタしている。設計書の`visibleAccounts`にはこのフィルタが含まれていない。
 
 ```typescript
-// 現在のJournalListLevel3Mock（useAccountSettings経由にリファクタリング済み、2026-03-16）
-const masterSettings = useAccountSettings('master')
-const clientSettings = computed(() => useAccountSettings('client', clientId))
+// 現在のJournalListLevel3Mock（2026-03-29リファクタリング済み）
+// ✅ composable内部でフォールバック完結。呼び出し側はclientSettingsのみ参照
+const clientSettings = useAccountSettings('client', clientId)
+// ※ masterSettingsへの直接参照・三項演算子フォールバックは全て廃止済み
 
 const filteredAccounts = computed(() => {
   const client = activeClientFull.value;
   const clientType = client?.type ?? 'corp';
   const hasRental = client?.hasRentalIncome ?? false;
-  const source = clientSettings.value
-    ? clientSettings.value.visibleAccounts.value
-    : masterSettings.accounts.value;
-  return source
+  return clientSettings.visibleAccounts.value
     .filter(acc => {
       if (acc.deprecated) return false;
       if (acc.target === 'both') return true;
@@ -836,8 +834,13 @@ const filteredAccounts = computed(() => {
 
 **決定済み**: 含めない。このフィルタはページ固有（仕訳リスト用）であり、マスタ/顧問先設定ページでは不要。`visibleAccounts`はhidden系フラグのフィルタのみ行い、businessType/hasRentalIncomeフィルタはページ側で追加適用する。
 
+> **2026-03-29変更**: フォールバックをcomposable内部に完結させる設計変更を実施。
+> `scope='client'`でデータ取得失敗時、composable内部で`console.error`出力後にマスタデータをフォールバックとして返す。
+> 呼び出し側（JournalListLevel3Mock、MockExportPage等）からは`masterSettings`変数・三項演算子フォールバックを全て削除。
+> computed内でのcomposable呼び出し（リアクティブ性・メモリリーク問題）も同時に解消。
+
 ```typescript
-// 仕訳リストでの使い方
+// ✅ 正しい使い方（2026-03-29以降）
 const settings = useAccountSettings('client', clientId)
 const filteredAccounts = computed(() => {
   return settings.visibleAccounts.value.filter(acc => {
@@ -847,6 +850,11 @@ const filteredAccounts = computed(() => {
     return false
   })
 })
+
+// ❌ 禁止パターン（廃止済み）
+// const masterSettings = useAccountSettings('master')  ← 呼び出し側でのフォールバック用取得
+// const source = clientSettings ? clientSettings.xxx : masterSettings.xxx  ← 三項演算子フォールバック
+// const settings = computed(() => useAccountSettings(...))  ← computed内composable呼び出し
 ```
 
 ---
@@ -903,20 +911,18 @@ if (scope === 'client' && clientId) {
 
 ---
 
-### 9.7 旧画面（ScreenS_AccountSettings.vue）
+### 9.7 旧画面（ScreenS_AccountSettings.vue）— ✅削除済み
 
-**省略していた事実**: `src/views/ScreenS_AccountSettings.vue`に`TAX_CATEGORY_MASTER`の直接参照が4箇所残っている（L198, L266, L303, L363）。
+**省略していた事実**: `src/views/ScreenS_AccountSettings.vue`に`TAX_CATEGORY_MASTER`の直接参照が4箇所残っていた（L198, L266, L303, L363）。
 
-**明示的な決定**: この画面は`/old/`ルート配下の旧UIであり、以下の理由でスコープ外とする。
+**2026-03-29解決**: ルーターから到達不能であることを確認し、ファイルを**物理削除**済み。`settingsStore.ts`内の同ファイルへの言及も修正済み。
 
-| 理由 | 詳細 |
+| 対処 | 詳細 |
 |------|------|
-| 廃止予定 | 新しいMockMasterAccountsPage/MockClientAccountsPageに置き換え済み |
-| ルーティング | `/old/settings/:clientId`でのみアクセス可能 |
-| 影響範囲 | ユーザーが意図的に旧URLにアクセスしない限り使われない |
-| リスク | 旧画面を修正すると予期しない副作用が発生する可能性 |
-
-**推奨**: Phase B/Cでの旧画面削除時にまとめて対処。今回は触らない。
+| ファイル削除 | `src/views/ScreenS_AccountSettings.vue` を物理削除 |
+| ルーター確認 | `/old/settings/:clientId`ルートは存在せず、到達不能だった |
+| 参照修正 | `settingsStore.ts`内の旧ファイルへの言及を修正 |
+| grep検証 | ScreenS_AccountSettingsへの参照が0件であることを確認済み |
 
 ---
 

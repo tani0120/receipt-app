@@ -1,7 +1,8 @@
 # 正当な相手科目リスト（CATEGORY_CONFLICTバリデーション定義）
 
-> **実装ファイル**: `src/mocks/components/JournalListLevel3Mock.vue` — `validateDebitCreditCombination()`
-> **最終更新**: 2026-03-22
+> **実装ファイル**: [journalWarningSync.ts](file:///c:/dev/receipt-app/src/mocks/utils/journalWarningSync.ts) — `validateDebitCreditCombination()`, `getMegaGroup()`, `isContraAccount()`
+> **呼び出し元**: `JournalListLevel3Mock.vue`（仕訳一覧）、`MockExportPage.vue`（出力ページ・syncWarningLabelsCore経由）
+> **最終更新**: 2026-03-29（journalWarningSync.tsに抽出済み。複合仕訳対応: 全借方×全貸方クロスチェック実装済み）
 
 ---
 

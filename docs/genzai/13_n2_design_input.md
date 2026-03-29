@@ -77,7 +77,7 @@ useClients (既存)
   ├ client.hasRentalIncome → 不動産所得あり（個人のみ）固定表示
   └ client.consumptionTaxMode → 課税方式（general/simplified/exempt）固定表示
 
-useAccountSettings (✅N7実装完了 2026-03-16 → 設計書: 14_useAccountSettings_design.md)
+useAccountSettings (✅N7実装完了 2026-03-16 → フォールバック内部化完了 2026-03-29)
   ├ scope: 'master' | 'client'
   ├ clientId?: string    → 顧問先ページの場合のみ
   ├ accounts[]           → UnifiedAccount[]  (hidden/source/isMasterCustom付き)
@@ -92,6 +92,8 @@ useAccountSettings (✅N7実装完了 2026-03-16 → 設計書: 14_useAccountSet
   ├ addCustomAccount / removeCustomAccount → scope='master'のみ
   ├ defaultAccountOrder / defaultTaxOrder → デフォルト順ソート用Map
   └ _accountMasterOverrides / _taxMasterOverrides → 内部overrides直接参照
+  📌 scope='client'でデータ取得失敗時、composable内部でマスタデータにフォールバック（2026-03-29）
+  📌 呼び出し側でmasterSettings参照・三項演算子フォールバックは禁止（code_quality.md参照）
 ```
 
 ---
@@ -172,10 +174,10 @@ useAccountSettings (✅N7実装完了 2026-03-16 → 設計書: 14_useAccountSet
 
 | # | 修正内容 | 対象ファイル | 状態 |
 |---|---------|-------------|------|
-| R1 | TAX_CATEGORY_MASTERハードコード排除 | `JournalListLevel3Mock.vue` L966,1121,2489 | ✅ `useAccountSettings('master').taxCategories`経由に変更（2026-03-16） |
+| R1 | TAX_CATEGORY_MASTERハードコード排除 | `JournalListLevel3Mock.vue` L966,1121,2489 | ✅ `useAccountSettings('master').taxCategories`経由に変更（2026-03-16）→ `useAccountSettings('client', clientId)`経由に統一（2026-03-29フォールバック内部化） |
 | R2 | マスタカスタム/顧問先カスタム区別表示 | `useClientAccounts.ts`, `MockClientAccountsPage.vue` | ✅ `isMasterCustom`フラグ追加、テンプレート3分岐。useAccountSettings経由で統一 |
 | R3 | 補助科目自動連動 | `useClientAccounts.ts`, `JournalListLevel3Mock.vue` L1106 | ✅ `subAccounts` ref公開、`selectAccount()`で自動セット。useAccountSettings経由で統一 |
-| R4 | useAccountSettings統一composable設計書+実装 | `docs/genzai/14_useAccountSettings_design.md` | ✅ 設計書作成+composable実装+全6ページリファクタリング完了（2026-03-16） |
+| R4 | useAccountSettings統一composable設計書+実装 | `docs/genzai/14_useAccountSettings_design.md` | ✅ 設計書作成+composable実装+全6ページリファクタリング完了（2026-03-16）→ フォールバック内部化+レガシー削除+品質ルール策定完了（2026-03-29） |
 
 ### 【スコープ宣言】保存キー統一
 

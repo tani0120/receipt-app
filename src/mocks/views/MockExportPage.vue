@@ -2,21 +2,53 @@
   <div class="h-full flex flex-col bg-gray-50 font-sans text-[10px] text-gray-700">
     <!-- アクションボタン -->
     <div class="bg-white px-3 py-1.5 flex items-center gap-3 border-b border-gray-300">
-      <button class="px-4 py-1 bg-blue-600 text-white rounded text-[10px] font-semibold hover:bg-blue-700" @click="showDownloadModal = true">CSV形式でダウンロード</button>
-      <router-link :to="'/client/export-history/' + ($route.params.clientId ?? 'ABC-00001')" class="px-4 py-1 border border-gray-300 rounded text-[10px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 no-underline">ダウンロード履歴</router-link>
+      <button
+        class="px-4 py-1 bg-blue-600 text-white rounded text-[10px] font-semibold hover:bg-blue-700"
+        @click="showDownloadModal = true"
+      >
+        CSV形式でダウンロード
+      </button>
+      <router-link
+        :to="'/client/export-history/' + ($route.params.clientId ?? 'ABC-00001')"
+        class="px-4 py-1 border border-gray-300 rounded text-[10px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 no-underline"
+        >ダウンロード履歴</router-link
+      >
     </div>
 
     <!-- 出力形式行 + ダウンロードファイル名 -->
     <div class="bg-white px-3 py-1.5 flex items-center gap-3 border-b border-gray-200">
-      <span class="text-[13px] font-bold text-blue-700">出力形式：マネーフォワード クラウド会計</span>
-      <button class="px-2 py-0.5 bg-blue-600 text-white rounded text-[10px] font-semibold hover:bg-blue-700" @click="showNotImplemented">変更</button>
+      <span class="text-[13px] font-bold text-blue-700"
+        >出力形式：マネーフォワード クラウド会計</span
+      >
+      <button
+        class="px-2 py-0.5 bg-blue-600 text-white rounded text-[10px] font-semibold hover:bg-blue-700"
+        @click="showNotImplemented"
+      >
+        変更
+      </button>
       <div class="border-l border-gray-300 h-4 mx-1"></div>
       <span class="text-[10px] text-gray-600">ダウンロードファイル名</span>
-      <input type="text" v-model="downloadFileName" placeholder="" class="border border-gray-300 px-1.5 py-0.5 rounded text-[10px] w-48">
-      <span class="relative inline-flex" @mouseenter="showFileNameHelp = true" @mouseleave="showFileNameHelp = false">
-        <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-400 text-white text-[8px] font-bold cursor-pointer hover:bg-blue-600">?</span>
-        <div v-if="showFileNameHelp" class="absolute left-5 top-0 z-50 bg-gray-800 text-white text-[9px] px-2 py-1 rounded shadow-lg whitespace-nowrap">
-          空白の場合は会計ソフト名とダウンロード日で出力します。（例：マネーフォワード_20260101）同日に複数出力した場合はマネーフォワード_20260101_2, _3...と付与します。
+      <input
+        type="text"
+        v-model="downloadFileName"
+        placeholder=""
+        class="border border-gray-300 px-1.5 py-0.5 rounded text-[10px] w-48"
+      />
+      <span
+        class="relative inline-flex"
+        @mouseenter="showFileNameHelp = true"
+        @mouseleave="showFileNameHelp = false"
+      >
+        <span
+          class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-400 text-white text-[8px] font-bold cursor-pointer hover:bg-blue-600"
+          >?</span
+        >
+        <div
+          v-if="showFileNameHelp"
+          class="absolute left-5 top-0 z-50 bg-gray-800 text-white text-[9px] px-2 py-1 rounded shadow-lg whitespace-nowrap"
+        >
+          空白の場合は会計ソフト名とダウンロード日で出力します。（例：マネーフォワード_20260101）同日に複数出力した場合はマネーフォワード_20260101_2,
+          _3...と付与します。
         </div>
       </span>
     </div>
@@ -24,39 +56,71 @@
     <!-- セグメント + 合計金額中央 -->
     <div class="bg-white px-3 py-1.5 flex items-center border-b border-gray-200 text-[10px]">
       <div class="flex items-center gap-4 flex-wrap">
-        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showTargetOnly" class="w-2.5 h-2.5">未出力を表示</label>
-        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showExcluded" class="w-2.5 h-2.5">出力対象外を表示</label>
-        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="showWarnings" class="w-2.5 h-2.5">警告を表示</label>
+        <label class="flex items-center gap-1 cursor-pointer"
+          ><input type="checkbox" v-model="showTargetOnly" class="w-2.5 h-2.5" />未出力を表示</label
+        >
+        <label class="flex items-center gap-1 cursor-pointer"
+          ><input
+            type="checkbox"
+            v-model="showExcluded"
+            class="w-2.5 h-2.5"
+          />出力対象外を表示</label
+        >
+        <label class="flex items-center gap-1 cursor-pointer"
+          ><input type="checkbox" v-model="showWarnings" class="w-2.5 h-2.5" />警告を表示</label
+        >
         <div class="border-l border-gray-300 h-4 mx-1"></div>
-        <select v-model="debitAccountFilter" class="border border-gray-300 px-1.5 py-0.5 rounded text-[10px]">
+        <select
+          v-model="debitAccountFilter"
+          class="border border-gray-300 px-1.5 py-0.5 rounded text-[10px]"
+        >
           <option value="">借方勘定科目</option>
           <option v-for="name in accountNames" :key="'d-' + name" :value="name">{{ name }}</option>
         </select>
-        <select v-model="creditAccountFilter" class="border border-gray-300 px-1.5 py-0.5 rounded text-[10px]">
+        <select
+          v-model="creditAccountFilter"
+          class="border border-gray-300 px-1.5 py-0.5 rounded text-[10px]"
+        >
           <option value="">貸方勘定科目</option>
           <option v-for="name in accountNames" :key="'c-' + name" :value="name">{{ name }}</option>
         </select>
       </div>
-      <div class="flex-1 text-center text-[12px] text-gray-700 font-semibold">合計金額：¥{{ totalAmount.toLocaleString() }}</div>
+      <div class="flex-1 text-center text-[12px] text-gray-700 font-semibold">
+        合計金額：¥{{ totalAmount.toLocaleString() }}
+      </div>
     </div>
 
     <!-- ページネーション -->
     <div class="bg-white px-3 py-1.5 flex items-center justify-between border-b border-gray-200">
       <div class="flex items-center gap-1">
         <button
-          v-for="p in displayPages" :key="p"
+          v-for="p in displayPages"
+          :key="p"
           class="px-1.5 py-0.5 border border-gray-300 rounded text-[10px] transition-colors"
-          :class="p === currentPage ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-100'"
+          :class="
+            p === currentPage
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          "
           @click="currentPage = p"
-        >{{ p }}</button>
+        >
+          {{ p }}
+        </button>
         <button
           class="px-1.5 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100"
           @click="currentPage = Math.min(totalPages, currentPage + 1)"
-        >＞</button>
-        <span class="ml-2 text-[10px] text-gray-500">全{{ filteredJournalCount }}件（{{ filteredRows.length }}行）</span>
+        >
+          ＞
+        </button>
+        <span class="ml-2 text-[10px] text-gray-500"
+          >全{{ filteredJournalCount }}件（{{ filteredRows.length }}行）</span
+        >
       </div>
       <div class="flex items-center gap-2">
-        <button class="px-2 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1" @click="showRealtimeUpdateMsg">
+        <button
+          class="px-2 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1"
+          @click="showRealtimeUpdateMsg"
+        >
           <i class="fa-solid fa-arrows-rotate text-[8px]"></i> 更新
         </button>
       </div>
@@ -64,70 +128,125 @@
 
     <!-- テーブル -->
     <div class="flex-1 overflow-auto">
-      <table class="w-full border-collapse text-[10px]" style="table-layout: fixed;">
+      <table class="w-full border-collapse text-[10px]" style="table-layout: fixed">
         <thead>
           <tr class="bg-blue-100 text-gray-800 sticky top-0">
             <!-- ダウンロード対象列（ソート対応） -->
-            <th class="p-1 border-r border-gray-300 text-center cursor-pointer hover:bg-blue-200 select-none relative"
-                :style="{ width: exColWidths['checked'] + 'px' }"
-                @click="handleSort('checked')">
-              <div>ダウンロード対象 <span v-if="sortKey === 'checked'" class="text-[8px]">{{ sortDir === 'asc' ? '▲' : '▼' }}</span></div>
-              <div class="mt-0.5"><input type="checkbox" class="w-2.5 h-2.5" :checked="isAllPageChecked" @change="toggleAll"></div>
+            <th
+              class="p-1 border-r border-gray-300 text-center cursor-pointer hover:bg-blue-200 select-none relative"
+              :style="{ width: exColWidths['checked'] + 'px' }"
+              @click="handleSort('checked')"
+            >
+              <div>
+                ダウンロード対象
+                <span v-if="sortKey === 'checked'" class="text-[8px]">{{
+                  sortDir === "asc" ? "▲" : "▼"
+                }}</span>
+              </div>
+              <div class="mt-0.5">
+                <input
+                  type="checkbox"
+                  class="w-2.5 h-2.5"
+                  :checked="isAllPageChecked"
+                  @change="toggleAll"
+                />
+              </div>
               <div class="resize-handle" @mousedown.stop="onExResizeStart('checked', $event)"></div>
             </th>
-            <th class="p-1 border-r border-gray-300 text-center" style="width: 35px;">No</th>
-            <th v-for="col in sortableColumns" :key="col.key"
-                class="p-1 border-r border-gray-300 cursor-pointer hover:bg-blue-200 select-none relative"
-                :class="[col.align]"
-                :style="{ width: exColWidths[col.key] + 'px' }"
-                @click="handleSort(col.key)">
+            <th class="p-1 border-r border-gray-300 text-center" style="width: 35px">No</th>
+            <th
+              v-for="col in sortableColumns"
+              :key="col.key"
+              class="p-1 border-r border-gray-300 cursor-pointer hover:bg-blue-200 select-none relative"
+              :class="[col.align]"
+              :style="{ width: exColWidths[col.key] + 'px' }"
+              @click="handleSort(col.key)"
+            >
               {{ col.label }}
-              <span v-if="sortKey === col.key" class="text-[8px]">{{ sortDir === 'asc' ? '▲' : '▼' }}</span>
+              <span v-if="sortKey === col.key" class="text-[8px]">{{
+                sortDir === "asc" ? "▲" : "▼"
+              }}</span>
               <div class="resize-handle" @mousedown.stop="onExResizeStart(col.key, $event)"></div>
             </th>
           </tr>
         </thead>
         <tbody>
           <tr
-            v-for="(row, idx) in pagedRows" :key="row.id"
+            v-for="(row, idx) in pagedRows"
+            :key="row.id"
             class="border-b border-gray-200 hover:bg-blue-50 transition-colors"
             :class="getRowClass(row, idx)"
           >
-            <td class="p-1 text-center border-r border-gray-200"><input type="checkbox" class="w-2.5 h-2.5" :checked="checkedIds.has(row.id)" @change="toggleCheck(row.id)"></td>
-            <td class="p-1 text-center border-r border-gray-200">{{ idx + 1 + (currentPage - 1) * PAGE_SIZE }}</td>
+            <td class="p-1 text-center border-r border-gray-200">
+              <input
+                type="checkbox"
+                class="w-2.5 h-2.5"
+                :checked="checkedIds.has(row.id)"
+                @change="toggleCheck(row.id)"
+              />
+            </td>
+            <td class="p-1 text-center border-r border-gray-200">
+              {{ idx + 1 + (currentPage - 1) * PAGE_SIZE }}
+            </td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.qualified }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.date }}</td>
-            <td class="p-1 border-r border-gray-200 truncate max-w-[200px]">{{ row.description }}</td>
+            <td class="p-1 border-r border-gray-200 truncate max-w-[200px]">
+              {{ row.description }}
+            </td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.debitAccount }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.debitSub }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.debitTax }}</td>
-            <td class="p-1 text-right border-r border-gray-200">{{ row.debitAmount != null ? '¥' + row.debitAmount.toLocaleString() : '' }}</td>
+            <td class="p-1 text-right border-r border-gray-200">
+              {{ row.debitAmount != null ? "¥" + row.debitAmount.toLocaleString() : "" }}
+            </td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.creditAccount }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.creditSub }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.creditTax }}</td>
-            <td class="p-1 text-right border-r border-gray-200">{{ row.creditAmount != null ? '¥' + row.creditAmount.toLocaleString() : '' }}</td>
+            <td class="p-1 text-right border-r border-gray-200">
+              {{ row.creditAmount != null ? "¥" + row.creditAmount.toLocaleString() : "" }}
+            </td>
             <td class="p-1 text-center">{{ row.importDate }}</td>
           </tr>
           <tr v-if="pagedRows.length === 0">
-            <td :colspan="sortableColumns.length + 2" class="p-6 text-center text-gray-400">出力対象のデータがありません</td>
+            <td :colspan="sortableColumns.length + 2" class="p-6 text-center text-gray-400">
+              出力対象のデータがありません
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <!-- ダウンロード確認モーダル -->
-    <div v-if="showDownloadModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="cancelDownload">
+    <div
+      v-if="showDownloadModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      @click.self="cancelDownload"
+    >
       <div class="bg-white rounded-lg shadow-xl p-6 min-w-[340px] text-center">
         <template v-if="!isDownloading">
-          <p class="text-[14px] font-semibold text-gray-800 mb-4">CSV形式でダウンロードしますか？</p>
+          <p class="text-[14px] font-semibold text-gray-800 mb-4">
+            CSV形式でダウンロードしますか？
+          </p>
           <div class="flex justify-center gap-4">
-            <button class="px-6 py-2 bg-blue-600 text-white rounded text-[12px] font-semibold hover:bg-blue-700" @click="startDownload">はい</button>
-            <button class="px-6 py-2 border border-gray-300 rounded text-[12px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200" @click="cancelDownload">いいえ</button>
+            <button
+              class="px-6 py-2 bg-blue-600 text-white rounded text-[12px] font-semibold hover:bg-blue-700"
+              @click="startDownload"
+            >
+              はい
+            </button>
+            <button
+              class="px-6 py-2 border border-gray-300 rounded text-[12px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200"
+              @click="cancelDownload"
+            >
+              いいえ
+            </button>
           </div>
         </template>
         <template v-else>
           <div class="flex flex-col items-center gap-4">
-            <div class="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            <div
+              class="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"
+            ></div>
             <p class="text-[14px] font-semibold text-gray-800">ダウンロード中です</p>
             <p class="text-[11px] text-gray-500">最大1〜2分かかる場合があります</p>
           </div>
@@ -138,72 +257,85 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import { useJournals } from '@/mocks/composables/useJournals';
-import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
-import { useColumnResize } from '@/mocks/composables/useColumnResize';
-import { validateForCsvExport, buildMfCsvContent, downloadMfCsv, EXCLUDE_LABELS } from '@/mocks/utils/exportMfCsv';
-import { syncWarningLabelsCore } from '@/mocks/utils/journalWarningSync';
-import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
+import { ref, computed, watch, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import { useJournals } from "@/mocks/composables/useJournals";
+import { useAccountSettings } from "@/features/account-settings/composables/useAccountSettings";
+import { useColumnResize } from "@/mocks/composables/useColumnResize";
+import {
+  validateForCsvExport,
+  buildMfCsvContent,
+  downloadMfCsv,
+  EXCLUDE_LABELS,
+} from "@/mocks/utils/exportMfCsv";
+import { syncWarningLabelsCore } from "@/mocks/utils/journalWarningSync";
+import { toMfCsvDate } from "@/shared/utils/mf-csv-date";
 
 const route = useRoute();
-const clientId = computed(() => (route.params.clientId as string) ?? 'LDI-00008');
+const clientId = computed(() => (route.params.clientId as string) ?? "LDI-00008");
 const { journals } = useJournals(clientId);
 
 // 列幅カスタマイズ
 const exDefaultWidths: Record<string, number> = {
   checked: 90,
-  qualified: 30, date: 70, description: 180,
-  debitAccount: 100, debitSub: 80, debitTax: 80, debitAmount: 80,
-  creditAccount: 100, creditSub: 80, creditTax: 80, creditAmount: 80,
+  qualified: 30,
+  date: 70,
+  description: 180,
+  debitAccount: 100,
+  debitSub: 80,
+  debitTax: 80,
+  debitAmount: 80,
+  creditAccount: 100,
+  creditSub: 80,
+  creditTax: 80,
+  creditAmount: 80,
   importDate: 70,
 };
-const { columnWidths: exColWidths, onResizeStart: onExResizeStart } = useColumnResize('export', exDefaultWidths);
+const { columnWidths: exColWidths, onResizeStart: onExResizeStart } = useColumnResize(
+  "export",
+  exDefaultWidths,
+);
 
-const clientSettings = useAccountSettings('client', clientId.value);
+const clientSettings = useAccountSettings("client", clientId.value);
 
 // 出力ページ初期化時: 全仕訳の警告ラベルを同期（顧問先設定でバリデーション）
 onMounted(() => {
   // 顧問先設定の科目・税区分でバリデーション（顧問先設定外→ACCOUNT_UNKNOWN/TAX_UNKNOWN）
   const accounts = clientSettings.accounts.value;
   const taxCategories = clientSettings.taxCategories.value;
-  journals.value.forEach(j => syncWarningLabelsCore(j, accounts, taxCategories));
+  journals.value.forEach((j) => syncWarningLabelsCore(j, accounts, taxCategories));
 });
 
 // --- 勘定科目マスタから科目名リスト（顧問先設定優先、deprecated除外） ---
 const accountNames = computed(() => {
   const source = clientSettings.accounts.value;
-  const names = source
-    .filter(a => !a.deprecated)
-    .map(a => a.name);
+  const names = source.filter((a) => !a.deprecated).map((a) => a.name);
   return [...new Set(names)];
 });
 
-const debitAccountFilter = ref('');
-const creditAccountFilter = ref('');
+const debitAccountFilter = ref("");
+const creditAccountFilter = ref("");
 
 function resolveAccountName(id: string | null | undefined): string {
-  if (!id) return ''
+  if (!id) return "";
   // 顧問先設定を優先、見つからなければマスタ全体からフォールバック
-  const account = clientSettings.accounts.value.find(a => a.id === id)
-  return account ? account.name : id
+  const account = clientSettings.accounts.value.find((a) => a.id === id);
+  return account ? account.name : id;
 }
 
 function resolveTaxCategoryName(id: string | null | undefined): string {
-  if (!id) return ''
-  const entry = clientSettings.taxCategories.value.find(tc => tc.id === id)
-  return entry ? entry.name : id
+  if (!id) return "";
+  const entry = clientSettings.taxCategories.value.find((tc) => tc.id === id);
+  return entry ? entry.name : id;
 }
 
-
 // --- ダウンロードファイル名 ---
-const downloadFileName = ref('');
+const downloadFileName = ref("");
 const showFileNameHelp = ref(false);
 
 // --- 変更ボタン ---
-const showNotImplemented = () => globalThis.alert('未実装です');
-const showRealtimeUpdateMsg = () => globalThis.alert('現在はリアルタイム更新です');
+const showNotImplemented = () => globalThis.alert("未実装です");
+const showRealtimeUpdateMsg = () => globalThis.alert("現在はリアルタイム更新です");
 
 // --- セグメント ---
 const showTargetOnly = ref(true);
@@ -218,16 +350,14 @@ const startDownload = () => {
   // composableから仕訳データを取得
   // checkedIdsは展開後のid（jrn-00000001-0）なので、元のjournal id（jrn-00000001）を抽出
   const sourceJournals = journals.value;
-  const checkedJournalIds = new Set(
-    [...checkedIds.value].map(rid => rid.replace(/-\d+$/, ''))
-  );
+  const checkedJournalIds = new Set([...checkedIds.value].map((rid) => rid.replace(/-\d+$/, "")));
   const checkedJournals = sourceJournals.filter(
-    j => j.deleted_at === null && checkedJournalIds.has(j.id)
+    (j) => j.deleted_at === null && checkedJournalIds.has(j.id),
   );
   if (checkedJournals.length === 0) {
     isDownloading.value = false;
     showDownloadModal.value = false;
-    globalThis.alert('ダウンロード対象の仕訳がありません。');
+    globalThis.alert("ダウンロード対象の仕訳がありません。");
     return;
   }
   // バリデーション適用（警告付き仕訳を除外）
@@ -241,18 +371,20 @@ const startDownload = () => {
   // スピナー表示後、少し待ってからダウンロード
   setTimeout(() => {
     const csvContent = buildMfCsvContent(valid, resolveAccountName, resolveTaxCategoryName);
-    const clientCode = clientId.value.split('-')[0] ?? clientId.value.slice(0, 3);
-    const fname = downloadFileName.value || `${clientCode}_マネーフォワード_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+    const clientCode = clientId.value.split("-")[0] ?? clientId.value.slice(0, 3);
+    const fname =
+      downloadFileName.value ||
+      `${clientCode}_マネーフォワード_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
     downloadMfCsv(csvContent, `${fname}.csv`);
     // 出力した仕訳のstatusをexportedに変更（二重出力防止）
     const exportedAt = new Date().toISOString();
     const historyId = `h-${Date.now()}`;
     for (const v of valid) {
-      const target = journals.value.find(j => j.id === v.id);
+      const target = journals.value.find((j) => j.id === v.id);
       if (target) {
-        target.status = 'exported';
+        target.status = "exported";
         target.exported_at = exportedAt;
-        target.exported_by = 'staff-0001'; // モック段階では固定
+        target.exported_by = "staff-0001"; // モック段階では固定
         target.export_batch_id = historyId; // バッチIDを紐付け
       }
     }
@@ -260,13 +392,16 @@ const startDownload = () => {
     saveDownloadHistory(`${fname}.csv`, valid.length, historyId);
     // CSVスナップショットをlocalStorageに保持（再ダウンロード用）
     const csvKey = `sugu-suru:export-csv:${clientId.value}:${historyId}`;
-    localStorage.setItem(csvKey, JSON.stringify({
-      historyId,
-      fileName: fname,
-      exportDate: toMfCsvDate(new Date().toISOString().slice(0, 10)),
-      journalCount: valid.length,
-      csvContent,
-    }));
+    localStorage.setItem(
+      csvKey,
+      JSON.stringify({
+        historyId,
+        fileName: fname,
+        exportDate: toMfCsvDate(new Date().toISOString().slice(0, 10)),
+        journalCount: valid.length,
+        csvContent,
+      }),
+    );
     isDownloading.value = false;
     showDownloadModal.value = false;
   }, 500);
@@ -275,14 +410,14 @@ const startDownload = () => {
 /** ダウンロード履歴をlocalStorageに保存 */
 function saveDownloadHistory(fileName: string, count: number, historyId: string) {
   const key = `sugu-suru:export-history:${clientId.value}`;
-  const existing = JSON.parse(localStorage.getItem(key) || '[]');
+  const existing = JSON.parse(localStorage.getItem(key) || "[]");
   const today = new Date();
   existing.unshift({
     id: historyId,
     exportDate: toMfCsvDate(today.toISOString().slice(0, 10)),
     fileName,
     count,
-    status: '出力済',
+    status: "出力済",
   });
   localStorage.setItem(key, JSON.stringify(existing));
 }
@@ -302,29 +437,29 @@ interface Column {
 }
 
 const sortableColumns: Column[] = [
-  { key: 'qualified',     label: '適格',         width: 'w-[30px]',      align: 'text-center' },
-  { key: 'date',          label: '日付',         width: 'w-[70px]',      align: 'text-center' },
-  { key: 'description',   label: '摘要',         width: 'min-w-[180px]', align: 'text-left' },
-  { key: 'debitAccount',  label: '借方勘定科目', width: 'w-[100px]',     align: 'text-center' },
-  { key: 'debitSub',      label: '借方補助科目', width: 'w-[80px]',      align: 'text-center' },
-  { key: 'debitTax',      label: '借方税区分',   width: 'w-[80px]',      align: 'text-center' },
-  { key: 'debitAmount',   label: '借方金額',     width: 'w-[80px]',      align: 'text-right' },
-  { key: 'creditAccount', label: '貸方勘定科目', width: 'w-[100px]',     align: 'text-center' },
-  { key: 'creditSub',     label: '貸方補助科目', width: 'w-[80px]',      align: 'text-center' },
-  { key: 'creditTax',     label: '貸方税区分',   width: 'w-[80px]',      align: 'text-center' },
-  { key: 'creditAmount',  label: '貸方金額',     width: 'w-[80px]',      align: 'text-right' },
-  { key: 'importDate',    label: '取込日',       width: 'w-[70px]',      align: 'text-center' },
+  { key: "qualified", label: "適格", width: "w-[30px]", align: "text-center" },
+  { key: "date", label: "日付", width: "w-[70px]", align: "text-center" },
+  { key: "description", label: "摘要", width: "min-w-[180px]", align: "text-left" },
+  { key: "debitAccount", label: "借方勘定科目", width: "w-[100px]", align: "text-center" },
+  { key: "debitSub", label: "借方補助科目", width: "w-[80px]", align: "text-center" },
+  { key: "debitTax", label: "借方税区分", width: "w-[80px]", align: "text-center" },
+  { key: "debitAmount", label: "借方金額", width: "w-[80px]", align: "text-right" },
+  { key: "creditAccount", label: "貸方勘定科目", width: "w-[100px]", align: "text-center" },
+  { key: "creditSub", label: "貸方補助科目", width: "w-[80px]", align: "text-center" },
+  { key: "creditTax", label: "貸方税区分", width: "w-[80px]", align: "text-center" },
+  { key: "creditAmount", label: "貸方金額", width: "w-[80px]", align: "text-right" },
+  { key: "importDate", label: "取込日", width: "w-[70px]", align: "text-center" },
 ];
 
 // --- ソート ---
 const sortKey = ref<string | null>(null);
-const sortDir = ref<'asc' | 'desc'>('asc');
+const sortDir = ref<"asc" | "desc">("asc");
 const handleSort = (key: string) => {
   if (sortKey.value === key) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+    sortDir.value = sortDir.value === "asc" ? "desc" : "asc";
   } else {
     sortKey.value = key;
-    sortDir.value = 'asc';
+    sortDir.value = "asc";
   }
 };
 
@@ -354,32 +489,32 @@ interface ExportRow {
 const allRows = computed<ExportRow[]>(() => {
   const rows: ExportRow[] = [];
   journals.value
-    .filter(j => j.deleted_at === null && j.status !== 'exported')
-    .forEach(j => {
-      const dismissals = (j as any).warning_dismissals as string[] ?? [];
-      const isWarning = (j.labels as string[]).some(l =>
-        (EXCLUDE_LABELS as readonly string[]).includes(l) && !dismissals.includes(l)
+    .filter((j) => j.deleted_at === null && j.status !== "exported")
+    .forEach((j) => {
+      const dismissals = ((j as any).warning_dismissals as string[]) ?? [];
+      const isWarning = (j.labels as string[]).some(
+        (l) => (EXCLUDE_LABELS as readonly string[]).includes(l) && !dismissals.includes(l),
       );
-      const isExcluded = j.labels.includes('EXPORT_EXCLUDE');
-      const isExported = j.status === 'exported';
+      const isExcluded = j.labels.includes("EXPORT_EXCLUDE");
+      const isExported = j.status === "exported";
       const maxLen = Math.max(j.debit_entries.length, j.credit_entries.length);
       for (let i = 0; i < maxLen; i++) {
         const debit = j.debit_entries[i];
         const credit = j.credit_entries[i];
         rows.push({
           id: `${j.id}-${i}`,
-          qualified: i === 0 ? (j.invoice_status === 'qualified' ? '○' : '') : '',
-          date: i === 0 ? toMfCsvDate(j.voucher_date ?? '') : '',
-          description: i === 0 ? j.description : '',
-          debitAccount: debit ? resolveAccountName(debit.account) : '',
-          debitSub: debit?.sub_account ?? '',
-          debitTax: debit ? resolveTaxCategoryName(debit.tax_category_id) : '',
+          qualified: i === 0 ? (j.invoice_status === "qualified" ? "○" : "") : "",
+          date: i === 0 ? toMfCsvDate(j.voucher_date ?? "") : "",
+          description: i === 0 ? j.description : "",
+          debitAccount: debit ? resolveAccountName(debit.account) : "",
+          debitSub: debit?.sub_account ?? "",
+          debitTax: debit ? resolveTaxCategoryName(debit.tax_category_id) : "",
           debitAmount: debit?.amount ?? null,
-          creditAccount: credit ? resolveAccountName(credit.account) : '',
-          creditSub: credit?.sub_account ?? '',
-          creditTax: credit ? resolveTaxCategoryName(credit.tax_category_id) : '',
+          creditAccount: credit ? resolveAccountName(credit.account) : "",
+          creditSub: credit?.sub_account ?? "",
+          creditTax: credit ? resolveTaxCategoryName(credit.tax_category_id) : "",
           creditAmount: credit?.amount ?? null,
-          importDate: toMfCsvDate(j.created_at ?? ''),
+          importDate: toMfCsvDate(j.created_at ?? ""),
           isExcluded,
           isWarning,
           isExported,
@@ -391,13 +526,16 @@ const allRows = computed<ExportRow[]>(() => {
 
 // セグメントフィルタ（加算的：チェックONのカテゴリのみ表示）
 const filteredRows = computed<ExportRow[]>(() => {
-  return allRows.value.filter(row => {
+  return allRows.value.filter((row) => {
     // 各行のカテゴリを判定し、対応するチェックがONの場合のみ表示
     const isTarget = !row.isExcluded && !row.isWarning;
-    if (isTarget && showTargetOnly.value) { /* 表示 */ }
-    else if (row.isExcluded && showExcluded.value) { /* 表示 */ }
-    else if (row.isWarning && showWarnings.value) { /* 表示 */ }
-    else return false;
+    if (isTarget && showTargetOnly.value) {
+      /* 表示 */
+    } else if (row.isExcluded && showExcluded.value) {
+      /* 表示 */
+    } else if (row.isWarning && showWarnings.value) {
+      /* 表示 */
+    } else return false;
 
     if (debitAccountFilter.value && row.debitAccount !== debitAccountFilter.value) return false;
     if (creditAccountFilter.value && row.creditAccount !== creditAccountFilter.value) return false;
@@ -407,7 +545,7 @@ const filteredRows = computed<ExportRow[]>(() => {
 
 // 仕訳単位の件数（行ではなく仕訳数。複合仕訳は1件としてカウント）
 const filteredJournalCount = computed(() => {
-  const ids = new Set(filteredRows.value.map(r => r.id.replace(/-\d+$/, '')));
+  const ids = new Set(filteredRows.value.map((r) => r.id.replace(/-\d+$/, "")));
   return ids.size;
 });
 
@@ -416,9 +554,9 @@ const sortedRows = computed<ExportRow[]>(() => {
   const rows = [...filteredRows.value];
   if (!sortKey.value) return rows;
 
-  const dir = sortDir.value === 'asc' ? 1 : -1;
+  const dir = sortDir.value === "asc" ? 1 : -1;
 
-  if (sortKey.value === 'checked') {
+  if (sortKey.value === "checked") {
     // ✓ソート: checked→unchecked or unchecked→checked
     rows.sort((a, b) => {
       const ac = checkedIds.value.has(a.id) ? 1 : 0;
@@ -435,8 +573,9 @@ const sortedRows = computed<ExportRow[]>(() => {
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
     if (bv == null) return -1;
-    if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
-    if (typeof av === 'boolean' && typeof bv === 'boolean') return ((av ? 1 : 0) - (bv ? 1 : 0)) * dir;
+    if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+    if (typeof av === "boolean" && typeof bv === "boolean")
+      return ((av ? 1 : 0) - (bv ? 1 : 0)) * dir;
     return String(av).localeCompare(String(bv)) * dir;
   });
   return rows;
@@ -458,14 +597,14 @@ const pagedRows = computed(() => {
 
 // --- 合計金額 ---
 const totalAmount = computed(() =>
-  filteredRows.value.reduce((sum, r) => sum + (r.debitAmount ?? 0), 0)
+  filteredRows.value.reduce((sum, r) => sum + (r.debitAmount ?? 0), 0),
 );
 
 // --- 行背景色 ---
 const getRowClass = (row: ExportRow, idx: number): string => {
-  if (row.isExcluded) return 'bg-gray-200 opacity-60';
-  if (row.isWarning) return 'bg-red-50 border-l-[3px] border-l-red-400';
-  return idx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+  if (row.isExcluded) return "bg-gray-200 opacity-60";
+  if (row.isWarning) return "bg-red-50 border-l-[3px] border-l-red-400";
+  return idx % 2 === 0 ? "bg-white" : "bg-gray-50";
 };
 
 // --- チェック（ダウンロードする）管理 ---
@@ -474,7 +613,7 @@ const checkedIds = ref<Set<string>>(new Set());
 
 const initChecks = () => {
   const ids = new Set<string>();
-  allRows.value.forEach(r => {
+  allRows.value.forEach((r) => {
     if (!r.isExcluded && !r.isWarning) ids.add(r.id);
   });
   checkedIds.value = ids;
@@ -493,16 +632,16 @@ const toggleCheck = (id: string) => {
   checkedIds.value = next;
 };
 
-const isAllPageChecked = computed(() =>
-  pagedRows.value.length > 0 && pagedRows.value.every(r => checkedIds.value.has(r.id))
+const isAllPageChecked = computed(
+  () => pagedRows.value.length > 0 && pagedRows.value.every((r) => checkedIds.value.has(r.id)),
 );
 
 const toggleAll = () => {
   const next = new Set(checkedIds.value);
   if (isAllPageChecked.value) {
-    pagedRows.value.forEach(r => next.delete(r.id));
+    pagedRows.value.forEach((r) => next.delete(r.id));
   } else {
-    pagedRows.value.forEach(r => next.add(r.id));
+    pagedRows.value.forEach((r) => next.add(r.id));
   }
   checkedIds.value = next;
 };
@@ -511,8 +650,17 @@ const toggleAll = () => {
 <style scoped>
 /* リサイズハンドル */
 .resize-handle {
-  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
-  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 2;
 }
-.resize-handle:hover { background: #1976D2; }
+.resize-handle:hover {
+  background: #1976d2;
+}
 </style>
