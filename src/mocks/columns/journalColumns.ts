@@ -53,8 +53,8 @@ export const journalColumns: JournalColumn[] = [
   { key: "credit.tax_category_id", label: "貸方税区分", width: "w-20", defaultPx: 80, type: "text", sortKey: "credit_tax" },
   { key: "credit.amount", label: "貸方金額", width: "w-16", defaultPx: 64, type: "amount", sortKey: "credit_amount" },
 
-  // --- 操作（末尾） ---
-  { key: "actions", label: "操作", width: "w-8", defaultPx: 32, type: "action", icon: "⋮" },
+  // --- ヒント（末尾） ---
+  { key: "actions", label: "ヒント", width: "w-8", defaultPx: 32, type: "action", icon: "💡" },
 ];
 
 /** useColumnResize用のデフォルト幅マップ生成 */

@@ -1249,7 +1249,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     display_order: 35,
     voucher_date: '2025-02-15', date_on_document: true,
     description: '決算仕訳（費用振替）',
-    voucher_type: '振替',
+    voucher_type: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,

@@ -234,9 +234,9 @@
             <span class="flex items-center gap-0.5">
               {{ col.label }}
               <span
-                v-if="col.key === 'labelType' || col.key === 'warning'"
+                v-if="col.key === 'labelType' || col.key === 'warning' || col.key === 'voucher_type'"
                 class="relative inline-flex"
-                @mouseenter="legendModalType = col.key as 'labelType' | 'warning'"
+                @mouseenter="legendModalType = col.key as 'labelType' | 'warning' | 'voucher_type'"
                 @mouseleave="legendModalType = null"
               >
                 <span
@@ -322,6 +322,100 @@
                   </div>
                 </div>
               </span>
+              <!-- 証票意味ポップオーバー -->
+              <div
+                v-if="legendModalType === 'voucher_type' && col.key === 'voucher_type'"
+                class="absolute top-full left-0 mt-1 z-[110] transform origin-top-left"
+              >
+                <div
+                  class="bg-gray-900/95 rounded-xl shadow-2xl w-[520px] overflow-hidden border border-gray-700"
+                >
+                  <div
+                    class="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 bg-gradient-to-r from-blue-900/40 to-purple-900/40"
+                  >
+                    <span class="text-white font-bold text-[14px] flex items-center gap-1.5"
+                      >📋 証票意味ごとの許容科目ルール</span
+                    >
+                  </div>
+                  <div class="p-3 text-[12px]">
+                    <table class="w-full border-collapse">
+                      <thead>
+                        <tr class="text-gray-400 text-[11px]">
+                          <th class="text-left px-2 py-1.5 w-[90px] border-b-2 border-gray-600">証票意味</th>
+                          <th class="text-left px-2 py-1.5 border-b-2 border-gray-600">
+                            <span class="flex items-center gap-1">⬅ 借方（左）</span>
+                          </th>
+                          <th class="text-left px-2 py-1.5 border-b-2 border-gray-600">
+                            <span class="flex items-center gap-1">➡ 貸方（右）</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="border-b border-gray-800/60 bg-gray-800/20">
+                          <td class="px-2 py-2 font-bold">
+                            <span class="inline-flex items-center gap-1 text-blue-300">🧾 経費</span>
+                          </td>
+                          <td class="px-2 py-2 text-gray-200">
+                            <span class="bg-blue-500/20 text-blue-200 px-1.5 py-0.5 rounded text-[10px]">費用科目全般</span>
+                          </td>
+                          <td class="px-2 py-2 text-gray-300">現金・預金・未払金・仮払金</td>
+                        </tr>
+                        <tr class="border-b border-gray-800/60">
+                          <td class="px-2 py-2 font-bold">
+                            <span class="inline-flex items-center gap-1 text-blue-300">💰 売上</span>
+                          </td>
+                          <td class="px-2 py-2 text-gray-300">売掛金・現金・預金</td>
+                          <td class="px-2 py-2 text-gray-200">
+                            <span class="bg-green-500/20 text-green-200 px-1.5 py-0.5 rounded text-[10px]">収益科目全般</span>
+                          </td>
+                        </tr>
+                        <tr class="border-b border-gray-800/60 bg-gray-800/20">
+                          <td class="px-2 py-2 font-bold">
+                            <span class="inline-flex items-center gap-1 text-purple-300">💳 クレカ</span>
+                          </td>
+                          <td class="px-2 py-2 text-gray-200">
+                            <span class="bg-blue-500/20 text-blue-200 px-1.5 py-0.5 rounded text-[10px]">費用科目全般</span>
+                          </td>
+                          <td class="px-2 py-2 text-gray-300">未払金のみ</td>
+                        </tr>
+                        <tr class="border-b border-gray-800/60">
+                          <td class="px-2 py-2 font-bold">
+                            <span class="inline-flex items-center gap-1 text-purple-300">🏦 クレカ引落</span>
+                          </td>
+                          <td class="px-2 py-2 text-gray-300">未払金のみ</td>
+                          <td class="px-2 py-2 text-gray-300">預金口座</td>
+                        </tr>
+                        <tr class="border-b border-gray-800/60 bg-gray-800/20">
+                          <td class="px-2 py-2 font-bold">
+                            <span class="inline-flex items-center gap-1 text-green-300">👤 給与</span>
+                          </td>
+                          <td class="px-2 py-2 text-gray-300">給料手当・役員報酬・賞与</td>
+                          <td class="px-2 py-2 text-gray-300">預金<span class="text-gray-500 text-[10px]">（手取）</span>+ 預り金<span class="text-gray-500 text-[10px]">（天引）</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-800/60">
+                          <td class="px-2 py-2 font-bold">
+                            <span class="inline-flex items-center gap-1 text-orange-300">📝 立替経費</span>
+                          </td>
+                          <td class="px-2 py-2 text-gray-200">
+                            <span class="bg-blue-500/20 text-blue-200 px-1.5 py-0.5 rounded text-[10px]">費用科目全般</span>
+                          </td>
+                          <td class="px-2 py-2 text-gray-300">立替金・未収金</td>
+                        </tr>
+                        <tr>
+                          <td class="px-2 py-2 font-bold">
+                            <span class="inline-flex items-center gap-1 text-cyan-300">🔄 振替</span>
+                          </td>
+                          <td class="px-2 py-2 text-gray-300">預金口座</td>
+                          <td class="px-2 py-2 text-gray-300">預金口座</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div class="mt-3 pt-2 border-t border-gray-700 text-[10px] text-gray-400 px-1 flex items-center gap-1">
+                      <span class="text-yellow-400">⚠</span> 上記以外の科目を使用した場合、証票意味矛盾警告が表示されます
+                    </div>
+                  </div>
+                </div>
+              </div>
             </span>
           </template>
           <!-- リサイズハンドル -->
@@ -801,6 +895,7 @@
                         @change="
                           journal.voucher_type = editingValue;
                           journal.is_read = true;
+                          syncWarningLabels(journal);
                           editingCell = null;
                         "
                         @blur="editingCell = null"
@@ -1241,12 +1336,11 @@
                 :style="colWidthStyle(col)"
                 :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center relative']"
               >
-                <!-- ⋮ ボタン（rowIndex===0のみ活性） -->
+                <!-- 💡 ヒントアイコン（全行表示） -->
                 <span
-                  v-if="rowIndex === 0"
-                  class="text-gray-500 hover:text-blue-600 cursor-pointer text-xs font-bold"
-                  :title="col.label"
-                  @click.stop="toggleDropdown(journal.id)"
+                  class="text-amber-400 hover:text-amber-600 cursor-pointer text-xs"
+                  title="ヒント"
+                  @click.stop="openHintModal(journal)"
                 >
                   {{ col.icon }}
                 </span>
@@ -1824,6 +1918,165 @@
         ></div>
       </div>
     </Teleport>
+
+    <!-- ────── ヒントモーダル（ドラッグ可能） ────── -->
+    <Teleport to="body">
+      <div
+        v-if="hintModalJournal"
+        ref="hintModalRef"
+        :style="{
+          top: hintModalPos.top + 'px',
+          left: hintModalPos.left + 'px',
+          zIndex: hintModalZ,
+        }"
+        class="fixed bg-white rounded-xl shadow-2xl w-[520px] max-h-[80vh] overflow-y-auto border border-gray-200 cursor-move"
+        style="resize: both; min-width: 360px; min-height: 200px"
+        @click.stop
+        @mousedown="modalDrag(startHintDrag, $event)"
+      >
+        <!-- ヘッダー（ドラッグハンドル） -->
+        <div
+          class="bg-gradient-to-r from-amber-50 to-amber-100 px-5 py-3 border-b flex items-center justify-between rounded-t-xl cursor-move select-none"
+          @mousedown="startHintDrag"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-lg">💡</span>
+            <h3 class="text-sm font-bold text-gray-800">ヒント</h3>
+            <span class="text-[10px] text-gray-500 bg-white px-2 py-0.5 rounded-full border">No.{{ hintModalJournalIndex + 1 }}</span>
+            <span class="text-[10px] text-amber-600">※移動できます</span>
+          </div>
+          <button @click="hintModalJournal = null" class="text-gray-400 hover:text-gray-700 text-lg">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- 仕訳概要 -->
+        <div class="px-5 py-3 bg-gray-50 border-b text-xs">
+          <div class="flex gap-4">
+            <span><b>日付:</b> {{ hintModalJournal.voucher_date || '未設定' }}</span>
+            <span><b>摘要:</b> {{ hintModalJournal.description || '未設定' }}</span>
+            <span><b>証票意味:</b> {{ hintModalJournal.voucher_type || '未設定' }}</span>
+          </div>
+        </div>
+
+        <!-- ① バリデーション結果 -->
+        <div class="px-5 py-3 border-b">
+          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
+            📋 バリデーション結果
+          </h4>
+          <div v-if="hintValidations.length === 0" class="flex items-center gap-2 text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+            <span class="text-base">✅</span>
+            <span>この仕訳に問題は検出されませんでした</span>
+          </div>
+          <div v-else class="space-y-1.5">
+            <div
+              v-for="(v, vi) in hintValidations"
+              :key="vi"
+              :class="[
+                'flex items-start gap-2 text-xs rounded-lg px-3 py-2',
+                v.level === 'error' ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-800',
+              ]"
+            >
+              <span class="text-base flex-shrink-0">{{ v.level === 'error' ? '❌' : '⚠️' }}</span>
+              <span>{{ v.message }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ② 修正候補（ルールベース） -->
+        <div class="px-5 py-3 border-b">
+          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
+            💡 修正候補
+          </h4>
+          <div v-if="hintSuggestions.length === 0" class="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+            修正候補はありません
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="(s, si) in hintSuggestions"
+              :key="si"
+              class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                  <span class="text-blue-600 font-bold flex-shrink-0">{{ s.side === 'debit' ? '借方' : '貸方' }}</span>
+                  <span class="text-gray-500 flex-shrink-0">{{ s.field }}:</span>
+                  <span class="text-red-500 line-through flex-shrink-0">{{ s.currentLabel }}</span>
+                  <span class="text-gray-400 flex-shrink-0">→</span>
+                  <!-- 択一候補: ドロップダウン -->
+                  <select
+                    v-if="s.alternatives.length > 1"
+                    :value="s.selectedValue"
+                    @change="onHintAlternativeChange(si, ($event.target as HTMLSelectElement).value)"
+                    class="border border-blue-300 rounded px-1.5 py-0.5 text-xs bg-white text-green-700 font-bold max-w-[200px] cursor-pointer"
+                    @click.stop
+                    @mousedown.stop
+                  >
+                    <option v-for="alt in s.alternatives" :key="alt.value" :value="alt.value">
+                      {{ alt.label }}
+                    </option>
+                  </select>
+                  <!-- 単一候補: テキスト表示 -->
+                  <span v-else class="text-green-700 font-bold">{{ s.selectedLabel }}</span>
+                </div>
+                <button
+                  @click="applyHintSuggestion(s)"
+                  class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-bold transition-colors flex-shrink-0 ml-2"
+                >
+                  適用
+                </button>
+              </div>
+            </div>
+            <!-- 全て適用ボタン -->
+            <button
+              v-if="hintSuggestions.length > 1"
+              @click="hintSuggestions.forEach(s => applyHintSuggestion(s)); hintModalJournal = null"
+              class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-xs font-bold transition-colors mt-1"
+            >
+              ✨ 全て適用（各行の選択値を適用）
+            </button>
+          </div>
+        </div>
+
+        <!-- ③ AI推論（工事中） -->
+        <div class="px-5 py-3 border-b">
+          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
+            🤖 AI推論
+          </h4>
+          <div class="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-3 text-center flex items-center justify-center gap-2">
+            <span class="text-base">🚧</span>
+            <span>工事中 — Gemini連携による高精度推論を準備中です</span>
+          </div>
+        </div>
+
+        <!-- ④ 過去の類似仕訳（工事中） -->
+        <div class="px-5 py-3">
+          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
+            📚 過去の類似仕訳
+          </h4>
+          <div class="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-3 text-center flex items-center justify-center gap-2">
+            <span class="text-base">🚧</span>
+            <span>工事中 — DB接続後に有効化予定</span>
+          </div>
+        </div>
+
+        <!-- フッター -->
+        <div class="px-5 py-3 bg-gray-50 border-t rounded-b-xl flex justify-end">
+          <button
+            @click="hintModalJournal = null"
+            class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-1.5 rounded text-xs font-bold transition-colors"
+          >
+            閉じる
+          </button>
+        </div>
+
+        <!-- リサイズグリップ -->
+        <div
+          class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none"
+          style="background: linear-gradient(135deg, transparent 50%, rgba(217, 119, 6, 0.4) 50%, rgba(217, 119, 6, 0.6) 100%); border-radius: 0 0 0.75rem 0;"
+        ></div>
+      </div>
+    </Teleport>
   </div>
   <!-- コメントモーダル（Teleportでbody直下に移動） -->
   <Teleport to="body">
@@ -1981,6 +2234,11 @@
   <!-- 税区分矛盾モーダル（非ブロッキング: 右上フローティング） -->
   <div
     v-if="showTaxMismatchModal"
+    class="fixed inset-0 z-[89]"
+    @click="showTaxMismatchModal = false"
+  ></div>
+  <div
+    v-if="showTaxMismatchModal"
     class="fixed top-20 right-4 z-[90] w-80 bg-white rounded-lg shadow-2xl border border-red-200 p-4 text-sm"
   >
     <h3 class="font-bold mb-2 text-red-600 flex items-center gap-1 text-xs">
@@ -2120,6 +2378,8 @@ import { createEmptyStaffNotes, STAFF_NOTE_KEYS } from "../types/staff_notes";
 import type { StaffNoteKey } from "../types/staff_notes";
 
 import { toMfCsvDate } from "@/shared/utils/mf-csv-date";
+import { validateByVoucherType, getVoucherTypeConflictAccounts } from "@/mocks/utils/journalWarningSync";
+import { VOUCHER_TYPE_RULES, getBaseAccountId } from "@/mocks/utils/voucherTypeRules";
 
 // 列幅カスタマイズ
 const {
@@ -2627,7 +2887,8 @@ function runAccountValidation(journal: JournalPhase5Mock): void {
   const voucherType = journal.voucher_type;
   if (!voucherType || !debitAccount || !creditAccount) return;
 
-  const voucherWarning = validateByVoucherType(voucherType, journal);
+  const accts = clientSettings.value ? clientSettings.value.accounts.value : masterSettings.accounts.value;
+  const voucherWarning = validateByVoucherType(voucherType, journal, accts);
   if (voucherWarning) {
     confirmDialog.value = {
       show: true,
@@ -2642,6 +2903,9 @@ function runAccountValidation(journal: JournalPhase5Mock): void {
     };
   }
 }
+
+/** 証票意味矛盾の勘定科目マップ（セルハイライト用） */
+const voucherTypeConflictMap = new Map<string, { debit: Set<string>; credit: Set<string> }>();
 
 /**
  * 段階A: 警告列バリデーション（双方向同期）
@@ -2681,11 +2945,17 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
   if (allAccountsValid) removeLabel("ACCOUNT_UNKNOWN");
   else addLabel("ACCOUNT_UNKNOWN");
 
-  // 2. TAX_UNKNOWN（税区分不明）: 全エントリのtax_category_idが非null
-  const allTaxFilled =
-    journal.debit_entries.every((e) => e.tax_category_id != null && e.tax_category_id !== "") &&
-    journal.credit_entries.every((e) => e.tax_category_id != null && e.tax_category_id !== "");
-  if (allTaxFilled) removeLabel("TAX_UNKNOWN");
+  // 2. TAX_UNKNOWN（税区分不明）: 全エントリのtax_category_idが非null かつ マスタ/顧問先設定に存在
+  const allTaxCategories = clientSettings.value
+    ? clientSettings.value.taxCategories.value
+    : masterSettings.taxCategories.value;
+  const taxCategoryIds = new Set(allTaxCategories.map((t) => t.id));
+  const isValidTax = (id: string | null | undefined) =>
+    id != null && id !== "" && taxCategoryIds.has(id);
+  const allTaxValid =
+    journal.debit_entries.every((e) => isValidTax(e.tax_category_id)) &&
+    journal.credit_entries.every((e) => isValidTax(e.tax_category_id));
+  if (allTaxValid) removeLabel("TAX_UNKNOWN");
   else addLabel("TAX_UNKNOWN");
 
   // 3. DESCRIPTION_UNKNOWN（摘要不明）: descriptionが非null
@@ -2755,12 +3025,14 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
 
   // 8. VOUCHER_TYPE_CONFLICT（証票意味矛盾）: 証票タイプ別バリデーション
   const voucherType = journal.voucher_type;
-  const firstDebit = journal.debit_entries?.[0]?.account ?? null;
-  const firstCredit = journal.credit_entries?.[0]?.account ?? null;
-  if (voucherType && firstDebit && firstCredit && validateByVoucherType(voucherType, journal)) {
+  if (voucherType && validateByVoucherType(voucherType, journal, allAccounts)) {
     addLabel("VOUCHER_TYPE_CONFLICT");
+    // 矛盾科目のマップを更新（セルハイライト用）
+    const conflictInfo = getVoucherTypeConflictAccounts(voucherType, journal, allAccounts);
+    voucherTypeConflictMap.set(journal.id, conflictInfo);
   } else {
     removeLabel("VOUCHER_TYPE_CONFLICT");
+    voucherTypeConflictMap.delete(journal.id);
   }
 
   // 9. TAX_ACCOUNT_MISMATCH（税区分科目矛盾）: taxDeterminationベースの方向チェック
@@ -2768,7 +3040,9 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
   let hasTaxAccountMismatch = false;
   const settings = clientSettings.value ?? masterSettings;
   const accounts = settings.accounts.value;
-  const taxCats = masterTaxCategories.value;
+  const taxCats = clientSettings.value
+    ? clientSettings.value.taxCategories.value
+    : masterTaxCategories.value;
   for (const entry of allEntries) {
     if (!entry.account || !entry.tax_category_id) continue;
     const acct = accounts.find((a) => a.id === entry.account);
@@ -2911,8 +3185,27 @@ function getWarningCellClass(
   // DESCRIPTION_UNKNOWN（摘要不明）→ 摘要セル
   if (colKey === "description" && labels.includes("DESCRIPTION_UNKNOWN")) return W;
 
-  // VOUCHER_TYPE_CONFLICT（証票意味矛盾）→ 証票意味セル
-  if (colKey === "voucher_type" && labels.includes("VOUCHER_TYPE_CONFLICT")) return W;
+  // VOUCHER_TYPE_CONFLICT（証票意味矛盾）→ 証票意味セル + 矛盾科目セル
+  if (labels.includes("VOUCHER_TYPE_CONFLICT")) {
+    if (colKey === "voucher_type") return W;
+    // 矛盾している勘定科目セルも赤ハイライト
+    if (
+      colKey.includes("account") &&
+      !colKey.includes("sub_account") &&
+      entry
+    ) {
+      const acctName = entry.account as string | null;
+      if (!acctName) return W; // null科目は無条件で赤背景
+      const side = colKey.startsWith("debit") ? "debit" : "credit";
+      const vtConflict = voucherTypeConflictMap.get(journal.id);
+      if (
+        vtConflict &&
+        ((side === "debit" && vtConflict.debit.has(acctName)) ||
+          (side === "credit" && vtConflict.credit.has(acctName)))
+      )
+        return W;
+    }
+  }
 
   // TAX_ACCOUNT_MISMATCH（税区分科目矛盾）→ 税区分セル
   if (colKey.includes("tax_category") && labels.includes("TAX_ACCOUNT_MISMATCH")) return W;
@@ -2920,63 +3213,7 @@ function getWarningCellClass(
   return "";
 }
 
-/** 預り金系科目名パターン */
-const WITHHOLDING_ACCOUNTS = ["預り金", "所得税預り金", "住民税預り金", "社会保険料預り金"];
-/** 給与系科目名パターン */
-const SALARY_ACCOUNTS = ["給料手当", "役員報酬", "賞与", "雑給"];
-/** 未払金系科目名パターン */
-const UNPAID_ACCOUNTS = ["未払金", "未払費用"];
-/** 立替系科目名パターン */
-const ADVANCE_ACCOUNTS = ["立替金", "未収入金"];
-/** 預金系科目名パターン */
-const DEPOSIT_ACCOUNTS = ["普通預金", "当座預金", "定期預金"];
-
-/**
- * 種別ごとの高度バリデーション
- * @returns null=正常、string=警告メッセージ
- */
-function validateByVoucherType(voucherType: string, journal: JournalPhase5Mock): string | null {
-  const debitAccounts = journal.debit_entries.map((e) => e.account).filter(Boolean) as string[];
-  const creditAccounts = journal.credit_entries.map((e) => e.account).filter(Boolean) as string[];
-
-  switch (voucherType) {
-    case "給与": {
-      // 貸方に預り金系科目がない
-      const hasWithholding = creditAccounts.some((a) => WITHHOLDING_ACCOUNTS.includes(a));
-      if (!hasWithholding) return "給与仕訳ですが源泉/社保の預り金がありません";
-      // 借方が給与系科目でない
-      const hasSalary = debitAccounts.some((a) => SALARY_ACCOUNTS.includes(a));
-      if (!hasSalary) return "給与仕訳ですが借方が給与系科目ではありません";
-      break;
-    }
-    case "クレカ": {
-      // 貸方が未払金でない
-      const hasUnpaid = creditAccounts.some((a) => UNPAID_ACCOUNTS.includes(a));
-      if (!hasUnpaid) return "クレカ仕訳ですが貸方が未払金ではありません";
-      break;
-    }
-    case "クレカ引落": {
-      // 借方が未払金でない
-      const hasUnpaid = debitAccounts.some((a) => UNPAID_ACCOUNTS.includes(a));
-      if (!hasUnpaid) return "クレカ引落ですが借方が未払金ではありません";
-      break;
-    }
-    case "立替経費": {
-      // 貸方が立替金/未収入金でない
-      const hasAdvance = creditAccounts.some((a) => ADVANCE_ACCOUNTS.includes(a));
-      if (!hasAdvance) return "立替経費ですが貸方が立替系科目ではありません";
-      break;
-    }
-    case "振替": {
-      // 借方/貸方の両方が預金系でない
-      const debitDeposit = debitAccounts.some((a) => DEPOSIT_ACCOUNTS.includes(a));
-      const creditDeposit = creditAccounts.some((a) => DEPOSIT_ACCOUNTS.includes(a));
-      if (!debitDeposit || !creditDeposit) return "口座振替ですが片方が預金系ではありません";
-      break;
-    }
-  }
-  return null;
-}
+// validateByVoucherType は journalWarningSync.ts からインポート済み
 
 // ────── 検索付きコンボボックス: 選択関数 ──────
 
@@ -3145,7 +3382,15 @@ function startCellEdit(
   currentValue: unknown,
 ): void {
   editingCell.value = { journalId, rowIndex, colKey };
-  const val = currentValue != null ? String(currentValue) : "";
+  let val = currentValue != null ? String(currentValue) : "";
+  // 勘定科目列の場合: IDを日本語名に変換して検索欄に表示
+  if (colKey.endsWith(".account") && val) {
+    const allAccts = clientSettings.value
+      ? clientSettings.value.accounts.value
+      : masterSettings.accounts.value;
+    const acc = allAccts.find((a) => a.id === val);
+    if (acc) val = acc.name;
+  }
   editingValue.value = val;
   editingOriginalValue.value = val;
   nextTick(() => {
@@ -3364,7 +3609,7 @@ function endFillDrag(): void {
   fillHandle.value = null;
 }
 
-function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unknown): void {
+function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unknown, targetRowIndex?: number): void {
   if (!colKey.includes(".")) {
     (journal as unknown as Record<string, unknown>)[colKey] = value;
   } else {
@@ -3373,25 +3618,26 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
     const field = parts[1];
     if (!side || !field) return;
 
-    // 複合仕訳対応: 該当側の全エントリに値を適用
+    // 複合仕訳対応: targetRowIndex指定時はその行のみ、未指定時は全エントリ
     const entries = side === "debit" ? journal.debit_entries : journal.credit_entries;
-    for (const entry of entries) {
+    const targetEntries = (targetRowIndex != null && targetRowIndex < entries.length
+      ? [entries[targetRowIndex]]
+      : entries).filter((e): e is NonNullable<typeof e> => e != null);
+    for (const entry of targetEntries) {
       if (colKey.endsWith(".category")) {
         (entry as unknown as Record<string, unknown>).selectedCategory = value || null;
       } else if (colKey.endsWith(".account")) {
         // 勘定科目フィル時に税区分・区分・補助科目も連動（selectAccountItemと同じ挙動）
         (entry as unknown as Record<string, unknown>)[field] = value;
-        const accountName = value as string;
-        if (accountName) {
-          const allAccounts = clientSettings.value
+        const accountId = value as string;
+        if (accountId) {
+          const allAccts = clientSettings.value
             ? clientSettings.value.accounts.value
             : masterSettings.accounts.value;
-          const acc = allAccounts.find((a) => a.name === accountName);
+          const acc = allAccts.find((a) => a.id === accountId);
           // デフォルト税区分の自動設定
           if (acc?.defaultTaxCategoryId) {
-            const tc = masterTaxCategories.value.find((t) => t.id === acc.defaultTaxCategoryId);
-            const rawName = tc ? tc.name : acc.defaultTaxCategoryId;
-            entry.tax_category_id = resolveDefaultTaxForClient(rawName);
+            entry.tax_category_id = resolveDefaultTaxForClient(acc.defaultTaxCategoryId);
           }
           // 区分（selectedCategory）連動
           if (acc) {
@@ -3540,7 +3786,7 @@ function endCellDrag(): void {
     if (journal && journal.status !== "exported" && journal.deleted_at === null) {
       // Undo記録: 変更前スナップショット
       const beforeSnap = snapshotJournal(journal.id);
-      applyFillValue(journal, cellDrag.value.dropColKey, cellDrag.value.sourceValue);
+      applyFillValue(journal, cellDrag.value.dropColKey, cellDrag.value.sourceValue, cellDrag.value.dropRowIndex ?? undefined);
       syncWarningLabels(journal);
       // Undo記録: 変更後スナップショット
       if (beforeSnap) {
@@ -3635,7 +3881,7 @@ const hasShownHelp = ref(false);
 const openDropdownId = ref<string | null>(null);
 
 // 凡例モーダル
-const legendModalType = ref<"labelType" | "warning" | null>(null);
+const legendModalType = ref<"labelType" | "warning" | "voucher_type" | null>(null);
 
 const labelTypeLegend = [
   { short: "レ", label: "レシート・領収証", bgClass: "bg-emerald-600" },
@@ -3814,6 +4060,396 @@ const warnLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level ===
 
 function toggleDropdown(journalId: string) {
   openDropdownId.value = openDropdownId.value === journalId ? null : journalId;
+}
+
+// ────── ヒントモーダル ──────
+type HintValidation = { level: 'error' | 'warn'; message: string };
+type HintAlternative = { value: string; label: string };
+type HintSuggestion = {
+  side: 'debit' | 'credit';
+  field: string;
+  currentValue: string | null;
+  currentLabel: string;
+  selectedValue: string;
+  selectedLabel: string;
+  alternatives: HintAlternative[];  // ドロップダウン全候補（勘定科目のみ）
+  entryIndex: number;
+};
+
+const hintModalJournal = ref<JournalPhase5Mock | null>(null);
+const hintValidations = ref<HintValidation[]>([]);
+const hintSuggestions = ref<HintSuggestion[]>([]);
+
+const hintModalJournalIndex = computed(() => {
+  if (!hintModalJournal.value) return -1;
+  return paginatedJournals.value.findIndex((j) => j.id === hintModalJournal.value!.id);
+});
+
+function openHintModal(journal: JournalPhase5Mock): void {
+  hintModalJournal.value = journal;
+  hintValidations.value = generateHintValidations(journal);
+  hintSuggestions.value = generateHintSuggestions(journal);
+  // 画面中央に配置（モーダル幅520px, 想定高さ500px）
+  hintModalPos.value = {
+    top: Math.max(50, (window.innerHeight - 500) / 2),
+    left: Math.max(50, (window.innerWidth - 520) / 2),
+  };
+}
+
+function generateHintValidations(journal: JournalPhase5Mock): HintValidation[] {
+  const results: HintValidation[] = [];
+  const labels = journal.labels as string[];
+  const allAccounts = clientSettings.value
+    ? clientSettings.value.accounts.value
+    : masterSettings.accounts.value;
+
+  // 各warningLabelに対応するメッセージ
+  if (labels.includes('ACCOUNT_UNKNOWN')) {
+    // 具体的にどの科目が不明か特定
+    const accountIds = new Set(allAccounts.map((a) => a.id));
+    for (const e of journal.debit_entries) {
+      if (e.account && !accountIds.has(e.account)) {
+        results.push({ level: 'error', message: `借方科目【${e.account}】はマスタに存在しません` });
+      }
+    }
+    for (const e of journal.credit_entries) {
+      if (e.account && !accountIds.has(e.account)) {
+        results.push({ level: 'error', message: `貸方科目【${e.account}】はマスタに存在しません` });
+      }
+    }
+    if (results.length === 0) {
+      results.push({ level: 'error', message: '勘定科目が未設定または不明です' });
+    }
+  }
+  if (labels.includes('TAX_UNKNOWN'))
+    results.push({ level: 'error', message: '税区分が未設定または不明です' });
+  if (labels.includes('DESCRIPTION_UNKNOWN'))
+    results.push({ level: 'warn', message: '摘要が未設定です' });
+  if (labels.includes('DATE_UNKNOWN'))
+    results.push({ level: 'warn', message: '日付が未設定です' });
+  if (labels.includes('AMOUNT_UNCLEAR'))
+    results.push({ level: 'error', message: '金額が未設定のエントリがあります' });
+  if (labels.includes('DEBIT_CREDIT_MISMATCH')) {
+    const dSum = journal.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
+    const cSum = journal.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
+    results.push({ level: 'error', message: `貸借不一致: 借方合計 ${dSum.toLocaleString()} ≠ 貸方合計 ${cSum.toLocaleString()}` });
+  }
+  if (labels.includes('CATEGORY_CONFLICT'))
+    results.push({ level: 'error', message: '借方・貸方の勘定科目の組み合わせに矛盾があります' });
+  if (labels.includes('SAME_ACCOUNT_BOTH_SIDES'))
+    results.push({ level: 'warn', message: '借方と貸方に同一の勘定科目が使用されています' });
+  if (labels.includes('VOUCHER_TYPE_CONFLICT')) {
+    const vt = journal.voucher_type;
+    const rule = vt ? VOUCHER_TYPE_RULES[vt] : null;
+    if (rule) {
+      results.push({ level: 'error', message: `証票意味【${vt}】に対して不適切な科目があります\n${rule.description}` });
+    } else {
+      results.push({ level: 'error', message: '証票意味に対して不適切な科目があります' });
+    }
+  }
+  if (labels.includes('TAX_ACCOUNT_MISMATCH'))
+    results.push({ level: 'warn', message: '税区分と勘定科目の方向（売上/仕入）が一致しません' });
+
+  return results;
+}
+
+function generateHintSuggestions(journal: JournalPhase5Mock): HintSuggestion[] {
+  const suggestions: HintSuggestion[] = [];
+  const labels = journal.labels as string[];
+
+  // ★ 顧問先勘定科目を優先（なければマスタ）
+  const allAccts = clientSettings.value
+    ? clientSettings.value.accounts.value
+    : masterSettings.accounts.value;
+  const allTaxCats = clientSettings.value
+    ? clientSettings.value.taxCategories.value
+    : masterSettings.taxCategories.value;
+  const accountIds = new Set(allAccts.map((a) => a.id));
+
+  // ★ 「科目名（補助科目）」形式のラベル生成
+  const acctLabel = (id: string | null): string => {
+    if (!id) return '未設定';
+    const a = allAccts.find((x) => x.id === id);
+    if (!a) return id;
+    return a.sub ? `${a.name}（${a.sub}）` : a.name;
+  };
+  const taxName = (id: string | null | undefined) => {
+    if (!id) return '未設定';
+    const t = allTaxCats.find((x) => x.id === id);
+    return t ? (t.shortName ?? t.name) : id;
+  };
+
+  // ★ 該当グループの全顧問先科目をalternatives化
+  const buildAlternatives = (
+    sideRule: { allowedGroups?: string[]; allowedIds?: string[]; allowedCategories?: string[] },
+    excludeId: string,
+  ): HintAlternative[] => {
+    const seen = new Set<string>();
+    const alts: HintAlternative[] = [];
+    // allowedIdsから（コピー元IDも含む）
+    if (sideRule.allowedIds) {
+      for (const id of sideRule.allowedIds) {
+        if (id === excludeId || seen.has(id)) continue;
+        if (!accountIds.has(id)) continue;
+        seen.add(id);
+        alts.push({ value: id, label: acctLabel(id) });
+      }
+      // コピー科目も候補に含める（コピー元IDがallowedIdsに含まれる場合）
+      for (const a of allAccts) {
+        if (seen.has(a.id) || a.id === excludeId) continue;
+        const baseId = getBaseAccountId(a.id);
+        if (baseId !== a.id && sideRule.allowedIds.includes(baseId)) {
+          seen.add(a.id);
+          alts.push({ value: a.id, label: acctLabel(a.id) });
+        }
+      }
+    }
+    // allowedGroupsから全件
+    if (sideRule.allowedGroups) {
+      for (const a of allAccts) {
+        if (seen.has(a.id) || a.id === excludeId) continue;
+        if (!sideRule.allowedGroups.includes(a.accountGroup ?? '')) continue;
+        seen.add(a.id);
+        alts.push({ value: a.id, label: acctLabel(a.id) });
+      }
+    }
+    // allowedCategoriesから全件（コピー・カスタム科目も動的に含まれる）
+    if (sideRule.allowedCategories) {
+      for (const a of allAccts) {
+        if (seen.has(a.id) || a.id === excludeId) continue;
+        if (!sideRule.allowedCategories.includes((a as any).category ?? '')) continue;
+        seen.add(a.id);
+        alts.push({ value: a.id, label: acctLabel(a.id) });
+      }
+    }
+    return alts;
+  };
+
+  // ★ デフォルト候補選択（証票意味に応じた賢い初期値）
+  const pickDefault = (vt: string | null, alts: HintAlternative[]): HintAlternative | undefined => {
+    if (alts.length === 0) return undefined;
+    // クレカ → 未払金を優先
+    if (vt === 'クレカ') {
+      const accrued = alts.find((a) => a.value === 'ACCRUED_EXPENSES');
+      if (accrued) return accrued;
+    }
+    // 売上 → 売掛金を優先
+    if (vt === '売上') {
+      const receivable = alts.find((a) => a.value === 'ACCOUNTS_RECEIVABLE');
+      if (receivable) return receivable;
+    }
+    return alts[0];
+  };
+
+  // ────── A: 証票意味ルールに基づく科目修正 ──────
+  const vt = journal.voucher_type;
+  const rule = vt ? VOUCHER_TYPE_RULES[vt] : null;
+
+  // 借方・貸方の共通チェック関数
+  const checkSideEntries = (
+    entries: typeof journal.debit_entries,
+    side: 'debit' | 'credit',
+    sideRule: { allowedGroups?: string[]; allowedIds?: string[]; allowedCategories?: string[] } | undefined,
+  ) => {
+    if (!sideRule) return;
+    entries.forEach((entry, idx) => {
+      const acct = entry.account;
+
+      // ケース1: null科目 → 候補提案
+      if (!acct) {
+        const alts = buildAlternatives(sideRule, '');
+        const def = pickDefault(vt, alts);
+        if (def) {
+          suggestions.push({
+            side, field: '勘定科目', currentValue: null,
+            currentLabel: '未設定',
+            selectedValue: def.value, selectedLabel: def.label,
+            alternatives: alts, entryIndex: idx,
+          });
+        }
+        return;
+      }
+
+      // ケース2: マスタ外科目 → 候補提案
+      if (!accountIds.has(acct)) {
+        const alts = buildAlternatives(sideRule, acct);
+        const def = pickDefault(vt, alts);
+        if (def) {
+          suggestions.push({
+            side, field: '勘定科目', currentValue: acct,
+            currentLabel: acct, // マスタ外なのでID表示
+            selectedValue: def.value, selectedLabel: def.label,
+            alternatives: alts, entryIndex: idx,
+          });
+        }
+        return;
+      }
+
+      // ケース3: マスタ内だがグループ不一致 → 候補提案
+      const acctObj = allAccts.find((a) => a.id === acct);
+      if (!acctObj) return;
+
+      let allowed = false;
+      if (sideRule.allowedGroups?.includes(acctObj.accountGroup ?? '')) allowed = true;
+      if (sideRule.allowedIds?.includes(acct)) allowed = true;
+      // コピー元IDも照合
+      if (sideRule.allowedIds) {
+        const baseId = getBaseAccountId(acct);
+        if (baseId !== acct && sideRule.allowedIds.includes(baseId)) allowed = true;
+      }
+      // allowedCategoriesでcategoryが一致すればOK
+      if (sideRule.allowedCategories?.includes((acctObj as any).category ?? '')) allowed = true;
+
+      if (!allowed) {
+        const alts = buildAlternatives(sideRule, acct);
+        const def = pickDefault(vt, alts);
+        if (def) {
+          suggestions.push({
+            side, field: '勘定科目', currentValue: acct,
+            currentLabel: acctLabel(acct),
+            selectedValue: def.value, selectedLabel: def.label,
+            alternatives: alts, entryIndex: idx,
+          });
+        }
+      }
+    });
+  };
+
+  if (rule) {
+    checkSideEntries(journal.debit_entries, 'debit', rule.debit);
+    checkSideEntries(journal.credit_entries, 'credit', rule.credit);
+  }
+
+  // ────── B: 税区分不整合修正（科目のdefaultTaxCategoryIdに基づく） ──────
+  if (labels.includes('TAX_ACCOUNT_MISMATCH') || labels.includes('TAX_UNKNOWN')) {
+    const checkTaxEntries = (entries: typeof journal.debit_entries, side: 'debit' | 'credit') => {
+      entries.forEach((entry, idx) => {
+        const acct = entry.account;
+        if (!acct) return;
+        const acctObj = allAccts.find((a) => a.id === acct);
+        if (!acctObj?.defaultTaxCategoryId) return;
+
+        const currentTax = entry.tax_category_id;
+        const expectedTax = acctObj.defaultTaxCategoryId;
+        if (currentTax !== expectedTax) {
+          suggestions.push({
+            side, field: '税区分', currentValue: currentTax ?? null,
+            currentLabel: taxName(currentTax),
+            selectedValue: expectedTax, selectedLabel: taxName(expectedTax),
+            alternatives: [], entryIndex: idx,
+          });
+        }
+      });
+    };
+    checkTaxEntries(journal.debit_entries, 'debit');
+    checkTaxEntries(journal.credit_entries, 'credit');
+  }
+
+  // ────── C: 貸借不一致修正（1:N仕訳の場合） ──────
+  if (labels.includes('DEBIT_CREDIT_MISMATCH')) {
+    const dSum = journal.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
+    const cSum = journal.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
+    if (dSum !== cSum && dSum > 0 && cSum > 0) {
+      const dCount = journal.debit_entries.length;
+      const cCount = journal.credit_entries.length;
+
+      if (dCount === 1 && cCount >= 2) {
+        suggestions.push({
+          side: 'debit', field: '金額', currentValue: String(dSum),
+          currentLabel: dSum.toLocaleString(),
+          selectedValue: String(cSum), selectedLabel: cSum.toLocaleString(),
+          alternatives: [], entryIndex: 0,
+        });
+      } else if (cCount === 1 && dCount >= 2) {
+        suggestions.push({
+          side: 'credit', field: '金額', currentValue: String(cSum),
+          currentLabel: cSum.toLocaleString(),
+          selectedValue: String(dSum), selectedLabel: dSum.toLocaleString(),
+          alternatives: [], entryIndex: 0,
+        });
+      }
+      if (dCount >= 2 && cCount >= 2) {
+        const diff = Math.abs(dSum - cSum);
+        suggestions.push({
+          side: dSum > cSum ? 'debit' : 'credit',
+          field: '金額（差額）',
+          currentValue: String(Math.max(dSum, cSum)),
+          currentLabel: `差額 ${diff.toLocaleString()}`,
+          selectedValue: String(Math.min(dSum, cSum)),
+          selectedLabel: `${Math.min(dSum, cSum).toLocaleString()} に揃える`,
+          alternatives: [], entryIndex: -1,
+        });
+      }
+    }
+  }
+
+  return suggestions;
+}
+
+// ★ ドロップダウン変更時のハンドラ
+function onHintAlternativeChange(suggestionIndex: number, newValue: string): void {
+  const s = hintSuggestions.value[suggestionIndex];
+  if (!s) return;
+  const alt = s.alternatives.find((a) => a.value === newValue);
+  if (alt) {
+    s.selectedValue = newValue;
+    s.selectedLabel = alt.label;
+  }
+}
+
+function applyHintSuggestion(s: HintSuggestion): void {
+  const journal = hintModalJournal.value;
+  if (!journal) return;
+
+  const beforeSnap = snapshotJournal(journal.id);
+
+  const entries = s.side === 'debit' ? journal.debit_entries : journal.credit_entries;
+
+  if (s.field === '勘定科目') {
+    const entry = entries[s.entryIndex];
+    if (!entry) return;
+    entry.account = s.selectedValue;
+    // 科目に連動して税区分・補助科目を自動補完
+    const allAccts = clientSettings.value
+      ? clientSettings.value.accounts.value
+      : masterSettings.accounts.value;
+    const acctObj = allAccts.find((a) => a.id === s.selectedValue);
+    if (acctObj) {
+      if (acctObj.defaultTaxCategoryId) entry.tax_category_id = acctObj.defaultTaxCategoryId;
+      // 補助科目: selectAccountItemと同じくclientSettings.subAccountsから取得
+      if (clientSettings.value) {
+        const sub = clientSettings.value.subAccounts.value[s.selectedValue];
+        entry.sub_account = sub || null;
+      } else {
+        entry.sub_account = null;
+      }
+    }
+  } else if (s.field === '税区分') {
+    const entry = entries[s.entryIndex];
+    if (!entry) return;
+    entry.tax_category_id = s.selectedValue;
+  } else if (s.field === '金額') {
+    const entry = entries[s.entryIndex];
+    if (!entry) return;
+    entry.amount = Number(s.selectedValue);
+  } else if (s.field === '金額（差額）') {
+    console.log('[Hint] N:N差額は自動修正不可 → 手動修正してください');
+    return;
+  }
+
+  journal.is_read = true;
+  syncWarningLabels(journal);
+
+  const afterSnap = snapshotJournal(journal.id);
+  if (beforeSnap && afterSnap) {
+    undoStack.value.push({ before: [beforeSnap], after: [afterSnap] });
+    redoStack.value = [];
+  }
+
+  hintValidations.value = generateHintValidations(journal);
+  hintSuggestions.value = generateHintSuggestions(journal);
+
+  console.log(`[Hint] 修正適用: ${s.side} [${s.entryIndex}] ${s.field}: ${s.currentLabel} → ${s.selectedLabel}`);
 }
 
 function closeDropdown() {
@@ -4251,6 +4887,14 @@ const {
   zIndex: commentModalZ,
   startDrag: startCommentDrag,
 } = useDraggable(commentModalRef);
+
+// ヒントモーダル用
+const hintModalRef = ref<HTMLElement | null>(null);
+const {
+  position: hintModalPos,
+  zIndex: hintModalZ,
+  startDrag: startHintDrag,
+} = useDraggable(hintModalRef);
 
 const showPastJournalModal = ref<boolean>(false);
 const pastJournalTab = ref<"streamed" | "accounting">("streamed");
@@ -4819,17 +5463,23 @@ function getValue(obj: any, path: string): unknown {
   return raw;
 }
 
-/** 概念IDからMF正式名称を取得。マスタになければIDをそのまま返す */
+/** 概念IDからMF正式名称を取得。顧問先税区分を優先、なければマスタフォールバック */
 function resolveTaxCategoryName(id: string | null | undefined): string {
   if (!id) return "";
-  const entry = masterTaxCategories.value.find((tc) => tc.id === id);
+  const allTaxCats = clientSettings.value
+    ? clientSettings.value.taxCategories.value
+    : masterTaxCategories.value;
+  const entry = allTaxCats.find((tc) => tc.id === id);
   return entry ? entry.name : id;
 }
 
-/** マスタIDから勘定科目の表示名を取得。マスタになければIDをそのまま返す */
+/** IDから勘定科目の表示名を取得。顧問先科目を優先、なければマスタフォールバック */
 function resolveAccountName(id: string | null | undefined): string {
   if (!id) return "";
-  const account = masterSettings.accounts.value.find((a) => a.id === id);
+  const allAccts = clientSettings.value
+    ? clientSettings.value.accounts.value
+    : masterSettings.accounts.value;
+  const account = allAccts.find((a) => a.id === id);
   return account ? account.name : id;
 }
 

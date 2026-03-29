@@ -5,6 +5,7 @@
  * JournalListLevel3Mock.vue から抽出。UIモーダル表示は呼び出し側で制御。
  */
 import type { JournalPhase5Mock } from '../types/journal_phase5_mock.type'
+import { VOUCHER_TYPE_RULES, getBaseAccountId } from './voucherTypeRules'
 
 // ────────────────────────────────────────────
 // 型・定数
@@ -15,12 +16,6 @@ export type MegaGroupType = 'sales' | 'expense' | 'bs_al' | 'bs_equity' | null
 const CONTRA_REVENUE_IDS = ['SALES_RETURNS', 'SALES_RETURNS_CORP']
 const CONTRA_EXPENSE_IDS = ['PURCHASE_RETURNS', 'PURCHASE_RETURNS_CORP']
 
-const WITHHOLDING_ACCOUNTS = ['預り金', '所得税預り金', '住民税預り金', '社会保険料預り金']
-const SALARY_ACCOUNTS = ['給料手当', '役員報酬', '賞与', '雑給']
-const UNPAID_ACCOUNTS = ['未払金', '未払費用']
-const ADVANCE_ACCOUNTS = ['立替金', '未収入金']
-const DEPOSIT_ACCOUNTS = ['普通預金', '当座預金', '定期預金']
-
 // ────────────────────────────────────────────
 // 勘定科目インターフェース（useAccountSettingsの型に依存しない最小定義）
 // ────────────────────────────────────────────
@@ -28,6 +23,7 @@ const DEPOSIT_ACCOUNTS = ['普通預金', '当座預金', '定期預金']
 export interface AccountForValidation {
   id: string
   accountGroup?: string | null
+  category?: string | null
   taxDetermination?: string | null
   defaultTaxCategoryId?: string | null
 }
@@ -107,41 +103,109 @@ export function validateDebitCreditCombination(
   return null
 }
 
-export function validateByVoucherType(voucherType: string, journal: JournalPhase5Mock): string | null {
-  const debitAccounts = journal.debit_entries.map(e => e.account).filter(Boolean) as string[]
-  const creditAccounts = journal.credit_entries.map(e => e.account).filter(Boolean) as string[]
+/**
+ * 証票意味ルールに基づく科目チェック（ホワイトリスト方式）
+ * VOUCHER_TYPE_RULES テーブルを参照し、借方・貸方の各科目が許容範囲内かを検証する。
+ */
+export function validateByVoucherType(
+  voucherType: string,
+  journal: JournalPhase5Mock,
+  accounts: AccountForValidation[]
+): string | null {
+  const rule = VOUCHER_TYPE_RULES[voucherType]
+  if (!rule) return null // ルール未定義の証票意味はスキップ
 
-  switch (voucherType) {
-    case '給与': {
-      const hasWithholding = creditAccounts.some(a => WITHHOLDING_ACCOUNTS.includes(a))
-      if (!hasWithholding) return '給与仕訳ですが源泉/社保の預り金がありません'
-      const hasSalary = debitAccounts.some(a => SALARY_ACCOUNTS.includes(a))
-      if (!hasSalary) return '給与仕訳ですが借方が給与系科目ではありません'
-      break
+  const accountMap = new Map(accounts.map(a => [a.id, a]))
+
+  function isAllowed(accountId: string, sideRule: { allowedGroups?: string[]; allowedIds?: string[]; allowedCategories?: string[] }): boolean {
+    // allowedIdsに含まれていればOK（コピー元IDも照合）
+    if (sideRule.allowedIds) {
+      if (sideRule.allowedIds.includes(accountId)) return true
+      const baseId = getBaseAccountId(accountId)
+      if (baseId !== accountId && sideRule.allowedIds.includes(baseId)) return true
     }
-    case 'クレカ': {
-      const hasUnpaid = creditAccounts.some(a => UNPAID_ACCOUNTS.includes(a))
-      if (!hasUnpaid) return 'クレカ仕訳ですが貸方が未払金ではありません'
-      break
+    // allowedGroupsでaccountGroupが一致すればOK
+    if (sideRule.allowedGroups) {
+      const acc = accountMap.get(accountId)
+      if (acc?.accountGroup && sideRule.allowedGroups.includes(acc.accountGroup)) return true
     }
-    case 'クレカ引落': {
-      const hasUnpaid = debitAccounts.some(a => UNPAID_ACCOUNTS.includes(a))
-      if (!hasUnpaid) return 'クレカ引落ですが借方が未払金ではありません'
-      break
+    // allowedCategoriesでcategoryが一致すればOK
+    if (sideRule.allowedCategories) {
+      const acc = accountMap.get(accountId)
+      if (acc?.category && sideRule.allowedCategories.includes(acc.category)) return true
     }
-    case '立替経費': {
-      const hasAdvance = creditAccounts.some(a => ADVANCE_ACCOUNTS.includes(a))
-      if (!hasAdvance) return '立替経費ですが貸方が立替系科目ではありません'
-      break
-    }
-    case '振替': {
-      const debitDeposit = debitAccounts.some(a => DEPOSIT_ACCOUNTS.includes(a))
-      const creditDeposit = creditAccounts.some(a => DEPOSIT_ACCOUNTS.includes(a))
-      if (!debitDeposit || !creditDeposit) return '口座振替ですが片方が預金系ではありません'
-      break
+    return false
+  }
+
+  function resolveAccountName(accountId: string): string {
+    const acc = accountMap.get(accountId)
+    return acc ? acc.id : accountId
+  }
+
+  // 借方チェック
+  for (const entry of journal.debit_entries) {
+    if (!entry.account) continue
+    if (!isAllowed(entry.account, rule.debit)) {
+      return `${voucherType}の借方に「${resolveAccountName(entry.account)}」は通常使用しません`
     }
   }
+
+  // 貸方チェック
+  for (const entry of journal.credit_entries) {
+    if (!entry.account) continue
+    if (!isAllowed(entry.account, rule.credit)) {
+      return `${voucherType}の貸方に「${resolveAccountName(entry.account)}」は通常使用しません`
+    }
+  }
+
   return null
+}
+
+/**
+ * 証票意味バリデーションで矛盾する科目IDを返す（セルハイライト用）
+ * @returns { debit: Set<string>, credit: Set<string> } 矛盾科目IDのセット
+ */
+export function getVoucherTypeConflictAccounts(
+  voucherType: string,
+  journal: JournalPhase5Mock,
+  accounts: AccountForValidation[]
+): { debit: Set<string>; credit: Set<string> } {
+  const result = { debit: new Set<string>(), credit: new Set<string>() }
+  const rule = VOUCHER_TYPE_RULES[voucherType]
+  if (!rule) return result
+
+  const accountMap = new Map(accounts.map(a => [a.id, a]))
+
+  function isAllowed(accountId: string, sideRule: { allowedGroups?: string[]; allowedIds?: string[]; allowedCategories?: string[] }): boolean {
+    if (sideRule.allowedIds) {
+      if (sideRule.allowedIds.includes(accountId)) return true
+      const baseId = getBaseAccountId(accountId)
+      if (baseId !== accountId && sideRule.allowedIds.includes(baseId)) return true
+    }
+    if (sideRule.allowedGroups) {
+      const acc = accountMap.get(accountId)
+      if (acc?.accountGroup && sideRule.allowedGroups.includes(acc.accountGroup)) return true
+    }
+    if (sideRule.allowedCategories) {
+      const acc = accountMap.get(accountId)
+      if (acc?.category && sideRule.allowedCategories.includes(acc.category)) return true
+    }
+    return false
+  }
+
+  for (const entry of journal.debit_entries) {
+    if (!entry.account) continue
+    if (!isAllowed(entry.account, rule.debit)) {
+      result.debit.add(entry.account)
+    }
+  }
+  for (const entry of journal.credit_entries) {
+    if (!entry.account) continue
+    if (!isAllowed(entry.account, rule.credit)) {
+      result.credit.add(entry.account)
+    }
+  }
+  return result
 }
 
 // ────────────────────────────────────────────
@@ -203,14 +267,24 @@ export function syncWarningLabelsCore(
   if (allAccountsValid) removeLabel('ACCOUNT_UNKNOWN')
   else addLabel('ACCOUNT_UNKNOWN', `${unknownAccounts.join(', ')}がマスタに存在しません`)
 
-  // 2. TAX_UNKNOWN
+  // 2. TAX_UNKNOWN（税区分未設定 or マスタ/顧問先設定に存在しない）
+  const taxCategoryIds = new Set(taxCategories.map(t => t.id))
   const emptyTaxEntries = [
-    ...journal.debit_entries.filter(e => !e.tax_category_id).map((_, i) => `借方${i + 1}行目`),
-    ...journal.credit_entries.filter(e => !e.tax_category_id).map((_, i) => `貸方${i + 1}行目`),
+    ...journal.debit_entries.filter(e => !e.tax_category_id).map((_, i) => `借方${i + 1}行目の税区分が未設定です`),
+    ...journal.credit_entries.filter(e => !e.tax_category_id).map((_, i) => `貸方${i + 1}行目の税区分が未設定です`),
   ]
-  const allTaxFilled = emptyTaxEntries.length === 0
-  if (allTaxFilled) removeLabel('TAX_UNKNOWN')
-  else addLabel('TAX_UNKNOWN', `${emptyTaxEntries.join(', ')}の税区分が未設定です`)
+  const unknownTaxEntries = [
+    ...journal.debit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => `借方'${e.tax_category_id}'`),
+    ...journal.credit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => `貸方'${e.tax_category_id}'`),
+  ]
+  const allTaxValid = emptyTaxEntries.length === 0 && unknownTaxEntries.length === 0
+  if (allTaxValid) removeLabel('TAX_UNKNOWN')
+  else {
+    const msgs: string[] = []
+    if (emptyTaxEntries.length > 0) msgs.push(...emptyTaxEntries)
+    if (unknownTaxEntries.length > 0) msgs.push(`${unknownTaxEntries.join(', ')}が税区分マスタに存在しません`)
+    addLabel('TAX_UNKNOWN', msgs.join('。'))
+  }
 
   // 3. DESCRIPTION_UNKNOWN
   if (journal.description != null && journal.description !== '') removeLabel('DESCRIPTION_UNKNOWN')
@@ -267,7 +341,7 @@ export function syncWarningLabelsCore(
   const voucherType = journal.voucher_type
   const firstDebit = journal.debit_entries?.[0]?.account ?? null
   const firstCredit = journal.credit_entries?.[0]?.account ?? null
-  const vtMsg = voucherType && firstDebit && firstCredit ? validateByVoucherType(voucherType, journal) : null
+  const vtMsg = voucherType && firstDebit && firstCredit ? validateByVoucherType(voucherType, journal, accounts) : null
   if (vtMsg) {
     addLabel('VOUCHER_TYPE_CONFLICT', vtMsg)
   } else {

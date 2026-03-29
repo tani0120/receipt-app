@@ -162,17 +162,20 @@ const exDefaultWidths: Record<string, number> = {
 const { columnWidths: exColWidths, onResizeStart: onExResizeStart } = useColumnResize('export', exDefaultWidths);
 
 const masterSettings = useAccountSettings('master');
+const clientSettings = useAccountSettings('client', clientId.value);
 
-// 出力ページ初期化時: 全仕訳の警告ラベルを同期（一覧UIと同じバリデーション）
+// 出力ページ初期化時: 全仕訳の警告ラベルを同期（顧問先設定でバリデーション）
 onMounted(() => {
-  const accounts = masterSettings.accounts.value;
-  const taxCategories = masterSettings.taxCategories.value;
+  // 顧問先設定の科目・税区分でバリデーション（顧問先設定外→ACCOUNT_UNKNOWN/TAX_UNKNOWN）
+  const accounts = clientSettings.accounts.value;
+  const taxCategories = clientSettings.taxCategories.value;
   journals.value.forEach(j => syncWarningLabelsCore(j, accounts, taxCategories));
 });
 
-// --- 勘定科目マスタから科目名リスト（deprecated除外） ---
+// --- 勘定科目マスタから科目名リスト（顧問先設定優先、deprecated除外） ---
 const accountNames = computed(() => {
-  const names = masterSettings.accounts.value
+  const source = clientSettings.accounts.value;
+  const names = source
     .filter(a => !a.deprecated)
     .map(a => a.name);
   return [...new Set(names)];
@@ -183,13 +186,16 @@ const creditAccountFilter = ref('');
 
 function resolveAccountName(id: string | null | undefined): string {
   if (!id) return ''
-  const account = masterSettings.accounts.value.find(a => a.id === id)
+  // 顧問先設定を優先、見つからなければマスタ全体からフォールバック
+  const account = clientSettings.accounts.value.find(a => a.id === id)
+    ?? masterSettings.accounts.value.find(a => a.id === id)
   return account ? account.name : id
 }
 
 function resolveTaxCategoryName(id: string | null | undefined): string {
   if (!id) return ''
-  const entry = masterSettings.taxCategories.value.find(tc => tc.id === id)
+  const entry = clientSettings.taxCategories.value.find(tc => tc.id === id)
+    ?? masterSettings.taxCategories.value.find(tc => tc.id === id)
   return entry ? entry.name : id
 }
 
