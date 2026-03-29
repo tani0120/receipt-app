@@ -271,7 +271,9 @@ const accountHasRealEstate = computed(() => currentClientData.value?.hasRentalIn
 const clientTaxMethod = computed<'general' | 'simplified' | 'exempt'>(() => currentClientData.value?.consumptionTaxMode ?? 'general');
 
 // =============== composable接続（useAccountSettings経由） ===============
-const settings = clientId.value ? useAccountSettings('client', clientId.value) : useAccountSettings('master');
+// clientIdはURL由来で必須。フォールバックはuseAccountSettings内部で処理済み。
+if (!clientId.value) throw new Error('[MockClientAccountsPage] clientId is required');
+const settings = useAccountSettings('client', clientId.value);
 const accountFilter = ref('');
 const accountPage = ref(1);
 

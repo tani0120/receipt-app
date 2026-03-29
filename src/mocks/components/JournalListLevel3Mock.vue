@@ -2412,14 +2412,9 @@ const activeClientFull = computed(() => {
 });
 
 // 顧問先の勘定科目 composable（useAccountSettings経由）
-const clientSettings = computed(() => {
-  if (!currentClient.value) return null;
-  return useAccountSettings("client", currentClient.value.clientId);
-});
-
-// マスタ設定（税区分・デフォルト科目参照用）
-const masterSettings = useAccountSettings("master");
-const masterTaxCategories = masterSettings.taxCategories;
+// ※ フォールバックはuseAccountSettings内部で処理済み。masterSettings不要。
+// ※ clientIdが変わった場合はVue Routerが再マウントするため、setupトップレベルで安全。
+const clientSettings = useAccountSettings("client", currentClient.value?.clientId ?? '');
 
 /** 顧問先のtype/hasRentalIncomeでフィルタ済み勘定科目リスト */
 const filteredAccounts = computed(() => {
@@ -2428,9 +2423,7 @@ const filteredAccounts = computed(() => {
   const hasRental = client?.hasRentalIncome ?? false;
 
   // composableがあればvisibleAccountsを使用（非表示科目除外済み）
-  const source = clientSettings.value
-    ? clientSettings.value.visibleAccounts.value
-    : masterSettings.accounts.value;
+  const source = clientSettings.visibleAccounts.value;
 
   return source
     .filter((acc) => {
@@ -2624,7 +2617,7 @@ function getTaxGroupsForEntry(row: Record<string, unknown>, colKey: string) {
   const entry = row[side] as Record<string, unknown> | undefined;
   const accountName = entry?.account as string | null;
 
-  const settings = clientSettings.value ?? masterSettings;
+  const settings = clientSettings;
 
   if (!accountName) {
     // 勘定科目未選択: 全表示税区分をグルーピング
@@ -2637,7 +2630,7 @@ function getTaxGroupsForEntry(row: Record<string, unknown>, colKey: string) {
   }
 
   const allAccounts = settings.accounts.value;
-  const acc = allAccounts.find((a) => a.name === accountName);
+  const acc = allAccounts.find((a) => a.id === accountName);
   if (!acc) {
     const visible = settings.visibleTaxCategories.value;
     return [
@@ -2715,9 +2708,7 @@ const CONTRA_EXPENSE_IDS = ["PURCHASE_RETURNS", "PURCHASE_RETURNS_CORP"];
 /** 勘定科目名から5分類グループを判定（accountGroupベース） */
 function getMegaGroup(accountName: string | null): MegaGroupType {
   if (!accountName) return null;
-  const allAccounts = clientSettings.value
-    ? clientSettings.value.accounts.value
-    : masterSettings.accounts.value;
+  const allAccounts = clientSettings.accounts.value;
   const acc = allAccounts.find((a) => a.id === accountName);
   if (!acc) return null;
   if (acc.accountGroup === "PL_REVENUE") return "sales";
@@ -2733,9 +2724,7 @@ function isContraAccount(accountName: string | null): {
   isContraExpense: boolean;
 } {
   if (!accountName) return { isContraRevenue: false, isContraExpense: false };
-  const allAccounts = clientSettings.value
-    ? clientSettings.value.accounts.value
-    : masterSettings.accounts.value;
+  const allAccounts = clientSettings.accounts.value;
   const acc = allAccounts.find((a) => a.id === accountName);
   if (!acc) return { isContraRevenue: false, isContraExpense: false };
   return {
@@ -2887,7 +2876,7 @@ function runAccountValidation(journal: JournalPhase5Mock): void {
   const voucherType = journal.voucher_type;
   if (!voucherType || !debitAccount || !creditAccount) return;
 
-  const accts = clientSettings.value ? clientSettings.value.accounts.value : masterSettings.accounts.value;
+  const accts = clientSettings.accounts.value;
   const voucherWarning = validateByVoucherType(voucherType, journal, accts);
   if (voucherWarning) {
     confirmDialog.value = {
@@ -2934,9 +2923,7 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
   }
 
   // 1. ACCOUNT_UNKNOWN（勘定科目不明）: 全エントリのaccountが非null かつ マスタに存在
-  const allAccounts = clientSettings.value
-    ? clientSettings.value.accounts.value
-    : masterSettings.accounts.value;
+  const allAccounts = clientSettings.accounts.value;
   const accountIds = new Set(allAccounts.map((a) => a.id));
   const isValidAccount = (id: string | null) => id != null && id !== "" && accountIds.has(id);
   const allAccountsValid =
@@ -2946,9 +2933,7 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
   else addLabel("ACCOUNT_UNKNOWN");
 
   // 2. TAX_UNKNOWN（税区分不明）: 全エントリのtax_category_idが非null かつ マスタ/顧問先設定に存在
-  const allTaxCategories = clientSettings.value
-    ? clientSettings.value.taxCategories.value
-    : masterSettings.taxCategories.value;
+  const allTaxCategories = clientSettings.taxCategories.value;
   const taxCategoryIds = new Set(allTaxCategories.map((t) => t.id));
   const isValidTax = (id: string | null | undefined) =>
     id != null && id !== "" && taxCategoryIds.has(id);
@@ -3038,11 +3023,9 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
   // 9. TAX_ACCOUNT_MISMATCH（税区分科目矛盾）: taxDeterminationベースの方向チェック
   const allEntries = [...journal.debit_entries, ...journal.credit_entries];
   let hasTaxAccountMismatch = false;
-  const settings = clientSettings.value ?? masterSettings;
+  const settings = clientSettings;
   const accounts = settings.accounts.value;
-  const taxCats = clientSettings.value
-    ? clientSettings.value.taxCategories.value
-    : masterTaxCategories.value;
+  const taxCats = clientSettings.taxCategories.value;
   for (const entry of allEntries) {
     if (!entry.account || !entry.tax_category_id) continue;
     const acct = accounts.find((a) => a.id === entry.account);
@@ -3137,9 +3120,7 @@ function getWarningCellClass(
   ) {
     if (entry.account == null || entry.account === "") return W;
     // マスタに存在しない科目も赤背景
-    const acctList = clientSettings.value
-      ? clientSettings.value.accounts.value
-      : masterSettings.accounts.value;
+    const acctList = clientSettings.accounts.value;
     const acctIdSet = new Set(acctList.map((a) => a.id));
     if (!acctIdSet.has(entry.account as string)) return W;
   }
@@ -3236,9 +3217,7 @@ function selectAccountItem(
   entry.account = accountId || null;
 
   if (accountId) {
-    const allAccounts = clientSettings.value
-      ? clientSettings.value.accounts.value
-      : masterSettings.accounts.value;
+    const allAccounts = clientSettings.accounts.value;
     const acc = allAccounts.find((a) => a.id === accountId);
     if (acc?.defaultTaxCategoryId) {
       // デフォルト税区分IDを直接セット（免税時はCOMMON_EXEMPTに変換）
@@ -3248,8 +3227,8 @@ function selectAccountItem(
     if (acc) {
       entry.selectedCategory = acc.category;
     }
-    if (acc && clientSettings.value) {
-      const sub = clientSettings.value.subAccounts.value[acc.id];
+    if (acc) {
+      const sub = clientSettings.subAccounts.value[acc.id];
       entry.sub_account = sub || null;
     }
   } else {
@@ -3298,7 +3277,7 @@ function blurAccountEdit(
 function blurTaxEdit(journal: JournalPhase5Mock): void {
   if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
   const val = editingValue.value;
-  const settings = clientSettings.value ?? masterSettings;
+  const settings = clientSettings;
   // 入力値がID一致 or 名前一致する税区分を検索
   const matched = settings.visibleTaxCategories.value.find(
     (tc) => tc.id === val || tc.name === val,
@@ -3385,9 +3364,7 @@ function startCellEdit(
   let val = currentValue != null ? String(currentValue) : "";
   // 勘定科目列の場合: IDを日本語名に変換して検索欄に表示
   if (colKey.endsWith(".account") && val) {
-    const allAccts = clientSettings.value
-      ? clientSettings.value.accounts.value
-      : masterSettings.accounts.value;
+    const allAccts = clientSettings.accounts.value;
     const acc = allAccts.find((a) => a.id === val);
     if (acc) val = acc.name;
   }
@@ -3631,9 +3608,7 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
         (entry as unknown as Record<string, unknown>)[field] = value;
         const accountId = value as string;
         if (accountId) {
-          const allAccts = clientSettings.value
-            ? clientSettings.value.accounts.value
-            : masterSettings.accounts.value;
+          const allAccts = clientSettings.accounts.value;
           const acc = allAccts.find((a) => a.id === accountId);
           // デフォルト税区分の自動設定
           if (acc?.defaultTaxCategoryId) {
@@ -3644,8 +3619,8 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
             (entry as unknown as Record<string, unknown>).selectedCategory = acc.category;
           }
           // 補助科目連動
-          if (acc && clientSettings.value) {
-            const sub = clientSettings.value.subAccounts.value[acc.id];
+          if (acc) {
+            const sub = clientSettings.subAccounts.value[acc.id];
             entry.sub_account = sub || null;
           }
         } else {
@@ -4058,9 +4033,7 @@ function openWarningConfirmModal(journal: JournalPhase5Mock) {
 const errorLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level === "error");
 const warnLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level === "warn");
 
-function toggleDropdown(journalId: string) {
-  openDropdownId.value = openDropdownId.value === journalId ? null : journalId;
-}
+
 
 // ────── ヒントモーダル ──────
 type HintValidation = { level: 'error' | 'warn'; message: string };
@@ -4099,9 +4072,7 @@ function openHintModal(journal: JournalPhase5Mock): void {
 function generateHintValidations(journal: JournalPhase5Mock): HintValidation[] {
   const results: HintValidation[] = [];
   const labels = journal.labels as string[];
-  const allAccounts = clientSettings.value
-    ? clientSettings.value.accounts.value
-    : masterSettings.accounts.value;
+  const allAccounts = clientSettings.accounts.value;
 
   // 各warningLabelに対応するメッセージ
   if (labels.includes('ACCOUNT_UNKNOWN')) {
@@ -4158,12 +4129,8 @@ function generateHintSuggestions(journal: JournalPhase5Mock): HintSuggestion[] {
   const labels = journal.labels as string[];
 
   // ★ 顧問先勘定科目を優先（なければマスタ）
-  const allAccts = clientSettings.value
-    ? clientSettings.value.accounts.value
-    : masterSettings.accounts.value;
-  const allTaxCats = clientSettings.value
-    ? clientSettings.value.taxCategories.value
-    : masterSettings.taxCategories.value;
+  const allAccts = clientSettings.accounts.value;
+  const allTaxCats = clientSettings.taxCategories.value;
   const accountIds = new Set(allAccts.map((a) => a.id));
 
   // ★ 「科目名（補助科目）」形式のラベル生成
@@ -4410,19 +4377,13 @@ function applyHintSuggestion(s: HintSuggestion): void {
     if (!entry) return;
     entry.account = s.selectedValue;
     // 科目に連動して税区分・補助科目を自動補完
-    const allAccts = clientSettings.value
-      ? clientSettings.value.accounts.value
-      : masterSettings.accounts.value;
+    const allAccts = clientSettings.accounts.value;
     const acctObj = allAccts.find((a) => a.id === s.selectedValue);
     if (acctObj) {
       if (acctObj.defaultTaxCategoryId) entry.tax_category_id = acctObj.defaultTaxCategoryId;
       // 補助科目: selectAccountItemと同じくclientSettings.subAccountsから取得
-      if (clientSettings.value) {
-        const sub = clientSettings.value.subAccounts.value[s.selectedValue];
-        entry.sub_account = sub || null;
-      } else {
-        entry.sub_account = null;
-      }
+      const sub = clientSettings.subAccounts.value[s.selectedValue];
+      entry.sub_account = sub || null;
     }
   } else if (s.field === '税区分') {
     const entry = entries[s.entryIndex];
@@ -5466,9 +5427,7 @@ function getValue(obj: any, path: string): unknown {
 /** 概念IDからMF正式名称を取得。顧問先税区分を優先、なければマスタフォールバック */
 function resolveTaxCategoryName(id: string | null | undefined): string {
   if (!id) return "";
-  const allTaxCats = clientSettings.value
-    ? clientSettings.value.taxCategories.value
-    : masterTaxCategories.value;
+  const allTaxCats = clientSettings.taxCategories.value;
   const entry = allTaxCats.find((tc) => tc.id === id);
   return entry ? entry.name : id;
 }
@@ -5476,9 +5435,7 @@ function resolveTaxCategoryName(id: string | null | undefined): string {
 /** IDから勘定科目の表示名を取得。顧問先科目を優先、なければマスタフォールバック */
 function resolveAccountName(id: string | null | undefined): string {
   if (!id) return "";
-  const allAccts = clientSettings.value
-    ? clientSettings.value.accounts.value
-    : masterSettings.accounts.value;
+  const allAccts = clientSettings.accounts.value;
   const account = allAccts.find((a) => a.id === id);
   return account ? account.name : id;
 }

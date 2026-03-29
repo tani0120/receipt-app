@@ -220,7 +220,9 @@ const mfWarningMessage = ref('');
 const taxPage = ref(1);
 
 // =============== composable接続（useAccountSettings経由） ===============
-const settings = clientId.value ? useAccountSettings('client', clientId.value) : useAccountSettings('master');
+// clientIdはURL由来で必須。フォールバックはuseAccountSettings内部で処理済み。
+if (!clientId.value) throw new Error('[MockClientTaxPage] clientId is required');
+const settings = useAccountSettings('client', clientId.value);
 
 // 旧キーマイグレーションはuseAccountSettings内部で実行済み
 

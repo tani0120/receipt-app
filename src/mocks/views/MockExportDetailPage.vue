@@ -154,28 +154,21 @@ interface DetailRow {
 
 // 日付表示はtoMfCsvDate（YYYY/MM/DD）に統一
 
-// 名前解決（顧問先設定優先→マスタフォールバック）
-const masterSettings = useAccountSettings('master');
+// 名前解決（フォールバックはuseAccountSettings内部で処理済み）
 const clientSettings = useAccountSettings('client', clientId.value);
 
 function resolveAccountName(id: string | null | undefined): string {
   if (!id) return '';
   // 顧問先設定を優先検索
   const clientAcct = clientSettings.accounts.value.find(a => a.id === id);
-  if (clientAcct) return clientAcct.name;
-  // マスタフォールバック
-  const masterAcct = masterSettings.accounts.value.find(a => a.id === id);
-  return masterAcct ? masterAcct.name : id;
+  return clientAcct ? clientAcct.name : id;
 }
 
 function resolveTaxCategoryName(id: string | null | undefined): string {
   if (!id) return '';
   // 顧問先設定を優先検索
   const clientTc = clientSettings.taxCategories.value.find(tc => tc.id === id);
-  if (clientTc) return clientTc.name;
-  // マスタフォールバック
-  const masterTc = masterSettings.taxCategories.value.find(tc => tc.id === id);
-  return masterTc ? masterTc.name : id;
+  return clientTc ? clientTc.name : id;
 }
 
 const showRealtimeUpdateMsg = () => globalThis.alert('現在はリアルタイム更新です');

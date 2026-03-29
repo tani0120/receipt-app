@@ -161,7 +161,6 @@ const exDefaultWidths: Record<string, number> = {
 };
 const { columnWidths: exColWidths, onResizeStart: onExResizeStart } = useColumnResize('export', exDefaultWidths);
 
-const masterSettings = useAccountSettings('master');
 const clientSettings = useAccountSettings('client', clientId.value);
 
 // 出力ページ初期化時: 全仕訳の警告ラベルを同期（顧問先設定でバリデーション）
@@ -188,14 +187,12 @@ function resolveAccountName(id: string | null | undefined): string {
   if (!id) return ''
   // 顧問先設定を優先、見つからなければマスタ全体からフォールバック
   const account = clientSettings.accounts.value.find(a => a.id === id)
-    ?? masterSettings.accounts.value.find(a => a.id === id)
   return account ? account.name : id
 }
 
 function resolveTaxCategoryName(id: string | null | undefined): string {
   if (!id) return ''
   const entry = clientSettings.taxCategories.value.find(tc => tc.id === id)
-    ?? masterSettings.taxCategories.value.find(tc => tc.id === id)
   return entry ? entry.name : id
 }
 

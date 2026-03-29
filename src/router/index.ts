@@ -145,7 +145,6 @@ export const routes: RouteRecordRaw[] = [
     path: '/client/journal-list/:clientId',
     name: 'MockJournalList',
     component: () => import('@/mocks/components/JournalListLevel3Mock.vue'),
-    props: true
   },
   {
     path: '/client/export/:clientId',

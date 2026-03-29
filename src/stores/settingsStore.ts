@@ -2,7 +2,7 @@
  * 設定ストア — 基本情報パネルの値を画面間で共有
  *
  * ScreenS_Settings.vue の基本情報パネルで設定した値を
- * ScreenS_AccountSettings.vue（勘定科目と税区分）で参照する。
+ * MockClientAccountsPage.vue / MockClientTaxPage.vue で参照する。
  */
 import { defineStore } from 'pinia';
 import { ref } from 'vue';

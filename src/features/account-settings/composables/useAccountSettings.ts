@@ -66,7 +66,21 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       })
     }
     // scope === 'client'
-    if (!clientAccountsComposable) return []
+    if (!clientAccountsComposable) {
+      console.error('[useAccountSettings] scope="client" but clientAccountsComposable is null (clientId missing?)')
+      // フォールバック: マスタデータを返す（呼び出し側でmasterSettings参照を不要にする）
+      return accountMaster.masterAccounts.value.map(a => {
+        const source: UnifiedAccount['source'] = a.isCustom ? 'master-custom' : 'default'
+        return {
+          ...a,
+          hidden: a.hiddenInMaster,
+          hiddenInMaster: false,
+          isMasterCustom: a.isCustom,
+          isClientCustom: false,
+          source,
+        }
+      })
+    }
     return clientAccountsComposable.clientAccounts.value.map(a => {
       const source: UnifiedAccount['source'] = a.isMasterCustom ? 'master-custom' : a.isCustom ? 'client-custom' : 'default'
       return {
@@ -109,7 +123,21 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
         }
       })
     }
-    if (!clientTaxComposable) return []
+    if (!clientTaxComposable) {
+      console.error('[useAccountSettings] scope="client" but clientTaxComposable is null (clientId missing?)')
+      // フォールバック: マスタ税区分を返す
+      return taxMaster.masterTaxCategories.value.map(tc => {
+        const source: UnifiedTaxCategory['source'] = tc.isCustom ? 'master-custom' : 'default'
+        return {
+          ...tc,
+          hidden: tc.hiddenInMaster,
+          hiddenInMaster: false,
+          defaultVisible: tc.defaultVisible,
+          visibilityOverride: taxMaster.overrides.value.visibilityOverrides[tc.id] ?? null,
+          source,
+        }
+      })
+    }
     return clientTaxComposable.clientTaxCategories.value.map(tc => {
       // マスタカスタムか顧問先カスタムかの判定
       // マスタのcustomTaxCategoriesリストにIDが含まれるかで判定（hiddenInMasterに依存しない）
