@@ -86,8 +86,6 @@ export function convertLegacyClient(old: LegacyClient): ClientDocument {
  * Convert Legacy Job to V2 WorkLogDocument (Focus on Time/Task)
  */
 export function convertLegacyJobToWorkLog(old: LegacyJob): WorkLogDocument {
-    const _now = Timestamp.now();
-
     // Map Status for WorkLog
     let status: WorkLogDocument['status'] = 'draft';
     if (old.status === 'approved' || old.status === 'done') status = 'approved';

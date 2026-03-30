@@ -54,10 +54,6 @@ const safeNumber = (value: unknown, fallback = 0): number => {
 };
 
 
-const _safeBoolean = (value: unknown): boolean => {
-  return !!value;
-};
-
 const formatTimestamp = (ts: unknown): string => {
   if (!ts) return '—';
 

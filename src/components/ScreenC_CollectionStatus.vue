@@ -21,8 +21,8 @@
               <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 flex justify-between items-start">
                   <div>
                       <div class="flex items-center gap-3 mb-2">
-                          <span class="bg-slate-100 text-slate-600 text-sm px-2 py-1 rounded font-mono font-bold">{{ currentClient.code }}</span>
-                          <h1 class="text-2xl font-bold text-slate-800">{{ currentClient.name }}</h1>
+                          <span class="bg-slate-100 text-slate-600 text-sm px-2 py-1 rounded font-mono font-bold">{{ currentClient.clientCode }}</span>
+                          <h1 class="text-2xl font-bold text-slate-800">{{ currentClient.companyName }}</h1>
                           <span class="text-xs bg-slate-100 px-2 py-1 rounded border text-slate-500">
                               {{ currentClient.type === 'individual' ? '個人' : '法人' }} ({{ currentClient.fiscalMonth }}月決算)
                           </span>
@@ -494,8 +494,8 @@ const materialStatuses = computed(() => {
 // Mock Actions (No-op or Alert)
 const openBankModal = () => { alert('Mock: Open Bank Modal'); };
 const openCardModal = () => { alert('Mock: Open Card Modal'); };
-const deleteBank = () => { if(confirm('Mock: Explore delete?')) alert('Mock: Deleted'); };
-const deleteCard = () => { if(confirm('Mock: Explore delete?')) alert('Mock: Deleted'); };
+const deleteBank = (_id: string) => { if(confirm('Mock: Explore delete?')) alert('Mock: Deleted'); };
+const deleteCard = (_id: string) => { if(confirm('Mock: Explore delete?')) alert('Mock: Deleted'); };
 const saveCConfig = () => { c_isSaving.value = true; setTimeout(() => c_isSaving.value = false, 500); };
 const c_isSaving = ref(false);
 const openReportModal = () => { alert('Mock: Open Report Modal'); };

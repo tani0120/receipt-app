@@ -16,7 +16,7 @@ import type {
 
 export function identifyInstitutionByBalance(
     detectedStartBalance: number,
-    detectedEndBalance: number,
+    _detectedEndBalance: number,
     historyBalances: AccountBalance[]
 ): string | null {
     // Logic: Find an account where Previous Month's End Balance == Current Start Balance
@@ -68,6 +68,7 @@ export function identifyInstitutionByFingerprint(
 // Local type extension to include data usually found in the parent 'Job' or 'Enriched' context
 export interface EnrichedLine extends JournalLine {
     transactionDate?: string | Date; // Optional, used for duplicate checking
+    metadata?: { hasTNumber?: boolean }; // Optional, T-Number check用
 }
 
 export interface FiscalContext {

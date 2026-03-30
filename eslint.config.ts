@@ -13,7 +13,22 @@ export default defineConfigWithVueTs(
     files: ['**/*.{ts,mts,tsx,vue}'],
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
+  globalIgnores([
+    '**/dist/**',
+    '**/dist-ssr/**',
+    '**/coverage/**',
+    // Tier 0: lint ノイズ除去（2026-03-30）
+    '.history/**',
+    '**/*.cjs',
+    '**/*.js',
+    'docs/_archive_legacy/**',
+    'docs/genzai/07_test_plan/**',
+    'freeze/**',
+    'test_*.ts',
+    'verify_factory.ts',
+    'test_api.ts',
+    'test_env.ts',
+  ]),
 
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
@@ -49,7 +64,8 @@ export default defineConfigWithVueTs(
       'src/Mirror_sandbox/**/*',
       'src/three_sandbox/**/*',
       'src/utils/seed*',
-      'src/mocks/**/*'
+      'src/mocks/**/*',
+      'scripts/**/*',
     ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',

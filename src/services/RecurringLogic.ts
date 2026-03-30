@@ -30,8 +30,7 @@ export function analyzeRecurringTransactions(
             // But GeneralLedgerService returns accumulating balance.
             // We need to infer movement or update GeneralLedgerService to return 'monthlyTurnover'.
             // For now, let's assume if it exists in history, we check it.
-            const _baseName = b.accountName.split('::')[0]; // Ignore sub-account for grouping? Or keep strictly?
-            // Let's use strict Account Name
+            // accountNameをそのまま使用（sub-accountも含めた厳密マッチ）
             accountFrequency.set(b.accountName, (accountFrequency.get(b.accountName) || 0) + 1);
         }
     });

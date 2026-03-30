@@ -101,8 +101,8 @@ function setTestStatus(status: string) {
 }
 
 onMounted(async () => {
-  const _documentId = route.params.id as string
-  // TODO: API呼び出し
-  // document.value = await fetchDocument(documentId)
+  // TODO: API呼び出し（route.params.idからドキュメント取得）
+  // document.value = await fetchDocument(route.params.id as string)
+  void route // 将来のAPI呼び出し用に保持
 })
 </script>

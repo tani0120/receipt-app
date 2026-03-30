@@ -11,7 +11,7 @@ export async function seedBanks() {
             branchName: '渋谷支店',
             accountNumber: '1234567',
             status: 'connected'
-        });
+        } as any);
         console.log('Bank Seeded.');
     } catch (e) {
         console.error('Failed to seed bank', e);
@@ -24,7 +24,7 @@ export async function seedBanks() {
             brand: 'Amex',
             last4Digits: '9001',
             status: 'connected'
-        });
+        } as any);
         console.log('Card Seeded.');
     } catch (e) {
         console.error('Failed to seed card', e);

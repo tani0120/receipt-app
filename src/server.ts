@@ -100,8 +100,8 @@ app.get('/', (c) => {
 
 console.log('🔧 Starting HTTP server...')
 
-// ⚠️ CRITICAL: serve()の戻り値を保持してプロセスを維持
-const _server = serve({
+// serve()の戻り値はイベントループで保持されるため変数代入不要
+serve({
     fetch: app.fetch,
     port,
     hostname: '0.0.0.0',

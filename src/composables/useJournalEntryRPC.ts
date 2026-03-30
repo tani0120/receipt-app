@@ -1,5 +1,10 @@
 import { ref } from 'vue';
-import type { JournalEntryUi } from '@/types/ui.type';
+
+/** スタブ型: 将来ui.typeに正式定義後に差し替え */
+interface JournalEntryUi {
+  id: string;
+  [key: string]: unknown;
+}
 
 /**
  * useJournalEntryRPC - RPC/API層（スタブ版）

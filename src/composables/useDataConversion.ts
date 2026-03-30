@@ -90,13 +90,6 @@ export function aaa_useDataConversion() {
     const isProcessing = ref(false);
     const loadingStatus = ref('');
 
-    const _SOFTWARE_LABELS = {
-        'Yayoi': '弥生会計',
-        'MF': 'マネーフォワード',
-        'Freee': 'freee',
-        'Unknown': '不明'
-    } as const;
-
     const generateId = () => {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         let result = '';

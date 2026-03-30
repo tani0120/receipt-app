@@ -19,7 +19,7 @@
 
 import {
     // Core Schemas
-    DocumentSchema,
+    // DocumentSchema,  // TODO: zod_schemaにDocumentSchemaを定義後に復元
     ClientSchema,
     JobSchema,
     JournalLineSchema,
@@ -29,7 +29,7 @@ import {
 
     // Enum Schemas
     AccountingSoftwareSchema,
-    ClientStatusSchema,
+    // ClientStatusSchema,  // TODO: zod_schemaにClientStatusSchemaを定義後に復元（ClientSchemaとは別）
     JobStatusSchema,
     TaxFilingTypeSchema,
     ConsumptionTaxModeSchema,
@@ -43,7 +43,7 @@ import {
  */
 export const Keys = {
     // Core Entities
-    Document: DocumentSchema.keyof().enum,
+    // Document: DocumentSchema.keyof().enum,  // TODO: DocumentSchema定義後に復元
     Client: ClientSchema.keyof().enum,
     Job: JobSchema.keyof().enum,
     JournalLine: JournalLineSchema.keyof().enum,
@@ -57,7 +57,7 @@ export const Keys = {
  *
  * TypeScriptの型システムで使用可能
  */
-export type DocumentKey = keyof typeof DocumentSchema.shape;
+// export type DocumentKey = keyof typeof DocumentSchema.shape;  // TODO: DocumentSchema定義後に復元
 export type ClientKey = keyof typeof ClientSchema.shape;
 export type JobKey = keyof typeof JobSchema.shape;
 export type JournalLineKey = keyof typeof JournalLineSchema.shape;
@@ -69,7 +69,7 @@ export type LearningRuleKey = keyof typeof LearningRuleSchema.shape;
  * Enum値の型定義
  */
 export type AccountingSoftware = z.infer<typeof AccountingSoftwareSchema>;
-export type ClientStatus = z.infer<typeof ClientStatusSchema>;
+// export type ClientStatus = z.infer<typeof ClientStatusSchema>;  // TODO: ClientStatusSchema定義後に復元
 export type JobStatus = z.infer<typeof JobStatusSchema>;
 export type TaxFilingType = z.infer<typeof TaxFilingTypeSchema>;
 export type ConsumptionTaxMode = z.infer<typeof ConsumptionTaxModeSchema>;

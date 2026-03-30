@@ -1,5 +1,5 @@
 import { FirestoreRepository } from '../services/firestoreRepository';
-import type { Job, JobStatus, JournalLine } from '../types/firestore';
+import type { JobStatus, JournalLine } from '../types/firestore';
 import { Timestamp } from 'firebase/firestore';
 
 // Copied from aaa_useAccountingSystem.ts to avoid modifying it
@@ -163,12 +163,7 @@ export async function seedMockJobs() {
 
                 const credit = entry.proposal.credits[0]; // Assume single credit for now for simplicity
 
-                // Calculate proportional credit amount or just use debit amount for balance?
-                // Double entry must balance per transaction.
-                // Usually JournalLine means a "Row" in a standard view.
-                // Let's just use debit amount for crAmount to keep it balanced per line if that's the UI expectation,
-                // OR we accept that 'crAmount' might need to be set differently.
-                // Getting simple: Use debit amount for both sides on this line.
+                if (!debit) continue; // undefined guard
 
                 lines.push({
                     lineNo: lineNo++,
@@ -179,7 +174,7 @@ export async function seedMockJobs() {
                     crAmount: debit.amount, // Force balance on line level for display
                     crTaxClass: credit ? credit.taxType : '対象外',
                     description: entry.description,
-                    subAccount: entry.vendor,
+                    drSubAccount: entry.vendor,
                     note: entry.aiInference.reason
                 });
             }
@@ -193,7 +188,9 @@ export async function seedMockJobs() {
             transactionDate: timestamp,
             confidenceScore: confidence,
             aiAnalysisRaw: JSON.stringify(entry.aiInference),
-            lines: lines
+            lines: lines,
+            priority: 'normal' as const,
+            retryCount: 0,
         };
 
         try {
