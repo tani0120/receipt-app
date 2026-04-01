@@ -6,6 +6,9 @@ import type { StaffNotes } from './staff_notes'
 // ============================================================
 import type { JournalLabel, JournalEntryLine } from '@/domain/types/journal';
 export type { JournalLabel, JournalEntryLine };
+import type { SourceType, Direction } from './pipeline/source_type.type';
+import type { VendorVector } from './pipeline/vendor.type';
+
 
 /**
  * Phase 5 仕訳モック型定義
@@ -94,7 +97,23 @@ export interface JournalPhase5Mock {
    */
   date_on_document: boolean;
   description: string;                   // 摘要
+  /**
+   * @deprecated 旧証票意味（将来削除予定）
+   * パイプライン移行後は source_type / direction / vendor_vector を使用すること。
+   * 現在のUI表示・CSVエクスポートとの後方互換性のため残存。
+   */
   voucher_type: string | null;           // 証票意味（売上/経費/給与/立替経費/振替/クレカ/クレカ引落/その他）
+
+  // ── パイプライン3フィールド（T-00b追加 2026-04-02）──────────
+  // Step 0出力: 証票種類（7種。Gemini直接判定）
+  // Step 1出力: 証票向き（3種）
+  // Step 3出力: 証票業種ベクトル（66種）
+  // 全て nullable（パイプライン未実行 or non_journalの場合はnull）
+  source_type: SourceType | null;        // 証票種類（receipt/invoice/bank_statement等7種）
+  direction: Direction | null;           // 証票向き（expense/income/transfer）
+  vendor_vector: VendorVector | null;    // 証票業種（restaurant/cafe/taxi等66種）
+  // ─────────────────────────────────────────────────────────────
+
 
   // 証票紐付け（スキーマ準拠）
   document_id: string | null;             // 証票ID（documentsテーブル参照）
