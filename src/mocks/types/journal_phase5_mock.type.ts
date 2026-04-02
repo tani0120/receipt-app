@@ -104,13 +104,13 @@ export interface JournalPhase5Mock {
    */
   voucher_type: string | null;           // 証票意味（売上/経費/給与/立替経費/振替/クレカ/クレカ引落/その他）
 
-  // ── パイプライン3フィールド（T-00b追加 2026-04-02）──────────
-  // Step 0出力: 証票種類（7種。Gemini直接判定）
-  // Step 1出力: 証票向き（3種）
+  // ── パイプライン3フィールド（T-00b追加 2026-04-02 / 再設計 2026-04-02）──
+  // Step 0出力: 証票種類（11種。Gemini直接判定）
+  // Step 1出力: 仕訳方向（4種。expense/income/transfer/mixed）
   // Step 3出力: 証票業種ベクトル（66種）
   // 全て nullable（パイプライン未実行 or non_journalの場合はnull）
-  source_type: SourceType | null;        // 証票種類（receipt/invoice/bank_statement等7種）
-  direction: Direction | null;           // 証票向き（expense/income/transfer）
+  source_type: SourceType | null;        // 証票種類（receipt/invoice_received/bank_statement等11種）
+  direction: Direction | null;           // 仕訳方向（expense（出金）/income（入金）/transfer（振替）/mixed（混在））
   vendor_vector: VendorVector | null;    // 証票業種（restaurant/cafe/taxi等66種）
   // ─────────────────────────────────────────────────────────────
 

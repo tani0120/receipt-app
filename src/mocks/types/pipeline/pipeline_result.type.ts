@@ -5,7 +5,13 @@
  *
  * 【概要】
  *   AIパイプライン（Step 0〜4）の最終出力型。
- *   UI列（証票種類/証票向き/証票業種）、DB保存、CSV出力の全てがこの型を参照する。
+ *   UI列（証票種類/仕訳方向/証票業種）、DB保存、CSV出力の全てがこの型を参照する。
+ *
+ * 【再設計（2026-04-02）】
+ *   - SourceType: 7種 → 11種（invoice_issued/receipt_issued追加、medical_certificate削除）
+ *   - Direction: 3種 → 4種（mixed追加）
+ *   - ProcessingMode: 新規追加（auto/manual/excluded — source_typeから導出）
+ *   - processing_mode フィールド追加
  *
  * 【設計決定（2026-03-30 確定）】
  *   - GPT提案の `status: 'confirmed' | 'candidate'` は不採用（設計に存在しない概念）
@@ -32,7 +38,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import type { SourceType, Direction } from './source_type.type'
+import type { SourceType, Direction, ProcessingMode } from './source_type.type'
 
 // ============================================================
 // § VendorVector 型（暫定import）
@@ -111,10 +117,16 @@ export interface PipelineResult {
   // パイプライン判定結果（UIが直接参照する3列）
   // ============================================================
 
-  /** 証票種類（7種）— Step 0 で判定 */
+  /** 証票種類（11種）— Step 0 で判定 */
   source_type: SourceType
 
-  /** 証票向き（3種）— Step 1 で判定。non_journal の場合 null */
+  /**
+   * 処理区分（3種）— source_type から PROCESSING_MODE_MAP で導出
+   * auto（自動仕訳） / manual（手入力仕訳） / excluded（仕訳対象外）
+   */
+  processing_mode: ProcessingMode
+
+  /** 仕訳方向（4種）— Step 1 で判定。non_journal の場合 null */
   direction: Direction | null
 
   /** 証票業種（66種）— Step 3 で判定。Step 2 で早期終了した場合 null */
