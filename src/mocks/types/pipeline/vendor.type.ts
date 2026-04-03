@@ -46,7 +46,7 @@ export type VendorVector =
   | 'convenience_store' // コンビニ等（insufficient）
   | 'general_goods'     // 雑貨・生活用品（A）
   | 'souvenir'          // おみやげ（A）
-  | 'drugstore'         // ドラッグストア（insufficient）
+  | 'drugstore'         // ドラッグストア（A）
   | 'apparel'           // 衣類・靴・カバン・小物（A）
   | 'cosmetics'         // 化粧品類（A）
   | 'books'             // 書籍（A）
@@ -62,25 +62,25 @@ export type VendorVector =
   | 'stationery'        // 文具（A）
 
   // ── 🔧 サービス（19種）─────────────────────────────
-  | 'beauty'            // 美容・エステ・クリーニング（insufficient）
-  | 'printing'          // 印刷（insufficient）
+  | 'beauty'            // 美容・エステ・クリーニング（A）
+  | 'printing'          // 印刷（A）
   | 'advertising'       // 広告・マーケティング（A）
   | 'post_office'       // 郵便局（insufficient）
   | 'waste'             // ゴミ処理・廃棄物（A）
   | 'it_service'        // ITサービス（insufficient）
   | 'telecom_saas'      // 通信・SaaS（insufficient）
-  | 'education'         // 研修・各種スクール（法人:insufficient / 個人:A）
+  | 'education'         // 研修・各種スクール（A）
   | 'outsourcing'       // アウトソーシング（A）
-  | 'lease_rental'      // リース・レンタル（A）
+  | 'lease_rental'      // リース・レンタル（insufficient）
   | 'staffing'          // 人材派遣（A）
   | 'camera_dpe'        // カメラ・DPE（A）
   | 'funeral'           // 仏壇・仏事（A）
   | 'platform'          // プラットフォーム（insufficient）
   | 'ec_site'           // ECサイト（insufficient）
-  | 'logistics'         // 物流・運送（insufficient）
+  | 'logistics'         // 物流・運送（A）
   | 'consulting'        // コンサルティング・顧問（insufficient）
-  | 'legal_firm'        // 士業（弁護士・税理士等）（insufficient）
-  | 'construction'      // 工事業・建設住宅（insufficient）
+  | 'legal_firm'        // 士業（弁護士・税理士等）（A）
+  | 'construction'      // 工事業・建設住宅（A）
 
   // ── 🏢 不動産・保険（2種）──────────────────────────
   | 'real_estate'       // 不動産（insufficient）
@@ -91,12 +91,12 @@ export type VendorVector =
   | 'leisure'           // 娯楽施設・スポーツ施設（insufficient）
   | 'cinema_music'      // 映画・音楽（A）
   | 'spa'               // 温泉・銭湯（A）
-  | 'travel_agency'     // 旅行代理店（法人:insufficient / 個人:A）
+  | 'travel_agency'     // 旅行代理店（A）
 
   // ── 🚃 交通機関（9種）──────────────────────────────
-  | 'gas_station'       // ガソリンスタンド（insufficient）
+  | 'gas_station'       // ガソリンスタンド（A）
   | 'taxi'              // タクシー（A）
-  | 'rental_car'        // レンタカー（insufficient）
+  | 'rental_car'        // レンタカー（A）
   | 'train'             // 電車（A）
   | 'bus'               // バス（A）
   | 'highway'           // 有料道路（A）
@@ -109,7 +109,7 @@ export type VendorVector =
   | 'government'        // 官公庁・税金（insufficient）
   | 'social_insurance'  // 社会保険（A）
   | 'medical'           // 医院・病院（A）※法人→WELFARE、個人→WELFARE
-  | 'religious'         // 神社・教会等（A）
+  | 'religious'         // 神社・教会等（insufficient）
 
   // ── 💰 金融（1種）───────────────────────────────────
   | 'financial'         // 金融機関・銀行（insufficient）
