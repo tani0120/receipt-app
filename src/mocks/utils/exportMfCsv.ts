@@ -70,7 +70,7 @@ export const EXCLUDE_LABELS = [
   'MULTIPLE_VOUCHERS',
   // domain層 警告（黄4種）
   'DUPLICATE_SUSPECT',
-  'DATE_OUT_OF_RANGE',
+  'FUTURE_DATE',
   'UNREADABLE_ESTIMATED',
   'MEMO_DETECTED',
   // mock層 警告（5種）

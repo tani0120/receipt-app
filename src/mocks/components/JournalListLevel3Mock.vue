@@ -1080,6 +1080,7 @@
                         : '',
                       isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '',
                       getWarningCellClass(journal, col.key),
+                      col.key === 'voucher_date' ? getDatePeriodClass(journal.voucher_date) : '',
                       isDragCompatibleCol(col.key) ? '!bg-blue-50' : '',
                       isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                     ]"
@@ -3061,6 +3062,18 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
     removeLabel("TAX_ACCOUNT_MISMATCH");
   }
 
+  // 10. FUTURE_DATE（未来日付）: voucher_dateが明日以降
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`; // ローカルTZ
+  if (journal.voucher_date != null && journal.voucher_date !== "" && journal.voucher_date >= tomorrowStr) {
+    addLabel("FUTURE_DATE");
+  } else {
+    removeLabel("FUTURE_DATE");
+  }
+
   // 新規追加されたラベルがあれば警告モーダルを表示（silentモードでは非表示）
   if (addedLabels.length > 0 && !silent) {
     const warningText = addedLabels.map((l) => warningLabelMap[l]?.label ?? l).join("\n");
@@ -3163,6 +3176,9 @@ function getWarningCellClass(
   // DATE_UNKNOWN（日付不明）→ 日付セル
   if (colKey === "voucher_date" && labels.includes("DATE_UNKNOWN")) return W;
 
+  // FUTURE_DATE（未来日付）→ 日付セル赤背景
+  if (colKey === "voucher_date" && labels.includes("FUTURE_DATE")) return W;
+
   // DESCRIPTION_UNKNOWN（摘要不明）→ 摘要セル
   if (colKey === "description" && labels.includes("DESCRIPTION_UNKNOWN")) return W;
 
@@ -3191,6 +3207,51 @@ function getWarningCellClass(
   // TAX_ACCOUNT_MISMATCH（税区分科目矛盾）→ 税区分セル
   if (colKey.includes("tax_category") && labels.includes("TAX_ACCOUNT_MISMATCH")) return W;
 
+  return "";
+}
+
+/**
+ * 日付セルの期間別テキスト色を返す
+ * - 前期以前: 青文字（text-blue-500）
+ * - 当期: 黒文字（空文字＝デフォルト）
+ * - 未来日付: 赤背景はgetWarningCellClassで処理済みのためここでは空
+ *
+ * 会計期間の算出: activeClientFull.fiscalMonthから当期の開始日・終了日を計算
+ *   例: fiscalMonth=3 → 当期: 2025/04/01〜2026/03/31（本日=2026/04/03の場合）
+ */
+function getDatePeriodClass(dateStr: string | null): string {
+  if (!dateStr) return "";
+
+  const client = activeClientFull.value;
+  const fiscalMonth = client?.fiscalMonth ?? 3; // デフォルト3月決算
+
+  // 本日を取得
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-12
+
+  // 当期の期末年月日を算出
+  // fiscalMonth=3の場合、本日が2026/04/03なら期末=2027/03/31
+  // fiscalMonth=3の場合、本日が2026/02/01なら期末=2026/03/31
+  let fiscalEndYear: number;
+  if (currentMonth <= fiscalMonth) {
+    // 本日の月が決算月以前 → 当期期末は今年のfiscalMonth末日
+    fiscalEndYear = currentYear;
+  } else {
+    // 本日の月が決算月より後 → 当期期末は翌年のfiscalMonth末日
+    fiscalEndYear = currentYear + 1;
+  }
+
+  // 期首日: fiscalEndYear-1年のfiscalMonth+1月の1日
+  const fiscalStartDate = new Date(fiscalEndYear - 1, fiscalMonth, 1);
+  const fiscalStartStr = `${fiscalStartDate.getFullYear()}-${String(fiscalStartDate.getMonth() + 1).padStart(2, '0')}-${String(fiscalStartDate.getDate()).padStart(2, '0')}`; // ローカルTZ
+
+  // 判定
+  if (dateStr < fiscalStartStr) {
+    return "text-blue-500"; // 前期以前
+  }
+  // 当期（fiscalStartStr <= dateStr <= fiscalEndStr）またはそれ以降はデフォルト
   return "";
 }
 
@@ -3924,7 +3985,7 @@ const warningLabelMap: Record<
     weight: 7.5,
   },
   DUPLICATE_SUSPECT: { level: "warn", label: "重複疑い", color: "text-yellow-600", weight: 6 },
-  DATE_OUT_OF_RANGE: { level: "warn", label: "期間外日付", color: "text-yellow-600", weight: 5 },
+  FUTURE_DATE: { level: "error", label: "未来日付", color: "text-red-600", weight: 9 },
   UNREADABLE_ESTIMATED: {
     level: "warn",
     label: "判読困難（AI推測値）",
@@ -4120,6 +4181,8 @@ function generateHintValidations(journal: JournalPhase5Mock): HintValidation[] {
   }
   if (labels.includes('TAX_ACCOUNT_MISMATCH'))
     results.push({ level: 'warn', message: '税区分と勘定科目の方向（売上/仕入）が一致しません' });
+  if (labels.includes('FUTURE_DATE'))
+    results.push({ level: 'error', message: `未来日付です（${journal.voucher_date}）。日付を確認してください` });
 
   return results;
 }

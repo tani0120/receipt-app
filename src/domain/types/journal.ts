@@ -149,7 +149,7 @@ export type JournalLabel =
     | 'DUPLICATE_CONFIRMED'     // 完全重複確定（赤）
     | 'MULTIPLE_VOUCHERS'       // 複数証票（赤）
     | 'DUPLICATE_SUSPECT'       // 重複疑い（黄）
-    | 'DATE_OUT_OF_RANGE'       // 期間外日付（黄）
+    | 'FUTURE_DATE'             // 未来日付（赤）
     | 'UNREADABLE_ESTIMATED'    // 判読困難AI推測（黄）
     | 'MEMO_DETECTED'           // 手書きメモ検出（黄）
 

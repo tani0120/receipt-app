@@ -303,8 +303,8 @@ export function generateLabels(
     if (r.has_multiple_vouchers) labels.push('MULTIPLE_VOUCHERS');
     // 7. DUPLICATE_SUSPECT
     if (duplicateSuspect) labels.push('DUPLICATE_SUSPECT');
-    // 8. DATE_OUT_OF_RANGE
-    if (dateAnomaly) labels.push('DATE_OUT_OF_RANGE');
+    // 8. FUTURE_DATE
+    if (dateAnomaly) labels.push('FUTURE_DATE');
     // 9. UNREADABLE_ESTIMATED: unreadable=true + 値あり（AIが推測で埋めた）
     if (r.date_unreadable && r.date !== null) labels.push('UNREADABLE_ESTIMATED');
     if (r.amount_unreadable && r.total_amount !== null) labels.push('UNREADABLE_ESTIMATED');
