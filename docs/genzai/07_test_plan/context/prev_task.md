@@ -7,7 +7,7 @@
 
 ---
 
-## 設計原則（2026-04-02 確定）
+## 設計原則（2026-04-04 更新）
 
 ### TSルールベース vs Gemini の使い分け
 
@@ -29,6 +29,22 @@
 | Geminiが実際に何を返すか（形式・揺れ幅） | 型定義の着手前 | 型が実態と乖離しないようにする |
 | TSルールでどこまでカバーできるか | 型定義の着手前 | Gemini使用箇所を最小化する |
 | TSが限界になる境界がどこか | 型定義の着手前 | 不要なGemini実装を排除する |
+
+### N:N統一設計（2026-04-04 確定）
+
+> **全source_typeで `line_items[]` を使用する。1:N / N:N の分岐は設けない。**
+> レシート = `line_items.length === 1`（通常）。通帳 = `line_items.length === N`。同一構造で統一。
+
+| 決定事項 | 内容 | 根拠 |
+|---|---|---|
+| **N:N統一** | 全source_typeで `line_items[]` 配列を使用 | プロンプト分岐を排除。構造の単純化 |
+| **ReceiptItem / LineItem 分離維持** | レシート商品明細（ReceiptItem）と取引行（LineItem）は別型 | ReceiptItemはquantity/unit_price/tax_rateを持つ。通帳行にはない |
+| **2段階型確定** | v1（T-P4実測済み5+1フィールド）→ v2（T-P3後にvendor_name追加） | 型定義前テスト原則に準拠 |
+| **日付フォーマット** | YYYY-MM-DD維持（toMfCsvDateで変換済み） | Gemini内部でISO 8601が最安定 |
+| **旧LineItem** | classify_schema.ts のLineItemは `@deprecated` | 旧世代コード（Phase A-2）。新設計はline_item.type.ts |
+| **debit_account/credit_account** | 削除→directionに置換 | T-P4実測でGeminiはdebit_account/credit_accountを返さない |
+| **date_on_document / amount_on_document** | LineItemには含めない | `date === null` でコード側導出可能 |
+| **tax_rate** | LineItemには含めない | ReceiptItem側の責務。通帳/クレカ行には税率情報がない |
 
 ---
 
@@ -224,13 +240,42 @@ input = {
 - **依存**: T-01
 - [x] 完了（2026-04-02。T-01と同一ファイルに実装）
 
-### ⚡ T-P4：Step 4（journal_inference）Gemini出力形式プロトタイプ【優先度低下・不要の可能性大】
-- **目的**: Geminiが仕訳1行をどの形式で返すかを実測確認。ConfirmedJournal型・PipelineResult型の設計根拠を確定する
-- **タイミング**: T-03（ConfirmedJournal型）着手前
-- **⚠️ 2026-04-03 設計転換**: vendor_vector辞書引きで科目確定が可能と判明。journal_inferenceの「Geminiに仕訳を考えさせる」シナリオは不要の可能性大。vendor_vector × direction → industry_vector辞書 → 科目候補のTSルックアップで代替可能。
-- **判断基準**: T-P3（vendor_vector 66種テスト）の結果次第。66種の判定精度が実用レベルならT-P4は不要。
+### ⚡ T-P4：通帳/クレカ明細 line_items[] 抽出テスト【目的変更・LineItem v1根拠】
+- **目的（変更後）**: Geminiが通帳/クレカ明細から `line_items[]` を正しく抽出できるかを実測確認。LineItem v1型の設計根拠を確定する
+- **タイミング**: T-LI1（LineItem v1型定義）着手前
+- **⚠️ 2026-04-03 設計転換**: vendor_vector辞書引きで科目確定が可能と判明。journal_inferenceの「Geminiに仕訳を考えさせる」シナリオは不要。
+- **⚠️ 2026-04-04 目的変更**: T-P4の意義を「journal_inference出力形式確認」→「line_items[]抽出精度確認」に変更。通帳23行/クレカ6行の実測で5フィールド（date/description/amount/direction/balance）の抽出精度が100%と確認済み。
+- **実測結果**:
+  | source_type | 行数 | date | description | amount | direction | balance |
+  |---|---|---|---|---|---|---|
+  | 通帳 | 23行 | ✅ 100% | ✅ 100% | ✅ 100% | ✅ 100% | ✅ 100% |
+  | クレカ | 6行 | ✅ 100% | ✅ 100% | ✅ 100% | ✅ 100% | null（正常） |
 - **依存**: image_preprocessor.ts（完了済み）、実物証票数件
-- [ ] 完了（不要の可能性大）
+- [x] 完了（2026-04-03。目的変更：journal_inference→line_items[]抽出。LineItem v1の型根拠として確定）
+
+### T-LI1：LineItem v1型定義 ★新規（2026-04-04追加）
+- **ファイル**: `src/mocks/types/pipeline/line_item.type.ts`
+- **目的**: Gemini line_items[] 出力の受け皿型（全source_type共通・N:N統一）
+- **完了条件**:
+  ```typescript
+  interface LineItem {
+    // T-P4実測済み（確定）
+    date: string | null;              // 日付（YYYY-MM-DD）。nullは日付欄なし
+    description: string;               // 摘要（印字そのまま）
+    amount: number;                    // 金額（円・整数）
+    direction: 'expense' | 'income';   // 入出金方向
+    balance: number | null;            // 残高（通帳のみ。クレカ・レシートはnull）
+    // コード側付番（Geminiには出させない）
+    line_index: number;                // 行番号（1始まり。パイプライン内で自動付番）
+    // 第2段階（T-P3後に追加予定）
+    // vendor_name?: string | null;    // 行別取引先（N:N時）
+  }
+  ```
+- **設計根拠**: T-P4実測（通帳23行・クレカ6行で5フィールド100%正確抽出）
+- **N:N統一**: レシート=1行、請求書=N行、通帳=N行。全source_typeで同一型
+- **ReceiptItem分離**: ReceiptItem（商品明細）は別型のまま維持。quantity/unit_price/tax_rateはLineItemに含めない
+- **依存**: T-P4完了
+- [ ] 完了
 
 ### T-03：ConfirmedJournal型（確定済み仕訳型）の作成
 - **ファイル**: `src/mocks/types/pipeline/confirmed_journal.type.ts`
@@ -621,13 +666,13 @@ graph TD
 
 ## 進捗サマリ
 
-> 最終更新: 2026-04-03（セッション 29cbfbc7）
+> 最終更新: 2026-04-04（セッション bd8b5ef7）
 
 | 区分 | タスク数 | 完了 |
 |---|---|---|
 | **Phase 1** | | |
-| Step 0：型定義 + データ基盤 | 12 | **9/12**（T-00i/j/k/T-00b完了・T-01/T-02/T-04先行完了） |
-| ⚡ 先行テスト（型定義前テスト） | 3 | **1/3**（T-P1完了。T-P3未実施。T-P4不要の可能性大） |
+| Step 0：型定義 + データ基盤 | 13 | **10/13**（T-00i/j/k/T-00b完了・T-01/T-02/T-04先行完了。T-LI1新規追加） |
+| ⚡ 先行テスト（型定義前テスト） | 3 | **2/3**（T-P1完了。T-P4完了（目的変更：line_items[]抽出）。T-P3未実施） |
 | Step 1：業種ベクトル辞書 | 4 | **4/4**（T-06c, T-06d完了） |
 | Step 2：共通取引先 | 1 | 0/1 |
 | Step 3：LDI社 | 2 | 0/2 |
@@ -635,18 +680,24 @@ graph TD
 | Step 5：GHI社 | 2 | 0/2 |
 | Phase 1 検証 | 3 | 0/3 |
 | Step 6：UI変更 + UI用データ | 7 | 0/7（T-00c/d/eをStep 0から移動） |
-| **Phase 1 小計** | **36** | **14/36** |
+| **Phase 1 小計** | **37** | **16/37** |
 | **Phase 2** | | |
 | Group 1: Step 0+1 | 設計待ち | — |
 | Group 2: Step 2 | 設計待ち | — |
 | Group 3: Step 3+4 | 設計待ち | — |
 | E2E + 境界テスト | 設計待ち | — |
 
-### 実行順序（2026-04-03 再設計確定）
+### 実行順序（2026-04-04 更新）
 
 ```
+Phase A-0: LineItem v1 型確定（T-P4実測根拠あり。今すぐ実施可能）
+  0. T-LI1: LineItem v1型定義（5+1フィールド）
+
 Phase A: テストで土台を固める
   1. T-P3: 4層OCR精度テスト（T番号/電話/名称の読取精度を実測）
+
+Phase A-1: LineItem v2 型確定（T-P3結果で vendor_name 追加）
+  1-1. T-LI1 更新: vendor_name フィールド追加
 
 Phase B: TSロジックを先に固める（Gemini不要部分）
   2-a. T-N1a: T番号抽出・検証
@@ -672,7 +723,7 @@ Phase E: UI
 |---|---|---|---|
 | T-P1 | 仕訳方向（direction）判定テスト | T-00f着手前 | [x] **完了**（v5: 28/28=100%）|
 | T-P3 | 取引先特定4層のOCR精度確認 | T-07着手前 | [ ] **★最優先** |
-| T-P4 | 仕訳推論（journal_inference）のGemini出力形式確認 | T-03着手前 | [ ] **不要の可能性大** |
+| T-P4 | line_items[]抽出精度確認（通帳/クレカ） | T-LI1着手前 | [x] **完了**（2026-04-03。通帳23行・クレカ6行で100%。LineItem v1根拠確定） |
 
 ### Gemini責務境界（2026-04-03 確定）
 
@@ -722,17 +773,20 @@ Phase E: UI
 | `src/scripts/pipeline/image_preprocessor.ts` | 画像前処理（リサイズ・EXIF回転・コントラスト補正）| 2026-04-02 |
 | `src/mocks/types/pipeline/vendor.type.ts` | T-01+T-02+T-04先行実装 | 2026-04-02 |
 | `src/mocks/types/journal_phase5_mock.type.ts` | T-00b: 証票種類/証票向き/業種ベクトル 追加 | 2026-04-02 |
+| `src/mocks/types/pipeline/line_item.type.ts` | T-LI1: LineItem v1型（5+1フィールド。N:N統一） | **予定** |
 
-### 既存コード世代問題（2026-04-03 調査）
+### 既存コード世代問題（2026-04-04 更新）
 
 | コード | 世代 | 問題 |
 |---|---|---|
-| classify_schema.ts | 旧（Phase A-2） | voucher_type 7種（旧設計）。新11種source_typeに未対応 |
+| classify_schema.ts | 旧（Phase A-2） | voucher_type 7種（旧設計）。新11種source_typeに未対応。**LineItem型は@deprecated（新設計はline_item.type.ts）** |
+| classify_schema.ts LineItem | **旧（廃止対象）** | debit_account/credit_accountはT-P4実測と乖離。directionに置換済み |
 | GeminiVisionService.ts | 旧（Phase 1） | gemini-pro-vision モデル（廃止済み） |
 | FileTypeDetector.ts | 旧（Phase 1） | 8種ファイル形式（新11種と不整合） |
 | journal_inference.ts | 新（スケルトン） | 287行だが未実装（throw Error）。不要の可能性大 |
 | document_filter_test.ts | **新（稼働中）** | 11種+4種。唯一の新世代 |
 | source_type.type.ts | **新（稼働中）** | 11種+ProcessingMode。新設計確定 |
+| line_item.type.ts | **新（予定）** | LineItem v1（5+1フィールド）。N:N統一設計 |
 
 ---
 

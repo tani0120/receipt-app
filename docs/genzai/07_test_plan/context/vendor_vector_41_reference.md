@@ -5,7 +5,7 @@
 > **TS層：プロパティ方式（`{ vector, expense: [...], income: [...] }`）**
 > **DB層：列方式（`vector | direction | account`）前提**
 > **flatten変換関数を先に作る（移行時ではなく今）**
-> 更新: 2026-04-03 — source_type 11種再設計反映・Gemini責務境界確定・journal_inference不要判断
+> 更新: 2026-04-04 — N:N統一設計確定・LineItem v1設計確定・T-P4完了（line_items[]抽出100%）・journal_inference不要確定
 
 > ### vendor_vector の設計原則（2026-04-02 確定）
 > **vendor_vectorはvendors_masterに人間が手動設定するフィールド。Geminiがリアルタイムに判定するものではない。**
@@ -33,7 +33,7 @@
 
 ---
 
-## 設計決定（確定 — 2026-03-29 最終版）
+## 設計決定（確定 — 2026-04-04 最新版）
 
 | 項目 | 決定 |
 |---|---|
@@ -48,7 +48,7 @@
 | JournalPhase5Mock（仕訳モック型） | `source_type`（証票種類）, `direction`（証票向き）, `vendor_vector`（証票業種）**3フィールド追加** |
 | 旧voucher_type（旧・証票意味） | **非推奨**（コメント付きで残す。将来削除） |
 | is_credit_card_payment（クレカ払いフラグ） | **データとして残す**（CSV出力で使用。UI列は削除） |
-| **journal_inference** | **不要の可能性大**（vendor_vector辞書引きで科目確定が可能。2026-04-03判断） |
+| **journal_inference** | **不要確定**（vendor_vector辞書引きで科目確定が可能。2026-04-04確定） |
 
 ## AIパイプラインフロー（2026-04-03 再設計）
 

@@ -1,11 +1,11 @@
 # パイプライン監査 + ID完全置換 + 設計決定（テスト戦略統合版）
 
 > 作成日: 2026-03-29
-> 更新日: **2026-04-03**（T-P1完了（v5: 28/28=100%）・Gemini責務境界確定・journal_inference不要判断・新優先順位確定）
+> 更新日: **2026-04-04**（T-P4完了（目的変更：line_items[]抽出精度確認）・N:N統一設計確定・LineItem v1設計確定・2段階型確定方針確定）
 > 目的: ACCOUNT_MASTERの既存IDとパイプライン設計のIDの完全突合
 > **全IDに日本語科目名を括弧付記**
 >
-> ## 確定設計決定（2026-03-29 最終版）
+> ## 確定設計決定（2026-04-04 最新版）
 > | 項目 | 決定 |
 > |---|---|
 > | TS層（TypeScript層） | プロパティ方式（`{ vector, expense: [...], income: [...] }`） |
@@ -29,6 +29,11 @@
 > | medical VV（医院ベクトル） | 法人=`WELFARE`（福利厚生費）/ 個人=`OWNER_DRAWING`（事業主貸） |
 > | **実装方式原則** | **TSルールベース優先（安定性最優先）。Geminiは実装コスト高・画像文脈理解が必要な場合のみ** |
 > | **型定義前テスト** | **Gemini採用箇所は型定義前にプロトタイプで出力形式確認必須（T-P1/T-P3/T-P4）** |
+> | **N:N統一設計** | **全source_typeで`line_items[]`を使用。1:N/N:N分岐なし（2026-04-04確定）** |
+> | **LineItem v1** | **date/description/amount/direction/balance/line_index の6フィールド（T-P4実測根拠）** |
+> | **ReceiptItem/LineItem** | **分離維持。ReceiptItemはquantity/unit_price/tax_rateを持つ別型** |
+> | **日付フォーマット** | **Gemini出力はYYYY-MM-DD維持。toMfCsvDate()でMF出力時に変換（変換レイヤー実装済み）** |
+> | **旧classiy_schema.ts LineItem** | **@deprecated。debit_account/credit_accountはT-P4実測と乖離。line_item.type.tsへ移行** |
 
 
 
@@ -68,27 +73,28 @@
 
 ### 新規作成ファイル（これから作る）
 
-| ファイル | 用途 |
-|---|---|
-| `src/mocks/types/pipeline/source_type.type.ts` | SourceType 11種 + Direction 4種 + ProcessingMode 3種 + PROCESSING_MODE_MAP **→再設計完了（2026-04-02）** |
-| `src/mocks/types/pipeline/vendor.type.ts` | VendorVector **66種** + Vendor型 |
-| `src/mocks/types/pipeline/confirmed_journal.type.ts` | ConfirmedJournal型 |
-| `src/mocks/types/pipeline/industry_vector.type.ts` | IndustryVectorEntry型（プロパティ方式） + FlatIndustryVectorRow型（DB列方式） |
-| `src/mocks/types/pipeline/pipeline_result.type.ts` | **PipelineResult型**（パイプライン出力。Phase 2全テストの到達点）★新規 |
-| `src/mocks/types/pipeline/vendor_alias.type.ts` | VendorAlias型 |
-| `src/mocks/types/pipeline/vendor_keyword.type.ts` | VendorKeyword型 |
-| `src/mocks/types/pipeline/validation.ts` | isValidTNumber() |
-| `src/mocks/data/pipeline/industry_vector_corporate.ts` | 法人用辞書 |
-| `src/mocks/data/pipeline/industry_vector_sole.ts` | 個人用辞書 |
-| `src/mocks/data/pipeline/vendors_global.ts` | 全社共通取引先 |
-| `src/mocks/data/pipeline/vendors_ldi.ts` | LDI社取引先 |
-| `src/mocks/data/pipeline/vendors_abc.ts` | ABC社取引先 |
-| `src/mocks/data/pipeline/vendors_ghi.ts` | GHI社取引先 |
-| `src/mocks/data/pipeline/confirmed_journals_ldi.ts` | LDI社過去仕訳 |
-| `src/mocks/data/pipeline/confirmed_journals_abc.ts` | ABC社過去仕訳 |
-| `src/mocks/data/pipeline/confirmed_journals_ghi.ts` | GHI社過去仕訳 |
-| `src/mocks/types/pipeline/document_filter.type.ts` | **document_filter型（T-00kテスト結果確定後に作成）** |
-| `docs/genzai/07_test_plan/scripts/*` | **document_filterテストスクリプト（T-00i）** |
+| ファイル | 用途 | 状態 |
+|---|---|---|
+| `src/mocks/types/pipeline/source_type.type.ts` | SourceType 11種 + Direction 4種 + ProcessingMode 3種 + PROCESSING_MODE_MAP | ✅ **完了（2026-04-02）** |
+| `src/mocks/types/pipeline/vendor.type.ts` | VendorVector **66種** + Vendor型 + IndustryVectorEntry先行定義 | ✅ **完了（2026-04-02）** |
+| `src/mocks/types/pipeline/line_item.type.ts` | **LineItem v1型**（6フィールド。N:N統一。T-P4実測根拠）★2026-04-04新規 | ⬜ **T-LI1（次の優先）** |
+| `src/mocks/types/pipeline/confirmed_journal.type.ts` | ConfirmedJournal型 | ⬜ 未着手 |
+| `src/mocks/types/pipeline/industry_vector.type.ts` | IndustryVectorEntry型（vendor.type.tsから分離予定） | ⬜ 未着手 |
+| `src/mocks/types/pipeline/pipeline_result.type.ts` | **PipelineResult型**（契約v1.0。processing_modeフィールド追加） | ✅ **完了（2026-04-02）** |
+| `src/mocks/types/pipeline/vendor_alias.type.ts` | VendorAlias型 | ⬜ 未着手 |
+| `src/mocks/types/pipeline/vendor_keyword.type.ts` | VendorKeyword型 | ⬜ 未着手 |
+| `src/mocks/types/pipeline/validation.ts` | isValidTNumber() | ⬜ 未着手 |
+| `src/mocks/data/pipeline/industry_vector_corporate.ts` | 法人用辞書 | ✅ **完了（2026-04-03）** |
+| `src/mocks/data/pipeline/industry_vector_sole.ts` | 個人用辞書 | ✅ **完了（2026-04-03）** |
+| `src/mocks/data/pipeline/vendors_global.ts` | 全社共通取引先 | ⬜ 未着手 |
+| `src/mocks/data/pipeline/vendors_ldi.ts` | LDI社取引先 | ⬜ 未着手 |
+| `src/mocks/data/pipeline/vendors_abc.ts` | ABC社取引先 | ⬜ 未着手 |
+| `src/mocks/data/pipeline/vendors_ghi.ts` | GHI社取引先 | ⬜ 未着手 |
+| `src/mocks/data/pipeline/confirmed_journals_ldi.ts` | LDI社過去仕訳 | ⬜ 未着手 |
+| `src/mocks/data/pipeline/confirmed_journals_abc.ts` | ABC社過去仕訳 | ⬜ 未着手 |
+| `src/mocks/data/pipeline/confirmed_journals_ghi.ts` | GHI社過去仕訳 | ⬜ 未着手 |
+| `src/mocks/types/pipeline/document_filter.type.ts` | document_filter型（T-00k結果確定後） | ✅ **T-00k完了（不要と判定）** |
+| `docs/genzai/07_test_plan/scripts/document_filter_test.ts` | document_filterテストスクリプト（T-00i） | ✅ **完了（2026-04-02）** |
 
 ---
 
@@ -220,22 +226,22 @@
 
 ## 4. 次のアクション
 
-> 最終更新: 2026-04-03（セッション 29cbfbc7）
+> 最終更新: 2026-04-04（セッション bd8b5ef7）
 
-### Gemini責務境界（2026-04-03 確定）
+### Gemini責務境界（2026-04-04 更新）
 
 > **Geminiは「目」。TSは「電卓」。**
-> 詳細: [gemini_boundary_map.md](file:///C:/Users/kazen/.gemini/antigravity/brain/29cbfbc7-2bf4-4dd5-b2b6-a72c8c7c7018/gemini_boundary_map.md)
 
 | Gemini責務 | テスト | 精度 |
 |---|---|---|
 | ① source_type（11種） | ✅ 100% | T-00k/T-P1 |
 | ② direction（4種） | ✅ 100% | T-P1(v5: 28/28) |
-| ③ vendor_vector（66種） | ❌ 未テスト | T-P3 |
-| ④ OCR読取（最小限） | 🔶 旧実験 | Phase A-2 |
+| ③ line_items[]抽出（通帳/クレカ） | ✅ 100% | **T-P4完了（2026-04-03）通帳23行・クレカ6行** |
+| ④ vendor_vector（66種）— 新規取引先のみ | ❌ 未テスト | T-P3 ★最優先 |
+| ⑤ OCR読取（最小限: 日付/金額/取引先名/T番号） | 🔶 旧実験のみ | Phase A-2 |
 
-> **journal_inference（Geminiに仕訳推論させる）は不要の可能性大。**
-> vendor_vector × direction → industry_vector辞書 → 科目候補のTSルックアップで代替可能。
+> **journal_inference（Geminiに仕訳推論させる）は不要。**
+> vendor_vector × direction → industry_vector辞書 → 科目候補のTSルックアップで代替確定。
 
 ### 取引先特定4層（照合順序 — 2026-04-03確定）
 
@@ -255,32 +261,40 @@
 - [x] ⑦ JournalPhase5Mock型に `source_type`, `direction`, `vendor_vector` フィールド追加 ← 完了（2026-04-02）
 - [ ] ⑧ journalColumns.ts 列変更（3列削除+3列追加）← Step 6に移動
 - [ ] ⑨ voucherTypeRules.ts 再設計（判定+バリデーション兼用）← Step 6に移動
-- [x] ⑩ Step 0 型定義ファイル作成 — **6/8完了** ★2026-04-02更新
+- [x] ⑩ Step 0 型定義ファイル作成 — **7/9完了** ★2026-04-04更新
   - [x] `pipeline_result.type.ts`（契約 v1.0。processing_modeフィールド追加）
   - [x] `source_type.type.ts`（SourceType 11種 + Direction 4種 + ProcessingMode + PROCESSING_MODE_MAP）← **再設計完了（2026-04-02）**
   - [x] `vendor.type.ts`（VendorVector 66種 + Vendor型 + IndustryVectorEntry先行定義）← **2026-04-02完了**
+  - [ ] `line_item.type.ts`（LineItem v1: 6フィールド。N:N統一設計）← **T-LI1: 次の優先タスク（2026-04-04追加）**
   - [ ] `confirmed_journal.type.ts`
   - [ ] `industry_vector.type.ts`（vendor.type.tsから分離予定）
   - [ ] `vendor_alias.type.ts`
   - [ ] `vendor_keyword.type.ts`
   - [ ] `validation.ts`
-- [x] ⑪ 不足事項の実施（2026-04-02更新）
+- [x] ⑪ 不足事項の実施（2026-04-04更新）
   - [x] **T-00i: テストスクリプト整備** ← 完了（2026-04-02。11種再設計済み）
   - [x] **T-00j: 実物証票資料の用意** ← 初回完了（2026-04-02。19件。追加8件未配置）
   - [x] **T-00k: document_filterテスト実行** ← 完了（15/15=100%。前処理あり6.3秒/枚）
-  - [x] **T-P1: direction先行テスト** ← 完了（direction_v2: 89.5%。テストデータ修正後100%）
+  - [x] **T-P1: direction先行テスト** ← 完了（direction_v5: 28/28=100%。事業者フル情報+用途限定）
+  - [x] **T-P4: line_items[]抽出精度確認** ← 完了（2026-04-03。通帳23行・クレカ6行で全5フィールド100%。LineItem v1根拠確定）
   - [x] ガード関数追加（isNonJournal, getProcessingMode）→ T-00a再設計時に実施済み
   - [x] NON_JOURNAL_EXAMPLES拡充（6件→18件。医療費3件含む）→ T-00a再設計時に実施済み
+  - [ ] **T-LI1: LineItem v1型定義** ← **次の優先タスク（2026-04-04追加）**
+  - [ ] **T-P3: 取引先特定4層OCR精度確認** ← ★最優先（T-LI1完了後）
   - [ ] パイプライン接続ロジック → Phase 2 Group 1
   - [ ] テストデータ3フィールド追加 → T-00f
   - [ ] NON_JOURNALマスタデータ化 → Supabase移行時
 
-### 追加完了ファイル（2026-04-02）
+### 追加完了ファイル（2026-04-04 更新）
 
-| ファイル | 内容 |
-|---|---|
-| `src/scripts/pipeline/image_preprocessor.ts` | 画像前処理（リサイズ・EXIF回転・コントラスト補正） |
-| `src/mocks/types/pipeline/vendor.type.ts` | T-01+T-02+T-04先行実装 |
+| ファイル | 内容 | 完了日 |
+|---|---|---|
+| `src/scripts/pipeline/image_preprocessor.ts` | 画像前処理（リサイズ・EXIF回転・コントラスト補正） | 2026-04-02 |
+| `src/mocks/types/pipeline/vendor.type.ts` | T-01+T-02+T-04先行実装 | 2026-04-02 |
+| `src/mocks/utils/pipeline/vendorIdentification.ts` | T-N1a: T番号抽出・検証 / T-N1b: 電話番号正規化 / T-N1c: 取引先名正規化スケルトン | 2026-04-03 |
+| `src/mocks/data/pipeline/industry_vector_corporate.ts` | T-06a: 法人用業種ベクトル辞書（66種） | 2026-04-03 |
+| `src/mocks/data/pipeline/industry_vector_sole.ts` | T-06b: 個人事業主用業種ベクトル辞書（66種） | 2026-04-03 |
+| `src/mocks/types/pipeline/line_item.type.ts` | **T-LI1: LineItem v1型（6フィールド。N:N統一）** | **予定（次の優先）** |
 
 ---
 
