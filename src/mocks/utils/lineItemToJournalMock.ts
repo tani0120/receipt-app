@@ -5,8 +5,8 @@
  * 効果: 「テスト→Gemini→LineItem→JournalPhase5Mock→MfCsvRow→CSV」が初めてつながる
  *
  * 【ファイル構成】
- *   C-1（本ファイル現在）: COUNTERPART_ACCOUNT_MAP（相手勘定マップ）定数
- *   D-1〜D-6（次フェーズ）: lineItemToJournalMock() 変換関数本体
+ *   C-1: COUNTERPART_ACCOUNT_MAP（相手勘定マップ）定数
+ *   D-1〜D-6: lineItemToJournalMock() 変換関数本体
  *
  * 【全ID根拠】
  *   勘定科目ID : ACCOUNT_MASTER（src/shared/data/account-master.ts）準拠
@@ -15,10 +15,14 @@
  *
  * 変更履歴:
  *   2026-04-05: C-1 新規作成（COUNTERPART_ACCOUNT_MAP定義。DL-017関連）
+ *   2026-04-05: D-1〜D-6 追記（lineItemToJournalMock() 変換関数本体）
  */
 
+import type { LineItem } from '@/mocks/types/pipeline/line_item.type'
 import type { LineItemDirection } from '@/mocks/types/pipeline/line_item.type'
 import type { SourceType } from '@/mocks/types/pipeline/source_type.type'
+import type { JournalPhase5Mock } from '@/mocks/types/journal_phase5_mock.type'
+import type { JournalEntryLine } from '@/domain/types/journal'
 
 // ============================================================
 // § CounterpartEntry — 相手勘定エントリ型
@@ -177,4 +181,188 @@ export function resolveCounterpartAccount(
 
   // マップ外（手入力仕訳・仕訳対象外 等）
   return { account: null, tax_category: null }
+}
+
+// ============================================================
+// § D-6: VOUCHER_TYPE_MAP — voucher_type（証票意味）マッピング定数
+// ============================================================
+
+/**
+ * source_type × direction → voucher_type（MF CSV互換の証票意味）マッピング
+ *
+ * voucher_type は @deprecated フィールドだが現在のUI/CSV出力で使用中のため維持。
+ * VOUCHER_TYPE_RULES（voucherTypeRules.ts）のキーと一致させる。
+ *
+ * null を返すケース:
+ *   - bank_statement × income: 売上/振替/雑収入など内容次第で不定 → null（人間判断）
+ *   - cash_ledger × income: 同上
+ *   - その他（手入力仕訳・対象外等）
+ */
+export const VOUCHER_TYPE_MAP: Partial<
+  Record<SourceType, Partial<Record<LineItemDirection, string | null>>>
+> = {
+  bank_statement:   { expense: '経費',   income: null },    // income は内容次第（振替・売上等）
+  credit_card:      { expense: 'クレカ'                },    // credit_card × income は稀
+  receipt:          { expense: '経費'                  },    // クレカ払い時は resolveVoucherType() で上書き
+  invoice_received: { expense: '経費'                  },
+  tax_payment:      { expense: '経費'                  },
+  cash_ledger:      { expense: '経費',   income: null },    // income は内容次第
+  journal_voucher:  { expense: '振替',   income: '振替' },
+}
+
+/**
+ * source_type × direction × is_credit_card_payment → voucher_type を解決する関数（D-6）
+ */
+function resolveVoucherType(
+  sourceType: SourceType,
+  direction: LineItemDirection,
+  isCreditCardPayment: boolean,
+): string | null {
+  if (sourceType === 'receipt' && direction === 'expense' && isCreditCardPayment) {
+    return 'クレカ'
+  }
+  return VOUCHER_TYPE_MAP[sourceType]?.[direction] ?? null
+}
+
+// ============================================================
+// § D-1〜D-5: lineItemToJournalMock() — 変換関数本体
+// ============================================================
+
+/**
+ * D-1: ID生成ヘルパー
+ *
+ * jrn-00000001 形式（8桁ゼロパディング）。
+ * idOffset を指定することで既存ID連番との衝突を避ける。
+ */
+function generateJournalId(index: number, idOffset = 0): string {
+  return `jrn-${String(index + 1 + idOffset).padStart(8, '0')}`
+}
+
+/**
+ * D-1: LineItem[] → JournalPhase5Mock[] 変換関数
+ *
+ * 【D-2: debit/credit変換ロジック】
+ *   expense: debit = determined_account（確定科目）, credit = counterpart_account（相手勘定）
+ *   income:  debit = counterpart_account（相手勘定）, credit = determined_account（確定科目）
+ *   どちらかが null → entries = []（人間判断待ち）
+ *
+ * 【D-5: insufficient処理】
+ *   level = 'insufficient' または determined_account = null の場合:
+ *   → debit/credit entries = []（空）かつ labels に 'ACCOUNT_UNKNOWN' を付与
+ *   ※ JournalPhase5Mock.status は 'exported' | null のみ（classification_status フィールドなし）
+ *   ※ task.md の「classification_status: 'needs_review'」はフィールド不存在のため
+ *      labels: ['ACCOUNT_UNKNOWN'] で代替実装（スコープ外問題として報告済み）
+ *
+ * @param items               - 変換元の LineItem 配列
+ * @param sourceType          - 証票種別（SourceType 11種）
+ * @param clientId            - 顧問先ID（例: LDI-00008）
+ * @param isCreditCardPayment - クレカ払いフラグ（receipt の相手勘定・voucher_type 分岐に使用）
+ * @param idOffset            - ID連番オフセット（既存データとの衝突回避用。デフォルト 0）
+ * @returns JournalPhase5Mock[]
+ */
+export function lineItemToJournalMock(
+  items: LineItem[],
+  sourceType: SourceType,
+  clientId: string,
+  isCreditCardPayment = false,
+  idOffset = 0,
+): JournalPhase5Mock[] {
+  return items.map((item, index) => {
+    const isInsufficient =
+      item.level === 'insufficient' ||
+      item.determined_account === null ||
+      item.determined_account === undefined
+
+    // D-2: 相手勘定を解決
+    const counterpart = resolveCounterpartAccount(sourceType, item.direction, isCreditCardPayment)
+
+    // D-2: debit/credit エントリ生成
+    // insufficient または determined_account が未確定の場合は空配列（人間判断待ち）
+    let debitEntries: JournalEntryLine[] = []
+    let creditEntries: JournalEntryLine[] = []
+
+    if (!isInsufficient && item.determined_account && counterpart.account) {
+      // D-3: sub_account（補助科目）のマッピング（LineItem.sub_account → JournalEntryLine.sub_account）
+      const mainSubAccount = item.sub_account ?? null
+
+      // D-4: tax_category（税区分）のマッピング
+      //   主科目側: LineItem.tax_category（実際の税区分）
+      //   相手勘定側: counterpart.tax_category（全件 COMMON_EXEMPT）
+      const mainTaxCategoryId = item.tax_category ?? null
+      const counterpartTaxCategoryId = counterpart.tax_category
+
+      // 主科目エントリ（主科目は account_on_document: true で扱う）
+      const mainEntry: JournalEntryLine = {
+        account:            item.determined_account,
+        account_on_document: true,
+        sub_account:        mainSubAccount,
+        amount:             item.amount,
+        amount_on_document: true,
+        tax_category_id:    mainTaxCategoryId,
+      }
+
+      // 相手勘定エントリ（相手勘定は account_on_document: false で扱う）
+      const counterpartEntry: JournalEntryLine = {
+        account:            counterpart.account,
+        account_on_document: false,
+        sub_account:        null,
+        amount:             item.amount,
+        amount_on_document: true,
+        tax_category_id:    counterpartTaxCategoryId,
+      }
+
+      if (item.direction === 'expense') {
+        // expense: 借方 = 主科目（確定科目）、貸方 = 相手勘定
+        debitEntries  = [mainEntry]
+        creditEntries = [counterpartEntry]
+      } else {
+        // income: 借方 = 相手勘定、貸方 = 主科目（確定科目）
+        debitEntries  = [counterpartEntry]
+        creditEntries = [mainEntry]
+      }
+    }
+
+    // D-5: insufficient の場合は ACCOUNT_UNKNOWN ラベルを付与
+    const labels: JournalPhase5Mock['labels'] = isInsufficient
+      ? ['ACCOUNT_UNKNOWN']
+      : []
+
+    // D-6: voucher_type 解決
+    const voucherType = resolveVoucherType(sourceType, item.direction, isCreditCardPayment)
+
+    const journal: JournalPhase5Mock = {
+      id:                   generateJournalId(index, idOffset),
+      client_id:            clientId,
+      display_order:        index + 1,
+      voucher_date:         item.date,
+      date_on_document:     item.date !== null,
+      description:          item.description,
+      voucher_type:         voucherType,       // @deprecated だが後方互換性のため維持
+      source_type:          sourceType,
+      direction:            item.direction,
+      vendor_vector:        item.vendor_vector ?? null,
+      document_id:          null,
+      line_id:              null,
+      debit_entries:        debitEntries,
+      credit_entries:       creditEntries,
+      status:               null,              // 未出力（デフォルト）
+      is_read:              false,
+      deleted_at:           null,
+      labels,
+      warning_dismissals:   [],
+      warning_details:      {},
+      export_batch_id:      null,
+      is_credit_card_payment: isCreditCardPayment,
+      rule_id:              null,
+      rule_confidence:      null,
+      invoice_status:       null,
+      invoice_number:       null,
+      memo:                 null,
+      memo_author:          null,
+      memo_target:          null,
+      memo_created_at:      null,
+    }
+
+    return journal
+  })
 }

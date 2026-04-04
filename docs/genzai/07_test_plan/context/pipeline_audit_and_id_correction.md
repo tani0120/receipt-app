@@ -77,13 +77,13 @@
 |---|---|---|
 | `src/mocks/types/pipeline/source_type.type.ts` | SourceType 11種 + Direction 4種 + ProcessingMode 3種 + PROCESSING_MODE_MAP | ✅ **完了（2026-04-02）** |
 | `src/mocks/types/pipeline/vendor.type.ts` | VendorVector **66種** + Vendor型 + IndustryVectorEntry先行定義 | ✅ **完了（2026-04-02）** |
-| `src/mocks/types/pipeline/line_item.type.ts` | **LineItem v1型**（6フィールド。N:N統一。T-P4実測根拠）★2026-04-04新規 | ⬜ **T-LI1（次の優先）** |
+| `src/mocks/types/pipeline/line_item.type.ts` | **LineItem v1型**（6フィールド + 科目候補フィールド群。N:N統一。T-P4実測根拠）★2026-04-05完了 | ✅ **完了（2026-04-05）** |
 | `src/mocks/types/pipeline/confirmed_journal.type.ts` | ConfirmedJournal型 | ⬜ 未着手 |
 | `src/mocks/types/pipeline/industry_vector.type.ts` | IndustryVectorEntry型（vendor.type.tsから分離予定） | ⬜ 未着手 |
 | `src/mocks/types/pipeline/pipeline_result.type.ts` | **PipelineResult型**（契約v1.0。processing_modeフィールド追加） | ✅ **完了（2026-04-02）** |
 | `src/mocks/types/pipeline/vendor_alias.type.ts` | VendorAlias型 | ⬜ 未着手 |
 | `src/mocks/types/pipeline/vendor_keyword.type.ts` | VendorKeyword型 | ⬜ 未着手 |
-| `src/mocks/types/pipeline/validation.ts` | isValidTNumber() | ⬜ 未着手 |
+| ~~`src/mocks/types/pipeline/validation.ts`~~ → `src/mocks/utils/pipeline/validation.ts` | `isValidTNumber()` / `normalizePhoneNumber()` / `normalizeTNumber()` | ✅ **完了（2026-04-05）**（配置先修正済み） |
 | `src/mocks/data/pipeline/industry_vector_corporate.ts` | 法人用辞書 | ✅ **完了（2026-04-03）** |
 | `src/mocks/data/pipeline/industry_vector_sole.ts` | 個人用辞書 | ✅ **完了（2026-04-03）** |
 | `src/mocks/data/pipeline/vendors_global.ts` | 全社共通取引先 | ⬜ 未着手 |
@@ -265,12 +265,12 @@
   - [x] `pipeline_result.type.ts`（契約 v1.0。processing_modeフィールド追加）
   - [x] `source_type.type.ts`（SourceType 11種 + Direction 4種 + ProcessingMode + PROCESSING_MODE_MAP）← **再設計完了（2026-04-02）**
   - [x] `vendor.type.ts`（VendorVector 66種 + Vendor型 + IndustryVectorEntry先行定義）← **2026-04-02完了**
-  - [ ] `line_item.type.ts`（LineItem v1: 6フィールド。N:N統一設計）← **T-LI1: 次の優先タスク（2026-04-04追加）**
+  - [x] `line_item.type.ts`（LineItem v1: 6フィールド + 科目候補フィールド群。N:N統一設計）← **T-LI1: 完了（2026-04-05）**
   - [ ] `confirmed_journal.type.ts`
   - [ ] `industry_vector.type.ts`（vendor.type.tsから分離予定）
   - [ ] `vendor_alias.type.ts`
   - [ ] `vendor_keyword.type.ts`
-  - [ ] `validation.ts`
+  - [x] `validation.ts` → `src/mocks/utils/pipeline/validation.ts`（配置先修正済み）← **完了（2026-04-05）**
 - [x] ⑪ 不足事項の実施（2026-04-04更新）
   - [x] **T-00i: テストスクリプト整備** ← 完了（2026-04-02。11種再設計済み）
   - [x] **T-00j: 実物証票資料の用意** ← 初回完了（2026-04-02。19件。追加8件未配置）
@@ -279,7 +279,7 @@
   - [x] **T-P4: line_items[]抽出精度確認** ← 完了（2026-04-03。通帳23行・クレカ6行で全5フィールド100%。LineItem v1根拠確定）
   - [x] ガード関数追加（isNonJournal, getProcessingMode）→ T-00a再設計時に実施済み
   - [x] NON_JOURNAL_EXAMPLES拡充（6件→18件。医療費3件含む）→ T-00a再設計時に実施済み
-  - [ ] **T-LI1: LineItem v1型定義** ← **次の優先タスク（2026-04-04追加）**
+  - [x] **T-LI1: LineItem v1型定義** ← **完了（2026-04-05）**
   - [ ] **T-P3: 取引先特定4層OCR精度確認** ← ★最優先（T-LI1完了後）
   - [ ] パイプライン接続ロジック → Phase 2 Group 1
   - [ ] テストデータ3フィールド追加 → T-00f
@@ -294,7 +294,12 @@
 | `src/mocks/utils/pipeline/vendorIdentification.ts` | T-N1a: T番号抽出・検証 / T-N1b: 電話番号正規化 / T-N1c: 取引先名正規化スケルトン | 2026-04-03 |
 | `src/mocks/data/pipeline/industry_vector_corporate.ts` | T-06a: 法人用業種ベクトル辞書（66種） | 2026-04-03 |
 | `src/mocks/data/pipeline/industry_vector_sole.ts` | T-06b: 個人事業主用業種ベクトル辞書（66種） | 2026-04-03 |
-| `src/mocks/types/pipeline/line_item.type.ts` | **T-LI1: LineItem v1型（6フィールド。N:N統一）** | **予定（次の優先）** |
+| `src/mocks/types/pipeline/line_item.type.ts` | **T-LI1: LineItem v1型（6フィールド + 科目候補フィールド群。N:N統一）** | **2026-04-05** |
+| `src/mocks/types/pipeline/non_vendor.type.ts` | NonVendorType 24種（銀行9/クレカ7/人間判断8）+ TaxPaymentType 5種 | 2026-04-05 |
+| `src/mocks/data/pipeline/non_vendor_account_corporate.ts` | 法人用取引先外科目候補マップ（26エントリ） | 2026-04-05 |
+| `src/mocks/data/pipeline/non_vendor_account_sole.ts` | 個人事業主用取引先外科目候補マップ（26エントリ） | 2026-04-05 |
+| `src/mocks/utils/lineItemToJournalMock.ts` | COUNTERPART_ACCOUNT_MAP（相手勘定マップ）+ lineItemToJournalMock()変換関数 | 2026-04-05 |
+| `src/mocks/utils/pipeline/validation.ts` | E-1: isValidTNumber() / E-2: normalizePhoneNumber() / E-3: normalizeTNumber() | 2026-04-05 |
 
 ---
 
