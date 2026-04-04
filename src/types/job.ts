@@ -9,7 +9,9 @@ export type JobStatus =
   | 'primary_completed'  // 1次仕訳完了: 最終承認待ち (画面上は ☑ + [最終確認])
   | 'final_pending'      // (Optional) 最終確認中
   | 'remanded'           // 差戻し中: [差戻し] ボタン表示
-  | 'completed';         // 完了: 全て完了
+  | 'excluded'           // 対象外: 仕訳不要として除外
+  | 'approved'           // 承認済み: 最終承認完了
+  | 'completed';         // 完了: CSV出力等の全工程完了
 
 /**
  * Job Interface

@@ -1,5 +1,5 @@
 <template>
-  <!-- 🔴 Phase 6 動作確認マーカー 2026-02-01 10:20 UI・コード同期テスト中 -->
+  <!-- 🔴 Phase 6 動作確認マーカー 2026-04-04 新型JournalEntry対応済み -->
   <div class="h-screen flex flex-col bg-slate-100 font-sans overflow-hidden">
     <!-- Top Nav -->
     <header class="bg-white border-b border-slate-200 h-14 flex items-center justify-between px-4 shrink-0 z-20">
@@ -31,9 +31,15 @@
 
       <!-- Left: Evidence (PDF/Image Viewer) -->
       <div class="w-1/2 bg-slate-800 relative flex items-center justify-center border-r border-slate-300">
-        <template v-if="entry.evidenceUrl">
-            <!-- Simple Iframe for PDF/Image Preview. In production, use a dedicated Viewer component. -->
-            <iframe :src="entry.evidenceUrl" class="w-full h-full border-none bg-white"></iframe>
+        <template v-if="entry && entry.sourceFiles.length > 0">
+            <!-- sourceFiles[0].driveFileId を使って表示（本番ではDrive URL を取得して渡す） -->
+            <div class="text-slate-300 flex flex-col items-center text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span class="font-mono text-xs opacity-70">{{ entry.sourceFiles[0]?.fileName ?? '証憑ファイル' }}</span>
+                <!-- TODO Phase 6.3: Google Drive Viewer URLを組み立ててiframeで表示 -->
+            </div>
         </template>
         <template v-else>
             <div class="text-slate-400 flex flex-col items-center">
@@ -49,94 +55,110 @@
       <div class="w-1/2 flex flex-col bg-white overflow-hidden">
 
         <!-- Editor Header Info -->
-        <div class="p-4 border-b border-slate-100 grid grid-cols-2 gap-4 shrink-0">
+        <div v-if="entry" class="p-4 border-b border-slate-100 grid grid-cols-2 gap-4 shrink-0">
              <div>
                  <label class="block text-xs font-bold text-slate-500 mb-1">取引日</label>
-                 <!-- Simple Date Input binding to Date object might need formatting helper in v-model. Using ISO string for simple input type=date -->
-                 <input type="date" :value="entry.transactionDate.toISOString().substr(0,10)"
-                        @input="e => entry!.transactionDate = new Date((e.target as HTMLInputElement).value)"
+                 <!-- date フィールドは YYYY-MM-DD文字列 -->
+                 <input type="date" v-model="entry.date"
                         :disabled="uiMode === 'readonly'"
                         class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
              </div>
              <div>
-                 <label class="block text-xs font-bold text-slate-500 mb-1">取引先名</label>
-                 <input v-model="entry.vendorName" type="text"
+                 <label class="block text-xs font-bold text-slate-500 mb-1">摘要</label>
+                 <!-- description = 取引摘要（JournalEntry.description） -->
+                 <input v-model="entry.description" type="text"
                         :disabled="uiMode === 'readonly'"
                         class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
              </div>
              <div>
-                 <label class="block text-xs font-bold text-slate-500 mb-1">T番号</label>
-                 <input v-model="entry.tNumber" type="text" placeholder="T0000000000000"
-                        :disabled="uiMode === 'readonly'"
-                        class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" />
+                 <label class="block text-xs font-bold text-slate-500 mb-1">適格請求書</label>
+                 <!-- tNumberは廃止。hasQualifiedInvoice（boolean）で代替 -->
+                 <label class="flex items-center gap-2 text-sm text-slate-700 mt-1">
+                     <input type="checkbox" v-model="entry.hasQualifiedInvoice"
+                            :disabled="uiMode === 'readonly'"
+                            class="rounded border-slate-300" />
+                     適格請求書あり
+                 </label>
              </div>
         </div>
 
-        <!-- Journal Lines Table -->
+        <!-- Journal Lines Table （新型: 1行=借方または貸方） -->
         <div class="flex-1 overflow-auto p-4">
              <table class="w-full min-w-[600px] border-collapse relative">
                  <thead class="sticky top-0 bg-white z-10 shadow-sm">
                      <tr class="text-xs text-slate-500 text-left border-b border-slate-200">
                          <th class="py-2 pl-2 w-8">#</th>
-                         <th class="py-2 w-1/4">借方 (Dr)</th>
-                         <th class="py-2 w-24">金額</th>
-                         <th class="py-2 w-1/4">貸方 (Cr)</th>
-                         <th class="py-2 w-24">金額</th>
-                         <th class="py-2">摘要</th>
+                         <th class="py-2 w-16">区分</th>
+                         <th class="py-2 w-1/4">科目コード</th>
+                         <th class="py-2 w-1/4">科目名</th>
+                         <th class="py-2 w-28">借方 (Dr)</th>
+                         <th class="py-2 w-28">貸方 (Cr)</th>
+                         <th class="py-2">税コード</th>
                          <th class="py-2 w-8"></th>
                      </tr>
                  </thead>
-                 <tbody class="text-sm">
-                     <tr v-for="(line, idx) in entry.lines" :key="idx" class="border-b border-slate-100 group hover:bg-slate-50">
+                 <tbody v-if="entry" class="text-sm">
+                     <tr v-for="(line, idx) in entry.lines" :key="line.lineId" class="border-b border-slate-100 group hover:bg-slate-50">
                          <td class="py-2 pl-2 text-slate-400">{{ idx + 1 }}</td>
 
-                         <!-- Debit Side -->
+                         <!-- 借方/貸方 区分（debit > 0 → Dr, credit > 0 → Cr） -->
                          <td class="py-2 pr-2">
-                             <input v-model="line.drAccount" placeholder="科目" class="w-full border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1" />
-                              <!-- Tax Select (Debit) -->
-                             <select v-model="line.drTaxClass" class="w-full text-xs text-slate-700 border border-slate-300 bg-white outline-none mt-1 cursor-pointer hover:bg-slate-50 focus:ring-1 focus:ring-blue-300 rounded shadow-sm py-1 px-1">
-                                 <option value="" disabled>税区分</option>
+                             <span :class="line.debit > 0 ? 'text-blue-600 font-bold' : 'text-red-500 font-bold'">
+                                 {{ line.debit > 0 ? 'Dr' : 'Cr' }}
+                             </span>
+                         </td>
+
+                         <!-- 科目コード -->
+                         <td class="py-2 pr-2">
+                             <input v-model="line.accountCode" placeholder="科目コード"
+                                    :disabled="uiMode === 'readonly'"
+                                    class="w-full border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1 font-mono text-xs" />
+                         </td>
+
+                         <!-- 科目名 -->
+                         <td class="py-2 pr-2">
+                             <input v-model="line.accountName" placeholder="科目名"
+                                    :disabled="uiMode === 'readonly'"
+                                    class="w-full border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1" />
+                         </td>
+
+                         <!-- 借方金額 -->
+                         <td class="py-2 pr-2">
+                             <input v-model.number="line.debit" type="number"
+                                    :disabled="uiMode === 'readonly'"
+                                    class="w-full text-right border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1 font-mono" />
+                         </td>
+
+                         <!-- 貸方金額 -->
+                         <td class="py-2 pr-2">
+                             <input v-model.number="line.credit" type="number"
+                                    :disabled="uiMode === 'readonly'"
+                                    class="w-full text-right border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1 font-mono" />
+                         </td>
+
+                         <!-- 税コード -->
+                         <td class="py-2 pr-2">
+                             <select v-model="line.taxCode"
+                                     :disabled="uiMode === 'readonly'"
+                                     class="w-full text-xs text-slate-700 border border-slate-300 bg-white outline-none cursor-pointer hover:bg-slate-50 focus:ring-1 focus:ring-blue-300 rounded shadow-sm py-1 px-1">
+                                 <option value="" disabled>税コード</option>
                                  <optgroup label="仕入区分">
-                                     <option v-for="opt in TAX_OPTIONS.filter(o => o.type === 'purchase')"
+                                     <option v-for="opt in purchaseOptions"
                                              :key="opt.code"
                                              :value="opt.code"
-                                             :disabled="isOptionDisabled(opt.code, 'purchase')"
-                                             class="text-slate-700 disabled:text-slate-300 disabled:bg-slate-50">
+                                             class="text-slate-700">
                                          {{ opt.code }} ({{ opt.label }})
                                      </option>
                                  </optgroup>
-                                 <optgroup label="売上区分 (例外)">
-                                 </optgroup>
-                             </select>
-                         </td>
-                         <td class="py-2 pr-2">
-                             <input v-model.number="line.drAmount" type="number" class="w-full text-right border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1 font-mono" />
-                         </td>
-
-                         <!-- Credit Side -->
-                         <td class="py-2 pr-2 border-l border-slate-100 pl-2">
-                             <input v-model="line.crAccount" placeholder="科目" class="w-full border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1" />
-                             <!-- Tax Select (Credit) -->
-                             <select v-model="line.crTaxClass" class="w-full text-xs text-slate-500 border-none bg-transparent outline-none mt-1 cursor-pointer hover:bg-slate-50 focus:ring-1 focus:ring-blue-100 rounded">
-                                 <option value="" disabled>税区分</option>
                                  <optgroup label="売上区分">
-                                     <option v-for="opt in TAX_OPTIONS.filter(o => o.type === 'sales')"
+                                     <option v-for="opt in salesOptions"
                                              :key="opt.code"
                                              :value="opt.code"
-                                             :disabled="isOptionDisabled(opt.code, 'sales')"
-                                             class="text-slate-700 disabled:text-slate-300 disabled:bg-slate-50">
+                                             class="text-slate-700">
                                          {{ opt.code }} ({{ opt.label }})
                                      </option>
                                  </optgroup>
                              </select>
-                         </td>
-                         <td class="py-2 pr-2">
-                             <input v-model.number="line.crAmount" type="number" class="w-full text-right border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1 font-mono" />
-                         </td>
-
-                         <!-- Description -->
-                         <td class="py-2 pr-2 border-l border-slate-100 pl-2">
-                             <input v-model="line.description" class="w-full border-b border-transparent focus:border-blue-500 bg-transparent outline-none py-1" />
                          </td>
 
                          <!-- Actions -->
@@ -164,8 +186,9 @@
                     {{ err }}
                 </div>
             </div>
-             <div v-if="validation.warnings.length > 0" class="bg-amber-50 border border-amber-200 text-amber-700 text-sm px-3 py-2 rounded">
-                <div v-for="warn in validation.warnings" :key="warn" class="flex items-center gap-2">
+            <!-- warnings は validation.warnings ?? [] でoptional対処 -->
+             <div v-if="(validation.warnings ?? []).length > 0" class="bg-amber-50 border border-amber-200 text-amber-700 text-sm px-3 py-2 rounded">
+                <div v-for="warn in (validation.warnings ?? [])" :key="warn" class="flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     {{ warn }}
                 </div>
@@ -220,7 +243,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { aaa_useJournalEditor } from '@/composables/useJournalEditor';
-import { TAX_OPTIONS } from '@/composables/useAccountingSystem';
+// TAX_OPTIONS の正しいimport元: @/shared/schema_dictionary（旧: useAccountingSystem に存在しない）
+import { TAX_OPTIONS } from '@/shared/schema_dictionary';
 import type { JournalUiMode } from '@/shared/journalUiMode';
 
 const {
@@ -252,41 +276,25 @@ const uiMode = computed<JournalUiMode>(() => {
   }
 });
 
-// 借方合計（computed）
+// 借方合計（新型: line.debit を集計）
 const totalDebit = computed(() => {
   if (!entry.value) return 0;
-  return entry.value.lines.reduce((sum, line) => sum + (line.drAmount || 0), 0);
+  return entry.value.lines.reduce((sum, line) => sum + (line.debit || 0), 0);
 });
 
-// 貸方合計（computed）
+// 貸方合計（新型: line.credit を集計）
 const totalCredit = computed(() => {
   if (!entry.value) return 0;
-  return entry.value.lines.reduce((sum, line) => sum + (line.crAmount || 0), 0);
+  return entry.value.lines.reduce((sum, line) => sum + (line.credit || 0), 0);
 });
 
-
-// Helper: Dynamic Gray-out Logic
-const isOptionDisabled = (optionCode: string, side: 'sales' | 'purchase') => {
-    if (!entry.value) return false;
-    const mode = entry.value.consumptionTaxMode || 'general';
-
-    // 1. Exempt (免税): All Taxable/Export codes are disabled. Only None/Exempt allowed.
-    if (mode === 'exempt') {
-        const allowed = ['TAX_NONE', 'TAX_EXEMPT', 'TAX_SALES_NONE', 'TAX_SALES_NON_TAXABLE', 'TAX_PURCHASE_NONE', 'TAX_PURCHASE_FROM_EXEMPT'];
-        return !allowed.includes(optionCode);
-    }
-
-    // 2. Simplified (簡易):
-    if (mode === 'simplified') {
-        if (side === 'purchase') {
-            // Purchase: Taxable Purchase (10/8) is effectively useless/converted to None.
-            const taxablePurchases = ['TAX_PURCHASE_10', 'TAX_PURCHASE_8_RED'];
-            if (taxablePurchases.includes(optionCode)) return true;
-        }
-        // Sales: Allow all (Standard codes are converted to Simplified Class by system)
-    }
-
-    // 3. General (本則): All enabled.
-    return false;
-};
+// 税コードオプション（TAX_OPTIONS を仕入/売上でフィルタ）
+// consumptionTaxMode は JournalEntry に存在しないため、全オプションを有効化
+// TODO Phase 6.3: クライアント設定（免税/簡易）に基づく動的グレーアウトを実装
+const purchaseOptions = computed(() =>
+    TAX_OPTIONS.filter((opt: { code: string; label: string; type: string }) => opt.type === 'purchase')
+);
+const salesOptions = computed(() =>
+    TAX_OPTIONS.filter((opt: { code: string; label: string; type: string }) => opt.type === 'sales')
+);
 </script>

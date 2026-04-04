@@ -39,6 +39,13 @@ const __dirname = path.dirname(__filename);
 
 
 
+// ============================================================
+// Vertex AI 設定
+// ============================================================
+const PROJECT_ID   = process.env['VERTEX_PROJECT_ID']  ?? 'FAKE_GCP_PROJECT_ID';
+const LOCATION     = process.env['VERTEX_LOCATION']     ?? 'us-central1';
+const MODEL_ID     = process.env['VERTEX_MODEL_ID']     ?? 'gemini-2.5-flash-preview-04-17';
+
 const TEST_IMAGES_DIR = path.join(__dirname, 'test_images');
 const RESULTS_DIR = path.join(__dirname, 'test_results');
 

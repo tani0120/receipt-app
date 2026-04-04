@@ -10,7 +10,7 @@ export const getLogs = () => {
 };
 
 export const addLog = (message: string) => {
-    const timestamp = new Date().toISOString().split('T')[1].slice(0, 8); // HH:mm:ss
+    const timestamp = new Date().toISOString().split('T')[1]?.slice(0, 8) ?? '??:??:??';
     const logLine = `[${timestamp}] ${message}`;
 
     logBuffer.push(logLine);

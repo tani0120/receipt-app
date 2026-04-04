@@ -6,7 +6,7 @@
  */
 
 import { executeOCRBrowser } from '../gemini/ocr_service_browser';
-import type { AIIntermediateOutput } from '../gemini/schemas';
+import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 
 /**
  * OCR実行（唯一の呼び出し口）
@@ -83,7 +83,7 @@ async function fileToBase64(file: File): Promise<string> {
         reader.onload = () => {
             const result = reader.result as string;
             // data:image/jpeg;base64,... → base64部分のみ抽出
-            const base64 = result.split(',')[1];
+            const base64 = result.split(',')[1] ?? '';
             resolve(base64);
         };
 

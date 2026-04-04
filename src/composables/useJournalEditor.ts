@@ -3,6 +3,12 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { JournalService } from '@/services/JournalService';
 import type { JournalEntry, JournalLine, ValidationResult } from '@/types/journal';
+import {
+    TaxCodeEnum,
+    InvoiceDeductionEnum,
+    TaxTypeEnum,
+    TaxAmountSourceEnum,
+} from '@/core/journal';
 
 export function aaa_useJournalEditor() {
     const route = useRoute();
@@ -33,7 +39,7 @@ export function aaa_useJournalEditor() {
             entry.value = data;
 
             // Initial Validation
-            validation.value = JournalService.validateJournal(data);
+            validation.value = JournalService.validateJournal(data.lines);
         } catch (err) {
             console.error(err);
             error.value = err as Error;
@@ -47,7 +53,7 @@ export function aaa_useJournalEditor() {
         () => entry.value,
         (newVal) => {
             if (newVal) {
-                validation.value = JournalService.validateJournal(newVal);
+                validation.value = JournalService.validateJournal(newVal.lines);
             }
         },
         { deep: true }
@@ -56,15 +62,22 @@ export function aaa_useJournalEditor() {
     // Grid Actions
     const addRow = () => {
         if (!entry.value) return;
+        // 新型JournalLine: 全必須フィールドを設定（accountCode/accountNameは空文字で初期化）
         const newLine: JournalLine = {
-            lineNo: (entry.value.lines.length || 0) + 1,
-            description: '',
-            drAccount: '',
-            drAmount: 0,
-            crAccount: '',
-            crAmount: 0,
-            drTaxClass: '課対仕入10%', // Default
-            crTaxClass: '課対仕入10%'  // Default
+            lineId: `line-new-${Date.now()}`,
+            accountCode: '',        // ユーザーが入力
+            accountName: '',        // ユーザーが入力
+            debit: 0,
+            credit: 0,
+            taxCode: TaxCodeEnum.enum.TAXABLE_PURCHASE_10,
+            invoiceDeduction: InvoiceDeductionEnum.enum.QUALIFIED,
+            taxType: TaxTypeEnum.enum.none,
+            taxDocumentSource: 'NOT_PRESENT',
+            taxAmountCalculated: 0,
+            taxCalculationMethod: 'SIMPLE_RATE',
+            taxAmountFinal: 0,
+            taxAmountSource: TaxAmountSourceEnum.enum.CALCULATED,
+            isAIGenerated: false,
         };
         entry.value.lines.push(newLine);
     };

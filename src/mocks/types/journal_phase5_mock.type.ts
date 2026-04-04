@@ -44,6 +44,7 @@ export type JournalLabelMock =
   | 'DESCRIPTION_UNKNOWN'     // 摘要不明
   | 'VOUCHER_TYPE_CONFLICT'   // 証票意味矛盾
   | 'TAX_ACCOUNT_MISMATCH'   // 税区分科目矛盾
+  | 'DATE_OUT_OF_RANGE'       // 日付異常（未来日付・期外日付）
 
   // --- 以下はPhase B/Cで除去予定（現在のモックで使用中） ---
 

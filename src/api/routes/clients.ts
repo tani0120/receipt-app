@@ -101,7 +101,9 @@ const ClientUiSchema = z.object({
     taxCalculationMethodLabel: z.string(),
     invoiceRegistrationLabel: z.string(),
     roundingSettingsLabel: z.string(),
-    typeLabel: z.string()
+    typeLabel: z.string(),
+    // 申告種類ラベル（'blue'→'青色申告' / 'white'→'白色申告'）
+    taxFilingTypeLabel: z.string().default('青色申告')
 })
 
 // --- 2. BFF Route ---
@@ -224,6 +226,7 @@ const route = app
                 invoiceRegistrationLabel: raw.isInvoiceRegistered ? '有' : '無',
                 roundingSettingsLabel: roundingLabel,
                 typeLabel: raw.type === 'individual' ? '個人' : '法人',
+                taxFilingTypeLabel: raw.taxFilingType === 'white' ? '白色申告' : '青色申告',  // 青色/白色申告ラベル
 
                 // ID Placeholders
                 sharedFolderId: '',

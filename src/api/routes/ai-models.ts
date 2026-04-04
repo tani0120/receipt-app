@@ -8,7 +8,7 @@ const route = app
     // GET /api/ai/models - List available models for the current provider
     .get('/models', async (c) => {
         try {
-            const provider = AIProviderFactory.getProvider();
+            const provider = await AIProviderFactory.getProvider();
             const models = await provider.listAvailableModels();
             return c.json({ success: true, models });
         } catch (e: unknown) {

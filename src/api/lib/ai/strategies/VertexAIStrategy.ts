@@ -4,11 +4,9 @@ import type { AIProvider, ModelInfo, ReceiptAnalysisResult } from '../types';
 
 export class VertexAIStrategy implements AIProvider {
     private client: VertexAI;
-    private location = 'us-central1'; // Default for batch jobs
 
     constructor(projectId: string, location = 'us-central1') {
         this.client = new VertexAI({ project: projectId, location });
-        this.location = location;
     }
 
     async listAvailableModels(): Promise<ModelInfo[]> {

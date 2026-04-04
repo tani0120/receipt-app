@@ -1,7 +1,6 @@
 
 import { db } from '../lib/firebase';
 import { geminiModel } from '../lib/gemini';
-import { z } from 'zod';
 import type { GenerateContentResult } from '@google/generative-ai';
 
 // --- Types ---
@@ -12,17 +11,6 @@ export interface ConversionResult {
     summary: string;
 }
 
-// Log Schema for Firestore
-const _ConversionLogDbSchema = z.object({
-    id: z.string(),
-    clientId: z.string().optional(),
-    fileName: z.string(),
-    originalSize: z.number(),
-    status: z.enum(['processing', 'completed', 'error']),
-    timestamp: z.string(), // ISO
-    downloadUrl: z.string().optional(),
-    error: z.string().optional()
-});
 
 export class ConversionService {
     private static COLLECTION = 'conversion_logs';

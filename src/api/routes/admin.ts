@@ -21,32 +21,6 @@ const PhaseSettingsSchema = z.object({
     optimization: PhaseConfigSchema
 })
 
-// --- Data Models ---
-const DashboardKpiSchema = z.object({
-    monthlyJournals: z.number(),
-    autoConversionRate: z.number(),
-    aiAccuracy: z.number(),
-    funnel: z.object({
-        received: z.number(),
-        exported: z.number()
-    })
-})
-
-const StaffPerformanceSchema = z.object({
-    name: z.string(),
-    backlogs: z.object({
-        total: z.number(),
-        draft: z.number()
-    }),
-    velocity: z.object({
-        draftAvg: z.number()
-    })
-})
-
-const _AdminDashboardSchema = z.object({
-    kpi: DashboardKpiSchema,
-    staff: z.array(StaffPerformanceSchema)
-})
 
 // --- Mock Data ---
 const MOCK_ADMIN_DATA = {

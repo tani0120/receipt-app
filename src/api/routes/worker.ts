@@ -32,6 +32,7 @@ const oidcAuth = async (c: Context, next: () => Promise<void>) => {
     // specific OIDC claim validation would go here.
     // For now, pass-through if Bearer is present.
     await next()
+    return
 }
 
 // Apply middleware to all routes in this app

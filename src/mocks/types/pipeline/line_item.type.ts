@@ -1,3 +1,5 @@
+import type { VendorVector } from './vendor.type'
+
 /**
  * line_item.type.ts — T-LI1: LineItem v1型定義
  *
@@ -14,10 +16,10 @@
  *   全source_typeで同一型。プロンプト分岐なし。
  *
  * 含めないフィールド（設計根拠付き）:
- *   - vendor_vector  : Step 3の出力。LineItemは入力側（T-P3後にPhase 2 Group 3でテスト）
- *   - vendor_name    : 第2段階（T-P3実施後にv2で追加予定）
+ *   - vendor_vector  : LineItemに追加済み（v1.1。Step 3の出力。DL-006参照）
+ *   - vendor_name    : LineItemに追加済み（v1.1。T-P3の受け皖型。DL-012参照）
  *   - tax_rate       : ReceiptItem側の責務。通帳/クレカ行に税率情報はない
- *   - date_on_document / amount_on_document: date === null でコード側導出可能
+ *   - date_on_document: date === null でコード側導出可能（冗長）
  *   - debit_account / credit_account: classify_schema.ts旧世代の残骸（@deprecated）
  *
  * ReceiptItem との関係:
@@ -25,9 +27,82 @@
  *   quantity / unit_price / tax_rate を持つため LineItem に統合しない。
  *
  * 変更履歴:
- *   2026-04-04: v1 初版（T-P4実測根拠。6フィールド確定）
- *   — v2予定: T-P3完了後に vendor_name フィールドを追加
+ *   2026-04-04: v1.0 初版（T-P4実測根拠。必須目6フィールド確定）
+ *   2026-04-04: v1.1 determined_account? / tax_category? 追加
+ *   2026-04-04: v1.2 vendor_vector? / vendor_name? / candidates? / level? /
+ *               history_match_hit? / sub_account? / counterpart_account? 追加
+ *               （A-1～A-8: 66業種確定・T-P3受け皖型・大解決）
+ *   2026-04-04: v1.3 NonVendorType / TaxType 型定義追加（A-9～A-12）
+ *               non_vendor_type? / tax_type? フィールド追加（DL-016確定）
  */
+
+// ============================================================
+// § NonVendorType — 取引先外取引の種別（A-9）
+// ============================================================
+
+/**
+ * 取引先外取引の種別（non_vendor_type）
+ *
+ * 取引先特定できない行（ATM・利息・手数料・口座間移動等）で使用。
+ *
+ * vendor_vector との相互排他制約:
+ *   取引先あり → vendor_vector のみ設定。non_vendor_type は必ず null。
+ *   取引先外   → non_vendor_type または tax_type のどちらか一方。vendor_vector は null。
+ *
+ * 科目推定可否:
+ *   自動確定（level: 'A'）    : ATM / INTEREST_INCOME / INTEREST_EXPENSE /
+ *                                   BANK_FEE / CREDIT_CARD_FEE / INTERNAL_TRANSFER
+ *   人間判断必要（level: 'insufficient'）: CASHBACK / UNIDENTIFIED_SALARY
+ *
+ * 主に発生するsource_type（証票種別）:
+ *   - 通帳・銀行明細（bank_statement）: 頻繁に発生
+ *   - クレカ明細（credit_card）: 頻繁に発生
+ *   - 現金出納帳（cash_ledger）: 稀に発生
+ *
+ * 根拠: DL-016（2026-04-04確定）
+ */
+export type NonVendorType =
+  // ✅ 科目自動確定（level: 'A'で返る）
+  | 'ATM'               // ATM入出金　　　　現金 ／ 普通預金
+  | 'INTEREST_INCOME'   // 受取利息　　　　 普通預金 ／ 受取利息
+  | 'INTEREST_EXPENSE'  // 支払利息　　　　 支払利息 ／ 普通預金
+  | 'BANK_FEE'          // 銀行手数料　　　 支払手数料 ／ 普通預金
+  | 'CREDIT_CARD_FEE'   // クレカ手数料　　 支払手数料 ／ 未払金
+  | 'INTERNAL_TRANSFER' // 口座間移動　　　 普通預金 ／ 普通預金（貸借対照表内移動）
+  // ❌ 科目人間判断（level: 'insufficient'で返る）
+  | 'CASHBACK'             // キャッシュバック（雑収入か費用控除か事業者判断）
+  | 'UNIDENTIFIED_SALARY'; // 給与振込＊支払元不明（法人→給与手当 ／ 個人→事業主貸）
+
+// ============================================================
+// § TaxPaymentType — 税金（納付）の種別（A-10）
+// ============================================================
+
+/**
+ * 税金の種別（tax_type）
+ *
+ * 使用範囲:
+ *   - 納付書（source_type: 'tax_payment'）の全行
+ *   - 通帳・銀行明細（bank_statement）内の税金級落ち行
+ *
+ * 非分類ルール:
+ *   税金（tax_type）は取引先外（non_vendor_type）に含めない。独立カテゴリ。
+ *   non_vendor_type と tax_type は相互排他（両方同時に設定しない）。
+ *
+ * 科目推定可否:
+ *   自動確定（level: 'A'）    : CORPORATE_TAX / CONSUMPTION_TAX /
+ *                                   BUSINESS_TAX / WITHHOLDING_TAX
+ *   人間判断必要（level: 'insufficient'）: RESIDENT_TAX
+ *
+ * 根拠: DL-016（2026-04-04確定）
+ */
+export type TaxPaymentType =
+  // ✅ 科目自動確定（level: 'A'で返る）
+  | 'CORPORATE_TAX'    // 法人税等　　　　　 法人税等 ／ 普通預金
+  | 'CONSUMPTION_TAX'  // 消費税　　　　　　 未払消費税 ／ 普通預金
+  | 'BUSINESS_TAX'     // 事業税　　　　　　 租税公課 ／ 普通預金
+  | 'WITHHOLDING_TAX'  // 源泉所得税　　　 預り金 ／ 普通預金
+  // ❌ 科目人間判断（level: 'insufficient'で返る）― 事業形態で変わる
+  | 'RESIDENT_TAX';    // 住民税（法人→法人税等 ／ 個人事業主→事業主貸）
 
 // ============================================================
 // § LineItemDirection — 行レベルの入出金方向（2種）
@@ -36,15 +111,15 @@
 /**
  * 行レベルの入出金方向（2種）
  *
- * source_type.type.ts の Direction（4種: expense/income/transfer/mixed）とは別物。
- * 通帳・クレカ・レシートの1行は必ず expense か income のどちらか。
+ * source_type.type.ts の Direction（4種: expense（出金）/income（入金）/transfer（振替）/mixed（混在））とは別物。
+ * 通帳・クレカ・レシートの1行は必ず expense（出金）か income（入金）のどちらか。
  * - transfer（振替）: 書類レベルの方向。個別の行には適用しない
  * - mixed（混在）:    書類レベルの方向。個別の行は必ずどちらかに確定する
  */
 export type LineItemDirection = 'expense' | 'income';
 
 // ============================================================
-// § LineItem — 証票明細行（v1）
+// § LineItem — 証票明細行（v1.3）
 // ============================================================
 
 /**
@@ -99,9 +174,130 @@ export interface LineItem {
    */
   tax_category?: string | null;
 
-  // ── v2予定（T-P3完了後に追加）──────────────────────────────
-  // /** 行別取引先名（N:N時。摘要から抽出。特定できない場合は null） */
-  // vendor_name?: string | null;
+  /**
+   * 業種ベクトル（VendorVector 66種）
+   *
+   * Step 3（取引先特定4層）の出力。
+   * - Layer 1-3（T番号・電話・名称マッチ）: vendors_*.ts マスタから取得
+   * - Layer 4（Geminiフォールバック）: 画像の文脈からGeminiが推定
+   *
+   * 【3状態】
+   * - あり: 'taxi' 等の VendorVector 値（Layer 1-3照合済み or Layer 4推定成功）
+   * - 不明: null（Step 3実行済みだが取引先特定失敗 → level: 'insufficient'）
+   * - なし: undefined（Step 3未実行）
+   *
+   * 66種はGemini精度（T-P3）に関係なく採用確定（DL-006参照）。
+   */
+  vendor_vector?: VendorVector | null;
+
+  /**
+   * 行別取引先名（A-2）
+   *
+   * Step 3 Layer 4（Geminiフォールバック）が摘要テキストから抽出。
+   * Layer 1-3（T番号・電話・名称マッチ）成功時はマスタの正式名称を使用。
+   * 型は string | null で確定。精度は null で吸収（DL-012参照）。
+   * - 抽出できた: '株式会社〇〇' 等
+   * - 特定不能: null
+   * - パイプライン未実行: undefined
+   */
+  vendor_name?: string | null;
+
+  /**
+   * 科目候補（A-3）
+   *
+   * Step 4で設定。vendor_vector × direction → industry_vector辞書引きで得た
+   * ACCOUNT_MASTER ID の配列。history_match命中時は過去と同じ科目の1件配列。
+   * - レベルA（候補1件）: ['TRAVEL'] 等
+   * - insufficient（候補複数）: ['MEETING', 'ENTERTAINMENT'] 等
+   * - パイプライン未実行: undefined
+   */
+  candidates?: string[];
+
+  /**
+   * 判定レベル（A-4）
+   *
+   * Step 4で設定。candidates の件数から決まる。
+   * - 'A': candidates.length === 1（自動確定。determined_accountが設定される）
+   * - 'insufficient': candidates.length >= 2（人間がUIで選択）
+   * - パイプライン未実行: undefined
+   */
+  level?: 'A' | 'insufficient';
+
+  /**
+   * Step 2照合ヒットフラグ（A-5）
+   *
+   * Step 2（history_match）で過去仕訳と照合した結果。
+   * true の場合、過去と同じ科目+税区分で即確定したことを示す（根拠トレース用）。
+   * - true: 過去仕訳と照合でき、同じ科目で即確定
+   * - false: 照合なし（Step 3以降へ）
+   * - パイプライン未実行: undefined
+   */
+  history_match_hit?: boolean;
+
+  /**
+   * 補助科目（A-6）
+   *
+   * MF CSV の「借方補助科目」「貸方補助科目」列への対応。
+   * 通帳の場合は銀行名が摘要に出るため推定可能（例: '三菱UFJ'）。
+   * - 補助科目あり: '三菱UFJ' 等
+   * - なし: null
+   * - パイプライン未実行: undefined
+   */
+  sub_account?: string | null;
+
+  /**
+   * 相手勘定（A-7）
+   *
+   * source_type × direction から COUNTERPART_ACCOUNT_MAP で導出。
+   * lineItemToJournalMock() での debit/credit 変換に使用。
+   * - bank_statement/expense → 'ORDINARY_DEPOSIT'（普通預金）
+   * - credit_card/expense   → 'ACCRUED_EXPENSES'（未払金）
+   * - receipt/expense       → 'CASH'（現金）/ is_credit_card_payment時は'ACCRUED_EXPENSES'
+   * - 不明・未対応: null（人間判断待ち）
+   * - パイプライン未実行: undefined
+   * 根拠: voucherTypeRules.ts と同一ルール（DL-009参照）
+   */
+  counterpart_account?: string | null;
+
+  /**
+   * 取引先外取引の種別（A-9）
+   *
+   * 取引先特定できない行（ATM・利息・手数料・口座間移動等）の分類。
+   *
+   * 設定ルール（相互排他）:
+   *   - 取引先ありの行: vendor_vector が設定される。本フィールドは必ず null。
+   *   - 取引先外の行: 本フィールドまたは tax_type のどちらか一方。vendor_vector は null。
+   *   - tax_type との同時設定禁止（税金は独立カテゴリ）。
+   *
+   * - 科目推定可能: 'ATM' / 'INTEREST_INCOME' / 'INTEREST_EXPENSE' /
+   *                         'BANK_FEE' / 'CREDIT_CARD_FEE' / 'INTERNAL_TRANSFER'
+   *                         → level: 'A'（自動確定）
+   * - 科目人間判断: 'CASHBACK' / 'UNIDENTIFIED_SALARY'
+   *                         → level: 'insufficient'（情報不足）
+   * - 未設定: undefined（パイプライン未実行）
+   * 根拠: DL-016（2026-04-04確定）
+   */
+  non_vendor_type?: NonVendorType | null;
+
+  /**
+   * 税金の種別（A-10）
+   *
+   * 納付書（source_type: 'tax_payment'）および
+   * 通帳・銀行明細（bank_statement）内の税金行で使用。
+   *
+   * 設定ルール（相互排他）:
+   *   - non_vendor_type と同時展模禁止。税金は独立カテゴリ。
+   *   - vendor_vector との同時展模禁止。
+   *
+   * - 科目推定可能: 'CORPORATE_TAX' / 'CONSUMPTION_TAX' /
+   *                         'BUSINESS_TAX' / 'WITHHOLDING_TAX'
+   *                         → level: 'A'（自動確定）
+   * - 科目人間判断: 'RESIDENT_TAX'
+   *                         → level: 'insufficient'（情報不足。事業形態で変わる）
+   * - 未設定: undefined（パイプライン未実行）
+   * 根拠: DL-016（2026-04-04確定）
+   */
+  tax_type?: TaxPaymentType | null;
 }
 
 // ============================================================

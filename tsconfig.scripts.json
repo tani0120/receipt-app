@@ -13,6 +13,14 @@
     "skipLibCheck": true
   },
   "include": [
-    "src/scripts/**/*"
+    "env.d.ts",
+    "src/scripts/**/*",
+    "src/shared/**/*",
+    "src/domain/**/*",
+    "src/core/**/*",
+    "src/repositories/**/*",
+    "src/services/firestoreRepository.ts",
+    "src/types/**/*",
+    "src/firebase.ts"
   ]
 }

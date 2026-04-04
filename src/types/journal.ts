@@ -64,5 +64,6 @@ export type { JobStatus } from './firestore';
 export interface ValidationResult {
     isValid: boolean;
     errors: string[];
+    warnings?: string[];   // 警告メッセージ（useJournalEditor等で使用）
     balanceDiff: number;
 }

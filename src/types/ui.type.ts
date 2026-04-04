@@ -193,7 +193,8 @@ export interface ClientUi {
   readonly clientCode: string;
   readonly companyName: string;
   readonly repName: string;
-  readonly type: 'corp' | 'individual'; // Added
+  readonly staffName?: string; // 担当者名（APIから取得。省略可）
+  readonly type: 'corp' | 'individual';
   readonly fiscalMonth: number;
   readonly status: 'active' | 'inactive' | 'suspension';
 
@@ -259,6 +260,8 @@ export interface ClientUi {
 
   readonly taxMethodLabel: string;
   readonly calcMethodShortLabel: string;
+  // 申告種類ラベル（taxFilingType: 'blue'→'青色申告' / 'white'→'白色申告'）
+  readonly taxFilingTypeLabel: string;
 }
 
 export type TaxCalculationMethodUi = 'stack' | 'back';

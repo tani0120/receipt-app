@@ -1214,8 +1214,10 @@ export function aaa_useAccountingSystem() {
         updatedAt: Timestamp.now()
       };
 
-      // Hono RPC
-      await client.api.clients.$post({ json: newClientRaw as unknown as ClientApi }); // Type assertion for RPC payload
+      // Hono RPC: $post の json 型を推論して型安全にキャスト（TS2740回避）
+      type PostBodyJson = Parameters<typeof client.api.clients.$post>[0]['json'];
+      await client.api.clients.$post({ json: newClientRaw as unknown as PostBodyJson });
+
       await fetchClients();
     } catch (e: unknown) {
       if (e instanceof Error) error.value = e.message;

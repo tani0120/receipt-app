@@ -55,6 +55,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
             clientCode: 'Unknown',
             companyName: 'Unknown Client',
             repName: '',
+            staffName: undefined,
             fiscalMonth: 1,
             type: 'corp',
             status: 'active',
@@ -98,6 +99,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
             invoiceRegistrationLabel: '無',
             roundingSettingsLabel: '切り捨て',
             typeLabel: '法人',
+            taxFilingTypeLabel: '青色申告',
             actions: [
                 { type: 'edit' as const, label: '編集', isEnabled: true },
                 { type: 'delete' as const, label: '削除', isEnabled: false }
@@ -220,12 +222,17 @@ export function mapClientApiToUi(api: unknown): ClientUi {
     // "freee / 税込 / 発生"
     const taxInfoLabel = `${taxMethodLabel} / ${shortCalc}`;
 
+    const staffNameVal = safeString(raw.staffName) || undefined;
+    // taxFilingTypeLabel: 申告種類ラベル
+    const taxFilingTypeLabel = taxFilingType === 'blue' ? '青色申告' : '白色申告';
+
     return {
         clientId,
         clientCode,
         companyName,
         repName,
-        type, // Added
+        staffName: staffNameVal,
+        type,
         fiscalMonth,
         status,
 
@@ -267,6 +274,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
         invoiceRegistrationLabel,
         roundingSettingsLabel,
         typeLabel,
+        taxFilingTypeLabel,  // 青色申告 / 白色申告
 
         // Actions (BFF)
         actions: [

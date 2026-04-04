@@ -158,6 +158,10 @@ async function main() {
 
       for (let i = 0; i < IMAGE_PATHS.length; i++) {
         const imagePath = IMAGE_PATHS[i];
+        if (!imagePath) {
+          console.error(`   ❌ IMAGE_PATHS[${i}] is undefined. Skipping.`);
+          continue;
+        }
         console.log(`   Processing Image ${i + 1}: ${path.basename(imagePath)}`);
 
         const startTime = Date.now();
@@ -202,17 +206,30 @@ async function main() {
           console.log(`      Token Usage: Input=${usage?.promptTokenCount || 0}, Output=${usage?.candidatesTokenCount || 0}, Total=${usage?.totalTokenCount || 0}`);
 
           // Try parse JSON
-          let parsedData = "Failed to parse JSON";
-          if (response.candidates && response.candidates[0].content.parts[0].text) {
+          let parsedData: unknown = 'Failed to parse JSON';
+          const firstCandidate = response.candidates?.[0];
+          const firstPart = firstCandidate?.content?.parts?.[0];
+          if (firstPart && 'text' in firstPart && typeof firstPart.text === 'string') {
             try {
-              parsedData = JSON.parse(response.candidates[0].content.parts[0].text);
-              // Minimal validation display
-              console.log(`      Detected Type: ${parsedData.document_type}`);
-              console.log(`      Issuer: ${parsedData.issuer?.name}`);
-              console.log(`      Total: ${parsedData.transaction_header?.total_amount}`);
+              parsedData = JSON.parse(firstPart.text);
+              // Minimal validation display（型を確認してから参照）
+              if (parsedData !== null && typeof parsedData === 'object' && !Array.isArray(parsedData)) {
+                const pd = parsedData as Record<string, unknown>;
+                console.log(`      Detected Type: ${pd['document_type']}`);
+                const issuer = pd['issuer'];
+                if (issuer !== null && typeof issuer === 'object' && !Array.isArray(issuer)) {
+                  console.log(`      Issuer: ${(issuer as Record<string, unknown>)['name']}`);
+                }
+                const txHeader = pd['transaction_header'];
+                if (txHeader !== null && typeof txHeader === 'object' && !Array.isArray(txHeader)) {
+                  console.log(`      Total: ${(txHeader as Record<string, unknown>)['total_amount']}`);
+                }
+              }
             } catch (e) {
-              console.error("      JSON Parse Error:", e);
-              console.log("      Raw Text:", response.candidates[0].content.parts[0].text.substring(0, 100) + "...");
+              console.error('      JSON Parse Error:', e);
+              const firstPart2 = response.candidates?.[0]?.content?.parts?.[0];
+              const rawText = firstPart2 && 'text' in firstPart2 ? firstPart2.text : '';
+              console.log('      Raw Text:', (rawText ?? '').substring(0, 100) + '...');
             }
           }
 

@@ -388,7 +388,9 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { aaa_useAccountingSystem, type Job, type JobStatus } from '@/composables/useAccountingSystem';
+import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
+import type { JobUi } from '@/types/ui.type';
+import type { JobStatus } from '@/types/job';
 
 
 const route = useRoute();
@@ -402,7 +404,7 @@ const screen = computed({
 });
 
 const currentIndex = ref(0);
-const selectedJob = ref<Job | null>(null);
+const selectedJob = ref<JobUi | null>(null); // JobUi型(変換済み)に統一
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const client = ref<any>(null); // raw client data
 
@@ -422,28 +424,28 @@ const currentClient = computed(() => {
     };
 });
 
-// Map selectedJob to currentTransaction
 const currentTransaction = computed(() => {
     const j = selectedJob.value;
-    if (!j) return { id: '', mode: 'new', isExcluded: false, status: 'ready_for_work', imageTitle: '', vendor: '', item: '', amount: 0, ai_reason: '', ai_proposal: null };
+    if (!j) return { id: '', mode: 'new', isExcluded: false, status: 'ready_for_work', imageTitle: '', vendor: '', item: '', amount: 0, ai_reason: '', ai_proposal: null, hasDuplicate: false };
     return {
         id: j.id,
         mode: 'new',
         isExcluded: j.status === 'excluded',
         status: j.status,
         imageTitle: '領収書',
-        vendor: j.lines?.[0]?.description || '', // default from line
-        item: j.lines?.[0]?.drAccount || '',
-        amount: j.lines?.reduce((s,l)=>s+(Number(l.drAmount)||0),0).toLocaleString() || 0,
-        ai_reason: j.aiAnalysisRaw || '',
+        vendor: j.lines?.[0]?.description || '',
+        item: j.lines?.[0]?.debit?.account || '',          // 新型: debit.account
+        amount: j.lines?.reduce((s, l) => s + l.debit.amount, 0).toLocaleString() || 0,
+        ai_reason: j.aiProposal?.reason || '',              // 新型: aiProposal.reason
         ai_proposal: {
-             d: j.lines?.[0]?.drAccount || '',
-             c: j.lines?.[0]?.crAccount || '',
-             amount: j.lines?.reduce((s,l)=>s+(Number(l.drAmount)||0),0) || 0
+             d: j.lines?.[0]?.debit?.account || '',        // 新型: debit.account
+             c: j.lines?.[0]?.credit?.account || '',       // 新型: credit.account
+             amount: j.lines?.reduce((s, l) => s + l.debit.amount, 0) || 0
         },
         hasDuplicate: false
     };
 });
+
 
 // Form Data (The detailed editor state)
 const form = reactive({
@@ -456,32 +458,31 @@ const form = reactive({
 });
 
 // Helper to load job into form
-function loadJobToForm(job: Job) {
+function loadJobToForm(job: JobUi) {
     if (!job) return;
-    try {
-       form.date = job.transactionDate ? job.transactionDate.toDate().toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-    } catch { form.date = ''; }
+    // JobUi.transactionDate はフォーマット済み文字列（例: "2024/11/12"）
+    // input[type=date]はYYYY-MM-DD形式が必要なので変換する
+    const rawDate = job.transactionDate || '';
+    // "2024/11/12" → "2024-11-12" 形式に変換
+    form.date = rawDate.replace(/\//g, '-');
 
-    // Naively assume lines are split. In real app we parse lines.
-    // For now, map existing lines to debit/credit
     const lines = job.lines || [];
-    // If no lines, add default
     if (lines.length === 0) {
         form.debit = [{ acct: '', sub: '', tax: 'tax_10', amount: 0 }];
         form.credit = [{ acct: '', sub: '', tax: 'tax_none', amount: 0 }];
         form.summary = '';
     } else {
         form.debit = lines.map(l => ({
-            acct: l.drAccount,
-            sub: l.drSubAccount,
-            tax: l.drTaxClass || 'tax_10',
-            amount: l.drAmount
+            acct: l.debit.account,
+            sub: l.debit.subAccount,
+            tax: l.debit.taxCode || 'tax_10',
+            amount: l.debit.amount
         }));
         form.credit = lines.map(l => ({
-            acct: l.crAccount,
-            sub: l.crSubAccount,
-            tax: l.crTaxClass || 'tax_none',
-            amount: l.crAmount
+            acct: l.credit.account,
+            sub: l.credit.subAccount,
+            tax: l.credit.taxCode || 'tax_none',
+            amount: l.credit.amount
         }));
         form.summary = lines[0]?.description || '';
     }
@@ -489,9 +490,10 @@ function loadJobToForm(job: Job) {
 
 // Watch selection
 watch(currentIndex, (idx) => {
-    if (jobs.value[idx]) {
-        selectedJob.value = jobs.value[idx];
-        loadJobToForm(selectedJob.value);
+    const job = jobs.value[idx];  // noUncheckedIndexedAccess対応
+    if (job) {
+        selectedJob.value = job;
+        loadJobToForm(job);
     }
 });
 
@@ -633,8 +635,7 @@ const performUndo = () => {
     // Simplified undo: revert the last item in active session for demo
     showToast('Undo not fully implemented in demo', 'error');
 };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const _lastAction = ref<any>(null); // unused but kept for future undo
+// _lastAction は将来のundo機能用（Phase 6.3予定）のため変数定義を削除済み。
 
 const revertItems = () => {
     // removal logic
@@ -648,16 +649,16 @@ const revertItems = () => {
 const executeBatch = async () => {
     showToast('処理を実行中...', 'success');
     for (const item of approvalQueue.value) {
-        let status: JobStatus = 'ready_for_work';
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let _reviewStatus: any = undefined;
+        let status: JobStatus = 'pending';
+        // _reviewStatus は旧設計の名残。JobStatus型への移行に伴い削除。
         switch (item.decision) {
-            case 'confirmed': status = 'review'; _reviewStatus = 'confirmed'; break;
-            case 'unknown': status = 'review'; _reviewStatus = 'unknown'; break;
-            case 'exclude_candidate': status = 'review'; _reviewStatus = 'exclude_candidate'; break;
-            case 'remand': status = 'remanded'; break;
-            case 'exclude': status = 'excluded'; break;
-            case 'csv': status = 'approved'; break;
+            case 'confirmed':         status = 'primary_completed'; break;
+            case 'unknown':           status = 'pending';           break;
+            case 'exclude_candidate': status = 'pending';           break;
+            case 'remand':            status = 'remanded';          break;
+            case 'exclude':           status = 'excluded';          break;  // 修正: JobStatus型に'excluded'追加済み
+            case 'csv':               status = 'completed';         break;
+
         }
 
         await updateJobStatus(item.id, status, undefined);
@@ -683,11 +684,12 @@ const openBatchModal = () => {
 
 // Lifecycle
 onMounted(() => {
-    if (jobs.value.length > 0) {
-        selectedJob.value = jobs.value[0];
-        loadJobToForm(selectedJob.value);
+    const firstJob = jobs.value[0];  // noUncheckedIndexedAccess対応
+    if (jobs.value.length > 0 && firstJob) {
+        selectedJob.value = firstJob;
+        loadJobToForm(firstJob);
     }
-    const code = route.params.clientCode || jobs.value[0]?.clientCode;
+    const code = route.params.clientCode || firstJob?.clientCode;
     if(code) client.value = getClientByCode(code as string);
 });
 </script>

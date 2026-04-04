@@ -90,6 +90,14 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('../components/ScreenE_JournalEntry.vue'),
     props: true
   },
+  // --- 新型仕訳エントリー画面（ScreenE_Workbench。?mode=work対応） ---
+  {
+    path: '/journal-entry/:id',
+    name: 'JournalEntry',
+    component: () => import('@/views/ScreenE_Workbench.vue'),
+    props: true
+  },
+
 
 
   // 旧パス互換: /old/settings-accounts → /client/settings/accounts/ABC-00001
@@ -146,6 +154,28 @@ export const routes: RouteRecordRaw[] = [
     name: 'MockJournalList',
     component: () => import('@/mocks/components/JournalListLevel3Mock.vue'),
   },
+  // --- 顧問先詳細（ScreenA_ClientDetail） ---
+  {
+    path: '/client/detail/:clientId',
+    name: 'ClientDetail',
+    component: () => import('@/components/ScreenA_ClientDetail.vue'),
+    props: true
+  },
+  // --- 仕訳ワークベンチ（ScreenE_Workbench。新型JournalEntry対応） ---
+  {
+    path: '/client/workbench/:clientId',
+    name: 'ClientWorkbench',
+    component: () => import('@/views/ScreenE_Workbench.vue'),
+    props: true
+  },
+  // --- ScreenE_LogicMaster（旧URL互換。将来廃止予定） ---
+  {
+    path: '/screen-e/:clientId',
+    name: 'ScreenELogicMaster',
+    component: () => import('@/components/ScreenE_LogicMaster.vue'),
+    props: true
+  },
+
   {
     path: '/client/export/:clientId',
     name: 'MockExport',

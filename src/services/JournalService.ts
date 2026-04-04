@@ -1,88 +1,83 @@
 import { db } from '@/firebase';
-import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import type { JournalEntry, JournalLine, ValidationResult } from '@/types/journal';
-import type { Job } from '@/types/job';
-import type { Client } from '@/types/firestore';
 import { JobService } from '@/services/JobService';
+import {
+  TaxCodeEnum,
+  InvoiceDeductionEnum,
+  TaxTypeEnum,
+  TaxAmountSourceEnum,
+} from '@/core/journal';
 
 const COLLECTION_NAME = 'jobs';
 
 export const JournalService = {
     /**
-     * 仕訳データの取得 (Job -> JournalEntry 変換)
-     * @param jobId
+     * 仕訳データの取得（モック版）
+     * Phase 6.3: Firestore直読みはScreenE_Workbench実装時に復元
      */
     async fetchJournalById(jobId: string): Promise<JournalEntry | null> {
-        // TEMPORARY: Return Mock Data for User Verification
+        // モックデータ（ScreenE_Workbench.vue開発/デバッグ用）
         if (jobId === 'mock-job-001' || jobId === '1001' || jobId === 'job_draft_01') {
             console.log('Returning Mock Journal Entry for:', jobId);
+            const now = new Date().toISOString();
             return {
                 id: jobId,
-                clientCode: '1001',
-                status: 'pending',
-                evidenceUrl: 'mock-invoice.pdf', // Dummy
-                evidenceId: 'evidence-1001',
-                transactionDate: new Date('2025-01-12'),
+                clientId: 'LDI-00008',
+                clientCode: 'LDI',
+                status: 'READY_FOR_WORK',
+                date: '2025-01-12',
+                description: 'MacBook Pro 5台 FAKE_TOKEN',
+                totalAmount: 1650000,
                 lines: [
                     {
-                        lineNo: 1,
-                        description: 'MacBook Pro 5台 DEBUG_TOKEN',
-                        drAccount: '消耗品費',
-                        drTaxClass: 'TAX_PURCHASE_10',
-                        drAmount: 1650000,
-                        crAccount: '未払金',
-                        crTaxClass: 'TAX_NONE',
-                        crAmount: 1650000,
-                        flags: { isTaxDiff: false }
-                    }
+                        lineId: `${jobId}-line-001`,
+                        accountCode: 'SUPPLIES',
+                        accountName: '消耗品費',
+                        debit: 1650000,
+                        credit: 0,
+                        taxCode: TaxCodeEnum.enum.TAXABLE_PURCHASE_10,
+                        invoiceDeduction: InvoiceDeductionEnum.enum.QUALIFIED,
+                        taxType: TaxTypeEnum.enum.consumption,
+                        taxDocumentSource: 'NOT_PRESENT',
+                        taxAmountCalculated: 150000,
+                        taxCalculationMethod: 'SIMPLE_RATE',
+                        taxAmountFinal: 150000,
+                        taxAmountSource: TaxAmountSourceEnum.enum.CALCULATED,
+                        isAIGenerated: true,
+                        description: 'MacBook Pro 5台',
+                    },
+                    {
+                        lineId: `${jobId}-line-002`,
+                        accountCode: 'ACCRUED_EXPENSES',
+                        accountName: '未払金',
+                        debit: 0,
+                        credit: 1650000,
+                        taxCode: TaxCodeEnum.enum.OUT_OF_SCOPE_PURCHASE,
+                        invoiceDeduction: InvoiceDeductionEnum.enum.QUALIFIED,
+                        taxType: TaxTypeEnum.enum.none,
+                        taxDocumentSource: 'NOT_PRESENT',
+                        taxAmountCalculated: 0,
+                        taxCalculationMethod: 'SIMPLE_RATE',
+                        taxAmountFinal: 0,
+                        taxAmountSource: TaxAmountSourceEnum.enum.CALCULATED,
+                        isAIGenerated: true,
+                    },
                 ],
-                totalAmount: 1650000,
-                balanceDiff: 0,
-                remandReason: '',
-                remandCount: 0,
-                updatedAt: new Date(),
-                consumptionTaxMode: 'general',
-                simplifiedTaxCategory: undefined
+                aiSourceType: 'gemini',
+                aiConfidence: 0.95,
+                sourceFiles: [],
+                createdAt: now,
+                createdBy: 'system',
+                updatedAt: now,
+                isConfirmed: false,
+                duplicateCheckHash: `mock-hash-${jobId}`,
             };
         }
 
-        try {
-            const docRef = doc(db, COLLECTION_NAME, jobId);
-            const snap = await getDoc(docRef);
-
-            if (!snap.exists()) return null;
-
-            const data = snap.data() as Job;
-
-            // Fetch Client for Tax Settings
-            const clientSnap = await getDoc(doc(db, 'clients', data.clientCode));
-            const client = clientSnap.exists() ? (clientSnap.data() as Client) : {} as Partial<Client>;
-
-            // 計算: 合計と差額
-            const { total, diff } = this.calculateBalance(data.lines || []);
-
-            return {
-                id: snap.id,
-                evidenceUrl: data.driveFileUrl,
-                evidenceId: data.driveFileId,
-                lines: data.lines || [],
-                totalAmount: total,
-                balanceDiff: diff,
-                clientCode: data.clientCode,
-                status: data.status,
-                transactionDate: data.transactionDate.toDate(),
-                remandReason: data.remandReason,
-                remandCount: data.remandCount ?? 0,
-                updatedAt: data.updatedAt.toDate(),
-
-                // Client Tax Settings
-                consumptionTaxMode: client.consumptionTaxMode || 'general',
-                simplifiedTaxCategory: client.simplifiedTaxCategory
-            };
-        } catch (error) {
-            console.error('JournalService: fetch error', error);
-            throw error;
-        }
+        // TODO Phase 6.3: Firestore直読みはScreenE_Workbench.vue実装時に復元
+        // ScreenE_Workbench.vue は現在 mvp.ts でコメントアウト中
+        throw new Error(`fetchJournalById: Firestore直読み未実装 (jobId: ${jobId})`);
     },
 
     /**
@@ -91,16 +86,16 @@ export const JournalService = {
      * @param entry 編集済みデータ
      */
     async saveJournal(id: string, entry: Partial<JournalEntry>): Promise<void> {
+        // TODO Phase 6.3: Firestoreへの保存。ScreenE_Workbench.vue実装時に完全実装
         const docRef = doc(db, COLLECTION_NAME, id);
 
         const updateData: Record<string, unknown> = {
-            updatedAt: Timestamp.now()
+            updatedAt: new Date().toISOString()  // JournalEntry.updatedAt: string
         };
 
         if (entry.lines) updateData.lines = entry.lines;
-        if (entry.remandReason !== undefined) updateData.remandReason = entry.remandReason;
-        if (entry.remandCount !== undefined) updateData.remandCount = entry.remandCount;
-        // Date -> Timestamp 変換が必要な場合はここで行う (transactionDateなど編集可にするなら)
+        // remandReason/remandCountはJournalEntryに存在しないため削除済み
+        // （Job型側のフィールドはPhase 6.3でJobServiceを通じて更新）
 
         await updateDoc(docRef, updateData);
     },
@@ -111,14 +106,14 @@ export const JournalService = {
     validateJournal(lines: JournalLine[]): ValidationResult {
         const { diff } = this.calculateBalance(lines);
         const isValid = diff === 0;
-        const errors = [];
+        const errors: string[] = [];
 
         if (!isValid) {
             errors.push(`貸借が一致していません (差額: ${diff}円)`);
         }
 
-        // 他のバリデーション (必須項目など) もここに追加可能
-        const hasEmptyAccount = lines.some(l => !l.drAccount || !l.crAccount);
+        // 新型: accountCode で空チェック（旧: drAccount/crAccount）
+        const hasEmptyAccount = lines.some(l => !l.accountCode);
         if (hasEmptyAccount) {
             errors.push('勘定科目が未入力の行があります');
         }
@@ -134,8 +129,8 @@ export const JournalService = {
         let crTotal = 0;
 
         lines.forEach(line => {
-            drTotal += Number(line.drAmount || 0);
-            crTotal += Number(line.crAmount || 0);
+            drTotal += Number(line.debit || 0);   // 新型: debit（旧: drAmount）
+            crTotal += Number(line.credit || 0);  // 新型: credit（旧: crAmount）
         });
 
         return {

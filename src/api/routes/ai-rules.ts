@@ -4,8 +4,6 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import type { LearningRuleUi } from '../../types/LearningRuleUi';
 
-const app = new Hono();
-
 // Mock Data
 const MOCK_CLIENTS = [
     { id: '1001', name: '株式会社 テスト商事', activeRules: 12, totalRules: 15 },
@@ -29,7 +27,6 @@ const MOCK_RULES: Record<string, LearningRuleUi[]> = {
             hitCount: 142,
             generatedBy: 'ai',
             lastUsedAt: '2025-12-20',
-            actions: [{ type: 'edit', label: '編集', isEnabled: true }, { type: 'delete', label: '削除', isEnabled: true }]
         },
         {
             id: 'rule-002',
@@ -42,7 +39,6 @@ const MOCK_RULES: Record<string, LearningRuleUi[]> = {
             hitCount: 56,
             generatedBy: 'human',
             lastUsedAt: '2025-12-18',
-            actions: [{ type: 'edit', label: '編集', isEnabled: true }, { type: 'delete', label: '削除', isEnabled: true }]
         },
     ],
     '1002': [
@@ -56,26 +52,10 @@ const MOCK_RULES: Record<string, LearningRuleUi[]> = {
             confidence: 0.92,
             hitCount: 0,
             generatedBy: 'ai',
-            actions: [{ type: 'edit', label: '編集', isEnabled: true }, { type: 'delete', label: '削除', isEnabled: true }]
         }
     ]
 };
 
-// --- Routes ---
-
-// 1. Get Clients
-app.get('/clients', (c) => {
-    return c.json(MOCK_CLIENTS);
-});
-
-// 2. Get Rules for Client
-app.get('/:clientId/rules', (c) => {
-    const clientId = c.req.param('clientId');
-    const rules = MOCK_RULES[clientId] || [];
-    return c.json(rules);
-});
-
-// 3. Create Rule
 const CreateRuleSchema = z.object({
     priority: z.number().optional(),
     status: z.enum(['active', 'inactive', 'draft']).optional(),
@@ -92,54 +72,102 @@ const CreateRuleSchema = z.object({
     generatedBy: z.enum(['ai', 'human']).optional()
 });
 
-app.post(
-    '/:clientId/rules',
-    zValidator('json', CreateRuleSchema),
-    (c) => {
-        const clientId = c.req.param('clientId');
-        const data = c.req.valid('json');
-
-        const newRule: LearningRuleUi = {
-            id: `rule-${Date.now()}`,
-            clientId,
-            priority: data.priority ?? 3,
-            status: data.status ?? 'active',
-            trigger: {
-                type: data.trigger.type,
-                keyword: data.trigger.keyword,
-                ...(data.trigger.amountRange ? { amountRange: data.trigger.amountRange } : {}),
-            },
-            result: data.result,
-            confidence: 1.0,
-            hitCount: 0,
-            generatedBy: data.generatedBy ?? 'human',
-            lastUsedAt: new Date().toISOString().split('T')[0],
-        };
-
-        if (!MOCK_RULES[clientId]) MOCK_RULES[clientId] = [];
-        MOCK_RULES[clientId].push(newRule);
-
-        // Update stats
-        const client = MOCK_CLIENTS.find(c => c.id === clientId);
-        if (client) {
-            client.totalRules++;
-            if (newRule.status === 'active') client.activeRules++;
-        }
-
-        return c.json(newRule, 201);
-    }
-);
-
-// 4. Update Rule
 const UpdateRuleSchema = CreateRuleSchema.partial();
 
-app.put(
-    '/:clientId/rules/:ruleId',
-    zValidator('json', UpdateRuleSchema),
-    (c) => {
+// --- チェーン形式で定義（Honoの型推論に必要）---
+const app = new Hono()
+    // 1. クライアント一覧
+    .get('/clients', (c) => {
+        return c.json(MOCK_CLIENTS);
+    })
+    // 2. クライアントのルール一覧
+    .get('/:clientId/rules', (c) => {
+        const clientId = c.req.param('clientId');
+        const rules = MOCK_RULES[clientId] || [];
+        return c.json(rules);
+    })
+    // 3. ルール作成
+    .post(
+        '/:clientId/rules',
+        zValidator('json', CreateRuleSchema),
+        (c) => {
+            const clientId = c.req.param('clientId');
+            const data = c.req.valid('json');
+
+            const newRule: LearningRuleUi = {
+                id: `rule-${Date.now()}`,
+                clientId,
+                priority: data.priority ?? 3,
+                status: data.status ?? 'active',
+                trigger: {
+                    type: data.trigger.type,
+                    keyword: data.trigger.keyword,
+                    ...(data.trigger.amountRange ? { amountRange: data.trigger.amountRange } : {}),
+                },
+                result: data.result,
+                confidence: 1.0,
+                hitCount: 0,
+                generatedBy: data.generatedBy ?? 'human',
+                lastUsedAt: new Date().toISOString().split('T')[0],
+            };
+
+            if (!MOCK_RULES[clientId]) MOCK_RULES[clientId] = [];
+            MOCK_RULES[clientId].push(newRule);
+
+            const client = MOCK_CLIENTS.find(c => c.id === clientId);
+            if (client) {
+                client.totalRules++;
+                if (newRule.status === 'active') client.activeRules++;
+            }
+
+            return c.json(newRule, 201);
+        }
+    )
+    // 4. ルール更新
+    .put(
+        '/:clientId/rules/:ruleId',
+        zValidator('json', UpdateRuleSchema),
+        (c) => {
+            const clientId = c.req.param('clientId');
+            const ruleId = c.req.param('ruleId');
+            const data = c.req.valid('json');
+
+            const rules = MOCK_RULES[clientId];
+            if (!rules) return c.json({ error: 'Client not found' }, 404);
+
+            const index = rules.findIndex(r => r.id === ruleId);
+            if (index === -1) return c.json({ error: 'Rule not found' }, 404);
+
+            const currentRule = rules[index] as LearningRuleUi;
+            const wasActive = currentRule.status === 'active';
+
+            const updatedRule: LearningRuleUi = {
+                ...currentRule,
+                ...data,
+                id: currentRule.id,
+                clientId: currentRule.clientId,
+                confidence: currentRule.confidence,
+                hitCount: currentRule.hitCount,
+                trigger: data.trigger ? { ...currentRule.trigger, ...data.trigger } : currentRule.trigger,
+                result: data.result ? { ...currentRule.result, ...data.result } : currentRule.result
+            };
+
+            rules[index] = updatedRule;
+
+            const client = MOCK_CLIENTS.find(c => c.id === clientId);
+            if (client) {
+                const isActive = updatedRule.status === 'active';
+                if (wasActive && !isActive) client.activeRules--;
+                if (!wasActive && isActive) client.activeRules++;
+            }
+
+            return c.json(updatedRule);
+        }
+    )
+    // 5. ルール削除
+    .delete('/:clientId/rules/:ruleId', (c) => {
         const clientId = c.req.param('clientId');
         const ruleId = c.req.param('ruleId');
-        const data = c.req.valid('json');
 
         const rules = MOCK_RULES[clientId];
         if (!rules) return c.json({ error: 'Client not found' }, 404);
@@ -147,52 +175,16 @@ app.put(
         const index = rules.findIndex(r => r.id === ruleId);
         if (index === -1) return c.json({ error: 'Rule not found' }, 404);
 
-        const currentRule = rules[index];
-        const wasActive = currentRule.status === 'active';
+        const deletedRule = rules[index] as LearningRuleUi;
+        rules.splice(index, 1);
 
-        const updatedRule: LearningRuleUi = {
-            ...currentRule,
-            ...data,
-            trigger: data.trigger ? { ...currentRule.trigger, ...data.trigger } : currentRule.trigger,
-            result: data.result ? { ...currentRule.result, ...data.result } : currentRule.result
-        };
-
-        rules[index] = updatedRule;
-
-        // Update Stats if status changed
         const client = MOCK_CLIENTS.find(c => c.id === clientId);
         if (client) {
-            const isActive = updatedRule.status === 'active';
-            if (wasActive && !isActive) client.activeRules--;
-            if (!wasActive && isActive) client.activeRules++;
+            client.totalRules--;
+            if (deletedRule.status === 'active') client.activeRules--;
         }
 
-        return c.json(updatedRule);
-    }
-);
-
-// 5. Delete Rule
-app.delete('/:clientId/rules/:ruleId', (c) => {
-    const clientId = c.req.param('clientId');
-    const ruleId = c.req.param('ruleId');
-
-    const rules = MOCK_RULES[clientId];
-    if (!rules) return c.json({ error: 'Client not found' }, 404);
-
-    const index = rules.findIndex(r => r.id === ruleId);
-    if (index === -1) return c.json({ error: 'Rule not found' }, 404);
-
-    const deletedRule = rules[index];
-    rules.splice(index, 1);
-
-    // Update Stats
-    const client = MOCK_CLIENTS.find(c => c.id === clientId);
-    if (client) {
-        client.totalRules--;
-        if (deletedRule.status === 'active') client.activeRules--;
-    }
-
-    return c.json({ success: true });
-});
+        return c.json({ success: true });
+    });
 
 export default app;
