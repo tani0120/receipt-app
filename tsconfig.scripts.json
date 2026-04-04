@@ -21,6 +21,7 @@
     "src/repositories/**/*",
     "src/services/firestoreRepository.ts",
     "src/types/**/*",
+    "src/mocks/types/pipeline/**/*",
     "src/firebase.ts"
   ]
 }

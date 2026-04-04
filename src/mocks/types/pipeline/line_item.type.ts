@@ -1,4 +1,5 @@
 import type { VendorVector } from './vendor.type'
+import type { NonVendorType, TaxPaymentType } from './non_vendor.type'
 
 /**
  * line_item.type.ts — T-LI1: LineItem v1型定義
@@ -34,75 +35,26 @@ import type { VendorVector } from './vendor.type'
  *               （A-1～A-8: 66業種確定・T-P3受け皖型・大解決）
  *   2026-04-04: v1.3 NonVendorType / TaxType 型定義追加（A-9～A-12）
  *               non_vendor_type? / tax_type? フィールド追加（DL-016確定）
+ *   2026-04-05: v1.4 NonVendorType / TaxPaymentType を non_vendor.type.ts に移動
+ *               （24種拡張対応。DL-017確定）
  */
 
 // ============================================================
-// § NonVendorType — 取引先外取引の種別（A-9）
+// § NonVendorType / TaxPaymentType — non_vendor.type.ts から再エクスポート
 // ============================================================
-
-/**
- * 取引先外取引の種別（non_vendor_type）
- *
- * 取引先特定できない行（ATM・利息・手数料・口座間移動等）で使用。
- *
- * vendor_vector との相互排他制約:
- *   取引先あり → vendor_vector のみ設定。non_vendor_type は必ず null。
- *   取引先外   → non_vendor_type または tax_type のどちらか一方。vendor_vector は null。
- *
- * 科目推定可否:
- *   自動確定（level: 'A'）    : ATM / INTEREST_INCOME / INTEREST_EXPENSE /
- *                                   BANK_FEE / CREDIT_CARD_FEE / INTERNAL_TRANSFER
- *   人間判断必要（level: 'insufficient'）: CASHBACK / UNIDENTIFIED_SALARY
- *
- * 主に発生するsource_type（証票種別）:
- *   - 通帳・銀行明細（bank_statement）: 頻繁に発生
- *   - クレカ明細（credit_card）: 頻繁に発生
- *   - 現金出納帳（cash_ledger）: 稀に発生
- *
- * 根拠: DL-016（2026-04-04確定）
- */
-export type NonVendorType =
-  // ✅ 科目自動確定（level: 'A'で返る）
-  | 'ATM'               // ATM入出金　　　　現金 ／ 普通預金
-  | 'INTEREST_INCOME'   // 受取利息　　　　 普通預金 ／ 受取利息
-  | 'INTEREST_EXPENSE'  // 支払利息　　　　 支払利息 ／ 普通預金
-  | 'BANK_FEE'          // 銀行手数料　　　 支払手数料 ／ 普通預金
-  | 'CREDIT_CARD_FEE'   // クレカ手数料　　 支払手数料 ／ 未払金
-  | 'INTERNAL_TRANSFER' // 口座間移動　　　 普通預金 ／ 普通預金（貸借対照表内移動）
-  // ❌ 科目人間判断（level: 'insufficient'で返る）
-  | 'CASHBACK'             // キャッシュバック（雑収入か費用控除か事業者判断）
-  | 'UNIDENTIFIED_SALARY'; // 給与振込＊支払元不明（法人→給与手当 ／ 個人→事業主貸）
+// 定義は non_vendor.type.ts に移動（2026-04-05 v1.4）
+// NonVendorType: 8種 → 24種に拡張済み（DL-017）
+export type { NonVendorType, TaxPaymentType } from './non_vendor.type'
 
 // ============================================================
-// § TaxPaymentType — 税金（納付）の種別（A-10）
+// § TaxPaymentType の値（再エクスポート後のダミー継続）
 // ============================================================
-
-/**
- * 税金の種別（tax_type）
- *
- * 使用範囲:
- *   - 納付書（source_type: 'tax_payment'）の全行
- *   - 通帳・銀行明細（bank_statement）内の税金級落ち行
- *
- * 非分類ルール:
- *   税金（tax_type）は取引先外（non_vendor_type）に含めない。独立カテゴリ。
- *   non_vendor_type と tax_type は相互排他（両方同時に設定しない）。
- *
- * 科目推定可否:
- *   自動確定（level: 'A'）    : CORPORATE_TAX / CONSUMPTION_TAX /
- *                                   BUSINESS_TAX / WITHHOLDING_TAX
- *   人間判断必要（level: 'insufficient'）: RESIDENT_TAX
- *
- * 根拠: DL-016（2026-04-04確定）
- */
-export type TaxPaymentType =
-  // ✅ 科目自動確定（level: 'A'で返る）
-  | 'CORPORATE_TAX'    // 法人税等　　　　　 法人税等 ／ 普通預金
-  | 'CONSUMPTION_TAX'  // 消費税　　　　　　 未払消費税 ／ 普通預金
-  | 'BUSINESS_TAX'     // 事業税　　　　　　 租税公課 ／ 普通預金
-  | 'WITHHOLDING_TAX'  // 源泉所得税　　　 預り金 ／ 普通預金
-  // ❌ 科目人間判断（level: 'insufficient'で返る）― 事業形態で変わる
-  | 'RESIDENT_TAX';    // 住民税（法人→法人税等 ／ 個人事業主→事業主貸）
+// 以下の旧定義は削除済み。non_vendor.type.ts を参照すること。
+//   'CORPORATE_TAX'    // 法人税等
+//   'CONSUMPTION_TAX'  // 消費税
+//   'BUSINESS_TAX'     // 事業税
+//   'WITHHOLDING_TAX'  // 源泉所得税
+//   'RESIDENT_TAX'     // 住民税（人間判断）
 
 // ============================================================
 // § LineItemDirection — 行レベルの入出金方向（2種）
@@ -269,13 +221,21 @@ export interface LineItem {
    *   - 取引先外の行: 本フィールドまたは tax_type のどちらか一方。vendor_vector は null。
    *   - tax_type との同時設定禁止（税金は独立カテゴリ）。
    *
-   * - 科目推定可能: 'ATM' / 'INTEREST_INCOME' / 'INTEREST_EXPENSE' /
-   *                         'BANK_FEE' / 'CREDIT_CARD_FEE' / 'INTERNAL_TRANSFER'
-   *                         → level: 'A'（自動確定）
-   * - 科目人間判断: 'CASHBACK' / 'UNIDENTIFIED_SALARY'
-   *                         → level: 'insufficient'（情報不足）
+   * - 銀行自動確定（9種）: 'ATM' / 'INTEREST_INCOME' / 'INTEREST_EXPENSE' /
+   *                          'BANK_FEE' / 'ACCOUNT_FEE' / 'FOREIGN_EXCHANGE_FEE' /
+   *                          'INTERNAL_TRANSFER' / 'LOAN_RECEIPT' / 'LOAN_REPAYMENT'
+   *                          → level: 'A'（自動確定）
+   * - クレカ自動確定（7種）: 'CREDIT_CARD_ANNUAL_FEE' / 'CREDIT_CARD_STATEMENT_FEE' /
+   *                          'CREDIT_CARD_LATE_FEE' / 'REVOLVING_FEE' /
+   *                          'CARD_CASH_ADVANCE_FEE' / 'CARD_CASH_ADVANCE_INTEREST' /
+   *                          'FOREIGN_TRANSACTION_FEE'
+   *                          → level: 'A'（自動確定。一部法人のみ）
+   * - 人間判断（8種）: 'CASHBACK' / 'UNIDENTIFIED_SALARY' / 'UNIDENTIFIED_INFLOW' /
+   *                   'UNIDENTIFIED_OUTFLOW' / 'PETTY_CASH_ADJUSTMENT' /
+   *                   'SUBSIDY_RECEIVED' / 'INSURANCE_RECEIVED' / 'OTHER_NON_VENDOR'
+   *                   → level: 'insufficient'
    * - 未設定: undefined（パイプライン未実行）
-   * 根拠: DL-016（2026-04-04確定）
+   * 根拠: DL-016（2026-04-04）/ DL-017（2026-04-05。8種→24種拡張）
    */
   non_vendor_type?: NonVendorType | null;
 

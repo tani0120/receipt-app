@@ -8,19 +8,20 @@
  * 変更履歴:
  *   v1: 初回実験用（22フィールド）
  *   v2: 全面再設計（層A 29フィールド + 層B コード側8項目）
- *       - classification_status / date_anomaly / date_anomaly_reason をGeminiから削除
- *       - 読取不可フラグ3種追加
- *       - journal_entry_suggestions 配列化
- *       - receipt_items / payment_method / issuer_branch / bank_name_evidence 追加
- *       - has_multiple_vouchers / is_composite_transaction / handwritten_memo_content 追加
  *   v3.1: 確定スキーマ完全対応
  *       - A30: is_credit_card_payment 追加
  *       - G1: sub_account（補助科目）追加
  *       - G2: tax_category（税区分 8値enum）追加
  *       - PostProcessResult に labels[] 追加
+ *   v3.2: 旧LineItem型削除・新設計（line_item.type.ts）に一本化（B項目 2026-04-05）
+ *       - 旧LineItem（@deprecated）を完全削除
+ *       - GeminiClassifyResponse.line_items を Omit<LineItem, 'line_index'>[] | null に変更
+ *       - CLASSIFY_RESPONSE_SCHEMA の line_items スキーマを direction / balance に変更
+ *         （旧: debit_account / credit_account → 廃止）
  */
 
 import { SchemaType } from '@google-cloud/vertexai';
+import type { LineItem } from '../mocks/types/pipeline/line_item.type';
 
 // ============================================================
 // TypeScript型定義
@@ -71,21 +72,8 @@ export interface ReceiptItem {
   tax_rate: number | null;  // 8 or 10
 }
 
-/**
- * 明細行（カード明細・通帳の各行）
- *
- * @deprecated Phase A-2 旧世代。debit_account/credit_accountは新設計と乖離。
- *   新設計: src/mocks/types/pipeline/line_item.type.ts の LineItem を使用すること。
- *   direction（'expense'|'income'）と balance（残高）で代替済み（T-P4実測根拠）。
- *   本インターフェースは document_filter_test.ts 専用に残す。将来削除予定。
- */
-export interface LineItem {
-  date: string | null;
-  description: string;
-  amount: number;
-  debit_account: string | null;
-  credit_account: string | null;
-}
+// 旧 LineItem インターフェースは v3.2 で削除済み（2026-04-05）
+// 新設計: src/mocks/types/pipeline/line_item.type.ts の LineItem を使用すること
 
 // ============================================================
 // 層A: Geminiに出力させるレスポンス型（29フィールド）
@@ -146,7 +134,8 @@ export interface GeminiClassifyResponse {
   receipt_items: ReceiptItem[] | null;
 
   // === A29: 通帳/カード明細行 ===
-  line_items: LineItem[] | null;
+  // line_index は Gemini に出力させない（assignLineIndex() でコード側付番）
+  line_items: Omit<LineItem, 'line_index'>[] | null;
 
   // === A30: クレジットカード払い（v3.1追加）===
   is_credit_card_payment: boolean;
@@ -413,20 +402,24 @@ export const CLASSIFY_RESPONSE_SCHEMA = {
       description: '商品明細（レシートの場合）。該当しない場合はnull'
     },
 
-    // --- A29: 通帳/カード明細行 ---
+    // --- A29: 通帳/カード明細行（v3.2: direction/balance に変更。旧debit_account/credit_account廃止）---
     line_items: {
       type: SchemaType.ARRAY,
       nullable: true,
       items: {
         type: SchemaType.OBJECT,
         properties: {
-          date: { type: SchemaType.STRING, nullable: true, description: '取引日（YYYY-MM-DD）' },
-          description: { type: SchemaType.STRING, description: '取引内容' },
-          amount: { type: SchemaType.NUMBER, description: '金額' },
-          debit_account: { type: SchemaType.STRING, nullable: true, description: '借方勘定科目（推定）' },
-          credit_account: { type: SchemaType.STRING, nullable: true, description: '貸方勘定科目（推定）' }
+          date:        { type: SchemaType.STRING, nullable: true, description: '取引日（YYYY-MM-DD）。日付欄なしはnull' },
+          description: { type: SchemaType.STRING, description: '摘要（印字テキストそのまま。正規化前）' },
+          amount:      { type: SchemaType.NUMBER, description: '金額（円・整数・正数のみ。入出金はdirectionで区別）' },
+          direction:   {
+            type: SchemaType.STRING,
+            enum: ['expense', 'income'],
+            description: '入出金方向。expense=出金・支払、income=入金・受取'
+          },
+          balance:     { type: SchemaType.NUMBER, nullable: true, description: '残高（円・整数）。通帳のみ有効。クレカ明細はnull' }
         },
-        required: ['description', 'amount']
+        required: ['description', 'amount', 'direction']
       },
       description: '明細行（通帳・カード明細の場合）。該当しない場合はnull'
     },
