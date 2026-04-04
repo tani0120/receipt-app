@@ -35,7 +35,7 @@ import {
   type TaxCategory,
   type AccountCode,
   HandwrittenFlag,
-} from '@/domain/types/journal';
+} from '../domain/types/journal';
 export type { VoucherType, PaymentMethod, TaxCategory, AccountCode };
 export { HandwrittenFlag };
 
@@ -71,7 +71,14 @@ export interface ReceiptItem {
   tax_rate: number | null;  // 8 or 10
 }
 
-/** 明細行（カード明細・通帳の各行） */
+/**
+ * 明細行（カード明細・通帳の各行）
+ *
+ * @deprecated Phase A-2 旧世代。debit_account/credit_accountは新設計と乖離。
+ *   新設計: src/mocks/types/pipeline/line_item.type.ts の LineItem を使用すること。
+ *   direction（'expense'|'income'）と balance（残高）で代替済み（T-P4実測根拠）。
+ *   本インターフェースは document_filter_test.ts 専用に残す。将来削除予定。
+ */
 export interface LineItem {
   date: string | null;
   description: string;

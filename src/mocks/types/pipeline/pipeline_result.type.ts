@@ -39,20 +39,13 @@
  */
 
 import type { SourceType, Direction, ProcessingMode } from './source_type.type'
+import type { VendorVector } from './vendor.type'
+import type { LineItem } from './line_item.type'
 
 // ============================================================
-// § VendorVector 型（暫定import）
+// § VendorVector 型（vendor.type.ts から正式import済み）
 // ============================================================
-// TODO: T-01（vendor_vector.type.ts）作成後にimportパスを変更
-// 現時点では string で代用し、T-01完了時に差し替える
-
-/**
- * VendorVector — 取引先業種ベクトル（66種）
- *
- * 正: vendor_vector_41_reference.md
- * T-01 で正式な union型として定義予定
- */
-type VendorVector = string
+// 旧: type VendorVector = string（暫定）→ T-01完了により vendor.type.ts に移行完了
 
 // ============================================================
 // § PipelineResult（契約 v1.0）
@@ -207,6 +200,19 @@ export interface PipelineResult {
     /** 各ステップの判定理由ログ（人間可読） */
     notes: string[]
   }
+
+  /**
+   * 証票明細行（N:N統一設計。2026-04-04追加）
+   *
+   * Geminiが line_items[] として抽出した明細行の配列。
+   * - 通帳: N行（1書類 = N取引）
+   * - クレカ明細: N行（1書類 = N取引）
+   * - レシート: 通常1行（1書類 = 1取引）
+   * - non_journal / other: undefined（パイプライン対象外）
+   *
+   * optional（既存PipelineResultとの後方互換性を維持）
+   */
+  line_items?: LineItem[]
 }
 
 // ============================================================
