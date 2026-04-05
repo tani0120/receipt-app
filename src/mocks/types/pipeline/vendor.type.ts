@@ -347,6 +347,15 @@ export interface Vendor {
   debit_account: string | null;
 
   /**
+   * 借方勘定科目（閾値超）（ACCOUNT_MASTER ID）
+   * amount_thresholdを超えた場合に適用する借方科目。
+   * 例: restaurant → ≤10000: MEETING, >10000: ENTERTAINMENT
+   *   → debit_account: 'MEETING', debit_account_over: 'ENTERTAINMENT'
+   * null = 閾値分岐なし（debit_accountのみ使用）
+   */
+  debit_account_over: string | null;
+
+  /**
    * 借方補助科目（任意）
    * 顧問先固有の補助科目コード。vendors_globalでは基本null。
    */

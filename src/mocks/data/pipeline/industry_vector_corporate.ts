@@ -56,7 +56,7 @@ export const INDUSTRY_VECTOR_CORPORATE: IndustryVectorEntry[] = [
   { vector: 'camera_dpe',        expense: ['SUPPLIES_CORP'],                                      income: [] },
   { vector: 'funeral',           expense: ['ENTERTAINMENT'],                                      income: [] },
   { vector: 'platform',          expense: ['FEES', 'ADVERTISING'],                                income: ['SALES'] },
-  { vector: 'ec_site',           expense: ['SUPPLIES_CORP', 'PURCHASES_CORP', 'ADVERTISING'],     income: [] },
+  { vector: 'ec_site',           expense: ['SUPPLIES_CORP', 'PURCHASES_CORP', 'ADVERTISING'],     income: ['SALES'] },
   { vector: 'logistics',         expense: ['PACKING_SHIPPING'],                                   income: [] },
   { vector: 'consulting',        expense: ['FEES', 'OUTSOURCING_CORP'],                           income: [] },
   { vector: 'legal_firm',        expense: ['FEES'],                                               income: [] },

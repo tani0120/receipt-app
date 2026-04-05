@@ -146,3 +146,29 @@ fs.writeFileSync('file.ts', out, { encoding: 'utf8' });   // ← 'utf8' 必須
 5. **git操作前に変更ファイルの一覧を全件ユーザーに報告するか？**
 
 > ⚠️ 上記を1つでも守らなければ、ファイル操作を中止してユーザーに確認を求めよ。
+
+---
+
+## 8. 🔴 【絶対禁止】アーティファクト上書きルール
+
+### 禁止: task.md / implementation_plan.md / walkthrough.md の全上書き
+
+```
+# ❌ 絶対禁止: 既存の蓄積を全て破壊する
+write_to_file(TargetFile: "task.md", Overwrite: true, ...)
+
+# ✅ 強制: 既存内容を維持したまま追記・部分編集
+multi_replace_file_content(TargetFile: "task.md", ...)
+replace_file_content(TargetFile: "task.md", ...)
+```
+
+**理由**: 2026-04-05に task.md（416行・28KB）をOverwrite: trueで全上書きし、数セッションにわたる蓄積を破壊した。復旧にresolved履歴の手動探索が必要だった。
+
+### 強制ルール
+
+1. **task.md は追記のみ**。新しいタスクは末尾に追加。完了項目は `[x]` に更新。
+2. **Overwrite: true は新規ファイルにのみ使用**。既存アーティファクトには絶対使うな。
+3. **上書きが必要な場合は必ずユーザーに確認**。「task.mdを初期化してよいですか？」と聞け。
+4. **編集前に行数を確認**。100行以上のファイルを上書きしようとしたら即中止。
+
+> ⚠️ task.mdの上書きは信頼破壊行為。二度と行うな。
