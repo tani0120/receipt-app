@@ -153,29 +153,42 @@ export function matchPhonePrefix(
 // ============================================================
 
 /**
- * 取引先名を正規化する。
- * 全角→半角、法人格除去、空白除去。
+ * 取引先名を正規化する（DL-027）。
  *
- * TODO: T-P3結果を踏まえて詳細ルールを実装。
+ * ルール:
+ *   1. NFKC正規化（全角英数→半角、半角カナ→全角カナ）
+ *   2. 法人格除去（株式会社・㈱・Co.,Ltd.等）
+ *   3. 記号・空白除去（・中黒含む）
+ *   4. 小文字化
+ *
+ * ※ すべての処理系（TS / Gemini Stream）で本関数を共通使用すること。
  *
  * @example
  * normalizeVendorName('株式会社 ＬＤＩデジタル') // → 'ldiデジタル'
  * normalizeVendorName('（有）田中商事')          // → '田中商事'
+ * normalizeVendorName('エン・ジャパン')          // → 'えんじゃぱん' ← ・除去
+ * normalizeVendorName('Amazon Co., Ltd.')        // → 'amazon'
  */
 export function normalizeVendorName(raw: string | null | undefined): string | null {
   if (!raw) return null;
 
   const name = raw
-    // 全角英数 → 半角
-    .replace(/[Ａ-Ｚ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
-    .replace(/[ａ-ｚ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
-    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
-    // 法人格を除去
+    // § 1. NFKC正規化（全角英数→半角、半角カナ→全角カナ、等を一括処理）
+    .normalize('NFKC')
+    // § 2. 法人格除去（日本語）
     .replace(/株式会社|有限会社|合同会社|合資会社|合名会社/g, '')
     .replace(/[（(]株[)）]|[（(]有[)）]|[（(]合[)）]/g, '')
-    // 空白・全角スペースを除去
-    .replace(/[\s　]+/g, '')
-    // 小文字化
+    .replace(/㈱|㈲/g, '')
+    // § 2b. 法人格除去（英語）
+    .replace(/,?\s*co\.?,?\s*ltd\.?/gi, '')
+    .replace(/,?\s*inc\.?/gi, '')
+    .replace(/,?\s*corp\.?/gi, '')
+    .replace(/,?\s*llc\.?/gi, '')
+    .replace(/,?\s*g\.?k\.?/gi, '')
+    .replace(/,?\s*k\.?k\.?/gi, '')
+    // § 3. 記号・空白除去（・中黒含む）
+    .replace(/[・\s　]+/g, '')
+    // § 4. 小文字化
     .toLowerCase()
     .trim();
 

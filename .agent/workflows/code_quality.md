@@ -111,3 +111,38 @@ const settings = useAccountSettings('client', clientId.value)
 | 到達不能ファイル放置 | ルーティング未確認 | ScreenS_AccountSettings 22KB削除 |
 
 **これらの失敗を二度と繰り返すな。**
+
+---
+
+## 7. 🔴 【絶対禁止】ファイル書き換えルール
+
+### 禁止: PowerShell / シェルコマンドによるファイル直接書き換え
+
+```powershell
+# ❌ 絶対禁止（文字化け・BOM汚染・エンコード破壊の原因）
+(Get-Content 'file.ts' -Raw) -replace 'old', 'new' | Set-Content 'file.ts'
+(Get-Content 'file.ts' -Raw) -replace 'old', 'new' | Set-Content 'file.ts' -NoNewline
+$content | Out-File 'file.ts'
+```
+
+**理由**: PowerShellのSet-Content / Out-Fileは日本語マルチバイト文字を破壊する。2026-04-05に `vendors_global.ts` 全体が文字化けした実害事故が発生した。
+
+### 強制: ファイル書き換えはNode.jsスクリプトを使え
+
+```js
+// ✅ 強制: Node.jsスクリプトで必ずUTF-8を明示（scripts/*.cjs に配置）
+const fs = require('fs');
+const src = fs.readFileSync('file.ts', 'utf8');           // ← 'utf8' 必須
+const out = src.replace(/old/g, 'new');
+fs.writeFileSync('file.ts', out, { encoding: 'utf8' });   // ← 'utf8' 必須
+```
+
+### チェックリスト（ファイル書き換え前に必ず確認）
+
+1. **Node.jsスクリプトを使っているか？** ← PowerShellコマンドで書き換えていれば即中止
+2. **`fs.readFileSync` / `fs.writeFileSync` に `'utf8'` を明示しているか？**
+3. **書き換え前後に `tsc --noEmit` でエラーなしを確認するか？**
+4. **replace対象が複数ファイルに影響する場合、`git status` で影響範囲を事前確認するか？**
+5. **git操作前に変更ファイルの一覧を全件ユーザーに報告するか？**
+
+> ⚠️ 上記を1つでも守らなければ、ファイル操作を中止してユーザーに確認を求めよ。

@@ -1,10 +1,10 @@
 /**
  * vendor.type.ts — T-01: VendorVector型 + T-02: Vendor型
  *
- * 準拠: vendor_vector_41_reference.md（66種拡張済み）
+ * 準拠: vendor_vector_41_reference.md（68種拡張済み）
  * 全科目ID: ACCOUNT_MASTER（src/shared/data/account-master.ts）準拠
  *
- * 【VendorVector（66種）】
+ * 【VendorVector（68種）】
  *   AIパイプライン Step 3 で判定する取引先業種ベクトル。
  *   取引先名・キーワードから業種を特定し、科目候補リストを得る。
  *
@@ -68,7 +68,10 @@ export type VendorVector =
   | 'post_office'       // 郵便局（insufficient）
   | 'waste'             // ゴミ処理・廃棄物（A）
   | 'it_service'        // ITサービス（insufficient）
-  | 'telecom_saas'      // 通信・SaaS（insufficient）
+  /** @deprecated 2026-04-05: telecom / saas に分割。互換性のため残存 */
+  | 'telecom_saas'
+  | 'telecom'           // 通信・インフラ（A: COMMUNICATION）携帯/固定回線/ISP
+  | 'saas'             // SaaS・クラウドサービス（insufficient: COMMUNICATION, FEES）AWS/Google/Microsoft等
   | 'education'         // 研修・各種スクール（A）
   | 'outsourcing'       // アウトソーシング（A）
   | 'lease_rental'      // リース・レンタル（insufficient）
@@ -94,7 +97,7 @@ export type VendorVector =
   | 'travel_agency'     // 旅行代理店（A）
 
   // ── 🚃 交通機関（9種）──────────────────────────────
-  | 'gas_station'       // ガソリンスタンド（A）
+  | 'gas_station'       // ガソリンスタンド（A: VEHICLE_COSTS）
   | 'taxi'              // タクシー（A）
   | 'rental_car'        // レンタカー（A）
   | 'train'             // 電車（A）
@@ -131,7 +134,7 @@ export const VENDOR_VECTORS = [
   'building_materials', 'stationery',
   // サービス
   'beauty', 'printing', 'advertising', 'post_office', 'waste', 'it_service',
-  'telecom_saas', 'education', 'outsourcing', 'lease_rental', 'staffing',
+  'telecom_saas', 'telecom', 'saas', 'education', 'outsourcing', 'lease_rental', 'staffing',
   'camera_dpe', 'funeral', 'platform', 'ec_site', 'logistics', 'consulting',
   'legal_firm', 'construction',
   // 不動産・保険
@@ -181,7 +184,9 @@ export const VENDOR_VECTOR_LABELS: Record<VendorVector, string> = {
   post_office: '郵便局',
   waste: 'ゴミ処理・廃棄物',
   it_service: 'ITサービス',
-  telecom_saas: '通信・SaaS',
+  telecom_saas: '通信・SaaS（@deprecated）',
+  telecom: '通信・インフラ',
+  saas: 'SaaS・クラウドサービス',
   education: '研修・各種スクール',
   outsourcing: 'アウトソーシング',
   lease_rental: 'リース・レンタル',
@@ -261,18 +266,133 @@ export interface Vendor {
   vendor_id: string;
   /** 正式会社名・屋号 */
   company_name: string;
-  /** 正規化後の名称（照合キー。小文字・全角半角統一済み） */
+  /** 正規化後の名称（照合キー。DL-027: NFKC・法人格除去・小文字化済み） */
   normalized_name: string;
-  /** インボイス番号（T + 13桁。未登録の場合 null） */
-  T_number: string | null;
-  /** 電話番号（正規化済み。例: "0722221234"） */
-  phone: string | null;
-  /** 住所（正規化済み） */
+  /**
+   * 別名リスト（正規化済み）
+   *
+   * L3（名称マッチ）での表記ゆれ・略称対応。
+   * クレカ・銀行明細の摘要は法人正式名称と異なる略称で記載されることが多い。
+   *
+   * 例（Amazon Japan G.K.）:
+   *   normalized_name: 'amazonjapan'
+   *   aliases: ['amazoncojp', 'amazon', 'amazonjapangk']
+   *
+   * 例（Amazon Web Services Japan G.K.）:
+   *   normalized_name: 'amazonwebservicesjapan'
+   *   aliases: ['aws', 'amazonwebservices', 'awsjapan']
+   *
+   * マッチ判定: normalizeVendorName(摘要) が normalized_name または aliases のいずれかに一致
+   */
+  aliases: string[];
+  /**
+   * インボイス番号リスト（T + 13桁）
+   *
+   * FC・フランチャイズ等、同一ブランドが複数T番号を持つ場合に対応（DL-022）。
+   * Layer 1（T番号照合）で t_numbers のいずれかに一致した場合に業種確定。
+   * 本社・主要直営のT番号のみ登録。未登録FCはLayer 3（正規化名称）にフォールバック。
+   * 未登録（インボイス番号なし）の場合は空配列 [] とする。
+   */
+  t_numbers: string[];
+  /**
+   * 電話番号リスト（正規化済み）
+   *
+   * 複数拠点・代表番号・サポート番号に対応。
+   * 例: ["0722221234", "0120001234"]
+   * 未登録の場合は空配列 [] とする。
+   */
+  phone_numbers: string[];
+  /**
+   * ブランドID（任意）
+   *
+   * FC・グループ企業等で複数法人が同一ブランドを使う場合に設定（DL-022）。
+   * 例: 'MCDONALDS', 'SEVEN_ELEVEN'
+   * 未設定の場合は normalized_name でグループ識別する。
+   */
+  brand_id?: string;
+  /** 住所（正規化済み。未登録の場合 null） */
   address: string | null;
-  /** 業種ベクトル（66種） */
+  /** 業種ベクトル（68種） */
   vendor_vector: VendorVector;
-  /** デフォルト科目（ACCOUNT_MASTER ID。null = マスタ未設定） */
-  default_account: string | null;
+
+  // ============================================================
+  // § 仕訳テンプレート（DL-027 Streamed互換）
+  // UI表示: 学習ワード | T番号 | 電話番号 | 入出金 | 金額 | 借方科目 | 借方補助 | 借方税区 | 借方部門
+  //                                                         | 貸方科目 | 貸方補助 | 貸方税区 | 貸方部門
+  //
+  // vendors_global: ACCOUNT_MASTER参照で例示値を設定（法人本則・出金前提）
+  // vendors_client: 個別顧問先勘定科目マスタ参照。過去仕訳から学習して上書き。
+  // ============================================================
+
+  /**
+   * 入出金区分（'expense' | 'income' | null）
+   * null = 未設定（UI上は空欄）
+   */
+  direction: 'expense' | 'income' | null;
+
+  /**
+   * 金額閾値（円。Streamed互換）
+   * この金額以下の場合に本エントリのテンプレートを適用。
+   * null = 金額制限なし（全額対象）
+   * 例: 4999 → 4999円以下は会議費、それ以上は別エントリで接待交際費
+   */
+  amount_threshold: number | null;
+
+  /**
+   * 借方勘定科目（ACCOUNT_MASTER ID）
+   * vendors_global: ACCOUNT_MASTER参照の例示値（法人本則出金前提）
+   * vendors_client: 顧問先固有科目マスタ参照
+   * null = マスタ未設定（industry_vectorから自動導出）
+   */
+  debit_account: string | null;
+
+  /**
+   * 借方補助科目（任意）
+   * 顧問先固有の補助科目コード。vendors_globalでは基本null。
+   */
+  debit_sub_account: string | null;
+
+  /**
+   * 借方税区分
+   * 例: '対象外', '課税仕入', '非課税仕入'
+   * vendors_globalでは法人本則に基づく例示値を設定。
+   * null = ACCOUNT_MASTERから自動導出（DL-024）
+   */
+  debit_tax_category: string | null;
+
+  /**
+   * 借方部門（任意）
+   * 顧問先固有の部門コード。vendors_globalでは基本null。
+   */
+  debit_department: string | null;
+
+  /**
+   * 貸方勘定科目（ACCOUNT_MASTER ID）
+   * source_type（銀行/カード/小口）によって異なる。
+   * vendors_globalでは基本null（仕訳時にsource_typeから自動設定）。
+   * vendors_clientで顧問先固有の口座・未払金等に上書き可能。
+   */
+  credit_account: string | null;
+
+  /**
+   * 貸方補助科目（任意）
+   * 例: 銀行口座名「○○銀行普通預金」
+   * 顧問先固有。vendors_globalでは基本null。
+   */
+  credit_sub_account: string | null;
+
+  /**
+   * 貸方税区分（任意）
+   * 貸方は基本「対象外」固定だが、例外時に設定。
+   */
+  credit_tax_category: string | null;
+
+  /**
+   * 貸方部門（任意）
+   * 顧問先固有の部門コード。vendors_globalでは基本null。
+   */
+  credit_department: string | null;
+
   /** スコープ */
   scope: 'global' | 'client';
   /** 顧問先ID（scope='client' の場合のみ。例: "LDI-00008"） */

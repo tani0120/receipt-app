@@ -1,7 +1,7 @@
 /**
  * industry_vector_sole.ts — T-06b: 個人事業主用業種ベクトル辞書
  *
- * 準拠: vendor_vector_41_reference.md（66種・個人expense/income列）
+ * 準拠: vendor_vector_41_reference.md（68種: telecom/saas分割後。2026-04-05更新）
  * 全科目ID: ACCOUNT_MASTER（src/shared/data/account-master.ts）準拠
  *
  * 用途: パイプライン Step 4（科目確定）で、
@@ -21,7 +21,7 @@
 
 import type { IndustryVectorEntry } from '@/mocks/types/pipeline/vendor.type';
 
-/** 個人事業主用 業種ベクトル → 科目候補マッピング（66種） */
+/** 個人事業主用 業種ベクトル → 科目候補マッピング（68種: telecom/saas分割後。telecom_saasはdeprecated） */
 export const INDUSTRY_VECTOR_SOLE: IndustryVectorEntry[] = [
   // ── 🍽️ 飲食（2種）──
   { vector: 'restaurant',        expense: ['MEETING', 'ENTERTAINMENT'],                     income: [] },
@@ -55,7 +55,10 @@ export const INDUSTRY_VECTOR_SOLE: IndustryVectorEntry[] = [
   { vector: 'post_office',       expense: ['COMMUNICATION', 'FEES', 'TAXES_DUES'],          income: [] },
   { vector: 'waste',             expense: ['FEES'],                                         income: [] },
   { vector: 'it_service',        expense: ['COMMUNICATION', 'FEES'],                        income: [] },
+  // @deprecated telecom_saas → telecom / saas に分割（2026-04-05）
   { vector: 'telecom_saas',      expense: ['COMMUNICATION', 'FEES'],                        income: [] },
+  { vector: 'telecom',           expense: ['COMMUNICATION'],                                income: [] },  // A確定: 携帯・固定回線・ISP
+  { vector: 'saas',              expense: ['COMMUNICATION', 'FEES'],                        income: [] },  // insufficient: AWS/Google/Microsoft等
   { vector: 'education',         expense: ['TRAINING'],                                     income: [] },
   { vector: 'outsourcing',       expense: ['OUTSOURCING'],                                  income: [] },
   { vector: 'lease_rental',      expense: ['LEASE', 'LEASE_CORP'],                          income: [] },
@@ -81,7 +84,7 @@ export const INDUSTRY_VECTOR_SOLE: IndustryVectorEntry[] = [
   { vector: 'travel_agency',     expense: ['TRAVEL'],                                       income: [] },
 
   // ── 🚃 交通機関（9種）──
-  { vector: 'gas_station',       expense: ['TRAVEL'],                                       income: [] },
+  { vector: 'gas_station',       expense: ['VEHICLE_COSTS'],                                income: [] },  // A確定: VEHICLE_COSTS（2026-04-05変更）
   { vector: 'taxi',              expense: ['TRAVEL'],                                       income: [] },
   { vector: 'rental_car',        expense: ['TRAVEL'],                                       income: [] },
   { vector: 'train',             expense: ['TRAVEL'],                                       income: [] },
@@ -93,7 +96,11 @@ export const INDUSTRY_VECTOR_SOLE: IndustryVectorEntry[] = [
 
   // ── 🏛️ 公共機関（5種）──
   { vector: 'utility',           expense: ['UTILITIES'],                                    income: [] },
-  { vector: 'government',        expense: ['TAXES_DUES', 'FEES'],                           income: ['SUBSIDY_INCOME', 'MISC_INCOME_CORP'] },
+  { vector: 'government',        expense: ['TAXES_DUES'/*租税公課*/, 'FEES'/*支払手数料*/],
+    // ▶ SUBSIDY_INCOME（補助金収入）は ACCOUNT_MASTER（勘定科目マスタ）に存在しない。
+    //   「存在しない」ことが正しい設計。二度と追加するな。
+    //   補助金入金は MISC_INCOME_CORP（雑収入・法人）で処理する。
+    income: ['MISC_INCOME_CORP'/*雑収入・法人*/] },
   { vector: 'social_insurance',  expense: ['LEGAL_WELFARE'],                                income: [] },
   { vector: 'medical',           expense: ['WELFARE'],                                      income: [] },
   { vector: 'religious',         expense: ['DONATIONS', 'MEMBERSHIP_FEES', 'FEES'],         income: [] },

@@ -41,6 +41,7 @@
 | DB層（Supabase） | 列方式（`vector \| direction \| account`） |
 | 変換（flatten展開） | flatten関数を**先に**作る |
 | 判定ルール | ①history_match（過去仕訳照合）→ ②レベルA一意確定 → ③それ以外insufficient（候補不足） |
+| **優先表示科目** | **`expense[]` の先頭要素が「優先表示科目」**（UIでのデフォルト選択科目）。`Vendor.default_account`（取引先マスタ）が設定されている場合はそちらが最優先。優先度: `Vendor.default_account` > `expense[0]` > それ以降の候補 |
 | バリデーション（検証） | 2種のみ（`NEW_INDIVIDUAL_VENDOR`（初回個人取引先）+ `UNKNOWN_VENDOR`（取引先不明）） |
 | voucherTypeRules（証票種類ルール） | **判定ルール + バリデーション兼用**（事後バリデーション専用ではない） |
 | source_type（証票種類） | **11種**（自動7+手入力2+対象外2）→ **Gemini直接判定に確定（T-00k/T-P1完了）** |
@@ -251,7 +252,9 @@ export function getDirectionLabel(dir: Direction): string
 | 25 | `post_office` | 郵便局 | insufficient | `COMMUNICATION`（通信費）, `FEES`（支払手数料）, `TAXES_DUES`（租税公課） | `COMMUNICATION`（通信費）, `FEES`（支払手数料）, `TAXES_DUES`（租税公課） | — | 新規 |
 | 26 | `waste` | ゴミ処理・廃棄物 | **A** | `FEES`（支払手数料） | `FEES`（支払手数料） | — | 既存 |
 | 27 | `it_service` | ITサービス | insufficient | `COMMUNICATION`（通信費）, `FEES`（支払手数料） | `COMMUNICATION`（通信費）, `FEES`（支払手数料） | — | 新規 |
-| 28 | `telecom_saas` | 通信・SaaS | insufficient | `COMMUNICATION`（通信費）, `FEES`（支払手数料） | `COMMUNICATION`（通信費）, `FEES`（支払手数料） | — | 既存 |
+| ~~28~~ | ~~`telecom_saas`~~ | ~~通信・SaaS~~ | **@deprecated** | → `telecom` / `saas` に分割（2026-04-05） | — | — | — |
+| 28a | `telecom` | 通信・インフラ | **A** | `COMMUNICATION`（通信費） | `COMMUNICATION`（通信費） | — | **新規（分割）** |
+| 28b | `saas` | SaaS・クラウドサービス | insufficient | `COMMUNICATION`（通信費）, `FEES`（支払手数料） | `COMMUNICATION`（通信費）, `FEES`（支払手数料） | — | **新規（分割）** |
 | 29 | `education` | 研修・各種スクール | **A** | `TRAINING`（研修採用費） | `TRAINING`（研修採用費） | — | 既存 |
 | 30 | `outsourcing` | アウトソーシング | **A** | `OUTSOURCING_CORP`（外注費） | `OUTSOURCING`（外注費） | — | 既存 |
 | 31 | `lease_rental` | リース・レンタル | insufficient | `LEASE_CORP`（賃借料）, `LEASE`（リース料） | `LEASE`（リース料）, `LEASE_CORP`（賃借料） | — | 既存 |
@@ -286,7 +289,7 @@ export function getDirectionLabel(dir: Direction): string
 
 | # | 値 | 日本語名 | レベル | 法人expense | 個人expense | income | 状態 |
 |---|---|---|---|---|---|---|---|
-| 48 | `gas_station` | ガソリンスタンド | **A** | `TRAVEL`（旅費交通費） | `TRAVEL`（旅費交通費） | — | 既存 |
+| 48 | `gas_station` | ガソリンスタンド | **A** | `VEHICLE_COSTS`（車両費） | `VEHICLE_COSTS`（車両費） | — | 既存（**2026-04-05変更**: TRAVEL→VEHICLE_COSTS） |
 | 49 | `taxi` | タクシー | **A** | `TRAVEL`（旅費交通費） | `TRAVEL`（旅費交通費） | — | 既存 |
 | 50 | `rental_car` | レンタカー | **A** | `TRAVEL`（旅費交通費） | `TRAVEL`（旅費交通費） | — | 既存 |
 | 51 | `train` | 電車 | **A** | `TRAVEL`（旅費交通費） | `TRAVEL`（旅費交通費） | — | 新規 |
@@ -327,13 +330,14 @@ export function getDirectionLabel(dir: Direction): string
 
 | 項目 | 値 |
 |---|---|
-| 全種類 | **66種** |
-| A 一意確定（法人） | **44種** |
-| insufficient（法人） | **22種** |
+| 全種類 | **68種**（telecom/saas分割追加。telecom_saasはdeprecated） |
+| A 一意確定（法人） | **45種**（telecom追加） |
+| insufficient（法人） | **23種**（saas追加、telecom_saas deprecated） |
 | 法人/個人でレベルが変わるもの | **0種** |
 | 入金パターンがあるもの | 6種（#35 `platform`、#41 `real_estate`、#58 `government`、#62 `financial`、#63 `individual`、#66 `unknown`） |
-| 新規追加 | **25種** |
+| 新規追加 | **27種**（2026-04-05: telecom/saas追加） |
 | バリデーション | 2種（`NEW_INDIVIDUAL_VENDOR`、`UNKNOWN_VENDOR`） |
+| 2026-04-05変更 | gas_station: TRAVEL→VEHICLE_COSTS。telecom_saas→telecom+saas分割 |
 
 ---
 
