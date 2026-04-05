@@ -4,12 +4,20 @@
 > 全社共通の雛形は `vendors_global_master.md` を参照してください。
 >
 > 作成日: 2026-04-05
+> 最終更新: 2026-04-06
 > 目的: vendors_client.ts のソースデータ。顧問先固有の勘定科目・補助科目・部門を上書き設定する。
-> 正規化: 学習ワードは後工程で normalizeVendorName() にかけてnormalized_nameを生成する。
+> 照合キー: `normalizeVendorName()` で自動導出した `match_key` を照合に使用。
 > 電話番号: 後工程で追加予定（現時点は空欄）。
 > 勘定科目: ACCOUNT_MASTER ID（日本語名を括弧内に記載）。
 > insufficient: 借方/貸方勘定科目が特定できず人間判断が必要なケース。
 > 優先度: このファイルの設定 > vendors_global_master.md の設定（顧問先設定が最優先）。
+>
+> **DL-027 照合キー（match_key）設計確定（2026-04-06）**:
+> - `normalized_name` → **廃止**。`match_key`（照合キー）に置き換え。`normalizeVendorName()` で自動導出
+> - `aliases` は照合キーとして使わない。記録・UI表示のみ
+> - 3フィールド構成: `match_key`（照合用）・`company_name`（正式名称。通帳由来はnull）・`display_name`（証票表示原文。領収書由来はnull）
+> - 顧問先マスタには同一取引先の複数エントリが蓄積される（漢字/カタカナは別照合キー。同じ科目に到達する）
+> - 取引先と取引先外は概念的に同質。同一テーブルで管理する方針（TS統合は計画的に実施）
 >
 > **同期方針（DL-022 2026-04-05確定）**: vendors_global との同期は不要。顧問先別マスタは発生した取引先を都度追加する方式。
 > **DL-026 t_numbers設計**: t_numbers: [] = T番号不明（免税事業者・個人含む）。個人（individual）は t_numbers: [] で警告レベル低下。

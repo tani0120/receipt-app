@@ -1,7 +1,7 @@
 # 全社用取引先マスタ（vendors_global）
 
 > 作成日: 2026-04-05
-> 最終更新: 2026-04-05
+> 最終更新: 2026-04-06
 >
 > **⚠️ 正規ソース（SSOT）: `src/mocks/data/pipeline/vendors_global.ts`（224件）**
 > **本MDは設計方針・分類ルールの記録のみ。取引先データの参照・編集はTSファイルで行うこと。**
@@ -10,11 +10,17 @@
 > 勘定科目: ACCOUNT_MASTER ID準拠。
 > 税区分: null維持（DL-024: ACCOUNT_MASTER.defaultTaxCategoryIdから自動導出。未実装）。
 >
+> **DL-027 照合キー（match_key）設計確定（2026-04-06）**:
+> - `normalized_name` → **廃止**。`match_key`（照合キー）に置き換え。`normalizeVendorName(company_name)` で自動導出
+> - `aliases` は照合キーとして使わない。記録・UI表示のみ
+> - 3フィールド構成確定: `match_key`（照合キー）・`company_name`（正式名称）・`display_name`（表示名。全社マスタではnull）
+> - 漢字↔カタカナの一致は追求しない（別エントリとして管理）
+> - ひらがな→カタカナ変換を `normalizeVendorName()` に追加予定（カタカナ統一）
+>
 > **DL-026 T番号設計原則（2026-04-05確定）**:
 > - T番号の目的: 取引先・サービス名の一意特定。税額控除確認は目的ではない
-> - 同一T番号（同一法人）は1エントリに統合。サービス名は aliases に列挙
+> - 同一T番号（同一法人）は1エントリに統合。サービス名は aliases に列挙（照合には使わない）
 > - t_numbers: [] = T番号不明（免税事業者・個人・未確認は税務上同一扱い）
-> - 銀行明細・カード明細にはT番号記載なし → Layer 3（aliases）が実質的な主力照合
 
 
 
