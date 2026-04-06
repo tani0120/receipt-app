@@ -109,8 +109,7 @@ const topItems: TopItem[] = [
   { key: 'progress', label: '進捗管理',       icon: 'fa-solid fa-bars-progress',   path: '/master/progress',       managedPaths: ['/master/progress'] },
   { key: 'clients',  label: '顧問先管理',     icon: 'fa-solid fa-building',        path: '/master/clients',    managedPaths: ['/master/clients'] },
   { key: 'staff',    label: 'スタッフ管理',   icon: 'fa-solid fa-users',           path: '/master/staff',      managedPaths: ['/master/staff'] },
-  { key: 'accounts', label: '勘定科目マスタ', icon: 'fa-solid fa-book',            path: '/master/accounts',   managedPaths: ['/master/accounts'] },
-  { key: 'tax',      label: '税区分マスタ',   icon: 'fa-solid fa-percent',         path: '/master/tax',        managedPaths: ['/master/tax'] },
+  { key: 'vendors',  label: 'マスタ管理',     icon: 'fa-solid fa-warehouse',       path: '/master/vendors',    managedPaths: ['/master/vendors'] },
   { key: 'costs',    label: '想定費用',       icon: 'fa-solid fa-calculator',      path: '/master/costs',      managedPaths: ['/master/costs'] },
   { key: 'settings', label: '設定管理',       icon: 'fa-solid fa-gear',            path: '/master/settings',   managedPaths: ['/master/settings'] },
 ];
