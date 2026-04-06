@@ -6,7 +6,7 @@
  * - 列挙型（AISourceTypeEnum, TaxTypeEnum, TaxCodeEnum, InvoiceDeductionEnum等）
  * - 型（JournalEntry, JournalEntryDraft, JournalLine, JournalLineDraft）
  * - ビジネスルール（JournalSemanticGuard）
- * - サービス（TaxResolutionService, NormalizationService, TaxCodeMapper, CsvValidator, CsvExportService）
+ * - サービス（TaxResolutionService, TaxCodeMapper, CsvValidator, CsvExportService）
  */
 
 // ============================================================
@@ -71,7 +71,6 @@ export { JournalSemanticGuard } from './JournalSemanticGuard';
 // ============================================================
 
 export { TaxResolutionService } from './services/TaxResolutionService';
-export { NormalizationService } from './services/NormalizationService';  // Phase 1追加
 export { TaxCodeMapper } from './services/TaxCodeMapper';                // Phase 1追加
 export { CsvValidator } from './services/CsvValidator';                  // Phase 1追加
 export { CsvExportService } from './services/CsvExportService';          // Phase 1追加

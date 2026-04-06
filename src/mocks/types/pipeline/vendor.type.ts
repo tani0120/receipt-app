@@ -266,8 +266,18 @@ export interface Vendor {
   vendor_id: string;
   /** 正式会社名・屋号 */
   company_name: string;
-  /** 正規化後の名称（照合キー。DL-027: NFKC・法人格除去・小文字化済み） */
-  normalized_name: string;
+  /**
+   * 照合キー（normalizeVendorName()の出力。DL-027 SSOT）
+   * NFKC・法人格除去・記号除去・ひらがな→カタカナ・小文字化済み。
+   * 照合は match_key の完全一致のみ。aliases は照合に使用しない。
+   */
+  match_key: string;
+  /**
+   * 表示名（証票に表示された正規化前の原文）
+   * 通帳・クレカ明細のカタカナ表記等、証票上の原文を保持する。
+   * 全社マスタ（vendors_global）では null。顧問先マスタで設定。
+   */
+  display_name: string | null;
   /**
    * 別名リスト（正規化済み）
    *
@@ -275,14 +285,14 @@ export interface Vendor {
    * クレカ・銀行明細の摘要は法人正式名称と異なる略称で記載されることが多い。
    *
    * 例（Amazon Japan G.K.）:
-   *   normalized_name: 'amazonjapan'
+   *   match_key: 'amazonjapan'
    *   aliases: ['amazoncojp', 'amazon', 'amazonjapangk']
    *
    * 例（Amazon Web Services Japan G.K.）:
-   *   normalized_name: 'amazonwebservicesjapan'
+   *   match_key: 'amazonwebservicesjapan'
    *   aliases: ['aws', 'amazonwebservices', 'awsjapan']
    *
-   * マッチ判定: normalizeVendorName(摘要) が normalized_name または aliases のいずれかに一致
+   * マッチ判定: normalizeVendorName(摘要) が match_key と完全一致（DL-027）。aliases は照合に使用しない（記録・UI表示のみ）
    */
   aliases: string[];
   /**
@@ -307,7 +317,7 @@ export interface Vendor {
    *
    * FC・グループ企業等で複数法人が同一ブランドを使う場合に設定（DL-022）。
    * 例: 'MCDONALDS', 'SEVEN_ELEVEN'
-   * 未設定の場合は normalized_name でグループ識別する。
+   * 未設定の場合は match_key でグループ識別する。
    */
   brand_id?: string;
   /** 住所（正規化済み。未登録の場合 null） */

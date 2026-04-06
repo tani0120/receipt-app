@@ -149,25 +149,35 @@ export function matchPhonePrefix(
 }
 
 // ============================================================
-// § T-N1c: 取引先名の正規化（スケルトン。T-P3結果確定後に実装）
+// § T-N1c: 取引先名の正規化（DL-027 match_key導出用）
 // ============================================================
 
 /**
- * 取引先名を正規化する（DL-027）。
+ * 取引先名を正規化する（DL-027 SSOT）。
+ *
+ * match_key = normalizeVendorName(company_name or 摘要) の出力。
+ * すべての処理系（TS / Gemini Stream）で本関数を共通使用すること。
  *
  * ルール:
- *   1. NFKC正規化（全角英数→半角、半角カナ→全角カナ）
- *   2. 法人格除去（株式会社・㈱・Co.,Ltd.等）
- *   3. 記号・空白除去（・中黒含む）
- *   4. 小文字化
+ *   1.  NFKC正規化（全角英数→半角、半角カナ→全角カナ）
+ *   2.  法人格除去（株式会社・㈱・Co.,Ltd.等）
+ *   3.  記号・空白除去（・中黒含む）
+ *   3b. ひらがな→カタカナ変換（カタカナ統一。DL-027 D6）
+ *   4.  小文字化（英字のみ。カタカナ・漢字には影響なし）
  *
- * ※ すべての処理系（TS / Gemini Stream）で本関数を共通使用すること。
+ * 設計判断:
+ *   - 漢字はそのまま残す（読み仮名変換は不可能。DL-027 D5確定）
+ *   - 漢字↔カタカナの一致は追求しない（別match_keyとして別エントリで管理。DL-027 D7）
+ *   - toLowerCaseは維持（display_nameが原形表示を担うため一意性に影響なし）
  *
  * @example
  * normalizeVendorName('株式会社 ＬＤＩデジタル') // → 'ldiデジタル'
  * normalizeVendorName('（有）田中商事')          // → '田中商事'
- * normalizeVendorName('エン・ジャパン')          // → 'えんじゃぱん' ← ・除去
+ * normalizeVendorName('エン・ジャパン')          // → 'エンジャパン'（・除去、カタカナ維持）
+ * normalizeVendorName('えん・じゃぱん')          // → 'エンジャパン'（ひらがな→カタカナ）
  * normalizeVendorName('Amazon Co., Ltd.')        // → 'amazon'
+ * normalizeVendorName('カンサイデンリョク')      // → 'カンサイデンリョク'（通帳摘要そのまま）
+ * normalizeVendorName('関西電力株式会社')        // → '関西電力'（漢字維持）
  */
 export function normalizeVendorName(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -188,7 +198,13 @@ export function normalizeVendorName(raw: string | null | undefined): string | nu
     .replace(/,?\s*k\.?k\.?/gi, '')
     // § 3. 記号・空白除去（・中黒含む）
     .replace(/[・\s　]+/g, '')
-    // § 4. 小文字化
+    // § 3b. ひらがな→カタカナ変換（DL-027 D6: カタカナ統一）
+    // 通帳摘要がカタカナ表記のため、照合キーをカタカナに統一する
+    // 漢字はそのまま残す（読み仮名変換は不可能。D5確定）
+    .replace(/[\u3041-\u3096]/g, (ch) =>
+      String.fromCharCode(ch.charCodeAt(0) + 0x60),
+    )
+    // § 4. 小文字化（英字のみ。カタカナ・漢字には影響なし）
     .toLowerCase()
     .trim();
 

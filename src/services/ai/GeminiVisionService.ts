@@ -1,7 +1,7 @@
 import type { JournalEntryDraft, FileType } from '@/core/journal';
 import type { Client } from '@/types/client';
 import { JournalEntryDraftSchema } from '@/core/journal';
-import { NormalizationService } from '@/core/journal';
+import { normalizeVendorName } from '@/mocks/utils/pipeline/vendorIdentification';
 import { FileTypeDetector } from './FileTypeDetector';
 
 /**
@@ -112,7 +112,7 @@ export class GeminiVisionService {
               if (typeof line === 'object' && line !== null && 'vendorNameRaw' in line) {
                 const typedLine = line as { vendorNameRaw?: string; vendorName?: string };
                 if (typedLine.vendorNameRaw) {
-                  typedLine.vendorName = NormalizationService.normalizeVendorName(typedLine.vendorNameRaw);
+                  typedLine.vendorName = normalizeVendorName(typedLine.vendorNameRaw) ?? typedLine.vendorNameRaw;
                 }
               }
             });
@@ -120,9 +120,7 @@ export class GeminiVisionService {
 
           // 摘要の正規化
           if (parsed.journalEntry.description) {
-            parsed.journalEntry.description = NormalizationService.normalizeDescription(
-              parsed.journalEntry.description
-            );
+            parsed.journalEntry.description = parsed.journalEntry.description.normalize('NFKC').trim();
           }
 
           // 必須フィールドを設定
