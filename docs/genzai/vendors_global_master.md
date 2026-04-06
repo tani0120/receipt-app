@@ -15,7 +15,7 @@
 > - `aliases` は照合キーとして使わない。記録・UI表示のみ
 > - 3フィールド構成確定: `match_key`（照合キー）・`company_name`（正式名称）・`display_name`（表示名。全社マスタではnull）
 > - 漢字↔カタカナの一致は追求しない（別エントリとして管理）
-> - ひらがな→カタカナ変換を `normalizeVendorName()` に追加予定（カタカナ統一）
+> - ひらがな→カタカナ変換を `normalizeVendorName()` に追加済み（DL027-1。2026-04-06）
 >
 > **DL-026 T番号設計原則（2026-04-05確定）**:
 > - T番号の目的: 取引先・サービス名の一意特定。税額控除確認は目的ではない
@@ -65,6 +65,18 @@
 > - amount_threshold: restaurant/cafe系のみ `10000`
 > - 税区分（debit_tax_category / credit_tax_category）: 全件null（DL-024未実装）
 > - credit_account: 全件null（パイプラインがsource_typeから自動設定予定）
+>
+> **マスタ管理UI実装状態（2026-04-06）**:
+> - マスタ管理ハブ: `MockMasterManagementPage.vue`（ルート `/master/vendors`）実装済み
+> - 取引先マスタ一覧: `MockMasterVendorsPage.vue`（ルート `/master/vendors/list`）実装済み
+>   - 全行インライン編集（テキスト入力＋ドロップダウン）
+>   - 日本語表示: `VENDOR_VECTOR_LABELS`・`ACCOUNT_MASTER` からimport（ハードコードゼロ）
+>   - 照合キー自動計算: `normalizeVendorName(company_name)` のリアルタイム表示
+>   - 追加ボタン（先頭に空行挿入、ID自動採番）
+>   - 削除モーダル（ゴミ箱アイコン→確認→物理削除）
+>   - 貸方科目列・表示名列を追加
+>   - T番号: T枠外固定＋数字13桁のみ表示・編集
+>   - 検索・フィルタ（業種・入出金）・ソート・ページネーション
 >
 > **vector修正済み（2026-04-05）**:
 > - Amazon / 楽天 / メルカリ / ZOZO: `platform` → `ec_site`（購入側）

@@ -6,6 +6,9 @@
         <div class="vm-header">
           <span class="vm-header-label">全社取引先マスタ（事務所共通）</span>
           <span class="vm-header-count">{{ filteredRows.length }}件</span>
+          <button class="vm-add-btn" @click="addVendor">
+            <i class="fa-solid fa-plus"></i> 追加
+          </button>
         </div>
 
         <!-- 検索・フィルタ -->
@@ -23,16 +26,15 @@
             <label class="vm-filter-label">業種:</label>
             <select v-model="vectorFilter" class="vm-filter-select">
               <option value="">全て</option>
-              <option v-for="v in uniqueVectors" :key="v" :value="v">{{ v }}</option>
+              <option v-for="v in uniqueVectors" :key="v" :value="v">{{ vectorLabel(v) }}</option>
             </select>
           </div>
           <div class="vm-filter-group">
-            <label class="vm-filter-label">方向:</label>
+            <label class="vm-filter-label">入出金:</label>
             <select v-model="directionFilter" class="vm-filter-select">
               <option value="">全て</option>
-              <option value="expense">expense</option>
-              <option value="income">income</option>
-              <option value="both">both</option>
+              <option value="expense">{{ directionLabel('expense') }}</option>
+              <option value="income">{{ directionLabel('income') }}</option>
             </select>
           </div>
         </div>
@@ -54,48 +56,107 @@
         <!-- テーブル -->
         <div class="vm-table-wrap">
           <table class="vm-table">
-            <colgroup>
-              <col style="width: 60px;">
-              <col style="width: auto;">
-              <col style="width: 160px;">
-              <col style="width: 100px;">
-              <col style="width: 80px;">
-              <col style="width: 120px;">
-              <col style="width: 120px;">
-              <col style="width: 180px;">
-              <col style="width: 200px;">
-            </colgroup>
             <thead>
               <tr>
-                <th class="vm-th sortable" @click="sortBy('vendor_id')">ID <i :class="getSortIcon('vendor_id')"></i></th>
-                <th class="vm-th sortable" @click="sortBy('company_name')">会社名 <i :class="getSortIcon('company_name')"></i></th>
-                <th class="vm-th sortable" @click="sortBy('match_key')">照合キー <i :class="getSortIcon('match_key')"></i></th>
-                <th class="vm-th sortable" @click="sortBy('vendor_vector')">業種 <i :class="getSortIcon('vendor_vector')"></i></th>
-                <th class="vm-th sortable" @click="sortBy('direction')">方向 <i :class="getSortIcon('direction')"></i></th>
-                <th class="vm-th sortable" @click="sortBy('debit_account')">借方科目 <i :class="getSortIcon('debit_account')"></i></th>
-                <th class="vm-th">超過借方</th>
-                <th class="vm-th">T番号</th>
-                <th class="vm-th">別名</th>
+                <th class="vm-th" style="width:50px;">ID</th>
+                <th class="vm-th sortable" style="min-width:170px;" @click="sortBy('company_name')">会社名 <i :class="getSortIcon('company_name')"></i></th>
+                <th class="vm-th" style="min-width:130px;">照合キー</th>
+                <th class="vm-th" style="min-width:110px;">表示名</th>
+                <th class="vm-th sortable" style="min-width:150px;" @click="sortBy('vendor_vector')">業種 <i :class="getSortIcon('vendor_vector')"></i></th>
+                <th class="vm-th sortable" style="width:70px;" @click="sortBy('direction')">入出金 <i :class="getSortIcon('direction')"></i></th>
+                <th class="vm-th sortable" style="min-width:110px;" @click="sortBy('debit_account')">借方科目 <i :class="getSortIcon('debit_account')"></i></th>
+                <th class="vm-th" style="min-width:110px;">超過借方</th>
+                <th class="vm-th" style="min-width:110px;">貸方科目</th>
+                <th class="vm-th" style="min-width:170px;">T番号</th>
+                <th class="vm-th" style="min-width:150px;">別名</th>
+                <th class="vm-th" style="width:36px;"></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="row in pagedRows" :key="row.vendor_id" class="vm-row">
+                <!-- ID（読み取り専用） -->
                 <td class="vm-td vm-td-id">{{ row.vendor_id.replace('gbl-', '') }}</td>
-                <td class="vm-td vm-td-name">{{ row.company_name }}</td>
-                <td class="vm-td vm-td-key">{{ row.match_key }}</td>
-                <td class="vm-td vm-td-vector">
-                  <span class="vm-vector-badge">{{ row.vendor_vector }}</span>
+
+                <!-- 会社名（テキスト編集） -->
+                <td class="vm-td">
+                  <input v-model="row.company_name" class="vm-edit-text" />
                 </td>
-                <td class="vm-td vm-td-direction" :class="'dir-' + row.direction">{{ row.direction }}</td>
-                <td class="vm-td vm-td-account">{{ row.debit_account || '—' }}</td>
-                <td class="vm-td vm-td-account">{{ row.debit_account_over || '—' }}</td>
+
+                <!-- 照合キー（自動計算・読み取り専用） -->
+                <td class="vm-td vm-td-computed">{{ computeMatchKey(row.company_name) }}</td>
+
+                <!-- 表示名（テキスト編集） -->
+                <td class="vm-td">
+                  <input :value="row.display_name ?? ''" class="vm-edit-text" placeholder="—" @input="row.display_name = ($event.target as HTMLInputElement).value || null" />
+                </td>
+
+                <!-- 業種（ドロップダウン） -->
+                <td class="vm-td">
+                  <select v-model="row.vendor_vector" class="vm-edit-select">
+                    <option v-for="vv in allVectors" :key="vv" :value="vv">{{ vectorLabel(vv) }}</option>
+                  </select>
+                </td>
+
+                <!-- 入出金（ドロップダウン） -->
+                <td class="vm-td">
+                  <select v-model="row.direction" class="vm-edit-select vm-edit-select-sm">
+                    <option :value="null">—</option>
+                    <option value="expense">{{ directionLabel('expense') }}</option>
+                    <option value="income">{{ directionLabel('income') }}</option>
+                  </select>
+                </td>
+
+                <!-- 借方科目（ドロップダウン） -->
+                <td class="vm-td">
+                  <select v-model="row.debit_account" class="vm-edit-select">
+                    <option :value="null">—</option>
+                    <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
+                  </select>
+                </td>
+
+                <!-- 超過借方（ドロップダウン） -->
+                <td class="vm-td">
+                  <select v-model="row.debit_account_over" class="vm-edit-select">
+                    <option :value="null">—</option>
+                    <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
+                  </select>
+                </td>
+
+                <!-- 貸方科目（ドロップダウン） -->
+                <td class="vm-td">
+                  <select v-model="row.credit_account" class="vm-edit-select">
+                    <option :value="null">—</option>
+                    <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
+                  </select>
+                </td>
+
+                <!-- T番号（T枠外 + 数字のみ編集） -->
                 <td class="vm-td vm-td-tnumber">
-                  <span v-for="(t, i) in row.t_numbers" :key="i" class="vm-tnumber-tag">{{ t }}</span>
+                  <div v-for="(t, i) in row.t_numbers" :key="i" class="vm-tnumber-row">
+                    <span class="vm-t-prefix">T</span>
+                    <input
+                      :value="t.replace(/^T/, '')"
+                      class="vm-tnumber-input"
+                      maxlength="13"
+                      @input="updateTNumber(row, i, ($event.target as HTMLInputElement).value)"
+                    />
+                  </div>
                   <span v-if="!row.t_numbers.length" class="vm-empty">—</span>
                 </td>
-                <td class="vm-td vm-td-aliases">
-                  <span v-for="(a, i) in row.aliases" :key="i" class="vm-alias-tag">{{ a }}</span>
-                  <span v-if="!row.aliases.length" class="vm-empty">—</span>
+
+                <!-- 別名（カンマ区切りテキスト編集） -->
+                <td class="vm-td">
+                  <input
+                    :value="row.aliases.join(', ')"
+                    class="vm-edit-text"
+                    placeholder="—"
+                    @change="updateAliases(row, ($event.target as HTMLInputElement).value)"
+                  />
+                </td>
+
+                <!-- 削除 -->
+                <td class="vm-td vm-td-delete">
+                  <i class="fa-solid fa-trash-can vm-delete-icon" @click="confirmDelete(row)"></i>
                 </td>
               </tr>
             </tbody>
@@ -114,21 +175,161 @@
         </div>
       </div>
     </div>
+
+    <!-- 削除確認モーダル -->
+    <div v-if="deleteTarget" class="vm-modal-overlay" @click.self="deleteTarget = null">
+      <div class="vm-modal">
+        <div class="vm-modal-title">削除しますか？</div>
+        <div class="vm-modal-body">
+          「{{ deleteTarget.company_name }}」を削除します。この操作は取り消せません。
+        </div>
+        <div class="vm-modal-actions">
+          <button class="vm-modal-btn vm-modal-btn-no" @click="deleteTarget = null">いいえ</button>
+          <button class="vm-modal-btn vm-modal-btn-yes" @click="executeDelete">はい</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { VENDORS_GLOBAL } from '@/mocks/data/pipeline/vendors_global';
-import type { Vendor } from '@/mocks/types/pipeline/vendor.type';
+import type { Vendor, VendorVector } from '@/mocks/types/pipeline/vendor.type';
+import { VENDOR_VECTOR_LABELS, VENDOR_VECTORS } from '@/mocks/types/pipeline/vendor.type';
+import { ACCOUNT_MASTER } from '@/shared/data/account-master';
+import { normalizeVendorName } from '@/mocks/utils/pipeline/vendorIdentification';
 
+// ============================================================
+// データ（VENDORS_GLOBALのディープコピー。編集はこのコピーに対して行う）
+// ============================================================
+const vendors = ref<Vendor[]>(structuredClone(VENDORS_GLOBAL));
+
+// ============================================================
+// ラベル変換（全てimport元のデータから導出。ハードコードなし）
+// ============================================================
+
+/** 業種ID → 日本語ラベル（VENDOR_VECTOR_LABELS準拠） */
+function vectorLabel(v: VendorVector): string {
+  return VENDOR_VECTOR_LABELS[v] ?? v;
+}
+
+/**
+ * 入出金区分 → 日本語ラベル
+ * vendor.type.ts L338: "入出金区分（'expense' | 'income' | null）"
+ * vendor.type.ts L330: "UI表示: ... | 入出金 | ..."
+ */
+const DIRECTION_LABELS: Record<string, string> = {
+  expense: '出金',
+  income: '入金',
+};
+function directionLabel(d: string | null): string {
+  if (!d) return '—';
+  return DIRECTION_LABELS[d] ?? d;
+}
+
+
+
+/** 科目ドロップダウン選択肢（ACCOUNT_MASTER準拠） */
+const accountOptions = computed(() =>
+  ACCOUNT_MASTER.map(a => ({ id: a.id, name: a.name }))
+);
+
+/** 業種ドロップダウン選択肢（VENDOR_VECTORS準拠） */
+const allVectors = VENDOR_VECTORS;
+
+// ============================================================
+// 照合キー自動計算（normalizeVendorName準拠）
+// ============================================================
+function computeMatchKey(companyName: string): string {
+  return normalizeVendorName(companyName) ?? '';
+}
+
+// ============================================================
+// T番号・別名の更新
+// ============================================================
+
+/** T番号更新: 数字のみ保持し、Tプレフィックスを付与して格納 */
+function updateTNumber(row: Vendor, index: number, digits: string) {
+  const cleanDigits = digits.replace(/\D/g, '').slice(0, 13);
+  row.t_numbers[index] = 'T' + cleanDigits;
+}
+
+/** 別名更新: カンマ区切りテキスト → 配列 */
+function updateAliases(row: Vendor, text: string) {
+  row.aliases = text.split(/[,、，]/).map(s => s.trim()).filter(s => s.length > 0);
+}
+
+// ============================================================
+// 削除
+// ============================================================
+const deleteTarget = ref<Vendor | null>(null);
+
+function confirmDelete(row: Vendor) {
+  deleteTarget.value = row;
+}
+
+function executeDelete() {
+  if (!deleteTarget.value) return;
+  const idx = vendors.value.findIndex(v => v.vendor_id === deleteTarget.value!.vendor_id);
+  if (idx !== -1) {
+    vendors.value.splice(idx, 1);
+  }
+  deleteTarget.value = null;
+}
+
+// ============================================================
+// 追加
+// ============================================================
+
+/** 新規取引先を先頭に追加。IDは既存最大値+1で自動採番 */
+function addVendor() {
+  // 既存IDから最大番号を取得
+  const maxNum = vendors.value.reduce((max, v) => {
+    const n = parseInt(v.vendor_id.replace('gbl-', ''), 10);
+    return isNaN(n) ? max : Math.max(max, n);
+  }, 0);
+  const newId = `gbl-${String(maxNum + 1).padStart(4, '0')}`;
+
+  const newVendor: Vendor = {
+    vendor_id: newId,
+    company_name: '',
+    match_key: '',
+    display_name: null,
+    aliases: [],
+    t_numbers: [],
+    phone_numbers: [],
+    address: null,
+    vendor_vector: 'unknown',
+    direction: null,
+    amount_threshold: null,
+    debit_account: null,
+    debit_account_over: null,
+    debit_sub_account: null,
+    debit_tax_category: null,
+    debit_department: null,
+    credit_account: null,
+    credit_sub_account: null,
+    credit_tax_category: null,
+    credit_department: null,
+    scope: 'global',
+    client_id: null,
+  };
+
+  vendors.value.unshift(newVendor);
+  // 1ページ目に移動して新規行を表示
+  page.value = 1;
+}
+
+// ============================================================
+// 検索・フィルタ・ソート・ページネーション
+// ============================================================
 const PAGE_SIZE = 50;
 const page = ref(1);
 const searchQuery = ref('');
 const vectorFilter = ref('');
 const directionFilter = ref('');
 
-// ソート
 const sortKey = ref<keyof Vendor | ''>('');
 const sortAsc = ref(true);
 
@@ -142,22 +343,21 @@ function getSortIcon(key: string) {
   return sortAsc.value ? 'fa-solid fa-sort-up sort-icon' : 'fa-solid fa-sort-down sort-icon';
 }
 
-// 業種一覧（ユニーク）
+/** 業種一覧（データに存在するもののみ。ユニーク） */
 const uniqueVectors = computed(() => {
-  const set = new Set(VENDORS_GLOBAL.map(v => v.vendor_vector));
-  return [...set].sort();
+  const set = new Set(vendors.value.map(v => v.vendor_vector));
+  return [...set].sort() as VendorVector[];
 });
 
-// フィルタ
 const filteredRows = computed(() => {
-  let rows = [...VENDORS_GLOBAL];
+  let rows = [...vendors.value];
 
   // 検索
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
     rows = rows.filter(r =>
       r.company_name.toLowerCase().includes(q) ||
-      r.match_key.toLowerCase().includes(q) ||
+      (normalizeVendorName(r.company_name) ?? '').includes(q) ||
       r.aliases.some(a => a.toLowerCase().includes(q))
     );
   }
@@ -167,7 +367,7 @@ const filteredRows = computed(() => {
     rows = rows.filter(r => r.vendor_vector === vectorFilter.value);
   }
 
-  // 方向フィルタ
+  // 入出金フィルタ
   if (directionFilter.value) {
     rows = rows.filter(r => r.direction === directionFilter.value);
   }
@@ -216,6 +416,23 @@ watch(filteredRows, () => { if (page.value > totalPages.value) page.value = 1; }
 }
 .vm-header-label { color: #1976D2; font-weight: 600; font-size: 13px; }
 .vm-header-count { color: #888; font-size: 11px; }
+
+/* 追加ボタン */
+.vm-add-btn {
+  margin-left: auto;
+  padding: 5px 14px;
+  background: #1976D2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.vm-add-btn:hover { background: #1565C0; }
 
 /* 検索・フィルタ */
 .vm-filters {
@@ -285,10 +502,10 @@ watch(filteredRows, () => { if (page.value > totalPages.value) page.value = 1; }
 
 /* テーブル */
 .vm-table-wrap { overflow: auto; flex: 1; min-height: 0; }
-.vm-table { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid #d0d7de; table-layout: fixed; }
+.vm-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 11px; border: 1px solid #d0d7de; }
 .vm-table thead { background: #e3f2fd; position: sticky; top: 0; z-index: 1; }
 .vm-th {
-  padding: 6px 8px; text-align: center; font-weight: 600;
+  padding: 6px 6px; text-align: center; font-weight: 600;
   color: #555; font-size: 11px; white-space: nowrap; border: 1px solid #d0d7de;
 }
 .vm-th.sortable { cursor: pointer; user-select: none; }
@@ -296,61 +513,137 @@ watch(filteredRows, () => { if (page.value > totalPages.value) page.value = 1; }
 .sort-icon { font-size: 9px; margin-left: 2px; color: #1976D2; }
 .sort-icon.inactive { color: #ccc; }
 
-.vm-td { padding: 4px 8px; border: 1px solid #e0e0e0; color: #333; }
+.vm-td { padding: 3px 4px; border: 1px solid #e0e0e0; color: #333; vertical-align: middle; }
 .vm-row:hover { background: #f5f9ff; }
 
+/* 読み取り専用セル */
 .vm-td-id { text-align: center; color: #999; font-size: 10px; font-family: monospace; }
-.vm-td-name { font-weight: 500; }
-.vm-td-key { font-family: monospace; font-size: 11px; color: #555; }
+.vm-td-computed { font-family: monospace; font-size: 10px; color: #888; background: #fafafa; }
 
-/* 業種バッジ */
-.vm-vector-badge {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 3px;
+/* 編集用テキスト入力 */
+.vm-edit-text {
+  width: 100%;
+  padding: 3px 4px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  font-size: 11px;
+  color: #333;
+  background: transparent;
+  outline: none;
+  box-sizing: border-box;
+}
+.vm-edit-text:hover { border-color: #ccc; }
+.vm-edit-text:focus { border-color: #1976D2; background: #fff; box-shadow: 0 0 0 1px rgba(25,118,210,0.2); }
+
+/* 編集用ドロップダウン */
+.vm-edit-select {
+  width: 100%;
+  padding: 2px 2px;
+  border: 1px solid transparent;
+  border-radius: 2px;
   font-size: 10px;
-  font-weight: 600;
-  background: #e8f5e9;
-  color: #2e7d32;
-  border: 1px solid #a5d6a7;
-  white-space: nowrap;
+  color: #333;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
 }
+.vm-edit-select:hover { border-color: #ccc; }
+.vm-edit-select:focus { border-color: #1976D2; background: #fff; }
+.vm-edit-select-sm { font-size: 10px; }
 
-/* 方向 */
-.vm-td-direction { text-align: center; font-size: 10px; font-weight: 600; }
-.dir-expense { color: #c62828; }
-.dir-income { color: #2e7d32; }
-.dir-both { color: #555; }
-
-/* 科目 */
-.vm-td-account { font-size: 10px; font-family: monospace; color: #555; }
-
-/* T番号タグ */
-.vm-tnumber-tag {
+/* T番号 */
+.vm-td-tnumber { white-space: nowrap; }
+.vm-tnumber-row { display: flex; align-items: center; gap: 0; margin: 1px 0; }
+.vm-t-prefix {
   display: inline-block;
-  padding: 1px 4px;
-  margin: 1px 2px;
-  border-radius: 3px;
-  font-size: 9px;
   font-family: monospace;
-  background: #fff3e0;
-  color: #e65100;
-  border: 1px solid #ffcc80;
-  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  color: #1976D2;
+  padding: 2px 2px 2px 0;
+  user-select: none;
 }
+.vm-tnumber-input {
+  width: 110px;
+  padding: 2px 3px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  font-family: monospace;
+  font-size: 10px;
+  color: #555;
+  background: transparent;
+  outline: none;
+  box-sizing: border-box;
+}
+.vm-tnumber-input:hover { border-color: #ccc; }
+.vm-tnumber-input:focus { border-color: #1976D2; background: #fff; }
 
-/* 別名タグ */
-.vm-alias-tag {
-  display: inline-block;
-  padding: 1px 4px;
-  margin: 1px 2px;
-  border-radius: 3px;
-  font-size: 9px;
-  background: #f3e5f5;
-  color: #7b1fa2;
-  border: 1px solid #ce93d8;
-  white-space: nowrap;
+/* 削除 */
+.vm-td-delete { text-align: center; }
+.vm-delete-icon {
+  color: #bbb;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s;
 }
+.vm-delete-icon:hover { color: #c62828; }
 
 .vm-empty { color: #ccc; font-size: 10px; }
+
+/* ============================================================ */
+/* 削除モーダル                                                 */
+/* ============================================================ */
+.vm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.vm-modal {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  padding: 24px 28px;
+  min-width: 340px;
+  max-width: 440px;
+}
+.vm-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #c62828;
+  margin-bottom: 12px;
+}
+.vm-modal-body {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.vm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.vm-modal-btn {
+  padding: 7px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.vm-modal-btn-no {
+  background: #e0e0e0;
+  color: #555;
+}
+.vm-modal-btn-no:hover { background: #ccc; }
+.vm-modal-btn-yes {
+  background: #c62828;
+  color: #fff;
+}
+.vm-modal-btn-yes:hover { background: #b71c1c; }
 </style>
