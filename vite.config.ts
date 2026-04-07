@@ -13,6 +13,7 @@ export default defineConfig({
     vueDevTools(),
   ],
   server: {
+    host: true,
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

@@ -242,6 +242,14 @@ export const routes: RouteRecordRaw[] = [
   // 旧パス互換
   { path: '/upload/:clientId', redirect: (to) => `/client/upload/${to.params.clientId}` },
   { path: '/learning/:clientId', redirect: (to) => `/client/learning/${to.params.clientId}` },
+  // 資料アップロード（バリデーションなし: 謄本・CSV・Excel等）
+  {
+    path: '/client/upload-docs/:clientId',
+    name: 'UploadDocs',
+    component: () => import('@/mocks/views/MockUploadDocsPage.vue'),
+    props: true
+  },
+  { path: '/upload-docs/:clientId', redirect: (to) => `/client/upload-docs/${to.params.clientId}` },
   // --- 事務所共通マスタ（顧問先ID不要） ---
   {
     path: '/master/accounts',

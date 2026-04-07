@@ -266,6 +266,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { VENDORS_GLOBAL } from "@/mocks/data/pipeline/vendors_global";
+import type { NonVendorType } from "@/mocks/types/pipeline/non_vendor.type";
 import type { Vendor } from "@/mocks/types/pipeline/vendor.type";
 import { ACCOUNT_MASTER } from "@/shared/data/account-master";
 import { TAX_CATEGORY_MASTER } from "@/shared/data/tax-category-master";
