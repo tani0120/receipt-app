@@ -1,5 +1,5 @@
 /**
- * vendor.type.ts — T-01: VendorVector型 + T-02: Vendor型
+ * vendor.type.ts — T-01: VendorVector型 + T-02: Vendor型（取引先 + 取引先外 統合）
  *
  * 準拠: vendor_vector_41_reference.md（68種拡張済み）
  * 全科目ID: ACCOUNT_MASTER（src/shared/data/account-master.ts）準拠
@@ -8,9 +8,15 @@
  *   AIパイプライン Step 3 で判定する取引先業種ベクトル。
  *   取引先名・キーワードから業種を特定し、科目候補リストを得る。
  *
- * 【Vendor】
- *   取引先マスタのinterface（T-02）。
+ * 【Vendor（DL027-4 統合済み）】
+ *   取引先マスタのinterface（T-02）。取引先と取引先外を同一型で管理。
  *   scope: 'global'（全社共通）または 'client'（顧問先固有）
+ *
+ *   取引先:   vendor_vector に業種を設定。non_vendor_type = null。
+ *             照合キー一致 → 業種 → IndustryVector辞書 → 科目候補（複数あり得る）
+ *   取引先外: non_vendor_type に種別を設定。vendor_vector = null。
+ *             照合キー一致 + direction → 科目一意確定（level='A'の場合）
+ *   排他制御: UIのボタンが排他制御。vendor_vector と non_vendor_type は片方のみ設定。
  *
  * 【flatten関数設計（T-06d 完了済み）】
  *   TS層（プロパティ方式）→ DB層（列方式）への変換設計を末尾に記載。
@@ -19,6 +25,8 @@
  *   NEW_INDIVIDUAL_VENDOR: individual + 過去仕訳なし → ⚠️ 警告
  *   UNKNOWN_VENDOR: 取引先特定失敗 or unknown → ⚠️ 警告
  */
+
+import type { NonVendorType } from './non_vendor.type'
 
 // ============================================================
 // § VendorVector union型（66種）
@@ -322,8 +330,33 @@ export interface Vendor {
   brand_id?: string;
   /** 住所（正規化済み。未登録の場合 null） */
   address: string | null;
-  /** 業種ベクトル（68種） */
-  vendor_vector: VendorVector;
+  /**
+   * 業種ベクトル（68種）
+   * 取引先 → 設定（必須）。取引先外 → null。
+   * vendor_vector と non_vendor_type は相互排他（UIのボタンで排他制御）。
+   */
+  vendor_vector: VendorVector | null;
+
+  /**
+   * 取引先外種別（24種。DL027-4統合）
+   * 取引先外 → 設定（必須）。取引先 → null。
+   * 照合キー + direction で科目が一意に決まる（業種ベクトル不要）。
+   */
+  non_vendor_type: NonVendorType | null;
+
+  /**
+   * 証票種類カテゴリ（取引先外用）
+   * 'bank' = 銀行明細専用、'credit' = クレカ明細専用、'all' = 全source_type共通。
+   * 取引先 → null。
+   */
+  source_category: 'bank' | 'credit' | 'all' | null;
+
+  /**
+   * 確定レベル（取引先外用）
+   * 'A' = 科目自動確定、'insufficient' = 人間判断必要。
+   * 取引先 → null（IndustryVector辞書側で管理）。
+   */
+  level: 'A' | 'insufficient' | null;
 
   // ============================================================
   // § 仕訳テンプレート（DL-027 Streamed互換）
@@ -372,10 +405,15 @@ export interface Vendor {
   debit_sub_account: string | null;
 
   /**
-   * 借方税区分
-   * 例: '対象外', '課税仕入', '非課税仕入'
-   * vendors_globalでは法人本則に基づく例示値を設定。
-   * null = ACCOUNT_MASTERから自動導出（DL-024）
+   * 借方税区分（TAX_CATEGORY_MASTER ID）
+   *
+   * 【取引先（vendor_vector設定）の場合】
+   *   null = ACCOUNT_MASTERのdefaultTaxCategoryIdから自動導出（DL-024）。
+   *   vendors_clientで顧問先固有値に上書き可能。
+   *
+   * 【取引先外（non_vendor_type設定）の場合】
+   *   直接設定（例: 'COMMON_EXEMPT', 'PURCHASE_TAXABLE_10'）。
+   *   取引先外は科目と税区分がセットで確定するため自動導出しない。
    */
   debit_tax_category: string | null;
 

@@ -203,7 +203,9 @@ import { normalizeVendorName } from '@/mocks/utils/pipeline/vendorIdentification
 // ============================================================
 // データ（VENDORS_GLOBALのディープコピー。編集はこのコピーに対して行う）
 // ============================================================
-const vendors = ref<Vendor[]>(structuredClone(VENDORS_GLOBAL));
+const vendors = ref<Vendor[]>(
+  structuredClone(VENDORS_GLOBAL.filter(v => v.vendor_vector !== null))
+);
 
 // ============================================================
 // ラベル変換（全てimport元のデータから導出。ハードコードなし）
@@ -301,6 +303,9 @@ function addVendor() {
     phone_numbers: [],
     address: null,
     vendor_vector: 'unknown',
+    non_vendor_type: null,
+    source_category: null,
+    level: null,
     direction: null,
     amount_threshold: null,
     debit_account: null,
@@ -345,7 +350,7 @@ function getSortIcon(key: string) {
 
 /** 業種一覧（データに存在するもののみ。ユニーク） */
 const uniqueVectors = computed(() => {
-  const set = new Set(vendors.value.map(v => v.vendor_vector));
+  const set = new Set(vendors.value.map(v => v.vendor_vector).filter((v): v is VendorVector => v !== null));
   return [...set].sort() as VendorVector[];
 });
 

@@ -263,6 +263,11 @@ export const routes: RouteRecordRaw[] = [
     name: 'MasterVendorsList',
     component: () => import('@/mocks/views/MockMasterVendorsPage.vue')
   },
+  {
+    path: '/master/vendors/non-vendor',
+    name: 'MasterNonVendor',
+    component: () => import('@/mocks/views/MockMasterNonVendorPage.vue')
+  },
   // 旧パスリダイレクト
   { path: '/settings/accounts', redirect: '/client/settings/accounts/ABC-00001' },
   { path: '/master/tax-categories', redirect: '/master/tax' },

@@ -17,7 +17,7 @@
 > - `aliases` は照合キーとして使わない。記録・UI表示のみ
 > - 3フィールド構成: `match_key`（照合用）・`company_name`（正式名称。通帳由来はnull）・`display_name`（証票表示原文。領収書由来はnull）
 > - 顧問先マスタには同一取引先の複数エントリが蓄積される（漢字/カタカナは別照合キー。同じ科目に到達する）
-> - 取引先と取引先外は概念的に同質。同一テーブルで管理する方針（TS統合は計画的に実施）
+> - 取引先と取引先外は概念的に同質。**DL027-4で Vendor型に統合済み**。vendors_global.ts にて `non_vendor_type` / `source_category` / `level` フィールドで識別。`vendor_vector` はnullable化。
 >
 > **同期方針（DL-022 2026-04-05確定）**: vendors_global との同期は不要。顧問先別マスタは発生した取引先を都度追加する方式。
 > **DL-026 t_numbers設計**: t_numbers: [] = T番号不明（免税事業者・個人含む）。個人（individual）は t_numbers: [] で警告レベル低下。

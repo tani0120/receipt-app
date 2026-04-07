@@ -43,6 +43,16 @@
             <p class="card-description">全社共通の取引先マスタ（224件）を管理します。会社名・照合キー・業種・T番号の確認・編集が可能です。</p>
             <a class="card-link">設定する</a>
           </div>
+
+          <!-- カード5: 取引先外マスタ（全社） -->
+          <div class="settings-card" @click="navigateTo('non-vendor')">
+            <div class="settings-card-header">
+              <i class="fa-solid fa-shuffle card-icon"></i>
+              <h3 class="card-title">取引先外マスタ（全社）</h3>
+            </div>
+            <p class="card-description">取引先特定不要の取引（ATM・手数料・利息・借入金等）24種）の科目マッピングを確認・編集します。法人用/個人用切替対応。</p>
+            <a class="card-link">設定する</a>
+          </div>
         </div>
       </div>
     </div>
@@ -59,6 +69,7 @@ const navigateTo = (section: string) => {
     'accounts': '/master/accounts',
     'tax': '/master/tax',
     'vendors-list': '/master/vendors/list',
+    'non-vendor': '/master/vendors/non-vendor',
   };
   if (routes[section]) {
     router.push(routes[section]);

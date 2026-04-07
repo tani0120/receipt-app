@@ -20,9 +20,9 @@
  *   INDUSTRY_VECTOR_CORPORATE / INDUSTRY_VECTOR_SOLE と同じ位置づけ（辞書定義のみ）。
  *   実際の仕訳生成時は useClientAccounts(clientId) から動的に科目を取得すること。
  *
- * 【データファイル分離（vendor.type.ts 設計と対称）】
- *   法人用マップ: src/mocks/data/pipeline/non_vendor_account_corporate.ts
- *   個人事業主用: src/mocks/data/pipeline/non_vendor_account_sole.ts
+ * 【データファイル（DL027-4 統合済み）】
+ *   vendors_global.ts に Vendor型として統合。non_vendor_type フィールドで識別。
+ *   旧: non_vendor_account_corporate.ts / non_vendor_account_sole.ts（廃止）
  *
  * 変更履歴:
  *   2026-04-05: 新規作成（line_item.type.ts から NonVendorType・TaxPaymentType を移動。
@@ -149,122 +149,7 @@ export type TaxPaymentType =
   | 'RESIDENT_TAX';    // 住民税（法人: 法人税等 / 個人: 事業主貸 — 事業形態で変わる）
 
 // ============================================================
-// § NonVendorAccountEntry型（辞書エントリ）
+// § NonVendorAccountEntry型 → DL027-4で Vendor型に統合。廃止。
+// § FlatNonVendorAccountRow型 → Vendor.flattenVendor() に統合。廃止。
+// § flattenNonVendorAccount() → 同上。廃止。
 // ============================================================
-
-/**
- * 取引先外科目候補辞書エントリ（Step 4 将来実装用）
- *
- * vendor.type.ts の IndustryVectorEntry に対応する型。
- * データファイル（non_vendor_account_corporate.ts / non_vendor_account_sole.ts）で使用。
- *
- * 【重要制約】
- * debit / credit / tax_category は ACCOUNT_MASTER / TAX_CATEGORY_MASTER に存在するIDのみ設定すること。
- * 存在しないIDのハードコードは禁止。存在しない場合は null（insufficient）にする。
- *
- * 【source_category について】
- * 'bank'   = 銀行明細（bank_statement）専用
- * 'credit' = クレカ明細（credit_card）専用
- * 'all'    = 全source_type共通
- *
- * 【ATMの入出金分離について】
- * 入金（income）と出金（expense）で借方・貸方が逆転する場合、
- * direction を分けて2エントリとして定義する。
- */
-export interface NonVendorAccountEntry {
-  /** 取引先外種別 */
-  non_vendor_type: NonVendorType;
-  /** 証票種類カテゴリ */
-  source_category: 'bank' | 'credit' | 'all';
-  /** 仕訳方向（行レベル） */
-  direction: 'expense' | 'income';
-  /** 借方科目（ACCOUNT_MASTER ID）。null = insufficient（人間判断） */
-  debit: string | null;
-  /** 貸方科目（ACCOUNT_MASTER ID）。null = insufficient（人間判断） */
-  credit: string | null;
-  /** 税区分（TAX_CATEGORY_MASTER ID）。null = insufficient */
-  tax_category: string | null;
-  /** 確定レベル */
-  level: 'A' | 'insufficient';
-  /** 日本語ラベル（UI表示・ログ用） */
-  label: string;
-}
-
-// ============================================================
-// § FlatNonVendorAccountRow型（DB層用フラット行）
-// ============================================================
-
-/**
- * DB層用フラット行（Supabase移行時に使用）
- *
- * vendor.type.ts の FlatIndustryVectorRow に対応する型。
- * Supabase テーブル non_vendor_account_map の1行に相当。
- */
-export interface FlatNonVendorAccountRow {
-  non_vendor_type: NonVendorType;
-  source_category: 'bank' | 'credit' | 'all';
-  direction: 'expense' | 'income';
-  account_role: 'debit' | 'credit';
-  account: string;
-  tax_category: string | null;
-  level: 'A' | 'insufficient';
-}
-
-// ============================================================
-// § flattenNonVendorAccount() — TS層→DB層変換関数
-// ============================================================
-
-/**
- * TS層（プロパティ方式）→ DB層（列方式）への変換関数
- *
- * vendor.type.ts の flattenIndustryVector() に対応する関数。
- * debit / credit それぞれを独立した行に展開する。
- * null（insufficient）は行を生成しない。
- *
- * @example
- * ```ts
- * const rows = flattenNonVendorAccount({
- *   non_vendor_type: 'BANK_FEE',
- *   source_category: 'bank',
- *   direction: 'expense',
- *   debit: 'FEES',
- *   credit: 'ORDINARY_DEPOSIT',
- *   tax_category: 'PURCHASE_TAXABLE_10',
- *   level: 'A',
- *   label: '銀行振込手数料',
- * });
- * // → [
- * //   { non_vendor_type: 'BANK_FEE', source_category: 'bank', direction: 'expense', account_role: 'debit',  account: 'FEES',              tax_category: 'PURCHASE_TAXABLE_10', level: 'A' },
- * //   { non_vendor_type: 'BANK_FEE', source_category: 'bank', direction: 'expense', account_role: 'credit', account: 'ORDINARY_DEPOSIT',  tax_category: 'PURCHASE_TAXABLE_10', level: 'A' },
- * // ]
- * ```
- */
-export function flattenNonVendorAccount(entry: NonVendorAccountEntry): FlatNonVendorAccountRow[] {
-  const rows: FlatNonVendorAccountRow[] = [];
-
-  if (entry.debit !== null) {
-    rows.push({
-      non_vendor_type: entry.non_vendor_type,
-      source_category: entry.source_category,
-      direction: entry.direction,
-      account_role: 'debit',
-      account: entry.debit,
-      tax_category: entry.tax_category,
-      level: entry.level,
-    });
-  }
-
-  if (entry.credit !== null) {
-    rows.push({
-      non_vendor_type: entry.non_vendor_type,
-      source_category: entry.source_category,
-      direction: entry.direction,
-      account_role: 'credit',
-      account: entry.credit,
-      tax_category: entry.tax_category,
-      level: entry.level,
-    });
-  }
-
-  return rows;
-}
