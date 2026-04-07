@@ -47,9 +47,10 @@ async function analyzeReceiptMock(_file: File): Promise<ReceiptAnalysisResult> {
 
   if (isOk) {
     const day = Math.floor(Math.random() * 28) + 1
-    const date = new Date(2025, 2, day).toISOString().split('T')[0]
+    const d = new Date(2025, 2, day)
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     const amount = Math.floor((Math.random() * 500 + 5)) * 100
-    const vendor = MOCK_VENDORS[Math.floor(Math.random() * MOCK_VENDORS.length)]
+    const vendor = MOCK_VENDORS[Math.floor(Math.random() * MOCK_VENDORS.length)] ?? null
     return { ok: true, date, amount, vendor, errorReason: null }
   }
 
@@ -58,7 +59,7 @@ async function analyzeReceiptMock(_file: File): Promise<ReceiptAnalysisResult> {
     date: null,
     amount: null,
     vendor: null,
-    errorReason: MOCK_ERROR_REASONS[Math.floor(Math.random() * MOCK_ERROR_REASONS.length)],
+    errorReason: MOCK_ERROR_REASONS[Math.floor(Math.random() * MOCK_ERROR_REASONS.length)] ?? null,
   }
 }
 

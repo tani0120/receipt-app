@@ -20,9 +20,7 @@
  *   INDUSTRY_VECTOR_CORPORATE / INDUSTRY_VECTOR_SOLE と同じ位置づけ（辞書定義のみ）。
  *   実際の仕訳生成時は useClientAccounts(clientId) から動的に科目を取得すること。
  *
- * 【データファイル（DL027-4 統合済み）】
- *   vendors_global.ts に Vendor型として統合。non_vendor_type フィールドで識別。
- *   旧: non_vendor_account_corporate.ts / non_vendor_account_sole.ts（廃止）
+ *   vendors_global.ts に Vendor型として統合済み（DL027-4）。non_vendor_type フィールドで識別。
  *
  * 変更履歴:
  *   2026-04-05: 新規作成（line_item.type.ts から NonVendorType・TaxPaymentType を移動。
@@ -148,8 +146,3 @@ export type TaxPaymentType =
   // ❌ 人間判断（level: 'insufficient'）
   | 'RESIDENT_TAX';    // 住民税（法人: 法人税等 / 個人: 事業主貸 — 事業形態で変わる）
 
-// ============================================================
-// § NonVendorAccountEntry型 → DL027-4で Vendor型に統合。廃止。
-// § FlatNonVendorAccountRow型 → Vendor.flattenVendor() に統合。廃止。
-// § flattenNonVendorAccount() → 同上。廃止。
-// ============================================================

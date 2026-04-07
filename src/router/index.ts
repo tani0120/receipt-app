@@ -246,8 +246,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/client/upload-docs/:clientId',
     name: 'UploadDocs',
-    component: () => import('@/mocks/views/MockUploadDocsPage.vue'),
-    props: true
+    component: () => import('@/mocks/views/MockUploadDocsPage.vue')
   },
   { path: '/upload-docs/:clientId', redirect: (to) => `/client/upload-docs/${to.params.clientId}` },
   // --- 事務所共通マスタ（顧問先ID不要） ---
