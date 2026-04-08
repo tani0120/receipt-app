@@ -1,0 +1,1660 @@
+# パイプライン 意思決定ログ（Decision Log）
+
+> **このファイルの役割：Why + Evidence（なぜそう決めたか・証拠）**
+> TSファイルで確認できるWhat（型・定数・実装）はここに書かない。
+> 更新ルール：設計変更・テスト実施・廃止判断の都度、日付と根拠を追記すること。
+
+---
+
+## DL-001 | N:N統一設計の採用（2026-04-04）
+
+**決定**: 全source_typeで `line_items[]` を使用。1枚1行/1枚N行の分岐なし。
+
+**なぜ採用したか**:
+- T-P4実測で、Geminiは通帳・クレカの全行（N件）を `line_items[]` として正確に返せることが確認できた
+- 「レシート=1件」「通帳=N件」でプロンプトを分岐させると、ルール管理が2倍になる
+- `line_items.length === 1`（レシート）と `line_items.length === N`（通帳）を同じ型で処理できる
+
+**根拠（Evidence）（T-P4実測 2026-04-03）**:
+- 通帳23行: date/description/amount/direction/balance の5フィールドを **100%正確**に抽出
+- クレカ6行: 同上（balance=null）**100%正確**
+- ファイル: `src/scripts/classify_test.ts`
+
+**廃止した代替案**:
+- 1:N設計（レシート専用プロンプト + 明細専用プロンプト）→ プロンプト分岐管理コストが高い
+
+---
+
+## DL-002 | journal_inference不要確定（2026-04-04）
+
+**決定**: GeminiにJournal（仕訳）を推論させない。TSルールで確定できる。
+
+**なぜ不要か**:
+- vendor_vector（66種）× direction（expense/income）→ industry_vector辞書でACCOUNT_MASTER IDが導出できる
+- 44種（67%）はレベルA（自動確定）なのでGeminiに推論させる必要がない
+- 残り22種はinsufficient（情報不足）で人間がUIで選択する設計のため、Geminiの推論精度が問題にならない
+
+**根拠（Evidence）**:
+- vendor_vector_41_reference.md: 66種中44種が一意確定（67%）
+- Geminiの仕訳推論精度はテスト未実施。テストせずに不要と判定した理由:
+  TSルールが決定論的（再現性100%）なのに対し、Geminiは確率的。科目は決定論的であるべき。
+
+---
+
+## DL-003 | LineItem v1で含めなかったフィールドとその理由（2026-04-04）
+
+**決定**: 以下のフィールドはLineItemに含めない。
+
+| フィールド | 含めない理由 |
+|---|---|
+| `tax_rate` | ReceiptItemの責務。通帳・クレカの1行には税率欄が存在しない |
+| `date_on_document` | `date === null` のフラグとして `date` 自体が機能する。冗長 |
+| `debit_account` / `credit_account` | classify_schema.ts旧世代の残骸。T-P4実測でdirectionで代替確認済み |
+| `vendor_id` | マスタ照合前の段階（Step 3入力前）では未確定。不確定な外部IDをLineItemに持たせない |
+| `line_index`（Gemini出力から） | Geminiに返させない。コード側（assignLineIndex）で付番する設計（任意の順序で返す可能性への防御） |
+
+---
+
+## DL-004 | transformToJournalMock.ts 削除判断（2026-04-04）
+
+**決定**: 即削除（Phase 2まで待たない）。
+
+**削除の根拠（3点）**:
+1. どこからもimportされていない（`src/` 内grep: 参照ゼロ件確認）
+2. 入力型が `GeminiClassifyResponse`（旧設計）のため新パイプライン（LineItem→JournalPhase5Mock）の変換関数として機能しない
+3. `source_type / direction / vendor_vector = null` で埋めていた（型エラー回避の穴埋め）
+
+**「Phase 2まで待つ」という先送りを拒否した理由**:
+- 使用箇所ゼロ・旧世代・穴埋めが揃っており「残す価値ゼロ」を確認できていた
+- 先送りにより「変換関数が存在する」という錯覚を生み出すリスクの方が高い
+
+---
+
+## DL-005 | tsconfig.scripts.json 新規作成（根本解決）（2026-04-04）
+
+**決定**: src/scripts/ 専用のtsconfig.scripts.jsonを新規作成して@/エイリアスを有効化。
+
+**なぜ対症療法（個別ファイルの@/→相対パス書き換え）ではなく根本解決にしたか**:
+- `tsconfig.app.json` が `"exclude": ["src/scripts/**"]` しているため、今後も同じ問題が再発する
+- 毎回個別修正は技術的負債の積み上げ
+- tsconfig.json の `references` に追加することで VSCode が認識し、IDE補完も機能するようになる
+
+---
+
+## DL-006 | VendorVector 66種の採用判断（2026-04-04）
+
+**決定**: 66種はGemini精度テスト（T-P3）の結果に関係なく採用確定。
+
+**なぜGemini精度に依存しないか**:
+- vendor_vector は「Geminiがリアルタイムに推定するもの」ではない
+- vendors_global.ts / vendors_ldi.ts 等のマスタに**人間が手動設定するフィールド**（主用途）
+- Layer 1-3（T番号・電話・名称）でマスタ照合できれば Gemini不要で vendor_vector が確定する
+- T-P3で確認するのは「Layer 4 Geminiフォールバックの精度」のみ
+
+**根拠（Evidence）**: vendor_vector_41_reference.md（設計原則セクション参照）
+
+---
+
+## DL-007 | MEDICAL_TRIAGE廃止（2026-03-31）
+
+**決定**: 医療費領収書は全て non_journal（仕訳対象外）。MEDICAL_TRIAGE（3分岐）廃止。
+
+**旧設計**:
+- 仕訳しない（non_journal）/ 確定申告用（medical_certificate）/ 通常経費（receipt）の3分岐
+
+**廃止の理由**:
+- コスト実測（1.8円/枚）から、1000件に1回の福利厚生費よりも、毎年大量発生する個人医療費の分別の方が価値が高いと判断
+- medical_certificate（医療費証明書）を新たなsource_typeとして維持するコストが高い
+- 法人で健康診断費用（WELFARE）になるケースはUI上で「注意label」を付与して人間に判断させる
+
+**結果**: source_type から `medical_certificate` を削除。source_type は11種に確定。
+
+---
+
+## DL-008 | Gemini責務境界の確定（2026-04-04）
+
+**決定**: Geminiは「目」（読み取り専用）。TSは「電卓」（確定的計算）。
+
+**Geminiを使う・使わない の分類基準**:
+
+| 基準 | Gemini | TS |
+|---|---|---|
+| 画像の文脈理解が必要 | ✅ 使う | ✗ |
+| 決定論的に計算できる | ✗ | ✅ 使う |
+| 精度が100%未満でも許容できる | ✅ 使う | ✗ |
+| 仕訳科目の確定（決定論必須） | ✗ | ✅ 使う |
+
+**責務確定（テスト済み）**:
+
+| 責務 | 担当 | 根拠（Evidence） |
+|---|---|---|
+| source_type判定（11種：証票種別） | Gemini | T-00k/T-P1: **100%**（2026-04-02） |
+| direction判定（4種：仕訳方向） | Gemini | T-P1(v5): **28/28=100%**（2026-04-02） |
+| line_items[]抽出 | Gemini | T-P4: **通帳23行・クレカ6行=100%**（2026-04-03） |
+| vendor_vector（Layer 4フォールバックのみ） | Gemini | **T-P3未実施（★最優先）** |
+| history_match（過去仕訳照合） | TS完結 | — |
+| Layer 1-3マッチ（マスタ照合） | TS完結 | — |
+| 科目確定（Step 4） | TS完結 | — |
+| 税区分自動設定 | TS完結 | — |
+| journal_inference（仕訳推論） | **不要確定** | DL-002参照 |
+
+---
+
+## DL-009 | LineItem.counterpart_account の設計根拠（2026-04-04）
+
+**決定**: `counterpart_account` フィールドをLineItemに追加。source_type×directionのマップで導出。
+
+**なぜLineItemに持たせるか**:
+- JournalPhase5Mock への変換時（lineItemToJournalMock()）に相手勘定が必要
+- source_type は PipelineResult が持つが、LineItem への変換関数に都度渡すよりフィールドとして持たせる方が見通しがよい
+
+**マッピング根拠**:
+- voucherTypeRules.ts のルール（クレカ→ACCRUED_EXPENSES等）と整合している
+- account-master.ts で全ID確認済み
+- voucherTypeRules.ts と矛盾がないことを設計時に確認済み
+
+---
+
+## DL-010 | コスト実測（2026-03-31）
+
+**根拠（Evidence）（Run A: 18件テスト）**:
+
+| 項目 | 値 |
+|---|---|
+| 総コスト | 27.5円 |
+| **1枚平均** | **1.53円（Gemini）+ 0.23円（OCR前処理）= 1.8円** |
+| Phase A見積り（当初） | 7-9円/枚 |
+| 15円/枚制約 | **大幅に下回る** |
+| 結論 | 全件Gemini処理でコスト無視可能。document_filterの価値は品質管理のみ |
+
+---
+
+## DL-011 | document_filter廃止・Gemini直接判定採用（2026-04-02）
+
+**決定**: TSキーワードマッチ（document_filter）は不要。Geminiに直接判定させる。
+
+**根拠（Evidence）（T-00k: 実物証票15件）**:
+
+| 条件 | 件数 | 分類正解率 | source_type正解率 | 処理時間 |
+|---|---|---|---|---|
+| 前処理なし | 15/15 | **100%** | **100%** | 18.0秒/枚 |
+| 前処理あり（image_preprocessor.ts） | 15/15 | **100%** | **100%** | **6.3秒/枚（65%短縮）** |
+
+**廃止した代替案**:
+- TSキーワードマッチによる事前フィルタリング → 実装・メンテコストのわりに効果なし
+- 画像前処理（image_preprocessor.ts）によるトークン18%削減の方が高効率
+
+---
+
+## DL-012 | vendor_name フィールドのLineItem追加判断（2026-04-04）
+
+**決定**: `vendor_name?: string | null` を今（T-P3前に）追加する。
+
+**なぜT-P3前でも追加できるか**:
+- 型は `string | null` でGemini精度に関係なく確定できる
+- 精度が悪い場合は `null` が返るだけで、型として問題ない
+- 「T-P3精度確認前に追加できない」は誤り（型定義はGemini精度に依存しない）
+
+**T-P3で確認すること（型追加とは別）**:
+- vendor_nameの実際の抽出精度（摘要からの取引先名）
+- nullの発生割合
+- T-N1c（正規化）に渡すのに十分な品質かどうか
+
+---
+
+## DL-013 | Honoルートはチェーン形式でないとRPC型推論が機能しない（2026-04-04）
+
+**決定**: `src/api/routes/` 配下の全Honoルートファイルはメソッドチェーン形式で定義する。命令型（`app.get(...)` を個別に呼び出す）を禁止。
+
+**なぜか（技術的根拠）**:
+- Honoの `hc<AppType>()` RPC クライアントは `AppType = typeof routes` で型を推論する
+- `const routes = app.get(...).post(...).route(...)` のチェーン形式では各ルートの型情報が `routes` 変数に蓄積される
+- `app.get(...)` を個別の文として実行すると、戻り値（型情報）が捨てられ `app` の型は `Hono<Env, BlankSchema>` のまま変わらない
+- 結果: `client.api['ai-rules']` にアクセスしても TypeScript が型を解決できず `TS7053: any` になる
+
+**根拠・証拠（Evidence）（修正前後）**:
+- 修正前: `useAIRulesRPC.ts` L38, L52 に `TS7053: Property 'ai-rules' does not exist` × 2件
+- 修正後: 命令型 → チェーン形式に書き直し → TS7053 0件
+
+**副次的に発見した問題**:
+- `LearningRuleUi` 型に存在しない `actions` フィールドがモックデータに混入していた
+  → 命令型のときは型が `any` だったため検出されなかった（チェーン形式で初めて表面化）
+- `rules[index]` の `undefined` の可能性が `findIndex` 確認後でも型推論上残る
+  → `as LearningRuleUi` キャストで対処（`findIndex !== -1` の後なので実行時安全）
+
+**今後のルール（再発防止）**:
+- 新規ルートファイル作成時は必ずチェーン形式: `const app = new Hono().get(...).post(...)`
+- `export default app` の前に `export type AppRouteType = typeof app` を追加することを推奨
+
+---
+
+## DL-014 | Layer 4 取引先業種判定フロー確定（2026-04-04）
+
+**状態**: 設計確定（未定義事項あり。T-P3プロンプト設計時に補完）
+
+### 確定フロー
+
+```
+Step 3: L1-3（T番号・電話・正規化）
+  ↓ 照合成功 → 科目直決定（vendor_vectorはマスタ取得。Gemini不要）
+
+  ↓ 照合失敗 → Layer 4（Geminiフォールバック）
+
+  ① 人名のみ
+     → 即 'unknown'（絶対ルール。名前から業種は判断不可能）
+
+  ② source_type が bank_statement / credit_card
+     → 即 'unknown'（構造的に住所・電話が存在しない）
+
+  ③ source_type が receipt / invoice_received かつ
+     住所または電話番号がOCRで取得できている
+     → GSG（Google Search Grounding）実行
+       ↓ 2つ以上の独立ソース一致かつ業種が明記
+         → 65種のいずれかを返す
+       ↓ 不一致・業種不明記・混同リスク
+         → 'unknown'
+
+  ④ ③以外（住所・電話なし）
+     → 即 'unknown'
+
+  ⑤ 摘要・取引先情報が空または意味不明
+     → null（情報がそもそもない）
+```
+
+### vendor_vector 3状態の確定定義
+
+| 値 | 意味 | 設定者 |
+|---|---|---|
+| `'taxi'` 等65種 | 業種確定 | L1-3マスタ照合 or GSG成功 |
+| `'unknown'` | 情報はあるが業種を確信を持って判断できない（Geminiの降参宣言） | Gemini Layer 4 |
+| `null` | 取引先情報そのものがない（摘要空・数字のみ等） | Gemini Layer 4 |
+| `undefined` | Step 3未実行 | — |
+
+**重要**: Geminiに65種への強制分類を禁止。判断できなければ必ず `'unknown'`。
+
+### GSGプロンプトルール（確定）
+
+```
+【発動条件】
+- L1-3照合失敗 かつ
+- source_type が receipt または invoice_received かつ
+- 住所または電話番号がOCRで取得できている場合のみ
+
+【検索ルール】
+- T番号がある場合: 法人番号で検索（最優先）
+- T番号なし: 社名＋住所完全一致 または 電話番号で検索
+- 部分一致禁止
+
+【情報採用ルール】
+- 公式サイトまたは政府データを最優先
+- 2つ以上の独立ソースで一致した情報のみ採用
+- 業種は明記されている場合のみ採用
+- 推測・補完禁止
+
+【排除ルール】
+- 同名企業の混同禁止
+- 住所不一致の情報は無効
+- 古い情報は除外
+
+【出力ルール】
+- 結論を最初に書く
+- 特定できない場合は「特定できない」と明記 → 'unknown'を返す
+- 根拠を簡潔に示す（使用ソース）
+```
+
+### 未定義事項（T-P3プロンプト設計時に確定）
+
+| # | 未定義項目 | 重要度 |
+|---|---|---|
+| U-1 | L2（電話照合）失敗後にGSGで同じ電話番号を使う場合の明文化 | 中 |
+| U-2 | 「古い情報は除外」の具体的判断基準 | 低 |
+| U-3 | GSG結果から65種への変換ロジック（「飲食業」→'restaurant'等のマッピング） | 高 |
+| U-4 | `vendor_vector_confidence` フィールドを追加するか否か | 中 |
+
+---
+
+## DL-015 | 全体パイプラインフロー確定（2026-04-04）
+
+**状態**: 確定
+
+### 入力ファイル判定（Step 0より前）
+
+> **エントリーポイント**: アップロードUI（`/client/upload/:clientId`）
+> **テストURL**: `http://localhost:5173/#/client/upload/LDI-00008`
+
+| ファイル種別 | 処理 |
+|---|---|
+| CSV・Excelファイル | アップロードUI（B画面: `/client/upload-docs/:clientId`）で受付。人間がMFに直接インポート |
+| 画像・PDFファイル | アップロードUI（A画面）で受付 → 以降のパイプラインへ |
+
+### Step 0: 証票種別判定（source_type 11種）→ ProcessingMode 3種に分類
+
+| ProcessingMode | source_type（英語値） | source_type（日本語） | 内容 |
+|---|---|---|---|
+| `auto`（自動仕訳 7種） | receipt / invoice_received / tax_payment / journal_voucher / bank_statement / credit_card / cash_ledger | 領収書 / 受取請求書 / 納付書 / 振替伝票 / 通帳・銀行明細 / クレカ明細 / 現金出納帳 | Step 1以降のパイプラインへ |
+| `manual`（手入力仕訳 2種） | invoice_issued / receipt_issued | 発行請求書 / 発行領収書 | 情報不足フローへ |
+| `excluded`（対象外 2種） | non_journal / other | 仕訳対象外 / その他 | Drive資料選別UIへ |
+
+### excluded（仕訳対象外）の以降
+
+```
+drive-select UI（/client/drive-select/:clientId）
+  └ 戻す   → 通常パイプライン（auto）に差戻し
+  └ 戻さない → 仕訳対象外フォルダに保存
+               CSVやExcelは人間がMFに直接インポート
+```
+
+**実装確認**: `isNonJournal()` 関数が `source_type.type.ts` に実装済み。  
+**UIで確認**: `/client/drive-select/:clientId` ページが存在し、drive-selectセレクター機能が実装済み。
+
+### level: 'insufficient' の出力方針（確定）
+
+| フィールド | 出力内容 | 理由 |
+|---|---|---|
+| 日付 | OCR確定値（事実データ） | UIで「未確定」赤警告を出さないため |
+| 金額 | OCR確定値（事実データ） | 同上 |
+| 摘要（原文） | OCR取得テキスト（事実データ） | 人間が内容を確認できるように |
+| 仕訳方向 | 判定済み確定値（事実データ） | 科目選択の前提情報 |
+| 科目 | 「--」または `null` | UIが赤背景で警告→人間が選択 |
+| 税区分 | `null` | 科目選択後に連動して絞り込み |
+| 科目候補 | 推定できる場合のみ配列 | 人間の選択を助けるため |
+
+**確認**: journal-list UI（/client/journal-list/:clientId）で科目「--」行が赤背景で表示され、人間の注意を促す設計が実装済み（2026-04-04 UI確認済み）。
+
+---
+
+## DL-016 | 取引先外（non_vendor）フロー確定（2026-04-04）
+
+**状態**: 確定・実装完了（2026-04-04 A-9〜A-13完了）
+
+**実装済みファイル**: `src/mocks/types/pipeline/line_item.type.ts` v1.3
+
+### null（取引先情報なし）は上位概念
+
+```
+Step 3 入り口判定:
+  取引先として識別できる情報がある？（会社名・T番号・電話等）
+
+  YES → 取引先ありフロー（L1-3 → Layer 4）
+  NO  → 取引先外フロー（non_vendor_type / tax_type で処理）
+```
+
+### transaction_type フィールドは不要（削除確定）
+
+```
+❌ transaction_type: 'vendor_based' | 'non_vendor'
+   → vendor_vector または non_vendor_type のどちらが設定されているかで判定できる。冗長。
+```
+
+### LineItemに追加するフィールド（A-9 / A-10）
+
+```typescript
+non_vendor_type?: NonVendorType | null
+// どちらか一方のみ設定される（相互排他。両方同時に設定しない）
+tax_type?: TaxType | null
+```
+
+### NonVendorType 確定定義（→ DL-017で8種→24種に拡張済み。最新定義は `non_vendor.type.ts` を参照）
+
+```typescript
+/**
+ * 取引先外取引の種別（non_vendor_type）
+ * → DL-017で8種→24種に拡張済み（銀行9+クレカ7+人間判断8）
+ * → CREDIT_CARD_FEEは廃止。クレカ7種に分割済み
+ * 最新定義: src/mocks/types/pipeline/non_vendor.type.ts
+ */
+type NonVendorType = ...; // 24種。詳細は non_vendor.type.ts 参照
+```
+
+### TaxPaymentType 確定定義（→ TaxTypeからTaxPaymentTypeに改名済み: 2026-04-04）
+
+```typescript
+/**
+ * 税金の種別（tax_type）
+ * → 型名を TaxType から TaxPaymentType に改名済み（2026-04-04）
+ * 納付書（source_type: 'tax_payment'）および
+ * 通帳・銀行明細（bank_statement）内の税金行の両方で使用
+ * 税金（TAX）は取引先外（non_vendor）に含めない。独立カテゴリ。
+ * 最新定義: src/mocks/types/pipeline/non_vendor.type.ts
+ */
+type TaxPaymentType =
+
+  // ✅ 科目推定可能（自動確定）
+  | 'CORPORATE_TAX'        // 法人税等　　　　 法人税等 ／ 普通預金
+  | 'CONSUMPTION_TAX'      // 消費税　　　　　 未払消費税 ／ 普通預金
+  | 'BUSINESS_TAX'         // 事業税　　　　　 租税公課 ／ 普通預金
+  | 'WITHHOLDING_TAX'      // 源泉所得税　　　 預り金 ／ 普通預金
+
+  // ❌ 科目推定不可（情報不足。人間が判断）― 事業形態で変わる
+  | 'RESIDENT_TAX'         // 住民税（法人→法人税等 ／ 個人事業主→事業主貸）
+```
+
+
+### 主に発生するsource_type
+
+| source_type（英語値） | 日本語 | 取引先外発生 | 備考 |
+|---|---|---|---|
+| bank_statement | 通帳・銀行明細 | ✅ 頻繁 | ATM・利息・手数料・振込等 |
+| credit_card | クレカ明細 | ✅ 頻繁 | 年会費・利息・キャッシュバック等 |
+| cash_ledger | 現金出納帳 | △ 稀 | 現金入出金の一部 |
+| receipt | 領収書 | ❌ 基本発生しない | 取引先名が必ず存在する |
+| invoice_received | 受取請求書 | ❌ 基本発生しない | 同上 |
+| tax_payment | 納付書 | ❌ 発生しない | tax_typeで独立処理 |
+
+---
+
+## 📌 アーキテクチャ概要（全体像・確定版）
+
+```
+【入力ファイル判定】
+  CSV・Excelファイル → drive-select UIへ（仕訳対象外）
+                       人間がMFに直接インポート
+  画像・PDFファイル  → パイプラインへ
+        ↓
+  Step 0: 証票種別判定（source_type 11種）
+    excluded（対象外）: non_journal（仕訳対象外） / other（その他）
+      → Drive資料選別UI → 戻す/戻さない判断
+    manual（手入力仕訳）: invoice_issued（発行請求書） / receipt_issued（発行領収書）
+      → 情報不足フローへ（日付・金額のみ確定して科目は人間が入力）
+    auto（自動仕訳）: receipt（領収書） / bank_statement（通帳・銀行明細） 等
+      → Step 1へ
+        ↓
+  Step 1: 仕訳方向判定（direction）
+    expense（出金） / income（入金） / transfer（振替） / mixed（混在）
+        ↓
+  Step 2: 過去仕訳照合（history_match: confirmed_journals_*.ts）
+    一致 → 科目直決定（終了）
+    不一致 ↓
+        ↓
+  Step 3: 【取引先あり】か【取引先外】かを判定
+
+    【取引先あり】（DL-027確定フロー）
+      3-1: T番号照合（全社マスタ.t_numbers）
+      3-2: 電話番号照合（全社マスタ.phone_numbers）
+      3-3: 会社名照合（全社マスタ.match_key 完全一致）
+        → 照合成功 → 業種（vendor_vector）確定 → Step 4へ
+        → 照合失敗 → Layer 4（Geminiフォールバック）
+            人名のみ・通帳（bank_statement）/クレカ明細（credit_card）・住所電話なし
+              → 業種不明（vendor_vector: 'unknown'）
+            領収書（receipt）/受取請求書（invoice_received） + 住所か電話あり
+              → GSG（Google Search Grounding）実行
+                検索成功 → 65種のいずれか確定
+                検索失敗 → 業種不明（'unknown'）
+
+    【取引先外】（DL-017: 24種。ATM・利息・手数料・税金・口座間移動 等）
+      3-0: 取引先外パターン照合（顧問先マスタ.match_key）
+      科目推定可能 → 自動確定（16種）:
+        銀行明細: ATM / INTEREST_INCOME / INTEREST_EXPENSE / BANK_FEE /
+          ACCOUNT_FEE / FOREIGN_EXCHANGE_FEE / INTERNAL_TRANSFER /
+          LOAN_RECEIPT / LOAN_REPAYMENT
+        クレカ明細: CREDIT_CARD_ANNUAL_FEE / CREDIT_CARD_STATEMENT_FEE /
+          REVOLVING_FEE / CARD_CASH_ADVANCE_FEE / CARD_CASH_ADVANCE_INTEREST /
+          FOREIGN_TRANSACTION_FEE
+        税金: CORPORATE_TAX / CONSUMPTION_TAX / BUSINESS_TAX / WITHHOLDING_TAX
+      科目推定不可 → 人間が選択（8種）:
+        CREDIT_CARD_LATE_FEE / CASHBACK / UNIDENTIFIED_SALARY /
+        UNIDENTIFIED_INFLOW / UNIDENTIFIED_OUTFLOW / PETTY_CASH_ADJUSTMENT /
+        SUBSIDY_RECEIVED / INSURANCE_RECEIVED / OTHER_NON_VENDOR /
+        RESIDENT_TAX（住民税）
+        ↓
+  Step 4: 科目確定
+    取引先あり: 業種（vendor_vector） × 仕訳方向（direction） → 業種辞書 → 科目マスタ
+    取引先外:   取引先外種別（non_vendor_type）/ 税種別（tax_type） → 科目マスタ直参照
+
+  自動確定（level: 'A'）    → 科目確定（自動出力）
+  情報不足（level: 'insufficient'） → 確定値（日付・金額・摘要）のみ確定。
+                                      科目「--」・税区分空白でUI返却。
+                                      UIが赤背景警告→人間が選択
+        ↓
+  LineItem[]（line_item.type.ts）
+        ↓ lineItemToJournalMock()（変換関数）
+  JournalPhase5Mock[]
+        ↓ expandJournalToMfRows()
+  MfCsvRow[]
+        ↓ downloadMfCsv()
+  CSV / Excel ダウンロード（MFクラウドインポート用）
+
+担当分担:
+  Gemini: 画像読み取り・Step 0〜1・Step 3 Layer 4（GSG含む）
+  TS:     Step 2〜4・変換・CSV出力・バリデーション
+```
+
+---
+
+## 旧ページ（OLD系 UI）一覧（2026-04-04 調査済み）
+
+Z-1〜Z-15の型エラー修正が旧ページに影響しないことを全件確認済み。
+
+| URL | マップ先コンポーネント | `aaa_useJournalEditor` / `JournalService`（旧）依存 | 備考 |
+|---|---|---|---|
+| `/#/old/journals/demo` | `src/views/ScreenB_JournalStatus.vue` | なし ✅ | 顧問先仕訳一覧（旧） |
+| `/#/old/tasks/demo` | `src/views/ScreenH_TaskDashboard.vue` | なし ✅ | タスクダッシュボード（旧） |
+| `/#/old/admin` | `src/views/ScreenZ_AdminSettings.vue` | なし ✅ | 管理者設定（旧） |
+| `/#/old/collection/demo` | `src/components/ScreenC_CollectionStatus.vue` | なし ✅ | 資料収集状況（旧） |
+| `/#/old/ai-rules/demo` | `src/views/ScreenD_AIRules.vue` | なし ✅ | AIルール設定（旧） |
+| `/#/old/data-conversion/demo` | `src/views/ScreenG_DataConversion.vue` | なし ✅ | データ変換（旧） |
+| `/#/journal-entry/job_draft_01?mode=work` | `src/views/ScreenE_Workbench.vue` | なし ✅ | **2026-04-05 ルート `/journal-entry/:id` 追加済み。正常表示確認済み（MockデータREADY_FOR_WORK）** |
+
+### 調査方法
+各コンポーネントファイルを直接 `grep` で検索（`useJournalEditor` / `JournalService` / `aaa_use`）。全件ヒットなし確認済み。
+
+### ⚠️ 発見した旧ページの問題（全件解消済み 2026-04-05）
+- `/#/journal-entry/job_draft_01?mode=work` — ルート未定義 → **解消**: `/journal-entry/:id` → `ScreenE_Workbench.vue` を追加
+
+---
+
+## DL-017 | NonVendorType拡張（8種→24種）とファイル分離設計（2026-04-05）
+
+**状態**: 設計確定・`non_vendor.type.ts` 新規作成完了
+
+### 決定内容
+
+1. **`NonVendorType` を `line_item.type.ts` から `non_vendor.type.ts` に分離する**
+   - `vendor.type.ts` に `VendorVector` が定義されているのと対称的な設計
+   - `line_item.type.ts` は `re-export`（`export type { NonVendorType, TaxPaymentType } from './non_vendor.type'`）に変更
+
+2. **`NonVendorType` を 8種 → 24種に拡張する**
+   - 銀行明細（自動確定）9種 + クレカ明細（自動確定）7種 + 人間判断8種
+   - 廃止: `CREDIT_CARD_FEE`（単一）→ クレカ7種に分割
+
+3. **科目候補辞書データファイルを法人/個人で分離する**
+   - `industry_vector_corporate.ts` / `industry_vector_sole.ts` と同じパターン
+   - `non_vendor_account_corporate.ts`（法人用）
+   - `non_vendor_account_sole.ts`（個人事業主用）
+   - 差異点: `UNIDENTIFIED_SALARY`（法人: SALARIES / 個人: OWNER_DRAWING）等
+
+### パイプラインStep4 現状調査結果（2026-04-05）
+
+**調査方法**: `INDUSTRY_VECTOR_CORPORATE` / `INDUSTRY_VECTOR_SOLE` のimport先を全件grep
+
+**結果**:
+```
+INDUSTRY_VECTOR_CORPORATE → import先: 0件（デッドコード）
+INDUSTRY_VECTOR_SOLE      → import先: 0件（デッドコード）
+```
+
+**現状アーキテクチャ（確定）**:
+```
+UI層（仕訳一覧）:
+  JournalListLevel3Mock.vue
+    └── useAccountSettings('client', clientId)
+          └── useClientAccounts(clientId) ← localStorage
+                └── ACCOUNT_MASTER + 顧問先カスタム科目
+  ✅ UIは顧問先科目マスタに接続済み
+
+パイプライン層:
+  INDUSTRY_VECTOR_CORPORATE / INDUSTRY_VECTOR_SOLE（辞書定義のみ）
+    ← どこからもimportされていない（Step4 = 科目確定ロジック 未実装）
+
+  NON_VENDOR_ACCOUNT_CORPORATE / NON_VENDOR_ACCOUNT_SOLE（今回作成予定）
+    ← 同様。辞書定義のみ（Step4実装まで未接続）
+```
+
+**技術的負債（既存）**:
+| ファイル | 問題 |
+|---|---|
+| `industry_vector_corporate.ts` | Step4未接続。辞書定義のみで科目確定ロジックに食わせていない |
+| `industry_vector_sole.ts` | 同上 |
+| パイプライン→UI 科目連携 | Step4（`INDUSTRY_VECTOR_*` → `useClientAccounts` フィルタ → 確定）が未実装 |
+
+**なぜStep4を今実装しないか**:
+- Step4実装には「パイプライン一括統合」が必要（Phase 2 Group 1）
+- 個別に接続すると設計が分散するリスクがある
+- 現状はモックデータで仕訳UIが動作しているため、業務影響なし
+
+### ACCOUNT_MASTER 確認事項（IDハードコード防止）
+
+```
+調査済みACCOUNT_MASTER ID（non_vendor_account_*.tsで使用するもの）:
+  ORDINARY_DEPOSIT     = 普通預金（L39、both）
+  CASH                 = 現金（L26、both）
+  FEES                 = 支払手数料（L500、both）
+  INTEREST_INCOME      = 受取利息（L1818、corp）
+  INTEREST_EXPENSE     = 支払利息（L1857、corp）
+  SHORT_TERM_BORROWINGS= 短期借入金（L1530、corp）
+  MISC_LOSS            = 雑損失（L1870、corp専用）
+  ACCRUED_EXPENSES     = 未払金（L261、both）
+  SALARIES             = 給料手当（L1688、corp）
+  OWNER_DRAWING        = 事業主貸（L751、individual）
+  WAGES                = 給料賃金（L948、individual）
+  DEPOSITS_RECEIVED    = 預り金（L275、both）
+  TAXES_DUES           = 租税公課（L487、both）
+  MISCELLANEOUS        = 雑費（L526、both、target: both）
+
+ACCOUNT_MASTERに存在しないID（使用禁止）:
+  SUBSIDY_INCOME → 存在しない。SUBSIDY_RECEIVED は insufficient(null) とする。
+  MISC_LOSS_CORP → 存在しない。MISC_LOSS（corp専用）を使用。
+```
+
+---
+
+## DL-018 | COUNTERPART_ACCOUNT_MAP設計確定（2026-04-05）
+
+**状態**: 設計確定・`src/mocks/utils/lineItemToJournalMock.ts` 作成完了
+
+### 決定内容
+
+| source_type（証票種別） | direction | 相手勘定ID | 科目名 |
+|---|---|---|---|
+| `bank_statement`（銀行明細） | expense/income | `ORDINARY_DEPOSIT` | 普通預金 |
+| `credit_card`（クレカ明細） | expense/income | `ACCRUED_EXPENSES` | 未払金 |
+| `receipt`（レシート・現金払い） | expense | `CASH` | 現金 |
+| `receipt`（レシート・クレカ払い） | expense | `ACCRUED_EXPENSES` | 未払金 |
+| `invoice_received`（受取請求書） | expense | `ACCOUNTS_PAYABLE` | 買掛金 |
+| `tax_payment`（納付書） | expense | `ORDINARY_DEPOSIT` | 普通預金 |
+| `cash_ledger`（現金出納帳） | expense/income | `CASH` | 現金 |
+| `journal_voucher`（振替伝票） | — | `null` | **insufficient確定。専用設計不要（2026-04-05 人間判断）** |
+
+- 相手勘定の税区分は全件 `COMMON_EXEMPT`（対象外）で確定
+- `receipt` の `is_credit_card_payment=true` 時は `ACCRUED_EXPENSES`（未払金）に上書き
+  → `resolveCounterpartAccount()` 関数で分岐を吸収
+
+---
+
+## DL-019 | lineItemToJournalMock() 変換関数実装確定（2026-04-05）
+
+**状態**: 実装完了・`src/mocks/utils/lineItemToJournalMock.ts` に D-1〜D-6 追記
+
+### 確定内容
+
+| 項目 | 実装内容 |
+|---|---|
+| D-1 | `lineItemToJournalMock(items, sourceType, clientId, isCreditCardPayment?, idOffset?)` |
+| D-2 | expense: 借方=確定科目, 貸方=相手勘定 / income: 逆。null → entries=[] |
+| D-3 | `LineItem.sub_account`（補助科目）→ `JournalEntryLine.sub_account` |
+| D-4 | 主科目: `LineItem.tax_category` → `tax_category_id` / 相手勘定: `COMMON_EXEMPT`（対象外）固定 |
+| D-5 | `level='insufficient'` または `determined_account=null` → `labels: ['ACCOUNT_UNKNOWN']` |
+| D-6 | `VOUCHER_TYPE_MAP` + `resolveVoucherType()` |
+
+### D-5 設計ズレ修正（2026-04-05 確定）
+
+**旧設計（task.md記載）**: `level='insufficient'` → `classification_status: 'needs_review'`
+**問題**: `JournalPhase5Mock.status` は `'exported' | null` のみ。`classification_status`フィールドが存在しない
+**修正後確定実装**: `labels: ['ACCOUNT_UNKNOWN']` を付与することで代替
+
+### voucher_type マッピング確定値（D-6）
+
+| source_type × direction | voucher_type |
+|---|---|
+| bank_statement × expense | `'経費'` |
+| bank_statement × income | `null`（内容次第・人間判断） |
+| credit_card × expense | `'クレカ'` |
+| receipt × expense（現金払い） | `'経費'` |
+| receipt × expense（クレカ払い） | `'クレカ'` |
+| invoice_received × expense | `'経費'` |
+| tax_payment × expense | `'経費'` |
+| cash_ledger × expense | `'経費'` |
+| cash_ledger × income | `null`（内容次第・人間判断） |
+| journal_voucher | `'振替'` |
+| その他 | `null` |
+
+---
+
+## DL-020 | validation.ts 実装確定（2026-04-05）
+
+**状態**: 実装完了・`src/mocks/utils/pipeline/validation.ts` 新規作成
+
+### 確定内容
+
+| 関数 | 実装内容 |
+|---|---|
+| `isValidTNumber(s): boolean` | T+13桁 boolean ラッパー（E-1） |
+| `normalizePhoneNumber(s): string\|null` | `validatePhone()` alias。10/11桁以外はnull（E-2） |
+| `normalizeTNumber(s): string\|null` | Tプレフィックス補完・スペース/ハイフン除去（E-3。新規実装） |
+
+### 配置先修正
+
+- **旧（task.md記載）**: `src/mocks/types/pipeline/validation.ts`
+- **修正後**: `src/mocks/utils/pipeline/validation.ts`
+- **理由**: ユーティリティ関数を `types/` に配置するのは設計上不適切
+
+### スコープ外問題（E-2前提の誤り）
+
+- task.md では「`vendorIdentification.ts` に空実装あり」と記載
+- **実際**: `normalizePhone()` / `validatePhone()` は T-P3 round2 実測結果を踏まえて**完全実装済み**
+- `normalizePhoneNumber()` は `validatePhone()` の alias として実装
+
+---
+
+## DL-021 | 次フェーズ方針確定（2026-04-05）
+
+**確定内容:**
+- **T-P3（取引先特定4層OCR精度確認）は後回し**。UI作成を優先。
+- **UIより前に取引先マスタTSデータ（`vendors_*.ts`）を先に作成**する
+- 業種マスタUI・取引先外マスタUIはTSデータ完了済みのため次フェーズで即作成可能
+
+### 次フェーズ優先順位
+
+| 優先 | タスク | 依存 |
+|---|---|---|
+| **H** | `vendors_*.ts` 取引先マスタTSデータ作成 | なし（次の最優先） |
+| **I-①** | 全社用マスタUI 3種（取引先外・業種・取引先） | H完了（取引先マスタUIのみ） |
+| **I-②** | 個別顧問先マスタUI 3種 | H完了 |
+| T-P3 | 取引先特定4層OCR精度テスト | H完了後以降 |
+
+### T-P3補足（2026-04-05確認）
+
+- Layer 1〜3（T番号・電話・名称マッチ）は T-P3 round2 実測済み（100%/72%/94%）
+- T-P3の主目的は **Layer 4（Geminiフォールバック）の vendor_vector 66種推定精度 + 降参宣言率（`'unknown'`を正直に返せるか）**
+- 降参宣言率の確認がパイプライン品質に最も影響する
+
+---
+
+## DL-022 | マスタアーキテクチャ確定（2026-04-05）
+
+**決定**: 全社共通マスタ（vendors_global）と顧問先固有マスタ（vendors_client）の2層構造。
+
+### マージ方式
+
+| 方式 | 決定 |
+|---|---|
+| TSビルド時マージ | ❌ 採用しない |
+| UIレイヤー（composable）で実行時解決 | ✅ 採用 |
+
+**参照優先順序**:
+```
+vendors_client[clientId]  ← 顧問先固有設定（最優先）
+    ↓ 未登録
+vendors_global            ← 全社共通設定（fallback）
+    ↓ 未登録
+→ unknown（人間が判断）
+```
+
+### Vendor型設計確定（t_numbers配列化 + DL-027 match_key導入）
+
+| 変更内容 | 詳細 |
+|---|---|
+| `t_number: string` → `t_numbers: string[]` | FCなど同一ブランドで複数T番号対応 |
+| `brand_id?: string`（任意） | 'MCDONALDS'等，FCグループ識別用 |
+| `phone_numbers?: string[]` | 電話番号も複数対応 |
+| `normalized_name` → **廃止** | `match_key`（照合キー。`normalizeVendorName(company_name)`で自動導出）に置き換え（DL-027） |
+| `match_key: string`（新規） | 照合キー。正規化済み。照合用。最上位概念 |
+| `display_name: string | null`（新規） | 証票に表示された正規化前の原文（通帳・クレカ用）|
+| `aliases` | 照合キーとしては使わない（DL-027確定）。記録・UI表示のみ |
+
+**なぜt_numbers配列か**:
+- マクドナルド等FCでは各FC法人が独自のT番号（法人番号）を持つ
+- 本社・主要直営のT番号のみ `t_numbers[]` に登録
+- 未登録FCはStep 3-3（match_key完全一致）にフォールバック
+- 科目・業種はブランド（match_key）単位で1つに統一
+
+### ファイル構成確定
+
+| ファイル | 役割 | 状態 |
+|---|---|---|
+| `vendors_global_master.md` | 設計記録のみ（TSがSSOT） | 取引先詳細削除済み（2026-04-05） |
+| `vendors_client_master.md` | 顧問先固有の差分（最優先）| 作成中 |
+| `vendors_global.ts` | 全社共通TSデータ（SSOT） | **実装完了（224件。2026-04-05）** |
+| `vendors_client.ts` | 顧問先固有TSデータ | 未実装（次フェーズH優先） |
+
+**vendors_client_master.md への vendors_global 同期は不要（2026-04-05 確定）**:
+- 顧問先別取引先マスタは「過去仕訳・今後の仕訳で発生した取引先を都度追加」する方式
+- 全社マスタ（vendors_global）の内容をコピーしない
+- vendors_client は顧問先固有の差分設定のみを保持する
+
+---
+
+## DL-023 | 業種ベクトル68種確定（2026-04-05）
+
+**決定**: VendorVector を66種から68種に拡張（telecom/saas分割）。
+
+| 変更内容 | 詳細 |
+|---|---|
+| `telecom_saas` | **@deprecated**（互換性のため残存。新規使用禁止） |
+| `telecom`（新規） | A確定: COMMUNICATION（通信費）。携帯/固定回線/ISP |
+| `saas`（新規） | insufficient: COMMUNICATION / FEES。AWS/Google/Microsoft等 |
+| `gas_station` | TRAVEL → **VEHICLE_COSTS**（車両費）に変更 |
+| `parking` | A確定: TRAVEL（旅費交通費） |
+| `convenience_store` | insufficient: expense[0]=SUPPLIES_CORP, expense[1]=MEETING |
+| `cafe` | A確定: MEETING（会議費） |
+| `drugstore` | A確定: SUPPLIES_CORP（消耗品費） |
+| `beauty` | A確定: WELFARE（福利厚生費） |
+| `printing` | A確定: ADVERTISING（広告宣伝費） |
+
+**優先表示科目ルール確定**:
+- `expense[0]` = 優先表示科目（UIで最初に提示するデフォルト）
+- 優先度: `Vendor.default_account` > `expense[0]` > `expense[1...]`
+- vendors_*_master.md の借方勘定科目欄先頭 = `expense[0]`
+- AIの独自意見は記載禁止。VV確定（業種68）のみ正
+
+**実装済みファイル**:
+- `src/mocks/types/pipeline/vendor.type.ts`（VendorVector型定義 68種 + `debit_account_over`フィールド追加。2026-04-05）
+- `src/mocks/data/pipeline/industry_vector_corporate.ts`（68種。ec_siteにincome: ['SALES']追加。2026-04-05）
+- `src/mocks/data/pipeline/industry_vector_sole.ts`（68種）
+- `src/mocks/data/pipeline/vendors_global.ts`（224件。全件direction/debit_account/debit_account_over設定済み。2026-04-05）
+
+---
+
+## DL-024 | 取引先マスタ税区分設計確定（2026-04-05）
+
+
+**決定**: vendor系取引先の税区分は `ACCOUNT_MASTER.defaultTaxCategoryId` から自動連動。
+
+| 系統 | 税区分の取得元 |
+|---|---|
+| vendor系（取引先あり） | `ACCOUNT_MASTER[借方科目ID].defaultTaxCategoryId` から自動連動 |
+| non_vendor系（取引先外） | `NonVendorAccountEntry.tax_category` に明示（TAX_CATEGORY_MASTER ID） |
+
+**実装影響**:
+- `vendors_global_master.md` / `vendors_client_master.md` の借方税区分欄は `← ACCT[科目ID].defaultTaxCategoryId` 表記にする（参照式・具体値なし）
+- 免税顧問先（`consumptionTaxCategory: 'EXEMPT'`）はパイプラインが全件 `COMMON_EXEMPT`（対象外）に自動変換
+- 簡易課税は本則と同じ税区分を記録し、申告時のみ簡易計算
+
+---
+
+## DL-025 | JobStatus型拡張・ルーター整備（2026-04-05）※旧DL-017重複を番号修正
+
+**状態**: 完了（コミット `a1c4692`）
+
+### JobStatus型拡張
+
+**決定**: `src/types/job.ts` の `JobStatus` に `'excluded'`（対象外）と `'approved'`（承認済み）を追加。
+
+**なぜか**:
+- `ScreenE_LogicMaster.vue` の `executeBatch` で `case 'exclude'` が `status = 'remanded'` にフォールバックしていた（意味が誤り）
+- `JobStatus` 型にこれらが存在しなかったため、型エラーを避けるために近い値で代用していた
+- 追加後、`case 'exclude': status = 'excluded'` に正しく修正
+
+**今後のルール**:
+- `JobStatus` の拡張は、UI・パイプラインの業務フロー上の状態遷移設計と整合させること
+- 新しい状態を追加したら `executeBatch` のswitch文・UIのステータスバッジも必ず同時更新
+
+### ルーター整備
+
+**決定**: 以下4ルートを `src/router/index.ts` に追加。
+
+| パス | コンポーネント | 用途 |
+|---|---|---|
+| `/client/detail/:clientId` | `ScreenA_ClientDetail.vue` | 顧問先詳細 |
+| `/client/workbench/:clientId` | `ScreenE_Workbench.vue` | 仕訳ワークベンチ（clientId引き） |
+| `/screen-e/:clientId` | `ScreenE_LogicMaster.vue` | 旧ScreenE互換URL |
+| `/journal-entry/:id` | `ScreenE_Workbench.vue` | 仕訳エントリー（jobId引き・mode=work対応） |
+
+**確認済み**:
+- `/journal-entry/job_draft_01?mode=work` — MockデータがJournalServiceから正常取得・画面表示確認
+- `/client/detail/LDI-00001` — `taxFilingTypeLabel`「青色申告」表示確認
+
+---
+
+## DL-026 | T番号・照合設計原則確定（2026-04-05）
+
+**目的**: vendors_global.ts生成にあたりT番号の役割を確定する。
+
+### 確定内容
+
+| 原則 | 内容 |
+|---|---|
+| **T番号の目的** | 取引先・サービス名の一意特定が目的。税額控除確認は目的ではない |
+| **適格性前提** | 全社取引先マスタ登録企業は100%適格事業者 |
+| **照合フロー** | Step 2（過去仕訳照合）→ Step 3-1（T番号）→ Step 3-2（電話番号）→ Step 3-3（match_key完全一致）→ null（人間が手入力）※DL-027で確定 |
+| **source_type分岐** | 不要。T番号・電話番号の有無で自然にフォールバック |
+| **T番号と証票** | 領収書・請求書にはT番号記載あり。銀行明細・カード明細には記載なし |
+| **match_keyの役割** | 全source_typeに共通して機能する照合キー（`normalizeVendorName()` で自動導出）|
+
+### t_numbers 設計
+
+| 値 | 意味 |
+|---|---|
+| `['T1234567890123']` | T番号確認済み |
+| `[]` | T番号不明（免税事業者・個人・未確認。税務上は同一扱い。バリデーション警告対象） |
+
+- `null` は使用しない（外形的に免税事業者と未確認を区別できないため）
+- `vendor_vector === 'individual'` の場合、`t_numbers: []` のバリデーション警告レベルを下げる
+
+### T番号重複（同一法人・異なるサービス名）の方針
+
+- 同一T番号 = 同一法人 → **1エントリに統合**
+- 通帳・カード明細にはサービス名が記載されるため `aliases` にブランド名を列挙（照合キーとしては使わない。記録・UI表示のみ。DL-027確定）
+- 例: オプテージ + mineo + eo光 → `t_numbers: ['T9120001062589']`, `aliases: ['mineo', 'eo光']`
+
+---
+
+## DL-027 | 照合キー（match_key）設計確定（2026-04-06）
+
+**目的**: 照合キーの概念を統一し、取引先・取引先外を同一のロジックで処理可能にする。Geminiの推測を排除し、factのみ出力するパイプラインを構築する。
+
+### 設計思想
+
+パイプラインは**Geminiに安定して降参させるための仕組み**。Geminiは「目」（OCR読み取り）のみ。科目判断には関与させない。確実にわかること（日付・金額・摘要）だけ自動出力。わからないことはnullで返し、UIバリデーション（赤背景）で人間に通知。手入力結果は顧問先マスタに蓄積され、次回から自動確定。使えば使うほど手入力が減る自動学習サイクル。
+
+### 3フィールド構成（案B確定）
+
+| フィールド | 日本語 | 用途 | 全社マスタ | 顧問先マスタ（領収書由来） | 顧問先マスタ（通帳由来） | 取引先外 |
+|---|---|---|---|---|---|---|
+| `match_key`（照合キー） | 照合キー | 正規化済み。照合用 | `関西電力` | `関西電力` | `カンサイデンリョク` | `ジドウフリカエリボ` |
+| `company_name`（正式名称） | 正式名称 | 登記名。T番号と1:1 | `関西電力株式会社` | `関西電力株式会社` | null | null |
+| `display_name`（表示名） | 表示名 | 証票に表示された正規化前の原文 | null | null | `カンサイデンリョク` | `ジドウフリカエ リボ` |
+
+- フィールド順序: `match_key` → `company_name` → `display_name`（照合キーが最上位概念）
+- 顧問先マスタの領収書由来エントリは、全社マスタと同じ`company_name`を持つ（全社マスタからコピー）
+- 通帳由来エントリは`company_name`がnull（通帳には登記名が記載されない）
+- 同一取引先でも漢字/カタカナは別エントリ。同じ科目に到達する
+
+### aliasesは照合キーに使わない
+
+aliases照合は一意確定が保証されない。記録・UI表示のみ（同一法人の別ブランド名の記録）。
+
+### 照合フロー（全体・優先順位付き）
+
+```
+Step 0: 証票種別判定（source_type 11種）
+  → excluded / manual / auto に分岐
+
+Step 1: 仕訳方向判定（direction）
+  → expense / income / transfer / mixed
+
+Step 2: 過去仕訳照合（confirmed_journals）
+  → 顧問先マスタ.match_key と完全一致 → 科目確定（終了）
+  → 不一致 ↓
+
+Step 3: 取引先照合
+  3-0: 取引先外パターン照合
+    → 顧問先マスタ.match_key（取引先外エントリ）と一致 → non_vendor_type確定（終了）
+    → 不一致 ↓
+  3-1: T番号照合
+    → 全社マスタ.t_numbers と一致 → 取引先確定（終了）
+    → 不一致 ↓
+  3-2: 電話番号照合
+    → 全社マスタ.phone_numbers と一致 → 取引先確定（終了）
+    → 不一致 ↓
+  3-3: 会社名照合
+    → 全社マスタ.match_key と完全一致 → 取引先確定（終了）
+    → 不一致 ↓
+  3-4: 不一致
+    → null（人間が手入力 → 顧問先マスタに蓄積 → 次回から自動）
+
+Step 4: 科目確定
+  取引先あり → vendor_vector × direction → 業種辞書 → 科目
+  取引先外 → non_vendor_type → 科目直参照
+  不明 → null → UIで赤背景警告 → 人間が手入力
+```
+
+### 取引先と取引先外は概念的に同質
+
+取引先外（ATM・利息等）も通帳摘要の正規化した照合キーとして同一テーブルで扱える。TSファイルの統合が正しい方針。計画的に実施する。
+
+### 全社マスタと顧問先マスタの役割分離
+
+| マスタ | 照合対象 | 照合キー | データ生成方法 |
+|---|---|---|---|
+| **全社取引先マスタ（vendors_global.ts）** | 領収書・請求書（コールドスタート用。通帳・クレカには使えない） | T番号・電話番号・match_key | 人間が手動登録 |
+| **顧問先取引先マスタ（vendors_client）** | 全証票 | match_key（過去仕訳の摘要を正規化した値） | 過去仕訳CSVから自動抽出 + 人間の手入力蓄積 |
+
+### normalizeVendorName() 改修事項
+
+- ひらがな→カタカナ変換を追加（カタカナ統一。通帳がカタカナ表記のため）
+- exampleの嘘（`エン・ジャパン→えんじゃぱん`）を修正（カタカナ→ひらがな変換は実装にない）
+- 漢字はそのまま残す（読み仮名変換は不可能。上手＝ジョウズ/カミテ）
+- 漢字↔カタカナの一致は追求しない（別のmatch_keyとして別エントリで管理）
+
+### 経緯
+
+1. `normalized_name`が手動入力されており共通関数で自動導出すべきか→ 廃止してmatch_keyに統一
+2. 全社マスタは領収書専用、通帳・クレカは顧問先マスタが担当と確認
+3. aliasesの照合キー利用は一意性が保証されないため不採用
+4. 取引先外も照合キーとして同質であることを確認（TS統合方針確定）
+5. 漢字↔カタカナの一致は技術的に不可能と確認
+6. `company_name`と`display_name`の2フィールド分離を確定（性質が異なる：法的名称 vs 証票表示原文）
+
+### 実施すべきこと
+
+| # | 項目 | 依存 | 状態 |
+|---|---|---|---|
+| 1 | **normalizeVendorName()改修** — ひらがな→カタカナ変換追加。exampleの嘘修正。NormalizationService削除 | なし | ✅ 完了（2026-04-06） |
+| 2 | **match_key / company_name / display_name の3要素をTSに反映** — Vendor型からnormalized_name削除。match_key・display_name追加。224件を`{ match_key, company_name, display_name: null }`形式に変換 | #1 | ✅ 完了（2026-04-06） |
+| 3 | **取引先と取引先外TSの統合** — non_vendor_account_*.ts削除。vendors_global.tsにコア要素を統合。MockMasterNonVendorPage.vue実装 | #2 | ✅ 完了（git `e2ecf1c` 2026-04-07） |
+| 4 | **全社取引先マスタUI** — match_key・company_name・業種・科目の閲覧・インライン編集・追加・削除 | #2 | ✅ 完了（MockMasterVendorsPage.vue。git `f3a156f`→`a16e701`。2026-04-06） |
+| 5 | **全社業種（vendor_vector）マスタUI** — 68業種の閲覧・科目候補の確認 | #2 | ❌ 未実施 |
+| 6 | **全社取引先外マスタUI** — MockMasterNonVendorPage.vue。CRUD機能・検索・フィルタ・ページネーション | #2 | ✅ 完了（git `e2ecf1c` 2026-04-07） |
+| 7 | **顧問先取引先マスタUI** — 取引先・取引先外を同一画面で管理。過去仕訳からの蓄積表示 | #3 | ❌ 未実施 |
+| 8 | **顧問先業種マスタUI** — 顧問先別の業種→科目マッピング上書き | #3 | ❌ 未実施 |
+
+### 決定済み事項（本セッション 2026-04-06）
+
+| # | 決定事項 | 根拠 |
+|---|---|---|
+| D1 | `normalized_name` 廃止 → `match_key`（照合キー）に統一 | 手動入力を排除し共通関数で自動導出 |
+| D2 | `match_key` = `normalizeVendorName(company_name or 摘要)` の出力 | 正規化のみ。読み仮名変換はしない |
+| D3 | 3フィールド構成: `match_key` / `company_name` / `display_name` | 法的名称と証票表示原文は性質が異なる（案B確定）|
+| D4 | `aliases` は照合キーとして使わない | 一意確定が保証されない。記録・UI表示のみ |
+| D5 | 漢字↔カタカナの一致は追求しない | 技術的に不可能（上手＝ジョウズ/カミテ）|
+| D6 | ひらがな→カタカナ変換を `normalizeVendorName()` に追加 | カタカナ統一（通帳がカタカナ表記のため）|
+| D7 | 同一取引先でも漢字/カタカナは別エントリ | 別match_key。別照合経路。同じ科目に到達 |
+| D8 | 顧問先マスタには領収書由来・通帳由来の両方が蓄積される | 漢字(`関西電力`)とカタカナ(`カンサイデンリョク`)が共存 |
+| D9 | 取引先と取引先外は概念的に同質 | 同一照合キーテーブルとしてTS統合する方針 |
+| D10 | `vendor_alias.type.ts` / `vendor_keyword.type.ts` は作成しない | DL-027でmatch_keyに統一。専用型不要 |
+| D11 | 照合フロー: Step 2（過去仕訳）が最優先。Step 3（T番号→電話→match_key）は全社マスタ用 | 過去仕訳で一致すれば全社マスタの照合自体が不要 |
+| D12 | 重複チェックは日付＋金額＋仕訳方向で行う | 取引先名の一致は補助情報。漢字↔カタカナ一致不要 |
+
+### 実施済み事項
+
+> 最終更新: 2026-04-07（セッション 1cd25cab）
+
+| # | セッション | 日付 | 実施内容 | ファイル |
+|---|---|---|---|---|
+| E1 | bd8b5ef7 | 2026-04-06 | DL-026 照合フロー記述を match_key ベースに更新 | `pipeline_design_master.md` |
+| E2 | bd8b5ef7 | 2026-04-06 | DL-022 Vendor型設計にmatch_key/display_name/aliases不使用を追記 | `pipeline_design_master.md` |
+| E3 | bd8b5ef7 | 2026-04-06 | DL-027 照合キー設計確定を追記 | `pipeline_design_master.md` |
+| E4 | bd8b5ef7 | 2026-04-06 | DL-027 設計確定を冒頭に追記。DL-026 aliases主力照合記述を削除 | `vendors_global_master.md` |
+| E5 | bd8b5ef7 | 2026-04-06 | DL-027 設計確定を冒頭に追記。正規化記述をmatch_keyに更新 | `vendors_client_master.md` |
+| E6 | bd8b5ef7 | 2026-04-06 | DL027-1〜4タスク追加。I項目をDL-027設計に再構成。vendor_alias/keyword廃止確定 | `task.md` |
+| E7 | bd8b5ef7 | 2026-04-06 | コミット `4625561` プッシュ完了 | git |
+| E8 | 7d74add7 | 2026-04-06 | DL027-1: normalizeVendorName() §3b ひらがな→カタカナ変換追加、@example嘘修正、JSDoc更新 | `vendorIdentification.ts` |
+| E9 | 7d74add7 | 2026-04-06 | DL027-1: GeminiVisionService import先をNormalizationService→vendorIdentification.tsに統一 | `GeminiVisionService.ts` |
+| E10 | 7d74add7 | 2026-04-06 | DL027-1: NormalizationService.ts 削除（呼び出し元ゼロ。6メソッド全デッドコード） | `NormalizationService.ts`（削除） |
+| E11 | 7d74add7 | 2026-04-06 | DL027-1: NormalizationService re-export削除 | `core/journal/index.ts` |
+| E12 | 7d74add7 | 2026-04-06 | DL027-1: ユニットテスト11ケース新規作成（全PASSED） | `vendorIdentification.test.ts`（新規） |
+| E13 | 7d74add7 | 2026-04-06 | DL027-2: Vendor型 normalized_name → match_key + display_name 追加。JSDoc全箇所修正 | `vendor.type.ts` |
+| E14 | 7d74add7 | 2026-04-06 | DL027-3: vendors_global.ts 224件一括置換（Node.jsスクリプト。normalized_name残留0件確認） | `vendors_global.ts` |
+| E15 | 1cd25cab | 2026-04-07 | DL027-2: vendor.type.ts 全文（514行）実ファイル確認。normalized_name 0件・match_key（L282）・display_name（L288）定義済みを確認 | `vendor.type.ts`（確認のみ） |
+| E16 | 1cd25cab | 2026-04-07 | DL027-3: vendors_global.ts normalized_name残留をgrep確認。0件確認（置換完了） | `vendors_global.ts`（確認のみ） |
+| E17 | 1cd25cab | 2026-04-07 | DL-027 #3（取引先と取引先外統合）: non_vendor_type/source_category/levelフィールドで統合済みを実ファイル確認。#3未実施→確認済みに更新 | `vendor.type.ts`（確認のみ） |
+| E18 | 1cd25cab | 2026-04-07 | マスタ管理ハブUI・全社取引先マスタUI（MockMasterVendorsPage.vue）実装済みを確認。DL-027 #4を完了済みに更新 | `vendors_global_master.md`（確認のみ） |
+| E19 | 1cd25cab | 2026-04-07 | task.md・pipeline_design_master.md を今セッション（1cd25cab）brainにコピー・最新状態に更新 | ブレインファイル |
+| E20 | — | 2026-04-06 | I-①a: MockMasterManagementPage.vue（マスタ管理ハブ）新規実装。MockMasterVendorsPage.vue（全社取引先マスタ一覧）新規実装。NavBar整理・ルーター追加（/master/vendors → ハブ、/master/vendors/list → 一覧） | git `f3a156f` |
+| E21 | — | 2026-04-06 | I-①a: MockMasterVendorsPage.vue を全面改修（データ駆動型UI・SSOT化・インライン編集・normalizeVendorName連動・追加・削除機能）。vendors_global_master.md 更新 | git `a16e701` |
+| E22 | — | 2026-04-07 | DL027-4・I-①c: non_vendor_account_corporate.ts / _sole.ts 削除。vendors_global.tsに統合。MockMasterNonVendorPage.vue（全社取引先外マスタ・CRUD）新規実装。vendor.type.ts/non_vendor.type.ts拡張。load_context.md厳格化 | git `e2ecf1c` |
+
+---
+
+## DL-028 | 科目推定アーキテクチャ設計議論（2026-04-08）
+
+**状態**: 議論完了・採否確定
+
+### 背景
+
+Phase 2 Group 3（Step 3: 業種ベクトル + Step 4: 科目確定）の実装に向け、科目推定の全体アーキテクチャについて6つの設計提案が出された。ユーザーがこれら全提案を冷徹に批評し、AIがそれを受けて見解を述べ、ユーザーが承認する形で採否が確定した。
+
+### 議論の経緯
+
+#### Phase A: ユーザーによる6提案の批評
+
+**① 全社マスタは科目を持たない・学習ありき**
+
+ユーザー評価: 良い点あり・問題あり
+- 良い点: 想像属性排除で現実的。既存仕訳活用は整合
+- 問題点: 「学習ありき」はコールドスタートを解決していない。新規顧問先の初回はどうする？ 既存仕訳データを全社マスタに正規化する処理の設計がない。vendors_global.ts（224件）との関係が曖昧
+
+**② メガベンダーフラグ（is_mega_vendor）**
+
+ユーザー評価: 致命的問題あり
+- Amazonが「仕入のみ」の顧問先（小売業）では is_mega_vendor は不要または有害
+- is_mega_vendor は「一般論」であって「この顧問先にとって」ではない
+- 顧問先レベルで「過去仕訳の科目種類数」で自動判定できる → フラグ不要論
+
+**③ 一意性判定（科目種類数 / 80%基準）**
+
+ユーザー評価: FACTベースで健全・問題あり
+- 良い点: 履歴があれば機能する
+- 問題点: 80%基準は根拠がない（恣意的）。選択肢の並び順・絞り込み方の設計がない。コールドスタートで完全に機能しない
+
+**④ ジャンル中間マスタ（3層: キーワード→ジャンル→科目）**
+
+ユーザー評価: 最も重大な問題あり
+- 良い点: 経理ルール変更時の保守性が高い。AIはジャンル分類が得意という観察は正しい
+- 問題点: ジャンルマスタを**誰が作るのか？** 初期整備コストが高い。vendors_global.ts（224件）と二重管理リスク。**VendorVector（68種）との役割がかぶっていないか？**（VendorVectorも実質「相手業種」分類）。Phase 2に必要か不明。過剰設計の可能性
+
+**⑤ 3軸クロスマッチング（自社業種×相手業種×ジャンル）**
+
+ユーザー評価: 最重大問題
+- 3軸マトリクスはほぼ無限に膨らむ（N × 68 × M = 管理不能）
+- STREAMEDは2軸（自社業種×相手業種）ですら会計事務所が泥臭く手作業整備
+- ジャンル軸を足すと指数的に組み合わせ増大。整備できるか？
+
+**⑥ STREAMEDのFACT記録をpipeline_design_masterに入れた件**
+
+ユーザー評価: 場所が不適切
+- リサーチメモであり設計決定事項ではない
+- pipeline_design_masterの役割は「Why + Evidence」
+- docs/に別ファイル（例: streamed_benchmark.md）として配置すべき
+
+#### Phase B: ユーザーの整理
+
+ユーザーが採用候補と不採用候補を整理した：
+
+| 提案 | ユーザー評価 | 理由 |
+|---|---|---|
+| 全社マスタは科目を持たない | 採用候補 | DL-027と整合。ただしコールドスタート解決策が別途必要 |
+| メガベンダーフラグ（全社） | 要再検討 | 顧問先レベルの判定で代替できる可能性あり |
+| 一意性判定（科目種類数） | 採用候補 | FACTベース。80%基準は調整要 |
+| ジャンル中間マスタ | 要再検討 | VendorVectorとの役割分担を先に整理すべき |
+| 3軸クロスマッチング | 優先度低 | 整備コストが高い。Phase 2以降 |
+| STREAMED FACT記録位置 | 要移動 | pipeline_design_masterではなくdocsへ |
+
+**ユーザーの核心質問**: 「最初に議論すべきは何か？」→「**VendorVectorとジャンルは役割が重複しているか**が最も影響範囲が大きい」
+
+#### Phase C: AIの見解
+
+核心問題「VendorVectorとジャンルの役割重複」に対するAI回答：
+
+**結論: 重複している。が、レイヤーが違う。**
+
+| 分類軸 | VendorVector（68種） | ジャンル中間マスタ |
+|---|---|---|
+| 何を分類するか | 取引**相手**の属性（何屋か） | 取引**内容**の属性（何を買ったか） |
+| 例 | セブンイレブン → `convenience_store` | セブンイレブンで買った弁当 → `食品` |
+| 科目推定の精度 | 相手から推定（曖昧） | 内容から推定（精密） |
+| データソース | マスタ照合で自動取得 | **品目OCRが必要**（開発コスト高） |
+
+```
+VendorVector = convenience_store
+  → 科目候補: 会議費 / 消耗品 / 福利厚生費 / 雑費（5→3に絞る）
+
+ジャンル = 食品
+  → 科目候補: 会議費 / 福利厚生費（3→2に絞る）
+  → まだ一意に決まらない（会議か福利厚生かは状況依存）
+
+差分はわずか1段階の絞り込み。品目OCR開発コストに見合うか？→ 現時点ではない。
+```
+
+**コールドスタート解決策（AI提案）**:
+```
+新規顧問先の初回仕訳:
+  Step 2（過去仕訳照合）→ null（履歴なし）
+  Step 3（取引先特定）→ T番号/電話/名称で照合 → vendors_global.ts にヒット
+  Step 4（科目推定）→ VendorVector + 自社業種 → 科目候補を提示
+  → 人間が選択 → 学習 → 2回目以降は自動
+
+初回は「候補提示 + 人間選択」で割り切る。STREAMEDも同じ方式。
+```
+
+#### Phase D: ユーザー承認
+
+AIの見解に対しユーザーが「OK」と承認。以下が確定した。
+
+### 確定事項
+
+| 提案 | 採否 | 確定理由 |
+|---|---|---|
+| 全社マスタは科目を持たない | ✅ 採用 | DL-027と整合。コールドスタートはVendorVector→候補提示→人間選択で対応 |
+| メガベンダーフラグ | ❌ 先送り | 顧問先レベルの科目種類数で代替できる可能性あり（ユーザー指摘）。代替案の検証結果次第で再検討 |
+| 一意性判定 | ✅ 採用 | FACTベースで健全。80%は初期仮値。実データで調整 |
+| ジャンル中間マスタ | ❌ 先送り | VendorVector+履歴学習で精度不足が実測された場合のみ再検討 |
+| 3軸クロスマッチング | ❌ 先送り | 整備コスト高（N×68×M）。データ十分・精度不足時のみ再検討 |
+| STREAMED FACT記録 | 📁 移動 | docs/に別ファイルとして配置すべき |
+
+> **②④⑤は全て同じ条件**: 「VendorVector + 履歴学習」の精度検証結果次第で再検討。現時点では不要。
+
+---
+
+## DL-029 | 顧客自律型不備解消アーキテクチャ（2026-04-08）
+
+**状態**: 設計確定（アップロードUIのコア価値として記録）
+
+### 背景・問題
+
+現状（Streamed導入前後共通）の不備対応フローは往復コストが高い。
+
+```
+【Before: 現状の損失構造】
+
+客が不備な資料を送る（ChatWork等）
+  ↓
+スタッフがStreamedで処理 → 不備発見（金額不明等）
+  ↓ 数時間〜数日後
+スタッフが客に通知「この領収書の金額が読めません」
+  ↓ さらに数時間〜数日後
+客が撮り直して再送
+  ↓
+スタッフが再アップロード
+
+往復コスト: スタッフ2回 × 客2回 = 4アクション / 不備1件
+```
+
+### 解決設計（このシステムの本質価値）
+
+```
+【After: 顧客自律型フロー】
+
+客が撮影してシステムに直接アップロード
+  ↓ 即座（〜2秒）
+Geminiがバリデーション → 不備を客の画面に即時表示（赤カード）
+  ↓ その場で
+客が赤カードをタップ → 撮り直し → 即再チェック
+  ↓
+全件OK → 「確定送信」ボタンが活性化 → 送付完了
+
+往復コスト: スタッフ0回 × 客が自己完結 = 0往復
+```
+
+### 価値の定量評価
+
+| 削減できる損失 | 削減理由 |
+|---|---|
+| 「不備の発見と通知」スタッフ工数 | Geminiが即時自動発見・客の画面に直接表示 |
+| 「再送待ち」のタイムラグ（数日） | その場で撮り直しが完結 |
+| 「再アップロード」スタッフ工数 | 客が最初から正しいデータを送る |
+| 「不備の問い合わせ」コミュニケーション | エラー理由が画面に明示されるため不明点なし |
+
+**月10時間→2時間の8時間削減の大半がこのフローから生まれる。**
+
+### 設計上の確定事項
+
+#### バリデーションエラーメッセージの品質が核心
+
+エラーメッセージの質 = 顧客が自律修正できるかどうかを直接決める。
+
+```
+NG: 「金額が判読できません」
+    → 客は何をすれば直るか分からない
+
+GOOD: 「金額が読み取れませんでした。
+       影や手で数字が隠れていませんか？」
+    → 原因の見当がつく
+
+BEST: 上記 + 固定の撮影ヒントを画面に常時表示
+    → 客が自律修正できる
+```
+
+#### エラー種別と撮影ヒントの対応（確定）
+
+| Geminiのエラー判定 | 客への表示メッセージ | 撮影ヒント |
+|---|---|---|
+| 金額が読み取れない | 「金額が読み取れませんでした」 | 影・暗さ・角度を確認して撮り直し |
+| 日付が読み取れない | 「日付が確認できませんでした」 | 上部が切れていないか確認 |
+| 取引先が不明 | 「店名・会社名が確認できませんでした」 | ヘッダー部分を含めて全体を撮影 |
+| 複数の証票が写っている | 「複数の書類が写っています」 | 1枚ずつ別々に撮影して送ってください |
+| 証票として認識できない（non_journal） | 「証票として認識できませんでした」 | 領収書・レシート・請求書・通帳・クレカ明細を送ってください |
+
+**共通ヒント（UI常時表示）:**
+- 明るい場所で、真上からまっすぐ撮影してください
+- レシート全体（上から下まで）が枠に収まるようにしてください
+- ピントが合っているか確認してから送ってください
+- 暗い場所ではスマホの画面を反射させると照らせます
+
+#### Step 0の判定結果を客のUIにフィードバックするフローが必要（未実装）
+
+**現状（DL-015）の問題点**:
+- Step 0でnon_journal/otherと判定された場合、Drive資料選別UIへ→事務所内部フローで完結する
+- 客の画面にStep 0の判定結果が返らない → 客は「送れた」と思ったまま
+
+**必要な追加設計**:
+- Geminiからのレスポンス（source_type + バリデーション結果）を客向けアップロードUIに返す
+- non_journal判定 = 「証票として認識できませんでした」エラーカードを表示
+- excluded（対象外）であっても、客側では撮り直しを促すUXにする
+
+### 実装状況
+
+| 要素 | 状態 |
+|---|---|
+| A画面: アップロードUI（MockUploadPage.vue） | ✅ 実装済み（モック）`609b360` |
+| A画面: バリデーション4項目（モック） | ✅ receiptService.tsでランダム返却 |
+| A画面: エラーカード表示（赤枠・撮り直し） | ✅ 実装済み |
+| A画面: カメラ直接起動（capture="environment"） | ✅ 実装済み |
+| A画面: SHA-256重複検知（バックグラウンド） | ✅ 実装済み |
+| A画面: スライディングウィンドウ並列処理（CONCURRENCY=4） | ✅ 実装済み |
+| B画面: 資料アップロードUI（MockUploadDocsPage.vue） | ✅ 実装済み（モック）`609b360` |
+| B画面: バリデーションなし（謄本・CSV・Excel等） | ✅ 設計通り |
+| B画面: ファイル種別アイコン自動判定 | ✅ 実装済み |
+| B画面: CONCURRENCY=3・再送・ドラッグ&ドロップ | ✅ 実装済み |
+| サービス層: receiptService.ts（VITE_USE_MOCK切り替え） | ✅ 実装済み `609b360` |
+| ルーター: `/client/upload-docs/:clientId` | ✅ 実装済み `609b360` |
+| vite設定: server.host: true（モバイルアクセス） | ✅ 実装済み `609b360` |
+| 撮影ヒント（固定テキスト） | ❌ 未実装 |
+| Step 0（non_journal）→ 客UIへフィードバック | ❌ 未実装（Gemini接続前） |
+| エラーメッセージの詳細化 | ❌ 現状はランダム文言のみ |
+| Supabase Edge Functions接続（本番モード） | ❌ スタブのみ（Phase 2 Group 1） |
+
+### 修正記録（2026-04-08）
+
+| 問題ID | 内容 | 修正 |
+|---|---|---|
+| E-3 | receiptService.ts L50 `toISOString()` タイムゾーンバグ | `getFullYear/getMonth/getDate` 方式に修正 |
+| E-6 | router `props: true` 設定（code_quality.md §4違反） | `props: true` を削除（コンポーネントはuseRoute()で取得） |
+
+
+
+
+**状態**: 設計確定（Phase 2 Group 1 実装前の根拠として記録）
+
+### 背景
+
+設計議論（2026-04-07）において、仕訳自動化パイプラインの根本設計を整理した。以下を確定する。
+
+---
+
+### 1. 全社取引先マスタの役割再定義
+
+| 項目 | 決定内容 |
+|---|---|
+| 全社取引先マスタへの科目付与 | ❌ 不要。科目は顧問先依存であり、全社に持たせると現実とズレる |
+| 全社取引先マスタの実態 | 「最初の仮説」。方向性（仕入系/経費系/混在）を持つ。科目は持たない |
+| 全社取引先マスタの整備方針 | 想像で属性を付与しない。**学習ありき**。仕訳 → 実績蓄積 → マスタ化 |
+| 顧問先取引先マスタの実態 | 「現実の答え」。過去仕訳を正規化取引先名×科目で保持 |
+| 2層構造 | 全社マスタ（初期仮説）＋ 顧問先マスタ（最終確定）。優先順位: 顧問先 ＞ 全社 |
+
+### 2. メガベンダー定義
+
+**定義**: 複数科目を含む取引先（科目が一意に決まらない取引先）
+
+| 分類 | 代表例 | 特徴 |
+|---|---|---|
+| EC・通販 | Amazon、楽天市場、Yahoo!ショッピング | 仕入・備品・消耗品が混在 |
+| 大手量販・小売 | ヨドバシカメラ、ビックカメラ、コーナン | 家電・備品・消耗品すべてあり |
+| コンビニ・総合小売 | セブン-イレブン、ファミリーマート、ローソン | 会議費・消耗品・雑費が少額混在 |
+| SaaS・ITプラットフォーム | Google、Microsoft、Adobe | 通信費/ソフト利用料/広告費が混在 |
+| 決済プラットフォーム | PayPay、Stripe | 複数取引の集合体。科目混在 |
+| 商社・総合取扱 | ○○商事、○○トレーディング | 仕入+備品+外注が混在 |
+
+**システム上の扱い**:
+- `is_mega_vendor: boolean` フラグを取引先マスタに付与
+- メガベンダー = 通常ルールを適用しない → 個別判定・選択肢提示へ
+
+### 3. 一意性判定ロジック
+
+仕訳の科目決定を「一意に決まるか否か」で分岐する。
+
+```
+Step 1: 顧問先マスタで取引先×科目の履歴を取得
+  → 科目の種類が1種類のみ → 一意 → 自動確定
+  → 科目が複数種類    → 非一意 → 選択肢提示（人間）
+
+Step 2: 準一意の扱い
+  → 最大比率 > 80% → デフォルト提示（人間が承認するだけ）
+  → 最大比率 <= 80% → 顧問先属性フィルタで順位付けして候補提示
+
+Step 3: 履歴なし（コールドスタート）
+  → 全社マスタ + 業種マトリクス辞書から候補提示
+  → 決まらなければ人間が入力 → 顧問先マスタに蓄積
+```
+
+### 4. ジャンル（品目カテゴリ）中間マスタ設計
+
+キーワードから科目に直接紐付けるのではなく、**3層構造**を採用する。
+
+```
+【入力】キーワード（摘要テキスト: 「キャベツ」「AWS」等）
+  ↓ 部分一致 or AI推論
+【中間マスタ】ジャンル（食材 / ITインフラ / 事務用品 / 等）
+  ↓ 自社業種 × ジャンル × 方向 のマッピング
+【出力】勘定科目 + 税区分（仕入高 8% / 通信費 10% / 等）
+```
+
+**3層構造の理由**:
+- 経理ルール変更時は「ジャンル→科目マッピング」を1箇所変えるだけで全キーワードに反映できる
+- AIはジャンル分類（事実確認）は得意。科目確定（経理ルール）はTS側で制御する
+- 消費税（軽減8%/10%）の自動判定がジャンルレベルで完結する
+
+### 5. クロスマッチング設計
+
+```
+自社業種 × 相手業種 × 仕入ジャンル = 科目候補
+```
+
+| 自社業種 | 相手業種 | 仕入ジャンル | → 科目 |
+|---|---|---|---|
+| IT企業 | 家電小売 | IT機器 | 消耗品費 or 工具器具備品（金額分岐） |
+| 飲食店 | スーパー | 食材 | 仕入高（8%） |
+| 飲食店 | スーパー | 日用品 | 消耗品費（10%） |
+| 建設業 | ホームセンター | 建設資材 | 材料費 |
+
+### 6. ストリームドのFACT（ベンチマーク）
+
+| 仕様 | STREAMED | マネーフォワード |
+|---|---|---|
+| 自社業種設定 | 顧問先登録時の業種選択 → 業種辞書（マトリクス）を一括セット | 事業者設定に業種区分あり。レポート・簡易課税ロジックに影響 |
+| 領収書の科目自動判定 | ✅ 対応（自社業種×相手業種のマトリクス辞書） | ✅ 対応（AI推論 + ビッグデータ参照） |
+| 通帳・クレカの科目自動判定 | ❌ 非対応。デフォルト科目（仮払金/仮受金）を適用 | ✅ 対応（AI推論 + 自社過去履歴参照） |
+| 学習の方式 | **受動的**（ユーザーが「学習」ボタンを明示的に押す時のみ記録） | 半自動（AIが推測、ユーザーが承認で確定） |
+| 学習しない場合の挙動 | 業種辞書デフォルト科目を毎回提示（過去履歴を参照しない） | AI推測 + 過去履歴から候補提示（継続） |
+| マスター辞書の実態 | 会計事務所が事前登録した「キーワード→科目」のルールをコピー | LLM + 全ユーザーの匿名化ビッグデータからAIが推論 |
+
+### 7. 自社システムへの適用方針
+
+**Phase 2 Group 1 実装前の合意事項**:
+
+| # | 適用方針 |
+|---|---|
+| A | 全社取引先マスタへの科目付与は行わない。学習実績ベースでのみ整備 |
+| B | メガベンダーフラグ（`is_mega_vendor`）を Vendor 型に追加する |
+| C | ジャンル中間マスタ（`VendorItemCategory`）を設計・実装する |
+| D | 一意性判定ロジック（科目出現頻度チェック）をパイプラインStep 4に組み込む |
+| E | クロスマッチング（自社業種×相手業種×ジャンル）を科目候補生成の基軸とする |
+| F | 通帳・クレカの科目判定はSTREAMED同様、学習ルールが主役。デフォルトは仮払金/仮受金 |
+
+---
+
+## DL-030 | Repository設計方針（データアクセス抽象化）（2026-04-08）
+
+**状態**: 設計確定
+
+### 背景・問題
+
+現状、マスタデータがTSファイルにハードコードされている（`vendors_global.ts` 224件、`industry_vector_corporate.ts` 68種、`account-master.ts` 等）。Supabase移行時に「配列を直接渡す」設計だと全関数シグネチャがasync化で崩壊する。
+
+### 決定事項
+
+**原則: Repositoryはデータの出し入れだけ。ロジックは絶対に入れない。**
+
+```
+┌─────────────────────────────────────┐
+│  パイプラインロジック層              │ ← ロジックはここ
+│  matchVendor(repo) / classify(repo) │    （matchVendor, classifySourceType,
+│  determineAccount(repo)             │     scoreConfidence 等）
+└──────────┬──────────────────────────┘
+           │ await repo.getAll()
+           │ await repo.findByMatchKey(key)
+┌──────────▼──────────────────────────┐
+│  Repository型（インターフェース）    │ ← データアクセスだけ
+│  getAll() / findByKey() / save()    │    （全メソッドPromise<T>で統一）
+└──────────┬──────────────────────────┘
+           │
+    ┌──────┴──────┐
+    │             │
+  モック実装    Supabase実装    ← 中身差し替えるだけ
+  (TSファイル)  (将来)
+```
+
+### ルール
+
+| ルール | 内容 |
+|---|---|
+| **Repositoryに入れていいもの** | `getAll()`, `findByMatchKey()`, `findByClientId()`, `save()` 等のデータ取得・保存 |
+| **Repositoryに入れてはダメなもの** | `matchVendor()`, `classifySourceType()`, `scoreConfidence()`, `determineAccount()` 等のビジネスロジック |
+| **全メソッドの戻り値** | `Promise<T>` で統一（最初からasync。将来のDB移行でシグネチャ崩壊を完全防止） |
+| **既存コード** | 精度テスト完了後（フェーズ5）にリファクタ。今は触らない |
+| **新規コード** | この規約に従う |
+
+### なぜ配列渡しではなくRepository型か
+
+| 項目 | 配列渡し `fn(vendors: Vendor[])` | Repository渡し `fn(repo: VendorRepository)` |
+|---|---|---|
+| 今のコスト | 低い | 少し高い（async/await記述） |
+| DB移行時のコスト | **全関数シグネチャ崩壊**（sync→async化） | **差し替えのみ（ゼロ修正）** |
+| テスト | 配列を直接渡す | mockRepo を渡すだけ |
+| tenant分離 | 対応不可 | repoに`clientId`を持たせれば対応可 |
+| キャッシュ | 対応不可 | repo内部で自由にキャッシュ可能 |
+| フィルタ条件追加 | 関数シグネチャ変更必要 | repoメソッド追加のみ |
+
+**初期コストの差は微小（awaitを書くだけ）。後での爆発コストは甚大。**
+
+### Repository型定義（全5種）
+
+#### 1. VendorRepository（取引先マスタ）
+
+```typescript
+// src/repositories/vendor.repository.ts
+import type { Vendor, VendorVector } from '@/mocks/types/pipeline/vendor.type'
+
+export type VendorRepository = {
+  /** 全社共通取引先マスタ全件取得 */
+  getAll(): Promise<Vendor[]>
+  /** match_keyで完全一致検索 */
+  findByMatchKey(key: string): Promise<Vendor | undefined>
+  /** T番号で検索（t_numbers配列内を検索） */
+  findByTNumber(tNumber: string): Promise<Vendor | undefined>
+  /** 電話番号で検索（phone_numbers配列内を検索） */
+  findByPhoneNumber(phone: string): Promise<Vendor | undefined>
+}
+```
+
+**モック実装:**
+```typescript
+// src/repositories/mock/vendor.repository.mock.ts
+import { VENDORS_GLOBAL } from '@/mocks/data/pipeline/vendors_global'
+
+export const mockVendorRepo: VendorRepository = {
+  getAll: async () => VENDORS_GLOBAL,
+  findByMatchKey: async (key) =>
+    VENDORS_GLOBAL.find(v => v.match_key === key),
+  findByTNumber: async (tNumber) =>
+    VENDORS_GLOBAL.find(v => v.t_numbers?.includes(tNumber)),
+  findByPhoneNumber: async (phone) =>
+    VENDORS_GLOBAL.find(v => v.phone_numbers?.includes(phone)),
+}
+```
+
+**将来のSupabase実装:**
+```typescript
+// src/repositories/supabase/vendor.repository.supabase.ts
+export const supabaseVendorRepo: VendorRepository = {
+  getAll: async () => {
+    const { data } = await supabase.from('vendors_global').select('*')
+    return data ?? []
+  },
+  findByMatchKey: async (key) => {
+    const { data } = await supabase.from('vendors_global')
+      .select('*').eq('match_key', key).maybeSingle()
+    return data ?? undefined
+  },
+  findByTNumber: async (tNumber) => {
+    const { data } = await supabase.from('vendors_global')
+      .select('*').contains('t_numbers', [tNumber]).maybeSingle()
+    return data ?? undefined
+  },
+  findByPhoneNumber: async (phone) => {
+    const { data } = await supabase.from('vendors_global')
+      .select('*').contains('phone_numbers', [phone]).maybeSingle()
+    return data ?? undefined
+  },
+}
+```
+
+#### 2. ClientVendorRepository（顧問先取引先マスタ）
+
+```typescript
+export type ClientVendorRepository = {
+  /** 顧問先の取引先マスタ全件取得 */
+  getByClientId(clientId: string): Promise<Vendor[]>
+  /** 顧問先マスタでmatch_key検索 */
+  findByMatchKey(clientId: string, key: string): Promise<Vendor | undefined>
+  /** 顧問先マスタに取引先を追加（学習結果の蓄積） */
+  save(clientId: string, vendor: Vendor): Promise<void>
+}
+```
+
+#### 3. IndustryVectorRepository（業種辞書マスタ）
+
+```typescript
+import type { IndustryVectorEntry, VendorVector } from '@/mocks/types/pipeline/vendor.type'
+
+export type IndustryVectorRepository = {
+  /** 業種辞書全件取得（法人 or 個人） */
+  getAll(businessType: 'corporate' | 'sole'): Promise<IndustryVectorEntry[]>
+  /** 業種ベクトルから科目候補を取得 */
+  findByVector(businessType: 'corporate' | 'sole', vector: VendorVector): Promise<IndustryVectorEntry | undefined>
+}
+```
+
+**モック実装:**
+```typescript
+import { INDUSTRY_VECTOR_CORPORATE } from '@/mocks/data/pipeline/industry_vector_corporate'
+import { INDUSTRY_VECTOR_SOLE } from '@/mocks/data/pipeline/industry_vector_sole'
+
+export const mockIndustryVectorRepo: IndustryVectorRepository = {
+  getAll: async (businessType) =>
+    businessType === 'corporate' ? INDUSTRY_VECTOR_CORPORATE : INDUSTRY_VECTOR_SOLE,
+  findByVector: async (businessType, vector) => {
+    const data = businessType === 'corporate' ? INDUSTRY_VECTOR_CORPORATE : INDUSTRY_VECTOR_SOLE
+    return data.find(e => e.vendor_vector === vector)
+  },
+}
+```
+
+#### 4. AccountRepository（勘定科目マスタ）
+
+```typescript
+export type AccountRepository = {
+  /** 科目マスタ全件取得 */
+  getAll(): Promise<AccountMasterEntry[]>
+  /** 科目IDで検索 */
+  findById(id: string): Promise<AccountMasterEntry | undefined>
+  /** 顧問先のカスタム科目を含む全件取得 */
+  getAllForClient(clientId: string): Promise<AccountMasterEntry[]>
+}
+```
+
+#### 5. ConfirmedJournalRepository（確定済み仕訳マスタ）
+
+```typescript
+export type ConfirmedJournalRepository = {
+  /** 顧問先の確定済み仕訳全件取得 */
+  getByClientId(clientId: string): Promise<ConfirmedJournal[]>
+  /** 顧問先の確定済み仕訳をmatch_keyで絞り込み（過去仕訳照合用） */
+  findByMatchKey(clientId: string, matchKey: string): Promise<ConfirmedJournal[]>
+}
+```
+
+### ファイル構成
+
+```
+src/repositories/
+  types.ts                              ← 全Repository型定義（上記5種）を集約
+  mock/
+    vendor.repository.mock.ts           ← VendorRepository モック実装
+    clientVendor.repository.mock.ts     ← ClientVendorRepository モック実装
+    industryVector.repository.mock.ts   ← IndustryVectorRepository モック実装
+    account.repository.mock.ts          ← AccountRepository モック実装
+    confirmedJournal.repository.mock.ts ← ConfirmedJournalRepository モック実装
+    index.ts                            ← 全モック実装をまとめてexport
+  supabase/                             ← 将来作成（フェーズ5）
+    vendor.repository.supabase.ts
+    ...
+    index.ts
+  index.ts                              ← 環境変数でモック/Supabaseを切り替え
+```
+
+### 環境切り替え（`src/repositories/index.ts`）
+
+```typescript
+import { mockRepos } from './mock'
+// import { supabaseRepos } from './supabase' // 将来
+
+const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
+
+export const repos = USE_MOCK ? mockRepos : mockRepos // 将来: supabaseRepos
+```
+
+### パイプラインロジック側の使い方
+
+```typescript
+// ❌ NG: 直接import（ハードコード密結合）
+import { VENDORS_GLOBAL } from '@/mocks/data/pipeline/vendors_global'
+function matchVendor(name: string) {
+  return VENDORS_GLOBAL.find(v => v.match_key === name) // sync
+}
+
+// ✅ OK: Repository経由（疎結合・DB移行安全）
+import type { VendorRepository } from '@/repositories/types'
+async function matchVendor(name: string, repo: VendorRepository) {
+  return await repo.findByMatchKey(name) // async
+}
+```
+
+### 対象ファイルと移行タイミング
+
+| 現行ファイル | Repository型 | 移行タイミング |
+|---|---|---|
+| `vendors_global.ts`（224件） | `VendorRepository` | C-0（精度テスト前） |
+| `vendors_client_*.ts`（未作成） | `ClientVendorRepository` | フェーズ4（Step 2-4） |
+| `industry_vector_corporate.ts` / `_sole.ts` | `IndustryVectorRepository` | フェーズ4（Step 2-4） |
+| `account-master.ts` | `AccountRepository` | フェーズ4（Step 2-4） |
+| `confirmed_journals_*.ts`（未作成） | `ConfirmedJournalRepository` | フェーズ4（Step 2-4） |
+| `tax-category-master.ts` | 将来検討（AccountRepositoryに統合の可能性） | フェーズ5 |
+
+### 経緯
+
+1. 「配列を引数で渡す」案が提案された → 疎結合だがDB移行時にsync→async化で全関数崩壊するリスクを指摘（ユーザー）
+2. Repository型（取得関数）を渡す方式に改善 → 差し替えだけでOK
+3. 最初からPromise<T>で統一 → 後での爆発を完全防止（ユーザー提案・採用）
+4. Repositoryにロジックを入れない → データアクセスのみ（ユーザー確定）

@@ -39,8 +39,8 @@ const MOCK_VENDORS = [
 
 // ===== モック実装 =====
 async function analyzeReceiptMock(_file: File): Promise<ReceiptAnalysisResult> {
-  // 1.5〜2.5秒（Gemini推論のシミュレーション）
-  const delay = 1500 + Math.random() * 1000
+  // 5〜8秒（DL-011実測: 前処理あり6.3秒/枚に基づく）
+  const delay = 5000 + Math.random() * 3000
   await new Promise(r => setTimeout(r, delay))
 
   const isOk = Math.random() > 0.25 // 75%がOK
