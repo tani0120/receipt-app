@@ -167,6 +167,46 @@ export type ConfirmedJournalRepository = {
 }
 
 // ============================================================
+// § 6. ShareStatusRepository（共有設定マスタ）
+// ============================================================
+
+/** 共有設定ステータス */
+export type ShareStatus = 'pending' | 'active' | 'revoked'
+
+/** 顧問先ごとの共有設定レコード */
+export interface ShareStatusRecord {
+  clientId: string
+  status: ShareStatus
+  /** 招待コード（発行済みの場合） */
+  inviteCode: string | null
+  /** 最終更新日時（ISO 8601） */
+  updatedAt: string
+}
+
+/**
+ * 共有設定マスタへのデータアクセス
+ *
+ * 対象データ: 顧問先ごとの共有ステータス（pending/active/revoked）
+ * 用途: アップロードURL共有のステータス管理
+ * 連携: 進捗管理画面（/master/progress）・アップロード管理画面（/client/upload/:clientId）
+ *
+ * 準拠: DL-031（認証・認可設計）
+ */
+export type ShareStatusRepository = {
+  /** 全顧問先の共有設定を取得 */
+  getAll(): Promise<ShareStatusRecord[]>
+
+  /** 顧問先IDで共有設定を取得 */
+  getByClientId(clientId: string): Promise<ShareStatusRecord | undefined>
+
+  /** 共有設定ステータスを更新（データの書き換えのみ。判断ロジックは呼び出し側） */
+  updateStatus(clientId: string, status: ShareStatus): Promise<void>
+
+  /** 招待コードを保存 */
+  saveInviteCode(clientId: string, code: string): Promise<void>
+}
+
+// ============================================================
 // § Repositories集約型（factory関数の戻り値型）
 // ============================================================
 
@@ -185,4 +225,6 @@ export type Repositories = {
   account: AccountRepository
   /** 確定済み仕訳マスタ（過去仕訳照合用） */
   confirmedJournal: ConfirmedJournalRepository
+  /** 共有設定マスタ（DL-031） */
+  shareStatus: ShareStatusRepository
 }

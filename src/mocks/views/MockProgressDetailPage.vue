@@ -48,6 +48,7 @@
           <col :style="{ width: pgColWidths['fiscalMonth'] + 'px' }">
           <col>
           <col :style="{ width: pgColWidths['staffName'] + 'px' }">
+          <col :style="{ width: pgColWidths['shareStatus'] + 'px' }">
           <col :style="{ width: pgColWidths['receivedDate'] + 'px' }">
           <col :style="{ width: pgColWidths['unexported'] + 'px' }">
           <col v-for="m in monthColumns" :key="'col-'+m.key" style="width: 36px;">
@@ -68,6 +69,9 @@
             <th class="sortable" @click="sortBy('companyName')">顧問先 <i :class="getSortIcon('companyName')"></i></th>
             <th class="sortable pg-th-narrow relative" @click="sortBy('staffName')">担当 <i :class="getSortIcon('staffName')"></i>
               <div class="resize-handle" @mousedown.stop="onPgResizeStart('staffName', $event)"></div>
+            </th>
+            <th class="pg-th-narrow relative">共有設定
+              <div class="resize-handle" @mousedown.stop="onPgResizeStart('shareStatus', $event)"></div>
             </th>
             <th class="sortable pg-th-narrow relative" @click="sortBy('receivedDate')">資料受取日 <i :class="getSortIcon('receivedDate')"></i>
               <div class="resize-handle" @mousedown.stop="onPgResizeStart('receivedDate', $event)"></div>
@@ -99,6 +103,12 @@
             <td class="pg-td-fiscal">{{ row.fiscalMonth }}月</td>
             <td class="pg-td-client">{{ row.companyName }}</td>
             <td class="pg-td-narrow">{{ getStaffNameForClient(row.clientId) || '' }}</td>
+            <td class="pg-td-narrow pg-td-share">
+              <span v-if="getStatusFromCache(row.clientId) === 'active'" class="pg-share-badge pg-share-active">共有OK</span>
+              <span v-else-if="getStatusFromCache(row.clientId) === 'pending'" class="pg-share-badge pg-share-pending">未承認</span>
+              <span v-else-if="getStatusFromCache(row.clientId) === 'revoked'" class="pg-share-badge pg-share-revoked">解除済</span>
+              <span v-else class="pg-share-badge pg-share-none">—</span>
+            </td>
             <td class="pg-td-narrow">{{ row.receivedDate || '—' }}</td>
             <td class="pg-td-num">{{ row.unexported > 0 ? row.unexported + '件' : '—' }}</td>
             <td
@@ -110,7 +120,7 @@
             <td class="pg-td-num pg-td-total">{{ row.lastYearJournals > 0 ? row.lastYearJournals.toLocaleString() : '—' }}</td>
           </tr>
           <tr v-if="pagedRows.length === 0">
-            <td :colspan="9 + monthColumns.length" class="pg-empty">該当する顧問先がありません</td>
+            <td :colspan="10 + monthColumns.length" class="pg-empty">該当する顧問先がありません</td>
           </tr>
         </tbody>
       </table>
@@ -119,18 +129,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProgress } from '@/features/progress-management/composables/useProgress';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
+import { useShareStatus } from '@/composables/useShareStatus';
 
 const pgDefaultWidths: Record<string, number> = {
   status: 60, code: 60, fiscalMonth: 60,
-  staffName: 78, receivedDate: 78, unexported: 78,
+  staffName: 78, shareStatus: 78, receivedDate: 78, unexported: 78,
   currentYear: 70, lastYear: 70,
 };
 const { columnWidths: pgColWidths, onResizeStart: onPgResizeStart } = useColumnResize('progress', pgDefaultWidths);
+
+const { loadAll: loadShareStatus, getStatusFromCache } = useShareStatus();
+onMounted(() => { loadShareStatus(); });
 
 const router = useRouter();
 
@@ -345,4 +359,15 @@ function goToJournalList(row: { clientId: string }) {
   cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
 }
 .resize-handle-light:hover { background: rgba(255,255,255,0.5); }
+
+/* 共有設定バッジ */
+.pg-td-share { text-align: center; }
+.pg-share-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+}
+.pg-share-active  { background: #dcfce7; color: #166534; }
+.pg-share-pending { background: #dbeafe; color: #1e40af; }
+.pg-share-revoked { background: #f1f5f9; color: #94a3b8; }
+.pg-share-none    { color: #cbd5e1; }
 </style>

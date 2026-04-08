@@ -226,12 +226,23 @@ export const routes: RouteRecordRaw[] = [
   // 旧パス互換: /settings/accounts or tax/:clientId → /client/...
   { path: '/settings/accounts/:clientId', redirect: (to) => `/client/settings/accounts/${to.params.clientId}` },
   { path: '/settings/tax/:clientId', redirect: (to) => `/client/settings/tax/${to.params.clientId}` },
-  // アップロード・学習（仮ページ）
+  // アップロード分岐セレクター（PC用/スマホ用の選択画面）
   {
     path: '/client/upload/:clientId',
-    name: 'Upload',
+    name: 'UploadSelector',
+    component: () => import('@/mocks/views/MockUploadSelectorPage.vue'),
+  },
+  // スマホ用アップロード（カメラ撮影・即AIチェック）
+  {
+    path: '/client/upload/:clientId/mobile',
+    name: 'UploadMobile',
     component: () => import('@/mocks/views/MockUploadPage.vue'),
-    props: true
+  },
+  // PC用アップロード（ドラッグ&ドロップ・一括選択）
+  {
+    path: '/client/upload/:clientId/pc',
+    name: 'UploadPc',
+    component: () => import('@/mocks/views/MockUploadPage.vue'),
   },
   {
     path: '/client/learning/:clientId',
@@ -313,6 +324,27 @@ export const routes: RouteRecordRaw[] = [
     path: '/master/staff',
     name: 'MasterStaff',
     component: () => import('@/mocks/views/MockMasterStaffPage.vue')
+  },
+  // --- 顧問先ポータル（ナビバーなし・顧問先専用UI） ---
+  {
+    path: '/portal/:clientId',
+    name: 'Portal',
+    component: () => import('@/mocks/views/MockPortalPage.vue'),
+  },
+  {
+    path: '/portal/:clientId/mobile',
+    name: 'PortalMobile',
+    component: () => import('@/mocks/views/MockUploadPage.vue'),
+  },
+  {
+    path: '/portal/:clientId/pc',
+    name: 'PortalPc',
+    component: () => import('@/mocks/views/MockUploadPage.vue'),
+  },
+  {
+    path: '/portal/:clientId/docs',
+    name: 'PortalDocs',
+    component: () => import('@/mocks/views/MockUploadDocsPage.vue'),
   },
 ]
 

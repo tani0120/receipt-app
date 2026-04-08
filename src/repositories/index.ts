@@ -13,11 +13,12 @@
  *
  * 【切り替え方式】
  * - VITE_USE_MOCK=true（デフォルト）: TSファイルからデータ取得
- * - VITE_USE_MOCK=false: Supabaseからデータ取得（フェーズ5で実装）
+ * - VITE_USE_MOCK=false: Supabaseからデータ取得
  */
 
 import type { Repositories } from '@/repositories/types'
 import { createMockRepositories } from './mock'
+import { createSupabaseRepositories } from './supabase'
 
 /**
  * Repository群を生成するfactory関数
@@ -32,9 +33,7 @@ export function createRepositories(): Repositories {
     return createMockRepositories()
   }
 
-  // フェーズ5: Supabase実装
-  // return createSupabaseRepositories()
-
-  // Supabase未実装の間はモックで代替
-  return createMockRepositories()
+  // フェーズ5: Supabase実装（.envでVITE_USE_MOCK=falseに設定で有効化）
+  return createSupabaseRepositories()
 }
+

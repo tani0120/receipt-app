@@ -1658,3 +1658,219 @@ async function matchVendor(name: string, repo: VendorRepository) {
 2. Repository型（取得関数）を渡す方式に改善 → 差し替えだけでOK
 3. 最初からPromise<T>で統一 → 後での爆発を完全防止（ユーザー提案・採用）
 4. Repositoryにロジックを入れない → データアクセスのみ（ユーザー確定）
+
+---
+
+## DL-031 | 認証・認可設計（統一認証 + 招待リンク方式）（2026-04-08）
+
+**状態**: 設計確定
+
+### 背景・問題
+
+アップロードUI（`/client/upload/:clientId`）を顧問先担当者に直接使わせる設計（DL-029）において、認証・認可が未設計だった。以下の要件を同時に満たす必要がある：
+
+1. 顧問先にURLを渡したら永続的にセキュアに使える（ワンタイムではない）
+2. 顧問先の担当者が**自分で**登録する（スタッフの管理手間ゼロ）
+3. スタッフも同じ認証システムを利用する（別系統にしない）
+4. Google / Apple ID / メール+パスワードの3方式に対応
+
+### 確定設計
+
+#### ユーザー種別（role）
+
+| role | 対象 | アクセス範囲 |
+|---|---|---|
+| `staff` | 事務所スタッフ | 全顧問先・全画面にアクセス可能 |
+| `client_user` | 顧問先担当者 | 自分のclientIdのアップロード画面のみ |
+
+#### 認証方式
+
+Google / Apple ID / メール+パスワード（Supabase Auth）。スタッフも顧問先も同一の認証基盤を使用。
+
+#### 招待リンク方式（顧問先の自己登録）
+
+```
+【スタッフの作業（1回だけ）】
+顧問先管理画面 → 「招待リンクを発行」ボタン
+→ URL自動生成: https://app.example.com/#/invite/x7k9m2
+→ ChatWork等で顧問先に送信
+→ 以降、スタッフの管理作業なし
+
+【顧問先担当者の初回】
+招待リンクをタップ → 登録画面
+→ Google / Apple ID / メール+パスワードで自己登録
+→ 自動的にclientIdと紐付け → アップロード画面に直行
+
+【2回目以降】
+ブックマーク or 同じURL → 自動ログイン → 即利用可能
+```
+
+#### 招待リンクの仕様
+
+| 項目 | 仕様 |
+|---|---|
+| 形式 | `/invite/:code`（ランダム6文字。36^6 = 21億通り） |
+| 利用回数 | **無制限**（同じリンクで複数担当者が自己登録可能） |
+| 有効期限 | なし（人員交代時も同じリンクで新担当者が登録） |
+| 無効化 | スタッフが管理画面でOFFにすれば即無効 |
+| URLの推測耐性 | ランダム生成のため推測不可能 |
+
+#### テーブル設計（Supabase）
+
+```sql
+-- ユーザープロファイル（auth.usersの拡張）
+CREATE TABLE user_profiles (
+  user_id      UUID PRIMARY KEY REFERENCES auth.users(id),
+  role         TEXT NOT NULL DEFAULT 'client_user',  -- 'staff' / 'client_user'
+  display_name TEXT,
+  created_at   TIMESTAMPTZ DEFAULT now()
+);
+
+-- 招待テーブル
+CREATE TABLE invitations (
+  code         TEXT PRIMARY KEY,          -- 'x7k9m2'（ランダム6文字）
+  client_id    TEXT NOT NULL,             -- 'LDI-00008'
+  created_by   UUID REFERENCES auth.users(id),  -- 発行したスタッフ
+  is_active    BOOLEAN DEFAULT true,
+  created_at   TIMESTAMPTZ DEFAULT now()
+);
+
+-- 顧問先×ユーザー紐付（認可）
+CREATE TABLE client_users (
+  client_id    TEXT NOT NULL,
+  user_id      UUID NOT NULL REFERENCES auth.users(id),
+  created_at   TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (client_id, user_id)
+);
+```
+
+#### アクセス制御
+
+| URL | スタッフ（staff） | 顧問先担当者（client_user） |
+|---|---|---|
+| `/client/upload/:clientId` | ✅（全clientId） | ✅（自分のclientIdのみ） |
+| `/client/journal-list/:clientId` | ✅ | ❌ |
+| `/master/*` | ✅ | ❌ |
+| `/invite/:code` | ❌（不要） | ✅（初回登録時のみ） |
+
+#### ログイン後の画面分岐
+
+```
+ログイン完了
+  ↓
+role === 'staff'?
+  YES → /mode-select（通常ダッシュボード）
+  NO  → /client/upload/{自分のclientId}（アップロード画面に直行）
+```
+
+### URL設計（確定）
+
+| URL | 用途 | 変更 |
+|---|---|---|
+| `/client/upload/:clientId` | アップロード分岐セレクター（PC用/スマホ用選択） | 現在のURL構造を維持 |
+| `/client/upload/:clientId/mobile` | スマホ用アップロードUI | 新規サブルート |
+| `/client/upload/:clientId/pc` | PC用アップロードUI | 新規サブルート |
+| `/invite/:code` | 招待→自己登録画面（将来実装） | Supabase接続時に追加 |
+
+### 実装タイミング
+
+| タイミング | やること |
+|---|---|
+| 今（モック段階） | URL構造のみ確定。認証なしで動作 |
+| フェーズ5（Supabase接続） | Auth + invitations + client_users + RLS実装 |
+
+### 経緯
+
+1. clientIdがURL推測可能 → 認証必要と判断
+2. ワンタイムトークン方式 → URLが変わるため却下
+3. Google/Apple ID/メール+パスワード認証 → 採用（顧問先が自分で登録）
+4. スタッフも同じ認証システム → 採用（別系統にしない）
+5. 招待リンク方式 → 採用（スタッフ管理手間ゼロ。複数担当者対応。無期限）
+6. Google Drive共有フォルダとの差 → DL-029の即時AIバリデーションが差別化要因
+
+---
+
+## DL-032: DBスキーマ確定・Supabase先行実装（2026-04-08確定）
+
+### 概要
+
+モック型（TS interface）をベースにPostgreSQLスキーマを確定し、
+Supabase版Repositoryを**接続前に先行実装**。
+`.env`の`VITE_USE_MOCK=false`でモック→Supabase即切り替え可能。
+
+### テーブル構成
+
+| # | テーブル | 型ソース | SQL | 状態 |
+|---|---|---|---|---|
+| 1 | `user_profiles` | DL-031新規 | 001_share_status.sql | ✅ |
+| 2 | `invitations` | DL-031新規 | 001_share_status.sql | ✅ |
+| 3 | `client_users` | DL-031新規 | 001_share_status.sql | ✅ |
+| 4 | `share_status` | ShareStatusRecord | 001_share_status.sql | ✅ |
+| 5 | `clients` | Client型 | 002_core_tables.sql | ✅ |
+| 6 | `vendors` | Vendor型 | 002_core_tables.sql | ✅ |
+| 7 | `accounts` | Account型 | 002_core_tables.sql | ✅ |
+| 8 | `client_accounts` | Account拡張 | 002_core_tables.sql | ✅ |
+| 9 | `industry_vectors` | FlatIndustryVectorRow | 002_core_tables.sql | ✅ |
+| 10 | `confirmed_journals` | unknown（T-03待ち） | 未作成 | ❌ |
+
+### Repository実装状況
+
+| Repository | モック | Supabase | 備考 |
+|---|---|---|---|
+| ShareStatusRepository | ✅ | ✅ | Realtime subscription付き |
+| VendorRepository | ✅ | ✅ | GINインデックスでT番号・電話番号検索 |
+| ClientVendorRepository | スタブ | ✅ | vendorsテーブルのscope='client'行 |
+| IndustryVectorRepository | スタブ | ✅ | フラット→プロパティ変換付き |
+| AccountRepository | スタブ | ✅ | client_accountsマージ付き |
+| ConfirmedJournalRepository | スタブ | スタブ | T-03完了後 |
+
+### ファイル構成
+
+```
+src/repositories/
+  types.ts                    ← 全Repository型（ShareStatus追加済み）
+  index.ts                    ← factory（VITE_USE_MOCK分岐）
+  mock/
+    index.ts                  ← モック集約
+    vendor.repository.mock.ts
+    shareStatus.repository.mock.ts
+  supabase/
+    index.ts                  ← Supabase集約
+    helpers.ts                ← DB行↔TS型 変換関数（DRY）
+    vendor.repository.supabase.ts
+    clientVendor.repository.supabase.ts
+    account.repository.supabase.ts
+    industryVector.repository.supabase.ts
+    shareStatus.repository.supabase.ts
+src/lib/
+  supabase.ts                 ← Supabaseクライアント初期化
+src/composables/
+  useShareStatus.ts           ← 共有設定composable（Repository経由）
+supabase/migrations/
+  001_share_status.sql        ← 認証・共有設定テーブル
+  002_core_tables.sql         ← コアテーブル5つ
+```
+
+### 切り替え方法
+
+```bash
+# .envに以下を設定
+VITE_USE_MOCK=false
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbG...
+```
+
+### 正規化方針（確定）
+
+| TS型 | DB表現 | 根拠 |
+|---|---|---|
+| `string[]`（aliases等） | `TEXT[]`（PostgreSQL配列） | 別テーブルは管理コスト過大 |
+| `VendorVector`（66種） | `TEXT + CHECK` | ENUMテーブルはメンテ地獄 |
+| `Client.contact` | `JSONB` | 構造が単純。正規化不要 |
+| `IndustryVectorEntry` | フラット行（vector/direction/account） | flattenIndustryVector()設計済み |
+
+### 残課題
+
+1. **confirmed_journals**: T-03で型確定後にSQL + Supabase版Repository作成
+2. **seedスクリプト**: モックデータ（vendors_global 224件等）のDB投入スクリプト未作成
+3. **Supabase Realtime**: share_status以外のsubscription未実装（必要時に追加）

@@ -6,6 +6,7 @@
  *
  * 【現在の実装状況】
  * - VendorRepository:           ✅ 実装済み（vendor.repository.mock.ts）
+ * - ShareStatusRepository:      ✅ 実装済み（shareStatus.repository.mock.ts）
  * - ClientVendorRepository:     ❌ 未実装（フェーズ4: R-6）
  * - IndustryVectorRepository:   ❌ 未実装（フェーズ4: R-3）
  * - AccountRepository:          ❌ 未実装（フェーズ4: R-4）
@@ -14,6 +15,7 @@
 
 import type { Repositories } from '@/repositories/types'
 import { mockVendorRepo } from './vendor.repository.mock'
+import { mockShareStatusRepo } from './shareStatus.repository.mock'
 
 /**
  * モック版Repositories生成
@@ -24,6 +26,7 @@ import { mockVendorRepo } from './vendor.repository.mock'
 export function createMockRepositories(): Repositories {
   return {
     vendor: mockVendorRepo,
+    shareStatus: mockShareStatusRepo,
 
     // ── 以下はフェーズ4で実装予定。呼び出すとエラーを投げる ──
 
