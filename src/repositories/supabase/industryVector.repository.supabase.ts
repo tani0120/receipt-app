@@ -7,7 +7,7 @@
  * 準拠: pipeline_design_master.md DL-030, DL-032
  */
 
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 import type { IndustryVectorRepository } from '@/repositories/types'
 import type { IndustryVectorEntry, VendorVector } from '@/mocks/types/pipeline/vendor.type'
 
@@ -42,7 +42,7 @@ export const supabaseIndustryVectorRepo: IndustryVectorRepository = {
   async getAll(_businessType: 'corporate' | 'sole'): Promise<IndustryVectorEntry[]> {
     // 現時点ではbusinessTypeによる分岐なし（法人/個人で同一辞書）
     // フェーズ5で分岐が必要になったらbusiness_typeカラムを追加
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('industry_vectors')
       .select('vector, direction, account')
       .order('sort_order')
@@ -55,7 +55,7 @@ export const supabaseIndustryVectorRepo: IndustryVectorRepository = {
     _businessType: 'corporate' | 'sole',
     vector: VendorVector
   ): Promise<IndustryVectorEntry | undefined> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('industry_vectors')
       .select('vector, direction, account')
       .eq('vector', vector)

@@ -1,23 +1,37 @@
 /**
- * Supabaseクライアント初期化
+ * Supabaseクライアント初期化（遅延方式）
  *
  * 環境変数から接続情報を読む。
  * .envにVITE_SUPABASE_URLとVITE_SUPABASE_ANON_KEYを設定する。
  *
- * 【フェーズ5で有効化】
- * 現在はモック運用のため実際には使用されない。
- * Supabase接続時に .env の値を設定するだけで即接続可能。
+ * 【重要】モック運用時（VITE_USE_MOCK=true）は呼ばれないが、
+ * importチェーン（repositories/index.ts → supabase/index.ts → supabase.ts）で
+ * モジュールレベルのcreateClientが即実行されるためエラーになる。
+ * → 遅延初期化で回避。実際に使う時だけcreateClientを呼ぶ。
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
+let _supabase: SupabaseClient | null = null
 
 /**
- * Supabaseクライアント（シングルトン）
+ * Supabaseクライアント取得（遅延初期化・シングルトン）
  *
- * ⚠️ VITE_SUPABASE_URL が未設定の場合、createClientは空URLで生成される。
- *    モック運用時は呼ばれないので問題ない。
+ * VITE_SUPABASE_URL が未設定の場合はエラーを投げる。
+ * モック運用時はこの関数が呼ばれないので安全。
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const url = import.meta.env.VITE_SUPABASE_URL
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+    if (!url || !key) {
+      throw new Error(
+        '[supabase] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY が未設定です。' +
+        '.env.local に設定してください。モック運用なら VITE_USE_MOCK=true を確認してください。'
+      )
+    }
+    _supabase = createClient(url, key)
+  }
+  return _supabase
+}
+

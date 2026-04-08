@@ -7,14 +7,14 @@
  * 準拠: pipeline_design_master.md DL-030, DL-032
  */
 
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 import type { VendorRepository } from '@/repositories/types'
 import type { Vendor } from '@/mocks/types/pipeline/vendor.type'
 import { toVendor } from './helpers'
 
 export const supabaseVendorRepo: VendorRepository = {
   async getAll(): Promise<Vendor[]> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('vendors')
       .select('*')
       .eq('scope', 'global')
@@ -24,7 +24,7 @@ export const supabaseVendorRepo: VendorRepository = {
   },
 
   async findByMatchKey(key: string): Promise<Vendor | undefined> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('vendors')
       .select('*')
       .eq('match_key', key)
@@ -36,7 +36,7 @@ export const supabaseVendorRepo: VendorRepository = {
   },
 
   async findByTNumber(tNumber: string): Promise<Vendor | undefined> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('vendors')
       .select('*')
       .contains('t_numbers', [tNumber])
@@ -47,7 +47,7 @@ export const supabaseVendorRepo: VendorRepository = {
   },
 
   async findByPhoneNumber(phone: string): Promise<Vendor | undefined> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('vendors')
       .select('*')
       .contains('phone_numbers', [phone])

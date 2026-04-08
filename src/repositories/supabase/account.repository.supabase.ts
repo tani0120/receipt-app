@@ -7,14 +7,14 @@
  * 準拠: pipeline_design_master.md DL-030, DL-032
  */
 
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 import type { AccountRepository } from '@/repositories/types'
 import type { Account } from '@/shared/types/account'
 import { toAccount } from './helpers'
 
 export const supabaseAccountRepo: AccountRepository = {
   async getAll(): Promise<Account[]> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('accounts')
       .select('*')
       .order('sort_order')
@@ -24,7 +24,7 @@ export const supabaseAccountRepo: AccountRepository = {
   },
 
   async findById(id: string): Promise<Account | undefined> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('accounts')
       .select('*')
       .eq('id', id)
@@ -36,7 +36,7 @@ export const supabaseAccountRepo: AccountRepository = {
 
   async getAllForClient(clientId: string): Promise<Account[]> {
     // 1. 全科目取得
-    const { data: allAccounts, error: accErr } = await supabase
+    const { data: allAccounts, error: accErr } = await getSupabase()
       .from('accounts')
       .select('*')
       .order('sort_order')
@@ -44,7 +44,7 @@ export const supabaseAccountRepo: AccountRepository = {
     if (accErr) throw new Error(`[AccountRepository] getAllForClient(accounts)失敗: ${accErr.message}`)
 
     // 2. 顧問先カスタム設定取得
-    const { data: overrides, error: ovErr } = await supabase
+    const { data: overrides, error: ovErr } = await getSupabase()
       .from('client_accounts')
       .select('*')
       .eq('client_id', clientId)

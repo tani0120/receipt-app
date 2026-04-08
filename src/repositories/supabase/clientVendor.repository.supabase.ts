@@ -7,14 +7,14 @@
  * 準拠: pipeline_design_master.md DL-030, DL-032
  */
 
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 import type { ClientVendorRepository } from '@/repositories/types'
 import type { Vendor } from '@/mocks/types/pipeline/vendor.type'
 import { toVendor, fromVendor } from './helpers'
 
 export const supabaseClientVendorRepo: ClientVendorRepository = {
   async getByClientId(clientId: string): Promise<Vendor[]> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('vendors')
       .select('*')
       .eq('scope', 'client')
@@ -25,7 +25,7 @@ export const supabaseClientVendorRepo: ClientVendorRepository = {
   },
 
   async findByMatchKey(clientId: string, key: string): Promise<Vendor | undefined> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('vendors')
       .select('*')
       .eq('scope', 'client')
@@ -40,7 +40,7 @@ export const supabaseClientVendorRepo: ClientVendorRepository = {
   async save(clientId: string, vendor: Vendor): Promise<void> {
     const row = fromVendor({ ...vendor, scope: 'client', client_id: clientId })
 
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('vendors')
       .upsert(row, { onConflict: 'vendor_id' })
 
