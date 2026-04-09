@@ -238,11 +238,11 @@ export const routes: RouteRecordRaw[] = [
     name: 'UploadMobile',
     component: () => import('@/mocks/views/MockUploadPage.vue'),
   },
-  // PC用アップロード（ドラッグ&ドロップ・一括選択）
+  // PC用アップロード（3カテゴリ均等・ドラッグ&ドロップ）
   {
     path: '/client/upload/:clientId/pc',
     name: 'UploadPc',
-    component: () => import('@/mocks/views/MockUploadPage.vue'),
+    component: () => import('@/mocks/views/MockUploadPcPage.vue'),
   },
   {
     path: '/client/learning/:clientId',
@@ -332,6 +332,11 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/mocks/views/MockPortalPage.vue'),
   },
   {
+    path: '/portal/:clientId/login',
+    name: 'PortalLogin',
+    component: () => import('@/mocks/views/MockPortalLoginPage.vue'),
+  },
+  {
     path: '/portal/:clientId/mobile',
     name: 'PortalMobile',
     component: () => import('@/mocks/views/MockUploadPage.vue'),
@@ -339,7 +344,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/portal/:clientId/pc',
     name: 'PortalPc',
-    component: () => import('@/mocks/views/MockUploadPage.vue'),
+    component: () => import('@/mocks/views/MockUploadPcPage.vue'),
   },
   {
     path: '/portal/:clientId/docs',

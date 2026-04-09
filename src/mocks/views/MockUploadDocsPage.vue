@@ -1,37 +1,37 @@
 <template>
-  <div class="min-h-screen bg-slate-100 flex flex-col" style="font-family: 'Noto Sans JP', sans-serif">
+  <div class="h-full overflow-y-auto flex flex-col" style="font-family: 'Noto Sans JP', sans-serif; position: relative; background: #fff;">
 
-    <!-- ===== ヘッダー ===== -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-      <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          <h1 class="text-[15px] font-bold text-gray-800 leading-tight">📁 資料を送る</h1>
-          <p class="text-[11px] text-gray-400 mt-0.5 truncate">{{ clientId }} ／ {{ monthLabel }}</p>
-        </div>
-        <!-- バッジ -->
-        <div class="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
-          <span v-if="counts.done"
-            class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-            ✓ {{ counts.done }}
-          </span>
-          <span v-if="counts.failed"
-            class="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
-            ✗ {{ counts.failed }}
-          </span>
-          <span v-if="counts.uploading"
-            class="text-[10px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full animate-pulse">
-            ⏳ {{ counts.uploading }}
-          </span>
-          <span v-if="files.length"
-            class="text-[10px] text-gray-400 border border-gray-200 px-2 py-0.5 rounded-full">
-            計 {{ files.length }} 件
-          </span>
-        </div>
-      </div>
-    </header>
+    <!-- 左上ロゴ（ポータル統一位置：top:20px left:24px） -->
+    <div style="position: absolute; top: 20px; left: 24px; z-index: 30;">
+      <img src="/sugu-suru-logo.png" alt="sugu-suru" style="height: 32px; opacity: 0.85;" />
+    </div>
+
+    <!-- 右上社名バッジ -->
+    <div style="position: absolute; top: 20px; right: 24px; z-index: 30; display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 20px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 13px; font-weight: 700; color: #1e40af;">
+      🏢 株式会社LDIデジタル
+    </div>
+
+    <!-- 件数バッジ（ファイル追加時のみ） -->
+    <div v-if="files.length" style="position: absolute; top: 56px; right: 24px; z-index: 30; display: flex; gap: 6px;">
+      <span v-if="counts.done"
+        class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+        ✓ {{ counts.done }}
+      </span>
+      <span v-if="counts.failed"
+        class="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+        ✗ {{ counts.failed }}
+      </span>
+      <span v-if="counts.uploading"
+        class="text-[10px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full animate-pulse">
+        ⏳ {{ counts.uploading }}
+      </span>
+      <span class="text-[10px] text-gray-400 border border-gray-200 px-2 py-0.5 rounded-full">
+        計 {{ files.length }} 件
+      </span>
+    </div>
 
     <!-- ===== メイン ===== -->
-    <main class="flex-1 max-w-2xl mx-auto w-full px-3 py-4 pb-40">
+    <main class="flex-1 max-w-2xl mx-auto w-full px-3 py-4 pb-40" style="padding-top: 80px;">
 
       <!-- 空の状態 -->
       <div

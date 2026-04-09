@@ -5,7 +5,10 @@
     <MockNavBar v-if="!hideNavBar" />
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-hidden relative bg-slate-100 p-4">
+    <main :class="[
+      'flex-1 overflow-hidden relative',
+      hideNavBar ? 'bg-white p-0' : 'bg-slate-100 p-4'
+    ]">
          <router-view v-slot="{ Component, route: viewRoute }">
             <transition name="fade" mode="out-in">
               <div :key="viewRoute.path" class="h-full">

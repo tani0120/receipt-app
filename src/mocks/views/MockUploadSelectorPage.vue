@@ -6,7 +6,46 @@
 
       <!-- ========== 左カラム: 共有フロー ========== -->
       <aside class="col-left">
-        <h2 class="col-title">◆ アップロードURL共有方法</h2>
+
+        <!-- ◆共有設定（上段カード） -->
+        <div class="share-card">
+          <div class="share-header">
+            <h2 class="share-title">◆ 共有設定</h2>
+            <transition name="badge-fade" mode="out-in">
+              <span v-if="currentStatus === 'active'" key="active" class="share-badge share-badge--active">
+                <span class="badge-dot badge-dot--green"></span>共有OK
+              </span>
+              <span v-else-if="currentStatus === 'revoked'" key="revoked" class="share-badge share-badge--revoked">
+                <span class="badge-dot badge-dot--red"></span>解除済
+              </span>
+              <span v-else key="none" class="share-badge share-badge--none">
+                <span class="badge-dot badge-dot--gray"></span>未設定
+              </span>
+            </transition>
+          </div>
+          <div class="share-segment">
+            <div class="share-segment-track">
+              <div
+                class="share-segment-indicator"
+                :class="currentStatus === 'active' ? 'indicator--right' : 'indicator--left'"
+              ></div>
+              <button
+                class="share-seg-btn"
+                :class="currentStatus !== 'active' ? 'share-seg--selected' : 'share-seg--dimmed'"
+                @click="setStatus('revoked')"
+              >共有解除</button>
+              <button
+                class="share-seg-btn"
+                :class="currentStatus === 'active' ? 'share-seg--selected' : 'share-seg--dimmed'"
+                @click="setStatus('active')"
+              >共有OKにする</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ◆アップロードURL共有方法（下段カード） -->
+        <div class="flow-card">
+          <h2 class="col-title">◆ アップロードURL共有方法</h2>
 
         <!-- ===== 初回セクション ===== -->
         <div class="flow-section">
@@ -24,8 +63,9 @@
                 <span class="url-label">招待リンクURL：</span>
                 <div class="url-row">
                   <input class="url-input" :value="inviteUrl" readonly @click="selectAll" />
-                  <button class="copy-btn" @click="copyText(inviteUrl, 'invite')">
-                    {{ copiedKey === 'invite' ? '✅' : '📋' }}
+                  <button class="copy-btn" :class="{ 'copy-btn--copied': copiedKey === 'invite' }" @click="copyText(inviteUrl, 'invite')">
+                    <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'invite' }">📋</span>
+                    <span v-if="copiedKey === 'invite'" class="copy-toast">コピー済</span>
                   </button>
                 </div>
               </div>
@@ -57,16 +97,12 @@
             <span class="step-num">④</span>
             <div class="step-body">
               <p class="step-title">登録画面が表示される</p>
-              <p class="step-note">★ 3つの方法で登録可能</p>
+              <p class="step-note">★ 2つの方法で登録可能</p>
               <div class="auth-options">
                 <div class="auth-opt">
-                  <span class="auth-icon">🔵</span>
+                  <span class="auth-icon">🟢</span>
                   <span>Googleで登録</span>
                   <span class="auth-tag">ワンタップ</span>
-                </div>
-                <div class="auth-opt">
-                  <span class="auth-icon">⚫</span>
-                  <span>Apple IDで登録</span>
                 </div>
                 <div class="auth-opt">
                   <span class="auth-icon">📧</span>
@@ -104,8 +140,9 @@
                   <span class="url-entry-label">スマホ用：</span>
                   <div class="url-row">
                     <input class="url-input" :value="staffMobileUrl" readonly @click="selectAll" />
-                    <button class="copy-btn" @click="copyText(staffMobileUrl, 'sm')">
-                      {{ copiedKey === 'sm' ? '✅' : '📋' }}
+                    <button class="copy-btn" :class="{ 'copy-btn--copied': copiedKey === 'sm' }" @click="copyText(staffMobileUrl, 'sm')">
+                      <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'sm' }">📋</span>
+                      <span v-if="copiedKey === 'sm'" class="copy-toast">コピー済</span>
                     </button>
                   </div>
                 </div>
@@ -113,8 +150,9 @@
                   <span class="url-entry-label">PC用：</span>
                   <div class="url-row">
                     <input class="url-input" :value="staffPcUrl" readonly @click="selectAll" />
-                    <button class="copy-btn" @click="copyText(staffPcUrl, 'sp')">
-                      {{ copiedKey === 'sp' ? '✅' : '📋' }}
+                    <button class="copy-btn" :class="{ 'copy-btn--copied': copiedKey === 'sp' }" @click="copyText(staffPcUrl, 'sp')">
+                      <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'sp' }">📋</span>
+                      <span v-if="copiedKey === 'sp'" class="copy-toast">コピー済</span>
                     </button>
                   </div>
                 </div>
@@ -122,21 +160,13 @@
 
               <div class="url-group">
                 <p class="url-group-label">＜顧問先用＞</p>
+                <p class="url-group-note">顧問先ログイン用URL（PC・スマホ共通）</p>
                 <div class="url-entry">
-                  <span class="url-entry-label">スマホ用：</span>
                   <div class="url-row">
-                    <input class="url-input" :value="portalMobileUrl" readonly @click="selectAll" />
-                    <button class="copy-btn" @click="copyText(portalMobileUrl, 'pm')">
-                      {{ copiedKey === 'pm' ? '✅' : '📋' }}
-                    </button>
-                  </div>
-                </div>
-                <div class="url-entry">
-                  <span class="url-entry-label">PC用：</span>
-                  <div class="url-row">
-                    <input class="url-input" :value="portalPcUrl" readonly @click="selectAll" />
-                    <button class="copy-btn" @click="copyText(portalPcUrl, 'pp')">
-                      {{ copiedKey === 'pp' ? '✅' : '📋' }}
+                    <input class="url-input" :value="portalLoginUrl" readonly @click="selectAll" />
+                    <button class="copy-btn" :class="{ 'copy-btn--copied': copiedKey === 'portal' }" @click="copyText(portalLoginUrl, 'portal')">
+                      <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'portal' }">📋</span>
+                      <span v-if="copiedKey === 'portal'" class="copy-toast">コピー済</span>
                     </button>
                   </div>
                 </div>
@@ -153,41 +183,12 @@
             <span class="repeat-note">（招待コードは2回目以降不要）</span>
           </p>
         </div>
+        </div>
       </aside>
 
       <!-- ========== 右カラム: アップロードカード ========== -->
       <section class="col-right">
 
-        <!-- 共有設定 -->
-        <div class="card-section section-share">
-          <div class="card-section-header">
-            <span class="section-badge badge-share">⚙️ 共有設定</span>
-            <div class="share-status-row">
-              <span class="share-label">現在の状態：</span>
-              <span v-if="currentStatus === 'active'" class="share-st-badge share-st-active">共有OK</span>
-              <span v-else-if="currentStatus === 'pending'" class="share-st-badge share-st-pending">未承認</span>
-              <span v-else-if="currentStatus === 'revoked'" class="share-st-badge share-st-revoked">解除済</span>
-              <span v-else class="share-st-badge share-st-none">未設定</span>
-            </div>
-          </div>
-          <div class="share-actions">
-            <button
-              v-if="currentStatus !== 'active'"
-              class="share-action-btn share-btn-approve"
-              @click="setStatus('active')"
-            >✅ 共有OKにする</button>
-            <button
-              v-if="currentStatus !== 'pending' && currentStatus !== null"
-              class="share-action-btn share-btn-pending"
-              @click="setStatus('pending')"
-            >⏳ 未承認に戻す</button>
-            <button
-              v-if="currentStatus === 'active' || currentStatus === 'pending'"
-              class="share-action-btn share-btn-revoke"
-              @click="setStatus('revoked')"
-            >⛔ 共有解除</button>
-          </div>
-        </div>
 
         <!-- 社内用 -->
         <div class="card-section section-staff">
@@ -216,24 +217,21 @@
             <p class="section-note">カードをクリックでURLコピー</p>
           </div>
           <div class="card-row">
-            <div class="sel-card card-client-mobile" @click="copyText(portalMobileUrl, 'pm')">
-              <div class="card-icon-area icon-client-mobile"><span>📱</span></div>
-              <h3 class="card-label">スマホ用URL</h3>
-              <span class="copy-tag" :class="{ copied: copiedKey === 'pm' }">
-                {{ copiedKey === 'pm' ? '✅ コピー済み' : '📋 URLをコピー' }}
+            <div class="sel-card card-client-mobile" @click="copyText(portalLoginUrl, 'portal')">
+              <div class="card-icon-area icon-client-mobile"><span>🔗</span></div>
+              <h3 class="card-label">顧問先ログイン用URL</h3>
+              <p class="card-sub">PC・スマホ共通</p>
+              <span class="copy-tag" :class="{ copied: copiedKey === 'portal' }">
+                <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'portal' }">📋</span>
+                {{ copiedKey === 'portal' ? 'コピーしました！' : 'URLをコピー' }}
               </span>
             </div>
-            <div class="sel-card card-client-pc" @click="copyText(portalPcUrl, 'pp')">
-              <div class="card-icon-area icon-client-pc"><span>💻</span></div>
-              <h3 class="card-label">PC用URL</h3>
-              <span class="copy-tag" :class="{ copied: copiedKey === 'pp' }">
-                {{ copiedKey === 'pp' ? '✅ コピー済み' : '📋 URLをコピー' }}
-              </span>
-            </div>
+            <button class="sel-card card-client-pc" @click="go('/portal/' + clientId)">
+              <div class="card-icon-area icon-client-pc"><span>👁</span></div>
+              <h3 class="card-label">ポータルを確認</h3>
+              <p class="card-sub">ログインをスキップ</p>
+            </button>
           </div>
-          <button class="preview-btn" @click="go('/portal/' + clientId)">
-            👁 顧問先ポータルをプレビュー →
-          </button>
         </div>
 
         <!-- 資料 -->
@@ -265,8 +263,7 @@ const staffMobilePath = `/client/upload/${clientId}/mobile`
 const staffPcPath     = `/client/upload/${clientId}/pc`
 const staffMobileUrl  = `${origin}/#${staffMobilePath}`
 const staffPcUrl      = `${origin}/#${staffPcPath}`
-const portalMobileUrl = `${origin}/#/portal/${clientId}/mobile`
-const portalPcUrl     = `${origin}/#/portal/${clientId}/pc`
+const portalLoginUrl  = `${origin}/#/portal/${clientId}/login`
 
 // 共有設定（Repository経由）
 const { loadAll, updateStatus, saveInviteCode, getStatusFromCache, getInviteCodeFromCache } = useShareStatus()
@@ -352,12 +349,12 @@ const go = (path: string) => {
 /* ===== 2カラム ===== */
 .two-col {
   flex: 1;
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   width: 100%;
   padding: 20px 16px 40px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 3fr;
   gap: 20px;
   align-items: start;
 }
@@ -365,12 +362,11 @@ const go = (path: string) => {
   .two-col { grid-template-columns: 1fr; }
 }
 
-/* ===== 左カラム ===== */
+/* ===== 左カラム（コンテナのみ・背景なし） ===== */
 .col-left {
-  background: #fff;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 .col-title {
   font-size: 15px; font-weight: 800; color: #1e293b;
@@ -393,9 +389,8 @@ const go = (path: string) => {
 .step-num {
   flex-shrink: 0;
   width: 26px; height: 26px;
-  background: #3b82f6; color: #fff;
-  font-size: 12px; font-weight: 700;
-  border-radius: 50%;
+  background: none; color: #2563eb;
+  font-size: 14px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
   margin-top: 1px;
 }
@@ -436,12 +431,47 @@ const go = (path: string) => {
 }
 .url-input:focus { border-color: #93c5fd; }
 .copy-btn {
+  position: relative;
   padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 6px;
   cursor: pointer; background: #fff; font-size: 12px;
-  transition: background 0.2s;
+  transition: all 0.25s ease;
   -webkit-tap-highlight-color: transparent;
+  display: inline-flex; align-items: center; gap: 2px;
 }
 .copy-btn:hover { background: #f0f7ff; }
+.copy-btn--copied {
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+}
+
+/* コピーアイコンのポップアニメーション */
+.copy-icon {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+.copy-icon--pop {
+  animation: copyPop 0.45s ease;
+}
+@keyframes copyPop {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.45) rotate(-8deg); }
+  50%  { transform: scale(0.9) rotate(4deg); }
+  70%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* コピー完了トースト（ボタン横に表示） */
+.copy-toast {
+  font-size: 9px;
+  font-weight: 700;
+  color: #166534;
+  white-space: nowrap;
+  animation: toastSlideIn 0.3s ease;
+}
+@keyframes toastSlideIn {
+  0%   { opacity: 0; transform: translateX(-4px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
 
 /* 認証オプション */
 .auth-options { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
@@ -543,13 +573,20 @@ const go = (path: string) => {
 
 .preview-btn {
   display: block; width: 100%; text-align: center;
-  margin-top: 10px; padding: 8px;
-  border: none; border-radius: 8px;
-  background: transparent; cursor: pointer;
-  font-family: inherit; font-size: 11px; color: #64748b;
-  transition: color 0.2s;
+  margin-top: 12px; padding: 12px 16px;
+  border: 2px solid #22c55e; border-radius: 12px;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  color: #166534;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-.preview-btn:hover { color: #22c55e; }
+.preview-btn:hover {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34,197,94,0.2);
+}
 
 .docs-area { text-align: center; }
 .docs-btn {
@@ -559,40 +596,121 @@ const go = (path: string) => {
   cursor: pointer; transition: all 0.2s ease; font-family: inherit;
 }
 .docs-btn:hover { background: #fff; border-color: #94a3b8; color: #334155; }
-
-/* 共有設定セクション */
-.section-share { border: 2px solid #e2e8f0; }
-.badge-share { background: #fef3c7; color: #92400e; }
-
-.share-status-row {
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 8px;
+/* ===== 共有方法（下段カード） ===== */
+.flow-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.05);
 }
-.share-label { font-size: 12px; color: #64748b; }
-.share-st-badge {
-  display: inline-block; padding: 3px 12px; border-radius: 6px;
-  font-size: 12px; font-weight: 700;
-}
-.share-st-active  { background: #dcfce7; color: #166534; }
-.share-st-pending { background: #dbeafe; color: #1e40af; }
-.share-st-revoked { background: #fee2e2; color: #991b1b; }
-.share-st-none    { background: #f1f5f9; color: #94a3b8; }
 
-.share-actions {
-  display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
+/* ===== 共有設定カード（モダンデザイン） ===== */
+.share-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 22px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
+  transition: box-shadow 0.2s ease;
 }
-.share-action-btn {
-  padding: 6px 14px; border-radius: 8px;
-  font-size: 11px; font-weight: 700;
-  border: 1px solid #e2e8f0; cursor: pointer;
-  transition: all 0.2s ease;
+.share-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+}
+
+/* ヘッダー（タイトル + バッジ）1行 */
+.share-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.share-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+/* ステータスバッジ（ドット付き） */
+.share-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 120px;
+  justify-content: center;
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.badge-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.badge-dot--green { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+.badge-dot--red   { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.3); }
+.badge-dot--gray  { background: #cbd5e1; }
+.share-badge--active  { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.share-badge--revoked { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.share-badge--none    { background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; }
+
+/* バッジトランジション */
+.badge-fade-enter-active,
+.badge-fade-leave-active { transition: all 0.25s ease; }
+.badge-fade-enter-from { opacity: 0; transform: scale(0.9) translateY(-2px); }
+.badge-fade-leave-to   { opacity: 0; transform: scale(0.9) translateY(2px); }
+
+/* セグメントコントロール（iOS風トグル） */
+.share-segment {
+  margin-top: 2px;
+}
+.share-segment-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 0;
+}
+.share-segment-indicator {
+  position: absolute;
+  top: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1), 0 0 1px rgba(0,0,0,0.05);
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.indicator--left  { left: 3px; }
+.indicator--right { left: calc(50%); }
+
+.share-seg-btn {
+  position: relative;
+  z-index: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.25s ease;
   font-family: inherit;
   -webkit-tap-highlight-color: transparent;
+  text-align: center;
 }
-.share-btn-approve { background: #dcfce7; color: #166534; border-color: #86efac; }
-.share-btn-approve:hover { background: #bbf7d0; }
-.share-btn-pending { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
-.share-btn-pending:hover { background: #bfdbfe; }
-.share-btn-revoke { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-.share-btn-revoke:hover { background: #fecaca; }
+.share-seg--selected {
+  color: #1e293b;
+}
+.share-seg--dimmed {
+  color: #94a3b8;
+}
+.share-seg--dimmed:hover {
+  color: #64748b;
+}
 </style>

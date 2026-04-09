@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-slate-100 flex flex-col" style="font-family: 'Noto Sans JP', sans-serif">
+  <div class="h-full overflow-y-auto bg-slate-100 flex flex-col" style="font-family: 'Noto Sans JP', sans-serif">
 
     <!-- ===== ヘッダー ===== -->
     <header class="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">

@@ -1,102 +1,87 @@
 <template>
-  <div class="portal-page">
+  <div class="portal-page" style="font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif">
 
-    <!-- ===== 事務所ブランディングヘッダー ===== -->
-    <header class="portal-header">
-      <div class="header-inner">
-        <div class="brand-area">
-          <span class="brand-icon">🏢</span>
-          <div>
-            <h1 class="brand-name">すぐるす会計事務所</h1>
-            <p class="brand-sub">資料アップロードポータル</p>
-          </div>
-        </div>
-      </div>
-    </header>
+    <!-- 左上ロゴ -->
+    <div class="top-logo">
+      <img src="/sugu-suru-logo.png" alt="sugu-suru" class="brand-logo" />
+    </div>
 
-    <!-- ===== メインコンテンツ ===== -->
+    <!-- 右上社名バッジ -->
+    <div class="company-badge">
+      <span class="client-badge-icon">🏢</span>
+      <span class="client-badge-name">{{ clientName }}</span>
+    </div>
+
     <main class="portal-main">
 
       <!-- 挨拶 -->
-      <div class="greeting-area">
-        <p class="greeting-text">
-          いつもお世話になっております。<br>
-          下のボタンから資料をお送りください。
-        </p>
+      <div class="greeting">
+        <h1 class="greeting-title">資料アップロード</h1>
+        <p class="greeting-sub">下のボタンから資料をお送りください</p>
       </div>
 
-      <!-- セクション: 領収書・レシート -->
-      <section class="portal-section">
-        <h2 class="section-title">
-          <span class="section-icon">📄</span>
-          領収書・レシートを送る
-        </h2>
-        <p class="section-desc">
-          撮影またはスキャンした画像をアップロードします。<br>
-          AIが自動でチェックし、不備があればその場で教えます。
-        </p>
+      <!-- メインアクションカード -->
+      <div class="action-cards">
 
-        <div class="mode-grid">
-          <!-- スマホ用 -->
-          <button class="mode-card mode-mobile" @click="goUpload('mobile')">
-            <div class="mode-icon-wrap mode-icon-mobile">
-              <span class="mode-icon">📱</span>
+        <!-- 📄 領収書・レシート -->
+        <div class="action-card">
+          <div class="card-header">
+            <span class="card-icon">📄</span>
+            <div>
+              <h2 class="card-title">領収書・レシートを送る</h2>
+              <p class="card-desc">撮影またはスキャンした画像をアップロード</p>
             </div>
-            <div class="mode-text">
-              <h3 class="mode-title">スマホで撮影</h3>
-              <p class="mode-desc">カメラで撮ってそのまま送れます</p>
-            </div>
-            <span class="mode-arrow">→</span>
-          </button>
-
-          <!-- PC用 -->
-          <button class="mode-card mode-pc" @click="goUpload('pc')">
-            <div class="mode-icon-wrap mode-icon-pc">
-              <span class="mode-icon">💻</span>
-            </div>
-            <div class="mode-text">
-              <h3 class="mode-title">PCから送る</h3>
-              <p class="mode-desc">保存済みの画像をまとめて送れます</p>
-            </div>
-            <span class="mode-arrow">→</span>
-          </button>
-        </div>
-      </section>
-
-      <!-- セクション: その他の資料 -->
-      <section class="portal-section section-docs">
-        <h2 class="section-title">
-          <span class="section-icon">📎</span>
-          その他の資料を送る
-        </h2>
-        <p class="section-desc">
-          謄本・CSV・Excel・通帳コピーなど
-        </p>
-        <button class="docs-btn" @click="goUploadDocs">
-          資料アップロードを開く →
-        </button>
-      </section>
-
-      <!-- 撮影ヒント -->
-      <section class="portal-section section-tips">
-        <h2 class="section-title">
-          <span class="section-icon">💡</span>
-          きれいに撮るコツ
-        </h2>
-        <div class="tips-grid">
-          <div v-for="tip in tips" :key="tip.icon" class="tip-item">
-            <span class="tip-icon">{{ tip.icon }}</span>
-            <p class="tip-text">{{ tip.text }}</p>
+          </div>
+          <div class="card-modes">
+            <button class="mode-btn" @click="goUpload('mobile')">
+              <div class="mode-icon-wrap mode-icon--mobile"><span>📱</span></div>
+              <div class="mode-text">
+                <span class="mode-label">スマホで撮影</span>
+                <span class="mode-hint">カメラで撮ってそのまま送れます</span>
+              </div>
+              <span class="mode-arrow">→</span>
+            </button>
+            <button class="mode-btn" @click="goUpload('pc')">
+              <div class="mode-icon-wrap mode-icon--pc"><span>💻</span></div>
+              <div class="mode-text">
+                <span class="mode-label">PCから送る</span>
+                <span class="mode-hint">画像をまとめてアップロード</span>
+              </div>
+              <span class="mode-arrow">→</span>
+            </button>
           </div>
         </div>
-      </section>
 
+        <!-- 📎 その他の資料 -->
+        <div class="action-card card--secondary">
+          <div class="card-header">
+            <span class="card-icon">📎</span>
+            <div>
+              <h2 class="card-title">その他の資料を送る</h2>
+              <p class="card-desc">謄本・CSV・Excel・通帳コピーなど</p>
+            </div>
+          </div>
+          <button class="docs-btn" @click="goUploadDocs">
+            資料アップロードを開く →
+          </button>
+        </div>
+      </div>
+
+      <!-- 撮影ヒント -->
+      <div class="tips-section">
+        <h3 class="tips-title">💡 きれいに撮るコツ</h3>
+        <div class="tips-grid">
+          <div class="tip" v-for="tip in tips" :key="tip.icon">
+            <span class="tip-icon">{{ tip.icon }}</span>
+            <span class="tip-text">{{ tip.text }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- フッター -->
+      <p class="portal-footer">© sugu-suru</p>
     </main>
 
-    <!-- フッター -->
-    <footer class="portal-footer">
-      <p class="footer-text">© すぐるす会計事務所</p>
-    </footer>
   </div>
 </template>
 
@@ -106,6 +91,12 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 const clientId = route.params.clientId as string
+
+// モック: clientIdから社名を取得
+const clientNames: Record<string, string> = {
+  'LDI-00008': '株式会社LDIデジタル',
+}
+const clientName = clientNames[clientId] || clientId
 
 const tips = [
   { icon: '☀️', text: '明るい場所で撮影' },
@@ -126,117 +117,128 @@ const goUploadDocs = () => {
 <style scoped>
 /* ===== ページ全体 ===== */
 .portal-page {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #f8fafc 0%, #f0f4ff 100%);
-  font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ===== ヘッダー ===== */
-.portal-header {
+  height: 100vh;
+  overflow-y: auto;
   background: #fff;
-  border-bottom: 1px solid #e2e8f0;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  position: relative;
 }
 
-.header-inner {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 16px 20px;
+/* ===== 左上ロゴ ===== */
+.top-logo {
+  position: absolute;
+  top: 20px; left: 24px;
+  z-index: 10;
 }
-
-.brand-area {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.brand-icon {
-  font-size: 32px;
-  line-height: 1;
-}
-
-.brand-name {
-  font-size: 16px;
-  font-weight: 800;
-  color: #1e293b;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-.brand-sub {
-  font-size: 11px;
-  color: #94a3b8;
-  margin: 2px 0 0;
+.brand-logo {
+  height: 32px;
+  object-fit: contain;
+  opacity: 0.85;
 }
 
 /* ===== メイン ===== */
 .portal-main {
-  flex: 1;
-  max-width: 640px;
+  max-width: 480px;
   margin: 0 auto;
-  width: 100%;
-  padding: 24px 16px 40px;
+  padding: 60px 20px 40px;
 }
 
 /* ===== 挨拶 ===== */
-.greeting-area {
+.greeting {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 36px;
 }
-
-.greeting-text {
+.greeting-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #1e293b;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+.greeting-sub {
   font-size: 14px;
-  color: #475569;
-  line-height: 1.8;
+  color: #94a3b8;
   margin: 0;
 }
 
-/* ===== セクション ===== */
-.portal-section {
-  background: #fff;
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 16px;
-  box-shadow: 0 1px 8px rgba(0,0,0,0.04);
-}
-
-.section-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 8px;
-  display: flex;
+/* 右上社名バッジ */
+.company-badge {
+  position: absolute;
+  top: 20px; right: 24px;
+  z-index: 30;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+.client-badge-icon {
+  font-size: 14px; line-height: 1;
+}
+.client-badge-name {
+  font-size: 13px; font-weight: 700; color: #1e40af;
 }
 
-.section-icon {
-  font-size: 18px;
-}
-
-.section-desc {
-  font-size: 12px;
-  color: #64748b;
-  margin: 0 0 16px;
-  line-height: 1.7;
-}
-
-/* ===== モード選択グリッド ===== */
-.mode-grid {
+/* ===== アクションカード ===== */
+.action-cards {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.action-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  background: #fff;
+  transition: box-shadow 0.2s;
+}
+.action-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+}
+.card--secondary {
+  background: #fafbfc;
 }
 
-.mode-card {
+/* カードヘッダー */
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.card-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.card-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 2px;
+}
+.card-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* モードボタン */
+.card-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mode-btn {
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   background: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -244,137 +246,84 @@ const goUploadDocs = () => {
   font-family: inherit;
   -webkit-tap-highlight-color: transparent;
 }
-
-.mode-card:hover {
+.mode-btn:hover {
   border-color: #93c5fd;
-  background: #f0f7ff;
-  transform: translateX(4px);
+  background: #f8fafc;
 }
-
-.mode-card:active {
-  transform: scale(0.98);
+.mode-btn:active {
+  transform: scale(0.99);
 }
-
 .mode-icon-wrap {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
+  font-size: 20px;
 }
-
-.mode-icon-mobile { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
-.mode-icon-pc     { background: linear-gradient(135deg, #ede9fe, #ddd6fe); }
-
-.mode-icon {
-  font-size: 24px;
-}
-
+.mode-icon--mobile { background: #eff6ff; }
+.mode-icon--pc     { background: #f0fdf4; }
 .mode-text {
-  flex: 1;
-  min-width: 0;
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
 }
-
-.mode-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 2px;
+.mode-label {
+  font-size: 14px; font-weight: 700; color: #1e293b;
 }
-
-.mode-desc {
-  font-size: 11px;
-  color: #94a3b8;
-  margin: 0;
+.mode-hint {
+  font-size: 11px; color: #94a3b8; margin-top: 1px;
 }
-
 .mode-arrow {
-  font-size: 18px;
-  color: #cbd5e1;
-  flex-shrink: 0;
+  font-size: 16px; color: #cbd5e1; flex-shrink: 0;
   transition: color 0.2s;
 }
+.mode-btn:hover .mode-arrow { color: #3b82f6; }
 
-.mode-card:hover .mode-arrow {
-  color: #3b82f6;
-}
-
-/* ===== その他の資料 ===== */
-.section-docs {
-  background: #fafafa;
-  border: 1px dashed #d1d5db;
-  box-shadow: none;
-}
-
+/* その他ボタン */
 .docs-btn {
-  display: block;
-  width: 100%;
+  display: block; width: 100%;
   padding: 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
   background: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-  cursor: pointer;
+  font-size: 13px; font-weight: 600; color: #475569;
+  cursor: pointer; font-family: inherit;
   transition: all 0.2s ease;
-  font-family: inherit;
   -webkit-tap-highlight-color: transparent;
+  text-align: center;
 }
-
 .docs-btn:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
+  background: #f8fafc;
+  border-color: #cbd5e1;
 }
 
-/* ===== 撮影ヒント ===== */
-.section-tips {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  box-shadow: none;
+/* ===== ヒント ===== */
+.tips-section {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 24px;
+  margin-bottom: 20px;
 }
-
+.tips-title {
+  font-size: 13px; font-weight: 700; color: #64748b;
+  margin: 0 0 14px;
+}
 .tips-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
-
 @media (max-width: 400px) {
-  .tips-grid {
-    grid-template-columns: 1fr;
-  }
+  .tips-grid { grid-template-columns: 1fr; }
 }
-
-.tip-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.tip {
+  display: flex; align-items: center; gap: 8px;
 }
-
-.tip-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.tip-text {
-  font-size: 11px;
-  color: #92400e;
-  margin: 0;
-  line-height: 1.4;
-}
+.tip-icon { font-size: 16px; flex-shrink: 0; }
+.tip-text { font-size: 12px; color: #64748b; }
 
 /* ===== フッター ===== */
 .portal-footer {
   text-align: center;
-  padding: 20px;
-}
-
-.footer-text {
-  font-size: 10px;
-  color: #cbd5e1;
-  margin: 0;
+  font-size: 11px; color: #cbd5e1;
+  margin-top: 32px;
 }
 </style>

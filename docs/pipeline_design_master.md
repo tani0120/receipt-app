@@ -1874,3 +1874,62 @@ VITE_SUPABASE_ANON_KEY=eyJhbG...
 1. **confirmed_journals**: T-03で型確定後にSQL + Supabase版Repository作成
 2. **seedスクリプト**: モックデータ（vendors_global 224件等）のDB投入スクリプト未作成
 3. **Supabase Realtime**: share_status以外のsubscription未実装（必要時に追加）
+
+---
+
+## 障害記録: Supabaseクライアント即時初期化によるナビゲーションブロック（2026-04-08）
+
+### 症状
+
+NavBarの「進捗管理」ボタンをクリックしても `/master/progress` に遷移しない。
+ブラウザコンソールに以下のエラー:
+
+```
+[Vue Router warn]: uncaught error during route navigation:
+Error: supabaseUrl is required.
+    at supabase.ts:23:25
+```
+
+### 根本原因
+
+`src/lib/supabase.ts` がモジュールレベル（トップレベル）で `createClient('', '')` を即実行していた。
+`@supabase/supabase-js` v2 は第1引数が空文字の場合に `supabaseUrl is required` エラーを投げる。
+
+モック運用時（`VITE_USE_MOCK=true`、または未設定）でも、ESモジュールのimportチェーンにより
+Supabase版Repositoryが必ず読み込まれ、連鎖的に `supabase.ts` が実行されていた。
+
+**エラー伝搬経路:**
+
+```
+repositories/index.ts（factory関数）
+  → repositories/supabase/index.ts（バレルexport）
+    → 各 *.repository.supabase.ts（import { supabase } from '@/lib/supabase'）
+      → src/lib/supabase.ts（createClient() がモジュールレベルで即実行 → エラー）
+```
+
+factory関数は `VITE_USE_MOCK` でモック版を返すが、ESモジュール仕様上
+import文はモジュール読み込み時に全て解決されるため、分岐に関係なく `supabase.ts` が読み込まれた。
+
+### 修正内容
+
+1. `src/lib/supabase.ts`: `export const supabase = createClient(...)` を廃止。
+   `export function getSupabase(): SupabaseClient` を新設（遅延初期化・シングルトン）。
+   モジュール読み込み時には何も実行せず、初回呼び出し時にのみ `createClient()` を実行。
+2. Supabase版Repository全5ファイル: `import { supabase }` → `import { getSupabase }`、
+   `supabase.from(...)` → `getSupabase().from(...)` に変更。
+
+### 二次障害（AI起因）
+
+修正過程でPowerShellの正規表現一括置換（`Get-Content | -replace | Set-Content`）を使用した結果、
+日本語コメントが文字化けしファイルが破損。`git restore` で復元したが、
+コミット済みバージョンへの巻き戻しとなり、セッション中の未コミット作業が失われた。
+
+**教訓:**
+- PowerShellでのコード操作は禁止（`.agent/workflows/load_context.md` に追記済み）
+- ファイル編集は必ず `replace_file_content` / `multi_replace_file_content` を1ファイルずつ使用する
+- コード変更後は早期にコミットし、長時間の未コミット状態を避ける
+
+### 対応コミット
+
+`79c7fca` — `fix: Supabaseクライアントの遅延初期化導入によるナビゲーションブロックの解消`
+

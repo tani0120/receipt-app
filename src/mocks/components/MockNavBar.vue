@@ -118,14 +118,9 @@ const isTopActive = (item: TopItem): boolean =>
   item.managedPaths.some(p => route.path.startsWith(p));
 
 const handleTopClick = (item: TopItem): void => {
-  console.log('[NavBar] handleTopClick:', item.key, item.path, 'current:', route.path);
   if (item.path) {
     // 事務所共通ページはそのまま遷移（/master/xxx）
-    router.push(item.path).then(() => {
-      console.log('[NavBar] 遷移成功:', item.path);
-    }).catch((err: unknown) => {
-      console.error('[NavBar] 遷移失敗:', err);
-    });
+    router.push(item.path);
   } else {
     globalThis.alert(`${item.label}は未実装です`);
   }
