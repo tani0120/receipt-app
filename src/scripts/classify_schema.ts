@@ -2,7 +2,7 @@
  * Phase A-2 v2: 証票分類 Gemini実験 — JSON Schema定義
  *
  * 目的: Gemini 1 API callで証票から抽出すべき情報の構造定義
- * 依存: @google-cloud/vertexai の SchemaType のみ
+ * 依存: @google/genai の Type のみ
  * スコープ: 実験用。既存の src/mocks/ src/shared/ には依存しない
  *
  * 変更履歴:
@@ -20,7 +20,7 @@
  *         （旧: debit_account / credit_account → 廃止）
  */
 
-import { SchemaType } from '@google-cloud/vertexai';
+import { Type } from '@google/genai';
 import type { LineItem } from '../mocks/types/pipeline/line_item.type';
 
 // ============================================================
@@ -184,61 +184,61 @@ export interface ClassifyResult {
 // ============================================================
 
 export const CLASSIFY_RESPONSE_SCHEMA = {
-  type: SchemaType.OBJECT,
+  type: Type.OBJECT,
   properties: {
     // --- A1-A2: 証票分類 ---
     voucher_type: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       enum: ['RECEIPT', 'INVOICE', 'TRANSPORT', 'CREDIT_CARD', 'BANK_STATEMENT', 'MEDICAL', 'NOT_APPLICABLE'],
       description: '証票の種類'
     },
     voucher_type_confidence: {
-      type: SchemaType.NUMBER,
+      type: Type.NUMBER,
       description: '証票分類の信頼度（0.0〜1.0）'
     },
 
     // --- A3-A8: OCR抽出（3状態） ---
     date: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       nullable: true,
       description: '取引日（YYYY-MM-DD）。欄自体が存在しない場合はnull'
     },
     date_unreadable: {
-      type: SchemaType.BOOLEAN,
+      type: Type.BOOLEAN,
       description: '日付欄はあるが文字が潰れて読めない場合true'
     },
     total_amount: {
-      type: SchemaType.NUMBER,
+      type: Type.NUMBER,
       nullable: true,
       description: '合計金額（税込）。欄自体が存在しない場合はnull'
     },
     amount_unreadable: {
-      type: SchemaType.BOOLEAN,
+      type: Type.BOOLEAN,
       description: '金額欄はあるが文字が潰れて読めない場合true'
     },
     issuer_name: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       nullable: true,
       description: '発行者名（会社名・店舗名）。欄自体が存在しない場合はnull'
     },
     issuer_unreadable: {
-      type: SchemaType.BOOLEAN,
+      type: Type.BOOLEAN,
       description: '発行者名欄はあるが読めない場合true'
     },
 
     // --- A9-A11: 追加OCR ---
     issuer_branch: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       nullable: true,
       description: '支店名・店舗名（例: 谷町四丁目店）'
     },
     description: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       nullable: true,
       description: '摘要（取引内容の要約）'
     },
     payment_method: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       nullable: true,
       enum: ['CASH', 'CREDIT_CARD', 'BANK_TRANSFER', 'E_MONEY', 'QR_PAY', 'OTHER'],
       description: '支払方法。判別不能な場合はnull'
@@ -246,68 +246,68 @@ export const CLASSIFY_RESPONSE_SCHEMA = {
 
     // --- A12-A13: 適格請求書 ---
     invoice_registration_number: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       nullable: true,
       description: 'インボイス登録番号（T + 13桁、ハイフンなし）。存在しない場合はnull'
     },
     is_invoice_qualified: {
-      type: SchemaType.BOOLEAN,
+      type: Type.BOOLEAN,
       description: '適格請求書か。T番号が存在する場合true'
     },
 
     // --- A14-A16: 税率 ---
     tax_entries: {
-      type: SchemaType.ARRAY,
+      type: Type.ARRAY,
       items: {
-        type: SchemaType.OBJECT,
+        type: Type.OBJECT,
         properties: {
-          rate: { type: SchemaType.NUMBER, description: '税率（8 or 10）' },
-          taxable_amount: { type: SchemaType.NUMBER, description: '税抜額' },
-          tax_amount: { type: SchemaType.NUMBER, description: '消費税額' }
+          rate: { type: Type.NUMBER, description: '税率（8 or 10）' },
+          taxable_amount: { type: Type.NUMBER, description: '税抜額' },
+          tax_amount: { type: Type.NUMBER, description: '消費税額' }
         },
         required: ['rate', 'taxable_amount', 'tax_amount']
       },
       description: '税率別内訳。税情報がない場合は空配列'
     },
     has_multiple_tax_rates: {
-      type: SchemaType.BOOLEAN,
+      type: Type.BOOLEAN,
       description: '8%と10%が混在しているか'
     },
     has_reduced_tax_rate: {
-      type: SchemaType.BOOLEAN,
+      type: Type.BOOLEAN,
       description: '軽減税率（8%）の取引が含まれるか'
     },
 
     // --- A17-A19: 口座推定 ---
     bank_name_guess: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       nullable: true,
       description: '推定銀行名（口座明細の場合）'
     },
     bank_name_confidence: {
-      type: SchemaType.NUMBER,
+      type: Type.NUMBER,
       nullable: true,
       description: '銀行名推定の信頼度（0.0〜1.0）'
     },
     bank_name_evidence: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       nullable: true,
       description: '銀行名推定の根拠（ロゴ形状、フォーマット特徴、固有キーワード等）'
     },
 
     // --- A20-A21: 仕訳候補 ---
     journal_entry_suggestions: {
-      type: SchemaType.ARRAY,
+      type: Type.ARRAY,
       items: {
-        type: SchemaType.OBJECT,
+        type: Type.OBJECT,
         properties: {
           entry_type: {
-            type: SchemaType.STRING,
+            type: Type.STRING,
             enum: ['debit', 'credit'],
             description: '借方(debit)または貸方(credit)'
           },
           account: {
-            type: SchemaType.STRING,
+            type: Type.STRING,
             enum: [
               'TRAVEL', 'SUPPLIES', 'COMMUNICATION', 'MEETING', 'ENTERTAINMENT',
               'ADVERTISING', 'FEES', 'RENT', 'UTILITIES', 'INSURANCE',
@@ -323,12 +323,12 @@ export const CLASSIFY_RESPONSE_SCHEMA = {
             description: '勘定科目（30科目enum）'
           },
           sub_account: {
-            type: SchemaType.STRING,
+            type: Type.STRING,
             nullable: true,
             description: '補助科目（銀行名、カード名等。不明ならnull）'
           },
           tax_category: {
-            type: SchemaType.STRING,
+            type: Type.STRING,
             enum: [
               'TAXABLE_PURCHASE_10', 'TAXABLE_PURCHASE_8',
               'NON_TAXABLE_PURCHASE', 'OUT_OF_SCOPE_PURCHASE',
@@ -337,65 +337,65 @@ export const CLASSIFY_RESPONSE_SCHEMA = {
             ],
             description: '税区分（課税仕入10%/8%、非課税仕入、対象外等）'
           },
-          amount: { type: SchemaType.NUMBER, description: '金額' },
-          description: { type: SchemaType.STRING, description: '摘要' }
+          amount: { type: Type.NUMBER, description: '金額' },
+          description: { type: Type.STRING, description: '摘要' }
         },
         required: ['entry_type', 'account', 'tax_category', 'amount', 'description']
       },
       description: '仕訳候補。借方・貸方を各エントリで表現。対象外の場合は空配列'
     },
     is_composite_transaction: {
-      type: SchemaType.BOOLEAN,
+      type: Type.BOOLEAN,
       description: '複合仕訳か（複数の勘定科目が必要、または貸借が2行以上）'
     },
 
     // --- A22-A23: 手書き判定 ---
     handwritten_flag: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       enum: ['NONE', 'NON_MEANINGFUL', 'MEANINGFUL'],
       description: '手書き判定。NONE=手書きなし、NON_MEANINGFUL=チェックマーク・走り書き等、MEANINGFUL=金額修正・用途追記等の会計的に意味のある手書き。角印・受領印・スタンプは手書きに含めない'
     },
     handwritten_memo_content: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       nullable: true,
       description: '手書きの内容（読み取れた場合。optional）'
     },
 
     // --- A24: 医療費 ---
     is_medical_expense: {
-      type: SchemaType.BOOLEAN,
+      type: Type.BOOLEAN,
       description: '医療費の取引か（薬局・クリニック・病院等）'
     },
 
     // --- A25-A26: 除外判定 ---
     is_not_applicable: {
-      type: SchemaType.BOOLEAN,
+      type: Type.BOOLEAN,
       description: '仕訳対象外か（謄本・名刺・メモ・風景写真等）'
     },
     not_applicable_reason: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       nullable: true,
       description: '対象外の理由'
     },
 
     // --- A27: 証票枚数 ---
     has_multiple_vouchers: {
-      type: SchemaType.BOOLEAN,
+      type: Type.BOOLEAN,
       description: '1画像に2枚以上の証票が写っているか'
     },
 
     // --- A28: 商品明細 ---
     receipt_items: {
-      type: SchemaType.ARRAY,
+      type: Type.ARRAY,
       nullable: true,
       items: {
-        type: SchemaType.OBJECT,
+        type: Type.OBJECT,
         properties: {
-          name: { type: SchemaType.STRING, description: '商品名' },
-          quantity: { type: SchemaType.NUMBER, nullable: true, description: '数量' },
-          unit_price: { type: SchemaType.NUMBER, nullable: true, description: '単価' },
-          amount: { type: SchemaType.NUMBER, description: '金額' },
-          tax_rate: { type: SchemaType.NUMBER, nullable: true, description: '税率（8 or 10）' }
+          name: { type: Type.STRING, description: '商品名' },
+          quantity: { type: Type.NUMBER, nullable: true, description: '数量' },
+          unit_price: { type: Type.NUMBER, nullable: true, description: '単価' },
+          amount: { type: Type.NUMBER, description: '金額' },
+          tax_rate: { type: Type.NUMBER, nullable: true, description: '税率（8 or 10）' }
         },
         required: ['name', 'amount']
       },
@@ -404,20 +404,20 @@ export const CLASSIFY_RESPONSE_SCHEMA = {
 
     // --- A29: 通帳/カード明細行（v3.2: direction/balance に変更。旧debit_account/credit_account廃止）---
     line_items: {
-      type: SchemaType.ARRAY,
+      type: Type.ARRAY,
       nullable: true,
       items: {
-        type: SchemaType.OBJECT,
+        type: Type.OBJECT,
         properties: {
-          date:        { type: SchemaType.STRING, nullable: true, description: '取引日（YYYY-MM-DD）。日付欄なしはnull' },
-          description: { type: SchemaType.STRING, description: '摘要（印字テキストそのまま。正規化前）' },
-          amount:      { type: SchemaType.NUMBER, description: '金額（円・整数・正数のみ。入出金はdirectionで区別）' },
+          date:        { type: Type.STRING, nullable: true, description: '取引日（YYYY-MM-DD）。日付欄なしはnull' },
+          description: { type: Type.STRING, description: '摘要（印字テキストそのまま。正規化前）' },
+          amount:      { type: Type.NUMBER, description: '金額（円・整数・正数のみ。入出金はdirectionで区別）' },
           direction:   {
-            type: SchemaType.STRING,
+            type: Type.STRING,
             enum: ['expense', 'income'],
             description: '入出金方向。expense=出金・支払、income=入金・受取'
           },
-          balance:     { type: SchemaType.NUMBER, nullable: true, description: '残高（円・整数）。通帳のみ有効。クレカ明細はnull' }
+          balance:     { type: Type.NUMBER, nullable: true, description: '残高（円・整数）。通帳のみ有効。クレカ明細はnull' }
         },
         required: ['description', 'amount', 'direction']
       },
@@ -426,7 +426,7 @@ export const CLASSIFY_RESPONSE_SCHEMA = {
 
     // --- A30: クレジットカード払い（v3.1追加） ---
     is_credit_card_payment: {
-      type: SchemaType.BOOLEAN,
+      type: Type.BOOLEAN,
       description: 'クレジットカード払いか。カード会社ロゴ、「カード」テキスト、下4桁番号等を検出した場合true。voucher_typeとは独立'
     }
   },

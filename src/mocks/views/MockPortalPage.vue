@@ -1,16 +1,8 @@
 <template>
   <div class="portal-page" style="font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif">
 
-    <!-- 左上ロゴ -->
-    <div class="top-logo">
-      <img src="/sugu-suru-logo.png" alt="sugu-suru" class="brand-logo" />
-    </div>
-
-    <!-- 右上社名バッジ -->
-    <div class="company-badge">
-      <span class="client-badge-icon">🏢</span>
-      <span class="client-badge-name">{{ clientName }}</span>
-    </div>
+    <!-- ポータル共通ヘッダー -->
+    <PortalHeader :clientName="clientName" />
 
     <main class="portal-main">
 
@@ -86,17 +78,15 @@
 </template>
 
 <script setup lang="ts">
+import PortalHeader from '@/mocks/components/PortalHeader.vue'
+import { getClientName } from '@/mocks/data/clientNames'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
 const clientId = route.params.clientId as string
 
-// モック: clientIdから社名を取得
-const clientNames: Record<string, string> = {
-  'LDI-00008': '株式会社LDIデジタル',
-}
-const clientName = clientNames[clientId] || clientId
+const clientName = getClientName(clientId)
 
 const tips = [
   { icon: '☀️', text: '明るい場所で撮影' },
@@ -123,18 +113,6 @@ const goUploadDocs = () => {
   position: relative;
 }
 
-/* ===== 左上ロゴ ===== */
-.top-logo {
-  position: absolute;
-  top: 20px; left: 24px;
-  z-index: 10;
-}
-.brand-logo {
-  height: 32px;
-  object-fit: contain;
-  opacity: 0.85;
-}
-
 /* ===== メイン ===== */
 .portal-main {
   max-width: 480px;
@@ -158,26 +136,6 @@ const goUploadDocs = () => {
   font-size: 14px;
   color: #94a3b8;
   margin: 0;
-}
-
-/* 右上社名バッジ */
-.company-badge {
-  position: absolute;
-  top: 20px; right: 24px;
-  z-index: 30;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 16px;
-  border-radius: 20px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-}
-.client-badge-icon {
-  font-size: 14px; line-height: 1;
-}
-.client-badge-name {
-  font-size: 13px; font-weight: 700; color: #1e40af;
 }
 
 /* ===== アクションカード ===== */

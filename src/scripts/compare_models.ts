@@ -1,43 +1,23 @@
 
-import { VertexAI, SchemaType } from '@google-cloud/vertexai';
+import { GoogleGenAI, Type } from '@google/genai';
 import * as fs from 'fs';
 import * as path from 'path';
 
 // --- Configuration ---
-const PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || 'ai-accounting-88'; // Adjust or read from env
-const LOCATION = 'us-central1'; // Use a region that supports the desired models
+const PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || 'ai-accounting-88';
+const LOCATION = 'us-central1';
 
-// --- User Specified Models & Costs ---
-// Note: As of early 2026, some of these models might be hypothetical or experimental.
-// We map them to the closest likely API model IDs.
 const MODELS = [
   {
-    name: 'Gemini 1.5 Flash-8B',
-    modelId: 'gemini-1.5-flash-001-tuning', // Placeholder ID - 8B might be a specific variant or simply 'gemini-1.5-flash-8b-exp'
-    // For this script, we'll use a widely available flash model ID as a fallback if specific ones fail,
-    // but let's try to target what the user asked for if possible.
-    // Since '8B' suggests a smaller model, we'll try 'gemini-1.5-flash-8b' if it exists, else 'gemini-1.5-flash-002'.
-    // Given the user's specific context, let's use standard Flash as a proxy if 8B isn't public, but we'll try to be specific.
-    apiModelId: 'gemini-1.5-flash-002', // Using Flash 002 as the reliable current "Flash" standard.
-    costPer1MInput: 0.075, // $0.075 / 1M tokens (Approx for Flash) -> User said $0.003 / image?
-    // User's cost ref: "$0.003 (approx 0.45 yen)" - likely PER REQUEST or PER 100 IMAGES?
-    // "100 枚あたり $0.003" -> 0.00003 per image? That's extremely low.
-    // Or maybe $0.003 per image. Let's stick to calculating Token Usage and outputting that.
-    userLabel: '$0.003/req (User Est)'
+    name: 'Gemini 2.5 Flash',
+    apiModelId: 'gemini-2.5-flash',
+    userLabel: 'Flash (standard)'
   },
   {
-    name: 'Gemini 2.0 Flash / 2.5 Flash-Lite',
-    // 'gemini-2.0-flash-exp' is a distinct model.
-    apiModelId: 'gemini-2.0-flash-exp',
-    userLabel: '$0.008/req (User Est)'
+    name: 'Gemini 2.5 Pro',
+    apiModelId: 'gemini-2.5-pro',
+    userLabel: 'Pro (high quality)'
   },
-  {
-    name: 'Gemini 3.0 Flash',
-    // Hypothetical model. We will try 'gemini-experimental' or similar as a proxy, or just warn.
-    // Let's use 'gemini-1.5-pro-002' as a "High Intelligence" proxy for comparison if 3.0 doesn't exist.
-    apiModelId: 'gemini-1.5-pro-002',
-    userLabel: '$0.040/req (High End Proxy)'
-  }
 ];
 
 // --- Target Images ---
@@ -49,84 +29,84 @@ const IMAGE_PATHS = [
 
 // --- Universal OCR Schema ---
 const RESPONSE_SCHEMA = {
-  type: SchemaType.OBJECT,
+  type: Type.OBJECT,
   properties: {
     document_type: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       enum: ["RECEIPT", "INVOICE", "BANK_STATEMENT", "CARD_STATEMENT", "OTHER"]
     },
     meta: {
-      type: SchemaType.OBJECT,
+      type: Type.OBJECT,
       properties: {
-        scan_date: { type: SchemaType.STRING, description: "YYYY-MM-DD" },
-        currency: { type: SchemaType.STRING },
-        language: { type: SchemaType.STRING }
+        scan_date: { type: Type.STRING, description: "YYYY-MM-DD" },
+        currency: { type: Type.STRING },
+        language: { type: Type.STRING }
       },
       required: ["scan_date"]
     },
     issuer: {
-      type: SchemaType.OBJECT,
+      type: Type.OBJECT,
       properties: {
-        name: { type: SchemaType.STRING },
-        name_reading: { type: SchemaType.STRING },
-        registration_number: { type: SchemaType.STRING },
-        phone_number: { type: SchemaType.STRING },
-        address: { type: SchemaType.STRING },
-        is_handwritten: { type: SchemaType.BOOLEAN }
+        name: { type: Type.STRING },
+        name_reading: { type: Type.STRING },
+        registration_number: { type: Type.STRING },
+        phone_number: { type: Type.STRING },
+        address: { type: Type.STRING },
+        is_handwritten: { type: Type.BOOLEAN }
       },
       required: ["name"]
     },
     recipient: {
-      type: SchemaType.OBJECT,
+      type: Type.OBJECT,
       properties: {
-        name: { type: SchemaType.STRING }
+        name: { type: Type.STRING }
       }
     },
     transaction_header: {
-      type: SchemaType.OBJECT,
+      type: Type.OBJECT,
       properties: {
-        date: { type: SchemaType.STRING, description: "YYYY-MM-DD" },
-        total_amount: { type: SchemaType.NUMBER },
-        total_tax_amount: { type: SchemaType.NUMBER },
-        payment_method: { type: SchemaType.STRING, enum: ["CASH", "CREDIT_CARD", "E_MONEY", "TRANSFER", "UNKNOWN"] },
-        summary: { type: SchemaType.STRING }
+        date: { type: Type.STRING, description: "YYYY-MM-DD" },
+        total_amount: { type: Type.NUMBER },
+        total_tax_amount: { type: Type.NUMBER },
+        payment_method: { type: Type.STRING, enum: ["CASH", "CREDIT_CARD", "E_MONEY", "TRANSFER", "UNKNOWN"] },
+        summary: { type: Type.STRING }
       },
       required: ["date", "total_amount"]
     },
     tax_breakdown: {
-      type: SchemaType.ARRAY,
+      type: Type.ARRAY,
       items: {
-        type: SchemaType.OBJECT,
+        type: Type.OBJECT,
         properties: {
-          rate: { type: SchemaType.NUMBER },
-          taxable_amount: { type: SchemaType.NUMBER },
-          tax_amount: { type: SchemaType.NUMBER }
+          rate: { type: Type.NUMBER },
+          taxable_amount: { type: Type.NUMBER },
+          tax_amount: { type: Type.NUMBER }
         }
       }
     },
     line_items: {
-      type: SchemaType.ARRAY,
+      type: Type.ARRAY,
       items: {
-        type: SchemaType.OBJECT,
+        type: Type.OBJECT,
         properties: {
-          date: { type: SchemaType.STRING },
-          description: { type: SchemaType.STRING },
-          amount: { type: SchemaType.NUMBER },
-          tax_rate: { type: SchemaType.NUMBER },
-          type: { type: SchemaType.STRING, enum: ["ITEM", "TAX", "DISCOUNT"] },
-          income_amount: { type: SchemaType.NUMBER },
-          expense_amount: { type: SchemaType.NUMBER },
-          balance: { type: SchemaType.NUMBER }
+          date: { type: Type.STRING },
+          description: { type: Type.STRING },
+          amount: { type: Type.NUMBER },
+          tax_rate: { type: Type.NUMBER },
+          type: { type: Type.STRING, enum: ["ITEM", "TAX", "DISCOUNT"] },
+          income_amount: { type: Type.NUMBER },
+          expense_amount: { type: Type.NUMBER },
+          balance: { type: Type.NUMBER }
         },
         required: ["description", "amount"]
       }
     },
     validation: {
-      type: SchemaType.OBJECT,
+      type: Type.OBJECT,
       properties: {
-        is_invoice_qualified: { type: SchemaType.BOOLEAN },
-        has_stamp_duty: { type: SchemaType.BOOLEAN },
-        notes: { type: SchemaType.STRING }
+        is_invoice_qualified: { type: Type.BOOLEAN },
+        has_stamp_duty: { type: Type.BOOLEAN },
+        notes: { type: Type.STRING }
       },
       required: ["is_invoice_qualified"]
     }
@@ -142,20 +122,12 @@ async function main() {
   console.log(`Images: ${IMAGE_PATHS.length} files`);
   console.log('------------------------------------------\n');
 
-  const vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION });
+  const ai = new GoogleGenAI({ vertexai: true, project: PROJECT_ID, location: LOCATION });
 
   for (const modelConfig of MODELS) {
     console.log(`\n>>> Testing Model: ${modelConfig.name} [ID: ${modelConfig.apiModelId}]`);
 
     try {
-      const generativeModel = vertexAI.getGenerativeModel({
-        model: modelConfig.apiModelId,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: RESPONSE_SCHEMA,
-        }
-      });
-
       for (let i = 0; i < IMAGE_PATHS.length; i++) {
         const imagePath = IMAGE_PATHS[i];
         if (!imagePath) {
@@ -170,7 +142,8 @@ async function main() {
           const imageBuffer = fs.readFileSync(imagePath);
           const imageBase64 = imageBuffer.toString('base64');
 
-          const request = {
+          const result = await ai.models.generateContent({
+            model: modelConfig.apiModelId,
             contents: [
               {
                 role: 'user',
@@ -191,45 +164,37 @@ async function main() {
                   }
                 ]
               }
-            ]
-          };
+            ],
+            config: {
+              responseMimeType: 'application/json',
+              responseSchema: RESPONSE_SCHEMA,
+            },
+          });
 
-          const result = await generativeModel.generateContent(request);
           const endTime = Date.now();
           const duration = (endTime - startTime) / 1000;
 
-          const response = result.response;
-          const usage = response.usageMetadata;
+          const usage = result.usageMetadata;
 
-          // Console Output Summary
           console.log(`      Duration: ${duration.toFixed(2)}s`);
           console.log(`      Token Usage: Input=${usage?.promptTokenCount || 0}, Output=${usage?.candidatesTokenCount || 0}, Total=${usage?.totalTokenCount || 0}`);
 
-          // Try parse JSON
-          let parsedData: unknown = 'Failed to parse JSON';
-          const firstCandidate = response.candidates?.[0];
-          const firstPart = firstCandidate?.content?.parts?.[0];
-          if (firstPart && 'text' in firstPart && typeof firstPart.text === 'string') {
+          const responseText = result.text ?? '';
+          if (responseText) {
             try {
-              parsedData = JSON.parse(firstPart.text);
-              // Minimal validation display（型を確認してから参照）
-              if (parsedData !== null && typeof parsedData === 'object' && !Array.isArray(parsedData)) {
-                const pd = parsedData as Record<string, unknown>;
-                console.log(`      Detected Type: ${pd['document_type']}`);
-                const issuer = pd['issuer'];
-                if (issuer !== null && typeof issuer === 'object' && !Array.isArray(issuer)) {
-                  console.log(`      Issuer: ${(issuer as Record<string, unknown>)['name']}`);
-                }
-                const txHeader = pd['transaction_header'];
-                if (txHeader !== null && typeof txHeader === 'object' && !Array.isArray(txHeader)) {
-                  console.log(`      Total: ${(txHeader as Record<string, unknown>)['total_amount']}`);
-                }
+              const parsedData = JSON.parse(responseText) as Record<string, unknown>;
+              console.log(`      Detected Type: ${parsedData['document_type']}`);
+              const issuer = parsedData['issuer'];
+              if (issuer !== null && typeof issuer === 'object' && !Array.isArray(issuer)) {
+                console.log(`      Issuer: ${(issuer as Record<string, unknown>)['name']}`);
+              }
+              const txHeader = parsedData['transaction_header'];
+              if (txHeader !== null && typeof txHeader === 'object' && !Array.isArray(txHeader)) {
+                console.log(`      Total: ${(txHeader as Record<string, unknown>)['total_amount']}`);
               }
             } catch (e) {
               console.error('      JSON Parse Error:', e);
-              const firstPart2 = response.candidates?.[0]?.content?.parts?.[0];
-              const rawText = firstPart2 && 'text' in firstPart2 ? firstPart2.text : '';
-              console.log('      Raw Text:', (rawText ?? '').substring(0, 100) + '...');
+              console.log('      Raw Text:', responseText.substring(0, 100) + '...');
             }
           }
 
@@ -240,7 +205,6 @@ async function main() {
 
     } catch (modelErr) {
       console.error(`   Failed to initialize or run model ${modelConfig.apiModelId}:`, modelErr);
-      console.warn("   (Note: 'Gemini 3.0' and 'Flash-8B' are placeholders and might not be available in public API yet. Check permissions and available models.)");
     }
   }
 }

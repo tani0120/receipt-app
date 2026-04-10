@@ -1,41 +1,33 @@
 
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import type { AIProvider, ModelInfo, ReceiptAnalysisResult } from '../types';
 
 export class VertexAIStrategy implements AIProvider {
-    private client: VertexAI;
+    private client: GoogleGenAI;
 
     constructor(projectId: string, location = 'us-central1') {
-        this.client = new VertexAI({ project: projectId, location });
+        this.client = new GoogleGenAI({ vertexai: true, project: projectId, location });
     }
 
     async listAvailableModels(): Promise<ModelInfo[]> {
-        // In real world, we might query Model Garden API, but for now hardcode known good models
         return [
             {
-                id: 'gemini-1.5-pro-002',
-                name: 'Vertex Gemini 1.5 Pro (002)',
+                id: 'gemini-2.5-flash',
+                name: 'Vertex Gemini 2.5 Flash',
                 provider: 'vertex_ai',
                 capabilities: { batch: true, image: true }
             },
             {
-                id: 'gemini-1.5-flash-002',
-                name: 'Vertex Gemini 1.5 Flash (002)',
+                id: 'gemini-2.5-pro',
+                name: 'Vertex Gemini 2.5 Pro',
                 provider: 'vertex_ai',
                 capabilities: { batch: true, image: true }
             },
-            {
-                id: 'gemini-2.0-flash-001',
-                name: 'Vertex Gemini 2.0 Flash (001)',
-                provider: 'vertex_ai',
-                capabilities: { batch: true, image: true }
-            }
         ];
     }
 
     async analyzeReceipt(gcsUri: string, modelId?: string): Promise<ReceiptAnalysisResult> {
-        const finalModelId = modelId || 'gemini-1.5-flash-002'; // Default fallback
-        const generativeModel = this.client.getGenerativeModel({ model: finalModelId });
+        const finalModelId = modelId || 'gemini-2.5-flash';
 
         const prompt = `
             Analyze this receipt image and extract the following JSON:
@@ -48,19 +40,20 @@ export class VertexAIStrategy implements AIProvider {
             Return ONLY raw JSON.
         `;
 
-        const request = {
-            contents: [{
-                role: 'user',
-                parts: [
-                    { text: prompt },
-                    { fileData: { fileUri: gcsUri, mimeType: 'image/jpeg' } } // Vertex Accesses GCS directly
-                ]
-            }]
-        };
+        const result = await this.client.models.generateContent({
+            model: finalModelId,
+            contents: [
+                {
+                    role: 'user',
+                    parts: [
+                        { text: prompt },
+                        { fileData: { fileUri: gcsUri, mimeType: 'image/jpeg' } }
+                    ]
+                }
+            ],
+        });
 
-        const result = await generativeModel.generateContent(request);
-        const candidates = result.response.candidates;
-        const responseText = candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const responseText = result.text ?? '{}';
 
         // Clean markdown code blocks if present
         const jsonStr = responseText.replace(/```json\n?|\n?```/g, '');

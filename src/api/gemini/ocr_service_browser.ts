@@ -1,23 +1,18 @@
 /**
- * Gemini OCR Service（ブラウザ版）
+ * Gemini OCR Service（ブラウザ版・@google/genai SDK）
  *
  * Node.js版のocr_service.tsをブラウザ環境に移植
  *
  * 主な変更点:
  * - readFileSync → FileReader API
- * - process.env → import.meta.env
- * - Buffer → browser native APIs
+ * - import.meta.env でAPI Key取得
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 
 /**
  * Gemini OCR実行（ブラウザ版）
- *
- * @param imageFile - File object（ブラウザのFileReader用）
- * @param clientId - クライアントID（将来のCache用）
- * @returns AIIntermediateOutput
  */
 export async function executeOCRBrowser(
     imageFile: File,
@@ -25,17 +20,14 @@ export async function executeOCRBrowser(
 ): Promise<AIIntermediateOutput> {
     console.log(`🔍 [Browser] OCR実行開始: ${imageFile.name}, clientId: ${clientId}`);
 
-    // 画像をBase64に変換
     const base64Image = await fileToBase64(imageFile);
 
-    // Gemini API呼び出し
     const responseText = await callGeminiAPIBrowser(
         base64Image,
         imageFile.type,
-        [] // batchHistory: 現在未使用
+        []
     );
 
-    // レスポンスJSON抽出
     const rawJSON = extractJSONFromResponse(responseText);
 
     console.log(`✅ [Browser] OCR完了`);
@@ -65,7 +57,6 @@ async function fileToBase64(file: File): Promise<string> {
 
         reader.onload = () => {
             const result = reader.result as string;
-            // data:image/jpeg;base64,... → base64部分のみ抽出
             const base64 = result.split(',')[1];
             console.log('[fileToBase64] 成功', {
                 base64Length: base64?.length
@@ -83,40 +74,38 @@ async function fileToBase64(file: File): Promise<string> {
 }
 
 /**
- * Gemini API呼び出し（ブラウザ版）
+ * Gemini API呼び出し（ブラウザ版・@google/genai SDK）
  */
 async function callGeminiAPIBrowser(
     base64Image: string,
     mimeType: string,
     _batchHistory: unknown[]
 ): Promise<string> {
-    // API Key取得（Vite環境変数）
     const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
     if (!API_KEY) {
         throw new Error('VITE_GEMINI_API_KEY が設定されていません');
     }
 
-    const genAI = new GoogleGenerativeAI(API_KEY);
+    const ai = new GoogleGenAI({ apiKey: API_KEY });
 
     try {
-        // シンプルなOCR実行（Cache不使用）
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-3-flash-preview'
-        });
-
         console.log('📤 [Browser] Gemini API呼び出し中...');
 
-        // API呼び出し
-        const result = await model.generateContent([
-            {
-                inlineData: {
-                    mimeType: mimeType,
-                    data: base64Image
-                }
-            },
-            {
-                text: `あなたは会計OCRエンジンです。
+        const result = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [
+                {
+                    role: 'user',
+                    parts: [
+                        {
+                            inlineData: {
+                                mimeType: mimeType,
+                                data: base64Image
+                            }
+                        },
+                        {
+                            text: `あなたは会計OCRエンジンです。
 以下のJSON Schemaに厳密に従って出力してください。
 
 【絶対ルール - べき等性のために必須】
@@ -163,13 +152,16 @@ async function callGeminiAPIBrowser(
 }
 
 この領収書から上記形式でJSONを抽出してください。`
-            }
-        ]);
+                        }
+                    ]
+                }
+            ],
+        });
 
-        const responseText = result.response.text();
+        const responseText = result.text ?? '';
 
         // トークン使用量を取得
-        const usageMetadata = result.response.usageMetadata;
+        const usageMetadata = result.usageMetadata;
         if (usageMetadata) {
             console.log('📊 [Browser] トークン使用量:', {
                 promptTokenCount: usageMetadata.promptTokenCount,
@@ -177,9 +169,12 @@ async function callGeminiAPIBrowser(
                 totalTokenCount: usageMetadata.totalTokenCount
             });
 
-            // Gemini 3 Flash料金で実コスト計算（$1=¥150）
-            const inputCost = (usageMetadata.promptTokenCount / 1_000_000) * 0.50 * 150;
-            const outputCost = (usageMetadata.candidatesTokenCount / 1_000_000) * 3.00 * 150;
+            const inputTokens = usageMetadata.promptTokenCount ?? 0;
+            const outputTokens = usageMetadata.candidatesTokenCount ?? 0;
+
+            // Gemini 2.5 Flash料金で実コスト計算（$1=¥150）
+            const inputCost = (inputTokens / 1_000_000) * 0.15 * 150;
+            const outputCost = (outputTokens / 1_000_000) * 0.60 * 150;
             const totalCost = inputCost + outputCost;
 
             console.log('💰 [Browser] 推定コスト:', {
@@ -200,19 +195,15 @@ async function callGeminiAPIBrowser(
 
 /**
  * レスポンスからJSON抽出
- *
- * Geminiは ```json ... ``` 形式で返すことが多い
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function extractJSONFromResponse(responseText: string): any {
-    // マークダウンコードブロックを削除
     const jsonMatch = responseText.match(/```json\s*\n([\s\S]*?)\n```/);
 
     if (jsonMatch) {
         return JSON.parse(jsonMatch[1] ?? '{}');
     }
 
-    // コードブロックがない場合は直接パース
     try {
         return JSON.parse(responseText);
     } catch {

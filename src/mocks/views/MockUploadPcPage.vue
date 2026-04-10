@@ -5,15 +5,8 @@
     <div class="bg-deco bg-deco--1"></div>
     <div class="bg-deco bg-deco--2"></div>
 
-    <!-- 左上ロゴ（ポータル統一位置） -->
-    <div class="top-logo">
-      <img src="/sugu-suru-logo.png" alt="sugu-suru" class="brand-logo" />
-    </div>
-
-    <!-- 右上社名バッジ -->
-    <div class="company-badge">
-      🏢 株式会社LDIデジタル
-    </div>
+    <!-- ポータル共通ヘッダー -->
+    <PortalHeader :clientName="clientName" />
 
     <!-- 件数バッジ（ファイル追加時のみ表示） -->
     <div class="header-stats" v-if="totalCount > 0">
@@ -128,9 +121,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import PortalHeader from '@/mocks/components/PortalHeader.vue'
+import { getClientName } from '@/mocks/data/clientNames'
 
 const route = useRoute()
 const clientId = route.params.clientId as string
+const clientName = getClientName(clientId)
 
 type Category = 'journal' | 'other'
 
@@ -234,19 +230,7 @@ const resetAll = () => {
   background: radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 70%);
 }
 
-/* ===== 右上社名バッジ ===== */
-.company-badge {
-  position: absolute;
-  top: 20px; right: 24px;
-  z-index: 30;
-  font-size: 13px;
-  font-weight: 700;
-  color: #1e40af;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 20px;
-  padding: 6px 16px;
-}
+
 
 /* ===== 件数バッジ ===== */
 .header-stats {
@@ -269,16 +253,7 @@ const resetAll = () => {
   max-width: 1440px; margin: 0 auto; width: 100%;
   padding: 80px 24px 120px;
 }
-/* 左上ロゴ（ポータル統一位置） */
-.top-logo {
-  position: absolute;
-  top: 20px; left: 24px;
-  z-index: 30;
-}
-.brand-logo {
-  height: 32px;
-  opacity: 0.85;
-}
+
 
 .three-col {
   display: grid;

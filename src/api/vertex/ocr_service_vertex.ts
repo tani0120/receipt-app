@@ -1,24 +1,17 @@
 /**
- * Vertex AI OCR Service
+ * Vertex AI OCR Service（@google/genai SDK版）
  *
- * Vertex AI + Context Cacheを使用したOCR実行
+ * @google/genai + vertexai:true を使用したOCR実行
  * - ADC（Application Default Credentials）認証
  * - Context Cache活用（System Instruction含む）
- * - べき等性維持（Phase 6.2と同等）
  */
 
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import { getOrCreateCache } from './cache_manager_vertex';
 import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 
 /**
  * Vertex AI OCR実行
- *
- * @param imageFile - File object（Node.js環境）
- * @param clientId - クライアントID
- * @param projectId - GCPプロジェクトID
- * @param location - リージョン
- * @returns AIIntermediateOutput
  */
 export async function executeOCRVertex(
     imageBase64: string,
@@ -29,16 +22,15 @@ export async function executeOCRVertex(
 ): Promise<AIIntermediateOutput> {
     console.log(`🔍 [Vertex] OCR実行開始: clientId=${clientId}`);
 
-    // 使用モデル（定数）
     const MODEL_NAME = 'gemini-2.5-flash';
 
     // Context Cache取得
     const cacheInfo = await getOrCreateCache({
         client_id: clientId,
-        master_file_path: 'master_data.txt', // Phase 6.3: 固定値
+        master_file_path: 'master_data.txt',
         projectId,
         location,
-        model_name: MODEL_NAME  // モデル名を渡す
+        model_name: MODEL_NAME
     });
 
     console.log(`[Vertex] Cache取得完了: ${cacheInfo.cacheName}`);
@@ -50,7 +42,7 @@ export async function executeOCRVertex(
         cacheInfo.cacheName,
         projectId,
         location,
-        MODEL_NAME  // モデル名を渡す
+        MODEL_NAME
     );
 
     // レスポンスJSON抽出
@@ -62,14 +54,7 @@ export async function executeOCRVertex(
 }
 
 /**
- * Vertex AI呼び出し
- *
- * @param imageBase64 - Base64エンコード画像
- * @param mimeType - MIMEタイプ
- * @param cacheName - Cache名（文字列）
- * @param projectId - GCPプロジェクトID
- * @param location - リージョン
- * @returns レスポンステキスト
+ * Vertex AI呼び出し（@google/genai SDK版）
  */
 async function callVertexAI(
     imageBase64: string,
@@ -77,25 +62,17 @@ async function callVertexAI(
     cacheName: string,
     projectId: string,
     location: string,
-    modelName: string  // 追加
+    modelName: string
 ): Promise<string> {
-    const vertexAI = new VertexAI({
+    const ai = new GoogleGenAI({
+        vertexai: true,
         project: projectId,
-        location: location
+        location: location,
     });
 
     try {
-        // Cached Content参照でモデル取得
-        // SDK API: getGenerativeModelFromCachedContent(cachedContent, modelParams?, requestOptions?)
-        // 第1引数は { name, model } を持つオブジェクトを直接渡す
-        const model = vertexAI.preview.getGenerativeModelFromCachedContent({
-            name: cacheName,
-            model: modelName  // パラメータを使用
-        });
-
         console.log('📤 [Vertex] Gemini API呼び出し中...');
 
-        // プロンプト（べき等性向上版）
         const prompt = `【画像を確認してJSONのみを出力してください】
 
 この画像は領収書です。以下のJSON形式で出力してください。説明文やMarkdownは不要です。
@@ -130,64 +107,62 @@ async function callVertexAI(
 - コードブロック不要
 - 説明文不要`;
 
-        // API呼び出し（画像データを含むリクエスト）
-        const result = await model.generateContent({
-            contents: [{
-                role: 'user',
-                parts: [
-                    {
-                        inlineData: {
-                            mimeType: mimeType,
-                            data: imageBase64
+        const result = await ai.models.generateContent({
+            model: modelName,
+            contents: [
+                {
+                    role: 'user',
+                    parts: [
+                        {
+                            inlineData: {
+                                mimeType: mimeType,
+                                data: imageBase64
+                            }
+                        },
+                        {
+                            text: prompt
                         }
-                    },
-                    {
-                        text: prompt
-                    }
-                ]
-            }]
+                    ]
+                }
+            ],
+            config: {
+                cachedContent: cacheName,
+            },
         });
 
-        // レスポンス構造をデバッグ
-        console.log('🔍 [Debug] result.response:', JSON.stringify(result.response, null, 2).substring(0, 500));
-
-        const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        console.log('🔍 [Debug] responseText length:', responseText.length);
+        const responseText = result.text ?? '';
 
         // トークン使用量を取得
-        const usageMetadata = result.response.usageMetadata;
+        const usageMetadata = result.usageMetadata;
         if (usageMetadata) {
-            console.log('📊 [Vertex] トークン使用量:', {
-                promptTokenCount: usageMetadata.promptTokenCount,
-                candidatesTokenCount: usageMetadata.candidatesTokenCount,
-                totalTokenCount: usageMetadata.totalTokenCount,
-                cachedContentTokenCount: usageMetadata.cachedContentTokenCount || 0
-            });
-
-            // Gemini 2.5 Flash料金で実コスト計算（$1=¥150）
             const cachedTokens = usageMetadata.cachedContentTokenCount || 0;
             const inputTokens = usageMetadata.promptTokenCount || 0;
             const outputTokens = usageMetadata.candidatesTokenCount || 0;
 
-            // モデル別料金定義（Vertex AI）
+            console.log('📊 [Vertex] トークン使用量:', {
+                promptTokenCount: inputTokens,
+                candidatesTokenCount: outputTokens,
+                totalTokenCount: usageMetadata.totalTokenCount,
+                cachedContentTokenCount: cachedTokens
+            });
+
+            // Gemini 2.5 Flash料金で実コスト計算（$1=¥150）
             const PRICING_FLASH = {
                 name: 'Gemini 2.5 Flash',
-                INPUT_NORMAL: 0.30 / 1_000_000,   // $0.30 per 1M tokens
-                INPUT_CACHED: 0.03 / 1_000_000,   // $0.03 per 1M tokens (90% discount)
-                OUTPUT: 2.50 / 1_000_000,         // $2.50 per 1M tokens
+                INPUT_NORMAL: 0.15 / 1_000_000,
+                INPUT_CACHED: 0.0375 / 1_000_000,
+                OUTPUT: 0.60 / 1_000_000,
             };
             const PRICING_PRO = {
                 name: 'Gemini 2.5 Pro',
-                INPUT_NORMAL: 3.50 / 1_000_000,   // $3.50 per 1M tokens
-                INPUT_CACHED: 0.875 / 1_000_000,  // $0.875 per 1M tokens (75% discount)
-                OUTPUT: 10.50 / 1_000_000,        // $10.50 per 1M tokens
+                INPUT_NORMAL: 1.25 / 1_000_000,
+                INPUT_CACHED: 0.3125 / 1_000_000,
+                OUTPUT: 10.00 / 1_000_000,
             };
-            const EXCHANGE_RATE = 150;  // $1 = ¥150
+            const EXCHANGE_RATE = 150;
 
-            // 使用モデルに基づいて料金選択
             const PRICING = modelName.includes('pro') ? PRICING_PRO : PRICING_FLASH;
 
-            // 計算ロジック（マイナス値を防止）
             const costCache = cachedTokens * PRICING.INPUT_CACHED * EXCHANGE_RATE;
             const nonCachedTokens = Math.max(0, inputTokens - cachedTokens);
             const costInput = nonCachedTokens * PRICING.INPUT_NORMAL * EXCHANGE_RATE;
@@ -213,14 +188,8 @@ async function callVertexAI(
 
 /**
  * レスポンスからJSON抽出
- *
- * Geminiは ```json ... ``` 形式で返すことが多い
- *
- * @param responseText - レスポンステキスト
- * @returns JSON object
  */
 function extractJSONFromResponse(responseText: string): unknown {
-    // パターン1: マークダウンコードブロック (```json ... ```)
     const jsonCodeBlockMatch = responseText.match(/```json\s*\n([\s\S]*?)\n```/);
     if (jsonCodeBlockMatch) {
         try {
@@ -230,7 +199,6 @@ function extractJSONFromResponse(responseText: string): unknown {
         }
     }
 
-    // パターン2: 通常のコードブロック (``` ... ```)
     const codeBlockMatch = responseText.match(/```\s*\n([\s\S]*?)\n```/);
     if (codeBlockMatch) {
         try {
@@ -240,7 +208,6 @@ function extractJSONFromResponse(responseText: string): unknown {
         }
     }
 
-    // パターン3: テキスト内のJSONオブジェクトを探す
     const jsonObjectMatch = responseText.match(/\{[\s\S]*"category"[\s\S]*\}/);
     if (jsonObjectMatch) {
         try {
@@ -250,7 +217,6 @@ function extractJSONFromResponse(responseText: string): unknown {
         }
     }
 
-    // パターン4: 直接パース
     try {
         return JSON.parse(responseText);
     } catch {

@@ -1,17 +1,13 @@
 /**
- * Vertex AI Context Cache Manager
+ * Vertex AI Context Cache Manager（@google/genai SDK版）
  *
  * Vertex AI用のContext Cache管理ロジック
  * - TTL: 1時間
  * - Cache再利用
  * - System InstructionをCache内に含める
- *
- * Phase 6.2のcache_manager.tsとの差異:
- * - Gemini API: GoogleAICacheManager
- * - Vertex AI: VertexAI.preview.cachedContents
  */
 
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import { SYSTEM_INSTRUCTION } from '../gemini/system_instruction';
 
 /**
@@ -22,15 +18,11 @@ export interface CacheConfig {
     master_file_path: string;
     projectId: string;
     location: string;
-    model_name: string;  // 追加: 使用モデル名
+    model_name: string;
 }
 
 /**
  * Cache情報（Vertex AI専用）
- *
- * ⚠ Vertex AI Note:
- * cachedContents.create() does NOT return a cachedContent object.
- * Only a resource name string is returned.
  */
 export interface VertexCacheInfo {
     cacheName: string;
@@ -40,48 +32,30 @@ export interface VertexCacheInfo {
 
 /**
  * Cache DB（仮実装）
- *
- * Phase 6.3: ローカルメモリ
- * Phase 6.4以降: Firestore or Redis
  */
 const cacheDB: Map<string, VertexCacheInfo> = new Map();
 
 /**
  * Cacheキー生成
- *
- * client_id:master_file_path 形式
- * 将来の事故防止（会計年度変更、マスタ更新、A/Bテスト対応）
- *
- * @param config - Cache設定
- * @returns Cacheキー
  */
 function generateCacheKey(config: CacheConfig): string {
-    return `${config.client_id}:${config.master_file_path}:${config.model_name}`;  // モデル名をキーに含める
+    return `${config.client_id}:${config.master_file_path}:${config.model_name}`;
 }
 
 /**
  * Context Cacheを取得または作成
- *
- * 1. 既存Cacheの有効性確認
- * 2. 有効ならCache再利用
- * 3. 無効なら新規作成
- *
- * @param config - Cache設定
- * @returns Cache名（Vertex AIのCached Content名）
  */
 export async function getOrCreateCache(config: CacheConfig): Promise<VertexCacheInfo> {
     const cacheKey = generateCacheKey(config);
 
     console.log(`[Cache] キー: ${cacheKey}`);
 
-    // 既存Cacheの確認
     const existing = cacheDB.get(cacheKey);
     if (existing && isCacheValid(existing)) {
         console.log(`[Cache] ✅ 再利用: ${existing.cacheName}`);
         return existing;
     }
 
-    // 新規Cache作成
     console.log(`[Cache] 🆕 新規作成中...`);
     const newCache = await createCache(config);
     cacheDB.set(cacheKey, newCache);
@@ -92,11 +66,6 @@ export async function getOrCreateCache(config: CacheConfig): Promise<VertexCache
 
 /**
  * Cacheの有効性確認
- *
- * 有効期限内かチェック
- *
- * @param cache - Cache情報
- * @returns 有効ならtrue
  */
 function isCacheValid(cache: VertexCacheInfo): boolean {
     if (!cache.expireTime) return false;
@@ -107,45 +76,35 @@ function isCacheValid(cache: VertexCacheInfo): boolean {
 }
 
 /**
- * Context Cache作成（Vertex AI版）
- *
- * System InstructionをCache内に含める
- *
- * @param config - Cache設定
- * @returns Cache情報
+ * Context Cache作成（@google/genai SDK版・Vertex AI）
  */
 async function createCache(config: CacheConfig): Promise<VertexCacheInfo> {
-    const vertexAI = new VertexAI({
+    const ai = new GoogleGenAI({
+        vertexai: true,
         project: config.projectId,
-        location: config.location
+        location: config.location,
     });
 
     // マスタデータ読み込み（Phase 6.3では仮実装）
     const masterData = await loadMasterData(config.master_file_path);
 
-    // Cache作成
-    const cacheResult = await vertexAI.preview.cachedContents.create({
-        model: config.model_name,  // パラメータ化
-        contents: [
-            {
-                role: 'user',
-                parts: [
-                    {
-                        text: `# マスタデータ\n\n${masterData}`
-                    }
-                ]
-            }
-        ],
-        systemInstruction: {
-            role: 'system',
-            parts: [
+    const cacheResult = await ai.caches.create({
+        model: config.model_name,
+        config: {
+            displayName: `cache_${config.client_id}`,
+            contents: [
                 {
-                    text: SYSTEM_INSTRUCTION
+                    role: 'user',
+                    parts: [
+                        {
+                            text: `# マスタデータ\n\n${masterData}`
+                        }
+                    ]
                 }
-            ]
+            ],
+            systemInstruction: SYSTEM_INSTRUCTION,
+            ttl: '3600s',
         },
-        ttl: '3600s', // 1時間（Vertex AIは "3600s" 形式）
-        displayName: `cache_${config.client_id}`
     });
 
     if (!cacheResult.name) {
@@ -155,21 +114,14 @@ async function createCache(config: CacheConfig): Promise<VertexCacheInfo> {
     return {
         cacheName: cacheResult.name,
         createTime: cacheResult.createTime,
-        expireTime: cacheResult.expireTime
+        expireTime: cacheResult.expireTime,
     };
 }
 
 /**
  * マスタデータ読み込み（仮実装）
- *
- * Phase 6.3: 固定テキスト
- * Phase 6.4以降: Firestore or CSVファイル
- *
- * @param masterFilePath - マスタファイルパス
- * @returns マスタデータ（テキスト）
  */
 async function loadMasterData(_masterFilePath: string): Promise<string> {
-    // Phase 6.3: 仮実装（固定データ）
     return `
 ## 顧問先基本情報
 - 会社名: テスト株式会社
@@ -202,8 +154,6 @@ async function loadMasterData(_masterFilePath: string): Promise<string> {
 
 /**
  * Cache削除（デバッグ用）
- *
- * @param cacheKey - Cacheキー
  */
 export function clearCache(cacheKey: string): void {
     cacheDB.delete(cacheKey);

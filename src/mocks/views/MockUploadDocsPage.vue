@@ -1,15 +1,8 @@
 <template>
   <div class="h-full overflow-y-auto flex flex-col" style="font-family: 'Noto Sans JP', sans-serif; position: relative; background: #fff;">
 
-    <!-- 左上ロゴ（ポータル統一位置：top:20px left:24px） -->
-    <div style="position: absolute; top: 20px; left: 24px; z-index: 30;">
-      <img src="/sugu-suru-logo.png" alt="sugu-suru" style="height: 32px; opacity: 0.85;" />
-    </div>
-
-    <!-- 右上社名バッジ -->
-    <div style="position: absolute; top: 20px; right: 24px; z-index: 30; display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 20px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 13px; font-weight: 700; color: #1e40af;">
-      🏢 株式会社LDIデジタル
-    </div>
+    <!-- ポータル共通ヘッダー -->
+    <PortalHeader :clientName="clientName" />
 
     <!-- 件数バッジ（ファイル追加時のみ） -->
     <div v-if="files.length" style="position: absolute; top: 56px; right: 24px; z-index: 30; display: flex; gap: 6px;">
@@ -243,11 +236,13 @@
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
+import PortalHeader from '@/mocks/components/PortalHeader.vue'
+import { getClientName } from '@/mocks/data/clientNames'
 
 // ===== ルート =====
 const route = useRoute()
 const clientId = route.params.clientId as string
-const monthLabel = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' }) + 'の資料'
+const clientName = getClientName(clientId)
 
 // ===== 型 =====
 type FileStatus = 'queued' | 'uploading' | 'done' | 'failed'

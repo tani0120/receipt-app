@@ -1,7 +1,6 @@
 
 import { db } from '../lib/firebase';
-import { geminiModel } from '../lib/gemini';
-import type { GenerateContentResult } from '@google/generative-ai';
+import { geminiClient } from '../lib/gemini';
 
 // --- Types ---
 
@@ -34,7 +33,7 @@ export class ConversionService {
 
         try {
             // 2. Call Gemini
-            if (!geminiModel) throw new Error('Gemini Client not initialized');
+            if (!geminiClient) throw new Error('Gemini Client not initialized');
 
             // Limit content for prototype (Token limits)
             // In production, we use Batch API or chunking
@@ -56,8 +55,11 @@ export class ConversionService {
             - Default "借方" or "貸方" to "現金" or "普通預金" if unsure, but try to be specific.
             `;
 
-            const result: GenerateContentResult = await geminiModel.generateContent(prompt);
-            const responseText = result.response.text();
+            const result = await geminiClient.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+            });
+            const responseText = result.text ?? '';
 
             // Clean up Markdown if Gemini adds it
             const csvContent = responseText.replace(/```csv/g, '').replace(/```/g, '').trim();

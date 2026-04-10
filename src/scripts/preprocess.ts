@@ -33,7 +33,7 @@ import * as iconv from 'iconv-lite';
 // 型定義
 // ============================================================
 
-import type { Part } from '@google-cloud/vertexai';
+import type { Part } from '@google/genai';
 
 /** 前処理オプション */
 export interface PreprocessOptions {

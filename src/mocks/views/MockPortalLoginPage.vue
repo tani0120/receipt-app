@@ -1,10 +1,8 @@
 <template>
   <div class="login-page" style="font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif">
 
-    <!-- 左上ロゴ -->
-    <div class="top-logo">
-      <img src="/sugu-suru-logo.png" alt="sugu-suru" class="brand-logo" />
-    </div>
+    <!-- ポータル共通ヘッダー（ログインはバッジなし） -->
+    <PortalHeader />
 
     <main class="login-main">
 
@@ -106,6 +104,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import PortalHeader from '@/mocks/components/PortalHeader.vue'
 
 const route = useRoute()
 const router = useRouter()

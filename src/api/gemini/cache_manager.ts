@@ -1,41 +1,24 @@
 /**
- * Context Cache 管理ロジック（改善反映版 + 実API実装）
+ * Context Cache 管理ロジック（@google/genai SDK版）
  *
  * Gemini Context Cachingを使用したマスタデータの効率的な管理
  * - TTL: 1時間
  * - Cache再利用
  * - 有効期限チェック
- *
- * 改善ポイント:
- * ① GEMINI_API_KEY 統一（フォールバック対応）
- * ② systemInstruction をCache作成時に付与
- * ③ Cacheキーを client_id:master_file_path に変更（将来事故防止）
  */
 
 import type { CachedContentInfo, CacheConfig } from '@/types/GeminiOCR.types';
 import { SYSTEM_INSTRUCTION } from './system_instruction';
-import { GoogleAICacheManager } from '@google/generative-ai/server';
+import { GoogleGenAI } from '@google/genai';
 import { readFileSync } from 'fs';
 
 /**
  * Cache DB（仮実装）
- *
- * Phase 6.2-A: ローカルメモリ
- * Phase 6.3以降: Firestore or Redis
  */
 const cacheDB: Map<string, CachedContentInfo> = new Map();
 
 /**
- * Cacheキー生成（改善③：将来事故防止）
- *
- * client_id 単独ではなく、master_file_path も含める
- * - 会計年度が変わる
- * - マスタ更新
- * - A/Bテスト
- * これらのケースで異なるCacheが必要になるため
- *
- * @param config - Cache設定
- * @returns Cacheキー
+ * Cacheキー生成
  */
 function generateCacheKey(config: CacheConfig): string {
     return `${config.client_id}:${config.master_file_path}`;
@@ -43,17 +26,10 @@ function generateCacheKey(config: CacheConfig): string {
 
 /**
  * Context Cacheを取得または作成
- *
- * 1. 既存Cacheの有効性確認
- * 2. 有効ならCache再利用
- * 3. 無効なら新規作成
- *
- * @param config - Cache設定
- * @returns CachedContentInfo
  */
 export async function getOrCreateCache(config: CacheConfig): Promise<CachedContentInfo> {
     const now = new Date();
-    const cacheKey = generateCacheKey(config); // 改善③
+    const cacheKey = generateCacheKey(config);
     const existingCache = cacheDB.get(cacheKey);
 
     // 既存Cacheの有効性確認
@@ -62,7 +38,6 @@ export async function getOrCreateCache(config: CacheConfig): Promise<CachedConte
         return existingCache;
     }
 
-    // 既存Cacheが期限切れの場合
     if (existingCache) {
         console.log(`⚠️ Cache Expired: ${cacheKey} - 再作成します`);
     } else {
@@ -72,57 +47,48 @@ export async function getOrCreateCache(config: CacheConfig): Promise<CachedConte
     // マスタファイル読み込み
     const masterText = readFileSync(config.master_file_path, 'utf-8');
 
-    // Context Cache作成（Gemini API呼び出し）
+    // Context Cache作成
     const cacheInfo = await createContextCache(
         config.client_id,
         masterText,
         config.ttl_seconds
     );
 
-    // Cache DB更新
-    cacheDB.set(cacheKey, cacheInfo); // 改善③
+    cacheDB.set(cacheKey, cacheInfo);
 
     return cacheInfo;
 }
 
 /**
- * Context Cacheを作成（Gemini API実装）
- *
- * 修正①: GEMINI_API_KEY統一（フォールバック対応）
- * 修正②: systemInstruction付与
- *
- * @param clientId - 顧問先ID
- * @param masterText - マスタデータテキスト
- * @param ttlSeconds - TTL（秒）
- * @returns CachedContentInfo
+ * Context Cacheを作成（@google/genai SDK版）
  */
 async function createContextCache(
     clientId: string,
     masterText: string,
     ttlSeconds: number
 ): Promise<CachedContentInfo> {
-    // 修正①: API Key取得（フォールバック対応）
     const API_KEY = process.env.GEMINI_API_KEY ?? process.env.VITE_GEMINI_API_KEY;
 
     if (!API_KEY) {
         throw new Error('GEMINI_API_KEY または VITE_GEMINI_API_KEY が設定されていません');
     }
 
-    const cacheManager = new GoogleAICacheManager(API_KEY);
+    const ai = new GoogleGenAI({ apiKey: API_KEY });
 
     try {
-        // 修正②: systemInstruction付与
-        const cache = await cacheManager.create({
-            model: 'models/gemini-1.5-flash-001',
-            displayName: `audit_master_${clientId}`,
-            systemInstruction: SYSTEM_INSTRUCTION,
-            contents: [
-                {
-                    role: 'user',
-                    parts: [{ text: masterText }]
-                }
-            ],
-            ttlSeconds: ttlSeconds
+        const cache = await ai.caches.create({
+            model: 'gemini-2.5-flash',
+            config: {
+                displayName: `audit_master_${clientId}`,
+                systemInstruction: SYSTEM_INSTRUCTION,
+                contents: [
+                    {
+                        role: 'user',
+                        parts: [{ text: masterText }]
+                    }
+                ],
+                ttl: `${ttlSeconds}s`,
+            },
         });
 
         const expireTime = new Date(Date.now() + ttlSeconds * 1000);
@@ -145,15 +111,9 @@ async function createContextCache(
 
 /**
  * Cacheを手動削除
- *
- * マスタデータ更新時などに使用
- *
- * @param clientId - 顧問先ID
- * @param masterFilePath - マスタファイルパス（省略時は全削除）
  */
 export function invalidateCache(clientId: string, masterFilePath?: string): void {
     if (masterFilePath) {
-        // 特定のCacheのみ削除（改善③）
         const cacheKey = `${clientId}:${masterFilePath}`;
         const deleted = cacheDB.delete(cacheKey);
         if (deleted) {
@@ -162,7 +122,6 @@ export function invalidateCache(clientId: string, masterFilePath?: string): void
             console.log(`⚠️ Cache Not Found: ${cacheKey}`);
         }
     } else {
-        // 顧問先IDに紐づく全Cache削除
         let deletedCount = 0;
         for (const key of cacheDB.keys()) {
             if (key.startsWith(`${clientId}:`)) {
@@ -175,9 +134,7 @@ export function invalidateCache(clientId: string, masterFilePath?: string): void
 }
 
 /**
- * 全Cacheの状態確認
- *
- * デバッグ用
+ * 全Cacheの状態確認（デバッグ用）
  */
 export function getCacheStatus(): Map<string, CachedContentInfo> {
     return new Map(cacheDB);

@@ -1,19 +1,14 @@
 /**
- * Gemini OCR Service（改善反映版 + 実API実装）
+ * Gemini OCR Service（Gen AI SDK版）
  *
- * Gemini 3 Flash + Context Cachingを使用したOCR処理
+ * @google/genai 統一SDK使用
  * Phase 6.2-A: 基本実装（レシート専用）
- *
- * 改善ポイント:
- * ① GEMINI_API_KEY 統一（フォールバック対応）
- * ② SYSTEM_INSTRUCTIONを共通ファイルからimport
- * ③ mimeType安全化
  */
 
 import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 // getOrCreateCache: Phase 6.2-Bでcache復活時にimport復元
 import { extractJSONFromResponse } from './schemas';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { readFileSync } from 'fs';
 
 /**
@@ -27,8 +22,6 @@ export interface OCRRequest {
   /** バッチ履歴（重複チェック用） */
   batch_history?: unknown[];
 }
-
-
 
 /**
  * Gemini OCR実行
@@ -62,31 +55,20 @@ export async function executeOCR(request: OCRRequest): Promise<AIIntermediateOut
 }
 
 /**
- * Gemini API呼び出し（実API実装）
- *
- * 修正①: GEMINI_API_KEY統一（フォールバック対応）
- * 修正③: mimeType安全化
- *
- * Phase 6.2-B: GeminiCallContext構造化予定（改善⑤）
- *
- * @param cacheId - Context Cache ID
- * @param imagePath - 画像ファイルパス
- * @param batchHistory - バッチ履歴
- * @returns レスポンステキスト
+ * Gemini API呼び出し（@google/genai SDK版）
  */
 async function callGeminiAPI(
   _cacheId: string,
   imagePath: string,
   _batchHistory: unknown[]
 ): Promise<string> {
-  // 修正①: API Key取得（フォールバック対応）
   const API_KEY = process.env.GEMINI_API_KEY ?? process.env.VITE_GEMINI_API_KEY;
 
   if (!API_KEY) {
     throw new Error('GEMINI_API_KEY または VITE_GEMINI_API_KEY が設定されていません');
   }
 
-  const genAI = new GoogleGenerativeAI(API_KEY);
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
 
   // 画像存在チェック
   if (!readFileSync) {
@@ -94,34 +76,34 @@ async function callGeminiAPI(
   }
 
   try {
-    // 【案B】Cache完全スキップ - シンプルなOCR直叩き
-    const model = genAI.getGenerativeModel(
-      { model: 'models/gemini-1.5-flash-001' }
-      // apiVersion: v1beta 不要（Cacheなしの場合）
-    );
-
     // 画像をBase64エンコード
     const imageBuffer = readFileSync(imagePath);
     const base64Image = imageBuffer.toString('base64');
 
-    // 修正③: mimeType安全化
+    // mimeType安全化
     const mimeType = imagePath.endsWith('.png') ? 'image/png' : 'image/jpeg';
 
-    // 【案B】systemInstruction削除、cachedContent削除
-    // 画像のみでOCR実行
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          mimeType: mimeType,
-          data: base64Image
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType: mimeType,
+                data: base64Image
+              }
+            },
+            {
+              text: 'この領収書から以下の情報をJSON形式で抽出してください：店名(vendor)、日付(date)、合計金額(total_amount)、T番号(t_number)'
+            }
+          ]
         }
-      },
-      {
-        text: 'この領収書から以下の情報をJSON形式で抽出してください：店名(vendor)、日付(date)、合計金額(total_amount)、T番号(t_number)'
-      }
-    ]);
+      ],
+    });
 
-    const responseText = result.response.text();
+    const responseText = result.text ?? '';
     console.log(`✅ Gemini API呼び出し成功`);
 
     return responseText;

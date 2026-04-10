@@ -1,41 +1,34 @@
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { getStorage } from 'firebase-admin/storage';
 import type { AIProvider, ModelInfo, ReceiptAnalysisResult } from '../types';
 
 export class AIStudioStrategy implements AIProvider {
-    private client: GoogleGenerativeAI;
+    private client: GoogleGenAI;
 
     constructor(apiKey: string) {
-        this.client = new GoogleGenerativeAI(apiKey);
+        this.client = new GoogleGenAI({ apiKey });
     }
 
     async listAvailableModels(): Promise<ModelInfo[]> {
         return [
             {
-                id: 'gemini-1.5-pro',
-                name: 'AI Studio Gemini 1.5 Pro',
+                id: 'gemini-2.5-flash',
+                name: 'Gemini 2.5 Flash',
                 provider: 'ai_studio',
                 capabilities: { batch: false, image: true }
             },
             {
-                id: 'gemini-1.5-flash',
-                name: 'AI Studio Gemini 1.5 Flash',
+                id: 'gemini-2.5-pro',
+                name: 'Gemini 2.5 Pro',
                 provider: 'ai_studio',
                 capabilities: { batch: false, image: true }
             },
-            {
-                id: 'gemini-2.0-flash-001',
-                name: 'AI Studio Gemini 2.0 Flash (001)',
-                provider: 'ai_studio',
-                capabilities: { batch: false, image: true }
-            }
         ];
     }
 
     async analyzeReceipt(gcsUri: string, modelId?: string): Promise<ReceiptAnalysisResult> {
-        const finalModelId = modelId || 'gemini-1.5-flash'; // Default fallback
-        const model = this.client.getGenerativeModel({ model: finalModelId });
+        const finalModelId = modelId || 'gemini-2.5-flash';
 
         // AI Studio cannot access gs:// URIs directly. We must download and send buffer.
         // Helper to download from GCS
@@ -57,17 +50,25 @@ export class AIStudioStrategy implements AIProvider {
             Return ONLY raw JSON.
         `;
 
-        const result = await model.generateContent([
-            prompt,
-            {
-                inlineData: {
-                    data: base64Data,
-                    mimeType: 'image/jpeg' // Assuming JPEG for simplicity, real impl should detect from GCS metadata
+        const result = await this.client.models.generateContent({
+            model: finalModelId,
+            contents: [
+                {
+                    role: 'user',
+                    parts: [
+                        { text: prompt },
+                        {
+                            inlineData: {
+                                data: base64Data,
+                                mimeType: 'image/jpeg'
+                            }
+                        }
+                    ]
                 }
-            }
-        ]);
+            ],
+        });
 
-        const responseText = result.response.text();
+        const responseText = result.text ?? '';
         const jsonStr = responseText.replace(/```json\n?|\n?```/g, '');
 
         try {

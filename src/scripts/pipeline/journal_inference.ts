@@ -27,7 +27,7 @@
 // 依存関係（将来インストール）
 // ============================================================
 // import sharp from 'sharp';  // 画像リサイズ: npm install sharp
-// import { VertexAI } from '@google-cloud/vertexai';
+// import { GoogleGenAI } from '@google/genai';
 
 // ============================================================
 // 型定義（T-01〜T-03 完成後に正式な型に置き換える）

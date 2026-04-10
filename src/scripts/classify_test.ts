@@ -18,7 +18,7 @@
  *   - src/scripts/test_images/ に実データ配置済み
  */
 
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import {
   CLASSIFY_RESPONSE_SCHEMA,
   type GeminiClassifyResponse,
@@ -264,7 +264,7 @@ function getTestFiles(): string[] {
 // ============================================================
 
 async function processOneFile(
-  vertexAI: VertexAI,
+  ai: GoogleGenAI,
   filePath: string,
   index: number,
   total: number
@@ -276,21 +276,11 @@ async function processOneFile(
   const processed = await preprocessFile(filePath, { enablePreprocess: ENABLE_PREPROCESS });
   console.log(`   📦 ${processed.category} | ${(processed.originalSize / 1024).toFixed(0)}KB → ${(processed.processedSize / 1024).toFixed(0)}KB | 前処理: ${processed.preprocessed}`);
 
-  // 2. Vertex AIモデル初期化
-  const generativeModel = vertexAI.getGenerativeModel({
-    model: MODEL_ID,
-    systemInstruction: SYSTEM_INSTRUCTION,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: CLASSIFY_RESPONSE_SCHEMA,
-      temperature: 0,
-    },
-  });
-
-  // 3. API呼び出し
+  // 2. API呼び出し（@google/genai SDK）
   const startTime = Date.now();
 
-  const response = await generativeModel.generateContent({
+  const response = await ai.models.generateContent({
+    model: MODEL_ID,
     contents: [
       {
         role: 'user',
@@ -300,16 +290,19 @@ async function processOneFile(
         ],
       },
     ],
+    config: {
+      systemInstruction: SYSTEM_INSTRUCTION,
+      responseMimeType: 'application/json',
+      responseSchema: CLASSIFY_RESPONSE_SCHEMA,
+      temperature: 0,
+    },
   });
 
   const duration = Date.now() - startTime;
 
-  // 4. レスポンス解析
-  const candidate = response.response.candidates?.[0];
-  const usage = response.response.usageMetadata;
+  // 3. レスポンス解析
+  const usage = response.usageMetadata;
 
-  // TODO: Vertex AI SDK が thoughtsTokenCount を公式サポートしたら
-  //       Record<string, unknown> キャストを削除し、SDK型を直接使用する
   const tokenUsage: TokenUsage = {
     promptTokenCount: usage?.promptTokenCount || 0,
     candidatesTokenCount: usage?.candidatesTokenCount || 0,
@@ -317,12 +310,13 @@ async function processOneFile(
   };
 
   let geminiResult: GeminiClassifyResponse;
-  if (candidate?.content?.parts?.[0]?.text) {
+  const responseText = response.text ?? '';
+  if (responseText) {
     try {
-      geminiResult = JSON.parse(candidate.content.parts[0].text) as GeminiClassifyResponse;
+      geminiResult = JSON.parse(responseText) as GeminiClassifyResponse;
     } catch {
       console.error(`   ⚠️ JSON解析失敗`);
-      throw new Error(`JSON解析失敗: ${candidate.content.parts[0].text?.substring(0, 200)}`);
+      throw new Error(`JSON解析失敗: ${responseText.substring(0, 200)}`);
     }
   } else {
     throw new Error('Geminiからのレスポンスが空');
@@ -377,7 +371,7 @@ async function main() {
   console.log(`料金: 入力$0.30/M  出力$2.50/M  思考$2.50/M`);
   console.log('='.repeat(60));
 
-  const vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION });
+  const ai = new GoogleGenAI({ vertexai: true, project: PROJECT_ID, location: LOCATION });
   const files = getTestFiles();
   console.log(`\n📁 テストファイル: ${files.length}件`);
   files.forEach(f => console.log(`   - ${f}`));
@@ -403,7 +397,7 @@ async function main() {
   for (let i = 0; i < files.length; i++) {
     const filePath = path.join(TEST_IMAGES_DIR, files[i] ?? '');
     try {
-      const result = await processOneFile(vertexAI, filePath, i, files.length);
+      const result = await processOneFile(ai, filePath, i, files.length);
       rawResults.push(result);
       successCount++;
     } catch (err) {
