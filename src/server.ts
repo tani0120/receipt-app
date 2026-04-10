@@ -12,6 +12,7 @@ import adminRoute from './api/routes/admin'
 import workerRoute from './api/routes/worker'
 import aiModelsRoute from './api/routes/ai-models'
 import documentsRoute from './api/routes/documents'
+import pipelineRoute from './api/routes/pipeline'
 
 // Phase 3: Firebase Admin SDK初期化
 if (!admin.apps.length) {
@@ -89,6 +90,9 @@ if (process.env.ENABLE_OCR === 'true') {
 
 // Phase 1 Step 1.4: Documents Route (PostgreSQL統合)
 app.route('/api/documents', documentsRoute)
+
+// Pipeline API: パイプライン結合テスト（Step 0-1: classify / extract）
+app.route('/api/pipeline', pipelineRoute)
 
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))

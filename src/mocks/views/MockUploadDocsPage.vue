@@ -237,12 +237,13 @@
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import PortalHeader from '@/mocks/components/PortalHeader.vue'
-import { getClientName } from '@/mocks/data/clientNames'
+import { useClients } from '@/features/client-management/composables/useClients'
 
 // ===== ルート =====
 const route = useRoute()
 const clientId = route.params.clientId as string
-const clientName = getClientName(clientId)
+const { clients } = useClients()
+const clientName = clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId
 
 // ===== 型 =====
 type FileStatus = 'queued' | 'uploading' | 'done' | 'failed'

@@ -44,6 +44,19 @@
               <div class="file-info">
                 <p class="file-name">{{ f.file.name }}</p>
                 <p class="file-size">{{ formatSize(f.file.size) }}</p>
+                <!-- classify結果バッジ -->
+                <div class="classify-badges" v-if="f.classifyStatus">
+                  <span v-if="f.classifyStatus === 'loading'" class="badge badge--loading">⏳ 分類中...</span>
+                  <span v-else-if="f.classifyStatus === 'error'" class="badge badge--error">❌ 失敗</span>
+                  <template v-else-if="f.classifyResult">
+                    <span class="badge badge--type" :class="'badge--mode-' + f.classifyResult.processing_mode">{{ sourceTypeLabel(f.classifyResult.source_type) }}</span>
+                    <span class="badge badge--dir">{{ directionLabel(f.classifyResult.direction) }}</span>
+                    <span class="badge badge--conf" :class="confClass(f.classifyResult.source_type_confidence)">{{ Math.round(f.classifyResult.source_type_confidence * 100) }}%</span>
+                    <span v-if="f.classifyResult.issuer_name" class="badge badge--issuer">{{ f.classifyResult.issuer_name }}</span>
+                    <span v-if="f.classifyResult.total_amount" class="badge badge--amount">¥{{ f.classifyResult.total_amount.toLocaleString() }}</span>
+                    <span class="badge badge--time">{{ f.classifyResult.metadata.duration_ms }}ms</span>
+                  </template>
+                </div>
               </div>
               <button class="file-remove" @click="removeFile('journal', i)">✕</button>
             </div>
@@ -122,17 +135,21 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import PortalHeader from '@/mocks/components/PortalHeader.vue'
-import { getClientName } from '@/mocks/data/clientNames'
+import { useClients } from '@/features/client-management/composables/useClients'
+import type { ClassifyResponse } from '@/api/services/pipeline/types'
 
 const route = useRoute()
 const clientId = route.params.clientId as string
-const clientName = getClientName(clientId)
+const { clients } = useClients()
+const clientName = clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId
 
 type Category = 'journal' | 'other'
 
 interface FileEntry {
   id: string
   file: File
+  classifyStatus?: 'loading' | 'done' | 'error'
+  classifyResult?: ClassifyResponse
 }
 
 const dragging = ref<Category | null>(null)
@@ -150,8 +167,12 @@ const otherInput = ref<HTMLInputElement>()
 const totalCount = computed(() =>
   files.value.journal.length + files.value.other.length
 )
-const totalOk = computed(() => totalCount.value) // モック: 全件OK扱い
-const totalPending = computed(() => 0)
+const totalOk = computed(() =>
+  files.value.journal.filter(f => f.classifyStatus === 'done').length + files.value.other.length
+)
+const totalPending = computed(() =>
+  files.value.journal.filter(f => f.classifyStatus === 'loading').length
+)
 
 const openPicker = (cat: Category) => {
   if (cat === 'journal') journalInput.value?.click()
@@ -164,7 +185,62 @@ const addFiles = (cat: Category, fileList: File[]) => {
     file: f,
   }))
   files.value[cat].push(...entries)
+
+  // journal画像はclassify APIを自動呼び出し
+  if (cat === 'journal') {
+    entries.forEach(entry => classifyFile(entry))
+  }
 }
+
+/** 画像をbase64変換してclassify APIを呼ぶ */
+const classifyFile = async (entry: FileEntry) => {
+  entry.classifyStatus = 'loading'
+  try {
+    const base64 = await fileToBase64(entry.file)
+    const resp = await fetch('/api/pipeline/classify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: base64,
+        mimeType: entry.file.type || 'image/jpeg',
+        clientId,
+        filename: entry.file.name,
+      }),
+    })
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    entry.classifyResult = await resp.json()
+    entry.classifyStatus = 'done'
+  } catch (err) {
+    console.error('[classify] 失敗:', entry.file.name, err)
+    entry.classifyStatus = 'error'
+  }
+}
+
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      // data:image/jpeg;base64,XXXX → XXXX部分のみ
+      resolve(result.split(',')[1] || result)
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+
+// ラベル変換
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  receipt: '領収書', invoice_received: '請求書', tax_payment: '納付書',
+  journal_voucher: '振替伝票', bank_statement: '通帳', credit_card: 'クレカ',
+  cash_ledger: '現金出納帳', invoice_issued: '発行請求書', receipt_issued: '発行領収書',
+  non_journal: '仕訳対象外', other: 'その他',
+}
+const DIRECTION_LABELS: Record<string, string> = {
+  expense: '支払', income: '入金', transfer: '振替', mixed: '混在',
+}
+const sourceTypeLabel = (v: string) => SOURCE_TYPE_LABELS[v] ?? v
+const directionLabel = (v: string) => DIRECTION_LABELS[v] ?? v
+const confClass = (c: number) => c >= 0.8 ? 'conf-high' : c >= 0.5 ? 'conf-mid' : 'conf-low'
 
 const handleDrop = (e: DragEvent, cat: Category) => {
   dragging.value = null
@@ -202,6 +278,72 @@ const resetAll = () => {
 </script>
 
 <style scoped>
+/* ===== classify結果バッジ ===== */
+.classify-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge--loading {
+  background: #fff3cd;
+  color: #856404;
+  animation: pulse 1.5s infinite;
+}
+.badge--error {
+  background: #f8d7da;
+  color: #721c24;
+}
+.badge--type {
+  color: #fff;
+}
+.badge--mode-auto {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+.badge--mode-manual {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+}
+.badge--mode-excluded {
+  background: #6c757d;
+}
+.badge--dir {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+.badge--conf {
+  font-weight: 700;
+}
+.conf-high { background: #d4edda; color: #155724; }
+.conf-mid  { background: #fff3cd; color: #856404; }
+.conf-low  { background: #f8d7da; color: #721c24; }
+.badge--issuer {
+  background: #f0f0f0;
+  color: #333;
+}
+.badge--amount {
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-weight: 700;
+}
+.badge--time {
+  background: #f5f5f5;
+  color: #999;
+  font-size: 10px;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* ===== ページ全体 ===== */
 .pc-upload {
   height: 100%;

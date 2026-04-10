@@ -79,14 +79,15 @@
 
 <script setup lang="ts">
 import PortalHeader from '@/mocks/components/PortalHeader.vue'
-import { getClientName } from '@/mocks/data/clientNames'
+import { useClients } from '@/features/client-management/composables/useClients'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
 const clientId = route.params.clientId as string
 
-const clientName = getClientName(clientId)
+const { clients } = useClients()
+const clientName = clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId
 
 const tips = [
   { icon: '☀️', text: '明るい場所で撮影' },
