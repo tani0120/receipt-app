@@ -231,11 +231,12 @@ function resolveVoucherType(
 /**
  * D-1: ID生成ヘルパー
  *
- * jrn-00000001 形式（8桁ゼロパディング）。
- * idOffset を指定することで既存ID連番との衝突を避ける。
+ * jrn-{UUID} 形式。crypto.randomUUID() を使用。
+ * Supabase時はUUID PKとしてそのまま使用可能。
+ * 旧形式（jrn-00000001）は並行アップロード時の連番衝突リスクがあったため廃止。
  */
-function generateJournalId(index: number, idOffset = 0): string {
-  return `jrn-${String(index + 1 + idOffset).padStart(8, '0')}`
+function generateJournalId(): string {
+  return `jrn-${crypto.randomUUID()}`
 }
 
 /**
@@ -257,7 +258,7 @@ function generateJournalId(index: number, idOffset = 0): string {
  * @param sourceType          - 証票種別（SourceType 11種）
  * @param clientId            - 顧問先ID（例: LDI-00008）
  * @param isCreditCardPayment - クレカ払いフラグ（receipt の相手勘定・voucher_type 分岐に使用）
- * @param idOffset            - ID連番オフセット（既存データとの衝突回避用。デフォルト 0）
+ * @param documentId          - 証票ID（crypto.randomUUID()でアップロード時に生成済み。未指定時はnull）
  * @returns JournalPhase5Mock[]
  */
 export function lineItemToJournalMock(
@@ -265,7 +266,7 @@ export function lineItemToJournalMock(
   sourceType: SourceType,
   clientId: string,
   isCreditCardPayment = false,
-  idOffset = 0,
+  documentId: string | null = null,
 ): JournalPhase5Mock[] {
   return items.map((item, index) => {
     const isInsufficient =
@@ -331,7 +332,7 @@ export function lineItemToJournalMock(
     const voucherType = resolveVoucherType(sourceType, item.direction, isCreditCardPayment)
 
     const journal: JournalPhase5Mock = {
-      id:                   generateJournalId(index, idOffset),
+      id:                   generateJournalId(),
       client_id:            clientId,
       display_order:        index + 1,
       voucher_date:         item.date,
@@ -341,8 +342,8 @@ export function lineItemToJournalMock(
       source_type:          sourceType,
       direction:            item.direction,
       vendor_vector:        item.vendor_vector ?? null,
-      document_id:          null,
-      line_id:              null,
+      document_id:          documentId,
+      line_id:              documentId ? `${documentId}_line-${item.line_index}` : null,
       debit_entries:        debitEntries,
       credit_entries:       creditEntries,
       status:               null,              // 未出力（デフォルト）

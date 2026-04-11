@@ -135,17 +135,22 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import PortalHeader from '@/mocks/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
-import { analyzeReceipt, type ReceiptAnalysisResult } from '@/mocks/services/receiptService'
+import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from '@/mocks/services/receiptService'
 
 const route = useRoute()
 const clientId = route.params.clientId as string
 const { clients } = useClients()
 const clientName = clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId
+// route.nameから権限（role）・端末（device）を導出
+const role = String(route.name ?? '').toLowerCase().includes('guest') ? 'guest' : 'staff'
+const device = String(route.name ?? '').toLowerCase().includes('mobile') ? 'mobile' : 'pc'
+const analyzeOpts: AnalyzeOptions = { clientId, role, device }
 
 type Category = 'journal' | 'other'
 
 interface FileEntry {
   id: string
+  documentId: string   // 証票ID（crypto.randomUUID()。Supabase時はUUID PK）
   file: File
   classifyStatus?: 'loading' | 'done' | 'error'
   errorReason?: string | null
@@ -182,6 +187,7 @@ const openPicker = (cat: Category) => {
 const addFiles = (cat: Category, fileList: File[]) => {
   const entries: FileEntry[] = fileList.map(f => ({
     id: `f-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    documentId: crypto.randomUUID(),
     file: f,
   }))
   files.value[cat].push(...entries)
@@ -196,7 +202,7 @@ const addFiles = (cat: Category, fileList: File[]) => {
 const classifyFile = async (entry: FileEntry) => {
   entry.classifyStatus = 'loading'
   try {
-    const result = await analyzeReceipt(entry.file, clientId)
+    const result = await analyzeReceipt(entry.file, { ...analyzeOpts, documentId: entry.documentId })
     entry.result = result
     if (result.ok) {
       entry.classifyStatus = 'done'

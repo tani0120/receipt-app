@@ -2126,3 +2126,75 @@ Content-Type: application/json
 3. Supabaseクライアント即時初期化がサーバー起動をブロック → Proxy遅延初期化で解消
 4. `preprocess.ts`の前処理パイプラインを`classify.service.ts`に統合（base64→Buffer→sharp→base64の変換対応）
 5. ADC認証エラー（`invalid_grant` / `invalid_rapt`）が発生 → `gcloud auth application-default login`で再認証が必要
+
+---
+
+## DL-034 | UUID方式ID設計 + AnalyzeOptions拡張 + 全メトリクスログ出力（2026-04-12）
+
+**状態**: 実装完了
+
+### 決定内容
+
+#### 1. ID設計をUUID方式に変更（衝突リスク排除）
+
+| ID | 旧方式 | 新方式 | 生成タイミング |
+|---|---|---|---|
+| `document_id`（証票ID） | 存在しなかった | `crypto.randomUUID()` | アップロード時（フロント） |
+| `id`（仕訳ID） | `jrn-${連番}` | `jrn-${crypto.randomUUID()}` | 仕訳生成時 |
+| `line_id`（行ID） | 常にnull | `${documentId}_line-${line_index}` | 仕訳生成時 |
+
+**なぜ変更したか**:
+- 旧連番方式（`jrn-00000001`）は並行アップロード時にidOffset管理が必要で衝突リスクがあった
+- UUID v4（122ビット暗号乱数）は315万件（300社×3,500仕訳/年×3年）規模で衝突確率 ≈ 10^-31（事実上ゼロ）
+- Supabase移行時にUUID PKとしてそのまま使用可能。追加変換不要
+
+**Supabase移行方針**:
+- クライアント側（フロント or APIサーバー）で `crypto.randomUUID()` を使ってUUIDを生成
+- Supabase テーブルは `UUID PRIMARY KEY DEFAULT gen_random_uuid()` でフォールバック
+- INSERT前の使用有無チェックは不要（衝突確率 ≈ 0、PK制約が最終防御）
+
+#### 2. AnalyzeOptions 拡張
+
+`analyzeReceipt()` の第2引数を `clientId: string` → `AnalyzeOptions` オブジェクトに変更。
+
+```typescript
+interface AnalyzeOptions {
+  clientId?: string     // 顧問先ID
+  role?: string         // 'staff' | 'guest'
+  device?: string       // 'pc' | 'mobile'
+  documentId?: string   // 証票ID（crypto.randomUUID()）
+}
+```
+
+`role` / `device` は `route.name` から導出（UploadStaffPc → staff/pc 等）。
+
+#### 3. テスト用全メトリクスログ出力
+
+`logClassifyResult()` でブラウザコンソールに全30項目を構造化出力。
+
+```
+▼ フロント情報（7項目）
+  顧問先ID / 証票ID / 権限 / 端末 / ファイル名 / 形式 / サイズ
+▼ AIレスポンス（11項目）
+  OK/NG / 種別 / 種別信頼度 / 方向 / 方向信頼度 / モード / 日付 / 金額 / 取引先 / 摘要 / fallback
+▼ メトリクス（7項目）
+  処理時間 / 入力トークン / 出力トークン / 思考トークン / 合計 / コスト / モデル
+▼ 前処理（3項目）
+  元サイズ / 圧縮後 / 削減率
+```
+
+### 変更ファイル一覧
+
+| ファイル | 変更内容 |
+|---|---|
+| `src/mocks/services/receiptService.ts` | `AnalyzeOptions`型追加（documentId含む）、`logClassifyResult`全30項目出力 |
+| `src/mocks/views/MockUploadPcPage.vue` | `FileEntry.documentId`追加、`crypto.randomUUID()`生成、classify時に渡す |
+| `src/mocks/views/MockUploadPage.vue` | `ReceiptItem.documentId`追加、同上 + retake時再生成 |
+| `src/mocks/utils/lineItemToJournalMock.ts` | `generateJournalId()` UUID化、`documentId`引数追加、`line_id`生成 |
+
+### 根拠（Evidence）
+
+- 型チェック: `tsc --noEmit` エラー0件確認（2026-04-12）
+- UUID v4衝突確率: 315万件で ≈ 10^-31（数学的証明）
+
+---

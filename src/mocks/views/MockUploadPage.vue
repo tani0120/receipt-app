@@ -310,11 +310,15 @@
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
-import { analyzeReceipt } from '@/mocks/services/receiptService'
+import { analyzeReceipt, type AnalyzeOptions } from '@/mocks/services/receiptService'
 
 // ===== ルート =====
 const route = useRoute()
 const clientId = route.params.clientId as string
+// route.nameから権限（role）・端末（device）を導出
+const role = String(route.name ?? '').toLowerCase().includes('guest') ? 'guest' : 'staff'
+const device = String(route.name ?? '').toLowerCase().includes('mobile') ? 'mobile' : 'pc'
+const analyzeOpts: AnalyzeOptions = { clientId, role, device }
 const monthLabel = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' }) + 'の領収書'
 
 // ===== 型 =====
@@ -322,6 +326,7 @@ type ReceiptStatus = 'queued' | 'uploading' | 'analyzing' | 'ok' | 'error'
 
 interface ReceiptItem {
   id: string
+  documentId: string   // 証票ID（crypto.randomUUID()。Supabase時はUUID PK）
   file: File
   previewUrl: string
   status: ReceiptStatus
@@ -412,6 +417,7 @@ const handleDrop = (e: DragEvent) => {
 const addFiles = (files: File[]) => {
   const newItems: ReceiptItem[] = files.map(file => ({
     id: `r-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    documentId: crypto.randomUUID(),
     file,
     previewUrl: URL.createObjectURL(file),
     status: 'queued',
@@ -464,7 +470,7 @@ const processOne = async (id: string) => {
   await new Promise(res => setTimeout(res, 300 + Math.random() * 400))
 
   r.status = 'analyzing'
-  const result = await analyzeReceipt(r.file)
+  const result = await analyzeReceipt(r.file, { ...analyzeOpts, documentId: r.documentId })
 
   if (result.ok) {
     r.status = 'ok'
@@ -491,10 +497,12 @@ const handleRetake = (e: Event) => {
 
   const idx = retakeTargetIdx.value
   const old = receipts.value[idx]
+  if (!old) return
   URL.revokeObjectURL(old.previewUrl)
 
   receipts.value[idx] = {
     id: old.id,
+    documentId: crypto.randomUUID(),
     file,
     previewUrl: URL.createObjectURL(file),
     status: 'queued',
@@ -502,6 +510,8 @@ const handleRetake = (e: Event) => {
     date: null,
     amount: null,
     vendor: null,
+    isDuplicate: false,
+    hash: null,
   }
 
   retakeTargetIdx.value = null
