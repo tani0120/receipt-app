@@ -267,11 +267,11 @@ const goToClientMaster = () => {
 };
 
 const navigateTo = (section: string) => {
-  // clientIdはルートパラメータから取得（/client/settings/:clientId）
+  // clientIdはルートパラメータから取得（/client-settings/:clientId）
   const clientId = (router.currentRoute.value.params.clientId as string) ?? 'ABC-00001';
   const routes: Record<string, string> = {
-    'client-accounts': `/client/settings/accounts/${clientId}`,
-    'client-tax': `/client/settings/tax/${clientId}`,
+    'client-accounts': `/client-settings/accounts/${clientId}`,
+    'client-tax': `/client-settings/tax/${clientId}`,
   };
   if (routes[section]) {
     router.push(routes[section]);

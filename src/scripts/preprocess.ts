@@ -24,10 +24,11 @@
  *   const parts = await processFiles(filePaths, { enablePreprocess: true });
  */
 
-import sharp from 'sharp';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as iconv from 'iconv-lite';
+import { preprocessImage as sharpPreprocess, getMimeType as getSharpMimeType } from './pipeline/image_preprocessor';
+import type { MimeType } from './pipeline/image_preprocessor';
 
 // ============================================================
 // 型定義
@@ -88,25 +89,8 @@ function getImageMimeType(filePath: string): string {
 }
 
 // ============================================================
-// 画像前処理
+// 画像前処理 → image_preprocessor.ts に委譲
 // ============================================================
-
-/**
- * sharp pipelineで画像を最適化してBufferを返す
- */
-async function preprocessImage(
-    inputBuffer: Buffer,
-    options: Required<PreprocessOptions>
-): Promise<Buffer> {
-    return sharp(inputBuffer)
-        .rotate()                                                    // 1. EXIF回転補正
-        .resize(options.maxWidth, null, { withoutEnlargement: true }) // 2. 横幅上限
-        .grayscale()                                                 // 3. 白黒化
-        .normalize()                                                 // 4. コントラスト正規化
-        .sharpen({ sigma: options.sharpenSigma })                    // 5. 文字エッジ強調
-        .jpeg({ quality: options.jpegQuality })                      // 6. JPEG出力
-        .toBuffer();
-}
 
 // ============================================================
 // CSV前処理
@@ -167,18 +151,23 @@ export async function processFile(
             const rawBuffer = fs.readFileSync(filePath);
 
             if (opts.enablePreprocess) {
-                const processed = await preprocessImage(rawBuffer, opts);
+                const mime = getSharpMimeType(filePath);
+                const ppResult = await sharpPreprocess(rawBuffer, mime, {
+                    maxLongEdge: opts.maxWidth,
+                    jpegQuality: opts.jpegQuality,
+                    sharpenSigma: opts.sharpenSigma,
+                });
                 return {
                     fileName,
                     category,
                     part: {
                         inlineData: {
-                            mimeType: 'image/jpeg',
-                            data: processed.toString('base64'),
+                            mimeType: ppResult.mimeType,
+                            data: ppResult.base64,
                         },
                     },
                     originalSize,
-                    processedSize: processed.length,
+                    processedSize: ppResult.buffer.length,
                     preprocessed: true,
                 };
             } else {

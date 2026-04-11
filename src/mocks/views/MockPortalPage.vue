@@ -97,11 +97,11 @@ const tips = [
 ]
 
 const goUpload = (mode: 'mobile' | 'pc') => {
-  router.push(`/portal/${clientId}/${mode}`)
+  router.push(`/upload/${clientId}/guest/${mode}`)
 }
 
 const goUploadDocs = () => {
-  router.push(`/portal/${clientId}/docs`)
+  router.push(`/upload-docs/${clientId}/guest`)
 }
 </script>
 

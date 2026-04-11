@@ -47,14 +47,13 @@
                 <!-- classify結果バッジ -->
                 <div class="classify-badges" v-if="f.classifyStatus">
                   <span v-if="f.classifyStatus === 'loading'" class="badge badge--loading">⏳ 分類中...</span>
-                  <span v-else-if="f.classifyStatus === 'error'" class="badge badge--error">❌ 失敗</span>
-                  <template v-else-if="f.classifyResult">
-                    <span class="badge badge--type" :class="'badge--mode-' + f.classifyResult.processing_mode">{{ sourceTypeLabel(f.classifyResult.source_type) }}</span>
-                    <span class="badge badge--dir">{{ directionLabel(f.classifyResult.direction) }}</span>
-                    <span class="badge badge--conf" :class="confClass(f.classifyResult.source_type_confidence)">{{ Math.round(f.classifyResult.source_type_confidence * 100) }}%</span>
-                    <span v-if="f.classifyResult.issuer_name" class="badge badge--issuer">{{ f.classifyResult.issuer_name }}</span>
-                    <span v-if="f.classifyResult.total_amount" class="badge badge--amount">¥{{ f.classifyResult.total_amount.toLocaleString() }}</span>
-                    <span class="badge badge--time">{{ f.classifyResult.metadata.duration_ms }}ms</span>
+                  <span v-else-if="f.classifyStatus === 'error'" class="badge badge--error">❌ {{ f.errorReason ?? '失敗' }}</span>
+                  <template v-else-if="f.classifyStatus === 'done'">
+                    <span v-if="f.result?.metrics?.source_type" class="badge badge--type" :class="'badge--mode-' + (f.result.metrics.processing_mode ?? 'auto')">{{ sourceTypeLabel(f.result.metrics.source_type) }}</span>
+                    <span v-if="f.result?.vendor" class="badge badge--issuer">{{ f.result.vendor }}</span>
+                    <span v-if="f.result?.amount" class="badge badge--amount">¥{{ f.result.amount.toLocaleString() }}</span>
+                    <span v-if="f.result?.date" class="badge badge--date">{{ f.result.date }}</span>
+                    <span v-if="f.result?.metrics" class="badge badge--time">{{ f.result.metrics.duration_seconds }}秒 / ¥{{ f.result.metrics.cost_yen.toFixed(2) }}</span>
                   </template>
                 </div>
               </div>
@@ -136,7 +135,7 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import PortalHeader from '@/mocks/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
-import type { ClassifyResponse } from '@/api/services/pipeline/types'
+import { analyzeReceipt, type ReceiptAnalysisResult } from '@/mocks/services/receiptService'
 
 const route = useRoute()
 const clientId = route.params.clientId as string
@@ -149,7 +148,8 @@ interface FileEntry {
   id: string
   file: File
   classifyStatus?: 'loading' | 'done' | 'error'
-  classifyResult?: ClassifyResponse
+  errorReason?: string | null
+  result?: ReceiptAnalysisResult
 }
 
 const dragging = ref<Category | null>(null)
@@ -192,41 +192,24 @@ const addFiles = (cat: Category, fileList: File[]) => {
   }
 }
 
-/** 画像をbase64変換してclassify APIを呼ぶ */
+/** analyzeReceiptを使ってclassify + バリデーション */
 const classifyFile = async (entry: FileEntry) => {
   entry.classifyStatus = 'loading'
   try {
-    const base64 = await fileToBase64(entry.file)
-    const resp = await fetch('/api/pipeline/classify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        image: base64,
-        mimeType: entry.file.type || 'image/jpeg',
-        clientId,
-        filename: entry.file.name,
-      }),
-    })
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    entry.classifyResult = await resp.json()
-    entry.classifyStatus = 'done'
+    const result = await analyzeReceipt(entry.file, clientId)
+    entry.result = result
+    if (result.ok) {
+      entry.classifyStatus = 'done'
+    } else {
+      entry.classifyStatus = 'error'
+      entry.errorReason = result.errorReason
+    }
   } catch (err) {
     console.error('[classify] 失敗:', entry.file.name, err)
     entry.classifyStatus = 'error'
+    entry.errorReason = '通信エラー'
   }
 }
-
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result as string
-      // data:image/jpeg;base64,XXXX → XXXX部分のみ
-      resolve(result.split(',')[1] || result)
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
 
 // ラベル変換
 const SOURCE_TYPE_LABELS: Record<string, string> = {
@@ -235,12 +218,7 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   cash_ledger: '現金出納帳', invoice_issued: '発行請求書', receipt_issued: '発行領収書',
   non_journal: '仕訳対象外', other: 'その他',
 }
-const DIRECTION_LABELS: Record<string, string> = {
-  expense: '支払', income: '入金', transfer: '振替', mixed: '混在',
-}
 const sourceTypeLabel = (v: string) => SOURCE_TYPE_LABELS[v] ?? v
-const directionLabel = (v: string) => DIRECTION_LABELS[v] ?? v
-const confClass = (c: number) => c >= 0.8 ? 'conf-high' : c >= 0.5 ? 'conf-mid' : 'conf-low'
 
 const handleDrop = (e: DragEvent, cat: Category) => {
   dragging.value = null

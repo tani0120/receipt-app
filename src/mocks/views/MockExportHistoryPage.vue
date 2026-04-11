@@ -2,7 +2,7 @@
   <div class="h-full flex flex-col bg-gray-50 font-sans text-[12px] text-gray-700">
     <!-- 戻るリンク -->
     <div class="bg-white px-4 py-2 flex items-center gap-4 border-b border-gray-300">
-      <router-link :to="'/client/export/' + clientId" class="text-blue-600 text-[12px] hover:underline flex items-center gap-1">
+      <router-link :to="'/export/' + clientId" class="text-blue-600 text-[12px] hover:underline flex items-center gap-1">
         <i class="fa-solid fa-arrow-left text-[10px]"></i> 出力ページに戻る
       </router-link>
       <span class="text-[15px] font-bold text-blue-700">ダウンロード履歴</span>
@@ -141,7 +141,7 @@ const pagedRows = computed(() => {
 const selectedId = ref('h10');
 const navigateToDetail = (id: string) => {
   selectedId.value = id;
-  router.push(`/client/export-detail/${clientId.value}/${id}`);
+  router.push(`/export-detail/${clientId.value}/${id}`);
 };
 
 // --- チェックボックス ---

@@ -2,7 +2,7 @@
   <div class="h-full flex flex-col bg-gray-50 font-sans text-[10px] text-gray-700">
     <!-- 戻るリンク -->
     <div class="bg-white px-3 py-1.5 flex items-center gap-3 border-b border-gray-300">
-      <router-link :to="'/client/export-history/' + clientId" class="text-blue-600 text-[10px] hover:underline flex items-center gap-1">
+      <router-link :to="'/export-history/' + clientId" class="text-blue-600 text-[10px] hover:underline flex items-center gap-1">
         <i class="fa-solid fa-arrow-left text-[8px]"></i> ダウンロード履歴に戻る
       </router-link>
       <span class="text-[13px] font-bold text-blue-700">出力詳細：{{ historyFileName }}</span>

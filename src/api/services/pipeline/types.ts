@@ -82,10 +82,16 @@ export interface ClassifyResponse {
   fallback_applied: boolean;         // fallbackが適用されたか
   metadata: {
     duration_ms: number;
+    duration_seconds: number;         // 処理時間（秒）
     prompt_tokens: number;
     completion_tokens: number;
     thinking_tokens: number;
+    token_count: number;              // 入力+出力トークン合計
+    cost_yen: number;                 // 利用料（円）
     model: string;
+    original_size_kb: number;         // 前処理前サイズ（KB）
+    processed_size_kb: number;        // 前処理後サイズ（KB）
+    preprocess_reduction_pct: number; // 削減率（%）
   };
 }
 

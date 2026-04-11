@@ -273,7 +273,7 @@ const refreshData = () => {
 
 // --- 行クリック: 仕訳一覧へ遷移 ---
 function goToJournalList(row: { clientId: string }) {
-  router.push(`/client/journal-list/${row.clientId}`);
+  router.push(`/journal-list/${row.clientId}`);
 }
 </script>
 

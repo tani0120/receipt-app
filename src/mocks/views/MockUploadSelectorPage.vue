@@ -226,7 +226,7 @@
                 {{ copiedKey === 'portal' ? 'コピーしました！' : 'URLをコピー' }}
               </span>
             </div>
-            <button class="sel-card card-client-pc" @click="go('/portal/' + clientId)">
+            <button class="sel-card card-client-pc" @click="go('/guest/' + clientId)">
               <div class="card-icon-area icon-client-pc"><span>👁</span></div>
               <h3 class="card-label">ポータルを確認</h3>
               <p class="card-sub">ログインをスキップ</p>
@@ -236,7 +236,7 @@
 
         <!-- 資料 -->
         <div class="docs-area">
-          <button class="docs-btn" @click="go('/client/upload-docs/' + clientId)">
+          <button class="docs-btn" @click="go('/upload-docs/' + clientId)">
             📎 謄本・CSV・Excel等の資料を送る
           </button>
         </div>
@@ -259,11 +259,11 @@ const clientId = route.params.clientId as string
 const origin = window.location.origin
 
 // URL群
-const staffMobilePath = `/client/upload/${clientId}/mobile`
-const staffPcPath     = `/client/upload/${clientId}/pc`
+const staffMobilePath = `/upload/${clientId}/staff/mobile`
+const staffPcPath     = `/upload/${clientId}/staff/pc`
 const staffMobileUrl  = `${origin}/#${staffMobilePath}`
 const staffPcUrl      = `${origin}/#${staffPcPath}`
-const portalLoginUrl  = `${origin}/#/portal/${clientId}/login`
+const portalLoginUrl  = `${origin}/#/guest/${clientId}/login`
 
 // 共有設定（Repository経由）
 const { loadAll, updateStatus, saveInviteCode, getStatusFromCache, getInviteCodeFromCache } = useShareStatus()

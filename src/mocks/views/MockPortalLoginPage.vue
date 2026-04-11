@@ -119,7 +119,7 @@ const resetEmail = ref('')
 const canSubmit = computed(() => email.value.length > 0 && password.value.length > 0)
 
 const navigateToPortal = () => {
-  router.push(`/portal/${clientId}`)
+  router.push(`/guest/${clientId}`)
 }
 
 const handleEmailLogin = () => {

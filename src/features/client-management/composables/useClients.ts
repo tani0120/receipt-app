@@ -243,10 +243,17 @@ export function useClients() {
     /** ルートパスまたはクエリパラメータから現在選択中のクライアントを動的に取得 */
     const currentClient = computed<Client | null>(() => {
         const path = route.path;
-        // 1. パターンB: /client/journal-list/:clientId, /client/drive-select/:clientId 等
-        const patternB = path.match(/^\/client\/(journal-list|drive-select|export|export-history|export-detail|settings\/accounts|settings\/tax|settings|upload|learning)\/([^/]+)/);
+        // 1. 新URL構造: /journal-list/:clientId, /upload/:clientId/staff/mobile 等
+        const patternB = path.match(/^\/(journal-list|drive-select|export-detail|export-history|export|client-settings(?:\/accounts|\/tax)?|upload-docs|upload|learning|detail|workbench|guest)\/([^/]+)/);
         if (patternB && patternB[2]) {
             const cid = patternB[2];
+            const found = clients.value.find(c => c.clientId === cid);
+            if (found) return found;
+        }
+        // 1b. 旧URL互換: /client/xxx/:clientId パターン
+        const patternOld = path.match(/^\/client\/(journal-list|drive-select|export|export-history|export-detail|settings\/accounts|settings\/tax|settings|upload|learning)\/([^/]+)/);
+        if (patternOld && patternOld[2]) {
+            const cid = patternOld[2];
             const found = clients.value.find(c => c.clientId === cid);
             if (found) return found;
         }
