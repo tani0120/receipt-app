@@ -22,22 +22,25 @@ import { postprocessClassify } from './postprocess';
 // 設定
 // ============================================================
 
-const PROJECT_ID = process.env['VERTEX_PROJECT_ID'] ?? '';
-const LOCATION   = process.env['VERTEX_LOCATION']   ?? 'us-central1';
-const MODEL_ID   = process.env['VERTEX_MODEL_ID']    ?? 'gemini-2.5-flash';
-
 // シングルトン（リクエスト毎に生成しない）
 let _ai: GoogleGenAI | null = null;
 
 function getAI(): GoogleGenAI {
   if (!_ai) {
-    if (!PROJECT_ID) {
+    // ESMではimportが先に解決されるため、トップレベルではなくここで遅延取得する
+    const projectId = process.env['VERTEX_PROJECT_ID'] ?? '';
+    const location  = process.env['VERTEX_LOCATION']   ?? 'us-central1';
+    if (!projectId) {
       throw new Error('VERTEX_PROJECT_ID 環境変数が未設定です');
     }
-    _ai = new GoogleGenAI({ vertexai: true, project: PROJECT_ID, location: LOCATION });
-    console.log(`[pipeline/service] Vertex AI初期化完了: project=${PROJECT_ID}, location=${LOCATION}, model=${MODEL_ID}`);
+    _ai = new GoogleGenAI({ vertexai: true, project: projectId, location });
+    console.log(`[pipeline/service] Vertex AI初期化完了: project=${projectId}, location=${location}, model=${getModelId()}`);
   }
   return _ai;
+}
+
+function getModelId(): string {
+  return process.env['VERTEX_MODEL_ID'] ?? 'gemini-2.5-flash';
 }
 
 // ============================================================
@@ -73,6 +76,15 @@ const CLASSIFY_SCHEMA = {
       type: Type.STRING,
       nullable: true,
       description: '判定根拠。なぜそのsource_typeを選んだかの理由を日本語で1、2文で説明',
+    },
+    document_count: {
+      type: Type.NUMBER,
+      description: '画像内の独立した情報源の数。純粋に1枚の証票だけが写っている場合のみ1。それ以外は2以上を返す',
+    },
+    document_count_reason: {
+      type: Type.STRING,
+      nullable: true,
+      description: '画像内の情報源数の判定根拠。他の書類・証票の端や影が写っていないかを確認した結果を日本語で1、2文で説明',
     },
     description: {
       type: Type.STRING,
@@ -131,6 +143,7 @@ const CLASSIFY_SCHEMA = {
   required: [
     'source_type', 'source_type_confidence',
     'direction', 'direction_confidence',
+    'document_count',
   ],
 };
 
@@ -139,6 +152,7 @@ const CLASSIFY_SCHEMA = {
 // ============================================================
 
 const SYSTEM_INSTRUCTION_BASE = `あなたは日本の会計事務所向けのAI証票分類エンジンです。
+【最優先タスク】まず画像内に独立した情報源が1つだけか、2つ以上あるかを判定せよ。判定後、主要な1つについて詳細情報を抽出せよ。
 1枚の証票画像から、証票種別（source_type）と仕訳方向（direction）を判定し、行データ（line_items）を抽出してください。
 `;
 
@@ -174,6 +188,8 @@ const SYSTEM_INSTRUCTION_RULES = `
 - date: 取引日・契約日・報告対象期間の開始日（YYYY-MM-DD）。全source_typeで必ず読み取りを試みる。読み取れない場合はnull。
 - total_amount: 合計金額・契約金額（税込）。全source_typeで必ず読み取りを試みる。読み取れない場合はnull。
 - classify_reason: 判定根拠。なぜそのsource_typeを選んだかを日本語で1、2文で説明。例:「『領収書』の表記があり、POSレシート形式」
+- document_count: 画像内に独立した情報源が何個あるかを数える。純粋に1枚の証票だけが写っている場合のみ1を返す。以下のケースは全て2以上: 複数の証票が並んでいるまたは重なっている / 証票以外のもの（他の書類・画面等）が同時に写っている。必ず整数で返す。
+- document_count_reason: 上記document_countの判定根拠。画像の端・背景・重なり部分に他の書類や証票の片鲞が写っていないかを確認し、その結果を日本語で1、2文で説明。例:「主証票の左下に別のレシートの端が見える」「証票以外のものは写っていない」
 - line_items: 行データ配列。各行のamountは必ず正の整数。入出金はdirectionで区別。`;
 
 /** プロンプト生成: ベース + キーワード集（外部） + ルール */
@@ -234,7 +250,7 @@ export async function classifyImage(req: ClassifyRequest): Promise<ClassifyRespo
     const ai = getAI();
 
     const response = await ai.models.generateContent({
-      model: MODEL_ID,
+      model: getModelId(),
       contents: [
         {
           role: 'user',
@@ -249,6 +265,9 @@ export async function classifyImage(req: ClassifyRequest): Promise<ClassifyRespo
         responseMimeType: 'application/json',
         responseSchema: CLASSIFY_SCHEMA,
         temperature: 0,
+        thinkingConfig: {
+          thinkingBudget: 2048,
+        },
       },
     });
 
@@ -303,7 +322,7 @@ export async function classifyImage(req: ClassifyRequest): Promise<ClassifyRespo
     thinking_tokens: thinkingTokens,
     token_count: totalTokens,
     cost_yen: Math.round(costYen * 10000) / 10000,  // 小数4桁
-    model: MODEL_ID,
+    model: getModelId(),
     original_size_kb: Math.round(originalSize / 1024),
     processed_size_kb: Math.round(ppSize / 1024),
     preprocess_reduction_pct: Math.round((1 - ppSize / originalSize) * 100),

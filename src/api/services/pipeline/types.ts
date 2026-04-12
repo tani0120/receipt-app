@@ -64,6 +64,8 @@ export interface ClassifyRawResponse {
   direction: string;
   direction_confidence: number;
   classify_reason: string | null;    // 判定根拠（AIがなぜその種別を選んだか）
+  document_count: number;             // 画像内の証票枚数（2以上ならエラー）
+  document_count_reason: string | null; // 枚数判定の根拠
   description: string | null;        // 摘要（AI推定）
   issuer_name: string | null;        // 発行者名
   date: string | null;               // YYYY-MM-DD
@@ -88,6 +90,8 @@ export interface ClassifyResponse {
   direction_confidence: number;
   processing_mode: ProcessingMode;
   classify_reason: string | null;    // 判定根拠
+  document_count: number;             // 画像内の証票枚数（2以上ならエラー）
+  document_count_reason: string | null; // 枚数判定の根拠
   description: string | null;
   issuer_name: string | null;
   date: string | null;

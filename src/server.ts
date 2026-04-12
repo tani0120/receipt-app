@@ -1,4 +1,7 @@
 // src/server.ts
+import { config } from 'dotenv'
+config({ path: '.env.local' })  // .env.localを明示的に読み込む（VERTEX_PROJECT_ID等）
+
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'

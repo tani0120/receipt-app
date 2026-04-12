@@ -2040,15 +2040,15 @@ DL-029で「Supabase接続なしでパイプライン精度テストを完結さ
 
 ### 設計決定
 
-| # | 決定事項 | 根拠 |
-|---|---|---|
-| D1 | Supabase Edge Functionsではなく**Honoローカルサーバー**を使う | Supabase接続なしでテストする方針（DL-029）。Edge Functions版は全モック完了後に実装 |
-| D2 | Vite proxyで`/api`→8080に転送 | CORSなし・フロントエンドから透過的にAPIを呼べる |
-| D3 | 前処理（sharp pipeline）を`classify.service.ts`に**直接統合** | `preprocess.ts`はスタンドアロン版。APIではbase64→Buffer→sharp→base64の変換が必要なため別実装 |
-| D4 | PDFは前処理スキップ | GeminiがPDFを直接読めるため |
-| D5 | 前処理失敗時は生画像で続行（例外を投げない） | AI呼び出し自体は可能。前処理失敗でパイプライン全体を止めない |
-| D6 | GoogleGenAIクライアントはシングルトン | リクエスト毎にnewしない。`_ai`変数でキャッシュ |
-| D7 | `src/database/supabase/client.ts`をProxy遅延初期化に変更 | 環境変数未設定でもバックエンドがクラッシュしない |
+| #   | 決定事項                                                      | 根拠                                                                                         |
+| --- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| D1  | Supabase Edge Functionsではなく**Honoローカルサーバー**を使う | Supabase接続なしでテストする方針（DL-029）。Edge Functions版は全モック完了後に実装           |
+| D2  | Vite proxyで`/api`→8080に転送                                 | CORSなし・フロントエンドから透過的にAPIを呼べる                                              |
+| D3  | 前処理（sharp pipeline）を`classify.service.ts`に**直接統合** | `preprocess.ts`はスタンドアロン版。APIではbase64→Buffer→sharp→base64の変換が必要なため別実装 |
+| D4  | PDFは前処理スキップ                                           | GeminiがPDFを直接読めるため                                                                  |
+| D5  | 前処理失敗時は生画像で続行（例外を投げない）                  | AI呼び出し自体は可能。前処理失敗でパイプライン全体を止めない                                 |
+| D6  | GoogleGenAIクライアントはシングルトン                         | リクエスト毎にnewしない。`_ai`変数でキャッシュ                                               |
+| D7  | `src/database/supabase/client.ts`をProxy遅延初期化に変更      | 環境変数未設定でもバックエンドがクラッシュしない                                             |
 
 ### 前処理パイプライン（sharp pipeline）
 
@@ -2068,11 +2068,11 @@ DL-029で「Supabase接続なしでパイプライン精度テストを完結さ
 
 ### 実測結果
 
-| 画像 | 元サイズ | 処理後 | 削減率 |
-|---|---|---|---|
-| 20250912_075647.jpg | 4077KB | 1143KB | 72% |
-| 20250912_075650.jpg | 3551KB | 909KB | 74% |
-| 20250912_075642.jpg | 4354KB | 1328KB | 69% |
+| 画像                | 元サイズ | 処理後 | 削減率 |
+| ------------------- | -------- | ------ | ------ |
+| 20250912_075647.jpg | 4077KB   | 1143KB | 72%    |
+| 20250912_075650.jpg | 3551KB   | 909KB  | 74%    |
+| 20250912_075642.jpg | 4354KB   | 1328KB | 69%    |
 
 **平均削減率: 72%**。DL-011実測（前処理あり/なしの比較）と整合。
 
@@ -2102,23 +2102,23 @@ Content-Type: application/json
 
 アップロード時に自動で`/api/pipeline/classify`を呼び出し、結果をバッジ表示：
 
-| バッジ色 | 内容 |
-|---|---|
-| 紫/ピンク | source_type（領収書、請求書等） |
-| 青 | direction（支払、入金等） |
-| 緑/黄/赤 | confidence（80%以上=緑、50-80%=黄、50%未満=赤） |
-| グレー | 発行者名（AI推定） |
-| 緑 | 金額（税込合計） |
-| 薄灰 | 処理時間（ms） |
+| バッジ色  | 内容                                            |
+| --------- | ----------------------------------------------- |
+| 紫/ピンク | source_type（領収書、請求書等）                 |
+| 青        | direction（支払、入金等）                       |
+| 緑/黄/赤  | confidence（80%以上=緑、50-80%=黄、50%未満=赤） |
+| グレー    | 発行者名（AI推定）                              |
+| 緑        | 金額（税込合計）                                |
+| 薄灰      | 処理時間（ms）                                  |
 
 ### 残課題
 
-| # | 課題 | 状態 |
-|---|---|---|
-| 1 | ADC認証通過後のStep 0-1精度実測 | 🔶 次のステップ |
-| 2 | Extract（明細抽出）APIの実装 | ❌ 未着手 |
-| 3 | CSV出力機能 | ❌ 未着手 |
-| 4 | 分類失敗時のUIエラーハンドリング改善 | ❌ 未着手 |
+| #   | 課題                                 | 状態            |
+| --- | ------------------------------------ | --------------- |
+| 1   | ADC認証通過後のStep 0-1精度実測      | 🔶 次のステップ |
+| 2   | Extract（明細抽出）APIの実装         | ❌ 未着手       |
+| 3   | CSV出力機能                          | ❌ 未着手       |
+| 4   | 分類失敗時のUIエラーハンドリング改善 | ❌ 未着手       |
 
 ### 経緯
 
@@ -2138,18 +2138,20 @@ Content-Type: application/json
 
 #### 1. ID設計をUUID方式に変更（衝突リスク排除）
 
-| ID | 旧方式 | 新方式 | 生成タイミング |
-|---|---|---|---|
-| `document_id`（証票ID） | 存在しなかった | `crypto.randomUUID()` | アップロード時（フロント） |
-| `id`（仕訳ID） | `jrn-${連番}` | `jrn-${crypto.randomUUID()}` | 仕訳生成時 |
-| `line_id`（行ID） | 常にnull | `${documentId}_line-${line_index}` | 仕訳生成時 |
+| ID                      | 旧方式         | 新方式                             | 生成タイミング             |
+| ----------------------- | -------------- | ---------------------------------- | -------------------------- |
+| `document_id`（証票ID） | 存在しなかった | `crypto.randomUUID()`              | アップロード時（フロント） |
+| `id`（仕訳ID）          | `jrn-${連番}`  | `jrn-${crypto.randomUUID()}`       | 仕訳生成時                 |
+| `line_id`（行ID）       | 常にnull       | `${documentId}_line-${line_index}` | 仕訳生成時                 |
 
 **なぜ変更したか**:
+
 - 旧連番方式（`jrn-00000001`）は並行アップロード時にidOffset管理が必要で衝突リスクがあった
 - UUID v4（122ビット暗号乱数）は315万件（300社×3,500仕訳/年×3年）規模で衝突確率 ≈ 10^-31（事実上ゼロ）
 - Supabase移行時にUUID PKとしてそのまま使用可能。追加変換不要
 
 **Supabase移行方針**:
+
 - クライアント側（フロント or APIサーバー）で `crypto.randomUUID()` を使ってUUIDを生成
 - Supabase テーブルは `UUID PRIMARY KEY DEFAULT gen_random_uuid()` でフォールバック
 - INSERT前の使用有無チェックは不要（衝突確率 ≈ 0、PK制約が最終防御）
@@ -2160,10 +2162,10 @@ Content-Type: application/json
 
 ```typescript
 interface AnalyzeOptions {
-  clientId?: string     // 顧問先ID
-  role?: string         // 'staff' | 'guest'
-  device?: string       // 'pc' | 'mobile'
-  documentId?: string   // 証票ID（crypto.randomUUID()）
+  clientId?: string; // 顧問先ID
+  role?: string; // 'staff' | 'guest'
+  device?: string; // 'pc' | 'mobile'
+  documentId?: string; // 証票ID（crypto.randomUUID()）
 }
 ```
 
@@ -2186,12 +2188,12 @@ interface AnalyzeOptions {
 
 ### 変更ファイル一覧
 
-| ファイル | 変更内容 |
-|---|---|
-| `src/mocks/services/receiptService.ts` | `AnalyzeOptions`型追加（documentId含む）、`logClassifyResult`全30項目出力 |
-| `src/mocks/views/MockUploadPcPage.vue` | `FileEntry.documentId`追加、`crypto.randomUUID()`生成、classify時に渡す |
-| `src/mocks/views/MockUploadPage.vue` | `ReceiptItem.documentId`追加、同上 + retake時再生成 |
-| `src/mocks/utils/lineItemToJournalMock.ts` | `generateJournalId()` UUID化、`documentId`引数追加、`line_id`生成 |
+| ファイル                                   | 変更内容                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------- |
+| `src/mocks/services/receiptService.ts`     | `AnalyzeOptions`型追加（documentId含む）、`logClassifyResult`全30項目出力 |
+| `src/mocks/views/MockUploadPcPage.vue`     | `FileEntry.documentId`追加、`crypto.randomUUID()`生成、classify時に渡す   |
+| `src/mocks/views/MockUploadPage.vue`       | `ReceiptItem.documentId`追加、同上 + retake時再生成                       |
+| `src/mocks/utils/lineItemToJournalMock.ts` | `generateJournalId()` UUID化、`documentId`引数追加、`line_id`生成         |
 
 ### 根拠（Evidence）
 
@@ -2202,53 +2204,53 @@ interface AnalyzeOptions {
 
 #### フロントエンド側（送信前に取得可能）
 
-| # | 変数名 | 日本語 | 値の例 | null | 出力 |
-|---|---|---|---|---|---|
-| 1 | `clientId`（顧問先ID） | 顧問先コード | LDI-00008 | 不可 | ✅ |
-| 2 | `documentId`（証票ID） | 証票UUID | 9b1deb4d-3b7d-4bad-... | 不可 | ✅ |
-| 3 | `role`（権限） | 事務所 or 顧問先 | staff / guest | 不可 | ✅ |
-| 4 | `device`（端末） | PC or スマホ | pc / mobile | 不可 | ✅ |
-| 5 | `filename`（ファイル名） | 元ファイル名 | 20250912.jpg | 不可 | ✅ |
-| 6 | `mimeType`（形式） | ファイル形式 | image/jpeg | 不可 | ✅ |
-| 7 | `fileSizeBytes`（元サイズ） | アップロード前バイト数 | 4174788 | 不可 | ✅ |
+| #   | 変数名                      | 日本語                 | 値の例                 | null | 出力 |
+| --- | --------------------------- | ---------------------- | ---------------------- | ---- | ---- |
+| 1   | `clientId`（顧問先ID）      | 顧問先コード           | LDI-00008              | 不可 | ✅   |
+| 2   | `documentId`（証票ID）      | 証票UUID               | 9b1deb4d-3b7d-4bad-... | 不可 | ✅   |
+| 3   | `role`（権限）              | 事務所 or 顧問先       | staff / guest          | 不可 | ✅   |
+| 4   | `device`（端末）            | PC or スマホ           | pc / mobile            | 不可 | ✅   |
+| 5   | `filename`（ファイル名）    | 元ファイル名           | 20250912.jpg           | 不可 | ✅   |
+| 6   | `mimeType`（形式）          | ファイル形式           | image/jpeg             | 不可 | ✅   |
+| 7   | `fileSizeBytes`（元サイズ） | アップロード前バイト数 | 4174788                | 不可 | ✅   |
 
 #### AIレスポンス（サーバーから返却）
 
-| # | 変数名 | 日本語 | 値の例 | null可 | 出力 |
-|---|---|---|---|---|---|
-| 8 | `source_type`（証票種別） | 領収書・請求書等12種 | receipt（領収書） | 不可 | ✅ |
-| 9 | `source_type_confidence`（種別信頼度） | AI確信度0.0〜1.0 | 1 | 不可 | ✅ |
-| 10 | `direction`（仕訳方向） | 支払・入金・振替・混在 | expense（支払） | 不可 | ✅ |
-| 11 | `direction_confidence`（方向信頼度） | AI確信度0.0〜1.0 | 1 | 不可 | ✅ |
-| 12 | `processing_mode`（処理モード） | 自動・手動・除外 | auto（自動） | 不可 | ✅ |
-| 13 | `description`（摘要） | AIが生成した取引内容 | コンビニでの飲食物購入 | null可 | ✅ |
-| 14 | `issuer_name`（取引先名） | 発行者名 | サクラマート コンビニ | null可 | ✅ |
-| 15 | `date`（日付） | 取引日 YYYY-MM-DD | 2022-06-16 | null可 | ✅ |
-| 16 | `total_amount`（合計金額） | 税込金額（整数） | 799 | null可 | ✅ |
-| 17 | `fallback_applied`（フォールバック適用） | AI失敗時のデフォルト値置換 | false / true | 不可 | ✅ |
+| #   | 変数名                                   | 日本語                     | 値の例                 | null可 | 出力 |
+| --- | ---------------------------------------- | -------------------------- | ---------------------- | ------ | ---- |
+| 8   | `source_type`（証票種別）                | 領収書・請求書等12種       | receipt（領収書）      | 不可   | ✅   |
+| 9   | `source_type_confidence`（種別信頼度）   | AI確信度0.0〜1.0           | 1                      | 不可   | ✅   |
+| 10  | `direction`（仕訳方向）                  | 支払・入金・振替・混在     | expense（支払）        | 不可   | ✅   |
+| 11  | `direction_confidence`（方向信頼度）     | AI確信度0.0〜1.0           | 1                      | 不可   | ✅   |
+| 12  | `processing_mode`（処理モード）          | 自動・手動・除外           | auto（自動）           | 不可   | ✅   |
+| 13  | `description`（摘要）                    | AIが生成した取引内容       | コンビニでの飲食物購入 | null可 | ✅   |
+| 14  | `issuer_name`（取引先名）                | 発行者名                   | サクラマート コンビニ  | null可 | ✅   |
+| 15  | `date`（日付）                           | 取引日 YYYY-MM-DD          | 2022-06-16             | null可 | ✅   |
+| 16  | `total_amount`（合計金額）               | 税込金額（整数）           | 799                    | null可 | ✅   |
+| 17  | `fallback_applied`（フォールバック適用） | AI失敗時のデフォルト値置換 | false / true           | 不可   | ✅   |
 
 #### メトリクス（metadata内）
 
-| # | 変数名 | 日本語 | 値の例 | 出力 |
-|---|---|---|---|---|
-| 18 | `duration_ms`（処理ミリ秒） | AI処理時間（ms） | 10226 | ✅ |
-| 19 | `duration_seconds`（処理秒） | AI処理時間（秒） | 10.2 | ✅ |
-| 20 | `prompt_tokens`（入力トークン） | プロンプトトークン数 | 1965 | ✅ |
-| 21 | `completion_tokens`（出力トークン） | 応答トークン数 | 104 | ✅ |
-| 22 | `thinking_tokens`（思考トークン） | 思考トークン数 | 286 | ✅ |
-| 23 | `token_count`（トークン合計） | 入力+出力合計 | 2069 | ✅ |
-| 24 | `cost_yen`（利用料） | 1枚あたりAI費用（円） | 0.2037 | ✅ |
-| 25 | `model`（モデル名） | 使用AIモデル | gemini-2.5-flash | ✅ |
-| 26 | `original_size_kb`（前処理前） | 元画像サイズ（KB） | 593 | ✅ |
-| 27 | `processed_size_kb`（前処理後） | 圧縮後サイズ（KB） | 91 | ✅ |
-| 28 | `preprocess_reduction_pct`（削減率） | サイズ削減率（%） | 85 | ✅ |
+| #   | 変数名                               | 日本語                | 値の例           | 出力 |
+| --- | ------------------------------------ | --------------------- | ---------------- | ---- |
+| 18  | `duration_ms`（処理ミリ秒）          | AI処理時間（ms）      | 10226            | ✅   |
+| 19  | `duration_seconds`（処理秒）         | AI処理時間（秒）      | 10.2             | ✅   |
+| 20  | `prompt_tokens`（入力トークン）      | プロンプトトークン数  | 1965             | ✅   |
+| 21  | `completion_tokens`（出力トークン）  | 応答トークン数        | 104              | ✅   |
+| 22  | `thinking_tokens`（思考トークン）    | 思考トークン数        | 286              | ✅   |
+| 23  | `token_count`（トークン合計）        | 入力+出力合計         | 2069             | ✅   |
+| 24  | `cost_yen`（利用料）                 | 1枚あたりAI費用（円） | 0.2037           | ✅   |
+| 25  | `model`（モデル名）                  | 使用AIモデル          | gemini-2.5-flash | ✅   |
+| 26  | `original_size_kb`（前処理前）       | 元画像サイズ（KB）    | 593              | ✅   |
+| 27  | `processed_size_kb`（前処理後）      | 圧縮後サイズ（KB）    | 91               | ✅   |
+| 28  | `preprocess_reduction_pct`（削減率） | サイズ削減率（%）     | 85               | ✅   |
 
 #### バリデーション結果（フロント側で判定）
 
-| # | 変数名 | 日本語 | 値の例 | 出力 |
-|---|---|---|---|---|
-| 29 | `ok`（判定結果） | OK / NG | true / false | ✅ |
-| 30 | `errorReason`（NG理由） | 却下理由 | 日付が読み取れません / null | ✅ |
+| #   | 変数名                  | 日本語   | 値の例                      | 出力 |
+| --- | ----------------------- | -------- | --------------------------- | ---- |
+| 29  | `ok`（判定結果）        | OK / NG  | true / false                | ✅   |
+| 30  | `errorReason`（NG理由） | 却下理由 | 日付が読み取れません / null | ✅   |
 
 > **全30項目テスト出力済み。未出力項目ゼロ。**（2026-04-12確認）
 
@@ -2262,20 +2264,22 @@ interface AnalyzeOptions {
 
 #### 1. source_type 12種化（supplementary_doc追加）
 
-| 変更 | 内容 |
-|---|---|
-| 新種別 | `supplementary_doc`（補助資料：見積書・契約書・保険証券・検査報告書等、仕訳対象外だが業務に必要な書類） |
-| ProcessingMode | `excluded`（対象外）に分類 |
-| 影響ファイル | `types.ts`（SOURCE_TYPES列挙）、`postprocess.ts`（MODE_MAP追加）、`classify.service.ts`（スキーマ追加） |
+| 変更           | 内容                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------- |
+| 新種別         | `supplementary_doc`（補助資料：見積書・契約書・保険証券・検査報告書等、仕訳対象外だが業務に必要な書類） |
+| ProcessingMode | `excluded`（対象外）に分類                                                                              |
+| 影響ファイル   | `types.ts`（SOURCE_TYPES列挙）、`postprocess.ts`（MODE_MAP追加）、`classify.service.ts`（スキーマ追加） |
 
 #### 2. 分類キーワードの外部ファイル化（source_type_keywords.ts）
 
 **なぜ外部化したか**:
+
 - `classify.service.ts` のSYSTEM_INSTRUCTIONに全12種のキーワードが直書きされていた（約200行）
 - キーワード追加・変更のたびにプロンプト全体を触る必要があり保守性が低かった
 - 将来的にSupabase等のDB格納や顧問先別カスタマイズを見据えた設計
 
 **新アーキテクチャ**:
+
 ```
 SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE（導入部）
                    + buildKeywordsPrompt()（← source_type_keywords.tsから動的生成）
@@ -2283,6 +2287,7 @@ SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE（導入部）
 ```
 
 **実装ファイル**: `src/api/services/pipeline/source_type_keywords.ts`
+
 - `SourceTypeKeywords` インターフェース（keywords / excludeRules / notes）
 - `BoundaryGuide` インターフェース（pair / guide）
 - 全12種のキーワード定義 + 紛らわしい境界ガイド10件
@@ -2290,29 +2295,29 @@ SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE（導入部）
 
 #### 3. classify_reason フィールド追加
 
-| 変更 | 内容 |
-|---|---|
-| `ClassifyRawResponse.classify_reason` | AIが判定根拠を自然言語で返すフィールド |
-| `ClassifyResponse.classify_reason` | postprocessでフロントに伝播 |
-| 用途 | テスト時の精度検証・判定根拠のトレーサビリティ向上 |
+| 変更                                  | 内容                                               |
+| ------------------------------------- | -------------------------------------------------- |
+| `ClassifyRawResponse.classify_reason` | AIが判定根拠を自然言語で返すフィールド             |
+| `ClassifyResponse.classify_reason`    | postprocessでフロントに伝播                        |
+| 用途                                  | テスト時の精度検証・判定根拠のトレーサビリティ向上 |
 
 ### テスト結果（2026-04-12）
 
-| テスト | 結果 |
-|---|---|
-| tsc --noEmit | エラー0件 |
+| テスト                              | 結果                                                             |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| tsc --noEmit                        | エラー0件                                                        |
 | journal_voucher判定（仕訳一覧画像） | ✅ 正常判定（classify_reason: 「借方」「貸方」の項目があるため） |
-| 仕訳一覧→journal_voucher | 許容（振替伝票と仕訳一覧の区別はキーワードベースでは困難） |
+| 仕訳一覧→journal_voucher            | 許容（振替伝票と仕訳一覧の区別はキーワードベースでは困難）       |
 
 ### 変更ファイル一覧
 
-| ファイル | 変更内容 |
-|---|---|
+| ファイル                                            | 変更内容                                                                  |
+| --------------------------------------------------- | ------------------------------------------------------------------------- |
 | `src/api/services/pipeline/source_type_keywords.ts` | 新規作成。全12種キーワード定義 + 境界ガイド10件 + `buildKeywordsPrompt()` |
-| `src/api/services/pipeline/classify.service.ts` | プロンプトを外部ファイルからの動的結合方式に変更 |
-| `src/api/services/pipeline/types.ts` | `supplementary_doc`追加、`classify_reason`フィールド追加 |
-| `src/api/services/pipeline/postprocess.ts` | MODE_MAPにsupplementary_doc追加、classify_reason伝播 |
-| `src/mocks/services/receiptService.ts` | ログ出力にclassify_reason追加 |
+| `src/api/services/pipeline/classify.service.ts`     | プロンプトを外部ファイルからの動的結合方式に変更                          |
+| `src/api/services/pipeline/types.ts`                | `supplementary_doc`追加、`classify_reason`フィールド追加                  |
+| `src/api/services/pipeline/postprocess.ts`          | MODE_MAPにsupplementary_doc追加、classify_reason伝播                      |
+| `src/mocks/services/receiptService.ts`              | ログ出力にclassify_reason追加                                             |
 
 ---
 
@@ -2353,25 +2358,25 @@ SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE（導入部）
 
 ### ファイル形式による分岐（DL-036a: 2026-04-12確定）
 
-| ファイル形式 | 処理 |
-|---|---|
-| .jpg / .jpeg / .png / .heic / .webp / .pdf | ① → ② → ③ → ④ → ⑤ のフルフロー |
-| .csv / .xlsx / .xls / .ods | エラー「MFに直接インポートしてください」 |
-| .ks / .mf 等（会計ソフト独自） | エラー「MFに直接インポートしてください」 |
-| その他 | エラー「対応していないファイル形式です」 |
+| ファイル形式                               | 処理                                     |
+| ------------------------------------------ | ---------------------------------------- |
+| .jpg / .jpeg / .png / .heic / .webp / .pdf | ① → ② → ③ → ④ → ⑤ のフルフロー           |
+| .csv / .xlsx / .xls / .ods                 | エラー「MFに直接インポートしてください」 |
+| .ks / .mf 等（会計ソフト独自）             | エラー「MFに直接インポートしてください」 |
+| その他                                     | エラー「対応していないファイル形式です」 |
 
 ### エラー種類一覧（8種）
 
-| # | レイヤー | エラーメッセージ | Geminiコスト |
-|---|---|---|---|
-| 1 | フロント | CSV・Excelファイルはマネーフォワードに直接インポートしてください | ゼロ |
-| 2 | フロント | 対応していないファイル形式です。画像（JPG/PNG/HEIC/WebP）またはPDFを送ってください | ゼロ |
-| 3 | フロント | サーバーエラー (${status}) | ゼロ |
-| 4 | 後処理 | 仕訳対象外の書類です | 発生済 |
-| 5 | 後処理 | 日付が読み取れません | 発生済 |
-| 6 | 後処理 | 金額が読み取れません | 発生済 |
-| 7 | 後処理 | AI処理に失敗しました。撮り直してください | 発生済 |
-| 8 | フロント | 通信エラー: ${message} | ゼロ |
+| #   | レイヤー | エラーメッセージ                                                                   | Geminiコスト |
+| --- | -------- | ---------------------------------------------------------------------------------- | ------------ |
+| 1   | フロント | CSV・Excelファイルはマネーフォワードに直接インポートしてください                   | ゼロ         |
+| 2   | フロント | 対応していないファイル形式です。画像（JPG/PNG/HEIC/WebP）またはPDFを送ってください | ゼロ         |
+| 3   | フロント | サーバーエラー (${status})                                                         | ゼロ         |
+| 4   | 後処理   | 仕訳対象外の書類です                                                               | 発生済       |
+| 5   | 後処理   | 日付が読み取れません                                                               | 発生済       |
+| 6   | 後処理   | 金額が読み取れません                                                               | 発生済       |
+| 7   | 後処理   | AI処理に失敗しました。撮り直してください                                           | 発生済       |
+| 8   | フロント | 通信エラー: ${message}                                                             | ゼロ         |
 
 ---
 
@@ -2399,16 +2404,51 @@ SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE（導入部）
 
 **解決方針**: PDFファイルの場合は `<iframe>` でブラウザ内蔵PDFビューアを使って表示する。URLの拡張子 `.pdf` またはファイルの `type === 'application/pdf'` で判定。
 
-| ページ | ファイル | 判定方法 | 対応内容 |
-|---|---|---|---|
-| スマホアップロード | `MockUploadPage.vue` L135-149 | `r.file.type === 'application/pdf'` | iframeで200%→scale(0.5)縮小プレビュー + pointer-events:none |
-| drive-select（サムネ） | `MockDriveSelectPage.vue` L29-39 | `doc.fileName?.toLowerCase().endsWith('.pdf')` | iframe 100px→scale(0.5)縮小 |
-| drive-select（プレビュー） | `MockDriveSelectPage.vue` L71-81 | `selected.fileName?.toLowerCase().endsWith('.pdf')` | iframe h-[400px]フル表示 |
-| 仕訳一覧モーダル | `JournalListLevel3Mock.vue` L1599-1620 | `modalImageUrl?.toLowerCase().endsWith('.pdf')` | iframe w-full h-full |
-| 仕訳入力画面 | `ScreenE_JournalEntry.vue` L274-280 | `selectedJob?.driveFileUrl?.toLowerCase().endsWith('.pdf')` | iframe w-full h-full |
+| ページ                     | ファイル                               | 判定方法                                                    | 対応内容                                                    |
+| -------------------------- | -------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
+| スマホアップロード         | `MockUploadPage.vue` L135-149          | `r.file.type === 'application/pdf'`                         | iframeで200%→scale(0.5)縮小プレビュー + pointer-events:none |
+| drive-select（サムネ）     | `MockDriveSelectPage.vue` L29-39       | `doc.fileName?.toLowerCase().endsWith('.pdf')`              | iframe 100px→scale(0.5)縮小                                 |
+| drive-select（プレビュー） | `MockDriveSelectPage.vue` L71-81       | `selected.fileName?.toLowerCase().endsWith('.pdf')`         | iframe h-[400px]フル表示                                    |
+| 仕訳一覧モーダル           | `JournalListLevel3Mock.vue` L1599-1620 | `modalImageUrl?.toLowerCase().endsWith('.pdf')`             | iframe w-full h-full                                        |
+| 仕訳入力画面               | `ScreenE_JournalEntry.vue` L274-280    | `selectedJob?.driveFileUrl?.toLowerCase().endsWith('.pdf')` | iframe w-full h-full                                        |
 
 **影響なしのページ**:
+
 - PC版アップロード（`MockUploadPcPage.vue`）: プレビュー画像なし（ファイルリスト表示のみ）
 - OCRテスト（`TestOCRPage.vue`）: OCR結果表示用（別用途）
 - エクスポート履歴（`MockExportHistoryPage.vue`）: CSV/ファイルダウンロード用
 
+---
+
+## 2026-04-12 証票枚数バリデーション強化（document_count）
+
+### 実装内容
+
+| 項目 | 内容 |
+|---|---|
+| thinkingBudget | 2048トークンに制限（思考ループによるコスト爆発防止） |
+| document_count | Geminiに画像内の独立した情報源数をカウントさせるフィールド |
+| document_count_reason | 枚数判定の根拠をGeminiに言語化させるフィールド（Chain of Thought効果） |
+| プロンプト強化 | SYSTEM_INSTRUCTION_BASEに「最優先タスク：情報源数の判定」を明示 |
+
+### 検出精度（テスト結果）
+
+| ケース | 検出可否 | 備考 |
+|---|---|---|
+| 並列撮影（2枚を横に並べて撮影） | 安定検出 | document_count=2でNG判定 |
+| スクリーンショット混在 | 安定検出 | document_count=2でNG判定 |
+| 重畳撮影（レシートを重ねて撮影） | 検出不能 | Geminiが画像認識レベルで認識できない。プロンプト改善では解決不可 |
+
+### 既知の制約
+
+- 重畳撮影はGeminiの画像認識の限界であり、プロンプト改善・スキーマ変更では解決できない
+- 重畳ケースではdocument_count=1（誤判定）かつ金額・日付も正常に読み取れるためOKで通過してしまう
+- 対策としてUI側の撮影ガイド（1枚ずつ平置き撮影の案内）で間接的に防止する方針
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| classify.service.ts | thinkingBudget:2048設定、スキーマにdocument_count_reason追加、プロンプトに最優先タスク追加 |
+| types.ts | ClassifyRawResponse/ClassifyResponseにdocument_count_reason追加 |
+| postprocess.ts | document_count_reasonの伝播処理追加 |
