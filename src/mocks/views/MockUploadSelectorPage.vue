@@ -233,13 +233,6 @@
             </button>
           </div>
         </div>
-
-        <!-- 資料 -->
-        <div class="docs-area">
-          <button class="docs-btn" @click="go('/upload-docs/' + clientId)">
-            📎 謄本・CSV・Excel等の資料を送る
-          </button>
-        </div>
       </section>
 
     </main>

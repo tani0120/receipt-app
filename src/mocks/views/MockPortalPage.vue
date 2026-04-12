@@ -43,20 +43,6 @@
             </button>
           </div>
         </div>
-
-        <!-- 📎 その他の資料 -->
-        <div class="action-card card--secondary">
-          <div class="card-header">
-            <span class="card-icon">📎</span>
-            <div>
-              <h2 class="card-title">その他の資料を送る</h2>
-              <p class="card-desc">謄本・CSV・Excel・通帳コピーなど</p>
-            </div>
-          </div>
-          <button class="docs-btn" @click="goUploadDocs">
-            資料アップロードを開く →
-          </button>
-        </div>
       </div>
 
       <!-- 撮影ヒント -->
@@ -100,9 +86,6 @@ const goUpload = (mode: 'mobile' | 'pc') => {
   router.push(`/upload/${clientId}/guest/${mode}`)
 }
 
-const goUploadDocs = () => {
-  router.push(`/upload-docs/${clientId}/guest`)
-}
 </script>
 
 <style scoped>

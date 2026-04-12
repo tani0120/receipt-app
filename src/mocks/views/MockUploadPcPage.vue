@@ -63,38 +63,6 @@
           <input ref="journalInput" type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.webp,.pdf" multiple class="hidden-input" @change="handleFileSelect($event, 'journal')" />
         </div>
 
-        <!-- ② その他 -->
-        <div class="upload-lane">
-          <div class="lane-header lane-header--other">
-            <h2 class="lane-title">◆それ以外（CSV・エクセル・謄本や税務届等）</h2>
-            <p class="lane-desc">すべてのCSV、エクセル形式ファイル、謄本や定款等</p>
-          </div>
-          <div
-            class="drop-zone"
-            :class="{ 'drop-zone--active': dragging === 'other' }"
-            @dragover.prevent="dragging = 'other'"
-            @dragleave.prevent="dragging = null"
-            @drop.prevent="handleDrop($event, 'other')"
-          >
-            <div class="drop-icon-circle"><i class="drop-icon-emoji">📎</i></div>
-            <h3 class="drop-title">ファイルをここにドラッグ＆ドロップ</h3>
-            <p class="drop-or">または</p>
-            <button class="drop-select-btn" @click.stop="openPicker('other')">ファイルを選択</button>
-            <p class="drop-formats">対応形式: PDF / 画像 / CSV / Excel / Word</p>
-          </div>
-          <div class="file-list" v-if="files.other.length">
-            <div v-for="(f, i) in files.other" :key="f.id" class="file-item">
-              <div class="file-icon file-icon--doc">📄</div>
-              <div class="file-info">
-                <p class="file-name">{{ f.file.name }}</p>
-                <p class="file-size">{{ formatSize(f.file.size) }}</p>
-              </div>
-              <button class="file-remove" @click="removeFile('other', i)">✕</button>
-            </div>
-          </div>
-          <input ref="otherInput" type="file" multiple class="hidden-input" @change="handleFileSelect($event, 'other')" />
-        </div>
-
 
 
       </div>
@@ -104,8 +72,7 @@
     <footer class="pc-footer" v-if="totalCount > 0">
       <div class="footer-inner">
         <div class="footer-summary">
-          <span>仕訳用: <strong>{{ files.journal.length }}</strong>件</span>
-          <span>その他: <strong>{{ files.other.length }}</strong>件</span>
+        <span>合計: <strong>{{ files.journal.length }}</strong>件</span>
         </div>
         <button class="submit-btn" @click="handleSubmit">
           📤 {{ totalCount }}件をアップロード
@@ -146,7 +113,7 @@ const role = String(route.name ?? '').toLowerCase().includes('guest') ? 'guest' 
 const device = String(route.name ?? '').toLowerCase().includes('mobile') ? 'mobile' : 'pc'
 const analyzeOpts: AnalyzeOptions = { clientId, role, device }
 
-type Category = 'journal' | 'other'
+type Category = 'journal'
 
 interface FileEntry {
   id: string
@@ -163,25 +130,22 @@ const submittedCount = ref(0)
 
 const files = ref<Record<Category, FileEntry[]>>({
   journal: [],
-  other: [],
 })
 
 const journalInput = ref<HTMLInputElement>()
-const otherInput = ref<HTMLInputElement>()
 
 const totalCount = computed(() =>
-  files.value.journal.length + files.value.other.length
+  files.value.journal.length
 )
 const totalOk = computed(() =>
-  files.value.journal.filter(f => f.classifyStatus === 'done').length + files.value.other.length
+  files.value.journal.filter(f => f.classifyStatus === 'done').length
 )
 const totalPending = computed(() =>
   files.value.journal.filter(f => f.classifyStatus === 'loading').length
 )
 
-const openPicker = (cat: Category) => {
-  if (cat === 'journal') journalInput.value?.click()
-  else otherInput.value?.click()
+const openPicker = (_cat: Category) => {
+  journalInput.value?.click()
 }
 
 const addFiles = (cat: Category, fileList: File[]) => {
