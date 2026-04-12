@@ -14,6 +14,15 @@ export interface ReceiptAnalysisResult {
   vendor: string | null
   /** NGの場合: 却下理由（UIに表示） */
   errorReason: string | null
+  /** 行データ（通帳・N行、レシート・1行、対象外・空） */
+  lineItems?: {
+    line_index: number
+    date: string | null
+    description: string
+    amount: number
+    direction: 'expense' | 'income'
+    balance: number | null
+  }[]
   /** テスト用メトリクス（全項目） */
   metrics?: {
     // AIレスポンス
@@ -22,6 +31,7 @@ export interface ReceiptAnalysisResult {
     direction: string                    // 仕訳方向（支払/入金/振替/混在）
     direction_confidence: number          // 方向信頼度（0.0〜1.0）
     processing_mode: string              // 処理モード（自動/手動/除外）
+    classify_reason: string | null       // 判定根拠
     description: string | null           // 摘要
     fallback_applied: boolean            // フォールバック適用
     // メトリクス
@@ -140,6 +150,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       direction: data.direction ?? 'unknown',
       direction_confidence: data.direction_confidence ?? 0,
       processing_mode: data.processing_mode ?? 'unknown',
+      classify_reason: data.classify_reason ?? null,
       description: data.description ?? null,
       fallback_applied: data.fallback_applied ?? false,
       // メトリクス
@@ -157,38 +168,55 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       preprocess_reduction_pct: data.metadata?.preprocess_reduction_pct ?? 0,
     }
 
-    // 除外対象（non_journal / other）
-    if (data.source_type === 'non_journal' || data.source_type === 'other') {
+    // 行データ取得
+    const lineItems = (data.line_items ?? []).map((li: Record<string, unknown>, idx: number) => ({
+      line_index: (li.line_index as number) ?? idx + 1,
+      date: (li.date as string) ?? null,
+      description: (li.description as string) ?? '',
+      amount: (li.amount as number) ?? 0,
+      direction: (li.direction as 'expense' | 'income') ?? 'expense',
+      balance: (li.balance as number) ?? null,
+    }))
+
+    // 行データがある証票種別（通帳・クレカ等）はname/amountバリデーションを緩和
+    const multiLineTypes = ['bank_statement', 'credit_card', 'cash_ledger', 'supplementary_doc']
+    const isMultiLine = multiLineTypes.includes(data.source_type)
+
+    // 除外対象（non_journal / supplementary_doc / other）
+    if (data.source_type === 'non_journal' || data.source_type === 'supplementary_doc' || data.source_type === 'other') {
       return {
         ok: false,
         date,
         amount,
         vendor,
         errorReason: '仕訳対象外の書類です',
+        lineItems,
         metrics,
       }
     }
 
-    // 日付なし → NG
-    if (!date) {
+    // 日付なし → NG（通帳・クレカは行データに日付があるので不問）
+    if (!isMultiLine && !date) {
       return {
         ok: false,
         date: null,
         amount,
         vendor,
         errorReason: '日付が読み取れません',
+        lineItems,
         metrics,
       }
     }
 
-    // 金額なしまたは0以下 → NG
-    if (amount === null || amount <= 0) {
+    // 金額なしまたは0以下 → NG（通帳・クレカは行データに金額があるので不問）
+    if (!isMultiLine && (amount === null || amount <= 0)) {
       return {
         ok: false,
         date,
         amount: null,
         vendor,
         errorReason: '金額が読み取れません',
+        lineItems,
         metrics,
       }
     }
@@ -201,6 +229,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
         amount,
         vendor,
         errorReason: 'AI処理に失敗しました。撮り直してください',
+        lineItems,
         metrics,
       }
     }
@@ -212,6 +241,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       amount,
       vendor,
       errorReason: null,
+      lineItems,
       metrics,
     }
   } catch (err) {
@@ -238,6 +268,8 @@ function logClassifyResult(file: File, opts: AnalyzeOptions, result: ReceiptAnal
     ? 'あり（デフォルト値に置換）'
     : 'なし（AIが正常に処理）'
 
+  const lines = result.lineItems ?? []
+
   console.log(
     `\n═══ classify結果 [${file.name}] ═══\n` +
     `▼ フロント情報\n` +
@@ -259,6 +291,7 @@ function logClassifyResult(file: File, opts: AnalyzeOptions, result: ReceiptAnal
     `  金額         : ${result.amount != null ? `¥${result.amount.toLocaleString()}` : 'null'}\n` +
     `  取引先       : ${result.vendor ?? 'null'}\n` +
     `  摘要         : ${m?.description ?? 'null'}\n` +
+    `  判定根拠     : ${m?.classify_reason ?? '-'}\n` +
     `  fallback     : ${fallbackLabel}\n` +
     `▼ メトリクス\n` +
     `  処理時間     : ${m?.duration_seconds ?? '-'}秒 (${m?.duration_ms ?? '-'}ms)\n` +
@@ -272,6 +305,17 @@ function logClassifyResult(file: File, opts: AnalyzeOptions, result: ReceiptAnal
     `  元サイズ     : ${m?.original_size_kb ?? '-'}KB\n` +
     `  圧縮後       : ${m?.processed_size_kb ?? '-'}KB\n` +
     `  削減率       : ${m?.preprocess_reduction_pct ?? '-'}%\n` +
+    `▼ 行データ（${lines.length}行）\n` +
+    (lines.length === 0
+      ? `  (行データなし)\n`
+      : lines.map(li => {
+          const lineId = opts.documentId ? `${opts.documentId}_line-${li.line_index}` : '-'
+          const dir = li.direction === 'income' ? '入金' : '支払'
+          const bal = li.balance != null ? `残高:¥${li.balance.toLocaleString()}` : ''
+          return `  [${li.line_index}] ${li.date ?? '----/--/--'} | ${dir} | ¥${li.amount.toLocaleString()} | ${li.description} ${bal}\n` +
+                 `       line_id: ${lineId}\n`
+        }).join('')
+    ) +
     `════════════════════════════════════\n`
   )
 }

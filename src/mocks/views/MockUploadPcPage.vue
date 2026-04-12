@@ -222,7 +222,7 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   receipt: '領収書', invoice_received: '請求書', tax_payment: '納付書',
   journal_voucher: '振替伝票', bank_statement: '通帳', credit_card: 'クレカ',
   cash_ledger: '現金出納帳', invoice_issued: '発行請求書', receipt_issued: '発行領収書',
-  non_journal: '仕訳対象外', other: 'その他',
+  non_journal: '仕訳対象外', supplementary_doc: '補助資料', other: 'その他',
 }
 const sourceTypeLabel = (v: string) => SOURCE_TYPE_LABELS[v] ?? v
 

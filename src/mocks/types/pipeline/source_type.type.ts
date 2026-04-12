@@ -6,7 +6,7 @@
  *       detailed_implementation_plan.md テスト戦略統合版
  *       source_type_redesign_checklist.md（2026-04-02 再設計）
  *
- * SourceType: 証票種類（11種）— AIが最初に判定する型
+ * SourceType: 証票種類（12種）— AIが最初に判定する型
  * ProcessingMode: 処理区分（3種）— source_typeから導出
  * Direction: 仕訳方向（4種）— Step 1で判定
  * NON_JOURNAL_EXAMPLES: 仕訳対象外の文書一覧
@@ -24,6 +24,7 @@
  * 変更履歴:
  *   2026-03-29: 初版（7種 + Direction 3種 + MEDICAL_TRIAGE）
  *   2026-04-02: 再設計（11種 + ProcessingMode + Direction 4種 + MEDICAL_TRIAGE削除）
+ *   2026-04-12: supplementary_doc（補助資料）追加（11種→12種。DL-035）
  *     - invoice → invoice_received に改名
  *     - credit_card_statement → credit_card に改名
  *     - medical_certificate 削除（医療費は全てnon_journal）
@@ -38,11 +39,11 @@
  */
 
 // ============================================================
-// SourceType（証票種類 — 11種）
+// SourceType（証票種類 — 12種）
 // ============================================================
 
 /**
- * 証票種類（11種）
+ * 証票種類（12種）
  *
  * AIが最初に判定する。source_typeから処理区分（ProcessingMode）が一意に決まる。
  *
@@ -59,8 +60,9 @@
  * - invoice_issued: 発行請求書（自社が発行。摘要は人間入力）
  * - receipt_issued: 発行領収書（自社が発行。摘要は人間入力）
  *
- * ── 仕訳対象外（excluded — 2種）──
- * - non_journal: 仕訳対象外（見積書・名刺・メモ・医療費等）
+ * ── 仕訳対象外（excluded — 3種）──
+ * - non_journal: 仕訳対象外（名刺・メモ・医療費等）
+ * - supplementary_doc: 補助資料（見積書・契約書・保険証券・検査報告書等。仕訳対象外だが業務に必要）
  * - other: 判別不能（AI分類失敗時のフォールバック）
  */
 export type SourceType =
@@ -75,8 +77,9 @@ export type SourceType =
   // ── 手入力仕訳対象（2種）──
   | "invoice_issued"    // 発行請求書（自社が発行。摘要は人間入力）
   | "receipt_issued"    // 発行領収書（自社が発行。摘要は人間入力）
-  // ── 仕訳対象外（2種）──
-  | "non_journal"       // 仕訳対象外（見積書・名刺・メモ・医療費等）
+  // ── 仕訳対象外（3種）──
+  | "non_journal"       // 仕訳対象外（名刺・メモ・医療費等）
+  | "supplementary_doc" // 補助資料（見積書・契約書・保険証券等。仕訳不要だが業務に必要）
   | "other";            // 判別不能（AI分類失敗時のフォールバック）
 
 /** SourceType全値の定数配列（網羅性チェック用） */
@@ -92,8 +95,9 @@ export const SOURCE_TYPES = [
   // 手入力仕訳対象（2種）
   "invoice_issued",
   "receipt_issued",
-  // 仕訳対象外（2種）
+  // 仕訳対象外（3種）
   "non_journal",
+  "supplementary_doc",
   "other",
 ] as const satisfies readonly SourceType[];
 
@@ -129,8 +133,9 @@ export const PROCESSING_MODE_MAP: Record<SourceType, ProcessingMode> = {
   // 手入力仕訳対象（2種）
   invoice_issued:   "manual",    // 発行請求書 → 手入力
   receipt_issued:   "manual",    // 発行領収書 → 手入力
-  // 仕訳対象外（2種）
+  // 仕訳対象外（3種）
   non_journal:      "excluded",  // 仕訳対象外 → 対象外
+  supplementary_doc: "excluded", // 補助資料 → 対象外
   other:            "excluded",  // 判別不能 → 対象外
 } as const;
 
@@ -227,8 +232,9 @@ export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
   // 手入力仕訳対象（2種）
   invoice_issued:   "発行請求書",
   receipt_issued:   "発行領収書",
-  // 仕訳対象外（2種）
+  // 仕訳対象外（3種）
   non_journal:      "仕訳対象外",
+  supplementary_doc: "補助資料",
   other:            "その他",
 };
 

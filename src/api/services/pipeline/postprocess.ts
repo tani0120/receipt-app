@@ -13,6 +13,7 @@ import {
   type ProcessingMode,
   type ClassifyRawResponse,
   type ClassifyResponse,
+  type ClassifyResponseLineItem,
 } from './types';
 
 // ============================================================
@@ -27,6 +28,7 @@ const MODE_MAP: Record<SourceType, ProcessingMode> = {
   bank_statement: 'auto',
   credit_card: 'auto',
   cash_ledger: 'auto',
+  supplementary_doc: 'auto',
   invoice_issued: 'manual',
   receipt_issued: 'manual',
   non_journal: 'excluded',
@@ -42,6 +44,7 @@ const FALLBACK_CLASSIFY: ClassifyRawResponse = {
   source_type_confidence: 0,
   direction: 'expense',
   direction_confidence: 0,
+  classify_reason: null,
   description: null,
   issuer_name: null,
   date: null,
@@ -76,7 +79,7 @@ export function postprocessClassify(
   // AI出力がnull（API呼び出し失敗等）→ 全面fallback
   if (!raw) {
     console.warn('[pipeline/postprocess] AI出力がnull → fallback適用');
-    return buildResponse(FALLBACK_CLASSIFY, true, metadata);
+    return buildResponse(FALLBACK_CLASSIFY, true, [], metadata);
   }
 
   let fallbackApplied = false;
@@ -110,13 +113,24 @@ export function postprocessClassify(
     source_type_confidence: stConf,
     direction,
     direction_confidence: dirConf,
+    classify_reason: raw.classify_reason ?? null,
     description: raw.description ?? null,
     issuer_name: raw.issuer_name ?? null,
     date: raw.date ?? null,
     total_amount: raw.total_amount ?? null,
   };
 
-  return buildResponse(validated, fallbackApplied, metadata);
+  // line_itemsバリデーション + line_index付番
+  const lineItems: ClassifyResponseLineItem[] = (raw.line_items ?? []).map((item, idx) => ({
+    line_index: idx + 1,
+    date: item.date ?? null,
+    description: item.description ?? '',
+    amount: typeof item.amount === 'number' && item.amount >= 0 ? Math.round(item.amount) : 0,
+    direction: item.direction === 'income' ? 'income' : 'expense',
+    balance: typeof item.balance === 'number' ? Math.round(item.balance) : null,
+  }));
+
+  return buildResponse(validated, fallbackApplied, lineItems, metadata);
 }
 
 // ============================================================
@@ -126,6 +140,7 @@ export function postprocessClassify(
 function buildResponse(
   raw: ClassifyRawResponse,
   fallbackApplied: boolean,
+  lineItems: ClassifyResponseLineItem[],
   metadata: ClassifyResponse['metadata'],
 ): ClassifyResponse {
   const sourceType = raw.source_type as SourceType;
@@ -137,11 +152,13 @@ function buildResponse(
     direction,
     direction_confidence: raw.direction_confidence,
     processing_mode: MODE_MAP[sourceType],
+    classify_reason: raw.classify_reason ?? null,
     description: raw.description,
     issuer_name: raw.issuer_name,
     date: raw.date,
     total_amount: raw.total_amount,
     fallback_applied: fallbackApplied,
+    line_items: lineItems,
     metadata,
   };
 }

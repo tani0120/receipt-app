@@ -69,7 +69,7 @@ export interface CounterpartEntry {
  * 相手勘定を一律に定義できないため null（insufficient）とする。
  *
  * 【手入力仕訳・仕訳対象外】
- * invoice_issued / receipt_issued / non_journal / other は
+ * invoice_issued / receipt_issued / non_journal / supplementary_doc / other は
  * COUNTERPART_ACCOUNT_MAP の対象外。null（insufficient）を返す。
  *
  * 全科目ID確認済み（ACCOUNT_MASTER）:
@@ -131,7 +131,7 @@ export const COUNTERPART_ACCOUNT_MAP: Partial<
   },
 
   // ── 手入力仕訳・仕訳対象外 ──────────────────────────────────
-  // invoice_issued / receipt_issued / non_journal / other
+  // invoice_issued / receipt_issued / non_journal / supplementary_doc / other
   // → 本マップ外。resolveCounterpartAccount() で null を返す。
 }
 

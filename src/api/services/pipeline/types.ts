@@ -6,7 +6,7 @@
  */
 
 // ============================================================
-// source_type（11種: DL-015 + DL-028確定）
+// source_type（12種: DL-015 + DL-028 + DL-035確定）
 // ============================================================
 
 export const SOURCE_TYPES = [
@@ -17,6 +17,7 @@ export const SOURCE_TYPES = [
   'bank_statement',     // 通帳・銀行明細
   'credit_card',        // クレカ明細
   'cash_ledger',        // 現金出納帳
+  'supplementary_doc',  // 仕訳補助資料（報告書・精算書・明細書等）
   'invoice_issued',     // 発行請求書（manual）
   'receipt_issued',     // 発行領収書（manual）
   'non_journal',        // 仕訳対象外（excluded）
@@ -62,10 +63,21 @@ export interface ClassifyRawResponse {
   source_type_confidence: number;
   direction: string;
   direction_confidence: number;
+  classify_reason: string | null;    // 判定根拠（AIがなぜその種別を選んだか）
   description: string | null;        // 摘要（AI推定）
   issuer_name: string | null;        // 発行者名
   date: string | null;               // YYYY-MM-DD
   total_amount: number | null;       // 税込合計
+  line_items?: ClassifyRawLineItem[];  // 行データ（通帳・クレカはN行、レシートは1行）
+}
+
+/** Geminiが返す行データ（生） */
+export interface ClassifyRawLineItem {
+  date: string | null;
+  description: string;
+  amount: number;
+  direction: 'expense' | 'income';
+  balance: number | null;
 }
 
 /** postprocess後のclassify最終レスポンス */
@@ -75,11 +87,13 @@ export interface ClassifyResponse {
   direction: Direction;
   direction_confidence: number;
   processing_mode: ProcessingMode;
+  classify_reason: string | null;    // 判定根拠
   description: string | null;
   issuer_name: string | null;
   date: string | null;
   total_amount: number | null;
   fallback_applied: boolean;         // fallbackが適用されたか
+  line_items: ClassifyResponseLineItem[];  // 行データ（空配列 = 行抽出なし）
   metadata: {
     duration_ms: number;
     duration_seconds: number;         // 処理時間（秒）
@@ -93,6 +107,16 @@ export interface ClassifyResponse {
     processed_size_kb: number;        // 前処理後サイズ（KB）
     preprocess_reduction_pct: number; // 削減率（%）
   };
+}
+
+/** postprocess後の行データ（line_index付与済み） */
+export interface ClassifyResponseLineItem {
+  line_index: number;                 // 行番号（1始まり。postprocessで自動付番）
+  date: string | null;
+  description: string;
+  amount: number;
+  direction: 'expense' | 'income';
+  balance: number | null;
 }
 
 // ============================================================

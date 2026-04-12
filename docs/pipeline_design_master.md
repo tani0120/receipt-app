@@ -119,6 +119,7 @@
 - 法人で健康診断費用（WELFARE）になるケースはUI上で「注意label」を付与して人間に判断させる
 
 **結果**: source_type から `medical_certificate` を削除。source_type は11種に確定。
+→ **2026-04-12 DL-035で `supplementary_doc`（補助資料）追加。12種に拡張。**
 
 ---
 
@@ -139,7 +140,7 @@
 
 | 責務                                       | 担当         | 根拠（Evidence）                                 |
 | ------------------------------------------ | ------------ | ------------------------------------------------ |
-| source_type判定（11種：証票種別）          | Gemini       | T-00k/T-P1: **100%**（2026-04-02）               |
+| source_type判定（12種：証票種別）          | Gemini       | T-00k/T-P1: **100%**（2026-04-02）               |
 | direction判定（4種：仕訳方向）             | Gemini       | T-P1(v5): **28/28=100%**（2026-04-02）           |
 | line_items[]抽出                           | Gemini       | T-P4: **通帳23行・クレカ6行=100%**（2026-04-03） |
 | vendor_vector（Layer 4フォールバックのみ） | Gemini       | **T-P3未実施（★最優先）**                        |
@@ -347,13 +348,13 @@ Step 3: L1-3（T番号・電話・正規化）
 | CSV・Excelファイル | アップロードUI（B画面: `/client/upload-docs/:clientId`）で受付。人間がMFに直接インポート |
 | 画像・PDFファイル  | アップロードUI（A画面）で受付 → 以降のパイプラインへ                                     |
 
-### Step 0: 証票種別判定（source_type 11種）→ ProcessingMode 3種に分類
+### Step 0: 証票種別判定（source_type 12種）→ ProcessingMode 3種に分類
 
 | ProcessingMode             | source_type（英語値）                                                                                   | source_type（日本語）                                                              | 内容                       |
 | -------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------- |
 | `auto`（自動仕訳 7種）     | receipt / invoice_received / tax_payment / journal_voucher / bank_statement / credit_card / cash_ledger | 領収書 / 受取請求書 / 納付書 / 振替伝票 / 通帳・銀行明細 / クレカ明細 / 現金出納帳 | Step 1以降のパイプラインへ |
 | `manual`（手入力仕訳 2種） | invoice_issued / receipt_issued                                                                         | 発行請求書 / 発行領収書                                                            | 情報不足フローへ           |
-| `excluded`（対象外 2種）   | non_journal / other                                                                                     | 仕訳対象外 / その他                                                                | Drive資料選別UIへ          |
+| `excluded`（対象外 3種）   | non_journal / other / supplementary_doc                                                                 | 仕訳対象外 / その他 / 補助資料                                                     | Drive資料選別UIへ          |
 
 ### excluded（仕訳対象外）の以降
 
@@ -469,8 +470,8 @@ type TaxPaymentType =
                        人間がMFに直接インポート
   画像・PDFファイル  → パイプラインへ
         ↓
-  Step 0: 証票種別判定（source_type 11種）
-    excluded（対象外）: non_journal（仕訳対象外） / other（その他）
+  Step 0: 証票種別判定（source_type 12種）
+    excluded（対象外）: non_journal（仕訳対象外） / other（その他） / supplementary_doc（補助資料）
       → Drive資料選別UI → 戻す/戻さない判断
     manual（手入力仕訳）: invoice_issued（発行請求書） / receipt_issued（発行領収書）
       → 情報不足フローへ（日付・金額のみ確定して科目は人間が入力）
@@ -2196,5 +2197,121 @@ interface AnalyzeOptions {
 
 - 型チェック: `tsc --noEmit` エラー0件確認（2026-04-12）
 - UUID v4衝突確率: 315万件で ≈ 10^-31（数学的証明）
+
+### ファイルアップロード データ項目一覧（全30項目・全項目テスト出力済み）
+
+#### フロントエンド側（送信前に取得可能）
+
+| # | 変数名 | 日本語 | 値の例 | null | 出力 |
+|---|---|---|---|---|---|
+| 1 | `clientId`（顧問先ID） | 顧問先コード | LDI-00008 | 不可 | ✅ |
+| 2 | `documentId`（証票ID） | 証票UUID | 9b1deb4d-3b7d-4bad-... | 不可 | ✅ |
+| 3 | `role`（権限） | 事務所 or 顧問先 | staff / guest | 不可 | ✅ |
+| 4 | `device`（端末） | PC or スマホ | pc / mobile | 不可 | ✅ |
+| 5 | `filename`（ファイル名） | 元ファイル名 | 20250912.jpg | 不可 | ✅ |
+| 6 | `mimeType`（形式） | ファイル形式 | image/jpeg | 不可 | ✅ |
+| 7 | `fileSizeBytes`（元サイズ） | アップロード前バイト数 | 4174788 | 不可 | ✅ |
+
+#### AIレスポンス（サーバーから返却）
+
+| # | 変数名 | 日本語 | 値の例 | null可 | 出力 |
+|---|---|---|---|---|---|
+| 8 | `source_type`（証票種別） | 領収書・請求書等12種 | receipt（領収書） | 不可 | ✅ |
+| 9 | `source_type_confidence`（種別信頼度） | AI確信度0.0〜1.0 | 1 | 不可 | ✅ |
+| 10 | `direction`（仕訳方向） | 支払・入金・振替・混在 | expense（支払） | 不可 | ✅ |
+| 11 | `direction_confidence`（方向信頼度） | AI確信度0.0〜1.0 | 1 | 不可 | ✅ |
+| 12 | `processing_mode`（処理モード） | 自動・手動・除外 | auto（自動） | 不可 | ✅ |
+| 13 | `description`（摘要） | AIが生成した取引内容 | コンビニでの飲食物購入 | null可 | ✅ |
+| 14 | `issuer_name`（取引先名） | 発行者名 | サクラマート コンビニ | null可 | ✅ |
+| 15 | `date`（日付） | 取引日 YYYY-MM-DD | 2022-06-16 | null可 | ✅ |
+| 16 | `total_amount`（合計金額） | 税込金額（整数） | 799 | null可 | ✅ |
+| 17 | `fallback_applied`（フォールバック適用） | AI失敗時のデフォルト値置換 | false / true | 不可 | ✅ |
+
+#### メトリクス（metadata内）
+
+| # | 変数名 | 日本語 | 値の例 | 出力 |
+|---|---|---|---|---|
+| 18 | `duration_ms`（処理ミリ秒） | AI処理時間（ms） | 10226 | ✅ |
+| 19 | `duration_seconds`（処理秒） | AI処理時間（秒） | 10.2 | ✅ |
+| 20 | `prompt_tokens`（入力トークン） | プロンプトトークン数 | 1965 | ✅ |
+| 21 | `completion_tokens`（出力トークン） | 応答トークン数 | 104 | ✅ |
+| 22 | `thinking_tokens`（思考トークン） | 思考トークン数 | 286 | ✅ |
+| 23 | `token_count`（トークン合計） | 入力+出力合計 | 2069 | ✅ |
+| 24 | `cost_yen`（利用料） | 1枚あたりAI費用（円） | 0.2037 | ✅ |
+| 25 | `model`（モデル名） | 使用AIモデル | gemini-2.5-flash | ✅ |
+| 26 | `original_size_kb`（前処理前） | 元画像サイズ（KB） | 593 | ✅ |
+| 27 | `processed_size_kb`（前処理後） | 圧縮後サイズ（KB） | 91 | ✅ |
+| 28 | `preprocess_reduction_pct`（削減率） | サイズ削減率（%） | 85 | ✅ |
+
+#### バリデーション結果（フロント側で判定）
+
+| # | 変数名 | 日本語 | 値の例 | 出力 |
+|---|---|---|---|---|
+| 29 | `ok`（判定結果） | OK / NG | true / false | ✅ |
+| 30 | `errorReason`（NG理由） | 却下理由 | 日付が読み取れません / null | ✅ |
+
+> **全30項目テスト出力済み。未出力項目ゼロ。**（2026-04-12確認）
+
+---
+
+## DL-035 | AI分類キーワード外部化 + classify_reason追加（2026-04-12）
+
+**状態**: 実装完了・テスト通過
+
+### 決定内容
+
+#### 1. source_type 12種化（supplementary_doc追加）
+
+| 変更 | 内容 |
+|---|---|
+| 新種別 | `supplementary_doc`（補助資料：見積書・契約書・保険証券・検査報告書等、仕訳対象外だが業務に必要な書類） |
+| ProcessingMode | `excluded`（対象外）に分類 |
+| 影響ファイル | `types.ts`（SOURCE_TYPES列挙）、`postprocess.ts`（MODE_MAP追加）、`classify.service.ts`（スキーマ追加） |
+
+#### 2. 分類キーワードの外部ファイル化（source_type_keywords.ts）
+
+**なぜ外部化したか**:
+- `classify.service.ts` のSYSTEM_INSTRUCTIONに全12種のキーワードが直書きされていた（約200行）
+- キーワード追加・変更のたびにプロンプト全体を触る必要があり保守性が低かった
+- 将来的にSupabase等のDB格納や顧問先別カスタマイズを見据えた設計
+
+**新アーキテクチャ**:
+```
+SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE（導入部）
+                   + buildKeywordsPrompt()（← source_type_keywords.tsから動的生成）
+                   + SYSTEM_INSTRUCTION_RULES（出力ルール）
+```
+
+**実装ファイル**: `src/api/services/pipeline/source_type_keywords.ts`
+- `SourceTypeKeywords` インターフェース（keywords / excludeRules / notes）
+- `BoundaryGuide` インターフェース（pair / guide）
+- 全12種のキーワード定義 + 紛らわしい境界ガイド10件
+- `buildKeywordsPrompt()` 関数でプロンプトテキストに変換
+
+#### 3. classify_reason フィールド追加
+
+| 変更 | 内容 |
+|---|---|
+| `ClassifyRawResponse.classify_reason` | AIが判定根拠を自然言語で返すフィールド |
+| `ClassifyResponse.classify_reason` | postprocessでフロントに伝播 |
+| 用途 | テスト時の精度検証・判定根拠のトレーサビリティ向上 |
+
+### テスト結果（2026-04-12）
+
+| テスト | 結果 |
+|---|---|
+| tsc --noEmit | エラー0件 |
+| journal_voucher判定（仕訳一覧画像） | ✅ 正常判定（classify_reason: 「借方」「貸方」の項目があるため） |
+| 仕訳一覧→journal_voucher | 許容（振替伝票と仕訳一覧の区別はキーワードベースでは困難） |
+
+### 変更ファイル一覧
+
+| ファイル | 変更内容 |
+|---|---|
+| `src/api/services/pipeline/source_type_keywords.ts` | 新規作成。全12種キーワード定義 + 境界ガイド10件 + `buildKeywordsPrompt()` |
+| `src/api/services/pipeline/classify.service.ts` | プロンプトを外部ファイルからの動的結合方式に変更 |
+| `src/api/services/pipeline/types.ts` | `supplementary_doc`追加、`classify_reason`フィールド追加 |
+| `src/api/services/pipeline/postprocess.ts` | MODE_MAPにsupplementary_doc追加、classify_reason伝播 |
+| `src/mocks/services/receiptService.ts` | ログ出力にclassify_reason追加 |
 
 ---
