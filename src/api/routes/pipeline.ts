@@ -37,6 +37,18 @@ app.post('/classify', async (c) => {
   if (!body.mimeType || typeof body.mimeType !== 'string') {
     return c.json({ error: 'mimeTypeは必須です' }, 400);
   }
+
+  // MIMEタイプホワイトリスト（Geminiコスト防御）
+  const ALLOWED_MIME = [
+    'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp',
+    'application/pdf',
+  ];
+  if (!ALLOWED_MIME.includes(body.mimeType.toLowerCase())) {
+    return c.json({
+      error: `対応していないファイル形式です（${body.mimeType}）。画像またはPDFのみ処理可能です`,
+    }, 400);
+  }
+
   if (!body.clientId || typeof body.clientId !== 'string') {
     return c.json({ error: 'clientIdは必須です' }, 400);
   }

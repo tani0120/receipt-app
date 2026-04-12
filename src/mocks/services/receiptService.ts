@@ -105,10 +105,61 @@ async function analyzeReceiptMock(_file: File, _clientId?: string): Promise<Rece
   }
 }
 
+// ===== ファイル形式ホワイトリスト =====
+/** パイプラインで処理可能なMIMEタイプ */
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp',
+  'application/pdf',
+] as const
+
+/** パイプラインで処理可能な拡張子（ドット付き小文字） */
+const ALLOWED_EXTENSIONS = [
+  '.jpg', '.jpeg', '.png', '.heic', '.heif', '.webp', '.pdf',
+] as const
+
+/** MFインポート用ファイルの拡張子（エラーメッセージ分岐用） */
+const MF_IMPORT_EXTENSIONS = [
+  '.csv', '.xlsx', '.xls', '.ods', '.ks', '.mf',
+] as const
+
+/**
+ * ファイルがパイプライン処理可能か判定する
+ * @returns null=OK、文字列=エラー理由
+ */
+function validateFileType(file: File): string | null {
+  const ext = ('.' + (file.name.split('.').pop() ?? '')).toLowerCase()
+  const mime = file.type.toLowerCase()
+
+  // ホワイトリスト判定（MIMEまたは拡張子のどちらか一致でOK）
+  const mimeOk = (ALLOWED_MIME_TYPES as readonly string[]).includes(mime)
+  const extOk = (ALLOWED_EXTENSIONS as readonly string[]).includes(ext)
+  if (mimeOk || extOk) return null
+
+  // MFインポート用ファイル → 専用エラー
+  if ((MF_IMPORT_EXTENSIONS as readonly string[]).includes(ext)) {
+    return 'CSV・Excelファイルはマネーフォワードに直接インポートしてください'
+  }
+
+  // その他 → 汎用エラー
+  return '対応していないファイル形式です。画像（JPG/PNG/HEIC/WebP）またはPDFを送ってください'
+}
+
 // ===== 本番実装（/api/pipeline/classify） =====
 async function analyzeReceiptReal(file: File, clientId?: string): Promise<ReceiptAnalysisResult> {
   try {
-    // ファイルをbase64に変換
+    // ① ファイル形式チェック（API呼び出し前にブロック → Geminiコスト発生ゼロ）
+    const fileTypeError = validateFileType(file)
+    if (fileTypeError) {
+      return {
+        ok: false,
+        date: null,
+        amount: null,
+        vendor: null,
+        errorReason: fileTypeError,
+      }
+    }
+
+    // ② ファイルをbase64に変換
     const buffer = await file.arrayBuffer()
     const base64 = btoa(
       new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')

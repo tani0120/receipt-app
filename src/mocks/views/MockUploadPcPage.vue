@@ -60,7 +60,7 @@
               <button class="file-remove" @click="removeFile('journal', i)">✕</button>
             </div>
           </div>
-          <input ref="journalInput" type="file" accept="image/*,.pdf" multiple class="hidden-input" @change="handleFileSelect($event, 'journal')" />
+          <input ref="journalInput" type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.webp,.pdf" multiple class="hidden-input" @change="handleFileSelect($event, 'journal')" />
         </div>
 
         <!-- ② その他 -->

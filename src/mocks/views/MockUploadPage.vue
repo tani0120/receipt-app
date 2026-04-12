@@ -280,7 +280,7 @@
     <input
       ref="fileInputRef"
       type="file"
-      accept="image/*,.pdf"
+      accept=".jpg,.jpeg,.png,.heic,.heif,.webp,.pdf"
       multiple
       class="hidden"
       @change="handleFileSelect"
@@ -290,7 +290,7 @@
     <input
       ref="cameraInputRef"
       type="file"
-      accept="image/*"
+      accept=".jpg,.jpeg,.png,.heic,.heif,.webp"
       capture="environment"
       class="hidden"
       @change="handleCameraCapture"
@@ -300,7 +300,7 @@
     <input
       ref="retakeInputRef"
       type="file"
-      accept="image/*"
+      accept=".jpg,.jpeg,.png,.heic,.heif,.webp"
       class="hidden"
       @change="handleRetake"
     />
