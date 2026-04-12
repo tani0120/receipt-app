@@ -2315,3 +2315,62 @@ SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE（導入部）
 | `src/mocks/services/receiptService.ts` | ログ出力にclassify_reason追加 |
 
 ---
+
+## DL-036 | 全体処理フロー確定 + 人間チェック原則（2026-04-12）
+
+**決定**: AIの分類結果は「提案」であり、最終判断は必ず人間が行う。
+
+### 設計原則
+
+> **AIを信じるな。人間がチェックする。**
+> AIは「目」であり「判断者」ではない。全件を人間が確認してから次工程へ進む。
+
+### 全体処理フロー（確定版）
+
+```
+① アップロード（スマホ / PC）
+   画面: MockUploadPage.vue / MockUploadPcPage.vue
+   URL:  /upload/:clientId/:role/mobile  or  /upload/:clientId/:role/pc
+   処理: ファイル形式チェック（ホワイトリスト6種） → Gemini classify API
+   結果: source_type / direction / confidence / classify_reason
+         ↓
+② AI分類結果の人間チェック（Drive資料選別）★次ステップ★
+   画面: MockDriveSelectPage.vue
+   URL:  /drive-select/:clientId
+   処理: AIの提案（仕訳対象/対象外）を表示 → 人間が1件ずつ確認・修正
+   操作: [A] 仕訳対象  [D] 対象外  [S] 戻す  [↑↓] 移動
+         ↓
+③ 仕訳変換（TSルールベース）
+   処理: 確定済みline_items → lineItemToJournalMock() → 仕訳データ
+   科目: vendor_vector × direction → ACCOUNT_MASTER辞書で決定論的に導出
+         ↓
+④ 仕訳確認・修正（人間）
+   画面: 仕訳一覧画面
+   処理: 自動仕訳の内容を人間が確認・修正
+         ↓
+⑤ エクスポート → マネーフォワード
+```
+
+### ファイル形式による分岐（DL-036a: 2026-04-12確定）
+
+| ファイル形式 | 処理 |
+|---|---|
+| .jpg / .jpeg / .png / .heic / .webp / .pdf | ① → ② → ③ → ④ → ⑤ のフルフロー |
+| .csv / .xlsx / .xls / .ods | エラー「MFに直接インポートしてください」 |
+| .ks / .mf 等（会計ソフト独自） | エラー「MFに直接インポートしてください」 |
+| その他 | エラー「対応していないファイル形式です」 |
+
+### エラー種類一覧（8種）
+
+| # | レイヤー | エラーメッセージ | Geminiコスト |
+|---|---|---|---|
+| 1 | フロント | CSV・Excelファイルはマネーフォワードに直接インポートしてください | ゼロ |
+| 2 | フロント | 対応していないファイル形式です。画像（JPG/PNG/HEIC/WebP）またはPDFを送ってください | ゼロ |
+| 3 | フロント | サーバーエラー (${status}) | ゼロ |
+| 4 | 後処理 | 仕訳対象外の書類です | 発生済 |
+| 5 | 後処理 | 日付が読み取れません | 発生済 |
+| 6 | 後処理 | 金額が読み取れません | 発生済 |
+| 7 | 後処理 | AI処理に失敗しました。撮り直してください | 発生済 |
+| 8 | フロント | 通信エラー: ${message} | ゼロ |
+
+---
