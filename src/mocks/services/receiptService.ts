@@ -14,6 +14,8 @@ export interface ReceiptAnalysisResult {
   vendor: string | null
   /** NGの場合: 却下理由（UIに表示） */
   errorReason: string | null
+  /** 補助対象ファイル（CSV/Excel/仕訳対象外 → AI処理不要、drive-selectで人間が確認） */
+  supplementary?: boolean
   /** 行データ（通帳・N行、レシート・1行、対象外・空） */
   lineItems?: {
     line_index: number
@@ -124,38 +126,34 @@ const MF_IMPORT_EXTENSIONS = [
 
 /**
  * ファイルがパイプライン処理可能か判定する
- * @returns null=OK、文字列=エラー理由
+ * @returns 'ok'=AI処理対象、'supplementary'=補助対象（AI不要）
  */
-function validateFileType(file: File): string | null {
+function validateFileType(file: File): 'ok' | 'supplementary' {
   const ext = ('.' + (file.name.split('.').pop() ?? '')).toLowerCase()
   const mime = file.type.toLowerCase()
 
-  // ホワイトリスト判定（MIMEまたは拡張子のどちらか一致でOK）
+  // ホワイトリスト判定（MIMEまたは拡張子のどちらか一致でOK → AI処理対象）
   const mimeOk = (ALLOWED_MIME_TYPES as readonly string[]).includes(mime)
   const extOk = (ALLOWED_EXTENSIONS as readonly string[]).includes(ext)
-  if (mimeOk || extOk) return null
+  if (mimeOk || extOk) return 'ok'
 
-  // MFインポート用ファイル → 専用エラー
-  if ((MF_IMPORT_EXTENSIONS as readonly string[]).includes(ext)) {
-    return 'CSV・Excelファイルはマネーフォワードに直接インポートしてください'
-  }
-
-  // その他 → 汎用エラー
-  return '対応していないファイル形式です。画像（JPG/PNG/HEIC/WebP）またはPDFを送ってください'
+  // CSV/Excel/会計ソフト独自形式 or 不明な拡張子 → 補助対象（エラーではない）
+  return 'supplementary'
 }
 
 // ===== 本番実装（/api/pipeline/classify） =====
 async function analyzeReceiptReal(file: File, clientId?: string): Promise<ReceiptAnalysisResult> {
   try {
-    // ① ファイル形式チェック（API呼び出し前にブロック → Geminiコスト発生ゼロ）
-    const fileTypeError = validateFileType(file)
-    if (fileTypeError) {
+    // ① ファイル形式チェック（AI不要なら補助対象として即返却 → Geminiコスト発生ゼロ）
+    const fileCategory = validateFileType(file)
+    if (fileCategory === 'supplementary') {
       return {
-        ok: false,
+        ok: true,
         date: null,
         amount: null,
         vendor: null,
-        errorReason: fileTypeError,
+        errorReason: null,
+        supplementary: true,
       }
     }
 
@@ -233,14 +231,15 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
     const multiLineTypes = ['bank_statement', 'credit_card', 'cash_ledger', 'supplementary_doc']
     const isMultiLine = multiLineTypes.includes(data.source_type)
 
-    // 除外対象（non_journal / supplementary_doc / other）
+    // 除外対象（non_journal / supplementary_doc / other）→ 補助対象として通す（エラーではない）
     if (data.source_type === 'non_journal' || data.source_type === 'supplementary_doc' || data.source_type === 'other') {
       return {
-        ok: false,
+        ok: true,
         date,
         amount,
         vendor,
-        errorReason: '仕訳対象外の書類です',
+        errorReason: null,
+        supplementary: true,
         lineItems,
         metrics,
       }

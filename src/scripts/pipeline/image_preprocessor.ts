@@ -82,8 +82,8 @@ export interface PreprocessResult {
   buffer: Buffer;
   /** base64エンコード済み文字列（Gemini/Vision API直接渡し用） */
   base64: string;
-  /** 出力MIMEタイプ（常にimage/jpeg） */
-  mimeType: 'image/jpeg';
+  /** 出力MIMEタイプ（画像: image/jpeg、PDF: application/pdf） */
+  mimeType: 'image/jpeg' | 'application/pdf';
   /** 処理前の画像サイズ */
   originalSize: ImageSize;
   /** 処理後の画像サイズ */
@@ -146,13 +146,13 @@ export async function preprocessImage(
   const jpegQuality = options.jpegQuality ?? JPEG_QUALITY;
   const sharpenSigma = options.sharpenSigma ?? SHARPEN_SIGMA;
 
-  // PDF は前処理スキップ（Geminiが直接読める）
+  // PDF は前処理スキップ（Geminiが直接読める → MIMEタイプをそのまま保持）
   if (mime === 'application/pdf') {
     const buf = typeof input === 'string' ? fs.readFileSync(input) : input;
     return {
       buffer: buf,
       base64: buf.toString('base64'),
-      mimeType: 'image/jpeg',
+      mimeType: 'application/pdf',
       originalSize: { width: 0, height: 0 },
       processedSize: { width: 0, height: 0 },
       applied: { exifRotation: false, resize: false, grayscale: false, normalize: false, sharpen: false },

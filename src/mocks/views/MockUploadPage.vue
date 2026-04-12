@@ -132,9 +132,16 @@
             ]"
             @click="r.status === 'error' ? triggerRetake(idx) : undefined"
           >
-            <!-- プレビュー画像 -->
-            <div class="aspect-[3/4] relative bg-gray-100">
-              <img
+            <!-- プレビュー画像 / PDFプレビュー -->
+            <div class="aspect-[3/4] relative bg-gray-100 overflow-hidden">
+              <template v-if="r.file.type === 'application/pdf'">
+                <iframe
+                  :src="r.previewUrl"
+                  class="w-[200%] h-[200%] origin-top-left scale-50 pointer-events-none border-0"
+                  tabindex="-1"
+                ></iframe>
+              </template>
+              <img v-else
                 :src="r.previewUrl"
                 :alt="`領収書 ${idx + 1}`"
                 class="w-full h-full object-cover"
@@ -159,7 +166,7 @@
               <!-- オーバーレイ: OK -->
               <div v-if="r.status === 'ok'"
                 class="absolute top-1 right-1">
-                <span class="text-lg drop-shadow">✅</span>
+                <span class="text-lg drop-shadow">{{ r.supplementary ? '✅' : '✅' }}</span>
               </div>
 
               <!-- オーバーレイ: 重複警告 -->
@@ -183,7 +190,11 @@
 
             <!-- カード下部 -->
             <div class="px-1.5 py-1.5">
-              <template v-if="r.status === 'ok'">
+              <template v-if="r.status === 'ok' && r.supplementary">
+                <p class="text-[8px] text-blue-600 font-bold truncate">補助対象ファイルです。</p>
+                <p class="text-[7px] text-gray-400">{{ r.file.name }}</p>
+              </template>
+              <template v-else-if="r.status === 'ok'">
                 <p class="text-[8px] text-emerald-700 font-bold truncate">{{ r.vendor }}</p>
                 <p class="text-[8px] text-emerald-600">¥{{ r.amount?.toLocaleString() }}</p>
                 <p class="text-[7px] text-gray-400">{{ r.date }}</p>
@@ -336,6 +347,7 @@ interface ReceiptItem {
   vendor: string | null
   isDuplicate: boolean
   hash: string | null
+  supplementary: boolean
 }
 
 // ===== 状態 =====
@@ -427,6 +439,7 @@ const addFiles = (files: File[]) => {
     vendor: null,
     isDuplicate: false,
     hash: null,
+    supplementary: false,
   }))
   receipts.value.push(...newItems)
   processQueue()
@@ -477,6 +490,7 @@ const processOne = async (id: string) => {
     r.date   = result.date
     r.amount = result.amount
     r.vendor = result.vendor
+    r.supplementary = result.supplementary ?? false
   } else {
     r.status = 'error'
     r.errorReason = result.errorReason

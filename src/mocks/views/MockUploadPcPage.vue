@@ -48,6 +48,9 @@
                 <div class="classify-badges" v-if="f.classifyStatus">
                   <span v-if="f.classifyStatus === 'loading'" class="badge badge--loading">⏳ 分類中...</span>
                   <span v-else-if="f.classifyStatus === 'error'" class="badge badge--error">❌ {{ f.errorReason ?? '失敗' }}</span>
+                  <template v-else-if="f.classifyStatus === 'done' && f.result?.supplementary">
+                    <span class="badge badge--supplementary">📎 補助対象ファイルです。</span>
+                  </template>
                   <template v-else-if="f.classifyStatus === 'done'">
                     <span v-if="f.result?.metrics?.source_type" class="badge badge--type" :class="'badge--mode-' + (f.result.metrics.processing_mode ?? 'auto')">{{ sourceTypeLabel(f.result.metrics.source_type) }}</span>
                     <span v-if="f.result?.vendor" class="badge badge--issuer">{{ f.result.vendor }}</span>
@@ -250,6 +253,11 @@ const resetAll = () => {
 .badge--error {
   background: #f8d7da;
   color: #721c24;
+}
+.badge--supplementary {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 700;
 }
 .badge--type {
   color: #fff;

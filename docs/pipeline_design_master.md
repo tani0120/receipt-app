@@ -2374,3 +2374,41 @@ SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE（導入部）
 | 8 | フロント | 通信エラー: ${message} | ゼロ |
 
 ---
+
+## DL-037 | PDFプレビュー表示対応 + MIMEタイプバグ修正（2026-04-12）
+
+**状態**: 実装完了
+
+### バグ修正: PDF前処理のMIMEタイプ不整合
+
+**発見**: `image_preprocessor.ts` のPDF前処理スキップ時に `mimeType: 'image/jpeg'` を返していた。
+実際のデータはPDFバイナリであるため、Gemini APIがMIMEタイプとデータの不一致で処理できず、fallback（トークン0件）になっていた。
+
+```diff
+- mimeType: 'image/jpeg',   // ← バグ: PDFなのにimage/jpeg
++ mimeType: 'application/pdf', // ← 修正: 正しいMIMEタイプ
+```
+
+**型拡張**: `PreprocessResult.mimeType` を `'image/jpeg' | 'application/pdf'` に変更。
+
+**修正ファイル**: `src/scripts/pipeline/image_preprocessor.ts` L85-86, L149-161
+
+### PDFプレビュー表示（全5ページ対応）
+
+**問題**: `<img>` タグはPDFを表示できない。`URL.createObjectURL(pdfFile)` で作ったBlobURLを `<img src>` に渡しても描画不能。
+
+**解決方針**: PDFファイルの場合は `<iframe>` でブラウザ内蔵PDFビューアを使って表示する。URLの拡張子 `.pdf` またはファイルの `type === 'application/pdf'` で判定。
+
+| ページ | ファイル | 判定方法 | 対応内容 |
+|---|---|---|---|
+| スマホアップロード | `MockUploadPage.vue` L135-149 | `r.file.type === 'application/pdf'` | iframeで200%→scale(0.5)縮小プレビュー + pointer-events:none |
+| drive-select（サムネ） | `MockDriveSelectPage.vue` L29-39 | `doc.fileName?.toLowerCase().endsWith('.pdf')` | iframe 100px→scale(0.5)縮小 |
+| drive-select（プレビュー） | `MockDriveSelectPage.vue` L71-81 | `selected.fileName?.toLowerCase().endsWith('.pdf')` | iframe h-[400px]フル表示 |
+| 仕訳一覧モーダル | `JournalListLevel3Mock.vue` L1599-1620 | `modalImageUrl?.toLowerCase().endsWith('.pdf')` | iframe w-full h-full |
+| 仕訳入力画面 | `ScreenE_JournalEntry.vue` L274-280 | `selectedJob?.driveFileUrl?.toLowerCase().endsWith('.pdf')` | iframe w-full h-full |
+
+**影響なしのページ**:
+- PC版アップロード（`MockUploadPcPage.vue`）: プレビュー画像なし（ファイルリスト表示のみ）
+- OCRテスト（`TestOCRPage.vue`）: OCR結果表示用（別用途）
+- エクスポート履歴（`MockExportHistoryPage.vue`）: CSV/ファイルダウンロード用
+

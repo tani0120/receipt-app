@@ -1598,7 +1598,10 @@
         </div>
         <!-- 画像表示エリア -->
         <div class="flex-1 flex items-center justify-center overflow-hidden rounded-b-lg">
-          <img
+          <template v-if="modalImageUrl?.toLowerCase().endsWith('.pdf')">
+            <iframe :src="modalImageUrl" class="w-full h-full border-0"></iframe>
+          </template>
+          <img v-else
             :src="modalImageUrl"
             alt="領収書"
             :style="{

@@ -26,8 +26,13 @@
           :class="selectedIdx === idx ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50 border-l-4 border-l-transparent'"
           @click="selectDoc(idx)"
         >
-          <!-- サムネ（実画像） -->
-          <img
+          <!-- サムネ（実画像/PDF） -->
+          <template v-if="doc.fileName?.toLowerCase().endsWith('.pdf')">
+            <div class="w-[50px] h-[50px] rounded flex-shrink-0 bg-gray-100 overflow-hidden">
+              <iframe :src="doc.imagePath" class="w-[100px] h-[100px] origin-top-left scale-50 pointer-events-none border-0" tabindex="-1"></iframe>
+            </div>
+          </template>
+          <img v-else
             :src="doc.imagePath"
             :alt="doc.fileName"
             class="w-[50px] h-[50px] rounded object-cover flex-shrink-0 bg-gray-200"
@@ -68,9 +73,12 @@
 
           <!-- プレビュー本体 -->
           <template v-else>
-            <!-- プレビュー画像（実画像） -->
+            <!-- プレビュー画像（実画像/PDF） -->
             <div class="max-w-[560px] max-h-[400px] rounded-lg shadow-lg overflow-hidden bg-white border border-gray-200">
-              <img
+              <template v-if="selected.fileName?.toLowerCase().endsWith('.pdf')">
+                <iframe :src="selected.imagePath" class="w-full h-[400px] border-0"></iframe>
+              </template>
+              <img v-else
                 :src="selected.imagePath"
                 :alt="selected.fileName"
                 class="w-full h-full object-contain"
