@@ -181,7 +181,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
-import { useRoute } from 'vue-router';
+
 import type { TaxCategory, TaxDirection } from '@/shared/types/tax-category';
 import { extractRateFromName } from '@/shared/types/tax-category';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
@@ -202,15 +202,13 @@ const ctDefaultWidths: Record<string, number> = {
 };
 const { columnWidths: ctColWidths, onResizeStart: onCtResizeStart } = useColumnResize('client-tax', ctDefaultWidths);
 
+const props = defineProps<{ clientId: string }>();
+
 const PAGE_SIZE = 50;
-const route = useRoute();
 const { clients } = useClients();
 
 // =============== 顧問先情報取得 ===============
-const clientId = computed(() => {
-  const match = route.path.match(/\/client\/settings\/tax\/([^/]+)/);
-  return match ? match[1] : null;
-});
+const clientId = computed(() => props.clientId);
 const currentClientData = computed(() => clients.value.find(c => c.clientId === clientId.value) ?? null);
 
 type TaxMethodType = 'general' | 'simplified' | 'exempt';
@@ -220,9 +218,8 @@ const mfWarningMessage = ref('');
 const taxPage = ref(1);
 
 // =============== composable接続（useAccountSettings経由） ===============
-// clientIdはURL由来で必須。フォールバックはuseAccountSettings内部で処理済み。
-if (!clientId.value) throw new Error('[MockClientTaxPage] clientId is required');
-const settings = useAccountSettings('client', clientId.value);
+// clientIdはprops経由で必須。defineProps<{ clientId: string }>()で型安全。
+const settings = useAccountSettings('client', props.clientId);
 
 // 旧キーマイグレーションはuseAccountSettings内部で実行済み
 
