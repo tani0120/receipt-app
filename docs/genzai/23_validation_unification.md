@@ -72,7 +72,7 @@ classify_test.ts
 | 3 | フロント（送信前） | SHA-256ハッシュが同バッチ内で完全一致 | 完全重複（同一ファイル） | OK判定（警告のみ） | ⚠「重複の可能性」 |
 | 4 | サーバー | JSON解析失敗 / image（画像）空 / mimeType（形式）空 / clientId（顧問先ID）空 / MIMEホワイトリスト外 | リクエスト不正 | 400返却 | ❌「サーバーエラー (400)」 |
 | 5 | 後処理 | document_count（証票枚数） >= 2 | 複数証票検知 | NG判定（最優先） | ❌「この画像にはN枚の証票が写っています。1枚ずつ撮影してください」 |
-| 6 | 後処理 | source_type（証票種別） = non_journal / other | — | OK判定（バリデーションなし） | ✅「補助対象ファイルです。」 |
+| 6 | 後処理 | source_type（証票種別） = non_journal / other / supplementary_doc | — | OK判定（バリデーションなし） | ✅「補助対象ファイルです。」 |
 | 7 | 後処理 | fallback_applied（フォールバック適用） = true | AI処理失敗 | NG判定 | ❌「AI処理に失敗しました。撮り直してください」 |
 | 8 | 後処理 | 各行のdate（日付）= null | 日付読み取り不能 | NG判定 | ❌「日付が読み取れません」 |
 | 9 | 後処理 | 各行のamount（金額）= null or ≤ 0 | 金額読み取り不能 | NG判定 | ❌「金額が読み取れません」 |
@@ -91,7 +91,7 @@ classify_test.ts
 | bank_statement | 通帳 | 必須 | 必須 | 必須 |
 | credit_card | クレカ明細 | 必須 | 必須 | 必須 |
 | cash_ledger | 現金出納帳 | 必須 | 必須 | 必須 |
-| supplementary_doc | 補助書類 | 必須 | 必須 | 必須 |
+| supplementary_doc | 補助書類 | 不問 | 不問 | 不問 |
 | invoice_issued | 発行請求書 | 必須 | 必須 | 必須 |
 | receipt_issued | 発行領収書 | 必須 | 必須 | 必須 |
 | non_journal | 仕訳対象外 | 不問 | 不問 | 不問 |
