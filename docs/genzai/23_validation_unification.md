@@ -1,65 +1,42 @@
-# 23: バリデーション統合 + スキーマ統一 + any排除リファクタ
+# 23: バリデーション統合 + any排除（フェーズA: 現スキーマ維持）
 
 ## 概要
 
-バリデーションロジックの散在（4ファイル）、スキーマ分裂（3ファイル）、any型によるAPIレスポンスアクセス、取引先バリデーション未実装等の技術的負債を一括で解消する。データ駆動設計を導入し、ルール追加を1箇所で完結させる。
+バリデーションロジックの散在（receiptService.ts内のif連続）、any型によるAPIレスポンスアクセス、取引先バリデーション未実装、MIME定数の二重定義を一括で解消する。
+
+**重要制約: 現在のClassifyResponse型（types.ts）は一切変更しない。**
+スキーマ統一・旧ファイル移植（旧classify_postprocess.ts→新postprocess.ts）は別フェーズ（フェーズB）として分離済み。→ task_unified.md C-9参照
 
 ## 設計原則
 
-```
-外部（Gemini）→ service → domain（types.ts）→ 上位（API / test）
-```
-
-- **外→内の一方向依存**。内から外には依存しない
-- **ClassifyRawResponseはservice内で完結**。外にはClassifyResponseだけ出す
 - **postprocess = 計算**、**validate = 判定**。役割を分ける
 - **データ駆動**: 単純なルール → 定数テーブル、複雑なロジック → code
-
-## 最終構造
-
-```
-types.ts（唯一の真実）
-  ClassifyRawResponse（生レスポンス → service内のみ）
-  ClassifyResponse（フル版。29フィールド + 検算 + ラベル）
-  ReceiptAnalysisResult（フロント用。必要なフィールドだけ）
-    ↑ import
-classify.service.ts（外部依存隔離）
-  CLASSIFY_SCHEMA（Gemini固有、ここに閉じる）
-  Gemini呼び出し → ClassifyRawResponse
-    ↓
-postprocess.ts（計算）
-  ClassifyRawResponse → ClassifyResponse に変換
-  税検算・貸借検算・日付異常・ラベル生成もここで計算
-    ↓
-validateClassifyResult.ts（判定）
-  ClassifyResponse → OK/NG/補助対象 判定（データ駆動）
-    ↓
-receiptService.ts
-  API呼び出し → validateClassifyResult() → ReceiptAnalysisResult
-    ↓
-classify_test.ts
-  API呼び出し（/api/pipeline/classify）→ ClassifyResponse だけ検証
-```
+- **型を変えずにロジックだけ集約する**
+- バリデーション判定は`validateClassifyResult.ts` 1箇所に統一
 
 ---
 
-## 技術的負債一覧（全件今回で潰す）
+## 技術的負債一覧（フェーズAで潰す分）
 
 | # | 負債 | 場所 | 危険度 | 内容 |
 |---|---|---|---|---|
-| D-1 | any型でAPIレスポンスアクセス | receiptService.ts L188-228 | 🔴致命 | `response.json()` → any。型チェックなしで参照。スキーマ変更時にコンパイルエラーにならない |
+| D-1 | any型でAPIレスポンスアクセス | receiptService.ts L188-228 | 🔴致命 | `response.json()` → any。型チェックなしで参照 |
 | D-2 | 行データの型がany | receiptService.ts L221 | 🔴致命 | `Record<string, unknown>` で行データにアクセス |
-| D-3 | ReceiptAnalysisResult型のハードコード | receiptService.ts L7-53 | 🟡高 | types.tsに集約すべき型がファイル内にインライン定義されている |
+| D-3 | ReceiptAnalysisResult型のハードコード | receiptService.ts L7-53 | 🟡高 | types.tsに集約すべき型がファイル内にインライン定義 |
 | D-4 | バリデーションのif連続ハードコード | receiptService.ts L230-303 | 🟡高 | データ駆動設計ではなくif連続。ルール追加時に漏れる |
 | D-5 | 取引先（issuer_name）バリデーション未実装 | receiptService.ts | 🔴致命 | 日付・金額はチェックしているが取引先はスルー |
 | D-6 | supplementary_docの日付・金額バリデーション免除 | receiptService.ts L231 | 🟡高 | multiLineTypesに含まれていて免除されている（間違い） |
 | D-7 | 通帳・クレカの行データバリデーション未実装 | receiptService.ts | 🟡高 | 各行のdate/amount/取引先をチェックしていない |
 | D-8 | MIME定数の二重定義 | receiptService.ts L112 + MockUploadPage.vue L424 | 🟡高 | 同じMIME条件が2箇所に書かれている |
-| D-9 | スキーマ分裂（3ファイル） | types.ts / classify_schema.ts / receiptService.ts | 🔴致命 | 3つの型定義が別々に存在。フィールド名も異なる |
-| D-10 | classify_postprocess.tsが本番未接続 | classify_postprocess.ts | 🟡高 | 税検算・貸借検算・ラベル生成が本番パイプラインで使われていない |
-| D-11 | classify_test.tsがGemini直呼び出し | classify_test.ts | 🟡高 | LLMの型がテストに直接漏洩。SDK変更でテスト全壊 |
-| D-12 | ClassifyResponseに検算・ラベルフィールドなし | types.ts | 🟡高 | 税検算・貸借検算・日付異常・ラベルがAPIレスポンスに含まれない |
-| D-13 | ClassifyRawResponseが外部に漏洩する可能性 | 現状は漏れていない | 🟢低 | 今後の変更で漏らさないよう注意 |
+
+### フェーズBに先送りした負債（今回は触らない）
+
+| # | 負債 | 理由 |
+|---|---|---|
+| D-9 | スキーマ分裂（3ファイル） | 旧スキーマ（classify_schema.ts）と新スキーマ（types.ts）は設計思想が違う（7種 vs 12種）。統合は大手術 |
+| D-10 | classify_postprocess.tsが本番未接続 | 旧型（GeminiClassifyResponse 29フィールド）に依存。新型に移植するにはスキーマ統一が前提 |
+| D-11 | classify_test.tsがGemini直呼び出し | テスト資産としての価値がある。API経由への書き換えは目的を破壊する |
+| D-12 | ClassifyResponseに検算・ラベルフィールドなし | types.tsの型変更が必要。フェーズBで対応 |
 
 ---
 
@@ -99,76 +76,37 @@ classify_test.ts
 
 ---
 
-## 実施手順（型を先に固めてからロジックを直す）
+## 実施手順（フェーズA: 現スキーマ維持のまま）
 
-### 手順①: types.ts 型統一【最優先】
+### 手順①: types.ts にフロント用型を追加
 
 - **対象**: `src/api/services/pipeline/types.ts`
-- **目的**: 型定義を1箇所に集約する。新規ファイルは作らない
+- **目的**: ReceiptAnalysisResult / AnalyzeOptions をここに移動。**ClassifyResponse / ClassifyRawResponse は変更しない**
 - **内容**:
-  - ReceiptAnalysisResult型をreceiptService.tsからここに移動
-  - AnalyzeOptions型をreceiptService.tsからここに移動
-  - ClassifyResponseにフィールド追加（税検算結果、貸借検算結果、日付異常、ラベル、ステータス）
-  - ClassifyRawResponseにフィールド追加（tax_entries, journal_entry_suggestions, handwritten_flag等。旧CLASSIFY_RESPONSE_SCHEMAと同等）
-- **潰す負債**: D-3, D-9, D-12
+  - receiptService.ts L7-53 の ReceiptAnalysisResult 型を types.ts に移動
+  - receiptService.ts L55-61 の AnalyzeOptions 型を types.ts に移動
+- **潰す負債**: D-3
 
-### 手順②: classify.service.ts CLASSIFY_SCHEMA拡張
-
-- **対象**: `src/api/services/pipeline/classify.service.ts`
-- **目的**: CLASSIFY_SCHEMAを旧CLASSIFY_RESPONSE_SCHEMAと同等のフル版に昇格する。Geminiに全フィールドを出力させる
-- **内容**:
-  - CLASSIFY_SCHEMAに旧スキーマの全フィールドを追加（tax_entries, journal_entry_suggestions, handwritten_flag, is_invoice_qualified等）
-  - ClassifyRawResponseのフィールド追加に合わせてマッピング更新
-- **潰す負債**: D-12（の前提作成）
-
-### 手順③: postprocess.ts 計算ロジック追加
-
-- **対象**: `src/api/services/pipeline/postprocess.ts`
-- **目的**: ClassifyRawResponse → ClassifyResponse の変換に、税検算・貸借検算・日付異常・ラベル生成を追加する
-- **内容**:
-  - classify_postprocess.tsから以下を移植:
-    - checkTaxMismatch()（税検算）
-    - checkDebitCreditMismatch()（貸借検算）
-    - checkDateAnomaly()（日付異常検出）
-    - determineStatus()（ステータス判定）
-    - generateLabels()（ラベル自動生成）
-    - estimateCost()（コスト計算）
-  - 旧スキーマのフィールド名を新スキーマに変換（voucher_type → source_type等）
-  - ClassifyResponseに計算結果を含めて返す
-- **潰す負債**: D-10
-- **注意**: postprocess = 計算。判定はvalidateに任せる
-
-### 手順④: validateClassifyResult.ts 新設（データ駆動バリデーション）
+### 手順②: validateClassifyResult.ts 新設（データ駆動バリデーション）
 
 - **対象**: `src/shared/validateClassifyResult.ts`（新設）
-- **目的**: バリデーションロジックを1ファイルに集約する。データ駆動設計で実装し、if連続を排除する
+- **目的**: バリデーションロジックを1ファイルに集約。データ駆動設計でif連続を排除
+- **依存**: `ClassifyResponse`型のみをimport（現types.tsをそのまま使う）
 - **内容**:
-  - SOURCE_TYPE_CONFIG定数テーブル（証票種別ごとの日付・金額・取引先の必須/不問をbooleanで定義）
-  - VALIDATION_RULES定数テーブル（優先順にルールID・check関数・エラーメッセージを定義）
+  - SOURCE_TYPE_VALIDATION_CONFIG 定数テーブル（証票種別ごとの日付・金額・取引先の必須/不問をbooleanで定義）
+  - VALIDATION_RULES 定数テーブル（優先順にルールID・check関数・エラーメッセージを定義）
   - ALLOWED_MIME_TYPES / ALLOWED_EXTENSIONS / MF_IMPORT_EXTENSIONS 定数
-  - validateFileType()関数（ファイル形式判定）
-  - validateClassifyResult()関数（テーブルをループして最初にhitしたルールでOK/NG/補助対象を返す）
-  - checkDuplicatesInBatch()関数（同バッチ内の同日同額同取引先 + T番号一致の重複検出）
+  - validateFileType() 関数（ファイル形式判定）
+  - validateClassifyResult() 関数（テーブルをループして最初にhitしたルールでOK/NG/補助対象を返す）
+  - 入力: ClassifyResponse（現types.tsの型そのまま）
+  - 出力: `{ ok: boolean; errorReason: string | null; supplementary?: boolean }`
 - **潰す負債**: D-4, D-5, D-6, D-7, D-8
-- **注意**: validate = 判定のみ。計算はpostprocessの責務
+- **注意**: validate = 判定のみ。計算はpostprocessの責務。ClassifyResponseの型は一切触らない
 
-### 手順⑤: classify_test.ts API経由に変更
-
-- **対象**: `src/scripts/classify_test.ts`
-- **目的**: 旧スキーマ（classify_schema.ts）依存を完全排除し、API経由でClassifyResponseのみ検証する構造にする
-- **内容**:
-  - import元をclassify_schema.ts → types.tsに変更
-  - Gemini直呼び出し → `/api/pipeline/classify` API経由に変更
-  - 旧型名（GeminiClassifyResponse, ClassifyResult等）を新型名に置換
-  - 重複検出をclassify_postprocess.ts → validateClassifyResult.tsから参照
-  - issuer_name（取引先名）のログ出力追加
-  - テストはClassifyResponseだけを検証。LLMの存在を知らない
-- **潰す負債**: D-9, D-11
-
-### 手順⑥: receiptService.ts any排除 + 型付け
+### 手順③: receiptService.ts any排除 + validateに委譲
 
 - **対象**: `src/mocks/services/receiptService.ts`
-- **目的**: any型を排除し、ClassifyResponse型で型安全にAPIレスポンスを受け取る。バリデーションをvalidateClassifyResult.tsに委譲する
+- **目的**: any型を排除し、ClassifyResponse型で型安全にAPIレスポンスを受け取る。バリデーションをvalidateClassifyResult.tsに委譲
 - **内容**:
   - ReceiptAnalysisResult型定義（L7-53）削除 → types.tsからimport
   - AnalyzeOptions型定義（L55-61）削除 → types.tsからimport
@@ -177,52 +115,26 @@ classify_test.ts
   - ALLOWED定数（L112-125）削除 → validateClassifyResult.tsからimport
   - validateFileType関数（L131-142）削除 → validateClassifyResult.tsからimport
   - analyzeReceiptReal内のif連続バリデーション（L230-303）削除 → validateClassifyResult()呼び出しに置換
-  - issuer_name（取引先名）のログ出力追加
 - **潰す負債**: D-1, D-2, D-3, D-4, D-5, D-6, D-7, D-8
 
-### 手順⑦: MockUploadPage.vue MIME定数統一
+### 手順④: MockUploadPage.vue MIME定数統一
 
 - **対象**: `src/mocks/views/MockUploadPage.vue`
-- **目的**: D&DフィルタのMIME判定で使う定数の二重定義を解消する
+- **目的**: D&DフィルタのMIME判定で使う定数の二重定義を解消
 - **内容**:
-  - handleDrop内（L423-424）のimage/*判定をALLOWED_MIME_TYPESの定数参照に変更
+  - handleDrop内のimage/*判定をALLOWED_MIME_TYPESの定数参照に変更
   - validateClassifyResult.tsからimport
 - **潰す負債**: D-8
 
-### 手順⑧: 旧ファイル削除
+### 手順⑤: 動作確認
 
-- **対象**:
-  - `src/scripts/classify_postprocess.ts` → 削除（全ロジックpostprocess.tsに移植済み）
-  - `src/scripts/classify_schema.ts` → 削除（classify_test.tsの依存付け替え済み）
-- **潰す負債**: D-9, D-10
+- tsc --noEmit エラー0件確認
+- サーバー起動 → 画像アップロード → 日付・金額・取引先のNG判定確認 → 補助対象確認 → document_count確認
 
-### 手順⑨: 動作確認
+### 手順⑥: docs更新 + コミット
 
-- サーバー起動 → 画像アップロード → 日付・金額・取引先のNG判定確認 → 補助対象確認 → document_count確認 → 重複検出確認 → 税検算結果確認
-
-### 手順⑩: docs/pipeline_design_master.md 更新
-
-- バリデーションルール一覧更新
-- スキーマ統一の記録追加
-- データ駆動設計の記録追加
-
-### 手順⑪: docs/task_unified.md 更新
-
-- 実施済みタスクに追加
-
-### 手順⑫: コミット
-
+- task_unified.md 更新（実施済みセクションに追記）
 - /commit手順に従い実行
-
----
-
-## 地雷注意事項
-
-1. **ClassifyRawResponseを外で使うな** → Rawはservice内で完結。外にはClassifyResponseだけ出す
-2. **validateにロジック寄せすぎるな** → postprocess = 計算、validate = 判定
-3. **データ駆動のやりすぎ** → 単純 → config、複雑 → code
-4. **code_quality.md遵守** → PowerShellファイル書き換え禁止、Supabase移行後も壊れない構造
-5. **既存ロジックを上書き・破壊するな** → classify_postprocess.tsの全ロジック（税検算、貸借検算、日付異常、ステータス判定、ラベル生成、コスト計算）は1つも消さずにpostprocess.tsに移植保全する
 
 ---
 
@@ -232,43 +144,20 @@ classify_test.ts
 
 | 責務 | 場所 | やること | やらないこと |
 |---|---|---|---|
-| 計算 | postprocess.ts | 税検算結果を算出、貸借検算結果を算出、日付異常を検出、ラベルを生成、コストを計算 → ClassifyResponseのフィールドに格納 | OK/NG判定はしない |
+| 計算 | postprocess.ts | AI生出力の正規化・fallback適用・ProcessingMode判定 → ClassifyResponseのフィールドに格納 | OK/NG判定はしない |
 | 判定 | validateClassifyResult.ts | ClassifyResponseのフィールドを見てOK/NG/補助対象を判定する。データ駆動テーブルでルール評価 | 計算はしない（postprocessの結果を参照するだけ） |
 
 → receiptService.tsにもMockUploadPage.vueにもバリデーションロジックは**一切残さない**。
 
 ---
 
-## 旧→新フィールドマッピング表
+## 地雷注意事項
 
-classify_postprocess.tsで使っている旧フィールド名と、types.tsの新フィールド名の対応：
-
-| 旧（classify_schema.ts） | 新（types.ts） | 備考 |
-|---|---|---|
-| voucher_type | source_type | 値も変更（RECEIPT → receipt等） |
-| voucher_type_confidence | source_type_confidence | |
-| has_multiple_vouchers | document_count >= 2 | booleanから数値判定に変更 |
-| is_not_applicable | source_type === 'non_journal' | booleanからenum判定に変更 |
-| not_applicable_reason | — | ClassifyRawResponseに追加するか検討 |
-| date_unreadable | — | ClassifyRawResponseに追加 |
-| amount_unreadable | — | ClassifyRawResponseに追加 |
-| issuer_unreadable | — | ClassifyRawResponseに追加 |
-| tax_entries | tax_entries | ClassifyRawResponseに追加（現状なし） |
-| journal_entry_suggestions | journal_entry_suggestions | ClassifyRawResponseに追加（現状なし） |
-| handwritten_flag | handwritten_flag | ClassifyRawResponseに追加（現状なし） |
-| handwritten_memo_content | handwritten_memo_content | ClassifyRawResponseに追加（現状なし） |
-| is_invoice_qualified | is_invoice_qualified | ClassifyRawResponseに追加（現状なし） |
-| invoice_registration_number | invoice_registration_number | ClassifyRawResponseに追加（現状なし） |
-| has_multiple_tax_rates | has_multiple_tax_rates | ClassifyRawResponseに追加（現状なし） |
-| is_medical_expense | is_medical_expense | ClassifyRawResponseに追加（現状なし） |
-| is_credit_card_payment | is_credit_card_payment | ClassifyRawResponseに追加（現状なし） |
-| receipt_items | receipt_items | ClassifyRawResponseに追加（現状なし） |
-| payment_method | payment_method | ClassifyRawResponseに追加（現状なし） |
-| issuer_branch | issuer_branch | ClassifyRawResponseに追加（現状なし） |
-| bank_name_guess | bank_name_guess | ClassifyRawResponseに追加（現状なし） |
-| bank_name_confidence | bank_name_confidence | ClassifyRawResponseに追加（現状なし） |
-| bank_name_evidence | bank_name_evidence | ClassifyRawResponseに追加（現状なし） |
-| is_composite_transaction | is_composite_transaction | ClassifyRawResponseに追加（現状なし） |
+1. **ClassifyResponseの型を触るな** → フェーズAの鉄則。型変更はフェーズB
+2. **validateにロジック寄せすぎるな** → postprocess = 計算、validate = 判定
+3. **データ駆動のやりすぎ** → 単純 → config、複雑 → code
+4. **code_quality.md遵守** → PowerShellファイル書き換え禁止、Supabase移行後も壊れない構造
+5. **旧ファイル（classify_postprocess.ts / classify_schema.ts）は触るな** → フェーズBまで温存
 
 ---
 
@@ -320,3 +209,20 @@ export interface AnalyzeOptions {
   documentId?: string;
 }
 ```
+
+---
+
+## フェーズBとの境界（明確化）
+
+| 項目 | フェーズA（今回） | フェーズB（後回し） |
+|---|---|---|
+| ClassifyResponse型 | **触らない** | 検算・ラベル等フィールド追加 |
+| ClassifyRawResponse型 | **触らない** | tax_entries等29フィールドに拡張 |
+| CLASSIFY_SCHEMA | **触らない** | 旧CLASSIFY_RESPONSE_SCHEMAと統合 |
+| postprocess.ts | **触らない** | classify_postprocess.tsからロジック移植 |
+| classify_test.ts | **触らない** | 新旧両対応に改修（API経由化は行わない） |
+| classify_postprocess.ts | **触らない**（温存） | postprocess.tsに移植後に削除 |
+| classify_schema.ts | **触らない**（温存） | types.tsに統合後に削除 |
+| validateClassifyResult.ts | **新設** | — |
+| receiptService.ts | **any排除 + validate委譲** | — |
+| MockUploadPage.vue | **MIME定数統一** | — |
