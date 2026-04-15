@@ -253,47 +253,25 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/mocks/views/MockUploadUnifiedPage.vue'),
   },
 
-  // ===== 旧アップロード（既存URL互換・削除予定） =====
-  // アップロード分岐セレクター（旧版: PC/スマホ2ボタン）
-  {
-    path: '/upload/:clientId',
-    name: 'UploadSelector',
-    component: () => import('@/mocks/views/MockUploadSelectorPage.vue'),
-  },
-  // スマホ用アップロード（事務所スタッフ）
-  {
-    path: '/upload/:clientId/staff/mobile',
-    name: 'UploadStaffMobile',
-    component: () => import('@/mocks/views/MockUploadPage.vue'),
-  },
-  // PC用アップロード（事務所スタッフ）
-  {
-    path: '/upload/:clientId/staff/pc',
-    name: 'UploadStaffPc',
-    component: () => import('@/mocks/views/MockUploadPcPage.vue'),
-  },
-  // スマホ用アップロード（顧問先ゲスト）
-  {
-    path: '/upload/:clientId/guest/mobile',
-    name: 'UploadGuestMobile',
-    component: () => import('@/mocks/views/MockUploadPage.vue'),
-  },
-  // PC用アップロード（顧問先ゲスト）
-  {
-    path: '/upload/:clientId/guest/pc',
-    name: 'UploadGuestPc',
-    component: () => import('@/mocks/views/MockUploadPcPage.vue'),
-  },
+  // ===== 旧アップロード → 統合版リダイレクト =====
+  // 旧セレクター → 統合セレクター
+  { path: '/upload/:clientId', redirect: (to) => `/upload-v2/${to.params.clientId}` },
+  // 旧スタッフ（mobile/pc分岐）→ 統合スタッフ（レスポンシブ自動判定）
+  { path: '/upload/:clientId/staff/mobile', redirect: (to) => `/upload/${to.params.clientId}/staff` },
+  { path: '/upload/:clientId/staff/pc', redirect: (to) => `/upload/${to.params.clientId}/staff` },
+  // 旧ゲスト（mobile/pc分岐）→ 統合ゲスト（レスポンシブ自動判定）
+  { path: '/upload/:clientId/guest/mobile', redirect: (to) => `/upload/${to.params.clientId}/guest` },
+  { path: '/upload/:clientId/guest/pc', redirect: (to) => `/upload/${to.params.clientId}/guest` },
   {
     path: '/learning/:clientId',
     name: 'Learning',
     component: () => import('@/mocks/views/MockLearningPage.vue'),
     props: true
   },
-  // 旧パス互換（/client/upload → /upload）
-  { path: '/client/upload/:clientId', redirect: (to) => `/upload/${to.params.clientId}` },
-  { path: '/client/upload/:clientId/mobile', redirect: (to) => `/upload/${to.params.clientId}/staff/mobile` },
-  { path: '/client/upload/:clientId/pc', redirect: (to) => `/upload/${to.params.clientId}/staff/pc` },
+  // 旧パス互換（/client/upload → 統合版）
+  { path: '/client/upload/:clientId', redirect: (to) => `/upload-v2/${to.params.clientId}` },
+  { path: '/client/upload/:clientId/mobile', redirect: (to) => `/upload/${to.params.clientId}/staff` },
+  { path: '/client/upload/:clientId/pc', redirect: (to) => `/upload/${to.params.clientId}/staff` },
   { path: '/client/learning/:clientId', redirect: (to) => `/learning/${to.params.clientId}` },
   // 資料アップロード（バリデーションなし: 謄本・CSV・Excel等）
   {
@@ -387,8 +365,8 @@ export const routes: RouteRecordRaw[] = [
   // 旧パス互換（/portal/ → /guest/ or /upload/）
   { path: '/portal/:clientId', redirect: (to) => `/guest/${to.params.clientId}` },
   { path: '/portal/:clientId/login', redirect: (to) => `/guest/${to.params.clientId}/login` },
-  { path: '/portal/:clientId/mobile', redirect: (to) => `/upload/${to.params.clientId}/guest/mobile` },
-  { path: '/portal/:clientId/pc', redirect: (to) => `/upload/${to.params.clientId}/guest/pc` },
+  { path: '/portal/:clientId/mobile', redirect: (to) => `/upload/${to.params.clientId}/guest` },
+  { path: '/portal/:clientId/pc', redirect: (to) => `/upload/${to.params.clientId}/guest` },
   { path: '/portal/:clientId/docs', redirect: (to) => `/upload-docs/${to.params.clientId}/guest` },
 ]
 
