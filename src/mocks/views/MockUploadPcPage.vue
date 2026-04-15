@@ -19,12 +19,8 @@
     <main class="pc-main">
       <div class="three-col">
 
-        <!-- ① 仕訳用 -->
+        <!-- ① ファイルアップロード -->
         <div class="upload-lane">
-          <div class="lane-header lane-header--journal">
-            <h2 class="lane-title">◆仕訳用画像・PDF専用</h2>
-            <p class="lane-desc">領収書・請求書・通帳・クレカ明細　★画像・PDF専用</p>
-          </div>
           <div
             class="drop-zone"
             :class="{ 'drop-zone--active': dragging === 'journal' }"
@@ -36,23 +32,34 @@
             <h3 class="drop-title">ファイルをここにドラッグ＆ドロップ</h3>
             <p class="drop-or">または</p>
             <button class="drop-select-btn" @click.stop="openPicker('journal')">ファイルを選択</button>
-            <p class="drop-formats">対応形式: JPEG / PNG / HEIC / PDF</p>
           </div>
           <div class="file-list" v-if="files.journal.length">
-            <div v-for="(f, i) in files.journal" :key="f.id" class="file-item">
-              <div class="file-icon file-icon--img">🖼</div>
+            <div
+              v-for="(f, i) in files.journal"
+              :key="f.id"
+              class="file-item"
+              :class="{ 'file-item--selected': selectedFileId === f.id }"
+              @click="selectFile(f)"
+            >
+              <div class="file-icon" :class="fileIconClass(f.file.name)">{{ fileIconEmoji(f.file.name) }}</div>
               <div class="file-info">
                 <p class="file-name">{{ f.file.name }}</p>
                 <p class="file-size">{{ formatSize(f.file.size) }}</p>
                 <!-- classify結果バッジ -->
-                <div class="classify-badges" v-if="f.classifyStatus">
+                <!-- 重複バッジ -->
+                <div v-if="f.isDuplicate" class="classify-badges">
+                  <span class="badge badge--warning">⚠ 重複の可能性があります</span>
+                </div>
+                <div class="classify-badges" v-if="f.classifyStatus && !f.isDuplicate">
                   <span v-if="f.classifyStatus === 'loading'" class="badge badge--loading">⏳ 分類中...</span>
                   <span v-else-if="f.classifyStatus === 'error'" class="badge badge--error">❌ {{ f.errorReason ?? '失敗' }}</span>
                   <template v-else-if="f.classifyStatus === 'done' && f.result?.supplementary">
                     <span class="badge badge--supplementary">📎 補助対象ファイルです。</span>
                   </template>
                   <template v-else-if="f.classifyStatus === 'done'">
+                    <span v-if="f.result?.warning" class="badge badge--warning">⚠ {{ f.result.warning }}</span>
                     <span v-if="f.result?.metrics?.source_type" class="badge badge--type" :class="'badge--mode-' + (f.result.metrics.processing_mode ?? 'auto')">{{ sourceTypeLabel(f.result.metrics.source_type) }}</span>
+                    <span v-if="f.result?.lineItems?.length" class="badge badge--lines">📊 {{ f.result.lineItems.length }}行</span>
                     <span v-if="f.result?.vendor" class="badge badge--issuer">{{ f.result.vendor }}</span>
                     <span v-if="f.result?.amount" class="badge badge--amount">¥{{ f.result.amount.toLocaleString() }}</span>
                     <span v-if="f.result?.date" class="badge badge--date">{{ f.result.date }}</span>
@@ -60,10 +67,47 @@
                   </template>
                 </div>
               </div>
-              <button class="file-remove" @click="removeFile('journal', i)">✕</button>
+              <button class="file-remove" @click.stop="removeFile('journal', i)">✕</button>
             </div>
           </div>
-          <input ref="journalInput" type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.webp,.pdf" multiple class="hidden-input" @change="handleFileSelect($event, 'journal')" />
+          <input ref="journalInput" type="file" multiple class="hidden-input" @change="handleFileSelect($event, 'journal')" />
+        </div>
+
+        <!-- ② プレビューパネル -->
+        <div class="preview-panel">
+          <div v-if="!selectedFile" class="preview-empty">
+            <div class="preview-empty-icon">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="6" y="10" width="36" height="28" rx="4" stroke="#cbd5e1" stroke-width="2" fill="none"/>
+                <circle cx="18" cy="22" r="4" stroke="#cbd5e1" stroke-width="2" fill="none"/>
+                <path d="M6 32 L18 24 L26 30 L34 20 L42 28" stroke="#cbd5e1" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <p class="preview-empty-text">ファイルを選択またはドロップすると<br>プレビューが表示されます</p>
+          </div>
+          <template v-else>
+            <div class="preview-header">
+              <p class="preview-filename">{{ selectedFile.file.name }}</p>
+              <button class="preview-close" @click="selectedFileId = null">✕</button>
+            </div>
+            <div class="preview-body">
+              <img
+                v-if="isImageFile(selectedFile.file.name)"
+                :src="selectedFileUrl"
+                class="preview-image"
+                :alt="selectedFile.file.name"
+              />
+              <iframe
+                v-else-if="isPdfFile(selectedFile.file.name)"
+                :src="selectedFileUrl"
+                class="preview-pdf"
+              ></iframe>
+              <div v-else class="preview-unsupported">
+                <div class="preview-unsupported-icon">📄</div>
+                <p>このファイル形式のプレビューには対応していません</p>
+              </div>
+            </div>
+          </template>
         </div>
 
 
@@ -125,11 +169,49 @@ interface FileEntry {
   classifyStatus?: 'loading' | 'done' | 'error'
   errorReason?: string | null
   result?: ReceiptAnalysisResult
+  isDuplicate: boolean
+  hash: string | null
 }
+
+// SHA-256重複チェック用
+const knownHashes = ref<Set<string>>(new Set())
 
 const dragging = ref<Category | null>(null)
 const showComplete = ref(false)
 const submittedCount = ref(0)
+
+// プレビュー用
+const selectedFileId = ref<string | null>(null)
+const selectedFileUrl = ref<string | null>(null)
+
+const selectedFile = computed(() =>
+  selectedFileId.value
+    ? files.value.journal.find(f => f.id === selectedFileId.value) ?? null
+    : null
+)
+
+const selectFile = (entry: FileEntry) => {
+  // 前のオブジェクトURLを破棄
+  if (selectedFileUrl.value) URL.revokeObjectURL(selectedFileUrl.value)
+  selectedFileId.value = entry.id
+  selectedFileUrl.value = URL.createObjectURL(entry.file)
+}
+
+const isImageFile = (name: string) => /\.(jpe?g|png|gif|webp|bmp|heic|heif)$/i.test(name)
+const isPdfFile = (name: string) => /\.pdf$/i.test(name)
+
+const fileIconEmoji = (name: string) => {
+  if (isPdfFile(name)) return '📄'
+  if (isImageFile(name)) return '🖼'
+  if (/\.(csv|xlsx?)$/i.test(name)) return '📊'
+  return '📎'
+}
+const fileIconClass = (name: string) => {
+  if (isPdfFile(name)) return 'file-icon--doc'
+  if (isImageFile(name)) return 'file-icon--img'
+  if (/\.(csv|xlsx?)$/i.test(name)) return 'file-icon--csv'
+  return 'file-icon--img'
+}
 
 const files = ref<Record<Category, FileEntry[]>>({
   journal: [],
@@ -156,12 +238,39 @@ const addFiles = (cat: Category, fileList: File[]) => {
     id: `f-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     documentId: crypto.randomUUID(),
     file: f,
+    isDuplicate: false,
+    hash: null,
   }))
   files.value[cat].push(...entries)
 
-  // journal画像はclassify APIを自動呼び出し
+  // journal画像はclassify APIを自動呼び出し + 重複チェック
+  // ※ push後にプロキシ化された参照をIDで検索して渡す（リアクティビティ確保）
   if (cat === 'journal') {
-    entries.forEach(entry => classifyFile(entry))
+    for (const e of entries) {
+      const proxy = files.value[cat].find(f => f.id === e.id)
+      if (proxy) {
+        classifyFile(proxy)
+        computeHash(proxy)
+      }
+    }
+  }
+}
+
+// ===== SHA-256 重複チェック =====
+const computeHash = async (item: FileEntry) => {
+  try {
+    const buffer = await item.file.arrayBuffer()
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+    const hashHex = Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0')).join('')
+    if (knownHashes.value.has(hashHex)) {
+      item.isDuplicate = true
+    } else {
+      knownHashes.value.add(hashHex)
+      item.hash = hashHex
+    }
+  } catch {
+    // ハッシュ計算失敗は無視（処理を止めない）
   }
 }
 
@@ -206,6 +315,12 @@ const handleFileSelect = (e: Event, cat: Category) => {
 }
 
 const removeFile = (cat: Category, idx: number) => {
+  const removed = files.value[cat][idx]
+  if (removed && removed.id === selectedFileId.value) {
+    if (selectedFileUrl.value) URL.revokeObjectURL(selectedFileUrl.value)
+    selectedFileId.value = null
+    selectedFileUrl.value = null
+  }
   files.value[cat].splice(idx, 1)
 }
 
@@ -295,6 +410,17 @@ const resetAll = () => {
   color: #999;
   font-size: 10px;
 }
+.badge--lines {
+  background: #ede9fe;
+  color: #6d28d9;
+  font-weight: 700;
+}
+.badge--warning {
+  background: #fff7ed;
+  color: #c2410c;
+  font-weight: 700;
+  border: 1px solid #fed7aa;
+}
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -375,23 +501,83 @@ const resetAll = () => {
   box-shadow: 0 4px 20px rgba(0,0,0,0.07);
 }
 
-/* レーンヘッダー */
-.lane-header {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 16px 20px;
+/* ===== プレビューパネル ===== */
+.preview-panel {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
+  overflow: hidden;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 80px;
+}
+.preview-empty {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px;
+  color: #94a3b8;
+}
+.preview-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+.preview-empty-text {
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.6;
+  margin: 0;
+}
+.preview-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
   border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
 }
-.lane-title {
-  font-size: 14px; font-weight: 900; color: #0f172a;
-  margin: 0; letter-spacing: 0.01em;
+.preview-filename {
+  font-size: 12px; font-weight: 700; color: #334155;
+  margin: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 1;
 }
-.lane-desc {
-  font-size: 12px; color: #475569; margin: 0; font-weight: 500;
+.preview-close {
+  width: 24px; height: 24px;
+  border-radius: 6px; border: none;
+  background: transparent; color: #94a3b8;
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
-
-.lane-header--journal { background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); }
-.lane-header--other   { background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); }
-.lane-header--csv     { background: linear-gradient(135deg, #fefce8 0%, #f8fafc 100%); }
+.preview-close:hover { background: #fee2e2; color: #ef4444; }
+.preview-body {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  background: #fafafa;
+  min-height: 350px;
+}
+.preview-image {
+  max-width: 100%; max-height: 70vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.preview-pdf {
+  width: 100%; height: 70vh;
+  border: none; border-radius: 8px;
+}
+.preview-unsupported {
+  text-align: center; color: #94a3b8;
+  font-size: 13px;
+}
+.preview-unsupported-icon {
+  font-size: 48px; margin-bottom: 12px; opacity: 0.5;
+}
 
 /* ===== ドロップゾーン（ScreenG準拠） ===== */
 .drop-zone {
@@ -475,10 +661,16 @@ const resetAll = () => {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  transition: background 0.2s;
+  transition: all 0.2s;
   animation: fileSlideIn 0.3s ease;
+  cursor: pointer;
 }
 .file-item:hover { background: #f1f5f9; }
+.file-item--selected {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
 @keyframes fileSlideIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }

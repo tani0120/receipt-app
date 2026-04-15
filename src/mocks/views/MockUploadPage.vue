@@ -175,6 +175,12 @@
                 <span class="text-[8px] text-white font-bold">⚠ 重複の可能性</span>
               </div>
 
+              <!-- オーバーレイ: 複数証票警告 -->
+              <div v-if="r.warning && !r.isDuplicate"
+                class="absolute top-0 left-0 right-0 bg-orange-500/90 px-1 py-0.5 flex items-center justify-center">
+                <span class="text-[8px] text-white font-bold">⚠ {{ r.warning }}</span>
+              </div>
+
               <!-- オーバーレイ: エラー -->
               <div v-if="r.status === 'error'"
                 class="absolute inset-0 bg-red-600/75 flex flex-col items-center justify-center p-2 gap-1">
@@ -195,9 +201,20 @@
                 <p class="text-[7px] text-gray-400">{{ r.file.name }}</p>
               </template>
               <template v-else-if="r.status === 'ok'">
-                <p class="text-[8px] text-emerald-700 font-bold truncate">{{ r.vendor }}</p>
-                <p class="text-[8px] text-emerald-600">¥{{ r.amount?.toLocaleString() }}</p>
-                <p class="text-[7px] text-gray-400">{{ r.date }}</p>
+                <!-- source_typeラベル -->
+                <p v-if="r.sourceType" class="text-[7px] font-bold px-1 py-0.5 rounded bg-indigo-100 text-indigo-700 inline-block mb-0.5">
+                  {{ SOURCE_TYPE_LABELS[r.sourceType] ?? r.sourceType }}
+                </p>
+                <!-- 通帳/クレカ: 行データ件数表示 -->
+                <template v-if="r.lineItemsCount > 0 && !r.vendor">
+                  <p class="text-[8px] text-emerald-700 font-bold">{{ r.lineItemsCount }}行</p>
+                </template>
+                <!-- レシート等: 取引先/金額/日付 -->
+                <template v-else>
+                  <p v-if="r.vendor" class="text-[8px] text-emerald-700 font-bold truncate">{{ r.vendor }}</p>
+                  <p v-if="r.amount" class="text-[8px] text-emerald-600">¥{{ r.amount.toLocaleString() }}</p>
+                  <p v-if="r.date" class="text-[7px] text-gray-400">{{ r.date }}</p>
+                </template>
               </template>
               <template v-else>
                 <p class="text-[8px] text-gray-300">{{ idx + 1 }}</p>
@@ -322,6 +339,7 @@
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { analyzeReceipt, type AnalyzeOptions } from '@/mocks/services/receiptService'
+import { isDropAcceptable } from '@/shared/fileTypes'
 
 // ===== ルート =====
 const route = useRoute()
@@ -348,6 +366,17 @@ interface ReceiptItem {
   isDuplicate: boolean
   hash: string | null
   supplementary: boolean
+  sourceType: string | null        // 証票種別（例: 'receipt', 'bank_statement'）
+  lineItemsCount: number           // 行データ件数（通帳/クレカ: N行）
+  warning: string | null           // 警告（OK判定だが注意が必要）
+}
+
+// 証票種別ラベル変換
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  receipt: '領収書', invoice_received: '請求書', tax_payment: '納付書',
+  journal_voucher: '振替伝票', bank_statement: '通帳', credit_card: 'クレカ明細',
+  cash_ledger: '現金出納帳', invoice_issued: '発行請求書', receipt_issued: '発行領収書',
+  non_journal: '対象外', supplementary_doc: '補助資料', other: 'その他',
 }
 
 // ===== 状態 =====
@@ -420,9 +449,7 @@ const handleCameraCapture = (e: Event) => {
 
 const handleDrop = (e: DragEvent) => {
   isDragging.value = false
-  const files = Array.from(e.dataTransfer?.files ?? []).filter(
-    f => f.type.startsWith('image/') || f.type === 'application/pdf'
-  )
+  const files = Array.from(e.dataTransfer?.files ?? []).filter(isDropAcceptable)
   if (files.length) addFiles(files)
 }
 
@@ -440,6 +467,9 @@ const addFiles = (files: File[]) => {
     isDuplicate: false,
     hash: null,
     supplementary: false,
+    sourceType: null,
+    lineItemsCount: 0,
+    warning: null,
   }))
   receipts.value.push(...newItems)
   processQueue()
@@ -491,9 +521,14 @@ const processOne = async (id: string) => {
     r.amount = result.amount
     r.vendor = result.vendor
     r.supplementary = result.supplementary ?? false
+    r.sourceType = result.metrics?.source_type ?? null
+    r.lineItemsCount = result.lineItems?.length ?? 0
+    r.warning = result.warning ?? null
   } else {
     r.status = 'error'
     r.errorReason = result.errorReason
+    r.sourceType = result.metrics?.source_type ?? null
+    r.warning = result.warning ?? null
   }
 
   processQueue()
