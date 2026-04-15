@@ -29,7 +29,9 @@ const route = useRoute();
 
 /** ナビバー非表示条件: ログインページ・顧問先ポータル */
 const hideNavBar = computed(() =>
-  route.path === '/login' || route.path.startsWith('/portal')
+  route.path === '/login'
+  || route.path.startsWith('/portal')
+  || route.path.startsWith('/guest')
 );
 </script>
 

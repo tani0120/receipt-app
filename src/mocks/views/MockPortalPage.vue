@@ -25,19 +25,11 @@
             </div>
           </div>
           <div class="card-modes">
-            <button class="mode-btn" @click="goUpload('mobile')">
-              <div class="mode-icon-wrap mode-icon--mobile"><span>📱</span></div>
+            <button class="mode-btn" @click="goUpload()">
+              <div class="mode-icon-wrap mode-icon--mobile"><span>📤</span></div>
               <div class="mode-text">
-                <span class="mode-label">スマホで撮影</span>
-                <span class="mode-hint">カメラで撮ってそのまま送れます</span>
-              </div>
-              <span class="mode-arrow">→</span>
-            </button>
-            <button class="mode-btn" @click="goUpload('pc')">
-              <div class="mode-icon-wrap mode-icon--pc"><span>💻</span></div>
-              <div class="mode-text">
-                <span class="mode-label">PCから送る</span>
-                <span class="mode-hint">画像をまとめてアップロード</span>
+                <span class="mode-label">アップロード</span>
+                <span class="mode-hint">PC・スマホ自動判定で最適なUIを表示</span>
               </div>
               <span class="mode-arrow">→</span>
             </button>
@@ -82,8 +74,8 @@ const tips = [
   { icon: '📏', text: 'レシート全体が枠に入るように' },
 ]
 
-const goUpload = (mode: 'mobile' | 'pc') => {
-  router.push(`/upload/${clientId}/guest/${mode}`)
+const goUpload = () => {
+  router.push(`/upload/${clientId}/guest`)
 }
 
 </script>
