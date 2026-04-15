@@ -116,7 +116,7 @@
               <p class="text-[12px] font-semibold text-gray-800 truncate">{{ f.file.name }}</p>
               <p class="text-[10px] text-gray-400 mt-0.5">{{ formatSize(f.file.size) }}</p>
               <!-- 重複警告 -->
-              <p v-if="f.isDuplicate" class="text-[9px] text-amber-600 font-bold mt-0.5">⚠ アップロード済みの可能性</p>
+              <p v-if="f.isDuplicate" class="text-[9px] text-amber-600 font-bold mt-0.5">⚠ {{ MSG_DUPLICATE_SHORT }}</p>
             </div>
 
             <!-- ステータス -->
@@ -238,6 +238,7 @@ import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import PortalHeader from '@/mocks/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
+import { MSG_DUPLICATE_SHORT } from '@/shared/validationMessages'
 
 // ===== ルート =====
 const route = useRoute()
@@ -262,7 +263,6 @@ const fileInputRef = ref<HTMLInputElement>()
 const isDragging   = ref(false)
 const showComplete = ref(false)
 const confirmedCount = ref(0)
-const knownHashes  = ref<Set<string>>(new Set())
 
 const CONCURRENCY = 3
 
@@ -323,26 +323,8 @@ const addFiles = (newFiles: File[]) => {
   }))
   files.value.push(...items)
   processQueue()
-  items.forEach(item => computeHash(item))
 }
 
-// ===== SHA-256 重複チェック =====
-const computeHash = async (item: DocFile) => {
-  try {
-    const buffer = await item.file.arrayBuffer()
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
-    const hashHex = Array.from(new Uint8Array(hashBuffer))
-      .map(b => b.toString(16).padStart(2, '0')).join('')
-    if (knownHashes.value.has(hashHex)) {
-      item.isDuplicate = true
-    } else {
-      knownHashes.value.add(hashHex)
-      item.hash = hashHex
-    }
-  } catch {
-    // 計算失敗は無視
-  }
-}
 
 // ===== キュー処理 =====
 const processQueue = () => {
@@ -380,7 +362,6 @@ const retry = (idx: number) => {
 const removeFile = (idx: number) => {
   const item = files.value[idx]
   if (!item || item.status !== 'queued') return
-  if (item.hash) knownHashes.value.delete(item.hash)
   files.value.splice(idx, 1)
 }
 
@@ -393,7 +374,6 @@ const handleConfirm = () => {
 
 const resetAll = () => {
   files.value = []
-  knownHashes.value = new Set()
   showComplete.value = false
 }
 

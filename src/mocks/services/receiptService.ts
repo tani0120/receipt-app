@@ -18,17 +18,16 @@ import type {
   AnalyzeOptions,
 } from '@/api/services/pipeline/types';
 import { validateFileType } from '@/shared/fileTypes';
+import {
+  MOCK_ERROR_REASONS,
+  serverErrorMessage,
+  networkErrorMessage,
+} from '@/shared/validationMessages';
 
 // 型の再export（Vue側のimportパスを変更しないための互換性維持）
 export type { ReceiptAnalysisResult, AnalyzeOptions };
 
-// ===== モック用定数 =====
-const MOCK_ERROR_REASONS = [
-  "金額が読み取れません。撮り直してください",
-  "日付が読み取れません。撮り直してください",
-  "取引先が読み取れません。撮り直してください",
-  "この画像には2枚の証票が写っています。1枚ずつ撮影してください",
-];
+
 
 const MOCK_VENDORS = [
   "セブン-イレブン",
@@ -120,7 +119,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
         date: null,
         amount: null,
         vendor: null,
-        errorReason: `サーバーエラー (${response.status})`,
+        errorReason: serverErrorMessage(response.status),
       };
     }
 
@@ -179,7 +178,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       date: null,
       amount: null,
       vendor: null,
-      errorReason: `通信エラー: ${err instanceof Error ? err.message : String(err)}`,
+      errorReason: networkErrorMessage(err instanceof Error ? err.message : String(err)),
     };
   }
 }

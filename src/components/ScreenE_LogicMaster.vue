@@ -60,7 +60,7 @@
                        <div v-if="currentTransaction.hasDuplicate" class="bg-yellow-50 border border-yellow-200 rounded p-2 flex items-start gap-3 shadow-sm animate-pulse-slow">
                           <i class="fa-solid fa-triangle-exclamation text-yellow-500 mt-0.5"></i>
                           <div>
-                              <div class="text-xs font-bold text-yellow-700">すでにアップロードしたファイルの可能性。削除してください。</div>
+                              <div class="text-xs font-bold text-yellow-700">{{ MSG_DUPLICATE_DETAIL }}</div>
                               <div class="text-[10px] text-yellow-600">類似する仕訳: 2024/10/24 21,450円 (試算表)</div>
                           </div>
                       </div>
@@ -391,6 +391,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
 import type { JobUi } from '@/types/ui.type';
 import type { JobStatus } from '@/types/job';
+import { MSG_DUPLICATE_DETAIL } from '@/shared/validationMessages';
 
 
 const route = useRoute();

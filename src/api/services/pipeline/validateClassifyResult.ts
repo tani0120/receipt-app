@@ -11,6 +11,13 @@
  */
 
 import type { ClassifyResponse, SourceType } from './types';
+import {
+  multiDocumentError,
+  MSG_FALLBACK_ERROR,
+  MSG_ISSUER_MISSING,
+  MSG_DATE_MISSING,
+  MSG_AMOUNT_MISSING,
+} from '@/shared/validationMessages';
 
 // ============================================================
 // 証票種別ごとのバリデーション設定（データ駆動テーブル）
@@ -86,7 +93,7 @@ export function validateClassifyResult(data: ClassifyResponse): ValidationResult
   if (data.document_count >= 2) {
     return {
       ok: false,
-      errorReason: `この画像には${data.document_count}枚の証票が写っています。1枚ずつ撮影してください`,
+      errorReason: multiDocumentError(data.document_count),
       supplementary: false,
       warning: null,
     };
@@ -99,7 +106,7 @@ export function validateClassifyResult(data: ClassifyResponse): ValidationResult
 
   // fallback適用時 → NG
   if (data.fallback_applied) {
-    return { ok: false, errorReason: 'AI処理に失敗しました。撮り直してください', supplementary: false, warning: null };
+    return { ok: false, errorReason: MSG_FALLBACK_ERROR, supplementary: false, warning: null };
   }
 
   // 証票種別ごとのバリデーション設定
@@ -107,17 +114,17 @@ export function validateClassifyResult(data: ClassifyResponse): ValidationResult
 
   // 取引先チェック
   if (config.requireIssuer && (!data.issuer_name || data.issuer_name.trim() === '')) {
-    return { ok: false, errorReason: '取引先が読み取れません。撮り直してください', supplementary: false, warning: null };
+    return { ok: false, errorReason: MSG_ISSUER_MISSING, supplementary: false, warning: null };
   }
 
   // 日付チェック
   if (config.requireDate && !data.date) {
-    return { ok: false, errorReason: '日付が読み取れません。撮り直してください', supplementary: false, warning: null };
+    return { ok: false, errorReason: MSG_DATE_MISSING, supplementary: false, warning: null };
   }
 
   // 金額チェック
   if (config.requireAmount && (data.total_amount === null || data.total_amount <= 0)) {
-    return { ok: false, errorReason: '金額が読み取れません。撮り直してください', supplementary: false, warning: null };
+    return { ok: false, errorReason: MSG_AMOUNT_MISSING, supplementary: false, warning: null };
   }
 
   // 全チェック通過 → OK

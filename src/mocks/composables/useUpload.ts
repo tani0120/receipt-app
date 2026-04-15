@@ -14,6 +14,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from '@/mocks/services/receiptService'
+import { errorGuideMessage } from '@/shared/validationMessages'
 
 // ===== 型定義（統一） =====
 
@@ -139,7 +140,7 @@ export function useUpload() {
 
   const guideMessage = computed(() => {
     if (!entries.value.length) return ''
-    if (counts.value.error > 0) return `${counts.value.error}件の不備があります。赤いカードをタップして撮り直してください`
+    if (counts.value.error > 0) return errorGuideMessage(counts.value.error)
     return ''
   })
 
