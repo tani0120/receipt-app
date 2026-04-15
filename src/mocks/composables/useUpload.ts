@@ -308,7 +308,6 @@ export function useUpload() {
   return {
     // 状態
     entries,
-    isMobile,
     showComplete,
     confirmedCount,
     retakeTargetIdx,

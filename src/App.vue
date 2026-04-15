@@ -32,6 +32,7 @@ const hideNavBar = computed(() =>
   route.path === '/login'
   || route.path.startsWith('/portal')
   || route.path.startsWith('/guest')
+  || route.path.endsWith('/guest')
 );
 </script>
 

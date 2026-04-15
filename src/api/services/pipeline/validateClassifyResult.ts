@@ -17,7 +17,7 @@ import {
   MSG_ISSUER_MISSING,
   MSG_DATE_MISSING,
   MSG_AMOUNT_MISSING,
-} from '@/shared/validationMessages';
+} from '../../../shared/validationMessages';
 
 // ============================================================
 // 証票種別ごとのバリデーション設定（データ駆動テーブル）
