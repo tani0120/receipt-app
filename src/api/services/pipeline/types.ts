@@ -98,6 +98,13 @@ export interface ClassifyResponse {
   total_amount: number | null;
   fallback_applied: boolean;         // fallbackが適用されたか
   line_items: ClassifyResponseLineItem[];  // 行データ（空配列 = 行抽出なし）
+  /** サーバー側バリデーション結果（フロントはこれを信頼して表示するだけ） */
+  validation: {
+    ok: boolean;                     // バリデーション通過
+    errorReason: string | null;      // NG理由（UIに表示）
+    warning: string | null;          // 警告（OK判定だが注意が必要）
+    supplementary: boolean;          // 補助対象ファイル
+  };
   metadata: {
     duration_ms: number;
     duration_seconds: number;         // 処理時間（秒）
@@ -176,4 +183,65 @@ export interface PipelineLogEntry {
   postprocess: Record<string, unknown>; // 整形後
   error: string | null;
   duration_ms: number;
+}
+
+// ============================================================
+// フロント用型（Vue側が受け取る最終結果）
+// ============================================================
+
+/** classify結果をフロント向けに変換した最終型 */
+export interface ReceiptAnalysisResult {
+  /** バリデーション通過 */
+  ok: boolean;
+  /** 正常時: YYYY-MM-DD */
+  date: string | null;
+  /** 正常時: 合計金額（整数） */
+  amount: number | null;
+  /** 正常時: 取引先名（issuer_nameから変換） */
+  vendor: string | null;
+  /** NGの場合: 却下理由（UIに表示） */
+  errorReason: string | null;
+  /** 補助対象ファイル（CSV/Excel/仕訳対象外 → AI処理不要、drive-selectで人間が確認） */
+  supplementary?: boolean;
+  /** 警告メッセージ（OK判定だが注意が必要。例: 複数証票の可能性） */
+  warning?: string | null;
+  /** 行データ（通帳・N行、レシート・1行、対象外・空） */
+  lineItems?: {
+    line_index: number;
+    date: string | null;
+    description: string;
+    amount: number;
+    direction: 'expense' | 'income';
+    balance: number | null;
+  }[];
+  /** テスト用メトリクス（全項目） */
+  metrics?: {
+    source_type: string;              // 証票種別
+    source_type_confidence: number;   // 種別信頼度（0.0〜1.0）
+    direction: string;                // 仕訳方向（支払/入金/振替/混在）
+    direction_confidence: number;     // 方向信頼度（0.0〜1.0）
+    processing_mode: string;          // 処理モード（自動/手動/除外）
+    classify_reason: string | null;   // 判定根拠
+    description: string | null;       // 摘要
+    fallback_applied: boolean;        // フォールバック適用
+    duration_ms: number;              // 処理時間（ミリ秒）
+    duration_seconds: number;         // 処理時間（秒）
+    prompt_tokens: number;            // 入力トークン数
+    completion_tokens: number;        // 出力トークン数
+    thinking_tokens: number;          // 思考トークン数
+    token_count: number;              // トークン合計（入力+出力）
+    cost_yen: number;                 // 利用料（円）
+    model: string;                    // 使用AIモデル名
+    original_size_kb: number;         // 前処理前サイズ（KB）
+    processed_size_kb: number;        // 前処理後サイズ（KB）
+    preprocess_reduction_pct: number; // 削減率（%）
+  };
+}
+
+/** analyzeReceipt呼出し時のオプション */
+export interface AnalyzeOptions {
+  clientId?: string;
+  role?: string;       // 'staff' | 'guest'（権限）
+  device?: string;     // 'pc' | 'mobile'（端末）
+  documentId?: string; // 証票ID（crypto.randomUUID()で生成。Supabase時はUUID PK）
 }

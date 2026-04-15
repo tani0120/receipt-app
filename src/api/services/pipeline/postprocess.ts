@@ -165,6 +165,8 @@ function buildResponse(
     total_amount: raw.total_amount,
     fallback_applied: fallbackApplied,
     line_items: lineItems,
+    // validation: classify.service.tsでvalidateClassifyResult()の結果で上書きされる
+    validation: { ok: false, errorReason: null, warning: null, supplementary: false },
     metadata,
   };
 }

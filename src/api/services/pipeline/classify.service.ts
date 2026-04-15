@@ -17,6 +17,7 @@ import type {
   PipelineLogEntry,
 } from './types';
 import { postprocessClassify } from './postprocess';
+import { validateClassifyResult } from './validateClassifyResult';
 
 // ============================================================
 // 設定
@@ -338,6 +339,15 @@ export async function classifyImage(req: ClassifyRequest): Promise<ClassifyRespo
 
   // ログ出力
   console.log(`[pipeline/service] classify完了:`, JSON.stringify(logEntry, null, 0));
+
+  // バリデーション（postprocess後に実行）
+  const validation = validateClassifyResult(result);
+  result.validation = {
+    ok: validation.ok,
+    errorReason: validation.errorReason,
+    warning: validation.warning,
+    supplementary: validation.supplementary,
+  };
 
   return result;
 }

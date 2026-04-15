@@ -2,63 +2,25 @@
  * receiptService.ts
  * サービス層: モックモード / 本番モード を VITE_USE_MOCK で切り替える
  * Vue側は常に同じ ReceiptAnalysisResult 型を受け取る
+ *
+ * 設計:
+ *   - バリデーションはサーバー側（classify.service.ts → validateClassifyResult.ts）で実行
+ *   - フロントはAPIレスポンスのvalidation結果を信頼して表示するだけ
+ *   - ReceiptAnalysisResult / AnalyzeOptions → types.ts からimport
+ *   - any排除: ClassifyResponse型でAPIレスポンスを受け取る
+ *   - MIME定数: fileTypes.ts からimport
  */
 
-export interface ReceiptAnalysisResult {
-  ok: boolean;
-  /** 正常時: YYYY-MM-DD */
-  date: string | null;
-  /** 正常時: 合計金額（整数） */
-  amount: number | null;
-  /** 正常時: 取引先名 */
-  vendor: string | null;
-  /** NGの場合: 却下理由（UIに表示） */
-  errorReason: string | null;
-  /** 補助対象ファイル（CSV/Excel/仕訳対象外 → AI処理不要、drive-selectで人間が確認） */
-  supplementary?: boolean;
-  /** 行データ（通帳・N行、レシート・1行、対象外・空） */
-  lineItems?: {
-    line_index: number;
-    date: string | null;
-    description: string;
-    amount: number;
-    direction: "expense" | "income";
-    balance: number | null;
-  }[];
-  /** テスト用メトリクス（全項目） */
-  metrics?: {
-    // AIレスポンス
-    source_type: string; // 証票種別
-    source_type_confidence: number; // 種別信頼度（0.0〜1.0）
-    direction: string; // 仕訳方向（支払/入金/振替/混在）
-    direction_confidence: number; // 方向信頼度（0.0〜1.0）
-    processing_mode: string; // 処理モード（自動/手動/除外）
-    classify_reason: string | null; // 判定根拠
-    description: string | null; // 摘要
-    fallback_applied: boolean; // フォールバック適用
-    // メトリクス
-    duration_ms: number; // 処理時間（ミリ秒）
-    duration_seconds: number; // 処理時間（秒）
-    prompt_tokens: number; // 入力トークン数
-    completion_tokens: number; // 出力トークン数
-    thinking_tokens: number; // 思考トークン数
-    token_count: number; // トークン合計（入力+出力）
-    cost_yen: number; // 利用料（円）
-    model: string; // 使用AIモデル名
-    // 前処理
-    original_size_kb: number; // 前処理前サイズ（KB）
-    processed_size_kb: number; // 前処理後サイズ（KB）
-    preprocess_reduction_pct: number; // 削減率（%）
-  };
-}
+import type {
+  ClassifyResponse,
+  ClassifyResponseLineItem,
+  ReceiptAnalysisResult,
+  AnalyzeOptions,
+} from '@/api/services/pipeline/types';
+import { validateFileType } from '@/shared/fileTypes';
 
-/** analyzeReceipt呼出し時のオプション */
-export interface AnalyzeOptions {
-  clientId?: string;
-  role?: string; // 'staff' | 'guest'
-  device?: string; // 'pc' | 'mobile'
-  documentId?: string; // 証票ID（crypto.randomUUID()で生成。Supabase時はUUID PK）
-}
+// 型の再export（Vue側のimportパスを変更しないための互換性維持）
+export type { ReceiptAnalysisResult, AnalyzeOptions };
 
 // ===== モック用定数 =====
 const MOCK_ERROR_REASONS = [
@@ -107,40 +69,6 @@ async function analyzeReceiptMock(_file: File, _clientId?: string): Promise<Rece
   };
 }
 
-// ===== ファイル形式ホワイトリスト =====
-/** パイプラインで処理可能なMIMEタイプ */
-const ALLOWED_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/heic",
-  "image/heif",
-  "image/webp",
-  "application/pdf",
-] as const;
-
-/** パイプラインで処理可能な拡張子（ドット付き小文字） */
-const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".pdf"] as const;
-
-/** MFインポート用ファイルの拡張子（エラーメッセージ分岐用） */
-const MF_IMPORT_EXTENSIONS = [".csv", ".xlsx", ".xls", ".ods", ".ks", ".mf"] as const;
-
-/**
- * ファイルがパイプライン処理可能か判定する
- * @returns 'ok'=AI処理対象、'supplementary'=補助対象（AI不要）
- */
-function validateFileType(file: File): "ok" | "supplementary" {
-  const ext = ("." + (file.name.split(".").pop() ?? "")).toLowerCase();
-  const mime = file.type.toLowerCase();
-
-  // ホワイトリスト判定（MIMEまたは拡張子のどちらか一致でOK → AI処理対象）
-  const mimeOk = (ALLOWED_MIME_TYPES as readonly string[]).includes(mime);
-  const extOk = (ALLOWED_EXTENSIONS as readonly string[]).includes(ext);
-  if (mimeOk || extOk) return "ok";
-
-  // CSV/Excel/会計ソフト独自形式 or 不明な拡張子 → 補助対象（エラーではない）
-  return "supplementary";
-}
-
 // ===== 本番実装（/api/pipeline/classify） =====
 async function analyzeReceiptReal(file: File, clientId?: string): Promise<ReceiptAnalysisResult> {
   try {
@@ -185,130 +113,51 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       };
     }
 
-    const data = await response.json();
+    // ③ 型安全なレスポンス取得（D-1解消: any排除）
+    const data: ClassifyResponse = await response.json();
 
-    // バリデーション: date/amount のnullチェック
-    const date: string | null = data.date ?? null;
-    const amount: number | null = data.total_amount ?? null;
-    const vendor: string | null = data.issuer_name ?? null;
-
-    const metrics = {
-      // AIレスポンス
-      source_type: data.source_type ?? "unknown",
-      source_type_confidence: data.source_type_confidence ?? 0,
-      direction: data.direction ?? "unknown",
-      direction_confidence: data.direction_confidence ?? 0,
-      processing_mode: data.processing_mode ?? "unknown",
+    // ④ メトリクス構築（型安全: ClassifyResponseのフィールドを直接参照）
+    const metrics: ReceiptAnalysisResult['metrics'] = {
+      source_type: data.source_type,
+      source_type_confidence: data.source_type_confidence,
+      direction: data.direction,
+      direction_confidence: data.direction_confidence,
+      processing_mode: data.processing_mode,
       classify_reason: data.classify_reason ?? null,
       description: data.description ?? null,
-      fallback_applied: data.fallback_applied ?? false,
-      // メトリクス
-      duration_ms: data.metadata?.duration_ms ?? 0,
-      duration_seconds: data.metadata?.duration_seconds ?? 0,
-      prompt_tokens: data.metadata?.prompt_tokens ?? 0,
-      completion_tokens: data.metadata?.completion_tokens ?? 0,
-      thinking_tokens: data.metadata?.thinking_tokens ?? 0,
-      token_count: data.metadata?.token_count ?? 0,
-      cost_yen: data.metadata?.cost_yen ?? 0,
-      model: data.metadata?.model ?? "unknown",
-      // 前処理
-      original_size_kb: data.metadata?.original_size_kb ?? 0,
-      processed_size_kb: data.metadata?.processed_size_kb ?? 0,
-      preprocess_reduction_pct: data.metadata?.preprocess_reduction_pct ?? 0,
+      fallback_applied: data.fallback_applied,
+      duration_ms: data.metadata.duration_ms,
+      duration_seconds: data.metadata.duration_seconds,
+      prompt_tokens: data.metadata.prompt_tokens,
+      completion_tokens: data.metadata.completion_tokens,
+      thinking_tokens: data.metadata.thinking_tokens,
+      token_count: data.metadata.token_count,
+      cost_yen: data.metadata.cost_yen,
+      model: data.metadata.model,
+      original_size_kb: data.metadata.original_size_kb,
+      processed_size_kb: data.metadata.processed_size_kb,
+      preprocess_reduction_pct: data.metadata.preprocess_reduction_pct,
     };
 
-    // 行データ取得
-    const lineItems = (data.line_items ?? []).map((li: Record<string, unknown>, idx: number) => ({
-      line_index: (li.line_index as number) ?? idx + 1,
-      date: (li.date as string) ?? null,
-      description: (li.description as string) ?? "",
-      amount: (li.amount as number) ?? 0,
-      direction: (li.direction as "expense" | "income") ?? "expense",
-      balance: (li.balance as number) ?? null,
+    // ⑤ 行データ取得（D-2解消: ClassifyResponseLineItem型で型安全）
+    const lineItems = data.line_items.map((li: ClassifyResponseLineItem) => ({
+      line_index: li.line_index,
+      date: li.date,
+      description: li.description,
+      amount: li.amount,
+      direction: li.direction,
+      balance: li.balance,
     }));
 
-    // 行データがある証票種別（通帳・クレカ等）はname/amountバリデーションを緩和
-    const multiLineTypes = ["bank_statement", "credit_card", "cash_ledger", "supplementary_doc"];
-    const isMultiLine = multiLineTypes.includes(data.source_type);
-
-    // 証票2枚以上 → NG（証票種別に関係なく最優先で判定）
-    const docCount = (data.document_count as number) ?? 1;
-    if (docCount >= 2) {
-      return {
-        ok: false,
-        date,
-        amount,
-        vendor,
-        errorReason: `この画像には${docCount}枚の証票が写っています。1枚ずつ撮影してください`,
-        lineItems,
-        metrics,
-      };
-    }
-
-    // 除外対象（non_journal / supplementary_doc / other）→ 補助対象として通す（エラーではない）
-    if (
-      data.source_type === "non_journal" ||
-      data.source_type === "supplementary_doc" ||
-      data.source_type === "other"
-    ) {
-      return {
-        ok: true,
-        date,
-        amount,
-        vendor,
-        errorReason: null,
-        supplementary: true,
-        lineItems,
-        metrics,
-      };
-    }
-
-    // 日付なし → NG（通帳・クレカは行データに日付があるので不問）
-    if (!isMultiLine && !date) {
-      return {
-        ok: false,
-        date: null,
-        amount,
-        vendor,
-        errorReason: "日付が読み取れません",
-        lineItems,
-        metrics,
-      };
-    }
-
-    // 金額なしまたは0以下 → NG（通帳・クレカは行データに金額があるので不問）
-    if (!isMultiLine && (amount === null || amount <= 0)) {
-      return {
-        ok: false,
-        date,
-        amount: null,
-        vendor,
-        errorReason: "金額が読み取れません",
-        lineItems,
-        metrics,
-      };
-    }
-
-    // fallback適用時 → NG
-    if (data.fallback_applied) {
-      return {
-        ok: false,
-        date,
-        amount,
-        vendor,
-        errorReason: "AI処理に失敗しました。撮り直してください",
-        lineItems,
-        metrics,
-      };
-    }
-
-    // 全項目OK
+    // ⑥ サーバー側バリデーション結果をそのまま使う（フロントでは判定しない）
     return {
-      ok: true,
-      date,
-      amount,
-      vendor,
-      errorReason: null,
+      ok: data.validation.ok,
+      date: data.date,
+      amount: data.total_amount,
+      vendor: data.issuer_name,
+      errorReason: data.validation.errorReason,
+      supplementary: data.validation.supplementary,
+      warning: data.validation.warning,
       lineItems,
       metrics,
     };
