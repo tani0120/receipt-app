@@ -18,16 +18,16 @@ export const multiDocumentError = (count: number) =>
   `この画像には${count}枚の証票が写っています。1枚ずつ撮影してください`
 
 /** AI処理失敗（fallback_applied） */
-export const MSG_FALLBACK_ERROR = 'AI処理に失敗しました。撮り直してください'
+export const MSG_FALLBACK_ERROR = 'AI処理に失敗しました。判読できない場合は撮り直してください'
 
 /** 取引先が読み取れない */
-export const MSG_ISSUER_MISSING = '取引先が読み取れません。撮り直してください'
+export const MSG_ISSUER_MISSING = '取引先が読み取れません。判読できない場合は撮り直してください'
 
 /** 日付が読み取れない */
-export const MSG_DATE_MISSING = '日付が読み取れません。撮り直してください'
+export const MSG_DATE_MISSING = '日付が読み取れません。判読できない場合は撮り直してください'
 
 /** 金額が読み取れない */
-export const MSG_AMOUNT_MISSING = '金額が読み取れません。撮り直してください'
+export const MSG_AMOUNT_MISSING = '金額が読み取れません。判読できない場合は撮り直してください'
 
 // ============================================================
 // B. 重複チェック文言（フロントUI表示用）
@@ -45,7 +45,7 @@ export const MSG_DUPLICATE_SHORT = 'アップロード済みの可能性'
 
 /** エラーガイド（不備件数を含む） */
 export const errorGuideMessage = (count: number) =>
-  `${count}件の不備があります。赤いカードをタップして撮り直してください`
+  `${count}件のエラーがあります。タップして再撮影 or そのまま送付 を選択してください。（判読できるならそのまま送付でOK）`
 
 // ============================================================
 // D. エラーハンドリング（receiptService.ts で使用）

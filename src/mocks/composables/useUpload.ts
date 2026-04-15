@@ -135,8 +135,13 @@ export function useUpload() {
   )
 
   const canConfirm = computed(() =>
-    entries.value.length > 0 && counts.value.ok === entries.value.length
+    entries.value.length > 0
+    && counts.value.processing === 0
+    && counts.value.queued === 0
   )
+
+  /** エラーが1件以上ある（送付は可能だが警告表示用） */
+  const hasErrors = computed(() => counts.value.error > 0)
 
   const guideMessage = computed(() => {
     if (!entries.value.length) return ''
@@ -147,7 +152,7 @@ export function useUpload() {
   const confirmLabel = computed(() => {
     if (!entries.value.length) return '写真を選んでください'
     if (counts.value.processing || counts.value.queued) return `確認中... (${progressPct.value}%)`
-    if (counts.value.error) return `不備を修正してください（${counts.value.error}件）`
+    if (counts.value.error) return `${entries.value.length}枚を送付する（${counts.value.error}件不備あり）`
     return `${counts.value.ok}枚を送付する`
   })
 
@@ -320,6 +325,7 @@ export function useUpload() {
     counts,
     progressPct,
     canConfirm,
+    hasErrors,
     guideMessage,
     confirmLabel,
     // 操作

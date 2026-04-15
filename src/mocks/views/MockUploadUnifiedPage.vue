@@ -125,14 +125,14 @@
         >
           <div :class="['mobile-drop-zone', dragging ? 'mobile-drop-zone--active' : '']" @click="fileInputRef?.click()">
             <div class="mobile-drop-emoji">📸</div>
-            <p class="mobile-drop-title">写真を選ぶ</p>
+            <p class="mobile-drop-title">スマホで撮影またはファイルを選択</p>
             <p class="mobile-drop-sub">タップして選択 / ドラッグ&ドロップ</p>
             <div class="mobile-drop-btns">
-              <button class="mobile-btn-camera" @click.stop="cameraInputRef?.click()">📷 今撮る</button>
-              <button class="mobile-btn-file" @click.stop="fileInputRef?.click()">🖼 選んで送る</button>
+              <button class="mobile-btn-camera" @click.stop="cameraInputRef?.click()">📷 撮影する</button>
+              <button class="mobile-btn-file" @click.stop="fileInputRef?.click()">🖼 ファイルを選択する</button>
             </div>
           </div>
-          <p class="mobile-drop-hint">200枚まで一括送信できます<br><span>JPEG / PNG / HEIC / WebP / PDF 対応</span></p>
+          <p class="mobile-drop-hint">200枚まで一括送信できます<br><span>JPEG / PNG / PDF / CSV / その他 対応</span></p>
 
           <!-- 説明カード -->
           <div class="mobile-howto">
@@ -171,7 +171,7 @@
               v-for="(r, idx) in entries"
               :key="r.id"
               :class="['mobile-card', cardStatusClass(r)]"
-              @click="r.status === 'error' ? triggerRetakeAndOpen(idx) : undefined"
+              @click="r.status === 'error' ? toggleErrorAction(idx) : undefined"
             >
               <div class="mobile-card-thumb">
                 <template v-if="r.file.type === 'application/pdf'">
@@ -192,12 +192,8 @@
                 <div v-if="r.isDuplicate" class="overlay-dup">⚠ {{ MSG_DUPLICATE_SHORT }}</div>
                 <!-- 警告 -->
                 <div v-if="r.warning && !r.isDuplicate" class="overlay-warn">⚠ {{ r.warning }}</div>
-                <!-- エラー -->
-                <div v-if="r.status === 'error'" class="overlay overlay--error">
-                  <span class="overlay-error-icon">📷</span>
-                  <span class="overlay-error-text">{{ r.errorReason }}</span>
-                  <span class="overlay-error-hint">タップで撮り直し</span>
-                </div>
+                <!-- エラー: ❌バッジのみ（マスキングなし、写真が見える） -->
+                <div v-if="r.status === 'error'" class="overlay-error-badge">❌</div>
               </div>
 
               <!-- カード下部 -->
@@ -216,6 +212,14 @@
                     <p v-if="r.amount" class="card-amount">¥{{ r.amount.toLocaleString() }}</p>
                     <p v-if="r.date" class="card-date">{{ r.date }}</p>
                   </template>
+                </template>
+                <template v-else-if="r.status === 'error'">
+                  <p class="card-error-reason">{{ r.errorReason }}</p>
+                  <!-- エラーカード アクション（タップで展開） -->
+                  <div v-if="errorActionIdx === idx" class="card-error-actions">
+                    <button class="card-action-retake" @click.stop="doRetake(idx)">📷 撮り直す</button>
+                    <button class="card-action-skip" @click.stop="errorActionIdx = null">このまま送付</button>
+                  </div>
                 </template>
                 <template v-else>
                   <p class="card-idx">{{ idx + 1 }}</p>
@@ -244,8 +248,9 @@
         <!-- ガイドメッセージ（モバイルのみCSS表示） -->
         <div class="guide-area mobile-only">
           <transition name="fade">
-            <p v-if="guideMessage" class="guide-msg guide-msg--error">⚠ {{ guideMessage }}</p>
+            <p v-if="guideMessage && !canConfirm" class="guide-msg guide-msg--error">⚠ {{ guideMessage }}</p>
             <p v-else-if="counts.processing" class="guide-msg guide-msg--processing">AIが確認しています。しばらくお待ちください...</p>
+            <p v-else-if="canConfirm && hasErrors" class="guide-msg guide-msg--warn">タップして再撮影 or そのまま送付 を選択してください ⚠️</p>
             <p v-else-if="canConfirm" class="guide-msg guide-msg--ok">全件確認完了！送付できます ✅</p>
           </transition>
         </div>
@@ -254,14 +259,30 @@
           <span>合計: <strong>{{ entries.length }}</strong>件</span>
         </div>
         <!-- 共通: 送付ボタン -->
-        <button
-          :disabled="!canConfirm"
-          :class="['submit-btn', canConfirm ? 'submit-btn--active' : 'submit-btn--disabled']"
-          @click="handleConfirm"
-        >
-          <span class="pc-only">📤 {{ entries.length }}件をアップロード</span>
-          <span class="mobile-only">{{ confirmLabel }}</span>
-        </button>
+        <div class="footer-buttons">
+          <!-- エラーあり: 2ボタン表示 -->
+          <template v-if="hasErrors && canConfirm">
+            <button class="submit-btn submit-btn--retry" @click="scrollToFirstError">
+              <span class="pc-only">🔄 もう一度送付</span>
+              <span class="mobile-only">🔄 撮り直す</span>
+            </button>
+            <button class="submit-btn submit-btn--force" @click="handleConfirm">
+              <span class="pc-only">📤 このまま送付</span>
+              <span class="mobile-only">{{ confirmLabel }}</span>
+            </button>
+          </template>
+          <!-- エラーなし or 処理中: 1ボタン -->
+          <template v-else>
+            <button
+              :disabled="!canConfirm"
+              :class="['submit-btn', canConfirm ? 'submit-btn--active' : 'submit-btn--disabled']"
+              @click="handleConfirm"
+            >
+              <span class="pc-only">📤 {{ entries.length }}件をアップロード</span>
+              <span class="mobile-only">{{ confirmLabel }}</span>
+            </button>
+          </template>
+        </div>
       </div>
     </footer>
 
@@ -305,7 +326,7 @@ import { MSG_DUPLICATE_DETAIL, MSG_DUPLICATE_SHORT } from '@/shared/validationMe
 const {
   entries, showComplete, confirmedCount,
   selectedId, selectedUrl, selectedEntry, selectFile,
-  counts, progressPct, canConfirm, guideMessage, confirmLabel,
+  counts, progressPct, canConfirm, hasErrors, guideMessage, confirmLabel,
   addFiles, removeFile, triggerRetake, handleRetake, handleConfirm, resetAll,
   clientId,
 } = useUpload()
@@ -324,8 +345,8 @@ const dragging = ref(false)
 const howToItems = [
   { step: 1, icon: '📸', title: '写真を選ぶ', desc: 'カメラロールから複数まとめて選択できます' },
   { step: 2, icon: '🤖', title: '自動チェック', desc: 'AIが日付・金額・店名を確認します（約2秒/枚）' },
-  { step: 3, icon: '📷', title: '不備は撮り直し', desc: '赤いカードをタップして再撮影するだけ' },
-  { step: 4, icon: '✅', title: '全件OKで送付', desc: '緑になったら「送付する」ボタンを押して完了' },
+  { step: 3, icon: '📷', title: '不備は撮り直し可', desc: '赤いカードをタップで再撮影、またはそのまま送付' },
+  { step: 4, icon: '✅', title: '確認が終わったら送付', desc: '「送付する」ボタンを押して完了' },
 ]
 
 // イベントハンドラ（PC/モバイル統合）
@@ -347,9 +368,27 @@ const handleDrop = (e: DragEvent) => {
   if (files.length) addFiles(files)
 }
 
-const triggerRetakeAndOpen = (idx: number) => {
+
+// エラーカードのアクション表示制御
+const errorActionIdx = ref<number | null>(null)
+
+const toggleErrorAction = (idx: number) => {
+  errorActionIdx.value = errorActionIdx.value === idx ? null : idx
+}
+
+const doRetake = (idx: number) => {
+  errorActionIdx.value = null
   triggerRetake(idx)
   retakeInputRef.value?.click()
+}
+
+// エラーカードまでスクロール（「もう一度送付」ボタン用）
+const scrollToFirstError = () => {
+  const firstErrorIdx = entries.value.findIndex(e => e.status === 'error')
+  if (firstErrorIdx >= 0) {
+    const cards = document.querySelectorAll('.mobile-card')
+    cards[firstErrorIdx]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 }
 
 const handleRetakeInput = (e: Event) => {
@@ -678,7 +717,7 @@ const cardStatusClass = (r: UploadEntry) => {
   background: #fff; border: 2px solid #e5e7eb;
   transition: all 0.3s; user-select: none;
 }
-.mobile-card--error { border-color: #f87171; box-shadow: 0 4px 12px rgba(239,68,68,0.15); cursor: pointer; }
+.mobile-card--error { border-color: #f87171; border-width: 4px; box-shadow: 0 4px 12px rgba(239,68,68,0.15); cursor: pointer; }
 .mobile-card--error:active { transform: scale(0.95); }
 .mobile-card--ok { border-color: #34d399; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 
@@ -695,10 +734,8 @@ const cardStatusClass = (r: UploadEntry) => {
 .overlay-ok-badge { position: absolute; top: 4px; right: 4px; font-size: clamp(14px, 4vw, 18px); filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
 .overlay-dup { position: absolute; top: 0; left: 0; right: 0; background: rgba(245,158,11,0.9); padding: 2px 4px; text-align: center; font-size: clamp(6px, 1.8vw, 8px); color: #fff; font-weight: 700; }
 .overlay-warn { position: absolute; top: 0; left: 0; right: 0; background: rgba(249,115,22,0.9); padding: 2px 4px; text-align: center; font-size: clamp(6px, 1.8vw, 8px); color: #fff; font-weight: 700; }
-.overlay--error { background: rgba(220,38,38,0.75); padding: clamp(4px, 1.5vw, 8px); gap: 4px; }
-.overlay-error-icon { font-size: clamp(16px, 5vw, 24px); }
-.overlay-error-text { font-size: clamp(6px, 1.8vw, 8px); font-weight: 700; color: #fff; text-align: center; line-height: 1.3; }
-.overlay-error-hint { font-size: clamp(6px, 1.8vw, 8px); background: rgba(255,255,255,0.3); color: #fff; padding: 2px 8px; border-radius: 999px; margin-top: 2px; }
+/* エラー: マスキングなし、❌バッジのみ */
+.overlay-error-badge { position: absolute; top: 4px; right: 4px; font-size: clamp(14px, 4vw, 18px); filter: drop-shadow(0 1px 3px rgba(220,38,38,0.5)); }
 
 /* カード下部 */
 .mobile-card-footer { padding: clamp(4px, 1vw, 6px); }
@@ -710,6 +747,31 @@ const cardStatusClass = (r: UploadEntry) => {
 .card-amount { font-size: clamp(6px, 1.8vw, 8px); color: #059669; margin: 0; }
 .card-date { font-size: clamp(5px, 1.5vw, 7px); color: #9ca3af; margin: 0; }
 .card-idx { font-size: clamp(6px, 1.8vw, 8px); color: #d1d5db; margin: 0; }
+
+/* エラーカード下部: エラー理由 + アクション */
+.card-error-reason {
+  font-size: clamp(6px, 1.8vw, 8px); font-weight: 700; color: #dc2626;
+  margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-error-actions {
+  display: flex; flex-direction: column; gap: 3px; margin-top: 4px;
+  animation: fadeIn 0.2s ease;
+}
+.card-action-retake {
+  font-size: clamp(6px, 1.6vw, 7px); font-weight: 700;
+  background: #3b82f6; color: #fff;
+  border: none; border-radius: 6px; padding: 3px 6px;
+  cursor: pointer; font-family: inherit; transition: all 0.2s;
+}
+.card-action-retake:active { transform: scale(0.95); }
+.card-action-skip {
+  font-size: clamp(5px, 1.4vw, 6px); font-weight: 600;
+  background: transparent; color: #9ca3af;
+  border: 1px solid #e5e7eb; border-radius: 6px; padding: 2px 6px;
+  cursor: pointer; font-family: inherit; transition: all 0.2s;
+}
+.card-action-skip:active { transform: scale(0.95); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
 /* 追加ボタン */
 .mobile-add-card {
@@ -732,10 +794,12 @@ const cardStatusClass = (r: UploadEntry) => {
 .guide-msg--error { color: #ef4444; }
 .guide-msg--processing { color: #d97706; animation: pulse 1.5s infinite; }
 .guide-msg--ok { color: #059669; }
+.guide-msg--warn { color: #d97706; }
 
 /* ===== 送付ボタン ===== */
+.footer-buttons { display: flex; gap: clamp(6px, 1.5vw, 8px); width: 100%; }
 .submit-btn {
-  width: 100%; padding: clamp(10px, 2.5vw, 14px);
+  flex: 1; padding: clamp(10px, 2.5vw, 14px);
   border-radius: clamp(10px, 2vw, 14px); border: none;
   font-size: clamp(12px, 3vw, 14px); font-weight: 700;
   cursor: pointer; font-family: inherit;
@@ -748,6 +812,18 @@ const cardStatusClass = (r: UploadEntry) => {
 .submit-btn--active:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.4); }
 .submit-btn--active:active { transform: scale(0.97); }
 .submit-btn--disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+.submit-btn--retry {
+  background: #fff; color: #3b82f6;
+  border: 2px solid #3b82f6;
+}
+.submit-btn--retry:hover { background: #eff6ff; }
+.submit-btn--retry:active { transform: scale(0.97); }
+.submit-btn--force {
+  background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff;
+  box-shadow: 0 4px 14px rgba(245,158,11,0.3);
+}
+.submit-btn--force:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(245,158,11,0.4); }
+.submit-btn--force:active { transform: scale(0.97); }
 
 /* ===== モーダル ===== */
 .modal-overlay {
