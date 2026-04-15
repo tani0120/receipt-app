@@ -65,14 +65,16 @@
 | invoice_received | 受取請求書 | 必須 | 必須 | 必須 |
 | tax_payment | 納付書 | 必須 | 必須 | 必須 |
 | journal_voucher | 振替伝票 | 必須 | 必須 | 必須 |
-| bank_statement | 通帳 | 必須 | 必須 | 必須 |
-| credit_card | クレカ明細 | 必須 | 必須 | 必須 |
+| bank_statement | 通帳 | 不問 | 不問 | 不問 |
+| credit_card | クレカ明細 | 不問 | 不問 | 不問 |
 | cash_ledger | 現金出納帳 | 必須 | 必須 | 必須 |
 | supplementary_doc | 補助書類 | 不問 | 不問 | 不問 |
 | invoice_issued | 発行請求書 | 必須 | 必須 | 必須 |
 | receipt_issued | 発行領収書 | 必須 | 必須 | 必須 |
 | non_journal | 仕訳対象外 | 不問 | 不問 | 不問 |
 | other | その他 | 不問 | 不問 | 不問 |
+
+> **通帳・クレカ明細が不問の理由**: 行データ（line_items）がN件返れば十分。銀行名・カード会社名はStep 3（取引先照合）で特定する。アップロード時点でNG強制すると、行データが正常に読めているのに撮り直しを要求する誤判定が発生する。
 
 ---
 
