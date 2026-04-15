@@ -233,7 +233,28 @@ export const routes: RouteRecordRaw[] = [
   { path: '/client/settings/tax/:clientId', redirect: (to) => `/client-settings/tax/${to.params.clientId}` },
   { path: '/settings/accounts/:clientId', redirect: (to) => `/client-settings/accounts/${to.params.clientId}` },
   { path: '/settings/tax/:clientId', redirect: (to) => `/client-settings/tax/${to.params.clientId}` },
-  // アップロード分岐セレクター（PC用/スマホ用の選択画面）
+  // ===== 統合アップロード（レスポンシブ自動判定） =====
+  // セレクター（統合版: 1ボタン化）
+  {
+    path: '/upload-v2/:clientId',
+    name: 'UploadSelectorUnified',
+    component: () => import('@/mocks/views/MockUploadSelectorUnifiedPage.vue'),
+  },
+  // スタッフ用アップロード（PC/モバイル自動判定）
+  {
+    path: '/upload/:clientId/staff',
+    name: 'UploadStaff',
+    component: () => import('@/mocks/views/MockUploadUnifiedPage.vue'),
+  },
+  // ゲスト用アップロード（PC/モバイル自動判定）
+  {
+    path: '/upload/:clientId/guest',
+    name: 'UploadGuest',
+    component: () => import('@/mocks/views/MockUploadUnifiedPage.vue'),
+  },
+
+  // ===== 旧アップロード（既存URL互換・削除予定） =====
+  // アップロード分岐セレクター（旧版: PC/スマホ2ボタン）
   {
     path: '/upload/:clientId',
     name: 'UploadSelector',
