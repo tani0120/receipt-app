@@ -43,7 +43,12 @@
             @dragleave.prevent="dragging = false"
             @drop.prevent="handleDrop"
           >
-            <div class="drop-icon-circle"><i class="drop-icon-emoji">📸</i></div>
+            <div class="drop-icon-circle">
+              <svg class="drop-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 16V8m0 0l3 3m-3-3l-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 16.7428C21.2215 15.734 22 14.2079 22 12.5C22 9.46243 19.5376 7 16.5 7C16.2815 7 16.0771 6.886 15.9661 6.69774C14.6621 4.48484 12.2544 3 9.5 3C5.35786 3 2 6.35786 2 10.5C2 12.5661 2.83545 14.4371 4.18695 15.7935" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
             <h3 class="drop-title">ファイルをここにドラッグ＆ドロップ</h3>
             <p class="drop-or">または</p>
             <button class="drop-select-btn" @click.stop="fileInputRef?.click()">ファイルを選択</button>
@@ -124,12 +129,17 @@
           @drop.prevent="handleDrop"
         >
           <div :class="['mobile-drop-zone', dragging ? 'mobile-drop-zone--active' : '']" @click="fileInputRef?.click()">
-            <div class="mobile-drop-emoji">📸</div>
+            <div class="mobile-drop-icon-wrap">
+              <svg class="mobile-drop-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 16V8m0 0l3 3m-3-3l-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 16.7428C21.2215 15.734 22 14.2079 22 12.5C22 9.46243 19.5376 7 16.5 7C16.2815 7 16.0771 6.886 15.9661 6.69774C14.6621 4.48484 12.2544 3 9.5 3C5.35786 3 2 6.35786 2 10.5C2 12.5661 2.83545 14.4371 4.18695 15.7935" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
             <p class="mobile-drop-title">スマホで撮影またはファイルを選択</p>
             <p class="mobile-drop-sub">タップして選択 / ドラッグ&ドロップ</p>
             <div class="mobile-drop-btns">
-              <button class="mobile-btn-camera" @click.stop="cameraInputRef?.click()">📷 撮影する</button>
-              <button class="mobile-btn-file" @click.stop="fileInputRef?.click()">🖼 ファイルを選択する</button>
+              <button class="mobile-btn-camera" @click.stop="cameraInputRef?.click()">▶ 撮影する</button>
+              <button class="mobile-btn-file" @click.stop="fileInputRef?.click()">📁 ファイルを選択する</button>
             </div>
           </div>
           <p class="mobile-drop-hint">200枚まで一括送信できます<br><span>JPEG / PNG / PDF / CSV / その他 対応</span></p>
@@ -343,9 +353,9 @@ const dragging = ref(false)
 
 // 説明カード
 const howToItems = [
-  { step: 1, icon: '📸', title: '写真を選ぶ', desc: 'カメラロールから複数まとめて選択できます' },
-  { step: 2, icon: '🤖', title: '自動チェック', desc: 'AIが日付・金額・店名を確認します（約2秒/枚）' },
-  { step: 3, icon: '📷', title: '不備は撮り直し可', desc: '赤いカードをタップで再撮影、またはそのまま送付' },
+  { step: 1, icon: '📸', title: '資料を自動チェック用に送付', desc: 'スマホ撮影またはファイルを選択して送付' },
+  { step: 2, icon: '🤖', title: 'システムが自動チェック', desc: '自動で日付・金額・摘要を確認します' },
+  { step: 3, icon: '📷', title: 'エラー内容を1枚づつ確認', desc: 'タップして再撮影 or そのまま送付 を選択' },
   { step: 4, icon: '✅', title: '確認が終わったら送付', desc: '「送付する」ボタンを押して完了' },
 ]
 
@@ -489,23 +499,44 @@ const cardStatusClass = (r: UploadEntry) => {
 /* ===== PC: ドロップゾーン ===== */
 .drop-zone {
   margin: clamp(12px, 2vw, 16px);
-  border: 2px dashed #d1d5db;
-  border-radius: clamp(8px, 1.5vw, 12px);
-  padding: clamp(20px, 4vw, 32px) clamp(12px, 2vw, 16px);
+  border: 2px dashed #c7d2fe;
+  border-radius: clamp(12px, 2vw, 16px);
+  padding: clamp(28px, 5vw, 44px) clamp(12px, 2vw, 16px);
   text-align: center;
-  transition: all 0.25s ease;
-  background: #fff;
+  transition: all 0.3s ease;
+  background: linear-gradient(145deg, #f8faff 0%, #eef2ff 50%, #f0f7ff 100%);
+  position: relative;
 }
-.drop-zone:hover { border-color: #93c5fd; background: #f0f7ff; }
-.drop-zone--active { border-color: #22c55e; background: #f0fdf4; }
+.drop-zone::before {
+  content: ''; position: absolute; inset: -2px;
+  border-radius: inherit; padding: 2px;
+  background: linear-gradient(135deg, #818cf8, #60a5fa, #34d399);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+}
+.drop-zone:hover::before { opacity: 1; }
+.drop-zone:hover { border-color: transparent; background: linear-gradient(145deg, #eef2ff 0%, #e0e7ff 50%, #eff6ff 100%); box-shadow: 0 8px 32px rgba(99,102,241,0.1); }
+.drop-zone--active { border-color: #22c55e; background: linear-gradient(145deg, #f0fdf4, #dcfce7); }
+.drop-zone--active::before { opacity: 0; }
 .drop-icon-circle {
-  width: clamp(48px, 6vw, 64px); height: clamp(48px, 6vw, 64px);
-  border-radius: 50%; background: #f1f5f9;
+  width: clamp(56px, 7vw, 72px); height: clamp(56px, 7vw, 72px);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #818cf8 0%, #60a5fa 100%);
   display: flex; align-items: center; justify-content: center;
-  margin: 0 auto clamp(10px, 1.5vw, 14px);
-  transition: transform 0.3s ease, background 0.3s ease;
+  margin: 0 auto clamp(12px, 2vw, 16px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.25);
+  animation: floatIcon 3s ease-in-out infinite;
 }
-.drop-zone:hover .drop-icon-circle { transform: scale(1.08); background: #e0f2fe; }
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.drop-zone:hover .drop-icon-circle { transform: scale(1.1); box-shadow: 0 8px 24px rgba(99,102,241,0.35); }
+.drop-icon-svg { width: clamp(24px, 3.5vw, 32px); height: clamp(24px, 3.5vw, 32px); color: #fff; }
 .drop-icon-emoji { font-size: clamp(20px, 3vw, 26px); font-style: normal; line-height: 1; }
 .drop-title { font-size: clamp(12px, 1.5vw, 14px); font-weight: 700; color: #374151; margin: 0 0 4px; }
 .drop-or { font-size: clamp(10px, 1.2vw, 11px); color: #9ca3af; margin: 0 0 12px; }
@@ -654,12 +685,23 @@ const cardStatusClass = (r: UploadEntry) => {
 .mobile-empty { margin-top: clamp(20px, 6vw, 40px); display: flex; flex-direction: column; align-items: center; }
 .mobile-drop-zone {
   width: 100%; max-width: 360px;
-  border: 2px dashed #d1d5db; border-radius: clamp(16px, 4vw, 24px);
-  padding: clamp(24px, 6vw, 40px) clamp(12px, 3vw, 16px);
-  text-align: center; transition: all 0.2s; cursor: pointer; background: #fff;
+  border: 2px dashed #c7d2fe; border-radius: clamp(20px, 5vw, 28px);
+  padding: clamp(28px, 7vw, 44px) clamp(16px, 4vw, 20px);
+  text-align: center; transition: all 0.3s; cursor: pointer;
+  background: linear-gradient(145deg, #f8faff 0%, #eef2ff 50%, #f0f7ff 100%);
 }
-.mobile-drop-zone:hover { border-color: #93c5fd; background: #eff6ff; }
-.mobile-drop-zone--active { border-color: #22c55e; background: #f0fdf4; }
+.mobile-drop-zone:hover { border-color: #818cf8; background: linear-gradient(145deg, #eef2ff, #e0e7ff); }
+.mobile-drop-zone--active { border-color: #22c55e; background: linear-gradient(145deg, #f0fdf4, #dcfce7); }
+.mobile-drop-icon-wrap {
+  width: clamp(56px, 16vw, 72px); height: clamp(56px, 16vw, 72px);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #818cf8 0%, #60a5fa 100%);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto clamp(12px, 3vw, 18px);
+  box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+  animation: floatIcon 3s ease-in-out infinite;
+}
+.mobile-drop-svg { width: clamp(28px, 8vw, 36px); height: clamp(28px, 8vw, 36px); color: #fff; }
 .mobile-drop-emoji { font-size: clamp(36px, 10vw, 48px); margin-bottom: clamp(10px, 3vw, 16px); }
 .mobile-drop-title { font-size: clamp(14px, 3.5vw, 16px); font-weight: 700; color: #374151; margin: 0; }
 .mobile-drop-sub { font-size: clamp(10px, 2.5vw, 12px); color: #9ca3af; margin: 8px 0 0; }
