@@ -55,6 +55,7 @@ export interface ClassifyRequest {
   mimeType: string;    // image/jpeg, image/png, application/pdf 等
   clientId: string;    // 顧問先ID
   filename?: string;   // 元ファイル名（ログ用）
+  fileHash?: string;   // SHA-256ハッシュ（重複チェック用。フロントで計算）
 }
 
 /** Geminiが返すclassify生レスポンス */
@@ -104,6 +105,7 @@ export interface ClassifyResponse {
     errorReason: string | null;      // NG理由（UIに表示）
     warning: string | null;          // 警告（OK判定だが注意が必要）
     supplementary: boolean;          // 補助対象ファイル
+    isDuplicate: boolean;            // 重複検出（SHA-256一致）
   };
   metadata: {
     duration_ms: number;
@@ -205,6 +207,8 @@ export interface ReceiptAnalysisResult {
   supplementary?: boolean;
   /** 警告メッセージ（OK判定だが注意が必要。例: 複数証票の可能性） */
   warning?: string | null;
+  /** SHA-256重複検出（サーバー側で照合） */
+  isDuplicate?: boolean;
   /** 行データ（通帳・N行、レシート・1行、対象外・空） */
   lineItems?: {
     line_index: number;

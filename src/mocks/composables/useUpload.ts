@@ -4,7 +4,7 @@
  * 責務:
  *   - ファイル追加 / 削除 / 撮り直し
  *   - classify API呼出 + 結果マッピング
- *   - SHA-256重複チェック
+ *   - classify API呼出 + 結果マッピング（重複チェック含む）
  *   - スライディングウィンドウ（同時4件）
  *   - プレビュー選択
  *   - 送付確定 / リセット
@@ -106,7 +106,6 @@ export function useUpload() {
 
   // ===== 状態 =====
   const entries = ref<UploadEntry[]>([])
-  const knownHashes = ref<Set<string>>(new Set())
   const showComplete = ref(false)
   const confirmedCount = ref(0)
 
@@ -174,30 +173,8 @@ export function useUpload() {
     }))
     entries.value.push(...newEntries)
     processQueue()
-    // バックグラウンドでSHA-256ハッシュ計算
-    newEntries.forEach(e => {
-      const proxy = entries.value.find(x => x.id === e.id)
-      if (proxy) computeHash(proxy)
-    })
   }
 
-  // ===== SHA-256 重複チェック =====
-  const computeHash = async (item: UploadEntry) => {
-    try {
-      const buffer = await item.file.arrayBuffer()
-      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
-      const hashHex = Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2, '0')).join('')
-      if (knownHashes.value.has(hashHex)) {
-        item.isDuplicate = true
-      } else {
-        knownHashes.value.add(hashHex)
-        item.hash = hashHex
-      }
-    } catch {
-      // ハッシュ計算失敗は無視
-    }
-  }
 
   // ===== キュー処理 =====
   const processQueue = () => {
@@ -230,6 +207,7 @@ export function useUpload() {
       e.warning = result.warning ?? null
       e.metrics = result.metrics ?? null
       e.lineItems = result.lineItems ?? null
+      e.isDuplicate = result.isDuplicate ?? false
     } else {
       e.status = 'error'
       e.errorReason = result.errorReason
@@ -312,7 +290,6 @@ export function useUpload() {
   const resetAll = () => {
     entries.value.forEach(e => URL.revokeObjectURL(e.previewUrl))
     entries.value = []
-    knownHashes.value = new Set()
     showComplete.value = false
     selectedId.value = null
     if (selectedUrl.value) {

@@ -23,6 +23,9 @@ import { validateClassifyResult } from './validateClassifyResult';
 // 設定
 // ============================================================
 
+// SHA-256重複チェック用（メモリ内Set。Supabase移行時はDB照合に差替）
+const knownFileHashes = new Set<string>();
+
 // シングルトン（リクエスト毎に生成しない）
 let _ai: GoogleGenAI | null = null;
 
@@ -214,6 +217,17 @@ export async function classifyImage(req: ClassifyRequest): Promise<ClassifyRespo
   const startTime = Date.now();
   const filename = req.filename ?? 'unknown';
 
+  // ①-0 SHA-256重複チェック（フロントから送られたハッシュをサーバー側Setで照合）
+  let isDuplicate = false;
+  if (req.fileHash) {
+    if (knownFileHashes.has(req.fileHash)) {
+      isDuplicate = true;
+      console.log(`[pipeline/service] 重複検出: ${filename} (hash=${req.fileHash.slice(0, 12)}...)`);
+    } else {
+      knownFileHashes.add(req.fileHash);
+    }
+  }
+
   // ① 前処理（image_preprocessor.ts に委譲）
   const inputBuffer = Buffer.from(req.image, 'base64');
   const originalSize = inputBuffer.length;
@@ -347,6 +361,7 @@ export async function classifyImage(req: ClassifyRequest): Promise<ClassifyRespo
     errorReason: validation.errorReason,
     warning: validation.warning,
     supplementary: validation.supplementary,
+    isDuplicate,
   };
 
   return result;

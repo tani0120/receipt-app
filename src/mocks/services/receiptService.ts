@@ -85,11 +85,21 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       };
     }
 
-    // ② ファイルをbase64に変換
+    // ② ファイルをbase64に変換 + SHA-256ハッシュ計算
     const buffer = await file.arrayBuffer();
     const base64 = btoa(
       new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ""),
     );
+
+    // SHA-256ハッシュ計算（サーバー側重複チェック用）
+    let fileHash: string | undefined;
+    try {
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      fileHash = Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+      // ハッシュ計算失敗は無視（重複チェックをスキップ）
+    }
 
     // API呼び出し
     const response = await fetch("/api/pipeline/classify", {
@@ -100,6 +110,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
         mimeType: file.type || "image/jpeg",
         clientId: clientId ?? "unknown",
         filename: file.name,
+        fileHash,
       }),
     });
 
@@ -158,6 +169,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       errorReason: data.validation.errorReason,
       supplementary: data.validation.supplementary,
       warning: data.validation.warning,
+      isDuplicate: data.validation.isDuplicate,
       lineItems,
       metrics,
     };
