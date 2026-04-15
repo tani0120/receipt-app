@@ -48,7 +48,7 @@
                 <!-- classify結果バッジ -->
                 <!-- 重複バッジ -->
                 <div v-if="f.isDuplicate" class="classify-badges">
-                  <span class="badge badge--warning">⚠ 重複の可能性があります</span>
+                  <span class="badge badge--warning">⚠ すでにアップロードしたファイルの可能性。削除してください。</span>
                 </div>
                 <div class="classify-badges" v-if="f.classifyStatus && !f.isDuplicate">
                   <span v-if="f.classifyStatus === 'loading'" class="badge badge--loading">⏳ 分類中...</span>

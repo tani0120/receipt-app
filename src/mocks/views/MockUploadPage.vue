@@ -172,7 +172,7 @@
               <!-- オーバーレイ: 重複警告 -->
               <div v-if="r.isDuplicate"
                 class="absolute top-0 left-0 right-0 bg-amber-500/90 px-1 py-0.5 flex items-center justify-center">
-                <span class="text-[8px] text-white font-bold">⚠ 重複の可能性</span>
+                <span class="text-[8px] text-white font-bold">⚠ アップロード済みの可能性</span>
               </div>
 
               <!-- オーバーレイ: 複数証票警告 -->

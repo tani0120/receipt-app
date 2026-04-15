@@ -107,17 +107,17 @@ export function validateClassifyResult(data: ClassifyResponse): ValidationResult
 
   // 取引先チェック
   if (config.requireIssuer && (!data.issuer_name || data.issuer_name.trim() === '')) {
-    return { ok: false, errorReason: '取引先が読み取れません', supplementary: false, warning: null };
+    return { ok: false, errorReason: '取引先が読み取れません。撮り直してください', supplementary: false, warning: null };
   }
 
   // 日付チェック
   if (config.requireDate && !data.date) {
-    return { ok: false, errorReason: '日付が読み取れません', supplementary: false, warning: null };
+    return { ok: false, errorReason: '日付が読み取れません。撮り直してください', supplementary: false, warning: null };
   }
 
   // 金額チェック
   if (config.requireAmount && (data.total_amount === null || data.total_amount <= 0)) {
-    return { ok: false, errorReason: '金額が読み取れません', supplementary: false, warning: null };
+    return { ok: false, errorReason: '金額が読み取れません。撮り直してください', supplementary: false, warning: null };
   }
 
   // 全チェック通過 → OK

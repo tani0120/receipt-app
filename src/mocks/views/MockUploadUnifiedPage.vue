@@ -61,7 +61,7 @@
                   <p class="file-size">{{ formatSize(f.file.size) }}</p>
                   <!-- 重複バッジ -->
                   <div v-if="f.isDuplicate" class="classify-badges">
-                    <span class="badge badge--warning">⚠ 重複の可能性があります</span>
+                    <span class="badge badge--warning">⚠ すでにアップロードしたファイルの可能性。削除してください。</span>
                   </div>
                   <div class="classify-badges" v-if="classifyBadgeVisible(f)">
                     <span v-if="f.status === 'uploading' || f.status === 'analyzing'" class="badge badge--loading">⏳ 分類中...</span>
@@ -189,7 +189,7 @@
                 <!-- OK -->
                 <div v-if="r.status === 'ok'" class="overlay-ok-badge">✅</div>
                 <!-- 重複 -->
-                <div v-if="r.isDuplicate" class="overlay-dup">⚠ 重複の可能性</div>
+                <div v-if="r.isDuplicate" class="overlay-dup">⚠ アップロード済みの可能性</div>
                 <!-- 警告 -->
                 <div v-if="r.warning && !r.isDuplicate" class="overlay-warn">⚠ {{ r.warning }}</div>
                 <!-- エラー -->

@@ -116,7 +116,7 @@
               <p class="text-[12px] font-semibold text-gray-800 truncate">{{ f.file.name }}</p>
               <p class="text-[10px] text-gray-400 mt-0.5">{{ formatSize(f.file.size) }}</p>
               <!-- 重複警告 -->
-              <p v-if="f.isDuplicate" class="text-[9px] text-amber-600 font-bold mt-0.5">⚠ 重複の可能性</p>
+              <p v-if="f.isDuplicate" class="text-[9px] text-amber-600 font-bold mt-0.5">⚠ アップロード済みの可能性</p>
             </div>
 
             <!-- ステータス -->
