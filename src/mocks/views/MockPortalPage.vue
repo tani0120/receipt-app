@@ -123,7 +123,7 @@ const goUpload = () => {
 .portal-main {
   max-width: 520px;
   margin: 0 auto;
-  padding: 48px 24px 40px;
+  padding: clamp(16px, 4vw, 24px) clamp(16px, 4vw, 24px) 40px;
 }
 
 /* ===== ヒーローセクション ===== */
@@ -408,14 +408,14 @@ const goUpload = () => {
 }
 
 .tip-text {
-  font-size: 13px;
+  font-size: clamp(12px, 3vw, 14px);
   font-weight: 600;
   color: #334155;
   line-height: 1.5;
 }
 
 .tip-note {
-  font-size: 11px;
+  font-size: clamp(10px, 2.5vw, 12px);
   color: #ef4444;
   font-weight: 500;
 }
@@ -424,7 +424,7 @@ const goUpload = () => {
   margin: 18px 0 0;
   padding-top: 14px;
   border-top: 1px solid rgba(226, 232, 240, 0.5);
-  font-size: 11px;
+  font-size: clamp(10px, 2.5vw, 12px);
   color: #64748b;
   line-height: 1.7;
   text-align: center;

@@ -1,16 +1,18 @@
 <template>
-  <!-- ポータル共通ヘッダー（左上ロゴ＋右上社名バッジ） -->
-  <div class="portal-header-wrap">
-    <!-- 左上ロゴ -->
-    <div class="portal-logo">
-      <img src="/sugu-suru-logo.png" alt="sugu-suru" class="portal-logo-img" />
+  <!-- ポータル共通ヘッダー（左ロゴ＋右社名バッジ） -->
+  <nav class="portal-header-bar">
+    <div class="portal-header-inner">
+      <!-- 左: ロゴ -->
+      <div class="portal-logo">
+        <img src="/sugu-suru-logo.png" alt="sugu-suru" class="portal-logo-img" />
+      </div>
+      <!-- 右: 社名バッジ -->
+      <div class="portal-company-badge" v-if="clientName">
+        <span class="portal-company-icon">🏢</span>
+        <span class="portal-company-name">{{ clientName }}</span>
+      </div>
     </div>
-    <!-- 右上社名バッジ -->
-    <div class="portal-company-badge" v-if="clientName">
-      <span class="portal-company-icon">🏢</span>
-      <span class="portal-company-name">{{ clientName }}</span>
-    </div>
-  </div>
+  </nav>
 </template>
 
 <script setup lang="ts">
@@ -21,42 +23,49 @@ defineProps<{
 </script>
 
 <style scoped>
-/* ===== ポータル共通ヘッダー ===== */
-.portal-header-wrap {
-  position: absolute;
-  top: 0; left: 0; right: 0;
+/* ===== ポータル共通ヘッダー（フロー内ナビバー） ===== */
+.portal-header-bar {
+  width: 100%;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
   z-index: 30;
-  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.portal-header-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 24px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-/* 左上ロゴ: top:20px left:24px（全ページ統一） */
-.portal-logo {
-  position: absolute;
-  top: 20px; left: 24px;
-  pointer-events: auto;
-}
+/* 左: ロゴ */
 .portal-logo-img {
-  height: 32px;
+  height: clamp(24px, 4vw, 32px);
   opacity: 0.85;
+  display: block;
 }
 
-/* 右上社名バッジ: top:20px right:24px（全ページ統一） */
+/* 右: 社名バッジ */
 .portal-company-badge {
-  position: absolute;
-  top: 20px; right: 24px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 16px;
+  gap: clamp(4px, 1vw, 6px);
+  padding: clamp(4px, 1vw, 6px) clamp(10px, 2vw, 16px);
   border-radius: 20px;
   background: #eff6ff;
   border: 1px solid #bfdbfe;
-  pointer-events: auto;
+  flex-shrink: 0;
 }
 .portal-company-icon {
-  font-size: 14px; line-height: 1;
+  font-size: clamp(11px, 2vw, 14px); line-height: 1;
 }
 .portal-company-name {
-  font-size: 13px; font-weight: 700; color: #1e40af;
+  font-size: clamp(10px, 2.5vw, 13px); font-weight: 700; color: #1e40af;
+  white-space: nowrap;
 }
 </style>

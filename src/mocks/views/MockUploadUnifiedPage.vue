@@ -1,26 +1,8 @@
 <template>
   <div class="upload-unified" style="font-family: 'Noto Sans JP', sans-serif">
 
-    <!-- ===== PC: PortalHeader（CSS制御） ===== -->
-    <div class="pc-only">
-      <PortalHeader :clientName="clientName" />
-    </div>
-
-    <!-- ===== モバイル: ヘッダー（CSS制御） ===== -->
-    <header class="mobile-header mobile-only">
-      <div class="mobile-header-inner">
-        <div class="mobile-header-left">
-          <h1 class="mobile-header-title">📄 領収書を送る</h1>
-          <p class="mobile-header-sub">{{ clientId }} ／ {{ monthLabel }}</p>
-        </div>
-        <div class="mobile-header-badges">
-          <span v-if="counts.ok" class="m-badge m-badge--ok">✓ {{ counts.ok }}</span>
-          <span v-if="counts.error" class="m-badge m-badge--error">✗ {{ counts.error }}</span>
-          <span v-if="counts.processing" class="m-badge m-badge--processing">⏳ {{ counts.processing }}</span>
-          <span v-if="entries.length" class="m-badge m-badge--total">計 {{ entries.length }} 枚</span>
-        </div>
-      </div>
-    </header>
+    <!-- ===== 共通ヘッダー ===== -->
+    <PortalHeader :clientName="clientName" />
 
     <!-- ===== PC: 件数バッジ（CSS制御） ===== -->
     <div class="header-stats pc-only" v-if="entries.length > 0">
@@ -146,6 +128,7 @@
 
           <!-- 説明カード -->
           <div class="mobile-howto">
+            <p class="mobile-howto-section-title"><span>ファイル共有の流れ</span></p>
             <div v-for="item in howToItems" :key="item.step" class="mobile-howto-card">
               <span class="mobile-howto-icon">{{ item.icon }}</span>
               <div>
@@ -353,10 +336,10 @@ const dragging = ref(false)
 
 // 説明カード
 const howToItems = [
-  { step: 1, icon: '📸', title: '資料を自動チェック用に送付', desc: 'スマホ撮影またはファイルを選択して送付' },
-  { step: 2, icon: '🤖', title: 'システムが自動チェック', desc: '自動で日付・金額・摘要を確認します' },
-  { step: 3, icon: '📷', title: 'エラー内容を1枚づつ確認', desc: 'タップして再撮影 or そのまま送付 を選択' },
-  { step: 4, icon: '✅', title: '確認が終わったら送付', desc: '「送付する」ボタンを押して完了' },
+  { step: 1, icon: '①', title: '資料を自動チェック用に送付', desc: 'スマホ撮影またはファイルを選択して送付' },
+  { step: 2, icon: '②', title: 'システムが自動チェック', desc: '自動で日付・金額・摘要を確認します' },
+  { step: 3, icon: '③', title: 'エラー内容を1枚づつ確認', desc: 'タップして再撮影 or そのまま送付 を選択' },
+  { step: 4, icon: '④', title: '確認が終わったら送付', desc: '「送付する」ボタンを押して完了' },
 ]
 
 // イベントハンドラ（PC/モバイル統合）
@@ -658,21 +641,8 @@ const cardStatusClass = (r: UploadEntry) => {
 .footer-summary { display: flex; gap: 16px; font-size: clamp(10px, 1.3vw, 12px); color: #64748b; }
 .footer-summary strong { color: #1e293b; font-weight: 800; }
 
-/* ===== モバイル: ヘッダー ===== */
-.mobile-header {
-  background: #fff; border-bottom: 1px solid #e5e7eb;
-  position: sticky; top: 0; z-index: 20;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-.mobile-header-inner {
-  max-width: 640px; margin: 0 auto;
-  padding: clamp(8px, 2vw, 12px) clamp(12px, 2vw, 16px);
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-}
-.mobile-header-left { min-width: 0; }
-.mobile-header-title { font-size: clamp(13px, 3.5vw, 15px); font-weight: 700; color: #1f2937; margin: 0; }
-.mobile-header-sub { font-size: clamp(9px, 2.5vw, 11px); color: #9ca3af; margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mobile-header-badges { display: flex; gap: 4px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+/* ===== モバイル: バッジ（進捗表示用） ===== */
 .m-badge { font-size: clamp(8px, 2.2vw, 10px); font-weight: 700; padding: 2px 8px; border-radius: 10px; }
 .m-badge--ok { background: #d1fae5; color: #065f46; }
 .m-badge--error { background: #fee2e2; color: #dc2626; }
@@ -703,22 +673,22 @@ const cardStatusClass = (r: UploadEntry) => {
 .mobile-drop-emoji { font-size: clamp(36px, 10vw, 48px); margin-bottom: clamp(10px, 3vw, 16px); }
 .mobile-drop-title { font-size: clamp(14px, 3.5vw, 16px); font-weight: 700; color: #374151; margin: 0; }
 .mobile-drop-sub { font-size: clamp(10px, 2.5vw, 12px); color: #9ca3af; margin: 8px 0 0; }
-.mobile-drop-btns { display: flex; gap: clamp(8px, 2vw, 12px); justify-content: center; margin-top: clamp(16px, 4vw, 24px); }
+.mobile-drop-btns { display: flex; gap: clamp(8px, 2vw, 12px); justify-content: center; margin-top: clamp(16px, 4vw, 24px); width: 100%; max-width: 320px; margin-left: auto; margin-right: auto; }
 .mobile-btn-camera {
-  display: flex; align-items: center; gap: 6px;
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
   background: #2563eb; color: #fff;
   font-size: clamp(11px, 3vw, 13px); font-weight: 700;
-  padding: clamp(8px, 2vw, 12px) clamp(14px, 4vw, 20px);
+  padding: clamp(8px, 2vw, 12px) 0;
   border-radius: 16px; border: none; cursor: pointer;
   box-shadow: 0 2px 8px rgba(37,99,235,0.3); transition: all 0.2s; font-family: inherit;
 }
 .mobile-btn-camera:hover { background: #1d4ed8; }
 .mobile-btn-camera:active { transform: scale(0.95); }
 .mobile-btn-file {
-  display: flex; align-items: center; gap: 6px;
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
   background: #fff; color: #2563eb; border: 2px solid #2563eb;
   font-size: clamp(11px, 3vw, 13px); font-weight: 700;
-  padding: clamp(8px, 2vw, 12px) clamp(14px, 4vw, 20px);
+  padding: clamp(8px, 2vw, 12px) 0;
   border-radius: 16px; cursor: pointer;
   transition: all 0.2s; font-family: inherit;
 }
@@ -729,10 +699,23 @@ const cardStatusClass = (r: UploadEntry) => {
 
 /* 説明カード */
 .mobile-howto { margin-top: clamp(20px, 6vw, 32px); width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: clamp(8px, 2vw, 12px); }
-.mobile-howto-card { display: flex; align-items: flex-start; gap: 12px; background: #fff; border-radius: 16px; padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 16px); box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.mobile-howto-icon { font-size: clamp(16px, 4vw, 20px); flex-shrink: 0; margin-top: 2px; }
-.mobile-howto-title { font-size: clamp(10px, 2.5vw, 12px); font-weight: 700; color: #374151; margin: 0; }
-.mobile-howto-desc { font-size: clamp(9px, 2.2vw, 11px); color: #9ca3af; margin: 2px 0 0; }
+.mobile-howto-section-title {
+  font-size: clamp(13px, 3.5vw, 15px); font-weight: 700; color: #4f46e5;
+  margin: 0 0 4px; text-align: center;
+  display: flex; align-items: center; gap: 12px;
+}
+.mobile-howto-section-title::before,
+.mobile-howto-section-title::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, #c7d2fe, transparent);
+}
+.mobile-howto-section-title span {
+  white-space: nowrap;
+}
+.mobile-howto-card { display: flex; align-items: flex-start; gap: 12px; background: #fff; border-radius: 16px; padding: clamp(10px, 3vw, 14px) clamp(12px, 3vw, 16px); box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.mobile-howto-icon { font-size: clamp(16px, 4vw, 20px); flex-shrink: 0; margin-top: 2px; color: #6366f1; font-weight: 700; }
+.mobile-howto-title { font-size: clamp(12px, 3vw, 14px); font-weight: 700; color: #374151; margin: 0; }
+.mobile-howto-desc { font-size: clamp(11px, 2.8vw, 13px); color: #6b7280; margin: 2px 0 0; }
 
 /* ===== モバイル: 進捗 ===== */
 .mobile-progress { margin-bottom: clamp(10px, 3vw, 16px); background: #fff; border-radius: 16px; padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 16px); box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
@@ -903,7 +886,6 @@ const cardStatusClass = (r: UploadEntry) => {
 /* モバイルファースト: デフォルトはモバイル表示 */
 .upload-unified .pc-only { display: none !important; }
 .upload-unified .mobile-only { display: block !important; }
-.upload-unified header.mobile-only { display: block !important; }
 .upload-unified .guide-area.mobile-only { display: block !important; }
 
 /* PC表示: 641px以上 */
@@ -913,7 +895,6 @@ const cardStatusClass = (r: UploadEntry) => {
   .upload-unified .header-stats.pc-only { display: flex !important; }
   .upload-unified .footer-summary.pc-only { display: flex !important; }
   .upload-unified .mobile-only { display: none !important; }
-  .upload-unified header.mobile-only { display: none !important; }
   .upload-unified .mobile-section.mobile-only { display: none !important; }
   .upload-unified .guide-area.mobile-only { display: none !important; }
   /* submit-btn内のspan制御 */
