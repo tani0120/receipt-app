@@ -173,13 +173,52 @@ export function useUpload() {
     return `${counts.value.ok}枚を送付する`
   })
 
+  // ===== サムネイル生成（画像をcanvasで縮小。メモリ節約） =====
+  const THUMB_MAX = 200 // サムネイル最大幅/高さ（px）
+  const generateImageThumbnail = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        // 縮小率計算
+        const scale = Math.min(THUMB_MAX / img.width, THUMB_MAX / img.height, 1)
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h)
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+          URL.revokeObjectURL(url) // 元のBlobURL解放
+          resolve(dataUrl)
+        } else {
+          resolve(url) // canvas取得失敗時はBlobURLそのまま
+        }
+      }
+      img.onerror = () => {
+        resolve(url) // 画像読み込み失敗時はBlobURLそのまま
+      }
+      img.src = url
+    })
+  }
+
+  // プレースホルダーSVG（サムネイル生成中の表示用）
+  const PLACEHOLDER_SVG = 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160" fill="none">'
+    + '<rect width="120" height="160" fill="#f1f5f9"/>'
+    + '<text x="60" y="85" text-anchor="middle" font-size="14" fill="#94a3b8">読込中...</text>'
+    + '</svg>',
+  )
+
   // ===== ファイル追加 =====
   const addFiles = (fileList: File[]) => {
     const newEntries: UploadEntry[] = fileList.map(f => ({
       id: `f-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       documentId: generateUUID(),
       file: f,
-      previewUrl: URL.createObjectURL(f),
+      previewUrl: PLACEHOLDER_SVG, // 初期表示はプレースホルダー（メモリ節約）
       status: 'queued' as const,
       errorReason: null,
       date: null,
@@ -196,7 +235,7 @@ export function useUpload() {
     }))
     entries.value.push(...newEntries)
 
-    // PDFファイルのサムネイルをバックグラウンドで生成
+    // サムネイルをバックグラウンドで1枚ずつ生成（メモリ節約のため逐次処理）
     const PDF_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160" fill="none">'
       + '<rect width="120" height="160" fill="#f1f5f9"/>'
@@ -204,18 +243,26 @@ export function useUpload() {
       + '<text x="60" y="100" text-anchor="middle" font-size="16" font-weight="bold" fill="#dc2626">PDF</text>'
       + '</svg>',
     )
-    for (const entry of newEntries) {
-      if (entry.file.type === 'application/pdf') {
-        generatePdfThumbnail(entry.file).then(dataUrl => {
-          URL.revokeObjectURL(entry.previewUrl)
-          entry.previewUrl = dataUrl
-        }).catch(() => {
-          // サムネイル生成失敗時はPDFアイコンfallback
-          URL.revokeObjectURL(entry.previewUrl)
-          entry.previewUrl = PDF_FALLBACK
-        })
+
+    // 逐次処理（同時にデコードしない）
+    const generateThumbnails = async () => {
+      for (const entry of newEntries) {
+        if (entry.file.type === 'application/pdf') {
+          try {
+            entry.previewUrl = await generatePdfThumbnail(entry.file)
+          } catch {
+            entry.previewUrl = PDF_FALLBACK
+          }
+        } else if (entry.file.type.startsWith('image/')) {
+          try {
+            entry.previewUrl = await generateImageThumbnail(entry.file)
+          } catch {
+            entry.previewUrl = URL.createObjectURL(entry.file) // fallback
+          }
+        }
       }
     }
+    generateThumbnails() // 非同期で逐次実行（awaitしない）
 
     processQueue()
   }
@@ -330,7 +377,7 @@ export function useUpload() {
       id: old.id,
       documentId: generateUUID(),
       file,
-      previewUrl: URL.createObjectURL(file),
+      previewUrl: PLACEHOLDER_SVG, // サムネイル生成は非同期
       status: 'queued',
       errorReason: null,
       date: null,
@@ -344,6 +391,14 @@ export function useUpload() {
       lineItems: null,
       isDuplicate: false,
       hash: null,
+    }
+
+    // 撮り直しファイルのサムネイル非同期生成
+    const newEntry = entries.value[idx]
+    if (newEntry && file.type.startsWith('image/')) {
+      generateImageThumbnail(file).then(dataUrl => {
+        newEntry.previewUrl = dataUrl
+      }).catch(() => {})
     }
 
     retakeTargetIdx.value = null
