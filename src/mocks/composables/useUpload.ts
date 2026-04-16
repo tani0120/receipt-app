@@ -176,7 +176,7 @@ export function useUpload() {
   // ===== サムネイル生成（画像をcanvasで縮小。メモリ節約） =====
   const THUMB_MAX = 200 // サムネイル最大幅/高さ（px）
   const generateImageThumbnail = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const url = URL.createObjectURL(file)
       const img = new Image()
       img.onload = () => {
@@ -191,18 +191,54 @@ export function useUpload() {
         if (ctx) {
           ctx.drawImage(img, 0, 0, w, h)
           const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
-          URL.revokeObjectURL(url) // 元のBlobURL解放
+          // メモリ解放（BlobURL + canvas + Image）
+          URL.revokeObjectURL(url)
+          canvas.width = 0
+          canvas.height = 0
           resolve(dataUrl)
         } else {
-          resolve(url) // canvas取得失敗時はBlobURLそのまま
+          resolve(url)
         }
       }
       img.onerror = () => {
-        resolve(url) // 画像読み込み失敗時はBlobURLそのまま
+        resolve(url)
       }
       img.src = url
     })
   }
+
+  // サムネイル生成キュー（複数回addFilesでも同時に1枚だけデコード）
+  const thumbQueue: Array<{ entry: UploadEntry; file: File }> = []
+  let thumbProcessing = false
+  const processThumbnailQueue = async () => {
+    if (thumbProcessing) return // 既に処理中なら何もしない（前の処理が完了すれば自動で次へ）
+    thumbProcessing = true
+    while (thumbQueue.length > 0) {
+      const item = thumbQueue.shift()!
+      if (item.file.type === 'application/pdf') {
+        try {
+          item.entry.previewUrl = await generatePdfThumbnail(item.file)
+        } catch {
+          item.entry.previewUrl = PDF_FALLBACK
+        }
+      } else if (item.file.type.startsWith('image/')) {
+        try {
+          item.entry.previewUrl = await generateImageThumbnail(item.file)
+        } catch {
+          // fallbackはプレースホルダーのまま
+        }
+      }
+    }
+    thumbProcessing = false
+  }
+
+  const PDF_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160" fill="none">'
+    + '<rect width="120" height="160" fill="#f1f5f9"/>'
+    + '<text x="60" y="70" text-anchor="middle" font-size="40">📄</text>'
+    + '<text x="60" y="100" text-anchor="middle" font-size="16" font-weight="bold" fill="#dc2626">PDF</text>'
+    + '</svg>',
+  )
 
   // プレースホルダーSVG（サムネイル生成中の表示用）
   const PLACEHOLDER_SVG = 'data:image/svg+xml,' + encodeURIComponent(
@@ -235,34 +271,11 @@ export function useUpload() {
     }))
     entries.value.push(...newEntries)
 
-    // サムネイルをバックグラウンドで1枚ずつ生成（メモリ節約のため逐次処理）
-    const PDF_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160" fill="none">'
-      + '<rect width="120" height="160" fill="#f1f5f9"/>'
-      + '<text x="60" y="70" text-anchor="middle" font-size="40">📄</text>'
-      + '<text x="60" y="100" text-anchor="middle" font-size="16" font-weight="bold" fill="#dc2626">PDF</text>'
-      + '</svg>',
-    )
-
-    // 逐次処理（同時にデコードしない）
-    const generateThumbnails = async () => {
-      for (const entry of newEntries) {
-        if (entry.file.type === 'application/pdf') {
-          try {
-            entry.previewUrl = await generatePdfThumbnail(entry.file)
-          } catch {
-            entry.previewUrl = PDF_FALLBACK
-          }
-        } else if (entry.file.type.startsWith('image/')) {
-          try {
-            entry.previewUrl = await generateImageThumbnail(entry.file)
-          } catch {
-            entry.previewUrl = URL.createObjectURL(entry.file) // fallback
-          }
-        }
-      }
+    // サムネイルキューに追加（同時デコードは常に1枚）
+    for (const entry of newEntries) {
+      thumbQueue.push({ entry, file: entry.file })
     }
-    generateThumbnails() // 非同期で逐次実行（awaitしない）
+    processThumbnailQueue() // キュー処理開始（既に処理中なら何もしない）
 
     processQueue()
   }
@@ -393,12 +406,11 @@ export function useUpload() {
       hash: null,
     }
 
-    // 撮り直しファイルのサムネイル非同期生成
+    // 撮り直しファイルのサムネイルをキューに追加
     const newEntry = entries.value[idx]
-    if (newEntry && file.type.startsWith('image/')) {
-      generateImageThumbnail(file).then(dataUrl => {
-        newEntry.previewUrl = dataUrl
-      }).catch(() => {})
+    if (newEntry) {
+      thumbQueue.push({ entry: newEntry, file })
+      processThumbnailQueue()
     }
 
     retakeTargetIdx.value = null
