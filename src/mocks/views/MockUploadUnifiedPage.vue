@@ -427,7 +427,7 @@ const cardStatusClass = (r: UploadEntry) => {
 
 /* ===== CSS変数 ===== */
 :root {
-  --bp-mobile: 768px;
+  --bp-mobile: 640px;
 }
 
 /* レスポンシブ表示制御は非scopedの<style>ブロックで定義（子コンポーネント対応） */
@@ -441,7 +441,7 @@ const cardStatusClass = (r: UploadEntry) => {
   flex-direction: column;
   position: relative;
 }
-@media (min-width: 768px) {
+@media (min-width: 641px) {
   .upload-unified { background: #fff; }
 }
 .hidden-input { display: none; }
@@ -453,7 +453,7 @@ const cardStatusClass = (r: UploadEntry) => {
   max-width: 640px; margin: 0 auto;
   padding: clamp(8px, 2vw, 12px) clamp(8px, 2vw, 12px) 160px;
 }
-@media (min-width: 768px) {
+@media (min-width: 641px) {
   .main-content {
     max-width: 1440px;
     padding: clamp(60px, 8vw, 80px) clamp(16px, 3vw, 24px) 120px;
@@ -467,9 +467,7 @@ const cardStatusClass = (r: UploadEntry) => {
   gap: clamp(16px, 2vw, 20px);
   align-items: start;
 }
-@media (max-width: 960px) and (min-width: 768px) {
-  .two-col { grid-template-columns: 1fr; }
-}
+
 
 /* ===== PC: 件数バッジ ===== */
 .header-stats {
@@ -649,7 +647,7 @@ const cardStatusClass = (r: UploadEntry) => {
 .footer-inner {
   max-width: 640px; margin: 0 auto;
 }
-@media (min-width: 768px) {
+@media (min-width: 641px) {
   .footer-bar { border-top-color: #e2e8f0; box-shadow: 0 -4px 20px rgba(0,0,0,0.06); }
   .footer-inner {
     max-width: 1440px;
@@ -752,7 +750,7 @@ const cardStatusClass = (r: UploadEntry) => {
 
 /* ===== モバイル: カードグリッド ===== */
 .mobile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(6px, 1.5vw, 8px); }
-@media (min-width: 480px) and (max-width: 767px) { .mobile-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 480px) and (max-width: 640px) { .mobile-grid { grid-template-columns: repeat(4, 1fr); } }
 
 .mobile-card {
   position: relative; border-radius: clamp(12px, 3vw, 16px); overflow: hidden;
@@ -908,8 +906,8 @@ const cardStatusClass = (r: UploadEntry) => {
 .upload-unified header.mobile-only { display: block !important; }
 .upload-unified .guide-area.mobile-only { display: block !important; }
 
-/* PC表示: 768px以上 */
-@media (min-width: 768px) {
+/* PC表示: 641px以上 */
+@media (min-width: 641px) {
   .upload-unified .pc-only { display: block !important; }
   .upload-unified .two-col.pc-only { display: grid !important; }
   .upload-unified .header-stats.pc-only { display: flex !important; }
@@ -923,7 +921,7 @@ const cardStatusClass = (r: UploadEntry) => {
   .upload-unified .submit-btn span.mobile-only { display: none !important; }
 }
 /* モバイル時のsubmit-btn内span */
-@media (max-width: 767px) {
+@media (max-width: 640px) {
   .upload-unified .submit-btn span.pc-only { display: none !important; }
   .upload-unified .submit-btn span.mobile-only { display: inline !important; }
 }

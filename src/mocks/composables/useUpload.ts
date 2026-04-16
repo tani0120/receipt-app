@@ -83,8 +83,9 @@ export const fileIconClass = (name: string): string => {
 
 // ===== composable本体 =====
 
-const CONCURRENCY = 4
-const MOBILE_BREAKPOINT = 768
+const CONCURRENCY_PC = 4      // PC（641px以上）同時処理数
+const CONCURRENCY_MOBILE = 2   // モバイル（640px以下）同時処理数
+const MOBILE_BREAKPOINT = 640
 
 export function useUpload() {
   const route = useRoute()
@@ -184,7 +185,8 @@ export function useUpload() {
 
   // ===== キュー処理 =====
   const processQueue = () => {
-    const available = CONCURRENCY - counts.value.processing
+    const concurrency = isMobile.value ? CONCURRENCY_MOBILE : CONCURRENCY_PC
+    const available = concurrency - counts.value.processing
     if (available <= 0) return
     entries.value
       .filter(e => e.status === 'queued')
