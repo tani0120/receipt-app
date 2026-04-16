@@ -292,7 +292,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
 import PortalHeader from '@/mocks/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
 import {
@@ -311,12 +311,17 @@ const {
   entries, sortedEntries, showComplete, confirmedCount,
   selectedId, selectedUrl, selectedEntry, selectFile,
   counts, progressPct, canConfirm, hasErrors, guideMessage, confirmLabel,
-  addFiles, removeFile, triggerRetake, handleRetake, handleConfirm, resetAll,
+  addFiles, removeFile, triggerRetake, handleRetake, handleConfirm, resetAll, cleanup,
   clientId,
 } = useUpload()
 
 const { clients } = useClients()
 const clientName = clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId
+
+// 画面遷移時にサーバー側の重複ハッシュ記録をクリア（DL-038）
+onBeforeUnmount(() => {
+  cleanup()
+})
 
 
 // refs

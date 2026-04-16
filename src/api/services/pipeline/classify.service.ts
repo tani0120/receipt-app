@@ -26,6 +26,11 @@ import { validateClassifyResult } from './validateClassifyResult';
 // SHA-256重複チェック用（メモリ内Set。Supabase移行時はDB照合に差替）
 const knownFileHashes = new Set<string>();
 
+/** 重複ハッシュ記録をクリア（テスト・リセット用） */
+export function clearKnownHashes(): void {
+  knownFileHashes.clear();
+}
+
 // シングルトン（リクエスト毎に生成しない）
 let _ai: GoogleGenAI | null = null;
 

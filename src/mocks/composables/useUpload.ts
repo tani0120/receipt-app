@@ -358,6 +358,13 @@ export function useUpload() {
     showComplete.value = true
   }
 
+  /** サーバー側の重複ハッシュ記録をクリア（DL-038） */
+  const clearServerHashes = () => {
+    fetch('/api/pipeline/hashes', { method: 'DELETE' }).catch(() => {
+      // サーバー未起動時は無視（モックモードでは不要）
+    })
+  }
+
   const resetAll = () => {
     entries.value.forEach(e => URL.revokeObjectURL(e.previewUrl))
     entries.value = []
@@ -367,6 +374,12 @@ export function useUpload() {
       URL.revokeObjectURL(selectedUrl.value)
       selectedUrl.value = null
     }
+    clearServerHashes()
+  }
+
+  /** 画面遷移時のクリーンアップ（onBeforeUnmountで呼出） */
+  const cleanup = () => {
+    clearServerHashes()
   }
 
   // 完了済みのみソート + 未完了は末尾に追加順固定（表示用。元配列は変更しない）
@@ -444,6 +457,7 @@ export function useUpload() {
     handleRetake,
     handleConfirm,
     resetAll,
+    cleanup,
     // コンテキスト
     clientId,
     role,

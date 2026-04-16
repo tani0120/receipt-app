@@ -2458,3 +2458,34 @@ SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE（導入部）
 | classify.service.ts | thinkingBudget:2048設定、スキーマにdocument_count_reason追加、プロンプトに最優先タスク追加 |
 | types.ts            | ClassifyRawResponse/ClassifyResponseにdocument_count_reason追加                            |
 | postprocess.ts      | document_count_reasonの伝播処理追加                                                        |
+
+---
+
+## DL-038 | 重複ハッシュ記録のライフサイクル管理（2026-04-16）
+
+**状態**: 設計確定・A案実装済み
+
+### 問題
+
+アップロードUI画面遷移時にフロント側の`entries`（画像データ）は破棄されるが、サーバー側の`knownFileHashes`（SHA-256重複判定用Set）はメモリに残存する。再度同じページで同じファイルをアップロードすると、サーバーが「重複」と誤判定する。
+
+### 選択肢と決定
+
+| 案 | 内容 | メリット | デメリット | 採用 |
+|---|---|---|---|---|
+| **A（当面）** | 画面遷移時（`onBeforeUnmount`）+ `resetAll`時にDELETE APIでサーバー側記録をクリア | シンプル | 複数ユーザー同時利用時に他ユーザーの記録も消える | ✅ 採用 |
+| **B（Supabase移行時）** | セッションID（clientId等）ごとにSetを分割管理。またはdocumentsテーブルでハッシュ照合 | マルチユーザー安全 | サーバー側改修が必要 | 移行時に実施 |
+| C | TTL付きSet（30分で自動消去） | 放置しても自然消滅 | 30分以内の再アップロードで重複誤判定 | ❌ |
+
+### A案の実装（現行）
+
+- **APIエンドポイント**: `DELETE /api/pipeline/hashes` → `clearKnownHashes()` 呼出
+- **フロント呼出タイミング**: `onBeforeUnmount` + `resetAll` の2箇所
+- **対象ファイル**: `classify.service.ts`（clearKnownHashes関数）、`pipeline.ts`（DELETEルート）
+
+### B案への移行パス（Supabase移行時）
+
+- `documents`テーブルの`file_hash`カラムで重複照合に差し替え
+- `knownFileHashes`（メモリ内Set）を廃止
+- クライアントごと・セッションごとに自然にスコープが分離される
+- DELETEエンドポイントは不要になる（DBライフサイクルで管理）

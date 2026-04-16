@@ -10,7 +10,7 @@
  */
 
 import { Hono } from 'hono';
-import { classifyImage } from '../services/pipeline/classify.service';
+import { classifyImage, clearKnownHashes } from '../services/pipeline/classify.service';
 import type { ClassifyRequest } from '../services/pipeline/types';
 
 const app = new Hono();
@@ -79,6 +79,16 @@ app.get('/health', (c) => {
     project: process.env['VERTEX_PROJECT_ID'] ?? '(未設定)',
     model: process.env['VERTEX_MODEL_ID'] ?? 'gemini-2.5-flash-preview-04-17',
   });
+});
+
+// ============================================================
+// DELETE /hashes — 重複ハッシュ記録クリア（テスト・リセット用）
+// ============================================================
+
+app.delete('/hashes', (c) => {
+  clearKnownHashes();
+  console.log('[pipeline/route] 重複ハッシュ記録をクリアしました');
+  return c.json({ status: 'ok', message: '重複ハッシュ記録をクリアしました' });
 });
 
 export default app;
