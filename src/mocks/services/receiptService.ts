@@ -159,7 +159,21 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       balance: li.balance,
     }));
 
-    // ⑥ サーバー側バリデーション結果をそのまま使う（フロントでは判定しない）
+    // ⑥ サーバー側バリデーション結果を使う
+    // ただし fallback_applied=true（AI失敗）の場合はエラーとして返す
+    // 正規の補助対象（CSV等のファイル形式判定）とは区別する
+    if (data.fallback_applied) {
+      return {
+        ok: false,
+        date: null,
+        amount: null,
+        vendor: null,
+        errorReason: 'AI分析に失敗しました（サーバー側エラー）',
+        metrics,
+        fileHash,
+      };
+    }
+
     return {
       ok: data.validation.ok,
       date: data.date,
@@ -171,6 +185,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       isDuplicate: data.validation.isDuplicate,
       lineItems,
       metrics,
+      fileHash,
     };
   } catch (err) {
     return {

@@ -13,6 +13,7 @@
 
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
+import { generatePdfThumbnail } from '@/mocks/utils/pdfThumbnail'
 import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from '@/mocks/services/receiptService'
 import { errorGuideMessage } from '@/shared/validationMessages'
 
@@ -79,6 +80,21 @@ export const fileIconClass = (name: string): string => {
   if (isImageFile(name)) return 'file-icon--img'
   if (/\.(csv|xlsx?)$/i.test(name)) return 'file-icon--csv'
   return 'file-icon--img'
+}
+
+// UUID生成（HTTP環境フォールバック付き）
+// crypto.randomUUID()はSecure Context（HTTPS/localhost）でのみ動作
+// LAN IP経由のHTTPアクセスでは使えないためフォールバック
+function generateUUID(): string {
+  try {
+    return crypto.randomUUID()
+  } catch {
+    // Secure Context外: Math.randomベースのv4 UUID
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = (Math.random() * 16) | 0
+      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+    })
+  }
 }
 
 // ===== composable本体 =====
@@ -152,8 +168,8 @@ export function useUpload() {
 
   const confirmLabel = computed(() => {
     if (!entries.value.length) return '写真を選んでください'
-    if (counts.value.processing || counts.value.queued) return `確認中... (${progressPct.value}%)`
-    if (counts.value.error) return `${entries.value.length}枚を送付する（${counts.value.error}件不備あり）`
+    if (counts.value.processing || counts.value.queued) return `アップロード中... (${progressPct.value}%)`
+    if (counts.value.error) return `${entries.value.length}枚を送付する（${counts.value.error}件エラーあり）`
     return `${counts.value.ok}枚を送付する`
   })
 
@@ -161,7 +177,7 @@ export function useUpload() {
   const addFiles = (fileList: File[]) => {
     const newEntries: UploadEntry[] = fileList.map(f => ({
       id: `f-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      documentId: crypto.randomUUID(),
+      documentId: generateUUID(),
       file: f,
       previewUrl: URL.createObjectURL(f),
       status: 'queued' as const,
@@ -179,6 +195,28 @@ export function useUpload() {
       hash: null,
     }))
     entries.value.push(...newEntries)
+
+    // PDFファイルのサムネイルをバックグラウンドで生成
+    const PDF_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160" fill="none">'
+      + '<rect width="120" height="160" fill="#f1f5f9"/>'
+      + '<text x="60" y="70" text-anchor="middle" font-size="40">📄</text>'
+      + '<text x="60" y="100" text-anchor="middle" font-size="16" font-weight="bold" fill="#dc2626">PDF</text>'
+      + '</svg>',
+    )
+    for (const entry of newEntries) {
+      if (entry.file.type === 'application/pdf') {
+        generatePdfThumbnail(entry.file).then(dataUrl => {
+          URL.revokeObjectURL(entry.previewUrl)
+          entry.previewUrl = dataUrl
+        }).catch(() => {
+          // サムネイル生成失敗時はPDFアイコンfallback
+          URL.revokeObjectURL(entry.previewUrl)
+          entry.previewUrl = PDF_FALLBACK
+        })
+      }
+    }
+
     processQueue()
   }
 
@@ -198,38 +236,63 @@ export function useUpload() {
     const e = entries.value.find(x => x.id === id)
     if (!e) return
 
+    // デバッグ情報（スマホ実機でも確認可能にする）
+    const fileDebug = `[${e.file.name}] mime=${e.file.type || '(空)'} size=${e.file.size}`
+    console.log(`[processOne開始] ${fileDebug}`)
+
     e.status = 'uploading'
     await new Promise(res => setTimeout(res, 300 + Math.random() * 400))
 
-    e.status = 'analyzing'
-    const result = await analyzeReceipt(e.file, { ...analyzeOpts.value, documentId: e.documentId })
+    try {
+      e.status = 'analyzing'
+      const result = await analyzeReceipt(e.file, { ...analyzeOpts.value, documentId: e.documentId })
 
-    if (result.ok) {
-      e.status = 'ok'
-      e.date = result.date
-      e.amount = result.amount
-      e.vendor = result.vendor
-      e.supplementary = result.supplementary ?? false
-      e.sourceType = result.metrics?.source_type ?? null
-      e.lineItemsCount = result.lineItems?.length ?? 0
-      e.warning = result.warning ?? null
-      e.metrics = result.metrics ?? null
-      e.lineItems = result.lineItems ?? null
-      e.isDuplicate = result.isDuplicate ?? false
-    } else {
+      console.log(`[processOne完了] ${fileDebug} ok=${result.ok} supplementary=${result.supplementary ?? false}`)
+
+      if (result.ok) {
+        e.status = 'ok'
+        e.date = result.date
+        e.amount = result.amount
+        e.vendor = result.vendor
+        e.supplementary = result.supplementary ?? false
+        e.sourceType = result.metrics?.source_type ?? null
+        e.lineItemsCount = result.lineItems?.length ?? 0
+        e.warning = result.warning ?? null
+        e.metrics = result.metrics ?? null
+        e.lineItems = result.lineItems ?? null
+        e.isDuplicate = result.isDuplicate ?? false
+        e.hash = result.fileHash ?? null
+
+        // 補助対象の場合、デバッグ用にerrorReasonにファイル情報を保存
+        if (e.supplementary) {
+          e.errorReason = `参照資料 ${fileDebug}`
+        }
+      } else {
+        e.status = 'error'
+        e.errorReason = result.errorReason
+        e.sourceType = result.metrics?.source_type ?? null
+        e.warning = result.warning ?? null
+        e.metrics = result.metrics ?? null
+        e.lineItems = null
+        e.hash = result.fileHash ?? null
+      }
+    } catch (err) {
+      // API通信失敗・例外時（スマホで確認可能）
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[processOne例外] ${fileDebug} error=${msg}`)
       e.status = 'error'
-      e.errorReason = result.errorReason
-      e.sourceType = result.metrics?.source_type ?? null
-      e.warning = result.warning ?? null
-      e.metrics = result.metrics ?? null
-      e.lineItems = null
+      e.errorReason = `通信エラー: ${msg} ${fileDebug}`
     }
 
     processQueue()
   }
 
   // ===== ファイル削除 =====
-  const removeFile = (idx: number) => {
+  const removeFile = (idOrIdx: number | string) => {
+    // id（文字列）またはインデックス（数値）で削除
+    const idx = typeof idOrIdx === 'string'
+      ? entries.value.findIndex(e => e.id === idOrIdx)
+      : idOrIdx
     const removed = entries.value[idx]
     if (removed) {
       URL.revokeObjectURL(removed.previewUrl)
@@ -265,7 +328,7 @@ export function useUpload() {
 
     entries.value[idx] = {
       id: old.id,
-      documentId: crypto.randomUUID(),
+      documentId: generateUUID(),
       file,
       previewUrl: URL.createObjectURL(file),
       status: 'queued',
@@ -306,6 +369,49 @@ export function useUpload() {
     }
   }
 
+  // 完了済みのみソート + 未完了は末尾に追加順固定（表示用。元配列は変更しない）
+  const sortedEntries = computed(() => {
+    // 完了済み（error/ok）と未完了（queued/uploading/analyzing）を分離
+    const done: UploadEntry[] = []
+    const pending: UploadEntry[] = []
+    for (const e of entries.value) {
+      if (e.status === 'ok' || e.status === 'error') {
+        done.push(e)
+      } else {
+        pending.push(e) // 追加順のまま
+      }
+    }
+
+    // 完了済みのみソート: エラー → 重複 → OK
+    const statusOrder = (e: UploadEntry): number => {
+      if (e.status === 'error') return 0
+      if (e.isDuplicate) return 1
+      return 2 // ok
+    }
+    done.sort((a, b) => statusOrder(a) - statusOrder(b))
+
+    // 重複グループ化: 同じhashのエントリを連続配置
+    const sorted: UploadEntry[] = []
+    const visited = new Set<string>()
+    for (const entry of done) {
+      if (visited.has(entry.id)) continue
+      visited.add(entry.id)
+      sorted.push(entry)
+      // 同一ハッシュの仲間を直後に配置
+      if (entry.hash && entry.isDuplicate) {
+        for (const other of done) {
+          if (!visited.has(other.id) && other.hash === entry.hash) {
+            visited.add(other.id)
+            sorted.push(other)
+          }
+        }
+      }
+    }
+
+    // 完了済み（ソート済み） + 未完了（追加順固定）
+    return [...sorted, ...pending]
+  })
+
   // メモリ解放
   onBeforeUnmount(() => {
     entries.value.forEach(e => URL.revokeObjectURL(e.previewUrl))
@@ -315,6 +421,7 @@ export function useUpload() {
   return {
     // 状態
     entries,
+    sortedEntries,
     showComplete,
     confirmedCount,
     retakeTargetIdx,

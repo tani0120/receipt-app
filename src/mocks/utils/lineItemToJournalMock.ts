@@ -236,7 +236,17 @@ function resolveVoucherType(
  * 旧形式（jrn-00000001）は並行アップロード時の連番衝突リスクがあったため廃止。
  */
 function generateJournalId(): string {
-  return `jrn-${crypto.randomUUID()}`
+  let uuid: string
+  try {
+    uuid = crypto.randomUUID()
+  } catch {
+    // Secure Context外（HTTP+LAN IP）: Math.randomベースのv4 UUID
+    uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = (Math.random() * 16) | 0
+      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+    })
+  }
+  return `jrn-${uuid}`
 }
 
 /**

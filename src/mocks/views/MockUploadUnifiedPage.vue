@@ -37,7 +37,7 @@
           </div>
           <div class="file-list" v-if="entries.length">
             <div
-              v-for="(f, i) in entries"
+              v-for="(f, i) in sortedEntries"
               :key="f.id"
               class="file-item badge-container"
               :class="{ 'file-item--selected': selectedId === f.id }"
@@ -52,10 +52,10 @@
                   <span class="badge badge--warning">⚠ {{ MSG_DUPLICATE_DETAIL }}</span>
                 </div>
                 <div class="classify-badges" v-if="classifyBadgeVisible(f)">
-                  <span v-if="f.status === 'uploading' || f.status === 'analyzing'" class="badge badge--loading">⏳ 分類中...</span>
-                  <span v-else-if="f.status === 'error'" class="badge badge--error">❌ {{ f.errorReason ?? '失敗' }}</span>
+                  <span v-if="f.status === 'uploading' || f.status === 'analyzing'" class="badge badge--loading">⏳ アップロード中...</span>
+                  <span v-else-if="f.status === 'error'" class="badge badge--error">⚠️ {{ f.errorReason ?? '失敗' }}</span>
                   <template v-else-if="f.status === 'ok' && f.supplementary">
-                    <span class="badge badge--supplementary">📎 補助対象ファイルです。</span>
+                    <span class="badge badge--supplementary">📎 このまま送付してください（参照資料）</span>
                   </template>
                   <template v-else-if="f.status === 'ok'">
                     <span v-if="f.warning" class="badge badge--warning">⚠ {{ f.warning }}</span>
@@ -64,11 +64,11 @@
                     <span v-if="f.vendor" class="badge badge--issuer">{{ f.vendor }}</span>
                     <span v-if="f.amount" class="badge badge--amount">¥{{ f.amount.toLocaleString() }}</span>
                     <span v-if="f.date" class="badge badge--date">{{ f.date }}</span>
-                    <span v-if="f.metrics" class="badge badge--time">{{ f.metrics.duration_seconds }}秒 / ¥{{ f.metrics.cost_yen.toFixed(2) }}</span>
+
                   </template>
                 </div>
               </div>
-              <button class="file-remove" @click.stop="removeFile(i)">✕</button>
+              <button class="file-remove" @click.stop="confirmRemove(f.id)">🗑️</button>
             </div>
           </div>
         </div>
@@ -152,7 +152,7 @@
             </div>
             <div class="mobile-progress-counts">
               <span class="count-ok">✅ OK: {{ counts.ok }}</span>
-              <span v-if="counts.error" class="count-error">❌ NG: {{ counts.error }}</span>
+              <span v-if="counts.error" class="count-error">⚠️ NG: {{ counts.error }}</span>
               <span v-if="counts.processing" class="count-processing">⏳ 処理中: {{ counts.processing }}</span>
               <span v-if="counts.queued" class="count-queued">待機: {{ counts.queued }}</span>
             </div>
@@ -161,62 +161,54 @@
           <!-- グリッド -->
           <div class="mobile-grid">
             <div
-              v-for="(r, idx) in entries"
+              v-for="(r, idx) in sortedEntries"
               :key="r.id"
               :class="['mobile-card', cardStatusClass(r)]"
               @click="r.status === 'error' ? toggleErrorAction(idx) : undefined"
             >
               <div class="mobile-card-thumb">
-                <template v-if="r.file.type === 'application/pdf'">
-                  <iframe :src="r.previewUrl" class="mobile-pdf-thumb" tabindex="-1"></iframe>
-                </template>
-                <img v-else :src="r.previewUrl" :alt="`領収書 ${idx + 1}`" class="mobile-card-img" loading="lazy" />
+                <img :src="r.previewUrl" :alt="`領収書 ${idx + 1}`" class="mobile-card-img" loading="lazy" />
 
                 <!-- オーバーレイ: 待機 -->
                 <div v-if="r.status === 'queued'" class="overlay overlay--queued"><span>待機中</span></div>
                 <!-- オーバーレイ: 処理中 -->
                 <div v-if="r.status === 'uploading' || r.status === 'analyzing'" class="overlay overlay--processing">
                   <div class="spinner"></div>
-                  <span>{{ r.status === 'uploading' ? '送信中...' : 'AI確認中...' }}</span>
+                  <span>{{ r.status === 'uploading' ? '送信中...' : 'アップロード中...' }}</span>
                 </div>
-                <!-- OK -->
-                <div v-if="r.status === 'ok'" class="overlay-ok-badge">✅</div>
-                <!-- 重複 -->
-                <div v-if="r.isDuplicate" class="overlay-dup">⚠ {{ MSG_DUPLICATE_SHORT }}</div>
-                <!-- 警告 -->
-                <div v-if="r.warning && !r.isDuplicate" class="overlay-warn">⚠ {{ r.warning }}</div>
-                <!-- エラー: ❌バッジのみ（マスキングなし、写真が見える） -->
-                <div v-if="r.status === 'error'" class="overlay-error-badge">❌</div>
-              </div>
 
-              <!-- カード下部 -->
+                <!-- 上部ステータスバー（完了後に表示） -->
+                <!-- エラー -->
+                <div v-if="r.status === 'error'" class="status-bar status-bar--error">⚠ エラー</div>
+                <!-- 重複 -->
+                <div v-else-if="r.isDuplicate" class="status-bar status-bar--dup">⚠ {{ MSG_DUPLICATE_SHORT }}</div>
+                <!-- 警告 -->
+                <div v-else-if="r.status === 'ok' && r.warning" class="status-bar status-bar--warn">⚠ {{ r.warning }}</div>
+                <!-- OK（参照資料） -->
+                <div v-else-if="r.status === 'ok' && r.supplementary" class="status-bar status-bar--ok">✅ 送信OK（参照資料）</div>
+                <!-- OK -->
+                <div v-else-if="r.status === 'ok'" class="status-bar status-bar--ok">✅ 送信OK</div>
+              </div>
+              <!-- 削除ボタン（右上） -->
+              <button class="mobile-card-remove" @click.stop="confirmRemove(r.id)">🗑️</button>
+
+              <!-- カード下部（高さ統一） -->
               <div class="mobile-card-footer">
-                <template v-if="r.status === 'ok' && r.supplementary">
-                  <p class="card-supplementary">補助対象ファイルです。</p>
-                  <p class="card-filename">{{ r.file.name }}</p>
-                </template>
-                <template v-else-if="r.status === 'ok'">
-                  <p v-if="r.sourceType" class="card-source-type">{{ sourceTypeLabel(r.sourceType) }}</p>
-                  <template v-if="r.lineItemsCount > 0 && !r.vendor">
-                    <p class="card-lines">{{ r.lineItemsCount }}行</p>
+                <p class="card-footer-text">
+                  <template v-if="r.status === 'ok' && r.supplementary">{{ r.file.name }}</template>
+                  <template v-else-if="r.status === 'ok'">
+                    <template v-if="r.vendor">{{ r.vendor }}</template>
+                    <template v-else-if="r.lineItemsCount > 0">{{ r.lineItemsCount }}行</template>
+                    <template v-else>{{ r.file.name }}</template>
                   </template>
-                  <template v-else>
-                    <p v-if="r.vendor" class="card-vendor">{{ r.vendor }}</p>
-                    <p v-if="r.amount" class="card-amount">¥{{ r.amount.toLocaleString() }}</p>
-                    <p v-if="r.date" class="card-date">{{ r.date }}</p>
-                  </template>
-                </template>
-                <template v-else-if="r.status === 'error'">
-                  <p class="card-error-reason">{{ r.errorReason }}</p>
-                  <!-- エラーカード アクション（タップで展開） -->
-                  <div v-if="errorActionIdx === idx" class="card-error-actions">
-                    <button class="card-action-retake" @click.stop="doRetake(idx)">📷 撮り直す</button>
-                    <button class="card-action-skip" @click.stop="errorActionIdx = null">このまま送付</button>
-                  </div>
-                </template>
-                <template v-else>
-                  <p class="card-idx">{{ idx + 1 }}</p>
-                </template>
+                  <template v-else-if="r.status === 'error'">{{ r.errorReason ?? 'エラー' }}</template>
+                  <template v-else>{{ idx + 1 }}</template>
+                </p>
+                <!-- エラーカード アクション（タップで展開） -->
+                <div v-if="r.status === 'error' && errorActionIdx === idx" class="card-error-actions">
+                  <button class="card-action-retake" @click.stop="doRetake(idx)">📷 撮り直す</button>
+                  <button class="card-action-skip" @click.stop="errorActionIdx = null">このまま送付</button>
+                </div>
               </div>
             </div>
 
@@ -253,28 +245,14 @@
         </div>
         <!-- 共通: 送付ボタン -->
         <div class="footer-buttons">
-          <!-- エラーあり: 2ボタン表示 -->
-          <template v-if="hasErrors && canConfirm">
-            <button class="submit-btn submit-btn--retry" @click="scrollToFirstError">
-              <span class="pc-only">🔄 もう一度送付</span>
-              <span class="mobile-only">🔄 撮り直す</span>
-            </button>
-            <button class="submit-btn submit-btn--force" @click="handleConfirm">
-              <span class="pc-only">📤 このまま送付</span>
-              <span class="mobile-only">{{ confirmLabel }}</span>
-            </button>
-          </template>
-          <!-- エラーなし or 処理中: 1ボタン -->
-          <template v-else>
+          <!-- 送付ボタン（PC/モバイル統一） -->
             <button
               :disabled="!canConfirm"
-              :class="['submit-btn', canConfirm ? 'submit-btn--active' : 'submit-btn--disabled']"
+              :class="['submit-btn', canConfirm ? (hasErrors ? 'submit-btn--force' : 'submit-btn--active') : 'submit-btn--disabled']"
               @click="handleConfirm"
             >
-              <span class="pc-only">📤 {{ entries.length }}件をアップロード</span>
-              <span class="mobile-only">{{ confirmLabel }}</span>
+              {{ confirmLabel }}
             </button>
-          </template>
         </div>
       </div>
     </footer>
@@ -293,10 +271,23 @@
       </div>
     </transition>
 
+    <!-- 削除確認モーダル -->
+    <transition name="fade">
+      <div v-if="removeTargetId" class="modal-overlay" @click="removeTargetId = null">
+        <div class="modal-box" @click.stop>
+          <p class="modal-title">🗑️ 削除しますか？</p>
+          <div class="modal-confirm-btns">
+            <button class="modal-btn modal-btn--danger" @click="doRemove">はい</button>
+            <button class="modal-btn modal-btn--cancel" @click="removeTargetId = null">いいえ</button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <!-- 隠しinput -->
-    <input ref="fileInputRef" type="file" multiple class="hidden-input" @change="handleFileInput" />
-    <input ref="cameraInputRef" type="file" capture="environment" class="hidden-input" @change="handleCameraInput" />
-    <input ref="retakeInputRef" type="file" class="hidden-input" @change="handleRetakeInput" />
+    <input ref="fileInputRef" type="file" multiple accept="image/*,.pdf,.csv,.xlsx,.xls" class="hidden-input" @change="handleFileInput" />
+    <input ref="cameraInputRef" type="file" accept="image/*" capture="environment" class="hidden-input" @change="handleCameraInput" />
+    <input ref="retakeInputRef" type="file" accept="image/*,.pdf" class="hidden-input" @change="handleRetakeInput" />
   </div>
 </template>
 
@@ -317,7 +308,7 @@ import type { UploadEntry } from '@/mocks/composables/useUpload'
 import { MSG_DUPLICATE_DETAIL, MSG_DUPLICATE_SHORT } from '@/shared/validationMessages'
 
 const {
-  entries, showComplete, confirmedCount,
+  entries, sortedEntries, showComplete, confirmedCount,
   selectedId, selectedUrl, selectedEntry, selectFile,
   counts, progressPct, canConfirm, hasErrors, guideMessage, confirmLabel,
   addFiles, removeFile, triggerRetake, handleRetake, handleConfirm, resetAll,
@@ -326,7 +317,7 @@ const {
 
 const { clients } = useClients()
 const clientName = clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId
-const monthLabel = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' }) + 'の領収書'
+
 
 // refs
 const fileInputRef = ref<HTMLInputElement>()
@@ -375,14 +366,7 @@ const doRetake = (idx: number) => {
   retakeInputRef.value?.click()
 }
 
-// エラーカードまでスクロール（「もう一度送付」ボタン用）
-const scrollToFirstError = () => {
-  const firstErrorIdx = entries.value.findIndex(e => e.status === 'error')
-  if (firstErrorIdx >= 0) {
-    const cards = document.querySelectorAll('.mobile-card')
-    cards[firstErrorIdx]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
-}
+
 
 const handleRetakeInput = (e: Event) => {
   handleRetake(e)
@@ -397,6 +381,18 @@ const cardStatusClass = (r: UploadEntry) => {
   if (r.status === 'error') return 'mobile-card--error'
   if (r.status === 'ok') return 'mobile-card--ok'
   return ''
+}
+
+// 削除確認モーダル
+const removeTargetId = ref<string | null>(null)
+const confirmRemove = (id: string) => {
+  removeTargetId.value = id
+}
+const doRemove = () => {
+  if (removeTargetId.value) {
+    removeFile(removeTargetId.value)
+    removeTargetId.value = null
+  }
 }
 </script>
 
@@ -427,7 +423,15 @@ const cardStatusClass = (r: UploadEntry) => {
 @media (min-width: 641px) {
   .upload-unified { background: #fff; }
 }
-.hidden-input { display: none; }
+/* iOS Safari対応: display:noneだと.click()でピッカーが開かない */
+.hidden-input {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  clip: rect(0,0,0,0);
+}
 
 /* ===== メインコンテンツ ===== */
 .main-content {
@@ -732,49 +736,67 @@ const cardStatusClass = (r: UploadEntry) => {
 .count-queued { color: #9ca3af; }
 
 /* ===== モバイル: カードグリッド ===== */
-.mobile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(6px, 1.5vw, 8px); }
-@media (min-width: 480px) and (max-width: 640px) { .mobile-grid { grid-template-columns: repeat(4, 1fr); } }
+.mobile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(8px, 2vw, 12px); align-items: start; }
 
 .mobile-card {
   position: relative; border-radius: clamp(12px, 3vw, 16px); overflow: hidden;
   background: #fff; border: 2px solid #e5e7eb;
   transition: all 0.3s; user-select: none;
 }
-.mobile-card--error { border-color: #f87171; border-width: 4px; box-shadow: 0 4px 12px rgba(239,68,68,0.15); cursor: pointer; }
+.mobile-card--error { border-color: #f87171; box-shadow: 0 4px 12px rgba(239,68,68,0.15), inset 0 0 0 2px #f87171; cursor: pointer; }
 .mobile-card--error:active { transform: scale(0.95); }
 .mobile-card--ok { border-color: #34d399; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 
 .mobile-card-thumb { aspect-ratio: 3/4; position: relative; background: #f3f4f6; overflow: hidden; }
-.mobile-card-img { width: 100%; height: 100%; object-fit: cover; }
-.mobile-pdf-thumb { width: 200%; height: 200%; transform-origin: top left; transform: scale(0.5); pointer-events: none; border: 0; }
 
-/* オーバーレイ */
+/* モバイルカード削除ボタン */
+.mobile-card-remove {
+  position: absolute; top: 4px; right: 4px; z-index: 5;
+  width: clamp(22px, 6vw, 28px); height: clamp(22px, 6vw, 28px);
+  border: none; border-radius: 50%; cursor: pointer;
+  background: rgba(0,0,0,0.5); color: #fff;
+  font-size: clamp(10px, 3vw, 14px); line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s; padding: 0; font-family: inherit;
+}
+.mobile-card-remove:active { background: rgba(220,38,38,0.8); }
+.mobile-card-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* オーバーレイ（処理中・待機） */
 .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .overlay--queued { background: rgba(0,0,0,0.4); color: #fff; font-size: clamp(9px, 2.5vw, 11px); }
 .overlay--processing { background: rgba(0,0,0,0.55); color: #fff; font-size: clamp(7px, 2vw, 9px); font-weight: 600; gap: 6px; }
 .spinner { width: clamp(20px, 6vw, 28px); height: clamp(20px, 6vw, 28px); border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.overlay-ok-badge { position: absolute; top: 4px; right: 4px; font-size: clamp(14px, 4vw, 18px); filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
-.overlay-dup { position: absolute; top: 0; left: 0; right: 0; background: rgba(245,158,11,0.9); padding: 2px 4px; text-align: center; font-size: clamp(6px, 1.8vw, 8px); color: #fff; font-weight: 700; }
-.overlay-warn { position: absolute; top: 0; left: 0; right: 0; background: rgba(249,115,22,0.9); padding: 2px 4px; text-align: center; font-size: clamp(6px, 1.8vw, 8px); color: #fff; font-weight: 700; }
-/* エラー: マスキングなし、❌バッジのみ */
-.overlay-error-badge { position: absolute; top: 4px; right: 4px; font-size: clamp(14px, 4vw, 18px); filter: drop-shadow(0 1px 3px rgba(220,38,38,0.5)); }
 
-/* カード下部 */
-.mobile-card-footer { padding: clamp(4px, 1vw, 6px); }
-.card-supplementary { font-size: clamp(6px, 1.8vw, 8px); font-weight: 700; color: #2563eb; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card-filename { font-size: clamp(5px, 1.5vw, 7px); color: #9ca3af; margin: 0; }
-.card-source-type { font-size: clamp(5px, 1.5vw, 7px); font-weight: 700; padding: 1px 4px; border-radius: 4px; background: #e0e7ff; color: #4338ca; display: inline-block; margin: 0 0 2px; }
-.card-lines { font-size: clamp(6px, 1.8vw, 8px); font-weight: 700; color: #059669; margin: 0; }
-.card-vendor { font-size: clamp(6px, 1.8vw, 8px); font-weight: 700; color: #059669; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card-amount { font-size: clamp(6px, 1.8vw, 8px); color: #059669; margin: 0; }
-.card-date { font-size: clamp(5px, 1.5vw, 7px); color: #9ca3af; margin: 0; }
-.card-idx { font-size: clamp(6px, 1.8vw, 8px); color: #d1d5db; margin: 0; }
+/* 上部ステータスバー（完了後に表示） */
+.status-bar {
+  position: absolute; top: 0; left: 0; right: 0;
+  padding: 3px 6px; text-align: center;
+  font-size: clamp(8px, 2.2vw, 11px); font-weight: 700;
+  color: #fff; z-index: 2;
+}
+.status-bar--ok { background: rgba(16,185,129,0.9); }
+.status-bar--error { background: rgba(220,38,38,0.9); }
+.status-bar--dup { background: rgba(245,158,11,0.9); }
+.status-bar--warn { background: rgba(249,115,22,0.9); }
+
+/* カード下部（高さ固定） */
+.mobile-card-footer {
+  padding: clamp(4px, 1vw, 6px);
+  height: clamp(28px, 7vw, 36px);
+  display: flex; flex-direction: column; justify-content: center;
+  overflow: hidden;
+}
+.card-footer-text {
+  font-size: clamp(8px, 2.2vw, 11px); font-weight: 600; color: #374151;
+  margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.3;
+}
 
 /* エラーカード下部: エラー理由 + アクション */
-.card-error-reason {
-  font-size: clamp(6px, 1.8vw, 8px); font-weight: 700; color: #dc2626;
-  margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.mobile-card--error .card-footer-text {
+  color: #dc2626;
 }
 .card-error-actions {
   display: flex; flex-direction: column; gap: 3px; margin-top: 4px;
@@ -872,6 +894,33 @@ const cardStatusClass = (r: UploadEntry) => {
   cursor: pointer; font-family: inherit; transition: background 0.2s;
 }
 .modal-btn:hover { background: #2563eb; }
+
+/* 削除確認モーダル */
+.modal-box {
+  background: #fff; border-radius: clamp(16px, 3vw, 24px);
+  padding: clamp(24px, 5vw, 32px);
+  max-width: 320px; width: 100%; text-align: center;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+}
+.modal-confirm-btns {
+  display: flex; gap: 12px; margin-top: 16px;
+}
+.modal-btn--danger {
+  flex: 1; padding: clamp(10px, 2.5vw, 12px);
+  border-radius: clamp(8px, 2vw, 12px); border: none;
+  background: #ef4444; color: #fff;
+  font-size: clamp(13px, 3.5vw, 15px); font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: background 0.2s;
+}
+.modal-btn--danger:hover { background: #dc2626; }
+.modal-btn--cancel {
+  flex: 1; padding: clamp(10px, 2.5vw, 12px);
+  border-radius: clamp(8px, 2vw, 12px); border: 2px solid #d1d5db;
+  background: #fff; color: #374151;
+  font-size: clamp(13px, 3.5vw, 15px); font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: all 0.2s;
+}
+.modal-btn--cancel:hover { background: #f9fafb; }
 
 /* ===== トランジション ===== */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
