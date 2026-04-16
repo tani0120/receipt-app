@@ -369,5 +369,8 @@ export async function classifyImage(req: ClassifyRequest): Promise<ClassifyRespo
     isDuplicate,
   };
 
+  // fileHashをレスポンスに含める（フロントでのグループ化・重複表示用）
+  result.fileHash = req.fileHash;
+
   return result;
 }

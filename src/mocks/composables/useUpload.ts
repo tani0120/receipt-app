@@ -100,7 +100,7 @@ function generateUUID(): string {
 // ===== composable本体 =====
 
 const CONCURRENCY_PC = 4      // PC（641px以上）同時処理数
-const CONCURRENCY_MOBILE = 2   // モバイル（640px以下）同時処理数
+const CONCURRENCY_MOBILE = 1   // モバイル: 1枚ずつ処理（メモリ不足クラッシュ防止）
 const MOBILE_BREAKPOINT = 640
 
 export function useUpload() {

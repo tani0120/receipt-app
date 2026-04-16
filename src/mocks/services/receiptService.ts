@@ -84,33 +84,28 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       };
     }
 
-    // ② ファイルをbase64に変換 + SHA-256ハッシュ計算
-    const buffer = await file.arrayBuffer();
-    const base64 = btoa(
-      new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ""),
-    );
-
-    // SHA-256ハッシュ計算（サーバー側重複チェック用）
-    let fileHash: string | undefined;
-    try {
-      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-      fileHash = Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch {
-      // ハッシュ計算失敗は無視（重複チェックをスキップ）
+    // ② ファイルサイズ制限（10MB。Android端末のメモリ保護）
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+      return {
+        ok: false,
+        date: null,
+        amount: null,
+        vendor: null,
+        errorReason: `ファイルサイズが大きすぎます（${(file.size / 1024 / 1024).toFixed(1)}MB）。10MB以下にしてください`,
+      };
     }
 
-    // API呼び出し
+    // ③ FormData送信（フロントではbase64変換・SHA-256計算を行わない。サーバーで実施）
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mimeType', file.type || 'image/jpeg');
+    formData.append('clientId', clientId ?? 'unknown');
+    formData.append('filename', file.name);
+
     const response = await fetch("/api/pipeline/classify", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        image: base64,
-        mimeType: file.type || "image/jpeg",
-        clientId: clientId ?? "unknown",
-        filename: file.name,
-        fileHash,
-      }),
+      body: formData,  // Content-Typeは自動設定（multipart/form-data）
     });
 
     if (!response.ok) {
@@ -170,7 +165,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
         vendor: null,
         errorReason: 'AI分析に失敗しました（サーバー側エラー）',
         metrics,
-        fileHash,
+        fileHash: data.fileHash,
       };
     }
 
@@ -185,7 +180,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       isDuplicate: data.validation.isDuplicate,
       lineItems,
       metrics,
-      fileHash,
+      fileHash: data.fileHash,
     };
   } catch (err) {
     return {
