@@ -24,7 +24,7 @@ export type UploadStatus = 'queued' | 'uploading' | 'analyzing' | 'ok' | 'error'
 export interface UploadEntry {
   id: string
   documentId: string   // 証票ID（crypto.randomUUID()。Supabase時はUUID PK）
-  file: File
+  file: File | null  // 処理完了後はnull（メモリ解放）
   previewUrl: string
   status: UploadStatus
   errorReason: string | null
@@ -294,7 +294,7 @@ export function useUpload() {
 
   const processOne = async (id: string) => {
     const e = entries.value.find(x => x.id === id)
-    if (!e) return
+    if (!e || !e.file) return
 
     // デバッグ情報（スマホ実機でも確認可能にする）
     const fileDebug = `[${e.file.name}] mime=${e.file.type || '(空)'} size=${e.file.size}`
@@ -343,6 +343,9 @@ export function useUpload() {
       e.status = 'error'
       e.errorReason = `通信エラー: ${msg} ${fileDebug}`
     }
+
+    // ★ メモリ解放: 処理完了後にFile参照を削除（GC対象にする）
+    e.file = null
 
     processQueue()
   }
