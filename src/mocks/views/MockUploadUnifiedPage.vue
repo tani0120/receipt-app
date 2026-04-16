@@ -15,7 +15,7 @@
     <main class="main-content">
 
       <!-- ========== PC版: 2カラム（CSS制御） ========== -->
-      <div class="two-col pc-only">
+      <div v-if="!isMobile" class="two-col pc-only">
         <!-- 左: ドロップ+リスト -->
         <div class="upload-lane">
           <div
@@ -43,10 +43,10 @@
               :class="{ 'file-item--selected': selectedId === f.id }"
               @click="selectFile(f)"
             >
-              <div class="file-icon" :class="fileIconClass(f.file.name)">{{ fileIconEmoji(f.file.name) }}</div>
+              <div class="file-icon" :class="fileIconClass(f.fileName)">{{ fileIconEmoji(f.fileName) }}</div>
               <div class="file-info">
-                <p class="file-name">{{ f.file.name }}</p>
-                <p class="file-size">{{ formatSize(f.file.size) }}</p>
+                <p class="file-name">{{ f.fileName }}</p>
+                <p class="file-size">{{ formatSize(f.fileSize) }}</p>
                 <!-- 重複バッジ -->
                 <div v-if="f.isDuplicate" class="classify-badges">
                   <span class="badge badge--warning">⚠ {{ MSG_DUPLICATE_DETAIL }}</span>
@@ -87,12 +87,12 @@
           </div>
           <template v-else>
             <div class="preview-header">
-              <p class="preview-filename">{{ selectedEntry.file.name }}</p>
+              <p class="preview-filename">{{ selectedEntry.fileName }}</p>
               <button class="preview-close" @click="selectedId = null">✕</button>
             </div>
             <div class="preview-body">
-              <img v-if="isImageFile(selectedEntry.file.name)" :src="selectedUrl!" class="preview-image" :alt="selectedEntry.file.name" />
-              <iframe v-else-if="isPdfFile(selectedEntry.file.name)" :src="selectedUrl!" class="preview-pdf"></iframe>
+              <img v-if="isImageFile(selectedEntry.fileName)" :src="selectedUrl!" class="preview-image" :alt="selectedEntry.fileName" />
+              <iframe v-else-if="isPdfFile(selectedEntry.fileName)" :src="selectedUrl!" class="preview-pdf"></iframe>
               <div v-else class="preview-unsupported">
                 <div class="preview-unsupported-icon">📄</div>
                 <p>このファイル形式のプレビューには対応していません</p>
@@ -103,7 +103,7 @@
       </div>
 
       <!-- ========== モバイル版: カードグリッド（CSS制御） ========== -->
-      <div class="mobile-section mobile-only">
+      <div v-if="isMobile" class="mobile-section mobile-only">
         <!-- 空の状態 -->
         <div v-if="entries.length === 0" class="mobile-empty"
           @dragover.prevent="dragging = true"
@@ -195,11 +195,11 @@
               <!-- カード下部（高さ統一） -->
               <div class="mobile-card-footer">
                 <p class="card-footer-text">
-                  <template v-if="r.status === 'ok' && r.supplementary">{{ r.file.name }}</template>
+                  <template v-if="r.status === 'ok' && r.supplementary">{{ r.fileName }}</template>
                   <template v-else-if="r.status === 'ok'">
                     <template v-if="r.vendor">{{ r.vendor }}</template>
                     <template v-else-if="r.lineItemsCount > 0">{{ r.lineItemsCount }}行</template>
-                    <template v-else>{{ r.file.name }}</template>
+                    <template v-else>{{ r.fileName }}</template>
                   </template>
                   <template v-else-if="r.status === 'error'">{{ r.errorReason ?? 'エラー' }}</template>
                   <template v-else>{{ idx + 1 }}</template>
@@ -322,7 +322,7 @@ const {
   selectedId, selectedUrl, selectedEntry, selectFile,
   counts, progressPct, canConfirm, hasErrors, guideMessage, confirmLabel,
   addFiles, removeFile, triggerRetake, handleRetake, handleConfirm, resetAll, cleanup,
-  clientId,
+  clientId, isMobile,
 } = useUpload()
 
 const { clients } = useClients()

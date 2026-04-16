@@ -13,7 +13,6 @@
 
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
-import { generatePdfThumbnail } from '@/mocks/utils/pdfThumbnail'
 import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from '@/mocks/services/receiptService'
 import { errorGuideMessage } from '@/shared/validationMessages'
 
@@ -25,6 +24,8 @@ export interface UploadEntry {
   id: string
   documentId: string   // 証票ID（crypto.randomUUID()。Supabase時はUUID PK）
   file: File | null  // 処理完了後はnull（メモリ解放）
+  fileName: string   // ファイル名（file解放後もテンプレートから参照可能）
+  fileSize: number   // ファイルサイズ（file解放後もテンプレートから参照可能）
   previewUrl: string
   status: UploadStatus
   errorReason: string | null
@@ -144,17 +145,20 @@ export function useUpload() {
     error:      entries.value.filter(e => e.status === 'error').length,
     processing: entries.value.filter(e => e.status === 'uploading' || e.status === 'analyzing').length,
     queued:     entries.value.filter(e => e.status === 'queued').length,
+    pending:    pendingFiles.value.length,  // 内部キュー待ち
   }))
 
-  const progressPct = computed(() =>
-    entries.value.length === 0 ? 0
-      : Math.round((counts.value.ok + counts.value.error) / entries.value.length * 100)
-  )
+  const progressPct = computed(() => {
+    const total = entries.value.length + pendingFiles.value.length
+    return total === 0 ? 0
+      : Math.round((counts.value.ok + counts.value.error) / total * 100)
+  })
 
   const canConfirm = computed(() =>
     entries.value.length > 0
     && counts.value.processing === 0
     && counts.value.queued === 0
+    && pendingFiles.value.length === 0  // 内部キューも空
   )
 
   /** エラーが1件以上ある（送付は可能だが警告表示用） */
@@ -167,69 +171,87 @@ export function useUpload() {
   })
 
   const confirmLabel = computed(() => {
-    if (!entries.value.length) return '写真を選んでください'
-    if (counts.value.processing || counts.value.queued) return `アップロード中... (${progressPct.value}%)`
+    const total = entries.value.length + pendingFiles.value.length
+    if (!total) return '写真を選んでください'
+    if (counts.value.processing || counts.value.queued || pendingFiles.value.length) {
+      const done = counts.value.ok + counts.value.error
+      return `${total}枚中${done}枚が処理完了 (${progressPct.value}%)`
+    }
     if (counts.value.error) return `${entries.value.length}枚を送付する（${counts.value.error}件エラーあり）`
     return `${counts.value.ok}枚を送付する`
   })
 
-  // ===== サムネイル生成（画像をcanvasで縮小。メモリ節約） =====
-  const THUMB_MAX = 200 // サムネイル最大幅/高さ（px）
-  const generateImageThumbnail = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const url = URL.createObjectURL(file)
-      const img = new Image()
-      img.onload = () => {
-        // 縮小率計算
-        const scale = Math.min(THUMB_MAX / img.width, THUMB_MAX / img.height, 1)
-        const w = Math.round(img.width * scale)
-        const h = Math.round(img.height * scale)
-        const canvas = document.createElement('canvas')
-        canvas.width = w
-        canvas.height = h
-        const ctx = canvas.getContext('2d')
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, w, h)
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
-          // メモリ解放（BlobURL + canvas + Image）
-          URL.revokeObjectURL(url)
-          canvas.width = 0
-          canvas.height = 0
-          resolve(dataUrl)
-        } else {
-          resolve(url)
-        }
-      }
-      img.onerror = () => {
-        resolve(url)
-      }
-      img.src = url
-    })
+  // ===== 画像圧縮 + サムネイル同時生成（1回のデコードで両方作る） =====
+  const COMPRESS_MAX_WIDTH = 1280  // 圧縮後の最大幅（サーバーのpreprocessと同等）
+  const COMPRESS_QUALITY = 0.8     // JPEG品質
+  const THUMB_MAX = 200            // サムネイル最大幅/高さ
+
+  interface CompressedFile {
+    file: File          // 圧縮済みFile（200KB程度）
+    thumbnail: string   // サムネイルdataURL（5KB程度）
+    originalName: string
+    originalSize: number
   }
 
-  // サムネイル生成キュー（複数回addFilesでも同時に1枚だけデコード）
-  const thumbQueue: Array<{ entry: UploadEntry; file: File }> = []
-  let thumbProcessing = false
-  const processThumbnailQueue = async () => {
-    if (thumbProcessing) return // 既に処理中なら何もしない（前の処理が完了すれば自動で次へ）
-    thumbProcessing = true
-    while (thumbQueue.length > 0) {
-      const item = thumbQueue.shift()!
-      if (item.file.type === 'application/pdf') {
-        try {
-          item.entry.previewUrl = await generatePdfThumbnail(item.file)
-        } catch {
-          item.entry.previewUrl = PDF_FALLBACK
-        }
-      } else if (item.file.type.startsWith('image/')) {
-        try {
-          item.entry.previewUrl = await generateImageThumbnail(item.file)
-        } catch {
-          // fallbackはプレースホルダーのまま
-        }
+  /** 画像を圧縮 + サムネイル同時生成。createImageBitmapでメモリ効率的にリサイズ */
+  const compressAndThumbnail = async (file: File): Promise<CompressedFile> => {
+    // 画像以外はそのまま
+    if (!file.type.startsWith('image/')) {
+      return {
+        file,
+        thumbnail: file.type === 'application/pdf' ? PDF_FALLBACK : PLACEHOLDER_SVG,
+        originalName: file.name,
+        originalSize: file.size,
       }
     }
-    thumbProcessing = false
+
+    try {
+      // ① 圧縮用bitmap（1280px幅にリサイズ済みでデコード → 48MBではなく5MB）
+      const compressBitmap = await createImageBitmap(file, {
+        resizeWidth: Math.min(COMPRESS_MAX_WIDTH, 4000), // 元画像がCOMPRESS_MAX_WIDTH未満でもOK
+        resizeQuality: 'medium',
+      })
+      const cw = compressBitmap.width
+      const ch = compressBitmap.height
+
+      // 圧縮用canvas
+      const compressCanvas = document.createElement('canvas')
+      compressCanvas.width = cw
+      compressCanvas.height = ch
+      const cctx = compressCanvas.getContext('2d')!
+      cctx.drawImage(compressBitmap, 0, 0)
+      compressBitmap.close() // ★ 即時メモリ解放（GC不要）
+
+      // ② サムネイル用canvas（圧縮canvasから縮小描画。追加デコードなし）
+      const thumbScale = Math.min(THUMB_MAX / cw, THUMB_MAX / ch, 1)
+      const tw = Math.round(cw * thumbScale)
+      const th = Math.round(ch * thumbScale)
+      const thumbCanvas = document.createElement('canvas')
+      thumbCanvas.width = tw
+      thumbCanvas.height = th
+      const tctx = thumbCanvas.getContext('2d')!
+      tctx.drawImage(compressCanvas, 0, 0, tw, th) // compressCanvasから縮小（追加デコードなし）
+      const thumbnail = thumbCanvas.toDataURL('image/jpeg', 0.7)
+      thumbCanvas.width = 0
+      thumbCanvas.height = 0
+
+      // ③ 圧縮Blob生成
+      const blob = await new Promise<Blob | null>(res =>
+        compressCanvas.toBlob(res, 'image/jpeg', COMPRESS_QUALITY),
+      )
+      compressCanvas.width = 0
+      compressCanvas.height = 0
+
+      if (blob) {
+        const compressed = new File([blob], file.name, { type: 'image/jpeg' })
+        console.log(`[圧縮] ${file.name}: ${(file.size / 1024).toFixed(0)}KB → ${(compressed.size / 1024).toFixed(0)}KB (${Math.round(100 - (compressed.size / file.size) * 100)}%削減)`)
+        return { file: compressed, thumbnail, originalName: file.name, originalSize: file.size }
+      }
+      return { file, thumbnail, originalName: file.name, originalSize: file.size }
+    } catch {
+      // createImageBitmap非対応環境のfallback
+      return { file, thumbnail: PLACEHOLDER_SVG, originalName: file.name, originalSize: file.size }
+    }
   }
 
   const PDF_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(
@@ -240,7 +262,6 @@ export function useUpload() {
     + '</svg>',
   )
 
-  // プレースホルダーSVG（サムネイル生成中の表示用）
   const PLACEHOLDER_SVG = 'data:image/svg+xml,' + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160" fill="none">'
     + '<rect width="120" height="160" fill="#f1f5f9"/>'
@@ -248,48 +269,75 @@ export function useUpload() {
     + '</svg>',
   )
 
-  // ===== ファイル追加 =====
-  const addFiles = (fileList: File[]) => {
-    const newEntries: UploadEntry[] = fileList.map(f => ({
-      id: `f-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      documentId: generateUUID(),
-      file: f,
-      previewUrl: PLACEHOLDER_SVG, // 初期表示はプレースホルダー（メモリ節約）
-      status: 'queued' as const,
-      errorReason: null,
-      date: null,
-      amount: null,
-      vendor: null,
-      supplementary: false,
-      sourceType: null,
-      lineItemsCount: 0,
-      warning: null,
-      metrics: null,
-      lineItems: null,
-      isDuplicate: false,
-      hash: null,
-    }))
-    entries.value.push(...newEntries)
+  // ===== 圧縮キュー（1枚ずつImage()デコード → 元File即解放） =====
+  const rawQueue: File[] = []    // 未圧縮の元File（一時的に保持）
+  let compressing = false
+  const pendingFiles = ref<CompressedFile[]>([])  // 圧縮済み（軽量）
+  const pendingCount = computed(() => pendingFiles.value.length + rawQueue.length)
+  const totalSelected = computed(() => entries.value.length + pendingFiles.value.length + rawQueue.length)
 
-    // サムネイルキューに追加（同時デコードは常に1枚）
-    for (const entry of newEntries) {
-      thumbQueue.push({ entry, file: entry.file })
+  const processCompressQueue = async () => {
+    if (compressing) return
+    compressing = true
+    while (rawQueue.length > 0) {
+      const file = rawQueue.shift()!  // 元Fileをキューから取り出し（参照解放）
+      const compressed = await compressAndThumbnail(file)
+      pendingFiles.value.push(compressed)
+      processQueue()  // 圧縮完了ごとにprocessQueueを呼ぶ
+      // ★ ブレーキ: ブラウザの描画フレームに同期（DOM更新の反映を保証）
+      await new Promise<void>(r => requestAnimationFrame(() => r()))
     }
-    processThumbnailQueue() // キュー処理開始（既に処理中なら何もしない）
+    compressing = false
+  }
 
-    processQueue()
+  // ===== ファイル追加（rawQueueに入れて即座に圧縮開始） =====
+  const addFiles = (fileList: File[]) => {
+    rawQueue.push(...fileList)
+    processCompressQueue()  // 1枚ずつ圧縮 → 元File即解放
   }
 
 
-  // ===== キュー処理 =====
+  // ===== キュー処理（圧縮済みFileから1枚ずつentriesに追加→処理→完了→次） =====
   const processQueue = () => {
     const concurrency = isMobile.value ? CONCURRENCY_MOBILE : CONCURRENCY_PC
     const available = concurrency - counts.value.processing
+
+    // 既にqueued状態のentriesがあれば先に処理
+    const queuedEntries = entries.value.filter(e => e.status === 'queued')
+    if (queuedEntries.length > 0) {
+      queuedEntries.slice(0, available).forEach(e => processOne(e.id))
+      return
+    }
+
     if (available <= 0) return
-    entries.value
-      .filter(e => e.status === 'queued')
-      .slice(0, available)
-      .forEach(e => processOne(e.id))
+
+    // pendingFiles（圧縮済み）から1枚取り出し → entry作成 → entries追加 → processOne
+    const itemsToProcess = pendingFiles.value.splice(0, available)
+    for (const item of itemsToProcess) {
+      const entry: UploadEntry = {
+        id: `f-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        documentId: generateUUID(),
+        file: item.file,  // 圧縮済み（200KB程度）
+        fileName: item.originalName,
+        fileSize: item.originalSize,
+        previewUrl: item.thumbnail,  // サムネイル（5KB程度。既に生成済み）
+        status: 'queued',
+        errorReason: null,
+        date: null,
+        amount: null,
+        vendor: null,
+        supplementary: false,
+        sourceType: null,
+        lineItemsCount: 0,
+        warning: null,
+        metrics: null,
+        lineItems: null,
+        isDuplicate: false,
+        hash: null,
+      }
+      entries.value.push(entry)
+      processOne(entry.id)
+    }
   }
 
   const processOne = async (id: string) => {
@@ -372,7 +420,8 @@ export function useUpload() {
   const selectFile = (entry: UploadEntry) => {
     if (selectedUrl.value) URL.revokeObjectURL(selectedUrl.value)
     selectedId.value = entry.id
-    selectedUrl.value = URL.createObjectURL(entry.file)
+    // 処理完了後はfileがnull → サムネイルを拡大表示に使用
+    selectedUrl.value = entry.file ? URL.createObjectURL(entry.file) : entry.previewUrl
   }
 
   // ===== 撮り直し（モバイル用） =====
@@ -387,38 +436,35 @@ export function useUpload() {
     const idx = retakeTargetIdx.value
     const old = entries.value[idx]
     if (!old) return
-    URL.revokeObjectURL(old.previewUrl)
 
-    entries.value[idx] = {
-      id: old.id,
-      documentId: generateUUID(),
-      file,
-      previewUrl: PLACEHOLDER_SVG, // サムネイル生成は非同期
-      status: 'queued',
-      errorReason: null,
-      date: null,
-      amount: null,
-      vendor: null,
-      supplementary: false,
-      sourceType: null,
-      lineItemsCount: 0,
-      warning: null,
-      metrics: null,
-      lineItems: null,
-      isDuplicate: false,
-      hash: null,
-    }
-
-    // 撮り直しファイルのサムネイルをキューに追加
-    const newEntry = entries.value[idx]
-    if (newEntry) {
-      thumbQueue.push({ entry: newEntry, file })
-      processThumbnailQueue()
-    }
+    // 圧縮+サムネイル生成してからentryを更新
+    compressAndThumbnail(file).then(compressed => {
+      entries.value[idx] = {
+        id: old.id,
+        documentId: generateUUID(),
+        file: compressed.file,
+        fileName: compressed.originalName,
+        fileSize: compressed.originalSize,
+        previewUrl: compressed.thumbnail,
+        status: 'queued',
+        errorReason: null,
+        date: null,
+        amount: null,
+        vendor: null,
+        supplementary: false,
+        sourceType: null,
+        lineItemsCount: 0,
+        warning: null,
+        metrics: null,
+        lineItems: null,
+        isDuplicate: false,
+        hash: null,
+      }
+      processQueue()
+    })
 
     retakeTargetIdx.value = null
     ;(e.target as HTMLInputElement).value = ''
-    processQueue()
   }
 
   // ===== 送付確定 =====
@@ -530,6 +576,8 @@ export function useUpload() {
     hasErrors,
     guideMessage,
     confirmLabel,
+    pendingCount,
+    totalSelected,
     // 操作
     addFiles,
     removeFile,
@@ -542,5 +590,6 @@ export function useUpload() {
     clientId,
     role,
     device,
+    isMobile,
   }
 }
