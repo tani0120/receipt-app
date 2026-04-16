@@ -164,7 +164,7 @@
               v-for="(r, idx) in sortedEntries"
               :key="r.id"
               :class="['mobile-card', cardStatusClass(r)]"
-              @click="r.status === 'error' ? toggleErrorAction(idx) : undefined"
+              @click="r.status === 'error' ? openErrorModal(r) : undefined"
             >
               <div class="mobile-card-thumb">
                 <img :src="r.previewUrl" :alt="`領収書 ${idx + 1}`" class="mobile-card-img" loading="lazy" />
@@ -204,11 +204,7 @@
                   <template v-else-if="r.status === 'error'">{{ r.errorReason ?? 'エラー' }}</template>
                   <template v-else>{{ idx + 1 }}</template>
                 </p>
-                <!-- エラーカード アクション（タップで展開） -->
-                <div v-if="r.status === 'error' && errorActionIdx === idx" class="card-error-actions">
-                  <button class="card-action-retake" @click.stop="doRetake(idx)">📷 撮り直す</button>
-                  <button class="card-action-skip" @click.stop="errorActionIdx = null">このまま送付</button>
-                </div>
+
               </div>
             </div>
 
@@ -267,6 +263,20 @@
             <strong>{{ confirmedCount }}件</strong>のファイルを受け付けました。
           </p>
           <button class="modal-btn" @click="resetAll">続けてアップロード</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- エラー対応モーダル -->
+    <transition name="fade">
+      <div v-if="errorTargetEntry" class="modal-overlay" @click="errorTargetEntry = null">
+        <div class="modal-box" @click.stop>
+          <p class="modal-title">⚠️ エラーが検出されました</p>
+          <p class="modal-desc">{{ errorTargetEntry.errorReason ?? 'エラー' }}</p>
+          <div class="modal-confirm-btns">
+            <button class="modal-btn modal-btn--danger" @click="doErrorRetake">📷 再撮影</button>
+            <button class="modal-btn modal-btn--cancel" @click="errorTargetEntry = null">そのまま送る</button>
+          </div>
         </div>
       </div>
     </transition>
@@ -386,6 +396,22 @@ const cardStatusClass = (r: UploadEntry) => {
   if (r.status === 'error') return 'mobile-card--error'
   if (r.status === 'ok') return 'mobile-card--ok'
   return ''
+}
+
+// エラー対応モーダル
+const errorTargetEntry = ref<UploadEntry | null>(null)
+const openErrorModal = (entry: UploadEntry) => {
+  errorTargetEntry.value = entry
+}
+const doErrorRetake = () => {
+  if (!errorTargetEntry.value) return
+  // entries（元配列）のインデックスを逆引き
+  const idx = entries.value.findIndex(e => e.id === errorTargetEntry.value!.id)
+  if (idx !== -1) {
+    triggerRetake(idx)
+    retakeInputRef.value?.click()
+  }
+  errorTargetEntry.value = null
 }
 
 // 削除確認モーダル

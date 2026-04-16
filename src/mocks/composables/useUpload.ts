@@ -395,31 +395,41 @@ export function useUpload() {
       }
     }
 
-    // 完了済みのみソート: エラー → 重複 → OK
-    const statusOrder = (e: UploadEntry): number => {
-      if (e.status === 'error') return 0
-      if (e.isDuplicate) return 1
-      return 2 // ok
-    }
-    done.sort((a, b) => statusOrder(a) - statusOrder(b))
-
-    // 重複グループ化: 同じhashのエントリを連続配置
-    const sorted: UploadEntry[] = []
-    const visited = new Set<string>()
-    for (const entry of done) {
-      if (visited.has(entry.id)) continue
-      visited.add(entry.id)
-      sorted.push(entry)
-      // 同一ハッシュの仲間を直後に配置
-      if (entry.hash && entry.isDuplicate) {
-        for (const other of done) {
-          if (!visited.has(other.id) && other.hash === entry.hash) {
-            visited.add(other.id)
-            sorted.push(other)
-          }
-        }
+    // 完了済みのみソート: エラー → 重複グループ（親→子・昇順） → OK
+    // 1) ハッシュごとにグループ化（出現順＝アップロード順を維持）
+    const hashGroups = new Map<string, UploadEntry[]>()
+    const noHashEntries: UploadEntry[] = []
+    for (const e of done) {
+      if (e.hash) {
+        const group = hashGroups.get(e.hash) ?? []
+        group.push(e) // 出現順（=アップロード順＝昇順）を維持
+        hashGroups.set(e.hash, group)
+      } else {
+        noHashEntries.push(e)
       }
     }
+
+    // 2) 重複グループ（2件以上の同一hash）と非重複を分離
+    const duplicateGroups: UploadEntry[][] = []
+    const singleEntries: UploadEntry[] = []
+    for (const [, group] of hashGroups) {
+      if (group.length >= 2) {
+        duplicateGroups.push(group) // グループ内は既に昇順
+      } else {
+        singleEntries.push(group[0]!)
+      }
+    }
+    singleEntries.push(...noHashEntries)
+
+    // 3) エラー → 重複グループ（親→子・昇順） → OK の順で結合
+    const errors = singleEntries.filter(e => e.status === 'error')
+    const oks = singleEntries.filter(e => e.status === 'ok')
+
+    const sorted: UploadEntry[] = [
+      ...errors,
+      ...duplicateGroups.flat(), // 各グループ内は親（最初）→子（後続）の昇順
+      ...oks,
+    ]
 
     // 完了済み（ソート済み） + 未完了（追加順固定）
     return [...sorted, ...pending]
