@@ -45,9 +45,9 @@
         <colgroup>
           <col :style="{ width: pgColWidths['status'] + 'px' }">
           <col :style="{ width: pgColWidths['code'] + 'px' }">
-          <col :style="{ width: pgColWidths['fiscalMonth'] + 'px' }">
           <col>
           <col :style="{ width: pgColWidths['staffName'] + 'px' }">
+          <col :style="{ width: pgColWidths['fiscalMonth'] + 'px' }">
           <col :style="{ width: pgColWidths['shareStatus'] + 'px' }">
           <col :style="{ width: pgColWidths['receivedDate'] + 'px' }">
           <col :style="{ width: pgColWidths['unexported'] + 'px' }">
@@ -63,12 +63,12 @@
             <th class="sortable pg-th-narrow relative" @click="sortBy('code')">3コード <i :class="getSortIcon('code')"></i>
               <div class="resize-handle" @mousedown.stop="onPgResizeStart('code', $event)"></div>
             </th>
-            <th class="sortable pg-th-narrow relative" @click="sortBy('fiscalMonth')">決算月 <i :class="getSortIcon('fiscalMonth')"></i>
-              <div class="resize-handle" @mousedown.stop="onPgResizeStart('fiscalMonth', $event)"></div>
-            </th>
-            <th class="sortable" @click="sortBy('companyName')">顧問先 <i :class="getSortIcon('companyName')"></i></th>
+            <th class="sortable" @click="sortBy('companyName')">会社名/代表者名 <i :class="getSortIcon('companyName')"></i></th>
             <th class="sortable pg-th-narrow relative" @click="sortBy('staffName')">担当 <i :class="getSortIcon('staffName')"></i>
               <div class="resize-handle" @mousedown.stop="onPgResizeStart('staffName', $event)"></div>
+            </th>
+            <th class="sortable pg-th-narrow relative" @click="sortBy('fiscalMonth')">決算月 <i :class="getSortIcon('fiscalMonth')"></i>
+              <div class="resize-handle" @mousedown.stop="onPgResizeStart('fiscalMonth', $event)"></div>
             </th>
             <th class="pg-th-narrow relative">共有設定
               <div class="resize-handle" @mousedown.stop="onPgResizeStart('shareStatus', $event)"></div>
@@ -100,9 +100,9 @@
               }">{{ row.status === 'active' ? '稼働中' : row.status === 'suspension' ? '休眠中' : '契約終了' }}</span>
             </td>
             <td class="pg-td-code">{{ row.code }}</td>
-            <td class="pg-td-fiscal">{{ row.fiscalMonth }}月</td>
-            <td class="pg-td-client">{{ row.companyName }}</td>
+            <td class="pg-td-client">{{ row.type === 'individual' && row.repName ? row.repName : row.companyName }}</td>
             <td class="pg-td-narrow">{{ getStaffNameForClient(row.clientId) || '' }}</td>
+            <td class="pg-td-fiscal">{{ row.fiscalMonth }}月</td>
             <td class="pg-td-narrow pg-td-share">
               <span v-if="getStatusFromCache(row.clientId) === 'active'" class="pg-share-badge pg-share-active">共有OK</span>
               <span v-else-if="getStatusFromCache(row.clientId) === 'pending'" class="pg-share-badge pg-share-pending">未承認</span>

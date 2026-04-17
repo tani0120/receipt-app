@@ -28,8 +28,8 @@
           <col style="width: 50px;">
           <col style="width: 20%;">
           <col style="width: 90px;">
-          <col style="width: 80px;">
           <col style="width: 90px;">
+          <col style="width: 80px;">
           <col style="width: 110px;">
           <col style="width: 15%;">
           <col style="width: 100px;">
@@ -39,10 +39,10 @@
             <th class="sortable" @click="sortBy('status')">ステータス <i :class="getSortIcon('status')"></i></th>
             <th class="sortable" @click="sortBy('threeCode')">3コード <i :class="getSortIcon('threeCode')"></i></th>
             <th class="sortable" @click="sortBy('type')">種別 <i :class="getSortIcon('type')"></i></th>
-            <th class="sortable" @click="sortBy('companyName')">会社名 <i :class="getSortIcon('companyName')"></i></th>
+            <th class="sortable" @click="sortBy('companyName')">会社名/代表者名 <i :class="getSortIcon('companyName')"></i></th>
             <th class="sortable" @click="sortBy('staffName')">担当者 <i :class="getSortIcon('staffName')"></i></th>
-            <th class="sortable" @click="sortBy('accountingSoftware')">会計ソフト <i :class="getSortIcon('accountingSoftware')"></i></th>
             <th class="sortable" @click="sortBy('fiscalMonth')">決算日 <i :class="getSortIcon('fiscalMonth')"></i></th>
+            <th class="sortable" @click="sortBy('accountingSoftware')">会計ソフト <i :class="getSortIcon('accountingSoftware')"></i></th>
             <th>電話番号</th>
             <th>メール</th>
             <th>主な連絡手段</th>
@@ -63,10 +63,10 @@
             </td>
             <td class="cl-code">{{ row.threeCode }}</td>
             <td>{{ row.type === 'corp' ? '法人' : '個人' }}</td>
-            <td class="cl-company-name">{{ row.companyName }}</td>
+            <td class="cl-company-name">{{ row.type === 'individual' && row.repName ? row.repName : row.companyName }}</td>
             <td>{{ getStaffNameForClient(row.clientId) || '—' }}</td>
-            <td>{{ softwareLabel(row.accountingSoftware) }}</td>
             <td class="cl-fiscal">{{ row.fiscalMonth }}月/{{ row.fiscalDay === '末日' ? '末日' : row.fiscalDay + '日' }}</td>
+            <td>{{ softwareLabel(row.accountingSoftware) }}</td>
             <td>{{ row.phoneNumber || '—' }}</td>
             <td class="cl-ellipsis">{{ row.email || '—' }}</td>
             <td class="cl-contact-cell">
@@ -145,7 +145,8 @@ const filteredRows = computed(() => {
     const q = searchQuery.value.trim().toLowerCase();
     rows = rows.filter(c =>
       c.companyName.toLowerCase().includes(q) ||
-      c.threeCode.toLowerCase().includes(q)
+      c.threeCode.toLowerCase().includes(q) ||
+      (c.repName && c.repName.toLowerCase().includes(q))
     );
   }
   rows.sort((a, b) => {

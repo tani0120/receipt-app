@@ -40,6 +40,7 @@
               <col :style="{ width: clColWidths['fiscalMonth'] + 'px' }">
               <col :style="{ width: clColWidths['phoneNumber'] + 'px' }">
               <col :style="{ width: clColWidths['email'] + 'px' }">
+              <col :style="{ width: clColWidths['driveUrl'] + 'px' }">
               <col :style="{ width: clColWidths['chatRoomUrl'] + 'px' }">
               <col style="width: auto;">
             </colgroup>
@@ -66,7 +67,7 @@
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('taxMode', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortBy('companyName')">
-                  会社名 <i :class="getSortIcon('companyName')"></i>
+                  会社名/代表者名 <i :class="getSortIcon('companyName')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('companyName', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortBy('staffName')">
@@ -86,6 +87,9 @@
                 </th>
                 <th class="relative">メール
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('email', $event)"></div>
+                </th>
+                <th class="relative">Drive取込
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('driveUrl', $event)"></div>
                 </th>
                 <th class="relative">チャットURL
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('chatRoomUrl', $event)"></div>
@@ -127,7 +131,7 @@
                 <td>{{ taxModeLabel(row.consumptionTaxMode) }}</td>
                 <td class="cm-company-name td-editable" @dblclick.stop="startInlineEdit(row, 'companyName', $event)">
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                  <span v-else>{{ row.companyName }}</span>
+                  <span v-else>{{ row.type === 'individual' && row.repName ? row.repName : row.companyName }}</span>
                 </td>
                 <td class="td-editable" @dblclick.stop="startStaffInlineEdit(row, $event)">
                   <select v-if="inlineEditId === row.clientId && inlineEditField === 'staffName'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitStaffEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
@@ -172,6 +176,10 @@
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'email'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.email || '—' }}</span>
                 </td>
+                <td class="cm-drive-cell" @click.stop="copyDriveUrl(row.clientId)">
+                  <span v-if="driveUrlCopied === row.clientId" class="cm-drive-copied">✅ コピー済</span>
+                  <span v-else class="cm-drive-link">📋 URLコピー</span>
+                </td>
                 <td class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'chatRoomUrl', $event)">
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'chatRoomUrl'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.chatRoomUrl || '—' }}</span>
@@ -187,7 +195,7 @@
                 </td>
               </tr>
               <tr v-if="pagedRows.length === 0">
-                <td colspan="13" class="cm-empty">該当する顧問先がありません</td>
+                <td colspan="14" class="cm-empty">該当する顧問先がありません</td>
               </tr>
             </tbody>
           </table>
@@ -248,7 +256,7 @@
                 <input type="text" v-model="panelForm.threeCode" class="cm-input cm-code-input" maxlength="3" placeholder="ABC" @input="panelForm.threeCode = panelForm.threeCode.toUpperCase().replace(/[^A-Z]/g, '')">
               </div>
               <div class="cm-field">
-                <label class="cm-label">会社名 <span class="cm-required">*</span></label>
+                <label class="cm-label">会社名</label>
                 <input type="text" v-model="panelForm.companyName" class="cm-input" placeholder="株式会社サンプル">
               </div>
               <div class="cm-field">
@@ -277,6 +285,46 @@
               <div class="cm-field">
                 <label class="cm-label">メールアドレス</label>
                 <input type="email" v-model="panelForm.email" class="cm-input" placeholder="example@mail.com">
+              </div>
+              <div class="cm-field">
+                <label class="cm-label">Drive取込 URL（自動生成）</label>
+                <div class="cm-drive-url-box">
+                  <input type="text" :value="driveUploadUrl" class="cm-input cm-drive-url-input" readonly @click="($event.target as HTMLInputElement).select()">
+                  <button class="cm-drive-copy-btn" :class="{ copied: driveUrlPanelCopied }" @click="copyDriveUrlPanel">
+                    <span>{{ driveUrlPanelCopied ? '✅ コピー済' : '📋 コピー' }}</span>
+                  </button>
+                </div>
+                <p class="cm-hint" style="margin-top: 4px">顧問先にこのURLを共有 → スマホからDrive取込アップロード可能</p>
+              </div>
+              <!-- Driveフォルダ状態（編集モード時のみ） -->
+              <div v-if="panelMode === 'edit'" class="cm-field">
+                <label class="cm-label">Driveフォルダ状態</label>
+                <div class="cm-drive-folder-status">
+                  <template v-if="folderCheckLoading">
+                    <span class="cm-folder-checking">🔄 確認中...</span>
+                  </template>
+                  <template v-else-if="folderStatus === 'ok'">
+                    <span class="cm-folder-ok">✅ フォルダ存在（正常）</span>
+                  </template>
+                  <template v-else-if="folderStatus === 'trashed'">
+                    <span class="cm-folder-warn">⚠️ ゴミ箱に入っています（Driveで復元可能）</span>
+                    <button class="cm-folder-recreate-btn" @click="recreateDriveFolder" :disabled="folderRecreating">
+                      {{ folderRecreating ? '作成中...' : '📁 Driveフォルダ再作成' }}
+                    </button>
+                  </template>
+                  <template v-else-if="folderStatus === 'deleted'">
+                    <span class="cm-folder-error">❌ フォルダが削除されています</span>
+                    <button class="cm-folder-recreate-btn" @click="recreateDriveFolder" :disabled="folderRecreating">
+                      {{ folderRecreating ? '作成中...' : '📁 Driveフォルダ再作成' }}
+                    </button>
+                  </template>
+                  <template v-else-if="folderStatus === 'none'">
+                    <span class="cm-folder-none">📭 未作成</span>
+                    <button class="cm-folder-recreate-btn" @click="recreateDriveFolder" :disabled="folderRecreating">
+                      {{ folderRecreating ? '作成中...' : '📁 Driveフォルダ作成' }}
+                    </button>
+                  </template>
+                </div>
               </div>
               <div class="cm-field">
                 <label class="cm-label">チャットルームURL</label>
@@ -489,6 +537,7 @@ const clDefaultWidths: Record<string, number> = {
   fiscalMonth: 90,
   phoneNumber: 110,
   email: 140,
+  driveUrl: 100,
   chatRoomUrl: 140,
 };
 const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnResize('master-clients', clDefaultWidths);
@@ -671,17 +720,21 @@ const openEditPanel = (row: Client) => {
   panelStaffId.value = row.staffId ?? '';
   panelMode.value = 'edit';
   editingId.value = row.clientId;
+  // Driveフォルダ存在確認（非同期）
+  checkDriveFolderStatus(row);
 };
 
 const closePanel = () => {
   panelMode.value = null;
   editingId.value = null;
   showIndustryDropdown.value = false;
+  folderStatus.value = null;
+  folderCheckLoading.value = false;
 };
 
 const saveClient = () => {
-  if (!panelForm.companyName) {
-    globalThis.alert('会社名は必須です');
+  if (!panelForm.companyName && !panelForm.repName) {
+    globalThis.alert('会社名または代表者名のどちらかを入力してください');
     return;
   }
   const { contactType, contactValue, ...fields } = panelForm;
@@ -696,7 +749,11 @@ const saveClient = () => {
   };
   if (panelMode.value === 'add') {
     clients.value.push(data);
-    globalThis.alert(`「${data.companyName}」を追加しました。\n\n勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。`);
+    // Driveフォルダ自動作成（共有ドライブ内にフォルダを作成）
+    createDriveFolderForClient(data).catch(err => {
+      console.error('[clients] Driveフォルダ作成失敗:', err);
+    });
+    globalThis.alert(`「${data.companyName}」を追加しました。\n\n勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。\nGoogle Driveフォルダも自動作成されます。`);
   } else {
     const idx = clients.value.findIndex(c => c.clientId === editingId.value);
     if (idx >= 0) clients.value[idx] = data;
@@ -775,6 +832,120 @@ const commitStaffEdit = (_row: Client) => {
 const closeDropdowns = () => { showIndustryDropdown.value = false; };
 onMounted(() => document.addEventListener('click', closeDropdowns));
 onUnmounted(() => document.removeEventListener('click', closeDropdowns));
+
+// --- Drive取込 URL ---
+const driveUrlCopied = ref<string | null>(null);
+const driveUrlPanelCopied = ref(false);
+
+/** テーブル行のDrive取达URLをコピー */
+const copyDriveUrl = async (clientId: string) => {
+  const url = `${window.location.origin}/#/drive-upload/${clientId}/guest`;
+  try {
+    await navigator.clipboard.writeText(url);
+    driveUrlCopied.value = clientId;
+    setTimeout(() => { driveUrlCopied.value = null; }, 2500);
+  } catch {
+    window.prompt('URLをコピーしてください:', url);
+  }
+};
+
+/** パネル内のDrive取达URL（編集時はeditingId、新規時は「保存後に自動生成」） */
+const driveUploadUrl = computed(() => {
+  const id = editingId.value || '（保存後に自動生成）';
+  return `${window.location.origin}/#/drive-upload/${id}/guest`;
+});
+
+/** パネル内のDrive URLコピー */
+const copyDriveUrlPanel = async () => {
+  try {
+    await navigator.clipboard.writeText(driveUploadUrl.value);
+    driveUrlPanelCopied.value = true;
+    setTimeout(() => { driveUrlPanelCopied.value = false; }, 2500);
+  } catch {
+    window.prompt('URLをコピーしてください:', driveUploadUrl.value);
+  }
+};
+
+/** Driveフォルダ自動作成（新規登録時） */
+const createDriveFolderForClient = async (client: Client) => {
+  const folderName = `${client.threeCode}_${client.companyName}`;
+  try {
+    const res = await fetch('/api/drive/folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderName }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    const data = await res.json() as { folderId: string };
+    console.log(`[clients] Driveフォルダ作成完了: ${folderName} (id=${data.folderId})`);
+    // driveIdを顧問先データに保存
+    const idx = clients.value.findIndex(c => c.clientId === client.clientId);
+    if (idx >= 0) {
+      (clients.value[idx] as unknown as Record<string, unknown>).driveId = data.folderId;
+      markDirty();
+    }
+  } catch (err) {
+    console.error(`[clients] Driveフォルダ作成失敗 (${folderName}):`, err);
+  }
+};
+
+// --- Driveフォルダ状態確認 ---
+const folderStatus = ref<'ok' | 'trashed' | 'deleted' | 'none' | null>(null);
+const folderCheckLoading = ref(false);
+const folderRecreating = ref(false);
+
+/** パネルopen時にDriveフォルダの存在を確認 */
+const checkDriveFolderStatus = async (row: Client) => {
+  const driveId = (row as unknown as Record<string, unknown>).driveId as string | undefined;
+  if (!driveId) {
+    folderStatus.value = 'none';
+    return;
+  }
+
+  folderCheckLoading.value = true;
+  try {
+    const res = await fetch(`/api/drive/folder/check?folderId=${encodeURIComponent(driveId)}`);
+    if (!res.ok) {
+      folderStatus.value = 'deleted';
+      return;
+    }
+    const data = await res.json() as { exists: boolean; trashed: boolean };
+    if (!data.exists) {
+      folderStatus.value = 'deleted';
+    } else if (data.trashed) {
+      folderStatus.value = 'trashed';
+    } else {
+      folderStatus.value = 'ok';
+    }
+  } catch {
+    folderStatus.value = 'deleted';
+  } finally {
+    folderCheckLoading.value = false;
+  }
+};
+
+/** Driveフォルダ再作成 */
+const recreateDriveFolder = async () => {
+  if (!editingId.value) return;
+  const client = clients.value.find(c => c.clientId === editingId.value);
+  if (!client) return;
+
+  folderRecreating.value = true;
+  try {
+    await createDriveFolderForClient(client);
+    // 再チェック
+    await checkDriveFolderStatus(client);
+    globalThis.alert(`Driveフォルダを再作成しました。`);
+  } catch (err) {
+    console.error('[clients] Driveフォルダ再作成失敗:', err);
+    globalThis.alert(`Driveフォルダの再作成に失敗しました。`);
+  } finally {
+    folderRecreating.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -932,4 +1103,70 @@ onUnmounted(() => document.removeEventListener('click', closeDropdowns));
   cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
 }
 .resize-handle:hover { background: #3b82f6; }
+
+/* Drive取込セル（テーブル） */
+.cm-drive-cell {
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+.cm-drive-cell:hover { background: #fffbeb; }
+.cm-drive-link {
+  font-size: 11px; font-weight: 600;
+  color: #92400e;
+  padding: 2px 8px; border-radius: 4px;
+  background: #fef3c7;
+}
+.cm-drive-copied {
+  font-size: 11px; font-weight: 700;
+  color: #166534;
+  padding: 2px 8px; border-radius: 4px;
+  background: #dcfce7;
+}
+
+/* Drive取込URL（パネル内） */
+.cm-drive-url-box {
+  display: flex; gap: 6px; align-items: center;
+}
+.cm-drive-url-input {
+  flex: 1; min-width: 0;
+  font-size: 11px; font-family: monospace;
+  color: #64748b; background: #f8fafc;
+}
+.cm-drive-copy-btn {
+  flex-shrink: 0;
+  padding: 6px 14px; border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #fff; cursor: pointer;
+  font-size: 11px; font-weight: 600;
+  color: #334155; font-family: inherit;
+  transition: all 0.2s;
+}
+.cm-drive-copy-btn:hover { background: #f0f7ff; border-color: #93c5fd; }
+.cm-drive-copy-btn.copied { background: #dcfce7; border-color: #86efac; color: #166534; }
+
+/* Driveフォルダ状態 */
+.cm-drive-folder-status {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.cm-folder-checking { font-size: 12px; color: #64748b; }
+.cm-folder-ok   { font-size: 12px; font-weight: 600; color: #166534; }
+.cm-folder-warn  { font-size: 12px; font-weight: 600; color: #92400e; }
+.cm-folder-error { font-size: 12px; font-weight: 600; color: #dc2626; }
+.cm-folder-none  { font-size: 12px; font-weight: 600; color: #64748b; }
+.cm-folder-recreate-btn {
+  padding: 6px 16px; border-radius: 8px;
+  border: 1px solid #f59e0b;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  color: #92400e; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+  font-family: inherit; width: fit-content;
+}
+.cm-folder-recreate-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  box-shadow: 0 2px 8px rgba(245,158,11,0.2);
+}
+.cm-folder-recreate-btn:disabled {
+  opacity: 0.5; cursor: not-allowed;
+}
 </style>

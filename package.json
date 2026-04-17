@@ -35,6 +35,7 @@
     "exceljs": "^4.4.0",
     "firebase": "^12.7.0",
     "firebase-admin": "^13.6.0",
+    "googleapis": "^171.4.0",
     "hono": "^4.11.3",
     "iconv-lite": "^0.7.2",
     "moment": "^2.30.1",

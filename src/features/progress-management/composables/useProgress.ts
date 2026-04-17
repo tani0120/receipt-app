@@ -66,6 +66,7 @@ export function useProgress() {
                 type: c.type,
                 fiscalMonth: c.fiscalMonth,
                 companyName: c.companyName,
+                repName: c.repName || '',
                 receivedDate: mock?.receivedDate ?? '',
                 unexported: mock?.unexported ?? 0,
                 monthlyJournals: generateMonthlyData(cols, mock?.baseCount ?? 0),

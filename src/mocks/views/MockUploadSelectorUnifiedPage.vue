@@ -185,11 +185,17 @@
             <span class="section-badge badge-staff">🏢 社内用</span>
             <p class="section-note">スタッフがこの画面から直接アップロード（PC・スマホ自動対応）</p>
           </div>
-          <div class="card-row card-row--single">
+          <div class="card-row">
             <button class="sel-card card-staff-upload" @click="go(staffPath)">
               <div class="card-icon-area icon-staff-upload"><span>📤</span></div>
               <h3 class="card-label">アップロード</h3>
               <p class="card-sub">PC・スマホ自動判定</p>
+            </button>
+            <button class="sel-card card-drive-upload" @click="go(drivePath)">
+              <div class="card-icon-area icon-drive-upload"><span>📁</span></div>
+              <h3 class="card-label">ドライブから取り込み</h3>
+              <p class="card-sub">スマホ推奨・メモリ不使用</p>
+              <span class="drive-tag">Google Drive</span>
             </button>
           </div>
         </div>
@@ -200,7 +206,7 @@
             <span class="section-badge badge-client">👤 顧問先に共有</span>
             <p class="section-note">カードをクリックでURLコピー</p>
           </div>
-          <div class="card-row">
+          <div class="card-row card-row--triple">
             <div class="sel-card card-client-mobile" @click="copyText(portalLoginUrl, 'portal')">
               <div class="card-icon-area icon-client-mobile"><span>🔗</span></div>
               <h3 class="card-label">顧問先ログイン用URL</h3>
@@ -208,6 +214,15 @@
               <span class="copy-tag" :class="{ copied: copiedKey === 'portal' }">
                 <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'portal' }">📋</span>
                 {{ copiedKey === 'portal' ? 'コピーしました！' : 'URLをコピー' }}
+              </span>
+            </div>
+            <div class="sel-card card-drive-guest" @click="copyText(driveGuestUrl, 'driveGuest')">
+              <div class="card-icon-area icon-drive-guest"><span>📁</span></div>
+              <h3 class="card-label">Drive取込URL</h3>
+              <p class="card-sub">顧問先用・スマホ向け</p>
+              <span class="copy-tag" :class="{ copied: copiedKey === 'driveGuest' }">
+                <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'driveGuest' }">📋</span>
+                {{ copiedKey === 'driveGuest' ? 'コピーしました！' : 'URLをコピー' }}
               </span>
             </div>
             <button class="sel-card card-client-pc" @click="go('/guest/' + clientId)">
@@ -236,9 +251,11 @@ const clientId = route.params.clientId as string
 const origin = window.location.origin
 
 // URL群（統合版: PC・スマホ共通）
-const staffPath     = `/upload/${clientId}/staff`
-const staffUrl      = `${origin}/#${staffPath}`
+const staffPath       = `/upload/${clientId}/staff`
+const drivePath       = `/drive-upload/${clientId}`
+const staffUrl        = `${origin}/#${staffPath}`
 const portalLoginUrl  = `${origin}/#/guest/${clientId}/login`
+const driveGuestUrl   = `${origin}/#/drive-upload/${clientId}/guest`
 
 // 共有設定（Repository経由）
 const { loadAll, updateStatus, saveInviteCode, getStatusFromCache, getInviteCodeFromCache } = useShareStatus()
@@ -521,7 +538,11 @@ const go = (path: string) => {
 .card-staff-upload:hover { border-color: #3b82f6; background: #f0f7ff; }
 .card-client-mobile:hover { border-color: #22c55e; background: #f0fdf4; }
 .card-client-pc:hover     { border-color: #22c55e; background: #f0fdf4; }
+.card-drive-upload:hover  { border-color: #f59e0b; background: #fffbeb; }
+.card-drive-guest:hover   { border-color: #f59e0b; background: #fffbeb; }
 .card-row--single { grid-template-columns: 1fr; }
+.card-row--triple { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 640px) { .card-row--triple { grid-template-columns: 1fr; } }
 
 .card-icon-area {
   width: 48px; height: 48px; border-radius: 14px;
@@ -533,6 +554,15 @@ const go = (path: string) => {
 .icon-staff-upload  { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
 .icon-client-mobile { background: linear-gradient(135deg, #dcfce7, #bbf7d0); }
 .icon-client-pc     { background: linear-gradient(135deg, #dcfce7, #bbf7d0); }
+.icon-drive-upload  { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+.icon-drive-guest   { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+
+.drive-tag {
+  display: inline-block; font-size: 9px; font-weight: 700;
+  padding: 2px 8px; border-radius: 4px;
+  background: #fef3c7; color: #92400e;
+  margin-top: 6px;
+}
 
 .card-label { font-size: 13px; font-weight: 700; color: #1e293b; margin: 0 0 4px; }
 .card-sub   { font-size: 10px; color: #94a3b8; margin: 0; }

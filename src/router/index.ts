@@ -286,6 +286,19 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/mocks/views/MockUploadDocsPage.vue')
   },
   { path: '/client/upload-docs/:clientId', redirect: (to) => `/upload-docs/${to.params.clientId}` },
+  // ===== Driveアップロード（スマホ用: ファイルIDのみ送信。メモリゼロ） =====
+  {
+    path: '/drive-upload/:clientId',
+    name: 'DriveUpload',
+    component: () => import('@/mocks/views/MockDriveUploadPage.vue'),
+  },
+  // ゲスト用Driveアップロード
+  {
+    path: '/drive-upload/:clientId/guest',
+    name: 'DriveUploadGuest',
+    component: () => import('@/mocks/views/MockDriveUploadPage.vue'),
+  },
+  { path: '/client/drive-upload/:clientId', redirect: (to) => `/drive-upload/${to.params.clientId}` },
   // --- 事務所共通マスタ（顧問先ID不要） ---
   {
     path: '/master/accounts',

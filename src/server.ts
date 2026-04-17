@@ -97,6 +97,10 @@ app.route('/api/documents', documentsRoute)
 // Pipeline API: パイプライン結合テスト（Step 0-1: classify / extract）
 app.route('/api/pipeline', pipelineRoute)
 
+// Drive API: Google Drive連携（ファイル一覧取得・処理）
+import driveRoute from './api/routes/drive'
+app.route('/api/drive', driveRoute)
+
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
 
