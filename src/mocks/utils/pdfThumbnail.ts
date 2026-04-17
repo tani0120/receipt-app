@@ -39,7 +39,9 @@ export async function generatePdfThumbnail(
 
   const dataUrl = canvas.toDataURL('image/png')
 
-  // メモリ解放
+  // メモリ解放（canvas + pdfjs）
+  canvas.width = 0
+  canvas.height = 0
   page.cleanup()
   await pdf.destroy()
 

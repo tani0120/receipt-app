@@ -107,6 +107,8 @@ export interface ClassifyResponse {
     supplementary: boolean;          // 補助対象ファイル
     isDuplicate: boolean;            // 重複検出（SHA-256一致）
   };
+  /** SHA-256ハッシュ（重複グループ化・フロント表示用） */
+  fileHash?: string;
   metadata: {
     duration_ms: number;
     duration_seconds: number;         // 処理時間（秒）

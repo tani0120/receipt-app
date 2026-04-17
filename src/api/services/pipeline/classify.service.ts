@@ -31,6 +31,11 @@ export function clearKnownHashes(): void {
   knownFileHashes.clear();
 }
 
+/** 既知ハッシュかどうか確認（重複検出用） */
+export function isKnownHash(hash: string): boolean {
+  return knownFileHashes.has(hash);
+}
+
 // シングルトン（リクエスト毎に生成しない）
 let _ai: GoogleGenAI | null = null;
 

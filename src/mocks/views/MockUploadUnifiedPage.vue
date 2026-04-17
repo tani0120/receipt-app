@@ -36,21 +36,29 @@
             <button class="drop-select-btn" @click.stop="fileInputRef?.click()">ファイルを選択</button>
           </div>
           <div class="file-list" v-if="entries.length">
+            <!-- エラー・重複子の一括削除ボタン -->
+            <div v-if="bulkDeleteTargets.length" class="bulk-delete-bar">
+              <button class="bulk-delete-btn" @click="showBulkDeleteConfirm = true">
+                <span class="bulk-delete-icon">⚠</span>
+                <span class="bulk-delete-label">エラー・重複を一括削除</span>
+                <span class="bulk-delete-count">{{ bulkDeleteTargets.length }}件</span>
+              </button>
+            </div>
             <div
-              v-for="(f, i) in sortedEntries"
+              v-for="f in sortedEntries"
               :key="f.id"
               class="file-item badge-container"
-              :class="{ 'file-item--selected': selectedId === f.id }"
+              :class="[
+                { 'file-item--selected': selectedId === f.id },
+                dupGroupInfo(f)?.colorClass ?? '',
+                { 'dup-child': dupGroupInfo(f) && dupGroupInfo(f)!.pos >= 2 },
+              ]"
               @click="selectFile(f)"
             >
-              <div class="file-icon" :class="fileIconClass(f.fileName)">{{ fileIconEmoji(f.fileName) }}</div>
+              <div class="file-status-icon" :class="statusIconClass(f)">{{ statusIconText(f) }}</div>
               <div class="file-info">
                 <p class="file-name">{{ f.fileName }}</p>
                 <p class="file-size">{{ formatSize(f.fileSize) }}</p>
-                <!-- 重複バッジ -->
-                <div v-if="f.isDuplicate" class="classify-badges">
-                  <span class="badge badge--warning">⚠ {{ MSG_DUPLICATE_DETAIL }}</span>
-                </div>
                 <div class="classify-badges" v-if="classifyBadgeVisible(f)">
                   <span v-if="f.status === 'uploading' || f.status === 'analyzing'" class="badge badge--loading">⏳ アップロード中...</span>
                   <span v-else-if="f.status === 'error'" class="badge badge--error">⚠️ {{ f.errorReason ?? '失敗' }}</span>
@@ -64,10 +72,11 @@
                     <span v-if="f.vendor" class="badge badge--issuer">{{ f.vendor }}</span>
                     <span v-if="f.amount" class="badge badge--amount">¥{{ f.amount.toLocaleString() }}</span>
                     <span v-if="f.date" class="badge badge--date">{{ f.date }}</span>
-
                   </template>
                 </div>
               </div>
+              <!-- 重複グループバッジ（ゴミ箱の左横） -->
+              <span v-if="dupGroupInfo(f)" class="dup-tag" :class="dupGroupInfo(f)!.colorClass">グループ{{ dupGroupInfo(f)!.groupLabel }} ({{ dupGroupInfo(f)!.pos }}/{{ dupGroupInfo(f)!.size }})</span>
               <button class="file-remove" @click.stop="confirmRemove(f.id)">🗑️</button>
             </div>
           </div>
@@ -92,7 +101,7 @@
             </div>
             <div class="preview-body">
               <img v-if="isImageFile(selectedEntry.fileName)" :src="selectedUrl!" class="preview-image" :alt="selectedEntry.fileName" />
-              <iframe v-else-if="isPdfFile(selectedEntry.fileName)" :src="selectedUrl!" class="preview-pdf"></iframe>
+              <iframe v-else-if="isPdfFile(selectedEntry.fileName)" :src="selectedUrl! + '#zoom=page-fit'" class="preview-pdf"></iframe>
               <div v-else class="preview-unsupported">
                 <div class="preview-unsupported-icon">📄</div>
                 <p>このファイル形式のプレビューには対応していません</p>
@@ -121,8 +130,9 @@
             <p class="mobile-drop-sub">タップして選択 / ドラッグ&ドロップ</p>
             <div class="mobile-drop-btns">
               <button class="mobile-btn-camera" @click.stop="cameraInputRef?.click()">▶ 撮影する</button>
-              <button class="mobile-btn-file" @click.stop="fileInputRef?.click()">📁 ファイルを選択する</button>
+              <button class="mobile-btn-file" @click.stop="fileInputRef?.click()">📁 ファイルをアップロード</button>
             </div>
+            <button class="mobile-btn-advanced" @click.stop="advancedInputRef?.click()">⚙ 高度な処理でアップロード（時間がかかるため非推奨）</button>
           </div>
           <p class="mobile-drop-hint">200枚まで一括送信できます<br><span>JPEG / PNG / PDF / CSV / その他 対応</span></p>
 
@@ -160,14 +170,21 @@
 
           <!-- グリッド -->
           <div class="mobile-grid">
+            <!-- 完了済みが非表示の場合、折りたたみ表示 -->
+            <div v-if="hiddenDoneCount > 0" class="mobile-hidden-summary">
+              ✅ 完了済み {{ hiddenDoneCount }}件（表示省略）
+            </div>
             <div
-              v-for="(r, idx) in sortedEntries"
+              v-for="(r, idx) in visibleMobileEntries"
               :key="r.id"
               :class="['mobile-card', cardStatusClass(r)]"
               @click="r.status === 'error' ? openErrorModal(r) : undefined"
             >
               <div class="mobile-card-thumb">
-                <img :src="r.previewUrl" :alt="`領収書 ${idx + 1}`" class="mobile-card-img" loading="lazy" />
+                <!-- 処理中/待機中のみimg表示。完了後はテキスト化でRenderer負荷ゼロ → クラッシュ防止 -->
+                <img v-if="r.status === 'queued' || r.status === 'uploading' || r.status === 'analyzing'" :src="r.previewUrl" :alt="`領収書 ${idx + 1}`" class="mobile-card-img" loading="lazy" />
+                <div v-else-if="r.status === 'ok'" class="mobile-card-done">✅</div>
+                <div v-else class="mobile-card-done mobile-card-done--error">⚠️</div>
 
                 <!-- オーバーレイ: 待機 -->
                 <div v-if="r.status === 'queued'" class="overlay overlay--queued"><span>待機中</span></div>
@@ -180,7 +197,8 @@
                 <!-- 上部ステータスバー（完了後に表示） -->
                 <!-- エラー -->
                 <div v-if="r.status === 'error'" class="status-bar status-bar--error">⚠ エラー</div>
-                <!-- 重複 -->
+                <!-- 重複（グループ番号付き） -->
+                <div v-else-if="r.isDuplicate && dupGroupInfo(r)" class="status-bar status-bar--dup">⚠ 重複{{ dupGroupInfo(r)!.groupLabel }} ({{ dupGroupInfo(r)!.pos }}/{{ dupGroupInfo(r)!.size }})</div>
                 <div v-else-if="r.isDuplicate" class="status-bar status-bar--dup">⚠ {{ MSG_DUPLICATE_SHORT }}</div>
                 <!-- 警告 -->
                 <div v-else-if="r.status === 'ok' && r.warning" class="status-bar status-bar--warn">⚠ {{ r.warning }}</div>
@@ -214,7 +232,7 @@
                 <span>📷</span><span>撮る</span>
               </button>
               <div class="mobile-add-divider"></div>
-              <button class="mobile-add-btn" @click.stop="fileInputRef?.click()">
+              <button class="mobile-add-btn" @click.stop="pickFiles()">
                 <span>🖼</span><span>選ぶ</span>
               </button>
             </div>
@@ -294,15 +312,30 @@
       </div>
     </transition>
 
+    <!-- 一括削除確認モーダル -->
+    <transition name="fade">
+      <div v-if="showBulkDeleteConfirm" class="modal-overlay" @click="showBulkDeleteConfirm = false">
+        <div class="modal-box" @click.stop>
+          <p class="modal-title">🗑️ エラー・重複ファイルを一括削除しますか？</p>
+          <p class="modal-subtitle">対象: {{ bulkDeleteTargets.length }}件（エラー + 重複子ファイル）</p>
+          <div class="modal-confirm-btns">
+            <button class="modal-btn modal-btn--danger" @click="doBulkDelete">削除する</button>
+            <button class="modal-btn modal-btn--cancel" @click="showBulkDeleteConfirm = false">キャンセル</button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <!-- 隠しinput -->
     <input ref="fileInputRef" type="file" multiple accept="image/*,.pdf,.csv,.xlsx,.xls" class="hidden-input" @change="handleFileInput" />
+    <input ref="advancedInputRef" type="file" multiple accept="image/*,.pdf,.csv,.xlsx,.xls" class="hidden-input" @change="handleFileInputAdvanced" />
     <input ref="cameraInputRef" type="file" accept="image/*" capture="environment" class="hidden-input" @change="handleCameraInput" />
     <input ref="retakeInputRef" type="file" accept="image/*,.pdf" class="hidden-input" @change="handleRetakeInput" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import PortalHeader from '@/mocks/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
 import {
@@ -312,10 +345,9 @@ import {
   isImageFile,
   isPdfFile,
   fileIconEmoji,
-  fileIconClass,
 } from '@/mocks/composables/useUpload'
 import type { UploadEntry } from '@/mocks/composables/useUpload'
-import { MSG_DUPLICATE_DETAIL, MSG_DUPLICATE_SHORT } from '@/shared/validationMessages'
+import { MSG_DUPLICATE_SHORT } from '@/shared/validationMessages'
 
 const {
   entries, sortedEntries, showComplete, confirmedCount,
@@ -333,52 +365,100 @@ onBeforeUnmount(() => {
   cleanup()
 })
 
+// モバイルDOM制限: 処理中を優先表示、完了済みは最新N件のみ（Rendererクラッシュ防止）
+const MAX_VISIBLE_DONE = 6 // 完了済みの最大表示数（2列×3行）
+const visibleMobileEntries = computed(() => {
+  // 処理中/待機中は全表示
+  const active = sortedEntries.value.filter(e =>
+    e.status === 'queued' || e.status === 'uploading' || e.status === 'analyzing'
+  )
+  // 完了済み（OK/エラー）は最新N件のみ
+  const done = sortedEntries.value.filter(e =>
+    e.status === 'ok' || e.status === 'error'
+  )
+  const visibleDone = done.slice(0, Math.max(0, MAX_VISIBLE_DONE - active.length))
+  return [...active, ...visibleDone]
+})
+const hiddenDoneCount = computed(() => {
+  const totalDone = sortedEntries.value.filter(e => e.status === 'ok' || e.status === 'error').length
+  const visibleDone = visibleMobileEntries.value.filter(e => e.status === 'ok' || e.status === 'error').length
+  return totalDone - visibleDone
+})
+
 
 // refs
 const fileInputRef = ref<HTMLInputElement>()
+const advancedInputRef = ref<HTMLInputElement>()
 const cameraInputRef = ref<HTMLInputElement>()
 const retakeInputRef = ref<HTMLInputElement>()
 const dragging = ref(false)
 
 // 説明カード
 const howToItems = [
-  { step: 1, icon: '①', title: '資料を自動チェック用に送付', desc: 'スマホ撮影またはファイルを選択して送付' },
-  { step: 2, icon: '②', title: 'システムが自動チェック', desc: '自動で日付・金額・摘要を確認します' },
-  { step: 3, icon: '③', title: 'エラー内容を1枚づつ確認', desc: 'タップして再撮影 or そのまま送付 を選択' },
+  { step: 1, icon: '①', title: '資料を送付', desc: 'スマホ撮影またはファイルを選択して送付' },
+  { step: 2, icon: '②', title: '重複チェック', desc: '同じファイルがないか自動で確認します' },
+  { step: 3, icon: '③', title: '内容を確認', desc: 'タップして再撮影 or そのまま送付 を選択' },
   { step: 4, icon: '④', title: '確認が終わったら送付', desc: '「送付する」ボタンを押して完了' },
 ]
 
 // イベントハンドラ（PC/モバイル統合）
+// スマホメインボタン: 軽量モード（AI分類スキップ）
+// PC / スマホ「高度な処理」: 通常モード（AI分類あり）
 const handleFileInput = (e: Event) => {
   const files = Array.from((e.target as HTMLInputElement).files ?? [])
-  if (files.length) addFiles(files)
+  if (files.length) addFiles(files, { lite: isMobile.value })
   ;(e.target as HTMLInputElement).value = ''
+}
+
+/**
+ * モバイルファイル選択（クラッシュ防止設計）
+ * Android Chrome 132+: showOpenFilePicker（Content Provider回避）
+ * iOS Safari / 古いブラウザ: input動的生成（multiple外す、1枚ずつ）
+ */
+const supportsFilePicker = typeof window !== 'undefined' && 'showOpenFilePicker' in window
+
+async function pickFiles() {
+  if (supportsFilePicker) {
+    // Android Chrome 132+: File System Access API（Blink内部バッファ回避の可能性）
+    try {
+      const handles = await (window as any).showOpenFilePicker({
+        multiple: true,
+      })
+      const files: File[] = []
+      for (const handle of handles) {
+        files.push(await handle.getFile())
+      }
+      if (files.length) addFiles(files, { lite: isMobile.value })
+    } catch (err) {
+      // ユーザーがキャンセルした場合は無視
+      if ((err as Error).name !== 'AbortError') {
+        console.warn('[pickFiles] showOpenFilePicker失敗:', err)
+      }
+    }
+  } else {
+    // iOS Safari等: input動的生成（毎回新規作成でBlinkリーク回避）
+    // multiple外す（OSが単一選択モード→Blinkバッファ最小化）
+    // accept外す（OSのサムネ生成回避）
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.onchange = (e) => {
+      const files = Array.from((e.target as HTMLInputElement).files ?? [])
+      if (files.length) addFiles(files, { lite: isMobile.value })
+    }
+    input.click()
+  }
 }
 
 const handleCameraInput = (e: Event) => {
   const files = Array.from((e.target as HTMLInputElement).files ?? [])
-  if (files.length) addFiles(files)
+  if (files.length) addFiles(files, { lite: true })
   ;(e.target as HTMLInputElement).value = ''
 }
 
 const handleDrop = (e: DragEvent) => {
   dragging.value = false
   const files = Array.from(e.dataTransfer?.files ?? [])
-  if (files.length) addFiles(files)
-}
-
-
-// エラーカードのアクション表示制御
-const errorActionIdx = ref<number | null>(null)
-
-const toggleErrorAction = (idx: number) => {
-  errorActionIdx.value = errorActionIdx.value === idx ? null : idx
-}
-
-const doRetake = (idx: number) => {
-  errorActionIdx.value = null
-  triggerRetake(idx)
-  retakeInputRef.value?.click()
+  if (files.length) addFiles(files, { lite: isMobile.value })
 }
 
 
@@ -387,15 +467,76 @@ const handleRetakeInput = (e: Event) => {
   handleRetake(e)
 }
 
-// classify結果バッジ表示判定
-const classifyBadgeVisible = (f: UploadEntry) =>
-  (f.status === 'uploading' || f.status === 'analyzing' || f.status === 'ok' || f.status === 'error') && !f.isDuplicate
+// classify結果バッジ表示判定（重複子(pos>=2)のみ非表示。親(pos=1)は表示）
+const classifyBadgeVisible = (f: UploadEntry) => {
+  if (f.status !== 'uploading' && f.status !== 'analyzing' && f.status !== 'ok' && f.status !== 'error') return false
+  const dg = dupGroupInfo(f)
+  if (dg && dg.pos >= 2) return false
+  return true
+}
+
+// PC版ステータスアイコン（OK=✓、エラー=△!、重複=重A/B、処理中=拡張子アイコン）
+const statusIconClass = (f: UploadEntry) => {
+  if (f.status === 'error') return 'file-status-icon--error'
+  const dg = dupGroupInfo(f)
+  if (dg) return `file-status-icon--dup file-status-icon--${dg.colorClass}`
+  if (f.status === 'ok') return 'file-status-icon--ok'
+  return 'file-status-icon--pending'
+}
+const statusIconText = (f: UploadEntry) => {
+  if (f.status === 'error') return '△!'
+  const dg = dupGroupInfo(f)
+  if (dg) return `重${dg.groupLabel}`
+  if (f.status === 'ok') return '✓'
+  return fileIconEmoji(f.fileName)
+}
 
 // モバイルカードのステータスクラス
 const cardStatusClass = (r: UploadEntry) => {
   if (r.status === 'error') return 'mobile-card--error'
   if (r.status === 'ok') return 'mobile-card--ok'
   return ''
+}
+
+// 重複グループ情報（グループ色・番号・カウンター）
+const DUP_GROUP_COLORS = [
+  'dup-color-a', 'dup-color-b', 'dup-color-c', 'dup-color-d',
+  'dup-color-e', 'dup-color-f', 'dup-color-g', 'dup-color-h',
+]
+const DUP_GROUP_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+
+// 重複グループ情報のキャッシュMap（O(1)ルックアップ。テンプレートで多重呼び出しされても再計算しない）
+type DupGroupResult = { colorClass: string; groupLabel: string; pos: number; size: number }
+const dupGroupMap = computed(() => {
+  const map = new Map<string, DupGroupResult>()
+  // hashごとにグループ化
+  const hashGroups = new Map<string, UploadEntry[]>()
+  for (const e of entries.value) {
+    if (!e.hash) continue
+    const arr = hashGroups.get(e.hash) ?? []
+    arr.push(e)
+    hashGroups.set(e.hash, arr)
+  }
+  // 2件以上のhashのみ対象（ユニークhashの出現順でグループ番号を付与）
+  let groupIdx = 0
+  for (const [, group] of hashGroups) {
+    if (group.length < 2) continue
+    const colorClass = DUP_GROUP_COLORS[groupIdx % DUP_GROUP_COLORS.length]!
+    const groupLabel = DUP_GROUP_LABELS[groupIdx % DUP_GROUP_LABELS.length]!
+    for (let i = 0; i < group.length; i++) {
+      map.set(group[i]!.id, {
+        colorClass,
+        groupLabel,
+        pos: i + 1,
+        size: group.length,
+      })
+    }
+    groupIdx++
+  }
+  return map
+})
+const dupGroupInfo = (entry: UploadEntry): DupGroupResult | null => {
+  return dupGroupMap.value.get(entry.id) ?? null
 }
 
 // エラー対応モーダル
@@ -424,6 +565,26 @@ const doRemove = () => {
     removeFile(removeTargetId.value)
     removeTargetId.value = null
   }
+}
+
+// エラー・重複子の一括削除
+const bulkDeleteTargets = computed(() => {
+  return entries.value.filter(e => {
+    // エラーファイル
+    if (e.status === 'error') return true
+    // 重複子（pos>=2）
+    const dg = dupGroupInfo(e)
+    if (dg && dg.pos >= 2) return true
+    return false
+  })
+})
+const showBulkDeleteConfirm = ref(false)
+const doBulkDelete = () => {
+  const targets = bulkDeleteTargets.value.map(e => e.id)
+  for (const id of targets) {
+    removeFile(id)
+  }
+  showBulkDeleteConfirm.value = false
 }
 </script>
 
@@ -581,14 +742,25 @@ const doRemove = () => {
 .file-item:hover { background: #f1f5f9; }
 .file-item--selected { background: #eff6ff; border-color: #93c5fd; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
 @keyframes fileSlideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.file-icon {
+.file-status-icon {
   width: 32px; height: 32px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px; flex-shrink: 0;
+  font-size: 14px; font-weight: 900; flex-shrink: 0;
+  transition: all 0.3s;
 }
-.file-icon--img { background: #dbeafe; }
-.file-icon--doc { background: #dcfce7; }
-.file-icon--csv { background: #fef9c3; }
+.file-status-icon--ok { background: #dcfce7; color: #16a34a; }
+.file-status-icon--error { background: #fee2e2; color: #dc2626; }
+.file-status-icon--dup { background: #fef3c7; color: #92400e; }
+.file-status-icon--pending { background: #e0e7ff; color: #4f46e5; }
+/* 重複アイコンのグループ色連動（パステル） */
+.file-status-icon--dup-color-a { background: #f5dede; color: #8b4f4f; }
+.file-status-icon--dup-color-b { background: #dce5f5; color: #4a6289; }
+.file-status-icon--dup-color-c { background: #f5eed8; color: #7a5f2e; }
+.file-status-icon--dup-color-d { background: #e8eaed; color: #4b5563; }
+.file-status-icon--dup-color-e { background: #fce8e8; color: #a06060; }
+.file-status-icon--dup-color-f { background: #e4edf7; color: #5a7394; }
+.file-status-icon--dup-color-g { background: #f8f0d8; color: #7a6420; }
+.file-status-icon--dup-color-h { background: #eef0f2; color: #5a6370; }
 .file-info { flex: 1; min-width: 0; }
 .file-name { font-size: clamp(10px, 1.2vw, 11px); font-weight: 600; color: #334155; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .file-size { font-size: clamp(8px, 1vw, 9px); color: #94a3b8; margin: 2px 0 0; }
@@ -632,7 +804,8 @@ const doRemove = () => {
 .preview-panel {
   background: #fff; border-radius: clamp(12px, 2vw, 16px);
   box-shadow: 0 2px 12px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
-  overflow: hidden; min-height: 400px;
+  overflow: hidden;
+  height: calc(100vh - 120px);
   display: flex; flex-direction: column;
   position: sticky; top: 80px;
 }
@@ -647,11 +820,85 @@ const doRemove = () => {
 .preview-filename { font-size: clamp(10px, 1.3vw, 12px); font-weight: 700; color: #334155; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .preview-close { width: 24px; height: 24px; border-radius: 6px; border: none; background: transparent; color: #94a3b8; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; margin-left: 8px; }
 .preview-close:hover { background: #fee2e2; color: #ef4444; }
-.preview-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: clamp(12px, 2vw, 16px); background: #fafafa; min-height: 350px; }
-.preview-image { max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-.preview-pdf { width: 100%; height: 70vh; border: none; border-radius: 8px; }
+.preview-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: clamp(12px, 2vw, 16px); background: #fafafa; overflow: hidden; }
+.preview-image { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.preview-pdf { width: 100%; height: 100%; border: none; border-radius: 8px; }
 .preview-unsupported { text-align: center; color: #94a3b8; font-size: clamp(11px, 1.5vw, 13px); }
 .preview-unsupported-icon { font-size: clamp(36px, 5vw, 48px); margin-bottom: 12px; opacity: 0.5; }
+
+/* 重複グループ左ボーダー色（8色パステル） */
+.file-item.dup-color-a { border-left: 4px solid #d4868a; }  /* ローズ */
+.file-item.dup-color-b { border-left: 4px solid #7fa3c4; }  /* スカイ */
+.file-item.dup-color-c { border-left: 4px solid #c4a456; }  /* アンバー */
+.file-item.dup-color-d { border-left: 4px solid #9ca3af; }  /* スレート */
+.file-item.dup-color-e { border-left: 4px solid #e8a8a8; }  /* ピーチ */
+.file-item.dup-color-f { border-left: 4px solid #a0b8d4; }  /* ラベンダー */
+.file-item.dup-color-g { border-left: 4px solid #d4c478; }  /* サフラン */
+.file-item.dup-color-h { border-left: 4px solid #b8bfc8; }  /* ミスト */
+
+/* 重複グループタグ（ゴミ箱左横・パステル） */
+.dup-tag {
+  font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+  white-space: nowrap; flex-shrink: 0; margin-right: 4px;
+}
+.dup-tag.dup-color-a { background: #f5dede; color: #8b4f4f; }
+.dup-tag.dup-color-b { background: #dce5f5; color: #4a6289; }
+.dup-tag.dup-color-c { background: #f5eed8; color: #7a5f2e; }
+.dup-tag.dup-color-d { background: #e8eaed; color: #4b5563; }
+.dup-tag.dup-color-e { background: #fce8e8; color: #a06060; }
+.dup-tag.dup-color-f { background: #e4edf7; color: #5a7394; }
+.dup-tag.dup-color-g { background: #f8f0d8; color: #7a6420; }
+.dup-tag.dup-color-h { background: #eef0f2; color: #5a6370; }
+
+/* 重複子パネル（pos>=2）の斜めストライプ背景（濃い色） */
+.file-item.dup-child {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 6px,
+    rgba(0,0,0,0.08) 6px,
+    rgba(0,0,0,0.08) 12px
+  );
+}
+.file-item.dup-child:hover {
+  background: repeating-linear-gradient(
+    -45deg,
+    #f1f5f9,
+    #f1f5f9 6px,
+    rgba(0,0,0,0.12) 6px,
+    rgba(0,0,0,0.12) 12px
+  );
+}
+
+/* 一括削除バー */
+.bulk-delete-bar {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.bulk-delete-btn {
+  width: 100%; padding: 14px 16px;
+  border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #fff;
+  font-size: 13px; font-weight: 800; cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 2px 8px rgba(220,38,38,0.25);
+  letter-spacing: 0.5px;
+}
+.bulk-delete-btn:hover {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 16px rgba(220,38,38,0.4);
+  transform: translateY(-1px);
+}
+.bulk-delete-btn:active { transform: scale(0.98); }
+.bulk-delete-icon { font-size: 16px; }
+.bulk-delete-label { flex: 1; text-align: center; }
+.bulk-delete-count {
+  background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 12px;
+  font-size: 12px; font-weight: 800;
+}
+.modal-subtitle { font-size: 12px; color: #64748b; margin: 4px 0 12px; text-align: center; }
 
 /* ===== フッター（PC/モバイル統合） ===== */
 .footer-bar {
@@ -729,6 +976,17 @@ const doRemove = () => {
 }
 .mobile-btn-file:hover { background: #eff6ff; }
 .mobile-btn-file:active { transform: scale(0.95); }
+.mobile-btn-advanced {
+  width: 100%; max-width: 280px; margin-top: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  background: #f3f4f6; color: #9ca3af; border: 1px dashed #d1d5db;
+  font-size: clamp(9px, 2.2vw, 10px); font-weight: 500;
+  padding: clamp(6px, 1.5vw, 8px) 12px;
+  border-radius: 8px; cursor: pointer;
+  transition: all 0.2s; font-family: inherit;
+}
+.mobile-btn-advanced:hover { background: #e5e7eb; color: #6b7280; }
+.mobile-btn-advanced:active { transform: scale(0.97); }
 .mobile-drop-hint { margin-top: clamp(12px, 4vw, 20px); font-size: clamp(9px, 2.5vw, 11px); color: #9ca3af; text-align: center; line-height: 1.6; }
 .mobile-drop-hint span { color: #cbd5e1; }
 
@@ -769,6 +1027,18 @@ const doRemove = () => {
 /* ===== モバイル: カードグリッド ===== */
 .mobile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(8px, 2vw, 12px); align-items: start; }
 
+/* 完了済み省略サマリー（DOM制限時に表示） */
+.mobile-hidden-summary {
+  grid-column: 1 / -1;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #065f46;
+  text-align: center;
+  font-weight: 500;
+}
+
 .mobile-card {
   position: relative; border-radius: clamp(12px, 3vw, 16px); overflow: hidden;
   background: #fff; border: 2px solid #e5e7eb;
@@ -779,6 +1049,21 @@ const doRemove = () => {
 .mobile-card--ok { border-color: #34d399; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 
 .mobile-card-thumb { aspect-ratio: 3/4; position: relative; background: #f3f4f6; overflow: hidden; }
+
+/* 完了済みカード: img非表示→アイコン表示（Renderer負荷ゼロ。クラッシュ防止） */
+.mobile-card-done {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%; font-size: clamp(24px, 8vw, 36px);
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+.mobile-card-done--error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+}
+
+/* 処理中は追加ボタン無効化 */
+.mobile-add-btn:disabled {
+  opacity: 0.4; pointer-events: none;
+}
 
 /* モバイルカード削除ボタン */
 .mobile-card-remove {
@@ -875,25 +1160,37 @@ const doRemove = () => {
 /* ===== 送付ボタン ===== */
 .footer-buttons { display: flex; gap: clamp(6px, 1.5vw, 8px); width: 100%; }
 .submit-btn {
-  flex: 1; padding: clamp(10px, 2.5vw, 14px);
+  flex: 1; padding: clamp(12px, 3vw, 17px);
   border-radius: clamp(10px, 2vw, 14px); border: none;
-  font-size: clamp(12px, 3vw, 14px); font-weight: 700;
+  font-size: clamp(13px, 3.2vw, 15px); font-weight: 700;
   cursor: pointer; font-family: inherit;
   transition: all 0.3s;
+  min-height: clamp(44px, 6vw, 52px);
 }
+/* 全件OK → グリーン */
 .submit-btn--active {
-  background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff;
-  box-shadow: 0 4px 14px rgba(37,99,235,0.3);
+  background: linear-gradient(135deg, #10b981, #059669); color: #fff;
+  box-shadow: 0 4px 14px rgba(16,185,129,0.3);
 }
-.submit-btn--active:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.4); }
+.submit-btn--active:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
 .submit-btn--active:active { transform: scale(0.97); }
-.submit-btn--disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+/* 処理中 → 青系パルス */
+.submit-btn--disabled {
+  background: linear-gradient(135deg, #3b82f6, #6366f1); color: rgba(255,255,255,0.85);
+  cursor: not-allowed;
+  animation: btnPulse 2s ease-in-out infinite;
+}
+@keyframes btnPulse {
+  0%, 100% { opacity: 0.7; box-shadow: 0 2px 8px rgba(59,130,246,0.2); }
+  50% { opacity: 1; box-shadow: 0 4px 16px rgba(59,130,246,0.4); }
+}
 .submit-btn--retry {
   background: #fff; color: #3b82f6;
   border: 2px solid #3b82f6;
 }
 .submit-btn--retry:hover { background: #eff6ff; }
 .submit-btn--retry:active { transform: scale(0.97); }
+/* エラーあり → オレンジ */
 .submit-btn--force {
   background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff;
   box-shadow: 0 4px 14px rgba(245,158,11,0.3);

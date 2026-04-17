@@ -10,8 +10,11 @@
  */
 
 import { Hono } from 'hono';
-import { classifyImage, clearKnownHashes } from '../services/pipeline/classify.service';
+import { classifyImage, clearKnownHashes, isKnownHash } from '../services/pipeline/classify.service';
 import { createHash } from 'crypto';
+import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 
 const app = new Hono();
 
@@ -20,7 +23,7 @@ const app = new Hono();
 // SHA-256 → base64変換 → Gemini APIを1タスクとして制御
 // ============================================================
 
-const CONCURRENCY_SERVER = 2; // 同時処理数（サーバー側）
+const CONCURRENCY_SERVER = 4; // 同時処理数（サーバー側）
 let activeCount = 0;
 const waitQueue: Array<() => void> = [];
 
@@ -122,6 +125,171 @@ app.post('/classify', async (c) => {
 });
 
 // ============================================================
+// POST /upload — 軽量アップロード（AI分類なし。ハッシュ+重複検出のみ）
+// スマホ版デフォルト。Supabase移行時はStorage APIに差し替え
+// ============================================================
+
+app.post('/upload', async (c) => {
+  console.log('[pipeline/route] POST /upload 受信');
+
+  let formData: FormData;
+  try {
+    formData = await c.req.formData();
+  } catch {
+    return c.json({ error: 'FormDataの解析に失敗しました' }, 400);
+  }
+
+  const file = formData.get('file');
+  const clientId = formData.get('clientId') as string | null;
+  const documentId = formData.get('documentId') as string | null;
+  const filename = formData.get('filename') as string | null;
+
+  if (!file || !(file instanceof File)) {
+    return c.json({ error: 'file（ファイル）は必須です' }, 400);
+  }
+  if (!clientId) {
+    return c.json({ error: 'clientIdは必須です' }, 400);
+  }
+
+  // ファイルサイズ制限（10MB）
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  if (file.size > MAX_FILE_SIZE) {
+    return c.json({
+      error: `ファイルサイズが大きすぎます（${(file.size / 1024 / 1024).toFixed(1)}MB）。10MB以下にしてください`,
+    }, 400);
+  }
+
+  // ファイルバイナリ取得 + SHA-256ハッシュ
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const fileHash = createHash('sha256').update(buffer).digest('hex');
+
+  // サーバー側サムネイル生成（sharp 200px JPEG。スマホのデコード負荷ゼロ）
+  let thumbnail: string | null = null;
+  const mimeType = file.type || '';
+  if (mimeType.startsWith('image/')) {
+    try {
+      const sharp = (await import('sharp')).default;
+      const thumbBuffer = await sharp(buffer)
+        .resize(200, 200, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 60 })
+        .toBuffer();
+      thumbnail = `data:image/jpeg;base64,${thumbBuffer.toString('base64')}`;
+    } catch (err) {
+      console.warn(`[pipeline/upload] サムネイル生成失敗: ${err}`);
+    }
+  }
+
+  // 重複検出（既存ハッシュと照合）
+  const isDuplicate = isKnownHash(fileHash);
+
+  // TODO: Supabase移行時はここでStorage APIにアップロード
+  // 現在はログ出力のみ（モック段階）
+  console.log(`[pipeline/upload] ${filename ?? file.name} (${(file.size / 1024).toFixed(0)}KB) hash=${fileHash.slice(0, 12)}... docId=${documentId ?? '(なし)'} thumb=${thumbnail ? `${(thumbnail.length / 1024).toFixed(1)}KB` : 'なし'} dup=${isDuplicate}`);
+
+  return c.json({
+    ok: true,
+    fileHash,
+    filename: filename ?? file.name,
+    sizeBytes: file.size,
+    clientId,
+    documentId,
+    thumbnail,
+    isDuplicate,
+  });
+});
+
+// ============================================================
+// チャンクアップロード（モバイルクラッシュ防止）
+// File.slice(512KB)で分割送信 → メモリスパイク最大512KB
+// ============================================================
+
+/** チャンク一時保存ディレクトリ */
+const UPLOAD_TMP = join(tmpdir(), 'receipt-app-chunks');
+
+/**
+ * POST /upload-chunk — チャンク受信→ディスク追記
+ * Headers: X-Upload-Id（documentId）, Content-Type: application/octet-stream
+ */
+app.post('/upload-chunk', async (c) => {
+  const uploadId = c.req.header('X-Upload-Id');
+  if (!uploadId) {
+    return c.json({ error: 'X-Upload-Id必須' }, 400);
+  }
+
+  // 一時ディレクトリ作成（初回のみ）
+  if (!existsSync(UPLOAD_TMP)) {
+    mkdirSync(UPLOAD_TMP, { recursive: true });
+  }
+
+  const chunk = Buffer.from(await c.req.arrayBuffer());
+  const tmpPath = join(UPLOAD_TMP, uploadId);
+  appendFileSync(tmpPath, chunk);
+
+  return c.json({ ok: true, received: chunk.length });
+});
+
+/**
+ * POST /upload-complete — 全チャンク結合 → ハッシュ + サムネイル + 重複検出
+ * Body: { uploadId, filename, documentId, clientId }
+ * Response: { fileHash, thumbnail, isDuplicate, ... }（既存uploadと同じ形式）
+ */
+app.post('/upload-complete', async (c) => {
+  const body = await c.req.json();
+  const { uploadId, filename, documentId, clientId } = body;
+
+  if (!uploadId) {
+    return c.json({ error: 'uploadId必須' }, 400);
+  }
+
+  const tmpPath = join(UPLOAD_TMP, uploadId);
+  if (!existsSync(tmpPath)) {
+    return c.json({ error: 'チャンクファイルが見つかりません' }, 404);
+  }
+
+  // ファイル読み込み（全チャンク結合済み）
+  const fileBuffer = readFileSync(tmpPath);
+
+  // SHA-256ハッシュ計算
+  const fileHash = createHash('sha256').update(fileBuffer).digest('hex');
+
+  // サムネイル生成（sharp 200px JPEG）
+  let thumbnail: string | null = null;
+  const ext = (filename || '').split('.').pop()?.toLowerCase() ?? '';
+  const imageExts = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'gif', 'bmp', 'tiff'];
+  if (imageExts.includes(ext)) {
+    try {
+      const sharp = (await import('sharp')).default;
+      const thumbBuffer = await sharp(fileBuffer)
+        .resize(200, 200, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 60 })
+        .toBuffer();
+      thumbnail = `data:image/jpeg;base64,${thumbBuffer.toString('base64')}`;
+    } catch (err) {
+      console.warn(`[pipeline/upload-complete] サムネイル生成失敗: ${err}`);
+    }
+  }
+
+  // 重複検出
+  const isDuplicate = isKnownHash(fileHash);
+
+  // 一時ファイル削除
+  try { unlinkSync(tmpPath); } catch { /* 無視（既に削除済み等） */ }
+
+  console.log(`[pipeline/upload-complete] ${filename} (${(fileBuffer.length / 1024).toFixed(0)}KB) hash=${fileHash.slice(0, 12)}... docId=${documentId ?? '(なし)'} thumb=${thumbnail ? `${(thumbnail.length / 1024).toFixed(1)}KB` : 'なし'} dup=${isDuplicate}`);
+
+  return c.json({
+    ok: true,
+    fileHash,
+    filename,
+    sizeBytes: fileBuffer.length,
+    clientId,
+    documentId,
+    thumbnail,
+    isDuplicate,
+  });
+});
+
+// ============================================================
 // POST /extract — 将来用（line_items抽出）
 // ============================================================
 
@@ -141,6 +309,29 @@ app.get('/health', (c) => {
     project: process.env['VERTEX_PROJECT_ID'] ?? '(未設定)',
     model: process.env['VERTEX_MODEL_ID'] ?? 'gemini-2.5-flash-preview-04-17',
   });
+});
+
+// ============================================================
+// POST /metrics — クライアント側パフォーマンス計測結果受信
+// ============================================================
+
+app.post('/metrics', async (c) => {
+  const data = await c.req.json();
+  if (data.mode === 'checkpoint') {
+    // チェックポイント（クラッシュ地点特定用）
+    const extras = Object.entries(data)
+      .filter(([k]) => !['mode', 'fileName', 'memMB', 'ts'].includes(k))
+      .map(([k, v]) => `${k}=${v}`)
+      .join(' ');
+    console.log(`[checkpoint] ${data.fileName} | mem=${data.memMB ?? '-'}MB | ${extras}`);
+  } else if (String(data.mode).startsWith('batch_')) {
+    // バッチ壁時計
+    console.log(`[metrics] ${data.mode} | ${data.fileName} | 壁時計=${data.totalMs ?? '?'}ms mem=${data.memMB ?? '-'}MB | ua=${data.ua ?? '-'}`);
+  } else {
+    // 1枚単位メトリクス
+    console.log(`[metrics] ${data.mode ?? '?'} | ${data.fileName ?? '?'} | 合計=${data.totalMs ?? '?'}ms hash=${data.hashMs ?? '-'}ms upload=${data.uploadMs ?? '-'}ms api=${data.apiMs ?? '-'}ms dup=${data.isDuplicate ?? '-'} mem=${data.memMB ?? '-'}MB`);
+  }
+  return c.json({ ok: true });
 });
 
 // ============================================================
