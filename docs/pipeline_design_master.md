@@ -2532,3 +2532,41 @@ export async function grantFolderPermission(
 | 2 | Supabase Auth `signInWithPassword` / `signUp` 実装（パソコンのみフロー） | ❌ 未着手 |
 | 3 | 顧問先登録時に `sharedFolderId` をDBに保存する処理 | ❌ 未着手 |
 
+
+---
+
+## DL-040 | 資料管理基盤設計 — DocEntry型・documentsテーブル・資料選別連動（2026-04-18）
+
+**状態**: 完了（型定義・SQL・composable・UI接続・進捗管理連動）
+
+### 決定内容
+
+| 項目 | 決定 |
+|---|---|
+| 型定義場所 | `src/repositories/types.ts` に `DocEntry` + `DocumentRepository` 追加 |
+| SQL | `supabase/migrations/003_documents.sql` 新規作成（10番目のテーブル） |
+| composable | `src/composables/useDocuments.ts`（モジュールスコープrefで直接保持） |
+| 算出ロジック | `src/utils/documentUtils.ts` に分離（composable/Repositoryにロジックを入れない） |
+| 資料選別ページ | `MockDriveSelectPage.vue` をuseDocuments接続に改修 |
+| 進捗管理連動 | `useProgress.ts` のreceivedDate/unsortedをDocEntryから動的算出 |
+| ナビバー名称 | 「Drive資料選別」→「資料選別」（Drive以外のデータも扱うため） |
+| ナビバー順序 | アップロード → 資料選別（業務フロー順） |
+| 進捗管理列 | 「未選別」列を「未出力」列の左に追加（オレンジハイライト） |
+
+### フェーズルール準拠
+
+| ルール | 準拠方法 |
+|---|---|
+| composableはrefで直接保持 | useDocumentsがモジュールスコープrefで全資料を保持 |
+| createRepositories()に依存させるな | useDocumentsはRepositoryを使わない（移行時に差し替え） |
+| ロジックは入れるな | countUnsorted/latestReceivedDateはutils/documentUtils.tsに分離 |
+| 型はtypes.tsに定義 | DocEntry/DocumentRepositoryをrepositories/types.tsに追加 |
+| SQLはmigrations/に配置 | 003_documents.sql新規作成 |
+
+### 業務フロー設計
+
+```
+本番: 1時間に1回バッチでDrive/独自を確認 → 新規資料を取り込み → 進捗管理の「未選別」列で通知
+モック: 人間がAIに「アップした」と伝える → AIがrefにデータ投入
+即時性: 不要（前日昼に届いたら翌朝に資料選別にあればOK）
+```

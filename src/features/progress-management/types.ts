@@ -25,6 +25,9 @@ export interface ProgressRow {
     companyName: string;
     repName?: string;
     receivedDate: string;
+    /** 資料選別残（未選別の資料件数） */
+    unsorted: number;
+    /** 未出力（仕訳残の件数） */
     unexported: number;
     /** 月別仕訳数 キー: "2025-04" 形式 */
     monthlyJournals: Record<string, number>;

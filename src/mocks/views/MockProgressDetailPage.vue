@@ -50,6 +50,7 @@
           <col :style="{ width: pgColWidths['fiscalMonth'] + 'px' }">
           <col :style="{ width: pgColWidths['shareStatus'] + 'px' }">
           <col :style="{ width: pgColWidths['receivedDate'] + 'px' }">
+          <col :style="{ width: pgColWidths['unsorted'] + 'px' }">
           <col :style="{ width: pgColWidths['unexported'] + 'px' }">
           <col v-for="m in monthColumns" :key="'col-'+m.key" style="width: 36px;">
           <col :style="{ width: pgColWidths['currentYear'] + 'px' }">
@@ -75,6 +76,9 @@
             </th>
             <th class="sortable pg-th-narrow relative" @click="sortBy('receivedDate')">資料受取日 <i :class="getSortIcon('receivedDate')"></i>
               <div class="resize-handle" @mousedown.stop="onPgResizeStart('receivedDate', $event)"></div>
+            </th>
+            <th class="sortable pg-th-narrow pg-th-num relative" @click="sortBy('unsorted')">未選別 <i :class="getSortIcon('unsorted')"></i>
+              <div class="resize-handle-light" @mousedown.stop="onPgResizeStart('unsorted', $event)"></div>
             </th>
             <th class="sortable pg-th-narrow pg-th-num relative" @click="sortBy('unexported')">未出力 <i :class="getSortIcon('unexported')"></i>
               <div class="resize-handle-light" @mousedown.stop="onPgResizeStart('unexported', $event)"></div>
@@ -110,7 +114,8 @@
               <span v-else class="pg-share-badge pg-share-none">—</span>
             </td>
             <td class="pg-td-narrow">{{ row.receivedDate || '—' }}</td>
-            <td class="pg-td-num">{{ row.unexported > 0 ? row.unexported + '件' : '—' }}</td>
+            <td class="pg-td-num" :class="{ 'pg-unsorted-highlight': row.unsorted > 0 }">{{ row.unsorted > 0 ? row.unsorted + '件' : '—' }}</td>
+            <td class="pg-td-num" :class="{ 'pg-unexported-highlight': row.unexported > 0 }">{{ row.unexported > 0 ? row.unexported + '件' : '—' }}</td>
             <td
               v-for="m in monthColumns" :key="'td-'+m.key+'-'+row.id"
               class="pg-td-month"
@@ -120,7 +125,7 @@
             <td class="pg-td-num pg-td-total">{{ row.lastYearJournals > 0 ? row.lastYearJournals.toLocaleString() : '—' }}</td>
           </tr>
           <tr v-if="pagedRows.length === 0">
-            <td :colspan="10 + monthColumns.length" class="pg-empty">該当する顧問先がありません</td>
+            <td :colspan="11 + monthColumns.length" class="pg-empty">該当する顧問先がありません</td>
           </tr>
         </tbody>
       </table>
@@ -138,7 +143,7 @@ import { useShareStatus } from '@/composables/useShareStatus';
 
 const pgDefaultWidths: Record<string, number> = {
   status: 60, code: 60, fiscalMonth: 60,
-  staffName: 78, shareStatus: 78, receivedDate: 78, unexported: 78,
+  staffName: 78, shareStatus: 78, receivedDate: 78, unsorted: 60, unexported: 78,
   currentYear: 70, lastYear: 70,
 };
 const { columnWidths: pgColWidths, onResizeStart: onPgResizeStart } = useColumnResize('progress', pgDefaultWidths);
@@ -166,7 +171,7 @@ const sortBy = (key: string) => {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
   } else {
     sortKey.value = key;
-    sortOrder.value = key === 'unexported' || key === 'currentYearJournals' || key === 'lastYearJournals' || key.startsWith('month_') ? 'desc' : 'asc';
+    sortOrder.value = key === 'unsorted' || key === 'unexported' || key === 'currentYearJournals' || key === 'lastYearJournals' || key.startsWith('month_') ? 'desc' : 'asc';
   }
 };
 
@@ -370,4 +375,9 @@ function goToJournalList(row: { clientId: string }) {
 .pg-share-pending { background: #dbeafe; color: #1e40af; }
 .pg-share-revoked { background: #f1f5f9; color: #94a3b8; }
 .pg-share-none    { color: #cbd5e1; }
+
+/* 資料未選別ハイライト（オレンジ背景） */
+.pg-unsorted-highlight { background: #fff7ed; color: #c2410c; font-weight: 700; }
+/* 未出力ハイライト（赤背景） */
+.pg-unexported-highlight { background: #fef2f2; color: #dc2626; font-weight: 700; }
 </style>

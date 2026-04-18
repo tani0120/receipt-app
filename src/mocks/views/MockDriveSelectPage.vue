@@ -2,7 +2,7 @@
   <div class="h-full flex flex-col bg-gray-50 font-sans text-gray-700" style="font-family: 'Noto Sans JP', sans-serif">
     <!-- ヘッダー -->
     <div class="bg-white px-4 py-2 border-b border-gray-300 flex items-center gap-4">
-      <span class="text-[14px] font-bold text-gray-800">Drive資料選別</span>
+      <span class="text-[14px] font-bold text-gray-800">資料選別</span>
       <div class="flex items-center gap-3 text-[12px]">
         <span class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded font-semibold">未処理: {{ counts.pending }}件</span>
         <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold">仕訳対象: {{ counts.target }}件</span>
@@ -133,29 +133,28 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { useDocuments } from '@/composables/useDocuments';
 
-// --- モックデータ（8件、実画像使用） ---
-interface DriveDoc {
-  id: string;
-  fileName: string;
-  fileType: string;
-  fileSize: string;
-  uploadDate: string;
-  imagePath: string;
-  expectedStatus: 'target' | 'excluded';
-  status: 'pending' | 'target' | 'excluded';
-}
+const route = useRoute();
+const clientId = computed(() => (route.params.clientId as string) || '');
+const { getByClientId, updateStatus: updateDocStatus } = useDocuments();
+const clientDocs = getByClientId(clientId.value);
 
-const documents = ref<DriveDoc[]>([
-  { id: 'd01', fileName: 'IMG_20250305_143200.jpg',       fileType: 'JPEG', fileSize: '460KB', uploadDate: '25/03/05', imagePath: '/mock-receipts/medical_receipt.png',       expectedStatus: 'target',   status: 'pending' },
-  { id: 'd02', fileName: 'scan_003.pdf',                 fileType: 'PDF',  fileSize: '600KB', uploadDate: '25/03/05', imagePath: '/mock-receipts/delivery_note.png',         expectedStatus: 'target',   status: 'pending' },
-  { id: 'd03', fileName: '写真 2025-03-04 12.45.30.jpg', fileType: 'JPEG', fileSize: '590KB', uploadDate: '25/03/04', imagePath: '/mock-receipts/convenience_receipt.png',    expectedStatus: 'target',   status: 'pending' },
-  { id: 'd04', fileName: 'IMG_4872.jpg',                 fileType: 'JPEG', fileSize: '720KB', uploadDate: '25/03/04', imagePath: '/mock-receipts/izakaya_receipt.png',        expectedStatus: 'target',   status: 'pending' },
-  { id: 'd05', fileName: 'document(1).pdf',              fileType: 'PDF',  fileSize: '660KB', uploadDate: '25/03/03', imagePath: '/mock-receipts/bank_passbook.png',          expectedStatus: 'excluded', status: 'pending' },
-  { id: 'd06', fileName: 'CamScanner_20250303.pdf',      fileType: 'PDF',  fileSize: '550KB', uploadDate: '25/03/03', imagePath: '/mock-receipts/invoice.png',                expectedStatus: 'target',   status: 'pending' },
-  { id: 'd07', fileName: 'IMG_20250302_091500.jpg',      fileType: 'JPEG', fileSize: '630KB', uploadDate: '25/03/02', imagePath: '/mock-receipts/credit_card_statement.png',  expectedStatus: 'excluded', status: 'pending' },
-  { id: 'd08', fileName: 'photo_2025_03_02.jpg',         fileType: 'JPEG', fileSize: '680KB', uploadDate: '25/03/02', imagePath: '/mock-receipts/business_card.png',           expectedStatus: 'excluded', status: 'pending' },
-]);
+// --- DriveDoc互換のビュー型（テンプレートで使うプロパティを算出） ---
+const documents = computed(() =>
+  clientDocs.value.map(doc => ({
+    id: doc.id,
+    fileName: doc.fileName,
+    fileType: doc.fileType.split('/').pop()?.toUpperCase() || doc.fileType,
+    fileSize: doc.fileSize >= 1024 * 1024
+      ? (doc.fileSize / (1024 * 1024)).toFixed(1) + 'MB'
+      : Math.round(doc.fileSize / 1024) + 'KB',
+    uploadDate: new Date(doc.receivedAt).toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\//g, '/'),
+    imagePath: doc.previewUrl || doc.thumbnailUrl || '',
+    status: doc.status,
+  }))
+);
 
 const selectedIdx = ref(0);
 const selected = computed(() => documents.value[selectedIdx.value] ?? null);
@@ -192,7 +191,7 @@ const counts = computed(() => {
 // --- ステータス設定 + 自動次送り ---
 const setStatus = (status: 'target' | 'excluded') => {
   if (!selected.value) return;
-  selected.value.status = status;
+  updateDocStatus(selected.value.id, status);
   const nextPending = documents.value.findIndex((d, i) => i > selectedIdx.value && d.status === 'pending');
   if (nextPending !== -1) {
     selectedIdx.value = nextPending;
@@ -207,7 +206,7 @@ const setStatus = (status: 'target' | 'excluded') => {
 // --- 未処理に戻す ---
 const resetStatus = () => {
   if (!selected.value) return;
-  selected.value.status = 'pending';
+  updateDocStatus(selected.value.id, 'pending');
 };
 
 // --- ステータス表示 ---

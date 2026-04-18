@@ -207,6 +207,74 @@ export type ShareStatusRepository = {
 }
 
 // ============================================================
+// § 7. DocumentRepository（資料マスタ）
+// ============================================================
+
+/** 資料のデータソース */
+export type DocSource = 'drive' | 'upload'
+
+/** 資料の選別ステータス */
+export type DocStatus = 'pending' | 'target' | 'excluded'
+
+/**
+ * 資料1件（Drive/PCアップロードで取り込んだファイル）
+ *
+ * 対象データ: Drive共有フォルダ or PCアップロードで投入された画像/PDF
+ * 用途: 資料選別画面での人間チェック、進捗管理の未選別/資料受取日算出
+ *
+ * 準拠: DL-039（ゲスト認証・Drive権限付与設計）
+ */
+export interface DocEntry {
+  /** UUID（一意識別子） */
+  id: string
+  /** 顧問先ID（例: 'LDI-00008'） */
+  clientId: string
+  /** データソース（'drive' | 'upload'） */
+  source: DocSource
+  /** ファイル名（例: 'IMG_20250305_143200.jpg'） */
+  fileName: string
+  /** MIMEタイプ（例: 'image/jpeg', 'application/pdf'） */
+  fileType: string
+  /** ファイルサイズ（バイト） */
+  fileSize: number
+  /** SHA-256ハッシュ（重複検知用。未算出時はnull） */
+  fileHash: string | null
+  /** Drive fileId（source='drive'時のみ） */
+  driveFileId: string | null
+  /** サムネイルURL（Googleが自動生成する200px画像 or ローカルパス） */
+  thumbnailUrl: string | null
+  /** プレビュー用画像パス（フルサイズ閲覧用） */
+  previewUrl: string | null
+  /** 選別ステータス（'pending' | 'target' | 'excluded'） */
+  status: DocStatus
+  /** 取得日時（ISO 8601形式。バッチ取り込み時のタイムスタンプ） */
+  receivedAt: string
+}
+
+/**
+ * 資料マスタへのデータアクセス
+ *
+ * 対象データ: 顧問先ごとの資料一覧
+ * 用途: 資料選別画面、進捗管理の通知（未選別件数・資料受取日）
+ *
+ * ⚠️ 現在のフェーズではcomposableが直接refで保持。
+ *    移行時にこのRepository経由に差し替え。
+ */
+export type DocumentRepository = {
+  /** 顧問先の全資料を取得 */
+  getByClientId(clientId: string): Promise<DocEntry[]>
+
+  /** 資料の選別ステータスを更新（データ書き換えのみ） */
+  updateStatus(id: string, status: DocStatus): Promise<void>
+
+  /** 資料を1件保存（Drive取り込み/PCアップロード時） */
+  save(doc: DocEntry): Promise<void>
+
+  /** 資料を複数件一括保存（バッチ取り込み用） */
+  saveBatch(docs: DocEntry[]): Promise<void>
+}
+
+// ============================================================
 // § Repositories集約型（factory関数の戻り値型）
 // ============================================================
 
@@ -227,4 +295,6 @@ export type Repositories = {
   confirmedJournal: ConfirmedJournalRepository
   /** 共有設定マスタ（DL-031） */
   shareStatus: ShareStatusRepository
+  /** 資料マスタ（DL-039） */
+  document: DocumentRepository
 }

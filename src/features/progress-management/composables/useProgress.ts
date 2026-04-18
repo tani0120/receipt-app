@@ -6,7 +6,9 @@
 import { ref, computed } from 'vue';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { useStaff } from '@/features/staff-management/composables/useStaff';
+import { useDocuments } from '@/composables/useDocuments';
 import { useMonthColumns } from '../utils/monthColumns';
+import { countUnsorted, latestReceivedDate } from '@/utils/documentUtils';
 import type { ProgressRow, MonthColumn } from '../types';
 
 // =============================================
@@ -15,15 +17,15 @@ import type { ProgressRow, MonthColumn } from '../types';
 
 /** 顧問先ごとの仕訳数モックデータ（threeCodeで引く） */
 const MOCK_JOURNAL_DATA: Record<string, {
-    receivedDate: string;
+    /** 未出力（仕訳残の件数） */
     unexported: number;
     baseCount: number;
     currentYearJournals: number;
     lastYearJournals: number;
 }> = {
-    LDI: { receivedDate: '2026/03/01', unexported: 120, baseCount: 445, currentYearJournals: 445, lastYearJournals: 980 },
-    ANE: { receivedDate: '', unexported: 0, baseCount: 446, currentYearJournals: 2680, lastYearJournals: 3120 },
-    MHL: { receivedDate: '', unexported: 0, baseCount: 79, currentYearJournals: 79, lastYearJournals: 156 },
+    LDI: { unexported: 120, baseCount: 445, currentYearJournals: 445, lastYearJournals: 980 },
+    ANE: { unexported: 0, baseCount: 446, currentYearJournals: 2680, lastYearJournals: 3120 },
+    MHL: { unexported: 0, baseCount: 79, currentYearJournals: 79, lastYearJournals: 156 },
 };
 
 // =============================================
@@ -50,15 +52,19 @@ function generateMonthlyData(cols: MonthColumn[], baseCount: number): Record<str
 export function useProgress() {
     const { clients: allClients } = useClients();
     const { staffList } = useStaff();
+    const { allDocuments } = useDocuments();
     const monthColumns = useMonthColumns(12);
     const isLoading = ref(false);
 
     // clientsからprogressRowsを生成（Single Source of Truth）
+    // receivedDateとunsortedはDocEntry（useDocuments）から動的算出
     const progressRows = computed<ProgressRow[]>(() => {
         const cols = monthColumns.value;
+        const docs = allDocuments.value;
 
         return allClients.value.map(c => {
             const mock = MOCK_JOURNAL_DATA[c.threeCode];
+            const clientDocs = docs.filter(d => d.clientId === c.clientId);
             return {
                 clientId: c.clientId,
                 code: c.threeCode,
@@ -67,7 +73,8 @@ export function useProgress() {
                 fiscalMonth: c.fiscalMonth,
                 companyName: c.companyName,
                 repName: c.repName || '',
-                receivedDate: mock?.receivedDate ?? '',
+                receivedDate: latestReceivedDate(clientDocs),
+                unsorted: countUnsorted(clientDocs),
                 unexported: mock?.unexported ?? 0,
                 monthlyJournals: generateMonthlyData(cols, mock?.baseCount ?? 0),
                 currentYearJournals: mock?.currentYearJournals ?? 0,

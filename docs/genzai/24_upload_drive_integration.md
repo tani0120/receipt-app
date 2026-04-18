@@ -647,3 +647,73 @@ Authorization: Bearer {accessToken}
 
 - テストフォルダ: `TST_test-corp`（ID: `1SWizWuKizIzo6bUDocClsBfdwnXelLZv`）
 - テストユーザー: `marke.hughug@gmail.com`（writer権限付与済み）
+
+---
+
+## 9. 資料管理基盤設計（DL-040）
+
+### 9-1. 概要
+
+資料（Drive/PCアップロードで取り込んだファイル）を統一的に管理する基盤。
+資料選別画面と進捗管理画面が同じデータソース（DocEntry）を参照し、連動する。
+
+### 9-2. 型定義（`repositories/types.ts`）
+
+```typescript
+export interface DocEntry {
+  id: string              // UUID
+  clientId: string        // 顧問先ID
+  source: 'drive' | 'upload'  // データソース
+  fileName: string
+  fileType: string        // MIMEタイプ
+  fileSize: number        // バイト
+  fileHash: string | null // SHA-256（重複検知用）
+  driveFileId: string | null  // Drive fileId
+  thumbnailUrl: string | null // サムネイルURL
+  previewUrl: string | null   // プレビュー用画像パス
+  status: 'pending' | 'target' | 'excluded'  // 選別ステータス
+  receivedAt: string      // 取得日時（ISO 8601）
+}
+```
+
+### 9-3. SQL（`003_documents.sql`）
+
+- documentsテーブル新規作成（10番目のテーブル）
+- インデックス: client_id, client_status, drive_file_id（UNIQUE）, file_hash
+- RLS: スタッフ=全顧問先アクセス可、顧問先ユーザー=自分の資料のみ
+
+### 9-4. composable（`useDocuments.ts`）
+
+- モジュールスコープrefで全資料を直接保持（フェーズルール準拠）
+- createRepositories()に依存しない
+- モックデータ: LDI 8件（Drive 4件 + PCアップロード 4件）、MHL 3件
+
+### 9-5. 算出ユーティリティ（`utils/documentUtils.ts`）
+
+| 関数 | 用途 |
+|---|---|
+| `countUnsorted(docs)` | 未選別件数（status==='pending'の件数） |
+| `latestReceivedDate(docs)` | 最新の資料受取日（receivedAtの最大値、YYYY/MM/DD形式） |
+| `oldestUnexportedDate(docs)` | 最古の未出力資料日（将来用） |
+
+### 9-6. UI変更
+
+| 変更 | 内容 |
+|---|---|
+| ナビバー名称 | 「Drive資料選別」→「資料選別」 |
+| ナビバー順序 | ホーム → **アップロード → 資料選別** → 出力 → 学習 → 設定 |
+| 進捗管理 | 「未選別」列を「未出力」列の左に追加（オレンジハイライト） |
+| 進捗管理 | 「未出力」列に赤ハイライト追加 |
+| 資料選別ページ | ハードコードモック → useDocuments composable接続 |
+| 進捗管理 | receivedDate/unsortedをDocEntryから動的算出（ハードコード排除） |
+
+### 9-7. 業務フロー
+
+```
+本番: 1時間に1回バッチでDrive/独自を確認 → 新規資料を取り込み → 進捗管理の「未選別」列が通知
+モック: 人間がAIに「アップした」と伝える → AIがrefにデータ投入
+即時性: 不要（前日昼に届いたら翌朝に資料選別にあればOK）
+
+業務パイプライン（ナビバーの左→右）:
+  アップロード → 資料選別 → 出力
+```

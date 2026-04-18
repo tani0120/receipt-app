@@ -142,16 +142,16 @@ const navItems: NavItem[] = [
     path: '/journal-list',
   },
   {
-    key: 'drive',
-    label: 'Drive資料選別',
-    svgPaths: ['M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z'],
-    path: '/drive-select',
-  },
-  {
     key: 'upload',
     label: 'アップロード',
     svgPaths: ['M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12'],
     path: '/upload-v2',
+  },
+  {
+    key: 'drive',
+    label: '資料選別',
+    svgPaths: ['M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z'],
+    path: '/drive-select',
   },
   {
     key: 'export',
