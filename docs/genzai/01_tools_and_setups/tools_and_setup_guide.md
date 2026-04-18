@@ -15,7 +15,8 @@ json
 {
   "APIフレームワーク": "Hono 4.11.3 (@hono/node-server)",
   "メインDB": "Supabase (PostgreSQL) 2.95.3",
-  "イベントログDB": "Firebase/Firestore 12.7.0 + firebase-admin 13.6.0",
+  "認証": "Supabase Auth + Google OAuth（2026-04-18 Firebase Authから移行完了、Google OAuth設定完了）",
+  "ストレージ": "Supabase Storage（2026-04-18 Firebase Storageから移行完了）",
   "AI": "@google/genai (統一SDK。vertexai:trueでVertex AI、apiKeyでAI Studio)",
   "ランタイム": "Node.js 20.19+ / 22.12+",
   "ビルド": "esbuild 0.27 (バンドル)"
@@ -31,7 +32,7 @@ json
   "その他": "zod 4.3.4 (スキーマ検証), iconv-lite (Shift-JIS), xlsx 0.18.5"
 }
 デプロイ環境（想定）
-フロントエンド: Firebase Hosting
+フロントエンド: Vercel / Cloudflare Pages（Firebase Hosting廃止予定）
 バックエンド: Cloud Run（Node.js）
 AI処理: Vertex AI / AI Studio (Gemini 2.5 Flash / Pro) — @google/genai SDK
 🏗️ アーキテクチャ設計思想
@@ -41,8 +42,8 @@ Streamed互換設計（Phase A核心）
 
 データベース役割分離
 DB	役割	用途例
-PostgreSQL (Supabase)	正規帳簿（唯一の真実）	receipts, audit_logs, status管理
-Firestore	イベントログ（過程の記録）	OCR完了イベント、状態変更履歴
+PostgreSQL (Supabase)	正規帳簿（唯一の真実）+ イベントログ	receipts, audit_logs, status管理
+~~Firestore~~	~~イベントログ~~（2026-04-18廃止。Supabaseに統合）	—
 設計決定の3大修正（Phase 1で確定）
 status ENUM化: typo完全防止、意識的変更強制
 SQL function化: トランザクション保証、race condition防止

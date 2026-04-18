@@ -2,12 +2,12 @@ import { ref, computed } from 'vue';
 import type { LearningRuleUi } from '@/types/LearningRuleUi';
 import type { LearningRuleApi } from '@/types/zod.type';
 import { mapLearningRuleApiToUi } from './AIRulesMapper';
-import { Timestamp } from 'firebase/firestore';
+// 2026-04-18: Firebase Timestamp 廃止。Date型に移行済み
 
 // Mock Data Generator (DB Schema compliant)
 const generateMockApiData = (clientId: string): LearningRuleApi[] => {
     const baseDate = new Date('2025-12-01');
-    const ts = Timestamp.fromDate(baseDate);
+    const ts = new Date('2025-12-01');
 
     return [
         {
@@ -50,7 +50,7 @@ const generateMockApiData = (clientId: string): LearningRuleApi[] => {
 // WORST CASE GENERATOR (Stress Test)
 const generateWorstCaseApiData = (clientId: string, count: number): LearningRuleApi[] => {
     const list: LearningRuleApi[] = [];
-    const ts = Timestamp.now();
+    const ts = new Date();
 
     const longString = "This is a very long string designed to break the UI layout and overflow containers " +
         "これは非常に長い文字列でUIレイアウトを破壊しコンテナからあふれさせるために設計されています " +

@@ -1,4 +1,4 @@
-import { Timestamp } from 'firebase/firestore';
+// 2026-04-18: Firebase Timestamp 廃止。Date型に移行済み
 import type { Client as LegacyClient, Job as LegacyJob, JobStatus as LegacyJobStatus } from '../../types/firestore';
 import type {
     ClientDocument,
@@ -50,7 +50,7 @@ function calculateLegacyTax(lines: any[] | undefined): number {
  * Convert Legacy Client to V2 ClientDocument
  */
 export function convertLegacyClient(old: LegacyClient): ClientDocument {
-    const now = Timestamp.now();
+    const now = new Date();
 
     return {
         id: ensureId(old.clientCode),
@@ -94,7 +94,7 @@ export function convertLegacyJobToWorkLog(old: LegacyJob): WorkLogDocument {
     // Calculate Duration
     let durationMinutes = 0;
     if (old.startedAt && old.finishedAt) {
-        const diffMs = old.finishedAt.toMillis() - old.startedAt.toMillis();
+        const diffMs = old.finishedAt.getTime() - old.startedAt.getTime();
         durationMinutes = Math.floor(diffMs / 1000 / 60);
     }
 
@@ -158,7 +158,7 @@ export function convertLegacyJobToDocument(old: LegacyJob): DocumentRecord {
             provider: 'google_vision',
             raw_text_dump: old.aiAnalysisRaw || '',
             confidence_score: old.confidenceScore || 0,
-            extracted_date: old.transactionDate?.toDate().toISOString().split('T')[0],
+            extracted_date: old.transactionDate instanceof Date ? old.transactionDate.toISOString().split('T')[0] : undefined,
             extracted_amount: totalAmount, // Initial guess from lines
             merchant_candidate: ''
         },

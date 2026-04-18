@@ -41,6 +41,8 @@ export interface Client {
     hasRentalIncome: boolean;
     /** 主担当スタッフID（useStaff紐付けと同期。Phase C: clients.staff_id FKに移行） */
     staffId: string | null;
+    /** 共有用メール（Googleログイン時に自動取得。Drive共有権限付与 + PC独自システム認証に使用） */
+    sharedEmail: string;
     advisoryFee: number;
     bookkeepingFee: number;
     settlementFee: number;
@@ -86,7 +88,7 @@ export const emptyClientForm = (): ClientForm => ({
     taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
     isInvoiceRegistered: false, invoiceRegistrationNumber: '',
     hasDepartmentManagement: false, hasRentalIncome: false,
-    staffId: null,
+    staffId: null, sharedEmail: '',
     advisoryFee: 0, bookkeepingFee: 0, settlementFee: 0, taxFilingFee: 0,
 });
 
@@ -110,7 +112,7 @@ const clients = ref<Client[]>([
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T1234567890123',
         hasDepartmentManagement: false, hasRentalIncome: false,
-        staffId: 'staff-0002',
+        staffId: 'staff-0002', sharedEmail: 'yamada.taro@gmail.com',
         advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
     },
     {
@@ -123,7 +125,7 @@ const clients = ref<Client[]>([
         simplifiedTaxCategory: 3, taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'accounts_payable',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T9876543210987',
         hasDepartmentManagement: true, hasRentalIncome: false,
-        staffId: 'staff-0004',
+        staffId: 'staff-0004', sharedEmail: 'suzuki.ichiro@gmail.com',
         advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 150000, taxFilingFee: 80000,
     },
     {
@@ -136,7 +138,7 @@ const clients = ref<Client[]>([
         taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
         isInvoiceRegistered: false, invoiceRegistrationNumber: '',
         hasDepartmentManagement: false, hasRentalIncome: true,
-        staffId: 'staff-0002',
+        staffId: 'staff-0002', sharedEmail: '',
         advisoryFee: 20000, bookkeepingFee: 10000, settlementFee: 80000, taxFilingFee: 0,
     },
     {
@@ -149,7 +151,7 @@ const clients = ref<Client[]>([
         taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T5555666677778',
         hasDepartmentManagement: true, hasRentalIncome: false,
-        staffId: 'staff-0004',
+        staffId: 'staff-0004', sharedEmail: '',
         advisoryFee: 80000, bookkeepingFee: 50000, settlementFee: 300000, taxFilingFee: 150000,
     },
     {
@@ -162,7 +164,7 @@ const clients = ref<Client[]>([
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T7777888899990',
         hasDepartmentManagement: false, hasRentalIncome: false,
-        staffId: 'staff-0002',
+        staffId: 'staff-0002', sharedEmail: '',
         advisoryFee: 35000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
     },
     // --- 以下: 進捗管理用に追加した顧問先 ---
@@ -176,7 +178,7 @@ const clients = ref<Client[]>([
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'accounts_payable',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T6666777788880',
         hasDepartmentManagement: true, hasRentalIncome: false,
-        staffId: null,
+        staffId: null, sharedEmail: 'sasaki.makoto@gmail.com',
         advisoryFee: 60000, bookkeepingFee: 40000, settlementFee: 250000, taxFilingFee: 120000,
     },
     {
@@ -189,7 +191,7 @@ const clients = ref<Client[]>([
         simplifiedTaxCategory: 4, taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
         isInvoiceRegistered: false, invoiceRegistrationNumber: '',
         hasDepartmentManagement: false, hasRentalIncome: false,
-        staffId: null,
+        staffId: null, sharedEmail: '',
         advisoryFee: 15000, bookkeepingFee: 10000, settlementFee: 60000, taxFilingFee: 0,
     },
     {
@@ -202,7 +204,7 @@ const clients = ref<Client[]>([
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T9999000011110',
         hasDepartmentManagement: false, hasRentalIncome: false,
-        staffId: null,
+        staffId: null, sharedEmail: 'tamura.tomoko@gmail.com',
         advisoryFee: 45000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
     },
     {
@@ -215,7 +217,7 @@ const clients = ref<Client[]>([
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T1111222233330',
         hasDepartmentManagement: false, hasRentalIncome: false,
-        staffId: null,
+        staffId: null, sharedEmail: '',
         advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
     },
     {
@@ -228,7 +230,7 @@ const clients = ref<Client[]>([
         taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
         isInvoiceRegistered: false, invoiceRegistrationNumber: '',
         hasDepartmentManagement: false, hasRentalIncome: false,
-        staffId: null,
+        staffId: null, sharedEmail: '',
         advisoryFee: 15000, bookkeepingFee: 8000, settlementFee: 50000, taxFilingFee: 0,
     },
 ]);

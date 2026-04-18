@@ -2,9 +2,23 @@
 
 > 統合元: task_restored.md / task_03_resolved29.md / task_01_bd8b5ef7.md / task_02_prev_task.md / task.md / prev_task.md（bd8b5ef7）
 > 統合日: 2026-04-08（セッション 1cd25cab）
-> 最終更新: 2026-04-12（セッション 70eb9668 — DL-037 PDFプレビュー対応 + MIMEタイプバグ修正）
+> 最終更新: 2026-04-18（Firebase → Supabase完全移行完了）
 > 実査方法: git log・grep_search・view_file・list_dir による実ファイル確認
 > ルール: **型・コード・シグネチャは今やる。実行行為（テスト実施・データ整備）のみ先送り可。**
+
+---
+
+## ⚡ 2026-04-18: Firebase → Supabase 完全移行
+
+| 項目 | 変更内容 |
+|---|---|
+| **認証** | Firebase Auth → Supabase Auth（`src/utils/auth.ts` 書き換え） |
+| **ストレージ** | Firebase Storage → Supabase Storage（`src/api/lib/storage.ts` 書き換え） |
+| **イベントログ** | Firestore（`ENABLE_FIRESTORE=false`で既に無効）→ 完全削除 |
+| **初期化** | `firebase.ts`, `firebase-admin.ts` 削除 |
+| **削除ファイル** | 18ファイル（services/*, stores/auth.ts, utils/testAuth.ts, composables/useJournalEditor.ts 等） |
+| **環境変数** | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 追加 |
+| **残存** | 型定義ファイル（`Timestamp` from firebase/firestore）にimport残存。実行に影響なし |
 
 ---
 

@@ -3,7 +3,7 @@ import type { Staff, StaffRole } from '@/features/staff-management/composables/u
 
 // =============================================
 // 認証ストア（シングルトン）
-// Phase B TODO: Firebase Auth / Supabase Auth に差し替え
+// Supabase Auth で認証（移行済み。src/utils/auth.ts 参照）
 // =============================================
 
 /**

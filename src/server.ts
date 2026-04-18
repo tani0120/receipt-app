@@ -5,7 +5,6 @@ config({ path: '.env.local' })  // .env.localを明示的に読み込む（VERTE
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
-import admin from 'firebase-admin'
 import conversionRoute from './api/routes/conversion'
 import clientsRoute from './api/routes/clients'
 import journalStatusRoute from './api/routes/journal-status'
@@ -16,30 +15,6 @@ import workerRoute from './api/routes/worker'
 import aiModelsRoute from './api/routes/ai-models'
 import documentsRoute from './api/routes/documents'
 import pipelineRoute from './api/routes/pipeline'
-
-// Phase 3: Firebase Admin SDK初期化
-if (!admin.apps.length) {
-    if (process.env.NODE_ENV === 'production') {
-        // Cloud Run環境: Application Default Credentials使用
-        admin.initializeApp({
-            credential: admin.credential.applicationDefault()
-        })
-        console.log('✅ Firebase Admin initialized (Cloud Run mode)')
-    } else {
-        // ローカル環境: サービスアカウントキー使用
-        try {
-            const { readFileSync } = await import('fs');
-            const serviceAccount = JSON.parse(readFileSync('./service-account-key.json', 'utf-8'));
-            admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount)
-            })
-            console.log('✅ Firebase Admin initialized (Local mode)')
-        } catch {
-            console.warn('⚠️ Firebase Admin: service-account-key.json not found, skipping initialization')
-            console.warn('   Download from: https://console.firebase.google.com/project/sugu-suru/settings/serviceaccounts/adminsdk')
-        }
-    }
-}
 
 const app = new Hono()
 const port = parseInt(process.env.PORT || '8080')

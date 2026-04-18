@@ -241,23 +241,27 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { aaa_useJournalEditor } from '@/composables/useJournalEditor';
+import { computed, ref } from 'vue';
+// [レガシー] useJournalEditor は Firebase依存のため削除済み
+// TODO: Supabase移行後に再実装
+// import { aaa_useJournalEditor } from '@/composables/useJournalEditor';
 // TAX_OPTIONS の正しいimport元: @/shared/schema_dictionary（旧: useAccountingSystem に存在しない）
 import { TAX_OPTIONS } from '@/shared/schema_dictionary';
 import type { JournalUiMode } from '@/shared/journalUiMode';
 
-const {
-    entry,
-    loading: _loading,
-    isSaving,
-    validation,
-    addRow,
-    removeRow,
-    handleSave,
-    handleSubmit,
-    primaryActionButtonLabel
-} = aaa_useJournalEditor();
+// スタブ実装（レガシー画面の表示維持用）
+const entry = ref(null as null | {
+    clientCode: string; status: string; date: string; description: string;
+    hasQualifiedInvoice: boolean; sourceFiles: { fileName: string }[];
+    lines: { lineId: string; accountCode: string; accountName: string; debit: number; credit: number; taxCode: string }[];
+})
+const isSaving = ref(false)
+const validation = ref({ errors: [] as string[], warnings: [] as string[], isValid: false, balanceDiff: 0 })
+const addRow = () => {}
+const removeRow = (_idx: number) => {}
+const handleSave = () => {}
+const handleSubmit = () => {}
+const primaryActionButtonLabel = ref('確定（レガシー画面）')
 
 // UI Mode: status駆動UIの基盤
 const uiMode = computed<JournalUiMode>(() => {

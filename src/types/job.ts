@@ -1,5 +1,5 @@
 import type { Job as FirestoreJob } from './firestore';
-import { Timestamp } from 'firebase/firestore';
+// 2026-04-18: Firebase Timestamp → Date に移行
 
 /**
  * 業務フローに基づく厳密なステータス定義
@@ -21,8 +21,8 @@ export interface Job extends Omit<FirestoreJob, 'status'> {
   status: JobStatus;
 
   // ステータスごとのメタデータ (Optional)
-  primaryCompletedAt?: Timestamp;
-  finalCompletedAt?: Timestamp;
+  primaryCompletedAt?: Date;
+  finalCompletedAt?: Date;
   remandReason?: string;
   remandCount?: number;  // 差戻し回数（業務ワークフロー追跡用）
 

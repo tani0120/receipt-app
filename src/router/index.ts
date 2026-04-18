@@ -388,7 +388,7 @@ const router = createRouter({
   routes
 })
 
-// Firebase認証状態の読み込みを待つPromise
+// Supabase Auth 認証状態の読み込みを待つPromise
 let authInitialized = false;
 const authReadyPromise = new Promise<void>((resolve) => {
   import('@/utils/auth').then(({ onAuthStateChanged }) => {
@@ -405,7 +405,7 @@ const authReadyPromise = new Promise<void>((resolve) => {
 // 認証ガード（全環境で有効）
 
 router.beforeEach(async (to) => {
-  // 認証初期化を待つ（Firebase読み込み完了まで）
+  // 認証初期化を待つ（Supabase Auth読み込み完了まで）
   await authReadyPromise;
 
   // 開発環境: 認証ガード無効化（直接URLアクセス可能）

@@ -22,7 +22,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import { Timestamp } from "firebase/firestore";
+// 2026-04-18: Firebase Timestamp → Date に完全移行
 
 /**
  * Firestore Collection Definitions
@@ -187,7 +187,7 @@ export interface Client {
   /** Google Drive Link Status */
   driveLinked: boolean;
 
-  updatedAt: Timestamp;
+  updatedAt: Date;
 }
 
 // ============================================================================
@@ -265,17 +265,17 @@ export interface Job {
   retryCount: number;
 
   /** Accounting Date */
-  transactionDate: Timestamp;
+  transactionDate: Date;
 
   /** Timestamps */
-  createdAt: Timestamp; // File Scanned Time
-  startedAt?: Timestamp; // AI Processing Start
-  finishedAt?: Timestamp; // Approved/Archived Time
-  updatedAt: Timestamp;
+  createdAt: Date; // File Scanned Time
+  startedAt?: Date; // AI Processing Start
+  finishedAt?: Date; // Approved/Archived Time
+  updatedAt: Date;
 
   /** Locking Mechanism */
   lockedByUserId?: string;
-  lockedAt?: Timestamp;
+  lockedAt?: Date;
 
   /**
    * AI Analysis Data
@@ -304,7 +304,7 @@ export interface Job {
     // @approved-by: CI/CD脆弱性修正
     // @reason: 国税庁APIのレスポンス型が不完全
     apiResponse?: Record<string, unknown>; // Raw response from NTA API
-    checkedAt: Timestamp;
+    checkedAt: Date;
   };
 
   /**
@@ -352,7 +352,7 @@ export interface LearningRule {
   lastAppliedJobId?: string;
 
   isActive: boolean;
-  updatedAt: Timestamp;
+  updatedAt: Date;
 }
 
 // ============================================================================
@@ -362,7 +362,7 @@ export interface LearningRule {
 // ============================================================================
 export interface AuditLog {
   id: string;
-  logTimestamp: Timestamp;
+  logTimestamp: Date;
 
   userId: string;       // LOG_USER
   userEmail?: string;
@@ -407,7 +407,7 @@ export interface SystemSettings {
   maxRetries: number;     // default 3
   dataRetentionDays: number; // default 40
 
-  updatedAt: Timestamp;
+  updatedAt: Date;
 }
 
 // ============================================================================
@@ -430,7 +430,7 @@ export interface BankAccount {
   accountType: 'ordinary' | 'current';
   accountNumber: string;
   accountHolder: string;
-  updatedAt: Timestamp;
+  updatedAt: Date;
 }
 
 export interface CreditCard {
@@ -439,5 +439,5 @@ export interface CreditCard {
   cardHolder: string;
   last4Digits: string;
   paymentAccountBankId?: string; // Link to BankAccount
-  updatedAt: Timestamp;
+  updatedAt: Date;
 }

@@ -40,6 +40,7 @@
               <col :style="{ width: clColWidths['fiscalMonth'] + 'px' }">
               <col :style="{ width: clColWidths['phoneNumber'] + 'px' }">
               <col :style="{ width: clColWidths['email'] + 'px' }">
+              <col :style="{ width: clColWidths['sharedEmail'] + 'px' }">
               <col :style="{ width: clColWidths['driveUrl'] + 'px' }">
               <col :style="{ width: clColWidths['chatRoomUrl'] + 'px' }">
               <col style="width: auto;">
@@ -87,6 +88,9 @@
                 </th>
                 <th class="relative">メール
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('email', $event)"></div>
+                </th>
+                <th class="relative">共有用メール
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart('sharedEmail', $event)"></div>
                 </th>
                 <th class="relative">Drive取込
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('driveUrl', $event)"></div>
@@ -176,6 +180,10 @@
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'email'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.email || '—' }}</span>
                 </td>
+                <td class="cm-ellipsis">
+                  <span v-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
+                  <span v-else class="cm-shared-email-none">未取得</span>
+                </td>
                 <td class="cm-drive-cell" @click.stop="copyDriveUrl(row.clientId)">
                   <span v-if="driveUrlCopied === row.clientId" class="cm-drive-copied">✅ コピー済</span>
                   <span v-else class="cm-drive-link">📋 URLコピー</span>
@@ -195,7 +203,7 @@
                 </td>
               </tr>
               <tr v-if="pagedRows.length === 0">
-                <td colspan="14" class="cm-empty">該当する顧問先がありません</td>
+                <td colspan="15" class="cm-empty">該当する顧問先がありません</td>
               </tr>
             </tbody>
           </table>
@@ -537,6 +545,7 @@ const clDefaultWidths: Record<string, number> = {
   fiscalMonth: 90,
   phoneNumber: 110,
   email: 140,
+  sharedEmail: 140,
   driveUrl: 100,
   chatRoomUrl: 140,
 };
@@ -1169,4 +1178,8 @@ const recreateDriveFolder = async () => {
 .cm-folder-recreate-btn:disabled {
   opacity: 0.5; cursor: not-allowed;
 }
+
+/* 共有用メール */
+.cm-shared-email { font-size: 11px; color: #2563eb; }
+.cm-shared-email-none { font-size: 11px; color: #cbd5e1; font-style: italic; }
 </style>

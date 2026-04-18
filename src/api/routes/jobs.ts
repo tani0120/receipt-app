@@ -1,60 +1,30 @@
 import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { jobRepository } from '../../repositories/jobRepository'
-
-import { JobSchema } from '../../types/zod_schema'
 
 const app = new Hono()
 
+/**
+ * [レガシー] jobRepository は Firebase/Firestore 依存のため削除済み。
+ * Supabase移行後に再実装する。
+ * 現在は全エンドポイントでスタブレスポンスを返す。
+ */
+
 const route = app
-    // GET / - List All Jobs
+    // GET / - 全ジョブ一覧
     .get('/', async (c) => {
-        try {
-            const jobs = await jobRepository.getAllJobs()
-            return c.json(jobs)
-        } catch (e: unknown) {
-            console.error(e)
-            return c.json({ error: 'Failed to fetch jobs' }, 500)
-        }
+        console.warn('[jobs] jobRepository削除済み。スタブレスポンスを返します')
+        return c.json([])
     })
-    // GET /:id - Fetch Job
+    // GET /:id - ジョブ取得
     .get('/:id', async (c) => {
         const id = c.req.param('id')
-        try {
-            const job = await jobRepository.getJob(id)
-            if (!job) {
-                return c.json({ error: 'Job not found' }, 404)
-            }
-            return c.json(job)
-        } catch (e: unknown) {
-            console.error(e)
-            // Debug Mode: Return detailed error
-            const err = e instanceof Error ? e : new Error(String(e));
-            return c.json({
-                error: 'Internal Server Error',
-                message: err.message,
-                stack: err.stack,
-                details: JSON.stringify(e)
-            }, 500)
-        }
+        console.warn(`[jobs] jobRepository削除済み。ID=${id} のスタブレスポンスを返します`)
+        return c.json({ error: 'jobRepository は Supabase移行待ちです' }, 501)
     })
-
-    // PATCH /:id - Save Job (Partial Update)
-    .patch(
-        '/:id',
-        zValidator('json', JobSchema.partial()), // Use Sacred Schema
-        async (c) => {
-            const id = c.req.param('id')
-            const data = c.req.valid('json')
-            try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                await jobRepository.saveJob(id, data as any)
-                return c.json({ success: true, id })
-            } catch (e) {
-                console.error(e)
-                return c.json({ error: 'Failed to save job' }, 500)
-            }
-        }
-    )
+    // PATCH /:id - ジョブ更新
+    .patch('/:id', async (c) => {
+        const id = c.req.param('id')
+        console.warn(`[jobs] jobRepository削除済み。ID=${id} の更新はスキップされます`)
+        return c.json({ error: 'jobRepository は Supabase移行待ちです' }, 501)
+    })
 
 export default route

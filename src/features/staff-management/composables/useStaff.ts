@@ -60,6 +60,13 @@ export function emptyStaffForm(): StaffForm {
 
 const staffList = ref<Staff[]>([
     {
+        uuid: 'staff-0000',
+        name: '管理者',
+        email: 'admin@sugu-suru.com',
+        role: 'admin',
+        status: 'active',
+    },
+    {
         uuid: 'staff-0001',
         name: '田中 太郎',
         email: 'tanaka@sugu-suru.com',
@@ -106,11 +113,33 @@ export function useStaff() {
         return staffList.value.find(s => s.uuid === staffId)?.name ?? ''
     }
 
+    /**
+     * メールアドレスがスタッフマスタに登録済みか確認
+     * Google OAuthログイン時のアクセス制御に使用
+     * activeステータスのスタッフのみ許可
+     */
+    function isEmailRegistered(email: string): boolean {
+        return staffList.value.some(
+            s => s.email.toLowerCase() === email.toLowerCase() && s.status === 'active'
+        )
+    }
+
+    /**
+     * メールアドレスからスタッフ情報を取得
+     */
+    function getStaffByEmail(email: string): Staff | undefined {
+        return staffList.value.find(
+            s => s.email.toLowerCase() === email.toLowerCase() && s.status === 'active'
+        )
+    }
+
     return {
         staffList,
         activeStaff,
         adminStaff,
         getStaffName,
+        isEmailRegistered,
+        getStaffByEmail,
     }
 }
 

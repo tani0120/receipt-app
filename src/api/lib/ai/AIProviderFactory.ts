@@ -2,7 +2,8 @@ import type { AIProvider, AIPhase, PhaseConfig } from './types';
 import { VertexAIStrategy } from './strategies/VertexAIStrategy';
 import { AIStudioStrategy } from './strategies/AIStudioStrategy';
 import { config } from '../../config';
-import { db } from '../../lib/firebase'; // Assuming access to firebase admin/db
+// 2026-04-18: Firebase db参照削除。設定はデフォルト値を使用。
+// Supabase移行後に設定テーブルからの読み込みを再実装予定。
 
 // Mock config for fallback
 const DEFAULT_CONFIGS: Record<AIPhase, PhaseConfig> = {
@@ -55,31 +56,19 @@ export class AIProviderFactory {
         const now = Date.now();
         const cached = this.cache[phase];
 
-        // Cache Hit
+        // キャッシュヒット
         if (cached && (now - cached.timestamp < this.CACHE_TTL_MS)) {
             return cached.config;
         }
 
-        // Cache Miss - Fetch from Firestore
-        try {
-            const doc = await db.collection('system_configs').doc('ai_phase_settings').get();
-            if (doc.exists) {
-                const data = doc.data() as Record<string, unknown>; // Typed for flexibility reading partials
-                if (data && data[phase]) {
-                    const freshConfig = data[phase] as PhaseConfig;
-                    // Validate minimal fields
-                    if (freshConfig.provider && freshConfig.model) {
-                        this.cache[phase] = { config: freshConfig, timestamp: now };
-                        return freshConfig;
-                    }
-                }
-            }
-        } catch (error) {
-            console.error(`[AI Factory] Failed to fetch settings for ${phase}, using default.`, error);
-        }
+        // [Firebase削除済み] Firestoreからの設定読み込みは廃止。
+        // Supabase移行後、system_configsテーブルからの読み込みを再実装予定。
+        console.warn(`[AI Factory] Firestore削除済み。デフォルト設定を使用: ${phase}`);
 
-        // Fallback
-        return DEFAULT_CONFIGS[phase];
+        // デフォルト値をキャッシュして返却
+        const defaultConfig = DEFAULT_CONFIGS[phase];
+        this.cache[phase] = { config: defaultConfig, timestamp: now };
+        return defaultConfig;
     }
 
     /**

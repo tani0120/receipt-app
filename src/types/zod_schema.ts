@@ -23,46 +23,38 @@
  */
 
 import { z } from 'zod';
-import { Timestamp } from 'firebase/firestore';
+// 2026-04-18: Firebase Timestamp → Date に完全移行
 
 // ============================================================================
 // 0. Base Schemas & Enums
 // ============================================================================
 
-// Timestamp Validator: Flexible schema for Firestore Timestamps
-// Supports: Timestamp instances, serialized objects, Date, ISO strings
-// Phase 5 Fix: Handles Firestore data serialization across API boundaries
+// TimestampSchema: 柔軟なタイムスタンプバリデーター
+// Date、シリアライズ済みオブジェクト（seconds/nanoseconds）、ISO文字列を受け入れ、全てDateに正規化
 export const TimestampSchema = z.union([
-  // Option 1: Native Firestore Timestamp instance
-  z.custom<Timestamp>((data) => data instanceof Timestamp, {
-    message: "Expected Firestore Timestamp instance"
-  }),
+  // Option 1: JavaScriptのDateインスタンス
+  z.date(),
 
-  // Option 2: Serialized Timestamp object (from Firestore JSON)
+  // Option 2: シリアライズ済みTimestampオブジェクト（{seconds, nanoseconds}）
   z.object({
     seconds: z.number(),
     nanoseconds: z.number()
-  }).transform(data => {
+  }).transform(data => new Date(data.seconds * 1000)),
+
+  // Option 3: ISO 8601 文字列
+  z.string().datetime().transform(str => {
     try {
-      return new Timestamp(data.seconds, data.nanoseconds);
+      return new Date(str);
     } catch {
-      // Fallback: return original if Timestamp constructor fails
-      return data as unknown as Timestamp;
+      return new Date();
     }
   }),
 
-  // Option 3: JavaScript Date object
-  z.date().transform(date => Timestamp.fromDate(date)),
-
-  // Option 4: ISO 8601 string
-  z.string().datetime().transform(str => {
-    try {
-      return Timestamp.fromDate(new Date(str));
-    } catch {
-      // Fallback to current time if parsing fails
-      return Timestamp.now();
-    }
-  })
+  // Option 4: toDate()メソッドを持つオブジェクト（後方互換性）
+  z.custom<{ toDate: () => Date }>((data) =>
+    data != null && typeof data === 'object' && 'toDate' in data && typeof (data as { toDate: unknown }).toDate === 'function',
+    { message: "Expected object with toDate() method" }
+  ).transform(data => data.toDate())
 ]);
 
 export const TaxFilingTypeSchema = z.enum(['blue', 'white']);

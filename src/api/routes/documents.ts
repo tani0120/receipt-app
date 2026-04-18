@@ -1,11 +1,10 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { documentRepository } from '../../database/repositories/documentRepository'
-import admin from 'firebase-admin'
 
 const app = new Hono()
 
-// Zod Schema for request validation
+// Zodスキーマ（リクエストバリデーション）
 const UpdateStatusSchema = z.object({
     newStatus: z.enum(['uploaded', 'preprocessed', 'ocr_done', 'suggested', 'reviewing', 'confirmed', 'rejected']),
     actor: z.string().email().optional().default('system@receipt-app.com'),
@@ -13,7 +12,7 @@ const UpdateStatusSchema = z.object({
 })
 
 // POST /api/documents/:id/status
-// 状態変更API（Firestore + Supabase両方書き込み）
+// 状態変更API（Supabase書き込み）
 app.post('/:id/status', async (c) => {
     try {
         const documentId = c.req.param('id')
@@ -25,24 +24,7 @@ app.post('/:id/status', async (c) => {
         // バリデーション
         const validated = UpdateStatusSchema.parse(body)
 
-        // 1. Firestore: イベントログ記録（環境変数で制御）
-        const ENABLE_FIRESTORE = process.env.ENABLE_FIRESTORE === 'true'
-
-        if (ENABLE_FIRESTORE) {
-            const db = admin.firestore()
-            await db.collection('document_events').add({
-                documentId,
-                eventType: 'status_change',
-                newStatus: validated.newStatus,
-                actor: validated.actor,
-                timestamp: admin.firestore.FieldValue.serverTimestamp()
-            })
-            console.log(`[Firestore] Event logged: ${documentId} -> ${validated.newStatus}`)
-        } else {
-            console.log('[API] Firestore disabled, skipping event log')
-        }
-
-        // 2. Supabase: 正規帳簿更新（SQL function使用）
+        // Supabase: 正規帳簿更新（SQL function使用）
         console.log('[API] Starting Supabase operation...')
         if (validated.newStatus === 'confirmed') {
             // confirmed時はjournal必須
@@ -59,12 +41,12 @@ app.post('/:id/status', async (c) => {
         }
         console.log('[API] Supabase operation completed')
 
-        // 3. 成功レスポンス
+        // 成功レスポンス
         return c.json({
             success: true,
             documentId,
             newStatus: validated.newStatus,
-            message: 'Status updated in both Firestore and Supabase'
+            message: 'Status updated in Supabase'
         })
 
     } catch (e: unknown) {

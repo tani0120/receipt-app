@@ -1,6 +1,6 @@
 // ここに用意した schema_v2.ts のコードを貼り付けてください
 
-import { Timestamp } from 'firebase/firestore';
+// 2026-04-18: Firebase Timestamp → Date に完全移行
 
 /**
  * ============================================================================
@@ -25,8 +25,8 @@ export type CurrencyCode = 'JPY' | 'USD';
 
 export interface BaseDocumentV2 {
     id: DocumentId;
-    createdAt: Timestamp;
-    updatedAt: Timestamp;
+    createdAt: Date;
+    updatedAt: Date;
     version: number; // スキーマバージョン管理用
 }
 
@@ -52,7 +52,7 @@ export interface UserDocument extends BaseDocumentV2 {
     auth: {
         role: UserRole;
         permissions: string[];
-        lastLoginAt: Timestamp;
+        lastLoginAt: Date;
     };
     config: {
         // レガシーではフラットだった設定値を集約
@@ -73,7 +73,7 @@ export interface ClientDocument extends BaseDocumentV2 {
     management: {
         is_active: boolean;
         person_in_charge_id: UserId;
-        contract_start_date: Timestamp;
+        contract_start_date: Date;
         tags: string[];
     };
 
@@ -89,7 +89,7 @@ export interface ClientDocument extends BaseDocumentV2 {
     current_month_stats: {
         sales_total: number;
         job_count: number;
-        last_updated: Timestamp;
+        last_updated: Date;
     };
 }
 
@@ -111,8 +111,8 @@ export interface WorkLogDocument extends BaseDocumentV2 {
 
     // Time Tracking (厳格化)
     time_entry: {
-        start: Timestamp;
-        end: Timestamp | null; // 進行中はnull
+        start: Date;
+        end: Date | null; // 進行中はnull
         duration_minutes: number;
         is_billable: boolean;
     };
@@ -156,7 +156,7 @@ export interface DocumentRecord extends BaseDocumentV2 {
 
     // Structured Accounting Data (人間またはAIが確定させたデータ)
     accounting_data: {
-        confirmed_date: Timestamp;
+        confirmed_date: Date;
         confirmed_amount: number;
         tax_amount: number;
         merchant_name: string;

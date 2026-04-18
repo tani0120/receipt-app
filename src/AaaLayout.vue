@@ -92,7 +92,8 @@
 import { useRoute, useRouter } from 'vue-router';
 import { ref, computed } from 'vue';
 import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
-import { seedRichJobs } from '@/utils/seedRichJobs';
+// [レガシー] seedRichJobs は Firebase依存のため削除済み
+// import { seedRichJobs } from '@/utils/seedRichJobs';
 import { aaa_useDataConversion } from '@/composables/useDataConversion';
 
 const route = useRoute();
@@ -137,7 +138,8 @@ const handleSeedJobs = () => {
 const executeSeed = async () => {
     if (seedClientCode.value) {
         showSeedModal.value = false;
-        await seedRichJobs(seedClientCode.value);
+        // [レガシー] seedRichJobs削除済み。Supabase移行後に再実装
+        console.warn('[Seed] seedRichJobs は削除済みです:', seedClientCode.value);
     }
 };
 </script>

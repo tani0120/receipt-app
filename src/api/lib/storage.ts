@@ -1,50 +1,73 @@
+/**
+ * Storage Service（Supabase Storage版）
+ *
+ * Firebase Storage から Supabase Storage に移行。
+ * バケット名: receipts（Supabaseダッシュボードで事前作成が必要）
+ *
+ * 【移行履歴】
+ * 2026-04-18: Firebase Storage → Supabase Storage に完全移行
+ */
 
-import { getStorage } from 'firebase-admin/storage';
+import { createClient } from '@supabase/supabase-js'
+
+/** サーバー側Supabaseクライアント（service_role使用） */
+function getServerSupabase() {
+    const url = process.env.SUPABASE_URL
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!url || !key) {
+        throw new Error('[StorageService] SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が未設定です')
+    }
+    return createClient(url, key)
+}
+
+const BUCKET_NAME = 'receipts'
 
 export class StorageService {
-    private static BUCKET_NAME = process.env.FIREBASE_STORAGE_BUCKET || 'ai-accounting-app.appspot.com'; // Fallback for dev
-
     /**
-     * Uploads a file buffer to GCS and returns the gs:// URI.
-     * This URI is the canonical ID for the image in our system.
+     * ファイルをSupabase Storageにアップロードし、パスを返す
      */
     static async uploadImage(buffer: Buffer, path: string, mimeType: string): Promise<string> {
-        const bucket = getStorage().bucket(this.BUCKET_NAME);
-        const file = bucket.file(path);
+        const supabase = getServerSupabase()
 
-        await file.save(buffer, {
-            contentType: mimeType,
-            metadata: {
+        const { error } = await supabase.storage
+            .from(BUCKET_NAME)
+            .upload(path, buffer, {
+                contentType: mimeType,
                 cacheControl: 'public, max-age=31536000',
-            },
-        });
+                upsert: true,
+            })
 
-        // Construct gs:// URI
-        // Format: gs://<bucket_name>/<file_path>
-        return `gs://${this.BUCKET_NAME}/${path}`;
+        if (error) {
+            throw new Error(`[StorageService] アップロード失敗: ${error.message}`)
+        }
+
+        // Supabase Storageのパス形式で返す
+        return `${BUCKET_NAME}/${path}`
     }
 
     /**
-     * Generates a signed URL for frontend display (Valid for 1 hour)
+     * 署名付きURLを生成（1時間有効）
      */
-    static async getSignedUrl(gcsUri: string): Promise<string> {
-        // Parse gs:// uri
-        // gs://bucket/path/to/file.jpg
-        const match = gcsUri.match(/^gs:\/\/([^\/]+)\/(.+)$/);
-        if (!match) {
-            throw new Error(`Invalid GCS URI format: ${gcsUri}`);
+    static async getSignedUrl(storagePath: string): Promise<string> {
+        const supabase = getServerSupabase()
+
+        // storagePath = "receipts/path/to/file.jpg" → bucket="receipts", path="path/to/file.jpg"
+        const parts = storagePath.split('/')
+        const bucket = parts[0]
+        const filePath = parts.slice(1).join('/')
+
+        if (!bucket || !filePath) {
+            throw new Error(`[StorageService] 不正なパス: ${storagePath}`)
         }
 
-        const [, bucketName, filePath] = match;
-        if (!bucketName || !filePath) throw new Error(`Invalid GCS URI (missing bucket/path): ${gcsUri}`);
-        const bucket = getStorage().bucket(bucketName);
-        const file = bucket.file(filePath);
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(filePath, 3600) // 1時間
 
-        const [url] = await file.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 1000 * 60 * 60, // 1 hour
-        });
+        if (error) {
+            throw new Error(`[StorageService] 署名付きURL生成失敗: ${error.message}`)
+        }
 
-        return url;
+        return data.signedUrl
     }
 }

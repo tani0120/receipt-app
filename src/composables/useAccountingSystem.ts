@@ -2,7 +2,7 @@ import { ref, reactive } from 'vue';
 import { client } from '@/client';
 // import { FirestoreRepository } from '@/services/firestoreRepository'; // Removed for Hono Migration
 
-import { Timestamp } from 'firebase/firestore';
+// 2026-04-18: Firebase Timestamp 廃止。Date型に移行済み
 // import { aaa_useBankLogic } from '@/composables/useBankLogic';
 
 // Ironclad Imports
@@ -637,15 +637,15 @@ function createMockJob(
     status: status,
     priority: 'normal',
     retryCount: 0,
-    transactionDate: Timestamp.fromDate(new Date(dateStr)),
-    createdAt: Timestamp.fromDate(new Date(dateStr)),
-    updatedAt: Timestamp.now(),
+    transactionDate: new Date(dateStr),
+    createdAt: new Date(dateStr),
+    updatedAt: new Date(),
     confidenceScore: 0.9,
     lines: [line],
     aiUsageStats: { inputTokens: 500, outputTokens: 100, estimatedCostUsd: 0.002, modelName: 'gemini-2.0-flash-exp' },
     invoiceValidationLog: {
       isValid: true,
-      checkedAt: Timestamp.now()
+      checkedAt: new Date()
     }
   } as JobApi;
 }

@@ -379,5 +379,69 @@ WHERE tablename IN ('receipts', 'audit_logs');
 ---
 
 **Status**: 開発環境設定完了 ✅  
-**Version**: v2.0（2026-02-14更新）  
-**Next**: Phase 5実装開始
+**Version**: v3.0（2026-04-18更新 — Supabase Auth移行完了）  
+**Next**: auth.uid() を使ったclient_idベースRLSポリシー実装
+
+---
+
+## 📝 2026-04-18 更新: Supabase Auth移行完了
+
+### 認証基盤
+
+| 項目 | 変更前 | 変更後 |
+|---|---|---|
+| **認証** | Firebase Authentication | **Supabase Auth** |
+| **ストレージ** | Firebase Storage | **Supabase Storage** |
+| **イベントログ** | Firestore（ENABLE_FIRESTORE=false） | **廃止（Supabase audit_logsに統合）** |
+
+### RLSポリシーへの影響
+
+- Supabase Auth移行により、`auth.uid()` がSupabase認証ユーザーのUUIDを返すようになった
+- これにより、`user_client_access` テーブルを作成し、`auth.uid()` でclient_idベースのフィルタリングが可能になる
+- **推奨**: 移行完了後、過度に寛大なポリシー（`USING (true)`）をclient_idフィルタリングに更新
+
+### 削除されたFirebaseファイル（認証・初期化関連）
+
+- `src/firebase.ts`（Firebase初期化）
+- `src/firebase-admin.ts`（Firebase Admin初期化）
+- `src/utils/testAuth.ts`（Firebase Authテストログイン）
+- `src/stores/auth.ts`（Pinia認証ストア）
+- `src/api/lib/firebase.ts`（サーバー側Firebase初期化）
+- `src/repositories/documentRepository.ts`（Firestore版 — Supabase版は維持）
+- `src/repositories/clientRepository.ts`（Firestore版 — Supabase版は維持）
+- `src/api/services/WorkerService.ts`（Firebase db依存）
+- `src/api/services/JournalService.ts`（Firebase db依存）
+- `src/api/services/ConversionService.ts`（Firebase db依存）
+- `src/api/services/ConfigService.ts`（Firebase db依存）
+
+### 2026-04-18 追加更新: Google OAuth設定完了 + Timestamp移行
+
+#### Google OAuth構成
+
+| 項目 | 設定値 |
+|---|---|
+| **GCPプロジェクト** | `sugu-suru` |
+| **OAuthクライアントID** | `Supabase Auth`（ウェブアプリケーション） |
+| **リダイレクトURI** | `https://cujksbvnzjxbklhofyfu.supabase.co/auth/v1/callback` |
+| **OAuth同意画面** | 公開（基本スコープのみ、審査不要） |
+| **Supabase Googleプロバイダー** | Enabled |
+
+#### アクセス制御設計
+
+| レイヤー | 設定 | 役割 |
+|---|---|---|
+| GCP OAuth同意画面 | 公開 | 誰でもGoogle認証画面到達可能 |
+| Supabase Auth | ログイン受付 | Googleトークンを受け取る |
+| **アプリ側（validateStaffAccess）** | **スタッフマスタ照合** | **ここで制御** |
+
+- `admin@sugu-suru.com` は必須ユーザー（スタッフマスタから削除不可）
+- `/master/staff` でスタッフの登録・削除・修正 → 即座にログイン許可に反映
+- `src/utils/auth.ts` の `validateStaffAccess()` で照合
+
+#### Timestamp → Date 移行（9ファイル）
+
+`firebase/firestore` の `Timestamp` 型を全て JavaScript 標準の `Date` 型に置換。
+`TimestampSchema`（zod）は `Date` 互換に書き換え（`toDate()` 後方互換あり）。
+`vue-tsc --noEmit` エラー0件で検証済み。
+
+

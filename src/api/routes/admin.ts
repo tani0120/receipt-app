@@ -46,21 +46,13 @@ const route = app
         return c.json(MOCK_ADMIN_DATA)
     })
     .get('/config', async (c) => {
-        try {
-            const { db } = await import('../lib/firebase')
-            const doc = await db.collection('system_configs').doc('ai_phase_settings').get()
-            const data = doc.data() || {}
-            return c.json(data)
-        } catch (e: unknown) {
-            console.error('Failed to fetch config:', e)
-            return c.json({}, 500)
-        }
+        // [レガシー] Firebase Firestore依存。Supabase移行後に再実装
+        console.warn('[admin] config GET: Firebase削除済み。スタブレスポンスを返します')
+        return c.json({})
     })
     .patch('/config',
-        // Validate incoming payload (Partial update is allowed)
         zValidator('json', z.object({
             aiPhases: PhaseSettingsSchema.optional(),
-            // Allow other keys for scheduler settings, strictly validated later via ConfigService
         }).passthrough(), async (result, c) => {
             if (!result.success) {
                 return c.json({ success: false, message: 'Invalid config format', errors: result.error }, 400)
@@ -68,91 +60,9 @@ const route = app
             return undefined
         }),
         async (c) => {
-            try {
-                const { db } = await import('../lib/firebase')
-                const { ConfigService } = await import('../services/ConfigService') // Dynamic import
-
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const payload = c.req.valid('json') as any
-
-                // 1. Save AI Phase Settings (if present)
-                if (payload.aiPhases) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const mapPhase = (p: any) => ({
-                        provider: p.provider === 'gemini' ? 'ai_studio' : 'vertex_ai',
-                        mode: p.mode === 'normal' ? 'realtime' : 'batch',
-                        model: p.modelName || p.model
-                    })
-
-                    const docData = {
-                        ocr: mapPhase(payload.aiPhases.ocr),
-                        learning: mapPhase(payload.aiPhases.learning),
-                        conversion: mapPhase(payload.aiPhases.conversion),
-                        optimization: mapPhase(payload.aiPhases.optimization)
-                    }
-                    await db.collection('system_configs').doc('ai_phase_settings').set(docData, { merge: true })
-                }
-
-                // 2. Save Scheduler Settings (Map Flat UI -> Nested Schema)
-                // We map from the flat structure in useAdminDashboard.ts to SchedulerSettings structure
-                try {
-                    const schedulerPayload = {
-                        intervals: {
-                            draft_monitoring: payload.intervalDispatchMin,
-                            batch_api_check: payload.intervalWorkerMin,
-                            learning: payload.intervalLearnerMin,
-                            final_formatting: payload.intervalValidatorMin,
-                            knowledge_optimization: payload.intervalOptimizerDays
-                        },
-                        notifications: {
-                            target_hours: payload.notifyHours
-                                ? payload.notifyHours.split(',').map((h: string) => parseInt(h.trim())).filter((n: number) => !isNaN(n))
-                                : undefined,
-                            slack_webhook_url: payload.slackWebhookUrl
-                        },
-                        processing: {
-                            batch_size: payload.maxBatchSize,
-                            timeout_seconds: payload.gasTimeoutLimit,
-                            max_retries: payload.maxAttemptLimit,
-                            optimization_limit: payload.maxOptBatch
-                        },
-                        retention: {
-                            job_history_days: payload.dataRetentionDays
-                        }
-                    }
-
-                    // Remove undefined keys to allow partial updates (zod .parse would fail on undefined if we were strict, but here we construct object)
-                    // Actually ConfigService.updateSchedulerSettings should handle it.
-                    // Let's rely on ConfigService to merge.
-
-                    // Filter out undefined values from our mapped object to avoid overwriting with undefined
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const cleanPayload = (obj: any): any => {
-                        return Object.entries(obj).reduce((acc, [k, v]) => {
-                            if (v && typeof v === 'object' && !Array.isArray(v)) {
-                                const nested = cleanPayload(v)
-                                if (Object.keys(nested).length > 0) acc[k] = nested
-                            } else if (v !== undefined) {
-                                acc[k] = v
-                            }
-                            return acc
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        }, {} as any)
-                    }
-
-                    await ConfigService.updateSchedulerSettings(cleanPayload(schedulerPayload))
-
-                } catch (err) {
-                    console.warn('Failed to parse/save scheduler settings, skipping...', err)
-                    // Don't fail the whole request if only scheduler part fails (backward compatibility)
-                }
-
-                return c.json({ success: true, message: 'Configuration saved' })
-            } catch (e: unknown) {
-                const err = e as Error
-                console.error('Failed to save config:', err)
-                return c.json({ success: false, error: err.message }, 500)
-            }
+            // [レガシー] Firebase Firestore + ConfigService依存。Supabase移行後に再実装
+            console.warn('[admin] config PATCH: Firebase削除済み。保存はスキップされます')
+            return c.json({ success: true, message: 'Configuration save skipped (Firebase removed)' })
         }
     )
 

@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from '@google/genai';
-import { getStorage } from 'firebase-admin/storage';
+import { createClient } from '@supabase/supabase-js';
 import type { AIProvider, ModelInfo, ReceiptAnalysisResult } from '../types';
 
 export class AIStudioStrategy implements AIProvider {
@@ -27,16 +27,13 @@ export class AIStudioStrategy implements AIProvider {
         ];
     }
 
-    async analyzeReceipt(gcsUri: string, modelId?: string): Promise<ReceiptAnalysisResult> {
+    async analyzeReceipt(storagePath: string, modelId?: string): Promise<ReceiptAnalysisResult> {
         const finalModelId = modelId || 'gemini-2.5-flash';
 
-        // AI Studio cannot access gs:// URIs directly. We must download and send buffer.
-        // Helper to download from GCS
-        const fileBuffer = await this.downloadFile(gcsUri);
+        // Supabase Storageからファイルをダウンロード
+        const fileBuffer = await this.downloadFile(storagePath);
 
-        // Convert buffer to base64 for AI Studio
-        // Note: For large files, File API (uploading to AI Studio temporary storage) is better,
-        // but for receipts Base64 is usually fine (< 4MB).
+        // Base64に変換してAI Studioに送信
         const base64Data = fileBuffer.toString('base64');
 
         const prompt = `
@@ -79,15 +76,35 @@ export class AIStudioStrategy implements AIProvider {
         }
     }
 
-    private async downloadFile(gcsUri: string): Promise<Buffer> {
-        const match = gcsUri.match(/^gs:\/\/([^\/]+)\/(.+)$/);
-        if (!match) throw new Error(`Invalid GCS URI: ${gcsUri}`);
+    /**
+     * Supabase Storageからファイルをダウンロード
+     * storagePath = "receipts/path/to/file.jpg"
+     */
+    private async downloadFile(storagePath: string): Promise<Buffer> {
+        const url = process.env.SUPABASE_URL
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+        if (!url || !key) {
+            throw new Error('[AIStudioStrategy] SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が未設定です')
+        }
+        const supabase = createClient(url, key)
 
-        const [, bucketName, filePath] = match;
-        if (!bucketName || !filePath) throw new Error(`Invalid Budget Name in URI: ${gcsUri}`);
+        const parts = storagePath.split('/')
+        const bucket = parts[0]
+        const filePath = parts.slice(1).join('/')
 
-        const bucket = getStorage().bucket(bucketName);
-        const [buffer] = await bucket.file(filePath).download();
-        return buffer;
+        if (!bucket || !filePath) {
+            throw new Error(`[AIStudioStrategy] 不正なパス: ${storagePath}`)
+        }
+
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .download(filePath)
+
+        if (error || !data) {
+            throw new Error(`[AIStudioStrategy] ダウンロード失敗: ${error?.message ?? '不明'}`)
+        }
+
+        const arrayBuffer = await data.arrayBuffer()
+        return Buffer.from(arrayBuffer)
     }
 }

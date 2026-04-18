@@ -23,7 +23,7 @@ import type {
   ConversionSoftwareCode
 } from '../types/ui.type';
 
-import { Timestamp } from 'firebase/firestore';
+// 2026-04-18: Firebase Timestamp import 削除（formatTimestampはDate互換で動作）
 
 /* ============================================================
  * 内部ユーティリティ (Helpers)
@@ -65,11 +65,17 @@ const formatTimestamp = (ts: unknown): string => {
     return `${y}/${m}/${d}`;
   };
 
-  // Firestore Timestamp
+  // Dateインスタンス
+  if (ts instanceof Date) {
+    return formatDate(ts);
+  }
+
+  // toDate()メソッドを持つオブジェクト（後方互換性）
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (typeof ts === 'object' && ts !== null && 'toDate' in ts && typeof (ts as any).toDate === 'function') {
     try {
-      const date = (ts as Timestamp).toDate();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const date = (ts as any).toDate();
       return formatDate(date);
     } catch {
       return 'Inv. Date';
