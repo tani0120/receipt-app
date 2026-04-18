@@ -17,6 +17,7 @@ json
   "メインDB": "Supabase (PostgreSQL) 2.95.3",
   "認証": "Supabase Auth + Google OAuth（2026-04-18 Firebase Authから移行完了、Google OAuth設定完了）",
   "ストレージ": "Supabase Storage（2026-04-18 Firebase Storageから移行完了）",
+  "Google Drive API": "googleapis（SA認証。ファイル一覧・DL・権限付与。共有ドライブ対応）",
   "AI": "@google/genai (統一SDK。vertexai:trueでVertex AI、apiKeyでAI Studio)",
   "ランタイム": "Node.js 20.19+ / 22.12+",
   "ビルド": "esbuild 0.27 (バンドル)"

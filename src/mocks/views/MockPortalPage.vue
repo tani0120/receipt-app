@@ -16,27 +16,79 @@
         <p class="hero-sub">パソコンやスマホで撮影して資料を共有できます</p>
       </div>
 
-      <!-- CTAカード -->
-      <div class="cta-card" @click="goUpload()">
-        <div class="cta-inner">
-          <div class="cta-icon-wrap">
-            <svg class="cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-          </div>
-          <div class="cta-text">
-            <span class="cta-label">ファイルをアップロード</span>
-            <span class="cta-hint">PC・スマホ自動対応</span>
-          </div>
-          <div class="cta-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
+      <!-- ===== 共有ボタン ===== -->
+      <div class="action-cards">
+        <!-- パソコンから共有 -->
+        <div class="action-card" @click="goUpload()">
+          <div class="action-card-inner">
+            <div class="action-icon-wrap action-icon--pc">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <div class="action-text">
+              <span class="action-label">🖥️ パソコンから共有</span>
+              <span class="action-hint">ドラッグ&ドロップで資料を送付</span>
+            </div>
+            <div class="action-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
           </div>
         </div>
-        <div class="cta-shimmer"></div>
+
+        <!-- スマホから共有（スマホも使うユーザーのみ） -->
+        <a v-if="useSmartphone && hasDriveFolder" :href="driveUrl" target="_blank" rel="noopener" class="action-card action-card--drive">
+          <div class="action-card-inner">
+            <div class="action-icon-wrap action-icon--drive">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+                <path d="M8.01 18.26l2.09 3.62 7.83-4.52-2.09-3.62z" fill="#3B82F6"/>
+                <path d="M15.84 13.74H22.5l-7.83-13.56h-6.66z" fill="#F59E0B"/>
+                <path d="M1.5 18.26h6.51L15.84.18H8.01z" fill="#22C55E"/>
+              </svg>
+            </div>
+            <div class="action-text">
+              <span class="action-label">📱 スマホから共有</span>
+              <span class="action-hint">Googleドライブアプリで写真を送付</span>
+            </div>
+            <div class="action-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
+          </div>
+        </a>
+        <!-- スマホボタン（共有フォルダ未設定時） -->
+        <div v-if="useSmartphone && !hasDriveFolder" class="action-card action-card--disabled">
+          <div class="action-card-inner">
+            <div class="action-icon-wrap action-icon--drive" style="opacity: 0.4">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+                <path d="M8.01 18.26l2.09 3.62 7.83-4.52-2.09-3.62z" fill="#3B82F6"/>
+                <path d="M15.84 13.74H22.5l-7.83-13.56h-6.66z" fill="#F59E0B"/>
+                <path d="M1.5 18.26h6.51L15.84.18H8.01z" fill="#22C55E"/>
+              </svg>
+            </div>
+            <div class="action-text">
+              <span class="action-label" style="color: #94a3b8">📱 スマホから共有</span>
+              <span class="action-hint" style="color: #ef4444">共有フォルダが未作成のため利用できません。<br>担当スタッフにお問い合わせください。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 使い方ヒント -->
+      <div class="usage-hints">
+        <div class="hint-item">
+          <span class="hint-icon">⭐</span>
+          <span class="hint-text">このページを<strong>ブックマークに登録</strong>すると、次回からすぐにアクセスできます</span>
+        </div>
+        <div v-if="useSmartphone" class="hint-item">
+          <span class="hint-icon">📱</span>
+          <span class="hint-text">スマホからはGoogleドライブアプリの共有フォルダから直接アップロードできます</span>
+        </div>
       </div>
 
       <!-- 対応ファイル形式 -->
@@ -79,6 +131,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import PortalHeader from '@/mocks/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useRoute, useRouter } from 'vue-router'
@@ -88,7 +141,21 @@ const router = useRouter()
 const clientId = route.params.clientId as string
 
 const { clients } = useClients()
-const clientName = clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId
+const client = computed(() => clients.value.find(c => c.clientId === clientId))
+const clientName = computed(() => client.value?.companyName ?? clientId)
+
+/* ログインページで保存した共有方法を読み取り */
+const useSmartphone = computed(() => {
+  const saved = localStorage.getItem(`guest_share_${clientId}`)
+  return saved === 'smartphone'
+})
+
+/* Drive共有フォルダURL */
+const hasDriveFolder = computed(() => !!client.value?.sharedFolderId)
+const driveUrl = computed(() => {
+  const folderId = client.value?.sharedFolderId
+  return folderId ? `https://drive.google.com/drive/folders/${folderId}` : ''
+})
 
 const formats = [
   { icon: '📄', label: 'PDF' },
@@ -128,332 +195,203 @@ const goUpload = () => {
 
 /* ===== ヒーローセクション ===== */
 .hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  margin-bottom: 36px;
+  gap: 8px;
+  margin-bottom: 28px;
 }
-
 .hero-icon-wrap {
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
-  margin-bottom: 20px;
+  width: 64px; height: 64px;
 }
-
 .hero-icon {
-  font-size: 36px;
+  font-size: 32px;
   position: relative;
   z-index: 1;
-  animation: floatIcon 3s ease-in-out infinite;
 }
-
 .hero-icon-ring {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.08));
-  animation: pulseRing 3s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+  animation: ringPulse 2.5s ease-in-out infinite;
 }
-
-@keyframes floatIcon {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+@keyframes ringPulse {
+  0%,100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
 }
-
-@keyframes pulseRing {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.12); opacity: 0.7; }
-}
-
 .hero-title {
-  font-size: 26px;
+  font-size: clamp(20px, 5vw, 26px);
   font-weight: 900;
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin: 0 0 8px;
-  letter-spacing: -0.02em;
-}
-
-.hero-sub {
-  font-size: 14px;
-  color: #64748b;
-  margin: 0;
-  line-height: 1.6;
-}
-
-/* ===== CTAカード ===== */
-.cta-card {
-  position: relative;
-  border-radius: 18px;
-  overflow: hidden;
-  cursor: pointer;
-  margin-bottom: 24px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15), 0 1px 3px rgba(0,0,0,0.06);
-}
-
-.cta-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25), 0 2px 6px rgba(0,0,0,0.08);
-}
-
-.cta-card:active {
-  transform: translateY(0) scale(0.99);
-}
-
-.cta-inner {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px 22px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
-}
-
-.cta-icon-wrap {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.2);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.cta-icon {
-  width: 24px;
-  height: 24px;
-  color: #fff;
-}
-
-.cta-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.cta-label {
-  font-size: 16px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 0.02em;
-}
-
-.cta-hint {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
-  margin-top: 2px;
-}
-
-.cta-arrow {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.2s;
-}
-
-.cta-arrow svg {
-  width: 16px;
-  height: 16px;
-  color: #fff;
-}
-
-.cta-card:hover .cta-arrow {
-  background: rgba(255,255,255,0.3);
-}
-
-/* シマー効果 */
-.cta-shimmer {
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 60%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
-  animation: shimmer 3s ease-in-out infinite;
-  z-index: 2;
-  pointer-events: none;
-}
-
-@keyframes shimmer {
-  0% { left: -100%; }
-  30% { left: 150%; }
-  100% { left: 150%; }
-}
-
-/* ===== 対応ファイル形式 ===== */
-.formats-section {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.formats-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin: 0 0 10px;
-}
-
-.formats-badges {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-}
-
-.format-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 12px;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.7);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(226, 232, 240, 0.6);
-  font-size: 11px;
-  font-weight: 600;
-  color: #475569;
-  transition: all 0.2s;
-}
-
-.format-badge:hover {
-  background: rgba(255,255,255,0.95);
-  border-color: #c7d2fe;
-  color: #4338ca;
-}
-
-.format-badge-icon {
-  font-size: 13px;
-}
-
-/* ===== 共有のコツ ===== */
-.tips-section {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.5);
-  border-radius: 18px;
-  padding: 24px;
-  margin-bottom: 20px;
-}
-
-.tips-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 18px;
-}
-
-.tips-icon {
-  font-size: 20px;
-}
-
-.tips-title {
-  font-size: 15px;
-  font-weight: 800;
   color: #1e293b;
   margin: 0;
 }
-
-.tips-list {
-  list-style: none;
-  padding: 0;
+.hero-sub {
+  font-size: clamp(12px, 3vw, 14px);
+  color: #64748b;
   margin: 0;
+  line-height: 1.5;
+}
+
+/* ===== アクションカード ===== */
+.action-cards {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-
-.tip-item {
-  display: flex;
-  align-items: flex-start;
   gap: 12px;
+  margin-bottom: 20px;
 }
-
-.tip-number {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
+.action-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+.action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(99,102,241,0.15);
+}
+.action-card--drive:hover {
+  box-shadow: 0 6px 24px rgba(34,197,94,0.15);
+}
+.action-card-inner {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 1px;
+  gap: 14px;
+  padding: 18px 20px;
 }
-
-.tip-content {
+.action-icon-wrap {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.action-icon--pc {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #6366f1;
+}
+.action-icon--drive {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #16a34a;
+}
+.action-text {
   flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
+.action-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+.action-hint {
+  font-size: 12px;
+  color: #64748b;
+}
+.action-arrow {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.action-card:hover .action-arrow {
+  transform: translateX(3px);
+}
 
-.tip-text {
-  font-size: clamp(12px, 3vw, 14px);
-  font-weight: 600;
-  color: #334155;
+/* ===== 使い方ヒント ===== */
+.usage-hints {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hint-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 10px;
+  font-size: 12px;
+  color: #475569;
   line-height: 1.5;
 }
+.hint-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
 
-.tip-note {
-  font-size: clamp(10px, 2.5vw, 12px);
-  color: #ef4444;
-  font-weight: 500;
-}
-
-.tips-footer-note {
-  margin: 18px 0 0;
-  padding-top: 14px;
-  border-top: 1px solid rgba(226, 232, 240, 0.5);
-  font-size: clamp(10px, 2.5vw, 12px);
-  color: #64748b;
-  line-height: 1.7;
+/* ===== 対応ファイル形式 ===== */
+.formats-section {
   text-align: center;
+  margin-bottom: 24px;
+}
+.formats-label {
+  font-size: 12px; color: #94a3b8; font-weight: 600;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.formats-badges {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  justify-content: center;
+}
+.format-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 8px;
+  background: rgba(255,255,255,0.7);
+  font-size: 12px; color: #475569; font-weight: 500;
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.format-badge-icon { font-size: 13px; }
+
+/* ===== 共有のコツ ===== */
+.tips-section {
+  background: #fff;
+  border-radius: 16px;
+  padding: clamp(16px, 4vw, 22px);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  margin-bottom: 16px;
+}
+.tips-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px;
+}
+.tips-icon { font-size: 20px; }
+.tips-title {
+  font-size: 15px; font-weight: 800; color: #1e293b; margin: 0;
+}
+.tips-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.tip-item {
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.tip-number {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff; font-size: 11px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+.tip-content { display: flex; flex-direction: column; }
+.tip-text { font-size: 13px; color: #334155; line-height: 1.5; }
+.tip-note { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+.tips-footer-note {
+  font-size: 11px; color: #94a3b8;
+  margin: 12px 0 0; line-height: 1.6; text-align: center;
 }
 
 /* ===== フッター ===== */
 .portal-footer {
-  text-align: center;
-  font-size: 11px;
-  color: #cbd5e1;
-  margin-top: 32px;
-}
-
-/* ===== レスポンシブ ===== */
-@media (max-width: 480px) {
-  .portal-main {
-    padding: 32px 16px 32px;
-  }
-  .hero-title {
-    font-size: 22px;
-  }
-  .hero-sub {
-    font-size: 13px;
-  }
-  .cta-inner {
-    padding: 16px 18px;
-  }
-  .cta-label {
-    font-size: 15px;
-  }
+  margin-top: 24px;
+  font-size: 11px; color: #cbd5e1; text-align: center;
 }
 </style>

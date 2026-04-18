@@ -229,7 +229,7 @@
             <div class="sel-card card-drive-guest" @click="copyText(driveGuestUrl, 'driveGuest')">
               <div class="card-icon-area icon-drive-guest"><span>📁</span></div>
               <h3 class="card-label">Drive共有フォルダ</h3>
-              <p class="card-sub">顧問先スマホ用</p>
+              <p class="card-sub">顧問先スマホ用（直リンク）</p>
               <span class="copy-tag" :class="{ copied: copiedKey === 'driveGuest' }">
                 <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'driveGuest' }">📋</span>
                 {{ copiedKey === 'driveGuest' ? 'コピーしました！' : 'URLをコピー' }}
@@ -249,14 +249,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useClients } from '@/features/client-management/composables/useClients'
 import { useShareStatus } from '@/composables/useShareStatus'
 import type { ShareStatus } from '@/repositories/types'
 
 const route = useRoute()
 const router = useRouter()
 const clientId = route.params.clientId as string
+
+const { clients } = useClients()
+const clientData = computed(() => clients.value.find(c => c.clientId === clientId))
 
 const origin = window.location.origin
 
@@ -265,7 +269,13 @@ const staffPath       = `/upload/${clientId}/staff`
 const drivePath       = `/drive-upload/${clientId}`
 const staffUrl        = `${origin}/#${staffPath}`
 const portalLoginUrl  = `${origin}/#/guest/${clientId}/login`
-const driveGuestUrl   = `${origin}/#/drive-upload/${clientId}/guest`
+// Drive共有フォルダURL（Google Drive直リンク）
+const driveGuestUrl   = computed(() => {
+  const folderId = clientData.value?.sharedFolderId
+  return folderId
+    ? `https://drive.google.com/drive/folders/${folderId}`
+    : `${origin}/#/drive-upload/${clientId}/guest`
+})
 
 // 共有設定（Repository経由）
 const { loadAll, updateStatus, saveInviteCode, getStatusFromCache, getInviteCodeFromCache } = useShareStatus()

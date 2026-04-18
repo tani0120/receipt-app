@@ -158,7 +158,7 @@ Drive方式（移行後）:
 | `pipeline.ts` | `src/api/routes/` | 348 | APIルーティング（classify, upload-chunk, upload-complete, hashes） |
 | **`drive.ts`** | `src/api/routes/` | 約120 | **[新規] Drive APIルーティング（GET /files, POST /process）** |
 | `classify.service.ts` | `src/api/services/pipeline/` | 約400 | Gemini呼出 + sharp前処理 + JSON解析 |
-| **`driveService.ts`** | `src/api/services/drive/` | 約180 | **[改修済み] SA認証 + ファイル一覧 + DL + ハッシュ + サムネイル** |
+| **`driveService.ts`** | `src/api/services/drive/` | 約290 | **[改修済み] SA認証 + ファイル一覧 + DL + ハッシュ + サムネイル + `grantFolderPermission()`** |
 | `types.ts` | `src/api/services/pipeline/` | 約300 | ClassifyResponse / ClassifyResponseLineItem 等の型定義 |
 | `postprocess.ts` | `src/api/services/pipeline/` | 約180 | AI生出力の正規化・fallback適用 |
 | `validateClassifyResult.ts` | `src/api/services/pipeline/` | 約170 | データ駆動バリデーション（OK/NG判定） |
@@ -189,6 +189,8 @@ Drive方式（移行後）:
 | 環境変数 `VITE_SHARED_DRIVE_ID` | ✅ **設定済み**（`0AIOLCboQ_R-nUk9PVA`） |
 | Drive API接続テスト | ✅ **成功**（2026-04-17確認） |
 | `googleapis` npm依存 | ✅ **追加済み** |
+| Google OAuth（Supabase Auth経由） | ✅ **設定済み**（2026-04-18 同意画面公開済み） |
+| `grantFolderPermission()` | ✅ **実装済み**（writer権限付与。2026-04-18 実証テスト成功） |
 
 ### 1-6. モバイルアップロードの現在のUI構成
 
@@ -577,7 +579,71 @@ Authorization: Bearer {accessToken}
 
 | # | タスク | 担当 |
 |---|---|---|
-| 1 | 共有ドライブにテスト画像を数枚配置 | 人間 |
-| 2 | `/#/drive-upload/ABC-00001` でスマホ実機テスト | 人間+コード |
-| 3 | 顧問先フォルダID（`ClientStub.driveId`）の実データ設定 | 人間 |
-| 4 | AI分類との統合テスト | コード |
+| 1 | 共有ドライブにテスト画像を数枚配置 | ✅ 完了 |
+| 2 | `/#/drive-upload/ABC-00001` でスマホ実機テスト | ✅ 完了 |
+| 3 | 顧問先フォルダID（`sharedFolderId`）の実データ設定 | ✅ 完了（LDI-00008: `1SWizWuKizIzo6bUDocClsBfdwnXelLZv`） |
+| 4 | AI分類との統合テスト | ❌ 未着手 |
+| 5 | Supabase Auth `signInWithOAuth` コールバック内で `grantFolderPermission()` 呼び出し | ❌ 未着手 |
+| 6 | Supabase Auth `signInWithPassword` / `signUp` 実装（パソコンのみフロー） | ❌ 未着手 |
+
+---
+
+## 8. ゲスト認証・Drive共有権限付与設計（2026-04-18 追加）
+
+### 8-1. 全体フロー
+
+```
+招待リンク /guest/:clientId/login
+  ↓ STEP 1: 共有方法を選ぶ（デフォルト: スマホも使う）
+  ├─ パソコンのみ → メール認証（Supabase Auth signInWithPassword / signUp）
+  └─ スマホも使う
+       ↓ STEP 2: スマホ種類
+       ├─ Android → STEP 3: Googleでログイン（OAuth）
+       └─ iPhone  → STEP 3: Googleでログイン + STEP 4: ドライブアプリDL
+                    ☝️「STEP 3に戻ってログイン」案内あり
+  ↓ ログイン成功
+  ├─ スマホ選択時: grantFolderPermission(folderId, email, 'writer') 自動実行
+  ├─ localStorage に共有方法保存
+  └─ /guest/:clientId（ポータル）に遷移
+```
+
+### 8-2. 権限レベル設計
+
+| 操作 | writer（採用） | reader |
+|---|---|---|
+| ファイルアップロード | ✅ | ❌ |
+| ファイル編集・上書き | ✅ | ❌ |
+| フォルダ削除 | ❌（共有ドライブではorganizer以上が必要） | ❌ |
+| 自分がアップしたファイル削除 | ✅ | ❌ |
+| 他人のファイル削除 | ❌（共有ドライブ設定による） | ❌ |
+
+### 8-3. ポータル表示ロジック（`MockPortalPage.vue`）
+
+| 条件 | PCボタン | スマホボタン |
+|---|---|---|
+| パソコンのみでログイン | ✅ 表示 | ❌ 非表示 |
+| スマホも使う + `sharedFolderId` あり | ✅ 表示 | ✅ 表示（Drive直リンク） |
+| スマホも使う + `sharedFolderId` 未設定 | ✅ 表示 | ⚠️ 無効化（赤字「共有フォルダが未作成のため利用できません」） |
+
+### 8-4. 修正ファイル一覧
+
+| # | ファイル | 変更内容 |
+|---|---|---|
+| 1 | `MockPortalLoginPage.vue` | メール認証（ログイン/新規登録切替）、デバイス分岐、デフォルト「スマホも使う」、iPhone STEP4にログイン戻り案内 |
+| 2 | `MockPortalPage.vue` | PC/スマホ2ボタン分岐、フォルダ未設定時エラー表示、`hasDriveFolder`判定 |
+| 3 | `MockUploadSelectorUnifiedPage.vue` | Drive共有フォルダカードをGoogle Drive直リンクに変更 |
+| 4 | `driveService.ts` | `grantFolderPermission()` 追加（writer権限付与） |
+| 5 | `useClients.ts` | `Client`型に`sharedFolderId`追加、全モックデータにフィールド追加 |
+
+### 8-5. 実証テスト結果（2026-04-18）
+
+| テスト | 結果 |
+|---|---|
+| ログインページ全フロー（Android/iPhone/PC/新規登録） | ✅ |
+| ポータル — PCのみ/スマホ2ボタン/フォルダ未設定 | ✅ |
+| `grantFolderPermission()` でwriter権限自動付与 | ✅ |
+| **スマホからDriveフォルダにアクセス → 写真・動画アップロード** | ✅ |
+| **サーバー側でアップロードファイル確認（3件: jpg×2, mp4×1）** | ✅ |
+
+- テストフォルダ: `TST_test-corp`（ID: `1SWizWuKizIzo6bUDocClsBfdwnXelLZv`）
+- テストユーザー: `marke.hughug@gmail.com`（writer権限付与済み）

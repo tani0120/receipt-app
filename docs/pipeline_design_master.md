@@ -2489,3 +2489,46 @@ SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE（導入部）
 - `knownFileHashes`（メモリ内Set）を廃止
 - クライアントごと・セッションごとに自然にスコープが分離される
 - DELETEエンドポイントは不要になる（DBライフサイクルで管理）
+
+---
+
+## DL-039 | ゲスト認証・Drive共有フォルダ権限付与設計（2026-04-18）
+
+**状態**: UI実装完了・実証テスト成功（Supabase Auth統合は未着手）
+
+### 決定内容
+
+| 項目 | 決定 |
+|---|---|
+| フォルダ管理 | スタッフとゲストで**同一フォルダ**を共有 |
+| 権限レベル | **writer（編集者）**（ファイル追加・編集可能、フォルダ削除不可） |
+| 権限付与タイミング | ゲストのGoogleログイン成功時に自動実行 |
+| 認証方式（PC） | メール+パスワード（Supabase Auth `signInWithPassword` / `signUp`） |
+| 認証方式（スマホ） | Google OAuth（Supabase Auth `signInWithOAuth`） |
+| デフォルト選択 | 「スマホも使う」がデフォルト（顧問先はスマホ利用が主） |
+| `sharedFolderId` | `Client`型に追加。顧問先登録時に`createDriveFolder()`で自動作成 |
+
+### 実装した関数
+
+```typescript
+// src/api/services/drive/driveService.ts
+export async function grantFolderPermission(
+  folderId: string,
+  email: string,
+  role: 'reader' | 'writer' = 'writer', // デフォルト: writer（編集者）
+): Promise<void>
+```
+
+### 根拠（Evidence）
+
+- **実証テスト（2026-04-18）**: `marke.hughug@gmail.com` にwriter権限を付与 → スマホからDriveフォルダにアクセス → 写真2枚 + 動画1本のアップロード成功 → サーバー側でファイル確認完了
+- **権限分離**: 共有ドライブではwriter権限でもフォルダ構造の変更（削除・移動）は不可。organizer以上が必要。顧問先がフォルダを誤って削除するリスクはない
+
+### 今後のタスク
+
+| # | タスク | 状態 |
+|---|---|---|
+| 1 | Supabase Auth `signInWithOAuth({ provider: 'google' })` コールバック内で `grantFolderPermission()` 呼び出し | ❌ 未着手 |
+| 2 | Supabase Auth `signInWithPassword` / `signUp` 実装（パソコンのみフロー） | ❌ 未着手 |
+| 3 | 顧問先登録時に `sharedFolderId` をDBに保存する処理 | ❌ 未着手 |
+

@@ -251,3 +251,41 @@ export async function downloadAndProcessDriveFile(
     mimeType,
   };
 }
+
+/**
+ * 共有フォルダにユーザー権限を付与
+ *
+ * ゲストのGoogleログイン時に呼び出し、
+ * ゲストのメールアドレスに対して共有フォルダの書き込み権限を付与する。
+ *
+ * 権限レベル:
+ *   - writer（編集者）: ファイル追加・編集が可能。共有ドライブではフォルダ削除は不可。
+ *   - reader（閲覧者）: 閲覧のみ。ファイル追加不可。
+ *
+ * @param folderId - 共有フォルダのDrive ID
+ * @param email - ゲストのGoogleアカウントメールアドレス（Gmail以外も可）
+ * @param role - 権限レベル（デフォルト: writer = 編集者）
+ */
+export async function grantFolderPermission(
+  folderId: string,
+  email: string,
+  role: 'reader' | 'writer' = 'writer',
+): Promise<void> {
+  const drive = getDriveClient();
+
+  await drive.permissions.create({
+    fileId: folderId,
+    supportsAllDrives: true,
+    sendNotificationEmail: false,
+    requestBody: {
+      type: 'user',
+      role,
+      emailAddress: email,
+    },
+  });
+
+  console.log(
+    `[driveService] 権限付与完了: ${email} → ${role}`
+    + ` (folderId=${folderId.slice(0, 12)}...)`,
+  );
+}
