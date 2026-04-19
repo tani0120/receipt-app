@@ -130,13 +130,19 @@ export interface JournalPhase5Mock {
 
   // 未読/既読（背景色管理）
   is_read: boolean;
+  // 既読操作者（誰がマークしたか）
+  read_by?: string | null;
+  // 既読日時（ISO 8601）
+  read_at?: string | null;
 
   // ゴミ箱（論理削除・ワークフロー終了状態）
   // null = 有効、non-null = ゴミ箱（削除日時）
   // 制約: exported && deleted_at は禁止（外部出力済みの仕訳はゴミ箱不可）
   // 許可: export_exclude && deleted_at は許可（外部未出力のため）
-  // TODO Supabase: deleted_at→TIMESTAMPTZ, deleted_by→VARCHAR(100)追加
+  // TODO Supabase: deleted_at→TIMESTAMPTZ
   deleted_at: string | null;
+  // 削除操作者スタッフID
+  deleted_by?: string | null;
 
   // ラベル（22種類、非排他的）
   labels: JournalLabelMock[];

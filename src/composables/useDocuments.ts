@@ -64,15 +64,22 @@ export function useDocuments() {
   }
 
   /** 資料の選別ステータスを更新（ローカル + サーバー） */
-  function updateStatus(id: string, status: DocStatus) {
+  function updateStatus(id: string, status: DocStatus, staffId?: string | null) {
     const doc = allDocuments.value.find(d => d.id === id)
-    if (doc) doc.status = status
+    if (doc) {
+      const now = new Date().toISOString()
+      doc.status = status
+      doc.statusChangedBy = staffId ?? null
+      doc.statusChangedAt = now
+      doc.updatedBy = staffId ?? null
+      doc.updatedAt = now
+    }
 
     // サーバーにも反映（fire-and-forget）
     fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, statusChangedBy: staffId ?? null, statusChangedAt: new Date().toISOString(), updatedBy: staffId ?? null, updatedAt: new Date().toISOString() }),
     }).catch(err => console.error('[useDocuments] ステータス更新エラー:', err))
   }
 

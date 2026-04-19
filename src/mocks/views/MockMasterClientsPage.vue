@@ -522,6 +522,26 @@
         </div>
       </div>
     </transition>
+
+    <!-- 確認モーダル -->
+    <ConfirmModal
+      :show="modal.confirmState.show"
+      :title="modal.confirmState.title"
+      :message="modal.confirmState.message"
+      :confirm-label="modal.confirmState.confirmLabel"
+      :cancel-label="modal.confirmState.cancelLabel"
+      :variant="modal.confirmState.variant"
+      @confirm="modal.onConfirm"
+      @cancel="modal.onCancel"
+    />
+    <!-- 通知モーダル -->
+    <NotifyModal
+      :show="modal.notifyState.show"
+      :title="modal.notifyState.title"
+      :message="modal.notifyState.message"
+      :variant="modal.notifyState.variant"
+      @close="modal.onNotifyClose"
+    />
   </div>
 </template>
 
@@ -536,6 +556,9 @@ import type { Client, ClientForm } from '@/features/client-management/composable
 import { useStaff } from '@/features/staff-management/composables/useStaff';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
 import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
+import { useModalHelper } from '@/mocks/composables/useModalHelper';
+import ConfirmModal from '@/mocks/components/ConfirmModal.vue';
+import NotifyModal from '@/mocks/components/NotifyModal.vue';
 
 // 列幅カスタマイズ
 const clDefaultWidths: Record<string, number> = {
@@ -560,10 +583,11 @@ const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnR
 const { clients, getStaffNameForClient, updateSharedFolderId, addClient, updateClientLocal } = useClients();
 const { staffList, activeStaff: activeStaffList } = useStaff();
 
-// 未保存変更ガード（JSON永続化移行済み。localStorageへの保存は廃止）
-const { markDirty } = useUnsavedGuard(() => {
-  // サーバー側JSON永続化に移行済み。composable経由でAPI呼び出し済みのため何もしない
-});
+// モーダルヘルパー
+const modal = useModalHelper();
+
+// 未保存変更ガード（JSON永続化移行済み。composable経由でAPI呼び出し済み）
+const { markDirty } = useUnsavedGuard(null, modal);
 
 // --- 業種リスト（ScreenS_Settings.vueと同一） ---
 const industryOptions: string[] = [
@@ -743,9 +767,9 @@ const closePanel = () => {
   folderCheckLoading.value = false;
 };
 
-const saveClient = () => {
+const saveClient = async () => {
   if (!panelForm.companyName && !panelForm.repName) {
-    globalThis.alert('会社名または代表者名のどちらかを入力してください');
+    await modal.notify({ title: '会社名または代表者名のどちらかを入力してください', variant: 'warning' });
     return;
   }
   const { contactType, contactValue, ...fields } = panelForm;
@@ -764,25 +788,39 @@ const saveClient = () => {
     createDriveFolderForClient(data).catch(err => {
       console.error('[clients] Driveフォルダ作成失敗:', err);
     });
-    globalThis.alert(`「${data.companyName}」を追加しました。\n\n勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。\nGoogle Driveフォルダも自動作成されます。`);
+    await modal.notify({ title: `「${data.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。\nGoogle Driveフォルダも自動作成されます。', variant: 'success' });
   } else {
     updateClientLocal(data.clientId, data);
-    globalThis.alert(`「${data.companyName}」を更新しました。`);
+    await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
   }
   closePanel();
   markDirty();
 };
 
 // --- K13: 休眠・契約終了 ---
-const confirmSuspend = () => {
-  if (globalThis.confirm(`「${panelForm.companyName}」を休眠にしますか？\n\n休眠中も顧問先データは保持されます。再開も可能です。`)) {
+const confirmSuspend = async () => {
+  const ok = await modal.confirm({
+    title: `「${panelForm.companyName}」を休眠にしますか？`,
+    message: '休眠中も顧問先データは保持されます。再開も可能です。',
+    variant: 'danger',
+    confirmLabel: '休眠にする',
+    cancelLabel: 'キャンセル',
+  });
+  if (ok) {
     panelForm.status = 'suspension';
     saveClient();
   }
 };
 
-const confirmTerminate = () => {
-  if (globalThis.confirm(`「${panelForm.companyName}」の契約を終了しますか？\n\n顧問先データは保持されますが、契約終了として記録されます。`)) {
+const confirmTerminate = async () => {
+  const ok = await modal.confirm({
+    title: `「${panelForm.companyName}」の契約を終了しますか？`,
+    message: '顧問先データは保持されますが、契約終了として記録されます。',
+    variant: 'danger',
+    confirmLabel: '契約終了',
+    cancelLabel: 'キャンセル',
+  });
+  if (ok) {
     panelForm.status = 'inactive';
     saveClient();
   }
@@ -946,10 +984,10 @@ const recreateDriveFolder = async () => {
     await createDriveFolderForClient(client);
     // 再チェック
     await checkDriveFolderStatus(client);
-    globalThis.alert(`Driveフォルダを再作成しました。`);
+    await modal.notify({ title: 'Driveフォルダを再作成しました', variant: 'success' });
   } catch (err) {
     console.error('[clients] Driveフォルダ再作成失敗:', err);
-    globalThis.alert(`Driveフォルダの再作成に失敗しました。`);
+    await modal.notify({ title: 'Driveフォルダの再作成に失敗しました', variant: 'warning' });
   } finally {
     folderRecreating.value = false;
   }

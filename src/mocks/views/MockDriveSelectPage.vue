@@ -310,14 +310,14 @@ const pushHistory = (docId: string, from: DocStatus, to: DocStatus) => {
 const undo = () => {
   const entry = undoStack.value.pop();
   if (!entry) return;
-  updateDocStatus(entry.docId, entry.from);
+  updateDocStatus(entry.docId, entry.from, currentStaffId.value);
   redoStack.value.push(entry);
   showCompleteModal.value = false;
 };
 const redo = () => {
   const entry = redoStack.value.pop();
   if (!entry) return;
-  updateDocStatus(entry.docId, entry.to);
+  updateDocStatus(entry.docId, entry.to, currentStaffId.value);
   undoStack.value.push(entry);
 };
 
@@ -331,7 +331,7 @@ const setStatus = (status: DocStatus) => {
   if (currentStatus === status) return;
 
   pushHistory(selected.value.id, currentStatus, status);
-  updateDocStatus(selected.value.id, status);
+  updateDocStatus(selected.value.id, status, currentStaffId.value);
 
   const remainingPending = documents.value.filter(
     (d, i) => d.status === 'pending' && !(i === selectedIdx.value)
@@ -354,7 +354,7 @@ const setStatus = (status: DocStatus) => {
 const resetStatus = () => {
   if (!selected.value || selected.value.status === 'pending') return;
   pushHistory(selected.value.id, selected.value.status as DocStatus, 'pending');
-  updateDocStatus(selected.value.id, 'pending');
+  updateDocStatus(selected.value.id, 'pending', currentStaffId.value);
   showCompleteModal.value = false;
 };
 
@@ -445,6 +445,10 @@ const handleImport = async () => {
       batchId: null,
       journalId: null,
       createdBy: currentStaffId.value,  // ログインユーザーのstaffId
+      updatedBy: null,
+      updatedAt: null,
+      statusChangedBy: null,
+      statusChangedAt: null,
     }));
 
     // 4. useDocumentsに追加（重複チェック付き）

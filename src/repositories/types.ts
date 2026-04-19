@@ -352,6 +352,14 @@ export interface DocEntry {
   journalId: string | null
   /** 操作者スタッフID（アップロード/取込時に記録。ゲストの場合は'guest'。DL-042追加） */
   createdBy: string | null
+  /** 最終更新者スタッフID（ステータス変更・メタデータ編集時に記録） */
+  updatedBy: string | null
+  /** 最終更新日時（ISO 8601） */
+  updatedAt: string | null
+  /** ステータス変更者スタッフID（選別操作の追跡用） */
+  statusChangedBy: string | null
+  /** ステータス変更日時（ISO 8601） */
+  statusChangedAt: string | null
 }
 
 /**

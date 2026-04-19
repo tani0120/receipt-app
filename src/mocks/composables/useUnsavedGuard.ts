@@ -1,13 +1,26 @@
 import { ref, onBeforeUnmount } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
+import type { useModalHelper } from './useModalHelper'
 
 /**
- * パターン2: 保存ボタン + 離脱警告
- * 未保存の変更がある状態でページ遷移しようとすると確認ダイアログを表示。
- * OK → saveFn()を呼んで保存してから遷移
- * キャンセル → 破棄して遷移
+ * useUnsavedGuard — 未保存変更の離脱ガード（カスタムモーダル版）
+ *
+ * 【設計】
+ * - Vue Router 4の onBeforeRouteLeave は async/Promise<boolean> に対応
+ * - useModalHelper.confirm() でカスタムモーダルを表示
+ * - 「はい」→ saveFn() 実行して遷移
+ * - 「いいえ」→ 破棄して遷移
+ *
+ * 【使い方】
+ * const modal = useModalHelper()
+ * const { markDirty, markClean } = useUnsavedGuard(saveFn, modal)
+ *
+ * 準拠: DL-042
  */
-export function useUnsavedGuard(saveFn: () => void) {
+export function useUnsavedGuard(
+  saveFn: (() => void) | null,
+  modal?: ReturnType<typeof useModalHelper>,
+) {
   const isDirty = ref(false)
 
   /** 変更操作後に呼ぶ */
@@ -17,17 +30,32 @@ export function useUnsavedGuard(saveFn: () => void) {
   function markClean() { isDirty.value = false }
 
   // Vue Routerのルートガード
-  onBeforeRouteLeave(() => {
+  onBeforeRouteLeave(async () => {
     if (!isDirty.value) return true
-    const answer = window.confirm(
-      '未保存の変更があります。保存しますか？\n\nOK = 保存して元のページに留まる\nキャンセル = 破棄して移動'
-    )
-    if (answer) {
-      saveFn()
-      // 保存後、元のページに留まる（遷移をキャンセル）
-      return false
+
+    // モーダルが渡されていない場合はフォールバック（window.confirm）
+    if (!modal) {
+      const answer = window.confirm(
+        '未保存の変更があります。保存しますか？\n\nOK = 保存して遷移\nキャンセル = 破棄して遷移'
+      )
+      if (answer && saveFn) {
+        saveFn()
+      }
+      isDirty.value = false
+      return true
     }
-    // 破棄して遷移
+
+    // カスタムモーダルで確認
+    const answer = await modal.confirm({
+      title: '未保存の変更があります',
+      message: '保存しますか？',
+      confirmLabel: 'はい（保存して遷移）',
+      cancelLabel: 'いいえ（破棄して遷移）',
+    })
+
+    if (answer && saveFn) {
+      saveFn()
+    }
     isDirty.value = false
     return true
   })

@@ -207,6 +207,26 @@
       </div>
     </div>
   </div>
+
+  <!-- 確認モーダル -->
+  <ConfirmModal
+    :show="modal.confirmState.show"
+    :title="modal.confirmState.title"
+    :message="modal.confirmState.message"
+    :confirm-label="modal.confirmState.confirmLabel"
+    :cancel-label="modal.confirmState.cancelLabel"
+    :variant="modal.confirmState.variant"
+    @confirm="modal.onConfirm"
+    @cancel="modal.onCancel"
+  />
+  <!-- 通知モーダル -->
+  <NotifyModal
+    :show="modal.notifyState.show"
+    :title="modal.notifyState.title"
+    :message="modal.notifyState.message"
+    :variant="modal.notifyState.variant"
+    @close="modal.onNotifyClose"
+  />
 </template>
 
 <script setup lang="ts">
@@ -217,6 +237,9 @@ import { useAccountSettings } from '@/features/account-settings/composables/useA
 import { getInitialCopyCounter } from '@/shared/utils/copy-utils';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
 import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
+import { useModalHelper } from '@/mocks/composables/useModalHelper';
+import ConfirmModal from '@/mocks/components/ConfirmModal.vue';
+import NotifyModal from '@/mocks/components/NotifyModal.vue';
 
 // 列幅カスタマイズ
 const acctDefaultWidths: Record<string, number> = {
@@ -252,8 +275,11 @@ const accountPage = ref(1);
 
 const accountRows: Account[] = reactive([...masterAccounts.value]);
 
+// モーダルヘルパー
+const modal = useModalHelper();
+
 // 未保存変更ガード
-const { markDirty, markClean } = useUnsavedGuard(saveChanges);
+const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 
 
@@ -312,13 +338,14 @@ function showChecked() {
   checkedIds.value = [];
   markDirty();
 }
-function promoteToMfChecked() {
+async function promoteToMfChecked() {
   const customIds = checkedIds.value.filter(id => {
     const row = accountRows.find(r => r.id === id);
     return row?.isCustom;
   });
-  if (!customIds.length) { alert('カスタム科目のみMF公式に変更できます。'); return; }
-  if (!confirm(`${customIds.length}件のカスタム科目をMF公式に変更しますか？`)) return;
+  if (!customIds.length) { await modal.notify({ title: 'カスタム科目のみMF公式に変更できます。', variant: 'warning' }); return; }
+  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム科目をMF公式に変更しますか？` });
+  if (!ok) return;
   customIds.forEach(id => {
     const row = accountRows.find(r => r.id === id);
     if (row) row.isCustom = false;
@@ -326,13 +353,14 @@ function promoteToMfChecked() {
   checkedIds.value = [];
   markDirty();
 }
-function demoteFromMfChecked() {
+async function demoteFromMfChecked() {
   const officialIds = checkedIds.value.filter(id => {
     const row = accountRows.find(r => r.id === id);
     return row && !row.isCustom;
   });
-  if (!officialIds.length) { alert('MF公式科目のみMF非公式に変更できます。'); return; }
-  if (!confirm(`${officialIds.length}件の科目をMF非公式に変更しますか？\nMFインポート時に項目の紐付けが必要になる可能性があります。`)) return;
+  if (!officialIds.length) { await modal.notify({ title: 'MF公式科目のみMF非公式に変更できます。', variant: 'warning' }); return; }
+  const ok = await modal.confirm({ title: `${officialIds.length}件の科目をMF非公式に変更しますか？`, message: 'MFインポート時に項目の紐付けが必要になる可能性があります。', variant: 'danger' });
+  if (!ok) return;
   officialIds.forEach(id => {
     const row = accountRows.find(r => r.id === id);
     if (row) row.isCustom = true;
@@ -341,13 +369,14 @@ function demoteFromMfChecked() {
   markDirty();
 }
 
-function deleteChecked() {
+async function deleteChecked() {
   const customIds = checkedIds.value.filter(id => {
     const row = accountRows.find(r => r.id === id);
     return row?.isCustom;
   });
-  if (!customIds.length) { alert('カスタム科目のみ削除できます。'); return; }
-  if (!confirm(`${customIds.length}件のカスタム科目を削除しますか？復元できません。`)) return;
+  if (!customIds.length) { await modal.notify({ title: 'カスタム科目のみ削除できます。', variant: 'warning' }); return; }
+  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム科目を削除しますか？`, message: '復元できません。', variant: 'danger' });
+  if (!ok) return;
   customIds.forEach(id => {
     const idx = accountRows.findIndex(r => r.id === id);
     if (idx !== -1) accountRows.splice(idx, 1);
@@ -356,9 +385,10 @@ function deleteChecked() {
   markDirty();
 }
 let copyCounter = getInitialCopyCounter(accountRows);
-function copyChecked() {
+async function copyChecked() {
   if (!checkedIds.value.length) return;
-  if (!confirm(`${checkedIds.value.length}件の科目をコピーしますか？`)) return;
+  const ok = await modal.confirm({ title: `${checkedIds.value.length}件の科目をコピーしますか？` });
+  if (!ok) return;
   // チェック行を逆順にし、各行の直下にコピーを挿入
   const ids = [...checkedIds.value];
   ids.reverse().forEach(id => {
@@ -387,8 +417,9 @@ function copyChecked() {
   checkedIds.value = [];
   markDirty();
 }
-function addAfterChecked() {
-  if (!confirm('新規科目を追加しますか？')) return;
+async function addAfterChecked() {
+  const ok = await modal.confirm({ title: '新規科目を追加しますか？' });
+  if (!ok) return;
   // 最後にチェックした行の直下に新規行を挿入
   const ids = [...checkedIds.value];
   const lastId = ids[ids.length - 1];
@@ -422,7 +453,7 @@ function saveChanges() {
   overrides.value = { hiddenIds, customAccounts: customRows };
   localStorage.setItem('sugu-suru:account-master:overrides', JSON.stringify(overrides.value));
   markClean();
-  alert('保存しました');
+  modal.notify({ title: '保存しました', variant: 'success' });
 }
 
 // =============== インライン編集 ===============
@@ -434,7 +465,7 @@ type AccountEditField = 'name' | 'category' | 'taxDetermination' | 'defaultTaxCa
 
 function startEdit(row: Account, field: AccountEditField) {
   if (!row.isCustom) {
-    alert('デフォルト科目は編集できません。コピーしてから編集してください。');
+    modal.notify({ title: 'デフォルト科目は編集できません', message: 'コピーしてから編集してください。', variant: 'warning' });
     return;
   }
   editingRow.value = row.id;
@@ -451,7 +482,7 @@ function startEdit(row: Account, field: AccountEditField) {
 function commitEdit(row: Account) {
   switch (editingField.value) {
     case 'name':
-      if (!editValue.value.trim()) { alert('科目名は空にできません。'); return; }
+      if (!editValue.value.trim()) { modal.notify({ title: '科目名は空にできません。', variant: 'warning' }); return; }
       row.name = editValue.value;
       break;
     case 'category':

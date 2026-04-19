@@ -85,7 +85,7 @@ let initialized = false
 /** サーバーからスタッフ一覧を取得してrefに設定 */
 async function refresh(): Promise<void> {
   try {
-    const data = await apiGet<{ staff: Staff[] }>('/')
+    const data = await apiGet<{ staff: Staff[] }>('')
     staffList.value = data.staff
     initialized = true
     console.log(`[useStaff] ${data.staff.length}件をサーバーから取得`)
@@ -143,7 +143,7 @@ export function useStaff() {
   function addStaff(staff: Staff): void {
     staffList.value.push(staff)
     lastError.value = null
-    apiPost('/', staff).catch(err => {
+    apiPost('', staff).catch(err => {
       const msg = `スタッフ追加の保存に失敗しました: ${err}`
       console.error('[useStaff]', msg)
       lastError.value = msg

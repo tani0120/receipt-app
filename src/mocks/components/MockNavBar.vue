@@ -37,6 +37,32 @@
           </button>
           <span v-if="index < topItems.length - 1" class="text-gray-300">|</span>
         </template>
+      <!-- スタッフ切替ドロップダウン -->
+        <div class="relative ml-2">
+          <button
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all bg-sky-50 text-sky-700 text-[12px] font-medium border border-sky-200 hover:bg-sky-100"
+            @click="showStaffMenu = !showStaffMenu"
+          >
+            <i class="fa-solid fa-user-circle text-[14px]"></i>
+            <span>{{ currentUserName }}</span>
+            <i class="fa-solid fa-caret-down text-[9px]"></i>
+          </button>
+          <div v-if="showStaffMenu" class="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-[200px] py-1">
+            <div class="px-3 py-1 text-[10px] text-gray-400 border-b border-gray-100">ログインスタッフ切替</div>
+            <button
+              v-for="staff in activeStaffOptions"
+              :key="staff.uuid"
+              class="w-full text-left px-3 py-1.5 text-[12px] flex items-center gap-2 transition-colors"
+              :class="staff.uuid === currentStaffIdVal ? 'bg-sky-50 text-sky-700 font-bold' : 'text-gray-600 hover:bg-sky-50 hover:text-sky-700'"
+              @click="switchStaff(staff.uuid)"
+            >
+              <i class="fa-solid fa-user text-[10px] w-3 text-center"></i>
+              {{ staff.name }}
+              <span class="text-[10px] text-gray-400 ml-auto">{{ staff.email }}</span>
+              <i v-if="staff.uuid === currentStaffIdVal" class="fa-solid fa-check text-sky-600 text-[10px]"></i>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
     <!-- 下段バー（sky-600）ナビゲーション: 個別会社エリアのみ表示 -->
@@ -71,12 +97,22 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useClients } from '@/features/client-management/composables/useClients';
+import { useCurrentUser } from '@/mocks/composables/useCurrentUser';
 
 const router = useRouter();
 const route = useRoute();
 
 // --- クライアント情報（useClients composableから取得） ---
 const { currentClient } = useClients();
+
+// --- ログインスタッフ切替 ---
+const { userName: currentUserName, currentStaffId: currentStaffIdVal, activeStaffList, setCurrentUser } = useCurrentUser();
+const activeStaffOptions = activeStaffList;
+const showStaffMenu = ref(false);
+function switchStaff(uuid: string) {
+  setCurrentUser(uuid);
+  showStaffMenu.value = false;
+}
 
 // マスタページ（/master/）では顧問先コンテキストを非表示にする
 const isMasterPage = computed(() => route.path.startsWith('/master/'));

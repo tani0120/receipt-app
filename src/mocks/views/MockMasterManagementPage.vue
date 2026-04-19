@@ -57,24 +57,36 @@
       </div>
     </div>
   </div>
+
+  <NotifyModal
+    :show="modal.notifyState.show"
+    :title="modal.notifyState.title"
+    :message="modal.notifyState.message"
+    :variant="modal.notifyState.variant"
+    @close="modal.onNotifyClose"
+  />
 </template>
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { useModalHelper } from '@/mocks/composables/useModalHelper';
+import NotifyModal from '@/mocks/components/NotifyModal.vue';
 
 const router = useRouter();
+const modal = useModalHelper();
 
 const navigateTo = (section: string) => {
   const routes: Record<string, string> = {
     'accounts': '/master/accounts',
     'tax': '/master/tax',
+    'vectors': '/master/vendors',
     'vendors-list': '/master/vendors/list',
     'non-vendor': '/master/vendors/non-vendor',
   };
   if (routes[section]) {
     router.push(routes[section]);
   } else {
-    globalThis.alert(`${section}は未実装です`);
+    modal.notify({ title: `${section}は未実装です`, variant: 'warning' });
   }
 };
 </script>

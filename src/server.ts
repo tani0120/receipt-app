@@ -6,7 +6,7 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import conversionRoute from './api/routes/conversion'
-import clientsRoute from './api/routes/clients'
+// import clientsRoute from './api/routes/clients' // DL-042でclientRoutes.tsに移行済み
 import journalStatusRoute from './api/routes/journal-status'
 import journalEntryRoute from './api/routes/journal-entry'
 import aiRulesRoute from './api/routes/ai-rules'
@@ -42,8 +42,8 @@ app.get('/api/hello', (c) => {
 // Phase 4 Step 1: Conversion Route
 app.route('/api/conversion', conversionRoute)
 
-// Phase 4 Step 2: Clients Route
-app.route('/api/clients', clientsRoute)
+// Phase 4 Step 2: Clients Route（DL-042でclientRoutes.tsに移行済み。旧ルートは無効化）
+// app.route('/api/clients', clientsRoute)
 
 // Phase 4 Step 3-4: Journal Routes
 app.route('/api/journal-status', journalStatusRoute)
@@ -91,6 +91,16 @@ app.route('/api/clients', clientRoutes)
 // Journal API: 仕訳JSON永続化（DL-042 #12）
 import journalRoutes from './api/routes/journalRoutes'
 app.route('/api/journals', journalRoutes)
+
+// ExportHistory API: 出力履歴+CSVスナップショットJSON永続化（DL-042 S1）
+import exportHistoryRoutes from './api/routes/exportHistoryRoutes'
+app.route('/api/export-history', exportHistoryRoutes)
+
+// Vendor API: 取引先JSON永続化（DL-042）
+import { loadVendors } from './api/services/vendorStore'
+await loadVendors()
+import vendorRoutes from './api/routes/vendorRoutes'
+app.route('/api/vendors', vendorRoutes)
 
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))

@@ -880,6 +880,10 @@ export function useUpload() {
       batchId: null,
       journalId: null,
       createdBy: role === 'guest' ? 'guest' : useCurrentUser().currentStaffId.value,
+      updatedBy: null,
+      updatedAt: null,
+      statusChangedBy: null,
+      statusChangedAt: null,
     }))
     const addedCount = addDocuments(docEntries)
     console.log(`[useUpload] handleConfirm: ${addedCount}件をuseDocumentsに追加 (role=${role})`)

@@ -29,17 +29,33 @@ export function loadDocuments(): void {
     if (existsSync(DATA_FILE)) {
       const raw = readFileSync(DATA_FILE, 'utf-8');
       documents = JSON.parse(raw) as DocEntry[];
-      // DL-042マイグレーション: createdByフィールドがない既存データにnullを設定
+      // DL-042マイグレーション: 新フィールドがない既存データにnullを設定
       let migrated = false;
       for (const doc of documents) {
         if (doc.createdBy === undefined) {
           (doc as any).createdBy = null;
           migrated = true;
         }
+        if (doc.updatedBy === undefined) {
+          (doc as any).updatedBy = null;
+          migrated = true;
+        }
+        if (doc.updatedAt === undefined) {
+          (doc as any).updatedAt = null;
+          migrated = true;
+        }
+        if (doc.statusChangedBy === undefined) {
+          (doc as any).statusChangedBy = null;
+          migrated = true;
+        }
+        if (doc.statusChangedAt === undefined) {
+          (doc as any).statusChangedAt = null;
+          migrated = true;
+        }
       }
       if (migrated) {
         save();
-        console.log('[documentStore] createdByフィールドをnullで補完（マイグレーション）');
+        console.log('[documentStore] 新フィールドをnullで補完（マイグレーション）');
       }
       console.log(`[documentStore] ${documents.length}件をJSONから読み込み`);
     } else {

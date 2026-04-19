@@ -70,6 +70,14 @@
       </table>
     </div>
   </div>
+
+  <NotifyModal
+    :show="modal.notifyState.show"
+    :title="modal.notifyState.title"
+    :message="modal.notifyState.message"
+    :variant="modal.notifyState.variant"
+    @close="modal.onNotifyClose"
+  />
 </template>
 
 <script setup lang="ts">
@@ -78,6 +86,8 @@ import { useRoute } from 'vue-router';
 import { useJournals } from '@/mocks/composables/useJournals';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
+import { useModalHelper } from '@/mocks/composables/useModalHelper';
+import NotifyModal from '@/mocks/components/NotifyModal.vue';
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) ?? 'ABC-00001');
@@ -171,7 +181,8 @@ function resolveTaxCategoryName(id: string | null | undefined): string {
   return clientTc ? clientTc.name : id;
 }
 
-const showRealtimeUpdateMsg = () => globalThis.alert('現在はリアルタイム更新です');
+const modal = useModalHelper();
+const showRealtimeUpdateMsg = () => modal.notify({ title: '現在はリアルタイム更新です' });
 
 // 全行（composable経由、複合仕訳全行展開）
 const allRows = computed<DetailRow[]>(() => {

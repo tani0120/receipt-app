@@ -161,6 +161,26 @@
       </div>
     </div>
   </div>
+
+  <!-- 確認モーダル -->
+  <ConfirmModal
+    :show="modal.confirmState.show"
+    :title="modal.confirmState.title"
+    :message="modal.confirmState.message"
+    :confirm-label="modal.confirmState.confirmLabel"
+    :cancel-label="modal.confirmState.cancelLabel"
+    :variant="modal.confirmState.variant"
+    @confirm="modal.onConfirm"
+    @cancel="modal.onCancel"
+  />
+  <!-- 通知モーダル -->
+  <NotifyModal
+    :show="modal.notifyState.show"
+    :title="modal.notifyState.title"
+    :message="modal.notifyState.message"
+    :variant="modal.notifyState.variant"
+    @close="modal.onNotifyClose"
+  />
 </template>
 
 <script setup lang="ts">
@@ -172,6 +192,9 @@ import { getInitialCopyCounter } from '@/shared/utils/copy-utils';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
 import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
+import { useModalHelper } from '@/mocks/composables/useModalHelper';
+import ConfirmModal from '@/mocks/components/ConfirmModal.vue';
+import NotifyModal from '@/mocks/components/NotifyModal.vue';
 
 // 列幅カスタマイズ
 const taxDefaultWidths: Record<string, number> = {
@@ -199,8 +222,11 @@ const taxPage = ref(1);
 
 const allTaxRows: TaxCategory[] = reactive([...masterTaxCategories.value]);
 
+// モーダルヘルパー
+const modal = useModalHelper();
+
 // 未保存変更ガード
-const { markDirty, markClean } = useUnsavedGuard(saveChanges);
+const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 const filteredTaxRows = computed(() => {
   const isT = (id: string) => /_T[1-6]$/.test(id);
@@ -249,13 +275,14 @@ function hideChecked() {
   checkedIds.value = [];
   markDirty();
 }
-function promoteToMfChecked() {
+async function promoteToMfChecked() {
   const customIds = checkedIds.value.filter(id => {
     const row = allTaxRows.find(r => r.id === id);
     return row?.isCustom;
   });
-  if (!customIds.length) { alert('カスタム税区分のみMF公式に変更できます。'); return; }
-  if (!confirm(`${customIds.length}件のカスタム税区分をMF公式に変更しますか？`)) return;
+  if (!customIds.length) { await modal.notify({ title: 'カスタム税区分のみMF公式に変更できます。', variant: 'warning' }); return; }
+  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム税区分をMF公式に変更しますか？` });
+  if (!ok) return;
   customIds.forEach(id => {
     const row = allTaxRows.find(r => r.id === id);
     if (row) row.isCustom = false;
@@ -263,13 +290,14 @@ function promoteToMfChecked() {
   checkedIds.value = [];
   markDirty();
 }
-function demoteFromMfChecked() {
+async function demoteFromMfChecked() {
   const officialIds = checkedIds.value.filter(id => {
     const row = allTaxRows.find(r => r.id === id);
     return row && !row.isCustom;
   });
-  if (!officialIds.length) { alert('MF公式税区分のみMF非公式に変更できます。'); return; }
-  if (!confirm(`${officialIds.length}件の税区分をMF非公式に変更しますか？\nMFインポート時に項目の紐付けが必要になる可能性があります。`)) return;
+  if (!officialIds.length) { await modal.notify({ title: 'MF公式税区分のみMF非公式に変更できます。', variant: 'warning' }); return; }
+  const ok = await modal.confirm({ title: `${officialIds.length}件の税区分をMF非公式に変更しますか？`, message: 'MFインポート時に項目の紐付けが必要になる可能性があります。', variant: 'danger' });
+  if (!ok) return;
   officialIds.forEach(id => {
     const row = allTaxRows.find(r => r.id === id);
     if (row) row.isCustom = true;
@@ -288,13 +316,14 @@ function showChecked() {
 
 
 
-function deleteChecked() {
+async function deleteChecked() {
   const customIds = checkedIds.value.filter(id => {
     const row = allTaxRows.find(r => r.id === id);
     return row?.isCustom;
   });
-  if (!customIds.length) { alert('カスタム税区分のみ削除できます。'); return; }
-  if (!confirm(`${customIds.length}件のカスタム税区分を削除しますか？復元できません。`)) return;
+  if (!customIds.length) { await modal.notify({ title: 'カスタム税区分のみ削除できます。', variant: 'warning' }); return; }
+  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム税区分を削除しますか？`, message: '復元できません。', variant: 'danger' });
+  if (!ok) return;
   customIds.forEach(id => {
     const idx = allTaxRows.findIndex(r => r.id === id);
     if (idx !== -1) allTaxRows.splice(idx, 1);
@@ -305,9 +334,10 @@ function deleteChecked() {
 
 // =============== コピー・追加 ===============
 let copyCounter = getInitialCopyCounter(allTaxRows);
-function copyChecked() {
+async function copyChecked() {
   if (!checkedIds.value.length) return;
-  if (!confirm(`${checkedIds.value.length}件の税区分をコピーしますか？`)) return;
+  const ok = await modal.confirm({ title: `${checkedIds.value.length}件の税区分をコピーしますか？` });
+  if (!ok) return;
   const ids = [...checkedIds.value];
   ids.reverse().forEach(id => {
     const srcIdx = allTaxRows.findIndex(r => r.id === id);
@@ -336,8 +366,9 @@ function copyChecked() {
   checkedIds.value = [];
   markDirty();
 }
-function addAfterChecked() {
-  if (!confirm('新規税区分を追加しますか？')) return;
+async function addAfterChecked() {
+  const ok = await modal.confirm({ title: '新規税区分を追加しますか？' });
+  if (!ok) return;
   const ids = [...checkedIds.value];
   const lastId = ids[ids.length - 1];
   const insertIdx = lastId ? allTaxRows.findIndex(r => r.id === lastId) + 1 : allTaxRows.length;
@@ -375,7 +406,7 @@ function isEditing(rowId: string, field: string): boolean {
 
 function startEdit(row: TaxCategory, field: EditableField) {
   if (!row.isCustom) {
-    alert('デフォルト税区分は編集できません。コピーしてから編集してください。');
+    modal.notify({ title: 'デフォルト税区分は編集できません', message: 'コピーしてから編集してください。', variant: 'warning' });
     return;
   }
   editingRowId.value = row.id;
@@ -394,7 +425,7 @@ function commitEdit(row: TaxCategory, field: EditableField) {
       row.direction = editValue.value as TaxDirection;
       break;
     case 'name':
-      if (!editValue.value.trim()) { alert('税区分名は空にできません。'); return; }
+      if (!editValue.value.trim()) { modal.notify({ title: '税区分名は空にできません。', variant: 'warning' }); return; }
       row.name = editValue.value;
       row.shortName = editValue.value;
       break;
@@ -451,7 +482,7 @@ function saveChanges() {
   };
   localStorage.setItem('sugu-suru:tax-master:overrides', JSON.stringify(taxMasterOverrides.value));
   markClean();
-  alert('保存しました');
+  modal.notify({ title: '保存しました', variant: 'success' });
 }
 
 // =============== 共通ユーティリティ ===============

@@ -79,10 +79,12 @@ let initialized = false
 /** サーバーから顧問先一覧を取得してrefに設定 */
 async function refresh(): Promise<void> {
   try {
-    const data = await apiGet<{ clients: Client[] }>('/')
-    clients.value = data.clients
+    const raw = await apiGet<{ clients: Client[] } | Client[]>('')
+    // APIレスポンスが { clients: [...] } か [...] のどちらでも対応
+    const list = Array.isArray(raw) ? raw : raw.clients
+    clients.value = list
     initialized = true
-    console.log(`[useClients] ${data.clients.length}件をサーバーから取得`)
+    console.log(`[useClients] ${list.length}件をサーバーから取得`)
 
     // DL-042マイグレーション: localStorageのsharedFolderIdをサーバーデータにマージ
     migrateSharedFolderIds()
@@ -204,7 +206,7 @@ export function useClients() {
   function addClient(client: Client): void {
     clients.value.push(client)
     lastError.value = null
-    apiPost('/', client).catch(err => {
+    apiPost('', client).catch(err => {
       const msg = `顧問先追加の保存に失敗しました: ${err}`
       console.error('[useClients]', msg)
       lastError.value = msg

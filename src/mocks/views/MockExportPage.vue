@@ -254,6 +254,14 @@
       </div>
     </div>
   </div>
+
+  <NotifyModal
+    :show="modal.notifyState.show"
+    :title="modal.notifyState.title"
+    :message="modal.notifyState.message"
+    :variant="modal.notifyState.variant"
+    @close="modal.onNotifyClose"
+  />
 </template>
 
 <script setup lang="ts">
@@ -262,6 +270,8 @@ import { useRoute } from "vue-router";
 import { useJournals } from "@/mocks/composables/useJournals";
 import { useAccountSettings } from "@/features/account-settings/composables/useAccountSettings";
 import { useColumnResize } from "@/mocks/composables/useColumnResize";
+import { useModalHelper } from '@/mocks/composables/useModalHelper';
+import NotifyModal from '@/mocks/components/NotifyModal.vue';
 import {
   validateForCsvExport,
   buildMfCsvContent,
@@ -270,8 +280,10 @@ import {
 } from "@/mocks/utils/exportMfCsv";
 import { syncWarningLabelsCore } from "@/mocks/utils/journalWarningSync";
 import { toMfCsvDate } from "@/shared/utils/mf-csv-date";
+import { useCurrentUser } from "@/mocks/composables/useCurrentUser";
 
 const route = useRoute();
+const { currentStaffId } = useCurrentUser();
 const clientId = computed(() => (route.params.clientId as string) ?? "LDI-00008");
 const { journals } = useJournals(clientId);
 
@@ -334,8 +346,9 @@ const downloadFileName = ref("");
 const showFileNameHelp = ref(false);
 
 // --- 変更ボタン ---
-const showNotImplemented = () => globalThis.alert("未実装です");
-const showRealtimeUpdateMsg = () => globalThis.alert("現在はリアルタイム更新です");
+const modal = useModalHelper();
+const showNotImplemented = () => modal.notify({ title: '未実装です', variant: 'warning' });
+const showRealtimeUpdateMsg = () => modal.notify({ title: '現在はリアルタイム更新です' });
 
 // --- セグメント ---
 const showTargetOnly = ref(true);
@@ -345,7 +358,7 @@ const showWarnings = ref(false);
 // --- ダウンロードモーダル ---
 const showDownloadModal = ref(false);
 const isDownloading = ref(false);
-const startDownload = () => {
+const startDownload = async () => {
   isDownloading.value = true;
   // composableから仕訳データを取得
   // checkedIdsは展開後のid（jrn-00000001-0）なので、元のjournal id（jrn-00000001）を抽出
@@ -357,7 +370,7 @@ const startDownload = () => {
   if (checkedJournals.length === 0) {
     isDownloading.value = false;
     showDownloadModal.value = false;
-    globalThis.alert("ダウンロード対象の仕訳がありません。");
+    await modal.notify({ title: 'ダウンロード対象の仕訳がありません。', variant: 'warning' });
     return;
   }
   // バリデーション適用（警告付き仕訳を除外）
@@ -365,7 +378,7 @@ const startDownload = () => {
   if (valid.length === 0) {
     isDownloading.value = false;
     showDownloadModal.value = false;
-    globalThis.alert(`出力可能な仕訳がありません。\n除外: ${excluded.length}件`);
+    await modal.notify({ title: `出力可能な仕訳がありません`, message: `除外: ${excluded.length}件`, variant: 'warning' });
     return;
   }
   // スピナー表示後、少し待ってからダウンロード
@@ -377,49 +390,54 @@ const startDownload = () => {
       `${clientCode}_マネーフォワード_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
     downloadMfCsv(csvContent, `${fname}.csv`);
     // 出力した仕訳のstatusをexportedに変更（二重出力防止）
-    const exportedAt = new Date().toISOString();
+    // JSTオフセット付きISO 8601
+    const now = new Date();
+    const jstOffset = 9 * 60; // JST = UTC+9
+    const local = new Date(now.getTime() + jstOffset * 60000);
+    const exportedAt = local.toISOString().replace('Z', '+09:00');
     const historyId = `h-${Date.now()}`;
     for (const v of valid) {
       const target = journals.value.find((j) => j.id === v.id);
       if (target) {
         target.status = "exported";
         target.exported_at = exportedAt;
-        target.exported_by = "staff-0001"; // モック段階では固定
+        target.exported_by = currentStaffId.value ?? 'unknown';
         target.export_batch_id = historyId; // バッチIDを紐付け
       }
     }
-    // ダウンロード履歴をlocalStorageに保存
+    // ダウンロード履歴をサーバーに保存（DL-042 S1: localStorage→API移行）
     saveDownloadHistory(`${fname}.csv`, valid.length, historyId);
-    // CSVスナップショットをlocalStorageに保持（再ダウンロード用）
-    const csvKey = `sugu-suru:export-csv:${clientId.value}:${historyId}`;
-    localStorage.setItem(
-      csvKey,
-      JSON.stringify({
+    // CSVスナップショットをサーバーに保存（再ダウンロード用）
+    fetch(`/api/export-history/${encodeURIComponent(clientId.value)}/csv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         historyId,
         fileName: fname,
         exportDate: toMfCsvDate(new Date().toISOString().slice(0, 10)),
         journalCount: valid.length,
         csvContent,
       }),
-    );
+    }).catch(err => console.error('[ExportPage] CSVスナップショット保存エラー:', err));
     isDownloading.value = false;
     showDownloadModal.value = false;
   }, 500);
 };
 
-/** ダウンロード履歴をlocalStorageに保存 */
+/** ダウンロード履歴をサーバーに保存 */
 function saveDownloadHistory(fileName: string, count: number, historyId: string) {
-  const key = `sugu-suru:export-history:${clientId.value}`;
-  const existing = JSON.parse(localStorage.getItem(key) || "[]");
   const today = new Date();
-  existing.unshift({
-    id: historyId,
-    exportDate: toMfCsvDate(today.toISOString().slice(0, 10)),
-    fileName,
-    count,
-    status: "出力済",
-  });
-  localStorage.setItem(key, JSON.stringify(existing));
+  fetch(`/api/export-history/${encodeURIComponent(clientId.value)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: historyId,
+      exportDate: toMfCsvDate(today.toISOString().slice(0, 10)),
+      fileName,
+      count,
+      status: "出力済",
+    }),
+  }).catch(err => console.error('[ExportPage] 履歴保存エラー:', err));
 }
 const cancelDownload = () => {
   showDownloadModal.value = false;

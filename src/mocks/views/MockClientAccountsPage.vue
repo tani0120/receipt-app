@@ -229,6 +229,25 @@
       </div>
     </div>
   </div>
+
+  <!-- 確認モーダル -->
+  <ConfirmModal
+    :show="modal.confirmState.show"
+    :title="modal.confirmState.title"
+    :message="modal.confirmState.message"
+    :confirm-label="modal.confirmState.confirmLabel"
+    :cancel-label="modal.confirmState.cancelLabel"
+    :variant="modal.confirmState.variant"
+    @confirm="modal.onConfirm"
+    @cancel="modal.onCancel"
+  />
+  <NotifyModal
+    :show="modal.notifyState.show"
+    :title="modal.notifyState.title"
+    :message="modal.notifyState.message"
+    :variant="modal.notifyState.variant"
+    @close="modal.onNotifyClose"
+  />
 </template>
 
 <script setup lang="ts">
@@ -240,6 +259,9 @@ import { useClients } from '@/features/client-management/composables/useClients'
 import { getInitialCopyCounter } from '@/shared/utils/copy-utils';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
 import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
+import { useModalHelper } from '@/mocks/composables/useModalHelper';
+import ConfirmModal from '@/mocks/components/ConfirmModal.vue';
+import NotifyModal from '@/mocks/components/NotifyModal.vue';
 
 // 列幅カスタマイズ
 const caDefaultWidths: Record<string, number> = {
@@ -279,8 +301,11 @@ const accountRows: Account[] = reactive(
   [...settings.accounts.value]
 );
 
+// モーダルヘルパー
+const modal = useModalHelper();
+
 // 未保存変更ガード
-const { markDirty, markClean } = useUnsavedGuard(saveChanges);
+const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 // subAccountをlocalStorageから復元
 if (clientId.value) {
@@ -405,20 +430,22 @@ function showChecked() {
   checkedIds.value = [];
   markDirty();
 }
-function deleteRow(row: Account) {
+async function deleteRow(row: Account) {
   if (!row.isCustom) return;
-  if (!confirm(`「${row.name}」を削除しますか？復元できません。`)) return;
+  const ok = await modal.confirm({ title: `「${row.name}」を削除しますか？`, message: '復元できません。', variant: 'danger' });
+  if (!ok) return;
   const idx = accountRows.findIndex(r => r.id === row.id);
   if (idx !== -1) accountRows.splice(idx, 1);
   markDirty();
 }
-function deleteChecked() {
+async function deleteChecked() {
   const customIds = checkedIds.value.filter(id => {
     const row = accountRows.find(r => r.id === id);
     return row?.isCustom;
   });
-  if (!customIds.length) { alert('カスタム科目のみ削除できます。'); return; }
-  if (!confirm(`${customIds.length}件のカスタム科目を削除しますか？復元できません。`)) return;
+  if (!customIds.length) { await modal.notify({ title: 'カスタム科目のみ削除できます。', variant: 'warning' }); return; }
+  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム科目を削除しますか？`, message: '復元できません。', variant: 'danger' });
+  if (!ok) return;
   customIds.forEach(id => {
     const idx = accountRows.findIndex(r => r.id === id);
     if (idx !== -1) accountRows.splice(idx, 1);
@@ -427,9 +454,10 @@ function deleteChecked() {
   markDirty();
 }
 let copyCounter = getInitialCopyCounter(accountRows);
-function copyChecked() {
+async function copyChecked() {
   if (!checkedIds.value.length) return;
-  if (!confirm(`${checkedIds.value.length}件の科目をコピーしますか？`)) return;
+  const ok = await modal.confirm({ title: `${checkedIds.value.length}件の科目をコピーしますか？` });
+  if (!ok) return;
   // チェック行を逆順にし、各行の直下にコピーを挿入
   const ids = [...checkedIds.value];
   ids.reverse().forEach(id => {
@@ -458,8 +486,9 @@ function copyChecked() {
   checkedIds.value = [];
   markDirty();
 }
-function addAfterChecked() {
-  if (!confirm('新規科目を追加しますか？')) return;
+async function addAfterChecked() {
+  const ok = await modal.confirm({ title: '新規科目を追加しますか？' });
+  if (!ok) return;
   // 最後にチェックした行の直下に新規行を挿入
   const ids = [...checkedIds.value];
   const lastId = ids[ids.length - 1];
@@ -485,7 +514,7 @@ function addAfterChecked() {
   markDirty();
 }
 function saveChanges() {
-  if (!clientId.value) { alert('顧問先IDが不明です'); return; }
+  if (!clientId.value) { modal.notify({ title: '顧問先IDが不明です', variant: 'warning' }); return; }
   // subAccount情報を全行から収集
   const subAccounts: Record<string, string> = {};
   accountRows.forEach(r => {
@@ -495,7 +524,7 @@ function saveChanges() {
   // settings経由で保存（overrides refも同時に更新される）
   settings.saveAccounts(accountRows, subAccounts);
   markClean();
-  alert('保存しました — 変更はlocalStorageに永続化済み');
+  modal.notify({ title: '保存しました', variant: 'success' });
 }
 
 // =============== インライン編集 ===============
@@ -508,7 +537,7 @@ type AccountEditField = 'name' | 'category' | 'taxDetermination' | 'defaultTaxCa
 
 function startEdit(row: Account, field: AccountEditField) {
   if (field !== 'subAccount' && !row.isCustom) {
-    alert('デフォルト科目は編集できません。コピーしてから編集してください。');
+    modal.notify({ title: 'デフォルト科目は編集できません', message: 'コピーしてから編集してください。', variant: 'warning' });
     return;
   }
   editingRow.value = row.id;
@@ -527,7 +556,7 @@ const mfWarningMessage = ref('');
 function commitEdit(row: Account) {
   switch (editingField.value) {
     case 'name':
-      if (!editValue.value.trim()) { alert('科目名は空にできません。'); return; }
+      if (!editValue.value.trim()) { modal.notify({ title: '科目名は空にできません。', variant: 'warning' }); return; }
       row.name = editValue.value;
       if (row.isCustom && editValue.value !== editOriginalName.value) {
         mfWarningMessage.value = `⚠️ 「${editValue.value}」: この科目名を変更すると、MFインポート時に新しい勘定科目の登録または既存科目への変換を求められる可能性があります。`;

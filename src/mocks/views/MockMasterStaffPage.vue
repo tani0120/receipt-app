@@ -191,6 +191,26 @@
         </div>
       </div>
     </transition>
+
+    <!-- 確認モーダル -->
+    <ConfirmModal
+      :show="modal.confirmState.show"
+      :title="modal.confirmState.title"
+      :message="modal.confirmState.message"
+      :confirm-label="modal.confirmState.confirmLabel"
+      :cancel-label="modal.confirmState.cancelLabel"
+      :variant="modal.confirmState.variant"
+      @confirm="modal.onConfirm"
+      @cancel="modal.onCancel"
+    />
+    <!-- 通知モーダル -->
+    <NotifyModal
+      :show="modal.notifyState.show"
+      :title="modal.notifyState.title"
+      :message="modal.notifyState.message"
+      :variant="modal.notifyState.variant"
+      @close="modal.onNotifyClose"
+    />
   </div>
 </template>
 
@@ -204,6 +224,9 @@ import {
 import type { Staff, StaffForm } from '@/features/staff-management/composables/useStaff';
 import { useColumnResize } from '@/mocks/composables/useColumnResize';
 import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
+import { useModalHelper } from '@/mocks/composables/useModalHelper';
+import ConfirmModal from '@/mocks/components/ConfirmModal.vue';
+import NotifyModal from '@/mocks/components/NotifyModal.vue';
 
 // 列幅カスタマイズ
 const staffDefaultWidths: Record<string, number> = {
@@ -217,10 +240,11 @@ const { columnWidths: staffColWidths, onResizeStart: onStaffResizeStart } = useC
 // --- スタッフデータ（composableから取得） ---
 const { staffList, addStaff, updateStaff } = useStaff();
 
-// 未保存変更ガード（JSON永続化移行済み。localStorageへの保存は廃止）
-const { markDirty } = useUnsavedGuard(() => {
-  // サーバー側JSON永続化に移行済み。composable経由でAPI呼び出し済みのため何もしない
-});
+// モーダルヘルパー
+const modal = useModalHelper();
+
+// 未保存変更ガード（JSON永続化移行済み。composable経由でAPI呼び出し済み）
+const { markDirty } = useUnsavedGuard(null, modal);
 
 // --- ステータスフィルター ---
 const statusFilter = ref<'all' | 'active' | 'inactive'>('active');
@@ -346,17 +370,17 @@ const closePanel = () => {
   showPassword.value = false;
 };
 
-const saveStaff = () => {
+const saveStaff = async () => {
   if (!panelForm.name) {
-    globalThis.alert('名前は必須です');
+    await modal.notify({ title: '名前は必須です', variant: 'warning' });
     return;
   }
   if (!panelForm.email) {
-    globalThis.alert('メールアドレスは必須です');
+    await modal.notify({ title: 'メールアドレスは必須です', variant: 'warning' });
     return;
   }
   if (panelMode.value === 'add' && !panelForm.password) {
-    globalThis.alert('新規作成時はパスワードが必須です');
+    await modal.notify({ title: '新規作成時はパスワードが必須です', variant: 'warning' });
     return;
   }
   const uuid = editingUuid.value ?? generateStaffUuid();
@@ -369,18 +393,25 @@ const saveStaff = () => {
   };
   if (panelMode.value === 'add') {
     addStaff(data);
-    globalThis.alert(`「${data.name}」を追加しました。`);
+    await modal.notify({ title: `「${data.name}」を追加しました`, variant: 'success' });
   } else {
     updateStaff(data.uuid, data);
-    globalThis.alert(`「${data.name}」を更新しました。`);
+    await modal.notify({ title: `「${data.name}」を更新しました`, variant: 'success' });
   }
   closePanel();
   markDirty();
 };
 
 // --- 停止・復元 ---
-const confirmDeactivate = () => {
-  if (globalThis.confirm(`「${panelForm.name}」を停止しますか？\n\nスタッフデータは保持されます。再開も可能です。`)) {
+const confirmDeactivate = async () => {
+  const ok = await modal.confirm({
+    title: `「${panelForm.name}」を停止しますか？`,
+    message: 'スタッフデータは保持されます。再開も可能です。',
+    variant: 'danger',
+    confirmLabel: '停止する',
+    cancelLabel: 'キャンセル',
+  });
+  if (ok) {
     panelForm.status = 'inactive';
     saveStaff();
   }

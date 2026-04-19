@@ -84,18 +84,28 @@
       </div>
     </div>
   </div>
+
+  <NotifyModal
+    :show="modal.notifyState.show"
+    :title="modal.notifyState.title"
+    :message="modal.notifyState.message"
+    :variant="modal.notifyState.variant"
+    @close="modal.onNotifyClose"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
+import { useModalHelper } from '@/mocks/composables/useModalHelper';
+import NotifyModal from '@/mocks/components/NotifyModal.vue';
 
 const route = useRoute();
 const router = useRouter();
 const clientId = computed(() => (route.params.clientId as string) ?? 'ABC-00001');
 
-// --- ダウンロード履歴（localStorageから読み込み） ---
+// --- ダウンロード履歴（サーバーAPIから読み込み） ---
 interface HistoryRow {
   id: string;
   exportDate: string;
@@ -104,22 +114,30 @@ interface HistoryRow {
   status: string;
 }
 
-const historyData = computed<HistoryRow[]>(() => {
-  const key = `sugu-suru:export-history:${clientId.value}`;
+const historyData = ref<HistoryRow[]>([]);
+const modal = useModalHelper();
+
+/** サーバーから履歴を取得 */
+async function loadHistory() {
   try {
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    const res = await fetch(`/api/export-history/${encodeURIComponent(clientId.value)}`);
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      historyData.value = data;
+    } else {
+      // フォールバック：サンプル履歴（日付はtoMfCsvDateで統一）
+      historyData.value = [
+        { id: 'h01', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307',   count: 259, status: '出力済' },
+        { id: 'h02', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_2', count: 315, status: '出力済' },
+        { id: 'h03', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_3', count: 506, status: '出力済' },
+      ];
     }
-  } catch { /* 破損データは無視 */ }
-  // フォールバック：サンプル履歴（日付はtoMfCsvDateで統一）
-  return [
-    { id: 'h01', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307',   count: 259, status: '出力済' },
-    { id: 'h02', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_2', count: 315, status: '出力済' },
-    { id: 'h03', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_3', count: 506, status: '出力済' },
-  ];
-});
+  } catch {
+    historyData.value = [];
+  }
+}
+
+onMounted(() => loadHistory());
 
 // --- ページネーション（20件単位） ---
 const PAGE_SIZE = 20;
@@ -169,16 +187,15 @@ const showDownloadModal = ref(false);
 const isDownloading = ref(false);
 const startDownload = () => {
   isDownloading.value = true;
-  // 再ダウンロード: localStorageから保持済みCSVデータを取得してダウンロード
-  setTimeout(() => {
+  // 再ダウンロード: サーバーAPIからCSVスナップショットを取得してダウンロード
+  setTimeout(async () => {
     const checkedArr = [...checkedIds.value];
     let downloadCount = 0;
     for (const hid of checkedArr) {
-      const csvKey = `sugu-suru:export-csv:${clientId.value}:${hid}`;
       try {
-        const saved = localStorage.getItem(csvKey);
-        if (saved) {
-          const snapshot = JSON.parse(saved);
+        const res = await fetch(`/api/export-history/${encodeURIComponent(clientId.value)}/csv/${encodeURIComponent(hid)}`);
+        if (res.ok) {
+          const snapshot = await res.json();
           const blob = new Blob(['\uFEFF' + snapshot.csvContent], { type: 'text/csv;charset=utf-8;' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -188,12 +205,12 @@ const startDownload = () => {
           URL.revokeObjectURL(url);
           downloadCount++;
         }
-      } catch { /* 破損データは無視 */ }
+      } catch { /* 取得エラーは無視 */ }
     }
     isDownloading.value = false;
     showDownloadModal.value = false;
     if (downloadCount === 0) {
-      globalThis.alert('保持済みのCSVデータが見つかりません。過去の出力データは保持されていない可能性があります。');
+      modal.notify({ title: 'CSVデータが見つかりません', message: '過去の出力データは保持されていない可能性があります。', variant: 'warning' });
     }
   }, 800);
 };
@@ -203,5 +220,5 @@ const cancelDownload = () => {
 };
 
 // --- 更新ボタン ---
-const showRealtimeUpdateMsg = () => globalThis.alert('現在はリアルタイム更新です');
+const showRealtimeUpdateMsg = () => modal.notify({ title: '現在はリアルタイム更新です' });
 </script>

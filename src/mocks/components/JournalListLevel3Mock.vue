@@ -3300,6 +3300,9 @@ function selectAccountItem(
   }
 
   journal.is_read = true;
+  // 操作者追跡
+  journal.updated_by = currentStaffId.value ?? null;
+  journal.updated_at = new Date().toISOString();
   editingCell.value = null;
 
   // 勘定科目選択確定後、3大グループバリデーションを実行
@@ -3502,6 +3505,9 @@ function commitCellEdit(): void {
     }
   }
   journal.is_read = true;
+  // 操作者追跡: 仕訳編集時にupdated_by/updated_atを記録
+  journal.updated_by = currentStaffId.value ?? null;
+  journal.updated_at = new Date().toISOString();
   editingCell.value = null;
   // 変更4: セル編集確定時に警告列バリデーション（段階A: 双方向同期）を実行
   syncWarningLabels(journal);
@@ -4495,7 +4501,11 @@ function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
     message: `「${journal.description}」を${value ? "既読" : "未読"}にしますか？`,
     onConfirm: () => {
       target.is_read = value;
-      console.log(`[DD] 既読変更: ${journal.id} → is_read=${value}`);
+      if (value) {
+        target.read_by = currentStaffId.value ?? null;
+        target.read_at = new Date().toISOString();
+      }
+      console.log(`[DD] 既読変更: ${journal.id} → is_read=${value} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
         title: "完了",
@@ -4584,7 +4594,8 @@ function trashJournal(journal: JournalPhase5Mock) {
       const target = localJournals.value.find((j) => j.id === journal.id);
       if (!target) return;
       target.deleted_at = new Date().toISOString();
-      console.log(`[DD] ゴミ箱: ${journal.id}`);
+      target.deleted_by = currentStaffId.value ?? null;
+      console.log(`[DD] ゴミ箱: ${journal.id} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
         title: "完了",
@@ -4605,7 +4616,8 @@ function restoreJournal(journal: JournalPhase5Mock) {
     message: `「${journal.description}」を復活しますか？`,
     onConfirm: () => {
       target.deleted_at = null;
-      console.log(`[DD] 復活: ${journal.id}`);
+      target.deleted_by = null;
+      console.log(`[DD] 復活: ${journal.id} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
         title: "復活完了",
@@ -4672,8 +4684,12 @@ function bulkSetReadStatus(value: boolean) {
     onConfirm: () => {
       capturedTargets.forEach((j) => {
         j.is_read = value;
+        if (value) {
+          j.read_by = currentStaffId.value ?? null;
+          j.read_at = new Date().toISOString();
+        }
       });
-      console.log(`[一括] ${value ? "既読" : "未読"}: ${capturedTargets.length}件変更`);
+      console.log(`[一括] ${value ? "既読" : "未読"}: ${capturedTargets.length}件変更 by ${currentStaffId.value}`);
       const count = capturedTargets.length;
       clearSelection();
       confirmDialog.value = {
@@ -4830,8 +4846,9 @@ function showBulkTrashDialog() {
       const now = new Date().toISOString();
       capturedTargets.forEach((j) => {
         j.deleted_at = now;
+        j.deleted_by = currentStaffId.value ?? null;
       });
-      console.log(`[一括] ゴミ箱: ${capturedTargets.length}件`);
+      console.log(`[一括] ゴミ箱: ${capturedTargets.length}件 by ${currentStaffId.value}`);
       clearSelection();
       confirmDialog.value = {
         show: true,
@@ -5666,7 +5683,11 @@ function toggleStaffNote(journalId: string, key: StaffNoteKey) {
 
 // コメントモーダル
 const commentModalJournalId = ref<string | null>(null);
-const { userName: commentModalAuthor, staffList } = useCurrentUser();
+const { userName, staffList, currentStaffId } = useCurrentUser();
+// コメント投稿者名（ローカルref。v-model互換のためcomputedのuserNameとは別管理）
+const commentModalAuthor = ref<string>(userName.value);
+// userNameが変わったら同期
+watch(userName, (v) => { commentModalAuthor.value = v; });
 
 const commentModalJournal = computed(() => {
   if (!commentModalJournalId.value) return null;
@@ -5711,11 +5732,19 @@ function handleUndoRedoKeydown(e: KeyboardEvent): void {
     redo();
   }
 }
+// ────── セッション滞在時間計測（Phase 4: 操作時間追跡基礎） ──────
+const sessionStartTime = ref<number>(Date.now());
 onMounted(() => {
   window.addEventListener("keydown", handleUndoRedoKeydown);
+  sessionStartTime.value = Date.now();
+  console.log(`[セッション] 仕訳画面開始: ${new Date().toISOString()} スタッフ: ${currentStaffId.value}`);
 });
 onUnmounted(() => {
   window.removeEventListener("keydown", handleUndoRedoKeydown);
+  const elapsed = Math.round((Date.now() - sessionStartTime.value) / 1000);
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
+  console.log(`[セッション] 仕訳画面終了: ${new Date().toISOString()} スタッフ: ${currentStaffId.value} 滞在: ${minutes}分${seconds}秒`);
 });
 </script>
 
