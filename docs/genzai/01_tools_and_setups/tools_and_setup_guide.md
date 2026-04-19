@@ -294,8 +294,14 @@ receipt-app/
 │
 ├── src/
 │   ├── api/
-│   │   └── routes/
-│   │       └── documents.ts                 # Document API（Phase 1実装、旧receipts.ts）
+│   │   ├── routes/
+│   │   │   ├── documents.ts                 # Document API（Phase 1実装、旧receipts.ts）
+│   │   │   ├── vendorRoutes.ts              # 取引先マスタCRUD API（DL-042）
+│   │   │   └── exportHistoryRoutes.ts       # 出力履歴API（DL-042）
+│   │   └── services/
+│   │       ├── documentStore.ts             # 資料インメモリ+JSON永続化ストア（DL-041）
+│   │       ├── vendorStore.ts               # 取引先インメモリ+JSON永続化ストア（DL-042）
+│   │       └── exportHistoryStore.ts        # 出力履歴インメモリ+JSON永続化ストア（DL-042）
 │   ├── database/
 │   │   ├── supabase/
 │   │   │   ├── client.ts                   # Supabaseクライアント
@@ -307,8 +313,8 @@ receipt-app/
 │   │       └── document.types.ts           # Document型定義（旧receipt.types.ts）
 │   ├── mocks/
 │   │   ├── columns/                        # journalColumns.ts（列定義の単一ソース）
-│   │   ├── components/                     # JournalListLevel3Mock.vue等
-│   │   ├── composables/                    # useDraggable.ts, useCurrentUser.ts等（共通composable）
+│   │   ├── components/                     # JournalListLevel3Mock.vue, ConfirmModal.vue, NotifyModal.vue等
+│   │   ├── composables/                    # useDraggable.ts, useCurrentUser.ts, useModalHelper.ts, useUnsavedGuard.ts等
 │   │   ├── data/                           # journal_test_fixture_30cases.ts等
 │   │   └── types/                          # journal_phase5_mock.type.ts, staff_notes.ts等
 │   ├── views/
