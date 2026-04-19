@@ -15,6 +15,7 @@ import { useRoute } from 'vue-router'
 import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from '@/mocks/services/receiptService'
 import { errorGuideMessage } from '@/shared/validationMessages'
 import { useDocuments } from '@/composables/useDocuments'
+import { useCurrentUser } from '@/mocks/composables/useCurrentUser'
 import type { DocEntry, DocSource, DocStatus } from '@/repositories/types'
 
 // ===== 型定義（統一） =====
@@ -878,6 +879,7 @@ export function useUpload() {
       receivedAt: new Date(e.completedAt ?? Date.now()).toISOString(),
       batchId: null,
       journalId: null,
+      createdBy: role === 'guest' ? 'guest' : useCurrentUser().currentStaffId.value,
     }))
     const addedCount = addDocuments(docEntries)
     console.log(`[useUpload] handleConfirm: ${addedCount}件をuseDocumentsに追加 (role=${role})`)

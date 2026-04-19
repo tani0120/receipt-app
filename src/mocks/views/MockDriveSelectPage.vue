@@ -193,18 +193,20 @@ import { useRoute } from 'vue-router';
 import { useDocuments } from '@/composables/useDocuments';
 import { usePdfRenderer } from '@/composables/usePdfRenderer';
 import { useClients } from '@/features/client-management/composables/useClients';
+import { useCurrentUser } from '@/mocks/composables/useCurrentUser';
 import type { DocStatus, DocEntry } from '@/repositories/types';
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) || '');
 const { getByClientId, updateStatus: updateDocStatus, removeByClientId, addDocuments, assignBatchAndJournalIds } = useDocuments();
 const { currentClient } = useClients();
+const { currentStaffId } = useCurrentUser();
 // リアクティブ: clientIdが変わったら自動的に再フィルタ
 const clientDocs = computed(() => getByClientId(clientId.value).value);
 
 // --- PDF.js ---
 const {
-  canvasRef: pdfCanvasRef,
+  canvasRef: pdfCanvasRef, // テンプレートref（L121: ref="pdfCanvasRef"）で使用
   pageCount: pdfPageCount,
   currentPage: pdfCurrentPage,
   renderPage: pdfRenderPage,
@@ -442,6 +444,7 @@ const handleImport = async () => {
       receivedAt: new Date().toISOString(),
       batchId: null,
       journalId: null,
+      createdBy: currentStaffId.value,  // ログインユーザーのstaffId
     }));
 
     // 4. useDocumentsに追加（重複チェック付き）

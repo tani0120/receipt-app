@@ -557,12 +557,12 @@ const clDefaultWidths: Record<string, number> = {
 const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnResize('master-clients', clDefaultWidths);
 
 // --- クライアントデータ（composableから取得） ---
-const { clients, getStaffNameForClient, updateSharedFolderId } = useClients();
+const { clients, getStaffNameForClient, updateSharedFolderId, addClient, updateClientLocal } = useClients();
 const { staffList, activeStaff: activeStaffList } = useStaff();
 
-// 未保存変更ガード
+// 未保存変更ガード（JSON永続化移行済み。localStorageへの保存は廃止）
 const { markDirty } = useUnsavedGuard(() => {
-  localStorage.setItem('sugu-suru:clients', JSON.stringify(clients.value));
+  // サーバー側JSON永続化に移行済み。composable経由でAPI呼び出し済みのため何もしない
 });
 
 // --- 業種リスト（ScreenS_Settings.vueと同一） ---
@@ -660,10 +660,8 @@ const startInlineEdit = (row: Client, field: string, event: Event) => {
 
 const commitInlineEdit = (_row: Client) => {
   if (inlineEditId.value && inlineEditField.value) {
-    const idx = clients.value.findIndex(c => c.clientId === inlineEditId.value);
-    if (idx >= 0) {
-      (clients.value[idx] as unknown as Record<string, string | number>)[inlineEditField.value!] = inlineEditValue.value;
-    }
+    // composable経由でサーバーに永続化
+    updateClientLocal(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Client>);
   }
   markDirty();
   cancelInlineEdit();
@@ -671,12 +669,11 @@ const commitInlineEdit = (_row: Client) => {
 
 const commitFiscalEdit = (_row: Client) => {
   if (inlineEditId.value) {
-    const idx = clients.value.findIndex(c => c.clientId === inlineEditId.value);
-    if (idx >= 0) {
-      const target = clients.value[idx]!;
-      target.fiscalMonth = Number(inlineEditValue.value);
-      target.fiscalDay = inlineEditFiscalDay.value;
-    }
+    // composable経由でサーバーに永続化
+    updateClientLocal(inlineEditId.value, {
+      fiscalMonth: Number(inlineEditValue.value),
+      fiscalDay: inlineEditFiscalDay.value,
+    });
   }
   markDirty();
   cancelInlineEdit();
@@ -762,15 +759,14 @@ const saveClient = () => {
     contact: { type: contactType, value: contactValue },
   };
   if (panelMode.value === 'add') {
-    clients.value.push(data);
+    addClient(data);
     // Driveフォルダ自動作成（共有ドライブ内にフォルダを作成）
     createDriveFolderForClient(data).catch(err => {
       console.error('[clients] Driveフォルダ作成失敗:', err);
     });
     globalThis.alert(`「${data.companyName}」を追加しました。\n\n勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。\nGoogle Driveフォルダも自動作成されます。`);
   } else {
-    const idx = clients.value.findIndex(c => c.clientId === editingId.value);
-    if (idx >= 0) clients.value[idx] = data;
+    updateClientLocal(data.clientId, data);
     globalThis.alert(`「${data.companyName}」を更新しました。`);
   }
   closePanel();
@@ -832,11 +828,8 @@ const startStaffInlineEdit = (row: Client, event: Event) => {
 const commitStaffEdit = (_row: Client) => {
   if (inlineEditId.value) {
     const staffId = inlineEditValue.value as string;
-    // Client.staffIdを直接更新
-    const idx = clients.value.findIndex(c => c.clientId === inlineEditId.value);
-    if (idx >= 0 && clients.value[idx]) {
-      clients.value[idx].staffId = staffId || null;
-    }
+    // composable経由でサーバーに永続化
+    updateClientLocal(inlineEditId.value, { staffId: staffId || null });
   }
   markDirty();
   cancelInlineEdit();

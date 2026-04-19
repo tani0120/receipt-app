@@ -215,11 +215,11 @@ const staffDefaultWidths: Record<string, number> = {
 const { columnWidths: staffColWidths, onResizeStart: onStaffResizeStart } = useColumnResize('master-staff', staffDefaultWidths);
 
 // --- スタッフデータ（composableから取得） ---
-const { staffList } = useStaff();
+const { staffList, addStaff, updateStaff } = useStaff();
 
-// 未保存変更ガード
+// 未保存変更ガード（JSON永続化移行済み。localStorageへの保存は廃止）
 const { markDirty } = useUnsavedGuard(() => {
-  localStorage.setItem('sugu-suru:staff', JSON.stringify(staffList.value));
+  // サーバー側JSON永続化に移行済み。composable経由でAPI呼び出し済みのため何もしない
 });
 
 // --- ステータスフィルター ---
@@ -293,10 +293,8 @@ const startInlineEdit = (row: Staff, field: string, event: Event) => {
 
 const commitInlineEdit = () => {
   if (inlineEditId.value && inlineEditField.value) {
-    const idx = staffList.value.findIndex(s => s.uuid === inlineEditId.value);
-    if (idx >= 0) {
-      (staffList.value[idx] as unknown as Record<string, string>)[inlineEditField.value!] = inlineEditValue.value;
-    }
+    // composable経由でサーバーに永続化
+    updateStaff(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Staff>);
   }
   markDirty();
   cancelInlineEdit();
@@ -370,11 +368,10 @@ const saveStaff = () => {
     status: panelForm.status,
   };
   if (panelMode.value === 'add') {
-    staffList.value.push(data);
+    addStaff(data);
     globalThis.alert(`「${data.name}」を追加しました。`);
   } else {
-    const idx = staffList.value.findIndex(s => s.uuid === editingUuid.value);
-    if (idx >= 0) staffList.value[idx] = data;
+    updateStaff(data.uuid, data);
     globalThis.alert(`「${data.name}」を更新しました。`);
   }
   closePanel();

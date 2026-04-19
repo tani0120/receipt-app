@@ -2367,7 +2367,7 @@ import { useAccountSettings } from "@/features/account-settings/composables/useA
 import { useClients } from "@/features/client-management/composables/useClients";
 import { NULL_DISPLAY_UNKNOWN, compareWithNull } from "@/mocks/definitions/field-nullable-spec";
 import { useDraggable } from "@/mocks/composables/useDraggable";
-import { useCurrentUser, STAFF_LIST } from "@/mocks/composables/useCurrentUser";
+import { useCurrentUser } from "@/mocks/composables/useCurrentUser";
 import { journalColumns, getDefaultColumnWidths } from "@/mocks/columns/journalColumns";
 import { useColumnResize } from "@/mocks/composables/useColumnResize";
 import { useJournals } from "@/mocks/composables/useJournals";
@@ -5666,8 +5666,7 @@ function toggleStaffNote(journalId: string, key: StaffNoteKey) {
 
 // コメントモーダル
 const commentModalJournalId = ref<string | null>(null);
-const { userName: commentModalAuthor } = useCurrentUser();
-const staffList = STAFF_LIST;
+const { userName: commentModalAuthor, staffList } = useCurrentUser();
 
 const commentModalJournal = computed(() => {
   if (!commentModalJournalId.value) return null;

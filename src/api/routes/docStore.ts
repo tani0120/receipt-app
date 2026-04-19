@@ -23,6 +23,9 @@ import {
   updateDocumentStatus,
   assignBatchAndJournalIds,
   removeByClientId,
+  getById,
+  deleteById,
+  countDocuments,
 } from '../services/documentStore';
 
 const app = new Hono();
@@ -44,7 +47,7 @@ app.post('/', async (c) => {
   if (!body.documents || !Array.isArray(body.documents)) {
     return c.json({ error: 'documents配列が必要です' }, 400);
   }
-  const result = addDocuments(body.documents as any);
+  const result = addDocuments(body.documents as import('../../repositories/types').DocEntry[]);
   return c.json({ ok: true, ...result });
 });
 
@@ -57,7 +60,7 @@ app.put('/:id', async (c) => {
   if (!body.status) {
     return c.json({ error: 'statusが必要です' }, 400);
   }
-  const ok = updateDocumentStatus(id, body.status as any);
+  const ok = updateDocumentStatus(id, body.status as import('../../repositories/types').DocStatus);
   if (!ok) {
     return c.json({ error: `ドキュメント ${id} が見つかりません` }, 404);
   }
@@ -83,6 +86,39 @@ app.delete('/client/:clientId', (c) => {
   const clientId = c.req.param('clientId');
   const removed = removeByClientId(clientId);
   return c.json({ ok: true, removed });
+});
+
+// ============================================================
+// GET /count — 件数取得（DL-042追加）※ /:id より前に配置必須
+// ============================================================
+app.get('/count', (c) => {
+  const clientId = c.req.query('clientId');
+  const cnt = countDocuments(clientId);
+  return c.json({ count: cnt });
+});
+
+// ============================================================
+// GET /:id — 1件取得（DL-042追加）
+// ============================================================
+app.get('/:id', (c) => {
+  const id = c.req.param('id');
+  const doc = getById(id);
+  if (!doc) {
+    return c.json({ error: `ドキュメント ${id} が見つかりません` }, 404);
+  }
+  return c.json({ document: doc });
+});
+
+// ============================================================
+// DELETE /:id — 個別削除（DL-042追加）
+// ============================================================
+app.delete('/:id', (c) => {
+  const id = c.req.param('id');
+  const ok = deleteById(id);
+  if (!ok) {
+    return c.json({ error: `ドキュメント ${id} が見つかりません` }, 404);
+  }
+  return c.json({ ok: true });
 });
 
 export default app;

@@ -29,6 +29,18 @@ export function loadDocuments(): void {
     if (existsSync(DATA_FILE)) {
       const raw = readFileSync(DATA_FILE, 'utf-8');
       documents = JSON.parse(raw) as DocEntry[];
+      // DL-042マイグレーション: createdByフィールドがない既存データにnullを設定
+      let migrated = false;
+      for (const doc of documents) {
+        if (doc.createdBy === undefined) {
+          (doc as any).createdBy = null;
+          migrated = true;
+        }
+      }
+      if (migrated) {
+        save();
+        console.log('[documentStore] createdByフィールドをnullで補完（マイグレーション）');
+      }
       console.log(`[documentStore] ${documents.length}件をJSONから読み込み`);
     } else {
       documents = [];
@@ -123,6 +135,59 @@ export function removeByClientId(clientId: string): number {
   documents = documents.filter(d => d.clientId !== clientId);
   save();
   return before - documents.length;
+}
+
+// ============================================================
+// DL-042: CRUD不足補完
+// ============================================================
+
+/**
+ * IDで1件取得
+ */
+export function getById(id: string): DocEntry | undefined {
+  return documents.find(d => d.id === id);
+}
+
+/**
+ * IDで個別削除
+ */
+export function deleteById(id: string): boolean {
+  const before = documents.length;
+  documents = documents.filter(d => d.id !== id);
+  if (documents.length < before) {
+    save();
+    return true;
+  }
+  return false;
+}
+
+/**
+ * 件数取得（clientIdフィルタ任意）
+ */
+export function countDocuments(clientId?: string): number {
+  if (clientId) {
+    return documents.filter(d => d.clientId === clientId).length;
+  }
+  return documents.length;
+}
+
+/**
+ * ステータス別取得
+ */
+export function getByStatus(clientId: string, status: DocEntry['status']): DocEntry[] {
+  return documents.filter(d => d.clientId === clientId && d.status === status);
+}
+
+/**
+ * ステータス別件数
+ */
+export function countByStatus(clientId: string): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const d of documents) {
+    if (d.clientId !== clientId) continue;
+    result[d.status] = (result[d.status] || 0) + 1;
+  }
+  return result;
 }
 
 // 起動時に自動読み込み

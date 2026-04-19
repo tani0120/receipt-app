@@ -5,22 +5,119 @@
  * - Repositoryはデータの出し入れだけ。ロジックは絶対に入れない
  * - 全メソッドはPromise<T>で統一（将来のSupabase移行でシグネチャ崩壊を防止）
  * - モック実装（TSファイル）とSupabase実装を中身差し替えで切り替え可能
+ * - ★Staff/Client/DocEntry等のドメイン型もこのファイルに集約（唯一の型定義源泉）
  *
  * 【ファイル構成】
  * src/repositories/
- *   types.ts                    ← このファイル（全Repository型を集約）
+ *   types.ts                    ← このファイル（全Repository型 + ドメイン型を集約）
  *   mock/                       ← モック実装（TSファイルからデータ取得）
  *   supabase/                   ← 将来作成（フェーズ5）
  *   index.ts                    ← factory関数（環境切り替え）
  *
- * 準拠: pipeline_design_master.md DL-030
+ * 準拠: pipeline_design_master.md DL-030, DL-042
  */
+
 
 import type { Vendor, IndustryVectorEntry, VendorVector } from '@/mocks/types/pipeline/vendor.type'
 import type { Account } from '@/shared/types/account'
 
 // ============================================================
+// § 0-1. Staff（スタッフ）— DL-042で追加
+// ============================================================
+
+/** スタッフのロール */
+export type StaffRole = 'admin' | 'general'
+
+/** スタッフのステータス */
+export type StaffStatus = 'active' | 'inactive'
+
+/**
+ * スタッフ（一覧・詳細で共通利用）
+ *
+ * 対象データ: 事務所スタッフ（ログインユーザー）
+ * 用途: ログイン認証、顧問先担当者紐付け、仕訳画面のスタッフ切替
+ */
+export interface Staff {
+  uuid: string
+  name: string
+  email: string
+  // passwordはサーバーサイドのみ。フロントエンドには返らない
+  role: StaffRole
+  status: StaffStatus
+}
+
+/** パネルフォーム用型（Staffからuuidを除外、新規登録時のみパスワード入力） */
+export interface StaffForm {
+  name: string
+  email: string
+  password: string    // 新規登録・パスワード変更時のみ使用
+  role: StaffRole
+  status: StaffStatus
+}
+
+// ============================================================
+// § 0-2. Client（顧問先）— DL-042で追加
+// ============================================================
+
+/** クライアントステータス */
+export type ClientStatus = 'active' | 'inactive' | 'suspension'
+
+/**
+ * 顧問先（一覧・詳細で共通利用）
+ *
+ * 対象データ: 税理士事務所の顧問先企業/個人事業主
+ * 用途: 顧問先管理、仕訳対象の選択、Drive共有フォルダ管理、進捗管理
+ */
+export interface Client {
+  clientId: string;   // 不変。DB primary key。形式: {3コード}-{5桁連番}（例: ABC-00001）
+  threeCode: string;  // 可変。人間用の識別コード。大文字3文字（例: ABC）
+  companyName: string;
+  companyNameKana: string;
+  type: 'corp' | 'individual';
+  repName: string;
+  repNameKana: string;
+  phoneNumber: string;
+  email: string;
+  chatRoomUrl: string;
+  contact: { type: 'email' | 'chatwork' | 'none'; value: string };
+  fiscalMonth: number;
+  fiscalDay: string | number;
+  industry: string;
+  establishedDate: string;
+  status: ClientStatus;
+  accountingSoftware: 'mf' | 'freee' | 'yayoi' | 'tkc' | 'other';
+  taxFilingType: 'blue' | 'white';
+  consumptionTaxMode: 'general' | 'simplified' | 'exempt';
+  simplifiedTaxCategory?: number;
+  taxMethod: 'inclusive' | 'exclusive';
+  calculationMethod: 'accrual' | 'cash' | 'interim_cash';
+  defaultPaymentMethod: 'cash' | 'owner_loan' | 'accounts_payable';
+  isInvoiceRegistered: boolean;
+  invoiceRegistrationNumber: string;
+  hasDepartmentManagement: boolean;
+  /** 不動産所得あり（個人事業主の場合のみ有効。account-master.tsの不動産関連15科目の表示可否を制御） */
+  hasRentalIncome: boolean;
+  /** 主担当スタッフID（useStaff紐付けと同期。Phase C: clients.staff_id FKに移行） */
+  staffId: string | null;
+  /** Google Drive共有フォルダID（顧問先登録時にcreateDriveFolderで自動作成） */
+  sharedFolderId: string;
+  /** 共有用メール（Googleログイン時に自動取得。Drive共有権限付与 + PC独自システム認証に使用） */
+  sharedEmail: string;
+  advisoryFee: number;
+  bookkeepingFee: number;
+  settlementFee: number;
+  taxFilingFee: number;
+}
+
+/** パネルフォーム用型（ClientからclientIdを除き、contactをフラット化） */
+export interface ClientForm extends Omit<Client, 'clientId' | 'contact'> {
+  contactType: 'email' | 'chatwork' | 'none';
+  contactValue: string;
+}
+
+// ============================================================
 // § ConfirmedJournal 仮定義（T-03未着手のため）
+
 // ============================================================
 
 /**
@@ -253,6 +350,8 @@ export interface DocEntry {
   batchId: string | null
   /** 仕訳ID（選別完了→送出時に全件付与） */
   journalId: string | null
+  /** 操作者スタッフID（アップロード/取込時に記録。ゲストの場合は'guest'。DL-042追加） */
+  createdBy: string | null
 }
 
 /**
@@ -287,6 +386,10 @@ export type DocumentRepository = {
  * createRepositories()の戻り値として使用
  */
 export type Repositories = {
+  /** スタッフマスタ（DL-042） */
+  staff: StaffRepository
+  /** 顧問先マスタ（DL-042） */
+  client: ClientRepository
   /** 全社取引先マスタ */
   vendor: VendorRepository
   /** 顧問先取引先マスタ */
@@ -301,4 +404,54 @@ export type Repositories = {
   shareStatus: ShareStatusRepository
   /** 資料マスタ（DL-039） */
   document: DocumentRepository
+}
+
+// ============================================================
+// § StaffRepository（スタッフマスタ）— DL-042で追加
+// ============================================================
+
+/**
+ * スタッフマスタへのデータアクセス
+ *
+ * 対象データ: 事務所スタッフ
+ * 用途: ログイン認証、担当者名解決、仕訳画面のスタッフ切替
+ */
+export type StaffRepository = {
+  /** 全スタッフ取得 */
+  getAll(): Promise<Staff[]>
+  /** UUIDで1件取得 */
+  getById(uuid: string): Promise<Staff | undefined>
+  /** メールアドレスでスタッフ検索（ログイン認証用） */
+  getByEmail(email: string): Promise<Staff | undefined>
+  /** 有効スタッフのみ取得（担当者選択ドロップダウン用） */
+  getActiveStaff(): Promise<Staff[]>
+  /** スタッフ追加 */
+  create(staff: Staff): Promise<void>
+  /** スタッフ更新（部分更新） */
+  update(uuid: string, partial: Partial<Staff>): Promise<void>
+}
+
+// ============================================================
+// § ClientRepository（顧問先マスタ）— DL-042で追加
+// ============================================================
+
+/**
+ * 顧問先マスタへのデータアクセス
+ *
+ * 対象データ: 税理士事務所の顧問先企業/個人事業主
+ * 用途: 顧問先管理、仕訳対象の選択、Drive共有フォルダ管理
+ */
+export type ClientRepository = {
+  /** 全顧問先取得 */
+  getAll(): Promise<Client[]>
+  /** clientIdで1件取得 */
+  getById(clientId: string): Promise<Client | undefined>
+  /** 担当者別顧問先取得（進捗管理フィルタ） */
+  getByStaffId(staffId: string): Promise<Client[]>
+  /** 有効顧問先のみ取得 */
+  getActiveClients(): Promise<Client[]>
+  /** 顧問先追加 */
+  create(client: Client): Promise<void>
+  /** 顧問先更新（部分更新） */
+  update(clientId: string, partial: Partial<Client>): Promise<void>
 }

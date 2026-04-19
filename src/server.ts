@@ -80,6 +80,18 @@ app.route('/api/drive', driveRoute)
 import docStoreRoute from './api/routes/docStore'
 app.route('/api/doc-store', docStoreRoute)
 
+// Staff API: スタッフJSON永続化（DL-042）
+import staffRoutes from './api/routes/staffRoutes'
+app.route('/api/staff', staffRoutes)
+
+// Client API: 顧問先JSON永続化（DL-042）
+import clientRoutes from './api/routes/clientRoutes'
+app.route('/api/clients', clientRoutes)
+
+// Journal API: 仕訳JSON永続化（DL-042 #12）
+import journalRoutes from './api/routes/journalRoutes'
+app.route('/api/journals', journalRoutes)
+
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
 
