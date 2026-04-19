@@ -273,7 +273,7 @@ function hideChecked() {
     if (row) { row.deprecated = true; row.effectiveTo = today; }
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('税区分を非表示に変更');
 }
 async function promoteToMfChecked() {
   const customIds = checkedIds.value.filter(id => {
@@ -288,7 +288,7 @@ async function promoteToMfChecked() {
     if (row) row.isCustom = false;
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('税区分をMF公式に変更');
 }
 async function demoteFromMfChecked() {
   const officialIds = checkedIds.value.filter(id => {
@@ -303,7 +303,7 @@ async function demoteFromMfChecked() {
     if (row) row.isCustom = true;
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('税区分をMF非公式に変更');
 }
 function showChecked() {
   checkedIds.value.forEach(id => {
@@ -311,7 +311,7 @@ function showChecked() {
     if (row) { row.deprecated = false; row.effectiveTo = null; }
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('税区分を表示に変更');
 }
 
 
@@ -329,7 +329,7 @@ async function deleteChecked() {
     if (idx !== -1) allTaxRows.splice(idx, 1);
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('税区分を削除');
 }
 
 // =============== コピー・追加 ===============
@@ -364,7 +364,7 @@ async function copyChecked() {
     allTaxRows.splice(srcIdx + 1, 0, copy);
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('税区分をコピー');
 }
 async function addAfterChecked() {
   const ok = await modal.confirm({ title: '新規税区分を追加しますか？' });
@@ -391,7 +391,7 @@ async function addAfterChecked() {
   };
   allTaxRows.splice(insertIdx, 0, newRow);
   checkedIds.value = [];
-  markDirty();
+  markDirty('税区分を追加');
 }
 
 // =============== インライン編集 ===============
@@ -447,7 +447,8 @@ function commitEdit(row: TaxCategory, field: EditableField) {
       row.qualified = editValue.value === 'true';
       break;
   }
-  markDirty();
+  const txFieldLabels: Record<string, string> = { direction: '方向', name: '名称', rate: '税率', qualified: '適格' };
+  markDirty(`税区分の${txFieldLabels[field] ?? field}を変更`);
   cancelEdit();
 }
 

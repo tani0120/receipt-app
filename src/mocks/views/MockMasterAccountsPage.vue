@@ -325,7 +325,7 @@ function hideChecked() {
     }
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('勘定科目を非表示に変更');
 }
 function showChecked() {
   checkedIds.value.forEach(id => {
@@ -336,7 +336,7 @@ function showChecked() {
     }
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('勘定科目を表示に変更');
 }
 async function promoteToMfChecked() {
   const customIds = checkedIds.value.filter(id => {
@@ -351,7 +351,7 @@ async function promoteToMfChecked() {
     if (row) row.isCustom = false;
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('勘定科目をMF公式に変更');
 }
 async function demoteFromMfChecked() {
   const officialIds = checkedIds.value.filter(id => {
@@ -366,7 +366,7 @@ async function demoteFromMfChecked() {
     if (row) row.isCustom = true;
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('勘定科目をMF非公式に変更');
 }
 
 async function deleteChecked() {
@@ -382,7 +382,7 @@ async function deleteChecked() {
     if (idx !== -1) accountRows.splice(idx, 1);
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('勘定科目を削除');
 }
 let copyCounter = getInitialCopyCounter(accountRows);
 async function copyChecked() {
@@ -415,7 +415,7 @@ async function copyChecked() {
     accountRows.splice(srcIdx + 1, 0, copy);
   });
   checkedIds.value = [];
-  markDirty();
+  markDirty('勘定科目をコピー');
 }
 async function addAfterChecked() {
   const ok = await modal.confirm({ title: '新規科目を追加しますか？' });
@@ -442,7 +442,7 @@ async function addAfterChecked() {
   };
   accountRows.splice(insertIdx, 0, newRow);
   checkedIds.value = [];
-  markDirty();
+  markDirty('勘定科目を追加');
 }
 function saveChanges() {
   // composable のoverridesに同期 → 顧問先ページに反映
@@ -517,7 +517,8 @@ function commitEdit(row: Account) {
       }
       break;
   }
-  markDirty();
+  const acFieldLabels: Record<string, string> = { name: '科目名', category: '科目分類', taxDetermination: '税区分判定', defaultTaxCategoryId: 'デフォルト税区分', aiDetermination: '自動判定' };
+  markDirty(`勘定科目の${acFieldLabels[editingField.value] ?? editingField.value}を変更`);
   cancelEdit();
 }
 
@@ -632,7 +633,7 @@ function onDrop(targetIdx: number) {
   if (removed.length > 0) {
     accountRows.splice(dstGlobal, 0, removed[0]!);
     accountRows.forEach((r, i) => { r.sortOrder = i + 1; });
-    markDirty();
+    markDirty('勘定科目の並び順を変更');
   }
   dragIdx.value = -1;
 }

@@ -106,11 +106,13 @@ export async function createDriveFolder(
   });
 
   if (existing.data.files && existing.data.files.length > 0) {
-    const existingId = existing.data.files[0].id!;
-    console.log(
-      `[driveService] 同名フォルダ検出（新規作成スキップ）: ${folderName} (id=${existingId})`,
-    );
-    return existingId;
+    const existingId = existing.data.files[0]?.id;
+    if (existingId) {
+      console.log(
+        `[driveService] 同名フォルダ検出（新規作成スキップ）: ${folderName} (id=${existingId})`,
+      );
+      return existingId;
+    }
   }
 
   // --- 既存なし → 新規作成 ---
@@ -134,6 +136,29 @@ export async function createDriveFolder(
   );
 
   return folderId;
+}
+
+/**
+ * 共有ドライブのフォルダ名を変更
+ *
+ * @param folderId - 対象フォルダID
+ * @param newName - 新しいフォルダ名（例: 'XYZ_株式会社サンプル'）
+ */
+export async function renameDriveFolder(
+  folderId: string,
+  newName: string,
+): Promise<void> {
+  const drive = getDriveClient();
+
+  await drive.files.update({
+    fileId: folderId,
+    supportsAllDrives: true,
+    requestBody: { name: newName },
+  });
+
+  console.log(
+    `[driveService] フォルダリネーム完了: ${newName} (id=${folderId})`,
+  );
 }
 
 /**

@@ -121,7 +121,7 @@
                 </td>
                 <td class="cm-client-id">{{ row.clientId }}</td>
                 <td class="cm-code td-editable" @dblclick.stop="startInlineEdit(row, 'threeCode', $event)">
-                  <input v-if="inlineEditId === row.clientId && inlineEditField === 'threeCode'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <input v-if="inlineEditId === row.clientId && inlineEditField === 'threeCode'" v-model="inlineEditValue" class="cm-inline-input" maxlength="3" @input="inlineEditValue = String(inlineEditValue).toUpperCase().replace(/[^A-Z]/g, '')" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.threeCode }}</span>
                 </td>
                 <!-- 種別: select -->
@@ -273,16 +273,16 @@
                 <input type="text" v-model="panelForm.companyName" class="cm-input" placeholder="株式会社サンプル">
               </div>
               <div class="cm-field">
-                <label class="cm-label">会社名（カナ）</label>
-                <input type="text" v-model="panelForm.companyNameKana" class="cm-input" placeholder="カブシキガイシャサンプル">
+                <label class="cm-label">会社名（全角カナ）</label>
+                <input type="text" v-model="panelForm.companyNameKana" class="cm-input" placeholder="カブシキガイシャサンプル" @input="panelForm.companyNameKana = panelForm.companyNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')">
               </div>
               <div class="cm-field">
                 <label class="cm-label">代表者名</label>
                 <input type="text" v-model="panelForm.repName" class="cm-input" placeholder="山田 太郎">
               </div>
               <div class="cm-field">
-                <label class="cm-label">代表者名（カナ）</label>
-                <input type="text" v-model="panelForm.repNameKana" class="cm-input" placeholder="ヤマダ タロウ">
+                <label class="cm-label">代表者名（全角カナ）</label>
+                <input type="text" v-model="panelForm.repNameKana" class="cm-input" placeholder="ヤマダ タロウ" @input="panelForm.repNameKana = panelForm.repNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')">
               </div>
               <div class="cm-field">
                 <label class="cm-label">担当者</label>
@@ -299,46 +299,7 @@
                 <label class="cm-label">メールアドレス</label>
                 <input type="email" v-model="panelForm.email" class="cm-input" placeholder="example@mail.com">
               </div>
-              <div class="cm-field">
-                <label class="cm-label">Drive取込 URL（自動生成）</label>
-                <div class="cm-drive-url-box">
-                  <input type="text" :value="driveUploadUrl" class="cm-input cm-drive-url-input" readonly @click="($event.target as HTMLInputElement).select()">
-                  <button class="cm-drive-copy-btn" :class="{ copied: driveUrlPanelCopied }" @click="copyDriveUrlPanel">
-                    <span>{{ driveUrlPanelCopied ? '✅ コピー済' : '📋 コピー' }}</span>
-                  </button>
-                </div>
-                <p class="cm-hint" style="margin-top: 4px">顧問先にこのURLを共有 → スマホからDrive取込アップロード可能</p>
-              </div>
-              <!-- Driveフォルダ状態（編集モード時のみ） -->
-              <div v-if="panelMode === 'edit'" class="cm-field">
-                <label class="cm-label">Driveフォルダ状態</label>
-                <div class="cm-drive-folder-status">
-                  <template v-if="folderCheckLoading">
-                    <span class="cm-folder-checking">🔄 確認中...</span>
-                  </template>
-                  <template v-else-if="folderStatus === 'ok'">
-                    <span class="cm-folder-ok">✅ フォルダ存在（正常）</span>
-                  </template>
-                  <template v-else-if="folderStatus === 'trashed'">
-                    <span class="cm-folder-warn">⚠️ ゴミ箱に入っています（Driveで復元可能）</span>
-                    <button class="cm-folder-recreate-btn" @click="recreateDriveFolder" :disabled="folderRecreating">
-                      {{ folderRecreating ? '作成中...' : '📁 Driveフォルダ再作成' }}
-                    </button>
-                  </template>
-                  <template v-else-if="folderStatus === 'deleted'">
-                    <span class="cm-folder-error">❌ フォルダが削除されています</span>
-                    <button class="cm-folder-recreate-btn" @click="recreateDriveFolder" :disabled="folderRecreating">
-                      {{ folderRecreating ? '作成中...' : '📁 Driveフォルダ再作成' }}
-                    </button>
-                  </template>
-                  <template v-else-if="folderStatus === 'none'">
-                    <span class="cm-folder-none">📭 未作成</span>
-                    <button class="cm-folder-recreate-btn" @click="recreateDriveFolder" :disabled="folderRecreating">
-                      {{ folderRecreating ? '作成中...' : '📁 Driveフォルダ作成' }}
-                    </button>
-                  </template>
-                </div>
-              </div>
+              <!-- Drive関連UI削除（ロジックは温存） -->
               <div class="cm-field">
                 <label class="cm-label">チャットルームURL</label>
                 <input type="url" v-model="panelForm.chatRoomUrl" class="cm-input" placeholder="https://www.chatwork.com/#!rid...">
@@ -587,7 +548,7 @@ const { staffList, activeStaff: activeStaffList } = useStaff();
 const modal = useModalHelper();
 
 // 未保存変更ガード（JSON永続化移行済み。composable経由でAPI呼び出し済み）
-const { markDirty } = useUnsavedGuard(null, modal);
+const { markDirty, markClean } = useUnsavedGuard(null, modal);
 
 // --- 業種リスト（ScreenS_Settings.vueと同一） ---
 const industryOptions: string[] = [
@@ -682,12 +643,40 @@ const startInlineEdit = (row: Client, field: string, event: Event) => {
   });
 };
 
-const commitInlineEdit = (_row: Client) => {
+const commitInlineEdit = async (_row: Client) => {
   if (inlineEditId.value && inlineEditField.value) {
+    // --- 3コード重複チェック（インライン編集時） ---
+    if (inlineEditField.value === 'threeCode' && inlineEditValue.value) {
+      const duplicate = clients.value.find(
+        c => c.threeCode === inlineEditValue.value && c.clientId !== inlineEditId.value
+      );
+      if (duplicate) {
+        await modal.notify({
+          title: '3コードが重複しています。変更してください',
+          message: `「${duplicate.companyName}（${duplicate.clientId}）」で既に使用されています。`,
+          variant: 'warning',
+        });
+        cancelInlineEdit();
+        return;
+      }
+    }
     // composable経由でサーバーに永続化
     updateClientLocal(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Client>);
+    // 3コード変更時はDriveフォルダもリネーム
+    if (inlineEditField.value === 'threeCode') {
+      const client = clients.value.find(c => c.clientId === inlineEditId.value);
+      if (client) {
+        const renamed = await renameDriveFolderForClient(client);
+        if (renamed) {
+          await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更しました`, variant: 'success' });
+        }
+      }
+    }
   }
-  markDirty();
+  const clFieldLabels: Record<string, string> = { threeCode: '3コード', companyName: '会社名', companyNameKana: '会社名カナ', repName: '代表者名', repNameKana: '代表者名カナ', type: '種別', status: 'ステータス', industry: '業種', phoneNumber: '電話番号', email: 'メール' };
+  const clLabel = clFieldLabels[inlineEditField.value ?? ''] ?? inlineEditField.value;
+  markDirty(`${clLabel}を変更`);
+  markClean();
   cancelInlineEdit();
 };
 
@@ -699,7 +688,8 @@ const commitFiscalEdit = (_row: Client) => {
       fiscalDay: inlineEditFiscalDay.value,
     });
   }
-  markDirty();
+  markDirty('決算日を変更');
+  markClean();
   cancelInlineEdit();
 };
 
@@ -755,22 +745,32 @@ const openEditPanel = (row: Client) => {
   panelStaffId.value = row.staffId ?? '';
   panelMode.value = 'edit';
   editingId.value = row.clientId;
-  // Driveフォルダ存在確認（非同期）
-  checkDriveFolderStatus(row);
 };
 
 const closePanel = () => {
   panelMode.value = null;
   editingId.value = null;
   showIndustryDropdown.value = false;
-  folderStatus.value = null;
-  folderCheckLoading.value = false;
 };
 
 const saveClient = async () => {
   if (!panelForm.companyName && !panelForm.repName) {
     await modal.notify({ title: '会社名または代表者名のどちらかを入力してください', variant: 'warning' });
     return;
+  }
+  // --- 3コード重複チェック ---
+  if (panelForm.threeCode) {
+    const duplicate = clients.value.find(
+      c => c.threeCode === panelForm.threeCode && c.clientId !== editingId.value
+    );
+    if (duplicate) {
+      await modal.notify({
+        title: '3コードが重複しています。変更してください',
+        message: `「${duplicate.companyName}（${duplicate.clientId}）」で既に使用されています。`,
+        variant: 'warning',
+      });
+      return;
+    }
   }
   const { contactType, contactValue, ...fields } = panelForm;
   const clientId = editingId.value
@@ -790,11 +790,20 @@ const saveClient = async () => {
     });
     await modal.notify({ title: `「${data.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。\nGoogle Driveフォルダも自動作成されます。', variant: 'success' });
   } else {
+    // 編集時: 3コードが変わった場合はDriveフォルダもリネーム
+    const oldClient = clients.value.find(c => c.clientId === data.clientId);
     updateClientLocal(data.clientId, data);
+    if (oldClient && oldClient.threeCode !== data.threeCode) {
+      const renamed = await renameDriveFolderForClient(data);
+      if (renamed) {
+        await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更しました`, variant: 'success' });
+      }
+    }
     await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
   }
   closePanel();
-  markDirty();
+  markDirty(panelMode.value === 'add' ? `「${data.companyName}」を追加` : `「${data.companyName}」を更新`);
+  markClean();
 };
 
 // --- K13: 休眠・契約終了 ---
@@ -869,7 +878,8 @@ const commitStaffEdit = (_row: Client) => {
     // composable経由でサーバーに永続化
     updateClientLocal(inlineEditId.value, { staffId: staffId || null });
   }
-  markDirty();
+  markDirty('担当者を変更');
+  markClean();
   cancelInlineEdit();
 };
 
@@ -880,7 +890,6 @@ onUnmounted(() => document.removeEventListener('click', closeDropdowns));
 
 // --- Drive取込 URL ---
 const driveUrlCopied = ref<string | null>(null);
-const driveUrlPanelCopied = ref(false);
 
 /** テーブル行のDrive共有フォルダURLをコピー */
 const copyDriveUrl = async (row: Client) => {
@@ -893,27 +902,6 @@ const copyDriveUrl = async (row: Client) => {
     window.prompt('URLをコピーしてください:', url);
   }
 };
-
-/** パネル内のDrive共有フォルダURL（編集時はsharedFolderIdから生成） */
-const driveUploadUrl = computed(() => {
-  if (!editingId.value) return '（保存後に自動生成）';
-  const client = clients.value.find(c => c.clientId === editingId.value);
-  return client?.sharedFolderId
-    ? `https://drive.google.com/drive/folders/${client.sharedFolderId}`
-    : '（Driveフォルダ未作成）';
-});
-
-/** パネル内のDrive URLコピー */
-const copyDriveUrlPanel = async () => {
-  try {
-    await navigator.clipboard.writeText(driveUploadUrl.value);
-    driveUrlPanelCopied.value = true;
-    setTimeout(() => { driveUrlPanelCopied.value = false; }, 2500);
-  } catch {
-    window.prompt('URLをコピーしてください:', driveUploadUrl.value);
-  }
-};
-
 /** Driveフォルダ自動作成（新規登録時） */
 const createDriveFolderForClient = async (client: Client) => {
   const folderName = `${client.threeCode}_${client.companyName}`;
@@ -932,66 +920,35 @@ const createDriveFolderForClient = async (client: Client) => {
     console.log(`[clients] Driveフォルダ作成完了: ${folderName} (id=${data.folderId})`);
     // sharedFolderIdを更新（driveIdではなくsharedFolderIdに統一）
     updateSharedFolderId(client.clientId, data.folderId);
-    markDirty();
+    markDirty('Driveフォルダ作成');
+    markClean();
   } catch (err) {
     console.error(`[clients] Driveフォルダ作成失敗 (${folderName}):`, err);
   }
 };
 
-// --- Driveフォルダ状態確認 ---
-const folderStatus = ref<'ok' | 'trashed' | 'deleted' | 'none' | null>(null);
-const folderCheckLoading = ref(false);
-const folderRecreating = ref(false);
-
-/** パネルopen時にDriveフォルダの存在を確認 */
-const checkDriveFolderStatus = async (row: Client) => {
-  const folderId = row.sharedFolderId;
-  if (!folderId) {
-    folderStatus.value = 'none';
-    return;
-  }
-
-  folderCheckLoading.value = true;
+/** Driveフォルダリネーム（3コードまたは会社名変更時） */
+const renameDriveFolderForClient = async (client: Client): Promise<string | null> => {
+  if (!client.sharedFolderId) return null;
+  const newName = `${client.threeCode}_${client.companyName}`;
   try {
-    const res = await fetch(`/api/drive/folder/check?folderId=${encodeURIComponent(folderId)}`);
+    const res = await fetch('/api/drive/folder/rename', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderId: client.sharedFolderId, newName }),
+    });
     if (!res.ok) {
-      folderStatus.value = 'deleted';
-      return;
+      const data = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(data.error || `HTTP ${res.status}`);
     }
-    const data = await res.json() as { exists: boolean; trashed: boolean };
-    if (!data.exists) {
-      folderStatus.value = 'deleted';
-    } else if (data.trashed) {
-      folderStatus.value = 'trashed';
-    } else {
-      folderStatus.value = 'ok';
-    }
-  } catch {
-    folderStatus.value = 'deleted';
-  } finally {
-    folderCheckLoading.value = false;
-  }
-};
-
-/** Driveフォルダ再作成 */
-const recreateDriveFolder = async () => {
-  if (!editingId.value) return;
-  const client = clients.value.find(c => c.clientId === editingId.value);
-  if (!client) return;
-
-  folderRecreating.value = true;
-  try {
-    await createDriveFolderForClient(client);
-    // 再チェック
-    await checkDriveFolderStatus(client);
-    await modal.notify({ title: 'Driveフォルダを再作成しました', variant: 'success' });
+    console.log(`[clients] Driveフォルダリネーム完了: ${newName}`);
+    return newName;
   } catch (err) {
-    console.error('[clients] Driveフォルダ再作成失敗:', err);
-    await modal.notify({ title: 'Driveフォルダの再作成に失敗しました', variant: 'warning' });
-  } finally {
-    folderRecreating.value = false;
+    console.error(`[clients] Driveフォルダリネーム失敗 (${newName}):`, err);
+    return null;
   }
 };
+
 </script>
 
 <style scoped>

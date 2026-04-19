@@ -244,7 +244,7 @@ const { staffList, addStaff, updateStaff } = useStaff();
 const modal = useModalHelper();
 
 // 未保存変更ガード（JSON永続化移行済み。composable経由でAPI呼び出し済み）
-const { markDirty } = useUnsavedGuard(null, modal);
+const { markDirty, markClean } = useUnsavedGuard(null, modal);
 
 // --- ステータスフィルター ---
 const statusFilter = ref<'all' | 'active' | 'inactive'>('active');
@@ -320,7 +320,10 @@ const commitInlineEdit = () => {
     // composable経由でサーバーに永続化
     updateStaff(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Staff>);
   }
-  markDirty();
+  const fieldLabels: Record<string, string> = { status: 'ステータス', role: '権限', name: '名前', email: 'メール' };
+  const label = fieldLabels[inlineEditField.value] ?? inlineEditField.value;
+  markDirty(`${label}を変更`);
+  markClean();
   cancelInlineEdit();
 };
 
@@ -399,7 +402,8 @@ const saveStaff = async () => {
     await modal.notify({ title: `「${data.name}」を更新しました`, variant: 'success' });
   }
   closePanel();
-  markDirty();
+  markDirty(panelMode.value === 'add' ? `「${data.name}」を追加` : `「${data.name}」を更新`);
+  markClean();
 };
 
 // --- 停止・復元 ---

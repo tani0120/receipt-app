@@ -11,7 +11,7 @@
  */
 
 import { Hono } from 'hono';
-import { listDriveFiles, downloadAndProcessDriveFile, createDriveFolder, checkFolderExists, shareFolderWithEmail, trashDriveFile } from '../services/drive/driveService';
+import { listDriveFiles, downloadAndProcessDriveFile, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, trashDriveFile } from '../services/drive/driveService';
 import { isKnownHash } from '../services/pipeline/classify.service';
 
 const app = new Hono();
@@ -99,6 +99,28 @@ app.get('/folder/check', async (c) => {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[drive/route] GET /folder/check エラー:`, msg);
     return c.json({ error: `フォルダ確認失敗: ${msg}` }, 500);
+  }
+});
+
+// ============================================================
+// PATCH /folder/rename — フォルダリネーム（3コード変更時）
+// ============================================================
+
+app.patch('/folder/rename', async (c) => {
+  const body = await c.req.json<{ folderId: string; newName: string }>();
+
+  if (!body.folderId || !body.newName) {
+    return c.json({ error: 'folderId と newName が必要です' }, 400);
+  }
+
+  try {
+    await renameDriveFolder(body.folderId, body.newName);
+    console.log(`[drive/route] PATCH /folder/rename: ${body.newName} (id=${body.folderId})`);
+    return c.json({ success: true, newName: body.newName });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[drive/route] PATCH /folder/rename エラー:`, msg);
+    return c.json({ error: `フォルダリネーム失敗: ${msg}` }, 500);
   }
 });
 

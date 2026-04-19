@@ -10,10 +10,12 @@ import type { useModalHelper } from './useModalHelper'
  * - useModalHelper.confirm() でカスタムモーダルを表示
  * - 「はい」→ saveFn() 実行して遷移
  * - 「いいえ」→ 破棄して遷移
+ * - 変更ログ（changeLog）で未保存内容の詳細をモーダルに表示
  *
  * 【使い方】
  * const modal = useModalHelper()
  * const { markDirty, markClean } = useUnsavedGuard(saveFn, modal)
+ * markDirty('3コード: ABC → XYZ')  // 変更内容を記録
  *
  * 準拠: DL-042
  */
@@ -22,12 +24,29 @@ export function useUnsavedGuard(
   modal?: ReturnType<typeof useModalHelper>,
 ) {
   const isDirty = ref(false)
+  /** 変更ログ: markDirty(msg)で積み上げ、モーダルで表示 */
+  const changeLog = ref<string[]>([])
 
-  /** 変更操作後に呼ぶ */
-  function markDirty() { isDirty.value = true }
+  /** 変更操作後に呼ぶ（msg: 変更内容の説明。省略可） */
+  function markDirty(msg?: string) {
+    isDirty.value = true
+    if (msg && !changeLog.value.includes(msg)) {
+      changeLog.value.push(msg)
+    }
+  }
 
   /** 保存成功後に呼ぶ */
-  function markClean() { isDirty.value = false }
+  function markClean() {
+    isDirty.value = false
+    changeLog.value = []
+  }
+
+  /** 変更ログをモーダル用メッセージに整形 */
+  function formatChangeLog(): string {
+    if (changeLog.value.length === 0) return '保存しますか？'
+    const items = changeLog.value.map(m => `・${m}`).join('\n')
+    return `以下の変更が未保存です:\n\n${items}\n\n保存しますか？`
+  }
 
   // Vue Routerのルートガード
   onBeforeRouteLeave(async () => {
@@ -42,13 +61,14 @@ export function useUnsavedGuard(
         saveFn()
       }
       isDirty.value = false
+      changeLog.value = []
       return true
     }
 
-    // カスタムモーダルで確認
+    // カスタムモーダルで確認（変更ログ付き）
     const answer = await modal.confirm({
       title: '未保存の変更があります',
-      message: '保存しますか？',
+      message: formatChangeLog(),
       confirmLabel: 'はい（保存して遷移）',
       cancelLabel: 'いいえ（破棄して遷移）',
     })
@@ -57,6 +77,7 @@ export function useUnsavedGuard(
       saveFn()
     }
     isDirty.value = false
+    changeLog.value = []
     return true
   })
 
@@ -72,5 +93,5 @@ export function useUnsavedGuard(
     window.removeEventListener('beforeunload', beforeUnloadHandler)
   })
 
-  return { isDirty, markDirty, markClean }
+  return { isDirty, markDirty, markClean, changeLog }
 }
