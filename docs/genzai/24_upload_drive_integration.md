@@ -156,9 +156,11 @@ Drive方式（移行後）:
 | ファイル | パス | 行数 | 役割 |
 |---|---|---|---|
 | `pipeline.ts` | `src/api/routes/` | 348 | APIルーティング（classify, upload-chunk, upload-complete, hashes） |
-| **`drive.ts`** | `src/api/routes/` | 約120 | **[新規] Drive APIルーティング（GET /files, POST /process）** |
+| **`drive.ts`** | `src/api/routes/` | 約170 | **Drive APIルーティング（GET /files, POST /process + ゴミ箱移動）** |
+| **`docStore.ts`** | `src/api/routes/` | 約95 | **[新規] ドキュメントJSON永続化APIルート（GET/POST/PUT/DELETE）** |
 | `classify.service.ts` | `src/api/services/pipeline/` | 約400 | Gemini呼出 + sharp前処理 + JSON解析 |
-| **`driveService.ts`** | `src/api/services/drive/` | 約290 | **[改修済み] SA認証 + ファイル一覧 + DL + ハッシュ + サムネイル + `grantFolderPermission()`** |
+| **`driveService.ts`** | `src/api/services/drive/` | 約310 | **SA認証 + ファイル一覧 + DL + ハッシュ + サムネイル + `grantFolderPermission()` + `trashDriveFile()`** |
+| **`documentStore.ts`** | `src/api/services/` | 約130 | **[新規] ドキュメントJSON永続化ストア（インメモリ + data/documents.json）** |
 | `types.ts` | `src/api/services/pipeline/` | 約300 | ClassifyResponse / ClassifyResponseLineItem 等の型定義 |
 | `postprocess.ts` | `src/api/services/pipeline/` | 約180 | AI生出力の正規化・fallback適用 |
 | `validateClassifyResult.ts` | `src/api/services/pipeline/` | 約170 | データ駆動バリデーション（OK/NG判定） |
@@ -582,9 +584,12 @@ Authorization: Bearer {accessToken}
 | 1 | 共有ドライブにテスト画像を数枚配置 | ✅ 完了 |
 | 2 | `/#/drive-upload/ABC-00001` でスマホ実機テスト | ✅ 完了 |
 | 3 | 顧問先フォルダID（`sharedFolderId`）の実データ設定 | ✅ 完了（LDI-00008: `1SWizWuKizIzo6bUDocClsBfdwnXelLZv`） |
-| 4 | AI分類との統合テスト | ❌ 未着手 |
-| 5 | Supabase Auth `signInWithOAuth` コールバック内で `grantFolderPermission()` 呼び出し | ❌ 未着手 |
-| 6 | Supabase Auth `signInWithPassword` / `signUp` 実装（パソコンのみフロー） | ❌ 未着手 |
+| 4 | Drive取込→drive-select→ゴミ箱移動の結合テスト | ✅ **完了**（2026-04-19。3件取込+ゴミ箱移動成功） |
+| 5 | 独自アップロード→drive-selectの結合テスト | ✅ **完了**（2026-04-19。5件反映成功） |
+| 6 | JSON永続化（サーバー再起動でもデータ保持） | ✅ **完了**（2026-04-19。DL-041） |
+| 7 | AI分類との統合テスト | ❌ 未着手 |
+| 8 | Supabase Auth `signInWithOAuth` コールバック内で `grantFolderPermission()` 呼び出し | ❌ 未着手 |
+| 9 | Supabase Auth `signInWithPassword` / `signUp` 実装（パソコンのみフロー） | ❌ 未着手 |
 
 ---
 
@@ -663,7 +668,7 @@ Authorization: Bearer {accessToken}
 export interface DocEntry {
   id: string              // UUID
   clientId: string        // 顧問先ID
-  source: 'drive' | 'upload'  // データソース
+  source: DocSource       // データソース（下記参照）
   fileName: string
   fileType: string        // MIMEタイプ
   fileSize: number        // バイト
@@ -671,10 +676,17 @@ export interface DocEntry {
   driveFileId: string | null  // Drive fileId
   thumbnailUrl: string | null // サムネイルURL
   previewUrl: string | null   // プレビュー用画像パス
-  status: 'pending' | 'target' | 'excluded'  // 選別ステータス
+  status: DocStatus       // 選別ステータス（下記参照）
   receivedAt: string      // 取得日時（ISO 8601）
+  batchId: string | null  // 選別完了→送出時に付与（batch-{clientId}-{timestamp}）
+  journalId: string | null // 仕訳ID（選別完了→送出時にUUID付与）
 }
+
+export type DocSource = 'drive' | 'upload' | 'staff-upload' | 'guest-upload'
+export type DocStatus = 'pending' | 'target' | 'supporting' | 'excluded'
 ```
+
+> **2026-04-19 DL-041更新**: `source`に`staff-upload`/`guest-upload`追加、`status`に`supporting`（根拠資料）追加、`batchId`/`journalId`フィールド追加
 
 ### 9-3. SQL（`003_documents.sql`）
 
@@ -682,11 +694,14 @@ export interface DocEntry {
 - インデックス: client_id, client_status, drive_file_id（UNIQUE）, file_hash
 - RLS: スタッフ=全顧問先アクセス可、顧問先ユーザー=自分の資料のみ
 
-### 9-4. composable（`useDocuments.ts`）
+### 9-4. composable（`useDocuments.ts`）— 2026-04-19 DL-041でAPI接続へ改修
 
-- モジュールスコープrefで全資料を直接保持（フェーズルール準拠）
+- モジュールスコープrefでフロント側キャッシュを保持（ページ遷移しても保持）
+- サーバーAPI（`/api/doc-store`）経由でJSON永続化（`data/documents.json`）
+- addDocuments/updateStatus/removeByClientIdはローカル即反映 + サーバーfire-and-forget
+- `refresh(clientId?)` でサーバーから最新データを再取得可能
 - createRepositories()に依存しない
-- モックデータ: LDI 8件（Drive 4件 + PCアップロード 4件）、MHL 3件
+- 型は`repositories/types.ts`から一元参照（二重定義禁止）
 
 ### 9-5. 算出ユーティリティ（`utils/documentUtils.ts`）
 

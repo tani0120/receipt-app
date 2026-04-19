@@ -226,14 +226,29 @@
                 {{ copiedKey === 'portal' ? 'コピーしました！' : 'URLをコピー' }}
               </span>
             </div>
-            <div class="sel-card card-drive-guest" @click="copyText(driveGuestUrl, 'driveGuest')">
+            <div class="sel-card card-drive-guest" @click="hasDriveFolder ? copyText(driveGuestUrl, 'driveGuest') : createDriveFolder()">
               <div class="card-icon-area icon-drive-guest"><span>📁</span></div>
               <h3 class="card-label">Drive共有フォルダ</h3>
-              <p class="card-sub">顧問先スマホ用（直リンク）</p>
-              <span class="copy-tag" :class="{ copied: copiedKey === 'driveGuest' }">
-                <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'driveGuest' }">📋</span>
-                {{ copiedKey === 'driveGuest' ? 'コピーしました！' : 'URLをコピー' }}
-              </span>
+              <p class="card-sub">{{ hasDriveFolder ? '顧問先スマホ用（直リンク）' : 'フォルダ未作成' }}</p>
+              <!-- フォルダ作成中 -->
+              <template v-if="isCreatingFolder">
+                <span class="copy-tag creating">⏳ 作成中...</span>
+              </template>
+              <!-- フォルダ未作成 → 作成ボタン -->
+              <template v-else-if="!hasDriveFolder">
+                <span class="copy-tag create-folder">📂 フォルダを作成</span>
+              </template>
+              <!-- フォルダ作成済み → URLコピー -->
+              <template v-else>
+                <span class="copy-tag" :class="{ copied: copiedKey === 'driveGuest' }">
+                  <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'driveGuest' }">📋</span>
+                  {{ copiedKey === 'driveGuest' ? 'コピーしました！' : 'URLをコピー' }}
+                </span>
+              </template>
+              <!-- 作成済みフォルダURL表示 -->
+              <div v-if="hasDriveFolder" class="folder-url-display">
+                <input class="folder-url-input" :value="driveGuestUrl" readonly @click="selectAll" />
+              </div>
             </div>
             <button class="sel-card card-client-pc" @click="go('/guest/' + clientId)">
               <div class="card-icon-area icon-client-pc"><span>👁</span></div>
@@ -259,10 +274,13 @@ const route = useRoute()
 const router = useRouter()
 const clientId = route.params.clientId as string
 
-const { clients } = useClients()
+const { clients, updateSharedFolderId } = useClients()
 const clientData = computed(() => clients.value.find(c => c.clientId === clientId))
 
 const origin = window.location.origin
+
+// Drive共有フォルダの有無
+const hasDriveFolder = computed(() => !!clientData.value?.sharedFolderId)
 
 // URL群（統合版: PC・スマホ共通）
 const staffPath       = `/upload/${clientId}/staff`
@@ -274,8 +292,41 @@ const driveGuestUrl   = computed(() => {
   const folderId = clientData.value?.sharedFolderId
   return folderId
     ? `https://drive.google.com/drive/folders/${folderId}`
-    : `${origin}/#/drive-upload/${clientId}/guest`
+    : ''
 })
+
+// Driveフォルダ作成
+const isCreatingFolder = ref(false)
+const createDriveFolder = async () => {
+  if (isCreatingFolder.value) return
+  const company = clientData.value?.companyName
+  if (!company) { alert('顧問先情報が取得できません'); return }
+
+  isCreatingFolder.value = true
+  try {
+    const folderName = `${clientId}_${company}`
+    const sharedEmail = clientData.value?.sharedEmail || ''
+    const res = await fetch('/api/drive/folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderName, sharedEmail: sharedEmail || undefined }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: res.statusText }))
+      throw new Error(data.error || `HTTP ${res.status}`)
+    }
+    const data = await res.json() as { folderId: string }
+    // useClientsのモジュールスコープrefを更新 → リアクティブに反映
+    updateSharedFolderId(clientId, data.folderId)
+    console.log(`[upload-v2] Driveフォルダ作成完了: ${folderName} (id=${data.folderId})`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    alert(`Driveフォルダ作成失敗: ${msg}`)
+    console.error('[upload-v2] フォルダ作成エラー:', msg)
+  } finally {
+    isCreatingFolder.value = false
+  }
+}
 
 // 共有設定（Repository経由）
 const { loadAll, updateStatus, saveInviteCode, getStatusFromCache, getInviteCodeFromCache } = useShareStatus()
@@ -286,7 +337,29 @@ async function refreshStatus() {
   currentStatus.value = getStatusFromCache(clientId)
 }
 
-onMounted(() => { refreshStatus() })
+// Driveフォルダ存在確認（ページ読込時に動的チェック）
+async function checkDriveFolderExists() {
+  const folderId = clientData.value?.sharedFolderId
+  if (!folderId) return // 未設定なら確認不要
+
+  try {
+    const res = await fetch(`/api/drive/folder/check?folderId=${encodeURIComponent(folderId)}`)
+    if (!res.ok) return // API失敗時は現状維持
+    const data = await res.json() as { exists: boolean; trashed?: boolean }
+    if (!data.exists || data.trashed) {
+      // フォルダ削除済み → sharedFolderIdをクリア
+      updateSharedFolderId(clientId, '')
+      console.log(`[upload-v2] Driveフォルダ削除検知: ${folderId} → sharedFolderIdクリア`)
+    }
+  } catch (err) {
+    console.warn('[upload-v2] フォルダ存在確認スキップ:', err)
+  }
+}
+
+onMounted(() => {
+  refreshStatus()
+  checkDriveFolderExists()
+})
 
 async function setStatus(status: ShareStatus) {
   await updateStatus(clientId, status)
@@ -646,6 +719,18 @@ void staffUrl
   margin-top: 6px; transition: all 0.3s ease;
 }
 .copy-tag.copied { background: #dcfce7; color: #166534; }
+.copy-tag.creating { background: #dbeafe; color: #1e40af; animation: pulse 1.5s ease-in-out infinite; }
+.copy-tag.create-folder { background: #fef3c7; color: #92400e; font-weight: 700; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* フォルダURL表示 */
+.folder-url-display { margin-top: 8px; width: 100%; }
+.folder-url-input {
+  width: 100%; padding: 4px 6px; border: 1px solid #e2e8f0; border-radius: 6px;
+  font-size: 9px; font-family: monospace; color: #334155; background: #f8fafc;
+  text-align: center; outline: none;
+}
+.folder-url-input:focus { border-color: #93c5fd; }
 
 /* ===== 共有方法カード ===== */
 .flow-card {

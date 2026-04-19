@@ -114,7 +114,7 @@ const clients = ref<Client[]>([
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T1234567890123',
         hasDepartmentManagement: false, hasRentalIncome: false,
-        staffId: 'staff-0002', sharedFolderId: 'mock_shared_AAA', sharedEmail: 'yamada.taro@gmail.com',
+        staffId: 'staff-0002', sharedFolderId: '', sharedEmail: 'yamada.taro@gmail.com',
         advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
     },
     {
@@ -127,7 +127,7 @@ const clients = ref<Client[]>([
         simplifiedTaxCategory: 3, taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'accounts_payable',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T9876543210987',
         hasDepartmentManagement: true, hasRentalIncome: false,
-        staffId: 'staff-0004', sharedFolderId: 'mock_shared_BBB', sharedEmail: 'suzuki.ichiro@gmail.com',
+        staffId: 'staff-0004', sharedFolderId: '', sharedEmail: 'suzuki.ichiro@gmail.com',
         advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 150000, taxFilingFee: 80000,
     },
     {
@@ -140,7 +140,7 @@ const clients = ref<Client[]>([
         taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
         isInvoiceRegistered: false, invoiceRegistrationNumber: '',
         hasDepartmentManagement: false, hasRentalIncome: true,
-        staffId: 'staff-0002', sharedFolderId: 'mock_shared_CCC', sharedEmail: '',
+        staffId: 'staff-0002', sharedFolderId: '', sharedEmail: '',
         advisoryFee: 20000, bookkeepingFee: 10000, settlementFee: 80000, taxFilingFee: 0,
     },
     {
@@ -153,7 +153,7 @@ const clients = ref<Client[]>([
         taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T5555666677778',
         hasDepartmentManagement: true, hasRentalIncome: false,
-        staffId: 'staff-0004', sharedFolderId: 'mock_shared_DDD', sharedEmail: '',
+        staffId: 'staff-0004', sharedFolderId: '', sharedEmail: '',
         advisoryFee: 80000, bookkeepingFee: 50000, settlementFee: 300000, taxFilingFee: 150000,
     },
     {
@@ -166,7 +166,7 @@ const clients = ref<Client[]>([
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T7777888899990',
         hasDepartmentManagement: false, hasRentalIncome: false,
-        staffId: 'staff-0002', sharedFolderId: 'mock_shared_EEE', sharedEmail: '',
+        staffId: 'staff-0002', sharedFolderId: '', sharedEmail: '',
         advisoryFee: 35000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
     },
     // --- 以下: 進捗管理用に追加した顧問先 ---
@@ -206,7 +206,7 @@ const clients = ref<Client[]>([
         taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
         isInvoiceRegistered: true, invoiceRegistrationNumber: 'T9999000011110',
         hasDepartmentManagement: false, hasRentalIncome: false,
-        staffId: null, sharedFolderId: '1SWizWuKizIzo6bUDocClsBfdwnXelLZv', sharedEmail: 'tamura.tomoko@gmail.com',
+        staffId: null, sharedFolderId: '', sharedEmail: 'marke.hughug@gmail.com',
         advisoryFee: 45000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
     },
     {
@@ -236,6 +236,23 @@ const clients = ref<Client[]>([
         advisoryFee: 15000, bookkeepingFee: 8000, settlementFee: 50000, taxFilingFee: 0,
     },
 ]);
+
+// --- sharedFolderIdをlocalStorageから復元（リロード・別タブ対応） ---
+const SHARED_FOLDER_STORAGE_KEY = 'sugu-suru:shared-folder-ids'
+try {
+    const saved = localStorage.getItem(SHARED_FOLDER_STORAGE_KEY)
+    if (saved) {
+        const folderMap = JSON.parse(saved) as Record<string, string>
+        for (const client of clients.value) {
+            if (folderMap[client.clientId]) {
+                client.sharedFolderId = folderMap[client.clientId]
+            }
+        }
+        console.log('[useClients] sharedFolderIdをlocalStorageから復元:', Object.keys(folderMap).length, '件')
+    }
+} catch {
+    // パース失敗時は無視
+}
 
 // =============================================
 // Composable
@@ -286,9 +303,33 @@ export function useClients() {
         return getStaffName(client.staffId)
     }
 
+    /** sharedFolderId（共有フォルダID）を更新（Driveフォルダ作成後に使用） */
+    function updateSharedFolderId(clientId: string, folderId: string) {
+        const idx = clients.value.findIndex(c => c.clientId === clientId)
+        if (idx >= 0) {
+            // 配列要素を新オブジェクトに置換 → computedの再計算をトリガー
+            clients.value[idx] = { ...clients.value[idx], sharedFolderId: folderId }
+
+            // localStorageに永続化（リロード・別タブでも保持）
+            try {
+                const saved = localStorage.getItem(SHARED_FOLDER_STORAGE_KEY)
+                const folderMap = saved ? JSON.parse(saved) as Record<string, string> : {}
+                if (folderId) {
+                    folderMap[clientId] = folderId
+                } else {
+                    delete folderMap[clientId]
+                }
+                localStorage.setItem(SHARED_FOLDER_STORAGE_KEY, JSON.stringify(folderMap))
+            } catch {
+                // localStorage書き込み失敗は無視
+            }
+        }
+    }
+
     return {
         clients,
         currentClient,
         getStaffNameForClient,
+        updateSharedFolderId,
     };
 }

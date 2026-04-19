@@ -11,7 +11,7 @@
  */
 
 import { Hono } from 'hono';
-import { listDriveFiles, downloadAndProcessDriveFile, createDriveFolder, checkFolderExists } from '../services/drive/driveService';
+import { listDriveFiles, downloadAndProcessDriveFile, createDriveFolder, checkFolderExists, shareFolderWithEmail, trashDriveFile } from '../services/drive/driveService';
 import { isKnownHash } from '../services/pipeline/classify.service';
 
 const app = new Hono();
@@ -47,7 +47,7 @@ app.get('/files', async (c) => {
 // ============================================================
 
 app.post('/folder', async (c) => {
-  const body = await c.req.json<{ folderName: string }>();
+  const body = await c.req.json<{ folderName: string; sharedEmail?: string }>();
   const sharedDriveId = process.env.VITE_SHARED_DRIVE_ID;
 
   if (!body.folderName) {
@@ -60,6 +60,19 @@ app.post('/folder', async (c) => {
   try {
     const folderId = await createDriveFolder(body.folderName, sharedDriveId);
     console.log(`[drive/route] POST /folder: ${body.folderName} (id=${folderId})`);
+
+    // 共有メールが指定されていれば編集者権限を付与
+    if (body.sharedEmail) {
+      try {
+        await shareFolderWithEmail(folderId, body.sharedEmail, 'writer');
+        console.log(`[drive/route] 共有権限付与: ${body.sharedEmail}`);
+      } catch (shareErr) {
+        const shareMsg = shareErr instanceof Error ? shareErr.message : String(shareErr);
+        console.error(`[drive/route] 共有権限付与失敗（フォルダ自体は作成済み）: ${shareMsg}`);
+        // フォルダ作成は成功しているのでエラーにはしない
+      }
+    }
+
     return c.json({ folderId, folderName: body.folderName });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -147,6 +160,14 @@ app.post('/process', async (c) => {
         mimeType: result.mimeType,
         isDuplicate,
       });
+
+      // 取り込み成功 → Driveのファイルをゴミ箱に移動（データ消失防止: 失敗時は移動しない）
+      try {
+        await trashDriveFile(file.fileId);
+      } catch (trashErr) {
+        const trashMsg = trashErr instanceof Error ? trashErr.message : String(trashErr);
+        console.warn(`[drive/route] ゴミ箱移動失敗 (${file.filename}): ${trashMsg}（取り込みは成功済み）`);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[drive/route] ファイル処理失敗 (${file.filename}):`, msg);

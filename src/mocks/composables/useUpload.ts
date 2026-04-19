@@ -14,6 +14,8 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from '@/mocks/services/receiptService'
 import { errorGuideMessage } from '@/shared/validationMessages'
+import { useDocuments } from '@/composables/useDocuments'
+import type { DocEntry, DocSource, DocStatus } from '@/repositories/types'
 
 // ===== 型定義（統一） =====
 
@@ -857,6 +859,29 @@ export function useUpload() {
   // ===== 送付確定 =====
   const handleConfirm = () => {
     if (!canConfirm.value) return
+
+    // OK済みのentryをDocEntryに変換してuseDocumentsに追加
+    const { addDocuments } = useDocuments()
+    const okEntries = entries.value.filter(e => e.status === 'ok')
+    const docEntries: DocEntry[] = okEntries.map(e => ({
+      id: e.documentId,
+      clientId,
+      source: (role === 'guest' ? 'guest-upload' : 'staff-upload') as DocSource,
+      fileName: e.fileName,
+      fileType: e.file?.type || 'application/octet-stream',
+      fileSize: e.fileSize,
+      fileHash: e.hash,
+      driveFileId: null,
+      thumbnailUrl: e.previewUrl,
+      previewUrl: e.previewUrlHQ || e.previewUrl,
+      status: 'pending' as DocStatus,
+      receivedAt: new Date(e.completedAt ?? Date.now()).toISOString(),
+      batchId: null,
+      journalId: null,
+    }))
+    const addedCount = addDocuments(docEntries)
+    console.log(`[useUpload] handleConfirm: ${addedCount}件をuseDocumentsに追加 (role=${role})`)
+
     confirmedCount.value = counts.value.ok
     showComplete.value = true
   }

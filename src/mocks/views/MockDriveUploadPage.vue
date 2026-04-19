@@ -231,9 +231,9 @@ const fetchFiles = async () => {
   loadError.value = ''
 
   try {
-    // 顧問先のdriveId（フォルダID）を取得
+    // 顧問先のsharedFolderId（フォルダID）を取得
     const client = clients.value.find(c => c.clientId === clientId)
-    const folderId = (client as Record<string, unknown>)?.driveId as string | undefined
+    const folderId = client?.sharedFolderId
 
     if (!folderId) {
       // モックモード: ドライブ未設定の場合はダミーデータ

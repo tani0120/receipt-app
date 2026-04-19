@@ -211,10 +211,10 @@ export type ShareStatusRepository = {
 // ============================================================
 
 /** 資料のデータソース */
-export type DocSource = 'drive' | 'upload'
+export type DocSource = 'drive' | 'upload' | 'staff-upload' | 'guest-upload'
 
 /** 資料の選別ステータス */
-export type DocStatus = 'pending' | 'target' | 'excluded'
+export type DocStatus = 'pending' | 'target' | 'supporting' | 'excluded'
 
 /**
  * 資料1件（Drive/PCアップロードで取り込んだファイル）
@@ -245,10 +245,14 @@ export interface DocEntry {
   thumbnailUrl: string | null
   /** プレビュー用画像パス（フルサイズ閲覧用） */
   previewUrl: string | null
-  /** 選別ステータス（'pending' | 'target' | 'excluded'） */
+  /** 選別ステータス（'pending' | 'target' | 'supporting' | 'excluded'） */
   status: DocStatus
   /** 取得日時（ISO 8601形式。バッチ取り込み時のタイムスタンプ） */
   receivedAt: string
+  /** バッチID（選別完了→送出時に付与。1回の送出=1バッチ） */
+  batchId: string | null
+  /** 仕訳ID（選別完了→送出時に全件付与） */
+  journalId: string | null
 }
 
 /**

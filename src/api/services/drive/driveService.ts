@@ -83,11 +83,11 @@ function getDriveClient() {
 // ===== 公開関数 =====
 
 /**
- * 共有ドライブにフォルダを作成
+ * 共有ドライブにフォルダを作成（同名フォルダが存在すれば既存IDを返す）
  *
  * @param folderName - フォルダ名（例: 'LDI_株式会社LDIデジタル'）
  * @param sharedDriveId - 共有ドライブのID
- * @returns 作成されたフォルダのID
+ * @returns 作成された（または既存の）フォルダのID
  */
 export async function createDriveFolder(
   folderName: string,
@@ -95,6 +95,25 @@ export async function createDriveFolder(
 ): Promise<string> {
   const drive = getDriveClient();
 
+  // --- 同名フォルダの重複チェック ---
+  const existing = await drive.files.list({
+    q: `name = '${folderName.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and '${sharedDriveId}' in parents and trashed = false`,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+    corpora: 'drive',
+    driveId: sharedDriveId,
+    fields: 'files(id, name)',
+  });
+
+  if (existing.data.files && existing.data.files.length > 0) {
+    const existingId = existing.data.files[0].id!;
+    console.log(
+      `[driveService] 同名フォルダ検出（新規作成スキップ）: ${folderName} (id=${existingId})`,
+    );
+    return existingId;
+  }
+
+  // --- 既存なし → 新規作成 ---
   const response = await drive.files.create({
     supportsAllDrives: true,
     requestBody: {
@@ -111,10 +130,58 @@ export async function createDriveFolder(
   }
 
   console.log(
-    `[driveService] フォルダ作成完了: ${folderName} (id=${folderId})`,
+    `[driveService] フォルダ新規作成完了: ${folderName} (id=${folderId})`,
   );
 
   return folderId;
+}
+
+/**
+ * フォルダに指定メールアドレスへの共有権限を付与
+ *
+ * @param folderId - 対象フォルダID
+ * @param email - 共有先メールアドレス
+ * @param role - 権限（'reader' | 'writer' | 'commenter'）
+ */
+export async function shareFolderWithEmail(
+  folderId: string,
+  email: string,
+  role: 'reader' | 'writer' | 'commenter' = 'writer',
+): Promise<void> {
+  const drive = getDriveClient();
+
+  await drive.permissions.create({
+    fileId: folderId,
+    supportsAllDrives: true,
+    sendNotificationEmail: false,
+    requestBody: {
+      type: 'user',
+      role,
+      emailAddress: email,
+    },
+  });
+
+  console.log(
+    `[driveService] 共有権限付与完了: ${email} → ${folderId} (role=${role})`,
+  );
+}
+
+/**
+ * DriveファイルをDriveのゴミ箱に移動
+ * 取り込み成功後に呼び出し、フォルダ内のファイルをクリーンアップ
+ *
+ * @param fileId - ゴミ箱に移動するファイルID
+ */
+export async function trashDriveFile(fileId: string): Promise<void> {
+  const drive = getDriveClient();
+
+  await drive.files.update({
+    fileId,
+    supportsAllDrives: true,
+    requestBody: { trashed: true },
+  });
+
+  console.log(`[driveService] ゴミ箱移動完了: ${fileId}`);
 }
 
 /**

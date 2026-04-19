@@ -184,9 +184,14 @@
                   <span v-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
                   <span v-else class="cm-shared-email-none">未取得</span>
                 </td>
-                <td class="cm-drive-cell" @click.stop="copyDriveUrl(row.clientId)">
-                  <span v-if="driveUrlCopied === row.clientId" class="cm-drive-copied">✅ コピー済</span>
-                  <span v-else class="cm-drive-link">📋 URLコピー</span>
+                <td class="cm-drive-cell" @click.stop="row.sharedFolderId ? copyDriveUrl(row) : undefined">
+                  <template v-if="!row.sharedFolderId">
+                    <span class="cm-drive-none">—</span>
+                  </template>
+                  <template v-else>
+                    <span v-if="driveUrlCopied === row.clientId" class="cm-drive-copied">✅ コピー済</span>
+                    <span v-else class="cm-drive-link">📋 URLコピー</span>
+                  </template>
                 </td>
                 <td class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'chatRoomUrl', $event)">
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'chatRoomUrl'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
@@ -552,7 +557,7 @@ const clDefaultWidths: Record<string, number> = {
 const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnResize('master-clients', clDefaultWidths);
 
 // --- クライアントデータ（composableから取得） ---
-const { clients, getStaffNameForClient } = useClients();
+const { clients, getStaffNameForClient, updateSharedFolderId } = useClients();
 const { staffList, activeStaff: activeStaffList } = useStaff();
 
 // 未保存変更ガード
@@ -846,22 +851,25 @@ onUnmounted(() => document.removeEventListener('click', closeDropdowns));
 const driveUrlCopied = ref<string | null>(null);
 const driveUrlPanelCopied = ref(false);
 
-/** テーブル行のDrive取达URLをコピー */
-const copyDriveUrl = async (clientId: string) => {
-  const url = `${window.location.origin}/#/drive-upload/${clientId}/guest`;
+/** テーブル行のDrive共有フォルダURLをコピー */
+const copyDriveUrl = async (row: Client) => {
+  const url = `https://drive.google.com/drive/folders/${row.sharedFolderId}`;
   try {
     await navigator.clipboard.writeText(url);
-    driveUrlCopied.value = clientId;
+    driveUrlCopied.value = row.clientId;
     setTimeout(() => { driveUrlCopied.value = null; }, 2500);
   } catch {
     window.prompt('URLをコピーしてください:', url);
   }
 };
 
-/** パネル内のDrive取达URL（編集時はeditingId、新規時は「保存後に自動生成」） */
+/** パネル内のDrive共有フォルダURL（編集時はsharedFolderIdから生成） */
 const driveUploadUrl = computed(() => {
-  const id = editingId.value || '（保存後に自動生成）';
-  return `${window.location.origin}/#/drive-upload/${id}/guest`;
+  if (!editingId.value) return '（保存後に自動生成）';
+  const client = clients.value.find(c => c.clientId === editingId.value);
+  return client?.sharedFolderId
+    ? `https://drive.google.com/drive/folders/${client.sharedFolderId}`
+    : '（Driveフォルダ未作成）';
 });
 
 /** パネル内のDrive URLコピー */
@@ -878,11 +886,12 @@ const copyDriveUrlPanel = async () => {
 /** Driveフォルダ自動作成（新規登録時） */
 const createDriveFolderForClient = async (client: Client) => {
   const folderName = `${client.threeCode}_${client.companyName}`;
+  const sharedEmail = client.sharedEmail || '';
   try {
     const res = await fetch('/api/drive/folder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ folderName }),
+      body: JSON.stringify({ folderName, sharedEmail: sharedEmail || undefined }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({ error: res.statusText }));
@@ -890,12 +899,9 @@ const createDriveFolderForClient = async (client: Client) => {
     }
     const data = await res.json() as { folderId: string };
     console.log(`[clients] Driveフォルダ作成完了: ${folderName} (id=${data.folderId})`);
-    // driveIdを顧問先データに保存
-    const idx = clients.value.findIndex(c => c.clientId === client.clientId);
-    if (idx >= 0) {
-      (clients.value[idx] as unknown as Record<string, unknown>).driveId = data.folderId;
-      markDirty();
-    }
+    // sharedFolderIdを更新（driveIdではなくsharedFolderIdに統一）
+    updateSharedFolderId(client.clientId, data.folderId);
+    markDirty();
   } catch (err) {
     console.error(`[clients] Driveフォルダ作成失敗 (${folderName}):`, err);
   }
@@ -908,15 +914,15 @@ const folderRecreating = ref(false);
 
 /** パネルopen時にDriveフォルダの存在を確認 */
 const checkDriveFolderStatus = async (row: Client) => {
-  const driveId = (row as unknown as Record<string, unknown>).driveId as string | undefined;
-  if (!driveId) {
+  const folderId = row.sharedFolderId;
+  if (!folderId) {
     folderStatus.value = 'none';
     return;
   }
 
   folderCheckLoading.value = true;
   try {
-    const res = await fetch(`/api/drive/folder/check?folderId=${encodeURIComponent(driveId)}`);
+    const res = await fetch(`/api/drive/folder/check?folderId=${encodeURIComponent(folderId)}`);
     if (!res.ok) {
       folderStatus.value = 'deleted';
       return;

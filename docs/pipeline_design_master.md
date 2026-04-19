@@ -2545,7 +2545,7 @@ export async function grantFolderPermission(
 |---|---|
 | 型定義場所 | `src/repositories/types.ts` に `DocEntry` + `DocumentRepository` 追加 |
 | SQL | `supabase/migrations/003_documents.sql` 新規作成（10番目のテーブル） |
-| composable | `src/composables/useDocuments.ts`（モジュールスコープrefで直接保持） |
+| composable | `src/composables/useDocuments.ts`（モジュールスコープref → DL-041でAPI接続に改修） |
 | 算出ロジック | `src/utils/documentUtils.ts` に分離（composable/Repositoryにロジックを入れない） |
 | 資料選別ページ | `MockDriveSelectPage.vue` をuseDocuments接続に改修 |
 | 進捗管理連動 | `useProgress.ts` のreceivedDate/unsortedをDocEntryから動的算出 |
@@ -2570,3 +2570,82 @@ export async function grantFolderPermission(
 モック: 人間がAIに「アップした」と伝える → AIがrefにデータ投入
 即時性: 不要（前日昼に届いたら翌朝に資料選別にあればOK）
 ```
+
+---
+
+## DL-041 | JSON永続化 + サーバーAPI接続（2026-04-19）
+
+**状態**: 完了（インメモリ+JSON永続化ストア + APIルート + composable API接続 + DocEntry型拡張 + Drive/独自アップロード結合テスト完了）
+
+### 決定内容
+
+| 項目 | 決定 | 理由 |
+|---|---|---|
+| 永続化方式 | **インメモリ + JSONファイル**（`data/documents.json`） | 1か月のモック期間。サーバー再起動でもデータ保持。Supabase移行時にDB操作に差し替えるだけ |
+| Supabase直接接続 | **時期尚早。不採用** | UI+APIの形が固まってないのにDB繋ぐと柔軟性を失う。リポジトリパターンで移行対応済み |
+| ブラウザ間共有 | **サーバー側にデータ保持で解決** | Vueのrefはブラウザメモリ内で閉じる。APIサーバー経由ならどのブラウザからも同じデータ |
+| API設計 | RESTful（`/api/doc-store`） | 既存の`/api/documents`（Supabase向け）と共存 |
+| 型参照 | `repositories/types.ts`から一元import | 二重定義を構造的に防止。TypeScriptコンパイラで同期漏れを検知 |
+
+### 型参照構造（確定）
+
+```
+repositories/types.ts ← 唯一の型定義源泉
+  ├── composables/useDocuments.ts（フロント）→ import type { DocEntry }
+  ├── api/services/documentStore.ts（サーバー）→ import type { DocEntry }
+  └── mocks/composables/useUpload.ts（フロント）→ import type { DocEntry }
+```
+
+### DocEntry型拡張（DL-040から差分）
+
+| フィールド | 追加内容 |
+|---|---|
+| `source` | `'staff-upload' \| 'guest-upload'` 追加 |
+| `status` | `'supporting'`（根拠資料）追加 |
+| `batchId` | 選別完了→送出時に付与（`batch-{clientId}-{timestamp}`） |
+| `journalId` | 選別完了→送出時にUUID付与 |
+
+### 新規ファイル
+
+| ファイル | パス | 役割 |
+|---|---|---|
+| `documentStore.ts` | `src/api/services/` | インメモリ+JSON永続化ストア |
+| `docStore.ts` | `src/api/routes/` | APIルート（GET/POST/PUT/DELETE） |
+
+### APIエンドポイント
+
+| メソッド | パス | 用途 |
+|---|---|---|
+| `GET` | `/api/doc-store?clientId=xxx` | ドキュメント一覧取得 |
+| `POST` | `/api/doc-store` | ドキュメント一括追加（重複チェック付き） |
+| `PUT` | `/api/doc-store/:id` | ステータス更新 |
+| `POST` | `/api/doc-store/batch` | 選別完了→batchId/journalId付与 |
+| `DELETE` | `/api/doc-store/client/:clientId` | 顧問先の全資料削除 |
+
+### フロント側の通信方式
+
+**ローカルref即反映 + サーバーfire-and-forget**
+
+- addDocuments: refに追加 → POSTをfire-and-forget
+- updateStatus: refを更新 → PUTをfire-and-forget
+- removeByClientId: refをフィルタ → DELETEをfire-and-forget
+- refresh: サーバーからGET → refを差し替え
+
+**なぜfire-and-forgetか**:
+- モック段階でawaitすると体感遅延が発生
+- サーバーエラー時もUI操作は継続可能
+- Supabase移行時にawaitに変更すればリトライ/エラー表示が可能
+
+### 検証結果（2026-04-19）
+
+| テスト | 結果 |
+|---|---|
+| GET /api/doc-store（空） | ✅ `{ documents: [], count: 0 }` |
+| POST（1件追加） | ✅ `{ ok: true, added: 1, skipped: 0 }` |
+| POST（同一fileHash重複） | ✅ `{ ok: true, added: 0, skipped: 1 }` |
+| JSONファイル永続化確認 | ✅ `data/documents.json` に書き出し |
+| Drive取込→drive-select→ゴミ箱移動 | ✅ 3件取込成功 |
+| 独自アップロード→drive-select | ✅ 5件反映成功 |
+| batchId/journalId付与 | ✅ 全件付与成功 |
+| TypeScript型チェック | ✅ 通過 |
+

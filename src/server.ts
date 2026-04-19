@@ -76,6 +76,10 @@ app.route('/api/pipeline', pipelineRoute)
 import driveRoute from './api/routes/drive'
 app.route('/api/drive', driveRoute)
 
+// Doc Store API: ドキュメントJSON永続化
+import docStoreRoute from './api/routes/docStore'
+app.route('/api/doc-store', docStoreRoute)
+
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
 

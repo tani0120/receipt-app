@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS documents (
   thumbnail_url   TEXT,                                -- サムネイルURL
   preview_url     TEXT,                                -- プレビュー用URL
   status          TEXT NOT NULL DEFAULT 'pending'
-                  CHECK (status IN ('pending', 'target', 'excluded')),
+                  CHECK (status IN ('pending', 'target', 'supporting', 'excluded')),
   received_at     TIMESTAMPTZ NOT NULL,                -- 取得日時（バッチ取り込み時）
   created_at      TIMESTAMPTZ DEFAULT now(),
   updated_at      TIMESTAMPTZ DEFAULT now()
