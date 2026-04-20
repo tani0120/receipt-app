@@ -156,6 +156,11 @@ const router = useRouter();
 const { progressRows, monthColumns, staffList: allStaff, getSortValue } = useProgress();
 const { getStaffNameForClient } = useClients();
 
+// 進捗管理ページ表示時にuseDocumentsの最新データを取得
+import { useDocuments } from '@/composables/useDocuments';
+const { refresh: refreshDocs } = useDocuments();
+onMounted(async () => { await refreshDocs(); });
+
 // --- フィルター ---
 const filterClient = ref('');
 const filterStaff = ref('');
@@ -272,7 +277,9 @@ const pagedRows = computed(() => {
 const tagCount = ref(3);
 const buildDate = ref(new Date().toLocaleString('ja-JP'));
 
-const refreshData = () => {
+const refreshData = async () => {
+  const { refresh } = await import('@/composables/useDocuments').then(m => ({ refresh: m.useDocuments().refresh }));
+  await refresh();
   buildDate.value = new Date().toLocaleString('ja-JP');
 };
 

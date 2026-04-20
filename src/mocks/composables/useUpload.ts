@@ -858,35 +858,85 @@ export function useUpload() {
   }
 
   // ===== 送付確定 =====
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!canConfirm.value) return
 
-    // OK済みのentryをDocEntryに変換してuseDocumentsに追加
-    const { addDocuments } = useDocuments()
     const okEntries = entries.value.filter(e => e.status === 'ok')
-    const docEntries: DocEntry[] = okEntries.map(e => ({
-      id: e.documentId,
-      clientId,
-      source: (role === 'guest' ? 'guest-upload' : 'staff-upload') as DocSource,
-      fileName: e.fileName,
-      fileType: e.file?.type || 'application/octet-stream',
-      fileSize: e.fileSize,
-      fileHash: e.hash,
-      driveFileId: null,
-      thumbnailUrl: e.previewUrl,
-      previewUrl: e.previewUrlHQ || e.previewUrl,
-      status: 'pending' as DocStatus,
-      receivedAt: new Date(e.completedAt ?? Date.now()).toISOString(),
-      batchId: null,
-      journalId: null,
-      createdBy: role === 'guest' ? 'guest' : useCurrentUser().currentStaffId.value,
-      updatedBy: null,
-      updatedAt: null,
-      statusChangedBy: null,
-      statusChangedAt: null,
-    }))
-    const addedCount = addDocuments(docEntries)
-    console.log(`[useUpload] handleConfirm: ${addedCount}件をuseDocumentsに追加 (role=${role})`)
+    const docEntries: DocEntry[] = []
+
+    // 1. 各ファイルをサーバーにアップロードして永続保存
+    for (const e of okEntries) {
+      let localPath: string | null = null
+      let serverHash: string | null = e.hash
+
+      // ファイルが存在する場合はサーバーに送信
+      if (e.file) {
+        try {
+          const formData = new FormData()
+          formData.append('file', e.file)
+          formData.append('clientId', clientId)
+          const uploadRes = await fetch('/api/doc-store/upload-file', {
+            method: 'POST',
+            body: formData,
+          })
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json() as { localPath: string; fileHash: string }
+            localPath = uploadData.localPath
+            serverHash = uploadData.fileHash
+          } else {
+            console.error(`[useUpload] ファイル保存失敗 (${e.fileName}): HTTP ${uploadRes.status}`)
+          }
+        } catch (err) {
+          console.error(`[useUpload] ファイル送信エラー (${e.fileName}):`, err)
+        }
+      }
+
+      docEntries.push({
+        id: e.documentId,
+        clientId,
+        source: (role === 'guest' ? 'guest-upload' : 'staff-upload') as DocSource,
+        fileName: e.fileName,
+        fileType: e.file?.type || 'application/octet-stream',
+        fileSize: e.fileSize,
+        fileHash: serverHash,
+        driveFileId: null,
+        thumbnailUrl: e.previewUrl,
+        previewUrl: localPath || e.previewUrlHQ || e.previewUrl,
+        status: 'pending' as DocStatus,
+        receivedAt: new Date(e.completedAt ?? Date.now()).toISOString(),
+        batchId: null,
+        journalId: null,
+        createdBy: role === 'guest' ? 'guest' : useCurrentUser().currentStaffId.value,
+        updatedBy: null,
+        updatedAt: null,
+        statusChangedBy: null,
+        statusChangedAt: null,
+      })
+    }
+
+    // 2. documentStoreにPOST（awaitでエラーを捕捉）
+    try {
+      const res = await fetch('/api/doc-store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documents: docEntries }),
+      })
+      if (!res.ok) {
+        console.error(`[useUpload] documentStore保存失敗: HTTP ${res.status}`)
+        alert('データ保存に失敗しました。再度お試しください。')
+        return
+      }
+      const result = await res.json() as { added: number; skipped: number }
+      console.log(`[useUpload] handleConfirm: サーバーに${result.added}件保存（重複${result.skipped}件スキップ）(role=${role})`)
+    } catch (err) {
+      console.error('[useUpload] documentStore保存エラー:', err)
+      alert('データ保存に失敗しました。ネットワーク接続を確認してください。')
+      return
+    }
+
+    // 3. フロントのキャッシュを再取得
+    const { refresh } = useDocuments()
+    await refresh()
 
     confirmedCount.value = counts.value.ok
     showComplete.value = true

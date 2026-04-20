@@ -76,6 +76,7 @@
               <button type="submit" class="submit-btn" :disabled="!canSubmit">
                 {{ isRegister ? 'アカウントを作成' : 'ログイン' }}
               </button>
+              <p v-if="authError" class="auth-error">{{ authError }}</p>
             </form>
             <p class="form-hint">※ Googleアカウントは不要です。メールとパスワードだけでOK</p>
             <div class="form-switch">
@@ -139,7 +140,12 @@
           <section class="step-section">
             <div class="step-badge">STEP 3</div>
             <h2 class="step-title">Googleアカウントでログイン</h2>
-            <p class="step-note">Androidスマホをお使いの方は、Googleアカウントとドライブアプリをすでにお持ちです。<br>下のボタンを押すだけで完了します。</p>
+            <p class="step-note">Androidスマホをお使いの方は、Googleアカウントとドライブアプリをすでにお持ちです。<br>下のボタンを押すと以下が完了します：</p>
+            <ul class="step-list">
+              <li>✅ Googleアカウントでログイン</li>
+              <li>✅ 共有フォルダへのアクセス権を自動取得</li>
+              <li>✅ スマホのドライブアプリから資料を送付可能に</li>
+            </ul>
             <div class="google-card">
               <button class="google-btn" @click="handleGoogleLogin">
                 <svg class="google-svg" viewBox="0 0 24 24" width="20" height="20">
@@ -287,27 +293,142 @@ const canSubmit = computed(() => {
   return true
 })
 
+/** 認証エラーメッセージ */
+const authError = ref('')
+
 /** ログイン後の共通処理: 共有方法をlocalStorageに保存して遷移 */
 const completeLogin = () => {
+  authError.value = ''
   localStorage.setItem(`guest_share_${clientId}`, shareMethod.value ?? 'pc')
   router.push(`/guest/${clientId}`)
 }
 
-const handleEmailLogin = () => {
-  // Supabase Auth の signInWithPassword() で実装予定
-  completeLogin()
+const handleEmailLogin = async () => {
+  authError.value = ''
+  try {
+    const res = await fetch('/api/guest/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.value, password: password.value }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      authError.value = data.error ?? 'ログインに失敗しました'
+      return
+    }
+    completeLogin()
+  } catch {
+    authError.value = 'サーバーに接続できません'
+  }
 }
 
-const handleEmailRegister = () => {
-  // Supabase Auth の signUp() で実装予定
-  completeLogin()
+const handleEmailRegister = async () => {
+  authError.value = ''
+  try {
+    const res = await fetch('/api/guest/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value,
+        displayName: displayName.value,
+        clientId,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      authError.value = data.error ?? '登録に失敗しました'
+      return
+    }
+    completeLogin()
+  } catch {
+    authError.value = 'サーバーに接続できません'
+  }
 }
 
-/* Google認証（スマホも使う） */
+/* Google認証（スマホも使う） — Google Identity Services (GIS) */
+// GIS型定義（グローバル google.accounts.id）
+interface GoogleCredentialResponse {
+  credential: string  // JWTトークン
+  select_by: string
+}
+interface GoogleAccountsId {
+  initialize: (config: {
+    client_id: string
+    callback: (response: GoogleCredentialResponse) => void
+    auto_select?: boolean
+  }) => void
+  prompt: () => void
+}
+declare global {
+  interface Window {
+    google?: { accounts: { id: GoogleAccountsId } }
+  }
+}
+
+/** JWTペイロードデコード（base64url → JSON） */
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  const parts = token.split('.')
+  const payload = parts[1]
+  if (!payload) throw new Error('不正なJWTトークン')
+  const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+  return JSON.parse(atob(base64))
+}
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
+
 const handleGoogleLogin = () => {
-  // Supabase Auth の signInWithOAuth({ provider: 'google' }) で実装予定
-  // 成功後に grantFolderPermission() でDrive権限を付与
-  completeLogin()
+  authError.value = ''
+  if (!window.google?.accounts?.id) {
+    authError.value = 'Google認証スクリプトが読み込まれていません。ページを再読み込みしてください。'
+    return
+  }
+
+  window.google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: async (response: GoogleCredentialResponse) => {
+      try {
+        const payload = decodeJwtPayload(response.credential)
+        const email = payload.email as string
+        console.log('[GoogleLogin] 成功:', email, payload.name)
+
+        // Googleアカウント情報をlocalStorageに保存
+        localStorage.setItem(`guest_google_${clientId}`, JSON.stringify({
+          email,
+          name: payload.name,
+          picture: payload.picture,
+          sub: payload.sub,
+        }))
+
+        // Drive共有フォルダへのアクセス権を自動付与
+        const client = clients.value.find(c => c.clientId === clientId)
+        const folderId = client?.sharedFolderId
+        if (folderId && email) {
+          try {
+            const res = await fetch('/api/drive/grant-permission', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ folderId, email, role: 'writer' }),
+            })
+            const data = await res.json()
+            if (res.ok) {
+              console.log('[GoogleLogin] Drive権限付与成功:', data)
+            } else {
+              console.warn('[GoogleLogin] Drive権限付与失敗:', data.error)
+            }
+          } catch {
+            console.warn('[GoogleLogin] Drive権限付与API接続失敗')
+          }
+        }
+
+        completeLogin()
+      } catch (err) {
+        console.error('[GoogleLogin] JWT解析失敗:', err)
+        authError.value = 'Googleログインに失敗しました'
+      }
+    },
+  })
+  window.google.accounts.id.prompt()
 }
 </script>
 
@@ -454,6 +575,17 @@ const handleGoogleLogin = () => {
 }
 .submit-btn:hover { box-shadow: 0 4px 14px rgba(99,102,241,0.3); }
 .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.auth-error {
+  margin: 10px 0 0; padding: 10px 14px;
+  font-size: 13px; font-weight: 600; color: #dc2626;
+  background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: 8px; text-align: center;
+}
+.step-list {
+  margin: 6px 0 12px 8px; padding-left: 4px;
+  font-size: 13px; color: #475569; line-height: 1.8;
+  list-style: none;
+}
 .form-hint {
   margin: 14px 0 0; font-size: 12px;
   color: #64748b; text-align: center;

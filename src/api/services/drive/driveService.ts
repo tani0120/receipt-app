@@ -48,6 +48,8 @@ export interface DriveDownloadResult {
   filename: string;
   /** MIMEタイプ */
   mimeType: string;
+  /** ローカル保存パス（/api/uploads/{clientId}/{safeName}） */
+  localPath: string;
 }
 
 // ===== 認証（サービスアカウント） =====
@@ -285,17 +287,19 @@ export async function listDriveFiles(
 }
 
 /**
- * Drive API でファイルをダウンロードし、ハッシュ+サムネイルを生成
+ * Drive API でファイルをダウンロードし、ハッシュ+サムネイル+ローカル保存
  *
  * @param fileId - Google Drive ファイルID
  * @param filename - ファイル名
  * @param mimeType - MIMEタイプ
- * @returns ハッシュ・サムネイル・ファイル情報
+ * @param clientId - 顧問先ID（ローカル保存先ディレクトリ）
+ * @returns ハッシュ・サムネイル・ローカルパス・ファイル情報
  */
 export async function downloadAndProcessDriveFile(
   fileId: string,
   filename: string,
   mimeType: string,
+  clientId: string,
 ): Promise<DriveDownloadResult> {
   const drive = getDriveClient();
 
@@ -314,7 +318,18 @@ export async function downloadAndProcessDriveFile(
   // 2. SHA-256 ハッシュ計算
   const fileHash = createHash('sha256').update(buffer).digest('hex');
 
-  // 3. サムネイル生成（sharp 200px JPEG。画像のみ）
+  // 3. ローカルに保存（リロード後も表示可能にする）
+  const { mkdirSync, writeFileSync } = await import('fs');
+  const { join } = await import('path');
+  const dir = join('data', 'uploads', clientId);
+  mkdirSync(dir, { recursive: true });
+  // ファイル名衝突防止: hash先頭8文字を付与
+  const safeName = `${fileHash.slice(0, 8)}_${filename}`;
+  const filePath = join(dir, safeName);
+  writeFileSync(filePath, buffer);
+  const localPath = `/api/uploads/${clientId}/${encodeURIComponent(safeName)}`;
+
+  // 4. サムネイル生成（sharp 200px JPEG。画像のみ）
   let thumbnail: string | null = null;
   if (mimeType.startsWith('image/')) {
     try {
@@ -332,7 +347,8 @@ export async function downloadAndProcessDriveFile(
   console.log(
     `[driveService] ${filename} (${(buffer.length / 1024).toFixed(0)}KB)`
     + ` hash=${fileHash.slice(0, 12)}...`
-    + ` thumb=${thumbnail ? `${(thumbnail.length / 1024).toFixed(1)}KB` : 'なし'}`,
+    + ` thumb=${thumbnail ? `${(thumbnail.length / 1024).toFixed(1)}KB` : 'なし'}`
+    + ` local=${localPath ?? 'なし'}`,
   );
 
   return {
@@ -341,6 +357,7 @@ export async function downloadAndProcessDriveFile(
     thumbnail,
     filename,
     mimeType,
+    localPath,
   };
 }
 

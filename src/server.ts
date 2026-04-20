@@ -102,6 +102,17 @@ await loadVendors()
 import vendorRoutes from './api/routes/vendorRoutes'
 app.route('/api/vendors', vendorRoutes)
 
+// ShareStatus API: 共有設定JSON永続化（DL-043）
+import shareStatusRoutes from './api/routes/shareStatusRoutes'
+app.route('/api/share-status', shareStatusRoutes)
+
+// GuestAuth API: ゲスト認証JSON永続化（DL-043）
+import guestAuthRoutes from './api/routes/guestAuthRoutes'
+app.route('/api/guest', guestAuthRoutes)
+
+// Drive取り込みファイル配信（data/uploads/{clientId}/{filename}）
+app.use('/api/uploads/*', serveStatic({ root: './data/uploads', rewriteRequestPath: (path) => path.replace('/api/uploads', '') }))
+
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
 

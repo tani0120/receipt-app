@@ -62,6 +62,7 @@
                 </button>
                 <div class="url-box" v-if="inviteUrl">
                   <span class="url-label">招待リンクURL：</span>
+                  <p class="url-note">🔀 ランダム生成しています。最新URL以外は無効になります。</p>
                   <div class="url-row">
                     <input class="url-input" :value="inviteUrl" readonly @click="selectAll" />
                     <button class="copy-btn" :class="{ 'copy-btn--copied': copiedKey === 'invite' }" @click="copyText(inviteUrl, 'invite')">
@@ -847,5 +848,11 @@ void staffUrl
 }
 .share-seg--dimmed:hover {
   color: #64748b;
+}
+.url-note {
+  margin: 2px 0 6px;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
 }
 </style>

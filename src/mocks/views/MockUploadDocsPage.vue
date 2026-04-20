@@ -366,8 +366,77 @@ const removeFile = (idx: number) => {
 }
 
 // ===== 確定 =====
-const handleConfirm = () => {
-  if (!canConfirm.value) return
+const isConfirming = ref(false)
+const handleConfirm = async () => {
+  if (!canConfirm.value || isConfirming.value) return
+  isConfirming.value = true
+
+  const doneFiles = files.value.filter(f => f.status === 'done')
+  const docEntries: Array<Record<string, unknown>> = []
+
+  // 1. 各ファイルをサーバーに保存
+  for (const f of doneFiles) {
+    let localPath: string | null = null
+    let fileHash: string | null = null
+    try {
+      const formData = new FormData()
+      formData.append('file', f.file)
+      formData.append('clientId', clientId)
+      const res = await fetch('/api/doc-store/upload-file', { method: 'POST', body: formData })
+      if (res.ok) {
+        const data = await res.json() as { localPath: string; fileHash: string }
+        localPath = data.localPath
+        fileHash = data.fileHash
+      }
+    } catch (err) {
+      console.error(`[DocsPage] ファイル保存失敗 (${f.file.name}):`, err)
+    }
+
+    docEntries.push({
+      id: f.id,
+      clientId,
+      source: 'staff-upload',
+      fileName: f.file.name,
+      fileType: f.file.type || 'application/octet-stream',
+      fileSize: f.file.size,
+      fileHash,
+      driveFileId: null,
+      thumbnailUrl: null,
+      previewUrl: localPath,
+      status: 'pending',
+      receivedAt: new Date().toISOString(),
+      batchId: null,
+      journalId: null,
+      createdBy: null,
+      updatedBy: null,
+      updatedAt: null,
+      statusChangedBy: null,
+      statusChangedAt: null,
+    })
+  }
+
+  // 2. documentStoreに保存
+  try {
+    const res = await fetch('/api/doc-store', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documents: docEntries }),
+    })
+    if (!res.ok) {
+      alert('データ保存に失敗しました。再度お試しください。')
+      isConfirming.value = false
+      return
+    }
+    const result = await res.json() as { added: number }
+    console.log(`[DocsPage] ${result.added}件をサーバーに保存`)
+  } catch (err) {
+    console.error('[DocsPage] 保存エラー:', err)
+    alert('データ保存に失敗しました。ネットワーク接続を確認してください。')
+    isConfirming.value = false
+    return
+  }
+
+  isConfirming.value = false
   confirmedCount.value = counts.value.done
   showComplete.value = true
 }

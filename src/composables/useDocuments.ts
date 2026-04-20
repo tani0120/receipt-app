@@ -87,10 +87,18 @@ export function useDocuments() {
   function removeByClientId(clientId: string) {
     allDocuments.value = allDocuments.value.filter(d => d.clientId !== clientId)
 
-    // サーバーにも反映（fire-and-forget）
+    // サーバーにも反映（エラー時はユーザーに通知）
     fetch(`${API_BASE}/client/${encodeURIComponent(clientId)}`, {
       method: 'DELETE',
-    }).catch(err => console.error('[useDocuments] 削除エラー:', err))
+    }).then(res => {
+      if (!res.ok) {
+        console.error(`[useDocuments] サーバー削除失敗: HTTP ${res.status}`)
+        alert('データの削除に失敗しました。ページをリロードしてください。')
+      }
+    }).catch(err => {
+      console.error('[useDocuments] 削除エラー:', err)
+      alert('データの削除に失敗しました。ネットワーク接続を確認してください。')
+    })
   }
 
   /** 資料を一括追加（重複チェック: driveFileIdまたはfileHashで判定） */
@@ -111,13 +119,21 @@ export function useDocuments() {
     allDocuments.value.push(...newDocs)
     console.log(`[useDocuments] ${newDocs.length}件追加（重複${docs.length - newDocs.length}件スキップ）`)
 
-    // サーバーにも反映（fire-and-forget）
+    // サーバーにも反映（エラー時はユーザーに通知）
     if (newDocs.length > 0) {
       fetch(API_BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documents: newDocs }),
-      }).catch(err => console.error('[useDocuments] 追加エラー:', err))
+      }).then(res => {
+        if (!res.ok) {
+          console.error(`[useDocuments] サーバー保存失敗: HTTP ${res.status}`)
+          alert('データの保存に失敗しました。ページをリロードしてください。')
+        }
+      }).catch(err => {
+        console.error('[useDocuments] 追加エラー:', err)
+        alert('データの保存に失敗しました。ネットワーク接続を確認してください。')
+      })
     }
 
     return newDocs.length

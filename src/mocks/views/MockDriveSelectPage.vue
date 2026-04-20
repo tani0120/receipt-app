@@ -194,11 +194,15 @@ import { useDocuments } from '@/composables/useDocuments';
 import { usePdfRenderer } from '@/composables/usePdfRenderer';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { useCurrentUser } from '@/mocks/composables/useCurrentUser';
-import type { DocStatus, DocEntry } from '@/repositories/types';
+import type { DocStatus } from '@/repositories/types';
+
+// ページ表示時にサーバーから最新データを取得
+const { refresh: refreshDocs } = useDocuments();
+onMounted(async () => { await refreshDocs(); });
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) || '');
-const { getByClientId, updateStatus: updateDocStatus, removeByClientId, addDocuments, assignBatchAndJournalIds } = useDocuments();
+const { getByClientId, updateStatus: updateDocStatus, removeByClientId, assignBatchAndJournalIds } = useDocuments();
 const { currentClient } = useClients();
 const { currentStaffId } = useCurrentUser();
 // リアクティブ: clientIdが変わったら自動的に再フィルタ
@@ -206,7 +210,7 @@ const clientDocs = computed(() => getByClientId(clientId.value).value);
 
 // --- PDF.js ---
 const {
-  canvasRef: pdfCanvasRef, // テンプレートref（L121: ref="pdfCanvasRef"）で使用
+  // canvasRef: テンプレートではimg表示のため未使用
   pageCount: pdfPageCount,
   currentPage: pdfCurrentPage,
   renderPage: pdfRenderPage,
@@ -428,31 +432,9 @@ const handleImport = async () => {
       errors: Array<{ fileId: string; error: string }>;
     };
 
-    // 3. 結果をDocEntryに変換
-    const newDocs: DocEntry[] = processData.results.map(r => ({
-      id: `drive-${r.fileId}-${Date.now()}`,
-      clientId: clientId.value,
-      source: 'drive' as const,
-      fileName: r.filename,
-      fileType: r.mimeType,
-      fileSize: r.sizeBytes,
-      fileHash: r.fileHash,
-      driveFileId: r.fileId,
-      thumbnailUrl: r.thumbnail,
-      previewUrl: r.thumbnail,
-      status: 'pending' as DocStatus,
-      receivedAt: new Date().toISOString(),
-      batchId: null,
-      journalId: null,
-      createdBy: currentStaffId.value,  // ログインユーザーのstaffId
-      updatedBy: null,
-      updatedAt: null,
-      statusChangedBy: null,
-      statusChangedAt: null,
-    }));
-
-    // 4. useDocumentsに追加（重複チェック付き）
-    const addedCount = addDocuments(newDocs);
+    // 3. サーバー側でdocumentStoreに保存済み → フロントのキャッシュを全件再取得
+    const { refresh } = useDocuments();
+    await refresh();
 
     importMessage.value = '';
     isImporting.value = false;
@@ -460,7 +442,7 @@ const handleImport = async () => {
     const errorMsg = processData.errors.length > 0
       ? `\n※ ${processData.errors.length}件の取り込みに失敗しました`
       : '';
-    alert(`取り込み完了: ${addedCount}件追加（重複${newDocs.length - addedCount}件スキップ）${errorMsg}`);
+    alert(`取り込み完了: ${processData.results.length}件${errorMsg}`);
   } catch (err) {
     importMessage.value = '';
     isImporting.value = false;

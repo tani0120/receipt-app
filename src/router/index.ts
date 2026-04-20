@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-rou
 
 import ScreenB_Restore_Mock from '@/views/debug/ScreenB_Restore_Mock.vue';
 import { mvpRoutes } from './routes/mvp';
+import { useShareStatus } from '@/composables/useShareStatus';
 
 export const routes: RouteRecordRaw[] = [
   // ログインページ（認証不要）
@@ -381,6 +382,24 @@ export const routes: RouteRecordRaw[] = [
   { path: '/portal/:clientId/mobile', redirect: (to) => `/upload/${to.params.clientId}/guest` },
   { path: '/portal/:clientId/pc', redirect: (to) => `/upload/${to.params.clientId}/guest` },
   { path: '/portal/:clientId/docs', redirect: (to) => `/upload-docs/${to.params.clientId}/guest` },
+  // --- 招待リンク（コード→clientId逆引き→ゲストログインにリダイレクト） ---
+  {
+    path: '/invite/:code',
+    name: 'InviteRedirect',
+    // リダイレクト専用ルート。beforeEnterでサーバー問い合わせ→ゲストログインに転送。
+    component: () => import('@/mocks/views/MockPortalLoginPage.vue'),
+    beforeEnter: async (to) => {
+      const { resolveInviteCode } = useShareStatus()
+      const code = to.params.code as string
+      const clientId = await resolveInviteCode(code)
+      if (clientId) {
+        return `/guest/${clientId}/login`
+      }
+      // コード不正 or サーバー未応答 → トップページにリダイレクト
+      console.warn(`[invite] 招待コード「${code}」に対応する顧問先が見つかりません`)
+      return '/mode-select'
+    },
+  },
 ]
 
 const router = createRouter({

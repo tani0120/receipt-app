@@ -2649,3 +2649,99 @@ repositories/types.ts ← 唯一の型定義源泉
 | batchId/journalId付与 | ✅ 全件付与成功 |
 | TypeScript型チェック | ✅ 通過 |
 
+---
+
+## DL-042 | モーダルUI統一 + Vendors永続化基盤（2026-04-19）
+
+**状態**: 完了
+
+> 詳細は `task_unified.md` B-12参照。
+
+---
+
+## DL-043 | 招待リンク機能 + 未保存変更ガード最適化 + Driveフォルダ自動リネーム（2026-04-20）
+
+**状態**: mock実装完了（Google OAuth未着手）
+
+### 1. 招待リンク機能（/invite/:code）
+
+#### 決定内容
+
+| 項目 | 決定 |
+|---|---|
+| ルート | `/invite/:code` をrouter/index.tsに追加 |
+| 逆引き | `useShareStatus.getClientIdByInviteCode(code)` 新規追加 |
+| リダイレクト先 | `/guest/:clientId/login`（既存MockPortalLoginPage.vue再利用） |
+| コード不正時 | `/mode-select` にリダイレクト + コンソール警告 |
+| 処理タイミング | `beforeEnter` ガードで即座に逆引き・リダイレクト |
+
+#### 本番移行時の変更量
+
+| 要素 | mock（今） | 本番（Supabase） | 変更量 |
+|---|---|---|---|
+| `/invite/:code` ルート定義 | そのまま使う | そのまま使う | **0** |
+| コード→clientId逆引き | mockキャッシュ検索 | `invitations`テーブルSELECT | **リポジトリ切替のみ**（Supabase版実装済み） |
+| リダイレクト先 | `/guest/:clientId/login` | 同じ | **0** |
+| ログインページ | MockPortalLoginPage | 同じ＋Google OAuth追加 | **OAuthボタン追加のみ** |
+
+> **VITE_USE_MOCK=falseにするだけでSupabase版に切り替わる。**
+> ルート定義・リダイレクトロジック・composableは全てそのまま本番で動く。
+> 唯一追加が必要なのは、本番時にMockPortalLoginPageにGoogle OAuthボタンを実装する部分。
+
+#### 本番移行タスク（DL-039と連動）
+
+| # | タスク | 状態 |
+|---|---|---|
+| 1 | Google Cloud ConsoleでOAuthクライアントID発行 | ❌ 未着手 |
+| 2 | MockPortalLoginPageにGoogle Identity Services（GIS）ボタン追加 | ❌ 未着手 |
+| 3 | ログイン成功→JWTからメールアドレス抽出→`grantFolderPermission()`自動実行 | ❌ 未着手 |
+| 4 | Supabase `invitations`テーブルからのコード逆引き（リポジトリ層は実装済み） | ❌ 未着手 |
+
+> **補足**: SAキー（GOOGLE_SA_KEY_PATH）があるのでGCPプロジェクトは既に存在する。
+> Google OAuthはSupabase不要。Google Identity Services（GIS）のclient libraryで直接ログイン可能。
+> `google.accounts.id.initialize({ client_id: '...' })` でログインボタン表示→JWT→メールアドレス取得。
+
+### 2. 未保存変更ガード最適化
+
+#### 決定内容
+
+| 項目 | 決定 |
+|---|---|
+| 変更ログ方式 | `markDirty(msg?)` でオプショナルに変更内容を記録。離脱モーダルに一覧表示 |
+| 即時保存型ページ | Clients/Staffは各保存成功後に`markClean()`を呼びリセット（**案B**） |
+| バッチ保存型ページ | Accounts/Tax系は保存ボタンで既にmarkClean済み（変更なし） |
+| API失敗時の安全ネット | markDirtyに到達しない→dirty維持→離脱ガード発動 |
+
+#### 変更ログ対応済みページ（全6ページ、計38箇所）
+
+| ページ | markDirty箇所 | ページ種別 |
+|---|---|---|
+| MockMasterClientsPage | 5箇所 | 即時保存型（markClean追加済み） |
+| MockMasterStaffPage | 2箇所 | 即時保存型（markClean追加済み） |
+| MockMasterTaxCategoriesPage | 8箇所 | バッチ保存型 |
+| MockMasterAccountsPage | 9箇所 | バッチ保存型 |
+| MockClientTaxPage | 6箇所 | バッチ保存型 |
+| MockClientAccountsPage | 8箇所 | バッチ保存型 |
+
+### 3. Driveフォルダ自動リネーム
+
+| 項目 | 決定 |
+|---|---|
+| リネームタイミング | 3コード変更時に自動実行 |
+| フォルダ名形式 | `${threeCode}_${companyName}` |
+| APIエンドポイント | `PATCH /api/drive/folder/rename` 新設 |
+| フォルダ未作成時 | リネーム通知を抑制（sharedFolderIdが未設定の場合） |
+
+### 実装済みファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `src/composables/useShareStatus.ts` | `getClientIdByInviteCode()` 追加 |
+| `src/router/index.ts` | `/invite/:code` ルート + beforeEnter逆引き |
+| `src/mocks/composables/useUnsavedGuard.ts` | changeLog配列 + formatChangeLog() |
+| `src/api/services/drive/driveService.ts` | `renameDriveFolder()` 追加 |
+| `src/api/routes/drive.ts` | `PATCH /api/drive/folder/rename` 追加 |
+| `src/mocks/views/MockMaster*.vue` (4ページ) | markDirty説明文追加 |
+| `src/mocks/views/MockClient*.vue` (2ページ) | markDirty説明文追加 |
+
+

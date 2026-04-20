@@ -316,10 +316,12 @@ const startInlineEdit = (row: Staff, field: string, event: Event) => {
 };
 
 const commitInlineEdit = () => {
-  if (inlineEditId.value && inlineEditField.value) {
-    // composable経由でサーバーに永続化
-    updateStaff(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Staff>);
+  if (!inlineEditId.value || !inlineEditField.value) {
+    cancelInlineEdit();
+    return;
   }
+  // composable経由でサーバーに永続化
+  updateStaff(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Staff>);
   const fieldLabels: Record<string, string> = { status: 'ステータス', role: '権限', name: '名前', email: 'メール' };
   const label = fieldLabels[inlineEditField.value] ?? inlineEditField.value;
   markDirty(`${label}を変更`);

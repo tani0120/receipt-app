@@ -13,6 +13,8 @@
 import { Hono } from 'hono';
 import { listDriveFiles, downloadAndProcessDriveFile, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, trashDriveFile } from '../services/drive/driveService';
 import { isKnownHash } from '../services/pipeline/classify.service';
+import { addDocuments } from '../services/documentStore';
+import type { DocEntry } from '../../repositories/types';
 
 const app = new Hono();
 
@@ -168,12 +170,13 @@ app.post('/process', async (c) => {
         file.fileId,
         file.filename,
         file.mimeType,
+        body.clientId,
       );
 
       // 重複チェック（既知ハッシュと照合）
       const isDuplicate = isKnownHash(result.fileHash);
 
-      results.push({
+      const item = {
         fileId: file.fileId,
         filename: result.filename,
         fileHash: result.fileHash,
@@ -181,9 +184,35 @@ app.post('/process', async (c) => {
         thumbnail: result.thumbnail,
         mimeType: result.mimeType,
         isDuplicate,
-      });
+        localPath: result.localPath,
+      };
+      results.push(item);
 
-      // 取り込み成功 → Driveのファイルをゴミ箱に移動（データ消失防止: 失敗時は移動しない）
+      // documentStoreに保存（ゴミ箱移動より先。リロードでデータ消失を防止）
+      const docEntry: DocEntry = {
+        id: `drive-${file.fileId}-${Date.now()}`,
+        clientId: body.clientId,
+        source: 'drive',
+        fileName: result.filename,
+        fileType: result.mimeType,
+        fileSize: result.sizeBytes,
+        fileHash: result.fileHash,
+        driveFileId: file.fileId,
+        thumbnailUrl: result.thumbnail,
+        previewUrl: result.localPath,
+        status: 'pending',
+        receivedAt: new Date().toISOString(),
+        batchId: null,
+        journalId: null,
+        createdBy: null,
+        updatedBy: null,
+        updatedAt: null,
+        statusChangedBy: null,
+        statusChangedAt: null,
+      };
+      addDocuments([docEntry]);
+
+      // documentStore保存済み → Driveのファイルをゴミ箱に移動
       try {
         await trashDriveFile(file.fileId);
       } catch (trashErr) {
@@ -207,6 +236,30 @@ app.post('/process', async (c) => {
     totalProcessed: results.length,
     totalErrors: errors.length,
   });
+});
+
+// ============================================================
+// POST /grant-permission — ゲストにDrive共有フォルダの権限を付与
+// Googleログイン成功後にフロントから呼び出し
+// ============================================================
+
+app.post('/grant-permission', async (c) => {
+  const body = await c.req.json<{ folderId: string; email: string; role?: 'reader' | 'writer' }>();
+
+  if (!body.folderId || !body.email) {
+    return c.json({ error: 'folderIdとemailは必須です' }, 400);
+  }
+
+  try {
+    const { grantFolderPermission } = await import('../services/drive/driveService');
+    await grantFolderPermission(body.folderId, body.email, body.role ?? 'writer');
+    console.log(`[drive/route] POST /grant-permission: ${body.email} → ${body.folderId.slice(0, 12)}...`);
+    return c.json({ ok: true, email: body.email, role: body.role ?? 'writer' });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[drive/route] POST /grant-permission エラー:`, msg);
+    return c.json({ error: `権限付与失敗: ${msg}` }, 500);
+  }
 });
 
 export default app;

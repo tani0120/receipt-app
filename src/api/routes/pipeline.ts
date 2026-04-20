@@ -12,9 +12,27 @@
 import { Hono } from 'hono';
 import { classifyImage, clearKnownHashes, isKnownHash } from '../services/pipeline/classify.service';
 import { createHash } from 'crypto';
-import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync } from 'fs';
+import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+
+/** ファイル本体の永続保存先（data/uploads/{clientId}/{fileName}） */
+const UPLOADS_DIR = join(process.cwd(), 'data', 'uploads');
+
+/** ファイルを data/uploads/{clientId}/ に永続保存 */
+function saveUploadedFile(clientId: string, fileName: string, buffer: Buffer): string {
+  const clientDir = join(UPLOADS_DIR, clientId);
+  if (!existsSync(clientDir)) {
+    mkdirSync(clientDir, { recursive: true });
+  }
+  // ファイル名衝突回避: タイムスタンプ付与
+  const ts = Date.now();
+  const safeName = `${ts}_${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  const filePath = join(clientDir, safeName);
+  writeFileSync(filePath, buffer);
+  console.log(`[pipeline] ファイル永続保存: ${filePath} (${(buffer.length / 1024).toFixed(0)}KB)`);
+  return safeName;
+}
 
 const app = new Hono();
 
@@ -182,19 +200,22 @@ app.post('/upload', async (c) => {
   // 重複検出（既存ハッシュと照合）
   const isDuplicate = isKnownHash(fileHash);
 
-  // TODO: Supabase移行時はここでStorage APIにアップロード
-  // 現在はログ出力のみ（モック段階）
-  console.log(`[pipeline/upload] ${filename ?? file.name} (${(file.size / 1024).toFixed(0)}KB) hash=${fileHash.slice(0, 12)}... docId=${documentId ?? '(なし)'} thumb=${thumbnail ? `${(thumbnail.length / 1024).toFixed(1)}KB` : 'なし'} dup=${isDuplicate}`);
+  // ファイル本体を永続保存（data/uploads/{clientId}/）
+  const actualName = filename ?? file.name ?? 'unknown';
+  const savedName = saveUploadedFile(clientId, actualName, buffer);
+  const fileUrl = `/api/pipeline/file/${clientId}/${savedName}`;
+  console.log(`[pipeline/upload] ${actualName} (${(file.size / 1024).toFixed(0)}KB) hash=${fileHash.slice(0, 12)}... docId=${documentId ?? '(なし)'} thumb=${thumbnail ? `${(thumbnail.length / 1024).toFixed(1)}KB` : 'なし'} dup=${isDuplicate} saved=${savedName}`);
 
   return c.json({
     ok: true,
     fileHash,
-    filename: filename ?? file.name,
+    filename: actualName,
     sizeBytes: file.size,
     clientId,
     documentId,
     thumbnail,
     isDuplicate,
+    fileUrl,
   });
 });
 
@@ -272,10 +293,18 @@ app.post('/upload-complete', async (c) => {
   // 重複検出
   const isDuplicate = isKnownHash(fileHash);
 
-  // 一時ファイル削除
+  // ファイル本体を永続保存（data/uploads/{clientId}/）
+  let savedName = '';
+  let fileUrl = '';
+  if (clientId) {
+    savedName = saveUploadedFile(clientId, filename || 'unknown', fileBuffer);
+    fileUrl = `/api/pipeline/file/${clientId}/${savedName}`;
+  }
+
+  // 一時ファイル削除（永続保存後）
   try { unlinkSync(tmpPath); } catch { /* 無視（既に削除済み等） */ }
 
-  console.log(`[pipeline/upload-complete] ${filename} (${(fileBuffer.length / 1024).toFixed(0)}KB) hash=${fileHash.slice(0, 12)}... docId=${documentId ?? '(なし)'} thumb=${thumbnail ? `${(thumbnail.length / 1024).toFixed(1)}KB` : 'なし'} dup=${isDuplicate}`);
+  console.log(`[pipeline/upload-complete] ${filename} (${(fileBuffer.length / 1024).toFixed(0)}KB) hash=${fileHash.slice(0, 12)}... docId=${documentId ?? '(なし)'} thumb=${thumbnail ? `${(thumbnail.length / 1024).toFixed(1)}KB` : 'なし'} dup=${isDuplicate} saved=${savedName}`);
 
   return c.json({
     ok: true,
@@ -286,6 +315,7 @@ app.post('/upload-complete', async (c) => {
     documentId,
     thumbnail,
     isDuplicate,
+    fileUrl,
   });
 });
 
@@ -342,6 +372,41 @@ app.delete('/hashes', (c) => {
   clearKnownHashes();
   console.log('[pipeline/route] 重複ハッシュ記録をクリアしました');
   return c.json({ status: 'ok', message: '重複ハッシュ記録をクリアしました' });
+});
+
+// ============================================================
+// GET /file/:clientId/:fileName — 保存済みファイル提供（プレビュー用）
+// ============================================================
+
+app.get('/file/:clientId/:fileName', (c) => {
+  const clientIdParam = c.req.param('clientId');
+  const fileNameParam = c.req.param('fileName');
+  const filePath = join(UPLOADS_DIR, clientIdParam, fileNameParam);
+
+  if (!existsSync(filePath)) {
+    return c.json({ error: 'ファイルが見つかりません' }, 404);
+  }
+
+  const buffer = readFileSync(filePath);
+
+  // 拡張子からContent-Type推定
+  const ext = fileNameParam.split('.').pop()?.toLowerCase() ?? '';
+  const mimeMap: Record<string, string> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+    gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp',
+    heic: 'image/heic', heif: 'image/heif', tiff: 'image/tiff',
+    pdf: 'application/pdf', csv: 'text/csv',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    xls: 'application/vnd.ms-excel',
+  };
+  const contentType = mimeMap[ext] || 'application/octet-stream';
+
+  return new Response(buffer, {
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=86400',
+    },
+  });
 });
 
 export default app;
