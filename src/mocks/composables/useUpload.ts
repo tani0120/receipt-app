@@ -16,6 +16,7 @@ import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from 
 import { errorGuideMessage } from '@/shared/validationMessages'
 import { useDocuments } from '@/composables/useDocuments'
 import { useCurrentUser } from '@/mocks/composables/useCurrentUser'
+import { useClients } from '@/features/client-management/composables/useClients'
 import type { DocEntry, DocSource, DocStatus } from '@/repositories/types'
 
 // ===== 型定義（統一） =====
@@ -173,6 +174,7 @@ const MOBILE_BREAKPOINT = 640
 export function useUpload() {
   const route = useRoute()
   const clientId = route.params.clientId as string
+  const { clients } = useClients()
 
   // route.nameから権限（role）・端末（device）を導出
   const role = String(route.name ?? '').toLowerCase().includes('guest') ? 'guest' : 'staff'
@@ -858,36 +860,43 @@ export function useUpload() {
   }
 
   // ===== 送付確定 =====
+  const isConfirming = ref(false)
   const handleConfirm = async () => {
-    if (!canConfirm.value) return
+    if (!canConfirm.value || isConfirming.value) return
+    isConfirming.value = true
 
     const okEntries = entries.value.filter(e => e.status === 'ok')
     const docEntries: DocEntry[] = []
 
     // 1. 各ファイルをサーバーにアップロードして永続保存
     for (const e of okEntries) {
-      let localPath: string | null = null
-      let serverHash: string | null = e.hash
+      let driveFileId: string | null = null
+      const serverHash: string | null = e.hash
 
-      // ファイルが存在する場合はサーバーに送信
+      // ファイルが存在する場合はDriveにアップロード
       if (e.file) {
-        try {
-          const formData = new FormData()
-          formData.append('file', e.file)
-          formData.append('clientId', clientId)
-          const uploadRes = await fetch('/api/doc-store/upload-file', {
-            method: 'POST',
-            body: formData,
-          })
-          if (uploadRes.ok) {
-            const uploadData = await uploadRes.json() as { localPath: string; fileHash: string }
-            localPath = uploadData.localPath
-            serverHash = uploadData.fileHash
-          } else {
-            console.error(`[useUpload] ファイル保存失敗 (${e.fileName}): HTTP ${uploadRes.status}`)
+        const client = clients.value.find(c => c.clientId === clientId)
+        const folderId = client?.sharedFolderId
+        if (folderId) {
+          try {
+            const formData = new FormData()
+            formData.append('file', e.file)
+            formData.append('folderId', folderId)
+            const uploadRes = await fetch('/api/drive/upload', {
+              method: 'POST',
+              body: formData,
+            })
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json() as { driveFileId: string; name: string; mimeType: string; size: number }
+              driveFileId = uploadData.driveFileId
+            } else {
+              console.error(`[useUpload] Driveアップロード失敗 (${e.fileName}): HTTP ${uploadRes.status}`)
+            }
+          } catch (err) {
+            console.error(`[useUpload] Driveアップロードエラー (${e.fileName}):`, err)
           }
-        } catch (err) {
-          console.error(`[useUpload] ファイル送信エラー (${e.fileName}):`, err)
+        } else {
+          console.warn(`[useUpload] sharedFolderId未設定。Driveアップロードスキップ (${e.fileName})`)
         }
       }
 
@@ -899,9 +908,9 @@ export function useUpload() {
         fileType: e.file?.type || 'application/octet-stream',
         fileSize: e.fileSize,
         fileHash: serverHash,
-        driveFileId: null,
+        driveFileId,
         thumbnailUrl: e.previewUrl,
-        previewUrl: localPath || e.previewUrlHQ || e.previewUrl,
+        previewUrl: driveFileId ? `/api/drive/preview/${driveFileId}` : (e.previewUrlHQ || e.previewUrl),
         status: 'pending' as DocStatus,
         receivedAt: new Date(e.completedAt ?? Date.now()).toISOString(),
         batchId: null,
@@ -924,6 +933,7 @@ export function useUpload() {
       if (!res.ok) {
         console.error(`[useUpload] documentStore保存失敗: HTTP ${res.status}`)
         alert('データ保存に失敗しました。再度お試しください。')
+        isConfirming.value = false
         return
       }
       const result = await res.json() as { added: number; skipped: number }
@@ -931,6 +941,7 @@ export function useUpload() {
     } catch (err) {
       console.error('[useUpload] documentStore保存エラー:', err)
       alert('データ保存に失敗しました。ネットワーク接続を確認してください。')
+      isConfirming.value = false
       return
     }
 
@@ -938,6 +949,7 @@ export function useUpload() {
     const { refresh } = useDocuments()
     await refresh()
 
+    isConfirming.value = false
     confirmedCount.value = counts.value.ok
     showComplete.value = true
   }

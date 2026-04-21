@@ -36,6 +36,22 @@ export interface DriveFileItem {
   thumbnailLink: string | null;
 }
 
+/** サムネイルbase64付きファイルアイテム（Drive借景方式で使用） */
+export interface DriveFileItemWithThumbnail extends DriveFileItem {
+  /** サムネイル画像のbase64データURI（data:image/jpeg;base64,...）。取得失敗時はnull */
+  thumbnailBase64: string | null;
+}
+
+/** フルサイズプレビュー取得結果 */
+export interface DrivePreviewResult {
+  /** ファイルのバイナリデータ */
+  buffer: Buffer;
+  /** MIMEタイプ */
+  mimeType: string;
+  /** ファイル名 */
+  fileName: string;
+}
+
 /** Drive からダウンロードしたファイルの処理結果 */
 export interface DriveDownloadResult {
   /** SHA-256 ハッシュ（16進/hex） */
@@ -397,4 +413,196 @@ export async function grantFolderPermission(
     `[driveService] 権限付与完了: ${email} → ${role}`
     + ` (folderId=${folderId.slice(0, 12)}...)`,
   );
+}
+// ===== Drive借景方式（Phase C: PC版アップロード） =====
+
+/** Drive アップロード結果 */
+export interface DriveUploadResult {
+  /** アップロードされたファイルのDrive ID */
+  driveFileId: string;
+  /** ファイル名 */
+  name: string;
+  /** MIMEタイプ */
+  mimeType: string;
+  /** ファイルサイズ（バイト） */
+  size: number;
+}
+
+/**
+ * 共有ドライブの指定フォルダにファイルをアップロード（Phase C-1）
+ *
+ * createDriveFolder() L137-145 と同じ supportsAllDrives パターンで実装。
+ *
+ * @param folderId - アップロード先フォルダのDrive ID
+ * @param buffer - ファイルのバイナリデータ
+ * @param fileName - ファイル名
+ * @param mimeType - MIMEタイプ
+ * @returns アップロード結果（driveFileId, name, mimeType, size）
+ */
+export async function uploadToDrive(
+  folderId: string,
+  buffer: Buffer,
+  fileName: string,
+  mimeType: string,
+): Promise<DriveUploadResult> {
+  const drive = getDriveClient();
+  const { Readable } = await import('stream');
+
+  const response = await drive.files.create({
+    supportsAllDrives: true,
+    requestBody: {
+      name: fileName,
+      mimeType,
+      parents: [folderId],
+    },
+    media: {
+      mimeType,
+      body: Readable.from(buffer),
+    },
+    fields: 'id,name,mimeType,size',
+  });
+
+  const driveFileId = response.data.id;
+  if (!driveFileId) {
+    throw new Error(`アップロード失敗: レスポンスにIDがありません (name=${fileName})`);
+  }
+
+  const size = parseInt(String(response.data.size ?? '0'), 10);
+
+  console.log(
+    `[driveService] uploadToDrive: ${fileName}`
+    + ` (${(buffer.length / 1024).toFixed(0)}KB, ${mimeType})`
+    + ` → driveFileId=${driveFileId}`,
+  );
+
+  return {
+    driveFileId,
+    name: response.data.name ?? fileName,
+    mimeType: response.data.mimeType ?? mimeType,
+    size: size || buffer.length,
+  };
+}
+
+// ===== Drive借景方式（Phase A） =====
+
+/**
+ * サムネイルbase64付きファイル一覧を取得（Phase A-1）
+ *
+ * listDriveFiles() でメタデータを取得した後、
+ * 各ファイルの thumbnailLink からSA認証トークンでサムネイル画像をDLし、
+ * base64データURIに変換してレスポンスに埋め込む。
+ *
+ * パフォーマンス: 200枚 × 10KB = 約2MB。逐次DLで3-5秒程度。
+ *
+ * @param folderId - 顧問先フォルダのDrive ID
+ * @param sharedDriveId - 共有ドライブのID
+ * @param pageSize - 取得件数（デフォルト200）
+ * @returns サムネイルbase64付きファイル一覧
+ */
+export async function getFilesWithThumbnails(
+  folderId: string,
+  sharedDriveId: string,
+  pageSize = 200,
+): Promise<DriveFileItemWithThumbnail[]> {
+  // 1. 既存のlistDriveFilesでメタデータを取得
+  const files = await listDriveFiles(folderId, sharedDriveId, pageSize);
+
+  // 2. SA認証トークンを取得（thumbnailLinkへのHTTPリクエストに必要）
+  const keyPath = process.env.GOOGLE_SA_KEY_PATH;
+  if (!keyPath) {
+    // SA鍵がない場合はサムネイルなしで返す（フォールバック）
+    console.warn('[driveService] SA鍵未設定のためサムネイルDLをスキップ');
+    return files.map(f => ({ ...f, thumbnailBase64: null }));
+  }
+
+  const auth = new google.auth.GoogleAuth({
+    keyFile: keyPath,
+    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+  });
+  const accessToken = await auth.getAccessToken();
+
+  // 3. 各ファイルのサムネイルをDL → base64変換（逐次。並列はAPIレート制限に配慮）
+  const results: DriveFileItemWithThumbnail[] = [];
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const file of files) {
+    let thumbnailBase64: string | null = null;
+
+    if (file.thumbnailLink && accessToken) {
+      try {
+        // thumbnailLinkにSA認証トークンを付与してHTTPリクエスト
+        const thumbUrl = file.thumbnailLink.replace(/=s\d+$/, '=s200');
+        const response = await fetch(thumbUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          const base64 = Buffer.from(arrayBuffer).toString('base64');
+          const contentType = response.headers.get('content-type') ?? 'image/jpeg';
+          thumbnailBase64 = `data:${contentType};base64,${base64}`;
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    results.push({ ...file, thumbnailBase64 });
+  }
+
+  console.log(
+    `[driveService] getFilesWithThumbnails: ${files.length}件`
+    + ` (サムネイル成功=${successCount} 失敗=${failCount})`
+    + ` (folderId=${folderId.slice(0, 12)}...)`,
+  );
+
+  return results;
+}
+
+/**
+ * フルサイズプレビュー取得（Phase A-3）
+ *
+ * downloadAndProcessDriveFile のDL部分を抽出。
+ * ハッシュ計算・ローカル保存・サムネイル生成は行わない（プレビュー専用）。
+ *
+ * @param fileId - Google Drive ファイルID
+ * @returns ファイルのバイナリデータ・MIMEタイプ・ファイル名
+ */
+export async function getFilePreview(
+  fileId: string,
+): Promise<DrivePreviewResult> {
+  const drive = getDriveClient();
+
+  // ファイルメタデータ取得（MIMEタイプとファイル名）
+  const metaResponse = await drive.files.get({
+    fileId,
+    supportsAllDrives: true,
+    fields: 'name,mimeType',
+  });
+
+  const fileName = metaResponse.data.name ?? '不明';
+  const mimeType = metaResponse.data.mimeType ?? 'application/octet-stream';
+
+  // ファイル実体をバイナリでDL
+  const response = await drive.files.get(
+    {
+      fileId,
+      alt: 'media',
+      supportsAllDrives: true,
+    },
+    { responseType: 'arraybuffer' },
+  );
+
+  const buffer = Buffer.from(response.data as ArrayBuffer);
+
+  console.log(
+    `[driveService] getFilePreview: ${fileName}`
+    + ` (${(buffer.length / 1024).toFixed(0)}KB, ${mimeType})`,
+  );
+
+  return { buffer, mimeType, fileName };
 }

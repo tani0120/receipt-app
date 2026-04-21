@@ -21,13 +21,19 @@
           <i class="fa-solid fa-rotate-right"></i> やり直し
         </button>
       </div>
-      <!-- 右: 取り込みボタン -->
+      <!-- 右: リロードボタン（Driveから再取得） -->
       <div class="ds-header-right">
-        <button class="ds-import-btn" @click="handleImport" :disabled="isImporting">
-          <span class="ds-import-icon" :class="{ 'ds-importing': isImporting }">
-            <i class="fa-solid fa-cloud-arrow-down"></i>
+        <button v-if="excludedCount > 0" class="ds-import-btn" @click="downloadExcludedZip" :disabled="isDownloadingZip" style="margin-right: 8px;">
+          <span class="ds-import-icon">
+            <i class="fa-solid fa-file-zipper"></i>
           </span>
-          <span class="ds-import-label">{{ isImporting ? '取り込み中...' : '取り込み' }}</span>
+          <span class="ds-import-label">仕訳外DL ({{ excludedCount }})</span>
+        </button>
+        <button class="ds-import-btn" @click="handleReload" :disabled="isLoading">
+          <span class="ds-import-icon" :class="{ 'ds-importing': isLoading }">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </span>
+          <span class="ds-import-label">{{ isLoading ? '取得中...' : '再取得' }}</span>
         </button>
       </div>
     </div>
@@ -44,10 +50,10 @@
         >
           <template v-if="doc.fileName?.toLowerCase().endsWith('.pdf')">
             <div class="ds-thumb-wrap">
-              <iframe :src="doc.imagePath" class="ds-thumb-pdf" tabindex="-1"></iframe>
+              <iframe :src="`/api/drive/preview/${doc.id}`" class="ds-thumb-pdf" tabindex="-1"></iframe>
             </div>
           </template>
-          <img v-else :src="doc.imagePath" :alt="doc.fileName" class="ds-thumb-img" />
+          <img v-else :src="doc.thumbnailBase64 || ''" :alt="doc.fileName" class="ds-thumb-img" />
           <div class="ds-sidebar-info">
             <div class="ds-sidebar-name">{{ doc.fileName }}</div>
             <div class="ds-sidebar-meta">{{ doc.fileSize }} · {{ doc.uploadDate }}</div>
@@ -63,7 +69,7 @@
           <div class="ds-empty">
             <i class="fa-solid fa-inbox ds-empty-icon"></i>
             <div class="ds-empty-text">未選別のファイルはありません</div>
-            <div class="ds-empty-sub">「取り込み」ボタンで新しい資料を取得してください</div>
+            <div class="ds-empty-sub">Driveに新しい資料をアップロードしてください</div>
           </div>
         </template>
 
@@ -122,7 +128,7 @@
                 </template>
                 <!-- 画像: width%ベースで中央配置 -->
                 <img v-else
-                  :src="selected.imagePath"
+                  :src="previewUrl"
                   :alt="selected.fileName"
                   class="ds-preview-img"
                   :style="{ width: (zoomScale * 100) + '%' }"
@@ -169,19 +175,61 @@
     </div>
 
     <!-- 全選別完了モーダル -->
-    <div v-if="showCompleteModal" class="ds-modal-overlay" @click.self="showCompleteModal = false">
+    <div v-if="showCompleteModal" class="ds-modal-overlay" @click.self="!isMigrating && (showCompleteModal = false)">
       <div class="ds-modal">
-        <div class="ds-modal-icon"><i class="fa-solid fa-circle-check"></i></div>
-        <div class="ds-modal-title">選別完了</div>
-        <div class="ds-modal-text">
-          全{{ documents.length }}件の選別が完了しました。<br>
-          仕訳対象: {{ counts.target }}件 / 根拠資料: {{ counts.supporting }}件 / 仕訳外: {{ counts.excluded }}件
-        </div>
-        <div class="ds-modal-question">次の仕訳処理に送りますか？</div>
-        <div class="ds-modal-actions">
-          <button class="ds-modal-btn ds-modal-btn-yes" @click="sendToProcess"><i class="fa-solid fa-paper-plane"></i> はい</button>
-          <button class="ds-modal-btn ds-modal-btn-no" @click="showCompleteModal = false">いいえ</button>
-        </div>
+        <!-- 移行中: プログレスバー -->
+        <template v-if="isMigrating">
+          <div class="ds-modal-icon" style="color: #3b82f6;"><i class="fa-solid fa-spinner fa-spin"></i></div>
+          <div class="ds-modal-title">移行中...</div>
+          <div class="ds-modal-text">
+            {{ migrationProgress.done + migrationProgress.failed }} / {{ migrationProgress.total }}件完了
+          </div>
+          <div style="margin: 12px 0; background: #e5e7eb; border-radius: 4px; height: 8px; overflow: hidden;">
+            <div style="height: 100%; border-radius: 4px; transition: width 0.5s;"
+              :style="{
+                width: migrationProgress.total > 0 ? ((migrationProgress.done + migrationProgress.failed) / migrationProgress.total * 100) + '%' : '0%',
+                background: migrationProgress.failed > 0 ? '#f59e0b' : '#3b82f6',
+              }"
+            ></div>
+          </div>
+          <div v-if="migrationProgress.failed > 0" class="ds-modal-text" style="color: #dc2626;">
+            ⚠ {{ migrationProgress.failed }}件失敗
+          </div>
+        </template>
+        <!-- 移行完了 -->
+        <template v-else-if="migrationDone">
+          <div class="ds-modal-icon" style="color: #10b981;"><i class="fa-solid fa-circle-check"></i></div>
+          <div class="ds-modal-title">移行完了</div>
+          <div class="ds-modal-text">
+            {{ migrationProgress.done }}件移行完了。
+            <span v-if="migrationProgress.failed > 0" style="color: #dc2626;">
+              {{ migrationProgress.failed }}件失敗。管理画面で確認してください。
+            </span>
+          </div>
+          <div v-if="excludedInMigration > 0" class="ds-modal-text" style="margin-top: 8px; color: #6b7280;">
+            仕訳外: {{ excludedInMigration }}件
+          </div>
+          <div class="ds-modal-actions">
+            <button v-if="excludedInMigration > 0" class="ds-modal-btn ds-modal-btn-yes" @click="downloadExcludedZip" :disabled="isDownloadingZip" style="background: #6366f1;">
+              <i class="fa-solid fa-file-zipper"></i> {{ isDownloadingZip ? 'DL中...' : '仕訳外ZIP DL' }}
+            </button>
+            <button class="ds-modal-btn ds-modal-btn-yes" @click="finishMigration"><i class="fa-solid fa-check"></i> 閉じる</button>
+          </div>
+        </template>
+        <!-- 選別確定確認 -->
+        <template v-else>
+          <div class="ds-modal-icon"><i class="fa-solid fa-circle-check"></i></div>
+          <div class="ds-modal-title">選別完了</div>
+          <div class="ds-modal-text">
+            全{{ documents.length }}件の選別が完了しました。<br>
+            仕訳対象: {{ counts.target }}件 / 根拠資料: {{ counts.supporting }}件 / 仕訳外: {{ counts.excluded }}件
+          </div>
+          <div class="ds-modal-question">次の仕訳処理に送りますか？</div>
+          <div class="ds-modal-actions">
+            <button class="ds-modal-btn ds-modal-btn-yes" @click="sendToProcess"><i class="fa-solid fa-paper-plane"></i> はい</button>
+            <button class="ds-modal-btn ds-modal-btn-no" @click="showCompleteModal = false">いいえ</button>
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -190,27 +238,60 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
-import { useDocuments } from '@/composables/useDocuments';
 import { usePdfRenderer } from '@/composables/usePdfRenderer';
 import { useClients } from '@/features/client-management/composables/useClients';
-import { useCurrentUser } from '@/mocks/composables/useCurrentUser';
+import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
 import type { DocStatus } from '@/repositories/types';
-
-// ページ表示時にサーバーから最新データを取得
-const { refresh: refreshDocs } = useDocuments();
-onMounted(async () => { await refreshDocs(); });
+import type { DriveFileItemWithThumbnail } from '@/api/services/drive/driveService';
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) || '');
-const { getByClientId, updateStatus: updateDocStatus, removeByClientId, assignBatchAndJournalIds } = useDocuments();
 const { currentClient } = useClients();
-const { currentStaffId } = useCurrentUser();
-// リアクティブ: clientIdが変わったら自動的に再フィルタ
-const clientDocs = computed(() => getByClientId(clientId.value).value);
+
+// --- ページ離脱ガード（選別中の離脱を警告） ---
+const { markDirty, markClean } = useUnsavedGuard(null);
+
+// ===== Drive借景方式: Drive APIからファイル一覧を取得 =====
+
+/** Driveから取得した生データ */
+const driveFiles = ref<DriveFileItemWithThumbnail[]>([]);
+/** 選別結果をローカルで保持（Driveには書き込まない） */
+const driveSelections = ref<Map<string, DocStatus>>(new Map());
+
+/** Driveファイル一覧取得（サムネイルbase64付き） */
+const fetchDriveFiles = async () => {
+  const folderId = currentClient.value?.sharedFolderId;
+  if (!folderId) return;
+
+  isLoading.value = true;
+  try {
+    const res = await fetch(`/api/drive/files?folderId=${encodeURIComponent(folderId)}&withThumbnails=true`);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    const data = await res.json() as { files: DriveFileItemWithThumbnail[] };
+    driveFiles.value = data.files;
+
+    // 新規ファイルにはpendingを設定（既存の選別結果は保持）
+    for (const f of data.files) {
+      if (!driveSelections.value.has(f.id)) {
+        driveSelections.value.set(f.id, 'pending');
+      }
+    }
+    console.log(`[MockDriveSelectPage] Driveファイル${data.files.length}件取得`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    alert(`Driveファイル取得エラー: ${msg}`);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => { fetchDriveFiles(); fetchExcludedCount(); });
 
 // --- PDF.js ---
 const {
-  // canvasRef: テンプレートではimg表示のため未使用
   pageCount: pdfPageCount,
   currentPage: pdfCurrentPage,
   renderPage: pdfRenderPage,
@@ -221,27 +302,35 @@ const {
 
 // --- ビュー型 ---
 const documents = computed(() =>
-  clientDocs.value.map(doc => ({
-    id: doc.id,
-    fileName: doc.fileName,
-    fileType: doc.fileType.split('/').pop()?.toUpperCase() || doc.fileType,
-    fileSize: doc.fileSize >= 1024 * 1024
-      ? (doc.fileSize / (1024 * 1024)).toFixed(1) + 'MB'
-      : Math.round(doc.fileSize / 1024) + 'KB',
-    uploadDate: new Date(doc.receivedAt).toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\//g, '/'),
-    imagePath: doc.previewUrl || doc.thumbnailUrl || '',
-    status: doc.status,
-    mimeType: doc.fileType,
+  driveFiles.value.map(f => ({
+    id: f.id,
+    fileName: f.name,
+    fileType: f.mimeType.split('/').pop()?.toUpperCase() || f.mimeType,
+    fileSize: f.size >= 1024 * 1024
+      ? (f.size / (1024 * 1024)).toFixed(1) + 'MB'
+      : Math.round(f.size / 1024) + 'KB',
+    uploadDate: f.createdTime
+      ? new Date(f.createdTime).toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')
+      : '',
+    thumbnailBase64: f.thumbnailBase64,
+    status: driveSelections.value.get(f.id) || 'pending' as DocStatus,
+    mimeType: f.mimeType,
   }))
 );
 
 const selectedIdx = ref(0);
 const selected = computed(() => documents.value[selectedIdx.value] ?? null);
-/** PDFかどうか（fileNameだけでなくpreviewURLも.pdfの場合のみCanvas描画） */
+
+/** プレビューURL（Driveプロキシ経由） */
+const previewUrl = computed(() => {
+  if (!selected.value) return '';
+  return `/api/drive/preview/${selected.value.id}`;
+});
+
+/** PDFかどうか */
 const isPdf = computed(() => {
   if (!selected.value) return false;
-  const path = selected.value.imagePath.toLowerCase();
-  return path.endsWith('.pdf');
+  return selected.value.mimeType === 'application/pdf' || selected.value.fileName.toLowerCase().endsWith('.pdf');
 });
 
 // --- 拡大縮小（widthベース、デフォルト50%） ---
@@ -254,7 +343,7 @@ const doZoomReset = () => { zoomScale.value = DEFAULT_ZOOM; renderIfPdf(); };
 /** PDFの場合、scaleを変更したらCanvas再描画 */
 const renderIfPdf = () => {
   if (isPdf.value && selected.value) {
-    nextTick(() => pdfRenderPage(selected.value!.imagePath, zoomScale.value * 2));
+    nextTick(() => pdfRenderPage(previewUrl.value, zoomScale.value * 2));
   }
 };
 
@@ -262,20 +351,19 @@ const renderIfPdf = () => {
 const isLoading = ref(false);
 const simulateLoad = async () => {
   isLoading.value = true;
-  // 実データ時は読み込み時間が発生するのでawait
   await new Promise(r => setTimeout(r, 400));
   isLoading.value = false;
 
   // PDF描画
   if (isPdf.value && selected.value) {
     await nextTick();
-    pdfRenderPage(selected.value.imagePath, zoomScale.value * 2);
+    pdfRenderPage(previewUrl.value, zoomScale.value * 2);
   }
 };
 
 watch(selectedIdx, () => {
   zoomScale.value = DEFAULT_ZOOM;
-  pdfDestroy(); // 前のPDFリソース解放
+  pdfDestroy();
   simulateLoad();
 });
 onMounted(() => { simulateLoad(); });
@@ -283,7 +371,7 @@ onMounted(() => { simulateLoad(); });
 // PDFページ変更時に再描画
 watch(pdfCurrentPage, () => {
   if (isPdf.value && selected.value) {
-    pdfRenderPage(selected.value.imagePath, zoomScale.value * 2);
+    pdfRenderPage(previewUrl.value, zoomScale.value * 2);
   }
 });
 
@@ -314,14 +402,14 @@ const pushHistory = (docId: string, from: DocStatus, to: DocStatus) => {
 const undo = () => {
   const entry = undoStack.value.pop();
   if (!entry) return;
-  updateDocStatus(entry.docId, entry.from, currentStaffId.value);
+  driveSelections.value.set(entry.docId, entry.from);
   redoStack.value.push(entry);
   showCompleteModal.value = false;
 };
 const redo = () => {
   const entry = redoStack.value.pop();
   if (!entry) return;
-  updateDocStatus(entry.docId, entry.to, currentStaffId.value);
+  driveSelections.value.set(entry.docId, entry.to);
   undoStack.value.push(entry);
 };
 
@@ -335,7 +423,8 @@ const setStatus = (status: DocStatus) => {
   if (currentStatus === status) return;
 
   pushHistory(selected.value.id, currentStatus, status);
-  updateDocStatus(selected.value.id, status, currentStaffId.value);
+  driveSelections.value.set(selected.value.id, status);
+  markDirty(`${selected.value.fileName}: ${statusLabel(status)}`);
 
   const remainingPending = documents.value.filter(
     (d, i) => d.status === 'pending' && !(i === selectedIdx.value)
@@ -358,97 +447,135 @@ const setStatus = (status: DocStatus) => {
 const resetStatus = () => {
   if (!selected.value || selected.value.status === 'pending') return;
   pushHistory(selected.value.id, selected.value.status as DocStatus, 'pending');
-  updateDocStatus(selected.value.id, 'pending', currentStaffId.value);
+  driveSelections.value.set(selected.value.id, 'pending');
+  markDirty(`${selected.value.fileName}: 未処理に戻す`);
   showCompleteModal.value = false;
 };
 
-// --- 仕訳処理に送る ---
-const sendToProcess = () => {
-  // batchId + journalIdを全件付与（status問わず）
-  assignBatchAndJournalIds(clientId.value);
+// --- 移行進捗状態 ---
+const isMigrating = ref(false);
+const migrationDone = ref(false);
+const migrationProgress = ref({ total: 0, queued: 0, processing: 0, done: 0, failed: 0 });
 
-  showCompleteModal.value = false;
-  removeByClientId(clientId.value);
-  selectedIdx.value = 0;
-  undoStack.value = [];
-  redoStack.value = [];
-};
+// --- 仕訳処理に送る（Phase D: POST /api/drive/migrate + ポーリング） ---
+const sendToProcess = async () => {
+  const filesToMigrate = documents.value
+    .filter(d => d.status !== 'pending')
+    .map(d => ({ fileId: d.id, status: d.status }));
 
-// --- 取り込み（Drive API接続） ---
-const isImporting = ref(false);
-const importMessage = ref('');
-const handleImport = async () => {
-  const folderId = currentClient.value?.sharedFolderId;
-  if (!folderId) {
-    alert('Drive共有フォルダが未作成です。先にフォルダを作成してください。');
+  if (filesToMigrate.length === 0) {
+    showCompleteModal.value = false;
     return;
   }
 
-  isImporting.value = true;
-  importMessage.value = 'ファイル一覧を取得中...';
+  isMigrating.value = true;
+  migrationDone.value = false;
 
   try {
-    // 1. Driveフォルダ内のファイル一覧取得
-    const filesRes = await fetch(`/api/drive/files?folderId=${encodeURIComponent(folderId)}`);
-    if (!filesRes.ok) {
-      const data = await filesRes.json().catch(() => ({ error: filesRes.statusText }));
-      throw new Error(data.error || `HTTP ${filesRes.status}`);
-    }
-    const filesData = await filesRes.json() as {
-      files: Array<{ id: string; name: string; mimeType: string; size: number; createdTime: string; thumbnailLink: string | null }>
-    };
-
-    if (filesData.files.length === 0) {
-      importMessage.value = '';
-      isImporting.value = false;
-      alert('新しいファイルはありません。');
-      return;
-    }
-
-    importMessage.value = `${filesData.files.length}件を処理中...（DL+ハッシュ+サムネイル）`;
-
-    // 2. 各ファイルをDL+ハッシュ+サムネイル+ゴミ箱移動
-    const processRes = await fetch('/api/drive/process', {
+    const res = await fetch('/api/drive/migrate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        files: filesData.files.map(f => ({
-          fileId: f.id,
-          filename: f.name,
-          mimeType: f.mimeType,
-        })),
         clientId: clientId.value,
+        files: filesToMigrate,
       }),
     });
-    if (!processRes.ok) {
-      const data = await processRes.json().catch(() => ({ error: processRes.statusText }));
-      throw new Error(data.error || `HTTP ${processRes.status}`);
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(data.error || `HTTP ${res.status}`);
     }
-    const processData = await processRes.json() as {
-      results: Array<{
-        fileId: string; filename: string; fileHash: string;
-        sizeBytes: number; thumbnail: string | null; mimeType: string; isDuplicate: boolean;
-      }>;
-      errors: Array<{ fileId: string; error: string }>;
-    };
 
-    // 3. サーバー側でdocumentStoreに保存済み → フロントのキャッシュを全件再取得
-    const { refresh } = useDocuments();
-    await refresh();
+    const result = await res.json() as { jobId: string; queued: number };
+    console.log(`[MockDriveSelectPage] 移行ジョブ登録: jobId=${result.jobId}, queued=${result.queued}`);
 
-    importMessage.value = '';
-    isImporting.value = false;
+    migrationProgress.value = { total: result.queued, queued: result.queued, processing: 0, done: 0, failed: 0 };
 
-    const errorMsg = processData.errors.length > 0
-      ? `\n※ ${processData.errors.length}件の取り込みに失敗しました`
-      : '';
-    alert(`取り込み完了: ${processData.results.length}件${errorMsg}`);
+    // ポーリング（3秒間隔）
+    const pollInterval = setInterval(async () => {
+      try {
+        const statusRes = await fetch(`/api/drive/migrate/status/${result.jobId}`);
+        if (!statusRes.ok) return;
+        const status = await statusRes.json() as { total: number; queued: number; processing: number; done: number; failed: number };
+        migrationProgress.value = status;
+
+        // 全件完了（queued + processing === 0）
+        if (status.queued === 0 && status.processing === 0) {
+          clearInterval(pollInterval);
+          isMigrating.value = false;
+          migrationDone.value = true;
+          console.log(`[MockDriveSelectPage] 移行完了: done=${status.done}, failed=${status.failed}`);
+        }
+      } catch {
+        // ポーリングエラーは無視（次回リトライ）
+      }
+    }, 3000);
   } catch (err) {
-    importMessage.value = '';
-    isImporting.value = false;
     const msg = err instanceof Error ? err.message : String(err);
-    alert(`取り込みエラー: ${msg}`);
+    alert(`移行エラー: ${msg}`);
+    isMigrating.value = false;
   }
+};
+
+// --- 移行完了後のリセット ---
+const finishMigration = async () => {
+  showCompleteModal.value = false;
+  migrationDone.value = false;
+  await fetchDriveFiles();
+  await fetchExcludedCount();
+  selectedIdx.value = 0;
+  undoStack.value = [];
+  redoStack.value = [];
+  markClean();
+};
+
+// --- 仕訳外ZIP DL（Phase E-5/E-6） ---
+const excludedCount = ref(0);
+const isDownloadingZip = ref(false);
+const excludedInMigration = computed(() => counts.value.excluded);
+
+const fetchExcludedCount = async () => {
+  try {
+    const res = await fetch(`/api/drive/excluded-count/${clientId.value}`);
+    if (res.ok) {
+      const data = await res.json() as { count: number };
+      excludedCount.value = data.count;
+    }
+  } catch {
+    // 取得失敗は無視
+  }
+};
+
+const downloadExcludedZip = async () => {
+  isDownloadingZip.value = true;
+  try {
+    const res = await fetch(`/api/drive/download-excluded/${clientId.value}`);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = res.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'excluded.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    // DL後にカウント更新
+    await fetchExcludedCount();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    alert(`ZIP DLエラー: ${msg}`);
+  } finally {
+    isDownloadingZip.value = false;
+  }
+};
+
+// --- リロード（Driveから再取得） ---
+const handleReload = async () => {
+  await fetchDriveFiles();
 };
 
 // --- ステータス表示 ---

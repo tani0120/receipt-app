@@ -132,9 +132,16 @@ serve({
 
 console.log(`✅ Server listening on http://0.0.0.0:${port}`)
 
+// Phase D-5: 移行バックグラウンドワーカー起動
+import { startMigrationWorker, stopMigrationWorker } from './api/services/migration/migrationWorker'
+startMigrationWorker().catch(err => {
+  console.warn('⚠️ migrationWorker起動失敗（Supabase未接続の可能性）:', err instanceof Error ? err.message : String(err))
+})
+
 // プロセスが終了しないように維持
 process.on('SIGTERM', () => {
     console.log('🛑 SIGTERM received, shutting down gracefully')
+    stopMigrationWorker()
     process.exit(0)
 })
 

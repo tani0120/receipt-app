@@ -124,8 +124,10 @@ app.delete('/:id', (c) => {
 // POST /upload-file — ファイルをサーバーにローカル保存（P3対応）
 // 独自アップロードのblob URL問題を解消。
 // Drive取り込みと同じdata/uploads/{clientId}/に保存。
+// @deprecated Phase C以降は POST /api/drive/upload を使用。Phase Fで削除予定。
 // ============================================================
 app.post('/upload-file', async (c) => {
+  console.warn('[docStore] POST /upload-file は非推奨です。POST /api/drive/upload を使用してください。');
   const formData = await c.req.formData();
   const file = formData.get('file') as File | null;
   const clientId = formData.get('clientId') as string | null;
