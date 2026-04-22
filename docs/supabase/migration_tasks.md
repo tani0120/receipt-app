@@ -433,6 +433,11 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | F-4: documentStore.ts（211行）+ docStore.tsルート廃止 | useDocuments/useProgressが`/api/doc-store`に依存 | Supabase DB documentsテーブルに切替後に削除 | task.md.resolved Phase F |
 | F-7: useDocuments.tsの`/api/doc-store`参照廃止 | 進捗管理（useProgress）が依存 | Supabase版DocumentRepositoryに切替後に削除 | task.md.resolved Phase F |
 | pipeline.tsのsaveUploadedFile + GET /file廃止 | useUploadチャンクアップロードが`data/uploads/`に依存 | Drive upload完全移行後に削除 | task.md.resolved Phase F |
+| app_metadata.roleによる厳密なロール判定 | 未設定（guestAllowed メタで暫定分岐） | `role === 'staff'`/`'client'`でエラーページ出し分け | エラー表示設計 |
+| 403→404変換のサーバー側実装 | 未実装（フロントで一律404表示） | RLSで弾かれた場合にロール別エラーレスポンスに変換 | エラー表示設計 |
+| 401（認証切れ）→ 再ログインフローの出し分け | 未実装（一律/404リダイレクト） | 顧問先→再ログイン案内、スタッフ→JWT期限確認表示 | エラー表示設計 |
+| リクエストIDの生成・ログ連携 | 未実装 | スタッフ向けエラー画面にリクエストID・発生日時を表示 | エラー表示設計 |
+| スタッフ向けSlack #dev-alert連携 | 未実装 | 500/503発生時にSlack自動通知 | エラー表示設計 |
 
 ---
 
