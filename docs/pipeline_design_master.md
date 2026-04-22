@@ -2744,4 +2744,33 @@ repositories/types.ts ← 唯一の型定義源泉
 | `src/mocks/views/MockMaster*.vue` (4ページ) | markDirty説明文追加 |
 | `src/mocks/views/MockClient*.vue` (2ページ) | markDirty説明文追加 |
 
+---
 
+## DL-044: セキュリティ・DB・API一括実装（2026-04-23）
+
+### 実施内容
+
+| # | タスク | ファイル | 内容 |
+|---|---|---|---|
+| B-1 | staffテーブルSQL | `supabase/migrations/004_staff.sql` 新規 | staff.json互換。RLS: staffのみ |
+| B-2 | migration_jobsテーブルSQL | `supabase/migrations/005_migration_jobs.sql` 新規 | CHECK制約+UNIQUE冪等性インデックス |
+| A-1 | スタッフ認証JWT化 | `src/router/index.ts` L462 | localStorage→getCurrentUserAsync() |
+| A-3 | ゲストログイン直接アクセス制限 | `src/router/index.ts` beforeEnter | sessionStorageフラグ+検証 |
+| C-2 | 顧問先契約解除時ブロック | `src/router/index.ts` beforeEnter | API経由でclient.status確認 |
+| A-2 | excluded ZIPルート接続 | `src/api/routes/drive.ts` | GET /download-excluded/:clientId |
+| C-1 | PC D&D→Drive upload | `src/api/routes/drive.ts` | POST /upload |
+
+### 検証
+
+- `vue-tsc --noEmit` エラー0件
+
+### SQLテーブル数（R-S2更新: 10→12）
+
+| SQL | テーブル数 | テーブル |
+|---|---|---|
+| 001_share_status.sql | 4 | user_profiles, invitations, client_users, share_status |
+| 002_core_tables.sql | 5 | clients, vendors, accounts, client_accounts, industry_vectors |
+| 003_documents.sql | 1 | documents |
+| 004_staff.sql | 1 | staff |
+| 005_migration_jobs.sql | 1 | migration_jobs |
+| **合計** | **12** | — |

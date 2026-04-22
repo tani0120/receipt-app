@@ -9,10 +9,12 @@
  *   GET  /api/drive/preview/:fileId  — フルサイズプレビュー（Phase A-4）
  *   POST /api/drive/folder           — 顧問先フォルダ作成（新規登録時）
  *   POST /api/drive/process          — 選択ファイルのDL+ハッシュ+サムネイル+AI分類（→Phase Fで廃止予定）
+ *   POST /api/drive/upload           — PC D&D→Drive APIアップロード（Phase C）
+ *   GET  /api/drive/download-excluded/:clientId — 仕訳外ZIPダウンロード（Phase E-2）
  */
 
 import { Hono } from 'hono';
-import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, downloadAndProcessDriveFile, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, trashDriveFile } from '../services/drive/driveService';
+import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, downloadAndProcessDriveFile, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, revokeFolderPermission, trashDriveFile } from '../services/drive/driveService';
 import { isKnownHash } from '../services/pipeline/classify.service';
 import { addDocuments } from '../services/documentStore';
 import { enqueueMigrationJobs, getJobStatus, getExcludedCount } from '../services/migration/migrationRepository';
@@ -473,6 +475,113 @@ app.post('/grant-permission', async (c) => {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[drive/route] POST /grant-permission エラー:`, msg);
     return c.json({ error: `権限付与失敗: ${msg}` }, 500);
+  }
+});
+
+// ============================================================
+// POST /revoke-permission — Drive共有フォルダの権限を削除
+// 共有停止時にフロントから呼び出し
+// ============================================================
+
+app.post('/revoke-permission', async (c) => {
+  const body = await c.req.json<{ folderId: string; email: string }>();
+
+  if (!body.folderId || !body.email) {
+    return c.json({ error: 'folderIdとemailは必須です' }, 400);
+  }
+
+  try {
+    await revokeFolderPermission(body.folderId, body.email);
+    console.log(`[drive/route] POST /revoke-permission: ${body.email} → ${body.folderId.slice(0, 12)}...`);
+    return c.json({ ok: true, email: body.email });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[drive/route] POST /revoke-permission エラー:`, msg);
+    return c.json({ error: `権限削除失敗: ${msg}` }, 500);
+  }
+});
+
+// ============================================================
+// GET /download-excluded/:clientId — 仕訳外ファイルZIPダウンロード（Phase E-2）
+// ?all=true でDL済み含む全件。デフォルトは未DLのみ。
+// ============================================================
+app.get('/download-excluded/:clientId', async (c) => {
+  const clientId = c.req.param('clientId');
+  const all = c.req.query('all') === 'true';
+
+  try {
+    // 件数事前チェック
+    const count = await getExcludedCount(clientId, all);
+    if (count === 0) {
+      return c.json({ error: 'ダウンロード対象の仕訳外ファイルがありません' }, 404);
+    }
+
+    // ストリームレスポンスでZIP送出
+    const fileName = `excluded_${clientId}_${new Date().toISOString().slice(0, 10)}.zip`;
+    c.header('Content-Type', 'application/zip');
+    c.header('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    // HonoのNode.jsアダプタ経由でWritableを取得
+    const { Writable } = await import('stream');
+    const chunks: Buffer[] = [];
+    const writable = new Writable({
+      write(chunk, _encoding, callback) {
+        chunks.push(Buffer.from(chunk));
+        callback();
+      },
+    });
+
+    const zipCount = await generateExcludedZip(clientId, writable, all);
+    console.log(`[drive/route] GET /download-excluded/${clientId}: ${zipCount}件をZIP化`);
+
+    const body = Buffer.concat(chunks);
+    return new Response(body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${fileName}"`,
+        'Content-Length': String(body.length),
+      },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[drive/route] GET /download-excluded エラー:`, msg);
+    return c.json({ error: `ZIPダウンロード失敗: ${msg}` }, 500);
+  }
+});
+
+// ============================================================
+// POST /upload — PC D&D→Drive APIアップロード（Phase C）
+// フロントからファイルを受取→Drive API files.createで顧問先フォルダにアップロード
+// ============================================================
+app.post('/upload', async (c) => {
+  const body = await c.req.parseBody();
+  const file = body['file'];
+  const folderId = body['folderId'] as string;
+
+  if (!file || !(file instanceof File)) {
+    return c.json({ error: 'file フィールドが必要です' }, 400);
+  }
+  if (!folderId) {
+    return c.json({ error: 'folderId フィールドが必要です' }, 400);
+  }
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const sharedDriveId = process.env.VITE_SHARED_DRIVE_ID;
+
+    if (!sharedDriveId) {
+      return c.json({ error: 'VITE_SHARED_DRIVE_ID 環境変数が未設定です' }, 500);
+    }
+
+    const result = await uploadToDrive(buffer, file.name, file.type, folderId, sharedDriveId);
+    console.log(`[drive/route] POST /upload: ${file.name} → ${result.id}`);
+    return c.json({ ok: true, fileId: result.id, fileName: file.name });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[drive/route] POST /upload エラー:`, msg);
+    return c.json({ error: `アップロード失敗: ${msg}` }, 500);
   }
 });
 

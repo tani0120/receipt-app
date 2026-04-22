@@ -365,6 +365,47 @@ onMounted(() => {
 async function setStatus(status: ShareStatus) {
   await updateStatus(clientId, status)
   currentStatus.value = status
+
+  const folderId = clientData.value?.sharedFolderId
+  const email = clientData.value?.sharedEmail
+
+  // 共有停止時: Drive共有フォルダの権限をrevokeする
+  if (status === 'revoked' && folderId && email) {
+    try {
+      const res = await fetch('/api/drive/revoke-permission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderId, email }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        console.log(`[upload-v2] Drive権限削除成功: ${email}`)
+      } else {
+        console.warn(`[upload-v2] Drive権限削除失敗:`, data.error)
+      }
+    } catch {
+      console.warn('[upload-v2] Drive権限削除API接続失敗')
+    }
+  }
+
+  // 共有OK時: Drive共有フォルダの権限を再付与する
+  if (status === 'active' && folderId && email) {
+    try {
+      const res = await fetch('/api/drive/grant-permission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderId, email, role: 'writer' }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        console.log(`[upload-v2] Drive権限再付与成功: ${email}`)
+      } else {
+        console.warn(`[upload-v2] Drive権限再付与失敗:`, data.error)
+      }
+    } catch {
+      console.warn('[upload-v2] Drive権限再付与API接続失敗')
+    }
+  }
 }
 
 // 招待リンク（Repository経由で保存）

@@ -252,6 +252,7 @@ export const routes: RouteRecordRaw[] = [
     path: '/upload/:clientId/guest',
     name: 'UploadGuest',
     component: () => import('@/mocks/views/MockUploadUnifiedPage.vue'),
+    meta: { guestAllowed: true },
   },
 
   // ===== 旧アップロード → 統合版リダイレクト =====
@@ -284,7 +285,8 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/upload-docs/:clientId/guest',
     name: 'UploadDocsGuest',
-    component: () => import('@/mocks/views/MockUploadDocsPage.vue')
+    component: () => import('@/mocks/views/MockUploadDocsPage.vue'),
+    meta: { guestAllowed: true },
   },
   { path: '/client/upload-docs/:clientId', redirect: (to) => `/upload-docs/${to.params.clientId}` },
   // ===== Driveアップロード（スマホ用: ファイルIDのみ送信。メモリゼロ） =====
@@ -298,6 +300,7 @@ export const routes: RouteRecordRaw[] = [
     path: '/drive-upload/:clientId/guest',
     name: 'DriveUploadGuest',
     component: () => import('@/mocks/views/MockDriveUploadPage.vue'),
+    meta: { guestAllowed: true },
   },
   { path: '/client/drive-upload/:clientId', redirect: (to) => `/drive-upload/${to.params.clientId}` },
   // --- 事務所共通マスタ（顧問先ID不要） ---
@@ -370,11 +373,42 @@ export const routes: RouteRecordRaw[] = [
     path: '/guest/:clientId',
     name: 'GuestPortal',
     component: () => import('@/mocks/views/MockPortalPage.vue'),
+    meta: { guestAllowed: true },
+    beforeEnter: async (to) => {
+      const clientId = to.params.clientId as string;
+      try {
+        const res = await fetch(`/api/clients/${clientId}`);
+        if (!res.ok) {
+          console.warn(`[guest] 顧問先 ${clientId} が見つかりません`);
+          return '/404';
+        }
+        const { client } = await res.json();
+        if (client.status !== 'active') {
+          console.warn(`[guest] 顧問先 ${clientId} は ${client.status} です`);
+          return '/404';
+        }
+      } catch (err) {
+        console.error('[guest] 顧問先ステータス確認エラー:', err);
+        return '/404';
+      }
+    },
   },
   {
     path: '/guest/:clientId/login',
     name: 'GuestLogin',
     component: () => import('@/mocks/views/MockPortalLoginPage.vue'),
+    meta: { guestAllowed: true },
+    beforeEnter: (to) => {
+      const clientId = to.params.clientId as string;
+      // 招待リンク経由フラグ（/invite/:code → resolveInviteCode → リダイレクト時にセット）
+      const inviteRef = sessionStorage.getItem(`invite_ref_${clientId}`);
+      // ゲストログイン済みフラグ
+      const guestAuth = localStorage.getItem(`guest_google_${clientId}`);
+      if (!inviteRef && !guestAuth) {
+        console.warn(`[guest] /guest/${clientId}/login への直接アクセスを拒否`);
+        return '/404';
+      }
+    },
   },
   // 旧パス互換（/portal/ → /guest/ or Drive方式）
   { path: '/portal/:clientId', redirect: (to) => `/guest/${to.params.clientId}` },
@@ -388,17 +422,38 @@ export const routes: RouteRecordRaw[] = [
     name: 'InviteRedirect',
     // リダイレクト専用ルート。beforeEnterでサーバー問い合わせ→ゲストログインに転送。
     component: () => import('@/mocks/views/MockPortalLoginPage.vue'),
+    meta: { guestAllowed: true },
     beforeEnter: async (to) => {
-      const { resolveInviteCode } = useShareStatus()
+      const { resolveInviteCode, loadAll, getStatusFromCache } = useShareStatus()
       const code = to.params.code as string
       const clientId = await resolveInviteCode(code)
-      if (clientId) {
-        return `/guest/${clientId}/login`
+      if (!clientId) {
+        console.warn(`[invite] 招待コード「${code}」に対応する顧問先が見つかりません`)
+        return '/404'
       }
-      // コード不正 or サーバー未応答 → トップページにリダイレクト
-      console.warn(`[invite] 招待コード「${code}」に対応する顧問先が見つかりません`)
-      return '/mode-select'
+      // 共有停止中 → 404
+      await loadAll()
+      const status = getStatusFromCache(clientId)
+      if (status === 'revoked') {
+        console.warn(`[invite] 顧問先 ${clientId} は共有停止中です`)
+        return '/404'
+      }
+      // 招待経由フラグをセット（/guest/:clientId/loginのbeforeEnterで検証）
+      sessionStorage.setItem(`invite_ref_${clientId}`, code);
+      return `/guest/${clientId}/login`
     },
+  },
+  // --- 404ページ ---
+  {
+    path: '/404',
+    name: 'NotFound',
+    component: () => import('@/mocks/views/MockNotFoundPage.vue'),
+    meta: { guestAllowed: true },
+  },
+  // 未定義ルート → 404
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/404',
   },
 ]
 
@@ -427,9 +482,18 @@ router.beforeEach(async (to) => {
   // 認証初期化を待つ（Supabase Auth読み込み完了まで）
   await authReadyPromise;
 
-  // 開発環境: 認証ガード無効化（直接URLアクセス可能）
-  if (to.path === '/login') {
+  // ログインページ・ゲスト許可ルートは認証不要
+  if (to.path === '/login' || to.meta.guestAllowed) {
     return;
+  }
+
+  // スタッフ認証チェック（Supabase Auth JWT）
+  // ※ validateStaffAccess()はログイン時に1回実行済み。
+  //   ここではJWTセッションの存在のみ確認する。
+  const { getCurrentUserAsync } = await import('@/utils/auth');
+  const user = await getCurrentUserAsync();
+  if (!user) {
+    return '/404';
   }
   return true;
 })

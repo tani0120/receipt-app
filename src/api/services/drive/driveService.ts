@@ -210,6 +210,47 @@ export async function shareFolderWithEmail(
 }
 
 /**
+ * フォルダから指定メールアドレスの共有権限を削除
+ *
+ * @param folderId - 対象フォルダID
+ * @param email - 削除対象のメールアドレス
+ */
+export async function revokeFolderPermission(
+  folderId: string,
+  email: string,
+): Promise<void> {
+  const drive = getDriveClient();
+
+  // フォルダの権限一覧を取得
+  const permList = await drive.permissions.list({
+    fileId: folderId,
+    supportsAllDrives: true,
+    fields: 'permissions(id, emailAddress, role)',
+  });
+
+  const target = permList.data.permissions?.find(
+    (p) => p.emailAddress?.toLowerCase() === email.toLowerCase(),
+  );
+
+  if (!target?.id) {
+    console.log(
+      `[driveService] 権限削除スキップ（該当なし）: ${email} → ${folderId}`,
+    );
+    return;
+  }
+
+  await drive.permissions.delete({
+    fileId: folderId,
+    permissionId: target.id,
+    supportsAllDrives: true,
+  });
+
+  console.log(
+    `[driveService] 共有権限削除完了: ${email} → ${folderId}`,
+  );
+}
+
+/**
  * DriveファイルをDriveのゴミ箱に移動
  * 取り込み成功後に呼び出し、フォルダ内のファイルをクリーンアップ
  *

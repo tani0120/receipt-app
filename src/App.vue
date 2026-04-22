@@ -27,12 +27,13 @@ import { computed } from 'vue';
 
 const route = useRoute();
 
-/** ナビバー非表示条件: ログインページ・顧問先ポータル */
+/** ナビバー非表示条件: ログインページ・顧問先ポータル・ゲスト許可ルート */
 const hideNavBar = computed(() =>
   route.path === '/login'
   || route.path.startsWith('/portal')
   || route.path.startsWith('/guest')
   || route.path.endsWith('/guest')
+  || !!route.meta.guestAllowed
 );
 </script>
 

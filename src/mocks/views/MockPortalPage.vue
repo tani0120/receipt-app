@@ -131,16 +131,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import PortalHeader from '@/mocks/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useRoute, useRouter } from 'vue-router'
+import { useShareStatus } from '@/composables/useShareStatus'
 
 const route = useRoute()
 const router = useRouter()
 const clientId = route.params.clientId as string
 
 const { clients } = useClients()
+
+/** 共有停止中なら404にリダイレクト */
+onMounted(async () => {
+  const { loadAll, getStatusFromCache } = useShareStatus()
+  await loadAll()
+  const status = getStatusFromCache(clientId)
+  if (status === 'revoked') {
+    router.replace('/404')
+  }
+})
+
 const client = computed(() => clients.value.find(c => c.clientId === clientId))
 const clientName = computed(() => client.value?.companyName ?? clientId)
 
