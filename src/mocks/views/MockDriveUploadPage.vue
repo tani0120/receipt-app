@@ -219,7 +219,7 @@ import type { DriveFileItemWithThumbnail } from '@/api/services/drive/driveServi
 const route = useRoute()
 const clientId = route.params.clientId as string
 const { clients } = useClients()
-const clientName = clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId
+const clientName = computed(() => clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId)
 
 // --- ページ離脱ガード（選別中の離脱を警告） ---
 const { markDirty, markClean } = useUnsavedGuard(null)

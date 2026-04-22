@@ -244,7 +244,7 @@ import { MSG_DUPLICATE_SHORT } from '@/shared/validationMessages'
 const route = useRoute()
 const clientId = route.params.clientId as string
 const { clients } = useClients()
-const clientName = clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId
+const clientName = computed(() => clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId)
 
 // ===== 型 =====
 type FileStatus = 'queued' | 'uploading' | 'done' | 'failed'

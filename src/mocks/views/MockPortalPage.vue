@@ -30,7 +30,7 @@
             </div>
             <div class="action-text">
               <span class="action-label">🖥️ パソコンから共有</span>
-              <span class="action-hint">ドラッグ&ドロップで資料を送付</span>
+              <span class="action-hint">ファイルを選択して資料を送付</span>
             </div>
             <div class="action-arrow">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
@@ -40,8 +40,8 @@
           </div>
         </div>
 
-        <!-- スマホから共有（スマホも使うユーザーのみ） -->
-        <a v-if="useSmartphone && hasDriveFolder" :href="driveUrl" target="_blank" rel="noopener" class="action-card action-card--drive">
+        <!-- スマホから共有（共有フォルダがあれば表示） -->
+        <a v-if="hasDriveFolder" :href="driveUrl" target="_blank" rel="noopener" class="action-card action-card--drive">
           <div class="action-card-inner">
             <div class="action-icon-wrap action-icon--drive">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
@@ -62,7 +62,7 @@
           </div>
         </a>
         <!-- スマホボタン（共有フォルダ未設定時） -->
-        <div v-if="useSmartphone && !hasDriveFolder" class="action-card action-card--disabled">
+        <div v-if="!hasDriveFolder" class="action-card action-card--disabled">
           <div class="action-card-inner">
             <div class="action-icon-wrap action-icon--drive" style="opacity: 0.4">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
@@ -85,7 +85,7 @@
           <span class="hint-icon">⭐</span>
           <span class="hint-text">このページを<strong>ブックマークに登録</strong>すると、次回からすぐにアクセスできます</span>
         </div>
-        <div v-if="useSmartphone" class="hint-item">
+        <div class="hint-item">
           <span class="hint-icon">📱</span>
           <span class="hint-text">スマホからはGoogleドライブアプリの共有フォルダから直接アップロードできます</span>
         </div>
@@ -144,11 +144,7 @@ const { clients } = useClients()
 const client = computed(() => clients.value.find(c => c.clientId === clientId))
 const clientName = computed(() => client.value?.companyName ?? clientId)
 
-/* ログインページで保存した共有方法を読み取り */
-const useSmartphone = computed(() => {
-  const saved = localStorage.getItem(`guest_share_${clientId}`)
-  return saved === 'smartphone'
-})
+/* Drive統一: スマホボタンは常時表示（sharedFolderIdの有無で制御） */
 
 /* Drive共有フォルダURL */
 const hasDriveFolder = computed(() => !!client.value?.sharedFolderId)
@@ -172,7 +168,7 @@ const tips = [
 ]
 
 const goUpload = () => {
-  router.push(`/upload/${clientId}/guest`)
+  router.push(`/upload-docs/${clientId}/guest`)
 }
 
 </script>

@@ -358,7 +358,7 @@ const {
 } = useUpload()
 
 const { clients } = useClients()
-const clientName = clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId
+const clientName = computed(() => clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId)
 
 // 画面遷移時にサーバー側の重複ハッシュ記録をクリア（DL-038）
 onBeforeUnmount(() => {
@@ -407,6 +407,13 @@ const howToItems = [
 const handleFileInput = (e: Event) => {
   const files = Array.from((e.target as HTMLInputElement).files ?? [])
   if (files.length) addFiles(files, { lite: isMobile.value })
+  ;(e.target as HTMLInputElement).value = ''
+}
+
+// 高度な処理（AI分類あり）ボタン用ハンドラ
+const handleFileInputAdvanced = (e: Event) => {
+  const files = Array.from((e.target as HTMLInputElement).files ?? [])
+  if (files.length) addFiles(files, { lite: false })
   ;(e.target as HTMLInputElement).value = ''
 }
 

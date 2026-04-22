@@ -376,11 +376,11 @@ export const routes: RouteRecordRaw[] = [
     name: 'GuestLogin',
     component: () => import('@/mocks/views/MockPortalLoginPage.vue'),
   },
-  // 旧パス互換（/portal/ → /guest/ or /upload/）
+  // 旧パス互換（/portal/ → /guest/ or Drive方式）
   { path: '/portal/:clientId', redirect: (to) => `/guest/${to.params.clientId}` },
   { path: '/portal/:clientId/login', redirect: (to) => `/guest/${to.params.clientId}/login` },
-  { path: '/portal/:clientId/mobile', redirect: (to) => `/upload/${to.params.clientId}/guest` },
-  { path: '/portal/:clientId/pc', redirect: (to) => `/upload/${to.params.clientId}/guest` },
+  { path: '/portal/:clientId/mobile', redirect: (to) => `/drive-upload/${to.params.clientId}/guest` },
+  { path: '/portal/:clientId/pc', redirect: (to) => `/upload-docs/${to.params.clientId}/guest` },
   { path: '/portal/:clientId/docs', redirect: (to) => `/upload-docs/${to.params.clientId}/guest` },
   // --- 招待リンク（コード→clientId逆引き→ゲストログインにリダイレクト） ---
   {
