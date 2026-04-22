@@ -8,18 +8,14 @@
  *   GET  /api/drive/files            — 顧問先フォルダのファイル一覧取得（?withThumbnails=trueでサムネイルbase64付き）
  *   GET  /api/drive/preview/:fileId  — フルサイズプレビュー（Phase A-4）
  *   POST /api/drive/folder           — 顧問先フォルダ作成（新規登録時）
- *   POST /api/drive/process          — 選択ファイルのDL+ハッシュ+サムネイル+AI分類（→Phase Fで廃止予定）
  *   POST /api/drive/upload           — PC D&D→Drive APIアップロード（Phase C）
  *   GET  /api/drive/download-excluded/:clientId — 仕訳外ZIPダウンロード（Phase E-2）
  */
 
 import { Hono } from 'hono';
-import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, downloadAndProcessDriveFile, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, revokeFolderPermission, trashDriveFile } from '../services/drive/driveService';
-import { isKnownHash } from '../services/pipeline/classify.service';
-import { addDocuments } from '../services/documentStore';
+import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, revokeFolderPermission } from '../services/drive/driveService';
 import { enqueueMigrationJobs, getJobStatus, getExcludedCount } from '../services/migration/migrationRepository';
 import { generateExcludedZip } from '../services/migration/excludedZipService';
-import type { DocEntry } from '../../repositories/types';
 
 const app = new Hono();
 
@@ -342,117 +338,6 @@ app.patch('/folder/rename', async (c) => {
   }
 });
 
-// ============================================================
-// POST /process — 選択ファイルのDL+ハッシュ+サムネイル生成
-// ============================================================
-
-interface DriveProcessRequest {
-  /** 処理対象のファイルID配列 */
-  files: Array<{
-    fileId: string;
-    filename: string;
-    mimeType: string;
-  }>;
-  /** 顧問先ID */
-  clientId: string;
-}
-
-interface DriveProcessResultItem {
-  fileId: string;
-  filename: string;
-  fileHash: string;
-  sizeBytes: number;
-  thumbnail: string | null;
-  mimeType: string;
-  isDuplicate: boolean;
-}
-
-app.post('/process', async (c) => {
-  const body = await c.req.json<DriveProcessRequest>();
-
-  if (!body.files || !Array.isArray(body.files) || body.files.length === 0) {
-    return c.json({ error: 'files 配列が空です' }, 400);
-  }
-
-  console.log(`[drive/route] POST /process: ${body.files.length}件処理開始 (clientId=${body.clientId})`);
-
-  const results: DriveProcessResultItem[] = [];
-  const errors: Array<{ fileId: string; error: string }> = [];
-
-  // 逐次処理（サーバーメモリ保護。並列はDrive APIレート制限にも配慮）
-  for (const file of body.files) {
-    try {
-      const result = await downloadAndProcessDriveFile(
-        file.fileId,
-        file.filename,
-        file.mimeType,
-        body.clientId,
-      );
-
-      // 重複チェック（既知ハッシュと照合）
-      const isDuplicate = isKnownHash(result.fileHash);
-
-      const item = {
-        fileId: file.fileId,
-        filename: result.filename,
-        fileHash: result.fileHash,
-        sizeBytes: result.sizeBytes,
-        thumbnail: result.thumbnail,
-        mimeType: result.mimeType,
-        isDuplicate,
-        localPath: result.localPath,
-      };
-      results.push(item);
-
-      // documentStoreに保存（ゴミ箱移動より先。リロードでデータ消失を防止）
-      const docEntry: DocEntry = {
-        id: `drive-${file.fileId}-${Date.now()}`,
-        clientId: body.clientId,
-        source: 'drive',
-        fileName: result.filename,
-        fileType: result.mimeType,
-        fileSize: result.sizeBytes,
-        fileHash: result.fileHash,
-        driveFileId: file.fileId,
-        thumbnailUrl: result.thumbnail,
-        previewUrl: result.localPath,
-        status: 'pending',
-        receivedAt: new Date().toISOString(),
-        batchId: null,
-        journalId: null,
-        createdBy: null,
-        updatedBy: null,
-        updatedAt: null,
-        statusChangedBy: null,
-        statusChangedAt: null,
-      };
-      addDocuments([docEntry]);
-
-      // documentStore保存済み → Driveのファイルをゴミ箱に移動
-      try {
-        await trashDriveFile(file.fileId);
-      } catch (trashErr) {
-        const trashMsg = trashErr instanceof Error ? trashErr.message : String(trashErr);
-        console.warn(`[drive/route] ゴミ箱移動失敗 (${file.filename}): ${trashMsg}（取り込みは成功済み）`);
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[drive/route] ファイル処理失敗 (${file.filename}):`, msg);
-      errors.push({ fileId: file.fileId, error: msg });
-    }
-  }
-
-  console.log(
-    `[drive/route] POST /process 完了: 成功=${results.length} 失敗=${errors.length}`,
-  );
-
-  return c.json({
-    results,
-    errors,
-    totalProcessed: results.length,
-    totalErrors: errors.length,
-  });
-});
 
 // ============================================================
 // POST /grant-permission — ゲストにDrive共有フォルダの権限を付与
@@ -511,7 +396,7 @@ app.get('/download-excluded/:clientId', async (c) => {
 
   try {
     // 件数事前チェック
-    const count = await getExcludedCount(clientId, all);
+    const count = await getExcludedCount(clientId);
     if (count === 0) {
       return c.json({ error: 'ダウンロード対象の仕訳外ファイルがありません' }, 404);
     }
@@ -569,15 +454,9 @@ app.post('/upload', async (c) => {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const sharedDriveId = process.env.VITE_SHARED_DRIVE_ID;
-
-    if (!sharedDriveId) {
-      return c.json({ error: 'VITE_SHARED_DRIVE_ID 環境変数が未設定です' }, 500);
-    }
-
-    const result = await uploadToDrive(buffer, file.name, file.type, folderId, sharedDriveId);
-    console.log(`[drive/route] POST /upload: ${file.name} → ${result.id}`);
-    return c.json({ ok: true, fileId: result.id, fileName: file.name });
+    const result = await uploadToDrive(folderId, buffer, file.name, file.type);
+    console.log(`[drive/route] POST /upload: ${file.name} → ${result.driveFileId}`);
+    return c.json({ ok: true, fileId: result.driveFileId, fileName: file.name });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[drive/route] POST /upload エラー:`, msg);
