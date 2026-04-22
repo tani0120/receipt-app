@@ -1,7 +1,7 @@
 # Supabase移行タスク一覧
 
 > 作成日: 2026-04-23
-> 最終更新: 2026-04-23 v3（B-1/B-2/A-1/A-3/C-2/A-2/C-1実装完了、vue-tsc --noEmitエラー0件）
+> 最終更新: 2026-04-23 v4（Phase A-E全完了、Phase F-1/2/3/5/6完了、F-4/7はSupabase移行後）
 > ソース:
 > - [task_unified.md](file:///c:/dev/receipt-app/docs/task_unified.md)（セクションC-0, C-1, D, H, L-2）
 > - [supabase_security_report_260214.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/supabase_security_report_260214.md)（RLS, validateStaffAccess, Google OAuth）
@@ -66,7 +66,7 @@
 |---|---|---|
 | 判別方法 | ✅ **JWT化完了** `getCurrentUserAsync()`（L462） | — |
 | Supabase Auth初期化 | ✅ **実装済み**（L434-446 onAuthStateChanged） | そのまま使用 |
-| 偽装耐性 | ❌ 容易に偽装可能 | ✅ JWT署名で偽装不可 |
+| 偽装耐性 | ✅ **JWT化済み**（getCurrentUserAsync） | — |
 | 対象ファイル | [router/index.ts](file:///c:/dev/receipt-app/src/router/index.ts) L450-465 | 同左（L460の判定部分のみJWTに置換） |
 
 **実装内容:**
@@ -83,7 +83,7 @@
 | 項目 | 現状 | Supabase移行後 |
 |---|---|---|
 | データ | `staff.json`に`status: active/inactive` | staffテーブル or Supabase Auth user metadata |
-| チェック | ❌ 未実装（staffIdの存在のみ確認） | ✅ ログイン時・ルーターガードでstatus確認 |
+| チェック | ✅ **実装済み**（`validateStaffAccess()`がstatus=active確認） | staffテーブルに切替のみ |
 
 **実装内容:**
 - `inactive`スタッフのSupabase Authアカウントを`ban`するか、staffテーブルのstatusをチェック
@@ -95,7 +95,7 @@
 
 | 種別 | 現状の判別 | Supabase移行後 |
 |---|---|---|
-| スタッフ | localStorage staffId | Supabase Auth JWT + `validateStaffAccess()` |
+| スタッフ | ✅ Supabase Auth JWT + `validateStaffAccess()` | — |
 | 顧問先 | localStorage `guest_google_{clientId}` | Googleログイン + DB上のclientId紐付け |
 | 第三者 | どちらもなし | どちらもなし → 404 |
 
@@ -335,9 +335,9 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | 移行進捗監視API（GET /migrate/status/:jobId） | ✅ **実装済み**（drive.ts L160） | コード実査 |
 | 移行後のDriveファイルゴミ箱移動 | ✅ **実装済み**（migrationWorker.ts内） | コード実査 |
 | excluded ZIPダウンロード（サービス＋ルート） | ✅ **ルート接続完了**（drive.ts） | 本セッション |
-| excluded自動削除（DL済み+90日経過→Storage削除） | ❌ 未着手 | 24番 L1368-1371 |
+| excluded自動削除（DL済み+90日経過→Storage削除） | ✅ **実装済み**（`purgeExpiredExcluded()` migrationWorker.ts） | コード実査 |
 | PC D&D→Drive uploadルート（POST /upload） | ✅ **実装済み**（drive.ts） | 本セッション |
-| `archiver` npmインストール | ✅ **確認要** | 24番 L1334 |
+| `archiver` npmインストール | ✅ **インストール済み** | package.json |
 
 ### 6-3. 実装フェーズ（24番セクション13）
 
@@ -348,7 +348,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | Phase C | PC版Drive upload統合 | Phase A |
 | Phase D | Supabase移行バッチ（全3種別をSupabaseに移動→Drive全ゴミ箱） | Phase B + Supabase Storage |
 | Phase E | 仕訳外ZIPダウンロード（Supabase Storageから取得）+ 肥大化防止 | Phase D |
-| Phase F | 旧方式廃止（`data/uploads/`・JSON永続化・upload-file API・/process API） | Phase A-E全完了 |
+| Phase F | 旧方式廃止 — **F-1/2/3/5/6完了**。F-4/7はSupabase移行後 | Phase A-E全完了 |
 
 ### 6-4. 新設API（24番セクション11-2）
 
@@ -376,13 +376,13 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 
 ### 6-6. 廃止対象（Phase F、24番セクション11-1）
 
-| 廃止対象 | 現在のファイル | 理由 |
+| 廃止対象 | 現在のファイル | 状態 |
 |---|---|---|
-| `data/uploads/` ローカル保存 | drive.ts | Driveが一次ストレージ |
-| `POST /api/doc-store/upload-file` | docStore.ts | Drive API uploadに置換 |
-| `documentStore.ts` JSON永続化 | documentStore.ts | 選別前:Drive、選別後:Supabase DB |
-| `POST /api/drive/process`（DL+ゴミ箱移動） | drive.ts | Driveに留置方式に変更 |
-| blob URL / ローカルファイルURL | useUpload.ts | Drive APIサムネイルに置換 |
+| ~~`data/uploads/` 静的配信~~ | ~~server.ts~~ | ~~✅ F-1 削除済み~~ |
+| ~~`POST /api/doc-store/upload-file`~~ | ~~docStore.ts~~ | ~~✅ F-2 削除済み~~ |
+| `documentStore.ts` JSON永続化 | documentStore.ts | ⏸️ F-4 Supabase移行後 |
+| ~~`POST /api/drive/process`~~ | ~~drive.ts~~ | ~~✅ F-3 削除済み~~ |
+| ~~blob URL / ローカルファイルURL~~ | ~~MockUploadDocsPage.vue~~ | ~~✅ F-5 Drive uploadに切替済み~~ |
 
 > 出典: 24番 セクション10-16
 
@@ -405,7 +405,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 
 | ファイル | 移行先テーブル | レコード数（概算） | 前提 |
 |---|---|---|---|
-| `data/staff.json` | staff | 7名 | **staffテーブルSQL未作成** |
+| `data/staff.json` | staff | 7名 | ✅ **004_staff.sql作成済み** |
 | `data/clients.json` | clients | 数十件 | 002_core_tables.sql ✅ |
 | `data/share_status.json` | share_status | 数十件 | 001_share_status.sql ✅ |
 | `data/documents/*.json` | documents | 数百件 | 003_documents.sql ✅ |
@@ -430,6 +430,9 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | `documents`テーブル `drive_file_id UNIQUE`制約追加 | 未適用 | 冪等性保証用 | 24番 L1174 |
 | ~~excluded ZIPダウンロードルート接続~~ | ~~✅ 本セッションで完了~~ | — | — |
 | ~~PC D&D→Drive uploadルート~~ | ~~✅ 本セッションで完了~~ | — | — |
+| F-4: documentStore.ts（211行）+ docStore.tsルート廃止 | useDocuments/useProgressが`/api/doc-store`に依存 | Supabase DB documentsテーブルに切替後に削除 | task.md.resolved Phase F |
+| F-7: useDocuments.tsの`/api/doc-store`参照廃止 | 進捗管理（useProgress）が依存 | Supabase版DocumentRepositoryに切替後に削除 | task.md.resolved Phase F |
+| pipeline.tsのsaveUploadedFile + GET /file廃止 | useUploadチャンクアップロードが`data/uploads/`に依存 | Drive upload完全移行後に削除 | task.md.resolved Phase F |
 
 ---
 
@@ -437,7 +440,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 
 | # | 暫定実装 | ファイル | 置換先 |
 |---|---|---|---|
-| 1 | localStorage staffIdチェック | `router/index.ts` beforeEach | Supabase Auth JWT |
+| 1 | ~~localStorage staffIdチェック~~ | ~~`router/index.ts` beforeEach~~ | ~~✅ Supabase Auth JWT化済み~~ |
 | 2 | localStorage `guest_google_*` | `MockPortalLoginPage.vue` | サーバー側セッション |
 | 3 | `share_status.json` | `shareStatusStore.ts` | Supabase DB |
 | 4 | `clients.json` sharedEmail | `clientStore.ts` | Supabase DB clients.shared_email |
