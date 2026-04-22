@@ -374,22 +374,25 @@ const handleConfirm = async () => {
   const doneFiles = files.value.filter(f => f.status === 'done')
   const docEntries: Array<Record<string, unknown>> = []
 
-  // 1. 各ファイルをサーバーに保存
+  // 1. 各ファイルをDriveにアップロード（Phase C: Drive upload統合）
+  const client = clients.value.find(c => c.clientId === clientId)
+  const folderId = client?.sharedFolderId
   for (const f of doneFiles) {
-    let localPath: string | null = null
+    let driveFileId: string | null = null
     let fileHash: string | null = null
     try {
-      const formData = new FormData()
-      formData.append('file', f.file)
-      formData.append('clientId', clientId)
-      const res = await fetch('/api/doc-store/upload-file', { method: 'POST', body: formData })
-      if (res.ok) {
-        const data = await res.json() as { localPath: string; fileHash: string }
-        localPath = data.localPath
-        fileHash = data.fileHash
+      if (folderId) {
+        const formData = new FormData()
+        formData.append('file', f.file)
+        formData.append('folderId', folderId)
+        const res = await fetch('/api/drive/upload', { method: 'POST', body: formData })
+        if (res.ok) {
+          const data = await res.json() as { fileId: string }
+          driveFileId = data.fileId
+        }
       }
     } catch (err) {
-      console.error(`[DocsPage] ファイル保存失敗 (${f.file.name}):`, err)
+      console.error(`[DocsPage] ファイルアップロード失敗 (${f.file.name}):`, err)
     }
 
     docEntries.push({
@@ -400,9 +403,9 @@ const handleConfirm = async () => {
       fileType: f.file.type || 'application/octet-stream',
       fileSize: f.file.size,
       fileHash,
-      driveFileId: null,
+      driveFileId,
       thumbnailUrl: null,
-      previewUrl: localPath,
+      previewUrl: driveFileId ? `/api/drive/preview/${driveFileId}` : null,
       status: 'pending',
       receivedAt: new Date().toISOString(),
       batchId: null,

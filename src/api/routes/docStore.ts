@@ -119,45 +119,6 @@ app.delete('/:id', (c) => {
     return c.json({ error: `ドキュメント ${id} が見つかりません` }, 404);
   }
   return c.json({ ok: true });
-});
-// ============================================================
-// POST /upload-file — ファイルをサーバーにローカル保存（P3対応）
-// 独自アップロードのblob URL問題を解消。
-// Drive取り込みと同じdata/uploads/{clientId}/に保存。
-// @deprecated Phase C以降は POST /api/drive/upload を使用。Phase Fで削除予定。
-// ============================================================
-app.post('/upload-file', async (c) => {
-  console.warn('[docStore] POST /upload-file は非推奨です。POST /api/drive/upload を使用してください。');
-  const formData = await c.req.formData();
-  const file = formData.get('file') as File | null;
-  const clientId = formData.get('clientId') as string | null;
-
-  if (!file || !clientId) {
-    return c.json({ error: 'file と clientId が必要です' }, 400);
-  }
-
-  const { mkdirSync, writeFileSync, existsSync } = await import('fs');
-  const { join } = await import('path');
-  const { createHash } = await import('crypto');
-
-  // ファイルをBufferに変換
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
-  // SHA-256ハッシュ
-  const fileHash = createHash('sha256').update(buffer).digest('hex');
-
-  // 保存先
-  const dir = join('data', 'uploads', clientId);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const safeName = `${fileHash.slice(0, 8)}_${file.name}`;
-  const filePath = join(dir, safeName);
-  writeFileSync(filePath, buffer);
-
-  const localPath = `/api/uploads/${clientId}/${encodeURIComponent(safeName)}`;
-  console.log(`[docStore] ファイル保存: ${file.name} → ${localPath} (${(buffer.length / 1024).toFixed(0)}KB)`);
-
-  return c.json({ ok: true, localPath, fileHash, sizeBytes: buffer.length });
-});
 
 export default app;
+

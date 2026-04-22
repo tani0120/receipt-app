@@ -110,8 +110,6 @@ app.route('/api/share-status', shareStatusRoutes)
 import guestAuthRoutes from './api/routes/guestAuthRoutes'
 app.route('/api/guest', guestAuthRoutes)
 
-// Drive取り込みファイル配信（data/uploads/{clientId}/{filename}）
-app.use('/api/uploads/*', serveStatic({ root: './data/uploads', rewriteRequestPath: (path) => path.replace('/api/uploads', '') }))
 
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
