@@ -438,6 +438,9 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | 401（認証切れ）→ 再ログインフローの出し分け | 未実装（一律/404リダイレクト） | 顧問先→再ログイン案内、スタッフ→JWT期限確認表示 | エラー表示設計 |
 | リクエストIDの生成・ログ連携 | 未実装 | スタッフ向けエラー画面にリクエストID・発生日時を表示 | エラー表示設計 |
 | スタッフ向けSlack #dev-alert連携 | 未実装 | 500/503発生時にSlack自動通知 | エラー表示設計 |
+| normalizeSupabaseError.ts新設 | 未作成（fetchのnormalizeHttpError.tsのみ実装済み） | PostgrestError → AppError変換（RLSの42501→403等） | エラーハンドラー設計 |
+| errorRole.ts中身の差し替え | 暫定: JWT+guest_google_*で判定 | `app_metadata.role`で判定に置換（1関数の中身のみ） | エラーハンドラー設計 |
+| MockErrorPreviewPage.vue削除 | 開発用プレビュー（/#/error-preview） | 本番デプロイ前に削除 | エラーハンドラー設計 |
 
 ---
 
