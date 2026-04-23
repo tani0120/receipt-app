@@ -7,6 +7,7 @@
 
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { zodHook } from '../helpers/zodHook';
 import { z } from 'zod';
 import { executeOCRVertex } from '../vertex/ocr_service_vertex';
 
@@ -33,7 +34,7 @@ const ocrRequestSchema = z.object({
  */
 ocrRoute.post(
     '/',
-    zValidator('json', ocrRequestSchema),
+    zValidator('json', ocrRequestSchema, zodHook),
     async (c) => {
         try {
             const { image, mimeType, clientId } = c.req.valid('json');

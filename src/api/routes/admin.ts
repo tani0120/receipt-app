@@ -3,13 +3,14 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { zValidator } from '@hono/zod-validator'
+import { zodHook } from '../helpers/zodHook'
 
 const app = new Hono()
 
 // --- Config Schemas ---
 const PhaseConfigSchema = z.object({
-    provider: z.enum(['vertex_ai', 'ai_studio', 'gemini', 'vertex']),
-    mode: z.enum(['realtime', 'batch', 'normal']),
+    provider: z.enum(['vertex_ai', 'ai_studio', 'gemini', 'vertex'], { error: 'プロバイダーは必須です' }),
+    mode: z.enum(['realtime', 'batch', 'normal'], { error: 'モードは必須です' }),
     model: z.string().optional(),
     modelName: z.string().optional()
 })
@@ -53,12 +54,7 @@ const route = app
     .patch('/config',
         zValidator('json', z.object({
             aiPhases: PhaseSettingsSchema.optional(),
-        }).passthrough(), async (result, c) => {
-            if (!result.success) {
-                return c.json({ success: false, message: 'Invalid config format', errors: result.error }, 400)
-            }
-            return undefined
-        }),
+        }).passthrough(), zodHook),
         async (c) => {
             // [レガシー] Firebase Firestore + ConfigService依存。Supabase移行後に再実装
             console.warn('[admin] config PATCH: Firebase削除済み。保存はスキップされます')

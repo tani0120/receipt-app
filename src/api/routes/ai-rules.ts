@@ -1,7 +1,10 @@
 
 import { Hono } from 'hono';
+import { apiError } from '../helpers/apiError';
+import { 未検出, 必須 } from '../helpers/apiMessages';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
+import { zodHook } from '../helpers/zodHook';
 import type { LearningRuleUi } from '../../types/LearningRuleUi';
 
 // Mock Data
@@ -60,15 +63,15 @@ const CreateRuleSchema = z.object({
     priority: z.number().optional(),
     status: z.enum(['active', 'inactive', 'draft']).optional(),
     trigger: z.object({
-        type: z.enum(['description', 'vendor', 'amount']),
-        keyword: z.string(),
+        type: z.enum(['description', 'vendor', 'amount'], { error: 必須('トリガー種別') }),
+        keyword: z.string({ error: 必須('キーワード') }).min(1, 必須('キーワード')),
         amountRange: z.object({ min: z.number().optional(), max: z.number().optional() }).optional()
-    }),
+    }, { error: 必須('トリガー') }),
     result: z.object({
-        debitAccount: z.string(),
+        debitAccount: z.string({ error: 必須('借方勘定科目') }).min(1, 必須('借方勘定科目')),
         targetTaxClass: z.string().optional(),
         subAccount: z.string().optional()
-    }),
+    }, { error: 必須('仕訳結果') }),
     generatedBy: z.enum(['ai', 'human']).optional()
 });
 
@@ -89,7 +92,7 @@ const app = new Hono()
     // 3. ルール作成
     .post(
         '/:clientId/rules',
-        zValidator('json', CreateRuleSchema),
+        zValidator('json', CreateRuleSchema, zodHook),
         (c) => {
             const clientId = c.req.param('clientId');
             const data = c.req.valid('json');
@@ -126,17 +129,17 @@ const app = new Hono()
     // 4. ルール更新
     .put(
         '/:clientId/rules/:ruleId',
-        zValidator('json', UpdateRuleSchema),
+        zValidator('json', UpdateRuleSchema, zodHook),
         (c) => {
             const clientId = c.req.param('clientId');
             const ruleId = c.req.param('ruleId');
             const data = c.req.valid('json');
 
             const rules = MOCK_RULES[clientId];
-            if (!rules) return c.json({ error: 'Client not found' }, 404);
+            if (!rules) return apiError(c, 404, 未検出('顧問先'));
 
             const index = rules.findIndex(r => r.id === ruleId);
-            if (index === -1) return c.json({ error: 'Rule not found' }, 404);
+            if (index === -1) return apiError(c, 404, 未検出('ルール'));
 
             const currentRule = rules[index] as LearningRuleUi;
             const wasActive = currentRule.status === 'active';
@@ -170,10 +173,10 @@ const app = new Hono()
         const ruleId = c.req.param('ruleId');
 
         const rules = MOCK_RULES[clientId];
-        if (!rules) return c.json({ error: 'Client not found' }, 404);
+        if (!rules) return apiError(c, 404, 未検出('顧問先'));
 
         const index = rules.findIndex(r => r.id === ruleId);
-        if (index === -1) return c.json({ error: 'Rule not found' }, 404);
+        if (index === -1) return apiError(c, 404, 未検出('ルール'));
 
         const deletedRule = rules[index] as LearningRuleUi;
         rules.splice(index, 1);

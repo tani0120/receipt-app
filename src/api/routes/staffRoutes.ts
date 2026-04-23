@@ -15,6 +15,8 @@
  */
 
 import { Hono } from 'hono';
+import { apiError } from '../helpers/apiError';
+import { 未検出, 必須 } from '../helpers/apiMessages';
 import {
   getAll,
   getById,
@@ -22,7 +24,6 @@ import {
   update,
   getByEmail,
   getActiveStaff,
-  count,
 } from '../services/staffStore';
 
 const app = new Hono();
@@ -47,7 +48,7 @@ app.get('/email/:email', (c) => {
   const email = decodeURIComponent(c.req.param('email'));
   const staff = getByEmail(email);
   if (!staff) {
-    return c.json({ error: `メール ${email} のスタッフが見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`スタッフ(メール: ${email})`));
   }
   return c.json({ staff });
 });
@@ -59,7 +60,7 @@ app.get('/:uuid', (c) => {
   const uuid = c.req.param('uuid');
   const staff = getById(uuid);
   if (!staff) {
-    return c.json({ error: `スタッフ ${uuid} が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`スタッフ ${uuid}`));
   }
   return c.json({ staff });
 });
@@ -70,7 +71,7 @@ app.get('/:uuid', (c) => {
 app.post('/', async (c) => {
   const body = await c.req.json();
   if (!body.name || !body.email) {
-    return c.json({ error: 'name と email は必須です' }, 400);
+    return apiError(c, 400, 必須('name と email'));
   }
   const staff = create(body);
   return c.json({ ok: true, staff });
@@ -84,7 +85,7 @@ app.put('/:uuid', async (c) => {
   const body = await c.req.json();
   const ok = update(uuid, body);
   if (!ok) {
-    return c.json({ error: `スタッフ ${uuid} が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`スタッフ ${uuid}`));
   }
   return c.json({ ok: true });
 });

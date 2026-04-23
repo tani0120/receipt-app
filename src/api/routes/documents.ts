@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { apiError, apiCatchError } from '../helpers/apiError'
+import { 仕訳必須 } from '../helpers/apiMessages'
 import { z } from 'zod'
 import { documentRepository } from '../../database/repositories/documentRepository'
 
@@ -29,7 +31,7 @@ app.post('/:id/status', async (c) => {
         if (validated.newStatus === 'confirmed') {
             // confirmed時はjournal必須
             if (!validated.journal) {
-                return c.json({ error: 'journal is required for confirmed status' }, 400)
+                return apiError(c, 400, 仕訳必須)
             }
 
             console.log('[API] Calling confirmDocument...')
@@ -51,8 +53,7 @@ app.post('/:id/status', async (c) => {
 
     } catch (e: unknown) {
         console.error('[API Error] documents/:id/status:', e)
-        const errorMessage = e instanceof Error ? e.message : 'Unknown error'
-        return c.json({ error: errorMessage }, 500)
+        return apiCatchError(c, e)
     }
 })
 

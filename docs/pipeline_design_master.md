@@ -2774,3 +2774,70 @@ repositories/types.ts ← 唯一の型定義源泉
 | 004_staff.sql | 1 | staff |
 | 005_migration_jobs.sql | 1 | migration_jobs |
 | **合計** | **12** | — |
+
+---
+
+## DL-045: バリデーション・エラーハンドリングアーキテクチャ刷新（2026-04-23）
+
+### 設計思想
+
+> **「フロントは優しさ、サーバーは真実」**
+> 3層防御: フロント（UX用即時フィードバック）→ サーバーZod（ビジネスルール本体）→ DB制約（最後の砦）
+
+### 実施内容
+
+| # | タスク | ファイル | 内容 |
+|---|---|---|---|
+| 1 | zodHook新規作成 | `src/api/helpers/zodHook.ts` 新規 | zValidator共通エラーフック。Zodエラーを`apiError()`経由で統一フォーマットに変換。複数issues対応（`\n`結合） |
+| 2 | zodHook全ルート適用 | 6ファイル・10箇所 | `ai-rules.ts`(2), `collection.ts`(1), `clients.ts`(3), `admin.ts`(1), `ocr.ts`(1), `api/index.ts`(1) |
+| 3 | apiFetch全面改修 | `src/utils/apiFetch.ts` | 400系→ページ遷移しない（呼び出し元にAppError返却）、401→/login遷移、500系/404→/404遷移。`apiFetch.withError()`追加 |
+| 4 | 後方互換定数削除 | `src/api/helpers/apiMessages.ts` | 使用箇所ゼロの`サーバーエラー`/`外部サービスエラー`/`メンテナンス中`を削除 |
+| 5 | Zodスキーマ日本語化 | `ai-rules.ts`, `admin.ts`, `clients.ts` | Zod v4 `{ error: '...' }` 形式で`apiMessages.ts`の`必須()`関数をスキーマに埋め込み |
+| 6 | 移行タスク記載 | `docs/supabase/migration_tasks.md` | 残3タスク（スキーマ日本語化残り・fetch19箇所移行・スキーマ分離）をセクション9に追記 |
+
+### エラー処理フロー（最終形）
+
+```
+[フロントバリデーション] → UX用即時フィードバック（modal.notify等）
+         ↓ OK
+[apiFetch / apiFetch.withError] → サーバーにリクエスト
+         ↓
+[zValidator + zodHook] → Zodバリデーション失敗時 apiError(c, 400, 日本語メッセージ)
+         ↓ OK
+[ルートハンドラ] → apiError(c, 404, 未検出('xxx')) / apiCatchError(c, err)
+         ↓
+[レスポンス] → { error: "安全な日本語文面", requestId: "abc" }
+         ↓
+[apiFetch] → 401→/login, 500系/404→/404, 400系→呼び出し元にAppError返却
+```
+
+### apiFetch設計（改修後）
+
+| エラー種別 | 動作 | 呼び出し元の責務 |
+|---|---|---|
+| 成功(2xx) | `{ data: T, error: null }` | dataを使う |
+| 400系 | ページ遷移しない。`{ data: null, error: AppError }` | `error.メッセージ`をUI表示（toast/modal等） |
+| 401 | /loginに自動遷移 | なし（自動） |
+| 404/500/502/503 | /404エラーページに自動遷移 | なし（自動） |
+| ネットワーク障害 | /404エラーページに自動遷移 | なし（自動） |
+
+### 対象ファイル一覧
+
+| ファイル | 変更種別 |
+|---|---|
+| `src/api/helpers/zodHook.ts` | 新規 |
+| `src/api/helpers/apiMessages.ts` | 修正（定数削除） |
+| `src/utils/apiFetch.ts` | 全面改修 |
+| `src/api/routes/ai-rules.ts` | zodHook適用 + スキーマ日本語化 |
+| `src/api/routes/collection.ts` | zodHook適用 |
+| `src/api/routes/clients.ts` | zodHook適用 + スキーマ日本語化 |
+| `src/api/routes/admin.ts` | zodHook適用 + スキーマ日本語化（インラインhook統一） |
+| `src/api/routes/ocr.ts` | zodHook適用 |
+| `src/api/index.ts` | zodHook適用（インラインhook統一） |
+| `docs/supabase/migration_tasks.md` | 残タスク追記 |
+
+### 検証
+
+- `vue-tsc --noEmit` エラー0件
+- Zod v4.3.6対応（`{ required_error }` → `{ error }` に修正）
+

@@ -1,7 +1,10 @@
 
 import { Hono } from 'hono'
+import { apiError } from '../helpers/apiError'
+import { 未検出 } from '../helpers/apiMessages'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
+import { zodHook } from '../helpers/zodHook'
 import moment from 'moment'
 
 const app = new Hono()
@@ -261,7 +264,7 @@ const route = app
         const client = MOCK_CLIENTS.find(cl => cl.clientCode === code);
 
         if (!client) {
-            return c.json({ error: 'Client not found' }, 404);
+            return apiError(c, 404, 未検出('顧問先'));
         }
 
         const detail = {
@@ -275,7 +278,7 @@ const route = app
     })
 
     // PUT /config - Update Config
-    .put('/config', zValidator('json', CollectionConfigSchema), async (c) => {
+    .put('/config', zValidator('json', CollectionConfigSchema, zodHook), async (c) => {
         const data = c.req.valid('json');
         mockConfig = data;
         return c.json({ success: true, config: mockConfig });

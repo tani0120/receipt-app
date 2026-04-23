@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><title>404</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(160deg,#f0f4f8 0%,#e8edf5 40%,#f5f0fa 70%,#faf5f0 100%);
+  font-family:'Noto Sans JP',sans-serif;
+  overflow:hidden;
+}
+/* 背景のぼかし円 */
+body::before,body::after{
+  content:'';position:fixed;border-radius:50%;filter:blur(80px);opacity:.35;pointer-events:none;
+}
+body::before{
+  width:500px;height:500px;top:-120px;right:-80px;
+  background:radial-gradient(circle,#c4b5fd 0%,transparent 70%);
+}
+body::after{
+  width:400px;height:400px;bottom:-100px;left:-60px;
+  background:radial-gradient(circle,#93c5fd 0%,transparent 70%);
+}
+.container{
+  text-align:center;
+  position:relative;
+  z-index:1;
+}
+.dot{
+  width:6px;height:6px;border-radius:50%;
+  background:#cbd5e1;
+  margin:0 auto 32px;
+  animation:pulse 2.5s ease-in-out infinite;
+}
+@keyframes pulse{
+  0%,100%{opacity:.3;transform:scale(1)}
+  50%{opacity:.8;transform:scale(1.5)}
+}
+p{
+  font-size:20px;
+  color:#94a3b8;
+  font-weight:400;
+  letter-spacing:.5px;
+}
+</style></head>
+<body>
+<div class="container">
+  <div class="dot"></div>
+  <p>ページが見つかりません。</p>
+</div>
+</body>
+</html>

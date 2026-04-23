@@ -2,6 +2,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
+import { zodHook } from '../helpers/zodHook'
 import type { ClientRaw } from '../types/ClientRaw'
 
 const app = new Hono()
@@ -250,9 +251,9 @@ const route = app
             // Ideally should be Partial<ClientUi>
             companyName: z.string().optional(),
             repName: z.string().optional(),
-            clientCode: z.string(),
+            clientCode: z.string({ error: '顧問先コードは必須です' }).min(1, '顧問先コードは必須です'),
             // Allow other props
-        }).passthrough()),
+        }).passthrough(), zodHook),
         async (c) => {
             const code = c.req.param('code');
             const body = c.req.valid('json');
@@ -272,7 +273,7 @@ const route = app
     .patch(
         '/:code',
         // TODO Phase B: Replace with UpdateClientSchema
-        zValidator('json', z.object({}).passthrough()), // モック用の緋いスキーマ。Phase Bで UpdateClientSchema に置換する。
+        zValidator('json', z.object({}).passthrough(), zodHook), // モック用の緋いスキーマ。Phase Bで UpdateClientSchema に置換する。
         async (c) => {
             const code = c.req.param('code');
             const body = c.req.valid('json');
@@ -282,7 +283,7 @@ const route = app
     )
     .post(
         '/',
-        zValidator('json', ClientUiSchema.passthrough()),
+        zValidator('json', ClientUiSchema.passthrough(), zodHook),
         async (c) => {
             const body = c.req.valid('json');
             console.log('[BFF] Creating client', body);

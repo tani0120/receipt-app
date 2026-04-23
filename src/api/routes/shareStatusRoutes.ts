@@ -16,6 +16,8 @@
  */
 
 import { Hono } from 'hono';
+import { apiError } from '../helpers/apiError';
+import { 未検出, 必須 } from '../helpers/apiMessages';
 import {
   getAllShareStatus,
   getByClientId,
@@ -41,7 +43,7 @@ app.get('/invite/:code', (c) => {
   const code = c.req.param('code');
   const clientId = getClientIdByInviteCode(code);
   if (!clientId) {
-    return c.json({ error: `招待コード「${code}」に対応する顧問先が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`招待コード「${code}」の顧問先`));
   }
   return c.json({ clientId });
 });
@@ -53,7 +55,7 @@ app.get('/:clientId', (c) => {
   const clientId = c.req.param('clientId');
   const record = getByClientId(clientId);
   if (!record) {
-    return c.json({ error: `顧問先 ${clientId} の共有設定が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`顧問先 ${clientId} の共有設定`));
   }
   return c.json({ record });
 });
@@ -65,7 +67,7 @@ app.put('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
   const body = await c.req.json<{ status: string }>();
   if (!body.status) {
-    return c.json({ error: 'statusが必要です' }, 400);
+    return apiError(c, 400, 必須('status'));
   }
   updateStatus(clientId, body.status as import('../../repositories/types').ShareStatus);
   return c.json({ ok: true });
@@ -77,7 +79,7 @@ app.put('/:clientId', async (c) => {
 app.post('/invite', async (c) => {
   const body = await c.req.json<{ clientId: string; code: string }>();
   if (!body.clientId || !body.code) {
-    return c.json({ error: 'clientIdとcodeが必要です' }, 400);
+    return apiError(c, 400, 必須('clientIdとcode'));
   }
   saveInviteCode(body.clientId, body.code);
   return c.json({ ok: true });

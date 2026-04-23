@@ -16,8 +16,19 @@ import aiModelsRoute from './api/routes/ai-models'
 import documentsRoute from './api/routes/documents'
 import pipelineRoute from './api/routes/pipeline'
 
+import crypto from 'node:crypto'
+
 const app = new Hono()
 const port = parseInt(process.env.PORT || '8080')
+
+// リクエストIDミドルウェア: 全リクエストにUUID短縮8桁を付与
+app.use('*', async (c, next) => {
+  const requestId = crypto.randomUUID().slice(0, 8)
+  c.set('requestId', requestId)
+  c.header('X-Request-Id', requestId)
+  console.log(`[${requestId}] ${c.req.method} ${c.req.path}`)
+  await next()
+})
 
 console.log('='.repeat(50))
 console.log('🚀 Server starting...')

@@ -136,7 +136,15 @@
 1. 第三者用404ページ改善（`MockNotFoundPage.vue`）
 2. 顧問先用エラーページ作成（`/guest-error`）
 3. スタッフ用エラーページ作成（`/error`）
-4. API側エラーレスポンス形式の統一
+4. ~~API側エラーレスポンス形式の統一~~ → ✅ **DL-045で完了**（zodHook + apiError + apiMessages統一）
+
+### ✅ DL-045で完了済み（2026-04-23）
+
+1. `zodHook.ts` — 全zValidatorの共通エラーフック。Zodバリデーションエラーを`apiError()`経由で統一フォーマット化
+2. `apiMessages.ts` — ステータスコード→日本語文面マスター。全エラーメッセージ一元管理
+3. `apiError.ts` / `apiCatchError.ts` — 全レスポンスに`requestId`自動付与。生エラー漏洩防止
+4. `apiFetch.ts` — 400系→ページ遷移しない（呼び出し元にAppError返却）、401→/login遷移、500系→/404遷移
+5. Zodスキーマ日本語化 — Zod v4 `{ error: '...' }` 形式で`apiMessages.ts`の定数を埋め込み
 
 ### Supabase移行後に実装
 
@@ -145,6 +153,8 @@
 3. 401→再ログインフローの出し分け
 4. リクエストIDの生成・ログ連携
 5. スタッフ向けSlack #dev-alert連携
+6. `normalizeSupabaseError.ts`新設（PostgrestError → AppError変換）
+7. `errorRole.ts`中身の差し替え（`app_metadata.role`判定）
 
 ---
 
@@ -154,6 +164,12 @@
 APIレスポンスのステータスコードでフロント側がエラーコンポーネントを出し分ける設計とする。
 
 ```
-API → { status: 404, error: '...', code: 'NOT_FOUND' }
-フロント → ロール判定 → 該当するエラーコンポーネント表示
+API → { error: "安全な日本語文面", requestId: "abc-123" }（apiError/apiCatchError経由）
+  ↓
+apiFetch → normalizeHttpError → AppError { コード, メッセージ, パス, リクエストID }
+  ↓
+400系 → ページ遷移しない。呼び出し元でUI表示（toast/modal）
+401   → /login に自動遷移
+404/500系 → /404 に自動遷移 → ロール判定 → 該当するエラーコンポーネント表示
 ```
+

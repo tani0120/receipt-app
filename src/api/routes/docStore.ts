@@ -17,6 +17,8 @@
  */
 
 import { Hono } from 'hono';
+import { apiError } from '../helpers/apiError';
+import { 未検出, 必須, 配列必須 } from '../helpers/apiMessages';
 import {
   getDocuments,
   addDocuments,
@@ -45,7 +47,7 @@ app.get('/', (c) => {
 app.post('/', async (c) => {
   const body = await c.req.json<{ documents: unknown[] }>();
   if (!body.documents || !Array.isArray(body.documents)) {
-    return c.json({ error: 'documents配列が必要です' }, 400);
+    return apiError(c, 400, 配列必須('documents'));
   }
   const result = addDocuments(body.documents as import('../../repositories/types').DocEntry[]);
   return c.json({ ok: true, ...result });
@@ -58,11 +60,11 @@ app.put('/:id', async (c) => {
   const id = c.req.param('id');
   const body = await c.req.json<{ status: string }>();
   if (!body.status) {
-    return c.json({ error: 'statusが必要です' }, 400);
+    return apiError(c, 400, 必須('status'));
   }
   const ok = updateDocumentStatus(id, body.status as import('../../repositories/types').DocStatus);
   if (!ok) {
-    return c.json({ error: `ドキュメント ${id} が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`ドキュメント ${id}`));
   }
   return c.json({ ok: true });
 });
@@ -73,7 +75,7 @@ app.put('/:id', async (c) => {
 app.post('/batch', async (c) => {
   const body = await c.req.json<{ clientId: string }>();
   if (!body.clientId) {
-    return c.json({ error: 'clientIdが必要です' }, 400);
+    return apiError(c, 400, 必須('clientId'));
   }
   const result = assignBatchAndJournalIds(body.clientId);
   return c.json({ ok: true, ...result });
@@ -104,7 +106,7 @@ app.get('/:id', (c) => {
   const id = c.req.param('id');
   const doc = getById(id);
   if (!doc) {
-    return c.json({ error: `ドキュメント ${id} が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`ドキュメント ${id}`));
   }
   return c.json({ document: doc });
 });
@@ -116,7 +118,7 @@ app.delete('/:id', (c) => {
   const id = c.req.param('id');
   const ok = deleteById(id);
   if (!ok) {
-    return c.json({ error: `ドキュメント ${id} が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`ドキュメント ${id}`));
   }
   return c.json({ ok: true });
 });

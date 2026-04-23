@@ -1,5 +1,7 @@
 
 import { Hono } from 'hono'
+import { apiError, apiCatchError } from '../helpers/apiError'
+import { アップロード未実施 } from '../helpers/apiMessages'
 import { z } from 'zod'
 
 const app = new Hono()
@@ -73,7 +75,7 @@ const route = app.get('/', (c) => {
         return c.json(uiData)
     } catch (e: unknown) {
         console.error('[API Error] conversion get:', e);
-        return c.json({ error: e instanceof Error ? e.message : String(e) }, 500);
+        return apiCatchError(c, e);
     }
 })
     .delete('/:id', async (c) => {
@@ -88,7 +90,7 @@ const route = app.get('/', (c) => {
             const file = body['file'];
 
             if (!file || typeof file === 'string') {
-                return c.json({ success: false, message: 'No file uploaded' }, 400);
+                return apiError(c, 400, アップロード未実施);
             }
 
             // Real Storage Integration
@@ -112,7 +114,7 @@ const route = app.get('/', (c) => {
             });
         } catch (e: unknown) {
             console.error('[BFF] Upload Error:', e);
-            return c.json({ success: false, message: e instanceof Error ? e.message : String(e) }, 500);
+            return apiCatchError(c, e);
         }
     })
 

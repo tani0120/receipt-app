@@ -3,12 +3,6 @@
  *
  * このファイルはSupabase移行前後で変更不要。
  * 差し替えるのは normalizeHttpError.ts / errorRole.ts の中身のみ。
- *
- * 構造:
- *   ① normalizeHttpError.ts — fetch Response → AppError（移行後も残る）
- *      normalizeSupabaseError.ts — PostgrestError → AppError（移行後に追加）
- *   ② handleApiError.ts — 本体（このファイル。変えない）
- *   ③ errorRole.ts — ロール取得（中身のみ差し替え）
  */
 
 import type { Router } from 'vue-router';
@@ -33,10 +27,6 @@ export async function handleApiError(router: Router, res: Response): Promise<voi
 /**
  * 任意のAppErrorオブジェクトから /404 ページに遷移する。
  * Supabase移行後に normalizeSupabaseError() と組み合わせて使う。
- *
- * 使い方:
- *   const error = normalizeSupabaseError(pgError);
- *   handleAppError(router, error);
  */
 export function handleAppError(router: Router, エラー: AppError): void {
   エラーページへ遷移(router, エラー);
@@ -53,6 +43,7 @@ function エラーページへ遷移(router: Router, エラー: AppError): void 
       code: String(エラー.コード),
       message: エラー.メッセージ,
       path: エラー.パス,
+      requestId: エラー.リクエストID,
     },
   });
 }

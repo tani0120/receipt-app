@@ -17,6 +17,9 @@
  */
 
 import { Hono } from 'hono';
+import { apiError } from '../helpers/apiError';
+import { 未検出, 必須 } from '../helpers/apiMessages';
+import type { ClientStatus } from '../../repositories/types';
 import {
   getAll,
   getById,
@@ -29,7 +32,6 @@ import {
   updateSharedFolderId,
   updateSharedEmail,
   createClientId,
-  count,
 } from '../services/clientStore';
 
 const app = new Hono();
@@ -46,7 +48,7 @@ app.get('/', (c) => {
     return c.json({ clients: list, count: list.length });
   }
   if (status) {
-    const list = getByStatus(status as any);
+    const list = getByStatus(status as ClientStatus);
     return c.json({ clients: list, count: list.length });
   }
   if (staffId) {
@@ -64,7 +66,7 @@ app.get('/:clientId', (c) => {
   const clientId = c.req.param('clientId');
   const client = getById(clientId);
   if (!client) {
-    return c.json({ error: `顧問先 ${clientId} が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`顧問先 ${clientId}`));
   }
   return c.json({ client });
 });
@@ -75,7 +77,7 @@ app.get('/:clientId', (c) => {
 app.post('/', async (c) => {
   const body = await c.req.json();
   if (!body.threeCode || !body.companyName) {
-    return c.json({ error: 'threeCode と companyName は必須です' }, 400);
+    return apiError(c, 400, 必須('threeCode と companyName'));
   }
   // clientIdを自動発番（bodyにclientIdがなければ）
   if (!body.clientId) {
@@ -93,7 +95,7 @@ app.put('/:clientId', async (c) => {
   const body = await c.req.json();
   const ok = updateClient(clientId, body);
   if (!ok) {
-    return c.json({ error: `顧問先 ${clientId} が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`顧問先 ${clientId}`));
   }
   return c.json({ ok: true });
 });
@@ -106,7 +108,7 @@ app.put('/:clientId/staff', async (c) => {
   const body = await c.req.json<{ staffId: string | null }>();
   const ok = updateStaffAssignment(clientId, body.staffId);
   if (!ok) {
-    return c.json({ error: `顧問先 ${clientId} が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`顧問先 ${clientId}`));
   }
   return c.json({ ok: true });
 });
@@ -119,7 +121,7 @@ app.put('/:clientId/shared-folder', async (c) => {
   const body = await c.req.json<{ folderId: string }>();
   const ok = updateSharedFolderId(clientId, body.folderId);
   if (!ok) {
-    return c.json({ error: `顧問先 ${clientId} が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`顧問先 ${clientId}`));
   }
   return c.json({ ok: true });
 });
@@ -132,7 +134,7 @@ app.put('/:clientId/shared-email', async (c) => {
   const body = await c.req.json<{ email: string }>();
   const ok = updateSharedEmail(clientId, body.email);
   if (!ok) {
-    return c.json({ error: `顧問先 ${clientId} が見つかりません` }, 404);
+    return apiError(c, 404, 未検出(`顧問先 ${clientId}`));
   }
   return c.json({ ok: true });
 });

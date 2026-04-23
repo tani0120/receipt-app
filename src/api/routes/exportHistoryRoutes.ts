@@ -10,6 +10,8 @@
  */
 
 import { Hono } from 'hono';
+import { apiError } from '../helpers/apiError';
+import { CSV未検出 } from '../helpers/apiMessages';
 import {
   getExportHistory,
   addExportHistory,
@@ -38,7 +40,7 @@ app.get('/:clientId/csv/:historyId', (c) => {
   const clientId = c.req.param('clientId');
   const historyId = c.req.param('historyId');
   const snapshot = getCsvSnapshot(clientId, historyId);
-  if (!snapshot) return c.json({ error: 'not found' }, 404);
+  if (!snapshot) return apiError(c, 404, CSV未検出);
   return c.json(snapshot);
 });
 

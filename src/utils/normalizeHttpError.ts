@@ -9,10 +9,12 @@
 export interface AppError {
   /** HTTPステータスコード（表示・分岐用） */
   コード: number;
-  /** エラーメッセージ */
+  /** エラーメッセージ（安全な定型文） */
   メッセージ: string;
   /** リクエスト先パス */
   パス: string;
+  /** サーバー発行のリクエストID（ログ検索キー） */
+  リクエストID: string;
 }
 
 /**
@@ -20,16 +22,20 @@ export interface AppError {
  *
  * 使い方:
  *   const res = await fetch('/api/xxx');
- *   if (!res.ok) throw await normalizeHttpError(res);
+ *   if (!res.ok) return handleApiError(router, res);
  */
 export async function normalizeHttpError(res: Response): Promise<AppError> {
   let メッセージ = res.statusText || `HTTP ${res.status}`;
+  let リクエストID = res.headers.get('X-Request-Id') || '';
 
-  // JSONレスポンスからerrorメッセージを取得（あれば）
+  // JSONレスポンスからerrorメッセージとrequestIdを取得（あれば）
   try {
     const body = await res.clone().json();
     if (body?.error && typeof body.error === 'string') {
       メッセージ = body.error;
+    }
+    if (body?.requestId && typeof body.requestId === 'string') {
+      リクエストID = body.requestId;
     }
   } catch {
     // JSONでない場合は無視
@@ -39,5 +45,7 @@ export async function normalizeHttpError(res: Response): Promise<AppError> {
     コード: res.status,
     メッセージ,
     パス: new URL(res.url).pathname,
+    リクエストID,
   };
 }
+

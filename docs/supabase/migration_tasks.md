@@ -1,17 +1,18 @@
 # Supabase移行タスク一覧
 
 > 作成日: 2026-04-23
-> 最終更新: 2026-04-23 v4（Phase A-E全完了、Phase F-1/2/3/5/6完了、F-4/7はSupabase移行後）
+> 最終更新: 2026-04-23 v5（v4 + バリデーション・エラーハンドリング移行タスク3件追記）
 > ソース:
 > - [task_unified.md](file:///c:/dev/receipt-app/docs/task_unified.md)（セクションC-0, C-1, D, H, L-2）
 > - [supabase_security_report_260214.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/supabase_security_report_260214.md)（RLS, validateStaffAccess, Google OAuth）
 > - [setup_status_report_260211.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/setup_status_report_260211.md)（Firebase排除、Timestamp移行、SA権限）
 > - [tools_and_setup_guide.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/tools_and_setup_guide.md)（schema.sql, SDK）
 > - [24_upload_drive_integration.md](file:///c:/dev/receipt-app/docs/genzai/24_upload_drive_integration.md)（セクション7-4, 8, **10-16**）
-> - [pipeline_design_master.md](file:///c:/dev/receipt-app/docs/pipeline_design_master.md)（DL-030, **DL-031**, DL-032）
+> - [pipeline_design_master.md](file:///c:/dev/receipt-app/docs/pipeline_design_master.md)（DL-030, **DL-031**, DL-032, **DL-045**）
+> - [error_display_design.md](file:///c:/dev/receipt-app/docs/error_display_design.md)（ロール別エラー表示設計）
 > - KI: postgresql_migration_streamed_architecture
 > - Drive共有セッション（2026-04-21〜22）
-> - コード実査: `src/utils/auth.ts`, `src/router/index.ts`, `src/repositories/supabase/`
+> - コード実査: `src/utils/auth.ts`, `src/router/index.ts`, `src/repositories/supabase/`, `src/api/helpers/`
 >
 > 精査対象外（Supabase無関係確認済み）: 15番, 16番, 17番, 18番, 19番, 20番, 21番, 22番, 23番(両方), vendors_client_master, vendors_global_master
 
@@ -441,6 +442,9 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | normalizeSupabaseError.ts新設 | 未作成（fetchのnormalizeHttpError.tsのみ実装済み） | PostgrestError → AppError変換（RLSの42501→403等） | エラーハンドラー設計 |
 | errorRole.ts中身の差し替え | 暫定: JWT+guest_google_*で判定 | `app_metadata.role`で判定に置換（1関数の中身のみ） | エラーハンドラー設計 |
 | MockErrorPreviewPage.vue削除 | 開発用プレビュー（/#/error-preview） | 本番デプロイ前に削除 | エラーハンドラー設計 |
+| Zodスキーマ日本語化 + apiMessages統合 | モック用スキーマは英語のまま（zodHookフォールバックで安全） | 本番スキーマ作成時に `z.string().min(1, 必須('名前'))` 形式で日本語埋め込み。6ファイル対象: ai-rules, collection, clients, admin, ocr, api/index | バリデーション設計 |
+| 既存fetch 19箇所のapiFetch移行 | 全19箇所が直接fetch()。エラー処理はthrow/console.error/無視がバラバラ | composable層（useStaff, useClients等）はモジュールスコープでuseRouter()不可→SupabaseClient直接呼び出しに置換。Vueページ側はapiFetch.withError()に統一 | バリデーション設計 |
+| Zodスキーマファイル分離（`src/api/schemas/`） | 全スキーマがルートファイル内にインライン定義 | `src/api/schemas/staff.schema.ts` 等に分離。apiMessages.tsの定数を参照し、フロント・サーバー間で仕様を一元管理 | バリデーション設計 |
 
 ---
 
@@ -462,10 +466,11 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 
 | ドキュメント | 関連セクション |
 |---|---|
-| [task_unified.md](file:///c:/dev/receipt-app/docs/task_unified.md) | C-0（Repository化）, C-1 フェーズ5, D（先送り）, L-2 |
+| [task_unified.md](file:///c:/dev/receipt-app/docs/task_unified.md) | C-0（Repository化）, C-1 フェーズ5, D（先送り）, L-2, **B-15（DL-045）** |
 | [supabase_security_report_260214.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/supabase_security_report_260214.md) | RLS, validateStaffAccess, Google OAuth |
 | [24_upload_drive_integration.md](file:///c:/dev/receipt-app/docs/genzai/24_upload_drive_integration.md) | セクション7-4, 8, **10-16** |
-| [pipeline_design_master.md](file:///c:/dev/receipt-app/docs/pipeline_design_master.md) | DL-030, **DL-031**, DL-032 |
+| [pipeline_design_master.md](file:///c:/dev/receipt-app/docs/pipeline_design_master.md) | DL-030, **DL-031**, DL-032, **DL-045** |
+| [error_display_design.md](file:///c:/dev/receipt-app/docs/error_display_design.md) | ロール別エラー表示設計, DL-045完了済みセクション |
 | [tools_and_setup_guide.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/tools_and_setup_guide.md) | SDK導入, 環境変数 |
 | [setup_status_report_260211.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/setup_status_report_260211.md) | Firebase排除, Timestamp移行, SA権限 |
 | KI: postgresql_migration_streamed_architecture | ENUM型, CHECK制約, SQL function |

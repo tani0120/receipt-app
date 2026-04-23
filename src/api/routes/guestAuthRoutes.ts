@@ -14,6 +14,8 @@
  */
 
 import { Hono } from 'hono';
+import { apiError } from '../helpers/apiError';
+import { 必須, メール重複, パスワード不足, ログイン失敗 } from '../helpers/apiMessages';
 import { register, login } from '../services/guestUserStore';
 
 const app = new Hono();
@@ -30,12 +32,14 @@ app.post('/register', async (c) => {
   }>();
 
   if (!body.email || !body.password || !body.displayName || !body.clientId) {
-    return c.json({ error: 'email, password, displayName, clientIdは全て必須です' }, 400);
+    return apiError(c, 400, 必須('email, password, displayName, clientId'));
   }
 
   const result = register(body.email, body.password, body.displayName, body.clientId);
   if ('error' in result) {
-    return c.json({ error: result.error }, 409);
+    // storeが返す生エラーをそのまま出さず、安全な定型文に置換
+    const msg = result.error.includes('パスワード') ? パスワード不足 : メール重複;
+    return apiError(c, 409, msg);
   }
   return c.json({ ok: true, user: result.user });
 });
@@ -50,12 +54,12 @@ app.post('/login', async (c) => {
   }>();
 
   if (!body.email || !body.password) {
-    return c.json({ error: 'emailとpasswordは必須です' }, 400);
+    return apiError(c, 400, 必須('emailとpassword'));
   }
 
   const result = login(body.email, body.password);
   if ('error' in result) {
-    return c.json({ error: result.error }, 401);
+    return apiError(c, 401, ログイン失敗);
   }
   return c.json({ ok: true, user: result.user });
 });

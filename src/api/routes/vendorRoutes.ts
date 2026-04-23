@@ -15,6 +15,8 @@
  */
 
 import { Hono } from 'hono'
+import { apiError, apiCatchError } from '../helpers/apiError'
+import { 未検出 } from '../helpers/apiMessages'
 import * as vendorStore from '../services/vendorStore'
 
 const app = new Hono()
@@ -42,7 +44,7 @@ app.get('/:vendorId', (c) => {
   const vendorId = c.req.param('vendorId')
   const vendor = vendorStore.getById(vendorId)
   if (!vendor) {
-    return c.json({ error: '取引先が見つかりません', vendorId }, 404)
+    return apiError(c, 404, 未検出('取引先'))
   }
   return c.json(vendor)
 })
@@ -56,7 +58,7 @@ app.post('/', async (c) => {
     const vendor = vendorStore.create(body)
     return c.json(vendor, 201)
   } catch (err) {
-    return c.json({ error: '取引先の追加に失敗しました' }, 400)
+    return apiCatchError(c, err)
   }
 })
 
@@ -69,12 +71,12 @@ app.put('/:vendorId', async (c) => {
     const body = await c.req.json()
     const ok = vendorStore.update(vendorId, body)
     if (!ok) {
-      return c.json({ error: '取引先が見つかりません', vendorId }, 404)
+      return apiError(c, 404, 未検出('取引先'))
     }
     const updated = vendorStore.getById(vendorId)
     return c.json(updated)
   } catch (err) {
-    return c.json({ error: '取引先の更新に失敗しました' }, 400)
+    return apiCatchError(c, err)
   }
 })
 
@@ -85,7 +87,7 @@ app.delete('/:vendorId', (c) => {
   const vendorId = c.req.param('vendorId')
   const ok = vendorStore.remove(vendorId)
   if (!ok) {
-    return c.json({ error: '取引先が見つかりません', vendorId }, 404)
+    return apiError(c, 404, 未検出('取引先'))
   }
   return c.json({ success: true, vendorId })
 })

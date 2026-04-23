@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { apiError } from '../helpers/apiError'
+import { 移行待ち } from '../helpers/apiMessages'
 
 const app = new Hono()
 
@@ -18,13 +20,13 @@ const route = app
     .get('/:id', async (c) => {
         const id = c.req.param('id')
         console.warn(`[jobs] jobRepository削除済み。ID=${id} のスタブレスポンスを返します`)
-        return c.json({ error: 'jobRepository は Supabase移行待ちです' }, 501)
+        return apiError(c, 501, 移行待ち)
     })
     // PATCH /:id - ジョブ更新
     .patch('/:id', async (c) => {
         const id = c.req.param('id')
         console.warn(`[jobs] jobRepository削除済み。ID=${id} の更新はスキップされます`)
-        return c.json({ error: 'jobRepository は Supabase移行待ちです' }, 501)
+        return apiError(c, 501, 移行待ち)
     })
 
 export default route

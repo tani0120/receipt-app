@@ -10,6 +10,8 @@
  */
 
 import { Hono } from 'hono';
+import { apiError } from '../helpers/apiError';
+import { 配列必須 } from '../helpers/apiMessages';
 import {
   getJournals,
   saveJournals,
@@ -35,7 +37,7 @@ app.put('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
   const body = await c.req.json<{ journals: unknown[] }>();
   if (!body.journals || !Array.isArray(body.journals)) {
-    return c.json({ error: 'journals配列が必要です' }, 400);
+    return apiError(c, 400, 配列必須('journals'));
   }
   saveJournals(clientId, body.journals);
   return c.json({ ok: true, count: body.journals.length });
@@ -48,7 +50,7 @@ app.post('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
   const body = await c.req.json<{ journals: unknown[] }>();
   if (!body.journals || !Array.isArray(body.journals)) {
-    return c.json({ error: 'journals配列が必要です' }, 400);
+    return apiError(c, 400, 配列必須('journals'));
   }
   const added = addJournals(clientId, body.journals);
   return c.json({ ok: true, added });

@@ -13,6 +13,8 @@
  */
 
 import { Hono } from 'hono';
+import { apiError, apiCatchError } from '../helpers/apiError';
+import { 必須, 未検出, 環境設定エラー, ファイル必須, 仕訳外ゼロ } from '../helpers/apiMessages';
 import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, revokeFolderPermission } from '../services/drive/driveService';
 import { enqueueMigrationJobs, getJobStatus, getExcludedCount } from '../services/migration/migrationRepository';
 import { generateExcludedZip } from '../services/migration/excludedZipService';
@@ -30,10 +32,10 @@ app.get('/files', async (c) => {
   const withThumbnails = c.req.query('withThumbnails') === 'true';
 
   if (!folderId) {
-    return c.json({ error: 'folderId クエリパラメータが必要です' }, 400);
+    return apiError(c, 400, 必須('folderId'));
   }
   if (!sharedDriveId) {
-    return c.json({ error: 'VITE_SHARED_DRIVE_ID 環境変数が未設定です' }, 500);
+    return apiError(c, 500, 環境設定エラー);
   }
 
   try {
@@ -49,9 +51,7 @@ app.get('/files', async (c) => {
       return c.json({ files });
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[drive/route] GET /files エラー:`, msg);
-    return c.json({ error: `ファイル一覧取得失敗: ${msg}` }, 500);
+    return apiCatchError(c, err);
   }
 });
 
@@ -74,13 +74,11 @@ app.get('/preview/:fileId', async (c) => {
     // Honoのc.body()はBuffer非対応のため、Uint8Arrayで渡す
     return c.body(new Uint8Array(result.buffer));
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
     const status = (err as { code?: number }).code;
     if (status === 404) {
-      return c.json({ error: `ファイルが見つかりません: ${fileId}` }, 404);
+      return apiError(c, 404, 未検出('ファイル'));
     }
-    console.error(`[drive/route] GET /preview/${fileId} エラー:`, msg);
-    return c.json({ error: `プレビュー取得失敗: ${msg}` }, 500);
+    return apiCatchError(c, err);
   }
 });
 
@@ -96,10 +94,10 @@ app.post('/upload', async (c) => {
     const folderId = formData.get('folderId') as string | null;
 
     if (!file) {
-      return c.json({ error: 'file が必要です' }, 400);
+      return apiError(c, 400, ファイル必須);
     }
     if (!folderId) {
-      return c.json({ error: 'folderId が必要です' }, 400);
+      return apiError(c, 400, 必須('folderId'));
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -115,9 +113,7 @@ app.post('/upload', async (c) => {
     console.log(`[drive/route] POST /upload: ${file.name} → ${result.driveFileId}`);
     return c.json(result);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[drive/route] POST /upload エラー:', msg);
-    return c.json({ error: `アップロード失敗: ${msg}` }, 500);
+    return apiCatchError(c, err);
   }
 });
 
@@ -134,7 +130,7 @@ app.post('/migrate', async (c) => {
     }>();
 
     if (!body.clientId || !body.files || body.files.length === 0) {
-      return c.json({ error: 'clientId と files が必要です' }, 400);
+      return apiError(c, 400, 必須('clientId と files'));
     }
 
     // jobId生成（タイムスタンプ + ランダム）
@@ -145,9 +141,7 @@ app.post('/migrate', async (c) => {
     console.log(`[drive/route] POST /migrate: jobId=${jobId}, queued=${queued}/${body.files.length}`);
     return c.json({ jobId, queued });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[drive/route] POST /migrate エラー:', msg);
-    return c.json({ error: `移行ジョブ登録失敗: ${msg}` }, 500);
+    return apiCatchError(c, err);
   }
 });
 
@@ -159,15 +153,13 @@ app.get('/migrate/status/:jobId', async (c) => {
   try {
     const jobId = c.req.param('jobId');
     if (!jobId) {
-      return c.json({ error: 'jobId が必要です' }, 400);
+      return apiError(c, 400, 必須('jobId'));
     }
 
     const status = await getJobStatus(jobId);
     return c.json(status);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[drive/route] GET /migrate/status エラー:`, msg);
-    return c.json({ error: `ステータス取得失敗: ${msg}` }, 500);
+    return apiCatchError(c, err);
   }
 });
 
@@ -182,13 +174,13 @@ app.get('/download-excluded/:clientId', async (c) => {
     const all = c.req.query('all') === 'true';
 
     if (!clientId) {
-      return c.json({ error: 'clientId が必要です' }, 400);
+      return apiError(c, 400, 必須('clientId'));
     }
 
     // 0件チェック（Streamを作る前に確認）
     const count = await getExcludedCount(clientId);
     if (!all && count === 0) {
-      return c.json({ error: '未ダウンロードの仕訳外ファイルがありません', count: 0 }, 404);
+      return apiError(c, 404, 仕訳外ゼロ);
     }
 
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -235,9 +227,7 @@ app.get('/download-excluded/:clientId', async (c) => {
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[drive/route] GET /download-excluded エラー:', msg);
-    return c.json({ error: `ZIPダウンロード失敗: ${msg}` }, 500);
+    return apiCatchError(c, err);
   }
 });
 
@@ -251,8 +241,7 @@ app.get('/excluded-count/:clientId', async (c) => {
     const count = await getExcludedCount(clientId);
     return c.json({ count });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return c.json({ error: msg }, 500);
+    return apiCatchError(c, err);
   }
 });
 
@@ -265,10 +254,10 @@ app.post('/folder', async (c) => {
   const sharedDriveId = process.env.VITE_SHARED_DRIVE_ID;
 
   if (!body.folderName) {
-    return c.json({ error: 'folderName が必要です' }, 400);
+    return apiError(c, 400, 必須('folderName'));
   }
   if (!sharedDriveId) {
-    return c.json({ error: 'VITE_SHARED_DRIVE_ID 環境変数が未設定です' }, 500);
+    return apiError(c, 500, 環境設定エラー);
   }
 
   try {
@@ -289,9 +278,7 @@ app.post('/folder', async (c) => {
 
     return c.json({ folderId, folderName: body.folderName });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[drive/route] POST /folder エラー:`, msg);
-    return c.json({ error: `フォルダ作成失敗: ${msg}` }, 500);
+    return apiCatchError(c, err);
   }
 });
 
@@ -303,16 +290,14 @@ app.get('/folder/check', async (c) => {
   const folderId = c.req.query('folderId');
 
   if (!folderId) {
-    return c.json({ error: 'folderId クエリパラメータが必要です' }, 400);
+    return apiError(c, 400, 必須('folderId'));
   }
 
   try {
     const result = await checkFolderExists(folderId);
     return c.json(result);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[drive/route] GET /folder/check エラー:`, msg);
-    return c.json({ error: `フォルダ確認失敗: ${msg}` }, 500);
+    return apiCatchError(c, err);
   }
 });
 
@@ -324,7 +309,7 @@ app.patch('/folder/rename', async (c) => {
   const body = await c.req.json<{ folderId: string; newName: string }>();
 
   if (!body.folderId || !body.newName) {
-    return c.json({ error: 'folderId と newName が必要です' }, 400);
+    return apiError(c, 400, 必須('folderId と newName'));
   }
 
   try {
@@ -332,9 +317,7 @@ app.patch('/folder/rename', async (c) => {
     console.log(`[drive/route] PATCH /folder/rename: ${body.newName} (id=${body.folderId})`);
     return c.json({ success: true, newName: body.newName });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[drive/route] PATCH /folder/rename エラー:`, msg);
-    return c.json({ error: `フォルダリネーム失敗: ${msg}` }, 500);
+    return apiCatchError(c, err);
   }
 });
 
@@ -348,7 +331,7 @@ app.post('/grant-permission', async (c) => {
   const body = await c.req.json<{ folderId: string; email: string; role?: 'reader' | 'writer' }>();
 
   if (!body.folderId || !body.email) {
-    return c.json({ error: 'folderIdとemailは必須です' }, 400);
+    return apiError(c, 400, 必須('folderIdとemail'));
   }
 
   try {
@@ -357,9 +340,7 @@ app.post('/grant-permission', async (c) => {
     console.log(`[drive/route] POST /grant-permission: ${body.email} → ${body.folderId.slice(0, 12)}...`);
     return c.json({ ok: true, email: body.email, role: body.role ?? 'writer' });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[drive/route] POST /grant-permission エラー:`, msg);
-    return c.json({ error: `権限付与失敗: ${msg}` }, 500);
+    return apiCatchError(c, err);
   }
 });
 
@@ -372,7 +353,7 @@ app.post('/revoke-permission', async (c) => {
   const body = await c.req.json<{ folderId: string; email: string }>();
 
   if (!body.folderId || !body.email) {
-    return c.json({ error: 'folderIdとemailは必須です' }, 400);
+    return apiError(c, 400, 必須('folderIdとemail'));
   }
 
   try {
@@ -380,9 +361,7 @@ app.post('/revoke-permission', async (c) => {
     console.log(`[drive/route] POST /revoke-permission: ${body.email} → ${body.folderId.slice(0, 12)}...`);
     return c.json({ ok: true, email: body.email });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[drive/route] POST /revoke-permission エラー:`, msg);
-    return c.json({ error: `権限削除失敗: ${msg}` }, 500);
+    return apiCatchError(c, err);
   }
 });
 

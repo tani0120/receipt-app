@@ -2,6 +2,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
+import { zodHook } from './helpers/zodHook'
 import conversionRoute from './routes/conversion'
 import clientsRoute from './routes/clients'
 import journalStatusRoute from './routes/journal-status'
@@ -47,12 +48,7 @@ const routes = app
     })
     .post(
         '/api/journal',
-        zValidator('json', JournalDataSchema, (result, c) => {
-            if (!result.success) {
-                return c.json({ success: false, message: 'Invalid data', errors: result.error }, 400)
-            }
-            return undefined
-        }),
+        zValidator('json', JournalDataSchema, zodHook),
         (c) => {
             const data = c.req.valid('json')
             // Save to DB...

@@ -10,6 +10,8 @@
  */
 
 import { Hono } from 'hono';
+import { apiError } from '../helpers/apiError';
+import { 必須, FormData解析失敗, ファイル必須, ファイルサイズ超過, 非対応形式, 未検出, チャンク未検出, 未実装 } from '../helpers/apiMessages';
 import { classifyImage, clearKnownHashes, isKnownHash } from '../services/pipeline/classify.service';
 import { createHash } from 'crypto';
 import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
@@ -72,7 +74,7 @@ app.post('/classify', async (c) => {
   try {
     formData = await c.req.formData();
   } catch {
-    return c.json({ error: 'FormDataの解析に失敗しました' }, 400);
+    return apiError(c, 400, FormData解析失敗);
   }
 
   const file = formData.get('file');
@@ -82,13 +84,13 @@ app.post('/classify', async (c) => {
 
   // バリデーション
   if (!file || !(file instanceof File)) {
-    return c.json({ error: 'file（ファイル）は必須です' }, 400);
+    return apiError(c, 400, ファイル必須);
   }
   if (!mimeType) {
-    return c.json({ error: 'mimeTypeは必須です' }, 400);
+    return apiError(c, 400, 必須('mimeType'));
   }
   if (!clientId) {
-    return c.json({ error: 'clientIdは必須です' }, 400);
+    return apiError(c, 400, 必須('clientId'));
   }
 
   // MIMEタイプホワイトリスト（Geminiコスト防御）
@@ -97,17 +99,13 @@ app.post('/classify', async (c) => {
     'application/pdf',
   ];
   if (!ALLOWED_MIME.includes(mimeType.toLowerCase())) {
-    return c.json({
-      error: `対応していないファイル形式です（${mimeType}）。画像またはPDFのみ処理可能です`,
-    }, 400);
+    return apiError(c, 400, 非対応形式(mimeType));
   }
 
   // ファイルサイズ制限（サーバー側でも二重チェック）
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
   if (file.size > MAX_FILE_SIZE) {
-    return c.json({
-      error: `ファイルサイズが大きすぎます（${(file.size / 1024 / 1024).toFixed(1)}MB）。10MB以下にしてください`,
-    }, 400);
+    return apiError(c, 413, ファイルサイズ超過);
   }
 
   // セマフォで並列制御（SHA-256 + base64 + Gemini = 1タスク）
@@ -154,7 +152,7 @@ app.post('/upload', async (c) => {
   try {
     formData = await c.req.formData();
   } catch {
-    return c.json({ error: 'FormDataの解析に失敗しました' }, 400);
+    return apiError(c, 400, FormData解析失敗);
   }
 
   const file = formData.get('file');
@@ -163,18 +161,16 @@ app.post('/upload', async (c) => {
   const filename = formData.get('filename') as string | null;
 
   if (!file || !(file instanceof File)) {
-    return c.json({ error: 'file（ファイル）は必須です' }, 400);
+    return apiError(c, 400, ファイル必須);
   }
   if (!clientId) {
-    return c.json({ error: 'clientIdは必須です' }, 400);
+    return apiError(c, 400, 必須('clientId'));
   }
 
   // ファイルサイズ制限（10MB）
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
   if (file.size > MAX_FILE_SIZE) {
-    return c.json({
-      error: `ファイルサイズが大きすぎます（${(file.size / 1024 / 1024).toFixed(1)}MB）。10MB以下にしてください`,
-    }, 400);
+    return apiError(c, 413, ファイルサイズ超過);
   }
 
   // ファイルバイナリ取得 + SHA-256ハッシュ
@@ -234,7 +230,7 @@ const UPLOAD_TMP = join(tmpdir(), 'receipt-app-chunks');
 app.post('/upload-chunk', async (c) => {
   const uploadId = c.req.header('X-Upload-Id');
   if (!uploadId) {
-    return c.json({ error: 'X-Upload-Id必須' }, 400);
+    return apiError(c, 400, 必須('X-Upload-Id'));
   }
 
   // 一時ディレクトリ作成（初回のみ）
@@ -259,12 +255,12 @@ app.post('/upload-complete', async (c) => {
   const { uploadId, filename, documentId, clientId } = body;
 
   if (!uploadId) {
-    return c.json({ error: 'uploadId必須' }, 400);
+    return apiError(c, 400, 必須('uploadId'));
   }
 
   const tmpPath = join(UPLOAD_TMP, uploadId);
   if (!existsSync(tmpPath)) {
-    return c.json({ error: 'チャンクファイルが見つかりません' }, 404);
+    return apiError(c, 404, チャンク未検出);
   }
 
   // ファイル読み込み（全チャンク結合済み）
@@ -324,9 +320,7 @@ app.post('/upload-complete', async (c) => {
 // ============================================================
 
 app.post('/extract', async (c) => {
-  return c.json({
-    error: 'extract エンドポイントは未実装です。classify確定後に実装予定。',
-  }, 501);
+  return apiError(c, 501, 未実装('extract エンドポイント'));
 });
 
 // ============================================================
@@ -384,7 +378,7 @@ app.get('/file/:clientId/:fileName', (c) => {
   const filePath = join(UPLOADS_DIR, clientIdParam, fileNameParam);
 
   if (!existsSync(filePath)) {
-    return c.json({ error: 'ファイルが見つかりません' }, 404);
+    return apiError(c, 404, 未検出('ファイル'));
   }
 
   const buffer = readFileSync(filePath);
