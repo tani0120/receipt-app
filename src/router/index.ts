@@ -443,6 +443,13 @@ export const routes: RouteRecordRaw[] = [
       return `/guest/${clientId}/login`
     },
   },
+  // --- エラーページプレビュー（開発用: 4パターン並列表示） ---
+  {
+    path: '/error-preview',
+    name: 'ErrorPreview',
+    component: () => import('@/mocks/views/MockErrorPreviewPage.vue'),
+    meta: { guestAllowed: true },
+  },
   // --- 404ページ ---
   {
     path: '/404',
