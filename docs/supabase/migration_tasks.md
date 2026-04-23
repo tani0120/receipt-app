@@ -313,6 +313,12 @@ KI: postgresql_migration_streamed_architecture で設計済み。
 
 24番設計書セクション10-16で定義。
 
+> **方針: Supabase移行後もDrive借景は継続する。**
+> 理由: スマホブラウザでファイルをアップロードするとFileオブジェクトがメモリを圧迫しクラッシュする。
+> Driveアプリ経由にすればブラウザのメモリ消費がゼロになるため、スマホ用の入口としてDrive借景は不可欠。
+> 選別結果の永続化は、選別画面表示時にdoc-store（現在）/ documentsテーブル（移行後）に登録して解決する。
+> Supabase移行時はRepository切替（`VITE_USE_MOCK=false`）のみで追加の再設計は不要。
+
 ### 6-1. 全体フロー（セクション15で設計変更あり）
 
 ```
@@ -445,6 +451,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | Zodスキーマ日本語化 + apiMessages統合 | モック用スキーマは英語のまま（zodHookフォールバックで安全） | 本番スキーマ作成時に `z.string().min(1, 必須('名前'))` 形式で日本語埋め込み。6ファイル対象: ai-rules, collection, clients, admin, ocr, api/index | バリデーション設計 |
 | 既存fetch 19箇所のapiFetch移行 | 全19箇所が直接fetch()。エラー処理はthrow/console.error/無視がバラバラ | composable層（useStaff, useClients等）はモジュールスコープでuseRouter()不可→SupabaseClient直接呼び出しに置換。Vueページ側はapiFetch.withError()に統一 | バリデーション設計 |
 | Zodスキーマファイル分離（`src/api/schemas/`） | 全スキーマがルートファイル内にインライン定義 | `src/api/schemas/staff.schema.ts` 等に分離。apiMessages.tsの定数を参照し、フロント・サーバー間で仕様を一元管理 | バリデーション設計 |
+| Driveファイル選別結果の永続化 | `driveSelections`（メモリ上のMap）に保持。ページ遷移・リロードで消失 | **現段階でdoc-storeに登録して解決可能。** 選別画面表示時にDriveファイルをdoc-storeに登録（drive_file_idで重複排除）。Supabase移行時はRepository切替のみ | MockDriveSelectPage.vue L490-491 |
 
 ---
 

@@ -259,7 +259,7 @@ const driveFiles = ref<DriveFileItemWithThumbnail[]>([]);
 /** 選別結果をローカルで保持（Driveには書き込まない） */
 const driveSelections = ref<Map<string, DocStatus>>(new Map());
 
-/** Driveファイル一覧取得（サムネイルbase64付き） */
+/** Driveファイル一覧取得（サムネイルbase64付き） → doc-storeにも登録して永続化 */
 const fetchDriveFiles = async () => {
   const folderId = currentClient.value?.sharedFolderId;
   if (!folderId) return;
@@ -280,7 +280,38 @@ const fetchDriveFiles = async () => {
         driveSelections.value.set(f.id, 'pending');
       }
     }
-    console.log(`[MockDriveSelectPage] Driveファイル${data.files.length}件取得`);
+
+    // Driveファイルをdoc-storeに登録（drive_file_idで重複排除）
+    const driveDocEntries = data.files.map(f => ({
+      id: f.id,
+      clientId: clientId.value,
+      source: 'drive',
+      fileName: f.name,
+      fileType: f.mimeType || 'application/octet-stream',
+      fileSize: f.size || 0,
+      fileHash: null,
+      driveFileId: f.id,
+      thumbnailUrl: f.thumbnailBase64 ? `data:image/png;base64,${f.thumbnailBase64}` : null,
+      previewUrl: `/api/drive/preview/${f.id}`,
+      status: driveSelections.value.get(f.id) || 'pending',
+      receivedAt: f.createdTime || new Date().toISOString(),
+      batchId: null,
+      journalId: null,
+      createdBy: null,
+      updatedBy: null,
+      updatedAt: null,
+      statusChangedBy: null,
+      statusChangedAt: null,
+    }));
+    if (driveDocEntries.length > 0) {
+      fetch('/api/doc-store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documents: driveDocEntries }),
+      }).catch(err => console.error('[MockDriveSelectPage] Driveファイルdoc-store登録エラー:', err));
+    }
+
+    console.log(`[MockDriveSelectPage] Driveファイル${data.files.length}件取得 → doc-storeに登録`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     alert(`Driveファイル取得エラー: ${msg}`);
@@ -360,7 +391,7 @@ const documents = computed<DocView[]>(() => {
     fileSize: formatFileSize(f.size),
     uploadDate: formatDate(f.createdTime),
     uploadDateRaw: f.createdTime ? new Date(f.createdTime).getTime() : 0,
-    thumbnailBase64: f.thumbnailBase64,
+    thumbnailBase64: f.thumbnailBase64 || '',
     previewUrlFull: `/api/drive/preview/${f.id}`,
     status: driveSelections.value.get(f.id) || 'pending' as DocStatus,
     mimeType: f.mimeType,
@@ -484,22 +515,22 @@ const redo = () => {
 // --- 全選別完了モーダル ---
 const showCompleteModal = ref(false);
 
-// --- ステータス設定（ソースに応じて保存先を分岐） ---
+// --- ステータス設定（全ソース共通: doc-storeに保存） ---
 const applyStatus = (docId: string, source: string, status: DocStatus) => {
   if (source === 'drive') {
-    // Drive: ローカルMapに保持（migrate時にDL+doc-store登録）
+    // DriveファイルもローカルMap + doc-store両方を更新
     driveSelections.value.set(docId, status);
   } else {
-    // 独自: doc-storeの該当ドキュメントを即更新
+    // 独自アップロード: ローカル状態を更新
     const doc = uploadedDocs.value.find(d => d.id === docId);
     if (doc) doc.status = status;
-    // サーバーにも反映（fire-and-forget）
-    fetch(`/api/doc-store/${encodeURIComponent(docId)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    }).catch(err => console.error('[MockDriveSelectPage] doc-store更新エラー:', err));
   }
+  // 全ソース共通: doc-storeに即反映（fire-and-forget）
+  fetch(`/api/doc-store/${encodeURIComponent(docId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  }).catch(err => console.error('[MockDriveSelectPage] doc-store更新エラー:', err));
 };
 
 const setStatus = (status: DocStatus) => {
