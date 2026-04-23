@@ -119,6 +119,6 @@ app.delete('/:id', (c) => {
     return c.json({ error: `ドキュメント ${id} が見つかりません` }, 404);
   }
   return c.json({ ok: true });
+});
 
 export default app;
-
