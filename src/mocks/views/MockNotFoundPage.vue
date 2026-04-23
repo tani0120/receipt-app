@@ -105,6 +105,12 @@ const router = useRouter()
 // ロール判定（非同期）
 const role = ref<ErrorRole | null>(null)
 onMounted(async () => {
+  // 【開発用】?role= でロール強制オーバーライド（本番デプロイ前に削除）
+  const queryRole = route.query.role as string | undefined
+  if (queryRole === 'staff' || queryRole === 'client' || queryRole === 'third_party') {
+    role.value = queryRole
+    return
+  }
   role.value = await getErrorRole()
 })
 

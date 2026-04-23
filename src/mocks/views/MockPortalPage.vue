@@ -180,7 +180,7 @@ const tips = [
 ]
 
 const goUpload = () => {
-  router.push(`/upload-docs/${clientId}/guest`)
+  router.push(`/upload/${clientId}/guest`)
 }
 
 </script>

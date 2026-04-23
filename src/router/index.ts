@@ -14,13 +14,13 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: '/',
-    redirect: '/mode-select'
+    name: 'Home',
+    component: () => import('../mocks/views/MockHomePage.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/mode-select',
-    name: 'ModeSelect',
-    component: () => import('../views/ModeSelect.vue'),
-    meta: { requiresAuth: true }
+    redirect: '/'
   },
   {
     path: '/legacy',
@@ -391,6 +391,7 @@ export const routes: RouteRecordRaw[] = [
         console.error('[guest] 顧問先ステータス確認エラー:', err);
         return '/404';
       }
+      return undefined;
     },
   },
   {
@@ -408,6 +409,7 @@ export const routes: RouteRecordRaw[] = [
         console.warn(`[guest] /guest/${clientId}/login への直接アクセスを拒否`);
         return '/404';
       }
+      return undefined;
     },
   },
   // 旧パス互換（/portal/ → /guest/ or Drive方式）
@@ -442,13 +444,6 @@ export const routes: RouteRecordRaw[] = [
       sessionStorage.setItem(`invite_ref_${clientId}`, code);
       return `/guest/${clientId}/login`
     },
-  },
-  // --- エラーページプレビュー（開発用: 4パターン並列表示） ---
-  {
-    path: '/error-preview',
-    name: 'ErrorPreview',
-    component: () => import('@/mocks/views/MockErrorPreviewPage.vue'),
-    meta: { guestAllowed: true },
   },
   // --- 404ページ ---
   {

@@ -29,6 +29,8 @@ export interface UploadEntry {
   file: File | null  // 処理完了後はnull（メモリ解放）
   fileName: string   // ファイル名（file解放後もテンプレートから参照可能）
   fileSize: number   // ファイルサイズ（file解放後もテンプレートから参照可能）
+  /** MIMEタイプ（file解放後もテンプレートから参照可能。例: 'image/jpeg'） */
+  mimeType: string
   previewUrl: string
   previewUrlHQ: string | null  // PC用高解像度プレビュー（800px。モバイルではnull）
   status: UploadStatus
@@ -51,6 +53,8 @@ export interface UploadEntry {
   isDuplicate: boolean
   hash: string | null
   lite: boolean             // 軽量モード（AI分類スキップ）
+  /** サーバー保存先URL（/api/pipeline/file/{clientId}/{savedName}）。リロード後も有効 */
+  fileUrl: string | null
 }
 
 // ===== ラベル定義 =====
@@ -133,7 +137,7 @@ async function uploadChunked(
   filename: string,
   documentId: string,
   clientId: string,
-): Promise<{ fileHash?: string; thumbnail?: string; isDuplicate?: boolean }> {
+): Promise<{ fileHash?: string; thumbnail?: string; isDuplicate?: boolean; fileUrl?: string }> {
   const totalSize = file.size
 
   // チャンク送信（512KBずつ。メモリに全体を乗せない）
@@ -179,11 +183,19 @@ export function useUpload() {
   // route.nameから権限（role）・端末（device）を導出
   const role = String(route.name ?? '').toLowerCase().includes('guest') ? 'guest' : 'staff'
 
+  // アップロード実行者情報（スタッフ時のみ個人特定。ゲスト時はnull）
+  const { currentStaffId, userName: staffName, currentEmail } = useCurrentUser()
+
   // デバイスは画面幅から自動判定
   const isMobile = ref(window.innerWidth < MOBILE_BREAKPOINT)
   const device = computed(() => isMobile.value ? 'mobile' : 'pc')
   const analyzeOpts = computed<AnalyzeOptions>(() => ({
     clientId, role, device: device.value,
+    uploadedBy: {
+      staffId: role === 'staff' ? currentStaffId.value : null,
+      staffName: role === 'staff' ? staffName.value : null,
+      email: role === 'staff' ? currentEmail.value : null,
+    },
   }))
 
   // リサイズ監視
@@ -495,6 +507,7 @@ export function useUpload() {
           file: sendFile,
           fileName: item.file.name,
           fileSize: item.file.size,
+          mimeType: item.file.type || 'application/octet-stream',
           previewUrl: isImageFile(item.file.name) ? PLACEHOLDER_SVG : getFileTypeThumbnail(item.file.name),
           previewUrlHQ: null,
           status: 'queued',
@@ -513,6 +526,7 @@ export function useUpload() {
           isDuplicate: false,
           hash: null,
           lite: item.lite ?? false,
+          fileUrl: null,
         }
         batchEntryIds.push(entry.id)
         entries.value.push(entry)
@@ -624,6 +638,7 @@ export function useUpload() {
         file: item.file,  // 送信用（圧縮無効時は元ファイル）
         fileName: item.originalName,
         fileSize: item.originalSize,
+        mimeType: item.file.type || 'application/octet-stream',
         previewUrl: item.thumbnail,  // サムネイル（5KB程度。既に生成済み）
         previewUrlHQ: item.thumbnailHQ,  // PC用高解像度プレビュー（800px。モバイルではnull）
         status: 'queued',
@@ -642,6 +657,7 @@ export function useUpload() {
         isDuplicate: false,
         hash: null,
         lite: item.lite ?? false,
+        fileUrl: null,
       }
       entries.value.push(entry)
       processOne(entry.id)
@@ -688,6 +704,7 @@ export function useUpload() {
           e.previewUrl = data.thumbnail  // サーバー生成サムネイルで置換
         }
         e.isDuplicate = data.isDuplicate ?? false
+        e.fileUrl = data.fileUrl ?? null
         // クライアント側でも既存entriesとの重複確認
         if (e.hash && !e.isDuplicate) {
           e.isDuplicate = entries.value.some(x => x.id !== e.id && x.hash === e.hash)
@@ -703,6 +720,7 @@ export function useUpload() {
       e.status = 'ok'
       e.completedAt = Date.now()
       e.file = null
+      // fileUrlはサーバーに保存済みなので維持（送付時に使用）
       processQueue()
       return
     }
@@ -730,6 +748,7 @@ export function useUpload() {
         e.lineItems = result.lineItems ?? null
         e.isDuplicate = result.isDuplicate ?? false
         e.hash = result.fileHash ?? null
+        e.fileUrl = result.fileUrl ?? null
 
         // 補助対象の場合、デバッグ用にerrorReasonにファイル情報を保存
         if (e.supplementary) {
@@ -743,6 +762,7 @@ export function useUpload() {
         e.metrics = result.metrics ?? null
         e.lineItems = null
         e.hash = result.fileHash ?? null
+        e.fileUrl = result.fileUrl ?? null
       }
     } catch (err) {
       // API通信失敗・例外時（スマホで確認可能）
@@ -832,6 +852,7 @@ export function useUpload() {
         file: sendFile,
         fileName: file.name,
         fileSize: file.size,
+        mimeType: file.type || 'application/octet-stream',
         previewUrl: thumbUrl,
         previewUrlHQ: hqUrl,
         status: 'queued',
@@ -850,6 +871,7 @@ export function useUpload() {
         isDuplicate: false,
         hash: null,
         lite: old.lite,
+        fileUrl: null,
       }
       processQueue()
     }
@@ -865,52 +887,23 @@ export function useUpload() {
     if (!canConfirm.value || isConfirming.value) return
     isConfirming.value = true
 
-    const okEntries = entries.value.filter(e => e.status === 'ok')
+    // OKもエラーも保存（AI判定は間違える可能性あり。選別画面で人間が最終判断）
+    const okEntries = entries.value.filter(e => e.status === 'ok' || e.status === 'error')
     const docEntries: DocEntry[] = []
 
-    // 1. 各ファイルをサーバーにアップロードして永続保存
+    // 全件選別画面用にdoc-storeに送付・保存（エラー含むので要否の判断必要）
     for (const e of okEntries) {
-      let driveFileId: string | null = null
-      const serverHash: string | null = e.hash
-
-      // ファイルが存在する場合はDriveにアップロード
-      if (e.file) {
-        const client = clients.value.find(c => c.clientId === clientId)
-        const folderId = client?.sharedFolderId
-        if (folderId) {
-          try {
-            const formData = new FormData()
-            formData.append('file', e.file)
-            formData.append('folderId', folderId)
-            const uploadRes = await fetch('/api/drive/upload', {
-              method: 'POST',
-              body: formData,
-            })
-            if (uploadRes.ok) {
-              const uploadData = await uploadRes.json() as { driveFileId: string; name: string; mimeType: string; size: number }
-              driveFileId = uploadData.driveFileId
-            } else {
-              console.error(`[useUpload] Driveアップロード失敗 (${e.fileName}): HTTP ${uploadRes.status}`)
-            }
-          } catch (err) {
-            console.error(`[useUpload] Driveアップロードエラー (${e.fileName}):`, err)
-          }
-        } else {
-          console.warn(`[useUpload] sharedFolderId未設定。Driveアップロードスキップ (${e.fileName})`)
-        }
-      }
-
       docEntries.push({
         id: e.documentId,
         clientId,
         source: (role === 'guest' ? 'guest-upload' : 'staff-upload') as DocSource,
         fileName: e.fileName,
-        fileType: e.file?.type || 'application/octet-stream',
+        fileType: e.mimeType,
         fileSize: e.fileSize,
-        fileHash: serverHash,
-        driveFileId,
-        thumbnailUrl: e.previewUrl,
-        previewUrl: driveFileId ? `/api/drive/preview/${driveFileId}` : (e.previewUrlHQ || e.previewUrl),
+        fileHash: e.hash,
+        driveFileId: null,
+        thumbnailUrl: e.fileUrl ? `${e.fileUrl}` : e.previewUrl,
+        previewUrl: e.fileUrl || null,
         status: 'pending' as DocStatus,
         receivedAt: new Date(e.completedAt ?? Date.now()).toISOString(),
         batchId: null,
@@ -950,7 +943,7 @@ export function useUpload() {
     await refresh()
 
     isConfirming.value = false
-    confirmedCount.value = counts.value.ok
+    confirmedCount.value = counts.value.ok + counts.value.error
     showComplete.value = true
   }
 

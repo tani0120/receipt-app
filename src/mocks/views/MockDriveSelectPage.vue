@@ -50,13 +50,14 @@
         >
           <template v-if="doc.fileName?.toLowerCase().endsWith('.pdf')">
             <div class="ds-thumb-wrap">
-              <iframe :src="`/api/drive/preview/${doc.id}`" class="ds-thumb-pdf" tabindex="-1"></iframe>
+              <iframe :src="doc.source === 'drive' ? `/api/drive/preview/${doc.id}` : (doc.previewUrlFull || '')" class="ds-thumb-pdf" tabindex="-1"></iframe>
             </div>
           </template>
           <img v-else :src="doc.thumbnailBase64 || ''" :alt="doc.fileName" class="ds-thumb-img" />
           <div class="ds-sidebar-info">
             <div class="ds-sidebar-name">{{ doc.fileName }}</div>
             <div class="ds-sidebar-meta">{{ doc.fileSize }} · {{ doc.uploadDate }}</div>
+            <span class="ds-source-badge" :class="sourceBadgeClass(doc.source)">{{ sourceLabel(doc.source) }}</span>
           </div>
           <span class="ds-badge" :class="statusBadgeClass(doc.status)">{{ statusLabel(doc.status) }}</span>
         </div>
@@ -241,7 +242,7 @@ import { useRoute } from 'vue-router';
 import { usePdfRenderer } from '@/composables/usePdfRenderer';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
-import type { DocStatus } from '@/repositories/types';
+import type { DocEntry, DocStatus } from '@/repositories/types';
 import type { DriveFileItemWithThumbnail } from '@/api/services/drive/driveService';
 
 const route = useRoute();
@@ -288,7 +289,31 @@ const fetchDriveFiles = async () => {
   }
 };
 
-onMounted(() => { fetchDriveFiles(); fetchExcludedCount(); });
+// ===== doc-store方式: 独自アップロード済みファイルを取得 =====
+
+/** doc-storeから取得した独自アップロードファイル */
+const uploadedDocs = ref<DocEntry[]>([]);
+
+/** doc-storeからpending状態の独自アップロードファイルを取得 */
+const fetchUploadedDocs = async () => {
+  try {
+    const res = await fetch(`/api/doc-store?clientId=${encodeURIComponent(clientId.value)}`);
+    if (!res.ok) return;
+    const data = await res.json() as { documents: DocEntry[] };
+    // pending状態のみ表示（選別済みは非表示）
+    uploadedDocs.value = data.documents.filter(
+      (d: DocEntry) => d.status === 'pending' && d.source !== 'drive'
+    );
+    console.log(`[MockDriveSelectPage] doc-storeから${uploadedDocs.value.length}件取得（独自アップロード）`);
+  } catch (err) {
+    console.warn('[MockDriveSelectPage] doc-store取得失敗:', err);
+  }
+};
+
+onMounted(async () => {
+  await Promise.all([fetchDriveFiles(), fetchUploadedDocs()]);
+  fetchExcludedCount();
+});
 
 // --- PDF.js ---
 const {
@@ -300,31 +325,74 @@ const {
   destroy: pdfDestroy,
 } = usePdfRenderer();
 
-// --- ビュー型 ---
-const documents = computed(() =>
-  driveFiles.value.map(f => ({
+// --- ビュー型（Drive + 独自アップロード マージ） ---
+interface DocView {
+  id: string;
+  source: string;          // 'drive' | 'staff-upload' | 'guest-upload'
+  fileName: string;
+  fileType: string;
+  fileSize: string;
+  uploadDate: string;
+  uploadDateRaw: number;   // ソート用Unix時刻
+  thumbnailBase64: string;
+  previewUrlFull: string;  // プレビュー用フルURL
+  status: DocStatus;
+  mimeType: string;
+}
+
+const formatFileSize = (bytes: number) =>
+  bytes >= 1024 * 1024
+    ? (bytes / (1024 * 1024)).toFixed(1) + 'MB'
+    : Math.round(bytes / 1024) + 'KB';
+
+const formatDate = (dateStr: string) =>
+  dateStr
+    ? new Date(dateStr).toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')
+    : '';
+
+const documents = computed<DocView[]>(() => {
+  // ① Drive借景ファイル
+  const driveItems: DocView[] = driveFiles.value.map(f => ({
     id: f.id,
+    source: 'drive',
     fileName: f.name,
     fileType: f.mimeType.split('/').pop()?.toUpperCase() || f.mimeType,
-    fileSize: f.size >= 1024 * 1024
-      ? (f.size / (1024 * 1024)).toFixed(1) + 'MB'
-      : Math.round(f.size / 1024) + 'KB',
-    uploadDate: f.createdTime
-      ? new Date(f.createdTime).toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')
-      : '',
+    fileSize: formatFileSize(f.size),
+    uploadDate: formatDate(f.createdTime),
+    uploadDateRaw: f.createdTime ? new Date(f.createdTime).getTime() : 0,
     thumbnailBase64: f.thumbnailBase64,
+    previewUrlFull: `/api/drive/preview/${f.id}`,
     status: driveSelections.value.get(f.id) || 'pending' as DocStatus,
     mimeType: f.mimeType,
-  }))
-);
+  }));
+
+  // ② doc-store（独自アップロード: staff-upload / guest-upload）
+  const uploadItems: DocView[] = uploadedDocs.value.map(d => ({
+    id: d.id,
+    source: d.source,
+    fileName: d.fileName,
+    fileType: d.fileType.split('/').pop()?.toUpperCase() || d.fileType,
+    fileSize: formatFileSize(d.fileSize),
+    uploadDate: formatDate(d.receivedAt),
+    uploadDateRaw: d.receivedAt ? new Date(d.receivedAt).getTime() : 0,
+    thumbnailBase64: d.thumbnailUrl || '',
+    previewUrlFull: d.previewUrl || '',
+    status: d.status,
+    mimeType: d.fileType,
+  }));
+
+  // マージして日時降順ソート
+  return [...driveItems, ...uploadItems]
+    .sort((a, b) => b.uploadDateRaw - a.uploadDateRaw);
+});
 
 const selectedIdx = ref(0);
 const selected = computed(() => documents.value[selectedIdx.value] ?? null);
 
-/** プレビューURL（Driveプロキシ経由） */
+/** プレビューURL（ソースに応じて分岐） */
 const previewUrl = computed(() => {
   if (!selected.value) return '';
-  return `/api/drive/preview/${selected.value.id}`;
+  return selected.value.previewUrlFull;
 });
 
 /** PDFかどうか */
@@ -416,14 +484,31 @@ const redo = () => {
 // --- 全選別完了モーダル ---
 const showCompleteModal = ref(false);
 
-// --- ステータス設定 ---
+// --- ステータス設定（ソースに応じて保存先を分岐） ---
+const applyStatus = (docId: string, source: string, status: DocStatus) => {
+  if (source === 'drive') {
+    // Drive: ローカルMapに保持（migrate時にDL+doc-store登録）
+    driveSelections.value.set(docId, status);
+  } else {
+    // 独自: doc-storeの該当ドキュメントを即更新
+    const doc = uploadedDocs.value.find(d => d.id === docId);
+    if (doc) doc.status = status;
+    // サーバーにも反映（fire-and-forget）
+    fetch(`/api/doc-store/${encodeURIComponent(docId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    }).catch(err => console.error('[MockDriveSelectPage] doc-store更新エラー:', err));
+  }
+};
+
 const setStatus = (status: DocStatus) => {
   if (!selected.value) return;
   const currentStatus = selected.value.status as DocStatus;
   if (currentStatus === status) return;
 
   pushHistory(selected.value.id, currentStatus, status);
-  driveSelections.value.set(selected.value.id, status);
+  applyStatus(selected.value.id, selected.value.source, status);
   markDirty(`${selected.value.fileName}: ${statusLabel(status)}`);
 
   const remainingPending = documents.value.filter(
@@ -447,7 +532,7 @@ const setStatus = (status: DocStatus) => {
 const resetStatus = () => {
   if (!selected.value || selected.value.status === 'pending') return;
   pushHistory(selected.value.id, selected.value.status as DocStatus, 'pending');
-  driveSelections.value.set(selected.value.id, 'pending');
+  applyStatus(selected.value.id, selected.value.source, 'pending');
   markDirty(`${selected.value.fileName}: 未処理に戻す`);
   showCompleteModal.value = false;
 };
@@ -573,9 +658,9 @@ const downloadExcludedZip = async () => {
   }
 };
 
-// --- リロード（Driveから再取得） ---
+// --- リロード（Drive + doc-store両方を再取得） ---
 const handleReload = async () => {
-  await fetchDriveFiles();
+  await Promise.all([fetchDriveFiles(), fetchUploadedDocs()]);
 };
 
 // --- ステータス表示 ---
@@ -595,6 +680,20 @@ const statusTextClass = (s: string) => {
   if (s === 'target') return 'ds-text-target';
   if (s === 'supporting') return 'ds-text-supporting';
   if (s === 'excluded') return 'ds-text-excluded';
+  return '';
+};
+
+// --- ソースバッジ ---
+const sourceLabel = (s: string) => {
+  if (s === 'drive') return '📁 Drive';
+  if (s === 'staff-upload') return '💻 スタッフ';
+  if (s === 'guest-upload') return '👤 ゲスト';
+  return '📎 その他';
+};
+const sourceBadgeClass = (s: string) => {
+  if (s === 'drive') return 'ds-source-drive';
+  if (s === 'staff-upload') return 'ds-source-staff';
+  if (s === 'guest-upload') return 'ds-source-guest';
   return '';
 };
 
@@ -699,6 +798,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey));
 .ds-badge-target { background: #dbeafe; color: #1d4ed8; }
 .ds-badge-supporting { background: #fef3c7; color: #92400e; }
 .ds-badge-excluded { background: #fee2e2; color: #dc2626; }
+
+/* ソースバッジ（Drive / スタッフ / ゲスト） */
+.ds-source-badge { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; margin-top: 2px; display: inline-block; }
+.ds-source-drive { background: #fef3c7; color: #92400e; }
+.ds-source-staff { background: #dbeafe; color: #1d4ed8; }
+.ds-source-guest { background: #dcfce7; color: #166534; }
 
 /* ========== プレビュー ========== */
 .ds-preview {

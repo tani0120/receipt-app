@@ -441,7 +441,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | スタッフ向けSlack #dev-alert連携 | 未実装 | 500/503発生時にSlack自動通知 | エラー表示設計 |
 | normalizeSupabaseError.ts新設 | 未作成（fetchのnormalizeHttpError.tsのみ実装済み） | PostgrestError → AppError変換（RLSの42501→403等） | エラーハンドラー設計 |
 | errorRole.ts中身の差し替え | 暫定: JWT+guest_google_*で判定 | `app_metadata.role`で判定に置換（1関数の中身のみ） | エラーハンドラー設計 |
-| MockErrorPreviewPage.vue削除 | 開発用プレビュー（/#/error-preview） | 本番デプロイ前に削除 | エラーハンドラー設計 |
+| ~~MockErrorPreviewPage.vue削除~~ | ~~開発用プレビュー（/#/error-preview）~~ | ~~✅ 削除済み（2026-04-23）~~ | エラーハンドラー設計 |
 | Zodスキーマ日本語化 + apiMessages統合 | モック用スキーマは英語のまま（zodHookフォールバックで安全） | 本番スキーマ作成時に `z.string().min(1, 必須('名前'))` 形式で日本語埋め込み。6ファイル対象: ai-rules, collection, clients, admin, ocr, api/index | バリデーション設計 |
 | 既存fetch 19箇所のapiFetch移行 | 全19箇所が直接fetch()。エラー処理はthrow/console.error/無視がバラバラ | composable層（useStaff, useClients等）はモジュールスコープでuseRouter()不可→SupabaseClient直接呼び出しに置換。Vueページ側はapiFetch.withError()に統一 | バリデーション設計 |
 | Zodスキーマファイル分離（`src/api/schemas/`） | 全スキーマがルートファイル内にインライン定義 | `src/api/schemas/staff.schema.ts` 等に分離。apiMessages.tsの定数を参照し、フロント・サーバー間で仕様を一元管理 | バリデーション設計 |

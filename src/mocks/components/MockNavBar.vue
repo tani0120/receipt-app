@@ -4,7 +4,9 @@
     <div class="bg-white border-b border-gray-200 flex items-center justify-between px-3" style="height: 53px; font-family: 'Noto Sans JP', sans-serif">
       <!-- 左: ロゴ + 旧ページリンク -->
       <div class="flex items-center gap-3">
-        <img src="/sugu-suru-logo.png" alt="sugu-suru" style="height: 30px" />
+        <router-link to="/" style="display: flex; align-items: center;">
+          <img src="/sugu-suru-logo.png" alt="sugu-suru" style="height: 30px; cursor: pointer;" />
+        </router-link>
         <!-- クライアント名動的表示 -->
         <div v-if="currentClient && !isMasterPage" class="flex items-center gap-2 border-l-2 border-sky-400 pl-3 ml-2">
           <span class="bg-sky-600 text-white font-extrabold px-2 py-0.5 rounded text-[13px] tracking-wider shadow-sm">{{ currentClient.threeCode }}</span>
@@ -142,12 +144,12 @@ interface TopItem {
 }
 
 const topItems: TopItem[] = [
-  { key: 'progress', label: '進捗管理',       icon: 'fa-solid fa-bars-progress',   path: '/master/progress',       managedPaths: ['/master/progress'] },
-  { key: 'clients',  label: '顧問先管理',     icon: 'fa-solid fa-building',        path: '/master/clients',    managedPaths: ['/master/clients'] },
-  { key: 'staff',    label: 'スタッフ管理',   icon: 'fa-solid fa-users',           path: '/master/staff',      managedPaths: ['/master/staff'] },
-  { key: 'vendors',  label: 'マスタ管理',     icon: 'fa-solid fa-warehouse',       path: '/master/vendors',    managedPaths: ['/master/vendors'] },
-  { key: 'costs',    label: '想定費用',       icon: 'fa-solid fa-calculator',      path: '/master/costs',      managedPaths: ['/master/costs'] },
-  { key: 'settings', label: '設定管理',       icon: 'fa-solid fa-gear',            path: '/master/settings',   managedPaths: ['/master/settings'] },
+  { key: 'pipeline',   label: '見込管理',     icon: 'fa-solid fa-chart-line',             path: null,                          managedPaths: [] },
+  { key: 'clients',    label: '顧問先管理',   icon: 'fa-solid fa-building',               path: '/master/clients',             managedPaths: ['/master/clients'] },
+  { key: 'progress',   label: '進捗管理',     icon: 'fa-solid fa-bars-progress',          path: '/master/progress',            managedPaths: ['/master/progress'] },
+  { key: 'collection', label: '資料回収',     icon: 'fa-solid fa-folder-open',            path: '/old/collection/demo',        managedPaths: ['/old/collection'] },
+  { key: 'conversion', label: 'データ変換',   icon: 'fa-solid fa-arrow-right-arrow-left', path: '/old/data-conversion/demo',   managedPaths: ['/old/data-conversion'] },
+  { key: 'settings',   label: '設定管理',     icon: 'fa-solid fa-gear',                   path: '/master/settings',            managedPaths: ['/master/settings'] },
 ];
 
 const isTopActive = (item: TopItem): boolean =>

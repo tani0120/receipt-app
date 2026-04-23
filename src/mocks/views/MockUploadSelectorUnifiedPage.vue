@@ -187,74 +187,78 @@
         </div>
       </aside>
 
-      <!-- ========== 右カラム: アップロードカード ========== -->
+      <!-- ========== 右カラム: アップロード・共有設定 ========== -->
       <section class="col-right">
 
-        <!-- 社内用 -->
+        <!-- 📤 資料アップロード -->
         <div class="card-section section-staff">
           <div class="card-section-header">
-            <span class="section-badge badge-staff">🏢 社内用</span>
-            <p class="section-note">スタッフがこの画面から直接アップロード（PC・スマホ自動対応）</p>
+            <span class="section-badge badge-staff">📤 資料アップロード</span>
+            <p class="section-note">スタッフが直接アップロード</p>
+            <p class="section-warning">⚠ 社内専用 ― 顧問先にこのURLを共有しないでください</p>
           </div>
           <div class="card-row">
             <button class="sel-card card-staff-upload" @click="go(staffPath)">
-              <div class="card-icon-area icon-staff-upload"><span>📤</span></div>
-              <h3 class="card-label">アップロード</h3>
-              <p class="card-sub">PC・スマホ自動判定</p>
+              <div class="card-icon-area icon-staff-upload"><span>💻</span></div>
+              <h3 class="card-label">PC用（独自システム）</h3>
+              <p class="card-sub">ドラッグ＆ドロップでアップロード</p>
             </button>
-            <button class="sel-card card-drive-upload" @click="go(drivePath)">
-              <div class="card-icon-area icon-drive-upload"><span>📁</span></div>
-              <h3 class="card-label">ドライブから取り込み</h3>
-              <p class="card-sub">スマホ推奨・メモリ不使用</p>
-              <span class="drive-tag">Google Drive</span>
+            <!-- フォルダ発行済 → Google Driveフォルダを開く -->
+            <button v-if="hasDriveFolder" class="sel-card card-drive-upload" @click="openDriveFolder">
+              <div class="card-icon-area icon-drive-upload"><span>📱</span></div>
+              <h3 class="card-label">スマホ用（ドライブ）</h3>
+              <p class="card-sub">Google Driveから取り込み</p>
+              <span class="drive-status drive-status--ok">🟢 発行済</span>
             </button>
+            <!-- フォルダ未発行 → 発行ボタン表示 -->
+            <div v-else class="sel-card card-drive-upload card-drive-upload--disabled">
+              <div class="card-icon-area icon-drive-upload"><span>📱</span></div>
+              <h3 class="card-label">スマホ用（ドライブ）</h3>
+              <p class="card-sub">Google Driveから取り込み</p>
+              <span class="drive-status drive-status--ng">🔴 未発行</span>
+              <button
+                class="drive-create-btn"
+                :disabled="isCreatingFolder"
+                @click.stop="createDriveFolder"
+              >
+                {{ isCreatingFolder ? '⏳ 作成中...' : '📂 Googleドライブを発行する' }}
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- 顧問先用 -->
+        <!-- ⚙ 顧問先共有設定 -->
         <div class="card-section section-client">
           <div class="card-section-header">
-            <span class="section-badge badge-client">👤 顧問先に共有</span>
+            <span class="section-badge badge-client">⚙ 顧問先共有設定</span>
             <p class="section-note">カードをクリックでURLコピー</p>
           </div>
           <div class="card-row card-row--triple">
             <div class="sel-card card-client-mobile" @click="copyText(portalLoginUrl, 'portal')">
               <div class="card-icon-area icon-client-mobile"><span>🔗</span></div>
-              <h3 class="card-label">顧問先ログインURL</h3>
-              <p class="card-sub">PC・スマホ共通</p>
+              <h3 class="card-label">招待リンク（ログインURL）</h3>
+              <p class="card-sub">顧問先に共有するログインURL</p>
               <span class="copy-tag" :class="{ copied: copiedKey === 'portal' }">
                 <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'portal' }">📋</span>
                 {{ copiedKey === 'portal' ? 'コピーしました！' : 'URLをコピー' }}
               </span>
             </div>
-            <div class="sel-card card-drive-guest" @click="hasDriveFolder ? copyText(driveGuestUrl, 'driveGuest') : createDriveFolder()">
-              <div class="card-icon-area icon-drive-guest"><span>📁</span></div>
-              <h3 class="card-label">Drive共有フォルダ</h3>
-              <p class="card-sub">{{ hasDriveFolder ? '顧問先スマホ用（直リンク）' : 'フォルダ未作成' }}</p>
-              <!-- フォルダ作成中 -->
-              <template v-if="isCreatingFolder">
-                <span class="copy-tag creating">⏳ 作成中...</span>
-              </template>
-              <!-- フォルダ未作成 → 作成ボタン -->
-              <template v-else-if="!hasDriveFolder">
-                <span class="copy-tag create-folder">📂 フォルダを作成</span>
-              </template>
-              <!-- フォルダ作成済み → URLコピー -->
-              <template v-else>
-                <span class="copy-tag" :class="{ copied: copiedKey === 'driveGuest' }">
-                  <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'driveGuest' }">📋</span>
-                  {{ copiedKey === 'driveGuest' ? 'コピーしました！' : 'URLをコピー' }}
-                </span>
-              </template>
-              <!-- 作成済みフォルダURL表示 -->
-              <div v-if="hasDriveFolder" class="folder-url-display">
-                <input class="folder-url-input" :value="driveGuestUrl" readonly @click="selectAll" />
+            <div class="sel-card card-client-portal" @click="copyText(portalPageUrl, 'portalPage')">
+              <div class="card-icon-area icon-client-portal"><span>📁</span></div>
+              <h3 class="card-label">顧問先共有ページURL</h3>
+              <p class="card-sub">ドライブ・独自システムへの入口</p>
+              <div class="folder-url-display">
+                <input class="folder-url-input" :value="portalPageUrl" readonly @click="selectAll" />
               </div>
+              <span class="copy-tag" :class="{ copied: copiedKey === 'portalPage' }">
+                <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'portalPage' }">📋</span>
+                {{ copiedKey === 'portalPage' ? 'コピーしました！' : 'URLをコピー' }}
+              </span>
             </div>
             <button class="sel-card card-client-pc" @click="go('/guest/' + clientId)">
               <div class="card-icon-area icon-client-pc"><span>👁</span></div>
               <h3 class="card-label">ポータルを確認</h3>
-              <p class="card-sub">ログインをスキップ</p>
+              <p class="card-sub">顧問先視点でプレビュー</p>
             </button>
           </div>
         </div>
@@ -285,9 +289,10 @@ const hasDriveFolder = computed(() => !!clientData.value?.sharedFolderId)
 
 // URL群（統合版: PC・スマホ共通）
 const staffPath       = `/upload/${clientId}/staff`
-const drivePath       = `/drive-upload/${clientId}`
+const openDriveFolder = () => window.open(driveGuestUrl.value, '_blank')
 const staffUrl        = `${origin}/#${staffPath}`
 const portalLoginUrl  = `${origin}/#/guest/${clientId}/login`
+const portalPageUrl   = `${origin}/#/guest/${clientId}`
 // Drive共有フォルダURL（Google Drive直リンク）
 const driveGuestUrl   = computed(() => {
   const folderId = clientData.value?.sharedFolderId
@@ -448,8 +453,9 @@ const selectAll = (e: Event) => {
 const go = (path: string) => {
   router.push(path)
 }
-// staffUrl は未使用警告回避用（将来利用）
+// staffUrl / driveGuestUrl は未使用警告回避用（将来利用）
 void staffUrl
+void driveGuestUrl
 </script>
 
 <style scoped>
@@ -708,6 +714,12 @@ void staffUrl
 .badge-staff  { background: #dbeafe; color: #1e40af; }
 .badge-client { background: #dcfce7; color: #166534; }
 .section-note { font-size: 11px; color: #94a3b8; margin: 4px 0 0; }
+.section-warning {
+  font-size: 10px; font-weight: 700; color: #dc2626;
+  background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: 6px; padding: 4px 10px;
+  margin: 6px 0 0;
+}
 
 /* カード行 */
 .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -741,14 +753,50 @@ void staffUrl
 .icon-staff-upload  { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
 .icon-client-mobile { background: linear-gradient(135deg, #dcfce7, #bbf7d0); }
 .icon-client-pc     { background: linear-gradient(135deg, #dcfce7, #bbf7d0); }
+.icon-client-portal { background: linear-gradient(135deg, #e0e7ff, #c7d2fe); }
 .icon-drive-upload  { background: linear-gradient(135deg, #fef3c7, #fde68a); }
-.icon-drive-guest   { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+.card-client-portal:hover { border-color: #6366f1; background: #eef2ff; }
 
-.drive-tag {
-  display: inline-block; font-size: 9px; font-weight: 700;
-  padding: 2px 8px; border-radius: 4px;
-  background: #fef3c7; color: #92400e;
+.drive-status {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 3px 10px; border-radius: 6px;
   margin-top: 6px;
+}
+.drive-status--ok {
+  background: #dcfce7; color: #166534;
+}
+.drive-status--ng {
+  background: #fee2e2; color: #dc2626;
+}
+
+/* 未発行カード */
+.card-drive-upload--disabled {
+  border-style: dashed; border-color: #e2e8f0;
+  opacity: 0.85; cursor: default;
+}
+.card-drive-upload--disabled:hover {
+  transform: none; box-shadow: none;
+}
+
+/* Googleドライブ発行ボタン */
+.drive-create-btn {
+  display: block; width: 100%;
+  margin-top: 10px; padding: 8px 12px;
+  border-radius: 10px; border: none;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.drive-create-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+}
+.drive-create-btn:active { transform: scale(0.97); }
+.drive-create-btn:disabled {
+  background: #94a3b8; cursor: not-allowed;
+  transform: none; box-shadow: none;
 }
 
 .card-label { font-size: 13px; font-weight: 700; color: #1e293b; margin: 0 0 4px; }

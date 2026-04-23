@@ -119,7 +119,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
     }
 
     // ③ 型安全なレスポンス取得（D-1解消: any排除）
-    const data: ClassifyResponse = await response.json();
+    const data: ClassifyResponse & { fileUrl?: string } = await response.json();
 
     // ④ メトリクス構築（型安全: ClassifyResponseのフィールドを直接参照）
     const metrics: ReceiptAnalysisResult['metrics'] = {
@@ -166,6 +166,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
         errorReason: 'AI分析に失敗しました（サーバー側エラー）',
         metrics,
         fileHash: data.fileHash,
+        fileUrl: data.fileUrl,
       };
     }
 
@@ -181,6 +182,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       lineItems,
       metrics,
       fileHash: data.fileHash,
+      fileUrl: data.fileUrl,
     };
   } catch (err) {
     return {
@@ -215,6 +217,7 @@ function logClassifyResult(file: File, opts: AnalyzeOptions, result: ReceiptAnal
 
   const lines = result.lineItems ?? [];
 
+  const ub = opts.uploadedBy;
   console.log(
     `\n═══ classify結果 [${file.name}] ═══\n` +
       `▼ フロント情報\n` +
@@ -222,6 +225,7 @@ function logClassifyResult(file: File, opts: AnalyzeOptions, result: ReceiptAnal
       `  証票ID       : ${opts.documentId ?? "-"}\n` +
       `  権限         : ${opts.role ?? "-"}（${opts.role === "staff" ? "事務所スタッフ" : opts.role === "guest" ? "顧問先ゲスト" : "-"}）\n` +
       `  端末         : ${opts.device ?? "-"}（${opts.device === "pc" ? "PC" : opts.device === "mobile" ? "スマホ" : "-"}）\n` +
+      `  アップロード者: ${ub?.staffName ?? "(不明)"} (ID: ${ub?.staffId ?? "-"}, Email: ${ub?.email ?? "-"})\n` +
       `  ファイル名   : ${file.name}\n` +
       `  ファイル形式 : ${file.type || "-"}\n` +
       `  ファイルサイズ : ${Math.round(file.size / 1024)}KB (${file.size.toLocaleString()}バイト)\n` +

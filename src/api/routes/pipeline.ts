@@ -116,6 +116,12 @@ app.post('/classify', async (c) => {
     // SHA-256ハッシュ計算（サーバー側で実施）
     const fileHash = createHash('sha256').update(buffer).digest('hex');
 
+    // ファイル本体を永続保存（data/uploads/{clientId}/）
+    // ブラウザのFileオブジェクトは処理完了後にGCされるため、サーバーに残す
+    const actualName = filename ?? file.name ?? 'unknown';
+    const savedName = saveUploadedFile(clientId, actualName, buffer);
+    const fileUrl = `/api/pipeline/file/${clientId}/${savedName}`;
+
     // base64変換（サーバー側で実施。Gemini APIがbase64を要求するため）
     const base64 = buffer.toString('base64');
 
@@ -125,16 +131,19 @@ app.post('/classify', async (c) => {
       setTimeout(() => reject(new Error(`Gemini API タイムアウト（${timeoutMs / 1000}秒）`)), timeoutMs)
     );
 
-    return Promise.race([
+    const classifyResult = await Promise.race([
       classifyImage({
         image: base64,
         mimeType,
         clientId,
-        filename: filename ?? file.name ?? 'unknown',
+        filename: actualName,
         fileHash,
       }),
       timeoutPromise,
     ]);
+
+    // classifyResultにfileUrlを付与して返す
+    return { ...classifyResult, fileUrl };
   });
 
   return c.json(result);

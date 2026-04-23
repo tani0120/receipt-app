@@ -278,7 +278,7 @@
           <div class="modal-emoji">🎉</div>
           <h2 class="modal-title">アップロード完了！</h2>
           <p class="modal-desc">
-            <strong>{{ confirmedCount }}件</strong>のファイルを受け付けました。
+            <strong>{{ confirmedCount }}件</strong>の送付が完了しました。
           </p>
           <button class="modal-btn" @click="resetAll">続けてアップロード</button>
         </div>

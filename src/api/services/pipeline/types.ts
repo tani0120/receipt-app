@@ -109,6 +109,8 @@ export interface ClassifyResponse {
   };
   /** SHA-256ハッシュ（重複グループ化・フロント表示用） */
   fileHash?: string;
+  /** サーバー保存先URL */
+  fileUrl?: string;
   metadata: {
     duration_ms: number;
     duration_seconds: number;         // 処理時間（秒）
@@ -244,6 +246,8 @@ export interface ReceiptAnalysisResult {
     processed_size_kb: number;        // 前処理後サイズ（KB）
     preprocess_reduction_pct: number; // 削減率（%）
   };
+  /** サーバー保存先URL（/api/pipeline/file/{clientId}/{savedName}） */
+  fileUrl?: string;
 }
 
 /** analyzeReceipt呼出し時のオプション */
@@ -252,4 +256,10 @@ export interface AnalyzeOptions {
   role?: string;       // 'staff' | 'guest'（権限）
   device?: string;     // 'pc' | 'mobile'（端末）
   documentId?: string; // 証票ID（crypto.randomUUID()で生成。Supabase時はUUID PK）
+  /** アップロード実行者情報（ログ・監査用） */
+  uploadedBy?: {
+    staffId: string | null;   // スタッフUUID（ゲスト時はnull）
+    staffName: string | null; // スタッフ名（ゲスト時はnull）
+    email: string | null;     // メールアドレス
+  };
 }
