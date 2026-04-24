@@ -15,6 +15,7 @@
 import { ref } from 'vue'
 import { useGlobalToast } from './useGlobalToast'
 import { useNotificationCenter } from './useNotificationCenter'
+import { useDocuments } from '@/composables/useDocuments'
 
 // ============================================================
 // § ポーリング中のジョブ情報
@@ -145,6 +146,12 @@ function stopPolling(jobId: string): void {
 function notifyCompletion(entry: PollerEntry, doneCount: number, failedCount: number): void {
   const { showToast } = useGlobalToast()
   const { addNotification } = useNotificationCenter()
+  const { refresh } = useDocuments()
+
+  // migrationWorkerがdoc-storeに書き込んだAI分類結果をフロント側refに反映
+  refresh(entry.clientId).catch(err => {
+    console.warn('[useMigrationPoller] doc-storeリフレッシュ失敗:', err)
+  })
 
   const clientLabel = entry.clientName || entry.clientId
 

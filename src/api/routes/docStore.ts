@@ -16,9 +16,9 @@
  *   フロント側のAPI呼び出しは変更不要。
  */
 
-import { Hono } from 'hono';
-import { apiError } from '../helpers/apiError';
-import { 未検出, 必須, 配列必須 } from '../helpers/apiMessages';
+import { Hono } from "hono";
+import { apiError } from "../helpers/apiError";
+import { 未検出, 必須, 配列必須 } from "../helpers/apiMessages";
 import {
   getDocuments,
   addDocuments,
@@ -28,15 +28,15 @@ import {
   getById,
   deleteById,
   countDocuments,
-} from '../services/documentStore';
+} from "../services/documentStore";
 
 const app = new Hono();
 
 // ============================================================
 // GET / — ドキュメント一覧取得
 // ============================================================
-app.get('/', (c) => {
-  const clientId = c.req.query('clientId');
+app.get("/", (c) => {
+  const clientId = c.req.query("clientId");
   const docs = getDocuments(clientId);
   return c.json({ documents: docs, count: docs.length });
 });
@@ -44,25 +44,36 @@ app.get('/', (c) => {
 // ============================================================
 // POST / — ドキュメント一括追加
 // ============================================================
-app.post('/', async (c) => {
+app.post("/", async (c) => {
   const body = await c.req.json<{ documents: unknown[] }>();
   if (!body.documents || !Array.isArray(body.documents)) {
-    return apiError(c, 400, 配列必須('documents'));
+    return apiError(c, 400, 配列必須("documents"));
   }
-  const result = addDocuments(body.documents as import('../../repositories/types').DocEntry[]);
+  const result = addDocuments(body.documents as import("../../repositories/types").DocEntry[]);
   return c.json({ ok: true, ...result });
 });
 
 // ============================================================
 // PUT /:id — ステータス更新
 // ============================================================
-app.put('/:id', async (c) => {
-  const id = c.req.param('id');
-  const body = await c.req.json<{ status: string }>();
+app.put("/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json<{
+    status: string;
+    statusChangedBy?: string | null;
+    statusChangedAt?: string | null;
+    updatedBy?: string | null;
+    updatedAt?: string | null;
+  }>();
   if (!body.status) {
-    return apiError(c, 400, 必須('status'));
+    return apiError(c, 400, 必須("status"));
   }
-  const ok = updateDocumentStatus(id, body.status as import('../../repositories/types').DocStatus);
+  const ok = updateDocumentStatus(id, body.status as import("../../repositories/types").DocStatus, {
+    statusChangedBy: body.statusChangedBy,
+    statusChangedAt: body.statusChangedAt,
+    updatedBy: body.updatedBy,
+    updatedAt: body.updatedAt,
+  });
   if (!ok) {
     return apiError(c, 404, 未検出(`ドキュメント ${id}`));
   }
@@ -72,10 +83,10 @@ app.put('/:id', async (c) => {
 // ============================================================
 // POST /batch — 選別完了→batchId/journalId付与
 // ============================================================
-app.post('/batch', async (c) => {
+app.post("/batch", async (c) => {
   const body = await c.req.json<{ clientId: string }>();
   if (!body.clientId) {
-    return apiError(c, 400, 必須('clientId'));
+    return apiError(c, 400, 必須("clientId"));
   }
   const result = assignBatchAndJournalIds(body.clientId);
   return c.json({ ok: true, ...result });
@@ -84,8 +95,8 @@ app.post('/batch', async (c) => {
 // ============================================================
 // DELETE /client/:clientId — 顧問先の全資料削除
 // ============================================================
-app.delete('/client/:clientId', (c) => {
-  const clientId = c.req.param('clientId');
+app.delete("/client/:clientId", (c) => {
+  const clientId = c.req.param("clientId");
   const removed = removeByClientId(clientId);
   return c.json({ ok: true, removed });
 });
@@ -93,8 +104,8 @@ app.delete('/client/:clientId', (c) => {
 // ============================================================
 // GET /count — 件数取得（DL-042追加）※ /:id より前に配置必須
 // ============================================================
-app.get('/count', (c) => {
-  const clientId = c.req.query('clientId');
+app.get("/count", (c) => {
+  const clientId = c.req.query("clientId");
   const cnt = countDocuments(clientId);
   return c.json({ count: cnt });
 });
@@ -102,8 +113,8 @@ app.get('/count', (c) => {
 // ============================================================
 // GET /:id — 1件取得（DL-042追加）
 // ============================================================
-app.get('/:id', (c) => {
-  const id = c.req.param('id');
+app.get("/:id", (c) => {
+  const id = c.req.param("id");
   const doc = getById(id);
   if (!doc) {
     return apiError(c, 404, 未検出(`ドキュメント ${id}`));
@@ -114,8 +125,8 @@ app.get('/:id', (c) => {
 // ============================================================
 // DELETE /:id — 個別削除（DL-042追加）
 // ============================================================
-app.delete('/:id', (c) => {
-  const id = c.req.param('id');
+app.delete("/:id", (c) => {
+  const id = c.req.param("id");
   const ok = deleteById(id);
   if (!ok) {
     return apiError(c, 404, 未検出(`ドキュメント ${id}`));

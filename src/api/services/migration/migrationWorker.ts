@@ -4,15 +4,19 @@
  * 責務:
  *   - setInterval(5000) で定期実行
  *   - migration_jobs から queued を最大5件取得（④小分け）
- *   - 1件ずつ: DL → SHA-256 → Storage PUT → DB INSERT → ゴミ箱移動
+ *   - 1件ずつ: DL → SHA-256 → classify API → Storage PUT → doc-store書き戻し → ゴミ箱移動
  *   - ③リトライ: 404/401/403 → 即failed、429/5xx → requeue、3回超 → failed
  *   - 起動時デッドレター処理: processing → queued に戻す（クラッシュ復旧）
+ *   - excluded はclassifyをスキップ（コスト削減）
  */
 
 import { createHash } from 'crypto';
 import { getFilePreview } from '../drive/driveService';
 import { trashDriveFile } from '../drive/driveService';
 import { StorageService } from '../../lib/storage';
+import { classifyImage } from '../pipeline/classify.service';
+import type { ClassifyResponse } from '../pipeline/types';
+import { updateAiResults } from '../documentStore';
 import {
   dequeueJobs,
   markJobDone,
@@ -68,7 +72,35 @@ async function processOneJob(job: MigrationJob): Promise<void> {
     // 2. SHA-256ハッシュ計算
     const hash = createHash('sha256').update(preview.buffer).digest('hex');
 
-    // 3. Supabase Storage PUT
+    // 3. classify API呼び出し（excluded以外のみ）
+    // 設計判断: excludedはAI分類不要でコスト削減。
+    // 将来「仕訳外→仕訳対象に戻す」機能が必要な場合、
+    // ステータス変更時に個別classifyを実行する設計で対応する。
+    let classifyResult: ClassifyResponse | null = null;
+    if (job.docStatus !== 'excluded') {
+      try {
+        const base64 = Buffer.from(preview.buffer).toString('base64');
+        classifyResult = await classifyImage({
+          image: base64,
+          mimeType: preview.mimeType,
+          clientId: job.clientId,
+          filename: job.driveFileId,
+          fileHash: hash,
+        });
+        console.log(
+          `[migrationWorker] classify完了: ${job.driveFileId}`
+          + ` → ${classifyResult.source_type} (${classifyResult.source_type_confidence})`
+          + ` ${classifyResult.line_items.length}行`
+          + ` fallback=${classifyResult.fallback_applied}`,
+        );
+      } catch (classifyErr) {
+        // classify失敗でもDL+Storageは続行（AI結果なしでジョブ完了）
+        const msg = classifyErr instanceof Error ? classifyErr.message : String(classifyErr);
+        console.error(`[migrationWorker] classify失敗（続行）: ${job.driveFileId}: ${msg}`);
+      }
+    }
+
+    // 4. Supabase Storage PUT
     const ext = preview.mimeType.split('/').pop() || 'bin';
     const storagePath = `documents/${job.clientId}/${hash}.${ext}`;
     await StorageService.uploadImage(
@@ -77,10 +109,15 @@ async function processOneJob(job: MigrationJob): Promise<void> {
       preview.mimeType,
     );
 
-    // 4. ジョブ完了（storage_pathとfile_hashを記録）
+    // 5. ジョブ完了（storage_pathとfile_hashを記録）
     await markJobDone(job.id, storagePath, hash);
 
-    // 5. Driveゴミ箱移動（全3種別。Supabase移動完了後にDriveを空にする）
+    // 6. AI分類結果をdoc-storeに書き戻し（classifyが成功した場合のみ）
+    if (classifyResult) {
+      updateAiResults(job.driveFileId, classifyResult, hash);
+    }
+
+    // 7. Driveゴミ箱移動（全3種別。Supabase移動完了後にDriveを空にする）
     // 非同期で実行（ジョブの完了を待たない）
     trashWithRetry(job.driveFileId).catch(() => {});
 
@@ -88,7 +125,8 @@ async function processOneJob(job: MigrationJob): Promise<void> {
     console.log(
       `[migrationWorker] done: ${job.driveFileId} (${job.docStatus})`
       + ` (${(preview.buffer.byteLength / 1024).toFixed(0)}KB, ${elapsed}ms)`
-      + ` hash=${hash.slice(0, 12)}... path=${storagePath}`,
+      + ` hash=${hash.slice(0, 12)}... path=${storagePath}`
+      + (classifyResult ? ` ai=${classifyResult.source_type}` : ' ai=skipped'),
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

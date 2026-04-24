@@ -7,6 +7,7 @@
 
 import { ref, computed, type Ref, type ComputedRef } from 'vue';
 import { useDocuments } from '@/composables/useDocuments';
+import { useCurrentUser } from '@/mocks/composables/useCurrentUser';
 import type { DocEntry, DocStatus, DocSource } from '@/repositories/types';
 import type { DriveFileItemWithThumbnail } from '@/api/services/drive/driveService';
 
@@ -78,6 +79,7 @@ export function useDriveDocuments(
   resetSelectedIdx: () => void,
 ): UseDriveDocumentsReturn {
   const { updateStatus: updateDocStatus, addDocuments: addDocs, allDocuments } = useDocuments();
+  const { currentStaffId } = useCurrentUser();
 
   const isLoading = ref(false);
   const driveFiles = ref<DriveFileItemWithThumbnail[]>([]);
@@ -128,7 +130,7 @@ export function useDriveDocuments(
         receivedAt: f.createdTime || new Date().toISOString(),
         batchId: null,
         journalId: null,
-        createdBy: null,
+        createdBy: currentStaffId.value,
         updatedBy: null,
         updatedAt: null,
         statusChangedBy: null,

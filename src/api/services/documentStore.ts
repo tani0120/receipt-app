@@ -14,6 +14,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import type { DocEntry } from '../../repositories/types';
+import type { ClassifyResponse } from '../services/pipeline/types';
 
 const DATA_DIR = join(process.cwd(), 'data');
 const DATA_FILE = join(DATA_DIR, 'documents.json');
@@ -117,12 +118,27 @@ export function addDocuments(docs: DocEntry[]): { added: number; skipped: number
 }
 
 /**
- * ステータス更新
+ * ステータス更新（statusChangedBy/At/updatedBy/At含む）
  */
-export function updateDocumentStatus(id: string, status: DocEntry['status']): boolean {
+export function updateDocumentStatus(
+  id: string,
+  status: DocEntry['status'],
+  extra?: {
+    statusChangedBy?: string | null
+    statusChangedAt?: string | null
+    updatedBy?: string | null
+    updatedAt?: string | null
+  },
+): boolean {
   const doc = documents.find(d => d.id === id);
   if (!doc) return false;
   doc.status = status;
+  if (extra) {
+    if (extra.statusChangedBy !== undefined) doc.statusChangedBy = extra.statusChangedBy;
+    if (extra.statusChangedAt !== undefined) doc.statusChangedAt = extra.statusChangedAt;
+    if (extra.updatedBy !== undefined) doc.updatedBy = extra.updatedBy;
+    if (extra.updatedAt !== undefined) doc.updatedAt = extra.updatedAt;
+  }
   save();
   return true;
 }
@@ -204,6 +220,73 @@ export function countByStatus(clientId: string): Record<string, number> {
     result[d.status] = (result[d.status] || 0) + 1;
   }
   return result;
+}
+
+// ============================================================
+// フェーズ3.5: AI分類結果書き戻し（migrationWorkerから呼び出し）
+// ============================================================
+
+/**
+ * DriveファイルのDocEntryにAI分類結果を書き込む
+ *
+ * @param driveFileId - DriveファイルID（DocEntry.driveFileIdで検索）
+ * @param result - classifyImage()の戻り値
+ * @param fileHash - SHA-256ハッシュ（processOneJobで計算済み）
+ * @returns 更新成功したか
+ */
+export function updateAiResults(
+  driveFileId: string,
+  result: ClassifyResponse,
+  fileHash: string,
+): boolean {
+  const doc = documents.find(d => d.driveFileId === driveFileId);
+  if (!doc) {
+    console.warn(`[documentStore] updateAiResults: driveFileId=${driveFileId} が見つからない`);
+    return false;
+  }
+
+  // ファイルハッシュ
+  doc.fileHash = fileHash;
+
+  // AI分類結果
+  doc.aiDate = result.date ?? null;
+  doc.aiAmount = result.total_amount ?? null;
+  doc.aiVendor = result.issuer_name ?? null;
+  doc.aiSourceType = result.source_type ?? null;
+  doc.aiDirection = result.direction ?? null;
+  doc.aiDescription = result.description ?? null;
+  doc.aiClassifyReason = result.classify_reason ?? null;
+  doc.aiLineItems = result.line_items.length > 0 ? result.line_items : null;
+  doc.aiLineItemsCount = result.line_items.length;
+  doc.aiSupplementary = result.validation.supplementary;
+  doc.aiDocumentCount = result.document_count;
+  doc.aiWarning = result.validation.warning ?? null;
+  doc.aiProcessingMode = result.processing_mode ?? null;
+  doc.aiFallbackApplied = result.fallback_applied;
+
+  // メトリクス
+  doc.aiMetrics = {
+    source_type_confidence: result.source_type_confidence,
+    direction_confidence: result.direction_confidence,
+    duration_ms: result.metadata.duration_ms,
+    prompt_tokens: result.metadata.prompt_tokens,
+    completion_tokens: result.metadata.completion_tokens,
+    thinking_tokens: result.metadata.thinking_tokens,
+    token_count: result.metadata.token_count,
+    cost_yen: result.metadata.cost_yen,
+    model: result.metadata.model,
+    original_size_kb: result.metadata.original_size_kb,
+    processed_size_kb: result.metadata.processed_size_kb,
+    preprocess_reduction_pct: result.metadata.preprocess_reduction_pct,
+  };
+
+  save();
+  console.log(
+    `[documentStore] AI分類結果書き込み: ${driveFileId}`
+    + ` → ${result.source_type} (${result.source_type_confidence})`
+    + ` ${result.line_items.length}行`,
+  );
+  return true;
 }
 
 // 起動時に自動読み込み

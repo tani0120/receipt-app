@@ -16,7 +16,6 @@ import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from 
 import { errorGuideMessage } from '@/shared/validationMessages'
 import { useDocuments } from '@/composables/useDocuments'
 import { useCurrentUser } from '@/mocks/composables/useCurrentUser'
-import { useClients } from '@/features/client-management/composables/useClients'
 import type { DocEntry, DocSource, DocStatus } from '@/repositories/types'
 
 // ===== 型定義（統一） =====
@@ -179,7 +178,6 @@ const MOBILE_BREAKPOINT = 640
 export function useUpload() {
   const route = useRoute()
   const clientId = route.params.clientId as string
-  const { clients } = useClients()
 
   // route.nameから権限（role）・端末（device）を導出
   const role = String(route.name ?? '').toLowerCase().includes('guest') ? 'guest' : 'staff'
@@ -943,6 +941,9 @@ export function useUpload() {
           token_count: e.metrics.token_count,
           cost_yen: e.metrics.cost_yen,
           model: e.metrics.model,
+          original_size_kb: e.metrics.original_size_kb,
+          processed_size_kb: e.metrics.processed_size_kb,
+          preprocess_reduction_pct: e.metrics.preprocess_reduction_pct,
         } : null,
       })
     }

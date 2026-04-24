@@ -7,6 +7,7 @@
 
 import { ref, computed, type Ref, type ComputedRef } from 'vue';
 import { useDocuments } from '@/composables/useDocuments';
+import { useCurrentUser } from '@/mocks/composables/useCurrentUser';
 import type { DocStatus } from '@/repositories/types';
 import type { DocEntry } from '@/repositories/types';
 import type { DocView } from './useDriveDocuments';
@@ -78,6 +79,7 @@ export function useDocSelection(
   markDirty: (msg: string) => void,
 ): UseDocSelectionReturn {
   const { updateStatus: updateDocStatus } = useDocuments();
+  const { currentStaffId } = useCurrentUser();
 
   // --- 件数集計（全件から算出。フィルタの影響を受けない） ---
   const counts = computed(() => {
@@ -126,7 +128,7 @@ export function useDocSelection(
       const doc = uploadedDocs.value.find(d => d.id === docId);
       if (doc) doc.status = status;
     }
-    updateDocStatus(docId, status);
+    updateDocStatus(docId, status, currentStaffId.value);
   };
 
   const statusLabel = (s: DocStatus): string => {
@@ -143,7 +145,7 @@ export function useDocSelection(
       driveSelections.value.set(entry.docId, entry.from);
       const doc = uploadedDocs.value.find(d => d.id === entry.docId);
       if (doc) doc.status = entry.from;
-      updateDocStatus(entry.docId, entry.from);
+      updateDocStatus(entry.docId, entry.from, currentStaffId.value);
     }
     redoStack.value.push(group);
     showCompleteModal.value = false;
@@ -156,7 +158,7 @@ export function useDocSelection(
       driveSelections.value.set(entry.docId, entry.to);
       const doc = uploadedDocs.value.find(d => d.id === entry.docId);
       if (doc) doc.status = entry.to;
-      updateDocStatus(entry.docId, entry.to);
+      updateDocStatus(entry.docId, entry.to, currentStaffId.value);
     }
     undoStack.value.push(group);
   };

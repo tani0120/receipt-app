@@ -408,6 +408,12 @@ export interface DocEntry {
     token_count: number
     cost_yen: number
     model: string
+    /** 前処理前サイズ（KB） */
+    original_size_kb?: number
+    /** 前処理後サイズ（KB） */
+    processed_size_kb?: number
+    /** 削減率（%） */
+    preprocess_reduction_pct?: number
   } | null
 }
 
