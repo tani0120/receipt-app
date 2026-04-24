@@ -25,7 +25,7 @@ export interface ProgressRow {
     companyName: string;
     repName?: string;
     receivedDate: string;
-    /** 資料選別残（未選別の資料件数） */
+    /** 未選別（送信確定前のトータル書類枚数。migrate後に0になる） */
     unsorted: number;
     /** 未出力（仕訳残の件数） */
     unexported: number;

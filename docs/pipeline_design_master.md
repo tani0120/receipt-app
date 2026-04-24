@@ -2551,7 +2551,7 @@ export async function grantFolderPermission(
 | 進捗管理連動 | `useProgress.ts` のreceivedDate/unsortedをDocEntryから動的算出 |
 | ナビバー名称 | 「Drive資料選別」→「資料選別」（Drive以外のデータも扱うため） |
 | ナビバー順序 | アップロード → 資料選別（業務フロー順） |
-| 進捗管理列 | 「未選別」列を「未出力」列の左に追加（オレンジハイライト） |
+| 進捗管理列 | 「未選別」列を「未出力」列の左に追加（オレンジハイライト）。**未選別＝送信確定前のトータル書類枚数（migrate後に0）** |
 
 ### フェーズルール準拠
 
@@ -2841,3 +2841,93 @@ repositories/types.ts ← 唯一の型定義源泉
 - `vue-tsc --noEmit` エラー0件
 - Zod v4.3.6対応（`{ required_error }` → `{ error }` に修正）
 
+---
+
+## DL-046: プレビュー表示根本修正 + ブラウザ非対応形式変換（2026-04-24）
+
+### 設計思想
+
+> **「親に高さ、imgに100%、object-fit: containが基本」**
+> 対症療法（max-height, transform, flex, grid）を繰り返した結果、根本原因は「object-fit: containの前提条件（①親の高さが固定②imgのwidth/heightが100%）を満たしていなかった」ことだった。
+
+### 問題と原因
+
+| 問題 | 根本原因 |
+|---|---|
+| JPEG画像が下に見切れる | `.ds-preview-container`に高さが未設定。overflow: hiddenで下部を切断 |
+| PNG横長画像が枠内に収まらない | flexbox/grid子要素でmax-height%が期待通り動作しない |
+| 25%縮小が効かない | zoomScale <= 0.5でインラインスタイルが空=CSS制限のみ→縮小不可 |
+| PDF表示されない | ①canvasRefをdestructureから除外②CDN(cdnjs)にv5.6.205が未登録 |
+| HEIC/HEIF/TIFF表示不可 | ブラウザネイティブ非対応。`<img>`に渡しても描画されない |
+
+### 実施内容
+
+| # | タスク | ファイル | 内容 |
+|---|---|---|---|
+| 1 | プレビューCSS根本修正 | `MockDriveSelectPage.vue` | container→height固定、scroll→height:100%、wrapper→width/height%でズーム、img→width/height:100%+object-fit:contain |
+| 2 | ズーム方式変更 | `MockDriveSelectPage.vue` | transform:scale()→wrapper width/height%方式。全ズームレベルで統一動作 |
+| 3 | PNG透過背景 | `MockDriveSelectPage.vue` | 背景色 #e5e7eb → #fff |
+| 4 | EXIF回転対応 | `MockDriveSelectPage.vue` | `image-orientation: from-image` CSS追加 |
+| 5 | PDF canvasRef接続 | `MockDriveSelectPage.vue` | usePdfRenderer()のcanvasRefをdestructure |
+| 6 | PDF.js CDN修正 | `usePdfRenderer.ts` | cdnjs → jsDelivr npm CDN |
+| 7 | HEIC/HEIF/TIFF→JPEG変換 | `drive.ts` | `sharp`でサーバー側自動変換。キャッシュにJPEGとして保存 |
+| 8 | `sharp`インストール | `package.json` | `npm install sharp` |
+
+### CSS階層構造（修正後）
+
+```css
+.ds-preview-container { height: calc(100vh - 200px); overflow: hidden; }
+  .ds-preview-scroll { height: 100%; overflow: auto; }
+    .ds-preview-wrapper { width: {zoom*200}%; height: {zoom*200}%; }
+      .ds-preview-img { width: 100%; height: 100%; object-fit: contain; }
+```
+
+### ズーム計算
+
+| zoomScale | wrapper | 動作 |
+|---|---|---|
+| 0.25 | 50% x 50% | 枠の半分に縮小 |
+| 0.50（デフォルト） | 100% x 100% | 枠全体にcontain |
+| 1.00 | 200% x 200% | はみ出し→スクロール |
+
+### 拡張子別対策まとめ
+
+| 拡張子 | ブラウザ対応 | 対策 |
+|---|---|---|
+| .jpg | ✅ | `image-orientation: from-image`（EXIF回転） |
+| .png | ✅ | 背景白(#fff)、object-fit: contain |
+| .gif | ✅ | ファイル名表示のみ（CSV等と同じ扱い） |
+| .webp | ✅ | 対策不要 |
+| .heic/.heif | ❌ | **サーバー側sharp変換→JPEG** |
+| .tiff | ❌ | **サーバー側sharp変換→JPEG** |
+| .pdf | ⚠️ Canvas | PDF.js + canvasRef接続 + jsDelivr CDN |
+
+### 対象ファイル一覧
+
+| ファイル | 変更種別 |
+|---|---|
+| `src/mocks/views/MockDriveSelectPage.vue` | CSS/テンプレート全面修正 |
+| `src/composables/usePdfRenderer.ts` | CDN URL修正 |
+| `src/api/routes/drive.ts` | HEIC/TIFF変換+sharpインポート |
+| `package.json` | sharp追加 |
+
+### 検証
+
+- ✅ JPEG縦長（鳥貴族レシート）: 枠内に全体収まり、下の見切れなし
+- ✅ PNG横長（スクリーンショット）: 枠内に全体収まり
+- ✅ PDF（カインズ領収書）: Canvas描画で正常表示
+- ✅ 25%縮小: 画像が小さく表示される
+- ✅ 125%拡大: スクロールバーが出現しスクロール可能
+
+### 追加修正: 「未選別」定義修正
+
+| 項目 | 旧（誤り） | 新（正しい） |
+|---|---|---|
+| **定義** | `status === 'pending'` のみ | **送信確定前のトータル書類枚数** |
+| **含むもの** | 未処理のみ | pending + target + supporting + excluded の全件 |
+| **0になるタイミング** | 全件選別完了時 | **migrate（確定送信）完了後** |
+
+修正ファイル:
+- `src/utils/documentUtils.ts` — `countUnsorted()`: `filter(pending).length` → `docs.length`
+- `src/features/progress-management/types.ts` — unsortedフィールドコメント修正
+- `docs/genzai/24_upload_drive_integration.md` — countUnsorted定義修正

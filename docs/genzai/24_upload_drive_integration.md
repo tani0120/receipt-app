@@ -707,7 +707,7 @@ export type DocStatus = 'pending' | 'target' | 'supporting' | 'excluded'
 
 | 関数 | 用途 |
 |---|---|
-| `countUnsorted(docs)` | 未選別件数（status==='pending'の件数） |
+| `countUnsorted(docs)` | 未選別件数（送信確定前のトータル書類枚数。migrate後に0になる） |
 | `latestReceivedDate(docs)` | 最新の資料受取日（receivedAtの最大値、YYYY/MM/DD形式） |
 | `oldestUnexportedDate(docs)` | 最古の未出力資料日（将来用） |
 

@@ -13,6 +13,8 @@
  */
 
 import { Hono } from 'hono';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'fs';
+import { join } from 'path';
 import { apiError, apiCatchError } from '../helpers/apiError';
 import { 必須, 未検出, 環境設定エラー, ファイル必須, 仕訳外ゼロ } from '../helpers/apiMessages';
 import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, revokeFolderPermission } from '../services/drive/driveService';
@@ -57,22 +59,95 @@ app.get('/files', async (c) => {
 
 // ============================================================
 // GET /preview/:fileId — フルサイズプレビュー（Phase A-4）
-// オンデマンドで1枚DL。Content-Type付きバイナリ返却。
+// オンデマンドで1枚DL。ローカルキャッシュ付き（2回目以降は即返却）。
+// ?clientId=xxx でキャッシュディレクトリを分離
+// HEIC/HEIF/TIFF はブラウザ非対応のためサーバー側でJPEGに変換
 // ============================================================
+
+import sharp from 'sharp';
+
+/** プレビューキャッシュディレクトリ */
+const CACHE_DIR = join(process.cwd(), 'data', 'uploads', 'drive-cache');
+
+/** ブラウザ非対応MIMEの判定 */
+const NEEDS_CONVERSION = new Set(['image/heic', 'image/heif', 'image/tiff']);
+
+/** 拡張子を推定（MIMEタイプから） */
+function extFromMime(mime: string): string {
+  const map: Record<string, string> = {
+    'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif',
+    'image/webp': '.webp', 'application/pdf': '.pdf',
+  };
+  return map[mime] || '.bin';
+}
+
+/** 拡張子→MIMEタイプ */
+const EXT_TO_MIME: Record<string, string> = {
+  jpg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
+  webp: 'image/webp', pdf: 'application/pdf',
+};
+
+/** HEIC/HEIF/TIFFをJPEGに変換（sharpを使用） */
+async function convertToJpeg(inputBuffer: Buffer | ArrayBuffer): Promise<{ buffer: Buffer; mimeType: string }> {
+  const buf = inputBuffer instanceof Buffer ? inputBuffer : new Uint8Array(inputBuffer);
+  const output = await sharp(buf)
+    .jpeg({ quality: 90 })
+    .toBuffer();
+  return { buffer: output, mimeType: 'image/jpeg' };
+}
 
 app.get('/preview/:fileId', async (c) => {
   const fileId = c.req.param('fileId');
+  const clientId = c.req.query('clientId') || '_shared';
 
+  // キャッシュディレクトリ確保
+  const clientCacheDir = join(CACHE_DIR, clientId);
+  if (!existsSync(clientCacheDir)) mkdirSync(clientCacheDir, { recursive: true });
+
+  // キャッシュ検索（fileIdベースのファイル名）
+  const cacheFiles = existsSync(clientCacheDir)
+    ? readdirSync(clientCacheDir) as string[]
+    : [];
+  const cached = cacheFiles.find((f: string) => f.startsWith(fileId));
+
+  if (cached) {
+    // キャッシュヒット → ローカルから即返却
+    const cachedPath = join(clientCacheDir, cached);
+    const buffer = readFileSync(cachedPath);
+    const ext = cached.split('.').pop() || '';
+    c.header('Cache-Control', 'private, max-age=86400');
+    c.header('Content-Type', EXT_TO_MIME[ext] || 'application/octet-stream');
+    return c.body(new Uint8Array(buffer));
+  }
+
+  // キャッシュミス → Driveからダウンロードしてキャッシュに保存
   try {
     const result = await getFilePreview(fileId);
 
-    // キャッシュヘッダー: Drive上のファイルは変更されない前提
-    c.header('Cache-Control', 'private, max-age=3600');
-    c.header('Content-Type', result.mimeType);
-    c.header('Content-Disposition', `inline; filename="${encodeURIComponent(result.fileName)}"`);
+    let finalBuffer: Buffer;
+    let finalMime: string;
 
-    // Honoのc.body()はBuffer非対応のため、Uint8Arrayで渡す
-    return c.body(new Uint8Array(result.buffer));
+    // ブラウザ非対応形式（HEIC/HEIF/TIFF）はJPEGに変換
+    if (NEEDS_CONVERSION.has(result.mimeType)) {
+      const converted = await convertToJpeg(result.buffer);
+      finalBuffer = converted.buffer;
+      finalMime = converted.mimeType;
+      console.log(`[drive/route] ${result.mimeType} → JPEG変換完了 (${result.fileName})`);
+    } else {
+      finalBuffer = Buffer.from(result.buffer);
+      finalMime = result.mimeType;
+    }
+
+    // キャッシュに保存（変換後の拡張子で保存）
+    const ext = extFromMime(finalMime);
+    const cachePath = join(clientCacheDir, `${fileId}${ext}`);
+    writeFileSync(cachePath, finalBuffer);
+    console.log(`[drive/route] プレビューキャッシュ保存: ${cachePath}`);
+
+    c.header('Cache-Control', 'private, max-age=86400');
+    c.header('Content-Type', finalMime);
+    c.header('Content-Disposition', `inline; filename="${encodeURIComponent(result.fileName)}"`);
+    return c.body(new Uint8Array(finalBuffer));
   } catch (err) {
     const status = (err as { code?: number }).code;
     if (status === 404) {

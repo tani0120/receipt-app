@@ -10,10 +10,15 @@
 import type { DocEntry } from '@/repositories/types'
 
 /**
- * 未選別件数を算出（status === 'pending' の件数）
+ * 未選別件数を算出（送信確定前のトータル書類枚数）
+ *
+ * 「未選別」の定義:
+ * - pending（未処理）だけではなく、選別済み（target/supporting/excluded）も含む
+ * - 「送信して確定する前」の全書類が対象
+ * - migrate（確定送信）後に0になる
  */
 export function countUnsorted(docs: DocEntry[]): number {
-  return docs.filter(d => d.status === 'pending').length
+  return docs.length
 }
 
 /**

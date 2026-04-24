@@ -13,8 +13,8 @@
 import { ref, onUnmounted } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 
-// ワーカー設定（CDN）
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
+// ワーカー設定（jsDelivr npm CDN）
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
 
 export function usePdfRenderer() {
   const canvasRef = ref<HTMLCanvasElement | null>(null)

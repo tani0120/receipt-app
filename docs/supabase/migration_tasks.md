@@ -1,7 +1,7 @@
 # Supabase移行タスク一覧
 
 > 作成日: 2026-04-23
-> 最終更新: 2026-04-23 v5（v4 + バリデーション・エラーハンドリング移行タスク3件追記）
+> 最終更新: 2026-04-24 v6（v5 + DL-046: プレビュー表示根本修正 + HEIC/TIFF変換 + PDF表示修正）
 > ソース:
 > - [task_unified.md](file:///c:/dev/receipt-app/docs/task_unified.md)（セクションC-0, C-1, D, H, L-2）
 > - [supabase_security_report_260214.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/supabase_security_report_260214.md)（RLS, validateStaffAccess, Google OAuth）
@@ -345,6 +345,10 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | excluded自動削除（DL済み+90日経過→Storage削除） | ✅ **実装済み**（`purgeExpiredExcluded()` migrationWorker.ts） | コード実査 |
 | PC D&D→Drive uploadルート（POST /upload） | ✅ **実装済み**（drive.ts） | 本セッション |
 | `archiver` npmインストール | ✅ **インストール済み** | package.json |
+| `sharp` npmインストール | ✅ **インストール済み**（2026-04-24 DL-046。HEIC/HEIF/TIFF→JPEG変換用） | package.json |
+| Driveファイルのdoc-store永続化 | ✅ **実装済み**（選別画面表示時にdoc-storeに登録、drive_file_idで重複排除） | 2026-04-24 |
+| プレビューローカルキャッシュ | ✅ **実装済み**（drive.ts preview APIで初回のみDrive→ローカルキャッシュ保存。2回目以降即返却。**HEIC/HEIF/TIFFはsharpでJPEG変換後にキャッシュ保存**） | 2026-04-24 |
+| 選別結果の進捗画面リアルタイム反映 | ✅ **実装済み**（applyStatusでuseDocuments().updateStatus()使用、allDocuments refを即更新） | 2026-04-24 |
 
 ### 6-3. 実装フェーズ（24番セクション13）
 
@@ -362,7 +366,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | エンドポイント | 責務 | 状態 |
 |---|---|---|
 | `GET /api/drive/files`（サムネイル対応拡張） | ?withThumbnails=trueでbase64付き | ✅ **実装済み**（drive.ts L29） |
-| `GET /api/drive/preview/:fileId` | フルサイズプレビュー | ✅ **実装済み**（drive.ts L9） |
+| `GET /api/drive/preview/:fileId` | フルサイズプレビュー（**ローカルキャッシュ付き: 初回のみDrive API、以降は`data/uploads/drive-cache/`から即返却**） | ✅ **実装済み**（drive.ts） |
 | `POST /api/drive/upload` | PC D&D→Drive API files.create | ✅ **実装済み**（drive.ts） |
 | `POST /api/drive/migrate` | 選別確定→ジョブ登録 | ✅ **実装済み**（drive.ts L131） |
 | `GET /api/drive/migrate/status/:jobId` | 移行進捗監視 | ✅ **実装済み**（drive.ts L160） |
@@ -451,7 +455,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | Zodスキーマ日本語化 + apiMessages統合 | モック用スキーマは英語のまま（zodHookフォールバックで安全） | 本番スキーマ作成時に `z.string().min(1, 必須('名前'))` 形式で日本語埋め込み。6ファイル対象: ai-rules, collection, clients, admin, ocr, api/index | バリデーション設計 |
 | 既存fetch 19箇所のapiFetch移行 | 全19箇所が直接fetch()。エラー処理はthrow/console.error/無視がバラバラ | composable層（useStaff, useClients等）はモジュールスコープでuseRouter()不可→SupabaseClient直接呼び出しに置換。Vueページ側はapiFetch.withError()に統一 | バリデーション設計 |
 | Zodスキーマファイル分離（`src/api/schemas/`） | 全スキーマがルートファイル内にインライン定義 | `src/api/schemas/staff.schema.ts` 等に分離。apiMessages.tsの定数を参照し、フロント・サーバー間で仕様を一元管理 | バリデーション設計 |
-| Driveファイル選別結果の永続化 | `driveSelections`（メモリ上のMap）に保持。ページ遷移・リロードで消失 | **現段階でdoc-storeに登録して解決可能。** 選別画面表示時にDriveファイルをdoc-storeに登録（drive_file_idで重複排除）。Supabase移行時はRepository切替のみ | MockDriveSelectPage.vue L490-491 |
+| ~~Driveファイル選別結果の永続化~~ | ~~`driveSelections`（メモリ上のMap）に保持~~ | ~~✅ **解決済み（2026-04-24）**。選別画面表示時にdoc-storeに登録 + useDocuments().updateStatus()でallDocuments ref即更新 + プレビューローカルキャッシュ~~ | MockDriveSelectPage.vue, drive.ts |
 
 ---
 
