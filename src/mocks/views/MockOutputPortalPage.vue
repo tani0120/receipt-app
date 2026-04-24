@@ -7,7 +7,8 @@
       <span v-if="currentClient" class="op-client-name">— {{ currentClient.companyName }}</span>
     </div>
 
-    <!-- カードグリッド -->
+    <!-- カードグリッド: 出力アクション -->
+    <div class="op-section-label">出力・ダウンロード</div>
     <div class="op-grid">
       <!-- 仕訳外ZIP -->
       <button class="op-card" @click="goExcludedHistory">
@@ -33,6 +34,34 @@
         <i class="fa-solid fa-chevron-right op-card-arrow"></i>
       </button>
     </div>
+
+    <!-- 出力履歴セクション -->
+    <div class="op-section-label">出力履歴</div>
+    <div class="op-grid">
+      <!-- 仕訳外ZIP履歴 -->
+      <button class="op-card" @click="goExcludedHistory">
+        <div class="op-card-icon op-card-icon-history-zip">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div class="op-card-body">
+          <div class="op-card-title">仕訳外ZIPダウンロード履歴</div>
+          <div class="op-card-desc">ジョブ単位のダウンロード済み・未ダウンロード一覧</div>
+        </div>
+        <i class="fa-solid fa-chevron-right op-card-arrow"></i>
+      </button>
+
+      <!-- CSV出力履歴 -->
+      <button class="op-card" @click="goExportHistory">
+        <div class="op-card-icon op-card-icon-history-csv">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div class="op-card-body">
+          <div class="op-card-title">CSV出力履歴</div>
+          <div class="op-card-desc">過去に出力したMF用CSVファイルの一覧・再ダウンロード</div>
+        </div>
+        <i class="fa-solid fa-chevron-right op-card-arrow"></i>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -52,6 +81,10 @@ function goExport() {
 
 function goExcludedHistory() {
   router.push(`/excluded-history/${clientId.value}`)
+}
+
+function goExportHistory() {
+  router.push(`/export-history/${clientId.value}`)
 }
 </script>
 
@@ -91,12 +124,22 @@ function goExcludedHistory() {
   color: #64748b;
 }
 
+/* ===== セクションラベル ===== */
+.op-section-label {
+  padding: 24px 24px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
 /* ===== カードグリッド ===== */
 .op-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 20px;
-  padding: 32px 24px;
+  padding: 12px 24px 24px;
   max-width: 960px;
 }
 
@@ -144,6 +187,16 @@ function goExcludedHistory() {
 .op-card-icon-zip {
   background: linear-gradient(135deg, #e0e7ff, #eef2ff);
   color: #6366f1;
+}
+
+.op-card-icon-history-zip {
+  background: linear-gradient(135deg, #ede9fe, #f5f3ff);
+  color: #7c3aed;
+}
+
+.op-card-icon-history-csv {
+  background: linear-gradient(135deg, #e0f2fe, #f0f9ff);
+  color: #0284c7;
 }
 
 .op-card-body {

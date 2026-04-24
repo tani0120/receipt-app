@@ -52,6 +52,7 @@
           <col :style="{ width: pgColWidths['receivedDate'] + 'px' }">
           <col :style="{ width: pgColWidths['unsorted'] + 'px' }">
           <col :style="{ width: pgColWidths['unexported'] + 'px' }">
+          <col :style="{ width: pgColWidths['jobStatus'] + 'px' }">
           <col v-for="m in monthColumns" :key="'col-'+m.key" style="width: 36px;">
           <col :style="{ width: pgColWidths['currentYear'] + 'px' }">
           <col :style="{ width: pgColWidths['lastYear'] + 'px' }">
@@ -82,6 +83,9 @@
             </th>
             <th class="sortable pg-th-narrow pg-th-num relative" @click="sortBy('unexported')">未出力 <i :class="getSortIcon('unexported')"></i>
               <div class="resize-handle-light" @mousedown.stop="onPgResizeStart('unexported', $event)"></div>
+            </th>
+            <th class="pg-th-narrow relative">移行ジョブ
+              <div class="resize-handle-light" @mousedown.stop="onPgResizeStart('jobStatus', $event)"></div>
             </th>
             <th
               v-for="m in monthColumns" :key="'th-'+m.key"
@@ -116,6 +120,13 @@
             <td class="pg-td-narrow">{{ row.receivedDate || '—' }}</td>
             <td class="pg-td-num" :class="{ 'pg-unsorted-highlight': row.unsorted > 0 }">{{ row.unsorted > 0 ? row.unsorted + '件' : '—' }}</td>
             <td class="pg-td-num" :class="{ 'pg-unexported-highlight': row.unexported > 0 }">{{ row.unexported > 0 ? row.unexported + '件' : '—' }}</td>
+            <td class="pg-td-narrow pg-td-job">
+              <span v-if="getLatestJob(row.clientId)" class="pg-job-badge" :class="'pg-job-' + getLatestJob(row.clientId)!.status">
+                {{ getLatestJob(row.clientId)!.status === 'processing' ? '処理中' : getLatestJob(row.clientId)!.status === 'completed' ? '完了' : getLatestJob(row.clientId)!.status === 'failed' ? '失敗' : '待機中' }}
+                <span class="pg-job-count">{{ getLatestJob(row.clientId)!.done }}/{{ getLatestJob(row.clientId)!.total }}</span>
+              </span>
+              <span v-else class="pg-share-none">—</span>
+            </td>
             <td
               v-for="m in monthColumns" :key="'td-'+m.key+'-'+row.id"
               class="pg-td-month"
@@ -125,7 +136,7 @@
             <td class="pg-td-num pg-td-total">{{ row.lastYearJournals > 0 ? row.lastYearJournals.toLocaleString() : '—' }}</td>
           </tr>
           <tr v-if="pagedRows.length === 0">
-            <td :colspan="11 + monthColumns.length" class="pg-empty">該当する顧問先がありません</td>
+            <td :colspan="12 + monthColumns.length" class="pg-empty">該当する顧問先がありません</td>
           </tr>
         </tbody>
       </table>
@@ -144,6 +155,7 @@ import { useShareStatus } from '@/composables/useShareStatus';
 const pgDefaultWidths: Record<string, number> = {
   status: 60, code: 60, fiscalMonth: 60,
   staffName: 78, shareStatus: 78, receivedDate: 78, unsorted: 60, unexported: 78,
+  jobStatus: 78,
   currentYear: 70, lastYear: 70,
 };
 const { columnWidths: pgColWidths, onResizeStart: onPgResizeStart } = useColumnResize('progress', pgDefaultWidths);
@@ -160,6 +172,51 @@ const { getStaffNameForClient } = useClients();
 import { useDocuments } from '@/composables/useDocuments';
 const { refresh: refreshDocs } = useDocuments();
 onMounted(async () => { await refreshDocs(); });
+
+// --- ジョブ一覧（DL-047: 進捗管理画面統合） ---
+interface JobSummary {
+  jobId: string;
+  createdAt: string;
+  total: number;
+  done: number;
+  failed: number;
+  excluded: number;
+  status: string; // 'processing' | 'completed' | 'failed' | 'queued'
+}
+const jobsByClient = ref<Record<string, JobSummary[]>>({});
+
+/** 顧問先の直近ジョブを取得 */
+function getLatestJob(clientId: string): JobSummary | null {
+  const jobs = jobsByClient.value[clientId];
+  if (!jobs || jobs.length === 0) return null;
+  return jobs[0]!;
+}
+
+/** 全顧問先のジョブ一覧を取得 */
+async function fetchAllJobs(): Promise<void> {
+  const clients = progressRows.value;
+  const results: Record<string, JobSummary[]> = {};
+  // 並列取得（最大10件ずつ）
+  const batchSize = 10;
+  for (let i = 0; i < clients.length; i += batchSize) {
+    const batch = clients.slice(i, i + batchSize);
+    await Promise.all(batch.map(async (row) => {
+      try {
+        const res = await fetch(`/api/drive/migrate/jobs/${encodeURIComponent(row.clientId)}`);
+        if (!res.ok) return;
+        const data = await res.json() as { jobs: Array<{ jobId: string; createdAt: string; total: number; done: number; failed: number; excluded: number }> };
+        results[row.clientId] = data.jobs.map(j => ({
+          ...j,
+          status: j.failed > 0 ? 'failed' : j.done >= j.total ? 'completed' : j.done > 0 ? 'processing' : 'queued',
+        }));
+      } catch {
+        // 個別の取得失敗はスキップ
+      }
+    }));
+  }
+  jobsByClient.value = results;
+}
+onMounted(() => { fetchAllJobs(); });
 
 // --- フィルター ---
 const filterClient = ref('');
@@ -280,6 +337,7 @@ const buildDate = ref(new Date().toLocaleString('ja-JP'));
 const refreshData = async () => {
   const { refresh } = await import('@/composables/useDocuments').then(m => ({ refresh: m.useDocuments().refresh }));
   await refresh();
+  await fetchAllJobs();
   buildDate.value = new Date().toLocaleString('ja-JP');
 };
 
@@ -385,6 +443,15 @@ function goToJournalList(row: { clientId: string }) {
 
 /* 資料未選別ハイライト（オレンジ背景） */
 .pg-unsorted-highlight { background: #fff7ed; color: #c2410c; font-weight: 700; }
+
+/* ジョブステータスバッジ */
+.pg-td-job { text-align: center; }
+.pg-job-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.pg-job-count { font-weight: 400; font-size: 9px; opacity: 0.8; }
+.pg-job-processing { background: #dbeafe; color: #1e40af; }
+.pg-job-completed { background: #dcfce7; color: #166534; }
+.pg-job-failed { background: #fee2e2; color: #991b1b; }
+.pg-job-queued { background: #f1f5f9; color: #64748b; }
 /* 未出力ハイライト（赤背景） */
 .pg-unexported-highlight { background: #fef2f2; color: #dc2626; font-weight: 700; }
 </style>

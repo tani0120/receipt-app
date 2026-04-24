@@ -121,6 +121,10 @@ app.route('/api/share-status', shareStatusRoutes)
 import guestAuthRoutes from './api/routes/guestAuthRoutes'
 app.route('/api/guest', guestAuthRoutes)
 
+// Notification API: 通知JSON永続化（DL-047）
+import notificationRoutes from './api/routes/notificationRoutes'
+app.route('/api/notifications', notificationRoutes)
+
 
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
