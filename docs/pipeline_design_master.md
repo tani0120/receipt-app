@@ -2990,3 +2990,50 @@ repositories/types.ts ← 唯一の型定義源泉
 - DL済みマークバグは`all=true`パスのテスト不足が原因。条件自体が不要だった
 - currentClient改修により、`router/index.ts`で`:clientId`パスを定義するだけでナビバー連動が自動適用される
 - composable分離により単体テスト可能な3ブロックに責務を明確化
+
+---
+
+## DL-048: フェーズ3.5 migrationWorkerにclassify API統合 + メタデータ永続化全面修正（2026-04-24）
+
+**決定**: migrationWorkerのprocessOneJob()にclassify API呼び出しを統合。Drive経路のファイルにもAI分類結果を付与し、独自アップロード経路と同等のデータ品質を実現する。
+
+### アーキテクチャ
+
+```
+Drive → DL → SHA-256 → classify API → Storage PUT → markJobDone → doc-store書き戻し → ゴミ箱移動
+                           ↑
+                    excludedはスキップ（コスト削減）
+```
+
+### 修正ファイル一覧（10ファイル、+222行/-70行）
+
+| ファイル | 変更内容 |
+|---|---|
+| `migrationWorker.ts` | processOneJob()にclassify API統合。7ステップフローに拡張。excludedスキップ設計。classify失敗でもジョブは完了（DL+Storageは続行） |
+| `documentStore.ts` | `updateAiResults(driveFileId, result, hash)` 新設。ClassifyResponse→DocEntryの全20フィールドマッピング。`updateDocumentStatus()`をstatusChangedBy/At/updatedBy/At対応に拡張 |
+| `docStore.ts` | PUT /:id ルートでstatusChangedBy/At/updatedBy/Atをbodyから受け取ってupdateDocumentStatusに渡す |
+| `types.ts` | aiMetricsにoriginal_size_kb/processed_size_kb/preprocess_reduction_pct追加 |
+| `useUpload.ts` | handleConfirmのaiMetricsにサイズ情報3フィールド追加。未使用useClients import削除 |
+| `useMigrationPoller.ts` | ポーリング完了時にuseDocuments.refresh(clientId)でAI分類結果をフロント側refに反映 |
+| `useDriveDocuments.ts` | DriveファイルDocEntry生成時にcreatedByにcurrentStaffId付与 |
+| `useDocSelection.ts` | applyStatus/undo/redoでupdateDocStatusにcurrentStaffId渡し |
+| `useDocuments.ts` | updateStatus()のタイムスタンプ生成を1回に集約（ローカル更新とAPIリクエスト間のミリ秒ズレ解消） |
+| `typeDefinitionsData.ts` | selectDrive列 🔧→✅ を23件更新 |
+
+### 設計判断
+
+| 判断 | 根拠 |
+|---|---|
+| excludedはclassifyスキップ | 仕訳外ファイルにAI分類は不要。Vertex AIのAPIコスト削減。将来「仕訳外→仕訳対象に戻す」場合はステータス変更時に個別classifyを実行する設計で対応 |
+| classify失敗でもジョブはdoneに | DL+Storage PUTは成功しているため、AI結果なしでもファイル自体の移行は完了。手動でclassifyを再実行する手段は将来追加可能 |
+| updateAiResultsはインメモリ→save() | サーバー側doc-storeのJSON永続化はsave()で同期書き込み。フロント側refの更新はポーリング完了時のrefresh()で対応 |
+| updateDocumentStatusの拡張 | フロントのuseDocuments.updateStatus()がstatusChangedBy/Atを送信していたが、サーバー側で無視されていた永続化漏れを修正 |
+| aiMetricsにサイズ情報追加 | 画像前処理の効果測定データ（original_size_kb/processed_size_kb/preprocess_reduction_pct）をDocEntryに永続化。selectOwn/selectDriveの🔧を解消 |
+
+### typeDefinitionsData.ts selectDrive列 残存🔧（3件のみ）
+
+| フィールド | 列 | 理由 |
+|---|---|---|
+| `fileHash` | `uploadDrive` | Drive「アップロード」段階ではハッシュ計算不可。migrate後に付与される設計 |
+| `isDuplicate` | `selectOwn` | 独自アップロード側の重複判定。fileHashで代替可能だが現在未実装 |
+| `batchId` | `outMf` | 送出フェーズで付与。選別時点では物理的に未存在 |

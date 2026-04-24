@@ -1,7 +1,7 @@
 # Supabase移行タスク一覧
 
 > 作成日: 2026-04-23
-> 最終更新: 2026-04-24 v8（v7 + 出力ポータルUI統合、仕訳外ZIP履歴ページ、ジョブ単位DL、ジョブ一覧API、currentClient根本改修、DL済みマークバグ修正）
+> 最終更新: 2026-04-24 v9（v8 + DL-048: フェーズ3.5 migrationWorkerにclassify API統合、メタデータ永続化全面修正、doc-store PUT API拡張）
 > ソース:
 > - [task_unified.md](file:///c:/dev/receipt-app/docs/task_unified.md)（セクションC-0, C-1, D, H, L-2）
 > - [supabase_security_report_260214.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/supabase_security_report_260214.md)（RLS, validateStaffAccess, Google OAuth）
@@ -66,6 +66,13 @@
 | MockDriveSelectPage.vueデッドコード削除 | ✅ **2026-04-24** | 同上 |
 | jobId指定DL時の0件チェック追加 | ✅ **2026-04-24** | 同上 |
 | useClients.ts型エラー修正（L198, L220 非null断定） | ✅ **2026-04-24** | 同上 |
+| migrationWorker.tsにclassify API統合（DL→SHA-256→classify→Storage→doc-store書き戻し→ゴミ箱） | ✅ **2026-04-24 DL-048** | フェーズ3.5 |
+| documentStore.ts updateAiResults()新設（ClassifyResponse→DocEntry全フィールドマッピング） | ✅ **2026-04-24 DL-048** | 同上 |
+| documentStore.ts updateDocumentStatus()拡張（statusChangedBy/At/updatedBy/At保存） | ✅ **2026-04-24 DL-048** | 同上 |
+| docStore.ts PUT /:id拡張（statusChangedBy/At/updatedBy/Atをbodyから受け取り） | ✅ **2026-04-24 DL-048** | 同上 |
+| useMigrationPoller.ts ポーリング完了時にrefresh()でAI結果をフロント反映 | ✅ **2026-04-24 DL-048** | 同上 |
+| DocEntry aiMetricsにoriginal_size_kb/processed_size_kb/preprocess_reduction_pct追加 | ✅ **2026-04-24 DL-048** | 同上 |
+| Drive選別操作のstatusChangedBy/createdBy永続化（useDriveDocuments/useDocSelection改修） | ✅ **2026-04-24 DL-048** | 同上 |
 
 ---
 
@@ -349,7 +356,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 |---|---|---|
 | drive-select画面でDriveサムネイル借景表示 | ✅ 完了 | 24番 セクション10-5 |
 | 選別確定→migration_jobsにキュー登録（POST /migrate） | ✅ **実装済み**（drive.ts L131） | コード実査 |
-| バックグラウンドワーカー（migrationWorker.ts 217行） | ✅ **実装済み** | コード実査 |
+| バックグラウンドワーカー（migrationWorker.ts 255行） | ✅ **実装済み**（DL-048でclassify API統合） | コード実査 |
 | 移行進捗監視API（GET /migrate/status/:jobId） | ✅ **実装済み**（drive.ts L160） | コード実査 |
 | 移行後のDriveファイルゴミ箱移動 | ✅ **実装済み**（migrationWorker.ts内） | コード実査 |
 | excluded ZIPダウンロード（サービス＋ルート） | ✅ **ルート接続完了**（drive.ts） | 本セッション |
@@ -405,7 +412,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | `src/api/services/migration/migrationRepository.ts` ✅ | MigrationRepository interface | 同上 |
 | `src/api/services/migration/migrationRepository.json.ts` ✅ | JSON永続化版 | デフォルト |
 | `src/api/services/migration/migrationRepository.supabase.ts` ✅ | Supabase版 | `true`時 |
-| `src/api/services/migration/migrationWorker.ts` ✅ | バックグラウンドワーカー（217行） | — |
+| `src/api/services/migration/migrationWorker.ts` ✅ | バックグラウンドワーカー（255行。DL-048でclassify API統合済み） | — |
 | `src/api/services/migration/excludedZipService.ts` ✅ | 仕訳外ZIP生成サービス | — |
 
 ### 6-6. 廃止対象（Phase F、24番セクション11-1）
@@ -464,7 +471,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | `documents`テーブル `drive_file_id UNIQUE`制約追加 | 未適用 | 冪等性保証用 | 24番 L1174 |
 | ~~excluded ZIPダウンロードルート接続~~ | ~~✅ 本セッションで完了~~ | — | — |
 | ~~PC D&D→Drive uploadルート~~ | ~~✅ 本セッションで完了~~ | — | — |
-| F-4: documentStore.ts（211行）+ docStore.tsルート廃止 | useDocuments/useProgressが`/api/doc-store`に依存 | Supabase DB documentsテーブルに切替後に削除 | task.md.resolved Phase F |
+| F-4: documentStore.ts（279行）+ docStore.tsルート廃止 | useDocuments/useProgressが`/api/doc-store`に依存 | Supabase DB documentsテーブルに切替後に削除 | task.md.resolved Phase F |
 | F-7: useDocuments.tsの`/api/doc-store`参照廃止 | 進捗管理（useProgress）が依存 | Supabase版DocumentRepositoryに切替後に削除 | task.md.resolved Phase F |
 | pipeline.tsのsaveUploadedFile + GET /file廃止 | useUploadチャンクアップロードが`data/uploads/`に依存 | Drive upload完全移行後に削除 | task.md.resolved Phase F |
 | app_metadata.roleによる厳密なロール判定 | 未設定（guestAllowed メタで暫定分岐） | `role === 'staff'`/`'client'`でエラーページ出し分け | エラー表示設計 |
