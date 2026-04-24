@@ -52,6 +52,7 @@ export interface UploadEntry {
   // 重複チェック
   isDuplicate: boolean
   hash: string | null
+  documentCount: number            // 証票枚数（classify API出力。2以上は複数証票警告）
   lite: boolean             // 軽量モード（AI分類スキップ）
   /** サーバー保存先URL（/api/pipeline/file/{clientId}/{savedName}）。リロード後も有効 */
   fileUrl: string | null
@@ -524,6 +525,7 @@ export function useUpload() {
           metrics: null,
           lineItems: null,
           isDuplicate: false,
+          documentCount: 1,
           hash: null,
           lite: item.lite ?? false,
           fileUrl: null,
@@ -655,6 +657,7 @@ export function useUpload() {
         metrics: null,
         lineItems: null,
         isDuplicate: false,
+        documentCount: 1,
         hash: null,
         lite: item.lite ?? false,
         fileUrl: null,
@@ -748,6 +751,7 @@ export function useUpload() {
         e.lineItems = result.lineItems ?? null
         e.isDuplicate = result.isDuplicate ?? false
         e.hash = result.fileHash ?? null
+        e.documentCount = result.documentCount ?? 1
         e.fileUrl = result.fileUrl ?? null
 
         // 補助対象の場合、デバッグ用にerrorReasonにファイル情報を保存
@@ -869,6 +873,7 @@ export function useUpload() {
         metrics: null,
         lineItems: null,
         isDuplicate: false,
+        documentCount: 1,
         hash: null,
         lite: old.lite,
         fileUrl: null,
@@ -913,6 +918,32 @@ export function useUpload() {
         updatedAt: null,
         statusChangedBy: null,
         statusChangedAt: null,
+        // AI分類結果（classify APIで取得済みの場合に保持。軽量モード時はすべてnull）
+        aiDate: e.date ?? null,
+        aiAmount: e.amount ?? null,
+        aiVendor: e.vendor ?? null,
+        aiSourceType: e.sourceType ?? null,
+        aiDirection: e.metrics?.direction ?? null,
+        aiDescription: e.metrics?.description ?? null,
+        aiClassifyReason: e.metrics?.classify_reason ?? null,
+        aiLineItems: e.lineItems ?? null,
+        aiLineItemsCount: e.lineItemsCount,
+        aiSupplementary: e.supplementary,
+        aiDocumentCount: e.documentCount ?? 1,
+        aiWarning: e.warning ?? null,
+        aiProcessingMode: e.metrics?.processing_mode ?? null,
+        aiFallbackApplied: e.metrics?.fallback_applied ?? false,
+        aiMetrics: e.metrics ? {
+          source_type_confidence: e.metrics.source_type_confidence,
+          direction_confidence: e.metrics.direction_confidence,
+          duration_ms: e.metrics.duration_ms,
+          prompt_tokens: e.metrics.prompt_tokens,
+          completion_tokens: e.metrics.completion_tokens,
+          thinking_tokens: e.metrics.thinking_tokens,
+          token_count: e.metrics.token_count,
+          cost_yen: e.metrics.cost_yen,
+          model: e.metrics.model,
+        } : null,
       })
     }
 

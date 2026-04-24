@@ -213,6 +213,8 @@ export interface ReceiptAnalysisResult {
   warning?: string | null;
   /** SHA-256重複検出（サーバー側で照合） */
   isDuplicate?: boolean;
+  /** 証票枚数（classify API出力。2以上は複数証票警告） */
+  documentCount?: number;
   /** SHA-256ハッシュ値（重複グループ化用。フロントで計算） */
   fileHash?: string;
   /** 行データ（通帳・N行、レシート・1行、対象外・空） */

@@ -16,6 +16,13 @@
       >
         <i class="fa-solid fa-database"></i> 全型定義
       </button>
+      <button
+        class="settings-tab"
+        :class="{ active: activeTab === 'prompts' }"
+        @click="activeTab = 'prompts'"
+      >
+        <i class="fa-solid fa-wand-magic-sparkles"></i> プロンプト
+      </button>
     </div>
 
     <!-- 設定タブ -->
@@ -27,6 +34,11 @@
     <div v-if="activeTab === 'types'" class="settings-content">
       <TypeDefinitionsPanel />
     </div>
+
+    <!-- プロンプトタブ -->
+    <div v-if="activeTab === 'prompts'" class="settings-content">
+      <PromptDefinitionsPanel />
+    </div>
   </div>
 </template>
 
@@ -34,8 +46,9 @@
 import { ref } from 'vue';
 import ScreenS_Settings from '@/views/ScreenS_Settings.vue';
 import TypeDefinitionsPanel from '@/mocks/components/TypeDefinitionsPanel.vue';
+import PromptDefinitionsPanel from '@/mocks/components/PromptDefinitionsPanel.vue';
 
-const activeTab = ref<'settings' | 'types'>('settings');
+const activeTab = ref<'settings' | 'types' | 'prompts'>('settings');
 </script>
 
 <style scoped>

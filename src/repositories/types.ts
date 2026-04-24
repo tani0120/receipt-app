@@ -360,6 +360,55 @@ export interface DocEntry {
   statusChangedBy: string | null
   /** ステータス変更日時（ISO 8601） */
   statusChangedAt: string | null
+
+  // ── AI分類結果（classify API。独自アップロード時に取得、Drive経路はフェーズ3.5で追加予定） ──
+  /** AI抽出日付（YYYY-MM-DD） */
+  aiDate?: string | null
+  /** AI抽出金額（整数） */
+  aiAmount?: number | null
+  /** AI抽出取引先名 */
+  aiVendor?: string | null
+  /** AI判定証票種別（例: 'receipt', 'bank_statement'） */
+  aiSourceType?: string | null
+  /** AI判定仕訳方向（'expense' | 'income' | 'transfer' | 'mixed'） */
+  aiDirection?: string | null
+  /** AI抽出摘要 */
+  aiDescription?: string | null
+  /** AI判定根拠 */
+  aiClassifyReason?: string | null
+  /** AI抽出行データ（通帳/クレカ: N行、レシート: 1行、対象外: 空） */
+  aiLineItems?: {
+    line_index: number
+    date: string | null
+    description: string
+    amount: number
+    direction: 'expense' | 'income'
+    balance: number | null
+  }[] | null
+  /** AI行データ件数 */
+  aiLineItemsCount?: number
+  /** 補助資料フラグ（CSV/Excel等。AI処理スキップ対象） */
+  aiSupplementary?: boolean
+  /** AI判定証票枚数（2以上は複数証票警告） */
+  aiDocumentCount?: number
+  /** AI警告メッセージ（OK判定だが注意が必要） */
+  aiWarning?: string | null
+  /** AI処理モード（auto/manual/excluded） */
+  aiProcessingMode?: string | null
+  /** AIフォールバック適用フラグ */
+  aiFallbackApplied?: boolean
+  /** AI処理メトリクス（コスト・トークン数等） */
+  aiMetrics?: {
+    source_type_confidence: number
+    direction_confidence: number
+    duration_ms: number
+    prompt_tokens: number
+    completion_tokens: number
+    thinking_tokens: number
+    token_count: number
+    cost_yen: number
+    model: string
+  } | null
 }
 
 /**

@@ -179,6 +179,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       supplementary: data.validation.supplementary,
       warning: data.validation.warning,
       isDuplicate: data.validation.isDuplicate,
+      documentCount: data.document_count,
       lineItems,
       metrics,
       fileHash: data.fileHash,

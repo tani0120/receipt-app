@@ -482,6 +482,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | 通知センターのDB永続化 | useNotificationCenter.tsでメモリ内ref管理（ページリロードで消える）。**Supabase移行後でなければ実施不可**（notificationsテーブルのDB永続化が必要） | ①`006_notifications.sql`マイグレーション作成（型定義`AppNotification`は`repositories/types.ts`に準備済み）②useNotificationCenter内部をSupabase API呼び出しに差し替え ③Supabase Realtimeで他タブへのpush通知 | useNotificationCenter.ts |
 | ~~ジョブ一覧API（`GET /api/drive/migrate/jobs`）~~ | ~~✅ **実装済み（2026-04-24）**。`getMigrationJobs(clientId)` → interface/JSON版/Supabase版/ラッパー/エンドポイント全層実装。jobId単位グルーピング、total/done/failed/excluded集計~~ | ~~—~~ | ~~drive.ts, migrationRepository.ts~~ |
 | MockDriveSelectPage.vue composable分離 | 1163行の巨大ファイル。デッドコード削除済みだがUI状態（undo/redo等）が密結合 | データ取得・選別操作・PDF.jsの3ブロックをcomposableに分離。大規模リファクタリングとして別タスク | MockDriveSelectPage.vue |
+| DocEntry/JobRow二重データストア統合 | `DocEntry`（`data/documents/*.json`）と`JobRow`（`data/migration_jobs.json`）が分離管理。DocEntry=資料メタデータ（source/status/hash等）、JobRow=移行ジョブ進捗（migration_status/retry_count/storage_path等）。フロントエンドの選別画面はDrive APIとdoc-storeの2ソースをマージして表示。進捗管理はuseDocumentsとuseProgressから取得 | Supabase移行時に`documents`テーブルと`migration_jobs`テーブルのJOINクエリで統合表示。または`documents`テーブルに移行ステータスカラムを追加してJobRow相当を吸収。設計はSupabase版Repository実装（フェーズ5）時に確定 | documentStore.ts, migrationRepository.json.ts, useDocuments.ts |
 
 ---
 
