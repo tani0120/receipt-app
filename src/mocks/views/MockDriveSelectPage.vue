@@ -25,16 +25,10 @@
           <i class="fa-solid fa-layer-group"></i> 一括操作 ({{ checkedIds.size }}件)
         </button>
       </div>
-      <!-- 右: 確定送信 + 仕訳外DL + 再取得 -->
+      <!-- 右: 確定送信 + 再取得 -->
       <div class="ds-header-right">
         <button class="ds-submit-btn" :disabled="allDocsView.length === 0" @click="showCompleteModal = true">
           <i class="fa-solid fa-paper-plane"></i> 確定送信
-        </button>
-        <button class="ds-import-btn" @click="goExcludedHistory" style="margin-left: 8px;" title="仕訳外ダウンロード履歴">
-          <span class="ds-import-icon">
-            <i class="fa-solid fa-file-zipper"></i>
-          </span>
-          <span class="ds-import-label">仕訳外DL ({{ excludedCount }})</span>
         </button>
         <button class="ds-import-btn" @click="handleReload" :disabled="isLoading" style="margin-left: 8px;">
           <span class="ds-import-icon" :class="{ 'ds-importing': isLoading }">
@@ -427,10 +421,7 @@ const sendToProcess = async () => {
   }
 };
 
-// --- 仕訳外ダウンロード履歴ページ遷移 ---
-const goExcludedHistory = () => {
-  router.push(`/excluded-history/${clientId.value}`);
-};
+
 
 // --- ステータス表示 ---
 const statusLabel = (s: string) => {

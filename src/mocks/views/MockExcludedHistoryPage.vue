@@ -51,8 +51,10 @@
             :key="row.jobId"
             class="eh-row"
             :class="{ 'eh-row-alt': idx % 2 === 1 }"
+            style="cursor: pointer;"
+            @click="onRowClick(row)"
           >
-            <td class="eh-td eh-td-check">
+            <td class="eh-td eh-td-check" @click.stop>
               <input type="checkbox" :checked="checkedIds.has(row.jobId)" @change="toggleCheck(row.jobId)">
             </td>
             <td class="eh-td eh-td-date">{{ row.displayDate }}</td>
@@ -69,6 +71,26 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- ダウンロード確認モーダル -->
+    <div v-if="confirmTarget" class="eh-modal-overlay" @click="confirmTarget = null">
+      <div class="eh-modal" @click.stop>
+        <div class="eh-modal-icon">
+          <i class="fa-solid fa-file-zipper"></i>
+        </div>
+        <div class="eh-modal-title">ダウンロードしますか？</div>
+        <div class="eh-modal-desc">
+          <span class="eh-modal-filename">{{ confirmTarget.fileName }}.zip</span>
+          <span class="eh-modal-meta">{{ confirmTarget.excludedCount }}件 ・ {{ confirmTarget.displayDate }}</span>
+        </div>
+        <div class="eh-modal-actions">
+          <button class="eh-modal-btn eh-modal-btn-cancel" @click="confirmTarget = null">いいえ</button>
+          <button class="eh-modal-btn eh-modal-btn-ok" :disabled="isDownloading" @click="downloadSingle">
+            <i class="fa-solid fa-download"></i> {{ isDownloading ? 'DL中...' : 'はい' }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -201,6 +223,53 @@ async function downloadChecked() {
     showToast({ message: `DLエラー: ${msg}`, type: 'error' })
   } finally {
     isDownloading.value = false
+  }
+}
+
+// ============================================================
+// § 行クリック→確認モーダル→単体DL
+// ============================================================
+
+/** 確認モーダルの対象行（null=非表示） */
+const confirmTarget = ref<ExcludedHistoryRow | null>(null)
+
+/** 行クリックハンドラ */
+function onRowClick(row: ExcludedHistoryRow) {
+  confirmTarget.value = row
+}
+
+/** 確認モーダル「はい」→単体DL実行 */
+async function downloadSingle() {
+  if (!confirmTarget.value) return
+  const row = confirmTarget.value
+  isDownloading.value = true
+
+  try {
+    const res = await fetch(`/api/drive/download-excluded/${encodeURIComponent(clientId.value)}?jobId=${encodeURIComponent(row.jobId)}&all=true`)
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ error: res.statusText }))
+      showToast({ message: `DLエラー: ${errData.error || res.statusText}`, type: 'error' })
+      return
+    }
+
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = row.fileName + '.zip'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    showToast({ message: 'ダウンロード完了', type: 'success' })
+    await loadHistory()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    showToast({ message: `DLエラー: ${msg}`, type: 'error' })
+  } finally {
+    isDownloading.value = false
+    confirmTarget.value = null
   }
 }
 </script>
@@ -441,5 +510,102 @@ input[type="checkbox"] {
   height: 14px;
   accent-color: #6366f1;
   cursor: pointer;
+}
+
+/* ===== 確認モーダル ===== */
+.eh-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.eh-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  min-width: 360px;
+  max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.eh-modal-icon {
+  font-size: 36px;
+  color: #6366f1;
+  margin-bottom: 12px;
+}
+
+.eh-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 12px;
+}
+
+.eh-modal-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.eh-modal-filename {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  word-break: break-all;
+}
+
+.eh-modal-meta {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.eh-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.eh-modal-btn {
+  padding: 8px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  transition: all 0.15s;
+}
+
+.eh-modal-btn-cancel {
+  background: white;
+  color: #64748b;
+}
+
+.eh-modal-btn-cancel:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.eh-modal-btn-ok {
+  background: #6366f1;
+  color: white;
+  border-color: #6366f1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.eh-modal-btn-ok:hover {
+  background: #4f46e5;
+}
+
+.eh-modal-btn-ok:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>
