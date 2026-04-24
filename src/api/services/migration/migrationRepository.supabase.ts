@@ -195,7 +195,7 @@ export function createSupabaseMigrationRepository(): MigrationRepository {
       return recovered;
     },
 
-    async getExcludedJobs(clientId, all = false) {
+    async getExcludedJobs(clientId, all = false, jobId) {
       const supabase = getSupabase();
       let query = supabase
         .from(TABLE)
@@ -204,6 +204,10 @@ export function createSupabaseMigrationRepository(): MigrationRepository {
         .eq('doc_status', 'excluded')
         .eq('migration_status', 'done')
         .is('storage_purged_at', null);
+
+      if (jobId) {
+        query = query.eq('job_id', jobId);
+      }
 
       if (!all) {
         query = query.is('downloaded_at', null);
@@ -270,6 +274,109 @@ export function createSupabaseMigrationRepository(): MigrationRepository {
         .in('id', ids);
 
       if (error) throw new Error(`[supabaseMigrationRepo] markStoragePurged失敗: ${error.message}`);
+    },
+
+    async getExcludedHistory(clientId) {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .eq('client_id', clientId)
+        .eq('doc_status', 'excluded')
+        .eq('migration_status', 'done')
+        .is('storage_purged_at', null)
+        .order('created_at', { ascending: true });
+
+      if (error) throw new Error(`[supabaseMigrationRepo] getExcludedHistory失敗: ${error.message}`);
+
+      const rows = data ?? [];
+      const grouped = new Map<string, typeof rows>();
+      for (const r of rows) {
+        const arr = grouped.get(String(r.job_id)) || [];
+        arr.push(r);
+        grouped.set(String(r.job_id), arr);
+      }
+
+      const dateCount = new Map<string, number>();
+      const result: Array<{
+        jobId: string; clientId: string; excludedCount: number;
+        fileName: string; displayDate: string; createdAt: string; downloadedAt: string | null;
+      }> = [];
+
+      for (const [jobId, grp] of grouped) {
+        const first = grp[0]!;
+        const dt = new Date(String(first.created_at));
+        const dateStr = dt.toISOString().slice(0, 10).replace(/-/g, '');
+        const timeStr = dt.toISOString().slice(11, 19).replace(/:/g, '');
+        const dateKey = `${clientId}_${dateStr}`;
+        const count = dateCount.get(dateKey) || 0;
+        dateCount.set(dateKey, count + 1);
+
+        const fileName = count === 0
+          ? `${clientId}_仕訳外ダウンロード_${dateStr}`
+          : `${clientId}_仕訳外ダウンロード_${dateStr}_${timeStr}`;
+
+        const allDownloaded = grp.every(r => r.downloaded_at);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const displayDate = `${dt.getFullYear()}/${pad(dt.getMonth() + 1)}/${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+        result.push({
+          jobId,
+          clientId,
+          excludedCount: grp.length,
+          fileName,
+          displayDate,
+          createdAt: String(first.created_at),
+          downloadedAt: allDownloaded ? String(grp[0]!.downloaded_at) : null,
+        });
+      }
+
+      return result;
+    },
+
+    async getMigrationJobs(clientId) {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('job_id, client_id, doc_status, migration_status, created_at')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw new Error(`[supabaseMigrationRepo] getMigrationJobs失敗: ${error.message}`);
+
+      const rows = data ?? [];
+      // jobId単位でグルーピング
+      const grouped = new Map<string, typeof rows>();
+      for (const r of rows) {
+        const arr = grouped.get(String(r.job_id)) || [];
+        arr.push(r);
+        grouped.set(String(r.job_id), arr);
+      }
+
+      const result: Array<{
+        jobId: string;
+        clientId: string;
+        createdAt: string;
+        total: number;
+        done: number;
+        failed: number;
+        excluded: number;
+      }> = [];
+
+      for (const [jobId, grp] of grouped) {
+        const first = grp[0]!;
+        result.push({
+          jobId,
+          clientId,
+          createdAt: String(first.created_at),
+          total: grp.length,
+          done: grp.filter(r => r.migration_status === 'done').length,
+          failed: grp.filter(r => r.migration_status === 'failed').length,
+          excluded: grp.filter(r => r.doc_status === 'excluded').length,
+        });
+      }
+
+      return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     },
   };
 }

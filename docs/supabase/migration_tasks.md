@@ -1,7 +1,7 @@
 # Supabase移行タスク一覧
 
 > 作成日: 2026-04-23
-> 最終更新: 2026-04-24 v6（v5 + DL-046: プレビュー表示根本修正 + HEIC/TIFF変換 + PDF表示修正）
+> 最終更新: 2026-04-24 v8（v7 + 出力ポータルUI統合、仕訳外ZIP履歴ページ、ジョブ単位DL、ジョブ一覧API、currentClient根本改修、DL済みマークバグ修正）
 > ソース:
 > - [task_unified.md](file:///c:/dev/receipt-app/docs/task_unified.md)（セクションC-0, C-1, D, H, L-2）
 > - [supabase_security_report_260214.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/supabase_security_report_260214.md)（RLS, validateStaffAccess, Google OAuth）
@@ -56,6 +56,16 @@
 | 顧問先契約解除時ブロック（client.status確認） | ✅ **本セッション** | C-2 |
 | excluded ZIPダウンロードルート接続 | ✅ **本セッション** | A-2 |
 | PC D&D→Drive uploadルート（POST /upload） | ✅ **本セッション** | C-1 |
+| 出力ポータルUI統合（`/output/:clientId`） | ✅ **2026-04-24** | 出力ポータルセッション |
+| 仕訳外ZIP履歴ページ（`/excluded-history/:clientId`） | ✅ **2026-04-24** | 同上 |
+| ジョブ単位ZIPダウンロード（`?jobId=`パラメータ） | ✅ **2026-04-24** | 同上 |
+| ジョブ一覧API（`GET /migrate/jobs/:clientId`） | ✅ **2026-04-24** | 同上 |
+| currentClient正規表現ハードコード廃止（`route.params.clientId`優先） | ✅ **2026-04-24** | 同上 |
+| DL済みマークバグ修正（`all=true`でも`markDownloaded`実行） | ✅ **2026-04-24** | 同上 |
+| MockDriveUploadPage.vue旧式`downloadExcludedZip`削除 | ✅ **2026-04-24** | 同上 |
+| MockDriveSelectPage.vueデッドコード削除 | ✅ **2026-04-24** | 同上 |
+| jobId指定DL時の0件チェック追加 | ✅ **2026-04-24** | 同上 |
+| useClients.ts型エラー修正（L198, L220 非null断定） | ✅ **2026-04-24** | 同上 |
 
 ---
 
@@ -233,6 +243,7 @@ USING (
 | `client_users` | 顧問先×ユーザー紐付（認可） | **新規** | 001_share_status.sql | **pipeline DL-031 L1808** |
 | `confirmed_journals` | 確定済み仕訳 | 未作成（T-03待ち） | 未作成 | **pipeline DL-032 L1883** |
 | `migration_jobs` | Drive→Supabase移行ジョブ管理 | **新規** | **005_migration_jobs.sql ✅** | 本セッション |
+| `notifications` | アプリ通知（バックグラウンド処理完了/失敗通知） | **新規**（現在メモリ管理。型定義は`repositories/types.ts`に`AppNotification`として準備済み） | 未作成 | 2026-04-24セッション |
 
 > **注意**: `user_client_access`（security_report）と`client_users`（DL-031）は同一目的。DL-031の`client_users`が最新設計。
 
@@ -349,6 +360,16 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | Driveファイルのdoc-store永続化 | ✅ **実装済み**（選別画面表示時にdoc-storeに登録、drive_file_idで重複排除） | 2026-04-24 |
 | プレビューローカルキャッシュ | ✅ **実装済み**（drive.ts preview APIで初回のみDrive→ローカルキャッシュ保存。2回目以降即返却。**HEIC/HEIF/TIFFはsharpでJPEG変換後にキャッシュ保存**） | 2026-04-24 |
 | 選別結果の進捗画面リアルタイム反映 | ✅ **実装済み**（applyStatusでuseDocuments().updateStatus()使用、allDocuments refを即更新） | 2026-04-24 |
+| 選別確定後バックグラウンド移行（即時画面遷移） | ✅ **実装済み**（useMigrationPoller.ts: 画面遷移しても生き続けるグローバルポーリング。sendToProcess改修: POST成功→即モーダル閉じ→トースト通知→画面遷移可能） | 2026-04-24 |
+| グローバルトースト通知基盤 | ✅ **実装済み**（useGlobalToast.ts + GlobalToast.vue。App.vueにTeleportで配置。右下スタック表示、最大3件） | 2026-04-24 |
+| 通知センター（ナビバー🔔ドロワー） | ✅ **実装済み**（useNotificationCenter.ts + NotificationCenter.vue。MockNavBarに🔔アイコン+未読バッジ追加。仕訳外ZIP DLアクション付き通知対応。**現在メモリ管理→Supabase移行時にnotificationsテーブルで永続化**） | 2026-04-24 |
+| AppNotification型定義（Supabase移行準備） | ✅ **型定義済み**（repositories/types.tsに`AppNotification`型 + `NotificationType`型を追加。`notifications`テーブルに直接マッピング可能な設計） | 2026-04-24 |
+| 出力ポータルUI統合 | ✅ **実装済み**（`/output/:clientId` → 仕訳外ZIP・MF用CSV。ナビバーアクティブ判定5パス対応） | 2026-04-24 |
+| 仕訳外ZIP履歴ページ | ✅ **実装済み**（`/excluded-history/:clientId` → DL済/未DL一覧、ジョブ単位DL、複数選択一括DL） | 2026-04-24 |
+| ジョブ単位ZIPダウンロード | ✅ **実装済み**（`?jobId=`パラメータ → interface〜JSON版〜Supabase版〜ZIPサービス全層対応） | 2026-04-24 |
+| ジョブ一覧API | ✅ **実装済み**（`GET /migrate/jobs/:clientId` → jobId単位グルーピング、total/done/failed/excluded集計） | 2026-04-24 |
+| DL済みマークバグ修正 | ✅ **修正済み**（excludedZipService.ts: `!all`条件削除→DLしたら常にmarkDownloaded実行） | 2026-04-24 |
+| currentClient根本改修 | ✅ **修正済み**（useClients.ts: 正規表現ハードコード廃止→`route.params.clientId`優先。新ルート追加時の追記漏れ問題を解消） | 2026-04-24 |
 
 ### 6-3. 実装フェーズ（24番セクション13）
 
@@ -370,7 +391,9 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | `POST /api/drive/upload` | PC D&D→Drive API files.create | ✅ **実装済み**（drive.ts） |
 | `POST /api/drive/migrate` | 選別確定→ジョブ登録 | ✅ **実装済み**（drive.ts L131） |
 | `GET /api/drive/migrate/status/:jobId` | 移行進捗監視 | ✅ **実装済み**（drive.ts L160） |
-| `GET /api/drive/download-excluded/:clientId` | 仕訳外ZIPダウンロード | ✅ **ルート接続完了** |
+| `GET /api/drive/migrate/jobs/:clientId` | ジョブ一覧（jobId単位グルーピング） | ✅ **実装済み**（2026-04-24） |
+| `GET /api/drive/download-excluded/:clientId` | 仕訳外ZIPダウンロード（`?jobId=`対応、0件チェック付き） | ✅ **実装済み** |
+| `GET /api/drive/excluded-history/:clientId` | 仕訳外ダウンロード履歴（jobId単位グルーピング） | ✅ **実装済み**（2026-04-24） |
 
 ### 6-5. データアクセス抽象化（24番セクション16）✅ 実装済み
 
@@ -456,6 +479,9 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | 既存fetch 19箇所のapiFetch移行 | 全19箇所が直接fetch()。エラー処理はthrow/console.error/無視がバラバラ | composable層（useStaff, useClients等）はモジュールスコープでuseRouter()不可→SupabaseClient直接呼び出しに置換。Vueページ側はapiFetch.withError()に統一 | バリデーション設計 |
 | Zodスキーマファイル分離（`src/api/schemas/`） | 全スキーマがルートファイル内にインライン定義 | `src/api/schemas/staff.schema.ts` 等に分離。apiMessages.tsの定数を参照し、フロント・サーバー間で仕様を一元管理 | バリデーション設計 |
 | ~~Driveファイル選別結果の永続化~~ | ~~`driveSelections`（メモリ上のMap）に保持~~ | ~~✅ **解決済み（2026-04-24）**。選別画面表示時にdoc-storeに登録 + useDocuments().updateStatus()でallDocuments ref即更新 + プレビューローカルキャッシュ~~ | MockDriveSelectPage.vue, drive.ts |
+| 通知センターのDB永続化 | useNotificationCenter.tsでメモリ内ref管理（ページリロードで消える）。**Supabase移行後でなければ実施不可**（notificationsテーブルのDB永続化が必要） | ①`006_notifications.sql`マイグレーション作成（型定義`AppNotification`は`repositories/types.ts`に準備済み）②useNotificationCenter内部をSupabase API呼び出しに差し替え ③Supabase Realtimeで他タブへのpush通知 | useNotificationCenter.ts |
+| ~~ジョブ一覧API（`GET /api/drive/migrate/jobs`）~~ | ~~✅ **実装済み（2026-04-24）**。`getMigrationJobs(clientId)` → interface/JSON版/Supabase版/ラッパー/エンドポイント全層実装。jobId単位グルーピング、total/done/failed/excluded集計~~ | ~~—~~ | ~~drive.ts, migrationRepository.ts~~ |
+| MockDriveSelectPage.vue composable分離 | 1163行の巨大ファイル。デッドコード削除済みだがUI状態（undo/redo等）が密結合 | データ取得・選別操作・PDF.jsの3ブロックをcomposableに分離。大規模リファクタリングとして別タスク | MockDriveSelectPage.vue |
 
 ---
 

@@ -150,22 +150,14 @@ export function useClients() {
 
   /** ルートパスまたはクエリパラメータから現在選択中のクライアントを動的に取得 */
   const currentClient = computed<Client | null>(() => {
-    const path = route.path;
-    // 1. 新URL構造: /journal-list/:clientId, /upload/:clientId/staff, /upload-v2/:clientId 等
-    const patternB = path.match(/^\/(journal-list|drive-select|export-detail|export-history|export|client-settings(?:\/accounts|\/tax)?|upload-docs|upload-v2|upload|learning|detail|workbench|guest)\/([^/]+)/);
-    if (patternB && patternB[2]) {
-      const cid = patternB[2];
-      const found = clients.value.find(c => c.clientId === cid);
-      if (found) return found;
-    }
-    // 1b. 旧URL互換: /client/xxx/:clientId パターン
-    const patternOld = path.match(/^\/client\/(journal-list|drive-select|export|export-history|export-detail|settings\/accounts|settings\/tax|settings|upload|learning)\/([^/]+)/);
-    if (patternOld && patternOld[2]) {
-      const cid = patternOld[2];
-      const found = clients.value.find(c => c.clientId === cid);
+    // 1. route.params.clientId（Vue Router定義から自動取得。新ルート追加時の漏れ防止）
+    const paramClientId = route.params.clientId;
+    if (paramClientId && typeof paramClientId === 'string') {
+      const found = clients.value.find(c => c.clientId === paramClientId);
       if (found) return found;
     }
     // 2. /clients/:clientId/settings パターン（旧ページ互換）
+    const path = route.path;
     const clientsMatch = path.match(/\/clients\/([^/]+)/);
     if (clientsMatch && clientsMatch[1]) {
       const paramId = clientsMatch[1];
@@ -195,7 +187,7 @@ export function useClients() {
     const idx = clients.value.findIndex(c => c.clientId === clientId)
     if (idx >= 0) {
       // ref即反映（computedの再計算をトリガー）
-      clients.value[idx] = { ...clients.value[idx], sharedFolderId: folderId }
+      clients.value[idx] = { ...clients.value[idx]!, sharedFolderId: folderId }
       // サーバーに非同期送信
       apiPut(`/${clientId}/shared-folder`, { folderId })
         .catch(err => console.error('[useClients] sharedFolderId更新エラー:', err))
@@ -217,7 +209,7 @@ export function useClients() {
   function updateClientLocal(clientId: string, data: Partial<Client>): void {
     const idx = clients.value.findIndex(c => c.clientId === clientId)
     if (idx >= 0) {
-      clients.value[idx] = { ...clients.value[idx], ...data, clientId }
+      clients.value[idx] = { ...clients.value[idx]!, ...data, clientId }
     }
     lastError.value = null
     apiPut(`/${clientId}`, data).catch(err => {

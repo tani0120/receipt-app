@@ -18,7 +18,7 @@ import { join } from 'path';
 import { apiError, apiCatchError } from '../helpers/apiError';
 import { 必須, 未検出, 環境設定エラー, ファイル必須, 仕訳外ゼロ } from '../helpers/apiMessages';
 import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, revokeFolderPermission } from '../services/drive/driveService';
-import { enqueueMigrationJobs, getJobStatus, getExcludedCount } from '../services/migration/migrationRepository';
+import { enqueueMigrationJobs, getJobStatus, getExcludedCount, getExcludedHistory, getExcludedJobs, getMigrationJobs } from '../services/migration/migrationRepository';
 import { generateExcludedZip } from '../services/migration/excludedZipService';
 
 const app = new Hono();
@@ -239,6 +239,24 @@ app.get('/migrate/status/:jobId', async (c) => {
 });
 
 // ============================================================
+// GET /migrate/jobs/:clientId — 移行ジョブ一覧（jobId単位グルーピング）
+// ============================================================
+
+app.get('/migrate/jobs/:clientId', async (c) => {
+  try {
+    const clientId = c.req.param('clientId');
+    if (!clientId) {
+      return apiError(c, 400, 必須('clientId'));
+    }
+
+    const jobs = await getMigrationJobs(clientId);
+    return c.json(jobs);
+  } catch (err) {
+    return apiCatchError(c, err);
+  }
+});
+
+// ============================================================
 // GET /download-excluded/:clientId — 仕訳外ZIPダウンロード（Phase E-3/E-4）
 // ?all=true でDL済み含む全件。デフォルトは未DLのみ
 // ============================================================
@@ -247,19 +265,29 @@ app.get('/download-excluded/:clientId', async (c) => {
   try {
     const clientId = c.req.param('clientId');
     const all = c.req.query('all') === 'true';
+    const jobId = c.req.query('jobId') || undefined;
 
     if (!clientId) {
       return apiError(c, 400, 必須('clientId'));
     }
 
-    // 0件チェック（Streamを作る前に確認）
-    const count = await getExcludedCount(clientId);
-    if (!all && count === 0) {
-      return apiError(c, 404, 仕訳外ゼロ);
+    // 0件チェック（jobId指定時はジョブ単位で確認）
+    if (jobId) {
+      const jobs = await getExcludedJobs(clientId, true, jobId);
+      if (jobs.length === 0) {
+        return apiError(c, 404, 仕訳外ゼロ);
+      }
+    } else {
+      const count = await getExcludedCount(clientId);
+      if (!all && count === 0) {
+        return apiError(c, 404, 仕訳外ゼロ);
+      }
     }
 
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const fileName = `excluded_${clientId}_${today}.zip`;
+    const fileName = jobId
+      ? `${clientId}_仕訳外ダウンロード_${today}.zip`
+      : `excluded_${clientId}_${today}.zip`;
 
     // Node.jsのWritableストリームとしてレスポンスに書き込む
     const { writable, readable } = new TransformStream();
@@ -287,8 +315,8 @@ app.get('/download-excluded/:clientId', async (c) => {
         },
       });
 
-      const zipCount = await generateExcludedZip(clientId, nodeWritable, all);
-      console.log(`[drive/route] GET /download-excluded: ${clientId}, ${zipCount}件ZIP送出`);
+      const zipCount = await generateExcludedZip(clientId, nodeWritable, all, jobId);
+      console.log(`[drive/route] GET /download-excluded: ${clientId}${jobId ? ` (jobId=${jobId})` : ''}, ${zipCount}件ZIP送出`);
     })();
 
     zipPromise.catch((err) => {
@@ -298,7 +326,7 @@ app.get('/download-excluded/:clientId', async (c) => {
     return new Response(readable, {
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="${fileName}"`,
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
       },
     });
   } catch (err) {
@@ -315,6 +343,24 @@ app.get('/excluded-count/:clientId', async (c) => {
     const clientId = c.req.param('clientId');
     const count = await getExcludedCount(clientId);
     return c.json({ count });
+  } catch (err) {
+    return apiCatchError(c, err);
+  }
+});
+
+// ============================================================
+// GET /excluded-history/:clientId — 仕訳外ダウンロード履歴（jobId単位グルーピング）
+// ============================================================
+
+app.get('/excluded-history/:clientId', async (c) => {
+  try {
+    const clientId = c.req.param('clientId');
+    if (!clientId) {
+      return apiError(c, 400, 必須('clientId'));
+    }
+
+    const history = await getExcludedHistory(clientId);
+    return c.json(history);
   } catch (err) {
     return apiCatchError(c, err);
   }

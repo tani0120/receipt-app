@@ -68,8 +68,8 @@ export interface MigrationRepository {
 
   // --- Phase E: 仕訳外ファイル操作 ---
 
-  /** 未DLのexcludedジョブを取得（ZIP DL用） */
-  getExcludedJobs(clientId: string, all?: boolean): Promise<MigrationJob[]>;
+  /** 未DLのexcludedジョブを取得（ZIP DL用。jobId指定時はそのジョブのみ） */
+  getExcludedJobs(clientId: string, all?: boolean, jobId?: string): Promise<MigrationJob[]>;
 
   /** excludedジョブのDL済みマークをつける */
   markDownloaded(ids: string[]): Promise<void>;
@@ -82,6 +82,28 @@ export interface MigrationRepository {
 
   /** Storage削除済みマークをつける */
   markStoragePurged(ids: string[]): Promise<void>;
+
+  /** 仕訳外ダウンロード履歴取得（jobId単位でグルーピング） */
+  getExcludedHistory(clientId: string): Promise<Array<{
+    jobId: string;
+    clientId: string;
+    excludedCount: number;
+    fileName: string;
+    displayDate: string;
+    createdAt: string;
+    downloadedAt: string | null;
+  }>>;
+
+  /** 顧問先の移行ジョブ一覧取得（jobId単位でグルーピング） */
+  getMigrationJobs(clientId: string): Promise<Array<{
+    jobId: string;
+    clientId: string;
+    createdAt: string;
+    total: number;
+    done: number;
+    failed: number;
+    excluded: number;
+  }>>;
 }
 
 // ===== ファクトリ =====
@@ -141,8 +163,8 @@ export async function recoverStaleJobs(): Promise<number> {
   return getMigrationRepository().recoverStaleJobs();
 }
 
-export async function getExcludedJobs(clientId: string, all?: boolean): Promise<MigrationJob[]> {
-  return getMigrationRepository().getExcludedJobs(clientId, all);
+export async function getExcludedJobs(clientId: string, all?: boolean, jobId?: string): Promise<MigrationJob[]> {
+  return getMigrationRepository().getExcludedJobs(clientId, all, jobId);
 }
 
 export async function markDownloaded(ids: string[]): Promise<void> {
@@ -159,4 +181,12 @@ export async function getExpiredExcluded(): Promise<Array<{ id: string; storageP
 
 export async function markStoragePurged(ids: string[]): Promise<void> {
   return getMigrationRepository().markStoragePurged(ids);
+}
+
+export async function getExcludedHistory(clientId: string) {
+  return getMigrationRepository().getExcludedHistory(clientId);
+}
+
+export async function getMigrationJobs(clientId: string) {
+  return getMigrationRepository().getMigrationJobs(clientId);
 }

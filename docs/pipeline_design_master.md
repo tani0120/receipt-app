@@ -2931,3 +2931,62 @@ repositories/types.ts ← 唯一の型定義源泉
 - `src/utils/documentUtils.ts` — `countUnsorted()`: `filter(pending).length` → `docs.length`
 - `src/features/progress-management/types.ts` — unsortedフィールドコメント修正
 - `docs/genzai/24_upload_drive_integration.md` — countUnsorted定義修正
+
+---
+
+## DL-047: 出力ポータル統合 + アーキテクチャ改修 + composable分離（2026-04-24）
+
+**決定**: 仕訳外ZIPダウンロード・MF用CSV出力を「出力ポータル」に集約。ジョブ単位DL対応。MockDriveSelectPage.vueをcomposable分離。
+
+### 出力ポータルUI統合
+
+| 項目 | 内容 |
+|---|---|
+| `/output/:clientId` | 出力ポータルページ。仕訳外ZIP（左）・MF用CSV（右）のカードUI |
+| `/excluded-history/:clientId` | 仕訳外ダウンロード履歴。jobId単位のDL済/未DL一覧、複数選択一括DL |
+| ナビバー | 出力関連5パス（`/output`, `/export`, `/excluded-history`, `/export-history`, `/export-detail`）でアクティブ維持 |
+
+### バックエンドAPI追加・修正
+
+| エンドポイント | 変更内容 |
+|---|---|
+| `GET /download-excluded/:clientId` | `?jobId=`パラメータ追加（ジョブ単位ZIP）。0件チェックをjobId指定時も実施（空ZIPリスク解消） |
+| `GET /excluded-history/:clientId` | 新規。jobId単位グルーピングで履歴返却 |
+| `GET /migrate/jobs/:clientId` | 新規。jobId単位でtotal/done/failed/excluded集計。interface〜JSON版〜Supabase版〜ラッパー〜エンドポイント全層実装 |
+
+### バグ修正
+
+| バグ | 原因 | 修正 |
+|---|---|---|
+| DL済みマークが付かない | `excludedZipService.ts`の`!all`条件により`all=true`時にmarkDownloadedがスキップ | `!all`条件を削除。DLしたら常にmarkDownloaded実行 |
+| currentClient判定漏れ | `useClients.ts`の正規表現ハードコードに新ルートが欠落 | `route.params.clientId`優先方式に根本改修。新ルート追加時の追記漏れ問題を恒久解消 |
+
+### MockDriveUploadPage.vue旧式コード削除
+
+| 項目 | 変更 |
+|---|---|
+| `downloadExcludedZip`関数 | 削除（jobIdなし全件DLの旧式） |
+| `isDownloadingZip` ref | 削除 |
+| 仕訳外ZIPボタン | 「仕訳外ダウンロード履歴へ」遷移ボタンに変更 |
+
+### MockDriveSelectPage.vue composable分離
+
+**なぜ**: 1163行の巨大ファイルにデータ取得・選別操作・プレビュー制御が密結合していた。
+
+| ファイル | 行数 | 責務 |
+|---|---|---|
+| MockDriveSelectPage.vue（本体） | **850行**（旧1163行→27%削減） | UI・キーボード・確定送信・表示ヘルパー |
+| `useDriveDocuments.ts` | 249行 | Drive API + doc-store取得、DocView変換、フィルタ |
+| `useDocSelection.ts` | 230行 | Undo/Redo、ステータス変更、一括操作、チェックボックス |
+| `usePreviewZoom.ts` | 131行 | ファイル選択、ズーム制御、PDF判定 |
+
+### useClients.ts型エラー修正
+
+- L198, L220: スプレッド演算子の`noUncheckedIndexedAccess`相当の型エラーを`!`非null断定で解消
+
+### 根拠
+
+- 出力ポータルは「各顧問先に係る作業」であり第3段コンテンツ（clientId依存）
+- DL済みマークバグは`all=true`パスのテスト不足が原因。条件自体が不要だった
+- currentClient改修により、`router/index.ts`で`:clientId`パスを定義するだけでナビバー連動が自動適用される
+- composable分離により単体テスト可能な3ブロックに責務を明確化

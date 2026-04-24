@@ -65,6 +65,20 @@
             </button>
           </div>
         </div>
+        <!-- 🔔通知アイコン -->
+        <div class="relative ml-2">
+          <button
+            class="relative flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:bg-sky-50 text-gray-500 hover:text-sky-600"
+            @click="toggleDrawer"
+            title="通知"
+          >
+            <i class="fa-solid fa-bell text-[14px]"></i>
+            <span
+              v-if="unreadCount > 0"
+              class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-[16px] rounded-full flex items-center justify-center px-1 shadow-sm"
+            >{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+          </button>
+        </div>
       </div>
     </div>
     <!-- 下段バー（sky-600）ナビゲーション: 個別会社エリアのみ表示 -->
@@ -93,6 +107,8 @@
       </div>
     </div>
   </div>
+  <!-- 通知センタードロワー -->
+  <NotificationCenter />
 </template>
 
 <script setup lang="ts">
@@ -100,6 +116,8 @@ import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { useCurrentUser } from '@/mocks/composables/useCurrentUser';
+import { useNotificationCenter } from '@/mocks/composables/useNotificationCenter';
+import NotificationCenter from '@/mocks/components/NotificationCenter.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -115,6 +133,9 @@ function switchStaff(uuid: string) {
   setCurrentUser(uuid);
   showStaffMenu.value = false;
 }
+
+// --- 通知センター ---
+const { unreadCount, toggleDrawer } = useNotificationCenter();
 
 // マスタページ（/master/）では顧問先コンテキストを非表示にする
 const isMasterPage = computed(() => route.path.startsWith('/master/'));
@@ -195,7 +216,7 @@ const navItems: NavItem[] = [
     key: 'export',
     label: '出力',
     svgPaths: ['M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
-    path: '/export',
+    path: '/output',
   },
   {
     key: 'learning',
@@ -218,6 +239,10 @@ const isNavActive = (item: NavItem): boolean => {
   if (item.path === null) return false;
   // settingsトップは /client-settings/:clientId パターン
   if (item.key === 'settings') return route.path.match(/^\/client-settings\/[^/]+/) !== null;
+  // 出力ポータル配下: /output, /export, /excluded-history, /export-history, /export-detail
+  if (item.key === 'export') {
+    return ['/output/', '/export/', '/excluded-history/', '/export-history/', '/export-detail/'].some(p => route.path.startsWith(p));
+  }
   return route.path.startsWith(item.path + '/');
 };
 

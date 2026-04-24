@@ -193,13 +193,17 @@ export function createJsonMigrationRepository(): MigrationRepository {
       return recovered;
     },
 
-    async getExcludedJobs(clientId, all = false) {
+    async getExcludedJobs(clientId, all = false, jobId) {
       let jobs = readJobs().filter(j =>
         j.client_id === clientId &&
         j.doc_status === 'excluded' &&
         j.migration_status === 'done' &&
         !j.storage_purged_at
       );
+
+      if (jobId) {
+        jobs = jobs.filter(j => j.job_id === jobId);
+      }
 
       if (!all) {
         jobs = jobs.filter(j => !j.downloaded_at);
@@ -258,6 +262,109 @@ export function createJsonMigrationRepository(): MigrationRepository {
         }
       }
       writeJobs(jobs);
+    },
+
+    async getExcludedHistory(clientId) {
+      const jobs = readJobs().filter(j =>
+        j.client_id === clientId &&
+        j.doc_status === 'excluded' &&
+        j.migration_status === 'done' &&
+        !j.storage_purged_at
+      );
+
+      // jobId単位でグルーピング
+      const grouped = new Map<string, JobRow[]>();
+      for (const j of jobs) {
+        const arr = grouped.get(j.job_id) || [];
+        arr.push(j);
+        grouped.set(j.job_id, arr);
+      }
+
+      // ファイル名生成: clientId_仕訳外ダウンロード_YYYYMMDD（同日2件目以降は_HHMMSS付加）
+      const dateCount = new Map<string, number>();
+      const result: Array<{
+        jobId: string;
+        clientId: string;
+        excludedCount: number;
+        fileName: string;
+        displayDate: string;
+        createdAt: string;
+        downloadedAt: string | null;
+      }> = [];
+
+      // createdAt順にソート
+      const entries = [...grouped.entries()].sort((a, b) =>
+        a[1][0]!.created_at.localeCompare(b[1][0]!.created_at)
+      );
+
+      for (const [jobId, rows] of entries) {
+        const first = rows[0]!;
+        const dt = new Date(first.created_at);
+        const dateStr = dt.toISOString().slice(0, 10).replace(/-/g, '');
+        const timeStr = dt.toISOString().slice(11, 19).replace(/:/g, '');
+        const dateKey = `${clientId}_${dateStr}`;
+        const count = dateCount.get(dateKey) || 0;
+        dateCount.set(dateKey, count + 1);
+
+        const fileName = count === 0
+          ? `${clientId}_仕訳外ダウンロード_${dateStr}`
+          : `${clientId}_仕訳外ダウンロード_${dateStr}_${timeStr}`;
+
+        // DL済み判定: 全ファイルがDL済みならDL済み
+        const allDownloaded = rows.every(r => r.downloaded_at);
+
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const displayDate = `${dt.getFullYear()}/${pad(dt.getMonth() + 1)}/${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+        result.push({
+          jobId,
+          clientId,
+          excludedCount: rows.length,
+          fileName,
+          displayDate,
+          createdAt: first.created_at,
+          downloadedAt: allDownloaded ? rows[0]!.downloaded_at : null,
+        });
+      }
+
+      return result;
+    },
+
+    async getMigrationJobs(clientId) {
+      const jobs = readJobs().filter(j => j.client_id === clientId);
+
+      // jobId単位でグルーピング
+      const grouped = new Map<string, typeof jobs>();
+      for (const j of jobs) {
+        const arr = grouped.get(j.job_id) || [];
+        arr.push(j);
+        grouped.set(j.job_id, arr);
+      }
+
+      const result: Array<{
+        jobId: string;
+        clientId: string;
+        createdAt: string;
+        total: number;
+        done: number;
+        failed: number;
+        excluded: number;
+      }> = [];
+
+      for (const [jobId, rows] of grouped) {
+        const first = rows[0]!;
+        result.push({
+          jobId,
+          clientId,
+          createdAt: first.created_at,
+          total: rows.length,
+          done: rows.filter(r => r.migration_status === 'done').length,
+          failed: rows.filter(r => r.migration_status === 'failed').length,
+          excluded: rows.filter(r => r.doc_status === 'excluded').length,
+        });
+      }
+
+      return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     },
   };
 }

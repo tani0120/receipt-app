@@ -180,6 +180,12 @@ export const routes: RouteRecordRaw[] = [
   },
 
   {
+    path: '/output/:clientId',
+    name: 'MockOutputPortal',
+    component: () => import('@/mocks/views/MockOutputPortalPage.vue'),
+    props: true
+  },
+  {
     path: '/export/:clientId',
     name: 'MockExport',
     component: () => import('@/mocks/views/MockExportPage.vue'),
@@ -195,6 +201,12 @@ export const routes: RouteRecordRaw[] = [
     path: '/export-detail/:clientId/:historyId',
     name: 'MockExportDetail',
     component: () => import('@/mocks/views/MockExportDetailPage.vue'),
+    props: true
+  },
+  {
+    path: '/excluded-history/:clientId',
+    name: 'MockExcludedHistory',
+    component: () => import('@/mocks/views/MockExcludedHistoryPage.vue'),
     props: true
   },
   {

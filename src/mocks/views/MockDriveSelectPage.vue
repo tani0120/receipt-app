@@ -30,7 +30,7 @@
         <button class="ds-submit-btn" :disabled="allDocsView.length === 0" @click="showCompleteModal = true">
           <i class="fa-solid fa-paper-plane"></i> 確定送信
         </button>
-        <button v-if="excludedCount > 0" class="ds-import-btn" @click="downloadExcludedZip" :disabled="isDownloadingZip" style="margin-left: 8px;">
+        <button class="ds-import-btn" @click="goExcludedHistory" style="margin-left: 8px;" title="仕訳外ダウンロード履歴">
           <span class="ds-import-icon">
             <i class="fa-solid fa-file-zipper"></i>
           </span>
@@ -200,64 +200,22 @@
       </div>
     </div>
 
-    <!-- 確定送信モーダル（人間が明示的に開く） -->
-    <div v-if="showCompleteModal" class="ds-modal-overlay" @click.self="!isMigrating && (showCompleteModal = false)">
+    <!-- 確定送信モーダル（確認のみ。移行中/完了はバックグラウンド+トースト通知） -->
+    <div v-if="showCompleteModal" class="ds-modal-overlay" @click.self="showCompleteModal = false">
       <div class="ds-modal">
-        <!-- 移行中: プログレスバー -->
-        <template v-if="isMigrating">
-          <div class="ds-modal-icon" style="color: #3b82f6;"><i class="fa-solid fa-spinner fa-spin"></i></div>
-          <div class="ds-modal-title">移行中...</div>
-          <div class="ds-modal-text">
-            {{ migrationProgress.done + migrationProgress.failed }} / {{ migrationProgress.total }}件完了
-          </div>
-          <div style="margin: 12px 0; background: #e5e7eb; border-radius: 4px; height: 8px; overflow: hidden;">
-            <div style="height: 100%; border-radius: 4px; transition: width 0.5s;"
-              :style="{
-                width: migrationProgress.total > 0 ? ((migrationProgress.done + migrationProgress.failed) / migrationProgress.total * 100) + '%' : '0%',
-                background: migrationProgress.failed > 0 ? '#f59e0b' : '#3b82f6',
-              }"
-            ></div>
-          </div>
-          <div v-if="migrationProgress.failed > 0" class="ds-modal-text" style="color: #dc2626;">
-            ⚠ {{ migrationProgress.failed }}件失敗
-          </div>
-        </template>
-        <!-- 移行完了 -->
-        <template v-else-if="migrationDone">
-          <div class="ds-modal-icon" style="color: #10b981;"><i class="fa-solid fa-circle-check"></i></div>
-          <div class="ds-modal-title">移行完了</div>
-          <div class="ds-modal-text">
-            {{ migrationProgress.done }}件移行完了。
-            <span v-if="migrationProgress.failed > 0" style="color: #dc2626;">
-              {{ migrationProgress.failed }}件失敗。管理画面で確認してください。
-            </span>
-          </div>
-          <div v-if="excludedInMigration > 0" class="ds-modal-text" style="margin-top: 8px; color: #6b7280;">
-            仕訳外: {{ excludedInMigration }}件
-          </div>
-          <div class="ds-modal-actions">
-            <button v-if="excludedInMigration > 0" class="ds-modal-btn ds-modal-btn-yes" @click="downloadExcludedZip" :disabled="isDownloadingZip" style="background: #6366f1;">
-              <i class="fa-solid fa-file-zipper"></i> {{ isDownloadingZip ? 'DL中...' : '仕訳外ZIP DL' }}
-            </button>
-            <button class="ds-modal-btn ds-modal-btn-yes" @click="finishMigration"><i class="fa-solid fa-check"></i> 閉じる</button>
-          </div>
-        </template>
-        <!-- 確定送信確認 -->
-        <template v-else>
-          <div class="ds-modal-icon"><i class="fa-solid fa-paper-plane"></i></div>
-          <div class="ds-modal-title">確定送信</div>
-          <div class="ds-modal-text">
-            仕訳対象: {{ counts.target }}件 / 根拠資料: {{ counts.supporting }}件 / 仕訳外: {{ counts.excluded }}件
-            <span v-if="counts.pending > 0" style="display: block; margin-top: 6px; color: #d97706; font-weight: 600;">
-              ⚠ 未処理: {{ counts.pending }}件（送信されません）
-            </span>
-          </div>
-          <div class="ds-modal-question">仕訳処理に送信しますか？</div>
-          <div class="ds-modal-actions">
-            <button class="ds-modal-btn ds-modal-btn-yes" @click="sendToProcess"><i class="fa-solid fa-paper-plane"></i> 送信</button>
-            <button class="ds-modal-btn ds-modal-btn-no" @click="showCompleteModal = false">キャンセル</button>
-          </div>
-        </template>
+        <div class="ds-modal-icon"><i class="fa-solid fa-paper-plane"></i></div>
+        <div class="ds-modal-title">確定送信</div>
+        <div class="ds-modal-text">
+          仕訳対象: {{ counts.target }}件 / 根拠資料: {{ counts.supporting }}件 / 仕訳外: {{ counts.excluded }}件
+          <span v-if="counts.pending > 0" style="display: block; margin-top: 6px; color: #d97706; font-weight: 600;">
+            ⚠ 未処理: {{ counts.pending }}件（送信されません）
+          </span>
+        </div>
+        <div class="ds-modal-question">仕訳処理に送信しますか？</div>
+        <div class="ds-modal-actions">
+          <button class="ds-modal-btn ds-modal-btn-yes" @click="sendToProcess" :disabled="isSending"><i class="fa-solid fa-paper-plane"></i> {{ isSending ? '送信中...' : '送信' }}</button>
+          <button class="ds-modal-btn ds-modal-btn-no" @click="showCompleteModal = false" :disabled="isSending">キャンセル</button>
+        </div>
       </div>
     </div>
 
@@ -290,118 +248,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { usePdfRenderer } from '@/composables/usePdfRenderer';
 import { useClients } from '@/features/client-management/composables/useClients';
-import { useDocuments } from '@/composables/useDocuments';
 import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
-import type { DocEntry, DocStatus, DocSource } from '@/repositories/types';
-import type { DriveFileItemWithThumbnail } from '@/api/services/drive/driveService';
+import { useGlobalToast } from '@/mocks/composables/useGlobalToast';
+import { useMigrationPoller } from '@/mocks/composables/useMigrationPoller';
+import { useDriveDocuments } from '@/mocks/composables/useDriveDocuments';
+import { useDocSelection } from '@/mocks/composables/useDocSelection';
+import { usePreviewZoom } from '@/mocks/composables/usePreviewZoom';
+import type { DocStatus } from '@/repositories/types';
 
 const route = useRoute();
+const router = useRouter();
 const clientId = computed(() => (route.params.clientId as string) || '');
 const { currentClient } = useClients();
-const { updateStatus: updateDocStatus, addDocuments: addDocs, allDocuments } = useDocuments();
 
 // --- ページ離脱ガード（選別中の離脱を警告） ---
 const { markDirty, markClean } = useUnsavedGuard(null);
-
-// --- ローディング（fetchDriveFilesより前に宣言） ---
-const isLoading = ref(false);
-
-// ===== Drive借景方式: Drive APIからファイル一覧を取得 =====
-
-/** Driveから取得した生データ */
-const driveFiles = ref<DriveFileItemWithThumbnail[]>([]);
-/** 選別結果をローカルで保持（Driveには書き込まない） */
-const driveSelections = ref<Map<string, DocStatus>>(new Map());
-
-/** Driveファイル一覧取得（サムネイルbase64付き） → doc-storeにも登録して永続化 */
-const fetchDriveFiles = async () => {
-  const folderId = currentClient.value?.sharedFolderId;
-  if (!folderId) return;
-
-  isLoading.value = true;
-  try {
-    const res = await fetch(`/api/drive/files?folderId=${encodeURIComponent(folderId)}&withThumbnails=true`);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(data.error || `HTTP ${res.status}`);
-    }
-    const data = await res.json() as { files: DriveFileItemWithThumbnail[] };
-    driveFiles.value = data.files;
-
-    // allDocumentsからDriveファイルの既存statusを復元（リロード対策）
-    for (const f of data.files) {
-      const existing = allDocuments.value.find(d => d.driveFileId === f.id);
-      if (existing) {
-        driveSelections.value.set(f.id, existing.status);
-      } else if (!driveSelections.value.has(f.id)) {
-        driveSelections.value.set(f.id, 'pending');
-      }
-    }
-
-    // DriveファイルをuseDocuments経由でallDocuments ref + doc-storeに登録（重複排除付き）
-    const driveDocEntries: DocEntry[] = data.files.map(f => ({
-      id: f.id,
-      clientId: clientId.value,
-      source: 'drive' as DocSource,
-      fileName: f.name,
-      fileType: f.mimeType || 'application/octet-stream',
-      fileSize: f.size || 0,
-      fileHash: null,
-      driveFileId: f.id,
-      thumbnailUrl: `/api/drive/preview/${f.id}?clientId=${encodeURIComponent(clientId.value)}`,
-      previewUrl: `/api/drive/preview/${f.id}?clientId=${encodeURIComponent(clientId.value)}`,
-      status: driveSelections.value.get(f.id) || 'pending' as DocStatus,
-      receivedAt: f.createdTime || new Date().toISOString(),
-      batchId: null,
-      journalId: null,
-      createdBy: null,
-      updatedBy: null,
-      updatedAt: null,
-      statusChangedBy: null,
-      statusChangedAt: null,
-    }));
-    if (driveDocEntries.length > 0) {
-      addDocs(driveDocEntries);
-    }
-
-    console.log(`[MockDriveSelectPage] Driveファイル${data.files.length}件取得 → doc-storeに登録`);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    alert(`Driveファイル取得エラー: ${msg}`);
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-// ===== doc-store方式: 独自アップロード済みファイルを取得 =====
-
-/** doc-storeから取得した独自アップロードファイル */
-const uploadedDocs = ref<DocEntry[]>([]);
-
-/** doc-storeからpending状態の独自アップロードファイルを取得 */
-const fetchUploadedDocs = async () => {
-  try {
-    const res = await fetch(`/api/doc-store?clientId=${encodeURIComponent(clientId.value)}`);
-    if (!res.ok) return;
-    const data = await res.json() as { documents: DocEntry[] };
-    // 独自アップロードファイルを取得（Driveファイルは除外、全status表示）
-    uploadedDocs.value = data.documents.filter(
-      (d: DocEntry) => d.source !== 'drive'
-    );
-    console.log(`[MockDriveSelectPage] doc-storeから${uploadedDocs.value.length}件取得（独自アップロード）`);
-  } catch (err) {
-    console.warn('[MockDriveSelectPage] doc-store取得失敗:', err);
-  }
-};
-
-onMounted(async () => {
-  await Promise.all([fetchDriveFiles(), fetchUploadedDocs()]);
-  fetchExcludedCount();
-});
 
 // --- PDF.js ---
 const {
@@ -414,146 +279,75 @@ const {
   destroy: pdfDestroy,
 } = usePdfRenderer();
 
-// --- ビュー型（Drive + 独自アップロード マージ） ---
-interface DocView {
-  id: string;
-  source: string;          // 'drive' | 'staff-upload' | 'guest-upload'
-  fileName: string;
-  fileType: string;
-  fileSize: string;
-  uploadDate: string;
-  uploadDateRaw: number;   // ソート用Unix時刻
-  thumbnailBase64: string;
-  previewUrlFull: string;  // プレビュー用フルURL
-  status: DocStatus;
-  mimeType: string;
-}
+// ===== Composable 1: データ取得・マージ =====
+const {
+  driveFiles,
+  uploadedDocs,
+  driveSelections,
+  excludedCount,
+  isLoading,
+  allDocsView,
+  documents,
+  activeFilter,
+  fetchDriveFiles,
+  fetchUploadedDocs,
+  fetchExcludedCount,
+  handleReload,
+  toggleFilter,
+} = useDriveDocuments(
+  clientId,
+  () => currentClient.value?.sharedFolderId,
+  () => { selectedIdx.value = 0; },
+);
 
-const formatFileSize = (bytes: number) =>
-  bytes >= 1024 * 1024
-    ? (bytes / (1024 * 1024)).toFixed(1) + 'MB'
-    : Math.round(bytes / 1024) + 'KB';
+// ===== Composable 3: プレビュー・ズーム =====
+const {
+  selectedIdx,
+  selected,
+  previewUrl,
+  isPdf,
+  zoomScale,
+  doZoomIn,
+  doZoomOut,
+  doZoomReset,
+  previewWrapperStyle,
+  selectDoc,
+  simulateLoad,
+} = usePreviewZoom(documents, isLoading, pdfRenderPage, pdfDestroy);
 
-const formatDate = (dateStr: string) =>
-  dateStr
-    ? new Date(dateStr).toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')
-    : '';
+// ===== Composable 2: 選別操作 =====
+const {
+  undoStack,
+  redoStack,
+  canUndo,
+  canRedo,
+  undo,
+  redo,
+  setStatus,
+  resetStatus,
+  bulkSetStatus,
+  checkedIds,
+  toggleCheck,
+  toggleCheckAll,
+  counts,
+  showCompleteModal,
+  showBulkModal,
+} = useDocSelection(
+  driveSelections,
+  uploadedDocs,
+  allDocsView,
+  documents,
+  selected,
+  selectedIdx,
+  markDirty,
+);
 
-const allDocsView = computed<DocView[]>(() => {
-  // ① Drive借景ファイル
-  const driveItems: DocView[] = driveFiles.value.map(f => ({
-    id: f.id,
-    source: 'drive',
-    fileName: f.name,
-    fileType: f.mimeType.split('/').pop()?.toUpperCase() || f.mimeType,
-    fileSize: formatFileSize(f.size),
-    uploadDate: formatDate(f.createdTime),
-    uploadDateRaw: f.createdTime ? new Date(f.createdTime).getTime() : 0,
-    thumbnailBase64: f.thumbnailBase64 || '',
-    previewUrlFull: `/api/drive/preview/${f.id}?clientId=${encodeURIComponent(clientId.value)}`,
-    status: driveSelections.value.get(f.id) || 'pending' as DocStatus,
-    mimeType: f.mimeType,
-  }));
-
-  // ② doc-store（独自アップロード: staff-upload / guest-upload）
-  const uploadItems: DocView[] = uploadedDocs.value.map(d => ({
-    id: d.id,
-    source: d.source,
-    fileName: d.fileName,
-    fileType: d.fileType.split('/').pop()?.toUpperCase() || d.fileType,
-    fileSize: formatFileSize(d.fileSize),
-    uploadDate: formatDate(d.receivedAt),
-    uploadDateRaw: d.receivedAt ? new Date(d.receivedAt).getTime() : 0,
-    thumbnailBase64: d.thumbnailUrl || '',
-    previewUrlFull: d.previewUrl || '',
-    status: d.status,
-    mimeType: d.fileType,
-  }));
-
-  // マージして日時降順ソート
-  return [...driveItems, ...uploadItems]
-    .sort((a, b) => b.uploadDateRaw - a.uploadDateRaw);
-});
-
-// --- フィルタ ---
-const activeFilter = ref<DocStatus | 'all'>('all');
-const toggleFilter = (filter: DocStatus | 'all') => {
-  activeFilter.value = activeFilter.value === filter ? 'all' : filter;
-  selectedIdx.value = 0;
-};
-
-const documents = computed<DocView[]>(() => {
-  if (activeFilter.value === 'all') return allDocsView.value;
-  return allDocsView.value.filter(d => d.status === activeFilter.value);
-});
-
-const selectedIdx = ref(0);
-const selected = computed(() => documents.value[selectedIdx.value] ?? null);
-
-// フィルタ中の選別操作でリストからファイルが消えた場合、selectedIdxをクランプ
-watch(() => documents.value.length, (len) => {
-  if (len === 0) { selectedIdx.value = 0; return; }
-  if (selectedIdx.value >= len) selectedIdx.value = len - 1;
-});
-
-/** プレビューURL（ソースに応じて分岐） */
-const previewUrl = computed(() => {
-  if (!selected.value) return '';
-  return selected.value.previewUrlFull;
-});
-
-/** PDFかどうか */
-const isPdf = computed(() => {
-  if (!selected.value) return false;
-  return selected.value.mimeType === 'application/pdf' || selected.value.fileName.toLowerCase().endsWith('.pdf');
-});
-
-// --- 拡大縮小（デフォルト50% = 枠と同じサイズ） ---
-const DEFAULT_ZOOM = 0.5;
-const zoomScale = ref(DEFAULT_ZOOM);
-const doZoomIn = () => { zoomScale.value = Math.min(zoomScale.value + 0.25, 5); renderIfPdf(); };
-const doZoomOut = () => { zoomScale.value = Math.max(zoomScale.value - 0.25, 0.25); renderIfPdf(); };
-const doZoomReset = () => { zoomScale.value = DEFAULT_ZOOM; renderIfPdf(); };
-
-/** プレビュー画像wrapperのスタイル（ズーム制御）
- * - 0.25 → 50% x 50%（縮小）
- * - 0.50 → 100% x 100%（デフォルト=枠全体にcontain）
- * - 1.00 → 200% x 200%（拡大、スクロール）
- */
-const previewWrapperStyle = computed(() => {
-  const pct = zoomScale.value * 200; // 0.5 → 100%
-  return {
-    width: pct + '%',
-    height: pct + '%',
-  };
-});
-
-/** PDFの場合、scaleを変更したらCanvas再描画 */
-const renderIfPdf = () => {
-  if (isPdf.value && selected.value) {
-    nextTick(() => pdfRenderPage(previewUrl.value, zoomScale.value * 2));
-  }
-};
-
-// --- ローディング（プレビュー切り替え時のSupabaseレイテンシシミュレーション） ---
-const simulateLoad = async () => {
-  isLoading.value = true;
-  await new Promise(r => setTimeout(r, 400));
-  isLoading.value = false;
-
-  // PDF描画
-  if (isPdf.value && selected.value) {
-    await nextTick();
-    pdfRenderPage(previewUrl.value, zoomScale.value * 2);
-  }
-};
-
-watch(selectedIdx, () => {
-  zoomScale.value = DEFAULT_ZOOM;
-  pdfDestroy();
+// --- onMounted ---
+onMounted(async () => {
+  await Promise.all([fetchDriveFiles(), fetchUploadedDocs()]);
+  fetchExcludedCount();
   simulateLoad();
 });
-onMounted(() => { simulateLoad(); });
 
 // PDFページ変更時に再描画
 watch(pdfCurrentPage, () => {
@@ -562,136 +356,12 @@ watch(pdfCurrentPage, () => {
   }
 });
 
-const selectDoc = (idx: number) => { selectedIdx.value = idx; };
+// --- バックグラウンド移行基盤 ---
+const { showToast } = useGlobalToast();
+const { startPolling } = useMigrationPoller();
+const isSending = ref(false);
 
-// --- 件数集計（全件から算出。フィルタの影響を受けない） ---
-const counts = computed(() => {
-  const docs = allDocsView.value;
-  return {
-    pending:    docs.filter(d => d.status === 'pending').length,
-    target:     docs.filter(d => d.status === 'target').length,
-    supporting: docs.filter(d => d.status === 'supporting').length,
-    excluded:   docs.filter(d => d.status === 'excluded').length,
-  };
-});
-
-// --- 複数選択（チェックボックス） ---
-const checkedIds = ref<Set<string>>(new Set());
-const toggleCheck = (id: string) => {
-  const next = new Set(checkedIds.value);
-  if (next.has(id)) next.delete(id);
-  else next.add(id);
-  checkedIds.value = next;
-};
-const toggleCheckAll = () => {
-  if (checkedIds.value.size === documents.value.length) {
-    checkedIds.value = new Set();
-  } else {
-    checkedIds.value = new Set(documents.value.map(d => d.id));
-  }
-};
-
-// --- Undo/Redo（配列ベース: 一括操作をまとめてUndo可能） ---
-interface HistoryEntry { docId: string; from: DocStatus; to: DocStatus; }
-type HistoryGroup = HistoryEntry[];
-const undoStack = ref<HistoryGroup[]>([]);
-const redoStack = ref<HistoryGroup[]>([]);
-const canUndo = computed(() => undoStack.value.length > 0);
-const canRedo = computed(() => redoStack.value.length > 0);
-
-const pushHistoryGroup = (entries: HistoryEntry[]) => {
-  if (entries.length === 0) return;
-  undoStack.value.push(entries);
-  redoStack.value = [];
-};
-const undo = () => {
-  const group = undoStack.value.pop();
-  if (!group) return;
-  for (const entry of group) {
-    driveSelections.value.set(entry.docId, entry.from);
-    const doc = uploadedDocs.value.find(d => d.id === entry.docId);
-    if (doc) doc.status = entry.from;
-    updateDocStatus(entry.docId, entry.from);
-  }
-  redoStack.value.push(group);
-  showCompleteModal.value = false;
-};
-const redo = () => {
-  const group = redoStack.value.pop();
-  if (!group) return;
-  for (const entry of group) {
-    driveSelections.value.set(entry.docId, entry.to);
-    const doc = uploadedDocs.value.find(d => d.id === entry.docId);
-    if (doc) doc.status = entry.to;
-    updateDocStatus(entry.docId, entry.to);
-  }
-  undoStack.value.push(group);
-};
-
-// --- モーダル ---
-const showCompleteModal = ref(false);
-const showBulkModal = ref(false);
-
-// --- ステータス設定（全ソース共通: useDocuments経由でallDocuments ref + サーバー両方を更新） ---
-const applyStatus = (docId: string, source: string, status: DocStatus) => {
-  if (source === 'drive') {
-    driveSelections.value.set(docId, status);
-  } else {
-    const doc = uploadedDocs.value.find(d => d.id === docId);
-    if (doc) doc.status = status;
-  }
-  updateDocStatus(docId, status);
-};
-
-const setStatus = (status: DocStatus) => {
-  if (!selected.value) return;
-  const currentStatus = selected.value.status as DocStatus;
-  if (currentStatus === status) return;
-
-  pushHistoryGroup([{ docId: selected.value.id, from: currentStatus, to: status }]);
-  applyStatus(selected.value.id, selected.value.source, status);
-  markDirty(`${selected.value.fileName}: ${statusLabel(status)}`);
-
-  // 次のpendingに自動移動
-  const nextPendingIdx = documents.value.findIndex((d, i) => i > selectedIdx.value && d.status === 'pending');
-  if (nextPendingIdx !== -1) {
-    selectedIdx.value = nextPendingIdx;
-  } else {
-    const prevPendingIdx = documents.value.findIndex(d => d.status === 'pending');
-    if (prevPendingIdx !== -1) selectedIdx.value = prevPendingIdx;
-  }
-};
-
-const resetStatus = () => {
-  if (!selected.value || selected.value.status === 'pending') return;
-  pushHistoryGroup([{ docId: selected.value.id, from: selected.value.status as DocStatus, to: 'pending' }]);
-  applyStatus(selected.value.id, selected.value.source, 'pending');
-  markDirty(`${selected.value.fileName}: 未処理に戻す`);
-};
-
-// --- 一括操作 ---
-const bulkSetStatus = (status: DocStatus) => {
-  const entries: HistoryEntry[] = [];
-  for (const id of checkedIds.value) {
-    const doc = documents.value.find(d => d.id === id);
-    if (!doc || (doc.status as DocStatus) === status) continue;
-    entries.push({ docId: doc.id, from: doc.status as DocStatus, to: status });
-    applyStatus(doc.id, doc.source, status);
-  }
-  if (entries.length > 0) {
-    pushHistoryGroup(entries);
-    markDirty(`${entries.length}件を一括「${statusLabel(status)}」に変更`);
-  }
-  checkedIds.value = new Set();
-  showBulkModal.value = false;
-};
-
-// --- 移行進捗状態 ---
-const isMigrating = ref(false);
-const migrationDone = ref(false);
-const migrationProgress = ref({ total: 0, queued: 0, processing: 0, done: 0, failed: 0 });
-
-// --- 仕訳処理に送る（Phase D: POST /api/drive/migrate + ポーリング） ---
+// --- 仕訳処理に送る（Phase D） ---
 const sendToProcess = async () => {
   const filesToMigrate = documents.value
     .filter(d => d.status !== 'pending')
@@ -702,8 +372,7 @@ const sendToProcess = async () => {
     return;
   }
 
-  isMigrating.value = true;
-  migrationDone.value = false;
+  isSending.value = true;
 
   try {
     const res = await fetch('/api/drive/migrate', {
@@ -723,93 +392,44 @@ const sendToProcess = async () => {
     const result = await res.json() as { jobId: string; queued: number };
     console.log(`[MockDriveSelectPage] 移行ジョブ登録: jobId=${result.jobId}, queued=${result.queued}`);
 
-    migrationProgress.value = { total: result.queued, queued: result.queued, processing: 0, done: 0, failed: 0 };
+    // ポーリングをグローバルcomposableに委譲
+    startPolling(
+      result.jobId,
+      currentClient.value?.companyName ?? '',
+      clientId.value,
+      result.queued,
+      counts.value.excluded,
+    );
 
-    // ポーリング（3秒間隔）
-    const pollInterval = setInterval(async () => {
-      try {
-        const statusRes = await fetch(`/api/drive/migrate/status/${result.jobId}`);
-        if (!statusRes.ok) return;
-        const status = await statusRes.json() as { total: number; queued: number; processing: number; done: number; failed: number };
-        migrationProgress.value = status;
+    showCompleteModal.value = false;
+    markClean();
 
-        // 全件完了（queued + processing === 0）
-        if (status.queued === 0 && status.processing === 0) {
-          clearInterval(pollInterval);
-          isMigrating.value = false;
-          migrationDone.value = true;
-          console.log(`[MockDriveSelectPage] 移行完了: done=${status.done}, failed=${status.failed}`);
-        }
-      } catch {
-        // ポーリングエラーは無視（次回リトライ）
-      }
-    }, 3000);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    alert(`移行エラー: ${msg}`);
-    isMigrating.value = false;
-  }
-};
+    showToast({
+      message: '送信完了しました。処理はバックグラウンドで実行されます。',
+      type: 'info',
+      icon: 'fa-solid fa-paper-plane',
+    });
 
-// --- 移行完了後のリセット ---
-const finishMigration = async () => {
-  showCompleteModal.value = false;
-  migrationDone.value = false;
-  await fetchDriveFiles();
-  await fetchExcludedCount();
-  selectedIdx.value = 0;
-  undoStack.value = [];
-  redoStack.value = [];
-  markClean();
-};
-
-// --- 仕訳外ZIP DL（Phase E-5/E-6） ---
-const excludedCount = ref(0);
-const isDownloadingZip = ref(false);
-const excludedInMigration = computed(() => counts.value.excluded);
-
-const fetchExcludedCount = async () => {
-  try {
-    const res = await fetch(`/api/drive/excluded-count/${clientId.value}`);
-    if (res.ok) {
-      const data = await res.json() as { count: number };
-      excludedCount.value = data.count;
-    }
-  } catch {
-    // 取得失敗は無視
-  }
-};
-
-const downloadExcludedZip = async () => {
-  isDownloadingZip.value = true;
-  try {
-    const res = await fetch(`/api/drive/download-excluded/${clientId.value}`);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(data.error || `HTTP ${res.status}`);
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = res.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'excluded.zip';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    // DL後にカウント更新
+    // 画面リセット
+    await fetchDriveFiles();
     await fetchExcludedCount();
+    selectedIdx.value = 0;
+    undoStack.value = [];
+    redoStack.value = [];
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    alert(`ZIP DLエラー: ${msg}`);
+    showToast({
+      message: `移行エラー: ${msg}`,
+      type: 'error',
+    });
   } finally {
-    isDownloadingZip.value = false;
+    isSending.value = false;
   }
 };
 
-// --- リロード（Drive + doc-store両方を再取得） ---
-const handleReload = async () => {
-  await Promise.all([fetchDriveFiles(), fetchUploadedDocs()]);
+// --- 仕訳外ダウンロード履歴ページ遷移 ---
+const goExcludedHistory = () => {
+  router.push(`/excluded-history/${clientId.value}`);
 };
 
 // --- ステータス表示 ---

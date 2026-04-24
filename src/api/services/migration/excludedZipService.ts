@@ -21,15 +21,17 @@ import {
  * @param clientId 顧問先ID
  * @param output 書き込み先ストリーム（HTTPレスポンス等）
  * @param all trueなら全件（DL済み含む）、falseなら未DLのみ
+ * @param jobId 指定時はそのジョブのexcludedファイルのみ
  * @returns ZIP化した件数
  */
 export async function generateExcludedZip(
   clientId: string,
   output: Writable,
   all: boolean = false,
+  jobId?: string,
 ): Promise<number> {
   // 1. excludedジョブ取得
-  const jobs = await getExcludedJobs(clientId, all);
+  const jobs = await getExcludedJobs(clientId, all, jobId);
 
   if (jobs.length === 0) {
     // ストリームを閉じないとクライアントがハングする
@@ -78,8 +80,8 @@ export async function generateExcludedZip(
   // 4. ZIP確定
   await archive.finalize();
 
-  // 5. DL済みマーク（未DLモードの場合のみ）
-  if (!all && downloadedIds.length > 0) {
+  // 5. DL済みマーク（DLしたファイルは常にマーク）
+  if (downloadedIds.length > 0) {
     try {
       await markDownloaded(downloadedIds);
       console.log(`[excludedZipService] ${downloadedIds.length}件をDL済みマーク`);

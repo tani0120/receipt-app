@@ -17,11 +17,15 @@
             </transition>
           </router-view>
     </main>
+
+    <!-- グローバルトースト通知（全画面共通） -->
+    <GlobalToast />
   </div>
 </template>
 
 <script setup lang="ts">
 import MockNavBar from '@/mocks/components/MockNavBar.vue';
+import GlobalToast from '@/mocks/components/GlobalToast.vue';
 import { useRoute } from 'vue-router';
 import { computed } from 'vue';
 

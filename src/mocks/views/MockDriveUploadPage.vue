@@ -169,9 +169,8 @@
           <button
             v-if="excludedInMigration > 0"
             class="w-full bg-indigo-500 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-transform mb-2"
-            :disabled="isDownloadingZip"
-            @click="downloadExcludedZip"
-          >{{ isDownloadingZip ? 'DL中...' : '📥 仕訳外ZIP DL' }}</button>
+            @click="router.push(`/excluded-history/${clientId}`)"
+          >📥 仕訳外ダウンロード履歴へ</button>
           <button
             class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-transform"
             @click="finishMigration"
@@ -208,7 +207,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import PortalHeader from '@/mocks/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard'
@@ -217,6 +216,7 @@ import type { DriveFileItemWithThumbnail } from '@/api/services/drive/driveServi
 
 // ===== ルート =====
 const route = useRoute()
+const router = useRouter()
 const clientId = route.params.clientId as string
 const { clients } = useClients()
 const clientName = computed(() => clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId)
@@ -394,9 +394,8 @@ const finishMigration = async () => {
   markClean()
 }
 
-// ===== 仕訳外ZIP DL（Phase E-5/E-6） =====
+// ===== 仕訳外関連 =====
 const excludedCount = ref(0)
-const isDownloadingZip = ref(false)
 const excludedInMigration = computed(() => counts.value.excluded)
 
 const fetchExcludedCount = async () => {
@@ -407,32 +406,6 @@ const fetchExcludedCount = async () => {
       excludedCount.value = data.count
     }
   } catch { /* 無視 */ }
-}
-
-const downloadExcludedZip = async () => {
-  isDownloadingZip.value = true
-  try {
-    const res = await fetch(`/api/drive/download-excluded/${clientId}`)
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(data.error || `HTTP ${res.status}`)
-    }
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = res.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'excluded.zip'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    await fetchExcludedCount()
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    alert(`ZIP DLエラー: ${msg}`)
-  } finally {
-    isDownloadingZip.value = false
-  }
 }
 
 // ===== ユーティリティ =====
