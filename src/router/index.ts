@@ -353,10 +353,11 @@ export const routes: RouteRecordRaw[] = [
   },
   // 旧パスリダイレクト（/clients/list → /master/clients）
   { path: '/clients/list', redirect: '/master/clients' },
-  // /master ハブは廃止 → 事務所共通マスタ/勘定科目にリダイレクト
+  // /master ハブ（勘定科目マスタ + 税区分マスタの分岐ページ）
   {
     path: '/master',
-    redirect: '/master/accounts'
+    name: 'MasterHub',
+    component: () => import('@/mocks/views/MockMasterHubPage.vue')
   },
   {
     path: '/master/costs',

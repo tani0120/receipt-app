@@ -18,29 +18,35 @@ import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
 // 型定義
 // ============================================================
 
-/** MF CSV 1行分のデータ */
+/**
+ * MF CSV 1行分のデータ（23列）
+ * 列順序: MF実機エクスポート（課税事業者27列版）に準拠。
+ * 根拠: 部門→取引先→税区分→インボイス→金額(円)→税額
+ */
 export interface MfCsvRow {
-  取引No: string;
-  取引日: string;
-  借方勘定科目: string;
-  借方補助科目: string;
-  借方部門: string;
-  借方税区分: string;
-  借方金額: string;
-  借方税額: string;
-  貸方勘定科目: string;
-  貸方補助科目: string;
-  貸方部門: string;
-  貸方税区分: string;
-  貸方金額: string;
-  貸方税額: string;
-  摘要: string;
-  仕訳メモ: string;
-  タグ: string;
-  MF仕訳タイプ: string;
-  決算整理仕訳: string;
+  '取引No': string;
+  '取引日': string;
+  '借方勘定科目': string;
+  '借方補助科目': string;
+  '借方部門': string;
+  '借方取引先': string;
+  '借方税区分': string;
   '借方インボイス': string;
+  '借方金額(円)': string;
+  '借方税額': string;
+  '貸方勘定科目': string;
+  '貸方補助科目': string;
+  '貸方部門': string;
+  '貸方取引先': string;
+  '貸方税区分': string;
   '貸方インボイス': string;
+  '貸方金額(円)': string;
+  '貸方税額': string;
+  '摘要': string;
+  '仕訳メモ': string;
+  'タグ': string;
+  'MF仕訳タイプ': string;
+  '決算整理仕訳': string;
 }
 
 /** ID→MF名称変換コールバック */
@@ -165,27 +171,32 @@ export function expandJournalToMfRows(
     const credit: JournalEntryLine | undefined = credits[i];
 
     rows.push({
-      取引No: txNo,
-      取引日: txDate,
-      借方勘定科目: debit ? resolveAccountName(debit.account) : '',
-      借方補助科目: debit?.sub_account ?? '',
-      借方部門: '',
-      借方税区分: debit ? resolveTaxCategoryName(debit.tax_category_id) : '',
-      借方金額: debit?.amount != null ? String(debit.amount) : '',
-      借方税額: '',
-      貸方勘定科目: credit ? resolveAccountName(credit.account) : '',
-      貸方補助科目: credit?.sub_account ?? '',
-      貸方部門: '',
-      貸方税区分: credit ? resolveTaxCategoryName(credit.tax_category_id) : '',
-      貸方金額: credit?.amount != null ? String(credit.amount) : '',
-      貸方税額: '',
-      摘要: description,
-      仕訳メモ: '',
-      タグ: '',
-      MF仕訳タイプ: 'インポート',
-      決算整理仕訳: '',
+      '取引No': txNo,
+      '取引日': txDate,
+      // 借方: 科目→補助→部門→取引先→税区分→インボイス→金額(円)→税額
+      '借方勘定科目': debit ? resolveAccountName(debit.account) : '',
+      '借方補助科目': debit?.sub_account ?? '',
+      '借方部門': '',
+      '借方取引先': '',
+      '借方税区分': debit ? resolveTaxCategoryName(debit.tax_category_id) : '',
       '借方インボイス': i === 0 ? invoiceDebit : '',
+      '借方金額(円)': debit?.amount != null ? String(debit.amount) : '',
+      '借方税額': '',
+      // 貸方: 科目→補助→部門→取引先→税区分→インボイス→金額(円)→税額
+      '貸方勘定科目': credit ? resolveAccountName(credit.account) : '',
+      '貸方補助科目': credit?.sub_account ?? '',
+      '貸方部門': '',
+      '貸方取引先': '',
+      '貸方税区分': credit ? resolveTaxCategoryName(credit.tax_category_id) : '',
       '貸方インボイス': i === 0 ? invoiceCredit : '',
+      '貸方金額(円)': credit?.amount != null ? String(credit.amount) : '',
+      '貸方税額': '',
+      // 共通
+      '摘要': description,
+      '仕訳メモ': '',
+      'タグ': '',
+      'MF仕訳タイプ': 'インポート',
+      '決算整理仕訳': '',
     });
   }
 
@@ -196,13 +207,14 @@ export function expandJournalToMfRows(
 // CSV文字列生成
 // ============================================================
 
-/** MF CSV 21列のヘッダー順序 */
+/** MF CSV 23列のヘッダー順序（MF実機エクスポート準拠） */
 const MF_CSV_HEADERS: (keyof MfCsvRow)[] = [
   '取引No', '取引日',
-  '借方勘定科目', '借方補助科目', '借方部門', '借方税区分', '借方金額', '借方税額',
-  '貸方勘定科目', '貸方補助科目', '貸方部門', '貸方税区分', '貸方金額', '貸方税額',
+  '借方勘定科目', '借方補助科目', '借方部門', '借方取引先',
+  '借方税区分', '借方インボイス', '借方金額(円)', '借方税額',
+  '貸方勘定科目', '貸方補助科目', '貸方部門', '貸方取引先',
+  '貸方税区分', '貸方インボイス', '貸方金額(円)', '貸方税額',
   '摘要', '仕訳メモ', 'タグ', 'MF仕訳タイプ', '決算整理仕訳',
-  '借方インボイス', '貸方インボイス',
 ];
 
 /**

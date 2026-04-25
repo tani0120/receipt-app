@@ -98,7 +98,7 @@ const defaultMenuItems: MenuItem[] = [
   { key: 'clients',    label: '顧問先管理',   icon: 'fa-solid fa-building',               color: 'linear-gradient(135deg, #06b6d4, #0891b2)', path: '/master/clients' },
   { key: 'partners',   label: '提携管理',     icon: 'fa-solid fa-handshake',              color: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', path: null },
   { key: 'staff',      label: 'スタッフ管理', icon: 'fa-solid fa-users',                  color: 'linear-gradient(135deg, #10b981, #059669)', path: '/master/staff' },
-  { key: 'master',     label: 'マスタ管理',   icon: 'fa-solid fa-warehouse',              color: 'linear-gradient(135deg, #6366f1, #4f46e5)', path: '/master/accounts' },
+  { key: 'master',     label: 'マスタ管理',   icon: 'fa-solid fa-warehouse',              color: 'linear-gradient(135deg, #6366f1, #4f46e5)', path: '/master' },
   { key: 'costs',      label: '想定費用',     icon: 'fa-solid fa-calculator',             color: 'linear-gradient(135deg, #f59e0b, #d97706)', path: '/master/costs' },
   { key: 'settings',   label: '設定管理',     icon: 'fa-solid fa-gear',                   color: 'linear-gradient(135deg, #64748b, #475569)', path: '/master/settings' },
   { key: 'conversion', label: 'データ変換',   icon: 'fa-solid fa-arrow-right-arrow-left', color: 'linear-gradient(135deg, #ec4899, #db2777)', path: '/old/data-conversion/demo' },
