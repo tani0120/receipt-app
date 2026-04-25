@@ -11,8 +11,8 @@
           <i class="fa-solid fa-arrow-right-arrow-left text-green-600 text-xl"></i>
         </div>
         <div>
-           <h1 class="text-xl font-bold text-slate-800">会計ソフトデータ変換</h1>
-           <p class="text-xs text-gray-400">CSVデータを他社ソフト形式に変換します</p>
+           <h1 class="text-xl font-bold text-slate-800">口座・カード変換</h1>
+           <p class="text-xs text-gray-400">口座・カードCSVをMFインポート用に変換します</p>
         </div>
       </div>
     </header>
@@ -20,7 +20,7 @@
     <!-- [UI_Structure] Line:20 -->
     <main class="flex-1 p-8 overflow-y-auto relative z-10">
       <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Input Section -->
+        <!-- 入力セクション -->
         <div class="flex flex-col gap-6">
           <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
              <aaa_G_StepHeader stepNumber="1" title="変換設定" />
@@ -28,30 +28,30 @@
              <div class="space-y-4">
                  <div>
                      <label class="block text-xs font-bold text-gray-500 mb-1">顧問先名 <span class="text-red-500">*</span></label>
-                     <input v-model="form.clientName" type="text" class="w-full border border-gray-300 rounded p-2 text-sm">
+                     <input v-model="form.clientName" type="text" class="w-full border rounded p-2 text-sm" :class="validationErrors.clientName ? 'border-red-400 bg-red-50' : 'border-gray-300'">
+                     <p v-if="validationErrors.clientName" class="text-red-500 text-[10px] mt-1"><i class="fa-solid fa-circle-exclamation"></i> 顧問先名を入力してください</p>
                  </div>
 
+                 <!-- 出力する会計ソフト名 -->
                  <div>
-                     <label class="block text-xs font-bold text-gray-500 mb-1">移行前の会計ソフト名 <span class="text-xs font-normal text-gray-400">(自動検出)</span></label>
-                     <div class="relative">
-                         <input v-model="form.sourceSoftware" type="text" class="w-full border border-gray-300 rounded p-2 text-sm bg-gray-50" readonly>
-                         <i v-if="form.sourceSoftware" class="fa-solid fa-check text-green-500 absolute right-3 top-3 text-xs animate-bounce-in"></i>
+                     <label class="block text-xs font-bold text-gray-500 mb-2">出力する会計ソフト名 <span class="text-red-500">*</span></label>
+                     <div class="grid grid-cols-1 gap-3">
+                        <aaa_G_BrandRadio v-model="form.targetSoftware" value="MF" label="マネーフォワード" />
                      </div>
                  </div>
 
-                 <!-- Target Software Selection -->
+                 <!-- 出力形式 -->
                  <div>
-                     <label class="block text-xs font-bold text-gray-500 mb-2">移行したい会計ソフト名 <span class="text-red-500">*</span></label>
-                     <div class="grid grid-cols-3 gap-3">
-                        <aaa_G_BrandRadio v-model="form.targetSoftware" value="Yayoi" label="弥生会計" />
-                        <aaa_G_BrandRadio v-model="form.targetSoftware" value="MF" label="マネーフォワード" />
-                        <aaa_G_BrandRadio v-model="form.targetSoftware" value="Freee" label="freee" />
+                     <label class="block text-xs font-bold text-gray-500 mb-2">出力形式 <span class="text-red-500">*</span></label>
+                     <div class="grid grid-cols-2 gap-3">
+                        <aaa_G_BrandRadio v-model="form.outputFormat" value="meisai" label="明細CSV" />
+                        <aaa_G_BrandRadio v-model="form.outputFormat" value="shiwake" label="仕訳帳CSV" :disabled="true" badge="🚧 工事中" />
                      </div>
                  </div>
              </div>
           </div>
 
-          <!-- Upload Section -->
+          <!-- アップロードセクション -->
            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative overflow-hidden"
                 @drop.prevent="handleDrop" @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false">
 
@@ -66,7 +66,7 @@
                         <h3 class="font-bold text-gray-700 mb-1">ファイルをここにドラッグ＆ドロップ</h3>
                         <p class="text-xs text-gray-400 mb-4">または</p>
                         <button @click="(($refs.fileInput as HTMLInputElement).click())" class="pointer-events-auto bg-slate-800 text-white px-6 py-2 rounded-full text-xs font-bold hover:bg-slate-700 transition shadow hover:shadow-lg">ファイルを選択</button>
-                        <p class="text-[10px] text-gray-400 mt-4">対応形式: CSV (弥生, freee, MFなど)</p>
+                        <p class="text-[10px] text-gray-400 mt-4">対応形式: CSV（銀行口座・カード明細）</p>
                     </div>
                 </div>
 
@@ -87,7 +87,7 @@
                     </button>
                 </div>
 
-                <!-- Processing Overlay -->
+                <!-- 処理中オーバーレイ -->
                 <div v-if="isProcessing" class="absolute inset-0 bg-white/90 flex flex-col items-center justify-center p-6 z-10">
                     <div class="relative w-20 h-20 mb-4">
                         <div class="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
@@ -100,7 +100,7 @@
            </div>
         </div>
 
-        <!-- History Section -->
+        <!-- 履歴セクション -->
         <div class="flex flex-col h-full">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full relative overflow-hidden">
                 <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
@@ -133,10 +133,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent } from 'vue';
+import { ref, computed, reactive, defineAsyncComponent } from 'vue';
 import { aaa_useDataConversion } from '@/composables/useDataConversion';
 
-// Components
+// コンポーネント
 const aaa_G_StepHeader = defineAsyncComponent(() => import('@/components/ScreenG/G_StepHeader.vue'));
 const aaa_G_BrandRadio = defineAsyncComponent(() => import('@/components/ScreenG/G_BrandRadio.vue'));
 const aaa_G_HistoryItem = defineAsyncComponent(() => import('@/components/ScreenG/G_HistoryItem.vue'));
@@ -144,21 +144,30 @@ const aaa_G_HistoryItem = defineAsyncComponent(() => import('@/components/Screen
 // Composable
 const { logs, markAsDownloaded, removeLog, startDataConversion, processFile, isProcessing, loadingStatus } = aaa_useDataConversion();
 
-// State
+// 状態
 const isDragging = ref(false);
 const uploadedFile = ref<File | null>(null);
 const form = ref({
     clientName: '',
-    sourceSoftware: '',
-    targetSoftware: 'Yayoi'
+    targetSoftware: 'MF',
+    outputFormat: 'meisai'
 });
 
-// Computed
+// バリデーション
+const validationErrors = reactive({
+    clientName: false
+});
+
+const validateForm = (): boolean => {
+    validationErrors.clientName = !form.value.clientName.trim();
+    return !validationErrors.clientName;
+};
+
+// 算出プロパティ
 const canConvert = computed(() => {
     return !!(form.value.clientName && form.value.targetSoftware && uploadedFile.value);
 });
 
-// Sorting Logic (Moved logic to View, keeping UI specific sort here or move to composable? Keep here for now as UI pref)
 const sortedLogs = computed(() => {
     return [...logs.value].sort((a, b) => {
         if (a.isDownloaded !== b.isDownloaded) {
@@ -176,7 +185,7 @@ const formatFileSize = (bytes: number) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// Handlers
+// ハンドラー
 const handleDownload = (id: string) => {
     markAsDownloaded(id);
 };
@@ -208,22 +217,18 @@ const validateAndSetFile = async (file: File) => {
     try {
         await processFile(file);
         uploadedFile.value = file;
-        if (!form.value.sourceSoftware) {
-            setTimeout(() => {
-                form.value.sourceSoftware = '会計王';
-            }, 500);
-        }
     } catch (e: unknown) {
         alert(e instanceof Error ? e.message : String(e));
     }
 };
 
 const startConversion = async () => {
+    if (!validateForm()) return;
     if (!canConvert.value || !uploadedFile.value) return;
 
     const fileName = await startDataConversion(
         form.value.clientName,
-        form.value.sourceSoftware,
+        'CSV明細',
         form.value.targetSoftware,
         uploadedFile.value
     );
@@ -234,7 +239,7 @@ const startConversion = async () => {
 </script>
 
 <style scoped>
-/* [Style_Definition] Items 201-215 */
+/* [Style_Definition] アニメーション */
 .animate-slide-in-right {
     animation: slideInRight 0.5s ease-out;
 }
@@ -252,21 +257,3 @@ const startConversion = async () => {
 }
 </style>
 
-<style scoped>
-/* [Style_Definition] Items 201-215 */
-.animate-slide-in-right {
-    animation: slideInRight 0.5s ease-out;
-}
-@keyframes slideInRight {
-    from { opacity: 0; transform: translateX(20px); }
-    to { opacity: 1; transform: translateX(0); }
-}
-.animate-bounce-in {
-    animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-}
-@keyframes bounceIn {
-    0% { transform: scale(0); opacity: 0; }
-    60% { transform: scale(1.1); }
-    100% { transform: scale(1); opacity: 1; }
-}
-</style>

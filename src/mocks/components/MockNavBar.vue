@@ -146,7 +146,7 @@ const legacyItems = [
   { label: 'B:仕訳ステータス', icon: 'fa-solid fa-calculator', path: '/old/journals/demo' },
   { label: 'C:回収状況',       icon: 'fa-solid fa-calendar-days', path: '/old/collection/demo' },
   { label: 'D:AIルール',       icon: 'fa-solid fa-brain', path: '/old/ai-rules/demo' },
-  { label: 'G:データ変換',     icon: 'fa-solid fa-arrow-right-arrow-left', path: '/old/data-conversion/demo' },
+  { label: 'G:口座・カード変換',     icon: 'fa-solid fa-arrow-right-arrow-left', path: '/old/data-conversion/demo' },
   { label: 'H:タスク管理',     icon: 'fa-solid fa-list-check', path: '/old/tasks/demo' },
   { label: 'Z:管理者設定',     icon: 'fa-solid fa-screwdriver-wrench', path: '/old/admin' },
 ];
@@ -169,7 +169,7 @@ const topItems: TopItem[] = [
   { key: 'clients',    label: '顧問先管理',   icon: 'fa-solid fa-building',               path: '/master/clients',             managedPaths: ['/master/clients'] },
   { key: 'progress',   label: '進捗管理',     icon: 'fa-solid fa-bars-progress',          path: '/master/progress',            managedPaths: ['/master/progress'] },
   { key: 'collection', label: '資料回収',     icon: 'fa-solid fa-folder-open',            path: '/old/collection/demo',        managedPaths: ['/old/collection'] },
-  { key: 'conversion', label: 'データ変換',   icon: 'fa-solid fa-arrow-right-arrow-left', path: '/old/data-conversion/demo',   managedPaths: ['/old/data-conversion'] },
+  { key: 'conversion', label: '口座・カード変換',   icon: 'fa-solid fa-arrow-right-arrow-left', path: '/old/data-conversion/demo',   managedPaths: ['/old/data-conversion'] },
   { key: 'settings',   label: '設定管理',     icon: 'fa-solid fa-gear',                   path: '/master/settings',            managedPaths: ['/master/settings'] },
 ];
 
