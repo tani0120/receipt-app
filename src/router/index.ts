@@ -253,6 +253,12 @@ export const routes: RouteRecordRaw[] = [
     name: 'UploadSelectorUnified',
     component: () => import('@/mocks/views/MockUploadSelectorUnifiedPage.vue'),
   },
+  // ===== 過去仕訳CSV取込 =====
+  {
+    path: '/history-import/:clientId',
+    name: 'HistoryImport',
+    component: () => import('@/mocks/views/MockHistoryImportPage.vue'),
+  },
   // スタッフ用アップロード（PC/モバイル自動判定）
   {
     path: '/upload/:clientId/staff',
