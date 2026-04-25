@@ -1,7 +1,7 @@
 # Supabase移行タスク一覧
 
 > 作成日: 2026-04-23
-> 最終更新: 2026-04-24 v9（v8 + DL-048: フェーズ3.5 migrationWorkerにclassify API統合、メタデータ永続化全面修正、doc-store PUT API拡張）
+> 最終更新: 2026-04-25 v10（v9 + DL-050: 会計マスタ標準化・3ソフト変換方針確定・MF実機テスト・Python変換廃止）
 > ソース:
 > - [task_unified.md](file:///c:/dev/receipt-app/docs/task_unified.md)（セクションC-0, C-1, D, H, L-2）
 > - [supabase_security_report_260214.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/supabase_security_report_260214.md)（RLS, validateStaffAccess, Google OAuth）
@@ -73,6 +73,10 @@
 | useMigrationPoller.ts ポーリング完了時にrefresh()でAI結果をフロント反映 | ✅ **2026-04-24 DL-048** | 同上 |
 | DocEntry aiMetricsにoriginal_size_kb/processed_size_kb/preprocess_reduction_pct追加 | ✅ **2026-04-24 DL-048** | 同上 |
 | Drive選別操作のstatusChangedBy/createdBy永続化（useDriveDocuments/useDocSelection改修） | ✅ **2026-04-24 DL-048** | 同上 |
+| 税区分マスタ標準化（151件全件active:true + effectiveFrom/To修正 + MF実機CSV突合検証全件一致） | ✅ **2026-04-25 DL-050** | 税区分マスタ標準化 |
+| 3ソフト変換方針確定（MF形式統一出力・弥生/freee変換不要・本則CSV統一） | ✅ **2026-04-25 DL-050** | MF実機テスト4パターン完了 |
+| Python変換ロジック廃止（converter.py等17ファイル→参照資料移動） | ✅ **2026-04-25 DL-050** | 同上 |
+| tax-category-mapping.ts廃止（3ソフト方言対応表→参照資料移動） | ✅ **2026-04-25 DL-050** | 同上 |
 
 ---
 
