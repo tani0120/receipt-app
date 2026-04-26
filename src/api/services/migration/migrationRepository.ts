@@ -28,6 +28,7 @@ export interface MigrationJob {
   storagePath: string | null;
   fileHash: string | null;
   downloadedAt: string | null;
+  storagePurgedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

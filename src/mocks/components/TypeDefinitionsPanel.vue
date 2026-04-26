@@ -29,6 +29,8 @@
             <col style="width:26px" /><col style="width:26px" /><col style="width:26px" /><!-- 科目 -->
             <col style="width:26px" /><col style="width:26px" /><col style="width:26px" /><!-- 一覧 -->
             <col style="width:30px" /><col style="width:30px" /><col style="width:30px" /><col style="width:30px" /><!-- 出力 MF/費用/件数/時間 -->
+            <col style="width:36px" /><!-- ダッシュB -->
+            <col style="width:36px" /><!-- 学習 -->
             <col style="width:80px" /><!-- 転記元 -->
             <col /><!-- 備考 -->
           </colgroup>
@@ -45,6 +47,8 @@
               <th class="td-th td-th-group td-grp-ts" colspan="3">科目確定</th>
               <th class="td-th td-th-group td-grp-journal" colspan="3">仕訳一覧</th>
               <th class="td-th td-th-group td-grp-output" colspan="4">出力</th>
+              <th class="td-th td-th-group td-grp-dashb" rowspan="2">ダッシュB</th>
+              <th class="td-th td-th-group td-grp-learning" rowspan="2">学習</th>
               <th class="td-th td-th-cat" rowspan="3">転記元</th>
               <th class="td-th td-th-note" rowspan="3">備考</th>
             </tr>
@@ -57,6 +61,7 @@
               <th class="td-th td-th-ai-name" colspan="3">仕訳確定AI 🔧</th>
               <th class="td-th td-th-ai-name" colspan="3">—</th>
               <th class="td-th td-th-ai-name" colspan="4">—</th>
+              <!-- ダッシュBはrowspan=2で上のグループ行に含む -->
             </tr>
             <tr class="td-sub-row">
               <th class="td-th td-th-sub td-sub-upload">AI</th>
@@ -84,6 +89,8 @@
               <th class="td-th td-th-sub td-sub-output">費用</th>
               <th class="td-th td-th-sub td-sub-output">件数</th>
               <th class="td-th td-th-sub td-sub-output">時間</th>
+              <th class="td-th td-th-sub td-sub-dashb">—</th>
+              <th class="td-th td-th-sub td-sub-learning">—</th>
             </tr>
           </thead>
           <tbody>
@@ -116,6 +123,8 @@
               <td class="td-td td-td-cat" :class="cellClass(f.outCost)">{{ f.outCost }}</td>
               <td class="td-td td-td-cat" :class="cellClass(f.outStaffCount)">{{ f.outStaffCount }}</td>
               <td class="td-td td-td-cat" :class="cellClass(f.outStaffTime)">{{ f.outStaffTime }}</td>
+              <td class="td-td td-td-cat" :class="cellClass(f.dashB)">{{ f.dashB }}</td>
+              <td class="td-td td-td-cat" :class="cellClass(f.learning)">{{ f.learning }}</td>
               <td class="td-td td-td-note">{{ f.dataSource }}</td>
               <td class="td-td td-td-note">{{ f.note }}</td>
             </tr>
@@ -205,6 +214,10 @@ function cellClass(v: string): string {
 .td-sub-upload { background: #f0f9ff; color: #0284c7; }
 .td-sub-select { background: #fffbeb; color: #b45309; }
 .td-sub-output { background: #f0fdf4; color: #166534; }
+.td-grp-dashb { background: #faf5ff; color: #7c3aed; text-align: center; font-size: 10px; font-weight: 700; }
+.td-sub-dashb { background: #faf5ff; color: #7c3aed; }
+.td-grp-learning { background: #fefce8; color: #a16207; text-align: center; font-size: 10px; font-weight: 700; }
+.td-sub-learning { background: #fefce8; color: #a16207; }
 .td-th-cat { width: 20px; text-align: center; }
 .td-th-note { width: auto; }
 

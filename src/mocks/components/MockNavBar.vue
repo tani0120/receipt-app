@@ -26,6 +26,13 @@
             </button>
           </div>
         </div>
+        <button
+          class="text-[11px] flex items-center gap-1 px-2.5 py-1 rounded-md transition-all"
+          :class="route.path === '/admin-dashboard' ? 'bg-violet-100 text-violet-700 font-bold' : 'text-gray-400 hover:text-violet-600 hover:bg-violet-50'"
+          @click="router.push('/admin-dashboard')"
+        >
+          <i class="fa-solid fa-gauge-high"></i>管理者ダッシュボード
+        </button>
       </div>
       <!-- 右: 管理メニュー（データ駆動） -->
       <div class="flex items-center gap-1 text-[12px] font-medium text-gray-600">

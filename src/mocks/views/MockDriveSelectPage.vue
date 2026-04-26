@@ -163,6 +163,64 @@
               <div class="ds-file-count">{{ selectedIdx + 1 }} / {{ documents.length }}件</div>
             </div>
 
+            <!-- AI分類結果パネル -->
+            <div v-if="hasAiResult" class="ds-ai-panel">
+              <button class="ds-ai-toggle" @click="showAiPanel = !showAiPanel">
+                <i class="fa-solid fa-robot ds-ai-icon"></i>
+                <span class="ds-ai-toggle-label">AI分類結果</span>
+                <span v-if="selected.aiWarning" class="ds-ai-warn-badge">⚠</span>
+                <i :class="showAiPanel ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="ds-ai-chevron"></i>
+              </button>
+              <div v-show="showAiPanel" class="ds-ai-body">
+                <div class="ds-ai-grid">
+                  <div v-if="selected.aiDate" class="ds-ai-item">
+                    <span class="ds-ai-label">日付</span>
+                    <span class="ds-ai-value">{{ selected.aiDate }}</span>
+                  </div>
+                  <div v-if="selected.aiAmount != null" class="ds-ai-item">
+                    <span class="ds-ai-label">金額</span>
+                    <span class="ds-ai-value ds-ai-amount">¥{{ selected.aiAmount.toLocaleString() }}</span>
+                  </div>
+                  <div v-if="selected.aiVendor" class="ds-ai-item">
+                    <span class="ds-ai-label">取引先</span>
+                    <span class="ds-ai-value">{{ selected.aiVendor }}</span>
+                  </div>
+                  <div v-if="selected.aiSourceType" class="ds-ai-item">
+                    <span class="ds-ai-label">証票種別</span>
+                    <span class="ds-ai-value ds-ai-badge-type">{{ sourceTypeLabel(selected.aiSourceType) }}</span>
+                  </div>
+                  <div v-if="selected.aiDirection" class="ds-ai-item">
+                    <span class="ds-ai-label">方向</span>
+                    <span class="ds-ai-value" :class="directionClass(selected.aiDirection)">{{ directionLabel(selected.aiDirection) }}</span>
+                  </div>
+                  <div v-if="selected.aiDescription" class="ds-ai-item ds-ai-item-full">
+                    <span class="ds-ai-label">摘要</span>
+                    <span class="ds-ai-value">{{ selected.aiDescription }}</span>
+                  </div>
+                  <div v-if="selected.aiLineItemsCount" class="ds-ai-item">
+                    <span class="ds-ai-label">行数</span>
+                    <span class="ds-ai-value">{{ selected.aiLineItemsCount }}行</span>
+                  </div>
+                  <div v-if="selected.aiDocumentCount && selected.aiDocumentCount > 1" class="ds-ai-item">
+                    <span class="ds-ai-label">証票枚数</span>
+                    <span class="ds-ai-value ds-ai-warn">{{ selected.aiDocumentCount }}枚</span>
+                  </div>
+                </div>
+                <!-- 全項目null（classify通過したが認識不可） -->
+                <div v-if="!selected.aiDate && selected.aiAmount == null && !selected.aiVendor && !selected.aiSourceType && !selected.aiDirection && !selected.aiDescription && !selected.aiLineItemsCount" class="ds-ai-empty">
+                  <i class="fa-solid fa-circle-info"></i> AI認識結果なし（証票として認識できなかった可能性があります）
+                </div>
+                <!-- 警告 -->
+                <div v-if="selected.aiWarning" class="ds-ai-warning">
+                  <i class="fa-solid fa-triangle-exclamation"></i> {{ selected.aiWarning }}
+                </div>
+                <!-- 補助フラグ -->
+                <div v-if="selected.aiSupplementary" class="ds-ai-supplementary">
+                  <i class="fa-solid fa-paperclip"></i> 補助資料（AI処理スキップ）
+                </div>
+              </div>
+            </div>
+
             <!-- 3アクションボタン（選択中=濃い、非選択=薄い） -->
             <div class="ds-actions">
               <button class="ds-action-btn ds-btn-target" :class="{ 'ds-btn-active': selected.status === 'target' }" @click="setStatus('target')">
@@ -243,7 +301,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { usePdfRenderer } from '@/composables/usePdfRenderer';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
@@ -252,10 +310,8 @@ import { useMigrationPoller } from '@/mocks/composables/useMigrationPoller';
 import { useDriveDocuments } from '@/mocks/composables/useDriveDocuments';
 import { useDocSelection } from '@/mocks/composables/useDocSelection';
 import { usePreviewZoom } from '@/mocks/composables/usePreviewZoom';
-import type { DocStatus } from '@/repositories/types';
 
 const route = useRoute();
-const router = useRouter();
 const clientId = computed(() => (route.params.clientId as string) || '');
 const { currentClient } = useClients();
 
@@ -275,10 +331,8 @@ const {
 
 // ===== Composable 1: データ取得・マージ =====
 const {
-  driveFiles,
   uploadedDocs,
   driveSelections,
-  excludedCount,
   isLoading,
   allDocsView,
   documents,
@@ -457,6 +511,43 @@ const sourceBadgeClass = (s: string) => {
   return '';
 };
 
+// --- AI分類結果パネル ---
+const showAiPanel = ref(true);
+const hasAiResult = computed(() => {
+  if (!selected.value) return false;
+  const s = selected.value;
+  // AIフィールドが1つでもundefined以外（nullも含む）＝classify APIを通過済み
+  return s.aiDate !== undefined
+    || s.aiAmount !== undefined
+    || s.aiVendor !== undefined
+    || s.aiSourceType !== undefined
+    || s.aiDirection !== undefined
+    || s.aiDescription !== undefined
+    || s.aiSupplementary !== undefined;
+});
+
+const sourceTypeLabel = (t: string) => {
+  const map: Record<string, string> = {
+    receipt: 'レシート', invoice: '請求書', bank_statement: '通帳',
+    credit_card: 'クレカ明細', transfer: '振込明細', tax_payment: '納税',
+    other: 'その他',
+  };
+  return map[t] || t;
+};
+
+const directionLabel = (d: string) => {
+  const map: Record<string, string> = {
+    expense: '支出', income: '収入', transfer: '振替', mixed: '混合',
+  };
+  return map[d] || d;
+};
+
+const directionClass = (d: string) => {
+  if (d === 'expense') return 'ds-ai-dir-expense';
+  if (d === 'income') return 'ds-ai-dir-income';
+  return '';
+};
+
 // --- プレビュー不可ファイル判定 ---
 const PREVIEWABLE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.svg', '.pdf'];
 const isNonPreviewable = (fileName?: string): boolean => {
@@ -613,8 +704,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey));
 /* ========== プレビュー ========== */
 .ds-preview {
   flex: 1; display: flex; flex-direction: column; align-items: center;
-  justify-content: flex-start; background: #f1f5f9; padding: 16px;
-  overflow: auto;
+  justify-content: flex-start; background: #f1f5f9; padding: 12px 16px;
+  overflow: hidden;
 }
 
 .ds-empty { text-align: center; margin-top: 120px; }
@@ -636,8 +727,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey));
 .ds-preview-container {
   position: relative;
   width: 100%; max-width: 720px;
-  height: calc(100vh - 200px);
-  min-height: 300px;
+  flex: 1 1 0;
+  min-height: 120px;
   border-radius: 12px; overflow: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
   background: white; border: 1px solid #e5e7eb;
@@ -837,4 +928,63 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey));
 .ds-modal-btn-yes:hover { background: #1d4ed8; }
 .ds-modal-btn-no { background: #f3f4f6; color: #6b7280; }
 .ds-modal-btn-no:hover { background: #e5e7eb; }
+
+/* ========== AI分類結果パネル ========== */
+.ds-ai-panel {
+  margin-top: 10px; width: 100%; max-width: 720px;
+  background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+  border: 1px solid #e0e7ff; border-radius: 10px;
+  overflow: hidden; transition: all 0.2s;
+}
+.ds-ai-toggle {
+  width: 100%; padding: 8px 14px; border: none; background: none;
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; font-size: 13px; font-weight: 700; color: #4338ca;
+  transition: background 0.15s;
+}
+.ds-ai-toggle:hover { background: rgba(99, 102, 241, 0.08); }
+.ds-ai-icon { font-size: 16px; color: #6366f1; }
+.ds-ai-toggle-label { flex: 1; text-align: left; }
+.ds-ai-chevron { font-size: 11px; color: #a5b4fc; }
+.ds-ai-warn-badge {
+  font-size: 12px; color: #f59e0b; background: #fef3c7;
+  padding: 1px 6px; border-radius: 4px; font-weight: 700;
+}
+.ds-ai-body { padding: 0 14px 12px; }
+.ds-ai-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.ds-ai-item {
+  display: flex; flex-direction: column; gap: 1px;
+  background: white; border-radius: 6px; padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+}
+.ds-ai-item-full { grid-column: 1 / -1; }
+.ds-ai-label { font-size: 10px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.ds-ai-value { font-size: 13px; color: #1f2937; font-weight: 500; }
+.ds-ai-amount { color: #059669; font-weight: 700; font-size: 14px; }
+.ds-ai-badge-type {
+  display: inline-block; background: #ede9fe; color: #5b21b6;
+  padding: 1px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+}
+.ds-ai-dir-expense { color: #dc2626; font-weight: 600; }
+.ds-ai-dir-income { color: #059669; font-weight: 600; }
+.ds-ai-warn { color: #d97706; font-weight: 700; }
+.ds-ai-warning {
+  margin-top: 8px; padding: 6px 10px; border-radius: 6px;
+  background: #fef3c7; color: #92400e; font-size: 12px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+}
+.ds-ai-supplementary {
+  margin-top: 6px; padding: 4px 10px; border-radius: 6px;
+  background: #f3f4f6; color: #6b7280; font-size: 12px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+}
+.ds-ai-empty {
+  padding: 8px 10px; border-radius: 6px;
+  background: #f9fafb; color: #9ca3af; font-size: 12px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  font-style: italic;
+}
 </style>

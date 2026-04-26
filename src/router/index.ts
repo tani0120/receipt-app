@@ -253,6 +253,12 @@ export const routes: RouteRecordRaw[] = [
     name: 'UploadSelectorUnified',
     component: () => import('@/mocks/views/MockUploadSelectorUnifiedPage.vue'),
   },
+  // ===== 管理者ダッシュボード（事務所横断・顧問先ID不要） =====
+  {
+    path: '/admin-dashboard',
+    name: 'AdminDashboard',
+    component: () => import('@/mocks/views/MockAdminDashboardPage.vue'),
+  },
   // ===== 過去仕訳CSV取込 =====
   {
     path: '/history-import/:clientId',

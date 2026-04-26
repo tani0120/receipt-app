@@ -167,7 +167,6 @@ export interface JournalPhase5Mock {
 
   // ルール関連（オプション）
   rule_id: string | null;                // ルールID
-  rule_confidence: number | null;        // ルール信頼度（0.0-1.0）
 
   // インボイス関連（オプション）
   invoice_status: 'qualified' | 'not_qualified' | null;  // インボイスステータス

@@ -24,6 +24,19 @@ export interface DocView {
   previewUrlFull: string;  // プレビュー用フルURL
   status: DocStatus;
   mimeType: string;
+  // AI分類結果（証票分類AIが設定。未分類時はundefined）
+  aiDate?: string | null;
+  aiAmount?: number | null;
+  aiVendor?: string | null;
+  aiSourceType?: string | null;
+  aiDirection?: string | null;
+  aiDescription?: string | null;
+  aiLineItemsCount?: number;
+  aiSupplementary?: boolean;
+  aiDocumentCount?: number;
+  aiWarning?: string | null;
+  aiProcessingMode?: string | null;
+  aiFallbackApplied?: boolean;
 }
 
 // --- ユーティリティ ---
@@ -185,19 +198,36 @@ export function useDriveDocuments(
 
   const allDocsView = computed<DocView[]>(() => {
     // ① Drive借景ファイル
-    const driveItems: DocView[] = driveFiles.value.map(f => ({
-      id: f.id,
-      source: 'drive',
-      fileName: f.name,
-      fileType: f.mimeType.split('/').pop()?.toUpperCase() || f.mimeType,
-      fileSize: formatFileSize(f.size),
-      uploadDate: formatDate(f.createdTime),
-      uploadDateRaw: f.createdTime ? new Date(f.createdTime).getTime() : 0,
-      thumbnailBase64: f.thumbnailBase64 || '',
-      previewUrlFull: `/api/drive/preview/${f.id}?clientId=${encodeURIComponent(clientId.value)}`,
-      status: driveSelections.value.get(f.id) || 'pending' as DocStatus,
-      mimeType: f.mimeType,
-    }));
+    const driveItems: DocView[] = driveFiles.value.map(f => {
+      // allDocumentsからAI結果をlookup（classify済みなら値がある）
+      const docEntry = allDocuments.value.find(d => d.driveFileId === f.id);
+      return {
+        id: f.id,
+        source: 'drive',
+        fileName: f.name,
+        fileType: f.mimeType.split('/').pop()?.toUpperCase() || f.mimeType,
+        fileSize: formatFileSize(f.size),
+        uploadDate: formatDate(f.createdTime),
+        uploadDateRaw: f.createdTime ? new Date(f.createdTime).getTime() : 0,
+        thumbnailBase64: f.thumbnailBase64 || '',
+        previewUrlFull: `/api/drive/preview/${f.id}?clientId=${encodeURIComponent(clientId.value)}`,
+        status: driveSelections.value.get(f.id) || 'pending' as DocStatus,
+        mimeType: f.mimeType,
+        // AI分類結果（DocEntryから転写）
+        aiDate: docEntry?.aiDate,
+        aiAmount: docEntry?.aiAmount,
+        aiVendor: docEntry?.aiVendor,
+        aiSourceType: docEntry?.aiSourceType,
+        aiDirection: docEntry?.aiDirection,
+        aiDescription: docEntry?.aiDescription,
+        aiLineItemsCount: docEntry?.aiLineItemsCount,
+        aiSupplementary: docEntry?.aiSupplementary,
+        aiDocumentCount: docEntry?.aiDocumentCount,
+        aiWarning: docEntry?.aiWarning,
+        aiProcessingMode: docEntry?.aiProcessingMode,
+        aiFallbackApplied: docEntry?.aiFallbackApplied,
+      };
+    });
 
     // ② doc-store（独自アップロード: staff-upload / guest-upload）
     const uploadItems: DocView[] = uploadedDocs.value.map(d => ({
@@ -212,6 +242,19 @@ export function useDriveDocuments(
       previewUrlFull: d.previewUrl || '',
       status: d.status,
       mimeType: d.fileType,
+      // AI分類結果（DocEntryから直接転写）
+      aiDate: d.aiDate,
+      aiAmount: d.aiAmount,
+      aiVendor: d.aiVendor,
+      aiSourceType: d.aiSourceType,
+      aiDirection: d.aiDirection,
+      aiDescription: d.aiDescription,
+      aiLineItemsCount: d.aiLineItemsCount,
+      aiSupplementary: d.aiSupplementary,
+      aiDocumentCount: d.aiDocumentCount,
+      aiWarning: d.aiWarning,
+      aiProcessingMode: d.aiProcessingMode,
+      aiFallbackApplied: d.aiFallbackApplied,
     }));
 
     // マージして日時降順ソート

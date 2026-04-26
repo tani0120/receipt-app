@@ -365,13 +365,14 @@ export function lineItemToJournalMock(
       export_batch_id:      null,
       is_credit_card_payment: isCreditCardPayment,
       rule_id:              null,
-      rule_confidence:      null,
       invoice_status:       null,
       invoice_number:       null,
       memo:                 null,
       memo_author:          null,
       memo_target:          null,
       memo_created_at:      null,
+      created_by:           'AI',
+      created_at:           new Date().toISOString(),
     }
 
     return journal

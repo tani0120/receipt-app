@@ -57,6 +57,7 @@ function toJob(row: Record<string, unknown>): MigrationJob {
     storagePath: row.storage_path ? String(row.storage_path) : null,
     fileHash: row.file_hash ? String(row.file_hash) : null,
     downloadedAt: row.downloaded_at ? String(row.downloaded_at) : null,
+    storagePurgedAt: row.storage_purged_at ? String(row.storage_purged_at) : null,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };

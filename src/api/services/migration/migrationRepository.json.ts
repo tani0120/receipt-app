@@ -64,6 +64,7 @@ function toJob(row: JobRow): MigrationJob {
     storagePath: row.storage_path,
     fileHash: row.file_hash,
     downloadedAt: row.downloaded_at,
+    storagePurgedAt: row.storage_purged_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

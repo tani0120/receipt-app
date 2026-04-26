@@ -36,7 +36,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 800, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r001',
-    rule_confidence: 0.95,
     invoice_status: 'qualified',
     invoice_number: 'T1234567890123',
     memo: null,
@@ -73,7 +72,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 11000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'not_qualified',
     invoice_number: null,
     memo: null,
@@ -113,7 +111,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 2500, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T9876543210987',
     memo: null,
@@ -153,7 +150,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ACCRUED_EXPENSES', account_on_document: true, sub_account: null, amount: 3200, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T1111111111111',
     memo: null,
@@ -190,7 +186,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 650, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r003',
-    rule_confidence: 0.88,
     invoice_status: 'qualified',
     invoice_number: 'T2222222222222',
     memo: null,
@@ -230,7 +225,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 1500, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r004',
-    rule_confidence: 0.92,
     invoice_status: 'qualified',
     invoice_number: 'T3333333333333',
     memo: null,
@@ -267,7 +261,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 12000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r005',
-    rule_confidence: 0.97,
     invoice_status: 'qualified',
     invoice_number: 'T4444444444444',
     memo: null,
@@ -304,7 +297,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 1200, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T5555555555555',
     memo: null,
@@ -339,7 +331,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 150000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T6666666666666',
     memo: null,
@@ -374,7 +365,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 320, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r008',
-    rule_confidence: 0.93,
     invoice_status: 'qualified',
     invoice_number: 'T7777777777777',
     memo: null,
@@ -415,7 +405,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ACCRUED_EXPENSES', account_on_document: true, sub_account: null, amount: 6000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T8888888888888',
     memo: null,
@@ -450,7 +439,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 800, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T9999999999999',
     memo: null,
@@ -485,7 +473,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 750, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r011',
-    rule_confidence: 0.85,
     invoice_status: 'not_qualified',
     invoice_number: null,
     memo: null,
@@ -520,7 +507,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 8000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000001',
     memo: null,
@@ -555,7 +541,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 0, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000002',
     memo: null,
@@ -590,7 +575,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 800, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r014',
-    rule_confidence: 0.96,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000003',
     memo: null,
@@ -625,7 +609,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 500000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000004',
     memo: null,
@@ -660,7 +643,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 20000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000005',
     memo: null,
@@ -695,7 +677,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 50000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000006',
     memo: null,
@@ -730,7 +711,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 100000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000007',
     memo: null,
@@ -771,7 +751,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 8000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000008',
     memo: null,
@@ -810,7 +789,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 10000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: null,
     invoice_number: null,
     memo: null,
@@ -845,7 +823,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 9000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: null,
     invoice_number: null,
     memo: null,
@@ -880,7 +857,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 11000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: null,
     invoice_number: null,
     memo: null,
@@ -915,7 +891,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: null, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: null,
     invoice_number: null,
     memo: null,
@@ -950,7 +925,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 8000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: null,
     invoice_number: null,
     memo: 'この仕訳が何かわかりません。助けてください。',
@@ -990,7 +964,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 11000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: null,
     invoice_number: null,
     memo: 'この金額で合っていますか？確認してください。',
@@ -1031,7 +1004,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 5000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: null,
     invoice_number: null,
     memo: '領収書が見つかりませんでした。再発行を依頼中です。',
@@ -1071,7 +1043,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 4999, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: null,
     invoice_number: null,
     memo: null,
@@ -1106,7 +1077,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: null, account_on_document: false, sub_account: null, amount: 10001, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: null,
     invoice_number: null,
     memo: null,
@@ -1146,7 +1116,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ACCRUED_EXPENSES', account_on_document: true, sub_account: 'クレジットカード', amount: 2000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r021',
-    rule_confidence: 0.88,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000009',
     memo: null,
@@ -1182,7 +1151,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'ACCRUED_EXPENSES', account_on_document: true, sub_account: 'クレジットカード', amount: 20000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000010',
     memo: null,
@@ -1219,7 +1187,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'DEPOSITS_RECEIVED', account_on_document: true, sub_account: '源泉徴収税', amount: 20000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000011',
     memo: null,
@@ -1263,7 +1230,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'CASH', account_on_document: true, sub_account: '項目10', amount: 5000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000012',
     memo: null,
@@ -1302,7 +1268,6 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
       { account: 'WORK_IN_PROGRESS', account_on_document: true, sub_account: '経費', amount: 50000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
-    rule_confidence: null,
     invoice_status: 'qualified',
     invoice_number: 'T0000000000013',
     memo: null,
@@ -1338,7 +1303,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     credit_entries: [
       { account: 'CASH', account_on_document: true, sub_account: null, amount: 3000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
-    rule_id: null, rule_confidence: null,
+    rule_id: null,
     invoice_status: null, invoice_number: null,
     memo: null, memo_author: null, memo_target: null, memo_created_at: null,
     is_credit_card_payment: false,
@@ -1367,7 +1332,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     credit_entries: [
       { account: 'SALES', account_on_document: true, sub_account: null, amount: 50000, amount_on_document: true, tax_category_id: 'SALES_TAXABLE_10' }
     ],
-    rule_id: null, rule_confidence: null,
+    rule_id: null,
     invoice_status: null, invoice_number: null,
     memo: null, memo_author: null, memo_target: null, memo_created_at: null,
     is_credit_card_payment: false,
@@ -1397,7 +1362,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     credit_entries: [
       { account: 'SALES', account_on_document: true, sub_account: null, amount: 100000, amount_on_document: true, tax_category_id: 'SALES_TAXABLE_10_T3' }
     ],
-    rule_id: null, rule_confidence: null,
+    rule_id: null,
     invoice_status: 'qualified', invoice_number: 'T9999999999999',
     memo: null, memo_author: null, memo_target: null, memo_created_at: null,
     is_credit_card_payment: false,

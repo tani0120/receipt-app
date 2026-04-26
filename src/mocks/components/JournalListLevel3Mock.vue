@@ -848,12 +848,16 @@
                     <template v-else>
                       <span
                         v-if="journal.labels.includes('INVOICE_QUALIFIED')"
-                        class="text-green-600 text-sm font-bold"
+                        class="text-green-600 text-sm font-bold cursor-pointer"
+                        @mouseenter="showTooltip($event, journal.invoice_number ? `${journal.invoice_number}` : '適格（T番号なし）')"
+                        @mouseleave="hideTooltip()"
                         >◯</span
                       >
                       <span
                         v-else-if="journal.labels.includes('INVOICE_NOT_QUALIFIED')"
-                        class="text-red-600 text-sm font-bold"
+                        class="text-red-600 text-sm font-bold cursor-pointer"
+                        @mouseenter="showTooltip($event, '非適格')"
+                        @mouseleave="hideTooltip()"
                         >✕</span
                       >
                     </template>

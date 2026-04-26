@@ -1,7 +1,7 @@
 # Supabase移行タスク一覧
 
 > 作成日: 2026-04-23
-> 最終更新: 2026-04-25 v10（v9 + DL-050: 会計マスタ標準化・3ソフト変換方針確定・MF実機テスト・Python変換廃止）
+> 最終更新: 2026-04-26 v11（v10 + DL-051: 全108フィールド完全監査 + DL-052: typeDefinitionsData.ts 24列化・CellValue記号統一）
 > ソース:
 > - [task_unified.md](file:///c:/dev/receipt-app/docs/task_unified.md)（セクションC-0, C-1, D, H, L-2）
 > - [supabase_security_report_260214.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/supabase_security_report_260214.md)（RLS, validateStaffAccess, Google OAuth）
@@ -77,6 +77,11 @@
 | 3ソフト変換方針確定（MF形式統一出力・弥生/freee変換不要・本則CSV統一） | ✅ **2026-04-25 DL-050** | MF実機テスト4パターン完了 |
 | Python変換ロジック廃止（converter.py等17ファイル→参照資料移動） | ✅ **2026-04-25 DL-050** | 同上 |
 | tax-category-mapping.ts廃止（3ソフト方言対応表→参照資料移動） | ✅ **2026-04-25 DL-050** | 同上 |
+| typeDefinitionsData.ts CellValue 6記号化 + TypeField 24列化（全108フィールド再マッピング） | ✅ **2026-04-26 DL-052** | 監査テーブル刷新 |
+| TypeDefinitionsPanel.vue 3段ヘッダー構成（フェーズ名行+AI名行+責任行） | ✅ **2026-04-26 DL-052** | 同上 |
+| MockSettingsPage.vue activeTab型安全化（string→union型） | ✅ **2026-04-26 DL-052** | 同上 |
+| 全108フィールド完全監査（TS型5ファイル+TSロジック5ファイル+Vue107ファイル） | ✅ **2026-04-26 DL-051** | 問題6種検出・タスク起票 |
+| 検証スクリプト22ファイル新規作成（pipeline_flow.cjs等） | ✅ **2026-04-26 DL-051** | 自動検証基盤 |
 
 ---
 
@@ -494,6 +499,8 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | ~~ジョブ一覧API（`GET /api/drive/migrate/jobs`）~~ | ~~✅ **実装済み（2026-04-24）**。`getMigrationJobs(clientId)` → interface/JSON版/Supabase版/ラッパー/エンドポイント全層実装。jobId単位グルーピング、total/done/failed/excluded集計~~ | ~~—~~ | ~~drive.ts, migrationRepository.ts~~ |
 | MockDriveSelectPage.vue composable分離 | 1163行の巨大ファイル。デッドコード削除済みだがUI状態（undo/redo等）が密結合 | データ取得・選別操作・PDF.jsの3ブロックをcomposableに分離。大規模リファクタリングとして別タスク | MockDriveSelectPage.vue |
 | DocEntry/JobRow二重データストア統合 | `DocEntry`（`data/documents/*.json`）と`JobRow`（`data/migration_jobs.json`）が分離管理。DocEntry=資料メタデータ（source/status/hash等）、JobRow=移行ジョブ進捗（migration_status/retry_count/storage_path等）。フロントエンドの選別画面はDrive APIとdoc-storeの2ソースをマージして表示。進捗管理はuseDocumentsとuseProgressから取得 | Supabase移行時に`documents`テーブルと`migration_jobs`テーブルのJOINクエリで統合表示。または`documents`テーブルに移行ステータスカラムを追加してJobRow相当を吸収。設計はSupabase版Repository実装（フェーズ5）時に確定 | documentStore.ts, migrationRepository.json.ts, useDocuments.ts |
+| isDuplicateデータ消失（DL-051 T-AUD-5） | `useUpload.ts` handleConfirm()でUploadEntry→DocEntry変換時にisDuplicateフラグが消失。DocEntry型にプロパティが存在しない | ①DocEntry型に`isDuplicate: boolean`追加 ②handleConfirm()で値をコピー | useUpload.ts, repositories/types.ts |
+| AI分類結果15件のVue未表示（DL-051） | classify APIで取得しDocEntryに保存済みのaiDate/aiAmount/aiVendor等15フィールドが全Vue画面で未参照 | 選別画面（`/drive-select/:clientId`）でAI結果を表示するUI実装。task_unified.md L-8で「仕訳一覧UI（C-7）完了後に着手判断」 | MockDriveSelectPage.vue |
 
 ---
 

@@ -3181,3 +3181,106 @@ DL-024「免税顧問先はパイプラインが全件 COMMON_EXEMPT（対象外
 | 勘定科目マスタ | ✅ 仕訳候補の科目提案 |
 | `exportMfCsv.ts` | ✅ 仕訳帳CSV出力そのまま |
 
+---
+
+## DL-051 | 全108フィールド完全監査（2026-04-26）
+
+**状態**: 監査完了・問題6種検出・修正タスク起票済み
+
+### 目的
+
+DocEntry（52件）・JournalPhase5Mock（45件）・UploadEntry（26件）・LineItem（15件）・JournalEntryLine（6件）の全フィールドについて、以下を機械的に検証する。
+
+1. `typeDefinitionsData.ts`（監査テーブル）に全フィールドが定義されているか
+2. TSコード（useUpload.ts / useDriveDocuments.ts / lineItemToJournalMock.ts等）でフィールドが正しく設定されているか
+3. 全107個のVueファイルでフィールドが参照・表示されているか
+
+### 調査方法
+
+- TS型定義5ファイルからプロパティ名を全件抽出
+- TSロジック5ファイルのデータフロー（設定元・設定行番号）を追跡
+- 全107 Vueファイルに対して66プロパティ × 107ファイル = 7,062パターンのgrep検索を実施
+
+### 検出した問題（6種）
+
+| 問題種別 | 件数 | 詳細 |
+|---|---|---|
+| 欠落フィールド（typeDefに未定義だがTS型に存在） | 14件 | DocEntry内6件（direction_confidence, token_count, line_index, balance, original_size_kb, processed_size_kb） + LineItem内8件（determined_account, tax_category, vendor_name, candidates, level, history_match_hit, non_vendor_type, tax_type） |
+| ハードコード（typeDefにあるがTS型に未定義） | 12件 | Drive移行（JobRow）7件（job_id, migration_status, retry_count, last_error, storage_path, downloaded_at, storage_purged_at） + リレーション5件（Staff, Client, ShareStatus, Notification, ConfirmedJournal） |
+| 名前不一致 | 5件 | confidence→source_type_confidence, tokens(3種)→4プロパティ, size_kb(2種)→2プロパティ, reduction_pct→preprocess_reduction_pct, fallback→aiFallbackApplied |
+| Vue未参照（型定義はある） | 23件 | AI分類結果15件（aiDate, aiAmount, aiVendor等がどのVue画面でも未表示） + Journal4件 + AI推定4件 |
+| データ消失 | 1件 | `isDuplicate`がUploadEntry→DocEntry変換時（handleConfirm）に消失 |
+| Vue未参照（typeDef定義） | 1件 | `line_id`（クエリ高速化用だがVue未使用） |
+
+### 設計判断
+
+#### セクションG（Drive移行7フィールド）の扱い
+
+Drive移行の7フィールド（job_id, migration_status等）は `DocEntry` 型には含めない。これらは `migration_jobs` テーブル（`JobRow`型）のフィールドであり、DocEntryとは別テーブルで管理する。typeDefinitionsData.tsには「関連エンティティ」として記載し、DocEntry型の欠落ではないことを明示する。
+
+#### AI分類結果15件のVue未表示
+
+classify APIで取得してDocEntryに保存済みの15フィールド（aiDate, aiAmount, aiVendor, aiSourceType, aiDirection, aiDescription, aiClassifyReason, aiLineItems, aiLineItemsCount, aiSupplementary, aiDocumentCount, aiWarning, aiProcessingMode, aiFallbackApplied, aiMetrics）が、どのVue画面でも表示されていない。選別画面（`/drive-select/:clientId`）でAI結果を表示すべきだが未実装。task_unified.md L-8で「仕訳一覧UI（C-7）完了後に着手判断」として管理。
+
+#### isDuplicateデータ消失
+
+`useUpload.ts` の `handleConfirm()` でUploadEntry→DocEntry変換時に `isDuplicate` フラグが消失する。DocEntry型に `isDuplicate` プロパティが存在しないため。修正タスクとしてT-AUD-5を起票済み。
+
+### 監査レポート
+
+詳細は [field_audit.md v3](file:///C:/Users/kazen/.gemini/antigravity/brain/b29e23e6-88c0-4691-a867-4f898f874cd8/field_audit.md) を参照。
+
+### 実施済み検証ツール
+
+| ファイル | 目的 |
+|---|---|
+| `pipeline_flow.cjs` | フィールドのパイプラインフロー追跡 |
+| `field_diff.cjs` | typeDefとTS型定義のフィールド差分検出 |
+| `vue_prop_scan.cjs` | 全107 Vueファイルのプロパティ参照スキャン |
+
+---
+
+## DL-052 | typeDefinitionsData.ts 24列化・CellValue記号統一（2026-04-26）
+
+**状態**: 実装完了
+
+### 決定: CellValue記号を6種に刷新
+
+| 記号 | 意味 | 用途 |
+|---|---|---|
+| `✅` | 初期設定 | このフェーズでフィールドの値を最初に設定する |
+| `→` | 継承 | 前フェーズで設定された値がそのまま流れてくる |
+| `✏️` | 更新 | 前フェーズの値を変更・上書きする |
+| `🔧` | 未実装 | 設計上は必要だが未実装 |
+| `⛔` | 不可 | この経路では物理的にデータが存在しない |
+| `—` | 無関係 | このフェーズではこのフィールドに関与しない |
+
+**なぜ刷新したか**: 旧方式（✅/🔧/⛔/—の4記号）では「前フェーズから継承」と「このフェーズで新規設定」の区別がつかず、データフローの追跡が不可能だった。`→`（継承）と`✏️`（更新）の追加により、フィールドがどこで生まれ、どこで変更され、どこまで到達するかが一目で分かるようになった。
+
+### 決定: 18列→24列への拡張
+
+旧方式の18列（6フェーズ × 3主体）から24列に拡張。
+
+| # | グループ | AI列 | TS列 | 人間列 |
+|---|---|---|---|---|
+| 1 | アップロード独自 | uploadOwnAi | uploadOwnTs | uploadOwnHuman |
+| 2 | アップロードDrive | uploadDriveAi | uploadDriveTs | uploadDriveHuman |
+| 3 | 選別独自 | selectOwnAi | selectOwnTs | selectOwnHuman |
+| 4 | 選別Drive | selectDriveAi | selectDriveTs | selectDriveHuman |
+| 5 | 仕訳変換 | convertAi | convertTs | convertHuman |
+| 6 | 科目確定 | accountAi | accountTs | accountHuman |
+| 7 | 仕訳一覧 | journalAi | journalTs | journalHuman |
+| 8 | 出力 | outMf | outCost | outStaffCount / outStaffTime |
+
++ 基本3列（field, label, tsType） + dataSource + note = 計29列
+
+**なぜ拡張したか**: 独自アップロード経路とDrive経路ではデータフローが根本的に異なる（独自: classify API同期実行、Drive: migrationWorkerで非同期実行）。18列では両経路の区別が消えており、フィールドがどの経路で設定されるかの追跡が不可能だった。
+
+### 実装ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| [typeDefinitionsData.ts](file:///c:/dev/receipt-app/src/mocks/components/typeDefinitionsData.ts) | CellValue 6記号化、TypeField 24列化、全108フィールド値の再マッピング |
+| [TypeDefinitionsPanel.vue](file:///c:/dev/receipt-app/src/mocks/components/TypeDefinitionsPanel.vue) | 3段ヘッダー構成（フェーズ名行 + AI名行 + AI/TS/人間行）、記号凡例刷新 |
+| [MockSettingsPage.vue](file:///c:/dev/receipt-app/src/mocks/views/MockSettingsPage.vue) | activeTabの型を `string` → `'settings' | 'types' | 'prompts'` に強化 |
+
