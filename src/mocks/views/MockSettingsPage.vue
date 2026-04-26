@@ -5,21 +5,21 @@
       <button
         class="settings-tab"
         :class="{ active: activeTab === 'settings' }"
-        @click="activeTab = 'settings'"
+        @click="switchTab('settings')"
       >
         <i class="fa-solid fa-gear"></i> 設定
       </button>
       <button
         class="settings-tab"
         :class="{ active: activeTab === 'types' }"
-        @click="activeTab = 'types'"
+        @click="switchTab('types')"
       >
         <i class="fa-solid fa-database"></i> 全型定義
       </button>
       <button
         class="settings-tab"
         :class="{ active: activeTab === 'prompts' }"
-        @click="activeTab = 'prompts'"
+        @click="switchTab('prompts')"
       >
         <i class="fa-solid fa-wand-magic-sparkles"></i> プロンプト
       </button>
@@ -43,12 +43,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import ScreenS_Settings from '@/views/ScreenS_Settings.vue';
 import TypeDefinitionsPanel from '@/mocks/components/TypeDefinitionsPanel.vue';
 import PromptDefinitionsPanel from '@/mocks/components/PromptDefinitionsPanel.vue';
 
-const activeTab = ref<'settings' | 'types' | 'prompts'>('settings');
+const route = useRoute();
+const router = useRouter();
+
+type TabKey = 'settings' | 'types' | 'prompts';
+const validTabs: TabKey[] = ['settings', 'types', 'prompts'];
+
+const activeTab = computed<TabKey>(() => {
+  const q = route.query.tab as string | undefined;
+  return validTabs.includes(q as TabKey) ? (q as TabKey) : 'settings';
+});
+
+const switchTab = (tab: TabKey) => {
+  router.replace({ query: { ...route.query, tab } });
+};
 </script>
 
 <style scoped>
