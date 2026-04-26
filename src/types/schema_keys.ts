@@ -25,7 +25,7 @@ import {
     JournalLineSchema,
     SystemSettingsSchema,
     AuditLogSchema,
-    LearningRuleSchema,
+    // LearningRuleSchema — 旧Firestore設計は廃止
 
     // Enum Schemas
     AccountingSoftwareSchema,
@@ -49,7 +49,7 @@ export const Keys = {
     JournalLine: JournalLineSchema.keyof().enum,
     SystemSettings: SystemSettingsSchema.keyof().enum,
     AuditLog: AuditLogSchema.keyof().enum,
-    LearningRule: LearningRuleSchema.keyof().enum,
+    // LearningRule — 旧Firestore設計は廃止
 } as const;
 
 /**
@@ -63,7 +63,7 @@ export type JobKey = keyof typeof JobSchema.shape;
 export type JournalLineKey = keyof typeof JournalLineSchema.shape;
 export type SystemSettingsKey = keyof typeof SystemSettingsSchema.shape;
 export type AuditLogKey = keyof typeof AuditLogSchema.shape;
-export type LearningRuleKey = keyof typeof LearningRuleSchema.shape;
+// LearningRuleKey — 旧Firestore設計は廃止
 
 /**
  * Enum値の型定義

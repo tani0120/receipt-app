@@ -330,30 +330,9 @@ export interface Job {
 }
 
 // ============================================================================
-// 3. Learning Rules Collection (学習ルールDB)
-// Collection ID: 'learning_rules'
-// Source: @04_学習ルールDB
+// 3. Learning Rules — 旧Firestore設計は廃止。
+// 新系統: src/mocks/types/learning_rule.type.ts に移行
 // ============================================================================
-export interface LearningRule {
-  id: string;
-  clientCode: string; // Global rules have 'ALL' or empty
-
-  keyword: string;     // Matching condition
-  targetField: 'description' | 'vendor' | 'amount_range';
-
-  /** The Result to Apply */
-  accountItem: string;
-  subAccount?: string;
-  taxClass?: string;
-
-  /** Metrics */
-  confidenceScore: number; // 0.0-1.0
-  hitCount: number;        // Usage count
-  lastAppliedJobId?: string;
-
-  isActive: boolean;
-  updatedAt: Date;
-}
 
 // ============================================================================
 // 4. Audit Logs Collection (監査ログ)

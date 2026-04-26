@@ -473,22 +473,9 @@ export const JobSchema = z.object({
 });
 
 // ============================================================================
-// 3. Learning Rules
+// 3. Learning Rules — 旧Firestore設計は廃止。
+// 新系統: src/mocks/types/learning_rule.type.ts に移行
 // ============================================================================
-export const LearningRuleSchema = z.object({
-  id: z.string(),
-  clientCode: z.string(),
-  keyword: z.string(),
-  targetField: z.enum(['description', 'vendor', 'amount_range']),
-  accountItem: z.string(),
-  subAccount: z.string().optional(),
-  taxClass: z.string().optional(),
-  confidenceScore: z.number(),
-  hitCount: z.number(),
-  lastAppliedJobId: z.string().optional(),
-  isActive: z.boolean(),
-  updatedAt: TimestampSchema
-});
 
 // ============================================================================
 // 4. Audit Log

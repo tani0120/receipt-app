@@ -31,7 +31,7 @@ export const routes: RouteRecordRaw[] = [
   { path: '/journal-status', redirect: '/old/journals/demo' },
   { path: '/collection-status', redirect: '/old/collection/demo' },
   { path: '/collection-status/:code', redirect: '/old/collection/demo' },
-  { path: '/ai-rules', redirect: '/old/ai-rules/demo' },
+  // 旧ai-rulesは廃止。学習ページ(/learning/:clientId)に移行
   { path: '/data-conversion', redirect: '/old/data-conversion/demo' },
   { path: '/task-dashboard', redirect: '/old/tasks/demo' },
   { path: '/admin-settings', redirect: '/old/admin' },
@@ -81,12 +81,7 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('../components/ScreenC_CollectionStatus.vue'),
     props: true
   },
-  {
-    path: '/old/ai-rules/:clientId',
-    name: 'ClientAIRules',
-    component: () => import('@/views/ScreenD_AIRules.vue'),
-    props: true
-  },
+  // 旧ScreenD_AIRulesは廃止・削除済み。学習ページ(/learning/:clientId)に移行
   {
     path: '/old/journal-entry/:jobId',
     name: 'ScreenE',

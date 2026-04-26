@@ -9,7 +9,7 @@ import conversionRoute from './api/routes/conversion'
 // import clientsRoute from './api/routes/clients' // DL-042でclientRoutes.tsに移行済み
 import journalStatusRoute from './api/routes/journal-status'
 import journalEntryRoute from './api/routes/journal-entry'
-import aiRulesRoute from './api/routes/ai-rules'
+// 旧ai-rulesは廃止・削除済み。学習ページに移行
 import adminRoute from './api/routes/admin'
 import workerRoute from './api/routes/worker'
 import aiModelsRoute from './api/routes/ai-models'
@@ -18,7 +18,7 @@ import pipelineRoute from './api/routes/pipeline'
 
 import crypto from 'node:crypto'
 
-const app = new Hono()
+const app = new Hono<{ Variables: { requestId: string } }>()
 const port = parseInt(process.env.PORT || '8080')
 
 // リクエストIDミドルウェア: 全リクエストにUUID短縮8桁を付与
@@ -60,8 +60,7 @@ app.route('/api/conversion', conversionRoute)
 app.route('/api/journal-status', journalStatusRoute)
 app.route('/api/journal-entry', journalEntryRoute)
 
-// Phase 4 Step 7-8: AI Rules and Admin Routes
-app.route('/api/ai-rules', aiRulesRoute)
+// Phase 4 Step 7-8: Admin Route（旧ai-rulesは廃止・削除済み）
 app.route('/api/admin', adminRoute)
 
 // Phase 4 Step 9-10: Worker and AI Routes (Final)

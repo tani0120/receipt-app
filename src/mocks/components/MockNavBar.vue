@@ -152,7 +152,6 @@ const showLegacyMenu = ref(false);
 const legacyItems = [
   { label: 'B:仕訳ステータス', icon: 'fa-solid fa-calculator', path: '/old/journals/demo' },
   { label: 'C:回収状況',       icon: 'fa-solid fa-calendar-days', path: '/old/collection/demo' },
-  { label: 'D:AIルール',       icon: 'fa-solid fa-brain', path: '/old/ai-rules/demo' },
   { label: 'G:口座・カード変換',     icon: 'fa-solid fa-arrow-right-arrow-left', path: '/old/data-conversion/demo' },
   { label: 'H:タスク管理',     icon: 'fa-solid fa-list-check', path: '/old/tasks/demo' },
   { label: 'Z:管理者設定',     icon: 'fa-solid fa-screwdriver-wrench', path: '/old/admin' },

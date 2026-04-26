@@ -3,7 +3,7 @@ import {
   ClientSchema,
   JobSchema,
   JournalLineSchema,
-  LearningRuleSchema,
+  // LearningRuleSchema — 旧Firestore設計は廃止。新系統: src/mocks/types/learning_rule.type.ts
   AuditLogSchema,
   SystemSettingsSchema
 } from './zod_schema';
@@ -17,6 +17,6 @@ import {
 export type ClientApi = z.infer<typeof ClientSchema>;
 export type JobApi = z.infer<typeof JobSchema>;
 export type JournalLineApi = z.infer<typeof JournalLineSchema>;
-export type LearningRuleApi = z.infer<typeof LearningRuleSchema>;
+// LearningRuleApi — 旧Firestore設計は廃止
 export type AuditLogApi = z.infer<typeof AuditLogSchema>;
 export type SystemSettingsApi = z.infer<typeof SystemSettingsSchema>;

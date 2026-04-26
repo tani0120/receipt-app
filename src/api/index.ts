@@ -8,7 +8,7 @@ import clientsRoute from './routes/clients'
 import journalStatusRoute from './routes/journal-status'
 import journalEntry from './routes/journal-entry'
 import collection from './routes/collection'
-import aiRules from './routes/ai-rules'
+// 旧ai-rulesは廃止・削除済み
 import admin from './routes/admin'
 import worker from './routes/worker'
 import aiModels from './routes/ai-models'
@@ -39,7 +39,7 @@ const routes = app
     .route('/api/journal-entry', journalEntry)
     .route('/api/jobs', jobs) // Register Jobs Route
     .route('/api/collection', collection)
-    .route('/api/ai-rules', aiRules)
+    // 旧ai-rulesは廃止・削除済み
     .route('/api/admin', admin)
     .route('/api/worker', worker)
     .route('/api/ai', aiModels)

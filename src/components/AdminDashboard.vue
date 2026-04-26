@@ -78,16 +78,16 @@ const { adminData } = aaa_useAccountingSystem();
                     </p>
                 </div>
 
-                <!-- Card 4: AI Rules -->
-                <div @click="$router.push('/ai-rules')"
+                <!-- Card 4: 学習ルール（旧Screen D廃止 → /learning/:clientId に移行） -->
+                <div @click="$router.push('/learning/TST-00011')"
                      class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition cursor-pointer group hover:-translate-y-1 relative">
                     <div class="absolute top-4 right-4 bg-red-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-md z-10 animate-bounce">3</div>
                     <div class="w-12 h-12 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center mb-4 group-hover:bg-purple-600 group-hover:text-white transition">
                         <i class="fa-solid fa-brain text-xl"></i>
                     </div>
-                     <h3 class="font-bold text-gray-800 text-lg mb-2">AIルール設定 (Screen D)</h3>
+                     <h3 class="font-bold text-gray-800 text-lg mb-2">学習ルール管理</h3>
                     <p class="text-sm text-gray-500">
-                        自動仕訳の推論ルール、キーワード設定を管理します。
+                        顧問先ごとの学習ルール（キーワード→科目）を管理します。
                     </p>
                 </div>
 

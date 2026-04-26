@@ -17,8 +17,8 @@
                 <button @click="navigateTo('C')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2', isActive('/collection-status') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
                     <i class="fa-solid fa-calendar-days"></i> C:全社回収
                 </button>
-                <button @click="navigateTo('D')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 relative', isActive('/ai-rules') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
-                    <i class="fa-solid fa-brain"></i> D:AIルール
+                <button @click="navigateTo('D')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 relative', isActive('/learning') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
+                    <i class="fa-solid fa-brain"></i> D:学習ルール
                     <span class="bg-red-500 text-white text-[9px] px-1.5 rounded-full ml-1">3</span>
                 </button>
                 <button @click="navigateTo('G')" :class="['px-3 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 relative', isActive('/data-conversion') ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' : 'text-gray-500 hover:bg-gray-50']">
@@ -114,7 +114,7 @@ const getPath = (key: string) => {
         case 'A': return isMirror.value ? '/clients' : '/clients';
         case 'B': return isMirror.value ? '/journal-status' : '/journal-status';
         case 'C': return isMirror.value ? '/collection-status' : '/collection-status';
-        case 'D': return isMirror.value ? '/ai-rules' : '/ai-rules';
+        case 'D': return '/learning/TST-00011';
         case 'G': return isMirror.value ? '/data-conversion' : '/data-conversion';
         case 'H': return isMirror.value ? '/task-dashboard' : '/task-dashboard';
         default: return isMirror.value ? '/journal-status' : '/';
