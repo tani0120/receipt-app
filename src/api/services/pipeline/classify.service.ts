@@ -18,6 +18,7 @@ import type {
 } from './types';
 import { postprocessClassify } from './postprocess';
 import { validateClassifyResult } from './validateClassifyResult';
+import { determineAccount } from '@/mocks/utils/pipeline/accountDetermination';
 
 // ============================================================
 // 設定
@@ -363,6 +364,35 @@ export async function classifyImage(req: ClassifyRequest): Promise<ClassifyRespo
 
   // ログ出力
   console.log(`[pipeline/service] classify完了:`, JSON.stringify(logEntry, null, 0));
+
+  // ━━ Step4-C: 科目確定（辞書接続）━━━━━━━━━━━━━━━━━━
+  // fallback未適用（AI正常応答）の場合のみ、line_items毎に科目確定を実行
+  if (!result.fallback_applied && result.line_items.length > 0) {
+    for (const li of result.line_items) {
+      const acctResult = determineAccount(
+        result.issuer_name,    // vendorNameRaw: AI抽出の取引先名
+        li.description,         // 摘要テキスト
+        li.amount,              // 取引金額
+        li.direction,           // 入出金方向
+        result.source_type,     // 証票種別
+        req.clientId,           // 顧問先ID
+        null,                   // tNumberRaw: 現時点ではinvoice_numberは未抽出
+      )
+      // 科目確定結果をline_itemに設定
+      li.vendor_id = acctResult.vendorId
+      li.vendor_name = acctResult.vendorName
+      li.determined_account = acctResult.determinedAccount
+      li.tax_category = acctResult.taxCategory
+      li.sub_account = acctResult.subAccount
+      li.department = acctResult.department
+      li.rule_id = acctResult.ruleId
+      li.level = acctResult.level
+      li.prediction_method = acctResult.predictionMethod
+      li.candidates = acctResult.candidates
+    }
+    const determined = result.line_items.filter(li => li.level === 'A').length
+    console.log(`[pipeline/service] 科目確定: ${determined}/${result.line_items.length}件確定`)
+  }
 
   // バリデーション（postprocess後に実行）
   const validation = validateClassifyResult(result);

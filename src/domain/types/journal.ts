@@ -168,6 +168,13 @@ export type JournalLabel =
 
 export interface JournalEntryLine {
     /**
+     * 行ID（PK）
+     * Supabase journal_entries テーブルのPK。
+     * 複合仕訳の各行を一意に識別するために必須。
+     * null = レガシーデータ（id付与前に生成された行）
+     */
+    id: string | null;
+    /**
      * 勘定科目
      * nullable（null許容）: AIが勘定科目を判定できない場合null
      * CSV必須: MF（マネーフォワード）インポートで必須。nullならCSV出力前に警告
@@ -181,6 +188,12 @@ export interface JournalEntryLine {
     account_on_document: boolean;
     /** 補助科目（なしは正常） */
     sub_account: string | null;
+    /**
+     * 部門（MFインポートCSV「借方部門」/「貸方部門」列に対応）
+     * 学習ルール（LearningRuleEntryLine.department）から転記。
+     * null = 部門なし（大多数の仕訳）
+     */
+    department: string | null;
     /**
      * 金額
      * nullable（null許容）: 証憑から金額が読み取れない場合null

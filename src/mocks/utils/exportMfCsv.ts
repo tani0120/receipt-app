@@ -176,7 +176,7 @@ export function expandJournalToMfRows(
       // 借方: 科目→補助→部門→取引先→税区分→インボイス→金額(円)→税額
       '借方勘定科目': debit ? resolveAccountName(debit.account) : '',
       '借方補助科目': debit?.sub_account ?? '',
-      '借方部門': '',
+      '借方部門': debit?.department ?? '',
       '借方取引先': '',
       '借方税区分': debit ? resolveTaxCategoryName(debit.tax_category_id) : '',
       '借方インボイス': i === 0 ? invoiceDebit : '',
@@ -185,7 +185,7 @@ export function expandJournalToMfRows(
       // 貸方: 科目→補助→部門→取引先→税区分→インボイス→金額(円)→税額
       '貸方勘定科目': credit ? resolveAccountName(credit.account) : '',
       '貸方補助科目': credit?.sub_account ?? '',
-      '貸方部門': '',
+      '貸方部門': credit?.department ?? '',
       '貸方取引先': '',
       '貸方税区分': credit ? resolveTaxCategoryName(credit.tax_category_id) : '',
       '貸方インボイス': i === 0 ? invoiceCredit : '',

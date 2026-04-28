@@ -945,6 +945,8 @@ export function useUpload() {
           processed_size_kb: e.metrics.processed_size_kb,
           preprocess_reduction_pct: e.metrics.preprocess_reduction_pct,
         } : null,
+        // 重複検出フラグ（T-AUD-5: UploadEntry→DocEntry変換時にコピー）
+        isDuplicate: e.isDuplicate,
       })
     }
 

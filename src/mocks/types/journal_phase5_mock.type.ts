@@ -115,6 +115,13 @@ export interface JournalPhase5Mock {
   vendor_vector: VendorVector | null;    // 証票業種（restaurant/cafe/taxi等66種）
   // ─────────────────────────────────────────────────────────────
 
+  // ── 取引先特定結果（Step4-C 辞書接続 2026-04-28追加）──
+  /** 取引先ID（vendors_global/client の vendor_id。照合成功時に設定） */
+  vendor_id: string | null;
+  /** 取引先名（表示用。照合成功時はマスタ名、失敗時はAI抽出名） */
+  vendor_name: string | null;
+  // ─────────────────────────────────────────────────────────────
+
 
   // 証票紐付け（スキーマ準拠）
   document_id: string | null;             // 証票ID（documentsテーブル参照）

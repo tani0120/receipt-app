@@ -1,7 +1,7 @@
 # Supabase移行タスク一覧
 
 > 作成日: 2026-04-23
-> 最終更新: 2026-04-26 v11（v10 + DL-051: 全108フィールド完全監査 + DL-052: typeDefinitionsData.ts 24列化・CellValue記号統一）
+> 最終更新: 2026-04-28 v12（v11 + 監査タスクSupabase移行待ち4件追加: T-AUD-4a/4b/4c + 旧系統LearningRule廃止）
 > ソース:
 > - [task_unified.md](file:///c:/dev/receipt-app/docs/task_unified.md)（セクションC-0, C-1, D, H, L-2）
 > - [supabase_security_report_260214.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/supabase_security_report_260214.md)（RLS, validateStaffAccess, Google OAuth）
@@ -501,6 +501,10 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | DocEntry/JobRow二重データストア統合 | `DocEntry`（`data/documents/*.json`）と`JobRow`（`data/migration_jobs.json`）が分離管理。DocEntry=資料メタデータ（source/status/hash等）、JobRow=移行ジョブ進捗（migration_status/retry_count/storage_path等）。フロントエンドの選別画面はDrive APIとdoc-storeの2ソースをマージして表示。進捗管理はuseDocumentsとuseProgressから取得 | Supabase移行時に`documents`テーブルと`migration_jobs`テーブルのJOINクエリで統合表示。または`documents`テーブルに移行ステータスカラムを追加してJobRow相当を吸収。設計はSupabase版Repository実装（フェーズ5）時に確定 | documentStore.ts, migrationRepository.json.ts, useDocuments.ts |
 | isDuplicateデータ消失（DL-051 T-AUD-5） | `useUpload.ts` handleConfirm()でUploadEntry→DocEntry変換時にisDuplicateフラグが消失。DocEntry型にプロパティが存在しない | ①DocEntry型に`isDuplicate: boolean`追加 ②handleConfirm()で値をコピー | useUpload.ts, repositories/types.ts |
 | AI分類結果15件のVue未表示（DL-051） | classify APIで取得しDocEntryに保存済みのaiDate/aiAmount/aiVendor等15フィールドが全Vue画面で未参照 | 選別画面（`/drive-select/:clientId`）でAI結果を表示するUI実装。task_unified.md L-8で「仕訳一覧UI（C-7）完了後に着手判断」 | MockDriveSelectPage.vue |
+| aiMetrics実データ接続（DL-051 T-AUD-4a残り） | 管理者ダッシュボード「AI精度」「コスト」「処理時間」タブがプレースホルダーのまま。aiClassifyReason/aiLineItemsの詳細モーダルも未実装 | Supabase移行後にdocumentsテーブルから集計クエリで実データを取得。ダッシュボードのプレースホルダーを実データに置換 | MockAdminDashboardPage.vue |
+| rule_id仕訳逆引き表示（DL-051 T-AUD-4b） | 仕訳一覧で`rule_id`が存在するが、「なぜこの科目？」をルール名で逆引き表示する機能がない | Supabase移行後に`learning_rules`テーブルとJOINしてルール名・キーワードをホバー表示 | JournalListLevel3Mock.vue |
+| ai_completed_at等4件ダッシュボード接続（DL-051 T-AUD-4c） | `ai_completed_at`/`prediction_method`/`prediction_score`/`model_version` がダッシュボードのプレースホルダーに待ち状態 | Supabase移行後に実データ接続。prediction_methodはStep4完了後に初めて値が入る | MockAdminDashboardPage.vue |
+| 旧系統LearningRule二重管理廃止（DL-051 監査検出） | 旧Firestore設計のLearningRule関連コードが10ファイル以上に残存し、新系統（mocks層）と矛盾。`confidenceScore`がLearningRuleUi.ts/zod_schema.ts/firestore.tsに残存、clientCodeベース、借方勘定科目のみ（貸方なし）、ScreenD_AIRules.vueのimport先不在 | Supabase移行時に旧系統廃止。対象: `LearningRuleUi.ts`/`zod_schema.ts` L486/`firestore.ts` L350/`ScreenD_AIRules.vue`等。新系統`learning_rule.type.ts`+`learning_rules_TST00011.ts`で完全置換 | LearningRuleUi.ts, zod_schema.ts, firestore.ts, ScreenD_AIRules.vue |
 
 ---
 

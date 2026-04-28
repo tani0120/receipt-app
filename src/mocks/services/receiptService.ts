@@ -152,6 +152,17 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       amount: li.amount,
       direction: li.direction,
       balance: li.balance,
+      // Step4-C: 科目確定結果をフロントに透過
+      vendor_id: li.vendor_id ?? null,
+      vendor_name: li.vendor_name ?? null,
+      determined_account: li.determined_account ?? null,
+      tax_category: li.tax_category ?? null,
+      sub_account: li.sub_account ?? null,
+      department: li.department ?? null,
+      rule_id: li.rule_id ?? null,
+      level: li.level,
+      prediction_method: li.prediction_method ?? null,
+      candidates: li.candidates ?? [],
     }));
 
     // ⑥ サーバー側バリデーション結果を使う

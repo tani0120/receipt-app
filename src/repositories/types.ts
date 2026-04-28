@@ -415,6 +415,8 @@ export interface DocEntry {
     /** 削減率（%） */
     preprocess_reduction_pct?: number
   } | null
+  /** 重複検出フラグ（SHA-256ハッシュ一致。T-AUD-5: アップロード時に判定済みの値を保持） */
+  isDuplicate?: boolean
 }
 
 /**

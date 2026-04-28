@@ -23,6 +23,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '神戸相互タクシー',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -30,10 +31,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'TRAVEL', account_on_document: true, sub_account: null, amount: 800, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'TRAVEL', account_on_document: true, sub_account: null, department: null, amount: 800, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 800, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 800, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r001',
     invoice_status: 'qualified',
@@ -59,6 +60,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: 'VIVACE BEAUTYクリニック',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -66,10 +68,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'RULE_AVAILABLE', 'INVOICE_NOT_QUALIFIED', 'NEED_DOCUMENT'],  // 書類が不足
     debit_entries: [
-      { account: 'REPAIRS', account_on_document: true, sub_account: null, amount: 11000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'REPAIRS', account_on_document: true, sub_account: null, department: null, amount: 11000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 11000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 11000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'not_qualified',
@@ -98,6 +100,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: 'コピー用紙',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -105,10 +108,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED', 'NEED_INFO'],  // 情報が不足（旧NEED_CONFIRM）
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: null, amount: 2500, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: null, department: null, amount: 2500, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 2500, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 2500, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -137,6 +140,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '文房具セット',
     voucher_type: 'クレカ',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -144,10 +148,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['CREDIT_CARD', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: null, amount: 3200, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: null, department: null, amount: 3200, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'ACCRUED_EXPENSES', account_on_document: true, sub_account: null, amount: 3200, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'ACCRUED_EXPENSES', account_on_document: true, sub_account: null, department: null, amount: 3200, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -173,6 +177,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: 'タクシー代（不適格運送）',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -180,10 +185,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['BANK_STATEMENT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_CONSULT'],  // 社内相談する
     debit_entries: [
-      { account: 'TRAVEL', account_on_document: true, sub_account: null, amount: 650, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'TRAVEL', account_on_document: true, sub_account: null, department: null, amount: 650, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 650, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 650, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r003',
     invoice_status: 'qualified',
@@ -212,6 +217,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: 'タクシー代',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -219,10 +225,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'TRAVEL', account_on_document: true, sub_account: null, amount: 1500, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'TRAVEL', account_on_document: true, sub_account: null, department: null, amount: 1500, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 1500, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 1500, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r004',
     invoice_status: 'qualified',
@@ -248,6 +254,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '電気代 関西電力',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -255,10 +262,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['INVOICE', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'UTILITIES', account_on_document: true, sub_account: '電気代', amount: 12000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'UTILITIES', account_on_document: true, sub_account: '電気代', amount: 12000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 12000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 12000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r005',
     invoice_status: 'qualified',
@@ -284,6 +291,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: 'スターバックス',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -291,10 +299,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'MEETING', account_on_document: true, sub_account: null, amount: 1200, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'MEETING', account_on_document: true, sub_account: null, department: null, amount: 1200, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 1200, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 1200, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -318,6 +326,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '業務委託料',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -325,10 +334,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['INVOICE', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'OUTSOURCING', account_on_document: true, sub_account: null, amount: 150000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'OUTSOURCING', account_on_document: true, sub_account: null, department: null, amount: 150000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 150000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 150000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -352,6 +361,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: 'JR神戸線',
     voucher_type: '立替経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -359,10 +369,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED', 'NEED_DOCUMENT', 'NEED_INFO'],  // 複数フラグ
     debit_entries: [
-      { account: 'TRAVEL', account_on_document: true, sub_account: null, amount: 320, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'TRAVEL', account_on_document: true, sub_account: null, department: null, amount: 320, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 320, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 320, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r008',
     invoice_status: 'qualified',
@@ -392,6 +402,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: 'オフィス産科',
     voucher_type: 'クレカ',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -399,10 +410,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'RENT', account_on_document: true, sub_account: 'ガリツリ', amount: 6000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'RENT', account_on_document: true, sub_account: 'ガリツリ', amount: 6000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'ACCRUED_EXPENSES', account_on_document: true, sub_account: null, amount: 6000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'ACCRUED_EXPENSES', account_on_document: true, sub_account: null, department: null, amount: 6000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -426,6 +437,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '消耗品費（ボールペン）',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -433,10 +445,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'RULE_AVAILABLE', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: null, amount: 800, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: null, department: null, amount: 800, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 800, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 800, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -460,6 +472,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: 'タクシー代（不適格運送）',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -467,10 +480,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_NOT_QUALIFIED'],
     debit_entries: [
-      { account: 'TRAVEL', account_on_document: true, sub_account: null, amount: 750, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'TRAVEL', account_on_document: true, sub_account: null, department: null, amount: 750, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 750, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 750, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r011',
     invoice_status: 'not_qualified',
@@ -494,6 +507,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: 'NTTドコモ',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -501,10 +515,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['INVOICE', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'COMMUNICATION', account_on_document: true, sub_account: null, amount: 8000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'COMMUNICATION', account_on_document: true, sub_account: null, department: null, amount: 8000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 8000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 8000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -528,6 +542,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '手数料通帳費',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -535,10 +550,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED', 'MULTI_TAX_RATE', 'EXPORT_EXCLUDE'],  // 出力対象外
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: null, amount: 0, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: null, department: null, amount: 0, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 0, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 0, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -562,6 +577,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '神戸皇居鎌タクシー',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -569,10 +585,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['TRANSPORT', 'RULE_APPLIED', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'TRAVEL', account_on_document: true, sub_account: null, amount: 800, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'TRAVEL', account_on_document: true, sub_account: null, department: null, amount: 800, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 800, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 800, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: 'r014',
     invoice_status: 'qualified',
@@ -596,6 +612,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '貴金に宗鹿釜交友貴',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -603,10 +620,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: null, amount: 500000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: null, department: null, amount: 500000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 500000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 500000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -630,6 +647,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '不可分抜き回',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -637,10 +655,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'ENTERTAINMENT', account_on_document: true, sub_account: null, amount: 20000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'ENTERTAINMENT', account_on_document: true, sub_account: null, department: null, amount: 20000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 20000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 20000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -664,6 +682,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '事例寿判上いは詮',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -671,10 +690,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: '現金', amount: 50000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: '現金', amount: 50000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 50000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 50000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -698,6 +717,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '広告宣伝費（銀行振込）',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',  // 出力済み
@@ -705,10 +725,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['BANK_STATEMENT', 'INVOICE_QUALIFIED', 'NEED_CONSULT', 'NEED_DOCUMENT'],  // 複数フラグ2
     debit_entries: [
-      { account: 'ADVERTISING', account_on_document: true, sub_account: '銀行', amount: 100000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'ADVERTISING', account_on_document: true, sub_account: '銀行', amount: 100000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 100000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 100000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -738,6 +758,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '業務委託料',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: 'exported',
@@ -745,10 +766,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'INVOICE_QUALIFIED'],
     debit_entries: [
-      { account: 'OUTSOURCING', account_on_document: true, sub_account: null, amount: 8000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'OUTSOURCING', account_on_document: true, sub_account: null, department: null, amount: 8000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 8000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'ORDINARY_DEPOSIT', account_on_document: true, sub_account: '三菱UFJ', amount: 8000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: 'qualified',
@@ -776,6 +797,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '資料作成料',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -783,10 +805,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: '2026-02-21T00:00:00Z',  // ゴミ箱（検証用）
     labels: ['RECEIPT', 'UNREADABLE_ESTIMATED'],
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: null, amount: 10000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: null, department: null, amount: 10000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 10000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 10000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: null,
@@ -810,6 +832,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '不明な振り',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -817,10 +840,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: '2026-02-21T00:00:00Z',  // ゴミ箱（検証用）
     labels: ['TRANSPORT', 'DUPLICATE_SUSPECT', 'DUPLICATE_CONFIRMED'],
     debit_entries: [
-      { account: 'TRAVEL', account_on_document: true, sub_account: null, amount: 9000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'TRAVEL', account_on_document: true, sub_account: null, department: null, amount: 9000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 9000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 9000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: null,
@@ -844,6 +867,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '未来日付の仕訳',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -851,10 +875,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'DATE_OUT_OF_RANGE'],
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: null, amount: 11000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: null, department: null, amount: 11000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 11000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 11000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: null,
@@ -878,6 +902,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '異常金額',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -885,10 +910,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'AMOUNT_UNCLEAR', 'MULTIPLE_VOUCHERS'],
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: null, amount: null, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: null, department: null, amount: null, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: null, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: null, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: null,
@@ -912,6 +937,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '資料持ち',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -919,10 +945,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'MEMO_DETECTED', 'NEED_CONSULT'],  // 旧help → 相談が必要
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: null, amount: 8000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: null, department: null, amount: 8000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 8000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 8000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: null,
@@ -951,6 +977,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '材料費・調整等',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -958,10 +985,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['INVOICE', 'MEMO_DETECTED', 'NEED_CONSULT'],  // 旧soudan → 相談が必要
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: null, amount: 11000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: null, department: null, amount: 11000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 11000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 11000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: null,
@@ -991,6 +1018,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '現金領収遅れせれ仮払い',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -998,10 +1026,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'DATE_UNKNOWN', 'MEMO_DETECTED', 'NEED_DOCUMENT'],  // 日付不明 + 手書きメモ + 資料が必要
     debit_entries: [
-      { account: 'TRAVEL', account_on_document: true, sub_account: null, amount: 5000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'TRAVEL', account_on_document: true, sub_account: null, department: null, amount: 5000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 5000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 5000, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: null,
@@ -1030,6 +1058,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '入力ミス例',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -1037,10 +1066,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['RECEIPT', 'DEBIT_CREDIT_MISMATCH'],
     debit_entries: [
-      { account: 'SUPPLIES', account_on_document: true, sub_account: null, amount: 5000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: 'SUPPLIES', account_on_document: true, sub_account: null, department: null, amount: 5000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: 'CASH', account_on_document: true, sub_account: null, amount: 4999, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: 'CASH', account_on_document: true, sub_account: null, department: null, amount: 4999, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: null,
@@ -1064,6 +1093,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '計算誤差例',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -1071,10 +1101,10 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     deleted_at: null,
     labels: ['INVOICE', 'ACCOUNT_UNKNOWN', 'DEBIT_CREDIT_MISMATCH'],
     debit_entries: [
-      { account: null, account_on_document: false, sub_account: null, amount: 10000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
+      { id: null, account: null, account_on_document: false, sub_account: null, department: null, amount: 10000, amount_on_document: true, tax_category_id: 'PURCHASE_TAXABLE_10' }
     ],
     credit_entries: [
-      { account: null, account_on_document: false, sub_account: null, amount: 10001, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
+      { id: null, account: null, account_on_document: false, sub_account: null, department: null, amount: 10001, amount_on_document: true, tax_category_id: 'COMMON_EXEMPT' }
     ],
     rule_id: null,
     invoice_status: null,
@@ -1102,6 +1132,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: 'タクシー代（経費精算）',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -1137,6 +1168,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '出張費用（交通費+宿泊費）',
     voucher_type: 'クレカ',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -1172,6 +1204,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '給与支払（山田太郎）',
     voucher_type: '給与',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -1208,6 +1241,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '経費精算（明細10項目）',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -1251,6 +1285,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '決算仕訳（費用振替）',
     voucher_type: null,
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-001',
     line_id: null,
     status: null,
@@ -1291,6 +1326,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '【テスト】免税なのに課税仕入',
     voucher_type: '経費',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-err-001',
     line_id: null,
     status: null,
@@ -1320,6 +1356,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '【テスト】免税なのに課税売上',
     voucher_type: '売上',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-err-002',
     line_id: null,
     status: null,
@@ -1350,6 +1387,7 @@ export const mockJournalsPhase5: JournalPhase5Mock[] = [
     description: '【テスト】本則なのに業種区分付き',
     voucher_type: '売上',
     source_type: null, direction: null, vendor_vector: null,
+    vendor_id: null, vendor_name: null,
     document_id: 'receipt-err-003',
     line_id: null,
     status: null,

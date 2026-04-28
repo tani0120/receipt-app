@@ -23,6 +23,7 @@ import type { LineItemDirection } from '@/mocks/types/pipeline/line_item.type'
 import type { SourceType } from '@/mocks/types/pipeline/source_type.type'
 import type { JournalPhase5Mock } from '@/mocks/types/journal_phase5_mock.type'
 import type { JournalEntryLine } from '@/domain/types/journal'
+import type { AccountDeterminationResult } from './pipeline/accountDetermination'
 
 // ============================================================
 // § CounterpartEntry — 相手勘定エントリ型
@@ -250,6 +251,25 @@ function generateJournalId(): string {
 }
 
 /**
+ * 仕訳行ID生成ヘルパー
+ *
+ * jre-{UUID} 形式。JournalEntryLine.id のPK。
+ * Supabase journal_entries テーブルのPKとしてそのまま使用可能。
+ */
+function generateJournalEntryId(): string {
+  let uuid: string
+  try {
+    uuid = crypto.randomUUID()
+  } catch {
+    uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = (Math.random() * 16) | 0
+      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+    })
+  }
+  return `jre-${uuid}`
+}
+
+/**
  * D-1: LineItem[] → JournalPhase5Mock[] 変換関数
  *
  * 【D-2: debit/credit変換ロジック】
@@ -269,6 +289,7 @@ function generateJournalId(): string {
  * @param clientId            - 顧問先ID（例: LDI-00008）
  * @param isCreditCardPayment - クレカ払いフラグ（receipt の相手勘定・voucher_type 分岐に使用）
  * @param documentId          - 証票ID（crypto.randomUUID()でアップロード時に生成済み。未指定時はnull）
+ * @param accountResults      - 科目確定結果の配列（Step4-C辞書接続。items[i]に対応。未指定時は従来ロジック）
  * @returns JournalPhase5Mock[]
  */
 export function lineItemToJournalMock(
@@ -277,8 +298,11 @@ export function lineItemToJournalMock(
   clientId: string,
   isCreditCardPayment = false,
   documentId: string | null = null,
+  accountResults: AccountDeterminationResult[] | null = null,
 ): JournalPhase5Mock[] {
   return items.map((item, index) => {
+    // Step4-C: 科目確定結果がある場合はそちらを使用
+    const acctResult = accountResults?.[index] ?? null
     const isInsufficient =
       item.level === 'insufficient' ||
       item.determined_account === null ||
@@ -292,21 +316,28 @@ export function lineItemToJournalMock(
     let debitEntries: JournalEntryLine[] = []
     let creditEntries: JournalEntryLine[] = []
 
-    if (!isInsufficient && item.determined_account && counterpart.account) {
+    // Step4-C: 学習ルール適用時はテンプレート仕訳を使用
+    if (acctResult && acctResult.ruleId && acctResult.debitEntries.length > 0) {
+      // 学習ルールのテンプレート仕訳をそのまま使用
+      debitEntries = acctResult.debitEntries
+      creditEntries = acctResult.creditEntries
+    } else if (!isInsufficient && item.determined_account && counterpart.account) {
       // D-3: sub_account（補助科目）のマッピング（LineItem.sub_account → JournalEntryLine.sub_account）
-      const mainSubAccount = item.sub_account ?? null
+      const mainSubAccount = acctResult?.subAccount ?? item.sub_account ?? null
 
       // D-4: tax_category（税区分）のマッピング
       //   主科目側: LineItem.tax_category（実際の税区分）
       //   相手勘定側: counterpart.tax_category（全件 COMMON_EXEMPT）
-      const mainTaxCategoryId = item.tax_category ?? null
+      const mainTaxCategoryId = acctResult?.taxCategory ?? item.tax_category ?? null
       const counterpartTaxCategoryId = counterpart.tax_category
 
       // 主科目エントリ（主科目は account_on_document: true で扱う）
       const mainEntry: JournalEntryLine = {
+        id:                 generateJournalEntryId(),
         account:            item.determined_account,
         account_on_document: true,
         sub_account:        mainSubAccount,
+        department:         acctResult?.department ?? null,
         amount:             item.amount,
         amount_on_document: true,
         tax_category_id:    mainTaxCategoryId,
@@ -314,9 +345,11 @@ export function lineItemToJournalMock(
 
       // 相手勘定エントリ（相手勘定は account_on_document: false で扱う）
       const counterpartEntry: JournalEntryLine = {
+        id:                 generateJournalEntryId(),
         account:            counterpart.account,
         account_on_document: false,
         sub_account:        null,
+        department:         null,
         amount:             item.amount,
         amount_on_document: true,
         tax_category_id:    counterpartTaxCategoryId,
@@ -352,6 +385,9 @@ export function lineItemToJournalMock(
       source_type:          sourceType,
       direction:            item.direction,
       vendor_vector:        item.vendor_vector ?? null,
+      // Step4-C: 取引先特定結果
+      vendor_id:            acctResult?.vendorId ?? null,
+      vendor_name:          acctResult?.vendorName ?? null,
       document_id:          documentId,
       line_id:              documentId ? `${documentId}_line-${item.line_index}` : null,
       debit_entries:        debitEntries,
@@ -364,7 +400,7 @@ export function lineItemToJournalMock(
       warning_details:      {},
       export_batch_id:      null,
       is_credit_card_payment: isCreditCardPayment,
-      rule_id:              null,
+      rule_id:              acctResult?.ruleId ?? null,
       invoice_status:       null,
       invoice_number:       null,
       memo:                 null,
@@ -373,6 +409,7 @@ export function lineItemToJournalMock(
       memo_created_at:      null,
       created_by:           'AI',
       created_at:           new Date().toISOString(),
+      prediction_method:    acctResult?.predictionMethod ?? null,
     }
 
     return journal

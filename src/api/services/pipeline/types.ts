@@ -134,6 +134,27 @@ export interface ClassifyResponseLineItem {
   amount: number;
   direction: 'expense' | 'income';
   balance: number | null;
+  // ── 科目確定結果（Step4-C 辞書接続 2026-04-28追加）──
+  /** 取引先ID（vendors_global/client の vendor_id。照合成功時に設定） */
+  vendor_id?: string | null;
+  /** 取引先名（表示用。照合成功時はマスタ名、失敗時はAI抽出名） */
+  vendor_name?: string | null;
+  /** 確定科目（ACCOUNT_MASTER ID） */
+  determined_account?: string | null;
+  /** 税区分 */
+  tax_category?: string | null;
+  /** 補助科目 */
+  sub_account?: string | null;
+  /** 部門 */
+  department?: string | null;
+  /** 適用された学習ルールID */
+  rule_id?: string | null;
+  /** 確定レベル（'A'=確定、'insufficient'=不十分） */
+  level?: 'A' | 'insufficient';
+  /** 推定方法 */
+  prediction_method?: 't_number' | 'match_key' | 'learning_rule' | 'industry_vector' | null;
+  /** 科目候補 */
+  candidates?: string[];
 }
 
 // ============================================================
@@ -225,6 +246,17 @@ export interface ReceiptAnalysisResult {
     amount: number;
     direction: 'expense' | 'income';
     balance: number | null;
+    // ── 科目確定結果（Step4-C）──
+    vendor_id?: string | null;
+    vendor_name?: string | null;
+    determined_account?: string | null;
+    tax_category?: string | null;
+    sub_account?: string | null;
+    department?: string | null;
+    rule_id?: string | null;
+    level?: 'A' | 'insufficient';
+    prediction_method?: 't_number' | 'match_key' | 'learning_rule' | 'industry_vector' | null;
+    candidates?: string[];
   }[];
   /** テスト用メトリクス（全項目） */
   metrics?: {
