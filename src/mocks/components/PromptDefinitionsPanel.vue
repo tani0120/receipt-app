@@ -347,6 +347,136 @@
         <p class="prompt-placeholder-sub">classifyの証票種別 + 顧問先マスタの勘定科目体系を動的に注入する設計</p>
       </div>
     </section>
+
+    <!-- データフロー: classify → 仕訳 -->
+    <section class="prompt-section">
+      <div class="prompt-section-header prompt-section-flow">
+        <i class="fa-solid fa-diagram-project"></i>
+        <div>
+          <h3>classify → 仕訳変換フロー</h3>
+          <span class="prompt-badge prompt-badge-active">稼働中</span>
+        </div>
+      </div>
+
+      <div class="prompt-meta">
+        <div class="prompt-meta-item"><span class="prompt-meta-label">処理</span> classify API出力 → lineItemToJournalMock() → JournalPhase5Mock[]</div>
+        <div class="prompt-meta-item"><span class="prompt-meta-label">実行タイミング</span> 資料選別画面で「確定送信」時（AIは不使用。純粋なデータ変換）</div>
+        <div class="prompt-meta-item"><span class="prompt-meta-label">ソース</span> <code>lineItemToJournalMock.ts</code></div>
+      </div>
+
+      <!-- フィールドマッピング -->
+      <details class="prompt-block" open>
+        <summary class="prompt-block-title">
+          <i class="fa-solid fa-arrows-left-right"></i> フィールドマッピング（classify → 仕訳）
+        </summary>
+        <div class="prompt-block-content">
+          <h4>classify出力 → JournalPhase5Mock</h4>
+          <table class="prompt-table">
+            <thead>
+              <tr><th>classify出力</th><th>→</th><th>JournalPhase5Mock</th><th>変換方法</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>source_type</code></td><td>→</td><td><code>source_type</code></td><td>そのまま転写</td></tr>
+              <tr><td><code>direction</code></td><td>→</td><td><code>direction</code></td><td>そのまま転写</td></tr>
+              <tr><td><code>source_type × direction</code></td><td>→</td><td><code>voucher_type</code></td><td>resolveVoucherType()で変換</td></tr>
+              <tr><td><code>issuer_name</code></td><td>→</td><td><code>vendor_name</code></td><td>LineItem.vendor_name経由</td></tr>
+              <tr><td><code>line_items[].date</code></td><td>→</td><td><code>voucher_date</code></td><td>そのまま転写</td></tr>
+              <tr><td><code>line_items[].description</code></td><td>→</td><td><code>description</code></td><td>そのまま転写</td></tr>
+              <tr><td><code>line_items[].amount</code></td><td>→</td><td><code>debit/credit_entries[].amount</code></td><td>借方・貸方に同額設定</td></tr>
+              <tr><td><code>line_items[].direction</code></td><td>→</td><td><code>debit/credit配置</code></td><td>expense: 借方=主科目 / income: 逆</td></tr>
+            </tbody>
+          </table>
+
+          <h4>相手勘定の自動決定（COUNTERPART_ACCOUNT_MAP）</h4>
+          <table class="prompt-table">
+            <thead>
+              <tr><th>source_type</th><th>direction</th><th>相手勘定</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>bank_statement</code></td><td>expense / income</td><td>普通預金（ORDINARY_DEPOSIT）</td></tr>
+              <tr><td><code>credit_card</code></td><td>expense / income</td><td>未払金（ACCRUED_EXPENSES）</td></tr>
+              <tr><td><code>receipt</code></td><td>expense</td><td>現金（CASH）※クレカ払い時は未払金</td></tr>
+              <tr><td><code>invoice_received</code></td><td>expense</td><td>買掛金（ACCOUNTS_PAYABLE）</td></tr>
+              <tr><td><code>tax_payment</code></td><td>expense</td><td>普通預金（ORDINARY_DEPOSIT）</td></tr>
+              <tr><td><code>journal_voucher</code></td><td>—</td><td>null（人間判断必要）</td></tr>
+            </tbody>
+          </table>
+
+          <h4>科目未確定時の処理</h4>
+          <ul class="prompt-rules">
+            <li><strong>科目確定済み</strong>: debit=確定科目, credit=相手勘定（逆もあり）</li>
+            <li><strong>科目未確定（insufficient）</strong>: debit/credit にプレースホルダーエントリ（account=null, 金額はLineItem.amountを転写）。labels に <code>ACCOUNT_UNKNOWN</code> を付与</li>
+            <li><strong>学習ルールヒット</strong>: テンプレート仕訳をそのまま使用（acctResult.debitEntries/creditEntries）</li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- パイプラインフロー図 -->
+      <details class="prompt-block">
+        <summary class="prompt-block-title">
+          <i class="fa-solid fa-sitemap"></i> パイプラインフロー全体図
+        </summary>
+        <div class="prompt-block-content">
+          <div class="prompt-flow-diagram">
+            <div class="flow-step flow-upload">
+              <div class="flow-step-icon"><i class="fa-solid fa-upload"></i></div>
+              <div class="flow-step-body">
+                <strong>① アップロード</strong>
+                <span>画像/PDF → SHA-256ハッシュ計算 → DocEntry作成</span>
+                <span class="flow-trigger">🔥 発火: ユーザーがゲスト画面で画像を投入 or Drive連携でファイルを検出</span>
+                <span class="flow-route">独自: POST /api/pipeline/classify（即時） / Drive: POST /api/drive/migrate（バッチ）</span>
+              </div>
+            </div>
+            <div class="flow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+            <div class="flow-step flow-classify">
+              <div class="flow-step-icon"><i class="fa-solid fa-brain"></i></div>
+              <div class="flow-step-body">
+                <strong>② classify API（Vertex AI Gemini）</strong>
+                <span>source_type判定（12種）+ direction判定（4種）+ line_items抽出</span>
+                <span class="flow-trigger">🔥 発火: 独自=アップロード完了直後に自動 / Drive=migrationWorkerが5秒間隔でポーリング</span>
+              </div>
+            </div>
+            <div class="flow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+            <div class="flow-step flow-postprocess">
+              <div class="flow-step-icon"><i class="fa-solid fa-gears"></i></div>
+              <div class="flow-step-body">
+                <strong>③ 後処理（サーバー内部・自動）</strong>
+                <span>postprocessClassify → validateClassifyResult → determineAccount（辞書接続）</span>
+                <span class="flow-trigger">🔥 発火: ②のVertex AI応答受信直後に同期実行（classify関数内部）</span>
+              </div>
+            </div>
+            <div class="flow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+            <div class="flow-step flow-docstore">
+              <div class="flow-step-icon"><i class="fa-solid fa-database"></i></div>
+              <div class="flow-step-body">
+                <strong>④ doc-store保存</strong>
+                <span>DocEntry.aiLineItems に格納 → documents.json</span>
+                <span class="flow-trigger">🔥 発火: ③完了直後に自動。classifyのHTTPレスポンスとして返却</span>
+              </div>
+            </div>
+            <div class="flow-arrow"><i class="fa-solid fa-arrow-down"></i> <span class="flow-arrow-label">ユーザー操作待ち</span></div>
+            <div class="flow-step flow-select">
+              <div class="flow-step-icon"><i class="fa-solid fa-check-double"></i></div>
+              <div class="flow-step-body">
+                <strong>⑤ 資料選別確定（AIは不使用）</strong>
+                <span>sendToProcess() → lineItemToJournalMock()で仕訳形式に変換</span>
+                <span class="flow-trigger">🔥 発火: ユーザーが選別画面で「確定送信」ボタンを押下</span>
+                <span class="flow-route">⚠️ この時点でAIは動かない。④で保存済みのaiLineItemsをデータ変換するのみ</span>
+              </div>
+            </div>
+            <div class="flow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+            <div class="flow-step flow-journal">
+              <div class="flow-step-icon"><i class="fa-solid fa-book"></i></div>
+              <div class="flow-step-body">
+                <strong>⑥ 仕訳保存</strong>
+                <span>JournalPhase5Mock[] → PUT /api/journals/:clientId → journals-{clientId}.json</span>
+                <span class="flow-trigger">🔥 発火: ⑤の変換完了直後に自動。useJournals.pushで注入→watchで自動保存</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
   </div>
 </template>
 
@@ -458,4 +588,40 @@ const boundaries = BOUNDARY_GUIDES
 .prompt-placeholder i { font-size: 32px; margin-bottom: 12px; }
 .prompt-placeholder p { margin: 4px 0; font-weight: 600; }
 .prompt-placeholder-sub { font-size: 11px; color: #a16207; font-weight: 400; }
+
+/* データフローセクション */
+.prompt-section-flow { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-left: 4px solid #16a34a; }
+.prompt-section-flow i { color: #16a34a; }
+
+/* フロー図 */
+.prompt-flow-diagram { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 16px 0; }
+.flow-step {
+  display: flex; align-items: center; gap: 12px;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 10px 16px; width: 500px; max-width: 100%;
+  transition: box-shadow 0.2s;
+}
+.flow-step:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.flow-step-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.flow-step-body { display: flex; flex-direction: column; gap: 2px; }
+.flow-step-body strong { font-size: 12px; color: #1e293b; }
+.flow-step-body span { font-size: 10px; color: #64748b; }
+.flow-arrow { color: #94a3b8; font-size: 14px; padding: 4px 0; }
+
+.flow-upload .flow-step-icon { background: #eff6ff; color: #2563eb; }
+.flow-classify .flow-step-icon { background: #fef3c7; color: #d97706; }
+.flow-postprocess .flow-step-icon { background: #f0fdf4; color: #16a34a; }
+.flow-docstore .flow-step-icon { background: #ede9fe; color: #7c3aed; }
+.flow-select .flow-step-icon { background: #fce7f3; color: #db2777; }
+.flow-select { border-color: #f9a8d4; background: #fdf2f8; }
+.flow-journal .flow-step-icon { background: #dbeafe; color: #1d4ed8; }
+
+/* 発火条件 */
+.flow-trigger { font-size: 10px; color: #dc2626; font-weight: 600; margin-top: 2px; }
+.flow-route { font-size: 10px; color: #7c3aed; font-style: italic; }
+.flow-arrow-label { font-size: 10px; color: #f59e0b; font-weight: 600; margin-left: 6px; }
 </style>

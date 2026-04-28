@@ -13,8 +13,8 @@
  * 準拠: 27_account_determination.md §3-3（照合方式）
  */
 
-import type { LearningRule } from '@/mocks/types/learning_rule.type'
-import { learningRulesTST00011 } from '@/mocks/data/learning_rules_TST00011'
+import type { LearningRule } from '../../types/learning_rule.type'
+import { learningRulesTST00011 } from '../../data/learning_rules_TST00011'
 
 /**
  * 証票種別 → 学習ルールのsourceCategory への変換

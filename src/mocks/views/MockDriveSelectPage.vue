@@ -310,6 +310,7 @@ import { useMigrationPoller } from '@/mocks/composables/useMigrationPoller';
 import { useDriveDocuments } from '@/mocks/composables/useDriveDocuments';
 import { useDocSelection } from '@/mocks/composables/useDocSelection';
 import { usePreviewZoom } from '@/mocks/composables/usePreviewZoom';
+import type { DocEntry } from '@/repositories/types';
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) || '');
@@ -409,7 +410,40 @@ const { showToast } = useGlobalToast();
 const { startPolling } = useMigrationPoller();
 const isSending = ref(false);
 
-// --- 仕訳処理に送る（Phase D） ---
+// --- 仕訳変換（パイプライン接続: 選別→仕訳一覧） ---
+import { lineItemToJournalMock } from '@/mocks/utils/lineItemToJournalMock';
+import type { LineItem } from '@/mocks/types/pipeline/line_item.type';
+import type { SourceType } from '@/mocks/types/pipeline/source_type.type';
+import { useJournals } from '@/mocks/composables/useJournals';
+import { useDocuments } from '@/composables/useDocuments';
+
+const { journals } = useJournals(clientId);
+const { allDocuments } = useDocuments();
+
+/**
+ * DocEntry.aiLineItems → LineItem[] に変換するヘルパー
+ * DocEntry型は基本フィールド+科目確定結果を持つが、LineItem型にマッピングする
+ */
+function docLineItemsToLineItems(
+  aiLineItems: NonNullable<DocEntry['aiLineItems']>,
+): LineItem[] {
+  return aiLineItems.map(li => ({
+    date: li.date,
+    description: li.description,
+    amount: li.amount,
+    direction: li.direction,
+    balance: li.balance,
+    line_index: li.line_index,
+    determined_account: li.determined_account ?? null,
+    tax_category: li.tax_category ?? null,
+    sub_account: li.sub_account ?? null,
+    vendor_name: li.vendor_name ?? null,
+    level: li.level,
+    candidates: li.candidates,
+  }));
+}
+
+// --- 仕訳処理に送る（Phase D + パイプライン接続） ---
 const sendToProcess = async () => {
   const filesToMigrate = documents.value
     .filter(d => d.status !== 'pending')
@@ -423,37 +457,93 @@ const sendToProcess = async () => {
   isSending.value = true;
 
   try {
-    const res = await fetch('/api/drive/migrate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        clientId: clientId.value,
-        files: filesToMigrate,
-      }),
-    });
+    // ━━━ 1. 仕訳変換: target の DocEntry から仕訳レコードを生成 ━━━
+    const targetDocViews = documents.value.filter(d => d.status === 'target');
+    let generatedCount = 0;
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(data.error || `HTTP ${res.status}`);
+    for (const docView of targetDocViews) {
+      // DocView.id で元の DocEntry を検索（aiLineItemsを持つ完全データ）
+      const docEntry = allDocuments.value.find(d => d.id === docView.id)
+        || uploadedDocs.value.find(d => d.id === docView.id);
+
+      if (!docEntry?.aiLineItems || docEntry.aiLineItems.length === 0) {
+        console.log(`[sendToProcess] ${docView.id}: aiLineItemsなし（スキップ）`);
+        continue;
+      }
+
+      // 科目確定結果を含むLineItem[]に変換
+      const lineItems = docLineItemsToLineItems(docEntry.aiLineItems);
+      const sourceType = (docEntry.aiSourceType as SourceType) || 'receipt';
+
+      // lineItemToJournalMock() で JournalPhase5Mock[] に変換
+      const newJournals = lineItemToJournalMock(
+        lineItems,
+        sourceType,
+        clientId.value,
+        false,               // isCreditCardPayment（将来: DocEntryに追加予定）
+        docEntry.id,         // documentId
+      );
+
+      // useJournals に追加（autoSave watchで自動的にサーバー保存される）
+      journals.value.push(...newJournals);
+      generatedCount += newJournals.length;
+
+      console.log(
+        `[sendToProcess] ${docView.fileName}: ${newJournals.length}件の仕訳を生成`
+        + ` (source_type=${sourceType}, lineItems=${lineItems.length})`
+      );
     }
 
-    const result = await res.json() as { jobId: string; queued: number };
-    console.log(`[MockDriveSelectPage] 移行ジョブ登録: jobId=${result.jobId}, queued=${result.queued}`);
+    if (generatedCount > 0) {
+      console.log(`[sendToProcess] 合計${generatedCount}件の仕訳を journals-${clientId.value}.json に追加`);
+    }
 
-    // ポーリングをグローバルcomposableに委譲
-    startPolling(
-      result.jobId,
-      currentClient.value?.companyName ?? '',
-      clientId.value,
-      result.queued,
-      counts.value.excluded,
-    );
+    // ━━━ 2. Drive経路: migrateジョブ登録（Driveファイルのみ） ━━━
+    const driveFiles = filesToMigrate.filter(f => {
+      const docView = documents.value.find(d => d.id === f.fileId);
+      return docView?.source === 'drive';
+    });
+
+    if (driveFiles.length > 0) {
+      const res = await fetch('/api/drive/migrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: clientId.value,
+          files: driveFiles,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+
+      const result = await res.json() as { jobId: string; queued: number };
+      console.log(`[sendToProcess] Drive移行ジョブ登録: jobId=${result.jobId}, queued=${result.queued}`);
+
+      // ポーリングをグローバルcomposableに委譲
+      startPolling(
+        result.jobId,
+        currentClient.value?.companyName ?? '',
+        clientId.value,
+        result.queued,
+        counts.value.excluded,
+      );
+    }
 
     showCompleteModal.value = false;
     markClean();
 
+    const totalMsg = generatedCount > 0
+      ? `${generatedCount}件の仕訳を生成しました。`
+      : '';
+    const driveMsg = driveFiles.length > 0
+      ? `Drive${driveFiles.length}件はバックグラウンドで処理中。`
+      : '';
+
     showToast({
-      message: '送信完了しました。処理はバックグラウンドで実行されます。',
+      message: `送信完了。${totalMsg}${driveMsg}`,
       type: 'info',
       icon: 'fa-solid fa-paper-plane',
     });

@@ -16,13 +16,13 @@
  *   - 結果は prediction_method に推定方法を記録（トレーサビリティ）
  */
 
-import type { Vendor } from '@/mocks/types/pipeline/vendor.type'
-import type { JournalEntryLine } from '@/domain/types/journal'
-import type { LearningRule, LearningRuleEntryLine } from '@/mocks/types/learning_rule.type'
+import type { Vendor } from '../../types/pipeline/vendor.type'
+import type { JournalEntryLine } from '../../../domain/types/journal'
+import type { LearningRule, LearningRuleEntryLine } from '../../types/learning_rule.type'
 import { normalizeVendorName } from './vendorIdentification'
 import { validateTNumber, extractTNumber } from './vendorIdentification'
 import { matchLearningRule } from './matchLearningRule'
-import { VENDORS_GLOBAL } from '@/mocks/data/pipeline/vendors_global'
+import { VENDORS_GLOBAL } from '../../data/pipeline/vendors_global'
 
 // ============================================================
 // § 結果型

@@ -1490,3 +1490,123 @@ await enqueueMigrationJobs(jobId, clientId, files);
 | 切り替え | `VITE_USE_MOCK` | `USE_SUPABASE_MIGRATION` |
 | ファクトリ | `repositories/index.ts` | `migrationRepository.ts` 内 |
 
+---
+
+## 17. classify API仕様（UIプレビュー用軽量AI）
+
+> 旧 22_classify_realtime_validation.md を統合（2026-04-29）
+
+### 17-1. classifyの役割と限界
+
+**classifyはアップロード時のUIプレビュー表示専用。仕訳一覧が期待する型（JournalPhase5Mock）は一切出力しない。**
+
+| | classify API（UIプレビュー用） | Extract API（本番仕訳生成）※未実装 |
+|---|---|---|
+| **目的** | アップロード画面で種別・金額・日付をプレビュー表示 | 仕訳一覧が期待する全フィールド（科目、税区分、補助等）を出力 |
+| **出力** | source_type, direction, line_items（粗い） | JournalPhase5Mock型の完全な仕訳データ |
+| **発火** | 独自アップロード時に即時（画像1枚ずつ） | **選別確定時**（独自+Drive全証票をまとめて） |
+| **入力** | 画像1枚 | **独自+Driveの全証票をバッチ投入** |
+| **出力の寿命** | 選別確定後に**削除**（再利用価値なし） | 永続保存（仕訳一覧UI → CSV出力） |
+
+### 17-2. なぜExtract APIは選別確定時に発火するか
+
+Driveと独自アップロードの証票が揃うタイミングが選別確定時。バラバラにAIにかけるのではなく、全証票をまとめて渡す必要がある。
+
+```
+独自アップロード → classify（UIプレビュー）→ DocEntry保存
+Drive連携        → ファイルID取得のみ       → DocEntry保存
+                    ↓
+              選別画面で証票が集約される
+                    ↓
+              ユーザーが確定送信ボタン押下
+                    ↓
+              Extract API発火（全証票バッチ投入）
+                    ↓
+              JournalPhase5Mock[] 生成 → 仕訳一覧UIに表示
+                    ↓
+              classifyの出力を削除（不要になったため）
+```
+
+### 17-3. classify バリデーション仕様
+
+#### 対象ルート（4つ）= すべて同じAI処理＋バリデーション
+
+| ルート | UI | ロール |
+|---|---|---|
+| `/upload/:clientId/staff/mobile` | スマホ用 | 事務所スタッフ |
+| `/upload/:clientId/staff/pc` | PC用 | 事務所スタッフ |
+| `/upload/:clientId/guest/mobile` | スマホ用 | 顧問先ゲスト |
+| `/upload/:clientId/guest/pc` | PC用 | 顧問先ゲスト |
+
+#### 対象外
+
+| ルート | 理由 |
+|---|---|
+| `/upload-docs/:clientId` | CSV・エクセル・謄本・税務届等。AIバリデーション不要 |
+
+#### AIが返す項目とバリデーション
+
+| 項目 | AIが返す値 | バリデーション |
+|---|---|---|
+| `date` | `YYYY-MM-DD` or null | **nullならNG**（撮り直し） |
+| `total_amount` | 数値 or null | **nullまたは0以下ならNG** |
+| `issuer_name` | 文字列 or null | 警告のみ（NGにはしない） |
+| `source_type` | 11種enum | `non_journal` / `other` → 除外フラグ |
+| 重複 | SHA-256 + 日付+金額+取引先の一致 | ⚠警告表示（ブロックしない） |
+
+#### テスト用追加項目
+
+| 項目 | 単位 | 用途 |
+|---|---|---|
+| `date` | `YYYY-MM-DD` | 証票の日付 |
+| `duration_seconds` | 秒（整数 or 小数） | 処理時間 |
+| `token_count` | 整数 | 入力+出力トークン合計 |
+| `cost_yen` | 円（小数） | 利用料 |
+
+#### 処理フロー
+
+```
+4ルートすべて
+  → MockUploadPage.vue / MockUploadPcPage.vue
+    → analyzeReceipt(file)
+      → 現状: analyzeReceiptMock()     ← ランダム
+      → 本番: POST /api/pipeline/classify  ← AIが判定
+        → 前処理（image_preprocessor.ts）
+        → Gemini classify
+        → postprocess（バリデーション+fallback）
+        → レスポンスを ReceiptAnalysisResult に変換
+          → date/amount が null → ok: false, errorReason表示
+          → date/amount が有効  → ok: true, 結果表示
+```
+
+### 17-4. classifyの出力ライフサイクル
+
+```
+① アップロード → classify → aiLineItems等をDocEntryに一時保存
+② 選別画面で表示（種別、金額、摘要等のUIプレビューに使用）
+③ 確定送信 → Extract API発火 → 本番仕訳データ取得
+④ classifyの出力（aiLineItems等）を削除 ← 再利用価値なし
+```
+
+### 17-5. 暫定処理（Extract API未実装時）
+
+Extract APIが未実装のため、現在は以下の暫定フローで動作:
+
+```
+暫定: classify出力 → lineItemToJournalMock()で無理やり仕訳形式に変換
+本来: Extract API → JournalPhase5Mock型の完全な仕訳を直接出力
+```
+
+`lineItemToJournalMock()` はExtract API実装後に不要になる暫定処理。
+
+### 17-6. 実装ステップ（classify）
+
+- [x] classify API に `duration_seconds`, `token_count`, `cost_yen` を追加返却
+- [x] `analyzeReceiptReal` を実装（POST `/api/pipeline/classify` に接続）
+- [x] `ReceiptAnalysisResult` 型を拡張（テスト用項目追加）
+- [x] フロント側バリデーション（date/amount nullチェック → ok: false）
+- [x] 前処理パイプライン統一（`image_preprocessor.ts`）
+- [x] モデルID修正（`gemini-2.5-flash`）
+- [ ] 重複検出強化（日付+金額+取引先の内容ベース重複チェック）
+
+

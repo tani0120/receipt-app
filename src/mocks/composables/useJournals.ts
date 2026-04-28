@@ -139,7 +139,14 @@ export function useJournals(clientId: Ref<string>) {
       return
     }
 
-    // 3. フィクスチャデータはそのまま使用（getOrCreateで設定済み）
+    // 3. TST-00011はパイプライン貫通テスト用: フィクスチャ投入をスキップ（空のまま）
+    if (cid === 'TST-00011') {
+      data.value = []
+      console.log(`[useJournals] ${cid}: テスト用クライアント。フィクスチャ投入スキップ（空配列）`)
+      return
+    }
+
+    // 4. フィクスチャデータはそのまま使用（getOrCreateで設定済み）
     // サーバーにもフィクスチャを保存しておく
     saveToServer(cid, data.value)
     console.log(`[useJournals] ${cid}: フィクスチャ${data.value.length}件をサーバーに初期投入`)

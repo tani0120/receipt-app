@@ -384,6 +384,17 @@ export interface DocEntry {
     amount: number
     direction: 'expense' | 'income'
     balance: number | null
+    // 科目確定結果（classify API → determineAccount() で付与。Step4-C）
+    vendor_id?: string | null
+    vendor_name?: string | null
+    determined_account?: string | null
+    tax_category?: string | null
+    sub_account?: string | null
+    department?: string | null
+    rule_id?: string | null
+    level?: 'A' | 'insufficient'
+    prediction_method?: string | null
+    candidates?: string[]
   }[] | null
   /** AI行データ件数 */
   aiLineItemsCount?: number

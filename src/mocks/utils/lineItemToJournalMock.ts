@@ -364,6 +364,37 @@ export function lineItemToJournalMock(
         debitEntries  = [counterpartEntry]
         creditEntries = [mainEntry]
       }
+    } else {
+      // D-5改: insufficient でもプレースホルダーエントリを生成（テーブル表示用）
+      // account=null だが金額は保持。仕訳一覧で行として表示し、担当者が科目を手入力できる
+      const counterpartInsuf = resolveCounterpartAccount(sourceType, item.direction, isCreditCardPayment)
+      const placeholderMain: JournalEntryLine = {
+        id:                 generateJournalEntryId(),
+        account:            null,
+        account_on_document: false,
+        sub_account:        null,
+        department:         null,
+        amount:             item.amount,
+        amount_on_document: true,
+        tax_category_id:    null,
+      }
+      const placeholderCounter: JournalEntryLine = {
+        id:                 generateJournalEntryId(),
+        account:            counterpartInsuf.account,  // 相手勘定は source_type から確定可能
+        account_on_document: false,
+        sub_account:        null,
+        department:         null,
+        amount:             item.amount,
+        amount_on_document: true,
+        tax_category_id:    counterpartInsuf.tax_category,
+      }
+      if (item.direction === 'expense') {
+        debitEntries  = [placeholderMain]
+        creditEntries = [placeholderCounter]
+      } else {
+        debitEntries  = [placeholderCounter]
+        creditEntries = [placeholderMain]
+      }
     }
 
     // D-5: insufficient の場合は ACCOUNT_UNKNOWN ラベルを付与
@@ -387,7 +418,7 @@ export function lineItemToJournalMock(
       vendor_vector:        item.vendor_vector ?? null,
       // Step4-C: 取引先特定結果
       vendor_id:            acctResult?.vendorId ?? null,
-      vendor_name:          acctResult?.vendorName ?? null,
+      vendor_name:          acctResult?.vendorName ?? item.vendor_name ?? null,
       document_id:          documentId,
       line_id:              documentId ? `${documentId}_line-${item.line_index}` : null,
       debit_entries:        debitEntries,

@@ -18,7 +18,7 @@ import type {
 } from './types';
 import { postprocessClassify } from './postprocess';
 import { validateClassifyResult } from './validateClassifyResult';
-import { determineAccount } from '@/mocks/utils/pipeline/accountDetermination';
+import { determineAccount } from '../../../mocks/utils/pipeline/accountDetermination';
 
 // ============================================================
 // 設定
