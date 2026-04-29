@@ -124,6 +124,10 @@ app.route('/api/guest', guestAuthRoutes)
 import notificationRoutes from './api/routes/notificationRoutes'
 app.route('/api/notifications', notificationRoutes)
 
+// ConfirmedJournal API: 確定済み仕訳JSON永続化（T-03 / DL-053）
+import confirmedJournalRoutes from './api/routes/confirmedJournalRoutes'
+app.route('/api/confirmed-journals', confirmedJournalRoutes)
+
 
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))

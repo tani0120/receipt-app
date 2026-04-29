@@ -116,18 +116,18 @@ export interface ClientForm extends Omit<Client, 'clientId' | 'contact'> {
 }
 
 // ============================================================
-// § ConfirmedJournal 仮定義（T-03未着手のため）
-
+// § ConfirmedJournal 型（T-03完了: 2026-04-29）
 // ============================================================
 
 /**
- * 確定済み仕訳（仮定義）
+ * 確定済み仕訳（正式型）
  *
- * ⚠️ T-03（確定済み仕訳マスタ型定義）完了時に正式な型に差し替えること。
- * ⚠️ この型はtypes.ts内に封じ込める。Repository外に漏らさない。
- * ⚠️ パイプライン側ではT-03完了まで使用しない。
+ * 型定義本体: src/mocks/types/confirmed_journal.type.ts
+ * 設計根拠: docs/genzai/25_past_journal.md §4
+ * 命名規則: snake_case統一（DL-054）
  */
-type ConfirmedJournal = unknown
+import type { ConfirmedJournal } from '@/mocks/types/confirmed_journal.type'
+export type { ConfirmedJournal }
 
 // ============================================================
 // § 1. VendorRepository（全社取引先マスタ）

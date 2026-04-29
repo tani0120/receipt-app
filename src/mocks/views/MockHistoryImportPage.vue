@@ -88,37 +88,62 @@
               <p class="history-empty-sub">CSVをアップロードすると、ここに取込履歴が表示されます</p>
             </div>
 
-            <div v-else class="history-list">
-              <div v-for="item in importedFiles" :key="item.id" class="history-item">
+            <!-- サマリー（バッチリストの上） -->
+            <div v-if="importedFiles.length > 0" class="history-summary">
+              <div class="summary-item">
+                <span class="summary-label">取込済み過去仕訳</span>
+                <span class="summary-value">{{ totalRows }}件</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">インポート回数</span>
+                <span class="summary-value">{{ importedFiles.length }}回</span>
+              </div>
+            </div>
+
+            <!-- バッチリスト -->
+            <div v-if="importedFiles.length > 0" class="history-list">
+              <div v-for="item in importedFiles" :key="item.id" class="history-item" @click="showDownloadModal(item)" style="cursor: pointer;">
                 <div class="history-item-info">
                   <div class="history-item-icon">
                     <i class="fa-solid fa-check-circle"></i>
                   </div>
                   <div>
-                    <p class="history-item-name">{{ item.fileName }}</p>
-                    <p class="history-item-meta">
-                      {{ item.rowCount }}件 ・ {{ item.importedAt }}
+                    <p class="history-item-name">
+                      顧問先：{{ item.clientId }}　インポート日：{{ formatDate(item.importedAt) }}　<span class="history-item-count">{{ item.rowCount }}件</span>
+                    </p>
+                    <p class="history-item-date">
+                      仕訳日付：{{ item.minVoucherDate }} ～ {{ item.maxVoucherDate }}
                     </p>
                   </div>
                 </div>
-                <button class="history-item-delete" @click="removeImported(item.id)" title="削除">
+                <button class="history-item-delete" @click.stop="removeImported(item.id)" title="削除">
                   <i class="fa-solid fa-trash-can"></i>
                 </button>
               </div>
             </div>
-
-            <!-- 統計サマリー -->
-            <div v-if="importedFiles.length > 0" class="history-summary">
-              <div class="summary-item">
-                <span class="summary-label">総仕訳数</span>
-                <span class="summary-value">{{ totalRows }}件</span>
-              </div>
-              <div class="summary-item">
-                <span class="summary-label">ファイル数</span>
-                <span class="summary-value">{{ importedFiles.length }}件</span>
-              </div>
-            </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CSVダウンロードモーダル -->
+    <div v-if="downloadTarget" class="modal-overlay" @click.self="downloadTarget = null">
+      <div class="modal-card">
+        <h3 class="modal-title"><i class="fa-solid fa-download"></i> CSVダウンロード</h3>
+        <p class="modal-desc">
+          以下のバッチのCSVをダウンロードしますか？
+        </p>
+        <div class="modal-detail">
+          <p>顧問先：{{ downloadTarget.clientId }}</p>
+          <p>インポート日：{{ formatDate(downloadTarget.importedAt) }}</p>
+          <p>仕訳日付：{{ downloadTarget.minVoucherDate }} ～ {{ downloadTarget.maxVoucherDate }}</p>
+          <p>件数：{{ downloadTarget.rowCount }}件</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-yes" @click="executeDownload" :disabled="isDownloading">
+            {{ isDownloading ? 'ダウンロード中...' : 'はい' }}
+          </button>
+          <button class="btn-modal-no" @click="downloadTarget = null">いいえ</button>
         </div>
       </div>
     </div>
@@ -126,7 +151,48 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const clientId = route.params.clientId as string
+
+/**
+ * CSVファイルのエンコーディングを自動検出して読み取る
+ * 判定ロジック:
+ *   1. 先頭3バイトがEF BB BF → UTF-8 BOM付き
+ *   2. UTF-8でデコード → ヘッダーに「取引No」が含まれれば確定
+ *   3. UTF-8で「取引No」が見つからない → Shift-JISで再試行
+ */
+async function readCsvFileAutoEncoding(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+
+  // BOM検出
+  const has_bom = bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF
+
+  if (has_bom) {
+    // BOM付きUTF-8
+    return new TextDecoder('utf-8').decode(buffer)
+  }
+
+  // BOMなし: まずUTF-8で試行
+  const utf8_text = new TextDecoder('utf-8').decode(buffer)
+  const first_line = utf8_text.split(/\r?\n/)[0] ?? ''
+  if (first_line.includes('取引No')) {
+    return utf8_text
+  }
+
+  // UTF-8で「取引No」が見つからない → Shift-JISで再試行
+  const sjis_text = new TextDecoder('shift_jis').decode(buffer)
+  const sjis_first_line = sjis_text.split(/\r?\n/)[0] ?? ''
+  if (sjis_first_line.includes('取引No')) {
+    return sjis_text
+  }
+
+  // どちらでも見つからない場合はUTF-8のまま返す（パーサー側でエラーになる）
+  return utf8_text
+}
 
 // 状態
 const isDragging = ref(false)
@@ -137,13 +203,45 @@ const isImporting = ref(false)
 // 取込済みデータ
 interface ImportedFile {
   id: string
-  fileName: string
+  clientId: string
   rowCount: number
   importedAt: string
+  minVoucherDate: string
+  maxVoucherDate: string
 }
 const importedFiles = ref<ImportedFile[]>([])
 
 const totalRows = computed(() => importedFiles.value.reduce((sum, f) => sum + f.rowCount, 0))
+
+// 日付フォーマット（ISO文字列 → yyyy-mm-dd）
+const formatDate = (isoStr: string): string => {
+  if (!isoStr) return ''
+  return isoStr.slice(0, 10)
+}
+
+// ── サーバーからバッチ一覧を取得 ──
+const refreshBatches = async () => {
+  try {
+    const response = await fetch(`/api/confirmed-journals/${clientId}/batches`)
+    if (response.ok) {
+      const data = await response.json()
+      importedFiles.value = (data.batches || []).map((b: any) => ({
+        id: b.import_batch_id,
+        clientId: b.client_id || clientId,
+        rowCount: b.count,
+        importedAt: b.imported_at,
+        minVoucherDate: b.min_voucher_date || '',
+        maxVoucherDate: b.max_voucher_date || '',
+      }))
+      console.log(`[HistoryImport] ${importedFiles.value.length}バッチをサーバーから読み込み`)
+    }
+  } catch (err) {
+    console.error('[HistoryImport] バッチ一覧の取得失敗:', err)
+  }
+}
+
+// 起動時に自動取得
+onMounted(() => refreshBatches())
 
 // ファイルサイズフォーマット
 const formatFileSize = (bytes: number) => {
@@ -194,29 +292,181 @@ const executeImport = async () => {
   if (!uploadedFile.value) return
   isImporting.value = true
 
-  // TODO: 実際のパース＆保存ロジックをここに実装
-  await new Promise(resolve => setTimeout(resolve, 1500))
+  try {
+    // CSVテキストを読み取り（UTF-8 / Shift-JIS 自動検出）
+    const csv_text = await readCsvFileAutoEncoding(uploadedFile.value)
 
-  const now = new Date()
-  const timestamp = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    // APIにPOST
+    const response = await fetch(`/api/confirmed-journals/${clientId}/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csv_text }),
+    })
 
-  importedFiles.value.unshift({
-    id: crypto.randomUUID(),
-    fileName: uploadedFile.value.name,
-    rowCount: rowCount.value,
-    importedAt: timestamp,
-  })
+    const result = await response.json()
 
-  uploadedFile.value = null
-  rowCount.value = 0
-  isImporting.value = false
+    if (!response.ok) {
+      alert(`取込エラー: ${result.message || '不明なエラー'}`)
+      isImporting.value = false
+      return
+    }
+
+    // 警告があれば表示
+    if (result.warnings && result.warnings.length > 0) {
+      console.warn('[HistoryImport] 警告:', result.warnings)
+    }
+
+    if (!result.ok || result.added === 0) {
+      const warning_msg = result.warnings?.join('\n') || 'パースに失敗しました'
+      alert(`取込できませんでした:\n${warning_msg}`)
+      isImporting.value = false
+      return
+    }
+
+    // 成功メッセージ（重複スキップがあれば併記）
+    const skip_msg = result.skipped > 0 ? `（重複${result.skipped}件スキップ）` : ''
+    console.log(`[HistoryImport] ${result.added}件取込完了${skip_msg}。DB総数: ${result.total_in_db}件`)
+
+    // バッチ一覧を再取得（voucher_date範囲等の正確なデータを取得）
+    await refreshBatches()
+
+    uploadedFile.value = null
+    rowCount.value = 0
+  } catch (err) {
+    console.error('[HistoryImport] 取込失敗:', err)
+    alert('取込に失敗しました。サーバーが起動しているか確認してください。')
+  } finally {
+    isImporting.value = false
+  }
 }
 
-// 取込済みデータ削除
-const removeImported = (id: string) => {
-  if (confirm('この取込データを削除しますか？')) {
-    importedFiles.value = importedFiles.value.filter(f => f.id !== id)
+// 取込済みデータ削除（サーバーAPIからも削除）
+const removeImported = async (id: string) => {
+  if (!confirm('この取込データを削除しますか？\n（サーバーからも完全に削除されます）')) return
+
+  try {
+    const response = await fetch(`/api/confirmed-journals/batch/${id}`, {
+      method: 'DELETE',
+    })
+    const result = await response.json()
+    if (response.ok) {
+      importedFiles.value = importedFiles.value.filter(f => f.id !== id)
+      console.log(`[HistoryImport] バッチ${id}削除完了（${result.removed}件）`)
+    } else {
+      alert('削除に失敗しました')
+    }
+  } catch (err) {
+    console.error('[HistoryImport] 削除失敗:', err)
+    alert('削除に失敗しました。サーバーが起動しているか確認してください。')
   }
+}
+
+// ── CSVダウンロード ──
+const downloadTarget = ref<ImportedFile | null>(null)
+const isDownloading = ref(false)
+
+const showDownloadModal = (item: ImportedFile) => {
+  downloadTarget.value = item
+}
+
+const executeDownload = async () => {
+  if (!downloadTarget.value) return
+  isDownloading.value = true
+
+  try {
+    const response = await fetch(`/api/confirmed-journals/batch/${downloadTarget.value.id}/journals`)
+    if (!response.ok) {
+      alert('仕訳データの取得に失敗しました')
+      return
+    }
+
+    const data = await response.json()
+    const journals = data.journals || []
+
+    if (journals.length === 0) {
+      alert('仕訳データがありません')
+      return
+    }
+
+    // MF CSV 23列ヘッダー
+    const headers = [
+      '取引No', '取引日', '借方勘定科目', '借方補助科目', '借方部門', '借方取引先',
+      '借方税区分', '借方インボイス', '借方金額(円)', '借方税額',
+      '貸方勘定科目', '貸方補助科目', '貸方部門', '貸方取引先',
+      '貸方税区分', '貸方インボイス', '貸方金額(円)', '貸方税額',
+      '摘要', '仕訳メモ', 'タグ', 'MF仕訳タイプ', '決算整理仕訳',
+    ]
+
+    const rows: string[] = [headers.join(',')]
+
+    for (const j of journals) {
+      const max_lines = Math.max(
+        (j.debit_entries || []).length,
+        (j.credit_entries || []).length,
+        1
+      )
+
+      for (let i = 0; i < max_lines; i++) {
+        const d = (j.debit_entries || [])[i]
+        const c = (j.credit_entries || [])[i]
+
+        const fields = [
+          j.mf_transaction_no ?? '',
+          (j.voucher_date || '').replace(/-/g, '/'),
+          d?.account ?? '',
+          d?.sub_account ?? '',
+          d?.department ?? '',
+          d?.vendor_name ?? '',
+          d?.tax_category_id ?? '',
+          d?.invoice ?? '',
+          d?.amount ?? '',
+          d?.tax_amount ?? '',
+          c?.account ?? '',
+          c?.sub_account ?? '',
+          c?.department ?? '',
+          c?.vendor_name ?? '',
+          c?.tax_category_id ?? '',
+          c?.invoice ?? '',
+          c?.amount ?? '',
+          c?.tax_amount ?? '',
+          i === 0 ? (j.description ?? '') : '',
+          i === 0 ? (j.memo ?? '') : '',
+          i === 0 ? (j.tags ?? '') : '',
+          i === 0 ? (j.mf_journal_type ?? '') : '',
+          i === 0 && j.is_closing_entry ? '○' : '',
+        ]
+
+        rows.push(fields.map(f => csvEscape(String(f))).join(','))
+      }
+    }
+
+    const csv_text = rows.join('\r\n')
+    const bom = '\uFEFF'
+    const blob = new Blob([bom + csv_text], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `confirmed_journals_${downloadTarget.value.clientId}_${formatDate(downloadTarget.value.importedAt)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+
+    downloadTarget.value = null
+    console.log(`[HistoryImport] CSV出力完了: ${journals.length}件`)
+  } catch (err) {
+    console.error('[HistoryImport] CSVダウンロード失敗:', err)
+    alert('CSVダウンロードに失敗しました')
+  } finally {
+    isDownloading.value = false
+  }
+}
+
+/** CSV値エスケープ */
+const csvEscape = (val: string): string => {
+  if (!val) return ''
+  if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+    return '"' + val.replace(/"/g, '""') + '"'
+  }
+  return val
 }
 </script>
 
@@ -522,15 +772,26 @@ const removeImported = (id: string) => {
   font-size: 16px;
 }
 .history-item-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: #1e293b;
   margin: 0;
+}
+.history-item-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
 }
 .history-item-meta {
   font-size: 10px;
   color: #64748b;
   margin: 2px 0 0;
+}
+.history-item-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin: 3px 0 0;
 }
 .history-item-delete {
   background: none;
@@ -569,5 +830,98 @@ const removeImported = (id: string) => {
   font-size: 16px;
   font-weight: 800;
   color: #15803d;
+}
+
+/* CSVダウンロードモーダル */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.modal-card {
+  background: white;
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin-bottom: 12px;
+}
+.modal-title i {
+  color: #3b82f6;
+  margin-right: 8px;
+}
+.modal-desc {
+  font-size: 14px;
+  color: #475569;
+  margin-bottom: 16px;
+}
+.modal-detail {
+  background: #f0f9ff;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.modal-detail p {
+  font-size: 13px;
+  color: #1e3a5f;
+  margin: 4px 0;
+}
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.btn-modal-yes {
+  padding: 10px 28px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-modal-yes:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+.btn-modal-yes:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-modal-no {
+  padding: 10px 28px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-modal-no:hover {
+  background: #e2e8f0;
+}
+
+/* バッチ行ホバー */
+.history-item:hover {
+  background: #f0f9ff;
+  border-radius: 8px;
 }
 </style>

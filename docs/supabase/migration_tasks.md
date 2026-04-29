@@ -505,6 +505,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | rule_id仕訳逆引き表示（DL-051 T-AUD-4b） | 仕訳一覧で`rule_id`が存在するが、「なぜこの科目？」をルール名で逆引き表示する機能がない | Supabase移行後に`learning_rules`テーブルとJOINしてルール名・キーワードをホバー表示 | JournalListLevel3Mock.vue |
 | ai_completed_at等4件ダッシュボード接続（DL-051 T-AUD-4c） | `ai_completed_at`/`prediction_method`/`prediction_score`/`model_version` がダッシュボードのプレースホルダーに待ち状態 | Supabase移行後に実データ接続。prediction_methodはStep4完了後に初めて値が入る | MockAdminDashboardPage.vue |
 | 旧系統LearningRule二重管理廃止（DL-051 監査検出） | 旧Firestore設計のLearningRule関連コードが10ファイル以上に残存し、新系統（mocks層）と矛盾。`confidenceScore`がLearningRuleUi.ts/zod_schema.ts/firestore.tsに残存、clientCodeベース、借方勘定科目のみ（貸方なし）、ScreenD_AIRules.vueのimport先不在 | Supabase移行時に旧系統廃止。対象: `LearningRuleUi.ts`/`zod_schema.ts` L486/`firestore.ts` L350/`ScreenD_AIRules.vue`等。新系統`learning_rule.type.ts`+`learning_rules_TST00011.ts`で完全置換 | LearningRuleUi.ts, zod_schema.ts, firestore.ts, ScreenD_AIRules.vue |
+| **プロパティ命名snake_case統一（DL-054）** | LearningRule系（`matchType`, `amountMin`, `isActive`等）とAccountDeterminationResult（`vendorId`, `determinedAccount`等）がcamelCase。JournalPhase5Mock/Vendor等のUI表示系はsnake_case。**混在** | Supabase移行時に一括リファクタ。対象: `learning_rule.type.ts`（LearningRule + LearningRuleEntryLine）、`accountDetermination.ts`（AccountDeterminationResult）、`matchLearningRule.ts`。全プロパティをsnake_caseに変換 | learning_rule.type.ts, accountDetermination.ts, matchLearningRule.ts |
 
 ---
 
