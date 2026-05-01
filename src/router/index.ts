@@ -205,6 +205,12 @@ export const routes: RouteRecordRaw[] = [
     props: true
   },
   {
+    path: '/supporting-history/:clientId',
+    name: 'MockSupportingHistory',
+    component: () => import('@/mocks/views/MockSupportingHistoryPage.vue'),
+    props: true
+  },
+  {
     path: '/drive-select/:clientId',
     name: 'MockDriveSelect',
     component: () => import('@/mocks/views/MockDriveSelectPage.vue'),
@@ -527,6 +533,18 @@ router.beforeEach(async (to) => {
   }
   return true;
 })
+
+// ============================================================
+// 活動トラッキング（ページ遷移時に自動計測）
+// ============================================================
+import { startTracking, stopTracking } from '@/composables/useActivityTracker';
+
+router.afterEach((to) => {
+  // 前のページの計測を停止
+  stopTracking();
+  // 新しいページの計測を開始（対象外ページは内部でスキップ）
+  startTracking(to.path);
+});
 
 export default router
 

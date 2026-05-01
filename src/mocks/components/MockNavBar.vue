@@ -251,9 +251,9 @@ const isNavActive = (item: NavItem): boolean => {
   if (item.path === null) return false;
   // settingsトップは /client-settings/:clientId パターン
   if (item.key === 'settings') return route.path.match(/^\/client-settings\/[^/]+/) !== null;
-  // 出力ポータル配下: /output, /export, /excluded-history, /export-history, /export-detail
+  // 出力ポータル配下: /output, /export, /excluded-history, /supporting-history, /export-history, /export-detail
   if (item.key === 'export') {
-    return ['/output/', '/export/', '/excluded-history/', '/export-history/', '/export-detail/'].some(p => route.path.startsWith(p));
+    return ['/output/', '/export/', '/excluded-history/', '/supporting-history/', '/export-history/', '/export-detail/'].some(p => route.path.startsWith(p));
   }
   return route.path.startsWith(item.path + '/');
 };

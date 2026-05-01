@@ -4,6 +4,9 @@ import { z } from 'zod'
 
 import { zValidator } from '@hono/zod-validator'
 import { zodHook } from '../helpers/zodHook'
+import { getDocuments } from '../services/documentStore'
+import { summarizeCsvLines as summarizeCsvLinesImport } from '../services/exportHistoryStore'
+import type { DocEntry } from '../../repositories/types'
 
 const app = new Hono()
 
@@ -41,6 +44,87 @@ const MOCK_ADMIN_DATA = {
     ]
 }
 
+// ============================================================
+// AI利用統計集計ヘルパー
+// ============================================================
+
+interface AiMetricsSummary {
+  /** 集計キー（顧問先ID or スタッフID） */
+  key: string;
+  /** AI呼び出し回数 */
+  totalCalls: number;
+  /** 入力トークン合計 */
+  promptTokens: number;
+  /** 出力トークン合計 */
+  completionTokens: number;
+  /** 思考トークン合計 */
+  thinkingTokens: number;
+  /** 合計トークン数 */
+  totalTokens: number;
+  /** 費用合計（円） */
+  totalCostYen: number;
+  /** 平均処理時間（ms） */
+  avgLatencyMs: number;
+  /** 使用モデル（最頻） */
+  model: string;
+}
+
+/** DocEntry配列からaiMetricsを集計 */
+function aggregateMetrics(docs: DocEntry[], groupBy: 'clientId' | 'createdBy'): AiMetricsSummary[] {
+  const groups = new Map<string, DocEntry[]>();
+  for (const doc of docs) {
+    if (!doc.aiMetrics) continue;
+    const key = groupBy === 'clientId' ? doc.clientId : (doc.createdBy ?? '不明');
+    const list = groups.get(key) ?? [];
+    list.push(doc);
+    groups.set(key, list);
+  }
+
+  const results: AiMetricsSummary[] = [];
+  for (const [key, list] of groups) {
+    let promptTokens = 0;
+    let completionTokens = 0;
+    let thinkingTokens = 0;
+    let totalCostYen = 0;
+    let totalLatency = 0;
+    const modelCounts = new Map<string, number>();
+
+    for (const doc of list) {
+      const m = doc.aiMetrics!;
+      promptTokens += m.prompt_tokens;
+      completionTokens += m.completion_tokens;
+      thinkingTokens += m.thinking_tokens;
+      totalCostYen += m.cost_yen;
+      totalLatency += m.duration_ms;
+      const model = m.model ?? 'unknown';
+      modelCounts.set(model, (modelCounts.get(model) ?? 0) + 1);
+    }
+
+    // 最頻モデル
+    let topModel = 'unknown';
+    let topCount = 0;
+    for (const [model, count] of modelCounts) {
+      if (count > topCount) { topModel = model; topCount = count; }
+    }
+
+    results.push({
+      key,
+      totalCalls: list.length,
+      promptTokens,
+      completionTokens,
+      thinkingTokens,
+      totalTokens: promptTokens + completionTokens,
+      totalCostYen: Math.round(totalCostYen * 10000) / 10000,
+      avgLatencyMs: list.length > 0 ? Math.round(totalLatency / list.length) : 0,
+      model: topModel,
+    });
+  }
+
+  // コスト降順
+  results.sort((a, b) => b.totalCostYen - a.totalCostYen);
+  return results;
+}
+
 // --- Routes ---
 const route = app
     .get('/dashboard', (c) => {
@@ -61,5 +145,95 @@ const route = app
             return c.json({ success: true, message: 'Configuration save skipped (Firebase removed)' })
         }
     )
+    // ━━━ AI利用統計API（管理ダッシュボード用） ━━━
+    .get('/ai-metrics/summary', (c) => {
+      const docs = getDocuments();
+      const withMetrics = docs.filter(d => d.aiMetrics);
+      const byClient = aggregateMetrics(docs, 'clientId');
+      const byStaff = aggregateMetrics(docs, 'createdBy');
+
+      // 全体集計
+      let promptTokens = 0, completionTokens = 0, thinkingTokens = 0;
+      let totalCostYen = 0, totalLatency = 0;
+      for (const doc of withMetrics) {
+        const m = doc.aiMetrics!;
+        promptTokens += m.prompt_tokens;
+        completionTokens += m.completion_tokens;
+        thinkingTokens += m.thinking_tokens;
+        totalCostYen += m.cost_yen;
+        totalLatency += m.duration_ms;
+      }
+
+      return c.json({
+        total: {
+          totalCalls: withMetrics.length,
+          promptTokens,
+          completionTokens,
+          thinkingTokens,
+          totalTokens: promptTokens + completionTokens,
+          totalCostYen: Math.round(totalCostYen * 10000) / 10000,
+          avgLatencyMs: withMetrics.length > 0 ? Math.round(totalLatency / withMetrics.length) : 0,
+        },
+        byClient,
+        byStaff,
+      });
+    })
+    /** 顧問先別AI利用統計 */
+    .get('/ai-metrics/by-client', (c) => {
+      const docs = getDocuments();
+      return c.json({ results: aggregateMetrics(docs, 'clientId') });
+    })
+    /** スタッフ別AI利用統計 */
+    .get('/ai-metrics/by-staff', (c) => {
+      const docs = getDocuments();
+      return c.json({ results: aggregateMetrics(docs, 'createdBy') });
+    })
+    /** 特定顧問先のAI利用統計（詳細） */
+    .get('/ai-metrics/client/:clientId', (c) => {
+      const clientId = c.req.param('clientId');
+      const docs = getDocuments(clientId);
+      const withMetrics = docs.filter(d => d.aiMetrics);
+
+      const details = withMetrics.map(d => ({
+        id: d.id,
+        fileName: d.fileName,
+        createdBy: d.createdBy,
+        receivedAt: d.receivedAt,
+        status: d.status,
+        metrics: d.aiMetrics,
+      }));
+
+      // 集計
+      let promptTokens = 0, completionTokens = 0, thinkingTokens = 0;
+      let totalCostYen = 0, totalLatency = 0;
+      for (const d of withMetrics) {
+        const m = d.aiMetrics!;
+        promptTokens += m.prompt_tokens;
+        completionTokens += m.completion_tokens;
+        thinkingTokens += m.thinking_tokens;
+        totalCostYen += m.cost_yen;
+        totalLatency += m.duration_ms;
+      }
+
+      return c.json({
+        clientId,
+        summary: {
+          totalCalls: withMetrics.length,
+          promptTokens,
+          completionTokens,
+          thinkingTokens,
+          totalTokens: promptTokens + completionTokens,
+          totalCostYen: Math.round(totalCostYen * 10000) / 10000,
+          avgLatencyMs: withMetrics.length > 0 ? Math.round(totalLatency / withMetrics.length) : 0,
+        },
+        details,
+      });
+    })
+    // ━━━ CSV行数集計API（管理ダッシュボード用） ━━━
+    .get('/csv-summary', (c) => {
+      const summary = summarizeCsvLinesImport();
+      return c.json(summary);
+    })
 
 export default route
+

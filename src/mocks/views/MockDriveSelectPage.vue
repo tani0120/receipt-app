@@ -498,25 +498,51 @@ const sendToProcess = async () => {
       console.log(`[sendToProcess] 合計${generatedCount}件の仕訳を journals-${clientId.value}.json に追加`);
     }
 
-    // ━━━ 1.5. previewExtractデータ完全削除（設計方針: previewExtract.service.ts ヘッダー参照）━━━
+    // ━━━ 1.5. 根拠資料メタデータ保存（clearAiFieldsの前に実行。AI抽出値を検索用に保存する） ━━━
+    const supportingDocViews = documents.value.filter(d => d.status === 'supporting');
+    if (supportingDocViews.length > 0) {
+      const metaItems = supportingDocViews.map(doc => ({
+        id: doc.id,
+        clientId: clientId.value,
+        fileName: doc.fileName,
+        previewUrl: doc.previewUrlFull || doc.thumbnailBase64 || '',
+        date: doc.aiDate ?? null,
+        amount: doc.aiAmount ?? null,
+        vendor: doc.aiVendor ?? null,
+        description: doc.aiDescription ?? null,
+        sourceType: doc.aiSourceType ?? null,
+      }));
+
+      try {
+        await fetch(`/api/drive/save-supporting-meta/${encodeURIComponent(clientId.value)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: metaItems }),
+        });
+        console.log(`[sendToProcess] 根拠資料メタデータ${metaItems.length}件保存`);
+      } catch (err) {
+        console.warn('[sendToProcess] 根拠資料メタ保存失敗（続行）:', err);
+      }
+    }
+
+    // ━━━ 1.6. previewExtractデータ完全削除（設計方針: previewExtract.service.ts ヘッダー参照）━━━
     // 仕訳変換が完了したため、previewExtract起算のai*フィールドは不要。
     // Extract API（本番AI）実装後はゼロから仕訳データを再生成する。
     await clearAiFields(clientId.value);
     console.log(`[sendToProcess] previewExtractデータ完全削除: ${clientId.value}`);
 
-    // ━━━ 2. Drive経路: migrateジョブ登録（Driveファイルのみ） ━━━
-    const driveFiles = filesToMigrate.filter(f => {
-      const docView = documents.value.find(d => d.id === f.fileId);
-      return docView?.source === 'drive';
-    });
+    // ━━━ 2. 移行ジョブ登録（supporting/excluded 全件。経路を問わない） ━━━
+    // Drive経路・独自アップロード経路ともに同じmigration_jobsに登録する。
+    // これにより根拠資料ZIP・仕訳外ZIPが両経路で統一的にダウンロード可能になる。
+    const nonTargetFiles = filesToMigrate.filter(f => f.status !== 'target');
 
-    if (driveFiles.length > 0) {
+    if (nonTargetFiles.length > 0) {
       const res = await fetch('/api/drive/migrate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId: clientId.value,
-          files: driveFiles,
+          files: nonTargetFiles,
         }),
       });
 
@@ -526,16 +552,23 @@ const sendToProcess = async () => {
       }
 
       const result = await res.json() as { jobId: string; queued: number };
-      console.log(`[sendToProcess] Drive移行ジョブ登録: jobId=${result.jobId}, queued=${result.queued}`);
+      console.log(`[sendToProcess] 移行ジョブ登録: jobId=${result.jobId}, queued=${result.queued}`);
 
-      // ポーリングをグローバルcomposableに委譲
-      startPolling(
-        result.jobId,
-        currentClient.value?.companyName ?? '',
-        clientId.value,
-        result.queued,
-        counts.value.excluded,
-      );
+      // ポーリングをグローバルcomposableに委譲（Driveファイルがある場合のみ）
+      const driveFileCount = nonTargetFiles.filter(f => {
+        const docView = documents.value.find(d => d.id === f.fileId);
+        return docView?.source === 'drive';
+      }).length;
+
+      if (driveFileCount > 0) {
+        startPolling(
+          result.jobId,
+          currentClient.value?.companyName ?? '',
+          clientId.value,
+          result.queued,
+          counts.value.excluded,
+        );
+      }
     }
 
     showCompleteModal.value = false;
@@ -544,12 +577,12 @@ const sendToProcess = async () => {
     const totalMsg = generatedCount > 0
       ? `${generatedCount}件の仕訳を生成しました。`
       : '';
-    const driveMsg = driveFiles.length > 0
-      ? `Drive${driveFiles.length}件はバックグラウンドで処理中。`
+    const bgMsg = nonTargetFiles.length > 0
+      ? `${nonTargetFiles.length}件（根拠資料・仕訳外）はバックグラウンドで処理中。`
       : '';
 
     showToast({
-      message: `送信完了。${totalMsg}${driveMsg}`,
+      message: `送信完了。${totalMsg}${bgMsg}`,
       type: 'info',
       icon: 'fa-solid fa-paper-plane',
     });

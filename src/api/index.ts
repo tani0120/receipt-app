@@ -13,6 +13,7 @@ import admin from './routes/admin'
 import worker from './routes/worker'
 import aiModels from './routes/ai-models'
 import jobs from './routes/jobs'
+import activityLog from './routes/activityLogRoutes'
 import { TAX_OPTIONS } from '../shared/schema_dictionary'
 
 const app = new Hono()
@@ -43,6 +44,7 @@ const routes = app
     .route('/api/admin', admin)
     .route('/api/worker', worker)
     .route('/api/ai', aiModels)
+    .route('/api/activity-log', activityLog)
     .get('/api/tax-options', (c) => {
         return c.json(TAX_OPTIONS)
     })

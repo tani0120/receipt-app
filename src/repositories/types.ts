@@ -432,19 +432,25 @@ export interface DocEntry {
 }
 
 /**
- * previewExtract APIで書き込まれるai*フィールドのキー一覧
+ * 確定送信時のai*フィールド管理一覧
  *
- * 確定送信後にこれらのフィールドを全てnullに設定する。
+ * ■ 削除対象（clearAiFieldsでnullに設定）:
+ *   aiDate, aiAmount, aiVendor, aiSourceType, aiDirection,
+ *   aiDescription, aiPreviewExtractReason, aiLineItems, aiLineItemsCount,
+ *   aiSupplementary, aiDocumentCount, aiWarning, aiProcessingMode, aiFallbackApplied
+ *
+ * ■ 削除しない（永続保持）:
+ *   aiMetrics    — 管理ダッシュボード指標（トークン数・費用・処理時間）
+ *   isDuplicate  — SHA-256ハッシュ比較結果（previewExtract出力ではない）
+ *
  * フィールド追加時はここと DocEntry 型定義を同時に更新すること。
- *
- * ※ isDuplicateはハッシュ比較結果でありpreviewExtract出力ではないため含めない
  */
 export const AI_FIELD_KEYS: (keyof DocEntry)[] = [
   'aiDate', 'aiAmount', 'aiVendor', 'aiSourceType', 'aiDirection',
   'aiDescription', 'aiPreviewExtractReason', 'aiLineItems', 'aiLineItemsCount',
   'aiSupplementary', 'aiDocumentCount', 'aiWarning', 'aiProcessingMode',
-  'aiFallbackApplied', 'aiMetrics',
-] as const satisfies readonly (keyof DocEntry)[]
+  'aiFallbackApplied',
+]
 
 /**
  * 資料マスタへのデータアクセス
@@ -595,3 +601,69 @@ export interface AppNotification {
     url: string
   }
 }
+
+// ============================================================
+// § 9. ActivityLog（活動ログ）— ページ別処理時間トラッキング
+// ============================================================
+
+/** 計測対象ページ種別 */
+export type TrackablePage =
+  | 'journal-list'   // 仕訳一覧
+  | 'drive-select'   // Drive選別
+  | 'output'         // 出力
+  | 'export'         // エクスポート
+  | 'export-history' // エクスポート履歴
+
+/**
+ * 活動ログ1件
+ *
+ * ログインスタッフの各ページ滞在時間を記録。
+ * アイドル検出（5分無操作→タイマー停止）で放置時間を除外。
+ */
+export interface ActivityLog {
+  /** 一意ID（例: act-1714500000000-abc123） */
+  id: string
+  /** ログインスタッフID（例: staff-0000） */
+  staffId: string
+  /** 顧問先ID（URLパラメータから取得。例: TST-00011） */
+  clientId: string
+  /** ページ種別 */
+  page: TrackablePage
+  /** 計測開始日時（ISO8601） */
+  startedAt: string
+  /** 計測終了日時（ISO8601） */
+  endedAt: string
+  /** アイドル除外後の実稼働ミリ秒 */
+  activeMs: number
+  /** アイドル時間（ミリ秒） */
+  idleMs: number
+}
+
+/** スタッフ別活動集計 */
+export interface StaffActivitySummary {
+  /** スタッフID */
+  staffId: string
+  /** 合計実稼働ミリ秒 */
+  totalActiveMs: number
+  /** 合計アイドルミリ秒 */
+  totalIdleMs: number
+  /** セッション数 */
+  sessionCount: number
+  /** ページ別実稼働ミリ秒 */
+  byPage: Record<string, number>
+}
+
+/** 顧問先別活動集計 */
+export interface ClientActivitySummary {
+  /** 顧問先ID */
+  clientId: string
+  /** 合計実稼働ミリ秒 */
+  totalActiveMs: number
+  /** 合計アイドルミリ秒 */
+  totalIdleMs: number
+  /** セッション数 */
+  sessionCount: number
+  /** ページ別実稼働ミリ秒 */
+  byPage: Record<string, number>
+}
+

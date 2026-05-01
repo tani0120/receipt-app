@@ -379,5 +379,103 @@ export function createSupabaseMigrationRepository(): MigrationRepository {
 
       return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     },
+
+    // --- 根拠資料ZIP用（excluded系と同構造、doc_status='supporting'でフィルタ） ---
+
+    async getSupportingJobs(clientId, all = false, jobId) {
+      const supabase = getSupabase();
+      let query = supabase
+        .from(TABLE)
+        .select('*')
+        .eq('client_id', clientId)
+        .eq('doc_status', 'supporting')
+        .eq('migration_status', 'done')
+        .is('storage_purged_at', null);
+
+      if (jobId) {
+        query = query.eq('job_id', jobId);
+      }
+
+      if (!all) {
+        query = query.is('downloaded_at', null);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: true });
+      if (error) throw new Error(`[supabaseMigrationRepo] getSupportingJobs失敗: ${error.message}`);
+      return (data ?? []).map(toJob);
+    },
+
+    async getSupportingCount(clientId) {
+      const supabase = getSupabase();
+      const { count, error } = await supabase
+        .from(TABLE)
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', clientId)
+        .eq('doc_status', 'supporting')
+        .eq('migration_status', 'done')
+        .is('downloaded_at', null)
+        .is('storage_purged_at', null);
+
+      if (error) throw new Error(`[supabaseMigrationRepo] getSupportingCount失敗: ${error.message}`);
+      return count ?? 0;
+    },
+
+    async getSupportingHistory(clientId) {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .eq('client_id', clientId)
+        .eq('doc_status', 'supporting')
+        .eq('migration_status', 'done')
+        .is('storage_purged_at', null)
+        .order('created_at', { ascending: true });
+
+      if (error) throw new Error(`[supabaseMigrationRepo] getSupportingHistory失敗: ${error.message}`);
+
+      const rows = data ?? [];
+      const grouped = new Map<string, typeof rows>();
+      for (const r of rows) {
+        const arr = grouped.get(String(r.job_id)) || [];
+        arr.push(r);
+        grouped.set(String(r.job_id), arr);
+      }
+
+      const dateCount = new Map<string, number>();
+      const result: Array<{
+        jobId: string; clientId: string; supportingCount: number;
+        fileName: string; displayDate: string; createdAt: string; downloadedAt: string | null;
+      }> = [];
+
+      for (const [jobId, grp] of grouped) {
+        const first = grp[0]!;
+        const dt = new Date(String(first.created_at));
+        const dateStr = dt.toISOString().slice(0, 10).replace(/-/g, '');
+        const timeStr = dt.toISOString().slice(11, 19).replace(/:/g, '');
+        const dateKey = `${clientId}_sup_${dateStr}`;
+        const count = dateCount.get(dateKey) || 0;
+        dateCount.set(dateKey, count + 1);
+
+        const fileName = count === 0
+          ? `${clientId}_根拠資料ダウンロード_${dateStr}`
+          : `${clientId}_根拠資料ダウンロード_${dateStr}_${timeStr}`;
+
+        const allDownloaded = grp.every(r => r.downloaded_at);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const displayDate = `${dt.getFullYear()}/${pad(dt.getMonth() + 1)}/${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+        result.push({
+          jobId,
+          clientId,
+          supportingCount: grp.length,
+          fileName,
+          displayDate,
+          createdAt: String(first.created_at),
+          downloadedAt: allDownloaded ? String(grp[0]!.downloaded_at) : null,
+        });
+      }
+
+      return result;
+    },
   };
 }

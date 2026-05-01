@@ -367,5 +367,101 @@ export function createJsonMigrationRepository(): MigrationRepository {
 
       return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     },
+
+    // --- 根拠資料ZIP用（excluded系と同構造、doc_status='supporting'でフィルタ） ---
+
+    async getSupportingJobs(clientId, all = false, jobId) {
+      let jobs = readJobs().filter(j =>
+        j.client_id === clientId &&
+        j.doc_status === 'supporting' &&
+        j.migration_status === 'done' &&
+        !j.storage_purged_at
+      );
+
+      if (jobId) {
+        jobs = jobs.filter(j => j.job_id === jobId);
+      }
+
+      if (!all) {
+        jobs = jobs.filter(j => !j.downloaded_at);
+      }
+
+      return jobs
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
+        .map(toJob);
+    },
+
+    async getSupportingCount(clientId) {
+      return readJobs().filter(j =>
+        j.client_id === clientId &&
+        j.doc_status === 'supporting' &&
+        j.migration_status === 'done' &&
+        !j.downloaded_at &&
+        !j.storage_purged_at
+      ).length;
+    },
+
+    async getSupportingHistory(clientId) {
+      const jobs = readJobs().filter(j =>
+        j.client_id === clientId &&
+        j.doc_status === 'supporting' &&
+        j.migration_status === 'done' &&
+        !j.storage_purged_at
+      );
+
+      // jobId単位でグルーピング
+      const grouped = new Map<string, JobRow[]>();
+      for (const j of jobs) {
+        const arr = grouped.get(j.job_id) || [];
+        arr.push(j);
+        grouped.set(j.job_id, arr);
+      }
+
+      const dateCount = new Map<string, number>();
+      const result: Array<{
+        jobId: string;
+        clientId: string;
+        supportingCount: number;
+        fileName: string;
+        displayDate: string;
+        createdAt: string;
+        downloadedAt: string | null;
+      }> = [];
+
+      const entries = [...grouped.entries()].sort((a, b) =>
+        a[1][0]!.created_at.localeCompare(b[1][0]!.created_at)
+      );
+
+      for (const [jobId, rows] of entries) {
+        const first = rows[0]!;
+        const dt = new Date(first.created_at);
+        const dateStr = dt.toISOString().slice(0, 10).replace(/-/g, '');
+        const timeStr = dt.toISOString().slice(11, 19).replace(/:/g, '');
+        const dateKey = `${clientId}_sup_${dateStr}`;
+        const count = dateCount.get(dateKey) || 0;
+        dateCount.set(dateKey, count + 1);
+
+        const fileName = count === 0
+          ? `${clientId}_根拠資料ダウンロード_${dateStr}`
+          : `${clientId}_根拠資料ダウンロード_${dateStr}_${timeStr}`;
+
+        const allDownloaded = rows.every(r => r.downloaded_at);
+
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const displayDate = `${dt.getFullYear()}/${pad(dt.getMonth() + 1)}/${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+        result.push({
+          jobId,
+          clientId,
+          supportingCount: rows.length,
+          fileName,
+          displayDate,
+          createdAt: first.created_at,
+          downloadedAt: allDownloaded ? rows[0]!.downloaded_at : null,
+        });
+      }
+
+      return result;
+    },
   };
 }

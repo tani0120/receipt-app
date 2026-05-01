@@ -26,6 +26,7 @@ export const journalColumns: JournalColumn[] = [
 
   // --- 特殊描画（component型） ---
   { key: "photo", label: "写真", width: "w-12", defaultPx: 28, type: "component", sortKey: "has_photo" },
+  { key: "supportingDoc", label: "根拠", width: "w-12", defaultPx: 28, type: "component" },
   { key: "pastJournal", label: "過去仕訳", width: "w-14", defaultPx: 37, type: "component", sortKey: "past_journal" },
   { key: "rule", label: "学習", width: "w-8", defaultPx: 26, type: "component", sortKey: "rule" },
   { key: "comment", label: "コメント", width: "w-12", defaultPx: 39, type: "component", sortKey: "staff_notes" },

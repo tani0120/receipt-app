@@ -7,7 +7,11 @@
         <div class="ad-header-icon">🎛</div>
         <div>
           <h1 class="ad-header-title">管理者ダッシュボード</h1>
-          <p class="ad-header-sub">AI精度・コスト・処理時間・学習ルール・管理者設定</p>
+          <p class="ad-header-sub">全社指標・スタッフ別指標・顧問先別指標・AIコスト</p>
+        </div>
+        <div class="ad-header-note">
+          <i class="fa-solid fa-clock"></i>
+          <span>アイドル検出（5分無操作→タイマー停止）で放置時間を除外。処理開始〜終了の時間で計測。一部ページは滞在時間で計測。<br>2つ以上のタブを操作していても、操作中のタブだけがアクティブ時間として記録されるので、二重計上されません。</span>
         </div>
         <!-- 右: システムステータス -->
         <div class="ad-header-status">
@@ -37,41 +41,198 @@
       <!-- コンテンツ -->
       <div class="ad-content">
 
-        <!-- AI精度タブ -->
-        <div v-if="activeTab === 'accuracy'" class="ad-cards">
-          <div class="ad-card">
-            <h3 class="ad-card-title"><i class="fa-solid fa-bullseye"></i> 証票分類AI精度</h3>
-            <div class="ad-metric">
-              <span class="ad-metric-value">92.3%</span>
-              <span class="ad-metric-label">正解率（直近30日）</span>
+        <!-- 全社指標タブ -->
+        <div v-if="activeTab === 'company'">
+          <div class="ad-cards">
+            <!-- コスト & 品質 -->
+            <div class="ad-card">
+              <h3 class="ad-card-title"><i class="fa-solid fa-building"></i> コスト & 品質（登録・仕訳状況）</h3>
+              <div class="ad-table-wrap">
+                <table class="ad-dark-table">
+                  <thead>
+                    <tr>
+                      <th>項目</th>
+                      <th class="text-right">実績値 (今月)</th>
+                      <th class="text-right">前年末</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="font-bold">登録顧問先数</td>
+                      <td class="text-right ad-val-primary">{{ adminData.kpiCostQuality.registeredClients }} <span class="ad-unit">件</span></td>
+                      <td class="text-right">{{ adminData.kpiCostQuality.prevYearEnd?.registeredClients ?? 0 }} <span class="ad-unit">件</span></td>
+                    </tr>
+                    <tr>
+                      <td class="font-bold">稼働中</td>
+                      <td class="text-right">{{ adminData.kpiCostQuality.activeClients }} <span class="ad-unit">件</span></td>
+                      <td class="text-right">{{ adminData.kpiCostQuality.prevYearEnd?.activeClients ?? 0 }} <span class="ad-unit">件</span></td>
+                    </tr>
+                    <tr>
+                      <td class="font-bold">休眠・契約停止</td>
+                      <td class="text-right">{{ adminData.kpiCostQuality.stoppedClients }} <span class="ad-unit">件</span></td>
+                      <td class="text-right">{{ adminData.kpiCostQuality.prevYearEnd?.stoppedClients ?? 0 }} <span class="ad-unit">件</span></td>
+                    </tr>
+                    <tr>
+                      <td class="font-bold">担当者数</td>
+                      <td class="text-right ad-val-primary">{{ adminData.kpiCostQuality.staffCount }} <span class="ad-unit">名</span></td>
+                      <td class="text-right">{{ adminData.kpiCostQuality.prevYearEnd?.staffCount ?? 0 }} <span class="ad-unit">名</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div class="ad-metric-sub">
-              <div>処理件数: <strong>847件</strong></div>
-              <div>エラー率: <strong class="text-red">6.5%</strong></div>
+            <!-- 処理効率 -->
+            <div class="ad-card">
+              <h3 class="ad-card-title"><i class="fa-solid fa-gauge-high"></i> 処理効率</h3>
+              <div class="ad-table-wrap">
+                <table class="ad-dark-table">
+                  <thead>
+                    <tr>
+                      <th>項目</th>
+                      <th class="text-right">実績値 (今月)</th>
+                      <th class="text-right">1年移動平均</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>月仕訳数／処理時間</td>
+                      <td class="text-right">{{ adminData.kpiProductivity.journals?.thisMonth?.toLocaleString() ?? 0 }}件 / {{ formatActiveTime(activityTotalMs) }}</td>
+                      <td class="text-right">{{ adminData.kpiProductivity.journals?.monthlyAvg?.toLocaleString() ?? 0 }}件 / —</td>
+                    </tr>
+                    <tr>
+                      <td>1h処理仕訳数</td>
+                      <td class="text-right">{{ computedVelocityPerHour }} <span class="ad-unit">件/h</span></td>
+                      <td class="text-right">— <span class="ad-unit">件/h</span></td>
+                    </tr>
+                    <tr>
+                      <td>100仕訳処理時間</td>
+                      <td class="text-right">{{ computedTimePer100 }} <span class="ad-unit">秒</span></td>
+                      <td class="text-right">— <span class="ad-unit">秒</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-          <div class="ad-card">
-            <h3 class="ad-card-title"><i class="fa-solid fa-calculator"></i> 科目確定AI精度</h3>
-            <div class="ad-metric">
-              <span class="ad-metric-value">87.1%</span>
-              <span class="ad-metric-label">正解率（直近30日）</span>
-            </div>
-            <div class="ad-metric-sub">
-              <div>keyword: <strong>95.2%</strong></div>
-              <div>alias: <strong>91.0%</strong></div>
-              <div>ai(LLM): <strong>82.3%</strong></div>
-            </div>
-          </div>
-          <div class="ad-card ad-card--wide">
-            <h3 class="ad-card-title"><i class="fa-solid fa-chart-bar"></i> 低確信度仕訳（score &lt; 0.5）</h3>
-            <div class="ad-placeholder">
-              <i class="fa-solid fa-chart-simple"></i>
-              <p>Supabase移行後にデータ集計が利用可能になります</p>
+            <!-- 生産性 -->
+            <div class="ad-card ad-card--wide">
+              <h3 class="ad-card-title"><i class="fa-solid fa-chart-line"></i> 生産性（仕訳数 & API費用）</h3>
+              <div class="ad-table-wrap">
+                <table class="ad-dark-table">
+                  <thead>
+                    <tr>
+                      <th>期間</th>
+                      <th class="text-right">仕訳数</th>
+                      <th class="text-right">API費用</th>
+                      <th class="text-right">処理時間</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>今月</td>
+                      <td class="text-right">{{ adminData.kpiProductivity.journals?.thisMonth?.toLocaleString() }} <span class="ad-unit">件</span></td>
+                      <td class="text-right">¥{{ adminData.kpiProductivity.apiCost?.thisMonthForecast?.toLocaleString() }}</td>
+                      <td class="text-right">{{ formatActiveTime(activityTotalMs) }}</td>
+                    </tr>
+                    <tr>
+                      <td>月平均 <span class="ad-unit">1年移動平均</span></td>
+                      <td class="text-right">{{ adminData.kpiProductivity.journals?.monthlyAvg?.toLocaleString() }} <span class="ad-unit">件</span></td>
+                      <td class="text-right">¥{{ adminData.kpiProductivity.apiCost?.monthlyAvg?.toLocaleString() }}</td>
+                      <td class="text-right">—</td>
+                    </tr>
+                    <tr>
+                      <td>昨年同月</td>
+                      <td class="text-right">{{ adminData.kpiProductivity.journals?.lastYearSameMonth?.toLocaleString() }} <span class="ad-unit">件</span></td>
+                      <td class="text-right">¥{{ adminData.kpiProductivity.apiCost?.lastYearSameMonth?.toLocaleString() }}</td>
+                      <td class="text-right">—</td>
+                    </tr>
+                    <tr>
+                      <td>今年 <span class="ad-unit">暦年合計</span></td>
+                      <td class="text-right">{{ adminData.kpiProductivity.journals?.thisYear?.toLocaleString() }} <span class="ad-unit">件</span></td>
+                      <td class="text-right">¥{{ adminData.kpiProductivity.apiCost?.thisYear?.toLocaleString() }}</td>
+                      <td class="text-right">—</td>
+                    </tr>
+                    <tr>
+                      <td>昨年 <span class="ad-unit">暦年合計</span></td>
+                      <td class="text-right">{{ adminData.kpiProductivity.journals?.lastYear?.toLocaleString() }} <span class="ad-unit">件</span></td>
+                      <td class="text-right">¥{{ adminData.kpiProductivity.apiCost?.lastYear?.toLocaleString() }}</td>
+                      <td class="text-right">—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- コストタブ -->
+        <!-- スタッフ別指標タブ -->
+        <div v-if="activeTab === 'staff'">
+          <div class="ad-card ad-card--wide" style="margin-bottom: 0">
+            <h3 class="ad-card-title"><i class="fa-solid fa-users"></i> 担当者個別分析</h3>
+            <div class="ad-table-wrap" v-if="adminData.staffAnalysis">
+              <table class="ad-dark-table">
+                <thead>
+                  <tr>
+                    <th class="ad-sortable" @click="toggleSort('staff', 'name')">担当者名 <span class="ad-sort-icon">{{ sortIcon('staff', 'name') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('staff', 'thisMonthJournals')">今月仕訳数 <span class="ad-sort-icon">{{ sortIcon('staff', 'thisMonthJournals') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('staff', 'monthlyAvgJournals')">月平均仕訳数 <span class="ad-sort-icon">{{ sortIcon('staff', 'monthlyAvgJournals') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('staff', 'annualApiCost')">年間API利用料 <span class="ad-sort-icon">{{ sortIcon('staff', 'annualApiCost') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('staff', 'velocityThisMonth')">月仕訳数／処理時間 (今月) <span class="ad-sort-icon">{{ sortIcon('staff', 'velocityThisMonth') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('staff', 'velocityAvg')">月仕訳数／処理時間 (平均) <span class="ad-sort-icon">{{ sortIcon('staff', 'velocityAvg') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('staff', 'velocityPerHourAvg')">1h処理仕訳数 (平均) <span class="ad-sort-icon">{{ sortIcon('staff', 'velocityPerHourAvg') }}</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(staff, index) in sortedStaff" :key="index">
+                    <td>{{ staff.name }}</td>
+                    <td class="text-right">{{ staff.performance.thisMonthJournals }}</td>
+                    <td class="text-right">{{ staff.performance.monthlyAvgJournals }}</td>
+                    <td class="text-right">¥{{ (staff.performance.annualApiCost / 1000).toFixed(0) }}千円</td>
+                    <td class="text-right font-mono">{{ staff.performance.velocityThisMonth }}</td>
+                    <td class="text-right font-mono">{{ staff.performance.velocityAvg }}</td>
+                    <td class="text-right">{{ staff.performance.velocityPerHourAvg }} <span class="ad-unit">件/h</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 顧問先別指標タブ -->
+        <div v-if="activeTab === 'client'">
+          <div class="ad-card ad-card--wide" style="margin-bottom: 0">
+            <h3 class="ad-card-title"><i class="fa-solid fa-briefcase"></i> 顧問先別コスト・効率分析</h3>
+            <div class="ad-table-wrap" v-if="adminData.clientAnalysis">
+              <table class="ad-dark-table">
+                <thead>
+                  <tr>
+                    <th class="ad-sortable" @click="toggleSort('client', 'code')">コード <span class="ad-sort-icon">{{ sortIcon('client', 'code') }}</span></th>
+                    <th class="ad-sortable" @click="toggleSort('client', 'name')">会社名 <span class="ad-sort-icon">{{ sortIcon('client', 'name') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('client', 'journalsThisMonth')">今月仕訳数 <span class="ad-sort-icon">{{ sortIcon('client', 'journalsThisMonth') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('client', 'journalsThisYear')">年度仕訳数 <span class="ad-sort-icon">{{ sortIcon('client', 'journalsThisYear') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('client', 'journalsLastYear')">昨年度仕訳数 <span class="ad-sort-icon">{{ sortIcon('client', 'journalsLastYear') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('client', 'apiCostThisYear')">年度API費用 <span class="ad-sort-icon">{{ sortIcon('client', 'apiCostThisYear') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('client', 'velocityThisMonth')">月仕訳数／時間 (今月) <span class="ad-sort-icon">{{ sortIcon('client', 'velocityThisMonth') }}</span></th>
+                    <th class="ad-sortable text-right" @click="toggleSort('client', 'velocityAvg')">月仕訳数／時間 (平均) <span class="ad-sort-icon">{{ sortIcon('client', 'velocityAvg') }}</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="client in sortedClients" :key="client.code">
+                    <td class="font-mono">{{ client.code }}</td>
+                    <td>{{ client.name }}</td>
+                    <td class="text-right">{{ client.performance.journalsThisMonth }}</td>
+                    <td class="text-right">{{ client.performance.journalsThisYear }}</td>
+                    <td class="text-right">{{ client.performance.journalsLastYear }}</td>
+                    <td class="text-right">¥{{ (client.performance.apiCostThisYear)?.toLocaleString() }}</td>
+                    <td class="text-right font-mono">{{ client.performance.velocityThisMonth }}</td>
+                    <td class="text-right font-mono">{{ client.performance.velocityAvg }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- AIコストタブ -->
         <div v-if="activeTab === 'cost'" class="ad-cards">
           <div class="ad-card">
             <h3 class="ad-card-title"><i class="fa-solid fa-coins"></i> 今月のAPI費用</h3>
@@ -100,60 +261,12 @@
           </div>
         </div>
 
-        <!-- 処理時間タブ -->
-        <div v-if="activeTab === 'performance'" class="ad-cards">
-          <div class="ad-card">
-            <h3 class="ad-card-title"><i class="fa-solid fa-clock"></i> 証票分類AI</h3>
-            <div class="ad-metric">
-              <span class="ad-metric-value">3.2秒</span>
-              <span class="ad-metric-label">平均処理時間</span>
-            </div>
-          </div>
-          <div class="ad-card">
-            <h3 class="ad-card-title"><i class="fa-solid fa-clock"></i> 科目確定AI</h3>
-            <div class="ad-metric">
-              <span class="ad-metric-value">1.8秒</span>
-              <span class="ad-metric-label">平均処理時間</span>
-            </div>
-          </div>
-          <div class="ad-card">
-            <h3 class="ad-card-title"><i class="fa-solid fa-image"></i> 前処理</h3>
-            <div class="ad-metric">
-              <span class="ad-metric-value">0.4秒</span>
-              <span class="ad-metric-label">平均処理時間</span>
-            </div>
-            <div class="ad-metric-sub">
-              <div>平均削減率: <strong>62%</strong></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ルールタブ -->
-        <div v-if="activeTab === 'rules'" class="ad-cards">
-          <div class="ad-card ad-card--wide">
-            <h3 class="ad-card-title"><i class="fa-solid fa-graduation-cap"></i> 学習ルール状況</h3>
-            <div class="ad-placeholder">
-              <i class="fa-solid fa-database"></i>
-              <p>学習ルールDB実装後にルール一覧・精度データが表示されます</p>
-              <p class="ad-placeholder-sub">関連フィールド: rule_id</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 管理者設定タブ（旧 /old/admin 統合） -->
-        <div v-if="activeTab === 'admin'" class="ad-admin-section">
-          <!-- ScreenZ_Dashboardをそのまま埋め込み -->
-          <ScreenZ_Dashboard
-            @open-staff-modal="isStaffModalOpen = true"
-          />
-        </div>
-
       </div>
 
       <!-- フッター注記 -->
       <div class="ad-footer">
         <i class="fa-solid fa-circle-info"></i>
-        AI精度・コスト・処理時間・ルールタブの数値はダミーデータです。Supabase移行後に実データに切り替わります。
+        スタッフ別指標・AIコストタブの数値はダミーデータです。Supabase移行後に実データに切り替わります。
       </div>
     </div>
 
@@ -168,22 +281,131 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import ScreenZ_Dashboard from '@/views/ScreenZ/ScreenZ_Dashboard.vue';
+import { ref, watch, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import aaa_Z_StaffModal from '@/views/ScreenZ/Z_StaffModal.vue';
 import { aaa_useAdminDashboard } from '@/composables/useAdminDashboard';
 
+const route = useRoute();
+const router = useRouter();
 const { data: adminData } = aaa_useAdminDashboard();
 
-const activeTab = ref<'accuracy' | 'cost' | 'performance' | 'rules' | 'admin'>('admin');
+// 活動ログ集計: 今月の合計処理時間（ミリ秒）
+const activityTotalMs = ref(0);
+
+async function fetchActivityTotal() {
+  try {
+    const res = await fetch('/api/activity-log/summary');
+    if (!res.ok) return;
+    const body = await res.json() as {
+      byStaff: { totalActiveMs: number }[];
+    };
+    // 全スタッフの合計
+    activityTotalMs.value = (body.byStaff ?? []).reduce((sum: number, s: { totalActiveMs: number }) => sum + s.totalActiveMs, 0);
+  } catch {
+    // 取得失敗時は0のまま
+  }
+}
+fetchActivityTotal();
+
+/** ミリ秒を「Xh Ym」形式にフォーマット */
+function formatActiveTime(ms: number): string {
+  if (ms <= 0) return '0h';
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+/** 1h処理仕訳数（今月仕訳数 ÷ 処理時間h） */
+const computedVelocityPerHour = computed(() => {
+  const journals = adminData.value.kpiProductivity.journals?.thisMonth ?? 0;
+  const hours = activityTotalMs.value / 3600000;
+  if (hours <= 0 || journals <= 0) return '0';
+  return (journals / hours).toFixed(1);
+});
+
+/** 100仕訳処理時間（処理時間秒 ÷ 仕訳数 × 100） */
+const computedTimePer100 = computed(() => {
+  const journals = adminData.value.kpiProductivity.journals?.thisMonth ?? 0;
+  const totalSec = activityTotalMs.value / 1000;
+  if (totalSec <= 0 || journals <= 0) return '0';
+  return Math.round((totalSec / journals) * 100);
+});
+
+type TabKey = 'company' | 'staff' | 'client' | 'cost';
+const validTabs: TabKey[] = ['company', 'staff', 'client', 'cost'];
+
+// URLクエリからタブを復元
+function getTabFromQuery(): TabKey {
+  const q = route.query.tab as string | undefined;
+  return validTabs.includes(q as TabKey) ? (q as TabKey) : 'company';
+}
+
+const activeTab = ref<TabKey>(getTabFromQuery());
+
+// タブ変更時にURLを同期
+watch(activeTab, (tab) => {
+  router.replace({ query: { ...route.query, tab } });
+});
+
+// URLの直接変更を検知
+watch(() => route.query.tab, (newTab) => {
+  if (validTabs.includes(newTab as TabKey)) {
+    activeTab.value = newTab as TabKey;
+  }
+});
 
 const tabs = [
-  { key: 'admin' as const, label: '管理者設定', icon: 'fa-solid fa-screwdriver-wrench' },
-  { key: 'accuracy' as const, label: 'AI精度', icon: 'fa-solid fa-bullseye' },
-  { key: 'cost' as const, label: 'コスト', icon: 'fa-solid fa-coins' },
-  { key: 'performance' as const, label: '処理時間', icon: 'fa-solid fa-clock' },
-  { key: 'rules' as const, label: 'ルール', icon: 'fa-solid fa-graduation-cap' },
+  { key: 'company' as const, label: '全社指標', icon: 'fa-solid fa-building' },
+  { key: 'staff' as const, label: 'スタッフ別指標', icon: 'fa-solid fa-users' },
+  { key: 'client' as const, label: '顧問先別指標', icon: 'fa-solid fa-briefcase' },
+  { key: 'cost' as const, label: 'AIコスト', icon: 'fa-solid fa-coins' },
 ];
+
+// ======== ソート機能 ========
+type SortDir = 'asc' | 'desc' | null;
+const sortState = ref<{ table: string; key: string; dir: SortDir }>({ table: '', key: '', dir: null });
+
+function toggleSort(table: string, key: string) {
+  if (sortState.value.table === table && sortState.value.key === key) {
+    // 同じ列: asc → desc → null
+    sortState.value.dir = sortState.value.dir === 'asc' ? 'desc' : sortState.value.dir === 'desc' ? null : 'asc';
+  } else {
+    sortState.value = { table, key, dir: 'asc' };
+  }
+}
+
+function sortIcon(table: string, key: string): string {
+  if (sortState.value.table !== table || sortState.value.key !== key || !sortState.value.dir) return '⇅';
+  return sortState.value.dir === 'asc' ? '↑' : '↓';
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getNestedVal(obj: any, key: string): any {
+  // スタッフ: name直下 or performance.xxx
+  if (key === 'name' || key === 'code') return obj[key];
+  if (obj.performance && key in obj.performance) return obj.performance[key];
+  return obj[key];
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function sortList<T>(list: T[], table: string): T[] {
+  if (sortState.value.table !== table || !sortState.value.dir) return list;
+  const key = sortState.value.key;
+  const dir = sortState.value.dir === 'asc' ? 1 : -1;
+  return [...list].sort((a, b) => {
+    const va = getNestedVal(a, key);
+    const vb = getNestedVal(b, key);
+    if (typeof va === 'string' && typeof vb === 'string') return va.localeCompare(vb) * dir;
+    return ((va ?? 0) - (vb ?? 0)) * dir;
+  });
+}
+
+const sortedStaff = computed(() => sortList(adminData.value.staffAnalysis ?? [], 'staff'));
+const sortedClients = computed(() => sortList(adminData.value.clientAnalysis ?? [], 'client'));
 
 // スタッフモーダル
 const isStaffModalOpen = ref(false);
@@ -244,6 +466,26 @@ const handleStaffDelete = () => {
   font-size: 12px;
   color: #94a3b8;
   margin: 0;
+}
+.ad-header-note {
+  flex: 1;
+  font-size: 14px;
+  color: #e2e8f0;
+  font-weight: 700;
+  line-height: 1.6;
+  padding: 10px 16px;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.ad-header-note i {
+  color: #7c3aed;
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 .ad-header-status {
   margin-left: auto;
@@ -413,6 +655,73 @@ const handleStaffDelete = () => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* ダークテーマテーブル */
+.ad-table-wrap {
+  overflow-x: auto;
+  margin: 0 -20px -20px;
+  padding: 0 20px 20px;
+}
+.ad-dark-table {
+  width: 100%;
+  text-align: left;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 16px;
+}
+.ad-dark-table thead tr {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+.ad-dark-table th {
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.ad-dark-table td {
+  padding: 16px 18px;
+  color: #e2e8f0;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  white-space: nowrap;
+  font-size: 18px;
+}
+.ad-dark-table tbody tr {
+  transition: background 0.15s;
+}
+.ad-dark-table tbody tr:hover {
+  background: rgba(148, 163, 184, 0.06);
+}
+.ad-dark-table .font-bold {
+  color: #f1f5f9;
+}
+.ad-val-primary {
+  color: #e2e8f0 !important;
+  font-weight: 800;
+  font-size: 22px;
+}
+
+/* ソートヘッダー */
+.ad-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+.ad-sortable:hover {
+  color: #e2e8f0;
+}
+.ad-sort-icon {
+  font-size: 12px;
+  opacity: 0.5;
+  margin-left: 4px;
+}
+.ad-unit {
+  font-size: 11px;
+  font-weight: 400;
+  color: #64748b;
 }
 
 @keyframes pulse {

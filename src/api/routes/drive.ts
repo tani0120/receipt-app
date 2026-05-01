@@ -16,10 +16,11 @@ import { Hono } from 'hono';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { apiError, apiCatchError } from '../helpers/apiError';
-import { 必須, 未検出, 環境設定エラー, ファイル必須, 仕訳外ゼロ } from '../helpers/apiMessages';
+import { 必須, 未検出, 環境設定エラー, ファイル必須, 仕訳外ゼロ, 根拠資料ゼロ } from '../helpers/apiMessages';
 import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, revokeFolderPermission } from '../services/drive/driveService';
-import { enqueueMigrationJobs, getJobStatus, getExcludedCount, getExcludedHistory, getExcludedJobs, getMigrationJobs } from '../services/migration/migrationRepository';
+import { enqueueMigrationJobs, getJobStatus, getExcludedCount, getExcludedHistory, getExcludedJobs, getMigrationJobs, getSupportingJobs, getSupportingCount, getSupportingHistory } from '../services/migration/migrationRepository';
 import { generateExcludedZip } from '../services/migration/excludedZipService';
+import { searchSupporting, saveSupportingMeta, getSupportingMetaCount } from '../services/migration/supportingSearchService';
 
 const app = new Hono();
 
@@ -361,6 +362,185 @@ app.get('/excluded-history/:clientId', async (c) => {
 
     const history = await getExcludedHistory(clientId);
     return c.json(history);
+  } catch (err) {
+    return apiCatchError(c, err);
+  }
+});
+
+// ============================================================
+// GET /download-supporting/:clientId — 根拠資料ZIPダウンロード
+// ?all=true でDL済み含む全件。デフォルトは未DLのみ
+// ============================================================
+
+app.get('/download-supporting/:clientId', async (c) => {
+  try {
+    const clientId = c.req.param('clientId');
+    const all = c.req.query('all') === 'true';
+    const jobId = c.req.query('jobId') || undefined;
+
+    if (!clientId) {
+      return apiError(c, 400, 必須('clientId'));
+    }
+
+    // 0件チェック
+    if (jobId) {
+      const jobs = await getSupportingJobs(clientId, true, jobId);
+      if (jobs.length === 0) {
+        return apiError(c, 404, 根拠資料ゼロ);
+      }
+    } else {
+      const count = await getSupportingCount(clientId);
+      if (!all && count === 0) {
+        return apiError(c, 404, 根拠資料ゼロ);
+      }
+    }
+
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const fileName = jobId
+      ? `${clientId}_根拠資料ダウンロード_${today}.zip`
+      : `supporting_${clientId}_${today}.zip`;
+
+    // 根拠資料ZIP生成（excludedと同じストリーム方式）
+    const { writable, readable } = new TransformStream();
+    const writer = writable.getWriter();
+
+    const zipPromise = (async () => {
+      const { Writable } = await import('stream');
+      const nodeWritable = new Writable({
+        async write(chunk, _encoding, callback) {
+          try {
+            await writer.write(chunk);
+            callback();
+          } catch (err) {
+            callback(err instanceof Error ? err : new Error(String(err)));
+          }
+        },
+        async final(callback) {
+          try {
+            await writer.close();
+            callback();
+          } catch (err) {
+            callback(err instanceof Error ? err : new Error(String(err)));
+          }
+        },
+      });
+
+      // generateExcludedZipを根拠資料用に再利用（doc_statusでフィルタ済み）
+      const { generateSupportingZip } = await import('../services/migration/supportingZipService');
+      const zipCount = await generateSupportingZip(clientId, nodeWritable, all, jobId);
+      console.log(`[drive/route] GET /download-supporting: ${clientId}${jobId ? ` (jobId=${jobId})` : ''}, ${zipCount}件ZIP送出`);
+    })();
+
+    zipPromise.catch((err) => {
+      console.error('[drive/route] 根拠資料ZIP生成エラー:', err);
+    });
+
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
+      },
+    });
+  } catch (err) {
+    return apiCatchError(c, err);
+  }
+});
+
+// ============================================================
+// GET /supporting-count/:clientId — 未DLのsupporting件数（バッジ表示用）
+// ============================================================
+
+app.get('/supporting-count/:clientId', async (c) => {
+  try {
+    const clientId = c.req.param('clientId');
+    const count = await getSupportingCount(clientId);
+    return c.json({ count });
+  } catch (err) {
+    return apiCatchError(c, err);
+  }
+});
+
+// ============================================================
+// GET /supporting-history/:clientId — 根拠資料ダウンロード履歴（jobId単位グルーピング）
+// ============================================================
+
+app.get('/supporting-history/:clientId', async (c) => {
+  try {
+    const clientId = c.req.param('clientId');
+    if (!clientId) {
+      return apiError(c, 400, 必須('clientId'));
+    }
+
+    const history = await getSupportingHistory(clientId);
+    return c.json(history);
+  } catch (err) {
+    return apiCatchError(c, err);
+  }
+});
+
+// ============================================================
+// GET /search-supporting/:clientId — 根拠資料自由キーワード検索
+// ?q=キーワード（スペース区切りAND検索）
+// ============================================================
+
+app.get('/search-supporting/:clientId', async (c) => {
+  try {
+    const clientId = c.req.param('clientId');
+    if (!clientId) {
+      return apiError(c, 400, 必須('clientId'));
+    }
+
+    const query = c.req.query('q') || '';
+    const results = searchSupporting(clientId, query);
+    return c.json({ results, total: results.length });
+  } catch (err) {
+    return apiCatchError(c, err);
+  }
+});
+
+// ============================================================
+// POST /save-supporting-meta/:clientId — 根拠資料メタデータ保存（確定送信時）
+// ============================================================
+
+app.post('/save-supporting-meta/:clientId', async (c) => {
+  try {
+    const clientId = c.req.param('clientId');
+    if (!clientId) {
+      return apiError(c, 400, 必須('clientId'));
+    }
+
+    const body = await c.req.json<{ items: Array<{
+      id: string;
+      clientId: string;
+      fileName: string;
+      previewUrl: string;
+      date: string | null;
+      amount: number | null;
+      vendor: string | null;
+      description: string | null;
+      sourceType: string | null;
+    }> }>();
+
+    if (!body.items || !Array.isArray(body.items)) {
+      return apiError(c, 400, 必須('items'));
+    }
+
+    const count = saveSupportingMeta(clientId, body.items);
+    return c.json({ saved: count, total: getSupportingMetaCount(clientId) });
+  } catch (err) {
+    return apiCatchError(c, err);
+  }
+});
+
+// ============================================================
+// GET /supporting-meta-count/:clientId — 根拠資料メタ件数
+// ============================================================
+
+app.get('/supporting-meta-count/:clientId', async (c) => {
+  try {
+    const clientId = c.req.param('clientId');
+    const count = getSupportingMetaCount(clientId);
+    return c.json({ count });
   } catch (err) {
     return apiCatchError(c, err);
   }

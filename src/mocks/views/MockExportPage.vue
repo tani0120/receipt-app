@@ -405,8 +405,10 @@ const startDownload = async () => {
         target.export_batch_id = historyId; // バッチIDを紐付け
       }
     }
+    // CSV行数をカウント（ヘッダー行を除く）
+    const csvLineCount = csvContent.split('\n').filter(line => line.trim().length > 0).length - 1;
     // ダウンロード履歴をサーバーに保存（DL-042 S1: localStorage→API移行）
-    saveDownloadHistory(`${fname}.csv`, valid.length, historyId);
+    saveDownloadHistory(`${fname}.csv`, valid.length, historyId, csvLineCount);
     // CSVスナップショットをサーバーに保存（再ダウンロード用）
     fetch(`/api/export-history/${encodeURIComponent(clientId.value)}/csv`, {
       method: 'POST',
@@ -425,7 +427,7 @@ const startDownload = async () => {
 };
 
 /** ダウンロード履歴をサーバーに保存 */
-function saveDownloadHistory(fileName: string, count: number, historyId: string) {
+function saveDownloadHistory(fileName: string, count: number, historyId: string, csvLineCount: number) {
   const today = new Date();
   fetch(`/api/export-history/${encodeURIComponent(clientId.value)}`, {
     method: 'POST',
@@ -435,6 +437,8 @@ function saveDownloadHistory(fileName: string, count: number, historyId: string)
       exportDate: toMfCsvDate(today.toISOString().slice(0, 10)),
       fileName,
       count,
+      csvLineCount,
+      staffId: currentStaffId.value ?? 'unknown',
       status: "出力済",
     }),
   }).catch(err => console.error('[ExportPage] 履歴保存エラー:', err));

@@ -255,16 +255,11 @@ const MOCK_DATA: DashboardData = {
     ]
   },
   kpiCostQuality: {
-    registeredClients: 124,
-    activeClients: 110,
-    stoppedClients: 14,
-    staffCount: 8,
-    prevYearEnd: {
-      registeredClients: 115,
-      activeClients: 100,
-      stoppedClients: 15,
-      staffCount: 7
-    },
+    registeredClients: 0,
+    activeClients: 0,
+    stoppedClients: 0,
+    staffCount: 0,
+    prevYearEnd: undefined,
     performance: {
       monthlyJournals: 12450,
       processingTime: "450h",
@@ -448,6 +443,142 @@ const MOCK_DATA: DashboardData = {
 
 export function aaa_useAdminDashboard() {
   const data = ref<DashboardData>(MOCK_DATA);
+
+  // 実データ取得: 顧問先数・スタッフ数・スタッフ名・顧問先名
+  async function fetchRealKpi() {
+    try {
+      // 顧問先一覧取得（レスポンス: { clients: [...], count: N }）
+      const clientRes = await fetch('/api/clients');
+      if (clientRes.ok) {
+        const body = await clientRes.json() as {
+          clients: { clientId: string; threeCode: string; companyName: string; status: string }[];
+          count: number;
+        };
+        const clients = body.clients;
+        const active = clients.filter(c => c.status === 'active').length;
+        const stopped = clients.filter(c => c.status !== 'active').length;
+        data.value.kpiCostQuality.registeredClients = clients.length;
+        data.value.kpiCostQuality.activeClients = active;
+        data.value.kpiCostQuality.stoppedClients = stopped;
+
+        // 顧問先別指標にインポート（実名・コードを反映）
+        if (clients.length > 0) {
+          const defaultPerf = {
+            journalsThisMonth: 0, journalsThisYear: 0, journalsLastYear: 0,
+            apiCostThisYear: 0, velocityThisMonth: 0, velocityAvg: 0
+          };
+          data.value.clientAnalysis = clients.map(c => ({
+            code: c.threeCode || c.clientId,
+            name: c.companyName,
+            performance: { ...defaultPerf }
+          }));
+        }
+      }
+      // スタッフ一覧取得（レスポンス: { staff: [...], count: N }）
+      const staffRes = await fetch('/api/staff');
+      if (staffRes.ok) {
+        const body = await staffRes.json() as {
+          staff: { uuid: string; name: string; status: string; role?: string }[];
+          count: number;
+        };
+        const activeStaff = body.staff.filter(s => s.status === 'active').length;
+        data.value.kpiCostQuality.staffCount = activeStaff;
+
+        // スタッフ別指標にインポート（実名を反映）
+        const activeList = body.staff.filter(s => s.status === 'active');
+        if (activeList.length > 0) {
+          const defaultPerf = {
+            monthlyJournals: 0, processingTime: '0h', velocityPerHour: 0,
+            thisMonthJournals: 0, monthlyAvgJournals: 0, annualApiCost: 0,
+            velocityThisMonth: 0, velocityAvg: 0, velocityPerHourAvg: 0,
+            velocity: { draftAvg: 0 }
+          };
+          data.value.staffAnalysis = activeList.map(s => ({
+            name: s.name,
+            performance: { ...defaultPerf },
+            backlogs: { total: 0, draft: 0 },
+            backlog: {}
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn('[useAdminDashboard] 実データ取得失敗。ダミー値を使用:', e);
+    }
+  }
+
+  /** 活動ログ集計を取得してスタッフ別・顧問先別に反映 */
+  async function fetchActivitySummary() {
+    try {
+      const res = await fetch('/api/activity-log/summary');
+      if (!res.ok) return;
+      const body = await res.json() as {
+        byStaff: { staffId: string; totalActiveMs: number; sessionCount: number }[];
+        byClient: { clientId: string; totalActiveMs: number; sessionCount: number }[];
+      };
+
+      // スタッフ別: 処理時間をperformanceに反映
+      if (body.byStaff && data.value.staffAnalysis) {
+        for (const _staffSummary of body.byStaff) {
+          // staffIdからスタッフ名を逆引き（staffAnalysisにstaffIdがないためスキップ）
+          // TODO: staffAnalysisにstaffIdフィールドを追加してマッチングする
+        }
+      }
+
+      // 顧問先別: 処理時間をperformanceに反映
+      if (body.byClient && data.value.clientAnalysis) {
+        for (const clientSummary of body.byClient) {
+          const match = data.value.clientAnalysis.find(
+            c => c.code === clientSummary.clientId || c.code === clientSummary.clientId.split('-')[0]
+          );
+          if (match) {
+            // 今月処理時間をミリ秒→時間に変換して設定
+            const hours = clientSummary.totalActiveMs / 3600000;
+            if (hours > 0 && match.performance.journalsThisMonth > 0) {
+              match.performance.velocityThisMonth = Math.round(match.performance.journalsThisMonth / hours);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[useAdminDashboard] 活動ログ集計取得失敗:', e);
+    }
+  }
+
+  /** CSV行数集計を取得して仕訳数に反映 */
+  async function fetchCsvSummary() {
+    try {
+      const res = await fetch('/api/admin/csv-summary');
+      if (!res.ok) return;
+      const body = await res.json() as {
+        total: { csvLineCount: number; journalCount: number; exportCount: number };
+        byClient: { clientId: string; csvLineCount: number; journalCount: number }[];
+        byStaff: { staffId: string; csvLineCount: number; journalCount: number }[];
+      };
+
+      // 全社指標: 今月の仕訳数（CSV行数）を反映
+      if (body.total.csvLineCount > 0) {
+        data.value.kpiProductivity.journals = {
+          ...data.value.kpiProductivity.journals,
+          thisMonth: body.total.csvLineCount,
+        };
+      }
+
+      // 顧問先別: 今月仕訳数を反映
+      if (body.byClient && data.value.clientAnalysis) {
+        for (const cs of body.byClient) {
+          const match = data.value.clientAnalysis.find(c => c.code === cs.clientId);
+          if (match) {
+            match.performance.journalsThisMonth = cs.csvLineCount;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[useAdminDashboard] CSV集計取得失敗:', e);
+    }
+  }
+
+  fetchRealKpi().then(() => fetchActivitySummary()).then(() => fetchCsvSummary());
+
   const downloadCsv = async () => {
     // Mock CSV Download
     return new Promise<boolean>((resolve) => {

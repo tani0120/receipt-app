@@ -95,6 +95,25 @@ export interface MigrationRepository {
     downloadedAt: string | null;
   }>>;
 
+  // --- Phase E-2: 根拠資料ファイル操作 ---
+
+  /** 未ダウンロードのsupportingジョブを取得（ZIP DL用。jobId指定時はそのジョブのみ） */
+  getSupportingJobs(clientId: string, all?: boolean, jobId?: string): Promise<MigrationJob[]>;
+
+  /** 未ダウンロードのsupporting件数を取得（バッジ表示用） */
+  getSupportingCount(clientId: string): Promise<number>;
+
+  /** 根拠資料ダウンロード履歴取得（jobId単位でグルーピング） */
+  getSupportingHistory(clientId: string): Promise<Array<{
+    jobId: string;
+    clientId: string;
+    supportingCount: number;
+    fileName: string;
+    displayDate: string;
+    createdAt: string;
+    downloadedAt: string | null;
+  }>>;
+
   /** 顧問先の移行ジョブ一覧取得（jobId単位でグルーピング） */
   getMigrationJobs(clientId: string): Promise<Array<{
     jobId: string;
@@ -190,4 +209,16 @@ export async function getExcludedHistory(clientId: string) {
 
 export async function getMigrationJobs(clientId: string) {
   return getMigrationRepository().getMigrationJobs(clientId);
+}
+
+export async function getSupportingJobs(clientId: string, all?: boolean, jobId?: string): Promise<MigrationJob[]> {
+  return getMigrationRepository().getSupportingJobs(clientId, all, jobId);
+}
+
+export async function getSupportingCount(clientId: string): Promise<number> {
+  return getMigrationRepository().getSupportingCount(clientId);
+}
+
+export async function getSupportingHistory(clientId: string) {
+  return getMigrationRepository().getSupportingHistory(clientId);
 }
