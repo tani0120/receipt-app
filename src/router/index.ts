@@ -236,6 +236,12 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('../mocks/views/MockClientTaxPage.vue'),
     props: true
   },
+  {
+    path: '/client-settings/vectors/:clientId',
+    name: 'ClientVectorSettings',
+    component: () => import('../mocks/views/MockClientIndustryVectorPage.vue'),
+    props: true
+  },
   // 旧パス互換
   { path: '/client/settings/accounts/:clientId', redirect: (to) => `/client-settings/accounts/${to.params.clientId}` },
   { path: '/client/settings/tax/:clientId', redirect: (to) => `/client-settings/tax/${to.params.clientId}` },
@@ -334,10 +340,12 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/mocks/views/MockMasterTaxCategoriesPage.vue')
   },
   {
-    path: '/master/vendors',
-    name: 'MasterVendors',
-    component: () => import('@/mocks/views/MockMasterManagementPage.vue')
+    path: '/master/vectors',
+    name: 'MasterIndustryVectors',
+    component: () => import('@/mocks/views/MockMasterIndustryVectorPage.vue')
   },
+  // /master/vendors → /master にリダイレクト（統合済み）
+  { path: '/master/vendors', redirect: '/master' },
   {
     path: '/master/vendors/list',
     name: 'MasterVendorsList',
@@ -364,7 +372,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/master',
     name: 'MasterHub',
-    component: () => import('@/mocks/views/MockMasterHubPage.vue')
+    component: () => import('@/mocks/views/MockMasterManagementPage.vue')
   },
   {
     path: '/master/costs',

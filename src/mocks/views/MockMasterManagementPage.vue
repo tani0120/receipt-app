@@ -79,7 +79,7 @@ const navigateTo = (section: string) => {
   const routes: Record<string, string> = {
     'accounts': '/master/accounts',
     'tax': '/master/tax',
-    'vectors': '/master/vendors',
+    'vectors': '/master/vectors',
     'vendors-list': '/master/vendors/list',
     'non-vendor': '/master/vendors/non-vendor',
   };

@@ -52,13 +52,13 @@
         <a class="card-link">設定する</a>
       </div>
 
-      <!-- カード5: データ化ルール 業種設定 -->
-      <div class="settings-card" @click="navigateTo('data-rules')">
+      <!-- カード5: 業種マスタ（顧問先単位） -->
+      <div class="settings-card" @click="navigateTo('client-vectors')">
         <div class="settings-card-header">
-          <i class="fa-solid fa-list-check card-icon"></i>
-          <h3 class="card-title">データ化ルール<br>業種設定</h3>
+          <i class="fa-solid fa-industry card-icon"></i>
+          <h3 class="card-title">業種マスタ<br>（顧問先単位）</h3>
         </div>
-        <p class="card-description">支払先ごとにデータ化のルールを設定します。（アップロード時の科目を「自動判定」にした場合に有効になります）</p>
+        <p class="card-description">初取引など、学習ルールがない場合は、業種マスタ（顧問先単位）に基づいて仕訳候補を出力します。</p>
         <a class="card-link">設定する</a>
       </div>
 
@@ -272,6 +272,7 @@ const navigateTo = (section: string) => {
   const routes: Record<string, string> = {
     'client-accounts': `/client-settings/accounts/${clientId}`,
     'client-tax': `/client-settings/tax/${clientId}`,
+    'client-vectors': `/client-settings/vectors/${clientId}`,
   };
   if (routes[section]) {
     router.push(routes[section]);
