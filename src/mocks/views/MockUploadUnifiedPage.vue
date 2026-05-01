@@ -59,7 +59,7 @@
               <div class="file-info">
                 <p class="file-name">{{ f.fileName }}</p>
                 <p class="file-size">{{ formatSize(f.fileSize) }}</p>
-                <div class="classify-badges" v-if="classifyBadgeVisible(f)">
+                <div class="previewExtract-badges" v-if="previewExtractBadgeVisible(f)">
                   <span v-if="f.status === 'uploading' || f.status === 'analyzing'" class="badge badge--loading">⏳ アップロード中...</span>
                   <span v-else-if="f.status === 'error'" class="badge badge--error">⚠️ {{ f.errorReason ?? '失敗' }}</span>
                   <template v-else-if="f.status === 'ok' && f.supplementary">
@@ -474,8 +474,8 @@ const handleRetakeInput = (e: Event) => {
   handleRetake(e)
 }
 
-// classify結果バッジ表示判定（重複子(pos>=2)のみ非表示。親(pos=1)は表示）
-const classifyBadgeVisible = (f: UploadEntry) => {
+// previewExtract結果バッジ表示判定（重複子(pos>=2)のみ非表示。親(pos=1)は表示）
+const previewExtractBadgeVisible = (f: UploadEntry) => {
   if (f.status !== 'uploading' && f.status !== 'analyzing' && f.status !== 'ok' && f.status !== 'error') return false
   const dg = dupGroupInfo(f)
   if (dg && dg.pos >= 2) return false
@@ -778,9 +778,9 @@ const doBulkDelete = () => {
 }
 .file-remove:hover { background: #fee2e2; color: #ef4444; }
 
-/* ===== classify結果バッジ（コンテナクエリ対応） ===== */
+/* ===== previewExtract結果バッジ（コンテナクエリ対応） ===== */
 .badge-container { container-type: inline-size; }
-.classify-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.previewExtract-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .badge {
   display: inline-flex; align-items: center;
   padding: clamp(1px, 0.5cqi, 2px) clamp(4px, 2cqi, 8px);

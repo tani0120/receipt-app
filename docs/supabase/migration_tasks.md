@@ -66,8 +66,8 @@
 | MockDriveSelectPage.vueデッドコード削除 | ✅ **2026-04-24** | 同上 |
 | jobId指定DL時の0件チェック追加 | ✅ **2026-04-24** | 同上 |
 | useClients.ts型エラー修正（L198, L220 非null断定） | ✅ **2026-04-24** | 同上 |
-| migrationWorker.tsにclassify API統合（DL→SHA-256→classify→Storage→doc-store書き戻し→ゴミ箱） | ✅ **2026-04-24 DL-048** | フェーズ3.5 |
-| documentStore.ts updateAiResults()新設（ClassifyResponse→DocEntry全フィールドマッピング） | ✅ **2026-04-24 DL-048** | 同上 |
+| migrationWorker.tsにpreviewExtract API統合（DL→SHA-256→previewExtract→Storage→doc-store書き戻し→ゴミ箱） | ✅ **2026-04-24 DL-048** | フェーズ3.5 |
+| documentStore.ts updateAiResults()新設（PreviewExtractResponse→DocEntry全フィールドマッピング） | ✅ **2026-04-24 DL-048** | 同上 |
 | documentStore.ts updateDocumentStatus()拡張（statusChangedBy/At/updatedBy/At保存） | ✅ **2026-04-24 DL-048** | 同上 |
 | docStore.ts PUT /:id拡張（statusChangedBy/At/updatedBy/Atをbodyから受け取り） | ✅ **2026-04-24 DL-048** | 同上 |
 | useMigrationPoller.ts ポーリング完了時にrefresh()でAI結果をフロント反映 | ✅ **2026-04-24 DL-048** | 同上 |
@@ -365,7 +365,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 |---|---|---|
 | drive-select画面でDriveサムネイル借景表示 | ✅ 完了 | 24番 セクション10-5 |
 | 選別確定→migration_jobsにキュー登録（POST /migrate） | ✅ **実装済み**（drive.ts L131） | コード実査 |
-| バックグラウンドワーカー（migrationWorker.ts 255行） | ✅ **実装済み**（DL-048でclassify API統合） | コード実査 |
+| バックグラウンドワーカー（migrationWorker.ts 255行） | ✅ **実装済み**（DL-048でpreviewExtract API統合） | コード実査 |
 | 移行進捗監視API（GET /migrate/status/:jobId） | ✅ **実装済み**（drive.ts L160） | コード実査 |
 | 移行後のDriveファイルゴミ箱移動 | ✅ **実装済み**（migrationWorker.ts内） | コード実査 |
 | excluded ZIPダウンロード（サービス＋ルート） | ✅ **ルート接続完了**（drive.ts） | 本セッション |
@@ -421,7 +421,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | `src/api/services/migration/migrationRepository.ts` ✅ | MigrationRepository interface | 同上 |
 | `src/api/services/migration/migrationRepository.json.ts` ✅ | JSON永続化版 | デフォルト |
 | `src/api/services/migration/migrationRepository.supabase.ts` ✅ | Supabase版 | `true`時 |
-| `src/api/services/migration/migrationWorker.ts` ✅ | バックグラウンドワーカー（255行。DL-048でclassify API統合済み） | — |
+| `src/api/services/migration/migrationWorker.ts` ✅ | バックグラウンドワーカー（255行。DL-048でpreviewExtract API統合済み） | — |
 | `src/api/services/migration/excludedZipService.ts` ✅ | 仕訳外ZIP生成サービス | — |
 
 ### 6-6. 廃止対象（Phase F、24番セクション11-1）
@@ -500,13 +500,13 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | MockDriveSelectPage.vue composable分離 | 1163行の巨大ファイル。デッドコード削除済みだがUI状態（undo/redo等）が密結合 | データ取得・選別操作・PDF.jsの3ブロックをcomposableに分離。大規模リファクタリングとして別タスク | MockDriveSelectPage.vue |
 | DocEntry/JobRow二重データストア統合 | `DocEntry`（`data/documents/*.json`）と`JobRow`（`data/migration_jobs.json`）が分離管理。DocEntry=資料メタデータ（source/status/hash等）、JobRow=移行ジョブ進捗（migration_status/retry_count/storage_path等）。フロントエンドの選別画面はDrive APIとdoc-storeの2ソースをマージして表示。進捗管理はuseDocumentsとuseProgressから取得 | Supabase移行時に`documents`テーブルと`migration_jobs`テーブルのJOINクエリで統合表示。または`documents`テーブルに移行ステータスカラムを追加してJobRow相当を吸収。設計はSupabase版Repository実装（フェーズ5）時に確定 | documentStore.ts, migrationRepository.json.ts, useDocuments.ts |
 | isDuplicateデータ消失（DL-051 T-AUD-5） | `useUpload.ts` handleConfirm()でUploadEntry→DocEntry変換時にisDuplicateフラグが消失。DocEntry型にプロパティが存在しない | ①DocEntry型に`isDuplicate: boolean`追加 ②handleConfirm()で値をコピー | useUpload.ts, repositories/types.ts |
-| AI分類結果15件のVue未表示（DL-051） | classify APIで取得しDocEntryに保存済みのaiDate/aiAmount/aiVendor等15フィールドが全Vue画面で未参照 | 選別画面（`/drive-select/:clientId`）でAI結果を表示するUI実装。task_unified.md L-8で「仕訳一覧UI（C-7）完了後に着手判断」 | MockDriveSelectPage.vue |
-| aiMetrics実データ接続（DL-051 T-AUD-4a残り） | 管理者ダッシュボード「AI精度」「コスト」「処理時間」タブがプレースホルダーのまま。aiClassifyReason/aiLineItemsの詳細モーダルも未実装 | Supabase移行後にdocumentsテーブルから集計クエリで実データを取得。ダッシュボードのプレースホルダーを実データに置換 | MockAdminDashboardPage.vue |
+| AI分類結果15件のVue未表示（DL-051） | previewExtract APIで取得しDocEntryに保存済みのaiDate/aiAmount/aiVendor等15フィールドが全Vue画面で未参照 | 選別画面（`/drive-select/:clientId`）でAI結果を表示するUI実装。task_unified.md L-8で「仕訳一覧UI（C-7）完了後に着手判断」 | MockDriveSelectPage.vue |
+| aiMetrics実データ接続（DL-051 T-AUD-4a残り） | 管理者ダッシュボード「AI精度」「コスト」「処理時間」タブがプレースホルダーのまま。aiPreviewExtractReason/aiLineItemsの詳細モーダルも未実装 | Supabase移行後にdocumentsテーブルから集計クエリで実データを取得。ダッシュボードのプレースホルダーを実データに置換 | MockAdminDashboardPage.vue |
 | rule_id仕訳逆引き表示（DL-051 T-AUD-4b） | 仕訳一覧で`rule_id`が存在するが、「なぜこの科目？」をルール名で逆引き表示する機能がない | Supabase移行後に`learning_rules`テーブルとJOINしてルール名・キーワードをホバー表示 | JournalListLevel3Mock.vue |
 | ai_completed_at等4件ダッシュボード接続（DL-051 T-AUD-4c） | `ai_completed_at`/`prediction_method`/`prediction_score`/`model_version` がダッシュボードのプレースホルダーに待ち状態 | Supabase移行後に実データ接続。prediction_methodはStep4完了後に初めて値が入る | MockAdminDashboardPage.vue |
 | 旧系統LearningRule二重管理廃止（DL-051 監査検出） | 旧Firestore設計のLearningRule関連コードが10ファイル以上に残存し、新系統（mocks層）と矛盾。`confidenceScore`がLearningRuleUi.ts/zod_schema.ts/firestore.tsに残存、clientCodeベース、借方勘定科目のみ（貸方なし）、ScreenD_AIRules.vueのimport先不在 | Supabase移行時に旧系統廃止。対象: `LearningRuleUi.ts`/`zod_schema.ts` L486/`firestore.ts` L350/`ScreenD_AIRules.vue`等。新系統`learning_rule.type.ts`+`learning_rules_TST00011.ts`で完全置換 | LearningRuleUi.ts, zod_schema.ts, firestore.ts, ScreenD_AIRules.vue |
 | **プロパティ命名snake_case統一（DL-054）** | LearningRule系（`matchType`, `amountMin`, `isActive`等）とAccountDeterminationResult（`vendorId`, `determinedAccount`等）がcamelCase。JournalPhase5Mock/Vendor等のUI表示系はsnake_case。**混在** | Supabase移行時に一括リファクタ。対象: `learning_rule.type.ts`（LearningRule + LearningRuleEntryLine）、`accountDetermination.ts`（AccountDeterminationResult）、`matchLearningRule.ts`。全プロパティをsnake_caseに変換 | learning_rule.type.ts, accountDetermination.ts, matchLearningRule.ts |
-| **確定送信のトランザクション化** | `sendToProcess()`で①仕訳保存→②classifyデータ削除→③Drive移行ジョブ登録を順次実行。現在はJSON永続化のため②が失敗しても①の仕訳データは保存済みで実害なし。ただし②のサーバー通信失敗時にリトライしない | Supabase移行時にDBトランザクションで①②を原子的に実行。③（Drive移行）は非同期ジョブのため別トランザクション。対象: `clearAiFieldsByClientId()`（documentStore.ts）→ documentsテーブルのUPDATE（ai*カラム=NULL）+ journalsテーブルのINSERTを1トランザクションに統合 | MockDriveSelectPage.vue, documentStore.ts, useDocuments.ts |
+| **確定送信のトランザクション化** | `sendToProcess()`で①仕訳保存→②previewExtractデータ削除→③Drive移行ジョブ登録を順次実行。現在はJSON永続化のため②が失敗しても①の仕訳データは保存済みで実害なし。ただし②のサーバー通信失敗時にリトライしない | Supabase移行時にDBトランザクションで①②を原子的に実行。③（Drive移行）は非同期ジョブのため別トランザクション。対象: `clearAiFieldsByClientId()`（documentStore.ts）→ documentsテーブルのUPDATE（ai*カラム=NULL）+ journalsテーブルのINSERTを1トランザクションに統合 | MockDriveSelectPage.vue, documentStore.ts, useDocuments.ts |
 
 ---
 

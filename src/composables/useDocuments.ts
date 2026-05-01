@@ -180,10 +180,10 @@ export function useDocuments() {
   }
 
   /**
-   * classifyデータ（ai*フィールド）を完全削除
+   * previewExtractデータ（ai*フィールド）を完全削除
    *
    * 確定送信後に呼び出す。仕訳変換完了後に実行すること。
-   * 設計方針: classify.service.ts ヘッダー参照
+   * 設計方針: previewExtract.service.ts ヘッダー参照
    */
   async function clearAiFields(clientId: string) {
     // ローカルrefを即時クリア
@@ -194,7 +194,7 @@ export function useDocuments() {
         record[key] = null
       }
     }
-    console.log(`[useDocuments] classifyデータ削除（ローカル）: ${targets.length}件`)
+    console.log(`[useDocuments] previewExtractデータ削除（ローカル）: ${targets.length}件`)
 
     // サーバーにも反映
     try {
@@ -202,10 +202,10 @@ export function useDocuments() {
         method: 'POST',
       })
       if (!res.ok) {
-        console.error(`[useDocuments] classifyデータ削除失敗: HTTP ${res.status}`)
+        console.error(`[useDocuments] previewExtractデータ削除失敗: HTTP ${res.status}`)
       }
     } catch (err) {
-      console.error('[useDocuments] classifyデータ削除エラー:', err)
+      console.error('[useDocuments] previewExtractデータ削除エラー:', err)
     }
   }
 
@@ -226,7 +226,7 @@ export function useDocuments() {
     assignBatchAndJournalIds,
     /** サーバーから最新データを再取得 */
     refresh,
-    /** classifyデータ完全削除（確定送信後） */
+    /** previewExtractデータ完全削除（確定送信後） */
     clearAiFields,
   }
 }

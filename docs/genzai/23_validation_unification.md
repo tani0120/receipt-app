@@ -4,15 +4,15 @@
 
 バリデーションロジックの散在（receiptService.ts内のif連続）、any型によるAPIレスポンスアクセス、取引先バリデーション未実装、MIME定数の二重定義を一括で解消する。
 
-**重要制約: 現在のClassifyResponse型（types.ts）は一切変更しない。**
-スキーマ統一・旧ファイル移植（旧classify_postprocess.ts→新postprocess.ts）は別フェーズ（フェーズB）として分離済み。→ task_unified.md C-9参照
+**重要制約: 現在のPreviewExtractResponse型（types.ts）は一切変更しない。**
+スキーマ統一・旧ファイル移植（旧previewExtract_postprocess.ts→新postprocess.ts）は別フェーズ（フェーズB）として分離済み。→ task_unified.md C-9参照
 
 ## 設計原則
 
 - **postprocess = 計算**、**validate = 判定**。役割を分ける
 - **データ駆動**: 単純なルール → 定数テーブル、複雑なロジック → code
 - **型を変えずにロジックだけ集約する**
-- バリデーション判定は`validateClassifyResult.ts` 1箇所に統一
+- バリデーション判定は`validatePreviewExtractResult.ts` 1箇所に統一
 
 ---
 
@@ -33,10 +33,10 @@
 
 | # | 負債 | 理由 |
 |---|---|---|
-| D-9 | スキーマ分裂（3ファイル） | 旧スキーマ（classify_schema.ts）と新スキーマ（types.ts）は設計思想が違う（7種 vs 12種）。統合は大手術 |
-| D-10 | classify_postprocess.tsが本番未接続 | 旧型（GeminiClassifyResponse 29フィールド）に依存。新型に移植するにはスキーマ統一が前提 |
-| D-11 | classify_test.tsがGemini直呼び出し | テスト資産としての価値がある。API経由への書き換えは目的を破壊する |
-| D-12 | ClassifyResponseに検算・ラベルフィールドなし | types.tsの型変更が必要。フェーズBで対応 |
+| D-9 | スキーマ分裂（3ファイル） | 旧スキーマ（previewExtract_schema.ts）と新スキーマ（types.ts）は設計思想が違う（7種 vs 12種）。統合は大手術 |
+| D-10 | previewExtract_postprocess.tsが本番未接続 | 旧型（GeminiPreviewExtractResponse 29フィールド）に依存。新型に移植するにはスキーマ統一が前提 |
+| D-11 | previewExtract_test.tsがGemini直呼び出し | テスト資産としての価値がある。API経由への書き換えは目的を破壊する |
+| D-12 | PreviewExtractResponseに検算・ラベルフィールドなし | types.tsの型変更が必要。フェーズBで対応 |
 
 ---
 
@@ -83,40 +83,40 @@
 ### 手順①: types.ts にフロント用型を追加
 
 - **対象**: `src/api/services/pipeline/types.ts`
-- **目的**: ReceiptAnalysisResult / AnalyzeOptions をここに移動。**ClassifyResponse / ClassifyRawResponse は変更しない**
+- **目的**: ReceiptAnalysisResult / AnalyzeOptions をここに移動。**PreviewExtractResponse / PreviewExtractRawResponse は変更しない**
 - **内容**:
   - receiptService.ts L7-53 の ReceiptAnalysisResult 型を types.ts に移動
   - receiptService.ts L55-61 の AnalyzeOptions 型を types.ts に移動
 - **潰す負債**: D-3
 
-### 手順②: validateClassifyResult.ts 新設（データ駆動バリデーション）
+### 手順②: validatePreviewExtractResult.ts 新設（データ駆動バリデーション）
 
-- **対象**: `src/shared/validateClassifyResult.ts`（新設）
+- **対象**: `src/shared/validatePreviewExtractResult.ts`（新設）
 - **目的**: バリデーションロジックを1ファイルに集約。データ駆動設計でif連続を排除
-- **依存**: `ClassifyResponse`型のみをimport（現types.tsをそのまま使う）
+- **依存**: `PreviewExtractResponse`型のみをimport（現types.tsをそのまま使う）
 - **内容**:
   - SOURCE_TYPE_VALIDATION_CONFIG 定数テーブル（証票種別ごとの日付・金額・取引先の必須/不問をbooleanで定義）
   - VALIDATION_RULES 定数テーブル（優先順にルールID・check関数・エラーメッセージを定義）
   - ALLOWED_MIME_TYPES / ALLOWED_EXTENSIONS / MF_IMPORT_EXTENSIONS 定数
   - validateFileType() 関数（ファイル形式判定）
-  - validateClassifyResult() 関数（テーブルをループして最初にhitしたルールでOK/NG/補助対象を返す）
-  - 入力: ClassifyResponse（現types.tsの型そのまま）
+  - validatePreviewExtractResult() 関数（テーブルをループして最初にhitしたルールでOK/NG/補助対象を返す）
+  - 入力: PreviewExtractResponse（現types.tsの型そのまま）
   - 出力: `{ ok: boolean; errorReason: string | null; supplementary?: boolean }`
 - **潰す負債**: D-4, D-5, D-6, D-7, D-8
-- **注意**: validate = 判定のみ。計算はpostprocessの責務。ClassifyResponseの型は一切触らない
+- **注意**: validate = 判定のみ。計算はpostprocessの責務。PreviewExtractResponseの型は一切触らない
 
 ### 手順③: receiptService.ts any排除 + validateに委譲
 
 - **対象**: `src/mocks/services/receiptService.ts`
-- **目的**: any型を排除し、ClassifyResponse型で型安全にAPIレスポンスを受け取る。バリデーションをvalidateClassifyResult.tsに委譲
+- **目的**: any型を排除し、PreviewExtractResponse型で型安全にAPIレスポンスを受け取る。バリデーションをvalidatePreviewExtractResult.tsに委譲
 - **内容**:
   - ReceiptAnalysisResult型定義（L7-53）削除 → types.tsからimport
   - AnalyzeOptions型定義（L55-61）削除 → types.tsからimport
-  - `const data = await response.json()` → `const data: ClassifyResponse = await response.json()`
-  - 行データの`Record<string, unknown>` → ClassifyResponseLineItem型
-  - ALLOWED定数（L112-125）削除 → validateClassifyResult.tsからimport
-  - validateFileType関数（L131-142）削除 → validateClassifyResult.tsからimport
-  - analyzeReceiptReal内のif連続バリデーション（L230-303）削除 → validateClassifyResult()呼び出しに置換
+  - `const data = await response.json()` → `const data: PreviewExtractResponse = await response.json()`
+  - 行データの`Record<string, unknown>` → PreviewExtractLineItem型
+  - ALLOWED定数（L112-125）削除 → validatePreviewExtractResult.tsからimport
+  - validateFileType関数（L131-142）削除 → validatePreviewExtractResult.tsからimport
+  - analyzeReceiptReal内のif連続バリデーション（L230-303）削除 → validatePreviewExtractResult()呼び出しに置換
 - **潰す負債**: D-1, D-2, D-3, D-4, D-5, D-6, D-7, D-8
 
 ### 手順④: MockUploadPage.vue MIME定数統一
@@ -125,7 +125,7 @@
 - **目的**: D&DフィルタのMIME判定で使う定数の二重定義を解消
 - **内容**:
   - handleDrop内のimage/*判定をALLOWED_MIME_TYPESの定数参照に変更
-  - validateClassifyResult.tsからimport
+  - validatePreviewExtractResult.tsからimport
 - **潰す負債**: D-8
 
 ### 手順⑤: 動作確認
@@ -142,12 +142,12 @@
 
 ## バリデーション統一ルール
 
-**全てのバリデーション（判定）はvalidateClassifyResult.ts 1箇所に統一する。**
+**全てのバリデーション（判定）はvalidatePreviewExtractResult.ts 1箇所に統一する。**
 
 | 責務 | 場所 | やること | やらないこと |
 |---|---|---|---|
-| 計算 | postprocess.ts | AI生出力の正規化・fallback適用・ProcessingMode判定 → ClassifyResponseのフィールドに格納 | OK/NG判定はしない |
-| 判定 | validateClassifyResult.ts | ClassifyResponseのフィールドを見てOK/NG/補助対象を判定する。データ駆動テーブルでルール評価 | 計算はしない（postprocessの結果を参照するだけ） |
+| 計算 | postprocess.ts | AI生出力の正規化・fallback適用・ProcessingMode判定 → PreviewExtractResponseのフィールドに格納 | OK/NG判定はしない |
+| 判定 | validatePreviewExtractResult.ts | PreviewExtractResponseのフィールドを見てOK/NG/補助対象を判定する。データ駆動テーブルでルール評価 | 計算はしない（postprocessの結果を参照するだけ） |
 
 → receiptService.tsにもMockUploadPage.vueにもバリデーションロジックは**一切残さない**。
 
@@ -155,11 +155,11 @@
 
 ## 地雷注意事項
 
-1. **ClassifyResponseの型を触るな** → フェーズAの鉄則。型変更はフェーズB
+1. **PreviewExtractResponseの型を触るな** → フェーズAの鉄則。型変更はフェーズB
 2. **validateにロジック寄せすぎるな** → postprocess = 計算、validate = 判定
 3. **データ駆動のやりすぎ** → 単純 → config、複雑 → code
 4. **code_quality.md遵守** → PowerShellファイル書き換え禁止、Supabase移行後も壊れない構造
-5. **旧ファイル（classify_postprocess.ts / classify_schema.ts）は触るな** → フェーズBまで温存
+5. **旧ファイル（previewExtract_postprocess.ts / previewExtract_schema.ts）は触るな** → フェーズBまで温存
 
 ---
 
@@ -187,7 +187,7 @@ export interface ReceiptAnalysisResult {
     direction: string;
     direction_confidence: number;
     processing_mode: string;
-    classify_reason: string | null;
+    preview_extract_reason: string | null;
     description: string | null;
     fallback_applied: boolean;
     duration_ms: number;
@@ -218,13 +218,13 @@ export interface AnalyzeOptions {
 
 | 項目 | フェーズA（今回） | フェーズB（後回し） |
 |---|---|---|
-| ClassifyResponse型 | **触らない** | 検算・ラベル等フィールド追加 |
-| ClassifyRawResponse型 | **触らない** | tax_entries等29フィールドに拡張 |
-| CLASSIFY_SCHEMA | **触らない** | 旧CLASSIFY_RESPONSE_SCHEMAと統合 |
-| postprocess.ts | **触らない** | classify_postprocess.tsからロジック移植 |
-| classify_test.ts | **触らない** | 新旧両対応に改修（API経由化は行わない） |
-| classify_postprocess.ts | **触らない**（温存） | postprocess.tsに移植後に削除 |
-| classify_schema.ts | **触らない**（温存） | types.tsに統合後に削除 |
-| validateClassifyResult.ts | **新設** | — |
+| PreviewExtractResponse型 | **触らない** | 検算・ラベル等フィールド追加 |
+| PreviewExtractRawResponse型 | **触らない** | tax_entries等29フィールドに拡張 |
+| PREVIEW_EXTRACT_SCHEMA | **触らない** | 旧PREVIEW_EXTRACT_RESPONSE_SCHEMAと統合 |
+| postprocess.ts | **触らない** | previewExtract_postprocess.tsからロジック移植 |
+| previewExtract_test.ts | **触らない** | 新旧両対応に改修（API経由化は行わない） |
+| previewExtract_postprocess.ts | **触らない**（温存） | postprocess.tsに移植後に削除 |
+| previewExtract_schema.ts | **触らない**（温存） | types.tsに統合後に削除 |
+| validatePreviewExtractResult.ts | **新設** | — |
 | receiptService.ts | **any排除 + validate委譲** | — |
 | MockUploadPage.vue | **MIME定数統一** | — |

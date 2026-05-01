@@ -11,9 +11,9 @@ import {
   type SourceType,
   type Direction,
   type ProcessingMode,
-  type ClassifyRawResponse,
-  type ClassifyResponse,
-  type ClassifyResponseLineItem,
+  type PreviewExtractRawResponse,
+  type PreviewExtractResponse,
+  type PreviewExtractLineItem,
 } from './types';
 
 // ============================================================
@@ -39,12 +39,12 @@ const MODE_MAP: Record<SourceType, ProcessingMode> = {
 // fallback定数
 // ============================================================
 
-const FALLBACK_CLASSIFY: ClassifyRawResponse = {
+const FALLBACK_PREVIEW_EXTRACT: PreviewExtractRawResponse = {
   source_type: 'other',
   source_type_confidence: 0,
   direction: 'expense',
   direction_confidence: 0,
-  classify_reason: null,
+  preview_extract_reason: null,
   document_count: 1,
   document_count_reason: null,
   description: null,
@@ -70,18 +70,18 @@ function isValidDirection(v: unknown): v is Direction {
 // ============================================================
 
 /**
- * AI生出力を検証し、安全なClassifyResponseに変換する。
+ * AI生出力を検証し、安全なPreviewExtractResponseに変換する。
  * AI失敗時はfallback（source_type: 'other', confidence: 0）を返す。
  * 例外を投げない。
  */
-export function postprocessClassify(
-  raw: ClassifyRawResponse | null,
-  metadata: ClassifyResponse['metadata'],
-): ClassifyResponse {
+export function postprocessPreviewExtract(
+  raw: PreviewExtractRawResponse | null,
+  metadata: PreviewExtractResponse['metadata'],
+): PreviewExtractResponse {
   // AI出力がnull（API呼び出し失敗等）→ 全面fallback
   if (!raw) {
     console.warn('[pipeline/postprocess] AI出力がnull → fallback適用');
-    return buildResponse(FALLBACK_CLASSIFY, true, [], metadata);
+    return buildResponse(FALLBACK_PREVIEW_EXTRACT, true, [], metadata);
   }
 
   let fallbackApplied = false;
@@ -110,12 +110,12 @@ export function postprocessClassify(
   const stConf = clampConfidence(raw.source_type_confidence);
   const dirConf = clampConfidence(raw.direction_confidence);
 
-  const validated: ClassifyRawResponse = {
+  const validated: PreviewExtractRawResponse = {
     source_type: sourceType,
     source_type_confidence: stConf,
     direction,
     direction_confidence: dirConf,
-    classify_reason: raw.classify_reason ?? null,
+    preview_extract_reason: raw.preview_extract_reason ?? null,
     document_count: typeof raw.document_count === 'number' && raw.document_count >= 1 ? Math.round(raw.document_count) : 1,
     document_count_reason: raw.document_count_reason ?? null,
     description: raw.description ?? null,
@@ -125,7 +125,7 @@ export function postprocessClassify(
   };
 
   // line_itemsバリデーション + line_index付番
-  const lineItems: ClassifyResponseLineItem[] = (raw.line_items ?? []).map((item, idx) => ({
+  const lineItems: PreviewExtractLineItem[] = (raw.line_items ?? []).map((item, idx) => ({
     line_index: idx + 1,
     date: item.date ?? null,
     description: item.description ?? '',
@@ -142,11 +142,11 @@ export function postprocessClassify(
 // ============================================================
 
 function buildResponse(
-  raw: ClassifyRawResponse,
+  raw: PreviewExtractRawResponse,
   fallbackApplied: boolean,
-  lineItems: ClassifyResponseLineItem[],
-  metadata: ClassifyResponse['metadata'],
-): ClassifyResponse {
+  lineItems: PreviewExtractLineItem[],
+  metadata: PreviewExtractResponse['metadata'],
+): PreviewExtractResponse {
   const sourceType = raw.source_type as SourceType;
   const direction = raw.direction as Direction;
 
@@ -156,7 +156,7 @@ function buildResponse(
     direction,
     direction_confidence: raw.direction_confidence,
     processing_mode: MODE_MAP[sourceType],
-    classify_reason: raw.classify_reason ?? null,
+    preview_extract_reason: raw.preview_extract_reason ?? null,
     document_count: raw.document_count ?? 1,
     document_count_reason: raw.document_count_reason ?? null,
     description: raw.description,
@@ -165,7 +165,7 @@ function buildResponse(
     total_amount: raw.total_amount,
     fallback_applied: fallbackApplied,
     line_items: lineItems,
-    // validation: classify.service.tsでvalidateClassifyResult()の結果で上書きされる
+    // validation: previewExtract.service.tsでvalidatePreviewExtractResult()の結果で上書きされる
     validation: { ok: false, errorReason: null, warning: null, supplementary: false },
     metadata,
   };

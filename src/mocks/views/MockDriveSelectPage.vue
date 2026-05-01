@@ -206,7 +206,7 @@
                     <span class="ds-ai-value ds-ai-warn">{{ selected.aiDocumentCount }}枚</span>
                   </div>
                 </div>
-                <!-- 全項目null（classify通過したが認識不可） -->
+                <!-- 全項目null（previewExtract通過したが認識不可） -->
                 <div v-if="!selected.aiDate && selected.aiAmount == null && !selected.aiVendor && !selected.aiSourceType && !selected.aiDirection && !selected.aiDescription && !selected.aiLineItemsCount" class="ds-ai-empty">
                   <i class="fa-solid fa-circle-info"></i> AI認識結果なし（証票として認識できなかった可能性があります）
                 </div>
@@ -498,11 +498,11 @@ const sendToProcess = async () => {
       console.log(`[sendToProcess] 合計${generatedCount}件の仕訳を journals-${clientId.value}.json に追加`);
     }
 
-    // ━━━ 1.5. classifyデータ完全削除（設計方針: classify.service.ts ヘッダー参照）━━━
-    // 仕訳変換が完了したため、classify起算のai*フィールドは不要。
+    // ━━━ 1.5. previewExtractデータ完全削除（設計方針: previewExtract.service.ts ヘッダー参照）━━━
+    // 仕訳変換が完了したため、previewExtract起算のai*フィールドは不要。
     // Extract API（本番AI）実装後はゼロから仕訳データを再生成する。
     await clearAiFields(clientId.value);
-    console.log(`[sendToProcess] classifyデータ完全削除: ${clientId.value}`);
+    console.log(`[sendToProcess] previewExtractデータ完全削除: ${clientId.value}`);
 
     // ━━━ 2. Drive経路: migrateジョブ登録（Driveファイルのみ） ━━━
     const driveFiles = filesToMigrate.filter(f => {
@@ -612,7 +612,7 @@ const showAiPanel = ref(true);
 const hasAiResult = computed(() => {
   if (!selected.value) return false;
   const s = selected.value;
-  // AIフィールドが1つでもundefined以外（nullも含む）＝classify APIを通過済み
+  // AIフィールドが1つでもundefined以外（nullも含む）＝previewExtract APIを通過済み
   return s.aiDate !== undefined
     || s.aiAmount !== undefined
     || s.aiVendor !== undefined

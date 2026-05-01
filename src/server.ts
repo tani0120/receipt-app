@@ -79,7 +79,7 @@ if (process.env.ENABLE_OCR === 'true') {
 // Phase 1 Step 1.4: Documents Route (PostgreSQL統合)
 app.route('/api/documents', documentsRoute)
 
-// Pipeline API: パイプライン結合テスト（Step 0-1: classify / extract）
+// Pipeline API: パイプライン結合テスト（Step 0-1: previewExtract / extract）
 app.route('/api/pipeline', pipelineRoute)
 
 // Drive API: Google Drive連携（ファイル一覧取得・処理）

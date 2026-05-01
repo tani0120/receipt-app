@@ -9,7 +9,7 @@
 | ファイル | 変更前の状態 |
 |---|---|
 | `src/scripts/pipeline/image_preprocessor.ts` | 長辺1400px, gamma(1.5), grayscaleなし, sharpenなし |
-| `src/api/services/pipeline/classify.service.ts` | 横幅2000px, grayscale, normalize, sharpen (inline実装) |
+| `src/api/services/pipeline/previewExtract.service.ts` | 横幅2000px, grayscale, normalize, sharpen (inline実装) |
 | `src/scripts/preprocess.ts` | 横幅2000px, grayscale, normalize, sharpen (inline実装) |
 
 → 3箇所がそれぞれsharpを直接呼び、パラメーターもバラバラだった。
@@ -51,10 +51,10 @@
 - gamma(1.5) **削除**
 - `AppliedSteps` 型に `grayscale`, `normalize`, `sharpen` フラグ追加
 
-### ファイル2: `src/api/services/pipeline/classify.service.ts`（インライン削除）
+### ファイル2: `src/api/services/pipeline/previewExtract.service.ts`（インライン削除）
 
 - `PreprocessResult` インターフェース（55行）**削除**
-- `preprocessForClassify()` 関数 **削除**
+- `preprocessForPreviewExtract()` 関数 **削除**
 - `image_preprocessor.ts` を import して呼び出しに変更
 - `sharp` の直接import **削除**
 
@@ -64,7 +64,7 @@
 - `image_preprocessor.ts` を import して呼び出しに変更
 - `sharp` の直接import **削除**
 
-### ファイル4: `src/api/services/pipeline/classify.service.ts`（モデルID修正）
+### ファイル4: `src/api/services/pipeline/previewExtract.service.ts`（モデルID修正）
 
 - `gemini-2.5-flash-preview-04-17` → `gemini-2.5-flash`
 - preview版が404（NOT_FOUND）になるため安定版に変更
@@ -74,7 +74,7 @@
 ```
 image_preprocessor.ts ── preprocessImage()  ← sharp呼び出しはここだけ
     ↑ import          ↑ import
-classify.service.ts    preprocess.ts
+previewExtract.service.ts    preprocess.ts
 ```
 
 ## 検証結果

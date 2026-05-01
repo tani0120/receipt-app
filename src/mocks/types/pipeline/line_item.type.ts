@@ -21,7 +21,7 @@ import type { NonVendorType, TaxPaymentType } from './non_vendor.type'
  *   - vendor_name    : LineItemに追加済み（v1.1。T-P3の受け皖型。DL-012参照）
  *   - tax_rate       : ReceiptItem側の責務。通帳/クレカ行に税率情報はない
  *   - date_on_document: date === null でコード側導出可能（冗長）
- *   - debit_account / credit_account: classify_schema.ts旧世代の残骸（@deprecated）
+ *   - debit_account / credit_account: previewExtract_schema.ts旧世代の残骸（@deprecated）
  *
  * ReceiptItem との関係:
  *   ReceiptItem（レシート商品明細）は別型のまま維持。

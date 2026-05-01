@@ -15,8 +15,8 @@
  *       - PostProcessResult に labels[] 追加
  *   v3.2: 旧LineItem型削除・新設計（line_item.type.ts）に一本化（B項目 2026-04-05）
  *       - 旧LineItem（@deprecated）を完全削除
- *       - GeminiClassifyResponse.line_items を Omit<LineItem, 'line_index'>[] | null に変更
- *       - CLASSIFY_RESPONSE_SCHEMA の line_items スキーマを direction / balance に変更
+ *       - GeminiPreviewExtractResponse.line_items を Omit<LineItem, 'line_index'>[] | null に変更
+ *       - PREVIEW_EXTRACT_RESPONSE_SCHEMA の line_items スキーマを direction / balance に変更
  *         （旧: debit_account / credit_account → 廃止）
  */
 
@@ -80,7 +80,7 @@ export interface ReceiptItem {
 // ============================================================
 
 /** Gemini 1 callのレスポンス型（層A） */
-export interface GeminiClassifyResponse {
+export interface GeminiPreviewExtractResponse {
   // === A1-A2: 証票分類 ===
   voucher_type: VoucherType;
   voucher_type_confidence: number;  // 0.0〜1.0
@@ -160,8 +160,8 @@ export interface PostProcessResult {
 }
 
 /** 最終結果（層A + 層B統合） */
-export interface ClassifyResult {
-  gemini: GeminiClassifyResponse;
+export interface PreviewExtractResult {
+  gemini: GeminiPreviewExtractResponse;
   postprocess: PostProcessResult;
   metadata: {
     file: string;
@@ -183,7 +183,7 @@ export interface ClassifyResult {
 // Vertex AI SchemaType定義（structured output用）
 // ============================================================
 
-export const CLASSIFY_RESPONSE_SCHEMA = {
+export const PREVIEW_EXTRACT_RESPONSE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
     // --- A1-A2: 証票分類 ---

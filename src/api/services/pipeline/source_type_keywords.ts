@@ -2,7 +2,7 @@
  * source_type_keywords.ts
  * 証票種別ごとの判定キーワード・除外ルール・補足情報
  *
- * 用途: classify.service.ts のプロンプト生成時にimportし、
+ * 用途: previewExtract.service.ts のプロンプト生成時にimportし、
  *       SYSTEM_INSTRUCTIONに動的結合する
  * 将来: Supabase移行時にDB格納に差し替え可能
  */
@@ -383,7 +383,7 @@ export const BOUNDARY_GUIDES: BoundaryGuide[] = [
 
 /**
  * キーワード定義をプロンプト用テキストに変換
- * classify.service.ts のSYSTEM_INSTRUCTIONに結合する
+ * previewExtract.service.ts のSYSTEM_INSTRUCTIONに結合する
  */
 export function buildKeywordsPrompt(): string {
   // 判定基準テーブル

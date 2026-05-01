@@ -13,11 +13,11 @@
  */
 
 import type {
-    GeminiClassifyResponse,
+    GeminiPreviewExtractResponse,
     ClassificationStatus,
     PostProcessResult,
-} from './classify_schema';
-import { HandwrittenFlag } from './classify_schema';
+} from './preview_extract_schema';
+import { HandwrittenFlag } from './preview_extract_schema';
 
 // ============================================================
 // 定数
@@ -40,7 +40,7 @@ const PRICING = {
 // B1: ステータス判定
 // ============================================================
 
-export function determineStatus(r: GeminiClassifyResponse): ClassificationStatus {
+export function determineStatus(r: GeminiPreviewExtractResponse): ClassificationStatus {
     // 1. 対象外
     if (r.is_not_applicable) return 'excluded';
 
@@ -88,7 +88,7 @@ interface TaxCheckResult {
     detail: string;
 }
 
-export function checkTaxMismatch(r: GeminiClassifyResponse): TaxCheckResult {
+export function checkTaxMismatch(r: GeminiPreviewExtractResponse): TaxCheckResult {
     // 税エントリがない場合はチェック不要
     if (!r.tax_entries || r.tax_entries.length === 0) {
         return { mismatch: false, detail: '税エントリなし' };
@@ -130,7 +130,7 @@ interface DateCheckResult {
     reason: string;
 }
 
-export function checkDateAnomaly(r: GeminiClassifyResponse): DateCheckResult {
+export function checkDateAnomaly(r: GeminiPreviewExtractResponse): DateCheckResult {
     if (r.date === null) {
         return { anomaly: false, reason: '日付なし' };
     }
@@ -165,9 +165,9 @@ interface DuplicateCheckResult {
  * 同バッチ内の他の結果と突合し、重複の疑いがあるか判定
  */
 export function checkDuplicates(
-    current: GeminiClassifyResponse,
+    current: GeminiPreviewExtractResponse,
     currentIndex: number,
-    allResults: GeminiClassifyResponse[]
+    allResults: GeminiPreviewExtractResponse[]
 ): DuplicateCheckResult {
     const suspects: string[] = [];
 
@@ -207,7 +207,7 @@ interface DebitCreditCheckResult {
     detail: string;
 }
 
-export function checkDebitCreditMismatch(r: GeminiClassifyResponse): DebitCreditCheckResult {
+export function checkDebitCreditMismatch(r: GeminiPreviewExtractResponse): DebitCreditCheckResult {
     if (!r.journal_entry_suggestions || r.journal_entry_suggestions.length === 0) {
         return { mismatch: false, detail: '仕訳候補なし' };
     }
@@ -272,7 +272,7 @@ export function estimateCost(usage: TokenUsage): CostBreakdown {
  * RULE_APPLIED/RULE_AVAILABLEは層C依存のためスキップ。
  */
 export function generateLabels(
-    r: GeminiClassifyResponse,
+    r: GeminiPreviewExtractResponse,
     taxMismatch: boolean,
     dateAnomaly: boolean,
     duplicateSuspect: boolean,
@@ -298,7 +298,7 @@ export function generateLabels(
     if (r.amount_unreadable && r.total_amount === null) labels.push('UNREADABLE_FAILED');
     if (r.issuer_unreadable && r.issuer_name === null) labels.push('UNREADABLE_FAILED');
     // 5. DUPLICATE_CONFIRMED: SHA256ハッシュ比較（層B内でのファイルハッシュ比較は別途実装予定）
-    // → 現時点ではrunPostProcess内では未実装。ファイルハッシュの比較はclassify_test.ts側で行う必要あり。
+    // → 現時点ではrunPostProcess内では未実装。ファイルハッシュの比較はpreviewExtract_test.ts側で行う必要あり。
     // 6. MULTIPLE_VOUCHERS
     if (r.has_multiple_vouchers) labels.push('MULTIPLE_VOUCHERS');
     // 7. DUPLICATE_SUSPECT
@@ -331,9 +331,9 @@ export function generateLabels(
 // ============================================================
 
 export function runPostProcess(
-    geminiResult: GeminiClassifyResponse,
+    geminiResult: GeminiPreviewExtractResponse,
     currentIndex: number,
-    allResults: GeminiClassifyResponse[],
+    allResults: GeminiPreviewExtractResponse[],
     tokenUsage: TokenUsage
 ): PostProcessResult {
     const taxCheck = checkTaxMismatch(geminiResult);

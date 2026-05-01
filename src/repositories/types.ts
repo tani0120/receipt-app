@@ -361,7 +361,7 @@ export interface DocEntry {
   /** ステータス変更日時（ISO 8601） */
   statusChangedAt: string | null
 
-  // ── AI分類結果（classify API。独自アップロード時に取得、Drive経路はフェーズ3.5で追加予定） ──
+  // ── AI分類結果（previewExtract API。独自アップロード時に取得、Drive経路はフェーズ3.5で追加予定） ──
   /** AI抽出日付（YYYY-MM-DD） */
   aiDate?: string | null
   /** AI抽出金額（整数） */
@@ -375,7 +375,7 @@ export interface DocEntry {
   /** AI抽出摘要 */
   aiDescription?: string | null
   /** AI判定根拠 */
-  aiClassifyReason?: string | null
+  aiPreviewExtractReason?: string | null
   /** AI抽出行データ（通帳/クレカ: N行、レシート: 1行、対象外: 空） */
   aiLineItems?: {
     line_index: number
@@ -384,7 +384,7 @@ export interface DocEntry {
     amount: number
     direction: 'expense' | 'income'
     balance: number | null
-    // 科目確定結果（classify API → determineAccount() で付与。Step4-C）
+    // 科目確定結果（previewExtract API → determineAccount() で付与。Step4-C）
     vendor_id?: string | null
     vendor_name?: string | null
     determined_account?: string | null
@@ -427,21 +427,21 @@ export interface DocEntry {
     preprocess_reduction_pct?: number
   } | null
   /** 重複検出フラグ（SHA-256ハッシュ一致。T-AUD-5: アップロード時に判定済みの値を保持） */
-  // ※ isDuplicateはclassifyデータではなくハッシュ比較結果。AI_FIELD_KEYSに含めない（削除対象外）
+  // ※ isDuplicateはpreviewExtractデータではなくハッシュ比較結果。AI_FIELD_KEYSに含めない（削除対象外）
   isDuplicate?: boolean
 }
 
 /**
- * classify APIで書き込まれるai*フィールドのキー一覧
+ * previewExtract APIで書き込まれるai*フィールドのキー一覧
  *
  * 確定送信後にこれらのフィールドを全てnullに設定する。
  * フィールド追加時はここと DocEntry 型定義を同時に更新すること。
  *
- * ※ isDuplicateはハッシュ比較結果でありclassify出力ではないため含めない
+ * ※ isDuplicateはハッシュ比較結果でありpreviewExtract出力ではないため含めない
  */
 export const AI_FIELD_KEYS: (keyof DocEntry)[] = [
   'aiDate', 'aiAmount', 'aiVendor', 'aiSourceType', 'aiDirection',
-  'aiDescription', 'aiClassifyReason', 'aiLineItems', 'aiLineItemsCount',
+  'aiDescription', 'aiPreviewExtractReason', 'aiLineItems', 'aiLineItemsCount',
   'aiSupplementary', 'aiDocumentCount', 'aiWarning', 'aiProcessingMode',
   'aiFallbackApplied', 'aiMetrics',
 ] as const satisfies readonly (keyof DocEntry)[]

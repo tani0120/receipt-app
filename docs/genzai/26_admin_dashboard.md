@@ -30,7 +30,7 @@
 
 | フィールド | 型 | 定義場所 | 用途 |
 |------------|------|----------|------|
-| `aiClassifyReason` | `string \| null` | [types.ts L391](file:///c:/dev/receipt-app/src/repositories/types.ts#L391) | AI判定根拠テキスト。精度検証時に「なぜその証票種別と判定したか」を確認 |
+| `aiPreviewExtractReason` | `string \| null` | [types.ts L391](file:///c:/dev/receipt-app/src/repositories/types.ts#L391) | AI判定根拠テキスト。精度検証時に「なぜその証票種別と判定したか」を確認 |
 | `aiLineItems` | `AiLineItem[]` | [types.ts L377](file:///c:/dev/receipt-app/src/repositories/types.ts#L377) | AI抽出行データ配列。行ごとの金額・税区分の妥当性検証 |
 | `aiMetrics` | `AiMetrics` | [types.ts L397](file:///c:/dev/receipt-app/src/repositories/types.ts#L397) | トークン数・処理時間・コスト等のパフォーマンス指標 |
 
@@ -117,7 +117,7 @@
 
 | フィールド | 見送り理由 | 判断日 | 監査タスク |
 |------------|-----------|--------|-----------|
-| `aiClassifyReason` | 証票ごとの判定理由は詳細モーダル向け。一覧では過剰 | 2026-04-26 | T-AUD-4a |
+| `aiPreviewExtractReason` | 証票ごとの判定理由は詳細モーダル向け。一覧では過剰 | 2026-04-26 | T-AUD-4a |
 | `aiLineItems` | 配列データ。テーブル表示が必要で一覧パネルに不適 | 2026-04-26 | T-AUD-4a |
 | `aiMetrics` | コスト・トークンは管理者のみ関心 | 2026-04-26 | T-AUD-4a |
 | `ai_completed_at` | デバッグ・計測用。スタッフは不要 | 2026-04-26 | T-AUD-4c |

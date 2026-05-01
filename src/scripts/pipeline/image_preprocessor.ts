@@ -29,7 +29,7 @@
  *   // result.applied → トレースログに記録
  *
  * 呼び出し元:
- *   - classify.service.ts（API経由のclassify）
+ *   - previewExtract.service.ts（API経由のpreviewExtract）
  *   - preprocess.ts（バッチ処理）
  */
 

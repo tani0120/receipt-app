@@ -4,16 +4,16 @@
  * Vue側は常に同じ ReceiptAnalysisResult 型を受け取る
  *
  * 設計:
- *   - バリデーションはサーバー側（classify.service.ts → validateClassifyResult.ts）で実行
+ *   - バリデーションはサーバー側（previewExtract.service.ts → validatePreviewExtractResult.ts）で実行
  *   - フロントはAPIレスポンスのvalidation結果を信頼して表示するだけ
  *   - ReceiptAnalysisResult / AnalyzeOptions → types.ts からimport
- *   - any排除: ClassifyResponse型でAPIレスポンスを受け取る
+ *   - any排除: PreviewExtractResponse型でAPIレスポンスを受け取る
  *   - MIME定数: fileTypes.ts からimport
  */
 
 import type {
-  ClassifyResponse,
-  ClassifyResponseLineItem,
+  PreviewExtractResponse,
+  PreviewExtractLineItem,
   ReceiptAnalysisResult,
   AnalyzeOptions,
 } from '@/api/services/pipeline/types';
@@ -68,7 +68,7 @@ async function analyzeReceiptMock(_file: File, _clientId?: string): Promise<Rece
   };
 }
 
-// ===== 本番実装（/api/pipeline/classify） =====
+// ===== 本番実装（/api/pipeline/preview-extract） =====
 async function analyzeReceiptReal(file: File, clientId?: string): Promise<ReceiptAnalysisResult> {
   try {
     // ① ファイル形式チェック（AI不要なら補助対象として即返却 → Geminiコスト発生ゼロ）
@@ -103,7 +103,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
     formData.append('clientId', clientId ?? 'unknown');
     formData.append('filename', file.name);
 
-    const response = await fetch("/api/pipeline/classify", {
+    const response = await fetch("/api/pipeline/preview-extract", {
       method: "POST",
       body: formData,  // Content-Typeは自動設定（multipart/form-data）
     });
@@ -119,16 +119,16 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
     }
 
     // ③ 型安全なレスポンス取得（D-1解消: any排除）
-    const data: ClassifyResponse & { fileUrl?: string } = await response.json();
+    const data: PreviewExtractResponse & { fileUrl?: string } = await response.json();
 
-    // ④ メトリクス構築（型安全: ClassifyResponseのフィールドを直接参照）
+    // ④ メトリクス構築（型安全: PreviewExtractResponseのフィールドを直接参照）
     const metrics: ReceiptAnalysisResult['metrics'] = {
       source_type: data.source_type,
       source_type_confidence: data.source_type_confidence,
       direction: data.direction,
       direction_confidence: data.direction_confidence,
       processing_mode: data.processing_mode,
-      classify_reason: data.classify_reason ?? null,
+      preview_extract_reason: data.preview_extract_reason ?? null,
       description: data.description ?? null,
       fallback_applied: data.fallback_applied,
       duration_ms: data.metadata.duration_ms,
@@ -144,8 +144,8 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       preprocess_reduction_pct: data.metadata.preprocess_reduction_pct,
     };
 
-    // ⑤ 行データ取得（D-2解消: ClassifyResponseLineItem型で型安全）
-    const lineItems = data.line_items.map((li: ClassifyResponseLineItem) => ({
+    // ⑤ 行データ取得（D-2解消: PreviewExtractLineItem型で型安全）
+    const lineItems = data.line_items.map((li: PreviewExtractLineItem) => ({
       line_index: li.line_index,
       date: li.date,
       description: li.description,
@@ -207,8 +207,8 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
   }
 }
 
-/** テスト用: classify結果をコンソールに全項目構造化出力 */
-function logClassifyResult(file: File, opts: AnalyzeOptions, result: ReceiptAnalysisResult) {
+/** テスト用: previewExtract結果をコンソールに全項目構造化出力 */
+function logPreviewExtractResult(file: File, opts: AnalyzeOptions, result: ReceiptAnalysisResult) {
   const m = result.metrics;
   const DIRECTION_LABELS: Record<string, string> = {
     expense: "支払",
@@ -231,7 +231,7 @@ function logClassifyResult(file: File, opts: AnalyzeOptions, result: ReceiptAnal
 
   const ub = opts.uploadedBy;
   console.log(
-    `\n═══ classify結果 [${file.name}] ═══\n` +
+    `\n═══ previewExtract結果 [${file.name}] ═══\n` +
       `▼ フロント情報\n` +
       `  顧問先ID     : ${opts.clientId ?? "-"}\n` +
       `  証票ID       : ${opts.documentId ?? "-"}\n` +
@@ -252,7 +252,7 @@ function logClassifyResult(file: File, opts: AnalyzeOptions, result: ReceiptAnal
       `  金額         : ${result.amount != null ? `¥${result.amount.toLocaleString()}` : "null"}\n` +
       `  取引先       : ${result.vendor ?? "null"}\n` +
       `  摘要         : ${m?.description ?? "null"}\n` +
-      `  判定根拠     : ${m?.classify_reason ?? "-"}\n` +
+      `  判定根拠     : ${m?.preview_extract_reason ?? "-"}\n` +
       `  fallback     : ${fallbackLabel}\n` +
       `▼ メトリクス\n` +
       `  処理時間     : ${m?.duration_seconds ?? "-"}秒 (${m?.duration_ms ?? "-"}ms)\n` +
@@ -294,6 +294,6 @@ export const analyzeReceipt = async (
 ): Promise<ReceiptAnalysisResult> => {
   const result = await _analyzeRaw(file, opts?.clientId);
   // テスト用: ブラウザコンソールに全項目構造化出力
-  logClassifyResult(file, opts ?? {}, result);
+  logPreviewExtractResult(file, opts ?? {}, result);
   return result;
 };

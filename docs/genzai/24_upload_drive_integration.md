@@ -97,7 +97,7 @@ Drive方式（移行後）:
 ┌─ PC ──────────────────────────────────┐
 │  ドラッグ&ドロップ / ファイル選択      │
 │  → useUpload.ts                       │
-│  → FormData POST /api/pipeline/classify│
+│  → FormData POST /api/pipeline/preview-extract│
 │  → Vertex AI（Gemini）分類            │
 │  → 結果バッジ表示                     │
 │  ★ 問題なし                          │
@@ -155,15 +155,15 @@ Drive方式（移行後）:
 
 | ファイル | パス | 行数 | 役割 |
 |---|---|---|---|
-| `pipeline.ts` | `src/api/routes/` | 348 | APIルーティング（classify, upload-chunk, upload-complete, hashes） |
+| `pipeline.ts` | `src/api/routes/` | 348 | APIルーティング（previewExtract, upload-chunk, upload-complete, hashes） |
 | **`drive.ts`** | `src/api/routes/` | 約170 | **Drive APIルーティング（GET /files, POST /process + ゴミ箱移動）** |
 | **`docStore.ts`** | `src/api/routes/` | 約95 | **[新規] ドキュメントJSON永続化APIルート（GET/POST/PUT/DELETE）** |
-| `classify.service.ts` | `src/api/services/pipeline/` | 約400 | Gemini呼出 + sharp前処理 + JSON解析 |
+| `previewExtract.service.ts` | `src/api/services/pipeline/` | 約400 | Gemini呼出 + sharp前処理 + JSON解析 |
 | **`driveService.ts`** | `src/api/services/drive/` | 約310 | **SA認証 + ファイル一覧 + DL + ハッシュ + サムネイル + `grantFolderPermission()` + `trashDriveFile()`** |
 | **`documentStore.ts`** | `src/api/services/` | 約130 | **[新規] ドキュメントJSON永続化ストア（インメモリ + data/documents.json）** |
-| `types.ts` | `src/api/services/pipeline/` | 約300 | ClassifyResponse / ClassifyResponseLineItem 等の型定義 |
+| `types.ts` | `src/api/services/pipeline/` | 約300 | PreviewExtractResponse / PreviewExtractLineItem 等の型定義 |
 | `postprocess.ts` | `src/api/services/pipeline/` | 約180 | AI生出力の正規化・fallback適用 |
-| `validateClassifyResult.ts` | `src/api/services/pipeline/` | 約170 | データ駆動バリデーション（OK/NG判定） |
+| `validatePreviewExtractResult.ts` | `src/api/services/pipeline/` | 約170 | データ駆動バリデーション（OK/NG判定） |
 | `source_type_keywords.ts` | `src/api/services/pipeline/` | 約400 | 証票種別キーワード辞書 |
 | `image_preprocessor.ts` | `src/scripts/pipeline/` | — | sharp 6ステップ前処理（唯一のsharp呼出元） |
 
@@ -236,9 +236,9 @@ Drive方式（移行後）:
    ┌─ 軽量モード（lite=true）: AI分類スキップ
    │   → uploadChunked() → 512KB × N回 → upload-complete
    │   → サーバー: SHA-256 + サムネイル + 重複チェック
-   │   → 即OK（classify不要）
+   │   → 即OK（previewExtract不要）
    └─ 高度モード（lite=false）: AI分類実行
-       → FormData POST /api/pipeline/classify
+       → FormData POST /api/pipeline/preview-extract
        → サーバー: sharp前処理 → Vertex AI（Gemini）分類
        → バリデーション → OK/NG判定
 
@@ -265,7 +265,7 @@ Drive方式（移行後）:
 
 | 定数 | 値 | 場所 | 説明 |
 |---|---|---|---|
-| `CONCURRENCY_PC` | 6 | L166 | classify API同時呼出数 |
+| `CONCURRENCY_PC` | 6 | L166 | previewExtract API同時呼出数 |
 | `COMPRESS_CONCURRENCY` | 4 | L535 | サムネイル生成の同時処理数 |
 | `THUMB_MAX` | 200 | L256 | サムネイル最大幅/高さ（px） |
 | `PREVIEW_HQ_MAX` | 800 | L257 | HQプレビュー最大幅/高さ（px） |
@@ -326,7 +326,7 @@ Drive方式（移行後）:
   - ファイルリスト（L47-82）: `sortedEntries` でソート済み表示
     - ステータスアイコン（✅⚠⏳）
     - ファイル名 + サイズ
-    - classifyバッジ群（証票種別 / 取引先 / 金額 / 日付 / 行数 / 重複グループ）
+    - previewExtractバッジ群（証票種別 / 取引先 / 金額 / 日付 / 行数 / 重複グループ）
     - 削除ボタン（🗑️）
 - **右カラム**（`preview-panel`）:
   - 未選択時: SVGアイコン + 「ファイルを選択またはドロップすると〜」（L87-96）
@@ -437,7 +437,7 @@ queued → uploading → analyzing → ok
 │  サービスアカウント認証（秘密鍵。顧問先に見えない）│
 │  ④ Drive APIでファイル取得（サーバー間通信）    │
 │  ⑤ SHA-256 + サムネイル + 重複チェック         │
-│  ⑥ AI分類（classify / Gemini）                 │
+│  ⑥ AI分類（previewExtract / Gemini）                 │
 │  ⑦ 結果をフロントエンドに返す                  │
 └────────────────────────────────────────────────┘
 ```
@@ -1492,15 +1492,15 @@ await enqueueMigrationJobs(jobId, clientId, files);
 
 ---
 
-## 17. classify API仕様（UIプレビュー用軽量AI）
+## 17. previewExtract API仕様（UIプレビュー用軽量AI）
 
 > 旧 22_classify_realtime_validation.md を統合（2026-04-29）
 
-### 17-1. classifyの役割と限界
+### 17-1. previewExtractの役割と限界
 
-**classifyはアップロード時のUIプレビュー表示専用。仕訳一覧が期待する型（JournalPhase5Mock）は一切出力しない。**
+**previewExtractはアップロード時のUIプレビュー表示専用。仕訳一覧が期待する型（JournalPhase5Mock）は一切出力しない。**
 
-| | classify API（UIプレビュー用） | Extract API（本番仕訳生成）※未実装 |
+| | previewExtract API（UIプレビュー用） | Extract API（本番仕訳生成）※未実装 |
 |---|---|---|
 | **目的** | アップロード画面で種別・金額・日付をプレビュー表示 | 仕訳一覧が期待する全フィールド（科目、税区分、補助等）を出力 |
 | **出力** | source_type, direction, line_items（粗い） | JournalPhase5Mock型の完全な仕訳データ |
@@ -1513,7 +1513,7 @@ await enqueueMigrationJobs(jobId, clientId, files);
 Driveと独自アップロードの証票が揃うタイミングが選別確定時。バラバラにAIにかけるのではなく、全証票をまとめて渡す必要がある。
 
 ```
-独自アップロード → classify（UIプレビュー）→ DocEntry保存
+独自アップロード → previewExtract（UIプレビュー）→ DocEntry保存
 Drive連携        → ファイルID取得のみ       → DocEntry保存
                     ↓
               選別画面で証票が集約される
@@ -1524,10 +1524,10 @@ Drive連携        → ファイルID取得のみ       → DocEntry保存
                     ↓
               JournalPhase5Mock[] 生成 → 仕訳一覧UIに表示
                     ↓
-              classifyの出力を削除（不要になったため）
+              previewExtractの出力を削除（不要になったため）
 ```
 
-### 17-3. classify バリデーション仕様
+### 17-3. previewExtract バリデーション仕様
 
 #### 対象ルート（4つ）= すべて同じAI処理＋バリデーション
 
@@ -1570,23 +1570,23 @@ Drive連携        → ファイルID取得のみ       → DocEntry保存
   → MockUploadPage.vue / MockUploadPcPage.vue
     → analyzeReceipt(file)
       → 現状: analyzeReceiptMock()     ← ランダム
-      → 本番: POST /api/pipeline/classify  ← AIが判定
+      → 本番: POST /api/pipeline/preview-extract  ← AIが判定
         → 前処理（image_preprocessor.ts）
-        → Gemini classify
+        → Gemini previewExtract
         → postprocess（バリデーション+fallback）
         → レスポンスを ReceiptAnalysisResult に変換
           → date/amount が null → ok: false, errorReason表示
           → date/amount が有効  → ok: true, 結果表示
 ```
 
-### 17-4. classifyの出力ライフサイクル
+### 17-4. previewExtractの出力ライフサイクル
 
 ```
-① アップロード → classify → aiLineItems等をDocEntryに一時保存
+① アップロード → previewExtract → aiLineItems等をDocEntryに一時保存
 ② 選別画面で表示（種別、金額、摘要等のUIプレビューに使用）
-③ 確定送信 → classifyの出力（aiLineItems等）を**完全削除**
+③ 確定送信 → previewExtractの出力（aiLineItems等）を**完全削除**
 ④ Extract API発火 → 画像からゼロで本番仕訳データ生成
-   ※classifyの出力はExtract APIへの入力パラメータとしても渡さない
+   ※previewExtractの出力はExtract APIへの入力パラメータとしても渡さない
 ```
 
 ### 17-5. 暫定処理（Extract API未実装時）
@@ -1594,16 +1594,16 @@ Drive連携        → ファイルID取得のみ       → DocEntry保存
 Extract APIが未実装のため、現在は以下の暫定フローで動作:
 
 ```
-暫定: classify出力 → lineItemToJournalMock()で無理やり仕訳形式に変換
+暫定: previewExtract出力 → lineItemToJournalMock()で無理やり仕訳形式に変換
 本来: Extract API → JournalPhase5Mock型の完全な仕訳を直接出力
 ```
 
 `lineItemToJournalMock()` はExtract API実装後に不要になる暫定処理。
 
-### 17-6. 実装ステップ（classify）
+### 17-6. 実装ステップ（previewExtract）
 
-- [x] classify API に `duration_seconds`, `token_count`, `cost_yen` を追加返却
-- [x] `analyzeReceiptReal` を実装（POST `/api/pipeline/classify` に接続）
+- [x] previewExtract API に `duration_seconds`, `token_count`, `cost_yen` を追加返却
+- [x] `analyzeReceiptReal` を実装（POST `/api/pipeline/preview-extract` に接続）
 - [x] `ReceiptAnalysisResult` 型を拡張（テスト用項目追加）
 - [x] フロント側バリデーション（date/amount nullチェック → ok: false）
 - [x] 前処理パイプライン統一（`image_preprocessor.ts`）

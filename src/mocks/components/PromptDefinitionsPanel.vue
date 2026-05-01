@@ -1,14 +1,14 @@
 <template>
   <div class="prompt-root">
     <h2 class="prompt-title"><i class="fa-solid fa-wand-magic-sparkles"></i> AIプロンプト一覧</h2>
-    <p class="prompt-desc">現行のAIプロンプト構成。classify API（アップロード/選別AI）と本番AI（Extract API）の2段階。</p>
+    <p class="prompt-desc">現行のAIプロンプト構成。previewExtract API（アップロード/選別AI）と本番AI（Extract API）の2段階。</p>
 
     <!-- アップロード/選別AI -->
     <section class="prompt-section">
-      <div class="prompt-section-header prompt-section-classify">
+      <div class="prompt-section-header prompt-section-previewExtract">
         <i class="fa-solid fa-brain"></i>
         <div>
-          <h3>アップロード/選別AI（classify API）</h3>
+          <h3>アップロード/選別AI（previewExtract API）</h3>
           <span class="prompt-badge prompt-badge-active">稼働中</span>
           <span class="prompt-badge prompt-badge-model">gemini-2.5-flash</span>
         </div>
@@ -67,7 +67,7 @@
             <li><code>issuer_name</code> — 発行者名。全種別で読み取りを試みる</li>
             <li><code>date</code> — YYYY-MM-DD。読み取れない場合null</li>
             <li><code>total_amount</code> — 合計金額（税込）。読み取れない場合null</li>
-            <li><code>classify_reason</code> — 判定根拠を日本語1〜2文</li>
+            <li><code>preview_extract_reason</code> — 判定根拠を日本語1〜2文</li>
             <li><code>document_count</code> — 画像内の証票枚数。1枚のみなら1、複数/重なり/他書類混入は2以上</li>
             <li><code>document_count_reason</code> — 枚数判定根拠を日本語1〜2文</li>
             <li><code>line_items</code> — amountは正の整数。入出金はdirectionで区別</li>
@@ -157,10 +157,10 @@
       </div>
 
       <div class="prompt-meta">
-        <div class="prompt-meta-item"><span class="prompt-meta-label">用途</span> classify確定後、証票画像から本番仕訳データ（勘定科目・税区分等）を抽出</div>
+        <div class="prompt-meta-item"><span class="prompt-meta-label">用途</span> previewExtract確定後、証票画像から本番仕訳データ（勘定科目・税区分等）を抽出</div>
         <div class="prompt-meta-item"><span class="prompt-meta-label">実行タイミング</span> 資料選別OK後。顧問先設定（勘定科目体系・過去仕訳パターン）を参照</div>
-        <div class="prompt-meta-item"><span class="prompt-meta-label">ステータス</span> types.tsに型定義のみ。classify_test.tsにテスト版プロンプトが存在</div>
-        <div class="prompt-meta-item"><span class="prompt-meta-label">ソース</span> <code>src/scripts/classify_test.ts</code>（Phase A-2 v2）</div>
+        <div class="prompt-meta-item"><span class="prompt-meta-label">ステータス</span> types.tsに型定義のみ。previewExtract_test.tsにテスト版プロンプトが存在</div>
+        <div class="prompt-meta-item"><span class="prompt-meta-label">ソース</span> <code>src/scripts/previewExtract_test.ts</code>（Phase A-2 v2）</div>
       </div>
 
       <!-- テスト版 System Instruction -->
@@ -197,7 +197,7 @@
             </tbody>
           </table>
 
-          <h4>追加機能（現行classifyにはない）</h4>
+          <h4>追加機能（現行previewExtractにはない）</h4>
           <ul class="prompt-rules">
             <li><strong>銀行推定</strong> — ロゴ形状・配色・フォント・列ヘッダー固有表現から推定。根拠をbank_name_evidenceに記載</li>
             <li><strong>手書き判定</strong> — NONE/NON_MEANINGFUL/MEANINGFUL。角印・受領印は手書きに含めない</li>
@@ -343,22 +343,22 @@
       <div class="prompt-placeholder">
         <i class="fa-solid fa-code-branch"></i>
         <p>T-03（仕訳AI）フェーズで上記テスト版を基にExtract API専用プロンプトを構築</p>
-        <p class="prompt-placeholder-sub">classifyの証票種別 + 顧問先マスタの勘定科目体系を動的に注入する設計</p>
+        <p class="prompt-placeholder-sub">previewExtractの証票種別 + 顧問先マスタの勘定科目体系を動的に注入する設計</p>
       </div>
     </section>
 
-    <!-- データフロー: classify → 仕訳 -->
+    <!-- データフロー: previewExtract → 仕訳 -->
     <section class="prompt-section">
       <div class="prompt-section-header prompt-section-flow">
         <i class="fa-solid fa-diagram-project"></i>
         <div>
-          <h3>classify → 仕訳変換フロー</h3>
+          <h3>previewExtract → 仕訳変換フロー</h3>
           <span class="prompt-badge prompt-badge-active">稼働中</span>
         </div>
       </div>
 
       <div class="prompt-meta">
-        <div class="prompt-meta-item"><span class="prompt-meta-label">処理</span> classify API出力 → lineItemToJournalMock() → JournalPhase5Mock[]</div>
+        <div class="prompt-meta-item"><span class="prompt-meta-label">処理</span> previewExtract API出力 → lineItemToJournalMock() → JournalPhase5Mock[]</div>
         <div class="prompt-meta-item"><span class="prompt-meta-label">実行タイミング</span> 資料選別画面で「確定送信」時（AIは不使用。純粋なデータ変換）</div>
         <div class="prompt-meta-item"><span class="prompt-meta-label">ソース</span> <code>lineItemToJournalMock.ts</code></div>
       </div>
@@ -366,13 +366,13 @@
       <!-- フィールドマッピング -->
       <details class="prompt-block" open>
         <summary class="prompt-block-title">
-          <i class="fa-solid fa-arrows-left-right"></i> フィールドマッピング（classify → 仕訳）
+          <i class="fa-solid fa-arrows-left-right"></i> フィールドマッピング（previewExtract → 仕訳）
         </summary>
         <div class="prompt-block-content">
-          <h4>classify出力 → JournalPhase5Mock</h4>
+          <h4>previewExtract出力 → JournalPhase5Mock</h4>
           <table class="prompt-table">
             <thead>
-              <tr><th>classify出力</th><th>→</th><th>JournalPhase5Mock</th><th>変換方法</th></tr>
+              <tr><th>previewExtract出力</th><th>→</th><th>JournalPhase5Mock</th><th>変換方法</th></tr>
             </thead>
             <tbody>
               <tr><td><code>source_type</code></td><td>→</td><td><code>source_type</code></td><td>そのまま転写</td></tr>
@@ -423,14 +423,14 @@
                 <strong>① アップロード</strong>
                 <span>画像/PDF → SHA-256ハッシュ計算 → DocEntry作成</span>
                 <span class="flow-trigger">🔥 発火: ユーザーがゲスト画面で画像を投入 or Drive連携でファイルを検出</span>
-                <span class="flow-route">独自: POST /api/pipeline/classify（即時） / Drive: POST /api/drive/migrate（バッチ）</span>
+                <span class="flow-route">独自: POST /api/pipeline/preview-extract（即時） / Drive: POST /api/drive/migrate（バッチ）</span>
               </div>
             </div>
             <div class="flow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
-            <div class="flow-step flow-classify">
+            <div class="flow-step flow-previewExtract">
               <div class="flow-step-icon"><i class="fa-solid fa-brain"></i></div>
               <div class="flow-step-body">
-                <strong>② classify API（Vertex AI Gemini）</strong>
+                <strong>② previewExtract API（Vertex AI Gemini）</strong>
                 <span>source_type判定（12種）+ direction判定（4種）+ line_items抽出</span>
                 <span class="flow-trigger">🔥 発火: 独自=アップロード完了直後に自動 / Drive=migrationWorkerが5秒間隔でポーリング</span>
               </div>
@@ -440,8 +440,8 @@
               <div class="flow-step-icon"><i class="fa-solid fa-gears"></i></div>
               <div class="flow-step-body">
                 <strong>③ 後処理（サーバー内部・自動）</strong>
-                <span>postprocessClassify → validateClassifyResult → determineAccount（辞書接続）</span>
-                <span class="flow-trigger">🔥 発火: ②のVertex AI応答受信直後に同期実行（classify関数内部）</span>
+                <span>postprocessPreviewExtract → validatePreviewExtractResult → determineAccount（辞書接続）</span>
+                <span class="flow-trigger">🔥 発火: ②のVertex AI応答受信直後に同期実行（previewExtract関数内部）</span>
               </div>
             </div>
             <div class="flow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
@@ -450,7 +450,7 @@
               <div class="flow-step-body">
                 <strong>④ doc-store保存</strong>
                 <span>DocEntry.aiLineItems に格納 → documents.json</span>
-                <span class="flow-trigger">🔥 発火: ③完了直後に自動。classifyのHTTPレスポンスとして返却</span>
+                <span class="flow-trigger">🔥 発火: ③完了直後に自動。previewExtractのHTTPレスポンスとして返却</span>
               </div>
             </div>
             <div class="flow-arrow"><i class="fa-solid fa-arrow-down"></i> <span class="flow-arrow-label">ユーザー操作待ち</span></div>
@@ -503,7 +503,7 @@ const boundaries = BOUNDARY_GUIDES
 }
 .prompt-section-header h3 { margin: 0; font-size: 15px; font-weight: 700; }
 .prompt-section-header i { font-size: 20px; }
-.prompt-section-classify { background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%); color: #1e40af; }
+.prompt-section-previewExtract { background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%); color: #1e40af; }
 .prompt-section-extract { background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%); color: #92400e; }
 
 /* バッジ */
@@ -612,7 +612,7 @@ const boundaries = BOUNDARY_GUIDES
 .flow-arrow { color: #94a3b8; font-size: 14px; padding: 4px 0; }
 
 .flow-upload .flow-step-icon { background: #eff6ff; color: #2563eb; }
-.flow-classify .flow-step-icon { background: #fef3c7; color: #d97706; }
+.flow-previewExtract .flow-step-icon { background: #fef3c7; color: #d97706; }
 .flow-postprocess .flow-step-icon { background: #f0fdf4; color: #16a34a; }
 .flow-docstore .flow-step-icon { background: #ede9fe; color: #7c3aed; }
 .flow-select .flow-step-icon { background: #fce7f3; color: #db2777; }

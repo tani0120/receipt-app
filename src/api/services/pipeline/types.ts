@@ -1,5 +1,5 @@
 /**
- * パイプラインAPI型定義（Step 0-1: classify / extract）
+ * パイプラインAPI型定義（Step 0-1: previewExtract / extract）
  *
  * レイヤー: route → service → postprocess で共有される型
  * 依存: domain層の型のみ
@@ -46,11 +46,11 @@ export type Direction = typeof DIRECTIONS[number];
 export type ProcessingMode = 'auto' | 'manual' | 'excluded';
 
 // ============================================================
-// classify API 入出力
+// previewExtract API 入出力
 // ============================================================
 
-/** POST /api/pipeline/classify リクエスト */
-export interface ClassifyRequest {
+/** POST /api/pipeline/preview-extract リクエスト */
+export interface PreviewExtractRequest {
   image: string;       // base64エンコード画像
   mimeType: string;    // image/jpeg, image/png, application/pdf 等
   clientId: string;    // 顧問先ID
@@ -58,24 +58,24 @@ export interface ClassifyRequest {
   fileHash?: string;   // SHA-256ハッシュ（重複チェック用。フロントで計算）
 }
 
-/** Geminiが返すclassify生レスポンス */
-export interface ClassifyRawResponse {
+/** Geminiが返すpreviewExtract生レスポンス */
+export interface PreviewExtractRawResponse {
   source_type: string;
   source_type_confidence: number;
   direction: string;
   direction_confidence: number;
-  classify_reason: string | null;    // 判定根拠（AIがなぜその種別を選んだか）
+  preview_extract_reason: string | null;    // 判定根拠（AIがなぜその種別を選んだか）
   document_count: number;             // 画像内の証票枚数（2以上ならエラー）
   document_count_reason: string | null; // 枚数判定の根拠
   description: string | null;        // 摘要（AI推定）
   issuer_name: string | null;        // 発行者名
   date: string | null;               // YYYY-MM-DD
   total_amount: number | null;       // 税込合計
-  line_items?: ClassifyRawLineItem[];  // 行データ（通帳・クレカはN行、レシートは1行）
+  line_items?: PreviewExtractRawLineItem[];  // 行データ（通帳・クレカはN行、レシートは1行）
 }
 
 /** Geminiが返す行データ（生） */
-export interface ClassifyRawLineItem {
+export interface PreviewExtractRawLineItem {
   date: string | null;
   description: string;
   amount: number;
@@ -83,14 +83,14 @@ export interface ClassifyRawLineItem {
   balance: number | null;
 }
 
-/** postprocess後のclassify最終レスポンス */
-export interface ClassifyResponse {
+/** postprocess後のpreviewExtract最終レスポンス */
+export interface PreviewExtractResponse {
   source_type: SourceType;
   source_type_confidence: number;
   direction: Direction;
   direction_confidence: number;
   processing_mode: ProcessingMode;
-  classify_reason: string | null;    // 判定根拠
+  preview_extract_reason: string | null;    // 判定根拠
   document_count: number;             // 画像内の証票枚数（2以上ならエラー）
   document_count_reason: string | null; // 枚数判定の根拠
   description: string | null;
@@ -98,7 +98,7 @@ export interface ClassifyResponse {
   date: string | null;
   total_amount: number | null;
   fallback_applied: boolean;         // fallbackが適用されたか
-  line_items: ClassifyResponseLineItem[];  // 行データ（空配列 = 行抽出なし）
+  line_items: PreviewExtractLineItem[];  // 行データ（空配列 = 行抽出なし）
   /** サーバー側バリデーション結果（フロントはこれを信頼して表示するだけ） */
   validation: {
     ok: boolean;                     // バリデーション通過
@@ -127,7 +127,7 @@ export interface ClassifyResponse {
 }
 
 /** postprocess後の行データ（line_index付与済み） */
-export interface ClassifyResponseLineItem {
+export interface PreviewExtractLineItem {
   line_index: number;                 // 行番号（1始まり。postprocessで自動付番）
   date: string | null;
   description: string;
@@ -158,7 +158,7 @@ export interface ClassifyResponseLineItem {
 }
 
 // ============================================================
-// extract API 入出力（将来用。classify確定後に実装）
+// extract API 入出力（将来用。previewExtract確定後に実装）
 // ============================================================
 
 /** POST /api/pipeline/extract リクエスト */
@@ -199,7 +199,7 @@ export interface ExtractResponse {
 /** パイプラインログエントリ */
 export interface PipelineLogEntry {
   timestamp: string;
-  step: 'classify' | 'extract';
+  step: 'preview-extract' | 'extract';
   input: {
     filename: string;
     mimeType: string;
@@ -216,7 +216,7 @@ export interface PipelineLogEntry {
 // フロント用型（Vue側が受け取る最終結果）
 // ============================================================
 
-/** classify結果をフロント向けに変換した最終型 */
+/** previewExtract結果をフロント向けに変換した最終型 */
 export interface ReceiptAnalysisResult {
   /** バリデーション通過 */
   ok: boolean;
@@ -234,7 +234,7 @@ export interface ReceiptAnalysisResult {
   warning?: string | null;
   /** SHA-256重複検出（サーバー側で照合） */
   isDuplicate?: boolean;
-  /** 証票枚数（classify API出力。2以上は複数証票警告） */
+  /** 証票枚数（previewExtract API出力。2以上は複数証票警告） */
   documentCount?: number;
   /** SHA-256ハッシュ値（重複グループ化用。フロントで計算） */
   fileHash?: string;
@@ -265,7 +265,7 @@ export interface ReceiptAnalysisResult {
     direction: string;                // 仕訳方向（支払/入金/振替/混在）
     direction_confidence: number;     // 方向信頼度（0.0〜1.0）
     processing_mode: string;          // 処理モード（自動/手動/除外）
-    classify_reason: string | null;   // 判定根拠
+    preview_extract_reason: string | null;   // 判定根拠
     description: string | null;       // 摘要
     fallback_applied: boolean;        // フォールバック適用
     duration_ms: number;              // 処理時間（ミリ秒）

@@ -3,7 +3,7 @@
  *
  * 責務:
  *   - ファイル追加 / 削除 / 撮り直し
- *   - classify API呼出 + 結果マッピング（重複チェック含む）
+ *   - previewExtract API呼出 + 結果マッピング（重複チェック含む）
  *   - スライディングウィンドウ（同時4件）
  *   - プレビュー選択
  *   - 送付確定 / リセット
@@ -37,7 +37,7 @@ export interface UploadEntry {
   // タイムスタンプ（ソート安定化用）
   addedAt: number           // Date.now()。投入時刻
   completedAt: number | null // 処理完了時刻（ok/error確定時）
-  // classify結果
+  // previewExtract結果
   date: string | null
   amount: number | null
   vendor: string | null
@@ -51,7 +51,7 @@ export interface UploadEntry {
   // 重複チェック
   isDuplicate: boolean
   hash: string | null
-  documentCount: number            // 証票枚数（classify API出力。2以上は複数証票警告）
+  documentCount: number            // 証票枚数（previewExtract API出力。2以上は複数証票警告）
   lite: boolean             // 軽量モード（AI分類スキップ）
   /** サーバー保存先URL（/api/pipeline/file/{clientId}/{savedName}）。リロード後も有効 */
   fileUrl: string | null
@@ -916,14 +916,14 @@ export function useUpload() {
         updatedAt: null,
         statusChangedBy: null,
         statusChangedAt: null,
-        // AI分類結果（classify APIで取得済みの場合に保持。軽量モード時はすべてnull）
+        // AI分類結果（previewExtract APIで取得済みの場合に保持。軽量モード時はすべてnull）
         aiDate: e.date ?? null,
         aiAmount: e.amount ?? null,
         aiVendor: e.vendor ?? null,
         aiSourceType: e.sourceType ?? null,
         aiDirection: e.metrics?.direction ?? null,
         aiDescription: e.metrics?.description ?? null,
-        aiClassifyReason: e.metrics?.classify_reason ?? null,
+        aiPreviewExtractReason: e.metrics?.preview_extract_reason ?? null,
         aiLineItems: e.lineItems ?? null,
         aiLineItemsCount: e.lineItemsCount,
         aiSupplementary: e.supplementary,

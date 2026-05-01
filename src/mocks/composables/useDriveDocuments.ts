@@ -199,7 +199,7 @@ export function useDriveDocuments(
   const allDocsView = computed<DocView[]>(() => {
     // ① Drive借景ファイル
     const driveItems: DocView[] = driveFiles.value.map(f => {
-      // allDocumentsからAI結果をlookup（classify済みなら値がある）
+      // allDocumentsからAI結果をlookup（previewExtract済みなら値がある）
       const docEntry = allDocuments.value.find(d => d.driveFileId === f.id);
       return {
         id: f.id,

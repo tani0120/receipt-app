@@ -32,9 +32,9 @@
 | # | フィールド | 型 | null許容 | UIでの用途 | パイプライン充足 |
 |---|---|---|---|---|---|
 | 7 | `voucher_type` | `string \| null` | ✅ | 証票意味列（経費/クレカ等）表示 | ✅ resolveVoucherType() |
-| 8 | `source_type` | `SourceType \| null` | ✅ | 証票種別フィルタ・ソート | ⚠️ 暫定: classify結果（Extract API実装後はExtractが供給） |
-| 9 | `direction` | `Direction \| null` | ✅ | debit/credit配置決定 | ⚠️ 暫定: classify結果（Extract API実装後はExtractが供給） |
-| 10 | `vendor_vector` | `VendorVector \| null` | ✅ | 業種表示（未使用列） | ⚠️ classify未出力の場合あり |
+| 8 | `source_type` | `SourceType \| null` | ✅ | 証票種別フィルタ・ソート | ⚠️ 暫定: previewExtract結果（Extract API実装後はExtractが供給） |
+| 9 | `direction` | `Direction \| null` | ✅ | debit/credit配置決定 | ⚠️ 暫定: previewExtract結果（Extract API実装後はExtractが供給） |
+| 10 | `vendor_vector` | `VendorVector \| null` | ✅ | 業種表示（未使用列） | ⚠️ previewExtract未出力の場合あり |
 
 ### C. 取引先特定（Step4-C）
 
@@ -192,19 +192,19 @@
 
 ### 本来の設計: Extract API（未実装）
 
-仕訳一覧UIが期待するJournalPhase5Mock型の全フィールドは、**Extract API（本番AI）が出力する。** classify APIはUIプレビュー用の軽量AIであり、仕訳の型は一切出力しない。
+仕訳一覧UIが期待するJournalPhase5Mock型の全フィールドは、**Extract API（本番AI）が出力する。** previewExtract APIはUIプレビュー用の軽量AIであり、仕訳の型は一切出力しない。
 
 ```
-classify API → source_type, direction, line_items（粗い）→ UIプレビュー表示用のみ
+previewExtract API → source_type, direction, line_items（粗い）→ UIプレビュー表示用のみ
 Extract API  → JournalPhase5Mock型の完全な仕訳データ   → 仕訳一覧UI表示 → CSV出力
 ```
 
-| 項目 | classify API | Extract API（未実装） |
+| 項目 | previewExtract API | Extract API（未実装） |
 |---|---|---|
 | 発火タイミング | アップロード時（即時） | **選別確定時**（確定送信ボタン押下） |
 | 入力 | 画像1枚 | 独自+Drive全証票をバッチ投入 |
-| 出力型 | ClassifyRawResponse | **JournalPhase5Mock** |
-| classifyの出力 | — | 選別確定後に**完全削除**。本番AIへの入力にも渡さない |
+| 出力型 | PreviewExtractRawResponse | **JournalPhase5Mock** |
+| previewExtractの出力 | — | 選別確定後に**完全削除**。本番AIへの入力にも渡さない |
 
 > 詳細: [24_upload_drive_integration.md §17](file:///c:/dev/receipt-app/docs/genzai/24_upload_drive_integration.md) 参照
 
@@ -213,7 +213,7 @@ Extract API  → JournalPhase5Mock型の完全な仕訳データ   → 仕訳一
 Extract APIが未実装のため、現在は以下の暫定フローで動作:
 
 ```
-暫定: classify出力 → lineItemToJournalMock()で無理やり仕訳形式に変換
+暫定: previewExtract出力 → lineItemToJournalMock()で無理やり仕訳形式に変換
 本来: Extract API → JournalPhase5Mock型の完全な仕訳を直接出力
 ```
 
@@ -331,9 +331,9 @@ Extract APIが未実装のため、現在は以下の暫定フローで動作:
 | 10 | `FUTURE_DATE` | error | **TS**（Vue側のみ） | セル編集確定時 | Vue側 `syncWarningLabels()` L3072-3082 |
 | 11 | `DUPLICATE_CONFIRMED` | error | **AI** | Extract API処理時 | SHA-256ハッシュ比較 |
 | 12 | `DUPLICATE_SUSPECT` | warn | **AI** | Extract API処理時 | 日付+金額+取引先の一致 |
-| 13 | `MULTIPLE_VOUCHERS` | error | **AI** | classify時 | 画像内複数証票検出 |
+| 13 | `MULTIPLE_VOUCHERS` | error | **AI** | previewExtract時 | 画像内複数証票検出 |
 | 14 | `UNREADABLE_ESTIMATED` | warn | **AI** | Extract API処理時 | 信頼度低い推定値 |
-| 15 | `MEMO_DETECTED` | warn | **AI** | classify時 | 手書きメモ検出 |
+| 15 | `MEMO_DETECTED` | warn | **AI** | previewExtract時 | 手書きメモ検出 |
 
 ### 重要な設計ポイント
 
@@ -401,7 +401,7 @@ UI表示時:
 ```
 Extract APIへの入力:
   ① 画像ファイル（Drive URLまたはBase64）
-  ② DocEntryメタデータ（id, storagePath）※classifyの出力は渡さない（完全削除済み）
+  ② DocEntryメタデータ（id, storagePath）※previewExtractの出力は渡さない（完全削除済み）
   ③ 顧問先マスタ（勘定科目リスト、税区分リスト、学習ルール）
 
 Extract APIの出力:

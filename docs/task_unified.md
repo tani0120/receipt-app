@@ -57,7 +57,7 @@
 | N-3        | non_vendor_account_corporate.ts（法人用マップ26件）→ **DL027-4でvendors_global.tsに統合済み** | 完了                 |
 | N-4        | non_vendor_account_sole.ts（個人用マップ26件）→ **同上**                                      | 完了                 |
 | N-5        | tsc --noEmit エラー0件確認                                                                    | 完了                 |
-| B-1〜B-tsc | classify_schema.ts 旧LineItem矛盾解消                                                         | `d3e83ee`            |
+| B-1〜B-tsc | previewExtract_schema.ts 旧LineItem矛盾解消                                                         | `d3e83ee`            |
 | C-1〜C-tsc | COUNTERPART_ACCOUNT_MAP 定数定義                                                              | `d3e83ee`            |
 | D-1〜D-tsc | lineItemToJournalMock.ts 変換関数                                                             | `e2ac014`            |
 | E-1〜E-tsc | validation.ts（isValidTNumber・normalizePhoneNumber・normalizeTNumber）                       | `e2ac014`            |
@@ -183,22 +183,22 @@
 | タスク   | 内容                                                                            | git        |
 | -------- | ------------------------------------------------------------------------------- | ---------- |
 | DL-034-1 | `AnalyzeOptions`型追加（clientId/role/device/documentId）                       | `5ccebc3` |
-| DL-034-2 | `logClassifyResult`全30項目構造化出力                                           | `5ccebc3` |
+| DL-034-2 | `logPreviewExtractResult`全30項目構造化出力                                           | `5ccebc3` |
 | DL-034-3 | `FileEntry.documentId` / `ReceiptItem.documentId` 追加（`crypto.randomUUID()`） | `5ccebc3` |
 | DL-034-4 | `generateJournalId()` UUID化（連番衝突リスク排除）                              | `5ccebc3` |
 | DL-034-5 | `lineItemToJournalMock()` document_id/line_id生成対応                           | `5ccebc3` |
 | DL-034-6 | `MockUploadPage.vue` retake時 isDuplicate/hash/documentId修正                   | `5ccebc3` |
 | DL-034-7 | `18_account_classification_comparison.md` 復元                                  | `5ccebc3` |
 
-### B-8. DL-035: AI分類キーワード外部化 + classify_reason + supplementary_doc 12種化
+### B-8. DL-035: AI分類キーワード外部化 + preview_extract_reason + supplementary_doc 12種化
 
 | タスク   | 内容                                                                                                  | git        |
 | -------- | ----------------------------------------------------------------------------------------------------- | ---------- |
 | DL-035-1 | `source_type_keywords.ts` 新規作成（全12種キーワード定義 + 境界ガイド10件 + `buildKeywordsPrompt()`） | `1c95ee1` |
-| DL-035-2 | `classify.service.ts` プロンプトを外部ファイルからの動的結合方式に変更                                | `1c95ee1` |
-| DL-035-3 | `types.ts` に `supplementary_doc` 追加、`classify_reason` フィールド追加                              | `1c95ee1` |
-| DL-035-4 | `postprocess.ts` MODE_MAP に supplementary_doc 追加、classify_reason 伝播                             | `1c95ee1` |
-| DL-035-5 | `receiptService.ts` ログ出力に classify_reason 追加                                                   | `1c95ee1` |
+| DL-035-2 | `previewExtract.service.ts` プロンプトを外部ファイルからの動的結合方式に変更                                | `1c95ee1` |
+| DL-035-3 | `types.ts` に `supplementary_doc` 追加、`preview_extract_reason` フィールド追加                              | `1c95ee1` |
+| DL-035-4 | `postprocess.ts` MODE_MAP に supplementary_doc 追加、preview_extract_reason 伝播                             | `1c95ee1` |
+| DL-035-5 | `receiptService.ts` ログ出力に preview_extract_reason 追加                                                   | `1c95ee1` |
 | DL-035-6 | UI結合テスト通過（journal_voucher判定確認）                                                           | ✅ 確認済  |
 
 ### B-6. その他完了
@@ -259,12 +259,12 @@
 
 ---
 
-### B-18. DL-048: フェーズ3.5 migrationWorkerにclassify API統合 + メタデータ永続化全面修正
+### B-18. DL-048: フェーズ3.5 migrationWorkerにpreviewExtract API統合 + メタデータ永続化全面修正
 
 | タスク | 内容 | git |
 |---|---|---|
-| DL-048-1 | `migrationWorker.ts` processOneJobにclassify API統合（DL→SHA-256→classify→Storage→doc-store書き戻し→ゴミ箱） | `248f437` |
-| DL-048-2 | `documentStore.ts` updateAiResults()新設（ClassifyResponse→DocEntry全フィールドマッピング） | `248f437` |
+| DL-048-1 | `migrationWorker.ts` processOneJobにpreviewExtract API統合（DL→SHA-256→previewExtract→Storage→doc-store書き戻し→ゴミ箱） | `248f437` |
+| DL-048-2 | `documentStore.ts` updateAiResults()新設（PreviewExtractResponse→DocEntry全フィールドマッピング） | `248f437` |
 | DL-048-3 | `documentStore.ts` updateDocumentStatus()拡張（statusChangedBy/At/updatedBy/At保存対応） | `248f437` |
 | DL-048-4 | `docStore.ts` PUT /:id ルート拡張（statusChangedBy/At/updatedBy/Atをbodyから受け取り） | `248f437` |
 | DL-048-5 | `types.ts` aiMetricsにoriginal_size_kb/processed_size_kb/preprocess_reduction_pct追加 | `248f437` |
@@ -305,7 +305,7 @@
 | タスク | 内容 | git |
 |---|---|---|
 | DL-051-1 | TS型定義5ファイル（DocEntry 52件・JournalPhase5Mock 45件・UploadEntry 26件・LineItem 15件・JournalEntryLine 6件）からプロパティ全件抽出 | 未コミット |
-| DL-051-2 | TSロジック5ファイル（useUpload.ts / useDriveDocuments.ts / useDocuments.ts / lineItemToJournalMock.ts / classify.service.ts）のデータフロー追跡 | 未コミット |
+| DL-051-2 | TSロジック5ファイル（useUpload.ts / useDriveDocuments.ts / useDocuments.ts / lineItemToJournalMock.ts / previewExtract.service.ts）のデータフロー追跡 | 未コミット |
 | DL-051-3 | 全107 Vueファイル × 66プロパティ = 7,062パターンgrep検索 | 未コミット |
 | DL-051-4 | 問題6種検出（欠落14件・ハードコード12件・名前不一致5件・Vue未参照23件・データ消失1件・line_id未使用1件） | 未コミット |
 | DL-051-5 | 検証スクリプト22ファイル新規作成（pipeline_flow.cjs / field_diff.cjs / vue_prop_scan.cjs等） | 未コミット |
@@ -321,7 +321,7 @@
 | DL-052-4 | TypeDefinitionsPanel.vue 3段ヘッダー構成（フェーズ名行+AI名行+責任行） | 未コミット |
 | DL-052-5 | MockSettingsPage.vue activeTab型安全化（string→'settings'|'types'|'prompts' union型） | 未コミット |
 
-### B-23. Step4-C/Step4-A: 科目確定エンジン実装 + classify API接続 + 学習ページ新型対応
+### B-23. Step4-C/Step4-A: 科目確定エンジン実装 + previewExtract API接続 + 学習ページ新型対応
 
 > 設計書: [27_account_determination.md](file:///c:/dev/receipt-app/docs/genzai/27_account_determination.md) §4 優先度1,2,4,5
 
@@ -332,8 +332,8 @@
 | Step4-C-3 | `learning_rule.type.ts` 新規作成（LearningRule + LearningRuleEntryLine型） | `9341ac7` |
 | Step4-C-4 | `journal_phase5_mock.type.ts` に vendor_id, vendor_name 追加 | `9341ac7` |
 | Step4-C-5 | `lineItemToJournalMock.ts` 拡張（AccountDeterminationResult受け取り、複合仕訳展開） | `9341ac7` |
-| Step4-C-6 | `classify.service.ts` 接続（postprocess後にline_items毎にdetermineAccount()呼び出し） | `9341ac7` |
-| Step4-C-7 | `types.ts` ClassifyResponseLineItem + ReceiptAnalysisResult に科目確定フィールド10件追加 | `9341ac7` |
+| Step4-C-6 | `previewExtract.service.ts` 接続（postprocess後にline_items毎にdetermineAccount()呼び出し） | `9341ac7` |
+| Step4-C-7 | `types.ts` PreviewExtractLineItem + ReceiptAnalysisResult に科目確定フィールド10件追加 | `9341ac7` |
 | Step4-C-8 | `receiptService.ts` で科目確定結果をフロントに透過 | `9341ac7` |
 | Step4-C-9 | テストデータ38件に vendor_id, vendor_name 追加 | `9341ac7` |
 | Step4-A | `MockLearningPage.vue` 新型import確認済み（LearningRule + learningRulesTST00011。全機能実装済み） | `9341ac7` |
@@ -381,7 +381,7 @@
 >
 > - バックエンド: Hono サーバー（`src/server.ts`、ポート8080）で Vertex AI を直接呼び出し
 > - フロントエンド: Vite proxy（`/api` → `http://localhost:8080`）経由でバックエンドに接続
-> - 前処理: sharp pipeline（EXIF回転補正→リサイズ2000px→白黒化→コントラスト正規化→シャープ処理→JPEG 85%）を `classify.service.ts` に統合済み
+> - 前処理: sharp pipeline（EXIF回転補正→リサイズ2000px→白黒化→コントラスト正規化→シャープ処理→JPEG 85%）を `previewExtract.service.ts` に統合済み
 > - 認証: ADC（Application Default Credentials）で Vertex AI に接続。`gcloud auth application-default login` で認証
 > - Supabase接続: 全モックテスト完了後にデータ駆動化（型固定）と合わせて実施
 
@@ -391,8 +391,8 @@
 | ---- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------- |
 | 1    | **UI修正**                            | モック世界の改善（遅延修正済み、他UI微調整等）                                                                  | ✅ 完了       | —                            |
 | 2    | **結合テスト環境構築**                | Honoサーバー＋Vite proxy＋sharp前処理＋Vertex AI接続（DL-033）                                                  | ✅ 完了       | 1 完了                       |
-| 3    | **Step 0-1 UI結合テスト**             | MockUploadPcPage → classify API → Vertex AI 貫通テスト（ADC認証通過後に実測）                                   | 🔶 進行中     | 2 完了                       |
-| 3.5  | **★サーバーバッチAI（DL-048）**       | migrationWorkerにclassify API統合。Drive→DL→SHA-256→classify→Storage→doc-store書き戻し→ゴミ箱。excludedはclassifyスキップ（コスト削減） | ✅ 完了       | 3 完了                       |
+| 3    | **Step 0-1 UI結合テスト**             | MockUploadPcPage → previewExtract API → Vertex AI 貫通テスト（ADC認証通過後に実測）                                   | 🔶 進行中     | 2 完了                       |
+| 3.5  | **★サーバーバッチAI（DL-048）**       | migrationWorkerにpreviewExtract API統合。Drive→DL→SHA-256→previewExtract→Storage→doc-store書き戻し→ゴミ箱。excludedはpreviewExtractスキップ（コスト削減） | ✅ 完了       | 3 完了                       |
 | 4    | **Step 2-4 精度テスト**               | TSロジック＋Gemini（L4）検証（history_match, vendor_vector等）                                                  | ❌ 未着手     | 3.5 完了                     |
 | 5    | **Supabase接続**                      | 全モックテスト完了後、データ駆動化（型固定）と合わせて本番DB接続                                                | ❌ 未着手     | 全てのモック検証（1〜4）完了 |
 
@@ -401,11 +401,11 @@
 | ファイル                                        | 内容                                                    | 状態        |
 | ----------------------------------------------- | ------------------------------------------------------- | ----------- |
 | `src/server.ts`                                 | Hono HTTPサーバー（ポート8080）                         | ✅ 実装済み |
-| `src/api/routes/pipeline.route.ts`              | `/api/pipeline/health`・`/api/pipeline/classify` ルート | ✅ 実装済み |
-| `src/api/services/pipeline/classify.service.ts` | Vertex AI呼び出し＋sharp前処理統合＋Structured Output   | ✅ 実装済み |
-| `src/api/services/pipeline/postprocess.ts`      | AI出力→ClassifyResponse変換＋fallback設計               | ✅ 実装済み |
-| `src/api/services/pipeline/types.ts`            | ClassifyRequest/ClassifyResponse等の型定義              | ✅ 実装済み |
-| `src/mocks/views/MockUploadPcPage.vue`          | classify API呼び出し＋バッジ表示                        | ✅ 実装済み |
+| `src/api/routes/pipeline.route.ts`              | `/api/pipeline/health`・`/api/pipeline/preview-extract` ルート | ✅ 実装済み |
+| `src/api/services/pipeline/previewExtract.service.ts` | Vertex AI呼び出し＋sharp前処理統合＋Structured Output   | ✅ 実装済み |
+| `src/api/services/pipeline/postprocess.ts`      | AI出力→PreviewExtractResponse変換＋fallback設計               | ✅ 実装済み |
+| `src/api/services/pipeline/types.ts`            | PreviewExtractRequest/PreviewExtractResponse等の型定義              | ✅ 実装済み |
+| `src/mocks/views/MockUploadPcPage.vue`          | previewExtract API呼び出し＋バッジ表示                        | ✅ 実装済み |
 | `src/scripts/preprocess.ts`                     | スタンドアロン前処理パイプライン（A/Bテスト対応）       | ✅ 実装済み |
 | `vite.config.ts`                                | Vite proxyルール（`/api` → 8080）                       | ✅ 設定済み |
 | `src/database/supabase/client.ts`               | Proxy遅延初期化（環境変数未設定でもクラッシュしない）   | ✅ 修正済み |
@@ -501,20 +501,20 @@
 ### C-9. フェーズB: スキーマ統一 + 旧ファイル移植（23番設計書から分離）
 
 > **前提**: C-9着手にはフェーズA（23_validation_unification.md の手順①〜⑥）の完了が必須。
-> **分離理由**: 旧スキーマ（classify_schema.ts: voucher_type 7種）と新スキーマ（types.ts: source_type 12種）は設計思想が異なり、統合は大手術。型変更なしで潰せる負債（D-1〜D-8）を先にフェーズAで片付け、リスクの高いスキーマ統一は安定後に着手する。
+> **分離理由**: 旧スキーマ（previewExtract_schema.ts: voucher_type 7種）と新スキーマ（types.ts: source_type 12種）は設計思想が異なり、統合は大手術。型変更なしで潰せる負債（D-1〜D-8）を先にフェーズAで片付け、リスクの高いスキーマ統一は安定後に着手する。
 
 | タスク | 内容 | 状態 | 潰す負債 |
 |---|---|---|---|
-| S-1 | types.ts ClassifyRawResponse拡張（tax_entries, journal_entry_suggestions等29フィールド化） | ❌ 未着手 | D-9, D-12 |
-| S-2 | classify.service.ts CLASSIFY_SCHEMA拡張（旧CLASSIFY_RESPONSE_SCHEMAと統合。7種→12種のenum整合） | ❌ 未着手 | D-12 |
-| S-3 | postprocess.ts 計算ロジック移植（classify_postprocess.tsの6関数を新型に書き直し） | ❌ 未着手 | D-10 |
-| S-4 | classify_test.ts 新旧両対応改修（API経由化は行わない。テスト資産としての価値を維持） | ❌ 未着手 | D-11 |
-| S-5 | 旧ファイル削除（classify_postprocess.ts, classify_schema.ts）→ S-1〜S-4の動作確認完了後 | ❌ 未着手 | D-9, D-10 |
+| S-1 | types.ts PreviewExtractRawResponse拡張（tax_entries, journal_entry_suggestions等29フィールド化） | ❌ 未着手 | D-9, D-12 |
+| S-2 | previewExtract.service.ts PREVIEW_EXTRACT_SCHEMA拡張（旧PREVIEW_EXTRACT_RESPONSE_SCHEMAと統合。7種→12種のenum整合） | ❌ 未着手 | D-12 |
+| S-3 | postprocess.ts 計算ロジック移植（previewExtract_postprocess.tsの6関数を新型に書き直し） | ❌ 未着手 | D-10 |
+| S-4 | previewExtract_test.ts 新旧両対応改修（API経由化は行わない。テスト資産としての価値を維持） | ❌ 未着手 | D-11 |
+| S-5 | 旧ファイル削除（previewExtract_postprocess.ts, previewExtract_schema.ts）→ S-1〜S-4の動作確認完了後 | ❌ 未着手 | D-9, D-10 |
 | S-6 | docs更新 + コミット | ❌ 未着手 | — |
 
 > **注意事項**:
 > - S-1, S-2, S-3は密結合（型・スキーマ・ロジックが相互依存）なので同時に着手すること
-> - S-4のclassify_test.tsはGemini生出力の品質検証ツール。API経由への書き換えは目的を破壊するため行わない
+> - S-4のpreviewExtract_test.tsはGemini生出力の品質検証ツール。API経由への書き換えは目的を破壊するため行わない
 > - S-5の旧ファイル削除はS-1〜S-4全ての動作確認が完了するまで実行しないこと
 
 ### C-7. UI変更（Phase 2完了後）
@@ -555,7 +555,7 @@
 | T-P3実施                                 | 実物証票・Gemini API呼出が必要       | 日程確認後                          |
 | vendors\_\*.ts データ整備（H-2〜4）      | データ入力行為                       | T-P3完了後                          |
 | confirmed*journals*\*.ts                 | 実データ収集が必要                   | 顧問先データ収集後                  |
-| classify_postprocess.ts voucher_type移行 | Phase 2 Group 1で一括移行            | Phase 2着手時                       |
+| previewExtract_postprocess.ts voucher_type移行 | Phase 2 Group 1で一括移行            | Phase 2着手時                       |
 | Supabase移行                             | 別フェーズ                           | Phase 3                             |
 | マウスだけでリカバリ（囲んで再抽出）     | パイプライン貫通後                   | パイプライン貫通後                  |
 | DL-028 メガベンダーフラグ                | 顧問先レベルの履歴で代替可能なため   | VendorVector+履歴学習の精度検証次第 |
@@ -574,7 +574,7 @@
 
 ### ✅ E-2: GeminiVisionService.ts 旧世代アーキテクチャ — **削除完了（2026-05-01）**
 
-- Phase 1遺物。未使用確認済みのため削除。classify.service.tsが完全な後継
+- Phase 1遺物。未使用確認済みのため削除。previewExtract.service.tsが完全な後継
 - FileTypeDetector.ts（GeminiVisionService.tsからのみ参照）も連鎖削除
 - DetectionLogic.ts, RecurringLogic.ts も同時に未使用確認・削除
 
@@ -593,7 +593,7 @@
 
 | コード                  | 世代             | 問題                                                  |
 | ----------------------- | ---------------- | ----------------------------------------------------- |
-| classify_schema.ts      | 旧               | voucher_type 7種（旧設計）→ 新12種source_typeに未対応 |
+| previewExtract_schema.ts      | 旧               | voucher_type 7種（旧設計）→ 新12種source_typeに未対応 |
 | ~~GeminiVisionService.ts~~  | 旧               | **✅ 削除完了（2026-05-01）**                         |
 | ~~FileTypeDetector.ts~~     | 旧               | **✅ 削除完了（2026-05-01）**                         |
 | ~~journal_inference.ts~~    | 新（スケルトン） | **✅ 削除完了（2026-05-01）**                         |
@@ -615,7 +615,7 @@
 
 ### ⚠️ E-8: AI分類結果15件が全Vue画面で未表示（DL-051） — 部分解消
 
-- **実査結果**: classify APIで取得しDocEntryに保存済みの15フィールド（aiDate, aiAmount, aiVendor, aiSourceType, aiDirection等）が、全107 Vueファイルのどこでも参照されていない
+- **実査結果**: previewExtract APIで取得しDocEntryに保存済みの15フィールド（aiDate, aiAmount, aiVendor, aiSourceType, aiDirection等）が、全107 Vueファイルのどこでも参照されていない
 - **影響**: AI分類の精度確認・人間によるレビューがUI上で不可能
 - **対処**: 選別画面（`/drive-select/:clientId`）でAI結果を表示するUI実装。L-8で管理
 - **詳細**: [field_audit.md v3 問題4](file:///C:/Users/kazen/.gemini/antigravity/brain/b29e23e6-88c0-4691-a867-4f898f874cd8/field_audit.md)
@@ -666,7 +666,7 @@
 | 設計書 | 内容 | 作成セッション | git | 状態 |
 |---|---|---|---|---|
 | 21_preprocess_unification.md | 前処理パイプライン統一（3箇所→1箇所） | 70eb9668 | — | ✅ 実装完了 |
-| ~~22_classify_realtime_validation.md~~ | ~~classifyリアルタイムバリデーション仕様~~ | 70eb9668 | — | ✅ **24_upload_drive_integration.md §17に統合済み → 旧ファイル削除済み**（2026-04-28セッション） |
+| ~~22_classify_realtime_validation.md~~ | ~~previewExtractリアルタイムバリデーション仕様~~ | 70eb9668 | — | ✅ **24_upload_drive_integration.md §17に統合済み → 旧ファイル削除済み**（2026-04-28セッション） |
 | 23_validation_unification.md | バリデーション統合+any排除（フェーズA/B分離済み） | 70eb9668 | `4cc6be7` | ✅ フェーズA完了（フェーズBはC-9に分離） |
 | 24_upload_drive_integration.md | アップロード・ドライブ統合 + ゲスト認証・Drive権限付与 + 資料管理基盤 + モーダルUI統一 + 招待リンク | 6082ae5a | `ac44426`→`26cd32a` | ✅ Drive実装完了 + ゲスト認証UI完了 + DocEntry型/SQL/composable/進捗管理連動完了 + JSON永続化+API接続完了（DL-041） + モーダルUI統一+Vendors永続化完了（DL-042） + **招待リンク機能+未保存ガード最適化+Drive自動リネーム完了（DL-043）** + Supabase Auth/Google OAuth統合は未着手 |
 | 27_account_determination.md | 科目確定パイプライン設計（第一層〜第六層フロー + 学習ルール型 + 複合仕訳テンプレート + ストリームド・MF比較） | 7da07b6a | `9341ac7` | ✅ §4優先度1,2,4,5完了。優先度3（過去仕訳表示）はモック実装済み |

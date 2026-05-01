@@ -5,14 +5,14 @@
  * 責務: リクエスト受付・バリデーション・レスポンス返却
  *
  * エンドポイント:
- *   POST /api/pipeline/classify  — Step 0-1: source_type + direction判定（FormData受信）
+ *   POST /api/pipeline/preview-extract  — Step 0-1: source_type + direction判定（FormData受信）
  *   POST /api/pipeline/extract   — 将来用（line_items抽出）
  */
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
 import { 必須, FormData解析失敗, ファイル必須, ファイルサイズ超過, 非対応形式, 未検出, チャンク未検出, 未実装 } from '../helpers/apiMessages';
-import { classifyImage, clearKnownHashes, isKnownHash } from '../services/pipeline/classify.service';
+import { previewExtractImage, clearKnownHashes, isKnownHash } from '../services/pipeline/previewExtract.service';
 import { createHash } from 'crypto';
 import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
@@ -63,11 +63,11 @@ async function withSemaphore<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 // ============================================================
-// POST /classify — Step 0-1: 証票種別 + 仕訳方向判定（FormData受信）
+// POST /preview-extract — Step 0-1: 証票種別 + 仕訳方向判定（FormData受信）
 // ============================================================
 
-app.post('/classify', async (c) => {
-  console.log('[pipeline/route] POST /classify 受信');
+app.post('/preview-extract', async (c) => {
+  console.log('[pipeline/route] POST /preview-extract 受信');
 
   // FormData受信（Fileオブジェクトとして受け取る）
   let formData: FormData;
@@ -125,14 +125,14 @@ app.post('/classify', async (c) => {
     // base64変換（サーバー側で実施。Gemini APIがbase64を要求するため）
     const base64 = buffer.toString('base64');
 
-    // タイムアウト付きでclassifyImage呼出（30秒）
+    // タイムアウト付きでpreviewExtractImage呼出（30秒）
     const timeoutMs = 30_000;
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error(`Gemini API タイムアウト（${timeoutMs / 1000}秒）`)), timeoutMs)
     );
 
-    const classifyResult = await Promise.race([
-      classifyImage({
+    const previewExtractResult = await Promise.race([
+      previewExtractImage({
         image: base64,
         mimeType,
         clientId,
@@ -142,8 +142,8 @@ app.post('/classify', async (c) => {
       timeoutPromise,
     ]);
 
-    // classifyResultにfileUrlを付与して返す
-    return { ...classifyResult, fileUrl };
+    // previewExtractResultにfileUrlを付与して返す
+    return { ...previewExtractResult, fileUrl };
   });
 
   return c.json(result);
