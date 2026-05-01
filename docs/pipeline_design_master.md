@@ -2657,7 +2657,7 @@ repositories/types.ts ← 唯一の型定義源泉
 |---|---|---|---|
 | 1 | zodHook新規作成 | `src/api/helpers/zodHook.ts` 新規 | zValidator共通エラーフック。Zodエラーを`apiError()`経由で統一フォーマットに変換。複数issues対応（`\n`結合） |
 | 2 | zodHook全ルート適用 | 6ファイル・10箇所 | `ai-rules.ts`(2), `collection.ts`(1), `clients.ts`(3), `admin.ts`(1), `ocr.ts`(1), `api/index.ts`(1) |
-| 3 | apiFetch全面改修 | `src/utils/apiFetch.ts` | 400系→ページ遷移しない（呼び出し元にAppError返却）、401→/login遷移、500系/404→/404遷移。`apiFetch.withError()`追加 |
+| 3 | ~~apiFetch全面改修~~ | ~~`src/utils/apiFetch.ts`~~ | **✅ 削除済み（2026-05-01 未使用確認）。**当時の内容: 400系→ページ遷移しない、401→/login遷移、500系/404→/404遷移 |
 | 4 | 後方互換定数削除 | `src/api/helpers/apiMessages.ts` | 使用箇所ゼロの`サーバーエラー`/`外部サービスエラー`/`メンテナンス中`を削除 |
 | 5 | Zodスキーマ日本語化 | `ai-rules.ts`, `admin.ts`, `clients.ts` | Zod v4 `{ error: '...' }` 形式で`apiMessages.ts`の`必須()`関数をスキーマに埋め込み |
 | 6 | 移行タスク記載 | `docs/supabase/migration_tasks.md` | 残3タスク（スキーマ日本語化残り・fetch19箇所移行・スキーマ分離）をセクション9に追記 |
@@ -2694,7 +2694,7 @@ repositories/types.ts ← 唯一の型定義源泉
 |---|---|
 | `src/api/helpers/zodHook.ts` | 新規 |
 | `src/api/helpers/apiMessages.ts` | 修正（定数削除） |
-| `src/utils/apiFetch.ts` | 全面改修 |
+| ~~`src/utils/apiFetch.ts`~~ | ✅ **削除済み**（2026-05-01 未使用確認） |
 | `src/api/routes/ai-rules.ts` | zodHook適用 + スキーマ日本語化 |
 | `src/api/routes/collection.ts` | zodHook適用 |
 | `src/api/routes/clients.ts` | zodHook適用 + スキーマ日本語化 |

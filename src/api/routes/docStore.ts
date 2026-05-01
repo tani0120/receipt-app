@@ -28,6 +28,7 @@ import {
   getById,
   deleteById,
   countDocuments,
+  clearAiFieldsByClientId,
 } from "../services/documentStore";
 
 const app = new Hono();
@@ -99,6 +100,16 @@ app.delete("/client/:clientId", (c) => {
   const clientId = c.req.param("clientId");
   const removed = removeByClientId(clientId);
   return c.json({ ok: true, removed });
+});
+
+// ============================================================
+// POST /clear-ai/:clientId — classifyデータ一括削除（確定送信後）
+// 設計方針: classify.service.ts ヘッダー参照
+// ============================================================
+app.post("/clear-ai/:clientId", (c) => {
+  const clientId = c.req.param("clientId");
+  const cleared = clearAiFieldsByClientId(clientId);
+  return c.json({ ok: true, cleared });
 });
 
 // ============================================================

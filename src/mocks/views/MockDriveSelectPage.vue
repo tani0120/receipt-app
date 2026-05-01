@@ -418,7 +418,7 @@ import { useJournals } from '@/mocks/composables/useJournals';
 import { useDocuments } from '@/composables/useDocuments';
 
 const { journals } = useJournals(clientId);
-const { allDocuments } = useDocuments();
+const { allDocuments, clearAiFields } = useDocuments();
 
 /**
  * DocEntry.aiLineItems → LineItem[] に変換するヘルパー
@@ -497,6 +497,12 @@ const sendToProcess = async () => {
     if (generatedCount > 0) {
       console.log(`[sendToProcess] 合計${generatedCount}件の仕訳を journals-${clientId.value}.json に追加`);
     }
+
+    // ━━━ 1.5. classifyデータ完全削除（設計方針: classify.service.ts ヘッダー参照）━━━
+    // 仕訳変換が完了したため、classify起算のai*フィールドは不要。
+    // Extract API（本番AI）実装後はゼロから仕訳データを再生成する。
+    await clearAiFields(clientId.value);
+    console.log(`[sendToProcess] classifyデータ完全削除: ${clientId.value}`);
 
     // ━━━ 2. Drive経路: migrateジョブ登録（Driveファイルのみ） ━━━
     const driveFiles = filesToMigrate.filter(f => {

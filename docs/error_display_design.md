@@ -143,7 +143,7 @@
 1. `zodHook.ts` — 全zValidatorの共通エラーフック。Zodバリデーションエラーを`apiError()`経由で統一フォーマット化
 2. `apiMessages.ts` — ステータスコード→日本語文面マスター。全エラーメッセージ一元管理
 3. `apiError.ts` / `apiCatchError.ts` — 全レスポンスに`requestId`自動付与。生エラー漏洩防止
-4. `apiFetch.ts` — 400系→ページ遷移しない（呼び出し元にAppError返却）、401→/login遷移、500系→/404遷移
+4. ~~`apiFetch.ts`~~ — **削除済み（2026-05-01 未使用確認）。**当時の実装: 400系→ページ遷移しない、401→/login遷移、500系→/404遷移
 5. Zodスキーマ日本語化 — Zod v4 `{ error: '...' }` 形式で`apiMessages.ts`の定数を埋め込み
 
 ### Supabase移行後に実装

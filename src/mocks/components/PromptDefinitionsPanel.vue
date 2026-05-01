@@ -97,8 +97,7 @@
                 <td><code>{{ kw.type }}</code></td>
                 <td>{{ kw.label }}</td>
                 <td class="prompt-kw-cell">
-                  <span v-for="k in kw.keywords.slice(0, 5)" :key="k" class="prompt-kw-tag">{{ k }}</span>
-                  <span v-if="kw.keywords.length > 5" class="prompt-kw-more">+{{ kw.keywords.length - 5 }}</span>
+                  <span v-for="k in kw.keywords" :key="k" class="prompt-kw-tag">{{ k }}</span>
                 </td>
                 <td class="prompt-ex-cell">
                   <div v-for="ex in kw.exclude" :key="ex" class="prompt-ex-item">{{ ex }}</div>
@@ -557,7 +556,7 @@ const boundaries = BOUNDARY_GUIDES
 .prompt-table code { font-size: 10px; padding: 1px 4px; border-radius: 3px; background: #f0f9ff; color: #0369a1; }
 
 /* キーワードタグ */
-.prompt-kw-cell { max-width: 240px; }
+.prompt-kw-cell { }
 .prompt-kw-tag {
   display: inline-block; background: #eff6ff; color: #1d4ed8;
   font-size: 10px; padding: 1px 6px; border-radius: 4px; margin: 1px 2px;

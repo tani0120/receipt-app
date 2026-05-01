@@ -139,7 +139,7 @@ Drive方式（移行後）:
 | `useUpload.ts` | `src/mocks/composables/` | 1,026 | アップロード全ロジック（キュー・圧縮・API呼出） |
 | ~~`useGooglePicker.ts`~~ | ~~`src/mocks/composables/`~~ | — | **[削除済み] Picker API不使用のため削除** |
 | `receiptService.ts` | `src/mocks/services/` | 284 | モック/本番切替サービス層 |
-| `hash-worker.ts` | `src/mocks/workers/` | 37 | Web Workerハッシュ計算（SHA-256 / FNV-1aフォールバック） |
+| ~~`hash-worker.ts`~~ | ~~`src/mocks/workers/`~~ | — | **[削除済み] ハッシュ計算はサーバー側（pipeline.ts）で実行** |
 | `pdfThumbnail.ts` | `src/mocks/utils/` | 50 | pdfjs-dist で1ページ目→canvasサムネイル |
 | `PortalHeader.vue` | `src/mocks/components/` | — | 顧問先名表示ヘッダー（Upload系4画面で共通使用） |
 
@@ -1584,8 +1584,9 @@ Drive連携        → ファイルID取得のみ       → DocEntry保存
 ```
 ① アップロード → classify → aiLineItems等をDocEntryに一時保存
 ② 選別画面で表示（種別、金額、摘要等のUIプレビューに使用）
-③ 確定送信 → Extract API発火 → 本番仕訳データ取得
-④ classifyの出力（aiLineItems等）を削除 ← 再利用価値なし
+③ 確定送信 → classifyの出力（aiLineItems等）を**完全削除**
+④ Extract API発火 → 画像からゼロで本番仕訳データ生成
+   ※classifyの出力はExtract APIへの入力パラメータとしても渡さない
 ```
 
 ### 17-5. 暫定処理（Extract API未実装時）

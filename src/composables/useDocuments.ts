@@ -14,6 +14,7 @@
  */
 import { ref, computed } from 'vue'
 import type { DocEntry, DocStatus } from '@/repositories/types'
+import { AI_FIELD_KEYS } from '@/repositories/types'
 
 // ============================================================
 // モジュールスコープref（ページ遷移しても保持される）
@@ -178,6 +179,36 @@ export function useDocuments() {
     console.log(`[useDocuments] refresh: ${docs.length}件を取得`)
   }
 
+  /**
+   * classifyデータ（ai*フィールド）を完全削除
+   *
+   * 確定送信後に呼び出す。仕訳変換完了後に実行すること。
+   * 設計方針: classify.service.ts ヘッダー参照
+   */
+  async function clearAiFields(clientId: string) {
+    // ローカルrefを即時クリア
+    const targets = allDocuments.value.filter(d => d.clientId === clientId)
+    for (const doc of targets) {
+      const record = doc as unknown as Record<string, unknown>
+      for (const key of AI_FIELD_KEYS) {
+        record[key] = null
+      }
+    }
+    console.log(`[useDocuments] classifyデータ削除（ローカル）: ${targets.length}件`)
+
+    // サーバーにも反映
+    try {
+      const res = await fetch(`${API_BASE}/clear-ai/${encodeURIComponent(clientId)}`, {
+        method: 'POST',
+      })
+      if (!res.ok) {
+        console.error(`[useDocuments] classifyデータ削除失敗: HTTP ${res.status}`)
+      }
+    } catch (err) {
+      console.error('[useDocuments] classifyデータ削除エラー:', err)
+    }
+  }
+
   return {
     /** 全顧問先の全資料（ref） */
     allDocuments,
@@ -195,5 +226,7 @@ export function useDocuments() {
     assignBatchAndJournalIds,
     /** サーバーから最新データを再取得 */
     refresh,
+    /** classifyデータ完全削除（確定送信後） */
+    clearAiFields,
   }
 }

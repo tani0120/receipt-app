@@ -427,8 +427,24 @@ export interface DocEntry {
     preprocess_reduction_pct?: number
   } | null
   /** 重複検出フラグ（SHA-256ハッシュ一致。T-AUD-5: アップロード時に判定済みの値を保持） */
+  // ※ isDuplicateはclassifyデータではなくハッシュ比較結果。AI_FIELD_KEYSに含めない（削除対象外）
   isDuplicate?: boolean
 }
+
+/**
+ * classify APIで書き込まれるai*フィールドのキー一覧
+ *
+ * 確定送信後にこれらのフィールドを全てnullに設定する。
+ * フィールド追加時はここと DocEntry 型定義を同時に更新すること。
+ *
+ * ※ isDuplicateはハッシュ比較結果でありclassify出力ではないため含めない
+ */
+export const AI_FIELD_KEYS: (keyof DocEntry)[] = [
+  'aiDate', 'aiAmount', 'aiVendor', 'aiSourceType', 'aiDirection',
+  'aiDescription', 'aiClassifyReason', 'aiLineItems', 'aiLineItemsCount',
+  'aiSupplementary', 'aiDocumentCount', 'aiWarning', 'aiProcessingMode',
+  'aiFallbackApplied', 'aiMetrics',
+] as const satisfies readonly (keyof DocEntry)[]
 
 /**
  * 資料マスタへのデータアクセス

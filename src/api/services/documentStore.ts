@@ -14,6 +14,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import type { DocEntry } from '../../repositories/types';
+import { AI_FIELD_KEYS } from '../../repositories/types';
 import type { ClassifyResponse } from '../services/pipeline/types';
 
 const DATA_DIR = join(process.cwd(), 'data');
@@ -33,24 +34,25 @@ export function loadDocuments(): void {
       // DL-042マイグレーション: 新フィールドがない既存データにnullを設定
       let migrated = false;
       for (const doc of documents) {
+        const record = doc as unknown as Record<string, unknown>;
         if (doc.createdBy === undefined) {
-          (doc as any).createdBy = null;
+          record.createdBy = null;
           migrated = true;
         }
         if (doc.updatedBy === undefined) {
-          (doc as any).updatedBy = null;
+          record.updatedBy = null;
           migrated = true;
         }
         if (doc.updatedAt === undefined) {
-          (doc as any).updatedAt = null;
+          record.updatedAt = null;
           migrated = true;
         }
         if (doc.statusChangedBy === undefined) {
-          (doc as any).statusChangedBy = null;
+          record.statusChangedBy = null;
           migrated = true;
         }
         if (doc.statusChangedAt === undefined) {
-          (doc as any).statusChangedAt = null;
+          record.statusChangedAt = null;
           migrated = true;
         }
       }
@@ -287,6 +289,57 @@ export function updateAiResults(
     + ` ${result.line_items.length}行`,
   );
   return true;
+}
+
+// ============================================================
+// classifyデータ完全削除（確定送信後に呼び出し）
+// 設計方針: classify.service.ts ヘッダー参照
+// ============================================================
+
+
+/** DocEntryのai*フィールドを全てnullに設定する */
+function nullifyAiFields(doc: DocEntry): void {
+  const record = doc as unknown as Record<string, unknown>;
+  for (const key of AI_FIELD_KEYS) {
+    record[key] = null;
+  }
+}
+
+/**
+ * 指定DocEntryのclassifyデータ（ai*フィールド）を完全削除
+ *
+ * 確定送信後に呼び出す。仕訳変換が完了した後に実行すること。
+ * Extract API（本番AI）がゼロから仕訳データを再生成するため、
+ * classifyの出力は不要になる。
+ *
+ * @param id - DocEntryのID
+ * @returns 削除成功したか
+ */
+export function clearAiFields(id: string): boolean {
+  const doc = documents.find(d => d.id === id);
+  if (!doc) return false;
+
+  nullifyAiFields(doc);
+  doc.updatedAt = new Date().toISOString();
+  save();
+  return true;
+}
+
+/**
+ * 顧問先の全DocEntryのclassifyデータを一括削除
+ *
+ * @param clientId - 顧問先ID
+ * @returns 削除したDocEntry件数
+ */
+export function clearAiFieldsByClientId(clientId: string): number {
+  const targets = documents.filter(d => d.clientId === clientId);
+  for (const doc of targets) {
+    nullifyAiFields(doc);
+    doc.updatedAt = new Date().toISOString();
+  }
+  if (targets.length > 0) save();
+  console.log(`[documentStore] classifyデータ削除: ${clientId} → ${targets.length}件`);
+  return targets.length;
 }
 
 // 起動時に自動読み込み

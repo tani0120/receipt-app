@@ -173,7 +173,7 @@
 |---|---|---|
 | DL-045-1 | `zodHook.ts`新規作成（zValidator共通エラーフック。Zodエラー→apiError統一変換） | 未コミット |
 | DL-045-2 | zodHook全ルート適用（6ファイル・10箇所。インラインhook撲滅） | 未コミット |
-| DL-045-3 | `apiFetch.ts`全面改修（400系→遷移しない、401→/login、500系→/404） | 未コミット |
+| ~~DL-045-3~~ | ~~`apiFetch.ts`全面改修~~ | **✅ 削除済み（2026-05-01 未使用確認）** |
 | DL-045-4 | `apiMessages.ts`後方互換定数3件削除 | 未コミット |
 | DL-045-5 | Zodスキーマ日本語化（Zod v4 `{ error }` 形式。ai-rules/admin/clients） | 未コミット |
 | DL-045-6 | `migration_tasks.md`に残タスク3件追記 | 未コミット |
@@ -493,8 +493,8 @@
 
 | タスク  | 内容                                                                         | 根拠                                        | 対応フェーズ                   |
 | ------- | ---------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------ |
-| E-2対応 | GeminiVisionService.ts を新パイプラインに全面書き換え                        | 旧世代コード。classify.service.tsが実質後継 | ~~2. Step 0-1~~ → 完了時に削除 |
-| E-5対応 | classify_schema.ts / FileTypeDetector.ts / journal_inference.ts の新設計移行 | 旧世代が新11種と不整合                      | 3. Step 0-1                    |
+| ~~E-2対応~~ | ~~GeminiVisionService.ts を新パイプラインに全面書き換え~~ | **✅ 削除完了（2026-05-01）。未使用確認済み** | — |
+| ~~E-5対応~~ | ~~FileTypeDetector.ts / journal_inference.ts の新設計移行~~ | **✅ 削除完了（2026-05-01）。未使用確認済み** | — |
 | E-1対応 | industry_vector_corporate.ts 等をStep 3+4ロジックに接続                      | デッドコード                                | 4. Step 2-4                    |
 | E-5対応 | Supabase Edge Functions接続（receiptService.ts本番実装）                     | スタブ。全モック完了後に実施                | **5. 全モック完了後**          |
 
@@ -572,11 +572,11 @@
 - **影響**: Step 4（科目確定ロジック）が未接続。パイプラインのStep 3→4がつながっていない
 - **対処**: Phase 2 Group 3（Step 3+4）実装時に接続。それまではデッドコードとして残置
 
-### ⚠️ E-2: GeminiVisionService.ts 旧世代アーキテクチャ
+### ✅ E-2: GeminiVisionService.ts 旧世代アーキテクチャ — **削除完了（2026-05-01）**
 
-- Phase 1遺物。gemini-pro-vision モデル（廃止済み）を使用
-- `@/core/journal` から `JournalEntryDraftSchema` をimportしており、新パイプライン（LineItem→JournalPhase5Mock）とは無関係
-- **対処**: Phase 2 Group 1で全面書き換え対象
+- Phase 1遺物。未使用確認済みのため削除。classify.service.tsが完全な後継
+- FileTypeDetector.ts（GeminiVisionService.tsからのみ参照）も連鎖削除
+- DetectionLogic.ts, RecurringLogic.ts も同時に未使用確認・削除
 
 ### ✅ E-3: receiptService.ts L50 toISOString() タイムゾーンバグ — **修正済み（2026-04-08）**
 
@@ -594,9 +594,9 @@
 | コード                  | 世代             | 問題                                                  |
 | ----------------------- | ---------------- | ----------------------------------------------------- |
 | classify_schema.ts      | 旧               | voucher_type 7種（旧設計）→ 新12種source_typeに未対応 |
-| GeminiVisionService.ts  | 旧               | gemini-pro-vision（廃止済み）                         |
-| FileTypeDetector.ts     | 旧               | 8種ファイル形式（新12種と不整合）                     |
-| journal_inference.ts    | 新（スケルトン） | 287行だが未実装（throw Error）。不要の可能性大        |
+| ~~GeminiVisionService.ts~~  | 旧               | **✅ 削除完了（2026-05-01）**                         |
+| ~~FileTypeDetector.ts~~     | 旧               | **✅ 削除完了（2026-05-01）**                         |
+| ~~journal_inference.ts~~    | 新（スケルトン） | **✅ 削除完了（2026-05-01）**                         |
 | document_filter_test.ts | **新（稼働中）** | 12種+4種                                              |
 | source_type.type.ts     | **新（稼働中）** | 12種+ProcessingMode                                   |
 

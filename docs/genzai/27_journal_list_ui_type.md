@@ -32,8 +32,8 @@
 | # | フィールド | 型 | null許容 | UIでの用途 | パイプライン充足 |
 |---|---|---|---|---|---|
 | 7 | `voucher_type` | `string \| null` | ✅ | 証票意味列（経費/クレカ等）表示 | ✅ resolveVoucherType() |
-| 8 | `source_type` | `SourceType \| null` | ✅ | 証票種別フィルタ・ソート | ✅ classify結果 |
-| 9 | `direction` | `Direction \| null` | ✅ | debit/credit配置決定 | ✅ classify結果 |
+| 8 | `source_type` | `SourceType \| null` | ✅ | 証票種別フィルタ・ソート | ⚠️ 暫定: classify結果（Extract API実装後はExtractが供給） |
+| 9 | `direction` | `Direction \| null` | ✅ | debit/credit配置決定 | ⚠️ 暫定: classify結果（Extract API実装後はExtractが供給） |
 | 10 | `vendor_vector` | `VendorVector \| null` | ✅ | 業種表示（未使用列） | ⚠️ classify未出力の場合あり |
 
 ### C. 取引先特定（Step4-C）
@@ -204,7 +204,7 @@ Extract API  → JournalPhase5Mock型の完全な仕訳データ   → 仕訳一
 | 発火タイミング | アップロード時（即時） | **選別確定時**（確定送信ボタン押下） |
 | 入力 | 画像1枚 | 独自+Drive全証票をバッチ投入 |
 | 出力型 | ClassifyRawResponse | **JournalPhase5Mock** |
-| classifyの出力 | — | 選別確定後に**削除**（再利用価値なし） |
+| classifyの出力 | — | 選別確定後に**完全削除**。本番AIへの入力にも渡さない |
 
 > 詳細: [24_upload_drive_integration.md §17](file:///c:/dev/receipt-app/docs/genzai/24_upload_drive_integration.md) 参照
 
@@ -401,7 +401,7 @@ UI表示時:
 ```
 Extract APIへの入力:
   ① 画像ファイル（Drive URLまたはBase64）
-  ② DocEntryメタデータ（id, storagePath, classifyの出力※参考用）
+  ② DocEntryメタデータ（id, storagePath）※classifyの出力は渡さない（完全削除済み）
   ③ 顧問先マスタ（勘定科目リスト、税区分リスト、学習ルール）
 
 Extract APIの出力:
