@@ -103,6 +103,8 @@ export interface Client {
   sharedFolderId: string;
   /** 共有用メール（Googleログイン時に自動取得。Drive共有権限付与 + PC独自システム認証に使用） */
   sharedEmail: string;
+  /** 共有用チャットURL（顧問先との共有チャットルーム） */
+  sharedChatUrl: string;
   advisoryFee: number;
   bookkeepingFee: number;
   settlementFee: number;

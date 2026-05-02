@@ -167,11 +167,17 @@
         <!-- スタッフ別指標タブ -->
         <div v-if="activeTab === 'staff'">
           <div class="ad-card ad-card--wide" style="margin-bottom: 0">
-            <h3 class="ad-card-title"><i class="fa-solid fa-users"></i> 担当者個別分析</h3>
+            <h3 class="ad-card-title"><i class="fa-solid fa-users"></i> 担当者個別分析 <span class="ad-count-badge">{{ sortedStaff.length }}名</span></h3>
+            <div class="ad-segment-bar">
+              <button :class="['ad-segment-btn', { active: staffStatusFilter === 'all' }]" @click="staffStatusFilter = 'all'">全員 ({{ staffStatusCounts.all }})</button>
+              <button :class="['ad-segment-btn', { active: staffStatusFilter === 'active' }]" @click="staffStatusFilter = 'active'">有効 ({{ staffStatusCounts.active }})</button>
+              <button v-if="staffStatusCounts.inactive" :class="['ad-segment-btn ad-segment-btn--danger', { active: staffStatusFilter === 'inactive' }]" @click="staffStatusFilter = 'inactive'">停止中 ({{ staffStatusCounts.inactive }})</button>
+            </div>
             <div class="ad-table-wrap" v-if="adminData.staffAnalysis">
               <table class="ad-dark-table">
                 <thead>
                   <tr>
+                    <th class="ad-sortable" @click="toggleSort('staff', 'status')">ステータス <span class="ad-sort-icon">{{ sortIcon('staff', 'status') }}</span></th>
                     <th class="ad-sortable" @click="toggleSort('staff', 'name')">担当者名 <span class="ad-sort-icon">{{ sortIcon('staff', 'name') }}</span></th>
                     <th class="ad-sortable text-right" @click="toggleSort('staff', 'thisMonthJournals')">今月仕訳数 <span class="ad-sort-icon">{{ sortIcon('staff', 'thisMonthJournals') }}</span></th>
                     <th class="ad-sortable text-right" @click="toggleSort('staff', 'monthlyAvgJournals')">月平均仕訳数 <span class="ad-sort-icon">{{ sortIcon('staff', 'monthlyAvgJournals') }}</span></th>
@@ -182,7 +188,8 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(staff, index) in sortedStaff" :key="index">
+                  <tr v-for="(staff, index) in sortedStaff" :key="index" :class="{ 'ad-row-inactive': staff.status !== 'active' }">
+                    <td><span :class="statusClass(staff.status)">{{ staffStatusLabel(staff.status) }}</span></td>
                     <td>{{ staff.name }}</td>
                     <td class="text-right">{{ staff.performance.thisMonthJournals }}</td>
                     <td class="text-right">{{ staff.performance.monthlyAvgJournals }}</td>
@@ -200,11 +207,18 @@
         <!-- 顧問先別指標タブ -->
         <div v-if="activeTab === 'client'">
           <div class="ad-card ad-card--wide" style="margin-bottom: 0">
-            <h3 class="ad-card-title"><i class="fa-solid fa-briefcase"></i> 顧問先別コスト・効率分析</h3>
+            <h3 class="ad-card-title"><i class="fa-solid fa-briefcase"></i> 顧問先別コスト・効率分析 <span class="ad-count-badge">{{ sortedClients.length }}社</span></h3>
+            <div class="ad-segment-bar">
+              <button :class="['ad-segment-btn', { active: clientStatusFilter === 'all' }]" @click="clientStatusFilter = 'all'">全社 ({{ clientStatusCounts.all }})</button>
+              <button :class="['ad-segment-btn', { active: clientStatusFilter === 'active' }]" @click="clientStatusFilter = 'active'">稼働中 ({{ clientStatusCounts.active }})</button>
+              <button v-if="clientStatusCounts.suspension" :class="['ad-segment-btn ad-segment-btn--warn', { active: clientStatusFilter === 'suspension' }]" @click="clientStatusFilter = 'suspension'">休眠中 ({{ clientStatusCounts.suspension }})</button>
+              <button v-if="clientStatusCounts.inactive" :class="['ad-segment-btn ad-segment-btn--danger', { active: clientStatusFilter === 'inactive' }]" @click="clientStatusFilter = 'inactive'">契約終了 ({{ clientStatusCounts.inactive }})</button>
+            </div>
             <div class="ad-table-wrap" v-if="adminData.clientAnalysis">
               <table class="ad-dark-table">
                 <thead>
                   <tr>
+                    <th class="ad-sortable" @click="toggleSort('client', 'status')">ステータス <span class="ad-sort-icon">{{ sortIcon('client', 'status') }}</span></th>
                     <th class="ad-sortable" @click="toggleSort('client', 'code')">コード <span class="ad-sort-icon">{{ sortIcon('client', 'code') }}</span></th>
                     <th class="ad-sortable" @click="toggleSort('client', 'name')">会社名 <span class="ad-sort-icon">{{ sortIcon('client', 'name') }}</span></th>
                     <th class="ad-sortable text-right" @click="toggleSort('client', 'journalsThisMonth')">今月仕訳数 <span class="ad-sort-icon">{{ sortIcon('client', 'journalsThisMonth') }}</span></th>
@@ -216,7 +230,8 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="client in sortedClients" :key="client.code">
+                  <tr v-for="client in sortedClients" :key="client.code" :class="{ 'ad-row-inactive': client.status !== 'active' }">
+                    <td><span :class="statusClass(client.status)">{{ clientStatusLabel(client.status) }}</span></td>
                     <td class="font-mono">{{ client.code }}</td>
                     <td>{{ client.name }}</td>
                     <td class="text-right">{{ client.performance.journalsThisMonth }}</td>
@@ -237,19 +252,19 @@
           <div class="ad-card">
             <h3 class="ad-card-title"><i class="fa-solid fa-coins"></i> 今月のAPI費用</h3>
             <div class="ad-metric">
-              <span class="ad-metric-value">¥12,450</span>
-              <span class="ad-metric-label">Gemini API（2026年4月）</span>
+              <span class="ad-metric-value">¥{{ adminData.kpiProductivity.apiCost?.thisMonthForecast?.toLocaleString() }}</span>
+              <span class="ad-metric-label">Gemini API（{{ new Date().getFullYear() }}年{{ new Date().getMonth() + 1 }}月） / {{ adminData.kpiProductivity.apiCost?.totalCalls ?? 0 }}回呼出</span>
             </div>
           </div>
           <div class="ad-card">
             <h3 class="ad-card-title"><i class="fa-solid fa-microchip"></i> トークン消費</h3>
             <div class="ad-metric">
-              <span class="ad-metric-value">2.4M</span>
+              <span class="ad-metric-value">{{ formatTokenCount(adminData.kpiProductivity.apiCost?.totalTokens ?? 0) }}</span>
               <span class="ad-metric-label">合計トークン（今月）</span>
             </div>
             <div class="ad-metric-sub">
-              <div>prompt: <strong>1.8M</strong></div>
-              <div>completion: <strong>0.6M</strong></div>
+              <div>prompt: <strong>{{ formatTokenCount(adminData.kpiProductivity.apiCost?.promptTokens ?? 0) }}</strong></div>
+              <div>completion: <strong>{{ formatTokenCount(adminData.kpiProductivity.apiCost?.completionTokens ?? 0) }}</strong></div>
             </div>
           </div>
           <div class="ad-card ad-card--wide">
@@ -308,15 +323,14 @@ async function fetchActivityTotal() {
 }
 fetchActivityTotal();
 
-/** ミリ秒を「Xh Ym」形式にフォーマット */
+/** ミリ秒を「h:mm:ss」形式にフォーマット */
 function formatActiveTime(ms: number): string {
-  if (ms <= 0) return '0h';
-  const totalMin = Math.round(ms / 60000);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}m`;
+  if (ms <= 0) return '0:00:00';
+  const totalSec = Math.round(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 /** 1h処理仕訳数（今月仕訳数 ÷ 処理時間h） */
@@ -334,6 +348,43 @@ const computedTimePer100 = computed(() => {
   if (totalSec <= 0 || journals <= 0) return '0';
   return Math.round((totalSec / journals) * 100);
 });
+
+/** トークン数を「0」「123K」「1.5M」形式にフォーマット */
+function formatTokenCount(n: number): string {
+  if (n <= 0) return '0';
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return n.toLocaleString();
+}
+
+/** スタッフのステータスラベル（スタッフマスターと統一） */
+function staffStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    active: '有効',
+    inactive: '停止中',
+  };
+  return map[status] ?? status;
+}
+
+/** 顧問先のステータスラベル（顧問先マスターと統一） */
+function clientStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    active: '稼働中',
+    suspension: '休眠中',
+    inactive: '契約終了',
+  };
+  return map[status] ?? status;
+}
+
+/** ステータスのCSSクラス（共通） */
+function statusClass(status: string): string {
+  const map: Record<string, string> = {
+    active: 'ad-status ad-status--active',
+    inactive: 'ad-status ad-status--inactive',
+    suspension: 'ad-status ad-status--suspension',
+  };
+  return map[status] ?? 'ad-status';
+}
 
 type TabKey = 'company' | 'staff' | 'client' | 'cost';
 const validTabs: TabKey[] = ['company', 'staff', 'client', 'cost'];
@@ -404,8 +455,46 @@ function sortList<T>(list: T[], table: string): T[] {
   });
 }
 
-const sortedStaff = computed(() => sortList(adminData.value.staffAnalysis ?? [], 'staff'));
-const sortedClients = computed(() => sortList(adminData.value.clientAnalysis ?? [], 'client'));
+const sortedStaff = computed(() => {
+  const all = adminData.value.staffAnalysis ?? [];
+  const filtered = staffStatusFilter.value === 'all'
+    ? all
+    : all.filter(s => s.status === staffStatusFilter.value);
+  return sortList(filtered, 'staff');
+});
+const sortedClients = computed(() => {
+  const all = adminData.value.clientAnalysis ?? [];
+  const filtered = clientStatusFilter.value === 'all'
+    ? all
+    : all.filter(c => c.status === clientStatusFilter.value);
+  return sortList(filtered, 'client');
+});
+
+/** ステータスフィルタ状態 */
+const staffStatusFilter = ref<string>('all');
+const clientStatusFilter = ref<string>('all');
+
+/** スタッフのステータス別件数 */
+const staffStatusCounts = computed(() => {
+  const all = adminData.value.staffAnalysis ?? [];
+  return {
+    all: all.length,
+    active: all.filter(s => s.status === 'active').length,
+    inactive: all.filter(s => s.status === 'inactive').length,
+    suspension: all.filter(s => s.status === 'suspension').length,
+  };
+});
+
+/** 顧問先のステータス別件数 */
+const clientStatusCounts = computed(() => {
+  const all = adminData.value.clientAnalysis ?? [];
+  return {
+    all: all.length,
+    active: all.filter(c => c.status === 'active').length,
+    inactive: all.filter(c => c.status === 'inactive').length,
+    suspension: all.filter(c => c.status === 'suspension').length,
+  };
+});
 
 // スタッフモーダル
 const isStaffModalOpen = ref(false);
@@ -722,6 +811,83 @@ const handleStaffDelete = () => {
   font-size: 11px;
   font-weight: 400;
   color: #64748b;
+}
+/* ステータスバッジ */
+.ad-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.ad-status--active {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+.ad-status--inactive {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+.ad-status--suspension {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* 件数バッジ */
+.ad-count-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(99, 102, 241, 0.2);
+  color: #818cf8;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* セグメントバー */
+.ad-segment-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.ad-segment-btn {
+  padding: 4px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ad-segment-btn:hover {
+  background: rgba(148, 163, 184, 0.1);
+  color: #e2e8f0;
+}
+.ad-segment-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  color: #818cf8;
+}
+.ad-segment-btn--warn.active {
+  background: rgba(234, 179, 8, 0.15);
+  border-color: #eab308;
+  color: #eab308;
+}
+.ad-segment-btn--danger.active {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* 非稼働行 */
+.ad-row-inactive {
+  opacity: 0.55;
 }
 
 @keyframes pulse {

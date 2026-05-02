@@ -180,8 +180,9 @@
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'email'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.email || '—' }}</span>
                 </td>
-                <td class="cm-ellipsis">
-                  <span v-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
+                <td class="cm-ellipsis td-editable" @dblclick.stop="startInlineEdit(row, 'sharedEmail', $event)">
+                  <input v-if="inlineEditId === row.clientId && inlineEditField === 'sharedEmail'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <span v-else-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
                   <span v-else class="cm-shared-email-none">未取得</span>
                 </td>
                 <td class="cm-drive-cell" @click.stop="row.sharedFolderId ? copyDriveUrl(row) : undefined">
@@ -311,9 +312,17 @@
                   <label class="cm-radio"><input type="radio" v-model="panelForm.contactType" value="chatwork"><span>チャットワーク</span></label>
                 </div>
               </div>
-              <div v-if="panelForm.contactType !== 'none'" class="cm-field">
+              <div class="cm-field">
                 <label class="cm-label">連絡先</label>
                 <input type="text" v-model="panelForm.contactValue" class="cm-input" :placeholder="panelForm.contactType === 'email' ? 'example@mail.com' : 'Chatwork ID'">
+              </div>
+              <div class="cm-field">
+                <label class="cm-label">共有用メール <span class="cm-hint">※顧問先との共有メールアドレス</span></label>
+                <input type="email" v-model="panelSharedEmail" class="cm-input" placeholder="shared@example.com">
+              </div>
+              <div class="cm-field">
+                <label class="cm-label">共有用チャットURL <span class="cm-hint">※顧問先との共有チャットルーム</span></label>
+                <input type="url" v-model="panelSharedChatUrl" class="cm-input" placeholder="https://www.chatwork.com/#!rid...">
               </div>
               <div class="cm-field">
                 <label class="cm-label">決算日</label>
@@ -673,7 +682,7 @@ const commitInlineEdit = async (_row: Client) => {
       }
     }
   }
-  const clFieldLabels: Record<string, string> = { threeCode: '3コード', companyName: '会社名', companyNameKana: '会社名カナ', repName: '代表者名', repNameKana: '代表者名カナ', type: '種別', status: 'ステータス', industry: '業種', phoneNumber: '電話番号', email: 'メール' };
+  const clFieldLabels: Record<string, string> = { threeCode: '3コード', companyName: '会社名', companyNameKana: '会社名カナ', repName: '代表者名', repNameKana: '代表者名カナ', type: '種別', status: 'ステータス', industry: '業種', phoneNumber: '電話番号', email: 'メール', sharedEmail: '共有メール' };
   const clLabel = clFieldLabels[inlineEditField.value ?? ''] ?? inlineEditField.value;
   markDirty(`${clLabel}を変更`);
   markClean();
@@ -707,6 +716,8 @@ const showIndustryDropdown = ref(false);
 
 const panelForm = reactive<ClientForm>(emptyClientForm());
 const panelStaffId = ref(''); // パネル用スタッフID
+const panelSharedEmail = ref(''); // パネル用共有メール
+const panelSharedChatUrl = ref(''); // パネル用共有チャットURL
 
 // B修正: 法人→個人切替時にhasRentalIncomeをリセット
 watch(() => panelForm.type, (newType) => {
@@ -730,6 +741,8 @@ const delayedOpenEditPanel = (row: Client) => {
 const openAddPanel = () => {
   Object.assign(panelForm, emptyClientForm());
   panelStaffId.value = '';
+  panelSharedEmail.value = '';
+  panelSharedChatUrl.value = '';
   panelMode.value = 'add';
   editingId.value = null;
 };
@@ -743,6 +756,8 @@ const openEditPanel = (row: Client) => {
   });
   // Client.staffIdから直接取得
   panelStaffId.value = row.staffId ?? '';
+  panelSharedEmail.value = row.sharedEmail ?? '';
+  panelSharedChatUrl.value = row.sharedChatUrl ?? '';
   panelMode.value = 'edit';
   editingId.value = row.clientId;
 };
@@ -780,6 +795,8 @@ const saveClient = async () => {
     ...fields,
     clientId,
     staffId: panelStaffId.value || null,
+    sharedEmail: panelSharedEmail.value,
+    sharedChatUrl: panelSharedChatUrl.value,
     contact: { type: contactType, value: contactValue },
   };
   if (panelMode.value === 'add') {

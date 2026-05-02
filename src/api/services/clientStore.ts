@@ -39,7 +39,7 @@ const SEED_DATA: Client[] = [
     taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
     isInvoiceRegistered: true, invoiceRegistrationNumber: 'T1234567890123',
     hasDepartmentManagement: false, hasRentalIncome: false,
-    staffId: 'staff-0002', sharedFolderId: '', sharedEmail: 'yamada.taro@gmail.com',
+    staffId: 'staff-0002', sharedFolderId: '', sharedEmail: 'yamada.taro@gmail.com', sharedChatUrl: '',
     advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
   },
   {
@@ -52,7 +52,7 @@ const SEED_DATA: Client[] = [
     simplifiedTaxCategory: 3, taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'accounts_payable',
     isInvoiceRegistered: true, invoiceRegistrationNumber: 'T9876543210987',
     hasDepartmentManagement: true, hasRentalIncome: false,
-    staffId: 'staff-0004', sharedFolderId: '', sharedEmail: 'suzuki.ichiro@gmail.com',
+    staffId: 'staff-0004', sharedFolderId: '', sharedEmail: 'suzuki.ichiro@gmail.com', sharedChatUrl: '',
     advisoryFee: 40000, bookkeepingFee: 20000, settlementFee: 150000, taxFilingFee: 80000,
   },
   {
@@ -65,7 +65,7 @@ const SEED_DATA: Client[] = [
     taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
     isInvoiceRegistered: false, invoiceRegistrationNumber: '',
     hasDepartmentManagement: false, hasRentalIncome: true,
-    staffId: 'staff-0002', sharedFolderId: '', sharedEmail: '',
+    staffId: 'staff-0002', sharedFolderId: '', sharedEmail: '', sharedChatUrl: '',
     advisoryFee: 20000, bookkeepingFee: 10000, settlementFee: 80000, taxFilingFee: 0,
   },
   {
@@ -78,7 +78,7 @@ const SEED_DATA: Client[] = [
     taxMethod: 'exclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
     isInvoiceRegistered: true, invoiceRegistrationNumber: 'T5555666677778',
     hasDepartmentManagement: true, hasRentalIncome: false,
-    staffId: 'staff-0004', sharedFolderId: '', sharedEmail: '',
+    staffId: 'staff-0004', sharedFolderId: '', sharedEmail: '', sharedChatUrl: '',
     advisoryFee: 80000, bookkeepingFee: 50000, settlementFee: 300000, taxFilingFee: 150000,
   },
   {
@@ -91,7 +91,7 @@ const SEED_DATA: Client[] = [
     taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
     isInvoiceRegistered: true, invoiceRegistrationNumber: 'T7777888899990',
     hasDepartmentManagement: false, hasRentalIncome: false,
-    staffId: 'staff-0002', sharedFolderId: '', sharedEmail: '',
+    staffId: 'staff-0002', sharedFolderId: '', sharedEmail: '', sharedChatUrl: '',
     advisoryFee: 35000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
   },
   {
@@ -104,7 +104,7 @@ const SEED_DATA: Client[] = [
     taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'accounts_payable',
     isInvoiceRegistered: true, invoiceRegistrationNumber: 'T6666777788880',
     hasDepartmentManagement: true, hasRentalIncome: false,
-    staffId: null, sharedFolderId: '', sharedEmail: 'sasaki.makoto@gmail.com',
+    staffId: null, sharedFolderId: '', sharedEmail: 'sasaki.makoto@gmail.com', sharedChatUrl: '',
     advisoryFee: 60000, bookkeepingFee: 40000, settlementFee: 250000, taxFilingFee: 120000,
   },
   {
@@ -117,7 +117,7 @@ const SEED_DATA: Client[] = [
     simplifiedTaxCategory: 4, taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
     isInvoiceRegistered: false, invoiceRegistrationNumber: '',
     hasDepartmentManagement: false, hasRentalIncome: false,
-    staffId: null, sharedFolderId: '', sharedEmail: '',
+    staffId: null, sharedFolderId: '', sharedEmail: '', sharedChatUrl: '',
     advisoryFee: 15000, bookkeepingFee: 10000, settlementFee: 60000, taxFilingFee: 0,
   },
   {
@@ -130,7 +130,7 @@ const SEED_DATA: Client[] = [
     taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
     isInvoiceRegistered: true, invoiceRegistrationNumber: 'T9999000011110',
     hasDepartmentManagement: false, hasRentalIncome: false,
-    staffId: null, sharedFolderId: '', sharedEmail: 'marke.hughug@gmail.com',
+    staffId: null, sharedFolderId: '', sharedEmail: 'marke.hughug@gmail.com', sharedChatUrl: '',
     advisoryFee: 45000, bookkeepingFee: 25000, settlementFee: 180000, taxFilingFee: 90000,
   },
   {
@@ -143,7 +143,7 @@ const SEED_DATA: Client[] = [
     taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
     isInvoiceRegistered: true, invoiceRegistrationNumber: 'T1111222233330',
     hasDepartmentManagement: false, hasRentalIncome: false,
-    staffId: null, sharedFolderId: '', sharedEmail: '',
+    staffId: null, sharedFolderId: '', sharedEmail: '', sharedChatUrl: '',
     advisoryFee: 50000, bookkeepingFee: 30000, settlementFee: 200000, taxFilingFee: 100000,
   },
   {
@@ -156,7 +156,7 @@ const SEED_DATA: Client[] = [
     taxMethod: 'inclusive', calculationMethod: 'cash', defaultPaymentMethod: 'owner_loan',
     isInvoiceRegistered: false, invoiceRegistrationNumber: '',
     hasDepartmentManagement: false, hasRentalIncome: false,
-    staffId: null, sharedFolderId: '', sharedEmail: '',
+    staffId: null, sharedFolderId: '', sharedEmail: '', sharedChatUrl: '',
     advisoryFee: 15000, bookkeepingFee: 8000, settlementFee: 50000, taxFilingFee: 0,
   },
 ];
@@ -226,7 +226,7 @@ export function create(client: Client): Client {
 export function updateClient(clientId: string, partial: Partial<Client>): boolean {
   const idx = clients.findIndex(c => c.clientId === clientId);
   if (idx < 0) return false;
-  clients[idx] = { ...clients[idx], ...partial, clientId }; // clientIdは不変
+  clients[idx] = { ...clients[idx], ...partial, clientId } as Client; // clientIdは不変
   save();
   return true;
 }

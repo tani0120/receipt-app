@@ -128,6 +128,9 @@ app.route('/api/notifications', notificationRoutes)
 import confirmedJournalRoutes from './api/routes/confirmedJournalRoutes'
 app.route('/api/confirmed-journals', confirmedJournalRoutes)
 
+// ActivityLog API: 活動ログJSON永続化（DL-042）
+import activityLogRoutes from './api/routes/activityLogRoutes'
+app.route('/api/activity-log', activityLogRoutes)
 
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))

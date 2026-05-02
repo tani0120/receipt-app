@@ -34,7 +34,7 @@ export const emptyClientForm = (): ClientForm => ({
   taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
   isInvoiceRegistered: false, invoiceRegistrationNumber: '',
   hasDepartmentManagement: false, hasRentalIncome: false,
-  staffId: null, sharedFolderId: '', sharedEmail: '',
+  staffId: null, sharedFolderId: '', sharedEmail: '', sharedChatUrl: '',
   advisoryFee: 0, bookkeepingFee: 0, settlementFee: 0, taxFilingFee: 0,
 });
 

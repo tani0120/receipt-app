@@ -28,7 +28,10 @@ export interface StaffPerformance {
 }
 
 export interface StaffAnalysis {
+  staffId: string;
   name: string;
+  role: string;
+  status: string;
   performance: StaffPerformance & { velocity: { draftAvg: number } };
   backlogs: { total: number; draft: number };
   backlog?: Record<string, BacklogStatus>;
@@ -44,6 +47,7 @@ export interface Staff {
 export interface ClientAnalysis {
   code: string;
   name: string;
+  status: string;
   performance: {
     journalsThisMonth: number;
     journalsThisYear: number;
@@ -156,6 +160,10 @@ export interface DashboardData {
       lastYearSameMonth: number;
       thisYear: number;
       lastYear: number;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+      totalCalls: number;
     };
   };
   staffList: Staff[];
@@ -260,35 +268,29 @@ const MOCK_DATA: DashboardData = {
     stoppedClients: 0,
     staffCount: 0,
     prevYearEnd: undefined,
-    performance: {
-      monthlyJournals: 12450,
-      processingTime: "450h",
-      velocityPerHour: 27.6,
-      timePer100Journals: 217
-    },
-    performanceYearAvg: {
-      monthlyJournals: 11800,
-      processingTime: "440h",
-      velocityPerHour: 26.8,
-      timePer100Journals: 224
-    }
+    performance: undefined,
+    performanceYearAvg: undefined,
   },
   kpiProductivity: {
     journals: {
-      thisMonth: 1250,
-      lastMonth: 1180,
-      monthlyAvg: 1150,
-      lastYearSameMonth: 980,
-      thisYear: 14500,
-      lastYear: 13200
+      thisMonth: 0,
+      lastMonth: 0,
+      monthlyAvg: 0,
+      lastYearSameMonth: 0,
+      thisYear: 0,
+      lastYear: 0
     },
     apiCost: {
-      thisMonthForecast: 45000,
-      lastMonth: 42000,
-      monthlyAvg: 41000,
-      lastYearSameMonth: 35000,
-      thisYear: 520000,
-      lastYear: 480000
+      thisMonthForecast: 0,
+      lastMonth: 0,
+      monthlyAvg: 0,
+      lastYearSameMonth: 0,
+      thisYear: 0,
+      lastYear: 0,
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      totalCalls: 0
     }
   },
   staffList: [
@@ -299,7 +301,10 @@ const MOCK_DATA: DashboardData = {
   ],
   staffAnalysis: [
     {
+      staffId: 'S002',
       name: '佐藤 健太',
+      role: '実務者',
+      status: 'active',
       performance: {
         monthlyJournals: 1200, processingTime: '45h', velocityPerHour: 26.6,
         thisMonthJournals: 125, monthlyAvgJournals: 110, annualApiCost: 54000,
@@ -315,7 +320,10 @@ const MOCK_DATA: DashboardData = {
       }
     },
     {
+      staffId: 'S003',
       name: '鈴木 美咲',
+      role: '実務者',
+      status: 'active',
       performance: {
         monthlyJournals: 980, processingTime: '38h', velocityPerHour: 25.7,
         thisMonthJournals: 95, monthlyAvgJournals: 90, annualApiCost: 45000,
@@ -331,7 +339,10 @@ const MOCK_DATA: DashboardData = {
       }
     },
     {
+      staffId: 'S004',
       name: '高橋 誠',
+      role: '実務者',
+      status: 'active',
       performance: {
         monthlyJournals: 1450, processingTime: '52h', velocityPerHour: 27.8,
         thisMonthJournals: 150, monthlyAvgJournals: 140, annualApiCost: 70000,
@@ -349,21 +360,21 @@ const MOCK_DATA: DashboardData = {
   ],
   clientAnalysis: [
     {
-      code: 'AAA', name: '株式会社 ＡＡＡ',
+      code: 'AAA', name: '株式会社 ＡＡＡ', status: 'active',
       performance: {
         journalsThisMonth: 50, journalsThisYear: 600, journalsLastYear: 550,
         apiCostThisYear: 24000, velocityThisMonth: 25, velocityAvg: 24
       }
     },
     {
-      code: 'BBB', name: '合同会社 ＢＢＢ',
+      code: 'BBB', name: '合同会社 ＢＢＢ', status: 'active',
       performance: {
         journalsThisMonth: 30, journalsThisYear: 360, journalsLastYear: 300,
         apiCostThisYear: 15000, velocityThisMonth: 22, velocityAvg: 20
       }
     },
     {
-      code: 'CCC', name: 'ＣＣＣ 商店',
+      code: 'CCC', name: 'ＣＣＣ 商店', status: 'active',
       performance: {
         journalsThisMonth: 80, journalsThisYear: 960, journalsLastYear: 800,
         apiCostThisYear: 40000, velocityThisMonth: 28, velocityAvg: 26
@@ -461,7 +472,7 @@ export function aaa_useAdminDashboard() {
         data.value.kpiCostQuality.activeClients = active;
         data.value.kpiCostQuality.stoppedClients = stopped;
 
-        // 顧問先別指標にインポート（実名・コードを反映）
+        // 顧問先別指標にインポート（実名・コード・ステータスを反映）
         if (clients.length > 0) {
           const defaultPerf = {
             journalsThisMonth: 0, journalsThisYear: 0, journalsLastYear: 0,
@@ -470,6 +481,7 @@ export function aaa_useAdminDashboard() {
           data.value.clientAnalysis = clients.map(c => ({
             code: c.threeCode || c.clientId,
             name: c.companyName,
+            status: c.status,
             performance: { ...defaultPerf }
           }));
         }
@@ -484,17 +496,19 @@ export function aaa_useAdminDashboard() {
         const activeStaff = body.staff.filter(s => s.status === 'active').length;
         data.value.kpiCostQuality.staffCount = activeStaff;
 
-        // スタッフ別指標にインポート（実名を反映）
-        const activeList = body.staff.filter(s => s.status === 'active');
-        if (activeList.length > 0) {
+        // スタッフ別指標にインポート（全員表示、ステータス付き）
+        if (body.staff.length > 0) {
           const defaultPerf = {
             monthlyJournals: 0, processingTime: '0h', velocityPerHour: 0,
             thisMonthJournals: 0, monthlyAvgJournals: 0, annualApiCost: 0,
             velocityThisMonth: 0, velocityAvg: 0, velocityPerHourAvg: 0,
             velocity: { draftAvg: 0 }
           };
-          data.value.staffAnalysis = activeList.map(s => ({
+          data.value.staffAnalysis = body.staff.map(s => ({
+            staffId: s.uuid,
             name: s.name,
+            role: s.role ?? '一般',
+            status: s.status,
             performance: { ...defaultPerf },
             backlogs: { total: 0, draft: 0 },
             backlog: {}
@@ -518,9 +532,11 @@ export function aaa_useAdminDashboard() {
 
       // スタッフ別: 処理時間をperformanceに反映
       if (body.byStaff && data.value.staffAnalysis) {
-        for (const _staffSummary of body.byStaff) {
-          // staffIdからスタッフ名を逆引き（staffAnalysisにstaffIdがないためスキップ）
-          // TODO: staffAnalysisにstaffIdフィールドを追加してマッチングする
+        for (const staffSummary of body.byStaff) {
+          const match = data.value.staffAnalysis.find(s => s.staffId === staffSummary.staffId);
+          if (match) {
+            match.performance.processingTime = `${Math.round(staffSummary.totalActiveMs / 3600000)}h`;
+          }
         }
       }
 
@@ -544,40 +560,113 @@ export function aaa_useAdminDashboard() {
     }
   }
 
-  /** CSV行数集計を取得して仕訳数に反映 */
+  /** CSV出力実績を取得して仕訳数に反映 */
   async function fetchCsvSummary() {
     try {
       const res = await fetch('/api/admin/csv-summary');
       if (!res.ok) return;
+      type Bucket = { csvLineCount: number; journalCount: number; exportCount: number };
       const body = await res.json() as {
-        total: { csvLineCount: number; journalCount: number; exportCount: number };
-        byClient: { clientId: string; csvLineCount: number; journalCount: number }[];
-        byStaff: { staffId: string; csvLineCount: number; journalCount: number }[];
+        thisMonth: Bucket;
+        monthlyAvg: Bucket;
+        lastYearSameMonth: Bucket;
+        thisYear: Bucket;
+        lastYear: Bucket;
+        byClient: { clientId: string; thisMonth: Bucket; thisYear: Bucket; lastYear: Bucket }[];
+        byStaff: { staffId: string; thisMonth: Bucket; thisYear: Bucket; lastYear: Bucket }[];
       };
 
-      // 全社指標: 今月の仕訳数（CSV行数）を反映
-      if (body.total.csvLineCount > 0) {
-        data.value.kpiProductivity.journals = {
-          ...data.value.kpiProductivity.journals,
-          thisMonth: body.total.csvLineCount,
-        };
-      }
+      // 全社指標: 仕訳数を全期間に反映
+      data.value.kpiProductivity.journals = {
+        thisMonth: body.thisMonth.csvLineCount,
+        lastMonth: data.value.kpiProductivity.journals.lastMonth,
+        monthlyAvg: body.monthlyAvg.csvLineCount,
+        lastYearSameMonth: body.lastYearSameMonth.csvLineCount,
+        thisYear: body.thisYear.csvLineCount,
+        lastYear: body.lastYear.csvLineCount,
+      };
 
-      // 顧問先別: 今月仕訳数を反映
+      // 顧問先別: 仕訳数を反映（今月・今年・昨年）
       if (body.byClient && data.value.clientAnalysis) {
         for (const cs of body.byClient) {
-          const match = data.value.clientAnalysis.find(c => c.code === cs.clientId);
+          const threeCode = cs.clientId.split('-')[0];
+          const match = data.value.clientAnalysis.find(
+            c => c.code === cs.clientId || c.code === threeCode
+          );
           if (match) {
-            match.performance.journalsThisMonth = cs.csvLineCount;
+            match.performance.journalsThisMonth = cs.thisMonth.csvLineCount;
+            match.performance.journalsThisYear = cs.thisYear.csvLineCount;
+            match.performance.journalsLastYear = cs.lastYear.csvLineCount;
           }
         }
       }
+
+      // スタッフ別: 仕訳数を反映
+      if (body.byStaff && data.value.staffAnalysis) {
+        for (const ss of body.byStaff) {
+          const match = data.value.staffAnalysis.find(s => s.staffId === ss.staffId);
+          if (match) {
+            match.performance.thisMonthJournals = ss.thisMonth.csvLineCount;
+          }
+        }
+      }
+
+      console.log(`[useAdminDashboard] CSV集計: 今月${body.thisMonth.csvLineCount}, 月平均${body.monthlyAvg.csvLineCount}, 昨年同月${body.lastYearSameMonth.csvLineCount}, 今年${body.thisYear.csvLineCount}, 昨年${body.lastYear.csvLineCount}`);
     } catch (e) {
       console.warn('[useAdminDashboard] CSV集計取得失敗:', e);
     }
   }
 
-  fetchRealKpi().then(() => fetchActivitySummary()).then(() => fetchCsvSummary());
+  /** AI費用をaiMetrics APIから実データインポート */
+  async function fetchAiCostSummary() {
+    try {
+      const res = await fetch('/api/admin/ai-metrics/summary');
+      if (!res.ok) return;
+      const body = await res.json() as {
+        total: {
+          totalCostYen: number;
+          totalCalls: number;
+          promptTokens: number;
+          completionTokens: number;
+          totalTokens: number;
+        };
+        byClient: { key: string; totalCostYen: number }[];
+        byStaff: { key: string; totalCostYen: number }[];
+      };
+
+      // 全社指標: API費用・トークン数を反映
+      data.value.kpiProductivity.apiCost = {
+        ...data.value.kpiProductivity.apiCost,
+        thisMonthForecast: Math.round(body.total.totalCostYen),
+        promptTokens: body.total.promptTokens,
+        completionTokens: body.total.completionTokens,
+        totalTokens: body.total.totalTokens,
+        totalCalls: body.total.totalCalls,
+      };
+
+      // 顧問先別: API費用を反映
+      if (body.byClient && data.value.clientAnalysis) {
+        for (const cs of body.byClient) {
+          const threeCode = cs.key.split('-')[0];
+          const match = data.value.clientAnalysis.find(
+            c => c.code === cs.key || c.code === threeCode
+          );
+          if (match) {
+            match.performance.apiCostThisYear = Math.round(cs.totalCostYen);
+          }
+        }
+      }
+
+      console.log(`[useAdminDashboard] AI費用: ¥${Math.round(body.total.totalCostYen)}, ${body.total.totalCalls}回, ${body.total.totalTokens}トークン`);
+    } catch (e) {
+      console.warn('[useAdminDashboard] AI費用集計取得失敗:', e);
+    }
+  }
+
+  fetchRealKpi()
+    .then(() => fetchActivitySummary())
+    .then(() => fetchCsvSummary())
+    .then(() => fetchAiCostSummary());
 
   const downloadCsv = async () => {
     // Mock CSV Download

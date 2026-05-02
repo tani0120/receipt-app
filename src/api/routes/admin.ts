@@ -6,6 +6,8 @@ import { zValidator } from '@hono/zod-validator'
 import { zodHook } from '../helpers/zodHook'
 import { getDocuments } from '../services/documentStore'
 import { summarizeCsvLines as summarizeCsvLinesImport } from '../services/exportHistoryStore'
+import { getAll as getAllClients } from '../services/clientStore'
+import { getJournals } from '../services/journalStore'
 import type { DocEntry } from '../../repositories/types'
 
 const app = new Hono()
@@ -233,6 +235,65 @@ const route = app
     .get('/csv-summary', (c) => {
       const summary = summarizeCsvLinesImport();
       return c.json(summary);
+    })
+    // ━━━ 仕訳数集計API（全顧問先の仕訳データから実数をインポート） ━━━
+    .get('/journal-summary', (c) => {
+      const allClients = getAllClients();
+      const now = new Date();
+      const thisMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; // 'YYYY-MM'
+
+      let totalJournals = 0; // 仕訳件数（証票数）
+      let totalLines = 0;    // 仕訳行数（debit/credit展開後）
+      const byClient: { clientId: string; companyName: string; journalCount: number; lineCount: number }[] = [];
+      const byStaff = new Map<string, { journalCount: number; lineCount: number }>();
+
+      /** 仕訳1件のレコード型 */
+      type JournalRecord = Record<string, unknown> & {
+        deleted_at?: string | null;
+        created_at?: string | null;
+        debit_entries?: unknown[];
+        credit_entries?: unknown[];
+      };
+
+      for (const client of allClients) {
+        const journals = getJournals(client.clientId) as JournalRecord[];
+        // deleted_atがnullかつ今月作成分のみカウント
+        const active = journals.filter(j =>
+          (j.deleted_at === null || j.deleted_at === undefined) &&
+          (typeof j.created_at === 'string' && j.created_at.startsWith(thisMonthPrefix))
+        );
+        const journalCount = active.length;
+        // 行数: debit_entries + credit_entries の最大値を合算
+        let lineCount = 0;
+        for (const j of active) {
+          const debitLen = Array.isArray(j.debit_entries) ? j.debit_entries.length : 0;
+          const creditLen = Array.isArray(j.credit_entries) ? j.credit_entries.length : 0;
+          lineCount += Math.max(debitLen, creditLen);
+        }
+
+        totalJournals += journalCount;
+        totalLines += lineCount;
+
+        byClient.push({
+          clientId: client.clientId,
+          companyName: client.companyName,
+          journalCount,
+          lineCount,
+        });
+
+        // スタッフ別集計
+        const sid = client.staffId ?? 'unassigned';
+        const existing = byStaff.get(sid) ?? { journalCount: 0, lineCount: 0 };
+        existing.journalCount += journalCount;
+        existing.lineCount += lineCount;
+        byStaff.set(sid, existing);
+      }
+
+      return c.json({
+        total: { journalCount: totalJournals, lineCount: totalLines },
+        byClient,
+        byStaff: Array.from(byStaff.entries()).map(([staffId, v]) => ({ staffId, ...v })),
+      });
     })
 
 export default route
