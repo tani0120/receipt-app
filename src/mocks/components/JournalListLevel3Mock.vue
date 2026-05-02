@@ -8,20 +8,20 @@
       <!-- フィルタモード（通常時） -->
       <template v-if="!isSelectionMode">
         <div class="flex items-center gap-3 text-[11px]">
-          <select
-            class="border border-blue-400 text-blue-600 text-[12px] px-2 py-0.5 rounded cursor-pointer"
-          >
-            <option>表示条件</option>
-            <option>未読</option>
-            <option>メモ</option>
-            <option>エラー ⚠</option>
-            <option>重複</option>
-            <option>要確認</option>
-            <option>電子帳簿保存法</option>
-            <option>学習未適用</option>
-            <option>学習適用済</option>
-            <option>学習なし</option>
-          </select>
+          <div class="flex items-center gap-1">
+            <i class="fa-solid fa-magnifying-glass text-[10px] text-gray-400"></i>
+            <input
+              type="text"
+              v-model="globalSearchQuery"
+              placeholder="全列検索（摘要・科目・金額…）"
+              class="border border-blue-400 text-blue-700 text-[11px] px-2 py-0.5 rounded w-48 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <button
+              v-if="globalSearchQuery"
+              @click="globalSearchQuery = ''"
+              class="text-gray-400 hover:text-gray-600 text-[10px] -ml-5"
+            >✕</button>
+          </div>
           <label class="flex items-center gap-1 cursor-pointer"
             ><input
               type="checkbox"
@@ -35,6 +35,13 @@
               v-model="showExported"
               class="w-2.5 h-2.5"
             />過去出力済を表示</label
+          >
+          <label class="flex items-center gap-1 cursor-pointer"
+            ><input
+              type="checkbox"
+              v-model="showPastCsv"
+              class="w-2.5 h-2.5"
+            />過去仕訳CSV</label
           >
           <label class="flex items-center gap-1 cursor-pointer"
             ><input
@@ -167,14 +174,6 @@
           <i class="fa-solid fa-arrows-left-right text-[10px]"></i>列幅リセット
         </button>
 
-        <span class="text-gray-300">|</span>
-        <span class="text-gray-600">行の背景色</span>
-        <span class="bg-yellow-100 border border-gray-400 px-2 py-0.5 text-gray-800 font-bold"
-          >未読</span
-        >
-        <span class="bg-white border border-gray-400 px-2 py-0.5 text-gray-800">既読</span>
-        <span class="bg-gray-200 border border-gray-400 px-2 py-0.5 text-gray-800">出力済</span>
-        <span class="bg-gray-600 border border-gray-400 px-2 py-0.5 text-white">ゴミ箱</span>
       </div>
     </div>
     <!-- 初回選択ヘルプ（fadeOut） -->
@@ -1941,7 +1940,7 @@
             システム上の過去仕訳
           </button>
           <button
-            @click="pastJournalTab = 'accounting'"
+            @click="pastJournalTab = 'accounting'; fetchConfirmedJournals()"
             :class="[
               'px-4 py-2 text-xs font-medium',
               pastJournalTab === 'accounting'
@@ -1950,12 +1949,22 @@
             ]"
           >
             会計ソフトから取り込んだ過去仕訳
+            <span v-if="confirmedJournals.length > 0" class="ml-1 px-1.5 py-0.5 text-[9px] bg-amber-100 text-amber-700 rounded-full font-bold">{{ confirmedJournals.length }}</span>
           </button>
         </div>
 
         <!-- 検索結果テーブル -->
         <div class="flex-1 overflow-auto p-4">
-          <div class="text-xs text-gray-600 mb-2">
+          <!-- ローディング表示（会計タブ） -->
+          <div v-if="pastJournalTab === 'accounting' && isConfirmedLoading" class="text-center py-8 text-gray-400 text-sm">
+            <i class="fa-solid fa-spinner fa-spin mr-2"></i>過去仕訳データを読み込み中...
+          </div>
+          <!-- 件数サマリー（会計タブ） -->
+          <div v-if="pastJournalTab === 'accounting' && !isConfirmedLoading && confirmedJournals.length > 0" class="text-xs text-gray-500 mb-2">
+            取込済み過去仕訳: <span class="font-bold text-gray-700">{{ confirmedJournals.length }}件</span>
+            <span v-if="filteredPastJournals.length !== confirmedJournals.length" class="ml-2">→ 絞込結果: <span class="font-bold text-blue-600">{{ filteredPastJournals.length }}件</span></span>
+          </div>
+          <div class="text-xs text-gray-600 mb-2" v-if="pastJournalTab !== 'accounting'">
             行の背景色:
             <button
               @click="toggleOutputFilter('unexported')"
@@ -2548,6 +2557,7 @@ import type {
 } from "../types/journal_phase5_mock.type";
 import { createEmptyStaffNotes, STAFF_NOTE_KEYS } from "../types/staff_notes";
 import type { StaffNoteKey } from "../types/staff_notes";
+import type { ConfirmedJournal } from "../types/confirmed_journal.type";
 
 import { toMfCsvDate } from "@/shared/utils/mf-csv-date";
 import { validateByVoucherType, getVoucherTypeConflictAccounts } from "@/mocks/utils/journalWarningSync";
@@ -4060,6 +4070,8 @@ const showUnexported = ref<boolean>(true); // 未出力を表示（初期: ON）
 const showExported = ref<boolean>(false); // 出力済を表示（初期: OFF）
 const showExcluded = ref<boolean>(false); // 出力対象外を表示（初期: OFF）
 const showTrashed = ref<boolean>(false); // ゴミ箱を表示（初期: OFF）
+const showPastCsv = ref<boolean>(false); // 過去仕訳CSVを表示（初期: OFF）
+const globalSearchQuery = ref<string>(''); // 全列横断検索クエリ
 
 // 証票種別フィルタ（空文字 = 全て）
 const voucherFilter = ref<string>("");
@@ -5306,8 +5318,33 @@ const outputFilter = ref<"all" | "unexported" | "exported">("all");
 const pastJournalPage = ref<number>(1);
 const PAST_JOURNAL_PAGE_SIZE = 50;
 
+// ── 会計ソフトから取り込んだ過去仕訳（confirmed_journals API） ──
+const confirmedJournals = ref<ConfirmedJournal[]>([]);
+const isConfirmedLoading = ref(false);
+const confirmedLoaded = ref(false);
+
+async function fetchConfirmedJournals() {
+  if (confirmedLoaded.value) return;
+  isConfirmedLoading.value = true;
+  try {
+    const res = await fetch(`/api/confirmed-journals/${encodeURIComponent(journalClientId.value)}`);
+    if (res.ok) {
+      const data = await res.json() as { journals: ConfirmedJournal[]; count: number };
+      confirmedJournals.value = data.journals;
+      console.log(`[過去仕訳] confirmed_journals ${data.count}件取得 (${journalClientId.value})`);
+    }
+    confirmedLoaded.value = true;
+  } catch (err) {
+    console.warn('[過去仕訳] 取得失敗:', err);
+  } finally {
+    isConfirmedLoading.value = false;
+  }
+}
+
 function showPastJournalSearchModal() {
   showPastJournalModal.value = true;
+  // 会計タブのデータを事前取得
+  fetchConfirmedJournals();
 }
 
 function hidePastJournalSearchModal() {
@@ -5392,7 +5429,67 @@ const filteredPastJournals = computed(() => {
 
   // タブによる表示制御
   if (pastJournalTab.value === "accounting") {
-    return []; // 会計ソフトデータは未実装
+    // 会計ソフトから取り込んだ過去仕訳（confirmed_journals API）
+    let cjResults = [...confirmedJournals.value];
+
+    // 摘要フィルタ
+    if (pastJournalSearch.value.vendor) {
+      cjResults = cjResults.filter((j) => j.description.includes(pastJournalSearch.value.vendor));
+    }
+    // 日付範囲フィルタ
+    if (pastJournalSearch.value.dateFrom) {
+      cjResults = cjResults.filter((j) => j.voucher_date >= pastJournalSearch.value.dateFrom);
+    }
+    if (pastJournalSearch.value.dateTo) {
+      cjResults = cjResults.filter((j) => j.voucher_date <= pastJournalSearch.value.dateTo);
+    }
+    // 金額フィルタ
+    if (pastJournalSearch.value.amount !== null && pastJournalSearch.value.amountCondition) {
+      cjResults = cjResults.filter((j) => {
+        const debitTotal = j.debit_entries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+        const creditTotal = j.credit_entries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+        const amount = Math.max(debitTotal, creditTotal);
+        switch (pastJournalSearch.value.amountCondition) {
+          case "equal": return amount === pastJournalSearch.value.amount;
+          case "greater": return amount >= (pastJournalSearch.value.amount || 0);
+          case "less": return amount <= (pastJournalSearch.value.amount || 0);
+          default: return true;
+        }
+      });
+    }
+    // 借方勘定科目フィルタ
+    if (pastJournalSearch.value.debitAccount) {
+      cjResults = cjResults.filter((j) =>
+        j.debit_entries.some((e) => e.account === pastJournalSearch.value.debitAccount)
+      );
+    }
+    // 貸方勘定科目フィルタ
+    if (pastJournalSearch.value.creditAccount) {
+      cjResults = cjResults.filter((j) =>
+        j.credit_entries.some((e) => e.account === pastJournalSearch.value.creditAccount)
+      );
+    }
+    // JournalPhase5Mock互換オブジェクトに変換して返す
+    return cjResults.map((cj) => ({
+      id: cj.id,
+      voucher_date: cj.voucher_date,
+      description: cj.description,
+      debit_entries: cj.debit_entries.map((e) => ({
+        account: e.account,
+        sub_account: e.sub_account,
+        tax_category_id: e.tax_category_id,
+        amount: e.amount,
+      })),
+      credit_entries: cj.credit_entries.map((e) => ({
+        account: e.account,
+        sub_account: e.sub_account,
+        tax_category_id: e.tax_category_id,
+        amount: e.amount,
+      })),
+      status: 'exported' as const,
+      labels: [] as string[],
+      source: cj.source,
+    }));
   }
 
   // 出力ステータスフィルタ
@@ -5518,7 +5615,7 @@ function onMouseUp() {
 }
 
 const journals = computed(() => {
-  const result = [...localJournals.value].sort((a, b) => {
+  let result = [...localJournals.value].sort((a, b) => {
     return (
       new Date(a.voucher_date ?? "9999-12-31").getTime() -
       new Date(b.voucher_date ?? "9999-12-31").getTime()
@@ -5703,9 +5800,24 @@ const journals = computed(() => {
       return 0;
     });
   }
+  // 全列横断検索フィルタ
+  if (globalSearchQuery.value.trim()) {
+    const q = globalSearchQuery.value.trim().toLowerCase();
+    result = result.filter((j) => {
+      const fields = [
+        j.voucher_date ?? '',
+        j.description ?? '',
+        ...(j.debit_entries ?? []).flatMap(e => [e.account ?? '', e.sub_account ?? '', e.tax_category_id ?? '', String(e.amount ?? '')]),
+        ...(j.credit_entries ?? []).flatMap(e => [e.account ?? '', e.sub_account ?? '', e.tax_category_id ?? '', String(e.amount ?? '')]),
+        j.memo ?? '',
+        j.voucher_type ?? '',
+      ];
+      return fields.some(f => f.toLowerCase().includes(q));
+    });
+  }
 
   // チェックボックスフィルタリング
-  return result.filter((journal) => {
+  const filtered = result.filter((journal) => {
     // ゴミ箱フィルタ（AND条件: OFFならtrashed非表示）
     if (journal.deleted_at !== null && !showTrashed.value) return false;
 
@@ -5728,6 +5840,80 @@ const journals = computed(() => {
 
     return false;
   });
+
+  // 過去仕訳CSVチェック時: confirmed_journalsをJournalPhase5Mock形式で追加
+  if (showPastCsv.value && confirmedJournals.value.length > 0) {
+    const pastRows: JournalPhase5Mock[] = confirmedJournals.value.map((cj, idx) => ({
+      id: `past-csv-${idx}`,
+      client_id: journalClientId.value,
+      display_order: 90000 + idx,
+      voucher_date: cj.voucher_date || null,
+      date_on_document: true,
+      description: cj.description || '',
+      voucher_type: null,
+      source_type: null,
+      direction: cj.direction || null,
+      vendor_vector: null,
+      vendor_id: cj.vendor_id || null,
+      vendor_name: cj.vendor_name || null,
+      document_id: null,
+      line_id: null,
+      debit_entries: (cj.debit_entries || []).map(e => ({
+        id: e.id || crypto.randomUUID(),
+        account: e.account || null,
+        account_on_document: false,
+        sub_account: e.sub_account || null,
+        department: e.department || null,
+        amount: e.amount ?? null,
+        amount_on_document: false,
+        tax_category_id: e.tax_category_id || null,
+        vendor_name: e.vendor_name || null,
+      })),
+      credit_entries: (cj.credit_entries || []).map(e => ({
+        id: e.id || crypto.randomUUID(),
+        account: e.account || null,
+        account_on_document: false,
+        sub_account: e.sub_account || null,
+        department: e.department || null,
+        amount: e.amount ?? null,
+        amount_on_document: false,
+        tax_category_id: e.tax_category_id || null,
+        vendor_name: e.vendor_name || null,
+      })),
+      status: 'exported' as const,
+      is_read: true,
+      deleted_at: null,
+      labels: [] as JournalLabelMock[],
+      warning_dismissals: [],
+      warning_details: {},
+      export_batch_id: null,
+      is_credit_card_payment: false,
+      rule_id: null,
+      invoice_status: null,
+      invoice_number: null,
+      memo: '過去仕訳CSV',
+      memo_author: null,
+      memo_target: null,
+      memo_created_at: null,
+    }));
+    // pastRowsにも全列検索フィルタを適用
+    const q = globalSearchQuery.value.trim().toLowerCase();
+    const filteredPast = q
+      ? pastRows.filter((j) => {
+          const fields = [
+            j.voucher_date ?? '',
+            j.description ?? '',
+            ...(j.debit_entries ?? []).flatMap(e => [e.account ?? '', e.sub_account ?? '', e.tax_category_id ?? '', String(e.amount ?? '')]),
+            ...(j.credit_entries ?? []).flatMap(e => [e.account ?? '', e.sub_account ?? '', e.tax_category_id ?? '', String(e.amount ?? '')]),
+            j.memo ?? '',
+          ];
+          return fields.some(f => f.toLowerCase().includes(q));
+        })
+      : pastRows;
+    filtered.push(...filteredPast);
+  }
+
+  return filtered;
 });
 
 // ────── journals依存のcomputed（journals computedの後に配置必須） ──────
@@ -6087,6 +6273,8 @@ onMounted(() => {
   window.addEventListener("keydown", handleUndoRedoKeydown);
   sessionStartTime.value = Date.now();
   console.log(`[セッション] 仕訳画面開始: ${new Date().toISOString()} スタッフ: ${currentStaffId.value}`);
+  // ツールバーの過去仕訳CSV件数表示用に自動取得
+  fetchConfirmedJournals();
 });
 onUnmounted(() => {
   window.removeEventListener("keydown", handleUndoRedoKeydown);

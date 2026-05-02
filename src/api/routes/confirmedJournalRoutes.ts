@@ -23,9 +23,11 @@ import {
   findByMatchKey,
   importJournals,
   deleteByBatchId,
+  deleteByClientId,
   getByBatchId,
   getImportBatches,
   countByClientId,
+  loadConfirmedJournals,
 } from "../services/confirmedJournalStore";
 
 const app = new Hono();
@@ -122,4 +124,22 @@ app.get("/batch/:batchId/journals", (c) => {
   return c.json({ journals, count: journals.length });
 });
 
+// ============================================================
+// DELETE /:clientId — 顧問先の全件削除
+// ============================================================
+app.delete("/:clientId", (c) => {
+  const client_id = c.req.param("clientId");
+  const removed = deleteByClientId(client_id);
+  return c.json({ ok: true, removed });
+});
+
+// ============================================================
+// POST /reload — インメモリキャッシュをJSONから再読み込み
+// ============================================================
+app.post("/reload", (c) => {
+  loadConfirmedJournals();
+  return c.json({ ok: true, message: 'JSONから再読み込み完了' });
+});
+
 export default app;
+

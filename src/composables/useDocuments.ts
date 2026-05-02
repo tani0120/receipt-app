@@ -14,7 +14,6 @@
  */
 import { ref, computed } from 'vue'
 import type { DocEntry, DocStatus } from '@/repositories/types'
-import { AI_FIELD_KEYS } from '@/repositories/types'
 
 // ============================================================
 // モジュールスコープref（ページ遷移しても保持される）
@@ -185,25 +184,24 @@ export function useDocuments() {
    * 確定送信後に呼び出す。仕訳変換完了後に実行すること。
    * 設計方針: previewExtract.service.ts ヘッダー参照
    */
+  /**
+   * previewExtractデータ（ai*フィールド）を完全削除
+   *
+   * サーバーAPIでフィールド削除後、refresh()でrefを再取得する。
+   * ローカルrefの直接書き換えは行わない（設計方針: composableにロジック禁止）。
+   */
   async function clearAiFields(clientId: string) {
-    // ローカルrefを即時クリア
-    const targets = allDocuments.value.filter(d => d.clientId === clientId)
-    for (const doc of targets) {
-      const record = doc as unknown as Record<string, unknown>
-      for (const key of AI_FIELD_KEYS) {
-        record[key] = null
-      }
-    }
-    console.log(`[useDocuments] previewExtractデータ削除（ローカル）: ${targets.length}件`)
-
-    // サーバーにも反映
     try {
       const res = await fetch(`${API_BASE}/clear-ai/${encodeURIComponent(clientId)}`, {
         method: 'POST',
       })
       if (!res.ok) {
         console.error(`[useDocuments] previewExtractデータ削除失敗: HTTP ${res.status}`)
+        return
       }
+      // サーバーで削除完了後、refを再取得して反映
+      await refresh(clientId)
+      console.log(`[useDocuments] previewExtractデータ削除+再取得完了: ${clientId}`)
     } catch (err) {
       console.error('[useDocuments] previewExtractデータ削除エラー:', err)
     }
