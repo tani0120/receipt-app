@@ -89,7 +89,7 @@
                 <th class="relative">メール
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('email', $event)"></div>
                 </th>
-                <th class="relative">共有用メール
+                <th class="relative">顧問先ログインメール
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('sharedEmail', $event)"></div>
                 </th>
                 <th class="relative">Drive取込
@@ -183,7 +183,7 @@
                 <td class="cm-ellipsis td-editable" @dblclick.stop="startInlineEdit(row, 'sharedEmail', $event)">
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'sharedEmail'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
-                  <span v-else class="cm-shared-email-none">未取得</span>
+                  <span v-else class="cm-shared-email-none">未取得（顧問先が登録）</span>
                 </td>
                 <td class="cm-drive-cell" @click.stop="row.sharedFolderId ? copyDriveUrl(row) : undefined">
                   <template v-if="!row.sharedFolderId">
@@ -317,7 +317,7 @@
                 <input type="text" v-model="panelForm.contactValue" class="cm-input" :placeholder="panelForm.contactType === 'email' ? 'example@mail.com' : 'Chatwork ID'">
               </div>
               <div class="cm-field">
-                <label class="cm-label">共有用メール <span class="cm-hint">※顧問先との共有メールアドレス</span></label>
+                <label class="cm-label">顧問先ログインメール <span class="cm-hint">※自動取得（顧問先がポータルログイン時に登録）</span></label>
                 <input type="email" v-model="panelSharedEmail" class="cm-input" placeholder="shared@example.com">
               </div>
               <div class="cm-field">
@@ -682,7 +682,7 @@ const commitInlineEdit = async (_row: Client) => {
       }
     }
   }
-  const clFieldLabels: Record<string, string> = { threeCode: '3コード', companyName: '会社名', companyNameKana: '会社名カナ', repName: '代表者名', repNameKana: '代表者名カナ', type: '種別', status: 'ステータス', industry: '業種', phoneNumber: '電話番号', email: 'メール', sharedEmail: '共有メール' };
+  const clFieldLabels: Record<string, string> = { threeCode: '3コード', companyName: '会社名', companyNameKana: '会社名カナ', repName: '代表者名', repNameKana: '代表者名カナ', type: '種別', status: 'ステータス', industry: '業種', phoneNumber: '電話番号', email: 'メール', sharedEmail: '顧問先ログインメール' };
   const clLabel = clFieldLabels[inlineEditField.value ?? ''] ?? inlineEditField.value;
   markDirty(`${clLabel}を変更`);
   markClean();
@@ -1190,7 +1190,7 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
   opacity: 0.5; cursor: not-allowed;
 }
 
-/* 共有用メール */
+/* 顧問先ログインメール */
 .cm-shared-email { font-size: 11px; color: #2563eb; }
-.cm-shared-email-none { font-size: 11px; color: #cbd5e1; font-style: italic; }
+.cm-shared-email-none { font-size: 11px; color: #94a3b8; font-style: italic; }
 </style>

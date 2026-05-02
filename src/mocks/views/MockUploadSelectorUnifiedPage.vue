@@ -137,7 +137,7 @@
                   </div>
                   <div class="auto-item">
                     <span class="auto-check">✅</span>
-                    <span>顧問先マスタ: 共有用メールを自動記録</span>
+                    <span>顧問先マスタ: 顧問先ログインメールを自動記録</span>
                   </div>
                 </div>
                 <div class="notify-box">
