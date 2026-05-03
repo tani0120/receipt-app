@@ -187,7 +187,7 @@
     <aaa_ClientModal
         :visible="isModalVisible"
         :mode="modalMode"
-        :initialData="selectedClient"
+        :initialData="selectedClient ?? undefined"
         @close="closeModal"
         @save="handleSave"
     />
@@ -200,6 +200,7 @@ import { useRouter } from 'vue-router';
 import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
 import aaa_ClientModal from './ClientModal.vue';
 import type { ClientUi } from '@/types/ui.type'; // Import UI type
+import type { ClientFormData } from '@/types/client-form.type';
 
 const router = useRouter();
 const { clients, fetchClients, createClient, updateClient } = aaa_useAccountingSystem();
@@ -219,8 +220,7 @@ const sortOrder = ref<'asc' | 'desc'>('asc');
 
 const isModalVisible = ref(false);
 const modalMode = ref<'new' | 'edit'>('new');
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const selectedClient = ref<any>(null); // Use any for modal compatibility or strict type
+const selectedClient = ref<ClientUi | null>(null);
 
 // --- Stats Logic ---
 const stats = computed(() => {
@@ -262,10 +262,8 @@ const sortedClients = computed(() => {
     // 3. Sorting
     if (sortKey.value) {
         list = [...list].sort((a, b) => { // Create copy to sort
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let valA: any = '';
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let valB: any = '';
+            let valA: string | number = '';
+            let valB: string | number = '';
 
             // Mapping sortKey to actual fields
             switch(sortKey.value) {
@@ -337,8 +335,7 @@ const navigateToDetail = (code: string) => {
     router.push({ name: 'ScreenA_Detail', params: { code } });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const handleSave = async (formData: any) => {
+const handleSave = async (formData: ClientFormData) => {
     // Helper to map consumption tax composite
     let consumptionTaxMode = 'general';
     let simplifiedTaxCategory: number | undefined = undefined;
@@ -358,7 +355,7 @@ const handleSave = async (formData: any) => {
         type: formData.type || 'corp', // Added
         fiscalMonth: Number(formData.fiscalMonth),
         status: (formData.isActive ? 'active' : 'inactive') as 'active' | 'inactive' | 'suspension',
-        accountingSoftware: formData.settings.software,
+        accountingSoftware: formData.settings.software as 'mf' | 'freee' | 'yayoi' | 'tkc' | 'other',
 
         contactInfo: formData.contact.value, // Simplified mapping
 

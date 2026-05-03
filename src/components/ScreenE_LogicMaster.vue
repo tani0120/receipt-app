@@ -393,6 +393,26 @@ import type { JobUi } from '@/types/ui.type';
 import type { JobStatus } from '@/types/job';
 import { MSG_DUPLICATE_DETAIL } from '@/shared/validationMessages';
 
+/** 仕訳フォーム行の型 */
+interface JournalFormRow {
+  acct: string;
+  sub: string;
+  tax: string;
+  amount: number;
+}
+
+/** 承認キューアイテムの型 */
+interface ApprovalQueueItem {
+  id: string;
+  decision: string;
+  date: string;
+  amount: string;
+  debit: string;
+  credit: string;
+  summary: string;
+  selected: boolean;
+}
+
 
 const route = useRoute();
 const router = useRouter();
@@ -406,22 +426,28 @@ const screen = computed({
 
 const currentIndex = ref(0);
 const selectedJob = ref<JobUi | null>(null); // JobUi型(変換済み)に統一
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const client = ref<any>(null); // raw client data
+const client = ref<ClientUi | null>(null); // ClientUi型に統一
 
 // Map 'pageMode' to currentClient.action
 const pageMode = computed(() => (route.query.mode as string) || 'details');
 
 const currentClient = computed(() => {
-    const base = client.value || {};
+    const base = client.value;
     let action = 'work';
     if (pageMode.value === 'remand') action = 'remand';
     if (pageMode.value === 'approved') action = 'approve';
 
     return {
-        ...base,
+        code: base?.clientCode?.slice(0, 3) ?? '???',
+        name: base?.companyName ?? '不明',
+        rep: base?.repName ?? '',
         action,
-        settings: base.settings || { software: 'MFクラウド', taxMethod: 'inclusive', calcMethod: '現金主義', taxType: '青色' }
+        settings: {
+            software: base?.accountingSoftware ?? 'MFクラウド',
+            taxMethod: (base?.taxMethod ?? 'inclusive') as 'inclusive' | 'exclusive',
+            calcMethod: '現金主義',
+            taxType: '青色',
+        },
     };
 });
 
@@ -452,10 +478,8 @@ const currentTransaction = computed(() => {
 const form = reactive({
     date: '',
     summary: '',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    debit: [] as any[], // { acct, sub, tax, amount }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    credit: [] as any[]
+    debit: [] as JournalFormRow[], // { acct, sub, tax, amount }
+    credit: [] as JournalFormRow[]
 });
 
 // Helper to load job into form
@@ -550,8 +574,7 @@ const goNext = nextTransaction; // alias
 const goBack = prevTransaction; // alias (partially)
 
 // Queue Logic
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const approvalQueue = ref<any[]>([]);
+const approvalQueue = ref<ApprovalQueueItem[]>([]);
 const remainingApprovalCount = computed(() => jobs.value.length - approvalQueue.value.length);
 const currentDecision = computed(() => {
     if(!selectedJob.value) return null;
@@ -567,8 +590,7 @@ const pendingRevertId = ref<string|null>(null);
 
 // Toast
 const toast = reactive({ visible: false, message: '', isUndo: false, type: 'normal' });
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let toastTimeout: any;
+let toastTimeout: ReturnType<typeof setTimeout> | undefined;
 const showToast = (msg: string, type: 'normal'|'undo'|'success'|'error' = 'normal') => {
     clearTimeout(toastTimeout);
     toast.message = msg;
@@ -691,7 +713,7 @@ onMounted(() => {
         loadJobToForm(firstJob);
     }
     const code = route.params.clientCode || firstJob?.clientCode;
-    if(code) client.value = getClientByCode(code as string);
+    if(code) client.value = getClientByCode(code as string) ?? null;
 });
 </script>
 

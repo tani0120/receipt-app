@@ -31,8 +31,7 @@ export class ValidationError extends Error {
  * @returns バリデーション済みのAIIntermediateOutput
  * @throws ValidationError - バリデーション失敗時
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function validateAIIntermediateOutput(data: any): AIIntermediateOutput {
+export function validateAIIntermediateOutput(data: Record<string, unknown>): AIIntermediateOutput {
     // 必須項目チェック
     if (!data.category) {
         throw new ValidationError('category is required');
@@ -152,8 +151,7 @@ export function validateAIIntermediateOutput(data: any): AIIntermediateOutput {
  * @returns パースされたJSON
  * @throws Error - JSON抽出失敗時
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function extractJSONFromResponse(responseText: string): any {
+export function extractJSONFromResponse(responseText: string): unknown {
     // マークダウンコードブロック除去
     const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) ||
         responseText.match(/```\n([\s\S]*?)\n```/);

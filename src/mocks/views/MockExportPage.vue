@@ -515,7 +515,7 @@ const allRows = computed<ExportRow[]>(() => {
     .forEach((j) => {
       const dismissals = j.warning_dismissals ?? [];
       const isWarning = j.labels.some(
-        (l) => (EXCLUDE_LABELS as readonly string[]).includes(l) && !dismissals.includes(l),
+        (l) => EXCLUDE_LABELS.includes(l) && !dismissals.includes(l),
       );
       const isExcluded = j.labels.includes("EXPORT_EXCLUDE");
       const isExported = j.status === "exported";

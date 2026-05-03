@@ -349,6 +349,14 @@ import {
 import type { UploadEntry } from '@/mocks/composables/useUpload'
 import { MSG_DUPLICATE_SHORT } from '@/shared/validationMessages'
 
+/** File System Access API（Chrome 86+）の型宣言 */
+interface FilePickerHandle {
+  getFile(): Promise<File>;
+}
+interface WindowWithFilePicker extends Window {
+  showOpenFilePicker(options?: { multiple?: boolean }): Promise<FilePickerHandle[]>;
+}
+
 const {
   entries, sortedEntries, showComplete, confirmedCount,
   selectedId, selectedUrl, selectedEntry, selectFile,
@@ -428,7 +436,7 @@ async function pickFiles() {
   if (supportsFilePicker) {
     // Android Chrome 132+: File System Access API（Blink内部バッファ回避の可能性）
     try {
-      const handles = await (window as any).showOpenFilePicker({
+      const handles = await (window as unknown as WindowWithFilePicker).showOpenFilePicker({
         multiple: true,
       })
       const files: File[] = []

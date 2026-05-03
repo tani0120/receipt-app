@@ -29,8 +29,18 @@ export function aaa_useDataConversion() {
         fetchLogs();
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const addLog = (log: any) => {
+    interface AddLogInput {
+        id?: string;
+        timestamp: string;
+        clientName: string;
+        sourceSoftware: string;
+        targetSoftware: string;
+        fileName: string;
+        downloadUrl: string;
+        isDownloaded: boolean;
+    }
+
+    const addLog = (log: AddLogInput) => {
         // Local simulation for immediate feedback
         const uiLog: ConversionLogUi = {
             id: (log.id || 'new') as ConversionLogId,
@@ -53,12 +63,11 @@ export function aaa_useDataConversion() {
     const markAsDownloaded = (id: string) => {
         const log = logs.value.find(l => l.id === id);
         if (log) {
-            // We need to bypass Readonly constraints for local UI state updates if Types enforce it
-            // Ideally UI types shouldn't be readonly if we edit them locally, but let's cast
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (log as any).isDownloaded = true;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (log as any).rowStyle = 'bg-gray-50 opacity-70';
+            // readonly制約をローカルUI更新のために解除（Mutable型ヘルパー）
+            type Mutable<T> = { -readonly [P in keyof T]: T[P] };
+            const mutableLog = log as Mutable<ConversionLogUi>;
+            mutableLog.isDownloaded = true;
+            mutableLog.rowStyle = 'bg-gray-50 opacity-70';
         }
     };
 

@@ -66,8 +66,7 @@ export function createMapper<
         const validatedInput = sourceSchema.parse(data);
 
         // 2. マッピング実行
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const result: any = {};
+        const result: Record<string, unknown> = {};
         for (const [sourceKey, targetKey] of Object.entries(mapping)) {
             if (targetKey && sourceKey in validatedInput) {
                 result[targetKey] = validatedInput[sourceKey as keyof typeof validatedInput];
@@ -109,8 +108,7 @@ export type MappingWithTransform<
     keyof S,
     {
         target: keyof T;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        transform?: (value: any) => any;
+        transform?: (value: unknown) => unknown;
     }
 >>;
 
@@ -127,8 +125,7 @@ export function createMapperWithTransform<
         const validatedInput = sourceSchema.parse(data);
 
         // 2. マッピングと変換を実行
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const result: any = {};
+        const result: Record<string, unknown> = {};
         for (const [sourceKey, config] of Object.entries(mapping)) {
             if (config && sourceKey in validatedInput) {
                 const value = validatedInput[sourceKey as keyof typeof validatedInput];

@@ -715,7 +715,7 @@
                     ]"
                   >
                     <span
-                      v-if="journal.labels.some((l: string) => warningLabelMap[l])"
+                      v-if="journal.labels.some((l) => warningLabelMap[l])"
                       class="relative inline-flex items-center"
                     >
                       <i
@@ -725,9 +725,9 @@
                         @click.stop="openWarningConfirmModal(journal)"
                       ></i>
                       <span
-                        v-if="journal.labels.filter((l: string) => warningLabelMap[l]).length >= 2"
+                        v-if="journal.labels.filter((l) => warningLabelMap[l]).length >= 2"
                         class="absolute -top-1.5 -right-2 bg-red-500 text-white text-[7px] font-bold rounded-full w-3 h-3 flex items-center justify-center"
-                        >{{ journal.labels.filter((l: string) => warningLabelMap[l]).length }}</span
+                        >{{ journal.labels.filter((l) => warningLabelMap[l]).length }}</span
                       >
                     </span>
                   </div>
@@ -2628,8 +2628,8 @@ const filteredAccounts = computed(() => {
 });
 
 /** ドットパスで生値を取得（税区分名称変換なし） */
-function getRawValue(obj: any, path: string): unknown {
-  return path.split(".").reduce((o: any, key: string) => o?.[key], obj);
+function getRawValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split(".").reduce((o: unknown, key: string) => (o as Record<string, unknown>)?.[key], obj as unknown);
 }
 
 // ────── 区分ドロップダウン（D7a: category-first選択の起点） ──────
@@ -5506,8 +5506,8 @@ function hasPastJournal(journal: JournalPhase5Mock): boolean {
   return localJournals.value.findIndex((j) => j.id === journal.id) < 25;
 }
 
-function getValue(obj: any, path: string): unknown {
-  const raw = path.split(".").reduce((o: any, key: string) => o?.[key], obj);
+function getValue(obj: Record<string, unknown>, path: string): unknown {
+  const raw = path.split(".").reduce((o: unknown, key: string) => (o as Record<string, unknown>)?.[key], obj as unknown);
   // 概念ID → MF正式名称に変換（tax_category_idキーの場合）
   if (path.endsWith("tax_category_id") && typeof raw === "string") {
     return resolveTaxCategoryName(raw);

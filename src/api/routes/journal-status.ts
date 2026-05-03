@@ -64,24 +64,24 @@ const JournalStatusUiSchema = z.object({
 
 // --- 2. Helper Logic (Ported from Mapper & Business Logic) ---
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mapStep = (rawIs: any) => {
-    if (!rawIs) return { state: 'none', label: '', count: 0 };
+const mapStep = (rawIs: unknown) => {
+    const raw = rawIs as Record<string, unknown> | null | undefined;
+    if (!raw) return { state: 'none' as const, label: '', count: 0 };
     return {
-        state: ['pending', 'processing', 'done', 'error', 'ready', 'none'].includes(rawIs.state) ? rawIs.state : 'none',
-        label: String(rawIs.label || ''),
-        count: Number(rawIs.count || 0)
+        state: (['pending', 'processing', 'done', 'error', 'ready', 'none'] as const).find(s => s === raw.state) ?? 'none' as const,
+        label: String(raw.label || ''),
+        count: Number(raw.count || 0)
     };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mapAction = (rawAc: any) => {
-    if (!rawAc) return { type: 'none', label: '', isEnabled: false };
-    const validTypes = ['rescue', 'work', 'approve', 'remand', 'export', 'archive', 'complete_all', 'none'];
+const mapAction = (rawAc: unknown) => {
+    const raw = rawAc as Record<string, unknown> | null | undefined;
+    if (!raw) return { type: 'none' as const, label: '', isEnabled: false };
+    const validTypes = ['rescue', 'work', 'approve', 'remand', 'export', 'archive', 'complete_all', 'none'] as const;
     return {
-        type: validTypes.includes(rawAc.type) ? rawAc.type : 'none',
-        label: String(rawAc.label || ''),
-        isEnabled: !!rawAc.isEnabled
+        type: validTypes.find(t => t === raw.type) ?? 'none' as const,
+        label: String(raw.label || ''),
+        isEnabled: !!raw.isEnabled
     };
 };
 
@@ -105,6 +105,9 @@ const route = app.get('/', (c) => {
                 aiAnalysis: { state: 'done', label: '解析完了', count: 15 },
                 journalEntry: { state: 'processing', label: '仕訳中', count: 10 },
                 approval: { state: 'pending', label: '承認待', count: 0 },
+                remand: { state: 'none', label: '', count: 0 },
+                export: { state: 'none', label: '', count: 0 },
+                archive: { state: 'none', label: '', count: 0 },
             },
             primaryAction: { type: 'work', label: '仕訳作業', isEnabled: true },
             nextAction: { type: 'none', label: '', isEnabled: false }
@@ -121,6 +124,11 @@ const route = app.get('/', (c) => {
             steps: {
                 receipt: { state: 'done', label: '受領済', count: 50 },
                 aiAnalysis: { state: 'error', label: '解析エラー', count: 1 }, // Error State
+                journalEntry: { state: 'none', label: '', count: 0 },
+                approval: { state: 'none', label: '', count: 0 },
+                remand: { state: 'none', label: '', count: 0 },
+                export: { state: 'none', label: '', count: 0 },
+                archive: { state: 'none', label: '', count: 0 },
             },
             primaryAction: { type: 'rescue', label: 'エラー修正', isEnabled: true }, // Explicitly tells UI to open Rescue Modal
             nextAction: { type: 'none', label: '', isEnabled: false }
@@ -138,7 +146,9 @@ const route = app.get('/', (c) => {
                 aiAnalysis: { state: 'done', label: '完了', count: 5 },
                 journalEntry: { state: 'done', label: '完了', count: 5 },
                 approval: { state: 'done', label: '承認済', count: 5 },
-                export: { state: 'ready', label: '出力可', count: 0 }
+                remand: { state: 'none', label: '', count: 0 },
+                export: { state: 'ready', label: '出力可', count: 0 },
+                archive: { state: 'none', label: '', count: 0 },
             },
             primaryAction: { type: 'export', label: 'データ出力', isEnabled: true }, // Opens Drive Modal
             nextAction: { type: 'archive', label: 'アーカイブ', isEnabled: true }
@@ -146,8 +156,7 @@ const route = app.get('/', (c) => {
     ];
 
     // Transformation
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const processed = rawJobs.map((raw: any) => {
+    const processed = rawJobs.map((raw) => {
         return {
             id: raw.id,
             rowStyle: safeString(raw.rowStyle),

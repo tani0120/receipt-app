@@ -99,7 +99,7 @@ export class CsvValidator {
   /**
    * Phase 2: Freee形式の制約チェック
    */
-  static validateFreee(_entry: any): void {  // eslint-disable-line @typescript-eslint/no-explicit-any
+  static validateFreee(_entry: JournalEntry): void {
     // Phase 2で実装予定
     throw new Error('validateFreee() はPhase 2で実装予定');
   }
@@ -107,7 +107,7 @@ export class CsvValidator {
   /**
    * Phase 2: 弥生形式の制約チェック
    */
-  static validateYayoi(_entry: any): void {  // eslint-disable-line @typescript-eslint/no-explicit-any
+  static validateYayoi(_entry: JournalEntry): void {
     // Phase 2で実装予定
 
     // 参考: 弥生の制約

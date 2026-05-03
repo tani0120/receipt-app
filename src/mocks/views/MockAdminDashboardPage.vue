@@ -434,16 +434,23 @@ function sortIcon(table: string, key: string): string {
   return sortState.value.dir === 'asc' ? '↑' : '↓';
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getNestedVal(obj: any, key: string): any {
+/** ソート対象オブジェクトの共通型（name/code直下 + performance配下） */
+interface SortableItem {
+  name?: string;
+  code?: string;
+  status?: string;
+  performance: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+function getNestedVal(obj: SortableItem, key: string): unknown {
   // スタッフ: name直下 or performance.xxx
-  if (key === 'name' || key === 'code') return obj[key];
+  if (key === 'name' || key === 'code' || key === 'status') return obj[key];
   if (obj.performance && key in obj.performance) return obj.performance[key];
   return obj[key];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function sortList<T>(list: T[], table: string): T[] {
+function sortList<T extends SortableItem>(list: T[], table: string): T[] {
   if (sortState.value.table !== table || !sortState.value.dir) return list;
   const key = sortState.value.key;
   const dir = sortState.value.dir === 'asc' ? 1 : -1;
@@ -451,7 +458,7 @@ function sortList<T>(list: T[], table: string): T[] {
     const va = getNestedVal(a, key);
     const vb = getNestedVal(b, key);
     if (typeof va === 'string' && typeof vb === 'string') return va.localeCompare(vb) * dir;
-    return ((va ?? 0) - (vb ?? 0)) * dir;
+    return (((va as number) ?? 0) - ((vb as number) ?? 0)) * dir;
   });
 }
 

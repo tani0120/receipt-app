@@ -130,9 +130,8 @@ export function aaa_useClientList() {
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const debugInjectClients = (badData: any[]) => {
-        clients.value = badData;
+    const debugInjectClients = (badData: unknown[]) => {
+        clients.value = badData as ClientUi[];
     };
 
     return {

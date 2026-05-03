@@ -23,7 +23,7 @@ export function usePdfRenderer() {
   const isRendering = ref(false)
 
   // 内部状態
-  let pdfDoc: any = null
+  let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null
   let currentUrl = ''
 
   /** PDFを読み込んで指定ページをCanvasに描画 */
@@ -60,6 +60,7 @@ export function usePdfRenderer() {
       canvas.height = viewport.height
 
       await page.render({
+        canvas,
         canvasContext: ctx,
         viewport,
       }).promise

@@ -1,6 +1,5 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 
-import ScreenB_Restore_Mock from '@/views/debug/ScreenB_Restore_Mock.vue';
 import { mvpRoutes } from './routes/mvp';
 import { useShareStatus } from '@/composables/useShareStatus';
 
@@ -24,11 +23,11 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: '/legacy',
-    redirect: '/old/journals/demo'
+    redirect: '/'
   },
   // --- 旧パス互換リダイレクト → /old/ 配下に統一 ---
   // Phase B で旧レイアウト廃止後に一括削除する
-  { path: '/journal-status', redirect: '/old/journals/demo' },
+  { path: '/journal-status', redirect: '/' },
   { path: '/collection-status', redirect: '/old/collection/demo' },
   { path: '/collection-status/:code', redirect: '/old/collection/demo' },
   // 旧ai-rulesは廃止。学習ページ(/learning/:clientId)に移行
@@ -37,12 +36,7 @@ export const routes: RouteRecordRaw[] = [
   { path: '/admin-settings', redirect: '/old/admin' },
   { path: '/settings', redirect: '/client-settings/ABC-00001' },
   { path: '/settings/accounts', redirect: '/client-settings/accounts/ABC-00001' },
-  { path: '/journal-list', redirect: '/old/journals/demo' },
-  {
-    path: '/old/screen-b-mock',
-    name: 'ScreenB_Restore_Mock',
-    component: ScreenB_Restore_Mock
-  },
+  { path: '/journal-list', redirect: '/' },
   // 旧Screen Aは廃止。新構造: /master/clients（一覧）および /settings/:clientId（個別）に統合。
   {
     path: '/clients',
@@ -64,28 +58,9 @@ export const routes: RouteRecordRaw[] = [
   { path: '/settings/:clientId', redirect: (to) => `/client-settings/${to.params.clientId}` },
   { path: '/client/settings/:clientId', redirect: (to) => `/client-settings/${to.params.clientId}` },
   {
-    path: '/old/journals/:clientId',
-    name: 'ClientJournals',
-    component: () => import('../views/ScreenB_JournalStatus.vue'),
-    props: true
-  },
-  {
-    path: '/old/jobs/:clientId/:jobId',
-    name: 'ClientJob',
-    component: () => import('../views/ScreenB_JournalStatus.vue'),
-    props: true
-  },
-  {
     path: '/old/collection/:clientId',
     name: 'ClientCollection',
     component: () => import('../components/ScreenC_CollectionStatus.vue'),
-    props: true
-  },
-  // 旧ScreenD_AIRulesは廃止・削除済み。学習ページ(/learning/:clientId)に移行
-  {
-    path: '/old/journal-entry/:jobId',
-    name: 'ScreenE',
-    component: () => import('../components/ScreenE_JournalEntry.vue'),
     props: true
   },
   // --- 新型仕訳エントリー画面（ScreenE_Workbench。?mode=work対応） ---

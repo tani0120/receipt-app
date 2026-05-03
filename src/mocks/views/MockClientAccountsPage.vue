@@ -179,7 +179,7 @@
                   <template v-if="editingRow === row.id && editingField === 'subAccount'">
                     <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" autofocus>
                   </template>
-                  <template v-else>{{ (row as any).subAccount ?? '' }}</template>
+                  <template v-else>{{ row.subAccount ?? '' }}</template>
                 </td>
                 <!-- 科目分類 -->
                 <td @dblclick="row.isCustom && startEdit(row, 'category')" :class="{ 'td-editable': row.isCustom }">
@@ -316,7 +316,7 @@ if (clientId.value) {
       if (saved.subAccounts) {
         accountRows.forEach(r => {
           if (saved.subAccounts[r.id]) {
-            (r as Record<string, unknown>).subAccount = saved.subAccounts[r.id];
+            r.subAccount = saved.subAccounts[r.id];
           }
         });
       }
@@ -518,8 +518,8 @@ function saveChanges() {
   // subAccount情報を全行から収集
   const subAccounts: Record<string, string> = {};
   accountRows.forEach(r => {
-    const sub = (r as Record<string, unknown>).subAccount;
-    if (sub) subAccounts[r.id] = sub as string;
+    const sub = r.subAccount;
+    if (sub) subAccounts[r.id] = sub;
   });
   // settings経由で保存（overrides refも同時に更新される）
   settings.saveAccounts(accountRows, subAccounts);
@@ -547,7 +547,7 @@ function startEdit(row: Account, field: AccountEditField) {
     case 'category': editValue.value = row.category; break;
     case 'taxDetermination': editValue.value = row.taxDetermination; break;
     case 'defaultTaxCategoryId': editValue.value = row.defaultTaxCategoryId ?? ''; break;
-    case 'subAccount': editValue.value = (row as Record<string, unknown>).subAccount as string ?? ''; break;
+    case 'subAccount': editValue.value = row.subAccount ?? ''; break;
     case 'aiDetermination': editValue.value = String(row.taxDetermination !== 'fixed'); break;
   }
 }
@@ -584,7 +584,7 @@ function commitEdit(row: Account) {
       row.defaultTaxCategoryId = editValue.value;
       break;
     case 'subAccount':
-      (row as Record<string, unknown>).subAccount = editValue.value;
+      row.subAccount = editValue.value;
       break;
     case 'aiDetermination':
       if (editValue.value === 'true') {

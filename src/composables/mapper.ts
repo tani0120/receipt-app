@@ -24,6 +24,7 @@ import type {
 } from '../types/ui.type';
 
 // 2026-04-18: Firebase Timestamp import 削除（formatTimestampはDate互換で動作）
+// 2026-05-03: Firestore後方互換コード（toDate/seconds分岐）もデッドコードとして削除
 
 /* ============================================================
  * 内部ユーティリティ (Helpers)
@@ -68,31 +69,6 @@ const formatTimestamp = (ts: unknown): string => {
   // Dateインスタンス
   if (ts instanceof Date) {
     return formatDate(ts);
-  }
-
-  // toDate()メソッドを持つオブジェクト（後方互換性）
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (typeof ts === 'object' && ts !== null && 'toDate' in ts && typeof (ts as any).toDate === 'function') {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const date = (ts as any).toDate();
-      return formatDate(date);
-    } catch {
-      return 'Inv. Date';
-    }
-  }
-
-  // Serialized Timestamp ({ seconds: number, nanoseconds: number })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (typeof ts === 'object' && ts !== null && 'seconds' in ts && typeof (ts as any).seconds === 'number') {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const seconds = (ts as any).seconds as number;
-      const date = new Date(seconds * 1000);
-      return formatDate(date);
-    } catch {
-      return 'Inv. Date';
-    }
   }
 
   // String Date
@@ -319,10 +295,16 @@ const calculateActions = (api: Partial<JobApi>): { primary: JobActionUi, next: J
  */
 
 const mapJournalLine = (api: unknown, client: Partial<ClientApi>): JournalLineUi => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const d = (api && typeof api === 'object') ? (api as Record<string, any>) : {};
+  const d = (api && typeof api === 'object') ? (api as Record<string, unknown>) : {};
 
-  // TaxDetails Safety（drTaxの直接参照は326行のmapTaxRate経由に統合済み）
+  // taxDetails.rate を安全に取得
+  const taxDetailsRate = (() => {
+    const td = d.taxDetails;
+    if (td && typeof td === 'object' && 'rate' in (td as Record<string, unknown>)) {
+      return (td as Record<string, unknown>).rate;
+    }
+    return undefined;
+  })();
 
   return {
     lineNo: safeNumber(d.lineNo),
@@ -331,8 +313,7 @@ const mapJournalLine = (api: unknown, client: Partial<ClientApi>): JournalLineUi
       account: safeText(d.drAccount),
       subAccount: safeText(d.drSubAccount),
       amount: safeNumber(d.drAmount),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      taxRate: mapTaxRate((d as any).taxDetails?.rate), // Safe enough via mapTaxRate
+      taxRate: mapTaxRate(taxDetailsRate),
       taxCode: translateTaxCode(d.drTaxClass, client, 'debit'),
     },
 
@@ -340,8 +321,7 @@ const mapJournalLine = (api: unknown, client: Partial<ClientApi>): JournalLineUi
       account: safeText(d.crAccount),
       subAccount: safeText(d.crSubAccount),
       amount: safeNumber(d.crAmount),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      taxRate: mapTaxRate((d as any).taxDetails?.rate),
+      taxRate: mapTaxRate(taxDetailsRate),
       taxCode: translateTaxCode(d.crTaxClass, client, 'credit'),
     },
 
@@ -417,11 +397,10 @@ export const mapJobApiToUi = (
     canEdit: ['ready_for_work', 'remanded', 'error_retry'].includes(jobStatus),
 
     aiProposal: (() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let parsed: any = null;
+      let parsed: Record<string, unknown> | null = null;
       if (api.aiAnalysisRaw) {
         try {
-          parsed = JSON.parse(api.aiAnalysisRaw);
+          parsed = JSON.parse(api.aiAnalysisRaw) as Record<string, unknown>;
         } catch { /* ignore */ }
       }
 
@@ -429,20 +408,18 @@ export const mapJobApiToUi = (
 
       return {
         hasProposal,
-        reason: hasProposal ? safeText(parsed.reason) : '',
+        reason: hasProposal ? safeText(parsed!.reason) : '',
         confidenceLabel: hasProposal ? (api.confidenceScore ? `信頼度: ${(api.confidenceScore * 100).toFixed(0)}%` : '高') : '',
-        summary: hasProposal ? safeText(parsed.summary) : '',
+        summary: hasProposal ? safeText(parsed!.summary) : '',
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        debits: (hasProposal && Array.isArray(parsed.debits)) ? parsed.debits.map((d: any) => ({
+        debits: (hasProposal && Array.isArray(parsed!.debits)) ? (parsed!.debits as Record<string, unknown>[]).map((d) => ({
           account: safeText(d.account),
           subAccount: safeText(d.subAccount),
           amount: safeNumber(d.amount),
           taxRate: mapTaxRate(d.taxRate)
         })) : [],
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        credits: (hasProposal && Array.isArray(parsed.credits)) ? parsed.credits.map((c: any) => ({
+        credits: (hasProposal && Array.isArray(parsed!.credits)) ? (parsed!.credits as Record<string, unknown>[]).map((c) => ({
           account: safeText(c.account),
           subAccount: safeText(c.subAccount),
           amount: safeNumber(c.amount),
@@ -471,8 +448,7 @@ export const mapJobApiToUi = (
 };
 
 export const mapConversionLogUi = (input: unknown): ConversionLogUi => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const d = (input && typeof input === 'object') ? (input as any) : {};
+  const d = (input && typeof input === 'object') ? (input as Record<string, unknown>) : {} as Record<string, unknown>;
 
   // 1. Target Software Mapping (Pure Logic)
   let targetCode: ConversionSoftwareCode = 'Unknown';

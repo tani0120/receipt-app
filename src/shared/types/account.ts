@@ -46,5 +46,11 @@ export type Account = {
     isCustom?: boolean
     /** デフォルト順復元用: コピー/追加時の挿入位置直前の行ID */
     insertAfter?: string
+    /** 補助科目（顧問先別設定画面で動的に付与） */
+    subAccount?: string
+    /** 非表示フラグ（勘定科目設定で使用） */
+    hidden?: boolean
+    /** マスタカスタム科目フラグ */
+    isMasterCustom?: boolean
 }
 

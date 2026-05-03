@@ -157,6 +157,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
 import { mapClientDetailApiToUi } from '@/composables/ClientDetailMapper';
+import type { ClientFormData } from '@/types/client-form.type';
 import ScreenA_Detail_EditModal from './ScreenA_Detail_EditModal.vue';
 import ScreenA_Detail_ConfirmModal from './ScreenA_Detail_ConfirmModal.vue';
 import ScreenA_Detail_AIProposalEditModal from './ScreenA_Detail_AIProposalEditModal.vue';
@@ -198,10 +199,9 @@ const currentKnowledge = ref(`【固有ルール】
 const code = computed(() => route.params.code as string);
 const rawClient = computed(() => clients.value.find(c => c.clientCode === code.value));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const localClient = ref<any>(null);
+const localClient = ref<ClientFormData | null>(null);
 
-const client = computed(() => {
+const client = computed((): ClientDetailUi => {
     if (localClient.value) {
         const form = localClient.value;
         const base = mapClientDetailApiToUi(rawClient.value || {});
@@ -211,14 +211,13 @@ const client = computed(() => {
             clientCode: form.code,
             staffName: form.staffName,
             fiscalMonth: form.fiscalMonth,
-            accountingSoftware: form.settings.software,
+            accountingSoftware: form.settings.software as ClientDetailUi['accountingSoftware'],
         };
     }
     return mapClientDetailApiToUi(rawClient.value || {});
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const handleSave = async (formData: any) => {
+const handleSave = async (formData: ClientFormData) => {
     // Helper to map consumption tax composite
     let consumptionTaxMode = 'general';
     let simplifiedTaxCategory: number | undefined = undefined;

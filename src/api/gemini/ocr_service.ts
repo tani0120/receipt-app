@@ -50,8 +50,7 @@ export async function executeOCR(request: OCRRequest): Promise<AIIntermediateOut
 
   console.log(`✅ OCR完了`);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return rawJSON as any; // 一旦any型で返す
+  return rawJSON as AIIntermediateOutput; // extractJSONFromResponseがunknown型を返すためキャスト（Phase 6.2-Bでバリデーション追加予定）
 }
 
 /**

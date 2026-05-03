@@ -196,8 +196,7 @@ async function callGeminiAPIBrowser(
 /**
  * レスポンスからJSON抽出
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractJSONFromResponse(responseText: string): any {
+function extractJSONFromResponse(responseText: string): unknown {
     const jsonMatch = responseText.match(/```json\s*\n([\s\S]*?)\n```/);
 
     if (jsonMatch) {

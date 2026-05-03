@@ -10,7 +10,7 @@
  *   - 複合仕訳（N対N）はmax(debit, credit)行に展開
  */
 
-import type { JournalPhase5Mock } from '@/mocks/types/journal_phase5_mock.type';
+import type { JournalPhase5Mock, JournalLabelMock } from '@/mocks/types/journal_phase5_mock.type';
 import type { JournalEntryLine } from '@/domain/types/journal';
 import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
 
@@ -92,7 +92,7 @@ export const EXCLUDE_LABELS = [
   'NEED_CONSULT',
   // 出力制御
   'EXPORT_EXCLUDE',
-] as const;
+] as const satisfies readonly JournalLabelMock[];
 
 /**
  * CSV出力前バリデーション

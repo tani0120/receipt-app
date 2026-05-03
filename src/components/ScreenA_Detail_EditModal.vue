@@ -204,11 +204,11 @@
 
 <script setup lang="ts">
 import { reactive, watch, toRefs, computed } from 'vue';
+import type { ClientDetailUi } from '@/types/ui.type';
 
 const props = defineProps<{
   visible: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  initialData?: any;
+  initialData?: ClientDetailUi;
 }>();
 
 const emit = defineEmits(['close', 'save']);

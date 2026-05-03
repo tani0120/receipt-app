@@ -224,8 +224,17 @@ const refreshBatches = async () => {
   try {
     const response = await fetch(`/api/confirmed-journals/${clientId}/batches`)
     if (response.ok) {
-      const data = await response.json()
-      importedFiles.value = (data.batches || []).map((b: any) => ({
+      const data = await response.json() as {
+        batches: {
+          import_batch_id: string;
+          client_id?: string;
+          count: number;
+          imported_at: string;
+          min_voucher_date?: string;
+          max_voucher_date?: string;
+        }[];
+      }
+      importedFiles.value = (data.batches || []).map((b) => ({
         id: b.import_batch_id,
         clientId: b.client_id || clientId,
         rowCount: b.count,
