@@ -285,20 +285,14 @@
       </div>
     </div>
 
-    <!-- スタッフ登録モーダル -->
-    <ZStaffModal
-      :visible="isStaffModalOpen"
-      @close="isStaffModalOpen = false"
-      @save="handleStaffSave"
-      @delete="handleStaffDelete"
-    />
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import ZStaffModal from '@/views/ScreenZ/Z_StaffModal.vue';
+
 import { useAdminDashboard } from '@/composables/useAdminDashboard';
 
 const route = useRoute();
@@ -503,16 +497,7 @@ const clientStatusCounts = computed(() => {
   };
 });
 
-// スタッフモーダル
-const isStaffModalOpen = ref(false);
-const handleStaffSave = (staffData: Record<string, unknown> & { name: string; email: string }) => {
-  alert(`担当者登録: ${staffData.name} (${staffData.email})`);
-  isStaffModalOpen.value = false;
-};
-const handleStaffDelete = () => {
-  alert('担当者を削除しました');
-  isStaffModalOpen.value = false;
-};
+
 </script>
 
 <style scoped>

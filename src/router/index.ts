@@ -33,7 +33,7 @@ export const routes: RouteRecordRaw[] = [
   // 旧ai-rulesは廃止。学習ページ(/learning/:clientId)に移行
   { path: '/data-conversion', redirect: '/old/data-conversion/demo' },
   { path: '/task-dashboard', redirect: '/old/tasks/demo' },
-  { path: '/admin-settings', redirect: '/old/admin' },
+
   { path: '/settings', redirect: '/client-settings/ABC-00001' },
   { path: '/settings/accounts', redirect: '/client-settings/accounts/ABC-00001' },
   { path: '/journal-list', redirect: '/' },
@@ -75,11 +75,7 @@ export const routes: RouteRecordRaw[] = [
 
   // 旧パス互換: /old/settings-accounts → /client/settings/accounts/ABC-00001
   { path: '/old/settings-accounts', redirect: '/client/settings/accounts/ABC-00001' },
-  {
-    path: '/old/admin',
-    name: 'AdminSettings',
-    component: () => import('../views/ScreenZ_AdminSettings.vue')
-  },
+
   {
     path: '/old/data-conversion/:clientId',
     name: 'ClientDataConversion',
@@ -127,13 +123,7 @@ export const routes: RouteRecordRaw[] = [
     name: 'MockJournalList',
     component: () => import('@/mocks/components/JournalListLevel3Mock.vue'),
   },
-  // --- 顧問先詳細（ScreenA_ClientDetail） ---
-  {
-    path: '/detail/:clientId',
-    name: 'ClientDetail',
-    component: () => import('@/components/ScreenA_ClientDetail.vue'),
-    props: true
-  },
+
   // --- 仕訳ワークベンチ（ScreenE_Workbench。新型JournalEntry対応） ---
   {
     path: '/workbench/:clientId',
@@ -141,13 +131,7 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/ScreenE_Workbench.vue'),
     props: true
   },
-  // --- ScreenE_LogicMaster（旧URL互換。将来廃止予定） ---
-  {
-    path: '/screen-e/:clientId',
-    name: 'ScreenELogicMaster',
-    component: () => import('@/components/ScreenE_LogicMaster.vue'),
-    props: true
-  },
+
 
   {
     path: '/output/:clientId',
@@ -197,7 +181,7 @@ export const routes: RouteRecordRaw[] = [
   { path: '/client/export-history/:clientId', redirect: (to) => `/export-history/${to.params.clientId}` },
   { path: '/client/export-detail/:clientId/:historyId', redirect: (to) => `/export-detail/${to.params.clientId}/${to.params.historyId}` },
   { path: '/client/drive-select/:clientId', redirect: (to) => `/drive-select/${to.params.clientId}` },
-  { path: '/client/detail/:clientId', redirect: (to) => `/detail/${to.params.clientId}` },
+
   { path: '/client/workbench/:clientId', redirect: (to) => `/workbench/${to.params.clientId}` },
   // --- 旧URL互換リダイレクト ---
   { path: '/mock/journal-list', redirect: '/journal-list/ABC-00001' },

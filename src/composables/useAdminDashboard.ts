@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import {
   AI_PROMPTS,
   GAS_LOGIC_DEFINITIONS
-} from '@/composables/useAccountingSystem';
+} from '@/composables/accountingConstants';
 
 // ========================================================================
 // 📊 Dashboard Interfaces (Strict Typed Contract)
