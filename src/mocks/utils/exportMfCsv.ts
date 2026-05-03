@@ -106,7 +106,7 @@ export function validateForCsvExport(
 
   for (const j of journals) {
     const reasons: string[] = [];
-    const labels = j.labels as string[];
+    const labels = j.labels;
 
     for (const label of EXCLUDE_LABELS) {
       if (labels.includes(label)) {

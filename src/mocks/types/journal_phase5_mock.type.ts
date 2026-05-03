@@ -43,8 +43,16 @@ export type JournalLabelMock =
   | 'TAX_UNKNOWN'             // 税区分不明
   | 'DESCRIPTION_UNKNOWN'     // 摘要不明
   | 'VOUCHER_TYPE_CONFLICT'   // 証票意味矛盾
-  | 'TAX_ACCOUNT_MISMATCH'   // 税区分科目矛盾
+  | 'TAX_ACCOUNT_MISMATCH'    // 税区分科目矛盾
   | 'DATE_OUT_OF_RANGE'       // 日付異常（未来日付・期外日付）
+  | 'SAME_ACCOUNT_BOTH_SIDES' // 借方貸方に同一科目
+
+  // --- AI判定補助ラベル ---
+  | 'AUTO_INVOICE_SMALL'      // 少額自動適格判定
+  | 'DIRECTOR_LOAN'           // 役員貸付金検出
+  | 'MISSING_FIELD'           // 必須項目欠落
+  | 'TAX_CALCULATION_ERROR'   // 税額計算エラー
+  | 'UNREADABLE_FAILED'       // 判読不能（AI推測なし）
 
   // --- 以下はPhase B/Cで除去予定（現在のモックで使用中） ---
 

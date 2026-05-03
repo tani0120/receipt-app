@@ -1,25 +1,22 @@
 /**
- * journalWarningSync.ts — 仕訳警告ラベル同期ロジック（共通utility）
+ * journalValidation.ts — 仕訳バリデーションサービス（API側）
  *
- * 一覧UIと出力UIの両方で使用する。
- * JournalListLevel3Mock.vue から抽出。UIモーダル表示は呼び出し側で制御。
+ * mocks/utils/journalWarningSync.ts のロジックをAPI側に移動。
+ * Phase 1 Step 2（2026-05-02）で作成。
+ *
+ * 依存:
+ *   - journalStore.ts（仕訳データ取得）
+ *   - shared/data/voucherTypeRules.ts（証票意味ルール。shared配置に移動済み 2026-05-02）
+ *
+ * Phase 2完了（2026-05-03）: accounts/taxCategories を accountMasterStore から取得する方式に変更済み。
+ *   POSTボディ経由の受け渡しは廃止。
  */
-import type { JournalPhase5Mock, JournalLabelMock } from '../types/journal_phase5_mock.type'
-import { VOUCHER_TYPE_RULES, getBaseAccountId } from '@/shared/data/voucherTypeRules'
 
 // ────────────────────────────────────────────
-// 型・定数
+// 型定義
 // ────────────────────────────────────────────
 
-export type MegaGroupType = 'sales' | 'expense' | 'bs_al' | 'bs_equity' | null
-
-const CONTRA_REVENUE_IDS = ['SALES_RETURNS', 'SALES_RETURNS_CORP']
-const CONTRA_EXPENSE_IDS = ['PURCHASE_RETURNS', 'PURCHASE_RETURNS_CORP']
-
-// ────────────────────────────────────────────
-// 勘定科目インターフェース（useAccountSettingsの型に依存しない最小定義）
-// ────────────────────────────────────────────
-
+/** バリデーション用の勘定科目最小インターフェース */
 export interface AccountForValidation {
   id: string
   accountGroup?: string | null
@@ -28,10 +25,61 @@ export interface AccountForValidation {
   defaultTaxCategoryId?: string | null
 }
 
+/** バリデーション用の税区分最小インターフェース */
 export interface TaxCategoryForValidation {
   id: string
   direction?: string | null
 }
+
+export type MegaGroupType = 'sales' | 'expense' | 'bs_al' | 'bs_equity' | null
+
+/** 仕訳エントリ行 */
+interface JournalEntryForValidation {
+  account: string | null
+  sub_account?: string | null
+  tax_category_id: string | null
+  amount: number | null
+  department?: string | null
+  vendor_name?: string | null
+}
+
+/** バリデーション対象の仕訳 */
+export interface JournalForValidation {
+  id: string
+  voucher_date: string | null
+  description: string | null
+  voucher_type: string | null
+  debit_entries: JournalEntryForValidation[]
+  credit_entries: JournalEntryForValidation[]
+  labels: string[]
+  warning_dismissals?: string[]
+  warning_details?: Record<string, string>
+  staff_notes?: Record<string, unknown>
+}
+
+/** バリデーション結果 */
+export interface ValidationResult {
+  journalId: string
+  labels: string[]
+  warning_details: Record<string, string>
+  addedLabels: string[]
+  removedLabels: string[]
+  /** 証票意味ルール矛盾の科目一覧（UIセルハイライト用。Set→配列変換済み） */
+  conflictAccounts: { debit: string[]; credit: string[] }
+}
+
+// ────────────────────────────────────────────
+// 定数
+// ────────────────────────────────────────────
+
+const CONTRA_REVENUE_IDS = ['SALES_RETURNS', 'SALES_RETURNS_CORP']
+const CONTRA_EXPENSE_IDS = ['PURCHASE_RETURNS', 'PURCHASE_RETURNS_CORP']
+
+// ────────────────────────────────────────────
+// 証票意味ルール（shared/data/ から一元参照）
+// ────────────────────────────────────────────
+import { VOUCHER_TYPE_RULES, getBaseAccountId } from '../../shared/data/voucherTypeRules'
+import type { VoucherTypeSideRule } from '../../shared/data/voucherTypeRules'
 
 // ────────────────────────────────────────────
 // 5分類判定
@@ -59,7 +107,7 @@ function isContraAccount(accountName: string | null, accounts: AccountForValidat
 }
 
 // ────────────────────────────────────────────
-// バリデーション
+// 貸借組合せチェック
 // ────────────────────────────────────────────
 
 export function validateDebitCreditCombination(
@@ -103,33 +151,30 @@ export function validateDebitCreditCombination(
   return null
 }
 
-/**
- * 証票意味ルールに基づく科目チェック（ホワイトリスト方式）
- * VOUCHER_TYPE_RULES テーブルを参照し、借方・貸方の各科目が許容範囲内かを検証する。
- */
+// ────────────────────────────────────────────
+// 証票意味ルールチェック
+// ────────────────────────────────────────────
+
 export function validateByVoucherType(
   voucherType: string,
-  journal: JournalPhase5Mock,
+  journal: JournalForValidation,
   accounts: AccountForValidation[]
 ): string | null {
   const rule = VOUCHER_TYPE_RULES[voucherType]
-  if (!rule) return null // ルール未定義の証票意味はスキップ
+  if (!rule) return null
 
   const accountMap = new Map(accounts.map(a => [a.id, a]))
 
-  function isAllowed(accountId: string, sideRule: { allowedGroups?: string[]; allowedIds?: string[]; allowedCategories?: string[] }): boolean {
-    // allowedIdsに含まれていればOK（コピー元IDも照合）
+  function isAllowed(accountId: string, sideRule: VoucherTypeSideRule): boolean {
     if (sideRule.allowedIds) {
       if (sideRule.allowedIds.includes(accountId)) return true
       const baseId = getBaseAccountId(accountId)
       if (baseId !== accountId && sideRule.allowedIds.includes(baseId)) return true
     }
-    // allowedGroupsでaccountGroupが一致すればOK
     if (sideRule.allowedGroups) {
       const acc = accountMap.get(accountId)
       if (acc?.accountGroup && sideRule.allowedGroups.includes(acc.accountGroup)) return true
     }
-    // allowedCategoriesでcategoryが一致すればOK
     if (sideRule.allowedCategories) {
       const acc = accountMap.get(accountId)
       if (acc?.category && sideRule.allowedCategories.includes(acc.category)) return true
@@ -137,37 +182,28 @@ export function validateByVoucherType(
     return false
   }
 
-  function resolveAccountName(accountId: string): string {
-    const acc = accountMap.get(accountId)
-    return acc ? acc.id : accountId
-  }
-
-  // 借方チェック
   for (const entry of journal.debit_entries) {
     if (!entry.account) continue
     if (!isAllowed(entry.account, rule.debit)) {
-      return `${voucherType}の借方に「${resolveAccountName(entry.account)}」は通常使用しません`
+      return `${voucherType}の借方に「${entry.account}」は通常使用しません`
     }
   }
-
-  // 貸方チェック
   for (const entry of journal.credit_entries) {
     if (!entry.account) continue
     if (!isAllowed(entry.account, rule.credit)) {
-      return `${voucherType}の貸方に「${resolveAccountName(entry.account)}」は通常使用しません`
+      return `${voucherType}の貸方に「${entry.account}」は通常使用しません`
     }
   }
-
   return null
 }
 
-/**
- * 証票意味バリデーションで矛盾する科目IDを返す（セルハイライト用）
- * @returns { debit: Set<string>, credit: Set<string> } 矛盾科目IDのセット
- */
+// ────────────────────────────────────────────
+// 矛盾科目特定（UIセルハイライト用）
+// ────────────────────────────────────────────
+
 export function getVoucherTypeConflictAccounts(
   voucherType: string,
-  journal: JournalPhase5Mock,
+  journal: JournalForValidation,
   accounts: AccountForValidation[]
 ): { debit: Set<string>; credit: Set<string> } {
   const result = { debit: new Set<string>(), credit: new Set<string>() }
@@ -176,7 +212,7 @@ export function getVoucherTypeConflictAccounts(
 
   const accountMap = new Map(accounts.map(a => [a.id, a]))
 
-  function isAllowed(accountId: string, sideRule: { allowedGroups?: string[]; allowedIds?: string[]; allowedCategories?: string[] }): boolean {
+  function isAllowed(accountId: string, sideRule: VoucherTypeSideRule): boolean {
     if (sideRule.allowedIds) {
       if (sideRule.allowedIds.includes(accountId)) return true
       const baseId = getBaseAccountId(accountId)
@@ -195,48 +231,32 @@ export function getVoucherTypeConflictAccounts(
 
   for (const entry of journal.debit_entries) {
     if (!entry.account) continue
-    if (!isAllowed(entry.account, rule.debit)) {
-      result.debit.add(entry.account)
-    }
+    if (!isAllowed(entry.account, rule.debit)) result.debit.add(entry.account)
   }
   for (const entry of journal.credit_entries) {
     if (!entry.account) continue
-    if (!isAllowed(entry.account, rule.credit)) {
-      result.credit.add(entry.account)
-    }
+    if (!isAllowed(entry.account, rule.credit)) result.credit.add(entry.account)
   }
   return result
 }
 
 // ────────────────────────────────────────────
-// syncWarningLabels（コアロジック。UIモーダルなし）
+// 統合バリデーション（9種チェック）
 // ────────────────────────────────────────────
 
-export interface SyncWarningResult {
-  addedLabels: string[]
-  removedLabels: string[]
-}
-
-export function syncWarningLabelsCore(
-  journal: JournalPhase5Mock,
+export function validateJournal(
+  journal: JournalForValidation,
   accounts: AccountForValidation[],
   taxCategories: TaxCategoryForValidation[]
-): SyncWarningResult {
-  const labels = journal.labels
-  const addedLabels: JournalLabelMock[] = []
-  const removedLabels: JournalLabelMock[] = []
-  // 警告詳細を初期化（存在しない場合）
-  if (!journal.warning_details) {
-    journal.warning_details = {}
-  }
-  const details = journal.warning_details
-
+): ValidationResult {
+  const labels = [...journal.labels]
+  const addedLabels: string[] = []
+  const removedLabels: string[] = []
+  const details: Record<string, string> = { ...(journal.warning_details ?? {}) }
   const dismissals = journal.warning_dismissals ?? []
 
-  function addLabel(key: JournalLabelMock, detail?: string) {
-    // warning_dismissalsに含まれる警告タイプはスキップ（ユーザーが確認済み）
+  function addLabel(key: string, detail?: string) {
     if (dismissals.includes(key)) {
-      // 確認済みなので、もし既にラベルがあれば除去する
       const idx = labels.indexOf(key)
       if (idx >= 0) labels.splice(idx, 1)
       return
@@ -247,7 +267,8 @@ export function syncWarningLabelsCore(
     if (detail) details[key] = detail
     addedLabels.push(key)
   }
-  function removeLabel(key: JournalLabelMock) {
+
+  function removeLabel(key: string) {
     const idx = labels.indexOf(key)
     if (idx >= 0) {
       labels.splice(idx, 1)
@@ -256,18 +277,17 @@ export function syncWarningLabelsCore(
     delete details[key]
   }
 
-  // 1. ACCOUNT_UNKNOWN
+  // 1. ACCOUNT_UNKNOWN（科目不明）
   const accountIds = new Set(accounts.map(a => a.id))
   const isValidAccount = (id: string | null) => id != null && id !== '' && accountIds.has(id)
   const unknownAccounts = [
     ...journal.debit_entries.filter(e => !isValidAccount(e.account)).map(e => `借方'${e.account ?? '(空)'}'`),
     ...journal.credit_entries.filter(e => !isValidAccount(e.account)).map(e => `貸方'${e.account ?? '(空)'}'`),
   ]
-  const allAccountsValid = unknownAccounts.length === 0
-  if (allAccountsValid) removeLabel('ACCOUNT_UNKNOWN')
+  if (unknownAccounts.length === 0) removeLabel('ACCOUNT_UNKNOWN')
   else addLabel('ACCOUNT_UNKNOWN', `${unknownAccounts.join(', ')}がマスタに存在しません`)
 
-  // 2. TAX_UNKNOWN（税区分未設定 or マスタ/顧問先設定に存在しない）
+  // 2. TAX_UNKNOWN（税区分不明）
   const taxCategoryIds = new Set(taxCategories.map(t => t.id))
   const emptyTaxEntries = [
     ...journal.debit_entries.filter(e => !e.tax_category_id).map((_, i) => `借方${i + 1}行目の税区分が未設定です`),
@@ -277,39 +297,38 @@ export function syncWarningLabelsCore(
     ...journal.debit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => `借方'${e.tax_category_id}'`),
     ...journal.credit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => `貸方'${e.tax_category_id}'`),
   ]
-  const allTaxValid = emptyTaxEntries.length === 0 && unknownTaxEntries.length === 0
-  if (allTaxValid) removeLabel('TAX_UNKNOWN')
-  else {
+  if (emptyTaxEntries.length === 0 && unknownTaxEntries.length === 0) {
+    removeLabel('TAX_UNKNOWN')
+  } else {
     const msgs: string[] = []
     if (emptyTaxEntries.length > 0) msgs.push(...emptyTaxEntries)
     if (unknownTaxEntries.length > 0) msgs.push(`${unknownTaxEntries.join(', ')}が税区分マスタに存在しません`)
     addLabel('TAX_UNKNOWN', msgs.join('。'))
   }
 
-  // 3. DESCRIPTION_UNKNOWN
+  // 3. DESCRIPTION_UNKNOWN（摘要なし）
   if (journal.description != null && journal.description !== '') removeLabel('DESCRIPTION_UNKNOWN')
   else addLabel('DESCRIPTION_UNKNOWN', '摘要が空です')
 
-  // 4. DATE_UNKNOWN
+  // 4. DATE_UNKNOWN（日付なし）
   if (journal.voucher_date != null && journal.voucher_date !== '') removeLabel('DATE_UNKNOWN')
   else addLabel('DATE_UNKNOWN', '日付が空です')
 
-  // 5. AMOUNT_UNCLEAR
+  // 5. AMOUNT_UNCLEAR（金額未設定）
   const emptyAmountEntries = [
     ...journal.debit_entries.filter(e => e.amount == null).map((_, i) => `借方${i + 1}行目`),
     ...journal.credit_entries.filter(e => e.amount == null).map((_, i) => `貸方${i + 1}行目`),
   ]
-  const allAmountsFilled = emptyAmountEntries.length === 0
-  if (allAmountsFilled) removeLabel('AMOUNT_UNCLEAR')
+  if (emptyAmountEntries.length === 0) removeLabel('AMOUNT_UNCLEAR')
   else addLabel('AMOUNT_UNCLEAR', `${emptyAmountEntries.join(', ')}の金額が未設定です`)
 
-  // 6. DEBIT_CREDIT_MISMATCH
+  // 6. DEBIT_CREDIT_MISMATCH（貸借不一致）
   const debitSum = journal.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0)
   const creditSum = journal.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0)
   if (debitSum === creditSum && debitSum > 0) removeLabel('DEBIT_CREDIT_MISMATCH')
   else addLabel('DEBIT_CREDIT_MISMATCH', `借方合計${debitSum.toLocaleString()} ≠ 貸方合計${creditSum.toLocaleString()}`)
 
-  // 7. CATEGORY_CONFLICT
+  // 7. CATEGORY_CONFLICT（5分類矛盾）
   let hasConflict = false
   let conflictDetail = ''
   for (const dEntry of journal.debit_entries) {
@@ -330,25 +349,30 @@ export function syncWarningLabelsCore(
   if (hasConflict) addLabel('CATEGORY_CONFLICT', conflictDetail)
   else removeLabel('CATEGORY_CONFLICT')
 
-  // 7b. SAME_ACCOUNT_BOTH_SIDES
+  // 7b. SAME_ACCOUNT_BOTH_SIDES（同一科目が借方と貸方の両方）
   const debitAccountSet = new Set(journal.debit_entries.map(e => e.account).filter((v): v is string => v != null))
   const creditAccountSet = new Set(journal.credit_entries.map(e => e.account).filter((v): v is string => v != null))
   const sameAccounts = [...debitAccountSet].filter(a => creditAccountSet.has(a))
   if (sameAccounts.length > 0) addLabel('SAME_ACCOUNT_BOTH_SIDES', `'${sameAccounts.join("', '")}'が借方と貸方の両方に使用されています`)
   else removeLabel('SAME_ACCOUNT_BOTH_SIDES')
 
-  // 8. VOUCHER_TYPE_CONFLICT
+  // 8. VOUCHER_TYPE_CONFLICT（証票意味ルール矛盾）
   const voucherType = journal.voucher_type
   const firstDebit = journal.debit_entries?.[0]?.account ?? null
   const firstCredit = journal.credit_entries?.[0]?.account ?? null
   const vtMsg = voucherType && firstDebit && firstCredit ? validateByVoucherType(voucherType, journal, accounts) : null
-  if (vtMsg) {
-    addLabel('VOUCHER_TYPE_CONFLICT', vtMsg)
-  } else {
-    removeLabel('VOUCHER_TYPE_CONFLICT')
+  if (vtMsg) addLabel('VOUCHER_TYPE_CONFLICT', vtMsg)
+  else removeLabel('VOUCHER_TYPE_CONFLICT')
+
+  // 矛盾科目の特定（UIセルハイライト用）
+  // Set<string>はJSON.stringifyで{}に化けるため、Array.fromで配列に変換してレスポンスに含める
+  let conflictAccounts = { debit: [] as string[], credit: [] as string[] }
+  if (voucherType && vtMsg) {
+    const raw = getVoucherTypeConflictAccounts(voucherType, journal, accounts)
+    conflictAccounts = { debit: Array.from(raw.debit), credit: Array.from(raw.credit) }
   }
 
-  // 9. TAX_ACCOUNT_MISMATCH
+  // 9. TAX_ACCOUNT_MISMATCH（科目×税区分の不整合）
   const allEntries = [...journal.debit_entries, ...journal.credit_entries]
   let hasTaxAccountMismatch = false
   for (const entry of allEntries) {
@@ -366,19 +390,32 @@ export function syncWarningLabelsCore(
         }
       }
     } else if (acct.taxDetermination === 'auto_purchase') {
-      if (taxCat.direction === 'sales') {
-        hasTaxAccountMismatch = true
-        break
-      }
+      if (taxCat.direction === 'sales') { hasTaxAccountMismatch = true; break }
     } else if (acct.taxDetermination === 'auto_sales') {
-      if (taxCat.direction === 'purchase') {
-        hasTaxAccountMismatch = true
-        break
-      }
+      if (taxCat.direction === 'purchase') { hasTaxAccountMismatch = true; break }
     }
   }
   if (hasTaxAccountMismatch) addLabel('TAX_ACCOUNT_MISMATCH', '科目に設定された税区分と異なる税区分が使用されています')
   else removeLabel('TAX_ACCOUNT_MISMATCH')
 
-  return { addedLabels, removedLabels }
+  // 10. FUTURE_DATE（未来日付）: voucher_dateが明日以降
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+  if (journal.voucher_date != null && journal.voucher_date !== '' && journal.voucher_date >= tomorrowStr) {
+    addLabel('FUTURE_DATE', `未来日付です（${journal.voucher_date}）`)
+  } else {
+    removeLabel('FUTURE_DATE')
+  }
+
+  return {
+    journalId: journal.id,
+    labels,
+    warning_details: details,
+    addedLabels,
+    removedLabels,
+    conflictAccounts,
+  }
 }

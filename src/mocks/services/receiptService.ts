@@ -1,9 +1,11 @@
 /**
  * receiptService.ts
- * サービス層: モックモード / 本番モード を VITE_USE_MOCK で切り替える
+ * サービス層: 証票分析API呼び出し
  * Vue側は常に同じ ReceiptAnalysisResult 型を受け取る
  *
  * 設計:
+ *   - モック/本番の分岐はサーバー側（/api/pipeline/preview-extract）で統一管理
+ *     Phase 3（2026-05-03）でフロント側のVITE_USE_MOCK分岐を廃止
  *   - バリデーションはサーバー側（previewExtract.service.ts → validatePreviewExtractResult.ts）で実行
  *   - フロントはAPIレスポンスのvalidation結果を信頼して表示するだけ
  *   - ReceiptAnalysisResult / AnalyzeOptions → types.ts からimport
@@ -19,7 +21,6 @@ import type {
 } from '@/api/services/pipeline/types';
 import { validateFileType } from '@/shared/fileTypes';
 import {
-  MOCK_ERROR_REASONS,
   serverErrorMessage,
   networkErrorMessage,
 } from '@/shared/validationMessages';
@@ -29,46 +30,8 @@ export type { ReceiptAnalysisResult, AnalyzeOptions };
 
 
 
-const MOCK_VENDORS = [
-  "セブン-イレブン",
-  "ファミリーマート",
-  "ローソン",
-  "東京電力エナジーパートナー",
-  "Amazon Japan",
-  "関西電力",
-  "ENEOSウイング",
-  "ヤマト運輸",
-  "NTTコミュニケーションズ",
-  "イオンリテール",
-];
-
-// ===== モック実装 =====
-async function analyzeReceiptMock(_file: File, _clientId?: string): Promise<ReceiptAnalysisResult> {
-  // 5〜8秒（DL-011実測: 前処理あり6.3秒/枚に基づく）
-  const delay = 5000 + Math.random() * 3000;
-  await new Promise((r) => setTimeout(r, delay));
-
-  const isOk = Math.random() > 0.25; // 75%がOK
-
-  if (isOk) {
-    const day = Math.floor(Math.random() * 28) + 1;
-    const d = new Date(2025, 2, day);
-    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const amount = Math.floor(Math.random() * 500 + 5) * 100;
-    const vendor = MOCK_VENDORS[Math.floor(Math.random() * MOCK_VENDORS.length)] ?? null;
-    return { ok: true, date, amount, vendor, errorReason: null };
-  }
-
-  return {
-    ok: false,
-    date: null,
-    amount: null,
-    vendor: null,
-    errorReason: MOCK_ERROR_REASONS[Math.floor(Math.random() * MOCK_ERROR_REASONS.length)] ?? null,
-  };
-}
-
-// ===== 本番実装（/api/pipeline/preview-extract） =====
+// ===== API実装（/api/pipeline/preview-extract） =====
+// Phase 3: サーバー側でモック/本番を自動切替するため、常にこのパスを使用
 async function analyzeReceiptReal(file: File, clientId?: string): Promise<ReceiptAnalysisResult> {
   try {
     // ① ファイル形式チェック（AI不要なら補助対象として即返却 → Geminiコスト発生ゼロ）
@@ -284,15 +247,14 @@ function logPreviewExtractResult(file: File, opts: AnalyzeOptions, result: Recei
   );
 }
 
-// ===== エクスポート（環境変数でスイッチ） =====
-const _analyzeRaw: (file: File, clientId?: string) => Promise<ReceiptAnalysisResult> =
-  import.meta.env.VITE_USE_MOCK !== "false" ? analyzeReceiptMock : analyzeReceiptReal;
+// ===== エクスポート =====
+// Phase 3: VITE_USE_MOCK分岐をサーバー側に移動。フロントは常にanalyzeReceiptRealを使用。
 
 export const analyzeReceipt = async (
   file: File,
   opts?: AnalyzeOptions,
 ): Promise<ReceiptAnalysisResult> => {
-  const result = await _analyzeRaw(file, opts?.clientId);
+  const result = await analyzeReceiptReal(file, opts?.clientId);
   // テスト用: ブラウザコンソールに全項目構造化出力
   logPreviewExtractResult(file, opts ?? {}, result);
   return result;

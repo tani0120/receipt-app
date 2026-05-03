@@ -513,8 +513,8 @@ const allRows = computed<ExportRow[]>(() => {
   journals.value
     .filter((j) => j.deleted_at === null && j.status !== "exported")
     .forEach((j) => {
-      const dismissals = ((j as any).warning_dismissals as string[]) ?? [];
-      const isWarning = (j.labels as string[]).some(
+      const dismissals = j.warning_dismissals ?? [];
+      const isWarning = j.labels.some(
         (l) => (EXCLUDE_LABELS as readonly string[]).includes(l) && !dismissals.includes(l),
       );
       const isExcluded = j.labels.includes("EXPORT_EXCLUDE");

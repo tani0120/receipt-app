@@ -12,6 +12,7 @@
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
 import { 必須, FormData解析失敗, ファイル必須, ファイルサイズ超過, 非対応形式, 未検出, チャンク未検出, 未実装 } from '../helpers/apiMessages';
+import { MOCK_ERROR_REASONS } from '../../shared/validationMessages';
 import { previewExtractImage, clearKnownHashes, isKnownHash } from '../services/pipeline/previewExtract.service';
 import { createHash } from 'crypto';
 import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
@@ -68,6 +69,153 @@ async function withSemaphore<T>(fn: () => Promise<T>): Promise<T> {
 
 app.post('/preview-extract', async (c) => {
   console.log('[pipeline/route] POST /preview-extract 受信');
+
+  // ━━ Phase 3: モックモード分岐（VITE_USE_MOCK=true時、AI呼び出しスキップ）━━
+  // フロント側の分岐を廃止し、サーバー側で統一的にモック/本番を切り替える
+  const useMock = process.env['VITE_USE_MOCK'] !== 'false';
+  if (useMock) {
+    // FormData受信（モックでもfileは受け取るがAIには送信しない）
+    let formData: FormData;
+    try {
+      formData = await c.req.formData();
+    } catch {
+      return apiError(c, 400, FormData解析失敗);
+    }
+
+    const file = formData.get('file');
+    const mimeType = formData.get('mimeType') as string | null;
+    const clientId = formData.get('clientId') as string | null;
+    const filename = formData.get('filename') as string | null;
+
+    if (!file || !(file instanceof File)) {
+      return apiError(c, 400, ファイル必須);
+    }
+
+    // MIMEタイプチェック（本番と同じホワイトリスト。非画像ファイルの防御）
+    const ALLOWED_MIME_MOCK = [
+      'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp',
+      'application/pdf',
+    ];
+    if (mimeType && !ALLOWED_MIME_MOCK.includes(mimeType.toLowerCase())) {
+      return apiError(c, 400, 非対応形式(mimeType));
+    }
+
+    // モックレスポンス生成（Geminiコスト発生ゼロ）
+    // 遅延はDL-011実測値ベース（本番AI処理: 前処理あり6.3秒/枚）
+    const delay = 5000 + Math.random() * 3000; // 5〜8秒
+    await new Promise(r => setTimeout(r, delay));
+
+    const MOCK_VENDORS = [
+      'セブン-イレブン', 'ファミリーマート', 'ローソン', '東京電力エナジーパートナー',
+      'Amazon Japan', '関西電力', 'ENEOSウイング', 'ヤマト運輸', 'NTTコミュニケーションズ', 'イオンリテール',
+    ];
+    const isOk = Math.random() > 0.25; // 75%成功
+    const day = Math.floor(Math.random() * 28) + 1;
+    const d = new Date(2025, 2, day);
+    const mockDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const mockAmount = Math.floor(Math.random() * 500 + 5) * 100;
+    const mockVendor = MOCK_VENDORS[Math.floor(Math.random() * MOCK_VENDORS.length)] ?? null;
+    const durationMs = Math.round(delay);
+
+    // ファイル永続保存（モックでもファイルは保存）
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const fileHash = createHash('sha256').update(buffer).digest('hex');
+    const actualName = filename ?? file.name ?? 'unknown';
+    const savedName = saveUploadedFile(clientId ?? 'unknown', actualName, buffer);
+    const fileUrl = `/api/pipeline/file/${clientId ?? 'unknown'}/${savedName}`;
+
+    if (isOk) {
+      console.log(`[pipeline/route] モック応答: OK ${actualName} → ${mockVendor} ¥${mockAmount}`);
+      return c.json({
+        source_type: 'receipt',
+        source_type_confidence: 0.95,
+        direction: 'expense',
+        direction_confidence: 0.95,
+        processing_mode: 'auto',
+        preview_extract_reason: 'モックモード: AI呼出しスキップ',
+        document_count: 1,
+        document_count_reason: 'モックモード',
+        description: `${mockVendor}での購入`,
+        issuer_name: mockVendor,
+        date: mockDate,
+        total_amount: mockAmount,
+        fallback_applied: false,
+        line_items: [{
+          line_index: 1,
+          date: mockDate,
+          description: `${mockVendor}での購入`,
+          amount: mockAmount,
+          direction: 'expense' as const,
+          balance: null,
+        }],
+        validation: {
+          ok: true,
+          errorReason: null,
+          warning: null,
+          supplementary: false,
+          isDuplicate: false,
+        },
+        fileHash,
+        fileUrl,
+        metadata: {
+          duration_ms: durationMs,
+          duration_seconds: Math.round(durationMs / 100) / 10,
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          thinking_tokens: 0,
+          token_count: 0,
+          cost_yen: 0,
+          model: 'mock',
+          original_size_kb: Math.round(file.size / 1024),
+          processed_size_kb: Math.round(file.size / 1024),
+          preprocess_reduction_pct: 0,
+        },
+      });
+    } else {
+      // MOCK_ERROR_REASONS: shared/validationMessages.tsから一元管理（文言ハードコード禁止）
+      const errorReason = MOCK_ERROR_REASONS[Math.floor(Math.random() * MOCK_ERROR_REASONS.length)] ?? '不明なエラー';
+      console.log(`[pipeline/route] モック応答: NG ${actualName} → ${errorReason}`);
+      return c.json({
+        source_type: 'other',
+        source_type_confidence: 0.3,
+        direction: 'expense',
+        direction_confidence: 0.3,
+        processing_mode: 'excluded',
+        preview_extract_reason: `モックモード: ${errorReason}`,
+        document_count: 1,
+        document_count_reason: 'モックモード',
+        description: null,
+        issuer_name: null,
+        date: null,
+        total_amount: null,
+        fallback_applied: true,
+        line_items: [],
+        validation: {
+          ok: false,
+          errorReason,
+          warning: null,
+          supplementary: false,
+          isDuplicate: false,
+        },
+        fileHash,
+        fileUrl,
+        metadata: {
+          duration_ms: durationMs,
+          duration_seconds: Math.round(durationMs / 100) / 10,
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          thinking_tokens: 0,
+          token_count: 0,
+          cost_yen: 0,
+          model: 'mock',
+          original_size_kb: Math.round(file.size / 1024),
+          processed_size_kb: Math.round(file.size / 1024),
+          preprocess_reduction_pct: 0,
+        },
+      });
+    }
+  }
+  // ━━ 本番モード（以下は従来のGemini API呼び出し）━━
 
   // FormData受信（Fileオブジェクトとして受け取る）
   let formData: FormData;

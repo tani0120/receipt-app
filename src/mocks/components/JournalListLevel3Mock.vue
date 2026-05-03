@@ -2140,8 +2140,14 @@
           </div>
         </div>
 
+        <!-- ローディング表示（API待ち） -->
+        <div v-if="hintLoading" class="px-5 py-8 flex items-center justify-center gap-2 text-xs text-gray-500">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <span>ヒントを取得中...</span>
+        </div>
+
         <!-- ① バリデーション結果 -->
-        <div class="px-5 py-3 border-b">
+        <div v-else class="px-5 py-3 border-b">
           <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
             📋 バリデーション結果
           </h4>
@@ -2539,10 +2545,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, triggerRef, watch } from "vue";
 import { useAccountSettings } from "@/features/account-settings/composables/useAccountSettings";
 import { useClients } from "@/features/client-management/composables/useClients";
-import { NULL_DISPLAY_UNKNOWN, compareWithNull } from "@/mocks/definitions/field-nullable-spec";
+import { NULL_DISPLAY_UNKNOWN } from "@/mocks/definitions/field-nullable-spec";
 import { useDraggable } from "@/mocks/composables/useDraggable";
 import { useCurrentUser } from "@/mocks/composables/useCurrentUser";
 import { journalColumns, getDefaultColumnWidths } from "@/mocks/columns/journalColumns";
@@ -2561,7 +2567,7 @@ import type { ConfirmedJournal } from "../types/confirmed_journal.type";
 
 import { toMfCsvDate } from "@/shared/utils/mf-csv-date";
 import { validateByVoucherType, getVoucherTypeConflictAccounts } from "@/mocks/utils/journalWarningSync";
-import { VOUCHER_TYPE_RULES, getBaseAccountId } from "@/mocks/utils/voucherTypeRules";
+// VOUCHER_TYPE_RULES, getBaseAccountId は API側 (journalHintService.ts) に移設済み (Step 6-A3)
 
 // 列幅カスタマイズ
 const {
@@ -3084,19 +3090,19 @@ const voucherTypeConflictMap = new Map<string, { debit: Set<string>; credit: Set
  * 新規追加されたラベルがあれば警告モーダルを表示する。
  */
 function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
-  const labels = journal.labels as string[];
-  const addedLabels: string[] = [];
-  const removedLabels: string[] = [];
+  const labels = journal.labels;
+  const addedLabels: JournalLabelMock[] = [];
+  const removedLabels: JournalLabelMock[] = [];
 
   // ヘルパー: ラベル追加（重複なし）＋モーダル表示用記録（既存でも記録）
-  function addLabel(key: string) {
+  function addLabel(key: JournalLabelMock) {
     if (!labels.includes(key)) {
       labels.push(key);
     }
     addedLabels.push(key);
   }
   // ヘルパー: ラベル除去（実際に除去した場合にremovedLabelsに記録）
-  function removeLabel(key: string) {
+  function removeLabel(key: JournalLabelMock) {
     const idx = labels.indexOf(key);
     if (idx >= 0) {
       labels.splice(idx, 1);
@@ -3176,10 +3182,10 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
 
   // 7b. SAME_ACCOUNT_BOTH_SIDES（借方貸方に同一科目）
   const debitAccountSet = new Set(
-    journal.debit_entries.map((e) => e.account).filter(Boolean) as string[],
+    journal.debit_entries.map((e) => e.account).filter((v): v is string => v != null),
   );
   const creditAccountSet = new Set(
-    journal.credit_entries.map((e) => e.account).filter(Boolean) as string[],
+    journal.credit_entries.map((e) => e.account).filter((v): v is string => v != null),
   );
   const sameAccounts = [...debitAccountSet].filter((a) => creditAccountSet.has(a));
   if (sameAccounts.length > 0) {
@@ -3293,7 +3299,7 @@ function getWarningCellClass(
   colKey: string,
   entry?: Record<string, unknown>,
 ): string {
-  const labels = journal.labels as string[];
+  const labels = journal.labels;
   /** 警告セルの共通背景CSSクラス（一箇所管理） */
   const W = "!bg-red-400 !text-white";
 
@@ -3643,7 +3649,7 @@ function commitCellEdit(): void {
 
   // 適格列の特殊処理
   if (e.colKey === "invoice") {
-    const labels = journal.labels as string[];
+    const labels = journal.labels;
     const idx1 = labels.indexOf("INVOICE_QUALIFIED");
     const idx2 = labels.indexOf("INVOICE_NOT_QUALIFIED");
     if (idx1 >= 0) labels.splice(idx1, 1);
@@ -4218,7 +4224,7 @@ function showWarningTooltip(event: MouseEvent, labels: string[], journal?: Journ
       let msg = w?.label ?? l;
       if (journal) {
         // warning_detailsに具体的な理由がある場合はそちらを優先
-        const details = (journal as any).warning_details as Record<string, string> | undefined;
+        const details = journal.warning_details;
         if (details && details[l]) {
           msg = details[l];
         } else if (l === "DATE_UNKNOWN") {
@@ -4302,308 +4308,50 @@ type HintSuggestion = {
 const hintModalJournal = ref<JournalPhase5Mock | null>(null);
 const hintValidations = ref<HintValidation[]>([]);
 const hintSuggestions = ref<HintSuggestion[]>([]);
+const hintLoading = ref(false);
 
 const hintModalJournalIndex = computed(() => {
   if (!hintModalJournal.value) return -1;
   return paginatedJournals.value.findIndex((j) => j.id === hintModalJournal.value!.id);
 });
 
-function openHintModal(journal: JournalPhase5Mock): void {
+/** ヒントAPIを呼び出してvalidations/suggestionsを更新 */
+async function fetchHintsFromAPI(journalId: string): Promise<void> {
+  hintLoading.value = true;
+  try {
+    // Phase 2: サーバー側マスタから科目・税区分を取得するため、POSTボディ不要
+    const res = await fetch(
+      `/api/journals/${encodeURIComponent(journalClientId.value)}/${encodeURIComponent(journalId)}/hints`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
+    );
+    if (res.ok) {
+      const data = await res.json();
+      hintValidations.value = data.validations;
+      hintSuggestions.value = data.suggestions;
+    } else {
+      console.warn('[Hint API] レスポンスエラー:', res.status);
+    }
+  } catch (err) {
+    console.error('[Hint API] 通信エラー:', err);
+  } finally {
+    hintLoading.value = false;
+  }
+}
+
+async function openHintModal(journal: JournalPhase5Mock): Promise<void> {
   hintModalJournal.value = journal;
-  hintValidations.value = generateHintValidations(journal);
-  hintSuggestions.value = generateHintSuggestions(journal);
   // 画面中央に配置（モーダル幅520px, 想定高さ500px）
   hintModalPos.value = {
     top: Math.max(50, (window.innerHeight - 500) / 2),
     left: Math.max(50, (window.innerWidth - 520) / 2),
   };
+  await fetchHintsFromAPI(journal.id);
 }
 
-function generateHintValidations(journal: JournalPhase5Mock): HintValidation[] {
-  const results: HintValidation[] = [];
-  const labels = journal.labels as string[];
-  const allAccounts = clientSettings.accounts.value;
-
-  // 各warningLabelに対応するメッセージ
-  if (labels.includes('ACCOUNT_UNKNOWN')) {
-    // 具体的にどの科目が不明か特定
-    const accountIds = new Set(allAccounts.map((a) => a.id));
-    for (const e of journal.debit_entries) {
-      if (e.account && !accountIds.has(e.account)) {
-        results.push({ level: 'error', message: `借方科目【${e.account}】はマスタに存在しません` });
-      }
-    }
-    for (const e of journal.credit_entries) {
-      if (e.account && !accountIds.has(e.account)) {
-        results.push({ level: 'error', message: `貸方科目【${e.account}】はマスタに存在しません` });
-      }
-    }
-    if (results.length === 0) {
-      results.push({ level: 'error', message: '勘定科目が未設定または不明です' });
-    }
-  }
-  if (labels.includes('TAX_UNKNOWN'))
-    results.push({ level: 'error', message: '税区分が未設定または不明です' });
-  if (labels.includes('DESCRIPTION_UNKNOWN'))
-    results.push({ level: 'warn', message: '摘要が未設定です' });
-  if (labels.includes('DATE_UNKNOWN'))
-    results.push({ level: 'warn', message: '日付が未設定です' });
-  if (labels.includes('AMOUNT_UNCLEAR'))
-    results.push({ level: 'error', message: '金額が未設定のエントリがあります' });
-  if (labels.includes('DEBIT_CREDIT_MISMATCH')) {
-    const dSum = journal.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
-    const cSum = journal.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
-    results.push({ level: 'error', message: `貸借不一致: 借方合計 ${dSum.toLocaleString()} ≠ 貸方合計 ${cSum.toLocaleString()}` });
-  }
-  if (labels.includes('CATEGORY_CONFLICT'))
-    results.push({ level: 'error', message: '借方・貸方の勘定科目の組み合わせに矛盾があります' });
-  if (labels.includes('SAME_ACCOUNT_BOTH_SIDES'))
-    results.push({ level: 'warn', message: '借方と貸方に同一の勘定科目が使用されています' });
-  if (labels.includes('VOUCHER_TYPE_CONFLICT')) {
-    const vt = journal.voucher_type;
-    const rule = vt ? VOUCHER_TYPE_RULES[vt] : null;
-    if (rule) {
-      results.push({ level: 'error', message: `証票意味【${vt}】に対して不適切な科目があります\n${rule.description}` });
-    } else {
-      results.push({ level: 'error', message: '証票意味に対して不適切な科目があります' });
-    }
-  }
-  if (labels.includes('TAX_ACCOUNT_MISMATCH'))
-    results.push({ level: 'warn', message: '税区分と勘定科目の方向（売上/仕入）が一致しません' });
-  if (labels.includes('FUTURE_DATE'))
-    results.push({ level: 'error', message: `未来日付です（${journal.voucher_date}）。日付を確認してください` });
-
-  return results;
-}
-
-function generateHintSuggestions(journal: JournalPhase5Mock): HintSuggestion[] {
-  const suggestions: HintSuggestion[] = [];
-  const labels = journal.labels as string[];
-
-  // ★ 顧問先勘定科目を優先（なければマスタ）
-  const allAccts = clientSettings.accounts.value;
-  const allTaxCats = clientSettings.taxCategories.value;
-  const accountIds = new Set(allAccts.map((a) => a.id));
-
-  // ★ 「科目名（補助科目）」形式のラベル生成
-  const acctLabel = (id: string | null): string => {
-    if (!id) return '未設定';
-    const a = allAccts.find((x) => x.id === id);
-    if (!a) return id;
-    return a.sub ? `${a.name}（${a.sub}）` : a.name;
-  };
-  const taxName = (id: string | null | undefined) => {
-    if (!id) return '未設定';
-    const t = allTaxCats.find((x) => x.id === id);
-    return t ? (t.shortName ?? t.name) : id;
-  };
-
-  // ★ 該当グループの全顧問先科目をalternatives化
-  const buildAlternatives = (
-    sideRule: { allowedGroups?: string[]; allowedIds?: string[]; allowedCategories?: string[] },
-    excludeId: string,
-  ): HintAlternative[] => {
-    const seen = new Set<string>();
-    const alts: HintAlternative[] = [];
-    // allowedIdsから（コピー元IDも含む）
-    if (sideRule.allowedIds) {
-      for (const id of sideRule.allowedIds) {
-        if (id === excludeId || seen.has(id)) continue;
-        if (!accountIds.has(id)) continue;
-        seen.add(id);
-        alts.push({ value: id, label: acctLabel(id) });
-      }
-      // コピー科目も候補に含める（コピー元IDがallowedIdsに含まれる場合）
-      for (const a of allAccts) {
-        if (seen.has(a.id) || a.id === excludeId) continue;
-        const baseId = getBaseAccountId(a.id);
-        if (baseId !== a.id && sideRule.allowedIds.includes(baseId)) {
-          seen.add(a.id);
-          alts.push({ value: a.id, label: acctLabel(a.id) });
-        }
-      }
-    }
-    // allowedGroupsから全件
-    if (sideRule.allowedGroups) {
-      for (const a of allAccts) {
-        if (seen.has(a.id) || a.id === excludeId) continue;
-        if (!sideRule.allowedGroups.includes(a.accountGroup ?? '')) continue;
-        seen.add(a.id);
-        alts.push({ value: a.id, label: acctLabel(a.id) });
-      }
-    }
-    // allowedCategoriesから全件（コピー・カスタム科目も動的に含まれる）
-    if (sideRule.allowedCategories) {
-      for (const a of allAccts) {
-        if (seen.has(a.id) || a.id === excludeId) continue;
-        if (!sideRule.allowedCategories.includes((a as any).category ?? '')) continue;
-        seen.add(a.id);
-        alts.push({ value: a.id, label: acctLabel(a.id) });
-      }
-    }
-    return alts;
-  };
-
-  // ★ デフォルト候補選択（証票意味に応じた賢い初期値）
-  const pickDefault = (vt: string | null, alts: HintAlternative[]): HintAlternative | undefined => {
-    if (alts.length === 0) return undefined;
-    // クレカ → 未払金を優先
-    if (vt === 'クレカ') {
-      const accrued = alts.find((a) => a.value === 'ACCRUED_EXPENSES');
-      if (accrued) return accrued;
-    }
-    // 売上 → 売掛金を優先
-    if (vt === '売上') {
-      const receivable = alts.find((a) => a.value === 'ACCOUNTS_RECEIVABLE');
-      if (receivable) return receivable;
-    }
-    return alts[0];
-  };
-
-  // ────── A: 証票意味ルールに基づく科目修正 ──────
-  const vt = journal.voucher_type;
-  const rule = vt ? VOUCHER_TYPE_RULES[vt] : null;
-
-  // 借方・貸方の共通チェック関数
-  const checkSideEntries = (
-    entries: typeof journal.debit_entries,
-    side: 'debit' | 'credit',
-    sideRule: { allowedGroups?: string[]; allowedIds?: string[]; allowedCategories?: string[] } | undefined,
-  ) => {
-    if (!sideRule) return;
-    entries.forEach((entry, idx) => {
-      const acct = entry.account;
-
-      // ケース1: null科目 → 候補提案
-      if (!acct) {
-        const alts = buildAlternatives(sideRule, '');
-        const def = pickDefault(vt, alts);
-        if (def) {
-          suggestions.push({
-            side, field: '勘定科目', currentValue: null,
-            currentLabel: '未設定',
-            selectedValue: def.value, selectedLabel: def.label,
-            alternatives: alts, entryIndex: idx,
-          });
-        }
-        return;
-      }
-
-      // ケース2: マスタ外科目 → 候補提案
-      if (!accountIds.has(acct)) {
-        const alts = buildAlternatives(sideRule, acct);
-        const def = pickDefault(vt, alts);
-        if (def) {
-          suggestions.push({
-            side, field: '勘定科目', currentValue: acct,
-            currentLabel: acct, // マスタ外なのでID表示
-            selectedValue: def.value, selectedLabel: def.label,
-            alternatives: alts, entryIndex: idx,
-          });
-        }
-        return;
-      }
-
-      // ケース3: マスタ内だがグループ不一致 → 候補提案
-      const acctObj = allAccts.find((a) => a.id === acct);
-      if (!acctObj) return;
-
-      let allowed = false;
-      if (sideRule.allowedGroups?.includes(acctObj.accountGroup ?? '')) allowed = true;
-      if (sideRule.allowedIds?.includes(acct)) allowed = true;
-      // コピー元IDも照合
-      if (sideRule.allowedIds) {
-        const baseId = getBaseAccountId(acct);
-        if (baseId !== acct && sideRule.allowedIds.includes(baseId)) allowed = true;
-      }
-      // allowedCategoriesでcategoryが一致すればOK
-      if (sideRule.allowedCategories?.includes((acctObj as any).category ?? '')) allowed = true;
-
-      if (!allowed) {
-        const alts = buildAlternatives(sideRule, acct);
-        const def = pickDefault(vt, alts);
-        if (def) {
-          suggestions.push({
-            side, field: '勘定科目', currentValue: acct,
-            currentLabel: acctLabel(acct),
-            selectedValue: def.value, selectedLabel: def.label,
-            alternatives: alts, entryIndex: idx,
-          });
-        }
-      }
-    });
-  };
-
-  if (rule) {
-    checkSideEntries(journal.debit_entries, 'debit', rule.debit);
-    checkSideEntries(journal.credit_entries, 'credit', rule.credit);
-  }
-
-  // ────── B: 税区分不整合修正（科目のdefaultTaxCategoryIdに基づく） ──────
-  if (labels.includes('TAX_ACCOUNT_MISMATCH') || labels.includes('TAX_UNKNOWN')) {
-    const checkTaxEntries = (entries: typeof journal.debit_entries, side: 'debit' | 'credit') => {
-      entries.forEach((entry, idx) => {
-        const acct = entry.account;
-        if (!acct) return;
-        const acctObj = allAccts.find((a) => a.id === acct);
-        if (!acctObj?.defaultTaxCategoryId) return;
-
-        const currentTax = entry.tax_category_id;
-        const expectedTax = acctObj.defaultTaxCategoryId;
-        if (currentTax !== expectedTax) {
-          suggestions.push({
-            side, field: '税区分', currentValue: currentTax ?? null,
-            currentLabel: taxName(currentTax),
-            selectedValue: expectedTax, selectedLabel: taxName(expectedTax),
-            alternatives: [], entryIndex: idx,
-          });
-        }
-      });
-    };
-    checkTaxEntries(journal.debit_entries, 'debit');
-    checkTaxEntries(journal.credit_entries, 'credit');
-  }
-
-  // ────── C: 貸借不一致修正（1:N仕訳の場合） ──────
-  if (labels.includes('DEBIT_CREDIT_MISMATCH')) {
-    const dSum = journal.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
-    const cSum = journal.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
-    if (dSum !== cSum && dSum > 0 && cSum > 0) {
-      const dCount = journal.debit_entries.length;
-      const cCount = journal.credit_entries.length;
-
-      if (dCount === 1 && cCount >= 2) {
-        suggestions.push({
-          side: 'debit', field: '金額', currentValue: String(dSum),
-          currentLabel: dSum.toLocaleString(),
-          selectedValue: String(cSum), selectedLabel: cSum.toLocaleString(),
-          alternatives: [], entryIndex: 0,
-        });
-      } else if (cCount === 1 && dCount >= 2) {
-        suggestions.push({
-          side: 'credit', field: '金額', currentValue: String(cSum),
-          currentLabel: cSum.toLocaleString(),
-          selectedValue: String(dSum), selectedLabel: dSum.toLocaleString(),
-          alternatives: [], entryIndex: 0,
-        });
-      }
-      if (dCount >= 2 && cCount >= 2) {
-        const diff = Math.abs(dSum - cSum);
-        suggestions.push({
-          side: dSum > cSum ? 'debit' : 'credit',
-          field: '金額（差額）',
-          currentValue: String(Math.max(dSum, cSum)),
-          currentLabel: `差額 ${diff.toLocaleString()}`,
-          selectedValue: String(Math.min(dSum, cSum)),
-          selectedLabel: `${Math.min(dSum, cSum).toLocaleString()} に揃える`,
-          alternatives: [], entryIndex: -1,
-        });
-      }
-    }
-  }
-
-  return suggestions;
-}
+// generateHintValidations / generateHintSuggestions は
+// API側 (api/services/journalHintService.ts) に移設済み。
+// Phase 1 Step 6-A3 (2026-05-03)
+// フロントからは fetchHintsFromAPI() 経由で呼び出す。
 
 // ★ ドロップダウン変更時のハンドラ
 function onHintAlternativeChange(suggestionIndex: number, newValue: string): void {
@@ -4659,8 +4407,8 @@ function applyHintSuggestion(s: HintSuggestion): void {
     redoStack.value = [];
   }
 
-  hintValidations.value = generateHintValidations(journal);
-  hintSuggestions.value = generateHintSuggestions(journal);
+  // ヒントをAPI経由で再計算（Phase 1 Step 6-A3）
+  fetchHintsFromAPI(journal.id);
 
   console.log(`[Hint] 修正適用: ${s.side} [${s.entryIndex}] ${s.field}: ${s.currentLabel} → ${s.selectedLabel}`);
 }
@@ -5047,10 +4795,11 @@ const sortDirection = ref<"asc" | "desc">("asc");
 // ────── メイン仕訳ページネーション ──────
 const journalPageSize = ref(30);
 const journalCurrentPage = ref(1);
-const journalTotalCount = computed(() => journals.value.length);
-const journalTotalPages = computed(() =>
-  Math.max(1, Math.ceil(journalTotalCount.value / journalPageSize.value)),
-);
+// Step 5: API結果から取得（journals computedの依存を排除）
+const _apiTotalCount = ref(0);
+const _apiTotalPages = ref(1);
+const journalTotalCount = computed(() => _apiTotalCount.value);
+const journalTotalPages = computed(() => _apiTotalPages.value);
 const journalPageStart = computed(() => (journalCurrentPage.value - 1) * journalPageSize.value + 1);
 const journalPageEnd = computed(() =>
   Math.min(journalCurrentPage.value * journalPageSize.value, journalTotalCount.value),
@@ -5159,92 +4908,39 @@ const supportingZoom = ref(1);
 
 let supportingSearchTimer: ReturnType<typeof setTimeout> | null = null;
 
-// ━━━ 根拠資料 自動紐づけ（日付・取引先・金額マッチング） ━━━
-const allSupportingMeta = ref<SupportingMetaItem[]>([]);
+// ━━━ 根拠資料 自動紐づけ（API経由）━━━
+// matchScore / supportingMatchMap computed は API側に移設済み。
+// Phase 1 Step 6-B3 (2026-05-03)
 
-/** 根拠メタ全件取得（マウント時 + 仕訳変更時） */
-async function fetchSupportingMeta() {
+/** 仕訳ID → マッチした根拠資料の紐づけマップ（APIレスポンスをキャッシュ） */
+const supportingMatchMap = ref<Map<string, SupportingMetaItem[]>>(new Map());
+
+/** 証票マッチングAPI呼び出し（マウント時 + 仕訳変更時） */
+async function fetchSupportingMatches() {
   try {
-    const res = await fetch(`/api/drive/search-supporting/${encodeURIComponent(journalClientId.value)}?q=`);
+    const res = await fetch(`/api/journals/${encodeURIComponent(journalClientId.value)}/supporting-match`);
     if (res.ok) {
-      const data = await res.json() as { results: SupportingMetaItem[] };
-      allSupportingMeta.value = data.results;
-      console.log(`[根拠資料紐づけ] メタデータ${data.results.length}件取得`);
+      const data = await res.json() as { matches: Record<string, SupportingMetaItem[]>; matchedCount: number };
+      const map = new Map<string, SupportingMetaItem[]>();
+      for (const [journalId, items] of Object.entries(data.matches)) {
+        map.set(journalId, items);
+      }
+      supportingMatchMap.value = map;
+      console.log(`[根拠資料紐づけ] ${data.matchedCount}件マッチ`);
     }
   } catch {
     // 取得失敗は無視
   }
 }
 
-/**
- * 仕訳と根拠資料のマッチングスコア算出
- * 日付一致 +3、取引先一致 +3、金額一致 +3
- * スコア3以上で紐づけ成功（1条件以上の完全一致）
- */
-function matchScore(journal: JournalPhase5Mock, meta: SupportingMetaItem): number {
-  let score = 0;
-
-  // 日付マッチ（完全一致 or 年月一致）
-  if (journal.voucher_date && meta.date) {
-    if (journal.voucher_date === meta.date) {
-      score += 3;
-    } else if (journal.voucher_date.slice(0, 7) === meta.date.slice(0, 7)) {
-      score += 1; // 月一致
-    }
-  }
-
-  // 取引先マッチ（部分一致）
-  if (meta.vendor && meta.vendor.length >= 2) {
-    const vendorLower = meta.vendor.toLowerCase();
-    if (journal.vendor_name && journal.vendor_name.toLowerCase().includes(vendorLower)) {
-      score += 3;
-    } else if (journal.description.toLowerCase().includes(vendorLower)) {
-      score += 2;
-    }
-  }
-
-  // 金額マッチ（仕訳の借方合計 or 貸方合計 = 根拠のamount）
-  if (meta.amount != null && meta.amount > 0) {
-    const debitTotal = journal.debit_entries.reduce((s, e) => s + (e.amount || 0), 0);
-    const creditTotal = journal.credit_entries.reduce((s, e) => s + (e.amount || 0), 0);
-    if (debitTotal === meta.amount || creditTotal === meta.amount) {
-      score += 3;
-    }
-  }
-
-  return score;
-}
-
-/** 仕訳ID → マッチした根拠資料の紐づけマップ（computed） */
-const supportingMatchMap = computed<Map<string, SupportingMetaItem[]>>(() => {
-  const map = new Map<string, SupportingMetaItem[]>();
-  if (allSupportingMeta.value.length === 0) return map;
-
-  for (const journal of localJournals.value) {
-    // 未出力仕訳のみ対象
-    if (journal.status === 'exported' || journal.deleted_at) continue;
-
-    const matches: SupportingMetaItem[] = [];
-    for (const meta of allSupportingMeta.value) {
-      if (matchScore(journal, meta) >= 3) {
-        matches.push(meta);
-      }
-    }
-    if (matches.length > 0) {
-      map.set(journal.id, matches);
-    }
-  }
-  return map;
-});
-
 /** 仕訳に紐づく根拠資料があるか */
 function hasSupportingMatch(journal: JournalPhase5Mock): boolean {
   return supportingMatchMap.value.has(journal.id);
 }
 
-// マウント時に根拠メタ取得
+// マウント時に証票マッチング取得
 onMounted(() => {
-  fetchSupportingMeta();
+  fetchSupportingMatches();
 });
 
 function openSupportingSearchModal() {
@@ -5487,7 +5183,7 @@ const filteredPastJournals = computed(() => {
         amount: e.amount,
       })),
       status: 'exported' as const,
-      labels: [] as string[],
+      labels: [] as JournalLabelMock[],
       source: cj.source,
     }));
   }
@@ -5614,315 +5310,96 @@ function onMouseUp() {
   isDragging.value = false;
 }
 
-const journals = computed(() => {
-  let result = [...localJournals.value].sort((a, b) => {
-    return (
-      new Date(a.voucher_date ?? "9999-12-31").getTime() -
-      new Date(b.voucher_date ?? "9999-12-31").getTime()
-    );
-  });
+// ────────────────────────────────────────────
+// Step 5: journals をAPI統合一覧で取得（Phase 1 Step 4のAPIを使用）
+// 旧 journals computed (290行のソート・フィルタ・検索・pastRows統合) を削除。
+// API側の journalListService がソート・フィルタ・検索・pastRows統合・ページネーションを実行。
+// セル編集の即時反映は localJournals の deep watch → autoSave → fetchJournalList で維持。
+// ────────────────────────────────────────────
 
+const journals = shallowRef<JournalPhase5Mock[]>([]);
+
+/** 統合一覧APIの呼び出し（POST: 科目名マッピング付き） */
+let _fetchVersion = 0;
+async function fetchJournalList() {
+  const version = ++_fetchVersion;
+
+  // Phase 2: accountMap/taxMapはサーバー側マスタから自動生成（POSTボディ送信不要）
+
+  const body: Record<string, unknown> = {
+    showPastCsv: showPastCsv.value,
+    showUnexported: showUnexported.value,
+    showExported: showExported.value,
+    showExcluded: showExcluded.value,
+    showTrashed: showTrashed.value,
+    page: journalCurrentPage.value,
+    pageSize: journalPageSize.value,
+  };
   if (sortColumn.value) {
-    result.sort((a, b) => {
-      type SortValue = number | string;
-      let aVal: SortValue = 0;
-      let bVal: SortValue = 0;
-
-      switch (sortColumn.value) {
-        case "display_order":
-          aVal = a.display_order;
-          bVal = b.display_order;
-          break;
-        case "has_photo":
-          aVal = a.document_id ? 1 : 0;
-          bVal = b.document_id ? 1 : 0;
-          break;
-        case "staff_notes": {
-          // staff_notesのいずれかがenabledならソート上位
-          const hasNotes = (j: JournalPhase5Mock): number => {
-            if (!j.staff_notes) return 0;
-            return Object.values(j.staff_notes).some((n) => n.enabled) ? 1 : 0;
-          };
-          aVal = hasNotes(a);
-          bVal = hasNotes(b);
-          break;
-        }
-        case "past_journal":
-          aVal = localJournals.value.findIndex((j) => j.id === a.id) < 25 ? 1 : 0;
-          bVal = localJournals.value.findIndex((j) => j.id === b.id) < 25 ? 1 : 0;
-          break;
-        case "requires_action": {
-          // staff_notesの重み付けソート: NEED_DOCUMENT(8) > NEED_INFO(4) > REMINDER(2) > NEED_CONSULT(1) > なし(0)
-          const getNeedWeight = (j: JournalPhase5Mock): number => {
-            if (!j.staff_notes) return 0;
-            let w = 0;
-            if (j.staff_notes.NEED_DOCUMENT?.enabled) w += 8;
-            if (j.staff_notes.NEED_INFO?.enabled) w += 4;
-            if (j.staff_notes.REMINDER?.enabled) w += 2;
-            if (j.staff_notes.NEED_CONSULT?.enabled) w += 1;
-            return w;
-          };
-          aVal = getNeedWeight(a);
-          bVal = getNeedWeight(b);
-          break;
-        }
-        case "label_type":
-          aVal = a.labels.join(",");
-          bVal = b.labels.join(",");
-          break;
-        case "warning":
-          // 事故フラグの有無と重み付け: 赤色（エラー）＞黄色（警告）の順
-          const getWarningWeight = (labels: string[]) => {
-            for (const l of labels) {
-              const entry = warningLabelMap[l];
-              if (entry) return entry.weight;
-            }
-            return 0;
-          };
-          aVal = getWarningWeight(a.labels);
-          bVal = getWarningWeight(b.labels);
-          break;
-        case "rule":
-          // RULE_APPLIED=2, RULE_AVAILABLE=1, なし=0
-          const getRuleWeight = (labels: string[]) => {
-            if (labels.includes("RULE_APPLIED")) return 2;
-            if (labels.includes("RULE_AVAILABLE")) return 1;
-            return 0;
-          };
-          aVal = getRuleWeight(a.labels);
-          bVal = getRuleWeight(b.labels);
-          break;
-        case "is_credit_card_payment":
-          aVal = a.is_credit_card_payment ? 1 : 0;
-          bVal = b.is_credit_card_payment ? 1 : 0;
-          break;
-        case "tax_rate":
-          // 軽減税率アイコン(MULTI_TAX_RATEラベル)の有無でソート
-          aVal = a.labels.includes("MULTI_TAX_RATE") ? 1 : 0;
-          bVal = b.labels.includes("MULTI_TAX_RATE") ? 1 : 0;
-          break;
-        case "memo":
-          aVal = a.memo ? 1 : 0;
-          bVal = b.memo ? 1 : 0;
-          break;
-        case "invoice":
-          // INVOICE_QUALIFIED=2, INVOICE_NOT_QUALIFIED=1, なし=0
-          const getInvoiceWeight = (labels: string[]) => {
-            if (labels.includes("INVOICE_QUALIFIED")) return 2;
-            if (labels.includes("INVOICE_NOT_QUALIFIED")) return 1;
-            return 0;
-          };
-          aVal = getInvoiceWeight(a.labels);
-          bVal = getInvoiceWeight(b.labels);
-          break;
-        // D5: compareWithNull（null比較関数）で統一。null時は昇順=末尾、降順=先頭
-        case "voucher_date":
-          return compareWithNull(
-            a.voucher_date ? new Date(a.voucher_date).getTime() : null,
-            b.voucher_date ? new Date(b.voucher_date).getTime() : null,
-            sortDirection.value,
-            (x, y) => x - y,
-          );
-        case "description":
-          aVal = a.description;
-          bVal = b.description;
-          break;
-        case "debit_account":
-          return compareWithNull(
-            resolveAccountName(a.debit_entries[0]?.account),
-            resolveAccountName(b.debit_entries[0]?.account),
-            sortDirection.value,
-            (x, y) => x.localeCompare(y),
-          );
-        case "debit_sub_account":
-          return compareWithNull(
-            a.debit_entries[0]?.sub_account,
-            b.debit_entries[0]?.sub_account,
-            sortDirection.value,
-            (x, y) => x.localeCompare(y),
-          );
-        case "debit_tax":
-          return compareWithNull(
-            resolveTaxCategoryName(a.debit_entries[0]?.tax_category_id),
-            resolveTaxCategoryName(b.debit_entries[0]?.tax_category_id),
-            sortDirection.value,
-            (x, y) => x.localeCompare(y),
-          );
-        case "debit_amount": {
-          const aHasAny = a.debit_entries.some((e) => e.amount != null);
-          const bHasAny = b.debit_entries.some((e) => e.amount != null);
-          const aSum = aHasAny ? a.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0) : null;
-          const bSum = bHasAny ? b.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0) : null;
-          if (aSum === null && bSum === null) return 0;
-          if (aSum === null) return sortDirection.value === "asc" ? -1 : 1;
-          if (bSum === null) return sortDirection.value === "asc" ? 1 : -1;
-          const r = aSum - bSum;
-          return sortDirection.value === "desc" ? -r : r;
-        }
-        case "credit_account":
-          return compareWithNull(
-            resolveAccountName(a.credit_entries[0]?.account),
-            resolveAccountName(b.credit_entries[0]?.account),
-            sortDirection.value,
-            (x, y) => x.localeCompare(y),
-          );
-        case "credit_sub_account":
-          return compareWithNull(
-            a.credit_entries[0]?.sub_account,
-            b.credit_entries[0]?.sub_account,
-            sortDirection.value,
-            (x, y) => x.localeCompare(y),
-          );
-        case "credit_tax":
-          return compareWithNull(
-            resolveTaxCategoryName(a.credit_entries[0]?.tax_category_id),
-            resolveTaxCategoryName(b.credit_entries[0]?.tax_category_id),
-            sortDirection.value,
-            (x, y) => x.localeCompare(y),
-          );
-        case "credit_amount": {
-          const aHasAny = a.credit_entries.some((e) => e.amount != null);
-          const bHasAny = b.credit_entries.some((e) => e.amount != null);
-          const aSum = aHasAny ? a.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0) : null;
-          const bSum = bHasAny ? b.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0) : null;
-          if (aSum === null && bSum === null) return 0;
-          if (aSum === null) return sortDirection.value === "asc" ? -1 : 1;
-          if (bSum === null) return sortDirection.value === "asc" ? 1 : -1;
-          const r = aSum - bSum;
-          return sortDirection.value === "desc" ? -r : r;
-        }
-        default:
-          return 0;
-      }
-
-      if (aVal < bVal) return sortDirection.value === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDirection.value === "asc" ? 1 : -1;
-      return 0;
-    });
+    body.sort = sortColumn.value;
+    body.order = sortDirection.value;
   }
-  // 全列横断検索フィルタ
   if (globalSearchQuery.value.trim()) {
-    const q = globalSearchQuery.value.trim().toLowerCase();
-    result = result.filter((j) => {
-      const fields = [
-        j.voucher_date ?? '',
-        j.description ?? '',
-        ...(j.debit_entries ?? []).flatMap(e => [e.account ?? '', e.sub_account ?? '', e.tax_category_id ?? '', String(e.amount ?? '')]),
-        ...(j.credit_entries ?? []).flatMap(e => [e.account ?? '', e.sub_account ?? '', e.tax_category_id ?? '', String(e.amount ?? '')]),
-        j.memo ?? '',
-        j.voucher_type ?? '',
-      ];
-      return fields.some(f => f.toLowerCase().includes(q));
+    body.search = globalSearchQuery.value.trim();
+  }
+  if (voucherFilter.value) {
+    body.voucherFilter = voucherFilter.value;
+  }
+
+  try {
+    const res = await fetch(`/api/journals/${journalClientId.value}/list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     });
+    if (!res.ok) {
+      console.error('[fetchJournalList] API error:', res.status);
+      return;
+    }
+    const data = await res.json();
+    // バージョンチェック: 新しいリクエストが発行されていたら棄却
+    if (_fetchVersion !== version) return;
+    journals.value = data.journals ?? [];
+    _apiTotalCount.value = data.totalCount ?? 0;
+    _apiTotalPages.value = data.totalPages ?? 1;
+    triggerRef(journals);
+  } catch (err) {
+    console.error('[fetchJournalList] fetch失敗:', err);
   }
+}
 
-  // チェックボックスフィルタリング
-  const filtered = result.filter((journal) => {
-    // ゴミ箱フィルタ（AND条件: OFFならtrashed非表示）
-    if (journal.deleted_at !== null && !showTrashed.value) return false;
-
-    // 証票種別フィルタ（AND条件: 選択時はそのラベルを含む仕訳のみ表示）
-    if (voucherFilter.value && !journal.labels.includes(voucherFilter.value as JournalLabelMock))
-      return false;
-
-    const isExcluded = journal.labels.includes("EXPORT_EXCLUDE");
-    const isExported = journal.status === "exported";
-    const isUnexported = journal.status === null && !isExcluded;
-
-    if (showUnexported.value && isUnexported) return true;
-    if (showExported.value && isExported) return true;
-    if (showExcluded.value && isExcluded) return true;
-    if (showTrashed.value && journal.deleted_at !== null) return true;
-
-    // すべてOFFの場合は全表示（trashed除外済み）
-    if (!showUnexported.value && !showExported.value && !showExcluded.value && !showTrashed.value)
-      return true;
-
-    return false;
-  });
-
-  // 過去仕訳CSVチェック時: confirmed_journalsをJournalPhase5Mock形式で追加
-  if (showPastCsv.value && confirmedJournals.value.length > 0) {
-    const pastRows: JournalPhase5Mock[] = confirmedJournals.value.map((cj, idx) => ({
-      id: `past-csv-${idx}`,
-      client_id: journalClientId.value,
-      display_order: 90000 + idx,
-      voucher_date: cj.voucher_date || null,
-      date_on_document: true,
-      description: cj.description || '',
-      voucher_type: null,
-      source_type: null,
-      direction: cj.direction || null,
-      vendor_vector: null,
-      vendor_id: cj.vendor_id || null,
-      vendor_name: cj.vendor_name || null,
-      document_id: null,
-      line_id: null,
-      debit_entries: (cj.debit_entries || []).map(e => ({
-        id: e.id || crypto.randomUUID(),
-        account: e.account || null,
-        account_on_document: false,
-        sub_account: e.sub_account || null,
-        department: e.department || null,
-        amount: e.amount ?? null,
-        amount_on_document: false,
-        tax_category_id: e.tax_category_id || null,
-        vendor_name: e.vendor_name || null,
-      })),
-      credit_entries: (cj.credit_entries || []).map(e => ({
-        id: e.id || crypto.randomUUID(),
-        account: e.account || null,
-        account_on_document: false,
-        sub_account: e.sub_account || null,
-        department: e.department || null,
-        amount: e.amount ?? null,
-        amount_on_document: false,
-        tax_category_id: e.tax_category_id || null,
-        vendor_name: e.vendor_name || null,
-      })),
-      status: 'exported' as const,
-      is_read: true,
-      deleted_at: null,
-      labels: [] as JournalLabelMock[],
-      warning_dismissals: [],
-      warning_details: {},
-      export_batch_id: null,
-      is_credit_card_payment: false,
-      rule_id: null,
-      invoice_status: null,
-      invoice_number: null,
-      memo: '過去仕訳CSV',
-      memo_author: null,
-      memo_target: null,
-      memo_created_at: null,
-    }));
-    // pastRowsにも全列検索フィルタを適用
-    const q = globalSearchQuery.value.trim().toLowerCase();
-    const filteredPast = q
-      ? pastRows.filter((j) => {
-          const fields = [
-            j.voucher_date ?? '',
-            j.description ?? '',
-            ...(j.debit_entries ?? []).flatMap(e => [e.account ?? '', e.sub_account ?? '', e.tax_category_id ?? '', String(e.amount ?? '')]),
-            ...(j.credit_entries ?? []).flatMap(e => [e.account ?? '', e.sub_account ?? '', e.tax_category_id ?? '', String(e.amount ?? '')]),
-            j.memo ?? '',
-          ];
-          return fields.some(f => f.toLowerCase().includes(q));
-        })
-      : pastRows;
-    filtered.push(...filteredPast);
-  }
-
-  return filtered;
+// 条件変更時にAPI再呼び出し（検索はデバウンス付き）
+let _searchTimer: ReturnType<typeof setTimeout> | null = null;
+watch(
+  [sortColumn, sortDirection, showPastCsv, showUnexported, showExported, showExcluded, showTrashed, voucherFilter, journalCurrentPage, journalPageSize],
+  () => { fetchJournalList(); },
+);
+watch(globalSearchQuery, () => {
+  if (_searchTimer) clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => fetchJournalList(), 300);
 });
 
-// ────── journals依存のcomputed（journals computedの後に配置必須） ──────
+// autoSave完了後にAPI再フェッチ（localJournalsのdeep watch）
+// useJournals内のautoSaveは500msデバウンス。その完了後にfetchJournalListを呼ぶ。
+// localJournalsの変更は即座にセル上に反映される（テンプレートがlocalJournalsを直接参照する行もある）が、
+// journals ref（ソート・フィルタ済みリスト）はAPI再フェッチで更新される。
+let _localSaveTimer: ReturnType<typeof setTimeout> | null = null;
+watch(localJournals, () => {
+  if (_localSaveTimer) clearTimeout(_localSaveTimer);
+  // autoSaveの500ms + 余裕200ms = 700ms後にfetchJournalList + 証票マッチング再取得
+  _localSaveTimer = setTimeout(() => {
+    fetchJournalList();
+    fetchSupportingMatches(); // 仕訳変更後にマッチング結果を再計算（Step 6 #4修正）
+  }, 700);
+}, { deep: true });
 
-/** ページネーション適用済み仕訳リスト */
-const paginatedJournals = computed(() => {
-  const start = (journalCurrentPage.value - 1) * journalPageSize.value;
-  return journals.value.slice(start, start + journalPageSize.value);
-});
+// 初期ロード
+fetchJournalList();
+
+// ────── journals依存のcomputed（journals ref の後に配置必須） ──────
+
+/** ページネーション適用済み仕訳リスト（APIがページング済みなのでjournalsそのまま） */
+const paginatedJournals = computed(() => journals.value);
 
 const visibleIds = computed(() => journals.value.map((j) => j.id));
 
@@ -6010,7 +5487,7 @@ function getRowBackground(journal: JournalPhase5Mock): string {
     return "bg-gray-600 text-white";
   }
   // 優先度2: 出力対象外 → 薄緑
-  if ((journal.labels as string[]).includes("EXPORT_EXCLUDE")) {
+  if (journal.labels.includes("EXPORT_EXCLUDE")) {
     return "bg-green-50";
   }
   // 優先度3: 出力済み → 薄グレー + exported-rowクラス
