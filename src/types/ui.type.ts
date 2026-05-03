@@ -39,7 +39,7 @@ export type JobStatusUi =
   | 'error'
   | 'excluded'
   | 'unknown'
-  // Layer 2 C型修正: ScreenB_LogicMaster.vue用の追加値
+  // Layer 2 C型修正: ScreenE_Workbench等で使用する追加ステータス値
   | 'ai_processing'      // AI処理中
   | 'ready_for_work'     // 作業可能（1次仕訳待ち）
   | 'primary_completed'  // 1次仕訳完了

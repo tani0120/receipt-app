@@ -316,6 +316,15 @@
 import { ref, computed } from 'vue';
 import moment from 'moment';
 
+/** 回収カレンダー一覧で使用する顧問先データ型 */
+interface CollectionClient {
+  code: string;
+  name: string;
+  type: 'corp' | 'individual';
+  fiscalMonth: number;
+  jobId: string;
+}
+
 const testControls = ref(true);
 const mockIsDetailView = ref(false);
 const mockRouteParamsCode = ref('');
@@ -376,8 +385,7 @@ const goBack = () => {
     mockRouteParamsCode.value = '';
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const goToCollectionDetail = (client: any) => {
+const goToCollectionDetail = (client: CollectionClient) => {
     mockRouteParamsCode.value = client.code;
     mockIsDetailView.value = true;
 };
@@ -392,8 +400,7 @@ const getDateForCell = (m: number) => {
     return moment(`${year}-${String(month).padStart(2, '0')}-01`);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getFiscalTermEnd = (client: any, targetDate: moment.Moment) => {
+const getFiscalTermEnd = (client: CollectionClient, targetDate: moment.Moment) => {
     const fiscalMonth = client.type === 'individual' ? 12 : client.fiscalMonth;
     const month = targetDate.month() + 1;
     let year = targetDate.year();
@@ -403,8 +410,7 @@ const getFiscalTermEnd = (client: any, targetDate: moment.Moment) => {
     return moment(`${year}-${String(fiscalMonth).padStart(2, '0')}-01`).endOf('month');
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getActiveTerm1End = (client: any) => {
+const getActiveTerm1End = (client: CollectionClient) => {
     const checkDate = currentDateMock.clone().subtract(2, 'years');
     const today = currentDateMock;
 
@@ -421,8 +427,7 @@ const getActiveTerm1End = (client: any) => {
     return getFiscalTermEnd(client, today);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getCellStyle = (client: any, m: number) => {
+const getCellStyle = (client: CollectionClient, m: number) => {
     const cellDate = getDateForCell(m);
 
     const term1End = getActiveTerm1End(client);
@@ -441,16 +446,14 @@ const getCellStyle = (client: any, m: number) => {
     return 'bg-diagonal'; // Inactive
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isFiscalMonth = (client: any, m: number) => {
+const isFiscalMonth = (client: CollectionClient, m: number) => {
      const displayMonth = m <= 12 ? m : m - 12;
      // Handle individual case if hardcoded in logic (usually 12)
      const fiscalMonth = client.type === 'individual' ? 12 : client.fiscalMonth;
      return fiscalMonth === displayMonth;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const shouldShowIcon = (client: any, m: number) => {
+const shouldShowIcon = (client: CollectionClient, m: number) => {
     // 1. Must be Active Period
     if (getCellStyle(client, m) === 'bg-diagonal') return false;
 
@@ -464,8 +467,7 @@ const shouldShowIcon = (client: any, m: number) => {
     return true;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getPeriodStatus = (client: any, m: number) => {
+const getPeriodStatus = (client: CollectionClient, m: number) => {
     // Mimic Source: (client.jobId.charCodeAt(2) || 0) + m
     // Mock clients have jobId = clientCode e.g. '1001'
     const charCode = client.jobId ? client.jobId.charCodeAt(2) : 0;

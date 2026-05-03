@@ -24,12 +24,17 @@ const confirmSave = () => {
     showConfirmModal.value = false;
 };
 
+/** CSVスキーマ行（useAccountingSystem.SOFTWARE_EXPORT_CSV_SCHEMAS用） */
+interface CsvSchemaRow {
+  index: number;
+  name: string;
+  value: string;
+}
+
 // Helper: Format Schema Object to Text
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const formatSchema = (schemaArray: any[]) => {
+const formatSchema = (schemaArray: CsvSchemaRow[]) => {
     let text = "Index,項目名,内容\n";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    schemaArray.forEach((row: any) => {
+    schemaArray.forEach((row: CsvSchemaRow) => {
         text += `${row.index},${row.name},${row.value}\n`;
     });
     return text;

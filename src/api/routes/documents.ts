@@ -10,7 +10,7 @@ const app = new Hono()
 const UpdateStatusSchema = z.object({
     newStatus: z.enum(['uploaded', 'preprocessed', 'ocr_done', 'suggested', 'reviewing', 'confirmed', 'rejected']),
     actor: z.string().email().optional().default('system@receipt-app.com'),
-    journal: z.any().optional() // confirmed時は必須（Repository層でチェック）
+    journal: z.record(z.string(), z.unknown()).optional() // confirmed時は必須（Repository層でチェック）
 })
 
 // POST /api/documents/:id/status

@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref } from 'vue';
 import { executeOCR } from '@/api/ocr/ocr_service';
 import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
@@ -6,8 +6,7 @@ import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 // 単発テスト用
 const selectedFile = ref<File | null>(null);
 const isProcessing = ref(false);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const result = ref<any>(null);
+const result = ref<AIIntermediateOutput | null>(null);
 const error = ref<string | null>(null);
 
 // 10回テスト用
@@ -77,9 +76,8 @@ async function runOCR() {
 /**
  * JSON比較（explanation除外）
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeForCompare(obj: AIIntermediateOutput): any {
-  const { explanation, ...rest } = obj;
+function normalizeForCompare(obj: AIIntermediateOutput): Omit<AIIntermediateOutput, 'explanation'> {
+  const { explanation: _unused, ...rest } = obj;
   return rest;
 }
 

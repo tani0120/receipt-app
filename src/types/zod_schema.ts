@@ -239,7 +239,7 @@ export const JobSchema = z.object({
   invoiceValidationLog: z.object({
     registrationNumber: z.string().optional(),
     isValid: z.boolean(),
-    apiResponse: z.any().optional(), // Raw response can be any
+    apiResponse: z.unknown().optional(), // 外部API生レスポンス（構造不定）
     checkedAt: TimestampSchema
   }).optional(),
 
@@ -261,8 +261,8 @@ export const JobSchema = z.object({
   path: z.string().optional(), // File path or route path
   title: z.string().optional(),
   imageTitle: z.string().optional(),
-  debits: z.array(z.any()).optional(), // Array structure TBD
-  credits: z.array(z.any()).optional(), // Array structure TBD
+  debits: z.array(z.record(z.string(), z.unknown())).optional(), // 借方行配列（構造未定）
+  credits: z.array(z.record(z.string(), z.unknown())).optional(), // 貸方行配列（構造未定）
   amount: z.number().optional(),
   proposal: z.string().optional(),
   aiInference: z.string().optional(),
@@ -490,8 +490,8 @@ export const AuditLogSchema = z.object({
   logicId: z.string().optional(),
   targetCollection: z.enum(['jobs', 'clients', 'system_settings']),
   targetId: z.string().optional(),
-  previousData: z.any().optional(),
-  newData: z.any().optional()
+  previousData: z.unknown().optional(),
+  newData: z.unknown().optional()
 });
 
 // ============================================================================

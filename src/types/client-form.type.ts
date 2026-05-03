@@ -1,7 +1,7 @@
 /**
  * 顧問先編集フォーム型定義
  *
- * ClientModal.vue / ScreenA_Detail_EditModal.vue で使用する
+ * ScreenA_Detail_EditModal.vue で使用する
  * フォームデータの型。defaultFormの構造と完全に一致する。
  */
 
