@@ -89,7 +89,8 @@ export function useProgress() {
             const monthKey = key.replace('month_', '');
             return row.monthlyJournals[monthKey] || 0;
         }
-        return (row as unknown as Record<string, string | number>)[key] ?? '';
+        const val = row[key];
+        return typeof val === 'string' || typeof val === 'number' ? val : '';
     }
 
     return {

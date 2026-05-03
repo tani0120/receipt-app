@@ -105,15 +105,20 @@ export const supabaseShareStatusRepo: ShareStatusRepository = {
  * unsubscribeShareStatus(channel)
  * ```
  */
+/** Supabase Realtimeのペイロード型（share_statusテーブル） */
+interface ShareStatusChangePayload {
+  new: Partial<{ client_id: string; status: string }>
+}
+
 export function subscribeShareStatus(
-  onChange: (payload: { new: { client_id: string; status: string } }) => void
+  onChange: (payload: ShareStatusChangePayload) => void
 ): RealtimeChannel {
   return getSupabase()
     .channel('share_status_changes')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'share_status' },
-      (payload) => onChange(payload as unknown as { new: { client_id: string; status: string } })
+      (payload) => onChange(payload as ShareStatusChangePayload)
     )
     .subscribe()
 }

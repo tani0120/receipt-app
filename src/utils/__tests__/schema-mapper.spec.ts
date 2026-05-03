@@ -68,8 +68,7 @@ describe('Schema Mapper', () => {
                 email: 'yamada@example.com',
             };
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            expect(() => mapper(invalidInput as any)).toThrow();
+            expect(() => mapper(invalidInput as unknown)).toThrow();
         });
 
         it('部分マッピングでも動作する', () => {
@@ -183,8 +182,7 @@ describe('Schema Mapper', () => {
                 TargetSchema,
                 {
                     invalidKey: 'fullName', // 存在しないキー
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                } as any
+                } as unknown
             );
 
             expect(result.valid).toBe(false);
@@ -199,8 +197,7 @@ describe('Schema Mapper', () => {
                 TargetSchema,
                 {
                     name: 'invalidTarget', // 存在しないキー
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                } as any
+                } as unknown
             );
 
             expect(result.valid).toBe(false);

@@ -388,7 +388,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
+import { useAccountingSystem } from '@/composables/useAccountingSystem';
 import type { JobUi } from '@/types/ui.type';
 import type { JobStatus } from '@/types/job';
 import { MSG_DUPLICATE_DETAIL } from '@/shared/validationMessages';
@@ -416,7 +416,7 @@ interface ApprovalQueueItem {
 
 const route = useRoute();
 const router = useRouter();
-const { jobs, getClientByCode, updateJobStatus } = aaa_useAccountingSystem();
+const { jobs, getClientByCode, updateJobStatus } = useAccountingSystem();
 
 // -- HTML Compatibility State --
 const screen = computed({

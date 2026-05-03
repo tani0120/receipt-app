@@ -30,6 +30,7 @@ import notificationRoutes from './routes/notificationRoutes'
 import ocrRoute from './routes/ocr'
 import pipeline from './routes/pipeline'
 import shareStatusRoutes from './routes/shareStatusRoutes'
+import learningRuleRoutes from './routes/learningRuleRoutes'
 import { TAX_OPTIONS } from '../shared/schema_dictionary'
 
 const app = new Hono()
@@ -77,6 +78,7 @@ const routes = app
     .route('/api/ocr', ocrRoute)
     .route('/api/pipeline', pipeline)
     .route('/api/share-status', shareStatusRoutes)
+    .route('/api/learning-rules', learningRuleRoutes)
     .get('/api/tax-options', (c) => {
         return c.json(TAX_OPTIONS)
     })

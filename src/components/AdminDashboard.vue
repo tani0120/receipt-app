@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
-const { adminData } = aaa_useAccountingSystem();
+import { useAccountingSystem } from '@/composables/useAccountingSystem';
+const { adminData } = useAccountingSystem();
 </script>
 
 <template>

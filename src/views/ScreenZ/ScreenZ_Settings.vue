@@ -140,9 +140,9 @@
 
 <script setup lang="ts">
 import { watch } from 'vue';
-import { aaa_useAdminDashboard } from '@/composables/useAdminDashboard';
+import { useAdminDashboard } from '@/composables/useAdminDashboard';
 
-const { data } = aaa_useAdminDashboard();
+const { data } = useAdminDashboard();
 
 // Auto-set API Prices based on Model Selection (2026 Pricing)
 watch(() => data.value.settings.modelName, (newModel) => {

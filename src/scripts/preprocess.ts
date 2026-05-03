@@ -28,7 +28,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as iconv from 'iconv-lite';
 import { preprocessImage as sharpPreprocess, getMimeType as getSharpMimeType } from './pipeline/image_preprocessor';
-import type { MimeType } from './pipeline/image_preprocessor';
 
 // ============================================================
 // 型定義

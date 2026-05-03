@@ -321,7 +321,7 @@ const { markDirty, markClean } = useUnsavedGuard(null);
 
 // --- PDF.js ---
 const {
-  canvasRef: pdfCanvasEl, // eslint-disable-line @typescript-eslint/no-unused-vars -- template ref
+  canvasRef: pdfCanvasEl,
   pageCount: pdfPageCount,
   currentPage: pdfCurrentPage,
   renderPage: pdfRenderPage,

@@ -155,7 +155,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { aaa_useAccountingSystem } from '@/composables/useAccountingSystem';
+import { useAccountingSystem } from '@/composables/useAccountingSystem';
 import { mapClientDetailApiToUi } from '@/composables/ClientDetailMapper';
 import type { ClientFormData } from '@/types/client-form.type';
 import ScreenA_Detail_EditModal from './ScreenA_Detail_EditModal.vue';
@@ -168,7 +168,7 @@ import ScreenA_Detail_AIProposalCard from './ScreenA_Detail_AIProposalCard.vue';
 import ScreenA_Detail_AIKnowledgeCard from './ScreenA_Detail_AIKnowledgeCard.vue';
 
 const route = useRoute();
-const { clients, fetchClients, updateClient } = aaa_useAccountingSystem();
+const { clients, fetchClients, updateClient } = useAccountingSystem();
 const isEditModalOpen = ref(false);
 
 // Confirm Modal State (Fixed Type Definition for Delete)

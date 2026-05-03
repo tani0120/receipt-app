@@ -35,17 +35,14 @@ describe('Phase C: ClientMapper Ironclad Test', () => {
     };
 
     it('Lv1: Handles Null / Undefined / Missing Keys', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const result = mapClientApiToUi(null as any);
+        const result = mapClientApiToUi(null as unknown);
         assertIroncladContract(result);
         expect(result.companyName).toContain('Unknown'); // Safe Fallback
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const result2 = mapClientApiToUi(undefined as any);
+        const result2 = mapClientApiToUi(undefined as unknown);
         assertIroncladContract(result2);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const result3 = mapClientApiToUi({} as any);
+        const result3 = mapClientApiToUi({} as unknown);
         assertIroncladContract(result3);
     });
 
@@ -56,8 +53,7 @@ describe('Phase C: ClientMapper Ironclad Test', () => {
             repName: { complex: 'object' },
             fiscalMonth: 'NotANumber',
             status: 999
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any);
+        } as unknown);
         assertIroncladContract(result);
         // Ensure normalization
         expect(result.clientCode).toBe('12345');
@@ -67,8 +63,7 @@ describe('Phase C: ClientMapper Ironclad Test', () => {
     it('Lv3: Handles Extreme Values', () => {
         const result = mapClientApiToUi({
             fiscalMonth: 999999, // Should default to safe month or clamp
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any);
+        } as unknown);
         assertIroncladContract(result);
     });
 
@@ -84,8 +79,7 @@ describe('Phase C: ClientMapper Ironclad Test', () => {
             const result = mapClientApiToUi({
                 clientCode: input,
                 companyName: input
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } as any);
+            } as unknown);
             assertIroncladContract(result);
         });
     });
@@ -94,8 +88,7 @@ describe('Phase C: ClientMapper Ironclad Test', () => {
         const longPath = 'A'.repeat(10000);
         const result = mapClientApiToUi({
             companyName: longPath
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any);
+        } as unknown);
         assertIroncladContract(result);
         expect(result.companyName.length).toBe(10000);
     });

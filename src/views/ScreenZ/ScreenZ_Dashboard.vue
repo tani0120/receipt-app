@@ -151,10 +151,10 @@
 </template>
 
 <script setup lang="ts">
-import { aaa_useAdminDashboard } from '@/composables/useAdminDashboard';
+import { useAdminDashboard } from '@/composables/useAdminDashboard';
 
 defineEmits(['open-staff-modal']);
-const { data } = aaa_useAdminDashboard();
+const { data } = useAdminDashboard();
 </script>
 
 <style scoped>

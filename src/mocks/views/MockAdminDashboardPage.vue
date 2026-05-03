@@ -286,7 +286,7 @@
     </div>
 
     <!-- スタッフ登録モーダル -->
-    <aaa_Z_StaffModal
+    <ZStaffModal
       :visible="isStaffModalOpen"
       @close="isStaffModalOpen = false"
       @save="handleStaffSave"
@@ -298,12 +298,12 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import aaa_Z_StaffModal from '@/views/ScreenZ/Z_StaffModal.vue';
-import { aaa_useAdminDashboard } from '@/composables/useAdminDashboard';
+import ZStaffModal from '@/views/ScreenZ/Z_StaffModal.vue';
+import { useAdminDashboard } from '@/composables/useAdminDashboard';
 
 const route = useRoute();
 const router = useRouter();
-const { data: adminData } = aaa_useAdminDashboard();
+const { data: adminData } = useAdminDashboard();
 
 // 活動ログ集計: 今月の合計処理時間（ミリ秒）
 const activityTotalMs = ref(0);

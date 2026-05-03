@@ -65,10 +65,10 @@
 </template>
 
 <script setup lang="ts">
-import { aaa_useAdminDashboard } from '@/composables/useAdminDashboard';
+import { useAdminDashboard } from '@/composables/useAdminDashboard';
 
 defineEmits(['select-prompt', 'create-prompt']);
-const { data } = aaa_useAdminDashboard();
+const { data } = useAdminDashboard();
 </script>
 
 <style scoped>

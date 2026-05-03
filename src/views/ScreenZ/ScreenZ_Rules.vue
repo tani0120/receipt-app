@@ -49,10 +49,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { aaa_useAdminDashboard } from '@/composables/useAdminDashboard';
+import { useAdminDashboard } from '@/composables/useAdminDashboard';
 
 defineEmits(['select-rule']);
-const { data } = aaa_useAdminDashboard();
+const { data } = useAdminDashboard();
 
 // Flatten rules for uniform display
 const allRules = computed(() => [

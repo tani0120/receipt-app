@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * aaa_mapper.ts
+ * mapper.ts
  * ------------------------------------------------------------
  * Ironclad の心臓部 (Defense Layer)
  *
@@ -71,7 +71,7 @@ const formatTimestamp = (ts: unknown): string => {
     return formatDate(ts);
   }
 
-  // String Date
+  // 文字列日付
   if (typeof ts === 'string') {
     return ts;
   }
@@ -94,8 +94,8 @@ const mapJobStatus = (status: unknown): JobStatusUi => {
     case 'primary_completed': return 'in_progress';
     case 'review': return 'review';
     case 'waiting_approval': return 'review';
-    case 'remanded': return 'in_progress'; // Remand is work
-    case 'approved': return 'completed'; // Approved is mostly done
+    case 'remanded': return 'in_progress'; // 差戻は作業中
+    case 'approved': return 'completed'; // 承認は完了扱い
     case 'generating_csv': return 'completed';
     case 'done': return 'completed';
     case 'excluded': return 'excluded';
@@ -145,7 +145,7 @@ const translateTaxCode = (code: unknown, client: Partial<ClientApi>, side: 'debi
   // 1. Exempt (免税)
   // AIが何を推論しても、システム側で強制的に TAX_EXEMPT (非課税/対象外)
   if (mode === 'exempt') {
-    return 'TAX_NONE'; // Schema: TAX_NONE: 対象外/不課税
+    return 'TAX_NONE'; // 対象外/不課税
   }
 
   // 2. Simplified (簡易)
@@ -153,15 +153,15 @@ const translateTaxCode = (code: unknown, client: Partial<ClientApi>, side: 'debi
     // 売上 (Credit)
     if (side === 'credit') {
       // AI check: Specifically Taxable Sales (10% or 8%)
-      // Caution: Do NOT capture TAX_SALES_EXPORT or TAX_SALES_NON_TAXABLE here
+      // 注意: TAX_SALES_EXPORT/TAX_SALES_NON_TAXABLEはここで捕捉しない
       if (raw.includes('TAX_SALES_10') || raw.includes('TAX_SALES_8') || raw.includes('課税売上')) {
-        const cat = client.simplifiedTaxCategory || 3; // Default 3rd
+        const cat = client.simplifiedTaxCategory || 3; // デフォルト第3種
         const isReduced = raw.includes('8_RED') || raw.includes('軽減');
         const rate = isReduced ? '8%' : '10%';
         const kanji = ['一', '二', '三', '四', '五', '六'][cat - 1] || '三';
         return `簡易${kanji}売 ${rate}`;
       }
-      // Export/Exempt/None passes through as is (e.g., TAX_SALES_EXPORT)
+      // 輸出/免税/対象外はそのまま通過
       return raw;
     } else {
       // 仕入 (Debit) -> 対象外
@@ -181,25 +181,25 @@ const createStep = (state: StepStateUi = 'none', label = '', count = 0): JobStep
 });
 
 const calculateSteps = (api: Partial<JobApi>): JobUi['steps'] => {
-  const s = api.status; // Access raw status directly or safely
+  const s = api.status; // 生ステータスを安全に取得
   const statusStr = String(s ?? '');
 
-  // Helper for lines
+  // 行処理ヘルパー
   const linesCount = Array.isArray(api.lines) ? api.lines.length : 0;
 
-  // Initialize all steps (Mutable logic, then return as readonly)
-  // We calculate each step first
+  // 全ステップ初期化（可変ロジック→読み取り専用で返却）
+  // 各ステップを先に計算
 
-  // Document
+  // 証票
   const document = createStep('done', '受領済');
 
   // AI Analysis
   let aiAnalysis = createStep('none');
   if (statusStr === 'ai_processing') aiAnalysis = createStep('processing', '解析中');
   else if (statusStr === 'error_retry') aiAnalysis = createStep('error', 'エラー');
-  else aiAnalysis = createStep('done', '完了'); // Default assumption: analysis done if not processing/error
+  else aiAnalysis = createStep('done', '完了'); // デフォルト: 処理中/エラー以外は完了とみなす
 
-  // Journal Entry
+  // 仕訳
   let journalEntry = createStep('none');
   if (['pending', 'ai_processing', 'error_retry'].includes(statusStr)) {
     journalEntry = createStep('none');
@@ -209,7 +209,7 @@ const calculateSteps = (api: Partial<JobApi>): JobUi['steps'] => {
     journalEntry = createStep('done');
   }
 
-  // Approval
+  // 承認
   let approval = createStep('none');
   if (['review', 'waiting_approval'].includes(statusStr)) {
     approval = createStep('pending', '承認待ち', linesCount);
@@ -217,13 +217,13 @@ const calculateSteps = (api: Partial<JobApi>): JobUi['steps'] => {
     approval = createStep('done');
   }
 
-  // Remand
+  // 差戻
   let remand = createStep('none');
   if (statusStr === 'remanded') {
     remand = createStep('pending', '差戻し', linesCount);
   }
 
-  // Export
+  // エクスポート
   let exportStep = createStep('none'); // 'export' is reserved word? no, but clearer name
   if (['approved', 'generating_csv'].includes(statusStr)) {
     exportStep = createStep('ready', '未出力');
@@ -231,7 +231,7 @@ const calculateSteps = (api: Partial<JobApi>): JobUi['steps'] => {
     exportStep = createStep('done', '出力済');
   }
 
-  // Archive
+  // アーカイブ
   let archive = createStep('none');
   if (['done', 'error_retry'].includes(statusStr)) {
     const count = statusStr === 'error_retry' ? 1 : 12;
@@ -280,7 +280,7 @@ const calculateActions = (api: Partial<JobApi>): { primary: JobActionUi, next: J
       break;
   }
 
-  // Priority override for review
+  // レビュー用の優先度上書き
   if (['waiting_approval', 'review'].includes(s)) {
     primary = { type: 'approve', label: '最終承認', isEnabled: true };
   }
@@ -374,7 +374,7 @@ export const mapJobApiToUi = (
     confidenceScore: safeNumber(api.confidenceScore),
     hasAiResult: !!api.aiAnalysisRaw,
 
-    // Populating Screen B Helpers
+    // 画面Bヘルパー値設定
     primaryDescription: Array.isArray(api.lines) && api.lines.length > 0 ? safeText(api.lines[0]?.description) : '摘要なし',
     aiConfidenceLabel: api.confidenceScore ? `AI信頼度: ${(api.confidenceScore * 100).toFixed(0)}%` : 'AI未解析',
     transactionDateLabel: formatTimestamp(api.transactionDate),
@@ -391,7 +391,7 @@ export const mapJobApiToUi = (
 
     driveFileUrl: api.driveFileId ? `https://drive.google.com/file/d/${api.driveFileId}/view` : '',
 
-    // Screen E Default Logic
+    // 画面Eデフォルトロジック
     journalEditMode: 'work',
     alerts: [],
     canEdit: ['ready_for_work', 'remanded', 'error_retry'].includes(jobStatus),
@@ -428,7 +428,7 @@ export const mapJobApiToUi = (
       };
     })(),
 
-    // Ironclad Rule 4: Deep Logic
+    // 型安全ルール4: ディープロジック
     invoiceValidationLog: {
       isValid: !!api.invoiceValidationLog?.isValid,
       registrationNumber: safeText(api.invoiceValidationLog?.registrationNumber),
@@ -460,14 +460,14 @@ export const mapConversionLogUi = (input: unknown): ConversionLogUi => {
   else if (rawTarget === 'MF' || rawTarget === 'マネーフォワード') { targetCode = 'MF'; targetLabel = 'マネーフォワード'; }
 
   // 2. File Size Logic (Mock or Real)
-  // If API provides size bytes, format it. If not, mock it safely (never show undefined).
+  // APIがサイズを提供する場合フォーマット、なければ安全にモック（undefined表示防止）
   const sizeBytes = safeNumber(d.sizeBytes || d.size, 0);
   let sizeLabel = '0 KB';
   if (sizeBytes > 0) {
     if (sizeBytes < 1024 * 1024) sizeLabel = `${(sizeBytes / 1024).toFixed(1)} KB`;
     else sizeLabel = `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
   } else {
-    // Fallback for mocks lacking size
+    // サイズなしモック用フォールバック
     sizeLabel = 'Unknown Size';
   }
 

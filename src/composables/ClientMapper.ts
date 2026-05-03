@@ -1,6 +1,6 @@
 import type { ClientUi, TaxFilingTypeUi, ConsumptionTaxModeUi } from '@/types/ui.type';
 
-// Helpers
+// ヘルパー関数
 function mapSimplifiedTaxCategoryLabel(category: number): string {
     const map: Record<number, string> = {
         0: '特になし',
@@ -23,13 +23,13 @@ function mapSoftwareLabel(sw: string): string {
     const map: Record<string, string> = {
         'freee': 'freee',
         'yayoi': '弥生会計',
-        'mf': 'MF', // Fixed label
+        'mf': 'MF', // ラベル固定
         'other': 'その他'
     };
     return map[sw] || sw;
 }
 
-// Helpers for Ironclad Defense
+// 型安全防御ヘルパー
 const safeString = (val: unknown): string => {
     if (val === null || val === undefined) return '';
     if (typeof val === 'string') return val;
@@ -49,7 +49,7 @@ const safeNumber = (val: unknown): number => {
 export function mapClientApiToUi(api: unknown): ClientUi {
     // 1. Guard: Check if input is object
     if (!api || typeof api !== 'object') {
-        // Fallback
+        // フォールバック
         return {
             clientId: 'UNKNOWN_ID',
             clientCode: 'Unknown',
@@ -63,7 +63,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
             contact: { type: 'none', value: '' },
             driveLinks: { storage: '#', journalOutput: '#', journalExclusion: '#', pastJournals: '#' },
 
-            // Folder IDs
+            // フォルダID
             sharedFolderId: '',
             processingFolderId: '',
             archivedFolderId: '',
@@ -78,7 +78,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
             defaultTaxRate: 10,
             taxMethod: 'inclusive',
 
-            // New Fields
+            // 新規フィールド
             taxCalculationMethod: 'stack',
             isInvoiceRegistered: false,
             invoiceRegistrationNumber: '',
@@ -94,7 +94,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
             taxMethodLabel: '税込',
             calcMethodShortLabel: '発生',
 
-            // New Labels
+            // 新規ラベル
             taxCalculationMethodLabel: '積上計算',
             invoiceRegistrationLabel: '無',
             roundingSettingsLabel: '切り捨て',
@@ -109,18 +109,18 @@ export function mapClientApiToUi(api: unknown): ClientUi {
 
     const raw = api as Record<string, unknown>;
 
-    // Primitives with Safe Mapping
+    // プリミティブの安全なマッピング
     const clientId = safeString(raw.clientId) || 'UNKNOWN_ID';
     const clientCode = safeString(raw.clientCode) || 'Unknown';
     const companyName = safeString(raw.companyName) || 'Unknown Client';
     const repName = safeString(raw.repName);
     const contactInfo = safeString(raw.contactInfo);
 
-    // Logic: Ensure 1-12
+    // ロジック: 1-12の範囲保証
     let fiscalMonth = safeNumber(raw.fiscalMonth);
     if (fiscalMonth < 1 || fiscalMonth > 12) fiscalMonth = 1;
 
-    // Enums
+    // 列挙値
     const statusRaw = safeString(raw.status);
     const status = (statusRaw === 'active' || statusRaw === 'inactive' || statusRaw === 'suspension')
         ? statusRaw
@@ -128,7 +128,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
 
     const isActive = status === 'active';
 
-    // Contact
+    // 連絡先
     let contactType: 'email' | 'chatwork' | 'none' = 'none';
     if (contactInfo.includes('@')) contactType = 'email';
     else if (contactInfo.startsWith('http')) contactType = 'chatwork';
@@ -138,7 +138,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
         value: contactInfo
     };
 
-    // Folders & Drive Links
+    // フォルダ & Driveリンク
     const sharedFolderId = safeString(raw.sharedFolderId);
     const processingFolderId = safeString(raw.processingFolderId);
     const archivedFolderId = safeString(raw.archivedFolderId);
@@ -153,7 +153,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
         pastJournals: archivedFolderId ? `https://drive.google.com/drive/folders/${archivedFolderId}` : '#'
     };
 
-    // Tax Settings
+    // 税設定
     const taxTypeRaw = safeString(raw.taxFilingType);
     const taxFilingType = (['blue', 'white'].includes(taxTypeRaw) ? taxTypeRaw : 'blue') as TaxFilingTypeUi;
 
@@ -166,7 +166,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
     ) as 1 | 2 | 3 | 4 | 5 | 6 | undefined;
 
     // safeNumber returns 0 for invalid, so 0 maps to '特になし' but in UI type it is undefined optional.
-    // For label mapping:
+    // ラベルマッピング用:
     const simplifiedTaxCategoryLabel = mapSimplifiedTaxCategoryLabel(simplifiedTaxCategoryRaw);
 
     const defaultTaxRate = safeNumber(raw.defaultTaxRate);
@@ -179,16 +179,16 @@ export function mapClientApiToUi(api: unknown): ClientUi {
 
     const driveLinked = Boolean(raw.driveLinked); // safeBoolean
 
-    // Display Labels
+    // 表示ラベル
     const softwareLabel = mapSoftwareLabel(accountingSoftware);
 
-    // Calculation Method
+    // 計算方法
     const calcMethodRaw = safeString(raw.calculationMethod);
-    let calculationMethodLabel = '発生主義'; // Default
+    let calculationMethodLabel = '発生主義'; // デフォルト
     if (calcMethodRaw === 'cash') calculationMethodLabel = '現金主義';
     if (calcMethodRaw === 'interim_cash') calculationMethodLabel = '期中現金主義';
 
-    // New Fields Mapping
+    // 新規フィールドマッピング
     const typeRaw = safeString(raw.type);
     const type = (['corp', 'individual'].includes(typeRaw) ? typeRaw : 'corp') as 'corp' | 'individual';
     const typeLabel = type === 'corp' ? '法人' : '個人';
@@ -211,15 +211,13 @@ export function mapClientApiToUi(api: unknown): ClientUi {
     })();
 
 
-    // Composite Label
+    // 複合ラベル
     const shortCalc = calculationMethodLabel.replace('主義', '');
     const taxMethodLabel = taxMethod === 'inclusive' ? '税込' : '税抜';
 
-    // Format: "税込 / 発生" (as per original Strict requirements, maybe without tax filing info to be cleaner?)
-    // User complaint: "freee / 青色 / 課税 / 発生" is wrong.
-    // User requested: "ソフト/税/基準" -> Software / Tax / Standard.
-    // Let's assume "Tax" means "Inclusive/Exclusive".
-    // "freee / 税込 / 発生"
+    // フォーマット: "税込 / 発生"
+
+
     const taxInfoLabel = `${taxMethodLabel} / ${shortCalc}`;
 
     const staffNameVal = safeString(raw.staffName) || undefined;
@@ -240,17 +238,17 @@ export function mapClientApiToUi(api: unknown): ClientUi {
         contact,
         driveLinks,
 
-        // Folder IDs (Keep raw for editing)
+        // フォルダID（編集用に生値保持）
         sharedFolderId, processingFolderId, archivedFolderId, excludedFolderId, csvOutputFolderId, learningCsvFolderId,
 
-        // Tax Raw Data
+        // 税生データ
         taxFilingType,
         consumptionTaxMode,
         simplifiedTaxCategory,
         defaultTaxRate,
         taxMethod,
 
-        // New Fields
+        // 新規フィールド
         taxCalculationMethod,
         isInvoiceRegistered,
         invoiceRegistrationNumber,
@@ -259,7 +257,7 @@ export function mapClientApiToUi(api: unknown): ClientUi {
         accountingSoftware,
         driveLinked,
 
-        // Labels
+        // ラベル
         fiscalMonthLabel: mapFiscalMonthLabel(fiscalMonth),
         simplifiedTaxCategoryLabel,
         softwareLabel,
@@ -269,14 +267,14 @@ export function mapClientApiToUi(api: unknown): ClientUi {
         taxMethodLabel,
         calcMethodShortLabel: shortCalc,
 
-        // New Labels
+        // 新規ラベル
         taxCalculationMethodLabel,
         invoiceRegistrationLabel,
         roundingSettingsLabel,
         typeLabel,
         taxFilingTypeLabel,  // 青色申告 / 白色申告
 
-        // Actions (BFF)
+        // アクション
         actions: [
             { type: 'edit' as const, label: '編集', isEnabled: true },
             { type: 'delete' as const, label: '削除', isEnabled: status === 'active' }

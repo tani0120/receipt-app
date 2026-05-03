@@ -452,7 +452,7 @@ const MOCK_DATA: DashboardData = {
   }
 };
 
-export function aaa_useAdminDashboard() {
+export function useAdminDashboard() {
   const data = ref<DashboardData>(MOCK_DATA);
 
   // 実データ取得: 顧問先数・スタッフ数・スタッフ名・顧問先名
@@ -672,7 +672,7 @@ export function aaa_useAdminDashboard() {
     // Mock CSV Download
     return new Promise<boolean>((resolve) => {
       setTimeout(() => {
-        console.log("CSV Downloaded");
+        console.log("CSVダウンロード完了");
         resolve(true);
       }, 1000);
     });

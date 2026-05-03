@@ -2,7 +2,7 @@
 
 > 統合元: task_restored.md / task_03_resolved29.md / task_01_bd8b5ef7.md / task_02_prev_task.md / task.md / prev_task.md（bd8b5ef7）
 > 統合日: 2026-04-08（セッション 1cd25cab）
-> 最終更新: 2026-04-29（C-10: 仕訳UIロジック外出しタスク追加 + 全セクション実査監査）
+> 最終更新: 2026-05-03（技術負債解消: useAccountingSystem.ts分割・死コード削除・英語コメント日本語化）
 > 実査方法: git log・grep_search・view_file・list_dir による実ファイル確認
 > ルール: **型・コード・シグネチャは今やる。実行行為（テスト実施・データ整備）のみ先送り可。**
 
@@ -21,7 +21,7 @@
 | **初期化** | `firebase.ts`, `firebase-admin.ts` 削除 | ✅ ファイル不在確認 |
 | **削除ファイル** | 18ファイル（services/*, stores/auth.ts, utils/testAuth.ts, composables/useJournalEditor.ts 等） | ✅ |
 | **環境変数** | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 追加 | ✅ supabase.tsで参照 |
-| **残存** | 型定義ファイル（`Timestamp` from firebase/firestore）にimport残存。実行に影響なし | ⚠️ firestore.ts等5ファイルにTimestamp型残存（SDKimportなし） |
+| **残存** | ~~型定義ファイル（`Timestamp` from firebase/firestore）にimport残存~~ | ✅ firestore.ts削除済み（2026-05-03）。Timestamp参照0件 |
 
 ---
 
@@ -620,6 +620,27 @@
 - **対処**: 選別画面（`/drive-select/:clientId`）でAI結果を表示するUI実装。L-8で管理
 - **詳細**: [field_audit.md v3 問題4](file:///C:/Users/kazen/.gemini/antigravity/brain/b29e23e6-88c0-4691-a867-4f898f874cd8/field_audit.md)
 - **2026-04-29 実査**: `MockDriveSelectPage.vue`にaiSourceTypeが1件ヒット。**選別画面で部分的にAI結果表示済み**。全15件の表示状況は要詳細確認
+
+### ✅ E-9: useAccountingSystem.ts 巨大ファイル分割 — **完了（2026-05-03）**
+
+- 1522行 → 470行（69%削減）
+- `accountingConstants.ts`（582行）: GAS統合ロジック、税区分、AIプロンプト、システム設定、enum、interface
+- `mocks/data/accountingMockData.ts`（160行）: モックジョブ生成、管理ダッシュボードデータ、AI科目判定
+- `mocks/data/accountingMockClients.ts`（347行）: 顧問先モック12件分
+- 再エクスポートにより既存の利用者への互換性維持
+
+### ✅ E-10: 死コード・レガシー遺物完全排除 — **完了（2026-05-03）**
+
+- `useClientListRPC.ts`（Hono RPC依存）削除
+- `useBankLogic.ts`（Firebase Timestamp依存）削除
+- `firestore.ts`（Firebase型定義422行）削除
+- `client.ts`（Hono RPCクライアント定義。孤立ファイル）削除
+- `aaa_`プレフィクス19ファイル一括リネーム
+- Hono RPC `import { client }` 9箇所 → fetch API移行
+- `Timestamp.now()` → `new Date()` 15箇所
+- eslint-disable + `as any` → `as unknown` 26箇所
+- 英語コメント・ログメッセージ 120+箇所日本語化
+- HTMLエンティティバグ（`&quot;`）修正1箇所
 
 ---
 

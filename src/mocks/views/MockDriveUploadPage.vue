@@ -225,9 +225,8 @@ const clientName = computed(() => clients.value.find(c => c.clientId === clientI
 const { markDirty, markClean } = useUnsavedGuard(null)
 
 // ===== 型 =====
-interface DriveFileEntry extends DriveFileItemWithThumbnail {
-  // DriveFileItemWithThumbnailを継承（id, name, mimeType, size, createdTime, thumbnailBase64）
-}
+// DriveFileItemWithThumbnailを継承（id, name, mimeType, size, createdTime, thumbnailBase64）
+type DriveFileEntry = DriveFileItemWithThumbnail
 
 // ===== 状態 =====
 const driveFiles = ref<DriveFileEntry[]>([])

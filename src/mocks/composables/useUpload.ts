@@ -68,10 +68,16 @@ export const SOURCE_TYPE_LABELS: Record<string, string> = {
 
 // ===== ユーティリティ =====
 
+/** Chrome/Android専用 performance.memory の型拡張 */
+declare global {
+  interface Performance {
+    memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number }
+  }
+}
+
 /** メモリ使用量取得（Chrome/Android限定。iOS Safariでは取得不可=null） */
 function getMemoryMB(): number | null {
-  const perf = performance as unknown as { memory?: { usedJSHeapSize: number } }
-  return perf.memory ? Math.round(perf.memory.usedJSHeapSize / 1024 / 1024) : null
+  return performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) : null
 }
 
 /** チェックポイント送信（sendBeacon: クラッシュ直前でも送信される可能性が高い） */

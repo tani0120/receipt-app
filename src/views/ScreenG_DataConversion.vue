@@ -23,7 +23,7 @@
         <!-- 入力セクション -->
         <div class="flex flex-col gap-6">
           <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-             <aaa_G_StepHeader stepNumber="1" title="変換設定" />
+             <GStepHeader stepNumber="1" title="変換設定" />
 
              <div class="space-y-4">
                  <div>
@@ -36,7 +36,7 @@
                  <div>
                      <label class="block text-xs font-bold text-gray-500 mb-2">出力する会計ソフト名 <span class="text-red-500">*</span></label>
                      <div class="grid grid-cols-1 gap-3">
-                        <aaa_G_BrandRadio v-model="form.targetSoftware" value="MF" label="マネーフォワード" />
+                        <GBrandRadio v-model="form.targetSoftware" value="MF" label="マネーフォワード" />
                      </div>
                  </div>
 
@@ -44,8 +44,8 @@
                  <div>
                      <label class="block text-xs font-bold text-gray-500 mb-2">出力形式 <span class="text-red-500">*</span></label>
                      <div class="grid grid-cols-2 gap-3">
-                        <aaa_G_BrandRadio v-model="form.outputFormat" value="meisai" label="明細CSV" />
-                        <aaa_G_BrandRadio v-model="form.outputFormat" value="shiwake" label="仕訳帳CSV" :disabled="true" badge="🚧 工事中" />
+                        <GBrandRadio v-model="form.outputFormat" value="meisai" label="明細CSV" />
+                        <GBrandRadio v-model="form.outputFormat" value="shiwake" label="仕訳帳CSV" :disabled="true" badge="🚧 工事中" />
                      </div>
                  </div>
              </div>
@@ -55,7 +55,7 @@
            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative overflow-hidden"
                 @drop.prevent="handleDrop" @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false">
 
-                <aaa_G_StepHeader stepNumber="2" title="ファイルアップロード" />
+                <GStepHeader stepNumber="2" title="ファイルアップロード" />
 
                 <div v-if="!uploadedFile" class="border-2 border-gray-300 rounded-lg p-8 text-center" :class="{'bg-green-50 border-green-400': isDragging}">
                     <input ref="fileInput" type="file" class="hidden" @change="handleFileSelect" accept=".csv">
@@ -116,7 +116,7 @@
                         <p class="text-xs">履歴はありません</p>
                     </div>
 
-                    <aaa_G_HistoryItem
+                    <GHistoryItem
                         v-for="log in sortedLogs"
                         :key="log.id"
                         :log="log"
@@ -134,15 +134,15 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, defineAsyncComponent } from 'vue';
-import { aaa_useDataConversion } from '@/composables/useDataConversion';
+import { useDataConversion } from '@/composables/useDataConversion';
 
 // コンポーネント
-const aaa_G_StepHeader = defineAsyncComponent(() => import('@/components/ScreenG/G_StepHeader.vue'));
-const aaa_G_BrandRadio = defineAsyncComponent(() => import('@/components/ScreenG/G_BrandRadio.vue'));
-const aaa_G_HistoryItem = defineAsyncComponent(() => import('@/components/ScreenG/G_HistoryItem.vue'));
+const GStepHeader = defineAsyncComponent(() => import('@/components/ScreenG/G_StepHeader.vue'));
+const GBrandRadio = defineAsyncComponent(() => import('@/components/ScreenG/G_BrandRadio.vue'));
+const GHistoryItem = defineAsyncComponent(() => import('@/components/ScreenG/G_HistoryItem.vue'));
 
 // Composable
-const { logs, markAsDownloaded, removeLog, startDataConversion, processFile, isProcessing, loadingStatus } = aaa_useDataConversion();
+const { logs, markAsDownloaded, removeLog, startDataConversion, processFile, isProcessing, loadingStatus } = useDataConversion();
 
 // 状態
 const isDragging = ref(false);

@@ -455,7 +455,7 @@ const go = (path: string) => {
 }
 // staffUrl / driveGuestUrl は未使用警告回避用（将来利用）
 void staffUrl
-void driveGuestUrl
+void driveGuestUrl.value
 </script>
 
 <style scoped>

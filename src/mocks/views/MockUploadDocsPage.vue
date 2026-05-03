@@ -1,7 +1,7 @@
 <template>
   <div
     class="h-full overflow-y-auto flex flex-col"
-    style="font-family: &quot;Noto Sans JP&quot;, sans-serif; position: relative; background: #fff"
+    style="font-family: 'Noto Sans JP', sans-serif; position: relative; background: #fff"
   >
     <!-- ポータル共通ヘッダー -->
     <PortalHeader :clientName="clientName" />
@@ -416,7 +416,7 @@ const handleConfirm = async () => {
   const folderId = client?.sharedFolderId;
   for (const f of doneFiles) {
     let driveFileId: string | null = null;
-    let fileHash: string | null = null;
+    const fileHash: string | null = null;
     try {
       if (folderId) {
         const formData = new FormData();

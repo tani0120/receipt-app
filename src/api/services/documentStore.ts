@@ -34,25 +34,24 @@ export function loadDocuments(): void {
       // DL-042マイグレーション: 新フィールドがない既存データにnullを設定
       let migrated = false;
       for (const doc of documents) {
-        const record = doc as unknown as Record<string, unknown>;
         if (doc.createdBy === undefined) {
-          record.createdBy = null;
+          doc.createdBy = null;
           migrated = true;
         }
         if (doc.updatedBy === undefined) {
-          record.updatedBy = null;
+          doc.updatedBy = null;
           migrated = true;
         }
         if (doc.updatedAt === undefined) {
-          record.updatedAt = null;
+          doc.updatedAt = null;
           migrated = true;
         }
         if (doc.statusChangedBy === undefined) {
-          record.statusChangedBy = null;
+          doc.statusChangedBy = null;
           migrated = true;
         }
         if (doc.statusChangedAt === undefined) {
-          record.statusChangedAt = null;
+          doc.statusChangedAt = null;
           migrated = true;
         }
       }
@@ -299,10 +298,13 @@ export function updateAiResults(
 
 /** DocEntryのai*フィールドを全てnullに設定する */
 function nullifyAiFields(doc: DocEntry): void {
-  const record = doc as unknown as Record<string, unknown>;
+  const nullPatch: Partial<DocEntry> = {};
   for (const key of AI_FIELD_KEYS) {
-    record[key] = null;
+    // AI_FIELD_KEYSはDocEntryのai*プロパティ名を列挙した定数配列
+    // Partial<DocEntry>のプロパティにnullを代入
+    (nullPatch as Record<string, null>)[key] = null;
   }
+  Object.assign(doc, nullPatch);
 }
 
 /**

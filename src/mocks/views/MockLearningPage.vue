@@ -297,16 +297,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import type { LearningRule, LearningRuleEntryLine } from '../types/learning_rule.type'
-import { learningRulesTST00011 } from '@/mocks/data/learning_rules_TST00011'
 
 const route = useRoute()
 const clientId = computed(() => (route.params.clientId as string) || 'TST-00011')
 
-// --- データ ---
-const rules = ref<LearningRule[]>([...learningRulesTST00011])
+// --- データ（API経由で取得） ---
+const rules = ref<LearningRule[]>([])
+
+onMounted(async () => {
+  try {
+    const res = await fetch(`/api/learning-rules/${clientId.value}`)
+    if (res.ok) {
+      const data = await res.json() as { rules: LearningRule[] }
+      rules.value = data.rules
+    }
+  } catch (e) {
+    console.error('[LearningPage] API取得失敗:', e)
+  }
+})
 
 // --- 証票種別フィルタ ---
 const sourceFilter = ref<string>('all')

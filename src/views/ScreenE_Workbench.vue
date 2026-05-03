@@ -244,7 +244,7 @@
 import { computed, ref } from 'vue';
 // [レガシー] useJournalEditor は Firebase依存のため削除済み
 // TODO: Supabase移行後に再実装
-// import { aaa_useJournalEditor } from '@/composables/useJournalEditor';
+// import { useJournalEditor } from '@/composables/useJournalEditor';
 // TAX_OPTIONS の正しいimport元: @/shared/schema_dictionary（旧: useAccountingSystem に存在しない）
 import { TAX_OPTIONS } from '@/shared/schema_dictionary';
 import type { JournalUiMode } from '@/shared/journalUiMode';

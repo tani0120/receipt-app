@@ -1,26 +1,22 @@
 
 import { ref, computed, onMounted } from 'vue';
 import type { ConversionLogUi, ConversionLogId } from '@/types/ScreenG_ui.type';
-import { client } from '@/client';
 
 // State driven by API (BFF)
 const logs = ref<ConversionLogUi[]>([]);
 
-export function aaa_useDataConversion() {
+export function useDataConversion() {
 
     // Fetch from Hono (BFF)
     const fetchLogs = async () => {
         try {
-            const res = await client.api.conversion['$get']();
+            const res = await fetch('/api/conversion');
             if (res.ok) {
-                // Ensure type safety via casting if necessary, though RPC infers mostly
-                // Depending on Hono RPC types, we might get generic JSON.
-                // Zod in Hono ensures shape, but TS might need a nudge if types aren't shared perfectly yet.
                 const data = await res.json();
-                logs.value = data as unknown as ConversionLogUi[];
+                logs.value = data as ConversionLogUi[];
             }
         } catch (e) {
-            console.error('Failed to fetch conversion logs:', e);
+            console.error('変換ログ取得失敗:', e);
         }
     };
 
@@ -74,9 +70,7 @@ export function aaa_useDataConversion() {
     // Updated: DELETE via RPC
     const removeLog = async (id: string) => {
         try {
-            const res = await client.api.conversion[':id'].$delete({
-                param: { id }
-            });
+            const res = await fetch(`/api/conversion/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 // Update local state on success
                 const index = logs.value.findIndex(l => l.id === id);
@@ -84,10 +78,10 @@ export function aaa_useDataConversion() {
                     logs.value.splice(index, 1);
                 }
             } else {
-                console.error('Failed to delete log');
+                console.error('ログ削除失敗');
             }
         } catch (e) {
-            console.error('Delete error:', e);
+            console.error('削除エラー:', e);
         }
     };
 
