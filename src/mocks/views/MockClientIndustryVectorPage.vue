@@ -140,10 +140,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { INDUSTRY_VECTOR_CORPORATE } from '@/mocks/data/pipeline/industry_vector_corporate';
-import { INDUSTRY_VECTOR_SOLE } from '@/mocks/data/pipeline/industry_vector_sole';
 import { VENDOR_VECTOR_LABELS } from '@/mocks/types/pipeline/vendor.type';
 import type { VendorVector, IndustryVectorEntry } from '@/mocks/types/pipeline/vendor.type';
 import { ACCOUNT_MASTER } from '@/shared/data/account-master';
@@ -167,19 +165,38 @@ const ivDefaultWidths: Record<string, number> = { vector: 120, label: 140, categ
 const { columnWidths: ivColWidths, onResizeStart: onIvResizeStart } = useColumnResize('client-industry-vector', ivDefaultWidths);
 
 // ============================================================
-// 編集用データ（顧問先種別に応じた辞書のディープコピー）
+// 編集用データ（API経由で取得）
 // ============================================================
 interface EditableEntry { vector: string; expense: string[]; income: string[]; deprecated: boolean; }
 
-function cloneEntries(source: IndustryVectorEntry[]): EditableEntry[] {
+function toEditable(source: IndustryVectorEntry[]): EditableEntry[] {
   return source.map(e => ({ vector: e.vector, expense: [...e.expense], income: [...e.income], deprecated: e.vector === 'telecom_saas' }));
 }
 
 const entries = computed(() =>
   isCorporate.value ? corporateEntries.value : soleEntries.value
 );
-const corporateEntries = ref<EditableEntry[]>(cloneEntries(INDUSTRY_VECTOR_CORPORATE));
-const soleEntries = ref<EditableEntry[]>(cloneEntries(INDUSTRY_VECTOR_SOLE));
+const corporateEntries = ref<EditableEntry[]>([]);
+const soleEntries = ref<EditableEntry[]>([]);
+
+onMounted(async () => {
+  try {
+    const [corpRes, soleRes] = await Promise.all([
+      fetch('/api/industry-vectors?type=corporate'),
+      fetch('/api/industry-vectors?type=sole'),
+    ]);
+    if (corpRes.ok) {
+      const data = await corpRes.json() as { entries: IndustryVectorEntry[] };
+      corporateEntries.value = toEditable(data.entries);
+    }
+    if (soleRes.ok) {
+      const data = await soleRes.json() as { entries: IndustryVectorEntry[] };
+      soleEntries.value = toEditable(data.entries);
+    }
+  } catch (e) {
+    console.error('[ClientIndustryVectorPage] API取得失敗:', e);
+  }
+});
 
 // ============================================================
 // カテゴリ定義

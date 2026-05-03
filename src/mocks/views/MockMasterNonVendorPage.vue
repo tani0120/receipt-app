@@ -264,8 +264,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
-import { VENDORS_GLOBAL } from "@/mocks/data/pipeline/vendors_global";
+import { ref, computed, watch, onMounted } from "vue";
 import type { NonVendorType } from "@/mocks/types/pipeline/non_vendor.type";
 import type { Vendor } from "@/mocks/types/pipeline/vendor.type";
 import { ACCOUNT_MASTER } from "@/shared/data/account-master";
@@ -273,11 +272,21 @@ import { TAX_CATEGORY_MASTER } from "@/shared/data/tax-category-master";
 import { normalizeVendorName } from "@/mocks/utils/pipeline/vendorIdentification";
 
 // ============================================================
-// データ（VENDORS_GLOBALから non_vendor_type !== null のみ抽出してコピー）
+// データ（API経由で取得）
 // ============================================================
-const vendors = ref<Vendor[]>(
-  structuredClone(VENDORS_GLOBAL.filter((v) => v.non_vendor_type !== null)),
-);
+const vendors = ref<Vendor[]>([]);
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/vendors?type=non-vendor');
+    if (res.ok) {
+      const data = await res.json() as { vendors: Vendor[] };
+      vendors.value = data.vendors;
+    }
+  } catch (e) {
+    console.error('[NonVendorPage] API取得失敗:', e);
+  }
+});
 
 // ============================================================
 // ラベル変換・選択肢
@@ -325,11 +334,16 @@ function confirmDelete(row: Vendor) {
   deleteTarget.value = row;
 }
 
-function executeDelete() {
+async function executeDelete() {
   if (!deleteTarget.value) return;
-  const idx = vendors.value.findIndex((v) => v.vendor_id === deleteTarget.value!.vendor_id);
-  if (idx !== -1) {
-    vendors.value.splice(idx, 1);
+  try {
+    const res = await fetch(`/api/vendors/${deleteTarget.value.vendor_id}`, { method: 'DELETE' });
+    if (res.ok) {
+      const idx = vendors.value.findIndex((v) => v.vendor_id === deleteTarget.value!.vendor_id);
+      if (idx !== -1) vendors.value.splice(idx, 1);
+    }
+  } catch (e) {
+    console.error('[NonVendorPage] 削除失敗:', e);
   }
   deleteTarget.value = null;
 }
@@ -337,15 +351,8 @@ function executeDelete() {
 // ============================================================
 // 追加
 // ============================================================
-function addEntry() {
-  const maxNum = vendors.value.reduce((max, v) => {
-    const n = parseInt(v.vendor_id.replace("nv-", ""), 10);
-    return isNaN(n) ? max : Math.max(max, n);
-  }, 0);
-  const newId = `nv-${String(maxNum + 1).padStart(4, "0")}`;
-
-  const newVendor: Vendor = {
-    vendor_id: newId,
+async function addEntry() {
+  const newVendor: Omit<Vendor, 'vendor_id'> & { vendor_id?: string } = {
     company_name: "",
     match_key: "",
     display_name: null,
@@ -372,8 +379,20 @@ function addEntry() {
     client_id: null,
   };
 
-  vendors.value.unshift(newVendor);
-  page.value = 1;
+  try {
+    const res = await fetch('/api/vendors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newVendor),
+    });
+    if (res.ok) {
+      const created = await res.json() as Vendor;
+      vendors.value.unshift(created);
+      page.value = 1;
+    }
+  } catch (e) {
+    console.error('[NonVendorPage] 追加失敗:', e);
+  }
 }
 
 // ============================================================

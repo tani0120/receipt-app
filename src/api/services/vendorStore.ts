@@ -16,6 +16,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import type { Vendor } from '../../mocks/types/pipeline/vendor.type'
+import { VENDORS_GLOBAL } from '../../mocks/data/pipeline/vendors_global'
 
 const DATA_DIR = join(process.cwd(), 'data')
 const DATA_FILE = join(DATA_DIR, 'vendors.json')
@@ -27,18 +28,11 @@ let vendorList: Vendor[] = []
 let idCounter = 0
 
 // ============================================================
-// シードデータ読み込み（JSONが存在しない場合のみ）
+// シードデータ（JSONが存在しない場合のみ使用）
 // ============================================================
 
-async function loadSeedData(): Promise<Vendor[]> {
-  try {
-    // 動的importでVENDORS_GLOBALを遅延読み込み
-    const { VENDORS_GLOBAL } = await import('../../mocks/data/pipeline/vendors_global')
-    return [...VENDORS_GLOBAL]
-  } catch (err) {
-    console.error('[vendorStore] シードデータ読み込みエラー:', err)
-    return []
-  }
+function loadSeedData(): Vendor[] {
+  return [...VENDORS_GLOBAL]
 }
 
 // ============================================================
@@ -57,20 +51,20 @@ function save(): void {
 }
 
 /** 起動時にJSONから読み込み。なければ初期シード投入 */
-export async function loadVendors(): Promise<void> {
+export function loadVendors(): void {
   try {
     if (existsSync(DATA_FILE)) {
       const raw = readFileSync(DATA_FILE, 'utf-8')
       vendorList = JSON.parse(raw) as Vendor[]
       console.log(`[vendorStore] ${vendorList.length}件をJSONから読み込み`)
     } else {
-      vendorList = await loadSeedData()
+      vendorList = loadSeedData()
       save()
       console.log(`[vendorStore] JSONなし。初期シード${vendorList.length}件を投入`)
     }
   } catch (err) {
     console.error('[vendorStore] JSON読み込みエラー:', err)
-    vendorList = await loadSeedData()
+    vendorList = loadSeedData()
     save()
   }
   // IDカウンターを既存データの最大値に設定
@@ -80,7 +74,7 @@ export async function loadVendors(): Promise<void> {
 function updateIdCounter(): void {
   for (const v of vendorList) {
     const match = v.vendor_id.match(/^gbl-(\d+)$/)
-    if (match) {
+    if (match && match[1]) {
       const num = parseInt(match[1], 10)
       if (num > idCounter) idCounter = num
     }
@@ -164,3 +158,7 @@ function generateId(): string {
   idCounter++
   return `gbl-${String(idCounter).padStart(4, '0')}`
 }
+
+// 起動時に自動読み込み
+loadVendors()
+

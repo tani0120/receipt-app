@@ -193,19 +193,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { VENDORS_GLOBAL } from '@/mocks/data/pipeline/vendors_global';
+import { ref, computed, watch, onMounted } from 'vue';
 import type { Vendor, VendorVector } from '@/mocks/types/pipeline/vendor.type';
 import { VENDOR_VECTOR_LABELS, VENDOR_VECTORS } from '@/mocks/types/pipeline/vendor.type';
 import { ACCOUNT_MASTER } from '@/shared/data/account-master';
 import { normalizeVendorName } from '@/mocks/utils/pipeline/vendorIdentification';
 
 // ============================================================
-// データ（VENDORS_GLOBALのディープコピー。編集はこのコピーに対して行う）
+// データ（API経由で取得。編集はローカルrefに対して行う）
 // ============================================================
-const vendors = ref<Vendor[]>(
-  structuredClone(VENDORS_GLOBAL.filter(v => v.vendor_vector !== null))
-);
+const vendors = ref<Vendor[]>([]);
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/vendors?type=vendor');
+    if (res.ok) {
+      const data = await res.json() as { vendors: Vendor[] };
+      vendors.value = data.vendors;
+    }
+  } catch (e) {
+    console.error('[VendorsPage] API取得失敗:', e);
+  }
+});
 
 // ============================================================
 // ラベル変換（全てimport元のデータから導出。ハードコードなし）
@@ -271,11 +280,16 @@ function confirmDelete(row: Vendor) {
   deleteTarget.value = row;
 }
 
-function executeDelete() {
+async function executeDelete() {
   if (!deleteTarget.value) return;
-  const idx = vendors.value.findIndex(v => v.vendor_id === deleteTarget.value!.vendor_id);
-  if (idx !== -1) {
-    vendors.value.splice(idx, 1);
+  try {
+    const res = await fetch(`/api/vendors/${deleteTarget.value.vendor_id}`, { method: 'DELETE' });
+    if (res.ok) {
+      const idx = vendors.value.findIndex(v => v.vendor_id === deleteTarget.value!.vendor_id);
+      if (idx !== -1) vendors.value.splice(idx, 1);
+    }
+  } catch (e) {
+    console.error('[VendorsPage] 削除失敗:', e);
   }
   deleteTarget.value = null;
 }
@@ -284,17 +298,9 @@ function executeDelete() {
 // 追加
 // ============================================================
 
-/** 新規取引先を先頭に追加。IDは既存最大値+1で自動採番 */
-function addVendor() {
-  // 既存IDから最大番号を取得
-  const maxNum = vendors.value.reduce((max, v) => {
-    const n = parseInt(v.vendor_id.replace('gbl-', ''), 10);
-    return isNaN(n) ? max : Math.max(max, n);
-  }, 0);
-  const newId = `gbl-${String(maxNum + 1).padStart(4, '0')}`;
-
-  const newVendor: Vendor = {
-    vendor_id: newId,
+/** 新規取引先を先頭に追加。API POSTで永続化。 */
+async function addVendor() {
+  const newVendor: Omit<Vendor, 'vendor_id'> & { vendor_id?: string } = {
     company_name: '',
     match_key: '',
     display_name: null,
@@ -321,9 +327,20 @@ function addVendor() {
     client_id: null,
   };
 
-  vendors.value.unshift(newVendor);
-  // 1ページ目に移動して新規行を表示
-  page.value = 1;
+  try {
+    const res = await fetch('/api/vendors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newVendor),
+    });
+    if (res.ok) {
+      const created = await res.json() as Vendor;
+      vendors.value.unshift(created);
+      page.value = 1;
+    }
+  } catch (e) {
+    console.error('[VendorsPage] 追加失敗:', e);
+  }
 }
 
 // ============================================================

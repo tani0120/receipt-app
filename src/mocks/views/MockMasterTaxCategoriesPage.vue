@@ -470,20 +470,36 @@ function getRate(row: TaxCategory): string {
 }
 
 // =============== 保存 ===============
-function saveChanges() {
-  // composableのoverridesに同期 → 顧問先ページに反映
-  // TAX_CATEGORY_MASTERに存在しないID = カスタム追加された行（MF準拠昇格でisCustom=falseでも保持）
-  const defaultTaxIds = new Set(TAX_CATEGORY_MASTER.map(t => t.id));
-  const hiddenIds = allTaxRows.filter(r => r.deprecated).map(r => r.id);
-  const customTaxCategories = allTaxRows.filter(r => !defaultTaxIds.has(r.id));
-  taxMasterOverrides.value = {
-    hiddenIds,
-    visibilityOverrides: taxMasterOverrides.value.visibilityOverrides,
-    customTaxCategories,
-  };
-  localStorage.setItem('sugu-suru:tax-master:overrides', JSON.stringify(taxMasterOverrides.value));
-  markClean();
-  modal.notify({ title: '保存しました', variant: 'success' });
+async function saveChanges() {
+  try {
+    // API経由でサーバー側に保存
+    const response = await fetch('/api/tax-categories/master', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taxCategories: allTaxRows }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: '保存に失敗しました' }));
+      await modal.notify({ title: err.message ?? '保存に失敗しました', variant: 'warning' });
+      return;
+    }
+
+    // composable側のoverridesにも同期（顧問先ページへの反映用）
+    const defaultTaxIds = new Set(TAX_CATEGORY_MASTER.map(t => t.id));
+    const hiddenIds = allTaxRows.filter(r => r.deprecated).map(r => r.id);
+    const customTaxCategories = allTaxRows.filter(r => !defaultTaxIds.has(r.id));
+    taxMasterOverrides.value = {
+      hiddenIds,
+      visibilityOverrides: taxMasterOverrides.value.visibilityOverrides,
+      customTaxCategories,
+    };
+    localStorage.setItem('sugu-suru:tax-master:overrides', JSON.stringify(taxMasterOverrides.value));
+
+    markClean();
+    modal.notify({ title: '保存しました', variant: 'success' });
+  } catch (e) {
+    await modal.notify({ title: '通信エラーが発生しました', variant: 'warning' });
+  }
 }
 
 // =============== 共通ユーティリティ ===============

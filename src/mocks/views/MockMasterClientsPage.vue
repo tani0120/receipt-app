@@ -597,27 +597,24 @@ const filteredRows = computed((): Client[] => {
   }
   const key = sortKey.value as keyof Client | 'staffName';
   rows.sort((a, b) => {
-    let va: unknown;
-    let vb: unknown;
+    let sa: string;
+    let sb: string;
     if (key === 'staffName') {
       // staffId → staffListから名前を取得してソート
-      const nameA = a.staffId ? staffList.value.find(s => s.uuid === a.staffId)?.name : '';
-      const nameB = b.staffId ? staffList.value.find(s => s.uuid === b.staffId)?.name : '';
-      va = nameA ?? '';
-      vb = nameB ?? '';
+      sa = (a.staffId ? staffList.value.find(s => s.uuid === a.staffId)?.name : '') ?? '';
+      sb = (b.staffId ? staffList.value.find(s => s.uuid === b.staffId)?.name : '') ?? '';
+    } else if (key === 'clientId') {
+      // clientId: 数字部分(ハイフン以降)のみで数値ソート
+      const na = parseInt(a.clientId.split('-').pop() || '0', 10);
+      const nb = parseInt(b.clientId.split('-').pop() || '0', 10);
+      return sortOrder.value === 'asc' ? na - nb : nb - na;
     } else {
-      va = a[key] ?? '';
-      vb = b[key] ?? '';
-      // clientId: 数字部分(ハイフン以降)のみでソート
-      if (key === 'clientId') {
-        const na = parseInt((va as string).split('-').pop() || '0', 10);
-        const nb = parseInt((vb as string).split('-').pop() || '0', 10);
-        va = na; vb = nb;
-      }
+      sa = String(a[key] ?? '');
+      sb = String(b[key] ?? '');
     }
-    if ((va as string | number) < (vb as string | number)) return sortOrder.value === 'asc' ? -1 : 1;
-    if ((va as string | number) > (vb as string | number)) return sortOrder.value === 'asc' ? 1 : -1;
-    return 0;
+    return sortOrder.value === 'asc'
+      ? sa.localeCompare(sb, 'ja')
+      : sb.localeCompare(sa, 'ja');
   });
   return rows;
 });
@@ -637,11 +634,14 @@ const inlineEditField = ref<string | null>(null);
 const inlineEditValue = ref<string | number>('');
 const inlineEditFiscalDay = ref<string | number>('末日');
 
-const startInlineEdit = (row: Client, field: string, event: Event) => {
+/** インライン編集対象フィールド（Client型のキーに限定） */
+type InlineEditableField = 'status' | 'threeCode' | 'type' | 'companyName' | 'accountingSoftware' | 'fiscalMonth' | 'phoneNumber' | 'email' | 'sharedEmail' | 'chatRoomUrl';
+
+const startInlineEdit = (row: Client, field: InlineEditableField, event: Event) => {
   event.stopPropagation();
   inlineEditId.value = row.clientId;
   inlineEditField.value = field;
-  inlineEditValue.value = (row as unknown as Record<string, string | number>)[field] ?? '';
+  inlineEditValue.value = row[field] ?? '';
   if (field === 'fiscalMonth') {
     inlineEditFiscalDay.value = row.fiscalDay ?? '末日';
   }

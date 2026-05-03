@@ -303,11 +303,14 @@ const inlineEditId = ref<string | null>(null);
 const inlineEditField = ref<string | null>(null);
 const inlineEditValue = ref('');
 
-const startInlineEdit = (row: Staff, field: string, event: Event) => {
+/** インライン編集対象フィールド（Staff型のキーに限定） */
+type InlineEditableField = 'status' | 'role' | 'name' | 'email';
+
+const startInlineEdit = (row: Staff, field: InlineEditableField, event: Event) => {
   event.stopPropagation();
   inlineEditId.value = row.uuid;
   inlineEditField.value = field;
-  inlineEditValue.value = (row as unknown as Record<string, string>)[field] ?? '';
+  inlineEditValue.value = row[field] ?? '';
   if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
   nextTick(() => {
     const input = document.querySelector('.cm-inline-input') as HTMLInputElement;

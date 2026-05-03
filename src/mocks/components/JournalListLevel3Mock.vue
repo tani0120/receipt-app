@@ -969,10 +969,7 @@
                     getWarningCellClass(
                       journal,
                       col.key,
-                      row[col.key.startsWith('debit') ? 'debit' : 'credit'] as unknown as Record<
-                        string,
-                        unknown
-                      >,
+                      row[col.key.startsWith('debit') ? 'debit' : 'credit'] ?? undefined,
                     ),
                     isDragCompatibleCol(col.key) ? '!bg-blue-50' : '',
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
@@ -1195,10 +1192,7 @@
                     getWarningCellClass(
                       journal,
                       col.key,
-                      row[col.key.split('.')[0] as 'debit' | 'credit'] as unknown as Record<
-                        string,
-                        unknown
-                      >,
+                      row[col.key.split('.')[0] as 'debit' | 'credit'] ?? undefined,
                     ),
                     isDragCompatibleCol(col.key) ? '!bg-blue-50' : '',
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
@@ -1325,10 +1319,7 @@
                     getWarningCellClass(
                       journal,
                       col.key,
-                      row[col.key.split('.')[0] as 'debit' | 'credit'] as unknown as Record<
-                        string,
-                        unknown
-                      >,
+                      row[col.key.split('.')[0] as 'debit' | 'credit'] ?? undefined,
                     ),
                     isDragOver(journalIndex, rowIndex, col.key)
                       ? 'ring-2 ring-blue-500 !bg-yellow-200 !text-black'
@@ -2627,14 +2618,20 @@ const filteredAccounts = computed(() => {
     .sort((a, b) => a.sortOrder - b.sortOrder);
 });
 
-/** ドットパスで生値を取得（税区分名称変換なし） */
-function getRawValue(obj: Record<string, unknown>, path: string): unknown {
+/** ドットパスで生値を取得（税区分名称変換なし）
+ * 動的パスアクセスのためkeyof型安全性は保証できない。内部でunknown経由でRecordにキャストする。
+ */
+function getRawValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknown {
   return path.split(".").reduce((o: unknown, key: string) => (o as Record<string, unknown>)?.[key], obj as unknown);
 }
 
 // ────── 区分ドロップダウン（D7a: category-first選択の起点） ──────
-const SALES_CATEGORIES = ["売上", "不動産収入", "営業外収益"];
-const PURCHASE_CATEGORIES = ["経費", "売上原価", "販管費", "不動産経費", "営業外費用"];
+// 科目分類定数は shared/data/account-category-rules.ts に統合済み
+import {
+  SALES_CATEGORIES,
+  PURCHASE_CATEGORIES,
+  getCategoryDirection,
+} from '@/shared/data/account-category-rules';
 const BS_CATEGORIES = [
   "現金及び預金",
   "売上債権",
@@ -2652,7 +2649,7 @@ const BS_CATEGORIES = [
 ];
 
 /** 3大グループ定義 */
-const MEGA_GROUPS = [
+const MEGA_GROUPS: { label: string; categories: readonly string[] }[] = [
   { label: "💰 売上", categories: SALES_CATEGORIES },
   { label: "📋 経費・仕入", categories: PURCHASE_CATEGORIES },
   { label: "🏦 資産・負債", categories: BS_CATEGORIES },
@@ -2800,10 +2797,10 @@ const accountGroupsForJournal = computed(() => {
 });
 
 /** 仕訳入力用: 選択中の勘定科目の区分から方向判定し、税区分をフィルタ+グルーピング */
-function getTaxGroupsForEntry(row: Record<string, unknown>, colKey: string) {
-  const side = colKey.startsWith("debit") ? "debit" : "credit";
-  const entry = row[side] as Record<string, unknown> | undefined;
-  const accountName = entry?.account as string | null;
+function getTaxGroupsForEntry(row: CombinedRow, colKey: string) {
+  const side = colKey.startsWith("debit") ? "debit" : "credit" as const;
+  const entry = row[side];
+  const accountName = entry?.account ?? null;
 
   const settings = clientSettings;
 
@@ -2829,10 +2826,7 @@ function getTaxGroupsForEntry(row: Record<string, unknown>, colKey: string) {
   }
 
   const cat = acc.category;
-  let direction: "sales" | "purchase" | "common";
-  if (SALES_CATEGORIES.includes(cat)) direction = "sales";
-  else if (PURCHASE_CATEGORIES.includes(cat)) direction = "purchase";
-  else direction = "common";
+  const direction = getCategoryDirection(cat);
 
   const taxMode = activeClientFull.value?.consumptionTaxMode;
   const filtered = settings.filteredTaxCategories(direction, taxMode);
@@ -2853,7 +2847,7 @@ function getTaxGroupsForEntry(row: Record<string, unknown>, colKey: string) {
 // ────── 検索付きコンボボックス: フィルタ関数 ──────
 
 /** 勘定科目候補をテキストでフィルタ（区分連動廃止） */
-function filterAccountGroups(query: string, _row?: Record<string, unknown>, _colKey?: string) {
+function filterAccountGroups(query: string, _row?: CombinedRow, _colKey?: string) {
   const groups = accountGroupsForJournal.value;
   if (!query) return groups;
   const q = query.toLowerCase();
@@ -2875,7 +2869,7 @@ function getAccountsForMegaGroup(megaLabel: string) {
 }
 
 /** 税区分候補をテキストでフィルタ（方向フィルタ済みグループに対してさらに検索） */
-function filterTaxGroups(row: Record<string, unknown>, colKey: string, query: string) {
+function filterTaxGroups(row: CombinedRow, colKey: string, query: string) {
   const groups = getTaxGroupsForEntry(row, colKey);
   if (!query) return groups;
   const q = query.toLowerCase();
@@ -3297,7 +3291,7 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
 function getWarningCellClass(
   journal: JournalPhase5Mock,
   colKey: string,
-  entry?: Record<string, unknown>,
+  entry?: JournalEntryLine | null,
 ): string {
   const labels = journal.labels;
   /** 警告セルの共通背景CSSクラス（一箇所管理） */
@@ -3322,7 +3316,7 @@ function getWarningCellClass(
     // マスタに存在しない科目も赤背景
     const acctList = clientSettings.accounts.value;
     const acctIdSet = new Set(acctList.map((a) => a.id));
-    if (!acctIdSet.has(entry.account as string)) return W;
+    if (!acctIdSet.has(entry.account)) return W;
   }
 
   // TAX_UNKNOWN（税区分不明）→ nullの税区分セルのみ
@@ -3337,7 +3331,8 @@ function getWarningCellClass(
     labels.includes("CATEGORY_CONFLICT") &&
     entry
   ) {
-    const acctName = entry.account as string;
+    const acctName = entry.account;
+    if (!acctName) return '';
     const side = colKey.startsWith("debit") ? "debit" : "credit";
     const conflict = categoryConflictMap.get(journal.id);
     if (
@@ -3355,9 +3350,11 @@ function getWarningCellClass(
     labels.includes("SAME_ACCOUNT_BOTH_SIDES") &&
     entry
   ) {
-    const acctName = entry.account as string;
-    const overlap = sameAccountBothSidesMap.get(journal.id);
-    if (overlap && overlap.has(acctName)) return "!bg-yellow-300 !text-black";
+    const acctName = entry.account;
+    if (acctName) {
+      const overlap = sameAccountBothSidesMap.get(journal.id);
+      if (overlap && overlap.has(acctName)) return "!bg-yellow-300 !text-black";
+    }
   }
 
   // DATE_UNKNOWN（日付不明）→ 日付セル
@@ -3378,7 +3375,7 @@ function getWarningCellClass(
       !colKey.includes("sub_account") &&
       entry
     ) {
-      const acctName = entry.account as string | null;
+      const acctName = entry.account;
       if (!acctName) return W; // null科目は無条件で赤背景
       const side = colKey.startsWith("debit") ? "debit" : "credit";
       const vtConflict = voucherTypeConflictMap.get(journal.id);
@@ -3446,17 +3443,16 @@ function getDatePeriodClass(dateStr: string | null): string {
 
 // ────── 検索付きコンボボックス: 選択関数 ──────
 
-/** 勘定科目アイテム選択: 科目セット + デフォルト税区分/補助科目自動設定 + 既読化 */
 function selectAccountItem(
   journal: JournalPhase5Mock,
-  row: Record<string, unknown>,
+  row: CombinedRow,
   colKey: string,
   accountId: string,
 ): void {
   // Undo記録: 変更前スナップショット
   const beforeSnap = snapshotJournal(journal.id);
-  const side = colKey.startsWith("debit") ? "debit" : "credit";
-  const entry = row[side] as Record<string, unknown> | undefined;
+  const side = colKey.startsWith("debit") ? "debit" : "credit" as const;
+  const entry = row[side];
   if (!entry) {
     editingCell.value = null;
     return;
@@ -3470,10 +3466,6 @@ function selectAccountItem(
     if (acc?.defaultTaxCategoryId) {
       // デフォルト税区分IDを直接セット（免税時はCOMMON_EXEMPTに変換）
       entry.tax_category_id = resolveDefaultTaxForClient(acc.defaultTaxCategoryId);
-    }
-    // 科目の区分をselectedCategoryに自動セット（区分列と連動）
-    if (acc) {
-      entry.selectedCategory = acc.category;
     }
     if (acc) {
       const sub = clientSettings.subAccounts.value[acc.id];
@@ -3510,7 +3502,7 @@ function selectTaxItem(journal: JournalPhase5Mock, taxId: string): void {
 /** 勘定科目blur: 入力値が有効な科目名なら確定、そうでなければキャンセル */
 function blurAccountEdit(
   journal: JournalPhase5Mock,
-  row: Record<string, unknown>,
+  row: CombinedRow,
   colKey: string,
 ): void {
   if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
@@ -3664,9 +3656,9 @@ function commitCellEdit(): void {
   // journal-level（keyにドットなし）
   if (!e.colKey.includes(".")) {
     if (e.colKey === "voucher_date") {
-      (journal as unknown as Record<string, unknown>)[e.colKey] = parseDateInput(val);
-    } else {
-      (journal as unknown as Record<string, unknown>)[e.colKey] = val;
+      journal.voucher_date = parseDateInput(val);
+    } else if (e.colKey === "description") {
+      journal.description = val;
     }
   } else {
     // entry-level（debit.amount → row.debit.amount）
@@ -3674,16 +3666,12 @@ function commitCellEdit(): void {
     const row = rows[e.rowIndex];
     if (row) {
       const parts = e.colKey.split(".");
-      const side = parts[0];
+      const side = parts[0] as "debit" | "credit";
       const field = parts[1];
       if (side && field) {
-        const entry = row[side as "debit" | "credit"];
+        const entry = row[side];
         if (entry) {
-          if (field === "amount") {
-            entry[field as keyof JournalEntryLine] = (val ? Number(val) : null) as never;
-          } else {
-            (entry as unknown as Record<string, unknown>)[field] = val;
-          }
+          setEntryField(entry, field, val);
         }
       }
     }
@@ -3729,11 +3717,9 @@ function parseDateInput(val: string): string {
 const FILL_HANDLE_COLS = new Set([
   "voucher_date",
   "description",
-  "debit.category",
   "debit.account",
   "debit.sub_account",
   "debit.tax_category_id",
-  "credit.category",
   "credit.account",
   "credit.sub_account",
   "credit.tax_category_id",
@@ -3842,7 +3828,11 @@ function endFillDrag(): void {
 
 function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unknown, targetRowIndex?: number): void {
   if (!colKey.includes(".")) {
-    (journal as unknown as Record<string, unknown>)[colKey] = value;
+    if (colKey === "voucher_date") {
+      journal.voucher_date = value as string | null;
+    } else if (colKey === "description") {
+      journal.description = value as string;
+    }
   } else {
     const parts = colKey.split(".");
     const side = parts[0] as "debit" | "credit";
@@ -3855,11 +3845,9 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
       ? [entries[targetRowIndex]]
       : entries).filter((e): e is NonNullable<typeof e> => e != null);
     for (const entry of targetEntries) {
-      if (colKey.endsWith(".category")) {
-        (entry as unknown as Record<string, unknown>).selectedCategory = value || null;
-      } else if (colKey.endsWith(".account")) {
+      if (colKey.endsWith(".account")) {
         // 勘定科目フィル時に税区分・区分・補助科目も連動（selectAccountItemと同じ挙動）
-        (entry as unknown as Record<string, unknown>)[field] = value;
+        entry.account = (value as string) || null;
         const accountId = value as string;
         if (accountId) {
           const allAccts = clientSettings.accounts.value;
@@ -3867,10 +3855,6 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
           // デフォルト税区分の自動設定
           if (acc?.defaultTaxCategoryId) {
             entry.tax_category_id = resolveDefaultTaxForClient(acc.defaultTaxCategoryId);
-          }
-          // 区分（selectedCategory）連動
-          if (acc) {
-            (entry as unknown as Record<string, unknown>).selectedCategory = acc.category;
           }
           // 補助科目連動
           if (acc) {
@@ -3881,7 +3865,7 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
           entry.sub_account = null;
         }
       } else {
-        (entry as unknown as Record<string, unknown>)[field] = value;
+        setEntryField(entry, field, value);
       }
     }
   }
@@ -5459,9 +5443,42 @@ function resetToDefaultOrder() {
   });
 }
 
+/** getCombinedRowsの戳り値行型（getValue/getRawValueの引数型に使用） */
+type CombinedRow = { debit: JournalEntryLine | null; credit: JournalEntryLine | null };
+
+/**
+ * JournalEntryLineの動的フィールド書き込み（型安全ヘルパー）
+ *
+ * commitCellEdit / applyFillValue で entry[field] = value の動的書き込みが必要な箇所で使用。
+ * JournalEntryLineの既知フィールドのみ書き込み可能。未知フィールドは無視。
+ */
+function setEntryField(entry: JournalEntryLine, field: string, value: unknown): void {
+  switch (field) {
+    case 'account':
+      entry.account = (value as string) || null;
+      break;
+    case 'sub_account':
+      entry.sub_account = (value as string) || null;
+      break;
+    case 'department':
+      entry.department = (value as string) || null;
+      break;
+    case 'amount':
+      entry.amount = value != null && value !== '' ? Number(value) : null;
+      break;
+    case 'tax_category_id':
+      entry.tax_category_id = (value as string) || null;
+      break;
+    default:
+      // JournalEntryLineに存在しないフィールド（selectedCategory等）は書き込まない
+      console.warn(`[setEntryField] 未知のフィールド: ${field}`);
+      break;
+  }
+}
+
 function getCombinedRows(
   journal: JournalPhase5Mock,
-): Array<{ debit: JournalEntryLine | null; credit: JournalEntryLine | null }> {
+): CombinedRow[] {
   const maxRows = Math.max(journal.debit_entries.length, journal.credit_entries.length);
   return Array.from({ length: maxRows }, (_, i) => ({
     debit: journal.debit_entries[i] || null,
@@ -5506,7 +5523,11 @@ function hasPastJournal(journal: JournalPhase5Mock): boolean {
   return localJournals.value.findIndex((j) => j.id === journal.id) < 25;
 }
 
-function getValue(obj: Record<string, unknown>, path: string): unknown {
+/**
+ * ドットパスで値を取得（税区分名称・勘定科目名変換付き）
+ * 動的パスアクセスのためkeyof型安全性は保証できない。内部でunknown経由でRecordにキャストする。
+ */
+function getValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknown {
   const raw = path.split(".").reduce((o: unknown, key: string) => (o as Record<string, unknown>)?.[key], obj as unknown);
   // 概念ID → MF正式名称に変換（tax_category_idキーの場合）
   if (path.endsWith("tax_category_id") && typeof raw === "string") {

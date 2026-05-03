@@ -485,12 +485,29 @@ function getRate(row: TaxCategory): string {
 }
 
 // =============== 保存 ===============
-function saveChanges() {
+async function saveChanges() {
   if (!clientId.value) { modal.notify({ title: '顧問先IDが不明です', variant: 'warning' }); return; }
-  // settings経由で保存（キー: sugu-suru:client-tax: + clientId）
-  settings.saveTaxCategories(allTaxRows);
-  markClean();
-  modal.notify({ title: '保存しました', variant: 'success' });
+
+  try {
+    // API経由でサーバー側に保存
+    const response = await fetch(`/api/tax-categories/client/${clientId.value}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taxCategories: allTaxRows }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: '保存に失敗しました' }));
+      await modal.notify({ title: err.message ?? '保存に失敗しました', variant: 'warning' });
+      return;
+    }
+
+    // composable側にも同期（他ページへのリアルタイム反映用）
+    settings.saveTaxCategories(allTaxRows);
+    markClean();
+    modal.notify({ title: '保存しました', variant: 'success' });
+  } catch (e) {
+    await modal.notify({ title: '通信エラーが発生しました', variant: 'warning' });
+  }
 }
 
 // =============== 共通ユーティリティ ===============

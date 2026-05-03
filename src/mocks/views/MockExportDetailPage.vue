@@ -218,11 +218,11 @@ const allRows = computed<DetailRow[]>(() => {
 const sortedRows = computed<DetailRow[]>(() => {
   const rows = [...allRows.value];
   if (!sortKey.value) return rows;
-  const key = sortKey.value;
+  const key = sortKey.value as keyof DetailRow;
   const dir = sortDir.value === 'asc' ? 1 : -1;
   rows.sort((a, b) => {
-    const va = (a as unknown as Record<string, unknown>)[key];
-    const vb = (b as unknown as Record<string, unknown>)[key];
+    const va = a[key];
+    const vb = b[key];
     if (va == null && vb == null) return 0;
     if (va == null) return 1;
     if (vb == null) return -1;

@@ -262,6 +262,13 @@ import { useUnsavedGuard } from '@/mocks/composables/useUnsavedGuard';
 import { useModalHelper } from '@/mocks/composables/useModalHelper';
 import ConfirmModal from '@/mocks/components/ConfirmModal.vue';
 import NotifyModal from '@/mocks/components/NotifyModal.vue';
+import {
+  CATEGORY_GROUPS,
+  getCategoryDirection,
+  getAllowedTaxDeterminations as getAllowedTaxDeterminationsRaw,
+  taxDetLabel,
+  deriveCategoryDefaults,
+} from '@/shared/data/account-category-rules';
 
 // 列幅カスタマイズ
 const caDefaultWidths: Record<string, number> = {
@@ -513,7 +520,7 @@ async function addAfterChecked() {
   checkedIds.value = [];
   markDirty('勘定科目を追加');
 }
-function saveChanges() {
+async function saveChanges() {
   if (!clientId.value) { modal.notify({ title: '顧問先IDが不明です', variant: 'warning' }); return; }
   // subAccount情報を全行から収集
   const subAccounts: Record<string, string> = {};
@@ -521,10 +528,27 @@ function saveChanges() {
     const sub = r.subAccount;
     if (sub) subAccounts[r.id] = sub;
   });
-  // settings経由で保存（overrides refも同時に更新される）
-  settings.saveAccounts(accountRows, subAccounts);
-  markClean();
-  modal.notify({ title: '保存しました', variant: 'success' });
+
+  try {
+    // API経由でサーバー側に保存
+    const response = await fetch(`/api/accounts/client/${clientId.value}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accounts: accountRows, subAccounts }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: '保存に失敗しました' }));
+      await modal.notify({ title: err.message ?? '保存に失敗しました', variant: 'warning' });
+      return;
+    }
+
+    // composable側にも同期（他ページへのリアルタイム反映用）
+    settings.saveAccounts(accountRows, subAccounts);
+    markClean();
+    modal.notify({ title: '保存しました', variant: 'success' });
+  } catch (e) {
+    await modal.notify({ title: '通信エラーが発生しました', variant: 'warning' });
+  }
 }
 
 // =============== インライン編集 ===============
@@ -565,16 +589,11 @@ function commitEdit(row: Account) {
     case 'category':
       row.category = editValue.value;
       // category変更時にaccountGroup・taxDetermination・defaultTaxCategoryIdを自動設定
-      row.accountGroup = getCategoryAccountGroup(editValue.value);
-      if (SALES_CATEGORIES.includes(editValue.value)) {
-        row.taxDetermination = 'auto_sales';
-        row.defaultTaxCategoryId = 'SALES_TAXABLE_10';
-      } else if (PURCHASE_CATEGORIES.includes(editValue.value)) {
-        row.taxDetermination = 'auto_purchase';
-        row.defaultTaxCategoryId = 'PURCHASE_TAXABLE_10';
-      } else {
-        row.taxDetermination = 'fixed';
-        row.defaultTaxCategoryId = 'COMMON_EXEMPT';
+      {
+        const defaults = deriveCategoryDefaults(editValue.value);
+        row.accountGroup = defaults.accountGroup;
+        row.taxDetermination = defaults.taxDetermination;
+        row.defaultTaxCategoryId = defaults.defaultTaxCategoryId;
       }
       break;
     case 'taxDetermination':
@@ -607,55 +626,13 @@ function cancelEdit() {
   editingField.value = '';
 }
 
-// =============== categoryグループ分類 ===============
-import type { AccountGroup } from '@/shared/types/account';
-
-const SALES_CATEGORIES = ['売上', '不動産収入', '営業外収益', '特別利益'];
-const PURCHASE_CATEGORIES = ['経費', '売上原価', '販管費', '不動産経費', '営業外費用', '繰入額等', '特別損失'];
-const BS_ASSET_CATEGORIES = [
-  '現金及び預金', '売上債権', '有価証券', 'その他流動資産', '有形固定資産',
-  '無形固定資産', '投資その他', '棚卸資産', '繰延資産',
-];
-const BS_LIABILITY_CATEGORIES = ['仕入債務', 'その他流動負債', '固定負債'];
-const BS_EQUITY_CATEGORIES = ['純資産', '事業主貸', '事業主借', '資本の部', '諸口'];
-const OTHER_PL_CATEGORIES = ['繰戻額等'];
-
-// BS_ASSET内でauto_purchaseを許可する中分類（資産取得の課税仕入）
-const BS_ASSET_PURCHASE_CATEGORIES = ['有形固定資産', '無形固定資産'];
-
-const categoryGroups = [
-  { label: 'PL収益', items: SALES_CATEGORIES },
-  { label: 'PL費用', items: PURCHASE_CATEGORIES },
-  { label: 'BS資産', items: BS_ASSET_CATEGORIES },
-  { label: 'BS負債', items: BS_LIABILITY_CATEGORIES },
-  { label: 'BS純資産', items: BS_EQUITY_CATEGORIES },
-  { label: 'PLその他', items: OTHER_PL_CATEGORIES },
-];
-
-/** categoryからaccountGroupを導出 */
-function getCategoryAccountGroup(category: string): AccountGroup {
-  if (SALES_CATEGORIES.includes(category)) return 'PL_REVENUE';
-  if (PURCHASE_CATEGORIES.includes(category) || OTHER_PL_CATEGORIES.includes(category)) return 'PL_EXPENSE';
-  if (BS_ASSET_CATEGORIES.includes(category)) return 'BS_ASSET';
-  if (BS_LIABILITY_CATEGORIES.includes(category)) return 'BS_LIABILITY';
-  if (BS_EQUITY_CATEGORIES.includes(category)) return 'BS_EQUITY';
-  return 'PL_EXPENSE';
-}
+// =============== categoryグループ分類（shared/data/account-category-rules.ts からimport済み） ===============
+const categoryGroups = CATEGORY_GROUPS;
 
 /** 科目の大分類+中分類に基づいて許可されるtaxDetermination値を返す */
 function getAllowedTaxDeterminations(row: Account): string[] {
-  // 免税事業者: 全科目 fixed のみ
-  if (clientTaxMethod.value === 'exempt') return ['fixed'];
-  const group = row.accountGroup;
-  if (group === 'PL_REVENUE') return ['auto_sales', 'fixed'];
-  if (group === 'PL_EXPENSE') return ['auto_purchase', 'fixed'];
-  if (group === 'BS_ASSET' && BS_ASSET_PURCHASE_CATEGORIES.includes(row.category)) {
-    return ['auto_purchase', 'fixed'];
-  }
-  return ['fixed'];
+  return getAllowedTaxDeterminationsRaw(row.accountGroup, row.category, clientTaxMethod.value);
 }
-
-
 
 /** 課税方式に応じた「税区分自動判定」列の表示値 */
 function getDisplayAiDet(row: Account): string {
@@ -675,24 +652,9 @@ function getDisplayDefaultTax(row: Account): string {
   return getTaxCategoryName(row.defaultTaxCategoryId);
 }
 
-function getCategoryDirection(category: string): 'sales' | 'purchase' | 'common' {
-  if (SALES_CATEGORIES.includes(category)) return 'sales';
-  if (PURCHASE_CATEGORIES.includes(category)) return 'purchase';
-  return 'common';
-}
-
 function filteredTaxCategories(category: string) {
   const dir = getCategoryDirection(category);
   return settings.filteredTaxCategories(dir);
-}
-
-function taxDetLabel(td: string): string {
-  switch (td) {
-    case 'auto_purchase': return '自動(仕入)';
-    case 'auto_sales': return '自動(売上)';
-    case 'fixed': return '固定';
-    default: return td;
-  }
 }
 
 // =============== ドラッグ並替え ===============

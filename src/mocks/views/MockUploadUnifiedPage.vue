@@ -353,8 +353,10 @@ import { MSG_DUPLICATE_SHORT } from '@/shared/validationMessages'
 interface FilePickerHandle {
   getFile(): Promise<File>;
 }
-interface WindowWithFilePicker extends Window {
-  showOpenFilePicker(options?: { multiple?: boolean }): Promise<FilePickerHandle[]>;
+declare global {
+  interface Window {
+    showOpenFilePicker?(options?: { multiple?: boolean }): Promise<FilePickerHandle[]>;
+  }
 }
 
 const {
@@ -436,7 +438,7 @@ async function pickFiles() {
   if (supportsFilePicker) {
     // Android Chrome 132+: File System Access API（Blink内部バッファ回避の可能性）
     try {
-      const handles = await (window as unknown as WindowWithFilePicker).showOpenFilePicker({
+      const handles = await window.showOpenFilePicker!({
         multiple: true,
       })
       const files: File[] = []
