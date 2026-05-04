@@ -5,14 +5,12 @@ import { zValidator } from '@hono/zod-validator'
 import { zodHook } from './helpers/zodHook'
 import conversionRoute from './routes/conversion'
 import clientsRoute from './routes/clientRoutes'
-import journalStatusRoute from './routes/journal-status'
-import journalEntry from './routes/journal-entry'
+
 import collection from './routes/collection'
 // 旧ai-rulesは廃止・削除済み
 import admin from './routes/admin'
-import worker from './routes/worker'
 import aiModels from './routes/ai-models'
-import jobs from './routes/jobs'
+
 import activityLog from './routes/activityLogRoutes'
 import accountMaster from './routes/accountMasterRoutes'
 import taxCategory from './routes/taxCategoryRoutes'
@@ -53,13 +51,9 @@ const routes = app
     })
     .route('/api/conversion', conversionRoute)
     .route('/api/clients', clientsRoute)
-    .route('/api/journal-status', journalStatusRoute)
-    .route('/api/journal-entry', journalEntry)
-    .route('/api/jobs', jobs) // Register Jobs Route
     .route('/api/collection', collection)
     // 旧ai-rulesは廃止・削除済み
     .route('/api/admin', admin)
-    .route('/api/worker', worker)
     .route('/api/ai', aiModels)
     .route('/api/activity-log', activityLog)
     .route('/api/accounts', accountMaster)
