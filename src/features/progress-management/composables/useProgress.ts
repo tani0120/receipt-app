@@ -1,7 +1,13 @@
 /**
- * useProgress — 進捗管理 composable
- * Phase B TODO: モックデータを Supabase API (fetch) に差し替え
- * パターン: useClients / useStaff と同一構成
+ * useProgress — 進捗管理 composable（API接続版）
+ *
+ * 【設計原則】useJournals.tsパターン準拠
+ * - 仕訳データはuseJournals（API接続済み）から取得
+ * - 証票データはuseDocuments（API接続済み）から取得
+ * - 顧問先データはuseClients（API接続済み）から取得
+ * - モックデータ直書きを廃止。全データをAPI接続済みcomposableから集計
+ *
+ * 準拠: DL-042
  */
 import { ref, computed } from 'vue';
 import { useClients } from '@/features/client-management/composables/useClients';
@@ -12,38 +18,80 @@ import { countUnsorted, latestReceivedDate } from '@/utils/documentUtils';
 import type { ProgressRow, MonthColumn } from '../types';
 
 // =============================================
-// モックデータ定義（Phase B TODO: API化時に削除）
+// API通信ヘルパー
 // =============================================
 
-/** 顧問先ごとの仕訳数モックデータ（threeCodeで引く） */
-const MOCK_JOURNAL_DATA: Record<string, {
-    /** 未出力（仕訳残の件数） */
-    unexported: number;
-    baseCount: number;
-    currentYearJournals: number;
-    lastYearJournals: number;
-}> = {
-    LDI: { unexported: 120, baseCount: 445, currentYearJournals: 445, lastYearJournals: 980 },
-    ANE: { unexported: 0, baseCount: 446, currentYearJournals: 2680, lastYearJournals: 3120 },
-    MHL: { unexported: 0, baseCount: 79, currentYearJournals: 79, lastYearJournals: 156 },
-};
+const API_BASE = '/api/journals'
 
-// =============================================
-// ヘルパー関数
-// =============================================
-
-/** モック用: 月次データ生成（API化時に削除） */
-function generateMonthlyData(cols: MonthColumn[], baseCount: number): Record<string, number> {
-    const data: Record<string, number> = {};
-    if (baseCount === 0) {
-        cols.forEach(c => { data[c.key] = 0; });
-    } else {
-        cols.forEach(c => {
-            data[c.key] = Math.floor(Math.random() * baseCount * 0.3);
-        });
-    }
-    return data;
+interface JournalSummary {
+  /** 未出力（仕訳残の件数） */
+  unexported: number;
+  /** 月別仕訳数 キー: "2025-04" 形式 */
+  monthlyJournals: Record<string, number>;
+  /** 今年度仕訳数 */
+  currentYearJournals: number;
+  /** 前年度仕訳数 */
+  lastYearJournals: number;
 }
+
+/**
+ * サーバーから顧問先の仕訳サマリを取得
+ * GET /api/journals/:clientId → journals配列から集計
+ */
+async function fetchJournalSummary(clientId: string, cols: MonthColumn[]): Promise<JournalSummary> {
+  try {
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(clientId)}`)
+    if (!res.ok) return emptyJournalSummary(cols)
+    const data = await res.json() as { journals: Array<{ voucher_date?: string | null; exported?: boolean; export_batch_id?: string | null }> }
+    const journals = data.journals ?? []
+
+    // 月別仕訳数を集計
+    const monthlyJournals: Record<string, number> = {}
+    cols.forEach(c => { monthlyJournals[c.key] = 0 })
+
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    let currentYearCount = 0
+    let lastYearCount = 0
+
+    for (const j of journals) {
+      if (!j.voucher_date) continue
+      const dateStr = j.voucher_date.slice(0, 7) // "2025-04"
+      if (dateStr in monthlyJournals) {
+        monthlyJournals[dateStr]++
+      }
+      const year = parseInt(j.voucher_date.slice(0, 4), 10)
+      if (year === currentYear) currentYearCount++
+      else if (year === currentYear - 1) lastYearCount++
+    }
+
+    // 未出力（exported=false または export_batch_id=null）
+    const unexported = journals.filter(j => !j.exported && !j.export_batch_id).length
+
+    return {
+      unexported,
+      monthlyJournals,
+      currentYearJournals: currentYearCount,
+      lastYearJournals: lastYearCount,
+    }
+  } catch (err) {
+    console.error(`[useProgress] 仕訳サマリ取得失敗 (${clientId}):`, err)
+    return emptyJournalSummary(cols)
+  }
+}
+
+function emptyJournalSummary(cols: MonthColumn[]): JournalSummary {
+  const monthlyJournals: Record<string, number> = {}
+  cols.forEach(c => { monthlyJournals[c.key] = 0 })
+  return { unexported: 0, monthlyJournals, currentYearJournals: 0, lastYearJournals: 0 }
+}
+
+// =============================================
+// モジュールスコープキャッシュ
+// =============================================
+
+const journalSummaryCache = new Map<string, JournalSummary>()
+let cacheInitialized = false
 
 // =============================================
 // Composable
@@ -54,7 +102,34 @@ export function useProgress() {
     const { staffList } = useStaff();
     const { allDocuments } = useDocuments();
     const monthColumns = useMonthColumns(12);
-    const isLoading = ref(false);
+    const isLoading = ref(!cacheInitialized);
+
+    // 初回のみサーバーから仕訳サマリを取得（全顧問先分）
+    if (!cacheInitialized) {
+        cacheInitialized = true
+        // 全顧問先の仕訳サマリを並列取得
+        const loadSummaries = async () => {
+            isLoading.value = true
+            const cols = monthColumns.value
+            const clientList = allClients.value
+            // 3並列で取得（サーバー負荷制限）
+            const CONCURRENCY = 3
+            for (let i = 0; i < clientList.length; i += CONCURRENCY) {
+                const batch = clientList.slice(i, i + CONCURRENCY)
+                await Promise.all(batch.map(async (c) => {
+                    if (!journalSummaryCache.has(c.clientId)) {
+                        const summary = await fetchJournalSummary(c.clientId, cols)
+                        journalSummaryCache.set(c.clientId, summary)
+                    }
+                }))
+            }
+            isLoading.value = false
+            console.log(`[useProgress] ${clientList.length}件の仕訳サマリを取得完了`)
+        }
+        // 顧問先データのロード完了を待って取得開始
+        // allClientsはリアクティブなので、値が入ったタイミングで取得
+        setTimeout(() => loadSummaries(), 500)
+    }
 
     // clientsからprogressRowsを生成（Single Source of Truth）
     // receivedDateとunsortedはDocEntry（useDocuments）から動的算出
@@ -63,7 +138,7 @@ export function useProgress() {
         const docs = allDocuments.value;
 
         return allClients.value.map(c => {
-            const mock = MOCK_JOURNAL_DATA[c.threeCode];
+            const summary = journalSummaryCache.get(c.clientId)
             const clientDocs = docs.filter(d => d.clientId === c.clientId);
             return {
                 clientId: c.clientId,
@@ -75,10 +150,10 @@ export function useProgress() {
                 repName: c.repName || '',
                 receivedDate: latestReceivedDate(clientDocs),
                 unsorted: countUnsorted(clientDocs),
-                unexported: mock?.unexported ?? 0,
-                monthlyJournals: generateMonthlyData(cols, mock?.baseCount ?? 0),
-                currentYearJournals: mock?.currentYearJournals ?? 0,
-                lastYearJournals: mock?.lastYearJournals ?? 0,
+                unexported: summary?.unexported ?? 0,
+                monthlyJournals: summary?.monthlyJournals ?? emptyJournalSummary(cols).monthlyJournals,
+                currentYearJournals: summary?.currentYearJournals ?? 0,
+                lastYearJournals: summary?.lastYearJournals ?? 0,
             };
         });
     });

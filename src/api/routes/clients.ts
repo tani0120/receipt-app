@@ -272,7 +272,7 @@ const route = app
     // PATCH (Alias to Update)
     .patch(
         '/:code',
-        // TODO Phase B: Replace with UpdateClientSchema
+        // TODO (2026-04) Phase B: Replace with UpdateClientSchema
         zValidator('json', z.object({}).passthrough(), zodHook), // モック用の緋いスキーマ。Phase Bで UpdateClientSchema に置換する。
         async (c) => {
             const code = c.req.param('code');

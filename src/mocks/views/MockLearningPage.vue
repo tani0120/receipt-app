@@ -400,10 +400,25 @@ function formatAmountCondition(rule: LearningRule): string {
   return '—'
 }
 
-// --- 有効/無効トグル ---
-const toggleActive = (id: string) => {
+// --- 有効/無効トグル（API永続化） ---
+const toggleActive = async (id: string) => {
   const rule = rules.value.find(r => r.id === id)
-  if (rule) rule.isActive = !rule.isActive
+  if (!rule) return
+  const newActive = !rule.isActive
+  try {
+    const res = await fetch(`/api/learning-rules/${clientId.value}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: newActive }),
+    })
+    if (res.ok) {
+      rule.isActive = newActive
+    } else {
+      console.error('[LearningPage] トグル失敗:', await res.text())
+    }
+  } catch (err) {
+    console.error('[LearningPage] トグルAPI通信失敗:', err)
+  }
 }
 
 // --- モーダル ---
@@ -469,7 +484,7 @@ function syncAmountFromMode() {
   if (mode === 'max') { modalRule.value.amountMin = null }
 }
 
-function saveModal(mode: 'rule' | 'all') {
+async function saveModal(mode: 'rule' | 'all') {
   if (!modalRule.value) return
   syncAmountFromMode()
   // ペアからentries配列を再構築
@@ -483,24 +498,65 @@ function saveModal(mode: 'rule' | 'all') {
   modalRule.value.entries = entries
   modalRule.value.updatedAt = new Date().toISOString()
 
-  if (modalOriginalId.value?.startsWith('NEW-')) {
-    modalRule.value.id = `LR-${String(rules.value.length + 1).padStart(3, '0')}`
-    modalRule.value.entries.forEach(e => { e.ruleId = modalRule.value!.id })
-    const idx = rules.value.findIndex(r => r.id === modalOriginalId.value)
-    if (idx !== -1) rules.value[idx] = { ...modalRule.value, entries: modalRule.value.entries.map(e => ({ ...e })) }
-    else rules.value.push({ ...modalRule.value, entries: modalRule.value.entries.map(e => ({ ...e })) })
-  } else {
-    const idx = rules.value.findIndex(r => r.id === modalOriginalId.value)
-    if (idx !== -1) rules.value[idx] = { ...modalRule.value, entries: modalRule.value.entries.map(e => ({ ...e })) }
+  try {
+    if (modalOriginalId.value?.startsWith('NEW-')) {
+      // 新規作成: POST
+      const res = await fetch(`/api/learning-rules/${clientId.value}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modalRule.value),
+      })
+      if (!res.ok) {
+        console.error('[LearningPage] ルール作成失敗:', await res.text())
+        alert('ルールの保存に失敗しました')
+        return
+      }
+      const data = await res.json() as { rule: LearningRule }
+      // ローカル配列を更新（仮IDの行をサーバー返却のルールに差し替え）
+      const idx = rules.value.findIndex(r => r.id === modalOriginalId.value)
+      if (idx !== -1) rules.value[idx] = data.rule
+      else rules.value.push(data.rule)
+    } else {
+      // 既存更新: PUT
+      const res = await fetch(`/api/learning-rules/${clientId.value}/${modalOriginalId.value}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modalRule.value),
+      })
+      if (!res.ok) {
+        console.error('[LearningPage] ルール更新失敗:', await res.text())
+        alert('ルールの保存に失敗しました')
+        return
+      }
+      // ローカル配列を更新
+      const idx = rules.value.findIndex(r => r.id === modalOriginalId.value)
+      if (idx !== -1) rules.value[idx] = { ...modalRule.value!, entries: modalRule.value!.entries.map(e => ({ ...e })) }
+    }
+    if (mode === 'all') alert('今期仕訳に一括適用しました（モック）')
+    closeModal()
+  } catch (err) {
+    console.error('[LearningPage] 保存API通信失敗:', err)
+    alert('ルールの保存に失敗しました')
   }
-  if (mode === 'all') alert('今期仕訳に一括適用しました（モック）')
-  closeModal()
 }
 
-function handleDeleteModal() {
+async function handleDeleteModal() {
   if (!modalRule.value || !confirm('このルールを削除しますか？')) return
-  rules.value = rules.value.filter(r => r.id !== modalOriginalId.value)
-  closeModal()
+  try {
+    const res = await fetch(`/api/learning-rules/${clientId.value}/${modalOriginalId.value}`, {
+      method: 'DELETE',
+    })
+    if (res.ok) {
+      rules.value = rules.value.filter(r => r.id !== modalOriginalId.value)
+      closeModal()
+    } else {
+      console.error('[LearningPage] ルール削除失敗:', await res.text())
+      alert('ルールの削除に失敗しました')
+    }
+  } catch (err) {
+    console.error('[LearningPage] 削除API通信失敗:', err)
+    alert('ルールの削除に失敗しました')
+  }
 }
 
 function handleAdd() {

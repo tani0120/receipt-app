@@ -27,17 +27,6 @@ let staffList: Staff[] = [];
 let idCounter = 0;
 
 // ============================================================
-// 初期シードデータ（JSONが存在しない場合のみ使用）
-// ============================================================
-const SEED_DATA: Staff[] = [
-  { uuid: 'staff-0000', name: '管理者', email: 'admin@sugu-suru.com', role: 'admin', status: 'active' },
-  { uuid: 'staff-0001', name: '田中 太郎', email: 'tanaka@sugu-suru.com', role: 'admin', status: 'active' },
-  { uuid: 'staff-0002', name: '佐藤 花子', email: 'sato@sugu-suru.com', role: 'general', status: 'active' },
-  { uuid: 'staff-0003', name: '鈴木 一郎', email: 'suzuki@sugu-suru.com', role: 'general', status: 'inactive' },
-  { uuid: 'staff-0004', name: '田中 次郎', email: 'tanaka-j@sugu-suru.com', role: 'general', status: 'active' },
-];
-
-// ============================================================
 // 永続化
 // ============================================================
 
@@ -52,7 +41,7 @@ function save(): void {
   }
 }
 
-/** 起動時にJSONから読み込み。なければ初期シード投入 */
+/** 起動時にJSONから読み込み。なければ空配列で初期化 */
 export function loadStaff(): void {
   try {
     if (existsSync(DATA_FILE)) {
@@ -60,19 +49,18 @@ export function loadStaff(): void {
       staffList = JSON.parse(raw) as Staff[];
       console.log(`[staffStore] ${staffList.length}件をJSONから読み込み`);
     } else {
-      staffList = [...SEED_DATA];
+      staffList = [];
       save();
-      console.log(`[staffStore] JSONなし。初期シード${staffList.length}件を投入`);
+      console.log('[staffStore] JSONなし。空配列で初期化');
     }
   } catch (err) {
     console.error('[staffStore] JSON読み込みエラー:', err);
-    staffList = [...SEED_DATA];
-    save();
+    staffList = [];
   }
   // IDカウンターを既存データの最大値に設定
   for (const s of staffList) {
     const match = s.uuid.match(/^staff-(\d+)$/);
-    if (match) {
+    if (match && match[1]) {
       const num = parseInt(match[1], 10);
       if (num > idCounter) idCounter = num;
     }
@@ -107,7 +95,9 @@ export function create(staff: Omit<Staff, 'uuid'> & { uuid?: string }): Staff {
 export function update(uuid: string, partial: Partial<Staff>): boolean {
   const idx = staffList.findIndex(s => s.uuid === uuid);
   if (idx < 0) return false;
-  staffList[idx] = { ...staffList[idx], ...partial, uuid }; // uuidは不変
+  const current = staffList[idx];
+  if (!current) return false;
+  staffList[idx] = { ...current, ...partial, uuid } as Staff; // uuidは不変
   save();
   return true;
 }

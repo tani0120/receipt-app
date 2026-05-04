@@ -1,4 +1,15 @@
-import { ref, computed } from 'vue'
+/**
+ * useAccountMaster — 勘定科目マスタ composable（API接続版）
+ *
+ * 【設計原則】useJournals.tsパターン準拠
+ * - サーバーAPI（/api/accounts/master）を通じてデータを永続化
+ * - モジュールスコープのシングルトンrefでフロント側キャッシュ
+ * - 変更操作時にサーバーへ自動保存（デバウンス300ms）
+ * - 初回アクセス時にサーバーから読み込み
+ *
+ * 準拠: DL-042, Phase 2 Step 2
+ */
+import { ref, computed, watch } from 'vue'
 import { ACCOUNT_MASTER } from '@/shared/data/account-master'
 import type { Account } from '@/shared/types/account'
 
@@ -14,13 +25,7 @@ export interface MasterAccount extends Account {
   isCustom: boolean
 }
 
-// =============================================
-// localStorage キー
-// =============================================
-
-const STORAGE_KEY = 'sugu-suru:account-master:overrides'
-
-/** localStorage に保存する差分データ */
+/** マスタ差分データ（非表示ID + カスタム科目） */
 interface MasterOverrides {
   /** 非表示にした科目IDの一覧 */
   hiddenIds: string[]
@@ -29,27 +34,71 @@ interface MasterOverrides {
 }
 
 // =============================================
-// ヘルパー関数
+// API通信ヘルパー
 // =============================================
 
-function loadOverrides(): MasterOverrides {
+const API_BASE = '/api/accounts'
+
+async function fetchMasterFromServer(): Promise<MasterOverrides | null> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch { /* 破損データは無視 */ }
-  return { hiddenIds: [], customAccounts: [] }
+    const res = await fetch(`${API_BASE}/master?pageSize=200`)
+    if (!res.ok) return null
+    const data = await res.json() as { items: Account[] }
+    // サーバーから返された全件データからoverrides形式を復元
+    const defaultIds = new Set(ACCOUNT_MASTER.map(a => a.id))
+    const hiddenIds = data.items
+      .filter((a: Account) => a.deprecated || a.effectiveTo)
+      .filter((a: Account) => !a.isCustom)
+      .map((a: Account) => a.id)
+    const customAccounts = data.items.filter((a: Account) => !defaultIds.has(a.id))
+    return { hiddenIds, customAccounts }
+  } catch (err) {
+    console.error('[useAccountMaster] サーバー取得失敗:', err)
+    return null
+  }
 }
 
-function saveOverrides(data: MasterOverrides): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+async function saveOverridesToServer(overrides: MasterOverrides): Promise<void> {
+  try {
+    // overridesからフル科目リストを再構成してPUT
+    const defaultAccounts = ACCOUNT_MASTER.map(a => ({
+      ...a,
+      deprecated: overrides.hiddenIds.includes(a.id) ? true : a.deprecated,
+    }))
+    const allAccounts = [...defaultAccounts, ...overrides.customAccounts]
+    await fetch(`${API_BASE}/master`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accounts: allAccounts }),
+    })
+  } catch (err) {
+    console.error('[useAccountMaster] サーバー保存失敗:', err)
+  }
 }
 
 // =============================================
 // モジュールスコープ（シングルトン）
-// Phase B TODO: Supabase APIに差し替え
 // =============================================
 
-const overrides = ref<MasterOverrides>(loadOverrides())
+const overrides = ref<MasterOverrides>({ hiddenIds: [], customAccounts: [] })
+let initialized = false
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+// autoSave: overrides変更時にサーバーへ自動保存（デバウンス300ms）
+watch(overrides, () => {
+  if (!initialized) return
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => saveOverridesToServer(overrides.value), 300)
+}, { deep: true })
+
+// 非同期でサーバーから初期データを取得
+fetchMasterFromServer().then(serverData => {
+  if (serverData) {
+    overrides.value = serverData
+    console.log('[useAccountMaster] サーバーからマスタ科目を取得')
+  }
+  initialized = true
+})
 
 /** デフォルト科目 ＋ カスタム科目を統合した全科目リスト */
 const masterAccounts = computed<MasterAccount[]>(() => {
@@ -86,13 +135,11 @@ export function useAccountMaster() {
     } else {
       overrides.value.hiddenIds.push(accountId)
     }
-    saveOverrides(overrides.value)
   }
 
   /** カスタム科目を追加 */
   function addCustomAccount(account: Account): void {
     overrides.value.customAccounts.push(account)
-    saveOverrides(overrides.value)
   }
 
   /** カスタム科目を削除（デフォルト科目は削除不可） */
@@ -103,14 +150,12 @@ export function useAccountMaster() {
     // 非表示リストからも除去
     const hidIdx = overrides.value.hiddenIds.indexOf(accountId)
     if (hidIdx >= 0) overrides.value.hiddenIds.splice(hidIdx, 1)
-    saveOverrides(overrides.value)
     return true
   }
 
   /** デフォルト設定にリセット */
   function resetToDefault(): void {
     overrides.value = { hiddenIds: [], customAccounts: [] }
-    saveOverrides(overrides.value)
   }
 
   /** 科目が非表示かどうか */

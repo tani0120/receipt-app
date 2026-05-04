@@ -12,20 +12,7 @@
           <span class="bg-sky-600 text-white font-extrabold px-2 py-0.5 rounded text-[13px] tracking-wider shadow-sm">{{ currentClient.threeCode }}</span>
           <span class="text-[14px] font-bold text-sky-800">{{ currentClient.companyName }}</span>
         </div>
-        <div class="relative">
-          <button
-            class="text-[11px] text-gray-400 hover:text-sky-600 transition-colors flex items-center gap-1"
-            @click="showLegacyMenu = !showLegacyMenu"
-          >
-            <i class="fa-solid fa-clock-rotate-left"></i>旧ページ
-            <i class="fa-solid fa-caret-down text-[9px]"></i>
-          </button>
-          <div v-if="showLegacyMenu" class="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-[180px] py-1">
-            <button v-for="item in legacyItems" :key="item.path" class="w-full text-left px-3 py-1.5 text-[11px] text-gray-600 hover:bg-sky-50 hover:text-sky-700 flex items-center gap-2" @click="goLegacy(item.path)">
-              <i :class="item.icon" class="text-[10px] w-3 text-center"></i>{{ item.label }}
-            </button>
-          </div>
-        </div>
+
         <button
           class="text-[11px] flex items-center gap-1 px-2.5 py-1 rounded-md transition-all"
           :class="route.path === '/admin-dashboard' ? 'bg-violet-100 text-violet-700 font-bold' : 'text-gray-400 hover:text-violet-600 hover:bg-violet-50'"
@@ -147,18 +134,7 @@ const { unreadCount, toggleDrawer } = useNotificationCenter();
 // マスタページ（/master/）では顧問先コンテキストを非表示にする
 const isMasterPage = computed(() => route.path.startsWith('/master/'));
 
-// --- 旧ページメニュー ---
-const showLegacyMenu = ref(false);
-const legacyItems = [
-  { label: 'C:回収状況',       icon: 'fa-solid fa-calendar-days', path: '/old/collection/demo' },
-  { label: 'G:口座・カード変換',     icon: 'fa-solid fa-arrow-right-arrow-left', path: '/old/data-conversion/demo' },
-  { label: 'H:タスク管理',     icon: 'fa-solid fa-list-check', path: '/old/tasks/demo' },
-  { label: 'Z:管理者設定',     icon: 'fa-solid fa-screwdriver-wrench', path: '/old/admin' },
-];
-const goLegacy = (path: string) => {
-  showLegacyMenu.value = false;
-  router.push(path);
-};
+
 
 // --- 上段バー: 管理メニュー項目定義 ---
 interface TopItem {
@@ -173,8 +149,9 @@ const topItems: TopItem[] = [
   { key: 'pipeline',   label: '見込管理',     icon: 'fa-solid fa-chart-line',             path: null,                          managedPaths: [] },
   { key: 'clients',    label: '顧問先管理',   icon: 'fa-solid fa-building',               path: '/master/clients',             managedPaths: ['/master/clients'] },
   { key: 'progress',   label: '進捗管理',     icon: 'fa-solid fa-bars-progress',          path: '/master/progress',            managedPaths: ['/master/progress'] },
-  { key: 'collection', label: '資料回収',     icon: 'fa-solid fa-folder-open',            path: '/old/collection/demo',        managedPaths: ['/old/collection'] },
-  { key: 'conversion', label: '口座・カード変換',   icon: 'fa-solid fa-arrow-right-arrow-left', path: '/old/data-conversion/demo',   managedPaths: ['/old/data-conversion'] },
+  { key: 'collection', label: '資料回収',     icon: 'fa-solid fa-folder-open',            path: '/collection',                 managedPaths: ['/collection'] },
+  { key: 'conversion', label: 'CSV変換',       icon: 'fa-solid fa-arrow-right-arrow-left', path: '/csv-convert',                managedPaths: ['/csv-convert'] },
+  { key: 'tasks',      label: 'タスク管理',   icon: 'fa-solid fa-list-check',             path: '/task-board',                 managedPaths: ['/task-board'] },
   { key: 'settings',   label: '設定管理',     icon: 'fa-solid fa-gear',                   path: '/master/settings',            managedPaths: ['/master/settings'] },
 ];
 

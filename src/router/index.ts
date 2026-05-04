@@ -57,43 +57,43 @@ export const routes: RouteRecordRaw[] = [
   // 旧パス互換: /settings/:clientId, /client/settings/:clientId → /client-settings/:clientId
   { path: '/settings/:clientId', redirect: (to) => `/client-settings/${to.params.clientId}` },
   { path: '/client/settings/:clientId', redirect: (to) => `/client-settings/${to.params.clientId}` },
+  // --- 旧Screen E 削除済み → ホームにリダイレクト ---
+  { path: '/journal-entry/:id', redirect: '/' },
+  // --- 資料回収 ---
   {
-    path: '/old/collection/:clientId',
+    path: '/collection',
     name: 'ClientCollection',
     component: () => import('../components/ScreenC_CollectionStatus.vue'),
-    props: true
   },
-  // --- 新型仕訳エントリー画面（ScreenE_Workbench。?mode=work対応） ---
-  {
-    path: '/journal-entry/:id',
-    name: 'JournalEntry',
-    component: () => import('@/views/ScreenE_Workbench.vue'),
-    props: true
-  },
+  // 旧パス互換
+  { path: '/old/collection/:clientId', redirect: '/collection' },
+  { path: '/collection/:clientId', redirect: '/collection' },
 
 
 
   // 旧パス互換: /old/settings-accounts → /client/settings/accounts/ABC-00001
   { path: '/old/settings-accounts', redirect: '/client/settings/accounts/ABC-00001' },
 
+  // --- CSV変換 ---
   {
-    path: '/old/data-conversion/:clientId',
+    path: '/csv-convert',
     name: 'ClientDataConversion',
     component: () => import('@/views/ScreenG_DataConversion.vue'),
-    props: true
   },
+  // 旧パス互換
+  { path: '/old/data-conversion/:clientId', redirect: '/csv-convert' },
+  { path: '/csv-convert/:clientId', redirect: '/csv-convert' },
+  // --- タスク管理 ---
   {
-    path: '/old/tasks/:clientId',
+    path: '/task-board',
     name: 'ClientTasks',
     component: () => import('@/views/ScreenH_TaskDashboard.vue'),
-    props: true
   },
-  // --- Phase 2: Isolation Debug Route (Authorized) ---
-  {
-    path: '/debug/version-check/screen-e',
-    name: 'ScreenE_VersionCheck',
-    component: () => import('../views/debug/ScreenE_VersionCheck.vue')
-  },
+  // 旧パス互換
+  { path: '/old/tasks/:clientId', redirect: '/task-board' },
+  { path: '/task-board/:clientId', redirect: '/task-board' },
+  // --- 旧debug Screen E 削除済み → ホームにリダイレクト ---
+  { path: '/debug/version-check/screen-e', redirect: '/' },
 
   // --- Phase 6: MVP Routes (完全分離) ---
   ...mvpRoutes,
@@ -124,13 +124,8 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/mocks/components/JournalListLevel3Mock.vue'),
   },
 
-  // --- 仕訳ワークベンチ（ScreenE_Workbench。新型JournalEntry対応） ---
-  {
-    path: '/workbench/:clientId',
-    name: 'ClientWorkbench',
-    component: () => import('@/views/ScreenE_Workbench.vue'),
-    props: true
-  },
+  // --- 旧ワークベンチ(ScreenE)削除済み → ホームにリダイレクト ---
+  { path: '/workbench/:clientId', redirect: '/' },
 
 
   {

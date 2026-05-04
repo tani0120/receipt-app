@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { mapClientApiToUi } from '../composables/ClientMapper';
+import { mapClientToUi } from '../composables/ClientMapper';
 import type { ClientUi } from '../types/ui.type';
 
 // Phase C: Ironclad Contract - Mapper Stress Test (Lv4)
@@ -35,19 +35,19 @@ describe('Phase C: ClientMapper Ironclad Test', () => {
     };
 
     it('Lv1: Handles Null / Undefined / Missing Keys', () => {
-        const result = mapClientApiToUi(null as unknown);
+        const result = mapClientToUi(null as unknown);
         assertIroncladContract(result);
         expect(result.companyName).toContain('Unknown'); // Safe Fallback
 
-        const result2 = mapClientApiToUi(undefined as unknown);
+        const result2 = mapClientToUi(undefined as unknown);
         assertIroncladContract(result2);
 
-        const result3 = mapClientApiToUi({} as unknown);
+        const result3 = mapClientToUi({} as unknown);
         assertIroncladContract(result3);
     });
 
     it('Lv2: Handles Type Destruction (Number/Bool in String fields)', () => {
-        const result = mapClientApiToUi({
+        const result = mapClientToUi({
             clientCode: 12345,
             companyName: true,
             repName: { complex: 'object' },
@@ -61,7 +61,7 @@ describe('Phase C: ClientMapper Ironclad Test', () => {
     });
 
     it('Lv3: Handles Extreme Values', () => {
-        const result = mapClientApiToUi({
+        const result = mapClientToUi({
             fiscalMonth: 999999, // Should default to safe month or clamp
         } as unknown);
         assertIroncladContract(result);
@@ -76,7 +76,7 @@ describe('Phase C: ClientMapper Ironclad Test', () => {
         ];
 
         inputs.forEach(input => {
-            const result = mapClientApiToUi({
+            const result = mapClientToUi({
                 clientCode: input,
                 companyName: input
             } as unknown);
@@ -86,7 +86,7 @@ describe('Phase C: ClientMapper Ironclad Test', () => {
 
     it('Lv4: Handles Long Text (10,000 chars)', () => {
         const longPath = 'A'.repeat(10000);
-        const result = mapClientApiToUi({
+        const result = mapClientToUi({
             companyName: longPath
         } as unknown);
         assertIroncladContract(result);

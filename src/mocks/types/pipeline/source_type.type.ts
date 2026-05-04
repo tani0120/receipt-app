@@ -12,7 +12,7 @@
  * NON_JOURNAL_EXAMPLES: 仕訳対象外の文書一覧
  *
  * Phase A: モック内で使用（パイプライン型基盤）
- * Phase B TODO:
+ * Phase B TODO (2026-04):
  *   - Supabase ENUM型として定義
  *   - documents.source_type カラム追加
  *   - confirmed_journals.direction（仕訳方向）カラム追加

@@ -1,5 +1,5 @@
 import type { ClientDetailUi, DriveLinkUi } from '@/types/ui.type';
-import { mapClientApiToUi } from './ClientMapper';
+import { mapClientToUi } from './ClientMapper';
 
 
 // Ironclad Helpers
@@ -16,9 +16,9 @@ const safeNumber = (val: unknown, fallback = 0): number => {
     return fallback;
 };
 
-export function mapClientDetailApiToUi(api: unknown): ClientDetailUi {
+export function mapClientDetailToUi(api: unknown): ClientDetailUi {
     // 1. Reuse List Mapper for base properties
-    const baseUi = mapClientApiToUi(api);
+    const baseUi = mapClientToUi(api);
     const raw = (api && typeof api === 'object') ? (api as Record<string, unknown>) : {};
 
     // 2. Drive Links Logic

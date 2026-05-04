@@ -1907,7 +1907,7 @@
             <button
               @click="
                 () => {
-                  /* TODO: searchPastJournals */
+                  /* TODO (2026-05): searchPastJournals。Supabase移行後に実装 */
                 }
               "
               class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded text-xs"

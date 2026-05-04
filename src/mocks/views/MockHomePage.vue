@@ -96,13 +96,14 @@ const defaultMenuItems: MenuItem[] = [
   { key: 'pipeline',   label: '見込管理',     icon: 'fa-solid fa-chart-line',             color: 'linear-gradient(135deg, #f97316, #ea580c)', path: null },
   { key: 'progress',   label: '進捗管理',     icon: 'fa-solid fa-bars-progress',          color: 'linear-gradient(135deg, #3b82f6, #2563eb)', path: '/master/progress' },
   { key: 'clients',    label: '顧問先管理',   icon: 'fa-solid fa-building',               color: 'linear-gradient(135deg, #06b6d4, #0891b2)', path: '/master/clients' },
+  { key: 'collection', label: '資料回収',     icon: 'fa-solid fa-folder-open',            color: 'linear-gradient(135deg, #14b8a6, #0d9488)', path: '/collection' },
   { key: 'partners',   label: '提携管理',     icon: 'fa-solid fa-handshake',              color: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', path: null },
   { key: 'staff',      label: 'スタッフ管理', icon: 'fa-solid fa-users',                  color: 'linear-gradient(135deg, #10b981, #059669)', path: '/master/staff' },
   { key: 'master',     label: 'マスタ管理',   icon: 'fa-solid fa-warehouse',              color: 'linear-gradient(135deg, #6366f1, #4f46e5)', path: '/master' },
   { key: 'costs',      label: '想定費用',     icon: 'fa-solid fa-calculator',             color: 'linear-gradient(135deg, #f59e0b, #d97706)', path: '/master/costs' },
   { key: 'settings',   label: '設定管理',     icon: 'fa-solid fa-gear',                   color: 'linear-gradient(135deg, #64748b, #475569)', path: '/master/settings' },
-  { key: 'conversion', label: '口座・カード変換',   icon: 'fa-solid fa-arrow-right-arrow-left', color: 'linear-gradient(135deg, #ec4899, #db2777)', path: '/old/data-conversion/demo' },
-  { key: 'collection', label: '資料回収',     icon: 'fa-solid fa-folder-open',            color: 'linear-gradient(135deg, #14b8a6, #0d9488)', path: '/old/collection/demo' },
+  { key: 'conversion', label: 'CSV変換',       icon: 'fa-solid fa-arrow-right-arrow-left', color: 'linear-gradient(135deg, #ec4899, #db2777)', path: '/csv-convert' },
+  { key: 'tasks',      label: 'タスク管理',   icon: 'fa-solid fa-list-check',             color: 'linear-gradient(135deg, #ef4444, #dc2626)', path: '/task-board' },
 ]
 
 // ===== スタッフ別メニュー順序永続化 =====

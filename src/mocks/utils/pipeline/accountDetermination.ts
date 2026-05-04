@@ -270,7 +270,7 @@ export function determineAccount(
   // 第四層: 業種ベクトル → 業種辞書
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (matchedVendor?.vendor_vector) {
-    // TODO: IndustryVectorRepository.findByVector() でDB照合
+    // TODO (2026-04): IndustryVectorRepository.findByVector() でDB照合。Supabase移行時に実装
     // 現時点ではvendor_vectorのみ設定し、科目候補はUIに任せる
     result.predictionMethod = 'industry_vector'
     // candidates は業種辞書から取得するが、現時点ではRepository未実装

@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import { useAccountMaster } from '@/features/account-management/composables/useAccountMaster'
 import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster'
 import { useClientAccounts } from '@/features/account-management/composables/useClientAccounts'
@@ -25,26 +25,13 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
     ? useClientTaxCategories(clientId) : null
 
   // ==============================
-  // 旧キーマイグレーション（scope='client'のみ）
+  // 旧キーマイグレーションは不要（API接続版に移行済み）
   // ==============================
-  if (scope === 'client' && clientId) {
-    const oldTaxKey = 'sugu-suru:client-tax-page:' + clientId
-    const oldData = localStorage.getItem(oldTaxKey)
-    if (oldData && clientTaxComposable) {
-      try {
-        const parsed = JSON.parse(oldData)
-        if (Array.isArray(parsed)) {
-          clientTaxComposable.saveAll(parsed)
-        }
-      } catch { /* 破損データは無視 */ }
-      localStorage.removeItem(oldTaxKey)
-    }
-  }
 
   // ==============================
   // 補助科目（scope='client'のみ有効）
   // ==============================
-  const subAccounts = scope === 'client' && clientAccountsComposable
+  const subAccounts: Ref<Record<string, string>> = scope === 'client' && clientAccountsComposable
     ? clientAccountsComposable.subAccounts
     : ref<Record<string, string>>({})
 
@@ -297,18 +284,13 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // ==============================
   function saveAccounts(allRows: Account[], subAccountsInput?: Record<string, string>): void {
     if (scope === 'master') {
-      // マスタスコープ: overrides同期
+      // マスタスコープ: overrides同期（autoSaveで自動保存される）
       const hiddenIds = allRows
         .filter(r => !r.isCustom && (r.deprecated || r.effectiveTo))
         .map(r => r.id)
-      // ACCOUNT_MASTERに存在しないID = カスタム追加された行（MF準拠昇格でisCustom=falseでも保持）
       const defaultAccountIds = new Set(ACCOUNT_MASTER.map(a => a.id))
       const customAccounts = allRows.filter(r => !defaultAccountIds.has(r.id))
       accountMaster.overrides.value = { hiddenIds, customAccounts }
-      localStorage.setItem(
-        'sugu-suru:account-master:overrides',
-        JSON.stringify(accountMaster.overrides.value)
-      )
     } else {
       // 顧問先スコープ: composable.saveAll()に委譲
       clientAccountsComposable?.saveAll(allRows, subAccountsInput)
@@ -317,9 +299,8 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
 
   function saveTaxCategories(allRows: TaxCategory[]): void {
     if (scope === 'master') {
-      // マスタスコープ: overrides同期
+      // マスタスコープ: overrides同期（autoSaveで自動保存される）
       const hiddenIds = allRows.filter(r => r.deprecated).map(r => r.id)
-      // TAX_CATEGORY_MASTERに存在しないID = カスタム追加された行（MF準拠昇格でisCustom=falseでも保持）
       const defaultTaxIds = new Set(TAX_CATEGORY_MASTER.map(t => t.id))
       const customTaxCategories = allRows.filter(r => !defaultTaxIds.has(r.id))
       taxMaster.overrides.value = {
@@ -327,17 +308,9 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
         hiddenIds,
         customTaxCategories,
       }
-      localStorage.setItem(
-        'sugu-suru:tax-master:overrides',
-        JSON.stringify(taxMaster.overrides.value)
-      )
     } else {
       // 顧問先スコープ: composable.saveAll()に委譲
       clientTaxComposable?.saveAll(allRows)
-      // 旧キーが残っていたら削除
-      if (clientId) {
-        localStorage.removeItem('sugu-suru:client-tax-page:' + clientId)
-      }
     }
   }
 

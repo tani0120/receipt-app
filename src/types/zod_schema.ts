@@ -513,7 +513,7 @@ export const SystemSettingsSchema = z.object({
 // ============================================================================
 // 6. Inferred Types (Sacred Types)
 // ============================================================================
-export type ClientApi = z.infer<typeof ClientSchema>;
+// ClientApi型は廃止済み（repositories/types.tsのClient型に統合）
 export type JobApi = z.infer<typeof JobSchema>;
 export type JobStatusApi = z.infer<typeof JobStatusSchema>;
 export type JournalLineApi = z.infer<typeof JournalLineSchema>;

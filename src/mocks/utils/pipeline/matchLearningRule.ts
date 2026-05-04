@@ -60,7 +60,7 @@ export function matchLearningRule(
   const sourceCategory = toSourceCategory(sourceType)
 
   // 顧問先IDでフィルタ + 有効ルールのみ
-  // TODO: Supabase移行時はリポジトリ経由でクエリ
+  // TODO (2026-04): Supabase移行時はリポジトリ経由でクエリ
   const rules = learningRulesTST00011.filter(
     r => r.clientId === clientId && r.isActive,
   )

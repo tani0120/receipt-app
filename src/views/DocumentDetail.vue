@@ -101,7 +101,7 @@ function setTestStatus(status: string) {
 }
 
 onMounted(async () => {
-  // TODO: API呼び出し（route.params.idからドキュメント取得）
+  // TODO (2026-04): API呼び出し（route.params.idからドキュメント取得）。Supabase移行後に実装
   // document.value = await fetchDocument(route.params.id as string)
   void route // 将来のAPI呼び出し用に保持
 })

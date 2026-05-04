@@ -5,7 +5,7 @@
  * 準拠: implementation_plan.md
  *
  * Phase A: フィクスチャ直書き + モック内で使用
- * Phase B TODO:
+ * Phase B TODO (2026-04):
  *   - journal_staff_notes テーブル DDL（migration.sql）
  *   - REMINDER ラベル追加（ENUM/CHECK制約）
  *   - DB trigger: sync_labels_from_staff_notes() 自動同期

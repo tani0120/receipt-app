@@ -207,7 +207,7 @@ const MOCK_DATA: DashboardData = {
   settings: {
     geminiApiKey: '',
     invoiceApiKey: '',
-    systemRootId: '1ZWiIS73fPVaS5MrxI0-9lw_RTj43wZyG',
+    systemRootId: '(入力待)',
     masterSsId: '1XyZ...',
 
     modelName: 'models/gemini-3.0-flash',

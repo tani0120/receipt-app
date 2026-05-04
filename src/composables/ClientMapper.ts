@@ -46,7 +46,7 @@ const safeNumber = (val: unknown): number => {
     return parsed;
 };
 
-export function mapClientApiToUi(api: unknown): ClientUi {
+export function mapClientToUi(api: unknown): ClientUi {
     // 1. Guard: Check if input is object
     if (!api || typeof api !== 'object') {
         // フォールバック

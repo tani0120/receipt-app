@@ -491,9 +491,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | normalizeSupabaseError.ts新設 | 未作成（fetchのnormalizeHttpError.tsのみ実装済み） | PostgrestError → AppError変換（RLSの42501→403等） | エラーハンドラー設計 |
 | errorRole.ts中身の差し替え | 暫定: JWT+guest_google_*で判定 | `app_metadata.role`で判定に置換（1関数の中身のみ） | エラーハンドラー設計 |
 | ~~MockErrorPreviewPage.vue削除~~ | ~~開発用プレビュー（/#/error-preview）~~ | ~~✅ 削除済み（2026-04-23）~~ | エラーハンドラー設計 |
-| Zodスキーマ日本語化 + apiMessages統合 | モック用スキーマは英語のまま（zodHookフォールバックで安全） | 本番スキーマ作成時に `z.string().min(1, 必須('名前'))` 形式で日本語埋め込み。6ファイル対象: ai-rules, collection, clients, admin, ocr, api/index | バリデーション設計 |
 | 既存fetch 19箇所のapiFetch移行 | 全19箇所が直接fetch()。エラー処理はthrow/console.error/無視がバラバラ | composable層（useStaff, useClients等）はモジュールスコープでuseRouter()不可→SupabaseClient直接呼び出しに置換。Vueページ側はapiFetch.withError()に統一 | バリデーション設計 |
-| Zodスキーマファイル分離（`src/api/schemas/`） | 全スキーマがルートファイル内にインライン定義 | `src/api/schemas/staff.schema.ts` 等に分離。apiMessages.tsの定数を参照し、フロント・サーバー間で仕様を一元管理 | バリデーション設計 |
 | ~~Driveファイル選別結果の永続化~~ | ~~`driveSelections`（メモリ上のMap）に保持~~ | ~~✅ **解決済み（2026-04-24）**。選別画面表示時にdoc-storeに登録 + useDocuments().updateStatus()でallDocuments ref即更新 + プレビューローカルキャッシュ~~ | MockDriveSelectPage.vue, drive.ts |
 | 通知センターのDB永続化 | useNotificationCenter.tsでメモリ内ref管理（ページリロードで消える）。**Supabase移行後でなければ実施不可**（notificationsテーブルのDB永続化が必要） | ①`006_notifications.sql`マイグレーション作成（型定義`AppNotification`は`repositories/types.ts`に準備済み）②useNotificationCenter内部をSupabase API呼び出しに差し替え ③Supabase Realtimeで他タブへのpush通知 | useNotificationCenter.ts |
 | ~~ジョブ一覧API（`GET /api/drive/migrate/jobs`）~~ | ~~✅ **実装済み（2026-04-24）**。`getMigrationJobs(clientId)` → interface/JSON版/Supabase版/ラッパー/エンドポイント全層実装。jobId単位グルーピング、total/done/failed/excluded集計~~ | ~~—~~ | ~~drive.ts, migrationRepository.ts~~ |
@@ -507,7 +505,10 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | 旧系統LearningRule二重管理廃止（DL-051 監査検出） | 旧Firestore設計のLearningRule関連コードが10ファイル以上に残存し、新系統（mocks層）と矛盾。`confidenceScore`がLearningRuleUi.ts/zod_schema.ts/firestore.tsに残存、clientCodeベース、借方勘定科目のみ（貸方なし）、ScreenD_AIRules.vueのimport先不在 | Supabase移行時に旧系統廃止。対象: `LearningRuleUi.ts`/`zod_schema.ts` L486/`firestore.ts` L350/`ScreenD_AIRules.vue`等。新系統`learning_rule.type.ts`+`learning_rules_TST00011.ts`で完全置換 | LearningRuleUi.ts, zod_schema.ts, firestore.ts, ScreenD_AIRules.vue |
 | **プロパティ命名snake_case統一（DL-054）** | LearningRule系（`matchType`, `amountMin`, `isActive`等）とAccountDeterminationResult（`vendorId`, `determinedAccount`等）がcamelCase。JournalPhase5Mock/Vendor等のUI表示系はsnake_case。**混在** | Supabase移行時に一括リファクタ。対象: `learning_rule.type.ts`（LearningRule + LearningRuleEntryLine）、`accountDetermination.ts`（AccountDeterminationResult）、`matchLearningRule.ts`。全プロパティをsnake_caseに変換 | learning_rule.type.ts, accountDetermination.ts, matchLearningRule.ts |
 | **確定送信のトランザクション化** | `sendToProcess()`で①仕訳保存→②previewExtractデータ削除→③Drive移行ジョブ登録を順次実行。現在はJSON永続化のため②が失敗しても①の仕訳データは保存済みで実害なし。ただし②のサーバー通信失敗時にリトライしない | Supabase移行時にDBトランザクションで①②を原子的に実行。③（Drive移行）は非同期ジョブのため別トランザクション。対象: `clearAiFieldsByClientId()`（documentStore.ts）→ documentsテーブルのUPDATE（ai*カラム=NULL）+ journalsテーブルのINSERTを1トランザクションに統合 | MockDriveSelectPage.vue, documentStore.ts, useDocuments.ts |
-| **supabase gen types + AssertExtends CI自動化（型安全性保証）** | 現在は全14ストアがJSONを`as`キャストで読み込んでおり、型の不整合を検知する仕組みが**ゼロ**。repositories/types.tsの型を変更してもDBスキーマが追随していなければランタイムで壊れる。**事前検知不可** | ① `supabase gen types typescript --local > src/types/database.types.ts` でDBスキーマからTS型を自動生成 ② `src/types/type_guards.ts` に `AssertExtends<Database['public']['Tables']['clients']['Row'], Client>` 等を全テーブルに配置（コンパイル時に型不整合を即検知） ③ CIに `supabase gen types` → `vue-tsc --noEmit` パイプラインを追加（デプロイ前に自動検知） ④ DBマイグレーション + types.ts + Zodスキーマは同時デプロイ（分けない） | repositories/types.ts, src/types/database.types.ts（自動生成）, src/types/type_guards.ts（新設）, CI設定 |
+| **supabase gen types + AssertExtends CI自動化（型安全性保証）** | 現在は全14ストアがJSONを`as`キャストで読み込んでおり、型の不整合を検知する仕組みが**ゼロ**。repositories/types.tsの型を変更してもDBスキーマが追随していなければランタイムで壊れる。**事前検知不可** | ① `supabase gen types typescript --local > src/types/database.types.ts` でDBスキーマからTS型を自動生成 ② `src/types/type_guards.ts` に `AssertExtends<Database['public']['Tables']['clients']['Row'], Client>` 等を全テーブルに配置（コンパイル時に型不整合を即検知） ③ CIに `supabase gen types` → `vue-tsc --noEmit` パイプラインを追加（デプロイ前に自動検知） ④ DBマイグレーション + types.tsは同時デプロイ（分けない） | repositories/types.ts, src/types/database.types.ts（自動生成）, src/types/type_guards.ts（新設）, CI設定 |
+| **AI_PROMPTS定数のDB移行（定数API化）** | `accountingConstants.ts`のAI_PROMPTS（WORKER/LEARNER/UPDATER/BUILDER/OPTIMIZER/AUDITOR）がTSハードコード。プロンプトチューニングの度にコード変更＋デプロイが必要。非開発者によるチューニングが不可能 | ① Supabaseに`ai_prompts`テーブルを作成（id, name, value, updated_at） ② サーバー側に`GET /api/constants/prompts`エンドポイント新設 ③ フロントはルーターガード（beforeEach）で初回取得＋refキャッシュ（TTL 5分） ④ 管理者ダッシュボードにプロンプト編集UIを接続（既にMockAdminDashboardPage.vueにプロンプト表示タブあり） ⑤ エラー時はフォールバックなし（定数未取得→エラーページ遷移）。**注意**: GAS_LOGIC_DEFINITIONS, SOFTWARE_EXPORT_CSV_SCHEMAS, TAX_SCOPE_DEFINITIONS等はTSのままとする（変更頻度が低く、コードとの密結合度が高いため） | accountingConstants.ts, ai_promptsテーブル（新設）, GET /api/constants/prompts（新設）, MockAdminDashboardPage.vue |
+| **Docker network=none 実データテスト環境構築** | 実データ（顧問先情報・仕訳データ）を用いたテスト時、AIツールのテレメトリ通信・Sentryエラーレポート・ライブラリの裏通信など、コード制御不能な経路からのデータ漏洩リスクがある。`.gitignore`やpre-commitフックだけでは「ツールの暗黙の裏挙動」を防げない | ① `docker/docker-compose.yml` に `network_mode: "none"` を設定し、実データテスト時はネットワーク完全遮断環境で実行 ② 実データは `~/project-secrets/receipt-app/` （リポジトリ外）に配置し、Docker volumeで読み取り専用マウント（`:ro`） ③ `VITE_ENABLE_REAL_TEST` フラグ + `NODE_ENV !== 'development'` ガードで本番・CI環境での実データ読み込みをコード上でも完全封鎖 ④ 実データモード時は `console.log = () => {}` でログ出力も封鎖 ⑤ 物理遮断（Wi-Fiオフ）との併用を運用ルールとして定義 | docker/docker-compose.yml（新設）, scripts/load-test-data.cjs（新設）, .env.local |
+| **PostgreSQL Anonymizer導入（本番データマスキング）** | 本番DBからテスト用データを取得する際、顧問先名・電話番号・メールアドレス・口座情報等の個人情報がそのまま開発環境に流入するリスクがある。「本番データを持ってくるな」というルールは必ず破られるため、**持ってきても安全な状態に変換する正規経路**を提供する必要がある | ① Supabase移行後に `postgresql_anonymizer` 拡張（またはカスタムSQL関数）を導入し、`pg_dump` の出力にマスキング層を強制的に挟む ② マスキング対象: `companyName`→`株式会社テスト`, `email`→`test@example.com`, `phone`→`000-0000-0000`, `bankAccount`→`XXXXXXX`。金額・日付・データ構造はそのまま保持（バグ再現に必要） ③ 移行前の暫定策として `scripts/mask-data.cjs` でJSON形式の実データをマスキングするNode.jsスクリプトを提供（入力: 生データJSON → 出力: マスキング済みJSON） ④ マスキングスクリプトにはpre-commitフック（`scripts/precommit-check.cjs`）を連動させ、電話番号・メール形式・法人名パターンがステージングに含まれた場合はコミットを即abort ⑤ 将来的にはシークレット管理サービス（Doppler/Infisical等）への移行を検討し、環境ごと（dev/staging/prod）に異なるSupabaseプロジェクト＋鍵を分離する | postgresql_anonymizer（Supabase拡張）, scripts/mask-data.cjs（新設）, scripts/precommit-check.cjs（新設）, .husky/pre-commit（新設） |
 
 ---
 
@@ -525,7 +526,113 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 
 ---
 
+## 11. 移行前の棚卸しタスク（移行対象マップ作成）
+
+Supabase移行の**前に**実施する。目的は「潰す」ことではなく、移行時に何をどう変えるかの**マップを作る**こと。
+ここで洗い出した結果は、移行時のチェックリストとして使用する。
+
+### 11-1. localStorage直接操作の棚卸し（16ファイル）
+
+| ファイル | 件数 | 用途 | 移行時の対応方針 |
+|---|---|---|---|
+| `useAccountSettings.ts` | 5 | 科目設定キャッシュ | Supabase DBに移行。composableはAPI呼び出しに差し替え |
+| `useClientAccounts.ts` | 4 | 顧問先科目キャッシュ | 同上 |
+| `useClients.ts` | 3 | 顧問先リストキャッシュ | 同上 |
+| `useColumnResize.ts` | 3 | カラム幅記憶（UI設定） | **許容（ローカルUI設定のため移行不要）** |
+| `MockPortalLoginPage.vue` | 3 | ログイン状態 | Supabase Auth セッションに置換 |
+| `useAccountMaster.ts` | 2 | マスタ科目キャッシュ | Phase 2でサーバー保存API済み。移行時にlocalStorageフォールバック削除 |
+| `useTaxMaster.ts` | 2 | マスタ税区分キャッシュ | 同上 |
+| `useProgress.ts` | 1 | 進捗データ | Supabase DBに移行 |
+| `MockHomePage.vue` | 1 | ホーム設定 | Supabase DBに移行 |
+| `MockAdminDashboardPage.vue` | 1 | ダッシュボード設定 | Supabase DBに移行 |
+| その他6ファイル | 6 | 各種 | 移行時に個別判断 |
+
+### 11-2. TODO残存の棚卸し（20件）
+
+| カテゴリ | 件数 | 代表例 | 移行時の対応 |
+|---|---|---|---|
+| Supabase移行関連 | 12 | `journal_phase5_mock.type.ts` — テーブル設計メモ | 移行SQLの参照資料として使用後に削除 |
+| API化関連 | 3 | `useAccountMaster.ts`, `useTaxMaster.ts`, `useProgress.ts` | 移行と同時にAPI化して解消 |
+| 科目確定DB化 | 2 | `accountDetermination.ts`, `matchLearningRule.ts` | Supabase `learning_rules` テーブル接続時に解消 |
+| 画面実装 | 2 | `DocumentDetail.vue`, `ScreenE_Workbench.vue` | 移行後の機能実装時に解消 |
+| Phase 6.3 | 1 | `ScreenE_Workbench.vue` — 免税/簡易グレーアウト | 移行後の機能実装時に解消 |
+
+### 11-3. `as unknown as` ダブルキャスト残存（29件 / 12ファイル）
+
+| 分類 | 件数 | 移行時の対応 |
+|---|---|---|
+| API応答キャスト（`useClientListRPC.ts`等） | 4 | Supabase型（`supabase gen types`）導入で自然解消 |
+| 動的プロパティアクセス（`JournalListLevel3Mock.vue`等） | 15 | 移行時のリファクタで段階的に解消 |
+| インライン編集（`MockMasterClientsPage.vue`等） | 3 | 移行時のリファクタで解消 |
+| 非標準API（`performance.memory`等） | 2 | **許容（ブラウザ固有APIのため解消不可）** |
+| Supabase Realtime payload | 1 | Supabase型導入で自然解消 |
+| Firestoreドキュメント変換 | 2 | Firestore廃止で消滅 |
+| File System Access API | 1 | **許容（ブラウザ固有APIのため解消不可）** |
+| インライン編集ソート | 1 | 移行時のリファクタで解消 |
+
+### 11-4. 旧Screen系コードの判断
+
+| ファイル | 規模 | 判断 | 理由 |
+|---|---|---|---|
+| `ScreenA_ClientDetail.vue` | 34KB | **移行時に廃止** | MockMasterClientsPage.vueに機能統合済み |
+| `ScreenA_Detail_EditModal.vue` | 5KB | **移行時に廃止** | ScreenA_ClientDetailと同時廃止 |
+| `ScreenC_CollectionStatus.vue` | 34KB | **移行時に廃止** | MockProgressDetailPage.vueに置き換え |
+| `ScreenE_LogicMaster.vue` | 46KB | **要判断** | ScreenE_Workbench.vueと機能重複。移行時に統合検討 |
+| `ScreenE_Workbench.vue` | 17KB | **存続** | 仕訳処理のメイン画面 |
+| `client-form.type.ts` | 2KB | **移行時に廃止** | ScreenA専用型。Client型（repositories/types.ts）に統合 |
+
+### 11-5. useAccountingSystem.ts（64KB / 1,518行）の仕分け
+
+| 区分 | 行数（概算） | 内容 | 移行時の対応 |
+|---|---|---|---|
+| 定数定義（AI_PROMPTS等） | ~500行 | プロンプト文字列・GAS定義 | AI_PROMPTSのみDB化（セクション9参照）。他はTSのまま |
+| モックデータ生成 | ~300行 | `createMockJob`, `mockClients`等 | Supabase移行後に不要。削除 |
+| ロジック関数 | ~200行 | `determineAccountItem`等 | 既にサーバー側（`accountDetermination.ts`）に移動済み。import元切替のみ |
+| composable本体 | ~500行 | `aaa_useAccountingSystem` | Supabase移行時にAPI呼び出しパターン（`useJournals.ts`型）に書き換え |
+
+---
+
+## 12. フロントロジックAPI化の方針（Phase 3-4）
+
+`implementation_plan_merged.md` のPhase 3-4は**Supabase移行前に実施しない**。
+理由: JSONストアの上にfetchラッパーAPIを作っても、移行時にPostgreSQLクエリで作り直す二度手間になるため。
+
+### 実行順序（確定方針）
+
+| 順番 | タスク | アウトプット |
+|---|---|---|
+| **①** | 移行前棚卸し（セクション11） | 移行対象マップ（どのファイルの何をどう変えるか） |
+| **②** | Supabase移行本体（セクション1-8） | DBスキーマ + RLS + マイグレーションSQL + Repository層接続 |
+| **③** | Phase 3-4を移行と同時実施 | PostgreSQLクエリベースのAPI + localStorage廃止 + composable統一 |
+
+### API化の対象/対象外（判定基準）
+
+| 判定 | 種別 | 例 | 理由 |
+|---|---|---|---|
+| ✅ API化する | フィルタ・ソート・ページネーション | `filteredAccountRows`, `pagedAccountRows` | PostgreSQLクエリの方が高速かつ正確 |
+| ✅ API化する | バリデーション | `syncWarningLabels` | **Phase 1で完了済み** |
+| ✅ API化する | 科目確定パイプライン | `accountDetermination.ts` | **既にサーバー側で動作** |
+| ✅ API化する | CRUD保存 | `saveChanges` | **Phase 2で完了済み** |
+| ❌ フロント残留 | 表示ラベル生成 | `sourceCategoryLabel`, `formatSize` | ネットワーク往復コストの方が高い |
+| ❌ フロント残留 | UI状態の派生値 | `canConfirm`, `hasErrors`, `guideMessage` | サーバーがUIの状態を知る必要がない |
+| ❌ フロント残留 | ブラウザ固有処理 | `compressAndThumbnail`, Canvas API | サーバーで実行不可能 |
+| ❌ フロント残留 | ドラッグ&ドロップ | `onDragStart`, `onDrop` | UI操作。保存時にAPIに送れば十分 |
+| ❌ フロント残留 | インライン編集 | `startEdit`, `commitEdit` | セル編集のUI制御 |
+
+### 参照資料
+
+| 資料 | 状態 | 用途 |
+|---|---|---|
+| `implementation_plan_merged.md` | 温存（参照用） | 全122ファイル / 1,255関数の詳細リスト |
+| Phase 1（仕訳一覧API） | ✅ 完了済み | — |
+| Phase 2（マスタCRUD群API化 Step 1-10） | ✅ 完了済み | — |
+| Phase 3（アップロード・ドライブ連携） | 🔴 Supabase移行と同時実施 | 移行時に参照 |
+| Phase 4（その他ロジック削減） | 🔴 Supabase移行と同時実施 | 移行時に参照 |
+
+---
+
 ## 関連ドキュメントリンク
+
 
 | ドキュメント | 関連セクション |
 |---|---|

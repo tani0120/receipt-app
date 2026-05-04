@@ -1,6 +1,6 @@
 /**
  * 進捗管理 — 型定義
- * Phase B TODO: Supabase APIレスポンス型と統合
+ * Phase B TODO (2026-04): Supabase APIレスポンス型と統合
  */
 
 /** 月カラム（動的列ヘッダー用） */
