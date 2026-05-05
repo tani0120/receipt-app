@@ -31,6 +31,11 @@
  * 呼び出し元:
  *   - previewExtract.service.ts（API経由のpreviewExtract）
  *   - preprocess.ts（バッチ処理）
+ *
+ * 移動履歴:
+ *   2026-05-05: scripts/pipeline/image_preprocessor.ts → api/services/pipeline/image_preprocessor.ts
+ *   理由: プロダクションAPI（previewExtract.service.ts）が直接importしているため、
+ *         api/services/pipeline/ に配置するのが適切。
  */
 
 import sharp from 'sharp';

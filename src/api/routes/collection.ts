@@ -1,4 +1,3 @@
-
 import { Hono } from 'hono'
 import { apiError } from '../helpers/apiError'
 import { 未検出 } from '../helpers/apiMessages'
@@ -6,6 +5,7 @@ import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { zodHook } from '../helpers/zodHook'
 import moment from 'moment'
+import * as clientStore from '../services/clientStore'
 
 const app = new Hono()
 
@@ -42,7 +42,7 @@ const CollectionGridResponseSchema = z.object({
     config: CollectionConfigSchema
 })
 
-// --- 2. Mock Data & Logic (Ported from Vue) ---
+// --- 2. Data Source (clientStoreから動的取得) ---
 
 // Mock Config Store
 let mockConfig = {
@@ -52,23 +52,17 @@ let mockConfig = {
     social: false
 }
 
-// Mock Clients
-const MOCK_CLIENTS = [
-    {
-        clientCode: '1001',
-        companyName: '株式会社 テスト商事',
-        fiscalMonth: 3,
-        type: 'corp' as const,
-        jobId: '1001'
-    },
-    {
-        clientCode: '1003',
-        companyName: '鈴木商店',
-        fiscalMonth: 12,
-        type: 'individual' as const,
-        jobId: '1003'
-    }
-];
+/** clientStoreから回収状況用クライアント一覧を取得 */
+function getCollectionClients() {
+    const allClients = clientStore.getAll();
+    return allClients.map(c => ({
+        clientCode: c.clientId.split('-')[0] || c.clientId,
+        companyName: c.companyName,
+        fiscalMonth: c.fiscalMonth ?? (c.type === 'individual' ? 12 : 3),
+        type: c.type as 'corp' | 'individual',
+        jobId: c.clientId.split('-')[0] || c.clientId,
+    }));
+}
 
 // Re-export Schema if needed, or delete if truly unused.
 // However, zValidator uses ConfigSchema.
@@ -81,7 +75,7 @@ export { CollectionConfigSchema, CollectionClientSchema, CollectionDetailSchema,
 // Logic Helpers (Server-Side Calculation)
 const currentDateMock = moment('2025-12-28'); // Fixed Date for Consistency
 
-const getFiscalTermEnd = (client: typeof MOCK_CLIENTS[0], targetDate: moment.Moment) => {
+const getFiscalTermEnd = (client: ReturnType<typeof getCollectionClients>[0], targetDate: moment.Moment) => {
     const fiscalMonth = client.type === 'individual' ? 12 : client.fiscalMonth;
     const month = targetDate.month() + 1;
     let year = targetDate.year();
@@ -91,7 +85,7 @@ const getFiscalTermEnd = (client: typeof MOCK_CLIENTS[0], targetDate: moment.Mom
     return moment(`${year}-${String(fiscalMonth).padStart(2, '0')}-01`).endOf('month');
 };
 
-const getActiveTerm1End = (client: typeof MOCK_CLIENTS[0]) => {
+const getActiveTerm1End = (client: ReturnType<typeof getCollectionClients>[0]) => {
     const checkDate = currentDateMock.clone().subtract(2, 'years');
     const today = currentDateMock;
 
@@ -108,7 +102,7 @@ const getActiveTerm1End = (client: typeof MOCK_CLIENTS[0]) => {
     return getFiscalTermEnd(client, today);
 };
 
-const calculateCellData = (client: typeof MOCK_CLIENTS[0], viewYearStart: number) => {
+const calculateCellData = (client: ReturnType<typeof getCollectionClients>[0], viewYearStart: number) => {
     const term1End = getActiveTerm1End(client);
     const term1Start = term1End.clone().subtract(1, 'year').add(1, 'day');
     const term2End = term1End.clone().add(1, 'year');
@@ -240,7 +234,8 @@ const route = app
         const yearParam = c.req.query('year');
         const viewYearStart = yearParam ? parseInt(yearParam) : 2025;
 
-        const clientData = MOCK_CLIENTS.map(c => ({
+        const clients = getCollectionClients();
+        const clientData = clients.map(c => ({
             jobId: c.jobId,
             code: c.clientCode,
             name: c.companyName,
@@ -261,7 +256,8 @@ const route = app
         const code = c.req.param('code');
         const viewYearStart = 2025; // Default or pass via Query if needed
 
-        const client = MOCK_CLIENTS.find(cl => cl.clientCode === code);
+        const clients = getCollectionClients();
+        const client = clients.find(cl => cl.clientCode === code);
 
         if (!client) {
             return apiError(c, 404, 未検出('顧問先'));

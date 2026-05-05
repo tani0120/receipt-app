@@ -36,7 +36,7 @@
                <div class="flex items-center gap-2 text-teal-600 font-bold mb-1">
                  <i class="fa-solid fa-paper-plane"></i> CLから資料回収
                </div>
-               <div class="text-3xl font-extrabold text-gray-900 mt-2">3 <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
+               <div class="text-3xl font-extrabold text-gray-900 mt-2">{{ widgets.missingCount }} <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
                <p class="text-xs text-gray-500 mt-1">未回収の資料があります</p>
              </div>
              <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center relative z-10">
@@ -53,7 +53,7 @@
                 <div class="flex items-center gap-2 text-red-600 font-bold mb-1">
                   <i class="fa-solid fa-bell"></i> CLに状況確認
                 </div>
-                <div class="text-3xl font-extrabold text-gray-900 mt-2">5 <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
+                <div class="text-3xl font-extrabold text-gray-900 mt-2">{{ widgets.alertCount }} <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
                 <p class="text-xs text-gray-500 mt-1">要確認リスクがあります</p>
              </div>
              <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center relative z-10">
@@ -70,7 +70,7 @@
                 <div class="flex items-center gap-2 text-blue-600 font-bold mb-1">
                   <i class="fa-solid fa-pen-to-square"></i> <span class="text-sm">仕訳作業</span>
                 </div>
-                <div class="text-3xl font-extrabold text-gray-900 mt-2">124 <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
+                <div class="text-3xl font-extrabold text-gray-900 mt-2">{{ widgets.draftCount }} <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
                 <div class="text-[10px] font-medium text-gray-500 mt-1 whitespace-nowrap overflow-hidden text-ellipsis">期限間近: 12件</div>
              </div>
              <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center relative z-10">
@@ -87,7 +87,7 @@
                 <div class="flex items-center gap-2 text-purple-600 font-bold mb-1">
                   <i class="fa-solid fa-gavel"></i> 仕訳承認
                 </div>
-                <div class="text-3xl font-extrabold text-gray-900 mt-2">15 <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
+                <div class="text-3xl font-extrabold text-gray-900 mt-2">{{ widgets.approvalCount }} <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
                 <p class="text-xs text-gray-500 mt-1">承認待ちの仕訳があります</p>
              </div>
              <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center relative z-10">
@@ -104,7 +104,7 @@
                 <div class="flex items-center gap-2 text-green-600 font-bold mb-1">
                    <i class="fa-solid fa-file-export"></i> <span class="text-sm">CSV出力</span>
                 </div>
-                <div class="text-3xl font-extrabold text-gray-900 mt-2">4 <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
+                <div class="text-3xl font-extrabold text-gray-900 mt-2">{{ widgets.exportCount }} <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
                 <div class="text-[10px] font-medium text-gray-500 mt-1 whitespace-nowrap overflow-hidden text-ellipsis">未出力: 4件</div>
              </div>
              <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center relative z-10">
@@ -119,7 +119,7 @@
               </div>
               <div class="relative z-10">
                  <div class="flex items-center gap-2 text-gray-600 font-bold mb-1"><i class="fa-solid fa-folder-tree"></i> 仕訳外ファイルの移動</div>
-                 <div class="text-3xl font-extrabold text-gray-900 mt-2">12 <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
+                 <div class="text-3xl font-extrabold text-gray-900 mt-2">{{ widgets.filingCount }} <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
                  <p class="text-xs text-gray-500 mt-1">除外ファイルの移動待ちがあります</p>
               </div>
               <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center relative z-10">
@@ -134,7 +134,7 @@
               </div>
               <div class="relative z-10">
                  <div class="flex items-center gap-2 text-orange-600 font-bold mb-1"><i class="fa-solid fa-lightbulb"></i> 仕訳ルール</div>
-                 <div class="text-3xl font-extrabold text-gray-900 mt-2">8 <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
+                 <div class="text-3xl font-extrabold text-gray-900 mt-2">{{ widgets.learningCount }} <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
                  <p class="text-xs text-gray-500 mt-1">新規学習候補があります</p>
               </div>
               <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center relative z-10">
@@ -151,7 +151,7 @@
                  <div class="flex items-center gap-2 text-slate-600 font-bold mb-1 tracking-tight">
                     <i class="fa-solid fa-file-invoice-dollar"></i> <span class="text-sm">売掛金・買掛金の入出金消込</span>
                  </div>
-                 <div class="text-3xl font-extrabold text-gray-900 mt-2">5 <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
+                 <div class="text-3xl font-extrabold text-gray-900 mt-2">{{ widgets.reconcileCount }} <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
                  <p class="text-xs text-gray-500 mt-1">消込未完了リスト</p>
               </div>
               <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center relative z-10">

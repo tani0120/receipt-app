@@ -470,7 +470,7 @@ async function saveChanges() {
     const customRows = accountRows.filter(r => !defaultAccountIds.has(r.id));
     const hiddenIds = accountRows.filter(r => r.deprecated || r.effectiveTo).map(r => r.id);
     overrides.value = { hiddenIds, customAccounts: customRows };
-    localStorage.setItem('sugu-suru:account-master:overrides', JSON.stringify(overrides.value));
+    // ★DL-042: localStorage書き込み廃止済み（API保存に一本化）
 
     markClean();
     modal.notify({ title: '保存しました', variant: 'success' });

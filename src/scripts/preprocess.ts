@@ -27,7 +27,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as iconv from 'iconv-lite';
-import { preprocessImage as sharpPreprocess, getMimeType as getSharpMimeType } from './pipeline/image_preprocessor';
+import { preprocessImage as sharpPreprocess, getMimeType as getSharpMimeType } from '../api/services/pipeline/image_preprocessor';
 
 // ============================================================
 // 型定義

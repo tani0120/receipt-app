@@ -127,18 +127,11 @@ export function useDataConversion() {
 
     const startDataConversion = async (clientName: string, sourceSoftware: string, targetSoftware: string, _file: File) => {
         isProcessing.value = true;
-        loadingStatus.value = 'CSVファイルを解析中...';
+        loadingStatus.value = '変換処理を開始しています...';
 
-        await new Promise(r => setTimeout(r, 1000));
-        loadingStatus.value = 'フォーマットを標準化しています...';
-
-        await new Promise(r => setTimeout(r, 1000));
+        // TODO: POST /api/conversion/convert に接続し、実際のCSV変換を実行
+        //       現在はクライアント側でダミーCSVを生成する暫定実装
         loadingStatus.value = `${targetSoftware}形式へ変換中...`;
-
-        await new Promise(r => setTimeout(r, 1000));
-        loadingStatus.value = 'ファイルを生成しています...';
-
-        await new Promise(r => setTimeout(r, 1000));
 
         const today = new Date();
         const yyyymmdd = today.toISOString().slice(0, 10).replace(/-/g, '');

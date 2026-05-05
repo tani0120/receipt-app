@@ -493,7 +493,7 @@ async function saveChanges() {
       visibilityOverrides: taxMasterOverrides.value.visibilityOverrides,
       customTaxCategories,
     };
-    localStorage.setItem('sugu-suru:tax-master:overrides', JSON.stringify(taxMasterOverrides.value));
+    // ★DL-042: localStorage書き込み廃止済み（API保存に一本化）
 
     markClean();
     modal.notify({ title: '保存しました', variant: 'success' });

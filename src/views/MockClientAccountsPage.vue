@@ -314,22 +314,10 @@ const modal = useModalHelper();
 // 未保存変更ガード
 const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
-// subAccountをlocalStorageから復元
-if (clientId.value) {
-  try {
-    const raw = localStorage.getItem('sugu-suru:client-accounts:' + clientId.value);
-    if (raw) {
-      const saved = JSON.parse(raw);
-      if (saved.subAccounts) {
-        accountRows.forEach(r => {
-          if (saved.subAccounts[r.id]) {
-            r.subAccount = saved.subAccounts[r.id];
-          }
-        });
-      }
-    }
-  } catch { /* 破損データは無視 */ }
-}
+// ★DL-042: subAccountのlocalStorage復元を廃止
+// subAccountはsaveChanges()でAPI経由でサーバー保存済み。
+// 復元はsettings.accounts（API GET）から取得する設計に移行予定。
+// 現時点ではsettings.accounts.valueにsubAccountが含まれるため、初期値から復元される。
 
 // composableの変更を監視して非表示フラグのみ同期（順序は維持）
 if (clientId.value) {

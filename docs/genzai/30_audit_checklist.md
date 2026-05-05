@@ -1,7 +1,9 @@
-# 全293ファイル 調査チェックリスト（拡張版）
+# 全310ファイル 調査チェックリスト（拡張版）
 
 > 開始: 2026-05-04
 > 更新: 2026-05-05 R1(8件) + R2(5件) + R3(13件) + R3.5(7件) = 計33件削除済み + クズ行為復旧（server.ts 4ルート追加、journalListService.ts フィルタバグ2件修正、documentUtils.ts 復元）
+> 更新: 2026-05-05 R4: 監査漏れ17件追記（T-31新設API 7件 + scripts/ 5件 + database/ 2件 + domain/ 1件 + パス不一致修正 2件）+ image_preprocessor.ts移動 + LS二重永続化修正3件（AccountsPage/TaxCategoriesPage/ClientAccountsPage）
+> ★注意: mocks統合完了済み。旧mocks/パス記載は歴史的経緯。実ファイルはsrc/直下に配置。
 > ルール: view_fileのみ。grep禁止。先頭3文字・末尾3文字を証拠記録。
 > 全件読了後にimport突合で死コード判定を実施。
 
@@ -162,9 +164,9 @@
 | 142 | mocks/types/pipeline/vendor.type.ts | `/**` | `\n` | - | - | - | - | - | - | - | VendorVector(68種),Vendor,IndustryVectorEntry | なし | なし(514L,flattenIndustryVector含む) | ✅ |
 | 143 | mocks/data/document_mock_data.ts | `/**` | `\n` | - | - | - | - | - | - | - | DOCUMENT_MOCK_DATA | なし | なし(26L) | ✅ |
 | 144 | mocks/data/learning_rules_TST00011.ts | `/**` | `\n` | - | - | - | - | - | - | - | learningRulesTST00011 | learning_rule.type | なし(209L,複合仕訳テンプレ含む) | ✅ |
-| 145 | mocks/columns/journalColumns.ts | `/**` | `\n` | - | - | - | - | - | - | - | JOURNAL_COLUMNS | journal_phase5_mock.type | なし(71L,一覧列定義) | ✅ |
+| 145 | mocks/columns/journalColumns.ts ⚠実パス: columns/journalColumns.ts。#310参照 | `/**` | `\n` | - | - | - | - | - | - | - | JOURNAL_COLUMNS | journal_phase5_mock.type | なし(71L,一覧列定義) | ✅ |
 | 146 | mocks/definitions/field-nullable-spec.ts | `/**` | `\n` | - | - | - | - | - | - | - | FIELD_NULLABLE_SPEC,EXCLUDE_LABELS | なし | なし(96L,null許容SSOT) | ✅ |
-| 147 | mocks/services/receiptService.ts | `/**` | `\n` | - | - | fetch /api/pipeline | - | - | - | - | analyzeReceipt,PreviewExtractResponse | pipeline型 | なし(262L,Phase3統合済) | ✅ |
+| 147 | mocks/services/receiptService.ts ⚠実パス: services/receiptService.ts。#309参照 | `/**` | `\n` | - | - | fetch /api/pipeline | - | - | - | - | analyzeReceipt,PreviewExtractResponse | pipeline型 | なし(262L,Phase3統合済) | ✅ |
 | 148 | mocks/utils/exportMfCsv.ts | `/**` | `\n` | - | - | - | - | - | - | - | exportMfCsv | journal_phase5_mock,field-nullable | ⚠EXCLUDE_LABELS重複(definitions) | ✅ |
 | 149 | mocks/utils/journalWarningSync.ts | `/**` | `\n` | - | - | - | - | - | - | - | syncWarningLabels | journal_phase5_mock,voucherTypeRules | ⚠警告ラベル重複管理リスク | ✅ |
 | 150 | mocks/utils/lineItemToJournalMock.ts | `/**` | `\n` | - | - | - | - | - | - | - | lineItemToJournalMock | line_item,vendor,journal_phase5_mock | なし(449L,パイプライン変換核心) | ✅ |
@@ -307,10 +309,27 @@
 | 287 | ~~views/debug/ScreenE_VersionCheck.vue~~ | - | - | - | - | - | - | - | - | - | - | - | デバッグ画面,ルートを/リダイレクト化 | 🗑削除済み(R1) |
 | 288 | views/__tests__/DocumentDetail.spec.ts | `imp` | `\n` | - | - | - | - | - | - | - | DocumentDetailテスト | vitest | なし | ✅ |
 | 289 | api/index.ts+config.ts+helpers/(3)+gemini/(5)+vertex/(2)+ocr/(1)+lib/(5)+types/(1) | - | - | - | - | - | - | - | - | - | APIインフラ(18件:Hono,Gemini,Vertex,OCR,AIProvider) | hono,zod,@google/generative-ai | なし | ✅ |
-| 290 | api/routes/ (26件) | - | - | - | - | - | - | - | - | - | APIルート全26エンドポイント | hono,zod,各Store | なし | ✅ |
-| 291 | api/services/ (非pipeline,非migration) (18件) | - | - | - | - | - | - | - | - | - | JSONファイルベースStore(18件) | node:fs,node:path | ⚠Supabase移行Phase4対象 | ✅ |
+| 290 | api/routes/ (26件) ⚠個別記載は24件。#294-295で2件追記 | - | - | - | - | - | - | - | - | - | APIルート全26エンドポイント | hono,zod,各Store | なし | ✅ |
+| 291 | api/services/ (非pipeline,非migration) (23件) ⚠旧18件→23件に修正。#296-300で5件追記 | - | - | - | - | - | - | - | - | - | JSONファイルベースStore+ListService(23件) | node:fs,node:path | ⚠Supabase移行Phase4対象 | ✅ |
 | 292 | api/services/pipeline/ (5件) | - | - | - | - | - | - | - | - | - | AIパイプライン(previewExtract,postprocess,validation) | @google/generative-ai | なし | ✅ |
 | 293 | api/services/migration/ (6件) | - | - | - | - | - | - | - | - | - | マイグレーション(JSON→Supabase,ZIP生成) | node:fs,supabase | なし | ✅ |
+| 294 | api/routes/exportRoutes.ts | `/**` | `\n` | - | - | POST | - | - | - | - | app | hono,exportListService | T-31-7で新設 | ✅(R4) |
+| 295 | api/routes/progressRoutes.ts | `/**` | `\n` | - | - | GET | - | - | - | - | app | hono,progressListService | T-31-1で新設 | ✅(R4) |
+| 296 | api/services/clientListService.ts | `/**` | `\n` | - | - | - | - | - | - | - | getClientList等 | clientStore | T-31-3で新設 | ✅(R4) |
+| 297 | api/services/exportListService.ts | `/**` | `\n` | - | - | - | - | - | - | - | getExportList,getExportDetail | journalStore,confirmedStore,accountMasterStore | T-31-7/9で新設(12KB) | ✅(R4) |
+| 298 | api/services/progressListService.ts | `/**` | `\n` | - | - | - | - | - | - | - | getProgressList等 | journalStore,clientStore,documentStore | T-31-1/2で新設(10KB) | ✅(R4) |
+| 299 | api/services/staffListService.ts | `/**` | `\n` | - | - | - | - | - | - | - | getStaffListForAdmin等 | staffStore | T-31-3で新設 | ✅(R4) |
+| 300 | api/services/vendorListService.ts | `/**` | `\n` | - | - | - | - | - | - | - | getVendorListForMaster等 | vendorStore | マスタAPI化で新設 | ✅(R4) |
+| 301 | ~~scripts/pipeline/image_preprocessor.ts~~ → api/services/pipeline/image_preprocessor.ts | `/**` | `\n` | - | - | - | - | - | - | - | preprocessImage,getMimeType,PreprocessResult | sharp | ✅移動完了(R4)。importパス2箇所修正済み | ✅(R4) |
+| 302 | scripts/preprocess.ts | `/**` | `\n` | - | - | - | - | - | - | - | processFile,processFiles | fs,iconv-lite,image_preprocessor | バッチ前処理(sharp統合)。スタンドアロン実行用 | ✅(R4) |
+| 303 | scripts/preview_extract_postprocess.ts | `/**` | `\n` | - | - | - | - | - | - | - | runPostProcess,determineStatus,generateLabels | preview_extract_schema | 層B判定8項目+ラベル自動生成。テスト専用 | ✅(R4) |
+| 304 | scripts/preview_extract_schema.ts | `/**` | `\n` | - | - | - | - | - | - | - | GeminiPreviewExtractResponse,PREVIEW_EXTRACT_RESPONSE_SCHEMA | @google/genai,domain/types/journal | Vertex AIスキーマ定義(452L)。実験用 | ✅(R4) |
+| 305 | scripts/preview_extract_test.ts | `/**` | `\n` | - | - | Vertex AI | - | - | as Record(L309) | - | main(スタンドアロン) | @google/genai,schema,postprocess,preprocess | テストスクリプト。--label必須(574L) | ✅(R4) |
+| 306 | database/repositories/documentRepository.ts | `/**` | `\n` | - | - | Supabase | - | - | - | - | ドキュメントRepository | @supabase | Supabase書類Repository | ✅(R4) |
+| 307 | database/types/document.types.ts | `/**` | `\n` | - | - | - | - | - | - | - | 型定義 | なし | Supabase書類型定義 | ✅(R4) |
+| 308 | domain/types/journal.ts | `/**` | `\n` | - | - | - | - | - | - | - | VoucherType,PaymentMethod,HandwrittenFlag,TaxCategory,AccountCode | なし | ドメイン層enum/型定義(7.7KB) | ✅(R4) |
+| 309 | services/receiptService.ts | `/**` | `\n` | - | - | fetch /api/pipeline | - | - | - | - | analyzeReceipt,ReceiptAnalysisResult | pipeline/types,fileTypes,validationMessages | ⚠旧パスmocks/services/→services/に移動済み。#147と同一ファイル | ✅(R4) |
+| 310 | columns/journalColumns.ts | `/**` | `\n` | - | - | - | - | - | - | - | JOURNAL_COLUMNS | journal_phase5_mock.type | ⚠旧パスmocks/columns/→columns/に移動済み。#145と同一ファイル | ✅(R4) |
 
 ---
 
@@ -372,6 +391,25 @@
 ## タスク4: 型安全性確認 ✅完了
 
 npx vue-tsc --noEmit → 型エラー0件 ✅ 2026-05-05
+
+## タスク6: 仕訳一覧（JournalListLevel3Mock.vue）機能検証 ✅完了（2026-05-05 R5）
+
+> 対象: http://localhost:5174/#/journal-list/TST-00011
+> データ: 1113件（30件/ページ, 全38ページ）
+> API: POST /api/journals/TST-00011/list (journalListService.ts)
+
+| # | 検証項目 | 結果 | 詳細 |
+|---|---|---|---|
+| 1 | 基本表示 | ✅ | 1113件表示、全カラム（No, 写真, 根拠, 過去仕訳, 学習, コメント, 要対応, 証票, 警告, クレ払い, 軽減, 証票メモ, 連絡, 証票意味, 日付, 摘要, 借方勘定科目, 借方補助, 借方税区分, 借方金額, 貸方勘定科目, 貸方補助, 貸方税区分, 貸方金額, ヒント）正常 |
+| 2 | ページネーション | ✅ | 1→2→3ページ遷移正常、表示範囲(1~30/31~60)正しく更新 |
+| 3 | ソート | ✅ | 「ソート中: 日付」表示、デフォルト順ボタンあり、日付昇順で並んでいることを確認 |
+| 4 | フィルタ | ✅ | チェックボックスフィルタ（未出力, 過去出力済み, 過去仕訳CSV, 出力対象外, 丁稚を表示）正常に動作 |
+| 5 | 証票種類フィルタ | ✅ | 全て/証票/領収書/請求書/通帳/クレカ/交通費/医療費 — タブ切替で件数変動 |
+| 6 | セル編集 | ✅ | 摘要セルをダブルクリック→入力フィールドに切替→テキスト編集→Enter確定→値反映OK |
+| 7 | 画像モーダル | ✅ | 写真アイコンクリック→モーダルトリガー正常（画像データなしの場合は警告モーダル表示） |
+| 8 | 一括操作 | ✅ | チェックボックスON→上部バーが一括操作バーに変化。ボタン: 未読/既読, 対象外/対象, コピー, ゴミ箱 |
+| 9 | 全列検索 | ✅ | 検索ボックス（摘要・科目・金額検索）表示OK |
+| 10 | 列幅リセット | ✅ | 「↔列幅リセット」ボタン表示OK |
 
 ## タスク5: mocks統合（本来の進捗）
 

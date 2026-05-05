@@ -29,8 +29,8 @@
 
 import { GoogleGenAI } from '@google/genai';
 import { Type } from '@google/genai';
-import { preprocessImage } from '../../../scripts/pipeline/image_preprocessor';
-import type { MimeType } from '../../../scripts/pipeline/image_preprocessor';
+import { preprocessImage } from './image_preprocessor';
+import type { MimeType } from './image_preprocessor';
 import { buildKeywordsPrompt } from './source_type_keywords';
 import type {
   PreviewExtractRequest,

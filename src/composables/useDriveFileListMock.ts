@@ -6,6 +6,11 @@
  * - UI契約（DriveFileListProps）を満たすモックデータを生成
  * - API呼び出しは一切しない
  * - 型エラーが発生しないことを確認
+ *
+ * ⚠️ 全体がモック実装。Phase B（Drive API接続）で以下に差替:
+ *   - onSelectClient → GET /api/drive/files/:clientId
+ *   - onProcessFile → POST /api/drive/ocr/:fileId
+ *   - clientsリスト → clientStore.getAll()
  */
 
 import { ref } from 'vue';

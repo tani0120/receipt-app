@@ -36,7 +36,13 @@ const TRACKABLE_PAGES: Record<string, TrackablePage> = {
   '/export/': 'export',
 };
 
-/** 暫定ログインスタッフID（Supabase Auth移行時に差し替え） */
+/**
+ * 暫定ログインスタッフID（Phase B: Supabase Auth移行時に差し替え）
+ * 移行手順:
+ *   1. useCurrentUser().selectedStaffUuid を取得
+ *   2. Supabase Auth移行後は auth.currentUser.id に差替
+ *   3. startTracking()の引数にstaffIdを追加するか、composableとして注入
+ */
 const CURRENT_STAFF_ID = 'staff-0000';
 
 // ============================================================

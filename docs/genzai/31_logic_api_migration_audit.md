@@ -104,6 +104,42 @@
 
 ---
 
+## 残存課題（2026-05-05 R4 精査 → R5 全件修正）
+
+### A. モックデータ残存（API未接続） → ✅ 全件修正済み
+
+| ファイル | 修正内容 | 状態 |
+|---|---|---|
+| `useAdminDashboard.ts` | MOCK_DATA(250行)をゼロ/空配列のDEFAULT_DATAに置換。API取得で上書き。downloadCsvの疑似setTimeout削除 | ✅ |
+| `api/routes/collection.ts` | MOCK_CLIENTS(2社ハードコード)をclientStore.getAll()による動的取得に置換 | ✅ |
+| `ClientDetailMapper.ts` | healthScore:92→0, recentActivities:3件→空配列。API接続TODOコメント追記 | ✅ |
+| `ScreenH_TaskDashboard.vue` | ウィジェット8個のハードコード数値をwidgets ref（API値）に紐付け | ✅ |
+
+### B. 疑似処理（setTimeout） → ✅ 全件修正済み
+
+| ファイル | 修正内容 | 状態 |
+|---|---|---|
+| `useDataConversion.ts` | 4回のsetTimeout(1000)疑似処理を削除。POST /api/conversion/convert接続TODOを明記 | ✅ |
+| `useDriveFileListMock.ts` | Phase B移行TODOをdocstringに追記（モック全体のためsetTimeoutは維持） | ✅ TODO |
+
+### C. ハードコードID（Supabase Auth移行時に対処） → ✅ TODO明記済み
+
+| ファイル | 修正内容 | 状態 |
+|---|---|---|
+| `useActivityTracker.ts` L40 | Phase B移行手順（3ステップ）をdocstringに明記 | ✅ TODO |
+| `useCurrentUser.ts` | Phase B移行TODOが既に記載済みであることを確認 | ✅ 既存 |
+
+### D. localStorage残存（対処済み + 残留分類）
+
+| 状態 | 件数 | 内容 |
+|---|---|---|
+| ✅ R4修正済み | 3件 | MockMasterAccountsPage, MockMasterTaxCategoriesPage, MockClientAccountsPage |
+| ⚠ Phase B対応 | 5ファイル | ゲスト認証系（PortalLogin, NotFound, router, errorRole）+ useCurrentUser |
+| — 移行不要 | 2ファイル | useColumnResize（UI設定）, MockHomePage（メニュー順序） |
+| ✅ マイグレーション済み | 1ファイル | useClients（LS→サーバー移行ロジック。移行完了後に削除予定） |
+
+---
+
 ## 関連ドキュメント
 
 | ドキュメント | 関連 |

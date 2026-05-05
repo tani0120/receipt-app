@@ -201,10 +201,10 @@ export interface DashboardData {
 }
 
 // ========================================================================
-// 📊 Mock Data
+// 📊 デフォルトデータ（API取得前の初期値。ダミー値なし）
 // ========================================================================
 
-const MOCK_DATA: DashboardData = {
+const DEFAULT_DATA: DashboardData = {
   apiKeys: { geminiApiKey: '', invoiceApiKey: '' },
 
   settings: {
@@ -242,28 +242,17 @@ const MOCK_DATA: DashboardData = {
   },
 
   kpi: {
-    monthlyJournals: 18542,
-    autoConversionRate: 98.2,
-    aiAccuracy: 99.8,
+    monthlyJournals: 0,
+    autoConversionRate: 0,
+    aiAccuracy: 0,
     funnel: {
-      received: 156,
-      exported: 137
+      received: 0,
+      exported: 0
     },
-    monthlyTrend: [12000, 15000, 18542]
+    monthlyTrend: []
   },
   performance: {
-    staff: [
-      {
-        name: "鈴木 一郎",
-        backlogs: { total: 12, draft: 8 },
-        velocity: { draftAvg: 45 }
-      },
-      {
-        name: "佐藤 次郎",
-        backlogs: { total: 5, draft: 2 },
-        velocity: { draftAvg: 41 }
-      }
-    ]
+    staff: []
   },
   kpiCostQuality: {
     registeredClients: 0,
@@ -296,110 +285,12 @@ const MOCK_DATA: DashboardData = {
       totalCalls: 0
     }
   },
-  staffList: [
-    { id: 'S001', role: '管理者', name: '管理者 太郎', email: 'admin@example.com' },
-    { id: 'S002', role: '実務者', name: '佐藤 健太', email: 'k.sato@example.com' },
-    { id: 'S003', role: '実務者', name: '鈴木 美咲', email: 'm.suzuki@example.com' },
-    { id: 'S004', role: '実務者', name: '高橋 誠', email: 'm.takahashi@example.com' },
-  ],
-  staffAnalysis: [
-    {
-      staffId: 'S002',
-      name: '佐藤 健太',
-      role: '実務者',
-      status: 'active',
-      performance: {
-        monthlyJournals: 1200, processingTime: '45h', velocityPerHour: 26.6,
-        thisMonthJournals: 125, monthlyAvgJournals: 110, annualApiCost: 54000,
-        velocityThisMonth: 28, velocityAvg: 25, velocityPerHourAvg: 26.6,
-        velocity: { draftAvg: 41 }
-      },
-      backlogs: { total: 5, draft: 2 },
-      backlog: {
-        '未処理': { waiting: 5, processed: 120, total: 125, draft: 5 },
-        'AI処理中': { waiting: 2, processed: 118, total: 120, draft: 2 },
-        '確認待ち': { waiting: 8, processed: 100, total: 108, draft: 8 },
-        '完了': { waiting: 0, processed: 98, total: 98, draft: 0 },
-      }
-    },
-    {
-      staffId: 'S003',
-      name: '鈴木 美咲',
-      role: '実務者',
-      status: 'active',
-      performance: {
-        monthlyJournals: 980, processingTime: '38h', velocityPerHour: 25.7,
-        thisMonthJournals: 95, monthlyAvgJournals: 90, annualApiCost: 45000,
-        velocityThisMonth: 26, velocityAvg: 24, velocityPerHourAvg: 25.7,
-        velocity: { draftAvg: 41 }
-      },
-      backlogs: { total: 5, draft: 2 },
-      backlog: {
-        '未処理': { waiting: 0, processed: 95, total: 95, draft: 0 },
-        'AI処理中': { waiting: 0, processed: 95, total: 95, draft: 0 },
-        '確認待ち': { waiting: 3, processed: 90, total: 93, draft: 3 },
-        '完了': { waiting: 0, processed: 90, total: 90, draft: 0 },
-      }
-    },
-    {
-      staffId: 'S004',
-      name: '高橋 誠',
-      role: '実務者',
-      status: 'active',
-      performance: {
-        monthlyJournals: 1450, processingTime: '52h', velocityPerHour: 27.8,
-        thisMonthJournals: 150, monthlyAvgJournals: 140, annualApiCost: 70000,
-        velocityThisMonth: 30, velocityAvg: 28, velocityPerHourAvg: 27.8,
-        velocity: { draftAvg: 41 }
-      },
-      backlogs: { total: 5, draft: 2 },
-      backlog: {
-        '未処理': { waiting: 12, processed: 140, total: 152, draft: 12 },
-        'AI処理中': { waiting: 5, processed: 135, total: 140, draft: 5 },
-        '確認待ち': { waiting: 15, processed: 110, total: 125, draft: 15 },
-        '完了': { waiting: 0, processed: 100, total: 100, draft: 0 },
-      }
-    },
-  ],
-  clientAnalysis: [
-    {
-      code: 'AAA', name: '株式会社 ＡＡＡ', status: 'active',
-      performance: {
-        journalsThisMonth: 50, journalsThisYear: 600, journalsLastYear: 550,
-        apiCostThisYear: 24000, velocityThisMonth: 25, velocityAvg: 24
-      }
-    },
-    {
-      code: 'BBB', name: '合同会社 ＢＢＢ', status: 'active',
-      performance: {
-        journalsThisMonth: 30, journalsThisYear: 360, journalsLastYear: 300,
-        apiCostThisYear: 15000, velocityThisMonth: 22, velocityAvg: 20
-      }
-    },
-    {
-      code: 'CCC', name: 'ＣＣＣ 商店', status: 'active',
-      performance: {
-        journalsThisMonth: 80, journalsThisYear: 960, journalsLastYear: 800,
-        apiCostThisYear: 40000, velocityThisMonth: 28, velocityAvg: 26
-      }
-    }
-  ],
+  staffList: [],
+  staffAnalysis: [],
+  clientAnalysis: [],
   staffStatusCounts: { all: 0, active: 0, inactive: 0, suspension: 0 },
   clientStatusCounts: { all: 0, active: 0, inactive: 0, suspension: 0 },
-  systemLogs: [
-    {
-      message: 'API Rate Limit Warning',
-      timestamp: '2023-10-25 14:30',
-      detail: 'Freee API connection unstable.',
-      solution: 'Retry connection in 5 mins.'
-    },
-    {
-      message: 'Data Sync Partial Failure',
-      timestamp: '2023-10-24 09:15',
-      detail: 'Client A sync interrupted.',
-      solution: 'Manual sync required for Client A.'
-    }
-  ],
+  systemLogs: [],
   prompts: {
     ai: [
       { id: 'P-001', name: 'WORKER: 解析メイン (Phase 1)', value: AI_PROMPTS.WORKER },
@@ -458,7 +349,7 @@ const MOCK_DATA: DashboardData = {
 };
 
 export function useAdminDashboard() {
-  const data = ref<DashboardData>(MOCK_DATA);
+  const data = ref<DashboardData>(DEFAULT_DATA);
 
   // 実データ取得: サーバー側で集計済みのサマリを1回のAPIで取得（T-31-3）
   async function fetchRealKpi() {
@@ -671,13 +562,9 @@ export function useAdminDashboard() {
     .then(() => fetchAiCostSummary());
 
   const downloadCsv = async () => {
-    // Mock CSV Download
-    return new Promise<boolean>((resolve) => {
-      setTimeout(() => {
-        console.log("CSVダウンロード完了");
-        resolve(true);
-      }, 1000);
-    });
+    // TODO: 実際のCSVエクスポートAPIに接続
+    console.log('[useAdminDashboard] CSVダウンロード: API未接続');
+    return true;
   };
 
   // Re-export types if needed by components

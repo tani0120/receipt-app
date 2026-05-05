@@ -73,8 +73,10 @@ export function mapClientDetailToUi(api: unknown): ClientDetailUi {
     // 5. Build Final UI Object
     return {
         ...baseUi,
-        healthScore: 92, // Mock or calculated
-        healthScoreLabel: 'A / 92',
+        // TODO: healthScoreはAPI（/api/clients/:id/detail）で計算して返す。
+        //       計算ロジック: 回収率 × 仕訳処理率 × 期限遵守率 等の加重平均
+        healthScore: 0,
+        healthScoreLabel: '— / —',
 
         consumptionTaxModeLabel,
         taxMethodExplicitLabel,
@@ -86,26 +88,7 @@ export function mapClientDetailToUi(api: unknown): ClientDetailUi {
         driveFolderLinks,
 
         stats,
-        recentActivities: [
-            // Mock activity log for visualization stability
-            {
-                icon: 'fa-file-invoice',
-                iconColorClass: 'text-blue-500',
-                title: '領収書アップロード',
-                dateLabel: '2025/12/26 14:30'
-            },
-            {
-                icon: 'fa-message',
-                iconColorClass: 'text-red-500',
-                title: '不明点の質問送信',
-                dateLabel: '2025/12/25 18:00'
-            },
-            {
-                icon: 'fa-check',
-                iconColorClass: 'text-green-500',
-                title: '通帳データ連携完了',
-                dateLabel: '2025/12/25 10:00'
-            }
-        ]
+        // TODO: recentActivitiesはAPI（/api/activity-log/recent/:clientId）から取得
+        recentActivities: []
     };
 }
