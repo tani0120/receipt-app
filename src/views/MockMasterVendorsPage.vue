@@ -65,7 +65,7 @@
                 <th class="vm-th sortable" style="min-width:150px;" @click="sortBy('vendor_vector')">業種 <i :class="getSortIcon('vendor_vector')"></i></th>
                 <th class="vm-th sortable" style="width:70px;" @click="sortBy('direction')">入出金 <i :class="getSortIcon('direction')"></i></th>
                 <th class="vm-th sortable" style="min-width:110px;" @click="sortBy('debit_account')">借方科目 <i :class="getSortIcon('debit_account')"></i></th>
-                <th class="vm-th" style="min-width:110px;">超過借方</th>
+                <th class="vm-th" style="min-width:110px;">借方科目（金額超）</th>
                 <th class="vm-th" style="min-width:110px;">貸方科目</th>
                 <th class="vm-th" style="min-width:170px;">T番号</th>
                 <th class="vm-th" style="min-width:150px;">別名</th>
@@ -114,7 +114,7 @@
                   </select>
                 </td>
 
-                <!-- 超過借方（ドロップダウン） -->
+                <!-- 借方科目（金額超）（ドロップダウン） -->
                 <td class="vm-td">
                   <select v-model="row.debit_account_over" class="vm-edit-select">
                     <option :value="null">—</option>

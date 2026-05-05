@@ -70,8 +70,11 @@ serviceAccount*.json
 # ggshield
 .cache_ggshield
 
-# データディレクトリ（モックデータ・テスト出力）
-data/
+# データディレクトリ（実行時データ。トップレベルのdata/内のみ除外）
+# ※gitはディレクトリ除外後の否定パターンが効かないため、個別パターンで除外する
+/data/**
+!/data/.gitkeep
+!/data/README.md
 analysis/
 
 # テスト関連
