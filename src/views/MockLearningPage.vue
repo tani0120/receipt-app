@@ -297,7 +297,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { LearningRule, LearningRuleEntryLine } from '../types/learning_rule.type'
 
@@ -317,51 +317,66 @@ onMounted(async () => {
   } catch (e) {
     console.error('[LearningPage] API取得失敗:', e)
   }
+  // T-31-8: 初回ロード時にフィルタ付き一覧も取得
+  fetchRuleList()
 })
 
 // --- 証票種別フィルタ ---
 const sourceFilter = ref<string>('all')
 
-const sourceTabs = computed(() => {
-  const all = rules.value.length
-  const receipt = rules.value.filter(r => r.sourceCategory === 'receipt').length
-  const bank = rules.value.filter(r => r.sourceCategory === 'bank').length
-  const credit = rules.value.filter(r => r.sourceCategory === 'credit').length
-  return [
-    { label: '全て', value: 'all', count: all },
-    { label: '領収書', value: 'receipt', count: receipt },
-    { label: '口座', value: 'bank', count: bank },
-    { label: 'カード', value: 'credit', count: credit },
-  ]
-})
+// T-31-8: カウント/フィルタ/検索をサーバー側で実行
+const sourceCounts = ref({ all: 0, receipt: 0, bank: 0, credit: 0 })
+const statusCounts = ref({ all: 0, active: 0, inactive: 0 })
+const generatedByCounts = ref({ ai: 0, human: 0 })
+const filteredRules = ref<LearningRule[]>([])
 
-const sourceFilteredRules = computed(() => {
-  if (sourceFilter.value === 'all') return rules.value
-  return rules.value.filter(r => r.sourceCategory === sourceFilter.value)
-})
+const sourceTabs = computed(() => [
+  { label: '全て', value: 'all', count: sourceCounts.value.all },
+  { label: '領収書', value: 'receipt', count: sourceCounts.value.receipt },
+  { label: '口座', value: 'bank', count: sourceCounts.value.bank },
+  { label: 'カード', value: 'credit', count: sourceCounts.value.credit },
+])
+
+const sourceFilteredRules = computed(() => filteredRules.value)
 
 // --- 有効/無効フィルタ ---
 const filterMode = ref<'all' | 'active' | 'inactive'>('all')
 const searchText = ref('')
 
-const activeCount = computed(() => sourceFilteredRules.value.filter(r => r.isActive).length)
-const inactiveCount = computed(() => sourceFilteredRules.value.filter(r => !r.isActive).length)
-const aiCount = computed(() => rules.value.filter(r => r.generatedBy === 'ai').length)
-const humanCount = computed(() => rules.value.filter(r => r.generatedBy === 'human').length)
+const activeCount = computed(() => statusCounts.value.active)
+const inactiveCount = computed(() => statusCounts.value.inactive)
+const aiCount = computed(() => generatedByCounts.value.ai)
+const humanCount = computed(() => generatedByCounts.value.human)
 
-const filteredRules = computed(() => {
-  let result = sourceFilteredRules.value
-  if (filterMode.value === 'active') result = result.filter(r => r.isActive)
-  if (filterMode.value === 'inactive') result = result.filter(r => !r.isActive)
-  if (searchText.value.trim()) {
-    const q = searchText.value.trim().toLowerCase()
-    result = result.filter(r =>
-      r.keyword.toLowerCase().includes(q) ||
-      r.entries.some(e => e.account.toLowerCase().includes(q) || (e.subAccount && e.subAccount.toLowerCase().includes(q)))
-    )
+async function fetchRuleList() {
+  try {
+    const res = await fetch(`/api/learning-rules/${clientId.value}/list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sourceFilter: sourceFilter.value,
+        filterMode: filterMode.value,
+        searchText: searchText.value,
+      }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json() as {
+      rules: LearningRule[]
+      sourceCounts: typeof sourceCounts.value
+      statusCounts: typeof statusCounts.value
+      generatedByCounts: typeof generatedByCounts.value
+    }
+    filteredRules.value = data.rules
+    sourceCounts.value = data.sourceCounts
+    statusCounts.value = data.statusCounts
+    generatedByCounts.value = data.generatedByCounts
+  } catch (err) {
+    console.error('[LearningPage] ルール一覧取得エラー:', err)
   }
-  return result
-})
+}
+
+// フィルタ/検索変更時に自動再取得
+watch([sourceFilter, filterMode, searchText], () => { fetchRuleList() })
 
 // --- entries展開ヘルパー ---
 function firstDebit(rule: LearningRule) { return rule.entries.find(e => e.side === 'debit') || null }

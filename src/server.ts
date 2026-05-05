@@ -144,6 +144,10 @@ app.route('/api/learning-rules', learningRuleRoutes)
 import progressRoutes from './api/routes/progressRoutes'
 app.route('/api/progress', progressRoutes)
 
+// Export API: 仕訳出力一覧（T-31-7）
+import { exportRoutes } from './api/routes/exportRoutes'
+app.route('/api/export', exportRoutes)
+
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
 

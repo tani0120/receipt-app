@@ -176,6 +176,9 @@ export interface DashboardData {
   };
   staffAnalysis: StaffAnalysis[];
   clientAnalysis: ClientAnalysis[];
+  /** T-31-6: サーバー側で集計済みのステータス別カウント */
+  staffStatusCounts: { all: number; active: number; inactive: number; suspension: number };
+  clientStatusCounts: { all: number; active: number; inactive: number; suspension: number };
   systemLogs: {
     message: string;
     timestamp: string;
@@ -381,6 +384,8 @@ const MOCK_DATA: DashboardData = {
       }
     }
   ],
+  staffStatusCounts: { all: 0, active: 0, inactive: 0, suspension: 0 },
+  clientStatusCounts: { all: 0, active: 0, inactive: 0, suspension: 0 },
   systemLogs: [
     {
       message: 'API Rate Limit Warning',
@@ -489,6 +494,8 @@ export function useAdminDashboard() {
           backlogs: { total: number; draft: number };
           backlog: Record<string, BacklogStatus>;
         }[];
+        staffStatusCounts?: { all: number; active: number; inactive: number; suspension: number };
+        clientStatusCounts?: { all: number; active: number; inactive: number; suspension: number };
       };
 
       // サーバーから集計済みデータをそのまま設定（フロント側のfilter/mapは不要）
@@ -502,6 +509,13 @@ export function useAdminDashboard() {
       }
       if (body.staffAnalysis.length > 0) {
         data.value.staffAnalysis = body.staffAnalysis;
+      }
+      // T-31-6: ステータス別カウントをサーバーから直接設定
+      if (body.staffStatusCounts) {
+        data.value.staffStatusCounts = body.staffStatusCounts;
+      }
+      if (body.clientStatusCounts) {
+        data.value.clientStatusCounts = body.clientStatusCounts;
       }
     } catch (e) {
       console.warn('[useAdminDashboard] サマリ取得失敗。ダミー値を使用:', e);

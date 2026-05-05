@@ -276,7 +276,6 @@ import {
   validateForCsvExport,
   buildMfCsvContent,
   downloadMfCsv,
-  EXCLUDE_LABELS,
 } from "@/utils/exportMfCsv";
 import { syncWarningLabelsCore } from "@/utils/journalWarningSync";
 import { toMfCsvDate } from "@/shared/utils/mf-csv-date";
@@ -318,12 +317,8 @@ onMounted(() => {
   journals.value.forEach((j) => syncWarningLabelsCore(j, accounts, taxCategories));
 });
 
-// --- 勘定科目マスタから科目名リスト（顧問先設定優先、deprecated除外） ---
-const accountNames = computed(() => {
-  const source = clientSettings.accounts.value;
-  const names = source.filter((a) => !a.deprecated).map((a) => a.name);
-  return [...new Set(names)];
-});
+// --- 勘定科目名リスト（T-31-7: サーバーから取得） ---
+const accountNames = ref<string[]>([]);
 
 const debitAccountFilter = ref("");
 const creditAccountFilter = ref("");
@@ -507,120 +502,67 @@ interface ExportRow {
 
 // 日付表示はtoMfCsvDate（YYYY/MM/DD）に統一
 
-// 全行（composable経由、ゴミ箱除外。複合仕訳は全行展開）
-const allRows = computed<ExportRow[]>(() => {
-  const rows: ExportRow[] = [];
-  journals.value
-    .filter((j) => j.deleted_at === null && j.status !== "exported")
-    .forEach((j) => {
-      const dismissals = j.warning_dismissals ?? [];
-      const isWarning = j.labels.some(
-        (l) => EXCLUDE_LABELS.includes(l) && !dismissals.includes(l),
-      );
-      const isExcluded = j.labels.includes("EXPORT_EXCLUDE");
-      const isExported = j.status === "exported";
-      const maxLen = Math.max(j.debit_entries.length, j.credit_entries.length);
-      for (let i = 0; i < maxLen; i++) {
-        const debit = j.debit_entries[i];
-        const credit = j.credit_entries[i];
-        rows.push({
-          id: `${j.id}-${i}`,
-          qualified: i === 0 ? (j.invoice_status === "qualified" ? "○" : "") : "",
-          date: i === 0 ? toMfCsvDate(j.voucher_date ?? "") : "",
-          description: i === 0 ? j.description : "",
-          debitAccount: debit ? resolveAccountName(debit.account) : "",
-          debitSub: debit?.sub_account ?? "",
-          debitTax: debit ? resolveTaxCategoryName(debit.tax_category_id) : "",
-          debitAmount: debit?.amount ?? null,
-          creditAccount: credit ? resolveAccountName(credit.account) : "",
-          creditSub: credit?.sub_account ?? "",
-          creditTax: credit ? resolveTaxCategoryName(credit.tax_category_id) : "",
-          creditAmount: credit?.amount ?? null,
-          importDate: toMfCsvDate(j.created_at ?? ""),
-          isExcluded,
-          isWarning,
-          isExported,
-        });
-      }
-    });
-  return rows;
-});
-
-// セグメントフィルタ（加算的：チェックONのカテゴリのみ表示）
-const filteredRows = computed<ExportRow[]>(() => {
-  return allRows.value.filter((row) => {
-    // 各行のカテゴリを判定し、対応するチェックがONの場合のみ表示
-    const isTarget = !row.isExcluded && !row.isWarning;
-    if (isTarget && showTargetOnly.value) {
-      /* 表示 */
-    } else if (row.isExcluded && showExcluded.value) {
-      /* 表示 */
-    } else if (row.isWarning && showWarnings.value) {
-      /* 表示 */
-    } else return false;
-
-    if (debitAccountFilter.value && row.debitAccount !== debitAccountFilter.value) return false;
-    if (creditAccountFilter.value && row.creditAccount !== creditAccountFilter.value) return false;
-    return true;
-  });
-});
-
-// 仕訳単位の件数（行ではなく仕訳数。複合仕訳は1件としてカウント）
-const filteredJournalCount = computed(() => {
-  const ids = new Set(filteredRows.value.map((r) => r.id.replace(/-\d+$/, "")));
-  return ids.size;
-});
-
-// ソート（checkedソート対応）
-const sortedRows = computed<ExportRow[]>(() => {
-  const rows = [...filteredRows.value];
-  if (!sortKey.value) return rows;
-
-  const dir = sortDir.value === "asc" ? 1 : -1;
-
-  if (sortKey.value === "checked") {
-    // ✓ソート: checked→unchecked or unchecked→checked
-    rows.sort((a, b) => {
-      const ac = checkedIds.value.has(a.id) ? 1 : 0;
-      const bc = checkedIds.value.has(b.id) ? 1 : 0;
-      return (ac - bc) * dir;
-    });
-    return rows;
-  }
-
-  const key = sortKey.value as keyof ExportRow;
-  rows.sort((a, b) => {
-    const av = a[key];
-    const bv = b[key];
-    if (av == null && bv == null) return 0;
-    if (av == null) return 1;
-    if (bv == null) return -1;
-    if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
-    if (typeof av === "boolean" && typeof bv === "boolean")
-      return ((av ? 1 : 0) - (bv ? 1 : 0)) * dir;
-    return String(av).localeCompare(String(bv)) * dir;
-  });
-  return rows;
-});
-
-// --- ページネーション ---
+// T-31-7: 全データはAPI（POST /api/export/list）から取得
 const PAGE_SIZE = 25;
 const currentPage = ref(1);
-const totalPages = computed(() => Math.max(1, Math.ceil(sortedRows.value.length / PAGE_SIZE)));
+const pagedRows = ref<ExportRow[]>([]);
+const filteredJournalCount = ref(0);
+const totalAmount = ref(0);
+const totalPages = ref(1);
+const totalCount = ref(0);
 const displayPages = computed(() => {
   const pages: number[] = [];
   for (let i = 1; i <= Math.min(5, totalPages.value); i++) pages.push(i);
   return pages;
 });
-const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE;
-  return sortedRows.value.slice(start, start + PAGE_SIZE);
-});
+// filteredRows は pagedRows と同義（テンプレート互換用）
+const filteredRows = computed(() => ({ length: totalCount.value }));
 
-// --- 合計金額 ---
-const totalAmount = computed(() =>
-  filteredRows.value.reduce((sum, r) => sum + (r.debitAmount ?? 0), 0),
+async function fetchExportList() {
+  try {
+    const res = await fetch('/api/export/list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: clientId.value,
+        showTargetOnly: showTargetOnly.value,
+        showExcluded: showExcluded.value,
+        showWarnings: showWarnings.value,
+        debitAccountFilter: debitAccountFilter.value || undefined,
+        creditAccountFilter: creditAccountFilter.value || undefined,
+        sortKey: sortKey.value,
+        sortDir: sortDir.value,
+        page: currentPage.value,
+        pageSize: PAGE_SIZE,
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json() as {
+      rows: ExportRow[];
+      totalCount: number;
+      totalPages: number;
+      page: number;
+      filteredJournalCount: number;
+      totalAmount: number;
+      accountNames: string[];
+    };
+    pagedRows.value = data.rows;
+    totalCount.value = data.totalCount;
+    totalPages.value = data.totalPages;
+    filteredJournalCount.value = data.filteredJournalCount;
+    totalAmount.value = data.totalAmount;
+    accountNames.value = data.accountNames;
+  } catch (err) {
+    console.error('[ExportPage] 出力一覧取得エラー:', err);
+  }
+}
+
+// フィルタ/ソート/ページ変更時に自動再取得
+watch(
+  [showTargetOnly, showExcluded, showWarnings, debitAccountFilter, creditAccountFilter, sortKey, sortDir, currentPage],
+  () => { fetchExportList(); },
 );
+onMounted(() => { fetchExportList(); });
 
 // --- 行背景色 ---
 const getRowClass = (row: ExportRow, idx: number): string => {
@@ -635,14 +577,18 @@ const checkedIds = ref<Set<string>>(new Set());
 
 const initChecks = () => {
   const ids = new Set<string>();
-  allRows.value.forEach((r) => {
+  pagedRows.value.forEach((r) => {
     if (!r.isExcluded && !r.isWarning) ids.add(r.id);
   });
+  // 既存のチェック済みIDと統合（ページ切替時に消えないように）
+  for (const existing of checkedIds.value) {
+    ids.add(existing);
+  }
   checkedIds.value = ids;
 };
 
-// 初期化
-watch(allRows, () => initChecks(), { immediate: true });
+// API取得後にチェック初期化
+watch(pagedRows, () => initChecks());
 
 const toggleCheck = (id: string) => {
   const next = new Set(checkedIds.value);

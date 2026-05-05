@@ -475,27 +475,11 @@ const sortedClients = computed(() => {
 const staffStatusFilter = ref<string>('all');
 const clientStatusFilter = ref<string>('all');
 
-/** スタッフのステータス別件数 */
-const staffStatusCounts = computed(() => {
-  const all = adminData.value.staffAnalysis ?? [];
-  return {
-    all: all.length,
-    active: all.filter(s => s.status === 'active').length,
-    inactive: all.filter(s => s.status === 'inactive').length,
-    suspension: all.filter(s => s.status === 'suspension').length,
-  };
-});
+/** スタッフのステータス別件数（T-31-6: サーバー集計値を参照） */
+const staffStatusCounts = computed(() => adminData.value.staffStatusCounts ?? { all: 0, active: 0, inactive: 0, suspension: 0 });
 
-/** 顧問先のステータス別件数 */
-const clientStatusCounts = computed(() => {
-  const all = adminData.value.clientAnalysis ?? [];
-  return {
-    all: all.length,
-    active: all.filter(c => c.status === 'active').length,
-    inactive: all.filter(c => c.status === 'inactive').length,
-    suspension: all.filter(c => c.status === 'suspension').length,
-  };
-});
+/** 顧問先のステータス別件数（T-31-6: サーバー集計値を参照） */
+const clientStatusCounts = computed(() => adminData.value.clientStatusCounts ?? { all: 0, active: 0, inactive: 0, suspension: 0 });
 
 
 </script>

@@ -31,6 +31,79 @@ app.get('/:clientId', (c) => {
 })
 
 // ============================================================
+// POST /:clientId/list — T-31-8: フィルタ/カウント/検索付き一覧
+// ============================================================
+app.post('/:clientId/list', async (c) => {
+  const clientId = c.req.param('clientId')
+  try {
+    const body = await c.req.json() as {
+      sourceFilter?: string
+      filterMode?: 'all' | 'active' | 'inactive'
+      searchText?: string
+    }
+    const {
+      sourceFilter = 'all',
+      filterMode = 'all',
+      searchText = '',
+    } = body
+
+    const allRules = store.getByClientId(clientId)
+
+    // カテゴリ別カウント（全ルール対象）
+    const sourceCounts = {
+      all: allRules.length,
+      receipt: allRules.filter(r => r.sourceCategory === 'receipt').length,
+      bank: allRules.filter(r => r.sourceCategory === 'bank').length,
+      credit: allRules.filter(r => r.sourceCategory === 'credit').length,
+    }
+
+    // ソースカテゴリフィルタ
+    let filtered = sourceFilter === 'all'
+      ? allRules
+      : allRules.filter(r => r.sourceCategory === sourceFilter)
+
+    // ステータス別カウント（ソースフィルタ後）
+    const statusCounts = {
+      all: filtered.length,
+      active: filtered.filter(r => r.isActive).length,
+      inactive: filtered.filter(r => !r.isActive).length,
+    }
+
+    // 生成元別カウント（全ルール対象）
+    const generatedByCounts = {
+      ai: allRules.filter(r => r.generatedBy === 'ai').length,
+      human: allRules.filter(r => r.generatedBy === 'human').length,
+    }
+
+    // 有効/無効フィルタ
+    if (filterMode === 'active') filtered = filtered.filter(r => r.isActive)
+    if (filterMode === 'inactive') filtered = filtered.filter(r => !r.isActive)
+
+    // キーワード検索
+    if (searchText.trim()) {
+      const q = searchText.trim().toLowerCase()
+      filtered = filtered.filter(r =>
+        r.keyword.toLowerCase().includes(q) ||
+        r.entries.some((e: { account: string; subAccount?: string | null }) =>
+          e.account.toLowerCase().includes(q) ||
+          (e.subAccount && e.subAccount.toLowerCase().includes(q))
+        )
+      )
+    }
+
+    return c.json({
+      rules: filtered,
+      count: filtered.length,
+      sourceCounts,
+      statusCounts,
+      generatedByCounts,
+    })
+  } catch (err) {
+    return apiCatchError(c, err)
+  }
+})
+
+// ============================================================
 // GET /:clientId/:ruleId — 1件取得
 // ============================================================
 app.get('/:clientId/:ruleId', (c) => {

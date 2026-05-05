@@ -172,6 +172,20 @@ const route = app
         backlog: {}
       }))
 
+      // ステータス別カウント（T-31-6: ページ側のfilterカウントをサーバー移植）
+      const staffStatusCounts = {
+        all: staff.length,
+        active: staff.filter(s => s.status === 'active').length,
+        inactive: staff.filter(s => s.status === 'inactive').length,
+        suspension: staff.filter(s => s.status === 'suspension').length,
+      }
+      const clientStatusCounts = {
+        all: clients.length,
+        active: clients.filter(c => c.status === 'active').length,
+        inactive: clients.filter(c => c.status !== 'active' && c.status !== 'suspension').length,
+        suspension: clients.filter(c => c.status === 'suspension').length,
+      }
+
       return c.json({
         kpiCostQuality: {
           registeredClients: clients.length,
@@ -181,6 +195,8 @@ const route = app
         },
         clientAnalysis,
         staffAnalysis,
+        staffStatusCounts,
+        clientStatusCounts,
       })
     })
     // ━━━ T-31-4: タスクダッシュボード サマリAPI（モックデータをサーバー側に移動） ━━━

@@ -6,7 +6,7 @@
         <i class="fa-solid fa-arrow-left text-[8px]"></i> ダウンロード履歴に戻る
       </router-link>
       <span class="text-[13px] font-bold text-blue-700">出力詳細：{{ historyFileName }}</span>
-      <span class="text-[10px] text-gray-500 ml-2">（{{ allRows.length }}件）</span>
+      <span class="text-[10px] text-gray-500 ml-2">（{{ totalCount }}件）</span>
     </div>
 
     <!-- ページネーション -->
@@ -22,7 +22,7 @@
           class="px-1.5 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100"
           @click="currentPage = Math.min(totalPages, currentPage + 1)"
         >＞</button>
-        <span class="ml-2 text-[10px] text-gray-500">{{ pageStart }}~{{ pageEnd }} / 全{{ allRows.length }}件</span>
+        <span class="ml-2 text-[10px] text-gray-500">{{ pageStart }}~{{ pageEnd }} / 全{{ totalCount }}件</span>
       </div>
       <div class="flex items-center gap-2">
         <button class="px-2 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1" @click="showRealtimeUpdateMsg">
@@ -81,43 +81,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { useJournals } from '@/composables/useJournals';
-import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
-import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
 import { useModalHelper } from '@/composables/useModalHelper';
 import NotifyModal from '@/components/NotifyModal.vue';
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) ?? 'ABC-00001');
 const historyId = computed(() => route.params.historyId as string);
-const { journals } = useJournals(clientId);
 
-// 履歴IDからファイル名を解決（モック）
-const historyFileMap: Record<string, string> = {
-  h01: 'マネーフォワード_20250307',
-  h02: 'マネーフォワード_20250307_2',
-  h03: 'マネーフォワード_20250307_3',
-  h04: 'マネーフォワード_20240807',
-  h05: 'マネーフォワード_20240731',
-  h06: 'マネーフォワード_20240110',
-  h07: 'マネーフォワード_20240110_2',
-  h08: 'マネーフォワード_20240109',
-  h09: 'マネーフォワード_20240109_2',
-  h10: 'マネーフォワード_20230311',
-  h11: 'マネーフォワード_20230311_2',
-};
-const historyFileName = computed(() => historyFileMap[historyId.value] ?? historyId.value);
-
-// --- カラム定義（ダウンロード対象列・No列なし） ---
-interface Column {
-  key: string;
-  label: string;
-  width: string;
-  align: string;
-}
-
+// --- カラム定義 ---
+interface Column { key: string; label: string; width: string; align: string; }
 const columns: Column[] = [
   { key: 'qualified',     label: '適格',         width: 'w-[30px]',      align: 'text-center' },
   { key: 'date',          label: '日付',         width: 'w-[70px]',      align: 'text-center' },
@@ -147,104 +121,63 @@ const handleSort = (key: string) => {
 
 // --- データ型 ---
 interface DetailRow {
-  id: string;
-  qualified: string;
-  date: string;
-  description: string;
-  debitAccount: string;
-  debitSub: string;
-  debitTax: string;
-  debitAmount: number | null;
-  creditAccount: string;
-  creditSub: string;
-  creditTax: string;
-  creditAmount: number | null;
+  id: string; qualified: string; date: string; description: string;
+  debitAccount: string; debitSub: string; debitTax: string; debitAmount: number | null;
+  creditAccount: string; creditSub: string; creditTax: string; creditAmount: number | null;
   importDate: string;
-}
-
-// 日付表示はtoMfCsvDate（YYYY/MM/DD）に統一
-
-// 名前解決（フォールバックはuseAccountSettings内部で処理済み）
-const clientSettings = useAccountSettings('client', clientId.value);
-
-function resolveAccountName(id: string | null | undefined): string {
-  if (!id) return '';
-  // 顧問先設定を優先検索
-  const clientAcct = clientSettings.accounts.value.find(a => a.id === id);
-  return clientAcct ? clientAcct.name : id;
-}
-
-function resolveTaxCategoryName(id: string | null | undefined): string {
-  if (!id) return '';
-  // 顧問先設定を優先検索
-  const clientTc = clientSettings.taxCategories.value.find(tc => tc.id === id);
-  return clientTc ? clientTc.name : id;
 }
 
 const modal = useModalHelper();
 const showRealtimeUpdateMsg = () => modal.notify({ title: '現在はリアルタイム更新です' });
 
-// 全行（composable経由、複合仕訳全行展開）
-const allRows = computed<DetailRow[]>(() => {
-  const rows: DetailRow[] = [];
-  journals.value
-    .filter(j => j.deleted_at === null)
-    .forEach(j => {
-      const maxLen = Math.max(j.debit_entries.length, j.credit_entries.length);
-      for (let i = 0; i < maxLen; i++) {
-        const debit = j.debit_entries[i];
-        const credit = j.credit_entries[i];
-        rows.push({
-          id: `${j.id}-${i}`,
-          qualified: i === 0 ? (j.invoice_status === 'qualified' ? '○' : '') : '',
-          date: i === 0 ? toMfCsvDate(j.voucher_date ?? '') : '',
-          description: i === 0 ? j.description : '',
-          debitAccount: debit ? resolveAccountName(debit.account) : '',
-          debitSub: debit?.sub_account ?? '',
-          debitTax: debit ? resolveTaxCategoryName(debit.tax_category_id) : '',
-          debitAmount: debit?.amount ?? null,
-          creditAccount: credit ? resolveAccountName(credit.account) : '',
-          creditSub: credit?.sub_account ?? '',
-          creditTax: credit ? resolveTaxCategoryName(credit.tax_category_id) : '',
-          creditAmount: credit?.amount ?? null,
-          importDate: toMfCsvDate(j.created_at ?? ''),
-        });
-      }
-    });
-  return rows;
-});
-
-// ソート
-const sortedRows = computed<DetailRow[]>(() => {
-  const rows = [...allRows.value];
-  if (!sortKey.value) return rows;
-  const key = sortKey.value as keyof DetailRow;
-  const dir = sortDir.value === 'asc' ? 1 : -1;
-  rows.sort((a, b) => {
-    const va = a[key];
-    const vb = b[key];
-    if (va == null && vb == null) return 0;
-    if (va == null) return 1;
-    if (vb == null) return -1;
-    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
-    return String(va).localeCompare(String(vb), 'ja') * dir;
-  });
-  return rows;
-});
-
-// --- ページネーション ---
+// T-31-9: 全データはAPI（POST /api/export/detail）から取得
 const PAGE_SIZE = 25;
 const currentPage = ref(1);
-const totalPages = computed(() => Math.max(1, Math.ceil(sortedRows.value.length / PAGE_SIZE)));
+const pagedRows = ref<DetailRow[]>([]);
+const totalPages = ref(1);
+const totalCount = ref(0);
+const historyFileName = ref('');
+
 const displayPages = computed(() => {
   const pages: number[] = [];
   for (let i = 1; i <= Math.min(5, totalPages.value); i++) pages.push(i);
   return pages;
 });
 const pageStart = computed(() => (currentPage.value - 1) * PAGE_SIZE + 1);
-const pageEnd = computed(() => Math.min(currentPage.value * PAGE_SIZE, sortedRows.value.length));
-const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE;
-  return sortedRows.value.slice(start, start + PAGE_SIZE);
-});
+const pageEnd = computed(() => Math.min(currentPage.value * PAGE_SIZE, totalCount.value));
+
+async function fetchExportDetail() {
+  try {
+    const res = await fetch('/api/export/detail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: clientId.value,
+        historyId: historyId.value,
+        sortKey: sortKey.value,
+        sortDir: sortDir.value,
+        page: currentPage.value,
+        pageSize: PAGE_SIZE,
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json() as {
+      rows: DetailRow[];
+      totalCount: number;
+      totalPages: number;
+      page: number;
+      historyFileName: string;
+    };
+    pagedRows.value = data.rows;
+    totalCount.value = data.totalCount;
+    totalPages.value = data.totalPages;
+    historyFileName.value = data.historyFileName;
+  } catch (err) {
+    console.error('[ExportDetailPage] 取得エラー:', err);
+  }
+}
+
+// ソート/ページ変更時に自動再取得
+watch([sortKey, sortDir, currentPage], () => { fetchExportDetail(); });
+onMounted(() => { fetchExportDetail(); });
 </script>
