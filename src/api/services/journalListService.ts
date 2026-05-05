@@ -416,6 +416,9 @@ function filterJournals(
   }
 ): JournalRow[] {
   return result.filter(journal => {
+    // 過去仕訳CSV行はステータスフィルタの対象外（showPastCsvの判断は結合段階で完了）
+    if (journal.id.startsWith('past-csv-')) return true
+
     // ゴミ箱フィルタ（AND条件: OFFならtrashed非表示）
     if (journal.deleted_at !== null && !opts.showTrashed) return false
 
@@ -430,10 +433,6 @@ function filterJournals(
     if (opts.showExported && isExported) return true
     if (opts.showExcluded && isExcluded) return true
     if (opts.showTrashed && journal.deleted_at !== null) return true
-
-    // すべてOFFの場合は全表示（trashed除外済み）
-    if (!opts.showUnexported && !opts.showExported && !opts.showExcluded && !opts.showTrashed)
-      return true
 
     return false
   })

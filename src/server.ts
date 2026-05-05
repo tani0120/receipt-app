@@ -124,6 +124,22 @@ app.route('/api/confirmed-journals', confirmedJournalRoutes)
 import activityLogRoutes from './api/routes/activityLogRoutes'
 app.route('/api/activity-log', activityLogRoutes)
 
+// IndustryVector API: 業種ベクトルJSON永続化（DL-042）
+import industryVectorRoutes from './api/routes/industryVectorRoutes'
+app.route('/api/industry-vectors', industryVectorRoutes)
+
+// AccountMaster API: 勘定科目マスタ（DL-042）
+import accountMasterRoutes from './api/routes/accountMasterRoutes'
+app.route('/api/accounts', accountMasterRoutes)
+
+// TaxCategory API: 税区分マスタ（DL-042）
+import taxCategoryRoutes from './api/routes/taxCategoryRoutes'
+app.route('/api/tax-categories', taxCategoryRoutes)
+
+// LearningRule API: 学習ルール（DL-042）
+import learningRuleRoutes from './api/routes/learningRuleRoutes'
+app.route('/api/learning-rules', learningRuleRoutes)
+
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
 
