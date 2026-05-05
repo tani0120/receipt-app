@@ -418,7 +418,7 @@ export const learningRulesTST00011: LearningRule[] = [
   {
     "id": "LR-009",
     "clientId": "TST-00011",
-    "keyword": "売上返金",
+    "keyword": "売上入金",
     "matchType": "contains",
     "direction": "income",
     "sourceCategory": "bank",
@@ -803,5 +803,52 @@ export const learningRulesTST00011: LearningRule[] = [
     "generatedBy": "ai",
     "createdAt": "2026-03-15T10:00:00Z",
     "updatedAt": "2026-04-20T10:00:00Z"
+  },
+  {
+    "id": "LR-014",
+    "clientId": "TST-00011",
+    "keyword": "売上返金",
+    "matchType": "contains",
+    "direction": "expense",
+    "sourceCategory": "bank",
+    "amountMin": null,
+    "amountMax": null,
+    "entries": [
+      {
+        "id": "LRE-014-1",
+        "ruleId": "LR-014",
+        "side": "debit",
+        "account": "売上高",
+        "subAccount": null,
+        "taxCategory": "課税売上-返還等 10%",
+        "department": null,
+        "amountType": "auto",
+        "fixedAmount": null,
+        "displayName": null,
+        "description": "売上返品・返金",
+        "targetMonth": null,
+        "displayOrder": 1
+      },
+      {
+        "id": "LRE-014-2",
+        "ruleId": "LR-014",
+        "side": "credit",
+        "account": "普通預金",
+        "subAccount": null,
+        "taxCategory": null,
+        "department": null,
+        "amountType": "auto",
+        "fixedAmount": null,
+        "displayName": null,
+        "description": null,
+        "targetMonth": null,
+        "displayOrder": 2
+      }
+    ],
+    "isActive": true,
+    "hitCount": 0,
+    "generatedBy": "human",
+    "createdAt": "2026-05-06T08:50:00Z",
+    "updatedAt": "2026-05-06T08:50:00Z"
   }
 ]
