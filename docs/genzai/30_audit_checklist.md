@@ -3,6 +3,7 @@
 > 開始: 2026-05-04
 > 更新: 2026-05-05 R1(8件) + R2(5件) + R3(13件) + R3.5(7件) = 計33件削除済み + クズ行為復旧（server.ts 4ルート追加、journalListService.ts フィルタバグ2件修正、documentUtils.ts 復元）
 > 更新: 2026-05-05 R4: 監査漏れ17件追記（T-31新設API 7件 + scripts/ 5件 + database/ 2件 + domain/ 1件 + パス不一致修正 2件）+ image_preprocessor.ts移動 + LS二重永続化修正3件（AccountsPage/TaxCategoriesPage/ClientAccountsPage）
+> 更新: 2026-05-05 R5: 死コード削除2件（clients.ts + ClientRaw.ts）+ admin.ts MOCK_ADMIN_DATA→ストア実データ集計に置換 + server.tsコメントアウト行削除
 > ★注意: mocks統合完了済み。旧mocks/パス記載は歴史的経緯。実ファイルはsrc/直下に配置。
 > ルール: view_fileのみ。grep禁止。先頭3文字・末尾3文字を証拠記録。
 > 全件読了後にimport突合で死コード判定を実施。

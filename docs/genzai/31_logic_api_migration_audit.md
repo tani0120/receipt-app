@@ -114,6 +114,9 @@
 | `api/routes/collection.ts` | MOCK_CLIENTS(2社ハードコード)をclientStore.getAll()による動的取得に置換 | ✅ |
 | `ClientDetailMapper.ts` | healthScore:92→0, recentActivities:3件→空配列。API接続TODOコメント追記 | ✅ |
 | `ScreenH_TaskDashboard.vue` | ウィジェット8個のハードコード数値をwidgets ref（API値）に紐付け | ✅ |
+| `api/routes/admin.ts` | MOCK_ADMIN_DATA(KPI+3スタッフ)を削除→ストア実データ集計(/dashboard)に置換 | ✅ R5 |
+| `api/routes/clients.ts` | 死コード削除（clientRoutes.tsに完全移行済み。server.tsでコメントアウト済み） | 🗑 R5 |
+| `api/types/ClientRaw.ts` | clients.ts専用型。clients.ts削除に伴い不要 | 🗑 R5 |
 
 ### B. 疑似処理（setTimeout） → ✅ 全件修正済み
 

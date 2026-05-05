@@ -29,23 +29,6 @@ const PhaseSettingsSchema = z.object({
 })
 
 
-// --- Mock Data ---
-const MOCK_ADMIN_DATA = {
-    kpi: {
-        monthlyJournals: 12580,
-        autoConversionRate: 94.2,
-        aiAccuracy: 98.5,
-        funnel: {
-            received: 15400,
-            exported: 13552
-        }
-    },
-    staff: [
-        { name: '佐藤 健太', backlogs: { total: 45, draft: 12 }, velocity: { draftAvg: 85 } },
-        { name: '鈴木 一郎', backlogs: { total: 12, draft: 0 }, velocity: { draftAvg: 110 } },
-        { name: '高橋 花子', backlogs: { total: 8, draft: 2 }, velocity: { draftAvg: 95 } }
-    ]
-}
 
 // ============================================================
 // AI利用統計集計ヘルパー
@@ -131,7 +114,66 @@ function aggregateMetrics(docs: DocEntry[], groupBy: 'clientId' | 'createdBy'): 
 // --- Routes ---
 const route = app
     .get('/dashboard', (c) => {
-        return c.json(MOCK_ADMIN_DATA)
+        // ストアから実データを集計（MOCK_ADMIN_DATA削除: 2026-05-05 R5）
+        const clients = getAllClients()
+        const staff = getAllStaff()
+        const docs = getDocuments()
+        const withMetrics = docs.filter(d => d.aiMetrics)
+
+        // KPI: 月間仕訳数（今月の処理済みドキュメント数をカウント）
+        const now = new Date()
+        const thisMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+        const thisMonthDocs = docs.filter(d =>
+          typeof d.receivedAt === 'string' && d.receivedAt.startsWith(thisMonthPrefix)
+        )
+        const monthlyJournals = thisMonthDocs.length
+
+        // KPI: 自動変換率（完了 / 全受領 × 100）
+        const completed = thisMonthDocs.filter(d => d.status === 'completed' || d.status === 'exported')
+        const autoConversionRate = thisMonthDocs.length > 0
+          ? Math.round((completed.length / thisMonthDocs.length) * 1000) / 10
+          : 0
+
+        // KPI: AI精度（aiMetricsが記録されている割合）
+        const thisMonthWithMetrics = thisMonthDocs.filter(d => d.aiMetrics)
+        const aiAccuracy = thisMonthDocs.length > 0
+          ? Math.round((thisMonthWithMetrics.length / thisMonthDocs.length) * 1000) / 10
+          : 0
+
+        // KPI: ファネル（受領→出力）
+        const received = docs.length
+        const exported = docs.filter(d => d.status === 'exported').length
+
+        // スタッフパフォーマンス
+        const staffPerformance = staff
+          .filter(s => s.status === 'active')
+          .map(s => {
+            // 各スタッフの担当顧問先の仕訳をカウント
+            const assignedClients = clients.filter(cl => cl.staffId === s.uuid)
+            let totalBacklog = 0
+            let draftCount = 0
+            for (const cl of assignedClients) {
+              const journals = getJournals(cl.clientId) as Record<string, unknown>[]
+              const active = journals.filter(j => !j.deleted_at)
+              totalBacklog += active.length
+              draftCount += active.filter(j => j.status === 'draft').length
+            }
+            return {
+              name: s.name,
+              backlogs: { total: totalBacklog, draft: draftCount },
+              velocity: { draftAvg: 0 } // TODO: 実際の処理速度はactivityLogから算出
+            }
+          })
+
+        return c.json({
+          kpi: {
+            monthlyJournals,
+            autoConversionRate,
+            aiAccuracy,
+            funnel: { received, exported }
+          },
+          staff: staffPerformance
+        })
     })
     // ━━━ T-31-3: ダッシュボードサマリAPI（顧問先数・スタッフ数・分析データ集計） ━━━
     .get('/dashboard/summary', (c) => {

@@ -6,7 +6,7 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import conversionRoute from './api/routes/conversion'
-// import clientsRoute from './api/routes/clients' // DL-042でclientRoutes.tsに移行済み
+
 // 旧ai-rulesは廃止・削除済み。学習ページに移行
 import adminRoute from './api/routes/admin'
 import aiModelsRoute from './api/routes/ai-models'
@@ -50,8 +50,7 @@ app.get('/api/hello', (c) => {
 // Phase 4 Step 1: Conversion Route
 app.route('/api/conversion', conversionRoute)
 
-// Phase 4 Step 2: Clients Route（DL-042でclientRoutes.tsに移行済み。旧ルートは無効化）
-// app.route('/api/clients', clientsRoute)
+
 
 // Phase 4 Step 7-8: Admin Route（旧ai-rulesは廃止・削除済み）
 app.route('/api/admin', adminRoute)
