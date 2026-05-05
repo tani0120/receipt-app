@@ -32,7 +32,7 @@
           @click="currentPage = p"
         >{{ p }}</span>
         <span class="pg-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
-        <span class="pg-page-info">{{ pageStartIndex }}~{{ pageEndIndex }} / 全{{ filteredRows.length }}件</span>
+        <span class="pg-page-info">{{ pageStartIndex }}~{{ pageEndIndex }} / 全{{ totalCount }}件</span>
       </div>
       <div class="pg-actions">
         <button class="pg-btn pg-btn-secondary" @click="refreshData"><i class="fa-solid fa-arrows-rotate"></i> 更新</button>
@@ -165,7 +165,7 @@ onMounted(() => { loadShareStatus(); });
 
 const router = useRouter();
 
-const { progressRows, monthColumns, staffList: allStaff, getSortValue } = useProgress();
+const { progressRows, monthColumns, staffList: allStaff } = useProgress();
 const { getStaffNameForClient } = useClients();
 
 // 進捗管理ページ表示時にuseDocumentsの最新データを取得
@@ -244,89 +244,59 @@ const getSortIcon = (key: string) => {
     : 'fa-solid fa-sort-down pg-sort-icon active';
 };
 
-/** ステータス → ソート優先度（active=0, suspension=1, inactive=2） */
-const statusOrder = (s: string): number => s === 'active' ? 0 : s === 'suspension' ? 1 : 2;
-
-/** 決算月ソート値: 法人は月そのまま（1-12）、個人は13（法人12の後に来る） */
-const fiscalMonthSort = (row: { type: string; fiscalMonth: number }, asc: boolean): number => {
-  if (row.type === 'individual') return asc ? 13 : 13;
-  return row.fiscalMonth;
-};
-
-/** デフォルト多段ソート比較関数 */
-const defaultSort = (a: import('@/features/progress-management/types').ProgressRow, b: import('@/features/progress-management/types').ProgressRow): number => {
-  // 1. ステータス: active→suspension→inactive
-  const sa = statusOrder(a.status) - statusOrder(b.status);
-  if (sa !== 0) return sa;
-  // 2. 未出力: 降順（多い順）
-  if (a.unexported !== b.unexported) return b.unexported - a.unexported;
-  // 3. 資料受取日: 昇順（古い順、空白は最後）
-  const aDate = a.receivedDate || '\uffff';
-  const bDate = b.receivedDate || '\uffff';
-  if (aDate !== bDate) return aDate < bDate ? -1 : 1;
-  // 4. 3コード: 昇順
-  return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
-};
-
-// --- フィルタ+ソート ---
-const filteredRows = computed(() => {
-  let rows = progressRows.value;
-  if (filterClient.value.trim()) {
-    const q = filterClient.value.trim().toLowerCase();
-    rows = rows.filter(r =>
-      r.companyName.toLowerCase().includes(q) ||
-      r.code.toLowerCase().includes(q)
-    );
-  }
-  if (filterStaff.value) {
-    rows = rows.filter(r => getStaffNameForClient(r.clientId) === filterStaff.value);
-  }
-  if (onlyUnexported.value) {
-    rows = rows.filter(r => r.unexported > 0);
-  }
-  // ソート
-  if (sortKey.value === null) {
-    // デフォルト多段ソート
-    rows = [...rows].sort(defaultSort);
-  } else if (sortKey.value === 'fiscalMonth') {
-    // 決算月ソート: 法人1-12、個人13
-    rows = [...rows].sort((a, b) => {
-      const aVal = fiscalMonthSort(a, sortOrder.value === 'asc');
-      const bVal = fiscalMonthSort(b, sortOrder.value === 'asc');
-      const cmp = aVal - bVal;
-      const primary = sortOrder.value === 'asc' ? cmp : -cmp;
-      if (primary !== 0) return primary;
-      return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
-    });
-  } else {
-    // 通常ソート
-    rows = [...rows].sort((a, b) => {
-      const aVal = getSortValue(a, sortKey.value!);
-      const bVal = getSortValue(b, sortKey.value!);
-      const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-      const primary = sortOrder.value === 'asc' ? cmp : -cmp;
-      if (primary !== 0) return primary;
-      return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
-    });
-  }
-  return rows;
-});
-
-// --- ページネーション ---
+// --- フィルタ+ソート+ページネーション → API呼び出し（T-31-1: progressListService.tsに移植済み） ---
+const filteredRows = ref<import('@/features/progress-management/types').ProgressRow[]>([]);
+const totalCount = ref(0);
+const totalPages = ref(1);
 const PAGE_SIZE = 20;
 const currentPage = ref(1);
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredRows.value.length / PAGE_SIZE)));
 const displayPages = computed(() => {
   const pages: number[] = [];
   for (let i = 1; i <= totalPages.value; i++) pages.push(i);
   return pages;
 });
-const pageStartIndex = computed(() => (currentPage.value - 1) * PAGE_SIZE + 1);
-const pageEndIndex = computed(() => Math.min(currentPage.value * PAGE_SIZE, filteredRows.value.length));
-const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE;
-  return filteredRows.value.slice(start, start + PAGE_SIZE);
-});
+const pageStartIndex = computed(() => totalCount.value === 0 ? 0 : (currentPage.value - 1) * PAGE_SIZE + 1);
+const pageEndIndex = computed(() => Math.min(currentPage.value * PAGE_SIZE, totalCount.value));
+const pagedRows = computed(() => filteredRows.value);
+
+/** サーバーからフィルタ済み・ソート済み・ページ済みリストを取得 */
+async function fetchProgressList() {
+  try {
+    const res = await fetch('/api/progress/list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        searchQuery: filterClient.value.trim() || undefined,
+        filterStaff: filterStaff.value || undefined,
+        filterUnexported: onlyUnexported.value || undefined,
+        sortKey: sortKey.value,
+        sortOrder: sortOrder.value,
+        page: currentPage.value,
+        pageSize: PAGE_SIZE,
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    filteredRows.value = data.rows;
+    totalCount.value = data.totalCount;
+    totalPages.value = data.totalPages;
+  } catch (err) {
+    console.error('[MockProgressDetailPage] 進捗一覧取得失敗:', err);
+    filteredRows.value = [];
+    totalCount.value = 0;
+    totalPages.value = 1;
+  }
+}
+
+// フィルタ・ソート・ページ変更時に自動再取得
+import { watch } from 'vue';
+watch(
+  [filterClient, filterStaff, onlyUnexported, sortKey, sortOrder, currentPage],
+  () => { fetchProgressList(); },
+  { immediate: true }
+);
+// フィルタ変更時にページを1に戻す
+watch([filterClient, filterStaff, onlyUnexported], () => { currentPage.value = 1; });
 
 
 

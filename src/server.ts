@@ -140,6 +140,10 @@ app.route('/api/tax-categories', taxCategoryRoutes)
 import learningRuleRoutes from './api/routes/learningRuleRoutes'
 app.route('/api/learning-rules', learningRuleRoutes)
 
+// Progress API: 進捗管理一覧（T-31-1）
+import progressRoutes from './api/routes/progressRoutes'
+app.route('/api/progress', progressRoutes)
+
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
 

@@ -63,18 +63,18 @@ C:\dev\receipt-app\.agent\workflows\code_quality.md
 C:\dev\receipt-app\.agent\workflows\language_rule.md
 C:\dev\receipt-app\.agent\workflows\commit.md
 
-## 実態乖離の記録（2026-05-02確認）
+## 実態乖離の記録
 
-以下のルールが守れていないことを確認済み。Phase 1〜4で段階的に修正する。
+詳細は [31_logic_api_migration_audit.md](../../docs/genzai/31_logic_api_migration_audit.md) を参照せよ。
 
-- composableにロジックが大量にある（33ファイル / 584ロジック行。最大: useUpload 86行） → Phase 1〜4でAPI化
-- ★2026-05-03: useAccountingSystem.ts 1522行→470行に分割完了（定数582行+モックジョブ160行+モック顧問先347行を外部ファイル化）
-- フロントのcomputed/関数にソート・フィルタ・バリデーション等のロジックが散在 → 同上
-- VITE_USE_MOCKによる分岐はフロント4ファイルに存在。実害: receiptService.ts（L289） → Phase 3でAPI化
-- ページにロジックが埋まっているため「呼び出し側は変更不要」が達成できていない → 同上
-- 問題ファイル: composable 33 + vue 49 = 82ファイル / 2,262ロジック行
-- useDocuments.ts AI_FIELD_KEYS値import違反 → ✅修正済み（2026-05-02。refresh方式に変更）
-- ★2026-05-03: Firebase/Hono遺物完全排除（firestore.ts/useBankLogic.ts/useClientListRPC.ts/client.ts削除、aaa\_リネーム、英語→日本語化120+箇所）
+- API化完了: 5画面（仕訳一覧 + マスタ4画面）
+- API化未着手: 進捗管理（P1）、ダッシュボード集計（P2）、データ変換（P3）
+- API化対象外: ブラウザUI状態（useUpload等）、インライン編集6画面
+- Supabase移行と同時: 科目/税区分composable合成ロジック（LEFT JOIN同時）
+- ★2026-05-03: useAccountingSystem.ts 1522行→470行に分割完了
+- ★2026-05-03: Firebase/Hono遺物完全排除
+- VITE_USE_MOCKによる分岐はフロント4ファイルに存在 → Phase 3でAPI化
+- useDocuments.ts AI_FIELD_KEYS値import違反 → ✅修正済み（2026-05-02）
 
 ## ★重要 新規ロジック追加ルール（即日適用 2026-05-02〜）
 

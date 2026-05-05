@@ -458,53 +458,46 @@ interface MockClient {
     oldestReconcileDate?: string;
 }
 
-const allClients = ref<MockClient[]>([
-    {
-        code: '1001', name: '株式会社 テスト商事', isIndividual: false,
-        missingCount: 1, oldestMissingDate: '12/10',
-        alertCount: 2, oldestAlertDate: '12/15',
-        draftCount: 45, oldestDraftDate: '12/05',
-        approvalCount: 5, oldestApprovalDate: '12/24',
-        exportCount: 0,
-        filingCount: 2, oldestFilingDate: '12/20',
-        learningCount: 0,
-        reconcileCount: 1, oldestReconcileDate: '11/30'
-    },
-    {
-        code: '1002', name: '合同会社 サンプル', isIndividual: false,
-        missingCount: 0,
-        alertCount: 0,
-        draftCount: 12, oldestDraftDate: '12/20',
-        approvalCount: 0,
-        exportCount: 120, oldestExportDate: '12/25',
-        filingCount: 0,
-        learningCount: 2, oldestLearningDate: '12/18',
-        reconcileCount: 0
-    },
-    {
-        code: '1003', name: '鈴木商店', isIndividual: true,
-        missingCount: 2, oldestMissingDate: '11/15',
-        alertCount: 3, oldestAlertDate: '11/20',
-        draftCount: 67, oldestDraftDate: '11/10',
-        approvalCount: 10, oldestApprovalDate: '12/01',
-        exportCount: 0,
-        filingCount: 10, oldestFilingDate: '11/01',
-        learningCount: 6, oldestLearningDate: '12/10',
-        reconcileCount: 4, oldestReconcileDate: '11/05'
-    },
-    {
-        code: '2001', name: '田中建設', isIndividual: true,
-        missingCount: 0, alertCount: 0, draftCount: 0, approvalCount: 0,
-        exportCount: 380, oldestExportDate: '11/30',
-        filingCount: 0, learningCount: 0, reconcileCount: 0
-    },
-    {
-        code: '2005', name: 'Tech Solutions Inc.', isIndividual: false,
-        missingCount: 0, alertCount: 0, draftCount: 0, approvalCount: 0,
-        exportCount: 0, filingCount: 0, learningCount: 0, reconcileCount: 0
-    }
-]);
+/** ウィジェット集計（サーバーから取得） */
+interface TaskWidgets {
+    missingCount: number;
+    alertCount: number;
+    draftCount: number;
+    approvalCount: number;
+    exportCount: number;
+    filingCount: number;
+    learningCount: number;
+    reconcileCount: number;
+}
 
+const allClients = ref<MockClient[]>([]);
+const widgets = ref<TaskWidgets>({
+    missingCount: 0, alertCount: 0, draftCount: 0, approvalCount: 0,
+    exportCount: 0, filingCount: 0, learningCount: 0, reconcileCount: 0
+});
+
+/** サーバーからタスクサマリ + 顧問先タスク一覧を取得（T-31-4） */
+async function fetchTaskData() {
+    try {
+        const res = await fetch('/api/admin/task-summary');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json() as {
+            widgets: TaskWidgets;
+            clients: MockClient[];
+        };
+        widgets.value = data.widgets;
+        allClients.value = data.clients;
+    } catch (e) {
+        console.warn('[ScreenH] タスクサマリ取得失敗:', e);
+    }
+}
+
+import { onMounted } from 'vue';
+onMounted(() => { fetchTaskData(); });
+
+// T-31-4: フィルタもサーバー側で実行可能だが、クライアント数が少量（<100）のため
+// ローカルフィルタを残す（再取得の遅延なし）。
+// Supabase移行時にPOST /api/admin/task-list に置換可能。
 const filteredClients = computed(() => {
     if (!activeFilter.value) return allClients.value;
     const filterKey = activeFilter.value;

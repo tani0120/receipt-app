@@ -7,6 +7,7 @@ import { zodHook } from '../helpers/zodHook'
 import { getDocuments } from '../services/documentStore'
 import { summarizeCsvLines as summarizeCsvLinesImport } from '../services/exportHistoryStore'
 import { getAll as getAllClients } from '../services/clientStore'
+import { getAll as getAllStaff } from '../services/staffStore'
 import { getJournals } from '../services/journalStore'
 import type { DocEntry } from '../../repositories/types'
 
@@ -131,6 +132,120 @@ function aggregateMetrics(docs: DocEntry[], groupBy: 'clientId' | 'createdBy'): 
 const route = app
     .get('/dashboard', (c) => {
         return c.json(MOCK_ADMIN_DATA)
+    })
+    // ━━━ T-31-3: ダッシュボードサマリAPI（顧問先数・スタッフ数・分析データ集計） ━━━
+    .get('/dashboard/summary', (c) => {
+      const clients = getAllClients()
+      const staff = getAllStaff()
+
+      // 顧問先集計
+      const activeClients = clients.filter(c => c.status === 'active').length
+      const stoppedClients = clients.filter(c => c.status !== 'active').length
+
+      // 顧問先分析データ生成
+      const clientAnalysis = clients.map(c => ({
+        code: c.threeCode || c.clientId,
+        name: c.companyName,
+        status: c.status,
+        performance: {
+          journalsThisMonth: 0, journalsThisYear: 0, journalsLastYear: 0,
+          apiCostThisYear: 0, velocityThisMonth: 0, velocityAvg: 0
+        }
+      }))
+
+      // スタッフ集計
+      const activeStaffCount = staff.filter(s => s.status === 'active').length
+
+      // スタッフ分析データ生成
+      const staffAnalysis = staff.map(s => ({
+        staffId: s.uuid,
+        name: s.name,
+        role: s.role ?? '一般',
+        status: s.status,
+        performance: {
+          monthlyJournals: 0, processingTime: '0h', velocityPerHour: 0,
+          thisMonthJournals: 0, monthlyAvgJournals: 0, annualApiCost: 0,
+          velocityThisMonth: 0, velocityAvg: 0, velocityPerHourAvg: 0,
+          velocity: { draftAvg: 0 }
+        },
+        backlogs: { total: 0, draft: 0 },
+        backlog: {}
+      }))
+
+      return c.json({
+        kpiCostQuality: {
+          registeredClients: clients.length,
+          activeClients,
+          stoppedClients,
+          staffCount: activeStaffCount,
+        },
+        clientAnalysis,
+        staffAnalysis,
+      })
+    })
+    // ━━━ T-31-4: タスクダッシュボード サマリAPI（モックデータをサーバー側に移動） ━━━
+    // Supabase移行時: 各カウントをSELECT COUNT(*)に差し替え
+    .get('/task-summary', (c) => {
+      // モックデータ（Supabase接続前はハードコード。接続後はクエリ結果に差し替え）
+      const taskClients = [
+        {
+          code: '1001', name: '株式会社 テスト商事', isIndividual: false,
+          missingCount: 1, oldestMissingDate: '12/10',
+          alertCount: 2, oldestAlertDate: '12/15',
+          draftCount: 45, oldestDraftDate: '12/05',
+          approvalCount: 5, oldestApprovalDate: '12/24',
+          exportCount: 0,
+          filingCount: 2, oldestFilingDate: '12/20',
+          learningCount: 0,
+          reconcileCount: 1, oldestReconcileDate: '11/30'
+        },
+        {
+          code: '1002', name: '合同会社 サンプル', isIndividual: false,
+          missingCount: 0, alertCount: 0,
+          draftCount: 12, oldestDraftDate: '12/20',
+          approvalCount: 0,
+          exportCount: 120, oldestExportDate: '12/25',
+          filingCount: 0,
+          learningCount: 2, oldestLearningDate: '12/18',
+          reconcileCount: 0
+        },
+        {
+          code: '1003', name: '鈴木商店', isIndividual: true,
+          missingCount: 2, oldestMissingDate: '11/15',
+          alertCount: 3, oldestAlertDate: '11/20',
+          draftCount: 67, oldestDraftDate: '11/10',
+          approvalCount: 10, oldestApprovalDate: '12/01',
+          exportCount: 0,
+          filingCount: 10, oldestFilingDate: '11/01',
+          learningCount: 6, oldestLearningDate: '12/10',
+          reconcileCount: 4, oldestReconcileDate: '11/05'
+        },
+        {
+          code: '2001', name: '田中建設', isIndividual: true,
+          missingCount: 0, alertCount: 0, draftCount: 0, approvalCount: 0,
+          exportCount: 380, oldestExportDate: '11/30',
+          filingCount: 0, learningCount: 0, reconcileCount: 0
+        },
+        {
+          code: '2005', name: 'Tech Solutions Inc.', isIndividual: false,
+          missingCount: 0, alertCount: 0, draftCount: 0, approvalCount: 0,
+          exportCount: 0, filingCount: 0, learningCount: 0, reconcileCount: 0
+        }
+      ]
+
+      // ウィジェット集計（サーバー側で算出）
+      const widgets = {
+        missingCount: taskClients.reduce((s, c) => s + (c.missingCount ?? 0), 0),
+        alertCount: taskClients.reduce((s, c) => s + (c.alertCount ?? 0), 0),
+        draftCount: taskClients.reduce((s, c) => s + (c.draftCount ?? 0), 0),
+        approvalCount: taskClients.reduce((s, c) => s + (c.approvalCount ?? 0), 0),
+        exportCount: taskClients.reduce((s, c) => s + (c.exportCount ?? 0), 0),
+        filingCount: taskClients.reduce((s, c) => s + (c.filingCount ?? 0), 0),
+        learningCount: taskClients.reduce((s, c) => s + (c.learningCount ?? 0), 0),
+        reconcileCount: taskClients.reduce((s, c) => s + (c.reconcileCount ?? 0), 0),
+      }
+
+      return c.json({ widgets, clients: taskClients })
     })
     .get('/config', async (c) => {
         // [レガシー] Firebase Firestore依存。Supabase移行後に再実装

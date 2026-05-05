@@ -168,14 +168,8 @@ const canConvert = computed(() => {
     return !!(form.value.clientName && form.value.targetSoftware && uploadedFile.value);
 });
 
-const sortedLogs = computed(() => {
-    return [...logs.value].sort((a, b) => {
-        if (a.isDownloaded !== b.isDownloaded) {
-            return a.isDownloaded ? 1 : -1;
-        }
-        return b.timestamp.localeCompare(a.timestamp);
-    });
-});
+// T-31-5: サーバー側でソート済みのためフロントでは直接参照
+const sortedLogs = computed(() => logs.value);
 
 const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';

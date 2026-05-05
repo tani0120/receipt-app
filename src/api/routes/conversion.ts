@@ -72,7 +72,23 @@ const route = app.get('/', (c) => {
             ]
         }))
 
-        return c.json(uiData)
+        // ━━━ T-31-5: ソート・集計をサーバー側で実行 ━━━
+        // ソート: 未DLが先、同グループ内は日付新しい順
+        uiData.sort((a, b) => {
+            if (a.isDownloaded !== b.isDownloaded) {
+                return a.isDownloaded ? 1 : -1;
+            }
+            return b.timestamp.localeCompare(a.timestamp);
+        });
+
+        // 未DLカウント
+        const pendingDownloadCount = uiData.filter(item => !item.isDownloaded).length;
+
+        return c.json({
+            logs: uiData,
+            pendingDownloadCount,
+            totalCount: uiData.length,
+        })
     } catch (e: unknown) {
         console.error('[API Error] conversion get:', e);
         return apiCatchError(c, e);

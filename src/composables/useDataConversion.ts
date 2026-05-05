@@ -4,16 +4,24 @@ import type { ConversionLogUi, ConversionLogId } from '@/types/ScreenG_ui.type';
 
 // State driven by API (BFF)
 const logs = ref<ConversionLogUi[]>([]);
+/** サーバーから受け取った未DLカウント（T-31-5: サーバー側で集計） */
+const serverPendingCount = ref(0);
 
 export function useDataConversion() {
 
-    // Fetch from Hono (BFF)
+    // Fetch from Hono (BFF) — T-31-5: サーバー側ソート済み+未DLカウント付きレスポンス
     const fetchLogs = async () => {
         try {
             const res = await fetch('/api/conversion');
             if (res.ok) {
-                const data = await res.json();
-                logs.value = data as ConversionLogUi[];
+                const data = await res.json() as {
+                    logs: ConversionLogUi[];
+                    pendingDownloadCount: number;
+                    totalCount: number;
+                };
+                // サーバー側でソート済みの配列をそのまま設定
+                logs.value = data.logs;
+                serverPendingCount.value = data.pendingDownloadCount;
             }
         } catch (e) {
             console.error('変換ログ取得失敗:', e);
@@ -52,6 +60,7 @@ export function useDataConversion() {
             rowStyle: 'bg-white'
         };
         logs.value.unshift(uiLog);
+        serverPendingCount.value++;
     };
 
     // Note: In BFF pattern, mutations should ideally go to API too.
@@ -64,6 +73,7 @@ export function useDataConversion() {
             const mutableLog = log as Mutable<ConversionLogUi>;
             mutableLog.isDownloaded = true;
             mutableLog.rowStyle = 'bg-gray-50 opacity-70';
+            serverPendingCount.value = Math.max(0, serverPendingCount.value - 1);
         }
     };
 
@@ -75,6 +85,10 @@ export function useDataConversion() {
                 // Update local state on success
                 const index = logs.value.findIndex(l => l.id === id);
                 if (index !== -1) {
+                    const removed = logs.value[index];
+                    if (removed && !removed.isDownloaded) {
+                        serverPendingCount.value = Math.max(0, serverPendingCount.value - 1);
+                    }
                     logs.value.splice(index, 1);
                 }
             } else {
@@ -85,9 +99,8 @@ export function useDataConversion() {
         }
     };
 
-    const pendingDownloadCount = computed(() => {
-        return logs.value.filter(log => !log.isDownloaded).length;
-    });
+    /** 未DLカウント（サーバー集計値 + ローカル楽観更新） */
+    const pendingDownloadCount = computed(() => serverPendingCount.value);
 
     // --- Legacy / Simulation Logic Below (Kept for creating new dummy logs) ---
     const isProcessing = ref(false);

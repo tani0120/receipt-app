@@ -455,68 +455,56 @@ const MOCK_DATA: DashboardData = {
 export function useAdminDashboard() {
   const data = ref<DashboardData>(MOCK_DATA);
 
-  // 実データ取得: 顧問先数・スタッフ数・スタッフ名・顧問先名
+  // 実データ取得: サーバー側で集計済みのサマリを1回のAPIで取得（T-31-3）
   async function fetchRealKpi() {
     try {
-      // 顧問先一覧取得（レスポンス: { clients: [...], count: N }）
-      const clientRes = await fetch('/api/clients');
-      if (clientRes.ok) {
-        const body = await clientRes.json() as {
-          clients: { clientId: string; threeCode: string; companyName: string; status: string }[];
-          count: number;
+      const res = await fetch('/api/admin/dashboard/summary');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = await res.json() as {
+        kpiCostQuality: {
+          registeredClients: number;
+          activeClients: number;
+          stoppedClients: number;
+          staffCount: number;
         };
-        const clients = body.clients;
-        const active = clients.filter(c => c.status === 'active').length;
-        const stopped = clients.filter(c => c.status !== 'active').length;
-        data.value.kpiCostQuality.registeredClients = clients.length;
-        data.value.kpiCostQuality.activeClients = active;
-        data.value.kpiCostQuality.stoppedClients = stopped;
-
-        // 顧問先別指標にインポート（実名・コード・ステータスを反映）
-        if (clients.length > 0) {
-          const defaultPerf = {
-            journalsThisMonth: 0, journalsThisYear: 0, journalsLastYear: 0,
-            apiCostThisYear: 0, velocityThisMonth: 0, velocityAvg: 0
+        clientAnalysis: {
+          code: string;
+          name: string;
+          status: string;
+          performance: {
+            journalsThisMonth: number;
+            journalsThisYear: number;
+            journalsLastYear: number;
+            apiCostThisYear: number;
+            velocityThisMonth: number;
+            velocityAvg: number;
           };
-          data.value.clientAnalysis = clients.map(c => ({
-            code: c.threeCode || c.clientId,
-            name: c.companyName,
-            status: c.status,
-            performance: { ...defaultPerf }
-          }));
-        }
+        }[];
+        staffAnalysis: {
+          staffId: string;
+          name: string;
+          role: string;
+          status: string;
+          performance: StaffPerformance & { velocity: { draftAvg: number } };
+          backlogs: { total: number; draft: number };
+          backlog: Record<string, BacklogStatus>;
+        }[];
+      };
+
+      // サーバーから集計済みデータをそのまま設定（フロント側のfilter/mapは不要）
+      data.value.kpiCostQuality.registeredClients = body.kpiCostQuality.registeredClients;
+      data.value.kpiCostQuality.activeClients = body.kpiCostQuality.activeClients;
+      data.value.kpiCostQuality.stoppedClients = body.kpiCostQuality.stoppedClients;
+      data.value.kpiCostQuality.staffCount = body.kpiCostQuality.staffCount;
+
+      if (body.clientAnalysis.length > 0) {
+        data.value.clientAnalysis = body.clientAnalysis;
       }
-      // スタッフ一覧取得（レスポンス: { staff: [...], count: N }）
-      const staffRes = await fetch('/api/staff');
-      if (staffRes.ok) {
-        const body = await staffRes.json() as {
-          staff: { uuid: string; name: string; status: string; role?: string }[];
-          count: number;
-        };
-        const activeStaff = body.staff.filter(s => s.status === 'active').length;
-        data.value.kpiCostQuality.staffCount = activeStaff;
-
-        // スタッフ別指標にインポート（全員表示、ステータス付き）
-        if (body.staff.length > 0) {
-          const defaultPerf = {
-            monthlyJournals: 0, processingTime: '0h', velocityPerHour: 0,
-            thisMonthJournals: 0, monthlyAvgJournals: 0, annualApiCost: 0,
-            velocityThisMonth: 0, velocityAvg: 0, velocityPerHourAvg: 0,
-            velocity: { draftAvg: 0 }
-          };
-          data.value.staffAnalysis = body.staff.map(s => ({
-            staffId: s.uuid,
-            name: s.name,
-            role: s.role ?? '一般',
-            status: s.status,
-            performance: { ...defaultPerf },
-            backlogs: { total: 0, draft: 0 },
-            backlog: {}
-          }));
-        }
+      if (body.staffAnalysis.length > 0) {
+        data.value.staffAnalysis = body.staffAnalysis;
       }
     } catch (e) {
-      console.warn('[useAdminDashboard] 実データ取得失敗。ダミー値を使用:', e);
+      console.warn('[useAdminDashboard] サマリ取得失敗。ダミー値を使用:', e);
     }
   }
 
