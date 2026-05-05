@@ -1,8 +1,5 @@
 
 import { Hono } from 'hono'
-import { z } from 'zod'
-import { zValidator } from '@hono/zod-validator'
-import { zodHook } from './helpers/zodHook'
 import conversionRoute from './routes/conversion'
 import clientsRoute from './routes/clientRoutes'
 
@@ -29,17 +26,11 @@ import ocrRoute from './routes/ocr'
 import pipeline from './routes/pipeline'
 import shareStatusRoutes from './routes/shareStatusRoutes'
 import learningRuleRoutes from './routes/learningRuleRoutes'
+import progressRoutes from './routes/progressRoutes'
+import { exportRoutes } from './routes/exportRoutes'
 import { TAX_OPTIONS } from '../shared/schema_dictionary'
 
 const app = new Hono()
-
-// ... (Existing middleware)
-
-// --- Data Models ---
-// --- Data Models ---
-// TaxOptionSchema removed (Using Shared Constant)
-
-const JournalDataSchema = z.object({}).passthrough()
 
 // --- API Routes ---
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -73,18 +64,11 @@ const routes = app
     .route('/api/pipeline', pipeline)
     .route('/api/share-status', shareStatusRoutes)
     .route('/api/learning-rules', learningRuleRoutes)
+    .route('/api/progress', progressRoutes)
+    .route('/api/export', exportRoutes)
     .get('/api/tax-options', (c) => {
         return c.json(TAX_OPTIONS)
     })
-    .post(
-        '/api/journal',
-        zValidator('json', JournalDataSchema, zodHook),
-        (c) => {
-            const data = c.req.valid('json')
-            // Save to DB...
-            return c.json({ success: true, id: data.id })
-        }
-    )
 
 export default app
 export type AppType = typeof routes
