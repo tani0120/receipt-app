@@ -6,7 +6,6 @@ dotenv.config()
 export const config = {
     GCP_PROJECT_ID: process.env.GCP_PROJECT_ID,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    USE_VERTEX_AI: process.env.USE_VERTEX_AI === 'true',
 
     // --- Operational Parameters (Restored) ---
     // ドラフト生成・監視間隔: 5分
