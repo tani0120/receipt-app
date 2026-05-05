@@ -17,7 +17,7 @@
 import { Hono } from "hono";
 import { apiError } from "../helpers/apiError";
 import { 必須 } from "../helpers/apiMessages";
-import { parseMfCsv } from "../../mocks/utils/pipeline/mfCsvParser";
+import { parseMfCsv } from "../../utils/pipeline/mfCsvParser";
 import {
   getByClientId,
   findByMatchKey,

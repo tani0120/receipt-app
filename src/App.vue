@@ -24,8 +24,8 @@
 </template>
 
 <script setup lang="ts">
-import MockNavBar from '@/mocks/components/MockNavBar.vue';
-import GlobalToast from '@/mocks/components/GlobalToast.vue';
+import MockNavBar from '@/components/MockNavBar.vue';
+import GlobalToast from '@/components/GlobalToast.vue';
 import { useRoute } from 'vue-router';
 import { computed } from 'vue';
 

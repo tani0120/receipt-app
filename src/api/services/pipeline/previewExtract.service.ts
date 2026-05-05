@@ -40,7 +40,7 @@ import type {
 } from './types';
 import { postprocessPreviewExtract } from './postprocess';
 import { validatePreviewExtractResult } from './validatePreviewExtractResult';
-import { determineAccount } from '../../../mocks/utils/pipeline/accountDetermination';
+import { determineAccount } from '../../../utils/pipeline/accountDetermination';
 
 // ============================================================
 // 設定

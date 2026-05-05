@@ -7,7 +7,7 @@
  * 【注意】変換関数はロジックではない（データマッピングのみ）。
  */
 
-import type { Vendor } from '@/mocks/types/pipeline/vendor.type'
+import type { Vendor } from '@/types/pipeline/vendor.type'
 import type { Account } from '@/shared/types/account'
 
 /** DB行 → Vendor型への変換 */

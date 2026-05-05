@@ -14,7 +14,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('../mocks/views/MockHomePage.vue'),
+    component: () => import('../views/MockHomePage.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -50,7 +50,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/client-settings/:clientId',
     name: 'ClientSettings',
-    component: () => import('../mocks/views/MockSettingsPage.vue'),
+    component: () => import('../views/MockSettingsPage.vue'),
     props: true
   },
   // 旧パス互換: /settings/:clientId → /client/settings/:clientId
@@ -121,7 +121,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/journal-list/:clientId',
     name: 'MockJournalList',
-    component: () => import('@/mocks/components/JournalListLevel3Mock.vue'),
+    component: () => import('@/components/JournalListLevel3Mock.vue'),
   },
 
   // --- 旧ワークベンチ(ScreenE)削除済み → ホームにリダイレクト ---
@@ -131,43 +131,43 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/output/:clientId',
     name: 'MockOutputPortal',
-    component: () => import('@/mocks/views/MockOutputPortalPage.vue'),
+    component: () => import('@/views/MockOutputPortalPage.vue'),
     props: true
   },
   {
     path: '/export/:clientId',
     name: 'MockExport',
-    component: () => import('@/mocks/views/MockExportPage.vue'),
+    component: () => import('@/views/MockExportPage.vue'),
     props: true
   },
   {
     path: '/export-history/:clientId',
     name: 'MockExportHistory',
-    component: () => import('@/mocks/views/MockExportHistoryPage.vue'),
+    component: () => import('@/views/MockExportHistoryPage.vue'),
     props: true
   },
   {
     path: '/export-detail/:clientId/:historyId',
     name: 'MockExportDetail',
-    component: () => import('@/mocks/views/MockExportDetailPage.vue'),
+    component: () => import('@/views/MockExportDetailPage.vue'),
     props: true
   },
   {
     path: '/excluded-history/:clientId',
     name: 'MockExcludedHistory',
-    component: () => import('@/mocks/views/MockExcludedHistoryPage.vue'),
+    component: () => import('@/views/MockExcludedHistoryPage.vue'),
     props: true
   },
   {
     path: '/supporting-history/:clientId',
     name: 'MockSupportingHistory',
-    component: () => import('@/mocks/views/MockSupportingHistoryPage.vue'),
+    component: () => import('@/views/MockSupportingHistoryPage.vue'),
     props: true
   },
   {
     path: '/drive-select/:clientId',
     name: 'MockDriveSelect',
-    component: () => import('@/mocks/views/MockDriveSelectPage.vue'),
+    component: () => import('@/views/MockDriveSelectPage.vue'),
     props: true
   },
   // 旧パス互換（/client/ 付き旧URL → 新URLにリダイレクト）
@@ -187,19 +187,19 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/client-settings/accounts/:clientId',
     name: 'ClientAccountSettings',
-    component: () => import('../mocks/views/MockClientAccountsPage.vue'),
+    component: () => import('../views/MockClientAccountsPage.vue'),
     props: true
   },
   {
     path: '/client-settings/tax/:clientId',
     name: 'ClientTaxSettings',
-    component: () => import('../mocks/views/MockClientTaxPage.vue'),
+    component: () => import('../views/MockClientTaxPage.vue'),
     props: true
   },
   {
     path: '/client-settings/vectors/:clientId',
     name: 'ClientVectorSettings',
-    component: () => import('../mocks/views/MockClientIndustryVectorPage.vue'),
+    component: () => import('../views/MockClientIndustryVectorPage.vue'),
     props: true
   },
   // 旧パス互換
@@ -212,31 +212,31 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/upload-v2/:clientId',
     name: 'UploadSelectorUnified',
-    component: () => import('@/mocks/views/MockUploadSelectorUnifiedPage.vue'),
+    component: () => import('@/views/MockUploadSelectorUnifiedPage.vue'),
   },
   // ===== 管理者ダッシュボード（事務所横断・顧問先ID不要） =====
   {
     path: '/admin-dashboard',
     name: 'AdminDashboard',
-    component: () => import('@/mocks/views/MockAdminDashboardPage.vue'),
+    component: () => import('@/views/MockAdminDashboardPage.vue'),
   },
   // ===== 過去仕訳CSV取込 =====
   {
     path: '/history-import/:clientId',
     name: 'HistoryImport',
-    component: () => import('@/mocks/views/MockHistoryImportPage.vue'),
+    component: () => import('@/views/MockHistoryImportPage.vue'),
   },
   // スタッフ用アップロード（PC/モバイル自動判定）
   {
     path: '/upload/:clientId/staff',
     name: 'UploadStaff',
-    component: () => import('@/mocks/views/MockUploadUnifiedPage.vue'),
+    component: () => import('@/views/MockUploadUnifiedPage.vue'),
   },
   // ゲスト用アップロード（PC/モバイル自動判定）
   {
     path: '/upload/:clientId/guest',
     name: 'UploadGuest',
-    component: () => import('@/mocks/views/MockUploadUnifiedPage.vue'),
+    component: () => import('@/views/MockUploadUnifiedPage.vue'),
     meta: { guestAllowed: true },
   },
 
@@ -252,7 +252,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/learning/:clientId',
     name: 'Learning',
-    component: () => import('@/mocks/views/MockLearningPage.vue'),
+    component: () => import('@/views/MockLearningPage.vue'),
     props: true
   },
   // 旧パス互換（/client/upload → 統合版）
@@ -264,13 +264,13 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/upload-docs/:clientId',
     name: 'UploadDocs',
-    component: () => import('@/mocks/views/MockUploadDocsPage.vue')
+    component: () => import('@/views/MockUploadDocsPage.vue')
   },
   // 顧問先ゲスト用資料アップロード
   {
     path: '/upload-docs/:clientId/guest',
     name: 'UploadDocsGuest',
-    component: () => import('@/mocks/views/MockUploadDocsPage.vue'),
+    component: () => import('@/views/MockUploadDocsPage.vue'),
     meta: { guestAllowed: true },
   },
   { path: '/client/upload-docs/:clientId', redirect: (to) => `/upload-docs/${to.params.clientId}` },
@@ -278,13 +278,13 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/drive-upload/:clientId',
     name: 'DriveUpload',
-    component: () => import('@/mocks/views/MockDriveUploadPage.vue'),
+    component: () => import('@/views/MockDriveUploadPage.vue'),
   },
   // ゲスト用Driveアップロード
   {
     path: '/drive-upload/:clientId/guest',
     name: 'DriveUploadGuest',
-    component: () => import('@/mocks/views/MockDriveUploadPage.vue'),
+    component: () => import('@/views/MockDriveUploadPage.vue'),
     meta: { guestAllowed: true },
   },
   { path: '/client/drive-upload/:clientId', redirect: (to) => `/drive-upload/${to.params.clientId}` },
@@ -292,29 +292,29 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/master/accounts',
     name: 'MasterAccounts',
-    component: () => import('@/mocks/views/MockMasterAccountsPage.vue')
+    component: () => import('@/views/MockMasterAccountsPage.vue')
   },
   {
     path: '/master/tax',
     name: 'MasterTaxCategories',
-    component: () => import('@/mocks/views/MockMasterTaxCategoriesPage.vue')
+    component: () => import('@/views/MockMasterTaxCategoriesPage.vue')
   },
   {
     path: '/master/vectors',
     name: 'MasterIndustryVectors',
-    component: () => import('@/mocks/views/MockMasterIndustryVectorPage.vue')
+    component: () => import('@/views/MockMasterIndustryVectorPage.vue')
   },
   // /master/vendors → /master にリダイレクト（統合済み）
   { path: '/master/vendors', redirect: '/master' },
   {
     path: '/master/vendors/list',
     name: 'MasterVendorsList',
-    component: () => import('@/mocks/views/MockMasterVendorsPage.vue')
+    component: () => import('@/views/MockMasterVendorsPage.vue')
   },
   {
     path: '/master/vendors/non-vendor',
     name: 'MasterNonVendor',
-    component: () => import('@/mocks/views/MockMasterNonVendorPage.vue')
+    component: () => import('@/views/MockMasterNonVendorPage.vue')
   },
   // 旧パスリダイレクト
   { path: '/settings/accounts', redirect: '/client-settings/accounts/ABC-00001' },
@@ -324,7 +324,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/master/clients',
     name: 'MasterClients',
-    component: () => import('@/mocks/views/MockMasterClientsPage.vue')
+    component: () => import('@/views/MockMasterClientsPage.vue')
   },
   // 旧パスリダイレクト（/clients/list → /master/clients）
   { path: '/clients/list', redirect: '/master/clients' },
@@ -332,35 +332,35 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/master',
     name: 'MasterHub',
-    component: () => import('@/mocks/views/MockMasterManagementPage.vue')
+    component: () => import('@/views/MockMasterManagementPage.vue')
   },
   {
     path: '/master/costs',
     name: 'MasterCosts',
-    component: () => import('@/mocks/views/MockCostsPage.vue')
+    component: () => import('@/views/MockCostsPage.vue')
   },
   {
     path: '/master/settings',
     name: 'MasterSettings',
-    component: () => import('@/mocks/views/MockSettingsHubPage.vue')
+    component: () => import('@/views/MockSettingsHubPage.vue')
   },
   {
     path: '/master/progress/:code?',
     name: 'ProgressDetail',
-    component: () => import('@/mocks/views/MockProgressDetailPage.vue')
+    component: () => import('@/views/MockProgressDetailPage.vue')
   },
   // 旧パス互換: /progress → /master/progress
   { path: '/progress/:code?', redirect: (to) => `/master/progress${to.params.code ? '/' + to.params.code : ''}` },
   {
     path: '/master/staff',
     name: 'MasterStaff',
-    component: () => import('@/mocks/views/MockMasterStaffPage.vue')
+    component: () => import('@/views/MockMasterStaffPage.vue')
   },
   // --- 顧問先ゲストポータル（ナビバーなし・顧問先専用UI） ---
   {
     path: '/guest/:clientId',
     name: 'GuestPortal',
-    component: () => import('@/mocks/views/MockPortalPage.vue'),
+    component: () => import('@/views/MockPortalPage.vue'),
     meta: { guestAllowed: true },
     beforeEnter: async (to) => {
       const clientId = to.params.clientId as string;
@@ -385,7 +385,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/guest/:clientId/login',
     name: 'GuestLogin',
-    component: () => import('@/mocks/views/MockPortalLoginPage.vue'),
+    component: () => import('@/views/MockPortalLoginPage.vue'),
     meta: { guestAllowed: true },
     beforeEnter: (to) => {
       const clientId = to.params.clientId as string;
@@ -411,7 +411,7 @@ export const routes: RouteRecordRaw[] = [
     path: '/invite/:code',
     name: 'InviteRedirect',
     // リダイレクト専用ルート。beforeEnterでサーバー問い合わせ→ゲストログインに転送。
-    component: () => import('@/mocks/views/MockPortalLoginPage.vue'),
+    component: () => import('@/views/MockPortalLoginPage.vue'),
     meta: { guestAllowed: true },
     beforeEnter: async (to) => {
       const { resolveInviteCode, loadAll, getStatusFromCache } = useShareStatus()
@@ -437,7 +437,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/404',
     name: 'NotFound',
-    component: () => import('@/mocks/views/MockNotFoundPage.vue'),
+    component: () => import('@/views/MockNotFoundPage.vue'),
     meta: { guestAllowed: true },
   },
   // 未定義ルート → 404

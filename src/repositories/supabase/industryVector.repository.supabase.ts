@@ -9,7 +9,7 @@
 
 import { getSupabase } from '@/lib/supabase'
 import type { IndustryVectorRepository } from '@/repositories/types'
-import type { IndustryVectorEntry, VendorVector } from '@/mocks/types/pipeline/vendor.type'
+import type { IndustryVectorEntry, VendorVector } from '@/types/pipeline/vendor.type'
 
 /**
  * DB行（フラット形式）→ IndustryVectorEntry（プロパティ方式）に集約

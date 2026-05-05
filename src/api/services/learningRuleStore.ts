@@ -11,8 +11,8 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
-import type { LearningRule } from '../../mocks/types/learning_rule.type'
-import { learningRulesTST00011 } from '../../mocks/data/learning_rules_TST00011'
+import type { LearningRule } from '../../types/learning_rule.type'
+import { learningRulesTST00011 } from '../../data/learning_rules_TST00011'
 
 const DATA_DIR = join(process.cwd(), 'data')
 const FILE_PATH = join(DATA_DIR, 'learning-rules.json')

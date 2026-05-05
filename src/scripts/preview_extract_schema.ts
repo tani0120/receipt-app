@@ -21,7 +21,7 @@
  */
 
 import { Type } from '@google/genai';
-import type { LineItem } from '../mocks/types/pipeline/line_item.type';
+import type { LineItem } from '../types/pipeline/line_item.type';
 
 // ============================================================
 // TypeScript型定義

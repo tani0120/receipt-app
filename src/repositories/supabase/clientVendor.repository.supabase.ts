@@ -9,7 +9,7 @@
 
 import { getSupabase } from '@/lib/supabase'
 import type { ClientVendorRepository } from '@/repositories/types'
-import type { Vendor } from '@/mocks/types/pipeline/vendor.type'
+import type { Vendor } from '@/types/pipeline/vendor.type'
 import { toVendor, fromVendor } from './helpers'
 
 export const supabaseClientVendorRepo: ClientVendorRepository = {

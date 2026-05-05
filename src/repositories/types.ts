@@ -18,7 +18,7 @@
  */
 
 
-import type { Vendor, IndustryVectorEntry, VendorVector } from '@/mocks/types/pipeline/vendor.type'
+import type { Vendor, IndustryVectorEntry, VendorVector } from '@/types/pipeline/vendor.type'
 import type { Account } from '@/shared/types/account'
 
 // ============================================================
@@ -128,7 +128,7 @@ export interface ClientForm extends Omit<Client, 'clientId' | 'contact'> {
  * 設計根拠: docs/genzai/25_past_journal.md §4
  * 命名規則: snake_case統一（DL-054）
  */
-import type { ConfirmedJournal } from '@/mocks/types/confirmed_journal.type'
+import type { ConfirmedJournal } from '@/types/confirmed_journal.type'
 export type { ConfirmedJournal }
 
 // ============================================================

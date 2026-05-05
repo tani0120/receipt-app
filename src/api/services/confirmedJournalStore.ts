@@ -14,7 +14,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
-import type { ConfirmedJournal } from '../../mocks/types/confirmed_journal.type';
+import type { ConfirmedJournal } from '../../types/confirmed_journal.type';
 
 const DATA_DIR = join(process.cwd(), 'data');
 const DATA_FILE = join(DATA_DIR, 'confirmed_journals.json');

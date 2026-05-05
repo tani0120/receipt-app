@@ -11,7 +11,7 @@
  */
 
 import type { VendorRepository } from '@/repositories/types'
-import { VENDORS_GLOBAL } from '@/mocks/data/pipeline/vendors_global'
+import { VENDORS_GLOBAL } from '@/data/pipeline/vendors_global'
 
 /**
  * 全社取引先マスタのモック実装

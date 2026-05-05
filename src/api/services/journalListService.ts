@@ -16,7 +16,7 @@
 
 import { getJournals } from './journalStore'
 import { getByClientId as getConfirmedJournals } from './confirmedJournalStore'
-import type { ConfirmedJournal } from '../../mocks/types/confirmed_journal.type'
+import type { ConfirmedJournal } from '../../types/confirmed_journal.type'
 
 // ────────────────────────────────────────────
 // 型定義（API応答用の最小型。フロント側の巨大な型に依存しない）

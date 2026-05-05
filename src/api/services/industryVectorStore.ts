@@ -11,9 +11,9 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
-import type { IndustryVectorEntry } from '../../mocks/types/pipeline/vendor.type'
-import { INDUSTRY_VECTOR_CORPORATE } from '../../mocks/data/pipeline/industry_vector_corporate'
-import { INDUSTRY_VECTOR_SOLE } from '../../mocks/data/pipeline/industry_vector_sole'
+import type { IndustryVectorEntry } from '../../types/pipeline/vendor.type'
+import { INDUSTRY_VECTOR_CORPORATE } from '../../data/pipeline/industry_vector_corporate'
+import { INDUSTRY_VECTOR_SOLE } from '../../data/pipeline/industry_vector_sole'
 
 const DATA_DIR = join(process.cwd(), 'data')
 const CORPORATE_FILE = join(DATA_DIR, 'industry-vectors-corporate.json')
