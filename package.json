@@ -7,6 +7,7 @@
     "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
+    "predev": "node scripts/check-key-rotation.cjs",
     "dev": "run-p dev:frontend dev:api",
     "dev:frontend": "vite",
     "dev:api": "nodemon --watch src/api --watch src/server.ts --watch src/scripts -e ts --exec \"npx tsx src/server.ts\"",
