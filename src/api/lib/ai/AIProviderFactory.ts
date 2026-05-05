@@ -30,8 +30,8 @@ export class AIProviderFactory {
         switch (phaseConfig.provider) {
             case 'vertex_ai':
                 // Check if Vertex credentials exist, else fallback or throw
-                if (config.FIREBASE_PROJECT_ID) {
-                    strategy = new VertexAIStrategy(config.FIREBASE_PROJECT_ID);
+                if (config.GCP_PROJECT_ID) {
+                    strategy = new VertexAIStrategy(config.GCP_PROJECT_ID);
                 } else {
                     console.warn(`[AI Factory] Vertex AI requested for ${phase} but no Project ID found. Falling back to AI Studio.`);
                     strategy = new AIStudioStrategy(config.GEMINI_API_KEY || 'mock-key');
@@ -42,7 +42,7 @@ export class AIProviderFactory {
                 break;
             default:
                 // Fallback / Unknown
-                strategy = new VertexAIStrategy(config.FIREBASE_PROJECT_ID || 'demo');
+                strategy = new VertexAIStrategy(config.GCP_PROJECT_ID || 'demo');
         }
 
         // 3. Wrap strategy to inject configured model and mode

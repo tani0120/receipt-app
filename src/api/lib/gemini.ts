@@ -5,7 +5,10 @@ let client: GoogleGenAI | null = null;
 
 if (config.USE_VERTEX_AI) {
     // Vertex AI (Service Account)
-    const projectId = config.FIREBASE_PROJECT_ID || 'gen-lang-client-0837543731';
+    const projectId = config.GCP_PROJECT_ID;
+    if (!projectId) {
+        console.error('[Gemini] GCP_PROJECT_ID が未設定です。.env.local に GCP_PROJECT_ID を設定してください。');
+    }
     const location = 'us-central1';
 
     try {

@@ -4,12 +4,9 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 export const config = {
-    FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
-    FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
-    FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    GCP_PROJECT_ID: process.env.GCP_PROJECT_ID,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     USE_VERTEX_AI: process.env.USE_VERTEX_AI === 'true',
-    FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET,
 
     // --- Operational Parameters (Restored) ---
     // ドラフト生成・監視間隔: 5分
