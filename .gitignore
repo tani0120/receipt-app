@@ -64,8 +64,9 @@ serviceAccount*.json
 !tsconfig.*.json
 !.eslintrc.cjs
 
-# 一時ファイル
+# 一時ファイル（docs配下の監査記録txtは許可）
 *.txt
+!docs/**/*.txt
 
 # ggshield
 .cache_ggshield

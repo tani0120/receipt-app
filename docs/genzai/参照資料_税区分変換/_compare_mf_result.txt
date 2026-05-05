@@ -1,0 +1,103 @@
+﻿======================================================================
+MF税区分設定CSV vs TS税区分マスタ 突合結果
+======================================================================
+
+MF CSV: 151件
+TS マスタ: 151件
+
+━━━ 1. CSV→TS 突合（CSVにあってTSにないもの）━━━
+  なし ✅
+  計: 0件
+
+━━━ 2. TS→CSV 突合（TSにあってCSVにないもの）━━━
+  なし ✅
+  計: 0件
+
+━━━ 3. 使用フラグ差異（両方にあるが active が違う）━━━
+  [共通特定課税仕入 10%] CSV=True TS=False
+  [共通特定課税仕入 8%] CSV=True TS=False
+  [共通特定課税仕入-返還等 10%] CSV=True TS=False
+  [共通特定課税仕入-返還等 8%] CSV=True TS=False
+  [共通課税仕入 5%] CSV=True TS=False
+  [共通課税仕入-返還等 5%] CSV=True TS=False
+  [共通輸入仕入-地方消費税額 1%] CSV=True TS=False
+  [共通輸入仕入-本体 5%] CSV=True TS=False
+  [共通輸入仕入-消費税額 4%] CSV=True TS=False
+  [特定課税仕入 10%] CSV=True TS=False
+  [特定課税仕入 8%] CSV=True TS=False
+  [特定課税仕入-返還等 10%] CSV=True TS=False
+  [特定課税仕入-返還等 8%] CSV=True TS=False
+  [課税仕入 5%] CSV=True TS=False
+  [課税仕入-返還等 5%] CSV=True TS=False
+  [課税売上 (軽)8% 一種] CSV=True TS=False
+  [課税売上 (軽)8% 三種] CSV=True TS=False
+  [課税売上 (軽)8% 二種] CSV=True TS=False
+  [課税売上 (軽)8% 五種] CSV=True TS=False
+  [課税売上 (軽)8% 六種] CSV=True TS=False
+  [課税売上 (軽)8% 四種] CSV=True TS=False
+  [課税売上 10% 一種] CSV=True TS=False
+  [課税売上 10% 三種] CSV=True TS=False
+  [課税売上 10% 二種] CSV=True TS=False
+  [課税売上 10% 六種] CSV=True TS=False
+  [課税売上 10% 四種] CSV=True TS=False
+  [課税売上 5%] CSV=True TS=False
+  [課税売上 5% 一種] CSV=True TS=False
+  [課税売上 5% 三種] CSV=True TS=False
+  [課税売上 5% 二種] CSV=True TS=False
+  [課税売上 5% 五種] CSV=True TS=False
+  [課税売上 5% 六種] CSV=True TS=False
+  [課税売上 5% 四種] CSV=True TS=False
+  [課税売上 8% 一種] CSV=True TS=False
+  [課税売上 8% 三種] CSV=True TS=False
+  [課税売上 8% 二種] CSV=True TS=False
+  [課税売上 8% 五種] CSV=True TS=False
+  [課税売上 8% 六種] CSV=True TS=False
+  [課税売上 8% 四種] CSV=True TS=False
+  [課税売上-貸倒 5%] CSV=True TS=False
+  [課税売上-貸倒回収 5%] CSV=True TS=False
+  [課税売上-返還等 (軽)8% 一種] CSV=True TS=False
+  [課税売上-返還等 (軽)8% 三種] CSV=True TS=False
+  [課税売上-返還等 (軽)8% 二種] CSV=True TS=False
+  [課税売上-返還等 (軽)8% 五種] CSV=True TS=False
+  [課税売上-返還等 (軽)8% 六種] CSV=True TS=False
+  [課税売上-返還等 (軽)8% 四種] CSV=True TS=False
+  [課税売上-返還等 10% 一種] CSV=True TS=False
+  [課税売上-返還等 10% 三種] CSV=True TS=False
+  [課税売上-返還等 10% 二種] CSV=True TS=False
+  [課税売上-返還等 10% 五種] CSV=True TS=False
+  [課税売上-返還等 10% 六種] CSV=True TS=False
+  [課税売上-返還等 10% 四種] CSV=True TS=False
+  [課税売上-返還等 5%] CSV=True TS=False
+  [課税売上-返還等 5% 一種] CSV=True TS=False
+  [課税売上-返還等 5% 三種] CSV=True TS=False
+  [課税売上-返還等 5% 二種] CSV=True TS=False
+  [課税売上-返還等 5% 五種] CSV=True TS=False
+  [課税売上-返還等 5% 六種] CSV=True TS=False
+  [課税売上-返還等 5% 四種] CSV=True TS=False
+  [課税売上-返還等 8% 一種] CSV=True TS=False
+  [課税売上-返還等 8% 三種] CSV=True TS=False
+  [課税売上-返還等 8% 二種] CSV=True TS=False
+  [課税売上-返還等 8% 五種] CSV=True TS=False
+  [課税売上-返還等 8% 六種] CSV=True TS=False
+  [課税売上-返還等 8% 四種] CSV=True TS=False
+  [輸入仕入-地方消費税額 1%] CSV=True TS=False
+  [輸入仕入-本体 5%] CSV=True TS=False
+  [輸入仕入-消費税額 4%] CSV=True TS=False
+  [非課税対応仕入 5%] CSV=True TS=False
+  [非課税対応仕入-返還等 5%] CSV=True TS=False
+  [非課税対応特定課税仕入 10%] CSV=True TS=False
+  [非課税対応特定課税仕入 8%] CSV=True TS=False
+  [非課税対応特定課税仕入-返還等 10%] CSV=True TS=False
+  [非課税対応特定課税仕入-返還等 8%] CSV=True TS=False
+  [非課税対応輸入-地方消費税額 1%] CSV=True TS=False
+  [非課税対応輸入-本体 5%] CSV=True TS=False
+  [非課税対応輸入-消費税額 4%] CSV=True TS=False
+  計: 78件
+
+━━━ 4. サマリ ━━━
+  両方に存在: 151件
+  CSVのみ: 0件
+  TSのみ: 0件
+  active差異: 78件
+
+  ⚠️ 差異あり — 対応が必要
