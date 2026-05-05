@@ -589,44 +589,42 @@ const getSortIcon = (key: string) => {
   return sortOrder.value === 'asc' ? 'fa-solid fa-sort-up cm-sort-icon active' : 'fa-solid fa-sort-down cm-sort-icon active';
 };
 
-// --- フィルター＋ソート済みデータ ---
-const filteredRows = computed((): Client[] => {
-  let rows = clients.value.slice();
-  if (statusFilters.value.length > 0) {
-    rows = rows.filter(r => statusFilters.value.includes(r.status));
-  }
-  const key = sortKey.value as keyof Client | 'staffName';
-  rows.sort((a, b) => {
-    let sa: string;
-    let sb: string;
-    if (key === 'staffName') {
-      // staffId → staffListから名前を取得してソート
-      sa = (a.staffId ? staffList.value.find(s => s.uuid === a.staffId)?.name : '') ?? '';
-      sb = (b.staffId ? staffList.value.find(s => s.uuid === b.staffId)?.name : '') ?? '';
-    } else if (key === 'clientId') {
-      // clientId: 数字部分(ハイフン以降)のみで数値ソート
-      const na = parseInt(a.clientId.split('-').pop() || '0', 10);
-      const nb = parseInt(b.clientId.split('-').pop() || '0', 10);
-      return sortOrder.value === 'asc' ? na - nb : nb - na;
-    } else {
-      sa = String(a[key] ?? '');
-      sb = String(b[key] ?? '');
-    }
-    return sortOrder.value === 'asc'
-      ? sa.localeCompare(sb, 'ja')
-      : sb.localeCompare(sa, 'ja');
-  });
-  return rows;
-});
-
-// --- ページネーション ---
+// --- フィルター＋ソート済みデータ（API化済み） ---
+const filteredRows = ref<Client[]>([]);
 const PAGE_SIZE = 50;
 const currentPage = ref(1);
-const totalPages = computed(() => Math.ceil(filteredRows.value.length / PAGE_SIZE));
-const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE;
-  return filteredRows.value.slice(start, start + PAGE_SIZE);
-});
+const totalPages = ref(1);
+const pagedRows = computed(() => filteredRows.value);
+
+/** POST /api/clients/list でサーバー側でフィルタ+ソート+ページネーション */
+const fetchClientList = async () => {
+  try {
+    const res = await fetch('/api/clients/list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        statusFilters: statusFilters.value.length > 0 ? statusFilters.value : undefined,
+        sortKey: sortKey.value,
+        sortOrder: sortOrder.value,
+        page: currentPage.value,
+        pageSize: PAGE_SIZE,
+      }),
+    });
+    const data = await res.json();
+    filteredRows.value = data.rows;
+    totalPages.value = data.totalPages;
+  } catch (e) {
+    console.error('[ClientsPage] リスト取得失敗:', e);
+  }
+};
+
+// フィルタ・ソート・ページ変更時に自動でAPI再呼び出し
+watch([statusFilters, sortKey, sortOrder, currentPage], () => {
+  fetchClientList();
+}, { immediate: true });
+
+/** データ変更後にリストを再取得 */
+const refreshList = () => fetchClientList();
 
 // --- インライン編集 ---
 const inlineEditId = ref<string | null>(null);
@@ -687,6 +685,7 @@ const commitInlineEdit = async (_row: Client) => {
   markDirty(`${clLabel}を変更`);
   markClean();
   cancelInlineEdit();
+  refreshList();
 };
 
 const commitFiscalEdit = (_row: Client) => {
@@ -821,6 +820,7 @@ const saveClient = async () => {
   closePanel();
   markDirty(panelMode.value === 'add' ? `「${data.companyName}」を追加` : `「${data.companyName}」を更新`);
   markClean();
+  refreshList();
 };
 
 // --- K13: 休眠・契約終了 ---
@@ -898,6 +898,7 @@ const commitStaffEdit = (_row: Client) => {
   markDirty('担当者を変更');
   markClean();
   cancelInlineEdit();
+  refreshList();
 };
 
 // --- ドロップダウン外クリックで閉じる ---

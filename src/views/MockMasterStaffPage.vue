@@ -215,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, nextTick } from 'vue';
+import { ref, reactive, computed, nextTick, watch } from 'vue';
 import {
   useStaff,
   emptyStaffForm,
@@ -267,31 +267,39 @@ const getSortIcon = (key: string) => {
   return sortOrder.value === 'asc' ? 'fa-solid fa-sort-up cm-sort-icon active' : 'fa-solid fa-sort-down cm-sort-icon active';
 };
 
-// --- フィルター＋ソート済みデータ ---
-const filteredRows = computed((): Staff[] => {
-  let rows = staffList.value.slice();
-  if (statusFilter.value !== 'all') {
-    rows = rows.filter(r => r.status === statusFilter.value);
-  }
-  const key = sortKey.value as keyof Staff;
-  rows.sort((a, b) => {
-    const va = a[key] ?? '';
-    const vb = b[key] ?? '';
-    if (va < vb) return sortOrder.value === 'asc' ? -1 : 1;
-    if (va > vb) return sortOrder.value === 'asc' ? 1 : -1;
-    return 0;
-  });
-  return rows;
-});
-
-// --- ページネーション ---
+// --- サーバー側フィルタ+ソート+ページネーション（API化済み） ---
+const filteredRows = ref<Staff[]>([]);
 const PAGE_SIZE = 20;
 const currentPage = ref(1);
-const totalPages = computed(() => Math.ceil(filteredRows.value.length / PAGE_SIZE));
-const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE;
-  return filteredRows.value.slice(start, start + PAGE_SIZE);
-});
+const totalPages = ref(1);
+const pagedRows = computed(() => filteredRows.value);
+
+/** POST /api/staff/list でサーバー側でフィルタ+ソート+ページネーション */
+const fetchStaffList = async () => {
+  const res = await fetch('/api/staff/list', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      statusFilter: statusFilter.value,
+      sortKey: sortKey.value,
+      sortOrder: sortOrder.value,
+      page: currentPage.value,
+      pageSize: PAGE_SIZE,
+    }),
+  });
+  const data = await res.json();
+  filteredRows.value = data.rows;
+  totalPages.value = data.totalPages;
+};
+
+// フィルタ・ソート・ページ変更時に自動でAPI再呼び出し
+watch([statusFilter, sortKey, sortOrder, currentPage], () => {
+  fetchStaffList();
+}, { immediate: true });
+
+// データ変更後（追加・更新・削除）にリストを再取得
+const refreshList = () => fetchStaffList();
+
 
 // --- パネル ---
 const panelMode = ref<'add' | 'edit' | null>(null);
@@ -330,6 +338,7 @@ const commitInlineEdit = () => {
   markDirty(`${label}を変更`);
   markClean();
   cancelInlineEdit();
+  refreshList();
 };
 
 const cancelInlineEdit = () => {
@@ -409,6 +418,7 @@ const saveStaff = async () => {
   closePanel();
   markDirty(panelMode.value === 'add' ? `「${data.name}」を追加` : `「${data.name}」を更新`);
   markClean();
+  refreshList();
 };
 
 // --- 停止・復元 ---

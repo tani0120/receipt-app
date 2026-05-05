@@ -5,7 +5,7 @@
         <!-- ヘッダー -->
         <div class="vm-header">
           <span class="vm-header-label">取引先外マスタ（NonVendor）</span>
-          <span class="vm-header-count">{{ filteredRows.length }}件</span>
+          <span class="vm-header-count">{{ totalCount }}件</span>
           <button class="vm-add-btn" @click="addEntry">
             <i class="fa-solid fa-plus"></i> 追加
           </button>
@@ -73,7 +73,7 @@
               >＞</span
             >
             <span class="vm-page-range"
-              >{{ pageStart }}~{{ pageEnd }} / {{ filteredRows.length }}件</span
+              >{{ pageStart }}~{{ pageEnd }} / {{ totalCount }}件</span
             >
           </div>
         </div>
@@ -341,6 +341,7 @@ async function executeDelete() {
     if (res.ok) {
       const idx = vendors.value.findIndex((v) => v.vendor_id === deleteTarget.value!.vendor_id);
       if (idx !== -1) vendors.value.splice(idx, 1);
+      refreshList();
     }
   } catch (e) {
     console.error('[NonVendorPage] 削除失敗:', e);
@@ -389,6 +390,7 @@ async function addEntry() {
       const created = await res.json() as Vendor;
       vendors.value.unshift(created);
       page.value = 1;
+      refreshList();
     }
   } catch (e) {
     console.error('[NonVendorPage] 追加失敗:', e);
@@ -422,57 +424,48 @@ function getSortIcon(key: string) {
   return sortAsc.value ? "fa-solid fa-sort-up sort-icon" : "fa-solid fa-sort-down sort-icon";
 }
 
-const filteredRows = computed(() => {
-  let rows = [...vendors.value];
+const filteredRows = ref<Vendor[]>([]);
+const totalCount = ref(0);
 
-  // 検索
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    rows = rows.filter(
-      (r) =>
-        r.company_name.toLowerCase().includes(q) ||
-        (normalizeVendorName(r.company_name) ?? "").includes(q) ||
-        r.aliases.some((a) => a.toLowerCase().includes(q)),
-    );
-  }
-
-  // 証票種類フィルタ
-  if (sourceFilter.value) {
-    rows = rows.filter((r) => r.source_category === sourceFilter.value);
-  }
-
-  // 入出金フィルタ
-  if (directionFilter.value) {
-    rows = rows.filter((r) => r.direction === directionFilter.value);
-  }
-
-  // 確定レベルフィルタ
-  if (levelFilter.value) {
-    rows = rows.filter((r) => r.level === levelFilter.value);
-  }
-
-  // ソート
-  if (sortKey.value) {
-    const key = sortKey.value;
-    const asc = sortAsc.value;
-    rows.sort((a, b) => {
-      const va = String(a[key] ?? "");
-      const vb = String(b[key] ?? "");
-      return asc ? va.localeCompare(vb, "ja") : vb.localeCompare(va, "ja");
-    });
-  }
-
-  return rows;
-});
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredRows.value.length / PAGE_SIZE)));
+const totalPages = ref(1);
 const pageStart = computed(() => (page.value - 1) * PAGE_SIZE + 1);
-const pageEnd = computed(() => Math.min(page.value * PAGE_SIZE, filteredRows.value.length));
-const pagedRows = computed(() => filteredRows.value.slice(pageStart.value - 1, pageEnd.value));
+const pageEnd = computed(() => Math.min(page.value * PAGE_SIZE, totalCount.value));
+const pagedRows = computed(() => filteredRows.value);
 
-watch(filteredRows, () => {
-  if (page.value > totalPages.value) page.value = 1;
-});
+/** POST /api/vendors/list でサーバー側でフィルタ+ソート+ページネーション */
+const fetchList = async () => {
+  try {
+    const res = await fetch('/api/vendors/list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        search: searchQuery.value || undefined,
+        sourceFilter: sourceFilter.value || undefined,
+        directionFilter: directionFilter.value || undefined,
+        levelFilter: levelFilter.value || undefined,
+        sortKey: sortKey.value || undefined,
+        sortOrder: sortAsc.value ? 'asc' : 'desc',
+        page: page.value,
+        pageSize: PAGE_SIZE,
+        type: 'non_vendor',
+      }),
+    });
+    const data = await res.json();
+    filteredRows.value = data.rows;
+    totalCount.value = data.totalCount;
+    totalPages.value = data.totalPages;
+  } catch (e) {
+    console.error('[NonVendorPage] リスト取得失敗:', e);
+  }
+};
+
+// フィルタ・ソート・ページ変更時に自動でAPI再呼び出し
+watch([searchQuery, sourceFilter, directionFilter, levelFilter, sortKey, sortAsc, page], () => {
+  fetchList();
+}, { immediate: true });
+
+/** データ変更後にリストを再取得 */
+const refreshList = () => fetchList();
 </script>
 
 <style scoped>

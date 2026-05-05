@@ -33,8 +33,18 @@ import {
   updateSharedEmail,
   createClientId,
 } from '../services/clientStore';
+import { getClientList } from '../services/clientListService';
 
 const app = new Hono();
+
+// ============================================================
+// POST /list — 顧問先一覧（フィルタ+ソート+ページネーション）
+// ============================================================
+app.post('/list', async (c) => {
+  const body = await c.req.json();
+  const result = getClientList(body);
+  return c.json(result);
+});
 
 // ============================================================
 // GET / — 全顧問先取得

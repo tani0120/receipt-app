@@ -25,8 +25,18 @@ import {
   getByEmail,
   getActiveStaff,
 } from '../services/staffStore';
+import { getStaffList } from '../services/staffListService';
 
 const app = new Hono();
+
+// ============================================================
+// POST /list — スタッフ一覧（フィルタ+ソート+ページネーション）
+// ============================================================
+app.post('/list', async (c) => {
+  const body = await c.req.json();
+  const result = getStaffList(body);
+  return c.json(result);
+});
 
 // ============================================================
 // GET / — 全スタッフ取得

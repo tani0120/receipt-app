@@ -5,7 +5,7 @@
         <!-- ヘッダー -->
         <div class="vm-header">
           <span class="vm-header-label">全社取引先マスタ（事務所共通）</span>
-          <span class="vm-header-count">{{ filteredRows.length }}件</span>
+          <span class="vm-header-count">{{ totalCount }}件</span>
           <button class="vm-add-btn" @click="addVendor">
             <i class="fa-solid fa-plus"></i> 追加
           </button>
@@ -49,7 +49,7 @@
               @click="page = p"
             >{{ p }}</span>
             <span class="vm-page-arrow" :class="{ disabled: page >= totalPages }" @click="page = Math.min(totalPages, page + 1)">＞</span>
-            <span class="vm-page-range">{{ pageStart }}~{{ pageEnd }} / {{ filteredRows.length }}件</span>
+            <span class="vm-page-range">{{ pageStart }}~{{ pageEnd }} / {{ totalCount }}件</span>
           </div>
         </div>
 
@@ -287,6 +287,7 @@ async function executeDelete() {
     if (res.ok) {
       const idx = vendors.value.findIndex(v => v.vendor_id === deleteTarget.value!.vendor_id);
       if (idx !== -1) vendors.value.splice(idx, 1);
+      refreshList();
     }
   } catch (e) {
     console.error('[VendorsPage] 削除失敗:', e);
@@ -337,6 +338,7 @@ async function addVendor() {
       const created = await res.json() as Vendor;
       vendors.value.unshift(created);
       page.value = 1;
+      refreshList();
     }
   } catch (e) {
     console.error('[VendorsPage] 追加失敗:', e);
@@ -365,55 +367,51 @@ function getSortIcon(key: string) {
   return sortAsc.value ? 'fa-solid fa-sort-up sort-icon' : 'fa-solid fa-sort-down sort-icon';
 }
 
-/** 業種一覧（データに存在するもののみ。ユニーク） */
-const uniqueVectors = computed(() => {
-  const set = new Set(vendors.value.map(v => v.vendor_vector).filter((v): v is VendorVector => v !== null));
-  return [...set].sort() as VendorVector[];
-});
+/** 業種一覧（API応答から取得） */
+const uniqueVectors = ref<string[]>([]);
 
-const filteredRows = computed(() => {
-  let rows = [...vendors.value];
+const filteredRows = ref<Vendor[]>([]);
+const totalCount = ref(0);
 
-  // 検索
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    rows = rows.filter(r =>
-      r.company_name.toLowerCase().includes(q) ||
-      (normalizeVendorName(r.company_name) ?? '').includes(q) ||
-      r.aliases.some(a => a.toLowerCase().includes(q))
-    );
-  }
-
-  // 業種フィルタ
-  if (vectorFilter.value) {
-    rows = rows.filter(r => r.vendor_vector === vectorFilter.value);
-  }
-
-  // 入出金フィルタ
-  if (directionFilter.value) {
-    rows = rows.filter(r => r.direction === directionFilter.value);
-  }
-
-  // ソート
-  if (sortKey.value) {
-    const key = sortKey.value;
-    const asc = sortAsc.value;
-    rows.sort((a, b) => {
-      const va = String(a[key] ?? '');
-      const vb = String(b[key] ?? '');
-      return asc ? va.localeCompare(vb, 'ja') : vb.localeCompare(va, 'ja');
-    });
-  }
-
-  return rows;
-});
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredRows.value.length / PAGE_SIZE)));
+const totalPages = ref(1);
 const pageStart = computed(() => (page.value - 1) * PAGE_SIZE + 1);
-const pageEnd = computed(() => Math.min(page.value * PAGE_SIZE, filteredRows.value.length));
-const pagedRows = computed(() => filteredRows.value.slice(pageStart.value - 1, pageEnd.value));
+const pageEnd = computed(() => Math.min(page.value * PAGE_SIZE, totalCount.value));
+const pagedRows = computed(() => filteredRows.value);
 
-watch(filteredRows, () => { if (page.value > totalPages.value) page.value = 1; });
+/** POST /api/vendors/list でサーバー側でフィルタ+ソート+ページネーション */
+const fetchVendorList = async () => {
+  try {
+    const res = await fetch('/api/vendors/list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        search: searchQuery.value || undefined,
+        vectorFilter: vectorFilter.value || undefined,
+        directionFilter: directionFilter.value || undefined,
+        sortKey: sortKey.value || undefined,
+        sortOrder: sortAsc.value ? 'asc' : 'desc',
+        page: page.value,
+        pageSize: PAGE_SIZE,
+        type: 'vendor',
+      }),
+    });
+    const data = await res.json();
+    filteredRows.value = data.rows;
+    totalCount.value = data.totalCount;
+    totalPages.value = data.totalPages;
+    uniqueVectors.value = data.uniqueVectors ?? [];
+  } catch (e) {
+    console.error('[VendorsPage] リスト取得失敗:', e);
+  }
+};
+
+// フィルタ・ソート・ページ・検索変更時に自動でAPI再呼び出し
+watch([searchQuery, vectorFilter, directionFilter, sortKey, sortAsc, page], () => {
+  fetchVendorList();
+}, { immediate: true });
+
+/** データ変更後にリストを再取得 */
+const refreshList = () => fetchVendorList();
 </script>
 
 <style scoped>

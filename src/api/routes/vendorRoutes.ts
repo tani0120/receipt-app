@@ -18,8 +18,18 @@ import { Hono } from 'hono'
 import { apiError, apiCatchError } from '../helpers/apiError'
 import { 未検出 } from '../helpers/apiMessages'
 import * as vendorStore from '../services/vendorStore'
+import { getVendorList } from '../services/vendorListService'
 
 const app = new Hono()
+
+// ============================================================
+// POST /list — 取引先一覧（フィルタ+ソート+ページネーション）
+// ============================================================
+app.post('/list', async (c) => {
+  const body = await c.req.json()
+  const result = getVendorList(body)
+  return c.json(result)
+})
 
 // ============================================================
 // GET / — 全件取得
