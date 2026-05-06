@@ -1,12 +1,12 @@
-import { supabase } from '../supabase/client';
-import type { Document, DocumentStatus } from '../types/document.types';
+import { getSupabase } from './supabase';
+import type { Document, DocumentStatus } from '../../types/document.types';
 
 export const documentRepository = {
     /**
      * ステータスでDocument一覧取得
      */
     async getByStatus(status: DocumentStatus): Promise<Document[]> {
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('receipts') // DBテーブル名は'receipts'のまま（DB互換維持）
             .select('*')
             .eq('status', status);
@@ -24,7 +24,7 @@ export const documentRepository = {
         newStatus: DocumentStatus,
         actor: string
     ): Promise<void> {
-        const { error } = await supabase.rpc('update_receipt_status', { // RPC名はDB側の定義のため変更不可
+        const { error } = await getSupabase().rpc('update_receipt_status', { // RPC名はDB側の定義のため変更不可
             p_id: id,
             p_new_status: newStatus,
             p_actor: actor
@@ -42,7 +42,7 @@ export const documentRepository = {
         actor: string
     ): Promise<void> {
         // 1. confirmed_journal を設定
-        const { error: updateError } = await supabase
+        const { error: updateError } = await getSupabase()
             .from('receipts') // DBテーブル名は'receipts'のまま（DB互換維持）
             .update({ confirmed_journal: journal })
             .eq('id', id);

@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { apiError, apiCatchError } from '../helpers/apiError'
 import { 仕訳必須 } from '../helpers/apiMessages'
 import { z } from 'zod'
-import { documentRepository } from '../../database/repositories/documentRepository'
+import { documentRepository } from '../../repositories/supabase/document.repository.supabase'
 
 const app = new Hono()
 
