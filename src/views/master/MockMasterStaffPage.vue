@@ -32,6 +32,7 @@
               <col :style="{ width: staffColWidths['uuid'] + 'px' }">
               <col :style="{ width: staffColWidths['role'] + 'px' }">
               <col :style="{ width: staffColWidths['name'] + 'px' }">
+              <col :style="{ width: staffColWidths['nameRomaji'] + 'px' }">
               <col style="width: auto;">
             </colgroup>
             <thead>
@@ -51,6 +52,10 @@
                 <th class="sortable relative" @click="sortBy('name')">
                   名前 <i :class="getSortIcon('name')"></i>
                   <div class="resize-handle" @mousedown.stop="onStaffResizeStart('name', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortBy('nameRomaji')">
+                  ローマ字 <i :class="getSortIcon('nameRomaji')"></i>
+                  <div class="resize-handle" @mousedown.stop="onStaffResizeStart('nameRomaji', $event)"></div>
                 </th>
                 <th class="sortable" @click="sortBy('email')">
                   メールアドレス <i :class="getSortIcon('email')"></i>
@@ -89,13 +94,17 @@
                   <input v-if="inlineEditId === row.uuid && inlineEditField === 'name'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit" @keydown.enter="commitInlineEdit" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.name }}</span>
                 </td>
+                <td class="cm-romaji td-editable" @dblclick.stop="startInlineEdit(row, 'nameRomaji', $event)">
+                  <input v-if="inlineEditId === row.uuid && inlineEditField === 'nameRomaji'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit" @keydown.enter="commitInlineEdit" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <span v-else>{{ row.nameRomaji || '—' }}</span>
+                </td>
                 <td class="cm-email td-editable" @dblclick.stop="startInlineEdit(row, 'email', $event)">
                   <input v-if="inlineEditId === row.uuid && inlineEditField === 'email'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit" @keydown.enter="commitInlineEdit" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.email }}</span>
                 </td>
               </tr>
               <tr v-if="pagedRows.length === 0">
-                <td colspan="5" class="cm-empty">該当するスタッフがいません</td>
+                <td colspan="6" class="cm-empty">該当するスタッフがいません</td>
               </tr>
             </tbody>
           </table>
@@ -148,6 +157,10 @@
               <div class="cm-field">
                 <label class="cm-label">名前 <span class="cm-required">*</span></label>
                 <input type="text" v-model="panelForm.name" class="cm-input" placeholder="山田 太郎">
+              </div>
+              <div class="cm-field">
+                <label class="cm-label">ローマ字名 <span class="cm-hint">※メンション検索用</span></label>
+                <input type="text" v-model="panelForm.nameRomaji" class="cm-input" placeholder="yamada taro">
               </div>
               <div class="cm-field">
                 <label class="cm-label">メールアドレス <span class="cm-required">*</span> <span class="cm-hint">※ログインIDとして使用</span></label>
@@ -233,12 +246,13 @@ const staffDefaultWidths: Record<string, number> = {
   status: 80,
   uuid: 160,
   role: 80,
-  name: 200,
+  name: 160,
+  nameRomaji: 150,
 };
 const { columnWidths: staffColWidths, onResizeStart: onStaffResizeStart } = useColumnResize('master-staff', staffDefaultWidths);
 
 // --- スタッフデータ（composableから取得） ---
-const { staffList, addStaff, updateStaff } = useStaff();
+const { addStaff, updateStaff } = useStaff();
 
 // モーダルヘルパー
 const modal = useModalHelper();
@@ -312,7 +326,7 @@ const inlineEditField = ref<string | null>(null);
 const inlineEditValue = ref('');
 
 /** インライン編集対象フィールド（Staff型のキーに限定） */
-type InlineEditableField = 'status' | 'role' | 'name' | 'email';
+type InlineEditableField = 'status' | 'role' | 'name' | 'nameRomaji' | 'email';
 
 const startInlineEdit = (row: Staff, field: InlineEditableField, event: Event) => {
   event.stopPropagation();
@@ -333,7 +347,7 @@ const commitInlineEdit = () => {
   }
   // composable経由でサーバーに永続化
   updateStaff(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Staff>);
-  const fieldLabels: Record<string, string> = { status: 'ステータス', role: '権限', name: '名前', email: 'メール' };
+  const fieldLabels: Record<string, string> = { status: 'ステータス', role: '権限', name: '名前', nameRomaji: 'ローマ字', email: 'メール' };
   const label = fieldLabels[inlineEditField.value] ?? inlineEditField.value;
   markDirty(`${label}を変更`);
   markClean();
@@ -371,6 +385,7 @@ const openAddPanel = () => {
 const openEditPanel = (row: Staff) => {
   Object.assign(panelForm, {
     name: row.name,
+    nameRomaji: row.nameRomaji ?? '',
     email: row.email,
     password: '',
     role: row.role,
@@ -404,6 +419,7 @@ const saveStaff = async () => {
   const data: Staff = {
     uuid,
     name: panelForm.name,
+    nameRomaji: panelForm.nameRomaji || undefined,
     email: panelForm.email,
     role: panelForm.role,
     status: panelForm.status,
@@ -472,6 +488,7 @@ const restoreStaff = () => {
 .cm-table tbody tr.row-inactive { opacity: 0.5; background: #f1f5f9; }
 .cm-staff-name { font-weight: 600; }
 .cm-email { color: #64748b; }
+.cm-romaji { color: #64748b; font-size: 11px; }
 .cm-uuid { font-family: 'Menlo', monospace; font-size: 10px; color: #94a3b8; letter-spacing: 0.5px; }
 .cm-empty { text-align: center; color: #94a3b8; padding: 40px 12px !important; }
 .cm-sort-icon { font-size: 10px; color: #94a3b8; margin-left: 2px; }

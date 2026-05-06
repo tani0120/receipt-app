@@ -1,12 +1,11 @@
 /**
- * useNotificationCenter.ts — 通知センターcomposable
+ * useNotificationCenter.ts — 通知センターcomposable（API完全依存版）
  *
  * 責務: ナビバーの🔔アイコン + 通知センタードロワーの状態管理。
- *       モジュールスコープのrefで状態を保持し、画面遷移しても維持される。
- *       サーバーAPI（/api/notifications）経由でJSON永続化。
- *       ページリロードしても通知は消えない。
+ *       サーバーAPI（/api/notifications）経由でフィルタ済み通知を取得。
+ *       フロント側にフィルタロジックは持たない。
  *
- * 型定義: AppNotification（repositories/types.ts）— Supabase移行を見据えた恒久的型
+ * 型定義: AppNotification（repositories/types.ts）
  *
  * ルール:
  *   - composableにロジックは入れない（状態の出し入れのみ）
@@ -15,36 +14,53 @@
 
 import { ref, computed } from 'vue'
 import type { AppNotification } from '@/repositories/types'
+import { useCurrentUser } from '@/composables/useCurrentUser'
 
 // ============================================================
 // § モジュールスコープ（グローバルシングルトン）
 // ============================================================
 
-/** 通知一覧（新しい順） */
+/** 自分宛の通知一覧（サーバーからフィルタ済みで取得） */
 const notifications = ref<AppNotification[]>([])
 
 /** 通知センタードロワーの開閉状態 */
 const isOpen = ref(false)
 
-/** 通知ID生成用カウンタ */
-let notificationIdCounter = 0
-
 /** 初回ロード済みフラグ（重複fetch防止） */
 let initialLoadDone = false
+
+// ============================================================
+// § ログインユーザーID取得
+// ============================================================
+
+let _currentStaffId: (() => string | null) | null = null
+function getCurrentStaffId(): string | null {
+  if (!_currentStaffId) {
+    try {
+      const { currentStaffId } = useCurrentUser()
+      _currentStaffId = () => currentStaffId.value
+    } catch { return null }
+  }
+  return _currentStaffId()
+}
 
 // ============================================================
 // § API通信
 // ============================================================
 
-/** サーバーから通知一覧を取得してrefに反映 */
+/** サーバーから自分宛の通知一覧を取得してrefに反映 */
 async function fetchNotifications(): Promise<void> {
+  const staffId = getCurrentStaffId()
   try {
-    const res = await fetch('/api/notifications')
+    const url = staffId
+      ? `/api/notifications?staffId=${encodeURIComponent(staffId)}`
+      : '/api/notifications'
+    const res = await fetch(url)
     if (!res.ok) return
     const data = await res.json() as { notifications: AppNotification[] }
     notifications.value = data.notifications
   } catch {
-    // ネットワークエラーはサイレントに無視（メモリ内の通知はそのまま残る）
+    // ネットワークエラーはサイレントに無視
   }
 }
 
@@ -55,129 +71,150 @@ async function loadIfNeeded(): Promise<void> {
   await fetchNotifications()
 }
 
-/** サーバーに通知を永続化（fire-and-forget） */
-function persistNotification(notification: AppNotification): void {
-  fetch('/api/notifications', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(notification),
-  }).catch(() => { /* サイレント */ })
-}
-
 // ============================================================
 // § 導出プロパティ
 // ============================================================
 
 /** 未読通知件数（🔔バッジ表示用） */
-const unreadCount = computed(() =>
-  notifications.value.filter(n => !n.isRead).length
-)
+const unreadCount = computed(() => {
+  const myId = getCurrentStaffId()
+  if (!myId) return 0
+  return notifications.value.filter(n => !n.readBy.includes(myId)).length
+})
 
 // ============================================================
 // § 公開関数
 // ============================================================
 
 /**
- * 通知を追加する
+ * メンション通知をサーバーAPIで発行する
  *
- * @param options - 通知の内容
- * @returns 通知ID
+ * サーバー側でメンション検出→通知作成。フロントはAPIを呼ぶだけ。
  */
-function addNotification(options: Omit<AppNotification, 'id' | 'isRead' | 'createdAt'>): string {
-  const id = `notif-${++notificationIdCounter}-${Date.now()}`
+async function sendMentionNotification(params: {
+  commentBody: string
+  authorName: string
+  authorStaffId: string
+  clientId: string
+  clientName: string
+}): Promise<void> {
+  try {
+    await fetch('/api/notifications/mention', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+    // 通知発行後に自分の通知リストを再取得（自分宛に通知が来たかもしれない）
+    await fetchNotifications()
+  } catch (err) {
+    console.error('[通知] メンション通知API呼び出し失敗:', err)
+  }
+}
+
+/**
+ * 汎用通知を追加する（移行完了等の全体通知用）
+ * サーバーに永続化 + ローカルrefに追加
+ */
+async function addNotification(options: Omit<AppNotification, 'id' | 'readBy' | 'createdAt'>): Promise<string> {
+  const id = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 
   const notification: AppNotification = {
     ...options,
     id,
-    isRead: false,
+    readBy: [],
     createdAt: new Date().toISOString(),
   }
 
-  // 先頭に追加（新しい順）
+  // ローカルrefに即追加
   notifications.value.unshift(notification)
 
-  // 最大50件に制限（古いものから削除）
-  if (notifications.value.length > 50) {
-    notifications.value = notifications.value.slice(0, 50)
-  }
-
   // サーバーに永続化（fire-and-forget）
-  persistNotification(notification)
+  fetch('/api/notifications', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(notification),
+  }).catch(() => { /* サイレント */ })
 
   return id
 }
 
 /**
  * 通知を既読にする
- *
- * @param id - 通知ID
  */
 function markAsRead(id: string): void {
+  const myId = getCurrentStaffId()
+  if (!myId) return
   const notification = notifications.value.find(n => n.id === id)
-  if (notification) {
-    notification.isRead = true
-    // サーバーに反映（fire-and-forget）
-    fetch(`/api/notifications/${encodeURIComponent(id)}/read`, {
-      method: 'PUT',
-    }).catch(() => { /* サイレント */ })
+  if (notification && !notification.readBy.includes(myId)) {
+    notification.readBy.push(myId)
   }
+  // サーバーに反映
+  fetch(`/api/notifications/${encodeURIComponent(id)}/read`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ staffId: myId }),
+  }).catch(() => { /* サイレント */ })
 }
 
 /**
  * 全通知を既読にする
  */
 function markAllAsRead(): void {
+  const myId = getCurrentStaffId()
+  if (!myId) return
   for (const n of notifications.value) {
-    n.isRead = true
+    if (!n.readBy.includes(myId)) {
+      n.readBy.push(myId)
+    }
   }
-  // サーバーに反映（fire-and-forget）
+  // サーバーに反映
   fetch('/api/notifications/read-all', {
     method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ staffId: myId }),
   }).catch(() => { /* サイレント */ })
 }
 
-/**
- * 通知センタードロワーを開く
- */
-function openDrawer(): void {
-  isOpen.value = true
-}
-
-/**
- * 通知センタードロワーを閉じる
- */
-function closeDrawer(): void {
-  isOpen.value = false
-}
-
-/**
- * 通知センタードロワーの開閉を切り替える
- */
-function toggleDrawer(): void {
-  isOpen.value = !isOpen.value
-}
+function openDrawer(): void { isOpen.value = true }
+function closeDrawer(): void { isOpen.value = false }
+function toggleDrawer(): void { isOpen.value = !isOpen.value }
 
 // ============================================================
 // § composable export
 // ============================================================
 
+/**
+ * 通知を削除する
+ */
+function deleteNotification(id: string): void {
+  notifications.value = notifications.value.filter(n => n.id !== id)
+  // サーバーに反映
+  fetch(`/api/notifications/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  }).catch(() => { /* サイレント */ })
+}
+
 export function useNotificationCenter() {
-  // 初回呼び出し時にサーバーから通知を取得（非同期だが待たない）
+  // 初回呼び出し時にサーバーから通知を取得
   loadIfNeeded()
 
   return {
-    /** 通知一覧（新しい順） */
+    /** 自分宛の通知一覧（サーバーからフィルタ済み） */
     notifications,
     /** 未読通知件数 */
     unreadCount,
     /** ドロワー開閉状態 */
     isOpen,
-    /** 通知を追加する */
+    /** メンション通知をサーバーAPIで発行 */
+    sendMentionNotification,
+    /** 汎用通知を追加（移行完了等） */
     addNotification,
     /** 通知を既読にする */
     markAsRead,
     /** 全通知を既読にする */
     markAllAsRead,
+    /** 通知を削除する */
+    deleteNotification,
     /** ドロワーを開く */
     openDrawer,
     /** ドロワーを閉じる */

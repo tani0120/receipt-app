@@ -24,6 +24,7 @@ export type { Staff, StaffRole, StaffStatus, StaffForm }
 export function emptyStaffForm(): StaffForm {
   return {
     name: '',
+    nameRomaji: '',
     email: '',
     password: '',
     role: 'general',
@@ -36,7 +37,7 @@ export function generateStaffUuid(): string {
   let maxNum = 0
   for (const s of staffList.value) {
     const match = s.uuid.match(/^staff-(\d+)$/)
-    if (match) {
+    if (match && match[1]) {
       const num = parseInt(match[1], 10)
       if (num > maxNum) maxNum = num
     }
@@ -154,7 +155,8 @@ export function useStaff() {
   function updateStaff(uuid: string, data: Partial<Staff>): void {
     const idx = staffList.value.findIndex(s => s.uuid === uuid)
     if (idx >= 0) {
-      staffList.value[idx] = { ...staffList.value[idx], ...data, uuid }
+      const current = staffList.value[idx]!
+      staffList.value[idx] = { ...current, ...data, uuid }
     }
     lastError.value = null
     apiPut(`/${uuid}`, data).catch(err => {

@@ -326,6 +326,18 @@ export const routes: RouteRecordRaw[] = [
     name: 'MasterClients',
     component: () => import('@/views/master/MockMasterClientsPage.vue')
   },
+  // 顧問先 新規追加（/newは/:clientIdより先に定義してマッチ優先）
+  {
+    path: '/master/clients/new',
+    name: 'ClientNew',
+    component: () => import('@/views/master/ClientEditPage.vue')
+  },
+  // 顧問先 編集ページ
+  {
+    path: '/master/clients/:clientId',
+    name: 'ClientEdit',
+    component: () => import('@/views/master/ClientEditPage.vue')
+  },
   // 旧パスリダイレクト（/clients/list → /master/clients）
   { path: '/clients/list', redirect: '/master/clients' },
   // /master ハブ（勘定科目マスタ + 税区分マスタの分岐ページ）

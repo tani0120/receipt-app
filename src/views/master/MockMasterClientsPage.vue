@@ -19,7 +19,7 @@
             <span class="cm-page-info">全{{ filteredRows.length }}件</span>
           </div>
           <div class="cm-toolbar-right">
-            <button class="cm-action-btn primary" @click="openAddPanel">
+            <button class="cm-action-btn primary" @click="$router.push('/master/clients/new')">
               <i class="fa-solid fa-plus"></i> 新規追加
             </button>
           </div>
@@ -47,8 +47,8 @@
             </colgroup>
             <thead>
               <tr>
-                <th class="sortable relative" @click="sortBy('status')">
-                  ステータス <i :class="getSortIcon('status')"></i>
+                <th class="sortable relative cm-th-status" @click="sortBy('status')">
+                  <i :class="getSortIcon('status')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('status', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortBy('clientId')">
@@ -106,18 +106,12 @@
                 v-for="row in pagedRows"
                 :key="row.clientId"
                 :class="{ 'row-inactive': row.status === 'inactive', 'row-suspension': row.status === 'suspension' }"
-                @click="delayedOpenEditPanel(row)"
               >
-                <!-- ステータス: select -->
-                <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'status', $event)">
-                  <select v-if="inlineEditId === row.clientId && inlineEditField === 'status'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <option value="active">稼働中</option>
-                    <option value="suspension">休眠中</option>
-                    <option value="inactive">契約終了</option>
-                  </select>
-                  <span v-else class="cm-status-badge" :class="'status-' + row.status">
-                    {{ row.status === 'active' ? '稼働中' : row.status === 'suspension' ? '休眠中' : '契約終了' }}
-                  </span>
+                <!-- ステータス: 鉛筆アイコン（クリックで編集ページ遷移） -->
+                <td class="cm-td-status">
+                  <div class="cm-status-icon-group" @click.stop="$router.push(`/master/clients/${row.clientId}`)">
+                    <i class="fa-solid fa-pen cm-status-pen" :class="'pen-' + row.status"></i>
+                  </div>
                 </td>
                 <td class="cm-client-id">{{ row.clientId }}</td>
                 <td class="cm-code td-editable" @dblclick.stop="startInlineEdit(row, 'threeCode', $event)">
@@ -643,7 +637,6 @@ const startInlineEdit = (row: Client, field: InlineEditableField, event: Event) 
   if (field === 'fiscalMonth') {
     inlineEditFiscalDay.value = row.fiscalDay ?? '末日';
   }
-  if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
   nextTick(() => {
     const el = document.querySelector('.cm-inline-input, .cm-inline-select') as HTMLElement;
     if (el) el.focus();
@@ -725,41 +718,6 @@ watch(() => panelForm.type, (newType) => {
   }
 });
 
-// --- クリック/ダブルクリック競合回避 ---
-let clickTimer: ReturnType<typeof setTimeout> | null = null;
-
-const delayedOpenEditPanel = (row: Client) => {
-  if (inlineEditId.value) return; // インライン編集中はパネルを開かない
-  if (clickTimer) clearTimeout(clickTimer);
-  clickTimer = setTimeout(() => {
-    openEditPanel(row);
-    clickTimer = null;
-  }, 250);
-};
-
-const openAddPanel = () => {
-  Object.assign(panelForm, emptyClientForm());
-  panelStaffId.value = '';
-  panelSharedEmail.value = '';
-  panelSharedChatUrl.value = '';
-  panelMode.value = 'add';
-  editingId.value = null;
-};
-
-const openEditPanel = (row: Client) => {
-  const { clientId: _clientId, contact, ...rest } = row;
-  Object.assign(panelForm, {
-    ...rest,
-    contactType: contact.type,
-    contactValue: contact.value,
-  });
-  // Client.staffIdから直接取得
-  panelStaffId.value = row.staffId ?? '';
-  panelSharedEmail.value = row.sharedEmail ?? '';
-  panelSharedChatUrl.value = row.sharedChatUrl ?? '';
-  panelMode.value = 'edit';
-  editingId.value = row.clientId;
-};
 
 const closePanel = () => {
   panelMode.value = null;
@@ -882,7 +840,6 @@ const startStaffInlineEdit = (row: Client, event: Event) => {
   inlineEditField.value = 'staffName';
   // Client.staffIdから直接取得
   inlineEditValue.value = row.staffId ?? '';
-  if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
   nextTick(() => {
     const el = document.querySelector('.cm-inline-select') as HTMLElement;
     if (el) el.focus();
@@ -1006,11 +963,29 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 .cm-sort-icon { font-size: 10px; color: #94a3b8; margin-left: 2px; }
 .cm-sort-icon.active { color: #3b82f6; }
 
-/* ステータスバッジ */
+/* ステータスバッジ（レガシー互換。他ページで使用） */
 .cm-status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
 .status-active { background: #dcfce7; color: #166534; }
 .status-inactive { background: #fee2e2; color: #991b1b; }
 .status-suspension { background: #fef3c7; color: #92400e; }
+
+/* ステータス列: ヘッダー空白+中央寄せ */
+.cm-th-status { text-align: center; min-width: 40px; }
+.cm-td-status { text-align: center; padding: 0 !important; vertical-align: middle; }
+
+/* ステータスドットアイコン */
+.cm-status-icon-group {
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  transition: background 0.15s;
+}
+.cm-status-icon-group:hover { background: #f3f4f6; }
+
+/* ステータスペンアイコン（色でステータス表現） */
+.cm-status-pen { font-size: 13px; transition: opacity 0.15s; }
+.pen-active { color: #22c55e; }
+.pen-suspension { color: #f59e0b; }
+.pen-inactive { color: #ef4444; }
 .row-suspension { opacity: 0.6; background: #fefce8; }
 
 /* 決算日セレクトグループ */

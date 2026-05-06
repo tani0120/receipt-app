@@ -38,7 +38,7 @@
           <div
             v-for="item in notifications"
             :key="item.id"
-            :class="['nc-item', { 'nc-item--unread': !item.isRead }]"
+            :class="['nc-item', { 'nc-item--unread': !isRead(item) }]"
             @click="handleItemClick(item)"
           >
             <!-- 種別アイコン -->
@@ -64,8 +64,13 @@
               <span>{{ item.action.label }}</span>
             </button>
 
+            <!-- 削除ボタン -->
+            <button class="nc-item-delete" @click.stop="handleDelete(item.id)" title="削除">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+
             <!-- 未読インジケータ -->
-            <div v-if="!item.isRead" class="nc-item-dot"></div>
+            <div v-if="!isRead(item)" class="nc-item-dot"></div>
           </div>
         </div>
       </div>
@@ -83,21 +88,36 @@ const {
   isOpen,
   markAsRead,
   markAllAsRead,
+  deleteNotification,
   closeDrawer,
 } = useNotificationCenter()
+
+import { useCurrentUser } from '@/composables/useCurrentUser'
+const { currentStaffId } = useCurrentUser()
+
+/** 既読判定（readByに自分のIDが含まれているか） */
+function isRead(item: AppNotification): boolean {
+  return currentStaffId.value ? item.readBy.includes(currentStaffId.value) : false
+}
 
 /** 種別→アイコンマッピング */
 const typeIconMap: Record<string, string> = {
   migration_complete: 'fa-solid fa-circle-check',
   migration_failed: 'fa-solid fa-circle-xmark',
   batch_complete: 'fa-solid fa-list-check',
+  mention: 'fa-solid fa-at',
   error: 'fa-solid fa-triangle-exclamation',
 }
 
-/** 通知クリック時: 既読にする */
+/** 通知クリック時: 既読にする + 対象ページへ遷移 */
 function handleItemClick(item: AppNotification): void {
-  if (!item.isRead) {
+  if (!isRead(item)) {
     markAsRead(item.id)
+  }
+  // 対象ページへ遷移
+  if (item.clientId) {
+    closeDrawer()
+    window.location.hash = `#/master/clients/${item.clientId}`
   }
 }
 
@@ -115,6 +135,11 @@ function handleAction(item: AppNotification): void {
     // ページ遷移の場合
     window.location.hash = item.action.url
   }
+}
+
+/** 削除ボタンクリック */
+function handleDelete(id: string): void {
+  deleteNotification(id)
 }
 
 /** 経過時間表示（「たった今」「5分前」「1時間前」等） */
@@ -327,6 +352,11 @@ function formatTime(iso: string): string {
   color: #d97706;
 }
 
+.nc-item-icon--mention {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
 /* ===== 本文 ===== */
 .nc-item-body {
   flex: 1;
@@ -386,6 +416,29 @@ function formatTime(iso: string): string {
   height: 6px;
   border-radius: 50%;
   background: #3b82f6;
+}
+
+/* ===== 削除ボタン ===== */
+.nc-item-delete {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  color: #cbd5e1;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  align-self: center;
+}
+
+.nc-item-delete:hover {
+  color: #ef4444;
+  background: #fef2f2;
 }
 
 /* ===== アニメーション ===== */

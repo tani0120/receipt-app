@@ -4,12 +4,10 @@ import { useStaff } from '@/features/staff-management/composables/useStaff'
 /**
  * 現在のユーザー情報を提供するComposable
  *
- * Phase A: useStaff().activeStaffから動的にスタッフリストを取得
+ * Phase A: /api/auth/current, /api/auth/switch でサーバー管理
  *          UIドロップダウンでログインスタッフを切替可能
- *          選択状態はlocalStorageに永続化（ページリロードでも維持）
- * Phase B: supabase.auth.getUser() に差し替え予定
- *   → 認証基盤はSupabase Authに移行済み（src/utils/auth.ts）
- *   → 画面仕様確定後に実装
+ *          ローカルキャッシュ（localStorage）で即時反映 + サーバーfire-and-forget
+ * Phase B: supabase.auth.getUser() に差し替え予定（サーバー側のみ変更）
  *
  * 準拠: DL-042（STAFF_LISTハードコード廃止）
  */
@@ -18,6 +16,9 @@ const STORAGE_KEY = 'sugu-suru:current-staff-uuid'
 
 // モジュールスコープ（全composable呼び出しで共有）
 const selectedUuid = ref<string | null>(localStorage.getItem(STORAGE_KEY))
+
+/** 初回サーバー同期済みフラグ */
+let serverSynced = false
 
 export function useCurrentUser() {
   const { activeStaff, staffList: allStaff } = useStaff()
@@ -47,20 +48,51 @@ export function useCurrentUser() {
 
   /**
    * ログインスタッフを切り替える
+   * ref即反映 + サーバーfire-and-forget（useStaffと同パターン）
    * @param staffUuid - 切替先のスタッフUUID
    */
   function setCurrentUser(staffUuid: string): void {
+    // ref即反映
     selectedUuid.value = staffUuid
     localStorage.setItem(STORAGE_KEY, staffUuid)
     console.log(`[useCurrentUser] スタッフ切替: ${staffUuid}`)
+    // サーバーfire-and-forget
+    fetch('/api/auth/switch', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staffId: staffUuid }),
+    }).catch(err => {
+      console.error('[useCurrentUser] サーバー同期失敗:', err)
+    })
   }
 
   // APIロード完了後にデフォルト設定（初回のみ）
   watch(activeStaff, (list) => {
-    if (!selectedUuid.value && list.length > 0) {
+    if (!selectedUuid.value && list.length > 0 && list[0]) {
       setCurrentUser(list[0].uuid)
     }
   })
+
+  // 初回サーバー同期（fire-and-forget）
+  if (!serverSynced) {
+    serverSynced = true
+    fetch('/api/auth/current')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.staffId && !selectedUuid.value) {
+          selectedUuid.value = data.staffId
+          localStorage.setItem(STORAGE_KEY, data.staffId)
+        } else if (selectedUuid.value) {
+          // ローカルの選択をサーバーに同期
+          fetch('/api/auth/switch', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ staffId: selectedUuid.value }),
+          }).catch(() => { /* サイレント */ })
+        }
+      })
+      .catch(() => { /* サイレント */ })
+  }
 
   return {
     userName,

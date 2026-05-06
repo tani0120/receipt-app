@@ -40,6 +40,8 @@ export type StaffStatus = 'active' | 'inactive'
 export interface Staff {
   uuid: string
   name: string
+  /** ローマ字名（メンション検索用） */
+  nameRomaji?: string
   email: string
   // passwordはサーバーサイドのみ。フロントエンドには返らない
   role: StaffRole
@@ -49,6 +51,8 @@ export interface Staff {
 /** パネルフォーム用型（Staffからuuidを除外、新規登録時のみパスワード入力） */
 export interface StaffForm {
   name: string
+  /** ローマ字名（メンション検索用） */
+  nameRomaji: string
   email: string
   password: string    // 新規登録・パスワード変更時のみ使用
   role: StaffRole
@@ -567,6 +571,7 @@ export type NotificationType =
   | 'migration_failed'      // 移行失敗
   | 'batch_complete'        // バッチ処理完了（将来拡張）
   | 'error'                 // エラー通知（将来拡張）
+  | 'mention'               // @メンション通知
 
 /**
  * アプリ通知（通知センターに表示される1件の通知）
@@ -584,8 +589,8 @@ export interface AppNotification {
   title: string
   /** 通知本文（例: 「5件移行完了。1件失敗。」） */
   body: string
-  /** 既読フラグ */
-  isRead: boolean
+  /** 既読スタッフIDリスト（スタッフごとの既読管理） */
+  readBy: string[]
   /** 作成日時（ISO 8601） */
   createdAt: string
   /** 関連する顧問先ID（任意。顧問先に紐づく通知の場合） */
@@ -602,6 +607,8 @@ export interface AppNotification {
     /** 遷移先URL or APIエンドポイント */
     url: string
   }
+  /** 通知の宛先スタッフUUID（メンション等、特定ユーザー宛の通知。未設定=全体通知） */
+  targetStaffId?: string
 }
 
 // ============================================================

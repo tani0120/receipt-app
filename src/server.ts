@@ -85,6 +85,10 @@ app.route('/api/doc-store', docStoreRoute)
 import staffRoutes from './api/routes/staffRoutes'
 app.route('/api/staff', staffRoutes)
 
+// Auth API: ログインスタッフ管理（DL-042）
+import authRoutes from './api/routes/authRoutes'
+app.route('/api/auth', authRoutes)
+
 // Client API: 顧問先JSON永続化（DL-042）
 import clientRoutes from './api/routes/clientRoutes'
 app.route('/api/clients', clientRoutes)
