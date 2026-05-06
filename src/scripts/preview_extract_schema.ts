@@ -36,7 +36,7 @@ import {
   type TaxCategory,
   type AccountCode,
   HandwrittenFlag,
-} from '../domain/types/journal';
+} from '../types/domain-journal';
 export type { VoucherType, PaymentMethod, TaxCategory, AccountCode };
 export { HandwrittenFlag };
 

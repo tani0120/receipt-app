@@ -12,7 +12,7 @@
 
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
-import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from '@/services/receiptService'
+import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from '@/api/services/receiptService'
 import { errorGuideMessage } from '@/shared/validationMessages'
 import { useDocuments } from '@/composables/useDocuments'
 import { useCurrentUser } from '@/composables/useCurrentUser'

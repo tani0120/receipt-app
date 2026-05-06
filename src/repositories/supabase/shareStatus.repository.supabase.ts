@@ -10,7 +10,7 @@
  * 準拠: pipeline_design_master.md DL-030, DL-031
  */
 
-import { getSupabase } from '@/lib/supabase'
+import { getSupabase } from '@/repositories/supabase/supabase'
 import type { ShareStatusRecord, ShareStatusRepository } from '@/repositories/types'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 

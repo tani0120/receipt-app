@@ -2539,10 +2539,10 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, triggerRef, watch } from "vue";
 import { useAccountSettings } from "@/features/account-settings/composables/useAccountSettings";
 import { useClients } from "@/features/client-management/composables/useClients";
-import { NULL_DISPLAY_UNKNOWN } from "@/definitions/field-nullable-spec";
+import { NULL_DISPLAY_UNKNOWN } from "@/shared/field-nullable-spec";
 import { useDraggable } from "@/composables/useDraggable";
 import { useCurrentUser } from "@/composables/useCurrentUser";
-import { journalColumns, getDefaultColumnWidths } from "@/columns/journalColumns";
+import { journalColumns, getDefaultColumnWidths } from "@/shared/journalColumns";
 import { useColumnResize } from "@/composables/useColumnResize";
 import { useJournals } from "@/composables/useJournals";
 import { useRoute } from "vue-router";

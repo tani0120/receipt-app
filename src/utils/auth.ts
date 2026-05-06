@@ -8,7 +8,7 @@
  * 2026-04-18: Firebase Auth → Supabase Auth に完全移行
  */
 
-import { getSupabase } from '@/lib/supabase'
+import { getSupabase } from '@/repositories/supabase/supabase'
 import type { User } from '@supabase/supabase-js'
 
 /**

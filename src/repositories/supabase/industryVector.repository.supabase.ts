@@ -7,7 +7,7 @@
  * 準拠: pipeline_design_master.md DL-030, DL-032
  */
 
-import { getSupabase } from '@/lib/supabase'
+import { getSupabase } from '@/repositories/supabase/supabase'
 import type { IndustryVectorRepository } from '@/repositories/types'
 import type { IndustryVectorEntry, VendorVector } from '@/types/pipeline/vendor.type'
 

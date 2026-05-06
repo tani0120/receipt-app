@@ -11,7 +11,7 @@
  */
 
 import type { JournalPhase5Mock, JournalLabelMock } from '@/types/journal_phase5_mock.type';
-import type { JournalEntryLine } from '@/domain/types/journal';
+import type { JournalEntryLine } from '@/types/domain-journal';
 import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
 
 // ============================================================

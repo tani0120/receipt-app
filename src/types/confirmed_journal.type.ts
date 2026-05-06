@@ -105,7 +105,7 @@ export interface ConfirmedJournal {
 /**
  * 確定済み仕訳の1行（借方 or 貸方）
  *
- * JournalEntryLine（domain/types/journal.ts）と互換性のあるプロパティ名:
+ * JournalEntryLine（types/domain-journal.ts）と互換性のあるプロパティ名:
  *   account, sub_account, department, amount, tax_category_id
  *
  * JournalEntryLineとの差分:

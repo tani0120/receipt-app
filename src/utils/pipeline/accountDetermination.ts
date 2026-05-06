@@ -17,7 +17,7 @@
  */
 
 import type { Vendor } from '../../types/pipeline/vendor.type'
-import type { JournalEntryLine } from '../../../domain/types/journal'
+import type { JournalEntryLine } from '../../types/domain-journal'
 import type { LearningRule, LearningRuleEntryLine } from '../../types/learning_rule.type'
 import { normalizeVendorName } from './vendorIdentification'
 import { validateTNumber, extractTNumber } from './vendorIdentification'

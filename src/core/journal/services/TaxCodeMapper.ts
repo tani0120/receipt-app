@@ -23,7 +23,7 @@ export class TaxCodeMapper {
     ): { taxCode: string; invoiceFlag: string } {
 
         // 税区分マッピング（MF正式名称。省略名ではマッチしない）
-        // 旧ID（domain/types/journal.ts）と新ID（tax-category-master.ts）の両方に対応
+        // 旧ID（types/domain-journal.ts）と新ID（tax-category-master.ts）の両方に対応
         const taxMapping: Record<string, string> = {
             // === 旧ID（後方互換） ===
             // 売上

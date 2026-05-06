@@ -4,7 +4,7 @@ import type { StaffNotes } from './staff_notes'
 // ============================================================
 // domain層からの再export（型の出自はdomain層）
 // ============================================================
-import type { JournalLabel, JournalEntryLine } from '@/domain/types/journal';
+import type { JournalLabel, JournalEntryLine } from '@/types/domain-journal';
 export type { JournalLabel, JournalEntryLine };
 import type { SourceType, Direction } from './pipeline/source_type.type';
 import type { VendorVector } from './pipeline/vendor.type';
