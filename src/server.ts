@@ -165,29 +165,61 @@ app.get('/', (c) => {
 
 console.log('🔧 Starting HTTP server...')
 
-// serve()の戻り値はイベントループで保持されるため変数代入不要
-serve({
+// Phase D-5: 移行バックグラウンドワーカー起動
+import { startMigrationWorker, stopMigrationWorker } from './api/services/migration/migrationWorker'
+
+// Keep-aliveタイマー（Cloud Runログ確認用）
+const heartbeatTimer = setInterval(() => {
+    console.log('💓 Server heartbeat - still running')
+}, 30000)
+
+/**
+ * Graceful Shutdown
+ * - HTTPサーバーを閉じてポートを即解放
+ * - migrationWorkerを停止
+ * - heartbeatタイマーをクリア（プロセスの残留を防止）
+ */
+function gracefulShutdown(signal: string) {
+    console.log(`🛑 ${signal} received, shutting down gracefully`)
+    clearInterval(heartbeatTimer)
+    stopMigrationWorker()
+    httpServer.close(() => {
+        console.log('✅ HTTP server closed')
+        process.exit(0)
+    })
+    // 5秒以内にclose完了しなければ強制終了
+    setTimeout(() => {
+        console.warn('⚠️ 強制終了（close timeout）')
+        process.exit(1)
+    }, 5000).unref()
+}
+
+// serve()の戻り値(http.Server)を保持 → shutdown時にclose()でポート即解放
+const httpServer = serve({
     fetch: app.fetch,
     port,
     hostname: '0.0.0.0',
 })
 
-console.log(`✅ Server listening on http://0.0.0.0:${port}`)
-
-// Phase D-5: 移行バックグラウンドワーカー起動
-import { startMigrationWorker, stopMigrationWorker } from './api/services/migration/migrationWorker'
-startMigrationWorker().catch(err => {
-  console.warn('⚠️ migrationWorker起動失敗（Supabase未接続の可能性）:', err instanceof Error ? err.message : String(err))
+// EADDRINUSEエラーハンドリング: 旧プロセスが残っている場合にクラッシュせず終了
+httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`❌ ポート ${port} は既に使用中です。旧プロセスを停止してください。`)
+        console.error(`   → 対処法: npx kill-port ${port}`)
+        clearInterval(heartbeatTimer)
+        process.exit(1)
+    }
+    throw err
 })
 
-// プロセスが終了しないように維持
-process.on('SIGTERM', () => {
-    console.log('🛑 SIGTERM received, shutting down gracefully')
-    stopMigrationWorker()
-    process.exit(0)
+httpServer.on('listening', () => {
+    console.log(`✅ Server listening on http://0.0.0.0:${port}`)
+    // サーバー起動成功後にワーカー起動
+    startMigrationWorker().catch(err => {
+        console.warn('⚠️ migrationWorker起動失敗（Supabase未接続の可能性）:', err instanceof Error ? err.message : String(err))
+    })
 })
 
-// Keep-aliveメッセージ（Cloud Runログで確認用）
-setInterval(() => {
-    console.log('💓 Server heartbeat - still running')
-}, 30000) // 30秒ごと
+// SIGTERM（docker stop, Cloud Run）+ SIGINT（Ctrl+C, nodemon restart）の両方を処理
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => gracefulShutdown('SIGINT'))

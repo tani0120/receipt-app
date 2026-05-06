@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="ce-page">
     <!-- ヘッダー1行目: ページタイトル -->
     <div class="ce-header-top">

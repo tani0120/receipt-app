@@ -10,11 +10,9 @@
       hideNavBar ? 'bg-white p-0' : 'bg-slate-100 p-4'
     ]">
          <router-view v-slot="{ Component, route: viewRoute }">
-            <transition name="fade" mode="out-in">
-              <div :key="viewRoute.path" class="h-full">
-                <component :is="Component" />
-              </div>
-            </transition>
+            <KeepAlive :max="5">
+              <component :is="Component" :key="viewRoute.path" />
+            </KeepAlive>
           </router-view>
     </main>
 

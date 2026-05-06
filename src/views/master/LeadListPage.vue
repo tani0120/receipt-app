@@ -9,12 +9,18 @@
 
         <!-- ツールバー（共通コンポーネント） -->
         <TableFilterToolbar
-          :status-options="leadStatusOptions"
-          v-model:status-filter="statusFilter"
           :columns="allColumns"
           v-model:visible-columns="visibleColumns"
           :total-count="filteredRows.length"
+          :views="leadViews"
+          v-model:active-view-index="activeViewIndex"
+          :filter-columns="leadFilterColumns"
+          :filter-conditions="filterConditions"
+          :filter-logic="filterLogic"
+          :filter-sort="filterSortSetting"
           @filter-change="onFilterChange"
+          @filter-apply="onFilterApply"
+          @view-change="onViewChange"
         >
           <template #actions>
             <button class="cm-action-btn primary" @click="$router.push('/master/leads/new')">
@@ -28,20 +34,7 @@
           <table class="cm-table" style="table-layout: fixed;">
             <colgroup>
               <col :style="{ width: clColWidths['status'] + 'px' }">
-              <col v-if="isColVisible('leadId')" :style="{ width: clColWidths['leadId'] + 'px' }">
-              <col v-if="isColVisible('threeCode')" :style="{ width: clColWidths['threeCode'] + 'px' }">
-              <col v-if="isColVisible('type')" :style="{ width: clColWidths['type'] + 'px' }">
-              <col v-if="isColVisible('taxMode')" :style="{ width: clColWidths['taxMode'] + 'px' }">
-              <col v-if="isColVisible('companyName')" :style="{ width: clColWidths['companyName'] + 'px' }">
-              <col v-if="isColVisible('staffName')" :style="{ width: clColWidths['staffName'] + 'px' }">
-              <col v-if="isColVisible('accountingSoftware')" :style="{ width: clColWidths['accountingSoftware'] + 'px' }">
-              <col v-if="isColVisible('fiscalMonth')" :style="{ width: clColWidths['fiscalMonth'] + 'px' }">
-              <col v-if="isColVisible('phoneNumber')" :style="{ width: clColWidths['phoneNumber'] + 'px' }">
-              <col v-if="isColVisible('email')" :style="{ width: clColWidths['email'] + 'px' }">
-              <col v-if="isColVisible('sharedEmail')" :style="{ width: clColWidths['sharedEmail'] + 'px' }">
-              <col v-if="isColVisible('driveUrl')" :style="{ width: clColWidths['driveUrl'] + 'px' }">
-              <col v-if="isColVisible('chatRoomUrl')" :style="{ width: clColWidths['chatRoomUrl'] + 'px' }">
-              <col v-if="isColVisible('contact')" style="width: auto;">
+              <col v-for="col in visibleColumnDefs" :key="'cg-'+col.key" :style="{ width: getColWidth(col) + 'px' }">
             </colgroup>
             <thead>
               <tr>
@@ -49,159 +42,101 @@
                   <i :class="getSortIcon('status')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('status', $event)"></div>
                 </th>
-                <th v-if="isColVisible('leadId')" class="sortable relative" @click="sortBy('leadId')">
-                  内部ID <i :class="getSortIcon('leadId')"></i>
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('leadId', $event)"></div>
+                <th v-for="col in visibleColumnDefs" :key="'th-'+col.key" class="sortable relative cm-th-cell" @click="sortBy(col.key)">
+                  {{ col.label }} <i :class="getSortIcon(col.key)"></i>
+                  <div class="resize-handle" @mousedown.stop="onClResizeStart(col.key, $event)"></div>
                 </th>
-                <th v-if="isColVisible('threeCode')" class="sortable relative" @click="sortBy('threeCode')">
-                  3コード <i :class="getSortIcon('threeCode')"></i>
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('threeCode', $event)"></div>
-                </th>
-                <th v-if="isColVisible('type')" class="sortable relative" @click="sortBy('type')">
-                  種別 <i :class="getSortIcon('type')"></i>
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('type', $event)"></div>
-                </th>
-                <th v-if="isColVisible('taxMode')" class="sortable relative" @click="sortBy('consumptionTaxMode')">
-                  課税方式 <i :class="getSortIcon('consumptionTaxMode')"></i>
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('taxMode', $event)"></div>
-                </th>
-                <th v-if="isColVisible('companyName')" class="sortable relative" @click="sortBy('companyName')">
-                  会社名/代表者名 <i :class="getSortIcon('companyName')"></i>
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('companyName', $event)"></div>
-                </th>
-                <th v-if="isColVisible('staffName')" class="sortable relative" @click="sortBy('staffName')">
-                  担当者 <i :class="getSortIcon('staffName')"></i>
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('staffName', $event)"></div>
-                </th>
-                <th v-if="isColVisible('accountingSoftware')" class="sortable relative" @click="sortBy('accountingSoftware')">
-                  会計ソフト <i :class="getSortIcon('accountingSoftware')"></i>
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('accountingSoftware', $event)"></div>
-                </th>
-                <th v-if="isColVisible('fiscalMonth')" class="sortable relative" @click="sortBy('fiscalMonth')">
-                  決算日 <i :class="getSortIcon('fiscalMonth')"></i>
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('fiscalMonth', $event)"></div>
-                </th>
-                <th v-if="isColVisible('phoneNumber')" class="relative">電話番号
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('phoneNumber', $event)"></div>
-                </th>
-                <th v-if="isColVisible('email')" class="relative">メール
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('email', $event)"></div>
-                </th>
-                <th v-if="isColVisible('sharedEmail')" class="relative">見込先ログインメール
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('sharedEmail', $event)"></div>
-                </th>
-                <th v-if="isColVisible('driveUrl')" class="relative">Drive取込
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('driveUrl', $event)"></div>
-                </th>
-                <th v-if="isColVisible('chatRoomUrl')" class="relative">チャットURL
-                  <div class="resize-handle" @mousedown.stop="onClResizeStart('chatRoomUrl', $event)"></div>
-                </th>
-                <th v-if="isColVisible('contact')">主な連絡手段</th>
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="row in pagedRows"
-                :key="row.leadId"
-                :class="{ 'row-inactive': row.status === 'inactive', 'row-suspension': row.status === 'suspension' }"
-              >
-                <!-- ステータス: 鉛筆アイコン（クリックで編集ページ遷移） -->
+              <tr v-for="row in pagedRows" :key="row.leadId"
+                :class="{ 'row-inactive': row.status === 'inactive', 'row-suspension': row.status === 'suspension' }">
                 <td class="cm-td-status">
                   <div class="cm-status-icon-group" @click.stop="$router.push(`/master/leads/${row.leadId}`)">
                     <i class="fa-solid fa-pen cm-status-pen" :class="'pen-' + row.status"></i>
                   </div>
                 </td>
-                <td v-if="isColVisible('leadId')" class="cm-client-id">{{ row.leadId }}</td>
-                <td v-if="isColVisible('threeCode')" class="cm-code td-editable" @dblclick.stop="startInlineEdit(row, 'threeCode', $event)">
-                  <input v-if="inlineEditId === row.leadId && inlineEditField === 'threeCode'" v-model="inlineEditValue" class="cm-inline-input" maxlength="3" @input="inlineEditValue = String(inlineEditValue).toUpperCase().replace(/[^A-Z]/g, '')" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                  <span v-else>{{ row.threeCode }}</span>
-                </td>
-                <td v-if="isColVisible('type')" class="td-editable" @dblclick.stop="startInlineEdit(row, 'type', $event)">
-                  <select v-if="inlineEditId === row.leadId && inlineEditField === 'type'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <option value="corp">法人</option>
-                    <option value="individual">個人</option>
-                  </select>
-                  <span v-else>{{ row.type === 'corp' ? '法人' : '個人' }}</span>
-                </td>
-                <td v-if="isColVisible('taxMode')">{{ taxModeLabel(row.consumptionTaxMode) }}</td>
-                <td v-if="isColVisible('companyName')" class="cm-company-name td-editable" @dblclick.stop="startInlineEdit(row, 'companyName', $event)">
-                  <input v-if="inlineEditId === row.leadId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                  <span v-else>{{ row.type === 'individual' && row.repName ? row.repName : row.companyName }}</span>
-                </td>
-                <td v-if="isColVisible('staffName')" class="td-editable" @dblclick.stop="startStaffInlineEdit(row, $event)">
-                  <select v-if="inlineEditId === row.leadId && inlineEditField === 'staffName'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitStaffEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <option value="">未設定</option>
-                    <option v-for="s in staffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
-                  </select>
-                  <span v-else>{{ getStaffNameForLead(row.leadId) || '—' }}</span>
-                </td>
-                <td v-if="isColVisible('accountingSoftware')" class="td-editable" @dblclick.stop="startInlineEdit(row, 'accountingSoftware', $event)">
-                  <select v-if="inlineEditId === row.leadId && inlineEditField === 'accountingSoftware'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <option value="mf">MF</option>
-                    <option value="freee">freee</option>
-                    <option value="yayoi">弥生</option>
-                    <option value="tkc">TKC</option>
-                    <option value="other">その他</option>
-                  </select>
-                  <span v-else>{{ softwareLabel(row.accountingSoftware) }}</span>
-                </td>
-                <td v-if="isColVisible('fiscalMonth')" class="cm-fiscal td-editable" @dblclick.stop="startInlineEdit(row, 'fiscalMonth', $event)">
-                  <template v-if="inlineEditId === row.leadId && inlineEditField === 'fiscalMonth'">
-                    <div class="cm-inline-fiscal-group">
-                      <select v-model="inlineEditValue" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop>
-                        <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
-                      </select>
-                      <span class="cm-inline-fiscal-sep">/</span>
-                      <select v-model="inlineEditFiscalDay" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop>
-                        <option value="末日">末日</option>
-                        <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
-                      </select>
-                      <button class="cm-inline-fiscal-ok" @click.stop="commitFiscalEdit(row)">✓</button>
-                    </div>
+                <td v-for="col in visibleColumnDefs" :key="'td-'+col.key" class="cm-td-cell"
+                  :class="getCellClass(col.key)"
+                  @dblclick.stop="isEditableCol(col.key) ? (col.key === 'staffName' ? startStaffInlineEdit(row, $event) : startInlineEdit(row, col.key as InlineEditableField, $event)) : undefined"
+                >
+                  <template v-if="col.key === 'threeCode'">
+                    <input v-if="inlineEditId === row.leadId && inlineEditField === 'threeCode'" v-model="inlineEditValue" class="cm-inline-input" maxlength="3" @input="inlineEditValue = String(inlineEditValue).toUpperCase().replace(/[^A-Z]/g, '')" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                    <span v-else>{{ row.threeCode }}</span>
                   </template>
-                  <span v-else>{{ row.fiscalMonth }}月/{{ row.fiscalDay === '末日' ? '末日' : row.fiscalDay + '日' }}</span>
-                </td>
-                <td v-if="isColVisible('phoneNumber')" class="td-editable" @dblclick.stop="startInlineEdit(row, 'phoneNumber', $event)">
-                  <input v-if="inlineEditId === row.leadId && inlineEditField === 'phoneNumber'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                  <span v-else>{{ row.phoneNumber || '—' }}</span>
-                </td>
-                <td v-if="isColVisible('email')" class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'email', $event)">
-                  <input v-if="inlineEditId === row.leadId && inlineEditField === 'email'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                  <span v-else>{{ row.email || '—' }}</span>
-                </td>
-                <td v-if="isColVisible('sharedEmail')" class="cm-ellipsis td-editable" @dblclick.stop="startInlineEdit(row, 'sharedEmail', $event)">
-                  <input v-if="inlineEditId === row.leadId && inlineEditField === 'sharedEmail'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                  <span v-else-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
-                  <span v-else class="cm-shared-email-none">未取得（見込先が登録）</span>
-                </td>
-                <td v-if="isColVisible('driveUrl')" class="cm-drive-cell" @click.stop="row.sharedFolderId ? copyDriveUrl(row) : undefined">
-                  <template v-if="!row.sharedFolderId">
-                    <span class="cm-drive-none">—</span>
+                  <template v-else-if="col.key === 'type'">
+                    <select v-if="inlineEditId === row.leadId && inlineEditField === 'type'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                      <option value="corp">法人</option><option value="individual">個人</option>
+                    </select>
+                    <span v-else>{{ row.type === 'corp' ? '法人' : '個人' }}</span>
                   </template>
-                  <template v-else>
-                    <span v-if="driveUrlCopied === row.leadId" class="cm-drive-copied">✅ コピー済</span>
-                    <span v-else class="cm-drive-link">📋 URLコピー</span>
+                  <template v-else-if="col.key === 'taxMode'">{{ taxModeLabel(row.consumptionTaxMode) }}</template>
+                  <template v-else-if="col.key === 'companyName'">
+                    <input v-if="inlineEditId === row.leadId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                    <span v-else>{{ row.type === 'individual' && row.repName ? row.repName : row.companyName }}</span>
                   </template>
-                </td>
-                <td v-if="isColVisible('chatRoomUrl')" class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'chatRoomUrl', $event)">
-                  <input v-if="inlineEditId === row.leadId && inlineEditField === 'chatRoomUrl'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                  <span v-else>{{ row.chatRoomUrl || '—' }}</span>
-                </td>
-                <td v-if="isColVisible('contact')" class="cm-contact-cell">
-                  <span v-if="row.chatRoomUrl">チャットワーク</span>
-                  <span v-else-if="row.email" class="cm-contact-fallback">
-                    メール
-                    <i class="fa-solid fa-triangle-exclamation cm-contact-warn" title="チャットワークURLが空白です。メールを表示しています。"></i>
-                  </span>
-                  <span v-else>—</span>
+                  <template v-else-if="col.key === 'staffName'">
+                    <select v-if="inlineEditId === row.leadId && inlineEditField === 'staffName'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitStaffEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                      <option value="">未設定</option>
+                      <option v-for="s in staffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
+                    </select>
+                    <span v-else>{{ getStaffNameForLead(row.leadId) || '—' }}</span>
+                  </template>
+                  <template v-else-if="col.key === 'accountingSoftware'">
+                    <select v-if="inlineEditId === row.leadId && inlineEditField === 'accountingSoftware'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                      <option value="mf">MF</option><option value="freee">freee</option><option value="yayoi">弥生</option><option value="tkc">TKC</option><option value="other">その他</option>
+                    </select>
+                    <span v-else>{{ softwareLabel(row.accountingSoftware) }}</span>
+                  </template>
+                  <template v-else-if="col.key === 'fiscalMonth'">
+                    <template v-if="inlineEditId === row.leadId && inlineEditField === 'fiscalMonth'">
+                      <div class="cm-inline-fiscal-group">
+                        <select v-model="inlineEditValue" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop><option v-for="m in 12" :key="m" :value="m">{{ m }}月</option></select>
+                        <span class="cm-inline-fiscal-sep">/</span>
+                        <select v-model="inlineEditFiscalDay" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop><option value="末日">末日</option><option v-for="d in 31" :key="d" :value="d">{{ d }}日</option></select>
+                        <button class="cm-inline-fiscal-ok" @click.stop="commitFiscalEdit(row)">✓</button>
+                      </div>
+                    </template>
+                    <span v-else>{{ row.fiscalMonth }}月/{{ row.fiscalDay === '末日' ? '末日' : row.fiscalDay + '日' }}</span>
+                  </template>
+                  <template v-else-if="col.key === 'sharedEmail'">
+                    <input v-if="inlineEditId === row.leadId && inlineEditField === 'sharedEmail'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                    <span v-else-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
+                    <span v-else class="cm-shared-email-none">未取得（見込先が登録）</span>
+                  </template>
+                  <template v-else-if="col.key === 'driveUrl'">
+                    <template v-if="!row.sharedFolderId"><span class="cm-drive-none">—</span></template>
+                    <template v-else>
+                      <span v-if="driveUrlCopied === row.leadId" class="cm-drive-copied">✅ コピー済</span>
+                      <span v-else class="cm-drive-link" @click.stop="copyDriveUrl(row)">📋 URLコピー</span>
+                    </template>
+                  </template>
+                  <template v-else-if="col.key === 'contact'">
+                    <span v-if="row.chatRoomUrl">チャットワーク</span>
+                    <span v-else-if="row.email" class="cm-contact-fallback">メール <i class="fa-solid fa-triangle-exclamation cm-contact-warn" title="チャットワークURLが空白です。"></i></span>
+                    <span v-else>—</span>
+                  </template>
+                  <template v-else-if="isTextEditCol(col.key)">
+                    <input v-if="inlineEditId === row.leadId && inlineEditField === col.key" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                    <span v-else>{{ (row as any)[col.key] || '—' }}</span>
+                  </template>
+                  <template v-else>{{ getFieldValue(row, col.key) }}</template>
                 </td>
               </tr>
-              <tr v-if="pagedRows.length === 0">
-                <td colspan="15" class="cm-empty">該当する見込先がありません</td>
+              <tr v-if="isLoading || pagedRows.length === 0">
+                <td :colspan="visibleColumnDefs.length + 1" class="cm-empty">
+                  <template v-if="isLoading">
+                    <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i>読み込み中…
+                  </template>
+                  <template v-else>該当する見込先がありません</template>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
+
+        <!-- ページネーション -->
+
 
         <!-- ページネーション -->
         <div class="cm-pagination" v-if="totalPages > 1">
@@ -504,7 +439,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, onActivated, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   useLeads,
@@ -519,6 +454,7 @@ import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
+import type { FilterColumnDef, FilterCondition, FilterResult, SortSetting, ViewDef } from '@/components/list-view/types';
 
 // 列幅カスタマイズ
 const clDefaultWidths: Record<string, number> = {
@@ -563,8 +499,9 @@ const route = useRoute();
 const router = useRouter();
 const statusFilter = ref<string>((route.query.status as string) || '');
 
-// 表示列管理
+// 表示列管理 — 全フィールド定義
 const allColumns = [
+  // 基本情報（従来の14列）
   { key: 'leadId', label: '内部ID' },
   { key: 'threeCode', label: '3コード' },
   { key: 'type', label: '種別' },
@@ -579,10 +516,61 @@ const allColumns = [
   { key: 'driveUrl', label: 'Drive取込' },
   { key: 'chatRoomUrl', label: 'チャットURL' },
   { key: 'contact', label: '主な連絡手段' },
+  // 追加フィールド（「すべて」ビューで表示）
+  { key: 'companyNameKana', label: '会社名（カナ）' },
+  { key: 'repName', label: '代表者名' },
+  { key: 'repNameKana', label: '代表者名（カナ）' },
+  { key: 'contactType', label: '連絡手段区分' },
+  { key: 'contactValue', label: '連絡先' },
+  { key: 'sharedChatUrl', label: '共有チャットURL' },
+  { key: 'industry', label: '業種' },
+  { key: 'establishedDate', label: '設立日' },
+  { key: 'taxFilingType', label: '確定申告' },
+  { key: 'consumptionTaxMode', label: '課税方式（詳細）' },
+  { key: 'simplifiedTaxCategory', label: '簡易課税 事業区分' },
+  { key: 'taxMethod', label: '税込/税抜' },
+  { key: 'calculationMethod', label: '経理方式' },
+  { key: 'defaultPaymentMethod', label: 'デフォルト支払方法' },
+  { key: 'isInvoiceRegistered', label: 'インボイス登録' },
+  { key: 'invoiceRegistrationNumber', label: 'インボイス登録番号' },
+  { key: 'hasDepartmentManagement', label: '部門管理' },
+  { key: 'hasRentalIncome', label: '不動産所得' },
+  { key: 'advisoryFee', label: '月額顧問報酬' },
+  { key: 'bookkeepingFee', label: '記帳代行' },
+  { key: 'settlementFee', label: '決算報酬' },
+  { key: 'taxFilingFee', label: '消費税申告報酬' },
 ];
-const defaultCols = allColumns.map(c => c.key);
+
+/** 基本情報ビューで表示する列キー（従来の14列） */
+const basicViewCols = [
+  'leadId', 'threeCode', 'type', 'taxMode', 'companyName', 'staffName',
+  'accountingSoftware', 'fiscalMonth', 'phoneNumber', 'email',
+  'sharedEmail', 'driveUrl', 'chatRoomUrl', 'contact',
+];
+
 const colsFromUrl = route.query.cols ? (route.query.cols as string).split(',') : null;
-const visibleColumns = ref<string[]>(colsFromUrl || [...defaultCols]);
+const visibleColumns = ref<string[]>(colsFromUrl || [...basicViewCols]);
+
+// --- ビュー定義（表示列プリセット） ---
+const leadViews: ViewDef[] = [
+  {
+    name: '基本情報',
+    columns: basicViewCols,
+  },
+  {
+    name: '（すべて）',
+    columns: null,
+  },
+];
+const activeViewIndex = ref(0);
+
+/** ビュー切替時 */
+const onViewChange = (_idx: number) => {
+  const query: Record<string, string> = {};
+  if (statusFilter.value) query.status = statusFilter.value;
+  router.replace({ query });
+  // fetchLeadList()はwatch発火に任せる（二重呼び出し防止）
+};
 
 // ステータス選択肢
 const leadStatusOptions = [
@@ -592,19 +580,170 @@ const leadStatusOptions = [
   { value: 'converted', label: '顧問先化済' },
 ];
 
+// --- 絞り込みモーダル用列定義（LeadEditPageの全フィールド） ---
+const leadFilterColumns: FilterColumnDef[] = [
+  // ステータス
+  { key: 'status', label: 'ステータス', filterType: 'select', filterOptions: leadStatusOptions },
+  // 基本情報
+  { key: 'type', label: '法人/個人', filterType: 'select', filterOptions: [
+    { value: 'corp', label: '法人' }, { value: 'individual', label: '個人' },
+  ] },
+  { key: 'leadId', label: '内部ID', filterType: 'text' },
+  { key: 'threeCode', label: '3コード', filterType: 'text' },
+  { key: 'companyName', label: '会社名', filterType: 'text' },
+  { key: 'companyNameKana', label: '会社名（カナ）', filterType: 'text' },
+  { key: 'repName', label: '代表者名', filterType: 'text' },
+  { key: 'repNameKana', label: '代表者名（カナ）', filterType: 'text' },
+  { key: 'staffName', label: '担当者', filterType: 'text' },
+  { key: 'phoneNumber', label: '電話番号', filterType: 'text' },
+  { key: 'email', label: 'メールアドレス', filterType: 'text' },
+  { key: 'chatRoomUrl', label: 'チャットルームURL', filterType: 'text' },
+  { key: 'contactType', label: '主な連絡手段', filterType: 'select', filterOptions: [
+    { value: 'email', label: 'メール' }, { value: 'chatwork', label: 'チャットワーク' },
+  ] },
+  { key: 'contactValue', label: '連絡先', filterType: 'text' },
+  { key: 'sharedEmail', label: '見込先ログインメール', filterType: 'text' },
+  { key: 'sharedChatUrl', label: '共有用チャットURL', filterType: 'text' },
+  { key: 'fiscalMonth', label: '決算月', filterType: 'number' },
+  { key: 'industry', label: '業種', filterType: 'select', filterOptions: [
+    { value: '飲食業', label: '飲食業' }, { value: '建設業', label: '建設業' },
+    { value: '製造業・メーカー', label: '製造業・メーカー' }, { value: '卸売業・小売業', label: '卸売業・小売業' },
+    { value: '商社', label: '商社' }, { value: '不動産業', label: '不動産業' },
+    { value: '銀行・金融', label: '銀行・金融' }, { value: '保険業', label: '保険業' },
+    { value: '医療・福祉関係業', label: '医療・福祉関係業' }, { value: 'コンサルティング', label: 'コンサルティング' },
+    { value: '専門事務所', label: '専門事務所' }, { value: '運輸・運送業', label: '運輸・運送業' },
+    { value: 'IT・ソフトウェア関連', label: 'IT・ソフトウェア関連' }, { value: 'その他', label: 'その他' },
+  ] },
+  { key: 'establishedDate', label: '設立日', filterType: 'text' },
+  // 会計設定
+  { key: 'accountingSoftware', label: '会計ソフト', filterType: 'select', filterOptions: [
+    { value: 'mf', label: 'マネーフォワード' }, { value: 'freee', label: 'freee' },
+    { value: 'yayoi', label: '弥生' }, { value: 'tkc', label: 'TKC' },
+    { value: 'other', label: 'その他' },
+  ] },
+  { key: 'taxFilingType', label: '確定申告', filterType: 'select', filterOptions: [
+    { value: 'blue', label: '青色' }, { value: 'white', label: '白色' },
+  ] },
+  { key: 'consumptionTaxMode', label: '課税方式', filterType: 'select', filterOptions: [
+    { value: 'general', label: '原則課税' }, { value: 'simplified', label: '簡易課税' },
+    { value: 'exempt', label: '免税' },
+  ] },
+  { key: 'simplifiedTaxCategory', label: '簡易課税 事業区分', filterType: 'select', filterOptions: [
+    { value: '1', label: '第一種（卸売業）' }, { value: '2', label: '第二種（小売業）' },
+    { value: '3', label: '第三種（製造業・建設業）' }, { value: '4', label: '第四種（飲食店・その他）' },
+    { value: '5', label: '第五種（サービス業）' }, { value: '6', label: '第六種（不動産業）' },
+  ] },
+  { key: 'taxMethod', label: '税込/税抜', filterType: 'select', filterOptions: [
+    { value: 'inclusive', label: '税込' }, { value: 'exclusive', label: '税抜' },
+  ] },
+  { key: 'calculationMethod', label: '経理方式', filterType: 'select', filterOptions: [
+    { value: 'accrual', label: '発生主義' }, { value: 'cash', label: '現金主義' },
+    { value: 'interim_cash', label: '中間現金主義' },
+  ] },
+  { key: 'defaultPaymentMethod', label: 'デフォルト支払方法', filterType: 'select', filterOptions: [
+    { value: 'cash', label: '現金' }, { value: 'owner_loan', label: '事業主借' },
+    { value: 'accounts_payable', label: '買掛金' },
+  ] },
+  { key: 'isInvoiceRegistered', label: 'インボイス登録', filterType: 'select', filterOptions: [
+    { value: 'true', label: '登録済み' }, { value: 'false', label: '未登録' },
+  ] },
+  { key: 'invoiceRegistrationNumber', label: 'インボイス登録番号', filterType: 'text' },
+  { key: 'hasDepartmentManagement', label: '部門管理', filterType: 'select', filterOptions: [
+    { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
+  ] },
+  { key: 'hasRentalIncome', label: '不動産所得', filterType: 'select', filterOptions: [
+    { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
+  ] },
+  // 報酬設定
+  { key: 'advisoryFee', label: '月額顧問報酬', filterType: 'number' },
+  { key: 'bookkeepingFee', label: '記帳代行', filterType: 'number' },
+  { key: 'settlementFee', label: '決算報酬', filterType: 'number' },
+  { key: 'taxFilingFee', label: '消費税申告報酬', filterType: 'number' },
+];
+
+// --- 絞り込み条件state ---
+const filterConditions = ref<FilterCondition[]>([]);
+const filterLogic = ref<'and' | 'or'>('and');
+const filterSortSetting = ref<SortSetting>({ key: 'threeCode', order: 'asc' });
+
 /** フィルター変更時: URLクエリパラメータを更新 */
 const onFilterChange = () => {
   const query: Record<string, string> = {};
   if (statusFilter.value) query.status = statusFilter.value;
-  if (visibleColumns.value.length < defaultCols.length) {
-    query.cols = visibleColumns.value.join(',');
-  }
   router.replace({ query });
-  fetchLeadList();
+  // fetchLeadList()はwatch発火に任せる（二重呼び出し防止）
 };
 
-/** 列が表示中かどうか */
-const isColVisible = (key: string) => visibleColumns.value.includes(key);
+/** 絞り込みモーダル適用時 */
+const onFilterApply = (result: FilterResult) => {
+  filterConditions.value = result.conditions;
+  filterLogic.value = result.logic;
+  filterSortSetting.value = result.sort;
+  // ソート設定をローカルstateに反映
+  sortKey.value = result.sort.key;
+  sortOrder.value = result.sort.order;
+  // ステータス条件が含まれていればstatusFilterにも反映
+  const statusCond = result.conditions.find(c => c.field === 'status');
+  if (statusCond && typeof statusCond.value === 'string') {
+    statusFilter.value = statusCond.value;
+  } else if (statusCond && Array.isArray(statusCond.value) && statusCond.value.length === 1) {
+    statusFilter.value = statusCond.value[0] ?? '';
+  }
+  // fetchLeadList()はsortKey/sortOrder/statusFilter変更でwatch発火する（二重呼び出し防止）
+};
+
+
+/** visibleColumnsの順序でallColumnsから列定義を取得（全列統一描画用） */
+const visibleColumnDefs = computed(() => {
+  return visibleColumns.value
+    .map(k => allColumns.find(c => c.key === k))
+    .filter((c): c is { key: string; label: string } => !!c);
+});
+
+/** セルのCSSクラスを列キーから動的取得 */
+const getCellClass = (key: string): string => {
+  const editableKeys = new Set(['threeCode', 'type', 'companyName', 'staffName', 'accountingSoftware', 'fiscalMonth', 'phoneNumber', 'email', 'sharedEmail', 'chatRoomUrl']);
+  const classes: string[] = [];
+  if (editableKeys.has(key)) classes.push('td-editable');
+  if (['email', 'sharedEmail', 'chatRoomUrl'].includes(key)) classes.push('cm-ellipsis');
+  if (key === 'companyName') classes.push('cm-company-name');
+  if (key === 'fiscalMonth') classes.push('cm-fiscal');
+  if (key === 'driveUrl') classes.push('cm-drive-cell');
+  if (key === 'contact') classes.push('cm-contact-cell');
+  if (key === 'leadId') classes.push('cm-client-id');
+  if (key === 'threeCode') classes.push('cm-code');
+  return classes.join(' ');
+};
+
+/** インライン編集可能列か */
+const isEditableCol = (key: string): boolean => {
+  return ['threeCode', 'type', 'companyName', 'staffName', 'accountingSoftware', 'fiscalMonth', 'phoneNumber', 'email', 'sharedEmail', 'chatRoomUrl'].includes(key);
+};
+
+/** 汎用テキスト入力で編集する列 */
+const isTextEditCol = (key: string): boolean => {
+  return ['phoneNumber', 'email', 'chatRoomUrl'].includes(key);
+};
+
+/** データ行から動的フィールド値を取得（汎用） */
+const getFieldValue = (row: any, key: string): string => {
+  const val = row[key];
+  if (val === undefined || val === null) return '—';
+  if (typeof val === 'boolean') return val ? 'あり' : 'なし';
+  if (typeof val === 'number') return val.toLocaleString();
+  return String(val);
+};
+
+/** 列幅をラベル文字数から動的算出 or 保存値から取得 */
+const getColWidth = (col: { key: string; label: string }): number => {
+  const saved = clColWidths.value[col.key];
+  if (saved) return saved;
+  let w = 0;
+  for (const ch of col.label) {
+    w += ch.charCodeAt(0) > 0x7F ? 16 : 9;
+  }
+  return Math.max(w + 32, 100);
+};
 
 // --- ソート ---
 const sortKey = ref<string>('threeCode');
@@ -625,6 +764,7 @@ const getSortIcon = (key: string) => {
 };
 
 // --- フィルター＋ソート済みデータ ---
+const isLoading = ref(true);
 const filteredRows = ref<Lead[]>([]);
 const PAGE_SIZE = 50;
 const currentPage = ref(1);
@@ -633,6 +773,7 @@ const pagedRows = computed(() => filteredRows.value);
 
 /** GET /api/leads で見込先一覧取得 */
 const fetchLeadList = async () => {
+  isLoading.value = true;
   try {
     const statusParam = statusFilter.value ? `?status=${statusFilter.value}` : '';
     const res = await fetch(`/api/leads${statusParam}`);
@@ -652,13 +793,24 @@ const fetchLeadList = async () => {
     totalPages.value = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   } catch (e) {
     console.error('[LeadsPage] リスト取得失敗:', e);
+  } finally {
+    isLoading.value = false;
   }
 };
 
-// フィルタ・ソート・ページ変更時に自動でAPI再呼び出し
+// フィルタ・ソート・ページ変更時に自動でAPI再呼び出し（バッチ化で二重発火防止）
+let fetchPending = false;
 watch([statusFilter, sortKey, sortOrder, currentPage], () => {
-  fetchLeadList();
+  if (fetchPending) return;
+  fetchPending = true;
+  nextTick(() => {
+    fetchPending = false;
+    fetchLeadList();
+  });
 }, { immediate: true });
+
+// KeepAliveからの復帰時にデータを再取得
+onActivated(() => fetchLeadList());
 
 /** データ変更後にリストを再取得 */
 const refreshList = () => fetchLeadList();
@@ -968,247 +1120,6 @@ const renameDriveFolderForLead = async (lead: Lead): Promise<string | null> => {
 
 </script>
 
-<style scoped>
-.cm-settings { max-width: 100%; margin: 0 auto; padding: 20px 24px; }
-.cm-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-.cm-back-link { color: #3b82f6; font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 4px; }
-.cm-back-link:hover { text-decoration: underline; }
-.cm-title { font-size: 18px; font-weight: 700; color: #1e293b; }
-
-/* ツールバー */
-.cm-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 8px 0; }
-.cm-toolbar-left { display: flex; align-items: center; gap: 12px; }
-.cm-toolbar-right { display: flex; align-items: center; gap: 8px; }
-.cm-filter-select { border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 10px; font-size: 12px; color: #334155; background: white; cursor: pointer; outline: none; }
-.cm-filter-select:focus { border-color: #3b82f6; }
-.cm-page-info { font-size: 12px; color: #64748b; }
-.cm-action-btn { border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 14px; font-size: 12px; cursor: pointer; background: white; color: #334155; transition: all 0.15s; display: flex; align-items: center; gap: 4px; }
-.cm-action-btn:hover { border-color: #3b82f6; color: #3b82f6; }
-.cm-action-btn.primary { background: #3b82f6; color: white; border-color: #3b82f6; }
-.cm-action-btn.primary:hover { background: #2563eb; }
-
-/* テーブル */
-.cm-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 6px; background: white; }
-.cm-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.cm-table thead th { background: #f8fafc; border-bottom: 2px solid #e2e8f0; padding: 10px 12px; text-align: left; font-weight: 600; color: #475569; white-space: nowrap; user-select: none; }
-.cm-table thead th.sortable { cursor: pointer; }
-.cm-table thead th.sortable:hover { color: #3b82f6; }
-.cm-table tbody td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; white-space: nowrap; }
-.cm-table tbody tr:hover { background: #f8fafc; }
-.cm-table tbody tr.row-inactive { opacity: 0.5; background: #f1f5f9; }
-.cm-code { font-weight: 700; letter-spacing: 1px; color: #1e293b; font-family: 'Menlo', monospace; }
-.cm-client-id { font-size: 10px; color: #64748b; font-family: 'Menlo', monospace; letter-spacing: 0.5px; }
-.cm-client-id-input { background: #f1f5f9 !important; color: #94a3b8 !important; cursor: not-allowed; font-family: 'Menlo', monospace; letter-spacing: 0.5px; }
-.cm-company-name { font-weight: 600; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
-.cm-fiscal { text-align: center; }
-.cm-empty { text-align: center; color: #94a3b8; padding: 40px 12px !important; }
-.cm-sort-icon { font-size: 10px; color: #94a3b8; margin-left: 2px; }
-.cm-sort-icon.active { color: #3b82f6; }
-
-/* ステータスバッジ（レガシー互換。他ページで使用） */
-.cm-status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
-.status-active { background: #dcfce7; color: #166534; }
-.status-inactive { background: #fee2e2; color: #991b1b; }
-.status-suspension { background: #fef3c7; color: #92400e; }
-
-/* ステータス列: ヘッダー空白+中央寄せ */
-.cm-th-status { text-align: center; min-width: 40px; }
-.cm-td-status { text-align: center; padding: 0 !important; vertical-align: middle; }
-
-/* ステータスドットアイコン */
-.cm-status-icon-group {
-  display: inline-flex; align-items: center; justify-content: center;
-  cursor: pointer; padding: 4px 6px; border-radius: 6px;
-  transition: background 0.15s;
-}
-.cm-status-icon-group:hover { background: #f3f4f6; }
-
-/* ステータスペンアイコン（色でステータス表現） */
-.cm-status-pen { font-size: 13px; transition: opacity 0.15s; }
-.pen-active { color: #22c55e; }
-.pen-suspension { color: #f59e0b; }
-.pen-inactive { color: #ef4444; }
-.row-suspension { opacity: 0.6; background: #fefce8; }
-
-/* 決算日セレクトグループ */
-.cm-date-group { display: flex; align-items: center; gap: 8px; }
-.cm-date-separator { font-size: 14px; color: #64748b; }
-
-/* 主な連絡手段セル */
-.cm-contact-cell { font-size: 11px; }
-.cm-contact-fallback { color: #64748b; }
-.cm-contact-warn { color: #f59e0b; font-size: 10px; margin-left: 4px; cursor: help; }
-
-/* フィルターチェックボックス */
-.cm-filter-checkboxes { display: flex; align-items: center; gap: 10px; }
-.cm-filter-cb { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
-.cm-filter-cb input[type="checkbox"] { accent-color: #3b82f6; }
-.cb-label { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
-
-/* インライン編集 */
-.cm-inline-input { width: 100%; border: 1px solid #3b82f6; border-radius: 3px; padding: 4px 6px; font-size: 12px; color: #334155; outline: none; background: #eff6ff; box-sizing: border-box; }
-.cm-inline-select { width: 100%; border: 1px solid #3b82f6; border-radius: 3px; padding: 3px 4px; font-size: 12px; color: #334155; outline: none; background: #eff6ff; box-sizing: border-box; cursor: pointer; }
-
-/* 決算日インライン編集グループ */
-.cm-inline-fiscal-group { display: flex; align-items: center; gap: 2px; }
-.cm-inline-fiscal-sel { width: auto !important; min-width: 52px; padding: 2px 3px; font-size: 11px; }
-.cm-inline-fiscal-sep { font-size: 11px; color: #64748b; }
-.cm-inline-fiscal-ok { background: #3b82f6; color: white; border: none; border-radius: 3px; padding: 2px 6px; font-size: 11px; cursor: pointer; line-height: 1; }
-.cm-inline-fiscal-ok:hover { background: #2563eb; }
-
-/* 編集可能セルホバー（accounts準拠） */
-.td-editable { cursor: text; }
-.td-editable:hover { background: #fff9c4; outline: 1px dashed #fbc02d; }
-
-/* 省略表示 */
-.cm-ellipsis { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
-
-/* ページネーション */
-.cm-pagination { display: flex; justify-content: center; align-items: center; gap: 4px; margin-top: 16px; padding: 8px 0; }
-.cm-page-arrow { cursor: pointer; padding: 4px 8px; color: #3b82f6; font-size: 13px; user-select: none; }
-.cm-page-arrow.disabled { color: #cbd5e1; pointer-events: none; }
-.cm-page-num { cursor: pointer; padding: 4px 10px; border-radius: 4px; font-size: 12px; color: #64748b; }
-.cm-page-num.active { background: #3b82f6; color: white; }
-
-/* スライドインパネル */
-.cm-panel-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; display: flex; justify-content: flex-end; background: rgba(0,0,0,0.15); }
-.cm-panel-container { width: 480px; max-width: 90vw; background: white; box-shadow: -4px 0 24px rgba(0,0,0,0.12); display: flex; flex-direction: column; height: 100%; }
-.cm-panel-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
-.cm-panel-title { font-size: 15px; font-weight: 700; color: #1e293b; }
-.cm-panel-header-actions { display: flex; align-items: center; gap: 10px; }
-.cm-panel-cancel { color: #3b82f6; font-size: 13px; background: none; border: none; cursor: pointer; }
-.cm-panel-cancel:hover { text-decoration: underline; }
-.cm-panel-save { color: white; font-size: 13px; background: #3b82f6; border: none; border-radius: 4px; padding: 6px 14px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-.cm-panel-save:hover { background: #2563eb; }
-.cm-panel-stop-btn { color: white; font-size: 12px; background: #f59e0b; border: none; border-radius: 4px; padding: 5px 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-.cm-panel-stop-btn:hover { background: #d97706; }
-.cm-panel-terminate-btn { color: white; font-size: 12px; background: #ef4444; border: none; border-radius: 4px; padding: 5px 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-.cm-panel-terminate-btn:hover { background: #dc2626; }
-.cm-panel-restore-btn { color: white; font-size: 12px; background: #22c55e; border: none; border-radius: 4px; padding: 5px 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-.cm-panel-restore-btn:hover { background: #16a34a; }
-.cm-panel-body { flex: 1; overflow-y: auto; padding: 20px; }
-
-/* セクション */
-.cm-section { margin-bottom: 24px; }
-.cm-section-title { font-size: 14px; font-weight: 700; color: #1e293b; padding-bottom: 8px; border-bottom: 2px solid #3b82f6; margin-bottom: 14px; }
-.cm-field { margin-bottom: 12px; }
-.cm-label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
-.cm-hint { font-weight: 400; font-size: 10px; color: #94a3b8; }
-.cm-required { color: #ef4444; }
-.cm-input { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px 10px; font-size: 13px; color: #334155; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
-.cm-input:focus { border-color: #3b82f6; }
-.cm-code-input { width: 90px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; font-family: 'Menlo', monospace; }
-.cm-select { border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px 10px; font-size: 13px; color: #334155; background: white; cursor: pointer; outline: none; width: 100%; }
-.cm-select:focus { border-color: #3b82f6; }
-.cm-radio-group { display: flex; align-items: center; gap: 14px; margin-top: 2px; }
-.cm-radio { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #334155; cursor: pointer; }
-.cm-radio input[type="radio"] { accent-color: #3b82f6; }
-.cm-checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #475569; cursor: pointer; }
-.cm-checkbox-label input[type="checkbox"] { accent-color: #3b82f6; }
-
-/* 金額入力 */
-.cm-amount-input { display: flex; align-items: center; gap: 6px; }
-.cm-num-input { width: 160px !important; text-align: right; }
-.cm-amount-unit { font-size: 12px; color: #64748b; }
-.cm-computed-field { background: #f8fafc; border-radius: 4px; padding: 8px 10px; }
-.cm-computed-value { font-size: 14px; font-weight: 700; color: #1e293b; }
-
-/* カスタムドロップダウン */
-.cm-custom-select { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px 10px; font-size: 13px; color: #334155; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; box-sizing: border-box; }
-.cm-custom-select:hover { border-color: #3b82f6; }
-.cm-placeholder { color: #94a3b8; }
-.cm-select-arrow { font-size: 10px; color: #64748b; transition: transform 0.2s; }
-.cm-select-arrow.rotated { transform: rotate(180deg); }
-.cm-dropdown { position: absolute; top: 100%; left: 0; width: 100%; max-height: 220px; overflow-y: auto; background: white; border: 1px solid #cbd5e1; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 200; margin-top: 2px; }
-.cm-dropdown-item { padding: 7px 10px; font-size: 12px; color: #334155; cursor: pointer; }
-.cm-dropdown-item:hover { background: #f1f5f9; }
-.cm-dropdown-item.selected { background: #eff6ff; color: #3b82f6; font-weight: 600; }
-
-/* マスタ自動コピー通知 */
-.cm-auto-copy-notice { display: flex; align-items: flex-start; gap: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px 14px; font-size: 12px; color: #1e40af; line-height: 1.6; margin-top: 8px; }
-
-/* スライドアニメーション */
-.slide-panel-enter-active, .slide-panel-leave-active { transition: opacity 0.25s ease; }
-.slide-panel-enter-active .cm-panel-container, .slide-panel-leave-active .cm-panel-container { transition: transform 0.25s ease; }
-.slide-panel-enter-from { opacity: 0; }
-.slide-panel-enter-from .cm-panel-container { transform: translateX(100%); }
-.slide-panel-leave-to { opacity: 0; }
-.slide-panel-leave-to .cm-panel-container { transform: translateX(100%); }
-
-/* リサイズハンドル */
-.resize-handle {
-  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
-  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
-}
-.resize-handle:hover { background: #3b82f6; }
-
-/* Drive取込セル（テーブル） */
-.cm-drive-cell {
-  cursor: pointer;
-  text-align: center;
-  transition: background 0.15s;
-}
-.cm-drive-cell:hover { background: #fffbeb; }
-.cm-drive-link {
-  font-size: 11px; font-weight: 600;
-  color: #92400e;
-  padding: 2px 8px; border-radius: 4px;
-  background: #fef3c7;
-}
-.cm-drive-copied {
-  font-size: 11px; font-weight: 700;
-  color: #166534;
-  padding: 2px 8px; border-radius: 4px;
-  background: #dcfce7;
-}
-
-/* Drive取込URL（パネル内） */
-.cm-drive-url-box {
-  display: flex; gap: 6px; align-items: center;
-}
-.cm-drive-url-input {
-  flex: 1; min-width: 0;
-  font-size: 11px; font-family: monospace;
-  color: #64748b; background: #f8fafc;
-}
-.cm-drive-copy-btn {
-  flex-shrink: 0;
-  padding: 6px 14px; border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  background: #fff; cursor: pointer;
-  font-size: 11px; font-weight: 600;
-  color: #334155; font-family: inherit;
-  transition: all 0.2s;
-}
-.cm-drive-copy-btn:hover { background: #f0f7ff; border-color: #93c5fd; }
-.cm-drive-copy-btn.copied { background: #dcfce7; border-color: #86efac; color: #166534; }
-
-/* Driveフォルダ状態 */
-.cm-drive-folder-status {
-  display: flex; flex-direction: column; gap: 8px;
-}
-.cm-folder-checking { font-size: 12px; color: #64748b; }
-.cm-folder-ok   { font-size: 12px; font-weight: 600; color: #166534; }
-.cm-folder-warn  { font-size: 12px; font-weight: 600; color: #92400e; }
-.cm-folder-error { font-size: 12px; font-weight: 600; color: #dc2626; }
-.cm-folder-none  { font-size: 12px; font-weight: 600; color: #64748b; }
-.cm-folder-recreate-btn {
-  padding: 6px 16px; border-radius: 8px;
-  border: 1px solid #f59e0b;
-  background: linear-gradient(135deg, #fffbeb, #fef3c7);
-  color: #92400e; font-size: 12px; font-weight: 700;
-  cursor: pointer; transition: all 0.2s;
-  font-family: inherit; width: fit-content;
-}
-.cm-folder-recreate-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  box-shadow: 0 2px 8px rgba(245,158,11,0.2);
-}
-.cm-folder-recreate-btn:disabled {
-  opacity: 0.5; cursor: not-allowed;
-}
-
-/* 見込先ログインメール */
-.cm-shared-email { font-size: 11px; color: #2563eb; }
-.cm-shared-email-none { font-size: 11px; color: #94a3b8; font-style: italic; }
+<style>
+@import "@/styles/master-list.css";
 </style>

@@ -1,0 +1,252 @@
+/* master-vendors.css - MockMasterVendorsPage.vueから外部化 */
+.vendor-master {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #333;
+  background: #ffffff;
+  padding: 0 16px;
+  overflow: auto;
+}
+
+/* ヘッダー */
+.vm-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 12px;
+}
+.vm-header-label { color: #1976D2; font-weight: 600; font-size: 13px; }
+.vm-header-count { color: #888; font-size: 11px; }
+
+/* 追加ボタン */
+.vm-add-btn {
+  margin-left: auto;
+  padding: 5px 14px;
+  background: #1976D2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.vm-add-btn:hover { background: #1565C0; }
+
+/* 検索・フィルタ */
+.vm-filters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  flex-wrap: wrap;
+}
+.vm-search-group {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+  max-width: 400px;
+}
+.vm-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  font-size: 12px;
+}
+.vm-search-input {
+  width: 100%;
+  padding: 6px 10px 6px 30px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+.vm-search-input:focus { border-color: #1976D2; box-shadow: 0 0 0 2px rgba(25,118,210,0.15); }
+.vm-filter-group { display: flex; align-items: center; gap: 4px; }
+.vm-filter-label { font-size: 11px; color: #555; font-weight: 600; }
+.vm-filter-select {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 11px;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+}
+.vm-filter-select:focus { border-color: #1976D2; }
+
+/* ツールバー */
+.vm-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+
+/* ページネーション */
+.vm-pagination { display: flex; align-items: center; gap: 2px; font-size: 12px; flex-wrap: wrap; }
+.vm-pagination.bottom { justify-content: center; padding: 8px 0 12px; }
+.vm-page-arrow {
+  padding: 4px 10px; cursor: pointer; color: #1976D2; font-weight: 600;
+  border-radius: 3px; user-select: none;
+}
+.vm-page-arrow:hover { background: #e3f2fd; }
+.vm-page-arrow.disabled { color: #ccc; pointer-events: none; }
+.vm-page-num {
+  padding: 4px 10px; cursor: pointer; border-radius: 3px; color: #555;
+  min-width: 28px; text-align: center; user-select: none;
+}
+.vm-page-num:hover { background: #e3f2fd; }
+.vm-page-num.active { background: #1976D2; color: white; font-weight: 600; }
+.vm-page-range { margin-left: 10px; color: #888; font-size: 11px; }
+
+/* テーブル */
+.vm-table-wrap { overflow: auto; flex: 1; min-height: 0; }
+.vm-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 11px; border: 1px solid #d0d7de; }
+.vm-table thead { background: #e3f2fd; position: sticky; top: 0; z-index: 1; }
+.vm-th {
+  padding: 6px 6px; text-align: center; font-weight: 600;
+  color: #555; font-size: 11px; white-space: nowrap; border: 1px solid #d0d7de;
+}
+.vm-th.sortable { cursor: pointer; user-select: none; }
+.vm-th.sortable:hover { background: #d0e8fc; }
+.sort-icon { font-size: 9px; margin-left: 2px; color: #1976D2; }
+.sort-icon.inactive { color: #ccc; }
+
+.vm-td { padding: 3px 4px; border: 1px solid #e0e0e0; color: #333; vertical-align: middle; }
+.vm-row:hover { background: #f5f9ff; }
+
+/* 読み取り専用セル */
+.vm-td-id { text-align: center; color: #999; font-size: 10px; font-family: monospace; }
+.vm-td-computed { font-family: monospace; font-size: 10px; color: #888; background: #fafafa; }
+
+/* 編集用テキスト入力 */
+.vm-edit-text {
+  width: 100%;
+  padding: 3px 4px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  font-size: 11px;
+  color: #333;
+  background: transparent;
+  outline: none;
+  box-sizing: border-box;
+}
+.vm-edit-text:hover { border-color: #ccc; }
+.vm-edit-text:focus { border-color: #1976D2; background: #fff; box-shadow: 0 0 0 1px rgba(25,118,210,0.2); }
+
+/* 編集用ドロップダウン */
+.vm-edit-select {
+  width: 100%;
+  padding: 2px 2px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  font-size: 10px;
+  color: #333;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.vm-edit-select:hover { border-color: #ccc; }
+.vm-edit-select:focus { border-color: #1976D2; background: #fff; }
+.vm-edit-select-sm { font-size: 10px; }
+
+/* T番号 */
+.vm-td-tnumber { white-space: nowrap; }
+.vm-tnumber-row { display: flex; align-items: center; gap: 0; margin: 1px 0; }
+.vm-t-prefix {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #1976D2;
+  padding: 2px 2px 2px 0;
+  user-select: none;
+}
+.vm-tnumber-input {
+  width: 110px;
+  padding: 2px 3px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  font-family: monospace;
+  font-size: 10px;
+  color: #555;
+  background: transparent;
+  outline: none;
+  box-sizing: border-box;
+}
+.vm-tnumber-input:hover { border-color: #ccc; }
+.vm-tnumber-input:focus { border-color: #1976D2; background: #fff; }
+
+/* 削除 */
+.vm-td-delete { text-align: center; }
+.vm-delete-icon {
+  color: #bbb;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.vm-delete-icon:hover { color: #c62828; }
+
+.vm-empty { color: #ccc; font-size: 10px; }
+
+/* ============================================================ */
+/* 削除モーダル                                                 */
+/* ============================================================ */
+.vm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.vm-modal {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  padding: 24px 28px;
+  min-width: 340px;
+  max-width: 440px;
+}
+.vm-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #c62828;
+  margin-bottom: 12px;
+}
+.vm-modal-body {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.vm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.vm-modal-btn {
+  padding: 7px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.vm-modal-btn-no {
+  background: #e0e0e0;
+  color: #555;
+}
+.vm-modal-btn-no:hover { background: #ccc; }
+.vm-modal-btn-yes {
+  background: #c62828;
+  color: #fff;
+}
+.vm-modal-btn-yes:hover { background: #b71c1c; }

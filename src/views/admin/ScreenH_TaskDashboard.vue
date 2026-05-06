@@ -336,7 +336,12 @@
                    </tbody>
                </table>
             <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-xs text-gray-500 text-center">
-              表示件数: {{ filteredClients.length }} 件
+              <template v-if="isLoading">
+                <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i>読み込み中…
+              </template>
+              <template v-else>
+                表示件数: {{ filteredClients.length }} 件
+              </template>
             </div>
            </div>
         </div>
@@ -346,7 +351,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onActivated } from 'vue';
 import { useRouter } from 'vue-router';
 
 // [Internal_Logic_Flow] Items 233-310 (Exact Copy)
@@ -476,8 +481,13 @@ const widgets = ref<TaskWidgets>({
     exportCount: 0, filingCount: 0, learningCount: 0, reconcileCount: 0
 });
 
-/** サーバーからタスクサマリ + 顧問先タスク一覧を取得（T-31-4） */
+const isLoading = ref(true);
+
+onMounted(() => { fetchTaskData(); });
+onActivated(() => { fetchTaskData(); });
+
 async function fetchTaskData() {
+    isLoading.value = true;
     try {
         const res = await fetch('/api/admin/task-summary');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -489,11 +499,10 @@ async function fetchTaskData() {
         allClients.value = data.clients;
     } catch (e) {
         console.warn('[ScreenH] タスクサマリ取得失敗:', e);
+    } finally {
+        isLoading.value = false;
     }
 }
-
-import { onMounted } from 'vue';
-onMounted(() => { fetchTaskData(); });
 
 // T-31-4: フィルタもサーバー側で実行可能だが、クライアント数が少量（<100）のため
 // ローカルフィルタを残す（再取得の遅延なし）。

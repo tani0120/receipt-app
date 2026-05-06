@@ -228,7 +228,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, nextTick, watch } from 'vue';
+import { ref, onActivated, reactive, computed, nextTick, watch } from 'vue';
 import {
   useStaff,
   emptyStaffForm,
@@ -287,30 +287,49 @@ const PAGE_SIZE = 20;
 const currentPage = ref(1);
 const totalPages = ref(1);
 const pagedRows = computed(() => filteredRows.value);
+const isLoading = ref(false);
 
 /** POST /api/staff/list でサーバー側でフィルタ+ソート+ページネーション */
 const fetchStaffList = async () => {
-  const res = await fetch('/api/staff/list', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      statusFilter: statusFilter.value,
-      sortKey: sortKey.value,
-      sortOrder: sortOrder.value,
-      page: currentPage.value,
-      pageSize: PAGE_SIZE,
-    }),
-  });
-  const data = await res.json();
-  filteredRows.value = data.rows;
-  totalPages.value = data.totalPages;
+  isLoading.value = true;
+  try {
+    const res = await fetch('/api/staff/list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        statusFilter: statusFilter.value,
+        sortKey: sortKey.value,
+        sortOrder: sortOrder.value,
+        page: currentPage.value,
+        pageSize: PAGE_SIZE,
+      }),
+    });
+    const data = await res.json();
+    filteredRows.value = data.rows;
+    totalPages.value = data.totalPages;
+  } catch (e) {
+    console.error('[StaffPage] リスト取得失敗:', e);
+  } finally {
+    isLoading.value = false;
+  }
 };
 
-// フィルタ・ソート・ページ変更時に自動でAPI再呼び出し
+// フィルタ・ソート・ページ変更時に自動でAPI再呼び出し（バッチ化で二重発火防止）
+let fetchPending = false;
 watch([statusFilter, sortKey, sortOrder, currentPage], () => {
-  fetchStaffList();
+  if (fetchPending) return;
+  fetchPending = true;
+  nextTick(() => {
+    fetchPending = false;
+    fetchStaffList();
+  });
 }, { immediate: true });
 
+
+
+
+// KeepAliveからの復帰時にデータを再取得
+onActivated(() => fetchStaffList());
 // データ変更後（追加・更新・削除）にリストを再取得
 const refreshList = () => fetchStaffList();
 
@@ -458,121 +477,6 @@ const restoreStaff = () => {
 };
 </script>
 
-<style scoped>
-.cm-settings { max-width: 1000px; margin: 0 auto; padding: 20px 24px; }
-.cm-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-.cm-back-link { color: #3b82f6; font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 4px; }
-.cm-back-link:hover { text-decoration: underline; }
-.cm-title { font-size: 18px; font-weight: 700; color: #1e293b; }
-
-/* ツールバー */
-.cm-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 8px 0; }
-.cm-toolbar-left { display: flex; align-items: center; gap: 12px; }
-.cm-toolbar-right { display: flex; align-items: center; gap: 8px; }
-.cm-filter-select { border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 10px; font-size: 12px; color: #334155; background: white; cursor: pointer; outline: none; }
-.cm-filter-select:focus { border-color: #3b82f6; }
-.cm-page-info { font-size: 12px; color: #64748b; }
-.cm-action-btn { border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 14px; font-size: 12px; cursor: pointer; background: white; color: #334155; transition: all 0.15s; display: flex; align-items: center; gap: 4px; }
-.cm-action-btn:hover { border-color: #3b82f6; color: #3b82f6; }
-.cm-action-btn.primary { background: #3b82f6; color: white; border-color: #3b82f6; }
-.cm-action-btn.primary:hover { background: #2563eb; }
-
-/* テーブル */
-.cm-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 6px; background: white; }
-.cm-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.cm-table thead th { background: #f8fafc; border-bottom: 2px solid #e2e8f0; padding: 10px 12px; text-align: left; font-weight: 600; color: #475569; white-space: nowrap; user-select: none; }
-.cm-table thead th.sortable { cursor: pointer; }
-.cm-table thead th.sortable:hover { color: #3b82f6; }
-.cm-table tbody td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; white-space: nowrap; }
-.cm-table tbody tr:hover { background: #f8fafc; }
-.cm-table tbody tr.row-inactive { opacity: 0.5; background: #f1f5f9; }
-.cm-staff-name { font-weight: 600; }
-.cm-email { color: #64748b; }
-.cm-romaji { color: #64748b; font-size: 11px; }
-.cm-uuid { font-family: 'Menlo', monospace; font-size: 10px; color: #94a3b8; letter-spacing: 0.5px; }
-.cm-empty { text-align: center; color: #94a3b8; padding: 40px 12px !important; }
-.cm-sort-icon { font-size: 10px; color: #94a3b8; margin-left: 2px; }
-.cm-sort-icon.active { color: #3b82f6; }
-
-/* ステータスバッジ */
-.cm-status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
-.status-active { background: #dcfce7; color: #166534; }
-.status-inactive { background: #fee2e2; color: #991b1b; }
-
-/* 権限バッジ */
-.cm-role-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
-.role-admin { background: #dbeafe; color: #1e40af; }
-.role-general { background: #f1f5f9; color: #64748b; }
-
-/* ページネーション */
-.cm-pagination { display: flex; justify-content: center; align-items: center; gap: 4px; margin-top: 16px; padding: 8px 0; }
-.cm-page-arrow { cursor: pointer; padding: 4px 8px; color: #3b82f6; font-size: 13px; user-select: none; }
-.cm-page-arrow.disabled { color: #cbd5e1; pointer-events: none; }
-.cm-page-num { cursor: pointer; padding: 4px 10px; border-radius: 4px; font-size: 12px; color: #64748b; }
-.cm-page-num.active { background: #3b82f6; color: white; }
-
-/* インライン編集 */
-.cm-inline-input { width: 100%; border: 1px solid #3b82f6; border-radius: 3px; padding: 4px 6px; font-size: 12px; color: #334155; outline: none; background: #eff6ff; box-sizing: border-box; }
-.cm-inline-select { width: 100%; border: 1px solid #3b82f6; border-radius: 3px; padding: 3px 4px; font-size: 12px; color: #334155; outline: none; background: #eff6ff; box-sizing: border-box; cursor: pointer; }
-
-/* 編集可能セルホバー（accounts準拠） */
-.td-editable { cursor: text; }
-.td-editable:hover { background: #fff9c4; outline: 1px dashed #fbc02d; }
-
-/* スライドインパネル */
-.cm-panel-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; display: flex; justify-content: flex-end; background: rgba(0,0,0,0.15); }
-.cm-panel-container { width: 440px; max-width: 90vw; background: white; box-shadow: -4px 0 24px rgba(0,0,0,0.12); display: flex; flex-direction: column; height: 100%; }
-.cm-panel-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
-.cm-panel-title { font-size: 15px; font-weight: 700; color: #1e293b; }
-.cm-panel-header-actions { display: flex; align-items: center; gap: 10px; }
-.cm-panel-cancel { color: #3b82f6; font-size: 13px; background: none; border: none; cursor: pointer; }
-.cm-panel-cancel:hover { text-decoration: underline; }
-.cm-panel-save { color: white; font-size: 13px; background: #3b82f6; border: none; border-radius: 4px; padding: 6px 14px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-.cm-panel-save:hover { background: #2563eb; }
-.cm-panel-terminate-btn { color: white; font-size: 12px; background: #ef4444; border: none; border-radius: 4px; padding: 5px 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-.cm-panel-terminate-btn:hover { background: #dc2626; }
-.cm-panel-restore-btn { color: white; font-size: 12px; background: #22c55e; border: none; border-radius: 4px; padding: 5px 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-.cm-panel-restore-btn:hover { background: #16a34a; }
-.cm-panel-body { flex: 1; overflow-y: auto; padding: 20px; }
-
-/* セクション */
-.cm-section { margin-bottom: 24px; }
-.cm-section-title { font-size: 14px; font-weight: 700; color: #1e293b; padding-bottom: 8px; border-bottom: 2px solid #3b82f6; margin-bottom: 14px; }
-.cm-field { margin-bottom: 12px; }
-.cm-label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
-.cm-hint { font-weight: 400; font-size: 10px; color: #94a3b8; }
-.cm-required { color: #ef4444; }
-.cm-input { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px 10px; font-size: 13px; color: #334155; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
-.cm-input:focus { border-color: #3b82f6; }
-.cm-readonly { background: #f8fafc; color: #94a3b8; font-family: 'Menlo', monospace; font-size: 11px; letter-spacing: 0.5px; }
-.cm-radio-group { display: flex; align-items: center; gap: 14px; margin-top: 2px; }
-.cm-radio { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #334155; cursor: pointer; }
-.cm-radio input[type="radio"] { accent-color: #3b82f6; }
-
-/* パスワード入力 */
-.cm-password-wrap { position: relative; }
-.cm-password-input { padding-right: 36px; }
-.cm-password-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; }
-.cm-password-toggle:hover { color: #64748b; }
-
-/* 権限説明 */
-.cm-permission-info { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
-.cm-permission-block { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; background: #f8fafc; border-radius: 4px; font-size: 11px; line-height: 1.5; }
-.cm-permission-role-label { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; flex-shrink: 0; margin-top: 1px; }
-.cm-permission-desc { color: #64748b; }
-
-/* スライドアニメーション */
-.slide-panel-enter-active, .slide-panel-leave-active { transition: opacity 0.25s ease; }
-.slide-panel-enter-active .cm-panel-container, .slide-panel-leave-active .cm-panel-container { transition: transform 0.25s ease; }
-.slide-panel-enter-from { opacity: 0; }
-.slide-panel-enter-from .cm-panel-container { transform: translateX(100%); }
-.slide-panel-leave-to { opacity: 0; }
-.slide-panel-leave-to .cm-panel-container { transform: translateX(100%); }
-
-/* リサイズハンドル */
-.resize-handle {
-  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
-  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
-}
-.resize-handle:hover { background: #3b82f6; }
+<style>
+@import '@/styles/master-staff.css';
 </style>

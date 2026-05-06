@@ -12,13 +12,19 @@
 import { getAll } from './clientStore'
 import { getAll as getAllStaff } from './staffStore'
 import type { Client } from '../../repositories/types'
+import { applyFilterConditions } from '../helpers/applyFilterConditions'
+import type { FilterCondition } from '../helpers/applyFilterConditions'
 
 // ────────────────────────────────────────────
 // クエリパラメータ
 // ────────────────────────────────────────────
 
 export interface ClientListQuery {
-  /** ステータスフィルタ（複数可） */
+  /** 汎用フィルタ条件（FilterCondition[]） */
+  filters?: FilterCondition[]
+  /** 条件結合方式（デフォルト: 'and'） */
+  logic?: 'and' | 'or'
+  /** 旧: ステータスフィルタ（後方互換。filtersが空の場合のフォールバック） */
   statusFilters?: string[]
   /** ソートキー */
   sortKey?: string
@@ -50,8 +56,11 @@ export function getClientList(query: ClientListQuery): ClientListResponse {
   // 1. 全件取得
   let rows = [...getAll()]
 
-  // 2. ステータスフィルタ
-  if (query.statusFilters && query.statusFilters.length > 0) {
+  // 2. フィルタ適用（汎用フィルタエンジン）
+  if (query.filters && query.filters.length > 0) {
+    rows = applyFilterConditions(rows, query.filters, query.logic ?? 'and')
+  } else if (query.statusFilters && query.statusFilters.length > 0) {
+    // 後方互換: 旧statusFiltersパラメータ
     rows = rows.filter(r => query.statusFilters!.includes(r.status))
   }
 
@@ -104,3 +113,4 @@ export function getClientList(query: ClientListQuery): ClientListResponse {
     totalPages,
   }
 }
+

@@ -1,0 +1,107 @@
+/* progress-detail.css - MockProgressDetailPage.vueから外部化 */
+.pg-container { padding: 0; font-family: 'Noto Sans JP', sans-serif; font-size: 12px; color: #333; }
+
+/* フィルター行 */
+.pg-filter-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #f0f4f8; border-bottom: 1px solid #d0d7de; }
+.pg-filters { display: flex; align-items: center; gap: 8px; }
+.pg-search-wrap { position: relative; }
+.pg-search-icon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 11px; }
+.pg-search-input { padding: 4px 8px 4px 26px; border: 1px solid #c8cdd3; border-radius: 4px; font-size: 11px; color: #333; background: white; min-width: 120px; outline: none; }
+.pg-search-input:focus { border-color: #0969da; box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.15); }
+.pg-select { padding: 4px 8px; border: 1px solid #c8cdd3; border-radius: 4px; font-size: 11px; color: #333; background: white; min-width: 100px; }
+.pg-check-label { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #555; cursor: pointer; white-space: nowrap; }
+.pg-right-info { display: flex; align-items: center; gap: 16px; font-size: 11px; color: #666; }
+.pg-tag-info { color: #0969da; cursor: pointer; }
+.pg-build-info { color: #888; }
+
+/* アクション行 */
+.pg-action-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px; background: white; border-bottom: 1px solid #e1e4e8; }
+.pg-pagination { display: flex; align-items: center; gap: 4px; }
+.pg-page-arrow { cursor: pointer; padding: 2px 6px; font-size: 11px; color: #0969da; border: 1px solid #d0d7de; border-radius: 3px; background: white; }
+.pg-page-arrow:hover { background: #f0f4f8; }
+.pg-page-arrow.disabled { opacity: 0.3; pointer-events: none; }
+.pg-page-num { cursor: pointer; padding: 2px 8px; font-size: 11px; color: #333; border: 1px solid #d0d7de; border-radius: 3px; background: white; }
+.pg-page-num:hover { background: #f0f4f8; }
+.pg-page-num.active { background: #0969da; color: white; border-color: #0969da; }
+.pg-page-info { font-size: 11px; color: #666; margin-left: 8px; }
+.pg-actions { display: flex; align-items: center; gap: 6px; }
+.pg-btn { padding: 4px 12px; font-size: 11px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; border: 1px solid #d0d7de; white-space: nowrap; }
+.pg-btn-secondary { background: white; color: #333; }
+.pg-btn-secondary:hover { background: #f0f4f8; }
+
+/* テーブル */
+.pg-table-wrap { overflow-x: auto; }
+.pg-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.pg-table th { background: #4a9eed; color: white; padding: 6px 4px; text-align: center; font-size: 11px; font-weight: 600; white-space: nowrap; border-right: 1px solid rgba(255,255,255,0.3); user-select: none; line-height: 1.3; }
+.pg-table th:last-child { border-right: none; }
+.pg-table th.sortable { cursor: pointer; }
+.pg-table th.sortable:hover { background: #3a8edd; }
+.pg-th-status { width: 60px; text-align: center; }
+.pg-th-narrow { white-space: nowrap; }
+.pg-th-num { text-align: right; }
+.pg-th-month { text-align: center; font-size: 9px; padding: 6px 1px; }
+.pg-th-narrow { font-size: 11px; }
+.pg-sort-icon { font-size: 7px; color: rgba(255,255,255,0.5); margin-left: 1px; }
+.pg-sort-icon.active { color: white; }
+
+.pg-table td { border-bottom: 1px solid #d0d7de; border-right: 1px solid #e8ecf0; padding: 5px 4px; font-size: 12px; color: #333; white-space: nowrap; }
+.pg-table td:last-child { border-right: none; }
+.pg-row { transition: background 0.1s; }
+.pg-row:hover { background: #fef3c7; }
+.pg-row:nth-child(even) { background: #fafbfc; }
+.pg-row:nth-child(even):hover { background: #fef3c7; }
+.pg-row-inactive { opacity: 0.5; }
+.pg-row-suspension { opacity: 0.7; }
+
+.pg-td-status { text-align: center; }
+.pg-status-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.pg-status-active { background: #dcfce7; color: #166534; }
+.pg-status-suspension { background: #fef9c3; color: #854d0e; }
+.pg-status-inactive { background: #fee2e2; color: #991b1b; }
+.pg-td-code { font-weight: 700; letter-spacing: 0.5px; color: #1e293b; font-family: 'Menlo', monospace; font-size: 11px; text-align: center; }
+.pg-td-fiscal { text-align: center; font-size: 12px; color: #555; }
+.pg-td-client { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.pg-td-narrow { font-size: 12px; color: #555; text-align: center; }
+.pg-td-num { text-align: center; font-variant-numeric: tabular-nums; }
+.pg-td-month { text-align: center; font-size: 9px; font-variant-numeric: tabular-nums; color: #b0b8c4; padding: 5px 2px; }
+.pg-td-month-val { color: #1e293b; font-weight: 600; }
+.pg-td-total { font-weight: 600; font-size: 12px; }
+
+.pg-empty { text-align: center; color: #94a3b8; padding: 40px 12px !important; }
+
+/* リサイズハンドル（青ヘッダー用: 白系） */
+.resize-handle {
+  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
+  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
+}
+.resize-handle:hover { background: rgba(255,255,255,0.5); }
+.resize-handle-light {
+  position: absolute; top: 0; right: 0; width: 4px; height: 100%;
+  cursor: col-resize; background: transparent; transition: background 0.15s; z-index: 2;
+}
+.resize-handle-light:hover { background: rgba(255,255,255,0.5); }
+
+/* 共有設定バッジ */
+.pg-td-share { text-align: center; }
+.pg-share-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+}
+.pg-share-active  { background: #dcfce7; color: #166534; }
+.pg-share-pending { background: #dbeafe; color: #1e40af; }
+.pg-share-revoked { background: #f1f5f9; color: #94a3b8; }
+.pg-share-none    { color: #cbd5e1; }
+
+/* 資料未選別ハイライト（オレンジ背景） */
+.pg-unsorted-highlight { background: #fff7ed; color: #c2410c; font-weight: 700; }
+
+/* ジョブステータスバッジ */
+.pg-td-job { text-align: center; }
+.pg-job-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.pg-job-count { font-weight: 400; font-size: 9px; opacity: 0.8; }
+.pg-job-processing { background: #dbeafe; color: #1e40af; }
+.pg-job-completed { background: #dcfce7; color: #166534; }
+.pg-job-failed { background: #fee2e2; color: #991b1b; }
+.pg-job-queued { background: #f1f5f9; color: #64748b; }
+/* 未出力ハイライト（赤背景） */
+.pg-unexported-highlight { background: #fef2f2; color: #dc2626; font-weight: 700; }
