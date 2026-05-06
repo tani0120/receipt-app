@@ -2622,7 +2622,7 @@ const filteredAccounts = computed(() => {
  * 動的パスアクセスのためkeyof型安全性は保証できない。内部でunknown経由でRecordにキャストする。
  */
 function getRawValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknown {
-  return path.split(".").reduce((o: unknown, key: string) => (o as Record<string, unknown>)?.[key], obj as unknown);
+  return path.split(".").reduce<unknown>((o, key) => (o as Record<string, unknown> | undefined)?.[key], obj as Record<string, unknown>);
 }
 
 // ────── 区分ドロップダウン（D7a: category-first選択の起点） ──────
@@ -5528,7 +5528,7 @@ function hasPastJournal(journal: JournalPhase5Mock): boolean {
  * 動的パスアクセスのためkeyof型安全性は保証できない。内部でunknown経由でRecordにキャストする。
  */
 function getValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknown {
-  const raw = path.split(".").reduce((o: unknown, key: string) => (o as Record<string, unknown>)?.[key], obj as unknown);
+  const raw = path.split(".").reduce<unknown>((o, key) => (o as Record<string, unknown> | undefined)?.[key], obj as Record<string, unknown>);
   // 概念ID → MF正式名称に変換（tax_category_idキーの場合）
   if (path.endsWith("tax_category_id") && typeof raw === "string") {
     return resolveTaxCategoryName(raw);
