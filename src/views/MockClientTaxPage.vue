@@ -200,8 +200,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
 
-import type { TaxCategory, TaxDirection } from '@/shared/types/tax-category';
-import { extractRateFromName } from '@/shared/types/tax-category';
+import type { TaxCategory, TaxDirection } from '@/types/shared-tax-category';
+import { extractRateFromName } from '@/types/shared-tax-category';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { getInitialCopyCounter } from '@/shared/utils/copy-utils';

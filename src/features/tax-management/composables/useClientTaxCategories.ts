@@ -12,7 +12,7 @@
 import { ref, computed, watch, type Ref } from 'vue'
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master'
 import { useTaxMaster } from './useTaxMaster'
-import type { TaxCategory } from '@/shared/types/tax-category'
+import type { TaxCategory } from '@/types/shared-tax-category'
 
 // =============================================
 // 型定義

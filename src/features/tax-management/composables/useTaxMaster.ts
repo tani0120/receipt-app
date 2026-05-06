@@ -11,7 +11,7 @@
  */
 import { ref, computed, watch } from 'vue'
 import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master'
-import type { TaxCategory } from '@/shared/types/tax-category'
+import type { TaxCategory } from '@/types/shared-tax-category'
 
 // =============================================
 // 型定義

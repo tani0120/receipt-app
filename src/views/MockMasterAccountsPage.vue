@@ -231,7 +231,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
-import type { Account } from '@/shared/types/account';
+import type { Account } from '@/types/shared-account';
 import { ACCOUNT_MASTER } from '@/shared/data/account-master';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { getInitialCopyCounter } from '@/shared/utils/copy-utils';

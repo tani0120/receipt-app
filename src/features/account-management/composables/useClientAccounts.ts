@@ -11,7 +11,7 @@
  */
 import { ref, computed, watch, type Ref } from 'vue'
 import { useAccountMaster } from './useAccountMaster'
-import type { Account } from '@/shared/types/account'
+import type { Account } from '@/types/shared-account'
 
 // =============================================
 // 型定義

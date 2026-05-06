@@ -8,7 +8,7 @@
  */
 
 import type { Vendor } from '@/types/pipeline/vendor.type'
-import type { Account } from '@/shared/types/account'
+import type { Account } from '@/types/shared-account'
 
 /** DB行 → Vendor型への変換 */
 export function toVendor(row: Record<string, unknown>): Vendor {

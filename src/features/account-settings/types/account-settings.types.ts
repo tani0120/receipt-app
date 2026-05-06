@@ -1,6 +1,6 @@
 import type { Ref, ComputedRef } from 'vue'
-import type { Account } from '@/shared/types/account'
-import type { TaxCategory } from '@/shared/types/tax-category'
+import type { Account } from '@/types/shared-account'
+import type { TaxCategory } from '@/types/shared-tax-category'
 
 // =============================================
 // 統一型（マスタ/顧問先の区別なく使える）

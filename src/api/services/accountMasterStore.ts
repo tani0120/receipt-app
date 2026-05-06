@@ -14,8 +14,8 @@
 
 import { ACCOUNT_MASTER } from '../../shared/data/account-master'
 import { TAX_CATEGORY_MASTER } from '../../shared/data/tax-category-master'
-import type { Account } from '../../shared/types/account'
-import type { TaxCategory } from '../../shared/types/tax-category'
+import type { Account } from '../../types/shared-account'
+import type { TaxCategory } from '../../types/shared-tax-category'
 
 // ────────────────────────────────────────────
 // インメモリストア（将来Supabase移行時にDB呼び出しに差し替え）

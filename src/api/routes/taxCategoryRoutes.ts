@@ -22,7 +22,7 @@ import {
   getFilteredClientTaxCategories,
   saveClientTaxCategories,
 } from '../services/accountMasterStore'
-import type { TaxCategory } from '../../shared/types/tax-category'
+import type { TaxCategory } from '../../types/shared-tax-category'
 
 const app = new Hono()
 

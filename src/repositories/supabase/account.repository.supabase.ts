@@ -9,7 +9,7 @@
 
 import { getSupabase } from '@/repositories/supabase/supabase'
 import type { AccountRepository } from '@/repositories/types'
-import type { Account } from '@/shared/types/account'
+import type { Account } from '@/types/shared-account'
 import { toAccount } from './helpers'
 
 export const supabaseAccountRepo: AccountRepository = {

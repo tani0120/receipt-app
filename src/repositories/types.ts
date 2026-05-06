@@ -19,7 +19,7 @@
 
 
 import type { Vendor, IndustryVectorEntry, VendorVector } from '@/types/pipeline/vendor.type'
-import type { Account } from '@/shared/types/account'
+import type { Account } from '@/types/shared-account'
 
 // ============================================================
 // § 0-1. Staff（スタッフ）— DL-042で追加

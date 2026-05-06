@@ -253,7 +253,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, nextTick } from 'vue';
 
-import type { Account } from '@/shared/types/account';
+import type { Account } from '@/types/shared-account';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { getInitialCopyCounter } from '@/shared/utils/copy-utils';

@@ -7,7 +7,7 @@
  * 注意: JournalListLevel3Mock.vue L2636 にあったSALES_CATEGORIES / PURCHASE_CATEGORIES は
  *   本ファイルに統合済み。旧定義は '特別利益', '特別損失', '繰入額等' が欠落していた（バグ）。
  */
-import type { AccountGroup, TaxDetermination } from '@/shared/types/account'
+import type { AccountGroup, TaxDetermination } from '@/types/shared-account'
 
 // ========================================
 // カテゴリ定数（科目分類の中分類）// ========================================

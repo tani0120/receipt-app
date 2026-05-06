@@ -10,7 +10,7 @@
  *   - 変更契機は「業務ルールの変更」のみ
  */
 
-import type { Yen } from '@/shared/types/yen';
+import type { Yen } from '@/types/yen';
 
 // ============================================================
 // 手書き判定（3値enum）
@@ -57,7 +57,7 @@ export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod];
 
 // ============================================================
 // 税区分（マネーフォワード互換8値）
-// @deprecated 新規コードでは shared/types/tax-category.ts の TaxCategory 型と
+// @deprecated 新規コードでは types/shared-tax-category.ts の TaxCategory 型と
 //             shared/data/tax-category-master.ts の概念IDを使用すること。
 //             旧ID → 新IDの対応は TaxCodeMapper.ts で管理。
 // ============================================================

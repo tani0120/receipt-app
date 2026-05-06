@@ -22,7 +22,7 @@ import {
   getFilteredClientAccounts,
   saveClientAccounts,
 } from '../services/accountMasterStore'
-import type { Account } from '../../shared/types/account'
+import type { Account } from '../../types/shared-account'
 
 const app = new Hono()
 

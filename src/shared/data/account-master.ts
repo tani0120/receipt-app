@@ -14,7 +14,7 @@
  *   defaultTaxCategoryId: デフォルト税区分の概念ID
  */
 
-import type { Account } from "@/shared/types/account";
+import type { Account } from "@/types/shared-account";
 
 export const ACCOUNT_MASTER: readonly Account[] = [
   // ======================================================

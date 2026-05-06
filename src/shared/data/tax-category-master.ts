@@ -24,7 +24,7 @@
  * displayOrder: CSV並び順
  */
 
-import type { TaxCategory } from '@/shared/types/tax-category'
+import type { TaxCategory } from '@/types/shared-tax-category'
 
 export const TAX_CATEGORY_MASTER: readonly TaxCategory[] = [
   // ===== 共通 =====

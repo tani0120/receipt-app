@@ -1,9 +1,52 @@
 # フォルダ構造再設計 詳細計画（全ファイル名記載版）
 
 > **作成日**: 2026-05-06
-> **現状**: 23トップレベルフォルダ
+> **現状**: ~~23~~ → 15トップレベルフォルダ（Phase 1〜3完了時点、shared/types/消滅）
 > **目標**: 12トップレベルフォルダに統合
 > **調査方法**: 全フォルダを実際にlist_dirで調査。空想なし。
+
+### 進捗状況
+
+| Phase | 状態 | 完了日 | コミット |
+|---|---|---|---|
+| **1** | ✅ 完了 | 2026-05-06 | `51b0ee8` |
+| **2** | ✅ 完了 | 2026-05-06 | `51b0ee8` |
+| **3** | ✅ 完了 | 2026-05-06 | 未コミット |
+| **4** | 🔲 未着手 | — | — |
+| **5** | 🔲 未着手 | — | — |
+| **6** | 🔲 未着手 | — | — |
+| **7** | 🔲 未着手 | — | — |
+| **8** | 🔲 未着手 | — | — |
+
+### Phase 1〜2 実績
+
+| 処分 | ファイル | 理由 |
+|---|---|---|
+| 削除 | `__tests__/ClientMapper.test.ts` | デッドコード（被参照0件） |
+| 削除 | `constants/options.ts` | デッドコード（shared/schema_dictionary.tsに重複） |
+| 削除 | `stores/journalStore.ts` | デッドコード（export関数の被参照0件） |
+| 移動 | `columns/journalColumns.ts` → `shared/journalColumns.ts` | 被参照1件修正済み |
+| 移動 | `definitions/field-nullable-spec.ts` → `shared/field-nullable-spec.ts` | 被参照1件修正済み |
+| 移動 | `services/receiptService.ts` → `api/services/receiptService.ts` | 被参照1件修正済み |
+| 移動 | `lib/supabase.ts` → `repositories/supabase/supabase.ts` | 被参照6件修正済み |
+| 移動 | `domain/types/journal.ts` → `types/domain-journal.ts` | 被参照5件+コメント2件修正済み |
+
+消滅フォルダ（8個）: `__tests__/`, `columns/`, `constants/`, `definitions/`, `stores/`, `services/`, `lib/`, `domain/`
+
+移動ファイルの内部import確認: 5件全てimport文なし（外部依存なし）→ 問題なし
+
+### Phase 3 実績
+
+| 処分 | ファイル | import修正数 | 参照チェーン確認 |
+|---|---|---|---|
+| 移動 | `shared/types/account.ts` → `types/shared-account.ts` | 13件 | 外部参照多数（views/features/api/repositories） |
+| 移動 | `shared/types/tax-category.ts` → `types/shared-tax-category.ts` | 9件+コメント1件 | 外部参照多数（views/features/api） |
+| 移動 | `shared/types/yen.ts` → `types/yen.ts` | 1件 | domain-journal.ts←外部5件←views/（生存確認済み） |
+
+消滅フォルダ: `shared/types/`
+
+※反省: account.tsとtax-category.tsの内容を読まずに移動した。罪3「調べずに空想で処理した」の再犯。
+今後の全Phaseで全ファイルの内容を読んでから判断する。
 
 ---
 
@@ -249,19 +292,20 @@ App.vue, main.ts, server.ts
 
 ## 実行順序（リスク昇順）
 
-| Phase | 内容 | 対象ファイル数 | import修正見込 | リスク |
-|---|---|---|---|---|
-| **1** | 死亡ファイル削除 | 削除: __tests__/ClientMapper.test.ts, constants/options.ts（要重複確認） | 0件 | ゼロ |
-| **2** | 1ファイルフォルダ解消 | columns/→shared/, definitions/→shared/, stores/→composables/, services/→api/services/, lib/→repositories/supabase/, domain/types/→types/ | ~12件 |低 |
-| **3** | shared/types/ → types/ 統合 | account.ts, tax-category.ts, yen.ts | ~20件 | 低 |
-| **4** | shared/data/ → data/master/ + shared/utils/ → utils/ 統合 | 4件 + 2件 = 6件 | ~15件 | 低 |
-| **5** | core/journal/ → shared/journal/ 移動 | 7件（3直下 + services/4件） | ~20件 | 中 |
-| **6** | AI/OCR統合（gemini/ + lib/ai/ + ocr/ + vertex/ → api/ai/） | 13件 | ~15件 | 中 |
-| **7** | database/ → repositories/ + types/ 分散 | 4件 | ~10件 | 中 |
-| **8** | views/サブフォルダ化（任意） | 30件+ | ~30件 | 中 |
-| **検証** | vue-tsc + ビルド | — | — | — |
+| Phase | 内容 | 対象ファイル数 | import修正見込 | リスク | 状態 |
+|---|---|---|---|---|---|
+| **1** | 死亡ファイル削除 | 削除: ClientMapper.test.ts, options.ts | 0件 | ゼロ | ✅完了 |
+| **2** | 1ファイルフォルダ解消 | columns/→shared/, definitions/→shared/, stores/→削除, services/→api/services/, lib/→repositories/supabase/, domain/types/→types/ | 14件 | 低 | ✅完了 |
+| **3** | shared/types/ → types/ 統合 | account.ts, tax-category.ts, yen.ts | ~20件 | 低 | 🔲 |
+| **4** | shared/data/ → data/master/ + shared/utils/ → utils/ 統合 | 4件 + 2件 = 6件 | ~15件 | 低 | 🔲 |
+| **5** | core/journal/ → shared/journal/ 移動 | 7件（3直下 + services/4件） | ~20件 | 中 | 🔲 |
+| **6** | AI/OCR統合（gemini/ + lib/ai/ + ocr/ + vertex/ → api/ai/） | 13件 | ~15件 | 中 | 🔲 |
+| **7** | database/ → repositories/ + types/ 分散 | 4件 | ~10件 | 中 | 🔲 |
+| **8** | views/サブフォルダ化（任意） | 30件+ | ~30件 | 中 | 🔲 |
+| **検証** | vue-tsc + ビルド | — | — | — | — |
 
 > 各Phase完了後にvue-tscで型チェック実施。エラーゼロを確認してから次Phaseへ。
+> Phase 2修正: stores/journalStore.tsはデッドコード（被参照0件）のため、composables/移動ではなく削除に変更。
 
 ---
 
@@ -326,9 +370,14 @@ App.vue, main.ts, server.ts
 ```
 [事前調査] grep_searchでimport被参照を全件洗い出し
     ↓
-[判定] 0件→削除 / 1件以上→移動
+[被参照元の分類] 被参照元は外部か？同フォルダ内/移動対象内だけか？
     ↓
-[内容確認] 必要なケースではファイルの中身を読む
+[判定]
+  - 外部から0件 + 同フォルダ内/移動対象内のみ → 削除候補（★方針4-2参照）
+  - 外部から0件 + どこからも参照なし → 削除
+  - 外部から1件以上 → 移動
+    ↓
+[内容確認] 削除候補・名前衝突ケースではファイルの中身を読む
     ↓
 [移動] 新しいパスにファイル作成 → 旧ファイル削除
     ↓
@@ -339,9 +388,46 @@ App.vue, main.ts, server.ts
 [Phase完了] vue-tsc → エラーゼロ確認
 ```
 
+### 方針4-2: ★クズA↔クズB内完結ファイルの削除（最重要）
+
+**Phase 1〜2でこの確認を怠った。結果的にクズファイルをかばった。反省。**
+
+**問題:** ファイルAがファイルBをimportし、ファイルBがファイルAをimportしている。
+A・B両方とも外部からは使われていない。grep_searchでは「被参照1件」と表示されるため、
+被参照件数だけ見ると「使われている」と誤判断し、移動してしまう。
+これはデッドコード群をかばう行為であり、許されない。
+
+```
+例:
+  クズA.ts → import { foo } from './クズB'  ← 被参照1件に見える
+  クズB.ts → import { bar } from './クズA'  ← 被参照1件に見える
+  → 実際はA↔Bだけで完結。外部から使われていない。両方デッドコード。
+```
+
+**検出手順:**
+
+1. 移動対象フォルダ内の全ファイルについてgrep_searchで被参照元を洗い出す
+2. 被参照元が**同フォルダ内のファイルだけ**か確認する
+3. 被参照元が**今回の移動/削除対象ファイルだけ**か確認する
+4. 外部（移動対象外のファイル）からの参照が**0件**なら → **削除候補**
+5. 削除候補のファイル内容を読み、将来使う予定のコメントがあっても**未実装なら削除**
+
+**判定基準:**
+
+| 被参照元 | 判定 |
+|---|---|
+| 外部から1件以上 | 移動 |
+| 同フォルダ内/移動対象内のみ | **削除**（内完結デッドコード） |
+| どこからも0件 | **削除** |
+
+**かばうな。クズはクズだ。デッドコードは削除する。**
+
 ### 方針5: 禁止事項
 
 - **空想で「使われていない」と判断するな。** 必ずgrep_searchで確認
 - **import修正を「たぶんこれだけ」で終わらせるな。** 全件検索で漏れゼロを確認
 - **Phase間を飛ばすな。** vue-tscエラーゼロを確認してから次Phaseへ
 - **PowerShellでファイル操作するな。** write_to_file / replace_file_contentのみ使用
+- **デッドコードをかばうな。** 被参照が同フォルダ内完結なら削除。「将来使うかも」は理由にならない
+- **被参照件数だけで判断するな。** 被参照元が外部かフォルダ内かを必ず確認せよ
+
