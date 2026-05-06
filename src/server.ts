@@ -119,6 +119,10 @@ app.route('/api/guest', guestAuthRoutes)
 import notificationRoutes from './api/routes/notificationRoutes'
 app.route('/api/notifications', notificationRoutes)
 
+// Lead API: 見込先JSON永続化
+import leadRoutes from './api/routes/leadRoutes'
+app.route('/api/leads', leadRoutes)
+
 // ConfirmedJournal API: 確定済み仕訳JSON永続化（T-03 / DL-053）
 import confirmedJournalRoutes from './api/routes/confirmedJournalRoutes'
 app.route('/api/confirmed-journals', confirmedJournalRoutes)

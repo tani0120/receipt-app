@@ -146,7 +146,7 @@ interface TopItem {
 }
 
 const topItems: TopItem[] = [
-  { key: 'pipeline',   label: '見込管理',     icon: 'fa-solid fa-chart-line',             path: null,                          managedPaths: [] },
+  { key: 'pipeline',   label: '見込管理',     icon: 'fa-solid fa-chart-line',             path: '/master/leads',               managedPaths: ['/master/leads'] },
   { key: 'clients',    label: '顧問先管理',   icon: 'fa-solid fa-building',               path: '/master/clients',             managedPaths: ['/master/clients'] },
   { key: 'progress',   label: '進捗管理',     icon: 'fa-solid fa-bars-progress',          path: '/master/progress',            managedPaths: ['/master/progress'] },
   { key: 'collection', label: '資料回収',     icon: 'fa-solid fa-folder-open',            path: '/collection',                 managedPaths: ['/collection'] },

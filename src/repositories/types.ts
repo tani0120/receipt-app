@@ -122,6 +122,64 @@ export interface ClientForm extends Omit<Client, 'clientId' | 'contact'> {
 }
 
 // ============================================================
+// § 0-3. Lead（見込先）— 顧問先候補の管理
+// ============================================================
+
+/** 見込先ステータス */
+export type LeadStatus = 'active' | 'inactive' | 'converted' | 'suspension'
+
+/**
+ * 見込先（営業リード管理）
+ *
+ * 対象データ: まだ正式顧問先ではないが見込みのある企業/個人
+ * 用途: 見込管理、営業進捗トラッキング
+ * 構造: Client型と同一構成（項目は後で調整）
+ */
+export interface Lead {
+  leadId: string;       // 不変。DB primary key。形式: {3コード}-{5桁連番}
+  threeCode: string;    // 識別コード
+  companyName: string;
+  companyNameKana: string;
+  type: 'corp' | 'individual';
+  repName: string;
+  repNameKana: string;
+  phoneNumber: string;
+  email: string;
+  chatRoomUrl: string;
+  contact: { type: 'email' | 'chatwork' | 'none'; value: string };
+  fiscalMonth: number;
+  fiscalDay: string | number;
+  industry: string;
+  establishedDate: string;
+  status: LeadStatus;
+  accountingSoftware: 'mf' | 'freee' | 'yayoi' | 'tkc' | 'other';
+  taxFilingType: 'blue' | 'white';
+  consumptionTaxMode: 'general' | 'simplified' | 'exempt';
+  simplifiedTaxCategory?: number;
+  taxMethod: 'inclusive' | 'exclusive';
+  calculationMethod: 'accrual' | 'cash' | 'interim_cash';
+  defaultPaymentMethod: 'cash' | 'owner_loan' | 'accounts_payable';
+  isInvoiceRegistered: boolean;
+  invoiceRegistrationNumber: string;
+  hasDepartmentManagement: boolean;
+  hasRentalIncome: boolean;
+  staffId: string | null;
+  sharedFolderId: string;
+  sharedEmail: string;
+  sharedChatUrl: string;
+  advisoryFee: number;
+  bookkeepingFee: number;
+  settlementFee: number;
+  taxFilingFee: number;
+}
+
+/** 見込先フォーム用型 */
+export interface LeadForm extends Omit<Lead, 'leadId' | 'contact'> {
+  contactType: 'email' | 'chatwork' | 'none';
+  contactValue: string;
+}
+
+// ============================================================
 // § ConfirmedJournal 型（T-03完了: 2026-04-29）
 // ============================================================
 

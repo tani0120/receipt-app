@@ -340,6 +340,24 @@ export const routes: RouteRecordRaw[] = [
   },
   // 旧パスリダイレクト（/clients/list → /master/clients）
   { path: '/clients/list', redirect: '/master/clients' },
+  // 見込先一覧
+  {
+    path: '/master/leads',
+    name: 'MasterLeads',
+    component: () => import('@/views/master/LeadListPage.vue')
+  },
+  // 見込先 新規追加
+  {
+    path: '/master/leads/new',
+    name: 'LeadNew',
+    component: () => import('@/views/master/LeadEditPage.vue')
+  },
+  // 見込先 編集ページ
+  {
+    path: '/master/leads/:leadId',
+    name: 'LeadEdit',
+    component: () => import('@/views/master/LeadEditPage.vue')
+  },
   // /master ハブ（勘定科目マスタ + 税区分マスタの分岐ページ）
   {
     path: '/master',
