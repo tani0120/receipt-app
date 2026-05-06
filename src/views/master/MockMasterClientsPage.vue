@@ -7,43 +7,41 @@
           <h1 class="cm-title">顧問先管理</h1>
         </div>
 
-        <!-- ツールバー -->
-        <div class="cm-toolbar">
-          <div class="cm-toolbar-left">
-            <!-- ステータスフィルター（複数選択） -->
-            <div class="cm-filter-checkboxes">
-              <label class="cm-filter-cb"><input type="checkbox" value="active" v-model="statusFilters"><span class="cb-label status-active">稼働中</span></label>
-              <label class="cm-filter-cb"><input type="checkbox" value="suspension" v-model="statusFilters"><span class="cb-label status-suspension">休眠中</span></label>
-              <label class="cm-filter-cb"><input type="checkbox" value="inactive" v-model="statusFilters"><span class="cb-label status-inactive">契約終了</span></label>
-            </div>
-            <span class="cm-page-info">全{{ filteredRows.length }}件</span>
-          </div>
-          <div class="cm-toolbar-right">
+        <!-- ツールバー（共通コンポーネント） -->
+        <TableFilterToolbar
+          :status-options="clientStatusOptions"
+          v-model:status-filter="statusFilter"
+          :columns="allColumns"
+          v-model:visible-columns="visibleColumns"
+          :total-count="filteredRows.length"
+          @filter-change="onFilterChange"
+        >
+          <template #actions>
             <button class="cm-action-btn primary" @click="$router.push('/master/clients/new')">
               <i class="fa-solid fa-plus"></i> 新規追加
             </button>
-          </div>
-        </div>
+          </template>
+        </TableFilterToolbar>
 
         <!-- テーブル -->
         <div class="cm-table-wrap">
           <table class="cm-table" style="table-layout: fixed;">
             <colgroup>
               <col :style="{ width: clColWidths['status'] + 'px' }">
-              <col :style="{ width: clColWidths['clientId'] + 'px' }">
-              <col :style="{ width: clColWidths['threeCode'] + 'px' }">
-              <col :style="{ width: clColWidths['type'] + 'px' }">
-              <col :style="{ width: clColWidths['taxMode'] + 'px' }">
-              <col :style="{ width: clColWidths['companyName'] + 'px' }">
-              <col :style="{ width: clColWidths['staffName'] + 'px' }">
-              <col :style="{ width: clColWidths['accountingSoftware'] + 'px' }">
-              <col :style="{ width: clColWidths['fiscalMonth'] + 'px' }">
-              <col :style="{ width: clColWidths['phoneNumber'] + 'px' }">
-              <col :style="{ width: clColWidths['email'] + 'px' }">
-              <col :style="{ width: clColWidths['sharedEmail'] + 'px' }">
-              <col :style="{ width: clColWidths['driveUrl'] + 'px' }">
-              <col :style="{ width: clColWidths['chatRoomUrl'] + 'px' }">
-              <col style="width: auto;">
+              <col v-if="isColVisible('clientId')" :style="{ width: clColWidths['clientId'] + 'px' }">
+              <col v-if="isColVisible('threeCode')" :style="{ width: clColWidths['threeCode'] + 'px' }">
+              <col v-if="isColVisible('type')" :style="{ width: clColWidths['type'] + 'px' }">
+              <col v-if="isColVisible('taxMode')" :style="{ width: clColWidths['taxMode'] + 'px' }">
+              <col v-if="isColVisible('companyName')" :style="{ width: clColWidths['companyName'] + 'px' }">
+              <col v-if="isColVisible('staffName')" :style="{ width: clColWidths['staffName'] + 'px' }">
+              <col v-if="isColVisible('accountingSoftware')" :style="{ width: clColWidths['accountingSoftware'] + 'px' }">
+              <col v-if="isColVisible('fiscalMonth')" :style="{ width: clColWidths['fiscalMonth'] + 'px' }">
+              <col v-if="isColVisible('phoneNumber')" :style="{ width: clColWidths['phoneNumber'] + 'px' }">
+              <col v-if="isColVisible('email')" :style="{ width: clColWidths['email'] + 'px' }">
+              <col v-if="isColVisible('sharedEmail')" :style="{ width: clColWidths['sharedEmail'] + 'px' }">
+              <col v-if="isColVisible('driveUrl')" :style="{ width: clColWidths['driveUrl'] + 'px' }">
+              <col v-if="isColVisible('chatRoomUrl')" :style="{ width: clColWidths['chatRoomUrl'] + 'px' }">
+              <col v-if="isColVisible('contact')" style="width: auto;">
             </colgroup>
             <thead>
               <tr>
@@ -51,54 +49,54 @@
                   <i :class="getSortIcon('status')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('status', $event)"></div>
                 </th>
-                <th class="sortable relative" @click="sortBy('clientId')">
+                <th v-if="isColVisible('clientId')" class="sortable relative" @click="sortBy('clientId')">
                   内部ID <i :class="getSortIcon('clientId')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('clientId', $event)"></div>
                 </th>
-                <th class="sortable relative" @click="sortBy('threeCode')">
+                <th v-if="isColVisible('threeCode')" class="sortable relative" @click="sortBy('threeCode')">
                   3コード <i :class="getSortIcon('threeCode')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('threeCode', $event)"></div>
                 </th>
-                <th class="sortable relative" @click="sortBy('type')">
+                <th v-if="isColVisible('type')" class="sortable relative" @click="sortBy('type')">
                   種別 <i :class="getSortIcon('type')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('type', $event)"></div>
                 </th>
-                <th class="sortable relative" @click="sortBy('consumptionTaxMode')">
+                <th v-if="isColVisible('taxMode')" class="sortable relative" @click="sortBy('consumptionTaxMode')">
                   課税方式 <i :class="getSortIcon('consumptionTaxMode')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('taxMode', $event)"></div>
                 </th>
-                <th class="sortable relative" @click="sortBy('companyName')">
+                <th v-if="isColVisible('companyName')" class="sortable relative" @click="sortBy('companyName')">
                   会社名/代表者名 <i :class="getSortIcon('companyName')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('companyName', $event)"></div>
                 </th>
-                <th class="sortable relative" @click="sortBy('staffName')">
+                <th v-if="isColVisible('staffName')" class="sortable relative" @click="sortBy('staffName')">
                   担当者 <i :class="getSortIcon('staffName')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('staffName', $event)"></div>
                 </th>
-                <th class="sortable relative" @click="sortBy('accountingSoftware')">
+                <th v-if="isColVisible('accountingSoftware')" class="sortable relative" @click="sortBy('accountingSoftware')">
                   会計ソフト <i :class="getSortIcon('accountingSoftware')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('accountingSoftware', $event)"></div>
                 </th>
-                <th class="sortable relative" @click="sortBy('fiscalMonth')">
+                <th v-if="isColVisible('fiscalMonth')" class="sortable relative" @click="sortBy('fiscalMonth')">
                   決算日 <i :class="getSortIcon('fiscalMonth')"></i>
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('fiscalMonth', $event)"></div>
                 </th>
-                <th class="relative">電話番号
+                <th v-if="isColVisible('phoneNumber')" class="relative">電話番号
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('phoneNumber', $event)"></div>
                 </th>
-                <th class="relative">メール
+                <th v-if="isColVisible('email')" class="relative">メール
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('email', $event)"></div>
                 </th>
-                <th class="relative">顧問先ログインメール
+                <th v-if="isColVisible('sharedEmail')" class="relative">顧問先ログインメール
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('sharedEmail', $event)"></div>
                 </th>
-                <th class="relative">Drive取込
+                <th v-if="isColVisible('driveUrl')" class="relative">Drive取込
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('driveUrl', $event)"></div>
                 </th>
-                <th class="relative">チャットURL
+                <th v-if="isColVisible('chatRoomUrl')" class="relative">チャットURL
                   <div class="resize-handle" @mousedown.stop="onClResizeStart('chatRoomUrl', $event)"></div>
                 </th>
-                <th>主な連絡手段</th>
+                <th v-if="isColVisible('contact')">主な連絡手段</th>
               </tr>
             </thead>
             <tbody>
@@ -113,25 +111,25 @@
                     <i class="fa-solid fa-pen cm-status-pen" :class="'pen-' + row.status"></i>
                   </div>
                 </td>
-                <td class="cm-client-id">{{ row.clientId }}</td>
-                <td class="cm-code td-editable" @dblclick.stop="startInlineEdit(row, 'threeCode', $event)">
+                <td v-if="isColVisible('clientId')" class="cm-client-id">{{ row.clientId }}</td>
+                <td v-if="isColVisible('threeCode')" class="cm-code td-editable" @dblclick.stop="startInlineEdit(row, 'threeCode', $event)">
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'threeCode'" v-model="inlineEditValue" class="cm-inline-input" maxlength="3" @input="inlineEditValue = String(inlineEditValue).toUpperCase().replace(/[^A-Z]/g, '')" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.threeCode }}</span>
                 </td>
                 <!-- 種別: select -->
-                <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'type', $event)">
+                <td v-if="isColVisible('type')" class="td-editable" @dblclick.stop="startInlineEdit(row, 'type', $event)">
                   <select v-if="inlineEditId === row.clientId && inlineEditField === 'type'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                     <option value="corp">法人</option>
                     <option value="individual">個人</option>
                   </select>
                   <span v-else>{{ row.type === 'corp' ? '法人' : '個人' }}</span>
                 </td>
-                <td>{{ taxModeLabel(row.consumptionTaxMode) }}</td>
-                <td class="cm-company-name td-editable" @dblclick.stop="startInlineEdit(row, 'companyName', $event)">
+                <td v-if="isColVisible('taxMode')">{{ taxModeLabel(row.consumptionTaxMode) }}</td>
+                <td v-if="isColVisible('companyName')" class="cm-company-name td-editable" @dblclick.stop="startInlineEdit(row, 'companyName', $event)">
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.type === 'individual' && row.repName ? row.repName : row.companyName }}</span>
                 </td>
-                <td class="td-editable" @dblclick.stop="startStaffInlineEdit(row, $event)">
+                <td v-if="isColVisible('staffName')" class="td-editable" @dblclick.stop="startStaffInlineEdit(row, $event)">
                   <select v-if="inlineEditId === row.clientId && inlineEditField === 'staffName'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitStaffEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                     <option value="">未設定</option>
                     <option v-for="s in staffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
@@ -139,7 +137,7 @@
                   <span v-else>{{ getStaffNameForClient(row.clientId) || '—' }}</span>
                 </td>
                 <!-- 会計ソフト: select -->
-                <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'accountingSoftware', $event)">
+                <td v-if="isColVisible('accountingSoftware')" class="td-editable" @dblclick.stop="startInlineEdit(row, 'accountingSoftware', $event)">
                   <select v-if="inlineEditId === row.clientId && inlineEditField === 'accountingSoftware'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                     <option value="mf">MF</option>
                     <option value="freee">freee</option>
@@ -150,7 +148,7 @@
                   <span v-else>{{ softwareLabel(row.accountingSoftware) }}</span>
                 </td>
                 <!-- 決算日: 月select + 日select -->
-                <td class="cm-fiscal td-editable" @dblclick.stop="startInlineEdit(row, 'fiscalMonth', $event)">
+                <td v-if="isColVisible('fiscalMonth')" class="cm-fiscal td-editable" @dblclick.stop="startInlineEdit(row, 'fiscalMonth', $event)">
                   <template v-if="inlineEditId === row.clientId && inlineEditField === 'fiscalMonth'">
                     <div class="cm-inline-fiscal-group">
                       <select v-model="inlineEditValue" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop>
@@ -166,20 +164,20 @@
                   </template>
                   <span v-else>{{ row.fiscalMonth }}月/{{ row.fiscalDay === '末日' ? '末日' : row.fiscalDay + '日' }}</span>
                 </td>
-                <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'phoneNumber', $event)">
+                <td v-if="isColVisible('phoneNumber')" class="td-editable" @dblclick.stop="startInlineEdit(row, 'phoneNumber', $event)">
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'phoneNumber'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.phoneNumber || '—' }}</span>
                 </td>
-                <td class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'email', $event)">
+                <td v-if="isColVisible('email')" class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'email', $event)">
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'email'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.email || '—' }}</span>
                 </td>
-                <td class="cm-ellipsis td-editable" @dblclick.stop="startInlineEdit(row, 'sharedEmail', $event)">
+                <td v-if="isColVisible('sharedEmail')" class="cm-ellipsis td-editable" @dblclick.stop="startInlineEdit(row, 'sharedEmail', $event)">
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'sharedEmail'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
                   <span v-else class="cm-shared-email-none">未取得（顧問先が登録）</span>
                 </td>
-                <td class="cm-drive-cell" @click.stop="row.sharedFolderId ? copyDriveUrl(row) : undefined">
+                <td v-if="isColVisible('driveUrl')" class="cm-drive-cell" @click.stop="row.sharedFolderId ? copyDriveUrl(row) : undefined">
                   <template v-if="!row.sharedFolderId">
                     <span class="cm-drive-none">—</span>
                   </template>
@@ -188,12 +186,12 @@
                     <span v-else class="cm-drive-link">📋 URLコピー</span>
                   </template>
                 </td>
-                <td class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'chatRoomUrl', $event)">
+                <td v-if="isColVisible('chatRoomUrl')" class="td-editable cm-ellipsis" @dblclick.stop="startInlineEdit(row, 'chatRoomUrl', $event)">
                   <input v-if="inlineEditId === row.clientId && inlineEditField === 'chatRoomUrl'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                   <span v-else>{{ row.chatRoomUrl || '—' }}</span>
                 </td>
                 <!-- 主な連絡手段: チャットワーク優先ロジック -->
-                <td class="cm-contact-cell">
+                <td v-if="isColVisible('contact')" class="cm-contact-cell">
                   <span v-if="row.chatRoomUrl">チャットワーク</span>
                   <span v-else-if="row.email" class="cm-contact-fallback">
                     メール
@@ -511,6 +509,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import {
   useClients,
   emptyClientForm,
@@ -523,6 +522,7 @@ import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
+import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
 
 // 列幅カスタマイズ
 const clDefaultWidths: Record<string, number> = {
@@ -562,8 +562,56 @@ const industryOptions: string[] = [
   '清掃業', '教育業', '他サービス業', '官公庁・自治体', 'その他',
 ];
 
-// --- ステータスフィルター（複数選択） ---
-const statusFilters = ref<string[]>(['active']);
+// --- ステータスフィルター（単一値ドロップダウン） ---
+const route = useRoute();
+const router = useRouter();
+
+// URLクエリパラメータから初期値取得
+const statusFilter = ref<string>((route.query.status as string) || '');
+
+// 表示列管理
+
+const allColumns = [
+  { key: 'clientId', label: '内部ID' },
+  { key: 'threeCode', label: '3コード' },
+  { key: 'type', label: '種別' },
+  { key: 'taxMode', label: '課税方式' },
+  { key: 'companyName', label: '会社名/代表者名' },
+  { key: 'staffName', label: '担当者' },
+  { key: 'accountingSoftware', label: '会計ソフト' },
+  { key: 'fiscalMonth', label: '決算日' },
+  { key: 'phoneNumber', label: '電話番号' },
+  { key: 'email', label: 'メール' },
+  { key: 'sharedEmail', label: '顧問先ログインメール' },
+  { key: 'driveUrl', label: 'Drive取込' },
+  { key: 'chatRoomUrl', label: 'チャットURL' },
+  { key: 'contact', label: '主な連絡手段' },
+];
+// URLクエリから表示列復元。なければデフォルト全列
+const defaultCols = allColumns.map(c => c.key);
+const colsFromUrl = route.query.cols ? (route.query.cols as string).split(',') : null;
+const visibleColumns = ref<string[]>(colsFromUrl || [...defaultCols]);
+
+// ステータス選択肢（テンプレート用）
+const clientStatusOptions = [
+  { value: 'active', label: '稼働中' },
+  { value: 'suspension', label: '休眠中' },
+  { value: 'inactive', label: '契約終了' },
+];
+
+/** フィルター変更時: URLクエリパラメータを更新 */
+const onFilterChange = () => {
+  const query: Record<string, string> = {};
+  if (statusFilter.value) query.status = statusFilter.value;
+  if (visibleColumns.value.length < defaultCols.length) {
+    query.cols = visibleColumns.value.join(',');
+  }
+  router.replace({ query });
+  fetchClientList();
+};
+
+/** 列が表示中かどうか */
+const isColVisible = (key: string) => visibleColumns.value.includes(key);
 
 // --- ソート ---
 const sortKey = ref<string>('threeCode');
@@ -593,11 +641,12 @@ const pagedRows = computed(() => filteredRows.value);
 /** POST /api/clients/list でサーバー側でフィルタ+ソート+ページネーション */
 const fetchClientList = async () => {
   try {
+    const statusFilters = statusFilter.value ? [statusFilter.value] : undefined;
     const res = await fetch('/api/clients/list', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        statusFilters: statusFilters.value.length > 0 ? statusFilters.value : undefined,
+        statusFilters,
         sortKey: sortKey.value,
         sortOrder: sortOrder.value,
         page: currentPage.value,
@@ -613,7 +662,7 @@ const fetchClientList = async () => {
 };
 
 // フィルタ・ソート・ページ変更時に自動でAPI再呼び出し
-watch([statusFilters, sortKey, sortOrder, currentPage], () => {
+watch([statusFilter, sortKey, sortOrder, currentPage], () => {
   fetchClientList();
 }, { immediate: true });
 
@@ -1169,4 +1218,37 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 /* 顧問先ログインメール */
 .cm-shared-email { font-size: 11px; color: #2563eb; }
 .cm-shared-email-none { font-size: 11px; color: #94a3b8; font-style: italic; }
+
+/* フィルターグループ */
+.cm-filter-group { display: flex; align-items: center; }
+
+/* ファンネルアイコン */
+.cm-filter-funnel {
+  width: 32px; height: 32px; border-radius: 6px;
+  border: 1px solid #cbd5e1; background: white;
+  color: #94a3b8; font-size: 13px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.cm-filter-funnel:hover { border-color: #3b82f6; color: #3b82f6; }
+.cm-filter-funnel.active { background: #eff6ff; border-color: #3b82f6; color: #3b82f6; }
+
+/* 表示列ドロップダウン */
+.cm-column-toggle-btn {
+  display: flex; align-items: center; gap: 4px;
+  cursor: pointer; white-space: nowrap;
+}
+.cm-column-dropdown {
+  position: absolute; top: 100%; left: 0; z-index: 100;
+  background: white; border: 1px solid #e2e8f0; border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  padding: 8px 0; min-width: 180px; max-height: 320px; overflow-y: auto;
+}
+.cm-column-dropdown-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px; font-size: 12px; cursor: pointer;
+  transition: background 0.1s;
+}
+.cm-column-dropdown-item:hover { background: #f8fafc; }
+.cm-column-dropdown-item input[type="checkbox"] { accent-color: #3b82f6; }
 </style>
