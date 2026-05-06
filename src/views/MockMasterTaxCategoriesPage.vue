@@ -187,8 +187,8 @@
 import { ref, reactive, computed, watch } from 'vue';
 import type { TaxCategory, TaxDirection } from '@/types/shared-tax-category';
 import { extractRateFromName } from '@/types/shared-tax-category';
-import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master';
-import { getInitialCopyCounter } from '@/shared/utils/copy-utils';
+import { TAX_CATEGORY_MASTER } from '@/data/master/tax-category-master';
+import { getInitialCopyCounter } from '@/utils/copy-utils';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';

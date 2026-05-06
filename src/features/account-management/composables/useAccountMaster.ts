@@ -10,7 +10,7 @@
  * 準拠: DL-042, Phase 2 Step 2
  */
 import { ref, computed, watch } from 'vue'
-import { ACCOUNT_MASTER } from '@/shared/data/account-master'
+import { ACCOUNT_MASTER } from '@/data/master/account-master'
 import type { Account } from '@/types/shared-account'
 
 // =============================================

@@ -278,7 +278,7 @@ import {
   downloadMfCsv,
 } from "@/utils/exportMfCsv";
 import { syncWarningLabelsCore } from "@/utils/journalWarningSync";
-import { toMfCsvDate } from "@/shared/utils/mf-csv-date";
+import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { useCurrentUser } from "@/composables/useCurrentUser";
 
 const route = useRoute();

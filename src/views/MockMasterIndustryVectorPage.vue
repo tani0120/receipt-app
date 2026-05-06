@@ -185,7 +185,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { VENDOR_VECTOR_LABELS } from '@/types/pipeline/vendor.type';
 import type { VendorVector, IndustryVectorEntry } from '@/types/pipeline/vendor.type';
-import { ACCOUNT_MASTER } from '@/shared/data/account-master';
+import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import { useColumnResize } from '@/composables/useColumnResize';
 
 // 列幅カスタマイズ

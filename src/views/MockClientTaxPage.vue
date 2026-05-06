@@ -204,7 +204,7 @@ import type { TaxCategory, TaxDirection } from '@/types/shared-tax-category';
 import { extractRateFromName } from '@/types/shared-tax-category';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useClients } from '@/features/client-management/composables/useClients';
-import { getInitialCopyCounter } from '@/shared/utils/copy-utils';
+import { getInitialCopyCounter } from '@/utils/copy-utils';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';

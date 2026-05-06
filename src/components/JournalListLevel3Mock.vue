@@ -2556,7 +2556,7 @@ import { createEmptyStaffNotes, STAFF_NOTE_KEYS } from "../types/staff_notes";
 import type { StaffNoteKey } from "../types/staff_notes";
 import type { ConfirmedJournal } from "../types/confirmed_journal.type";
 
-import { toMfCsvDate } from "@/shared/utils/mf-csv-date";
+import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { validateByVoucherType, getVoucherTypeConflictAccounts } from "@/utils/journalWarningSync";
 // VOUCHER_TYPE_RULES, getBaseAccountId は API側 (journalHintService.ts) に移設済み (Step 6-A3)
 
@@ -2631,7 +2631,7 @@ import {
   SALES_CATEGORIES,
   PURCHASE_CATEGORIES,
   getCategoryDirection,
-} from '@/shared/data/account-category-rules';
+} from '@/data/master/account-category-rules';
 const BS_CATEGORIES = [
   "現金及び預金",
   "売上債権",

@@ -12,8 +12,8 @@
  *   POSTボディ経由の受け渡しは廃止。
  */
 
-import { VOUCHER_TYPE_RULES, getBaseAccountId } from '../../shared/data/voucherTypeRules'
-import type { VoucherTypeSideRule } from '../../shared/data/voucherTypeRules'
+import { VOUCHER_TYPE_RULES, getBaseAccountId } from '../../data/master/voucherTypeRules'
+import type { VoucherTypeSideRule } from '../../data/master/voucherTypeRules'
 import type { AccountForValidation, TaxCategoryForValidation } from './journalValidation'
 
 // ────────────────────────────────────────────

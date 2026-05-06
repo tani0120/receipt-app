@@ -5,7 +5,7 @@
  * JournalListLevel3Mock.vue から抽出。UIモーダル表示は呼び出し側で制御。
  */
 import type { JournalPhase5Mock, JournalLabelMock } from '../types/journal_phase5_mock.type'
-import { VOUCHER_TYPE_RULES, getBaseAccountId } from '@/shared/data/voucherTypeRules'
+import { VOUCHER_TYPE_RULES, getBaseAccountId } from '@/data/master/voucherTypeRules'
 
 // ────────────────────────────────────────────
 // 型・定数

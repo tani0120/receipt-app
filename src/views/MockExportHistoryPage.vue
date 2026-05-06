@@ -97,7 +97,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
+import { toMfCsvDate } from '@/utils/mf-csv-date';
 import { useModalHelper } from '@/composables/useModalHelper';
 import NotifyModal from '@/components/NotifyModal.vue';
 

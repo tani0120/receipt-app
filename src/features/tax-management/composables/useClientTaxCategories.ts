@@ -10,7 +10,7 @@
  * 準拠: DL-042, Phase 2 Step 5
  */
 import { ref, computed, watch, type Ref } from 'vue'
-import { TAX_CATEGORY_MASTER } from '@/shared/data/tax-category-master'
+import { TAX_CATEGORY_MASTER } from '@/data/master/tax-category-master'
 import { useTaxMaster } from './useTaxMaster'
 import type { TaxCategory } from '@/types/shared-tax-category'
 

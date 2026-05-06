@@ -196,7 +196,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import type { Vendor, VendorVector } from '@/types/pipeline/vendor.type';
 import { VENDOR_VECTOR_LABELS, VENDOR_VECTORS } from '@/types/pipeline/vendor.type';
-import { ACCOUNT_MASTER } from '@/shared/data/account-master';
+import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import { normalizeVendorName } from '@/utils/pipeline/vendorIdentification';
 
 // ============================================================

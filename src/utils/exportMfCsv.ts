@@ -12,7 +12,7 @@
 
 import type { JournalPhase5Mock, JournalLabelMock } from '@/types/journal_phase5_mock.type';
 import type { JournalEntryLine } from '@/types/domain-journal';
-import { toMfCsvDate } from '@/shared/utils/mf-csv-date';
+import { toMfCsvDate } from '@/utils/mf-csv-date';
 
 // ============================================================
 // 型定義

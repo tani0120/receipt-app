@@ -267,8 +267,8 @@
 import { ref, computed, watch, onMounted } from "vue";
 import type { NonVendorType } from "@/types/pipeline/non_vendor.type";
 import type { Vendor } from "@/types/pipeline/vendor.type";
-import { ACCOUNT_MASTER } from "@/shared/data/account-master";
-import { TAX_CATEGORY_MASTER } from "@/shared/data/tax-category-master";
+import { ACCOUNT_MASTER } from "@/data/master/account-master";
+import { TAX_CATEGORY_MASTER } from "@/data/master/tax-category-master";
 import { normalizeVendorName } from "@/utils/pipeline/vendorIdentification";
 
 // ============================================================

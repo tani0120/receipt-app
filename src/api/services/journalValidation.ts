@@ -78,8 +78,8 @@ const CONTRA_EXPENSE_IDS = ['PURCHASE_RETURNS', 'PURCHASE_RETURNS_CORP']
 // ────────────────────────────────────────────
 // 証票意味ルール（shared/data/ から一元参照）
 // ────────────────────────────────────────────
-import { VOUCHER_TYPE_RULES, getBaseAccountId } from '../../shared/data/voucherTypeRules'
-import type { VoucherTypeSideRule } from '../../shared/data/voucherTypeRules'
+import { VOUCHER_TYPE_RULES, getBaseAccountId } from '../../data/master/voucherTypeRules'
+import type { VoucherTypeSideRule } from '../../data/master/voucherTypeRules'
 
 // ────────────────────────────────────────────
 // 5分類判定

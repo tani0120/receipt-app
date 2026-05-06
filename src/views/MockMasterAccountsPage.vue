@@ -232,9 +232,9 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
 import type { Account } from '@/types/shared-account';
-import { ACCOUNT_MASTER } from '@/shared/data/account-master';
+import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
-import { getInitialCopyCounter } from '@/shared/utils/copy-utils';
+import { getInitialCopyCounter } from '@/utils/copy-utils';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
@@ -246,7 +246,7 @@ import {
   getAllowedTaxDeterminations as getAllowedTaxDeterminationsRaw,
   taxDetLabel,
   deriveCategoryDefaults,
-} from '@/shared/data/account-category-rules';
+} from '@/data/master/account-category-rules';
 
 // 列幅カスタマイズ
 const acctDefaultWidths: Record<string, number> = {
