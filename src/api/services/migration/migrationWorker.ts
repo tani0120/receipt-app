@@ -13,7 +13,7 @@
 import { createHash } from 'crypto';
 import { getFilePreview } from '../drive/driveService';
 import { trashDriveFile } from '../drive/driveService';
-import { StorageService } from '../../lib/storage';
+import { StorageService } from '../../ai/storage';
 import { previewExtractImage } from '../pipeline/previewExtract.service';
 import type { PreviewExtractResponse } from '../pipeline/types';
 import { updateAiResults } from '../documentStore';

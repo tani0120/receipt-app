@@ -1,7 +1,7 @@
 import type { AIProvider, AIPhase, PhaseConfig } from './types';
 import { VertexAIStrategy } from './strategies/VertexAIStrategy';
 import { AIStudioStrategy } from './strategies/AIStudioStrategy';
-import { config } from '../../config';
+import { config } from '../config';
 // 2026-04-18: Firebase db参照削除。設定はデフォルト値を使用。
 // Supabase移行後に設定テーブルからの読み込みを再実装予定。
 

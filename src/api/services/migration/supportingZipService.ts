@@ -11,7 +11,7 @@
 
 import archiver from 'archiver';
 import type { Writable } from 'stream';
-import { StorageService } from '../../lib/storage';
+import { StorageService } from '../../ai/storage';
 import {
   getSupportingJobs,
   markDownloaded,

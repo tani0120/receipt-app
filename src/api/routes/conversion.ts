@@ -110,7 +110,7 @@ const route = app.get('/', (c) => {
             }
 
             // Real Storage Integration
-            const { StorageService } = await import('../lib/storage');
+            const { StorageService } = await import('../ai/storage');
             const buffer = await (file as Blob).arrayBuffer();
             const nodeBuffer = Buffer.from(buffer);
 

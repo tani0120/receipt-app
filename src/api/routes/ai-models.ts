@@ -1,6 +1,6 @@
 
 import { Hono } from 'hono'
-import { AIProviderFactory } from '../lib/ai/AIProviderFactory'
+import { AIProviderFactory } from '../ai/AIProviderFactory'
 
 const app = new Hono()
 

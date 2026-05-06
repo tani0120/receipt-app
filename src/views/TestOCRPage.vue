@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { executeOCR } from '@/api/ocr/ocr_service';
+import { executeOCR } from '@/api/ai/ocr/ocr_service';
 import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 
 // 単発テスト用
