@@ -7,10 +7,10 @@
 
 /* レイアウト */
 .cm-settings { max-width: 100%; margin: 0 auto; padding: 20px 24px; }
-.cm-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-.cm-back-link { color: #3b82f6; font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 4px; }
+.cm-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; background: #3b82f6; padding: 12px 20px; border-radius: 8px; }
+.cm-back-link { color: #ffffff; font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 4px; }
 .cm-back-link:hover { text-decoration: underline; }
-.cm-title { font-size: 18px; font-weight: 700; color: #1e293b; }
+.cm-title { font-size: 18px; font-weight: 700; color: #ffffff; }
 
 /* ツールバー */
 .cm-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 8px 0; }

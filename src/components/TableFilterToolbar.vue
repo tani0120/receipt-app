@@ -60,6 +60,8 @@
     :conditions="filterConditions"
     :logic="filterLogic"
     :sort="filterSort"
+    :default-conditions="defaultConditions"
+    :default-sort="defaultSort"
     @apply="onFilterApply"
   />
 </template>
@@ -102,6 +104,10 @@ const props = defineProps<{
   filterLogic?: 'and' | 'or'
   /** ソート設定 */
   filterSort?: SortSetting
+  /** デフォルトのフィルタ条件（ビュー定義のdefaultFilters） */
+  defaultConditions?: FilterCondition[]
+  /** デフォルトのソート設定（ビュー定義のdefaultSort） */
+  defaultSort?: SortSetting
 }>()
 
 const emit = defineEmits<{

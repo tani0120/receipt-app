@@ -18,6 +18,8 @@
           :filter-conditions="filterConditions"
           :filter-logic="filterLogic"
           :filter-sort="filterSortSetting"
+          :default-conditions="currentViewDefaults.filters"
+          :default-sort="currentViewDefaults.sort"
           @filter-change="onFilterChange"
           @filter-apply="onFilterApply"
           @filter-remove="onFilterRemove"
@@ -483,7 +485,6 @@ import {
   parseSortFromQuery,
   buildQueryParams,
   findViewByKey,
-  getViewKey,
 } from '@/utils/urlFilterSync';
 import type { ViewDefWithDefaults } from '@/utils/urlFilterSync';
 
@@ -613,13 +614,15 @@ const visibleColumns = ref<string[]>(
     : [...initialView.columns]
 );
 
-// 旧statusFilter互換（フィルタ条件からステータスを取得）
-const statusFilter = computed(() => {
-  const cond = filterConditions.value.find(c => c.field === 'status');
-  if (!cond) return '';
-  if (Array.isArray(cond.value)) return cond.value[0] ?? '';
-  return cond.value;
+/** 現在のビューのデフォルト値（フィルタモーダルの「デフォルトに戻す」用） */
+const currentViewDefaults = computed(() => {
+  const view = clientViews[activeViewIndex.value] ?? clientViews[0]!;
+  return {
+    filters: view.defaultFilters,
+    sort: view.defaultSort,
+  };
 });
+
 
 /** URLクエリパラメータを現在の状態で更新 */
 function syncUrlQuery() {
@@ -652,7 +655,8 @@ const clientStatusOptions = [
 ];
 
 // --- 絞り込みモーダル用列定義（ClientEditPageの全フィールド） ---
-const clientFilterColumns: FilterColumnDef[] = [
+// staffListがリアクティブなためcomputedで動的生成
+const clientFilterColumns = computed<FilterColumnDef[]>(() => [
   // ステータス
   { key: 'status', label: 'ステータス', filterType: 'select', filterOptions: clientStatusOptions },
   // 基本情報
@@ -665,17 +669,22 @@ const clientFilterColumns: FilterColumnDef[] = [
   { key: 'companyNameKana', label: '会社名（カナ）', filterType: 'text' },
   { key: 'repName', label: '代表者名', filterType: 'text' },
   { key: 'repNameKana', label: '代表者名（カナ）', filterType: 'text' },
-  { key: 'staffName', label: '担当者', filterType: 'text' },
+  { key: 'staffId', label: '担当者', filterType: 'select', filterOptions:
+    staffList.value.map(s => ({ value: s.uuid, label: s.name }))
+  },
   { key: 'phoneNumber', label: '電話番号', filterType: 'text' },
   { key: 'email', label: 'メールアドレス', filterType: 'text' },
   { key: 'chatRoomUrl', label: 'チャットルームURL', filterType: 'text' },
   { key: 'contactType', label: '主な連絡手段', filterType: 'select', filterOptions: [
     { value: 'email', label: 'メール' }, { value: 'chatwork', label: 'チャットワーク' },
+    { value: 'none', label: 'なし' },
   ] },
   { key: 'contactValue', label: '連絡先', filterType: 'text' },
   { key: 'sharedEmail', label: '顧問先ログインメール', filterType: 'text' },
   { key: 'sharedChatUrl', label: '共有用チャットURL', filterType: 'text' },
-  { key: 'fiscalMonth', label: '決算月', filterType: 'number' },
+  { key: 'fiscalMonth', label: '決算月', filterType: 'select', filterOptions:
+    Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}月` }))
+  },
   { key: 'industry', label: '業種', filterType: 'select', filterOptions: [
     { value: '飲食業', label: '飲食業' }, { value: '建設業', label: '建設業' },
     { value: '製造業・メーカー', label: '製造業・メーカー' }, { value: '卸売業・小売業', label: '卸売業・小売業' },
@@ -730,7 +739,7 @@ const clientFilterColumns: FilterColumnDef[] = [
   { key: 'bookkeepingFee', label: '記帳代行', filterType: 'number' },
   { key: 'settlementFee', label: '決算報酬', filterType: 'number' },
   { key: 'taxFilingFee', label: '消費税申告報酬', filterType: 'number' },
-];
+]);
 
 // --- 絞り込み条件state（URLから初期値復元） ---
 const filterConditions = ref<FilterCondition[]>(initialFilters);

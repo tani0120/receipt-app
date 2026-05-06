@@ -1,26 +1,28 @@
 <template>
   <div class="pg-container">
-    <!-- 上段: フィルター行 -->
-    <div class="pg-filter-bar">
-      <div class="pg-filters">
-        <div class="pg-search-wrap">
-          <i class="fa-solid fa-magnifying-glass pg-search-icon"></i>
-          <input v-model="filterClient" type="text" placeholder="顧問先" class="pg-search-input">
-        </div>
-        <select v-model="filterStaff" class="pg-select">
-          <option value="">担当者</option>
-          <option v-for="s in allStaff" :key="s.uuid" :value="s.name">{{ s.name }}</option>
-        </select>
-        <label class="pg-check-label">
-          <input type="checkbox" v-model="onlyUnexported">
-          未出力がある顧問先のみ表示
-        </label>
-      </div>
-      <div class="pg-right-info">
-        <span class="pg-tag-info"><i class="fa-solid fa-tags"></i> タグ/完了日時({{ tagCount }})</span>
-        <span class="pg-build-info"><i class="fa-solid fa-gear"></i> 構築番: {{ buildDate }}</span>
-      </div>
+    <!-- ページタイトル（青背景） -->
+    <div class="cm-header">
+      <h1 class="cm-title">進捗管理</h1>
     </div>
+
+    <!-- ツールバー（共通コンポーネント） -->
+    <TableFilterToolbar
+      :columns="pgAllColumns"
+      v-model:visible-columns="pgVisibleColumns"
+      :total-count="totalCount"
+      :views="pgViews"
+      v-model:active-view-index="pgActiveViewIndex"
+      :filter-columns="pgFilterColumns"
+      :filter-conditions="pgFilterConditions"
+      :filter-logic="pgFilterLogic"
+      :filter-sort="pgFilterSortSetting"
+      :default-conditions="pgCurrentViewDefaults.filters"
+      :default-sort="pgCurrentViewDefaults.sort"
+      @filter-apply="onPgFilterApply"
+      @filter-remove="onPgFilterRemove"
+      @view-change="onPgViewChange"
+    >
+    </TableFilterToolbar>
 
     <!-- 中段: ページネーション + アクション -->
     <div class="pg-action-bar">
@@ -156,6 +158,9 @@ import { useProgress } from '@/features/progress-management/composables/useProgr
 import { useClients } from '@/features/client-management/composables/useClients';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useShareStatus } from '@/composables/useShareStatus';
+import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
+import type { FilterCondition, FilterColumnDef, SortSetting, FilterResult } from '@/components/list-view/types';
+import type { ViewDefWithDefaults } from '@/utils/urlFilterSync';
 
 const pgDefaultWidths: Record<string, number> = {
   status: 60, code: 60, fiscalMonth: 60,
@@ -223,15 +228,109 @@ async function fetchAllJobs(): Promise<void> {
 }
 onMounted(() => { fetchAllJobs(); });
 
-// --- フィルター ---
-const filterClient = ref('');
-const filterStaff = ref('');
-const onlyUnexported = ref(false);
+// ============================================================
+// TableFilterToolbar用 — ビュー/フィルタ/ソート定義
+// ============================================================
+
+/** 進捗管理の全列定義 */
+const pgAllColumns = [
+  { key: 'status', label: 'ステータス' },
+  { key: 'threeCode', label: '3コード' },
+  { key: 'companyName', label: '顧問先' },
+  { key: 'staffName', label: '担当者' },
+  { key: 'fiscalMonth', label: '決算月' },
+  { key: 'shareStatus', label: '共有状態' },
+  { key: 'receivedDate', label: '受取日' },
+  { key: 'unsorted', label: '未選別' },
+  { key: 'unexported', label: '未出力' },
+  { key: 'jobStatus', label: '取込' },
+  { key: 'currentYearJournals', label: '当年' },
+  { key: 'lastYearJournals', label: '前年' },
+];
+const pgVisibleColumns = ref<string[]>(pgAllColumns.map(c => c.key));
+
+/** 進捗管理のビュー定義 */
+const pgViews: ViewDefWithDefaults[] = [
+  {
+    name: 'デフォルト',
+    key: 'default',
+    columns: null,
+    defaultFilters: [
+      { field: 'clientStatus', operator: 'in', value: ['active'] },
+      { field: 'unsorted', operator: 'gte', value: '1' },
+      { field: 'unexported', operator: 'gte', value: '1' },
+    ],
+    defaultSort: { key: 'threeCode', order: 'asc' },
+  },
+  {
+    name: '（すべて）',
+    key: 'all',
+    columns: null,
+    defaultFilters: [],
+    defaultSort: { key: 'threeCode', order: 'asc' },
+  },
+];
+
+const pgActiveViewIndex = ref(0);
+
+/** フィルタ列定義（担当者はスタッフ一覧から動的生成） */
+const pgFilterColumns = computed<FilterColumnDef[]>(() => [
+  { key: 'clientStatus', label: 'ステータス', filterType: 'select', filterOptions: [
+    { value: 'active', label: '稼働中' },
+    { value: 'suspension', label: '休眠中' },
+    { value: 'inactive', label: '契約終了' },
+  ] },
+  { key: 'threeCode', label: '3コード', filterType: 'text' },
+  { key: 'companyName', label: '顧問先', filterType: 'text' },
+  { key: 'staffId', label: '担当者', filterType: 'select', filterOptions:
+    allStaff.value.map(s => ({ value: s.uuid, label: s.name }))
+  },
+  { key: 'fiscalMonth', label: '決算月', filterType: 'select', filterOptions:
+    Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}月` }))
+  },
+  { key: 'unsorted', label: '未選別', filterType: 'number' },
+  { key: 'unexported', label: '未出力', filterType: 'number' },
+]);
+
+/** フィルタ条件state */
+const initialView = pgViews[0]!;
+const pgFilterConditions = ref<FilterCondition[]>([...initialView.defaultFilters]);
+const pgFilterLogic = ref<'and' | 'or'>('and');
+const pgFilterSortSetting = ref<SortSetting>({ ...initialView.defaultSort });
+
+/** 現在のビューのデフォルト値 */
+const pgCurrentViewDefaults = computed(() => {
+  const view = pgViews[pgActiveViewIndex.value] ?? pgViews[0]!;
+  return { filters: view.defaultFilters, sort: view.defaultSort };
+});
+
+/** フィルタ適用 */
+const onPgFilterApply = (result: FilterResult) => {
+  pgFilterConditions.value = result.conditions;
+  pgFilterLogic.value = result.logic;
+  pgFilterSortSetting.value = result.sort;
+  sortKey.value = result.sort.key;
+  sortOrder.value = result.sort.order;
+};
+
+/** フィルタ条件個別削除 */
+const onPgFilterRemove = (index: number) => {
+  pgFilterConditions.value.splice(index, 1);
+};
+
+/** ビュー切替 */
+const onPgViewChange = (idx: number) => {
+  const view = pgViews[idx] ?? pgViews[0]!;
+  pgFilterConditions.value = [...view.defaultFilters];
+  pgFilterSortSetting.value = { ...view.defaultSort };
+  sortKey.value = view.defaultSort.key;
+  sortOrder.value = view.defaultSort.order;
+};
 
 // --- ソート ---
 // ソート: デフォルトは多段ソート（ステータス→未出力降順→受取日昇順→3コード昇順）
-const sortKey = ref<string | null>(null);
-const sortOrder = ref<'asc' | 'desc'>('asc');
+const sortKey = ref<string | null>(initialView.defaultSort.key);
+const sortOrder = ref<'asc' | 'desc'>(initialView.defaultSort.order);
 
 const sortBy = (key: string) => {
   if (sortKey.value === key) {
@@ -249,7 +348,7 @@ const getSortIcon = (key: string) => {
     : 'fa-solid fa-sort-down pg-sort-icon active';
 };
 
-// --- フィルタ+ソート+ページネーション → API呼び出し（T-31-1: progressListService.tsに移植済み） ---
+// --- フィルタ+ソート+ページネーション → API呼び出し ---
 const filteredRows = ref<import('@/features/progress-management/types').ProgressRow[]>([]);
 const totalCount = ref(0);
 const totalPages = ref(1);
@@ -273,9 +372,8 @@ async function fetchProgressList() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        searchQuery: filterClient.value.trim() || undefined,
-        filterStaff: filterStaff.value || undefined,
-        filterUnexported: onlyUnexported.value || undefined,
+        filters: pgFilterConditions.value,
+        logic: pgFilterLogic.value,
         sortKey: sortKey.value,
         sortOrder: sortOrder.value,
         page: currentPage.value,
@@ -301,7 +399,7 @@ async function fetchProgressList() {
 import { watch, nextTick } from 'vue';
 let fetchPending = false;
 watch(
-  [filterClient, filterStaff, onlyUnexported, sortKey, sortOrder, currentPage],
+  [pgFilterConditions, pgFilterLogic, sortKey, sortOrder, currentPage],
   () => {
     if (fetchPending) return;
     fetchPending = true;
@@ -310,10 +408,10 @@ watch(
       fetchProgressList();
     });
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 );
 // フィルタ変更時にページを1に戻す
-watch([filterClient, filterStaff, onlyUnexported], () => { currentPage.value = 1; });
+watch([pgFilterConditions, pgFilterLogic], () => { currentPage.value = 1; }, { deep: true });
 
 // KeepAliveからの復帰時にデータを再取得
 onActivated(() => { fetchProgressList(); fetchAllJobs(); });
@@ -338,5 +436,6 @@ function goToJournalList(row: { clientId: string }) {
 </script>
 
 <style>
+@import '@/styles/master-list.css';
 @import '@/styles/progress-detail.css';
 </style>

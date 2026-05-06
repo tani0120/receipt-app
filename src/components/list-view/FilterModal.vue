@@ -166,8 +166,11 @@
             </label>
           </div>
 
-          <!-- すべてクリア -->
-          <button class="fm-clear-btn" @click="clearAll">すべてクリア</button>
+          <!-- すべてクリア / デフォルトに戻す -->
+          <div class="fm-action-row">
+            <button class="fm-clear-btn" @click="clearAll">すべてクリア</button>
+            <button class="fm-default-btn" @click="restoreDefault">デフォルトに戻す</button>
+          </div>
         </div>
 
         <!-- ソートセクション -->
@@ -262,12 +265,18 @@ interface Props {
   logic?: 'and' | 'or'
   /** 現在のソート設定 */
   sort?: SortSetting
+  /** デフォルトのフィルタ条件（ビュー定義のdefaultFilters） */
+  defaultConditions?: FilterCondition[]
+  /** デフォルトのソート設定（ビュー定義のdefaultSort） */
+  defaultSort?: SortSetting
 }
 
 const props = withDefaults(defineProps<Props>(), {
   conditions: () => [],
   logic: 'and',
   sort: () => ({ key: 'threeCode', order: 'asc' as const }),
+  defaultConditions: () => [],
+  defaultSort: () => ({ key: 'threeCode', order: 'asc' as const }),
 })
 
 const emit = defineEmits<{
@@ -444,6 +453,20 @@ const removeCondition = (idx: number) => {
 const clearAll = () => {
   localConditions.value = [createEmptyCondition()]
   localLogic.value = 'and'
+}
+
+/** デフォルトに戻す（ビュー定義のdefaultFilters/defaultSortを復元） */
+const restoreDefault = () => {
+  if (props.defaultConditions.length > 0) {
+    localConditions.value = props.defaultConditions.map(c => ({
+      ...c,
+      value: Array.isArray(c.value) ? [...c.value] : c.value,
+    }))
+  } else {
+    localConditions.value = [createEmptyCondition()]
+  }
+  localLogic.value = 'and'
+  localSort.value = { ...props.defaultSort }
 }
 
 /** キャンセル */
@@ -823,7 +846,12 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   accent-color: #3498db;
 }
 
-/* ===== すべてクリア ===== */
+/* ===== すべてクリア / デフォルトに戻す ===== */
+.fm-action-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
 .fm-clear-btn {
   background: none;
   border: none;
@@ -831,10 +859,22 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   font-size: 13px;
   cursor: pointer;
   padding: 0;
-  margin-top: 8px;
   transition: color 0.15s;
 }
 .fm-clear-btn:hover {
+  color: #2980b9;
+  text-decoration: underline;
+}
+.fm-default-btn {
+  background: none;
+  border: none;
+  color: #3498db;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+.fm-default-btn:hover {
   color: #2980b9;
   text-decoration: underline;
 }
