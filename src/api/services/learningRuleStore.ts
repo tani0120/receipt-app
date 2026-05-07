@@ -11,6 +11,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
+import crypto from 'crypto'
 import type { LearningRule } from '../../types/learning_rule.type'
 import { learningRulesTST00011 } from '../../data/learning_rules_TST00011'
 
@@ -93,14 +94,21 @@ export function getById(clientId: string, ruleId: string): LearningRule | undefi
   return { ...rule, entries: rule.entries.map(e => ({ ...e })) }
 }
 
-/** 学習ルール追加 */
-export function create(clientId: string, rule: LearningRule): LearningRule {
+/** 学習ルール追加（サーバーがIDを発番） */
+export function create(clientId: string, rule: Partial<LearningRule> & Omit<LearningRule, 'id'>): LearningRule {
   const list = rulesByClient.get(clientId) ?? []
-  const cloned = { ...rule, entries: rule.entries.map(e => ({ ...e })) }
+  // サーバーが常にIDを発番
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  const bytes = crypto.randomBytes(8)
+  let id = 'lr_'
+  for (let i = 0; i < 8; i++) {
+    id += chars[bytes[i]! % chars.length]
+  }
+  const cloned: LearningRule = { ...rule, id, entries: (rule.entries ?? []).map(e => ({ ...e })) } as LearningRule
   list.push(cloned)
   rulesByClient.set(clientId, list)
   saveAll()
-  console.log(`[learningRuleStore] ${clientId} にルール「${rule.keyword}」を追加（ID: ${rule.id}）`)
+  console.log(`[learningRuleStore] ${clientId} にルール「${rule.keyword}」を追加（ID: ${id}）`)
   return cloned
 }
 

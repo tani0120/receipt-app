@@ -27,12 +27,12 @@ app.get('/:clientId', (c) => {
   return c.json(getExportHistory(clientId));
 });
 
-/** 履歴追加 */
+/** 履歴追加（サーバーがIDを発番して返す） */
 app.post('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
   const body = await c.req.json();
-  addExportHistory(clientId, body);
-  return c.json({ ok: true });
+  const saved = addExportHistory(clientId, body);
+  return c.json({ ok: true, id: saved.id });
 });
 
 /** CSVスナップショット取得 */

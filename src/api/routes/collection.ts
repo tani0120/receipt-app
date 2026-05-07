@@ -201,9 +201,10 @@ const generateMockHistory = (viewYearStart: number) => {
         const year = m <= 12 ? viewYearStart : viewYearStart + 1;
         const month = m <= 12 ? m : m - 12;
 
-        // Random files
+        // 決定論的にファイル有無を判定（テスト安定性のため乱数排除）
+        const seed = (year * 100 + month) % 10;
         const files = [];
-        if (Math.random() > 0.7) {
+        if (seed >= 7) {
             files.push({
                 id: `f-${year}-${month}-1`,
                 name: `請求書_${year}${month}.pdf`,

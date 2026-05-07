@@ -141,26 +141,27 @@ export function useDocuments() {
     return newDocs.length
   }
 
-  /** 選別完了→送出時にbatchId/journalIdを全件付与 */
-  function assignBatchAndJournalIds(clientId: string) {
-    const now = new Date()
-    const ts = now.toISOString().replace(/[-:T]/g, '').slice(0, 15)
-    const batchId = `batch-${clientId}-${ts}`
-    const docs = allDocuments.value.filter(d => d.clientId === clientId && !d.batchId)
-    for (const doc of docs) {
-      doc.batchId = batchId
-      doc.journalId = crypto.randomUUID()
+  /** 選別完了→送出時にbatchId/journalIdを全件付与（サーバー発番） */
+  async function assignBatchAndJournalIds(clientId: string) {
+    try {
+      const res = await fetch(`${API_BASE}/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId }),
+      })
+      if (!res.ok) {
+        console.error(`[useDocuments] バッチ付与失敗: HTTP ${res.status}`)
+        return { batchId: '', count: 0 }
+      }
+      const data = await res.json() as { batchId: string; count: number }
+      // サーバー発番済みデータでrefを更新
+      await refresh(clientId)
+      console.log(`[useDocuments] batchId=${data.batchId} journalId付与: ${data.count}件（サーバー発番）`)
+      return data
+    } catch (err) {
+      console.error('[useDocuments] バッチ付与エラー:', err)
+      return { batchId: '', count: 0 }
     }
-    console.log(`[useDocuments] batchId=${batchId} journalId付与: ${docs.length}件`)
-
-    // サーバーにも反映（fire-and-forget）
-    fetch(`${API_BASE}/batch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId }),
-    }).catch(err => console.error('[useDocuments] バッチ付与エラー:', err))
-
-    return { batchId, count: docs.length }
   }
 
   /** サーバーから最新データを再取得 */

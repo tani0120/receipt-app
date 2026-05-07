@@ -153,7 +153,9 @@ app.post('/:clientId', async (c) => {
     return apiError(c, 400, 配列必須('journals'));
   }
   const added = addJournals(clientId, body.journals);
-  return c.json({ ok: true, added });
+  // サーバーが上書き発番したIDリストを返す
+  const serverIds = body.journals.map((j: unknown) => (j as Record<string, unknown>).id as string);
+  return c.json({ ok: true, added, serverIds });
 });
 
 // ============================================================

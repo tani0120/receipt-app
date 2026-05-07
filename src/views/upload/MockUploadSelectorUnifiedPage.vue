@@ -416,12 +416,16 @@ async function setStatus(status: ShareStatus) {
 // 招待リンク（Repository経由で保存）
 const inviteUrl = ref<string | null>(null)
 const generateInvite = async () => {
-  const code = Math.random().toString(36).slice(2, 8)
-  await saveInviteCode(clientId, code)
-  inviteUrl.value = `${origin}/#/invite/${code}`
-  // 招待リンク発行時、ステータスが未設定ならpendingにする
-  if (!currentStatus.value) {
-    await setStatus('pending')
+  try {
+    const code = await saveInviteCode(clientId)
+    inviteUrl.value = `${origin}/#/invite/${code}`
+    // 招待リンク発行時、ステータスが未設定ならpendingにする
+    if (!currentStatus.value) {
+      await setStatus('pending')
+    }
+  } catch (err) {
+    alert('招待コードの生成に失敗しました')
+    console.error('[upload-v2] 招待コード生成エラー:', err)
   }
 }
 

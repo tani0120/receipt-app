@@ -1,5 +1,7 @@
 import './assets/main.css'
 import '@fortawesome/fontawesome-free/css/all.css'
+import '@fontsource/noto-sans-jp/400.css'
+import '@fontsource/noto-sans-jp/600.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

@@ -377,7 +377,7 @@ const startDownload = async () => {
     return;
   }
   // スピナー表示後、少し待ってからダウンロード
-  setTimeout(() => {
+  setTimeout(async () => {
     const csvContent = buildMfCsvContent(valid, resolveAccountName, resolveTaxCategoryName);
     const clientCode = clientId.value.split("-")[0] ?? clientId.value.slice(0, 3);
     const fname =
@@ -390,20 +390,19 @@ const startDownload = async () => {
     const jstOffset = 9 * 60; // JST = UTC+9
     const local = new Date(now.getTime() + jstOffset * 60000);
     const exportedAt = local.toISOString().replace('Z', '+09:00');
-    const historyId = `h-${Date.now()}`;
+    // CSV行数をカウント（ヘッダー行を除く）
+    const csvLineCount = csvContent.split('\n').filter(line => line.trim().length > 0).length - 1;
+    // ダウンロード履歴をサーバーに保存（サーバーがhistoryIdを発番）
+    const historyId = await saveDownloadHistory(`${fname}.csv`, valid.length, csvLineCount);
     for (const v of valid) {
       const target = journals.value.find((j) => j.id === v.id);
       if (target) {
         target.status = "exported";
         target.exported_at = exportedAt;
         target.exported_by = currentStaffId.value ?? 'unknown';
-        target.export_batch_id = historyId; // バッチIDを紐付け
+        target.export_batch_id = historyId; // サーバーが発番したバッチIDを紐付け
       }
     }
-    // CSV行数をカウント（ヘッダー行を除く）
-    const csvLineCount = csvContent.split('\n').filter(line => line.trim().length > 0).length - 1;
-    // ダウンロード履歴をサーバーに保存（DL-042 S1: localStorage→API移行）
-    saveDownloadHistory(`${fname}.csv`, valid.length, historyId, csvLineCount);
     // CSVスナップショットをサーバーに保存（再ダウンロード用）
     fetch(`/api/export-history/${encodeURIComponent(clientId.value)}/csv`, {
       method: 'POST',
@@ -421,22 +420,30 @@ const startDownload = async () => {
   }, 500);
 };
 
-/** ダウンロード履歴をサーバーに保存 */
-function saveDownloadHistory(fileName: string, count: number, historyId: string, csvLineCount: number) {
+/** ダウンロード履歴をサーバーに保存（サーバーがIDを発番して返す） */
+async function saveDownloadHistory(fileName: string, count: number, csvLineCount: number): Promise<string> {
   const today = new Date();
-  fetch(`/api/export-history/${encodeURIComponent(clientId.value)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      id: historyId,
-      exportDate: toMfCsvDate(today.toISOString().slice(0, 10)),
-      fileName,
-      count,
-      csvLineCount,
-      staffId: currentStaffId.value ?? 'unknown',
-      status: "出力済",
-    }),
-  }).catch(err => console.error('[ExportPage] 履歴保存エラー:', err));
+  try {
+    const res = await fetch(`/api/export-history/${encodeURIComponent(clientId.value)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        exportDate: toMfCsvDate(today.toISOString().slice(0, 10)),
+        fileName,
+        count,
+        csvLineCount,
+        staffId: currentStaffId.value ?? 'unknown',
+        status: "出力済",
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json() as { ok: boolean; id: string };
+    return data.id;
+  } catch (err) {
+    console.error('[ExportPage] 履歴保存エラー:', err);
+    // フォールバック: ローカル仮ID
+    return `h_local_${crypto.randomUUID().slice(0, 8)}`;
+  }
 }
 const cancelDownload = () => {
   showDownloadModal.value = false;

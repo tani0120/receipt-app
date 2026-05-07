@@ -78,27 +78,38 @@ export function useShareStatus() {
     }).catch(err => console.warn('[useShareStatus] ステータス更新の永続化失敗:', err))
   }
 
-  /** 招待コードを保存（ref即反映 + サーバーfire-and-forget） */
-  async function saveInviteCode(clientId: string, code: string): Promise<void> {
-    // ① ローカルref即反映
-    const existing = allRecords.value.find(r => r.clientId === clientId)
-    if (existing) {
-      existing.inviteCode = code
-      existing.updatedAt = new Date().toISOString()
-    } else {
-      allRecords.value.push({
-        clientId,
-        status: 'pending',
-        inviteCode: code,
-        updatedAt: new Date().toISOString(),
+  /**
+   * 招待コードをサーバーで生成して保存（サーバー先行）
+   * サーバーがランダムコードを発番して返す。
+   */
+  async function saveInviteCode(clientId: string): Promise<string> {
+    try {
+      const res = await fetch('/api/share-status/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId }),
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json() as { ok: boolean; code: string }
+      const code = data.code
+      // サーバー成功後にローカルref反映
+      const existing = allRecords.value.find(r => r.clientId === clientId)
+      if (existing) {
+        existing.inviteCode = code
+        existing.updatedAt = new Date().toISOString()
+      } else {
+        allRecords.value.push({
+          clientId,
+          status: 'pending',
+          inviteCode: code,
+          updatedAt: new Date().toISOString(),
+        })
+      }
+      return code
+    } catch (err) {
+      console.error('[useShareStatus] 招待コード生成失敗:', err)
+      throw err
     }
-    // ② サーバーfire-and-forget
-    fetch('/api/share-status/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId, code }),
-    }).catch(err => console.warn('[useShareStatus] 招待コード保存の永続化失敗:', err))
   }
 
   /** clientIdからステータスを引く（キャッシュ内検索。表示用） */

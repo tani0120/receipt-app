@@ -16,7 +16,35 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
+import crypto from 'crypto';
+
 const DATA_DIR = join(process.cwd(), 'data');
+
+// ============================================================
+// ID発番ヘルパー
+// ============================================================
+
+const ID_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+/** jrn_XXXXXXXX 形式の仕訳IDをサーバーで発番 */
+function generateJournalId(): string {
+  const bytes = crypto.randomBytes(8);
+  let id = 'jrn_';
+  for (let i = 0; i < 8; i++) {
+    id += ID_CHARS[bytes[i]! % ID_CHARS.length];
+  }
+  return id;
+}
+
+/** jre_XXXXXXXX 形式の仕訳行IDをサーバーで発番 */
+function generateJournalEntryId(): string {
+  const bytes = crypto.randomBytes(8);
+  let id = 'jre_';
+  for (let i = 0; i < 8; i++) {
+    id += ID_CHARS[bytes[i]! % ID_CHARS.length];
+  }
+  return id;
+}
 
 // インメモリキャッシュ（clientIdごと）
 const journalCache = new Map<string, unknown[]>();
@@ -81,9 +109,25 @@ export function saveJournals(clientId: string, journals: unknown[]): void {
   console.log(`[journalStore] ${clientId}: ${journals.length}件を保存`);
 }
 
-/** 顧問先の仕訳データに追加 */
+/** 顧問先の仕訳データに追加（サーバーがIDを上書き発番） */
 export function addJournals(clientId: string, newJournals: unknown[]): number {
   const existing = loadClient(clientId);
+  // サーバーがID上書き発番（フロントが送ったIDは信頼しない）
+  for (const j of newJournals) {
+    const journal = j as Record<string, unknown>;
+    journal.id = generateJournalId();
+    // debit_entries / credit_entries のIDも上書き
+    if (Array.isArray(journal.debit_entries)) {
+      for (const entry of journal.debit_entries as Record<string, unknown>[]) {
+        entry.id = generateJournalEntryId();
+      }
+    }
+    if (Array.isArray(journal.credit_entries)) {
+      for (const entry of journal.credit_entries as Record<string, unknown>[]) {
+        entry.id = generateJournalEntryId();
+      }
+    }
+  }
   existing.push(...newJournals);
   save(clientId);
   return newJournals.length;

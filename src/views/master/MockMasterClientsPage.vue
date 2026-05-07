@@ -26,9 +26,6 @@
           @view-change="onViewChange"
         >
           <template #actions>
-            <button class="cm-action-btn primary" @click="$router.push('/master/clients/new')">
-              <i class="fa-solid fa-plus"></i> 新規追加
-            </button>
           </template>
         </TableFilterToolbar>
 
@@ -212,11 +209,11 @@
                 <input type="text" :value="panelMode === 'edit' ? editingId : '（自動生成）'" class="cm-input cm-client-id-input" disabled>
               </div>
               <div class="cm-field">
-                <label class="cm-label">3コード <span class="cm-hint">※大文字アルファベット3文字</span></label>
+                <label class="cm-label">3コード <span class="cm-required">*</span> <span class="cm-hint">※大文字アルファベット3文字</span></label>
                 <input type="text" v-model="panelForm.threeCode" class="cm-input cm-code-input" maxlength="3" placeholder="ABC" @input="panelForm.threeCode = panelForm.threeCode.toUpperCase().replace(/[^A-Z]/g, '')">
               </div>
               <div class="cm-field">
-                <label class="cm-label">会社名</label>
+                <label class="cm-label">会社名 <span class="cm-hint">※会社名・代表者名のどちらか必須</span></label>
                 <input type="text" v-model="panelForm.companyName" class="cm-input" placeholder="株式会社サンプル">
               </div>
               <div class="cm-field">
@@ -224,7 +221,7 @@
                 <input type="text" v-model="panelForm.companyNameKana" class="cm-input" placeholder="カブシキガイシャサンプル" @input="panelForm.companyNameKana = panelForm.companyNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')">
               </div>
               <div class="cm-field">
-                <label class="cm-label">代表者名</label>
+                <label class="cm-label">代表者名 <span class="cm-hint">※会社名・代表者名のどちらか必須</span></label>
                 <input type="text" v-model="panelForm.repName" class="cm-input" placeholder="山田 太郎">
               </div>
               <div class="cm-field">
@@ -467,7 +464,6 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   useClients,
   emptyClientForm,
-  createClientId,
 } from '@/features/client-management/composables/useClients';
 import type { Client, ClientForm } from '@/features/client-management/composables/useClients';
 import { useStaff } from '@/features/staff-management/composables/useStaff';
@@ -1019,38 +1015,53 @@ const saveClient = async () => {
     }
   }
   const { contactType, contactValue, ...fields } = panelForm;
-  const clientId = editingId.value
-    ? editingId.value
-    : createClientId(panelForm.threeCode, clients.value);
-  const data: Client = {
-    ...fields,
-    clientId,
-    staffId: panelStaffId.value || null,
-    sharedEmail: panelSharedEmail.value,
-    sharedChatUrl: panelSharedChatUrl.value,
-    contact: { type: contactType, value: contactValue },
-  };
   if (panelMode.value === 'add') {
-    addClient(data);
-    // Driveフォルダ自動作成（共有ドライブ内にフォルダを作成）
-    createDriveFolderForClient(data).catch(err => {
-      console.error('[clients] Driveフォルダ作成失敗:', err);
-    });
-    await modal.notify({ title: `「${data.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。\nGoogle Driveフォルダも自動作成されます。', variant: 'success' });
-  } else {
-    // 編集時: 3コードが変わった場合はDriveフォルダもリネーム
-    const oldClient = clients.value.find(c => c.clientId === data.clientId);
-    updateClientLocal(data.clientId, data);
-    if (oldClient && oldClient.threeCode !== data.threeCode) {
-      const renamed = await renameDriveFolderForClient(data);
-      if (renamed) {
-        await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更しました`, variant: 'success' });
-      }
+    // 新規: サーバーがIDを発番して返す
+    const data = {
+      ...fields,
+      staffId: panelStaffId.value || null,
+      sharedEmail: panelSharedEmail.value,
+      sharedChatUrl: panelSharedChatUrl.value,
+      contact: { type: contactType, value: contactValue },
+    };
+    try {
+      const saved = await addClient(data as any);
+      createDriveFolderForClient(saved).catch(err => {
+        console.error('[clients] Driveフォルダ作成失敗:', err);
+      });
+      await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。\nGoogle Driveフォルダも自動作成されます。', variant: 'success' });
+    } catch (err) {
+      await modal.notify({ title: '顧問先の追加に失敗しました', message: String(err), variant: 'warning' });
+      return;
     }
-    await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
+  } else {
+    // 編集: 既存clientIdを使用
+    const clientId = editingId.value!;
+    const data: Client = {
+      ...fields,
+      clientId,
+      staffId: panelStaffId.value || null,
+      sharedEmail: panelSharedEmail.value,
+      sharedChatUrl: panelSharedChatUrl.value,
+      contact: { type: contactType, value: contactValue },
+    };
+    try {
+      const oldClient = clients.value.find(c => c.clientId === data.clientId);
+      await updateClientLocal(data.clientId, data);
+      if (oldClient && oldClient.threeCode !== data.threeCode) {
+        const renamed = await renameDriveFolderForClient(data);
+        if (renamed) {
+          await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更しました`, variant: 'success' });
+        }
+      }
+      await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
+    } catch (err) {
+      await modal.notify({ title: '顧問先の更新に失敗しました', message: String(err), variant: 'warning' });
+      return;
+    }
   }
   closePanel();
-  markDirty(panelMode.value === 'add' ? `「${data.companyName}」を追加` : `「${data.companyName}」を更新`);
+  markDirty(panelMode.value === 'add' ? `「${panelForm.companyName}」を追加` : `「${panelForm.companyName}」を更新`);
   markClean();
   refreshList();
 };

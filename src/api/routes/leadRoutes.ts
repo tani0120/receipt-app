@@ -30,7 +30,7 @@ import {
   updateStaffAssignment,
   updateSharedFolderId,
   updateSharedEmail,
-  createLeadId,
+  generateLeadId,
 } from '../services/leadStore';
 
 const app = new Hono();
@@ -66,15 +66,14 @@ app.get('/:leadId', (c) => {
   return c.json({ lead });
 });
 
-// POST / — 見込先追加
+// POST / — 見込先追加（サーバーが常にID発番）
 app.post('/', async (c) => {
   const body = await c.req.json();
   if (!body.threeCode || !body.companyName) {
     return apiError(c, 400, 必須('threeCode と companyName'));
   }
-  if (!body.leadId) {
-    body.leadId = createLeadId(body.threeCode);
-  }
+  // サーバーが常にIDを発番。フロントからのIDは無視。
+  body.leadId = generateLeadId();
   const lead = create(body);
   return c.json({ ok: true, lead });
 });

@@ -15,6 +15,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import crypto from 'crypto';
 import type {
   ActivityLog,
   StaffActivitySummary,
@@ -67,7 +68,12 @@ export function loadActivityLogs(): void {
 
 /** ログ1件追加 */
 export function addLog(entry: Omit<ActivityLog, 'id'>): ActivityLog {
-  const id = `act-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = crypto.randomBytes(8);
+  let id = 'act_';
+  for (let i = 0; i < 8; i++) {
+    id += chars[bytes[i]! % chars.length];
+  }
   const newLog: ActivityLog = { id, ...entry };
   logs.push(newLog);
   save();

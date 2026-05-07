@@ -9,6 +9,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import crypto from 'crypto';
 import type { Lead, LeadStatus } from '../../repositories/types';
 
 const DATA_DIR = join(process.cwd(), 'data');
@@ -112,18 +113,19 @@ export function updateSharedEmail(leadId: string, email: string): boolean {
   return updateLead(leadId, { sharedEmail: email });
 }
 
-/** 新しいleadIdを生成 */
-export function createLeadId(threeCode: string): string {
-  let maxSeq = 0;
-  for (const l of leads) {
-    const dash = l.leadId.indexOf('-');
-    if (dash >= 0) {
-      const seq = parseInt(l.leadId.substring(dash + 1), 10);
-      if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
-    }
+/**
+ * ランダムなleadIdを生成する。
+ * 形式: l_{8文字ランダム}（例: l_7kXp2mN9）
+ * 3コードに依存しない。Supabase移行後は gen_random_uuid() に差し替え。
+ */
+export function generateLeadId(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = crypto.randomBytes(8);
+  let id = 'l_';
+  for (let i = 0; i < 8; i++) {
+    id += chars[bytes[i]! % chars.length];
   }
-  const nextSeq = String(maxSeq + 1).padStart(5, '0');
-  return `${threeCode}-${nextSeq}`;
+  return id;
 }
 
 // 起動時に自動読み込み

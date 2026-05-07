@@ -16,6 +16,7 @@
  */
 
 import { Hono } from 'hono';
+import crypto from 'crypto';
 import { apiError } from '../helpers/apiError';
 import { 未検出, 必須 } from '../helpers/apiMessages';
 import {
@@ -74,15 +75,22 @@ app.put('/:clientId', async (c) => {
 });
 
 // ============================================================
-// POST /invite — 招待コード保存
+// POST /invite — 招待コード発番（サーバーが常にコードを生成）
 // ============================================================
 app.post('/invite', async (c) => {
-  const body = await c.req.json<{ clientId: string; code: string }>();
-  if (!body.clientId || !body.code) {
-    return apiError(c, 400, 必須('clientIdとcode'));
+  const body = await c.req.json<{ clientId: string }>();
+  if (!body.clientId) {
+    return apiError(c, 400, 必須('clientId'));
   }
-  saveInviteCode(body.clientId, body.code);
-  return c.json({ ok: true });
+  // サーバーがランダム招待コードを生成
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = crypto.randomBytes(8);
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars[bytes[i]! % chars.length];
+  }
+  saveInviteCode(body.clientId, code);
+  return c.json({ ok: true, code });
 });
 
 export default app;

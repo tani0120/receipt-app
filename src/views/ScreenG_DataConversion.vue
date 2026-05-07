@@ -180,8 +180,18 @@ const formatFileSize = (bytes: number) => {
 };
 
 // ハンドラー
-const handleDownload = (id: string) => {
-    markAsDownloaded(id);
+const handleDownload = async (id: string) => {
+    // サーバーからCSVをダウンロード
+    const log = logs.value.find(l => l.id === id);
+    if (!log) return;
+    const link = document.createElement('a');
+    link.href = log.downloadUrl;
+    link.download = log.fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    // ダウンロード済みマーク（サーバー先行）
+    await markAsDownloaded(id);
 };
 
 const deleteLog = (id: string) => {

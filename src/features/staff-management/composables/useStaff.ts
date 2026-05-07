@@ -32,17 +32,13 @@ export function emptyStaffForm(): StaffForm {
   }
 }
 
-/** スタッフUUIDを生成（既存の最大連番+1） */
+/**
+ * @deprecated フロント側でのスタッフUUID生成は廃止。サーバーが発番する。
+ * 後方互換のため一時的に残すが、呼び出し側はサーバーレスポンスからIDを取得すべき。
+ */
 export function generateStaffUuid(): string {
-  let maxNum = 0
-  for (const s of staffList.value) {
-    const match = s.uuid.match(/^staff-(\d+)$/)
-    if (match && match[1]) {
-      const num = parseInt(match[1], 10)
-      if (num > maxNum) maxNum = num
-    }
-  }
-  return `staff-${String(maxNum + 1).padStart(4, '0')}`
+  console.warn('[useStaff] generateStaffUuidは廃止されました。サーバー発番を使用してください。')
+  return `staff-${crypto.randomUUID().slice(0, 12)}`
 }
 
 // ============================================================
@@ -140,30 +136,38 @@ export function useStaff() {
     )
   }
 
-  /** スタッフ追加（ref即反映 + サーバーfire-and-forget） */
-  function addStaff(staff: Staff): void {
-    staffList.value.push(staff)
+  /** スタッフ追加（サーバー先行。サーバーがIDを発番して返す） */
+  async function addStaff(staff: Omit<Staff, 'uuid'> & { uuid?: string }): Promise<Staff> {
     lastError.value = null
-    apiPost('', staff).catch(err => {
+    try {
+      const res = await apiPost<{ ok: boolean; staff: Staff }>('', staff)
+      const saved = res.staff
+      staffList.value.push(saved)
+      return saved
+    } catch (err) {
       const msg = `スタッフ追加の保存に失敗しました: ${err}`
       console.error('[useStaff]', msg)
       lastError.value = msg
-    })
+      throw err
+    }
   }
 
-  /** スタッフ更新（ref即反映 + サーバーfire-and-forget） */
-  function updateStaff(uuid: string, data: Partial<Staff>): void {
-    const idx = staffList.value.findIndex(s => s.uuid === uuid)
-    if (idx >= 0) {
-      const current = staffList.value[idx]!
-      staffList.value[idx] = { ...current, ...data, uuid }
-    }
+  /** スタッフ更新（サーバー保存成功 → ref反映） */
+  async function updateStaff(uuid: string, data: Partial<Staff>): Promise<void> {
     lastError.value = null
-    apiPut(`/${uuid}`, data).catch(err => {
+    try {
+      await apiPut(`/${uuid}`, data)
+      const idx = staffList.value.findIndex(s => s.uuid === uuid)
+      if (idx >= 0) {
+        const current = staffList.value[idx]!
+        staffList.value[idx] = { ...current, ...data, uuid }
+      }
+    } catch (err) {
       const msg = `スタッフ更新の保存に失敗しました: ${err}`
       console.error('[useStaff]', msg)
       lastError.value = msg
-    })
+      throw err
+    }
   }
 
   return {

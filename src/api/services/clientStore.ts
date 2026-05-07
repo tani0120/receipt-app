@@ -15,6 +15,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import crypto from 'crypto';
 import type { Client, ClientStatus } from '../../repositories/types';
 
 const DATA_DIR = join(process.cwd(), 'data');
@@ -141,18 +142,20 @@ export function getByAccountingSoftware(sw: string): Client[] {
   return clients.filter(c => c.accountingSoftware === sw);
 }
 
-/** 新しいclientIdを生成（既存の最大連番+1） */
-export function createClientId(threeCode: string): string {
-  let maxSeq = 0;
-  for (const c of clients) {
-    const dash = c.clientId.indexOf('-');
-    if (dash >= 0) {
-      const seq = parseInt(c.clientId.substring(dash + 1), 10);
-      if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
-    }
+/** 新しいclientIdを生成（nanoidベースのランダムID。3コード非依存） */
+export function generateClientId(): string {
+  // nanoidはESMのみなのでcrypto.randomBytesで代替
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = crypto.randomBytes(8);
+  let id = 'c_';
+  for (let i = 0; i < 8; i++) {
+    id += chars[bytes[i]! % chars.length];
   }
-  const nextSeq = String(maxSeq + 1).padStart(5, '0');
-  return `${threeCode}-${nextSeq}`;
+  // 衝突チェック（実質不要だが念のため）
+  if (clients.some(c => c.clientId === id)) {
+    return generateClientId();
+  }
+  return id;
 }
 
 // 起動時に自動読み込み

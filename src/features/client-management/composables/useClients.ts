@@ -194,29 +194,38 @@ export function useClients() {
     }
   }
 
-  /** 顧問先追加（ref即反映 + サーバーfire-and-forget） */
-  function addClient(client: Client): void {
-    clients.value.push(client)
+  /** 顧問先追加（サーバーでID発番 → ref反映） */
+  async function addClient(client: Omit<Client, 'clientId'> & { clientId?: string }): Promise<Client> {
     lastError.value = null
-    apiPost('', client).catch(err => {
+    try {
+      const res = await apiPost<{ ok: boolean; client: Client }>('', client)
+      const saved = res.client
+      clients.value.push(saved)
+      return saved
+    } catch (err) {
       const msg = `顧問先追加の保存に失敗しました: ${err}`
       console.error('[useClients]', msg)
       lastError.value = msg
-    })
+      throw err
+    }
   }
 
-  /** 顧問先更新（ref即反映 + サーバーfire-and-forget） */
-  function updateClientLocal(clientId: string, data: Partial<Client>): void {
-    const idx = clients.value.findIndex(c => c.clientId === clientId)
-    if (idx >= 0) {
-      clients.value[idx] = { ...clients.value[idx]!, ...data, clientId }
-    }
+  /** 顧問先更新（サーバー保存成功 → ref反映） */
+  async function updateClientLocal(clientId: string, data: Partial<Client>): Promise<void> {
     lastError.value = null
-    apiPut(`/${clientId}`, data).catch(err => {
+    try {
+      await apiPut(`/${clientId}`, data)
+      // サーバー成功後にref反映
+      const idx = clients.value.findIndex(c => c.clientId === clientId)
+      if (idx >= 0) {
+        clients.value[idx] = { ...clients.value[idx]!, ...data, clientId }
+      }
+    } catch (err) {
       const msg = `顧問先更新の保存に失敗しました: ${err}`
       console.error('[useClients]', msg)
       lastError.value = msg
-    })
+      throw err
+    }
   }
 
   return {
@@ -230,21 +239,3 @@ export function useClients() {
     lastError,
   };
 }
-
-/**
- * 新しいclientIdを生成する。
- * 形式: {3コード}-{5桁連番}（例: ABC-00001）
- * ★サーバー側で発番するのが正しいが、フロント互換のために残す
- */
-export const createClientId = (threeCode: string, existingClients: Client[]): string => {
-  let maxSeq = 0;
-  for (const c of existingClients) {
-    const dash = c.clientId.indexOf('-');
-    if (dash >= 0) {
-      const seq = parseInt(c.clientId.substring(dash + 1), 10);
-      if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
-    }
-  }
-  const nextSeq = String(maxSeq + 1).padStart(5, '0');
-  return `${threeCode}-${nextSeq}`;
-};

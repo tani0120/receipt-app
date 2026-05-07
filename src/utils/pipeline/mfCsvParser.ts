@@ -23,6 +23,18 @@
 
 import type { ConfirmedJournal, ConfirmedJournalEntry } from '../../types/confirmed_journal.type'
 import { normalizeVendorName } from './vendorIdentification'
+import crypto from 'crypto'
+
+// ID生成ヘルパー（サーバー側。prefix_XXXXXXXX形式統一）
+const ID_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+function generateId(prefix: string): string {
+  const bytes = crypto.randomBytes(8)
+  let id = prefix
+  for (let i = 0; i < 8; i++) {
+    id += ID_CHARS[bytes[i]! % ID_CHARS.length]
+  }
+  return id
+}
 
 // ============================================================
 // § MF CSV 必須ヘッダー定義
@@ -204,7 +216,7 @@ function buildJournal(
     const debit_account = col(row, header_map, '借方勘定科目')
     if (debit_account) {
       debit_entries.push({
-        id: crypto.randomUUID(),
+        id: generateId('cje_'),
         account: debit_account,
         sub_account: col(row, header_map, '借方補助科目') || null,
         department: col(row, header_map, '借方部門') || null,
@@ -220,7 +232,7 @@ function buildJournal(
     const credit_account = col(row, header_map, '貸方勘定科目')
     if (credit_account) {
       credit_entries.push({
-        id: crypto.randomUUID(),
+        id: generateId('cje_'),
         account: credit_account,
         sub_account: col(row, header_map, '貸方補助科目') || null,
         department: col(row, header_map, '貸方部門') || null,
@@ -237,7 +249,7 @@ function buildJournal(
   const direction = estimateDirection(debit_entries, credit_entries)
 
   return {
-    id: crypto.randomUUID(),
+    id: generateId('cj_'),
     client_id,
     voucher_date,
     description,

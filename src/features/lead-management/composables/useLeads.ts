@@ -115,27 +115,37 @@ export function useLeads() {
     }
   }
 
-  function addLead(lead: Lead): void {
-    leads.value.push(lead)
+  /** 見込先追加（サーバー先行。サーバーがIDを発番して返す） */
+  async function addLead(lead: Omit<Lead, 'leadId'> & { leadId?: string }): Promise<Lead> {
     lastError.value = null
-    apiPost('', lead).catch(err => {
+    try {
+      const res = await apiPost<{ ok: boolean; lead: Lead }>('', lead)
+      const saved = res.lead
+      leads.value.push(saved)
+      return saved
+    } catch (err) {
       const msg = `見込先追加の保存に失敗しました: ${err}`
       console.error('[useLeads]', msg)
       lastError.value = msg
-    })
+      throw err
+    }
   }
 
-  function updateLeadLocal(leadId: string, data: Partial<Lead>): void {
-    const idx = leads.value.findIndex(l => l.leadId === leadId)
-    if (idx >= 0) {
-      leads.value[idx] = { ...leads.value[idx]!, ...data, leadId }
-    }
+  /** 見込先更新（サーバー保存成功 → ref反映） */
+  async function updateLeadLocal(leadId: string, data: Partial<Lead>): Promise<void> {
     lastError.value = null
-    apiPut(`/${leadId}`, data).catch(err => {
+    try {
+      await apiPut(`/${leadId}`, data)
+      const idx = leads.value.findIndex(l => l.leadId === leadId)
+      if (idx >= 0) {
+        leads.value[idx] = { ...leads.value[idx]!, ...data, leadId }
+      }
+    } catch (err) {
       const msg = `見込先更新の保存に失敗しました: ${err}`
       console.error('[useLeads]', msg)
       lastError.value = msg
-    })
+      throw err
+    }
   }
 
   return {
@@ -149,16 +159,3 @@ export function useLeads() {
     lastError,
   };
 }
-
-export const createLeadId = (threeCode: string, existingLeads: Lead[]): string => {
-  let maxSeq = 0;
-  for (const l of existingLeads) {
-    const dash = l.leadId.indexOf('-');
-    if (dash >= 0) {
-      const seq = parseInt(l.leadId.substring(dash + 1), 10);
-      if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
-    }
-  }
-  const nextSeq = String(maxSeq + 1).padStart(5, '0');
-  return `${threeCode}-${nextSeq}`;
-};

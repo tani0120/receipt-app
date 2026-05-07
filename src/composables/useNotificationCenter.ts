@@ -95,7 +95,8 @@ async function sendMentionNotification(params: {
   commentBody: string
   authorName: string
   authorStaffId: string
-  clientId: string
+  clientId?: string
+  leadId?: string
   clientName: string
 }): Promise<void> {
   try {
@@ -116,26 +117,38 @@ async function sendMentionNotification(params: {
  * サーバーに永続化 + ローカルrefに追加
  */
 async function addNotification(options: Omit<AppNotification, 'id' | 'readBy' | 'createdAt'>): Promise<string> {
-  const id = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-
-  const notification: AppNotification = {
+  const notification: Omit<AppNotification, 'id'> & { id?: string } = {
     ...options,
-    id,
     readBy: [],
     createdAt: new Date().toISOString(),
   }
 
-  // ローカルrefに即追加
-  notifications.value.unshift(notification)
-
-  // サーバーに永続化（fire-and-forget）
-  fetch('/api/notifications', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(notification),
-  }).catch(() => { /* サイレント */ })
-
-  return id
+  try {
+    // サーバーがIDを発番して返す
+    const res = await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(notification),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json() as { ok: boolean; id: string }
+    const savedNotification: AppNotification = {
+      ...notification,
+      id: data.id,
+    } as AppNotification
+    notifications.value.unshift(savedNotification)
+    return data.id
+  } catch (err) {
+    console.error('[通知] 通知追加失敗:', err)
+    // フォールバック: ローカルで仮ID生成
+    const fallbackId = `ntf_local_${crypto.randomUUID().slice(0, 8)}`
+    const fallbackNotification: AppNotification = {
+      ...notification,
+      id: fallbackId,
+    } as AppNotification
+    notifications.value.unshift(fallbackNotification)
+    return fallbackId
+  }
 }
 
 /**

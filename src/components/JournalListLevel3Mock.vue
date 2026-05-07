@@ -4465,7 +4465,7 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
     message: `「${journal.description}」を未出力にコピーしますか？`,
     onConfirm: () => {
       const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(journal));
-      clone.id = `copy-${Date.now()}`;
+      clone.id = `copy-${crypto.randomUUID().slice(0, 12)}`;
       clone.display_order = journal.display_order + 0.5;
       clone.description = `★コピー ${journal.description}`;
       clone.is_read = false;
@@ -4700,7 +4700,7 @@ function showBulkCopyDialog() {
     onConfirm: () => {
       targets.forEach((j) => {
         const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(j));
-        clone.id = `copy-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        clone.id = `copy-${crypto.randomUUID().slice(0, 12)}`;
         clone.display_order = j.display_order + 0.5;
         clone.description = `★コピー ${j.description}`;
         clone.is_read = false;

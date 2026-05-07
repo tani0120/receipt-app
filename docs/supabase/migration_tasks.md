@@ -186,8 +186,10 @@
 | 項目 | 状態 |
 |---|---|
 | 問題 | clientIdが推測可能（`TST-00011`等の連番）で企業名が漏洩 |
-| 対策 | 招待リンク(`/invite/:code`)経由 or ログイン済みの場合のみアクセス許可 |
-| 実装 | ✅ **実装済み**（sessionStorageフラグ + beforeEnter検証） |
+| 対策① | 招待リンク(`/invite/:code`)経由 or ログイン済みの場合のみアクセス許可 |
+| 実装① | ✅ **実装済み**（sessionStorageフラグ + beforeEnter検証） |
+| 対策② | clientIdを`gen_random_uuid()`で発番し推測不可能にする（セクション4-6参照） |
+| 実装② | ⏸️ Supabase移行時に実施 |
 
 > 出典: Drive共有セッション
 
@@ -250,7 +252,7 @@ USING (
 | テーブル | 用途 | 現在のデータソース | SQL | 出典 |
 |---|---|---|---|---|
 | `staff` | スタッフ管理 | `data/staff.json` | **004_staff.sql ✅** | 本セッション |
-| `clients` | 顧問先管理 | `data/clients.json` | 002_core_tables.sql | task_unified |
+| `clients` | 顧問先管理（**id: UUID自動発番。three_codeは独立カラム**） | `data/clients.json` | 002_core_tables.sql | task_unified |
 | `share_status` | 共有設定 | `data/share_status.json` | 001_share_status.sql | task_unified |
 | `documents` | 証票管理 | `data/documents/` | 003_documents.sql | task_unified |
 | `vendors_global` | 全社共通取引先 | `data/vendors_global.ts`（224件） | 002_core_tables.sql | task_unified |
@@ -311,6 +313,42 @@ KI: postgresql_migration_streamed_architecture で設計済み。
 | `confirmed_requires_journal` CHECK制約 | confirmed時はconfirmed_journalが必須 |
 
 > 出典: KI implementation_plan L12-82
+
+### 4-6. clientId発番方式の移行（`{3コード}-{連番}` → `gen_random_uuid()`）
+
+| 項目 | 現状（問題あり） | Supabase移行後 |
+|---|---|---|
+| 発番場所 | **フロント**（`createClientId()`で連番生成） | **PostgreSQL**（`gen_random_uuid()`で自動発番） |
+| ID形式 | `ABC-00001`（3コードに依存） | UUID（`550e8400-e29b-41d4-a716-446655440000`） |
+| 3コード変更時 | IDと不整合（ABCがXYZに変わってもIDはABC-00001のまま） | **影響なし**（IDと3コードは完全独立） |
+| 同時接続 | レースコンディション（同じ連番を2人が取得する可能性） | **衝突なし**（DB側で排他制御） |
+| 推測可能性 | 推測可能（連番） | **推測不可能**（UUID） |
+| 3コード重複 | `UNIQUE`制約なし（フロント+APIのバリデーションのみ） | `three_code UNIQUE NOT NULL`制約（DB側で強制排除） |
+
+```sql
+CREATE TABLE clients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  three_code VARCHAR(3) UNIQUE NOT NULL,
+  company_name TEXT,
+  rep_name TEXT,
+  -- ... 他カラム
+  CONSTRAINT company_or_rep_required CHECK (company_name IS NOT NULL OR rep_name IS NOT NULL)
+);
+```
+
+**移行手順:**
+1. 現行JSONの`clientId`（`ABC-00001`等）をUUIDに変換するマイグレーションスクリプトを作成
+2. `three_code`カラムに旧`threeCode`値をそのまま移行
+3. フロント側の`createClientId()`を廃止
+4. `addClient()`はサーバーPOSTのレスポンスからIDを受け取る方式に変更
+5. URL・ルーティングを`/master/clients/:uuid`に切替
+6. 全リレーション（`documents.client_id`、`migration_jobs.client_id`等）のFK参照先をUUIDに変更
+
+**暫定対応（Supabase移行前）:**
+- サーバー側でnanoid等によるランダムID発番に切替（フロント発番廃止）
+- フロントはPOSTレスポンスからIDを受け取る
+
+> 出典: 2026-05-07 顧問先詳細ページ改修セッション
 
 ---
 

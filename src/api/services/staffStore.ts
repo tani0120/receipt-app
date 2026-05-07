@@ -15,6 +15,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import crypto from 'crypto';
 import type { Staff, StaffRole, StaffStatus } from '../../repositories/types';
 
 const DATA_DIR = join(process.cwd(), 'data');
@@ -140,9 +141,19 @@ export function getByRole(role: StaffRole): Staff[] {
 // ヘルパー
 // ============================================================
 
+/**
+ * ランダムなスタッフIDを生成する。
+ * 形式: s_{8文字ランダム}（例: s_7kXp2mN9）
+ * Supabase移行後は gen_random_uuid() に差し替え。
+ */
 function generateUuid(): string {
-  idCounter++;
-  return `staff-${String(idCounter).padStart(4, '0')}`;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = crypto.randomBytes(8);
+  let id = 's_';
+  for (let i = 0; i < 8; i++) {
+    id += chars[bytes[i]! % chars.length];
+  }
+  return id;
 }
 
 // 起動時に自動読み込み

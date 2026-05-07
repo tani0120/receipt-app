@@ -109,7 +109,7 @@ export function useDriveFileListMock(): DriveFileListMockState {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Mock: jobId生成
-      const mockJobId = `job-${Date.now()}-${fileId}`;
+      const mockJobId = `job-${crypto.randomUUID().slice(0, 8)}-${fileId}`;
       createdJobId.value = mockJobId;
 
       console.log(`[Mock] OCR実行完了: fileId=${fileId}, jobId=${mockJobId}`);

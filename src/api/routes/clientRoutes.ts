@@ -31,7 +31,7 @@ import {
   updateStaffAssignment,
   updateSharedFolderId,
   updateSharedEmail,
-  createClientId,
+  generateClientId,
 } from '../services/clientStore';
 import { getClientList } from '../services/clientListService';
 
@@ -86,13 +86,20 @@ app.get('/:clientId', (c) => {
 // ============================================================
 app.post('/', async (c) => {
   const body = await c.req.json();
-  if (!body.threeCode || !body.companyName) {
-    return apiError(c, 400, 必須('threeCode と companyName'));
+  if (!body.threeCode) {
+    return apiError(c, 400, 必須('threeCode'));
   }
-  // clientIdを自動発番（bodyにclientIdがなければ）
-  if (!body.clientId) {
-    body.clientId = createClientId(body.threeCode);
+  if (!body.companyName && !body.repName) {
+    return apiError(c, 400, 必須('companyName または repName'));
   }
+  // threeCode重複チェック
+  const existing = getAll();
+  const dup = existing.find(cl => cl.threeCode === body.threeCode && cl.clientId !== body.clientId);
+  if (dup) {
+    return apiError(c, 409, `3コード「${body.threeCode}」は既に「${dup.companyName}（${dup.clientId}）」で使用されています`);
+  }
+  // clientIdをサーバー側で発番（フロントからのID受け取りは無視）
+  body.clientId = generateClientId();
   const client = create(body);
   return c.json({ ok: true, client });
 });
@@ -103,6 +110,21 @@ app.post('/', async (c) => {
 app.put('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
   const body = await c.req.json();
+  // バリデーション（フロントと一致）
+  if (body.threeCode !== undefined && !body.threeCode) {
+    return apiError(c, 400, 必須('threeCode'));
+  }
+  if (body.companyName !== undefined && body.repName !== undefined && !body.companyName && !body.repName) {
+    return apiError(c, 400, 必須('companyName または repName'));
+  }
+  // threeCode重複チェック（変更時のみ）
+  if (body.threeCode) {
+    const existing = getAll();
+    const dup = existing.find(cl => cl.threeCode === body.threeCode && cl.clientId !== clientId);
+    if (dup) {
+      return apiError(c, 409, `3コード「${body.threeCode}」は既に「${dup.companyName}（${dup.clientId}）」で使用されています`);
+    }
+  }
   const ok = updateClient(clientId, body);
   if (!ok) {
     return apiError(c, 404, 未検出(`顧問先 ${clientId}`));

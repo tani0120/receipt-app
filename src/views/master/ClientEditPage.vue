@@ -7,14 +7,21 @@
     <!-- ヘッダー2行目: アクション -->
     <div class="ce-header">
       <div class="ce-header-left">
-        <button class="ce-btn ce-btn-cancel" @click="goBack">キャンセル</button>
-        <button class="ce-btn ce-btn-save" @click="saveClient"><i class="fa-solid fa-save"></i> 保存</button>
+        <!-- 閲覧モード -->
+        <template v-if="!isEditing">
+          <button class="ce-btn ce-btn-back" @click="$router.push('/master/clients')"><i class="fa-solid fa-arrow-left"></i> 一覧に戻る</button>
+        </template>
+        <!-- 編集モード -->
+        <template v-else>
+          <button class="ce-btn ce-btn-cancel" @click="onCancel">キャンセル</button>
+          <button class="ce-btn ce-btn-save" @click="saveClient"><i class="fa-solid fa-save"></i> 保存</button>
+        </template>
       </div>
       <div class="ce-header-right">
         <div class="ce-action-icons">
-          <button class="ce-icon-btn" title="新規追加" @click="$router.push('/master/clients/new')"><i class="fa-solid fa-plus"></i></button>
-          <button class="ce-icon-btn ce-icon-active" title="編集" @click="saveClient"><i class="fa-solid fa-pen"></i></button>
-          <button v-if="!isNew" class="ce-icon-btn" title="コピーして新規作成" @click="copyAndCreate"><i class="fa-regular fa-copy"></i></button>
+          <button class="ce-icon-btn" title="新規登録" @click="$router.push('/master/clients/new')"><i class="fa-solid fa-plus"></i></button>
+          <button v-if="!isEditing && !isNew" class="ce-icon-btn" title="編集" @click="startEditing"><i class="fa-solid fa-pen"></i></button>
+          <button v-if="!isEditing && !isNew" class="ce-icon-btn" title="コピーして新規作成" @click="copyAndCreate"><i class="fa-regular fa-copy"></i></button>
         </div>
       </div>
     </div>
@@ -28,95 +35,122 @@
         <div class="ce-grid">
           <div class="ce-field">
             <label>法人/個人</label>
-            <div class="ce-radio-group">
-              <label><input type="radio" v-model="form.type" value="corp"><span>法人</span></label>
-              <label><input type="radio" v-model="form.type" value="individual"><span>個人</span></label>
-            </div>
+            <template v-if="isEditing">
+              <div class="ce-radio-group">
+                <label><input type="radio" v-model="form.type" value="corp"><span>法人</span></label>
+                <label><input type="radio" v-model="form.type" value="individual"><span>個人</span></label>
+              </div>
+            </template>
+            <span v-else class="ce-readonly">{{ typeLabel }}</span>
           </div>
           <div class="ce-field">
             <label>内部ID</label>
-            <input type="text" :value="isNew ? '（自動生成）' : clientId" class="ce-input" disabled>
+            <span class="ce-readonly ce-muted">{{ isNew ? '（自動生成）' : clientId }}</span>
           </div>
           <div class="ce-field">
-            <label>3コード <span class="ce-hint">※大文字3文字</span></label>
-            <input type="text" v-model="form.threeCode" class="ce-input ce-w-sm" maxlength="3" placeholder="ABC" @input="form.threeCode = form.threeCode.toUpperCase().replace(/[^A-Z]/g, '')">
+            <label>3コード <span class="ce-required">*</span> <span class="ce-hint">※大文字3文字</span></label>
+            <input v-if="isEditing" type="text" v-model="form.threeCode" class="ce-input ce-w-sm" maxlength="3" placeholder="ABC" @input="form.threeCode = form.threeCode.toUpperCase().replace(/[^A-Z]/g, '')">
+            <span v-else class="ce-readonly ce-code">{{ form.threeCode || '—' }}</span>
           </div>
           <div class="ce-field">
-            <label>会社名</label>
-            <input type="text" v-model="form.companyName" class="ce-input" placeholder="株式会社サンプル">
+            <label>会社名 <span class="ce-hint">※会社名・代表者名のどちらか必須</span></label>
+            <input v-if="isEditing" type="text" v-model="form.companyName" class="ce-input" placeholder="株式会社サンプル">
+            <span v-else class="ce-readonly">{{ form.companyName || '—' }}</span>
           </div>
           <div class="ce-field">
             <label>会社名（全角カナ）</label>
-            <input type="text" v-model="form.companyNameKana" class="ce-input" placeholder="カブシキガイシャサンプル" @input="form.companyNameKana = form.companyNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')">
+            <input v-if="isEditing" type="text" v-model="form.companyNameKana" class="ce-input" placeholder="カブシキガイシャサンプル" @input="form.companyNameKana = form.companyNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')">
+            <span v-else class="ce-readonly">{{ form.companyNameKana || '—' }}</span>
           </div>
           <div class="ce-field">
-            <label>代表者名</label>
-            <input type="text" v-model="form.repName" class="ce-input" placeholder="山田 太郎">
+            <label>代表者名 <span class="ce-hint">※会社名・代表者名のどちらか必須</span></label>
+            <input v-if="isEditing" type="text" v-model="form.repName" class="ce-input" placeholder="山田 太郎">
+            <span v-else class="ce-readonly">{{ form.repName || '—' }}</span>
           </div>
           <div class="ce-field">
             <label>代表者名（全角カナ）</label>
-            <input type="text" v-model="form.repNameKana" class="ce-input" placeholder="ヤマダ タロウ" @input="form.repNameKana = form.repNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')">
+            <input v-if="isEditing" type="text" v-model="form.repNameKana" class="ce-input" placeholder="ヤマダ タロウ" @input="form.repNameKana = form.repNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')">
+            <span v-else class="ce-readonly">{{ form.repNameKana || '—' }}</span>
           </div>
           <div class="ce-field">
             <label>担当者</label>
-            <select v-model="staffId" class="ce-select">
-              <option value="">未設定</option>
-              <option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
-            </select>
+            <template v-if="isEditing">
+              <select v-model="staffId" class="ce-select">
+                <option value="">未設定</option>
+                <option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
+              </select>
+            </template>
+            <span v-else class="ce-readonly">{{ staffLabel }}</span>
           </div>
           <div class="ce-field">
             <label>電話番号</label>
-            <input type="text" v-model="form.phoneNumber" class="ce-input" placeholder="03-1234-5678">
+            <input v-if="isEditing" type="text" v-model="form.phoneNumber" class="ce-input" placeholder="03-1234-5678">
+            <span v-else class="ce-readonly">{{ form.phoneNumber || '—' }}</span>
           </div>
           <div class="ce-field">
             <label>メールアドレス</label>
-            <input type="email" v-model="form.email" class="ce-input" placeholder="example@mail.com">
+            <input v-if="isEditing" type="email" v-model="form.email" class="ce-input" placeholder="example@mail.com">
+            <span v-else class="ce-readonly">{{ form.email || '—' }}</span>
           </div>
           <div class="ce-field">
             <label>チャットルームURL</label>
-            <input type="url" v-model="form.chatRoomUrl" class="ce-input" placeholder="https://www.chatwork.com/#!rid...">
+            <input v-if="isEditing" type="url" v-model="form.chatRoomUrl" class="ce-input" placeholder="https://www.chatwork.com/#!rid...">
+            <span v-else class="ce-readonly">{{ form.chatRoomUrl || '—' }}</span>
           </div>
           <div class="ce-field">
             <label>主な連絡手段</label>
-            <div class="ce-radio-group">
-              <label><input type="radio" v-model="form.contactType" value="email"><span>メール</span></label>
-              <label><input type="radio" v-model="form.contactType" value="chatwork"><span>チャットワーク</span></label>
-            </div>
+            <template v-if="isEditing">
+              <div class="ce-radio-group">
+                <label><input type="radio" v-model="form.contactType" value="email"><span>メール</span></label>
+                <label><input type="radio" v-model="form.contactType" value="chatwork"><span>チャットワーク</span></label>
+              </div>
+            </template>
+            <span v-else class="ce-readonly">{{ contactTypeLabel }}</span>
           </div>
           <div class="ce-field">
             <label>連絡先</label>
-            <input type="text" v-model="form.contactValue" class="ce-input" :placeholder="form.contactType === 'email' ? 'example@mail.com' : 'Chatwork ID'">
+            <input v-if="isEditing" type="text" v-model="form.contactValue" class="ce-input" :placeholder="form.contactType === 'email' ? 'example@mail.com' : 'Chatwork ID'">
+            <span v-else class="ce-readonly">{{ form.contactValue || '—' }}</span>
           </div>
           <div class="ce-field">
             <label>顧問先ログインメール <span class="ce-hint">※自動取得</span></label>
-            <input type="email" v-model="sharedEmail" class="ce-input" placeholder="shared@example.com">
+            <input v-if="isEditing" type="email" v-model="sharedEmail" class="ce-input" placeholder="shared@example.com">
+            <span v-else class="ce-readonly">{{ sharedEmail || '—' }}</span>
           </div>
           <div class="ce-field">
             <label>共有用チャットURL</label>
-            <input type="url" v-model="sharedChatUrl" class="ce-input" placeholder="https://www.chatwork.com/#!rid...">
+            <input v-if="isEditing" type="url" v-model="sharedChatUrl" class="ce-input" placeholder="https://www.chatwork.com/#!rid...">
+            <span v-else class="ce-readonly">{{ sharedChatUrl || '—' }}</span>
           </div>
           <div class="ce-field">
             <label>決算日</label>
-            <div class="ce-date-group">
-              <select v-model="form.fiscalMonth" class="ce-select ce-w-sm">
-                <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
-              </select>
-              <span>/</span>
-              <select v-model="form.fiscalDay" class="ce-select ce-w-sm">
-                <option value="末日">末日</option>
-                <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
-              </select>
-            </div>
+            <template v-if="isEditing">
+              <div class="ce-date-group">
+                <select v-model="form.fiscalMonth" class="ce-select ce-w-sm">
+                  <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
+                </select>
+                <span>/</span>
+                <select v-model="form.fiscalDay" class="ce-select ce-w-sm">
+                  <option value="末日">末日</option>
+                  <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
+                </select>
+              </div>
+            </template>
+            <span v-else class="ce-readonly">{{ form.fiscalMonth }}月 / {{ form.fiscalDay === '末日' ? '末日' : form.fiscalDay + '日' }}</span>
           </div>
           <div class="ce-field">
             <label>業種</label>
-            <select v-model="form.industry" class="ce-select">
-              <option v-for="opt in industryOptions" :key="opt" :value="opt">{{ opt || '未設定' }}</option>
-            </select>
+            <template v-if="isEditing">
+              <select v-model="form.industry" class="ce-select">
+                <option v-for="opt in industryOptions" :key="opt" :value="opt">{{ opt || '未設定' }}</option>
+              </select>
+            </template>
+            <span v-else class="ce-readonly">{{ form.industry || '未設定' }}</span>
           </div>
           <div class="ce-field">
             <label>設立日</label>
-            <input type="text" v-model="form.establishedDate" class="ce-input ce-w-sm" placeholder="YYYYMMDD" maxlength="8">
+            <input v-if="isEditing" type="text" v-model="form.establishedDate" class="ce-input ce-w-sm" placeholder="YYYYMMDD" maxlength="8">
+            <span v-else class="ce-readonly">{{ form.establishedDate || '—' }}</span>
           </div>
         </div>
       </section>
@@ -127,77 +161,117 @@
         <div class="ce-grid">
           <div class="ce-field">
             <label>会計ソフト</label>
-            <select v-model="form.accountingSoftware" class="ce-select">
-              <option value="mf">マネーフォワード</option>
-              <option value="freee">freee</option>
-              <option value="yayoi">弥生</option>
-              <option value="tkc">TKC</option>
-              <option value="other">その他</option>
-            </select>
+            <template v-if="isEditing">
+              <select v-model="form.accountingSoftware" class="ce-select">
+                <option value="mf">マネーフォワード</option>
+                <option value="freee">freee</option>
+                <option value="yayoi">弥生</option>
+                <option value="tkc">TKC</option>
+                <option value="other">その他</option>
+              </select>
+            </template>
+            <span v-else class="ce-readonly">{{ accountingSoftwareLabel }}</span>
           </div>
           <div class="ce-field">
             <label>確定申告</label>
-            <div class="ce-radio-group">
-              <label><input type="radio" v-model="form.taxFilingType" value="blue"><span>青色</span></label>
-              <label><input type="radio" v-model="form.taxFilingType" value="white"><span>白色</span></label>
-            </div>
+            <template v-if="isEditing">
+              <div class="ce-radio-group">
+                <label><input type="radio" v-model="form.taxFilingType" value="blue"><span>青色</span></label>
+                <label><input type="radio" v-model="form.taxFilingType" value="white"><span>白色</span></label>
+              </div>
+            </template>
+            <span v-else class="ce-readonly">{{ taxFilingLabel }}</span>
           </div>
           <div class="ce-field">
             <label>課税方式</label>
-            <div class="ce-radio-group">
-              <label><input type="radio" v-model="form.consumptionTaxMode" value="general"><span>原則課税</span></label>
-              <label><input type="radio" v-model="form.consumptionTaxMode" value="simplified"><span>簡易課税</span></label>
-              <label><input type="radio" v-model="form.consumptionTaxMode" value="exempt"><span>免税</span></label>
-            </div>
+            <template v-if="isEditing">
+              <div class="ce-radio-group">
+                <label><input type="radio" v-model="form.consumptionTaxMode" value="general"><span>原則課税</span></label>
+                <label><input type="radio" v-model="form.consumptionTaxMode" value="simplified"><span>簡易課税</span></label>
+                <label><input type="radio" v-model="form.consumptionTaxMode" value="exempt"><span>免税</span></label>
+              </div>
+            </template>
+            <span v-else class="ce-readonly">{{ consumptionTaxLabel }}</span>
           </div>
           <div v-if="form.consumptionTaxMode === 'simplified'" class="ce-field">
             <label>事業区分</label>
-            <select v-model="form.simplifiedTaxCategory" class="ce-select">
-              <option :value="undefined">未設定</option>
-              <option :value="1">第一種（卸売業）90%</option>
-              <option :value="2">第二種（小売業）80%</option>
-              <option :value="3">第三種（製造業・建設業）70%</option>
-              <option :value="4">第四種（飲食店・その他）60%</option>
-              <option :value="5">第五種（サービス業）50%</option>
-              <option :value="6">第六種（不動産業）40%</option>
-            </select>
+            <template v-if="isEditing">
+              <select v-model="form.simplifiedTaxCategory" class="ce-select">
+                <option :value="undefined">未設定</option>
+                <option :value="1">第一種（卸売業）90%</option>
+                <option :value="2">第二種（小売業）80%</option>
+                <option :value="3">第三種（製造業・建設業）70%</option>
+                <option :value="4">第四種（飲食店・その他）60%</option>
+                <option :value="5">第五種（サービス業）50%</option>
+                <option :value="6">第六種（不動産業）40%</option>
+              </select>
+            </template>
+            <span v-else class="ce-readonly">{{ simplifiedCategoryLabel }}</span>
           </div>
           <div class="ce-field">
             <label>税込/税抜</label>
-            <div class="ce-radio-group">
-              <label><input type="radio" v-model="form.taxMethod" value="inclusive"><span>税込</span></label>
-              <label><input type="radio" v-model="form.taxMethod" value="exclusive"><span>税抜</span></label>
-            </div>
+            <template v-if="isEditing">
+              <div class="ce-radio-group">
+                <label><input type="radio" v-model="form.taxMethod" value="inclusive"><span>税込</span></label>
+                <label><input type="radio" v-model="form.taxMethod" value="exclusive"><span>税抜</span></label>
+              </div>
+            </template>
+            <span v-else class="ce-readonly">{{ taxMethodLabel }}</span>
           </div>
           <div class="ce-field">
             <label>経理方式</label>
-            <select v-model="form.calculationMethod" class="ce-select">
-              <option value="accrual">発生主義</option>
-              <option value="cash">現金主義</option>
-              <option value="interim_cash">中間現金主義</option>
-            </select>
+            <template v-if="isEditing">
+              <select v-model="form.calculationMethod" class="ce-select">
+                <option value="accrual">発生主義</option>
+                <option value="cash">現金主義</option>
+                <option value="interim_cash">中間現金主義</option>
+              </select>
+            </template>
+            <span v-else class="ce-readonly">{{ calculationMethodLabel }}</span>
           </div>
           <div class="ce-field">
             <label>デフォルト支払方法</label>
-            <select v-model="form.defaultPaymentMethod" class="ce-select">
-              <option value="cash">現金</option>
-              <option value="owner_loan">事業主借</option>
-              <option value="accounts_payable">買掛金</option>
-            </select>
+            <template v-if="isEditing">
+              <select v-model="form.defaultPaymentMethod" class="ce-select">
+                <option value="cash">現金</option>
+                <option value="owner_loan">事業主借</option>
+                <option value="accounts_payable">買掛金</option>
+              </select>
+            </template>
+            <span v-else class="ce-readonly">{{ defaultPaymentLabel }}</span>
           </div>
           <div class="ce-field">
-            <label class="ce-checkbox"><input type="checkbox" v-model="form.isInvoiceRegistered"><span>インボイス登録事業者</span></label>
+            <template v-if="isEditing">
+              <label class="ce-checkbox"><input type="checkbox" v-model="form.isInvoiceRegistered"><span>インボイス登録事業者</span></label>
+            </template>
+            <template v-else>
+              <label>インボイス登録</label>
+              <span class="ce-readonly">{{ form.isInvoiceRegistered ? '✅ 登録済み' : '☐ 未登録' }}</span>
+            </template>
           </div>
           <div v-if="form.isInvoiceRegistered" class="ce-field">
             <label>登録番号</label>
-            <input type="text" v-model="form.invoiceRegistrationNumber" class="ce-input" placeholder="T1234567890123">
+            <input v-if="isEditing" type="text" v-model="form.invoiceRegistrationNumber" class="ce-input" placeholder="T1234567890123">
+            <span v-else class="ce-readonly">{{ form.invoiceRegistrationNumber || '—' }}</span>
           </div>
           <div class="ce-field">
-            <label class="ce-checkbox"><input type="checkbox" v-model="form.hasDepartmentManagement"><span>部門管理あり</span></label>
+            <template v-if="isEditing">
+              <label class="ce-checkbox"><input type="checkbox" v-model="form.hasDepartmentManagement"><span>部門管理あり</span></label>
+            </template>
+            <template v-else>
+              <label>部門管理</label>
+              <span class="ce-readonly">{{ form.hasDepartmentManagement ? '✅ あり' : '☐ なし' }}</span>
+            </template>
           </div>
           <div v-if="form.type === 'individual'" class="ce-field">
-            <label class="ce-checkbox"><input type="checkbox" v-model="form.hasRentalIncome"><span>不動産所得あり</span></label>
-            <span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span>
+            <template v-if="isEditing">
+              <label class="ce-checkbox"><input type="checkbox" v-model="form.hasRentalIncome"><span>不動産所得あり</span></label>
+              <span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span>
+            </template>
+            <template v-else>
+              <label>不動産所得</label>
+              <span class="ce-readonly">{{ form.hasRentalIncome ? '✅ あり' : '☐ なし' }}</span>
+            </template>
           </div>
         </div>
       </section>
@@ -208,11 +282,17 @@
         <div class="ce-grid">
           <div class="ce-field">
             <label>月額顧問報酬</label>
-            <div class="ce-amount"><input type="number" v-model.number="form.advisoryFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
+            <template v-if="isEditing">
+              <div class="ce-amount"><input type="number" v-model.number="form.advisoryFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
+            </template>
+            <span v-else class="ce-readonly">{{ form.advisoryFee.toLocaleString() }} 円</span>
           </div>
           <div class="ce-field">
             <label>記帳代行</label>
-            <div class="ce-amount"><input type="number" v-model.number="form.bookkeepingFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
+            <template v-if="isEditing">
+              <div class="ce-amount"><input type="number" v-model.number="form.bookkeepingFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
+            </template>
+            <span v-else class="ce-readonly">{{ form.bookkeepingFee.toLocaleString() }} 円</span>
           </div>
           <div class="ce-field ce-computed">
             <label>月次合計（自動算出）</label>
@@ -220,11 +300,17 @@
           </div>
           <div class="ce-field">
             <label>決算報酬</label>
-            <div class="ce-amount"><input type="number" v-model.number="form.settlementFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
+            <template v-if="isEditing">
+              <div class="ce-amount"><input type="number" v-model.number="form.settlementFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
+            </template>
+            <span v-else class="ce-readonly">{{ form.settlementFee.toLocaleString() }} 円</span>
           </div>
           <div class="ce-field">
             <label>消費税申告報酬</label>
-            <div class="ce-amount"><input type="number" v-model.number="form.taxFilingFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
+            <template v-if="isEditing">
+              <div class="ce-amount"><input type="number" v-model.number="form.taxFilingFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
+            </template>
+            <span v-else class="ce-readonly">{{ form.taxFilingFee.toLocaleString() }} 円</span>
           </div>
           <div class="ce-field ce-computed">
             <label>年間総報酬（自動算出）</label>
@@ -232,6 +318,14 @@
           </div>
         </div>
       </section>
+
+
+
+
+
+
+
+
 
       <!-- マスタ自動コピー通知 -->
       <div v-if="isNew" class="ce-notice">
@@ -275,7 +369,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useClients, emptyClientForm, createClientId } from '@/features/client-management/composables/useClients';
+import { useClients, emptyClientForm } from '@/features/client-management/composables/useClients';
 import type { Client, ClientForm } from '@/features/client-management/composables/useClients';
 import { useStaff } from '@/features/staff-management/composables/useStaff';
 import type { Staff } from '@/features/staff-management/composables/useStaff';
@@ -295,12 +389,63 @@ const modal = useModalHelper();
 
 /** 新規 or 編集判定 */
 const clientId = computed(() => route.params.clientId as string | undefined);
-const isNew = computed(() => !clientId.value || route.name === 'ClientNew');
+const routeIsNew = computed(() => !clientId.value || route.name === 'ClientNew');
+/** コピー新規モード（画面遷移なしで新規作成として保存する） */
+const isCopyNew = ref(false);
+/** 実質的な新規判定（ルート上の新規 or コピー新規） */
+const isNew = computed(() => routeIsNew.value || isCopyNew.value);
+/** 編集モード（false=閲覧、true=編集） */
+const isEditing = ref(false);
 
 const form = reactive<ClientForm>(emptyClientForm());
 const staffId = ref('');
 const sharedEmail = ref('');
 const sharedChatUrl = ref('');
+/** 編集前のスナップショット（キャンセル時の復元用） */
+let originalSnapshot: string = '';
+
+/** 閲覧モード用ラベル変換ヘルパー */
+const typeLabel = computed(() => form.type === 'corp' ? '法人' : '個人');
+const taxFilingLabel = computed(() => form.taxFilingType === 'blue' ? '青色' : '白色');
+const consumptionTaxLabel = computed(() => {
+  const m: Record<string, string> = { general: '原則課税', simplified: '簡易課税', exempt: '免税' };
+  return m[form.consumptionTaxMode] ?? '';
+});
+const taxMethodLabel = computed(() => form.taxMethod === 'inclusive' ? '税込' : '税抜');
+const contactTypeLabel = computed(() => form.contactType === 'email' ? 'メール' : 'チャットワーク');
+const accountingSoftwareLabel = computed(() => {
+  const m: Record<string, string> = { mf: 'マネーフォワード', freee: 'freee', yayoi: '弥生', tkc: 'TKC', other: 'その他' };
+  return m[form.accountingSoftware] ?? '';
+});
+const calculationMethodLabel = computed(() => {
+  const m: Record<string, string> = { accrual: '発生主義', cash: '現金主義', interim_cash: '中間現金主義' };
+  return m[form.calculationMethod] ?? '';
+});
+const defaultPaymentLabel = computed(() => {
+  const m: Record<string, string> = { cash: '現金', owner_loan: '事業主借', accounts_payable: '買掛金' };
+  return m[form.defaultPaymentMethod] ?? '';
+});
+const simplifiedCategoryLabel = computed(() => {
+  const m: Record<number, string> = { 1: '第一種（卸売業）90%', 2: '第二種（小売業）80%', 3: '第三種（製造業・建設業）70%', 4: '第四種（飲食店・その他）60%', 5: '第五種（サービス業）50%', 6: '第六種（不動産業）40%' };
+  return form.simplifiedTaxCategory ? m[form.simplifiedTaxCategory] ?? '' : '未設定';
+});
+const staffLabel = computed(() => {
+  if (!staffId.value) return '未設定';
+  const s = activeStaffList.value.find(s => s.uuid === staffId.value);
+  return s?.name ?? '不明';
+});
+
+/** スナップショット取得（現在のフォーム状態を文字列化） */
+const takeSnapshot = () => JSON.stringify({ ...form, staffId: staffId.value, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value });
+
+/** 編集モードに入る */
+const startEditing = () => {
+  originalSnapshot = takeSnapshot();
+  isEditing.value = true;
+};
+
+/** 変更があるか判定 */
+const hasChanges = () => takeSnapshot() !== originalSnapshot;
 
 /** 業種リスト */
 const industryOptions: string[] = [
@@ -334,23 +479,9 @@ async function fetchMentionStaff(): Promise<void> {
   }
 }
 
-/** 編集モード: 既存データをフォームに読み込み */
-onMounted(async () => {
-  // スタッフリストをAPIから直接取得（メンション候補用）
-  await fetchMentionStaff();
-  // コピーデータがあれば復元
-  const copyRaw = sessionStorage.getItem('clientCopyData');
-  if (isNew.value && copyRaw) {
-    try {
-      const copyData = JSON.parse(copyRaw);
-      const { staffId: sId, sharedEmail: sEmail, sharedChatUrl: sChat, ...rest } = copyData;
-      Object.assign(form, rest);
-      staffId.value = sId ?? '';
-      sharedEmail.value = sEmail ?? '';
-      sharedChatUrl.value = sChat ?? '';
-    } catch { /* 無視 */ }
-    sessionStorage.removeItem('clientCopyData');
-  } else if (!isNew.value && clientId.value) {
+/** 既存データをフォームに読み込み */
+const loadClientData = () => {
+  if (clientId.value) {
     const c = clients.value.find(cl => cl.clientId === clientId.value);
     if (!c) { router.replace('/master/clients'); return; }
     const { clientId: _id, contact, ...rest } = c;
@@ -359,16 +490,79 @@ onMounted(async () => {
     sharedEmail.value = c.sharedEmail ?? '';
     sharedChatUrl.value = c.sharedChatUrl ?? '';
   }
-  loadComments();
+};
+
+/** スナップショットからフォームを復元 */
+const restoreFromSnapshot = () => {
+  try {
+    const data = JSON.parse(originalSnapshot);
+    const { staffId: sId, sharedEmail: sEmail, sharedChatUrl: sChat, ...rest } = data;
+    Object.assign(form, rest);
+    staffId.value = sId ?? '';
+    sharedEmail.value = sEmail ?? '';
+    sharedChatUrl.value = sChat ?? '';
+  } catch { /* 復元失敗時は何もしない */ }
+};
+
+onMounted(async () => {
+  await fetchMentionStaff();
+  initPage();
 });
 
-const goBack = () => router.push('/master/clients');
+/** ルート変更時（同一コンポーネント間遷移）にフォームを再初期化 */
+watch(() => route.fullPath, () => {
+  initPage();
+});
 
-/** コピーして新規作成 */
+/** ページ初期化（新規/既存の判定とフォーム設定） */
+const initPage = () => {
+  // コピー新規モードをリセット
+  isCopyNew.value = false;
+  if (routeIsNew.value) {
+    // 新規作成: フォームをまっさらにして編集モード
+    Object.assign(form, emptyClientForm());
+    staffId.value = '';
+    sharedEmail.value = '';
+    sharedChatUrl.value = '';
+    isEditing.value = true;
+    comments.value = [];
+  } else {
+    // 既存顧問先: データ読み込み → 閲覧モード
+    loadClientData();
+    isEditing.value = false;
+  }
+  originalSnapshot = takeSnapshot();
+  loadComments();
+};
+
+/** キャンセル処理 */
+const onCancel = async () => {
+  // 変更があればconfirm
+  if (hasChanges()) {
+    const ok = await modal.confirm({ title: '変更を破棄しますか？', message: '保存されていない変更は失われます。', confirmLabel: '破棄する', cancelLabel: '編集を続ける', variant: 'danger' });
+    if (!ok) return;
+  }
+
+  if (routeIsNew.value) {
+    // 新規登録 or コピー新規: 直前の画面に戻る
+    router.back();
+    return;
+  }
+
+  // 既存編集: スナップショットから復元 → 閲覧モードに戻る（画面遷移なし）
+  restoreFromSnapshot();
+  isEditing.value = false;
+  isCopyNew.value = false;
+};
+
+/** コピーして新規作成（画面遷移なし） */
 const copyAndCreate = () => {
-  // 現在のフォームデータをsessionStorageに保存して新規ページに遷移
-  sessionStorage.setItem('clientCopyData', JSON.stringify({ ...form, staffId: staffId.value, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value }));
-  router.push('/master/clients/new');
+  // clientId・3コードをクリアして新規作成モードに切替
+  form.threeCode = '';
+  isCopyNew.value = true;
+  isEditing.value = true;
+  comments.value = [];
+  originalSnapshot = takeSnapshot();
 };
 
 // --- コメント機能 ---
@@ -389,7 +583,8 @@ const addComment = () => {
   if (!newComment.value.trim()) return;
   showMentionPopup.value = false;
   const body = newComment.value.trim();
-  comments.value.unshift({ id: `cmt-${Date.now()}`, author: currentUserName.value, body, date: new Date().toLocaleString('ja-JP') });
+  const cmtId = `cmt-${crypto.randomUUID().slice(0, 8)}`;
+  comments.value.unshift({ id: cmtId, author: currentUserName.value, body, date: new Date().toLocaleString('ja-JP') });
   newComment.value = '';
   // テキストエリアの高さをリセット
   if (commentTextarea.value) {
@@ -503,6 +698,10 @@ const selectMention = (staff: Staff) => {
 };
 
 const saveClient = async () => {
+  if (!form.threeCode) {
+    await modal.notify({ title: '3コードは必須です', message: '大文字アルファベット3文字を入力してください', variant: 'warning' });
+    return;
+  }
   if (!form.companyName && !form.repName) {
     await modal.notify({ title: '会社名または代表者名のどちらかを入力してください', variant: 'warning' });
     return;
@@ -515,23 +714,37 @@ const saveClient = async () => {
     }
   }
   const { contactType, contactValue, ...fields } = form;
-  const id = isNew.value ? createClientId(form.threeCode, clients.value) : clientId.value!;
-  const data: Client = { ...fields, clientId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
 
   if (isNew.value) {
-    addClient(data);
-    createDriveFolderForClient(data).catch(e => console.error('[clients] Driveフォルダ作成失敗:', e));
-    await modal.notify({ title: `「${data.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタが自動コピーされました。', variant: 'success' });
-  } else {
-    const old = clients.value.find(c => c.clientId === id);
-    updateClientLocal(id, data);
-    if (old && old.threeCode !== data.threeCode) {
-      const renamed = await renameDriveFolderForClient(data);
-      if (renamed) await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更`, variant: 'success' });
+    // 新規: サーバーがIDを発番して返す
+    const data = { ...fields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
+    try {
+      const saved = await addClient(data as any);
+      createDriveFolderForClient(saved).catch(e => console.error('[clients] Driveフォルダ作成失敗:', e));
+      await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタが自動コピーされました。', variant: 'success' });
+      router.push(`/master/clients/${saved.clientId}`);
+    } catch (err) {
+      await modal.notify({ title: '顧問先の追加に失敗しました', message: String(err), variant: 'warning' });
     }
-    await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
+  } else {
+    // 既存更新
+    const id = clientId.value!;
+    const data: Client = { ...fields, clientId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
+    try {
+      const old = clients.value.find(c => c.clientId === id);
+      await updateClientLocal(id, data);
+      if (old && old.threeCode !== data.threeCode) {
+        const renamed = await renameDriveFolderForClient(data);
+        if (renamed) await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更`, variant: 'success' });
+      }
+      await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
+      isEditing.value = false;
+      isCopyNew.value = false;
+      originalSnapshot = takeSnapshot();
+    } catch (err) {
+      await modal.notify({ title: '顧問先の更新に失敗しました', message: String(err), variant: 'warning' });
+    }
   }
-  router.push('/master/clients');
 };
 
 
@@ -581,6 +794,13 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 .ce-btn-save:hover { background: #2563eb; }
 .ce-btn-cancel { background: #f1f5f9; color: #475569; }
 .ce-btn-cancel:hover { background: #e2e8f0; }
+.ce-btn-back { background: none; border: 1px solid #d1d5db; color: #475569; display: flex; align-items: center; gap: 6px; }
+.ce-btn-back:hover { background: #f1f5f9; color: #1e293b; }
+
+/* 閲覧モード用テキスト表示 */
+.ce-readonly { font-size: 14px; color: #1e293b; padding: 6px 0; min-height: 20px; line-height: 1.5; }
+.ce-readonly.ce-muted { color: #94a3b8; font-size: 13px; }
+.ce-readonly.ce-code { font-family: 'Consolas', 'Monaco', monospace; font-weight: 700; font-size: 15px; color: #0284c7; letter-spacing: 1px; }
 .ce-btn-warn { background: #fef3c7; color: #92400e; }
 .ce-btn-warn:hover { background: #fde68a; }
 .ce-btn-danger { background: #fee2e2; color: #991b1b; }
@@ -608,6 +828,7 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 .ce-select { border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 12px; font-size: 13px; background: #fff; }
 .ce-w-sm { max-width: 180px; }
 .ce-hint { font-size: 10px; color: #94a3b8; font-weight: 400; }
+.ce-required { color: #ef4444; font-weight: 700; font-size: 14px; }
 
 /* ラジオ/チェックボックス */
 .ce-radio-group { display: flex; gap: 16px; align-items: center; }

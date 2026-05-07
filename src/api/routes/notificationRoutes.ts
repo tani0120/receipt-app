@@ -24,8 +24,20 @@ import {
 } from '../services/notificationStore';
 import { getAll as getAllStaff } from '../services/staffStore';
 import type { AppNotification } from '../../repositories/types';
+import { randomBytes } from 'crypto';
 
 const app = new Hono();
+
+/** ランダム通知IDを生成 */
+function generateNotifId(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = randomBytes(8);
+  let id = 'ntf_';
+  for (let i = 0; i < 8; i++) {
+    id += chars[bytes[i]! % chars.length];
+  }
+  return id;
+}
 
 // ============================================================
 // GET / — 通知取得（staffIdフィルタ対応）
@@ -46,8 +58,9 @@ app.get('/', (c) => {
 // ============================================================
 app.post('/', async (c) => {
   const body = await c.req.json<AppNotification>();
-  // readByがない場合は空配列で初期化
   if (!body.readBy) body.readBy = [];
+  // サーバーが常にIDを発番
+  body.id = generateNotifId();
   addNotification(body);
   return c.json({ ok: true, id: body.id });
 });
@@ -75,7 +88,7 @@ app.post('/mention', async (c) => {
     // @all: 全activeスタッフに通知
     for (const s of allStaff) {
       if (s.status === 'active') {
-        const id = `notif-mention-${Date.now()}-${s.uuid}`;
+        const id = generateNotifId();
         addNotification({
           id,
           type: 'mention',
@@ -93,7 +106,7 @@ app.post('/mention', async (c) => {
     // 個別メンション: スタッフ名で直接マッチ
     for (const s of allStaff) {
       if (commentBody.includes(`@${s.name}`) && s.status === 'active') {
-        const id = `notif-mention-${Date.now()}-${s.uuid}`;
+        const id = generateNotifId();
         addNotification({
           id,
           type: 'mention',

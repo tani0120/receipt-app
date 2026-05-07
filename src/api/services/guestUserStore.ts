@@ -18,7 +18,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 
 const DATA_DIR = join(process.cwd(), 'data');
 const DATA_FILE = join(DATA_DIR, 'guest_users.json');
@@ -47,9 +47,15 @@ function hashPassword(password: string): string {
   return createHash('sha256').update(password).digest('hex');
 }
 
-/** UUID生成 */
+/** g_XXXXXXXX形式のゲストユーザーIDを生成 */
 function generateId(): string {
-  return crypto.randomUUID();
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = randomBytes(8);
+  let id = 'g_';
+  for (let i = 0; i < 8; i++) {
+    id += chars[bytes[i]! % chars.length];
+  }
+  return id;
 }
 
 /**

@@ -26,6 +26,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@fontsource/noto-sans-jp": "^5.2.9",
     "@fortawesome/fontawesome-free": "^7.1.0",
     "@google/genai": "^1.49.0",
     "@hono/node-server": "^1.19.7",

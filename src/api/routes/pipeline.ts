@@ -12,7 +12,6 @@
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
 import { 必須, FormData解析失敗, ファイル必須, ファイルサイズ超過, 非対応形式, 未検出, チャンク未検出, 未実装 } from '../helpers/apiMessages';
-import { MOCK_ERROR_REASONS } from '../../shared/validationMessages';
 import { previewExtractImage, clearKnownHashes, isKnownHash } from '../services/pipeline/previewExtract.service';
 import { createHash } from 'crypto';
 import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
@@ -101,20 +100,20 @@ app.post('/preview-extract', async (c) => {
     }
 
     // モックレスポンス生成（Geminiコスト発生ゼロ）
-    // 遅延はDL-011実測値ベース（本番AI処理: 前処理あり6.3秒/枚）
-    const delay = 5000 + Math.random() * 3000; // 5〜8秒
+    // 固定遅延（テスト安定性のため乱数排除）
+    const delay = 500;
     await new Promise(r => setTimeout(r, delay));
 
     const MOCK_VENDORS = [
       'セブン-イレブン', 'ファミリーマート', 'ローソン', '東京電力エナジーパートナー',
       'Amazon Japan', '関西電力', 'ENEOSウイング', 'ヤマト運輸', 'NTTコミュニケーションズ', 'イオンリテール',
     ];
-    const isOk = Math.random() > 0.25; // 75%成功
-    const day = Math.floor(Math.random() * 28) + 1;
-    const d = new Date(2025, 2, day);
-    const mockDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const mockAmount = Math.floor(Math.random() * 500 + 5) * 100;
-    const mockVendor = MOCK_VENDORS[Math.floor(Math.random() * MOCK_VENDORS.length)] ?? null;
+    // 固定値（テスト安定性のため乱数排除）
+    const mockDate = '2025-03-15';
+    const mockAmount = 3800;
+    // ファイル名からベンダーを決定論的に選択（テスト再現性確保）
+    const vendorIndex = (file.name?.charCodeAt(0) ?? 0) % MOCK_VENDORS.length;
+    const mockVendor = MOCK_VENDORS[vendorIndex] ?? 'セブン-イレブン';
     const durationMs = Math.round(delay);
 
     // ファイル永続保存（モックでもファイルは保存）
@@ -124,96 +123,52 @@ app.post('/preview-extract', async (c) => {
     const savedName = saveUploadedFile(clientId ?? 'unknown', actualName, buffer);
     const fileUrl = `/api/pipeline/file/${clientId ?? 'unknown'}/${savedName}`;
 
-    if (isOk) {
-      console.log(`[pipeline/route] モック応答: OK ${actualName} → ${mockVendor} ¥${mockAmount}`);
-      return c.json({
-        source_type: 'receipt',
-        source_type_confidence: 0.95,
-        direction: 'expense',
-        direction_confidence: 0.95,
-        processing_mode: 'auto',
-        preview_extract_reason: 'モックモード: AI呼出しスキップ',
-        document_count: 1,
-        document_count_reason: 'モックモード',
-        description: `${mockVendor}での購入`,
-        issuer_name: mockVendor,
+    console.log(`[pipeline/route] モック応答: OK ${actualName} → ${mockVendor} ¥${mockAmount}`);
+    return c.json({
+      source_type: 'receipt',
+      source_type_confidence: 0.95,
+      direction: 'expense',
+      direction_confidence: 0.95,
+      processing_mode: 'auto',
+      preview_extract_reason: 'モックモード: AI呼出しスキップ',
+      document_count: 1,
+      document_count_reason: 'モックモード',
+      description: `${mockVendor}での購入`,
+      issuer_name: mockVendor,
+      date: mockDate,
+      total_amount: mockAmount,
+      fallback_applied: false,
+      line_items: [{
+        line_index: 1,
         date: mockDate,
-        total_amount: mockAmount,
-        fallback_applied: false,
-        line_items: [{
-          line_index: 1,
-          date: mockDate,
-          description: `${mockVendor}での購入`,
-          amount: mockAmount,
-          direction: 'expense' as const,
-          balance: null,
-        }],
-        validation: {
-          ok: true,
-          errorReason: null,
-          warning: null,
-          supplementary: false,
-          isDuplicate: false,
-        },
-        fileHash,
-        fileUrl,
-        metadata: {
-          duration_ms: durationMs,
-          duration_seconds: Math.round(durationMs / 100) / 10,
-          prompt_tokens: 0,
-          completion_tokens: 0,
-          thinking_tokens: 0,
-          token_count: 0,
-          cost_yen: 0,
-          model: 'mock',
-          original_size_kb: Math.round(file.size / 1024),
-          processed_size_kb: Math.round(file.size / 1024),
-          preprocess_reduction_pct: 0,
-        },
-      });
-    } else {
-      // MOCK_ERROR_REASONS: shared/validationMessages.tsから一元管理（文言ハードコード禁止）
-      const errorReason = MOCK_ERROR_REASONS[Math.floor(Math.random() * MOCK_ERROR_REASONS.length)] ?? '不明なエラー';
-      console.log(`[pipeline/route] モック応答: NG ${actualName} → ${errorReason}`);
-      return c.json({
-        source_type: 'other',
-        source_type_confidence: 0.3,
-        direction: 'expense',
-        direction_confidence: 0.3,
-        processing_mode: 'excluded',
-        preview_extract_reason: `モックモード: ${errorReason}`,
-        document_count: 1,
-        document_count_reason: 'モックモード',
-        description: null,
-        issuer_name: null,
-        date: null,
-        total_amount: null,
-        fallback_applied: true,
-        line_items: [],
-        validation: {
-          ok: false,
-          errorReason,
-          warning: null,
-          supplementary: false,
-          isDuplicate: false,
-        },
-        fileHash,
-        fileUrl,
-        metadata: {
-          duration_ms: durationMs,
-          duration_seconds: Math.round(durationMs / 100) / 10,
-          prompt_tokens: 0,
-          completion_tokens: 0,
-          thinking_tokens: 0,
-          token_count: 0,
-          cost_yen: 0,
-          model: 'mock',
-          original_size_kb: Math.round(file.size / 1024),
-          processed_size_kb: Math.round(file.size / 1024),
-          preprocess_reduction_pct: 0,
-        },
-      });
-    }
+        description: `${mockVendor}での購入`,
+        amount: mockAmount,
+        direction: 'expense' as const,
+        balance: null,
+      }],
+      validation: {
+        ok: true,
+        errorReason: null,
+        warning: null,
+        supplementary: false,
+        isDuplicate: false,
+      },
+      fileHash,
+      fileUrl,
+      metadata: {
+        duration_ms: durationMs,
+        duration_seconds: Math.round(durationMs / 100) / 10,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        thinking_tokens: 0,
+        token_count: 0,
+        cost_yen: 0,
+        model: 'mock',
+        original_size_kb: Math.round(file.size / 1024),
+        processed_size_kb: Math.round(file.size / 1024),
+        preprocess_reduction_pct: 0,
+      },
+    });
   }
   // ━━ 本番モード（以下は従来のGemini API呼び出し）━━
 

@@ -13,6 +13,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import crypto from 'crypto';
 import type { DocEntry } from '../../repositories/types';
 import { AI_FIELD_KEYS } from '../../repositories/types';
 import type { PreviewExtractResponse } from '../services/pipeline/types';
@@ -153,7 +154,7 @@ export function assignBatchAndJournalIds(clientId: string): { batchId: string; c
   const targets = documents.filter(d => d.clientId === clientId && !d.batchId);
   for (const doc of targets) {
     doc.batchId = batchId;
-    doc.journalId = crypto.randomUUID();
+    doc.journalId = `doc_${crypto.randomBytes(8).toString('hex').slice(0, 8)}`;
   }
   save();
   console.log(`[documentStore] batchId=${batchId} journalId付与: ${targets.length}件`);

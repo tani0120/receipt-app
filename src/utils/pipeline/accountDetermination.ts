@@ -60,17 +60,9 @@ export interface AccountDeterminationResult {
 // § UUID生成ヘルパー（仕訳行ID用）
 // ============================================================
 
+/** @deprecated フロント側の仮ID。サーバーがaddJournals()でjre_XXXXXXXX形式に上書き発番する */
 function generateJournalEntryId(): string {
-  // Node.js環境（サーバー側）: crypto.randomUUID() を使用
-  try {
-    return `jre-${crypto.randomUUID()}`
-  } catch {
-    const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = (Math.random() * 16) | 0
-      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
-    })
-    return `jre-${uuid}`
-  }
+  return `jre-${crypto.randomUUID()}`
 }
 
 // ============================================================

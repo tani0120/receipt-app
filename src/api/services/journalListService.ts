@@ -17,6 +17,7 @@
 import { getJournals } from './journalStore'
 import { getByClientId as getConfirmedJournals } from './confirmedJournalStore'
 import type { ConfirmedJournal } from '../../types/confirmed_journal.type'
+import crypto from 'crypto'
 
 // ────────────────────────────────────────────
 // 型定義（API応答用の最小型。フロント側の巨大な型に依存しない）
@@ -102,7 +103,7 @@ function confirmedToJournalRow(cj: ConfirmedJournal, idx: number, clientId: stri
     voucher_type: null,
     document_id: null,
     debit_entries: (cj.debit_entries || []).map(e => ({
-      id: e.id || `past-de-${idx}-${Math.random().toString(36).slice(2, 8)}`,
+      id: e.id || `past-de-${idx}-${crypto.randomBytes(4).toString('hex')}`,
       account: e.account || null,
       account_on_document: false,
       sub_account: e.sub_account || null,
@@ -113,7 +114,7 @@ function confirmedToJournalRow(cj: ConfirmedJournal, idx: number, clientId: stri
       vendor_name: e.vendor_name || null,
     })),
     credit_entries: (cj.credit_entries || []).map(e => ({
-      id: e.id || `past-ce-${idx}-${Math.random().toString(36).slice(2, 8)}`,
+      id: e.id || `past-ce-${idx}-${crypto.randomBytes(4).toString('hex')}`,
       account: e.account || null,
       account_on_document: false,
       sub_account: e.sub_account || null,

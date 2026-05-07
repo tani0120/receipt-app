@@ -15,6 +15,7 @@
  */
 
 import { Hono } from "hono";
+import crypto from 'crypto';
 import { apiError } from "../helpers/apiError";
 import { 必須 } from "../helpers/apiMessages";
 import { parseMfCsv } from "../../utils/pipeline/mfCsvParser";
@@ -53,7 +54,12 @@ app.post("/:clientId/import", async (c) => {
   }
 
   // バッチID生成
-  const import_batch_id = crypto.randomUUID();
+  const ID_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = crypto.randomBytes(8);
+  let import_batch_id = 'batch_';
+  for (let i = 0; i < 8; i++) {
+    import_batch_id += ID_CHARS[bytes[i]! % ID_CHARS.length];
+  }
 
   // CSVパース
   const parse_result = parseMfCsv(body.csv_text, client_id, import_batch_id);

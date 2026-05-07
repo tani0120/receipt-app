@@ -232,41 +232,20 @@ function resolveVoucherType(
 /**
  * D-1: ID生成ヘルパー
  *
- * jrn-{UUID} 形式。crypto.randomUUID() を使用。
- * Supabase時はUUID PKとしてそのまま使用可能。
- * 旧形式（jrn-00000001）は並行アップロード時の連番衝突リスクがあったため廃止。
+ * @deprecated フロント側の仮ID。サーバーがaddJournals()でjrn_XXXXXXXX形式に上書き発番する。
+ * この関数はフロントでの一時的な識別子として残存するが、永続化されるIDはサーバー発番のもの。
  */
 function generateJournalId(): string {
-  let uuid: string
-  try {
-    uuid = crypto.randomUUID()
-  } catch {
-    // Secure Context外（HTTP+LAN IP）: Math.randomベースのv4 UUID
-    uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = (Math.random() * 16) | 0
-      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
-    })
-  }
-  return `jrn-${uuid}`
+  return `jrn-${crypto.randomUUID()}`
 }
 
 /**
  * 仕訳行ID生成ヘルパー
  *
- * jre-{UUID} 形式。JournalEntryLine.id のPK。
- * Supabase journal_entries テーブルのPKとしてそのまま使用可能。
+ * @deprecated フロント側の仮ID。サーバーがaddJournals()でjre_XXXXXXXX形式に上書き発番する。
  */
 function generateJournalEntryId(): string {
-  let uuid: string
-  try {
-    uuid = crypto.randomUUID()
-  } catch {
-    uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = (Math.random() * 16) | 0
-      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
-    })
-  }
-  return `jre-${uuid}`
+  return `jre-${crypto.randomUUID()}`
 }
 
 /**

@@ -353,7 +353,7 @@ const handleDrop = (e: DragEvent) => {
 
 const addFiles = (newFiles: File[]) => {
   const items: DocFile[] = newFiles.map((file) => ({
-    id: `d-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    id: `d-${crypto.randomUUID().slice(0, 12)}`,
     file,
     status: "queued",
     isDuplicate: false,
@@ -378,12 +378,12 @@ const uploadOne = async (id: string) => {
   if (!item) return;
 
   item.status = "uploading";
-  // モック: 0.5〜2秒（ファイルサイズで変動を模擬）
-  const delay = 500 + Math.random() * 1500;
+  // モック: 固定500ms遅延（乱数排除）
+  const delay = 500;
   await new Promise((res) => setTimeout(res, delay));
 
-  // モック: 95%成功
-  item.status = Math.random() > 0.05 ? "done" : "failed";
+  // モック: 常に成功（テスト安定性のため乱数排除）
+  item.status = "done";
   processQueue();
 };
 

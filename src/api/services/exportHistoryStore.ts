@@ -10,6 +10,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import crypto from 'crypto';
 
 const DATA_DIR = join(process.cwd(), 'data');
 
@@ -60,12 +61,21 @@ export function getExportHistory(clientId: string): ExportHistoryEntry[] {
   }
 }
 
-export function addExportHistory(clientId: string, entry: ExportHistoryEntry): void {
+export function addExportHistory(clientId: string, entry: Partial<ExportHistoryEntry> & Omit<ExportHistoryEntry, 'id'>): ExportHistoryEntry {
   ensureDir();
+  // サーバーが常にIDを発番
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = crypto.randomBytes(8);
+  let id = 'h_';
+  for (let i = 0; i < 8; i++) {
+    id += chars[bytes[i]! % chars.length];
+  }
+  const full: ExportHistoryEntry = { ...entry, id } as ExportHistoryEntry;
   const list = getExportHistory(clientId);
-  list.unshift(entry);
+  list.unshift(full);
   writeFileSync(historyPath(clientId), JSON.stringify(list, null, 2), 'utf-8');
-  console.log(`[exportHistoryStore] ${clientId}: 履歴追加 (仕訳${entry.count}件, CSV${entry.csvLineCount ?? '?'}行, staff=${entry.staffId ?? '不明'})`);
+  console.log(`[exportHistoryStore] ${clientId}: 履歴追加 (${id}, 仕訳${full.count}件, CSV${full.csvLineCount ?? '?'}行, staff=${full.staffId ?? '不明'})`);
+  return full;
 }
 
 // ────── CSVスナップショット ──────

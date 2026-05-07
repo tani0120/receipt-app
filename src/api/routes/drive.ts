@@ -13,6 +13,7 @@
  */
 
 import { Hono } from 'hono';
+import crypto from 'crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { apiError, apiCatchError } from '../helpers/apiError';
@@ -209,8 +210,13 @@ app.post('/migrate', async (c) => {
       return apiError(c, 400, 必須('clientId と files'));
     }
 
-    // jobId生成（タイムスタンプ + ランダム）
-    const jobId = `mig-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    // jobId生成（cryptoランダム）
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const bytes = crypto.randomBytes(8);
+    let jobId = 'mig_';
+    for (let i = 0; i < 8; i++) {
+      jobId += chars[bytes[i]! % chars.length];
+    }
 
     const queued = await enqueueMigrationJobs(jobId, body.clientId, body.files);
 

@@ -1,15 +1,19 @@
 
 import { ref, computed, onMounted } from 'vue';
-import type { ConversionLogUi, ConversionLogId } from '@/types/ScreenG_ui.type';
+import type { ConversionLogUi } from '@/types/ScreenG_ui.type';
 
 // State driven by API (BFF)
 const logs = ref<ConversionLogUi[]>([]);
-/** サーバーから受け取った未DLカウント（T-31-5: サーバー側で集計） */
+/** サーバーから受け取った未DLカウント（サーバー側で集計） */
 const serverPendingCount = ref(0);
 
 export function useDataConversion() {
 
-    // Fetch from Hono (BFF) — T-31-5: サーバー側ソート済み+未DLカウント付きレスポンス
+    // ============================================================
+    // サーバーAPI呼び出し
+    // ============================================================
+
+    /** ログ一覧取得（サーバー側でソート・集計済み） */
     const fetchLogs = async () => {
         try {
             const res = await fetch('/api/conversion');
@@ -19,7 +23,6 @@ export function useDataConversion() {
                     pendingDownloadCount: number;
                     totalCount: number;
                 };
-                // サーバー側でソート済みの配列をそのまま設定
                 logs.value = data.logs;
                 serverPendingCount.value = data.pendingDownloadCount;
             }
@@ -28,61 +31,36 @@ export function useDataConversion() {
         }
     };
 
-    // Initial Fetch
+    // 初期読み込み
     onMounted(() => {
         fetchLogs();
     });
 
-    interface AddLogInput {
-        id?: string;
-        timestamp: string;
-        clientName: string;
-        sourceSoftware: string;
-        targetSoftware: string;
-        fileName: string;
-        downloadUrl: string;
-        isDownloaded: boolean;
-    }
-
-    const addLog = (log: AddLogInput) => {
-        // Local simulation for immediate feedback
-        const uiLog: ConversionLogUi = {
-            id: (log.id || 'new') as ConversionLogId,
-            timestamp: log.timestamp,
-            clientName: log.clientName,
-            sourceSoftwareLabel: log.sourceSoftware, // Simple mapping
-            targetSoftwareLabel: log.targetSoftware,
-            fileName: log.fileName,
-            fileSize: 'Calculating...',
-            downloadUrl: log.downloadUrl,
-            isDownloaded: log.isDownloaded,
-            isDownloadable: true,
-            rowStyle: 'bg-white'
-        };
-        logs.value.unshift(uiLog);
-        serverPendingCount.value++;
-    };
-
-    // Note: In BFF pattern, mutations should ideally go to API too.
-    // For this Pilot, we manipulate the local state which is now the "source of truth" for the UI.
-    const markAsDownloaded = (id: string) => {
-        const log = logs.value.find(l => l.id === id);
-        if (log) {
-            // readonly制約をローカルUI更新のために解除（Mutable型ヘルパー）
-            type Mutable<T> = { -readonly [P in keyof T]: T[P] };
-            const mutableLog = log as Mutable<ConversionLogUi>;
-            mutableLog.isDownloaded = true;
-            mutableLog.rowStyle = 'bg-gray-50 opacity-70';
-            serverPendingCount.value = Math.max(0, serverPendingCount.value - 1);
+    /** ダウンロード済みマーク（サーバー先行 → ローカル楽観更新） */
+    const markAsDownloaded = async (id: string) => {
+        try {
+            const res = await fetch(`/api/conversion/${id}/downloaded`, { method: 'PUT' });
+            if (res.ok) {
+                // ローカル楽観更新
+                type Mutable<T> = { -readonly [P in keyof T]: T[P] };
+                const log = logs.value.find(l => l.id === id);
+                if (log) {
+                    const mutableLog = log as Mutable<ConversionLogUi>;
+                    mutableLog.isDownloaded = true;
+                    mutableLog.rowStyle = 'bg-gray-50 opacity-70';
+                    serverPendingCount.value = Math.max(0, serverPendingCount.value - 1);
+                }
+            }
+        } catch (e) {
+            console.error('ダウンロード済みマーク失敗:', e);
         }
     };
 
-    // Updated: DELETE via RPC
+    /** ログ削除（サーバー先行） */
     const removeLog = async (id: string) => {
         try {
             const res = await fetch(`/api/conversion/${id}`, { method: 'DELETE' });
             if (res.ok) {
-                // Update local state on success
                 const index = logs.value.findIndex(l => l.id === id);
                 if (index !== -1) {
                     const removed = logs.value[index];
@@ -99,22 +77,17 @@ export function useDataConversion() {
         }
     };
 
-    /** 未DLカウント（サーバー集計値 + ローカル楽観更新） */
+    /** 未DLカウント（サーバー集計値） */
     const pendingDownloadCount = computed(() => serverPendingCount.value);
 
-    // --- Legacy / Simulation Logic Below (Kept for creating new dummy logs) ---
+    // ============================================================
+    // CSV変換（サーバーAPI化済み）
+    // ============================================================
+
     const isProcessing = ref(false);
     const loadingStatus = ref('');
 
-    const generateId = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        let result = '';
-        for (let i = 0; i < 3; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
-    };
-
+    /** CSVファイルのバリデーション */
     const processFile = (file: File): Promise<void> => {
         return new Promise((resolve, reject) => {
             if (!file.name.toLowerCase().endsWith('.csv')) {
@@ -125,40 +98,61 @@ export function useDataConversion() {
         });
     };
 
-    const startDataConversion = async (clientName: string, sourceSoftware: string, targetSoftware: string, _file: File) => {
+    /**
+     * CSV変換実行 — サーバーAPI（POST /api/conversion/convert）
+     *
+     * 旧: フロント側でダミーCSV生成 → BlobURL
+     * 新: サーバーにCSVファイルを送信 → サーバー側で変換・保存 → ダウンロードURLを返却
+     */
+    const startDataConversion = async (
+        clientName: string,
+        sourceSoftware: string,
+        targetSoftware: string,
+        file: File,
+    ): Promise<string> => {
         isProcessing.value = true;
         loadingStatus.value = '変換処理を開始しています...';
 
-        // TODO: POST /api/conversion/convert に接続し、実際のCSV変換を実行
-        //       現在はクライアント側でダミーCSVを生成する暫定実装
-        loadingStatus.value = `${targetSoftware}形式へ変換中...`;
+        try {
+            loadingStatus.value = `${targetSoftware}形式へ変換中...`;
 
-        const today = new Date();
-        const yyyymmdd = today.toISOString().slice(0, 10).replace(/-/g, '');
-        const fileName = `${clientName}_${sourceSoftware}_変換後${targetSoftware}_${yyyymmdd}.csv`;
-        const content = '日付,借方勘定科目,借方金額,貸方勘定科目,貸方金額,摘要\n' +
-            `2024/12/26,消耗品費,1000,現金,1000,変換テストデータ\n`;
-        const blob = new Blob([content], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('clientName', clientName);
+            formData.append('sourceSoftware', sourceSoftware);
+            formData.append('targetSoftware', targetSoftware);
 
-        addLog({
-            id: generateId(),
-            timestamp: today.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
-            clientName: clientName,
-            sourceSoftware: sourceSoftware,
-            targetSoftware: targetSoftware,
-            fileName: fileName,
-            downloadUrl: url,
-            isDownloaded: false
-        });
+            const res = await fetch('/api/conversion/convert', {
+                method: 'POST',
+                body: formData,
+            });
 
-        isProcessing.value = false;
-        return fileName;
+            if (!res.ok) {
+                const errBody = await res.json().catch(() => ({}));
+                throw new Error((errBody as { message?: string }).message ?? '変換に失敗しました');
+            }
+
+            const data = await res.json() as {
+                success: boolean;
+                log: ConversionLogUi;
+            };
+
+            // サーバーからの応答をローカルに追加
+            logs.value.unshift(data.log);
+            serverPendingCount.value++;
+
+            loadingStatus.value = '変換完了！';
+            return data.log.fileName;
+        } catch (e) {
+            loadingStatus.value = 'エラーが発生しました';
+            throw e;
+        } finally {
+            isProcessing.value = false;
+        }
     };
 
     return {
         logs,
-        addLog,
         markAsDownloaded,
         removeLog,
         pendingDownloadCount,

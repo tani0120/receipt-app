@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="h-full flex flex-col bg-gray-50 font-sans">
     <div class="flex-1 overflow-auto">
       <div class="cm-settings">
@@ -444,7 +444,6 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   useLeads,
   emptyLeadForm,
-  createLeadId,
 } from '@/features/lead-management/composables/useLeads';
 import type { Lead, LeadForm } from '@/features/lead-management/composables/useLeads';
 import { useStaff } from '@/features/staff-management/composables/useStaff';
@@ -940,38 +939,53 @@ const saveLead = async () => {
     }
   }
   const { contactType, contactValue, ...fields } = panelForm;
-  const leadId = editingId.value
-    ? editingId.value
-    : createLeadId(panelForm.threeCode, leads.value);
-  const data: Lead = {
-    ...fields,
-    leadId,
-    staffId: panelStaffId.value || null,
-    sharedEmail: panelSharedEmail.value,
-    sharedChatUrl: panelSharedChatUrl.value,
-    contact: { type: contactType, value: contactValue },
-  };
   if (panelMode.value === 'add') {
-    addLead(data);
-    // Driveフォルダ自動作成（共有ドライブ内にフォルダを作成）
-    createDriveFolderForLead(data).catch(err => {
-      console.error('[clients] Driveフォルダ作成失敗:', err);
-    });
-    await modal.notify({ title: `「${data.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。\nGoogle Driveフォルダも自動作成されます。', variant: 'success' });
-  } else {
-    // 編集時: 3コードが変わった場合はDriveフォルダもリネーム
-    const oldLead = leads.value.find(c => c.leadId === data.leadId);
-    updateLeadLocal(data.leadId, data);
-    if (oldLead && oldLead.threeCode !== data.threeCode) {
-      const renamed = await renameDriveFolderForLead(data);
-      if (renamed) {
-        await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更しました`, variant: 'success' });
-      }
+    // 新規: サーバーがIDを発番して返す
+    const data = {
+      ...fields,
+      staffId: panelStaffId.value || null,
+      sharedEmail: panelSharedEmail.value,
+      sharedChatUrl: panelSharedChatUrl.value,
+      contact: { type: contactType, value: contactValue },
+    };
+    try {
+      const saved = await addLead(data as any);
+      createDriveFolderForLead(saved).catch(err => {
+        console.error('[leads] Driveフォルダ作成失敗:', err);
+      });
+      await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。\nGoogle Driveフォルダも自動作成されます。', variant: 'success' });
+    } catch (err) {
+      await modal.notify({ title: '見込先の追加に失敗しました', message: String(err), variant: 'warning' });
+      return;
     }
-    await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
+  } else {
+    // 編集: 既存leadIdを使用
+    const leadId = editingId.value!;
+    const data: Lead = {
+      ...fields,
+      leadId,
+      staffId: panelStaffId.value || null,
+      sharedEmail: panelSharedEmail.value,
+      sharedChatUrl: panelSharedChatUrl.value,
+      contact: { type: contactType, value: contactValue },
+    };
+    try {
+      const oldLead = leads.value.find(c => c.leadId === data.leadId);
+      await updateLeadLocal(data.leadId, data);
+      if (oldLead && oldLead.threeCode !== data.threeCode) {
+        const renamed = await renameDriveFolderForLead(data);
+        if (renamed) {
+          await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更しました`, variant: 'success' });
+        }
+      }
+      await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
+    } catch (err) {
+      await modal.notify({ title: '見込先の更新に失敗しました', message: String(err), variant: 'warning' });
+      return;
+    }
   }
   closePanel();
-  markDirty(panelMode.value === 'add' ? `「${data.companyName}」を追加` : `「${data.companyName}」を更新`);
+  markDirty(panelMode.value === 'add' ? `「${panelForm.companyName}」を追加` : `「${panelForm.companyName}」を更新`);
   markClean();
   refreshList();
 };

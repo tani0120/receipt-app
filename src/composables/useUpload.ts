@@ -119,19 +119,9 @@ export const fileIconEmoji = (name: string): string => {
 }
 
 
-// UUID生成（HTTP環境フォールバック付き）
-// crypto.randomUUID()はSecure Context（HTTPS/localhost）でのみ動作
-// LAN IP経由のHTTPアクセスでは使えないためフォールバック
+// UUID生成（証票IDなど一時フロントID用）
 function generateUUID(): string {
-  try {
-    return crypto.randomUUID()
-  } catch {
-    // Secure Context外: Math.randomベースのv4 UUID
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = (Math.random() * 16) | 0
-      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
-    })
-  }
+  return crypto.randomUUID()
 }
 
 /** チャンクアップロード（File.slice 512KB単位。メモリスパイク最大512KB） */
@@ -507,7 +497,7 @@ export function useUpload() {
         const sendFile = item.file
 
         const entry: UploadEntry = {
-          id: `f-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          id: `f-${generateUUID().slice(0, 12)}`,
           documentId: generateUUID(),
           file: sendFile,
           fileName: item.file.name,
@@ -639,7 +629,7 @@ export function useUpload() {
     const itemsToProcess = pendingFiles.value.splice(0, available)
     for (const item of itemsToProcess) {
       const entry: UploadEntry = {
-        id: `f-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id: `f-${generateUUID().slice(0, 12)}`,
         documentId: generateUUID(),
         file: item.file,  // 送信用（圧縮無効時は元ファイル）
         fileName: item.originalName,
@@ -683,9 +673,7 @@ export function useUpload() {
     e.status = 'uploading'
 
     // 軽量モード: setTimeoutスキップ（不要な待ちを排除）
-    if (!e.lite) {
-      await new Promise(res => setTimeout(res, 300 + Math.random() * 400))
-    }
+    // 通常モードも人工遅延は不要（API呼び出し自体にI/O時間がある）
 
     // E1対策: 処理中に削除された場合はAPI呼び出しをスキップ（Geminiコスト節約）
     if (!entries.value.find(x => x.id === id)) {

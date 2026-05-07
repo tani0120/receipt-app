@@ -448,7 +448,7 @@ interface EntryPair {
 const modalEntryPairs = ref<EntryPair[]>([])
 
 function emptyEntry(side: 'debit' | 'credit', ruleId: string): LearningRuleEntryLine {
-  return { id: `LRE-NEW-${Date.now()}-${side}`, ruleId, side, account: '', subAccount: null, taxCategory: null, department: null, amountType: 'auto', fixedAmount: null, displayName: null, description: null, targetMonth: null, displayOrder: 0 }
+  return { id: `LRE-NEW-${crypto.randomUUID().slice(0, 8)}-${side}`, ruleId, side, account: '', subAccount: null, taxCategory: null, department: null, amountType: 'auto', fixedAmount: null, displayName: null, description: null, targetMonth: null, displayOrder: 0 }
 }
 
 function detectAmountMode(rule: LearningRule): 'none' | 'min' | 'max' | 'exact' | 'range' {
@@ -576,7 +576,7 @@ async function handleDeleteModal() {
 
 function handleAdd() {
   const newRule: LearningRule = {
-    id: `NEW-${Date.now()}`, clientId: clientId.value, keyword: '', matchType: 'exact',
+    id: `NEW-${crypto.randomUUID().slice(0, 8)}`, clientId: clientId.value, keyword: '', matchType: 'exact',
     direction: 'expense', sourceCategory: null, amountMin: null, amountMax: null,
     entries: [emptyEntry('debit', ''), emptyEntry('credit', '')],
     isActive: true, hitCount: 0, generatedBy: 'human',
