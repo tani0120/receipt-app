@@ -1,5 +1,6 @@
 <template>
   <div class="pg-container">
+    <div class="cm-settings">
     <!-- ページタイトル（青背景） -->
     <div class="cm-header">
       <h1 class="cm-title">進捗管理</h1>
@@ -15,9 +16,9 @@
       :filter-columns="pgFilterColumns"
       :filter-conditions="pgFilterConditions"
       :filter-logic="pgFilterLogic"
-      :filter-sort="pgFilterSortSetting"
+      :filter-sorts="pgFilterSortSettings"
       :default-conditions="pgCurrentViewDefaults.filters"
-      :default-sort="pgCurrentViewDefaults.sort"
+      :default-sorts="pgCurrentViewDefaults.sorts"
       @filter-apply="onPgFilterApply"
       @filter-remove="onPgFilterRemove"
       @view-change="onPgViewChange"
@@ -148,6 +149,7 @@
         </tbody>
       </table>
     </div>
+    </div>
   </div>
 </template>
 
@@ -256,18 +258,20 @@ const pgViews: ViewDefWithDefaults[] = [
     key: 'default',
     columns: null,
     defaultFilters: [
-      { field: 'clientStatus', operator: 'in', value: ['active'] },
-      { field: 'unsorted', operator: 'gte', value: '1' },
-      { field: 'unexported', operator: 'gte', value: '1' },
+      { field: 'clientStatus', operator: 'eq', value: 'active' },
     ],
-    defaultSort: { key: 'threeCode', order: 'asc' },
+    defaultSorts: [
+      { key: 'unsorted', order: 'desc' },
+      { key: 'unexported', order: 'desc' },
+      { key: 'code', order: 'asc' },
+    ],
   },
   {
     name: '（すべて）',
     key: 'all',
     columns: null,
     defaultFilters: [],
-    defaultSort: { key: 'threeCode', order: 'asc' },
+    defaultSorts: [{ key: 'threeCode', order: 'asc' }],
   },
 ];
 
@@ -280,37 +284,45 @@ const pgFilterColumns = computed<FilterColumnDef[]>(() => [
     { value: 'suspension', label: '休眠中' },
     { value: 'inactive', label: '契約終了' },
   ] },
-  { key: 'threeCode', label: '3コード', filterType: 'text' },
+  { key: 'code', label: '3コード', filterType: 'text' },
   { key: 'companyName', label: '顧問先', filterType: 'text' },
+  { key: 'repName', label: '代表者名', filterType: 'text' },
+  { key: 'type', label: '種別', filterType: 'select', filterOptions: [
+    { value: 'corp', label: '法人' },
+    { value: 'individual', label: '個人' },
+  ] },
   { key: 'staffId', label: '担当者', filterType: 'select', filterOptions:
     allStaff.value.map(s => ({ value: s.uuid, label: s.name }))
   },
   { key: 'fiscalMonth', label: '決算月', filterType: 'select', filterOptions:
     Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}月` }))
   },
+  { key: 'receivedDate', label: '資料受取日', filterType: 'date' },
   { key: 'unsorted', label: '未選別', filterType: 'number' },
   { key: 'unexported', label: '未出力', filterType: 'number' },
+  { key: 'currentYearJournals', label: '今期累計', filterType: 'number' },
+  { key: 'lastYearJournals', label: '前期合計', filterType: 'number' },
 ]);
 
 /** フィルタ条件state */
 const initialView = pgViews[0]!;
 const pgFilterConditions = ref<FilterCondition[]>([...initialView.defaultFilters]);
 const pgFilterLogic = ref<'and' | 'or'>('and');
-const pgFilterSortSetting = ref<SortSetting>({ ...initialView.defaultSort });
+const pgFilterSortSettings = ref<SortSetting[]>([...initialView.defaultSorts]);
 
 /** 現在のビューのデフォルト値 */
 const pgCurrentViewDefaults = computed(() => {
   const view = pgViews[pgActiveViewIndex.value] ?? pgViews[0]!;
-  return { filters: view.defaultFilters, sort: view.defaultSort };
+  return { filters: view.defaultFilters, sorts: view.defaultSorts };
 });
 
 /** フィルタ適用 */
 const onPgFilterApply = (result: FilterResult) => {
   pgFilterConditions.value = result.conditions;
   pgFilterLogic.value = result.logic;
-  pgFilterSortSetting.value = result.sort;
-  sortKey.value = result.sort.key;
-  sortOrder.value = result.sort.order;
+  pgFilterSortSettings.value = result.sorts;
+  sortKey.value = result.sorts[0]?.key ?? 'threeCode';
+  sortOrder.value = result.sorts[0]?.order ?? 'asc';
 };
 
 /** フィルタ条件個別削除 */
@@ -322,15 +334,15 @@ const onPgFilterRemove = (index: number) => {
 const onPgViewChange = (idx: number) => {
   const view = pgViews[idx] ?? pgViews[0]!;
   pgFilterConditions.value = [...view.defaultFilters];
-  pgFilterSortSetting.value = { ...view.defaultSort };
-  sortKey.value = view.defaultSort.key;
-  sortOrder.value = view.defaultSort.order;
+  pgFilterSortSettings.value = [...view.defaultSorts];
+  sortKey.value = view.defaultSorts[0]?.key ?? 'threeCode';
+  sortOrder.value = view.defaultSorts[0]?.order ?? 'asc';
 };
 
 // --- ソート ---
 // ソート: デフォルトは多段ソート（ステータス→未出力降順→受取日昇順→3コード昇順）
-const sortKey = ref<string | null>(initialView.defaultSort.key);
-const sortOrder = ref<'asc' | 'desc'>(initialView.defaultSort.order);
+const sortKey = ref<string | null>(initialView.defaultSorts[0]?.key ?? 'threeCode');
+const sortOrder = ref<'asc' | 'desc'>(initialView.defaultSorts[0]?.order ?? 'asc');
 
 const sortBy = (key: string) => {
   if (sortKey.value === key) {
@@ -374,8 +386,7 @@ async function fetchProgressList() {
       body: JSON.stringify({
         filters: pgFilterConditions.value,
         logic: pgFilterLogic.value,
-        sortKey: sortKey.value,
-        sortOrder: sortOrder.value,
+        sorts: pgFilterSortSettings.value,
         page: currentPage.value,
         pageSize: PAGE_SIZE,
       }),
@@ -416,17 +427,10 @@ watch([pgFilterConditions, pgFilterLogic], () => { currentPage.value = 1; }, { d
 // KeepAliveからの復帰時にデータを再取得
 onActivated(() => { fetchProgressList(); fetchAllJobs(); });
 
-
-
-// --- メタ情報 ---
-const tagCount = ref(3);
-const buildDate = ref(new Date().toLocaleString('ja-JP'));
-
 const refreshData = async () => {
   const { refresh } = await import('@/composables/useDocuments').then(m => ({ refresh: m.useDocuments().refresh }));
   await refresh();
   await fetchAllJobs();
-  buildDate.value = new Date().toLocaleString('ja-JP');
 };
 
 // --- 行クリック: 仕訳一覧へ遷移 ---

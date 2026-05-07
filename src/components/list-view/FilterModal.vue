@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div v-if="visible" class="fm-overlay" @click.self="onCancel">
-      <div class="fm-modal">
+      <div class="fm-modal" @click="closeAllDropdowns">
         <!-- ヘッダー -->
         <div class="fm-header">
           <h2 class="fm-title">絞り込む</h2>
@@ -173,21 +173,26 @@
           </div>
         </div>
 
-        <!-- ソートセクション -->
+        <!-- ソートセクション（多段ソート） -->
         <div class="fm-section fm-sort-section">
           <div class="fm-section-label">ソート</div>
-          <div class="fm-sort-row">
+          <div
+            v-for="(srt, sIdx) in localSorts"
+            :key="sIdx"
+            class="fm-sort-row"
+          >
+            <span class="fm-sort-rank">{{ sIdx + 1 }}位</span>
             <!-- ソートフィールド（検索可能ドロップダウン） -->
             <div class="fm-searchable-select fm-sort-field" @click.stop>
               <button
                 class="fm-ss-trigger"
-                :class="{ active: sortFieldOpen }"
-                @click="sortFieldOpen = !sortFieldOpen; sortFieldSearch = ''"
+                :class="{ active: activeSortDropdown === sIdx }"
+                @click="toggleSortDropdown(sIdx)"
               >
-                <span class="fm-ss-label">{{ getFieldLabel(localSort.key) }}</span>
+                <span class="fm-ss-label">{{ getFieldLabel(srt.key) }}</span>
                 <i class="fa-solid fa-chevron-down fm-ss-chevron"></i>
               </button>
-              <div v-if="sortFieldOpen" class="fm-ss-dropdown">
+              <div v-if="activeSortDropdown === sIdx" class="fm-ss-dropdown">
                 <div class="fm-ss-search-wrap">
                   <i class="fa-solid fa-magnifying-glass fm-ss-search-icon"></i>
                   <input
@@ -195,30 +200,43 @@
                     type="text"
                     v-model="sortFieldSearch"
                     placeholder="フィールド検索…"
-                    @keydown.escape.stop="sortFieldOpen = false"
+                    @keydown.escape.stop="activeSortDropdown = null"
                   >
                 </div>
                 <div class="fm-ss-options">
                   <button
-                    v-for="col in filteredSortColumns"
+                    v-for="col in getAvailableSortColumns(sIdx)"
                     :key="col.key"
                     class="fm-ss-option"
-                    :class="{ selected: localSort.key === col.key }"
-                    @click="localSort.key = col.key; sortFieldOpen = false"
+                    :class="{ selected: srt.key === col.key }"
+                    @click="srt.key = col.key; activeSortDropdown = null"
                   >
                     {{ col.label }}
                   </button>
-                  <div v-if="filteredSortColumns.length === 0" class="fm-ss-no-match">
+                  <div v-if="getAvailableSortColumns(sIdx).length === 0" class="fm-ss-no-match">
                     該当なし
                   </div>
                 </div>
               </div>
             </div>
-            <select class="fm-select fm-sort-order" v-model="localSort.order">
+            <select class="fm-select fm-sort-order" v-model="srt.order">
               <option value="asc">昇順</option>
               <option value="desc">降順</option>
             </select>
+            <!-- 削除ボタン（2行以上の時のみ表示） -->
+            <button
+              v-if="localSorts.length > 1"
+              class="fm-sort-remove"
+              @click="removeSortRow(sIdx)"
+              title="この条件を削除"
+            ><i class="fa-solid fa-minus"></i></button>
           </div>
+          <!-- ソート追加ボタン -->
+          <button
+            class="fm-sort-add"
+            :disabled="localSorts.length >= props.columns.length"
+            @click="addSortRow"
+          ><i class="fa-solid fa-plus"></i> ソート条件を追加</button>
         </div>
 
         <!-- フッター -->
@@ -239,7 +257,7 @@
  * フィールドタイプ別に演算子を動的切替し、
  * 複数条件のAND/OR結合をサポートする。
  */
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import type {
   FilterColumnDef,
   FilterCondition,
@@ -263,20 +281,20 @@ interface Props {
   conditions?: FilterCondition[]
   /** 現在の結合方式 */
   logic?: 'and' | 'or'
-  /** 現在のソート設定 */
-  sort?: SortSetting
+  /** 現在のソート設定（多段） */
+  sorts?: SortSetting[]
   /** デフォルトのフィルタ条件（ビュー定義のdefaultFilters） */
   defaultConditions?: FilterCondition[]
-  /** デフォルトのソート設定（ビュー定義のdefaultSort） */
-  defaultSort?: SortSetting
+  /** デフォルトのソート設定（ビュー定義のdefaultSorts） */
+  defaultSorts?: SortSetting[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
   conditions: () => [],
   logic: 'and',
-  sort: () => ({ key: 'threeCode', order: 'asc' as const }),
+  sorts: () => [{ key: 'threeCode', order: 'asc' as const }],
   defaultConditions: () => [],
-  defaultSort: () => ({ key: 'threeCode', order: 'asc' as const }),
+  defaultSorts: () => [{ key: 'threeCode', order: 'asc' as const }],
 })
 
 const emit = defineEmits<{
@@ -299,7 +317,7 @@ const createEmptyCondition = (): FilterCondition => {
 
 const localConditions = ref<FilterCondition[]>([])
 const localLogic = ref<'and' | 'or'>('and')
-const localSort = ref<SortSetting>({ key: 'threeCode', order: 'asc' })
+const localSorts = ref<SortSetting[]>([{ key: 'threeCode', order: 'asc' }])
 const openMultiIdx = ref<number | null>(null)
 
 // --- フィールド検索用state ---
@@ -311,7 +329,8 @@ const openFieldIdx = ref<number | null>(null)
 const fieldSearchInputRef = ref<HTMLInputElement | null>(null)
 /** ソートのフィールド検索 */
 const sortFieldSearch = ref('')
-const sortFieldOpen = ref(false)
+/** アクティブなソートドロップダウンのインデックス */
+const activeSortDropdown = ref<number | null>(null)
 
 /** props → ローカル状態同期（v-ifマウント時もimmediate:trueで初期化） */
 watch(() => props.visible, (v) => {
@@ -323,12 +342,13 @@ watch(() => props.visible, (v) => {
         }))
       : [createEmptyCondition()]
     localLogic.value = props.logic
-    localSort.value = { ...props.sort }
+    localSorts.value = props.sorts.map(s => ({ ...s }))
+    if (localSorts.value.length === 0) localSorts.value = [{ key: props.columns[0]?.key ?? '', order: 'asc' }]
     openMultiIdx.value = null
     openFieldIdx.value = null
     fieldSearches.value = {}
     sortFieldSearch.value = ''
-    sortFieldOpen.value = false
+    activeSortDropdown.value = null
   }
 }, { immediate: true })
 
@@ -357,12 +377,47 @@ const filteredColumns = (idx: number): FilterColumnDef[] => {
   return props.columns.filter(c => c.label.toLowerCase().includes(q) || c.key.toLowerCase().includes(q))
 }
 
-/** ソートのフィールド検索結果 */
-const filteredSortColumns = computed(() => {
+/** ソートドロップダウン開閉 */
+const toggleSortDropdown = (idx: number) => {
+  if (activeSortDropdown.value === idx) {
+    activeSortDropdown.value = null
+  } else {
+    activeSortDropdown.value = idx
+    sortFieldSearch.value = ''
+  }
+}
+
+/** ソートのフィールド検索結果（他の行で使用済みのフィールドを除外） */
+const getAvailableSortColumns = (currentIdx: number): FilterColumnDef[] => {
+  const usedKeys = new Set(localSorts.value.filter((_, i) => i !== currentIdx).map(s => s.key))
   const q = sortFieldSearch.value.trim().toLowerCase()
-  if (!q) return props.columns
-  return props.columns.filter(c => c.label.toLowerCase().includes(q) || c.key.toLowerCase().includes(q))
-})
+  return props.columns.filter(c => {
+    if (usedKeys.has(c.key)) return false
+    if (!q) return true
+    return c.label.toLowerCase().includes(q) || c.key.toLowerCase().includes(q)
+  })
+}
+
+/** ソート行を追加 */
+const addSortRow = () => {
+  const usedKeys = new Set(localSorts.value.map(s => s.key))
+  const nextCol = props.columns.find(c => !usedKeys.has(c.key))
+  if (nextCol) {
+    localSorts.value.push({ key: nextCol.key, order: 'asc' })
+  }
+}
+
+/** ソート行を削除 */
+const removeSortRow = (idx: number) => {
+  localSorts.value.splice(idx, 1)
+}
+
+/** 全ドロップダウンを閉じる（モーダル本体クリック時） */
+const closeAllDropdowns = () => {
+  openFieldIdx.value = null
+  openMultiIdx.value = null
+  activeSortDropdown.value = null
+}
 
 /** フィールドドロップダウンの開閉 */
 const toggleFieldDropdown = (idx: number) => {
@@ -466,14 +521,15 @@ const restoreDefault = () => {
     localConditions.value = [createEmptyCondition()]
   }
   localLogic.value = 'and'
-  localSort.value = { ...props.defaultSort }
+  localSorts.value = props.defaultSorts.map(s => ({ ...s }))
+  if (localSorts.value.length === 0) localSorts.value = [{ key: props.columns[0]?.key ?? '', order: 'asc' }]
 }
 
 /** キャンセル */
 const onCancel = () => {
   openMultiIdx.value = null
   openFieldIdx.value = null
-  sortFieldOpen.value = false
+  activeSortDropdown.value = null
   emit('update:visible', false)
 }
 
@@ -490,7 +546,7 @@ const onApply = () => {
   emit('apply', {
     conditions: validConditions,
     logic: localLogic.value,
-    sort: { ...localSort.value },
+    sorts: localSorts.value.map(s => ({ ...s })),
   })
   emit('update:visible', false)
 }
@@ -885,7 +941,16 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 }
 .fm-sort-row {
   display: flex;
+  align-items: center;
   gap: 8px;
+  margin-bottom: 6px;
+}
+.fm-sort-rank {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  min-width: 28px;
+  text-align: center;
 }
 .fm-sort-field {
   flex: 1;
@@ -893,6 +958,47 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 }
 .fm-sort-order {
   min-width: 100px;
+}
+.fm-sort-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  background: white;
+  color: #999;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.fm-sort-remove:hover {
+  border-color: #e74c3c;
+  color: #e74c3c;
+  background: #fef2f2;
+}
+.fm-sort-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #3498db;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 4px;
+  transition: color 0.15s;
+}
+.fm-sort-add:hover:not(:disabled) {
+  color: #2980b9;
+  text-decoration: underline;
+}
+.fm-sort-add:disabled {
+  color: #ccc;
+  cursor: not-allowed;
 }
 
 /* ===== フッター ===== */

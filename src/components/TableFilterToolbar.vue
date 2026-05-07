@@ -59,9 +59,9 @@
     :columns="resolvedFilterColumns"
     :conditions="filterConditions"
     :logic="filterLogic"
-    :sort="filterSort"
+    :sorts="filterSorts"
     :default-conditions="defaultConditions"
-    :default-sort="defaultSort"
+    :default-sorts="defaultSorts"
     @apply="onFilterApply"
   />
 </template>
@@ -102,12 +102,12 @@ const props = defineProps<{
   filterConditions?: FilterCondition[]
   /** 条件結合方式 */
   filterLogic?: 'and' | 'or'
-  /** ソート設定 */
-  filterSort?: SortSetting
+  /** ソート設定（多段） */
+  filterSorts?: SortSetting[]
   /** デフォルトのフィルタ条件（ビュー定義のdefaultFilters） */
   defaultConditions?: FilterCondition[]
-  /** デフォルトのソート設定（ビュー定義のdefaultSort） */
-  defaultSort?: SortSetting
+  /** デフォルトのソート設定（ビュー定義のdefaultSorts） */
+  defaultSorts?: SortSetting[]
 }>()
 
 const emit = defineEmits<{

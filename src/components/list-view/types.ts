@@ -70,8 +70,8 @@ export interface FilterResult {
   conditions: FilterCondition[]
   /** 条件結合方式 */
   logic: 'and' | 'or'
-  /** ソート設定 */
-  sort: SortSetting
+  /** ソート設定（優先順位順。[0]が最優先） */
+  sorts: SortSetting[]
 }
 
 // --- フィールドタイプ別の演算子マップ ---

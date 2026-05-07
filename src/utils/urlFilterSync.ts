@@ -64,17 +64,20 @@ export function parseLogicFromQuery(query: LocationQuery): 'and' | 'or' {
   return l === 'or' ? 'or' : 'and'
 }
 
-/** URLクエリからソート設定を取得 */
-export function parseSortFromQuery(query: LocationQuery, defaultSort: SortSetting): SortSetting {
+/** URLクエリからソート設定を取得（多段対応） */
+export function parseSortsFromQuery(query: LocationQuery, defaultSorts: SortSetting[]): SortSetting[] {
   const s = query.sort
-  if (typeof s !== 'string' || !s) return defaultSort
+  if (typeof s !== 'string' || !s) return defaultSorts
 
-  const [key, order] = s.split('.')
-  if (!key) return defaultSort
-  return {
-    key,
-    order: order === 'desc' ? 'desc' : 'asc',
+  const parts = s.split(',')
+  const results: SortSetting[] = []
+  for (const part of parts) {
+    const [key, order] = part.split('.')
+    if (key) {
+      results.push({ key, order: order === 'desc' ? 'desc' : 'asc' })
+    }
   }
+  return results.length > 0 ? results : defaultSorts
 }
 
 // ============================================================
@@ -95,9 +98,9 @@ export function serializeFilters(conditions: FilterCondition[]): string {
   }).join(',')
 }
 
-/** ソート設定をURLクエリ文字列形式にシリアライズ */
-export function serializeSort(sort: SortSetting): string {
-  return `${sort.key}.${sort.order}`
+/** ソート設定をURLクエリ文字列形式にシリアライズ（多段対応） */
+export function serializeSorts(sorts: SortSetting[]): string {
+  return sorts.map(s => `${s.key}.${s.order}`).join(',')
 }
 
 /** 全状態をURLクエリオブジェクトに変換 */
@@ -105,10 +108,10 @@ export function buildQueryParams(opts: {
   viewName: string
   conditions: FilterCondition[]
   logic: 'and' | 'or'
-  sort: SortSetting
+  sorts: SortSetting[]
   defaultViewName?: string
   defaultConditions?: FilterCondition[]
-  defaultSort?: SortSetting
+  defaultSorts?: SortSetting[]
 }): Record<string, string> {
   const query: Record<string, string> = {}
 
@@ -123,7 +126,8 @@ export function buildQueryParams(opts: {
   if (opts.logic === 'or') query.logic = 'or'
 
   // ソート
-  query.sort = serializeSort(opts.sort)
+  const sortStr = serializeSorts(opts.sorts)
+  if (sortStr) query.sort = sortStr
 
   return query
 }
@@ -142,8 +146,8 @@ export interface ViewDefWithDefaults {
   columns: string[] | null
   /** このビューのデフォルトフィルタ条件 */
   defaultFilters: FilterCondition[]
-  /** このビューのデフォルトソート */
-  defaultSort: SortSetting
+  /** このビューのデフォルトソート（多段） */
+  defaultSorts: SortSetting[]
 }
 
 /** ビューキーからビュー定義を取得 */

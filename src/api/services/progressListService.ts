@@ -17,6 +17,8 @@ import { getDocuments } from './documentStore'
 import { getJournals } from './journalStore'
 import { countUnsorted, latestReceivedDate } from '../../utils/documentUtils'
 import type { ProgressRow } from '../../features/progress-management/types'
+import { applyFilterConditions } from '../helpers/applyFilterConditions'
+import type { FilterCondition } from '../../components/list-view/types'
 
 // ────────────────────────────────────────────
 // 仕訳サマリ取得（useProgress.ts から移植）
@@ -51,7 +53,7 @@ function buildJournalSummary(clientId: string, monthKeys: string[]): JournalSumm
     if (!vd) continue
     const dateStr = vd.slice(0, 7) // "2025-04"
     if (dateStr in monthlyJournals) {
-      monthlyJournals[dateStr]++
+      monthlyJournals[dateStr] = (monthlyJournals[dateStr] ?? 0) + 1
     }
     const year = parseInt(vd.slice(0, 4), 10)
     if (year === currentYear) currentYearCount++
@@ -70,12 +72,6 @@ function buildJournalSummary(clientId: string, monthKeys: string[]): JournalSumm
     currentYearJournals: currentYearCount,
     lastYearJournals: lastYearCount,
   }
-}
-
-function emptyJournalSummary(monthKeys: string[]): JournalSummary {
-  const monthlyJournals: Record<string, number> = {}
-  monthKeys.forEach(k => { monthlyJournals[k] = 0 })
-  return { unexported: 0, monthlyJournals, currentYearJournals: 0, lastYearJournals: 0 }
 }
 
 // ────────────────────────────────────────────
@@ -122,20 +118,27 @@ function buildProgressRows(): ProgressRow[] {
   })
 }
 
+
 // ────────────────────────────────────────────
 // クエリパラメータ（フロントからPOSTで送信）
 // ────────────────────────────────────────────
 
 export interface ProgressListQuery {
-  /** 顧問先検索文字列（会社名 or 3コード部分一致） */
+  /** 汎用フィルタ条件（FilterCondition[]） */
+  filters?: FilterCondition[]
+  /** 条件結合方式（デフォルト: 'and'） */
+  logic?: 'and' | 'or'
+  /** ソート設定（多段、優先順位順） */
+  sorts?: { key: string; order: 'asc' | 'desc' }[]
+  /** 旧: 顧問先検索文字列（後方互換） */
   searchQuery?: string
-  /** 担当者フィルタ（担当者名完全一致） */
+  /** 旧: 担当者フィルタ（後方互換） */
   filterStaff?: string
-  /** 未出力がある顧問先のみ表示 */
+  /** 旧: 未出力がある顧問先のみ表示（後方互換） */
   filterUnexported?: boolean
-  /** ソートキー（null=デフォルト多段ソート） */
+  /** 旧: ソートキー（後方互換） */
   sortKey?: string | null
-  /** ソート方向 */
+  /** 旧: ソート方向（後方互換） */
   sortOrder?: 'asc' | 'desc'
   /** ページ番号（1始まり） */
   page?: number
@@ -170,16 +173,12 @@ const fiscalMonthSort = (row: ProgressRow): number => {
 
 /** デフォルト多段ソート比較関数 */
 const defaultSort = (a: ProgressRow, b: ProgressRow): number => {
-  // 1. ステータス: active→suspension→inactive
   const sa = statusOrder(a.status) - statusOrder(b.status)
   if (sa !== 0) return sa
-  // 2. 未出力: 降順（多い順）
   if (a.unexported !== b.unexported) return b.unexported - a.unexported
-  // 3. 資料受取日: 昇順（古い順、空白は最後）
   const aDate = a.receivedDate || '\uffff'
   const bDate = b.receivedDate || '\uffff'
   if (aDate !== bDate) return aDate < bDate ? -1 : 1
-  // 4. 3コード: 昇順
   return a.code < b.code ? -1 : a.code > b.code ? 1 : 0
 }
 
@@ -214,50 +213,68 @@ export function getProgressList(query: ProgressListQuery): ProgressListResponse 
   // 1. 全progressRows生成
   let rows = buildProgressRows()
 
-  // 2. フィルタ: 顧問先検索
-  if (query.searchQuery?.trim()) {
-    const q = query.searchQuery.trim().toLowerCase()
-    rows = rows.filter(r =>
-      r.companyName.toLowerCase().includes(q) ||
-      r.code.toLowerCase().includes(q)
-    )
-  }
+  // 2. フィルタ適用
+  if (query.filters && query.filters.length > 0) {
+    // clientStatus → status にマッピング（フロントはclientStatusで送信）
+    const mappedFilters = query.filters.map(f => {
+      if (f.field === 'clientStatus') return { ...f, field: 'status' }
+      if (f.field === 'staffId') return null // 別途処理
+      return f
+    }).filter((f): f is FilterCondition => f !== null)
 
-  // 3. フィルタ: 担当者
-  if (query.filterStaff) {
-    rows = rows.filter(r => getStaffNameForClient(r.clientId) === query.filterStaff)
-  }
+    // staffIdフィルタは別途処理（ProgressRowにstaffIdが無いため）
+    const staffFilter = query.filters.find(f => f.field === 'staffId')
+    if (staffFilter) {
+      const staffIds = Array.isArray(staffFilter.value) ? staffFilter.value : [staffFilter.value]
+      const clients = getAllClients()
+      const clientIdSet = new Set(
+        clients.filter(c => c.staffId && staffIds.includes(c.staffId)).map(c => c.clientId)
+      )
+      rows = rows.filter(r => clientIdSet.has(r.clientId))
+    }
 
-  // 4. フィルタ: 未出力のみ
-  if (query.filterUnexported) {
-    rows = rows.filter(r => r.unexported > 0)
-  }
-
-  // 5. ソート
-  if (!query.sortKey) {
-    // デフォルト多段ソート
-    rows.sort(defaultSort)
-  } else if (query.sortKey === 'fiscalMonth') {
-    // 決算月ソート: 法人1-12、個人13
-    const order = query.sortOrder ?? 'asc'
-    rows.sort((a, b) => {
-      const aVal = fiscalMonthSort(a)
-      const bVal = fiscalMonthSort(b)
-      const cmp = aVal - bVal
-      const primary = order === 'asc' ? cmp : -cmp
-      if (primary !== 0) return primary
-      return a.code < b.code ? -1 : a.code > b.code ? 1 : 0
-    })
+    if (mappedFilters.length > 0) {
+      rows = applyFilterConditions(rows, mappedFilters, query.logic ?? 'and')
+    }
   } else {
-    // 通常ソート
-    const order = query.sortOrder ?? 'asc'
-    const key = query.sortKey
+    // 旧パラメータによるフォールバック
+    if (query.searchQuery?.trim()) {
+      const q = query.searchQuery.trim().toLowerCase()
+      rows = rows.filter(r =>
+        r.companyName.toLowerCase().includes(q) ||
+        r.code.toLowerCase().includes(q)
+      )
+    }
+    if (query.filterStaff) {
+      rows = rows.filter(r => getStaffNameForClient(r.clientId) === query.filterStaff)
+    }
+    if (query.filterUnexported) {
+      rows = rows.filter(r => r.unexported > 0)
+    }
+  }
+
+  // 3. ソート（多段対応）
+  const sortDefs = (query.sorts && query.sorts.length > 0)
+    ? query.sorts
+    : query.sortKey
+      ? [{ key: query.sortKey, order: (query.sortOrder ?? 'asc') as 'asc' | 'desc' }]
+      : null
+
+  if (!sortDefs) {
+    rows.sort(defaultSort)
+  } else {
     rows.sort((a, b) => {
-      const aVal = getSortValue(a, key)
-      const bVal = getSortValue(b, key)
-      const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0
-      const primary = order === 'asc' ? cmp : -cmp
-      if (primary !== 0) return primary
+      for (const sd of sortDefs) {
+        let cmp = 0
+        if (sd.key === 'fiscalMonth') {
+          cmp = fiscalMonthSort(a) - fiscalMonthSort(b)
+        } else {
+          const aVal = getSortValue(a, sd.key)
+          const bVal = getSortValue(b, sd.key)
+          cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0
+        }
+        if (cmp !== 0) return sd.order === 'asc' ? cmp : -cmp
+      }
       return a.code < b.code ? -1 : a.code > b.code ? 1 : 0
     })
   }

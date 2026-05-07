@@ -17,9 +17,9 @@
           :filter-columns="clientFilterColumns"
           :filter-conditions="filterConditions"
           :filter-logic="filterLogic"
-          :filter-sort="filterSortSetting"
+          :filter-sorts="filterSortSettings"
           :default-conditions="currentViewDefaults.filters"
-          :default-sort="currentViewDefaults.sort"
+          :default-sorts="currentViewDefaults.sorts"
           @filter-change="onFilterChange"
           @filter-apply="onFilterApply"
           @filter-remove="onFilterRemove"
@@ -482,7 +482,7 @@ import {
   parseViewFromQuery,
   parseFiltersFromQuery,
   parseLogicFromQuery,
-  parseSortFromQuery,
+  parseSortsFromQuery,
   buildQueryParams,
   findViewByKey,
 } from '@/utils/urlFilterSync';
@@ -586,14 +586,14 @@ const clientViews: ViewDefWithDefaults[] = [
     key: 'basic',
     columns: basicViewCols,
     defaultFilters: [{ field: 'status', operator: 'in', value: ['active'] }],
-    defaultSort: { key: 'threeCode', order: 'asc' },
+    defaultSorts: [{ key: 'threeCode', order: 'asc' }],
   },
   {
     name: '（すべて）',
     key: 'all',
     columns: null,
     defaultFilters: [],
-    defaultSort: { key: 'clientId', order: 'asc' },
+    defaultSorts: [{ key: 'clientId', order: 'asc' }],
   },
 ];
 
@@ -605,7 +605,7 @@ const activeViewIndex = ref(clientViews.indexOf(initialView));
 // URLにフィルタ条件がある場合はそれを使い、なければビューのデフォルトを適用
 const urlFilters = parseFiltersFromQuery(route.query);
 const initialFilters = urlFilters.length > 0 ? urlFilters : [...initialView.defaultFilters];
-const initialSort = parseSortFromQuery(route.query, initialView.defaultSort);
+const initialSorts = parseSortsFromQuery(route.query, initialView.defaultSorts);
 
 // 表示列復元
 const visibleColumns = ref<string[]>(
@@ -619,7 +619,7 @@ const currentViewDefaults = computed(() => {
   const view = clientViews[activeViewIndex.value] ?? clientViews[0]!;
   return {
     filters: view.defaultFilters,
-    sort: view.defaultSort,
+    sorts: view.defaultSorts,
   };
 });
 
@@ -631,7 +631,7 @@ function syncUrlQuery() {
     viewName: currentView.key,
     conditions: filterConditions.value,
     logic: filterLogic.value,
-    sort: filterSortSetting.value,
+    sorts: filterSortSettings.value,
   });
   router.replace({ query });
 }
@@ -641,9 +641,9 @@ const onViewChange = (idx: number) => {
   const view = clientViews[idx] ?? clientViews[0]!;
   // フィルタ・ソートをビューのデフォルトに戻す
   filterConditions.value = [...view.defaultFilters];
-  filterSortSetting.value = { ...view.defaultSort };
-  sortKey.value = view.defaultSort.key;
-  sortOrder.value = view.defaultSort.order;
+  filterSortSettings.value = [...view.defaultSorts];
+  sortKey.value = view.defaultSorts[0]?.key ?? 'threeCode';
+  sortOrder.value = view.defaultSorts[0]?.order ?? 'asc';
   syncUrlQuery();
 };
 
@@ -744,7 +744,7 @@ const clientFilterColumns = computed<FilterColumnDef[]>(() => [
 // --- 絞り込み条件state（URLから初期値復元） ---
 const filterConditions = ref<FilterCondition[]>(initialFilters);
 const filterLogic = ref<'and' | 'or'>(parseLogicFromQuery(route.query));
-const filterSortSetting = ref<SortSetting>(initialSort);
+const filterSortSettings = ref<SortSetting[]>(initialSorts);
 
 /** フィルター変更時: URLクエリパラメータを更新 */
 const onFilterChange = () => {
@@ -755,10 +755,10 @@ const onFilterChange = () => {
 const onFilterApply = (result: FilterResult) => {
   filterConditions.value = result.conditions;
   filterLogic.value = result.logic;
-  filterSortSetting.value = result.sort;
-  // ソート設定をローカルstateに反映
-  sortKey.value = result.sort.key;
-  sortOrder.value = result.sort.order;
+  filterSortSettings.value = result.sorts;
+  // ソート設定をローカルstateに反映（1位のソートをヘッダーソートに使用）
+  sortKey.value = result.sorts[0]?.key ?? 'threeCode';
+  sortOrder.value = result.sorts[0]?.order ?? 'asc';
   // URL同期
   syncUrlQuery();
 };
@@ -822,8 +822,8 @@ const getColWidth = (col: { key: string; label: string }): number => {
 };
 
 // --- ソート（URLから初期値復元） ---
-const sortKey = ref<string>(initialSort.key);
-const sortOrder = ref<'asc' | 'desc'>(initialSort.order);
+const sortKey = ref<string>(initialSorts[0]?.key ?? 'threeCode');
+const sortOrder = ref<'asc' | 'desc'>(initialSorts[0]?.order ?? 'asc');
 
 const sortBy = (key: string) => {
   if (sortKey.value === key) {
@@ -857,8 +857,7 @@ const fetchClientList = async () => {
       body: JSON.stringify({
         filters: filterConditions.value,
         logic: filterLogic.value,
-        sortKey: sortKey.value,
-        sortOrder: sortOrder.value,
+        sorts: filterSortSettings.value,
         page: currentPage.value,
         pageSize: PAGE_SIZE,
       }),

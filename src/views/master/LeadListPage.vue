@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="h-full flex flex-col bg-gray-50 font-sans">
     <div class="flex-1 overflow-auto">
       <div class="cm-settings">
@@ -17,7 +17,7 @@
           :filter-columns="leadFilterColumns"
           :filter-conditions="filterConditions"
           :filter-logic="filterLogic"
-          :filter-sort="filterSortSetting"
+          :filter-sorts="filterSortSettings"
           @filter-change="onFilterChange"
           @filter-apply="onFilterApply"
           @view-change="onViewChange"
@@ -664,7 +664,7 @@ const leadFilterColumns: FilterColumnDef[] = [
 // --- 絞り込み条件state ---
 const filterConditions = ref<FilterCondition[]>([]);
 const filterLogic = ref<'and' | 'or'>('and');
-const filterSortSetting = ref<SortSetting>({ key: 'threeCode', order: 'asc' });
+const filterSortSettings = ref<SortSetting[]>([{ key: 'threeCode', order: 'asc' }]);
 
 /** フィルター変更時: URLクエリパラメータを更新 */
 const onFilterChange = () => {
@@ -678,10 +678,10 @@ const onFilterChange = () => {
 const onFilterApply = (result: FilterResult) => {
   filterConditions.value = result.conditions;
   filterLogic.value = result.logic;
-  filterSortSetting.value = result.sort;
-  // ソート設定をローカルstateに反映
-  sortKey.value = result.sort.key;
-  sortOrder.value = result.sort.order;
+  filterSortSettings.value = result.sorts;
+  // ソート設定をローカルstateに反映（1位のソートをヘッダーソートに使用）
+  sortKey.value = result.sorts[0]?.key ?? 'threeCode';
+  sortOrder.value = result.sorts[0]?.order ?? 'asc';
   // ステータス条件が含まれていればstatusFilterにも反映
   const statusCond = result.conditions.find(c => c.field === 'status');
   if (statusCond && typeof statusCond.value === 'string') {
