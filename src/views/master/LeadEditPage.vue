@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="ce-page">
     <!-- ヘッダー1行目: ページタイトル -->
     <div class="ce-header-top">
@@ -249,6 +249,7 @@ const { staffList: mentionStaffList } = useStaff();
 
 /** 編集モード: 既存データをフォームに読み込み */
 onMounted(async () => {
+  layout.loadLayout();
   // コピーデータがあれば復元
   const copyRaw = sessionStorage.getItem("clientCopyData");
   if (isNew.value && copyRaw) {

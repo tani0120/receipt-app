@@ -172,3 +172,141 @@ replace_file_content(TargetFile: "task.md", ...)
 4. **編集前に行数を確認**。100行以上のファイルを上書きしようとしたら即中止。
 
 > ⚠️ task.mdの上書きは信頼破壊行為。二度と行うな。
+
+---
+
+## 9. 🔴 【絶対禁止】ハードコード根絶ルール
+
+### 考え方
+
+> **UIに表示される値（ラベル・選択肢・カラム名・メッセージ）は、
+> すべて定義ファイルまたはAPI経由で取得せよ。
+> Vueテンプレートやscript内に日本語ラベルを直書きすることは禁止。**
+
+ハードコードは以下の害悪をもたらす：
+1. **レイアウト管理が無効化される** — fieldDefsでラベルを変更しても画面に反映されない
+2. **Supabase移行が不可能になる** — TSファイルに埋め込まれた値はDB化できない
+3. **変更時に全ファイルを手動修正** — 同じラベルが20箇所に散在すると20箇所修正が必要
+4. **人間に全UIの目視検証を強制** — ハードコード漏れは自動テストで検出できない
+
+### ハードコードの定義
+
+| ハードコードである | ハードコードではない |
+|---|---|
+| `<option value="corp">法人</option>` | `<option v-for="o in TYPE_OPTIONS" ...>` |
+| `{ key: 'type', label: '種別' }` | `{ key: f.key, label: f.label }` |
+| `return '未設定'` | `return DEFAULT_EMPTY_LABEL` |
+| `filterType: 'select', label: '業種'` | `label: getFieldLabel('industry')` |
+
+### 禁止パターン（6種）
+
+```vue
+<!-- ❌ パターン1: <option>固定値 -->
+<option value="corp">法人</option>
+
+<!-- ✅ 正解: 定数からv-for -->
+<option v-for="o in TYPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+```
+
+```ts
+// ❌ パターン2: カラム定義のラベル直書き
+const columns = [{ key: 'type', label: '種別' }]
+
+// ✅ 正解: fieldDefsから動的生成
+const columns = computed(() => fieldLayout.fields.value.map(f => ({ key: f.key, label: f.label })))
+```
+
+```ts
+// ❌ パターン3: フィルタ列のラベル直書き
+{ key: 'industry', label: '業種', filterType: 'select' }
+
+// ✅ 正解: fieldDefsのラベルを参照
+{ key: 'industry', label: getFieldLabel('industry'), filterType: 'select' }
+```
+
+```ts
+// ❌ パターン4: 日本語リテラル
+return '未設定'
+
+// ✅ 正解: 定数定義
+const DEFAULT_EMPTY_LABEL = '未設定'
+return DEFAULT_EMPTY_LABEL
+```
+
+```ts
+// ❌ パターン5: 三項演算子で日本語直書き
+row.type === 'corp' ? '法人' : '個人'
+
+// ✅ 正解: Options定数からgetLabel
+getLabel(TYPE_OPTIONS, row.type)
+```
+
+```ts
+// ❌ パターン6: useFieldLayout()を使ってloadLayout()を呼ばない
+const layout = useFieldLayout(fields, sections)
+// loadLayout()がない → localStorageのカスタム設定が適用されない
+
+// ✅ 正解: 必ずloadLayout()を呼ぶ
+const layout = useFieldLayout(fields, sections)
+layout.loadLayout()
+```
+
+### 新規コード追加時のチェックリスト
+
+コードを追加する前に以下を**必ず**確認：
+
+1. **UIラベルを直書きしていないか？** → 定義ファイルからインポートせよ
+2. **`<option>`タグにv-forを使っているか？** → 固定値は禁止
+3. **カラム/フィルタ定義のlabelはfieldDefsから取得しているか？**
+4. **三項演算子で日本語を出し分けていないか？** → getLabel()を使え
+5. **useFieldLayout使用時にloadLayout()を呼んでいるか？**
+
+### 検出スクリプト
+
+`scripts/audit-hardcode.cjs` を配置し、以下のタイミングで実行：
+
+| タイミング | 実行義務 |
+|---|---|
+| セッション開始時 | 必須（残存件数確認） |
+| コミット前 | 必須（増加していないこと確認） |
+| 新規ファイル作成後 | 必須（新規ハードコードがないこと確認） |
+
+**検出件数が前回より増加した場合、コミットを中止し修正せよ。**
+
+---
+
+## 10. 🔴 【必須】破損検証ルール
+
+### 考え方
+
+> **コード変更後の破損確認をブラウザ目視に頼るな。
+> 自動化されたチェックを定義されたタイミングで必ず実行せよ。**
+
+### 検証コマンド一覧
+
+| # | コマンド | 確認内容 | 合格基準 |
+|---|---|---|---|
+| 1 | `npx vue-tsc --noEmit` | TypeScript型エラー | エラー0件 |
+| 2 | `npx eslint src/ --ext .ts,.vue` | Lintエラー | エラー0件 |
+| 3 | `npx vite build` | ビルド可否 | 成功 |
+| 4 | `git status --short` | 一時ファイル残存 | 出力ゼロ |
+| 5 | `node scripts/audit-hardcode.cjs` | ハードコード残存数 | 前回以下 |
+
+### 実行タイミング（厳守）
+
+| タイミング | 実行するチェック | 省略 |
+|---|---|---|
+| **セッション開始時** | 1+2+4+5 | **不可** |
+| **各ファイル修正後** | 1 | 不可 |
+| **5ファイル以上変更後** | 1+2+3 | 不可 |
+| **コミット前** | 1+2+3+4+5 | **不可** |
+| **ステップ完了時** | 1+2+3+4+5+ブラウザ確認 | **不可** |
+
+### 失敗時の対応
+
+- **チェック1〜3が失敗**: 作業を中止し、エラーを修正してから再開
+- **チェック4が失敗**: 一時ファイルを削除
+- **チェック5が増加**: 新規ハードコードを特定し修正してからコミット
+- **修正不可能なエラー**: 人間に必ず報告（隠蔽禁止）
+
+> ⚠️ 「確認しますか？」と人間に聞くな。定義されたタイミングで自動的に実行しろ。

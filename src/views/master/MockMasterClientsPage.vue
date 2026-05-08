@@ -497,7 +497,7 @@ import {
   INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_MODE_OPTIONS,
   TAX_FILING_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
   CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
-  STATUS_OPTIONS, getLabel,
+  STATUS_OPTIONS, TYPE_OPTIONS, CONTACT_METHOD_OPTIONS, getLabel,
 } from '@/constants/clientOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
@@ -817,58 +817,53 @@ const clientStatusOptions = STATUS_OPTIONS;
 // staffListがリアクティブなためcomputedで動的生成
 const clientFilterColumns = computed<FilterColumnDef[]>(() => [
   // ステータス
-  { key: 'status', label: 'ステータス', filterType: 'select', filterOptions: clientStatusOptions },
+  { key: 'status', label: getFieldLabel('status') || 'ステータス', filterType: 'select', filterOptions: clientStatusOptions },
   // 基本情報
-  { key: 'type', label: '法人/個人', filterType: 'select', filterOptions: [
-    { value: 'corp', label: '法人' }, { value: 'individual', label: '個人' },
-  ] },
-  { key: 'clientId', label: '内部ID', filterType: 'text' },
-  { key: 'threeCode', label: '3コード', filterType: 'text' },
-  { key: 'companyName', label: '会社名', filterType: 'text' },
-  { key: 'companyNameKana', label: '会社名（カナ）', filterType: 'text' },
-  { key: 'repName', label: '代表者名', filterType: 'text' },
-  { key: 'repNameKana', label: '代表者名（カナ）', filterType: 'text' },
-  { key: 'staffId', label: '担当者', filterType: 'select', filterOptions:
+  { key: 'type', label: getFieldLabel('type'), filterType: 'select', filterOptions: TYPE_OPTIONS },
+  { key: 'clientId', label: getFieldLabel('clientId'), filterType: 'text' },
+  { key: 'threeCode', label: getFieldLabel('threeCode'), filterType: 'text' },
+  { key: 'companyName', label: getFieldLabel('companyName'), filterType: 'text' },
+  { key: 'companyNameKana', label: getFieldLabel('companyNameKana'), filterType: 'text' },
+  { key: 'repName', label: getFieldLabel('repName'), filterType: 'text' },
+  { key: 'repNameKana', label: getFieldLabel('repNameKana'), filterType: 'text' },
+  { key: 'staffId', label: getFieldLabel('staffId'), filterType: 'select', filterOptions:
     staffList.value.map(s => ({ value: s.uuid, label: s.name }))
   },
-  { key: 'phoneNumber', label: '電話番号', filterType: 'text' },
-  { key: 'email', label: 'メールアドレス', filterType: 'text' },
-  { key: 'chatRoomUrl', label: 'チャットルームURL', filterType: 'text' },
-  { key: 'contactType', label: '主な連絡手段', filterType: 'select', filterOptions: [
-    { value: 'email', label: 'メール' }, { value: 'chatwork', label: 'チャットワーク' },
-    { value: 'none', label: 'なし' },
-  ] },
-  { key: 'contactValue', label: '連絡先', filterType: 'text' },
-  { key: 'sharedEmail', label: '顧問先ログインメール', filterType: 'text' },
-  { key: 'sharedChatUrl', label: '共有用チャットURL', filterType: 'text' },
-  { key: 'fiscalMonth', label: '決算月', filterType: 'select', filterOptions:
+  { key: 'phoneNumber', label: getFieldLabel('phoneNumber'), filterType: 'text' },
+  { key: 'email', label: getFieldLabel('email'), filterType: 'text' },
+  { key: 'chatRoomUrl', label: getFieldLabel('chatRoomUrl'), filterType: 'text' },
+  { key: 'contactType', label: getFieldLabel('contactType'), filterType: 'select', filterOptions: [...CONTACT_METHOD_OPTIONS, { value: 'none', label: 'なし' }] },
+  { key: 'contactValue', label: getFieldLabel('contactValue'), filterType: 'text' },
+  { key: 'sharedEmail', label: getFieldLabel('sharedEmail'), filterType: 'text' },
+  { key: 'sharedChatUrl', label: getFieldLabel('sharedChatUrl'), filterType: 'text' },
+  { key: 'fiscalMonth', label: getFieldLabel('fiscalDate'), filterType: 'select', filterOptions:
     Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}月` }))
   },
-  { key: 'industry', label: '業種', filterType: 'select', filterOptions: INDUSTRY_OPTIONS.filter(v => v !== '').map(v => ({ value: v, label: v })) },
-  { key: 'establishedDate', label: '設立日', filterType: 'text' },
+  { key: 'industry', label: getFieldLabel('industry'), filterType: 'select', filterOptions: INDUSTRY_OPTIONS.filter(v => v !== '').map(v => ({ value: v, label: v })) },
+  { key: 'establishedDate', label: getFieldLabel('establishedDate'), filterType: 'text' },
   // 会計設定
-  { key: 'accountingSoftware', label: '会計ソフト', filterType: 'select', filterOptions: ACCOUNTING_SOFTWARE_OPTIONS },
-  { key: 'taxFilingType', label: '確定申告', filterType: 'select', filterOptions: TAX_FILING_OPTIONS },
-  { key: 'consumptionTaxMode', label: '課税方式', filterType: 'select', filterOptions: TAX_MODE_OPTIONS },
-  { key: 'simplifiedTaxCategory', label: '簡易課税 事業区分', filterType: 'select', filterOptions: SIMPLIFIED_CATEGORY_OPTIONS.map(o => ({ value: String(o.value), label: o.label })) },
-  { key: 'taxMethod', label: '税込/税抜', filterType: 'select', filterOptions: TAX_METHOD_OPTIONS },
-  { key: 'calculationMethod', label: '経理方式', filterType: 'select', filterOptions: CALCULATION_METHOD_OPTIONS },
-  { key: 'defaultPaymentMethod', label: 'デフォルト支払方法', filterType: 'select', filterOptions: DEFAULT_PAYMENT_OPTIONS },
-  { key: 'isInvoiceRegistered', label: 'インボイス登録', filterType: 'select', filterOptions: [
-    { value: 'true', label: '登録済み' }, { value: 'false', label: '未登録' },
-  ] },
-  { key: 'invoiceRegistrationNumber', label: 'インボイス登録番号', filterType: 'text' },
-  { key: 'hasDepartmentManagement', label: '部門管理', filterType: 'select', filterOptions: [
+  { key: 'accountingSoftware', label: getFieldLabel('accountingSoftware'), filterType: 'select', filterOptions: ACCOUNTING_SOFTWARE_OPTIONS },
+  { key: 'taxFilingType', label: getFieldLabel('taxFilingType'), filterType: 'select', filterOptions: TAX_FILING_OPTIONS },
+  { key: 'consumptionTaxMode', label: getFieldLabel('consumptionTaxMode'), filterType: 'select', filterOptions: TAX_MODE_OPTIONS },
+  { key: 'simplifiedTaxCategory', label: getFieldLabel('simplifiedTaxCategory'), filterType: 'select', filterOptions: SIMPLIFIED_CATEGORY_OPTIONS.map(o => ({ value: String(o.value), label: o.label })) },
+  { key: 'taxMethod', label: getFieldLabel('taxMethod'), filterType: 'select', filterOptions: TAX_METHOD_OPTIONS },
+  { key: 'calculationMethod', label: getFieldLabel('calculationMethod'), filterType: 'select', filterOptions: CALCULATION_METHOD_OPTIONS },
+  { key: 'defaultPaymentMethod', label: getFieldLabel('defaultPaymentMethod'), filterType: 'select', filterOptions: DEFAULT_PAYMENT_OPTIONS },
+  { key: 'isInvoiceRegistered', label: getFieldLabel('isInvoiceRegistered'), filterType: 'select', filterOptions: [
     { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
   ] },
-  { key: 'hasRentalIncome', label: '不動産所得', filterType: 'select', filterOptions: [
+  { key: 'invoiceRegistrationNumber', label: getFieldLabel('invoiceRegistrationNumber'), filterType: 'text' },
+  { key: 'hasDepartmentManagement', label: getFieldLabel('hasDepartmentManagement'), filterType: 'select', filterOptions: [
+    { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
+  ] },
+  { key: 'hasRentalIncome', label: getFieldLabel('hasRentalIncome'), filterType: 'select', filterOptions: [
     { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
   ] },
   // 報酬設定
-  { key: 'advisoryFee', label: '月額顧問報酬', filterType: 'number' },
-  { key: 'bookkeepingFee', label: '記帳代行', filterType: 'number' },
-  { key: 'settlementFee', label: '決算報酬', filterType: 'number' },
-  { key: 'taxFilingFee', label: '消費税申告報酬', filterType: 'number' },
+  { key: 'advisoryFee', label: getFieldLabel('advisoryFee'), filterType: 'number' },
+  { key: 'bookkeepingFee', label: getFieldLabel('bookkeepingFee'), filterType: 'number' },
+  { key: 'settlementFee', label: getFieldLabel('settlementFee'), filterType: 'number' },
+  { key: 'taxFilingFee', label: getFieldLabel('taxFilingFee'), filterType: 'number' },
 ]);
 
 // --- 絞り込み条件state（URLから初期値復元） ---

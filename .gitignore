@@ -94,3 +94,4 @@ __pycache__/
 
 # アーカイブ済みドキュメント
 docs/_archive_legacy/
+scripts/.audit-hardcode-last.json
