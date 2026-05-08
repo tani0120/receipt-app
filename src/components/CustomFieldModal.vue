@@ -10,7 +10,7 @@
         <!-- セクション絞り込み -->
         <div class="cfm-filter-row">
           <select v-model="filterSection" class="cfm-select">
-            <option value="">全セクション</option>
+            <option value="">{{ FILTER_ALL_SECTIONS }}</option>
             <option v-for="s in sectionKeys" :key="s" :value="s">{{ s }}</option>
           </select>
           <span class="cfm-count">{{ filteredAllFields.length }}件</span>
@@ -67,6 +67,7 @@
 import { ref, watch, computed } from 'vue';
 import type { FieldComponent } from '@/types/fieldLayout';
 import { FIELD_COMPONENT_OPTIONS } from '@/types/fieldLayout';
+import { FILTER_ALL_SECTIONS } from '@/constants/vendorOptions';
 
 /** カスタムフィールド定義 */
 export interface CustomFieldDef {

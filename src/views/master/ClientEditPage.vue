@@ -31,7 +31,7 @@
             <!-- バージョン管理 -->
             <div class="ce-version-bar" v-if="layout.layoutVersions.value.length">
               <select class="ce-version-select" :value="layout.currentVersionLabel.value" @change="layout.switchVersion(($event.target as HTMLSelectElement).value)">
-                <option value="">-- バージョン選択 --</option>
+                <option value="">{{ VERSION_SELECT_LABEL }}</option>
                 <option v-for="v in layout.layoutVersions.value" :key="v.versionLabel" :value="v.versionLabel">{{ v.versionLabel }}{{ v.isDefault ? ' ★' : '' }}</option>
               </select>
               <button v-if="layout.currentVersionLabel.value" class="ce-btn ce-btn-sm ce-btn-default-ver" @click="layout.setDefaultVersion(layout.currentVersionLabel.value)" title="デフォルトに設定">★</button>
@@ -289,6 +289,9 @@ import {
   STATUS_OPTIONS, PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
   getLabel,
 } from '@/constants/clientOptions';
+
+/** バージョン選択プレースホルダ */
+const VERSION_SELECT_LABEL = '-- バージョン選択 --';
 import { clientSections, clientFields } from '@/constants/clientFieldDefs';
 import DraggableFieldGrid from '@/components/DraggableFieldGrid.vue';
 import ContactTable from '@/components/ContactTable.vue';

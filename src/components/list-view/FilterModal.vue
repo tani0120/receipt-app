@@ -106,7 +106,7 @@
                 :value="cond.value as string"
                 @change="cond.value = ($event.target as HTMLSelectElement).value"
               >
-                <option value="">--</option>
+                <option value="">{{ PLACEHOLDER_EMPTY }}</option>
                 <option
                   v-for="opt in getFieldDef(cond.field)?.filterOptions"
                   :key="opt.value"
@@ -257,7 +257,7 @@
  * 複数条件のAND/OR結合をサポートする。
  */
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { SORT_ORDER_OPTIONS } from '@/constants/vendorOptions'
+import { SORT_ORDER_OPTIONS, PLACEHOLDER_EMPTY } from '@/constants/vendorOptions'
 import type {
   FilterColumnDef,
   FilterCondition,

@@ -11,7 +11,7 @@
         <div class="cm-toolbar">
           <div class="cm-toolbar-left">
             <select v-model="statusFilter" class="cm-filter-select">
-              <option value="all">全て</option>
+              <option value="all">{{ FILTER_ALL_LABEL }}</option>
               <option v-for="o in STAFF_STATUS_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
             <span class="cm-page-info">全{{ filteredRows.length }}件</span>
@@ -236,6 +236,7 @@ import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
 import { STAFF_STATUS_OPTIONS, STAFF_PERMISSION_OPTIONS, getLabel } from '@/constants/clientOptions';
+import { FILTER_ALL_LABEL } from '@/constants/vendorOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 

@@ -982,7 +982,7 @@
                         @blur="editingCell = null"
                         @keydown.escape="cancelCellEdit()"
                       >
-                        <option value="">--</option>
+                        <option value="">{{ PLACEHOLDER_EMPTY }}</option>
                         <option v-for="vt in VOUCHER_TYPES" :key="vt" :value="vt">{{ vt }}</option>
                       </select>
                     </template>
@@ -1970,7 +1970,7 @@
                 v-model="pastJournalSearch.amountCondition"
                 class="w-40 px-2 py-1 text-xs border rounded"
               >
-                <option value="">選択してください</option>
+                <option value="">{{ PLACEHOLDER_SELECT }}</option>
                 <option v-for="o in AMOUNT_CONDITION_OPTIONS" :key="o.value" :value="o.value">
                   {{ o.label }}
                 </option>
@@ -1992,7 +1992,7 @@
                 v-model="pastJournalSearch.debitAccount"
                 class="w-full px-2 py-1 text-xs border rounded"
               >
-                <option value="">選択してください</option>
+                <option value="">{{ PLACEHOLDER_SELECT }}</option>
                 <option v-for="o in accountOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
               </select>
             </div>
@@ -2002,7 +2002,7 @@
                 v-model="pastJournalSearch.creditAccount"
                 class="w-full px-2 py-1 text-xs border rounded"
               >
-                <option value="">選択してください</option>
+                <option value="">{{ PLACEHOLDER_SELECT }}</option>
                 <option v-for="o in accountOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
               </select>
             </div>
@@ -2724,6 +2724,7 @@ import { validateByVoucherType, getVoucherTypeConflictAccounts } from "@/utils/j
 // VOUCHER_TYPE_RULES, getBaseAccountId は API側 (journalHintService.ts) に移設済み (Step 6-A3)
 import {
   CHECK_STATUS_OPTIONS, PAGE_SIZE_OPTIONS, AMOUNT_CONDITION_OPTIONS,
+  PLACEHOLDER_EMPTY, PLACEHOLDER_SELECT,
 } from '@/constants/vendorOptions';
 import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import type { SelectOption } from '@/constants/clientOptions';

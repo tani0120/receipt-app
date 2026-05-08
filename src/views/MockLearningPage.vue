@@ -154,7 +154,7 @@
         <div class="modal-field">
           <label>証憑種別</label>
           <select v-model="modalRule.sourceCategory" class="modal-select">
-            <option :value="null">—</option>
+            <option :value="null">{{ PLACEHOLDER_DASH }}</option>
             <option v-for="o in SOURCE_CATEGORY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
           </select>
         </div>
@@ -293,6 +293,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { LearningRule, LearningRuleEntryLine } from '../types/learning_rule.type'
+import { PLACEHOLDER_DASH } from '@/constants/vendorOptions'
 
 const route = useRoute()
 const clientId = computed(() => (route.params.clientId as string) || 'TST-00011')

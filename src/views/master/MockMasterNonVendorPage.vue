@@ -25,21 +25,21 @@
           <div class="vm-filter-group">
             <label class="vm-filter-label">証票種類:</label>
             <select v-model="sourceFilter" class="vm-filter-select">
-              <option value="">全て</option>
+              <option value="">{{ FILTER_ALL_LABEL }}</option>
               <option v-for="o in SOURCE_CATEGORY_FILTER_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </div>
           <div class="vm-filter-group">
             <label class="vm-filter-label">入出金:</label>
             <select v-model="directionFilter" class="vm-filter-select">
-              <option value="">全て</option>
+              <option value="">{{ FILTER_ALL_LABEL }}</option>
               <option v-for="o in DIRECTION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </div>
           <div class="vm-filter-group">
             <label class="vm-filter-label">確定レベル:</label>
             <select v-model="levelFilter" class="vm-filter-select">
-              <option value="">全て</option>
+              <option value="">{{ FILTER_ALL_LABEL }}</option>
               <option v-for="o in LEVEL_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </div>
@@ -133,7 +133,7 @@
                 <!-- 種別（non_vendor_type） -->
                 <td class="vm-td">
                   <select v-model="row.non_vendor_type" class="vm-edit-select">
-                    <option :value="null">—</option>
+                    <option :value="null">{{ PLACEHOLDER_DASH }}</option>
                     <option v-for="nvt in allNonVendorTypes" :key="nvt" :value="nvt">
                       {{ nvt }}
                     </option>
@@ -143,7 +143,7 @@
                 <!-- 証票種類 -->
                 <td class="vm-td">
                   <select v-model="row.source_category" class="vm-edit-select vm-edit-select-sm">
-                    <option :value="null">—</option>
+                    <option :value="null">{{ PLACEHOLDER_DASH }}</option>
                     <option v-for="o in SOURCE_CATEGORY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                   </select>
                 </td>
@@ -151,7 +151,7 @@
                 <!-- 入出金 -->
                 <td class="vm-td">
                   <select v-model="row.direction" class="vm-edit-select vm-edit-select-sm">
-                    <option :value="null">—</option>
+                    <option :value="null">{{ PLACEHOLDER_DASH }}</option>
                     <option v-for="o in DIRECTION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                   </select>
                 </td>
@@ -159,7 +159,7 @@
                 <!-- 借方科目 -->
                 <td class="vm-td">
                   <select v-model="row.debit_account" class="vm-edit-select">
-                    <option :value="null">—</option>
+                    <option :value="null">{{ PLACEHOLDER_DASH }}</option>
                     <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">
                       {{ acc.name }}
                     </option>
@@ -169,7 +169,7 @@
                 <!-- 貸方科目 -->
                 <td class="vm-td">
                   <select v-model="row.credit_account" class="vm-edit-select">
-                    <option :value="null">—</option>
+                    <option :value="null">{{ PLACEHOLDER_DASH }}</option>
                     <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">
                       {{ acc.name }}
                     </option>
@@ -179,7 +179,7 @@
                 <!-- 借方税区分 -->
                 <td class="vm-td">
                   <select v-model="row.debit_tax_category" class="vm-edit-select">
-                    <option :value="null">—</option>
+                    <option :value="null">{{ PLACEHOLDER_DASH }}</option>
                     <option v-for="tc in taxCategoryOptions" :key="tc.id" :value="tc.id">
                       {{ tc.name }}
                     </option>
@@ -189,7 +189,7 @@
                 <!-- 確定レベル -->
                 <td class="vm-td">
                   <select v-model="row.level" class="vm-edit-select vm-edit-select-sm">
-                    <option :value="null">—</option>
+                    <option :value="null">{{ PLACEHOLDER_DASH }}</option>
                     <option v-for="o in LEVEL_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                   </select>
                 </td>
@@ -265,6 +265,7 @@ import { normalizeVendorName } from "@/utils/pipeline/vendorIdentification";
 import {
   SOURCE_CATEGORY_FILTER_OPTIONS, SOURCE_CATEGORY_OPTIONS,
   DIRECTION_OPTIONS, LEVEL_OPTIONS,
+  FILTER_ALL_LABEL, PLACEHOLDER_DASH,
 } from '@/constants/vendorOptions';
 
 // ============================================================

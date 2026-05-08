@@ -25,14 +25,14 @@
           <div class="vm-filter-group">
             <label class="vm-filter-label">業種:</label>
             <select v-model="vectorFilter" class="vm-filter-select">
-              <option value="">全て</option>
+              <option value="">{{ FILTER_ALL_LABEL }}</option>
               <option v-for="v in uniqueVectors" :key="v" :value="v">{{ vectorLabel(v as VendorVector) }}</option>
             </select>
           </div>
           <div class="vm-filter-group">
             <label class="vm-filter-label">入出金:</label>
             <select v-model="directionFilter" class="vm-filter-select">
-              <option value="">全て</option>
+              <option value="">{{ FILTER_ALL_LABEL }}</option>
               <option v-for="o in DIRECTION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </div>
@@ -99,7 +99,7 @@
                 <!-- 入出金（ドロップダウン） -->
                 <td class="vm-td">
                   <select v-model="row.direction" class="vm-edit-select vm-edit-select-sm">
-                    <option :value="null">—</option>
+                    <option :value="null">{{ PLACEHOLDER_DASH }}</option>
                     <option v-for="o in DIRECTION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                   </select>
                 </td>
@@ -107,7 +107,7 @@
                 <!-- 借方科目（ドロップダウン） -->
                 <td class="vm-td">
                   <select v-model="row.debit_account" class="vm-edit-select">
-                    <option :value="null">—</option>
+                    <option :value="null">{{ PLACEHOLDER_DASH }}</option>
                     <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
                   </select>
                 </td>
@@ -115,7 +115,7 @@
                 <!-- 借方科目（金額超）（ドロップダウン） -->
                 <td class="vm-td">
                   <select v-model="row.debit_account_over" class="vm-edit-select">
-                    <option :value="null">—</option>
+                    <option :value="null">{{ PLACEHOLDER_DASH }}</option>
                     <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
                   </select>
                 </td>
@@ -123,7 +123,7 @@
                 <!-- 貸方科目（ドロップダウン） -->
                 <td class="vm-td">
                   <select v-model="row.credit_account" class="vm-edit-select">
-                    <option :value="null">—</option>
+                    <option :value="null">{{ PLACEHOLDER_DASH }}</option>
                     <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
                   </select>
                 </td>
@@ -196,7 +196,7 @@ import type { Vendor, VendorVector } from '@/types/pipeline/vendor.type';
 import { VENDOR_VECTOR_LABELS, VENDOR_VECTORS } from '@/types/pipeline/vendor.type';
 import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import { normalizeVendorName } from '@/utils/pipeline/vendorIdentification';
-import { DIRECTION_OPTIONS } from '@/constants/vendorOptions';
+import { DIRECTION_OPTIONS, FILTER_ALL_LABEL, PLACEHOLDER_DASH } from '@/constants/vendorOptions';
 
 // ============================================================
 // データ（API経由で取得。編集はローカルrefに対して行う）

@@ -114,3 +114,28 @@ export const SORT_ORDER_OPTIONS: readonly SelectOption[] = [
   { value: "asc", label: "昇順" },
   { value: "desc", label: "降順" },
 ] as const;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 共通プレースホルダ
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** フィルタのデフォルト値「全て」 */
+export const FILTER_ALL_LABEL = '全て'
+
+/** null選択肢のラベル「—」 */
+export const PLACEHOLDER_DASH = '—'
+
+/** 未選択プレースホルダ「--」 */
+export const PLACEHOLDER_EMPTY = '--'
+
+/** 選択肢のデフォルト「選択してください」 */
+export const PLACEHOLDER_SELECT = '選択してください'
+
+/** 区切り線「------」 */
+export const PLACEHOLDER_DIVIDER = '------'
+
+/** 追加操作ラベル「＋追加」 */
+export const PLACEHOLDER_ADD = '＋追加'
+
+/** 全セクションラベル */
+export const FILTER_ALL_SECTIONS = '全セクション'

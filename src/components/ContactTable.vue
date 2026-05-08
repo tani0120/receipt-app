@@ -26,7 +26,7 @@
             <!-- 連絡種別はselect -->
             <template v-if="col.type === 'select'">
               <select v-if="editingCell?.row === rIdx && editingCell?.col === col.key" v-model="row[col.key]" class="ct-select" @blur="endCellEdit" @change="endCellEdit">
-                <option value="">------</option>
+                <option value="">{{ PLACEHOLDER_DIVIDER }}</option>
                 <option v-for="opt in col.options" :key="opt" :value="opt">{{ opt }}</option>
               </select>
               <span v-else class="ct-cell-text">{{ row[col.key] || '—' }}</span>
@@ -50,6 +50,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue';
 import type { ClientContact } from '@/repositories/types';
+import { PLACEHOLDER_DIVIDER } from '@/constants/vendorOptions';
 
 /** 列定義 */
 export interface ContactColumn {

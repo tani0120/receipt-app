@@ -5,9 +5,8 @@
           <span class="font-bold text-red-600">[MIRROR WORLD] Screen C</span>
           <label><input type="checkbox" v-model="mockIsDetailView"> 詳細モード</label>
           <select v-model="mockRouteParamsCode" class="border rounded px-1">
-              <option value="">コードなし (一覧)</option>
-              <option value="1001">1001: テスト商事</option>
-              <option value="1003">1003: 鈴木商店 (個人)</option>
+              <option value="">{{ MOCK_PLACEHOLDER_NO_CODE }}</option>
+              <option v-for="c in clientSelectOptions" :key="c.clientCode" :value="c.clientCode">{{ c.clientCode }}: {{ c.companyName }}</option>
           </select>
       </div>
 
@@ -316,6 +315,9 @@
 import { ref, computed } from 'vue';
 import moment from 'moment';
 
+/** モックコントロール用プレースホルダ */
+const MOCK_PLACEHOLDER_NO_CODE = 'コードなし (一覧)';
+
 /** 回収カレンダー一覧で使用する顧問先データ型 */
 interface CollectionClient {
   code: string;
@@ -356,6 +358,14 @@ const clients = ref([
         jobId: '1003'
     }
 ]);
+
+/** モックコントロール用の顧問先選択肢（clientsから動的生成） */
+const clientSelectOptions = computed(() =>
+  clients.value.map(c => ({
+    clientCode: c.clientCode,
+    companyName: c.companyName + (c.type === 'individual' ? ' (個人)' : ''),
+  }))
+);
 
 const currentClient = computed(() => {
     if (!mockRouteParamsCode.value && !mockIsDetailView.value) return null;

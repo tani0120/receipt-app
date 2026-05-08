@@ -25,7 +25,7 @@
           <div class="iv-filter-group">
             <label class="iv-filter-label">カテゴリ:</label>
             <select v-model="categoryFilter" class="iv-filter-select">
-              <option value="">全て</option>
+              <option value="">{{ FILTER_ALL_LABEL }}</option>
               <option v-for="c in categories" :key="c.key" :value="c.key">{{ c.icon }} {{ c.label }}（{{ c.count }}）</option>
             </select>
           </div>
@@ -82,7 +82,7 @@
                       <i class="fa-solid fa-xmark iv-chip-remove" @click="removeAccount(row.expense, ai)"></i>
                     </span>
                     <select class="iv-add-account-select" @change="addAccount(row.expense, $event)">
-                      <option value="">＋追加</option>
+                      <option value="">{{ PLACEHOLDER_ADD }}</option>
                       <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
                     </select>
                   </div>
@@ -94,7 +94,7 @@
                       <i class="fa-solid fa-xmark iv-chip-remove" @click="removeAccount(row.income, ai)"></i>
                     </span>
                     <select class="iv-add-account-select" @change="addAccount(row.income, $event)">
-                      <option value="">＋追加</option>
+                      <option value="">{{ PLACEHOLDER_ADD }}</option>
                       <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
                     </select>
                   </div>
@@ -147,6 +147,7 @@ import type { VendorVector, IndustryVectorEntry } from '@/types/pipeline/vendor.
 import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useClients } from '@/features/client-management/composables/useClients';
+import { FILTER_ALL_LABEL, PLACEHOLDER_ADD } from '@/constants/vendorOptions';
 
 // ============================================================
 // 顧問先情報から法人/個人を判定
