@@ -191,6 +191,7 @@ import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import { getLabel } from '@/constants/clientOptions';
+import { UI_MSG } from '@/constants/uiMessages';
 import {
   TAX_DIRECTION_OPTIONS, QUALIFIED_OPTIONS, TAX_METHOD_TYPE_OPTIONS,
 } from '@/constants/vendorOptions';
@@ -495,9 +496,9 @@ async function saveChanges() {
     // ★DL-042: localStorage書き込み廃止済み（API保存に一本化）
 
     markClean();
-    modal.notify({ title: '保存しました', variant: 'success' });
+    modal.notify({ title: UI_MSG.保存成功, variant: 'success' });
   } catch (e) {
-    await modal.notify({ title: '通信エラーが発生しました', variant: 'warning' });
+    await modal.notify({ title: UI_MSG.通信エラー, variant: 'warning' });
   }
 }
 

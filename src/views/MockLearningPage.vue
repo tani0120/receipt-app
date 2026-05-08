@@ -294,6 +294,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { LearningRule, LearningRuleEntryLine } from '../types/learning_rule.type'
 import { PLACEHOLDER_DASH } from '@/constants/vendorOptions'
+import { UI_MSG } from '@/constants/uiMessages'
 
 const route = useRoute()
 const clientId = computed(() => (route.params.clientId as string) || 'TST-00011')
@@ -541,7 +542,7 @@ async function saveModal(mode: 'rule' | 'all') {
       })
       if (!res.ok) {
         console.error('[LearningPage] ルール作成失敗:', await res.text())
-        alert('ルールの保存に失敗しました')
+        alert(UI_MSG.ルール保存失敗)
         return
       }
       const data = await res.json() as { rule: LearningRule }
@@ -558,7 +559,7 @@ async function saveModal(mode: 'rule' | 'all') {
       })
       if (!res.ok) {
         console.error('[LearningPage] ルール更新失敗:', await res.text())
-        alert('ルールの保存に失敗しました')
+        alert(UI_MSG.ルール保存失敗)
         return
       }
       // ローカル配列を更新
@@ -569,7 +570,7 @@ async function saveModal(mode: 'rule' | 'all') {
     closeModal()
   } catch (err) {
     console.error('[LearningPage] 保存API通信失敗:', err)
-    alert('ルールの保存に失敗しました')
+    alert(UI_MSG.ルール保存失敗)
   }
 }
 

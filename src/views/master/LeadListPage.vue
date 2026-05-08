@@ -445,6 +445,7 @@ import {
 import { useFieldLayout } from '@/composables/useFieldLayout';
 import { leadSections, leadFields } from '@/constants/leadFieldDefs';
 import { LIST_ONLY_COLUMNS } from '@/constants/clientFieldDefs';
+import { UI_MSG } from '@/constants/uiMessages';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
@@ -944,7 +945,7 @@ const confirmSuspend = async () => {
     message: '休眠中も見込先データは保持されます。再開も可能です。',
     variant: 'danger',
     confirmLabel: '休眠にする',
-    cancelLabel: 'キャンセル',
+    cancelLabel: UI_MSG.キャンセル,
   });
   if (ok) {
     panelForm.status = 'suspension';
@@ -958,7 +959,7 @@ const confirmTerminate = async () => {
     message: '見込先データは保持されますが、契約終了として記録されます。',
     variant: 'danger',
     confirmLabel: '契約終了',
-    cancelLabel: 'キャンセル',
+    cancelLabel: UI_MSG.キャンセル,
   });
   if (ok) {
     panelForm.status = 'inactive';

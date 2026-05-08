@@ -240,6 +240,7 @@ import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import { QUALIFIED_OPTIONS } from '@/constants/vendorOptions';
+import { UI_MSG } from '@/constants/uiMessages';
 import {
   CATEGORY_GROUPS,
   getCategoryDirection,
@@ -460,8 +461,8 @@ async function saveChanges() {
       body: JSON.stringify({ accounts: accountRows }),
     });
     if (!response.ok) {
-      const err = await response.json().catch(() => ({ message: '保存に失敗しました' }));
-      await modal.notify({ title: err.message ?? '保存に失敗しました', variant: 'warning' });
+      const err = await response.json().catch(() => ({ message: UI_MSG.保存失敗 }));
+      await modal.notify({ title: err.message ?? UI_MSG.保存失敗, variant: 'warning' });
       return;
     }
 
@@ -473,9 +474,9 @@ async function saveChanges() {
     // ★DL-042: localStorage書き込み廃止済み（API保存に一本化）
 
     markClean();
-    modal.notify({ title: '保存しました', variant: 'success' });
+    modal.notify({ title: UI_MSG.保存成功, variant: 'success' });
   } catch (e) {
-    await modal.notify({ title: '通信エラーが発生しました', variant: 'warning' });
+    await modal.notify({ title: UI_MSG.通信エラー, variant: 'warning' });
   }
 }
 

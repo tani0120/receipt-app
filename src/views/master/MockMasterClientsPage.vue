@@ -511,6 +511,7 @@ import { useFieldLayout } from '@/composables/useFieldLayout';
 import { useCustomFields } from '@/composables/useCustomFields';
 import { useCurrentUser } from '@/composables/useCurrentUser';
 import { clientSections, clientFields, LIST_ONLY_COLUMNS } from '@/constants/clientFieldDefs';
+import { UI_MSG } from '@/constants/uiMessages';
 import {
   parseViewFromQuery,
   parseFiltersFromQuery,
@@ -1217,7 +1218,7 @@ const confirmSuspend = async () => {
     message: '休眠中も顧問先データは保持されます。再開も可能です。',
     variant: 'danger',
     confirmLabel: '休眠にする',
-    cancelLabel: 'キャンセル',
+    cancelLabel: UI_MSG.キャンセル,
   });
   if (ok) {
     panelForm.status = 'suspension';
@@ -1231,7 +1232,7 @@ const confirmTerminate = async () => {
     message: '顧問先データは保持されますが、契約終了として記録されます。',
     variant: 'danger',
     confirmLabel: '契約終了',
-    cancelLabel: 'キャンセル',
+    cancelLabel: UI_MSG.キャンセル,
   });
   if (ok) {
     panelForm.status = 'inactive';

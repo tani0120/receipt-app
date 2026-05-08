@@ -239,6 +239,7 @@ import { STAFF_STATUS_OPTIONS, STAFF_PERMISSION_OPTIONS, getLabel } from '@/cons
 import { FILTER_ALL_LABEL } from '@/constants/vendorOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
+import { UI_MSG } from '@/constants/uiMessages';
 
 // 列幅カスタマイズ
 const staffDefaultWidths: Record<string, number> = {
@@ -462,7 +463,7 @@ const confirmDeactivate = async () => {
     message: 'スタッフデータは保持されます。再開も可能です。',
     variant: 'danger',
     confirmLabel: '停止する',
-    cancelLabel: 'キャンセル',
+    cancelLabel: UI_MSG.キャンセル,
   });
   if (ok) {
     panelForm.status = 'inactive';

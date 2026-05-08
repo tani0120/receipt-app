@@ -262,6 +262,7 @@ import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import { QUALIFIED_OPTIONS } from '@/constants/vendorOptions';
+import { UI_MSG } from '@/constants/uiMessages';
 import {
   CATEGORY_GROUPS,
   getCategoryDirection,
@@ -525,17 +526,17 @@ async function saveChanges() {
       body: JSON.stringify({ accounts: accountRows, subAccounts }),
     });
     if (!response.ok) {
-      const err = await response.json().catch(() => ({ message: '保存に失敗しました' }));
-      await modal.notify({ title: err.message ?? '保存に失敗しました', variant: 'warning' });
+      const err = await response.json().catch(() => ({ message: UI_MSG.保存失敗 }));
+      await modal.notify({ title: err.message ?? UI_MSG.保存失敗, variant: 'warning' });
       return;
     }
 
     // composable側にも同期（他ページへのリアルタイム反映用）
     settings.saveAccounts(accountRows, subAccounts);
     markClean();
-    modal.notify({ title: '保存しました', variant: 'success' });
+    modal.notify({ title: UI_MSG.保存成功, variant: 'success' });
   } catch (e) {
-    await modal.notify({ title: '通信エラーが発生しました', variant: 'warning' });
+    await modal.notify({ title: UI_MSG.通信エラー, variant: 'warning' });
   }
 }
 

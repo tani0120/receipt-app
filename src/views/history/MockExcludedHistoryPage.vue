@@ -100,6 +100,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useGlobalToast } from '@/composables/useGlobalToast'
+import { UI_MSG } from '@/constants/uiMessages'
 
 const route = useRoute()
 const clientId = computed(() => (route.params.clientId as string) || '')
@@ -214,7 +215,7 @@ async function downloadChecked() {
       URL.revokeObjectURL(url)
     }
 
-    showToast({ message: 'ダウンロード完了', type: 'success' })
+    showToast({ message: UI_MSG.ダウンロード完了, type: 'success' })
     // 履歴を再取得してステータス更新
     await loadHistory()
     checkedIds.value = new Set()
@@ -262,7 +263,7 @@ async function downloadSingle() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    showToast({ message: 'ダウンロード完了', type: 'success' })
+    showToast({ message: UI_MSG.ダウンロード完了, type: 'success' })
     await loadHistory()
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
