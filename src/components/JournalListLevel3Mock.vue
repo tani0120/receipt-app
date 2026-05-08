@@ -871,9 +871,7 @@
                         @keydown.escape="cancelCellEdit()"
                         @blur="commitCellEdit()"
                       >
-                        <option value="">　</option>
-                        <option value="◯">◯</option>
-                        <option value="✕">✕</option>
+                        <option v-for="o in CHECK_STATUS_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                       </select>
                     </template>
                     <template v-else>
@@ -1561,9 +1559,7 @@
         v-model="journalPageSize"
         class="ml-2 border border-gray-300 rounded text-[10px] px-1 py-0.5 cursor-pointer"
       >
-        <option :value="30">30件</option>
-        <option :value="50">50件</option>
-        <option :value="100">100件</option>
+        <option v-for="o in PAGE_SIZE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
       </select>
     </div>
 
@@ -1861,9 +1857,7 @@
                 class="w-40 px-2 py-1 text-xs border rounded"
               >
                 <option value="">選択してください</option>
-                <option value="equal">等しい</option>
-                <option value="greater">以上</option>
-                <option value="less">以下</option>
+                <option v-for="o in AMOUNT_CONDITION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
               </select>
               <input
                 type="number"
@@ -2559,6 +2553,9 @@ import type { ConfirmedJournal } from "../types/confirmed_journal.type";
 import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { validateByVoucherType, getVoucherTypeConflictAccounts } from "@/utils/journalWarningSync";
 // VOUCHER_TYPE_RULES, getBaseAccountId は API側 (journalHintService.ts) に移設済み (Step 6-A3)
+import {
+  CHECK_STATUS_OPTIONS, PAGE_SIZE_OPTIONS, AMOUNT_CONDITION_OPTIONS,
+} from '@/constants/vendorOptions';
 
 // 列幅カスタマイズ
 const {

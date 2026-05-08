@@ -79,3 +79,38 @@ export const TAX_METHOD_TYPE_OPTIONS: readonly SelectOption[] = [
   { value: 'simplified', label: '簡易' },
   { value: 'exempt', label: '免税' },
 ] as const
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 仕訳リスト
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 確認状態（チェックマーク） */
+export const CHECK_STATUS_OPTIONS: readonly SelectOption[] = [
+  { value: '', label: '　' },
+  { value: '◯', label: '◯' },
+  { value: '✕', label: '✕' },
+] as const
+
+/** ページサイズ */
+export const PAGE_SIZE_OPTIONS: readonly SelectOption<number>[] = [
+  { value: 30, label: '30件' },
+  { value: 50, label: '50件' },
+  { value: 100, label: '100件' },
+] as const
+
+/** 金額条件 */
+export const AMOUNT_CONDITION_OPTIONS: readonly SelectOption[] = [
+  { value: 'equal', label: '等しい' },
+  { value: 'greater', label: '以上' },
+  { value: 'less', label: '以下' },
+] as const
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 共通UI
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** ソート方向 */
+export const SORT_ORDER_OPTIONS: readonly SelectOption[] = [
+  { value: 'asc', label: '昇順' },
+  { value: 'desc', label: '降順' },
+] as const

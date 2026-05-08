@@ -220,8 +220,7 @@
               </div>
             </div>
             <select class="fm-select fm-sort-order" v-model="srt.order">
-              <option value="asc">昇順</option>
-              <option value="desc">降順</option>
+              <option v-for="o in SORT_ORDER_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
             <!-- 削除ボタン（2行以上の時のみ表示） -->
             <button
@@ -258,6 +257,7 @@
  * 複数条件のAND/OR結合をサポートする。
  */
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { SORT_ORDER_OPTIONS } from '@/constants/vendorOptions'
 import type {
   FilterColumnDef,
   FilterCondition,

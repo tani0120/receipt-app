@@ -126,8 +126,7 @@
                 <td style="text-align: center;" @dblclick="startEdit(row, 'qualified')">
                   <template v-if="isEditing(row.id, 'qualified')">
                     <select v-model="editValue" @change="commitEdit(row, 'qualified')" @blur="cancelEdit()" class="inline-select">
-                      <option value="true">○</option>
-                      <option value="false"></option>
+                      <option v-for="o in QUALIFIED_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
                   </template>
                   <template v-else>{{ row.qualified ? '○' : '' }}</template>
@@ -136,12 +135,10 @@
                 <td class="td-direction" :class="'dir-' + row.direction" @dblclick="startEdit(row, 'direction')">
                   <template v-if="isEditing(row.id, 'direction')">
                     <select v-model="editValue" @change="commitEdit(row, 'direction')" @blur="cancelEdit()" class="inline-select" ref="editInput">
-                      <option value="common">共通</option>
-                      <option value="sales">売上</option>
-                      <option value="purchase">仕入</option>
+                      <option v-for="o in TAX_DIRECTION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
                   </template>
-                  <template v-else>{{ directionLabel(row.direction) }}</template>
+                  <template v-else>{{ getLabel(TAX_DIRECTION_OPTIONS, row.direction) }}</template>
                 </td>
                 <!-- 税区分 -->
                 <td @dblclick="startEdit(row, 'name')">
@@ -210,6 +207,8 @@ import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
+import { getLabel } from '@/constants/clientOptions';
+import { TAX_DIRECTION_OPTIONS, QUALIFIED_OPTIONS } from '@/constants/vendorOptions';
 
 // 列幅カスタマイズ
 const ctDefaultWidths: Record<string, number> = {
@@ -511,9 +510,7 @@ async function saveChanges() {
 }
 
 // =============== 共通ユーティリティ ===============
-function directionLabel(dir: TaxDirection): string {
-  switch (dir) { case 'sales': return '売上'; case 'purchase': return '仕入'; case 'common': return '共通'; }
-}
+
 
 function compareByKey<T>(arr: T[], key: keyof T, asc: boolean): void {
   arr.sort((a, b) => {
