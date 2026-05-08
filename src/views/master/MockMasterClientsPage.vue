@@ -105,7 +105,7 @@
                   <!-- 担当者 -->
                   <template v-else-if="col.key === 'staffName'">
                     <select v-if="inlineEditId === row.clientId && inlineEditField === 'staffName'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitStaffEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                      <option value="">未設定</option>
+                      <option value="">{{ PLACEHOLDER_UNSET }}</option>
                       <option v-for="s in staffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
                     </select>
                     <span v-else>{{ getStaffNameForClient(row.clientId) || '—' }}</span>
@@ -126,7 +126,7 @@
                         </select>
                         <span class="cm-inline-fiscal-sep">/</span>
                         <select v-model="inlineEditFiscalDay" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop>
-                          <option value="末日">末日</option>
+                          <option :value="FISCAL_DAY_END_LABEL">{{ FISCAL_DAY_END_LABEL }}</option>
                           <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
                         </select>
                         <button class="cm-inline-fiscal-ok" @click.stop="commitFiscalEdit(row)">✓</button>
@@ -248,7 +248,7 @@
               <div class="cm-field">
                 <label class="cm-label">担当者</label>
                 <select v-model="panelStaffId" class="cm-select">
-                  <option value="">未設定</option>
+                  <option value="">{{ PLACEHOLDER_UNSET }}</option>
                   <option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
                 </select>
               </div>
@@ -292,7 +292,7 @@
                   </select>
                   <span class="cm-date-separator">/</span>
                   <select v-model="panelForm.fiscalDay" class="cm-select">
-                    <option value="末日">末日</option>
+                    <option :value="FISCAL_DAY_END_LABEL">{{ FISCAL_DAY_END_LABEL }}</option>
                     <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
                   </select>
                 </div>
@@ -496,7 +496,9 @@ import {
   INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_MODE_OPTIONS,
   TAX_FILING_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
   CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
-  STATUS_OPTIONS, TYPE_OPTIONS, CONTACT_METHOD_OPTIONS, getLabel,
+  STATUS_OPTIONS, TYPE_OPTIONS, CONTACT_METHOD_OPTIONS,
+  PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
+  getLabel,
 } from '@/constants/clientOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';

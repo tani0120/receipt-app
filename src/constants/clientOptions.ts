@@ -181,3 +181,13 @@ export const STAFF_ROLE_OPTIONS: readonly SelectOption[] = [
   { value: 'sub', label: '副担当' },
   { value: 'payroll', label: '給与社保担当' },
 ] as const
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// フォーム共通プレースホルダー・定数
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** プレースホルダー: 未設定 */
+export const PLACEHOLDER_UNSET = '未設定'
+
+/** 決算日 — 末日ラベル */
+export const FISCAL_DAY_END_LABEL = '末日'

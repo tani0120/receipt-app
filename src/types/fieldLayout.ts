@@ -132,3 +132,13 @@ export interface LayoutVersion {
   /** 作成者 */
   createdBy: string;
 }
+
+/** カスタムフィールド追加時に選択できるコンポーネント型 */
+export const FIELD_COMPONENT_OPTIONS: readonly { value: FieldComponent; label: string }[] = [
+  { value: 'text', label: 'テキスト' },
+  { value: 'number', label: '数値' },
+  { value: 'date', label: '日付' },
+  { value: 'textarea', label: 'テキストエリア' },
+  { value: 'select', label: '選択' },
+  { value: 'checkbox', label: 'チェック' },
+] as const;

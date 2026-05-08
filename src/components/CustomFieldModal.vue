@@ -46,12 +46,7 @@
         <div class="cfm-add-row">
           <input type="text" v-model="newLabel" class="cfm-input cfm-input-grow" placeholder="新しいフィールド名">
           <select v-model="newComponent" class="cfm-select">
-            <option value="text">テキスト</option>
-            <option value="number">数値</option>
-            <option value="date">日付</option>
-            <option value="textarea">テキストエリア</option>
-            <option value="select">選択</option>
-            <option value="checkbox">チェック</option>
+            <option v-for="o in FIELD_COMPONENT_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
           </select>
           <select v-model="newSection" class="cfm-select">
             <option v-for="s in sectionKeys" :key="s" :value="s">{{ s }}</option>
@@ -71,6 +66,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import type { FieldComponent } from '@/types/fieldLayout';
+import { FIELD_COMPONENT_OPTIONS } from '@/types/fieldLayout';
 
 /** カスタムフィールド定義 */
 export interface CustomFieldDef {

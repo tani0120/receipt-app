@@ -13,12 +13,7 @@
         <div class="afm-row">
           <label class="afm-label">型</label>
           <select v-model="component" class="afm-select">
-            <option value="text">テキスト</option>
-            <option value="number">数値</option>
-            <option value="date">日付</option>
-            <option value="textarea">テキストエリア</option>
-            <option value="select">選択</option>
-            <option value="checkbox">チェック</option>
+            <option v-for="o in FIELD_COMPONENT_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
           </select>
         </div>
         <div class="afm-row">
@@ -39,6 +34,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue';
 import type { FieldComponent } from '@/types/fieldLayout';
+import { FIELD_COMPONENT_OPTIONS } from '@/types/fieldLayout';
 
 const props = defineProps<{
   visible: boolean;
