@@ -94,8 +94,8 @@ function detectIssues(filePath) {
     }
   });
 
-  // useFieldLayout使用チェック
-  if (content.includes('useFieldLayout(') && !content.includes('.loadLayout()')) {
+  // useFieldLayout使用チェック（composable定義ファイル自体は除外）
+  if (content.includes('useFieldLayout(') && !content.includes('.loadLayout()') && !content.includes('export function useFieldLayout')) {
     issues.push({ lineNum: 0, type: 'MISSING_LOAD_LAYOUT', line: 'useFieldLayout()はあるがloadLayout()が呼ばれていない' });
   }
 

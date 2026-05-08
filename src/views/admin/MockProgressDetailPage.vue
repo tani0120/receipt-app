@@ -108,7 +108,7 @@
                 'pg-status-active': row.status === 'active',
                 'pg-status-suspension': row.status === 'suspension',
                 'pg-status-inactive': row.status === 'inactive'
-              }">{{ row.status === 'active' ? '稼働中' : row.status === 'suspension' ? '休眠中' : '契約終了' }}</span>
+              }">{{ getLabel(STATUS_OPTIONS, row.status) }}</span>
             </td>
             <td class="pg-td-code">{{ row.code }}</td>
             <td class="pg-td-client">{{ row.type === 'individual' && row.repName ? row.repName : row.companyName }}</td>
@@ -163,6 +163,9 @@ import { useShareStatus } from '@/composables/useShareStatus';
 import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
 import type { FilterCondition, FilterColumnDef, SortSetting, FilterResult } from '@/components/list-view/types';
 import type { ViewDefWithDefaults } from '@/utils/urlFilterSync';
+import {
+  STATUS_OPTIONS, TYPE_OPTIONS, getLabel,
+} from '@/constants/clientOptions';
 
 const pgDefaultWidths: Record<string, number> = {
   status: 60, code: 60, fiscalMonth: 60,
@@ -279,18 +282,11 @@ const pgActiveViewIndex = ref(0);
 
 /** フィルタ列定義（担当者はスタッフ一覧から動的生成） */
 const pgFilterColumns = computed<FilterColumnDef[]>(() => [
-  { key: 'clientStatus', label: 'ステータス', filterType: 'select', filterOptions: [
-    { value: 'active', label: '稼働中' },
-    { value: 'suspension', label: '休眠中' },
-    { value: 'inactive', label: '契約終了' },
-  ] },
+  { key: 'clientStatus', label: 'ステータス', filterType: 'select', filterOptions: STATUS_OPTIONS },
   { key: 'code', label: '3コード', filterType: 'text' },
   { key: 'companyName', label: '顧問先', filterType: 'text' },
   { key: 'repName', label: '代表者名', filterType: 'text' },
-  { key: 'type', label: '種別', filterType: 'select', filterOptions: [
-    { value: 'corp', label: '法人' },
-    { value: 'individual', label: '個人' },
-  ] },
+  { key: 'type', label: '種別', filterType: 'select', filterOptions: TYPE_OPTIONS },
   { key: 'staffId', label: '担当者', filterType: 'select', filterOptions:
     allStaff.value.map(s => ({ value: s.uuid, label: s.name }))
   },

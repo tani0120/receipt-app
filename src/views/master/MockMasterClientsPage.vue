@@ -91,10 +91,9 @@
                   <!-- 種別 -->
                   <template v-else-if="col.key === 'type'">
                     <select v-if="inlineEditId === row.clientId && inlineEditField === 'type'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                      <option value="corp">法人</option>
-                      <option value="individual">個人</option>
+                      <option v-for="o in TYPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
-                    <span v-else>{{ row.type === 'corp' ? '法人' : '個人' }}</span>
+                    <span v-else>{{ getLabel(TYPE_OPTIONS, row.type) }}</span>
                   </template>
                   <!-- 課税方式 -->
                   <template v-else-if="col.key === 'taxMode'">{{ taxModeLabel(row.consumptionTaxMode) }}</template>
@@ -114,7 +113,7 @@
                   <!-- 会計ソフト -->
                   <template v-else-if="col.key === 'accountingSoftware'">
                     <select v-if="inlineEditId === row.clientId && inlineEditField === 'accountingSoftware'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                      <option value="mf">MF</option><option value="freee">freee</option><option value="yayoi">弥生</option><option value="tkc">TKC</option><option value="other">その他</option>
+                      <option v-for="o in ACCOUNTING_SOFTWARE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
                     <span v-else>{{ softwareLabel(row.accountingSoftware) }}</span>
                   </template>
