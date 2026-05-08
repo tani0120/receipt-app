@@ -26,25 +26,21 @@
             <label class="vm-filter-label">証票種類:</label>
             <select v-model="sourceFilter" class="vm-filter-select">
               <option value="">全て</option>
-              <option value="bank">🏦 銀行明細</option>
-              <option value="credit">💳 クレカ明細</option>
-              <option value="all">📋 全共通</option>
+              <option v-for="o in SOURCE_CATEGORY_FILTER_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </div>
           <div class="vm-filter-group">
             <label class="vm-filter-label">入出金:</label>
             <select v-model="directionFilter" class="vm-filter-select">
               <option value="">全て</option>
-              <option value="expense">出金</option>
-              <option value="income">入金</option>
+              <option v-for="o in DIRECTION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </div>
           <div class="vm-filter-group">
             <label class="vm-filter-label">確定レベル:</label>
             <select v-model="levelFilter" class="vm-filter-select">
               <option value="">全て</option>
-              <option value="A">A（自動確定）</option>
-              <option value="insufficient">❓ 人間判断</option>
+              <option v-for="o in LEVEL_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </div>
         </div>
@@ -148,9 +144,7 @@
                 <td class="vm-td">
                   <select v-model="row.source_category" class="vm-edit-select vm-edit-select-sm">
                     <option :value="null">—</option>
-                    <option value="bank">🏦 銀行</option>
-                    <option value="credit">💳 クレカ</option>
-                    <option value="all">📋 全共通</option>
+                    <option v-for="o in SOURCE_CATEGORY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                   </select>
                 </td>
 
@@ -158,8 +152,7 @@
                 <td class="vm-td">
                   <select v-model="row.direction" class="vm-edit-select vm-edit-select-sm">
                     <option :value="null">—</option>
-                    <option value="expense">出金</option>
-                    <option value="income">入金</option>
+                    <option v-for="o in DIRECTION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                   </select>
                 </td>
 
@@ -197,8 +190,7 @@
                 <td class="vm-td">
                   <select v-model="row.level" class="vm-edit-select vm-edit-select-sm">
                     <option :value="null">—</option>
-                    <option value="A">A（自動確定）</option>
-                    <option value="insufficient">❓ 人間判断</option>
+                    <option v-for="o in LEVEL_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                   </select>
                 </td>
 
@@ -270,6 +262,10 @@ import type { Vendor } from "@/types/pipeline/vendor.type";
 import { ACCOUNT_MASTER } from "@/data/master/account-master";
 import { TAX_CATEGORY_MASTER } from "@/data/master/tax-category-master";
 import { normalizeVendorName } from "@/utils/pipeline/vendorIdentification";
+import {
+  SOURCE_CATEGORY_FILTER_OPTIONS, SOURCE_CATEGORY_OPTIONS,
+  DIRECTION_OPTIONS, LEVEL_OPTIONS,
+} from '@/constants/vendorOptions';
 
 // ============================================================
 // データ（API経由で取得）
