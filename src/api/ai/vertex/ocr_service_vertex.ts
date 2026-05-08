@@ -7,6 +7,7 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
+import { getPromptContent } from '@/api/routes/aiPromptRoutes';
 import { getOrCreateCache } from './cache_manager_vertex';
 import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 
@@ -73,39 +74,7 @@ async function callVertexAI(
     try {
         console.log('📤 [Vertex] Gemini API呼び出し中...');
 
-        const prompt = `【画像を確認してJSONのみを出力してください】
-
-この画像は領収書です。以下のJSON形式で出力してください。説明文やMarkdownは不要です。
-
-{
-  "category": "RECEIPT",
-  "vendor": "店名（画像から正確に読み取る）",
-  "date": "YYYY-MM-DD",
-  "total_amount": 数値,
-  "t_number": "T番号（13桁の数字がある場合）または null",
-  "tax_items": [{"rate": 10, "net": 税抜額, "tax": 消費税}],
-  "inferred_category": "勘定科目（下記ルール参照）",
-  "explanation": "選択理由（1文）"
-}
-
-【inferred_category決定ルール（厳守）】
-1. T番号マスタに一致 → T番号マスタの科目を使用
-2. T番号マスタに不一致または無し → 以下の判断基準で決定:
-   - 飲食店での個人的な食事 → 「飲食費」
-   - 居酒屋・バー・料亭 → 「接待交際費」
-   - 金額10,000円以上の飲食 → 「接待交際費」
-   - その他軽食・コンビニ → 「飲食費」
-   - 判断困難 → 「仮払金」
-
-【べき等性ルール（最重要）】
-- 同じ画像には常に同じ結果を返してください
-- 店名が飲食店で金額10,000円未満なら「飲食費」を選択
-- 迷った場合は「飲食費」を選択
-
-【出力形式】
-- JSONオブジェクトのみ出力
-- コードブロック不要
-- 説明文不要`;
+        const prompt = await getPromptContent('ocr-vertex');
 
         const result = await ai.models.generateContent({
             model: modelName,

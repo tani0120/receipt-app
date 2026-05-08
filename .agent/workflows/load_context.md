@@ -50,7 +50,7 @@ src/constants/
 | 勘定科目/税区分マスタ | **済** | `accountMasterRoutes.ts` / `taxCategoryRoutes.ts` |
 | 選択肢定数（TYPE_OPTIONS等） | **No** | 定数ファイルで十分。変更頻度ゼロ |
 | 通知メッセージ | **No** | `uiMessages.ts`定数で十分 |
-| AIプロンプト文 | **No** | API層内で完結。フロント不参照 |
+| AIプロンプト文 | **済** | `aiPromptRoutes.ts`（GET/PUT）+ `aiPrompts.ts`（デフォルト値） |
 
 ### 新規コード時の判断フロー
 

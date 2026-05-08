@@ -9,6 +9,7 @@ import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
 // getOrCreateCache: Phase 6.2-Bでcache復活時にimport復元
 import { extractJSONFromResponse } from './schemas';
 import { GoogleGenAI } from '@google/genai';
+import { getPromptContent } from '@/api/routes/aiPromptRoutes';
 import { readFileSync } from 'fs';
 
 /**
@@ -95,7 +96,7 @@ async function callGeminiAPI(
               }
             },
             {
-              text: 'この領収書から以下の情報をJSON形式で抽出してください：店名(vendor)、日付(date)、合計金額(total_amount)、T番号(t_number)'
+              text: await getPromptContent('ocr-simple')
             }
           ]
         }

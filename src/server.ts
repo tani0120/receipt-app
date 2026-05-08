@@ -159,6 +159,10 @@ app.route('/api/export', exportRoutes)
 import fieldLayoutRoutes from './api/routes/fieldLayoutRoutes'
 app.route('/api/field-layout', fieldLayoutRoutes)
 
+// AIPrompt API: AIプロンプト管理（GET/PUT）
+import aiPromptRoutes from './api/routes/aiPromptRoutes'
+app.route('/api/ai-prompts', aiPromptRoutes)
+
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
 
