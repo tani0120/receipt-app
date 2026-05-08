@@ -103,6 +103,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useGlobalToast } from '@/composables/useGlobalToast'
+import { UI_MSG } from '@/constants/uiMessages'
 
 const route = useRoute()
 const router = useRouter()
@@ -118,7 +119,7 @@ async function downloadExcluded() {
     const res = await fetch(`/api/drive/download-excluded/${encodeURIComponent(clientId.value)}`)
     if (!res.ok) {
       const data = await res.json().catch(() => ({ error: res.statusText }))
-      showToast({ message: data.error || 'ダウンロードに失敗しました', type: 'error' })
+      showToast({ message: data.error || UI_MSG.ダウンロード失敗, type: 'error' })
       return
     }
 
@@ -138,7 +139,7 @@ async function downloadSupporting() {
     const res = await fetch(`/api/drive/download-supporting/${encodeURIComponent(clientId.value)}`)
     if (!res.ok) {
       const data = await res.json().catch(() => ({ error: res.statusText }))
-      showToast({ message: data.error || 'ダウンロードに失敗しました', type: 'error' })
+      showToast({ message: data.error || UI_MSG.ダウンロード失敗, type: 'error' })
       return
     }
 

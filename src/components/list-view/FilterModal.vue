@@ -38,7 +38,7 @@
                       class="fm-ss-search"
                       type="text"
                       v-model="fieldSearches[idx]"
-                      placeholder="フィールド検索…"
+                    :placeholder="UI_MSG.フィールド検索"
                       @keydown.escape.stop="openFieldIdx = null"
                     >
                   </div>
@@ -258,6 +258,7 @@
  */
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { SORT_ORDER_OPTIONS, PLACEHOLDER_EMPTY } from '@/constants/vendorOptions'
+import { UI_MSG } from '@/constants/uiMessages'
 import type {
   FilterColumnDef,
   FilterCondition,

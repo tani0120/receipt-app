@@ -1041,7 +1041,7 @@
                         type="text"
                         class="inline-edit-input w-full text-[9px] bg-white border border-blue-400 rounded outline-none pl-0.5 pr-5 py-0"
                         v-model="editingValue"
-                        placeholder="検索..."
+                        :placeholder="UI_MSG.検索"
                         @keydown.escape="cancelCellEdit()"
                         @blur="blurAccountEdit(journal, row, col.key)"
                       />
@@ -1258,7 +1258,7 @@
                         type="text"
                         class="inline-edit-input w-full text-[9px] bg-white border border-blue-400 rounded outline-none px-0.5 py-0"
                         v-model="editingValue"
-                        placeholder="検索..."
+                        :placeholder="UI_MSG.検索"
                         @keydown.escape="cancelCellEdit()"
                         @blur="blurTaxEdit(journal)"
                       />
@@ -2482,13 +2482,13 @@
                   v-model="commentModalJournal!.staff_notes![noteKey].text"
                   class="w-full border border-gray-300 rounded p-1.5 text-[10px] resize-none"
                   rows="2"
-                  placeholder="テキストを入力..."
+                  :placeholder="UI_MSG.テキスト入力"
                 ></textarea>
                 <input
                   v-model="commentModalJournal!.staff_notes![noteKey].chatworkUrl"
                   type="text"
                   class="w-full border border-gray-300 rounded p-1 text-[10px]"
-                  placeholder="Chatwork URL（任意）"
+                  :placeholder="UI_MSG.ChatworkURL"
                 />
               </div>
             </div>
@@ -2523,13 +2523,13 @@
                   v-model="commentModalJournal!.staff_notes![noteKey].text"
                   class="w-full border border-gray-300 rounded p-1.5 text-[10px] resize-none"
                   rows="2"
-                  placeholder="テキストを入力..."
+                  :placeholder="UI_MSG.テキスト入力"
                 ></textarea>
                 <input
                   v-model="commentModalJournal!.staff_notes![noteKey].chatworkUrl"
                   type="text"
                   class="w-full border border-gray-300 rounded p-1 text-[10px]"
-                  placeholder="Chatwork URL（任意）"
+                  :placeholder="UI_MSG.ChatworkURL"
                 />
               </div>
             </div>
@@ -4583,7 +4583,7 @@ function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
   closeDropdown();
   confirmDialog.value = {
     show: true,
-    title: value ? "既読にする" : "未読にする",
+    title: value ? UI_MSG.既読にする : UI_MSG.未読にする,
     message: `「${journal.description}」を${value ? "既読" : "未読"}にしますか？`,
     onConfirm: () => {
       target.is_read = value;
@@ -4610,7 +4610,7 @@ function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
   closeDropdown();
   confirmDialog.value = {
     show: true,
-    title: exclude ? "出力対象外にする" : "出力対象にする",
+    title: exclude ? UI_MSG.出力対象外にする : UI_MSG.出力対象にする,
     message: `「${journal.description}」を${exclude ? "出力対象外" : "出力対象"}にしますか？`,
     onConfirm: () => {
       if (exclude) {
@@ -4765,7 +4765,7 @@ function bulkSetReadStatus(value: boolean) {
       : `${capturedTargets.length}件を${value ? "既読" : "未読"}にしますか？`;
   confirmDialog.value = {
     show: true,
-    title: value ? "既読にする" : "未読にする",
+    title: value ? UI_MSG.既読にする : UI_MSG.未読にする,
     message: confirmMsg,
     onConfirm: () => {
       capturedTargets.forEach((j) => {
@@ -4843,7 +4843,7 @@ function bulkSetExportExclude(exclude: boolean) {
   const capturedTargets = [...targets];
   confirmDialog.value = {
     show: true,
-    title: exclude ? "出力対象外にする" : "出力対象にする",
+    title: exclude ? UI_MSG.出力対象外にする : UI_MSG.出力対象にする,
     message: `${capturedTargets.length}件を${exclude ? "出力対象外" : "出力対象"}にしますか？`,
     onConfirm: () => {
       capturedTargets.forEach((j) => {
