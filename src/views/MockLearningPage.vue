@@ -155,9 +155,7 @@
           <label>証憑種別</label>
           <select v-model="modalRule.sourceCategory" class="modal-select">
             <option :value="null">—</option>
-            <option value="receipt">領収書/請求書</option>
-            <option value="bank">口座</option>
-            <option value="credit">カード</option>
+            <option v-for="o in SOURCE_CATEGORY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
           </select>
         </div>
 
@@ -166,8 +164,7 @@
           <label>学習キーワード</label>
           <div class="modal-field-row">
             <select v-model="modalRule.matchType" class="modal-select modal-select--small">
-              <option value="exact">等しい</option>
-              <option value="contains">含む</option>
+              <option v-for="o in MATCH_TYPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
             <input v-model="modalRule.keyword" class="modal-input" placeholder="キーワード" />
           </div>
@@ -178,11 +175,7 @@
           <label>金額</label>
           <div class="modal-field-row">
             <select v-model="amountMode" class="modal-select">
-              <option value="none">金額を条件としない</option>
-              <option value="min">以上</option>
-              <option value="max">以下</option>
-              <option value="exact">同額</option>
-              <option value="range">範囲</option>
+              <option v-for="o in AMOUNT_MODE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
             <input v-if="amountMode === 'min' || amountMode === 'exact'" v-model.number="modalRule.amountMin" class="modal-input modal-input--num" type="number" placeholder="金額" />
             <template v-if="amountMode === 'max'">
@@ -225,7 +218,7 @@
                   <td><input v-model="pair.debit.subAccount" class="modal-input" /></td>
                   <td>
                     <select v-model="pair.debit.amountType" class="modal-select">
-                      <option value="auto">自動計算</option><option value="total">取引金額</option><option value="fixed">固定金額</option>
+                      <option v-for="o in AMOUNT_TYPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
                     <input v-if="pair.debit.amountType === 'fixed'" v-model.number="pair.debit.fixedAmount" class="modal-input modal-input--num" type="number" />
                   </td>
@@ -233,7 +226,7 @@
                   <td><input v-model="pair.credit.subAccount" class="modal-input" /></td>
                   <td>
                     <select v-model="pair.credit.amountType" class="modal-select">
-                      <option value="auto">自動計算</option><option value="total">取引金額</option><option value="fixed">固定金額</option>
+                      <option v-for="o in AMOUNT_TYPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
                     <input v-if="pair.credit.amountType === 'fixed'" v-model.number="pair.credit.fixedAmount" class="modal-input modal-input--num" type="number" />
                   </td>
@@ -396,11 +389,35 @@ function extraPairs(rule: LearningRule) {
   return rows
 }
 
-// --- 表示ヘルパー ---
+/** 学習ルール固有の選択肢定数 */
+const SOURCE_CATEGORY_OPTIONS = [
+  { value: 'receipt', label: '領収書/請求書' },
+  { value: 'bank', label: '口座' },
+  { value: 'credit', label: 'カード' },
+] as const
+
+const MATCH_TYPE_OPTIONS = [
+  { value: 'exact', label: '等しい' },
+  { value: 'contains', label: '含む' },
+] as const
+
+const AMOUNT_MODE_OPTIONS = [
+  { value: 'none', label: '金額を条件としない' },
+  { value: 'min', label: '以上' },
+  { value: 'max', label: '以下' },
+  { value: 'exact', label: '同額' },
+  { value: 'range', label: '範囲' },
+] as const
+
+const AMOUNT_TYPE_OPTIONS = [
+  { value: 'auto', label: '自動計算' },
+  { value: 'total', label: '取引金額' },
+  { value: 'fixed', label: '固定金額' },
+] as const
+
 function sourceCategoryLabel(cat: string | null): string {
-  if (cat === 'receipt') return '領収書'
-  if (cat === 'bank') return '口座'
-  if (cat === 'credit') return 'カード'
+  const opt = SOURCE_CATEGORY_OPTIONS.find(o => o.value === cat)
+  if (opt) return opt.label
   if (cat === 'all') return '全て'
   return '—'
 }
