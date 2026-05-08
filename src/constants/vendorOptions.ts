@@ -29,6 +29,16 @@ export const SOURCE_CATEGORY_OPTIONS: readonly SelectOption[] = [
 ] as const;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 真偽値フィルタ（あり/なし）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 真偽値フィルタ用選択肢 */
+export const BOOLEAN_FILTER_OPTIONS: readonly SelectOption[] = [
+  { value: 'true', label: 'あり' },
+  { value: 'false', label: 'なし' },
+] as const;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 入出金（direction）
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

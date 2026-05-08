@@ -204,6 +204,7 @@ import { leadSections, leadFields } from '@/constants/leadFieldDefs';
 import DraggableFieldGrid from '@/components/DraggableFieldGrid.vue';
 import ConfirmModal from "@/components/ConfirmModal.vue";
 import NotifyModal from "@/components/NotifyModal.vue";
+import { UI_MSG } from '@/constants/uiMessages';
 
 const route = useRoute();
 const router = useRouter();
@@ -467,7 +468,7 @@ const selectMention = (staff: Staff) => {
 const saveLead = async () => {
   if (!form.companyName && !form.repName) {
     await modal.notify({
-      title: "会社名または代表者名のどちらかを入力してください",
+      title: UI_MSG.名前必須,
       variant: "warning",
     });
     return;
@@ -478,7 +479,7 @@ const saveLead = async () => {
     );
     if (dup) {
       await modal.notify({
-        title: "3コードが重複しています",
+        title: UI_MSG.コード重複,
         message: `「${dup.companyName}（${dup.leadId}）」で既に使用`,
         variant: "warning",
       });

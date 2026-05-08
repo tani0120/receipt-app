@@ -299,6 +299,7 @@ import CustomFieldModal from '@/components/CustomFieldModal.vue';
 import type { CustomFieldDef } from '@/components/CustomFieldModal.vue';
 import AddFieldModal from '@/components/AddFieldModal.vue';
 import { useCustomFields } from '@/composables/useCustomFields';
+import { UI_MSG } from '@/constants/uiMessages';
 
 const route = useRoute();
 const router = useRouter();
@@ -736,13 +737,13 @@ const saveClient = async () => {
     return;
   }
   if (!form.companyName && !form.repName) {
-    await modal.notify({ title: '会社名または代表者名のどちらかを入力してください', variant: 'warning' });
+    await modal.notify({ title: UI_MSG.名前必須, variant: 'warning' });
     return;
   }
   if (form.threeCode) {
     const dup = clients.value.find(c => c.threeCode === form.threeCode && c.clientId !== clientId.value);
     if (dup) {
-      await modal.notify({ title: '3コードが重複しています', message: `「${dup.companyName}（${dup.clientId}）」で既に使用`, variant: 'warning' });
+      await modal.notify({ title: UI_MSG.コード重複, message: `「${dup.companyName}（${dup.clientId}）」で既に使用`, variant: 'warning' });
       return;
     }
   }

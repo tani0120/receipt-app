@@ -512,6 +512,7 @@ import { useCustomFields } from '@/composables/useCustomFields';
 import { useCurrentUser } from '@/composables/useCurrentUser';
 import { clientSections, clientFields, LIST_ONLY_COLUMNS } from '@/constants/clientFieldDefs';
 import { UI_MSG } from '@/constants/uiMessages';
+import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
 import {
   parseViewFromQuery,
   parseFiltersFromQuery,
@@ -844,13 +845,9 @@ const clientFilterColumns = computed<FilterColumnDef[]>(() => [
   { key: 'taxMethod', label: getFieldLabel('taxMethod'), filterType: 'select', filterOptions: TAX_METHOD_OPTIONS },
   { key: 'calculationMethod', label: getFieldLabel('calculationMethod'), filterType: 'select', filterOptions: CALCULATION_METHOD_OPTIONS },
   { key: 'defaultPaymentMethod', label: getFieldLabel('defaultPaymentMethod'), filterType: 'select', filterOptions: DEFAULT_PAYMENT_OPTIONS },
-  { key: 'isInvoiceRegistered', label: getFieldLabel('isInvoiceRegistered'), filterType: 'select', filterOptions: [
-    { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
-  ] },
+  { key: 'isInvoiceRegistered', label: getFieldLabel('isInvoiceRegistered'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
   { key: 'invoiceRegistrationNumber', label: getFieldLabel('invoiceRegistrationNumber'), filterType: 'text' },
-  { key: 'hasDepartmentManagement', label: getFieldLabel('hasDepartmentManagement'), filterType: 'select', filterOptions: [
-    { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
-  ] },
+  { key: 'hasDepartmentManagement', label: getFieldLabel('hasDepartmentManagement'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
   { key: 'hasRentalIncome', label: getFieldLabel('hasRentalIncome'), filterType: 'select', filterOptions: [
     { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
   ] },
@@ -1067,7 +1064,7 @@ const commitInlineEdit = async (_row: Client) => {
       );
       if (duplicate) {
         await modal.notify({
-          title: '3コードが重複しています。変更してください',
+          title: UI_MSG.コード重複,
           message: `「${duplicate.companyName}（${duplicate.clientId}）」で既に使用されています。`,
           variant: 'warning',
         });
@@ -1142,7 +1139,7 @@ const closePanel = () => {
 
 const saveClient = async () => {
   if (!panelForm.companyName && !panelForm.repName) {
-    await modal.notify({ title: '会社名または代表者名のどちらかを入力してください', variant: 'warning' });
+    await modal.notify({ title: UI_MSG.名前必須, variant: 'warning' });
     return;
   }
   // --- 3コード重複チェック ---
@@ -1152,7 +1149,7 @@ const saveClient = async () => {
     );
     if (duplicate) {
       await modal.notify({
-        title: '3コードが重複しています。変更してください',
+        title: UI_MSG.コード重複,
         message: `「${duplicate.companyName}（${duplicate.clientId}）」で既に使用されています。`,
         variant: 'warning',
       });

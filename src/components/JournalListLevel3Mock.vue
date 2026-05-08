@@ -2729,6 +2729,7 @@ import {
 } from '@/constants/vendorOptions';
 import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import type { SelectOption } from '@/constants/clientOptions';
+import { UI_MSG } from '@/constants/uiMessages';
 
 /** 勘定科目選択肢—ACCOUNT_MASTERから動的生成 */
 const accountOptions = computed<SelectOption[]>(() =>
@@ -4593,7 +4594,7 @@ function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
       console.log(`[DD] 既読変更: ${journal.id} → is_read=${value} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
-        title: "完了",
+        title: UI_MSG.完了,
         message: `${value ? "既読" : "未読"}にしました。`,
         onConfirm: () => {},
       };
@@ -4622,7 +4623,7 @@ function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
       }
       confirmDialog.value = {
         show: true,
-        title: "完了",
+        title: UI_MSG.完了,
         message: `${exclude ? "出力対象外" : "出力対象"}にしました。`,
         onConfirm: () => {},
       };
@@ -4683,7 +4684,7 @@ function trashJournal(journal: JournalPhase5Mock) {
       console.log(`[DD] ゴミ箱: ${journal.id} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
-        title: "完了",
+        title: UI_MSG.完了,
         message: `「${journal.description}」をゴミ箱に移動しました。`,
         onConfirm: () => {},
       };
@@ -4747,7 +4748,7 @@ function bulkSetReadStatus(value: boolean) {
   if (targets.length === 0) {
     confirmDialog.value = {
       show: true,
-      title: "実行不可",
+      title: UI_MSG.実行不可,
       message:
         exportedCount > 0
           ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）\n実行可能な仕訳がありません。`
@@ -4781,7 +4782,7 @@ function bulkSetReadStatus(value: boolean) {
       clearSelection();
       confirmDialog.value = {
         show: true,
-        title: "完了",
+        title: UI_MSG.完了,
         message: `${count}件を${value ? "既読" : "未読"}にしました。`,
         onConfirm: () => {},
       };
@@ -4800,7 +4801,7 @@ function bulkSetExportExclude(exclude: boolean) {
   if (targets.length === 0) {
     confirmDialog.value = {
       show: true,
-      title: "実行不可",
+      title: UI_MSG.実行不可,
       message:
         exportedCount > 0
           ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）\n実行可能な仕訳がありません。`
@@ -4830,7 +4831,7 @@ function bulkSetExportExclude(exclude: boolean) {
         clearSelection();
         confirmDialog.value = {
           show: true,
-          title: "完了",
+          title: UI_MSG.完了,
           message: `${count}件を${exclude ? "出力対象外" : "出力対象"}にしました。`,
           onConfirm: () => {},
         };
@@ -4858,7 +4859,7 @@ function bulkSetExportExclude(exclude: boolean) {
       clearSelection();
       confirmDialog.value = {
         show: true,
-        title: "完了",
+        title: UI_MSG.完了,
         message: `${count}件を${exclude ? "出力対象外" : "出力対象"}にしました。`,
         onConfirm: () => {},
       };
@@ -4911,7 +4912,7 @@ function showBulkTrashDialog() {
   if (targets.length === 0) {
     confirmDialog.value = {
       show: true,
-      title: "実行不可",
+      title: UI_MSG.実行不可,
       message:
         exportedCount > 0
           ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）\n実行可能な仕訳がありません。`
@@ -4939,7 +4940,7 @@ function showBulkTrashDialog() {
       clearSelection();
       confirmDialog.value = {
         show: true,
-        title: "完了",
+        title: UI_MSG.完了,
         message: `${capturedTargets.length}件をゴミ箱に移動しました。`,
         onConfirm: () => {},
       };

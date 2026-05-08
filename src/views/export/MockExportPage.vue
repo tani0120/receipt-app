@@ -280,6 +280,7 @@ import {
 import { syncWarningLabelsCore } from "@/utils/journalWarningSync";
 import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { useCurrentUser } from "@/composables/useCurrentUser";
+import { UI_MSG } from '@/constants/uiMessages';
 
 const route = useRoute();
 const { currentStaffId } = useCurrentUser();
@@ -343,7 +344,7 @@ const showFileNameHelp = ref(false);
 // --- 変更ボタン ---
 const modal = useModalHelper();
 const showNotImplemented = () => modal.notify({ title: '未実装です', variant: 'warning' });
-const showRealtimeUpdateMsg = () => modal.notify({ title: '現在はリアルタイム更新です' });
+const showRealtimeUpdateMsg = () => modal.notify({ title: UI_MSG.リアルタイム更新中 });
 
 // --- セグメント ---
 const showTargetOnly = ref(true);

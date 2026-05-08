@@ -85,6 +85,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useModalHelper } from '@/composables/useModalHelper';
 import NotifyModal from '@/components/NotifyModal.vue';
+import { UI_MSG } from '@/constants/uiMessages';
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) ?? 'ABC-00001');
@@ -128,7 +129,7 @@ interface DetailRow {
 }
 
 const modal = useModalHelper();
-const showRealtimeUpdateMsg = () => modal.notify({ title: '現在はリアルタイム更新です' });
+const showRealtimeUpdateMsg = () => modal.notify({ title: UI_MSG.リアルタイム更新中 });
 
 // T-31-9: 全データはAPI（POST /api/export/detail）から取得
 const PAGE_SIZE = 25;

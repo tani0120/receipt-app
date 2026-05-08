@@ -100,6 +100,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { toMfCsvDate } from '@/utils/mf-csv-date';
 import { useModalHelper } from '@/composables/useModalHelper';
 import NotifyModal from '@/components/NotifyModal.vue';
+import { UI_MSG } from '@/constants/uiMessages';
 
 const route = useRoute();
 const router = useRouter();
@@ -220,5 +221,5 @@ const cancelDownload = () => {
 };
 
 // --- 更新ボタン ---
-const showRealtimeUpdateMsg = () => modal.notify({ title: '現在はリアルタイム更新です' });
+const showRealtimeUpdateMsg = () => modal.notify({ title: UI_MSG.リアルタイム更新中 });
 </script>

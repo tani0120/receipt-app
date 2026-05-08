@@ -446,6 +446,7 @@ import { useFieldLayout } from '@/composables/useFieldLayout';
 import { leadSections, leadFields } from '@/constants/leadFieldDefs';
 import { LIST_ONLY_COLUMNS } from '@/constants/clientFieldDefs';
 import { UI_MSG } from '@/constants/uiMessages';
+import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
@@ -592,16 +593,10 @@ const leadFilterColumns = computed<FilterColumnDef[]>(() => [
   { key: 'taxMethod', label: getFieldLabel('taxMethod'), filterType: 'select', filterOptions: TAX_METHOD_OPTIONS },
   { key: 'calculationMethod', label: getFieldLabel('calculationMethod'), filterType: 'select', filterOptions: CALCULATION_METHOD_OPTIONS },
   { key: 'defaultPaymentMethod', label: getFieldLabel('defaultPaymentMethod'), filterType: 'select', filterOptions: DEFAULT_PAYMENT_OPTIONS },
-  { key: 'isInvoiceRegistered', label: getFieldLabel('isInvoiceRegistered'), filterType: 'select', filterOptions: [
-    { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
-  ] },
+  { key: 'isInvoiceRegistered', label: getFieldLabel('isInvoiceRegistered'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
   { key: 'invoiceRegistrationNumber', label: getFieldLabel('invoiceRegistrationNumber'), filterType: 'text' },
-  { key: 'hasDepartmentManagement', label: getFieldLabel('hasDepartmentManagement'), filterType: 'select', filterOptions: [
-    { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
-  ] },
-  { key: 'hasRentalIncome', label: getFieldLabel('hasRentalIncome'), filterType: 'select', filterOptions: [
-    { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
-  ] },
+  { key: 'hasDepartmentManagement', label: getFieldLabel('hasDepartmentManagement'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
+  { key: 'hasRentalIncome', label: getFieldLabel('hasRentalIncome'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
   // 報酬設定
   { key: 'advisoryFee', label: getFieldLabel('advisoryFee'), filterType: 'number' },
   { key: 'bookkeepingFee', label: getFieldLabel('bookkeepingFee'), filterType: 'number' },
@@ -794,7 +789,7 @@ const commitInlineEdit = async (_row: Lead) => {
       );
       if (duplicate) {
         await modal.notify({
-          title: '3コードが重複しています。変更してください',
+          title: UI_MSG.コード重複,
           message: `「${duplicate.companyName}（${duplicate.leadId}）」で既に使用されています。`,
           variant: 'warning',
         });
@@ -869,7 +864,7 @@ const closePanel = () => {
 
 const saveLead = async () => {
   if (!panelForm.companyName && !panelForm.repName) {
-    await modal.notify({ title: '会社名または代表者名のどちらかを入力してください', variant: 'warning' });
+    await modal.notify({ title: UI_MSG.名前必須, variant: 'warning' });
     return;
   }
   // --- 3コード重複チェック ---
@@ -879,7 +874,7 @@ const saveLead = async () => {
     );
     if (duplicate) {
       await modal.notify({
-        title: '3コードが重複しています。変更してください',
+        title: UI_MSG.コード重複,
         message: `「${duplicate.companyName}（${duplicate.leadId}）」で既に使用されています。`,
         variant: 'warning',
       });
