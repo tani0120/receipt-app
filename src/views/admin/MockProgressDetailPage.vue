@@ -166,6 +166,7 @@ import type { ViewDefWithDefaults } from '@/utils/urlFilterSync';
 import {
   STATUS_OPTIONS, TYPE_OPTIONS, getLabel,
 } from '@/constants/clientOptions';
+import { PROGRESS_ALL_COLUMNS, PROGRESS_FILTER_COLUMN_DEFS } from '@/constants/progressFieldDefs';
 
 const pgDefaultWidths: Record<string, number> = {
   status: 60, code: 60, fiscalMonth: 60,
@@ -237,21 +238,8 @@ onMounted(() => { fetchAllJobs(); });
 // TableFilterToolbar用 — ビュー/フィルタ/ソート定義
 // ============================================================
 
-/** 進捗管理の全列定義 */
-const pgAllColumns = [
-  { key: 'status', label: 'ステータス' },
-  { key: 'threeCode', label: '3コード' },
-  { key: 'companyName', label: '顧問先' },
-  { key: 'staffName', label: '担当者' },
-  { key: 'fiscalMonth', label: '決算月' },
-  { key: 'shareStatus', label: '共有状態' },
-  { key: 'receivedDate', label: '受取日' },
-  { key: 'unsorted', label: '未選別' },
-  { key: 'unexported', label: '未出力' },
-  { key: 'jobStatus', label: '取込' },
-  { key: 'currentYearJournals', label: '当年' },
-  { key: 'lastYearJournals', label: '前年' },
-];
+/** 進捗管理の全列定義 — 共有定数を使用 */
+const pgAllColumns = [...PROGRESS_ALL_COLUMNS];
 const pgVisibleColumns = ref<string[]>(pgAllColumns.map(c => c.key));
 
 /** 進捗管理のビュー定義 */
@@ -280,25 +268,19 @@ const pgViews: ViewDefWithDefaults[] = [
 
 const pgActiveViewIndex = ref(0);
 
-/** フィルタ列定義（担当者はスタッフ一覧から動的生成） */
-const pgFilterColumns = computed<FilterColumnDef[]>(() => [
-  { key: 'clientStatus', label: 'ステータス', filterType: 'select', filterOptions: STATUS_OPTIONS },
-  { key: 'code', label: '3コード', filterType: 'text' },
-  { key: 'companyName', label: '顧問先', filterType: 'text' },
-  { key: 'repName', label: '代表者名', filterType: 'text' },
-  { key: 'type', label: '種別', filterType: 'select', filterOptions: TYPE_OPTIONS },
-  { key: 'staffId', label: '担当者', filterType: 'select', filterOptions:
-    allStaff.value.map(s => ({ value: s.uuid, label: s.name }))
-  },
-  { key: 'fiscalMonth', label: '決算月', filterType: 'select', filterOptions:
-    Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}月` }))
-  },
-  { key: 'receivedDate', label: '資料受取日', filterType: 'date' },
-  { key: 'unsorted', label: '未選別', filterType: 'number' },
-  { key: 'unexported', label: '未出力', filterType: 'number' },
-  { key: 'currentYearJournals', label: '今期累計', filterType: 'number' },
-  { key: 'lastYearJournals', label: '前期合計', filterType: 'number' },
-]);
+/** フィルタ列定義 — 共有定数のラベルを使用し、動的選択肢を注入 */
+const pgFilterColumns = computed<FilterColumnDef[]>(() =>
+  PROGRESS_FILTER_COLUMN_DEFS.map(def => {
+    const base: FilterColumnDef = { key: def.key, label: def.label, filterType: def.filterType };
+    if ('optionsKey' in def) {
+      if (def.optionsKey === 'STATUS_OPTIONS') base.filterOptions = STATUS_OPTIONS as unknown as FilterColumnDef['filterOptions'];
+      else if (def.optionsKey === 'TYPE_OPTIONS') base.filterOptions = TYPE_OPTIONS as unknown as FilterColumnDef['filterOptions'];
+      else if (def.optionsKey === 'dynamic_staff') base.filterOptions = allStaff.value.map(s => ({ value: s.uuid, label: s.name }));
+      else if (def.optionsKey === 'dynamic_month') base.filterOptions = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}月` }));
+    }
+    return base;
+  })
+);
 
 /** フィルタ条件state */
 const initialView = pgViews[0]!;

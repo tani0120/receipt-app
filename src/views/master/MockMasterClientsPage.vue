@@ -496,7 +496,7 @@ import {
   INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_MODE_OPTIONS,
   TAX_FILING_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
   CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
-  STATUS_OPTIONS, TYPE_OPTIONS, CONTACT_METHOD_OPTIONS,
+  STATUS_OPTIONS, TYPE_OPTIONS, CONTACT_METHOD_FILTER_OPTIONS,
   PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
   getLabel,
 } from '@/constants/clientOptions';
@@ -826,7 +826,7 @@ const clientFilterColumns = computed<FilterColumnDef[]>(() => [
   { key: 'phoneNumber', label: getFieldLabel('phoneNumber'), filterType: 'text' },
   { key: 'email', label: getFieldLabel('email'), filterType: 'text' },
   { key: 'chatRoomUrl', label: getFieldLabel('chatRoomUrl'), filterType: 'text' },
-  { key: 'contactType', label: getFieldLabel('contactType'), filterType: 'select', filterOptions: [...CONTACT_METHOD_OPTIONS, { value: 'none', label: 'なし' }] },
+  { key: 'contactType', label: getFieldLabel('contactType'), filterType: 'select', filterOptions: CONTACT_METHOD_FILTER_OPTIONS },
   { key: 'contactValue', label: getFieldLabel('contactValue'), filterType: 'text' },
   { key: 'sharedEmail', label: getFieldLabel('sharedEmail'), filterType: 'text' },
   { key: 'sharedChatUrl', label: getFieldLabel('sharedChatUrl'), filterType: 'text' },

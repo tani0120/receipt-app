@@ -194,6 +194,12 @@ export const CONTACT_METHOD_OPTIONS: readonly SelectOption[] = [
   { value: 'chatwork', label: 'チャットワーク' },
 ] as const
 
+/** 連絡先種別（フィルタ用 — 「なし」を含む） */
+export const CONTACT_METHOD_FILTER_OPTIONS: readonly SelectOption[] = [
+  ...CONTACT_METHOD_OPTIONS,
+  { value: 'none', label: 'なし' },
+] as const
+
 /** 過去担当者 区分 */
 export const STAFF_ROLE_OPTIONS: readonly SelectOption[] = [
   { value: 'main', label: '主担当' },

@@ -87,7 +87,8 @@ function detectIssues(filePath) {
     }
 
     // パターンC: filterType付きフィルタ列定義
-    if (/filterType/.test(trimmed) && /label:\s*['"]/.test(trimmed)) {
+    // ※ constants/ 配下の定数ファイルは除外（マスタ定義のため）
+    if (/filterType/.test(trimmed) && /label:\s*['"]/.test(trimmed) && !isConstantsFile) {
       issues.push({ lineNum, type: 'FILTER_LABEL', line: trimmed.substring(0, 130) });
     }
 
