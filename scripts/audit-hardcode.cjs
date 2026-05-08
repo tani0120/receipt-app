@@ -68,6 +68,12 @@ function detectIssues(filePath) {
     'source_type_keywords.ts',    // パイプラインキーワード辞書
     'schema_dictionary',          // スキーマ辞書
     'ClientMapper.ts',            // データマッピング定義
+    '/api/ai/',                   // AIプロンプト・OCRサンプルJSON
+    'apiMessages.ts',             // HTTPステータスメッセージ（既に定数集約済み）
+    'journalColumns.ts',          // 仕訳列マスタ定義
+    'list-view/types.ts',         // フィルタ型のデフォルトラベル定義
+    'exportMfCsv.ts',             // MFクラウド仕様CSVヘッダ（外部仕様準拠）
+    'mfCsvParser.ts',             // MFクラウドCSVパーサー（外部仕様準拠）
   ];
   const isJpLiteralExcluded = isMasterDataFile
     || JP_LITERAL_WHITELIST.some(p => normalizedPath.includes(p));
