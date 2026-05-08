@@ -61,7 +61,7 @@
             <template #sharedEmail="{ field }"><div class="ce-field"><label>{{ field.label }} <span class="ce-hint">※自動取得</span></label><input type="email" v-model="sharedEmail" class="ce-input" placeholder="shared@example.com" /></div></template>
             <template #sharedChatUrl="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="url" v-model="sharedChatUrl" class="ce-input" placeholder="https://www.chatwork.com/#!rid..." /></div></template>
             <template #fiscalDate="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-date-group"><select v-model="form.fiscalMonth" class="ce-select ce-w-sm"><option v-for="m in 12" :key="m" :value="m">{{ m }}月</option></select><span>/</span><select v-model="form.fiscalDay" class="ce-select ce-w-sm"><option value="末日">末日</option><option v-for="d in 31" :key="d" :value="d">{{ d }}日</option></select></div></div></template>
-            <template #industry="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.industry" class="ce-select"><option v-for="opt in industryOptions" :key="opt" :value="opt">{{ opt || "未設定" }}</option></select></div></template>
+            <template #industry="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.industry" class="ce-select"><option v-for="opt in industryOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option></select></div></template>
             <template #establishedDate="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.establishedDate" class="ce-input ce-w-sm" placeholder="YYYYMMDD" maxlength="8" /></div></template>
           </DraggableFieldGrid>
         </section>

@@ -42,12 +42,31 @@ export const STATUS_OPTIONS: readonly SelectOption[] = [
 ] as const
 
 /** 業種リスト */
-export const INDUSTRY_OPTIONS: readonly string[] = [
-  '', '飲食業', '建設業', '製造業・メーカー', '卸売業・小売業', '商社',
-  '不動産業', '銀行・金融', '保険業', '医療・福祉関係業', 'コンサルティング',
-  '専門事務所', '運輸・運送業', '旅行／宿泊／レジャー', 'IT・ソフトウェア関連',
-  'スポーツ・ヘルス関連', '理容・美容・サロン', '冠婚葬祭', '警備関連',
-  '清掃業', '教育業', '他サービス業', '官公庁・自治体', 'その他',
+export const INDUSTRY_OPTIONS: readonly SelectOption[] = [
+  { value: '', label: '—' },
+  { value: '飲食業', label: '飲食業' },
+  { value: '建設業', label: '建設業' },
+  { value: '製造業・メーカー', label: '製造業・メーカー' },
+  { value: '卸売業・小売業', label: '卸売業・小売業' },
+  { value: '商社', label: '商社' },
+  { value: '不動産業', label: '不動産業' },
+  { value: '銀行・金融', label: '銀行・金融' },
+  { value: '保険業', label: '保険業' },
+  { value: '医療・福祉関係業', label: '医療・福祉関係業' },
+  { value: 'コンサルティング', label: 'コンサルティング' },
+  { value: '専門事務所', label: '専門事務所' },
+  { value: '運輸・運送業', label: '運輸・運送業' },
+  { value: '旅行／宿泊／レジャー', label: '旅行／宿泊／レジャー' },
+  { value: 'IT・ソフトウェア関連', label: 'IT・ソフトウェア関連' },
+  { value: 'スポーツ・ヘルス関連', label: 'スポーツ・ヘルス関連' },
+  { value: '理容・美容・サロン', label: '理容・美容・サロン' },
+  { value: '冠婚葬祭', label: '冠婚葬祭' },
+  { value: '警備関連', label: '警備関連' },
+  { value: '清掃業', label: '清掃業' },
+  { value: '教育業', label: '教育業' },
+  { value: '他サービス業', label: '他サービス業' },
+  { value: '官公庁・自治体', label: '官公庁・自治体' },
+  { value: 'その他', label: 'その他' },
 ] as const
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -191,3 +210,20 @@ export const PLACEHOLDER_UNSET = '未設定'
 
 /** 決算日 — 末日ラベル */
 export const FISCAL_DAY_END_LABEL = '末日'
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// スタッフ管理
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** スタッフステータス */
+export const STAFF_STATUS_OPTIONS: readonly SelectOption[] = [
+  { value: 'active', label: '有効' },
+  { value: 'inactive', label: '停止中' },
+] as const
+
+/** スタッフ権限 */
+export const STAFF_PERMISSION_OPTIONS: readonly SelectOption[] = [
+  { value: 'admin', label: '管理者' },
+  { value: 'member', label: '一般' },
+] as const
+

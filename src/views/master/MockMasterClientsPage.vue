@@ -304,7 +304,7 @@
                   <i class="fa-solid fa-chevron-down cm-select-arrow" :class="{ rotated: showIndustryDropdown }"></i>
                 </div>
                 <div v-if="showIndustryDropdown" class="cm-dropdown" @click.stop>
-                  <div v-for="opt in industryOptions" :key="opt" class="cm-dropdown-item" :class="{ selected: panelForm.industry === opt }" @click="panelForm.industry = opt; showIndustryDropdown = false">{{ opt || '未設定' }}</div>
+                  <div v-for="opt in industryOptions" :key="opt.value" class="cm-dropdown-item" :class="{ selected: panelForm.industry === opt.value }" @click="panelForm.industry = opt.value; showIndustryDropdown = false">{{ opt.label }}</div>
                 </div>
               </div>
               <div class="cm-field">
@@ -840,7 +840,7 @@ const clientFilterColumns = computed<FilterColumnDef[]>(() => [
   { key: 'fiscalMonth', label: getFieldLabel('fiscalDate'), filterType: 'select', filterOptions:
     Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}月` }))
   },
-  { key: 'industry', label: getFieldLabel('industry'), filterType: 'select', filterOptions: INDUSTRY_OPTIONS.filter(v => v !== '').map(v => ({ value: v, label: v })) },
+  { key: 'industry', label: getFieldLabel('industry'), filterType: 'select', filterOptions: INDUSTRY_OPTIONS.filter(o => o.value !== '') },
   { key: 'establishedDate', label: getFieldLabel('establishedDate'), filterType: 'text' },
   // 会計設定
   { key: 'accountingSoftware', label: getFieldLabel('accountingSoftware'), filterType: 'select', filterOptions: ACCOUNTING_SOFTWARE_OPTIONS },

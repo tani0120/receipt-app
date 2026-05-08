@@ -84,7 +84,7 @@
                   </template>
                   <!-- textarea -->
                   <template v-else-if="field.component === 'textarea'">
-                    <textarea v-if="isEditing" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLTextAreaElement).value)" class="ce-input ce-textarea" rows="3" :placeholder="field.placeholder"></textarea>
+                    <textarea v-if="isEditing" :value="getFieldValue(field) as string" @input="setFieldValue(field, ($event.target as HTMLTextAreaElement).value)" class="ce-input ce-textarea" rows="3" :placeholder="field.placeholder"></textarea>
                     <span v-else class="ce-readonly ce-pre-wrap">{{ getFieldDisplayValue(field) }}</span>
                   </template>
                   <!-- checkbox -->
@@ -212,7 +212,7 @@ const props = defineProps<{
   /** 編集モードか（自動レンダリング用、任意） */
   isEditing?: boolean;
   /** 選択肢文字列→配列を解決する関数（自動レンダリング用、任意） */
-  resolveOptions?: (optionsKey: string) => FieldOption[];
+  resolveOptions?: (optionsKey: string) => readonly FieldOption[];
   /** スタッフリスト（staffSelect用、任意） */
   staffList?: { uuid: string; name: string }[];
 }>();
@@ -252,7 +252,7 @@ const getFieldDisplayValue = (field: FieldDef): string => {
 };
 
 /** 選択肢を解決 */
-const getResolvedOptions = (field: FieldDef): FieldOption[] => {
+const getResolvedOptions = (field: FieldDef): readonly FieldOption[] => {
   if (!field.options) return [];
   if (Array.isArray(field.options)) return field.options;
   // 文字列参照 → resolveOptions関数で解決

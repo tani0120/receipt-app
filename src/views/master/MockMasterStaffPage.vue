@@ -12,8 +12,7 @@
           <div class="cm-toolbar-left">
             <select v-model="statusFilter" class="cm-filter-select">
               <option value="all">全て</option>
-              <option value="active">有効</option>
-              <option value="inactive">停止中</option>
+              <option v-for="o in STAFF_STATUS_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
             <span class="cm-page-info">全{{ filteredRows.length }}件</span>
           </div>
@@ -72,22 +71,20 @@
                 <!-- ステータス: select -->
                 <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'status', $event)">
                   <select v-if="inlineEditId === row.uuid && inlineEditField === 'status'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <option value="active">有効</option>
-                    <option value="inactive">停止中</option>
+                    <option v-for="o in STAFF_STATUS_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                   </select>
                   <span v-else class="cm-status-badge" :class="'status-' + row.status">
-                    {{ row.status === 'active' ? '有効' : '停止中' }}
+                    {{ getLabel(STAFF_STATUS_OPTIONS, row.status) }}
                   </span>
                 </td>
                 <td class="cm-uuid">{{ row.uuid }}</td>
                 <!-- 権限: select -->
                 <td class="td-editable" @dblclick.stop="startInlineEdit(row, 'role', $event)">
                   <select v-if="inlineEditId === row.uuid && inlineEditField === 'role'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <option value="admin">管理者</option>
-                    <option value="member">一般</option>
+                    <option v-for="o in STAFF_PERMISSION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                   </select>
                   <span v-else class="cm-role-badge" :class="'role-' + row.role">
-                    {{ row.role === 'admin' ? '管理者' : '一般' }}
+                    {{ getLabel(STAFF_PERMISSION_OPTIONS, row.role) }}
                   </span>
                 </td>
                 <td class="cm-staff-name td-editable" @dblclick.stop="startInlineEdit(row, 'name', $event)">
@@ -238,6 +235,7 @@ import type { Staff, StaffForm } from '@/features/staff-management/composables/u
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
+import { STAFF_STATUS_OPTIONS, STAFF_PERMISSION_OPTIONS, getLabel } from '@/constants/clientOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 
