@@ -108,7 +108,7 @@
                   <template v-else-if="field.component === 'staffSelect'">
                     <template v-if="isEditing">
                       <select :value="getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLSelectElement).value)" class="ce-select">
-                        <option value="">未設定</option>
+                        <option value="">{{ PLACEHOLDER_UNSET }}</option>
                         <option v-for="s in (staffList ?? [])" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
                       </select>
                     </template>
@@ -199,6 +199,7 @@
 import { ref, watch, computed, onBeforeUnmount } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import type { FieldDef, FieldOption } from '@/types/fieldLayout';
+import { PLACEHOLDER_UNSET } from '@/constants/clientOptions';
 
 const props = defineProps<{
   /** 表示するフィールド一覧（order順） */

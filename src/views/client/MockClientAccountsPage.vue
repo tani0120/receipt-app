@@ -156,11 +156,10 @@
                   <template v-if="editingRow === row.id && editingField === 'aiDetermination'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
                       <template v-if="getAllowedTaxDeterminations(row).length > 1">
-                        <option value="true">○</option>
-                        <option value="false"></option>
+                        <option v-for="o in QUALIFIED_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                       </template>
                       <template v-else>
-                        <option value="false"></option>
+                        <option v-for="o in QUALIFIED_OPTIONS.filter(o => o.value === 'false')" :key="o.value" :value="o.value">{{ o.label }}</option>
                       </template>
                     </select>
                   </template>
@@ -262,6 +261,7 @@ import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
+import { QUALIFIED_OPTIONS } from '@/constants/vendorOptions';
 import {
   CATEGORY_GROUPS,
   getCategoryDirection,

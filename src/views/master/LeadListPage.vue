@@ -300,7 +300,7 @@
               <div v-if="panelForm.consumptionTaxMode === 'simplified'" class="cm-field">
                 <label class="cm-label">事業区分</label>
                 <select v-model="panelForm.simplifiedTaxCategory" class="cm-select">
-                  <option :value="undefined">未設定</option>
+                  <option :value="undefined">{{ PLACEHOLDER_UNSET }}</option>
                   <option v-for="o in SIMPLIFIED_CATEGORY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                 </select>
               </div>
