@@ -19,7 +19,7 @@
               v-model="searchQuery"
               type="text"
               class="vm-search-input"
-              placeholder="会社名・照合キー・別名で検索..."
+              :placeholder="UI_MSG.会社名検索"
             />
           </div>
           <div class="vm-filter-group">
@@ -197,6 +197,7 @@ import { VENDOR_VECTOR_LABELS, VENDOR_VECTORS } from '@/types/pipeline/vendor.ty
 import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import { normalizeVendorName } from '@/utils/pipeline/vendorIdentification';
 import { DIRECTION_OPTIONS, FILTER_ALL_LABEL, PLACEHOLDER_DASH } from '@/constants/vendorOptions';
+import { UI_MSG } from '@/constants/uiMessages';
 
 // ============================================================
 // データ（API経由で取得。編集はローカルrefに対して行う）

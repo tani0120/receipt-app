@@ -3222,7 +3222,7 @@ function runAccountValidation(journal: JournalPhase5Mock): void {
         // モーダルを閉じるのみ。CATEGORY_CONFLICTラベルは
         // syncWarningLabelsが科目修正時に自動除去する
       },
-      confirmLabel: "確認済み",
+      confirmLabel: UI_MSG.確認済み,
       showCancel: false,
     };
     return; // 基本バリデーション警告があれば高度バリデーションはスキップ
@@ -3243,7 +3243,7 @@ function runAccountValidation(journal: JournalPhase5Mock): void {
         // モーダルを閉じるのみ。VOUCHER_TYPE_CONFLICTラベルは
         // syncWarningLabelsが科目修正時に自動除去する
       },
-      confirmLabel: "確認済み",
+      confirmLabel: UI_MSG.確認済み,
       showCancel: false,
     };
   }

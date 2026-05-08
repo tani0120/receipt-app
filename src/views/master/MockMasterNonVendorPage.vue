@@ -19,7 +19,7 @@
               v-model="searchQuery"
               type="text"
               class="vm-search-input"
-              placeholder="会社名・照合キー・別名で検索..."
+              :placeholder="UI_MSG.会社名検索"
             />
           </div>
           <div class="vm-filter-group">
@@ -267,6 +267,7 @@ import {
   DIRECTION_OPTIONS, LEVEL_OPTIONS,
   FILTER_ALL_LABEL, PLACEHOLDER_DASH,
 } from '@/constants/vendorOptions';
+import { UI_MSG } from '@/constants/uiMessages';
 
 // ============================================================
 // データ（API経由で取得）

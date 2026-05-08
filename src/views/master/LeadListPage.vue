@@ -939,7 +939,7 @@ const confirmSuspend = async () => {
     title: `「${panelForm.companyName}」を休眠にしますか？`,
     message: '休眠中も見込先データは保持されます。再開も可能です。',
     variant: 'danger',
-    confirmLabel: '休眠にする',
+    confirmLabel: UI_MSG.休眠にする,
     cancelLabel: UI_MSG.キャンセル,
   });
   if (ok) {
@@ -953,7 +953,7 @@ const confirmTerminate = async () => {
     title: `「${panelForm.companyName}」の契約を終了しますか？`,
     message: '見込先データは保持されますが、契約終了として記録されます。',
     variant: 'danger',
-    confirmLabel: '契約終了',
+    confirmLabel: UI_MSG.契約終了,
     cancelLabel: UI_MSG.キャンセル,
   });
   if (ok) {

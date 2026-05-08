@@ -426,7 +426,7 @@ async function copyChecked() {
   markDirty('勘定科目をコピー');
 }
 async function addAfterChecked() {
-  const ok = await modal.confirm({ title: '新規科目を追加しますか？' });
+  const ok = await modal.confirm({ title: UI_MSG.科目追加確認 });
   if (!ok) return;
   // 最後にチェックした行の直下に新規行を挿入
   const ids = [...checkedIds.value];
@@ -489,7 +489,7 @@ type AccountEditField = 'name' | 'category' | 'taxDetermination' | 'defaultTaxCa
 
 function startEdit(row: Account, field: AccountEditField) {
   if (!row.isCustom) {
-    modal.notify({ title: 'デフォルト科目は編集できません', message: 'コピーしてから編集してください。', variant: 'warning' });
+    modal.notify({ title: UI_MSG.デフォルト科目編集不可, message: UI_MSG.コピーしてから編集, variant: 'warning' });
     return;
   }
   editingRow.value = row.id;
@@ -506,7 +506,7 @@ function startEdit(row: Account, field: AccountEditField) {
 function commitEdit(row: Account) {
   switch (editingField.value) {
     case 'name':
-      if (!editValue.value.trim()) { modal.notify({ title: '科目名は空にできません。', variant: 'warning' }); return; }
+      if (!editValue.value.trim()) { modal.notify({ title: UI_MSG.科目名空, variant: 'warning' }); return; }
       row.name = editValue.value;
       break;
     case 'category':

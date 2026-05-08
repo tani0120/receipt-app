@@ -338,7 +338,7 @@ async function deleteChecked() {
     const row = allTaxRows.find(r => r.id === id);
     return row?.isCustom;
   });
-  if (!customIds.length) { await modal.notify({ title: 'カスタム税区分のみ削除できます。', variant: 'warning' }); return; }
+  if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム税区分のみ, variant: 'warning' }); return; }
   const ok = await modal.confirm({ title: `${customIds.length}件のカスタム税区分を削除しますか？`, message: '復元できません。', variant: 'danger' });
   if (!ok) return;
   customIds.forEach(id => {
@@ -423,7 +423,7 @@ function isEditing(rowId: string, field: string): boolean {
 
 function startEdit(row: TaxCategory, field: EditableField) {
   if (!row.isCustom) {
-    modal.notify({ title: UI_MSG.デフォルト税区分編集不可, message: 'コピーしてから編集してください。', variant: 'warning' });
+    modal.notify({ title: UI_MSG.デフォルト税区分編集不可, message: UI_MSG.コピーしてから編集, variant: 'warning' });
     return;
   }
   editingRowId.value = row.id;
@@ -486,7 +486,7 @@ function getRate(row: TaxCategory): string {
 
 // =============== 保存 ===============
 async function saveChanges() {
-  if (!clientId.value) { modal.notify({ title: '顧問先IDが不明です', variant: 'warning' }); return; }
+  if (!clientId.value) { modal.notify({ title: UI_MSG.顧問先ID不明, variant: 'warning' }); return; }
 
   try {
     // API経由でサーバー側に保存

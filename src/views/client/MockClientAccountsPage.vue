@@ -483,7 +483,7 @@ async function copyChecked() {
   markDirty('勘定科目をコピー');
 }
 async function addAfterChecked() {
-  const ok = await modal.confirm({ title: '新規科目を追加しますか？' });
+  const ok = await modal.confirm({ title: UI_MSG.科目追加確認 });
   if (!ok) return;
   // 最後にチェックした行の直下に新規行を挿入
   const ids = [...checkedIds.value];
@@ -510,7 +510,7 @@ async function addAfterChecked() {
   markDirty('勘定科目を追加');
 }
 async function saveChanges() {
-  if (!clientId.value) { modal.notify({ title: '顧問先IDが不明です', variant: 'warning' }); return; }
+  if (!clientId.value) { modal.notify({ title: UI_MSG.顧問先ID不明, variant: 'warning' }); return; }
   // subAccount情報を全行から収集
   const subAccounts: Record<string, string> = {};
   accountRows.forEach(r => {
@@ -550,7 +550,7 @@ type AccountEditField = 'name' | 'category' | 'taxDetermination' | 'defaultTaxCa
 
 function startEdit(row: Account, field: AccountEditField) {
   if (field !== 'subAccount' && !row.isCustom) {
-    modal.notify({ title: 'デフォルト科目は編集できません', message: 'コピーしてから編集してください。', variant: 'warning' });
+    modal.notify({ title: UI_MSG.デフォルト科目編集不可, message: UI_MSG.コピーしてから編集, variant: 'warning' });
     return;
   }
   editingRow.value = row.id;
@@ -569,7 +569,7 @@ const mfWarningMessage = ref('');
 function commitEdit(row: Account) {
   switch (editingField.value) {
     case 'name':
-      if (!editValue.value.trim()) { modal.notify({ title: '科目名は空にできません。', variant: 'warning' }); return; }
+      if (!editValue.value.trim()) { modal.notify({ title: UI_MSG.科目名空, variant: 'warning' }); return; }
       row.name = editValue.value;
       if (row.isCustom && editValue.value !== editOriginalName.value) {
         mfWarningMessage.value = `⚠️ 「${editValue.value}」: この科目名を変更すると、MFインポート時に新しい勘定科目の登録または既存科目への変換を求められる可能性があります。`;
