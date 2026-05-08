@@ -444,6 +444,7 @@ import {
 } from '@/constants/clientOptions';
 import { useFieldLayout } from '@/composables/useFieldLayout';
 import { leadSections, leadFields } from '@/constants/leadFieldDefs';
+import { LIST_ONLY_COLUMNS } from '@/constants/clientFieldDefs';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
@@ -496,15 +497,8 @@ const getFieldLabel = (key: string): string => {
   return f?.label ?? key;
 };
 
-// 一覧専用列（fieldDefsに存在しない派生列）
-const listOnlyColumns = [
-  { key: 'companyName', label: '会社名/代表者名' },
-  { key: 'taxMode', label: '課税方式' },
-  { key: 'staffName', label: '担当者' },
-  { key: 'fiscalMonth', label: '決算日' },
-  { key: 'driveUrl', label: 'Drive取込' },
-  { key: 'contact', label: '主な連絡手段' },
-];
+// 一覧専用列 — clientFieldDefsの共有定数を使用
+const listOnlyColumns = LIST_ONLY_COLUMNS;
 
 // 表示列管理 — fieldLayout.fieldsから動的生成
 const allColumns = computed(() => {

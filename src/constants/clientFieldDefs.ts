@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 顧問先編集画面のフィールド定義
  * テンプレートのHTML直書きから抽出したデータ駆動型定義
  */
@@ -130,3 +130,16 @@ export const clientFields: FieldDef[] = [
   { key: 'paymentDay', label: '引き落とし日', section: '報酬情報', subSection: '契約引落', component: 'select', widthPercent: 20, order: 3, options: 'PAYMENT_DAY_OPTIONS' },
   { key: 'feeNotes', label: '報酬備考', section: '報酬情報', subSection: '契約引落', component: 'textarea', widthPercent: 60, order: 4, placeholder: '報酬に関するメモ' },
 ];
+
+/**
+ * 一覧画面専用の派生列（fieldDefsに存在しない、一覧表示のみで使用する列）
+ * LeadListPage / MockMasterClientsPage で共用
+ */
+export const LIST_ONLY_COLUMNS = [
+  { key: 'companyName', label: '会社名/代表者名' },
+  { key: 'taxMode', label: '課税方式' },
+  { key: 'staffName', label: '担当者' },
+  { key: 'fiscalMonth', label: '決算日' },
+  { key: 'driveUrl', label: 'Drive取込' },
+  { key: 'contact', label: '主な連絡手段' },
+] as const;

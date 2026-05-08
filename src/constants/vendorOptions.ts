@@ -116,6 +116,33 @@ export const SORT_ORDER_OPTIONS: readonly SelectOption[] = [
 ] as const;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 証票ドキュメント種別（voucher document type）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 証票ドキュメント種別フィルタ */
+export const VOUCHER_DOC_FILTER_OPTIONS = [
+  { key: "", label: "全て" },
+  { key: "RECEIPT", label: "領収書" },
+  { key: "INVOICE", label: "請求書" },
+  { key: "BANK_STATEMENT", label: "通帳" },
+  { key: "CREDIT_CARD", label: "クレカ" },
+  { key: "TRANSPORT", label: "交通費" },
+  { key: "MEDICAL", label: "医療費" },
+] as const;
+
+/** 証票意味分類（仕訳の用途分類） */
+export const VOUCHER_TYPES = [
+  "売上",
+  "経費",
+  "給与",
+  "立替経費",
+  "振替",
+  "クレカ",
+  "クレカ引落",
+  "その他",
+] as const;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 共通プレースホルダ
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

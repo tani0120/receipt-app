@@ -510,7 +510,7 @@ import type { FilterColumnDef, FilterCondition, FilterResult, SortSetting } from
 import { useFieldLayout } from '@/composables/useFieldLayout';
 import { useCustomFields } from '@/composables/useCustomFields';
 import { useCurrentUser } from '@/composables/useCurrentUser';
-import { clientSections, clientFields } from '@/constants/clientFieldDefs';
+import { clientSections, clientFields, LIST_ONLY_COLUMNS } from '@/constants/clientFieldDefs';
 import {
   parseViewFromQuery,
   parseFiltersFromQuery,
@@ -700,15 +700,8 @@ const route = useRoute();
 const router = useRouter();
 
 // 表示列管理 — fieldLayout.fieldsからラベル上書き反映済みの列定義を動的生成
-// 一覧専用列（clientFieldDefsに存在しない派生列）
-const listOnlyColumns = [
-  { key: 'companyName', label: '会社名/代表者名' },
-  { key: 'taxMode', label: '課税方式' },
-  { key: 'staffName', label: '担当者' },
-  { key: 'fiscalMonth', label: '決算日' },
-  { key: 'driveUrl', label: 'Drive取込' },
-  { key: 'contact', label: '主な連絡手段' },
-];
+// 一覧専用列 — clientFieldDefsの共有定数を使用
+const listOnlyColumns = LIST_ONLY_COLUMNS;
 // fieldLayout.fieldsからラベルを取得（ラベル上書き適用済み）
 const getFieldLabel = (key: string): string => {
   const f = fieldLayout.fields.value.find(ff => ff.key === key);

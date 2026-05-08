@@ -2725,6 +2725,7 @@ import { validateByVoucherType, getVoucherTypeConflictAccounts } from "@/utils/j
 import {
   CHECK_STATUS_OPTIONS, PAGE_SIZE_OPTIONS, AMOUNT_CONDITION_OPTIONS,
   PLACEHOLDER_EMPTY, PLACEHOLDER_SELECT,
+  VOUCHER_DOC_FILTER_OPTIONS, VOUCHER_TYPES,
 } from '@/constants/vendorOptions';
 import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import type { SelectOption } from '@/constants/clientOptions';
@@ -2836,17 +2837,8 @@ const MEGA_GROUPS: { label: string; categories: readonly string[] }[] = [
   { label: "🏦 資産・負債", categories: BS_CATEGORIES },
 ];
 
-/** 証票意味選択肢 */
-const VOUCHER_TYPES = [
-  "売上",
-  "経費",
-  "給与",
-  "立替経費",
-  "振替",
-  "クレカ",
-  "クレカ引落",
-  "その他",
-];
+/** 証票意味選択肢 — vendorOptionsの共有定数を使用 */
+// VOUCHER_TYPES は vendorOptions.ts からimport済み
 
 /**
  * 顧問先の課税方式に基づいて、デフォルト税区分名を変換する。
@@ -4252,17 +4244,9 @@ const showTrashed = ref<boolean>(false); // ゴミ箱を表示（初期: OFF）
 const showPastCsv = ref<boolean>(false); // 過去仕訳CSVを表示（初期: OFF）
 const globalSearchQuery = ref<string>(""); // 全列横断検索クエリ
 
-// 証票種別フィルタ（空文字 = 全て）
+// 証票種別フィルタ（空文字 = 全て） — vendorOptionsの共有定数を使用
 const voucherFilter = ref<string>("");
-const voucherFilterOptions = [
-  { key: "", label: "全て" },
-  { key: "RECEIPT", label: "領収書" },
-  { key: "INVOICE", label: "請求書" },
-  { key: "BANK_STATEMENT", label: "通帳" },
-  { key: "CREDIT_CARD", label: "クレカ" },
-  { key: "TRANSPORT", label: "交通費" },
-  { key: "MEDICAL", label: "医療費" },
-] as const;
+const voucherFilterOptions = VOUCHER_DOC_FILTER_OPTIONS;
 
 // ────── 選択状態管理（一括操作バー用） ──────
 const selectedIds = ref<Set<string>>(new Set());

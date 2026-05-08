@@ -54,6 +54,8 @@ function detectIssues(filePath) {
 
   const lines = content.split(/\r?\n/);
   const issues = [];
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  const isConstantsFile = normalizedPath.includes('/constants/');
 
   lines.forEach((line, idx) => {
     const lineNum = idx + 1;
@@ -79,7 +81,8 @@ function detectIssues(filePath) {
     }
 
     // パターンB: { key: '...', label: '...' } のカラム定義
-    if (/\{\s*key:\s*['"][^'"]+['"],\s*label:\s*['"][^'"]+['"]\s*\}/.test(trimmed)) {
+    // ※ constants/ 配下の定数ファイルは除外（マスタ定義のため）
+    if (/\{\s*key:\s*['"][^'"]+['"],\s*label:\s*['"][^'"]+['"]\s*\}/.test(trimmed) && !isConstantsFile) {
       issues.push({ lineNum, type: 'COLUMN_DEF', line: trimmed.substring(0, 130) });
     }
 
