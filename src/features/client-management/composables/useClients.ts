@@ -36,6 +36,26 @@ export const emptyClientForm = (): ClientForm => ({
   hasDepartmentManagement: false, hasRentalIncome: false,
   staffId: null, sharedFolderId: '', sharedEmail: '', sharedChatUrl: '',
   advisoryFee: 0, bookkeepingFee: 0, settlementFee: 0, taxFilingFee: 0,
+  // ── Kintone拡張フィールド（31_client_management） ──
+  engagementStartDate: '', engagementEndDate: null,
+  subStaffId: null, payrollStaffId: null,
+  corporateNumber: '', repTitle: '',
+  websiteUrl: '', annualRevenue: '', employeeCount: null,
+  businessDescription: '', parentCompany: '', memo: '',
+  pastStaffHistory: [], contacts: [],
+  // ニーズ管理
+  needsInsurance: '', needsTaxSaving: '', needsSubsidy: '', needsLoan: '', needsRealEstate: '',
+  // 税務関連
+  consumptionTaxInterim: 'none',
+  // システム導入状況
+  accountingSoftwareMemo: '', payrollSoftware: '', payrollSoftwareMemo: '',
+  attendanceSystem: '', attendanceSystemMemo: '', otherSystem: '', otherSystemMemo: '',
+  // 報酬情報拡張
+  contractScope: '', bookkeepingType: '',
+  hasSocialInsuranceContract: 'no', hasPayrollService: 'no', hasAccountingService: 'no',
+  socialInsuranceFee: 0, payrollFee: 0, accountingServiceFee: 0, systemFee: 0,
+  contractDocUrl: '', paymentMethod: '', paymentDay: '', feeNotes: '',
+  attachmentFiles: [],
 });
 
 // ============================================================

@@ -302,61 +302,44 @@
               <div class="cm-field">
                 <label class="cm-label">会計ソフト</label>
                 <select v-model="panelForm.accountingSoftware" class="cm-select">
-                  <option value="mf">マネーフォワード</option>
-                  <option value="freee">freee</option>
-                  <option value="yayoi">弥生</option>
-                  <option value="tkc">TKC</option>
-                  <option value="other">その他</option>
+                  <option v-for="o in ACCOUNTING_SOFTWARE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                 </select>
               </div>
               <div class="cm-field">
                 <label class="cm-label">確定申告</label>
-                <div class="cm-radio-group">
-                  <label class="cm-radio"><input type="radio" v-model="panelForm.taxFilingType" value="blue"><span>青色</span></label>
-                  <label class="cm-radio"><input type="radio" v-model="panelForm.taxFilingType" value="white"><span>白色</span></label>
-                </div>
+                <select v-model="panelForm.taxFilingType" class="cm-select">
+                  <option v-for="o in TAX_FILING_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </select>
               </div>
               <div class="cm-field">
                 <label class="cm-label">課税方式</label>
-                <div class="cm-radio-group">
-                  <label class="cm-radio"><input type="radio" v-model="panelForm.consumptionTaxMode" value="general"><span>原則課税</span></label>
-                  <label class="cm-radio"><input type="radio" v-model="panelForm.consumptionTaxMode" value="simplified"><span>簡易課税</span></label>
-                  <label class="cm-radio"><input type="radio" v-model="panelForm.consumptionTaxMode" value="exempt"><span>免税</span></label>
-                </div>
+                <select v-model="panelForm.consumptionTaxMode" class="cm-select">
+                  <option v-for="o in TAX_MODE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </select>
               </div>
               <div v-if="panelForm.consumptionTaxMode === 'simplified'" class="cm-field">
                 <label class="cm-label">事業区分</label>
                 <select v-model="panelForm.simplifiedTaxCategory" class="cm-select">
                   <option :value="undefined">未設定</option>
-                  <option :value="1">第一種（卸売業）90%</option>
-                  <option :value="2">第二種（小売業）80%</option>
-                  <option :value="3">第三種（製造業・建設業）70%</option>
-                  <option :value="4">第四種（飲食店・その他）60%</option>
-                  <option :value="5">第五種（サービス業）50%</option>
-                  <option :value="6">第六種（不動産業）40%</option>
+                  <option v-for="o in SIMPLIFIED_CATEGORY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                 </select>
               </div>
               <div class="cm-field">
                 <label class="cm-label">税込/税抜</label>
-                <div class="cm-radio-group">
-                  <label class="cm-radio"><input type="radio" v-model="panelForm.taxMethod" value="inclusive"><span>税込</span></label>
-                  <label class="cm-radio"><input type="radio" v-model="panelForm.taxMethod" value="exclusive"><span>税抜</span></label>
-                </div>
+                <select v-model="panelForm.taxMethod" class="cm-select">
+                  <option v-for="o in TAX_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </select>
               </div>
               <div class="cm-field">
                 <label class="cm-label">経理方式</label>
                 <select v-model="panelForm.calculationMethod" class="cm-select">
-                  <option value="accrual">発生主義</option>
-                  <option value="cash">現金主義</option>
-                  <option value="interim_cash">中間現金主義</option>
+                  <option v-for="o in CALCULATION_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                 </select>
               </div>
               <div class="cm-field">
                 <label class="cm-label">デフォルト支払方法</label>
                 <select v-model="panelForm.defaultPaymentMethod" class="cm-select">
-                  <option value="cash">現金</option>
-                  <option value="owner_loan">事業主借</option>
-                  <option value="accounts_payable">買掛金</option>
+                  <option v-for="o in DEFAULT_PAYMENT_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                 </select>
               </div>
               <div class="cm-field">
@@ -470,6 +453,13 @@ import { useStaff } from '@/features/staff-management/composables/useStaff';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
+import { useDriveFolder } from '@/composables/useDriveFolder';
+import {
+  INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_MODE_OPTIONS,
+  TAX_FILING_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
+  CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
+  STATUS_OPTIONS, getLabel,
+} from '@/constants/clientOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
@@ -504,7 +494,7 @@ const clDefaultWidths: Record<string, number> = {
 const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnResize('master-clients', clDefaultWidths);
 
 // --- クライアントデータ（composableから取得） ---
-const { clients, getStaffNameForClient, updateSharedFolderId, addClient, updateClientLocal } = useClients();
+const { clients, getStaffNameForClient, updateSharedFolderId, addClient, updateClientLocal, refresh } = useClients();
 const { staffList, activeStaff: activeStaffList } = useStaff();
 
 // モーダルヘルパー
@@ -513,14 +503,8 @@ const modal = useModalHelper();
 // 未保存変更ガード（JSON永続化移行済み。composable経由でAPI呼び出し済み）
 const { markDirty, markClean } = useUnsavedGuard(null, modal);
 
-// --- 業種リスト（ScreenS_Settings.vueと同一） ---
-const industryOptions: string[] = [
-  '', '飲食業', '建設業', '製造業・メーカー', '卸売業・小売業', '商社',
-  '不動産業', '銀行・金融', '保険業', '医療・福祉関係業', 'コンサルティング',
-  '専門事務所', '運輸・運送業', '旅行／宿泊／レジャー', 'IT・ソフトウェア関連',
-  'スポーツ・ヘルス関連', '理容・美容・サロン', '冠婚葬祭', '警備関連',
-  '清掃業', '教育業', '他サービス業', '官公庁・自治体', 'その他',
-];
+// 業種リスト（clientOptions.tsから一元参照）
+const industryOptions = INDUSTRY_OPTIONS;
 
 // --- URL同期・ビュー・フィルタ管理 ---
 const route = useRoute();
@@ -644,11 +628,7 @@ const onViewChange = (idx: number) => {
 };
 
 // ステータス選択肢（テンプレート用）
-const clientStatusOptions = [
-  { value: 'active', label: '稼働中' },
-  { value: 'suspension', label: '休眠中' },
-  { value: 'inactive', label: '契約終了' },
-];
+const clientStatusOptions = STATUS_OPTIONS;
 
 // --- 絞り込みモーダル用列定義（ClientEditPageの全フィールド） ---
 // staffListがリアクティブなためcomputedで動的生成
@@ -681,45 +661,16 @@ const clientFilterColumns = computed<FilterColumnDef[]>(() => [
   { key: 'fiscalMonth', label: '決算月', filterType: 'select', filterOptions:
     Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}月` }))
   },
-  { key: 'industry', label: '業種', filterType: 'select', filterOptions: [
-    { value: '飲食業', label: '飲食業' }, { value: '建設業', label: '建設業' },
-    { value: '製造業・メーカー', label: '製造業・メーカー' }, { value: '卸売業・小売業', label: '卸売業・小売業' },
-    { value: '商社', label: '商社' }, { value: '不動産業', label: '不動産業' },
-    { value: '銀行・金融', label: '銀行・金融' }, { value: '保険業', label: '保険業' },
-    { value: '医療・福祉関係業', label: '医療・福祉関係業' }, { value: 'コンサルティング', label: 'コンサルティング' },
-    { value: '専門事務所', label: '専門事務所' }, { value: '運輸・運送業', label: '運輸・運送業' },
-    { value: 'IT・ソフトウェア関連', label: 'IT・ソフトウェア関連' }, { value: 'その他', label: 'その他' },
-  ] },
+  { key: 'industry', label: '業種', filterType: 'select', filterOptions: INDUSTRY_OPTIONS.filter(v => v !== '').map(v => ({ value: v, label: v })) },
   { key: 'establishedDate', label: '設立日', filterType: 'text' },
   // 会計設定
-  { key: 'accountingSoftware', label: '会計ソフト', filterType: 'select', filterOptions: [
-    { value: 'mf', label: 'マネーフォワード' }, { value: 'freee', label: 'freee' },
-    { value: 'yayoi', label: '弥生' }, { value: 'tkc', label: 'TKC' },
-    { value: 'other', label: 'その他' },
-  ] },
-  { key: 'taxFilingType', label: '確定申告', filterType: 'select', filterOptions: [
-    { value: 'blue', label: '青色' }, { value: 'white', label: '白色' },
-  ] },
-  { key: 'consumptionTaxMode', label: '課税方式', filterType: 'select', filterOptions: [
-    { value: 'general', label: '原則課税' }, { value: 'simplified', label: '簡易課税' },
-    { value: 'exempt', label: '免税' },
-  ] },
-  { key: 'simplifiedTaxCategory', label: '簡易課税 事業区分', filterType: 'select', filterOptions: [
-    { value: '1', label: '第一種（卸売業）' }, { value: '2', label: '第二種（小売業）' },
-    { value: '3', label: '第三種（製造業・建設業）' }, { value: '4', label: '第四種（飲食店・その他）' },
-    { value: '5', label: '第五種（サービス業）' }, { value: '6', label: '第六種（不動産業）' },
-  ] },
-  { key: 'taxMethod', label: '税込/税抜', filterType: 'select', filterOptions: [
-    { value: 'inclusive', label: '税込' }, { value: 'exclusive', label: '税抜' },
-  ] },
-  { key: 'calculationMethod', label: '経理方式', filterType: 'select', filterOptions: [
-    { value: 'accrual', label: '発生主義' }, { value: 'cash', label: '現金主義' },
-    { value: 'interim_cash', label: '中間現金主義' },
-  ] },
-  { key: 'defaultPaymentMethod', label: 'デフォルト支払方法', filterType: 'select', filterOptions: [
-    { value: 'cash', label: '現金' }, { value: 'owner_loan', label: '事業主借' },
-    { value: 'accounts_payable', label: '買掛金' },
-  ] },
+  { key: 'accountingSoftware', label: '会計ソフト', filterType: 'select', filterOptions: ACCOUNTING_SOFTWARE_OPTIONS },
+  { key: 'taxFilingType', label: '確定申告', filterType: 'select', filterOptions: TAX_FILING_OPTIONS },
+  { key: 'consumptionTaxMode', label: '課税方式', filterType: 'select', filterOptions: TAX_MODE_OPTIONS },
+  { key: 'simplifiedTaxCategory', label: '簡易課税 事業区分', filterType: 'select', filterOptions: SIMPLIFIED_CATEGORY_OPTIONS.map(o => ({ value: String(o.value), label: o.label })) },
+  { key: 'taxMethod', label: '税込/税抜', filterType: 'select', filterOptions: TAX_METHOD_OPTIONS },
+  { key: 'calculationMethod', label: '経理方式', filterType: 'select', filterOptions: CALCULATION_METHOD_OPTIONS },
+  { key: 'defaultPaymentMethod', label: 'デフォルト支払方法', filterType: 'select', filterOptions: DEFAULT_PAYMENT_OPTIONS },
   { key: 'isInvoiceRegistered', label: 'インボイス登録', filterType: 'select', filterOptions: [
     { value: 'true', label: '登録済み' }, { value: 'false', label: '未登録' },
   ] },
@@ -847,20 +798,41 @@ const pagedRows = computed(() => filteredRows.value);
 const fetchClientList = async () => {
   isLoading.value = true;
   try {
-    const res = await fetch('/api/clients/list', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        filters: filterConditions.value,
-        logic: filterLogic.value,
-        sorts: filterSortSettings.value,
-        page: currentPage.value,
-        pageSize: PAGE_SIZE,
-      }),
-    });
-    const data = await res.json();
-    filteredRows.value = data.rows;
-    totalPages.value = data.totalPages;
+    // composable経由で最新データを取得
+    await refresh();
+    // フロント側でフィルタ・ソートを適用
+    let rows = [...clients.value];
+    // フィルタ適用（サーバー側のフィルタがない場合のフォールバック）
+    if (filterConditions.value.length > 0) {
+      rows = rows.filter(row => {
+        const checks = filterConditions.value.map(cond => {
+          const val = String((row as unknown as Record<string, unknown>)[cond.field] ?? '');
+          switch (cond.operator) {
+            case 'eq': return val === cond.value;
+            case 'neq': return val !== cond.value;
+            case 'contains': return val.includes(String(cond.value));
+            case 'not_contains': return !val.includes(String(cond.value));
+            case 'in': return Array.isArray(cond.value) ? cond.value.includes(val) : val === cond.value;
+            case 'not_in': return Array.isArray(cond.value) ? !cond.value.includes(val) : val !== cond.value;
+            case 'is_empty': return !val;
+            case 'is_not_empty': return !!val;
+            default: return true;
+          }
+        });
+        return filterLogic.value === 'and' ? checks.every(Boolean) : checks.some(Boolean);
+      });
+    }
+    // ソート適用
+    if (filterSortSettings.value.length > 0) {
+      const s = filterSortSettings.value[0]!;
+      rows.sort((a, b) => {
+        const aVal = String((a as unknown as Record<string, unknown>)[s.key] ?? '');
+        const bVal = String((b as unknown as Record<string, unknown>)[s.key] ?? '');
+        return s.order === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+    }
+    filteredRows.value = rows;
+    totalPages.value = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   } catch (e) {
     console.error('[ClientsPage] リスト取得失敗:', e);
   } finally {
@@ -1101,15 +1073,8 @@ const restoreClient = () => {
 };
 
 // --- ヘルパー ---
-const softwareLabel = (s: string) => {
-  const map: Record<string, string> = { mf: 'MF', freee: 'freee', yayoi: '弥生', tkc: 'TKC', other: 'その他' };
-  return map[s] || s;
-};
-
-const taxModeLabel = (mode: string) => {
-  const map: Record<string, string> = { general: '本則', simplified: '簡易', exempt: '免税' };
-  return map[mode] || mode;
-};
+const softwareLabel = (s: string) => getLabel(ACCOUNTING_SOFTWARE_OPTIONS, s);
+const taxModeLabel = (mode: string) => getLabel(TAX_MODE_OPTIONS, mode);
 
 
 
@@ -1165,21 +1130,11 @@ const copyDriveUrl = async (row: Client) => {
 /** Driveフォルダ自動作成（新規登録時） */
 const createDriveFolderForClient = async (client: Client) => {
   const folderName = `${client.threeCode}_${client.companyName}`;
-  const sharedEmail = client.sharedEmail || '';
   try {
-    const res = await fetch('/api/drive/folder', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ folderName, sharedEmail: sharedEmail || undefined }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(data.error || `HTTP ${res.status}`);
-    }
-    const data = await res.json() as { folderId: string };
-    console.log(`[clients] Driveフォルダ作成完了: ${folderName} (id=${data.folderId})`);
-    // sharedFolderIdを更新（driveIdではなくsharedFolderIdに統一）
-    updateSharedFolderId(client.clientId, data.folderId);
+    const { createFolder } = useDriveFolder();
+    const folderId = await createFolder(folderName, client.sharedEmail || undefined);
+    console.log(`[clients] Driveフォルダ作成完了: ${folderName} (id=${folderId})`);
+    updateSharedFolderId(client.clientId, folderId);
     markDirty('Driveフォルダ作成');
     markClean();
   } catch (err) {
@@ -1192,15 +1147,8 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
   if (!client.sharedFolderId) return null;
   const newName = `${client.threeCode}_${client.companyName}`;
   try {
-    const res = await fetch('/api/drive/folder/rename', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ folderId: client.sharedFolderId, newName }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(data.error || `HTTP ${res.status}`);
-    }
+    const { renameFolder } = useDriveFolder();
+    await renameFolder(client.sharedFolderId, newName);
     console.log(`[clients] Driveフォルダリネーム完了: ${newName}`);
     return newName;
   } catch (err) {

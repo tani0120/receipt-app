@@ -22,7 +22,7 @@ export interface FilterColumnDef {
   /** フィールドタイプ（演算子セット決定用） */
   filterType: 'text' | 'select' | 'number' | 'date'
   /** select型の場合の選択肢 */
-  filterOptions?: { value: string; label: string }[]
+  filterOptions?: readonly { value: string; label: string }[]
 }
 
 /** 演算子の種類 */

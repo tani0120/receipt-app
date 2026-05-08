@@ -38,7 +38,7 @@
         <!-- 基本情報 -->
         <section class="ce-section">
           <h2 class="ce-section-title">基本情報</h2>
-          <div class="ce-grid">
+          <div class="ce-grid-4">
             <div class="ce-field">
               <label>法人/個人</label>
               <div class="ce-radio-group">
@@ -227,93 +227,48 @@
         <!-- 会計設定 -->
         <section class="ce-section">
           <h2 class="ce-section-title">会計設定</h2>
-          <div class="ce-grid">
+          <div class="ce-grid-3">
             <div class="ce-field">
               <label>会計ソフト</label>
               <select v-model="form.accountingSoftware" class="ce-select">
-                <option value="mf">マネーフォワード</option>
-                <option value="freee">freee</option>
-                <option value="yayoi">弥生</option>
-                <option value="tkc">TKC</option>
-                <option value="other">その他</option>
+                <option v-for="o in ACCOUNTING_SOFTWARE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
               </select>
             </div>
             <div class="ce-field">
               <label>確定申告</label>
-              <div class="ce-radio-group">
-                <label
-                  ><input type="radio" v-model="form.taxFilingType" value="blue" /><span
-                    >青色</span
-                  ></label
-                >
-                <label
-                  ><input type="radio" v-model="form.taxFilingType" value="white" /><span
-                    >白色</span
-                  ></label
-                >
-              </div>
+              <select v-model="form.taxFilingType" class="ce-select">
+                <option v-for="o in TAX_FILING_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+              </select>
             </div>
             <div class="ce-field">
               <label>課税方式</label>
-              <div class="ce-radio-group">
-                <label
-                  ><input type="radio" v-model="form.consumptionTaxMode" value="general" /><span
-                    >原則課税</span
-                  ></label
-                >
-                <label
-                  ><input type="radio" v-model="form.consumptionTaxMode" value="simplified" /><span
-                    >簡易課税</span
-                  ></label
-                >
-                <label
-                  ><input type="radio" v-model="form.consumptionTaxMode" value="exempt" /><span
-                    >免税</span
-                  ></label
-                >
-              </div>
+              <select v-model="form.consumptionTaxMode" class="ce-select">
+                <option v-for="o in TAX_MODE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+              </select>
             </div>
             <div v-if="form.consumptionTaxMode === 'simplified'" class="ce-field">
               <label>事業区分</label>
               <select v-model="form.simplifiedTaxCategory" class="ce-select">
                 <option :value="undefined">未設定</option>
-                <option :value="1">第一種（卸売業）90%</option>
-                <option :value="2">第二種（小売業）80%</option>
-                <option :value="3">第三種（製造業・建設業）70%</option>
-                <option :value="4">第四種（飲食店・その他）60%</option>
-                <option :value="5">第五種（サービス業）50%</option>
-                <option :value="6">第六種（不動産業）40%</option>
+                <option v-for="o in SIMPLIFIED_CATEGORY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
               </select>
             </div>
             <div class="ce-field">
               <label>税込/税抜</label>
-              <div class="ce-radio-group">
-                <label
-                  ><input type="radio" v-model="form.taxMethod" value="inclusive" /><span
-                    >税込</span
-                  ></label
-                >
-                <label
-                  ><input type="radio" v-model="form.taxMethod" value="exclusive" /><span
-                    >税抜</span
-                  ></label
-                >
-              </div>
+              <select v-model="form.taxMethod" class="ce-select">
+                <option v-for="o in TAX_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+              </select>
             </div>
             <div class="ce-field">
               <label>経理方式</label>
               <select v-model="form.calculationMethod" class="ce-select">
-                <option value="accrual">発生主義</option>
-                <option value="cash">現金主義</option>
-                <option value="interim_cash">中間現金主義</option>
+                <option v-for="o in CALCULATION_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
               </select>
             </div>
             <div class="ce-field">
               <label>デフォルト支払方法</label>
               <select v-model="form.defaultPaymentMethod" class="ce-select">
-                <option value="cash">現金</option>
-                <option value="owner_loan">事業主借</option>
-                <option value="accounts_payable">買掛金</option>
+                <option v-for="o in DEFAULT_PAYMENT_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
               </select>
             </div>
             <div class="ce-field">
@@ -353,7 +308,7 @@
         <!-- 報酬設定 -->
         <section class="ce-section">
           <h2 class="ce-section-title">報酬設定</h2>
-          <div class="ce-grid">
+          <div class="ce-grid-4">
             <div class="ce-field">
               <label>月額顧問報酬</label>
               <div class="ce-amount">
@@ -506,6 +461,12 @@ import type { Staff } from "@/features/staff-management/composables/useStaff";
 import { useCurrentUser } from "@/composables/useCurrentUser";
 import { useNotificationCenter } from "@/composables/useNotificationCenter";
 import { useModalHelper } from "@/composables/useModalHelper";
+import { useDriveFolder } from '@/composables/useDriveFolder';
+import {
+  INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_FILING_OPTIONS,
+  TAX_MODE_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
+  CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
+} from '@/constants/clientOptions';
 import ConfirmModal from "@/components/ConfirmModal.vue";
 import NotifyModal from "@/components/NotifyModal.vue";
 
@@ -516,6 +477,7 @@ const { activeStaff: activeStaffList } = useStaff();
 const { userName: currentUserName, currentStaffId: myStaffId } = useCurrentUser();
 const { sendMentionNotification } = useNotificationCenter();
 const modal = useModalHelper();
+const { createFolder, renameFolder } = useDriveFolder();
 
 /** 新規 or 編集判定 */
 const leadId = computed(() => route.params.leadId as string | undefined);
@@ -526,33 +488,8 @@ const staffId = ref("");
 const sharedEmail = ref("");
 const sharedChatUrl = ref("");
 
-/** 業種リスト */
-const industryOptions: string[] = [
-  "",
-  "飲食業",
-  "建設業",
-  "製造業・メーカー",
-  "卸売業・小売業",
-  "商社",
-  "不動産業",
-  "銀行・金融",
-  "保険業",
-  "医療・福祉関係業",
-  "コンサルティング",
-  "専門事務所",
-  "運輸・運送業",
-  "旅行／宿泊／レジャー",
-  "IT・ソフトウェア関連",
-  "スポーツ・ヘルス関連",
-  "理容・美容・サロン",
-  "冠婚葬祭",
-  "警備関連",
-  "清掃業",
-  "教育業",
-  "他サービス業",
-  "官公庁・自治体",
-  "その他",
-];
+/** 業種リスト（clientOptions.tsから一元参照） */
+const industryOptions = INDUSTRY_OPTIONS;
 
 const annualTotal = computed(() => {
   const monthly = form.advisoryFee + form.bookkeepingFee;
@@ -567,25 +504,11 @@ watch(
   },
 );
 
-/** メンション用スタッフリスト（APIから直接取得） */
-const mentionStaffList = ref<Staff[]>([]);
-
-async function fetchMentionStaff(): Promise<void> {
-  try {
-    const res = await fetch("/api/staff");
-    if (!res.ok) return;
-    const data = await res.json();
-    mentionStaffList.value = data.staff ?? [];
-    console.log(`[メンション] ${mentionStaffList.value.length}名のスタッフを取得`);
-  } catch (err) {
-    console.error("[メンション] スタッフ取得失敗:", err);
-  }
-}
+/** メンション用スタッフリスト（useStaffから取得） */
+const { staffList: mentionStaffList } = useStaff();
 
 /** 編集モード: 既存データをフォームに読み込み */
 onMounted(async () => {
-  // スタッフリストをAPIから直接取得（メンション候補用）
-  await fetchMentionStaff();
   // コピーデータがあれば復元
   const copyRaw = sessionStorage.getItem("clientCopyData");
   if (isNew.value && copyRaw) {
@@ -860,14 +783,8 @@ const saveLead = async () => {
 const createDriveFolderForLead = async (lead: Lead) => {
   const folderName = `${lead.threeCode}_${lead.companyName}`;
   try {
-    const res = await fetch("/api/drive/folder", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ folderName, sharedEmail: lead.sharedEmail || undefined }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const d = (await res.json()) as { folderId: string };
-    updateSharedFolderId(lead.leadId, d.folderId);
+    const folderId = await createFolder(folderName, lead.sharedEmail || undefined);
+    updateSharedFolderId(lead.leadId, folderId);
   } catch (e) {
     console.error(`[leads] Driveフォルダ作成失敗:`, e);
   }
@@ -878,13 +795,7 @@ const renameDriveFolderForLead = async (ld: Lead): Promise<string | null> => {
   if (!ld.sharedFolderId) return null;
   const newName = `${ld.threeCode}_${ld.companyName}`;
   try {
-    const res = await fetch("/api/drive/folder/rename", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ folderId: ld.sharedFolderId, newName }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return newName;
+    return await renameFolder(ld.sharedFolderId, newName);
   } catch (e) {
     console.error(`[leads] Driveフォルダリネーム失敗:`, e);
     return null;
@@ -898,8 +809,9 @@ const renameDriveFolderForLead = async (ld: Lead): Promise<string | null> => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #f8fafc;
-  font-family: "Inter", "Noto Sans JP", sans-serif;
+  background: #fff;
+  font-family: "Meiryo", "Noto Sans JP", sans-serif;
+  font-size: 13px;
 }
 
 /* ヘッダー1行目: 見込管理タイトル */
@@ -1010,13 +922,13 @@ const renameDriveFolderForLead = async (ld: Lead): Promise<string | null> => {
   background: #bbf7d0;
 }
 
-/* ボディ: 2カラム */
+/* ボディ */
 .ce-body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 0 16px 16px;
   display: flex;
-  gap: 24px;
+  gap: 16px;
 }
 .ce-main {
   flex: 1;
@@ -1024,21 +936,23 @@ const renameDriveFolderForLead = async (ld: Lead): Promise<string | null> => {
   overflow-y: auto;
 }
 
-/* セクション */
+/* セクション（kintone風: フラット、カードなし） */
 .ce-section {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  background: none;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 8px;
+  box-shadow: none;
 }
 .ce-section-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 16px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #3b82f6;
+  color: #fff;
+  margin: 0 0 12px;
+  padding: 6px 12px;
+  border-bottom: none;
+  background: #4a8dc9;
+  border-radius: 0;
 }
 
 /* グリッド */
@@ -1047,49 +961,59 @@ const renameDriveFolderForLead = async (ld: Lead): Promise<string | null> => {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+.ce-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.ce-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.ce-grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+.ce-field-wide {
+  grid-column: span 2;
+}
 
 /* フィールド */
 .ce-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 .ce-field label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  color: #333;
 }
 .ce-input {
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 6px 8px;
   font-size: 13px;
   transition: border-color 0.15s;
+  background: #fff;
 }
 .ce-input:focus {
-  border-color: #3b82f6;
+  border-color: #4a8dc9;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 2px rgba(74, 141, 201, 0.15);
 }
-.ce-input:disabled {
-  background: #f1f5f9;
-  color: #94a3b8;
-}
+.ce-input:disabled { background: #f5f5f5; color: #999; }
 .ce-select {
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 6px 8px;
   font-size: 13px;
   background: #fff;
 }
-.ce-w-sm {
-  max-width: 180px;
-}
-.ce-hint {
-  font-size: 10px;
-  color: #94a3b8;
-  font-weight: 400;
-}
+.ce-w-sm { max-width: 160px; }
+.ce-hint { font-size: 10px; color: #999; font-weight: 400; }
 
 /* ラジオ/チェックボックス */
 .ce-radio-group {
