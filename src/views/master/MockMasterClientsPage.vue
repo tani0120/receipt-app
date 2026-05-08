@@ -5,6 +5,24 @@
         <!-- ヘッダー -->
         <div class="cm-header">
           <h1 class="cm-title">顧問先管理</h1>
+          <div class="cm-header-actions" v-if="isAdmin">
+            <button
+              class="cm-admin-btn"
+              :class="{ active: adminMode === 'field' }"
+              :disabled="adminMode === 'layout'"
+              @click="toggleAdminMode('field')"
+            >
+              <i class="fa-solid fa-puzzle-piece"></i> フィールド管理
+            </button>
+            <button
+              class="cm-admin-btn"
+              :class="{ active: adminMode === 'layout' }"
+              :disabled="adminMode === 'field'"
+              @click="toggleAdminMode('layout')"
+            >
+              <i class="fa-solid fa-grip"></i> レイアウト管理
+            </button>
+          </div>
         </div>
 
         <!-- ツールバー（共通コンポーネント） -->
@@ -438,6 +456,27 @@
       :variant="modal.notifyState.variant"
       @close="modal.onNotifyClose"
     />
+
+    <!-- フィールド管理モーダル（全社共通） -->
+    <CustomFieldModal
+      :visible="showCustomFieldModal"
+      :custom-defs="customFields.customDefs.value"
+      :section-keys="sectionKeys"
+      :existing-fields="existingFieldInfos"
+      :label-overrides="fieldLayout.labelOverrides.value"
+      :hidden-fields="fieldLayout.hiddenFields.value"
+      @update:visible="showCustomFieldModal = $event"
+      @save="handleSaveFieldManagement"
+    />
+
+    <!-- フィールド追加モーダル -->
+    <AddFieldModal
+      :visible="showAddFieldModal"
+      :section-keys="sectionKeys"
+      :default-section="addFieldDefaultSection"
+      @update:visible="showAddFieldModal = $event"
+      @add="handleAddField"
+    />
   </div>
 </template>
 
@@ -462,8 +501,15 @@ import {
 } from '@/constants/clientOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
+import CustomFieldModal from '@/components/CustomFieldModal.vue';
+import type { CustomFieldDef } from '@/components/CustomFieldModal.vue';
+import AddFieldModal from '@/components/AddFieldModal.vue';
 import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
 import type { FilterColumnDef, FilterCondition, FilterResult, SortSetting } from '@/components/list-view/types';
+import { useFieldLayout } from '@/composables/useFieldLayout';
+import { useCustomFields } from '@/composables/useCustomFields';
+import { useCurrentUser } from '@/composables/useCurrentUser';
+import { clientSections, clientFields } from '@/constants/clientFieldDefs';
 import {
   parseViewFromQuery,
   parseFiltersFromQuery,
@@ -503,6 +549,148 @@ const modal = useModalHelper();
 // 未保存変更ガード（JSON永続化移行済み。composable経由でAPI呼び出し済み）
 const { markDirty, markClean } = useUnsavedGuard(null, modal);
 
+// 現在のユーザー情報（管理者判定用）
+const { isAdmin } = useCurrentUser();
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 全社共通フィールド管理・レイアウト管理
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 管理モード（排他制御: null=通常, 'field'=フィールド管理, 'layout'=レイアウト管理） */
+const adminMode = ref<'field' | 'layout' | null>(null);
+
+/** 管理モード切替（排他制御） */
+const toggleAdminMode = (mode: 'field' | 'layout') => {
+  if (adminMode.value === mode) {
+    // 同じモードを再押下→解除
+    adminMode.value = null;
+    if (mode === 'field') {
+      showCustomFieldModal.value = false;
+    } else {
+      fieldLayout.isLayoutEditing.value = false;
+    }
+  } else {
+    adminMode.value = mode;
+    if (mode === 'field') {
+      showCustomFieldModal.value = true;
+    } else {
+      // レイアウト管理: 詳細画面に遷移してレイアウト編集モードON
+      // 最初の顧問先で開く（プレビュー用）
+      const firstClient = clients.value[0];
+      if (firstClient) {
+        router.push({ path: `/master/clients/${firstClient.clientId}`, query: { mode: 'layout' } });
+      }
+      adminMode.value = null; // 遷移するのでリセット
+    }
+  }
+};
+
+/** フィールドレイアウト管理（全社共通） */
+const fieldLayout = useFieldLayout('client', clientSections, clientFields);
+// デフォルトレイアウトをlocalStorageから読み込み（ラベル上書き等を適用）
+fieldLayout.loadLayout();
+
+/** カスタムフィールド管理 */
+const customFields = useCustomFields('client');
+customFields.loadCustomDefs();
+// 初期化時にカスタムフィールドをfieldLayout.fieldsに追加
+for (const def of customFields.customDefs.value) {
+  fieldLayout.addDynamicField({
+    key: def.key,
+    label: def.label,
+    section: def.section,
+    component: def.component,
+    widthPercent: def.widthPercent,
+    order: def.order,
+  });
+}
+
+const showCustomFieldModal = ref(false);
+const showAddFieldModal = ref(false);
+const addFieldDefaultSection = ref('');
+const sectionKeys = clientSections.map(s => s.key);
+
+/** 既存フィールド情報一覧（CustomFieldModalに渡す） */
+const existingFieldInfos = computed(() =>
+  fieldLayout.defaultFields.map(f => ({
+    key: f.key,
+    originalLabel: fieldLayout.defaultFields.find(df => df.key === f.key)?.label || f.label,
+    section: f.section,
+    subSection: f.subSection,
+  }))
+);
+
+/** フィールド追加ハンドラ */
+const handleAddField = (payload: { label: string; component: import('@/types/fieldLayout').FieldComponent; section: string }) => {
+  const key = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const def: CustomFieldDef = {
+    key,
+    label: payload.label,
+    section: payload.section,
+    component: payload.component,
+    widthPercent: 20,
+    order: 100 + customFields.customDefs.value.length,
+  };
+  const newDefs = [...customFields.customDefs.value, def];
+  customFields.saveCustomDefs(newDefs);
+  fieldLayout.addDynamicField({
+    key: def.key,
+    label: def.label,
+    section: def.section,
+    component: def.component,
+    widthPercent: def.widthPercent,
+    order: def.order,
+  });
+};
+
+/** フィールド管理保存ハンドラ（統合版） */
+const handleSaveFieldManagement = (payload: {
+  customDefs: CustomFieldDef[];
+  labelOverrides: Record<string, string>;
+  hiddenFields: string[];
+}) => {
+  // カスタムフィールド定義を保存
+  customFields.saveCustomDefs(payload.customDefs);
+  // 既存カスタムフィールドを削除して新しいものに差し替え
+  const existingCustomKeys = customFields.customDefs.value.map(d => d.key);
+  for (const key of existingCustomKeys) {
+    fieldLayout.removeDynamicField(key);
+  }
+  for (const def of payload.customDefs) {
+    fieldLayout.addDynamicField({
+      key: def.key,
+      label: def.label,
+      section: def.section,
+      component: def.component,
+      widthPercent: def.widthPercent,
+      order: def.order,
+    });
+  }
+  // ラベル上書きを適用
+  for (const key of Object.keys(fieldLayout.labelOverrides.value)) {
+    fieldLayout.removeLabelOverride(key);
+  }
+  for (const [key, newLabel] of Object.entries(payload.labelOverrides)) {
+    fieldLayout.updateLabelOverride(key, newLabel);
+  }
+  // 非表示フィールドを適用
+  for (const key of [...fieldLayout.hiddenFields.value]) {
+    fieldLayout.toggleFieldVisibility(key, true);
+  }
+  for (const key of payload.hiddenFields) {
+    fieldLayout.toggleFieldVisibility(key, false);
+  }
+  // モーダルを閉じて管理モード解除
+  adminMode.value = null;
+};
+
+/** CustomFieldModalが閉じられた時の管理モード解除 */
+watch(showCustomFieldModal, (v) => {
+  if (!v && adminMode.value === 'field') {
+    adminMode.value = null;
+  }
+});
+
 // 業種リスト（clientOptions.tsから一元参照）
 const industryOptions = INDUSTRY_OPTIONS;
 
@@ -510,47 +698,42 @@ const industryOptions = INDUSTRY_OPTIONS;
 const route = useRoute();
 const router = useRouter();
 
-// 表示列管理 — 全フィールド定義（ビュー切替で表示/非表示を制御）
-const allColumns = [
-  // 基本情報（従来の14列）
-  { key: 'clientId', label: '内部ID' },
-  { key: 'threeCode', label: '3コード' },
-  { key: 'type', label: '種別' },
-  { key: 'taxMode', label: '課税方式' },
+// 表示列管理 — fieldLayout.fieldsからラベル上書き反映済みの列定義を動的生成
+// 一覧専用列（clientFieldDefsに存在しない派生列）
+const listOnlyColumns = [
   { key: 'companyName', label: '会社名/代表者名' },
+  { key: 'taxMode', label: '課税方式' },
   { key: 'staffName', label: '担当者' },
-  { key: 'accountingSoftware', label: '会計ソフト' },
   { key: 'fiscalMonth', label: '決算日' },
-  { key: 'phoneNumber', label: '電話番号' },
-  { key: 'email', label: 'メール' },
-  { key: 'sharedEmail', label: '顧問先ログインメール' },
   { key: 'driveUrl', label: 'Drive取込' },
-  { key: 'chatRoomUrl', label: 'チャットURL' },
   { key: 'contact', label: '主な連絡手段' },
-  // 追加フィールド（「すべて」ビューで表示）
-  { key: 'companyNameKana', label: '会社名（カナ）' },
-  { key: 'repName', label: '代表者名' },
-  { key: 'repNameKana', label: '代表者名（カナ）' },
-  { key: 'contactType', label: '連絡手段区分' },
-  { key: 'contactValue', label: '連絡先' },
-  { key: 'sharedChatUrl', label: '共有チャットURL' },
-  { key: 'industry', label: '業種' },
-  { key: 'establishedDate', label: '設立日' },
-  { key: 'taxFilingType', label: '確定申告' },
-  { key: 'consumptionTaxMode', label: '課税方式（詳細）' },
-  { key: 'simplifiedTaxCategory', label: '簡易課税 事業区分' },
-  { key: 'taxMethod', label: '税込/税抜' },
-  { key: 'calculationMethod', label: '経理方式' },
-  { key: 'defaultPaymentMethod', label: 'デフォルト支払方法' },
-  { key: 'isInvoiceRegistered', label: 'インボイス登録' },
-  { key: 'invoiceRegistrationNumber', label: 'インボイス登録番号' },
-  { key: 'hasDepartmentManagement', label: '部門管理' },
-  { key: 'hasRentalIncome', label: '不動産所得' },
-  { key: 'advisoryFee', label: '月額顧問報酬' },
-  { key: 'bookkeepingFee', label: '記帳代行' },
-  { key: 'settlementFee', label: '決算報酬' },
-  { key: 'taxFilingFee', label: '消費税申告報酬' },
 ];
+// fieldLayout.fieldsからラベルを取得（ラベル上書き適用済み）
+const getFieldLabel = (key: string): string => {
+  const f = fieldLayout.fields.value.find(ff => ff.key === key);
+  return f?.label ?? key;
+};
+// allColumnsをfieldLayout.fieldsから動的生成（一覧専用列 + フィールド定義列）
+const allColumns = computed(() => {
+  // 基本情報ビュー用の列順序（一覧専用列を含む）
+  const basicKeys = [
+    'clientId', 'threeCode', 'type', 'taxMode', 'companyName', 'staffName',
+    'accountingSoftware', 'fiscalMonth', 'phoneNumber', 'email',
+    'sharedEmail', 'driveUrl', 'chatRoomUrl', 'contact',
+  ];
+  // 基本情報列を構築
+  const basicCols = basicKeys.map(key => {
+    const listOnly = listOnlyColumns.find(c => c.key === key);
+    if (listOnly) return { key, label: listOnly.label };
+    return { key, label: getFieldLabel(key) };
+  });
+  // fieldLayout.fieldsから追加列（基本ビューに含まれないもの）
+  const additionalCols = fieldLayout.fields.value
+    .filter(f => !basicKeys.includes(f.key))
+    .filter(f => !['computed', 'urlCopy', 'dateGroup', 'link'].includes(f.component))
+    .map(f => ({ key: f.key, label: f.label }));
+  return [...basicCols, ...additionalCols];
+});
 
 /** 基本情報ビューで表示する列キー（従来の14列） */
 const basicViewCols = [
@@ -590,7 +773,7 @@ const initialSorts = parseSortsFromQuery(route.query, initialView.defaultSorts);
 // 表示列復元
 const visibleColumns = ref<string[]>(
   initialView.columns === null
-    ? allColumns.map(c => c.key)
+    ? allColumns.value.map(c => c.key)
     : [...initialView.columns]
 );
 
@@ -719,7 +902,7 @@ const onFilterRemove = (index: number) => {
 /** visibleColumnsの順序でallColumnsから列定義を取得（全列統一描画用） */
 const visibleColumnDefs = computed(() => {
   return visibleColumns.value
-    .map(k => allColumns.find(c => c.key === k))
+    .map(k => allColumns.value.find(c => c.key === k))
     .filter((c): c is { key: string; label: string } => !!c);
 });
 
@@ -1161,4 +1344,47 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 
 <style>
 @import '@/styles/master-list.css';
+</style>
+
+<style scoped>
+/* ━━━━ フィールド管理・レイアウト管理ボタン ━━━━ */
+.cm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cm-header-actions {
+  display: flex;
+  gap: 8px;
+}
+.cm-admin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cm-admin-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.cm-admin-btn.active {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #3b82f6;
+}
+.cm-admin-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cm-admin-btn i {
+  font-size: 14px;
+}
 </style>

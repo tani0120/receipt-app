@@ -2,13 +2,17 @@
   <div class="ce-page">
     <!-- ヘッダー1行目: ページタイトル -->
     <div class="ce-header-top">
-      <span class="ce-page-label">顧問先管理</span>
+      <span class="ce-page-label">{{ isLayoutMode ? '標準フォーマット編集（全社共通）' : '顧問先管理' }}</span>
     </div>
     <!-- ヘッダー2行目: アクション -->
     <div class="ce-header">
       <div class="ce-header-left">
+        <!-- レイアウト管理モード -->
+        <template v-if="isLayoutMode">
+          <button class="ce-btn ce-btn-back" @click="exitLayoutMode"><i class="fa-solid fa-arrow-left"></i> 一覧に戻る</button>
+        </template>
         <!-- 閲覧モード -->
-        <template v-if="!isEditing">
+        <template v-else-if="!isEditing">
           <button class="ce-btn ce-btn-back" @click="$router.push('/master/clients')"><i class="fa-solid fa-arrow-left"></i> 一覧に戻る</button>
         </template>
         <!-- 編集モード -->
@@ -19,12 +23,51 @@
       </div>
       <div class="ce-header-right">
         <div class="ce-action-icons">
-          <button class="ce-icon-btn" title="新規登録" @click="$router.push('/master/clients/new')"><i class="fa-solid fa-plus"></i></button>
-          <button v-if="!isEditing && !isNew" class="ce-icon-btn" title="編集" @click="startEditing"><i class="fa-solid fa-pen"></i></button>
-          <button v-if="!isEditing && !isNew" class="ce-icon-btn" title="コピーして新規作成" @click="copyAndCreate"><i class="fa-regular fa-copy"></i></button>
+          <!-- レイアウト管理モード: 全社共通の標準フォーマット操作のみ -->
+          <template v-if="isLayoutMode && layout.isLayoutEditing.value && isAdmin">
+            <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-save ce-btn-sm" @click="layout.saveLayout(currentUserName ?? '不明')"><i class="fa-solid fa-save"></i> レイアウト保存</button>
+            <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">リセット</button>
+            <button class="ce-btn ce-btn-sm ce-btn-custom" @click="showCustomFieldModal = true"><i class="fa-solid fa-puzzle-piece"></i> フィールド管理</button>
+            <!-- バージョン管理 -->
+            <div class="ce-version-bar" v-if="layout.layoutVersions.value.length">
+              <select class="ce-version-select" :value="layout.currentVersionLabel.value" @change="layout.switchVersion(($event.target as HTMLSelectElement).value)">
+                <option value="">-- バージョン選択 --</option>
+                <option v-for="v in layout.layoutVersions.value" :key="v.versionLabel" :value="v.versionLabel">{{ v.versionLabel }}{{ v.isDefault ? ' ★' : '' }}</option>
+              </select>
+              <button v-if="layout.currentVersionLabel.value" class="ce-btn ce-btn-sm ce-btn-default-ver" @click="layout.setDefaultVersion(layout.currentVersionLabel.value)" title="デフォルトに設定">★</button>
+              <button v-if="layout.currentVersionLabel.value" class="ce-btn ce-btn-sm ce-btn-delete-ver" @click="layout.deleteVersion(layout.currentVersionLabel.value)" title="バージョン削除">🗑</button>
+            </div>
+          </template>
+          <!-- 個別顧問先モード: 個別の会社用操作ボタン -->
+          <template v-else>
+            <button class="ce-icon-btn" title="新規登録" @click="$router.push('/master/clients/new')"><i class="fa-solid fa-plus"></i></button>
+            <button v-if="!isEditing && !isNew" class="ce-icon-btn" title="編集" @click="startEditing"><i class="fa-solid fa-pen"></i></button>
+            <button v-if="!isEditing && !isNew" class="ce-icon-btn" title="コピーして新規作成" @click="copyAndCreate"><i class="fa-regular fa-copy"></i></button>
+          </template>
         </div>
       </div>
     </div>
+
+    <!-- レイアウト管理モード用モーダル -->
+    <template v-if="isLayoutMode">
+      <CustomFieldModal
+        :visible="showCustomFieldModal"
+        :custom-defs="customFields.customDefs.value"
+        :section-keys="sectionKeys"
+        :existing-fields="existingFieldInfos"
+        :label-overrides="layout.labelOverrides.value"
+        :hidden-fields="layout.hiddenFields.value"
+        @update:visible="showCustomFieldModal = $event"
+        @save="handleSaveFieldManagement"
+      />
+      <AddFieldModal
+        :visible="showAddFieldModal"
+        :section-keys="sectionKeys"
+        :default-section="addFieldDefaultSection"
+        @update:visible="showAddFieldModal = $event"
+        @add="handleAddField"
+      />
+    </template>
 
     <div class="ce-body">
       <!-- 左カラム: フォーム -->
@@ -32,571 +75,152 @@
       <!-- 基本情報 -->
       <section class="ce-section">
         <h2 class="ce-section-title">基本情報</h2>
-        <div class="ce-grid-5">
-          <div class="ce-field">
-            <label>契約状況</label>
-            <span class="ce-readonly" :class="'ce-status-' + form.status">{{ getLabel(STATUS_OPTIONS, form.status) }}</span>
-          </div>
-          <div class="ce-field">
-            <label>区分</label>
-            <template v-if="isEditing">
-              <select v-model="form.type" class="ce-select">
-                <option v-for="o in TYPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ typeLabel }}</span>
-          </div>
-          <div class="ce-field">
-            <label>関与開始日</label>
-            <input v-if="isEditing" type="date" v-model="form.engagementStartDate" class="ce-input ce-w-sm">
-            <span v-else class="ce-readonly">{{ form.engagementStartDate || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>関与終了日</label>
-            <input v-if="isEditing" type="date" v-model="form.engagementEndDate" class="ce-input ce-w-sm">
-            <span v-else class="ce-readonly">{{ form.engagementEndDate || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>担当者</label>
-            <template v-if="isEditing">
-              <select v-model="staffId" class="ce-select">
-                <option value="">未設定</option>
-                <option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ staffLabel }}</span>
-          </div>
-          <div class="ce-field">
-            <label>副担当（記帳担当）</label>
-            <template v-if="isEditing">
-              <select v-model="form.subStaffId" class="ce-select">
-                <option :value="null">未設定</option>
-                <option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ getStaffName(form.subStaffId) }}</span>
-          </div>
-          <div class="ce-field">
-            <label>給与社保担当</label>
-            <template v-if="isEditing">
-              <select v-model="form.payrollStaffId" class="ce-select">
-                <option :value="null">未設定</option>
-                <option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ getStaffName(form.payrollStaffId) }}</span>
-          </div>
-          <div class="ce-field">
-            <label>進捗管理</label>
-            <a v-if="clientId" :href="journalListUrl" target="_blank" class="ce-link-btn"><i class="fa-solid fa-chart-line"></i> 仕訳一覧を開く</a>
-            <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
-          </div>
-        </div>
-        <div class="ce-grid-4" style="margin-top: 16px;">
-          <div class="ce-field">
-            <label>内部ID</label>
-            <span class="ce-readonly ce-muted">{{ isNew ? '（自動生成）' : clientId }}</span>
-          </div>
-          <div class="ce-field">
-            <label>3コード <span class="ce-required">*</span></label>
-            <input v-if="isEditing" type="text" v-model="form.threeCode" class="ce-input ce-w-sm" maxlength="3" placeholder="ABC" @input="form.threeCode = form.threeCode.toUpperCase().replace(/[^A-Z]/g, '')">
-            <span v-else class="ce-readonly ce-code">{{ form.threeCode || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>会社名</label>
-            <input v-if="isEditing" type="text" v-model="form.companyName" class="ce-input" placeholder="株式会社サンプル">
-            <span v-else class="ce-readonly">{{ form.companyName || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>会社名（カナ）</label>
-            <input v-if="isEditing" type="text" v-model="form.companyNameKana" class="ce-input" placeholder="カブシキガイシャサンプル">
-            <span v-else class="ce-readonly">{{ form.companyNameKana || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>法人番号 <span class="ce-warn-text">※マイナンバーは入れない</span></label>
-            <input v-if="isEditing" type="text" v-model="form.corporateNumber" class="ce-input ce-w-sm" maxlength="13" placeholder="13桁">
-            <span v-else class="ce-readonly">{{ form.corporateNumber || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>代表肩書</label>
-            <input v-if="isEditing" type="text" v-model="form.repTitle" class="ce-input" placeholder="代表取締役">
-            <span v-else class="ce-readonly">{{ form.repTitle || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>代表者名</label>
-            <input v-if="isEditing" type="text" v-model="form.repName" class="ce-input" placeholder="山田 太郎">
-            <span v-else class="ce-readonly">{{ form.repName || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>代表者名（カナ）</label>
-            <input v-if="isEditing" type="text" v-model="form.repNameKana" class="ce-input" placeholder="ヤマダ タロウ">
-            <span v-else class="ce-readonly">{{ form.repNameKana || '—' }}</span>
-          </div>
-        </div>
+        <DraggableFieldGrid
+          :fields="basicInfoFields"
+          :is-layout-editing="layout.isLayoutEditing.value"
+          :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)"
+          :is-editing="isLayoutMode ? false : isEditing"
+          :resolve-options="resolveOptions"
+          :staff-list="activeStaffList"
+          @update:order="(keys: string[]) => layout.updateFieldOrder('基本情報', undefined, keys)"
+          @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal"
+        >
+          <!-- status: 個別会社モードのみ表示 -->
+          <template v-if="!isLayoutMode" #status="{ field }">
+            <div class="ce-field">
+              <span class="ce-readonly" :class="'ce-status-' + form.status">{{ getLabel(STATUS_OPTIONS, form.status) }}</span>
+            </div>
+          </template>
+          <!-- staffId: 個別会社モードのみ表示 -->
+          <template v-if="!isLayoutMode" #staffId="{ field }">
+            <div class="ce-field">
+              <template v-if="isEditing">
+                <select v-model="staffId" class="ce-select">
+                  <option value="">未設定</option>
+                  <option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
+                </select>
+              </template>
+              <span v-else class="ce-readonly">{{ staffLabel }}</span>
+            </div>
+          </template>
+          <!-- progressLink: 個別会社モードのみ表示 -->
+          <template v-if="!isLayoutMode" #progressLink="{ field }">
+            <div class="ce-field">
+              <div v-if="clientId" class="ce-url-row">
+                <a :href="journalListUrl" target="_blank" class="ce-readonly ce-url-text ce-link-url">{{ journalListUrl }}</a>
+                <button class="ce-copy-btn" @click="copyToClipboard(journalListUrl)" title="コピー"><i class="fa-regular fa-copy"></i></button>
+              </div>
+              <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
+            </div>
+          </template>
+          <!-- threeCode: 個別会社モードのみ表示 -->
+          <template v-if="!isLayoutMode" #threeCode="{ field }">
+            <div class="ce-field">
+              <input v-if="isEditing" type="text" v-model="form.threeCode" class="ce-input ce-w-sm" maxlength="3" placeholder="ABC" @input="form.threeCode = form.threeCode.toUpperCase().replace(/[^A-Z]/g, '')">
+              <span v-else class="ce-readonly ce-code">{{ form.threeCode || '—' }}</span>
+            </div>
+          </template>
+        </DraggableFieldGrid>
         <!-- ニーズ管理 -->
         <h3 class="ce-sub-title">ニーズ管理</h3>
-        <div class="ce-grid-5">
-          <div class="ce-field" v-for="(nLabel, nKey) in { needsInsurance: '保険', needsTaxSaving: '節税', needsSubsidy: '補助金', needsLoan: '借入', needsRealEstate: '不動産' }" :key="nKey">
-            <label>{{ nLabel }}ニーズ</label>
-            <template v-if="isEditing">
-              <select v-model="(form as any)[nKey]" class="ce-select">
-                <option v-for="o in NEEDS_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ getLabel(NEEDS_OPTIONS, (form as any)[nKey] ?? '') }}</span>
-          </div>
-        </div>
+        <DraggableFieldGrid
+          :fields="needsFields"
+          :is-layout-editing="layout.isLayoutEditing.value"
+          :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)"
+          :is-editing="isLayoutMode ? false : isEditing"
+          :resolve-options="resolveOptions"
+          @update:order="(keys: string[]) => layout.updateFieldOrder('基本情報', 'ニーズ管理', keys)"
+          @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal"
+        />
         <!-- 決算・税務 -->
         <h3 class="ce-sub-title">決算・税務</h3>
-        <div class="ce-grid-4">
-          <div class="ce-field">
-            <label>決算日</label>
-            <template v-if="isEditing">
-              <div class="ce-date-group">
-                <select v-model="form.fiscalMonth" class="ce-select ce-w-sm">
-                  <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
-                </select>
-                <span>/</span>
-                <select v-model="form.fiscalDay" class="ce-select ce-w-sm">
-                  <option value="末日">末日</option>
-                  <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
-                </select>
-              </div>
-            </template>
-            <span v-else class="ce-readonly">{{ form.fiscalMonth }}月 / {{ form.fiscalDay === '末日' ? '末日' : form.fiscalDay + '日' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>消費税中間申告</label>
-            <template v-if="isEditing">
-              <select v-model="form.consumptionTaxInterim" class="ce-select">
-                <option v-for="o in CONSUMPTION_TAX_INTERIM_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ getLabel(CONSUMPTION_TAX_INTERIM_OPTIONS, form.consumptionTaxInterim ?? 'none') }}</span>
-          </div>
-          <div class="ce-field">
-            <template v-if="isEditing">
-              <label class="ce-checkbox"><input type="checkbox" v-model="form.isInvoiceRegistered"><span>インボイス登録事業者</span></label>
-            </template>
-            <template v-else>
-              <label>インボイス登録</label>
-              <span class="ce-readonly">{{ form.isInvoiceRegistered ? '✅ 登録済み' : '☐ 未登録' }}</span>
-            </template>
-          </div>
-          <div v-if="form.isInvoiceRegistered" class="ce-field">
-            <label>登録番号</label>
-            <input v-if="isEditing" type="text" v-model="form.invoiceRegistrationNumber" class="ce-input" placeholder="T1234567890123">
-            <span v-else class="ce-readonly">{{ form.invoiceRegistrationNumber || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>設立日</label>
-            <input v-if="isEditing" type="text" v-model="form.establishedDate" class="ce-input ce-w-sm" placeholder="YYYYMMDD" maxlength="8">
-            <span v-else class="ce-readonly">{{ form.establishedDate || '—' }}</span>
-          </div>
-        </div>
+        <DraggableFieldGrid :fields="fiscalFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('基本情報', '決算税務', keys)" @update:width="(key: string, pct: number) => layout.updateFieldWidth(key, pct)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
+          <!-- fiscalDate: dateGroup特殊レイアウト（月/日選択） -->
+          <template v-if="!isLayoutMode" #fiscalDate="{ field }">
+            <div class="ce-field">
+              <template v-if="isEditing">
+                <div class="ce-date-group">
+                  <select v-model="form.fiscalMonth" class="ce-select ce-w-sm">
+                    <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
+                  </select>
+                  <span>/</span>
+                  <select v-model="form.fiscalDay" class="ce-select ce-w-sm">
+                    <option value="末日">末日</option>
+                    <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
+                  </select>
+                </div>
+              </template>
+              <span v-else class="ce-readonly">{{ form.fiscalMonth }}月 / {{ form.fiscalDay === '末日' ? '末日' : form.fiscalDay + '日' }}</span>
+            </div>
+          </template>
+        </DraggableFieldGrid>
         <!-- 備考・URL・その他 -->
         <h3 class="ce-sub-title">備考・URL・その他</h3>
-        <div class="ce-grid-full">
-          <div class="ce-field">
-            <label>備考</label>
-            <textarea v-if="isEditing" v-model="form.memo" class="ce-input ce-textarea" rows="3" placeholder="メモ"></textarea>
-            <span v-else class="ce-readonly ce-pre-wrap">{{ form.memo || '—' }}</span>
-          </div>
-        </div>
-        <div class="ce-grid-3" style="margin-top: 12px;">
-          <div class="ce-field">
-            <label>WebサイトURL</label>
-            <input v-if="isEditing" type="url" v-model="form.websiteUrl" class="ce-input" placeholder="https://example.com">
-            <span v-else class="ce-readonly">{{ form.websiteUrl || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>顧問先ログインメール（自動取得）<span class="ce-hint">※編集不可</span></label>
-            <span class="ce-readonly ce-muted">{{ sharedEmail || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>社内用アップロードURL（自動）</label>
-            <div v-if="clientId" class="ce-url-row">
-              <span class="ce-readonly ce-url-text">{{ uploadUrlStaff }}</span>
-              <button class="ce-copy-btn" @click="copyToClipboard(uploadUrlStaff)" title="コピー"><i class="fa-regular fa-copy"></i></button>
+        <DraggableFieldGrid :fields="memoUrlFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('基本情報', '備考URL', keys)" @update:width="(key: string, pct: number) => layout.updateFieldWidth(key, pct)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
+          <!-- uploadUrlStaff/Guest: urlCopy特殊（動的URL+コピーボタン） -->
+          <template v-if="!isLayoutMode" #uploadUrlStaff="{ field }">
+            <div class="ce-field">
+              <div v-if="clientId" class="ce-url-row">
+                <span class="ce-readonly ce-url-text">{{ uploadUrlStaff }}</span>
+                <button class="ce-copy-btn" @click="copyToClipboard(uploadUrlStaff)" title="コピー"><i class="fa-regular fa-copy"></i></button>
+              </div>
+              <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
             </div>
-            <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
-          </div>
-          <div class="ce-field">
-            <label>顧問先用アップロードURL（自動）</label>
-            <div v-if="clientId" class="ce-url-row">
-              <span class="ce-readonly ce-url-text">{{ uploadUrlGuest }}</span>
-              <button class="ce-copy-btn" @click="copyToClipboard(uploadUrlGuest)" title="コピー"><i class="fa-regular fa-copy"></i></button>
+          </template>
+          <template v-if="!isLayoutMode" #uploadUrlGuest="{ field }">
+            <div class="ce-field">
+              <div v-if="clientId" class="ce-url-row">
+                <span class="ce-readonly ce-url-text">{{ uploadUrlGuest }}</span>
+                <button class="ce-copy-btn" @click="copyToClipboard(uploadUrlGuest)" title="コピー"><i class="fa-regular fa-copy"></i></button>
+              </div>
+              <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
             </div>
-            <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
-          </div>
-          <div class="ce-field">
-            <label>売上高</label>
-            <input v-if="isEditing" type="text" v-model="form.annualRevenue" class="ce-input" placeholder="1億円以上">
-            <span v-else class="ce-readonly">{{ form.annualRevenue || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>総従業員数</label>
-            <input v-if="isEditing" type="number" v-model.number="form.employeeCount" class="ce-input ce-w-sm" min="0">
-            <span v-else class="ce-readonly">{{ form.employeeCount != null ? form.employeeCount + '名' : '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>業種</label>
-            <template v-if="isEditing">
-              <select v-model="form.industry" class="ce-select">
-                <option v-for="opt in INDUSTRY_OPTIONS" :key="opt" :value="opt">{{ opt || '未設定' }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ form.industry || '未設定' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>親号先/グループ会社</label>
-            <input v-if="isEditing" type="text" v-model="form.parentCompany" class="ce-input">
-            <span v-else class="ce-readonly">{{ form.parentCompany || '—' }}</span>
-          </div>
-        </div>
-        <div class="ce-grid-full" style="margin-top: 12px;">
-          <div class="ce-field">
-            <label>事業内容</label>
-            <textarea v-if="isEditing" v-model="form.businessDescription" class="ce-input ce-textarea" rows="3" placeholder="事業内容の詳細"></textarea>
-            <span v-else class="ce-readonly ce-pre-wrap">{{ form.businessDescription || '—' }}</span>
-          </div>
-        </div>
+          </template>
+        </DraggableFieldGrid>
       </section>
 
       <!-- 連絡先 -->
       <section class="ce-section">
         <h2 class="ce-section-title">連絡先</h2>
-        <div class="ce-grid-3">
-          <div class="ce-field">
-            <label>電話番号</label>
-            <input v-if="isEditing" type="text" v-model="form.phoneNumber" class="ce-input" placeholder="03-1234-5678">
-            <span v-else class="ce-readonly">{{ form.phoneNumber || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>メールアドレス</label>
-            <input v-if="isEditing" type="email" v-model="form.email" class="ce-input" placeholder="example@mail.com">
-            <span v-else class="ce-readonly">{{ form.email || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>社内チャットURL</label>
-            <input v-if="isEditing" type="url" v-model="form.chatRoomUrl" class="ce-input" placeholder="https://www.chatwork.com/#!rid...">
-            <span v-else class="ce-readonly">{{ form.chatRoomUrl || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>顧問先共有チャットURL</label>
-            <input v-if="isEditing" type="url" v-model="sharedChatUrl" class="ce-input" placeholder="https://www.chatwork.com/#!rid...">
-            <span v-else class="ce-readonly">{{ sharedChatUrl || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>主な連絡手段</label>
-            <template v-if="isEditing">
-              <select v-model="form.contactType" class="ce-select">
-                <option v-for="o in CONTACT_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ contactTypeLabel }}</span>
-          </div>
-          <div class="ce-field">
-            <label>連絡先</label>
-            <input v-if="isEditing" type="text" v-model="form.contactValue" class="ce-input" :placeholder="form.contactType === 'email' ? 'example@mail.com' : 'Chatwork ID'">
-            <span v-else class="ce-readonly">{{ form.contactValue || '—' }}</span>
-          </div>
-        </div>
+        <ContactTable
+          :contacts="form.contacts || []"
+          @update:contacts="(v: ClientContact[]) => form.contacts = v"
+        />
       </section>
 
       <!-- 会計設定 -->
+      <!-- 会計設定 -->
       <section class="ce-section">
         <h2 class="ce-section-title">会計設定</h2>
-        <div class="ce-grid-3">
-          <div class="ce-field">
-            <label>会計ソフト</label>
-            <template v-if="isEditing">
-              <select v-model="form.accountingSoftware" class="ce-select">
-                <option v-for="o in ACCOUNTING_SOFTWARE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ accountingSoftwareLabel }}</span>
-          </div>
-          <div class="ce-field">
-            <label>確定申告</label>
-            <template v-if="isEditing">
-              <select v-model="form.taxFilingType" class="ce-select">
-                <option v-for="o in TAX_FILING_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ taxFilingLabel }}</span>
-          </div>
-          <div class="ce-field">
-            <label>課税方式</label>
-            <template v-if="isEditing">
-              <select v-model="form.consumptionTaxMode" class="ce-select">
-                <option v-for="o in TAX_MODE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ consumptionTaxLabel }}</span>
-          </div>
-          <div v-if="form.consumptionTaxMode === 'simplified'" class="ce-field">
-            <label>事業区分</label>
-            <template v-if="isEditing">
-              <select v-model="form.simplifiedTaxCategory" class="ce-select">
-                <option :value="undefined">未設定</option>
-                <option v-for="o in SIMPLIFIED_CATEGORY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ simplifiedCategoryLabel }}</span>
-          </div>
-          <div class="ce-field">
-            <label>税込/税抜</label>
-            <template v-if="isEditing">
-              <select v-model="form.taxMethod" class="ce-select">
-                <option v-for="o in TAX_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ taxMethodLabel }}</span>
-          </div>
-          <div class="ce-field">
-            <label>経理方式</label>
-            <template v-if="isEditing">
-              <select v-model="form.calculationMethod" class="ce-select">
-                <option v-for="o in CALCULATION_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ calculationMethodLabel }}</span>
-          </div>
-          <div class="ce-field">
-            <label>デフォルト支払方法</label>
-            <template v-if="isEditing">
-              <select v-model="form.defaultPaymentMethod" class="ce-select">
-                <option v-for="o in DEFAULT_PAYMENT_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ defaultPaymentLabel }}</span>
-          </div>
-          <div class="ce-field">
-            <template v-if="isEditing">
-              <label class="ce-checkbox"><input type="checkbox" v-model="form.hasDepartmentManagement"><span>部門管理あり</span></label>
-            </template>
-            <template v-else>
-              <label>部門管理</label>
-              <span class="ce-readonly">{{ form.hasDepartmentManagement ? '✅ あり' : '☐ なし' }}</span>
-            </template>
-          </div>
-          <div v-if="form.type === 'individual' || form.type === 'sole_proprietor'" class="ce-field">
-            <template v-if="isEditing">
-              <label class="ce-checkbox"><input type="checkbox" v-model="form.hasRentalIncome"><span>不動産所得あり</span></label>
-              <span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span>
-            </template>
-            <template v-else>
-              <label>不動産所得</label>
-              <span class="ce-readonly">{{ form.hasRentalIncome ? '✅ あり' : '☐ なし' }}</span>
-            </template>
-          </div>
-        </div>
+        <DraggableFieldGrid :fields="accountingFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('会計設定', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
+          <!-- hasRentalIncome: visibleWhen特殊制御（type依存+ヒント付き） -->
+          <template v-if="!isLayoutMode" #hasRentalIncome="{ field }"><div v-if="form.type === 'individual' || form.type === 'sole_proprietor'" class="ce-field"><template v-if="isEditing"><label class="ce-checkbox"><input type="checkbox" v-model="form.hasRentalIncome"><span>不動産所得あり</span></label><span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span></template><template v-else><span class="ce-readonly">{{ form.hasRentalIncome ? '✅ あり' : '☐ なし' }}</span></template></div></template>
+        </DraggableFieldGrid>
       </section>
 
-      <!-- システム導入状況 -->
       <section class="ce-section">
         <h2 class="ce-section-title">システム導入状況</h2>
-        <div class="ce-grid-3">
-          <div class="ce-field">
-            <label>会計ソフト</label>
-            <span class="ce-readonly">{{ accountingSoftwareLabel }}</span>
-          </div>
-          <div class="ce-field">
-            <label>会計ソフト備考</label>
-            <input v-if="isEditing" type="text" v-model="form.accountingSoftwareMemo" class="ce-input">
-            <span v-else class="ce-readonly">{{ form.accountingSoftwareMemo || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>給与計算ソフト</label>
-            <input v-if="isEditing" type="text" v-model="form.payrollSoftware" class="ce-input">
-            <span v-else class="ce-readonly">{{ form.payrollSoftware || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>給与計算備考</label>
-            <input v-if="isEditing" type="text" v-model="form.payrollSoftwareMemo" class="ce-input">
-            <span v-else class="ce-readonly">{{ form.payrollSoftwareMemo || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>勤怠管理システム</label>
-            <input v-if="isEditing" type="text" v-model="form.attendanceSystem" class="ce-input">
-            <span v-else class="ce-readonly">{{ form.attendanceSystem || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>勤怠管理備考</label>
-            <input v-if="isEditing" type="text" v-model="form.attendanceSystemMemo" class="ce-input">
-            <span v-else class="ce-readonly">{{ form.attendanceSystemMemo || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>その他システム</label>
-            <input v-if="isEditing" type="text" v-model="form.otherSystem" class="ce-input">
-            <span v-else class="ce-readonly">{{ form.otherSystem || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>その他システム備考</label>
-            <input v-if="isEditing" type="text" v-model="form.otherSystemMemo" class="ce-input">
-            <span v-else class="ce-readonly">{{ form.otherSystemMemo || '—' }}</span>
-          </div>
-        </div>
+        <DraggableFieldGrid :fields="systemFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('システム導入', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
+          <!-- accountingSoftwareDisplay: 会計設定セクションの値を参照する算出表示 -->
+          <template v-if="!isLayoutMode" #accountingSoftwareDisplay="{ field }"><div class="ce-field"><span class="ce-readonly">{{ accountingSoftwareLabel }}</span></div></template>
+        </DraggableFieldGrid>
       </section>
 
       <!-- 報酬情報 -->
       <section class="ce-section">
         <h2 class="ce-section-title">報酬情報</h2>
         <!-- 契約種別 -->
-        <div class="ce-grid-3">
-          <div class="ce-field">
-            <label>契約内容</label>
-            <template v-if="isEditing">
-              <select v-model="form.contractScope" class="ce-select">
-                <option value="">未設定</option>
-                <option v-for="o in CONTRACT_SCOPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ form.contractScope ? getLabel(CONTRACT_SCOPE_OPTIONS, form.contractScope) : '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>記帳代行・自計化</label>
-            <template v-if="isEditing">
-              <select v-model="form.bookkeepingType" class="ce-select">
-                <option value="">未設定</option>
-                <option v-for="o in BOOKKEEPING_TYPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ form.bookkeepingType ? getLabel(BOOKKEEPING_TYPE_OPTIONS, form.bookkeepingType) : '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>社労士契約</label>
-            <template v-if="isEditing">
-              <select v-model="form.hasSocialInsuranceContract" class="ce-select">
-                <option v-for="o in YES_NO_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ getLabel(YES_NO_OPTIONS, form.hasSocialInsuranceContract ?? 'no') }}</span>
-          </div>
-          <div class="ce-field">
-            <label>給与</label>
-            <template v-if="isEditing">
-              <select v-model="form.hasPayrollService" class="ce-select">
-                <option v-for="o in YES_NO_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ getLabel(YES_NO_OPTIONS, form.hasPayrollService ?? 'no') }}</span>
-          </div>
-          <div class="ce-field">
-            <label>経理代行</label>
-            <template v-if="isEditing">
-              <select v-model="form.hasAccountingService" class="ce-select">
-                <option v-for="o in YES_NO_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ getLabel(YES_NO_OPTIONS, form.hasAccountingService ?? 'no') }}</span>
-          </div>
-        </div>
+        <DraggableFieldGrid :fields="feeContractFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('報酬情報', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal" />
         <!-- 報酬金額 -->
         <h3 class="ce-sub-title">報酬金額</h3>
-        <div class="ce-grid-4">
-          <div class="ce-field">
-            <label>月額顧問報酬</label>
-            <template v-if="isEditing">
-              <div class="ce-amount"><input type="number" v-model.number="form.advisoryFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
-            </template>
-            <span v-else class="ce-readonly">{{ form.advisoryFee.toLocaleString() }} 円</span>
-          </div>
-          <div class="ce-field">
-            <label>記帳代行報酬</label>
-            <template v-if="isEditing">
-              <div class="ce-amount"><input type="number" v-model.number="form.bookkeepingFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
-            </template>
-            <span v-else class="ce-readonly">{{ form.bookkeepingFee.toLocaleString() }} 円</span>
-          </div>
-          <div class="ce-field">
-            <label>社労士報酬</label>
-            <template v-if="isEditing">
-              <div class="ce-amount"><input type="number" v-model.number="form.socialInsuranceFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
-            </template>
-            <span v-else class="ce-readonly">{{ (form.socialInsuranceFee ?? 0).toLocaleString() }} 円</span>
-          </div>
-          <div class="ce-field">
-            <label>給与報酬</label>
-            <template v-if="isEditing">
-              <div class="ce-amount"><input type="number" v-model.number="form.payrollFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
-            </template>
-            <span v-else class="ce-readonly">{{ (form.payrollFee ?? 0).toLocaleString() }} 円</span>
-          </div>
-          <div class="ce-field">
-            <label>経理代行報酬</label>
-            <template v-if="isEditing">
-              <div class="ce-amount"><input type="number" v-model.number="form.accountingServiceFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
-            </template>
-            <span v-else class="ce-readonly">{{ (form.accountingServiceFee ?? 0).toLocaleString() }} 円</span>
-          </div>
-          <div class="ce-field">
-            <label>システム報酬</label>
-            <template v-if="isEditing">
-              <div class="ce-amount"><input type="number" v-model.number="form.systemFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
-            </template>
-            <span v-else class="ce-readonly">{{ (form.systemFee ?? 0).toLocaleString() }} 円</span>
-          </div>
-          <div class="ce-field ce-computed">
-            <label>月次合計（自動算出）</label>
-            <span class="ce-computed-val">{{ (form.advisoryFee + form.bookkeepingFee + (form.socialInsuranceFee ?? 0) + (form.payrollFee ?? 0) + (form.accountingServiceFee ?? 0) + (form.systemFee ?? 0)).toLocaleString() }} 円</span>
-          </div>
-          <div class="ce-field">
-            <label>決算報酬</label>
-            <template v-if="isEditing">
-              <div class="ce-amount"><input type="number" v-model.number="form.settlementFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
-            </template>
-            <span v-else class="ce-readonly">{{ form.settlementFee.toLocaleString() }} 円</span>
-          </div>
-          <div class="ce-field">
-            <label>消費税申告報酬</label>
-            <template v-if="isEditing">
-              <div class="ce-amount"><input type="number" v-model.number="form.taxFilingFee" class="ce-input ce-w-sm" min="0"><span>円</span></div>
-            </template>
-            <span v-else class="ce-readonly">{{ form.taxFilingFee.toLocaleString() }} 円</span>
-          </div>
-          <div class="ce-field ce-computed">
-            <label>年間総報酬（自動算出）</label>
-            <span class="ce-computed-val">{{ annualTotal.toLocaleString() }} 円</span>
-          </div>
-        </div>
+        <DraggableFieldGrid :fields="feeAmountFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('報酬情報', '報酬金額', keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
+          <!-- monthlyTotal/annualTotal: 複数フィールドの合算による算出表示 -->
+          <template v-if="!isLayoutMode" #monthlyTotal><div class="ce-field ce-computed"><label>月次合計（自動算出）</label><span class="ce-computed-val">{{ (form.advisoryFee + form.bookkeepingFee + (form.socialInsuranceFee ?? 0) + (form.payrollFee ?? 0) + (form.accountingServiceFee ?? 0) + (form.systemFee ?? 0)).toLocaleString() }} 円</span></div></template>
+          <template v-if="!isLayoutMode" #annualTotal><div class="ce-field ce-computed"><label>年間総報酬（自動算出）</label><span class="ce-computed-val">{{ annualTotal.toLocaleString() }} 円</span></div></template>
+        </DraggableFieldGrid>
         <!-- 契約・引落 -->
         <h3 class="ce-sub-title">契約・引き落とし</h3>
-        <div class="ce-grid-3">
-          <div class="ce-field">
-            <label>契約書リンク</label>
-            <input v-if="isEditing" type="url" v-model="form.contractDocUrl" class="ce-input" placeholder="https://...">
-            <span v-else class="ce-readonly">{{ form.contractDocUrl || '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>引き落とし方法</label>
-            <template v-if="isEditing">
-              <select v-model="form.paymentMethod" class="ce-select">
-                <option value="">未設定</option>
-                <option v-for="o in PAYMENT_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ form.paymentMethod ? getLabel(PAYMENT_METHOD_OPTIONS, form.paymentMethod) : '—' }}</span>
-          </div>
-          <div class="ce-field">
-            <label>引き落とし日</label>
-            <template v-if="isEditing">
-              <select v-model="form.paymentDay" class="ce-select">
-                <option value="">未設定</option>
-                <option v-for="o in PAYMENT_DAY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </template>
-            <span v-else class="ce-readonly">{{ form.paymentDay ? getLabel(PAYMENT_DAY_OPTIONS, form.paymentDay) : '—' }}</span>
-          </div>
-        </div>
-        <div class="ce-grid-full" style="margin-top: 12px;">
-          <div class="ce-field">
-            <label>報酬備考</label>
-            <textarea v-if="isEditing" v-model="form.feeNotes" class="ce-input ce-textarea" rows="3" placeholder="報酬に関するメモ"></textarea>
-            <span v-else class="ce-readonly ce-pre-wrap">{{ form.feeNotes || '—' }}</span>
-          </div>
-        </div>
+        <DraggableFieldGrid :fields="paymentFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('報酬情報', '契約引落', keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal" />
       </section>
 
 
@@ -610,8 +234,8 @@
         新規作成時、勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされます。
       </div>
       </div>
-      <!-- 右カラム: コメント -->
-      <aside class="ce-comment-panel">
+      <!-- 右カラム: コメント（レイアウト管理モード時は非表示） -->
+      <aside v-if="!isLayoutMode" class="ce-comment-panel">
         <h3 class="ce-comment-title"><i class="fa-regular fa-comment-dots"></i> コメント</h3>
         <div class="ce-comment-input-area">
           <div class="ce-mention-wrapper">
@@ -654,26 +278,183 @@ import { useCurrentUser } from '@/composables/useCurrentUser';
 import { useNotificationCenter } from '@/composables/useNotificationCenter';
 import { useModalHelper } from '@/composables/useModalHelper';
 import { useDriveFolder } from '@/composables/useDriveFolder';
+import { useFieldLayout } from '@/composables/useFieldLayout';
 import {
   TYPE_OPTIONS, INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS,
   TAX_FILING_OPTIONS, TAX_MODE_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS,
   TAX_METHOD_OPTIONS, CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
   CONSUMPTION_TAX_INTERIM_OPTIONS, NEEDS_OPTIONS, CONTRACT_SCOPE_OPTIONS,
   BOOKKEEPING_TYPE_OPTIONS, YES_NO_OPTIONS, PAYMENT_METHOD_OPTIONS,
-  PAYMENT_DAY_OPTIONS, CONTACT_METHOD_OPTIONS,
+  PAYMENT_DAY_OPTIONS,
   STATUS_OPTIONS, getLabel,
 } from '@/constants/clientOptions';
+import { clientSections, clientFields } from '@/constants/clientFieldDefs';
+import DraggableFieldGrid from '@/components/DraggableFieldGrid.vue';
+import ContactTable from '@/components/ContactTable.vue';
+import type { ClientContact } from '@/repositories/types';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
+import CustomFieldModal from '@/components/CustomFieldModal.vue';
+import type { CustomFieldDef } from '@/components/CustomFieldModal.vue';
+import AddFieldModal from '@/components/AddFieldModal.vue';
+import { useCustomFields } from '@/composables/useCustomFields';
 
 const route = useRoute();
 const router = useRouter();
 const { clients, updateClientLocal, addClient, updateSharedFolderId } = useClients();
 const { activeStaff: activeStaffList } = useStaff();
-const { userName: currentUserName, currentStaffId: myStaffId } = useCurrentUser();
+const { userName: currentUserName, currentStaffId: myStaffId, isAdmin } = useCurrentUser();
 const { sendMentionNotification } = useNotificationCenter();
 const modal = useModalHelper();
 const { createFolder, renameFolder } = useDriveFolder();
+
+/** フィールドレイアウト管理 */
+const layout = useFieldLayout('client', clientSections, clientFields);
+// デフォルトレイアウトをlocalStorageから読み込み（全社共通設定を個別画面にも適用）
+layout.loadLayout();
+const basicInfoFields = layout.getFieldsForSection('基本情報');
+const needsFields = layout.getFieldsForSection('基本情報', 'ニーズ管理');
+const fiscalFields = layout.getFieldsForSection('基本情報', '決算税務');
+const memoUrlFields = layout.getFieldsForSection('基本情報', '備考URL');
+const accountingFields = layout.getFieldsForSection('会計設定');
+const systemFields = layout.getFieldsForSection('システム導入');
+const feeContractFields = layout.getFieldsForSection('報酬情報');
+const feeAmountFields = layout.getFieldsForSection('報酬情報', '報酬金額');
+const paymentFields = layout.getFieldsForSection('報酬情報', '契約引落');
+
+/** 選択肢文字列→配列を解決するマップ */
+const optionsMap: Record<string, import('@/types/fieldLayout').FieldOption[]> = {
+  TYPE_OPTIONS,
+  INDUSTRY_OPTIONS,
+  ACCOUNTING_SOFTWARE_OPTIONS,
+  TAX_FILING_OPTIONS,
+  TAX_MODE_OPTIONS,
+  SIMPLIFIED_CATEGORY_OPTIONS,
+  TAX_METHOD_OPTIONS,
+  CALCULATION_METHOD_OPTIONS,
+  DEFAULT_PAYMENT_OPTIONS,
+  CONSUMPTION_TAX_INTERIM_OPTIONS,
+  NEEDS_OPTIONS,
+  CONTRACT_SCOPE_OPTIONS,
+  BOOKKEEPING_TYPE_OPTIONS,
+  YES_NO_OPTIONS,
+  PAYMENT_METHOD_OPTIONS,
+  PAYMENT_DAY_OPTIONS,
+  STATUS_OPTIONS,
+};
+/** DFGの自動レンダリングに渡す選択肢解決関数 */
+const resolveOptions = (key: string) => optionsMap[key] ?? [];
+
+/** カスタムフィールド管理 */
+const customFields = useCustomFields('client');
+customFields.loadCustomDefs();
+// 初期化時にカスタムフィールドをlayout.fieldsに追加
+for (const def of customFields.customDefs.value) {
+  layout.addDynamicField({
+    key: def.key,
+    label: def.label,
+    section: def.section,
+    component: def.component,
+    widthPercent: def.widthPercent,
+    order: def.order,
+  });
+}
+
+/** レイアウト管理モード用変数・ハンドラ */
+const showCustomFieldModal = ref(false);
+const showAddFieldModal = ref(false);
+const addFieldDefaultSection = ref('');
+const sectionKeys = clientSections.map(s => s.key);
+
+/** ＋ボタン→追加専用モーダルを開く */
+const openAddFieldModal = () => {
+  showAddFieldModal.value = true;
+};
+
+/** 既存フィールド情報一覧（CustomFieldModalに渡す） */
+const existingFieldInfos = computed(() =>
+  layout.defaultFields.map(f => ({
+    key: f.key,
+    originalLabel: layout.defaultFields.find(df => df.key === f.key)?.label || f.label,
+    section: f.section,
+    subSection: f.subSection,
+  }))
+);
+
+/** フィールド追加ハンドラ */
+const handleAddField = (payload: { label: string; component: import('@/types/fieldLayout').FieldComponent; section: string }) => {
+  const key = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const def: CustomFieldDef = {
+    key,
+    label: payload.label,
+    section: payload.section,
+    component: payload.component,
+    widthPercent: 20,
+    order: 100 + customFields.customDefs.value.length,
+  };
+  const newDefs = [...customFields.customDefs.value, def];
+  customFields.saveCustomDefs(newDefs);
+  layout.addDynamicField({
+    key: def.key,
+    label: def.label,
+    section: def.section,
+    component: def.component,
+    widthPercent: def.widthPercent,
+    order: def.order,
+  });
+};
+
+/** フィールド管理保存ハンドラ */
+const handleSaveFieldManagement = (payload: {
+  customDefs: CustomFieldDef[];
+  labelOverrides: Record<string, string>;
+  hiddenFields: string[];
+}) => {
+  customFields.saveCustomDefs(payload.customDefs);
+  const existingCustomKeys = customFields.customDefs.value.map(d => d.key);
+  for (const key of existingCustomKeys) {
+    layout.removeDynamicField(key);
+  }
+  for (const def of payload.customDefs) {
+    layout.addDynamicField({
+      key: def.key,
+      label: def.label,
+      section: def.section,
+      component: def.component,
+      widthPercent: def.widthPercent,
+      order: def.order,
+    });
+  }
+  for (const key of Object.keys(layout.labelOverrides.value)) {
+    layout.removeLabelOverride(key);
+  }
+  for (const [key, newLabel] of Object.entries(payload.labelOverrides)) {
+    layout.updateLabelOverride(key, newLabel);
+  }
+  for (const key of [...layout.hiddenFields.value]) {
+    layout.toggleFieldVisibility(key, true);
+  }
+  for (const key of payload.hiddenFields) {
+    layout.toggleFieldVisibility(key, false);
+  }
+};
+
+/** レイアウト管理モードから一覧に戻る */
+const exitLayoutMode = () => {
+  layout.isLayoutEditing.value = false;
+  router.push('/master/clients');
+};
+
+/** 一覧画面からの「レイアウト管理」遷移対応 */
+const isLayoutMode = computed(() => route.query.mode === 'layout');
+// レイアウト管理モードで遷移された場合のみレイアウト編集をON、それ以外は常にOFF
+watch(isLayoutMode, (v) => {
+  if (v && isAdmin) {
+    layout.isLayoutEditing.value = true;
+  } else {
+    layout.isLayoutEditing.value = false;
+  }
+}, { immediate: true });
 
 /** 新規 or 編集判定 */
 const clientId = computed(() => route.params.clientId as string | undefined);
@@ -697,7 +478,6 @@ const typeLabel = computed(() => getLabel(TYPE_OPTIONS, form.type));
 const taxFilingLabel = computed(() => getLabel(TAX_FILING_OPTIONS, form.taxFilingType));
 const consumptionTaxLabel = computed(() => getLabel(TAX_MODE_OPTIONS, form.consumptionTaxMode));
 const taxMethodLabel = computed(() => getLabel(TAX_METHOD_OPTIONS, form.taxMethod));
-const contactTypeLabel = computed(() => getLabel(CONTACT_METHOD_OPTIONS, form.contactType));
 const accountingSoftwareLabel = computed(() => getLabel(ACCOUNTING_SOFTWARE_OPTIONS, form.accountingSoftware));
 const calculationMethodLabel = computed(() => getLabel(CALCULATION_METHOD_OPTIONS, form.calculationMethod));
 const defaultPaymentLabel = computed(() => getLabel(DEFAULT_PAYMENT_OPTIONS, form.defaultPaymentMethod));
@@ -1057,6 +837,17 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 .ce-btn-save:hover { background: #2563eb; }
 .ce-btn-cancel { background: #f1f5f9; color: #475569; }
 .ce-btn-cancel:hover { background: #e2e8f0; }
+
+/* バージョン管理バー */
+.ce-version-bar { display: flex; align-items: center; gap: 4px; margin-left: 8px; }
+.ce-version-select { padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; background: #fff; }
+.ce-btn-default-ver { background: #fef3c7; color: #92400e; font-size: 14px; }
+.ce-btn-default-ver:hover { background: #fcd34d; }
+.ce-btn-delete-ver { background: #fee2e2; color: #991b1b; font-size: 14px; }
+.ce-btn-delete-ver:hover { background: #fca5a5; }
+.ce-link-url { color: #2563eb; text-decoration: underline; word-break: break-all; }
+.ce-btn-custom { background: #8b5cf6; color: #fff; }
+.ce-btn-custom:hover { background: #7c3aed; }
 .ce-btn-back { background: none; border: 1px solid #d1d5db; color: #475569; display: flex; align-items: center; gap: 6px; }
 .ce-btn-back:hover { background: #f1f5f9; color: #1e293b; }
 
@@ -1174,4 +965,10 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 .ce-status-active { color: #16a34a; font-weight: 600; }
 .ce-status-suspension { color: #d97706; font-weight: 600; }
 .ce-status-inactive { color: #dc2626; font-weight: 600; }
+
+/* レイアウト編集ボタン */
+.ce-icon-active { background: #dbeafe !important; color: #2563eb !important; border-color: #2563eb !important; }
+.ce-icon-disabled { opacity: 0.4; cursor: not-allowed !important; }
+.ce-icon-disabled:hover { background: inherit; color: inherit; }
+.ce-btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 4px; }
 </style>

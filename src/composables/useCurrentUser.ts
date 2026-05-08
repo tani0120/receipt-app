@@ -46,6 +46,9 @@ export function useCurrentUser() {
   /** 現在のユーザーのメールアドレス */
   const currentEmail = computed(() => currentStaff.value?.email ?? '')
 
+  /** 管理者かどうか */
+  const isAdmin = computed(() => currentStaff.value?.role === 'admin')
+
   /**
    * ログインスタッフを切り替える
    * ref即反映 + サーバーfire-and-forget（useStaffと同パターン）
@@ -100,6 +103,7 @@ export function useCurrentUser() {
     currentStaffId,
     currentEmail,
     currentStaff,
+    isAdmin,
     setCurrentUser,
     /** activeStaff一覧（ドロップダウンUI用） */
     activeStaffList: activeStaff,

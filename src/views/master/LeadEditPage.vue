@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="ce-page">
     <!-- ヘッダー1行目: ページタイトル -->
     <div class="ce-header-top">
@@ -28,6 +28,12 @@
           >
             <i class="fa-regular fa-copy"></i>
           </button>
+          <!-- レイアウト編集ボタン（常時表示、管理者のみ有効） -->
+          <button class="ce-icon-btn" :class="{ 'ce-icon-active': layout.isLayoutEditing.value, 'ce-icon-disabled': !isAdmin }" :title="!isAdmin ? 'レイアウト編集（管理者のみ）' : layout.isLayoutEditing.value ? 'レイアウト編集終了' : 'レイアウト編集'" :disabled="!isAdmin" @click="layout.isLayoutEditing.value = !layout.isLayoutEditing.value"><i class="fa-solid fa-grip"></i></button>
+          <template v-if="layout.isLayoutEditing.value && isAdmin">
+            <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-save ce-btn-sm" @click="layout.saveLayout(currentUserName ?? '不明')"><i class="fa-solid fa-save"></i> レイアウト保存</button>
+            <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">リセット</button>
+          </template>
         </div>
       </div>
     </div>
@@ -38,334 +44,59 @@
         <!-- 基本情報 -->
         <section class="ce-section">
           <h2 class="ce-section-title">基本情報</h2>
-          <div class="ce-grid-4">
-            <div class="ce-field">
-              <label>法人/個人</label>
-              <div class="ce-radio-group">
-                <label
-                  ><input type="radio" v-model="form.type" value="corp" /><span>法人</span></label
-                >
-                <label
-                  ><input type="radio" v-model="form.type" value="individual" /><span
-                    >個人</span
-                  ></label
-                >
-              </div>
-            </div>
-            <div class="ce-field">
-              <label>内部ID</label>
-              <input
-                type="text"
-                :value="isNew ? '（自動生成）' : leadId"
-                class="ce-input"
-                disabled
-              />
-            </div>
-            <div class="ce-field">
-              <label>3コード <span class="ce-hint">※大文字3文字</span></label>
-              <input
-                type="text"
-                v-model="form.threeCode"
-                class="ce-input ce-w-sm"
-                maxlength="3"
-                placeholder="ABC"
-                @input="form.threeCode = form.threeCode.toUpperCase().replace(/[^A-Z]/g, '')"
-              />
-            </div>
-            <div class="ce-field">
-              <label>会社名</label>
-              <input
-                type="text"
-                v-model="form.companyName"
-                class="ce-input"
-                placeholder="株式会社サンプル"
-              />
-            </div>
-            <div class="ce-field">
-              <label>会社名（全角カナ）</label>
-              <input
-                type="text"
-                v-model="form.companyNameKana"
-                class="ce-input"
-                placeholder="カブシキガイシャサンプル"
-                @input="
-                  form.companyNameKana = form.companyNameKana.replace(
-                    /[^\u30A0-\u30F6\u30FC\u3000 ]/g,
-                    '',
-                  )
-                "
-              />
-            </div>
-            <div class="ce-field">
-              <label>代表者名</label>
-              <input type="text" v-model="form.repName" class="ce-input" placeholder="山田 太郎" />
-            </div>
-            <div class="ce-field">
-              <label>代表者名（全角カナ）</label>
-              <input
-                type="text"
-                v-model="form.repNameKana"
-                class="ce-input"
-                placeholder="ヤマダ タロウ"
-                @input="
-                  form.repNameKana = form.repNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')
-                "
-              />
-            </div>
-            <div class="ce-field">
-              <label>担当者</label>
-              <select v-model="staffId" class="ce-select">
-                <option value="">未設定</option>
-                <option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">
-                  {{ s.name }}
-                </option>
-              </select>
-            </div>
-            <div class="ce-field">
-              <label>電話番号</label>
-              <input
-                type="text"
-                v-model="form.phoneNumber"
-                class="ce-input"
-                placeholder="03-1234-5678"
-              />
-            </div>
-            <div class="ce-field">
-              <label>メールアドレス</label>
-              <input
-                type="email"
-                v-model="form.email"
-                class="ce-input"
-                placeholder="example@mail.com"
-              />
-            </div>
-            <div class="ce-field">
-              <label>チャットルームURL</label>
-              <input
-                type="url"
-                v-model="form.chatRoomUrl"
-                class="ce-input"
-                placeholder="https://www.chatwork.com/#!rid..."
-              />
-            </div>
-            <div class="ce-field">
-              <label>主な連絡手段</label>
-              <div class="ce-radio-group">
-                <label
-                  ><input type="radio" v-model="form.contactType" value="email" /><span
-                    >メール</span
-                  ></label
-                >
-                <label
-                  ><input type="radio" v-model="form.contactType" value="chatwork" /><span
-                    >チャットワーク</span
-                  ></label
-                >
-              </div>
-            </div>
-            <div class="ce-field">
-              <label>連絡先</label>
-              <input
-                type="text"
-                v-model="form.contactValue"
-                class="ce-input"
-                :placeholder="form.contactType === 'email' ? 'example@mail.com' : 'Chatwork ID'"
-              />
-            </div>
-            <div class="ce-field">
-              <label>見込先ログインメール <span class="ce-hint">※自動取得</span></label>
-              <input
-                type="email"
-                v-model="sharedEmail"
-                class="ce-input"
-                placeholder="shared@example.com"
-              />
-            </div>
-            <div class="ce-field">
-              <label>共有用チャットURL</label>
-              <input
-                type="url"
-                v-model="sharedChatUrl"
-                class="ce-input"
-                placeholder="https://www.chatwork.com/#!rid..."
-              />
-            </div>
-            <div class="ce-field">
-              <label>決算日</label>
-              <div class="ce-date-group">
-                <select v-model="form.fiscalMonth" class="ce-select ce-w-sm">
-                  <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
-                </select>
-                <span>/</span>
-                <select v-model="form.fiscalDay" class="ce-select ce-w-sm">
-                  <option value="末日">末日</option>
-                  <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
-                </select>
-              </div>
-            </div>
-            <div class="ce-field">
-              <label>業種</label>
-              <select v-model="form.industry" class="ce-select">
-                <option v-for="opt in industryOptions" :key="opt" :value="opt">
-                  {{ opt || "未設定" }}
-                </option>
-              </select>
-            </div>
-            <div class="ce-field">
-              <label>設立日</label>
-              <input
-                type="text"
-                v-model="form.establishedDate"
-                class="ce-input ce-w-sm"
-                placeholder="YYYYMMDD"
-                maxlength="8"
-              />
-            </div>
-          </div>
+          <DraggableFieldGrid :fields="leadBasicFields" :is-layout-editing="layout.isLayoutEditing.value" @update:order="(keys: string[]) => layout.updateFieldOrder('基本情報', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)">
+            <template #type="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-radio-group"><label><input type="radio" v-model="form.type" value="corp" /><span>法人</span></label><label><input type="radio" v-model="form.type" value="individual" /><span>個人</span></label></div></div></template>
+            <template #leadId="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" :value="isNew ? '（自動生成）' : leadId" class="ce-input" disabled /></div></template>
+            <template #threeCode="{ field }"><div class="ce-field"><label>{{ field.label }} <span class="ce-hint">※大文字3文字</span></label><input type="text" v-model="form.threeCode" class="ce-input ce-w-sm" maxlength="3" placeholder="ABC" @input="form.threeCode = form.threeCode.toUpperCase().replace(/[^A-Z]/g, '')" /></div></template>
+            <template #companyName="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.companyName" class="ce-input" placeholder="株式会社サンプル" /></div></template>
+            <template #companyNameKana="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.companyNameKana" class="ce-input" placeholder="カブシキガイシャサンプル" @input="form.companyNameKana = form.companyNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')" /></div></template>
+            <template #repName="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.repName" class="ce-input" placeholder="山田 太郎" /></div></template>
+            <template #repNameKana="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.repNameKana" class="ce-input" placeholder="ヤマダ タロウ" @input="form.repNameKana = form.repNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')" /></div></template>
+            <template #staffId="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="staffId" class="ce-select"><option value="">未設定</option><option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option></select></div></template>
+            <template #phoneNumber="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.phoneNumber" class="ce-input" placeholder="03-1234-5678" /></div></template>
+            <template #email="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="email" v-model="form.email" class="ce-input" placeholder="example@mail.com" /></div></template>
+            <template #chatRoomUrl="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="url" v-model="form.chatRoomUrl" class="ce-input" placeholder="https://www.chatwork.com/#!rid..." /></div></template>
+            <template #contactType="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-radio-group"><label><input type="radio" v-model="form.contactType" value="email" /><span>メール</span></label><label><input type="radio" v-model="form.contactType" value="chatwork" /><span>チャットワーク</span></label></div></div></template>
+            <template #contactValue="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.contactValue" class="ce-input" :placeholder="form.contactType === 'email' ? 'example@mail.com' : 'Chatwork ID'" /></div></template>
+            <template #sharedEmail="{ field }"><div class="ce-field"><label>{{ field.label }} <span class="ce-hint">※自動取得</span></label><input type="email" v-model="sharedEmail" class="ce-input" placeholder="shared@example.com" /></div></template>
+            <template #sharedChatUrl="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="url" v-model="sharedChatUrl" class="ce-input" placeholder="https://www.chatwork.com/#!rid..." /></div></template>
+            <template #fiscalDate="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-date-group"><select v-model="form.fiscalMonth" class="ce-select ce-w-sm"><option v-for="m in 12" :key="m" :value="m">{{ m }}月</option></select><span>/</span><select v-model="form.fiscalDay" class="ce-select ce-w-sm"><option value="末日">末日</option><option v-for="d in 31" :key="d" :value="d">{{ d }}日</option></select></div></div></template>
+            <template #industry="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.industry" class="ce-select"><option v-for="opt in industryOptions" :key="opt" :value="opt">{{ opt || "未設定" }}</option></select></div></template>
+            <template #establishedDate="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.establishedDate" class="ce-input ce-w-sm" placeholder="YYYYMMDD" maxlength="8" /></div></template>
+          </DraggableFieldGrid>
         </section>
+
 
         <!-- 会計設定 -->
         <section class="ce-section">
           <h2 class="ce-section-title">会計設定</h2>
-          <div class="ce-grid-3">
-            <div class="ce-field">
-              <label>会計ソフト</label>
-              <select v-model="form.accountingSoftware" class="ce-select">
-                <option v-for="o in ACCOUNTING_SOFTWARE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </div>
-            <div class="ce-field">
-              <label>確定申告</label>
-              <select v-model="form.taxFilingType" class="ce-select">
-                <option v-for="o in TAX_FILING_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </div>
-            <div class="ce-field">
-              <label>課税方式</label>
-              <select v-model="form.consumptionTaxMode" class="ce-select">
-                <option v-for="o in TAX_MODE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </div>
-            <div v-if="form.consumptionTaxMode === 'simplified'" class="ce-field">
-              <label>事業区分</label>
-              <select v-model="form.simplifiedTaxCategory" class="ce-select">
-                <option :value="undefined">未設定</option>
-                <option v-for="o in SIMPLIFIED_CATEGORY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </div>
-            <div class="ce-field">
-              <label>税込/税抜</label>
-              <select v-model="form.taxMethod" class="ce-select">
-                <option v-for="o in TAX_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </div>
-            <div class="ce-field">
-              <label>経理方式</label>
-              <select v-model="form.calculationMethod" class="ce-select">
-                <option v-for="o in CALCULATION_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </div>
-            <div class="ce-field">
-              <label>デフォルト支払方法</label>
-              <select v-model="form.defaultPaymentMethod" class="ce-select">
-                <option v-for="o in DEFAULT_PAYMENT_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </div>
-            <div class="ce-field">
-              <label class="ce-checkbox"
-                ><input type="checkbox" v-model="form.isInvoiceRegistered" /><span
-                  >インボイス登録事業者</span
-                ></label
-              >
-            </div>
-            <div v-if="form.isInvoiceRegistered" class="ce-field">
-              <label>登録番号</label>
-              <input
-                type="text"
-                v-model="form.invoiceRegistrationNumber"
-                class="ce-input"
-                placeholder="T1234567890123"
-              />
-            </div>
-            <div class="ce-field">
-              <label class="ce-checkbox"
-                ><input type="checkbox" v-model="form.hasDepartmentManagement" /><span
-                  >部門管理あり</span
-                ></label
-              >
-            </div>
-            <div v-if="form.type === 'individual'" class="ce-field">
-              <label class="ce-checkbox"
-                ><input type="checkbox" v-model="form.hasRentalIncome" /><span
-                  >不動産所得あり</span
-                ></label
-              >
-              <span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span>
-            </div>
-          </div>
+          <DraggableFieldGrid :fields="leadAccountingFields" :is-layout-editing="layout.isLayoutEditing.value" @update:order="(keys: string[]) => layout.updateFieldOrder('会計設定', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)">
+            <template #accountingSoftware="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.accountingSoftware" class="ce-select"><option v-for="o in ACCOUNTING_SOFTWARE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
+            <template #taxFilingType="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.taxFilingType" class="ce-select"><option v-for="o in TAX_FILING_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
+            <template #consumptionTaxMode="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.consumptionTaxMode" class="ce-select"><option v-for="o in TAX_MODE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
+            <template #simplifiedTaxCategory="{ field }"><div v-if="form.consumptionTaxMode === 'simplified'" class="ce-field"><label>{{ field.label }}</label><select v-model="form.simplifiedTaxCategory" class="ce-select"><option :value="undefined">未設定</option><option v-for="o in SIMPLIFIED_CATEGORY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
+            <template #taxMethod="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.taxMethod" class="ce-select"><option v-for="o in TAX_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
+            <template #calculationMethod="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.calculationMethod" class="ce-select"><option v-for="o in CALCULATION_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
+            <template #defaultPaymentMethod="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.defaultPaymentMethod" class="ce-select"><option v-for="o in DEFAULT_PAYMENT_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
+            <template #isInvoiceRegistered><div class="ce-field"><label class="ce-checkbox"><input type="checkbox" v-model="form.isInvoiceRegistered" /><span>インボイス登録事業者</span></label></div></template>
+            <template #invoiceRegistrationNumber="{ field }"><div v-if="form.isInvoiceRegistered" class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.invoiceRegistrationNumber" class="ce-input" placeholder="T1234567890123" /></div></template>
+            <template #hasDepartmentManagement><div class="ce-field"><label class="ce-checkbox"><input type="checkbox" v-model="form.hasDepartmentManagement" /><span>部門管理あり</span></label></div></template>
+            <template #hasRentalIncome><div v-if="form.type === 'individual'" class="ce-field"><label class="ce-checkbox"><input type="checkbox" v-model="form.hasRentalIncome" /><span>不動産所得あり</span></label><span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span></div></template>
+          </DraggableFieldGrid>
         </section>
 
         <!-- 報酬設定 -->
         <section class="ce-section">
           <h2 class="ce-section-title">報酬設定</h2>
-          <div class="ce-grid-4">
-            <div class="ce-field">
-              <label>月額顧問報酬</label>
-              <div class="ce-amount">
-                <input
-                  type="number"
-                  v-model.number="form.advisoryFee"
-                  class="ce-input ce-w-sm"
-                  min="0"
-                /><span>円</span>
-              </div>
-            </div>
-            <div class="ce-field">
-              <label>記帳代行</label>
-              <div class="ce-amount">
-                <input
-                  type="number"
-                  v-model.number="form.bookkeepingFee"
-                  class="ce-input ce-w-sm"
-                  min="0"
-                /><span>円</span>
-              </div>
-            </div>
-            <div class="ce-field ce-computed">
-              <label>月次合計（自動算出）</label>
-              <span class="ce-computed-val"
-                >{{ (form.advisoryFee + form.bookkeepingFee).toLocaleString() }} 円</span
-              >
-            </div>
-            <div class="ce-field">
-              <label>決算報酬</label>
-              <div class="ce-amount">
-                <input
-                  type="number"
-                  v-model.number="form.settlementFee"
-                  class="ce-input ce-w-sm"
-                  min="0"
-                /><span>円</span>
-              </div>
-            </div>
-            <div class="ce-field">
-              <label>消費税申告報酬</label>
-              <div class="ce-amount">
-                <input
-                  type="number"
-                  v-model.number="form.taxFilingFee"
-                  class="ce-input ce-w-sm"
-                  min="0"
-                /><span>円</span>
-              </div>
-            </div>
-            <div class="ce-field ce-computed">
-              <label>年間総報酬（自動算出）</label>
-              <span class="ce-computed-val">{{ annualTotal.toLocaleString() }} 円</span>
-            </div>
-          </div>
+          <DraggableFieldGrid :fields="leadFeeFields" :is-layout-editing="layout.isLayoutEditing.value" @update:order="(keys: string[]) => layout.updateFieldOrder('報酬設定', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)">
+            <template #advisoryFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.advisoryFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
+            <template #bookkeepingFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.bookkeepingFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
+            <template #monthlyTotal><div class="ce-field ce-computed"><label>月次合計（自動算出）</label><span class="ce-computed-val">{{ (form.advisoryFee + form.bookkeepingFee).toLocaleString() }} 円</span></div></template>
+            <template #settlementFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.settlementFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
+            <template #taxFilingFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.taxFilingFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
+            <template #annualTotal><div class="ce-field ce-computed"><label>年間総報酬（自動算出）</label><span class="ce-computed-val">{{ annualTotal.toLocaleString() }} 円</span></div></template>
+          </DraggableFieldGrid>
         </section>
-
         <!-- マスタ自動コピー通知 -->
         <div v-if="isNew" class="ce-notice">
           <i class="fa-solid fa-circle-info"></i>
@@ -462,11 +193,14 @@ import { useCurrentUser } from "@/composables/useCurrentUser";
 import { useNotificationCenter } from "@/composables/useNotificationCenter";
 import { useModalHelper } from "@/composables/useModalHelper";
 import { useDriveFolder } from '@/composables/useDriveFolder';
+import { useFieldLayout } from '@/composables/useFieldLayout';
 import {
   INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_FILING_OPTIONS,
   TAX_MODE_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
   CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
 } from '@/constants/clientOptions';
+import { leadSections, leadFields } from '@/constants/leadFieldDefs';
+import DraggableFieldGrid from '@/components/DraggableFieldGrid.vue';
 import ConfirmModal from "@/components/ConfirmModal.vue";
 import NotifyModal from "@/components/NotifyModal.vue";
 
@@ -474,10 +208,16 @@ const route = useRoute();
 const router = useRouter();
 const { leads, updateLeadLocal, addLead, updateSharedFolderId } = useLeads();
 const { activeStaff: activeStaffList } = useStaff();
-const { userName: currentUserName, currentStaffId: myStaffId } = useCurrentUser();
+const { userName: currentUserName, currentStaffId: myStaffId, isAdmin } = useCurrentUser();
 const { sendMentionNotification } = useNotificationCenter();
 const modal = useModalHelper();
 const { createFolder, renameFolder } = useDriveFolder();
+
+/** フィールドレイアウト管理 */
+const layout = useFieldLayout('lead', leadSections, leadFields);
+const leadBasicFields = layout.getFieldsForSection('基本情報');
+const leadAccountingFields = layout.getFieldsForSection('会計設定');
+const leadFeeFields = layout.getFieldsForSection('報酬設定');
 
 /** 新規 or 編集判定 */
 const leadId = computed(() => route.params.leadId as string | undefined);
@@ -1318,4 +1058,10 @@ const renameDriveFolderForLead = async (ld: Lead): Promise<string | null> => {
 .ce-comment-body :deep(.ce-comment-link:hover) {
   color: #1d4ed8;
 }
+
+/* レイアウト編集ボタン */
+.ce-icon-active { background: #dbeafe !important; color: #2563eb !important; border-color: #2563eb !important; }
+.ce-icon-disabled { opacity: 0.4; cursor: not-allowed !important; }
+.ce-icon-disabled:hover { background: inherit; color: inherit; }
+.ce-btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 4px; }
 </style>

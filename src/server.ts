@@ -155,6 +155,10 @@ app.route('/api/progress', progressRoutes)
 import { exportRoutes } from './api/routes/exportRoutes'
 app.route('/api/export', exportRoutes)
 
+// FieldLayout API: フィールドレイアウト保存/取得
+import fieldLayoutRoutes from './api/routes/fieldLayoutRoutes'
+app.route('/api/field-layout', fieldLayoutRoutes)
+
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
 

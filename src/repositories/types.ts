@@ -220,6 +220,8 @@ export interface ClientContact {
   usage: string;
   /** 備考 */
   memo: string;
+  /** 動的追加列データ（列キー→値） */
+  extra?: Record<string, string>;
 }
 
 /** 過去担当者テーブルの1行 */
