@@ -4635,7 +4635,7 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
   closeDropdown();
   confirmDialog.value = {
     show: true,
-    title: "コピー",
+    title: UI_MSG.コピー,
     message: `「${journal.description}」を未出力にコピーしますか？`,
     onConfirm: () => {
       const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(journal));
@@ -4657,7 +4657,7 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
       console.log(`[DD] コピー作成: ${clone.id} (元: ${journal.id})`);
       confirmDialog.value = {
         show: true,
-        title: "コピー完了",
+        title: UI_MSG.コピー完了,
         message: "未出力にコピーしました。",
         onConfirm: () => {},
       };
@@ -4871,7 +4871,7 @@ function showBulkCopyDialog() {
   const targets = [...selectedJournals.value]; // クロージャキャプチャ（コピーはexportedスキップなし）
   confirmDialog.value = {
     show: true,
-    title: "コピー",
+    title: UI_MSG.コピー,
     message: `${targets.length}件を未出力にコピーしますか？`,
     onConfirm: () => {
       targets.forEach((j) => {
@@ -4896,7 +4896,7 @@ function showBulkCopyDialog() {
       clearSelection();
       confirmDialog.value = {
         show: true,
-        title: "コピー完了",
+        title: UI_MSG.コピー完了,
         message: `${targets.length}件を未出力にコピーしました。`,
         onConfirm: () => {},
       };

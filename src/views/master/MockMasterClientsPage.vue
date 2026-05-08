@@ -1173,7 +1173,7 @@ const saveClient = async () => {
       });
       await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。\nGoogle Driveフォルダも自動作成されます。', variant: 'success' });
     } catch (err) {
-      await modal.notify({ title: '顧問先の追加に失敗しました', message: String(err), variant: 'warning' });
+      await modal.notify({ title: UI_MSG.顧問先追加失敗, message: String(err), variant: 'warning' });
       return;
     }
   } else {
@@ -1198,7 +1198,7 @@ const saveClient = async () => {
       }
       await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
     } catch (err) {
-      await modal.notify({ title: '顧問先の更新に失敗しました', message: String(err), variant: 'warning' });
+      await modal.notify({ title: UI_MSG.顧問先更新失敗, message: String(err), variant: 'warning' });
       return;
     }
   }

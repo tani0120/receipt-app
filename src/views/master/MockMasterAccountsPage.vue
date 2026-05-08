@@ -382,7 +382,7 @@ async function deleteChecked() {
     const row = accountRows.find(r => r.id === id);
     return row?.isCustom;
   });
-  if (!customIds.length) { await modal.notify({ title: 'カスタム科目のみ削除できます。', variant: 'warning' }); return; }
+  if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム科目のみ, variant: 'warning' }); return; }
   const ok = await modal.confirm({ title: `${customIds.length}件のカスタム科目を削除しますか？`, message: '復元できません。', variant: 'danger' });
   if (!ok) return;
   customIds.forEach(id => {

@@ -367,7 +367,7 @@ async function copyChecked() {
   markDirty('税区分をコピー');
 }
 async function addAfterChecked() {
-  const ok = await modal.confirm({ title: '新規税区分を追加しますか？' });
+  const ok = await modal.confirm({ title: UI_MSG.税区分追加確認 });
   if (!ok) return;
   const ids = [...checkedIds.value];
   const lastId = ids[ids.length - 1];
@@ -406,7 +406,7 @@ function isEditing(rowId: string, field: string): boolean {
 
 function startEdit(row: TaxCategory, field: EditableField) {
   if (!row.isCustom) {
-    modal.notify({ title: 'デフォルト税区分は編集できません', message: 'コピーしてから編集してください。', variant: 'warning' });
+    modal.notify({ title: UI_MSG.デフォルト税区分編集不可, message: 'コピーしてから編集してください。', variant: 'warning' });
     return;
   }
   editingRowId.value = row.id;
@@ -425,7 +425,7 @@ function commitEdit(row: TaxCategory, field: EditableField) {
       row.direction = editValue.value as TaxDirection;
       break;
     case 'name':
-      if (!editValue.value.trim()) { modal.notify({ title: '税区分名は空にできません。', variant: 'warning' }); return; }
+      if (!editValue.value.trim()) { modal.notify({ title: UI_MSG.税区分名空, variant: 'warning' }); return; }
       row.name = editValue.value;
       row.shortName = editValue.value;
       break;

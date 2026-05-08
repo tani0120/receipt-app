@@ -26,6 +26,8 @@
  *
  * 準拠: DL-042
  */
+import { UI_MSG } from '@/constants/uiMessages';
+
 withDefaults(defineProps<{
   /** モーダル表示状態 */
   show: boolean
@@ -41,8 +43,8 @@ withDefaults(defineProps<{
   variant?: 'default' | 'danger'
 }>(), {
   message: '',
-  confirmLabel: 'はい',
-  cancelLabel: 'いいえ',
+  confirmLabel: UI_MSG.はい,
+  cancelLabel: UI_MSG.いいえ,
   variant: 'default',
 })
 
