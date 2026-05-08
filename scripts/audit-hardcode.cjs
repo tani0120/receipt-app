@@ -55,7 +55,22 @@ function detectIssues(filePath) {
   const lines = content.split(/\r?\n/);
   const issues = [];
   const normalizedPath = filePath.replace(/\\/g, '/');
+  // 定数・マスタ定義ファイルは COLUMN_DEF / FILTER_LABEL / JP_LITERAL から除外
   const isConstantsFile = normalizedPath.includes('/constants/');
+  const isMasterDataFile = normalizedPath.includes('/constants/') || normalizedPath.includes('/data/');
+
+  // マスタデータ・定数定義ファイルのホワイトリスト（パス規則で捕捉できないもの）
+  const JP_LITERAL_WHITELIST = [
+    '/types/',                    // 型定義（enum/label）
+    '/scripts/',                  // 開発ツール
+    'accountingConstants.ts',     // 会計システム定数
+    'typeDefinitionsData',        // AIプロンプト型定義データ
+    'source_type_keywords.ts',    // パイプラインキーワード辞書
+    'schema_dictionary',          // スキーマ辞書
+    'ClientMapper.ts',            // データマッピング定義
+  ];
+  const isJpLiteralExcluded = isMasterDataFile
+    || JP_LITERAL_WHITELIST.some(p => normalizedPath.includes(p));
 
   lines.forEach((line, idx) => {
     const lineNum = idx + 1;
@@ -93,16 +108,26 @@ function detectIssues(filePath) {
     }
 
     // パターンD: 日本語リテラル
-    const jpMatch = trimmed.match(/['"]([^'"]*[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+[^'"]*)['"]/g);
-    if (jpMatch) {
-      const filtered = jpMatch.filter(jp => {
-        const inner = jp.slice(1, -1);
-        // CSSクラス名パターンを除外
-        if (/^(bg-|text-|border-|hover:|focus:|rounded|flex|grid|p-|m-|w-|h-|font-|shadow|cursor|opacity|transition|overflow|relative|absolute|fa-|cm-|ce-|ds-|iv-)/.test(inner)) return false;
-        return true;
-      });
-      if (filtered.length > 0 && !trimmed.includes('class=') && !trimmed.includes(':class=') && !trimmed.includes('className')) {
-        issues.push({ lineNum, type: 'JP_LITERAL', line: trimmed.substring(0, 130) });
+    // ※除外:
+    //   - constants/data/types/scripts/ 配下（マスタ定義 or 開発ツール）
+    //   - export const 行（定数定義そのもの）
+    //   - console.log/console.error（デバッグ出力）
+    if (!isJpLiteralExcluded) {
+      const jpMatch = trimmed.match(/['"]([^'"]*[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+[^'"]*)['"]|`[^`]*[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+[^`]*`/g);
+      if (jpMatch) {
+        const filtered = jpMatch.filter(jp => {
+          const inner = jp.startsWith('`') ? jp.slice(1, -1) : jp.slice(1, -1);
+          // CSSクラス名パターンを除外
+          if (/^(bg-|text-|border-|hover:|focus:|rounded|flex|grid|p-|m-|w-|h-|font-|shadow|cursor|opacity|transition|overflow|relative|absolute|fa-|cm-|ce-|ds-|iv-)/.test(inner)) return false;
+          return true;
+        });
+        if (filtered.length > 0 && !trimmed.includes('class=') && !trimmed.includes(':class=') && !trimmed.includes('className')) {
+          // export const行はスキップ（定数定義そのもの）
+          if (trimmed.startsWith('export const ') || trimmed.startsWith('export {')) return;
+          // console出力はスキップ
+          if (/^\s*console\.(log|error|warn|info)/.test(trimmed)) return;
+          issues.push({ lineNum, type: 'JP_LITERAL', line: trimmed.substring(0, 130) });
+        }
       }
     }
   });
