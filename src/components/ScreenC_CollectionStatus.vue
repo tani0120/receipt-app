@@ -375,7 +375,7 @@ const sortedCalendarDocs = computed(() => {
         code: c.clientCode,
         name: c.companyName,
         fiscalMonth: c.fiscalMonth,
-        type: c.type,
+        type: c.type as CollectionClient['type'],
         jobId: c.jobId
     }));
 });

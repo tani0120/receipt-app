@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, computed } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import type { ClientContact } from '@/repositories/types';
 import { PLACEHOLDER_DIVIDER } from '@/constants/vendorOptions';
 
