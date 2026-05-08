@@ -74,14 +74,14 @@
           v-model="debitAccountFilter"
           class="border border-gray-300 px-1.5 py-0.5 rounded text-[10px]"
         >
-          <option value="">{{ DEBIT_ACCOUNT_LABEL }}</option>
+          <option value="">借方勘定科目</option>
           <option v-for="name in accountNames" :key="'d-' + name" :value="name">{{ name }}</option>
         </select>
         <select
           v-model="creditAccountFilter"
           class="border border-gray-300 px-1.5 py-0.5 rounded text-[10px]"
         >
-          <option value="">{{ CREDIT_ACCOUNT_LABEL }}</option>
+          <option value="">貸方勘定科目</option>
           <option v-for="name in accountNames" :key="'c-' + name" :value="name">{{ name }}</option>
         </select>
       </div>
@@ -280,10 +280,6 @@ import {
 import { syncWarningLabelsCore } from "@/utils/journalWarningSync";
 import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { useCurrentUser } from "@/composables/useCurrentUser";
-
-/** フィルタ用プレースホルダ */
-const DEBIT_ACCOUNT_LABEL = '借方勘定科目';
-const CREDIT_ACCOUNT_LABEL = '貸方勘定科目';
 
 const route = useRoute();
 const { currentStaffId } = useCurrentUser();

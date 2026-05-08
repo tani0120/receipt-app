@@ -65,8 +65,17 @@ function detectIssues(filePath) {
     if (trimmed.startsWith('import ') || trimmed.startsWith('export default') || trimmed.startsWith('export type') || trimmed.startsWith('export interface')) return;
 
     // パターンA: <option>固定値（v-forでない）
-    if (/<option\s+value=["'][^"']*["']>[^<{]+<\/option>/.test(trimmed) && !trimmed.includes('v-for')) {
-      issues.push({ lineNum, type: 'HARDCODE_OPTION', line: trimmed.substring(0, 130) });
+    // ※UIプレースホルダは除外:
+    //   - {{ }} を含む（定数参照済み）
+    //   - value="" または :value="null" のデフォルトoption（フィルタ/未選択のプレースホルダ）
+    if (/<option[\s:]+/.test(trimmed) && !trimmed.includes('v-for') && !trimmed.includes('{{')) {
+      const isDefaultOption = /value=["']["']/.test(trimmed) || /:value=["']null["']/.test(trimmed) || /:value="undefined"/.test(trimmed);
+      if (!isDefaultOption) {
+        // value に具体的な値があるのにv-forでない → 真のハードコード
+        if (/<option[^>]*value=["'][^"']+["'][^>]*>[^<]+<\/option>/.test(trimmed)) {
+          issues.push({ lineNum, type: 'HARDCODE_OPTION', line: trimmed.substring(0, 130) });
+        }
+      }
     }
 
     // パターンB: { key: '...', label: '...' } のカラム定義

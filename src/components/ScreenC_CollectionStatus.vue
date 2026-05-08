@@ -5,7 +5,7 @@
           <span class="font-bold text-red-600">[MIRROR WORLD] Screen C</span>
           <label><input type="checkbox" v-model="mockIsDetailView"> 詳細モード</label>
           <select v-model="mockRouteParamsCode" class="border rounded px-1">
-              <option value="">{{ MOCK_PLACEHOLDER_NO_CODE }}</option>
+              <option value="">コードなし (一覧)</option>
               <option v-for="c in clientSelectOptions" :key="c.clientCode" :value="c.clientCode">{{ c.clientCode }}: {{ c.companyName }}</option>
           </select>
       </div>
@@ -314,9 +314,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import moment from 'moment';
-
-/** モックコントロール用プレースホルダ */
-const MOCK_PLACEHOLDER_NO_CODE = 'コードなし (一覧)';
 
 /** 回収カレンダー一覧で使用する顧問先データ型 */
 interface CollectionClient {
