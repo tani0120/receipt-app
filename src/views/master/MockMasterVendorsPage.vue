@@ -33,8 +33,7 @@
             <label class="vm-filter-label">入出金:</label>
             <select v-model="directionFilter" class="vm-filter-select">
               <option value="">全て</option>
-              <option value="expense">{{ directionLabel('expense') }}</option>
-              <option value="income">{{ directionLabel('income') }}</option>
+              <option v-for="o in DIRECTION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </div>
         </div>
@@ -101,8 +100,7 @@
                 <td class="vm-td">
                   <select v-model="row.direction" class="vm-edit-select vm-edit-select-sm">
                     <option :value="null">—</option>
-                    <option value="expense">{{ directionLabel('expense') }}</option>
-                    <option value="income">{{ directionLabel('income') }}</option>
+                    <option v-for="o in DIRECTION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                   </select>
                 </td>
 
@@ -198,6 +196,7 @@ import type { Vendor, VendorVector } from '@/types/pipeline/vendor.type';
 import { VENDOR_VECTOR_LABELS, VENDOR_VECTORS } from '@/types/pipeline/vendor.type';
 import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import { normalizeVendorName } from '@/utils/pipeline/vendorIdentification';
+import { DIRECTION_OPTIONS } from '@/constants/vendorOptions';
 
 // ============================================================
 // データ（API経由で取得。編集はローカルrefに対して行う）
@@ -225,19 +224,7 @@ function vectorLabel(v: VendorVector): string {
   return VENDOR_VECTOR_LABELS[v] ?? v;
 }
 
-/**
- * 入出金区分 → 日本語ラベル
- * vendor.type.ts L338: "入出金区分（'expense' | 'income' | null）"
- * vendor.type.ts L330: "UI表示: ... | 入出金 | ..."
- */
-const DIRECTION_LABELS: Record<string, string> = {
-  expense: '出金',
-  income: '入金',
-};
-function directionLabel(d: string | null): string {
-  if (!d) return '—';
-  return DIRECTION_LABELS[d] ?? d;
-}
+
 
 
 

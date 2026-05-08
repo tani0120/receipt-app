@@ -20,7 +20,9 @@
               v-if="globalSearchQuery"
               @click="globalSearchQuery = ''"
               class="text-gray-400 hover:text-gray-600 text-[10px] -ml-5"
-            >✕</button>
+            >
+              ✕
+            </button>
           </div>
           <label class="flex items-center gap-1 cursor-pointer"
             ><input
@@ -37,11 +39,7 @@
             />過去出力済を表示</label
           >
           <label class="flex items-center gap-1 cursor-pointer"
-            ><input
-              type="checkbox"
-              v-model="showPastCsv"
-              class="w-2.5 h-2.5"
-            />過去仕訳CSV</label
+            ><input type="checkbox" v-model="showPastCsv" class="w-2.5 h-2.5" />過去仕訳CSV</label
           >
           <label class="flex items-center gap-1 cursor-pointer"
             ><input
@@ -173,7 +171,6 @@
         >
           <i class="fa-solid fa-arrows-left-right text-[10px]"></i>列幅リセット
         </button>
-
       </div>
     </div>
     <!-- 初回選択ヘルプ（fadeOut） -->
@@ -233,7 +230,9 @@
             <span class="flex items-center gap-0.5">
               {{ col.label }}
               <span
-                v-if="col.key === 'labelType' || col.key === 'warning' || col.key === 'voucher_type'"
+                v-if="
+                  col.key === 'labelType' || col.key === 'warning' || col.key === 'voucher_type'
+                "
                 class="relative inline-flex"
                 @mouseenter="legendModalType = col.key as 'labelType' | 'warning' | 'voucher_type'"
                 @mouseleave="legendModalType = null"
@@ -340,7 +339,9 @@
                     <table class="w-full border-collapse">
                       <thead>
                         <tr class="text-gray-400 text-[11px]">
-                          <th class="text-left px-2 py-1.5 w-[90px] border-b-2 border-gray-600">証票意味</th>
+                          <th class="text-left px-2 py-1.5 w-[90px] border-b-2 border-gray-600">
+                            証票意味
+                          </th>
                           <th class="text-left px-2 py-1.5 border-b-2 border-gray-600">
                             <span class="flex items-center gap-1">⬅ 借方（左）</span>
                           </th>
@@ -352,65 +353,99 @@
                       <tbody>
                         <tr class="border-b border-gray-800/60 bg-gray-800/20">
                           <td class="px-2 py-2 font-bold">
-                            <span class="inline-flex items-center gap-1 text-blue-300">🧾 経費</span>
+                            <span class="inline-flex items-center gap-1 text-blue-300"
+                              >🧾 経費</span
+                            >
                           </td>
                           <td class="px-2 py-2 text-gray-200">
-                            <span class="bg-blue-500/20 text-blue-200 px-1.5 py-0.5 rounded text-[10px]">費用科目全般</span>
+                            <span
+                              class="bg-blue-500/20 text-blue-200 px-1.5 py-0.5 rounded text-[10px]"
+                              >費用科目全般</span
+                            >
                           </td>
                           <td class="px-2 py-2 text-gray-300">現金・預金・未払金・仮払金</td>
                         </tr>
                         <tr class="border-b border-gray-800/60">
                           <td class="px-2 py-2 font-bold">
-                            <span class="inline-flex items-center gap-1 text-blue-300">💰 売上</span>
+                            <span class="inline-flex items-center gap-1 text-blue-300"
+                              >💰 売上</span
+                            >
                           </td>
                           <td class="px-2 py-2 text-gray-300">売掛金・現金・預金</td>
                           <td class="px-2 py-2 text-gray-200">
-                            <span class="bg-green-500/20 text-green-200 px-1.5 py-0.5 rounded text-[10px]">収益科目全般</span>
+                            <span
+                              class="bg-green-500/20 text-green-200 px-1.5 py-0.5 rounded text-[10px]"
+                              >収益科目全般</span
+                            >
                           </td>
                         </tr>
                         <tr class="border-b border-gray-800/60 bg-gray-800/20">
                           <td class="px-2 py-2 font-bold">
-                            <span class="inline-flex items-center gap-1 text-purple-300">💳 クレカ</span>
+                            <span class="inline-flex items-center gap-1 text-purple-300"
+                              >💳 クレカ</span
+                            >
                           </td>
                           <td class="px-2 py-2 text-gray-200">
-                            <span class="bg-blue-500/20 text-blue-200 px-1.5 py-0.5 rounded text-[10px]">費用科目全般</span>
+                            <span
+                              class="bg-blue-500/20 text-blue-200 px-1.5 py-0.5 rounded text-[10px]"
+                              >費用科目全般</span
+                            >
                           </td>
                           <td class="px-2 py-2 text-gray-300">未払金のみ</td>
                         </tr>
                         <tr class="border-b border-gray-800/60">
                           <td class="px-2 py-2 font-bold">
-                            <span class="inline-flex items-center gap-1 text-purple-300">🏦 クレカ引落</span>
+                            <span class="inline-flex items-center gap-1 text-purple-300"
+                              >🏦 クレカ引落</span
+                            >
                           </td>
                           <td class="px-2 py-2 text-gray-300">未払金のみ</td>
                           <td class="px-2 py-2 text-gray-300">預金口座</td>
                         </tr>
                         <tr class="border-b border-gray-800/60 bg-gray-800/20">
                           <td class="px-2 py-2 font-bold">
-                            <span class="inline-flex items-center gap-1 text-green-300">👤 給与</span>
+                            <span class="inline-flex items-center gap-1 text-green-300"
+                              >👤 給与</span
+                            >
                           </td>
                           <td class="px-2 py-2 text-gray-300">給料手当・役員報酬・賞与</td>
-                          <td class="px-2 py-2 text-gray-300">預金<span class="text-gray-500 text-[10px]">（手取）</span>+ 預り金<span class="text-gray-500 text-[10px]">（天引）</span></td>
+                          <td class="px-2 py-2 text-gray-300">
+                            預金<span class="text-gray-500 text-[10px]">（手取）</span>+ 預り金<span
+                              class="text-gray-500 text-[10px]"
+                              >（天引）</span
+                            >
+                          </td>
                         </tr>
                         <tr class="border-b border-gray-800/60">
                           <td class="px-2 py-2 font-bold">
-                            <span class="inline-flex items-center gap-1 text-orange-300">📝 立替経費</span>
+                            <span class="inline-flex items-center gap-1 text-orange-300"
+                              >📝 立替経費</span
+                            >
                           </td>
                           <td class="px-2 py-2 text-gray-200">
-                            <span class="bg-blue-500/20 text-blue-200 px-1.5 py-0.5 rounded text-[10px]">費用科目全般</span>
+                            <span
+                              class="bg-blue-500/20 text-blue-200 px-1.5 py-0.5 rounded text-[10px]"
+                              >費用科目全般</span
+                            >
                           </td>
                           <td class="px-2 py-2 text-gray-300">立替金・未収金</td>
                         </tr>
                         <tr>
                           <td class="px-2 py-2 font-bold">
-                            <span class="inline-flex items-center gap-1 text-cyan-300">🔄 振替</span>
+                            <span class="inline-flex items-center gap-1 text-cyan-300"
+                              >🔄 振替</span
+                            >
                           </td>
                           <td class="px-2 py-2 text-gray-300">預金口座</td>
                           <td class="px-2 py-2 text-gray-300">預金口座</td>
                         </tr>
                       </tbody>
                     </table>
-                    <div class="mt-3 pt-2 border-t border-gray-700 text-[10px] text-gray-400 px-1 flex items-center gap-1">
-                      <span class="text-yellow-400">⚠</span> 上記以外の科目を使用した場合、証票意味矛盾警告が表示されます
+                    <div
+                      class="mt-3 pt-2 border-t border-gray-700 text-[10px] text-gray-400 px-1 flex items-center gap-1"
+                    >
+                      <span class="text-yellow-400">⚠</span>
+                      上記以外の科目を使用した場合、証票意味矛盾警告が表示されます
                     </div>
                   </div>
                 </div>
@@ -521,7 +556,11 @@
                       v-if="hasSupportingMatch(journal)"
                       class="fa-solid fa-paperclip text-[10px] text-amber-600 cursor-pointer hover:text-amber-800 hover:scale-125 transition-all"
                       title="根拠資料あり（クリックで表示）"
-                      @click="previewSupportingImage(supportingMatchMap.get(journal.id)?.[0] ?? { previewUrl: '' })"
+                      @click="
+                        previewSupportingImage(
+                          supportingMatchMap.get(journal.id)?.[0] ?? { previewUrl: '' },
+                        )
+                      "
                     ></i>
                     <!-- 紐づけなし: グレー → クリックで検索モーダル -->
                     <i
@@ -871,14 +910,23 @@
                         @keydown.escape="cancelCellEdit()"
                         @blur="commitCellEdit()"
                       >
-                        <option v-for="o in CHECK_STATUS_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+                        <option v-for="o in CHECK_STATUS_OPTIONS" :key="o.value" :value="o.value">
+                          {{ o.label }}
+                        </option>
                       </select>
                     </template>
                     <template v-else>
                       <span
                         v-if="journal.labels.includes('INVOICE_QUALIFIED')"
                         class="text-green-600 text-sm font-bold cursor-pointer"
-                        @mouseenter="showTooltip($event, journal.invoice_number ? `${journal.invoice_number}` : '適格（T番号なし）')"
+                        @mouseenter="
+                          showTooltip(
+                            $event,
+                            journal.invoice_number
+                              ? `${journal.invoice_number}`
+                              : '適格（T番号なし）',
+                          )
+                        "
                         @mouseleave="hideTooltip()"
                         >◯</span
                       >
@@ -1559,7 +1607,9 @@
         v-model="journalPageSize"
         class="ml-2 border border-gray-300 rounded text-[10px] px-1 py-0.5 cursor-pointer"
       >
-        <option v-for="o in PAGE_SIZE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+        <option v-for="o in PAGE_SIZE_OPTIONS" :key="o.value" :value="o.value">
+          {{ o.label }}
+        </option>
       </select>
     </div>
 
@@ -1623,7 +1673,8 @@
           <template v-if="modalImageUrl?.toLowerCase().endsWith('.pdf')">
             <iframe :src="modalImageUrl" class="w-full h-full border-0"></iframe>
           </template>
-          <img v-else
+          <img
+            v-else
             :src="modalImageUrl"
             alt="領収書"
             :style="{
@@ -1686,7 +1737,9 @@
         <!-- 検索バー -->
         <div class="px-3 py-2 border-b border-gray-100 bg-gray-50">
           <div class="relative">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+            <i
+              class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"
+            ></i>
             <input
               ref="supportingSearchInputRef"
               v-model="supportingSearchQuery"
@@ -1699,17 +1752,27 @@
           </div>
           <div class="flex items-center justify-between mt-1 text-[9px] text-gray-500">
             <span>スペース区切りAND検索</span>
-            <span v-if="supportingSearchResults.length > 0">{{ supportingSearchResults.length }}件</span>
+            <span v-if="supportingSearchResults.length > 0"
+              >{{ supportingSearchResults.length }}件</span
+            >
           </div>
         </div>
         <!-- 検索結果 -->
         <div class="flex-1 overflow-y-auto p-2" @mousedown.stop>
-          <div v-if="isSupportingSearching" class="flex items-center justify-center py-8 text-gray-400">
+          <div
+            v-if="isSupportingSearching"
+            class="flex items-center justify-center py-8 text-gray-400"
+          >
             <i class="fa-solid fa-spinner fa-spin mr-2"></i>検索中...
           </div>
-          <div v-else-if="supportingSearchResults.length === 0 && supportingSearchDone" class="text-center py-8 text-gray-400">
+          <div
+            v-else-if="supportingSearchResults.length === 0 && supportingSearchDone"
+            class="text-center py-8 text-gray-400"
+          >
             <i class="fa-solid fa-inbox text-2xl mb-2 block"></i>
-            <span class="text-[11px]">{{ supportingSearchQuery ? '該当なし' : '根拠資料未登録' }}</span>
+            <span class="text-[11px]">{{
+              supportingSearchQuery ? "該当なし" : "根拠資料未登録"
+            }}</span>
           </div>
           <div v-else class="grid grid-cols-2 gap-1.5">
             <div
@@ -1718,7 +1781,9 @@
               class="border border-gray-200 rounded p-2 hover:bg-amber-50 hover:border-amber-300 cursor-pointer transition-colors"
               @click="previewSupportingImage(item)"
             >
-              <div class="w-full h-16 bg-gray-100 rounded mb-1.5 overflow-hidden flex items-center justify-center">
+              <div
+                class="w-full h-16 bg-gray-100 rounded mb-1.5 overflow-hidden flex items-center justify-center"
+              >
                 <img
                   v-if="item.previewUrl"
                   :src="item.previewUrl"
@@ -1729,22 +1794,38 @@
                 <i v-else class="fa-solid fa-file-image text-xl text-gray-300"></i>
               </div>
               <div class="text-[9px] space-y-0.5">
-                <div class="font-bold text-gray-800 truncate" :title="item.fileName">{{ item.fileName }}</div>
+                <div class="font-bold text-gray-800 truncate" :title="item.fileName">
+                  {{ item.fileName }}
+                </div>
                 <div v-if="item.date" class="text-gray-600">
-                  <i class="fa-solid fa-calendar text-[7px] mr-0.5 text-amber-500"></i>{{ item.date }}
+                  <i class="fa-solid fa-calendar text-[7px] mr-0.5 text-amber-500"></i
+                  >{{ item.date }}
                 </div>
                 <div v-if="item.amount != null" class="text-gray-600">
-                  <i class="fa-solid fa-yen-sign text-[7px] mr-0.5 text-green-500"></i>{{ Number(item.amount).toLocaleString() }}
+                  <i class="fa-solid fa-yen-sign text-[7px] mr-0.5 text-green-500"></i
+                  >{{ Number(item.amount).toLocaleString() }}
                 </div>
                 <div v-if="item.vendor" class="text-gray-600 truncate">
-                  <i class="fa-solid fa-building text-[7px] mr-0.5 text-blue-500"></i>{{ item.vendor }}
+                  <i class="fa-solid fa-building text-[7px] mr-0.5 text-blue-500"></i
+                  >{{ item.vendor }}
                 </div>
               </div>
             </div>
           </div>
         </div>
         <!-- リサイズグリップ -->
-        <div class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none" style="background:linear-gradient(135deg,transparent 50%,rgba(217,119,6,0.5) 50%,rgba(217,119,6,0.7) 100%);border-radius:0 0 0.5rem 0"></div>
+        <div
+          class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none"
+          style="
+            background: linear-gradient(
+              135deg,
+              transparent 50%,
+              rgba(217, 119, 6, 0.5) 50%,
+              rgba(217, 119, 6, 0.7) 100%
+            );
+            border-radius: 0 0 0.5rem 0;
+          "
+        ></div>
       </div>
 
       <!-- 根拠資料画像プレビュー（検索結果から選択時） -->
@@ -1764,26 +1845,59 @@
           class="bg-amber-100 px-3 py-1.5 flex justify-between items-center cursor-move rounded-t-lg select-none"
           @mousedown="startSupportingImageDrag"
         >
-          <span class="text-xs font-bold text-gray-900">根拠資料プレビュー <span class="font-normal text-amber-600">※移動できます</span></span>
+          <span class="text-xs font-bold text-gray-900"
+            >根拠資料プレビュー <span class="font-normal text-amber-600">※移動できます</span></span
+          >
           <button @click="closeSupportingPreview" class="text-gray-500 hover:text-gray-700">
             <i class="fa-solid fa-xmark text-sm"></i>
           </button>
         </div>
         <div class="flex items-center gap-1 px-2 py-1 bg-gray-100 border-b border-gray-200">
-          <button @click.stop="supportingRotation = (supportingRotation + 90) % 360" class="bg-amber-500 hover:bg-amber-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors" title="90度回転">
+          <button
+            @click.stop="supportingRotation = (supportingRotation + 90) % 360"
+            class="bg-amber-500 hover:bg-amber-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
+            title="90度回転"
+          >
             <i class="fa-solid fa-rotate-right text-xs"></i>
           </button>
-          <button @click.stop="supportingZoom = Math.min(supportingZoom + 0.25, 7)" class="bg-green-500 hover:bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors" title="拡大">
+          <button
+            @click.stop="supportingZoom = Math.min(supportingZoom + 0.25, 7)"
+            class="bg-green-500 hover:bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
+            title="拡大"
+          >
             <i class="fa-solid fa-magnifying-glass-plus text-xs"></i>
           </button>
-          <button @click.stop="supportingZoom = Math.max(supportingZoom - 0.25, 0.25)" class="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors" title="縮小">
+          <button
+            @click.stop="supportingZoom = Math.max(supportingZoom - 0.25, 0.25)"
+            class="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
+            title="縮小"
+          >
             <i class="fa-solid fa-magnifying-glass-minus text-xs"></i>
           </button>
         </div>
         <div class="flex-1 flex items-center justify-center overflow-hidden rounded-b-lg">
-          <img :src="supportingPreviewUrl" alt="根拠資料" :style="{ transform: `rotate(${supportingRotation}deg) scale(${supportingZoom})`, imageOrientation: 'from-image' }" class="max-w-full max-h-full object-contain transition-transform duration-300" />
+          <img
+            :src="supportingPreviewUrl"
+            alt="根拠資料"
+            :style="{
+              transform: `rotate(${supportingRotation}deg) scale(${supportingZoom})`,
+              imageOrientation: 'from-image',
+            }"
+            class="max-w-full max-h-full object-contain transition-transform duration-300"
+          />
         </div>
-        <div class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none" style="background:linear-gradient(135deg,transparent 50%,rgba(217,119,6,0.5) 50%,rgba(217,119,6,0.7) 100%);border-radius:0 0 0.5rem 0"></div>
+        <div
+          class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none"
+          style="
+            background: linear-gradient(
+              135deg,
+              transparent 50%,
+              rgba(217, 119, 6, 0.5) 50%,
+              rgba(217, 119, 6, 0.7) 100%
+            );
+            border-radius: 0 0 0.5rem 0;
+          "
+        ></div>
       </div>
     </Teleport>
 
@@ -1857,7 +1971,9 @@
                 class="w-40 px-2 py-1 text-xs border rounded"
               >
                 <option value="">選択してください</option>
-                <option v-for="o in AMOUNT_CONDITION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+                <option v-for="o in AMOUNT_CONDITION_OPTIONS" :key="o.value" :value="o.value">
+                  {{ o.label }}
+                </option>
               </select>
               <input
                 type="number"
@@ -1877,9 +1993,7 @@
                 class="w-full px-2 py-1 text-xs border rounded"
               >
                 <option value="">選択してください</option>
-                <option value="旅費交通費">旅費交通費</option>
-                <option value="消耗品費">消耗品費</option>
-                <option value="会議費">会議費</option>
+                <option v-for="o in accountOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
               </select>
             </div>
             <div>
@@ -1889,9 +2003,7 @@
                 class="w-full px-2 py-1 text-xs border rounded"
               >
                 <option value="">選択してください</option>
-                <option value="現金">現金</option>
-                <option value="普通預金">普通預金</option>
-                <option value="未払金">未払金</option>
+                <option v-for="o in accountOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
               </select>
             </div>
           </div>
@@ -1925,7 +2037,10 @@
             システム上の過去仕訳
           </button>
           <button
-            @click="pastJournalTab = 'accounting'; fetchConfirmedJournals()"
+            @click="
+              pastJournalTab = 'accounting';
+              fetchConfirmedJournals();
+            "
             :class="[
               'px-4 py-2 text-xs font-medium',
               pastJournalTab === 'accounting'
@@ -1934,20 +2049,36 @@
             ]"
           >
             会計ソフトから取り込んだ過去仕訳
-            <span v-if="confirmedJournals.length > 0" class="ml-1 px-1.5 py-0.5 text-[9px] bg-amber-100 text-amber-700 rounded-full font-bold">{{ confirmedJournals.length }}</span>
+            <span
+              v-if="confirmedJournals.length > 0"
+              class="ml-1 px-1.5 py-0.5 text-[9px] bg-amber-100 text-amber-700 rounded-full font-bold"
+              >{{ confirmedJournals.length }}</span
+            >
           </button>
         </div>
 
         <!-- 検索結果テーブル -->
         <div class="flex-1 overflow-auto p-4">
           <!-- ローディング表示（会計タブ） -->
-          <div v-if="pastJournalTab === 'accounting' && isConfirmedLoading" class="text-center py-8 text-gray-400 text-sm">
+          <div
+            v-if="pastJournalTab === 'accounting' && isConfirmedLoading"
+            class="text-center py-8 text-gray-400 text-sm"
+          >
             <i class="fa-solid fa-spinner fa-spin mr-2"></i>過去仕訳データを読み込み中...
           </div>
           <!-- 件数サマリー（会計タブ） -->
-          <div v-if="pastJournalTab === 'accounting' && !isConfirmedLoading && confirmedJournals.length > 0" class="text-xs text-gray-500 mb-2">
-            取込済み過去仕訳: <span class="font-bold text-gray-700">{{ confirmedJournals.length }}件</span>
-            <span v-if="filteredPastJournals.length !== confirmedJournals.length" class="ml-2">→ 絞込結果: <span class="font-bold text-blue-600">{{ filteredPastJournals.length }}件</span></span>
+          <div
+            v-if="
+              pastJournalTab === 'accounting' && !isConfirmedLoading && confirmedJournals.length > 0
+            "
+            class="text-xs text-gray-500 mb-2"
+          >
+            取込済み過去仕訳:
+            <span class="font-bold text-gray-700">{{ confirmedJournals.length }}件</span>
+            <span v-if="filteredPastJournals.length !== confirmedJournals.length" class="ml-2"
+              >→ 絞込結果:
+              <span class="font-bold text-blue-600">{{ filteredPastJournals.length }}件</span></span
+            >
           </div>
           <div class="text-xs text-gray-600 mb-2" v-if="pastJournalTab !== 'accounting'">
             行の背景色:
@@ -2108,10 +2239,15 @@
           <div class="flex items-center gap-2">
             <span class="text-lg">💡</span>
             <h3 class="text-sm font-bold text-gray-800">ヒント</h3>
-            <span class="text-[10px] text-gray-500 bg-white px-2 py-0.5 rounded-full border">No.{{ hintModalJournalIndex + 1 }}</span>
+            <span class="text-[10px] text-gray-500 bg-white px-2 py-0.5 rounded-full border"
+              >No.{{ hintModalJournalIndex + 1 }}</span
+            >
             <span class="text-[10px] text-amber-600">※移動できます</span>
           </div>
-          <button @click="hintModalJournal = null" class="text-gray-400 hover:text-gray-700 text-lg">
+          <button
+            @click="hintModalJournal = null"
+            class="text-gray-400 hover:text-gray-700 text-lg"
+          >
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
@@ -2119,14 +2255,17 @@
         <!-- 仕訳概要 -->
         <div class="px-5 py-3 bg-gray-50 border-b text-xs">
           <div class="flex gap-4">
-            <span><b>日付:</b> {{ hintModalJournal.voucher_date || '未設定' }}</span>
-            <span><b>摘要:</b> {{ hintModalJournal.description || '未設定' }}</span>
-            <span><b>証票意味:</b> {{ hintModalJournal.voucher_type || '未設定' }}</span>
+            <span><b>日付:</b> {{ hintModalJournal.voucher_date || "未設定" }}</span>
+            <span><b>摘要:</b> {{ hintModalJournal.description || "未設定" }}</span>
+            <span><b>証票意味:</b> {{ hintModalJournal.voucher_type || "未設定" }}</span>
           </div>
         </div>
 
         <!-- ローディング表示（API待ち） -->
-        <div v-if="hintLoading" class="px-5 py-8 flex items-center justify-center gap-2 text-xs text-gray-500">
+        <div
+          v-if="hintLoading"
+          class="px-5 py-8 flex items-center justify-center gap-2 text-xs text-gray-500"
+        >
           <i class="fa-solid fa-spinner fa-spin"></i>
           <span>ヒントを取得中...</span>
         </div>
@@ -2136,7 +2275,10 @@
           <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
             📋 バリデーション結果
           </h4>
-          <div v-if="hintValidations.length === 0" class="flex items-center gap-2 text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+          <div
+            v-if="hintValidations.length === 0"
+            class="flex items-center gap-2 text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2"
+          >
             <span class="text-base">✅</span>
             <span>この仕訳に問題は検出されませんでした</span>
           </div>
@@ -2149,7 +2291,7 @@
                 v.level === 'error' ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-800',
               ]"
             >
-              <span class="text-base flex-shrink-0">{{ v.level === 'error' ? '❌' : '⚠️' }}</span>
+              <span class="text-base flex-shrink-0">{{ v.level === "error" ? "❌" : "⚠️" }}</span>
               <span>{{ v.message }}</span>
             </div>
           </div>
@@ -2157,10 +2299,11 @@
 
         <!-- ② 修正候補（ルールベース） -->
         <div class="px-5 py-3 border-b">
-          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
-            💡 修正候補
-          </h4>
-          <div v-if="hintSuggestions.length === 0" class="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">💡 修正候補</h4>
+          <div
+            v-if="hintSuggestions.length === 0"
+            class="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2"
+          >
             修正候補はありません
           </div>
           <div v-else class="space-y-2">
@@ -2171,7 +2314,9 @@
             >
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                  <span class="text-blue-600 font-bold flex-shrink-0">{{ s.side === 'debit' ? '借方' : '貸方' }}</span>
+                  <span class="text-blue-600 font-bold flex-shrink-0">{{
+                    s.side === "debit" ? "借方" : "貸方"
+                  }}</span>
                   <span class="text-gray-500 flex-shrink-0">{{ s.field }}:</span>
                   <span class="text-red-500 line-through flex-shrink-0">{{ s.currentLabel }}</span>
                   <span class="text-gray-400 flex-shrink-0">→</span>
@@ -2179,7 +2324,9 @@
                   <select
                     v-if="s.alternatives.length > 1"
                     :value="s.selectedValue"
-                    @change="onHintAlternativeChange(si, ($event.target as HTMLSelectElement).value)"
+                    @change="
+                      onHintAlternativeChange(si, ($event.target as HTMLSelectElement).value)
+                    "
                     class="border border-blue-300 rounded px-1.5 py-0.5 text-xs bg-white text-green-700 font-bold max-w-[200px] cursor-pointer"
                     @click.stop
                     @mousedown.stop
@@ -2202,7 +2349,10 @@
             <!-- 全て適用ボタン -->
             <button
               v-if="hintSuggestions.length > 1"
-              @click="hintSuggestions.forEach(s => applyHintSuggestion(s)); hintModalJournal = null"
+              @click="
+                hintSuggestions.forEach((s) => applyHintSuggestion(s));
+                hintModalJournal = null;
+              "
               class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-xs font-bold transition-colors mt-1"
             >
               ✨ 全て適用（各行の選択値を適用）
@@ -2212,10 +2362,10 @@
 
         <!-- ③ AI推論（工事中） -->
         <div class="px-5 py-3 border-b">
-          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
-            🤖 AI推論
-          </h4>
-          <div class="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-3 text-center flex items-center justify-center gap-2">
+          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">🤖 AI推論</h4>
+          <div
+            class="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-3 text-center flex items-center justify-center gap-2"
+          >
             <span class="text-base">🚧</span>
             <span>工事中 — Gemini連携による高精度推論を準備中です</span>
           </div>
@@ -2226,7 +2376,9 @@
           <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
             📚 過去の類似仕訳
           </h4>
-          <div class="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-3 text-center flex items-center justify-center gap-2">
+          <div
+            class="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-3 text-center flex items-center justify-center gap-2"
+          >
             <span class="text-base">🚧</span>
             <span>工事中 — DB接続後に有効化予定</span>
           </div>
@@ -2245,7 +2397,15 @@
         <!-- リサイズグリップ -->
         <div
           class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none"
-          style="background: linear-gradient(135deg, transparent 50%, rgba(217, 119, 6, 0.4) 50%, rgba(217, 119, 6, 0.6) 100%); border-radius: 0 0 0.75rem 0;"
+          style="
+            background: linear-gradient(
+              135deg,
+              transparent 50%,
+              rgba(217, 119, 6, 0.4) 50%,
+              rgba(217, 119, 6, 0.6) 100%
+            );
+            border-radius: 0 0 0.75rem 0;
+          "
         ></div>
       </div>
     </Teleport>
@@ -2530,7 +2690,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, triggerRef, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  shallowRef,
+  triggerRef,
+  watch,
+} from "vue";
 import { useAccountSettings } from "@/features/account-settings/composables/useAccountSettings";
 import { useClients } from "@/features/client-management/composables/useClients";
 import { NULL_DISPLAY_UNKNOWN } from "@/shared/field-nullable-spec";
@@ -2556,6 +2725,15 @@ import { validateByVoucherType, getVoucherTypeConflictAccounts } from "@/utils/j
 import {
   CHECK_STATUS_OPTIONS, PAGE_SIZE_OPTIONS, AMOUNT_CONDITION_OPTIONS,
 } from '@/constants/vendorOptions';
+import { ACCOUNT_MASTER } from '@/data/master/account-master';
+import type { SelectOption } from '@/constants/clientOptions';
+
+/** 勘定科目選択肢—ACCOUNT_MASTERから動的生成 */
+const accountOptions = computed<SelectOption[]>(() =>
+  ACCOUNT_MASTER
+    .filter(a => !a.deprecated && a.target === 'both')
+    .map(a => ({ value: a.name, label: a.name }))
+);
 
 // 列幅カスタマイズ
 const {
@@ -2590,7 +2768,7 @@ const activeClientFull = computed(() => {
 // 顧問先の勘定科目 composable（useAccountSettings経由）
 // ※ フォールバックはuseAccountSettings内部で処理済み。masterSettings不要。
 // ※ clientIdが変わった場合はVue Routerが再マウントするため、setupトップレベルで安全。
-const clientSettings = useAccountSettings("client", currentClient.value?.clientId ?? '');
+const clientSettings = useAccountSettings("client", currentClient.value?.clientId ?? "");
 
 /** 顧問先のtype/hasRentalIncomeでフィルタ済み勘定科目リスト */
 const filteredAccounts = computed(() => {
@@ -2619,7 +2797,12 @@ const filteredAccounts = computed(() => {
  * 動的パスアクセスのためkeyof型安全性は保証できない。内部でunknown経由でRecordにキャストする。
  */
 function getRawValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknown {
-  return path.split(".").reduce<unknown>((o, key) => (o as Record<string, unknown> | undefined)?.[key], obj as Record<string, unknown>);
+  return path
+    .split(".")
+    .reduce<unknown>(
+      (o, key) => (o as Record<string, unknown> | undefined)?.[key],
+      obj as Record<string, unknown>,
+    );
 }
 
 // ────── 区分ドロップダウン（D7a: category-first選択の起点） ──────
@@ -2628,7 +2811,7 @@ import {
   SALES_CATEGORIES,
   PURCHASE_CATEGORIES,
   getCategoryDirection,
-} from '@/data/master/account-category-rules';
+} from "@/data/master/account-category-rules";
 const BS_CATEGORIES = [
   "現金及び預金",
   "売上債権",
@@ -2795,7 +2978,7 @@ const accountGroupsForJournal = computed(() => {
 
 /** 仕訳入力用: 選択中の勘定科目の区分から方向判定し、税区分をフィルタ+グルーピング */
 function getTaxGroupsForEntry(row: CombinedRow, colKey: string) {
-  const side = colKey.startsWith("debit") ? "debit" : "credit" as const;
+  const side = colKey.startsWith("debit") ? "debit" : ("credit" as const);
   const entry = row[side];
   const accountName = entry?.account ?? null;
 
@@ -3245,8 +3428,12 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`; // ローカルTZ
-  if (journal.voucher_date != null && journal.voucher_date !== "" && journal.voucher_date >= tomorrowStr) {
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`; // ローカルTZ
+  if (
+    journal.voucher_date != null &&
+    journal.voucher_date !== "" &&
+    journal.voucher_date >= tomorrowStr
+  ) {
     addLabel("FUTURE_DATE");
   } else {
     removeLabel("FUTURE_DATE");
@@ -3329,7 +3516,7 @@ function getWarningCellClass(
     entry
   ) {
     const acctName = entry.account;
-    if (!acctName) return '';
+    if (!acctName) return "";
     const side = colKey.startsWith("debit") ? "debit" : "credit";
     const conflict = categoryConflictMap.get(journal.id);
     if (
@@ -3367,11 +3554,7 @@ function getWarningCellClass(
   if (labels.includes("VOUCHER_TYPE_CONFLICT")) {
     if (colKey === "voucher_type") return W;
     // 矛盾している勘定科目セルも赤ハイライト
-    if (
-      colKey.includes("account") &&
-      !colKey.includes("sub_account") &&
-      entry
-    ) {
+    if (colKey.includes("account") && !colKey.includes("sub_account") && entry) {
       const acctName = entry.account;
       if (!acctName) return W; // null科目は無条件で赤背景
       const side = colKey.startsWith("debit") ? "debit" : "credit";
@@ -3426,7 +3609,7 @@ function getDatePeriodClass(dateStr: string | null): string {
 
   // 期首日: fiscalEndYear-1年のfiscalMonth+1月の1日
   const fiscalStartDate = new Date(fiscalEndYear - 1, fiscalMonth, 1);
-  const fiscalStartStr = `${fiscalStartDate.getFullYear()}-${String(fiscalStartDate.getMonth() + 1).padStart(2, '0')}-${String(fiscalStartDate.getDate()).padStart(2, '0')}`; // ローカルTZ
+  const fiscalStartStr = `${fiscalStartDate.getFullYear()}-${String(fiscalStartDate.getMonth() + 1).padStart(2, "0")}-${String(fiscalStartDate.getDate()).padStart(2, "0")}`; // ローカルTZ
 
   // 判定
   if (dateStr < fiscalStartStr) {
@@ -3448,7 +3631,7 @@ function selectAccountItem(
 ): void {
   // Undo記録: 変更前スナップショット
   const beforeSnap = snapshotJournal(journal.id);
-  const side = colKey.startsWith("debit") ? "debit" : "credit" as const;
+  const side = colKey.startsWith("debit") ? "debit" : ("credit" as const);
   const entry = row[side];
   if (!entry) {
     editingCell.value = null;
@@ -3497,11 +3680,7 @@ function selectTaxItem(journal: JournalPhase5Mock, taxId: string): void {
 // ────── 検索付きコンボボックス: blur関数 ──────
 
 /** 勘定科目blur: 入力値が有効な科目名なら確定、そうでなければキャンセル */
-function blurAccountEdit(
-  journal: JournalPhase5Mock,
-  row: CombinedRow,
-  colKey: string,
-): void {
+function blurAccountEdit(journal: JournalPhase5Mock, row: CombinedRow, colKey: string): void {
   if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
   const val = editingValue.value;
   // 入力値がID一致 or 名前一致する科目を検索
@@ -3823,7 +4002,12 @@ function endFillDrag(): void {
   fillHandle.value = null;
 }
 
-function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unknown, targetRowIndex?: number): void {
+function applyFillValue(
+  journal: JournalPhase5Mock,
+  colKey: string,
+  value: unknown,
+  targetRowIndex?: number,
+): void {
   if (!colKey.includes(".")) {
     if (colKey === "voucher_date") {
       journal.voucher_date = value as string | null;
@@ -3838,9 +4022,11 @@ function applyFillValue(journal: JournalPhase5Mock, colKey: string, value: unkno
 
     // 複合仕訳対応: targetRowIndex指定時はその行のみ、未指定時は全エントリ
     const entries = side === "debit" ? journal.debit_entries : journal.credit_entries;
-    const targetEntries = (targetRowIndex != null && targetRowIndex < entries.length
-      ? [entries[targetRowIndex]]
-      : entries).filter((e): e is NonNullable<typeof e> => e != null);
+    const targetEntries = (
+      targetRowIndex != null && targetRowIndex < entries.length
+        ? [entries[targetRowIndex]]
+        : entries
+    ).filter((e): e is NonNullable<typeof e> => e != null);
     for (const entry of targetEntries) {
       if (colKey.endsWith(".account")) {
         // 勘定科目フィル時に税区分・区分・補助科目も連動（selectAccountItemと同じ挙動）
@@ -3996,7 +4182,12 @@ function endCellDrag(): void {
     if (journal && journal.status !== "exported" && journal.deleted_at === null) {
       // Undo記録: 変更前スナップショット
       const beforeSnap = snapshotJournal(journal.id);
-      applyFillValue(journal, cellDrag.value.dropColKey, cellDrag.value.sourceValue, cellDrag.value.dropRowIndex ?? undefined);
+      applyFillValue(
+        journal,
+        cellDrag.value.dropColKey,
+        cellDrag.value.sourceValue,
+        cellDrag.value.dropRowIndex ?? undefined,
+      );
       syncWarningLabels(journal);
       // Undo記録: 変更後スナップショット
       if (beforeSnap) {
@@ -4058,7 +4249,7 @@ const showExported = ref<boolean>(false); // 出力済を表示（初期: OFF）
 const showExcluded = ref<boolean>(false); // 出力対象外を表示（初期: OFF）
 const showTrashed = ref<boolean>(false); // ゴミ箱を表示（初期: OFF）
 const showPastCsv = ref<boolean>(false); // 過去仕訳CSVを表示（初期: OFF）
-const globalSearchQuery = ref<string>(''); // 全列横断検索クエリ
+const globalSearchQuery = ref<string>(""); // 全列横断検索クエリ
 
 // 証票種別フィルタ（空文字 = 全て）
 const voucherFilter = ref<string>("");
@@ -4270,19 +4461,17 @@ function openWarningConfirmModal(journal: JournalPhase5Mock) {
 const errorLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level === "error");
 const warnLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level === "warn");
 
-
-
 // ────── ヒントモーダル ──────
-type HintValidation = { level: 'error' | 'warn'; message: string };
+type HintValidation = { level: "error" | "warn"; message: string };
 type HintAlternative = { value: string; label: string };
 type HintSuggestion = {
-  side: 'debit' | 'credit';
+  side: "debit" | "credit";
   field: string;
   currentValue: string | null;
   currentLabel: string;
   selectedValue: string;
   selectedLabel: string;
-  alternatives: HintAlternative[];  // ドロップダウン全候補（勘定科目のみ）
+  alternatives: HintAlternative[]; // ドロップダウン全候補（勘定科目のみ）
   entryIndex: number;
 };
 
@@ -4303,17 +4492,17 @@ async function fetchHintsFromAPI(journalId: string): Promise<void> {
     // Phase 2: サーバー側マスタから科目・税区分を取得するため、POSTボディ不要
     const res = await fetch(
       `/api/journals/${encodeURIComponent(journalClientId.value)}/${encodeURIComponent(journalId)}/hints`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
     );
     if (res.ok) {
       const data = await res.json();
       hintValidations.value = data.validations;
       hintSuggestions.value = data.suggestions;
     } else {
-      console.warn('[Hint API] レスポンスエラー:', res.status);
+      console.warn("[Hint API] レスポンスエラー:", res.status);
     }
   } catch (err) {
-    console.error('[Hint API] 通信エラー:', err);
+    console.error("[Hint API] 通信エラー:", err);
   } finally {
     hintLoading.value = false;
   }
@@ -4351,9 +4540,9 @@ function applyHintSuggestion(s: HintSuggestion): void {
 
   const beforeSnap = snapshotJournal(journal.id);
 
-  const entries = s.side === 'debit' ? journal.debit_entries : journal.credit_entries;
+  const entries = s.side === "debit" ? journal.debit_entries : journal.credit_entries;
 
-  if (s.field === '勘定科目') {
+  if (s.field === "勘定科目") {
     const entry = entries[s.entryIndex];
     if (!entry) return;
     entry.account = s.selectedValue;
@@ -4366,16 +4555,16 @@ function applyHintSuggestion(s: HintSuggestion): void {
       const sub = clientSettings.subAccounts.value[s.selectedValue];
       entry.sub_account = sub || null;
     }
-  } else if (s.field === '税区分') {
+  } else if (s.field === "税区分") {
     const entry = entries[s.entryIndex];
     if (!entry) return;
     entry.tax_category_id = s.selectedValue;
-  } else if (s.field === '金額') {
+  } else if (s.field === "金額") {
     const entry = entries[s.entryIndex];
     if (!entry) return;
     entry.amount = Number(s.selectedValue);
-  } else if (s.field === '金額（差額）') {
-    console.log('[Hint] N:N差額は自動修正不可 → 手動修正してください');
+  } else if (s.field === "金額（差額）") {
+    console.log("[Hint] N:N差額は自動修正不可 → 手動修正してください");
     return;
   }
 
@@ -4391,7 +4580,9 @@ function applyHintSuggestion(s: HintSuggestion): void {
   // ヒントをAPI経由で再計算（Phase 1 Step 6-A3）
   fetchHintsFromAPI(journal.id);
 
-  console.log(`[Hint] 修正適用: ${s.side} [${s.entryIndex}] ${s.field}: ${s.currentLabel} → ${s.selectedLabel}`);
+  console.log(
+    `[Hint] 修正適用: ${s.side} [${s.entryIndex}] ${s.field}: ${s.currentLabel} → ${s.selectedLabel}`,
+  );
 }
 
 function closeDropdown() {
@@ -4598,7 +4789,9 @@ function bulkSetReadStatus(value: boolean) {
           j.read_at = new Date().toISOString();
         }
       });
-      console.log(`[一括] ${value ? "既読" : "未読"}: ${capturedTargets.length}件変更 by ${currentStaffId.value}`);
+      console.log(
+        `[一括] ${value ? "既読" : "未読"}: ${capturedTargets.length}件変更 by ${currentStaffId.value}`,
+      );
       const count = capturedTargets.length;
       clearSelection();
       confirmDialog.value = {
@@ -4866,7 +5059,7 @@ const {
 } = useDraggable(supportingImageModalRef);
 
 const showSupportingSearchModal = ref(false);
-const supportingSearchQuery = ref('');
+const supportingSearchQuery = ref("");
 type SupportingMetaItem = {
   id: string;
   fileName: string;
@@ -4899,9 +5092,14 @@ const supportingMatchMap = ref<Map<string, SupportingMetaItem[]>>(new Map());
 /** 証票マッチングAPI呼び出し（マウント時 + 仕訳変更時） */
 async function fetchSupportingMatches() {
   try {
-    const res = await fetch(`/api/journals/${encodeURIComponent(journalClientId.value)}/supporting-match`);
+    const res = await fetch(
+      `/api/journals/${encodeURIComponent(journalClientId.value)}/supporting-match`,
+    );
     if (res.ok) {
-      const data = await res.json() as { matches: Record<string, SupportingMetaItem[]>; matchedCount: number };
+      const data = (await res.json()) as {
+        matches: Record<string, SupportingMetaItem[]>;
+        matchedCount: number;
+      };
       const map = new Map<string, SupportingMetaItem[]>();
       for (const [journalId, items] of Object.entries(data.matches)) {
         map.set(journalId, items);
@@ -4926,7 +5124,7 @@ onMounted(() => {
 
 function openSupportingSearchModal() {
   showSupportingSearchModal.value = true;
-  supportingSearchQuery.value = '';
+  supportingSearchQuery.value = "";
   supportingSearchResults.value = [];
   supportingSearchDone.value = false;
   // 開いた直後に全件取得
@@ -4939,7 +5137,7 @@ function openSupportingSearchModal() {
 
 function closeSupportingSearchModal() {
   showSupportingSearchModal.value = false;
-  supportingSearchQuery.value = '';
+  supportingSearchQuery.value = "";
   supportingSearchResults.value = [];
 }
 
@@ -4955,13 +5153,15 @@ async function executeSupportingSearch() {
   supportingSearchDone.value = false;
   try {
     const q = encodeURIComponent(supportingSearchQuery.value.trim());
-    const res = await fetch(`/api/drive/search-supporting/${encodeURIComponent(journalClientId.value)}?q=${q}`);
+    const res = await fetch(
+      `/api/drive/search-supporting/${encodeURIComponent(journalClientId.value)}?q=${q}`,
+    );
     if (res.ok) {
-      const data = await res.json() as { results: typeof supportingSearchResults.value };
+      const data = (await res.json()) as { results: typeof supportingSearchResults.value };
       supportingSearchResults.value = data.results;
     }
   } catch (err) {
-    console.warn('[根拠資料検索] エラー:', err);
+    console.warn("[根拠資料検索] エラー:", err);
   } finally {
     isSupportingSearching.value = false;
     supportingSearchDone.value = true;
@@ -5006,13 +5206,13 @@ async function fetchConfirmedJournals() {
   try {
     const res = await fetch(`/api/confirmed-journals/${encodeURIComponent(journalClientId.value)}`);
     if (res.ok) {
-      const data = await res.json() as { journals: ConfirmedJournal[]; count: number };
+      const data = (await res.json()) as { journals: ConfirmedJournal[]; count: number };
       confirmedJournals.value = data.journals;
       console.log(`[過去仕訳] confirmed_journals ${data.count}件取得 (${journalClientId.value})`);
     }
     confirmedLoaded.value = true;
   } catch (err) {
-    console.warn('[過去仕訳] 取得失敗:', err);
+    console.warn("[過去仕訳] 取得失敗:", err);
   } finally {
     isConfirmedLoading.value = false;
   }
@@ -5127,23 +5327,27 @@ const filteredPastJournals = computed(() => {
         const creditTotal = j.credit_entries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
         const amount = Math.max(debitTotal, creditTotal);
         switch (pastJournalSearch.value.amountCondition) {
-          case "equal": return amount === pastJournalSearch.value.amount;
-          case "greater": return amount >= (pastJournalSearch.value.amount || 0);
-          case "less": return amount <= (pastJournalSearch.value.amount || 0);
-          default: return true;
+          case "equal":
+            return amount === pastJournalSearch.value.amount;
+          case "greater":
+            return amount >= (pastJournalSearch.value.amount || 0);
+          case "less":
+            return amount <= (pastJournalSearch.value.amount || 0);
+          default:
+            return true;
         }
       });
     }
     // 借方勘定科目フィルタ
     if (pastJournalSearch.value.debitAccount) {
       cjResults = cjResults.filter((j) =>
-        j.debit_entries.some((e) => e.account === pastJournalSearch.value.debitAccount)
+        j.debit_entries.some((e) => e.account === pastJournalSearch.value.debitAccount),
       );
     }
     // 貸方勘定科目フィルタ
     if (pastJournalSearch.value.creditAccount) {
       cjResults = cjResults.filter((j) =>
-        j.credit_entries.some((e) => e.account === pastJournalSearch.value.creditAccount)
+        j.credit_entries.some((e) => e.account === pastJournalSearch.value.creditAccount),
       );
     }
     // JournalPhase5Mock互換オブジェクトに変換して返す
@@ -5163,7 +5367,7 @@ const filteredPastJournals = computed(() => {
         tax_category_id: e.tax_category_id,
         amount: e.amount,
       })),
-      status: 'exported' as const,
+      status: "exported" as const,
       labels: [] as JournalLabelMock[],
       source: cj.source,
     }));
@@ -5329,12 +5533,12 @@ async function fetchJournalList() {
 
   try {
     const res = await fetch(`/api/journals/${journalClientId.value}/list`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     if (!res.ok) {
-      console.error('[fetchJournalList] API error:', res.status);
+      console.error("[fetchJournalList] API error:", res.status);
       return;
     }
     const data = await res.json();
@@ -5345,15 +5549,28 @@ async function fetchJournalList() {
     _apiTotalPages.value = data.totalPages ?? 1;
     triggerRef(journals);
   } catch (err) {
-    console.error('[fetchJournalList] fetch失敗:', err);
+    console.error("[fetchJournalList] fetch失敗:", err);
   }
 }
 
 // 条件変更時にAPI再呼び出し（検索はデバウンス付き）
 let _searchTimer: ReturnType<typeof setTimeout> | null = null;
 watch(
-  [sortColumn, sortDirection, showPastCsv, showUnexported, showExported, showExcluded, showTrashed, voucherFilter, journalCurrentPage, journalPageSize],
-  () => { fetchJournalList(); },
+  [
+    sortColumn,
+    sortDirection,
+    showPastCsv,
+    showUnexported,
+    showExported,
+    showExcluded,
+    showTrashed,
+    voucherFilter,
+    journalCurrentPage,
+    journalPageSize,
+  ],
+  () => {
+    fetchJournalList();
+  },
 );
 watch(globalSearchQuery, () => {
   if (_searchTimer) clearTimeout(_searchTimer);
@@ -5365,14 +5582,18 @@ watch(globalSearchQuery, () => {
 // localJournalsの変更は即座にセル上に反映される（テンプレートがlocalJournalsを直接参照する行もある）が、
 // journals ref（ソート・フィルタ済みリスト）はAPI再フェッチで更新される。
 let _localSaveTimer: ReturnType<typeof setTimeout> | null = null;
-watch(localJournals, () => {
-  if (_localSaveTimer) clearTimeout(_localSaveTimer);
-  // autoSaveの500ms + 余裕200ms = 700ms後にfetchJournalList + 証票マッチング再取得
-  _localSaveTimer = setTimeout(() => {
-    fetchJournalList();
-    fetchSupportingMatches(); // 仕訳変更後にマッチング結果を再計算（Step 6 #4修正）
-  }, 700);
-}, { deep: true });
+watch(
+  localJournals,
+  () => {
+    if (_localSaveTimer) clearTimeout(_localSaveTimer);
+    // autoSaveの500ms + 余裕200ms = 700ms後にfetchJournalList + 証票マッチング再取得
+    _localSaveTimer = setTimeout(() => {
+      fetchJournalList();
+      fetchSupportingMatches(); // 仕訳変更後にマッチング結果を再計算（Step 6 #4修正）
+    }, 700);
+  },
+  { deep: true },
+);
 
 // 初期ロード
 fetchJournalList();
@@ -5451,19 +5672,19 @@ type CombinedRow = { debit: JournalEntryLine | null; credit: JournalEntryLine | 
  */
 function setEntryField(entry: JournalEntryLine, field: string, value: unknown): void {
   switch (field) {
-    case 'account':
+    case "account":
       entry.account = (value as string) || null;
       break;
-    case 'sub_account':
+    case "sub_account":
       entry.sub_account = (value as string) || null;
       break;
-    case 'department':
+    case "department":
       entry.department = (value as string) || null;
       break;
-    case 'amount':
-      entry.amount = value != null && value !== '' ? Number(value) : null;
+    case "amount":
+      entry.amount = value != null && value !== "" ? Number(value) : null;
       break;
-    case 'tax_category_id':
+    case "tax_category_id":
       entry.tax_category_id = (value as string) || null;
       break;
     default:
@@ -5473,9 +5694,7 @@ function setEntryField(entry: JournalEntryLine, field: string, value: unknown): 
   }
 }
 
-function getCombinedRows(
-  journal: JournalPhase5Mock,
-): CombinedRow[] {
+function getCombinedRows(journal: JournalPhase5Mock): CombinedRow[] {
   const maxRows = Math.max(journal.debit_entries.length, journal.credit_entries.length);
   return Array.from({ length: maxRows }, (_, i) => ({
     debit: journal.debit_entries[i] || null,
@@ -5525,7 +5744,12 @@ function hasPastJournal(journal: JournalPhase5Mock): boolean {
  * 動的パスアクセスのためkeyof型安全性は保証できない。内部でunknown経由でRecordにキャストする。
  */
 function getValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknown {
-  const raw = path.split(".").reduce<unknown>((o, key) => (o as Record<string, unknown> | undefined)?.[key], obj as Record<string, unknown>);
+  const raw = path
+    .split(".")
+    .reduce<unknown>(
+      (o, key) => (o as Record<string, unknown> | undefined)?.[key],
+      obj as Record<string, unknown>,
+    );
   // 概念ID → MF正式名称に変換（tax_category_idキーの場合）
   if (path.endsWith("tax_category_id") && typeof raw === "string") {
     return resolveTaxCategoryName(raw);
@@ -5552,8 +5776,6 @@ function resolveAccountName(id: string | null | undefined): string {
   const account = allAccts.find((a) => a.id === id);
   return account ? account.name : id;
 }
-
-
 
 function formatDate(date: unknown): string {
   if (date == null || date === "") return NULL_DISPLAY_UNKNOWN;
@@ -5717,7 +5939,9 @@ const { userName, staffList, currentStaffId } = useCurrentUser();
 // コメント投稿者名（ローカルref。v-model互換のためcomputedのuserNameとは別管理）
 const commentModalAuthor = ref<string>(userName.value);
 // userNameが変わったら同期
-watch(userName, (v) => { commentModalAuthor.value = v; });
+watch(userName, (v) => {
+  commentModalAuthor.value = v;
+});
 
 const commentModalJournal = computed(() => {
   if (!commentModalJournalId.value) return null;
@@ -5767,7 +5991,9 @@ const sessionStartTime = ref<number>(Date.now());
 onMounted(() => {
   window.addEventListener("keydown", handleUndoRedoKeydown);
   sessionStartTime.value = Date.now();
-  console.log(`[セッション] 仕訳画面開始: ${new Date().toISOString()} スタッフ: ${currentStaffId.value}`);
+  console.log(
+    `[セッション] 仕訳画面開始: ${new Date().toISOString()} スタッフ: ${currentStaffId.value}`,
+  );
   // ツールバーの過去仕訳CSV件数表示用に自動取得
   fetchConfirmedJournals();
 });
@@ -5776,7 +6002,9 @@ onUnmounted(() => {
   const elapsed = Math.round((Date.now() - sessionStartTime.value) / 1000);
   const minutes = Math.floor(elapsed / 60);
   const seconds = elapsed % 60;
-  console.log(`[セッション] 仕訳画面終了: ${new Date().toISOString()} スタッフ: ${currentStaffId.value} 滞在: ${minutes}分${seconds}秒`);
+  console.log(
+    `[セッション] 仕訳画面終了: ${new Date().toISOString()} スタッフ: ${currentStaffId.value} 滞在: ${minutes}分${seconds}秒`,
+  );
 });
 </script>
 
