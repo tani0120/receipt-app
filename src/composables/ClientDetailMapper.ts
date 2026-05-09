@@ -1,5 +1,6 @@
 import type { ClientDetailUi, DriveLinkUi } from '@/types/ui.type';
 import { mapClientToUi } from './ClientMapper';
+import { UI_MSG } from '@/constants/uiMessages';
 
 
 // Ironclad Helpers
@@ -26,7 +27,7 @@ export function mapClientDetailToUi(api: unknown): ClientDetailUi {
         const folderId = safeString(id);
         return {
             title,
-            path: folderId ? `gdrive/folders/${folderId.slice(0, 10)}...` : '未連携',
+            path: folderId ? `gdrive/folders/${folderId.slice(0, 10)}...` : UI_MSG.未連携,
             url: folderId ? `https://drive.google.com/drive/folders/${folderId}` : '#',
             iconColorClass: color,
             isLinked: !!folderId
@@ -34,22 +35,22 @@ export function mapClientDetailToUi(api: unknown): ClientDetailUi {
     };
 
     const driveFolderLinks: DriveLinkUi[] = [
-        makeLink('顧客共有フォルダ', raw.sharedFolderId, 'text-yellow-400'),
-        makeLink('仕訳CSV出力先', raw.csvOutputFolderId, 'text-blue-400'),
-        makeLink('仕訳除外しフォルダ', raw.excludedFolderId, 'text-gray-400'),
-        makeLink('過去仕訳・学習データ', raw.archivedFolderId, 'text-purple-400')
+        makeLink(UI_MSG.顧客共有フォルダ, raw.sharedFolderId, 'text-yellow-400'),
+        makeLink(UI_MSG.仕訳CSV出力先, raw.csvOutputFolderId, 'text-blue-400'),
+        makeLink(UI_MSG.仕訳除外フォルダ, raw.excludedFolderId, 'text-gray-400'),
+        makeLink(UI_MSG.過去仕訳学習データ, raw.archivedFolderId, 'text-purple-400')
     ];
 
     // 3. Tax & Accounting Labels
     // Re-use logic from baseUi where possible, or enhance it.
 
     // consumptionTaxModeLabel is not in baseUi, so keep logic but fix it to use raw or base
-    const consumptionTaxModeLabel = (raw.consumptionTaxMode === 'simplified') ? '簡易課税'
-        : (raw.consumptionTaxMode === 'exempt') ? '免税'
-            : '原則課税';
+    const consumptionTaxModeLabel = (raw.consumptionTaxMode === 'simplified') ? UI_MSG.簡易課税
+        : (raw.consumptionTaxMode === 'exempt') ? UI_MSG.免税
+            : UI_MSG.原則課税;
 
     // baseUi already has taxMethodLabel ('税込' / '税抜') but detail might want Explicit '税込経理'
-    const taxMethodExplicitLabel = (baseUi.taxMethod === 'exclusive') ? '税抜経理' : '税込経理';
+    const taxMethodExplicitLabel = (baseUi.taxMethod === 'exclusive') ? UI_MSG.税抜経理 : UI_MSG.税込経理;
 
     // fractionAdjustmentLabel -> Use baseUi.roundingSettingsLabel
     const fractionAdjustmentLabel = baseUi.roundingSettingsLabel;
@@ -60,8 +61,8 @@ export function mapClientDetailToUi(api: unknown): ClientDetailUi {
     const hasSimplifiedTaxWarning = (baseUi.consumptionTaxMode === 'simplified' && !baseUi.simplifiedTaxCategory);
 
     const simplifiedTaxCategoryMessage = hasSimplifiedTaxWarning
-        ? '現在、簡易課税のみなし仕入率は設定されていません。'
-        : (baseUi.simplifiedTaxCategory ? `第${baseUi.simplifiedTaxCategory}種` : '設定なし');
+        ? UI_MSG.簡易課税みなし未設定
+        : (baseUi.simplifiedTaxCategory ? `第${baseUi.simplifiedTaxCategory}種` : UI_MSG.設定なし);
 
     // 4. Mock Statistics (In real app, this might come from a separate specialized API or be calculated)
     const stats = {

@@ -235,15 +235,22 @@ export const DOC_STATUS_LABELS: Record<string, string> = {
 } as const
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ソースタイプラベル（AI分類結果表示用）
+// ソースタイプラベル（AI分類結果 + アップロード画面共通）
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const SOURCE_TYPE_LABELS: Record<string, string> = {
   receipt: 'レシート',
   invoice: '請求書',
+  invoice_received: '請求書',
+  invoice_issued: '発行請求書',
+  receipt_issued: '発行領収書',
   bank_statement: '通帳',
   credit_card: 'クレカ明細',
   transfer: '振込明細',
   tax_payment: '納税',
+  journal_voucher: '振替伝票',
+  cash_ledger: '現金出納帳',
+  non_journal: '仕訳対象外',
+  supplementary_doc: '補助資料',
   other: 'その他',
 } as const
 

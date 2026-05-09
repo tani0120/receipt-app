@@ -17,6 +17,8 @@ import { errorGuideMessage } from '@/shared/validationMessages'
 import { useDocuments } from '@/composables/useDocuments'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import type { DocEntry, DocSource, DocStatus } from '@/repositories/types'
+import { SOURCE_TYPE_LABELS } from '@/constants/vendorOptions'
+import { UI_MSG } from '@/constants/uiMessages'
 
 // ===== 型定義（統一） =====
 
@@ -57,14 +59,8 @@ export interface UploadEntry {
   fileUrl: string | null
 }
 
-// ===== ラベル定義 =====
-
-export const SOURCE_TYPE_LABELS: Record<string, string> = {
-  receipt: '領収書', invoice_received: '請求書', tax_payment: '納付書',
-  journal_voucher: '振替伝票', bank_statement: '通帳', credit_card: 'クレカ明細',
-  cash_ledger: '現金出納帳', invoice_issued: '発行請求書', receipt_issued: '発行領収書',
-  non_journal: '仕訳対象外', supplementary_doc: '補助資料', other: 'その他',
-}
+// SOURCE_TYPE_LABELS は vendorOptions.ts から再エクスポート（後方互換）
+export { SOURCE_TYPE_LABELS } from '@/constants/vendorOptions'
 
 // ===== ユーティリティ =====
 
@@ -247,7 +243,7 @@ export function useUpload() {
 
   const confirmLabel = computed(() => {
     const total = entries.value.length + pendingFiles.value.length
-    if (!total) return '写真を選んでください'
+    if (!total) return UI_MSG.写真未選択
     if (counts.value.processing || counts.value.queued || pendingFiles.value.length) {
       const done = counts.value.ok + counts.value.error
       return `${total}枚中${done}枚が処理完了 (${progressPct.value}%)`
@@ -953,7 +949,7 @@ export function useUpload() {
       })
       if (!res.ok) {
         console.error(`[useUpload] documentStore保存失敗: HTTP ${res.status}`)
-        alert('データ保存に失敗しました。再度お試しください。')
+        alert(UI_MSG.データ保存失敗再試行)
         isConfirming.value = false
         return
       }
@@ -961,7 +957,7 @@ export function useUpload() {
       console.log(`[useUpload] handleConfirm: サーバーに${result.added}件保存（重複${result.skipped}件スキップ）(role=${role})`)
     } catch (err) {
       console.error('[useUpload] documentStore保存エラー:', err)
-      alert('データ保存に失敗しました。ネットワーク接続を確認してください。')
+      alert(UI_MSG.データ保存失敗ネットワーク)
       isConfirming.value = false
       return
     }
