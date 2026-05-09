@@ -134,3 +134,48 @@ export const warnFileSizeTooLarge = (sizeMB: string) =>
   `ファイルサイズが大きすぎます（${sizeMB}MB）。10MB以下にしてください`
 /** AI分析失敗 */
 export const WARN_AI_ANALYSIS_FAILED = 'AI分析に失敗しました（サーバー側エラー）'
+
+// ============================================================
+// G. ヒント検証メッセージ（journalHintService.ts で使用）
+// ============================================================
+
+/** 借方科目マスタ未存在 */
+export const hintDebitAccountUnknown = (account: string) =>
+  `借方科目【${account}】はマスタに存在しません`
+/** 貸方科目マスタ未存在 */
+export const hintCreditAccountUnknown = (account: string) =>
+  `貸方科目【${account}】はマスタに存在しません`
+/** 勘定科目未設定 */
+export const HINT_ACCOUNT_UNKNOWN = '勘定科目が未設定または不明です'
+/** 税区分未設定 */
+export const HINT_TAX_UNKNOWN = '税区分が未設定または不明です'
+/** 摘要未設定 */
+export const HINT_DESCRIPTION_EMPTY = '摘要が未設定です'
+/** 日付未設定 */
+export const HINT_DATE_EMPTY = '日付が未設定です'
+/** 金額未設定 */
+export const HINT_AMOUNT_EMPTY = '金額が未設定のエントリがあります'
+/** 貸借不一致 */
+export const hintDebitCreditMismatch = (debit: string, credit: string) =>
+  `貸借不一致: 借方合計 ${debit} ≠ 貸方合計 ${credit}`
+/** 科目組合せ矛盾 */
+export const HINT_CATEGORY_CONFLICT = '借方・貸方の勘定科目の組み合わせに矛盾があります'
+/** 借方貸方同一科目 */
+export const HINT_SAME_ACCOUNT = '借方と貸方に同一の勘定科目が使用されています'
+/** 証票意味ルール不適切（ルールあり） */
+export const hintVoucherTypeConflict = (voucherType: string, description: string) =>
+  `証票意味【${voucherType}】に対して不適切な科目があります\n${description}`
+/** 証票意味ルール不適切（ルールなし） */
+export const HINT_VOUCHER_TYPE_GENERIC = '証票意味に対して不適切な科目があります'
+/** 税区分方向不一致 */
+export const HINT_TAX_ACCOUNT_DIRECTION = '税区分と勘定科目の方向（売上/仕入）が一致しません'
+/** 未来日付 */
+export const hintFutureDate = (date: string) =>
+  `未来日付です（${date}）。日付を確認してください`
+
+// ── フィールドラベル（ヒント候補表示用）──
+export const FIELD_ACCOUNT = '勘定科目'
+export const FIELD_TAX_CATEGORY = '税区分'
+export const FIELD_AMOUNT = '金額'
+export const FIELD_AMOUNT_DIFF = '金額（差額）'
+export const LABEL_UNSET = '未設定'

@@ -15,6 +15,17 @@
 import { VOUCHER_TYPE_RULES, getBaseAccountId } from '../../data/master/voucherTypeRules'
 import type { VoucherTypeSideRule } from '../../data/master/voucherTypeRules'
 import type { AccountForValidation, TaxCategoryForValidation } from './journalValidation'
+import {
+  hintDebitAccountUnknown, hintCreditAccountUnknown,
+  HINT_ACCOUNT_UNKNOWN, HINT_TAX_UNKNOWN,
+  HINT_DESCRIPTION_EMPTY, HINT_DATE_EMPTY, HINT_AMOUNT_EMPTY,
+  hintDebitCreditMismatch,
+  HINT_CATEGORY_CONFLICT, HINT_SAME_ACCOUNT,
+  hintVoucherTypeConflict, HINT_VOUCHER_TYPE_GENERIC,
+  HINT_TAX_ACCOUNT_DIRECTION, hintFutureDate,
+  FIELD_ACCOUNT, FIELD_TAX_CATEGORY, FIELD_AMOUNT, FIELD_AMOUNT_DIFF,
+  LABEL_UNSET,
+} from '../../shared/validationMessages'
 
 // ────────────────────────────────────────────
 // 型定義
@@ -103,50 +114,50 @@ export function generateHintValidations(
     let found = false
     for (const e of journal.debit_entries) {
       if (e.account && !accountIds.has(e.account)) {
-        results.push({ level: 'error', message: `借方科目【${e.account}】はマスタに存在しません` })
+        results.push({ level: 'error', message: hintDebitAccountUnknown(e.account) })
         found = true
       }
     }
     for (const e of journal.credit_entries) {
       if (e.account && !accountIds.has(e.account)) {
-        results.push({ level: 'error', message: `貸方科目【${e.account}】はマスタに存在しません` })
+        results.push({ level: 'error', message: hintCreditAccountUnknown(e.account) })
         found = true
       }
     }
     if (!found) {
-      results.push({ level: 'error', message: '勘定科目が未設定または不明です' })
+      results.push({ level: 'error', message: HINT_ACCOUNT_UNKNOWN })
     }
   }
   if (labels.includes('TAX_UNKNOWN'))
-    results.push({ level: 'error', message: '税区分が未設定または不明です' })
+    results.push({ level: 'error', message: HINT_TAX_UNKNOWN })
   if (labels.includes('DESCRIPTION_UNKNOWN'))
-    results.push({ level: 'warn', message: '摘要が未設定です' })
+    results.push({ level: 'warn', message: HINT_DESCRIPTION_EMPTY })
   if (labels.includes('DATE_UNKNOWN'))
-    results.push({ level: 'warn', message: '日付が未設定です' })
+    results.push({ level: 'warn', message: HINT_DATE_EMPTY })
   if (labels.includes('AMOUNT_UNCLEAR'))
-    results.push({ level: 'error', message: '金額が未設定のエントリがあります' })
+    results.push({ level: 'error', message: HINT_AMOUNT_EMPTY })
   if (labels.includes('DEBIT_CREDIT_MISMATCH')) {
     const dSum = journal.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0)
     const cSum = journal.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0)
-    results.push({ level: 'error', message: `貸借不一致: 借方合計 ${dSum.toLocaleString()} ≠ 貸方合計 ${cSum.toLocaleString()}` })
+    results.push({ level: 'error', message: hintDebitCreditMismatch(dSum.toLocaleString(), cSum.toLocaleString()) })
   }
   if (labels.includes('CATEGORY_CONFLICT'))
-    results.push({ level: 'error', message: '借方・貸方の勘定科目の組み合わせに矛盾があります' })
+    results.push({ level: 'error', message: HINT_CATEGORY_CONFLICT })
   if (labels.includes('SAME_ACCOUNT_BOTH_SIDES'))
-    results.push({ level: 'warn', message: '借方と貸方に同一の勘定科目が使用されています' })
+    results.push({ level: 'warn', message: HINT_SAME_ACCOUNT })
   if (labels.includes('VOUCHER_TYPE_CONFLICT')) {
     const vt = journal.voucher_type
     const rule = vt ? VOUCHER_TYPE_RULES[vt] : null
     if (rule) {
-      results.push({ level: 'error', message: `証票意味【${vt}】に対して不適切な科目があります\n${rule.description}` })
+      results.push({ level: 'error', message: hintVoucherTypeConflict(vt!, rule.description) })
     } else {
-      results.push({ level: 'error', message: '証票意味に対して不適切な科目があります' })
+      results.push({ level: 'error', message: HINT_VOUCHER_TYPE_GENERIC })
     }
   }
   if (labels.includes('TAX_ACCOUNT_MISMATCH'))
-    results.push({ level: 'warn', message: '税区分と勘定科目の方向（売上/仕入）が一致しません' })
+    results.push({ level: 'warn', message: HINT_TAX_ACCOUNT_DIRECTION })
   if (labels.includes('FUTURE_DATE'))
-    results.push({ level: 'error', message: `未来日付です（${journal.voucher_date}）。日付を確認してください` })
+    results.push({ level: 'error', message: hintFutureDate(journal.voucher_date!) })
 
   return results
 }
@@ -167,13 +178,13 @@ export function generateHintSuggestions(
 
   // 「科目名（補助科目）」形式のラベル生成
   const acctLabel = (id: string | null): string => {
-    if (!id) return '未設定'
+    if (!id) return LABEL_UNSET
     const a = accounts.find(x => x.id === id)
     if (!a) return id
     return a.sub ? `${a.name}（${a.sub}）` : a.name
   }
   const taxName = (id: string | null | undefined): string => {
-    if (!id) return '未設定'
+    if (!id) return LABEL_UNSET
     const t = taxCategories.find(x => x.id === id)
     return t ? (t.shortName ?? t.name) : id
   }
@@ -261,8 +272,8 @@ export function generateHintSuggestions(
         const def = pickDefault(vt, alts)
         if (def) {
           suggestions.push({
-            side, field: '勘定科目', currentValue: null,
-            currentLabel: '未設定',
+            side, field: FIELD_ACCOUNT, currentValue: null,
+            currentLabel: LABEL_UNSET,
             selectedValue: def.value, selectedLabel: def.label,
             alternatives: alts, entryIndex: idx,
           })
@@ -276,7 +287,7 @@ export function generateHintSuggestions(
         const def = pickDefault(vt, alts)
         if (def) {
           suggestions.push({
-            side, field: '勘定科目', currentValue: acct,
+            side, field: FIELD_ACCOUNT, currentValue: acct,
             currentLabel: acct, // マスタ外なのでID表示
             selectedValue: def.value, selectedLabel: def.label,
             alternatives: alts, entryIndex: idx,
@@ -305,7 +316,7 @@ export function generateHintSuggestions(
         const def = pickDefault(vt, alts)
         if (def) {
           suggestions.push({
-            side, field: '勘定科目', currentValue: acct,
+            side, field: FIELD_ACCOUNT, currentValue: acct,
             currentLabel: acctLabel(acct),
             selectedValue: def.value, selectedLabel: def.label,
             alternatives: alts, entryIndex: idx,
@@ -333,7 +344,7 @@ export function generateHintSuggestions(
         const expectedTax = acctObj.defaultTaxCategoryId
         if (currentTax !== expectedTax) {
           suggestions.push({
-            side, field: '税区分', currentValue: currentTax ?? null,
+            side, field: FIELD_TAX_CATEGORY, currentValue: currentTax ?? null,
             currentLabel: taxName(currentTax),
             selectedValue: expectedTax, selectedLabel: taxName(expectedTax),
             alternatives: [], entryIndex: idx,
@@ -355,14 +366,14 @@ export function generateHintSuggestions(
 
       if (dCount === 1 && cCount >= 2) {
         suggestions.push({
-          side: 'debit', field: '金額', currentValue: String(dSum),
+          side: 'debit', field: FIELD_AMOUNT, currentValue: String(dSum),
           currentLabel: dSum.toLocaleString(),
           selectedValue: String(cSum), selectedLabel: cSum.toLocaleString(),
           alternatives: [], entryIndex: 0,
         })
       } else if (cCount === 1 && dCount >= 2) {
         suggestions.push({
-          side: 'credit', field: '金額', currentValue: String(cSum),
+          side: 'credit', field: FIELD_AMOUNT, currentValue: String(cSum),
           currentLabel: cSum.toLocaleString(),
           selectedValue: String(dSum), selectedLabel: dSum.toLocaleString(),
           alternatives: [], entryIndex: 0,
@@ -372,7 +383,7 @@ export function generateHintSuggestions(
         const diff = Math.abs(dSum - cSum)
         suggestions.push({
           side: dSum > cSum ? 'debit' : 'credit',
-          field: '金額（差額）',
+          field: FIELD_AMOUNT_DIFF,
           currentValue: String(Math.max(dSum, cSum)),
           currentLabel: `差額 ${diff.toLocaleString()}`,
           selectedValue: String(Math.min(dSum, cSum)),
