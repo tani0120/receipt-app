@@ -38,7 +38,7 @@
               v-model="searchQuery"
               type="text"
               class="iv-search-input"
-              placeholder="業種名・業種ID・科目名で検索..."
+              :placeholder="UI_MSG.業種検索"
             />
           </div>
           <div class="iv-filter-group">
@@ -188,6 +188,7 @@ import type { VendorVector, IndustryVectorEntry } from '@/types/pipeline/vendor.
 import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { FILTER_ALL_LABEL, PLACEHOLDER_ADD } from '@/constants/vendorOptions';
+import { UI_MSG } from '@/constants/uiMessages';
 
 // 列幅カスタマイズ
 const ivDefaultWidths: Record<string, number> = {

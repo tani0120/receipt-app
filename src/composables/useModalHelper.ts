@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { UI_MSG } from '@/constants/uiMessages'
 
 /**
  * useModalHelper — ConfirmModal / NotifyModal をPromiseベースで制御するcomposable
@@ -51,8 +52,8 @@ export function useModalHelper() {
     show: false,
     title: '',
     message: '',
-    confirmLabel: 'はい',
-    cancelLabel: 'いいえ',
+    confirmLabel: UI_MSG.はい,
+    cancelLabel: UI_MSG.いいえ,
     variant: 'default' as 'default' | 'danger',
   })
 
@@ -62,8 +63,8 @@ export function useModalHelper() {
   function confirm(opts: ConfirmOptions): Promise<boolean> {
     confirmState.title = opts.title
     confirmState.message = opts.message ?? ''
-    confirmState.confirmLabel = opts.confirmLabel ?? 'はい'
-    confirmState.cancelLabel = opts.cancelLabel ?? 'いいえ'
+    confirmState.confirmLabel = opts.confirmLabel ?? UI_MSG.はい
+    confirmState.cancelLabel = opts.cancelLabel ?? UI_MSG.いいえ
     confirmState.variant = opts.variant ?? 'default'
     confirmState.show = true
 

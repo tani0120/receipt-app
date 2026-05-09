@@ -265,6 +265,7 @@ import { useRoute } from "vue-router";
 import PortalHeader from "@/components/PortalHeader.vue";
 import { useClients } from "@/features/client-management/composables/useClients";
 import { MSG_DUPLICATE_SHORT } from "@/shared/validationMessages";
+import { UI_MSG } from '@/constants/uiMessages';
 
 // ===== ルート =====
 const route = useRoute();
@@ -296,17 +297,17 @@ const CONCURRENCY = 3;
 
 // ===== 説明カード =====
 const howToItems = [
-  { step: 1, icon: "📂", title: "ファイルを選ぶ", desc: "謄本・CSV・Excel・PDF など何でも対応" },
+  { step: 1, icon: UI_MSG.ステップ1アイコン, title: UI_MSG.ステップ1タイトル, desc: UI_MSG.ステップ1説明 },
   {
     step: 2,
     icon: "📤",
-    title: "自動アップロード",
+    title: UI_MSG.自動アップロード,
     desc: "ファイル選択後に自動で送信が始まります",
   },
   {
     step: 3,
     icon: "✅",
-    title: "全件完了で確定",
+    title: UI_MSG.全件完了で確定,
     desc: "全て送信できたら「確定」ボタンを押してください",
   },
 ];

@@ -112,7 +112,7 @@
               ref="commentTextarea"
               v-model="newComment"
               class="ce-comment-input"
-              placeholder="コメントする（@でメンション）"
+              :placeholder="UI_MSG.コメント"
               rows="1"
               @keydown.ctrl.enter="addComment"
               @input="onCommentInput"
@@ -501,7 +501,7 @@ const saveLead = async () => {
       });
       router.push(`/master/leads/${saved.leadId}`);
     } catch (err) {
-      await modal.notify({ title: '見込先の追加に失敗しました', message: String(err), variant: 'warning' });
+      await modal.notify({ title: UI_MSG.見込先追加失敗, message: String(err), variant: 'warning' });
     }
   } else {
     const id = leadId.value!;
@@ -517,7 +517,7 @@ const saveLead = async () => {
       await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: "success" });
       router.push("/master/leads");
     } catch (err) {
-      await modal.notify({ title: '見込先の更新に失敗しました', message: String(err), variant: 'warning' });
+      await modal.notify({ title: UI_MSG.見込先更新失敗, message: String(err), variant: 'warning' });
     }
   }
 };

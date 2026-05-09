@@ -280,7 +280,7 @@ async function promoteToMfChecked() {
     const row = allTaxRows.find(r => r.id === id);
     return row?.isCustom;
   });
-  if (!customIds.length) { await modal.notify({ title: 'カスタム税区分のみMF公式に変更できます。', variant: 'warning' }); return; }
+  if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム税区分のみMF公式, variant: 'warning' }); return; }
   const ok = await modal.confirm({ title: `${customIds.length}件のカスタム税区分をMF公式に変更しますか？` });
   if (!ok) return;
   customIds.forEach(id => {
@@ -295,7 +295,7 @@ async function demoteFromMfChecked() {
     const row = allTaxRows.find(r => r.id === id);
     return row && !row.isCustom;
   });
-  if (!officialIds.length) { await modal.notify({ title: 'MF公式税区分のみMF非公式に変更できます。', variant: 'warning' }); return; }
+  if (!officialIds.length) { await modal.notify({ title: UI_MSG.MF公式税区分のみMF非公式, variant: 'warning' }); return; }
   const ok = await modal.confirm({ title: `${officialIds.length}件の税区分をMF非公式に変更しますか？`, message: 'MFインポート時に項目の紐付けが必要になる可能性があります。', variant: 'danger' });
   if (!ok) return;
   officialIds.forEach(id => {
@@ -480,7 +480,7 @@ async function saveChanges() {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({ message: '保存に失敗しました' }));
-      await modal.notify({ title: err.message ?? '保存に失敗しました', variant: 'warning' });
+      await modal.notify({ title: err.message ?? UI_MSG.保存失敗, variant: 'warning' });
       return;
     }
 

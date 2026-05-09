@@ -348,6 +348,7 @@ import {
 } from '@/composables/useUpload'
 import type { UploadEntry } from '@/composables/useUpload'
 import { MSG_DUPLICATE_SHORT } from '@/shared/validationMessages'
+import { UI_MSG } from '@/constants/uiMessages'
 
 /** File System Access API（Chrome 86+）の型宣言 */
 interface FilePickerHandle {
@@ -405,10 +406,10 @@ const dragging = ref(false)
 
 // 説明カード
 const howToItems = [
-  { step: 1, icon: '①', title: '資料を送付', desc: 'スマホ撮影またはファイルを選択して送付' },
-  { step: 2, icon: '②', title: '重複チェック', desc: '同じファイルがないか自動で確認します' },
-  { step: 3, icon: '③', title: '内容を確認', desc: 'タップして再撮影 or そのまま送付 を選択' },
-  { step: 4, icon: '④', title: '確認が終わったら送付', desc: '「送付する」ボタンを押して完了' },
+  { step: 1, icon: UI_MSG.ゲストステップ1アイコン, title: UI_MSG.ゲストステップ1タイトル, desc: UI_MSG.ゲストステップ1説明 },
+  { step: 2, icon: UI_MSG.ゲストステップ2アイコン, title: UI_MSG.ゲストステップ2タイトル, desc: UI_MSG.ゲストステップ2説明 },
+  { step: 3, icon: UI_MSG.ゲストステップ3アイコン, title: UI_MSG.ゲストステップ3タイトル, desc: UI_MSG.ゲストステップ3説明 },
+  { step: 4, icon: UI_MSG.ゲストステップ4アイコン, title: UI_MSG.ゲストステップ4タイトル, desc: UI_MSG.ゲストステップ4説明 },
 ]
 
 // イベントハンドラ（PC/モバイル統合）

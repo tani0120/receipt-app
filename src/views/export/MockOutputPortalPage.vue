@@ -126,7 +126,7 @@ async function downloadExcluded() {
     const blob = await res.blob()
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
     triggerDownload(blob, `${clientId.value}_仕訳外_${today}.zip`)
-    showToast({ message: '仕訳外ZIPをダウンロードしました', type: 'success', icon: 'fa-solid fa-file-zipper' })
+    showToast({ message: UI_MSG.仕訳外ZIPダウンロード完了, type: 'success', icon: 'fa-solid fa-file-zipper' })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     showToast({ message: `エラー: ${msg}`, type: 'error' })
@@ -146,7 +146,7 @@ async function downloadSupporting() {
     const blob = await res.blob()
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
     triggerDownload(blob, `${clientId.value}_根拠資料_${today}.zip`)
-    showToast({ message: '根拠資料ZIPをダウンロードしました', type: 'success', icon: 'fa-solid fa-file-lines' })
+    showToast({ message: UI_MSG.根拠資料ZIPダウンロード完了, type: 'success', icon: 'fa-solid fa-file-lines' })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     showToast({ message: `エラー: ${msg}`, type: 'error' })

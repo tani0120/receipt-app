@@ -351,7 +351,7 @@ async function promoteToMfChecked() {
     const row = accountRows.find(r => r.id === id);
     return row?.isCustom;
   });
-  if (!customIds.length) { await modal.notify({ title: 'カスタム科目のみMF公式に変更できます。', variant: 'warning' }); return; }
+  if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム科目のみMF公式, variant: 'warning' }); return; }
   const ok = await modal.confirm({ title: `${customIds.length}件のカスタム科目をMF公式に変更しますか？` });
   if (!ok) return;
   customIds.forEach(id => {
@@ -366,7 +366,7 @@ async function demoteFromMfChecked() {
     const row = accountRows.find(r => r.id === id);
     return row && !row.isCustom;
   });
-  if (!officialIds.length) { await modal.notify({ title: 'MF公式科目のみMF非公式に変更できます。', variant: 'warning' }); return; }
+  if (!officialIds.length) { await modal.notify({ title: UI_MSG.MF公式科目のみMF非公式, variant: 'warning' }); return; }
   const ok = await modal.confirm({ title: `${officialIds.length}件の科目をMF非公式に変更しますか？`, message: 'MFインポート時に項目の紐付けが必要になる可能性があります。', variant: 'danger' });
   if (!ok) return;
   officialIds.forEach(id => {

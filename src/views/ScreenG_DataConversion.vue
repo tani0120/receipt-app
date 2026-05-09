@@ -135,6 +135,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive, defineAsyncComponent } from 'vue';
 import { useDataConversion } from '@/composables/useDataConversion';
+import { UI_MSG } from '@/constants/uiMessages';
 
 // コンポーネント
 const GStepHeader = defineAsyncComponent(() => import('@/components/ScreenG/G_StepHeader.vue'));
@@ -195,7 +196,7 @@ const handleDownload = async (id: string) => {
 };
 
 const deleteLog = (id: string) => {
-    if(confirm('この履歴を削除しますか？')) {
+    if(confirm(UI_MSG.履歴削除確認)) {
         removeLog(id);
     }
 };

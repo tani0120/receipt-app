@@ -1,6 +1,7 @@
 import { ref, onBeforeUnmount } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import type { useModalHelper } from './useModalHelper'
+import { UI_MSG } from '@/constants/uiMessages'
 
 /**
  * useUnsavedGuard — 未保存変更の離脱ガード（カスタムモーダル版）
@@ -67,10 +68,10 @@ export function useUnsavedGuard(
 
     // カスタムモーダルで確認（変更ログ付き）
     const answer = await modal.confirm({
-      title: '未保存の変更があります',
+      title: UI_MSG.未保存の変更,
       message: formatChangeLog(),
-      confirmLabel: 'はい（保存して遷移）',
-      cancelLabel: 'いいえ（破棄して遷移）',
+      confirmLabel: UI_MSG.はい保存して遷移,
+      cancelLabel: UI_MSG.いいえ破棄して遷移,
     })
 
     if (answer && saveFn) {

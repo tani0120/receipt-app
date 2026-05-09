@@ -20,7 +20,7 @@
         <div class="iv-filters">
           <div class="iv-search-group">
             <i class="fa-solid fa-magnifying-glass iv-search-icon"></i>
-            <input v-model="searchQuery" type="text" class="iv-search-input" placeholder="業種名・業種ID・科目名で検索..." />
+            <input v-model="searchQuery" type="text" class="iv-search-input" :placeholder="UI_MSG.業種検索" />
           </div>
           <div class="iv-filter-group">
             <label class="iv-filter-label">カテゴリ:</label>
@@ -148,6 +148,7 @@ import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { FILTER_ALL_LABEL, PLACEHOLDER_ADD } from '@/constants/vendorOptions';
+import { UI_MSG } from '@/constants/uiMessages';
 
 // ============================================================
 // 顧問先情報から法人/個人を判定

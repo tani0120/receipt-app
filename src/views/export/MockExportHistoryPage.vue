@@ -99,8 +99,8 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { toMfCsvDate } from '@/utils/mf-csv-date';
 import { useModalHelper } from '@/composables/useModalHelper';
-import NotifyModal from '@/components/NotifyModal.vue';
 import { UI_MSG } from '@/constants/uiMessages';
+import NotifyModal from '@/components/NotifyModal.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -211,7 +211,7 @@ const startDownload = () => {
     isDownloading.value = false;
     showDownloadModal.value = false;
     if (downloadCount === 0) {
-      modal.notify({ title: 'CSVデータが見つかりません', message: '過去の出力データは保持されていない可能性があります。', variant: 'warning' });
+      modal.notify({ title: UI_MSG.CSVデータなし, message: UI_MSG.CSVデータなし補足, variant: 'warning' });
     }
   }, 800);
 };

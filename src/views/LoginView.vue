@@ -22,7 +22,7 @@
             id="email"
             v-model="email"
             type="email"
-            placeholder="メールアドレスを入力"
+            :placeholder="UI_MSG.メールアドレス入力"
             required
             autocomplete="email"
           />
@@ -34,7 +34,7 @@
             id="password"
             v-model="password"
             type="password"
-            placeholder="パスワードを入力"
+            :placeholder="UI_MSG.パスワード入力"
             required
             autocomplete="current-password"
           />
@@ -67,6 +67,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { signInWithEmail, signInWithGoogle } from '@/utils/auth';
+import { UI_MSG } from '@/constants/uiMessages';
 
 const router = useRouter();
 

@@ -13,7 +13,7 @@
             <input
               type="text"
               v-model="globalSearchQuery"
-              placeholder="全列検索（摘要・科目・金額…）"
+              :placeholder="UI_MSG.全列検索"
               class="border border-blue-400 text-blue-700 text-[11px] px-2 py-0.5 rounded w-48 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <button
@@ -1744,7 +1744,7 @@
               ref="supportingSearchInputRef"
               v-model="supportingSearchQuery"
               type="text"
-              placeholder="日付 金額 取引先名 ファイル名 等"
+              :placeholder="UI_MSG.日付金額検索"
               class="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
               @input="debounceSupportingSearch"
               @mousedown.stop
@@ -1938,7 +1938,7 @@
               <input
                 type="text"
                 v-model="pastJournalSearch.vendor"
-                placeholder="パーク宝小路"
+                :placeholder="UI_MSG.サンプル建物名"
                 class="w-full px-2 py-1 text-xs border rounded"
               />
             </div>
@@ -1978,7 +1978,7 @@
               <input
                 type="number"
                 v-model.number="pastJournalSearch.amount"
-                placeholder="金額を入力"
+                :placeholder="UI_MSG.金額入力"
                 class="w-32 px-2 py-1 text-xs border rounded"
               />
             </div>
@@ -2653,7 +2653,7 @@
           "
           class="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
         >
-          {{ confirmDialog.confirmLabel || "実行" }}
+          {{ confirmDialog.confirmLabel || UI_MSG.実行 }}
         </button>
       </div>
     </div>
@@ -3216,7 +3216,7 @@ function runAccountValidation(journal: JournalPhase5Mock): void {
       : "未設定";
     confirmDialog.value = {
       show: true,
-      title: "⚠ 勘定科目の組み合わせ警告",
+      title: UI_MSG.科目組み合わせ警告,
       message: `${warning}\n\n借方: ${debitLabel}\n貸方: ${creditLabel}`,
       onConfirm: () => {
         // モーダルを閉じるのみ。CATEGORY_CONFLICTラベルは
@@ -3237,7 +3237,7 @@ function runAccountValidation(journal: JournalPhase5Mock): void {
   if (voucherWarning) {
     confirmDialog.value = {
       show: true,
-      title: "⚠ 種別チェック警告",
+      title: UI_MSG.種別チェック警告,
       message: `${voucherWarning}\n\n証票意味: ${voucherType}\n借方: ${debitAccount}\n貸方: ${creditAccount}`,
       onConfirm: () => {
         // モーダルを閉じるのみ。VOUCHER_TYPE_CONFLICTラベルは
@@ -3438,12 +3438,12 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
     const warningText = addedLabels.map((l) => warningLabelMap[l]?.label ?? l).join("\n");
     confirmDialog.value = {
       show: true,
-      title: "⚠ 警告が検出されました",
+      title: UI_MSG.警告検出,
       message: `以下の警告が検出されました：\n${warningText}`,
       onConfirm: () => {
         /* 確認済み */
       },
-      confirmLabel: "確認",
+      confirmLabel: UI_MSG.確認,
       showCancel: false,
     };
   } else if (removedLabels.length > 0 && !silent) {
@@ -3451,7 +3451,7 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
     const resolvedText = removedLabels.map((l) => warningLabelMap[l]?.label ?? l).join("\n");
     confirmDialog.value = {
       show: true,
-      title: "✅ 警告が解消されました",
+      title: UI_MSG.警告解消,
       message: `以下の警告が解消されました：\n${resolvedText}`,
       onConfirm: () => {
         /* OK */
@@ -4425,7 +4425,7 @@ function openWarningConfirmModal(journal: JournalPhase5Mock) {
   const warningText = warnings.map((l) => warningLabelMap[l]?.label ?? l).join("\n");
   confirmDialog.value = {
     show: true,
-    title: "警告確認",
+    title: UI_MSG.警告確認,
     message: `以下の警告があります:\n${warningText}\n\n確認済みとして警告を解除し、出力対象にしますか？`,
     onConfirm: () => {
       // warning_dismissalsに追加（syncWarningLabelsCore再実行時もスキップされる）
@@ -4674,7 +4674,7 @@ function trashJournal(journal: JournalPhase5Mock) {
   closeDropdown();
   confirmDialog.value = {
     show: true,
-    title: "ゴミ箱に移動",
+    title: UI_MSG.ゴミ箱に移動,
     message: `「${journal.description}」をゴミ箱に移動しますか？`,
     onConfirm: () => {
       const target = localJournals.value.find((j) => j.id === journal.id);
@@ -4698,7 +4698,7 @@ function restoreJournal(journal: JournalPhase5Mock) {
   closeDropdown();
   confirmDialog.value = {
     show: true,
-    title: "復活",
+    title: UI_MSG.復活,
     message: `「${journal.description}」を復活しますか？`,
     onConfirm: () => {
       target.deleted_at = null;
@@ -4706,7 +4706,7 @@ function restoreJournal(journal: JournalPhase5Mock) {
       console.log(`[DD] 復活: ${journal.id} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
-        title: "復活完了",
+        title: UI_MSG.復活完了,
         message: `「${journal.description}」を復活しました。`,
         onConfirm: () => {},
       };
@@ -4815,7 +4815,7 @@ function bulkSetExportExclude(exclude: boolean) {
     const capturedTargets = [...targets]; // クロージャキャプチャ
     confirmDialog.value = {
       show: true,
-      title: exclude ? "出力対象外に変更" : "出力対象に変更",
+      title: exclude ? UI_MSG.出力対象外に変更 : UI_MSG.出力対象に変更,
       message: `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）/ 実行対象: ${capturedTargets.length}件`,
       onConfirm: () => {
         capturedTargets.forEach((j) => {
@@ -4928,7 +4928,7 @@ function showBulkTrashDialog() {
       : `${capturedTargets.length}件をゴミ箱に移動しますか？`;
   confirmDialog.value = {
     show: true,
-    title: "ゴミ箱",
+    title: UI_MSG.ゴミ箱,
     message: msg,
     onConfirm: () => {
       const now = new Date().toISOString();

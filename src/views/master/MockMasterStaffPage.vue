@@ -423,15 +423,15 @@ const closePanel = () => {
 
 const saveStaff = async () => {
   if (!panelForm.name) {
-    await modal.notify({ title: '名前は必須です', variant: 'warning' });
+    await modal.notify({ title: UI_MSG.名前必須短, variant: 'warning' });
     return;
   }
   if (!panelForm.email) {
-    await modal.notify({ title: 'メールアドレスは必須です', variant: 'warning' });
+    await modal.notify({ title: UI_MSG.メールアドレス必須, variant: 'warning' });
     return;
   }
   if (panelMode.value === 'add' && !panelForm.password) {
-    await modal.notify({ title: '新規作成時はパスワードが必須です', variant: 'warning' });
+    await modal.notify({ title: UI_MSG.パスワード必須新規, variant: 'warning' });
     return;
   }
   const uuid = editingUuid.value ?? generateStaffUuid();
@@ -462,7 +462,7 @@ const confirmDeactivate = async () => {
     title: `「${panelForm.name}」を停止しますか？`,
     message: 'スタッフデータは保持されます。再開も可能です。',
     variant: 'danger',
-    confirmLabel: '停止する',
+    confirmLabel: UI_MSG.停止する,
     cancelLabel: UI_MSG.キャンセル,
   });
   if (ok) {

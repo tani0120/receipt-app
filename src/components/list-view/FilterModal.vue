@@ -121,7 +121,7 @@
                 :type="getFieldDef(cond.field)?.filterType === 'number' ? 'number' : getFieldDef(cond.field)?.filterType === 'date' ? 'date' : 'text'"
                 :value="cond.value as string"
                 @input="cond.value = ($event.target as HTMLInputElement).value"
-                placeholder="値を入力"
+                :placeholder="UI_MSG.値入力"
               >
 
               <!-- 値不要（is_empty / is_not_empty） -->
@@ -199,7 +199,7 @@
                     class="fm-ss-search"
                     type="text"
                     v-model="sortFieldSearch"
-                    placeholder="フィールド検索…"
+                    :placeholder="UI_MSG.フィールド検索"
                     @keydown.escape.stop="activeSortDropdown = null"
                   >
                 </div>

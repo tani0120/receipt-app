@@ -343,7 +343,7 @@ const showFileNameHelp = ref(false);
 
 // --- 変更ボタン ---
 const modal = useModalHelper();
-const showNotImplemented = () => modal.notify({ title: '未実装です', variant: 'warning' });
+const showNotImplemented = () => modal.notify({ title: UI_MSG.未実装, variant: 'warning' });
 const showRealtimeUpdateMsg = () => modal.notify({ title: UI_MSG.リアルタイム更新中 });
 
 // --- セグメント ---
@@ -366,7 +366,7 @@ const startDownload = async () => {
   if (checkedJournals.length === 0) {
     isDownloading.value = false;
     showDownloadModal.value = false;
-    await modal.notify({ title: 'ダウンロード対象の仕訳がありません。', variant: 'warning' });
+    await modal.notify({ title: UI_MSG.ダウンロード対象なし, variant: 'warning' });
     return;
   }
   // バリデーション適用（警告付き仕訳を除外）

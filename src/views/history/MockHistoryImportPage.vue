@@ -153,6 +153,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { UI_MSG } from '@/constants/uiMessages'
 
 const route = useRoute()
 const clientId = route.params.clientId as string
@@ -351,7 +352,7 @@ const executeImport = async () => {
 
 // 取込済みデータ削除（サーバーAPIからも削除）
 const removeImported = async (id: string) => {
-  if (!confirm('この取込データを削除しますか？\n（サーバーからも完全に削除されます）')) return
+  if (!confirm(UI_MSG.取込データ削除確認)) return
 
   try {
     const response = await fetch(`/api/confirmed-journals/batch/${id}`, {

@@ -575,7 +575,7 @@ async function saveModal(mode: 'rule' | 'all') {
 }
 
 async function handleDeleteModal() {
-  if (!modalRule.value || !confirm('このルールを削除しますか？')) return
+  if (!modalRule.value || !confirm(UI_MSG.ルール削除確認)) return
   try {
     const res = await fetch(`/api/learning-rules/${clientId.value}/${modalOriginalId.value}`, {
       method: 'DELETE',

@@ -239,7 +239,7 @@
         <h3 class="ce-comment-title"><i class="fa-regular fa-comment-dots"></i> コメント</h3>
         <div class="ce-comment-input-area">
           <div class="ce-mention-wrapper">
-            <textarea ref="commentTextarea" v-model="newComment" class="ce-comment-input" placeholder="コメントする（@でメンション）" rows="1" @keydown.ctrl.enter="addComment" @input="onCommentInput" @keydown="onMentionKeydown"></textarea>
+            <textarea ref="commentTextarea" v-model="newComment" class="ce-comment-input" :placeholder="UI_MSG.コメント" rows="1" @keydown.ctrl.enter="addComment" @input="onCommentInput" @keydown="onMentionKeydown"></textarea>
             <button class="ce-comment-submit" :disabled="!newComment.trim()" @click="addComment"><i class="fa-solid fa-paper-plane"></i></button>
           </div>
         </div>
@@ -573,7 +573,7 @@ const initPage = () => {
 const onCancel = async () => {
   // 変更があればconfirm
   if (hasChanges()) {
-    const ok = await modal.confirm({ title: '変更を破棄しますか？', message: '保存されていない変更は失われます。', confirmLabel: '破棄する', cancelLabel: '編集を続ける', variant: 'danger' });
+    const ok = await modal.confirm({ title: UI_MSG.変更破棄確認, message: UI_MSG.変更破棄補足, confirmLabel: UI_MSG.破棄する, cancelLabel: '編集を続ける', variant: 'danger' });
     if (!ok) return;
   }
 
@@ -733,7 +733,7 @@ const selectMention = (staff: Staff) => {
 
 const saveClient = async () => {
   if (!form.threeCode) {
-    await modal.notify({ title: '3コードは必須です', message: '大文字アルファベット3文字を入力してください', variant: 'warning' });
+    await modal.notify({ title: UI_MSG.コード必須, message: UI_MSG.コード必須補足, variant: 'warning' });
     return;
   }
   if (!form.companyName && !form.repName) {
@@ -758,7 +758,7 @@ const saveClient = async () => {
       await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタが自動コピーされました。', variant: 'success' });
       router.push(`/master/clients/${saved.clientId}`);
     } catch (err) {
-      await modal.notify({ title: '顧問先の追加に失敗しました', message: String(err), variant: 'warning' });
+      await modal.notify({ title: UI_MSG.顧問先追加失敗, message: String(err), variant: 'warning' });
     }
   } else {
     // 既存更新
@@ -776,7 +776,7 @@ const saveClient = async () => {
       isCopyNew.value = false;
       originalSnapshot = takeSnapshot();
     } catch (err) {
-      await modal.notify({ title: '顧問先の更新に失敗しました', message: String(err), variant: 'warning' });
+      await modal.notify({ title: UI_MSG.顧問先更新失敗, message: String(err), variant: 'warning' });
     }
   }
 };
