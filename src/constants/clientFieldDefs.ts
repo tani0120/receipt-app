@@ -4,6 +4,22 @@
  */
 import type { FieldDef, SectionDef } from '@/types/fieldLayout';
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// セクション名キー定数（ClientEditPage / useFieldLayout で参照）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export const SEC_BASIC    = '基本情報' as const;
+export const SEC_CONTACT  = '連絡先' as const;
+export const SEC_ACCOUNTING = '会計設定' as const;
+export const SEC_SYSTEM   = 'システム導入' as const;
+export const SEC_FEE      = '報酬情報' as const;
+
+// サブセクション名キー定数
+export const SUB_NEEDS    = 'ニーズ管理' as const;
+export const SUB_FISCAL   = '決算税務' as const;
+export const SUB_MEMO_URL = '備考URL' as const;
+export const SUB_FEE_AMT  = '報酬金額' as const;
+export const SUB_PAYMENT  = '契約引落' as const;
+
 /** セクション定義 */
 export const clientSections: SectionDef[] = [
   {

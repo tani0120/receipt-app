@@ -217,3 +217,9 @@ export const LEARNING_AMOUNT_TYPE_OPTIONS: readonly SelectOption[] = [
   { value: 'total', label: '取引金額' },
   { value: 'fixed', label: '固定金額' },
 ] as const
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// メンション検索キーワード
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/** @メンションの「全員」検索キーワード */
+export const MENTION_ALL_KEYWORD = '全員' as const

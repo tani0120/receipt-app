@@ -2,7 +2,7 @@
   <div class="ce-page">
     <!-- ヘッダー1行目: ページタイトル -->
     <div class="ce-header-top">
-      <span class="ce-page-label">{{ isLayoutMode ? '標準フォーマット編集（全社共通）' : '顧問先管理' }}</span>
+      <span class="ce-page-label">{{ isLayoutMode ? UI_MSG.標準フォーマット編集 : UI_MSG.顧問先管理 }}</span>
     </div>
     <!-- ヘッダー2行目: アクション -->
     <div class="ce-header">
@@ -25,7 +25,7 @@
         <div class="ce-action-icons">
           <!-- レイアウト管理モード: 全社共通の標準フォーマット操作のみ -->
           <template v-if="isLayoutMode && layout.isLayoutEditing.value && isAdmin">
-            <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-save ce-btn-sm" @click="layout.saveLayout(currentUserName ?? '不明')"><i class="fa-solid fa-save"></i> レイアウト保存</button>
+            <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-save ce-btn-sm" @click="layout.saveLayout(currentUserName ?? UI_MSG.不明)"><i class="fa-solid fa-save"></i> レイアウト保存</button>
             <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">リセット</button>
             <button class="ce-btn ce-btn-sm ce-btn-custom" @click="showCustomFieldModal = true"><i class="fa-solid fa-puzzle-piece"></i> フィールド管理</button>
             <!-- バージョン管理 -->
@@ -82,7 +82,7 @@
           :is-editing="isLayoutMode ? false : isEditing"
           :resolve-options="resolveOptions"
           :staff-list="activeStaffList"
-          @update:order="(keys: string[]) => layout.updateFieldOrder('基本情報', undefined, keys)"
+          @update:order="(keys: string[]) => layout.updateFieldOrder(SEC_BASIC, undefined, keys)"
           @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal"
         >
           <!-- status: 個別会社モードのみ表示 -->
@@ -129,12 +129,12 @@
           :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)"
           :is-editing="isLayoutMode ? false : isEditing"
           :resolve-options="resolveOptions"
-          @update:order="(keys: string[]) => layout.updateFieldOrder('基本情報', 'ニーズ管理', keys)"
+          @update:order="(keys: string[]) => layout.updateFieldOrder(SEC_BASIC, SUB_NEEDS, keys)"
           @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal"
         />
         <!-- 決算・税務 -->
         <h3 class="ce-sub-title">決算・税務</h3>
-        <DraggableFieldGrid :fields="fiscalFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('基本情報', '決算税務', keys)" @update:width="(key: string, pct: number) => layout.updateFieldWidth(key, pct)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
+        <DraggableFieldGrid :fields="fiscalFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder(SEC_BASIC, SUB_FISCAL, keys)" @update:width="(key: string, pct: number) => layout.updateFieldWidth(key, pct)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
           <!-- fiscalDate: dateGroup特殊レイアウト（月/日選択） -->
           <template v-if="!isLayoutMode" #fiscalDate>
             <div class="ce-field">
@@ -150,13 +150,13 @@
                   </select>
                 </div>
               </template>
-              <span v-else class="ce-readonly">{{ form.fiscalMonth }}月 / {{ form.fiscalDay === '末日' ? '末日' : form.fiscalDay + '日' }}</span>
+              <span v-else class="ce-readonly">{{ form.fiscalMonth }}月 / {{ form.fiscalDay === FISCAL_DAY_END_LABEL ? FISCAL_DAY_END_LABEL : form.fiscalDay + '日' }}</span>
             </div>
           </template>
         </DraggableFieldGrid>
         <!-- 備考・URL・その他 -->
         <h3 class="ce-sub-title">備考・URL・その他</h3>
-        <DraggableFieldGrid :fields="memoUrlFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('基本情報', '備考URL', keys)" @update:width="(key: string, pct: number) => layout.updateFieldWidth(key, pct)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
+        <DraggableFieldGrid :fields="memoUrlFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder(SEC_BASIC, SUB_MEMO_URL, keys)" @update:width="(key: string, pct: number) => layout.updateFieldWidth(key, pct)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
           <!-- uploadUrlStaff/Guest: urlCopy特殊（動的URL+コピーボタン） -->
           <template v-if="!isLayoutMode" #uploadUrlStaff>
             <div class="ce-field">
@@ -192,7 +192,7 @@
       <!-- 会計設定 -->
       <section class="ce-section">
         <h2 class="ce-section-title">会計設定</h2>
-        <DraggableFieldGrid :fields="accountingFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('会計設定', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
+        <DraggableFieldGrid :fields="accountingFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder(SEC_ACCOUNTING, undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
           <!-- hasRentalIncome: visibleWhen特殊制御（type依存+ヒント付き） -->
           <template v-if="!isLayoutMode" #hasRentalIncome><div v-if="form.type === 'individual' || form.type === 'sole_proprietor'" class="ce-field"><template v-if="isEditing"><label class="ce-checkbox"><input type="checkbox" v-model="form.hasRentalIncome"><span>不動産所得あり</span></label><span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span></template><template v-else><span class="ce-readonly">{{ form.hasRentalIncome ? '✅ あり' : '☐ なし' }}</span></template></div></template>
         </DraggableFieldGrid>
@@ -200,7 +200,7 @@
 
       <section class="ce-section">
         <h2 class="ce-section-title">システム導入状況</h2>
-        <DraggableFieldGrid :fields="systemFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('システム導入', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
+        <DraggableFieldGrid :fields="systemFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder(SEC_SYSTEM, undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
           <!-- accountingSoftwareDisplay: 会計設定セクションの値を参照する算出表示 -->
           <template v-if="!isLayoutMode" #accountingSoftwareDisplay><div class="ce-field"><span class="ce-readonly">{{ accountingSoftwareLabel }}</span></div></template>
         </DraggableFieldGrid>
@@ -210,17 +210,17 @@
       <section class="ce-section">
         <h2 class="ce-section-title">報酬情報</h2>
         <!-- 契約種別 -->
-        <DraggableFieldGrid :fields="feeContractFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('報酬情報', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal" />
+        <DraggableFieldGrid :fields="feeContractFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder(SEC_FEE, undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal" />
         <!-- 報酬金額 -->
         <h3 class="ce-sub-title">報酬金額</h3>
-        <DraggableFieldGrid :fields="feeAmountFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('報酬情報', '報酬金額', keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
+        <DraggableFieldGrid :fields="feeAmountFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder(SEC_FEE, SUB_FEE_AMT, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal">
           <!-- monthlyTotal/annualTotal: 複数フィールドの合算による算出表示 -->
           <template v-if="!isLayoutMode" #monthlyTotal><div class="ce-field ce-computed"><label>月次合計（自動算出）</label><span class="ce-computed-val">{{ (form.advisoryFee + form.bookkeepingFee + (form.socialInsuranceFee ?? 0) + (form.payrollFee ?? 0) + (form.accountingServiceFee ?? 0) + (form.systemFee ?? 0)).toLocaleString() }} 円</span></div></template>
           <template v-if="!isLayoutMode" #annualTotal><div class="ce-field ce-computed"><label>年間総報酬（自動算出）</label><span class="ce-computed-val">{{ annualTotal.toLocaleString() }} 円</span></div></template>
         </DraggableFieldGrid>
         <!-- 契約・引落 -->
         <h3 class="ce-sub-title">契約・引き落とし</h3>
-        <DraggableFieldGrid :fields="paymentFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder('報酬情報', '契約引落', keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal" />
+        <DraggableFieldGrid :fields="paymentFields" :is-layout-editing="layout.isLayoutEditing.value" :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)" :is-editing="isLayoutMode ? false : isEditing" :resolve-options="resolveOptions" @update:order="(keys: string[]) => layout.updateFieldOrder(SEC_FEE, SUB_PAYMENT, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)" @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)" @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)" @add-field="openAddFieldModal" />
       </section>
 
 
@@ -289,7 +289,12 @@ import {
   STATUS_OPTIONS, PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
   getLabel,
 } from '@/constants/clientOptions';
-import { clientSections, clientFields } from '@/constants/clientFieldDefs';
+import {
+  clientSections, clientFields,
+  SEC_BASIC, SEC_ACCOUNTING, SEC_SYSTEM, SEC_FEE,
+  SUB_NEEDS, SUB_FISCAL, SUB_MEMO_URL, SUB_FEE_AMT, SUB_PAYMENT,
+} from '@/constants/clientFieldDefs';
+import { MENTION_ALL_KEYWORD } from '@/constants/vendorOptions';
 import DraggableFieldGrid from '@/components/DraggableFieldGrid.vue';
 import ContactTable from '@/components/ContactTable.vue';
 import type { ClientContact } from '@/repositories/types';
@@ -314,15 +319,15 @@ const { createFolder, renameFolder } = useDriveFolder();
 const layout = useFieldLayout('client', clientSections, clientFields);
 // デフォルトレイアウトをlocalStorageから読み込み（全社共通設定を個別画面にも適用）
 layout.loadLayout();
-const basicInfoFields = layout.getFieldsForSection('基本情報');
-const needsFields = layout.getFieldsForSection('基本情報', 'ニーズ管理');
-const fiscalFields = layout.getFieldsForSection('基本情報', '決算税務');
-const memoUrlFields = layout.getFieldsForSection('基本情報', '備考URL');
-const accountingFields = layout.getFieldsForSection('会計設定');
-const systemFields = layout.getFieldsForSection('システム導入');
-const feeContractFields = layout.getFieldsForSection('報酬情報');
-const feeAmountFields = layout.getFieldsForSection('報酬情報', '報酬金額');
-const paymentFields = layout.getFieldsForSection('報酬情報', '契約引落');
+const basicInfoFields = layout.getFieldsForSection(SEC_BASIC);
+const needsFields = layout.getFieldsForSection(SEC_BASIC, SUB_NEEDS);
+const fiscalFields = layout.getFieldsForSection(SEC_BASIC, SUB_FISCAL);
+const memoUrlFields = layout.getFieldsForSection(SEC_BASIC, SUB_MEMO_URL);
+const accountingFields = layout.getFieldsForSection(SEC_ACCOUNTING);
+const systemFields = layout.getFieldsForSection(SEC_SYSTEM);
+const feeContractFields = layout.getFieldsForSection(SEC_FEE);
+const feeAmountFields = layout.getFieldsForSection(SEC_FEE, SUB_FEE_AMT);
+const paymentFields = layout.getFieldsForSection(SEC_FEE, SUB_PAYMENT);
 
 /** 選択肢文字列→配列を解決するマップ */
 const optionsMap: Record<string, readonly import('@/types/fieldLayout').FieldOption[]> = {
@@ -478,9 +483,9 @@ let originalSnapshot: string = '';
 /** 閲覧モード用ラベル変換（clientOptions.ts の getLabel に統一） */
 const accountingSoftwareLabel = computed(() => getLabel(ACCOUNTING_SOFTWARE_OPTIONS, form.accountingSoftware));
 const staffLabel = computed(() => {
-  if (!staffId.value) return '未設定';
+  if (!staffId.value) return UI_MSG.未設定;
   const s = activeStaffList.value.find(s => s.uuid === staffId.value);
-  return s?.name ?? '不明';
+  return s?.name ?? UI_MSG.不明;
 });
 /** 自動生成URL */
 const uploadUrlStaff = computed(() => clientId.value ? `${location.origin}/#/upload/${clientId.value}/staff` : '');
@@ -632,7 +637,7 @@ const addComment = () => {
       authorName: currentUserName.value,
       authorStaffId: myStaffId.value ?? '',
       clientId: clientId.value ?? '',
-      clientName: form.companyName || '新規顧問先',
+      clientName: form.companyName || UI_MSG.新規顧問先,
     });
   }
 };
@@ -659,7 +664,7 @@ const mentionCandidates = computed(() => {
   const staffEntries = mentionStaffList.value;
   if (!mentionQuery.value) return [allEntry, ...staffEntries];
   const q = mentionQuery.value.toLowerCase();
-  if ('all'.includes(q) || '全員'.includes(q)) {
+  if ('all'.includes(q) || MENTION_ALL_KEYWORD.includes(q)) {
     return [allEntry, ...staffEntries.filter(s =>
       s.name.toLowerCase().includes(q) ||
       s.email.toLowerCase().includes(q) ||
@@ -755,7 +760,7 @@ const saveClient = async () => {
     try {
       const saved = await addClient(data as any);
       createDriveFolderForClient(saved).catch(e => console.error('[clients] Driveフォルダ作成失敗:', e));
-      await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタが自動コピーされました。', variant: 'success' });
+      await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: UI_MSG.マスタ自動コピー完了, variant: 'success' });
       router.push(`/master/clients/${saved.clientId}`);
     } catch (err) {
       await modal.notify({ title: UI_MSG.顧問先追加失敗, message: String(err), variant: 'warning' });
