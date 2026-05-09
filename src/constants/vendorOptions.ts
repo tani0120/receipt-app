@@ -223,3 +223,36 @@ export const LEARNING_AMOUNT_TYPE_OPTIONS: readonly SelectOption[] = [
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /** @メンションの「全員」検索キーワード */
 export const MENTION_ALL_KEYWORD = '全員' as const
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 書類選別ステータスラベル
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export const DOC_STATUS_LABELS: Record<string, string> = {
+  target: '仕訳対象',
+  supporting: '根拠資料',
+  excluded: '仕訳外',
+  pending: '未処理',
+} as const
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ソースタイプラベル（AI分類結果表示用）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export const SOURCE_TYPE_LABELS: Record<string, string> = {
+  receipt: 'レシート',
+  invoice: '請求書',
+  bank_statement: '通帳',
+  credit_card: 'クレカ明細',
+  transfer: '振込明細',
+  tax_payment: '納税',
+  other: 'その他',
+} as const
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 入出金方向ラベル
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export const DIRECTION_LABELS: Record<string, string> = {
+  expense: '支出',
+  income: '収入',
+  transfer: '振替',
+  mixed: '混合',
+} as const

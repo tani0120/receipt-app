@@ -311,6 +311,7 @@ import { useDriveDocuments } from '@/composables/useDriveDocuments';
 import { useDocSelection } from '@/composables/useDocSelection';
 import { usePreviewZoom } from '@/composables/usePreviewZoom';
 import type { DocEntry } from '@/repositories/types';
+import { DOC_STATUS_LABELS, SOURCE_TYPE_LABELS, DIRECTION_LABELS } from '@/constants/vendorOptions';
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) || '');
@@ -607,12 +608,7 @@ const sendToProcess = async () => {
 
 
 // --- ステータス表示 ---
-const statusLabel = (s: string) => {
-  if (s === 'target') return '仕訳対象';
-  if (s === 'supporting') return '根拠資料';
-  if (s === 'excluded') return '仕訳外';
-  return '未処理';
-};
+const statusLabel = (s: string) => DOC_STATUS_LABELS[s] || s;
 const statusBadgeClass = (s: string) => {
   if (s === 'target') return 'ds-badge-target';
   if (s === 'supporting') return 'ds-badge-supporting';
@@ -655,21 +651,9 @@ const hasAiResult = computed(() => {
     || s.aiSupplementary !== undefined;
 });
 
-const sourceTypeLabel = (t: string) => {
-  const map: Record<string, string> = {
-    receipt: 'レシート', invoice: '請求書', bank_statement: '通帳',
-    credit_card: 'クレカ明細', transfer: '振込明細', tax_payment: '納税',
-    other: 'その他',
-  };
-  return map[t] || t;
-};
+const sourceTypeLabel = (t: string) => SOURCE_TYPE_LABELS[t] || t;
 
-const directionLabel = (d: string) => {
-  const map: Record<string, string> = {
-    expense: '支出', income: '収入', transfer: '振替', mixed: '混合',
-  };
-  return map[d] || d;
-};
+const directionLabel = (d: string) => DIRECTION_LABELS[d] || d;
 
 const directionClass = (d: string) => {
   if (d === 'expense') return 'ds-ai-dir-expense';

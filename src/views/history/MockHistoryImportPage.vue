@@ -55,7 +55,7 @@
                 <div class="uploaded-actions">
                   <button class="btn-import" @click="executeImport" :disabled="isImporting">
                     <i class="fa-solid fa-database"></i>
-                    {{ isImporting ? '取込中...' : '取込実行' }}
+                    {{ isImporting ? UI_MSG.取込中 : UI_MSG.取込実行 }}
                   </button>
                   <button class="btn-remove" @click="removeFile" title="削除">
                     <i class="fa-solid fa-trash-can"></i>
@@ -141,7 +141,7 @@
         </div>
         <div class="modal-actions">
           <button class="btn-modal-yes" @click="executeDownload" :disabled="isDownloading">
-            {{ isDownloading ? 'ダウンロード中...' : 'はい' }}
+            {{ isDownloading ? UI_MSG.ダウンロード中 : UI_MSG.はい }}
           </button>
           <button class="btn-modal-no" @click="downloadTarget = null">いいえ</button>
         </div>
@@ -154,6 +154,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { UI_MSG } from '@/constants/uiMessages'
+import { MF_CSV_HEADER_KEYWORD, MF_CSV_HEADERS } from '@/constants/journalConstants'
 
 const route = useRoute()
 const clientId = route.params.clientId as string
@@ -180,14 +181,14 @@ async function readCsvFileAutoEncoding(file: File): Promise<string> {
   // BOMなし: まずUTF-8で試行
   const utf8_text = new TextDecoder('utf-8').decode(buffer)
   const first_line = utf8_text.split(/\r?\n/)[0] ?? ''
-  if (first_line.includes('取引No')) {
+  if (first_line.includes(MF_CSV_HEADER_KEYWORD)) {
     return utf8_text
   }
 
   // UTF-8で「取引No」が見つからない → Shift-JISで再試行
   const sjis_text = new TextDecoder('shift_jis').decode(buffer)
   const sjis_first_line = sjis_text.split(/\r?\n/)[0] ?? ''
-  if (sjis_first_line.includes('取引No')) {
+  if (sjis_first_line.includes(MF_CSV_HEADER_KEYWORD)) {
     return sjis_text
   }
 
@@ -316,7 +317,7 @@ const executeImport = async () => {
     const result = await response.json()
 
     if (!response.ok) {
-      alert(`取込エラー: ${result.message || '不明なエラー'}`)
+      alert(`${UI_MSG.取込エラー}: ${result.message || UI_MSG.不明なエラー}`)
       isImporting.value = false
       return
     }
@@ -327,7 +328,7 @@ const executeImport = async () => {
     }
 
     if (!result.ok || result.added === 0) {
-      const warning_msg = result.warnings?.join('\n') || 'パースに失敗しました'
+      const warning_msg = result.warnings?.join('\n') || UI_MSG.パース失敗
       alert(`取込できませんでした:\n${warning_msg}`)
       isImporting.value = false
       return
@@ -344,7 +345,7 @@ const executeImport = async () => {
     rowCount.value = 0
   } catch (err) {
     console.error('[HistoryImport] 取込失敗:', err)
-    alert('取込に失敗しました。サーバーが起動しているか確認してください。')
+    alert(UI_MSG.取込失敗サーバー)
   } finally {
     isImporting.value = false
   }
@@ -363,11 +364,11 @@ const removeImported = async (id: string) => {
       importedFiles.value = importedFiles.value.filter(f => f.id !== id)
       console.log(`[HistoryImport] バッチ${id}削除完了（${result.removed}件）`)
     } else {
-      alert('削除に失敗しました')
+      alert(UI_MSG.削除失敗)
     }
   } catch (err) {
     console.error('[HistoryImport] 削除失敗:', err)
-    alert('削除に失敗しました。サーバーが起動しているか確認してください。')
+    alert(UI_MSG.削除失敗サーバー)
   }
 }
 
@@ -386,7 +387,7 @@ const executeDownload = async () => {
   try {
     const response = await fetch(`/api/confirmed-journals/batch/${downloadTarget.value.id}/journals`)
     if (!response.ok) {
-      alert('仕訳データの取得に失敗しました')
+      alert(UI_MSG.仕訳データ取得失敗)
       return
     }
 
@@ -394,18 +395,11 @@ const executeDownload = async () => {
     const journals = data.journals || []
 
     if (journals.length === 0) {
-      alert('仕訳データがありません')
+      alert(UI_MSG.仕訳データなし)
       return
     }
 
-    // MF CSV 23列ヘッダー
-    const headers = [
-      '取引No', '取引日', '借方勘定科目', '借方補助科目', '借方部門', '借方取引先',
-      '借方税区分', '借方インボイス', '借方金額(円)', '借方税額',
-      '貸方勘定科目', '貸方補助科目', '貸方部門', '貸方取引先',
-      '貸方税区分', '貸方インボイス', '貸方金額(円)', '貸方税額',
-      '摘要', '仕訳メモ', 'タグ', 'MF仕訳タイプ', '決算整理仕訳',
-    ]
+    const headers = [...MF_CSV_HEADERS]
 
     const rows: string[] = [headers.join(',')]
 
@@ -464,7 +458,7 @@ const executeDownload = async () => {
     console.log(`[HistoryImport] CSV出力完了: ${journals.length}件`)
   } catch (err) {
     console.error('[HistoryImport] CSVダウンロード失敗:', err)
-    alert('CSVダウンロードに失敗しました')
+    alert(UI_MSG.CSVダウンロード失敗)
   } finally {
     isDownloading.value = false
   }
