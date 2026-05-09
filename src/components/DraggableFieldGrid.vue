@@ -92,7 +92,7 @@
                     <template v-if="isEditing">
                       <label class="ce-checkbox"><input type="checkbox" :checked="!!getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLInputElement).checked)"><span>{{ field.label }}</span></label>
                     </template>
-                    <span v-else class="ce-readonly">{{ getFieldValue(field) ? '✅ あり' : '☐ なし' }}</span>
+                    <span v-else class="ce-readonly">{{ getFieldValue(field) ? 'あり' : 'なし' }}</span>
                   </template>
                   <!-- amount -->
                   <template v-else-if="field.component === 'amount'">
@@ -136,13 +136,6 @@
             >
               <i class="fa-solid fa-grip-lines-vertical"></i>
             </div>
-            <!-- コピーボタン（常時、ホバーで表示） -->
-            <button
-              v-if="!isLayoutEditing"
-              class="dfg-copy-btn"
-              :title="UI_MSG.値をコピー"
-              @click="copyFieldValue(field.key)"
-            ><i class="fa-regular fa-copy"></i></button>
 
             <button
               v-if="isLayoutEditing"
@@ -328,33 +321,7 @@ const onLabelBlur = (key: string, event: Event) => {
   }
 };
 
-/** フィールド値をコピー */
-const copyFieldValue = (key: string) => {
-  // DOMからフィールドの値を取得
-  const container = containerRef.value;
-  if (!container) return;
-  const fieldEl = container.querySelector(`[data-field-key="${key}"]`);
-  if (!fieldEl) {
-    // data-field-keyがない場合はテキストコンテンツから取得
-    const items = container.querySelectorAll('.dfg-item');
-    for (let i = 0; i < localFields.value.length; i++) {
-      const item = items[i];
-      if (localFields.value[i]?.key === key && item) {
-        const content = item.querySelector('.dfg-content');
-        if (content) {
-          const text = (content as HTMLElement).innerText?.trim() || '';
-          navigator.clipboard.writeText(text);
-          const btn = item.querySelector('.dfg-copy-btn') as HTMLElement;
-          if (btn) {
-            btn.classList.add('dfg-copied');
-            setTimeout(() => btn.classList.remove('dfg-copied'), 800);
-          }
-        }
-        break;
-      }
-    }
-  }
-};
+
 
 /** ─── 横幅リサイズ（%単位） ─── */
 let resizingIndex = -1;
@@ -457,13 +424,14 @@ onBeforeUnmount(() => {
 .dfg-drag-area {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px 0;
   width: 100%;
 }
 
 .dfg-item {
   display: flex;
-  align-items: stretch;
+  flex-direction: column;
   position: relative;
   min-width: 0;
   box-sizing: border-box;
@@ -493,6 +461,55 @@ onBeforeUnmount(() => {
 .dfg-content {
   flex: 1;
   min-width: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 4px 6px;
+  background: #f5f5f5;
+  /* 全フィールド値の書式を統一（「法人」と同じ） */
+  font-size: 13px;
+  color: #333;
+  font-weight: 400;
+}
+
+/* dfg-content内の入力要素は外枠で統一。内部の個別border/backgroundを消す */
+.dfg-content :deep(.ce-readonly) {
+  border: none;
+  background: transparent;
+  padding: 2px 0;
+  font-size: 13px;
+  color: #333;
+  font-weight: 400;
+}
+.dfg-content :deep(.ce-input) {
+  border: none;
+  background: transparent;
+  padding: 2px 0;
+  box-shadow: none;
+  font-size: 13px;
+  color: #333;
+  font-weight: 400;
+}
+.dfg-content :deep(.ce-input:focus) {
+  box-shadow: none;
+}
+.dfg-content :deep(.ce-select) {
+  border: none;
+  background: transparent;
+  padding: 2px 0;
+  font-size: 13px;
+  color: #333;
+  font-weight: 400;
+}
+/* ステータス色・特殊書式を統一（ce-status-active, ce-code等） */
+.dfg-content :deep([class*="ce-status-"]) {
+  color: #333 !important;
+  font-weight: 400 !important;
+}
+.dfg-content :deep(.ce-code) {
+  font-family: inherit !important;
+  font-weight: 400 !important;
+  color: #333 !important;
+  letter-spacing: normal !important;
 }
 
 .dfg-resize {
@@ -582,39 +599,7 @@ onBeforeUnmount(() => {
   transform: scale(1.2);
 }
 
-/* コピーボタン */
-.dfg-copy-btn {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 22px;
-  height: 22px;
-  border: none;
-  border-radius: 4px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 11px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.3;
-  transition: all 0.15s;
-  z-index: 5;
-}
-.dfg-item:hover .dfg-copy-btn {
-  opacity: 0.7;
-}
-.dfg-copy-btn:hover {
-  opacity: 1 !important;
-  background: #dbeafe;
-  color: #2563eb;
-}
-.dfg-copy-btn.dfg-copied {
-  opacity: 1 !important;
-  background: #dcfce7;
-  color: #16a34a;
-}
+
 
 /* 行区切り（強制改行） */
 .dfg-line-break {
