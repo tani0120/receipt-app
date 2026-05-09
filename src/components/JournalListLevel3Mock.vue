@@ -2815,7 +2815,6 @@ import {
   getCategoryDirection,
 } from "@/data/master/account-category-rules";
 import {
-  BS_CATEGORIES,
   MEGA_GROUPS,
   TAX_GROUP_SALES,
   TAX_GROUP_PURCHASE,
@@ -2835,7 +2834,7 @@ import {
   TIP_MEMO_EXISTS,
   TIP_NOT_QUALIFIED,
 } from "@/constants/journalConstants";
-import type { MegaGroupType, WarningLabelDef } from "@/constants/journalConstants";
+import type { MegaGroupType } from "@/constants/journalConstants";
 
 /** 証票意味選択肢 — vendorOptionsの共有定数を使用 */
 // VOUCHER_TYPES は vendorOptions.ts からimport済み

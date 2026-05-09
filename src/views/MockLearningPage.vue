@@ -294,6 +294,13 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { LearningRule, LearningRuleEntryLine } from '../types/learning_rule.type'
 import { PLACEHOLDER_DASH } from '@/constants/vendorOptions'
+import {
+  LEARNING_SOURCE_TAB_LABELS,
+  LEARNING_SOURCE_CATEGORY_OPTIONS,
+  LEARNING_MATCH_TYPE_OPTIONS,
+  LEARNING_AMOUNT_MODE_OPTIONS,
+  LEARNING_AMOUNT_TYPE_OPTIONS,
+} from '@/constants/vendorOptions'
 import { UI_MSG } from '@/constants/uiMessages'
 
 const route = useRoute()
@@ -325,12 +332,12 @@ const statusCounts = ref({ all: 0, active: 0, inactive: 0 })
 const generatedByCounts = ref({ ai: 0, human: 0 })
 const filteredRules = ref<LearningRule[]>([])
 
-const sourceTabs = computed(() => [
-  { label: '全て', value: 'all', count: sourceCounts.value.all },
-  { label: '領収書', value: 'receipt', count: sourceCounts.value.receipt },
-  { label: '口座', value: 'bank', count: sourceCounts.value.bank },
-  { label: 'カード', value: 'credit', count: sourceCounts.value.credit },
-])
+const sourceTabs = computed(() =>
+  LEARNING_SOURCE_TAB_LABELS.map(t => ({
+    ...t,
+    count: sourceCounts.value[t.value as keyof typeof sourceCounts.value] ?? 0,
+  }))
+)
 
 const sourceFilteredRules = computed(() => filteredRules.value)
 
@@ -391,36 +398,16 @@ function extraPairs(rule: LearningRule) {
   return rows
 }
 
-/** 学習ルール固有の選択肢定数 */
-const SOURCE_CATEGORY_OPTIONS = [
-  { value: 'receipt', label: '領収書/請求書' },
-  { value: 'bank', label: '口座' },
-  { value: 'credit', label: 'カード' },
-] as const
-
-const MATCH_TYPE_OPTIONS = [
-  { value: 'exact', label: '等しい' },
-  { value: 'contains', label: '含む' },
-] as const
-
-const AMOUNT_MODE_OPTIONS = [
-  { value: 'none', label: '金額を条件としない' },
-  { value: 'min', label: '以上' },
-  { value: 'max', label: '以下' },
-  { value: 'exact', label: '同額' },
-  { value: 'range', label: '範囲' },
-] as const
-
-const AMOUNT_TYPE_OPTIONS = [
-  { value: 'auto', label: '自動計算' },
-  { value: 'total', label: '取引金額' },
-  { value: 'fixed', label: '固定金額' },
-] as const
+/** 学習ルール固有の選択肢定数 → vendorOptions.tsに集約済み */
+const SOURCE_CATEGORY_OPTIONS = LEARNING_SOURCE_CATEGORY_OPTIONS
+const MATCH_TYPE_OPTIONS = LEARNING_MATCH_TYPE_OPTIONS
+const AMOUNT_MODE_OPTIONS = LEARNING_AMOUNT_MODE_OPTIONS
+const AMOUNT_TYPE_OPTIONS = LEARNING_AMOUNT_TYPE_OPTIONS
 
 function sourceCategoryLabel(cat: string | null): string {
   const opt = SOURCE_CATEGORY_OPTIONS.find(o => o.value === cat)
   if (opt) return opt.label
-  if (cat === 'all') return '全て'
+  if (cat === 'all') return LEARNING_SOURCE_TAB_LABELS[0].label
   return '—'
 }
 

@@ -176,3 +176,44 @@ export const PLACEHOLDER_ADD = '＋追加'
 
 /** 全セクションラベル */
 export const FILTER_ALL_SECTIONS = '全セクション'
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 学習ルール（MockLearningPage）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 学習ルール: 証票種別タブラベル（countは動的なのでlabel/valueのみ） */
+export const LEARNING_SOURCE_TAB_LABELS: readonly { label: string; value: string }[] = [
+  { label: '全て', value: 'all' },
+  { label: '領収書', value: 'receipt' },
+  { label: '口座', value: 'bank' },
+  { label: 'カード', value: 'credit' },
+]
+
+/** 学習ルール: 証憑種別（モーダル用） */
+export const LEARNING_SOURCE_CATEGORY_OPTIONS: readonly SelectOption[] = [
+  { value: 'receipt', label: '領収書/請求書' },
+  { value: 'bank', label: '口座' },
+  { value: 'credit', label: 'カード' },
+] as const
+
+/** 学習ルール: キーワード照合方式 */
+export const LEARNING_MATCH_TYPE_OPTIONS: readonly SelectOption[] = [
+  { value: 'exact', label: '等しい' },
+  { value: 'contains', label: '含む' },
+] as const
+
+/** 学習ルール: 金額条件モード */
+export const LEARNING_AMOUNT_MODE_OPTIONS: readonly SelectOption[] = [
+  { value: 'none', label: '金額を条件としない' },
+  { value: 'min', label: '以上' },
+  { value: 'max', label: '以下' },
+  { value: 'exact', label: '同額' },
+  { value: 'range', label: '範囲' },
+] as const
+
+/** 学習ルール: 金額タイプ（仕訳エントリ用） */
+export const LEARNING_AMOUNT_TYPE_OPTIONS: readonly SelectOption[] = [
+  { value: 'auto', label: '自動計算' },
+  { value: 'total', label: '取引金額' },
+  { value: 'fixed', label: '固定金額' },
+] as const
