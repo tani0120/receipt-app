@@ -2810,33 +2810,26 @@ function getRawValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknow
 
 // ────── 区分ドロップダウン（D7a: category-first選択の起点） ──────
 // 科目分類定数は shared/data/account-category-rules.ts に統合済み
+// 3大グループ・BS全カテゴリは constants/journalConstants.ts に集約
 import {
-  SALES_CATEGORIES,
-  PURCHASE_CATEGORIES,
   getCategoryDirection,
 } from "@/data/master/account-category-rules";
-const BS_CATEGORIES = [
-  "現金及び預金",
-  "売上債権",
-  "有価証券",
-  "その他流動資産",
-  "有形固定資産",
-  "無形固定資産",
-  "投資その他の資産",
-  "買入債務",
-  "短期借入金",
-  "その他流動負債",
-  "長期借入金",
-  "その他固定負債",
-  "純資産",
-];
-
-/** 3大グループ定義 */
-const MEGA_GROUPS: { label: string; categories: readonly string[] }[] = [
-  { label: "💰 売上", categories: SALES_CATEGORIES },
-  { label: "📋 経費・仕入", categories: PURCHASE_CATEGORIES },
-  { label: "🏦 資産・負債", categories: BS_CATEGORIES },
-];
+import {
+  BS_CATEGORIES,
+  MEGA_GROUPS,
+  TAX_GROUP_SALES,
+  TAX_GROUP_PURCHASE,
+  TAX_GROUP_COMMON,
+  CONTRA_REVENUE_IDS,
+  CONTRA_EXPENSE_IDS,
+  AG_PL_REVENUE,
+  AG_PL_EXPENSE,
+  AG_BS_EQUITY,
+  AG_BS_ASSET,
+  AG_BS_LIABILITY,
+  WARNING_LABEL_MAP,
+} from "@/constants/journalConstants";
+import type { MegaGroupType, WarningLabelDef } from "@/constants/journalConstants";
 
 /** 証票意味選択肢 — vendorOptionsの共有定数を使用 */
 // VOUCHER_TYPES は vendorOptions.ts からimport済み
@@ -2982,9 +2975,9 @@ function getTaxGroupsForEntry(row: CombinedRow, colKey: string) {
     // 勘定科目未選択: 全表示税区分をグルーピング
     const visible = settings.visibleTaxCategories.value;
     return [
-      { label: "売上系", items: visible.filter((tc) => tc.direction === "sales") },
-      { label: "仕入系", items: visible.filter((tc) => tc.direction === "purchase") },
-      { label: "共通", items: visible.filter((tc) => tc.direction === "common") },
+      { label: TAX_GROUP_SALES, items: visible.filter((tc) => tc.direction === "sales") },
+      { label: TAX_GROUP_PURCHASE, items: visible.filter((tc) => tc.direction === "purchase") },
+      { label: TAX_GROUP_COMMON, items: visible.filter((tc) => tc.direction === "common") },
     ].filter((g) => g.items.length > 0);
   }
 
@@ -2993,9 +2986,9 @@ function getTaxGroupsForEntry(row: CombinedRow, colKey: string) {
   if (!acc) {
     const visible = settings.visibleTaxCategories.value;
     return [
-      { label: "売上系", items: visible.filter((tc) => tc.direction === "sales") },
-      { label: "仕入系", items: visible.filter((tc) => tc.direction === "purchase") },
-      { label: "共通", items: visible.filter((tc) => tc.direction === "common") },
+      { label: TAX_GROUP_SALES, items: visible.filter((tc) => tc.direction === "sales") },
+      { label: TAX_GROUP_PURCHASE, items: visible.filter((tc) => tc.direction === "purchase") },
+      { label: TAX_GROUP_COMMON, items: visible.filter((tc) => tc.direction === "common") },
     ].filter((g) => g.items.length > 0);
   }
 
@@ -3006,16 +2999,16 @@ function getTaxGroupsForEntry(row: CombinedRow, colKey: string) {
   const filtered = settings.filteredTaxCategories(direction, taxMode);
   if (direction === "sales") {
     return [
-      { label: "売上系", items: filtered.filter((tc) => tc.direction === "sales") },
-      { label: "共通", items: filtered.filter((tc) => tc.direction === "common") },
+      { label: TAX_GROUP_SALES, items: filtered.filter((tc) => tc.direction === "sales") },
+      { label: TAX_GROUP_COMMON, items: filtered.filter((tc) => tc.direction === "common") },
     ].filter((g) => g.items.length > 0);
   } else if (direction === "purchase") {
     return [
-      { label: "仕入系", items: filtered.filter((tc) => tc.direction === "purchase") },
-      { label: "共通", items: filtered.filter((tc) => tc.direction === "common") },
+      { label: TAX_GROUP_PURCHASE, items: filtered.filter((tc) => tc.direction === "purchase") },
+      { label: TAX_GROUP_COMMON, items: filtered.filter((tc) => tc.direction === "common") },
     ].filter((g) => g.items.length > 0);
   }
-  return [{ label: "共通", items: filtered }].filter((g) => g.items.length > 0);
+  return [{ label: TAX_GROUP_COMMON, items: filtered }].filter((g) => g.items.length > 0);
 }
 
 // ────── 検索付きコンボボックス: フィルタ関数 ──────
@@ -3053,13 +3046,8 @@ function filterTaxGroups(row: CombinedRow, colKey: string, query: string) {
 }
 
 // ────── 貸借科目バリデーション（5分類 + 逆仕訳例外） ──────
-
-type MegaGroupType = "sales" | "expense" | "bs_al" | "bs_equity" | null;
-
-/** 逆仕訳科目: 借方に出ても正当な売上系科目（値引き・返品等） */
-const CONTRA_REVENUE_IDS = ["SALES_RETURNS", "SALES_RETURNS_CORP"];
-/** 逆仕訳科目: 貸方に出ても正当な経費系科目（値引き・返品等） */
-const CONTRA_EXPENSE_IDS = ["PURCHASE_RETURNS", "PURCHASE_RETURNS_CORP"];
+// MegaGroupType / CONTRA_REVENUE_IDS / CONTRA_EXPENSE_IDS / AG_* は
+// constants/journalConstants.ts からimport済み
 
 /** 勘定科目名から5分類グループを判定（accountGroupベース） */
 function getMegaGroup(accountName: string | null): MegaGroupType {
@@ -3067,10 +3055,10 @@ function getMegaGroup(accountName: string | null): MegaGroupType {
   const allAccounts = clientSettings.accounts.value;
   const acc = allAccounts.find((a) => a.id === accountName);
   if (!acc) return null;
-  if (acc.accountGroup === "PL_REVENUE") return "sales";
-  if (acc.accountGroup === "PL_EXPENSE") return "expense";
-  if (acc.accountGroup === "BS_EQUITY") return "bs_equity";
-  if (acc.accountGroup === "BS_ASSET" || acc.accountGroup === "BS_LIABILITY") return "bs_al";
+  if (acc.accountGroup === AG_PL_REVENUE) return "sales";
+  if (acc.accountGroup === AG_PL_EXPENSE) return "expense";
+  if (acc.accountGroup === AG_BS_EQUITY) return "bs_equity";
+  if (acc.accountGroup === AG_BS_ASSET || acc.accountGroup === AG_BS_LIABILITY) return "bs_al";
   return null;
 }
 
@@ -4293,67 +4281,9 @@ const labelKeyMap: Record<string, { short: string; label: string; bgClass: strin
   NOT_JOURNAL: { short: "外", label: "仕訳対象外", bgClass: "bg-gray-600" },
 };
 
-// 警告ラベルマップ: Single Source of Truth
-// 統合版: MISSING_FIELD/UNREADABLE_FAILED/TAX_CALCULATION_ERROR を削除し、フィールド別ラベルに分離
-// level: 'error'(赤) | 'warn'(黄) / label: 日本語定義（ホバーメッセージ） / color: アイコン色 / weight: ソート優先度
-const warningLabelMap: Record<
-  string,
-  { level: "error" | "warn"; label: string; color: string; weight: number }
-> = {
-  // エラー（赤）
-  DEBIT_CREDIT_MISMATCH: {
-    level: "error",
-    label: "借方貸方の合計額不一致",
-    color: "text-red-600",
-    weight: 17,
-  },
-  DATE_UNKNOWN: { level: "error", label: "日付が不明", color: "text-red-600", weight: 16 },
-  ACCOUNT_UNKNOWN: { level: "error", label: "勘定科目が不明", color: "text-red-600", weight: 15 },
-  TAX_UNKNOWN: { level: "error", label: "税区分が不明", color: "text-red-600", weight: 14.5 },
-  DUPLICATE_CONFIRMED: {
-    level: "error",
-    label: "完全重複（同一画像）",
-    color: "text-red-600",
-    weight: 13,
-  },
-  MULTIPLE_VOUCHERS: { level: "error", label: "複数の証票あり", color: "text-red-600", weight: 12 },
-  AMOUNT_UNCLEAR: { level: "error", label: "金額が不明", color: "text-red-600", weight: 14 },
-  // 注意（黄）
-  CATEGORY_CONFLICT: {
-    level: "warn",
-    label: "借方/貸方の区分が矛盾",
-    color: "text-yellow-600",
-    weight: 7,
-  },
-  VOUCHER_TYPE_CONFLICT: {
-    level: "warn",
-    label: "証票意味と科目が不整合",
-    color: "text-yellow-600",
-    weight: 6.5,
-  },
-  TAX_ACCOUNT_MISMATCH: {
-    level: "warn",
-    label: "税区分と勘定科目が矛盾",
-    color: "text-yellow-600",
-    weight: 7.5,
-  },
-  DUPLICATE_SUSPECT: { level: "warn", label: "重複疑い", color: "text-yellow-600", weight: 6 },
-  FUTURE_DATE: { level: "error", label: "未来日付", color: "text-red-600", weight: 9 },
-  UNREADABLE_ESTIMATED: {
-    level: "warn",
-    label: "判読困難（AI推測値）",
-    color: "text-yellow-600",
-    weight: 4,
-  },
-  MEMO_DETECTED: { level: "warn", label: "手書きメモ検出", color: "text-yellow-600", weight: 3 },
-  DESCRIPTION_UNKNOWN: { level: "warn", label: "摘要が不明", color: "text-yellow-600", weight: 2 },
-  SAME_ACCOUNT_BOTH_SIDES: {
-    level: "warn",
-    label: "同一科目が借方/貸方の両方に存在",
-    color: "text-yellow-600",
-    weight: 6.7,
-  },
-};
+// 警告ラベルマップ: Single Source of Truth → constants/journalConstants.ts に移動済み
+// WARNING_LABEL_MAP は constants/journalConstants.ts からimport済み
+const warningLabelMap = WARNING_LABEL_MAP;
 
 // ======== グローバルツールチップ（position:fixed、overflow親を越えて表示） ========
 const tooltipVisible = ref(false);
