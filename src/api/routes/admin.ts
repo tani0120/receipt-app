@@ -305,8 +305,8 @@ const route = app
       return c.json({ widgets, clients: taskClients })
     })
     .get('/config', async (c) => {
-        // [レガシー] Firebase Firestore依存。Supabase移行後に再実装
-        console.warn('[admin] config GET: Firebase削除済み。スタブレスポンスを返します')
+        // TODO: Supabase system_configsテーブルから読み込み
+        console.warn('[admin] config GET: 未実装。スタブレスポンスを返します')
         return c.json({})
     })
     .patch('/config',
@@ -314,9 +314,9 @@ const route = app
             aiPhases: PhaseSettingsSchema.optional(),
         }).passthrough(), zodHook),
         async (c) => {
-            // [レガシー] Firebase Firestore + ConfigService依存。Supabase移行後に再実装
-            console.warn('[admin] config PATCH: Firebase削除済み。保存はスキップされます')
-            return c.json({ success: true, message: 'Configuration save skipped (Firebase removed)' })
+            // TODO: Supabase system_configsテーブルへの保存を実装
+            console.warn('[admin] config PATCH: 未実装。保存はスキップされます')
+            return c.json({ success: true, message: '設定保存は未実装です' })
         }
     )
     // ━━━ AI利用統計API（管理ダッシュボード用） ━━━

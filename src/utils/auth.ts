@@ -1,11 +1,7 @@
 /**
  * 認証ユーティリティ（Supabase Auth版）
  *
- * Firebase Auth から Supabase Auth に移行。
  * 関数シグネチャは既存と互換維持（LoginView.vue等の呼び出し側は変更不要）。
- *
- * 【移行履歴】
- * 2026-04-18: Firebase Auth → Supabase Auth に完全移行
  */
 
 import { getSupabase } from '@/repositories/supabase/supabase'

@@ -7,8 +7,7 @@
  *
  * 呼び出し側は StorageService.uploadImage() 等をそのまま使用。変更不要。
  *
- * 【移行履歴】
- * 2026-04-18: Firebase Storage → Supabase Storage に完全移行
+ * 【履歴】
  * 2026-04-21: ローカルStorage版追加（dev/test用。interface + ファクトリ方式）
  */
 

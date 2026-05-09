@@ -2,8 +2,7 @@ import type { AIProvider, AIPhase, PhaseConfig } from './types';
 import { VertexAIStrategy } from './strategies/VertexAIStrategy';
 import { AIStudioStrategy } from './strategies/AIStudioStrategy';
 import { config } from '../config';
-// 2026-04-18: Firebase db参照削除。設定はデフォルト値を使用。
-// Supabase移行後に設定テーブルからの読み込みを再実装予定。
+// 設定はデフォルト値を使用。Supabase移行後にsystem_configsテーブルから読み込み予定。
 
 // Mock config for fallback
 const DEFAULT_CONFIGS: Record<AIPhase, PhaseConfig> = {
@@ -61,9 +60,8 @@ export class AIProviderFactory {
             return cached.config;
         }
 
-        // [Firebase削除済み] Firestoreからの設定読み込みは廃止。
-        // Supabase移行後、system_configsテーブルからの読み込みを再実装予定。
-        console.warn(`[AI Factory] Firestore削除済み。デフォルト設定を使用: ${phase}`);
+        // デフォルト設定を使用。Supabase移行後にsystem_configsテーブルから読み込み予定。
+        console.warn(`[AI Factory] デフォルト設定を使用: ${phase}`);
 
         // デフォルト値をキャッシュして返却
         const defaultConfig = DEFAULT_CONFIGS[phase];
