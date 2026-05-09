@@ -9,7 +9,7 @@
  * ② OCRErrorCode を使用（型安全性向上）
  */
 
-import type { AIIntermediateOutput, OCRErrorCode } from '@/types/GeminiOCR.types';
+import type { AIIntermediateOutput, OCRErrorCode } from '../../../types/GeminiOCR.types';
 
 /**
  * バリデーションエラー
@@ -58,34 +58,37 @@ export function validateAIIntermediateOutput(data: Record<string, unknown>): AII
     }
 
     // カテゴリチェック
+    const category = data.category as string;
     const validCategories = ['RECEIPT', 'PASSBOOK', 'CARD', 'EXCLUDED'];
-    if (!validCategories.includes(data.category)) {
-        throw new ValidationError(`Invalid category: ${data.category}`);
+    if (!validCategories.includes(category)) {
+        throw new ValidationError(`Invalid category: ${category}`);
     }
 
     // Phase 6.2対象チェック
-    if (data.category === 'PASSBOOK') {
+    if (category === 'PASSBOOK') {
         throw new ValidationError('PASSBOOK_NOT_SUPPORTED_YET');
     }
 
-    if (data.category === 'CARD') {
+    if (category === 'CARD') {
         throw new ValidationError('CARD_NOT_SUPPORTED_YET');
     }
 
     // audit_results構造チェック
-    if (!data.audit_results) {
+    if (!data.audit_results || typeof data.audit_results !== 'object') {
         throw new ValidationError('audit_results is required');
     }
 
-    if (typeof data.audit_results.duplicate !== 'boolean') {
+    const auditResults = data.audit_results as Record<string, unknown>;
+
+    if (typeof auditResults.duplicate !== 'boolean') {
         throw new ValidationError('audit_results.duplicate must be boolean');
     }
 
-    if (typeof data.audit_results.out_of_period !== 'boolean') {
+    if (typeof auditResults.out_of_period !== 'boolean') {
         throw new ValidationError('audit_results.out_of_period must be boolean');
     }
 
-    if (!['OK', 'NG'].includes(data.audit_results.balance_check)) {
+    if (!['OK', 'NG'].includes(auditResults.balance_check as string)) {
         throw new ValidationError('audit_results.balance_check must be "OK" or "NG"');
     }
 
@@ -105,14 +108,14 @@ export function validateAIIntermediateOutput(data: Record<string, unknown>): AII
     ];
 
     for (const error of data.errors) {
-        if (!validErrorCodes.includes(error)) {
+        if (!validErrorCodes.includes(error as OCRErrorCode)) {
             throw new ValidationError(`Invalid error code: ${error}`);
         }
     }
 
     // tax_items構造チェック
-    for (const item of data.tax_items) {
-        if (![10, 8].includes(item.rate)) {
+    for (const item of data.tax_items as Array<Record<string, unknown>>) {
+        if (![10, 8].includes(item.rate as number)) {
             throw new ValidationError(`Invalid tax rate: ${item.rate} (must be 10 or 8)`);
         }
 
@@ -127,21 +130,24 @@ export function validateAIIntermediateOutput(data: Record<string, unknown>): AII
 
     // 日付フォーマット簡易チェック（YYYY-MM-DD）
     const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-    if (!datePattern.test(data.date)) {
-        throw new ValidationError(`Invalid date format: ${data.date} (expected YYYY-MM-DD)`);
+    const dateStr = data.date as string;
+    if (!datePattern.test(dateStr)) {
+        throw new ValidationError(`Invalid date format: ${dateStr} (expected YYYY-MM-DD)`);
     }
 
     // confidence（optional）のチェック（改善①：Phase 6.2-Bで使用）
     if (data.confidence) {
+        const confidence = data.confidence as Record<string, unknown>;
         const confidenceFields = ['total_amount', 'date', 'tax_items', 'vendor', 't_number'];
         for (const field of confidenceFields) {
-            if (data.confidence[field] !== undefined && typeof data.confidence[field] !== 'number') {
+            if (confidence[field] !== undefined && typeof confidence[field] !== 'number') {
                 throw new ValidationError(`confidence.${field} must be a number`);
             }
         }
     }
 
-    return data as AIIntermediateOutput;
+    // 全バリデーション通過後にキャスト（unknown経由で型安全性を明示）
+    return data as unknown as AIIntermediateOutput;
 }
 
 /**

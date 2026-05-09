@@ -72,4 +72,32 @@ export default defineConfigWithVueTs(
       '@typescript-eslint/no-unused-vars': 'off',
     },
   },
+
+  // ────────────────────────────────────────────
+  // API層 @/ エイリアス禁止ルール
+  //
+  // tsx（サーバー側ランタイム）は tsconfig.app.json の paths を
+  // 解決できないため、src/api/ 配下では @/ エイリアスを禁止し
+  // 相対パスを強制する。
+  //
+  // ブラウザ専用ファイル（ocr_service_browser.ts, ocr/ocr_service.ts,
+  // receiptService.ts）は Vite が @/ を解決するため除外。
+  // ────────────────────────────────────────────
+  {
+    name: 'app/api-no-alias',
+    files: ['src/api/**/*.ts'],
+    ignores: [
+      'src/api/ai/gemini/ocr_service_browser.ts',
+      'src/api/ai/ocr/ocr_service.ts',
+      'src/api/services/receiptService.ts',
+    ],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['@/*'],
+          message: 'API層（tsx実行）では @/ エイリアス禁止。相対パスを使用してください。',
+        }],
+      }],
+    },
+  },
 )

@@ -7,7 +7,7 @@
  * - 有効期限チェック
  */
 
-import type { CachedContentInfo, CacheConfig } from '@/types/GeminiOCR.types';
+import type { CachedContentInfo, CacheConfig } from '../../../types/GeminiOCR.types';
 import { SYSTEM_INSTRUCTION } from './system_instruction';
 import { GoogleGenAI } from '@google/genai';
 import { readFileSync } from 'fs';

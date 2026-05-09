@@ -5,11 +5,11 @@
  * Phase 6.2-A: 基本実装（レシート専用）
  */
 
-import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
+import type { AIIntermediateOutput } from '../../../types/GeminiOCR.types';
 // getOrCreateCache: Phase 6.2-Bでcache復活時にimport復元
 import { extractJSONFromResponse } from './schemas';
 import { GoogleGenAI } from '@google/genai';
-import { getPromptContent } from '@/api/routes/aiPromptRoutes';
+import { getPromptContent } from '../../routes/aiPromptRoutes';
 import { readFileSync } from 'fs';
 
 /**

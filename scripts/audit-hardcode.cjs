@@ -244,6 +244,28 @@ function detectIssues(filePath) {
     issues.push({ lineNum: 0, type: 'MISSING_LOAD_LAYOUT', line: 'useFieldLayout()はあるがloadLayout()が呼ばれていない' });
   }
 
+  // API層の @/ パスエイリアス使用チェック
+  // tsx（サーバー側ランタイム）では @/ が解決できないため禁止
+  // ブラウザ専用ファイル（Viteが解決）は除外
+  const BROWSER_ONLY_FILES = [
+    'ocr_service_browser.ts',
+    'ocr/ocr_service.ts',
+    'receiptService.ts',
+  ];
+  const isBrowserOnlyFile = BROWSER_ONLY_FILES.some(f => normalizedPath.endsWith(f));
+  if (normalizedPath.includes('/api/') && !isBrowserOnlyFile) {
+    lines.forEach((line, idx) => {
+      const lineNum2 = idx + 1;
+      const trimmed2 = line.trim();
+      // コメント行スキップ
+      if (trimmed2.startsWith('//') || trimmed2.startsWith('*') || trimmed2.startsWith('/*')) return;
+      // import/export文内の @/ を検出
+      if (/from\s+['"]@\//.test(trimmed2) || /import\s*\(?\s*['"]@\//.test(trimmed2)) {
+        issues.push({ lineNum: lineNum2, type: 'API_ALIAS_IMPORT', line: trimmed2.substring(0, 130) });
+      }
+    });
+  }
+
   return issues;
 }
 

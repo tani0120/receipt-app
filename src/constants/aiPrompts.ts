@@ -9,7 +9,7 @@
  */
 
 // System Instruction は既存ファイルからre-export（後方互換維持）
-export { SYSTEM_INSTRUCTION } from '@/api/ai/gemini/system_instruction';
+export { SYSTEM_INSTRUCTION } from '../api/ai/gemini/system_instruction';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 勘定科目推論ルール（共通）

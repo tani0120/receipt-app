@@ -17,7 +17,7 @@
  */
 
 import { getJournals } from './journalStore'
-import { UI_MSG } from '@/constants/uiMessages'
+import { UI_MSG } from '../../constants/uiMessages'
 import { getClientAccounts, getClientTaxCategories } from './accountMasterStore'
 
 // ━━━ 除外ラベル定義（exportMfCsv.ts と同一） ━━━

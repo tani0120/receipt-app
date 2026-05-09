@@ -26,7 +26,7 @@ import {
   FIELD_ACCOUNT, FIELD_TAX_CATEGORY, FIELD_AMOUNT, FIELD_AMOUNT_DIFF,
   LABEL_UNSET,
 } from '../../constants/validationMessages'
-import { UI_MSG } from '@/constants/uiMessages'
+import { UI_MSG } from '../../constants/uiMessages'
 
 // ────────────────────────────────────────────
 // 型定義

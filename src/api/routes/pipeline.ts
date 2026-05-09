@@ -17,7 +17,7 @@ import { createHash } from 'crypto';
 import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { UI_MSG } from '@/constants/uiMessages';
+import { UI_MSG } from '../../constants/uiMessages';
 
 /** ファイル本体の永続保存先（data/uploads/{clientId}/{fileName}） */
 const UPLOADS_DIR = join(process.cwd(), 'data', 'uploads');

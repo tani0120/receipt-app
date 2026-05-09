@@ -18,8 +18,8 @@ import {
   OCR_DETAILED_PROMPT,
   OCR_VERTEX_PROMPT,
   SYSTEM_INSTRUCTION,
-} from '@/constants/aiPrompts';
-import { UI_MSG } from '@/constants/uiMessages';
+} from '../../constants/aiPrompts';
+import { UI_MSG } from '../../constants/uiMessages';
 
 const app = new Hono();
 

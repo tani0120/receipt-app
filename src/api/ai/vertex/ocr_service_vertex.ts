@@ -7,9 +7,9 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
-import { getPromptContent } from '@/api/routes/aiPromptRoutes';
+import { getPromptContent } from '../../routes/aiPromptRoutes';
 import { getOrCreateCache } from './cache_manager_vertex';
-import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
+import type { AIIntermediateOutput } from '../../../types/GeminiOCR.types';
 
 /**
  * Vertex AI OCR実行
