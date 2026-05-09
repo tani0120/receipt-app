@@ -61,3 +61,16 @@ export const leadFields: FieldDef[] = [
   { key: 'taxFilingFee', label: '消費税申告報酬', section: '報酬設定', component: 'amount', widthPercent: 20, order: 5, min: 0 },
   { key: 'annualTotal', label: '年間総報酬（自動算出）', section: '報酬設定', component: 'computed', widthPercent: 20, order: 6 },
 ];
+
+/** フラットレイアウト用: heading付き全フィールド（グローバルorder順） */
+export const leadFieldsFlat: FieldDef[] = [
+  // ── 基本情報（heading） ──
+  { key: 'heading_basic', label: '基本情報', section: '', component: 'heading', widthPercent: 100, order: 1, headingSize: 14, headingBg: '#4a8dc9' },
+  ...leadFields.filter(f => f.section === '基本情報').map((f, i) => ({ ...f, section: '', order: 2 + i })),
+  // ── 会計設定（heading） ──
+  { key: 'heading_accounting', label: '会計設定', section: '', component: 'heading', widthPercent: 100, order: 21, headingSize: 14, headingBg: '#4a8dc9' },
+  ...leadFields.filter(f => f.section === '会計設定').map((f, i) => ({ ...f, section: '', order: 22 + i })),
+  // ── 報酬設定（heading） ──
+  { key: 'heading_fee', label: '報酬設定', section: '', component: 'heading', widthPercent: 100, order: 33, headingSize: 14, headingBg: '#4a8dc9' },
+  ...leadFields.filter(f => f.section === '報酬設定').map((f, i) => ({ ...f, section: '', order: 34 + i })),
+];
