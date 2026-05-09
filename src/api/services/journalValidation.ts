@@ -80,6 +80,18 @@ const CONTRA_EXPENSE_IDS = ['PURCHASE_RETURNS', 'PURCHASE_RETURNS_CORP']
 // ────────────────────────────────────────────
 import { VOUCHER_TYPE_RULES, getBaseAccountId } from '../../data/master/voucherTypeRules'
 import type { VoucherTypeSideRule } from '../../data/master/voucherTypeRules'
+import {
+  WARN_SALES_DEBIT, WARN_EXPENSE_CREDIT,
+  WARN_SALES_SALES, WARN_EXPENSE_EXPENSE,
+  WARN_SALES_EXPENSE, WARN_EXPENSE_SALES,
+  WARN_EQUITY_SALES, WARN_EQUITY_EXPENSE,
+  WARN_SALES_EQUITY, WARN_EXPENSE_EQUITY, WARN_EQUITY_EQUITY,
+  warnVoucherTypeDebit, warnVoucherTypeCredit,
+  warnAccountUnknown, warnTaxEmpty, warnTaxUnknown,
+  WARN_DESCRIPTION_EMPTY, WARN_DATE_EMPTY,
+  warnAmountEmpty, warnDebitCreditMismatch,
+  warnSameAccountBothSides, WARN_TAX_ACCOUNT_MISMATCH,
+} from '../../shared/validationMessages'
 
 // ────────────────────────────────────────────
 // 5分類判定
@@ -129,24 +141,24 @@ export function validateDebitCreditCombination(
   if (debitGroup === 'sales' && creditGroup === 'bs_al') {
     const { isContraRevenue } = isContraAccount(debitAccount ?? null, accounts)
     if (isContraRevenue) return null
-    return '売上は通常貸方です。返品・値引ですか？'
+    return WARN_SALES_DEBIT
   }
   if (debitGroup === 'bs_al' && creditGroup === 'expense') {
     const { isContraExpense } = isContraAccount(creditAccount ?? null, accounts)
     if (isContraExpense) return null
-    return '経費は通常借方です。戻入・返品ですか？'
+    return WARN_EXPENSE_CREDIT
   }
 
   // 不正パターン
-  if (debitGroup === 'sales' && creditGroup === 'sales') return '借方・貸方が同じ区分（売上×売上）です'
-  if (debitGroup === 'expense' && creditGroup === 'expense') return '借方・貸方が同じ区分（経費×経費）です'
-  if (debitGroup === 'sales' && creditGroup === 'expense') return '借方が売上、貸方が経費は通常あり得ません'
-  if (debitGroup === 'expense' && creditGroup === 'sales') return '借方が経費、貸方が売上は通常あり得ません'
-  if (debitGroup === 'bs_equity' && creditGroup === 'sales') return '純資産×売上の組み合わせは通常あり得ません'
-  if (debitGroup === 'bs_equity' && creditGroup === 'expense') return '純資産×経費の組み合わせは通常あり得ません'
-  if (debitGroup === 'sales' && creditGroup === 'bs_equity') return '売上×純資産の組み合わせは通常あり得ません'
-  if (debitGroup === 'expense' && creditGroup === 'bs_equity') return '経費×純資産の組み合わせは通常あり得ません'
-  if (debitGroup === 'bs_equity' && creditGroup === 'bs_equity') return '純資産×純資産の組み合わせは通常あり得ません'
+  if (debitGroup === 'sales' && creditGroup === 'sales') return WARN_SALES_SALES
+  if (debitGroup === 'expense' && creditGroup === 'expense') return WARN_EXPENSE_EXPENSE
+  if (debitGroup === 'sales' && creditGroup === 'expense') return WARN_SALES_EXPENSE
+  if (debitGroup === 'expense' && creditGroup === 'sales') return WARN_EXPENSE_SALES
+  if (debitGroup === 'bs_equity' && creditGroup === 'sales') return WARN_EQUITY_SALES
+  if (debitGroup === 'bs_equity' && creditGroup === 'expense') return WARN_EQUITY_EXPENSE
+  if (debitGroup === 'sales' && creditGroup === 'bs_equity') return WARN_SALES_EQUITY
+  if (debitGroup === 'expense' && creditGroup === 'bs_equity') return WARN_EXPENSE_EQUITY
+  if (debitGroup === 'bs_equity' && creditGroup === 'bs_equity') return WARN_EQUITY_EQUITY
 
   return null
 }
@@ -185,13 +197,13 @@ export function validateByVoucherType(
   for (const entry of journal.debit_entries) {
     if (!entry.account) continue
     if (!isAllowed(entry.account, rule.debit)) {
-      return `${voucherType}の借方に「${entry.account}」は通常使用しません`
+      return warnVoucherTypeDebit(voucherType, entry.account)
     }
   }
   for (const entry of journal.credit_entries) {
     if (!entry.account) continue
     if (!isAllowed(entry.account, rule.credit)) {
-      return `${voucherType}の貸方に「${entry.account}」は通常使用しません`
+      return warnVoucherTypeCredit(voucherType, entry.account)
     }
   }
   return null
@@ -285,13 +297,13 @@ export function validateJournal(
     ...journal.credit_entries.filter(e => !isValidAccount(e.account)).map(e => `貸方'${e.account ?? '(空)'}'`),
   ]
   if (unknownAccounts.length === 0) removeLabel('ACCOUNT_UNKNOWN')
-  else addLabel('ACCOUNT_UNKNOWN', `${unknownAccounts.join(', ')}がマスタに存在しません`)
+  else addLabel('ACCOUNT_UNKNOWN', warnAccountUnknown(unknownAccounts))
 
   // 2. TAX_UNKNOWN（税区分不明）
   const taxCategoryIds = new Set(taxCategories.map(t => t.id))
   const emptyTaxEntries = [
-    ...journal.debit_entries.filter(e => !e.tax_category_id).map((_, i) => `借方${i + 1}行目の税区分が未設定です`),
-    ...journal.credit_entries.filter(e => !e.tax_category_id).map((_, i) => `貸方${i + 1}行目の税区分が未設定です`),
+    ...journal.debit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty('借方', i + 1)),
+    ...journal.credit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty('貸方', i + 1)),
   ]
   const unknownTaxEntries = [
     ...journal.debit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => `借方'${e.tax_category_id}'`),
@@ -302,17 +314,17 @@ export function validateJournal(
   } else {
     const msgs: string[] = []
     if (emptyTaxEntries.length > 0) msgs.push(...emptyTaxEntries)
-    if (unknownTaxEntries.length > 0) msgs.push(`${unknownTaxEntries.join(', ')}が税区分マスタに存在しません`)
+    if (unknownTaxEntries.length > 0) msgs.push(warnTaxUnknown(unknownTaxEntries))
     addLabel('TAX_UNKNOWN', msgs.join('。'))
   }
 
   // 3. DESCRIPTION_UNKNOWN（摘要なし）
   if (journal.description != null && journal.description !== '') removeLabel('DESCRIPTION_UNKNOWN')
-  else addLabel('DESCRIPTION_UNKNOWN', '摘要が空です')
+  else addLabel('DESCRIPTION_UNKNOWN', WARN_DESCRIPTION_EMPTY)
 
   // 4. DATE_UNKNOWN（日付なし）
   if (journal.voucher_date != null && journal.voucher_date !== '') removeLabel('DATE_UNKNOWN')
-  else addLabel('DATE_UNKNOWN', '日付が空です')
+  else addLabel('DATE_UNKNOWN', WARN_DATE_EMPTY)
 
   // 5. AMOUNT_UNCLEAR（金額未設定）
   const emptyAmountEntries = [
@@ -320,13 +332,13 @@ export function validateJournal(
     ...journal.credit_entries.filter(e => e.amount == null).map((_, i) => `貸方${i + 1}行目`),
   ]
   if (emptyAmountEntries.length === 0) removeLabel('AMOUNT_UNCLEAR')
-  else addLabel('AMOUNT_UNCLEAR', `${emptyAmountEntries.join(', ')}の金額が未設定です`)
+  else addLabel('AMOUNT_UNCLEAR', warnAmountEmpty(emptyAmountEntries))
 
   // 6. DEBIT_CREDIT_MISMATCH（貸借不一致）
   const debitSum = journal.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0)
   const creditSum = journal.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0)
   if (debitSum === creditSum && debitSum > 0) removeLabel('DEBIT_CREDIT_MISMATCH')
-  else addLabel('DEBIT_CREDIT_MISMATCH', `借方合計${debitSum.toLocaleString()} ≠ 貸方合計${creditSum.toLocaleString()}`)
+  else addLabel('DEBIT_CREDIT_MISMATCH', warnDebitCreditMismatch(debitSum.toLocaleString(), creditSum.toLocaleString()))
 
   // 7. CATEGORY_CONFLICT（5分類矛盾）
   let hasConflict = false
@@ -353,7 +365,7 @@ export function validateJournal(
   const debitAccountSet = new Set(journal.debit_entries.map(e => e.account).filter((v): v is string => v != null))
   const creditAccountSet = new Set(journal.credit_entries.map(e => e.account).filter((v): v is string => v != null))
   const sameAccounts = [...debitAccountSet].filter(a => creditAccountSet.has(a))
-  if (sameAccounts.length > 0) addLabel('SAME_ACCOUNT_BOTH_SIDES', `'${sameAccounts.join("', '")}'が借方と貸方の両方に使用されています`)
+  if (sameAccounts.length > 0) addLabel('SAME_ACCOUNT_BOTH_SIDES', warnSameAccountBothSides(sameAccounts))
   else removeLabel('SAME_ACCOUNT_BOTH_SIDES')
 
   // 8. VOUCHER_TYPE_CONFLICT（証票意味ルール矛盾）
@@ -395,7 +407,7 @@ export function validateJournal(
       if (taxCat.direction === 'purchase') { hasTaxAccountMismatch = true; break }
     }
   }
-  if (hasTaxAccountMismatch) addLabel('TAX_ACCOUNT_MISMATCH', '科目に設定された税区分と異なる税区分が使用されています')
+  if (hasTaxAccountMismatch) addLabel('TAX_ACCOUNT_MISMATCH', WARN_TAX_ACCOUNT_MISMATCH)
   else removeLabel('TAX_ACCOUNT_MISMATCH')
 
   // 10. FUTURE_DATE（未来日付）: voucher_dateが明日以降

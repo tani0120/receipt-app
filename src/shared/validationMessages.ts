@@ -70,3 +70,67 @@ export const MOCK_ERROR_REASONS = [
   MSG_ISSUER_MISSING,
   multiDocumentError(2),
 ]
+
+// ============================================================
+// F. 仕訳バリデーション警告メッセージ
+//    （journalWarningSync.ts / journalValidation.ts 共通）
+// ============================================================
+
+/** 逆仕訳: 売上が借方 */
+export const WARN_SALES_DEBIT = '売上は通常貸方です。返品・値引ですか？'
+/** 逆仕訳: 経費が貸方 */
+export const WARN_EXPENSE_CREDIT = '経費は通常借方です。戻入・返品ですか？'
+
+/** 不正パターン: 同区分同士 */
+export const WARN_SALES_SALES = '借方・貸方が同じ区分（売上×売上）です'
+export const WARN_EXPENSE_EXPENSE = '借方・貸方が同じ区分（経費×経費）です'
+
+/** 不正パターン: 売上×経費 */
+export const WARN_SALES_EXPENSE = '借方が売上、貸方が経費は通常あり得ません'
+export const WARN_EXPENSE_SALES = '借方が経費、貸方が売上は通常あり得ません'
+
+/** 不正パターン: 純資産組合せ */
+export const WARN_EQUITY_SALES = '純資産×売上の組み合わせは通常あり得ません'
+export const WARN_EQUITY_EXPENSE = '純資産×経費の組み合わせは通常あり得ません'
+export const WARN_SALES_EQUITY = '売上×純資産の組み合わせは通常あり得ません'
+export const WARN_EXPENSE_EQUITY = '経費×純資産の組み合わせは通常あり得ません'
+export const WARN_EQUITY_EQUITY = '純資産×純資産の組み合わせは通常あり得ません'
+
+/** 証票意味ルール違反（テンプレート） */
+export const warnVoucherTypeDebit = (voucherType: string, accountName: string) =>
+  `${voucherType}の借方に「${accountName}」は通常使用しません`
+export const warnVoucherTypeCredit = (voucherType: string, accountName: string) =>
+  `${voucherType}の貸方に「${accountName}」は通常使用しません`
+
+// ── 同期警告（syncWarningLabelsCore）──
+
+/** マスタ未存在 */
+export const warnAccountUnknown = (items: string[]) =>
+  `${items.join(', ')}がマスタに存在しません`
+/** 税区分未設定 */
+export const warnTaxEmpty = (side: string, idx: number) =>
+  `${side}${idx}行目の税区分が未設定です`
+/** 税区分マスタ未存在 */
+export const warnTaxUnknown = (items: string[]) =>
+  `${items.join(', ')}が税区分マスタに存在しません`
+/** 摘要空 */
+export const WARN_DESCRIPTION_EMPTY = '摘要が空です'
+/** 日付空 */
+export const WARN_DATE_EMPTY = '日付が空です'
+/** 金額未設定 */
+export const warnAmountEmpty = (items: string[]) =>
+  `${items.join(', ')}の金額が未設定です`
+/** 貸借不一致 */
+export const warnDebitCreditMismatch = (debit: string, credit: string) =>
+  `借方合計${debit} ≠ 貸方合計${credit}`
+/** 借方貸方同一科目 */
+export const warnSameAccountBothSides = (accounts: string[]) =>
+  `'${accounts.join("', '")}'が借方と貸方の両方に使用されています`
+/** 税区分と科目の不整合 */
+export const WARN_TAX_ACCOUNT_MISMATCH = '科目に設定された税区分と異なる税区分が使用されています'
+
+/** ファイルサイズ超過 */
+export const warnFileSizeTooLarge = (sizeMB: string) =>
+  `ファイルサイズが大きすぎます（${sizeMB}MB）。10MB以下にしてください`
+/** AI分析失敗 */
+export const WARN_AI_ANALYSIS_FAILED = 'AI分析に失敗しました（サーバー側エラー）'

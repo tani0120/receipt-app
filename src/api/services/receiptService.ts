@@ -23,6 +23,8 @@ import { validateFileType } from '@/shared/fileTypes';
 import {
   serverErrorMessage,
   networkErrorMessage,
+  warnFileSizeTooLarge,
+  WARN_AI_ANALYSIS_FAILED,
 } from '@/shared/validationMessages';
 
 // 型の再export（Vue側のimportパスを変更しないための互換性維持）
@@ -55,7 +57,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
         date: null,
         amount: null,
         vendor: null,
-        errorReason: `ファイルサイズが大きすぎます（${(file.size / 1024 / 1024).toFixed(1)}MB）。10MB以下にしてください`,
+        errorReason: warnFileSizeTooLarge((file.size / 1024 / 1024).toFixed(1)),
       };
     }
 
@@ -137,7 +139,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
         date: null,
         amount: null,
         vendor: null,
-        errorReason: 'AI分析に失敗しました（サーバー側エラー）',
+        errorReason: WARN_AI_ANALYSIS_FAILED,
         metrics,
         fileHash: data.fileHash,
         fileUrl: data.fileUrl,
