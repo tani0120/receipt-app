@@ -17,6 +17,7 @@
  */
 
 import { getJournals } from './journalStore'
+import { UI_MSG } from '@/constants/uiMessages'
 import { getClientAccounts, getClientTaxCategories } from './accountMasterStore'
 
 // ━━━ 除外ラベル定義（exportMfCsv.ts と同一） ━━━
@@ -291,17 +292,17 @@ export interface ExportDetailResult {
 
 /** 履歴IDからファイル名を解決 */
 const HISTORY_FILE_MAP: Record<string, string> = {
-  h01: 'マネーフォワード_20250307',
-  h02: 'マネーフォワード_20250307_2',
-  h03: 'マネーフォワード_20250307_3',
-  h04: 'マネーフォワード_20240807',
-  h05: 'マネーフォワード_20240731',
-  h06: 'マネーフォワード_20240110',
-  h07: 'マネーフォワード_20240110_2',
-  h08: 'マネーフォワード_20240109',
-  h09: 'マネーフォワード_20240109_2',
-  h10: 'マネーフォワード_20230311',
-  h11: 'マネーフォワード_20230311_2',
+  h01: `${UI_MSG.マネーフォワードファイル接頭}20250307`,
+  h02: `${UI_MSG.マネーフォワードファイル接頭}20250307_2`,
+  h03: `${UI_MSG.マネーフォワードファイル接頭}20250307_3`,
+  h04: `${UI_MSG.マネーフォワードファイル接頭}20240807`,
+  h05: `${UI_MSG.マネーフォワードファイル接頭}20240731`,
+  h06: `${UI_MSG.マネーフォワードファイル接頭}20240110`,
+  h07: `${UI_MSG.マネーフォワードファイル接頭}20240110_2`,
+  h08: `${UI_MSG.マネーフォワードファイル接頭}20240109`,
+  h09: `${UI_MSG.マネーフォワードファイル接頭}20240109_2`,
+  h10: `${UI_MSG.マネーフォワードファイル接頭}20230311`,
+  h11: `${UI_MSG.マネーフォワードファイル接頭}20230311_2`,
 }
 
 export function getExportDetail(query: ExportDetailQuery): ExportDetailResult {

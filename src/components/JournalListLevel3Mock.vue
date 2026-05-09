@@ -77,7 +77,7 @@
           <button
             @click="clearSelection"
             class="text-gray-500 hover:text-gray-700 px-1"
-            title="選択解除"
+            :title="UI_MSG.ツールチップ_選択解除"
           >
             ✖
           </button>
@@ -146,7 +146,7 @@
               : 'text-gray-300 cursor-not-allowed',
           ]"
           @click="undo()"
-          title="元に戻す (Ctrl+Z)"
+          :title="UI_MSG.ツールチップ_元に戻す"
         >
           <i class="fa-solid fa-rotate-left text-[10px]"></i>戻す
         </button>
@@ -159,7 +159,7 @@
               : 'text-gray-300 cursor-not-allowed',
           ]"
           @click="redo()"
-          title="やり直し (Ctrl+Y)"
+          :title="UI_MSG.ツールチップ_やり直し"
         >
           <i class="fa-solid fa-rotate-right text-[10px]"></i>進める
         </button>
@@ -167,7 +167,7 @@
         <button
           class="text-[13px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-0.5 transition-all"
           @click="resetColWidths()"
-          title="列幅をデフォルトに戻す"
+          :title="UI_MSG.ツールチップ_列幅リセット"
         >
           <i class="fa-solid fa-arrows-left-right text-[10px]"></i>列幅リセット
         </button>
@@ -528,7 +528,7 @@
                   >
                     <i
                       class="fa-solid fa-camera text-[10px] text-gray-800 cursor-pointer"
-                      title="写真（クリックで固定）"
+                      :title="UI_MSG.ツールチップ_写真"
                       @mouseenter="showImageModal(journal.id, journal.document_id)"
                       @mouseleave="hideImageModal"
                       @click="togglePinModal(journal.id, journal.document_id)"
@@ -555,7 +555,7 @@
                     <i
                       v-if="hasSupportingMatch(journal)"
                       class="fa-solid fa-paperclip text-[10px] text-amber-600 cursor-pointer hover:text-amber-800 hover:scale-125 transition-all"
-                      title="根拠資料あり（クリックで表示）"
+                      :title="UI_MSG.ツールチップ_根拠資料あり"
                       @click="
                         previewSupportingImage(
                           supportingMatchMap.get(journal.id)?.[0] ?? { previewUrl: '' },
@@ -566,7 +566,7 @@
                     <i
                       v-else
                       class="fa-solid fa-paperclip text-[10px] text-gray-300 cursor-pointer hover:text-gray-500 transition-colors"
-                      title="根拠資料を検索"
+                      :title="UI_MSG.ツールチップ_根拠資料検索"
                       @click="openSupportingSearchModal()"
                     ></i>
                   </div>
@@ -590,7 +590,7 @@
                     <i
                       v-if="hasPastJournal(journal)"
                       class="fa-solid fa-magnifying-glass text-[10px] text-gray-600 cursor-pointer"
-                      title="過去仕訳（クリックでピン留め）"
+                      :title="UI_MSG.ツールチップ_過去仕訳"
                       @mouseenter="showPastJournalSearchModal()"
                       @mouseleave="hidePastJournalSearchModal()"
                       @click="togglePastJournalSearchModalPin()"
@@ -924,7 +924,7 @@
                             $event,
                             journal.invoice_number
                               ? `${journal.invoice_number}`
-                              : '適格（T番号なし）',
+                              : UI_MSG.適格_T番号なし,
                           )
                         "
                         @mouseleave="hideTooltip()"
@@ -2586,10 +2586,10 @@
       <span class="font-bold">{{ activeClientFull?.companyName }}</span>
       （{{
         activeClientFull?.consumptionTaxMode === "exempt"
-          ? "免税事業者"
+          ? UI_MSG.ラベル_免税事業者
           : activeClientFull?.consumptionTaxMode === "simplified"
-            ? "簡易課税"
-            : "本則課税"
+            ? UI_MSG.ラベル_簡易課税
+            : UI_MSG.ラベル_本則課税
       }}）で <span class="font-bold text-red-600">{{ taxMismatchSummary.total }}件</span> の不整合
     </p>
     <div class="border rounded bg-gray-50 p-1.5 mb-3 max-h-24 overflow-y-auto">
@@ -3086,15 +3086,15 @@ function isContraAccount(accountName: string | null): {
 function megaGroupLabel(group: MegaGroupType): string {
   switch (group) {
     case "sales":
-      return "売上";
+      return UI_MSG.分類_売上;
     case "expense":
-      return "経費・仕入";
+      return UI_MSG.分類_経費仕入;
     case "bs_al":
-      return "資産・負債";
+      return UI_MSG.分類_資産負債;
     case "bs_equity":
-      return "純資産";
+      return UI_MSG.分類_純資産;
     default:
-      return "不明";
+      return UI_MSG.分類_不明;
   }
 }
 
@@ -4266,13 +4266,13 @@ const openDropdownId = ref<string | null>(null);
 const legendModalType = ref<"labelType" | "warning" | "voucher_type" | null>(null);
 
 const labelTypeLegend = [
-  { short: "レ", label: "レシート・領収証", bgClass: "bg-emerald-600" },
-  { short: "請", label: "請求書", bgClass: "bg-blue-600" },
-  { short: "交", label: "交通費", bgClass: "bg-cyan-600" },
-  { short: "ク", label: "クレジットカード", bgClass: "bg-purple-600" },
-  { short: "銀", label: "銀行明細", bgClass: "bg-indigo-600" },
-  { short: "医", label: "医療費", bgClass: "bg-pink-600" },
-  { short: "外", label: "仕訳対象外", bgClass: "bg-gray-600" },
+  { short: "レ", label: UI_MSG.証票バッジ_レシート, bgClass: "bg-emerald-600" },
+  { short: "請", label: UI_MSG.証票バッジ_請求書, bgClass: "bg-blue-600" },
+  { short: "交", label: UI_MSG.証票バッジ_交通費, bgClass: "bg-cyan-600" },
+  { short: "ク", label: UI_MSG.証票バッジ_クレカ, bgClass: "bg-purple-600" },
+  { short: "銀", label: UI_MSG.証票バッジ_銀行明細, bgClass: "bg-indigo-600" },
+  { short: "医", label: UI_MSG.証票バッジ_医療費, bgClass: "bg-pink-600" },
+  { short: "外", label: UI_MSG.証票バッジ_対象外, bgClass: "bg-gray-600" },
 ];
 
 // ボディ用: ラベル名→バッジ情報マッピング
@@ -5704,25 +5704,25 @@ const staffNoteConfig: Record<
   { label: string; icon: string; activeColor: string; hoverIconColor: string }
 > = {
   NEED_DOCUMENT: {
-    label: "書類が不足",
+    label: UI_MSG.付箋_書類不足,
     icon: "fa-file-circle-exclamation",
     activeColor: "text-red-600",
     hoverIconColor: "#dc2626",
   },
   NEED_INFO: {
-    label: "情報が不足",
+    label: UI_MSG.付箋_情報不足,
     icon: "fa-circle-question",
     activeColor: "text-amber-600",
     hoverIconColor: "#d97706",
   },
   REMINDER: {
-    label: "備忘メモ",
+    label: UI_MSG.付箋_備忘メモ,
     icon: "fa-thumbtack",
     activeColor: "text-blue-600",
     hoverIconColor: "#2563eb",
   },
   NEED_CONSULT: {
-    label: "社内相談する",
+    label: UI_MSG.付箋_社内相談,
     icon: "fa-comments",
     activeColor: "text-purple-600",
     hoverIconColor: "#9333ea",

@@ -64,7 +64,7 @@
           <button
             class="relative flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:bg-sky-50 text-gray-500 hover:text-sky-600"
             @click="toggleDrawer"
-            title="通知"
+            :title="UI_MSG.通知"
           >
             <i class="fa-solid fa-bell text-[14px]"></i>
             <span

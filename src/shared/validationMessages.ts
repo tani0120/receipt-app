@@ -179,3 +179,20 @@ export const FIELD_TAX_CATEGORY = '税区分'
 export const FIELD_AMOUNT = '金額'
 export const FIELD_AMOUNT_DIFF = '金額（差額）'
 export const LABEL_UNSET = '未設定'
+
+// ── 借方/貸方ラベル（バリデーション共通） ──
+export const SIDE_DEBIT = '借方'
+export const SIDE_CREDIT = '貸方'
+
+/** 科目未存在の行ラベル（「借方'xxx'」形式） */
+export const sideAccountLabel = (side: string, account: string | null) =>
+  `${side}'${account ?? '(空)'}'`
+
+/** 金額未設定の行ラベル（「借方N行目」形式） */
+export const sideRowLabel = (side: string, idx: number) =>
+  `${side}${idx}行目`
+
+/** 未来日付警告（journalValidation.ts用。hintFutureDateと同文言） */
+export const warnFutureDate = (date: string) =>
+  `未来日付です（${date}）。日付を確認してください`
+

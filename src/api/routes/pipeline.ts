@@ -17,6 +17,7 @@ import { createHash } from 'crypto';
 import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { UI_MSG } from '@/constants/uiMessages';
 
 /** ファイル本体の永続保存先（data/uploads/{clientId}/{fileName}） */
 const UPLOADS_DIR = join(process.cwd(), 'data', 'uploads');
@@ -130,10 +131,10 @@ app.post('/preview-extract', async (c) => {
       direction: 'expense',
       direction_confidence: 0.95,
       processing_mode: 'auto',
-      preview_extract_reason: 'モックモード: AI呼出しスキップ',
+      preview_extract_reason: UI_MSG.モック理由_AI呼出しスキップ,
       document_count: 1,
-      document_count_reason: 'モックモード',
-      description: `${mockVendor}での購入`,
+      document_count_reason: UI_MSG.モック理由_モックモード,
+      description: `${mockVendor}${UI_MSG.モック購入接尾}`,
       issuer_name: mockVendor,
       date: mockDate,
       total_amount: mockAmount,
@@ -141,7 +142,7 @@ app.post('/preview-extract', async (c) => {
       line_items: [{
         line_index: 1,
         date: mockDate,
-        description: `${mockVendor}での購入`,
+        description: `${mockVendor}${UI_MSG.モック購入接尾}`,
         amount: mockAmount,
         direction: 'expense' as const,
         balance: null,
@@ -231,7 +232,7 @@ app.post('/preview-extract', async (c) => {
     // タイムアウト付きでpreviewExtractImage呼出（30秒）
     const timeoutMs = 30_000;
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Gemini API タイムアウト（${timeoutMs / 1000}秒）`)), timeoutMs)
+      setTimeout(() => reject(new Error(`${UI_MSG.APIタイムアウト接頭}${timeoutMs / 1000}${UI_MSG.APIタイムアウト接尾}`)), timeoutMs)
     );
 
     const previewExtractResult = await Promise.race([
@@ -442,7 +443,7 @@ app.post('/extract', async (c) => {
 app.get('/health', (c) => {
   return c.json({
     status: 'ok',
-    project: process.env['VERTEX_PROJECT_ID'] ?? '(未設定)',
+    project: process.env['VERTEX_PROJECT_ID'] ?? UI_MSG.ヘルスチェック未設定,
     model: process.env['VERTEX_MODEL_ID'] ?? 'gemini-2.5-flash-preview-04-17',
   });
 });
@@ -477,7 +478,7 @@ app.post('/metrics', async (c) => {
 app.delete('/hashes', (c) => {
   clearKnownHashes();
   console.log('[pipeline/route] 重複ハッシュ記録をクリアしました');
-  return c.json({ status: 'ok', message: '重複ハッシュ記録をクリアしました' });
+  return c.json({ status: 'ok', message: UI_MSG.重複ハッシュクリア完了 });
 });
 
 // ============================================================

@@ -294,6 +294,7 @@ import { ref, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { useAdminDashboard } from '@/composables/useAdminDashboard';
+import { UI_MSG } from '@/constants/uiMessages';
 
 const route = useRoute();
 const router = useRouter();
@@ -354,8 +355,8 @@ function formatTokenCount(n: number): string {
 /** スタッフのステータスラベル（スタッフマスターと統一） */
 function staffStatusLabel(status: string): string {
   const map: Record<string, string> = {
-    active: '有効',
-    inactive: '停止中',
+    active: UI_MSG.スタッフ有効,
+    inactive: UI_MSG.スタッフ停止中,
   };
   return map[status] ?? status;
 }
@@ -363,9 +364,9 @@ function staffStatusLabel(status: string): string {
 /** 顧問先のステータスラベル（顧問先マスターと統一） */
 function clientStatusLabel(status: string): string {
   const map: Record<string, string> = {
-    active: '稼働中',
-    suspension: '休眠中',
-    inactive: '契約終了',
+    active: UI_MSG.顧問先稼働中,
+    suspension: UI_MSG.顧問先休眠中,
+    inactive: UI_MSG.顧問先契約終了,
   };
   return map[status] ?? status;
 }
@@ -404,10 +405,10 @@ watch(() => route.query.tab, (newTab) => {
 });
 
 const tabs = [
-  { key: 'company' as const, label: '全社指標', icon: 'fa-solid fa-building' },
-  { key: 'staff' as const, label: 'スタッフ別指標', icon: 'fa-solid fa-users' },
-  { key: 'client' as const, label: '顧問先別指標', icon: 'fa-solid fa-briefcase' },
-  { key: 'cost' as const, label: 'AIコスト', icon: 'fa-solid fa-coins' },
+  { key: 'company' as const, label: UI_MSG.タブ全社指標, icon: 'fa-solid fa-building' },
+  { key: 'staff' as const, label: UI_MSG.タブスタッフ別指標, icon: 'fa-solid fa-users' },
+  { key: 'client' as const, label: UI_MSG.タブ顧問先別指標, icon: 'fa-solid fa-briefcase' },
+  { key: 'cost' as const, label: UI_MSG.タブAIコスト, icon: 'fa-solid fa-coins' },
 ];
 
 // ======== ソート機能 ========

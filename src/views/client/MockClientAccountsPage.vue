@@ -429,11 +429,11 @@ function showChecked() {
 }
 async function deleteRow(row: Account) {
   if (!row.isCustom) return;
-  const ok = await modal.confirm({ title: `「${row.name}」を削除しますか？`, message: UI_MSG.復元不可, variant: 'danger' });
+  const ok = await modal.confirm({ title: `「${row.name}」${UI_MSG.削除確認接尾}`, message: UI_MSG.復元不可, variant: 'danger' });
   if (!ok) return;
   const idx = accountRows.findIndex(r => r.id === row.id);
   if (idx !== -1) accountRows.splice(idx, 1);
-  markDirty(`「${row.name}」を削除`);
+  markDirty(`「${row.name}」${UI_MSG.削除操作接尾}`);
 }
 async function deleteChecked() {
   const customIds = checkedIds.value.filter(id => {
@@ -441,7 +441,7 @@ async function deleteChecked() {
     return row?.isCustom;
   });
   if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム科目のみ, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム科目を削除しますか？`, message: UI_MSG.復元不可, variant: 'danger' });
+  const ok = await modal.confirm({ title: `${customIds.length}${UI_MSG.カスタム科目削除確認接尾}`, message: UI_MSG.復元不可, variant: 'danger' });
   if (!ok) return;
   customIds.forEach(id => {
     const idx = accountRows.findIndex(r => r.id === id);
@@ -453,7 +453,7 @@ async function deleteChecked() {
 let copyCounter = getInitialCopyCounter(accountRows);
 async function copyChecked() {
   if (!checkedIds.value.length) return;
-  const ok = await modal.confirm({ title: `${checkedIds.value.length}件の科目をコピーしますか？` });
+  const ok = await modal.confirm({ title: `${checkedIds.value.length}${UI_MSG.科目コピー確認接尾}` });
   if (!ok) return;
   // チェック行を逆順にし、各行の直下にコピーを挿入
   const ids = [...checkedIds.value];
@@ -465,7 +465,7 @@ async function copyChecked() {
     copyCounter++;
     const copy: Account = {
       id: `${src.id}_COPY_${copyCounter}`,
-      name: `${src.name}（コピー）`,
+      name: `${src.name}${UI_MSG.コピー接尾}`,
       target: src.target,
       accountGroup: src.accountGroup,
       category: src.category,
@@ -573,7 +573,7 @@ function commitEdit(row: Account) {
       if (!editValue.value.trim()) { modal.notify({ title: UI_MSG.科目名空, variant: 'warning' }); return; }
       row.name = editValue.value;
       if (row.isCustom && editValue.value !== editOriginalName.value) {
-        mfWarningMessage.value = `⚠️ 「${editValue.value}」: この科目名を変更すると、MFインポート時に新しい勘定科目の登録または既存科目への変換を求められる可能性があります。`;
+        mfWarningMessage.value = `${UI_MSG.MF科目名変更警告接頭}「${editValue.value}」${UI_MSG.MF科目名変更警告接尾}`;
       }
       break;
     case 'category':
@@ -607,7 +607,7 @@ function commitEdit(row: Account) {
       break;
   }
   const caFieldLabels = CLIENT_ACCOUNT_FIELD_LABELS;
-  markDirty(`勘定科目の${caFieldLabels[editingField.value] ?? editingField.value}を変更`);
+  markDirty(`勘定科目の${caFieldLabels[editingField.value] ?? editingField.value}${UI_MSG.フィールド変更}`);
   cancelEdit();
 }
 

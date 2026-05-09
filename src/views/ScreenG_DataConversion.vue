@@ -23,7 +23,7 @@
         <!-- 入力セクション -->
         <div class="flex flex-col gap-6">
           <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-             <GStepHeader stepNumber="1" title="変換設定" />
+             <GStepHeader stepNumber="1" :title="UI_MSG.ステップ_変換設定" />
 
              <div class="space-y-4">
                  <div>
@@ -36,7 +36,7 @@
                  <div>
                      <label class="block text-xs font-bold text-gray-500 mb-2">出力する会計ソフト名 <span class="text-red-500">*</span></label>
                      <div class="grid grid-cols-1 gap-3">
-                        <GBrandRadio v-model="form.targetSoftware" value="MF" label="マネーフォワード" />
+                        <GBrandRadio v-model="form.targetSoftware" value="MF" :label="UI_MSG.ラベル_マネーフォワード" />
                      </div>
                  </div>
 
@@ -44,8 +44,8 @@
                  <div>
                      <label class="block text-xs font-bold text-gray-500 mb-2">出力形式 <span class="text-red-500">*</span></label>
                      <div class="grid grid-cols-2 gap-3">
-                        <GBrandRadio v-model="form.outputFormat" value="meisai" label="明細CSV" />
-                        <GBrandRadio v-model="form.outputFormat" value="shiwake" label="仕訳帳CSV" :disabled="true" badge="🚧 工事中" />
+                        <GBrandRadio v-model="form.outputFormat" value="meisai" :label="UI_MSG.ラベル_明細CSV" />
+                        <GBrandRadio v-model="form.outputFormat" value="shiwake" :label="UI_MSG.ラベル_仕訳帳CSV" :disabled="true" :badge="UI_MSG.バッジ_工事中" />
                      </div>
                  </div>
              </div>
@@ -55,7 +55,7 @@
            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative overflow-hidden"
                 @drop.prevent="handleDrop" @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false">
 
-                <GStepHeader stepNumber="2" title="ファイルアップロード" />
+                <GStepHeader stepNumber="2" :title="UI_MSG.ステップ_ファイルアップロード" />
 
                 <div v-if="!uploadedFile" class="border-2 border-gray-300 rounded-lg p-8 text-center" :class="{'bg-green-50 border-green-400': isDragging}">
                     <input ref="fileInput" type="file" class="hidden" @change="handleFileSelect" accept=".csv">

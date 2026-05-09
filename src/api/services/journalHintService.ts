@@ -26,6 +26,7 @@ import {
   FIELD_ACCOUNT, FIELD_TAX_CATEGORY, FIELD_AMOUNT, FIELD_AMOUNT_DIFF,
   LABEL_UNSET,
 } from '../../shared/validationMessages'
+import { UI_MSG } from '@/constants/uiMessages'
 
 // ────────────────────────────────────────────
 // 型定義
@@ -240,12 +241,12 @@ export function generateHintSuggestions(
   const pickDefault = (vt: string | null, alts: HintAlternative[]): HintAlternative | undefined => {
     if (alts.length === 0) return undefined
     // クレカ → 未払金を優先
-    if (vt === 'クレカ') {
+    if (vt === UI_MSG.証票意味_クレカ) {
       const accrued = alts.find(a => a.value === 'ACCRUED_EXPENSES')
       if (accrued) return accrued
     }
     // 売上 → 売掛金を優先
-    if (vt === '売上') {
+    if (vt === UI_MSG.証票意味_売上) {
       const receivable = alts.find(a => a.value === 'ACCOUNTS_RECEIVABLE')
       if (receivable) return receivable
     }
@@ -385,9 +386,9 @@ export function generateHintSuggestions(
           side: dSum > cSum ? 'debit' : 'credit',
           field: FIELD_AMOUNT_DIFF,
           currentValue: String(Math.max(dSum, cSum)),
-          currentLabel: `差額 ${diff.toLocaleString()}`,
+          currentLabel: `${UI_MSG.差額接頭}${diff.toLocaleString()}`,
           selectedValue: String(Math.min(dSum, cSum)),
-          selectedLabel: `${Math.min(dSum, cSum).toLocaleString()} に揃える`,
+          selectedLabel: `${Math.min(dSum, cSum).toLocaleString()}${UI_MSG.金額揃え接尾}`,
           alternatives: [], entryIndex: -1,
         })
       }

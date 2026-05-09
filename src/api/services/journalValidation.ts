@@ -91,6 +91,8 @@ import {
   WARN_DESCRIPTION_EMPTY, WARN_DATE_EMPTY,
   warnAmountEmpty, warnDebitCreditMismatch,
   warnSameAccountBothSides, WARN_TAX_ACCOUNT_MISMATCH,
+  SIDE_DEBIT, SIDE_CREDIT,
+  sideAccountLabel, sideRowLabel, warnFutureDate,
 } from '../../shared/validationMessages'
 
 // ────────────────────────────────────────────
@@ -293,8 +295,8 @@ export function validateJournal(
   const accountIds = new Set(accounts.map(a => a.id))
   const isValidAccount = (id: string | null) => id != null && id !== '' && accountIds.has(id)
   const unknownAccounts = [
-    ...journal.debit_entries.filter(e => !isValidAccount(e.account)).map(e => `借方'${e.account ?? '(空)'}'`),
-    ...journal.credit_entries.filter(e => !isValidAccount(e.account)).map(e => `貸方'${e.account ?? '(空)'}'`),
+    ...journal.debit_entries.filter(e => !isValidAccount(e.account)).map(e => sideAccountLabel(SIDE_DEBIT, e.account)),
+    ...journal.credit_entries.filter(e => !isValidAccount(e.account)).map(e => sideAccountLabel(SIDE_CREDIT, e.account)),
   ]
   if (unknownAccounts.length === 0) removeLabel('ACCOUNT_UNKNOWN')
   else addLabel('ACCOUNT_UNKNOWN', warnAccountUnknown(unknownAccounts))
@@ -302,12 +304,12 @@ export function validateJournal(
   // 2. TAX_UNKNOWN（税区分不明）
   const taxCategoryIds = new Set(taxCategories.map(t => t.id))
   const emptyTaxEntries = [
-    ...journal.debit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty('借方', i + 1)),
-    ...journal.credit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty('貸方', i + 1)),
+    ...journal.debit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty(SIDE_DEBIT, i + 1)),
+    ...journal.credit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty(SIDE_CREDIT, i + 1)),
   ]
   const unknownTaxEntries = [
-    ...journal.debit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => `借方'${e.tax_category_id}'`),
-    ...journal.credit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => `貸方'${e.tax_category_id}'`),
+    ...journal.debit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => sideAccountLabel(SIDE_DEBIT, e.tax_category_id)),
+    ...journal.credit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => sideAccountLabel(SIDE_CREDIT, e.tax_category_id)),
   ]
   if (emptyTaxEntries.length === 0 && unknownTaxEntries.length === 0) {
     removeLabel('TAX_UNKNOWN')
@@ -328,8 +330,8 @@ export function validateJournal(
 
   // 5. AMOUNT_UNCLEAR（金額未設定）
   const emptyAmountEntries = [
-    ...journal.debit_entries.filter(e => e.amount == null).map((_, i) => `借方${i + 1}行目`),
-    ...journal.credit_entries.filter(e => e.amount == null).map((_, i) => `貸方${i + 1}行目`),
+    ...journal.debit_entries.filter(e => e.amount == null).map((_, i) => sideRowLabel(SIDE_DEBIT, i + 1)),
+    ...journal.credit_entries.filter(e => e.amount == null).map((_, i) => sideRowLabel(SIDE_CREDIT, i + 1)),
   ]
   if (emptyAmountEntries.length === 0) removeLabel('AMOUNT_UNCLEAR')
   else addLabel('AMOUNT_UNCLEAR', warnAmountEmpty(emptyAmountEntries))
@@ -417,7 +419,7 @@ export function validateJournal(
   tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
   if (journal.voucher_date != null && journal.voucher_date !== '' && journal.voucher_date >= tomorrowStr) {
-    addLabel('FUTURE_DATE', `未来日付です（${journal.voucher_date}）`)
+    addLabel('FUTURE_DATE', warnFutureDate(journal.voucher_date))
   } else {
     removeLabel('FUTURE_DATE')
   }

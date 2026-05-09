@@ -292,7 +292,7 @@ export function useUpload() {
       + '<rect width="120" height="160" fill="#f8fafc"/>'
       + '<text x="60" y="65" text-anchor="middle" font-size="36">📎</text>'
       + '<text x="60" y="95" text-anchor="middle" font-size="13" font-weight="bold" fill="#64748b">' + ext.toUpperCase() + '</text>'
-      + '<text x="60" y="115" text-anchor="middle" font-size="10" fill="#6b7280">読込完了</text>'
+      + '<text x="60" y="115" text-anchor="middle" font-size="10" fill="#6b7280">' + UI_MSG.SVG読込完了 + '</text>'
       + '</svg>',
     )
   }

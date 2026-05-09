@@ -23,7 +23,7 @@
                           <span class="bg-slate-100 text-slate-600 text-sm px-2 py-1 rounded font-mono font-bold">{{ currentClient.clientCode }}</span>
                           <h1 class="text-2xl font-bold text-slate-800">{{ currentClient.companyName }}</h1>
                           <span class="text-xs bg-slate-100 px-2 py-1 rounded border text-slate-500">
-                              {{ currentClient.type === 'individual' ? '個人' : '法人' }} ({{ currentClient.fiscalMonth }}月決算)
+                              {{ currentClient.type === 'individual' ? UI_MSG.個人 : UI_MSG.法人 }} ({{ currentClient.fiscalMonth }}{{ UI_MSG.月決算接尾 }})
                           </span>
                       </div>
                       <div class="flex items-center gap-3 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 inline-flex">
@@ -314,6 +314,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import moment from 'moment';
+import { UI_MSG } from '@/constants/uiMessages';
 
 /** 回収カレンダー一覧で使用する顧問先データ型 */
 interface CollectionClient {
@@ -350,7 +351,7 @@ const clients = ref([
         type: 'individual',
         banks: [],
         creditCards: [
-             { id: '1', companyName: '楽天カード', last4Digits: '9999', status: 'error', withdrawalAccount: '未設定' }
+             { id: '1', companyName: '楽天カード', last4Digits: '9999', status: 'error', withdrawalAccount: UI_MSG.未設定 }
         ],
         jobId: '1003'
     }
@@ -360,7 +361,7 @@ const clients = ref([
 const clientSelectOptions = computed(() =>
   clients.value.map(c => ({
     clientCode: c.clientCode,
-    companyName: c.companyName + (c.type === 'individual' ? ' (個人)' : ''),
+    companyName: c.companyName + (c.type === 'individual' ? UI_MSG.個人接尾 : ''),
   }))
 );
 

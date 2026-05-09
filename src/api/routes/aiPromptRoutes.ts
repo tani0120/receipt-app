@@ -19,6 +19,7 @@ import {
   OCR_VERTEX_PROMPT,
   SYSTEM_INSTRUCTION,
 } from '@/constants/aiPrompts';
+import { UI_MSG } from '@/constants/uiMessages';
 
 const app = new Hono();
 
@@ -28,19 +29,19 @@ const PROMPTS_FILE = path.join(DATA_DIR, 'prompts.json');
 /** プロンプトID → デフォルト値のマッピング */
 const DEFAULT_PROMPTS: Record<string, { label: string; content: string }> = {
   'ocr-simple': {
-    label: '簡易OCRプロンプト（Gemini API直接）',
+    label: UI_MSG.プロンプトラベル_簡易OCR,
     content: OCR_SIMPLE_PROMPT,
   },
   'ocr-detailed': {
-    label: '詳細OCRプロンプト（ブラウザ版）',
+    label: UI_MSG.プロンプトラベル_詳細OCR,
     content: OCR_DETAILED_PROMPT,
   },
   'ocr-vertex': {
-    label: 'Vertex AI用OCRプロンプト（Cache併用）',
+    label: UI_MSG.プロンプトラベル_VertexOCR,
     content: OCR_VERTEX_PROMPT,
   },
   'system-instruction': {
-    label: 'Gemini System Instruction（監査エージェント）',
+    label: UI_MSG.プロンプトラベル_SystemInstruction,
     content: SYSTEM_INSTRUCTION,
   },
 };
@@ -80,7 +81,7 @@ app.get('/', async (c) => {
     }));
     return c.json({ prompts: list });
   } catch {
-    return c.json({ error: 'プロンプト一覧取得失敗' }, 500);
+    return c.json({ error: UI_MSG.APIエラー_プロンプト一覧取得失敗 }, 500);
   }
 });
 
@@ -91,11 +92,11 @@ app.get('/:promptId', async (c) => {
     const prompts = await loadPrompts();
     const prompt = prompts[promptId];
     if (!prompt) {
-      return c.json({ error: `プロンプト「${promptId}」が見つかりません` }, 404);
+      return c.json({ error: `プロンプト「${promptId}」${UI_MSG.APIエラー_プロンプト未検出}` }, 404);
     }
     return c.json({ promptId, ...prompt });
   } catch {
-    return c.json({ error: 'プロンプト取得失敗' }, 500);
+    return c.json({ error: UI_MSG.APIエラー_プロンプト取得失敗 }, 500);
   }
 });
 
@@ -105,13 +106,13 @@ app.put('/:promptId', async (c) => {
   try {
     const body = await c.req.json<{ content?: string; label?: string }>();
     if (!body.content && !body.label) {
-      return c.json({ error: 'content または label が必要です' }, 400);
+      return c.json({ error: UI_MSG.APIエラー_プロンプト更新必須 }, 400);
     }
 
     const prompts = await loadPrompts();
     const existing = prompts[promptId] ?? DEFAULT_PROMPTS[promptId];
     if (!existing) {
-      return c.json({ error: `プロンプト「${promptId}」が見つかりません` }, 404);
+      return c.json({ error: `プロンプト「${promptId}」${UI_MSG.APIエラー_プロンプト未検出}` }, 404);
     }
 
     prompts[promptId] = {
@@ -122,7 +123,7 @@ app.put('/:promptId', async (c) => {
     await savePrompts(prompts);
     return c.json({ success: true, promptId });
   } catch {
-    return c.json({ error: 'プロンプト更新失敗' }, 500);
+    return c.json({ error: UI_MSG.APIエラー_プロンプト更新失敗 }, 500);
   }
 });
 

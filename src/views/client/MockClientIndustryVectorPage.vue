@@ -205,15 +205,15 @@ onMounted(async () => {
 // ============================================================
 interface CategoryDef { key: string; label: string; icon: string; color: string; vectors: string[]; }
 const CATEGORIES: CategoryDef[] = [
-  { key: 'food', label: '飲食', icon: '🍽️', color: '#fff3e0', vectors: ['restaurant', 'cafe'] },
-  { key: 'retail', label: '小売', icon: '🛒', color: '#e8f5e9', vectors: ['food_market','supermarket','convenience_store','general_goods','souvenir','drugstore','apparel','cosmetics','books','electronics','bicycle','sports_goods','media_disc','jewelry','florist','auto_dealer','auto_parts','building_materials','stationery'] },
-  { key: 'service', label: 'サービス', icon: '🔧', color: '#e3f2fd', vectors: ['beauty','printing','advertising','post_office','waste','it_service','telecom_saas','telecom','saas','education','outsourcing','lease_rental','staffing','camera_dpe','funeral','platform','ec_site','logistics','consulting','legal_firm','construction'] },
-  { key: 'realestate', label: '不動産・保険', icon: '🏢', color: '#fce4ec', vectors: ['real_estate','insurance'] },
-  { key: 'sports', label: 'スポーツ・娯楽', icon: '🎾', color: '#f3e5f5', vectors: ['entertainment','leisure','cinema_music','spa','travel_agency'] },
-  { key: 'transport', label: '交通機関', icon: '🚃', color: '#e0f7fa', vectors: ['gas_station','taxi','rental_car','train','bus','highway','airline_ship','parking','hotel'] },
-  { key: 'public', label: '公共機関', icon: '🏛️', color: '#fff9c4', vectors: ['utility','government','social_insurance','medical','religious'] },
-  { key: 'finance', label: '金融', icon: '💰', color: '#e8eaf6', vectors: ['financial'] },
-  { key: 'other', label: 'その他', icon: '👤', color: '#f5f5f5', vectors: ['individual','wholesale','association','unknown'] },
+  { key: 'food', label: UI_MSG.業種_飲食, icon: '🍽️', color: '#fff3e0', vectors: ['restaurant', 'cafe'] },
+  { key: 'retail', label: UI_MSG.業種_小売, icon: '🛒', color: '#e8f5e9', vectors: ['food_market','supermarket','convenience_store','general_goods','souvenir','drugstore','apparel','cosmetics','books','electronics','bicycle','sports_goods','media_disc','jewelry','florist','auto_dealer','auto_parts','building_materials','stationery'] },
+  { key: 'service', label: UI_MSG.業種_サービス, icon: '🔧', color: '#e3f2fd', vectors: ['beauty','printing','advertising','post_office','waste','it_service','telecom_saas','telecom','saas','education','outsourcing','lease_rental','staffing','camera_dpe','funeral','platform','ec_site','logistics','consulting','legal_firm','construction'] },
+  { key: 'realestate', label: UI_MSG.業種_不動産保険, icon: '🏢', color: '#fce4ec', vectors: ['real_estate','insurance'] },
+  { key: 'sports', label: UI_MSG.業種_スポーツ娯楽, icon: '🎾', color: '#f3e5f5', vectors: ['entertainment','leisure','cinema_music','spa','travel_agency'] },
+  { key: 'transport', label: UI_MSG.業種_交通機関, icon: '🚃', color: '#e0f7fa', vectors: ['gas_station','taxi','rental_car','train','bus','highway','airline_ship','parking','hotel'] },
+  { key: 'public', label: UI_MSG.業種_公共機関, icon: '🏛️', color: '#fff9c4', vectors: ['utility','government','social_insurance','medical','religious'] },
+  { key: 'finance', label: UI_MSG.業種_金融, icon: '💰', color: '#e8eaf6', vectors: ['financial'] },
+  { key: 'other', label: UI_MSG.業種_その他, icon: '👤', color: '#f5f5f5', vectors: ['individual','wholesale','association','unknown'] },
 ];
 const defaultCategory = CATEGORIES[CATEGORIES.length - 1]!;
 function findCategory(vector: string): CategoryDef {
