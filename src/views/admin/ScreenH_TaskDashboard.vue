@@ -353,6 +353,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated } from 'vue';
 import { useRouter } from 'vue-router';
+import { UI_MSG } from '@/constants/uiMessages';
 
 // [Internal_Logic_Flow] Items 233-310 (Exact Copy)
 const router = useRouter();
@@ -385,14 +386,14 @@ function clearFilter() {
 
 function getFilterName(key: FilterType) {
     const map: Record<string, string> = {
-        'missingCount': '資料回収',
-        'alertCount': '状況確認',
-        'draftCount': '仕訳作業',
-        'approvalCount': '仕訳承認',
-        'exportCount': 'CSV出力',
-        'filingCount': '仕訳外の移動',
-        'learningCount': 'ルール編集',
-        'reconcileCount': '入出金消込'
+        'missingCount': UI_MSG.タスク_資料回収,
+        'alertCount': UI_MSG.タスク_状況確認,
+        'draftCount': UI_MSG.タスク_仕訳作業,
+        'approvalCount': UI_MSG.タスク_仕訳承認,
+        'exportCount': UI_MSG.タスク_CSV出力,
+        'filingCount': UI_MSG.タスク_仕訳外の移動,
+        'learningCount': UI_MSG.タスク_ルール編集,
+        'reconcileCount': UI_MSG.タスク_入出金消込
     };
     return key ? map[key] : '';
 }

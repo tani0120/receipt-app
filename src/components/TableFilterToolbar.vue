@@ -28,7 +28,7 @@
         class="tft-filter-funnel"
         :class="{ active: hasActiveFilter }"
         @click="showFilterModal = true"
-        title="絞り込む"
+        :title="UI_MSG.フィルタ_絞り込む"
       >
         <i class="fa-solid fa-filter"></i>
       </button>
@@ -78,6 +78,7 @@
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import FilterModal from '@/components/list-view/FilterModal.vue'
 import type { FilterColumnDef, FilterCondition, FilterResult, SortSetting, ViewDef } from '@/components/list-view/types'
+import { UI_MSG } from '@/constants/uiMessages'
 
 /** 列定義（テーブル表示用） */
 export interface ColumnDef {
@@ -143,10 +144,10 @@ const hasActiveFilter = computed(() => {
 // --- 演算子ラベル ---
 const OP_LABELS: Record<string, string> = {
   eq: '=', neq: '≠',
-  contains: '含む', not_contains: '含まない',
-  in: 'のいずれか', not_in: 'のいずれでもない',
+  contains: UI_MSG.フィルタ_含む, not_contains: UI_MSG.フィルタ_含まない,
+  in: UI_MSG.フィルタ_のいずれか, not_in: UI_MSG.フィルタ_のいずれでもない,
   gte: '≧', lte: '≦', gt: '>', lt: '<',
-  is_empty: '空', is_not_empty: '空でない',
+  is_empty: UI_MSG.フィルタ_空, is_not_empty: UI_MSG.フィルタ_空でない,
 }
 
 /** 適用中フィルタの表示用タグ情報 */
