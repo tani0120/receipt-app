@@ -18,7 +18,7 @@ import {
   warnAmountEmpty, warnDebitCreditMismatch,
   warnSameAccountBothSides, WARN_TAX_ACCOUNT_MISMATCH,
   SIDE_DEBIT, SIDE_CREDIT, sideAccountLabel, sideRowLabel,
-} from '@/shared/validationMessages'
+} from '@/constants/validationMessages'
 
 // ────────────────────────────────────────────
 // 型・定数

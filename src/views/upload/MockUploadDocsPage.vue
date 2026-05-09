@@ -264,7 +264,7 @@ import { ref, computed, onBeforeUnmount } from "vue";
 import { useRoute } from "vue-router";
 import PortalHeader from "@/components/PortalHeader.vue";
 import { useClients } from "@/features/client-management/composables/useClients";
-import { MSG_DUPLICATE_SHORT } from "@/shared/validationMessages";
+import { MSG_DUPLICATE_SHORT } from "@/constants/validationMessages";
 import { UI_MSG } from '@/constants/uiMessages';
 
 // ===== ルート =====

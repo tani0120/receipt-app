@@ -25,7 +25,7 @@ import {
   networkErrorMessage,
   warnFileSizeTooLarge,
   WARN_AI_ANALYSIS_FAILED,
-} from '@/shared/validationMessages';
+} from '@/constants/validationMessages';
 
 // 型の再export（Vue側のimportパスを変更しないための互換性維持）
 export type { ReceiptAnalysisResult, AnalyzeOptions };

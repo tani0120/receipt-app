@@ -14,7 +14,7 @@
           @click="downloadChecked"
         >
           <i class="fa-solid fa-download"></i>
-          {{ isDownloading ? 'DL中...' : `ダウンロード (${checkedIds.size}件)` }}
+          {{ isDownloading ? UI_MSG.DL中 : `ダウンロード (${checkedIds.size}件)` }}
         </button>
         <button class="sh-reload-btn" @click="loadHistory" :disabled="isLoading">
           <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': isLoading }"></i>
@@ -65,7 +65,7 @@
             <td class="sh-td sh-td-count">{{ row.supportingCount }}件</td>
             <td class="sh-td sh-td-status">
               <span :class="['sh-badge', row.downloadedAt ? 'sh-badge-done' : 'sh-badge-pending']">
-                {{ row.downloadedAt ? 'DL済み' : '未DL' }}
+                {{ row.downloadedAt ? UI_MSG.DL済み : UI_MSG.未DL }}
               </span>
             </td>
           </tr>

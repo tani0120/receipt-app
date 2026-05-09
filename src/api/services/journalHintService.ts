@@ -25,7 +25,7 @@ import {
   HINT_TAX_ACCOUNT_DIRECTION, hintFutureDate,
   FIELD_ACCOUNT, FIELD_TAX_CATEGORY, FIELD_AMOUNT, FIELD_AMOUNT_DIFF,
   LABEL_UNSET,
-} from '../../shared/validationMessages'
+} from '../../constants/validationMessages'
 import { UI_MSG } from '@/constants/uiMessages'
 
 // ────────────────────────────────────────────

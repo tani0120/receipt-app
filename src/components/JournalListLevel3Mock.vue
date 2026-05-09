@@ -1327,10 +1327,10 @@
                       "
                       class="text-red-600 font-bold"
                       :title="
-                        '課税方式と不整合: ' +
+                        UI_MSG.課税方式不整合接頭 +
                         (activeClientFull?.consumptionTaxMode === 'exempt'
-                          ? '免税事業者は対象外のみ'
-                          : '本則課税に業種区分は不要')
+                          ? UI_MSG.課税方式_免税
+                          : UI_MSG.課税方式_本則)
                       "
                     >
                       ⚠ {{ getValue(row, col.key) ?? "" }}
@@ -1412,7 +1412,7 @@
                 <!-- 💡 ヒントアイコン（全行表示） -->
                 <span
                   class="text-amber-400 hover:text-amber-600 cursor-pointer text-xs"
-                  title="ヒント"
+                  :title="UI_MSG.ツールチップ_ヒント"
                   @click.stop="openHintModal(journal)"
                 >
                   {{ col.icon }}
@@ -1649,21 +1649,21 @@
           <button
             @click.stop="rotationAngle = (rotationAngle + 90) % 360"
             class="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            title="90度回転"
+            :title="UI_MSG.ツールチップ_回転"
           >
             <i class="fa-solid fa-rotate-right text-xs"></i>
           </button>
           <button
             @click.stop="zoomIn"
             class="bg-green-500 hover:bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            title="拡大"
+            :title="UI_MSG.ツールチップ_拡大"
           >
             <i class="fa-solid fa-magnifying-glass-plus text-xs"></i>
           </button>
           <button
             @click.stop="zoomOut"
             class="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            title="縮小"
+            :title="UI_MSG.ツールチップ_縮小"
           >
             <i class="fa-solid fa-magnifying-glass-minus text-xs"></i>
           </button>
@@ -1676,7 +1676,7 @@
           <img
             v-else
             :src="modalImageUrl"
-            alt="領収書"
+            :alt="UI_MSG.画像ALT_領収書"
             :style="{
               transform: `translate(${offsetX}px, ${offsetY}px) rotate(${rotationAngle}deg) scale(${zoomScale})`,
               imageOrientation: 'from-image',
@@ -1771,7 +1771,7 @@
           >
             <i class="fa-solid fa-inbox text-2xl mb-2 block"></i>
             <span class="text-[11px]">{{
-              supportingSearchQuery ? "該当なし" : "根拠資料未登録"
+              supportingSearchQuery ? UI_MSG.検索結果_該当なし : UI_MSG.検索結果_未登録
             }}</span>
           </div>
           <div v-else class="grid grid-cols-2 gap-1.5">
@@ -1856,21 +1856,21 @@
           <button
             @click.stop="supportingRotation = (supportingRotation + 90) % 360"
             class="bg-amber-500 hover:bg-amber-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            title="90度回転"
+            :title="UI_MSG.ツールチップ_回転"
           >
             <i class="fa-solid fa-rotate-right text-xs"></i>
           </button>
           <button
             @click.stop="supportingZoom = Math.min(supportingZoom + 0.25, 7)"
             class="bg-green-500 hover:bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            title="拡大"
+            :title="UI_MSG.ツールチップ_拡大"
           >
             <i class="fa-solid fa-magnifying-glass-plus text-xs"></i>
           </button>
           <button
             @click.stop="supportingZoom = Math.max(supportingZoom - 0.25, 0.25)"
             class="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            title="縮小"
+            :title="UI_MSG.ツールチップ_縮小"
           >
             <i class="fa-solid fa-magnifying-glass-minus text-xs"></i>
           </button>
@@ -1878,7 +1878,7 @@
         <div class="flex-1 flex items-center justify-center overflow-hidden rounded-b-lg">
           <img
             :src="supportingPreviewUrl"
-            alt="根拠資料"
+            :alt="UI_MSG.画像ALT_根拠資料"
             :style="{
               transform: `rotate(${supportingRotation}deg) scale(${supportingZoom})`,
               imageOrientation: 'from-image',
@@ -2255,9 +2255,9 @@
         <!-- 仕訳概要 -->
         <div class="px-5 py-3 bg-gray-50 border-b text-xs">
           <div class="flex gap-4">
-            <span><b>日付:</b> {{ hintModalJournal.voucher_date || "未設定" }}</span>
-            <span><b>摘要:</b> {{ hintModalJournal.description || "未設定" }}</span>
-            <span><b>証票意味:</b> {{ hintModalJournal.voucher_type || "未設定" }}</span>
+            <span><b>{{ UI_MSG.ラベル_日付 }}</b> {{ hintModalJournal.voucher_date || LABEL_UNSET }}</span>
+            <span><b>{{ UI_MSG.ラベル_摘要 }}</b> {{ hintModalJournal.description || LABEL_UNSET }}</span>
+            <span><b>{{ UI_MSG.ラベル_証票意味 }}</b> {{ hintModalJournal.voucher_type || LABEL_UNSET }}</span>
           </div>
         </div>
 
@@ -2315,7 +2315,7 @@
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2 flex-wrap flex-1 min-w-0">
                   <span class="text-blue-600 font-bold flex-shrink-0">{{
-                    s.side === "debit" ? "借方" : "貸方"
+                    s.side === "debit" ? SIDE_DEBIT : SIDE_CREDIT
                   }}</span>
                   <span class="text-gray-500 flex-shrink-0">{{ s.field }}:</span>
                   <span class="text-red-500 line-through flex-shrink-0">{{ s.currentLabel }}</span>
@@ -2730,6 +2730,15 @@ import {
 import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import type { SelectOption } from '@/constants/clientOptions';
 import { UI_MSG } from '@/constants/uiMessages';
+import {
+  FIELD_ACCOUNT, FIELD_TAX_CATEGORY, FIELD_AMOUNT, FIELD_AMOUNT_DIFF,
+  SIDE_DEBIT, SIDE_CREDIT, LABEL_UNSET,
+  WARN_SALES_DEBIT, WARN_EXPENSE_CREDIT,
+  WARN_SALES_SALES, WARN_EXPENSE_EXPENSE,
+  WARN_SALES_EXPENSE, WARN_EXPENSE_SALES,
+  WARN_EQUITY_SALES, WARN_EQUITY_EXPENSE,
+  WARN_SALES_EQUITY, WARN_EXPENSE_EQUITY, WARN_EQUITY_EQUITY,
+} from '@/constants/validationMessages';
 
 /** 勘定科目選択肢—ACCOUNT_MASTERから動的生成 */
 const accountOptions = computed<SelectOption[]>(() =>
@@ -2787,7 +2796,7 @@ const filteredAccounts = computed(() => {
       if (acc.deprecated) return false;
       if (acc.target === "both") return true;
       if (acc.target === clientType) {
-        if (clientType === "individual" && !hasRental && acc.category.includes("不動産"))
+        if (clientType === "individual" && !hasRental && acc.category.includes(UI_MSG.カテゴリ_不動産))
           return false;
         return true;
       }
@@ -3138,35 +3147,35 @@ function validateDebitCreditCombination(
   if (debitGroup === "sales" && creditGroup === "bs_al") {
     const { isContraRevenue } = isContraAccount(debitAccount ?? null);
     if (isContraRevenue) return null;
-    return "売上は通常貸方です。返品・値引ですか？";
+    return WARN_SALES_DEBIT;
   }
   // 資産負債 × 経費: 仕入値引き・返品なら許容
   if (debitGroup === "bs_al" && creditGroup === "expense") {
     const { isContraExpense } = isContraAccount(creditAccount ?? null);
     if (isContraExpense) return null;
-    return "経費は通常借方です。戻入・返品ですか？";
+    return WARN_EXPENSE_CREDIT;
   }
 
   // ── 不正パターン ──
   if (debitGroup === "sales" && creditGroup === "sales")
-    return "借方・貸方が同じ区分（売上×売上）です";
+    return WARN_SALES_SALES;
   if (debitGroup === "expense" && creditGroup === "expense")
-    return "借方・貸方が同じ区分（経費×経費）です";
+    return WARN_EXPENSE_EXPENSE;
   if (debitGroup === "sales" && creditGroup === "expense")
-    return "借方が売上、貸方が経費は通常あり得ません";
+    return WARN_SALES_EXPENSE;
   if (debitGroup === "expense" && creditGroup === "sales")
-    return "借方が経費、貸方が売上は通常あり得ません";
+    return WARN_EXPENSE_SALES;
   // 純資産 × PL系
   if (debitGroup === "bs_equity" && creditGroup === "sales")
-    return "純資産×売上の組み合わせは通常あり得ません";
+    return WARN_EQUITY_SALES;
   if (debitGroup === "bs_equity" && creditGroup === "expense")
-    return "純資産×経費の組み合わせは通常あり得ません";
+    return WARN_EQUITY_EXPENSE;
   if (debitGroup === "sales" && creditGroup === "bs_equity")
-    return "売上×純資産の組み合わせは通常あり得ません";
+    return WARN_SALES_EQUITY;
   if (debitGroup === "expense" && creditGroup === "bs_equity")
-    return "経費×純資産の組み合わせは通常あり得ません";
+    return WARN_EXPENSE_EQUITY;
   if (debitGroup === "bs_equity" && creditGroup === "bs_equity")
-    return "純資産×純資産の組み合わせは通常あり得ません";
+    return WARN_EQUITY_EQUITY;
 
   return null;
 }
@@ -3432,7 +3441,7 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
     confirmDialog.value = {
       show: true,
       title: UI_MSG.警告検出,
-      message: `以下の警告が検出されました：\n${warningText}`,
+      message: `${UI_MSG.警告検出接頭}${warningText}`,
       onConfirm: () => {
         /* 確認済み */
       },
@@ -3445,7 +3454,7 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
     confirmDialog.value = {
       show: true,
       title: UI_MSG.警告解消,
-      message: `以下の警告が解消されました：\n${resolvedText}`,
+      message: `${UI_MSG.警告解消接頭}${resolvedText}`,
       onConfirm: () => {
         /* OK */
       },
@@ -4314,21 +4323,21 @@ function showWarningTooltip(event: MouseEvent, labels: string[], journal?: Journ
         if (details && details[l]) {
           msg = details[l];
         } else if (l === "DATE_UNKNOWN") {
-          msg = journal.date_on_document
-            ? "日付の読み取りに失敗しました"
-            : "証憑に日付の記載がありません";
+            msg = journal.date_on_document
+              ? UI_MSG.OCR日付読取失敗
+              : UI_MSG.OCR日付記載なし;
         } else if (l === "ACCOUNT_UNKNOWN") {
           const onDoc =
             journal.debit_entries[0]?.account_on_document ??
             journal.credit_entries[0]?.account_on_document ??
             false;
-          msg = onDoc ? "勘定科目の読み取りに失敗しました" : "証憑に勘定科目の記載がありません";
+          msg = onDoc ? UI_MSG.OCR科目読取失敗 : UI_MSG.OCR科目記載なし;
         } else if (l === "AMOUNT_UNCLEAR") {
           const onDoc =
             journal.debit_entries[0]?.amount_on_document ??
             journal.credit_entries[0]?.amount_on_document ??
             false;
-          msg = onDoc ? "金額の読み取りに失敗しました" : "証憑に金額の記載がありません";
+          msg = onDoc ? UI_MSG.OCR金額読取失敗 : UI_MSG.OCR金額記載なし;
         }
       }
       return `<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}"></span>${msg}</span>`;
@@ -4354,7 +4363,7 @@ function openWarningConfirmModal(journal: JournalPhase5Mock) {
   confirmDialog.value = {
     show: true,
     title: UI_MSG.警告確認,
-    message: `以下の警告があります:\n${warningText}\n\n確認済みとして警告を解除し、出力対象にしますか？`,
+    message: `${UI_MSG.警告確認して出力}${warningText}${UI_MSG.警告確認して出力接尾}`,
     onConfirm: () => {
       // warning_dismissalsに追加（syncWarningLabelsCore再実行時もスキップされる）
       if (!journal.warning_dismissals) journal.warning_dismissals = [];
@@ -4456,7 +4465,7 @@ function applyHintSuggestion(s: HintSuggestion): void {
 
   const entries = s.side === "debit" ? journal.debit_entries : journal.credit_entries;
 
-  if (s.field === "勘定科目") {
+  if (s.field === FIELD_ACCOUNT) {
     const entry = entries[s.entryIndex];
     if (!entry) return;
     entry.account = s.selectedValue;
@@ -4469,15 +4478,15 @@ function applyHintSuggestion(s: HintSuggestion): void {
       const sub = clientSettings.subAccounts.value[s.selectedValue];
       entry.sub_account = sub || null;
     }
-  } else if (s.field === "税区分") {
+  } else if (s.field === FIELD_TAX_CATEGORY) {
     const entry = entries[s.entryIndex];
     if (!entry) return;
     entry.tax_category_id = s.selectedValue;
-  } else if (s.field === "金額") {
+  } else if (s.field === FIELD_AMOUNT) {
     const entry = entries[s.entryIndex];
     if (!entry) return;
     entry.amount = Number(s.selectedValue);
-  } else if (s.field === "金額（差額）") {
+  } else if (s.field === FIELD_AMOUNT_DIFF) {
     console.log("[Hint] N:N差額は自動修正不可 → 手動修正してください");
     return;
   }
@@ -4679,8 +4688,8 @@ function bulkSetReadStatus(value: boolean) {
       title: UI_MSG.実行不可,
       message:
         exportedCount > 0
-          ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）\n実行可能な仕訳がありません。`
-          : `すべて既に${value ? "既読" : "未読"}状態です。`,
+          ? `${UI_MSG.一括選択接頭}${all.length}${UI_MSG.件を}${UI_MSG.一括出力済接頭}${exportedCount}${UI_MSG.一括スキップ接尾}\n${UI_MSG.実行可能な仕訳がありません}`
+          : `${UI_MSG.一括全て既に接頭}${value ? UI_MSG.既読 : UI_MSG.未読}${UI_MSG.一括状態です接尾}`,
       onConfirm: () => {},
     };
     return;
@@ -4689,8 +4698,8 @@ function bulkSetReadStatus(value: boolean) {
   const capturedTargets = [...targets];
   const confirmMsg =
     exportedCount > 0
-      ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）/ 実行対象: ${capturedTargets.length}件`
-      : `${capturedTargets.length}件を${value ? "既読" : "未読"}にしますか？`;
+      ? `${UI_MSG.一括選択接頭}${all.length}${UI_MSG.件を}${UI_MSG.一括出力済接頭}${exportedCount}${UI_MSG.一括スキップ接尾}${UI_MSG.一括実行対象接頭}${capturedTargets.length}件`
+      : `${capturedTargets.length}${UI_MSG.件を}${value ? UI_MSG.既読 : UI_MSG.未読}${UI_MSG.にしますか}`;
   confirmDialog.value = {
     show: true,
     title: value ? UI_MSG.既読にする : UI_MSG.未読にする,
@@ -4711,7 +4720,7 @@ function bulkSetReadStatus(value: boolean) {
       confirmDialog.value = {
         show: true,
         title: UI_MSG.完了,
-        message: `${count}件を${value ? "既読" : "未読"}にしました。`,
+        message: `${count}${UI_MSG.件を}${value ? UI_MSG.既読 : UI_MSG.未読}${UI_MSG.にしました}`,
         onConfirm: () => {},
       };
     },
@@ -4732,8 +4741,8 @@ function bulkSetExportExclude(exclude: boolean) {
       title: UI_MSG.実行不可,
       message:
         exportedCount > 0
-          ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）\n実行可能な仕訳がありません。`
-          : "実行可能な仕訳がありません。",
+          ? `${UI_MSG.一括選択接頭}${all.length}${UI_MSG.件を}${UI_MSG.一括出力済接頭}${exportedCount}${UI_MSG.一括スキップ接尾}\n${UI_MSG.実行可能な仕訳がありません}`
+          : UI_MSG.実行可能な仕訳がありません,
       onConfirm: () => {},
     };
     return;
@@ -4744,7 +4753,7 @@ function bulkSetExportExclude(exclude: boolean) {
     confirmDialog.value = {
       show: true,
       title: exclude ? UI_MSG.出力対象外に変更 : UI_MSG.出力対象に変更,
-      message: `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）/ 実行対象: ${capturedTargets.length}件`,
+      message: `${UI_MSG.一括選択接頭}${all.length}${UI_MSG.件を}${UI_MSG.一括出力済接頭}${exportedCount}${UI_MSG.一括スキップ接尾}${UI_MSG.一括実行対象接頭}${capturedTargets.length}件`,
       onConfirm: () => {
         capturedTargets.forEach((j) => {
           if (exclude && !j.labels.includes("EXPORT_EXCLUDE")) {
@@ -4760,7 +4769,7 @@ function bulkSetExportExclude(exclude: boolean) {
         confirmDialog.value = {
           show: true,
           title: UI_MSG.完了,
-          message: `${count}件を${exclude ? "出力対象外" : "出力対象"}にしました。`,
+          message: `${count}${UI_MSG.件を}${exclude ? UI_MSG.出力対象外 : UI_MSG.出力対象}${UI_MSG.にしました}`,
           onConfirm: () => {},
         };
       },
@@ -4772,7 +4781,7 @@ function bulkSetExportExclude(exclude: boolean) {
   confirmDialog.value = {
     show: true,
     title: exclude ? UI_MSG.出力対象外にする : UI_MSG.出力対象にする,
-    message: `${capturedTargets.length}件を${exclude ? "出力対象外" : "出力対象"}にしますか？`,
+    message: `${capturedTargets.length}${UI_MSG.件を}${exclude ? UI_MSG.出力対象外 : UI_MSG.出力対象}${UI_MSG.にしますか}`,
     onConfirm: () => {
       capturedTargets.forEach((j) => {
         if (exclude && !j.labels.includes("EXPORT_EXCLUDE")) {
@@ -4788,7 +4797,7 @@ function bulkSetExportExclude(exclude: boolean) {
       confirmDialog.value = {
         show: true,
         title: UI_MSG.完了,
-        message: `${count}件を${exclude ? "出力対象外" : "出力対象"}にしました。`,
+        message: `${count}${UI_MSG.件を}${exclude ? UI_MSG.出力対象外 : UI_MSG.出力対象}${UI_MSG.にしました}`,
         onConfirm: () => {},
       };
     },
@@ -4800,13 +4809,13 @@ function showBulkCopyDialog() {
   confirmDialog.value = {
     show: true,
     title: UI_MSG.コピー,
-    message: `${targets.length}件を未出力にコピーしますか？`,
+    message: `${targets.length}${UI_MSG.件を}${UI_MSG.を未出力にコピーしますか}`,
     onConfirm: () => {
       targets.forEach((j) => {
         const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(j));
         clone.id = `copy-${crypto.randomUUID().slice(0, 12)}`;
         clone.display_order = j.display_order + 0.5;
-        clone.description = `★コピー ${j.description}`;
+        clone.description = `${UI_MSG.コピー接頭_星}${j.description}`;
         clone.is_read = false;
         clone.status = null;
         clone.labels = [];
@@ -4825,7 +4834,7 @@ function showBulkCopyDialog() {
       confirmDialog.value = {
         show: true,
         title: UI_MSG.コピー完了,
-        message: `${targets.length}件を未出力にコピーしました。`,
+        message: `${targets.length}${UI_MSG.件を}${UI_MSG.を未出力にコピーしました}`,
         onConfirm: () => {},
       };
     },
@@ -4843,8 +4852,8 @@ function showBulkTrashDialog() {
       title: UI_MSG.実行不可,
       message:
         exportedCount > 0
-          ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）\n実行可能な仕訳がありません。`
-          : "実行可能な仕訳がありません。",
+          ? `${UI_MSG.一括選択接頭}${all.length}${UI_MSG.件を}${UI_MSG.一括出力済接頭}${exportedCount}${UI_MSG.一括スキップ接尾}\n${UI_MSG.実行可能な仕訳がありません}`
+          : UI_MSG.実行可能な仕訳がありません,
       onConfirm: () => {},
     };
     return;
@@ -4852,8 +4861,8 @@ function showBulkTrashDialog() {
   const capturedTargets = [...targets]; // クロージャキャプチャ
   const msg =
     exportedCount > 0
-      ? `選択: ${all.length}件 / 出力済み: ${exportedCount}件（スキップ）/ 実行対象: ${capturedTargets.length}件\nゴミ箱に移動しますか？`
-      : `${capturedTargets.length}件をゴミ箱に移動しますか？`;
+      ? `${UI_MSG.一括選択接頭}${all.length}${UI_MSG.件を}${UI_MSG.一括出力済接頭}${exportedCount}${UI_MSG.一括スキップ接尾}${UI_MSG.一括実行対象接頭}${capturedTargets.length}件${UI_MSG.一括ゴミ箱確認接尾}`
+      : `${capturedTargets.length}${UI_MSG.件を}${UI_MSG.をゴミ箱に移動しますか}`;
   confirmDialog.value = {
     show: true,
     title: UI_MSG.ゴミ箱,
@@ -4869,7 +4878,7 @@ function showBulkTrashDialog() {
       confirmDialog.value = {
         show: true,
         title: UI_MSG.完了,
-        message: `${capturedTargets.length}件をゴミ箱に移動しました。`,
+        message: `${capturedTargets.length}${UI_MSG.件を}${UI_MSG.をゴミ箱に移動しました}`,
         onConfirm: () => {},
       };
     },

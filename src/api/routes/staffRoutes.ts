@@ -16,7 +16,7 @@
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { 未検出, 必須 } from '../helpers/apiMessages';
+import { 未検出, 必須, リソース_スタッフ } from '../helpers/apiMessages';
 import {
   getAll,
   getById,
@@ -58,7 +58,7 @@ app.get('/email/:email', (c) => {
   const email = decodeURIComponent(c.req.param('email'));
   const staff = getByEmail(email);
   if (!staff) {
-    return apiError(c, 404, 未検出(`スタッフ(メール: ${email})`));
+    return apiError(c, 404, 未検出(`${リソース_スタッフ}(メール: ${email})`));
   }
   return c.json({ staff });
 });
@@ -70,7 +70,7 @@ app.get('/:uuid', (c) => {
   const uuid = c.req.param('uuid');
   const staff = getById(uuid);
   if (!staff) {
-    return apiError(c, 404, 未検出(`スタッフ ${uuid}`));
+    return apiError(c, 404, 未検出(`${リソース_スタッフ} ${uuid}`));
   }
   return c.json({ staff });
 });
@@ -95,7 +95,7 @@ app.put('/:uuid', async (c) => {
   const body = await c.req.json();
   const ok = update(uuid, body);
   if (!ok) {
-    return apiError(c, 404, 未検出(`スタッフ ${uuid}`));
+    return apiError(c, 404, 未検出(`${リソース_スタッフ} ${uuid}`));
   }
   return c.json({ ok: true });
 });

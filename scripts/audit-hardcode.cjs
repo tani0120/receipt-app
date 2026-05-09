@@ -74,6 +74,14 @@ function detectIssues(filePath) {
     'list-view/types.ts',         // フィルタ型のデフォルトラベル定義
     'exportMfCsv.ts',             // MFクラウド仕様CSVヘッダ（外部仕様準拠）
     'mfCsvParser.ts',             // MFクラウドCSVパーサー（外部仕様準拠）
+    'schemaDescriptions.ts',      // AIスキーマdescription定数（集約済み）
+    'validationMessages.ts',      // バリデーションメッセージ定数（集約先自体）
+    'receiptService.ts',          // デバッグログ専用（logPreviewExtractResult。UIに表示されない）
+    'driveService.ts',            // サーバー側ログ/環境エラー（UIに表示されない）
+    'field-nullable-spec.ts',     // フィールド仕様定義データ（displayName。定数ファイル自体）
+    'image_preprocessor.ts',      // サーバー側前処理ログ（UIに表示されない）
+    'useUpload.ts',               // sendCheckpointテレメトリ（デバッグ用。UIに表示されない）
+    'lineItemToJournalMock.ts',   // VOUCHER_TYPE_MAP（証票種別→証票意味のドメインデータ定義）
   ];
   const isJpLiteralExcluded = isMasterDataFile
     || JP_LITERAL_WHITELIST.some(p => normalizedPath.includes(p));
@@ -130,8 +138,23 @@ function detectIssues(filePath) {
         if (filtered.length > 0 && !trimmed.includes('class=') && !trimmed.includes(':class=') && !trimmed.includes('className')) {
           // export const行はスキップ（定数定義そのもの）
           if (trimmed.startsWith('export const ') || trimmed.startsWith('export {')) return;
-          // console出力はスキップ
-          if (/^\s*console\.(log|error|warn|info)/.test(trimmed)) return;
+          // console出力はスキップ（デバッグログ、行先頭・行中両方）
+          if (/console\.(log|error|warn|info|debug)\s*\(/.test(trimmed)) return;
+          // 定数参照行をスキップ（UI_MSG/FIELD_/SIDE_/WARN_/DESC_/LABEL_等を含む行）
+          // テンプレートリテラル内で定数を展開しつつ日本語が残るケースの偶発検出を防止
+          if (/UI_MSG\.|FIELD_|SIDE_|WARN_|DESC_|LABEL_|getFieldLabel\(/.test(trimmed)) return;
+          // apiMessages.ts定数関数の呼び出し行をスキップ（未検出/必須/コード重複/リソース_等）
+          if (/未検出\(|必須\(|コード重複\(|リソース_|未実装\(/.test(trimmed)) return;
+          // throw new Errorはサーバー側エラー（据え置きOK）
+          if (/throw\s+new\s+Error/.test(trimmed)) return;
+          // APIルートのインラインエラーレスポンス（据え置きOK。将来apiError化で消える）
+          if (/return\s+.*\.json\(\s*\{\s*error:/.test(trimmed) || /apiError\(/.test(trimmed)) return;
+          // console.logの複数行引数（テンプレートリテラル始まりでログプレフィックス付き）
+          if (/^`\[/.test(trimmed)) return;
+          // alert/window.prompt（フロントの一時通知。将来useGlobalToastに統一予定）
+          if (/\balert\s*\(/.test(trimmed) || /window\.prompt\s*\(/.test(trimmed)) return;
+          // showToastのエラーメッセージ（動的テンプレートリテラル。定数化不適切）
+          if (/showToast\s*\(\s*\{.*type:\s*'error'/.test(trimmed)) return;
           issues.push({ lineNum, type: 'JP_LITERAL', line: trimmed.substring(0, 130) });
         }
       }

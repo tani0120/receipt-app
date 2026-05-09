@@ -347,7 +347,7 @@ import {
   fileIconEmoji,
 } from '@/composables/useUpload'
 import type { UploadEntry } from '@/composables/useUpload'
-import { MSG_DUPLICATE_SHORT } from '@/shared/validationMessages'
+import { MSG_DUPLICATE_SHORT } from '@/constants/validationMessages'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /** File System Access API（Chrome 86+）の型宣言 */

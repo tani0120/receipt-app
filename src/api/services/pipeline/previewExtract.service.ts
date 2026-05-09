@@ -41,6 +41,15 @@ import type {
 import { postprocessPreviewExtract } from './postprocess';
 import { validatePreviewExtractResult } from './validatePreviewExtractResult';
 import { determineAccount } from '../../../utils/pipeline/accountDetermination';
+import {
+  DESC_SOURCE_TYPE, DESC_SOURCE_TYPE_CONFIDENCE,
+  DESC_DIRECTION, DESC_DIRECTION_CONFIDENCE,
+  DESC_EXTRACT_REASON, DESC_DOCUMENT_COUNT, DESC_DOCUMENT_COUNT_REASON,
+  DESC_DESCRIPTION, DESC_ISSUER_NAME, DESC_DATE, DESC_TOTAL_AMOUNT,
+  DESC_LINE_ITEMS, DESC_LINE_DATE, DESC_LINE_DESCRIPTION,
+  DESC_LINE_AMOUNT, DESC_LINE_DIRECTION, DESC_LINE_BALANCE,
+  REQUEST_PROMPT,
+} from './schemaDescriptions';
 
 // ============================================================
 // 設定
@@ -94,83 +103,83 @@ const PREVIEW_EXTRACT_SCHEMA = {
         'bank_statement', 'credit_card', 'cash_ledger', 'supplementary_doc',
         'invoice_issued', 'receipt_issued', 'non_journal', 'other',
       ],
-      description: '証票種別（12種から1つ選択）',
+      description: DESC_SOURCE_TYPE,
     },
     source_type_confidence: {
       type: Type.NUMBER,
-      description: '証票種別の信頼度（0.0〜1.0）',
+      description: DESC_SOURCE_TYPE_CONFIDENCE,
     },
     direction: {
       type: Type.STRING,
       enum: ['expense', 'income', 'transfer', 'mixed'],
-      description: '仕訳方向（4種から1つ選択）',
+      description: DESC_DIRECTION,
     },
     direction_confidence: {
       type: Type.NUMBER,
-      description: '仕訳方向の信頼度（0.0〜1.0）',
+      description: DESC_DIRECTION_CONFIDENCE,
     },
     preview_extract_reason: {
       type: Type.STRING,
       nullable: true,
-      description: '判定根拠。なぜそのsource_typeを選んだかの理由を日本語で1、2文で説明',
+      description: DESC_EXTRACT_REASON,
     },
     document_count: {
       type: Type.NUMBER,
-      description: '画像内の独立した情報源の数。純粋に1枚の証票だけが写っている場合のみ1。それ以外は2以上を返す',
+      description: DESC_DOCUMENT_COUNT,
     },
     document_count_reason: {
       type: Type.STRING,
       nullable: true,
-      description: '画像内の情報源数の判定根拠。他の書類・証票の端や影が写っていないかを確認した結果を日本語で1、2文で説明',
+      description: DESC_DOCUMENT_COUNT_REASON,
     },
     description: {
       type: Type.STRING,
       nullable: true,
-      description: '摘要（取引内容の要約）',
+      description: DESC_DESCRIPTION,
     },
     issuer_name: {
       type: Type.STRING,
       nullable: true,
-      description: '発行者名（会社名・店舗名）',
+      description: DESC_ISSUER_NAME,
     },
     date: {
       type: Type.STRING,
       nullable: true,
-      description: '取引日（YYYY-MM-DD）',
+      description: DESC_DATE,
     },
     total_amount: {
       type: Type.NUMBER,
       nullable: true,
-      description: '合計金額（税込）',
+      description: DESC_TOTAL_AMOUNT,
     },
     line_items: {
       type: Type.ARRAY,
-      description: '行データ。通帳・クレカは全行、レシートは1行、仕訳対象外は空配列。',
+      description: DESC_LINE_ITEMS,
       items: {
         type: Type.OBJECT,
         properties: {
           date: {
             type: Type.STRING,
             nullable: true,
-            description: '取引日（YYYY-MM-DD）。日付欄がない行はnull',
+            description: DESC_LINE_DATE,
           },
           description: {
             type: Type.STRING,
-            description: '摘要（印字テキストそのまま）',
+            description: DESC_LINE_DESCRIPTION,
           },
           amount: {
             type: Type.NUMBER,
-            description: '金額（円・整数・負数なし）',
+            description: DESC_LINE_AMOUNT,
           },
           direction: {
             type: Type.STRING,
             enum: ['expense', 'income'],
-            description: '入出金方向（行レベル）',
+            description: DESC_LINE_DIRECTION,
           },
           balance: {
             type: Type.NUMBER,
             nullable: true,
-            description: '残高。通帳のみ有効。クレカ・レシートはnull',
+            description: DESC_LINE_BALANCE,
           },
         },
         required: ['description', 'amount', 'direction'],
@@ -232,7 +241,7 @@ const SYSTEM_INSTRUCTION_RULES = `
 /** プロンプト生成: ベース + キーワード集（外部） + ルール */
 const SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE + buildKeywordsPrompt() + SYSTEM_INSTRUCTION_RULES;
 
-const REQUEST_PROMPT = `この証票画像を分析し、証票種別と仕訳方向を判定し、行データを抽出してください。`;
+
 
 // ============================================================
 // 画像前処理 → image_preprocessor.ts に委譲

@@ -93,7 +93,7 @@ import {
   warnSameAccountBothSides, WARN_TAX_ACCOUNT_MISMATCH,
   SIDE_DEBIT, SIDE_CREDIT,
   sideAccountLabel, sideRowLabel, warnFutureDate,
-} from '../../shared/validationMessages'
+} from '../../constants/validationMessages'
 
 // ────────────────────────────────────────────
 // 5分類判定

@@ -13,7 +13,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from '@/api/services/receiptService'
-import { errorGuideMessage } from '@/shared/validationMessages'
+import { errorGuideMessage } from '@/constants/validationMessages'
 import { useDocuments } from '@/composables/useDocuments'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import type { DocEntry, DocSource, DocStatus } from '@/repositories/types'

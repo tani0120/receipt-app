@@ -17,7 +17,7 @@
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { 未検出, 必須 } from '../helpers/apiMessages';
+import { 未検出, 必須, リソース_見込先 } from '../helpers/apiMessages';
 import type { LeadStatus } from '../../repositories/types';
 import {
   getAll,
@@ -61,7 +61,7 @@ app.get('/:leadId', (c) => {
   const leadId = c.req.param('leadId');
   const lead = getById(leadId);
   if (!lead) {
-    return apiError(c, 404, 未検出(`見込先 ${leadId}`));
+    return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
   return c.json({ lead });
 });
@@ -84,7 +84,7 @@ app.put('/:leadId', async (c) => {
   const body = await c.req.json();
   const ok = updateLead(leadId, body);
   if (!ok) {
-    return apiError(c, 404, 未検出(`見込先 ${leadId}`));
+    return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
   return c.json({ ok: true });
 });
@@ -95,7 +95,7 @@ app.put('/:leadId/staff', async (c) => {
   const body = await c.req.json<{ staffId: string | null }>();
   const ok = updateStaffAssignment(leadId, body.staffId);
   if (!ok) {
-    return apiError(c, 404, 未検出(`見込先 ${leadId}`));
+    return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
   return c.json({ ok: true });
 });
@@ -106,7 +106,7 @@ app.put('/:leadId/shared-folder', async (c) => {
   const body = await c.req.json<{ folderId: string }>();
   const ok = updateSharedFolderId(leadId, body.folderId);
   if (!ok) {
-    return apiError(c, 404, 未検出(`見込先 ${leadId}`));
+    return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
   return c.json({ ok: true });
 });
@@ -117,7 +117,7 @@ app.put('/:leadId/shared-email', async (c) => {
   const body = await c.req.json<{ email: string }>();
   const ok = updateSharedEmail(leadId, body.email);
   if (!ok) {
-    return apiError(c, 404, 未検出(`見込先 ${leadId}`));
+    return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
   return c.json({ ok: true });
 });

@@ -18,7 +18,7 @@
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { 未検出, 必須 } from '../helpers/apiMessages';
+import { 未検出, 必須, コード重複, リソース_顧問先 } from '../helpers/apiMessages';
 import type { ClientStatus } from '../../repositories/types';
 import {
   getAll,
@@ -76,7 +76,7 @@ app.get('/:clientId', (c) => {
   const clientId = c.req.param('clientId');
   const client = getById(clientId);
   if (!client) {
-    return apiError(c, 404, 未検出(`顧問先 ${clientId}`));
+    return apiError(c, 404, 未検出(`${リソース_顧問先} ${clientId}`));
   }
   return c.json({ client });
 });
@@ -96,7 +96,7 @@ app.post('/', async (c) => {
   const existing = getAll();
   const dup = existing.find(cl => cl.threeCode === body.threeCode && cl.clientId !== body.clientId);
   if (dup) {
-    return apiError(c, 409, `3コード「${body.threeCode}」は既に「${dup.companyName}（${dup.clientId}）」で使用されています`);
+    return apiError(c, 409, コード重複(body.threeCode, dup.companyName, dup.clientId));
   }
   // clientIdをサーバー側で発番（フロントからのID受け取りは無視）
   body.clientId = generateClientId();
@@ -122,12 +122,12 @@ app.put('/:clientId', async (c) => {
     const existing = getAll();
     const dup = existing.find(cl => cl.threeCode === body.threeCode && cl.clientId !== clientId);
     if (dup) {
-      return apiError(c, 409, `3コード「${body.threeCode}」は既に「${dup.companyName}（${dup.clientId}）」で使用されています`);
+      return apiError(c, 409, コード重複(body.threeCode, dup.companyName, dup.clientId));
     }
   }
   const ok = updateClient(clientId, body);
   if (!ok) {
-    return apiError(c, 404, 未検出(`顧問先 ${clientId}`));
+    return apiError(c, 404, 未検出(`${リソース_顧問先} ${clientId}`));
   }
   return c.json({ ok: true });
 });
@@ -140,7 +140,7 @@ app.put('/:clientId/staff', async (c) => {
   const body = await c.req.json<{ staffId: string | null }>();
   const ok = updateStaffAssignment(clientId, body.staffId);
   if (!ok) {
-    return apiError(c, 404, 未検出(`顧問先 ${clientId}`));
+    return apiError(c, 404, 未検出(`${リソース_顧問先} ${clientId}`));
   }
   return c.json({ ok: true });
 });
@@ -153,7 +153,7 @@ app.put('/:clientId/shared-folder', async (c) => {
   const body = await c.req.json<{ folderId: string }>();
   const ok = updateSharedFolderId(clientId, body.folderId);
   if (!ok) {
-    return apiError(c, 404, 未検出(`顧問先 ${clientId}`));
+    return apiError(c, 404, 未検出(`${リソース_顧問先} ${clientId}`));
   }
   return c.json({ ok: true });
 });
@@ -166,7 +166,7 @@ app.put('/:clientId/shared-email', async (c) => {
   const body = await c.req.json<{ email: string }>();
   const ok = updateSharedEmail(clientId, body.email);
   if (!ok) {
-    return apiError(c, 404, 未検出(`顧問先 ${clientId}`));
+    return apiError(c, 404, 未検出(`${リソース_顧問先} ${clientId}`));
   }
   return c.json({ ok: true });
 });
