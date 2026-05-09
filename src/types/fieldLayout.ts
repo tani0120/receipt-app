@@ -20,6 +20,9 @@ export type FieldComponent =
   | 'urlCopy'       // URL表示+コピーボタン
   | 'dateGroup'     // 月/日 選択グループ
   | 'staffSelect'   // スタッフ選択
+  | 'heading'       // セクション見出し（タイトルフィールド）
+  | 'spacer'        // 空白行（高さ調整用スペーサー）
+  | 'contactTable'  // 連絡先テーブル（ContactTable埋込み）
   | 'custom';       // カスタムスロット
 
 /** 選択肢 */
@@ -77,6 +80,12 @@ export interface FieldDef {
   inputType?: string;
   /** 金額のmin値 */
   min?: number;
+  /** タイトルフィールドの文字サイズ（px）。デフォルト14 */
+  headingSize?: number;
+  /** タイトルフィールドの背景色（CSS色値）。デフォルト '#4a8dc9' */
+  headingBg?: string;
+  /** スペーサーフィールドの高さ（px）。デフォルト 20 */
+  spacerHeight?: number;
 }
 
 /** セクション定義 */
@@ -141,4 +150,6 @@ export const FIELD_COMPONENT_OPTIONS: readonly { value: FieldComponent; label: s
   { value: 'textarea', label: 'テキストエリア' },
   { value: 'select', label: '選択' },
   { value: 'checkbox', label: 'チェック' },
+  { value: 'heading', label: 'タイトル' },
+  { value: 'spacer', label: 'スペーサー' },
 ] as const;

@@ -223,6 +223,49 @@ export function useFieldLayout(
     });
   };
 
+  /** フラットレイアウト用: 全フィールドをorder順で取得（非表示除外） */
+  const getAllFieldsFlat = computed(() => {
+    return fields.value
+      .filter(f => !hiddenFields.value.includes(f.key))
+      .sort((a, b) => a.order - b.order);
+  });
+
+  /** フラットレイアウト用: フィールド順序の更新（D&D後、セクション不要） */
+  const updateFieldOrderFlat = (newKeys: string[]) => {
+    newKeys.forEach((key, idx) => {
+      const f = fields.value.find(ff => ff.key === key);
+      if (f) f.order = idx + 1;
+    });
+    isLayoutDirty.value = true;
+  };
+
+  /** headingの文字サイズ更新 */
+  const updateHeadingSize = (fieldKey: string, size: number) => {
+    const f = fields.value.find(ff => ff.key === fieldKey);
+    if (f) {
+      f.headingSize = size;
+      isLayoutDirty.value = true;
+    }
+  };
+
+  /** headingの背景色更新 */
+  const updateHeadingBg = (fieldKey: string, color: string) => {
+    const f = fields.value.find(ff => ff.key === fieldKey);
+    if (f) {
+      f.headingBg = color;
+      isLayoutDirty.value = true;
+    }
+  };
+
+  /** spacerの高さ更新 */
+  const updateSpacerHeight = (fieldKey: string, height: number) => {
+    const f = fields.value.find(ff => ff.key === fieldKey);
+    if (f) {
+      f.spacerHeight = height;
+      isLayoutDirty.value = true;
+    }
+  };
+
   /** カスタムフィールドを動的追加 */
   const addDynamicField = (fieldDef: FieldDef) => {
     // 既に存在する場合はスキップ
@@ -418,5 +461,11 @@ export function useFieldLayout(
     defaultFields,
     addDynamicField,
     removeDynamicField,
+    // フラットレイアウト用API
+    getAllFieldsFlat,
+    updateFieldOrderFlat,
+    updateHeadingSize,
+    updateHeadingBg,
+    updateSpacerHeight,
   };
 }

@@ -26,6 +26,62 @@
               <i class="fa-solid fa-grip-vertical"></i>
             </div>
 
+            <!-- ===== heading（タイトルフィールド）===== -->
+            <template v-if="field.component === 'heading'">
+              <div
+                class="dfg-heading"
+                :style="{
+                  fontSize: (field.headingSize || 14) + 'px',
+                  background: field.headingBg || '#4a8dc9',
+                }"
+              >
+                <input
+                  v-if="isLayoutEditing"
+                  type="text"
+                  :value="field.label"
+                  class="dfg-heading-input"
+                  :style="{ fontSize: (field.headingSize || 14) + 'px' }"
+                  @blur="onLabelBlur(field.key, $event)"
+                  @keydown.enter="($event.target as HTMLInputElement).blur()"
+                >
+                <span v-else>{{ field.label }}</span>
+              </div>
+              <!-- レイアウト編集時: 文字サイズ・背景色の設定 -->
+              <div v-if="isLayoutEditing" class="dfg-heading-settings">
+                <label>サイズ:
+                  <select :value="field.headingSize || 14" @change="emit('update:headingSize', field.key, Number(($event.target as HTMLSelectElement).value))">
+                    <option :value="12">12px</option>
+                    <option :value="13">13px</option>
+                    <option :value="14">14px</option>
+                    <option :value="16">16px</option>
+                    <option :value="18">18px</option>
+                  </select>
+                </label>
+                <label>背景:
+                  <input type="color" :value="field.headingBg || '#4a8dc9'" @input="emit('update:headingBg', field.key, ($event.target as HTMLInputElement).value)">
+                </label>
+              </div>
+            </template>
+
+            <!-- ===== spacer（スペーサーフィールド）===== -->
+            <template v-else-if="field.component === 'spacer'">
+              <div
+                class="dfg-spacer"
+                :style="{ height: (field.spacerHeight || 20) + 'px' }"
+              >
+                <span v-if="isLayoutEditing" class="dfg-spacer-label">スペーサー {{ field.spacerHeight || 20 }}px</span>
+              </div>
+              <!-- レイアウト編集時: 高さ調整 -->
+              <div v-if="isLayoutEditing" class="dfg-spacer-settings">
+                <label>高さ:
+                  <input type="range" min="10" max="60" :value="field.spacerHeight || 20" @input="emit('update:spacerHeight', field.key, Number(($event.target as HTMLInputElement).value))">
+                  <span>{{ field.spacerHeight || 20 }}px</span>
+                </label>
+              </div>
+            </template>
+
+            <!-- ===== 通常フィールド ===== -->
+            <template v-else>
             <!-- ラベル（DFGが常に管理） -->
             <div class="dfg-label-area">
               <input
@@ -126,6 +182,7 @@
                 </div>
               </slot>
             </div>
+            </template><!-- /通常フィールド -->
 
             <!-- リサイズハンドル（レイアウト編集モード時のみ） -->
             <div
@@ -221,6 +278,9 @@ const emit = defineEmits<{
   (e: 'label-edit', key: string, newLabel: string): void;
   (e: 'add-field'): void;
   (e: 'update:fieldValue', key: string, value: unknown): void;
+  (e: 'update:headingSize', key: string, size: number): void;
+  (e: 'update:headingBg', key: string, color: string): void;
+  (e: 'update:spacerHeight', key: string, height: number): void;
 }>();
 
 /** フォームからフィールド値を取得 */
@@ -292,8 +352,11 @@ const wrapperStyle = computed(() => {
 
 /** 各アイテムのスタイル */
 const itemStyle = (field: FieldDef) => {
+  const w = (field.component === 'heading' || field.component === 'spacer' || field.component === 'contactTable')
+    ? '100%'
+    : `${field.widthPercent}%`;
   return {
-    width: `${field.widthPercent}%`,
+    width: w,
     'flex-shrink': '0',
     'flex-grow': '0',
   };
@@ -700,5 +763,91 @@ onBeforeUnmount(() => {
 .dfg-add-field-btn:hover {
   background: #dbeafe;
   border-color: #3b82f6;
+}
+
+/* ===== タイトルフィールド（heading） ===== */
+.dfg-heading {
+  width: 100%;
+  padding: 6px 12px;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+.dfg-heading-input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 3px;
+  font-weight: 700;
+  color: #fff;
+  background: transparent;
+  box-sizing: border-box;
+}
+.dfg-heading-input:focus {
+  border-color: #fff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+}
+.dfg-heading-settings {
+  display: flex;
+  gap: 12px;
+  padding: 4px 8px;
+  background: #f1f5f9;
+  border-radius: 0 0 4px 4px;
+  font-size: 11px;
+  color: #475569;
+}
+.dfg-heading-settings label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+.dfg-heading-settings select,
+.dfg-heading-settings input[type="color"] {
+  padding: 1px 4px;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  font-size: 11px;
+}
+.dfg-heading-settings input[type="color"] {
+  width: 24px;
+  height: 20px;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* ===== スペーサーフィールド（spacer） ===== */
+.dfg-spacer {
+  width: 100%;
+  border: 1px dashed #d1d5db;
+  border-radius: 4px;
+  background: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.dfg-spacer-label {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+.dfg-spacer-settings {
+  padding: 4px 8px;
+  background: #f1f5f9;
+  border-radius: 0 0 4px 4px;
+  font-size: 11px;
+  color: #475569;
+}
+.dfg-spacer-settings label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.dfg-spacer-settings input[type="range"] {
+  width: 100px;
 }
 </style>
