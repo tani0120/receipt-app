@@ -188,7 +188,7 @@
                   <template v-else>{{ getDisplayDefaultTax(row) }}</template>
                 </td>
                 <td class="td-date">{{ row.effectiveFrom }}</td>
-                <td class="td-date">{{ row.effectiveTo ?? '現役' }}</td>
+                <td class="td-date">{{ row.effectiveTo ?? UI_MSG.現役 }}</td>
               </tr>
             </tbody>
           </table>
@@ -303,7 +303,7 @@ const filteredAccountRows = computed(() => {
     }
     // 不動産フィルタ（realEstate以外は不動産科目非表示）
     if (businessType.value !== 'realEstate') {
-      if (row.category === '不動産収入' || row.category === '不動産経費' || row.category === '不動産') return false;
+      if (row.category === UI_MSG.不動産収入 || row.category === UI_MSG.不動産経費 || row.category === UI_MSG.不動産) return false;
     }
     if (accountFilter.value && !row.name.includes(accountFilter.value)) return false;
     return true;
@@ -334,7 +334,7 @@ function hideChecked() {
     }
   });
   checkedIds.value = [];
-  markDirty('勘定科目を非表示に変更');
+  markDirty(UI_MSG.科目非表示);
 }
 function showChecked() {
   checkedIds.value.forEach(id => {
@@ -345,7 +345,7 @@ function showChecked() {
     }
   });
   checkedIds.value = [];
-  markDirty('勘定科目を表示に変更');
+  markDirty(UI_MSG.科目表示);
 }
 async function promoteToMfChecked() {
   const customIds = checkedIds.value.filter(id => {
@@ -360,7 +360,7 @@ async function promoteToMfChecked() {
     if (row) row.isCustom = false;
   });
   checkedIds.value = [];
-  markDirty('勘定科目をMF公式に変更');
+  markDirty(UI_MSG.科目MF公式);
 }
 async function demoteFromMfChecked() {
   const officialIds = checkedIds.value.filter(id => {
@@ -375,7 +375,7 @@ async function demoteFromMfChecked() {
     if (row) row.isCustom = true;
   });
   checkedIds.value = [];
-  markDirty('勘定科目をMF非公式に変更');
+  markDirty(UI_MSG.科目MF非公式);
 }
 
 async function deleteChecked() {
@@ -384,14 +384,14 @@ async function deleteChecked() {
     return row?.isCustom;
   });
   if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム科目のみ, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム科目を削除しますか？`, message: '復元できません。', variant: 'danger' });
+  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム科目を削除しますか？`, message: UI_MSG.復元不可, variant: 'danger' });
   if (!ok) return;
   customIds.forEach(id => {
     const idx = accountRows.findIndex(r => r.id === id);
     if (idx !== -1) accountRows.splice(idx, 1);
   });
   checkedIds.value = [];
-  markDirty('勘定科目を削除');
+  markDirty(UI_MSG.科目削除);
 }
 let copyCounter = getInitialCopyCounter(accountRows);
 async function copyChecked() {
@@ -424,7 +424,7 @@ async function copyChecked() {
     accountRows.splice(srcIdx + 1, 0, copy);
   });
   checkedIds.value = [];
-  markDirty('勘定科目をコピー');
+  markDirty(UI_MSG.科目コピー);
 }
 async function addAfterChecked() {
   const ok = await modal.confirm({ title: UI_MSG.科目追加確認 });
@@ -436,10 +436,10 @@ async function addAfterChecked() {
   copyCounter++;
   const newRow: Account = {
     id: `NEW_${copyCounter}`,
-    name: '新規科目',
+    name: UI_MSG.新規科目名,
     target: businessType.value === 'corp' ? 'corp' : 'individual',
     accountGroup: 'PL_EXPENSE',
-    category: '経費',
+    category: UI_MSG.デフォルト科目カテゴリ,
     defaultTaxCategoryId: 'COMMON_EXEMPT',
     taxDetermination: 'fixed',
     deprecated: false,
@@ -451,7 +451,7 @@ async function addAfterChecked() {
   };
   accountRows.splice(insertIdx, 0, newRow);
   checkedIds.value = [];
-  markDirty('勘定科目を追加');
+  markDirty(UI_MSG.科目追加);
 }
 async function saveChanges() {
   try {
@@ -563,13 +563,13 @@ function getDisplayAiDet(row: Account): string {
 
 /** 課税方式に応じた「税区分判定」列の表示値 */
 function getDisplayTaxDet(row: Account): string {
-  if (taxMethod.value === 'exempt') return '固定';
+  if (taxMethod.value === 'exempt') return UI_MSG.免税固定;
   return taxDetLabel(row.taxDetermination);
 }
 
 /** 課税方式に応じた「デフォルト税区分」列の表示値 */
 function getDisplayDefaultTax(row: Account): string {
-  if (taxMethod.value === 'exempt') return '対象外';
+  if (taxMethod.value === 'exempt') return UI_MSG.免税対象外;
   return getTaxCategoryName(row.defaultTaxCategoryId);
 }
 
@@ -596,7 +596,7 @@ function onDrop(targetIdx: number) {
   if (removed.length > 0) {
     accountRows.splice(dstGlobal, 0, removed[0]!);
     accountRows.forEach((r, i) => { r.sortOrder = i + 1; });
-    markDirty('勘定科目の並び順を変更');
+    markDirty(UI_MSG.科目並び順変更);
   }
   dragIdx.value = -1;
 }

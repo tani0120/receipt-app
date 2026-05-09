@@ -138,7 +138,7 @@
                   <template v-else>{{ getRate(row) }}</template>
                 </td>
                 <td class="td-date">{{ row.effectiveFrom || '—' }}</td>
-                <td class="td-date">{{ row.effectiveTo || '現役' }}</td>
+                <td class="td-date">{{ row.effectiveTo || UI_MSG.現役 }}</td>
               </tr>
             </tbody>
           </table>
@@ -274,7 +274,7 @@ function hideChecked() {
     if (row) { row.deprecated = true; row.effectiveTo = today; }
   });
   checkedIds.value = [];
-  markDirty('税区分を非表示に変更');
+  markDirty(UI_MSG.税区分非表示);
 }
 async function promoteToMfChecked() {
   const customIds = checkedIds.value.filter(id => {
@@ -289,7 +289,7 @@ async function promoteToMfChecked() {
     if (row) row.isCustom = false;
   });
   checkedIds.value = [];
-  markDirty('税区分をMF公式に変更');
+  markDirty(UI_MSG.税区分MF公式);
 }
 async function demoteFromMfChecked() {
   const officialIds = checkedIds.value.filter(id => {
@@ -304,7 +304,7 @@ async function demoteFromMfChecked() {
     if (row) row.isCustom = true;
   });
   checkedIds.value = [];
-  markDirty('税区分をMF非公式に変更');
+  markDirty(UI_MSG.税区分MF非公式);
 }
 function showChecked() {
   checkedIds.value.forEach(id => {
@@ -312,7 +312,7 @@ function showChecked() {
     if (row) { row.deprecated = false; row.effectiveTo = null; }
   });
   checkedIds.value = [];
-  markDirty('税区分を表示に変更');
+  markDirty(UI_MSG.税区分表示);
 }
 
 
@@ -323,14 +323,14 @@ async function deleteChecked() {
     return row?.isCustom;
   });
   if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム税区分のみ, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム税区分を削除しますか？`, message: '復元できません。', variant: 'danger' });
+  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム税区分を削除しますか？`, message: UI_MSG.復元不可, variant: 'danger' });
   if (!ok) return;
   customIds.forEach(id => {
     const idx = allTaxRows.findIndex(r => r.id === id);
     if (idx !== -1) allTaxRows.splice(idx, 1);
   });
   checkedIds.value = [];
-  markDirty('税区分を削除');
+  markDirty(UI_MSG.税区分削除);
 }
 
 // =============== コピー・追加 ===============
@@ -365,7 +365,7 @@ async function copyChecked() {
     allTaxRows.splice(srcIdx + 1, 0, copy);
   });
   checkedIds.value = [];
-  markDirty('税区分をコピー');
+  markDirty(UI_MSG.税区分コピー);
 }
 async function addAfterChecked() {
   const ok = await modal.confirm({ title: UI_MSG.税区分追加確認 });
@@ -376,8 +376,8 @@ async function addAfterChecked() {
   copyCounter++;
   const newRow: TaxCategory = {
     id: `NEW_TAX_${copyCounter}`,
-    name: '新規税区分',
-    shortName: '新規',
+    name: UI_MSG.新規税区分名,
+    shortName: UI_MSG.新規税区分略称,
     direction: 'common',
     qualified: false,
     aiSelectable: false,
@@ -392,7 +392,7 @@ async function addAfterChecked() {
   };
   allTaxRows.splice(insertIdx, 0, newRow);
   checkedIds.value = [];
-  markDirty('税区分を追加');
+  markDirty(UI_MSG.税区分追加);
 }
 
 // =============== インライン編集 ===============
@@ -480,7 +480,7 @@ async function saveChanges() {
       body: JSON.stringify({ taxCategories: allTaxRows }),
     });
     if (!response.ok) {
-      const err = await response.json().catch(() => ({ message: '保存に失敗しました' }));
+      const err = await response.json().catch(() => ({ message: UI_MSG.保存失敗 }));
       await modal.notify({ title: err.message ?? UI_MSG.保存失敗, variant: 'warning' });
       return;
     }
