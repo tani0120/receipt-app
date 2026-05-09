@@ -9,11 +9,13 @@
         v-model="localFields"
         :disabled="!isLayoutEditing"
         :animation="200"
+        :group="props.dragGroup ? { name: props.dragGroup, pull: true, put: true } : undefined"
         ghost-class="dfg-ghost"
         drag-class="dfg-drag"
         handle=".dfg-handle"
         class="dfg-drag-area"
         @end="onDragEnd"
+        @add="onDragAdd"
       >
         <template v-for="(field, idx) in localFields" :key="field.key">
           <!-- フィールド本体 -->
@@ -267,6 +269,8 @@ const props = defineProps<{
   resolveOptions?: (optionsKey: string) => readonly FieldOption[];
   /** スタッフリスト（staffSelect用、任意） */
   staffList?: { uuid: string; name: string }[];
+  /** D&Dグループ名（FieldPaletteと共有） */
+  dragGroup?: string;
 }>();
 
 const emit = defineEmits<{
@@ -281,6 +285,7 @@ const emit = defineEmits<{
   (e: 'update:headingSize', key: string, size: number): void;
   (e: 'update:headingBg', key: string, color: string): void;
   (e: 'update:spacerHeight', key: string, height: number): void;
+  (e: 'field-added', field: FieldDef): void;
 }>();
 
 /** フォームからフィールド値を取得 */
@@ -364,6 +369,24 @@ const itemStyle = (field: FieldDef) => {
 
 /** D&D終了時 */
 const onDragEnd = () => {
+  emit('update:order', localFields.value.map(f => f.key));
+};
+
+/** 別リスト（パレット）からのD&D追加時 */
+const onDragAdd = () => {
+  // localFieldsが既にVueDraggable内部で更新済み
+  // 全フィールドのorderを再番号
+  localFields.value.forEach((f, idx) => {
+    f.order = idx + 1;
+  });
+  // 新規追加フィールドを検出して親に通知
+  const existingKeys = new Set(props.fields.map(f => f.key));
+  for (const f of localFields.value) {
+    if (!existingKeys.has(f.key)) {
+      emit('field-added', { ...f });
+    }
+  }
+  // 順序も更新
   emit('update:order', localFields.value.map(f => f.key));
 };
 
