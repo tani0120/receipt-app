@@ -1,8 +1,15 @@
-﻿/**
+/**
  * 見込先編集画面のフィールド定義
  * テンプレートのHTML直書きから抽出したデータ駆動型定義
  */
 import type { FieldDef, SectionDef } from '@/types/fieldLayout';
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// セクション名キー定数（LeadEditPage / useFieldLayout で参照）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export const LEAD_SEC_BASIC      = '基本情報' as const;
+export const LEAD_SEC_ACCOUNTING = '会計設定' as const;
+export const LEAD_SEC_FEE        = '報酬設定' as const;
 
 /** セクション定義 */
 export const leadSections: SectionDef[] = [

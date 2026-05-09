@@ -132,7 +132,7 @@
                         <button class="cm-inline-fiscal-ok" @click.stop="commitFiscalEdit(row)">✓</button>
                       </div>
                     </template>
-                    <span v-else>{{ row.fiscalMonth }}月/{{ row.fiscalDay === '末日' ? '末日' : row.fiscalDay + '日' }}</span>
+                    <span v-else>{{ row.fiscalMonth }}月/{{ row.fiscalDay === FISCAL_DAY_END_LABEL ? FISCAL_DAY_END_LABEL : row.fiscalDay + '日' }}</span>
                   </template>
                   <!-- sharedEmail -->
                   <template v-else-if="col.key === 'sharedEmail'">
@@ -193,7 +193,7 @@
       <div v-if="panelMode" class="cm-panel-overlay" @click.self="closePanel">
         <div class="cm-panel-container">
           <div class="cm-panel-header">
-            <h2 class="cm-panel-title">{{ panelMode === 'add' ? '顧問先を追加' : '顧問先を編集' }}</h2>
+            <h2 class="cm-panel-title">{{ panelMode === 'add' ? UI_MSG.顧問先を追加 : UI_MSG.顧問先を編集 }}</h2>
             <div class="cm-panel-header-actions">
               <button v-if="panelMode === 'edit' && panelForm.status === 'active'" class="cm-panel-stop-btn" @click="confirmSuspend">
                 ⏸️ 休眠
@@ -300,7 +300,7 @@
               <div class="cm-field" style="position: relative;">
                 <label class="cm-label">業種</label>
                 <div class="cm-custom-select" @click.stop="showIndustryDropdown = !showIndustryDropdown">
-                  <span :class="{ 'cm-placeholder': !panelForm.industry }">{{ panelForm.industry || '未設定' }}</span>
+                  <span :class="{ 'cm-placeholder': !panelForm.industry }">{{ panelForm.industry || UI_MSG.未設定 }}</span>
                   <i class="fa-solid fa-chevron-down cm-select-arrow" :class="{ rotated: showIndustryDropdown }"></i>
                 </div>
                 <div v-if="showIndustryDropdown" class="cm-dropdown" @click.stop>
@@ -742,7 +742,7 @@ const basicViewCols = [
 // --- ビュー定義（デフォルトフィルタ・ソート付き） ---
 const clientViews: ViewDefWithDefaults[] = [
   {
-    name: '基本情報',
+    name: UI_MSG.ビュー基本情報,
     key: 'basic',
     columns: basicViewCols,
     defaultFilters: [{ field: 'status', operator: 'in', value: ['active'] }],
@@ -814,7 +814,7 @@ const clientStatusOptions = STATUS_OPTIONS;
 // staffListがリアクティブなためcomputedで動的生成
 const clientFilterColumns = computed<FilterColumnDef[]>(() => [
   // ステータス
-  { key: 'status', label: getFieldLabel('status') || 'ステータス', filterType: 'select', filterOptions: clientStatusOptions },
+  { key: 'status', label: getFieldLabel('status') || UI_MSG.ステータス, filterType: 'select', filterOptions: clientStatusOptions },
   // 基本情報
   { key: 'type', label: getFieldLabel('type'), filterType: 'select', filterOptions: TYPE_OPTIONS },
   { key: 'clientId', label: getFieldLabel('clientId'), filterType: 'text' },
@@ -849,9 +849,7 @@ const clientFilterColumns = computed<FilterColumnDef[]>(() => [
   { key: 'isInvoiceRegistered', label: getFieldLabel('isInvoiceRegistered'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
   { key: 'invoiceRegistrationNumber', label: getFieldLabel('invoiceRegistrationNumber'), filterType: 'text' },
   { key: 'hasDepartmentManagement', label: getFieldLabel('hasDepartmentManagement'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
-  { key: 'hasRentalIncome', label: getFieldLabel('hasRentalIncome'), filterType: 'select', filterOptions: [
-    { value: 'true', label: 'あり' }, { value: 'false', label: 'なし' },
-  ] },
+  { key: 'hasRentalIncome', label: getFieldLabel('hasRentalIncome'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
   // 報酬設定
   { key: 'advisoryFee', label: getFieldLabel('advisoryFee'), filterType: 'number' },
   { key: 'bookkeepingFee', label: getFieldLabel('bookkeepingFee'), filterType: 'number' },
@@ -923,7 +921,7 @@ const isTextEditCol = (key: string): boolean => {
 const getFieldValue = (row: any, key: string): string => {
   const val = row[key];
   if (val === undefined || val === null) return '—';
-  if (typeof val === 'boolean') return val ? 'あり' : 'なし';
+  if (typeof val === 'boolean') return val ? UI_MSG.あり : UI_MSG.なし;
   if (typeof val === 'number') return val.toLocaleString();
   return String(val);
 };
@@ -1037,7 +1035,7 @@ const refreshList = () => fetchClientList();
 const inlineEditId = ref<string | null>(null);
 const inlineEditField = ref<string | null>(null);
 const inlineEditValue = ref<string | number>('');
-const inlineEditFiscalDay = ref<string | number>('末日');
+const inlineEditFiscalDay = ref<string | number>(FISCAL_DAY_END_LABEL);
 
 /** インライン編集対象フィールド（Client型のキーに限定） */
 type InlineEditableField = 'status' | 'threeCode' | 'type' | 'companyName' | 'accountingSoftware' | 'fiscalMonth' | 'phoneNumber' | 'email' | 'sharedEmail' | 'chatRoomUrl';
@@ -1048,7 +1046,7 @@ const startInlineEdit = (row: Client, field: InlineEditableField, event: Event) 
   inlineEditField.value = field;
   inlineEditValue.value = row[field] ?? '';
   if (field === 'fiscalMonth') {
-    inlineEditFiscalDay.value = row.fiscalDay ?? '末日';
+    inlineEditFiscalDay.value = row.fiscalDay ?? FISCAL_DAY_END_LABEL;
   }
   nextTick(() => {
     const el = document.querySelector('.cm-inline-input, .cm-inline-select') as HTMLElement;
@@ -1102,7 +1100,7 @@ const commitFiscalEdit = (_row: Client) => {
       fiscalDay: inlineEditFiscalDay.value,
     });
   }
-  markDirty('決算日を変更');
+  markDirty(UI_MSG.決算日を変更);
   markClean();
   cancelInlineEdit();
 };
@@ -1111,7 +1109,7 @@ const cancelInlineEdit = () => {
   inlineEditId.value = null;
   inlineEditField.value = null;
   inlineEditValue.value = '';
-  inlineEditFiscalDay.value = '末日';
+  inlineEditFiscalDay.value = FISCAL_DAY_END_LABEL;
 };
 
 // --- パネル ---
@@ -1172,7 +1170,7 @@ const saveClient = async () => {
       createDriveFolderForClient(saved).catch(err => {
         console.error('[clients] Driveフォルダ作成失敗:', err);
       });
-      await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: '勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされました。\nGoogle Driveフォルダも自動作成されます。', variant: 'success' });
+      await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: UI_MSG.マスタ自動コピー完了詳細, variant: 'success' });
     } catch (err) {
       await modal.notify({ title: UI_MSG.顧問先追加失敗, message: String(err), variant: 'warning' });
       return;
@@ -1213,7 +1211,7 @@ const saveClient = async () => {
 const confirmSuspend = async () => {
   const ok = await modal.confirm({
     title: `「${panelForm.companyName}」を休眠にしますか？`,
-    message: '休眠中も顧問先データは保持されます。再開も可能です。',
+    message: UI_MSG.休眠確認顧問先,
     variant: 'danger',
     confirmLabel: UI_MSG.休眠にする,
     cancelLabel: UI_MSG.キャンセル,
@@ -1227,7 +1225,7 @@ const confirmSuspend = async () => {
 const confirmTerminate = async () => {
   const ok = await modal.confirm({
     title: `「${panelForm.companyName}」の契約を終了しますか？`,
-    message: '顧問先データは保持されますが、契約終了として記録されます。',
+    message: UI_MSG.契約終了確認顧問先,
     variant: 'danger',
     confirmLabel: UI_MSG.契約終了,
     cancelLabel: UI_MSG.キャンセル,
@@ -1273,7 +1271,7 @@ const commitStaffEdit = (_row: Client) => {
     // composable経由でサーバーに永続化
     updateClientLocal(inlineEditId.value, { staffId: staffId || null });
   }
-  markDirty('担当者を変更');
+  markDirty(UI_MSG.担当者を変更);
   markClean();
   cancelInlineEdit();
   refreshList();

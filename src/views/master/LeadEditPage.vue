@@ -31,7 +31,7 @@
           <!-- レイアウト編集ボタン（常時表示、管理者のみ有効） -->
           <button class="ce-icon-btn" :class="{ 'ce-icon-active': layout.isLayoutEditing.value, 'ce-icon-disabled': !isAdmin }" :title="!isAdmin ? 'レイアウト編集（管理者のみ）' : layout.isLayoutEditing.value ? 'レイアウト編集終了' : 'レイアウト編集'" :disabled="!isAdmin" @click="layout.isLayoutEditing.value = !layout.isLayoutEditing.value"><i class="fa-solid fa-grip"></i></button>
           <template v-if="layout.isLayoutEditing.value && isAdmin">
-            <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-save ce-btn-sm" @click="layout.saveLayout(currentUserName ?? '不明')"><i class="fa-solid fa-save"></i> レイアウト保存</button>
+            <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-save ce-btn-sm" @click="layout.saveLayout(currentUserName ?? UI_MSG.不明)"><i class="fa-solid fa-save"></i> レイアウト保存</button>
             <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">リセット</button>
           </template>
         </div>
@@ -44,7 +44,7 @@
         <!-- 基本情報 -->
         <section class="ce-section">
           <h2 class="ce-section-title">基本情報</h2>
-          <DraggableFieldGrid :fields="leadBasicFields" :is-layout-editing="layout.isLayoutEditing.value" @update:order="(keys: string[]) => layout.updateFieldOrder('基本情報', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)">
+          <DraggableFieldGrid :fields="leadBasicFields" :is-layout-editing="layout.isLayoutEditing.value" @update:order="(keys: string[]) => layout.updateFieldOrder(LEAD_SEC_BASIC, undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)">
             <template #type="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-radio-group"><label><input type="radio" v-model="form.type" value="corp" /><span>法人</span></label><label><input type="radio" v-model="form.type" value="individual" /><span>個人</span></label></div></div></template>
             <template #leadId="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" :value="isNew ? '（自動生成）' : leadId" class="ce-input" disabled /></div></template>
             <template #threeCode="{ field }"><div class="ce-field"><label>{{ field.label }} <span class="ce-hint">※大文字3文字</span></label><input type="text" v-model="form.threeCode" class="ce-input ce-w-sm" maxlength="3" placeholder="ABC" @input="form.threeCode = form.threeCode.toUpperCase().replace(/[^A-Z]/g, '')" /></div></template>
@@ -70,7 +70,7 @@
         <!-- 会計設定 -->
         <section class="ce-section">
           <h2 class="ce-section-title">会計設定</h2>
-          <DraggableFieldGrid :fields="leadAccountingFields" :is-layout-editing="layout.isLayoutEditing.value" @update:order="(keys: string[]) => layout.updateFieldOrder('会計設定', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)">
+          <DraggableFieldGrid :fields="leadAccountingFields" :is-layout-editing="layout.isLayoutEditing.value" @update:order="(keys: string[]) => layout.updateFieldOrder(LEAD_SEC_ACCOUNTING, undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)">
             <template #accountingSoftware="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.accountingSoftware" class="ce-select"><option v-for="o in ACCOUNTING_SOFTWARE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
             <template #taxFilingType="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.taxFilingType" class="ce-select"><option v-for="o in TAX_FILING_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
             <template #consumptionTaxMode="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.consumptionTaxMode" class="ce-select"><option v-for="o in TAX_MODE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
@@ -88,7 +88,7 @@
         <!-- 報酬設定 -->
         <section class="ce-section">
           <h2 class="ce-section-title">報酬設定</h2>
-          <DraggableFieldGrid :fields="leadFeeFields" :is-layout-editing="layout.isLayoutEditing.value" @update:order="(keys: string[]) => layout.updateFieldOrder('報酬設定', undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)">
+          <DraggableFieldGrid :fields="leadFeeFields" :is-layout-editing="layout.isLayoutEditing.value" @update:order="(keys: string[]) => layout.updateFieldOrder(LEAD_SEC_FEE, undefined, keys)" @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)" @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)">
             <template #advisoryFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.advisoryFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
             <template #bookkeepingFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.bookkeepingFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
             <template #monthlyTotal><div class="ce-field ce-computed"><label>月次合計（自動算出）</label><span class="ce-computed-val">{{ (form.advisoryFee + form.bookkeepingFee).toLocaleString() }} 円</span></div></template>
@@ -200,7 +200,8 @@ import {
   CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
   PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
 } from '@/constants/clientOptions';
-import { leadSections, leadFields } from '@/constants/leadFieldDefs';
+import { leadSections, leadFields, LEAD_SEC_BASIC, LEAD_SEC_ACCOUNTING, LEAD_SEC_FEE } from '@/constants/leadFieldDefs';
+import { MENTION_ALL_KEYWORD } from '@/constants/vendorOptions';
 import DraggableFieldGrid from '@/components/DraggableFieldGrid.vue';
 import ConfirmModal from "@/components/ConfirmModal.vue";
 import NotifyModal from "@/components/NotifyModal.vue";
@@ -217,9 +218,9 @@ const { createFolder, renameFolder } = useDriveFolder();
 
 /** フィールドレイアウト管理 */
 const layout = useFieldLayout('lead', leadSections, leadFields);
-const leadBasicFields = layout.getFieldsForSection('基本情報');
-const leadAccountingFields = layout.getFieldsForSection('会計設定');
-const leadFeeFields = layout.getFieldsForSection('報酬設定');
+const leadBasicFields = layout.getFieldsForSection(LEAD_SEC_BASIC);
+const leadAccountingFields = layout.getFieldsForSection(LEAD_SEC_ACCOUNTING);
+const leadFeeFields = layout.getFieldsForSection(LEAD_SEC_FEE);
 
 /** 新規 or 編集判定 */
 const leadId = computed(() => route.params.leadId as string | undefined);
@@ -387,7 +388,7 @@ const mentionCandidates = computed(() => {
   const staffEntries = mentionStaffList.value;
   if (!mentionQuery.value) return [allEntry, ...staffEntries];
   const q = mentionQuery.value.toLowerCase();
-  if ("all".includes(q) || "全員".includes(q)) {
+  if ("all".includes(q) || MENTION_ALL_KEYWORD.includes(q)) {
     return [
       allEntry,
       ...staffEntries.filter(
@@ -496,7 +497,7 @@ const saveLead = async () => {
       createDriveFolderForLead(saved).catch((e) => console.error("[leads] Driveフォルダ作成失敗:", e));
       await modal.notify({
         title: `「${saved.companyName}」を追加しました`,
-        message: "勘定科目マスタと税区分マスタが自動コピーされました。",
+        message: UI_MSG.マスタ自動コピー完了,
         variant: "success",
       });
       router.push(`/master/leads/${saved.leadId}`);
