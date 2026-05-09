@@ -4512,7 +4512,7 @@ function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
   confirmDialog.value = {
     show: true,
     title: value ? UI_MSG.既読にする : UI_MSG.未読にする,
-    message: `「${journal.description}」を${value ? "既読" : "未読"}にしますか？`,
+    message: `「${journal.description}」を${value ? UI_MSG.既読 : UI_MSG.未読}${UI_MSG.にしますか}`,
     onConfirm: () => {
       target.is_read = value;
       if (value) {
@@ -4523,7 +4523,7 @@ function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
       confirmDialog.value = {
         show: true,
         title: UI_MSG.完了,
-        message: `${value ? "既読" : "未読"}にしました。`,
+        message: `${value ? UI_MSG.既読 : UI_MSG.未読}${UI_MSG.にしました}`,
         onConfirm: () => {},
       };
     },
@@ -4539,7 +4539,7 @@ function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
   confirmDialog.value = {
     show: true,
     title: exclude ? UI_MSG.出力対象外にする : UI_MSG.出力対象にする,
-    message: `「${journal.description}」を${exclude ? "出力対象外" : "出力対象"}にしますか？`,
+    message: `「${journal.description}」を${exclude ? UI_MSG.出力対象外 : UI_MSG.出力対象}${UI_MSG.にしますか}`,
     onConfirm: () => {
       if (exclude) {
         target.labels.push("EXPORT_EXCLUDE");
@@ -4552,7 +4552,7 @@ function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
       confirmDialog.value = {
         show: true,
         title: UI_MSG.完了,
-        message: `${exclude ? "出力対象外" : "出力対象"}にしました。`,
+        message: `${exclude ? UI_MSG.出力対象外 : UI_MSG.出力対象}${UI_MSG.にしました}`,
         onConfirm: () => {},
       };
     },
@@ -4564,12 +4564,12 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
   confirmDialog.value = {
     show: true,
     title: UI_MSG.コピー,
-    message: `「${journal.description}」を未出力にコピーしますか？`,
+    message: `「${journal.description}」${UI_MSG.を未出力にコピーしますか}`,
     onConfirm: () => {
       const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(journal));
       clone.id = `copy-${crypto.randomUUID().slice(0, 12)}`;
       clone.display_order = journal.display_order + 0.5;
-      clone.description = `★コピー ${journal.description}`;
+      clone.description = `${UI_MSG.コピー接頭_星}${journal.description}`;
       clone.is_read = false;
       clone.status = null;
       clone.labels = [];
@@ -4586,7 +4586,7 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
       confirmDialog.value = {
         show: true,
         title: UI_MSG.コピー完了,
-        message: "未出力にコピーしました。",
+        message: UI_MSG.を未出力にコピーしました,
         onConfirm: () => {},
       };
     },
@@ -4603,7 +4603,7 @@ function trashJournal(journal: JournalPhase5Mock) {
   confirmDialog.value = {
     show: true,
     title: UI_MSG.ゴミ箱に移動,
-    message: `「${journal.description}」をゴミ箱に移動しますか？`,
+    message: `「${journal.description}」${UI_MSG.をゴミ箱に移動しますか}`,
     onConfirm: () => {
       const target = localJournals.value.find((j) => j.id === journal.id);
       if (!target) return;
@@ -4613,7 +4613,7 @@ function trashJournal(journal: JournalPhase5Mock) {
       confirmDialog.value = {
         show: true,
         title: UI_MSG.完了,
-        message: `「${journal.description}」をゴミ箱に移動しました。`,
+        message: `「${journal.description}」${UI_MSG.をゴミ箱に移動しました}`,
         onConfirm: () => {},
       };
     },
@@ -4627,7 +4627,7 @@ function restoreJournal(journal: JournalPhase5Mock) {
   confirmDialog.value = {
     show: true,
     title: UI_MSG.復活,
-    message: `「${journal.description}」を復活しますか？`,
+    message: `「${journal.description}」${UI_MSG.を復活しますか}`,
     onConfirm: () => {
       target.deleted_at = null;
       target.deleted_by = null;
@@ -4635,7 +4635,7 @@ function restoreJournal(journal: JournalPhase5Mock) {
       confirmDialog.value = {
         show: true,
         title: UI_MSG.復活完了,
-        message: `「${journal.description}」を復活しました。`,
+        message: `「${journal.description}」${UI_MSG.を復活しました}`,
         onConfirm: () => {},
       };
     },

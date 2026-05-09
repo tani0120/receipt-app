@@ -17,6 +17,7 @@ import {
   WARN_DESCRIPTION_EMPTY, WARN_DATE_EMPTY,
   warnAmountEmpty, warnDebitCreditMismatch,
   warnSameAccountBothSides, WARN_TAX_ACCOUNT_MISMATCH,
+  SIDE_DEBIT, SIDE_CREDIT, sideAccountLabel, sideRowLabel,
 } from '@/shared/validationMessages'
 
 // ────────────────────────────────────────────
@@ -272,8 +273,8 @@ export function syncWarningLabelsCore(
   const accountIds = new Set(accounts.map(a => a.id))
   const isValidAccount = (id: string | null) => id != null && id !== '' && accountIds.has(id)
   const unknownAccounts = [
-    ...journal.debit_entries.filter(e => !isValidAccount(e.account)).map(e => `借方'${e.account ?? '(空)'}'`),
-    ...journal.credit_entries.filter(e => !isValidAccount(e.account)).map(e => `貸方'${e.account ?? '(空)'}'`),
+    ...journal.debit_entries.filter(e => !isValidAccount(e.account)).map(e => sideAccountLabel(SIDE_DEBIT, e.account)),
+    ...journal.credit_entries.filter(e => !isValidAccount(e.account)).map(e => sideAccountLabel(SIDE_CREDIT, e.account)),
   ]
   const allAccountsValid = unknownAccounts.length === 0
   if (allAccountsValid) removeLabel('ACCOUNT_UNKNOWN')
@@ -282,12 +283,12 @@ export function syncWarningLabelsCore(
   // 2. TAX_UNKNOWN（税区分未設定 or マスタ/顧問先設定に存在しない）
   const taxCategoryIds = new Set(taxCategories.map(t => t.id))
   const emptyTaxEntries = [
-    ...journal.debit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty('借方', i + 1)),
-    ...journal.credit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty('貸方', i + 1)),
+    ...journal.debit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty(SIDE_DEBIT, i + 1)),
+    ...journal.credit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty(SIDE_CREDIT, i + 1)),
   ]
   const unknownTaxEntries = [
-    ...journal.debit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => `借方'${e.tax_category_id}'`),
-    ...journal.credit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => `貸方'${e.tax_category_id}'`),
+    ...journal.debit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => sideAccountLabel(SIDE_DEBIT, e.tax_category_id)),
+    ...journal.credit_entries.filter(e => e.tax_category_id && !taxCategoryIds.has(e.tax_category_id)).map(e => sideAccountLabel(SIDE_CREDIT, e.tax_category_id)),
   ]
   const allTaxValid = emptyTaxEntries.length === 0 && unknownTaxEntries.length === 0
   if (allTaxValid) removeLabel('TAX_UNKNOWN')
@@ -308,8 +309,8 @@ export function syncWarningLabelsCore(
 
   // 5. AMOUNT_UNCLEAR
   const emptyAmountEntries = [
-    ...journal.debit_entries.filter(e => e.amount == null).map((_, i) => `借方${i + 1}行目`),
-    ...journal.credit_entries.filter(e => e.amount == null).map((_, i) => `貸方${i + 1}行目`),
+    ...journal.debit_entries.filter(e => e.amount == null).map((_, i) => sideRowLabel(SIDE_DEBIT, i + 1)),
+    ...journal.credit_entries.filter(e => e.amount == null).map((_, i) => sideRowLabel(SIDE_CREDIT, i + 1)),
   ]
   const allAmountsFilled = emptyAmountEntries.length === 0
   if (allAmountsFilled) removeLabel('AMOUNT_UNCLEAR')
