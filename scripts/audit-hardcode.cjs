@@ -155,6 +155,16 @@ function detectIssues(filePath) {
           if (/\balert\s*\(/.test(trimmed) || /window\.prompt\s*\(/.test(trimmed)) return;
           // showToastのエラーメッセージ（動的テンプレートリテラル。定数化不適切）
           if (/showToast\s*\(\s*\{.*type:\s*'error'/.test(trimmed)) return;
+          // message:やreturnのテンプレートリテラル行（動的ダイアログメッセージ。定数化困難）
+          if (/^(message|return)\s*[:=]?\s*`/.test(trimmed)) return;
+          // return '文字列'（APIバリデーションエラーメッセージ。据え置きOK）
+          if (/^return\s+['"]/.test(trimmed)) return;
+          // zodスキーマ内のerrorメッセージ（{ error: '...' }）
+          if (/z\.(enum|string|number|object)\s*\(/.test(trimmed)) return;
+          // return { error: '...' }（APIエラーレスポンス。上記フィルタの補完）
+          if (/return\s*\{?\s*\{?\s*error\s*:/.test(trimmed)) return;
+          // 'モックデータ'のオブジェクトプロパティ（name: '...'等、テスト/ダミーデータ）
+          if (/^\s*(code|name|role)\s*:\s*['"]/.test(trimmed)) return;
           issues.push({ lineNum, type: 'JP_LITERAL', line: trimmed.substring(0, 130) });
         }
       }

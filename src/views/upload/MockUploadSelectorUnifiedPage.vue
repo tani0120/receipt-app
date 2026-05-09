@@ -221,7 +221,7 @@
                 :disabled="isCreatingFolder"
                 @click.stop="createDriveFolder"
               >
-                {{ isCreatingFolder ? '⏳ 作成中...' : '📂 Googleドライブを発行する' }}
+                {{ isCreatingFolder ? UI_MSG.フォルダ作成中 : UI_MSG.フォルダ発行ボタン }}
               </button>
             </div>
           </div>
@@ -240,7 +240,7 @@
               <p class="card-sub">顧問先に共有するログインURL</p>
               <span class="copy-tag" :class="{ copied: copiedKey === 'portal' }">
                 <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'portal' }">📋</span>
-                {{ copiedKey === 'portal' ? 'コピーしました！' : 'URLをコピー' }}
+                {{ copiedKey === 'portal' ? UI_MSG.コピーしました : UI_MSG.URLをコピー }}
               </span>
             </div>
             <div class="sel-card card-client-portal" @click="copyText(portalPageUrl, 'portalPage')">
@@ -252,7 +252,7 @@
               </div>
               <span class="copy-tag" :class="{ copied: copiedKey === 'portalPage' }">
                 <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'portalPage' }">📋</span>
-                {{ copiedKey === 'portalPage' ? 'コピーしました！' : 'URLをコピー' }}
+                {{ copiedKey === 'portalPage' ? UI_MSG.コピーしました : UI_MSG.URLをコピー }}
               </span>
             </div>
             <button class="sel-card card-client-pc" @click="go('/guest/' + clientId)">
@@ -274,6 +274,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useShareStatus } from '@/composables/useShareStatus'
 import type { ShareStatus } from '@/repositories/types'
+import { UI_MSG } from '@/constants/uiMessages'
 
 const route = useRoute()
 const router = useRouter()

@@ -213,6 +213,7 @@ import { useClients } from '@/features/client-management/composables/useClients'
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard'
 import type { DocStatus } from '@/repositories/types'
 import type { DriveFileItemWithThumbnail } from '@/api/services/drive/driveService'
+import { UI_MSG } from '@/constants/uiMessages'
 
 // ===== ルート =====
 const route = useRoute()
@@ -409,10 +410,10 @@ const fetchExcludedCount = async () => {
 
 // ===== ユーティリティ =====
 const statusLabel = (s: DocStatus): string => {
-  if (s === 'target') return '仕訳対象'
-  if (s === 'supporting') return '根拠'
-  if (s === 'excluded') return '仕訳外'
-  return '未処理'
+  if (s === 'target') return UI_MSG.選別_仕訳対象
+  if (s === 'supporting') return UI_MSG.選別_根拠
+  if (s === 'excluded') return UI_MSG.選別_仕訳外
+  return UI_MSG.選別_未処理
 }
 
 const badgeStyle = (s: DocStatus): Record<string, string> => {

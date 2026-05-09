@@ -51,6 +51,7 @@
 import { ref, watch, nextTick } from 'vue';
 import type { ClientContact } from '@/repositories/types';
 import { PLACEHOLDER_DIVIDER } from '@/constants/vendorOptions';
+import { UI_MSG } from '@/constants/uiMessages';
 
 /** 列定義 */
 export interface ContactColumn {
@@ -63,11 +64,11 @@ export interface ContactColumn {
 
 /** デフォルト5列 */
 const DEFAULT_COLUMNS: ContactColumn[] = [
-  { key: 'name', label: '担当者名', type: 'text', isDefault: true },
-  { key: 'method', label: '連絡種別', type: 'select', options: ['電話', 'メール', 'チャット'], isDefault: true },
-  { key: 'value', label: '連絡先', type: 'text', isDefault: true },
-  { key: 'usage', label: '自由記載', type: 'text', isDefault: true },
-  { key: 'memo', label: '連絡先備考', type: 'text', isDefault: true },
+  { key: 'name', label: UI_MSG.連絡先_担当者名, type: 'text', isDefault: true },
+  { key: 'method', label: UI_MSG.連絡先_連絡種別, type: 'select', options: ['電話', 'メール', 'チャット'], isDefault: true },
+  { key: 'value', label: UI_MSG.連絡先_連絡先, type: 'text', isDefault: true },
+  { key: 'usage', label: UI_MSG.連絡先_自由記載, type: 'text', isDefault: true },
+  { key: 'memo', label: UI_MSG.連絡先_連絡先備考, type: 'text', isDefault: true },
 ];
 
 const props = defineProps<{
@@ -184,7 +185,7 @@ const removeRow = (idx: number) => {
 /** 列追加 */
 const addColumn = () => {
   const key = `col_${Date.now()}`;
-  localColumns.value.push({ key, label: '新しい列', type: 'text' });
+  localColumns.value.push({ key, label: UI_MSG.連絡先_新しい列, type: 'text' });
   // 既存行に空値追加
   for (const row of localContacts.value) {
     row[key] = '';

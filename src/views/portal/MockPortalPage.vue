@@ -136,6 +136,7 @@ import PortalHeader from '@/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useRoute, useRouter } from 'vue-router'
 import { useShareStatus } from '@/composables/useShareStatus'
+import { UI_MSG } from '@/constants/uiMessages'
 
 const route = useRoute()
 const router = useRouter()
@@ -167,16 +168,16 @@ const driveUrl = computed(() => {
 
 const formats = [
   { icon: '📄', label: 'PDF' },
-  { icon: '📷', label: '写真' },
+  { icon: '📷', label: UI_MSG.ポータル_写真 },
   { icon: '📊', label: 'CSV' },
-  { icon: '📗', label: 'エクセル' },
-  { icon: '💰', label: '会計ソフト' },
+  { icon: '📗', label: UI_MSG.ポータル_エクセル },
+  { icon: '💰', label: UI_MSG.ポータル_会計ソフト },
 ]
 
 const tips = [
-  { text: '資料は1枚づつご共有ください', note: '※ 2枚以上の場合はエラーになります' },
-  { text: '重ならないようにご共有ください', note: '※ 重なっているとエラーになります' },
-  { text: 'スマホで撮影する場合は真上から撮影してください', note: null },
+  { text: UI_MSG.ポータル_注意1, note: UI_MSG.ポータル_注意1補足 },
+  { text: UI_MSG.ポータル_注意2, note: UI_MSG.ポータル_注意2補足 },
+  { text: UI_MSG.ポータル_注意3, note: null },
 ]
 
 const goUpload = () => {

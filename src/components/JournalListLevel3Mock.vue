@@ -3212,10 +3212,10 @@ function runAccountValidation(journal: JournalPhase5Mock): void {
 
   // Step 1: 5分類バリデーション（逆仕訳例外付き）→ モーダル表示のみ
   if (warning) {
-    const debitLabel = debitAccount ? `${debitAccount}（${megaGroupLabel(debitGroup)}）` : "未設定";
+    const debitLabel = debitAccount ? `${debitAccount}（${megaGroupLabel(debitGroup)}）` : UI_MSG.未設定;
     const creditLabel = creditAccount
       ? `${creditAccount}（${megaGroupLabel(creditGroup)}）`
-      : "未設定";
+      : UI_MSG.未設定;
     confirmDialog.value = {
       show: true,
       title: UI_MSG.科目組み合わせ警告,

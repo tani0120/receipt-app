@@ -302,13 +302,13 @@ const howToItems = [
     step: 2,
     icon: "📤",
     title: UI_MSG.自動アップロード,
-    desc: "ファイル選択後に自動で送信が始まります",
+    desc: UI_MSG.アップロード_ステップ1説明,
   },
   {
     step: 3,
     icon: "✅",
     title: UI_MSG.全件完了で確定,
-    desc: "全て送信できたら「確定」ボタンを押してください",
+    desc: UI_MSG.アップロード_ステップ2説明,
   },
 ];
 
@@ -331,7 +331,7 @@ const canConfirm = computed(
 );
 
 const confirmLabel = computed(() => {
-  if (!files.value.length) return "ファイルを選んでください";
+  if (!files.value.length) return UI_MSG.アップロード_ファイル選択;
   if (counts.value.uploading || counts.value.queued) return `送信中... (${progressPct.value}%)`;
   if (counts.value.failed) return `再送してください（${counts.value.failed}件）`;
   return `${counts.value.done}件を確定する`;
