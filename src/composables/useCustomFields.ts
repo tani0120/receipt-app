@@ -2,7 +2,7 @@
  * カスタムフィールド管理Composable
  * 動的フィールドの追加/編集/削除 + extra_fields値の管理
  */
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import type { FieldDef, FieldComponent } from '@/types/fieldLayout';
 
 /** カスタムフィールド定義（保存用） */

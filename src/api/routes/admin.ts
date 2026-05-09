@@ -118,7 +118,6 @@ const route = app
         const clients = getAllClients()
         const staff = getAllStaff()
         const docs = getDocuments()
-        const withMetrics = docs.filter(d => d.aiMetrics)
 
         // KPI: 月間仕訳数（今月の処理済みドキュメント数をカウント）
         const now = new Date()

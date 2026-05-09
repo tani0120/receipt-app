@@ -239,7 +239,7 @@
         <h3 class="ce-comment-title"><i class="fa-regular fa-comment-dots"></i> コメント</h3>
         <div class="ce-comment-input-area">
           <div class="ce-mention-wrapper">
-            <textarea ref="commentTextarea" v-model="newComment" class="ce-comment-input" :placeholder="UI_MSG.コメント" rows="1" @keydown.ctrl.enter="addComment" @input="onCommentInput" @keydown="onMentionKeydown"></textarea>
+            <textarea ref="commentTextarea" v-model="newComment" class="ce-comment-input" :placeholder="UI_MSG.コメント" rows="1" @keydown.ctrl.enter="addComment" @input="onCommentInput" @keydown.exact="onMentionKeydown"></textarea>
             <button class="ce-comment-submit" :disabled="!newComment.trim()" @click="addComment"><i class="fa-solid fa-paper-plane"></i></button>
           </div>
         </div>
@@ -758,7 +758,7 @@ const saveClient = async () => {
     // 新規: サーバーがIDを発番して返す
     const data = { ...fields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
     try {
-      const saved = await addClient(data as any);
+      const saved = await addClient(data as Omit<Client, 'clientId'>);
       createDriveFolderForClient(saved).catch(e => console.error('[clients] Driveフォルダ作成失敗:', e));
       await modal.notify({ title: `「${saved.companyName}」${UI_MSG.追加完了}`, message: UI_MSG.マスタ自動コピー完了, variant: 'success' });
       router.push(`/master/clients/${saved.clientId}`);

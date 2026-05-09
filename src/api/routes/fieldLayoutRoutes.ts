@@ -30,7 +30,7 @@ fieldLayoutRoutes.get('/:pageId', async (c) => {
     }
     const data = await readFile(filePath, 'utf-8');
     return c.json(JSON.parse(data));
-  } catch (e) {
+  } catch {
     return c.json({ error: 'レイアウト取得失敗' }, 500);
   }
 });
@@ -50,7 +50,7 @@ fieldLayoutRoutes.put('/:pageId', async (c) => {
     await writeFile(filePath, JSON.stringify(body, null, 2), 'utf-8');
 
     return c.json({ success: true });
-  } catch (e) {
+  } catch {
     return c.json({ error: 'レイアウト保存失敗' }, 500);
   }
 });
@@ -65,7 +65,7 @@ fieldLayoutRoutes.delete('/:pageId', async (c) => {
       await unlink(filePath);
     }
     return c.json({ success: true });
-  } catch (e) {
+  } catch {
     return c.json({ error: 'レイアウト削除失敗' }, 500);
   }
 });

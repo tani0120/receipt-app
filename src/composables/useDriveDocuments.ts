@@ -91,7 +91,7 @@ export function useDriveDocuments(
   sharedFolderId: () => string | undefined,
   resetSelectedIdx: () => void,
 ): UseDriveDocumentsReturn {
-  const { updateStatus: updateDocStatus, addDocuments: addDocs, allDocuments } = useDocuments();
+  const { updateStatus: _updateDocStatus, addDocuments: addDocs, allDocuments } = useDocuments();
   const { currentStaffId } = useCurrentUser();
 
   const isLoading = ref(false);

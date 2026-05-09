@@ -536,7 +536,7 @@ async function saveChanges() {
     settings.saveAccounts(accountRows, subAccounts);
     markClean();
     modal.notify({ title: UI_MSG.保存成功, variant: 'success' });
-  } catch (e) {
+  } catch {
     await modal.notify({ title: UI_MSG.通信エラー, variant: 'warning' });
   }
 }

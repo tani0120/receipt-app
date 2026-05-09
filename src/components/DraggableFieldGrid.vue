@@ -240,9 +240,6 @@ const getFieldValue = (field: FieldDef): unknown => {
 /** フォームにフィールド値を設定 */
 const setFieldValue = (field: FieldDef, value: unknown) => {
   const key = field.modelKey || field.key;
-  if (props.formData) {
-    props.formData[key] = value;
-  }
   emit('update:fieldValue', key, value);
 };
 

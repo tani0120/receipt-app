@@ -116,7 +116,7 @@
               rows="1"
               @keydown.ctrl.enter="addComment"
               @input="onCommentInput"
-              @keydown="onMentionKeydown"
+              @keydown.exact="onMentionKeydown"
             ></textarea>
             <button class="ce-comment-submit" :disabled="!newComment.trim()" @click="addComment">
               <i class="fa-solid fa-paper-plane"></i>
@@ -493,7 +493,7 @@ const saveLead = async () => {
     // 新規: サーバーがIDを発番して返す
     const data = { ...fields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
     try {
-      const saved = await addLead(data as any);
+      const saved = await addLead(data as Omit<Lead, 'leadId'>);
       createDriveFolderForLead(saved).catch((e) => console.error("[leads] Driveフォルダ作成失敗:", e));
       await modal.notify({
         title: `「${saved.companyName}」${UI_MSG.追加完了}`,

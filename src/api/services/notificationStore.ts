@@ -30,12 +30,13 @@ export function getAllNotifications(): AppNotification[] {
   try {
     const raw = JSON.parse(readFileSync(FILE_PATH, 'utf-8')) as unknown[];
     // 旧形式（isRead: boolean）→ 新形式（readBy: string[]）の移行
-    return raw.map((n: any) => {
+    return raw.map((item: unknown) => {
+      const n = item as Record<string, unknown>;
       if ('isRead' in n && !('readBy' in n)) {
         const { isRead, ...rest } = n;
         return { ...rest, readBy: isRead ? ['__migrated__'] : [] } as AppNotification;
       }
-      return n as AppNotification;
+      return n as unknown as AppNotification;
     });
   } catch {
     return [];

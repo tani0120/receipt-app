@@ -31,7 +31,7 @@ export interface FilterCondition {
  * @param logic - 条件結合方式（デフォルト: 'and'）
  * @returns フィルタ後の行配列
  */
-export function applyFilterConditions<T extends Record<string, any>>(
+export function applyFilterConditions<T extends Record<string, unknown>>(
   rows: T[],
   conditions: FilterCondition[],
   logic: 'and' | 'or' = 'and',
@@ -47,7 +47,7 @@ export function applyFilterConditions<T extends Record<string, any>>(
 }
 
 /** 単一条件を1行に対して評価 */
-function evaluateCondition<T extends Record<string, any>>(
+function evaluateCondition<T extends Record<string, unknown>>(
   row: T,
   cond: FilterCondition,
 ): boolean {

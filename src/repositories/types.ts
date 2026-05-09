@@ -29,7 +29,7 @@ import type { Account } from '@/types/shared-account'
 export type StaffRole = 'admin' | 'general'
 
 /** スタッフのステータス */
-export type StaffStatus = 'active' | 'inactive'
+export type StaffStatus = 'active' | 'inactive' | 'suspension'
 
 /**
  * スタッフ（一覧・詳細で共通利用）
@@ -510,7 +510,7 @@ export type ShareStatusRepository = {
 export type DocSource = 'drive' | 'upload' | 'staff-upload' | 'guest-upload'
 
 /** 資料の選別ステータス */
-export type DocStatus = 'pending' | 'target' | 'supporting' | 'excluded'
+export type DocStatus = 'pending' | 'target' | 'supporting' | 'excluded' | 'completed' | 'exported'
 
 /**
  * 資料1件（Drive/PCアップロードで取り込んだファイル）

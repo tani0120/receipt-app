@@ -918,7 +918,7 @@ const isTextEditCol = (key: string): boolean => {
 };
 
 /** データ行から動的フィールド値を取得（汎用） */
-const getFieldValue = (row: any, key: string): string => {
+const getFieldValue = (row: Record<string, unknown>, key: string): string => {
   const val = row[key];
   if (val === undefined || val === null) return '—';
   if (typeof val === 'boolean') return val ? UI_MSG.あり : UI_MSG.なし;
@@ -1166,7 +1166,7 @@ const saveClient = async () => {
       contact: { type: contactType, value: contactValue },
     };
     try {
-      const saved = await addClient(data as any);
+      const saved = await addClient(data as Omit<Client, 'clientId'>);
       createDriveFolderForClient(saved).catch(err => {
         console.error('[clients] Driveフォルダ作成失敗:', err);
       });
