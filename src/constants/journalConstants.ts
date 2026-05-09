@@ -179,3 +179,43 @@ export const WARNING_LABEL_MAP: Record<string, WarningLabelDef> = {
     weight: 6.7,
   },
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 証票種類バッジマップ（labelKeyMap）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 証票種類バッジ定義 */
+export interface LabelKeyDef {
+  /** 短縮表示（1文字） */
+  short: string
+  /** フルラベル（tooltipに表示） */
+  label: string
+  /** 背景色クラス（Tailwind CSS） */
+  bgClass: string
+}
+
+/** 証票種類バッジマップ: 仕訳リストの証票バッジ表示に使用 */
+export const LABEL_KEY_MAP: Record<string, LabelKeyDef> = {
+  RECEIPT: { short: 'レ', label: 'レシート・領収証', bgClass: 'bg-emerald-600' },
+  INVOICE: { short: '請', label: '請求書', bgClass: 'bg-blue-600' },
+  TRANSPORT: { short: '交', label: '交通費', bgClass: 'bg-cyan-600' },
+  CREDIT_CARD: { short: 'ク', label: 'クレジットカード', bgClass: 'bg-purple-600' },
+  BANK_STATEMENT: { short: '銀', label: '銀行明細', bgClass: 'bg-indigo-600' },
+  MEDICAL: { short: '医', label: '医療費', bgClass: 'bg-pink-600' },
+  NOT_JOURNAL: { short: '外', label: '仕訳対象外', bgClass: 'bg-gray-600' },
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ツールチップラベル
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** ツールチップ: 学習適用済み */
+export const TIP_RULE_APPLIED = '学習適用済み'
+/** ツールチップ: 学習できます */
+export const TIP_RULE_AVAILABLE = '学習できます'
+/** ツールチップ: クレジットカード払い */
+export const TIP_CREDIT_CARD_PAY = 'クレジットカード払い'
+/** ツールチップ: 証票にメモあり */
+export const TIP_MEMO_EXISTS = '証票にメモあり'
+/** ツールチップ: 非適格 */
+export const TIP_NOT_QUALIFIED = '非適格'

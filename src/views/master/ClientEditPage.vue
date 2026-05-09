@@ -573,7 +573,7 @@ const initPage = () => {
 const onCancel = async () => {
   // 変更があればconfirm
   if (hasChanges()) {
-    const ok = await modal.confirm({ title: UI_MSG.変更破棄確認, message: UI_MSG.変更破棄補足, confirmLabel: UI_MSG.破棄する, cancelLabel: '編集を続ける', variant: 'danger' });
+    const ok = await modal.confirm({ title: UI_MSG.変更破棄確認, message: UI_MSG.変更破棄補足, confirmLabel: UI_MSG.破棄する, cancelLabel: UI_MSG.編集を続ける, variant: 'danger' });
     if (!ok) return;
   }
 

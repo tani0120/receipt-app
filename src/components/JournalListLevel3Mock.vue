@@ -790,13 +790,13 @@
                     <i
                       v-if="journal.labels.includes('RULE_APPLIED')"
                       class="fa-solid fa-graduation-cap text-[10px] text-green-600 cursor-default"
-                      @mouseenter="showTooltip($event, '学習適用済み')"
+                      @mouseenter="showTooltip($event, TIP_RULE_APPLIED)"
                       @mouseleave="hideTooltip()"
                     ></i>
                     <i
                       v-if="journal.labels.includes('RULE_AVAILABLE')"
                       class="fa-solid fa-lightbulb text-[10px] text-blue-500 cursor-default"
-                      @mouseenter="showTooltip($event, '学習できます')"
+                      @mouseenter="showTooltip($event, TIP_RULE_AVAILABLE)"
                       @mouseleave="hideTooltip()"
                     ></i>
                   </div>
@@ -820,7 +820,7 @@
                     <span
                       v-if="journal.is_credit_card_payment"
                       class="text-[12px] cursor-default"
-                      @mouseenter="showTooltip($event, 'クレジットカード払い')"
+                      @mouseenter="showTooltip($event, TIP_CREDIT_CARD_PAY)"
                       @mouseleave="hideTooltip()"
                       >💳</span
                     >
@@ -868,7 +868,7 @@
                     <i
                       v-if="journal.memo"
                       class="fa-solid fa-pencil text-[10px] text-gray-600 cursor-default"
-                      @mouseenter="showTooltip($event, '証票にメモあり')"
+                      @mouseenter="showTooltip($event, TIP_MEMO_EXISTS)"
                       @mouseleave="hideTooltip()"
                     ></i>
                   </div>
@@ -933,7 +933,7 @@
                       <span
                         v-else-if="journal.labels.includes('INVOICE_NOT_QUALIFIED')"
                         class="text-red-600 text-sm font-bold cursor-pointer"
-                        @mouseenter="showTooltip($event, '非適格')"
+                        @mouseenter="showTooltip($event, TIP_NOT_QUALIFIED)"
                         @mouseleave="hideTooltip()"
                         >✕</span
                       >
@@ -2828,6 +2828,12 @@ import {
   AG_BS_ASSET,
   AG_BS_LIABILITY,
   WARNING_LABEL_MAP,
+  LABEL_KEY_MAP,
+  TIP_RULE_APPLIED,
+  TIP_RULE_AVAILABLE,
+  TIP_CREDIT_CARD_PAY,
+  TIP_MEMO_EXISTS,
+  TIP_NOT_QUALIFIED,
 } from "@/constants/journalConstants";
 import type { MegaGroupType, WarningLabelDef } from "@/constants/journalConstants";
 
@@ -4271,15 +4277,8 @@ const labelTypeLegend = [
 ];
 
 // ボディ用: ラベル名→バッジ情報マッピング
-const labelKeyMap: Record<string, { short: string; label: string; bgClass: string }> = {
-  RECEIPT: { short: "レ", label: "レシート・領収証", bgClass: "bg-emerald-600" },
-  INVOICE: { short: "請", label: "請求書", bgClass: "bg-blue-600" },
-  TRANSPORT: { short: "交", label: "交通費", bgClass: "bg-cyan-600" },
-  CREDIT_CARD: { short: "ク", label: "クレジットカード", bgClass: "bg-purple-600" },
-  BANK_STATEMENT: { short: "銀", label: "銀行明細", bgClass: "bg-indigo-600" },
-  MEDICAL: { short: "医", label: "医療費", bgClass: "bg-pink-600" },
-  NOT_JOURNAL: { short: "外", label: "仕訳対象外", bgClass: "bg-gray-600" },
-};
+// 証票種類バッジマップ → constants/journalConstants.ts に移動済み
+const labelKeyMap = LABEL_KEY_MAP;
 
 // 警告ラベルマップ: Single Source of Truth → constants/journalConstants.ts に移動済み
 // WARNING_LABEL_MAP は constants/journalConstants.ts からimport済み
