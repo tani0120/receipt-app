@@ -438,7 +438,7 @@ import {
   INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_MODE_OPTIONS,
   TAX_FILING_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
   CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
-  TYPE_OPTIONS, CONTACT_METHOD_OPTIONS,
+  TYPE_OPTIONS, CONTACT_METHOD_OPTIONS, LEAD_STATUS_OPTIONS,
   PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
   getLabel,
 } from '@/constants/clientOptions';
@@ -541,7 +541,7 @@ const leadViews: ViewDef[] = [
     columns: basicViewCols,
   },
   {
-    name: '（すべて）',
+    name: UI_MSG.ビューすべて,
     columns: null,
   },
 ];
@@ -555,13 +555,8 @@ const onViewChange = (_idx: number) => {
   // fetchLeadList()はwatch発火に任せる（二重呼び出し防止）
 };
 
-// ステータス選択肢
-const leadStatusOptions = [
-  { value: 'active', label: '稼働中' },
-  { value: 'suspension', label: '休眠中' },
-  { value: 'inactive', label: '契約終了' },
-  { value: 'converted', label: '顧問先化済' },
-];
+// ステータス選択肢（clientOptions.tsから一元参照）
+const leadStatusOptions = LEAD_STATUS_OPTIONS;
 
 // --- 絞り込みモーダル用列定義（LeadEditPageの全フィールド） ---
 const leadFilterColumns = computed<FilterColumnDef[]>(() => [
@@ -791,7 +786,7 @@ const commitInlineEdit = async (_row: Lead) => {
       if (duplicate) {
         await modal.notify({
           title: UI_MSG.コード重複,
-          message: `「${duplicate.companyName}（${duplicate.leadId}）」で既に使用されています。`,
+          message: `「${duplicate.companyName}（${duplicate.leadId}）」${UI_MSG.コード重複使用中}`,
           variant: 'warning',
         });
         cancelInlineEdit();
@@ -806,14 +801,14 @@ const commitInlineEdit = async (_row: Lead) => {
       if (client) {
         const renamed = await renameDriveFolderForLead(client);
         if (renamed) {
-          await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更しました`, variant: 'success' });
+          await modal.notify({ title: `Googleドライブ名を「${renamed}」${UI_MSG.ドライブ名変更済}`, variant: 'success' });
         }
       }
     }
   }
   const clFieldLabels = LEAD_FIELD_LABELS;
   const clLabel = clFieldLabels[inlineEditField.value ?? ''] ?? inlineEditField.value;
-  markDirty(`${clLabel}を変更`);
+  markDirty(`${clLabel}${UI_MSG.フィールド変更}`);
   markClean();
   cancelInlineEdit();
   refreshList();
@@ -876,7 +871,7 @@ const saveLead = async () => {
     if (duplicate) {
       await modal.notify({
         title: UI_MSG.コード重複,
-        message: `「${duplicate.companyName}（${duplicate.leadId}）」で既に使用されています。`,
+        message: `「${duplicate.companyName}（${duplicate.leadId}）」${UI_MSG.コード重複使用中}`,
         variant: 'warning',
       });
       return;
@@ -897,7 +892,7 @@ const saveLead = async () => {
       createDriveFolderForLead(saved).catch(err => {
         console.error('[leads] Driveフォルダ作成失敗:', err);
       });
-      await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: UI_MSG.マスタ自動コピー完了詳細, variant: 'success' });
+      await modal.notify({ title: `「${saved.companyName}」${UI_MSG.追加しました}`, message: UI_MSG.マスタ自動コピー完了詳細, variant: 'success' });
     } catch (err) {
       await modal.notify({ title: UI_MSG.見込先追加失敗, message: String(err), variant: 'warning' });
       return;
@@ -919,17 +914,17 @@ const saveLead = async () => {
       if (oldLead && oldLead.threeCode !== data.threeCode) {
         const renamed = await renameDriveFolderForLead(data);
         if (renamed) {
-          await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更しました`, variant: 'success' });
+          await modal.notify({ title: `Googleドライブ名を「${renamed}」${UI_MSG.ドライブ名変更済}`, variant: 'success' });
         }
       }
-      await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
+      await modal.notify({ title: `「${data.companyName}」${UI_MSG.更新しました}`, variant: 'success' });
     } catch (err) {
       await modal.notify({ title: UI_MSG.見込先更新失敗, message: String(err), variant: 'warning' });
       return;
     }
   }
   closePanel();
-  markDirty(panelMode.value === 'add' ? `「${panelForm.companyName}」を追加` : `「${panelForm.companyName}」を更新`);
+  markDirty(panelMode.value === 'add' ? `「${panelForm.companyName}」${UI_MSG.追加しました}` : `「${panelForm.companyName}」${UI_MSG.更新しました}`);
   markClean();
   refreshList();
 };
@@ -937,7 +932,7 @@ const saveLead = async () => {
 // --- K13: 休眠・契約終了 ---
 const confirmSuspend = async () => {
   const ok = await modal.confirm({
-    title: `「${panelForm.companyName}」を休眠にしますか？`,
+    title: `「${panelForm.companyName}」${UI_MSG.休眠確認タイトル末尾}`,
     message: UI_MSG.休眠確認見込先,
     variant: 'danger',
     confirmLabel: UI_MSG.休眠にする,
@@ -951,7 +946,7 @@ const confirmSuspend = async () => {
 
 const confirmTerminate = async () => {
   const ok = await modal.confirm({
-    title: `「${panelForm.companyName}」の契約を終了しますか？`,
+    title: `「${panelForm.companyName}」${UI_MSG.契約終了確認タイトル末尾}`,
     message: UI_MSG.契約終了確認見込先,
     variant: 'danger',
     confirmLabel: UI_MSG.契約終了,
@@ -1020,7 +1015,7 @@ const copyDriveUrl = async (row: Lead) => {
     driveUrlCopied.value = row.leadId;
     setTimeout(() => { driveUrlCopied.value = null; }, 2500);
   } catch {
-    window.prompt('URLをコピーしてください:', url);
+    window.prompt(UI_MSG.URLコピープロンプト, url);
   }
 };
 /** Driveフォルダ自動作成（新規登録時） */
@@ -1031,7 +1026,7 @@ const createDriveFolderForLead = async (lead: Lead) => {
     const folderId = await createFolder(folderName, lead.sharedEmail || undefined);
     console.log(`[leads] Driveフォルダ作成完了: ${folderName} (id=${folderId})`);
     updateSharedFolderId(lead.leadId, folderId);
-    markDirty('Driveフォルダ作成');
+    markDirty(UI_MSG.ドライブフォルダ作成);
     markClean();
   } catch (err) {
     console.error(`[leads] Driveフォルダ作成失敗 (${folderName}):`, err);

@@ -3,10 +3,10 @@
     <!-- 戻るリンク -->
     <div class="bg-white px-3 py-1.5 flex items-center gap-3 border-b border-gray-300">
       <router-link :to="'/export-history/' + clientId" class="text-blue-600 text-[10px] hover:underline flex items-center gap-1">
-        <i class="fa-solid fa-arrow-left text-[8px]"></i> ダウンロード履歴に戻る
+        <i class="fa-solid fa-arrow-left text-[8px]"></i> {{ UI_MSG.ダウンロード履歴に戻る }}
       </router-link>
-      <span class="text-[13px] font-bold text-blue-700">出力詳細：{{ historyFileName }}</span>
-      <span class="text-[10px] text-gray-500 ml-2">（{{ totalCount }}件）</span>
+      <span class="text-[13px] font-bold text-blue-700">{{ UI_MSG.出力詳細 }}{{ historyFileName }}</span>
+      <span class="text-[10px] text-gray-500 ml-2">（{{ totalCount }}{{ UI_MSG.全N件 }}）</span>
     </div>
 
     <!-- ページネーション -->
@@ -22,11 +22,11 @@
           class="px-1.5 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100"
           @click="currentPage = Math.min(totalPages, currentPage + 1)"
         >＞</button>
-        <span class="ml-2 text-[10px] text-gray-500">{{ pageStart }}~{{ pageEnd }} / 全{{ totalCount }}件</span>
+        <span class="ml-2 text-[10px] text-gray-500">{{ pageStart }}~{{ pageEnd }} / 全{{ totalCount }}{{ UI_MSG.全N件 }}</span>
       </div>
       <div class="flex items-center gap-2">
         <button class="px-2 py-0.5 border border-gray-300 rounded text-[10px] bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1" @click="showRealtimeUpdateMsg">
-          <i class="fa-solid fa-arrows-rotate text-[8px]"></i> 更新
+          <i class="fa-solid fa-arrows-rotate text-[8px]"></i> {{ UI_MSG.ボタン更新 }}
         </button>
       </div>
     </div>
@@ -64,7 +64,7 @@
             <td class="p-1 text-center">{{ row.importDate }}</td>
           </tr>
           <tr v-if="pagedRows.length === 0">
-            <td :colspan="columns.length" class="p-6 text-center text-gray-400">データがありません</td>
+            <td :colspan="columns.length" class="p-6 text-center text-gray-400">{{ UI_MSG.データなし }}</td>
           </tr>
         </tbody>
       </table>

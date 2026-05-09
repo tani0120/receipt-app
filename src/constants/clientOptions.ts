@@ -34,11 +34,19 @@ export const TYPE_OPTIONS: readonly SelectOption[] = [
   { value: 'individual', label: '個人' },
 ] as const
 
-/** ステータス */
+/** ステータス（顧問先用） */
 export const STATUS_OPTIONS: readonly SelectOption[] = [
   { value: 'active', label: '契約中' },
   { value: 'suspension', label: '休眠中' },
   { value: 'inactive', label: '契約終了' },
+] as const
+
+/** ステータス（見込先用） */
+export const LEAD_STATUS_OPTIONS: readonly SelectOption[] = [
+  { value: 'active', label: '稼働中' },
+  { value: 'suspension', label: '休眠中' },
+  { value: 'inactive', label: '契約終了' },
+  { value: 'converted', label: '顧問先化済' },
 ] as const
 
 /** 業種リスト */

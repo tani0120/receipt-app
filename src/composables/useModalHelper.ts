@@ -52,8 +52,8 @@ export function useModalHelper() {
     show: false,
     title: '',
     message: '',
-    confirmLabel: UI_MSG.はい,
-    cancelLabel: UI_MSG.いいえ,
+    confirmLabel: UI_MSG.はい as string,
+    cancelLabel: UI_MSG.いいえ as string,
     variant: 'default' as 'default' | 'danger',
   })
 

@@ -4,8 +4,8 @@
     <aside class="home-sidebar">
       <div class="sidebar-header">
         <i class="fa-solid fa-grip sidebar-header-icon"></i>
-        <span>メニュー</span>
-        <span class="sidebar-header-hint">ドラッグで並替</span>
+        <span>{{ UI_MSG.メニュー }}</span>
+        <span class="sidebar-header-hint">{{ UI_MSG.ドラッグで並替 }}</span>
       </div>
       <nav class="sidebar-nav">
         <button
@@ -31,7 +31,7 @@
           </div>
           <div class="menu-btn-body">
             <span class="menu-btn-label">{{ item.label }}</span>
-            <span v-if="!item.path" class="menu-btn-wip">作成中</span>
+            <span v-if="!item.path" class="menu-btn-wip">{{ UI_MSG.作成中 }}</span>
           </div>
           <i class="fa-solid fa-grip-vertical menu-btn-grip"></i>
         </button>
@@ -44,11 +44,11 @@
         <div class="placeholder-icon">
           <i class="fa-regular fa-calendar-days"></i>
         </div>
-        <h2 class="placeholder-title">カレンダー</h2>
-        <p class="placeholder-sub">今後ここにスケジュール・期限管理カレンダーを表示予定</p>
+        <h2 class="placeholder-title">{{ UI_MSG.カレンダー }}</h2>
+        <p class="placeholder-sub">{{ UI_MSG.カレンダー説明 }}</p>
         <div class="placeholder-badge">
           <i class="fa-solid fa-code"></i>
-          実装予定
+          {{ UI_MSG.実装予定 }}
         </div>
       </div>
     </main>
@@ -69,6 +69,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { UI_MSG } from '@/constants/uiMessages'
 
 const router = useRouter()
 const { currentStaffId } = useCurrentUser()
@@ -78,7 +79,7 @@ const showToast = ref(false)
 const toastMessage = ref('')
 
 function showWipToast(label: string) {
-  toastMessage.value = `「${label}」は作成中です...`
+  toastMessage.value = `「${label}」${UI_MSG.作成中トースト}`
   showToast.value = true
   setTimeout(() => { showToast.value = false }, 2500)
 }
@@ -93,17 +94,17 @@ interface MenuItem {
 }
 
 const defaultMenuItems: MenuItem[] = [
-  { key: 'pipeline',   label: '見込管理',     icon: 'fa-solid fa-chart-line',             color: 'linear-gradient(135deg, #f97316, #ea580c)', path: null },
-  { key: 'progress',   label: '進捗管理',     icon: 'fa-solid fa-bars-progress',          color: 'linear-gradient(135deg, #3b82f6, #2563eb)', path: '/master/progress' },
-  { key: 'clients',    label: '顧問先管理',   icon: 'fa-solid fa-building',               color: 'linear-gradient(135deg, #06b6d4, #0891b2)', path: '/master/clients' },
-  { key: 'collection', label: '資料回収',     icon: 'fa-solid fa-folder-open',            color: 'linear-gradient(135deg, #14b8a6, #0d9488)', path: '/collection' },
-  { key: 'partners',   label: '提携管理',     icon: 'fa-solid fa-handshake',              color: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', path: null },
-  { key: 'staff',      label: 'スタッフ管理', icon: 'fa-solid fa-users',                  color: 'linear-gradient(135deg, #10b981, #059669)', path: '/master/staff' },
-  { key: 'master',     label: 'マスタ管理',   icon: 'fa-solid fa-warehouse',              color: 'linear-gradient(135deg, #6366f1, #4f46e5)', path: '/master' },
-  { key: 'costs',      label: '想定費用',     icon: 'fa-solid fa-calculator',             color: 'linear-gradient(135deg, #f59e0b, #d97706)', path: '/master/costs' },
-  { key: 'settings',   label: '設定管理',     icon: 'fa-solid fa-gear',                   color: 'linear-gradient(135deg, #64748b, #475569)', path: '/master/settings' },
-  { key: 'conversion', label: 'CSV変換',       icon: 'fa-solid fa-arrow-right-arrow-left', color: 'linear-gradient(135deg, #ec4899, #db2777)', path: '/csv-convert' },
-  { key: 'tasks',      label: 'タスク管理',   icon: 'fa-solid fa-list-check',             color: 'linear-gradient(135deg, #ef4444, #dc2626)', path: '/task-board' },
+  { key: 'pipeline',   label: UI_MSG.ナビ見込管理,     icon: 'fa-solid fa-chart-line',             color: 'linear-gradient(135deg, #f97316, #ea580c)', path: null },
+  { key: 'progress',   label: UI_MSG.ナビ進捗管理,     icon: 'fa-solid fa-bars-progress',          color: 'linear-gradient(135deg, #3b82f6, #2563eb)', path: '/master/progress' },
+  { key: 'clients',    label: UI_MSG.ナビ顧問先管理,   icon: 'fa-solid fa-building',               color: 'linear-gradient(135deg, #06b6d4, #0891b2)', path: '/master/clients' },
+  { key: 'collection', label: UI_MSG.ナビ資料回収,     icon: 'fa-solid fa-folder-open',            color: 'linear-gradient(135deg, #14b8a6, #0d9488)', path: '/collection' },
+  { key: 'partners',   label: UI_MSG.ナビ提携管理,     icon: 'fa-solid fa-handshake',              color: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', path: null },
+  { key: 'staff',      label: UI_MSG.ナビスタッフ管理, icon: 'fa-solid fa-users',                  color: 'linear-gradient(135deg, #10b981, #059669)', path: '/master/staff' },
+  { key: 'master',     label: UI_MSG.ナビマスタ管理,   icon: 'fa-solid fa-warehouse',              color: 'linear-gradient(135deg, #6366f1, #4f46e5)', path: '/master' },
+  { key: 'costs',      label: UI_MSG.ナビ想定費用,     icon: 'fa-solid fa-calculator',             color: 'linear-gradient(135deg, #f59e0b, #d97706)', path: '/master/costs' },
+  { key: 'settings',   label: UI_MSG.ナビ設定管理,     icon: 'fa-solid fa-gear',                   color: 'linear-gradient(135deg, #64748b, #475569)', path: '/master/settings' },
+  { key: 'conversion', label: UI_MSG.ナビCSV変換,       icon: 'fa-solid fa-arrow-right-arrow-left', color: 'linear-gradient(135deg, #ec4899, #db2777)', path: '/csv-convert' },
+  { key: 'tasks',      label: UI_MSG.ナビタスク管理,   icon: 'fa-solid fa-list-check',             color: 'linear-gradient(135deg, #ef4444, #dc2626)', path: '/task-board' },
 ]
 
 // ===== スタッフ別メニュー順序永続化 =====

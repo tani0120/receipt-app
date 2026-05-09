@@ -41,7 +41,7 @@
             <div class="log-box">
               <button class="copy-btn" @click="copyLog" :class="{ copied: isCopied }">
                 <i :class="isCopied ? 'fa-solid fa-check' : 'fa-regular fa-copy'"></i>
-                {{ isCopied ? 'コピー済み' : 'コピー' }}
+                {{ isCopied ? UI_MSG.コピー済み : UI_MSG.コピー }}
               </button>
               <div class="log-row"><span class="log-key">エラーコード:</span> <span class="log-val">{{ errorCode }}</span></div>
               <div class="log-row"><span class="log-key">パス:</span> <span class="log-val">{{ currentPath }}</span></div>
@@ -98,6 +98,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getErrorRole, type ErrorRole } from '@/utils/errorRole'
 import PortalHeader from '@/components/PortalHeader.vue'
 import MockNavBar from '@/components/MockNavBar.vue'
+import { UI_MSG } from '@/constants/uiMessages'
 
 const route = useRoute()
 const router = useRouter()
@@ -161,12 +162,12 @@ onMounted(() => {
 const isCopied = ref(false)
 function copyLog() {
   const lines = [
-    `エラーコード: ${errorCode.value}`,
-    `パス: ${currentPath.value}`,
-    `リクエストID: ${requestId.value}`,
-    `発生日時: ${timestamp}`,
+    `${UI_MSG.エラーコード} ${errorCode.value}`,
+    `${UI_MSG.パス} ${currentPath.value}`,
+    `${UI_MSG.リクエストID} ${requestId.value}`,
+    `${UI_MSG.発生日時} ${timestamp}`,
   ]
-  if (errorMessage.value) lines.push(`詳細: ${errorMessage.value}`)
+  if (errorMessage.value) lines.push(`${UI_MSG.詳細} ${errorMessage.value}`)
   navigator.clipboard.writeText(lines.join('\n')).then(() => {
     isCopied.value = true
     setTimeout(() => { isCopied.value = false }, 2000)

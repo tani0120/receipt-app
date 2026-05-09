@@ -111,7 +111,7 @@ C:\dev\receipt-app\.agent\workflows\commit.md
 
 ## 実態乖離の記録
 
-詳細は [31_logic_api_migration_audit.md](../../docs/genzai/31_logic_api_migration_audit.md) を参照せよ。
+詳細は [28_api_migration_plan.md](../../docs/genzai/28_api_migration_plan.md) を参照せよ。
 
 - API化完了: 5画面（仕訳一覧 + マスタ4画面）
 - API化未着手: 進捗管理（P1）、ダッシュボード集計（P2）、データ変換（P3）

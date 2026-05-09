@@ -5,7 +5,7 @@
         <!-- ヘッダー -->
         <div class="iv-header">
           <i class="fa-solid fa-industry iv-header-icon"></i>
-          <span class="iv-header-label">業種マスタ（全社共通）</span>
+          <span class="iv-header-label">{{ UI_MSG.業種マスタ全社共通 }}</span>
           <span class="iv-header-count">{{ entries.length }}件</span>
           <button class="iv-add-btn" @click="addEntry">
             <i class="fa-solid fa-plus"></i> 追加
@@ -19,14 +19,14 @@
             :class="{ active: businessType === 'corporate' }"
             @click="businessType = 'corporate'"
           >
-            <i class="fa-solid fa-building"></i> 法人
+            <i class="fa-solid fa-building"></i> {{ UI_MSG.法人 }}
           </button>
           <button
             class="iv-type-tab"
             :class="{ active: businessType === 'sole' }"
             @click="businessType = 'sole'"
           >
-            <i class="fa-solid fa-user"></i> 個人事業主
+            <i class="fa-solid fa-user"></i> {{ UI_MSG.個人事業主 }}
           </button>
         </div>
 
@@ -66,18 +66,18 @@
             <thead>
               <tr>
                 <th class="iv-th">#</th>
-                <th class="iv-th sortable relative" @click="sortBy('vector')">業種ID <i :class="getSortIcon('vector')"></i>
+                <th class="iv-th sortable relative" @click="sortBy('vector')">{{ UI_MSG.列業種ID }} <i :class="getSortIcon('vector')"></i>
                   <div class="resize-handle" @mousedown.stop="onIvResizeStart('vector', $event)"></div>
                 </th>
-                <th class="iv-th sortable relative" @click="sortBy('label')">業種名 <i :class="getSortIcon('label')"></i>
+                <th class="iv-th sortable relative" @click="sortBy('label')">{{ UI_MSG.列業種名 }} <i :class="getSortIcon('label')"></i>
                   <div class="resize-handle" @mousedown.stop="onIvResizeStart('label', $event)"></div>
                 </th>
-                <th class="iv-th sortable relative" @click="sortBy('category')">カテゴリ <i :class="getSortIcon('category')"></i>
+                <th class="iv-th sortable relative" @click="sortBy('category')">{{ UI_MSG.列カテゴリ }} <i :class="getSortIcon('category')"></i>
                   <div class="resize-handle" @mousedown.stop="onIvResizeStart('category', $event)"></div>
                 </th>
-                <th class="iv-th sortable" @click="sortBy('expense')">出金時の科目候補 <i :class="getSortIcon('expense')"></i></th>
-                <th class="iv-th sortable" @click="sortBy('income')">入金時の科目候補 <i :class="getSortIcon('income')"></i></th>
-                <th class="iv-th sortable relative" @click="sortBy('level')">確定度 <i :class="getSortIcon('level')"></i>
+                <th class="iv-th sortable" @click="sortBy('expense')">{{ UI_MSG.列出金科目候補 }} <i :class="getSortIcon('expense')"></i></th>
+                <th class="iv-th sortable" @click="sortBy('income')">{{ UI_MSG.列入金科目候補 }} <i :class="getSortIcon('income')"></i></th>
+                <th class="iv-th sortable relative" @click="sortBy('level')">{{ UI_MSG.列確定度 }} <i :class="getSortIcon('level')"></i>
                   <div class="resize-handle" @mousedown.stop="onIvResizeStart('level', $event)"></div>
                 </th>
                 <th class="iv-th"></th>
@@ -95,7 +95,7 @@
                 <!-- 業種名 -->
                 <td class="iv-td iv-td-label">
                   <span class="iv-label-text">{{ vectorLabel(row.vector) }}</span>
-                  <span v-if="row.deprecated" class="iv-deprecated-badge">非推奨</span>
+                  <span v-if="row.deprecated" class="iv-deprecated-badge">{{ UI_MSG.非推奨 }}</span>
                 </td>
 
                 <!-- カテゴリ -->
@@ -133,7 +133,7 @@
 
                 <!-- 確定度 -->
                 <td class="iv-td iv-td-level">
-                  <span v-if="row.expense.length === 1" class="iv-level-badge a">A確定</span>
+                  <span v-if="row.expense.length === 1" class="iv-level-badge a">{{ UI_MSG.確定度A }}</span>
                   <span v-else-if="row.expense.length === 0" class="iv-level-badge none">—</span>
                   <span v-else class="iv-level-badge b">候補{{ row.expense.length }}件</span>
                 </td>
@@ -156,10 +156,10 @@
             未設定: {{ noneCount }}件
           </span>
           <span v-if="businessType === 'corporate'" class="iv-footer-note">
-            法人用辞書（INDUSTRY_VECTOR_CORPORATE）
+            {{ UI_MSG.法人用辞書 }}（INDUSTRY_VECTOR_CORPORATE）
           </span>
           <span v-else class="iv-footer-note">
-            個人事業主用辞書（INDUSTRY_VECTOR_SOLE）
+            {{ UI_MSG.個人事業主用辞書 }}（INDUSTRY_VECTOR_SOLE）
           </span>
         </div>
       </div>
@@ -168,7 +168,7 @@
     <!-- 削除確認モーダル -->
     <div v-if="deleteTargetIdx !== null" class="iv-modal-overlay" @click.self="deleteTargetIdx = null">
       <div class="iv-modal">
-        <div class="iv-modal-title">削除しますか？</div>
+        <div class="iv-modal-title">{{ UI_MSG.削除確認タイトル }}</div>
         <div class="iv-modal-body">
           「{{ deleteTargetIdx !== null ? entries[deleteTargetIdx]?.vector : '' }}」を削除します。この操作は取り消せません。
         </div>

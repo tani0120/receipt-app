@@ -749,7 +749,7 @@ const clientViews: ViewDefWithDefaults[] = [
     defaultSorts: [{ key: 'threeCode', order: 'asc' }],
   },
   {
-    name: '（すべて）',
+    name: UI_MSG.ビューすべて,
     key: 'all',
     columns: null,
     defaultFilters: [],
@@ -834,7 +834,7 @@ const clientFilterColumns = computed<FilterColumnDef[]>(() => [
   { key: 'sharedEmail', label: getFieldLabel('sharedEmail'), filterType: 'text' },
   { key: 'sharedChatUrl', label: getFieldLabel('sharedChatUrl'), filterType: 'text' },
   { key: 'fiscalMonth', label: getFieldLabel('fiscalDate'), filterType: 'select', filterOptions:
-    Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}月` }))
+    Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}${UI_MSG.列月}` }))
   },
   { key: 'industry', label: getFieldLabel('industry'), filterType: 'select', filterOptions: INDUSTRY_OPTIONS.filter(o => o.value !== '') },
   { key: 'establishedDate', label: getFieldLabel('establishedDate'), filterType: 'text' },
@@ -1064,7 +1064,7 @@ const commitInlineEdit = async (_row: Client) => {
       if (duplicate) {
         await modal.notify({
           title: UI_MSG.コード重複,
-          message: `「${duplicate.companyName}（${duplicate.clientId}）」で既に使用されています。`,
+          message: `「${duplicate.companyName}（${duplicate.clientId}）」${UI_MSG.コード重複使用中}`,
           variant: 'warning',
         });
         cancelInlineEdit();
@@ -1079,14 +1079,14 @@ const commitInlineEdit = async (_row: Client) => {
       if (client) {
         const renamed = await renameDriveFolderForClient(client);
         if (renamed) {
-          await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更しました`, variant: 'success' });
+          await modal.notify({ title: `Googleドライブ名を「${renamed}」${UI_MSG.ドライブ名変更済}`, variant: 'success' });
         }
       }
     }
   }
   const clFieldLabels = CLIENT_FIELD_LABELS;
   const clLabel = clFieldLabels[inlineEditField.value ?? ''] ?? inlineEditField.value;
-  markDirty(`${clLabel}を変更`);
+  markDirty(`${clLabel}${UI_MSG.フィールド変更}`);
   markClean();
   cancelInlineEdit();
   refreshList();
@@ -1149,7 +1149,7 @@ const saveClient = async () => {
     if (duplicate) {
       await modal.notify({
         title: UI_MSG.コード重複,
-        message: `「${duplicate.companyName}（${duplicate.clientId}）」で既に使用されています。`,
+        message: `「${duplicate.companyName}（${duplicate.clientId}）」${UI_MSG.コード重複使用中}`,
         variant: 'warning',
       });
       return;
@@ -1170,7 +1170,7 @@ const saveClient = async () => {
       createDriveFolderForClient(saved).catch(err => {
         console.error('[clients] Driveフォルダ作成失敗:', err);
       });
-      await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: UI_MSG.マスタ自動コピー完了詳細, variant: 'success' });
+      await modal.notify({ title: `「${saved.companyName}」${UI_MSG.追加しました}`, message: UI_MSG.マスタ自動コピー完了詳細, variant: 'success' });
     } catch (err) {
       await modal.notify({ title: UI_MSG.顧問先追加失敗, message: String(err), variant: 'warning' });
       return;
@@ -1192,17 +1192,17 @@ const saveClient = async () => {
       if (oldClient && oldClient.threeCode !== data.threeCode) {
         const renamed = await renameDriveFolderForClient(data);
         if (renamed) {
-          await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更しました`, variant: 'success' });
+          await modal.notify({ title: `Googleドライブ名を「${renamed}」${UI_MSG.ドライブ名変更済}`, variant: 'success' });
         }
       }
-      await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
+      await modal.notify({ title: `「${data.companyName}」${UI_MSG.更新しました}`, variant: 'success' });
     } catch (err) {
       await modal.notify({ title: UI_MSG.顧問先更新失敗, message: String(err), variant: 'warning' });
       return;
     }
   }
   closePanel();
-  markDirty(panelMode.value === 'add' ? `「${panelForm.companyName}」を追加` : `「${panelForm.companyName}」を更新`);
+  markDirty(panelMode.value === 'add' ? `「${panelForm.companyName}」${UI_MSG.追加しました}` : `「${panelForm.companyName}」${UI_MSG.更新しました}`);
   markClean();
   refreshList();
 };
@@ -1210,7 +1210,7 @@ const saveClient = async () => {
 // --- K13: 休眠・契約終了 ---
 const confirmSuspend = async () => {
   const ok = await modal.confirm({
-    title: `「${panelForm.companyName}」を休眠にしますか？`,
+    title: `「${panelForm.companyName}」${UI_MSG.休眠確認タイトル末尾}`,
     message: UI_MSG.休眠確認顧問先,
     variant: 'danger',
     confirmLabel: UI_MSG.休眠にする,
@@ -1224,7 +1224,7 @@ const confirmSuspend = async () => {
 
 const confirmTerminate = async () => {
   const ok = await modal.confirm({
-    title: `「${panelForm.companyName}」の契約を終了しますか？`,
+    title: `「${panelForm.companyName}」${UI_MSG.契約終了確認タイトル末尾}`,
     message: UI_MSG.契約終了確認顧問先,
     variant: 'danger',
     confirmLabel: UI_MSG.契約終了,
@@ -1293,7 +1293,7 @@ const copyDriveUrl = async (row: Client) => {
     driveUrlCopied.value = row.clientId;
     setTimeout(() => { driveUrlCopied.value = null; }, 2500);
   } catch {
-    window.prompt('URLをコピーしてください:', url);
+    window.prompt(UI_MSG.URLコピープロンプト, url);
   }
 };
 /** Driveフォルダ自動作成（新規登録時） */
@@ -1304,7 +1304,7 @@ const createDriveFolderForClient = async (client: Client) => {
     const folderId = await createFolder(folderName, client.sharedEmail || undefined);
     console.log(`[clients] Driveフォルダ作成完了: ${folderName} (id=${folderId})`);
     updateSharedFolderId(client.clientId, folderId);
-    markDirty('Driveフォルダ作成');
+    markDirty(UI_MSG.ドライブフォルダ作成);
     markClean();
   } catch (err) {
     console.error(`[clients] Driveフォルダ作成失敗 (${folderName}):`, err);

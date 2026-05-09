@@ -407,7 +407,7 @@ const AMOUNT_TYPE_OPTIONS = LEARNING_AMOUNT_TYPE_OPTIONS
 function sourceCategoryLabel(cat: string | null): string {
   const opt = SOURCE_CATEGORY_OPTIONS.find(o => o.value === cat)
   if (opt) return opt.label
-  if (cat === 'all') return LEARNING_SOURCE_TAB_LABELS[0].label
+  if (cat === 'all') return LEARNING_SOURCE_TAB_LABELS[0]?.label ?? '—'
   return '—'
 }
 

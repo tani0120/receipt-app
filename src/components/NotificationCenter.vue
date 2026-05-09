@@ -18,7 +18,7 @@
               v-if="unreadCount > 0"
               class="nc-mark-all-btn"
               @click="markAllAsRead"
-              title="すべて既読にする"
+              :title="UI_MSG.すべて既読"
             >
               <i class="fa-solid fa-check-double"></i> 全既読
             </button>
@@ -81,6 +81,7 @@
 <script setup lang="ts">
 import { useNotificationCenter } from '@/composables/useNotificationCenter'
 import type { AppNotification } from '@/repositories/types'
+import { UI_MSG } from '@/constants/uiMessages'
 
 const {
   notifications,
@@ -151,10 +152,10 @@ function formatTime(iso: string): string {
   const diffHour = Math.floor(diffMs / 3_600_000)
   const diffDay = Math.floor(diffMs / 86_400_000)
 
-  if (diffMin < 1) return 'たった今'
-  if (diffMin < 60) return `${diffMin}分前`
-  if (diffHour < 24) return `${diffHour}時間前`
-  if (diffDay < 7) return `${diffDay}日前`
+  if (diffMin < 1) return UI_MSG.たった今
+  if (diffMin < 60) return `${diffMin}${UI_MSG.分前}`
+  if (diffHour < 24) return `${diffHour}${UI_MSG.時間前}`
+  if (diffDay < 7) return `${diffDay}${UI_MSG.日前}`
   return new Date(iso).toLocaleDateString('ja-JP')
 }
 </script>

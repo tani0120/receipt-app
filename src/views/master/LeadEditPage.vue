@@ -23,7 +23,7 @@
           <button
             v-if="!isNew"
             class="ce-icon-btn"
-            title="コピーして新規作成"
+            :title="UI_MSG.コピーして新規作成"
             @click="copyAndCreate"
           >
             <i class="fa-regular fa-copy"></i>
@@ -346,7 +346,7 @@ const addComment = () => {
       authorName: currentUserName.value,
       authorStaffId: myStaffId.value ?? "",
       leadId: leadId.value ?? "",
-      clientName: form.companyName || "新規見込先",
+      clientName: form.companyName || UI_MSG.新規見込先,
     });
   }
 };
@@ -380,7 +380,7 @@ const mentionCandidates = computed(() => {
   // @all 候補を先頭に追加
   const allEntry: Staff = {
     uuid: "__all__",
-    name: "all（全員）",
+    name: UI_MSG.全員候補名,
     email: "",
     role: "general" as const,
     status: "active" as const,
@@ -481,7 +481,7 @@ const saveLead = async () => {
     if (dup) {
       await modal.notify({
         title: UI_MSG.コード重複,
-        message: `「${dup.companyName}（${dup.leadId}）」で既に使用`,
+        message: `「${dup.companyName}（${dup.leadId}）」${UI_MSG.コード既使用}`,
         variant: "warning",
       });
       return;
@@ -496,7 +496,7 @@ const saveLead = async () => {
       const saved = await addLead(data as any);
       createDriveFolderForLead(saved).catch((e) => console.error("[leads] Driveフォルダ作成失敗:", e));
       await modal.notify({
-        title: `「${saved.companyName}」を追加しました`,
+        title: `「${saved.companyName}」${UI_MSG.追加完了}`,
         message: UI_MSG.マスタ自動コピー完了,
         variant: "success",
       });
@@ -513,9 +513,9 @@ const saveLead = async () => {
       if (old && old.threeCode !== data.threeCode) {
         const renamed = await renameDriveFolderForLead(data);
         if (renamed)
-          await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更`, variant: "success" });
+          await modal.notify({ title: `${UI_MSG.ドライブ名変更}${renamed}${UI_MSG.に変更}`, variant: "success" });
       }
-      await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: "success" });
+      await modal.notify({ title: `「${data.companyName}」${UI_MSG.更新完了}`, variant: "success" });
       router.push("/master/leads");
     } catch (err) {
       await modal.notify({ title: UI_MSG.見込先更新失敗, message: String(err), variant: 'warning' });

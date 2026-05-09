@@ -322,7 +322,7 @@ const { markDirty, markClean } = useUnsavedGuard(null);
 
 // --- PDF.js ---
 const {
-  canvasRef: pdfCanvasEl,
+  canvasRef: _pdfCanvasEl,
   pageCount: pdfPageCount,
   currentPage: pdfCurrentPage,
   renderPage: pdfRenderPage,

@@ -81,7 +81,7 @@ const isLoading = ref(false);
  */
 async function handleEmailLogin() {
   if (!email.value || !password.value) {
-    errorMessage.value = 'メールアドレスとパスワードを入力してください';
+    errorMessage.value = UI_MSG.ログイン入力必須;
     return;
   }
 
@@ -93,7 +93,7 @@ async function handleEmailLogin() {
     // ログイン成功後、ホーム画面にリダイレクト
     router.push('/');
   } catch (error: unknown) {
-    errorMessage.value = error instanceof Error ? error.message : 'ログインに失敗しました';
+    errorMessage.value = error instanceof Error ? error.message : UI_MSG.ログイン失敗;
   } finally {
     isLoading.value = false;
   }
@@ -111,7 +111,7 @@ async function handleGoogleLogin() {
     // ログイン成功後、ホーム画面にリダイレクト
     router.push('/');
   } catch (error: unknown) {
-    errorMessage.value = error instanceof Error ? error.message : 'Googleログインに失敗しました';
+    errorMessage.value = error instanceof Error ? error.message : UI_MSG.Googleログイン失敗;
   } finally {
     isLoading.value = false;
   }

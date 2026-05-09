@@ -145,7 +145,7 @@ async function uploadChunked(
       body: chunk,
     })
     if (!res.ok) {
-      throw new Error(`チャンク送信失敗: ${res.status} (offset=${offset})`)
+      throw new Error(`${UI_MSG.チャンク送信失敗} ${res.status} (offset=${offset})`)
     }
   }
 
@@ -156,7 +156,7 @@ async function uploadChunked(
     body: JSON.stringify({ uploadId, filename, documentId, clientId }),
   })
   if (!completeRes.ok) {
-    throw new Error(`upload-complete失敗: ${completeRes.status}`)
+    throw new Error(`${UI_MSG.アップロード完了失敗} ${completeRes.status}`)
   }
   return await completeRes.json()
 }
@@ -246,10 +246,10 @@ export function useUpload() {
     if (!total) return UI_MSG.写真未選択
     if (counts.value.processing || counts.value.queued || pendingFiles.value.length) {
       const done = counts.value.ok + counts.value.error
-      return `${total}枚中${done}枚が処理完了 (${progressPct.value}%)`
+      return `${total}${UI_MSG.枚中}${done}${UI_MSG.処理完了ラベル} (${progressPct.value}%)`
     }
-    if (counts.value.error) return `${entries.value.length}枚を送付する（${counts.value.error}件エラーあり）`
-    return `${counts.value.ok}枚を送付する`
+    if (counts.value.error) return `${entries.value.length}${UI_MSG.枚を送付する}（${counts.value.error}${UI_MSG.件エラーあり}`
+    return `${counts.value.ok}${UI_MSG.枚を送付する}`
   })
 
   // ===== 画像サムネイル生成 + 圧縮（フラグで切替可能） =====
@@ -283,7 +283,7 @@ export function useUpload() {
         + '<rect width="120" height="160" fill="#f0fdf4"/>'
         + '<text x="60" y="65" text-anchor="middle" font-size="36">📊</text>'
         + '<text x="60" y="95" text-anchor="middle" font-size="13" font-weight="bold" fill="#16a34a">' + ext.toUpperCase() + '</text>'
-        + '<text x="60" y="115" text-anchor="middle" font-size="10" fill="#6b7280">読込完了</text>'
+        + '<text x="60" y="115" text-anchor="middle" font-size="10" fill="#6b7280">' + UI_MSG.SVG読込完了 + '</text>'
         + '</svg>',
       )
     }
@@ -431,7 +431,7 @@ export function useUpload() {
   const PLACEHOLDER_SVG = 'data:image/svg+xml,' + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160" fill="none">'
     + '<rect width="120" height="160" fill="#f1f5f9"/>'
-    + '<text x="60" y="85" text-anchor="middle" font-size="14" fill="#94a3b8">読込中...</text>'
+    + '<text x="60" y="85" text-anchor="middle" font-size="14" fill="#94a3b8">' + UI_MSG.SVG読込中 + '</text>'
     + '</svg>',
   )
 
@@ -744,7 +744,7 @@ export function useUpload() {
 
         // 補助対象の場合、デバッグ用にerrorReasonにファイル情報を保存
         if (e.supplementary) {
-          e.errorReason = `参照資料 ${fileDebug}`
+          e.errorReason = `${UI_MSG.参照資料} ${fileDebug}`
         }
       } else {
         e.status = 'error'
@@ -761,7 +761,7 @@ export function useUpload() {
       const msg = err instanceof Error ? err.message : String(err)
       console.error(`[processOne例外] ${fileDebug} error=${msg}`)
       e.status = 'error'
-      e.errorReason = `通信エラー: ${msg} ${fileDebug}`
+      e.errorReason = `${UI_MSG.通信エラーラベル} ${msg} ${fileDebug}`
     }
 
     // ★ 完了タイムスタンプ記録

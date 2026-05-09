@@ -12,9 +12,6 @@
 import {
   SALES_CATEGORIES,
   PURCHASE_CATEGORIES,
-  BS_ASSET_CATEGORIES,
-  BS_LIABILITY_CATEGORIES,
-  BS_EQUITY_CATEGORIES,
 } from '@/data/master/account-category-rules'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

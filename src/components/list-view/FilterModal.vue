@@ -131,7 +131,7 @@
               <button
                 class="fm-remove-btn"
                 @click="removeCondition(idx)"
-                title="条件を削除"
+                :title="UI_MSG.条件を削除"
                 :disabled="localConditions.length <= 1"
               >
                 <i class="fa-solid fa-circle-minus"></i>
@@ -227,7 +227,7 @@
               v-if="localSorts.length > 1"
               class="fm-sort-remove"
               @click="removeSortRow(sIdx)"
-              title="この条件を削除"
+              :title="UI_MSG.この条件を削除"
             ><i class="fa-solid fa-minus"></i></button>
           </div>
           <!-- ソート追加ボタン -->
