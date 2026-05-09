@@ -210,6 +210,7 @@ import NotifyModal from '@/components/NotifyModal.vue';
 import { getLabel } from '@/constants/clientOptions';
 import { TAX_DIRECTION_OPTIONS, QUALIFIED_OPTIONS } from '@/constants/vendorOptions';
 import { UI_MSG } from '@/constants/uiMessages';
+import { TAX_CATEGORY_FIELD_LABELS } from '@/constants/fieldLabels';
 
 // 列幅カスタマイズ
 const ctDefaultWidths: Record<string, number> = {
@@ -463,7 +464,7 @@ function commitEdit(row: TaxCategory, field: EditableField) {
       row.qualified = editValue.value === 'true';
       break;
   }
-  const ctFieldLabels: Record<string, string> = { direction: '方向', name: '名称', rate: '税率', qualified: '適格' };
+  const ctFieldLabels = TAX_CATEGORY_FIELD_LABELS;
   markDirty(`税区分の${ctFieldLabels[field] ?? field}を変更`);
   cancelEdit();
 }

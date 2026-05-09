@@ -512,6 +512,7 @@ import { useCustomFields } from '@/composables/useCustomFields';
 import { useCurrentUser } from '@/composables/useCurrentUser';
 import { clientSections, clientFields, LIST_ONLY_COLUMNS } from '@/constants/clientFieldDefs';
 import { UI_MSG } from '@/constants/uiMessages';
+import { CLIENT_FIELD_LABELS } from '@/constants/fieldLabels';
 import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
 import {
   parseViewFromQuery,
@@ -1085,7 +1086,7 @@ const commitInlineEdit = async (_row: Client) => {
       }
     }
   }
-  const clFieldLabels: Record<string, string> = { threeCode: '3コード', companyName: '会社名', companyNameKana: '会社名カナ', repName: '代表者名', repNameKana: '代表者名カナ', type: '種別', status: 'ステータス', industry: '業種', phoneNumber: '電話番号', email: 'メール', sharedEmail: '顧問先ログインメール' };
+  const clFieldLabels = CLIENT_FIELD_LABELS;
   const clLabel = clFieldLabels[inlineEditField.value ?? ''] ?? inlineEditField.value;
   markDirty(`${clLabel}を変更`);
   markClean();

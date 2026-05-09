@@ -192,6 +192,7 @@ import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import { getLabel } from '@/constants/clientOptions';
 import { UI_MSG } from '@/constants/uiMessages';
+import { TAX_CATEGORY_FIELD_LABELS } from '@/constants/fieldLabels';
 import {
   TAX_DIRECTION_OPTIONS, QUALIFIED_OPTIONS, TAX_METHOD_TYPE_OPTIONS,
 } from '@/constants/vendorOptions';
@@ -447,7 +448,7 @@ function commitEdit(row: TaxCategory, field: EditableField) {
       row.qualified = editValue.value === 'true';
       break;
   }
-  const txFieldLabels: Record<string, string> = { direction: '方向', name: '名称', rate: '税率', qualified: '適格' };
+  const txFieldLabels = TAX_CATEGORY_FIELD_LABELS;
   markDirty(`税区分の${txFieldLabels[field] ?? field}を変更`);
   cancelEdit();
 }

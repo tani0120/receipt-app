@@ -446,6 +446,7 @@ import { useFieldLayout } from '@/composables/useFieldLayout';
 import { leadSections, leadFields } from '@/constants/leadFieldDefs';
 import { LIST_ONLY_COLUMNS } from '@/constants/clientFieldDefs';
 import { UI_MSG } from '@/constants/uiMessages';
+import { LEAD_FIELD_LABELS } from '@/constants/fieldLabels';
 import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
@@ -810,7 +811,7 @@ const commitInlineEdit = async (_row: Lead) => {
       }
     }
   }
-  const clFieldLabels: Record<string, string> = { threeCode: '3コード', companyName: '会社名', companyNameKana: '会社名カナ', repName: '代表者名', repNameKana: '代表者名カナ', type: '種別', status: 'ステータス', industry: '業種', phoneNumber: '電話番号', email: 'メール', sharedEmail: '見込先ログインメール' };
+  const clFieldLabels = LEAD_FIELD_LABELS;
   const clLabel = clFieldLabels[inlineEditField.value ?? ''] ?? inlineEditField.value;
   markDirty(`${clLabel}を変更`);
   markClean();

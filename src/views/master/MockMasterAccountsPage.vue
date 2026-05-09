@@ -241,6 +241,7 @@ import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import { QUALIFIED_OPTIONS } from '@/constants/vendorOptions';
 import { UI_MSG } from '@/constants/uiMessages';
+import { ACCOUNT_FIELD_LABELS } from '@/constants/fieldLabels';
 import {
   CATEGORY_GROUPS,
   getCategoryDirection,
@@ -536,7 +537,7 @@ function commitEdit(row: Account) {
       }
       break;
   }
-  const acFieldLabels: Record<string, string> = { name: '科目名', category: '科目分類', taxDetermination: '税区分判定', defaultTaxCategoryId: 'デフォルト税区分', aiDetermination: '自動判定' };
+  const acFieldLabels = ACCOUNT_FIELD_LABELS;
   markDirty(`勘定科目の${acFieldLabels[editingField.value] ?? editingField.value}を変更`);
   cancelEdit();
 }

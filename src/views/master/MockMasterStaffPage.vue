@@ -240,6 +240,7 @@ import { FILTER_ALL_LABEL } from '@/constants/vendorOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import { UI_MSG } from '@/constants/uiMessages';
+import { STAFF_FIELD_LABELS } from '@/constants/fieldLabels';
 
 // 列幅カスタマイズ
 const staffDefaultWidths: Record<string, number> = {
@@ -366,7 +367,7 @@ const commitInlineEdit = () => {
   }
   // composable経由でサーバーに永続化
   updateStaff(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Staff>);
-  const fieldLabels: Record<string, string> = { status: 'ステータス', role: '権限', name: '名前', nameRomaji: 'ローマ字', email: 'メール' };
+  const fieldLabels = STAFF_FIELD_LABELS;
   const label = fieldLabels[inlineEditField.value] ?? inlineEditField.value;
   markDirty(`${label}を変更`);
   markClean();
