@@ -233,13 +233,13 @@ const startConversion = async () => {
 
     const fileName = await startDataConversion(
         form.value.clientName,
-        'CSV明細',
+        UI_MSG.CSV明細,
         form.value.targetSoftware,
         uploadedFile.value
     );
 
     uploadedFile.value = null;
-    alert(`${fileName} の生成が完了しました！`);
+    alert(`${fileName} ${UI_MSG.生成完了}`);
 };
 </script>
 

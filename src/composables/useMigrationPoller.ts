@@ -16,6 +16,7 @@ import { ref } from 'vue'
 import { useGlobalToast } from './useGlobalToast'
 import { useNotificationCenter } from './useNotificationCenter'
 import { useDocuments } from '@/composables/useDocuments'
+import { UI_MSG } from '@/constants/uiMessages'
 
 // ============================================================
 // § ポーリング中のジョブ情報
@@ -158,38 +159,38 @@ function notifyCompletion(entry: PollerEntry, doneCount: number, failedCount: nu
   if (failedCount > 0) {
     // 一部失敗
     showToast({
-      message: `${clientLabel} の移行に${failedCount}件失敗しました`,
+      message: `${clientLabel}${UI_MSG.移行失敗件数}${failedCount}${UI_MSG.件失敗}`,
       type: 'error',
     })
 
     addNotification({
       type: 'migration_failed',
-      title: `${clientLabel} 移行に失敗あり`,
-      body: `${doneCount}件完了、${failedCount}件失敗。管理画面で確認してください。`,
+      title: `${clientLabel} ${UI_MSG.移行失敗ありタイトル}`,
+      body: `${doneCount}${UI_MSG.件完了}${failedCount}${UI_MSG.件失敗確認}`,
       clientId: entry.clientId,
       jobId: entry.jobId,
     })
   } else {
     // 全件成功
     showToast({
-      message: `${clientLabel} 移行完了（${doneCount}件）`,
+      message: `${clientLabel} ${UI_MSG.移行完了}（${doneCount}件）`,
       type: 'success',
     })
 
     // 通知センターに記録（仕訳外があればZIP DLアクション付き）
     const notification: Parameters<typeof addNotification>[0] = {
       type: 'migration_complete',
-      title: `${clientLabel} 移行完了`,
-      body: `${doneCount}件の移行が完了しました。`,
+      title: `${clientLabel} ${UI_MSG.移行完了}`,
+      body: `${doneCount}${UI_MSG.件の移行完了}`,
       clientId: entry.clientId,
       jobId: entry.jobId,
     }
 
     // 仕訳外ファイルがある場合、ZIP DLアクションを追加
     if (entry.excludedCount > 0) {
-      notification.body += ` 仕訳外${entry.excludedCount}件。`
+      notification.body += ` ${UI_MSG.仕訳外件数}${entry.excludedCount}件。`
       notification.action = {
-        label: '仕訳外ZIP DL',
+        label: UI_MSG.仕訳外ZIP_DL,
         url: `/api/drive/download-excluded/${entry.clientId}`,
       }
     }

@@ -44,9 +44,9 @@ export function useUnsavedGuard(
 
   /** 変更ログをモーダル用メッセージに整形 */
   function formatChangeLog(): string {
-    if (changeLog.value.length === 0) return '保存しますか？'
+    if (changeLog.value.length === 0) return UI_MSG.保存しますか
     const items = changeLog.value.map(m => `・${m}`).join('\n')
-    return `以下の変更が未保存です:\n\n${items}\n\n保存しますか？`
+    return `${UI_MSG.未保存変更あり}\n\n${items}\n\n${UI_MSG.保存しますか}`
   }
 
   // Vue Routerのルートガード
@@ -56,7 +56,7 @@ export function useUnsavedGuard(
     // モーダルが渡されていない場合はフォールバック（window.confirm）
     if (!modal) {
       const answer = window.confirm(
-        '未保存の変更があります。保存しますか？\n\nOK = 保存して遷移\nキャンセル = 破棄して遷移'
+        UI_MSG.未保存確認ダイアログ
       )
       if (answer && saveFn) {
         saveFn()

@@ -375,7 +375,7 @@ const startDownload = async () => {
   if (valid.length === 0) {
     isDownloading.value = false;
     showDownloadModal.value = false;
-    await modal.notify({ title: `出力可能な仕訳がありません`, message: `除外: ${excluded.length}件`, variant: 'warning' });
+    await modal.notify({ title: UI_MSG.出力可能仕訳なし, message: `${UI_MSG.除外件数} ${excluded.length}件`, variant: 'warning' });
     return;
   }
   // スピナー表示後、少し待ってからダウンロード
@@ -384,7 +384,7 @@ const startDownload = async () => {
     const clientCode = clientId.value.split("-")[0] ?? clientId.value.slice(0, 3);
     const fname =
       downloadFileName.value ||
-      `${clientCode}_マネーフォワード_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
+      `${clientCode}${UI_MSG.MFファイル名}${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
     downloadMfCsv(csvContent, `${fname}.csv`);
     // 出力した仕訳のstatusをexportedに変更（二重出力防止）
     // JSTオフセット付きISO 8601
@@ -435,7 +435,7 @@ async function saveDownloadHistory(fileName: string, count: number, csvLineCount
         count,
         csvLineCount,
         staffId: currentStaffId.value ?? 'unknown',
-        status: "出力済",
+        status: UI_MSG.出力済,
       }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

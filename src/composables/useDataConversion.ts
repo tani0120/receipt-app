@@ -1,6 +1,7 @@
 
 import { ref, computed, onMounted } from 'vue';
 import type { ConversionLogUi } from '@/types/ScreenG_ui.type';
+import { UI_MSG } from '@/constants/uiMessages';
 
 // State driven by API (BFF)
 const logs = ref<ConversionLogUi[]>([]);
@@ -91,7 +92,7 @@ export function useDataConversion() {
     const processFile = (file: File): Promise<void> => {
         return new Promise((resolve, reject) => {
             if (!file.name.toLowerCase().endsWith('.csv')) {
-                reject(new Error('CSVファイルのみ対応しています'));
+                reject(new Error(UI_MSG.CSVのみ対応));
                 return;
             }
             resolve();
@@ -111,10 +112,10 @@ export function useDataConversion() {
         file: File,
     ): Promise<string> => {
         isProcessing.value = true;
-        loadingStatus.value = '変換処理を開始しています...';
+        loadingStatus.value = UI_MSG.変換開始中;
 
         try {
-            loadingStatus.value = `${targetSoftware}形式へ変換中...`;
+            loadingStatus.value = `${targetSoftware}${UI_MSG.形式へ変換中}`;
 
             const formData = new FormData();
             formData.append('file', file);
@@ -129,7 +130,7 @@ export function useDataConversion() {
 
             if (!res.ok) {
                 const errBody = await res.json().catch(() => ({}));
-                throw new Error((errBody as { message?: string }).message ?? '変換に失敗しました');
+                throw new Error((errBody as { message?: string }).message ?? UI_MSG.変換失敗);
             }
 
             const data = await res.json() as {
@@ -141,10 +142,10 @@ export function useDataConversion() {
             logs.value.unshift(data.log);
             serverPendingCount.value++;
 
-            loadingStatus.value = '変換完了！';
+            loadingStatus.value = UI_MSG.変換完了;
             return data.log.fileName;
         } catch (e) {
-            loadingStatus.value = 'エラーが発生しました';
+            loadingStatus.value = UI_MSG.エラー発生;
             throw e;
         } finally {
             isProcessing.value = false;

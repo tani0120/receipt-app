@@ -353,7 +353,7 @@ async function promoteToMfChecked() {
     return row?.isCustom;
   });
   if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム科目のみMF公式, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム科目をMF公式に変更しますか？` });
+  const ok = await modal.confirm({ title: `${customIds.length}${UI_MSG.MF公式変更確認}` });
   if (!ok) return;
   customIds.forEach(id => {
     const row = accountRows.find(r => r.id === id);
@@ -368,7 +368,7 @@ async function demoteFromMfChecked() {
     return row && !row.isCustom;
   });
   if (!officialIds.length) { await modal.notify({ title: UI_MSG.MF公式科目のみMF非公式, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${officialIds.length}件の科目をMF非公式に変更しますか？`, message: 'MFインポート時に項目の紐付けが必要になる可能性があります。', variant: 'danger' });
+  const ok = await modal.confirm({ title: `${officialIds.length}${UI_MSG.MF非公式変更確認}`, message: UI_MSG.MF非公式警告, variant: 'danger' });
   if (!ok) return;
   officialIds.forEach(id => {
     const row = accountRows.find(r => r.id === id);
@@ -384,7 +384,7 @@ async function deleteChecked() {
     return row?.isCustom;
   });
   if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム科目のみ, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム科目を削除しますか？`, message: UI_MSG.復元不可, variant: 'danger' });
+  const ok = await modal.confirm({ title: `${customIds.length}${UI_MSG.カスタム科目削除確認}`, message: UI_MSG.復元不可, variant: 'danger' });
   if (!ok) return;
   customIds.forEach(id => {
     const idx = accountRows.findIndex(r => r.id === id);
@@ -396,7 +396,7 @@ async function deleteChecked() {
 let copyCounter = getInitialCopyCounter(accountRows);
 async function copyChecked() {
   if (!checkedIds.value.length) return;
-  const ok = await modal.confirm({ title: `${checkedIds.value.length}件の科目をコピーしますか？` });
+  const ok = await modal.confirm({ title: `${checkedIds.value.length}${UI_MSG.科目コピー確認}` });
   if (!ok) return;
   // チェック行を逆順にし、各行の直下にコピーを挿入
   const ids = [...checkedIds.value];
@@ -408,7 +408,7 @@ async function copyChecked() {
     copyCounter++;
     const copy: Account = {
       id: `${src.id}_COPY_${copyCounter}`,
-      name: `${src.name}（コピー）`,
+      name: `${src.name}${UI_MSG.コピー接尾}`,
       target: src.target,
       accountGroup: src.accountGroup,
       category: src.category,
@@ -538,7 +538,7 @@ function commitEdit(row: Account) {
       break;
   }
   const acFieldLabels = ACCOUNT_FIELD_LABELS;
-  markDirty(`勘定科目の${acFieldLabels[editingField.value] ?? editingField.value}を変更`);
+  markDirty(`${UI_MSG.勘定科目変更}${acFieldLabels[editingField.value] ?? editingField.value}${UI_MSG.を変更}`);
   cancelEdit();
 }
 

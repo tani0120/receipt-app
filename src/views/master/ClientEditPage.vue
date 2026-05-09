@@ -660,7 +660,7 @@ const mentionIndex = ref(0);
 
 const mentionCandidates = computed(() => {
   // @all 候補を先頭に追加
-  const allEntry: Staff = { uuid: '__all__', name: 'all（全員）', email: '', role: 'general' as const, status: 'active' as const };
+  const allEntry: Staff = { uuid: '__all__', name: UI_MSG.全員候補名, email: '', role: 'general' as const, status: 'active' as const };
   const staffEntries = mentionStaffList.value;
   if (!mentionQuery.value) return [allEntry, ...staffEntries];
   const q = mentionQuery.value.toLowerCase();
@@ -748,7 +748,7 @@ const saveClient = async () => {
   if (form.threeCode) {
     const dup = clients.value.find(c => c.threeCode === form.threeCode && c.clientId !== clientId.value);
     if (dup) {
-      await modal.notify({ title: UI_MSG.コード重複, message: `「${dup.companyName}（${dup.clientId}）」で既に使用`, variant: 'warning' });
+      await modal.notify({ title: UI_MSG.コード重複, message: `「${dup.companyName}（${dup.clientId}）」${UI_MSG.コード既使用}`, variant: 'warning' });
       return;
     }
   }
@@ -760,7 +760,7 @@ const saveClient = async () => {
     try {
       const saved = await addClient(data as any);
       createDriveFolderForClient(saved).catch(e => console.error('[clients] Driveフォルダ作成失敗:', e));
-      await modal.notify({ title: `「${saved.companyName}」を追加しました`, message: UI_MSG.マスタ自動コピー完了, variant: 'success' });
+      await modal.notify({ title: `「${saved.companyName}」${UI_MSG.追加完了}`, message: UI_MSG.マスタ自動コピー完了, variant: 'success' });
       router.push(`/master/clients/${saved.clientId}`);
     } catch (err) {
       await modal.notify({ title: UI_MSG.顧問先追加失敗, message: String(err), variant: 'warning' });
@@ -774,9 +774,9 @@ const saveClient = async () => {
       await updateClientLocal(id, data);
       if (old && old.threeCode !== data.threeCode) {
         const renamed = await renameDriveFolderForClient(data);
-        if (renamed) await modal.notify({ title: `Googleドライブ名を「${renamed}」に変更`, variant: 'success' });
+        if (renamed) await modal.notify({ title: `${UI_MSG.ドライブ名変更}${renamed}${UI_MSG.に変更}`, variant: 'success' });
       }
-      await modal.notify({ title: `「${data.companyName}」を更新しました`, variant: 'success' });
+      await modal.notify({ title: `「${data.companyName}」${UI_MSG.更新完了}`, variant: 'success' });
       isEditing.value = false;
       isCopyNew.value = false;
       originalSnapshot = takeSnapshot();

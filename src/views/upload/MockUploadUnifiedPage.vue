@@ -191,7 +191,7 @@
                 <!-- オーバーレイ: 処理中 -->
                 <div v-if="r.status === 'uploading' || r.status === 'analyzing'" class="overlay overlay--processing">
                   <div class="spinner"></div>
-                  <span>{{ r.status === 'uploading' ? '送信中...' : 'アップロード中...' }}</span>
+                  <span>{{ r.status === 'uploading' ? UI_MSG.送信中 : UI_MSG.アップロード中 }}</span>
                 </div>
 
                 <!-- 上部ステータスバー（完了後に表示） -->
@@ -219,7 +219,7 @@
                     <template v-else-if="r.lineItemsCount > 0">{{ r.lineItemsCount }}行</template>
                     <template v-else>{{ r.fileName }}</template>
                   </template>
-                  <template v-else-if="r.status === 'error'">{{ r.errorReason ?? 'エラー' }}</template>
+                  <template v-else-if="r.status === 'error'">{{ r.errorReason ?? UI_MSG.エラー }}</template>
                   <template v-else>{{ idx + 1 }}</template>
                 </p>
 
@@ -504,7 +504,7 @@ const statusIconClass = (f: UploadEntry) => {
 const statusIconText = (f: UploadEntry) => {
   if (f.status === 'error') return '△!'
   const dg = dupGroupInfo(f)
-  if (dg) return `重${dg.groupLabel}`
+  if (dg) return `${UI_MSG.重複接頭}${dg.groupLabel}`
   if (f.status === 'ok') return '✓'
   return fileIconEmoji(f.fileName)
 }

@@ -10,6 +10,7 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useStaff } from '@/features/staff-management/composables/useStaff'
 import type { Lead, LeadStatus, LeadForm } from '@/repositories/types'
+import { UI_MSG } from '@/constants/uiMessages'
 
 export type { Lead, LeadStatus, LeadForm }
 
@@ -124,7 +125,7 @@ export function useLeads() {
       leads.value.push(saved)
       return saved
     } catch (err) {
-      const msg = `見込先追加の保存に失敗しました: ${err}`
+      const msg = `${UI_MSG.見込先追加保存失敗} ${err}`
       console.error('[useLeads]', msg)
       lastError.value = msg
       throw err
@@ -141,7 +142,7 @@ export function useLeads() {
         leads.value[idx] = { ...leads.value[idx]!, ...data, leadId }
       }
     } catch (err) {
-      const msg = `見込先更新の保存に失敗しました: ${err}`
+      const msg = `${UI_MSG.見込先更新保存失敗} ${err}`
       console.error('[useLeads]', msg)
       lastError.value = msg
       throw err

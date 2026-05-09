@@ -14,6 +14,7 @@
  */
 import { ref, computed } from 'vue'
 import type { DocEntry, DocStatus } from '@/repositories/types'
+import { UI_MSG } from '@/constants/uiMessages'
 
 // ============================================================
 // モジュールスコープref（ページ遷移しても保持される）
@@ -95,11 +96,11 @@ export function useDocuments() {
     }).then(res => {
       if (!res.ok) {
         console.error(`[useDocuments] サーバー削除失敗: HTTP ${res.status}`)
-        alert('データの削除に失敗しました。ページをリロードしてください。')
+        alert(UI_MSG.データ削除失敗再試行)
       }
     }).catch(err => {
       console.error('[useDocuments] 削除エラー:', err)
-      alert('データの削除に失敗しました。ネットワーク接続を確認してください。')
+      alert(UI_MSG.データ削除失敗ネットワーク)
     })
   }
 
@@ -130,11 +131,11 @@ export function useDocuments() {
       }).then(res => {
         if (!res.ok) {
           console.error(`[useDocuments] サーバー保存失敗: HTTP ${res.status}`)
-          alert('データの保存に失敗しました。ページをリロードしてください。')
+          alert(UI_MSG.データ保存失敗リロード)
         }
       }).catch(err => {
         console.error('[useDocuments] 追加エラー:', err)
-        alert('データの保存に失敗しました。ネットワーク接続を確認してください。')
+        alert(UI_MSG.データ保存失敗接続確認)
       })
     }
 

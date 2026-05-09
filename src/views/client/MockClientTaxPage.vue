@@ -365,8 +365,8 @@ async function copyChecked() {
     copyCounter++;
     const copy: TaxCategory = {
       id: `${src.id}_COPY_${copyCounter}`,
-      name: `${src.name}（コピー）`,
-      shortName: `${src.shortName}（コピー）`,
+      name: `${src.name}${UI_MSG.コピー接尾}`,
+      shortName: `${src.shortName}${UI_MSG.コピー接尾}`,
       direction: src.direction,
       qualified: src.qualified,
       aiSelectable: src.aiSelectable,
@@ -465,7 +465,7 @@ function commitEdit(row: TaxCategory, field: EditableField) {
       break;
   }
   const ctFieldLabels = TAX_CATEGORY_FIELD_LABELS;
-  markDirty(`税区分の${ctFieldLabels[field] ?? field}を変更`);
+  markDirty(`${UI_MSG.税区分変更}${ctFieldLabels[field] ?? field}${UI_MSG.を変更}`);
   cancelEdit();
 }
 

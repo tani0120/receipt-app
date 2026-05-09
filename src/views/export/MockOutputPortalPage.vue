@@ -125,11 +125,11 @@ async function downloadExcluded() {
 
     const blob = await res.blob()
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    triggerDownload(blob, `${clientId.value}_仕訳外_${today}.zip`)
+    triggerDownload(blob, `${clientId.value}${UI_MSG.仕訳外ファイル名}${today}.zip`)
     showToast({ message: UI_MSG.仕訳外ZIPダウンロード完了, type: 'success', icon: 'fa-solid fa-file-zipper' })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    showToast({ message: `エラー: ${msg}`, type: 'error' })
+    showToast({ message: `${UI_MSG.エラー接頭辞} ${msg}`, type: 'error' })
   }
 }
 
@@ -145,11 +145,11 @@ async function downloadSupporting() {
 
     const blob = await res.blob()
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    triggerDownload(blob, `${clientId.value}_根拠資料_${today}.zip`)
+    triggerDownload(blob, `${clientId.value}${UI_MSG.根拠資料ファイル名}${today}.zip`)
     showToast({ message: UI_MSG.根拠資料ZIPダウンロード完了, type: 'success', icon: 'fa-solid fa-file-lines' })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    showToast({ message: `エラー: ${msg}`, type: 'error' })
+    showToast({ message: `${UI_MSG.エラー接頭辞} ${msg}`, type: 'error' })
   }
 }
 

@@ -11,6 +11,7 @@ import { useCurrentUser } from '@/composables/useCurrentUser';
 import type { DocStatus } from '@/repositories/types';
 import type { DocEntry } from '@/repositories/types';
 import type { DocView } from './useDriveDocuments';
+import { UI_MSG } from '@/constants/uiMessages';
 
 // --- 型定義 ---
 export interface HistoryEntry {
@@ -132,10 +133,10 @@ export function useDocSelection(
   };
 
   const statusLabel = (s: DocStatus): string => {
-    if (s === 'target') return '仕訳対象';
-    if (s === 'supporting') return '根拠資料';
-    if (s === 'excluded') return '仕訳外';
-    return '未処理';
+    if (s === 'target') return UI_MSG.仕訳対象;
+    if (s === 'supporting') return UI_MSG.根拠資料;
+    if (s === 'excluded') return UI_MSG.仕訳外;
+    return UI_MSG.未処理;
   };
 
   const undo = () => {
@@ -191,7 +192,7 @@ export function useDocSelection(
     if (!selected.value || selected.value.status === 'pending') return;
     pushHistoryGroup([{ docId: selected.value.id, from: selected.value.status as DocStatus, to: 'pending' }]);
     applyStatus(selected.value.id, selected.value.source, 'pending');
-    markDirty(`${selected.value.fileName}: 未処理に戻す`);
+    markDirty(`${selected.value.fileName}: ${UI_MSG.未処理に戻す}`);
   };
 
   // --- 一括操作 ---
@@ -205,7 +206,7 @@ export function useDocSelection(
     }
     if (entries.length > 0) {
       pushHistoryGroup(entries);
-      markDirty(`${entries.length}件を一括「${statusLabel(status)}」に変更`);
+      markDirty(`${entries.length}${UI_MSG.一括変更}${statusLabel(status)}${UI_MSG.に変更ステータス}`);
     }
     checkedIds.value = new Set();
     showBulkModal.value = false;

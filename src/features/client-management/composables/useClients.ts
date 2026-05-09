@@ -15,6 +15,7 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useStaff } from '@/features/staff-management/composables/useStaff'
 import type { Client, ClientStatus, ClientForm } from '@/repositories/types'
+import { UI_MSG } from '@/constants/uiMessages'
 
 // re-export（外部から import type { Client } from 'useClients' していた箇所の互換性）
 export type { Client, ClientStatus, ClientForm }
@@ -223,7 +224,7 @@ export function useClients() {
       clients.value.push(saved)
       return saved
     } catch (err) {
-      const msg = `顧問先追加の保存に失敗しました: ${err}`
+      const msg = `${UI_MSG.顧問先追加保存失敗} ${err}`
       console.error('[useClients]', msg)
       lastError.value = msg
       throw err
@@ -241,7 +242,7 @@ export function useClients() {
         clients.value[idx] = { ...clients.value[idx]!, ...data, clientId }
       }
     } catch (err) {
-      const msg = `顧問先更新の保存に失敗しました: ${err}`
+      const msg = `${UI_MSG.顧問先更新保存失敗} ${err}`
       console.error('[useClients]', msg)
       lastError.value = msg
       throw err

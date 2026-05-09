@@ -131,7 +131,7 @@
             <div
               v-if="isLayoutEditing"
               class="dfg-resize"
-              title="ドラッグで横幅変更"
+              :title="UI_MSG.ドラッグ横幅変更"
               @mousedown="startWidthResize($event, idx)"
             >
               <i class="fa-solid fa-grip-lines-vertical"></i>
@@ -140,7 +140,7 @@
             <button
               v-if="!isLayoutEditing"
               class="dfg-copy-btn"
-              title="値をコピー"
+              :title="UI_MSG.値をコピー"
               @click="copyFieldValue(field.key)"
             ><i class="fa-regular fa-copy"></i></button>
 
@@ -148,7 +148,7 @@
               v-if="isLayoutEditing"
               class="dfg-linebreak-btn"
               :class="{ active: field.lineBreakAfter }"
-              :title="field.lineBreakAfter ? '行区切り解除' : 'この後で改行'"
+              :title="field.lineBreakAfter ? UI_MSG.行区切り解除 : UI_MSG.この後で改行"
               @click="toggleLineBreak(idx)"
             >↵</button>
 
@@ -156,7 +156,7 @@
             <button
               v-if="isLayoutEditing"
               class="dfg-hide-btn"
-              title="このフィールドを非表示"
+              :title="UI_MSG.フィールド非表示"
               @click="emit('hide-field', field.key)"
             >×</button>
 
@@ -187,7 +187,7 @@
     <div
       v-if="isLayoutEditing"
       class="dfg-height-handle"
-      title="ドラッグでセクション高さ変更"
+      :title="UI_MSG.ドラッグ高さ変更"
       @mousedown="startHeightResize"
     >
       <span class="dfg-height-handle-icon">⋯</span>
@@ -200,6 +200,7 @@ import { ref, watch, computed, onBeforeUnmount } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import type { FieldDef, FieldOption } from '@/types/fieldLayout';
 import { PLACEHOLDER_UNSET } from '@/constants/clientOptions';
+import { UI_MSG } from '@/constants/uiMessages';
 
 const props = defineProps<{
   /** 表示するフィールド一覧（order順） */
@@ -273,9 +274,9 @@ const getSelectLabel = (field: FieldDef): string => {
 /** スタッフ名取得 */
 const getStaffLabel = (field: FieldDef): string => {
   const val = getFieldValue(field);
-  if (!val) return '未設定';
+  if (!val) return UI_MSG.未設定;
   const staff = (props.staffList ?? []).find(s => s.uuid === val);
-  return staff ? staff.name : '未設定';
+  return staff ? staff.name : UI_MSG.未設定;
 };
 
 const wrapperRef = ref<HTMLElement | null>(null);

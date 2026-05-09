@@ -312,6 +312,7 @@ import { useDocSelection } from '@/composables/useDocSelection';
 import { usePreviewZoom } from '@/composables/usePreviewZoom';
 import type { DocEntry } from '@/repositories/types';
 import { DOC_STATUS_LABELS, SOURCE_TYPE_LABELS, DIRECTION_LABELS } from '@/constants/vendorOptions';
+import { UI_MSG } from '@/constants/uiMessages';
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) || '');
@@ -490,7 +491,7 @@ const sendToProcess = async () => {
       generatedCount += newJournals.length;
 
       console.log(
-        `[sendToProcess] ${docView.fileName}: ${newJournals.length}件の仕訳を生成`
+        `[sendToProcess] ${docView.fileName}: ${newJournals.length}${UI_MSG.仕訳生成件数}`
         + ` (source_type=${sourceType}, lineItems=${lineItems.length})`
       );
     }
@@ -576,14 +577,14 @@ const sendToProcess = async () => {
     markClean();
 
     const totalMsg = generatedCount > 0
-      ? `${generatedCount}件の仕訳を生成しました。`
+      ? `${generatedCount}${UI_MSG.仕訳生成完了}`
       : '';
     const bgMsg = nonTargetFiles.length > 0
-      ? `${nonTargetFiles.length}件（根拠資料・仕訳外）はバックグラウンドで処理中。`
+      ? `${nonTargetFiles.length}${UI_MSG.バックグラウンド処理中}`
       : '';
 
     showToast({
-      message: `送信完了。${totalMsg}${bgMsg}`,
+      message: `${UI_MSG.送信完了}${totalMsg}${bgMsg}`,
       type: 'info',
       icon: 'fa-solid fa-paper-plane',
     });
@@ -597,7 +598,7 @@ const sendToProcess = async () => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     showToast({
-      message: `移行エラー: ${msg}`,
+      message: `${UI_MSG.移行エラー} ${msg}`,
       type: 'error',
     });
   } finally {
@@ -625,9 +626,9 @@ const statusTextClass = (s: string) => {
 // --- ソースバッジ ---
 const sourceLabel = (s: string) => {
   if (s === 'drive') return '📁 Drive';
-  if (s === 'staff-upload') return '💻 スタッフ';
-  if (s === 'guest-upload') return '👤 ゲスト';
-  return '📎 その他';
+  if (s === 'staff-upload') return UI_MSG.ソーススタッフ;
+  if (s === 'guest-upload') return UI_MSG.ソースゲスト;
+  return UI_MSG.ソースその他;
 };
 const sourceBadgeClass = (s: string) => {
   if (s === 'drive') return 'ds-source-drive';

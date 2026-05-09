@@ -3,6 +3,7 @@ import {
   AI_PROMPTS,
   GAS_LOGIC_DEFINITIONS
 } from '@/composables/accountingConstants';
+import { UI_MSG } from '@/constants/uiMessages';
 
 // ========================================================================
 // 📊 Dashboard Interfaces (Strict Typed Contract)
@@ -210,15 +211,15 @@ const DEFAULT_DATA: DashboardData = {
   settings: {
     geminiApiKey: '',
     invoiceApiKey: '',
-    systemRootId: '(入力待)',
+    systemRootId: UI_MSG.入力待,
     masterSsId: '1XyZ...',
 
     modelName: 'models/gemini-3.0-flash',
-    systemSettingsSsId: '(自動取得)',
-    rulesSsId: '(入力待)',
-    systemDbId: '(入力待)',
-    queueId: '(入力待)', // Only one queueId
-    dashboardId: '(入力待)',
+    systemSettingsSsId: UI_MSG.自動取得,
+    rulesSsId: UI_MSG.入力待,
+    systemDbId: UI_MSG.入力待,
+    queueId: UI_MSG.入力待, // Only one queueId
+    dashboardId: UI_MSG.入力待,
 
     apiPriceInput: 0.50,
     apiPriceOutput: 3.00,
@@ -293,12 +294,12 @@ const DEFAULT_DATA: DashboardData = {
   systemLogs: [],
   prompts: {
     ai: [
-      { id: 'P-001', name: 'WORKER: 解析メイン (Phase 1)', value: AI_PROMPTS.WORKER },
-      { id: 'P-002', name: 'LEARNER: ルール生成 (Phase 2)', value: AI_PROMPTS.LEARNER },
-      { id: 'P-003', name: 'UPDATER: 知識更新 (Phase 3)', value: AI_PROMPTS.UPDATER },
-      { id: 'P-004', name: 'BUILDER: 初期知識生成 (Phase 0)', value: AI_PROMPTS.BUILDER },
-      { id: 'P-005', name: 'OPTIMIZER: 知識最適化 (Batch)', value: AI_PROMPTS.OPTIMIZER },
-      { id: 'P-006', name: 'AUDITOR: 知識監査 (Safety)', value: AI_PROMPTS.AUDITOR }
+      { id: 'P-001', name: UI_MSG.AIプロンプト名_WORKER, value: AI_PROMPTS.WORKER },
+      { id: 'P-002', name: UI_MSG.AIプロンプト名_LEARNER, value: AI_PROMPTS.LEARNER },
+      { id: 'P-003', name: UI_MSG.AIプロンプト名_UPDATER, value: AI_PROMPTS.UPDATER },
+      { id: 'P-004', name: UI_MSG.AIプロンプト名_BUILDER, value: AI_PROMPTS.BUILDER },
+      { id: 'P-005', name: UI_MSG.AIプロンプト名_OPTIMIZER, value: AI_PROMPTS.OPTIMIZER },
+      { id: 'P-006', name: UI_MSG.AIプロンプト名_AUDITOR, value: AI_PROMPTS.AUDITOR }
     ],
     gas: [
       { id: 'G-001', name: 'File Rescue & Dispatch', value: GAS_LOGIC_DEFINITIONS.FILE_RESCUE },
@@ -318,31 +319,31 @@ const DEFAULT_DATA: DashboardData = {
 
   rules: {
     ai: {
-      id: 'RULE_AI', name: 'AI処理ルール', description: 'AIによる自動仕訳生成の基本ルール設定',
-      history: [{ date: '2023-10-01', actor: 'Admin', action: '閾値変更' }]
+      id: 'RULE_AI', name: UI_MSG.ルール名_AI処理, description: UI_MSG.ルール説明_AI処理,
+      history: [{ date: '2023-10-01', actor: 'Admin', action: UI_MSG.ルール履歴_閾値変更 }]
     },
     taxYayoi: {
-      id: 'TAX_YAYOI', name: '税区分 (弥生)', description: '弥生会計形式での税区分変換ルール',
-      history: [{ date: '2023-09-15', actor: 'AI', action: '自動更新' }]
+      id: 'TAX_YAYOI', name: UI_MSG.ルール名_税区分弥生, description: UI_MSG.ルール説明_税区分弥生,
+      history: [{ date: '2023-09-15', actor: 'AI', action: UI_MSG.ルール履歴_自動更新 }]
     },
     taxMF: {
-      id: 'TAX_MF', name: '税区分 (MF)', description: 'マネーフォワード形式での税区分変換ルール',
+      id: 'TAX_MF', name: UI_MSG.ルール名_税区分MF, description: UI_MSG.ルール説明_税区分MF,
       history: []
     },
     taxFreee: {
-      id: 'TAX_FREEE', name: '税区分 (freee)', description: 'freee形式での税区分変換ルール',
+      id: 'TAX_FREEE', name: UI_MSG.ルール名_税区分freee, description: UI_MSG.ルール説明_税区分freee,
       history: []
     },
     formatYayoi: {
-      id: 'FMT_YAYOI', name: '出力形式 (弥生)', description: '弥生インポート形式の列定義',
+      id: 'FMT_YAYOI', name: UI_MSG.ルール名_出力形式弥生, description: UI_MSG.ルール説明_出力形式弥生,
       history: []
     },
     formatMF: {
-      id: 'FMT_MF', name: '出力形式 (MF)', description: 'MFインポート形式の列定義',
+      id: 'FMT_MF', name: UI_MSG.ルール名_出力形式MF, description: UI_MSG.ルール説明_出力形式MF,
       history: []
     },
     formatFreee: {
-      id: 'FMT_FREEE', name: '出力形式 (freee)', description: 'freeeインポート形式の列定義',
+      id: 'FMT_FREEE', name: UI_MSG.ルール名_出力形式freee, description: UI_MSG.ルール説明_出力形式freee,
       history: []
     }
   }

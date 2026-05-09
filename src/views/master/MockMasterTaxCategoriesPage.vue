@@ -282,7 +282,7 @@ async function promoteToMfChecked() {
     return row?.isCustom;
   });
   if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム税区分のみMF公式, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム税区分をMF公式に変更しますか？` });
+  const ok = await modal.confirm({ title: `${customIds.length}${UI_MSG.税区分MF公式変更}` });
   if (!ok) return;
   customIds.forEach(id => {
     const row = allTaxRows.find(r => r.id === id);
@@ -297,7 +297,7 @@ async function demoteFromMfChecked() {
     return row && !row.isCustom;
   });
   if (!officialIds.length) { await modal.notify({ title: UI_MSG.MF公式税区分のみMF非公式, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${officialIds.length}件の税区分をMF非公式に変更しますか？`, message: 'MFインポート時に項目の紐付けが必要になる可能性があります。', variant: 'danger' });
+  const ok = await modal.confirm({ title: `${officialIds.length}${UI_MSG.税区分MF非公式変更}`, message: UI_MSG.MF非公式警告, variant: 'danger' });
   if (!ok) return;
   officialIds.forEach(id => {
     const row = allTaxRows.find(r => r.id === id);
@@ -323,7 +323,7 @@ async function deleteChecked() {
     return row?.isCustom;
   });
   if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム税区分のみ, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}件のカスタム税区分を削除しますか？`, message: UI_MSG.復元不可, variant: 'danger' });
+  const ok = await modal.confirm({ title: `${customIds.length}${UI_MSG.税区分削除確認}`, message: UI_MSG.復元不可, variant: 'danger' });
   if (!ok) return;
   customIds.forEach(id => {
     const idx = allTaxRows.findIndex(r => r.id === id);
@@ -337,7 +337,7 @@ async function deleteChecked() {
 let copyCounter = getInitialCopyCounter(allTaxRows);
 async function copyChecked() {
   if (!checkedIds.value.length) return;
-  const ok = await modal.confirm({ title: `${checkedIds.value.length}件の税区分をコピーしますか？` });
+  const ok = await modal.confirm({ title: `${checkedIds.value.length}${UI_MSG.税区分コピー確認}` });
   if (!ok) return;
   const ids = [...checkedIds.value];
   ids.reverse().forEach(id => {
@@ -348,8 +348,8 @@ async function copyChecked() {
     copyCounter++;
     const copy: TaxCategory = {
       id: `${src.id}_COPY_${copyCounter}`,
-      name: `${src.name}（コピー）`,
-      shortName: `${src.shortName}（コピー）`,
+      name: `${src.name}${UI_MSG.コピー接尾}`,
+      shortName: `${src.shortName}${UI_MSG.コピー接尾}`,
       direction: src.direction,
       qualified: src.qualified,
       aiSelectable: src.aiSelectable,
@@ -449,7 +449,7 @@ function commitEdit(row: TaxCategory, field: EditableField) {
       break;
   }
   const txFieldLabels = TAX_CATEGORY_FIELD_LABELS;
-  markDirty(`税区分の${txFieldLabels[field] ?? field}を変更`);
+  markDirty(`${UI_MSG.税区分変更}${txFieldLabels[field] ?? field}${UI_MSG.を変更}`);
   cancelEdit();
 }
 

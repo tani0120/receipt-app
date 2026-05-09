@@ -128,9 +128,9 @@ async function loadHistory() {
     } else {
       // フォールバック：サンプル履歴（日付はtoMfCsvDateで統一）
       historyData.value = [
-        { id: 'h01', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307',   count: 259, status: '出力済' },
-        { id: 'h02', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_2', count: 315, status: '出力済' },
-        { id: 'h03', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_3', count: 506, status: '出力済' },
+        { id: 'h01', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307',   count: 259, status: UI_MSG.出力済 },
+        { id: 'h02', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_2', count: 315, status: UI_MSG.出力済 },
+        { id: 'h03', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_3', count: 506, status: UI_MSG.出力済 },
       ];
     }
   } catch {

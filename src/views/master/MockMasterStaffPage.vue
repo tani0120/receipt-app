@@ -369,7 +369,7 @@ const commitInlineEdit = () => {
   updateStaff(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Staff>);
   const fieldLabels = STAFF_FIELD_LABELS;
   const label = fieldLabels[inlineEditField.value] ?? inlineEditField.value;
-  markDirty(`${label}を変更`);
+  markDirty(`${label}${UI_MSG.を変更}`);
   markClean();
   cancelInlineEdit();
   refreshList();
@@ -446,13 +446,13 @@ const saveStaff = async () => {
   };
   if (panelMode.value === 'add') {
     addStaff(data);
-    await modal.notify({ title: `「${data.name}」を追加しました`, variant: 'success' });
+    await modal.notify({ title: `「${data.name}」${UI_MSG.を追加しました}`, variant: 'success' });
   } else {
     updateStaff(data.uuid, data);
-    await modal.notify({ title: `「${data.name}」を更新しました`, variant: 'success' });
+    await modal.notify({ title: `「${data.name}」${UI_MSG.を更新しました}`, variant: 'success' });
   }
   closePanel();
-  markDirty(panelMode.value === 'add' ? `「${data.name}」を追加` : `「${data.name}」を更新`);
+  markDirty(panelMode.value === 'add' ? `「${data.name}」${UI_MSG.を追加}` : `「${data.name}」${UI_MSG.を更新}`);
   markClean();
   refreshList();
 };
@@ -460,8 +460,8 @@ const saveStaff = async () => {
 // --- 停止・復元 ---
 const confirmDeactivate = async () => {
   const ok = await modal.confirm({
-    title: `「${panelForm.name}」を停止しますか？`,
-    message: 'スタッフデータは保持されます。再開も可能です。',
+    title: `「${panelForm.name}」${UI_MSG.停止確認}`,
+    message: UI_MSG.スタッフ停止補足,
     variant: 'danger',
     confirmLabel: UI_MSG.停止する,
     cancelLabel: UI_MSG.キャンセル,

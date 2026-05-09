@@ -101,7 +101,7 @@
                 <td class="td-tax">{{ firstCredit(rule)?.taxCategory || '—' }}</td>
                 <td class="td-status" :rowspan="entryPairCount(rule)">
                   <button class="status-toggle" :class="rule.isActive ? 'status-toggle--active' : 'status-toggle--inactive'"
-                    @click.stop="toggleActive(rule.id)">{{ rule.isActive ? '有効' : '無効' }}</button>
+                    @click.stop="toggleActive(rule.id)">{{ rule.isActive ? UI_MSG.有効 : UI_MSG.無効 }}</button>
                 </td>
                 <td class="td-hit" :rowspan="entryPairCount(rule)"><span class="hit-count">{{ rule.hitCount }}</span></td>
                 <td class="td-gen" :rowspan="entryPairCount(rule)">
@@ -414,7 +414,7 @@ function sourceCategoryLabel(cat: string | null): string {
 function formatAmountCondition(rule: LearningRule): string {
   const { amountMin, amountMax } = rule
   if (amountMin == null && amountMax == null) return '—'
-  if (amountMin != null && amountMax != null && amountMin === amountMax) return `${amountMin.toLocaleString()}（同額）`
+  if (amountMin != null && amountMax != null && amountMin === amountMax) return `${amountMin.toLocaleString()}${UI_MSG.同額}`
   if (amountMin != null && amountMax != null) return `${amountMin.toLocaleString()}〜${amountMax.toLocaleString()}`
   if (amountMin != null) return `≥${amountMin.toLocaleString()}`
   if (amountMax != null) return `≤${amountMax.toLocaleString()}`
@@ -515,7 +515,7 @@ async function saveModal(mode: 'rule' | 'all') {
     if (pair.debit.account.trim()) { pair.debit.displayOrder = order++; entries.push({ ...pair.debit }) }
     if (pair.credit.account.trim()) { pair.credit.displayOrder = order++; entries.push({ ...pair.credit }) }
   }
-  if (entries.length === 0) { alert('少なくとも1つの勘定科目を入力してください'); return }
+  if (entries.length === 0) { alert(UI_MSG.科目入力必須); return }
   modalRule.value.entries = entries
   modalRule.value.updatedAt = new Date().toISOString()
 
@@ -553,7 +553,7 @@ async function saveModal(mode: 'rule' | 'all') {
       const idx = rules.value.findIndex(r => r.id === modalOriginalId.value)
       if (idx !== -1) rules.value[idx] = { ...modalRule.value!, entries: modalRule.value!.entries.map(e => ({ ...e })) }
     }
-    if (mode === 'all') alert('今期仕訳に一括適用しました（モック）')
+    if (mode === 'all') alert(UI_MSG.一括適用完了)
     closeModal()
   } catch (err) {
     console.error('[LearningPage] 保存API通信失敗:', err)
@@ -572,11 +572,11 @@ async function handleDeleteModal() {
       closeModal()
     } else {
       console.error('[LearningPage] ルール削除失敗:', await res.text())
-      alert('ルールの削除に失敗しました')
+      alert(UI_MSG.ルール削除失敗)
     }
   } catch (err) {
     console.error('[LearningPage] 削除API通信失敗:', err)
-    alert('ルールの削除に失敗しました')
+    alert(UI_MSG.ルール削除失敗)
   }
 }
 
