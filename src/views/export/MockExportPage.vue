@@ -281,6 +281,7 @@ import { syncWarningLabelsCore } from "@/utils/journalWarningSync";
 import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { useCurrentUser } from "@/composables/useCurrentUser";
 import { UI_MSG } from '@/constants/uiMessages';
+import { exportColumns } from '@/shared/journalColumns';
 
 const route = useRoute();
 const { currentStaffId } = useCurrentUser();
@@ -453,28 +454,9 @@ const cancelDownload = () => {
 
 // --- テーブルカラム定義 ---
 // 警告ラベルはexportMfCsv.tsのEXCLUDE_LABELSで一元管理
+// 列定義はjournalColumns.tsのexportColumnsに集約
 
-interface Column {
-  key: string;
-  label: string;
-  width: string;
-  align: string;
-}
-
-const sortableColumns: Column[] = [
-  { key: "qualified", label: "適格", width: "w-[30px]", align: "text-center" },
-  { key: "date", label: "日付", width: "w-[70px]", align: "text-center" },
-  { key: "description", label: "摘要", width: "min-w-[180px]", align: "text-left" },
-  { key: "debitAccount", label: "借方勘定科目", width: "w-[100px]", align: "text-center" },
-  { key: "debitSub", label: "借方補助科目", width: "w-[80px]", align: "text-center" },
-  { key: "debitTax", label: "借方税区分", width: "w-[80px]", align: "text-center" },
-  { key: "debitAmount", label: "借方金額", width: "w-[80px]", align: "text-right" },
-  { key: "creditAccount", label: "貸方勘定科目", width: "w-[100px]", align: "text-center" },
-  { key: "creditSub", label: "貸方補助科目", width: "w-[80px]", align: "text-center" },
-  { key: "creditTax", label: "貸方税区分", width: "w-[80px]", align: "text-center" },
-  { key: "creditAmount", label: "貸方金額", width: "w-[80px]", align: "text-right" },
-  { key: "importDate", label: "取込日", width: "w-[70px]", align: "text-center" },
-];
+const sortableColumns = exportColumns;
 
 // --- ソート ---
 const sortKey = ref<string | null>(null);

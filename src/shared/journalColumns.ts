@@ -68,3 +68,39 @@ export function getDefaultColumnWidths(): Record<string, number> {
   }
   return map
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CSV出力画面用列定義（ExportPage / ExportDetailPage 共通）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** CSV出力テーブルの列定義型 */
+export interface ExportColumn {
+  key: string
+  label: string
+  width: string
+  align: string
+}
+
+/**
+ * CSV出力テーブルの列定義
+ *
+ * 使用箇所:
+ *   - MockExportPage.vue（sortableColumns）
+ *   - MockExportDetailPage.vue（columns）
+ *
+ * Supabase移行時にexport_column_defsテーブルへ投入するデータソース。
+ */
+export const exportColumns: ExportColumn[] = [
+  { key: 'qualified',     label: '適格',         width: 'w-[30px]',      align: 'text-center' },
+  { key: 'date',          label: '日付',         width: 'w-[70px]',      align: 'text-center' },
+  { key: 'description',   label: '摘要',         width: 'min-w-[180px]', align: 'text-left' },
+  { key: 'debitAccount',  label: '借方勘定科目', width: 'w-[100px]',     align: 'text-center' },
+  { key: 'debitSub',      label: '借方補助科目', width: 'w-[80px]',      align: 'text-center' },
+  { key: 'debitTax',      label: '借方税区分',   width: 'w-[80px]',      align: 'text-center' },
+  { key: 'debitAmount',   label: '借方金額',     width: 'w-[80px]',      align: 'text-right' },
+  { key: 'creditAccount', label: '貸方勘定科目', width: 'w-[100px]',     align: 'text-center' },
+  { key: 'creditSub',     label: '貸方補助科目', width: 'w-[80px]',      align: 'text-center' },
+  { key: 'creditTax',     label: '貸方税区分',   width: 'w-[80px]',      align: 'text-center' },
+  { key: 'creditAmount',  label: '貸方金額',     width: 'w-[80px]',      align: 'text-right' },
+  { key: 'importDate',    label: '取込日',       width: 'w-[70px]',      align: 'text-center' },
+]
