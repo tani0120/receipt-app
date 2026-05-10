@@ -7,9 +7,10 @@
     <!-- ヘッダー2行目: アクション -->
     <div class="ce-header">
       <div class="ce-header-left">
-        <!-- レイアウト管理モード -->
         <template v-if="isLayoutMode">
           <button class="ce-btn ce-btn-back" @click="exitLayoutMode"><i class="fa-solid fa-arrow-left"></i> 一覧に戻る</button>
+          <button class="ce-btn ce-btn-sm ce-btn-undo" :disabled="!layout.canUndo.value" @click="layout.undo()" title="元に戻す"><i class="fa-solid fa-rotate-left"></i></button>
+          <button class="ce-btn ce-btn-sm ce-btn-redo" :disabled="!layout.canRedo.value" @click="layout.redo()" title="やり直す"><i class="fa-solid fa-rotate-right"></i></button>
         </template>
         <!-- 閲覧モード -->
         <template v-else-if="!isEditing">
@@ -26,17 +27,9 @@
           <!-- レイアウト管理モード: 全社共通の標準フォーマット操作のみ -->
           <template v-if="isLayoutMode && layout.isLayoutEditing.value && isAdmin">
             <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-save ce-btn-sm" @click="layout.saveLayout(currentUserName ?? UI_MSG.不明)"><i class="fa-solid fa-save"></i> レイアウト保存</button>
-            <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">リセット</button>
+            <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-sm ce-btn-layout-cancel" @click="cancelLayoutEditing"><i class="fa-solid fa-xmark"></i> レイアウトキャンセル</button>
+            <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">初期化</button>
             <button class="ce-btn ce-btn-sm ce-btn-custom" @click="showCustomFieldModal = true"><i class="fa-solid fa-puzzle-piece"></i> フィールド管理</button>
-            <!-- バージョン管理 -->
-            <div class="ce-version-bar" v-if="layout.layoutVersions.value.length">
-              <select class="ce-version-select" :value="layout.currentVersionLabel.value" @change="layout.switchVersion(($event.target as HTMLSelectElement).value)">
-                <option value="">-- バージョン選択 --</option>
-                <option v-for="v in layout.layoutVersions.value" :key="v.versionLabel" :value="v.versionLabel">{{ v.versionLabel }}{{ v.isDefault ? ' ★' : '' }}</option>
-              </select>
-              <button v-if="layout.currentVersionLabel.value" class="ce-btn ce-btn-sm ce-btn-default-ver" @click="layout.setDefaultVersion(layout.currentVersionLabel.value)" title="デフォルトに設定">★</button>
-              <button v-if="layout.currentVersionLabel.value" class="ce-btn ce-btn-sm ce-btn-delete-ver" @click="layout.deleteVersion(layout.currentVersionLabel.value)" title="バージョン削除">🗑</button>
-            </div>
           </template>
           <!-- 個別顧問先モード: 個別の会社用操作ボタン -->
           <template v-else>
@@ -54,11 +47,16 @@
         :visible="showCustomFieldModal"
         :custom-defs="customFields.customDefs.value"
         :section-keys="sectionKeys"
-        :existing-fields="existingFieldInfos"
+        :layout-fields="layout.fields.value"
+        :field-rows="layout.fieldRows.value"
+        :default-field-keys="defaultFieldKeys"
         :label-overrides="layout.labelOverrides.value"
         :hidden-fields="layout.hiddenFields.value"
+        :deleted-fields="layout.deletedFields.value"
+        :field-options="layout.fieldOptions.value"
         @update:visible="showCustomFieldModal = $event"
         @save="handleSaveFieldManagement"
+        @focus-field="scrollToField"
       />
       <AddFieldModal
         :visible="showAddFieldModal"
@@ -81,6 +79,8 @@
           :resolve-options="resolveOptions"
           :staff-list="activeStaffList"
           :drag-group="isLayoutMode ? 'clientLayout' : undefined"
+          :selected-field-key="selectedPaletteField?.key"
+          :field-rows="layout.getFieldRows.value"
           @update:order="(keys: string[]) => layout.updateFieldOrderFlat(keys)"
           @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)"
           @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)"
@@ -89,9 +89,14 @@
           @add-field="openAddFieldModal"
           @update:headingSize="(key: string, size: number) => layout.updateHeadingSize(key, size)"
           @update:headingBg="(key: string, color: string) => layout.updateHeadingBg(key, color)"
+          @update:headingColor="(key: string, color: string) => layout.updateHeadingColor(key, color)"
           @update:spacerHeight="(key: string, height: number) => layout.updateSpacerHeight(key, height)"
+          @update:fieldHeight="(key: string, height: number) => layout.updateFieldHeight(key, height)"
           @update:fieldValue="(key: string, value: unknown) => { (form as Record<string, unknown>)[key] = value }"
           @field-added="(field: import('@/types/fieldLayout').FieldDef) => layout.addDynamicField(field)"
+          @select-field="(field: import('@/types/fieldLayout').FieldDef) => selectedPaletteField = field"
+          @update:field-options="(key: string, opts: import('@/types/fieldLayout').FieldOption[]) => layout.updateFieldOptions(key, opts)"
+          @update:rows="(rows: string[][]) => layout.updateAllRows(rows)"
         >
           <!-- status: 契約状況の表示 -->
           <template v-if="!isLayoutMode" #status>
@@ -219,7 +224,12 @@
           drag-group="clientLayout"
           :all-fields="layout.fields.value"
           :hidden-keys="layout.hiddenFields.value"
+          :selected-field="selectedPaletteField"
+          :field-options="layout.fieldOptions.value"
           @restore-field="(key: string) => layout.toggleFieldVisibility(key, true)"
+          @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)"
+          @delete-field="(key: string) => layout.removeDynamicField(key)"
+          @update:field-options="(key: string, opts: import('@/types/fieldLayout').FieldOption[]) => layout.updateFieldOptions(key, opts)"
         />
       </aside>
       <!-- 右カラム: コメント（レイアウト管理モード時は非表示） -->
@@ -309,6 +319,9 @@ layout.loadLayout();
 /** フラットフィールド一覧（テンプレートで使用） */
 const flatFields = layout.getAllFieldsFlat;
 
+/** パレットで選択中のフィールド（選択肢編集用） */
+const selectedPaletteField = ref<import('@/types/fieldLayout').FieldDef | null>(null);
+
 /** 選択肢文字列→配列を解決するマップ */
 const optionsMap: Record<string, readonly import('@/types/fieldLayout').FieldOption[]> = {
   TYPE_OPTIONS,
@@ -358,15 +371,18 @@ const openAddFieldModal = () => {
   showAddFieldModal.value = true;
 };
 
-/** 既存フィールド情報一覧（CustomFieldModalに渡す） */
-const existingFieldInfos = computed(() =>
-  layout.defaultFields.map(f => ({
-    key: f.key,
-    originalLabel: layout.defaultFields.find(df => df.key === f.key)?.label || f.label,
-    section: f.section,
-    subSection: f.subSection,
-  }))
-);
+/** 初期フィールドのキー一覧（削除不可判定用） */
+const defaultFieldKeys = layout.defaultFields.map(f => f.key);
+
+/** フィールド管理からのフォーカス：該当フィールドへスクロール＋ハイライト */
+const scrollToField = (key: string) => {
+  const el = document.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('dfg-flash');
+    setTimeout(() => el.classList.remove('dfg-flash'), 1500);
+  }
+};
 
 /** フィールド追加ハンドラ */
 const handleAddField = (payload: { label: string; component: import('@/types/fieldLayout').FieldComponent; section: string }) => {
@@ -396,39 +412,89 @@ const handleSaveFieldManagement = (payload: {
   customDefs: CustomFieldDef[];
   labelOverrides: Record<string, string>;
   hiddenFields: string[];
+  deletedFields: string[];
+  fieldOptions: Record<string, import('@/types/fieldLayout').FieldOption[]>;
 }) => {
-  customFields.saveCustomDefs(payload.customDefs);
-  const existingCustomKeys = customFields.customDefs.value.map(d => d.key);
-  for (const key of existingCustomKeys) {
-    layout.removeDynamicField(key);
+  // カスタムフィールドの差分管理（fieldRows順序を壊さない）
+  const oldKeys = new Set(customFields.customDefs.value.map(d => d.key));
+  const newKeys = new Set(payload.customDefs.map(d => d.key));
+
+  // 削除されたカスタムフィールドを除去
+  for (const key of oldKeys) {
+    if (!newKeys.has(key)) {
+      layout.removeDynamicField(key);
+    }
   }
+
+  // 新規追加 or 既存更新
   for (const def of payload.customDefs) {
-    layout.addDynamicField({
-      key: def.key,
-      label: def.label,
-      section: def.section,
-      component: def.component,
-      widthPercent: def.widthPercent,
-      order: def.order,
-    });
+    const existing = layout.fields.value.find(f => f.key === def.key);
+    if (existing) {
+      // 既存: ラベル・セクション等を更新（fieldRows順序は維持）
+      existing.label = def.label;
+      existing.section = def.section;
+      existing.component = def.component;
+    } else {
+      // 新規: 追加（addDynamicFieldがfieldRowsにも追加）
+      layout.addDynamicField({
+        key: def.key,
+        label: def.label,
+        section: def.section,
+        component: def.component,
+        widthPercent: def.widthPercent,
+        order: def.order,
+      });
+    }
   }
+  customFields.saveCustomDefs(payload.customDefs);
+
+  // ラベル上書きの同期
   for (const key of Object.keys(layout.labelOverrides.value)) {
     layout.removeLabelOverride(key);
   }
   for (const [key, newLabel] of Object.entries(payload.labelOverrides)) {
     layout.updateLabelOverride(key, newLabel);
   }
+
+  // 非表示の同期
   for (const key of [...layout.hiddenFields.value]) {
     layout.toggleFieldVisibility(key, true);
   }
   for (const key of payload.hiddenFields) {
     layout.toggleFieldVisibility(key, false);
   }
+
+  // 論理削除の同期
+  const currentDeleted = new Set(layout.deletedFields.value);
+  const newDeleted = new Set(payload.deletedFields);
+  for (const key of payload.deletedFields) {
+    if (!currentDeleted.has(key)) {
+      layout.softDeleteField(key);
+    }
+  }
+  for (const key of [...layout.deletedFields.value]) {
+    if (!newDeleted.has(key)) {
+      layout.restoreDeletedField(key);
+    }
+  }
+
+  // 選択肢の同期
+  for (const [key, opts] of Object.entries(payload.fieldOptions)) {
+    if (opts.length > 0) {
+      layout.updateFieldOptions(key, opts);
+    }
+  }
 };
 
-/** レイアウト管理モードから一覧に戻る */
 const exitLayoutMode = () => {
-  layout.isLayoutEditing.value = false;
+  // 未保存の変更がある場合のみスナップショットに巻き戻す
+  // 保存済み（dirty=false）の場合は現在の状態（=保存後の状態）を維持
+  if (layout.isLayoutDirty.value) {
+    layout.cancelLayoutEditing();
+  } else {
+    // 保存済み: 編集状態フラグのみ解除（スナップショット復元しない）
+    layout.isLayoutEditing.value = false;
+  }
   router.push('/master/clients');
 };
 
@@ -437,11 +503,16 @@ const isLayoutMode = computed(() => route.query.mode === 'layout');
 // レイアウト管理モードで遷移された場合のみレイアウト編集をON、それ以外は常にOFF
 watch(isLayoutMode, (v) => {
   if (v && isAdmin) {
-    layout.isLayoutEditing.value = true;
+    layout.startLayoutEditing();
   } else {
     layout.isLayoutEditing.value = false;
   }
 }, { immediate: true });
+
+/** レイアウト編集キャンセル */
+const cancelLayoutEditing = () => {
+  layout.cancelLayoutEditing();
+};
 
 /** 新規 or 編集判定 */
 const clientId = computed(() => route.params.clientId as string | undefined);
@@ -809,14 +880,12 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 .ce-btn-save:hover { background: #2563eb; }
 .ce-btn-cancel { background: #f1f5f9; color: #475569; }
 .ce-btn-cancel:hover { background: #e2e8f0; }
+.ce-btn-layout-cancel { background: #ef4444; color: #fff; }
+.ce-btn-layout-cancel:hover { background: #dc2626; }
+.ce-btn-undo, .ce-btn-redo { background: #f1f5f9; color: #475569; min-width: 32px; padding: 4px 8px; }
+.ce-btn-undo:hover, .ce-btn-redo:hover { background: #e2e8f0; }
+.ce-btn-undo:disabled, .ce-btn-redo:disabled { opacity: 0.35; cursor: not-allowed; }
 
-/* バージョン管理バー */
-.ce-version-bar { display: flex; align-items: center; gap: 4px; margin-left: 8px; }
-.ce-version-select { padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; background: #fff; }
-.ce-btn-default-ver { background: #fef3c7; color: #92400e; font-size: 14px; }
-.ce-btn-default-ver:hover { background: #fcd34d; }
-.ce-btn-delete-ver { background: #fee2e2; color: #991b1b; font-size: 14px; }
-.ce-btn-delete-ver:hover { background: #fca5a5; }
 .ce-link-url { color: #2563eb; text-decoration: underline; word-break: break-all; }
 .ce-btn-custom { background: #8b5cf6; color: #fff; }
 .ce-btn-custom:hover { background: #7c3aed; }

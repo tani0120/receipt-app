@@ -45,6 +45,8 @@ export interface FieldDef {
   component: FieldComponent;
   /** フィールドの横幅（%単位、0～100。デフォルトは20％） */
   widthPercent: number;
+  /** フィールドの高さ（px単位、ドラッグで変更可能） */
+  fieldHeight?: number;
   /** グリッド内の占有行数（デフォルト1） */
   rowSpan?: number;
   /** 表示順序（セクション内） */
@@ -84,8 +86,14 @@ export interface FieldDef {
   headingSize?: number;
   /** タイトルフィールドの背景色（CSS色値）。デフォルト '#4a8dc9' */
   headingBg?: string;
+  /** タイトルフィールドの文字色（CSS色値）。デフォルト '#fff' */
+  headingColor?: string;
   /** スペーサーフィールドの高さ（px）。デフォルト 20 */
   spacerHeight?: number;
+  /** 削除可能か（false=初期フィールドまたはデータ参照あり → 削除不可） */
+  deletable?: boolean;
+  /** 論理削除済みフラグ（trueの場合レイアウトから除外されるがデータは保持） */
+  isDeleted?: boolean;
 }
 
 /** セクション定義 */
@@ -112,6 +120,8 @@ export interface SavedFieldLayout {
   fieldRowSpans?: Record<string, number>;  // fieldKey -> rowSpan
   /** フィールドごとの行区切り */
   fieldLineBreaks?: Record<string, boolean>; // fieldKey -> lineBreakAfter
+  /** フィールドごとの高さ（px） */
+  fieldHeights?: Record<string, number>;    // fieldKey -> fieldHeight（px）
   /** セクションごとの高さ（px） */
   sectionHeights?: Record<string, number>; // sectionKey -> height
   /** セクション順序 */
@@ -126,8 +136,14 @@ export interface SavedFieldLayout {
   isDefault?: boolean;
   /** ラベル上書き（既存フィールドの表示名変更） */
   labelOverrides?: Record<string, string>;  // fieldKey -> 新ラベル
+  /** カスタムフィールドの選択肢（select用） */
+  fieldOptions?: Record<string, FieldOption[]>;  // fieldKey -> 選択肢配列
   /** 非表示フィールド一覧 */
   hiddenFields?: string[];  // fieldKey[]
+  /** 行ベースレイアウト（各行のフィールドキー配列） */
+  fieldRows?: string[][];  // row[] -> fieldKey[]
+  /** 論理削除済みフィールドキー一覧 */
+  deletedFields?: string[];  // fieldKey[]
 }
 
 /** レイアウトバージョン一覧の1件 */
@@ -153,3 +169,26 @@ export const FIELD_COMPONENT_OPTIONS: readonly { value: FieldComponent; label: s
   { value: 'heading', label: 'タイトル' },
   { value: 'spacer', label: 'スペーサー' },
 ] as const;
+
+/** 全コンポーネント型→日本語ラベルの変換マップ */
+export const COMPONENT_LABEL_MAP: Record<FieldComponent, string> = {
+  text: 'テキスト',
+  number: '数値',
+  date: '日付',
+  url: 'URL',
+  email: 'メール',
+  select: '選択',
+  checkbox: 'チェック',
+  textarea: 'テキストエリア',
+  amount: '金額',
+  readonly: '読取専用',
+  computed: '自動算出',
+  link: 'リンク',
+  urlCopy: 'URLコピー',
+  dateGroup: '日付グループ',
+  staffSelect: 'スタッフ選択',
+  heading: 'タイトル',
+  spacer: 'スペーサー',
+  contactTable: '連絡先テーブル',
+  custom: 'カスタム',
+};

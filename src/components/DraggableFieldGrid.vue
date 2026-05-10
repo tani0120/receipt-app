@@ -1,229 +1,111 @@
 <template>
   <div
-    ref="wrapperRef"
     class="dfg-wrapper"
     :style="wrapperStyle"
   >
     <div ref="containerRef" class="dfg-container">
-      <VueDraggable
-        v-model="localFields"
-        :disabled="!isLayoutEditing"
-        :animation="200"
-        :group="props.dragGroup ? { name: props.dragGroup, pull: true, put: true } : undefined"
-        ghost-class="dfg-ghost"
-        drag-class="dfg-drag"
-        handle=".dfg-handle"
-        class="dfg-drag-area"
-        @end="onDragEnd"
-        @add="onDragAdd"
-      >
-        <template v-for="(field, idx) in localFields" :key="field.key">
-          <!-- フィールド本体 -->
-          <div
-            class="dfg-item"
-            :style="itemStyle(field)"
+      <!-- 行ベースレイアウト -->
+      <div v-if="localRows.length" class="dfg-rows">
+        <div v-for="(row, rowIdx) in localRows" :key="'row-' + rowIdx" class="dfg-row">
+          <VueDraggable
+            :model-value="row"
+            @update:model-value="(val: FieldDef[]) => onRowModelUpdate(rowIdx, val)"
+            :disabled="!isLayoutEditing"
+            :animation="200"
+            :group="getRowDragGroup(row)"
+            ghost-class="dfg-ghost"
+            drag-class="dfg-drag"
+            class="dfg-row-drag-area"
+            @end="onRowDragEnd(rowIdx)"
+            @add="onRowDragAdd(rowIdx, $event)"
           >
-            <!-- ドラッグハンドル（レイアウト編集モード時のみ表示） -->
-            <div v-if="isLayoutEditing" class="dfg-handle" title="ドラッグで移動">
-              <i class="fa-solid fa-grip-vertical"></i>
-            </div>
-
-            <!-- ===== heading（タイトルフィールド）===== -->
-            <template v-if="field.component === 'heading'">
+            <template v-for="field in row" :key="field.key">
               <div
-                class="dfg-heading"
-                :style="{
-                  fontSize: (field.headingSize || 14) + 'px',
-                  background: field.headingBg || '#4a8dc9',
-                }"
+                class="dfg-item"
+                :class="{ 'dfg-item-selected': isLayoutEditing && selectedFieldKey === field.key, 'dfg-draggable': isLayoutEditing }"
+                :style="itemStyle(field)"
+                :data-field-key="field.key"
+                @click="isLayoutEditing ? emit('select-field', field) : undefined"
               >
-                <input
-                  v-if="isLayoutEditing"
-                  type="text"
-                  :value="field.label"
-                  class="dfg-heading-input"
-                  :style="{ fontSize: (field.headingSize || 14) + 'px' }"
-                  @blur="onLabelBlur(field.key, $event)"
-                  @keydown.enter="($event.target as HTMLInputElement).blur()"
-                >
-                <span v-else>{{ field.label }}</span>
-              </div>
-              <!-- レイアウト編集時: 文字サイズ・背景色の設定 -->
-              <div v-if="isLayoutEditing" class="dfg-heading-settings">
-                <label>サイズ:
-                  <select :value="field.headingSize || 14" @change="emit('update:headingSize', field.key, Number(($event.target as HTMLSelectElement).value))">
-                    <option :value="12">12px</option>
-                    <option :value="13">13px</option>
-                    <option :value="14">14px</option>
-                    <option :value="16">16px</option>
-                    <option :value="18">18px</option>
-                  </select>
-                </label>
-                <label>背景:
-                  <input type="color" :value="field.headingBg || '#4a8dc9'" @input="emit('update:headingBg', field.key, ($event.target as HTMLInputElement).value)">
-                </label>
-              </div>
-            </template>
-
-            <!-- ===== spacer（スペーサーフィールド）===== -->
-            <template v-else-if="field.component === 'spacer'">
-              <div
-                class="dfg-spacer"
-                :style="{ height: (field.spacerHeight || 20) + 'px' }"
-              >
-                <span v-if="isLayoutEditing" class="dfg-spacer-label">スペーサー {{ field.spacerHeight || 20 }}px</span>
-              </div>
-              <!-- レイアウト編集時: 高さ調整 -->
-              <div v-if="isLayoutEditing" class="dfg-spacer-settings">
-                <label>高さ:
-                  <input type="range" min="10" max="60" :value="field.spacerHeight || 20" @input="emit('update:spacerHeight', field.key, Number(($event.target as HTMLInputElement).value))">
-                  <span>{{ field.spacerHeight || 20 }}px</span>
-                </label>
-              </div>
-            </template>
-
-            <!-- ===== 通常フィールド ===== -->
-            <template v-else>
-            <!-- ラベル（DFGが常に管理） -->
-            <div class="dfg-label-area">
-              <input
-                v-if="isLayoutEditing"
-                type="text"
-                :value="field.label"
-                class="dfg-label-input"
-                @blur="onLabelBlur(field.key, $event)"
-                @keydown.enter="($event.target as HTMLInputElement).blur()"
-              >
-              <label v-else class="dfg-label">{{ field.label }}</label>
-            </div>
-
-            <!-- フィールド本体（スロット or 自動レンダリング） -->
-            <div class="dfg-content">
-              <slot :name="field.key" :field="field">
-                <!-- デフォルトフォールバック: field.component に基づく自動レンダリング -->
-                <div v-if="formData" class="ce-field" :class="field.cssClass">
-                  <!-- readonly -->
-                  <template v-if="field.component === 'readonly' || field.alwaysReadonly">
-                    <span class="ce-readonly" :class="field.cssClass">{{ getFieldDisplayValue(field) }}</span>
-                  </template>
-                  <!-- text -->
-                  <template v-else-if="field.component === 'text'">
-                    <input v-if="isEditing" type="text" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :placeholder="field.placeholder" :maxlength="field.maxLength">
-                    <span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span>
-                  </template>
-                  <!-- number -->
-                  <template v-else-if="field.component === 'number'">
-                    <input v-if="isEditing" type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :min="field.min">
-                    <span v-else class="ce-readonly">{{ getFieldValue(field) != null ? getFieldValue(field) + '名' : '—' }}</span>
-                  </template>
-                  <!-- date -->
-                  <template v-else-if="field.component === 'date'">
-                    <input v-if="isEditing" type="date" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input ce-w-sm">
-                    <span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span>
-                  </template>
-                  <!-- url -->
-                  <template v-else-if="field.component === 'url'">
-                    <input v-if="isEditing" type="url" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :placeholder="field.placeholder">
-                    <span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span>
-                  </template>
-                  <!-- email -->
-                  <template v-else-if="field.component === 'email'">
-                    <input v-if="isEditing" type="email" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :placeholder="field.placeholder">
-                    <span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span>
-                  </template>
-                  <!-- select -->
-                  <template v-else-if="field.component === 'select'">
-                    <template v-if="isEditing">
-                      <select :value="getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLSelectElement).value)" class="ce-select">
-                        <option v-for="o in getResolvedOptions(field)" :key="String(o.value)" :value="o.value">{{ o.label }}</option>
+                <!-- heading -->
+                <template v-if="field.component === 'heading'">
+                  <div class="dfg-heading" :style="{ fontSize: (field.headingSize || 14) + 'px', background: field.headingBg || '#4a8dc9', color: field.headingColor || '#fff' }">
+                    <input v-if="isLayoutEditing" type="text" :value="field.label" class="dfg-heading-input" :style="{ fontSize: (field.headingSize || 14) + 'px', color: field.headingColor || '#fff' }" @blur="onLabelBlur(field.key, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()">
+                    <span v-else>{{ field.label }}</span>
+                  </div>
+                  <div v-if="isLayoutEditing" class="dfg-heading-settings">
+                    <label>サイズ:
+                      <select :value="field.headingSize || 14" @change="emit('update:headingSize', field.key, Number(($event.target as HTMLSelectElement).value))">
+                        <option :value="12">12px</option><option :value="13">13px</option><option :value="14">14px</option><option :value="16">16px</option><option :value="18">18px</option>
                       </select>
-                    </template>
-                    <span v-else class="ce-readonly">{{ getSelectLabel(field) }}</span>
-                  </template>
-                  <!-- textarea -->
-                  <template v-else-if="field.component === 'textarea'">
-                    <textarea v-if="isEditing" :value="getFieldValue(field) as string" @input="setFieldValue(field, ($event.target as HTMLTextAreaElement).value)" class="ce-input ce-textarea" rows="3" :placeholder="field.placeholder"></textarea>
-                    <span v-else class="ce-readonly ce-pre-wrap">{{ getFieldDisplayValue(field) }}</span>
-                  </template>
-                  <!-- checkbox -->
-                  <template v-else-if="field.component === 'checkbox'">
-                    <template v-if="isEditing">
-                      <label class="ce-checkbox"><input type="checkbox" :checked="!!getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLInputElement).checked)"><span>{{ field.label }}</span></label>
-                    </template>
-                    <span v-else class="ce-readonly">{{ getFieldValue(field) ? 'あり' : 'なし' }}</span>
-                  </template>
-                  <!-- amount -->
-                  <template v-else-if="field.component === 'amount'">
-                    <template v-if="isEditing">
-                      <div class="ce-amount">
-                        <input type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input ce-w-sm" :min="field.min">
-                        <span>円</span>
+                    </label>
+                    <label>背景: <input type="color" :value="field.headingBg || '#4a8dc9'" @input="emit('update:headingBg', field.key, ($event.target as HTMLInputElement).value)"></label>
+                    <label>文字色: <input type="color" :value="field.headingColor || '#ffffff'" @input="emit('update:headingColor', field.key, ($event.target as HTMLInputElement).value)"></label>
+                  </div>
+                </template>
+                <!-- spacer -->
+                <template v-else-if="field.component === 'spacer'">
+                  <div class="dfg-spacer" :style="{ height: (field.spacerHeight || 20) + 'px' }">
+                    <span v-if="isLayoutEditing" class="dfg-spacer-label">スペーサー {{ field.spacerHeight || 20 }}px</span>
+                  </div>
+                  <div v-if="isLayoutEditing" class="dfg-spacer-settings">
+                    <label>高さ: <input type="range" min="10" max="60" :value="field.spacerHeight || 20" @input="emit('update:spacerHeight', field.key, Number(($event.target as HTMLInputElement).value))"> <span>{{ field.spacerHeight || 20 }}px</span></label>
+                  </div>
+                </template>
+                <!-- 通常フィールド -->
+                <template v-else>
+                  <div class="dfg-label-area">
+                    <input v-if="isLayoutEditing" type="text" :value="field.label" class="dfg-label-input" @blur="onLabelBlur(field.key, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()">
+                    <label v-else class="dfg-label">{{ field.label }}</label>
+                  </div>
+                  <div class="dfg-content">
+                    <slot :name="field.key" :field="field">
+                      <div v-if="formData" class="ce-field" :class="field.cssClass">
+                        <template v-if="field.component === 'readonly' || field.alwaysReadonly"><span class="ce-readonly" :class="field.cssClass">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'text'"><input v-if="isEditing" type="text" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :placeholder="field.placeholder" :maxlength="field.maxLength"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'number'"><input v-if="isEditing" type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :min="field.min"><span v-else class="ce-readonly">{{ getFieldValue(field) != null ? getFieldValue(field) + '名' : '—' }}</span></template>
+                        <template v-else-if="field.component === 'date'"><input v-if="isEditing" type="date" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input ce-w-sm"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'url'"><input v-if="isEditing" type="url" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :placeholder="field.placeholder"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'email'"><input v-if="isEditing" type="email" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :placeholder="field.placeholder"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'select'">
+                          <template v-if="isEditing"><select :value="getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLSelectElement).value)" class="ce-select"><option v-for="o in getResolvedOptions(field)" :key="String(o.value)" :value="o.value">{{ o.label }}</option></select></template>
+                          <span v-else class="ce-readonly">{{ getSelectLabel(field) }}</span>
+                        </template>
+                        <template v-else-if="field.component === 'textarea'"><textarea v-if="isEditing" :value="getFieldValue(field) as string" @input="setFieldValue(field, ($event.target as HTMLTextAreaElement).value)" class="ce-input ce-textarea" rows="3" :placeholder="field.placeholder"></textarea><span v-else class="ce-readonly ce-pre-wrap">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'checkbox'"><template v-if="isEditing"><label class="ce-checkbox"><input type="checkbox" :checked="!!getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLInputElement).checked)"><span>{{ field.label }}</span></label></template><span v-else class="ce-readonly">{{ getFieldValue(field) ? 'あり' : 'なし' }}</span></template>
+                        <template v-else-if="field.component === 'amount'"><template v-if="isEditing"><div class="ce-amount"><input type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input ce-w-sm" :min="field.min"><span>円</span></div></template><span v-else class="ce-readonly">{{ (getFieldValue(field) ?? 0).toLocaleString() }} 円</span></template>
+                        <template v-else-if="field.component === 'staffSelect'"><template v-if="isEditing"><select :value="getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLSelectElement).value)" class="ce-select"><option value="">{{ PLACEHOLDER_UNSET }}</option><option v-for="s in (staffList ?? [])" :key="s.uuid" :value="s.uuid">{{ s.name }}</option></select></template><span v-else class="ce-readonly">{{ getStaffLabel(field) }}</span></template>
+                        <template v-else><span class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
+                        <span v-if="field.hint && isEditing" class="ce-hint">{{ field.hint }}</span>
                       </div>
-                    </template>
-                    <span v-else class="ce-readonly">{{ (getFieldValue(field) ?? 0).toLocaleString() }} 円</span>
-                  </template>
-                  <!-- staffSelect -->
-                  <template v-else-if="field.component === 'staffSelect'">
-                    <template v-if="isEditing">
-                      <select :value="getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLSelectElement).value)" class="ce-select">
-                        <option value="">{{ PLACEHOLDER_UNSET }}</option>
-                        <option v-for="s in (staffList ?? [])" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
-                      </select>
-                    </template>
-                    <span v-else class="ce-readonly">{{ getStaffLabel(field) }}</span>
-                  </template>
-                  <!-- その他: フォールバック -->
-                  <template v-else>
-                    <span class="ce-readonly">{{ getFieldDisplayValue(field) }}</span>
-                  </template>
-                  <!-- ヒント表示 -->
-                  <span v-if="field.hint && isEditing" class="ce-hint">{{ field.hint }}</span>
-                </div>
-                <div v-else class="ce-field">
-                  <span class="ce-readonly">—</span>
-                </div>
-              </slot>
-            </div>
-            </template><!-- /通常フィールド -->
-
-            <!-- リサイズハンドル（レイアウト編集モード時のみ） -->
-            <div
-              v-if="isLayoutEditing"
-              class="dfg-resize"
-              :title="UI_MSG.ドラッグ横幅変更"
-              @mousedown="startWidthResize($event, idx)"
-            >
-              <i class="fa-solid fa-grip-lines-vertical"></i>
-            </div>
-
-            <button
-              v-if="isLayoutEditing"
-              class="dfg-linebreak-btn"
-              :class="{ active: field.lineBreakAfter }"
-              :title="field.lineBreakAfter ? UI_MSG.行区切り解除 : UI_MSG.この後で改行"
-              @click="toggleLineBreak(idx)"
-            >↵</button>
-
-            <!-- 非表示ボタン（レイアウト編集時） -->
-            <button
-              v-if="isLayoutEditing"
-              class="dfg-hide-btn"
-              :title="UI_MSG.フィールド非表示"
-              @click="emit('hide-field', field.key)"
-            >×</button>
-
-            <!-- 幅%表示（レイアウト編集時） -->
-            <span v-if="isLayoutEditing" class="dfg-width-label">{{ Math.round(field.widthPercent) }}%</span>
-          </div>
-
-          <!-- 行区切り: 100%幅の不可視ブロックで強制改行 -->
-          <div
-            v-if="field.lineBreakAfter"
-            :key="'break-' + field.key"
-            class="dfg-line-break"
-          ></div>
-        </template>
-      </VueDraggable>
+                      <div v-else class="ce-field"><span class="ce-readonly">—</span></div>
+                    </slot>
+                  </div>
+                  <!-- インライン選択肢編集 -->
+                  <div v-if="isLayoutEditing && field.component === 'select' && field.key.startsWith('custom_')" class="dfg-inline-options">
+                    <div v-for="(opt, oi) in getResolvedOptions(field)" :key="oi" class="dfg-inline-opt-row">
+                      <input type="text" :value="opt.label" class="dfg-inline-opt-input" @blur="onInlineOptionEdit(field.key, oi, ($event.target as HTMLInputElement).value)" @keydown.enter="($event.target as HTMLInputElement).blur()" />
+                      <button class="dfg-inline-opt-del" @click.stop="onInlineOptionRemove(field.key, oi)"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <button class="dfg-inline-opt-add" @click.stop="onInlineOptionAdd(field.key)"><i class="fa-solid fa-plus"></i> 選択肢追加</button>
+                  </div>
+                  <!-- チェックボックスラベル編集 -->
+                  <div v-if="isLayoutEditing && field.component === 'checkbox' && field.key.startsWith('custom_')" class="dfg-inline-options">
+                    <div class="dfg-inline-opt-row"><label style="font-size: 11px; color: #475569;">チェック項目名:</label></div>
+                    <div class="dfg-inline-opt-row"><input type="text" :value="field.label" class="dfg-inline-opt-input" @blur="emit('label-edit', field.key, ($event.target as HTMLInputElement).value)" @keydown.enter="($event.target as HTMLInputElement).blur()" /></div>
+                  </div>
+                </template>
+                <!-- 右端リサイズハンドル（横幅） -->
+                <div v-if="isLayoutEditing" class="dfg-resize dfg-resize-right" :title="UI_MSG.ドラッグ横幅変更" @mousedown.stop="startWidthResize($event, field.key)"></div>
+                <!-- 下端リサイズハンドル（高さ） -->
+                <div v-if="isLayoutEditing" class="dfg-resize dfg-resize-bottom" title="ドラッグで高さ変更" @mousedown.stop="startFieldHeightResize($event, field.key)"></div>
+                <!-- 非表示ボタン -->
+                <button v-if="isLayoutEditing" class="dfg-hide-btn" :title="UI_MSG.フィールド非表示" @click.stop="confirmHideField(field)">×</button>
+              </div>
+            </template>
+          </VueDraggable>
+        </div>
+      </div>
 
       <!-- ＋フィールド追加ボタン（レイアウト編集時） -->
       <button
@@ -235,16 +117,20 @@
       </button>
     </div>
 
-    <!-- セクション縦幅リサイズハンドル -->
-    <div
-      v-if="isLayoutEditing"
-      class="dfg-height-handle"
-      :title="UI_MSG.ドラッグ高さ変更"
-      @mousedown="startHeightResize"
-    >
-      <span class="dfg-height-handle-icon">⋯</span>
-    </div>
   </div>
+
+  <!-- 非表示確認モーダル -->
+  <Teleport to="body">
+    <div v-if="showHideConfirm" class="dfg-confirm-overlay" @click.self="cancelHide">
+      <div class="dfg-confirm-modal">
+        <p>「{{ pendingHideField?.label }}」を非表示にしますか？</p>
+        <div class="dfg-confirm-actions">
+          <button class="dfg-confirm-yes" @click="executeHide">はい</button>
+          <button class="dfg-confirm-no" @click="cancelHide">いいえ</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -271,6 +157,10 @@ const props = defineProps<{
   staffList?: { uuid: string; name: string }[];
   /** D&Dグループ名（FieldPaletteと共有） */
   dragGroup?: string;
+  /** 選択中フィールドのキー（レイアウト編集時のハイライト用） */
+  selectedFieldKey?: string;
+  /** 行ベースレイアウト（FieldDef[][] 行の配列） */
+  fieldRows?: FieldDef[][];
 }>();
 
 const emit = defineEmits<{
@@ -278,14 +168,19 @@ const emit = defineEmits<{
   (e: 'update:width', key: string, widthPercent: number): void;
   (e: 'update:lineBreak', key: string, value: boolean): void;
   (e: 'update:sectionHeight', height: number): void;
+  (e: 'update:fieldHeight', key: string, height: number): void;
   (e: 'hide-field', key: string): void;
   (e: 'label-edit', key: string, newLabel: string): void;
   (e: 'add-field'): void;
   (e: 'update:fieldValue', key: string, value: unknown): void;
   (e: 'update:headingSize', key: string, size: number): void;
   (e: 'update:headingBg', key: string, color: string): void;
+  (e: 'update:headingColor', key: string, color: string): void;
   (e: 'update:spacerHeight', key: string, height: number): void;
   (e: 'field-added', field: FieldDef): void;
+  (e: 'select-field', field: FieldDef): void;
+  (e: 'update:fieldOptions', key: string, options: FieldOption[]): void;
+  (e: 'update:rows', rows: string[][]): void;
 }>();
 
 /** フォームからフィールド値を取得 */
@@ -334,18 +229,56 @@ const getStaffLabel = (field: FieldDef): string => {
   return staff ? staff.name : UI_MSG.未設定;
 };
 
-const wrapperRef = ref<HTMLElement | null>(null);
 const containerRef = ref<HTMLElement | null>(null);
 
 /** ローカルフィールド（D&D用） */
 const localFields = ref<FieldDef[]>([...(props.fields ?? [])]);
 
-/** propsのfields変更を監視 */
-watch(() => props.fields, (nv) => {
-  localFields.value = [...(nv ?? [])];
-}, { deep: true });
+/** 行ベースローカルデータ（D&D用） */
+const localRows = ref<FieldDef[][]>(
+  props.fieldRows?.length
+    ? props.fieldRows.map(r => [...r])
+    : [[...(props.fields ?? [])]]
+);
 
-/** ラッパースタイル（セクション高さ制御） */
+/** propsのfieldRows変更を監視（キーリストで比較） */
+const fieldRowsSignature = computed(() =>
+  props.fieldRows?.map(r => r.map(f => f.key).join(',')).join('|') ?? ''
+);
+watch(fieldRowsSignature, () => {
+  const nv = props.fieldRows;
+  if (nv) {
+    localRows.value = nv.map(r => [...r]);
+  }
+});
+
+/** propsのfields変更を監視 */
+const fieldsSignature = computed(() =>
+  props.fields?.map(f => `${f.key}:${f.widthPercent}:${f.label}`).join(',') ?? ''
+);
+watch(fieldsSignature, () => {
+  localFields.value = [...(props.fields ?? [])];
+});
+
+/** 行ごとのD&Dグループ設定（heading/spacerはput:falseで割り込み禁止） */
+/** グループオブジェクトをキャッシュ（毎回新しいオブジェクト参照を返すとSortableJS再初期化の原因） */
+const dragGroupNormal = computed(() => {
+  const groupName = props.dragGroup || 'dfg-row-group';
+  return { name: groupName, pull: true, put: true };
+});
+const dragGroupLocked = computed(() => {
+  const groupName = props.dragGroup || 'dfg-row-group';
+  return { name: groupName, pull: true, put: false };
+});
+const getRowDragGroup = (row: FieldDef[]) => {
+  // heading/spacerのみの行はフィールド割り込み禁止
+  if (row.length === 1 && (row[0]?.component === 'heading' || row[0]?.component === 'spacer')) {
+    return dragGroupLocked.value;
+  }
+  return dragGroupNormal.value;
+};
+
+/** ラッパースタイル */
 const wrapperStyle = computed(() => {
   const s: Record<string, string> = {};
   if (props.sectionHeight && props.sectionHeight > 0) {
@@ -355,146 +288,209 @@ const wrapperStyle = computed(() => {
   return s;
 });
 
-/** 各アイテムのスタイル */
+/** アイテムスタイル */
 const itemStyle = (field: FieldDef) => {
-  const w = (field.component === 'heading' || field.component === 'spacer' || field.component === 'contactTable')
+  const w = (field.component === 'spacer' || field.component === 'contactTable')
     ? '100%'
     : `${field.widthPercent}%`;
-  return {
-    width: w,
-    'flex-shrink': '0',
-    'flex-grow': '0',
-  };
+  const s: Record<string, string> = { width: w, 'flex-shrink': '0', 'flex-grow': '0' };
+  if (field.fieldHeight && field.fieldHeight > 0) {
+    s['min-height'] = `${field.fieldHeight}px`;
+  }
+  return s;
 };
 
-/** D&D終了時 */
-const onDragEnd = () => {
-  emit('update:order', localFields.value.map(f => f.key));
+/** VueDraggableのmodel-value更新ガード */
+const onRowModelUpdate = (rowIdx: number, val: FieldDef[]) => {
+  const cur = localRows.value[rowIdx];
+  const curKeys = cur?.map(f => f.key).join(',') ?? '';
+  const newKeys = val.map(f => f.key).join(',');
+  if (curKeys !== newKeys) {
+    localRows.value[rowIdx] = val;
+  }
 };
 
-/** 別リスト（パレット）からのD&D追加時 */
-const onDragAdd = () => {
-  // localFieldsが既にVueDraggable内部で更新済み
-  // 全フィールドのorderを再番号
-  localFields.value.forEach((f, idx) => {
-    f.order = idx + 1;
-  });
-  // 新規追加フィールドを検出して親に通知
-  const existingKeys = new Set(props.fields.map(f => f.key));
-  for (const f of localFields.value) {
-    if (!existingKeys.has(f.key)) {
-      emit('field-added', { ...f });
+/** 行内D&D終了時 */
+const onRowDragEnd = (_rowIdx: number) => {
+  emitRowsUpdate();
+};
+
+/** 行へのD&D追加時 */
+const onRowDragAdd = (rowIdx: number, _evt: unknown) => {
+  // ① まずlocalRowsの現在状態（VueDraggableが既に挿入済み）をfieldRowsに反映
+  emitRowsUpdate();
+  // ② 次に新規フィールドをfields配列に追加
+  const allKnown = new Set(props.fields.map(f => f.key));
+  const row = localRows.value[rowIdx];
+  if (row) {
+    for (const f of row) {
+      if (!allKnown.has(f.key)) {
+        emit('field-added', { ...f });
+      }
     }
   }
-  // 順序も更新
-  emit('update:order', localFields.value.map(f => f.key));
 };
 
-/** 行区切りトグル */
-const toggleLineBreak = (index: number) => {
-  const field = localFields.value[index];
-  if (!field) return;
-  field.lineBreakAfter = !field.lineBreakAfter;
-  emit('update:lineBreak', field.key, !!field.lineBreakAfter);
+/** 行更新を親に通知 */
+const emitRowsUpdate = () => {
+  const rows = localRows.value
+    .map(r => r.map(f => f.key));
+  emit('update:rows', rows);
 };
 
-/** ラベル編集完了時 */
+
+/** ラベル編集 */
 const onLabelBlur = (key: string, event: Event) => {
   const input = event.target as HTMLInputElement;
   const newLabel = input.value.trim();
-  if (newLabel) {
-    emit('label-edit', key, newLabel);
-  }
+  if (newLabel) emit('label-edit', key, newLabel);
 };
 
+/** 非表示確認モーダル */
+const pendingHideField = ref<FieldDef | null>(null);
+const showHideConfirm = ref(false);
 
+const confirmHideField = (field: FieldDef) => {
+  pendingHideField.value = field;
+  showHideConfirm.value = true;
+};
 
-/** ─── 横幅リサイズ（%単位） ─── */
-let resizingIndex = -1;
+const executeHide = () => {
+  if (pendingHideField.value) {
+    emit('hide-field', pendingHideField.value.key);
+  }
+  showHideConfirm.value = false;
+  pendingHideField.value = null;
+};
+
+const cancelHide = () => {
+  showHideConfirm.value = false;
+  pendingHideField.value = null;
+};
+
+/** ─── インライン選択肢編集 ─── */
+const onInlineOptionAdd = (fieldKey: string) => {
+  const field = localFields.value.find(f => f.key === fieldKey);
+  if (!field) return;
+  const opts = Array.isArray(field.options) ? [...field.options] : [];
+  const idx = opts.length + 1;
+  opts.push({ value: `opt_${idx}`, label: `選択肢${idx}` });
+  field.options = opts;
+  emit('update:fieldOptions', fieldKey, opts);
+};
+
+const onInlineOptionRemove = (fieldKey: string, optIdx: number) => {
+  const field = localFields.value.find(f => f.key === fieldKey);
+  if (!field || !Array.isArray(field.options)) return;
+  const opts = [...field.options];
+  opts.splice(optIdx, 1);
+  field.options = opts;
+  emit('update:fieldOptions', fieldKey, opts);
+};
+
+const onInlineOptionEdit = (fieldKey: string, optIdx: number, newLabel: string) => {
+  const field = localFields.value.find(f => f.key === fieldKey);
+  if (!field || !Array.isArray(field.options)) return;
+  const opts = [...field.options];
+  if (opts[optIdx]) {
+    opts[optIdx] = { ...opts[optIdx], label: newLabel || opts[optIdx].label };
+  }
+  field.options = opts;
+  emit('update:fieldOptions', fieldKey, opts);
+};/** ─── 横幅リサイズ（%単位） ─── */
+let resizingKey = '';
 let startX = 0;
 let startWidthPct = 20;
 let containerWidth = 0;
 
-const startWidthResize = (e: MouseEvent, index: number) => {
+const startWidthResize = (e: MouseEvent, fieldKey: string) => {
   e.preventDefault();
-  const field = localFields.value[index];
+  const field = findFieldByKey(fieldKey);
   if (!field) return;
-  resizingIndex = index;
+  resizingKey = fieldKey;
   startX = e.clientX;
   startWidthPct = field.widthPercent;
-
-  // コンテナ幅を取得（100%の基準）
   if (containerRef.value) {
     containerWidth = containerRef.value.clientWidth;
   }
-
   document.addEventListener('mousemove', onWidthResizeMove);
   document.addEventListener('mouseup', onWidthResizeEnd);
 };
 
+/** フィールドをキーで検索（全行を横断） */
+const findFieldByKey = (key: string): FieldDef | undefined => {
+  for (const row of localRows.value) {
+    const f = row.find(ff => ff.key === key);
+    if (f) return f;
+  }
+  return localFields.value.find(f => f.key === key);
+};
+
 const onWidthResizeMove = (e: MouseEvent) => {
-  if (resizingIndex < 0 || !containerWidth) return;
+  if (!resizingKey || !containerWidth) return;
   const dx = e.clientX - startX;
   const deltaPct = (dx / containerWidth) * 100;
   const newPct = Math.max(5, Math.min(100, startWidthPct + deltaPct));
-
-  // reactiveに更新
-  const updated = [...localFields.value];
-  const current = updated[resizingIndex];
-  if (!current) return;
-  updated[resizingIndex] = { ...current, widthPercent: newPct } as FieldDef;
-  localFields.value = updated;
+  const field = findFieldByKey(resizingKey);
+  if (field) field.widthPercent = newPct;
 };
 
 const onWidthResizeEnd = () => {
-  if (resizingIndex >= 0) {
-    const field = localFields.value[resizingIndex];
+  if (resizingKey) {
+    const field = findFieldByKey(resizingKey);
     if (field) {
       emit('update:width', field.key, field.widthPercent);
     }
   }
-  resizingIndex = -1;
+  resizingKey = '';
   document.removeEventListener('mousemove', onWidthResizeMove);
   document.removeEventListener('mouseup', onWidthResizeEnd);
 };
 
-/** ─── セクション縦幅リサイズ ─── */
+/** ─── フィールド個別の高さリサイズ ─── */
+let heightResizingKey = '';
 let startY = 0;
-let startHeight = 0;
+let startFieldHeight = 0;
 
-const startHeightResize = (e: MouseEvent) => {
+const startFieldHeightResize = (e: MouseEvent, fieldKey: string) => {
   e.preventDefault();
+  const field = findFieldByKey(fieldKey);
+  if (!field) return;
+  heightResizingKey = fieldKey;
   startY = e.clientY;
-  const el = wrapperRef.value;
-  startHeight = el ? el.offsetHeight : 200;
-  document.addEventListener('mousemove', onHeightResizeMove);
-  document.addEventListener('mouseup', onHeightResizeEnd);
+  // 実際のDOM要素の高さを取得
+  const el = containerRef.value?.querySelector(`[data-field-key="${fieldKey}"]`) as HTMLElement | null;
+  startFieldHeight = el ? el.offsetHeight : (field.fieldHeight || 60);
+  document.addEventListener('mousemove', onFieldHeightMove);
+  document.addEventListener('mouseup', onFieldHeightEnd);
 };
 
-const onHeightResizeMove = (e: MouseEvent) => {
+const onFieldHeightMove = (e: MouseEvent) => {
+  if (!heightResizingKey) return;
   const dy = e.clientY - startY;
-  const newHeight = Math.max(80, startHeight + dy);
-  if (wrapperRef.value) {
-    wrapperRef.value.style.height = `${newHeight}px`;
-    wrapperRef.value.style.overflowY = 'auto';
-  }
+  const newHeight = Math.max(30, startFieldHeight + dy);
+  const field = findFieldByKey(heightResizingKey);
+  if (field) field.fieldHeight = newHeight;
 };
 
-const onHeightResizeEnd = () => {
-  if (wrapperRef.value) {
-    const h = wrapperRef.value.offsetHeight;
-    emit('update:sectionHeight', h);
+const onFieldHeightEnd = () => {
+  if (heightResizingKey) {
+    const field = findFieldByKey(heightResizingKey);
+    if (field) {
+      emit('update:fieldHeight', field.key, field.fieldHeight || 60);
+    }
   }
-  document.removeEventListener('mousemove', onHeightResizeMove);
-  document.removeEventListener('mouseup', onHeightResizeEnd);
+  heightResizingKey = '';
+  document.removeEventListener('mousemove', onFieldHeightMove);
+  document.removeEventListener('mouseup', onFieldHeightEnd);
 };
 
 /** クリーンアップ */
 onBeforeUnmount(() => {
   document.removeEventListener('mousemove', onWidthResizeMove);
   document.removeEventListener('mouseup', onWidthResizeEnd);
-  document.removeEventListener('mousemove', onHeightResizeMove);
-  document.removeEventListener('mouseup', onHeightResizeEnd);
+  document.removeEventListener('mousemove', onFieldHeightMove);
+  document.removeEventListener('mouseup', onFieldHeightEnd);
 });
 </script>
 
@@ -505,6 +501,25 @@ onBeforeUnmount(() => {
 
 .dfg-container {
   width: 100%;
+}
+
+.dfg-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dfg-row {
+  min-height: 32px;
+}
+
+.dfg-row-drag-area {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  min-height: 32px;
+  gap: 0;
+  overflow-x: auto;
 }
 
 .dfg-drag-area {
@@ -522,6 +537,19 @@ onBeforeUnmount(() => {
   min-width: 0;
   box-sizing: border-box;
   padding: 0 4px;
+  cursor: default;
+}
+.dfg-draggable {
+  cursor: grab;
+}
+.dfg-draggable:active {
+  cursor: grabbing;
+}
+.dfg-item-selected {
+  outline: 2px solid #3b82f6;
+  outline-offset: -1px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.04);
 }
 
 .dfg-handle {
@@ -872,5 +900,158 @@ onBeforeUnmount(() => {
 }
 .dfg-spacer-settings input[type="range"] {
   width: 100px;
+}
+
+/* 右端リサイズハンドル */
+.dfg-resize-right {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 2;
+}
+.dfg-resize-right:hover,
+.dfg-resize-right:active {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+/* 下端リサイズハンドル（高さ）※.dfg-resizeの共通スタイルを上書き */
+.dfg-resize-bottom {
+  position: absolute;
+  display: block;
+  width: auto;
+  margin-left: 0;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 8px;
+  cursor: row-resize;
+  background: rgba(59, 130, 246, 0.25);
+  border-radius: 0 0 3px 3px;
+  transition: background 0.15s;
+  z-index: 2;
+}
+.dfg-resize-bottom:hover,
+.dfg-resize-bottom:active {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+/* インライン選択肢編集 */
+.dfg-inline-options {
+  margin-top: 4px;
+  padding: 4px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 4px;
+}
+.dfg-inline-opt-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 2px;
+}
+.dfg-inline-opt-input {
+  flex: 1;
+  padding: 2px 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 2px;
+  font-size: 11px;
+}
+.dfg-inline-opt-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+.dfg-inline-opt-del {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 1px 3px;
+  font-size: 10px;
+}
+.dfg-inline-opt-add {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  padding: 3px 6px;
+  margin-top: 2px;
+  background: #dbeafe;
+  border: 1px dashed #93c5fd;
+  border-radius: 3px;
+  color: #1e40af;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dfg-inline-opt-add:hover {
+  background: #bfdbfe;
+}
+
+/* 非表示確認モーダル */
+.dfg-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.dfg-confirm-modal {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px 28px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  min-width: 280px;
+  text-align: center;
+}
+.dfg-confirm-modal p {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.dfg-confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.dfg-confirm-yes {
+  padding: 6px 20px;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dfg-confirm-yes:hover {
+  background: #dc2626;
+}
+.dfg-confirm-no {
+  padding: 6px 20px;
+  background: #e2e8f0;
+  color: #475569;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dfg-confirm-no:hover {
+  background: #cbd5e1;
+}
+/* フィールド管理からのフォーカスフラッシュ */
+.dfg-item.dfg-flash {
+  animation: dfg-flash-anim 1.5s ease;
+}
+@keyframes dfg-flash-anim {
+  0% { box-shadow: 0 0 0 3px #3b82f6; }
+  30% { box-shadow: 0 0 12px 4px rgba(59,130,246,0.5); }
+  100% { box-shadow: none; }
 }
 </style>

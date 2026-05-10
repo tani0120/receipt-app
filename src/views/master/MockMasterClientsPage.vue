@@ -461,9 +461,13 @@
       :visible="showCustomFieldModal"
       :custom-defs="customFields.customDefs.value"
       :section-keys="sectionKeys"
-      :existing-fields="existingFieldInfos"
+      :layout-fields="fieldLayout.fields.value"
+      :field-rows="fieldLayout.fieldRows.value"
+      :default-field-keys="fieldLayout.defaultFields.map(f => f.key)"
       :label-overrides="fieldLayout.labelOverrides.value"
       :hidden-fields="fieldLayout.hiddenFields.value"
+      :deleted-fields="fieldLayout.deletedFields.value"
+      :field-options="fieldLayout.fieldOptions.value"
       @update:visible="showCustomFieldModal = $event"
       @save="handleSaveFieldManagement"
     />
@@ -614,16 +618,6 @@ const showAddFieldModal = ref(false);
 const addFieldDefaultSection = ref('');
 const sectionKeys = clientSections.map(s => s.key);
 
-/** 既存フィールド情報一覧（CustomFieldModalに渡す） */
-const existingFieldInfos = computed(() =>
-  fieldLayout.defaultFields.map(f => ({
-    key: f.key,
-    originalLabel: fieldLayout.defaultFields.find(df => df.key === f.key)?.label || f.label,
-    section: f.section,
-    subSection: f.subSection,
-  }))
-);
-
 /** フィールド追加ハンドラ */
 const handleAddField = (payload: { label: string; component: import('@/types/fieldLayout').FieldComponent; section: string }) => {
   const key = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
@@ -652,24 +646,37 @@ const handleSaveFieldManagement = (payload: {
   customDefs: CustomFieldDef[];
   labelOverrides: Record<string, string>;
   hiddenFields: string[];
+  deletedFields: string[];
+  fieldOptions: Record<string, import('@/types/fieldLayout').FieldOption[]>;
 }) => {
-  // カスタムフィールド定義を保存
-  customFields.saveCustomDefs(payload.customDefs);
-  // 既存カスタムフィールドを削除して新しいものに差し替え
-  const existingCustomKeys = customFields.customDefs.value.map(d => d.key);
-  for (const key of existingCustomKeys) {
-    fieldLayout.removeDynamicField(key);
+  // カスタムフィールドの差分管理（fieldRows順序を壊さない）
+  const oldKeys = new Set(customFields.customDefs.value.map(d => d.key));
+  const newKeys = new Set(payload.customDefs.map(d => d.key));
+
+  for (const key of oldKeys) {
+    if (!newKeys.has(key)) {
+      fieldLayout.removeDynamicField(key);
+    }
   }
   for (const def of payload.customDefs) {
-    fieldLayout.addDynamicField({
-      key: def.key,
-      label: def.label,
-      section: def.section,
-      component: def.component,
-      widthPercent: def.widthPercent,
-      order: def.order,
-    });
+    const existing = fieldLayout.fields.value.find(f => f.key === def.key);
+    if (existing) {
+      existing.label = def.label;
+      existing.section = def.section;
+      existing.component = def.component;
+    } else {
+      fieldLayout.addDynamicField({
+        key: def.key,
+        label: def.label,
+        section: def.section,
+        component: def.component,
+        widthPercent: def.widthPercent,
+        order: def.order,
+      });
+    }
   }
+  customFields.saveCustomDefs(payload.customDefs);
+
   // ラベル上書きを適用
   for (const key of Object.keys(fieldLayout.labelOverrides.value)) {
     fieldLayout.removeLabelOverride(key);
@@ -683,6 +690,25 @@ const handleSaveFieldManagement = (payload: {
   }
   for (const key of payload.hiddenFields) {
     fieldLayout.toggleFieldVisibility(key, false);
+  }
+  // 論理削除の同期
+  const currentDeleted = new Set(fieldLayout.deletedFields.value);
+  const newDeleted = new Set(payload.deletedFields);
+  for (const key of payload.deletedFields) {
+    if (!currentDeleted.has(key)) {
+      fieldLayout.softDeleteField(key);
+    }
+  }
+  for (const key of [...fieldLayout.deletedFields.value]) {
+    if (!newDeleted.has(key)) {
+      fieldLayout.restoreDeletedField(key);
+    }
+  }
+  // 選択肢の同期
+  for (const [key, opts] of Object.entries(payload.fieldOptions)) {
+    if (opts.length > 0) {
+      fieldLayout.updateFieldOptions(key, opts);
+    }
   }
   // モーダルを閉じて管理モード解除
   adminMode.value = null;
