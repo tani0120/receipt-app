@@ -4,6 +4,7 @@ import conversionRoute from './routes/conversion'
 import clientsRoute from './routes/clientRoutes'
 
 import collection from './routes/collection'
+import commentRoutes from './routes/commentRoutes'
 // 旧ai-rulesは廃止・削除済み
 import admin from './routes/admin'
 import aiModels from './routes/ai-models'
@@ -66,6 +67,7 @@ const routes = app
     .route('/api/learning-rules', learningRuleRoutes)
     .route('/api/progress', progressRoutes)
     .route('/api/export', exportRoutes)
+    .route('/api/comments', commentRoutes)
     .get('/api/tax-options', (c) => {
         return c.json(TAX_OPTIONS)
     })

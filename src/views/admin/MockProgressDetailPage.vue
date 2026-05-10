@@ -111,7 +111,7 @@
               }">{{ getLabel(STATUS_OPTIONS, row.status) }}</span>
             </td>
             <td class="pg-td-code">{{ row.code }}</td>
-            <td class="pg-td-client">{{ row.type === 'individual' && row.repName ? row.repName : row.companyName }}</td>
+            <td class="pg-td-client">{{ (row.type === 'individual' || row.type === 'sole_proprietor') && row.repName ? row.repName : row.companyName }}</td>
             <td class="pg-td-narrow">{{ getStaffNameForClient(row.clientId) || '' }}</td>
             <td class="pg-td-fiscal">{{ row.fiscalMonth }}月</td>
             <td class="pg-td-narrow pg-td-share">

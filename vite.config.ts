@@ -1,7 +1,7 @@
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
+// import vueDevTools from 'vite-plugin-vue-devtools' // 速度改善のため無効化（必要時にコメント解除）
 import { fileURLToPath, URL } from 'node:url'
 // Force Rebuild Trigger
 
@@ -10,7 +10,7 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig({
   plugins: [
     vue(),
-    vueDevTools(),
+    // vueDevTools(), // 速度改善のため無効化
   ],
   server: {
     host: true,

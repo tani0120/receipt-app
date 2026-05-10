@@ -104,7 +104,7 @@ function buildProgressRows(): ProgressRow[] {
       clientId: c.clientId,
       code: c.threeCode,
       status: c.status as 'active' | 'inactive' | 'suspension',
-      type: c.type as 'corp' | 'individual',
+      type: c.type as 'corp' | 'individual' | 'sole_proprietor',
       fiscalMonth: c.fiscalMonth,
       companyName: c.companyName,
       repName: c.repName || '',
@@ -167,7 +167,7 @@ const statusOrder = (s: string): number => s === 'active' ? 0 : s === 'suspensio
 
 /** 決算月ソート値: 法人は月そのまま（1-12）、個人は13 */
 const fiscalMonthSort = (row: ProgressRow): number => {
-  if (row.type === 'individual') return 13
+  if (row.type === 'individual' || row.type === 'sole_proprietor') return 13
   return row.fiscalMonth
 }
 

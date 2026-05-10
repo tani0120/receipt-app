@@ -34,4 +34,5 @@ export function zodHook(
     const message = messages.join('\n') || '不正なリクエストです'
     return apiError(c, 400, message)
   }
+  return undefined
 }

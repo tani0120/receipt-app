@@ -19,7 +19,7 @@
  *   - individual: expense/income が法人と完全に異なる
  */
 
-import type { IndustryVectorEntry } from '@/mocks/types/pipeline/vendor.type';
+import type { IndustryVectorEntry } from '@/types/pipeline/vendor.type';
 
 /** 個人事業主用 業種ベクトル → 科目候補マッピング（68種: telecom/saas分割後。telecom_saasはdeprecated） */
 export const INDUSTRY_VECTOR_SOLE: IndustryVectorEntry[] = [

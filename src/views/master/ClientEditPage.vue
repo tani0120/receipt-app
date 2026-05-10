@@ -674,25 +674,54 @@ const comments = ref<ClientComment[]>([]);
 const commentStorageKey = computed(() => `client-comments-${clientId.value || 'new'}`);
 const commentTextarea = ref<HTMLTextAreaElement | null>(null);
 
-const loadComments = () => {
+const loadComments = async () => {
+  if (!clientId.value) { comments.value = []; return; }
   try {
-    const raw = localStorage.getItem(commentStorageKey.value);
-    comments.value = raw ? JSON.parse(raw) as ClientComment[] : [];
+    // localStorage → API移行（初回のみ）
+    const lsKey = commentStorageKey.value;
+    const lsRaw = localStorage.getItem(lsKey);
+    if (lsRaw) {
+      const lsComments = JSON.parse(lsRaw) as ClientComment[];
+      if (lsComments.length > 0) {
+        // localStorageのデータをAPIに移行
+        for (const c of lsComments) {
+          await fetch('/api/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...c, entityType: 'client', entityId: clientId.value }),
+          });
+        }
+        console.log(`[ClientEdit] コメント${lsComments.length}件をlocalStorage→APIに移行`);
+      }
+      localStorage.removeItem(lsKey);
+    }
+    // APIからコメント取得
+    const res = await fetch(`/api/comments?entityType=client&entityId=${clientId.value}`);
+    const data = await res.json();
+    comments.value = (data.comments ?? []) as ClientComment[];
   } catch { comments.value = []; }
 };
-const saveComments = () => { localStorage.setItem(commentStorageKey.value, JSON.stringify(comments.value)); };
-const addComment = () => {
+const saveComment = async (comment: ClientComment) => {
+  if (!clientId.value) return;
+  await fetch('/api/comments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...comment, entityType: 'client', entityId: clientId.value }),
+  });
+};
+const addComment = async () => {
   if (!newComment.value.trim()) return;
   showMentionPopup.value = false;
   const body = newComment.value.trim();
   const cmtId = `cmt-${crypto.randomUUID().slice(0, 8)}`;
-  comments.value.unshift({ id: cmtId, author: currentUserName.value, body, date: new Date().toLocaleString('ja-JP') });
+  const comment: ClientComment = { id: cmtId, author: currentUserName.value, body, date: new Date().toLocaleString('ja-JP') };
+  comments.value.unshift(comment);
   newComment.value = '';
   // テキストエリアの高さをリセット
   if (commentTextarea.value) {
     commentTextarea.value.style.height = 'auto';
   }
-  saveComments();
+  await saveComment(comment);
   // メンション通知をサーバーAPIに委譲（フロントにロジックなし）
   if (body.includes('@')) {
     sendMentionNotification({
@@ -704,7 +733,10 @@ const addComment = () => {
     });
   }
 };
-const deleteComment = (id: string) => { comments.value = comments.value.filter(c => c.id !== id); saveComments(); };
+const deleteComment = async (id: string) => {
+  comments.value = comments.value.filter(c => c.id !== id);
+  await fetch(`/api/comments/${id}`, { method: 'DELETE' });
+};
 
 /** @メンションをハイライト表示 */
 const renderMentions = (text: string): string => {

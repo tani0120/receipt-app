@@ -58,7 +58,7 @@ async function fetchJournalSummary(clientId: string, cols: MonthColumn[]): Promi
       if (!j.voucher_date) continue
       const dateStr = j.voucher_date.slice(0, 7) // "2025-04"
       if (dateStr in monthlyJournals) {
-        monthlyJournals[dateStr]++
+        monthlyJournals[dateStr] = (monthlyJournals[dateStr] ?? 0) + 1
       }
       const year = parseInt(j.voucher_date.slice(0, 4), 10)
       if (year === currentYear) currentYearCount++

@@ -134,16 +134,16 @@
               <label class="panel-label">法人/個人</label>
               <div class="panel-radio-group">
                 <label class="panel-radio">
-                  <input type="radio" :checked="currentClient.type !== 'individual'" disabled>
+                  <input type="radio" :checked="currentClient.type !== 'individual' && currentClient.type !== 'sole_proprietor'" disabled>
                   <span>法人</span>
                 </label>
                 <label class="panel-radio">
-                  <input type="radio" :checked="currentClient.type === 'individual'" disabled>
+                  <input type="radio" :checked="currentClient.type === 'individual' || currentClient.type === 'sole_proprietor'" disabled>
                   <span>個人</span>
                 </label>
               </div>
               <!-- 不動産所得（個人の場合のみ表示） -->
-              <div v-if="currentClient.type === 'individual'" style="margin-top: 10px;">
+              <div v-if="currentClient.type === 'individual' || currentClient.type === 'sole_proprietor'" style="margin-top: 10px;">
                 <label class="panel-checkbox-label">
                   <input type="checkbox" :checked="currentClient.hasRentalIncome" disabled>
                   <span>不動産所得あり</span>

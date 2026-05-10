@@ -20,7 +20,7 @@ export interface ProgressRow {
     clientId: string;
     code: string;
     status: 'active' | 'inactive' | 'suspension';
-    type: 'corp' | 'individual';
+    type: 'corp' | 'individual' | 'sole_proprietor';
     fiscalMonth: number;
     companyName: string;
     repName?: string;

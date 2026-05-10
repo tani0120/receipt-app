@@ -100,7 +100,7 @@
                   <!-- 会社名 -->
                   <template v-else-if="col.key === 'companyName'">
                     <input v-if="inlineEditId === row.clientId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <span v-else>{{ row.type === 'individual' && row.repName ? row.repName : row.companyName }}</span>
+                    <span v-else>{{ (row.type === 'individual' || row.type === 'sole_proprietor') && row.repName ? row.repName : row.companyName }}</span>
                   </template>
                   <!-- 担当者 -->
                   <template v-else-if="col.key === 'staffName'">
@@ -376,7 +376,7 @@
                 </label>
               </div>
               <!-- 不動産所得あり（個人事業主のみ表示） -->
-              <div v-if="panelForm.type === 'individual'" class="cm-field">
+              <div v-if="panelForm.type === 'individual' || panelForm.type === 'sole_proprietor'" class="cm-field">
                 <label class="cm-checkbox-label">
                   <input type="checkbox" v-model="panelForm.hasRentalIncome">
                   <span>不動産所得あり</span>

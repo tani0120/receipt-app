@@ -27,7 +27,7 @@
  *   → 顧問先固有。vendors_clientで設定。
  */
 
-import type { Vendor } from '@/mocks/types/pipeline/vendor.type';
+import type { Vendor } from '@/types/pipeline/vendor.type';
 
 export const VENDORS_GLOBAL: Vendor[] = [
   // § 2.1 公共インフラ・電力・ガス

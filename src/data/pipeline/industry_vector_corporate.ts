@@ -9,7 +9,7 @@
  *   LDI社・ABC社など法人顧問先で使用。
  */
 
-import type { IndustryVectorEntry } from '@/mocks/types/pipeline/vendor.type';
+import type { IndustryVectorEntry } from '@/types/pipeline/vendor.type';
 
 /** 法人用 業種ベクトル → 科目候補マッピング（68種: telecom/saas分割後。telecom_saasはdeprecated） */
 export const INDUSTRY_VECTOR_CORPORATE: IndustryVectorEntry[] = [

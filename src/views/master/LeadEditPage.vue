@@ -89,7 +89,7 @@
             <template #isInvoiceRegistered><div class="ce-field"><label class="ce-checkbox"><input type="checkbox" v-model="form.isInvoiceRegistered" /><span>インボイス登録事業者</span></label></div></template>
             <template #invoiceRegistrationNumber="{ field }"><div v-if="form.isInvoiceRegistered" class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.invoiceRegistrationNumber" class="ce-input" placeholder="T1234567890123" /></div></template>
             <template #hasDepartmentManagement><div class="ce-field"><label class="ce-checkbox"><input type="checkbox" v-model="form.hasDepartmentManagement" /><span>部門管理あり</span></label></div></template>
-            <template #hasRentalIncome><div v-if="form.type === 'individual'" class="ce-field"><label class="ce-checkbox"><input type="checkbox" v-model="form.hasRentalIncome" /><span>不動産所得あり</span></label><span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span></div></template>
+            <template #hasRentalIncome><div v-if="form.type === 'individual' || form.type === 'sole_proprietor'" class="ce-field"><label class="ce-checkbox"><input type="checkbox" v-model="form.hasRentalIncome" /><span>不動産所得あり</span></label><span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span></div></template>
             <template #advisoryFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.advisoryFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
             <template #bookkeepingFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.bookkeepingFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
             <template #monthlyTotal><div class="ce-field ce-computed"><label>月次合計（自動算出）</label><span class="ce-computed-val">{{ (form.advisoryFee + form.bookkeepingFee).toLocaleString() }} 円</span></div></template>
@@ -315,34 +315,58 @@ const comments = ref<LeadComment[]>([]);
 const commentStorageKey = computed(() => `lead-comments-${leadId.value || "new"}`);
 const commentTextarea = ref<HTMLTextAreaElement | null>(null);
 
-const loadComments = () => {
+const loadComments = async () => {
+  if (!leadId.value) { comments.value = []; return; }
   try {
-    const raw = localStorage.getItem(commentStorageKey.value);
-    comments.value = raw ? (JSON.parse(raw) as LeadComment[]) : [];
-  } catch {
-    comments.value = [];
-  }
+    // localStorage → API移行（初回のみ）
+    const lsKey = commentStorageKey.value;
+    const lsRaw = localStorage.getItem(lsKey);
+    if (lsRaw) {
+      const lsComments = JSON.parse(lsRaw) as LeadComment[];
+      if (lsComments.length > 0) {
+        for (const c of lsComments) {
+          await fetch('/api/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...c, entityType: 'lead', entityId: leadId.value }),
+          });
+        }
+        console.log(`[LeadEdit] コメント${lsComments.length}件をlocalStorage→APIに移行`);
+      }
+      localStorage.removeItem(lsKey);
+    }
+    // APIからコメント取得
+    const res = await fetch(`/api/comments?entityType=lead&entityId=${leadId.value}`);
+    const data = await res.json();
+    comments.value = (data.comments ?? []) as LeadComment[];
+  } catch { comments.value = []; }
 };
-const saveComments = () => {
-  localStorage.setItem(commentStorageKey.value, JSON.stringify(comments.value));
+const saveComment = async (comment: LeadComment) => {
+  if (!leadId.value) return;
+  await fetch('/api/comments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...comment, entityType: 'lead', entityId: leadId.value }),
+  });
 };
-const addComment = () => {
+const addComment = async () => {
   if (!newComment.value.trim()) return;
   showMentionPopup.value = false;
   const body = newComment.value.trim();
   const cmtId = `cmt-${crypto.randomUUID().slice(0, 8)}`;
-  comments.value.unshift({
+  const comment: LeadComment = {
     id: cmtId,
     author: currentUserName.value,
     body,
     date: new Date().toLocaleString("ja-JP"),
-  });
+  };
+  comments.value.unshift(comment);
   newComment.value = "";
   // テキストエリアの高さをリセット
   if (commentTextarea.value) {
     commentTextarea.value.style.height = "auto";
   }
-  saveComments();
+  await saveComment(comment);
   // メンション通知をサーバーAPIに委譲（フロントにロジックなし）
   if (body.includes("@")) {
     sendMentionNotification({
@@ -354,9 +378,9 @@ const addComment = () => {
     });
   }
 };
-const deleteComment = (id: string) => {
+const deleteComment = async (id: string) => {
   comments.value = comments.value.filter((c) => c.id !== id);
-  saveComments();
+  await fetch(`/api/comments/${id}`, { method: 'DELETE' });
 };
 
 /** @メンションをハイライト表示 */

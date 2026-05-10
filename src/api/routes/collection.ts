@@ -23,7 +23,7 @@ const CollectionClientSchema = z.object({
     code: z.string(),
     name: z.string(),
     fiscalMonth: z.number(),
-    type: z.enum(['corp', 'individual']),
+    type: z.enum(['corp', 'individual', 'sole_proprietor']),
     // Grid Data (24 months)
     cells: z.array(z.object({
         monthIndex: z.number(), // 1-24
@@ -58,8 +58,8 @@ function getCollectionClients() {
     return allClients.map(c => ({
         clientCode: c.clientId.split('-')[0] || c.clientId,
         companyName: c.companyName,
-        fiscalMonth: c.fiscalMonth ?? (c.type === 'individual' ? 12 : 3),
-        type: c.type as 'corp' | 'individual',
+        fiscalMonth: c.fiscalMonth ?? (c.type === 'individual' || c.type === 'sole_proprietor' ? 12 : 3),
+        type: c.type as 'corp' | 'individual' | 'sole_proprietor',
         jobId: c.clientId.split('-')[0] || c.clientId,
     }));
 }
@@ -76,7 +76,7 @@ export { CollectionConfigSchema, CollectionClientSchema, CollectionDetailSchema,
 const currentDateMock = moment('2025-12-28'); // Fixed Date for Consistency
 
 const getFiscalTermEnd = (client: ReturnType<typeof getCollectionClients>[0], targetDate: moment.Moment) => {
-    const fiscalMonth = client.type === 'individual' ? 12 : client.fiscalMonth;
+    const fiscalMonth = (client.type === 'individual' || client.type === 'sole_proprietor') ? 12 : client.fiscalMonth;
     const month = targetDate.month() + 1;
     let year = targetDate.year();
     if (month > fiscalMonth) {
@@ -91,7 +91,7 @@ const getActiveTerm1End = (client: ReturnType<typeof getCollectionClients>[0]) =
 
     for (let i = 0; i < 5; i++) {
         const termEnd = getFiscalTermEnd(client, checkDate);
-        const filingOffset = client.type === 'individual' ? 3 : 2;
+        const filingOffset = (client.type === 'individual' || client.type === 'sole_proprietor') ? 3 : 2;
         const filingDeadline = termEnd.clone().add(filingOffset, 'months').endOf('month');
 
         if (today.isSameOrBefore(filingDeadline)) {
@@ -128,7 +128,7 @@ const calculateCellData = (client: ReturnType<typeof getCollectionClients>[0], v
         else if (cellDate.isBetween(term2Start, term2End, 'month', '[]')) style = 'active-2';
 
         // Fiscal Month Marker
-        const fiscalMonth = client.type === 'individual' ? 12 : client.fiscalMonth;
+        const fiscalMonth = (client.type === 'individual' || client.type === 'sole_proprietor') ? 12 : client.fiscalMonth;
         const isFiscalMonth = (fiscalMonth === month);
 
         // Status Icon (Using generic logic from Vue: mod calculation)

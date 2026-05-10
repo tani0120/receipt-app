@@ -194,7 +194,7 @@ export interface ClientUi {
   readonly companyName: string;
   readonly repName: string;
   readonly staffName?: string; // 担当者名（APIから取得。省略可）
-  readonly type: 'corp' | 'individual';
+  readonly type: 'corp' | 'individual' | 'sole_proprietor';
   readonly fiscalMonth: number;
   readonly status: 'active' | 'inactive' | 'suspension';
 

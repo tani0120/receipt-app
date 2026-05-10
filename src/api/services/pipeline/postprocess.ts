@@ -166,7 +166,7 @@ function buildResponse(
     fallback_applied: fallbackApplied,
     line_items: lineItems,
     // validation: previewExtract.service.tsでvalidatePreviewExtractResult()の結果で上書きされる
-    validation: { ok: false, errorReason: null, warning: null, supplementary: false },
+    validation: { ok: false, errorReason: null, warning: null, supplementary: false, isDuplicate: false },
     metadata,
   };
 }

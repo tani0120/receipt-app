@@ -8,7 +8,7 @@
  */
 
 import { getAll } from './vendorStore'
-import type { Vendor } from '../../mocks/types/pipeline/vendor.type'
+import type { Vendor } from '../../types/pipeline/vendor.type'
 
 // ────────────────────────────────────────────
 // クエリパラメータ
