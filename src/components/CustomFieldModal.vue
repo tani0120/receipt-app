@@ -7,8 +7,9 @@
       </div>
 
       <div class="cfm-body">
-        <!-- 種別絞り込み -->
+        <!-- 種別絞り込み + 文字検索 -->
         <div class="cfm-filter-row">
+          <input v-model="searchText" type="text" class="cfm-search" placeholder="フィールド名で検索..." />
           <select v-model="filterType" class="cfm-select">
             <option value="">全種別</option>
             <option v-for="o in FIELD_COMPONENT_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
@@ -106,16 +107,7 @@
 import { ref, watch, computed } from 'vue';
 import type { FieldDef, FieldComponent, FieldOption } from '@/types/fieldLayout';
 import { FIELD_COMPONENT_OPTIONS, COMPONENT_LABEL_MAP } from '@/types/fieldLayout';
-
-/** カスタムフィールド定義 */
-export interface CustomFieldDef {
-  key: string;
-  label: string;
-  section: string;
-  component: FieldComponent;
-  widthPercent: number;
-  order: number;
-}
+import type { CustomFieldDef } from '@/composables/useFieldLayout';
 
 /** 統合表示用 */
 interface UnifiedFieldItem {
@@ -151,6 +143,7 @@ const emit = defineEmits<{
 }>();
 
 const filterType = ref('');
+const searchText = ref('');
 
 /** ローカルステート */
 const localCustomDefs = ref<CustomFieldDef[]>([]);
@@ -226,10 +219,20 @@ const allFields = computed<UnifiedFieldItem[]>(() => {
   return items;
 });
 
-/** 種別絞り込み */
+/** 種別絞り込み + 文字検索 */
 const filteredAllFields = computed(() => {
-  if (!filterType.value) return allFields.value;
-  return allFields.value.filter(f => f.component === filterType.value);
+  let result = allFields.value;
+  if (filterType.value) {
+    result = result.filter(f => f.component === filterType.value);
+  }
+  if (searchText.value.trim()) {
+    const q = searchText.value.trim().toLowerCase();
+    result = result.filter(f => {
+      const label = (localLabels.value[f.key] || f.originalLabel).toLowerCase();
+      return label.includes(q) || f.key.toLowerCase().includes(q);
+    });
+  }
+  return result;
 });
 
 const close = () => emit('update:visible', false);
@@ -362,6 +365,8 @@ const save = () => {
 .cfm-input-grow { flex: 1; }
 .cfm-select { padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; background: #fff; }
 .cfm-select:focus { border-color: #3b82f6; outline: none; }
+.cfm-search { width: 33%; padding: 6px 10px; border: 2px solid #94a3b8; border-radius: 4px; font-size: 13px; background: #fff; min-width: 0; }
+.cfm-search:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
 .cfm-add-row { display: flex; gap: 8px; margin-top: 12px; align-items: center; padding: 8px; background: #f8fafc; border-radius: 6px; }
 .cfm-btn { border: none; padding: 6px 14px; border-radius: 4px; font-size: 13px; cursor: pointer; font-weight: 600; }
 .cfm-btn-add { background: #3b82f6; color: #fff; white-space: nowrap; }

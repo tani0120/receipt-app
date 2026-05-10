@@ -48,7 +48,7 @@
     <template v-if="isLayoutMode">
       <CustomFieldModal
         :visible="showCustomFieldModal"
-        :custom-defs="customFields.customDefs.value"
+        :custom-defs="layout.customDefs.value"
         :section-keys="sectionKeys"
         :layout-fields="layout.fields.value"
         :field-rows="layout.fieldRows.value"
@@ -77,7 +77,7 @@
         <DraggableFieldGrid
           :fields="flatFields"
           :is-layout-editing="isLayoutMode && !isPreviewMode && layout.isLayoutEditing.value"
-          :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)"
+          :form-data="isPreviewMode ? {} : (isLayoutMode ? undefined : (form as unknown as Record<string, unknown>))"
           :is-editing="isPreviewMode ? true : (isLayoutMode ? false : isEditing)"
           :resolve-options="resolveOptions"
           :staff-list="activeStaffList"
@@ -104,7 +104,12 @@
           <!-- status: 契約状況の表示 -->
           <template v-if="!isLayoutMode" #status>
             <div class="ce-field">
-              <span class="ce-readonly" :class="'ce-status-' + form.status">{{ getLabel(STATUS_OPTIONS, form.status) }}</span>
+              <template v-if="isEditing">
+                <select v-model="form.status" class="ce-select" :class="'ce-status-' + form.status">
+                  <option v-for="opt in STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </template>
+              <span v-else class="ce-readonly" :class="'ce-status-' + form.status">{{ getLabel(STATUS_OPTIONS, form.status) }}</span>
             </div>
           </template>
           <!-- staffId: 担当者選択 -->
@@ -301,9 +306,9 @@ import type { ClientContact } from '@/repositories/types';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import CustomFieldModal from '@/components/CustomFieldModal.vue';
-import type { CustomFieldDef } from '@/components/CustomFieldModal.vue';
+import type { CustomFieldDef } from '@/composables/useFieldLayout';
 import AddFieldModal from '@/components/AddFieldModal.vue';
-import { useCustomFields } from '@/composables/useCustomFields';
+
 import { UI_MSG } from '@/constants/uiMessages';
 
 const route = useRoute();
@@ -348,11 +353,9 @@ const optionsMap: Record<string, readonly import('@/types/fieldLayout').FieldOpt
 /** DFGの自動レンダリングに渡す選択肢解決関数 */
 const resolveOptions = (key: string) => optionsMap[key] ?? [];
 
-/** カスタムフィールド管理 */
-const customFields = useCustomFields('client');
-customFields.loadCustomDefs();
+// カスタムフィールドはlayout.customDefsに統合済み（loadLayout時にAPIから復元）
 // 初期化時にカスタムフィールドをlayout.fieldsに追加
-for (const def of customFields.customDefs.value) {
+for (const def of layout.customDefs.value) {
   layout.addDynamicField({
     key: def.key,
     label: def.label,
@@ -397,10 +400,9 @@ const handleAddField = (payload: { label: string; component: import('@/types/fie
     section: payload.section,
     component: payload.component,
     widthPercent: 20,
-    order: 100 + customFields.customDefs.value.length,
+    order: 100 + layout.customDefs.value.length,
   };
-  const newDefs = [...customFields.customDefs.value, def];
-  customFields.saveCustomDefs(newDefs);
+  layout.customDefs.value = [...layout.customDefs.value, def];
   layout.addDynamicField({
     key: def.key,
     label: def.label,
@@ -420,7 +422,7 @@ const handleSaveFieldManagement = (payload: {
   fieldOptions: Record<string, import('@/types/fieldLayout').FieldOption[]>;
 }) => {
   // カスタムフィールドの差分管理（fieldRows順序を壊さない）
-  const oldKeys = new Set(customFields.customDefs.value.map(d => d.key));
+  const oldKeys = new Set(layout.customDefs.value.map(d => d.key));
   const newKeys = new Set(payload.customDefs.map(d => d.key));
 
   // 削除されたカスタムフィールドを除去
@@ -450,7 +452,7 @@ const handleSaveFieldManagement = (payload: {
       });
     }
   }
-  customFields.saveCustomDefs(payload.customDefs);
+  layout.customDefs.value = payload.customDefs;
 
   // ラベル上書きの同期
   for (const key of Object.keys(layout.labelOverrides.value)) {

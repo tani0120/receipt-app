@@ -78,19 +78,57 @@
                         <template v-else><span class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
                         <span v-if="field.hint && isEditing" class="ce-hint">{{ field.hint }}</span>
                       </div>
-                      <div v-else class="ce-field"><span class="ce-readonly">—</span></div>
+                      <div v-else class="ce-field">
+                        <template v-if="field.component === 'text'"><input type="text" disabled class="ce-input dfg-empty-input" :placeholder="field.placeholder || 'テキスト入力'"></template>
+                        <template v-else-if="field.component === 'number'"><input type="number" disabled class="ce-input dfg-empty-input ce-w-sm" placeholder="0"></template>
+                        <template v-else-if="field.component === 'date'"><input type="date" disabled class="ce-input dfg-empty-input ce-w-sm"></template>
+                        <template v-else-if="field.component === 'dateGroup'"><div class="dfg-empty-input" style="display:flex;gap:4px;align-items:center;"><select disabled class="ce-select" style="width:70px;"><option>1月</option></select><select disabled class="ce-select" style="width:70px;"><option>1日</option></select></div></template>
+                        <template v-else-if="field.component === 'url' || field.component === 'urlCopy'"><input type="url" disabled class="ce-input dfg-empty-input" placeholder="https://..."></template>
+                        <template v-else-if="field.component === 'link'"><span class="ce-readonly dfg-empty-input" style="color:#2563eb;text-decoration:underline;">リンク</span></template>
+                        <template v-else-if="field.component === 'email'"><input type="email" disabled class="ce-input dfg-empty-input" placeholder="email@example.com"></template>
+                        <template v-else-if="field.component === 'select'"><select disabled class="ce-select dfg-empty-input"><option>— 選択 —</option></select></template>
+                        <template v-else-if="field.component === 'textarea'"><textarea disabled class="ce-input ce-textarea dfg-empty-input" rows="2" placeholder="複数行テキスト"></textarea></template>
+                        <template v-else-if="field.component === 'checkbox'"><label class="ce-checkbox dfg-empty-input"><input type="checkbox" disabled><span>{{ field.label }}</span></label></template>
+                        <template v-else-if="field.component === 'amount'"><div class="ce-amount dfg-empty-input"><input type="number" disabled class="ce-input ce-w-sm" placeholder="0"><span>円</span></div></template>
+                        <template v-else-if="field.component === 'staffSelect'"><select disabled class="ce-select dfg-empty-input"><option value="">— スタッフ選択 —</option><option v-for="s in (staffList ?? [])" :key="s.uuid" :value="s.uuid">{{ s.name }}</option></select></template>
+                        <template v-else-if="field.component === 'computed'"><span class="ce-readonly dfg-empty-input" style="font-style:italic;">自動計算</span></template>
+                        <template v-else-if="field.component === 'contactTable'"><span class="ce-readonly dfg-empty-input">連絡先テーブル</span></template>
+                        <template v-else-if="field.component === 'readonly'"><span class="ce-readonly dfg-empty-input">読み取り専用</span></template>
+                        <template v-else><span class="ce-readonly dfg-empty-input">{{ field.component }}</span></template>
+                      </div>
                     </slot>
                   </div>
                   <!-- インライン選択肢編集 -->
-                  <div v-if="isLayoutEditing && field.component === 'select' && field.key.startsWith('custom_')" class="dfg-inline-options">
+                  <div v-if="isLayoutEditing && field.component === 'select'" class="dfg-inline-options">
                     <div v-for="(opt, oi) in getResolvedOptions(field)" :key="oi" class="dfg-inline-opt-row">
                       <input type="text" :value="opt.label" class="dfg-inline-opt-input" @blur="onInlineOptionEdit(field.key, oi, ($event.target as HTMLInputElement).value)" @keydown.enter="($event.target as HTMLInputElement).blur()" />
                       <button class="dfg-inline-opt-del" @click.stop="onInlineOptionRemove(field.key, oi)"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                     <button class="dfg-inline-opt-add" @click.stop="onInlineOptionAdd(field.key)"><i class="fa-solid fa-plus"></i> 選択肢追加</button>
                   </div>
+                  <!-- スタッフ一覧（読み取り専用） -->
+                  <div v-if="isLayoutEditing && field.component === 'staffSelect'" class="dfg-inline-options">
+                    <div v-for="s in (staffList ?? [])" :key="s.uuid" class="dfg-inline-opt-row">
+                      <span class="dfg-inline-opt-label">{{ s.name }}</span>
+                    </div>
+                    <div v-if="!(staffList ?? []).length" class="dfg-inline-opt-row">
+                      <span class="dfg-inline-opt-label" style="color:#94a3b8;font-style:italic;">スタッフ未登録</span>
+                    </div>
+                  </div>
+                  <!-- 決算日（月/日）選択肢一覧 -->
+                  <div v-if="isLayoutEditing && field.component === 'dateGroup'" class="dfg-inline-options">
+                    <div class="dfg-inline-opt-row"><span class="dfg-inline-opt-label" style="font-weight:600;">月:</span></div>
+                    <div class="dfg-inline-opt-row" style="flex-wrap:wrap;gap:2px;">
+                      <span v-for="m in 12" :key="'m'+m" class="dfg-inline-opt-label dfg-dategroup-chip">{{ m }}月</span>
+                    </div>
+                    <div class="dfg-inline-opt-row" style="margin-top:4px;"><span class="dfg-inline-opt-label" style="font-weight:600;">日:</span></div>
+                    <div class="dfg-inline-opt-row" style="flex-wrap:wrap;gap:2px;">
+                      <span class="dfg-inline-opt-label dfg-dategroup-chip">末日</span>
+                      <span v-for="d in 31" :key="'d'+d" class="dfg-inline-opt-label dfg-dategroup-chip">{{ d }}日</span>
+                    </div>
+                  </div>
                   <!-- チェックボックスラベル編集 -->
-                  <div v-if="isLayoutEditing && field.component === 'checkbox' && field.key.startsWith('custom_')" class="dfg-inline-options">
+                  <div v-if="isLayoutEditing && field.component === 'checkbox'" class="dfg-inline-options">
                     <div class="dfg-inline-opt-row"><label style="font-size: 11px; color: #475569;">チェック項目名:</label></div>
                     <div class="dfg-inline-opt-row"><input type="text" :value="field.label" class="dfg-inline-opt-input" @blur="emit('label-edit', field.key, ($event.target as HTMLInputElement).value)" @keydown.enter="($event.target as HTMLInputElement).blur()" /></div>
                   </div>
@@ -228,6 +266,7 @@ const getStaffLabel = (field: FieldDef): string => {
   const staff = (props.staffList ?? []).find(s => s.uuid === val);
   return staff ? staff.name : UI_MSG.未設定;
 };
+
 
 const containerRef = ref<HTMLElement | null>(null);
 
@@ -372,7 +411,15 @@ const cancelHide = () => {
 const onInlineOptionAdd = (fieldKey: string) => {
   const field = localFields.value.find(f => f.key === fieldKey);
   if (!field) return;
-  const opts = Array.isArray(field.options) ? [...field.options] : [];
+  // 文字列参照（'TYPE_OPTIONS'等）の場合、resolveOptionsで解決してから配列に変換
+  let opts: FieldOption[];
+  if (Array.isArray(field.options)) {
+    opts = [...field.options];
+  } else if (typeof field.options === 'string' && props.resolveOptions) {
+    opts = [...props.resolveOptions(field.options)];
+  } else {
+    opts = [];
+  }
   const idx = opts.length + 1;
   opts.push({ value: `opt_${idx}`, label: `選択肢${idx}` });
   field.options = opts;
@@ -381,8 +428,16 @@ const onInlineOptionAdd = (fieldKey: string) => {
 
 const onInlineOptionRemove = (fieldKey: string, optIdx: number) => {
   const field = localFields.value.find(f => f.key === fieldKey);
-  if (!field || !Array.isArray(field.options)) return;
-  const opts = [...field.options];
+  if (!field) return;
+  // 文字列参照の場合、先に配列に変換
+  let opts: FieldOption[];
+  if (Array.isArray(field.options)) {
+    opts = [...field.options];
+  } else if (typeof field.options === 'string' && props.resolveOptions) {
+    opts = [...props.resolveOptions(field.options)];
+  } else {
+    return;
+  }
   opts.splice(optIdx, 1);
   field.options = opts;
   emit('update:fieldOptions', fieldKey, opts);
@@ -390,8 +445,16 @@ const onInlineOptionRemove = (fieldKey: string, optIdx: number) => {
 
 const onInlineOptionEdit = (fieldKey: string, optIdx: number, newLabel: string) => {
   const field = localFields.value.find(f => f.key === fieldKey);
-  if (!field || !Array.isArray(field.options)) return;
-  const opts = [...field.options];
+  if (!field) return;
+  // 文字列参照の場合、先に配列に変換
+  let opts: FieldOption[];
+  if (Array.isArray(field.options)) {
+    opts = [...field.options];
+  } else if (typeof field.options === 'string' && props.resolveOptions) {
+    opts = [...props.resolveOptions(field.options)];
+  } else {
+    return;
+  }
   if (opts[optIdx]) {
     opts[optIdx] = { ...opts[optIdx], label: newLabel || opts[optIdx].label };
   }
@@ -991,6 +1054,13 @@ onBeforeUnmount(() => {
 .dfg-inline-opt-add:hover {
   background: #bfdbfe;
 }
+.dfg-inline-opt-label {
+  font-size: 12px; color: #334155; padding: 2px 6px;
+}
+.dfg-dategroup-chip {
+  display: inline-block; background: #f0f9ff; border: 1px solid #bae6fd;
+  border-radius: 4px; padding: 1px 6px; font-size: 11px; color: #0369a1;
+}
 
 /* 非表示確認モーダル */
 .dfg-confirm-overlay {
@@ -1054,4 +1124,7 @@ onBeforeUnmount(() => {
   30% { box-shadow: 0 0 12px 4px rgba(59,130,246,0.5); }
   100% { box-shadow: none; }
 }
+
+/* レイアウト編集時の空UI要素 */
+.dfg-empty-input { opacity: 0.7; cursor: default; }
 </style>

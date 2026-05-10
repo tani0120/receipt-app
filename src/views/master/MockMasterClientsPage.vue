@@ -459,7 +459,7 @@
     <!-- フィールド管理モーダル（全社共通） -->
     <CustomFieldModal
       :visible="showCustomFieldModal"
-      :custom-defs="customFields.customDefs.value"
+      :custom-defs="fieldLayout.customDefs.value"
       :section-keys="sectionKeys"
       :layout-fields="fieldLayout.fields.value"
       :field-rows="fieldLayout.fieldRows.value"
@@ -507,14 +507,14 @@ import {
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import CustomFieldModal from '@/components/CustomFieldModal.vue';
-import type { CustomFieldDef } from '@/components/CustomFieldModal.vue';
+import type { CustomFieldDef } from '@/composables/useFieldLayout';
 import AddFieldModal from '@/components/AddFieldModal.vue';
 import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
 import type { FilterColumnDef, FilterCondition, FilterResult, SortSetting } from '@/components/list-view/types';
 import { useFieldLayout } from '@/composables/useFieldLayout';
-import { useCustomFields } from '@/composables/useCustomFields';
+
 import { useCurrentUser } from '@/composables/useCurrentUser';
-import { clientSections, clientFields, LIST_ONLY_COLUMNS } from '@/constants/clientFieldDefs';
+import { clientSections, clientFieldsFlat, LIST_ONLY_COLUMNS } from '@/constants/clientFieldDefs';
 import { UI_MSG } from '@/constants/uiMessages';
 import { CLIENT_FIELD_LABELS } from '@/constants/fieldLabels';
 import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
@@ -598,15 +598,12 @@ const toggleAdminMode = (mode: 'field' | 'layout') => {
 };
 
 /** フィールドレイアウト管理（全社共通） */
-const fieldLayout = useFieldLayout('client', clientSections, clientFields);
-// デフォルトレイアウトをlocalStorageから読み込み（ラベル上書き等を適用）
+const fieldLayout = useFieldLayout('client', clientSections, clientFieldsFlat);
+// デフォルトレイアウトをAPIから読み込み（ラベル上書き等を適用）
 fieldLayout.loadLayout();
 
-/** カスタムフィールド管理 */
-const customFields = useCustomFields('client');
-customFields.loadCustomDefs();
-// 初期化時にカスタムフィールドをfieldLayout.fieldsに追加
-for (const def of customFields.customDefs.value) {
+// カスタムフィールドはfieldLayout.customDefsに統合済み（loadLayout時にAPIから復元）
+for (const def of fieldLayout.customDefs.value) {
   fieldLayout.addDynamicField({
     key: def.key,
     label: def.label,
@@ -631,10 +628,9 @@ const handleAddField = (payload: { label: string; component: import('@/types/fie
     section: payload.section,
     component: payload.component,
     widthPercent: 20,
-    order: 100 + customFields.customDefs.value.length,
+    order: 100 + fieldLayout.customDefs.value.length,
   };
-  const newDefs = [...customFields.customDefs.value, def];
-  customFields.saveCustomDefs(newDefs);
+  fieldLayout.customDefs.value = [...fieldLayout.customDefs.value, def];
   fieldLayout.addDynamicField({
     key: def.key,
     label: def.label,
@@ -654,7 +650,7 @@ const handleSaveFieldManagement = (payload: {
   fieldOptions: Record<string, import('@/types/fieldLayout').FieldOption[]>;
 }) => {
   // カスタムフィールドの差分管理（fieldRows順序を壊さない）
-  const oldKeys = new Set(customFields.customDefs.value.map(d => d.key));
+  const oldKeys = new Set(fieldLayout.customDefs.value.map(d => d.key));
   const newKeys = new Set(payload.customDefs.map(d => d.key));
 
   for (const key of oldKeys) {
@@ -679,7 +675,7 @@ const handleSaveFieldManagement = (payload: {
       });
     }
   }
-  customFields.saveCustomDefs(payload.customDefs);
+  fieldLayout.customDefs.value = payload.customDefs;
 
   // ラベル上書きを適用
   for (const key of Object.keys(fieldLayout.labelOverrides.value)) {

@@ -130,10 +130,6 @@ export interface SavedFieldLayout {
   updatedAt: string;
   /** 更新者 */
   updatedBy: string;
-  /** バージョンラベル（例: "20260508(1)"）*/
-  versionLabel?: string;
-  /** デフォルトバージョンか */
-  isDefault?: boolean;
   /** ラベル上書き（既存フィールドの表示名変更） */
   labelOverrides?: Record<string, string>;  // fieldKey -> 新ラベル
   /** カスタムフィールドの選択肢（select用） */
@@ -144,19 +140,11 @@ export interface SavedFieldLayout {
   fieldRows?: string[][];  // row[] -> fieldKey[]
   /** 論理削除済みフィールドキー一覧 */
   deletedFields?: string[];  // fieldKey[]
+  /** カスタムフィールド定義 */
+  customDefs?: Array<{ key: string; label: string; section: string; component: string; widthPercent: number; order: number }>;
 }
 
-/** レイアウトバージョン一覧の1件 */
-export interface LayoutVersion {
-  /** バージョンラベル（例: "20260508(1)"）*/
-  versionLabel: string;
-  /** デフォルトか */
-  isDefault: boolean;
-  /** 作成日時 */
-  createdAt: string;
-  /** 作成者 */
-  createdBy: string;
-}
+
 
 /** カスタムフィールド追加時に選択できるコンポーネント型 */
 export const FIELD_COMPONENT_OPTIONS: readonly { value: FieldComponent; label: string }[] = [

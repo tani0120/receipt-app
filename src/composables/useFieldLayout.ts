@@ -1,50 +1,96 @@
 /**
- * フィールドレイアウト管理Composable
- * ドラッグ&ドロップ順序変更・横幅リサイズ・レイアウト保存/復元
+ * フィールドレイアウト管理Composable（シングルトン版）
+ *
+ * 【設計原則】
+ * - モジュールスコープMap（pageIdごと）でSharedStateをキャッシュ
+ * - 全画面で同じrefを共有 → 即時伝播
+ * - 永続化: API（/api/field-layout/:pageId）→ data/field-layouts/
+ * - localStorage → 初回自動移行後に削除
+ *
+ * useStaffと同じシングルトンパターンを適用
  */
-import { ref, computed, watch } from 'vue';
-import type { FieldDef, FieldOption, SectionDef, SavedFieldLayout, LayoutVersion } from '@/types/fieldLayout';
+import { ref, computed, watch, type Ref } from 'vue';
+import type { FieldDef, FieldOption, SectionDef, SavedFieldLayout } from '@/types/fieldLayout';
+
+/** カスタムフィールド定義（useCustomFieldsから統合） */
+export interface CustomFieldDef {
+  key: string;
+  label: string;
+  section: string;
+  component: import('@/types/fieldLayout').FieldComponent;
+  widthPercent: number;
+  order: number;
+}
+
+// ============================================================
+// モジュールスコープ（シングルトン）
+// ============================================================
+
+/** 全画面で共有するレイアウトstate */
+interface SharedState {
+  fields: Ref<FieldDef[]>;
+  sectionOrder: Ref<string[]>;
+  sectionHeights: Ref<Record<string, number>>;
+  labelOverrides: Ref<Record<string, string>>;
+  fieldOptions: Ref<Record<string, FieldOption[]>>;
+  hiddenFields: Ref<string[]>;
+  deletedFields: Ref<string[]>;
+  fieldRows: Ref<string[][]>;
+  customDefs: Ref<CustomFieldDef[]>;
+}
+
+/** pageIdごとのシングルトンキャッシュ */
+const stateCache = new Map<string, SharedState>();
+
+/** 初回読込Promise（二重読込防止） */
+const loadingPromise = new Map<string, Promise<void>>();
+
+/** SharedStateを新規作成 */
+function createSharedState(defaultFields: FieldDef[], sections: SectionDef[]): SharedState {
+  return {
+    fields: ref<FieldDef[]>(JSON.parse(JSON.stringify(defaultFields))),
+    sectionOrder: ref<string[]>(sections.map(s => s.key)),
+    sectionHeights: ref<Record<string, number>>({}),
+    labelOverrides: ref<Record<string, string>>({}),
+    fieldOptions: ref<Record<string, FieldOption[]>>({}),
+    hiddenFields: ref<string[]>([]),
+    deletedFields: ref<string[]>([]),
+    fieldRows: ref<string[][]>([]),
+    customDefs: ref<CustomFieldDef[]>([]),
+  };
+}
+
+// ============================================================
+// Composable
+// ============================================================
 
 export function useFieldLayout(
   pageId: string,
   sections: SectionDef[],
   defaultFields: FieldDef[]
 ) {
-  /** フィールド定義の実体（order/widthPercentが変更される） */
-  const fields = ref<FieldDef[]>(JSON.parse(JSON.stringify(defaultFields)));
+  // シングルトン: 初回のみ作成、以降はキャッシュから返す
+  if (!stateCache.has(pageId)) {
+    stateCache.set(pageId, createSharedState(defaultFields, sections));
+  }
+  const shared = stateCache.get(pageId)!;
 
-  /** セクション順序 */
-  const sectionOrder = ref<string[]>(sections.map(s => s.key));
+  // 以下のエイリアスでSharedStateのrefに直接アクセス
+  const fields = shared.fields;
+  const sectionOrder = shared.sectionOrder;
+  const sectionHeights = shared.sectionHeights;
+  const labelOverrides = shared.labelOverrides;
+  const fieldOptions = shared.fieldOptions;
+  const hiddenFields = shared.hiddenFields;
+  const deletedFields = shared.deletedFields;
+  const fieldRows = shared.fieldRows;
 
+  // UI固有state（画面ごとに独立）
   /** レイアウト編集モード（管理者のみ有効化） */
   const isLayoutEditing = ref(false);
 
   /** レイアウト変更済フラグ */
   const isLayoutDirty = ref(false);
-
-  /** セクションごとの高さ（px） */
-  const sectionHeights = ref<Record<string, number>>({});
-
-  /** バージョン一覧 */
-  const layoutVersions = ref<LayoutVersion[]>([]);
-
-  /** 現在選択中のバージョンラベル */
-  const currentVersionLabel = ref<string>('');
-
-  /** ラベル上書き（fieldKey -> 新ラベル） */
-  const labelOverrides = ref<Record<string, string>>({});
-
-  /** カスタムフィールドの選択肢（fieldKey -> FieldOption[]） */
-  const fieldOptions = ref<Record<string, FieldOption[]>>({});
-
-  /** 非表示フィールド一覧 */
-  const hiddenFields = ref<string[]>([]);
-
-  /** 論理削除済みフィールド一覧 */
-  const deletedFields = ref<string[]>([]);
-
-  /** 行ベースレイアウト（各行のフィールドキー配列） */
-  const fieldRows = ref<string[][]>([]);
 
   /** UNDO/REDOスタック */
   const undoStack = ref<string[]>([]);
@@ -124,26 +170,66 @@ export function useFieldLayout(
     prevSnapshot = takeSnapshot();
   };
 
-  /** 保存済レイアウトの読み込み */
+  /** 保存済レイアウトの読み込み（API優先、localStorage移行） */
   const loadLayout = async () => {
-    try {
-      // localStorageからデフォルトレイアウトを読み込み
-      const stored = localStorage.getItem(`field-layout-${pageId}`);
-      if (stored) {
-        const saved: SavedFieldLayout = JSON.parse(stored);
-        applyLayout(saved);
-        currentVersionLabel.value = saved.versionLabel || '';
-      } else {
-        // フォールバック: API
-        const res = await fetch(`/api/field-layout/${pageId}`);
-        if (!res.ok) return;
-        const saved: SavedFieldLayout = await res.json();
-        applyLayout(saved);
-      }
-    } catch {
-      // 保存済レイアウトがない場合はデフォルトを使用
+    // 二重読込防止: 既にロード中なら待機のみ
+    if (loadingPromise.has(pageId)) {
+      await loadingPromise.get(pageId);
+      return;
     }
-    refreshVersionList();
+
+    const doLoad = async () => {
+      try {
+        // 1. APIから取得
+        const res = await fetch(`/api/field-layout/${pageId}`);
+        if (res.ok) {
+          const saved: SavedFieldLayout = await res.json();
+          applyLayout(saved);
+
+          // customDefsがあれば復元
+          if (saved.customDefs) {
+            shared.customDefs.value = saved.customDefs as CustomFieldDef[];
+          }
+          return;
+        }
+
+        // 2. APIにデータなし → localStorageから移行
+        const lsKey = `field-layout-${pageId}`;
+        const stored = localStorage.getItem(lsKey);
+        if (stored) {
+          const saved: SavedFieldLayout = JSON.parse(stored);
+          applyLayout(saved);
+
+          // customDefs移行
+          const customKey = `custom-field-defs-${pageId}`;
+          const customStored = localStorage.getItem(customKey);
+          if (customStored) {
+            shared.customDefs.value = JSON.parse(customStored);
+            saved.customDefs = shared.customDefs.value;
+          }
+
+          // APIに移行保存
+          await fetch(`/api/field-layout/${pageId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(saved),
+          });
+
+          // 移行完了 → localStorage削除
+          localStorage.removeItem(lsKey);
+          localStorage.removeItem(`field-layout-versions-${pageId}`);
+          localStorage.removeItem(customKey);
+          console.log(`[useFieldLayout] localStorage → API移行完了: ${pageId}`);
+        }
+      } catch {
+        // 保存済レイアウトがない場合はデフォルトを使用
+      }
+    };
+
+    const promise = doLoad();
+    loadingPromise.set(pageId, promise);
+    await promise;
+    loadingPromise.delete(pageId);
   };
 
   /** レイアウトの適用 */
@@ -279,12 +365,6 @@ export function useFieldLayout(
     }
 
     const now = new Date();
-    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-
-    // 同日の連番を算出
-    const sameDayVersions = layoutVersions.value.filter(v => v.versionLabel.startsWith(dateStr));
-    const seq = sameDayVersions.length + 1;
-    const versionLabel = `${dateStr}(${seq})`;
 
     const payload: SavedFieldLayout = {
       pageId,
@@ -297,31 +377,31 @@ export function useFieldLayout(
       sectionOrder: sectionOrder.value,
       updatedAt: now.toISOString(),
       updatedBy,
-      versionLabel,
-      isDefault: layoutVersions.value.length === 0,
       labelOverrides: Object.keys(labelOverrides.value).length ? { ...labelOverrides.value } : undefined,
       fieldOptions: Object.keys(fieldOptions.value).length ? { ...fieldOptions.value } : undefined,
       hiddenFields: hiddenFields.value.length ? [...hiddenFields.value] : undefined,
       deletedFields: deletedFields.value.length ? [...deletedFields.value] : undefined,
-      // fieldRows.valueは空行を含まない純粋データなのでそのまま保存
       fieldRows: fieldRows.value.length
         ? fieldRows.value.map(r => [...r])
         : undefined,
     };
 
-    try {
-      // バージョンストレージに保存
-      const storageKey = `field-layout-versions-${pageId}`;
-      const existing = JSON.parse(localStorage.getItem(storageKey) || '[]') as SavedFieldLayout[];
-      existing.push(payload);
-      localStorage.setItem(storageKey, JSON.stringify(existing));
+    // customDefsを含める
+    const fullPayload = {
+      ...payload,
+      customDefs: shared.customDefs.value.length ? [...shared.customDefs.value] : undefined,
+    };
 
-      // デフォルトも更新
-      localStorage.setItem(`field-layout-${pageId}`, JSON.stringify(payload));
+    try {
+      // API PUTで保存
+      const res = await fetch(`/api/field-layout/${pageId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fullPayload),
+      });
+      if (!res.ok) throw new Error(`API保存失敗: ${res.status}`);
 
       isLayoutDirty.value = false;
-      currentVersionLabel.value = versionLabel;
-      refreshVersionList();
     } catch (e) {
       console.error('レイアウト保存失敗:', e);
     }
@@ -742,59 +822,6 @@ export function useFieldLayout(
     }
   }, { deep: true });
 
-  /** バージョン一覧を更新 */
-  const refreshVersionList = () => {
-    const storageKey = `field-layout-versions-${pageId}`;
-    const existing = JSON.parse(localStorage.getItem(storageKey) || '[]') as SavedFieldLayout[];
-    layoutVersions.value = existing.map(v => ({
-      versionLabel: v.versionLabel || v.updatedAt,
-      isDefault: !!v.isDefault,
-      createdAt: v.updatedAt,
-      createdBy: v.updatedBy,
-    }));
-  };
-
-  /** バージョン切替 */
-  const switchVersion = (versionLabel: string) => {
-    const storageKey = `field-layout-versions-${pageId}`;
-    const existing = JSON.parse(localStorage.getItem(storageKey) || '[]') as SavedFieldLayout[];
-    const target = existing.find(v => v.versionLabel === versionLabel);
-    if (target) {
-      applyLayout(target);
-      currentVersionLabel.value = versionLabel;
-    }
-  };
-
-  /** デフォルトバージョン設定 */
-  const setDefaultVersion = (versionLabel: string) => {
-    const storageKey = `field-layout-versions-${pageId}`;
-    const existing = JSON.parse(localStorage.getItem(storageKey) || '[]') as SavedFieldLayout[];
-    for (const v of existing) {
-      v.isDefault = v.versionLabel === versionLabel;
-    }
-    localStorage.setItem(storageKey, JSON.stringify(existing));
-    const defaultLayout = existing.find(v => v.isDefault);
-    if (defaultLayout) {
-      localStorage.setItem(`field-layout-${pageId}`, JSON.stringify(defaultLayout));
-    }
-    refreshVersionList();
-  };
-
-  /** バージョン削除 */
-  const deleteVersion = (versionLabel: string) => {
-    const storageKey = `field-layout-versions-${pageId}`;
-    let existing = JSON.parse(localStorage.getItem(storageKey) || '[]') as SavedFieldLayout[];
-    existing = existing.filter(v => v.versionLabel !== versionLabel);
-    localStorage.setItem(storageKey, JSON.stringify(existing));
-    if (currentVersionLabel.value === versionLabel) {
-      currentVersionLabel.value = '';
-      // デフォルトに戻す
-      const defaultLayout = existing.find(v => v.isDefault);
-      if (defaultLayout) applyLayout(defaultLayout);
-    }
-    refreshVersionList();
-  };
-
   return {
     fields,
     sectionOrder,
@@ -802,8 +829,6 @@ export function useFieldLayout(
     isLayoutEditing,
     isLayoutDirty,
     sortedSections,
-    layoutVersions,
-    currentVersionLabel,
     loadLayout,
     saveLayout,
     resetLayout,
@@ -821,10 +846,6 @@ export function useFieldLayout(
     updateFieldRowSpan,
     updateSectionOrder,
     updateSectionHeight,
-    refreshVersionList,
-    switchVersion,
-    setDefaultVersion,
-    deleteVersion,
     labelOverrides,
     hiddenFields,
     updateLabelOverride,
@@ -856,5 +877,7 @@ export function useFieldLayout(
     deletedFields,
     softDeleteField,
     restoreDeletedField,
+    // カスタムフィールド定義（useCustomFieldsから統合）
+    customDefs: shared.customDefs,
   };
 }
