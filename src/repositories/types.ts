@@ -206,6 +206,8 @@ export interface Client {
   feeNotes?: string;
   /** 添付ファイル */
   attachmentFiles?: AttachmentFile[];
+  /** カスタムフィールドの値（key→value）。keyは 'custom_xxxx' 形式 */
+  extraFields?: Record<string, unknown>;
 }
 
 /** 連絡先テーブルの1行 */

@@ -51,6 +51,38 @@ export interface ClientListResponse {
 }
 
 // ────────────────────────────────────────────
+// UIキー → モデルプロパティ マッピング
+// ────────────────────────────────────────────
+
+/**
+ * フィルタ用キーマッピング
+ * clientFieldDefs.tsのkey（UI側）と Client型のプロパティ名が異なるケースを解消
+ */
+const FILTER_FIELD_MAP: Record<string, string> = {
+  fiscalDate: 'fiscalMonth',        // fieldDefsのkey='fiscalDate' → Client.fiscalMonth
+  taxMode: 'consumptionTaxMode',    // LIST_ONLY_COLUMNSのkey='taxMode' → Client.consumptionTaxMode
+}
+
+/**
+ * ソート用キーマッピング
+ * staffName / clientId は特殊処理があるためマッピング対象外
+ */
+const SORT_KEY_MAP: Record<string, string> = {
+  taxMode: 'consumptionTaxMode',
+}
+
+/**
+ * フィルタ条件のfield名をモデルプロパティ名にマッピング
+ * progressListService.ts のmappedFiltersパターンと同一
+ */
+function resolveFilterFields(conditions: FilterCondition[]): FilterCondition[] {
+  return conditions.map(c => ({
+    ...c,
+    field: FILTER_FIELD_MAP[c.field] ?? c.field,
+  }))
+}
+
+// ────────────────────────────────────────────
 // 統合一覧API
 // ────────────────────────────────────────────
 
@@ -60,7 +92,18 @@ export function getClientList(query: ClientListQuery): ClientListResponse {
 
   // 2. フィルタ適用（汎用フィルタエンジン）
   if (query.filters && query.filters.length > 0) {
-    rows = applyFilterConditions(rows, query.filters, query.logic ?? 'and')
+    // UIキー → モデルプロパティのマッピング（不整合解消）
+    const mappedFilters = resolveFilterFields(query.filters)
+    // カスタムフィールド(custom_*)はextraFieldsから展開してフィルタ対象にする
+    const hasCustomFilter = mappedFilters.some(f => f.field.startsWith('custom_'))
+    if (hasCustomFilter) {
+      const expandedRows = rows.map(r => ({ ...r, ...(r.extraFields ?? {}) }))
+      const filteredExpanded = applyFilterConditions(expandedRows, mappedFilters, query.logic ?? 'and')
+      const filteredIds = new Set(filteredExpanded.map(r => r.clientId))
+      rows = rows.filter(r => filteredIds.has(r.clientId))
+    } else {
+      rows = applyFilterConditions(rows, mappedFilters, query.logic ?? 'and')
+    }
   } else if (query.statusFilters && query.statusFilters.length > 0) {
     // 後方互換: 旧statusFiltersパラメータ
     rows = rows.filter(r => query.statusFilters!.includes(r.status))
@@ -82,6 +125,8 @@ export function getClientList(query: ClientListQuery): ClientListResponse {
   rows.sort((a, b) => {
     for (const sd of sortDefs) {
       let cmp = 0
+      // ソートキーのマッピング（UIキー → モデルプロパティ）
+      const resolvedKey = SORT_KEY_MAP[sd.key] ?? sd.key
       if (sd.key === 'staffName') {
         const sa = (a.staffId ? staffMap!.get(a.staffId) : '') ?? ''
         const sb = (b.staffId ? staffMap!.get(b.staffId) : '') ?? ''
@@ -90,8 +135,13 @@ export function getClientList(query: ClientListQuery): ClientListResponse {
         const na = parseInt(a.clientId.split('-').pop() || '0', 10)
         const nb = parseInt(b.clientId.split('-').pop() || '0', 10)
         cmp = na - nb
+      } else if (resolvedKey.startsWith('custom_')) {
+        // カスタムフィールドはextraFieldsから取得
+        const va = String((a.extraFields ?? {})[resolvedKey] ?? '')
+        const vb = String((b.extraFields ?? {})[resolvedKey] ?? '')
+        cmp = va.localeCompare(vb, 'ja')
       } else {
-        const key = sd.key as keyof Client
+        const key = resolvedKey as keyof Client
         const va = String(a[key] ?? '')
         const vb = String(b[key] ?? '')
         cmp = va.localeCompare(vb, 'ja')

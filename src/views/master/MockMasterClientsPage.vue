@@ -549,7 +549,7 @@ const clDefaultWidths: Record<string, number> = {
 const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnResize('master-clients', clDefaultWidths);
 
 // --- クライアントデータ（composableから取得） ---
-const { clients, getStaffNameForClient, updateSharedFolderId, addClient, updateClientLocal, refresh } = useClients();
+const { clients, getStaffNameForClient, updateSharedFolderId, addClient, updateClientLocal, listClients, refresh } = useClients();
 const { staffList, activeStaff: activeStaffList } = useStaff();
 
 // モーダルヘルパー
@@ -953,7 +953,12 @@ const isTextEditCol = (key: string): boolean => {
 
 /** データ行から動的フィールド値を取得（汎用） */
 const getFieldValue = (row: Record<string, unknown>, key: string): string => {
-  const val = row[key];
+  // カスタムフィールド(custom_*)はextraFieldsから取得
+  const val = key.startsWith('custom_')
+    ? (row as Record<string, unknown>).extraFields != null
+      ? ((row as Record<string, unknown>).extraFields as Record<string, unknown>)[key]
+      : undefined
+    : row[key];
   if (val === undefined || val === null) return '—';
   if (typeof val === 'boolean') return val ? UI_MSG.あり : UI_MSG.なし;
   if (typeof val === 'number') return val.toLocaleString();
@@ -989,6 +994,8 @@ const sortBy = (key: string) => {
     sortKey.value = key;
     sortOrder.value = 'asc';
   }
+  // filterSortSettingsに同期（API呼び出し時に反映させる）
+  filterSortSettings.value = [{ key: sortKey.value, order: sortOrder.value }];
 };
 
 const getSortIcon = (key: string) => {
@@ -1008,41 +1015,18 @@ const pagedRows = computed(() => filteredRows.value);
 const fetchClientList = async () => {
   isLoading.value = true;
   try {
-    // composable経由で最新データを取得
+    // composable経由で最新の全件データも同期（インライン編集の3コード重複チェック用）
     await refresh();
-    // フロント側でフィルタ・ソートを適用
-    let rows = [...clients.value];
-    // フィルタ適用（サーバー側のフィルタがない場合のフォールバック）
-    if (filterConditions.value.length > 0) {
-      rows = rows.filter(row => {
-        const checks = filterConditions.value.map(cond => {
-          const val = String((row as unknown as Record<string, unknown>)[cond.field] ?? '');
-          switch (cond.operator) {
-            case 'eq': return val === cond.value;
-            case 'neq': return val !== cond.value;
-            case 'contains': return val.includes(String(cond.value));
-            case 'not_contains': return !val.includes(String(cond.value));
-            case 'in': return Array.isArray(cond.value) ? cond.value.includes(val) : val === cond.value;
-            case 'not_in': return Array.isArray(cond.value) ? !cond.value.includes(val) : val !== cond.value;
-            case 'is_empty': return !val;
-            case 'is_not_empty': return !!val;
-            default: return true;
-          }
-        });
-        return filterLogic.value === 'and' ? checks.every(Boolean) : checks.some(Boolean);
-      });
-    }
-    // ソート適用
-    if (filterSortSettings.value.length > 0) {
-      const s = filterSortSettings.value[0]!;
-      rows.sort((a, b) => {
-        const aVal = String((a as unknown as Record<string, unknown>)[s.key] ?? '');
-        const bVal = String((b as unknown as Record<string, unknown>)[s.key] ?? '');
-        return s.order === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      });
-    }
-    filteredRows.value = rows;
-    totalPages.value = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+    // サーバー側でフィルタ+ソート+ページネーション
+    const result = await listClients({
+      filters: filterConditions.value.length > 0 ? filterConditions.value : undefined,
+      logic: filterLogic.value,
+      sorts: filterSortSettings.value.length > 0 ? filterSortSettings.value : undefined,
+      page: currentPage.value,
+      pageSize: PAGE_SIZE,
+    });
+    filteredRows.value = result.rows;
+    totalPages.value = result.totalPages;
   } catch (e) {
     console.error('[ClientsPage] リスト取得失敗:', e);
   } finally {

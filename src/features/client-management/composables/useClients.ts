@@ -249,6 +249,20 @@ export function useClients() {
     }
   }
 
+  /**
+   * POST /api/clients/list — サーバー側でフィルタ+ソート+ページネーション
+   * fetchClientListの代替。フロント側でのフィルタ・ソートを廃止する。
+   */
+  async function listClients(query: {
+    filters?: { field: string; operator: string; value: string | string[] }[]
+    logic?: 'and' | 'or'
+    sorts?: { key: string; order: 'asc' | 'desc' }[]
+    page?: number
+    pageSize?: number
+  }): Promise<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }> {
+    return apiPost<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
+  }
+
   return {
     clients,
     currentClient,
@@ -256,6 +270,7 @@ export function useClients() {
     updateSharedFolderId,
     addClient,
     updateClientLocal,
+    listClients,
     refresh,
     lastError,
   };

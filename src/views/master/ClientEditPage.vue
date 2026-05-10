@@ -575,8 +575,14 @@ const loadClientData = () => {
   if (clientId.value) {
     const c = clients.value.find(cl => cl.clientId === clientId.value);
     if (!c) { router.replace('/master/clients'); return; }
-    const { clientId: _id, contact, ...rest } = c;
+    const { clientId: _id, contact, extraFields: ef, ...rest } = c;
     Object.assign(form, { ...rest, contactType: contact.type, contactValue: contact.value });
+    // カスタムフィールドの値をextraFieldsからフォームのトップレベルに展開
+    if (ef) {
+      for (const [k, v] of Object.entries(ef)) {
+        (form as Record<string, unknown>)[k] = v;
+      }
+    }
     staffId.value = c.staffId ?? '';
     sharedEmail.value = c.sharedEmail ?? '';
     sharedChatUrl.value = c.sharedChatUrl ?? '';
@@ -804,10 +810,22 @@ const saveClient = async () => {
     }
   }
   const { contactType, contactValue, ...fields } = form;
+  // カスタムフィールドの値(custom_*)をextraFieldsに集約してトップレベルから除去
+  const extraFields: Record<string, unknown> = {};
+  const cleanFields = { ...fields } as Record<string, unknown>;
+  for (const key of Object.keys(cleanFields)) {
+    if (key.startsWith('custom_')) {
+      extraFields[key] = cleanFields[key];
+      delete cleanFields[key];
+    }
+  }
+  if (Object.keys(extraFields).length > 0) {
+    cleanFields.extraFields = extraFields;
+  }
 
   if (isNew.value) {
     // 新規: サーバーがIDを発番して返す
-    const data = { ...fields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
+    const data = { ...cleanFields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
     try {
       const saved = await addClient(data as Omit<Client, 'clientId'>);
       createDriveFolderForClient(saved).catch(e => console.error('[clients] Driveフォルダ作成失敗:', e));
@@ -819,7 +837,7 @@ const saveClient = async () => {
   } else {
     // 既存更新
     const id = clientId.value!;
-    const data: Client = { ...fields, clientId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
+    const data: Client = { ...cleanFields, clientId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } } as Client;
     try {
       const old = clients.value.find(c => c.clientId === id);
       await updateClientLocal(id, data);
