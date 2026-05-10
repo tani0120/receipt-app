@@ -583,12 +583,11 @@ const toggleAdminMode = (mode: 'field' | 'layout') => {
       showCustomFieldModal.value = true;
     } else {
       // レイアウト管理: 詳細画面に遷移してレイアウト編集モードON
-      // 最初の顧問先で開く（プレビュー用）
       const firstClient = clients.value[0];
       if (firstClient) {
         router.push({ path: `/master/clients/${firstClient.clientId}`, query: { mode: 'layout' } });
       }
-      adminMode.value = null; // 遷移するのでリセット
+      adminMode.value = null;
     }
   }
 };
@@ -907,7 +906,7 @@ const onFilterApply = (result: FilterResult) => {
 
 /** フィルタ条件を個別削除（タグの×ボタン） */
 const onFilterRemove = (index: number) => {
-  filterConditions.value.splice(index, 1);
+  filterConditions.value = filterConditions.value.filter((_, i) => i !== index);
   syncUrlQuery();
 };
 
@@ -1044,7 +1043,7 @@ watch([filterConditions, filterLogic, sortKey, sortOrder, currentPage], () => {
     fetchPending = false;
     fetchClientList();
   });
-}, { immediate: true, deep: true });
+}, { immediate: true });
 
 // 初回表示時にURLパラメータを書き込む（デフォルト設定をURLに反映）
 if (!urlViewKey) {
