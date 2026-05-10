@@ -2,7 +2,7 @@
   <div class="ce-page">
     <!-- ヘッダー1行目: ページタイトル -->
     <div class="ce-header-top">
-      <span class="ce-page-label">{{ isLayoutMode ? UI_MSG.標準フォーマット編集 : UI_MSG.顧問先管理 }}</span>
+      <span class="ce-page-label">{{ isPreviewMode ? 'プレビュー' : (isLayoutMode ? UI_MSG.標準フォーマット編集 : UI_MSG.顧問先管理) }}</span>
     </div>
     <!-- ヘッダー2行目: アクション -->
     <div class="ce-header">
@@ -11,6 +11,9 @@
           <button class="ce-btn ce-btn-back" @click="exitLayoutMode"><i class="fa-solid fa-arrow-left"></i> 一覧に戻る</button>
           <button class="ce-btn ce-btn-sm ce-btn-undo" :disabled="!layout.canUndo.value" @click="layout.undo()" title="元に戻す"><i class="fa-solid fa-rotate-left"></i></button>
           <button class="ce-btn ce-btn-sm ce-btn-redo" :disabled="!layout.canRedo.value" @click="layout.redo()" title="やり直す"><i class="fa-solid fa-rotate-right"></i></button>
+          <button class="ce-btn ce-btn-sm ce-btn-preview" :class="{ active: isPreviewMode }" @click="isPreviewMode = !isPreviewMode" title="プレビュー表示">
+            <i class="fa-solid fa-eye"></i> プレビュー
+          </button>
         </template>
         <!-- 閲覧モード -->
         <template v-else-if="!isEditing">
@@ -24,8 +27,8 @@
       </div>
       <div class="ce-header-right">
         <div class="ce-action-icons">
-          <!-- レイアウト管理モード: 全社共通の標準フォーマット操作のみ -->
-          <template v-if="isLayoutMode && layout.isLayoutEditing.value && isAdmin">
+          <!-- レイアウト管理モード: 全社共通の標準フォーマット操作のみ（プレビュー時は非表示） -->
+          <template v-if="isLayoutMode && !isPreviewMode && layout.isLayoutEditing.value && isAdmin">
             <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-save ce-btn-sm" @click="layout.saveLayout(currentUserName ?? UI_MSG.不明)"><i class="fa-solid fa-save"></i> レイアウト保存</button>
             <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-sm ce-btn-layout-cancel" @click="cancelLayoutEditing"><i class="fa-solid fa-xmark"></i> レイアウトキャンセル</button>
             <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">初期化</button>
@@ -73,12 +76,12 @@
         <!-- フラットレイアウト: 1つのDraggableFieldGridで全フィールドを管理 -->
         <DraggableFieldGrid
           :fields="flatFields"
-          :is-layout-editing="layout.isLayoutEditing.value"
+          :is-layout-editing="isLayoutMode && !isPreviewMode && layout.isLayoutEditing.value"
           :form-data="isLayoutMode ? undefined : (form as unknown as Record<string, unknown>)"
-          :is-editing="isLayoutMode ? false : isEditing"
+          :is-editing="isPreviewMode ? true : (isLayoutMode ? false : isEditing)"
           :resolve-options="resolveOptions"
           :staff-list="activeStaffList"
-          :drag-group="isLayoutMode ? 'clientLayout' : undefined"
+          :drag-group="isLayoutMode && !isPreviewMode ? 'clientLayout' : undefined"
           :selected-field-key="selectedPaletteField?.key"
           :field-rows="layout.getFieldRows.value"
           @update:order="(keys: string[]) => layout.updateFieldOrderFlat(keys)"
@@ -219,7 +222,7 @@
       </div>
       </div>
       <!-- 右カラム: レイアウト管理モード時はパーツパレット -->
-      <aside v-if="isLayoutMode" class="ce-palette-panel">
+      <aside v-if="isLayoutMode && !isPreviewMode" class="ce-palette-panel">
         <FieldPalette
           drag-group="clientLayout"
           :all-fields="layout.fields.value"
@@ -361,6 +364,7 @@ for (const def of customFields.customDefs.value) {
 }
 
 /** レイアウト管理モード用変数・ハンドラ */
+const isPreviewMode = ref(false);
 const showCustomFieldModal = ref(false);
 const showAddFieldModal = ref(false);
 const addFieldDefaultSection = ref('');
@@ -903,6 +907,9 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 .ce-btn-undo, .ce-btn-redo { background: #f1f5f9; color: #475569; min-width: 32px; padding: 4px 8px; }
 .ce-btn-undo:hover, .ce-btn-redo:hover { background: #e2e8f0; }
 .ce-btn-undo:disabled, .ce-btn-redo:disabled { opacity: 0.35; cursor: not-allowed; }
+.ce-btn-preview { background: #f1f5f9; color: #475569; padding: 4px 12px; gap: 4px; display: inline-flex; align-items: center; }
+.ce-btn-preview:hover { background: #e2e8f0; }
+.ce-btn-preview.active { background: #3b82f6; color: #fff; }
 
 .ce-link-url { color: #2563eb; text-decoration: underline; word-break: break-all; }
 .ce-btn-custom { background: #8b5cf6; color: #fff; }
