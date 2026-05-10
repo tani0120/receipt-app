@@ -102,7 +102,7 @@ export function getClientList(query: ClientListQuery): ClientListResponse {
       const filteredIds = new Set(filteredExpanded.map(r => r.clientId))
       rows = rows.filter(r => filteredIds.has(r.clientId))
     } else {
-      rows = applyFilterConditions(rows, mappedFilters, query.logic ?? 'and')
+      rows = applyFilterConditions(rows as unknown as Record<string, unknown>[], mappedFilters, query.logic ?? 'and') as unknown as Client[]
     }
   } else if (query.statusFilters && query.statusFilters.length > 0) {
     // 後方互換: 旧statusFiltersパラメータ

@@ -197,10 +197,9 @@ function removeFilter(index: number) {
 watch(() => props.visibleColumns, (v) => { localVisibleCols.value = [...v] }, { deep: true })
 watch(() => props.activeViewIndex, (v) => { if (v !== undefined) localViewIndex.value = v })
 
-// 表示列変更時
+// 表示列変更時（ユーザーが手動で列を追加/削除した場合のv-model同期のみ）
 watch(localVisibleCols, (v) => {
   emit('update:visibleColumns', [...v])
-  emit('filterChange')
 }, { deep: true })
 
 /** ビュー選択 */
@@ -209,21 +208,6 @@ const selectView = (idx: number) => {
   showViewDropdown.value = false
   emit('update:activeViewIndex', idx)
   emit('viewChange', idx)
-
-  // ビュー定義に基づいてvisibleColumnsを切替
-  if (props.views && props.views[idx]) {
-    const view = props.views[idx]
-    if (view.columns === null) {
-      // （すべて）: 全列表示
-      const allKeys = props.columns.map(c => c.key)
-      localVisibleCols.value = allKeys
-      emit('update:visibleColumns', allKeys)
-    } else {
-      localVisibleCols.value = [...view.columns]
-      emit('update:visibleColumns', [...view.columns])
-    }
-    emit('filterChange')
-  }
 }
 
 /** FilterModal適用時 */

@@ -177,13 +177,13 @@
 
         <!-- ページネーション -->
         <div class="cm-pagination" v-if="totalPages > 1">
-          <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
+          <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="goToPage(currentPage - 1)">＜</span>
           <span
             v-for="p in totalPages" :key="p"
             class="cm-page-num" :class="{ active: p === currentPage }"
-            @click="currentPage = p"
+            @click="goToPage(p)"
           >{{ p }}</span>
-          <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
+          <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="goToPage(currentPage + 1)">＞</span>
         </div>
       </div>
     </div>
@@ -583,10 +583,14 @@ const toggleAdminMode = (mode: 'field' | 'layout') => {
     if (mode === 'field') {
       showCustomFieldModal.value = true;
     } else {
-      // レイアウト管理: 詳細画面に遷移してレイアウト編集モードON
-      const firstClient = clients.value[0];
+      // レイアウト管理: 個別編集画面のレイアウト編集モードに遷移
+      const firstClient = clients.value[0] ?? filteredRows.value[0];
       if (firstClient) {
-        router.push({ path: `/master/clients/${firstClient.clientId}`, query: { mode: 'layout' } });
+        router.push({
+          name: 'ClientEdit',
+          params: { clientId: firstClient.clientId },
+          query: { mode: 'layout' },
+        });
       }
       adminMode.value = null;
     }
@@ -773,9 +777,9 @@ const clientViews: ViewDefWithDefaults[] = [
   {
     name: UI_MSG.ビューすべて,
     key: 'all',
-    columns: null,
+    columns: allColumns.value.map(c => c.key),
     defaultFilters: [],
-    defaultSorts: [{ key: 'clientId', order: 'asc' }],
+    defaultSorts: [{ key: 'threeCode', order: 'asc' }],
   },
 ];
 
@@ -815,20 +819,23 @@ function syncUrlQuery() {
     logic: filterLogic.value,
     sorts: filterSortSettings.value,
   });
-  console.log('[syncUrlQuery] conditions:', JSON.stringify(filterConditions.value));
-  console.log('[syncUrlQuery] query:', JSON.stringify(query));
   router.replace({ query });
 }
 
-/** ビュー切替時: デフォルトフィルタ・ソートに切替 + URL更新 */
+/** ビュー切替時: デフォルトフィルタ・ソート・列に切替 + URL更新 + データ再取得 */
 const onViewChange = (idx: number) => {
   const view = clientViews[idx] ?? clientViews[0]!;
+  // 表示列をビューの定義に切替
+  visibleColumns.value = view.columns
+    ? [...view.columns]
+    : allColumns.value.map(c => c.key);
   // フィルタ・ソートをビューのデフォルトに戻す
   filterConditions.value = [...view.defaultFilters];
   filterSortSettings.value = [...view.defaultSorts];
   sortKey.value = view.defaultSorts[0]?.key ?? 'threeCode';
   sortOrder.value = view.defaultSorts[0]?.order ?? 'asc';
   syncUrlQuery();
+  fetchClientList();
 };
 
 // ステータス選択肢（テンプレート用）
@@ -894,9 +901,10 @@ const filterConditions = ref<FilterCondition[]>(initialFilters);
 const filterLogic = ref<'and' | 'or'>(parseLogicFromQuery(route.query));
 const filterSortSettings = ref<SortSetting[]>(initialSorts);
 
-/** フィルター変更時: URLクエリパラメータを更新 */
+/** フィルター変更時: URLクエリパラメータを更新 + データ再取得 */
 const onFilterChange = () => {
   syncUrlQuery();
+  fetchClientList();
 };
 
 /** 絞り込みモーダル適用時 */
@@ -904,19 +912,17 @@ const onFilterApply = (result: FilterResult) => {
   filterConditions.value = result.conditions;
   filterLogic.value = result.logic;
   filterSortSettings.value = result.sorts;
-  // ソート設定をローカルstateに反映（1位のソートをヘッダーソートに使用）
   sortKey.value = result.sorts[0]?.key ?? 'threeCode';
   sortOrder.value = result.sorts[0]?.order ?? 'asc';
-  // URL同期
   syncUrlQuery();
+  fetchClientList();
 };
 
 /** フィルタ条件を個別削除（タグの×ボタン） */
 const onFilterRemove = (index: number) => {
-  console.log('[onFilterRemove] index:', index, 'before:', JSON.stringify(filterConditions.value));
   filterConditions.value = filterConditions.value.filter((_, i) => i !== index);
-  console.log('[onFilterRemove] after:', JSON.stringify(filterConditions.value));
   syncUrlQuery();
+  fetchClientList();
 };
 
 /** visibleColumnsの順序でallColumnsから列定義を取得（全列統一描画用） */
@@ -994,8 +1000,9 @@ const sortBy = (key: string) => {
     sortKey.value = key;
     sortOrder.value = 'asc';
   }
-  // filterSortSettingsに同期（API呼び出し時に反映させる）
   filterSortSettings.value = [{ key: sortKey.value, order: sortOrder.value }];
+  syncUrlQuery();
+  fetchClientList();
 };
 
 const getSortIcon = (key: string) => {
@@ -1011,47 +1018,91 @@ const currentPage = ref(1);
 const totalPages = ref(1);
 const pagedRows = computed(() => filteredRows.value);
 
+/** ページ変更 */
+const goToPage = (page: number) => {
+  const clamped = Math.max(1, Math.min(page, totalPages.value));
+  if (currentPage.value === clamped) return;
+  currentPage.value = clamped;
+  fetchClientList();
+};
+
 /** POST /api/clients/list でサーバー側でフィルタ+ソート+ページネーション */
+let fetchRequestId = 0;
 const fetchClientList = async () => {
+  const myRequestId = ++fetchRequestId;
   isLoading.value = true;
+  const filtersToSend = filterConditions.value.length > 0 ? [...filterConditions.value] : undefined;
+  const sortsToSend = filterSortSettings.value.length > 0 ? [...filterSortSettings.value] : undefined;
+  console.log(`[fetchClientList #${myRequestId}] filters:`, JSON.stringify(filtersToSend), 'sorts:', JSON.stringify(sortsToSend));
   try {
     // composable経由で最新の全件データも同期（インライン編集の3コード重複チェック用）
     await refresh();
+    // race condition防止: より新しいリクエストが発行されていたら結果を破棄
+    if (myRequestId !== fetchRequestId) {
+      console.log(`[fetchClientList #${myRequestId}] 破棄（新しいリクエスト #${fetchRequestId} が発行済み）`);
+      return;
+    }
     // サーバー側でフィルタ+ソート+ページネーション
     const result = await listClients({
-      filters: filterConditions.value.length > 0 ? filterConditions.value : undefined,
+      filters: filtersToSend,
       logic: filterLogic.value,
-      sorts: filterSortSettings.value.length > 0 ? filterSortSettings.value : undefined,
+      sorts: sortsToSend,
       page: currentPage.value,
       pageSize: PAGE_SIZE,
     });
+    // race condition防止: より新しいリクエストが発行されていたら結果を破棄
+    if (myRequestId !== fetchRequestId) {
+      console.log(`[fetchClientList #${myRequestId}] 破棄（新しいリクエスト #${fetchRequestId} が発行済み）`);
+      return;
+    }
+    console.log(`[fetchClientList #${myRequestId}] 結果: ${result.totalCount}件`);
     filteredRows.value = result.rows;
     totalPages.value = result.totalPages;
   } catch (e) {
+    if (myRequestId !== fetchRequestId) return;
     console.error('[ClientsPage] リスト取得失敗:', e);
   } finally {
-    isLoading.value = false;
+    if (myRequestId === fetchRequestId) isLoading.value = false;
   }
 };
 
-// フィルタ・ソート・ページ変更時に自動でAPI再呼び出し（バッチ化で二重発火防止）
-let fetchPending = false;
-watch([filterConditions, filterLogic, sortKey, sortOrder, currentPage], () => {
-  if (fetchPending) return;
-  fetchPending = true;
-  nextTick(() => {
-    fetchPending = false;
-    fetchClientList();
-  });
-}, { immediate: true });
+// イベント駆動: watchは使わず、各ハンドラから直接fetchClientListを呼ぶ
+// 初回表示: setup末尾で直接呼び出し
+syncUrlQuery();
+fetchClientList();
 
-// 初回表示時にURLパラメータを書き込む（デフォルト設定をURLに反映）
-if (!urlViewKey) {
-  nextTick(() => syncUrlQuery());
-}
+// KeepAliveからの復帰時にURLから状態を再同期してデータを再取得
+// 初回マウント時はsetup末尾でfetchClientList済みなのでスキップ
+let isFirstActivation = true;
+onActivated(() => {
+  if (isFirstActivation) {
+    isFirstActivation = false;
+    return;  // 初回はsetup末尾のfetchClientListに任せる
+  }
+  // 一覧ページに戻ってきた場合のみURLから状態復元
+  if (route.path === '/master/clients') {
+    const viewKey = parseViewFromQuery(route.query);
+    const view = findViewByKey(clientViews, viewKey) ?? clientViews[0]!;
+    const viewIdx = clientViews.indexOf(view);
+    if (activeViewIndex.value !== viewIdx) {
+      activeViewIndex.value = viewIdx;
+      visibleColumns.value = view.columns === null
+        ? allColumns.value.map(c => c.key)
+        : [...view.columns];
+    }
+    const urlF = parseFiltersFromQuery(route.query);
+    filterConditions.value = urlF.length > 0 ? urlF : [...view.defaultFilters];
+    filterLogic.value = parseLogicFromQuery(route.query);
+    const urlS = parseSortsFromQuery(route.query, view.defaultSorts);
+    filterSortSettings.value = urlS;
+    sortKey.value = urlS[0]?.key ?? 'threeCode';
+    sortOrder.value = urlS[0]?.order ?? 'asc';
+  }
+  fetchClientList();
+});
 
-// KeepAliveからの復帰時にデータを再取得
-onActivated(() => fetchClientList());
+// route.query watchは削除済み（無限ループの原因）
+// KeepAlive復帰時はonActivatedでURL→state復元する
 
 /** データ変更後にリストを再取得 */
 const refreshList = () => fetchClientList();
