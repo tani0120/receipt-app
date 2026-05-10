@@ -78,12 +78,12 @@
                 v-if="isMultiValueOp(cond.operator) && getFieldDef(cond.field)?.filterOptions"
                 class="fm-multi-value"
               >
-                <div class="fm-multi-value-box" @click="toggleMultiDropdown(idx)">
+                <div class="fm-multi-value-box" @click.stop="toggleMultiDropdown(idx)">
                   <span v-if="getMultiLabels(cond).length === 0" class="fm-placeholder">選択してください</span>
                   <span v-else class="fm-multi-tags">{{ getMultiLabels(cond).join(', ') }}</span>
                   <i class="fa-solid fa-chevron-down fm-chevron"></i>
                 </div>
-                <div v-if="openMultiIdx === idx" class="fm-multi-dropdown">
+                <div v-if="openMultiIdx === idx" class="fm-multi-dropdown" @click.stop>
                   <label
                     v-for="opt in getFieldDef(cond.field)?.filterOptions"
                     :key="opt.value"

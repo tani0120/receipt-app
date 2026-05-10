@@ -241,3 +241,46 @@ export const STAFF_PERMISSION_OPTIONS: readonly SelectOption[] = [
   { value: 'member', label: '一般' },
 ] as const
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 選択肢レジストリ（FieldDef.optionsの定数名参照→配列解決用）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 定数名 → SelectOption[] のマッピング */
+const OPTIONS_REGISTRY: Record<string, readonly SelectOption<string | number>[]> = {
+  TYPE_OPTIONS,
+  STATUS_OPTIONS,
+  INDUSTRY_OPTIONS,
+  ACCOUNTING_SOFTWARE_OPTIONS,
+  TAX_FILING_OPTIONS,
+  TAX_MODE_OPTIONS,
+  SIMPLIFIED_CATEGORY_OPTIONS,
+  TAX_METHOD_OPTIONS,
+  CALCULATION_METHOD_OPTIONS,
+  DEFAULT_PAYMENT_OPTIONS,
+  CONSUMPTION_TAX_INTERIM_OPTIONS,
+  NEEDS_OPTIONS,
+  CONTRACT_SCOPE_OPTIONS,
+  BOOKKEEPING_TYPE_OPTIONS,
+  YES_NO_OPTIONS,
+  PAYMENT_METHOD_OPTIONS,
+  PAYMENT_DAY_OPTIONS,
+  CONTACT_METHOD_OPTIONS,
+}
+
+/**
+ * FieldDef.options を FilterColumnDef.filterOptions 形式に解決
+ * - FieldOption[] → そのまま返す
+ * - string → OPTIONS_REGISTRYから取得
+ * - undefined → 空配列
+ */
+export function resolveFieldOptions(
+  options: readonly { value: string | number; label: string }[] | string | undefined,
+): readonly { value: string; label: string }[] {
+  if (!options) return []
+  if (typeof options === 'string') {
+    const found = OPTIONS_REGISTRY[options]
+    if (!found) return []
+    return found.map(o => ({ value: String(o.value), label: o.label }))
+  }
+  return options.map(o => ({ value: String(o.value), label: o.label }))
+}

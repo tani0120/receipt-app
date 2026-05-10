@@ -500,9 +500,9 @@ import {
   INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_MODE_OPTIONS,
   TAX_FILING_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
   CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
-  STATUS_OPTIONS, TYPE_OPTIONS, CONTACT_METHOD_FILTER_OPTIONS,
+  TYPE_OPTIONS,
   PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
-  getLabel,
+  getLabel, resolveFieldOptions,
 } from '@/constants/clientOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
@@ -518,6 +518,7 @@ import { clientSections, clientFields, LIST_ONLY_COLUMNS } from '@/constants/cli
 import { UI_MSG } from '@/constants/uiMessages';
 import { CLIENT_FIELD_LABELS } from '@/constants/fieldLabels';
 import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
+import type { FieldComponent } from '@/types/fieldLayout';
 import {
   parseViewFromQuery,
   parseFiltersFromQuery,
@@ -727,37 +728,33 @@ const industryOptions = INDUSTRY_OPTIONS;
 const route = useRoute();
 const router = useRouter();
 
-// 表示列管理 — fieldLayout.fieldsからラベル上書き反映済みの列定義を動的生成
+// 一覧テーブルで表示不可のコンポーネント種別
+const NON_LIST_COMPONENTS: FieldComponent[] = ['heading', 'spacer', 'contactTable', 'computed', 'urlCopy', 'dateGroup', 'link'];
+// フィルタ対象外のコンポーネント種別（dateGroup/linkはフィルタ対象にする）
+const NON_FILTER_COMPONENTS: FieldComponent[] = ['heading', 'spacer', 'contactTable', 'computed', 'urlCopy'];
+
 // 一覧専用列 — clientFieldDefsの共有定数を使用
 const listOnlyColumns = LIST_ONLY_COLUMNS;
-// fieldLayout.fieldsからラベルを取得（ラベル上書き適用済み）
-const getFieldLabel = (key: string): string => {
-  const f = fieldLayout.fields.value.find(ff => ff.key === key);
-  return f?.label ?? key;
-};
-// allColumnsをfieldLayout.fieldsから動的生成（一覧専用列 + フィールド定義列）
+
+/**
+ * 全列定義 — fieldLayout.fieldsから動的生成
+ * 一覧専用列（LIST_ONLY_COLUMNS）を先頭に配置し、
+ * fieldLayout.fieldsから一覧表示可能なフィールドを追加
+ */
 const allColumns = computed(() => {
-  // 基本情報ビュー用の列順序（一覧専用列を含む）
-  const basicKeys = [
-    'clientId', 'threeCode', 'type', 'taxMode', 'companyName', 'staffName',
-    'accountingSoftware', 'fiscalMonth', 'phoneNumber', 'email',
-    'sharedEmail', 'driveUrl', 'chatRoomUrl', 'contact',
-  ];
-  // 基本情報列を構築
-  const basicCols = basicKeys.map(key => {
-    const listOnly = listOnlyColumns.find(c => c.key === key);
-    if (listOnly) return { key, label: listOnly.label };
-    return { key, label: getFieldLabel(key) };
-  });
-  // fieldLayout.fieldsから追加列（基本ビューに含まれないもの）
-  const additionalCols = fieldLayout.fields.value
-    .filter(f => !basicKeys.includes(f.key))
-    .filter(f => !['computed', 'urlCopy', 'dateGroup', 'link'].includes(f.component))
+  // fieldLayout.fieldsから一覧表示可能な列を動的生成
+  const fromLayout = fieldLayout.fields.value
+    .filter(f => !NON_LIST_COMPONENTS.includes(f.component))
+    .filter(f => !f.isDeleted)
     .map(f => ({ key: f.key, label: f.label }));
-  return [...basicCols, ...additionalCols];
+  // 一覧専用列（fieldsに含まれない派生列）を先頭に追加
+  const listOnlyCols = listOnlyColumns
+    .filter(c => !fromLayout.find(f => f.key === c.key))
+    .map(c => ({ key: c.key, label: c.label }));
+  return [...fromLayout, ...listOnlyCols];
 });
 
-/** 基本情報ビューで表示する列キー（従来の14列） */
+/** 基本情報ビューで表示する列キー（ビジネスロジック上の固定列） */
 const basicViewCols = [
   'clientId', 'threeCode', 'type', 'taxMode', 'companyName', 'staffName',
   'accountingSoftware', 'fiscalMonth', 'phoneNumber', 'email',
@@ -818,6 +815,8 @@ function syncUrlQuery() {
     logic: filterLogic.value,
     sorts: filterSortSettings.value,
   });
+  console.log('[syncUrlQuery] conditions:', JSON.stringify(filterConditions.value));
+  console.log('[syncUrlQuery] query:', JSON.stringify(query));
   router.replace({ query });
 }
 
@@ -833,54 +832,62 @@ const onViewChange = (idx: number) => {
 };
 
 // ステータス選択肢（テンプレート用）
-const clientStatusOptions = STATUS_OPTIONS;
 
-// --- 絞り込みモーダル用列定義（ClientEditPageの全フィールド） ---
-// staffListがリアクティブなためcomputedで動的生成
-const clientFilterColumns = computed<FilterColumnDef[]>(() => [
-  // ステータス
-  { key: 'status', label: getFieldLabel('status') || UI_MSG.ステータス, filterType: 'select', filterOptions: clientStatusOptions },
-  // 基本情報
-  { key: 'type', label: getFieldLabel('type'), filterType: 'select', filterOptions: TYPE_OPTIONS },
-  { key: 'clientId', label: getFieldLabel('clientId'), filterType: 'text' },
-  { key: 'threeCode', label: getFieldLabel('threeCode'), filterType: 'text' },
-  { key: 'companyName', label: getFieldLabel('companyName'), filterType: 'text' },
-  { key: 'companyNameKana', label: getFieldLabel('companyNameKana'), filterType: 'text' },
-  { key: 'repName', label: getFieldLabel('repName'), filterType: 'text' },
-  { key: 'repNameKana', label: getFieldLabel('repNameKana'), filterType: 'text' },
-  { key: 'staffId', label: getFieldLabel('staffId'), filterType: 'select', filterOptions:
-    staffList.value.map(s => ({ value: s.uuid, label: s.name }))
-  },
-  { key: 'phoneNumber', label: getFieldLabel('phoneNumber'), filterType: 'text' },
-  { key: 'email', label: getFieldLabel('email'), filterType: 'text' },
-  { key: 'chatRoomUrl', label: getFieldLabel('chatRoomUrl'), filterType: 'text' },
-  { key: 'contactType', label: getFieldLabel('contactType'), filterType: 'select', filterOptions: CONTACT_METHOD_FILTER_OPTIONS },
-  { key: 'contactValue', label: getFieldLabel('contactValue'), filterType: 'text' },
-  { key: 'sharedEmail', label: getFieldLabel('sharedEmail'), filterType: 'text' },
-  { key: 'sharedChatUrl', label: getFieldLabel('sharedChatUrl'), filterType: 'text' },
-  { key: 'fiscalMonth', label: getFieldLabel('fiscalDate'), filterType: 'select', filterOptions:
-    Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}${UI_MSG.列月}` }))
-  },
-  { key: 'industry', label: getFieldLabel('industry'), filterType: 'select', filterOptions: INDUSTRY_OPTIONS.filter(o => o.value !== '') },
-  { key: 'establishedDate', label: getFieldLabel('establishedDate'), filterType: 'text' },
-  // 会計設定
-  { key: 'accountingSoftware', label: getFieldLabel('accountingSoftware'), filterType: 'select', filterOptions: ACCOUNTING_SOFTWARE_OPTIONS },
-  { key: 'taxFilingType', label: getFieldLabel('taxFilingType'), filterType: 'select', filterOptions: TAX_FILING_OPTIONS },
-  { key: 'consumptionTaxMode', label: getFieldLabel('consumptionTaxMode'), filterType: 'select', filterOptions: TAX_MODE_OPTIONS },
-  { key: 'simplifiedTaxCategory', label: getFieldLabel('simplifiedTaxCategory'), filterType: 'select', filterOptions: SIMPLIFIED_CATEGORY_OPTIONS.map(o => ({ value: String(o.value), label: o.label })) },
-  { key: 'taxMethod', label: getFieldLabel('taxMethod'), filterType: 'select', filterOptions: TAX_METHOD_OPTIONS },
-  { key: 'calculationMethod', label: getFieldLabel('calculationMethod'), filterType: 'select', filterOptions: CALCULATION_METHOD_OPTIONS },
-  { key: 'defaultPaymentMethod', label: getFieldLabel('defaultPaymentMethod'), filterType: 'select', filterOptions: DEFAULT_PAYMENT_OPTIONS },
-  { key: 'isInvoiceRegistered', label: getFieldLabel('isInvoiceRegistered'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
-  { key: 'invoiceRegistrationNumber', label: getFieldLabel('invoiceRegistrationNumber'), filterType: 'text' },
-  { key: 'hasDepartmentManagement', label: getFieldLabel('hasDepartmentManagement'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
-  { key: 'hasRentalIncome', label: getFieldLabel('hasRentalIncome'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
-  // 報酬設定
-  { key: 'advisoryFee', label: getFieldLabel('advisoryFee'), filterType: 'number' },
-  { key: 'bookkeepingFee', label: getFieldLabel('bookkeepingFee'), filterType: 'number' },
-  { key: 'settlementFee', label: getFieldLabel('settlementFee'), filterType: 'number' },
-  { key: 'taxFilingFee', label: getFieldLabel('taxFilingFee'), filterType: 'number' },
-]);
+/**
+ * FieldComponent → FilterType のマッピング
+ * fieldLayout.fieldsのコンポーネント種別から絞り込みのフィルタタイプを自動決定
+ * optionsが定義されている場合はcomponentに関係なくselectとして扱う
+ */
+function componentToFilterType(component: FieldComponent, hasOptions: boolean): FilterColumnDef['filterType'] {
+  // optionsが定義されていればselect型（readonly＋optionsのケース）
+  if (hasOptions) return 'select';
+  switch (component) {
+    case 'select':
+    case 'staffSelect':
+      return 'select';
+    case 'checkbox':
+      return 'select';  // チェックボックスはあり/なしの選択肢フィルタ
+    case 'number':
+    case 'amount':
+      return 'number';
+    case 'date':
+      return 'date';
+    default:
+      return 'text';
+  }
+}
+
+/**
+ * 絞り込みモーダル用列定義 — fieldLayout.fieldsから動的生成
+ * staffListがリアクティブなためcomputedで動的生成
+ */
+const clientFilterColumns = computed<FilterColumnDef[]>(() => {
+  return fieldLayout.fields.value
+    .filter(f => !NON_FILTER_COMPONENTS.includes(f.component))
+    .filter(f => !f.isDeleted)
+    .map(f => {
+      const filterType = componentToFilterType(f.component, !!f.options);
+      const col: FilterColumnDef = {
+        key: f.key,
+        label: f.label,
+        filterType,
+      };
+      // staffSelectの場合は動的にスタッフリストを使用
+      if (f.component === 'staffSelect') {
+        col.filterOptions = staffList.value.map(s => ({ value: s.uuid, label: s.name }));
+      // checkboxの場合は真偽値フィルタ
+      } else if (f.component === 'checkbox') {
+        col.filterOptions = BOOLEAN_FILTER_OPTIONS;
+      // dateGroupの場合は月選択肢を動的生成
+      } else if (f.component === 'dateGroup') {
+        col.filterOptions = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}${UI_MSG.列月}` }));
+      // 選択肢ありのフィールドはresolveFieldOptionsで解決
+      } else if (filterType === 'select' && f.options) {
+        col.filterOptions = resolveFieldOptions(f.options);
+      }
+      return col;
+    });
+});
 
 // --- 絞り込み条件state（URLから初期値復元） ---
 const filterConditions = ref<FilterCondition[]>(initialFilters);
@@ -906,7 +913,9 @@ const onFilterApply = (result: FilterResult) => {
 
 /** フィルタ条件を個別削除（タグの×ボタン） */
 const onFilterRemove = (index: number) => {
+  console.log('[onFilterRemove] index:', index, 'before:', JSON.stringify(filterConditions.value));
   filterConditions.value = filterConditions.value.filter((_, i) => i !== index);
+  console.log('[onFilterRemove] after:', JSON.stringify(filterConditions.value));
   syncUrlQuery();
 };
 
@@ -948,6 +957,13 @@ const getFieldValue = (row: Record<string, unknown>, key: string): string => {
   if (val === undefined || val === null) return '—';
   if (typeof val === 'boolean') return val ? UI_MSG.あり : UI_MSG.なし;
   if (typeof val === 'number') return val.toLocaleString();
+  // select型フィールドの値→ラベル変換（fieldLayout.fieldsからoptions参照）
+  const fieldDef = fieldLayout.fields.value.find(f => f.key === key);
+  if (fieldDef?.options) {
+    const resolved = resolveFieldOptions(fieldDef.options);
+    const found = resolved.find(o => o.value === String(val));
+    if (found) return found.label;
+  }
   return String(val);
 };
 

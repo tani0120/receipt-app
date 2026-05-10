@@ -49,7 +49,7 @@ export const clientSections: SectionDef[] = [
 /** 全フィールド定義 */
 export const clientFields: FieldDef[] = [
   // ── 基本情報 ──
-  { key: 'status', label: '契約状況', section: '基本情報', component: 'readonly', widthPercent: 20, order: 1, cssClass: 'ce-status' },
+  { key: 'status', label: '契約状況', section: '基本情報', component: 'readonly', widthPercent: 20, order: 1, cssClass: 'ce-status', options: 'STATUS_OPTIONS' },
   { key: 'type', label: '区分', section: '基本情報', component: 'select', widthPercent: 20, order: 2, options: 'TYPE_OPTIONS' },
   { key: 'engagementStartDate', label: '関与開始日', section: '基本情報', component: 'date', widthPercent: 20, order: 3, smallWidth: true },
   { key: 'engagementEndDate', label: '関与終了日', section: '基本情報', component: 'date', widthPercent: 20, order: 4, smallWidth: true },
