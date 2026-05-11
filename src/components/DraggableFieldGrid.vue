@@ -5,12 +5,12 @@
   >
     <div ref="containerRef" class="dfg-container">
       <!-- 行ベースレイアウト -->
-      <div v-if="localRows.length" class="dfg-rows">
-        <div v-for="(row, rowIdx) in localRows" :key="'row-' + rowIdx" class="dfg-row">
+      <div v-if="displayRows.length" class="dfg-rows">
+        <div v-for="(row, rowIdx) in displayRows" :key="'row-' + rowIdx" class="dfg-row">
           <VueDraggable
+            v-if="isLayoutEditing"
             :model-value="row"
             @update:model-value="(val: FieldDef[]) => onRowModelUpdate(rowIdx, val)"
-            :disabled="!isLayoutEditing"
             :animation="200"
             :group="getRowDragGroup(row)"
             ghost-class="dfg-ghost"
@@ -58,14 +58,14 @@
                     <input v-if="isLayoutEditing" type="text" :value="field.label" class="dfg-label-input" @blur="onLabelBlur(field.key, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()">
                     <label v-else class="dfg-label">{{ field.label }}</label>
                   </div>
-                  <div class="dfg-content">
+                  <div class="dfg-content" :class="{ 'dfg-editing': isEditing }">
                     <slot :name="field.key" :field="field">
                       <div v-if="formData" class="ce-field" :class="field.cssClass">
-                        <template v-if="field.component === 'readonly' || field.alwaysReadonly"><span class="ce-readonly" :class="field.cssClass">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-if="(field.component === 'readonly' || field.alwaysReadonly) && field.component !== 'url'"><span class="ce-readonly" :class="field.cssClass">{{ getFieldDisplayValue(field) }}</span></template>
                         <template v-else-if="field.component === 'text'"><input v-if="isEditing" type="text" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :placeholder="field.placeholder" :maxlength="field.maxLength"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
-                        <template v-else-if="field.component === 'number'"><input v-if="isEditing" type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :min="field.min"><span v-else class="ce-readonly">{{ getFieldValue(field) != null ? getFieldValue(field) + '名' : '—' }}</span></template>
+                        <template v-else-if="field.component === 'number'"><input v-if="isEditing" type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :min="field.min"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
                         <template v-else-if="field.component === 'date'"><input v-if="isEditing" type="date" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input ce-w-sm"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
-                        <template v-else-if="field.component === 'url'"><input v-if="isEditing" type="url" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :placeholder="field.placeholder"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'url'"><input v-if="isEditing && !field.alwaysReadonly" type="url" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :placeholder="field.placeholder"><a v-else-if="getFieldValue(field)" :href="String(getFieldValue(field))" target="_blank" class="ce-link">{{ getFieldDisplayValue(field) }}</a><span v-else class="ce-readonly">—</span></template>
                         <template v-else-if="field.component === 'email'"><input v-if="isEditing" type="email" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :placeholder="field.placeholder"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
                         <template v-else-if="field.component === 'select'">
                           <template v-if="isEditing"><select :value="getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLSelectElement).value)" class="ce-select"><option v-for="o in getResolvedOptions(field)" :key="String(o.value)" :value="o.value">{{ o.label }}</option></select></template>
@@ -73,8 +73,22 @@
                         </template>
                         <template v-else-if="field.component === 'textarea'"><textarea v-if="isEditing" :value="getFieldValue(field) as string" @input="setFieldValue(field, ($event.target as HTMLTextAreaElement).value)" class="ce-input ce-textarea" rows="3" :placeholder="field.placeholder"></textarea><span v-else class="ce-readonly ce-pre-wrap">{{ getFieldDisplayValue(field) }}</span></template>
                         <template v-else-if="field.component === 'checkbox'"><template v-if="isEditing"><label class="ce-checkbox"><input type="checkbox" :checked="!!getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLInputElement).checked)"><span>{{ field.label }}</span></label></template><span v-else class="ce-readonly">{{ getFieldValue(field) ? 'あり' : 'なし' }}</span></template>
-                        <template v-else-if="field.component === 'amount'"><template v-if="isEditing"><div class="ce-amount"><input type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input ce-w-sm" :min="field.min"><span>円</span></div></template><span v-else class="ce-readonly">{{ (getFieldValue(field) ?? 0).toLocaleString() }} 円</span></template>
+                        <template v-else-if="field.component === 'amount'"><template v-if="isEditing"><div class="ce-amount"><input type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input" style="width:85%" :min="field.min"><span>円</span></div></template><span v-else class="ce-readonly">{{ (getFieldValue(field) ?? 0).toLocaleString() }} 円</span></template>
                         <template v-else-if="field.component === 'staffSelect'"><template v-if="isEditing"><select :value="getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLSelectElement).value)" class="ce-select"><option value="">{{ PLACEHOLDER_UNSET }}</option><option v-for="s in (staffList ?? [])" :key="s.uuid" :value="s.uuid">{{ s.name }}</option></select></template><span v-else class="ce-readonly">{{ getStaffLabel(field) }}</span></template>
+                        <template v-else-if="field.component === 'file'">
+                          <div class="dfg-file-area">
+                            <label class="dfg-file-select-btn">
+                              <i class="fa-solid fa-paperclip"></i> ファイル選択
+                              <input type="file" multiple class="dfg-file-hidden" @change="onFileUpload(field, $event)">
+                            </label>
+                            <div v-if="getFileList(field).length" class="dfg-file-list">
+                              <div v-for="f in getFileList(field)" :key="f.id" class="dfg-file-item">
+                                <a :href="f.url" target="_blank" class="dfg-file-link">{{ f.name }}</a>
+                                <button v-if="isEditing" class="dfg-file-del" @click.stop="onFileDelete(field, f.id)">&times;</button>
+                              </div>
+                            </div>
+                          </div>
+                        </template>
                         <template v-else><span class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
                         <span v-if="field.hint && isEditing" class="ce-hint">{{ field.hint }}</span>
                       </div>
@@ -94,6 +108,7 @@
                         <template v-else-if="field.component === 'computed'"><span class="ce-readonly dfg-empty-input" style="font-style:italic;">自動計算</span></template>
                         <template v-else-if="field.component === 'contactTable'"><span class="ce-readonly dfg-empty-input">連絡先テーブル</span></template>
                         <template v-else-if="field.component === 'readonly'"><span class="ce-readonly dfg-empty-input">読み取り専用</span></template>
+                        <template v-else-if="field.component === 'file'"><span class="ce-readonly dfg-empty-input">&#x1F4CE; ファイル添付</span></template>
                         <template v-else><span class="ce-readonly dfg-empty-input">{{ field.component }}</span></template>
                       </div>
                     </slot>
@@ -142,6 +157,47 @@
               </div>
             </template>
           </VueDraggable>
+          <!-- 非編集時: VueDraggableなし -->
+          <div v-else class="dfg-row-drag-area">
+            <template v-for="field in row" :key="field.key">
+              <div class="dfg-item" :style="itemStyle(field)" :data-field-key="field.key">
+                <template v-if="field.component === 'heading'">
+                  <div class="dfg-heading" :style="{ fontSize: (field.headingSize || 14) + 'px', background: field.headingBg || '#4a8dc9', color: field.headingColor || '#fff' }"><span>{{ field.label }}</span></div>
+                </template>
+                <template v-else-if="field.component === 'spacer'">
+                  <div class="dfg-spacer" :style="{ height: (field.spacerHeight || 20) + 'px' }"></div>
+                </template>
+                <template v-else>
+                  <div class="dfg-label-area"><label class="dfg-label">{{ field.label }}</label></div>
+                  <div class="dfg-content" :class="{ 'dfg-editing': isEditing }">
+                    <slot :name="field.key" :field="field">
+                      <div v-if="formData" class="ce-field" :class="field.cssClass">
+                        <template v-if="(field.component === 'readonly' || field.alwaysReadonly) && field.component !== 'url'"><span class="ce-readonly" :class="field.cssClass">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'text'"><input v-if="isEditing" type="text" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :placeholder="field.placeholder" :maxlength="field.maxLength"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'number'"><input v-if="isEditing" type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :min="field.min"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'date'"><input v-if="isEditing" type="date" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input ce-w-sm"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'url'"><input v-if="isEditing && !field.alwaysReadonly" type="url" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :placeholder="field.placeholder"><a v-else-if="getFieldValue(field)" :href="String(getFieldValue(field))" target="_blank" class="ce-link">{{ getFieldDisplayValue(field) }}</a><span v-else class="ce-readonly">—</span></template>
+                        <template v-else-if="field.component === 'email'"><input v-if="isEditing" type="email" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :placeholder="field.placeholder"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'select'"><template v-if="isEditing"><select :value="getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLSelectElement).value)" class="ce-select"><option v-for="o in getResolvedOptions(field)" :key="String(o.value)" :value="o.value">{{ o.label }}</option></select></template><span v-else class="ce-readonly">{{ getSelectLabel(field) }}</span></template>
+                        <template v-else-if="field.component === 'textarea'"><textarea v-if="isEditing" :value="getFieldValue(field) as string" @input="setFieldValue(field, ($event.target as HTMLTextAreaElement).value)" class="ce-input ce-textarea" rows="3" :placeholder="field.placeholder"></textarea><span v-else class="ce-readonly ce-pre-wrap">{{ getFieldDisplayValue(field) }}</span></template>
+                        <template v-else-if="field.component === 'checkbox'"><template v-if="isEditing"><label class="ce-checkbox"><input type="checkbox" :checked="!!getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLInputElement).checked)"><span>{{ field.label }}</span></label></template><span v-else class="ce-readonly">{{ getFieldValue(field) ? 'あり' : 'なし' }}</span></template>
+                        <template v-else-if="field.component === 'amount'"><template v-if="isEditing"><div class="ce-amount"><input type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input" style="width:85%" :min="field.min"><span>円</span></div></template><span v-else class="ce-readonly">{{ ((getFieldValue(field) ?? 0) as number).toLocaleString() }} 円</span></template>
+                        <template v-else-if="field.component === 'staffSelect'"><template v-if="isEditing"><select :value="getFieldValue(field)" @change="setFieldValue(field, ($event.target as HTMLSelectElement).value)" class="ce-select"><option value="">{{ PLACEHOLDER_UNSET }}</option><option v-for="s in (staffList ?? [])" :key="s.uuid" :value="s.uuid">{{ s.name }}</option></select></template><span v-else class="ce-readonly">{{ getStaffLabel(field) }}</span></template>
+                        <template v-else-if="field.component === 'file'">
+                          <div class="dfg-file-area">
+                            <label class="dfg-file-select-btn"><i class="fa-solid fa-paperclip"></i> ファイル選択<input type="file" multiple class="dfg-file-hidden" @change="onFileUpload(field, $event)"></label>
+                            <div v-if="getFileList(field).length" class="dfg-file-list"><div v-for="f in getFileList(field)" :key="f.id" class="dfg-file-item"><a :href="f.url" target="_blank" class="dfg-file-link">{{ f.name }}</a><button v-if="isEditing" class="dfg-file-del" @click.stop="onFileDelete(field, f.id)">&times;</button></div></div>
+                          </div>
+                        </template>
+                        <template v-else><span class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
+                        <span v-if="field.hint && isEditing" class="ce-hint">{{ field.hint }}</span>
+                      </div>
+                    </slot>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
         </div>
       </div>
 
@@ -219,13 +275,21 @@ const emit = defineEmits<{
   (e: 'select-field', field: FieldDef): void;
   (e: 'update:fieldOptions', key: string, options: FieldOption[]): void;
   (e: 'update:rows', rows: string[][]): void;
+  (e: 'file-upload', fieldKey: string, files: FileList): void;
+  (e: 'file-delete', fieldKey: string, fileId: string): void;
 }>();
 
 /** フォームからフィールド値を取得 */
 const getFieldValue = (field: FieldDef): unknown => {
   if (!props.formData) return undefined;
   const key = field.modelKey || field.key;
-  return props.formData[key];
+  const val = props.formData[key];
+  // dateフィールド: YYYYMMDD → YYYY-MM-DD（HTML date inputの要求形式）
+  if (field.component === 'date' && typeof val === 'string') {
+    const m = val.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  }
+  return val;
 };
 
 /** フォームにフィールド値を設定 */
@@ -238,7 +302,24 @@ const setFieldValue = (field: FieldDef, value: unknown) => {
 const getFieldDisplayValue = (field: FieldDef): string => {
   const val = getFieldValue(field);
   if (val == null || val === '') return '—';
-  return String(val);
+  const s = String(val);
+  // 日付フィールド: YYYY-MM-DD or YYYYMMDD → YYYY/MM/DD
+  if (field.component === 'date') {
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) return `${isoMatch[1]}/${isoMatch[2]}/${isoMatch[3]}`;
+    const compactMatch = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (compactMatch) return `${compactMatch[1]}/${compactMatch[2]}/${compactMatch[3]}`;
+  }
+  // テキストフィールドでもYYYYMMDD形式（placeholder=YYYYMMDD）は日付変換
+  if (field.component === 'text' && field.placeholder === 'YYYYMMDD') {
+    const compactMatch = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (compactMatch) return `${compactMatch[1]}/${compactMatch[2]}/${compactMatch[3]}`;
+  }
+  // 数値フィールド
+  if (field.component === 'number') {
+    return val != null ? s : '—';
+  }
+  return s;
 };
 
 /** 選択肢を解決 */
@@ -267,24 +348,56 @@ const getStaffLabel = (field: FieldDef): string => {
   return staff ? staff.name : UI_MSG.未設定;
 };
 
+/** ファイル添付: ファイル一覧取得 */
+interface FileItem { id: string; name: string; url: string; size: number; }
+const getFileList = (field: FieldDef): FileItem[] => {
+  const val = getFieldValue(field);
+  if (Array.isArray(val)) return val as FileItem[];
+  return [];
+};
+
+
+
+/** ファイルアップロードイベント */
+const onFileUpload = (field: FieldDef, event: Event) => {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files.length > 0) {
+    emit('file-upload', field.key, input.files);
+    input.value = ''; // 同じファイルの再選択を可能に
+  }
+};
+
+/** ファイル削除イベント */
+const onFileDelete = (field: FieldDef, fileId: string) => {
+  emit('file-delete', field.key, fileId);
+};
 
 const containerRef = ref<HTMLElement | null>(null);
 
 /** ローカルフィールド（D&D用） */
 const localFields = ref<FieldDef[]>([...(props.fields ?? [])]);
 
-/** 行ベースローカルデータ（D&D用） */
+/** 行ベースローカルデータ（D&D用 — レイアウト編集時のみ使用） */
 const localRows = ref<FieldDef[][]>(
   props.fieldRows?.length
     ? props.fieldRows.map(r => [...r])
     : [[...(props.fields ?? [])]]
 );
 
+/** 表示用行データ: 非編集時はpropsを直接使い、VueDraggableの再帰を回避 */
+const displayRows = computed(() => {
+  if (props.isLayoutEditing) return localRows.value;
+  // fieldRows propsが設定されている場合はそれを使用、未設定ならlocalRows
+  return props.fieldRows ?? localRows.value;
+});
+
 /** propsのfieldRows変更を監視（キーリストで比較） */
 const fieldRowsSignature = computed(() =>
   props.fieldRows?.map(r => r.map(f => f.key).join(',')).join('|') ?? ''
 );
 watch(fieldRowsSignature, () => {
+  // レイアウト編集時のみlocalRowsを同期
+  if (!props.isLayoutEditing) return;
   const nv = props.fieldRows;
   if (nv) {
     localRows.value = nv.map(r => [...r]);
@@ -341,6 +454,7 @@ const itemStyle = (field: FieldDef) => {
 
 /** VueDraggableのmodel-value更新ガード */
 const onRowModelUpdate = (rowIdx: number, val: FieldDef[]) => {
+  if (!props.isLayoutEditing) return;
   const cur = localRows.value[rowIdx];
   const curKeys = cur?.map(f => f.key).join(',') ?? '';
   const newKeys = val.map(f => f.key).join(',');
@@ -372,6 +486,7 @@ const onRowDragAdd = (rowIdx: number, _evt: unknown) => {
 
 /** 行更新を親に通知 */
 const emitRowsUpdate = () => {
+  if (!props.isLayoutEditing) return;
   const rows = localRows.value
     .map(r => r.map(f => f.key));
   emit('update:rows', rows);
@@ -665,9 +780,42 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: #333;
   font-weight: 400;
+  width: 100%;
+  box-sizing: border-box;
+}
+/* ce-amount内のinputはflex内で自動幅 */
+.dfg-content :deep(.ce-amount .ce-input) {
+  width: auto;
+  flex: 1;
+}
+/* ce-amountのflex配置 */
+.dfg-content :deep(.ce-amount) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
 .dfg-content :deep(.ce-input:focus) {
   box-shadow: none;
+}
+/* 編集時: 枠＋白背景 */
+.dfg-content.dfg-editing :deep(.ce-input),
+.dfg-content.dfg-editing :deep(.ce-select),
+.dfg-content.dfg-editing :deep(.ce-textarea) {
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 3px;
+  padding: 4px 6px;
+}
+/* ce-w-smが付いている場合はmax-widthを優先 */
+.dfg-content.dfg-editing :deep(.ce-input.ce-w-sm) {
+  width: auto;
+}
+.dfg-content.dfg-editing :deep(.ce-input:focus),
+.dfg-content.dfg-editing :deep(.ce-select:focus) {
+  border-color: #4a8dc9;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(74,141,201,0.15);
 }
 .dfg-content :deep(.ce-select) {
   border: none;
@@ -676,6 +824,8 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: #333;
   font-weight: 400;
+  width: 100%;
+  box-sizing: border-box;
 }
 /* ステータス色・特殊書式を統一（ce-status-active, ce-code等） */
 .dfg-content :deep([class*="ce-status-"]) {
@@ -1127,4 +1277,31 @@ onBeforeUnmount(() => {
 
 /* レイアウト編集時の空UI要素 */
 .dfg-empty-input { opacity: 0.7; cursor: default; }
+
+/* ファイル添付コンポーネント */
+.dfg-file-area { display: flex; flex-direction: column; gap: 4px; }
+.dfg-file-select-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border: 1px dashed #93c5fd; border-radius: 4px;
+  background: #eff6ff; color: #2563eb; font-size: 12px; cursor: pointer;
+  transition: all 0.15s;
+}
+.dfg-file-select-btn:hover { background: #dbeafe; border-color: #3b82f6; }
+.dfg-file-hidden { display: none; }
+.dfg-file-list { display: flex; flex-direction: column; gap: 2px; }
+.dfg-file-item {
+  display: flex; align-items: center; gap: 4px;
+  padding: 2px 4px; border-radius: 3px; font-size: 12px;
+}
+.dfg-file-item:hover { background: #f1f5f9; }
+.dfg-file-link { color: #2563eb; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dfg-file-link:hover { text-decoration: underline; }
+.dfg-file-size { color: #94a3b8; font-size: 11px; }
+.dfg-file-del {
+  border: none; background: none; color: #dc2626; font-size: 14px;
+  cursor: pointer; padding: 0 2px; opacity: 0.6; transition: opacity 0.15s;
+}
+.dfg-file-del:hover { opacity: 1; }
+.ce-link { color: #2563eb; text-decoration: underline; word-break: break-all; }
+.ce-link:hover { color: #1d4ed8; }
 </style>

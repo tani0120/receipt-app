@@ -3,9 +3,9 @@
     <table class="ct-table">
       <thead>
         <tr>
-          <th v-for="col in localColumns" :key="col.key" @dblclick="startHeaderEdit(col.key)">
+          <th v-for="col in localColumns" :key="col.key" @dblclick="isLayoutMode && startHeaderEdit(col.key)">
             <input
-              v-if="editingHeader === col.key"
+              v-if="isLayoutMode && editingHeader === col.key"
               ref="headerInput"
               type="text"
               v-model="col.label"
@@ -14,30 +14,117 @@
               @keydown.enter="endHeaderEdit"
             >
             <span v-else>{{ col.label }}</span>
+            <button v-if="isLayoutMode" class="ct-col-del-btn" @click.stop="removeColumn(col.key)" title="列削除">&times;</button>
           </th>
-          <th class="ct-actions-col">
+          <th v-if="isLayoutMode" class="ct-actions-col">
             <button class="ct-col-add-btn" @click="addColumn" title="列追加">＋</button>
           </th>
         </tr>
       </thead>
-      <tbody>
-        <tr v-for="(row, rIdx) in localContacts" :key="rIdx">
-          <td v-for="col in localColumns" :key="col.key" @dblclick="startCellEdit(rIdx, col.key)">
-            <!-- 連絡種別はselect -->
+      <!-- レイアウト管理: 型プレビュー＋型変更＋選択肢編集 -->
+      <tbody v-if="isLayoutMode">
+        <!-- 型プレビュー行 -->
+        <tr>
+          <td v-for="col in localColumns" :key="col.key" class="ct-layout-cell">
             <template v-if="col.type === 'select'">
-              <select v-if="editingCell?.row === rIdx && editingCell?.col === col.key" v-model="row[col.key]" class="ct-select" @blur="endCellEdit" @change="endCellEdit">
+              <select disabled class="ct-select ct-preview"><option>— 選択 —</option></select>
+            </template>
+            <template v-else-if="col.type === 'textarea'">
+              <textarea disabled class="ct-input ct-preview" rows="1" placeholder="テキストエリア"></textarea>
+            </template>
+            <template v-else-if="col.type === 'number'">
+              <input type="number" disabled class="ct-input ct-preview" placeholder="0">
+            </template>
+            <template v-else-if="col.type === 'date'">
+              <input type="date" disabled class="ct-input ct-preview">
+            </template>
+            <template v-else-if="col.type === 'url'">
+              <input type="url" disabled class="ct-input ct-preview" placeholder="https://...">
+            </template>
+            <template v-else-if="col.type === 'email'">
+              <input type="email" disabled class="ct-input ct-preview" placeholder="email@example.com">
+            </template>
+            <template v-else-if="col.type === 'checkbox'">
+              <label class="ct-preview" style="display:flex;align-items:center;gap:4px;"><input type="checkbox" disabled><span>チェック</span></label>
+            </template>
+            <template v-else>
+              <input type="text" disabled class="ct-input ct-preview" placeholder="テキスト入力">
+            </template>
+          </td>
+          <td></td>
+        </tr>
+        <!-- 型変更行 -->
+        <tr>
+          <td v-for="col in localColumns" :key="col.key" class="ct-layout-cell">
+            <select v-model="col.type" class="ct-type-select" @change="onTypeChange(col)">
+              <option value="text">テキスト</option>
+              <option value="number">数値</option>
+              <option value="date">日付</option>
+              <option value="url">URL</option>
+              <option value="email">メール</option>
+              <option value="select">選択</option>
+              <option value="checkbox">チェック</option>
+              <option value="textarea">テキストエリア</option>
+            </select>
+          </td>
+          <td></td>
+        </tr>
+        <!-- 選択肢編集行（select型の列がある場合のみ） -->
+        <tr v-if="localColumns.some(c => c.type === 'select')">
+          <td v-for="col in localColumns" :key="col.key" class="ct-layout-cell ct-layout-options">
+            <template v-if="col.type === 'select'">
+              <div class="ct-opt-list">
+                <div v-for="(_opt, oi) in (col.options || [])" :key="oi" class="ct-opt-row">
+                  <input type="text" v-model="col.options![oi]" class="ct-opt-input" @blur="emitColumns" placeholder="選択肢">
+                  <button class="ct-opt-del" @click="removeColOption(col, oi)">&times;</button>
+                </div>
+                <button class="ct-opt-add" @click="addColOption(col)">＋ 追加</button>
+              </div>
+            </template>
+          </td>
+          <td></td>
+        </tr>
+      </tbody>
+      <!-- 通常: データ行 -->
+      <tbody v-else>
+        <tr v-for="(row, rIdx) in localContacts" :key="rIdx">
+          <td v-for="col in localColumns" :key="col.key" @dblclick="isEditing && startCellEdit(rIdx, col.key)">
+            <template v-if="col.type === 'select'">
+              <select v-if="isEditing && editingCell?.row === rIdx && editingCell?.col === col.key" v-model="row[col.key]" class="ct-select" @blur="endCellEdit" @change="endCellEdit">
                 <option value="">{{ PLACEHOLDER_DIVIDER }}</option>
                 <option v-for="opt in col.options" :key="opt" :value="opt">{{ opt }}</option>
               </select>
               <span v-else class="ct-cell-text">{{ row[col.key] || '—' }}</span>
             </template>
-            <!-- それ以外はtext -->
+            <template v-else-if="col.type === 'checkbox'">
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+                <input type="checkbox" :checked="row[col.key] === 'true' || row[col.key] === '1'" @change="row[col.key] = ($event.target as HTMLInputElement).checked ? 'true' : ''" :disabled="!isEditing">
+              </label>
+            </template>
+            <template v-else-if="col.type === 'date'">
+              <input v-if="isEditing && editingCell?.row === rIdx && editingCell?.col === col.key" type="date" v-model="row[col.key]" class="ct-input" @blur="endCellEdit">
+              <span v-else class="ct-cell-text">{{ row[col.key] || '—' }}</span>
+            </template>
+            <template v-else-if="col.type === 'url'">
+              <input v-if="isEditing && editingCell?.row === rIdx && editingCell?.col === col.key" type="url" v-model="row[col.key]" class="ct-input" @blur="endCellEdit" @keydown.enter="endCellEdit" placeholder="https://...">
+              <a v-else-if="row[col.key]" :href="row[col.key]" target="_blank" class="ct-cell-link">{{ row[col.key] }}</a>
+              <span v-else class="ct-cell-text">—</span>
+            </template>
+            <template v-else-if="col.type === 'email'">
+              <input v-if="isEditing && editingCell?.row === rIdx && editingCell?.col === col.key" type="email" v-model="row[col.key]" class="ct-input" @blur="endCellEdit" @keydown.enter="endCellEdit" placeholder="email@example.com">
+              <a v-else-if="row[col.key]" :href="'mailto:' + row[col.key]" class="ct-cell-link">{{ row[col.key] }}</a>
+              <span v-else class="ct-cell-text">—</span>
+            </template>
+            <template v-else-if="col.type === 'number'">
+              <input v-if="isEditing && editingCell?.row === rIdx && editingCell?.col === col.key" type="number" v-model="row[col.key]" class="ct-input" @blur="endCellEdit" @keydown.enter="endCellEdit">
+              <span v-else class="ct-cell-text">{{ row[col.key] || '—' }}</span>
+            </template>
             <template v-else>
-              <input v-if="editingCell?.row === rIdx && editingCell?.col === col.key" ref="cellInput" type="text" v-model="row[col.key]" class="ct-input" @blur="endCellEdit" @keydown.enter="endCellEdit" @keydown.tab="endCellEdit">
+              <input v-if="isEditing && editingCell?.row === rIdx && editingCell?.col === col.key" ref="cellInput" type="text" v-model="row[col.key]" class="ct-input" @blur="endCellEdit" @keydown.enter="endCellEdit" @keydown.tab="endCellEdit">
               <span v-else class="ct-cell-text">{{ row[col.key] || '—' }}</span>
             </template>
           </td>
-          <td class="ct-actions">
+          <td v-if="isEditing" class="ct-actions">
             <button class="ct-btn ct-btn-add" @click="addRow(rIdx)" title="行追加">＋</button>
             <button class="ct-btn ct-btn-remove" @click="removeRow(rIdx)" title="行削除" :disabled="localContacts.length <= 1">−</button>
           </td>
@@ -57,7 +144,7 @@ import { UI_MSG } from '@/constants/uiMessages';
 export interface ContactColumn {
   key: string;
   label: string;
-  type: 'text' | 'select' | 'textarea';
+  type: 'text' | 'number' | 'date' | 'url' | 'email' | 'select' | 'checkbox' | 'textarea';
   options?: string[];
   isDefault?: boolean;
 }
@@ -74,6 +161,10 @@ const DEFAULT_COLUMNS: ContactColumn[] = [
 const props = defineProps<{
   contacts: ClientContact[];
   columns?: ContactColumn[];
+  /** 編集モード（false=閲覧専用） */
+  isEditing?: boolean;
+  /** レイアウト管理モード（列追加/削除/ヘッダー編集を許可） */
+  isLayoutMode?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -191,11 +282,48 @@ const addColumn = () => {
     row[key] = '';
   }
 };
+
+/** 列削除 */
+const removeColumn = (colKey: string) => {
+  const idx = localColumns.value.findIndex(c => c.key === colKey);
+  if (idx < 0) return;
+  localColumns.value.splice(idx, 1);
+  // 行データからも削除
+  for (const row of localContacts.value) {
+    delete row[colKey];
+  }
+};
+
+/** 列定義変更を手動emit */
+const emitColumns = () => {
+  emit('update:columns', JSON.parse(JSON.stringify(localColumns.value)));
+};
+
+/** 列の型変更 */
+const onTypeChange = (col: ContactColumn) => {
+  if (col.type === 'select' && !col.options) {
+    col.options = [];
+  }
+  emitColumns();
+};
+
+/** 列の選択肢追加 */
+const addColOption = (col: ContactColumn) => {
+  if (!col.options) col.options = [];
+  col.options.push('');
+  emitColumns();
+};
+
+/** 列の選択肢削除 */
+const removeColOption = (col: ContactColumn, idx: number) => {
+  col.options?.splice(idx, 1);
+  emitColumns();
+};
 </script>
 
 <style scoped>
 .ct-wrapper { width: 100%; overflow-x: auto; }
-.ct-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ct-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
 .ct-table thead { background: #0284c7; color: #fff; }
 .ct-table th { padding: 8px 12px; font-weight: 600; text-align: left; white-space: nowrap; font-size: 12px; cursor: pointer; position: relative; }
 .ct-table th:hover { background: #0369a1; }
@@ -204,9 +332,9 @@ const addColumn = () => {
 .ct-cell-text { display: block; padding: 4px 2px; min-height: 20px; }
 .ct-header-input { width: 100%; padding: 4px 6px; border: 1px solid #fff; border-radius: 3px; font-size: 12px; font-weight: 600; background: rgba(255,255,255,0.2); color: #fff; box-sizing: border-box; }
 .ct-header-input:focus { outline: none; background: rgba(255,255,255,0.3); }
-.ct-input { width: 100%; padding: 4px 6px; border: 1px solid #3b82f6; border-radius: 3px; font-size: 13px; box-sizing: border-box; background: #eff6ff; }
+.ct-input { width: 100%; padding: 4px 6px; border: 1px solid #3b82f6; border-radius: 3px; font-size: 13px; box-sizing: border-box; background: #fff; }
 .ct-input:focus { outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
-.ct-select { padding: 4px 6px; border: 1px solid #3b82f6; border-radius: 3px; font-size: 13px; background: #eff6ff; min-width: 80px; }
+.ct-select { padding: 4px 6px; border: 1px solid #3b82f6; border-radius: 3px; font-size: 13px; background: #fff; min-width: 80px; }
 .ct-select:focus { outline: none; }
 .ct-actions-col { width: 70px; text-align: center; }
 .ct-actions { display: flex; gap: 4px; align-items: center; justify-content: center; }
@@ -218,4 +346,22 @@ const addColumn = () => {
 .ct-btn-remove:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
 .ct-col-add-btn { background: none; border: 1px dashed rgba(255,255,255,0.6); color: rgba(255,255,255,0.8); border-radius: 4px; padding: 2px 8px; font-size: 13px; font-weight: bold; cursor: pointer; }
 .ct-col-add-btn:hover { background: rgba(255,255,255,0.15); border-color: #fff; color: #fff; }
+.ct-col-del-btn { position: absolute; top: 2px; right: 2px; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 14px; cursor: pointer; padding: 0 3px; line-height: 1; }
+.ct-col-del-btn:hover { color: #fca5a5; }
+
+/* レイアウト管理用 */
+.ct-layout-cell { vertical-align: top; padding: 6px 8px; }
+.ct-preview { opacity: 0.6; pointer-events: none; width: 100%; box-sizing: border-box; }
+.ct-type-select { width: 100%; padding: 3px 4px; border: 1px solid #cbd5e1; border-radius: 3px; font-size: 11px; background: #f8fafc; color: #334155; box-sizing: border-box; }
+.ct-type-select:focus { outline: none; border-color: #3b82f6; }
+.ct-layout-options { vertical-align: top; }
+.ct-opt-list { display: flex; flex-direction: column; gap: 3px; }
+.ct-opt-row { display: flex; align-items: center; gap: 3px; }
+.ct-opt-input { flex: 1; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 3px; font-size: 12px; box-sizing: border-box; }
+.ct-opt-input:focus { outline: none; border-color: #3b82f6; }
+.ct-opt-del { border: none; background: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 0 2px; }
+.ct-opt-add { border: 1px dashed #94a3b8; background: none; color: #64748b; padding: 2px 6px; border-radius: 3px; font-size: 11px; cursor: pointer; margin-top: 2px; }
+.ct-opt-add:hover { background: #f1f5f9; border-color: #3b82f6; color: #2563eb; }
+.ct-cell-link { color: #2563eb; text-decoration: underline; font-size: 13px; word-break: break-all; }
 </style>
+

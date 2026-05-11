@@ -98,20 +98,21 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'consumptionTaxInterim', label: '消費税中間申告', section: '', component: 'select', widthPercent: 20, order: 32, options: 'CONSUMPTION_TAX_INTERIM_OPTIONS' },
   { key: 'isInvoiceRegistered', label: 'インボイス登録', section: '', component: 'checkbox', widthPercent: 20, order: 33 },
   { key: 'invoiceRegistrationNumber', label: '登録番号', section: '', component: 'text', widthPercent: 20, order: 34, placeholder: 'T1234567890123', visibleWhen: { field: 'isInvoiceRegistered', value: true } },
-  { key: 'establishedDate', label: '設立日', section: '', component: 'text', widthPercent: 20, order: 35, placeholder: 'YYYYMMDD', maxLength: 8, smallWidth: true },
+  { key: 'establishedDate', label: '設立日', section: '', component: 'date', widthPercent: 20, order: 35, smallWidth: true },
 
   // ── 備考・URL・その他 ──
   { key: 'heading_memo', label: '備考・URL・その他', section: '', component: 'heading', widthPercent: 100, order: 40, headingSize: 13, headingBg: '#7fb0d4' },
   { key: 'memo', label: '備考', section: '', component: 'textarea', widthPercent: 60, order: 41, placeholder: 'メモ' },
   { key: 'websiteUrl', label: 'WebサイトURL', section: '', component: 'url', widthPercent: 20, order: 42, placeholder: 'https://example.com' },
   { key: 'sharedEmail', label: '顧問先ログインメール（自動取得）', section: '', component: 'readonly', widthPercent: 20, order: 43, alwaysReadonly: true, hint: '※編集不可' },
-  { key: 'uploadUrlStaff', label: '社内用アップロードURL（自動）', section: '', component: 'urlCopy', widthPercent: 20, order: 44, alwaysReadonly: true },
-  { key: 'uploadUrlGuest', label: '顧問先用アップロードURL（自動）', section: '', component: 'urlCopy', widthPercent: 20, order: 45, alwaysReadonly: true },
-  { key: 'annualRevenue', label: '売上高', section: '', component: 'text', widthPercent: 20, order: 46, placeholder: '1億円以上' },
+  { key: 'uploadUrlStaff', label: '社内用アップロードURL（自動）', section: '', component: 'url', widthPercent: 20, order: 44, alwaysReadonly: true },
+  { key: 'uploadUrlGuest', label: '顧問先用アップロードURL（自動）', section: '', component: 'url', widthPercent: 20, order: 45, alwaysReadonly: true },
+  { key: 'annualRevenue', label: '売上高', section: '', component: 'select', widthPercent: 20, order: 46, options: 'ANNUAL_REVENUE_OPTIONS' },
   { key: 'employeeCount', label: '総従業員数', section: '', component: 'number', widthPercent: 20, order: 47, smallWidth: true, min: 0 },
   { key: 'industry', label: '業種', section: '', component: 'select', widthPercent: 20, order: 48, options: 'INDUSTRY_OPTIONS' },
   { key: 'parentCompany', label: '親号先/グループ会社', section: '', component: 'text', widthPercent: 20, order: 49 },
   { key: 'businessDescription', label: '事業内容', section: '', component: 'textarea', widthPercent: 60, order: 50, placeholder: '事業内容の詳細' },
+  { key: 'attachmentFiles', label: '添付ファイル', section: '', component: 'file', widthPercent: 40, order: 51 },
 
   // ── スペーサー ──
   { key: 'spacer_1', label: '', section: '', component: 'spacer', widthPercent: 100, order: 55, spacerHeight: 20 },

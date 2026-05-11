@@ -1,4 +1,4 @@
-// src/server.ts
+// src/server.ts — API + 静的ファイル提供
 import { config } from 'dotenv'
 config({ path: '.env.local' })  // .env.localを明示的に読み込む（VERTEX_PROJECT_ID等）
 
@@ -158,6 +158,14 @@ app.route('/api/export', exportRoutes)
 // FieldLayout API: フィールドレイアウト保存/取得
 import fieldLayoutRoutes from './api/routes/fieldLayoutRoutes'
 app.route('/api/field-layout', fieldLayoutRoutes)
+
+// Comment API: コメント管理
+import commentRoutes from './api/routes/commentRoutes'
+app.route('/api/comments', commentRoutes)
+
+// Attachment API: 添付ファイル管理
+import attachmentRoutes from './api/routes/attachmentRoutes'
+app.route('/api/attachments', attachmentRoutes)
 
 // AIPrompt API: AIプロンプト管理（GET/PUT）
 import aiPromptRoutes from './api/routes/aiPromptRoutes'

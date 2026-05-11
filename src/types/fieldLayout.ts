@@ -23,6 +23,7 @@ export type FieldComponent =
   | 'heading'       // セクション見出し（タイトルフィールド）
   | 'spacer'        // 空白行（高さ調整用スペーサー）
   | 'contactTable'  // 連絡先テーブル（ContactTable埋込み）
+  | 'file'          // ファイル添付
   | 'custom';       // カスタムスロット
 
 /** 選択肢 */
@@ -151,11 +152,15 @@ export const FIELD_COMPONENT_OPTIONS: readonly { value: FieldComponent; label: s
   { value: 'text', label: 'テキスト' },
   { value: 'number', label: '数値' },
   { value: 'date', label: '日付' },
+  { value: 'url', label: 'URL' },
+  { value: 'email', label: 'メール' },
   { value: 'textarea', label: 'テキストエリア' },
   { value: 'select', label: '選択' },
   { value: 'checkbox', label: 'チェック' },
+  { value: 'amount', label: '金額' },
   { value: 'heading', label: 'タイトル' },
   { value: 'spacer', label: 'スペーサー' },
+  { value: 'file', label: 'ファイル添付' },
 ] as const;
 
 /** 全コンポーネント型→日本語ラベルの変換マップ */
@@ -178,5 +183,6 @@ export const COMPONENT_LABEL_MAP: Record<FieldComponent, string> = {
   heading: 'タイトル',
   spacer: 'スペーサー',
   contactTable: '連絡先テーブル',
+  file: 'ファイル添付',
   custom: 'カスタム',
 };

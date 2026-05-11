@@ -38,7 +38,7 @@ export const leadFields: FieldDef[] = [
   { key: 'sharedChatUrl', label: '共有用チャットURL', section: '基本情報', component: 'url', widthPercent: 20, order: 15, placeholder: 'https://www.chatwork.com/#!rid...', modelKey: 'sharedChatUrl' },
   { key: 'fiscalDate', label: '決算日', section: '基本情報', component: 'dateGroup', widthPercent: 20, order: 16 },
   { key: 'industry', label: '業種', section: '基本情報', component: 'select', widthPercent: 20, order: 17, options: 'INDUSTRY_OPTIONS' },
-  { key: 'establishedDate', label: '設立日', section: '基本情報', component: 'text', widthPercent: 20, order: 18, placeholder: 'YYYYMMDD', maxLength: 8, smallWidth: true },
+  { key: 'establishedDate', label: '設立日', section: '基本情報', component: 'date', widthPercent: 20, order: 18, smallWidth: true },
 
   // ── 会計設定 ──
   { key: 'accountingSoftware', label: '会計ソフト', section: '会計設定', component: 'select', widthPercent: 20, order: 1, options: 'ACCOUNTING_SOFTWARE_OPTIONS' },

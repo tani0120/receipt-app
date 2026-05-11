@@ -184,12 +184,25 @@ export function useFieldLayout(
         const res = await fetch(`/api/field-layout/${pageId}`);
         if (res.ok) {
           const saved: SavedFieldLayout = await res.json();
-          applyLayout(saved);
 
-          // customDefsがあれば復元
+          // customDefsがあれば先にfields.valueに追加（applyLayoutで参照するため）
           if (saved.customDefs) {
             shared.customDefs.value = saved.customDefs as CustomFieldDef[];
+            for (const cd of shared.customDefs.value) {
+              if (!fields.value.find(f => f.key === cd.key)) {
+                fields.value.push({
+                  key: cd.key,
+                  label: cd.label,
+                  section: cd.section,
+                  component: cd.component,
+                  widthPercent: cd.widthPercent,
+                  order: cd.order,
+                });
+              }
+            }
           }
+
+          applyLayout(saved);
           return;
         }
 
@@ -198,15 +211,29 @@ export function useFieldLayout(
         const stored = localStorage.getItem(lsKey);
         if (stored) {
           const saved: SavedFieldLayout = JSON.parse(stored);
-          applyLayout(saved);
 
-          // customDefs移行
+          // customDefs移行（applyLayoutの前にfields.valueに追加）
           const customKey = `custom-field-defs-${pageId}`;
           const customStored = localStorage.getItem(customKey);
           if (customStored) {
             shared.customDefs.value = JSON.parse(customStored);
             saved.customDefs = shared.customDefs.value;
           }
+          // customDefsからFieldDefを復元
+          for (const cd of shared.customDefs.value) {
+            if (!fields.value.find(f => f.key === cd.key)) {
+              fields.value.push({
+                key: cd.key,
+                label: cd.label,
+                section: cd.section,
+                component: cd.component,
+                widthPercent: cd.widthPercent,
+                order: cd.order,
+              });
+            }
+          }
+
+          applyLayout(saved);
 
           // APIに移行保存
           await fetch(`/api/field-layout/${pageId}`, {
@@ -331,6 +358,17 @@ export function useFieldLayout(
     } else {
       // 後方互換: fieldRowsがない場合、lineBreakAfterから行を構築
       buildRowsFromFlat();
+    }
+
+    // デフォルト定義に存在するがfieldRowsに含まれていないフィールドを末尾行に追加
+    const allPlacedKeys = new Set(fieldRows.value.flat());
+    const deletedSet = new Set(deletedFields.value);
+    const hiddenSet = new Set(hiddenFields.value);
+    const missingKeys = defaultFields
+      .filter(f => !allPlacedKeys.has(f.key) && !deletedSet.has(f.key) && !hiddenSet.has(f.key))
+      .map(f => f.key);
+    if (missingKeys.length > 0) {
+      fieldRows.value.push(missingKeys);
     }
   };
 
@@ -548,9 +586,11 @@ export function useFieldLayout(
   /** 行ベース: 表示用の行配列を取得（FieldDef[][] — ドロップゾーン空行を含む） */
   const getFieldRows = computed((): FieldDef[][] => {
     const hidden = new Set(hiddenFields.value);
-    // データ層（fieldRows.value）には空行がないので、表示時にドロップゾーンを挿入
-    const withDropZones = ensureDropZones(fieldRows.value);
-    return withDropZones.map(row =>
+    // ドロップゾーン（空行）はレイアウト編集時のみ追加
+    const rows = isLayoutEditing.value
+      ? ensureDropZones(fieldRows.value)
+      : fieldRows.value;
+    return rows.map(row =>
       row
         .filter(key => !hidden.has(key))
         .map(key => fields.value.find(f => f.key === key))
@@ -668,6 +708,21 @@ export function useFieldLayout(
         lastRow.push(fieldDef.key);
       } else {
         fieldRows.value.push([fieldDef.key]);
+      }
+    }
+    // customDefsにも登録（custom_プレフィックスまたはデフォルト定義に存在しないフィールド）
+    const isDefaultField = defaultFields.some(df => df.key === fieldDef.key);
+    if (fieldDef.key.startsWith('custom_') || !isDefaultField) {
+      const exists = shared.customDefs.value.find(d => d.key === fieldDef.key);
+      if (!exists) {
+        shared.customDefs.value.push({
+          key: fieldDef.key,
+          label: fieldDef.label,
+          section: fieldDef.section,
+          component: fieldDef.component,
+          widthPercent: fieldDef.widthPercent,
+          order: fieldDef.order,
+        });
       }
     }
     markDirty();
@@ -879,5 +934,7 @@ export function useFieldLayout(
     restoreDeletedField,
     // カスタムフィールド定義（useCustomFieldsから統合）
     customDefs: shared.customDefs,
+    // dirty状態の手動設定
+    markDirty,
   };
 }

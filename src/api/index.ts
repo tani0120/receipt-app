@@ -5,6 +5,7 @@ import clientsRoute from './routes/clientRoutes'
 
 import collection from './routes/collection'
 import commentRoutes from './routes/commentRoutes'
+import attachmentRoutes from './routes/attachmentRoutes'
 // 旧ai-rulesは廃止・削除済み
 import admin from './routes/admin'
 import aiModels from './routes/ai-models'
@@ -68,6 +69,7 @@ const routes = app
     .route('/api/progress', progressRoutes)
     .route('/api/export', exportRoutes)
     .route('/api/comments', commentRoutes)
+    .route('/api/attachments', attachmentRoutes)
     .get('/api/tax-options', (c) => {
         return c.json(TAX_OPTIONS)
     })

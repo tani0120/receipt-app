@@ -204,7 +204,7 @@ export interface Client {
   paymentDay?: string;
   /** 報酬備考 */
   feeNotes?: string;
-  /** 添付ファイル */
+  /** 添付ファイル（レガシー: 今後はextraFields[fieldKey]で管理） */
   attachmentFiles?: AttachmentFile[];
   /** カスタムフィールドの値（key→value）。keyは 'custom_xxxx' 形式 */
   extraFields?: Record<string, unknown>;
@@ -308,6 +308,8 @@ export interface Lead {
   bookkeepingFee: number;
   settlementFee: number;
   taxFilingFee: number;
+  /** カスタムフィールドの値（key→value） */
+  extraFields?: Record<string, unknown>;
 }
 
 /** 見込先フォーム用型 */

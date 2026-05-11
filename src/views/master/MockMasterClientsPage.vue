@@ -43,8 +43,6 @@
           @filter-remove="onFilterRemove"
           @view-change="onViewChange"
         >
-          <template #actions>
-          </template>
         </TableFilterToolbar>
 
         <!-- テーブル -->

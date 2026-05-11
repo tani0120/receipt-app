@@ -126,6 +126,7 @@
 import { ref, computed, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import type { FieldDef, FieldComponent, FieldOption } from '@/types/fieldLayout';
+import { FIELD_COMPONENT_OPTIONS } from '@/types/fieldLayout';
 
 interface PaletteItem {
   key: string;
@@ -133,6 +134,48 @@ interface PaletteItem {
   icon: string;
   component: FieldComponent;
 }
+
+/** コンポーネント→アイコンのマップ */
+const COMPONENT_ICON_MAP: Record<string, string> = {
+  text: 'fa-solid fa-font',
+  number: 'fa-solid fa-hashtag',
+  date: 'fa-solid fa-calendar',
+  select: 'fa-solid fa-list',
+  checkbox: 'fa-solid fa-square-check',
+  textarea: 'fa-solid fa-align-left',
+  amount: 'fa-solid fa-yen-sign',
+  url: 'fa-solid fa-link',
+  email: 'fa-solid fa-envelope',
+  file: 'fa-solid fa-paperclip',
+  heading: 'fa-solid fa-heading',
+  spacer: 'fa-solid fa-arrows-up-down',
+};
+
+/** 構造部材のコンポーネント種別 */
+const STRUCTURE_COMPONENTS = new Set<string>(['heading', 'spacer']);
+
+/** FIELD_COMPONENT_OPTIONSから自動生成 */
+const structureParts = ref<PaletteItem[]>(
+  FIELD_COMPONENT_OPTIONS
+    .filter(o => STRUCTURE_COMPONENTS.has(o.value))
+    .map(o => ({
+      key: `_palette_${o.value}`,
+      label: o.label,
+      icon: COMPONENT_ICON_MAP[o.value] || 'fa-solid fa-cube',
+      component: o.value,
+    }))
+);
+
+const fieldParts = ref<PaletteItem[]>(
+  FIELD_COMPONENT_OPTIONS
+    .filter(o => !STRUCTURE_COMPONENTS.has(o.value))
+    .map(o => ({
+      key: `_palette_${o.value}`,
+      label: o.label,
+      icon: COMPONENT_ICON_MAP[o.value] || 'fa-solid fa-cube',
+      component: o.value,
+    }))
+);
 
 const props = defineProps<{
   /** D&Dグループ名（DraggableFieldGridと同じ名前にする） */
@@ -153,24 +196,6 @@ const emit = defineEmits<{
   (e: 'delete-field', key: string): void;
   (e: 'update:fieldOptions', key: string, options: FieldOption[]): void;
 }>();
-
-/** 構造部材 */
-const structureParts = ref<PaletteItem[]>([
-  { key: '_palette_heading', label: 'タイトル', icon: 'fa-solid fa-heading', component: 'heading' },
-  { key: '_palette_spacer', label: 'スペーサー', icon: 'fa-solid fa-arrows-up-down', component: 'spacer' },
-]);
-
-/** フィールド部材 */
-const fieldParts = ref<PaletteItem[]>([
-  { key: '_palette_text', label: 'テキスト', icon: 'fa-solid fa-font', component: 'text' },
-  { key: '_palette_number', label: '数値', icon: 'fa-solid fa-hashtag', component: 'number' },
-  { key: '_palette_date', label: '日付', icon: 'fa-solid fa-calendar', component: 'date' },
-  { key: '_palette_select', label: '選択肢', icon: 'fa-solid fa-list', component: 'select' },
-  { key: '_palette_checkbox', label: 'チェック', icon: 'fa-solid fa-square-check', component: 'checkbox' },
-  { key: '_palette_textarea', label: 'テキストエリア', icon: 'fa-solid fa-align-left', component: 'textarea' },
-  { key: '_palette_amount', label: '金額', icon: 'fa-solid fa-yen-sign', component: 'amount' },
-  { key: '_palette_url', label: 'URL', icon: 'fa-solid fa-link', component: 'url' },
-]);
 
 /** 非表示中のフィールド定義 */
 const hiddenFieldDefs = computed(() =>

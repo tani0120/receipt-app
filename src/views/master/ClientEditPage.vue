@@ -100,6 +100,8 @@
           @select-field="(field: import('@/types/fieldLayout').FieldDef) => selectedPaletteField = field"
           @update:field-options="(key: string, opts: import('@/types/fieldLayout').FieldOption[]) => layout.updateFieldOptions(key, opts)"
           @update:rows="(rows: string[][]) => layout.updateAllRows(rows)"
+          @file-upload="handleFileUpload"
+          @file-delete="handleFileDelete"
         >
           <!-- status: 契約状況の表示 -->
           <template v-if="!isLayoutMode" #status>
@@ -128,7 +130,7 @@
           <template v-if="!isLayoutMode" #progressLink>
             <div class="ce-field">
               <div v-if="clientId" class="ce-url-row">
-                <a :href="journalListUrl" target="_blank" class="ce-readonly ce-url-text ce-link-url">{{ journalListUrl }}</a>
+                <a :href="journalListUrl" target="_blank" class="ce-link-url">{{ journalListUrl }}</a>
                 <button class="ce-copy-btn" @click="copyToClipboard(journalListUrl)" title="コピー"><i class="fa-regular fa-copy"></i></button>
               </div>
               <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
@@ -163,7 +165,7 @@
           <template v-if="!isLayoutMode" #uploadUrlStaff>
             <div class="ce-field">
               <div v-if="clientId" class="ce-url-row">
-                <span class="ce-readonly ce-url-text">{{ uploadUrlStaff }}</span>
+                <a :href="uploadUrlStaff" target="_blank" class="ce-link-url">{{ uploadUrlStaff }}</a>
                 <button class="ce-copy-btn" @click="copyToClipboard(uploadUrlStaff)" title="コピー"><i class="fa-regular fa-copy"></i></button>
               </div>
               <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
@@ -173,17 +175,20 @@
           <template v-if="!isLayoutMode" #uploadUrlGuest>
             <div class="ce-field">
               <div v-if="clientId" class="ce-url-row">
-                <span class="ce-readonly ce-url-text">{{ uploadUrlGuest }}</span>
+                <a :href="uploadUrlGuest" target="_blank" class="ce-link-url">{{ uploadUrlGuest }}</a>
                 <button class="ce-copy-btn" @click="copyToClipboard(uploadUrlGuest)" title="コピー"><i class="fa-regular fa-copy"></i></button>
               </div>
               <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
             </div>
           </template>
           <!-- contactTable: 連絡先テーブル -->
-          <template v-if="!isLayoutMode" #contactTable>
+          <template #contactTable>
             <ContactTable
               :contacts="form.contacts || []"
+              :is-editing="isEditing"
+              :is-layout-mode="isLayoutMode"
               @update:contacts="(v: ClientContact[]) => form.contacts = v"
+              @update:columns="() => layout.markDirty()"
             />
           </template>
           <!-- hasRentalIncome: 不動産所得チェック -->
@@ -291,7 +296,7 @@ import {
   TAX_METHOD_OPTIONS, CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
   CONSUMPTION_TAX_INTERIM_OPTIONS, NEEDS_OPTIONS, CONTRACT_SCOPE_OPTIONS,
   BOOKKEEPING_TYPE_OPTIONS, YES_NO_OPTIONS, PAYMENT_METHOD_OPTIONS,
-  PAYMENT_DAY_OPTIONS,
+  PAYMENT_DAY_OPTIONS, ANNUAL_REVENUE_OPTIONS,
   STATUS_OPTIONS, PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
   getLabel,
 } from '@/constants/clientOptions';
@@ -334,6 +339,7 @@ const selectedPaletteField = ref<import('@/types/fieldLayout').FieldDef | null>(
 const optionsMap: Record<string, readonly import('@/types/fieldLayout').FieldOption[]> = {
   TYPE_OPTIONS,
   INDUSTRY_OPTIONS,
+  ANNUAL_REVENUE_OPTIONS,
   ACCOUNTING_SOFTWARE_OPTIONS,
   TAX_FILING_OPTIONS,
   TAX_MODE_OPTIONS,
@@ -572,6 +578,42 @@ const annualTotal = computed(() => {
 
 /** 法人→個人切替時にhasRentalIncomeリセット */
 watch(() => form.type, (v) => { if (v === 'corp') form.hasRentalIncome = false; });
+
+/** ファイルアップロードハンドラ */
+const handleFileUpload = async (fieldKey: string, files: FileList) => {
+  console.log('[ClientEdit] ファイルアップロード開始:', clientId.value, fieldKey, Array.from(files).map(f => f.name));
+  if (!clientId.value) { console.warn('[ClientEdit] clientIdがない'); return; }
+  for (const file of Array.from(files)) {
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch(`/api/attachments/${clientId.value}`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.ok && data.attachment) {
+        const current = ((form as Record<string, unknown>)[fieldKey] as unknown[]) ?? [];
+        const updated = [...current, data.attachment];
+        (form as Record<string, unknown>)[fieldKey] = updated;
+        console.log(`[ClientEdit] form[${fieldKey}]更新:`, updated.length, '件');
+      } else {
+        console.error('[ClientEdit] APIエラー:', data);
+      }
+    } catch (err) {
+      console.error('[ClientEdit] ファイルアップロード失敗:', err);
+    }
+  }
+};
+
+/** ファイル削除ハンドラ */
+const handleFileDelete = async (fieldKey: string, fileId: string) => {
+  if (!clientId.value) return;
+  try {
+    await fetch(`/api/attachments/${clientId.value}/${fileId}`, { method: 'DELETE' });
+    const list = (form as Record<string, unknown>)[fieldKey] as { id: string }[] ?? [];
+    (form as Record<string, unknown>)[fieldKey] = list.filter(f => f.id !== fileId);
+  } catch (err) {
+    console.error('[ClientEdit] ファイル削除失敗:', err);
+  }
+};
 
 /** メンション用スタッフリスト（useStaffから取得） */
 const { staffList: mentionStaffList } = useStaff();
@@ -848,11 +890,14 @@ const saveClient = async () => {
     }
   }
   const { contactType, contactValue, ...fields } = form;
-  // カスタムフィールドの値(custom_*)をextraFieldsに集約してトップレベルから除去
+  // デフォルトフォームのキー以外を全てextraFieldsに動的に集約
+  const defaultKeys = new Set(Object.keys(emptyClientForm()));
+  defaultKeys.add('contactType');
+  defaultKeys.add('contactValue');
   const extraFields: Record<string, unknown> = {};
   const cleanFields = { ...fields } as Record<string, unknown>;
   for (const key of Object.keys(cleanFields)) {
-    if (key.startsWith('custom_')) {
+    if (!defaultKeys.has(key)) {
       extraFields[key] = cleanFields[key];
       delete cleanFields[key];
     }
@@ -991,10 +1036,10 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 /* フィールド */
 .ce-field { display: flex; flex-direction: column; gap: 2px; }
 .ce-field label { font-size: 11px; font-weight: 700; color: #333; }
-.ce-input { border: 1px solid #ccc; border-radius: 3px; padding: 6px 8px; font-size: 13px; transition: border-color 0.15s; background: #fff; }
+.ce-input { width: 100%; border: 1px solid #ccc; border-radius: 3px; padding: 6px 8px; font-size: 13px; transition: border-color 0.15s; background: #fff; box-sizing: border-box; }
 .ce-input:focus { border-color: #4a8dc9; outline: none; box-shadow: 0 0 0 2px rgba(74,141,201,0.15); }
 .ce-input:disabled { background: #f5f5f5; color: #999; }
-.ce-select { border: 1px solid #ccc; border-radius: 3px; padding: 6px 8px; font-size: 13px; background: #fff; }
+.ce-select { width: 100%; border: 1px solid #ccc; border-radius: 3px; padding: 6px 8px; font-size: 13px; background: #fff; box-sizing: border-box; }
 .ce-w-sm { max-width: 160px; }
 .ce-hint { font-size: 10px; color: #999; font-weight: 400; }
 .ce-required { color: #e74c3c; font-weight: 700; font-size: 13px; }

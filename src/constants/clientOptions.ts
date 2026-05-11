@@ -77,6 +77,19 @@ export const INDUSTRY_OPTIONS: readonly SelectOption[] = [
   { value: 'その他', label: 'その他' },
 ] as const
 
+/** 売上高（年間売上規模） */
+export const ANNUAL_REVENUE_OPTIONS: readonly SelectOption[] = [
+  { value: '', label: '—' },
+  { value: 'under_3m', label: '300万円未満' },
+  { value: '3m_to_5m', label: '300万円以上～500万円未満' },
+  { value: '5m_to_10m', label: '500万円以上～1000万円未満' },
+  { value: '10m_to_30m', label: '1000万円以上～3000万円未満' },
+  { value: '30m_to_100m', label: '3000万円以上～1億円未満' },
+  { value: '100m_to_500m', label: '1億円以上～5億円未満' },
+  { value: '500m_to_1b', label: '5億円以上～10億円未満' },
+  { value: 'over_1b', label: '10億円以上～' },
+] as const
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 会計設定
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -250,6 +263,7 @@ const OPTIONS_REGISTRY: Record<string, readonly SelectOption<string | number>[]>
   TYPE_OPTIONS,
   STATUS_OPTIONS,
   INDUSTRY_OPTIONS,
+  ANNUAL_REVENUE_OPTIONS,
   ACCOUNTING_SOFTWARE_OPTIONS,
   TAX_FILING_OPTIONS,
   TAX_MODE_OPTIONS,

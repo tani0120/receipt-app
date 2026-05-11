@@ -48,6 +48,8 @@
           :form-data="(form as unknown as Record<string, unknown>)"
           :is-editing="true"
           :resolve-options="resolveOptions"
+          :field-rows="layout.getFieldRows.value"
+          @update:rows="(rows: string[][]) => layout.updateAllRows(rows)"
           :staff-list="activeStaffList"
           :drag-group="layout.isLayoutEditing.value ? 'leadLayout' : undefined"
           @update:order="(keys: string[]) => layout.updateFieldOrderFlat(keys)"
@@ -277,8 +279,14 @@ onMounted(async () => {
       router.replace("/master/leads");
       return;
     }
-    const { leadId: _id, contact, ...rest } = c;
+    const { leadId: _id, contact, extraFields: ef, ...rest } = c;
     Object.assign(form, { ...rest, contactType: contact.type, contactValue: contact.value });
+    // カスタムフィールドの値をextraFieldsからフォームのトップレベルに展開
+    if (ef) {
+      for (const [k, v] of Object.entries(ef)) {
+        (form as Record<string, unknown>)[k] = v;
+      }
+    }
     staffId.value = c.staffId ?? "";
     sharedEmail.value = c.sharedEmail ?? "";
     sharedChatUrl.value = c.sharedChatUrl ?? "";
@@ -516,10 +524,25 @@ const saveLead = async () => {
     }
   }
   const { contactType, contactValue, ...fields } = form;
+  // デフォルトフォームのキー以外を全てextraFieldsに動的に集約
+  const defaultKeys = new Set(Object.keys(emptyLeadForm()));
+  defaultKeys.add('contactType');
+  defaultKeys.add('contactValue');
+  const extraFields: Record<string, unknown> = {};
+  const cleanFields = { ...fields } as Record<string, unknown>;
+  for (const key of Object.keys(cleanFields)) {
+    if (!defaultKeys.has(key)) {
+      extraFields[key] = cleanFields[key];
+      delete cleanFields[key];
+    }
+  }
+  if (Object.keys(extraFields).length > 0) {
+    cleanFields.extraFields = extraFields;
+  }
 
   if (isNew.value) {
     // 新規: サーバーがIDを発番して返す
-    const data = { ...fields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
+    const data = { ...cleanFields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
     try {
       const saved = await addLead(data as Omit<Lead, 'leadId'>);
       createDriveFolderForLead(saved).catch((e) => console.error("[leads] Driveフォルダ作成失敗:", e));
@@ -534,7 +557,7 @@ const saveLead = async () => {
     }
   } else {
     const id = leadId.value!;
-    const data: Lead = { ...fields, leadId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
+    const data = { ...cleanFields, leadId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } } as Lead;
     try {
       const old = leads.value.find((l: Lead) => l.leadId === id);
       await updateLeadLocal(id, data);
