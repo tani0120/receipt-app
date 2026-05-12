@@ -10,7 +10,7 @@
  * useStaffと同じシングルトンパターンを適用
  */
 import { ref, computed, watch, type Ref } from 'vue';
-import type { FieldDef, FieldOption, SectionDef, SavedFieldLayout } from '@/types/fieldLayout';
+import type { FieldDef, FieldOption, SectionDef, SavedFieldLayout, TableColumnDef } from '@/types/fieldLayout';
 
 /** カスタムフィールド定義（useCustomFieldsから統合） */
 export interface CustomFieldDef {
@@ -37,6 +37,7 @@ interface SharedState {
   deletedFields: Ref<string[]>;
   fieldRows: Ref<string[][]>;
   customDefs: Ref<CustomFieldDef[]>;
+  tableColumns: Ref<Record<string, TableColumnDef[]>>;
 }
 
 /** pageIdごとのシングルトンキャッシュ */
@@ -57,6 +58,7 @@ function createSharedState(defaultFields: FieldDef[], sections: SectionDef[]): S
     deletedFields: ref<string[]>([]),
     fieldRows: ref<string[][]>([]),
     customDefs: ref<CustomFieldDef[]>([]),
+    tableColumns: ref<Record<string, TableColumnDef[]>>({}),
   };
 }
 
@@ -370,6 +372,11 @@ export function useFieldLayout(
     if (missingKeys.length > 0) {
       fieldRows.value.push(missingKeys);
     }
+
+    // テーブル列定義を適用
+    if (saved.tableColumns) {
+      shared.tableColumns.value = { ...saved.tableColumns };
+    }
   };
 
   /** レイアウトの保存 */
@@ -428,6 +435,7 @@ export function useFieldLayout(
     const fullPayload = {
       ...payload,
       customDefs: shared.customDefs.value.length ? [...shared.customDefs.value] : undefined,
+      tableColumns: Object.keys(shared.tableColumns.value).length ? { ...shared.tableColumns.value } : undefined,
     };
 
     try {
@@ -725,6 +733,18 @@ export function useFieldLayout(
         });
       }
     }
+    // table部品の場合、デフォルト4列を設定
+    if (fieldDef.component === 'table' && !shared.tableColumns.value[fieldDef.key]) {
+      shared.tableColumns.value = {
+        ...shared.tableColumns.value,
+        [fieldDef.key]: [
+          { key: 'col_1', label: '列1', type: 'text' },
+          { key: 'col_2', label: '列2', type: 'text' },
+          { key: 'col_3', label: '列3', type: 'text' },
+          { key: 'col_4', label: '列4', type: 'text' },
+        ],
+      };
+    }
     markDirty();
   };
 
@@ -934,6 +954,15 @@ export function useFieldLayout(
     restoreDeletedField,
     // カスタムフィールド定義（useCustomFieldsから統合）
     customDefs: shared.customDefs,
+    // テーブル列定義
+    tableColumns: shared.tableColumns,
+    updateTableColumns: (fieldKey: string, cols: TableColumnDef[]) => {
+      const current = JSON.stringify(shared.tableColumns.value[fieldKey] ?? []);
+      const incoming = JSON.stringify(cols);
+      if (current === incoming) return; // 変更なし→スキップ
+      shared.tableColumns.value = { ...shared.tableColumns.value, [fieldKey]: cols };
+      markDirty();
+    },
     // dirty状態の手動設定
     markDirty,
   };

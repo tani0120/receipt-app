@@ -185,10 +185,22 @@
           <template #contactTable>
             <ContactTable
               :contacts="form.contacts || []"
+              :columns="layout.tableColumns.value['contactTable']"
               :is-editing="isEditing"
               :is-layout-mode="isLayoutMode"
               @update:contacts="(v: ClientContact[]) => form.contacts = v"
-              @update:columns="() => layout.markDirty()"
+              @update:columns="(cols: ContactColumn[]) => layout.updateTableColumns('contactTable', cols)"
+            />
+          </template>
+          <!-- table部品: 汎用テーブル（動的スロット） -->
+          <template v-for="tf in tableFields" :key="tf.key" #[tf.key]>
+            <ContactTable
+              :contacts="getTableData(tf.key)"
+              :columns="layout.tableColumns.value[tf.key]"
+              :is-editing="isEditing"
+              :is-layout-mode="isLayoutMode"
+              @update:contacts="(v: ClientContact[]) => setTableData(tf.key, v)"
+              @update:columns="(cols: ContactColumn[]) => layout.updateTableColumns(tf.key, cols)"
             />
           </template>
           <!-- hasRentalIncome: 不動産所得チェック -->
@@ -307,6 +319,7 @@ import { MENTION_ALL_KEYWORD } from '@/constants/vendorOptions';
 import DraggableFieldGrid from '@/components/DraggableFieldGrid.vue';
 import FieldPalette from '@/components/FieldPalette.vue';
 import ContactTable from '@/components/ContactTable.vue';
+import type { ContactColumn } from '@/components/ContactTable.vue';
 import type { ClientContact } from '@/repositories/types';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
@@ -331,6 +344,19 @@ const layout = useFieldLayout('client', clientSections, clientFieldsFlat);
 layout.loadLayout();
 /** フラットフィールド一覧（テンプレートで使用） */
 const flatFields = layout.getAllFieldsFlat;
+
+/** table部品のフィールド一覧 */
+const tableFields = computed(() =>
+  layout.getAllFieldsFlat.value.filter(f => f.component === 'table')
+);
+/** テーブルデータ取得 */
+const getTableData = (fieldKey: string): ClientContact[] => {
+  return ((form as Record<string, unknown>)[fieldKey] as ClientContact[]) ?? [{}];
+};
+/** テーブルデータ設定 */
+const setTableData = (fieldKey: string, v: ClientContact[]) => {
+  (form as Record<string, unknown>)[fieldKey] = v;
+};
 
 /** パレットで選択中のフィールド（選択肢編集用） */
 const selectedPaletteField = ref<import('@/types/fieldLayout').FieldDef | null>(null);

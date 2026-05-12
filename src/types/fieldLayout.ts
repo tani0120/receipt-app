@@ -23,8 +23,19 @@ export type FieldComponent =
   | 'heading'       // セクション見出し（タイトルフィールド）
   | 'spacer'        // 空白行（高さ調整用スペーサー）
   | 'contactTable'  // 連絡先テーブル（ContactTable埋込み）
+  | 'table'         // 汎用テーブル
   | 'file'          // ファイル添付
   | 'custom';       // カスタムスロット
+
+/** テーブル列定義 */
+export interface TableColumnDef {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'date' | 'url' | 'email' | 'select' | 'checkbox' | 'textarea';
+  options?: string[];
+  /** 列幅(px)。0=自動 */
+  width?: number;
+}
 
 /** 選択肢 */
 export interface FieldOption {
@@ -143,6 +154,8 @@ export interface SavedFieldLayout {
   deletedFields?: string[];  // fieldKey[]
   /** カスタムフィールド定義 */
   customDefs?: Array<{ key: string; label: string; section: string; component: string; widthPercent: number; order: number }>;
+  /** テーブル部品の列定義（fieldKey → 列定義配列） */
+  tableColumns?: Record<string, TableColumnDef[]>;
 }
 
 
@@ -161,6 +174,7 @@ export const FIELD_COMPONENT_OPTIONS: readonly { value: FieldComponent; label: s
   { value: 'heading', label: 'タイトル' },
   { value: 'spacer', label: 'スペーサー' },
   { value: 'file', label: 'ファイル添付' },
+  { value: 'table', label: '表' },
 ] as const;
 
 /** 全コンポーネント型→日本語ラベルの変換マップ */
@@ -183,6 +197,7 @@ export const COMPONENT_LABEL_MAP: Record<FieldComponent, string> = {
   heading: 'タイトル',
   spacer: 'スペーサー',
   contactTable: '連絡先テーブル',
+  table: '表',
   file: 'ファイル添付',
   custom: 'カスタム',
 };

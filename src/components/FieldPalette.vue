@@ -119,6 +119,24 @@
       <div class="fp-section-label">フィールド設定: {{ selectedField.label }}</div>
       <div class="fp-field-key">内部キー: <code>{{ selectedField.key }}</code></div>
     </div>
+
+    <!-- 削除確認モーダル -->
+    <ConfirmModal
+      :show="showTrashConfirm"
+      title="削除しますか？"
+      :message="`「${pendingTrashFields.map(f => f.label || f.key).join(', ')}」を削除します。この操作は取り消せません。`"
+      variant="danger"
+      @confirm="confirmTrashDrop"
+      @cancel="cancelTrashDrop"
+    />
+    <!-- 非表示確認モーダル -->
+    <ConfirmModal
+      :show="showHideConfirm"
+      title="非表示にしますか？"
+      :message="`「${pendingHideFields.map(f => f.label || f.key).join(', ')}」を非表示にします。`"
+      @confirm="confirmHideDrop"
+      @cancel="cancelHideDrop"
+    />
   </div>
 </template>
 
@@ -127,6 +145,7 @@ import { ref, computed, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import type { FieldDef, FieldComponent, FieldOption } from '@/types/fieldLayout';
 import { FIELD_COMPONENT_OPTIONS } from '@/types/fieldLayout';
+import ConfirmModal from '@/components/ConfirmModal.vue';
 
 interface PaletteItem {
   key: string;
@@ -147,12 +166,13 @@ const COMPONENT_ICON_MAP: Record<string, string> = {
   url: 'fa-solid fa-link',
   email: 'fa-solid fa-envelope',
   file: 'fa-solid fa-paperclip',
+  table: 'fa-solid fa-table',
   heading: 'fa-solid fa-heading',
   spacer: 'fa-solid fa-arrows-up-down',
 };
 
 /** 構造部材のコンポーネント種別 */
-const STRUCTURE_COMPONENTS = new Set<string>(['heading', 'spacer']);
+const STRUCTURE_COMPONENTS = new Set<string>(['heading', 'spacer', 'table']);
 
 /** FIELD_COMPONENT_OPTIONSから自動生成 */
 const structureParts = ref<PaletteItem[]>(
@@ -207,28 +227,56 @@ const trashBin = ref<FieldDef[]>([]);
 /** 非表示ドロップ受け */
 const hideBin = ref<FieldDef[]>([]);
 
-/** ゴミ箱にドロップされた時 */
+/** ゴミ箱にドロップされた時（確認モーダル表示） */
+const pendingTrashFields = ref<FieldDef[]>([]);
+const showTrashConfirm = ref(false);
 const onTrashDrop = () => {
-  for (const f of trashBin.value) {
-    if (f.key.startsWith('custom_') || f.component === 'heading' || f.component === 'spacer') {
+  if (trashBin.value.length > 0) {
+    pendingTrashFields.value = [...trashBin.value];
+    trashBin.value = [];
+    showTrashConfirm.value = true;
+  }
+};
+const confirmTrashDrop = () => {
+  for (const f of pendingTrashFields.value) {
+    if (f.key.startsWith('custom_') || f.component === 'heading' || f.component === 'spacer' || f.component === 'table') {
       emit('delete-field', f.key);
     }
   }
-  trashBin.value = [];
+  pendingTrashFields.value = [];
+  showTrashConfirm.value = false;
+};
+const cancelTrashDrop = () => {
+  pendingTrashFields.value = [];
+  showTrashConfirm.value = false;
 };
 
-/** 非表示エリアにドロップされた時 */
+/** 非表示エリアにドロップされた時（確認モーダル表示） */
+const pendingHideFields = ref<FieldDef[]>([]);
+const showHideConfirm = ref(false);
 const onHideDrop = () => {
-  for (const f of hideBin.value) {
+  if (hideBin.value.length > 0) {
+    pendingHideFields.value = [...hideBin.value];
+    hideBin.value = [];
+    showHideConfirm.value = true;
+  }
+};
+const confirmHideDrop = () => {
+  for (const f of pendingHideFields.value) {
     emit('hide-field', f.key);
   }
-  hideBin.value = [];
+  pendingHideFields.value = [];
+  showHideConfirm.value = false;
+};
+const cancelHideDrop = () => {
+  pendingHideFields.value = [];
+  showHideConfirm.value = false;
 };
 
 /** 構造部材のクローン（ユニークキー生成） */
 const cloneStructurePart = (item: PaletteItem): FieldDef => ({
   key: `${item.component}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
-  label: item.component === 'heading' ? '新しいタイトル' : '',
+  label: item.component === 'heading' ? '新しいタイトル' : (item.component === 'table' ? '新規表' : ''),
   section: '',
   component: item.component,
   widthPercent: 100,

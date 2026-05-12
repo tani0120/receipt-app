@@ -107,6 +107,7 @@
                         <template v-else-if="field.component === 'staffSelect'"><select disabled class="ce-select dfg-empty-input"><option value="">— スタッフ選択 —</option><option v-for="s in (staffList ?? [])" :key="s.uuid" :value="s.uuid">{{ s.name }}</option></select></template>
                         <template v-else-if="field.component === 'computed'"><span class="ce-readonly dfg-empty-input" style="font-style:italic;">自動計算</span></template>
                         <template v-else-if="field.component === 'contactTable'"><span class="ce-readonly dfg-empty-input">連絡先テーブル</span></template>
+                        <template v-else-if="field.component === 'table'"><span class="ce-readonly dfg-empty-input">&#x1F4CA; 表（4列テーブル）</span></template>
                         <template v-else-if="field.component === 'readonly'"><span class="ce-readonly dfg-empty-input">読み取り専用</span></template>
                         <template v-else-if="field.component === 'file'"><span class="ce-readonly dfg-empty-input">&#x1F4CE; ファイル添付</span></template>
                         <template v-else><span class="ce-readonly dfg-empty-input">{{ field.component }}</span></template>
@@ -442,7 +443,7 @@ const wrapperStyle = computed(() => {
 
 /** アイテムスタイル */
 const itemStyle = (field: FieldDef) => {
-  const w = (field.component === 'spacer' || field.component === 'contactTable')
+  const w = (field.component === 'spacer')
     ? '100%'
     : `${field.widthPercent}%`;
   const s: Record<string, string> = { width: w, 'flex-shrink': '0', 'flex-grow': '0' };

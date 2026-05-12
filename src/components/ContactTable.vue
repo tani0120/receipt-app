@@ -1,9 +1,9 @@
 <template>
   <div class="ct-wrapper">
-    <table class="ct-table">
+    <table ref="tableEl" class="ct-table">
       <thead>
         <tr>
-          <th v-for="col in localColumns" :key="col.key" @dblclick="isLayoutMode && startHeaderEdit(col.key)">
+          <th v-for="col in localColumns" :key="col.key" :style="colWidthStyle(col)" @dblclick="isLayoutMode && startHeaderEdit(col.key)">
             <input
               v-if="isLayoutMode && editingHeader === col.key"
               ref="headerInput"
@@ -15,6 +15,7 @@
             >
             <span v-else>{{ col.label }}</span>
             <button v-if="isLayoutMode" class="ct-col-del-btn" @click.stop="removeColumn(col.key)" title="列削除">&times;</button>
+            <div v-if="isLayoutMode" class="ct-col-resize" @mousedown.stop.prevent="startColResize($event, col.key)" title="ドラッグで列幅変更"></div>
           </th>
           <th v-if="isLayoutMode" class="ct-actions-col">
             <button class="ct-col-add-btn" @click="addColumn" title="列追加">＋</button>
@@ -25,7 +26,7 @@
       <tbody v-if="isLayoutMode">
         <!-- 型プレビュー行 -->
         <tr>
-          <td v-for="col in localColumns" :key="col.key" class="ct-layout-cell">
+          <td v-for="col in localColumns" :key="col.key" :style="colWidthStyle(col)" class="ct-layout-cell">
             <template v-if="col.type === 'select'">
               <select disabled class="ct-select ct-preview"><option>— 選択 —</option></select>
             </template>
@@ -55,7 +56,7 @@
         </tr>
         <!-- 型変更行 -->
         <tr>
-          <td v-for="col in localColumns" :key="col.key" class="ct-layout-cell">
+          <td v-for="col in localColumns" :key="col.key" :style="colWidthStyle(col)" class="ct-layout-cell">
             <select v-model="col.type" class="ct-type-select" @change="onTypeChange(col)">
               <option value="text">テキスト</option>
               <option value="number">数値</option>
@@ -88,7 +89,7 @@
       <!-- 通常: データ行 -->
       <tbody v-else>
         <tr v-for="(row, rIdx) in localContacts" :key="rIdx">
-          <td v-for="col in localColumns" :key="col.key" @dblclick="isEditing && startCellEdit(rIdx, col.key)">
+          <td v-for="col in localColumns" :key="col.key" :style="colWidthStyle(col)" @dblclick="isEditing && startCellEdit(rIdx, col.key)">
             <template v-if="col.type === 'select'">
               <select v-if="isEditing && editingCell?.row === rIdx && editingCell?.col === col.key" v-model="row[col.key]" class="ct-select" @blur="endCellEdit" @change="endCellEdit">
                 <option value="">{{ PLACEHOLDER_DIVIDER }}</option>
@@ -147,6 +148,8 @@ export interface ContactColumn {
   type: 'text' | 'number' | 'date' | 'url' | 'email' | 'select' | 'checkbox' | 'textarea';
   options?: string[];
   isDefault?: boolean;
+  /** 列幅(%単位)。0=自動均等 */
+  width?: number;
 }
 
 /** デフォルト5列 */
@@ -250,6 +253,16 @@ watch(localColumns, (nv) => {
   emit('update:columns', JSON.parse(JSON.stringify(nv)));
 }, { deep: true });
 
+/** 外部からcolumnsが変更された場合に同期（無限ループ防止: JSON比較） */
+watch(() => props.columns, (nv) => {
+  if (nv?.length) {
+    const incoming = JSON.stringify(nv);
+    if (JSON.stringify(localColumns.value) !== incoming) {
+      localColumns.value = JSON.parse(incoming);
+    }
+  }
+});
+
 /** セル編集 */
 const startCellEdit = (row: number, col: string) => {
   editingCell.value = { row, col };
@@ -319,11 +332,61 @@ const removeColOption = (col: ContactColumn, idx: number) => {
   col.options?.splice(idx, 1);
   emitColumns();
 };
+
+/** 列幅スタイル（0=自動均等、1〜100=%指定） */
+const colWidthStyle = (col: ContactColumn): Record<string, string> => {
+  if (col.width && col.width > 0) {
+    return { width: `${col.width}%` };
+  }
+  return {};
+};
+
+/** ─── 列幅ドラッグリサイズ ─── */
+const tableEl = ref<HTMLTableElement | null>(null);
+let resizingColKey: string | null = null;
+let resizeStartX = 0;
+let resizeStartWidth = 0;
+
+/** ドラッグ開始 */
+const startColResize = (e: MouseEvent, colKey: string) => {
+  resizingColKey = colKey;
+  resizeStartX = e.clientX;
+  const col = localColumns.value.find(c => c.key === colKey);
+  resizeStartWidth = col?.width ?? 0;
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+  document.addEventListener('mousemove', onColResizeMove);
+  document.addEventListener('mouseup', onColResizeEnd);
+};
+
+/** ドラッグ中 */
+const onColResizeMove = (e: MouseEvent) => {
+  if (!resizingColKey || !tableEl.value) return;
+  const tableWidth = tableEl.value.offsetWidth;
+  if (tableWidth <= 0) return;
+  const deltaPx = e.clientX - resizeStartX;
+  const deltaPct = (deltaPx / tableWidth) * 100;
+  const newPct = Math.max(5, Math.min(80, resizeStartWidth + deltaPct));
+  const col = localColumns.value.find(c => c.key === resizingColKey);
+  if (col) col.width = Math.round(newPct);
+};
+
+/** ドラッグ終了 */
+const onColResizeEnd = () => {
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+  document.removeEventListener('mousemove', onColResizeMove);
+  document.removeEventListener('mouseup', onColResizeEnd);
+  if (resizingColKey) {
+    emitColumns();
+    resizingColKey = null;
+  }
+};
 </script>
 
 <style scoped>
 .ct-wrapper { width: 100%; overflow-x: auto; }
-.ct-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+.ct-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .ct-table thead { background: #0284c7; color: #fff; }
 .ct-table th { padding: 8px 12px; font-weight: 600; text-align: left; white-space: nowrap; font-size: 12px; cursor: pointer; position: relative; }
 .ct-table th:hover { background: #0369a1; }
@@ -363,5 +426,16 @@ const removeColOption = (col: ContactColumn, idx: number) => {
 .ct-opt-add { border: 1px dashed #94a3b8; background: none; color: #64748b; padding: 2px 6px; border-radius: 3px; font-size: 11px; cursor: pointer; margin-top: 2px; }
 .ct-opt-add:hover { background: #f1f5f9; border-color: #3b82f6; color: #2563eb; }
 .ct-cell-link { color: #2563eb; text-decoration: underline; font-size: 13px; word-break: break-all; }
+
+/* 列幅リサイズハンドル */
+.ct-col-resize {
+  position: absolute; top: 0; right: -2px; width: 5px; height: 100%;
+  cursor: col-resize; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+}
+.ct-col-resize::after {
+  content: '⋮⋮'; font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: -2px;
+}
+.ct-col-resize:hover::after { color: #fff; }
 </style>
 
