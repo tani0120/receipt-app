@@ -71,13 +71,9 @@
             <template #repName="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.repName" class="ce-input" placeholder="山田 太郎" /></div></template>
             <template #repNameKana="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.repNameKana" class="ce-input" placeholder="ヤマダ タロウ" @input="form.repNameKana = form.repNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')" /></div></template>
             <template #staffId="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="staffId" class="ce-select"><option value="">{{ PLACEHOLDER_UNSET }}</option><option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option></select></div></template>
-            <template #phoneNumber="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.phoneNumber" class="ce-input" placeholder="03-1234-5678" /></div></template>
-            <template #email="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="email" v-model="form.email" class="ce-input" placeholder="example@mail.com" /></div></template>
-            <template #chatRoomUrl="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="url" v-model="form.chatRoomUrl" class="ce-input" placeholder="https://www.chatwork.com/#!rid..." /></div></template>
             <template #contactType="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-radio-group"><label><input type="radio" v-model="form.contactType" value="email" /><span>メール</span></label><label><input type="radio" v-model="form.contactType" value="chatwork" /><span>チャットワーク</span></label></div></div></template>
             <template #contactValue="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.contactValue" class="ce-input" :placeholder="form.contactType === 'email' ? 'example@mail.com' : 'Chatwork ID'" /></div></template>
-            <template #sharedEmail="{ field }"><div class="ce-field"><label>{{ field.label }} <span class="ce-hint">※自動取得</span></label><input type="email" v-model="sharedEmail" class="ce-input" placeholder="shared@example.com" /></div></template>
-            <template #sharedChatUrl="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="url" v-model="sharedChatUrl" class="ce-input" placeholder="https://www.chatwork.com/#!rid..." /></div></template>
+            <template #sharedEmail="{ field}"><div class="ce-field"><label>{{ field.label }} <span class="ce-hint">※自動取得</span></label><input type="email" v-model="sharedEmail" class="ce-input" placeholder="shared@example.com" /></div></template>
             <template #fiscalDate="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-date-group"><select v-model="form.fiscalMonth" class="ce-select ce-w-sm"><option v-for="m in 12" :key="m" :value="m">{{ m }}月</option></select><span>/</span><select v-model="form.fiscalDay" class="ce-select ce-w-sm"><option :value="FISCAL_DAY_END_LABEL">{{ FISCAL_DAY_END_LABEL }}</option><option v-for="d in 31" :key="d" :value="d">{{ d }}日</option></select></div></div></template>
             <template #industry="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.industry" class="ce-select"><option v-for="opt in industryOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option></select></div></template>
             <template #establishedDate="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.establishedDate" class="ce-input ce-w-sm" placeholder="YYYYMMDD" maxlength="8" /></div></template>
@@ -235,7 +231,6 @@ const isNew = computed(() => !leadId.value || route.name === "LeadNew");
 const form = reactive<LeadForm>(emptyLeadForm());
 const staffId = ref("");
 const sharedEmail = ref("");
-const sharedChatUrl = ref("");
 
 /** 業種リスト（clientOptions.tsから一元参照） */
 const industryOptions = INDUSTRY_OPTIONS;
@@ -264,11 +259,10 @@ onMounted(async () => {
   if (isNew.value && copyRaw) {
     try {
       const copyData = JSON.parse(copyRaw);
-      const { staffId: sId, sharedEmail: sEmail, sharedChatUrl: sChat, ...rest } = copyData;
+      const { staffId: sId, sharedEmail: sEmail, ...rest } = copyData;
       Object.assign(form, rest);
       staffId.value = sId ?? "";
       sharedEmail.value = sEmail ?? "";
-      sharedChatUrl.value = sChat ?? "";
     } catch {
       /* 無視 */
     }
@@ -287,9 +281,30 @@ onMounted(async () => {
         (form as Record<string, unknown>)[k] = v;
       }
     }
+    // 旧フィールド→contacts自動マッピング（後方互換）
+    if (!c.contacts || c.contacts.length < 3) {
+      const defaultContacts = [
+        { name: '', method: '電話', value: c.phoneNumber || '', usage: '', memo: '' },
+        { name: '', method: 'メール', value: c.email || '', usage: '', memo: '' },
+        { name: '', method: 'チャット', value: c.chatRoomUrl || '', usage: '', memo: '' },
+      ];
+      if (c.contacts) {
+        for (let i = 0; i < c.contacts.length && i < 3; i++) {
+          const src = c.contacts[i];
+          if (!src) continue;
+          defaultContacts[i] = {
+            name: src.name ?? defaultContacts[i].name,
+            method: src.method ?? defaultContacts[i].method,
+            value: src.value ?? defaultContacts[i].value,
+            usage: src.usage ?? defaultContacts[i].usage,
+            memo: src.memo ?? defaultContacts[i].memo,
+          };
+        }
+      }
+      (form as Record<string, unknown>).contacts = defaultContacts;
+    }
     staffId.value = c.staffId ?? "";
     sharedEmail.value = c.sharedEmail ?? "";
-    sharedChatUrl.value = c.sharedChatUrl ?? "";
   }
   loadComments();
 });
@@ -305,7 +320,6 @@ const copyAndCreate = () => {
       ...form,
       staffId: staffId.value,
       sharedEmail: sharedEmail.value,
-      sharedChatUrl: sharedChatUrl.value,
     }),
   );
   router.push("/master/leads/new");
@@ -540,9 +554,18 @@ const saveLead = async () => {
     cleanFields.extraFields = extraFields;
   }
 
+  // contacts→旧フィールド同期（後方互換）
+  const contacts = (cleanFields.contacts as { method: string; value: string }[]) ?? [];
+  const phoneRow = contacts.find(r => r.method === '電話');
+  const emailRow = contacts.find(r => r.method === 'メール');
+  const chatRow = contacts.find(r => r.method === 'チャット');
+  cleanFields.phoneNumber = phoneRow?.value || '';
+  cleanFields.email = emailRow?.value || '';
+  cleanFields.chatRoomUrl = chatRow?.value || '';
+
   if (isNew.value) {
     // 新規: サーバーがIDを発番して返す
-    const data = { ...cleanFields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
+    const data = { ...cleanFields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, contact: { type: contactType, value: contactValue } };
     try {
       const saved = await addLead(data as Omit<Lead, 'leadId'>);
       createDriveFolderForLead(saved).catch((e) => console.error("[leads] Driveフォルダ作成失敗:", e));
@@ -557,7 +580,7 @@ const saveLead = async () => {
     }
   } else {
     const id = leadId.value!;
-    const data = { ...cleanFields, leadId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } } as Lead;
+    const data = { ...cleanFields, leadId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, contact: { type: contactType, value: contactValue } } as Lead;
     try {
       const old = leads.value.find((l: Lead) => l.leadId === id);
       await updateLeadLocal(id, data);

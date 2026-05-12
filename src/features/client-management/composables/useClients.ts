@@ -27,15 +27,14 @@ export type { Client, ClientStatus, ClientForm }
 /** 空のフォームを生成 */
 export const emptyClientForm = (): ClientForm => ({
   threeCode: '', companyName: '', companyNameKana: '', type: 'corp',
-  repName: '', repNameKana: '', phoneNumber: '',
-  email: '', chatRoomUrl: '',
+  repName: '', repNameKana: '',
   contactType: 'email', contactValue: '',
   fiscalMonth: 3, fiscalDay: '末日', industry: '', establishedDate: '', status: 'active',
   accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
   taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
   isInvoiceRegistered: false, invoiceRegistrationNumber: '',
   hasDepartmentManagement: false, hasRentalIncome: false,
-  staffId: null, sharedFolderId: '', sharedEmail: '', sharedChatUrl: '',
+  staffId: null, sharedFolderId: '', sharedEmail: '',
   advisoryFee: 0, bookkeepingFee: 0, settlementFee: 0, taxFilingFee: 0,
   // ── Kintone拡張フィールド（31_client_management） ──
   engagementStartDate: '', engagementEndDate: null,

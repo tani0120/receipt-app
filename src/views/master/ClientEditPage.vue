@@ -77,7 +77,7 @@
         <DraggableFieldGrid
           :fields="flatFields"
           :is-layout-editing="isLayoutMode && !isPreviewMode && layout.isLayoutEditing.value"
-          :form-data="isPreviewMode ? {} : (isLayoutMode ? undefined : (form as unknown as Record<string, unknown>))"
+          :form-data="isPreviewMode ? {} : (isLayoutMode ? undefined : enrichedFormData)"
           :is-editing="isPreviewMode ? true : (isLayoutMode ? false : isEditing)"
           :resolve-options="resolveOptions"
           :staff-list="activeStaffList"
@@ -251,7 +251,7 @@
           :hidden-keys="layout.hiddenFields.value"
           :selected-field="selectedPaletteField"
           :field-options="layout.fieldOptions.value"
-          @restore-field="(key: string) => layout.toggleFieldVisibility(key, true)"
+          @restore-field="(key: string) => { layout.toggleFieldVisibility(key, true); layout.restoreFieldToGrid(key); }"
           @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)"
           @delete-field="(key: string) => layout.removeDynamicField(key)"
           @update:field-options="(key: string, opts: import('@/types/fieldLayout').FieldOption[]) => layout.updateFieldOptions(key, opts)"
@@ -565,7 +565,6 @@ const isEditing = ref(false);
 const form = reactive<ClientForm>(emptyClientForm());
 const staffId = ref('');
 const sharedEmail = ref('');
-const sharedChatUrl = ref('');
 /** 編集前のスナップショット（キャンセル時の復元用） */
 let originalSnapshot: string = '';
 
@@ -580,11 +579,43 @@ const staffLabel = computed(() => {
 const uploadUrlStaff = computed(() => clientId.value ? `${location.origin}/#/upload/${clientId.value}/staff` : '');
 const uploadUrlGuest = computed(() => clientId.value ? `${location.origin}/#/guest/${clientId.value}` : '');
 const journalListUrl = computed(() => clientId.value ? `${location.origin}/#/journal-list/${clientId.value}` : '');
+
+/** Drive取込の表示値（自動生成） */
+const driveUrlDisplay = computed(() => {
+  const c = clientId.value ? clients.value.find(cl => cl.clientId === clientId.value) : null;
+  if (!c?.sharedFolderId) return '※保存後に自動生成';
+  return `https://drive.google.com/drive/folders/${c.sharedFolderId}`;
+});
+
+/** 主な連絡手段の表示値（自動判定: contacts配列から判定） */
+const contactDisplay = computed(() => {
+  const contacts = (form as Record<string, unknown>).contacts as { method: string; value: string }[] | undefined;
+  const chatRow = contacts?.find(c => c.method === 'チャット' && c.value);
+  if (chatRow) return 'チャットワーク';
+  const emailRow = contacts?.find(c => c.method === 'メール' && c.value);
+  if (emailRow) return 'メール';
+  // 旧フィールドフォールバック
+  if (form.chatRoomUrl) return 'チャットワーク';
+  if (form.email) return 'メール';
+  return '—';
+});
+
+/** DFGに渡す拡張フォームデータ（自動生成フィールドを含む） */
+const enrichedFormData = computed(() => ({
+  ...(form as unknown as Record<string, unknown>),
+  clientId: clientId.value ?? '（自動発番）',
+  driveUrl: driveUrlDisplay.value,
+  contact: contactDisplay.value,
+  staffId: staffId.value,
+  sharedEmail: sharedEmail.value,
+  uploadUrlStaff: uploadUrlStaff.value,
+  uploadUrlGuest: uploadUrlGuest.value,
+}));
 /** クリップボードコピー */
 const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text); };
 
 /** スナップショット取得（現在のフォーム状態を文字列化） */
-const takeSnapshot = () => JSON.stringify({ ...form, staffId: staffId.value, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value });
+const takeSnapshot = () => JSON.stringify({ ...form, staffId: staffId.value, sharedEmail: sharedEmail.value });
 
 /** 編集モードに入る */
 const startEditing = () => {
@@ -657,9 +688,32 @@ const loadClientData = () => {
         (form as Record<string, unknown>)[k] = v;
       }
     }
+    // 旧フィールド→contacts自動マッピング（後方互換）
+    if (!c.contacts || c.contacts.length < 3) {
+      const defaultContacts = [
+        { name: '', method: '電話', value: c.phoneNumber || '', usage: '', memo: '' },
+        { name: '', method: 'メール', value: c.email || '', usage: '', memo: '' },
+        { name: '', method: 'チャット', value: c.chatRoomUrl || '', usage: '', memo: '' },
+      ];
+      // 既存contactsがあればマージ
+      if (c.contacts) {
+        for (let i = 0; i < c.contacts.length && i < 3; i++) {
+          const src = c.contacts[i];
+          const dst = defaultContacts[i];
+          if (!src || !dst) continue;
+          defaultContacts[i] = {
+            name: src.name ?? dst.name,
+            method: src.method ?? dst.method,
+            value: src.value ?? dst.value,
+            usage: src.usage ?? dst.usage,
+            memo: src.memo ?? dst.memo,
+          };
+        }
+      }
+      (form as Record<string, unknown>).contacts = defaultContacts;
+    }
     staffId.value = c.staffId ?? '';
     sharedEmail.value = c.sharedEmail ?? '';
-    sharedChatUrl.value = c.sharedChatUrl ?? '';
   }
 };
 
@@ -667,11 +721,10 @@ const loadClientData = () => {
 const restoreFromSnapshot = () => {
   try {
     const data = JSON.parse(originalSnapshot);
-    const { staffId: sId, sharedEmail: sEmail, sharedChatUrl: sChat, ...rest } = data;
+    const { staffId: sId, sharedEmail: sEmail, ...rest } = data;
     Object.assign(form, rest);
     staffId.value = sId ?? '';
     sharedEmail.value = sEmail ?? '';
-    sharedChatUrl.value = sChat ?? '';
   } catch { /* 復元失敗時は何もしない */ }
 };
 
@@ -693,7 +746,6 @@ const initPage = () => {
     Object.assign(form, emptyClientForm());
     staffId.value = '';
     sharedEmail.value = '';
-    sharedChatUrl.value = '';
     isEditing.value = true;
     comments.value = [];
   } else {
@@ -932,9 +984,25 @@ const saveClient = async () => {
     cleanFields.extraFields = extraFields;
   }
 
+  // 自動算出: 月次合計・年間総報酬を計算
+  const monthly = (form.advisoryFee || 0) + (form.bookkeepingFee || 0)
+    + ((form as any).socialInsuranceFee ?? 0) + ((form as any).payrollFee ?? 0)
+    + ((form as any).accountingServiceFee ?? 0) + ((form as any).systemFee ?? 0);
+  cleanFields.monthlyTotal = monthly;
+  cleanFields.annualTotal = monthly * 12 + (form.settlementFee || 0) + (form.taxFilingFee || 0);
+
+  // contacts→旧フィールド同期（後方互換）
+  const contacts = (cleanFields.contacts as { method: string; value: string }[]) ?? [];
+  const phoneRow = contacts.find(r => r.method === '電話');
+  const emailRow = contacts.find(r => r.method === 'メール');
+  const chatRow = contacts.find(r => r.method === 'チャット');
+  cleanFields.phoneNumber = phoneRow?.value || '';
+  cleanFields.email = emailRow?.value || '';
+  cleanFields.chatRoomUrl = chatRow?.value || '';
+
   if (isNew.value) {
     // 新規: サーバーがIDを発番して返す
-    const data = { ...cleanFields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } };
+    const data = { ...cleanFields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, contact: { type: contactType, value: contactValue } };
     try {
       const saved = await addClient(data as Omit<Client, 'clientId'>);
       createDriveFolderForClient(saved).catch(e => console.error('[clients] Driveフォルダ作成失敗:', e));
@@ -946,7 +1014,7 @@ const saveClient = async () => {
   } else {
     // 既存更新
     const id = clientId.value!;
-    const data: Client = { ...cleanFields, clientId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, sharedChatUrl: sharedChatUrl.value, contact: { type: contactType, value: contactValue } } as Client;
+    const data: Client = { ...cleanFields, clientId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, contact: { type: contactType, value: contactValue } } as Client;
     try {
       const old = clients.value.find(c => c.clientId === id);
       await updateClientLocal(id, data);

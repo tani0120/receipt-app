@@ -80,9 +80,12 @@ export interface Client {
   type: 'corp' | 'individual' | 'sole_proprietor';
   repName: string;
   repNameKana: string;
-  phoneNumber: string;
-  email: string;
-  chatRoomUrl: string;
+  /** @deprecated contactsに統合済み。後方互換用に残置 */
+  phoneNumber?: string;
+  /** @deprecated contactsに統合済み。後方互換用に残置 */
+  email?: string;
+  /** @deprecated contactsに統合済み。後方互換用に残置 */
+  chatRoomUrl?: string;
   contact: { type: 'email' | 'chatwork' | 'none'; value: string };
   fiscalMonth: number;
   fiscalDay: string | number;
@@ -107,8 +110,6 @@ export interface Client {
   sharedFolderId: string;
   /** 顧問先ログインメール（ポータルログイン時にGoogleアカウントから自動取得。Drive共有権限付与 + PC独自システム認証に使用） */
   sharedEmail: string;
-  /** 共有用チャットURL（顧問先との共有チャットルーム） */
-  sharedChatUrl: string;
   advisoryFee: number;
   bookkeepingFee: number;
   settlementFee: number;
@@ -208,6 +209,12 @@ export interface Client {
   attachmentFiles?: AttachmentFile[];
   /** カスタムフィールドの値（key→value）。keyは 'custom_xxxx' 形式 */
   extraFields?: Record<string, unknown>;
+
+  // ── 自動算出（保存時に計算） ──
+  /** 月次合計（顧問報酬 + 記帳代行 + 社労士 + 給与 + 経理代行 + システム） */
+  monthlyTotal?: number;
+  /** 年間総報酬（月次合計 × 12 + 決算報酬 + 消費税申告報酬） */
+  annualTotal?: number;
 }
 
 /** 連絡先テーブルの1行 */
@@ -280,9 +287,12 @@ export interface Lead {
   type: 'corp' | 'individual' | 'sole_proprietor';
   repName: string;
   repNameKana: string;
-  phoneNumber: string;
-  email: string;
-  chatRoomUrl: string;
+  /** @deprecated contactsに統合済み。後方互換用に残置 */
+  phoneNumber?: string;
+  /** @deprecated contactsに統合済み。後方互換用に残置 */
+  email?: string;
+  /** @deprecated contactsに統合済み。後方互換用に残置 */
+  chatRoomUrl?: string;
   contact: { type: 'email' | 'chatwork' | 'none'; value: string };
   fiscalMonth: number;
   fiscalDay: string | number;
@@ -303,13 +313,16 @@ export interface Lead {
   staffId: string | null;
   sharedFolderId: string;
   sharedEmail: string;
-  sharedChatUrl: string;
   advisoryFee: number;
   bookkeepingFee: number;
   settlementFee: number;
   taxFilingFee: number;
   /** カスタムフィールドの値（key→value） */
   extraFields?: Record<string, unknown>;
+  /** 過去担当者履歴テーブル */
+  pastStaffHistory?: PastStaffEntry[];
+  /** 連絡先テーブル */
+  contacts?: ClientContact[];
 }
 
 /** 見込先フォーム用型 */

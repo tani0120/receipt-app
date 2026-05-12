@@ -758,10 +758,15 @@ export function useFieldLayout(
 
   /** フィールドを論理削除（データは保持、レイアウトから除外） */
   const softDeleteField = (fieldKey: string) => {
+    // 削除可否判定: custom_フィールドまたはdeletable: trueのみ削除可能
+    const f = fields.value.find(ff => ff.key === fieldKey);
+    if (f && !fieldKey.startsWith('custom_') && f.deletable !== true) {
+      console.warn(`[レイアウト] 削除不可フィールド: ${fieldKey}`);
+      return;
+    }
     if (!deletedFields.value.includes(fieldKey)) {
       deletedFields.value.push(fieldKey);
     }
-    const f = fields.value.find(ff => ff.key === fieldKey);
     if (f) f.isDeleted = true;
     // fieldRowsから除外
     fieldRows.value = fieldRows.value.map(row => row.filter(k => k !== fieldKey)).filter(row => row.length > 0);
@@ -781,6 +786,20 @@ export function useFieldLayout(
       fieldRows.value.push([fieldKey]);
     }
     markDirty();
+  };
+
+  /** フィールドをグリッド（fieldRows）に復元（DnDでゴミ箱/非表示に移動されたが拒否された場合用） */
+  const restoreFieldToGrid = (fieldKey: string) => {
+    // 既にfieldRowsに存在するなら何もしない
+    const allPlaced = new Set(fieldRows.value.flat());
+    if (allPlaced.has(fieldKey)) return;
+    // 末尾行に追加
+    const lastRow = fieldRows.value[fieldRows.value.length - 1];
+    if (lastRow) {
+      lastRow.push(fieldKey);
+    } else {
+      fieldRows.value.push([fieldKey]);
+    }
   };
 
   /** ラベル上書きの更新 */
@@ -814,6 +833,12 @@ export function useFieldLayout(
     if (visible) {
       hiddenFields.value = hiddenFields.value.filter(k => k !== fieldKey);
     } else {
+      // 削除不可フィールドは非表示にできない
+      const f = fields.value.find(ff => ff.key === fieldKey);
+      if (f && !fieldKey.startsWith('custom_') && f.deletable !== true) {
+        console.warn(`[レイアウト] 非表示不可フィールド: ${fieldKey}`);
+        return;
+      }
       if (!hiddenFields.value.includes(fieldKey)) {
         hiddenFields.value.push(fieldKey);
       }
@@ -952,6 +977,7 @@ export function useFieldLayout(
     deletedFields,
     softDeleteField,
     restoreDeletedField,
+    restoreFieldToGrid,
     // カスタムフィールド定義（useCustomFieldsから統合）
     customDefs: shared.customDefs,
     // テーブル列定義

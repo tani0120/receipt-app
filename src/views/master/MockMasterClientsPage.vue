@@ -79,7 +79,7 @@
                 <!-- 動的列（全列統一v-for） -->
                 <td v-for="col in visibleColumnDefs" :key="'td-'+col.key" class="cm-td-cell"
                   :class="getCellClass(col.key)"
-                  @dblclick.stop="isEditableCol(col.key) ? (col.key === 'staffName' ? startStaffInlineEdit(row, $event) : startInlineEdit(row, col.key as InlineEditableField, $event)) : undefined"
+                  @dblclick.stop="isEditableCol(col.key) ? (col.key === 'staffId' ? startStaffInlineEdit(row, $event) : startInlineEdit(row, col.key as InlineEditableField, $event)) : undefined"
                 >
                   <!-- 3コード -->
                   <template v-if="col.key === 'threeCode'">
@@ -94,15 +94,15 @@
                     <span v-else>{{ getLabel(TYPE_OPTIONS, row.type) }}</span>
                   </template>
                   <!-- 課税方式 -->
-                  <template v-else-if="col.key === 'taxMode'">{{ taxModeLabel(row.consumptionTaxMode) }}</template>
+                  <template v-else-if="col.key === 'consumptionTaxMode'">{{ taxModeLabel(row.consumptionTaxMode) }}</template>
                   <!-- 会社名 -->
                   <template v-else-if="col.key === 'companyName'">
                     <input v-if="inlineEditId === row.clientId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                     <span v-else>{{ (row.type === 'individual' || row.type === 'sole_proprietor') && row.repName ? row.repName : row.companyName }}</span>
                   </template>
                   <!-- 担当者 -->
-                  <template v-else-if="col.key === 'staffName'">
-                    <select v-if="inlineEditId === row.clientId && inlineEditField === 'staffName'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitStaffEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
+                  <template v-else-if="col.key === 'staffId'">
+                    <select v-if="inlineEditId === row.clientId && inlineEditField === 'staffId'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitStaffEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
                       <option value="">{{ PLACEHOLDER_UNSET }}</option>
                       <option v-for="s in staffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
                     </select>
@@ -116,8 +116,8 @@
                     <span v-else>{{ softwareLabel(row.accountingSoftware) }}</span>
                   </template>
                   <!-- 決算日 -->
-                  <template v-else-if="col.key === 'fiscalMonth'">
-                    <template v-if="inlineEditId === row.clientId && inlineEditField === 'fiscalMonth'">
+                  <template v-else-if="col.key === 'fiscalDate'">
+                    <template v-if="inlineEditId === row.clientId && inlineEditField === 'fiscalDate'">
                       <div class="cm-inline-fiscal-group">
                         <select v-model="inlineEditValue" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop>
                           <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
@@ -148,7 +148,9 @@
                   </template>
                   <!-- 主な連絡手段 -->
                   <template v-else-if="col.key === 'contact'">
-                    <span v-if="row.chatRoomUrl">チャットワーク</span>
+                    <span v-if="row.contacts?.find((c: any) => c.method === 'チャット' && c.value)">チャットワーク</span>
+                    <span v-else-if="row.contacts?.find((c: any) => c.method === 'メール' && c.value)" class="cm-contact-fallback">メール <i class="fa-solid fa-triangle-exclamation cm-contact-warn" title="チャットワークURLが空白です。"></i></span>
+                    <span v-else-if="row.chatRoomUrl">チャットワーク</span>
                     <span v-else-if="row.email" class="cm-contact-fallback">メール <i class="fa-solid fa-triangle-exclamation cm-contact-warn" title="チャットワークURLが空白です。"></i></span>
                     <span v-else>—</span>
                   </template>
@@ -250,19 +252,7 @@
                   <option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
                 </select>
               </div>
-              <div class="cm-field">
-                <label class="cm-label">電話番号</label>
-                <input type="text" v-model="panelForm.phoneNumber" class="cm-input" placeholder="03-1234-5678">
-              </div>
-              <div class="cm-field">
-                <label class="cm-label">メールアドレス</label>
-                <input type="email" v-model="panelForm.email" class="cm-input" placeholder="example@mail.com">
-              </div>
               <!-- Drive関連UI削除（ロジックは温存） -->
-              <div class="cm-field">
-                <label class="cm-label">チャットルームURL</label>
-                <input type="url" v-model="panelForm.chatRoomUrl" class="cm-input" placeholder="https://www.chatwork.com/#!rid...">
-              </div>
               <div class="cm-field">
                 <label class="cm-label">主な連絡手段</label>
                 <div class="cm-radio-group">
@@ -277,10 +267,6 @@
               <div class="cm-field">
                 <label class="cm-label">顧問先ログインメール <span class="cm-hint">※自動取得（顧問先がポータルログイン時に登録）</span></label>
                 <input type="email" v-model="panelSharedEmail" class="cm-input" placeholder="shared@example.com">
-              </div>
-              <div class="cm-field">
-                <label class="cm-label">共有用チャットURL <span class="cm-hint">※顧問先との共有チャットルーム</span></label>
-                <input type="url" v-model="panelSharedChatUrl" class="cm-input" placeholder="https://www.chatwork.com/#!rid...">
               </div>
               <div class="cm-field">
                 <label class="cm-label">決算日</label>
@@ -512,7 +498,7 @@ import type { FilterColumnDef, FilterCondition, FilterResult, SortSetting } from
 import { useFieldLayout } from '@/composables/useFieldLayout';
 
 import { useCurrentUser } from '@/composables/useCurrentUser';
-import { clientSections, clientFieldsFlat, LIST_ONLY_COLUMNS } from '@/constants/clientFieldDefs';
+import { clientSections, clientFieldsFlat } from '@/constants/clientFieldDefs';
 import { UI_MSG } from '@/constants/uiMessages';
 import { CLIENT_FIELD_LABELS } from '@/constants/fieldLabels';
 import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
@@ -533,11 +519,11 @@ const clDefaultWidths: Record<string, number> = {
   clientId: 100,
   threeCode: 60,
   type: 50,
-  taxMode: 70,
+  consumptionTaxMode: 70,
   companyName: 160,
-  staffName: 90,
+  staffId: 90,
   accountingSoftware: 80,
-  fiscalMonth: 90,
+  fiscalDate: 90,
   phoneNumber: 110,
   email: 140,
   sharedEmail: 140,
@@ -727,36 +713,41 @@ const route = useRoute();
 const router = useRouter();
 
 // 一覧テーブルで表示不可のコンポーネント種別
-const NON_LIST_COMPONENTS: FieldComponent[] = ['heading', 'spacer', 'contactTable', 'computed', 'urlCopy', 'dateGroup', 'link'];
-// フィルタ対象外のコンポーネント種別（dateGroup/linkはフィルタ対象にする）
-const NON_FILTER_COMPONENTS: FieldComponent[] = ['heading', 'spacer', 'contactTable', 'computed', 'urlCopy'];
-
-// 一覧専用列 — clientFieldDefsの共有定数を使用
-const listOnlyColumns = LIST_ONLY_COLUMNS;
+const NON_LIST_COMPONENTS: FieldComponent[] = ['heading', 'spacer', 'contactTable', 'table'];
+// フィルタ対象外のコンポーネント種別
+const NON_FILTER_COMPONENTS: FieldComponent[] = ['heading', 'spacer', 'contactTable', 'table'];
 
 /**
  * 全列定義 — fieldLayout.fieldsから動的生成
- * 一覧専用列（LIST_ONLY_COLUMNS）を先頭に配置し、
- * fieldLayout.fieldsから一覧表示可能なフィールドを追加
+ * レイアウト管理の並び順（fieldRows）に従って列を並べ替え
  */
 const allColumns = computed(() => {
+  // fieldRowsをflatten→順序インデックスマップ作成
+  const rowOrder = (fieldLayout.fieldRows.value ?? []).flat();
+  const orderMap = new Map<string, number>();
+  rowOrder.forEach((key, idx) => orderMap.set(key, idx));
+
   // fieldLayout.fieldsから一覧表示可能な列を動的生成
   const fromLayout = fieldLayout.fields.value
     .filter(f => !NON_LIST_COMPONENTS.includes(f.component))
     .filter(f => !f.isDeleted)
     .map(f => ({ key: f.key, label: f.label }));
-  // 一覧専用列（fieldsに含まれない派生列）を先頭に追加
-  const listOnlyCols = listOnlyColumns
-    .filter(c => !fromLayout.find(f => f.key === c.key))
-    .map(c => ({ key: c.key, label: c.label }));
-  return [...fromLayout, ...listOnlyCols];
+
+  // fieldRowsの順序でソート（fieldRowsに含まれないフィールドは末尾）
+  fromLayout.sort((a, b) => {
+    const ia = orderMap.get(a.key) ?? 99999;
+    const ib = orderMap.get(b.key) ?? 99999;
+    return ia - ib;
+  });
+
+  return fromLayout;
 });
 
 /** 基本情報ビューで表示する列キー（ビジネスロジック上の固定列） */
 const basicViewCols = [
-  'clientId', 'threeCode', 'type', 'taxMode', 'companyName', 'staffName',
-  'accountingSoftware', 'fiscalMonth', 'phoneNumber', 'email',
-  'sharedEmail', 'driveUrl', 'chatRoomUrl', 'contact',
+  'clientId', 'threeCode', 'type', 'consumptionTaxMode', 'companyName', 'staffId',
+  'accountingSoftware', 'fiscalDate',
+  'sharedEmail', 'driveUrl', 'contact',
 ];
 
 // --- ビュー定義（デフォルトフィルタ・ソート付き） ---
@@ -919,21 +910,20 @@ const onFilterRemove = (index: number) => {
   fetchClientList();
 };
 
-/** visibleColumnsの順序でallColumnsから列定義を取得（全列統一描画用） */
+/** allColumnsの順序（レイアウト管理準拠）で、表示対象の列だけを返す */
 const visibleColumnDefs = computed(() => {
-  return visibleColumns.value
-    .map(k => allColumns.value.find(c => c.key === k))
-    .filter((c): c is { key: string; label: string } => !!c);
+  const visible = new Set(visibleColumns.value);
+  return allColumns.value.filter(c => visible.has(c.key));
 });
 
 /** セルのCSSクラスを列キーから動的取得 */
 const getCellClass = (key: string): string => {
-  const editableKeys = new Set(['threeCode', 'type', 'companyName', 'staffName', 'accountingSoftware', 'fiscalMonth', 'phoneNumber', 'email', 'sharedEmail', 'chatRoomUrl']);
+  const editableKeys = new Set(['threeCode', 'type', 'companyName', 'staffId', 'accountingSoftware', 'fiscalDate', 'sharedEmail']);
   const classes: string[] = [];
   if (editableKeys.has(key)) classes.push('td-editable');
-  if (['email', 'sharedEmail', 'chatRoomUrl'].includes(key)) classes.push('cm-ellipsis');
+  if (['sharedEmail'].includes(key)) classes.push('cm-ellipsis');
   if (key === 'companyName') classes.push('cm-company-name');
-  if (key === 'fiscalMonth') classes.push('cm-fiscal');
+  if (key === 'fiscalDate') classes.push('cm-fiscal');
   if (key === 'driveUrl') classes.push('cm-drive-cell');
   if (key === 'contact') classes.push('cm-contact-cell');
   if (key === 'clientId') classes.push('cm-client-id');
@@ -943,12 +933,12 @@ const getCellClass = (key: string): string => {
 
 /** インライン編集可能列か（dblclick対象） */
 const isEditableCol = (key: string): boolean => {
-  return ['threeCode', 'type', 'companyName', 'staffName', 'accountingSoftware', 'fiscalMonth', 'phoneNumber', 'email', 'sharedEmail', 'chatRoomUrl'].includes(key);
+  return ['threeCode', 'type', 'companyName', 'staffId', 'accountingSoftware', 'fiscalDate', 'sharedEmail'].includes(key);
 };
 
 /** 汎用テキスト入力で編集する列 */
-const isTextEditCol = (key: string): boolean => {
-  return ['phoneNumber', 'email', 'chatRoomUrl'].includes(key);
+const isTextEditCol = (_key: string): boolean => {
+  return false; // phoneNumber/email/chatRoomUrlはcontactsに統合済み
 };
 
 /** データ行から動的フィールド値を取得（汎用） */
@@ -1108,15 +1098,17 @@ const inlineEditValue = ref<string | number>('');
 const inlineEditFiscalDay = ref<string | number>(FISCAL_DAY_END_LABEL);
 
 /** インライン編集対象フィールド（Client型のキーに限定） */
-type InlineEditableField = 'status' | 'threeCode' | 'type' | 'companyName' | 'accountingSoftware' | 'fiscalMonth' | 'phoneNumber' | 'email' | 'sharedEmail' | 'chatRoomUrl';
+type InlineEditableField = 'status' | 'threeCode' | 'type' | 'companyName' | 'accountingSoftware' | 'fiscalDate' | 'sharedEmail';
 
 const startInlineEdit = (row: Client, field: InlineEditableField, event: Event) => {
   event.stopPropagation();
   inlineEditId.value = row.clientId;
   inlineEditField.value = field;
-  inlineEditValue.value = row[field] ?? '';
-  if (field === 'fiscalMonth') {
+  if (field === 'fiscalDate') {
+    inlineEditValue.value = row.fiscalMonth ?? '';
     inlineEditFiscalDay.value = row.fiscalDay ?? FISCAL_DAY_END_LABEL;
+  } else {
+    inlineEditValue.value = row[field] ?? '';
   }
   nextTick(() => {
     const el = document.querySelector('.cm-inline-input, .cm-inline-select') as HTMLElement;
@@ -1190,7 +1182,7 @@ const showIndustryDropdown = ref(false);
 const panelForm = reactive<ClientForm>(emptyClientForm());
 const panelStaffId = ref(''); // パネル用スタッフID
 const panelSharedEmail = ref(''); // パネル用共有メール
-const panelSharedChatUrl = ref(''); // パネル用共有チャットURL
+
 
 // B修正: 法人→個人切替時にhasRentalIncomeをリセット
 watch(() => panelForm.type, (newType) => {
@@ -1226,13 +1218,30 @@ const saveClient = async () => {
     }
   }
   const { contactType, contactValue, ...fields } = panelForm;
+  const cleanFields = { ...fields } as Record<string, unknown>;
+  // contacts→旧フィールド同期（後方互換）
+  const contacts = (cleanFields.contacts as { method: string; value: string }[]) ?? [];
+  const phoneRow = contacts.find(r => r.method === '電話');
+  const emailRow = contacts.find(r => r.method === 'メール');
+  const chatRow = contacts.find(r => r.method === 'チャット');
+  cleanFields.phoneNumber = phoneRow?.value || '';
+  cleanFields.email = emailRow?.value || '';
+  cleanFields.chatRoomUrl = chatRow?.value || '';
+  // 新規追加時にcontactsが未設定ならデフォルト3行を生成
+  if (!cleanFields.contacts || (cleanFields.contacts as unknown[]).length < 3) {
+    cleanFields.contacts = [
+      { name: '', method: '電話', value: cleanFields.phoneNumber || '', usage: '', memo: '' },
+      { name: '', method: 'メール', value: cleanFields.email || '', usage: '', memo: '' },
+      { name: '', method: 'チャット', value: cleanFields.chatRoomUrl || '', usage: '', memo: '' },
+    ];
+  }
   if (panelMode.value === 'add') {
     // 新規: サーバーがIDを発番して返す
     const data = {
-      ...fields,
+      ...cleanFields,
       staffId: panelStaffId.value || null,
       sharedEmail: panelSharedEmail.value,
-      sharedChatUrl: panelSharedChatUrl.value,
+
       contact: { type: contactType, value: contactValue },
     };
     try {
@@ -1248,14 +1257,14 @@ const saveClient = async () => {
   } else {
     // 編集: 既存clientIdを使用
     const clientId = editingId.value!;
-    const data: Client = {
-      ...fields,
+    const data = {
+      ...cleanFields,
       clientId,
       staffId: panelStaffId.value || null,
       sharedEmail: panelSharedEmail.value,
-      sharedChatUrl: panelSharedChatUrl.value,
+
       contact: { type: contactType, value: contactValue },
-    };
+    } as unknown as Client;
     try {
       const oldClient = clients.value.find(c => c.clientId === data.clientId);
       await updateClientLocal(data.clientId, data);
@@ -1326,7 +1335,7 @@ const annualTotal = computed(() => {
 const startStaffInlineEdit = (row: Client, event: Event) => {
   event.stopPropagation();
   inlineEditId.value = row.clientId;
-  inlineEditField.value = 'staffName';
+  inlineEditField.value = 'staffId';
   // Client.staffIdから直接取得
   inlineEditValue.value = row.staffId ?? '';
   nextTick(() => {

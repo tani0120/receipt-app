@@ -137,6 +137,14 @@
       @confirm="confirmHideDrop"
       @cancel="cancelHideDrop"
     />
+    <!-- 削除不可フィールド通知モーダル -->
+    <NotifyModal
+      :show="showProtectedNotice"
+      title="削除できません"
+      :message="`「${protectedFieldNames.join(', ')}」はクライアント型のフィールドのため削除できません。非表示にすることは可能です。`"
+      variant="warning"
+      @close="showProtectedNotice = false"
+    />
   </div>
 </template>
 
@@ -146,6 +154,7 @@ import { VueDraggable } from 'vue-draggable-plus';
 import type { FieldDef, FieldComponent, FieldOption } from '@/types/fieldLayout';
 import { FIELD_COMPONENT_OPTIONS } from '@/types/fieldLayout';
 import ConfirmModal from '@/components/ConfirmModal.vue';
+import NotifyModal from '@/components/NotifyModal.vue';
 
 interface PaletteItem {
   key: string;
@@ -230,23 +239,48 @@ const hideBin = ref<FieldDef[]>([]);
 /** ゴミ箱にドロップされた時（確認モーダル表示） */
 const pendingTrashFields = ref<FieldDef[]>([]);
 const showTrashConfirm = ref(false);
+/** 削除不可フィールドの通知用 */
+const showProtectedNotice = ref(false);
+const protectedFieldNames = ref<string[]>([]);
+
+/** フィールドが削除可能か判定 */
+const isDeletable = (f: FieldDef): boolean => {
+  if (f.key.startsWith('custom_')) return true;
+  return f.deletable === true;
+};
+
 const onTrashDrop = () => {
   if (trashBin.value.length > 0) {
-    pendingTrashFields.value = [...trashBin.value];
+    const dropped = [...trashBin.value];
     trashBin.value = [];
-    showTrashConfirm.value = true;
+    const deletableFields = dropped.filter(f => isDeletable(f));
+    const protectedFields = dropped.filter(f => !isDeletable(f));
+    // 保護フィールドは即座にグリッドに復元
+    if (protectedFields.length > 0) {
+      for (const f of protectedFields) {
+        emit('restore-field', f.key);
+      }
+      protectedFieldNames.value = protectedFields.map(f => f.label || f.key);
+      showProtectedNotice.value = true;
+    }
+    if (deletableFields.length > 0) {
+      pendingTrashFields.value = deletableFields;
+      showTrashConfirm.value = true;
+    }
   }
 };
 const confirmTrashDrop = () => {
   for (const f of pendingTrashFields.value) {
-    if (f.key.startsWith('custom_') || f.component === 'heading' || f.component === 'spacer' || f.component === 'table') {
-      emit('delete-field', f.key);
-    }
+    emit('delete-field', f.key);
   }
   pendingTrashFields.value = [];
   showTrashConfirm.value = false;
 };
 const cancelTrashDrop = () => {
+  // キャンセル時もフィールドをグリッドに復元
+  for (const f of pendingTrashFields.value) {
+    emit('restore-field', f.key);
+  }
   pendingTrashFields.value = [];
   showTrashConfirm.value = false;
 };
@@ -256,9 +290,22 @@ const pendingHideFields = ref<FieldDef[]>([]);
 const showHideConfirm = ref(false);
 const onHideDrop = () => {
   if (hideBin.value.length > 0) {
-    pendingHideFields.value = [...hideBin.value];
+    const dropped = [...hideBin.value];
     hideBin.value = [];
-    showHideConfirm.value = true;
+    const hideable = dropped.filter(f => isDeletable(f));
+    const protectedHide = dropped.filter(f => !isDeletable(f));
+    // 保護フィールドは即座にグリッドに復元
+    if (protectedHide.length > 0) {
+      for (const f of protectedHide) {
+        emit('restore-field', f.key);
+      }
+      protectedFieldNames.value = protectedHide.map(f => f.label || f.key);
+      showProtectedNotice.value = true;
+    }
+    if (hideable.length > 0) {
+      pendingHideFields.value = hideable;
+      showHideConfirm.value = true;
+    }
   }
 };
 const confirmHideDrop = () => {
@@ -269,6 +316,10 @@ const confirmHideDrop = () => {
   showHideConfirm.value = false;
 };
 const cancelHideDrop = () => {
+  // キャンセル時もフィールドをグリッドに復元
+  for (const f of pendingHideFields.value) {
+    emit('restore-field', f.key);
+  }
   pendingHideFields.value = [];
   showHideConfirm.value = false;
 };

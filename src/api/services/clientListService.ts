@@ -60,7 +60,6 @@ export interface ClientListResponse {
  */
 const FILTER_FIELD_MAP: Record<string, string> = {
   fiscalDate: 'fiscalMonth',        // fieldDefsのkey='fiscalDate' → Client.fiscalMonth
-  taxMode: 'consumptionTaxMode',    // LIST_ONLY_COLUMNSのkey='taxMode' → Client.consumptionTaxMode
 }
 
 /**
@@ -68,7 +67,6 @@ const FILTER_FIELD_MAP: Record<string, string> = {
  * staffName / clientId は特殊処理があるためマッピング対象外
  */
 const SORT_KEY_MAP: Record<string, string> = {
-  taxMode: 'consumptionTaxMode',
 }
 
 /**
@@ -117,7 +115,7 @@ export function getClientList(query: ClientListQuery): ClientListResponse {
 
   // staffName用のスタッフマップ（必要時のみ生成）
   let staffMap: Map<string, string> | null = null
-  if (sortDefs.some(s => s.key === 'staffName')) {
+  if (sortDefs.some(s => s.key === 'staffId')) {
     const staffAll = getAllStaff()
     staffMap = new Map(staffAll.map(s => [s.uuid, s.name]))
   }
@@ -127,7 +125,7 @@ export function getClientList(query: ClientListQuery): ClientListResponse {
       let cmp = 0
       // ソートキーのマッピング（UIキー → モデルプロパティ）
       const resolvedKey = SORT_KEY_MAP[sd.key] ?? sd.key
-      if (sd.key === 'staffName') {
+      if (sd.key === 'staffId') {
         const sa = (a.staffId ? staffMap!.get(a.staffId) : '') ?? ''
         const sb = (b.staffId ? staffMap!.get(b.staffId) : '') ?? ''
         cmp = sa.localeCompare(sb, 'ja')

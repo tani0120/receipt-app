@@ -126,8 +126,13 @@
             </template>
           </td>
           <td v-if="isEditing" class="ct-actions">
-            <button class="ct-btn ct-btn-add" @click="addRow(rIdx)" title="行追加">＋</button>
-            <button class="ct-btn ct-btn-remove" @click="removeRow(rIdx)" title="行削除" :disabled="localContacts.length <= 1">−</button>
+            <template v-if="isProtectedRow(rIdx)">
+              <span class="ct-lock" title="代表連絡先（削除不可）">🔒</span>
+            </template>
+            <template v-else>
+              <button class="ct-btn ct-btn-add" @click="addRow(rIdx)" title="行追加">＋</button>
+              <button class="ct-btn ct-btn-remove" @click="removeRow(rIdx)" title="行削除" :disabled="localContacts.length <= protectedRowCount">−</button>
+            </template>
           </td>
         </tr>
       </tbody>
@@ -160,6 +165,15 @@ const DEFAULT_COLUMNS: ContactColumn[] = [
   { key: 'usage', label: UI_MSG.連絡先_自由記載, type: 'text', isDefault: true },
   { key: 'memo', label: UI_MSG.連絡先_連絡先備考, type: 'text', isDefault: true },
 ];
+
+/** デフォルト3行（電話・メール・チャットワーク）— 削除不可 */
+const DEFAULT_ROWS: { method: string; placeholder: string }[] = [
+  { method: '電話', placeholder: '03-1234-5678' },
+  { method: 'メール', placeholder: 'example@mail.com' },
+  { method: 'チャット', placeholder: 'https://www.chatwork.com/#!rid...' },
+];
+/** 保護された行数（デフォルト3行） */
+const protectedRowCount = DEFAULT_ROWS.length;
 
 const props = defineProps<{
   contacts: ClientContact[];
@@ -224,10 +238,38 @@ const emptyRow = (): Record<string, string> => {
   return row;
 };
 
+/** デフォルト3行を生成 */
+const makeDefaultRows = (): Record<string, string>[] => {
+  return DEFAULT_ROWS.map(dr => {
+    const row: Record<string, string> = {};
+    for (const col of localColumns.value) {
+      row[col.key] = '';
+    }
+    row.method = dr.method;
+    return row;
+  });
+};
+
 /** ローカル連絡先データ（フラット形式） */
 const localContacts = ref<Record<string, string>[]>(
-  props.contacts?.length ? props.contacts.map(flattenRow) : [emptyRow()]
+  props.contacts?.length && props.contacts.length >= protectedRowCount
+    ? props.contacts.map(flattenRow)
+    : (() => {
+        // 既存データがデフォルト行数未満の場合、デフォルト行で補完
+        const existing = props.contacts?.length ? props.contacts.map(flattenRow) : [];
+        const defaults = makeDefaultRows();
+        // 既存データをデフォルト行にマージ
+        for (let i = 0; i < defaults.length; i++) {
+          if (existing[i]) {
+            defaults[i] = { ...defaults[i], ...existing[i] };
+          }
+        }
+        return defaults;
+      })()
 );
+
+/** 行が保護されたデフォルト行か判定 */
+const isProtectedRow = (idx: number): boolean => idx < protectedRowCount;
 
 /** 編集中セル */
 const editingCell = ref<{ row: number; col: string } | null>(null);
@@ -237,7 +279,18 @@ const headerInput = ref<HTMLInputElement[] | null>(null);
 
 /** propsの変更を監視 */
 watch(() => props.contacts, (nv) => {
-  localContacts.value = nv?.length ? nv.map(flattenRow) : [emptyRow()];
+  if (nv?.length && nv.length >= protectedRowCount) {
+    localContacts.value = nv.map(flattenRow);
+  } else {
+    const existing = nv?.length ? nv.map(flattenRow) : [];
+    const defaults = makeDefaultRows();
+    for (let i = 0; i < defaults.length; i++) {
+      if (existing[i]) {
+        defaults[i] = { ...defaults[i], ...existing[i] };
+      }
+    }
+    localContacts.value = defaults;
+  }
 }, { deep: true });
 
 watch(() => props.columns, (nv) => {
@@ -282,7 +335,8 @@ const addRow = (afterIdx: number) => {
   localContacts.value.splice(afterIdx + 1, 0, emptyRow());
 };
 const removeRow = (idx: number) => {
-  if (localContacts.value.length <= 1) return;
+  if (isProtectedRow(idx)) return; // デフォルト行は削除不可
+  if (localContacts.value.length <= protectedRowCount) return;
   localContacts.value.splice(idx, 1);
 };
 
@@ -437,5 +491,16 @@ const onColResizeEnd = () => {
   content: '⋮⋮'; font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: -2px;
 }
 .ct-col-resize:hover::after { color: #fff; }
+
+/* デフォルト行の鍵マーク */
+.ct-lock {
+  font-size: 11px;
+  filter: saturate(2) brightness(1.1);
+  cursor: help;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
 </style>
 

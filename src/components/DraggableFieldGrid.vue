@@ -18,6 +18,7 @@
             class="dfg-row-drag-area"
             @end="onRowDragEnd(rowIdx)"
             @add="onRowDragAdd(rowIdx, $event)"
+            :move="onDragMove"
           >
             <template v-for="field in row" :key="field.key">
               <div
@@ -57,6 +58,7 @@
                   <div class="dfg-label-area">
                     <input v-if="isLayoutEditing" type="text" :value="field.label" class="dfg-label-input" @blur="onLabelBlur(field.key, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()">
                     <label v-else class="dfg-label">{{ field.label }}</label>
+                    <span v-if="isLayoutEditing && field.deletable !== true && !field.key.startsWith('custom_')" class="dfg-lock-icon" title="クライアント型フィールド（削除不可）">🔒</span>
                   </div>
                   <div class="dfg-content" :class="{ 'dfg-editing': isEditing }">
                     <slot :name="field.key" :field="field">
@@ -429,6 +431,23 @@ const getRowDragGroup = (row: FieldDef[]) => {
     return dragGroupLocked.value;
   }
   return dragGroupNormal.value;
+};
+
+/** ドラッグ移動時の制御: 保護フィールドがゴミ箱/非表示エリアに移動しようとした場合にブロック */
+const onDragMove = (evt: { dragged: HTMLElement; to: HTMLElement; related: HTMLElement }) => {
+  const fieldKey = evt.dragged?.getAttribute?.('data-field-key') || '';
+  // ドロップ先がゴミ箱または非表示エリア（fp-drop-zoneクラスを持つ）の場合
+  const toEl = evt.to;
+  if (toEl && (toEl.classList.contains('fp-drop-trash') || toEl.classList.contains('fp-drop-hide'))) {
+    // 保護フィールドかチェック
+    if (fieldKey && !fieldKey.startsWith('custom_')) {
+      const field = props.fields.find(f => f.key === fieldKey);
+      if (field && field.deletable !== true) {
+        return false; // ドロップを拒否
+      }
+    }
+  }
+  return true;
 };
 
 /** ラッパースタイル */
@@ -1305,4 +1324,14 @@ onBeforeUnmount(() => {
 .dfg-file-del:hover { opacity: 1; }
 .ce-link { color: #2563eb; text-decoration: underline; word-break: break-all; }
 .ce-link:hover { color: #1d4ed8; }
+
+/* 削除禁止フィールドの鍵マーク */
+.dfg-lock-icon {
+  font-size: 10px;
+  margin-left: 4px;
+  filter: saturate(2) brightness(1.1);
+  opacity: 0.8;
+  vertical-align: middle;
+  cursor: help;
+}
 </style>

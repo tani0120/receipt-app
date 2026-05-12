@@ -47,26 +47,13 @@ export const clientSections: SectionDef[] = [
 ];
 
 
-/**
- * 一覧画面専用の派生列（fieldDefsに存在しない、一覧表示のみで使用する列）
- * LeadListPage / MockMasterClientsPage で共用
- */
-export const LIST_ONLY_COLUMNS = [
-  { key: 'companyName', label: '会社名/代表者名' },
-  { key: 'taxMode', label: '課税方式' },
-  { key: 'staffName', label: '担当者' },
-  { key: 'fiscalMonth', label: '決算日' },
-  { key: 'driveUrl', label: 'Drive取込' },
-  { key: 'contact', label: '主な連絡手段' },
-] as const;
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // フラットフィールド定義（セクション廃止後の統合レイアウト用）
 // heading/spacer/contactTable を含む全フィールドをグローバルorder順で定義
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const clientFieldsFlat: FieldDef[] = [
   // ── 基本情報 ──
-  { key: 'heading_basic', label: '基本情報', section: '', component: 'heading', widthPercent: 100, order: 1, headingSize: 14, headingBg: '#4a8dc9' },
+  { key: 'heading_basic', label: '基本情報', section: '', component: 'heading', widthPercent: 100, order: 1, headingSize: 14, headingBg: '#4a8dc9', deletable: true },
   { key: 'status', label: '契約状況', section: '', component: 'select', widthPercent: 20, order: 2, cssClass: 'ce-status', options: 'STATUS_OPTIONS' },
   { key: 'type', label: '区分', section: '', component: 'select', widthPercent: 20, order: 3, options: 'TYPE_OPTIONS' },
   { key: 'engagementStartDate', label: '関与開始日', section: '', component: 'date', widthPercent: 20, order: 4, smallWidth: true },
@@ -85,7 +72,7 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'repNameKana', label: '代表者名（カナ）', section: '', component: 'text', widthPercent: 20, order: 17, placeholder: 'ヤマダ タロウ' },
 
   // ── ニーズ管理 ──
-  { key: 'heading_needs', label: 'ニーズ管理', section: '', component: 'heading', widthPercent: 100, order: 20, headingSize: 13, headingBg: '#7fb0d4' },
+  { key: 'heading_needs', label: 'ニーズ管理', section: '', component: 'heading', widthPercent: 100, order: 20, headingSize: 13, headingBg: '#7fb0d4', deletable: true },
   { key: 'needsInsurance', label: '保険ニーズ', section: '', component: 'select', widthPercent: 20, order: 21, options: 'NEEDS_OPTIONS' },
   { key: 'needsTaxSaving', label: '節税ニーズ', section: '', component: 'select', widthPercent: 20, order: 22, options: 'NEEDS_OPTIONS' },
   { key: 'needsSubsidy', label: '補助金ニーズ', section: '', component: 'select', widthPercent: 20, order: 23, options: 'NEEDS_OPTIONS' },
@@ -93,7 +80,7 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'needsRealEstate', label: '不動産ニーズ', section: '', component: 'select', widthPercent: 20, order: 25, options: 'NEEDS_OPTIONS' },
 
   // ── 決算・税務 ──
-  { key: 'heading_fiscal', label: '決算・税務', section: '', component: 'heading', widthPercent: 100, order: 30, headingSize: 13, headingBg: '#7fb0d4' },
+  { key: 'heading_fiscal', label: '決算・税務', section: '', component: 'heading', widthPercent: 100, order: 30, headingSize: 13, headingBg: '#7fb0d4', deletable: true },
   { key: 'fiscalDate', label: '決算日', section: '', component: 'dateGroup', widthPercent: 20, order: 31 },
   { key: 'consumptionTaxInterim', label: '消費税中間申告', section: '', component: 'select', widthPercent: 20, order: 32, options: 'CONSUMPTION_TAX_INTERIM_OPTIONS' },
   { key: 'isInvoiceRegistered', label: 'インボイス登録', section: '', component: 'checkbox', widthPercent: 20, order: 33 },
@@ -101,7 +88,7 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'establishedDate', label: '設立日', section: '', component: 'date', widthPercent: 20, order: 35, smallWidth: true },
 
   // ── 備考・URL・その他 ──
-  { key: 'heading_memo', label: '備考・URL・その他', section: '', component: 'heading', widthPercent: 100, order: 40, headingSize: 13, headingBg: '#7fb0d4' },
+  { key: 'heading_memo', label: '備考・URL・その他', section: '', component: 'heading', widthPercent: 100, order: 40, headingSize: 13, headingBg: '#7fb0d4', deletable: true },
   { key: 'memo', label: '備考', section: '', component: 'textarea', widthPercent: 60, order: 41, placeholder: 'メモ' },
   { key: 'websiteUrl', label: 'WebサイトURL', section: '', component: 'url', widthPercent: 20, order: 42, placeholder: 'https://example.com' },
   { key: 'sharedEmail', label: '顧問先ログインメール（自動取得）', section: '', component: 'readonly', widthPercent: 20, order: 43, alwaysReadonly: true, hint: '※編集不可' },
@@ -113,19 +100,21 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'parentCompany', label: '親号先/グループ会社', section: '', component: 'text', widthPercent: 20, order: 49 },
   { key: 'businessDescription', label: '事業内容', section: '', component: 'textarea', widthPercent: 60, order: 50, placeholder: '事業内容の詳細' },
   { key: 'attachmentFiles', label: '添付ファイル', section: '', component: 'file', widthPercent: 40, order: 51 },
+  { key: 'driveUrl', label: 'Drive取込', section: '', component: 'url', widthPercent: 20, order: 52, alwaysReadonly: true, hint: '※自動生成' },
+  { key: 'contact', label: '主な連絡手段', section: '', component: 'readonly', widthPercent: 20, order: 53, alwaysReadonly: true, hint: '※自動判定' },
 
   // ── スペーサー ──
-  { key: 'spacer_1', label: '', section: '', component: 'spacer', widthPercent: 100, order: 55, spacerHeight: 20 },
+  { key: 'spacer_1', label: '', section: '', component: 'spacer', widthPercent: 100, order: 55, spacerHeight: 20, deletable: true },
 
   // ── 連絡先 ──
-  { key: 'heading_contact', label: '連絡先', section: '', component: 'heading', widthPercent: 100, order: 60, headingSize: 14, headingBg: '#4a8dc9' },
+  { key: 'heading_contact', label: '連絡先', section: '', component: 'heading', widthPercent: 100, order: 60, headingSize: 14, headingBg: '#4a8dc9', deletable: true },
   { key: 'contactTable', label: '連絡先テーブル', section: '', component: 'contactTable', widthPercent: 100, order: 61 },
 
   // ── スペーサー ──
-  { key: 'spacer_2', label: '', section: '', component: 'spacer', widthPercent: 100, order: 65, spacerHeight: 20 },
+  { key: 'spacer_2', label: '', section: '', component: 'spacer', widthPercent: 100, order: 65, spacerHeight: 20, deletable: true },
 
   // ── 会計設定 ──
-  { key: 'heading_accounting', label: '会計設定', section: '', component: 'heading', widthPercent: 100, order: 70, headingSize: 14, headingBg: '#4a8dc9' },
+  { key: 'heading_accounting', label: '会計設定', section: '', component: 'heading', widthPercent: 100, order: 70, headingSize: 14, headingBg: '#4a8dc9', deletable: true },
   { key: 'accountingSoftware', label: '会計ソフト', section: '', component: 'select', widthPercent: 20, order: 71, options: 'ACCOUNTING_SOFTWARE_OPTIONS' },
   { key: 'taxFilingType', label: '確定申告', section: '', component: 'select', widthPercent: 20, order: 72, options: 'TAX_FILING_OPTIONS' },
   { key: 'consumptionTaxMode', label: '課税方式', section: '', component: 'select', widthPercent: 20, order: 73, options: 'TAX_MODE_OPTIONS' },
@@ -137,10 +126,10 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'hasRentalIncome', label: '不動産所得', section: '', component: 'checkbox', widthPercent: 20, order: 79, hint: '有効にすると不動産関連15科目が選択可能になります', visibleWhen: { field: 'type', value: ['individual', 'sole_proprietor'] } },
 
   // ── スペーサー ──
-  { key: 'spacer_3', label: '', section: '', component: 'spacer', widthPercent: 100, order: 85, spacerHeight: 20 },
+  { key: 'spacer_3', label: '', section: '', component: 'spacer', widthPercent: 100, order: 85, spacerHeight: 20, deletable: true },
 
   // ── システム導入状況 ──
-  { key: 'heading_system', label: 'システム導入状況', section: '', component: 'heading', widthPercent: 100, order: 90, headingSize: 14, headingBg: '#4a8dc9' },
+  { key: 'heading_system', label: 'システム導入状況', section: '', component: 'heading', widthPercent: 100, order: 90, headingSize: 14, headingBg: '#4a8dc9', deletable: true },
   { key: 'accountingSoftwareDisplay', label: '会計ソフト', section: '', component: 'readonly', widthPercent: 20, order: 91, alwaysReadonly: true },
   { key: 'accountingSoftwareMemo', label: '会計ソフト備考', section: '', component: 'text', widthPercent: 20, order: 92 },
   { key: 'payrollSoftware', label: '給与計算ソフト', section: '', component: 'text', widthPercent: 20, order: 93 },
@@ -151,10 +140,10 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'otherSystemMemo', label: 'その他システム備考', section: '', component: 'text', widthPercent: 20, order: 98 },
 
   // ── スペーサー ──
-  { key: 'spacer_4', label: '', section: '', component: 'spacer', widthPercent: 100, order: 105, spacerHeight: 20 },
+  { key: 'spacer_4', label: '', section: '', component: 'spacer', widthPercent: 100, order: 105, spacerHeight: 20, deletable: true },
 
   // ── 報酬情報 ──
-  { key: 'heading_fee', label: '報酬情報', section: '', component: 'heading', widthPercent: 100, order: 110, headingSize: 14, headingBg: '#4a8dc9' },
+  { key: 'heading_fee', label: '報酬情報', section: '', component: 'heading', widthPercent: 100, order: 110, headingSize: 14, headingBg: '#4a8dc9', deletable: true },
   { key: 'contractScope', label: '契約内容', section: '', component: 'select', widthPercent: 20, order: 111, options: 'CONTRACT_SCOPE_OPTIONS' },
   { key: 'bookkeepingType', label: '記帳代行・自計化', section: '', component: 'select', widthPercent: 20, order: 112, options: 'BOOKKEEPING_TYPE_OPTIONS' },
   { key: 'hasSocialInsuranceContract', label: '社労士契約', section: '', component: 'select', widthPercent: 20, order: 113, options: 'YES_NO_OPTIONS' },
@@ -162,7 +151,7 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'hasAccountingService', label: '経理代行', section: '', component: 'select', widthPercent: 20, order: 115, options: 'YES_NO_OPTIONS' },
 
   // ── 報酬金額 ──
-  { key: 'heading_fee_amount', label: '報酬金額', section: '', component: 'heading', widthPercent: 100, order: 120, headingSize: 13, headingBg: '#7fb0d4' },
+  { key: 'heading_fee_amount', label: '報酬金額', section: '', component: 'heading', widthPercent: 100, order: 120, headingSize: 13, headingBg: '#7fb0d4', deletable: true },
   { key: 'advisoryFee', label: '月額顧問報酬', section: '', component: 'amount', widthPercent: 20, order: 121, min: 0 },
   { key: 'bookkeepingFee', label: '記帳代行報酬', section: '', component: 'amount', widthPercent: 20, order: 122, min: 0 },
   { key: 'socialInsuranceFee', label: '社労士報酬', section: '', component: 'amount', widthPercent: 20, order: 123, min: 0 },
@@ -175,7 +164,7 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'annualTotal', label: '年間総報酬（自動算出）', section: '', component: 'computed', widthPercent: 20, order: 130 },
 
   // ── 契約・引き落とし ──
-  { key: 'heading_payment', label: '契約・引き落とし', section: '', component: 'heading', widthPercent: 100, order: 135, headingSize: 13, headingBg: '#7fb0d4' },
+  { key: 'heading_payment', label: '契約・引き落とし', section: '', component: 'heading', widthPercent: 100, order: 135, headingSize: 13, headingBg: '#7fb0d4', deletable: true },
   { key: 'contractDocUrl', label: '契約書リンク', section: '', component: 'url', widthPercent: 20, order: 136, placeholder: 'https://...' },
   { key: 'paymentMethod', label: '引き落とし方法', section: '', component: 'select', widthPercent: 20, order: 137, options: 'PAYMENT_METHOD_OPTIONS' },
   { key: 'paymentDay', label: '引き落とし日', section: '', component: 'select', widthPercent: 20, order: 138, options: 'PAYMENT_DAY_OPTIONS' },

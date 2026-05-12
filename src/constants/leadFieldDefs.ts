@@ -29,16 +29,14 @@ export const leadFields: FieldDef[] = [
   { key: 'repName', label: '代表者名', section: '基本情報', component: 'text', widthPercent: 20, order: 6, placeholder: '山田 太郎' },
   { key: 'repNameKana', label: '代表者名（全角カナ）', section: '基本情報', component: 'text', widthPercent: 20, order: 7, placeholder: 'ヤマダ タロウ' },
   { key: 'staffId', label: '担当者', section: '基本情報', component: 'staffSelect', widthPercent: 20, order: 8, modelKey: 'staffId' },
-  { key: 'phoneNumber', label: '電話番号', section: '基本情報', component: 'text', widthPercent: 20, order: 9, placeholder: '03-1234-5678' },
-  { key: 'email', label: 'メールアドレス', section: '基本情報', component: 'email', widthPercent: 20, order: 10, placeholder: 'example@mail.com' },
-  { key: 'chatRoomUrl', label: 'チャットルームURL', section: '基本情報', component: 'url', widthPercent: 20, order: 11, placeholder: 'https://www.chatwork.com/#!rid...' },
   { key: 'contactType', label: '主な連絡手段', section: '基本情報', component: 'custom', widthPercent: 20, order: 12 },
   { key: 'contactValue', label: '連絡先', section: '基本情報', component: 'text', widthPercent: 20, order: 13 },
   { key: 'sharedEmail', label: '見込先ログインメール', section: '基本情報', component: 'email', widthPercent: 20, order: 14, placeholder: 'shared@example.com', hint: '※自動取得', modelKey: 'sharedEmail' },
-  { key: 'sharedChatUrl', label: '共有用チャットURL', section: '基本情報', component: 'url', widthPercent: 20, order: 15, placeholder: 'https://www.chatwork.com/#!rid...', modelKey: 'sharedChatUrl' },
   { key: 'fiscalDate', label: '決算日', section: '基本情報', component: 'dateGroup', widthPercent: 20, order: 16 },
   { key: 'industry', label: '業種', section: '基本情報', component: 'select', widthPercent: 20, order: 17, options: 'INDUSTRY_OPTIONS' },
   { key: 'establishedDate', label: '設立日', section: '基本情報', component: 'date', widthPercent: 20, order: 18, smallWidth: true },
+  { key: 'driveUrl', label: 'Drive取込', section: '基本情報', component: 'url', widthPercent: 20, order: 19, alwaysReadonly: true, hint: '※自動生成' },
+  { key: 'contact', label: '主な連絡手段', section: '基本情報', component: 'readonly', widthPercent: 20, order: 20, alwaysReadonly: true, hint: '※自動判定' },
 
   // ── 会計設定 ──
   { key: 'accountingSoftware', label: '会計ソフト', section: '会計設定', component: 'select', widthPercent: 20, order: 1, options: 'ACCOUNTING_SOFTWARE_OPTIONS' },
@@ -65,12 +63,12 @@ export const leadFields: FieldDef[] = [
 /** フラットレイアウト用: heading付き全フィールド（グローバルorder順） */
 export const leadFieldsFlat: FieldDef[] = [
   // ── 基本情報（heading） ──
-  { key: 'heading_basic', label: '基本情報', section: '', component: 'heading', widthPercent: 100, order: 1, headingSize: 14, headingBg: '#4a8dc9' },
+  { key: 'heading_basic', label: '基本情報', section: '', component: 'heading', widthPercent: 100, order: 1, headingSize: 14, headingBg: '#4a8dc9', deletable: true },
   ...leadFields.filter(f => f.section === '基本情報').map((f, i) => ({ ...f, section: '', order: 2 + i })),
   // ── 会計設定（heading） ──
-  { key: 'heading_accounting', label: '会計設定', section: '', component: 'heading', widthPercent: 100, order: 21, headingSize: 14, headingBg: '#4a8dc9' },
+  { key: 'heading_accounting', label: '会計設定', section: '', component: 'heading', widthPercent: 100, order: 21, headingSize: 14, headingBg: '#4a8dc9', deletable: true },
   ...leadFields.filter(f => f.section === '会計設定').map((f, i) => ({ ...f, section: '', order: 22 + i })),
   // ── 報酬設定（heading） ──
-  { key: 'heading_fee', label: '報酬設定', section: '', component: 'heading', widthPercent: 100, order: 33, headingSize: 14, headingBg: '#4a8dc9' },
+  { key: 'heading_fee', label: '報酬設定', section: '', component: 'heading', widthPercent: 100, order: 33, headingSize: 14, headingBg: '#4a8dc9', deletable: true },
   ...leadFields.filter(f => f.section === '報酬設定').map((f, i) => ({ ...f, section: '', order: 34 + i })),
 ];
