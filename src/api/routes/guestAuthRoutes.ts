@@ -1,4 +1,4 @@
-/**
+﻿/**
  * guestAuthRoutes.ts — ゲスト認証APIルート（Hono）
  *
  * レイヤー: ★route★ → guestUserStore
@@ -15,7 +15,7 @@
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { 必須, メール重複, パスワード不足, ログイン失敗 } from '../helpers/apiMessages';
+import { 必須, メール重複, パスワード不足, ログイン失敗 } from '../../constants/apiMessages';
 import { register, login } from '../services/guestUserStore';
 
 const app = new Hono();

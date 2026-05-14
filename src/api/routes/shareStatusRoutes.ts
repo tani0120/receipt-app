@@ -1,4 +1,4 @@
-/**
+﻿/**
  * shareStatusRoutes.ts — 共有設定JSON永続化APIルート（Hono）
  *
  * レイヤー: ★route★ → shareStatusStore
@@ -18,7 +18,7 @@
 import { Hono } from 'hono';
 import crypto from 'crypto';
 import { apiError } from '../helpers/apiError';
-import { 未検出, 必須 } from '../helpers/apiMessages';
+import { 未検出, 必須 } from '../../constants/apiMessages';
 import {
   getAllShareStatus,
   getByClientId,

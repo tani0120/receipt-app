@@ -128,7 +128,7 @@ const timestamp = new Date().toLocaleString('ja-JP', {
 }).replace(/\//g, '-')
 
 // エラーコード→ラベル変換（apiMessages.tsのマスターを参照）
-import { ステータスから文面 } from '@/api/helpers/apiMessages'
+import { ステータスから文面 } from '@/constants/apiMessages'
 const errorLabel = computed(() => ステータスから文面(errorCode.value))
 
 // エラーコードの色

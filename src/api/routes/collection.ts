@@ -1,6 +1,6 @@
-import { Hono } from 'hono'
+﻿import { Hono } from 'hono'
 import { apiError } from '../helpers/apiError'
-import { 未検出 } from '../helpers/apiMessages'
+import { 未検出 } from '../../constants/apiMessages'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { zodHook } from '../helpers/zodHook'

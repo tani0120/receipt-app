@@ -1,4 +1,4 @@
-/**
+﻿/**
  * confirmedJournalRoutes.ts — 確定済み仕訳APIルート（Hono）
  *
  * レイヤー: ★route★ → confirmedJournalStore + mfCsvParser
@@ -17,7 +17,7 @@
 import { Hono } from "hono";
 import crypto from 'crypto';
 import { apiError } from "../helpers/apiError";
-import { 必須 } from "../helpers/apiMessages";
+import { 必須 } from "../../constants/apiMessages";
 import { parseMfCsv } from "../../utils/pipeline/mfCsvParser";
 import {
   getByClientId,

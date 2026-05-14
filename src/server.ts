@@ -159,6 +159,10 @@ app.route('/api/export', exportRoutes)
 import fieldLayoutRoutes from './api/routes/fieldLayoutRoutes'
 app.route('/api/field-layout', fieldLayoutRoutes)
 
+// ListView API: 一覧ビュー管理（kintone風ビュー設定）
+import listViewRoutes from './api/routes/listViewRoutes'
+app.route('/api/list-views', listViewRoutes)
+
 // Comment API: コメント管理
 import commentRoutes from './api/routes/commentRoutes'
 app.route('/api/comments', commentRoutes)

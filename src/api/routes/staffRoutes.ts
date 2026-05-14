@@ -1,4 +1,4 @@
-/**
+﻿/**
  * staffRoutes.ts — スタッフJSON永続化APIルート（Hono）
  *
  * レイヤー: ★route★ → staffStore
@@ -16,7 +16,7 @@
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { 未検出, 必須, リソース_スタッフ } from '../helpers/apiMessages';
+import { 未検出, 必須, リソース_スタッフ } from '../../constants/apiMessages';
 import {
   getAll,
   getById,

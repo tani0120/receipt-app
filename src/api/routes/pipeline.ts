@@ -1,4 +1,4 @@
-/**
+﻿/**
  * パイプラインAPIルート（Hono）
  *
  * レイヤー: ★route★ → service → postprocess
@@ -11,7 +11,7 @@
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { 必須, FormData解析失敗, ファイル必須, ファイルサイズ超過, 非対応形式, 未検出, チャンク未検出, 未実装 } from '../helpers/apiMessages';
+import { 必須, FormData解析失敗, ファイル必須, ファイルサイズ超過, 非対応形式, 未検出, チャンク未検出, 未実装 } from '../../constants/apiMessages';
 import { previewExtractImage, clearKnownHashes, isKnownHash } from '../services/pipeline/previewExtract.service';
 import { createHash } from 'crypto';
 import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync, writeFileSync } from 'fs';

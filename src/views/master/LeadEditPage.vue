@@ -228,6 +228,17 @@ const resolveOptions = (_optionsKey: string): readonly { value: string; label: s
 const leadId = computed(() => route.params.leadId as string | undefined);
 const isNew = computed(() => !leadId.value || route.name === "LeadNew");
 
+/** 一覧画面からの「レイアウト管理」遷移対応（/master/leads/layout ルート） */
+const isLayoutMode = computed(() => route.name === 'LeadLayout');
+// レイアウト管理モードで遷移された場合のみレイアウト編集をON
+watch(isLayoutMode, (v) => {
+  if (v && isAdmin) {
+    layout.startLayoutEditing();
+  } else if (!v) {
+    layout.isLayoutEditing.value = false;
+  }
+}, { immediate: true });
+
 const form = reactive<LeadForm>(emptyLeadForm());
 const staffId = ref("");
 const sharedEmail = ref("");
@@ -254,6 +265,10 @@ const { staffList: mentionStaffList } = useStaff();
 /** 編集モード: 既存データをフォームに読み込み */
 onMounted(async () => {
   layout.loadLayout();
+
+  // レイアウト管理モード: データ読込不要
+  if (isLayoutMode.value) return;
+
   // コピーデータがあれば復元
   const copyRaw = sessionStorage.getItem("clientCopyData");
   if (isNew.value && copyRaw) {

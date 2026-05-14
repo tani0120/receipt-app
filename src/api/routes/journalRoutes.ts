@@ -1,4 +1,4 @@
-/**
+﻿/**
  * journalRoutes.ts — 仕訳JSON永続化APIルート（Hono）
  *
  * エンドポイント:
@@ -13,7 +13,7 @@
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { 配列必須 } from '../helpers/apiMessages';
+import { 配列必須 } from '../../constants/apiMessages';
 import {
   getJournals,
   saveJournals,

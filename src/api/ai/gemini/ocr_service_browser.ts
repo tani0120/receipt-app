@@ -9,8 +9,24 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
-import { getPromptContent } from '@/api/routes/aiPromptRoutes';
+import { OCR_DETAILED_PROMPT } from '@/constants/aiPrompts';
 import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
+
+/**
+ * ブラウザ版: API経由でプロンプト本文を取得（フォールバック: 定数）
+ */
+async function getPromptContentBrowser(promptId: string): Promise<string> {
+  try {
+    const res = await fetch(`/api/ai-prompts/${promptId}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.content ?? '';
+  } catch {
+    // API未起動・エラー時は定数にフォールバック
+    if (promptId === 'ocr-detailed') return OCR_DETAILED_PROMPT;
+    return '';
+  }
+}
 
 /**
  * Gemini OCR実行（ブラウザ版）
@@ -106,7 +122,7 @@ async function callGeminiAPIBrowser(
                             }
                         },
                         {
-                            text: await getPromptContent('ocr-detailed')
+                            text: await getPromptContentBrowser('ocr-detailed')
                         }
                     ]
                 }

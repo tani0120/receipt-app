@@ -22,6 +22,12 @@
             >
               <i class="fa-solid fa-grip"></i> レイアウト管理
             </button>
+            <button
+              class="cm-admin-btn"
+              @click="$router.push({ name: 'ClientViewSettings' })"
+            >
+              <i class="fa-solid fa-list-check"></i> 一覧管理
+            </button>
           </div>
         </div>
 
@@ -563,19 +569,12 @@ const toggleAdminMode = (mode: 'field' | 'layout') => {
       fieldLayout.isLayoutEditing.value = false;
     }
   } else {
-    adminMode.value = mode;
     if (mode === 'field') {
+      adminMode.value = mode;
       showCustomFieldModal.value = true;
     } else {
-      // レイアウト管理: 個別編集画面のレイアウト編集モードに遷移
-      const firstClient = clients.value[0] ?? filteredRows.value[0];
-      if (firstClient) {
-        router.push({
-          name: 'ClientEdit',
-          params: { clientId: firstClient.clientId },
-          query: { mode: 'layout' },
-        });
-      }
+      // レイアウト管理: 全社共通レイアウト編集ページに遷移
+      router.push({ name: 'ClientLayout' });
       adminMode.value = null;
     }
   }
@@ -751,7 +750,8 @@ const basicViewCols = [
 ];
 
 // --- ビュー定義（デフォルトフィルタ・ソート付き） ---
-const clientViews: ViewDefWithDefaults[] = [
+// 初期値: フォールバック定義（API未取得時の表示用）
+const defaultClientViews: ViewDefWithDefaults[] = [
   {
     name: UI_MSG.ビュー基本情報,
     key: 'basic',
@@ -762,16 +762,39 @@ const clientViews: ViewDefWithDefaults[] = [
   {
     name: UI_MSG.ビューすべて,
     key: 'all',
-    columns: allColumns.value.map(c => c.key),
+    columns: null,
     defaultFilters: [],
     defaultSorts: [{ key: 'threeCode', order: 'asc' }],
   },
 ];
+const clientViews = ref<ViewDefWithDefaults[]>([...defaultClientViews]);
+
+/** API: ビュー一覧取得（「(すべて)」は末尾に自動追加） */
+const loadListViews = async () => {
+  try {
+    const res = await fetch('/api/list-views/client');
+    const data = await res.json();
+    const apiViews: ViewDefWithDefaults[] = data.views ?? [];
+    // APIから取得したビュー + 末尾に「(すべて)」固定ビュー
+    const allView: ViewDefWithDefaults = {
+      name: UI_MSG.ビューすべて,
+      key: 'all',
+      columns: null,
+      defaultFilters: [],
+      defaultSorts: [{ key: 'threeCode', order: 'asc' }],
+    };
+    clientViews.value = apiViews.length > 0
+      ? [...apiViews, allView]
+      : [...defaultClientViews];
+  } catch (e) {
+    console.error('[ClientList] ビュー一覧取得失敗:', e);
+  }
+};
 
 // URLからビュー・フィルタ・ソートを復元
 const urlViewKey = parseViewFromQuery(route.query);
-const initialView = findViewByKey(clientViews, urlViewKey) ?? clientViews[0]!;
-const activeViewIndex = ref(clientViews.indexOf(initialView));
+const initialView = findViewByKey(clientViews.value, urlViewKey) ?? clientViews.value[0]!;
+const activeViewIndex = ref(clientViews.value.indexOf(initialView));
 
 // URLにフィルタ条件がある場合はそれを使い、なければビューのデフォルトを適用
 const urlFilters = parseFiltersFromQuery(route.query);
@@ -787,7 +810,7 @@ const visibleColumns = ref<string[]>(
 
 /** 現在のビューのデフォルト値（フィルタモーダルの「デフォルトに戻す」用） */
 const currentViewDefaults = computed(() => {
-  const view = clientViews[activeViewIndex.value] ?? clientViews[0]!;
+  const view = clientViews.value[activeViewIndex.value] ?? clientViews.value[0]!;
   return {
     filters: view.defaultFilters,
     sorts: view.defaultSorts,
@@ -797,7 +820,7 @@ const currentViewDefaults = computed(() => {
 
 /** URLクエリパラメータを現在の状態で更新 */
 function syncUrlQuery() {
-  const currentView = clientViews[activeViewIndex.value] ?? clientViews[0]!;
+  const currentView = clientViews.value[activeViewIndex.value] ?? clientViews.value[0]!;
   const query = buildQueryParams({
     viewName: currentView.key,
     conditions: filterConditions.value,
@@ -809,7 +832,7 @@ function syncUrlQuery() {
 
 /** ビュー切替時: デフォルトフィルタ・ソート・列に切替 + URL更新 + データ再取得 */
 const onViewChange = (idx: number) => {
-  const view = clientViews[idx] ?? clientViews[0]!;
+  const view = clientViews.value[idx] ?? clientViews.value[0]!;
   // 表示列をビューの定義に切替
   visibleColumns.value = view.columns
     ? [...view.columns]
@@ -1055,6 +1078,9 @@ const fetchClientList = async () => {
 syncUrlQuery();
 fetchClientList();
 
+// 一覧ビュー定義をAPIから取得（ノンブロッキング）
+loadListViews();
+
 // KeepAliveからの復帰時にURLから状態を再同期してデータを再取得
 // 初回マウント時はsetup末尾でfetchClientList済みなのでスキップ
 let isFirstActivation = true;
@@ -1066,8 +1092,8 @@ onActivated(() => {
   // 一覧ページに戻ってきた場合のみURLから状態復元
   if (route.path === '/master/clients') {
     const viewKey = parseViewFromQuery(route.query);
-    const view = findViewByKey(clientViews, viewKey) ?? clientViews[0]!;
-    const viewIdx = clientViews.indexOf(view);
+    const view = findViewByKey(clientViews.value, viewKey) ?? clientViews.value[0]!;
+    const viewIdx = clientViews.value.indexOf(view);
     if (activeViewIndex.value !== viewIdx) {
       activeViewIndex.value = viewIdx;
       visibleColumns.value = view.columns === null

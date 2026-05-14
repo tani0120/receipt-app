@@ -1,4 +1,4 @@
-/**
+﻿/**
  * drive.ts — Google Drive APIルート（Hono）
  *
  * レイヤー: ★route★ → driveService
@@ -17,7 +17,7 @@ import crypto from 'crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { apiError, apiCatchError } from '../helpers/apiError';
-import { 必須, 未検出, 環境設定エラー, ファイル必須, 仕訳外ゼロ, 根拠資料ゼロ } from '../helpers/apiMessages';
+import { 必須, 未検出, 環境設定エラー, ファイル必須, 仕訳外ゼロ, 根拠資料ゼロ } from '../../constants/apiMessages';
 import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, revokeFolderPermission } from '../services/drive/driveService';
 import { enqueueMigrationJobs, getJobStatus, getExcludedCount, getExcludedHistory, getExcludedJobs, getMigrationJobs, getSupportingJobs, getSupportingCount, getSupportingHistory } from '../services/migration/migrationRepository';
 import { generateExcludedZip } from '../services/migration/excludedZipService';

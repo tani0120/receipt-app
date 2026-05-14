@@ -1,4 +1,4 @@
-/**
+﻿/**
  * docStore.ts — ドキュメントJSON永続化APIルート（Hono）
  *
  * レイヤー: ★route★ → documentStore
@@ -18,7 +18,7 @@
 
 import { Hono } from "hono";
 import { apiError } from "../helpers/apiError";
-import { 未検出, 必須, 配列必須 } from "../helpers/apiMessages";
+import { 未検出, 必須, 配列必須 } from "../../constants/apiMessages";
 import {
   getDocuments,
   addDocuments,

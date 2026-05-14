@@ -5,6 +5,20 @@
         <!-- ヘッダー -->
         <div class="cm-header">
           <h1 class="cm-title">見込管理</h1>
+          <div class="cm-header-actions" v-if="isAdmin">
+            <button
+              class="cm-admin-btn"
+              @click="$router.push({ name: 'LeadLayout' })"
+            >
+              <i class="fa-solid fa-grip"></i> レイアウト管理
+            </button>
+            <button
+              class="cm-admin-btn"
+              @click="$router.push({ name: 'LeadViewSettings' })"
+            >
+              <i class="fa-solid fa-list-check"></i> 一覧管理
+            </button>
+          </div>
         </div>
 
         <!-- ツールバー（共通コンポーネント） -->
@@ -420,6 +434,7 @@ import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
 import { useDriveFolder } from '@/composables/useDriveFolder';
+import { useCurrentUser } from '@/composables/useCurrentUser';
 import {
   INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_MODE_OPTIONS,
   TAX_FILING_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
@@ -460,6 +475,7 @@ const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnR
 // --- 見込先データ（composableから取得） ---
 const { leads, getStaffNameForLead, updateSharedFolderId, addLead, updateLeadLocal, refresh } = useLeads();
 const { staffList, activeStaff: activeStaffList } = useStaff();
+const { isAdmin } = useCurrentUser();
 
 // モーダルヘルパー
 const modal = useModalHelper();
@@ -488,12 +504,26 @@ const getFieldLabel = (key: string): string => {
 // 一覧テーブルで表示不可のコンポーネント種別
 const NON_LIST_COMPONENTS = ['heading', 'spacer', 'contactTable', 'table'];
 
-// 表示列管理 — fieldLayout.fieldsから動的生成
+// 表示列管理 — fieldLayout.fieldsから動的生成（レイアウト管理の並び順に準拠）
 const allColumns = computed(() => {
-  const cols = fieldLayout.fields.value
+  // fieldRowsをflatten→順序インデックスマップ作成
+  const rowOrder = (fieldLayout.fieldRows.value ?? []).flat();
+  const orderMap = new Map<string, number>();
+  rowOrder.forEach((key, idx) => orderMap.set(key, idx));
+
+  const fromLayout = fieldLayout.fields.value
     .filter(f => !NON_LIST_COMPONENTS.includes(f.component))
+    .filter(f => !f.isDeleted)
     .map(f => ({ key: f.key, label: f.label }));
-  return cols;
+
+  // fieldRowsの順序でソート（fieldRowsに含まれないフィールドは末尾）
+  fromLayout.sort((a, b) => {
+    const ia = orderMap.get(a.key) ?? 99999;
+    const ib = orderMap.get(b.key) ?? 99999;
+    return ia - ib;
+  });
+
+  return fromLayout;
 });
 
 /** 基本情報ビューで表示する列キー（従来の14列） */
@@ -509,7 +539,8 @@ const visibleColumns = ref<string[]>(colsFromUrl || [...basicViewCols]);
 // allColumnsがcomputedになったためvisibleColumnDefsの参照を.valueに統一
 
 // --- ビュー定義（表示列プリセット） ---
-const leadViews: ViewDef[] = [
+// 初期値: フォールバック定義
+const defaultLeadViews: ViewDef[] = [
   {
     name: UI_MSG.ビュー基本情報,
     columns: basicViewCols,
@@ -519,7 +550,24 @@ const leadViews: ViewDef[] = [
     columns: null,
   },
 ];
+const leadViews = ref<ViewDef[]>([...defaultLeadViews]);
 const activeViewIndex = ref(0);
+
+/** API: ビュー一覧取得 */
+const loadListViews = async () => {
+  try {
+    const res = await fetch('/api/list-views/lead');
+    const data = await res.json();
+    const apiViews: ViewDef[] = data.views ?? [];
+    const allView: ViewDef = { name: UI_MSG.ビューすべて, columns: null };
+    leadViews.value = apiViews.length > 0
+      ? [...apiViews, allView]
+      : [...defaultLeadViews];
+  } catch (e) {
+    console.error('[LeadList] ビュー一覧取得失敗:', e);
+  }
+};
+loadListViews();
 
 /** ビュー切替時 */
 const onViewChange = (_idx: number) => {

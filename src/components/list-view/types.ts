@@ -13,6 +13,22 @@ export interface ViewDef {
   columns: string[] | null
 }
 
+/** API永続化用ビュー定義（フィルタ・ソート・builtin情報を含む） */
+export interface ListViewDef {
+  /** ユニークキー（UUID短縮） */
+  key: string
+  /** 一覧名 */
+  name: string
+  /** 表示列キー配列（並び順 = テーブル左→右）。null = 全列表示 */
+  columns: string[] | null
+  /** デフォルト絞り込み条件 */
+  defaultFilters: FilterCondition[]
+  /** デフォルトソート */
+  defaultSorts: SortSetting[]
+  /** true = 「(すべて)」固定ビュー（編集・削除不可） */
+  isBuiltin?: boolean
+}
+
 /** フィルター用列定義（フィールドタイプ別に演算子を切替） */
 export interface FilterColumnDef {
   /** フィールドキー（Client/Leadのプロパティ名） */

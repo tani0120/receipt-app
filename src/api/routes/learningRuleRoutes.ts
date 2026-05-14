@@ -1,4 +1,4 @@
-/**
+﻿/**
  * learningRuleRoutes.ts — 学習ルールAPIルート（Hono）
  *
  * レイヤー: ★route★ → learningRuleStore
@@ -16,7 +16,7 @@
 
 import { Hono } from 'hono'
 import { apiError, apiCatchError } from '../helpers/apiError'
-import { 未検出, 必須 } from '../helpers/apiMessages'
+import { 未検出, 必須 } from '../../constants/apiMessages'
 import * as store from '../services/learningRuleStore'
 
 const app = new Hono()

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * taxCategoryRoutes.ts — 税区分APIルート（Hono）
  *
  * レイヤー: ★route★ → accountMasterStore
@@ -15,7 +15,7 @@
 
 import { Hono } from 'hono'
 import { apiError } from '../helpers/apiError'
-import { 必須 } from '../helpers/apiMessages'
+import { 必須 } from '../../constants/apiMessages'
 import {
   getFilteredTaxCategories,
   saveAllTaxCategories,

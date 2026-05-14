@@ -1,4 +1,4 @@
-/**
+﻿/**
  * clientRoutes.ts — 顧問先JSON永続化APIルート（Hono）
  *
  * レイヤー: ★route★ → clientStore
@@ -18,7 +18,7 @@
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { 未検出, 必須, コード重複, リソース_顧問先 } from '../helpers/apiMessages';
+import { 未検出, 必須, コード重複, リソース_顧問先 } from '../../constants/apiMessages';
 import type { ClientStatus } from '../../repositories/types';
 import {
   getAll,

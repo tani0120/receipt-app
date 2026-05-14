@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 出力履歴 + CSVスナップショット APIルート
  *
  * GET  /api/export-history/:clientId         → 履歴一覧
@@ -11,7 +11,7 @@
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { CSV未検出 } from '../helpers/apiMessages';
+import { CSV未検出 } from '../../constants/apiMessages';
 import {
   getExportHistory,
   addExportHistory,

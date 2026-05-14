@@ -332,6 +332,23 @@ export const routes: RouteRecordRaw[] = [
     name: 'ClientNew',
     component: () => import('@/views/master/ClientEditPage.vue')
   },
+  // 顧問先 レイアウト管理（全社共通・顧問先ID不要）
+  {
+    path: '/master/clients/layout',
+    name: 'ClientLayout',
+    component: () => import('@/views/master/ClientEditPage.vue')
+  },
+  // 顧問先 一覧管理ページ（kintone風ビュー設定）
+  {
+    path: '/master/clients/view-settings',
+    name: 'ClientViewSettings',
+    component: () => import('@/views/master/ListViewSettingsPage.vue')
+  },
+  {
+    path: '/master/clients/view-settings/:viewKey',
+    name: 'ClientViewEdit',
+    component: () => import('@/views/master/ListViewEditPage.vue')
+  },
   // 顧問先 編集ページ
   {
     path: '/master/clients/:clientId',
@@ -351,6 +368,23 @@ export const routes: RouteRecordRaw[] = [
     path: '/master/leads/new',
     name: 'LeadNew',
     component: () => import('@/views/master/LeadEditPage.vue')
+  },
+  // 見込先 レイアウト管理（全社共通）
+  {
+    path: '/master/leads/layout',
+    name: 'LeadLayout',
+    component: () => import('@/views/master/LeadEditPage.vue')
+  },
+  // 見込先 一覧管理ページ（kintone風ビュー設定）
+  {
+    path: '/master/leads/view-settings',
+    name: 'LeadViewSettings',
+    component: () => import('@/views/master/ListViewSettingsPage.vue')
+  },
+  {
+    path: '/master/leads/view-settings/:viewKey',
+    name: 'LeadViewEdit',
+    component: () => import('@/views/master/ListViewEditPage.vue')
   },
   // 見込先 編集ページ
   {

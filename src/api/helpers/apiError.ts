@@ -24,7 +24,7 @@
 
 import type { Context } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
-import { ステータスから文面 } from './apiMessages'
+import { ステータスから文面 } from '../../constants/apiMessages'
 
 /**
  * 統一エラーレスポンスを返す（バリデーション・404等）。

@@ -536,8 +536,8 @@ const exitLayoutMode = () => {
   router.push('/master/clients');
 };
 
-/** 一覧画面からの「レイアウト管理」遷移対応 */
-const isLayoutMode = computed(() => route.query.mode === 'layout');
+/** 一覧画面からの「レイアウト管理」遷移対応（/master/clients/layout ルート） */
+const isLayoutMode = computed(() => route.name === 'ClientLayout');
 // レイアウト管理モードで遷移された場合のみレイアウト編集をON、それ以外は常にOFF
 watch(isLayoutMode, (v) => {
   if (v && isAdmin) {
@@ -741,6 +741,16 @@ watch(() => route.fullPath, () => {
 const initPage = () => {
   // コピー新規モードをリセット
   isCopyNew.value = false;
+
+  // レイアウト管理モード: データ読込不要（空フォームでプレビュー）
+  if (isLayoutMode.value) {
+    Object.assign(form, emptyClientForm());
+    staffId.value = '';
+    sharedEmail.value = '';
+    isEditing.value = false;
+    return;
+  }
+
   if (routeIsNew.value) {
     // 新規作成: フォームをまっさらにして編集モード
     Object.assign(form, emptyClientForm());

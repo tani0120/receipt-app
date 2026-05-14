@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CSV変換APIルート（Hono）
  *
  * レイヤー: ★route★ → conversionStore（JSON永続化）
@@ -14,7 +14,7 @@
 
 import { Hono } from 'hono';
 import { apiError, apiCatchError } from '../helpers/apiError';
-import { 必須, 未検出 } from '../helpers/apiMessages';
+import { 必須, 未検出 } from '../../constants/apiMessages';
 import * as conversionStore from '../services/conversionStore';
 import { readFileSync } from 'fs';
 

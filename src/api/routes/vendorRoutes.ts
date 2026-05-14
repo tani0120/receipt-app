@@ -1,4 +1,4 @@
-/**
+﻿/**
  * vendorRoutes.ts — 取引先JSON永続化APIルート（Hono）
  *
  * レイヤー: ★route★ → vendorStore
@@ -16,7 +16,7 @@
 
 import { Hono } from 'hono'
 import { apiError, apiCatchError } from '../helpers/apiError'
-import { 未検出 } from '../helpers/apiMessages'
+import { 未検出 } from '../../constants/apiMessages'
 import * as vendorStore from '../services/vendorStore'
 import { getVendorList } from '../services/vendorListService'
 

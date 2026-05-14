@@ -1,4 +1,4 @@
-/**
+﻿/**
  * leadRoutes.ts — 見込先JSON永続化APIルート（Hono）
  *
  * clientRoutes.tsと同一構成。Client→Leadに置換。
@@ -17,7 +17,7 @@
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { 未検出, 必須, リソース_見込先 } from '../helpers/apiMessages';
+import { 未検出, 必須, リソース_見込先 } from '../../constants/apiMessages';
 import type { LeadStatus } from '../../repositories/types';
 import {
   getAll,
