@@ -86,7 +86,7 @@
                             <div v-if="getFileList(field).length" class="dfg-file-list">
                               <div v-for="f in getFileList(field)" :key="f.id" class="dfg-file-item">
                                 <a :href="f.url" target="_blank" class="dfg-file-link">{{ f.name }}</a>
-                                <button v-if="isEditing" class="dfg-file-del" @click.stop="onFileDelete(field, f.id)">&times;</button>
+                                <button v-if="isEditing" class="dfg-file-del" @click.stop="confirmFileDelete(field, f)">&times;</button>
                               </div>
                             </div>
                           </div>
@@ -189,7 +189,7 @@
                         <template v-else-if="field.component === 'file'">
                           <div class="dfg-file-area">
                             <label class="dfg-file-select-btn"><i class="fa-solid fa-paperclip"></i> ファイル選択<input type="file" multiple class="dfg-file-hidden" @change="onFileUpload(field, $event)"></label>
-                            <div v-if="getFileList(field).length" class="dfg-file-list"><div v-for="f in getFileList(field)" :key="f.id" class="dfg-file-item"><a :href="f.url" target="_blank" class="dfg-file-link">{{ f.name }}</a><button v-if="isEditing" class="dfg-file-del" @click.stop="onFileDelete(field, f.id)">&times;</button></div></div>
+                            <div v-if="getFileList(field).length" class="dfg-file-list"><div v-for="f in getFileList(field)" :key="f.id" class="dfg-file-item"><a :href="f.url" target="_blank" class="dfg-file-link">{{ f.name }}</a><button v-if="isEditing" class="dfg-file-del" @click.stop="confirmFileDelete(field, f)">&times;</button></div></div>
                           </div>
                         </template>
                         <template v-else><span class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
@@ -224,6 +224,16 @@
         <div class="dfg-confirm-actions">
           <button class="dfg-confirm-yes" @click="executeHide">はい</button>
           <button class="dfg-confirm-no" @click="cancelHide">いいえ</button>
+        </div>
+      </div>
+    </div>
+    <!-- ファイル削除確認モーダル -->
+    <div v-if="showFileDeleteConfirm" class="dfg-confirm-overlay" @click.self="cancelFileDelete">
+      <div class="dfg-confirm-modal">
+        <p>「{{ pendingDeleteFile?.name }}」を削除しますか？<br><span style="font-size:11px;color:#dc2626;">※この操作は取り消せません</span></p>
+        <div class="dfg-confirm-actions">
+          <button class="dfg-confirm-yes dfg-confirm-danger" @click="executeFileDelete">削除する</button>
+          <button class="dfg-confirm-no" @click="cancelFileDelete">キャンセル</button>
         </div>
       </div>
     </div>
@@ -370,9 +380,28 @@ const onFileUpload = (field: FieldDef, event: Event) => {
   }
 };
 
-/** ファイル削除イベント */
-const onFileDelete = (field: FieldDef, fileId: string) => {
-  emit('file-delete', field.key, fileId);
+/** ファイル削除確認モーダル */
+const showFileDeleteConfirm = ref(false);
+const pendingDeleteField = ref<FieldDef | null>(null);
+const pendingDeleteFile = ref<FileItem | null>(null);
+
+const confirmFileDelete = (field: FieldDef, file: FileItem) => {
+  pendingDeleteField.value = field;
+  pendingDeleteFile.value = file;
+  showFileDeleteConfirm.value = true;
+};
+const executeFileDelete = () => {
+  if (pendingDeleteField.value && pendingDeleteFile.value) {
+    emit('file-delete', pendingDeleteField.value.key, pendingDeleteFile.value.id);
+  }
+  showFileDeleteConfirm.value = false;
+  pendingDeleteField.value = null;
+  pendingDeleteFile.value = null;
+};
+const cancelFileDelete = () => {
+  showFileDeleteConfirm.value = false;
+  pendingDeleteField.value = null;
+  pendingDeleteFile.value = null;
 };
 
 const containerRef = ref<HTMLElement | null>(null);
@@ -434,16 +463,28 @@ const getRowDragGroup = (row: FieldDef[]) => {
 };
 
 /** ドラッグ移動時の制御: 保護フィールドがゴミ箱/非表示エリアに移動しようとした場合にブロック */
-const onDragMove = (evt: { dragged: HTMLElement; to: HTMLElement; related: HTMLElement }) => {
-  const fieldKey = evt.dragged?.getAttribute?.('data-field-key') || '';
-  // ドロップ先がゴミ箱または非表示エリア（fp-drop-zoneクラスを持つ）の場合
+const onDragMove = (evt: { dragged: HTMLElement; to: HTMLElement; related: HTMLElement; draggedContext?: { element?: FieldDef }; relatedContext?: { element?: FieldDef } }) => {
+  // draggedContext.elementからFieldDefを取得（vue-draggable-plus方式）
+  const field = evt.draggedContext?.element;
+  // フォールバック: DOM属性からキーを取得
+  const fieldKey = field?.key || evt.dragged?.getAttribute?.('data-field-key') || '';
+  // ドロップ先がゴミ箱または非表示エリアか判定
   const toEl = evt.to;
-  if (toEl && (toEl.classList.contains('fp-drop-trash') || toEl.classList.contains('fp-drop-hide'))) {
+  const isDropZone = toEl && (
+    toEl.classList.contains('fp-drop-trash') ||
+    toEl.classList.contains('fp-drop-hide') ||
+    toEl.closest?.('.fp-drop-trash') ||
+    toEl.closest?.('.fp-drop-hide')
+  );
+  if (isDropZone) {
     // 保護フィールドかチェック
-    if (fieldKey && !fieldKey.startsWith('custom_')) {
-      const field = props.fields.find(f => f.key === fieldKey);
-      if (field && field.deletable !== true) {
-        return false; // ドロップを拒否
+    if (field && field.deletable !== true && !fieldKey.startsWith('custom_')) {
+      return false; // ドロップを拒否
+    }
+    if (!field && fieldKey && !fieldKey.startsWith('custom_')) {
+      const found = props.fields.find(f => f.key === fieldKey);
+      if (found && found.deletable !== true) {
+        return false;
       }
     }
   }
@@ -704,7 +745,7 @@ onBeforeUnmount(() => {
 .dfg-rows {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 12px;
 }
 
 .dfg-row {
@@ -724,7 +765,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 8px 0;
+  gap: 12px 0;
   width: 100%;
 }
 
@@ -734,8 +775,9 @@ onBeforeUnmount(() => {
   position: relative;
   min-width: 0;
   box-sizing: border-box;
-  padding: 0 4px;
+  padding: 0 8px;
   cursor: default;
+  letter-spacing: 0.5px;
 }
 .dfg-draggable {
   cursor: grab;
@@ -999,7 +1041,7 @@ onBeforeUnmount(() => {
 
 /* ラベルエリア */
 .dfg-label-area {
-  padding: 2px 4px 0;
+  padding: 2px 4px 2px;
 }
 .dfg-label-input {
   width: 100%;
@@ -1022,10 +1064,11 @@ onBeforeUnmount(() => {
 .dfg-label {
   display: block;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 400;
   color: #475569;
   margin: 0;
   padding: 0 0 2px;
+  letter-spacing: 0.5px;
 }
 
 /* ＋フィールド追加ボタン */

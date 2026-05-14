@@ -47,7 +47,7 @@
       <div class="fp-section-label"><i class="fa-solid fa-trash-can"></i> ゴミ箱</div>
       <VueDraggable
         v-model="trashBin"
-        :group="{ name: dragGroup, pull: false, put: true }"
+        :group="trashDropGroup"
         class="fp-drop-zone fp-drop-trash"
         :class="{ 'fp-drop-zone-active': trashBin.length > 0 }"
         @add="onTrashDrop"
@@ -67,7 +67,7 @@
       <div class="fp-section-label"><i class="fa-solid fa-eye-slash"></i> 非表示 ({{ hiddenFieldDefs.length }})</div>
       <VueDraggable
         v-model="hideBin"
-        :group="{ name: dragGroup, pull: false, put: true }"
+        :group="hideDropGroup"
         class="fp-drop-zone fp-drop-hide"
         :class="{ 'fp-drop-zone-active': hideBin.length > 0 }"
         @add="onHideDrop"
@@ -248,6 +248,30 @@ const isDeletable = (f: FieldDef): boolean => {
   if (f.key.startsWith('custom_')) return true;
   return f.deletable === true;
 };
+
+/** SortableJS putコールバック: 保護フィールドの受け入れをSortableJSレベルで拒否 */
+const canAcceptDrop = (_to: unknown, _from: unknown, dragEl: HTMLElement): boolean => {
+  const fieldKey = dragEl?.getAttribute?.('data-field-key') || '';
+  if (!fieldKey) return true; // data-field-keyがない要素（構造部材等）は許可
+  if (fieldKey.startsWith('custom_')) return true; // カスタムフィールドは常に許可
+  const field = props.allFields.find(f => f.key === fieldKey);
+  if (field && field.deletable !== true) return false; // 保護フィールドは拒否
+  return true;
+};
+
+/** ゴミ箱ドロップグループ（putコールバックで保護フィールドを拒否） */
+const trashDropGroup = computed(() => ({
+  name: props.dragGroup,
+  pull: false as const,
+  put: canAcceptDrop,
+}));
+
+/** 非表示ドロップグループ（putコールバックで保護フィールドを拒否） */
+const hideDropGroup = computed(() => ({
+  name: props.dragGroup,
+  pull: false as const,
+  put: canAcceptDrop,
+}));
 
 const onTrashDrop = () => {
   if (trashBin.value.length > 0) {

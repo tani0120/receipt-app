@@ -31,7 +31,9 @@
 .cm-table thead th.sortable { cursor: pointer; }
 .cm-table thead th.sortable:hover { color: #3b82f6; }
 .cm-table tbody td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; white-space: nowrap; }
-.cm-table tbody tr:hover { background: #f8fafc; }
+.cm-table tbody tr:nth-child(odd) { background: #ffffff; }
+.cm-table tbody tr:nth-child(even) { background: #f1f5f9; }
+.cm-table tbody tr:hover { background: #eef2ff; }
 .cm-table tbody tr.row-inactive { opacity: 0.5; background: #f1f5f9; }
 .cm-code { font-weight: 700; letter-spacing: 1px; color: #1e293b; font-family: 'Menlo', monospace; }
 .cm-client-id { font-size: 10px; color: #64748b; font-family: 'Menlo', monospace; letter-spacing: 0.5px; }
