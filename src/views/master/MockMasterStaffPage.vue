@@ -1,7 +1,6 @@
 <template>
-  <div class="h-full flex flex-col bg-gray-50 font-sans">
-    <div class="flex-1 overflow-auto">
-      <div class="cm-settings">
+  <div class="h-full flex flex-col overflow-hidden bg-gray-50 font-sans">
+    <div class="cm-settings">
         <!-- ヘッダー -->
         <div class="cm-header">
           <h1 class="cm-title">スタッフ管理</h1>
@@ -14,7 +13,6 @@
               <option value="all">{{ FILTER_ALL_LABEL }}</option>
               <option v-for="o in STAFF_STATUS_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
-            <span class="cm-page-info">全{{ filteredRows.length }}件</span>
           </div>
           <div class="cm-toolbar-right">
             <button class="cm-action-btn primary" @click="openAddPanel">
@@ -23,16 +21,28 @@
           </div>
         </div>
 
+        <!-- ページネーション -->
+        <div class="cm-pagination">
+          <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
+          <span
+            v-for="p in totalPages" :key="p"
+            class="cm-page-num" :class="{ active: p === currentPage }"
+            @click="currentPage = p"
+          >{{ p }}</span>
+          <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
+          <span class="cm-page-info">{{ staffPageStartIndex }}~{{ staffPageEndIndex }} / 全{{ staffTotalCount }}件</span>
+        </div>
+
         <!-- テーブル -->
         <div class="cm-table-wrap">
-          <table class="cm-table" style="table-layout: fixed;">
+          <table class="cm-table" :style="{ tableLayout: 'fixed', width: staffTableWidth + 'px' }">
             <colgroup>
               <col :style="{ width: staffColWidths['status'] + 'px' }">
               <col :style="{ width: staffColWidths['uuid'] + 'px' }">
               <col :style="{ width: staffColWidths['role'] + 'px' }">
               <col :style="{ width: staffColWidths['name'] + 'px' }">
               <col :style="{ width: staffColWidths['nameRomaji'] + 'px' }">
-              <col style="width: auto;">
+              <col :style="{ width: staffColWidths['email'] + 'px' }">
             </colgroup>
             <thead>
               <tr>
@@ -56,8 +66,9 @@
                   ローマ字 <i :class="getSortIcon('nameRomaji')"></i>
                   <div class="resize-handle" @mousedown.stop="onStaffResizeStart('nameRomaji', $event)"></div>
                 </th>
-                <th class="sortable" @click="sortBy('email')">
+                <th class="sortable relative" @click="sortBy('email')">
                   メールアドレス <i :class="getSortIcon('email')"></i>
+                  <div class="resize-handle" @mousedown.stop="onStaffResizeStart('email', $event)"></div>
                 </th>
               </tr>
             </thead>
@@ -107,18 +118,7 @@
           </table>
         </div>
 
-        <!-- ページネーション -->
-        <div class="cm-pagination" v-if="totalPages > 1">
-          <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
-          <span
-            v-for="p in totalPages" :key="p"
-            class="cm-page-num" :class="{ active: p === currentPage }"
-            @click="currentPage = p"
-          >{{ p }}</span>
-          <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
-        </div>
       </div>
-    </div>
 
     <!-- スライドインパネル（追加/編集） -->
     <transition name="slide-panel">
@@ -249,8 +249,14 @@ const staffDefaultWidths: Record<string, number> = {
   role: 80,
   name: 160,
   nameRomaji: 150,
+  email: 250,
 };
 const { columnWidths: staffColWidths, onResizeStart: onStaffResizeStart } = useColumnResize('master-staff', staffDefaultWidths);
+
+/** テーブル合計幅（列幅の総和 → table widthに動的設定） */
+const staffTableWidth = computed(() => {
+  return Object.values(staffColWidths.value).reduce((sum, w) => sum + (w || 0), 0);
+});
 
 // --- スタッフデータ（composableから取得） ---
 const { addStaff, updateStaff } = useStaff();
@@ -284,10 +290,13 @@ const getSortIcon = (key: string) => {
 
 // --- サーバー側フィルタ+ソート+ページネーション（API化済み） ---
 const filteredRows = ref<Staff[]>([]);
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 50;
 const currentPage = ref(1);
 const totalPages = ref(1);
+const staffTotalCount = ref(0);
 const pagedRows = computed(() => filteredRows.value);
+const staffPageStartIndex = computed(() => staffTotalCount.value === 0 ? 0 : (currentPage.value - 1) * PAGE_SIZE + 1);
+const staffPageEndIndex = computed(() => Math.min(currentPage.value * PAGE_SIZE, staffTotalCount.value));
 const isLoading = ref(false);
 
 /** POST /api/staff/list でサーバー側でフィルタ+ソート+ページネーション */
@@ -308,6 +317,7 @@ const fetchStaffList = async () => {
     const data = await res.json();
     filteredRows.value = data.rows;
     totalPages.value = data.totalPages;
+    staffTotalCount.value = data.totalCount ?? data.rows.length;
   } catch (e) {
     console.error('[StaffPage] リスト取得失敗:', e);
   } finally {

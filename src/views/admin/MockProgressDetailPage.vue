@@ -1,5 +1,5 @@
 <template>
-  <div class="pg-container">
+  <div class="pg-container h-full flex flex-col overflow-hidden">
     <div class="cm-settings">
     <!-- ページタイトル（青背景） -->
     <div class="cm-header">
@@ -27,15 +27,15 @@
 
     <!-- 中段: ページネーション + アクション -->
     <div class="pg-action-bar">
-      <div class="pg-pagination">
-        <span class="pg-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
+      <div class="cm-pagination" style="padding: 0;">
+        <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
         <span
           v-for="p in displayPages" :key="p"
-          class="pg-page-num" :class="{ active: p === currentPage }"
+          class="cm-page-num" :class="{ active: p === currentPage }"
           @click="currentPage = p"
         >{{ p }}</span>
-        <span class="pg-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
-        <span class="pg-page-info">{{ pageStartIndex }}~{{ pageEndIndex }} / 全{{ totalCount }}件</span>
+        <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
+        <span class="cm-page-info">{{ pageStartIndex }}~{{ pageEndIndex }} / 全{{ totalCount }}件</span>
       </div>
       <div class="pg-actions">
         <button class="pg-btn pg-btn-secondary" @click="refreshData"><i class="fa-solid fa-arrows-rotate"></i> 更新</button>
@@ -43,12 +43,12 @@
     </div>
 
     <!-- テーブル -->
-    <div class="pg-table-wrap">
-      <table class="pg-table">
+    <div class="cm-table-wrap">
+      <table class="cm-table" :style="{ tableLayout: 'fixed', width: pgTableWidth + 'px' }">
         <colgroup>
           <col :style="{ width: pgColWidths['status'] + 'px' }">
           <col :style="{ width: pgColWidths['code'] + 'px' }">
-          <col>
+          <col :style="{ width: pgColWidths['companyName'] + 'px' }">
           <col :style="{ width: pgColWidths['staffName'] + 'px' }">
           <col :style="{ width: pgColWidths['fiscalMonth'] + 'px' }">
           <col :style="{ width: pgColWidths['shareStatus'] + 'px' }">
@@ -68,7 +68,9 @@
             <th class="sortable pg-th-narrow relative" @click="sortBy('code')">3コード <i :class="getSortIcon('code')"></i>
               <div class="resize-handle" @mousedown.stop="onPgResizeStart('code', $event)"></div>
             </th>
-            <th class="sortable" @click="sortBy('companyName')">会社名/代表者名 <i :class="getSortIcon('companyName')"></i></th>
+            <th class="sortable relative" @click="sortBy('companyName')">会社名/代表者名 <i :class="getSortIcon('companyName')"></i>
+              <div class="resize-handle" @mousedown.stop="onPgResizeStart('companyName', $event)"></div>
+            </th>
             <th class="sortable pg-th-narrow relative" @click="sortBy('staffName')">担当 <i :class="getSortIcon('staffName')"></i>
               <div class="resize-handle" @mousedown.stop="onPgResizeStart('staffName', $event)"></div>
             </th>
@@ -169,12 +171,19 @@ import {
 import { PROGRESS_ALL_COLUMNS, PROGRESS_FILTER_COLUMN_DEFS } from '@/constants/progressFieldDefs';
 
 const pgDefaultWidths: Record<string, number> = {
-  status: 60, code: 60, fiscalMonth: 60,
+  status: 60, code: 60, companyName: 180, fiscalMonth: 60,
   staffName: 78, shareStatus: 78, receivedDate: 78, unsorted: 60, unexported: 78,
   jobStatus: 78,
   currentYear: 70, lastYear: 70,
 };
 const { columnWidths: pgColWidths, onResizeStart: onPgResizeStart } = useColumnResize('progress', pgDefaultWidths);
+
+/** テーブル合計幅（列幅の総和 → table widthに動的設定） */
+const pgTableWidth = computed(() => {
+  const fixedW = Object.values(pgColWidths.value).reduce((sum, w) => sum + (w || 0), 0);
+  const monthW = 36 * 12; // 月列は固定36px × 12
+  return fixedW + monthW;
+});
 
 const { loadAll: loadShareStatus, getStatusFromCache } = useShareStatus();
 onMounted(() => { loadShareStatus(); });
@@ -342,7 +351,7 @@ const getSortIcon = (key: string) => {
 const filteredRows = ref<import('@/features/progress-management/types').ProgressRow[]>([]);
 const totalCount = ref(0);
 const totalPages = ref(1);
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 50;
 const currentPage = ref(1);
 const displayPages = computed(() => {
   const pages: number[] = [];

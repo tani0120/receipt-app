@@ -118,16 +118,18 @@ export function buildQueryParams(opts: {
   // ビュー（デフォルトと同じなら省略可能だが、明示する方針）
   query.view = opts.viewName
 
-  // フィルタ条件
+  // フィルタ条件（ビューのデフォルトと同一なら省略）
   const filterStr = serializeFilters(opts.conditions)
-  if (filterStr) query.q = filterStr
+  const defaultFilterStr = opts.defaultConditions ? serializeFilters(opts.defaultConditions) : ''
+  if (filterStr && filterStr !== defaultFilterStr) query.q = filterStr
 
   // 条件結合方式（andはデフォルトなので省略）
   if (opts.logic === 'or') query.logic = 'or'
 
-  // ソート
+  // ソート（ビューのデフォルトと同一なら省略）
   const sortStr = serializeSorts(opts.sorts)
-  if (sortStr) query.sort = sortStr
+  const defaultSortStr = opts.defaultSorts ? serializeSorts(opts.defaultSorts) : ''
+  if (sortStr && sortStr !== defaultSortStr) query.sort = sortStr
 
   return query
 }

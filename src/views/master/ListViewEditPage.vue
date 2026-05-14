@@ -2,10 +2,15 @@
   <div class="lve-page">
     <!-- ヘッダー -->
     <div class="lve-header">
-      <button class="lve-back-btn" @click="goBack">
-        <i class="fa-solid fa-arrow-left"></i> 一覧の設定に戻る
+      <div class="lve-header-left">
+        <button class="lve-back-btn" @click="goBack">
+          <i class="fa-solid fa-arrow-left"></i> 一覧の設定に戻る
+        </button>
+        <h1 class="lve-title">一覧の編集: {{ viewName }}</h1>
+      </div>
+      <button class="lve-save-btn" @click="save">
+        <i class="fa-solid fa-save"></i> 保存
       </button>
-      <h1 class="lve-title">一覧の編集: {{ viewName }}</h1>
     </div>
 
     <!-- 一覧名 -->
@@ -314,10 +319,25 @@ onMounted(async () => {
   margin: 0 auto;
   padding: 32px 24px;
   font-family: 'Inter', 'Hiragino Sans', sans-serif;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .lve-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: 32px;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  padding: 16px 0;
+  z-index: 10;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.lve-header-left {
+  flex: 1;
 }
 
 .lve-back-btn {

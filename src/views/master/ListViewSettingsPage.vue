@@ -83,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onActivated, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { ListViewDef } from '@/components/list-view/types';
 import ConfirmModal from '@/components/ConfirmModal.vue';
@@ -209,6 +209,16 @@ const onDragEnd = () => {
 onMounted(async () => {
   await loadViews();
   editableViewsList.value = editableViews.value;
+});
+
+// KeepAlive復帰時（ビュー編集ページから戻った時）にAPIから再取得
+let isFirstActivation = true;
+onActivated(async () => {
+  if (isFirstActivation) {
+    isFirstActivation = false;
+    return;
+  }
+  await loadViews();
 });
 
 watch(editableViews, (newVal) => {

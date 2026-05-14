@@ -1,11 +1,16 @@
 <template>
-  <div class="h-full flex flex-col bg-gray-50 font-sans">
-    <div class="flex-1 overflow-auto">
-      <div class="cm-settings">
+  <div class="h-full flex flex-col overflow-hidden bg-gray-50 font-sans">
+    <div class="cm-settings">
         <!-- ヘッダー -->
         <div class="cm-header">
           <h1 class="cm-title">顧問先管理</h1>
           <div class="cm-header-actions" v-if="isAdmin">
+            <button
+              class="cm-admin-btn"
+              @click="$router.push({ name: 'ClientViewSettings' })"
+            >
+              <i class="fa-solid fa-list-check"></i> 一覧管理
+            </button>
             <button
               class="cm-admin-btn"
               :class="{ active: adminMode === 'field' }"
@@ -21,12 +26,6 @@
               @click="toggleAdminMode('layout')"
             >
               <i class="fa-solid fa-grip"></i> レイアウト管理
-            </button>
-            <button
-              class="cm-admin-btn"
-              @click="$router.push({ name: 'ClientViewSettings' })"
-            >
-              <i class="fa-solid fa-list-check"></i> 一覧管理
             </button>
           </div>
         </div>
@@ -51,9 +50,21 @@
         >
         </TableFilterToolbar>
 
+        <!-- ページネーション -->
+        <div class="cm-pagination">
+          <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="goToPage(currentPage - 1)">＜</span>
+          <span
+            v-for="p in totalPages" :key="p"
+            class="cm-page-num" :class="{ active: p === currentPage }"
+            @click="goToPage(p)"
+          >{{ p }}</span>
+          <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="goToPage(currentPage + 1)">＞</span>
+          <span class="cm-page-info">{{ pageStartIndex }}~{{ pageEndIndex }} / 全{{ totalCount }}件</span>
+        </div>
+
         <!-- テーブル -->
         <div class="cm-table-wrap">
-          <table class="cm-table" style="table-layout: fixed;">
+          <table class="cm-table" :style="{ tableLayout: 'fixed', width: tableWidth + 'px' }">
             <colgroup>
               <col :style="{ width: clColWidths['status'] + 'px' }">
               <col v-for="col in visibleColumnDefs" :key="'cg-'+col.key" :style="{ width: getColWidth(col) + 'px' }">
@@ -181,18 +192,7 @@
           </table>
         </div>
 
-        <!-- ページネーション -->
-        <div class="cm-pagination" v-if="totalPages > 1">
-          <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="goToPage(currentPage - 1)">＜</span>
-          <span
-            v-for="p in totalPages" :key="p"
-            class="cm-page-num" :class="{ active: p === currentPage }"
-            @click="goToPage(p)"
-          >{{ p }}</span>
-          <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="goToPage(currentPage + 1)">＞</span>
-        </div>
       </div>
-    </div>
 
     <!-- スライドインパネル（追加/編集） -->
     <transition name="slide-panel">
@@ -769,13 +769,25 @@ const defaultClientViews: ViewDefWithDefaults[] = [
 ];
 const clientViews = ref<ViewDefWithDefaults[]>([...defaultClientViews]);
 
-/** API: ビュー一覧取得（「(すべて)」は末尾に自動追加） */
+/** API: ビュー一覧取得（「(すべて)」は末尾に自動追加）+ 表示状態を再同期 */
 const loadListViews = async () => {
   try {
     const res = await fetch('/api/list-views/client');
     const data = await res.json();
-    const apiViews: ViewDefWithDefaults[] = data.views ?? [];
-    // APIから取得したビュー + 末尾に「(すべて)」固定ビュー
+    let apiViews: ViewDefWithDefaults[] = data.views ?? [];
+
+    // APIが空の場合: デフォルトビューをシーディング（「すべて」は除外して保存）
+    if (apiViews.length === 0) {
+      const seedViews = defaultClientViews.filter(v => v.key !== 'all');
+      await fetch('/api/list-views/client', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ views: seedViews }),
+      });
+      apiViews = seedViews;
+    }
+
+    // APIビュー + 末尾に「(すべて)」固定ビュー
     const allView: ViewDefWithDefaults = {
       name: UI_MSG.ビューすべて,
       key: 'all',
@@ -783,9 +795,24 @@ const loadListViews = async () => {
       defaultFilters: [],
       defaultSorts: [{ key: 'threeCode', order: 'asc' }],
     };
-    clientViews.value = apiViews.length > 0
-      ? [...apiViews, allView]
-      : [...defaultClientViews];
+    clientViews.value = [...apiViews, allView];
+
+    // ビュー定義更新後に表示状態を再同期
+    const urlViewKey = parseViewFromQuery(route.query);
+    const view = findViewByKey(clientViews.value, urlViewKey) ?? clientViews.value[0]!;
+    const viewIdx = clientViews.value.indexOf(view);
+    activeViewIndex.value = viewIdx >= 0 ? viewIdx : 0;
+    visibleColumns.value = view.columns === null
+      ? allColumns.value.map(c => c.key)
+      : [...view.columns];
+    // URLにフィルタ/ソートが明示されていなければビューのデフォルトを適用
+    const urlF = parseFiltersFromQuery(route.query);
+    filterConditions.value = urlF.length > 0 ? urlF : [...view.defaultFilters];
+    const urlS = parseSortsFromQuery(route.query, view.defaultSorts);
+    filterSortSettings.value = urlS;
+    sortKey.value = urlS[0]?.key ?? 'threeCode';
+    sortOrder.value = urlS[0]?.order ?? 'asc';
+    syncUrlQuery();
   } catch (e) {
     console.error('[ClientList] ビュー一覧取得失敗:', e);
   }
@@ -826,6 +853,8 @@ function syncUrlQuery() {
     conditions: filterConditions.value,
     logic: filterLogic.value,
     sorts: filterSortSettings.value,
+    defaultConditions: currentView.defaultFilters,
+    defaultSorts: currentView.defaultSorts,
   });
   router.replace({ query });
 }
@@ -996,6 +1025,13 @@ const getColWidth = (col: { key: string; label: string }): number => {
   return Math.max(w + 32, 100);
 };
 
+/** テーブル合計幅（列幅の総和 → table widthに動的設定） */
+const tableWidth = computed(() => {
+  const statusW = clColWidths.value['status'] ?? 70;
+  const colsW = visibleColumnDefs.value.reduce((sum, col) => sum + getColWidth(col), 0);
+  return statusW + colsW;
+});
+
 // --- ソート（URLから初期値復元） ---
 const sortKey = ref<string>(initialSorts[0]?.key ?? 'threeCode');
 const sortOrder = ref<'asc' | 'desc'>(initialSorts[0]?.order ?? 'asc');
@@ -1023,7 +1059,10 @@ const filteredRows = ref<Client[]>([]);
 const PAGE_SIZE = 50;
 const currentPage = ref(1);
 const totalPages = ref(1);
+const totalCount = ref(0);
 const pagedRows = computed(() => filteredRows.value);
+const pageStartIndex = computed(() => totalCount.value === 0 ? 0 : (currentPage.value - 1) * PAGE_SIZE + 1);
+const pageEndIndex = computed(() => Math.min(currentPage.value * PAGE_SIZE, totalCount.value));
 
 /** ページ変更 */
 const goToPage = (page: number) => {
@@ -1065,6 +1104,7 @@ const fetchClientList = async () => {
     console.log(`[fetchClientList #${myRequestId}] 結果: ${result.totalCount}件`);
     filteredRows.value = result.rows;
     totalPages.value = result.totalPages;
+    totalCount.value = result.totalCount ?? 0;
   } catch (e) {
     if (myRequestId !== fetchRequestId) return;
     console.error('[ClientsPage] リスト取得失敗:', e);
@@ -1074,40 +1114,23 @@ const fetchClientList = async () => {
 };
 
 // イベント駆動: watchは使わず、各ハンドラから直接fetchClientListを呼ぶ
-// 初回表示: setup末尾で直接呼び出し
-syncUrlQuery();
-fetchClientList();
+// 初回表示: APIからビュー定義を取得してから初期化
+const initPage = async () => {
+  await loadListViews();   // API取得 → ビュー状態再同期（syncUrlQuery含む）
+  fetchClientList();
+};
+initPage();
 
-// 一覧ビュー定義をAPIから取得（ノンブロッキング）
-loadListViews();
-
-// KeepAliveからの復帰時にURLから状態を再同期してデータを再取得
-// 初回マウント時はsetup末尾でfetchClientList済みなのでスキップ
+// KeepAliveからの復帰時にAPIからビュー定義を再取得 + データ再取得
+// 初回マウント時はinitPage()で処理済みなのでスキップ
 let isFirstActivation = true;
-onActivated(() => {
+onActivated(async () => {
   if (isFirstActivation) {
     isFirstActivation = false;
-    return;  // 初回はsetup末尾のfetchClientListに任せる
+    return;
   }
-  // 一覧ページに戻ってきた場合のみURLから状態復元
-  if (route.path === '/master/clients') {
-    const viewKey = parseViewFromQuery(route.query);
-    const view = findViewByKey(clientViews.value, viewKey) ?? clientViews.value[0]!;
-    const viewIdx = clientViews.value.indexOf(view);
-    if (activeViewIndex.value !== viewIdx) {
-      activeViewIndex.value = viewIdx;
-      visibleColumns.value = view.columns === null
-        ? allColumns.value.map(c => c.key)
-        : [...view.columns];
-    }
-    const urlF = parseFiltersFromQuery(route.query);
-    filterConditions.value = urlF.length > 0 ? urlF : [...view.defaultFilters];
-    filterLogic.value = parseLogicFromQuery(route.query);
-    const urlS = parseSortsFromQuery(route.query, view.defaultSorts);
-    filterSortSettings.value = urlS;
-    sortKey.value = urlS[0]?.key ?? 'threeCode';
-    sortOrder.value = urlS[0]?.order ?? 'asc';
-  }
+  // 一覧管理ページからの復帰時: APIから最新ビュー定義を再取得 → 表示状態も再同期
+  await loadListViews();
   fetchClientList();
 });
 

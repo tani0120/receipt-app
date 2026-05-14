@@ -45,7 +45,6 @@
           <i class="fa-solid fa-xmark tft-tag-remove" @click.stop="removeFilter(ti)"></i>
         </span>
       </div>
-      <span class="tft-page-info">全{{ totalCount }}件</span>
     </div>
     <div class="tft-toolbar-right">
       <slot name="actions"></slot>
@@ -224,7 +223,7 @@ onUnmounted(() => document.removeEventListener('click', closeDropdowns))
 </script>
 
 <style scoped>
-.tft-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 8px 0; }
+.tft-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 8px 0; flex-shrink: 0; }
 .tft-toolbar-left { display: flex; align-items: center; gap: 12px; }
 .tft-toolbar-right { display: flex; align-items: center; gap: 8px; }
 .tft-filter-group { display: flex; align-items: center; }

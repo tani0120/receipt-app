@@ -1,22 +1,21 @@
 <template>
-  <div class="h-full flex flex-col bg-gray-50 font-sans">
-    <div class="flex-1 overflow-auto">
-      <div class="cm-settings">
+  <div class="h-full flex flex-col overflow-hidden bg-gray-50 font-sans">
+    <div class="cm-settings">
         <!-- ヘッダー -->
         <div class="cm-header">
           <h1 class="cm-title">見込管理</h1>
           <div class="cm-header-actions" v-if="isAdmin">
             <button
               class="cm-admin-btn"
-              @click="$router.push({ name: 'LeadLayout' })"
-            >
-              <i class="fa-solid fa-grip"></i> レイアウト管理
-            </button>
-            <button
-              class="cm-admin-btn"
               @click="$router.push({ name: 'LeadViewSettings' })"
             >
               <i class="fa-solid fa-list-check"></i> 一覧管理
+            </button>
+            <button
+              class="cm-admin-btn"
+              @click="$router.push({ name: 'LeadLayout' })"
+            >
+              <i class="fa-solid fa-grip"></i> レイアウト管理
             </button>
           </div>
         </div>
@@ -43,9 +42,21 @@
           </template>
         </TableFilterToolbar>
 
+        <!-- ページネーション -->
+        <div class="cm-pagination">
+          <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
+          <span
+            v-for="p in totalPages" :key="p"
+            class="cm-page-num" :class="{ active: p === currentPage }"
+            @click="currentPage = p"
+          >{{ p }}</span>
+          <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
+          <span class="cm-page-info">{{ leadPageStartIndex }}~{{ leadPageEndIndex }} / 全{{ leadTotalCount }}件</span>
+        </div>
+
         <!-- テーブル -->
         <div class="cm-table-wrap">
-          <table class="cm-table" style="table-layout: fixed;">
+          <table class="cm-table" :style="{ tableLayout: 'fixed', width: tableWidth + 'px' }">
             <colgroup>
               <col :style="{ width: clColWidths['status'] + 'px' }">
               <col v-for="col in visibleColumnDefs" :key="'cg-'+col.key" :style="{ width: getColWidth(col) + 'px' }">
@@ -150,22 +161,7 @@
             </tbody>
           </table>
         </div>
-
-        <!-- ページネーション -->
-
-
-        <!-- ページネーション -->
-        <div class="cm-pagination" v-if="totalPages > 1">
-          <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
-          <span
-            v-for="p in totalPages" :key="p"
-            class="cm-page-num" :class="{ active: p === currentPage }"
-            @click="currentPage = p"
-          >{{ p }}</span>
-          <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
-        </div>
       </div>
-    </div>
 
     <!-- スライドインパネル（追加/編集） -->
     <transition name="slide-panel">
@@ -451,7 +447,8 @@ import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
-import type { FilterColumnDef, FilterCondition, FilterResult, SortSetting, ViewDef } from '@/components/list-view/types';
+import type { FilterColumnDef, FilterCondition, FilterResult, SortSetting } from '@/components/list-view/types';
+import type { ViewDefWithDefaults } from '@/utils/urlFilterSync';
 
 // 列幅カスタマイズ
 const clDefaultWidths: Record<string, number> = {
@@ -538,36 +535,79 @@ const visibleColumns = ref<string[]>(colsFromUrl || [...basicViewCols]);
 
 // allColumnsがcomputedになったためvisibleColumnDefsの参照を.valueに統一
 
-// --- ビュー定義（表示列プリセット） ---
-// 初期値: フォールバック定義
-const defaultLeadViews: ViewDef[] = [
+// --- ビュー定義（デフォルトフィルタ・ソート付き） ---
+// 初期値: フォールバック定義（API未取得時の表示用）
+const defaultLeadViews: ViewDefWithDefaults[] = [
   {
     name: UI_MSG.ビュー基本情報,
+    key: 'basic',
     columns: basicViewCols,
+    defaultFilters: [],
+    defaultSorts: [{ key: 'threeCode', order: 'asc' as const }],
   },
   {
     name: UI_MSG.ビューすべて,
+    key: 'all',
     columns: null,
+    defaultFilters: [],
+    defaultSorts: [{ key: 'threeCode', order: 'asc' as const }],
   },
 ];
-const leadViews = ref<ViewDef[]>([...defaultLeadViews]);
+const leadViews = ref<ViewDefWithDefaults[]>([...defaultLeadViews]);
 const activeViewIndex = ref(0);
 
-/** API: ビュー一覧取得 */
+/** API: ビュー一覧取得（「(すべて)」は末尾に自動追加）+ 表示状態を再同期 */
 const loadListViews = async () => {
   try {
     const res = await fetch('/api/list-views/lead');
     const data = await res.json();
-    const apiViews: ViewDef[] = data.views ?? [];
-    const allView: ViewDef = { name: UI_MSG.ビューすべて, columns: null };
-    leadViews.value = apiViews.length > 0
-      ? [...apiViews, allView]
-      : [...defaultLeadViews];
+    let apiViews: ViewDefWithDefaults[] = data.views ?? [];
+
+    // APIが空の場合: デフォルトビューをシーディング（「すべて」は除外して保存）
+    if (apiViews.length === 0) {
+      const seedViews = defaultLeadViews.filter(v => v.key !== 'all');
+      await fetch('/api/list-views/lead', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ views: seedViews }),
+      });
+      apiViews = seedViews;
+    }
+
+    // APIビュー + 末尾に「(すべて)」固定ビュー
+    const allView: ViewDefWithDefaults = {
+      name: UI_MSG.ビューすべて,
+      key: 'all',
+      columns: null,
+      defaultFilters: [],
+      defaultSorts: [{ key: 'threeCode', order: 'asc' as const }],
+    };
+    leadViews.value = [...apiViews, allView];
+
+    // ビュー定義更新後に表示列を再同期
+    const currentIdx = Math.min(activeViewIndex.value, leadViews.value.length - 1);
+    activeViewIndex.value = currentIdx >= 0 ? currentIdx : 0;
+    const view = leadViews.value[activeViewIndex.value];
+    if (view) {
+      visibleColumns.value = view.columns === null
+        ? allColumns.value.map(c => c.key)
+        : [...view.columns];
+    }
   } catch (e) {
     console.error('[LeadList] ビュー一覧取得失敗:', e);
   }
 };
 loadListViews();
+
+// KeepAliveからの復帰時にAPIからビュー定義を再取得
+let isFirstActivation = true;
+onActivated(async () => {
+  if (isFirstActivation) {
+    isFirstActivation = false;
+    return;
+  }
+  await loadListViews();
+});
 
 /** ビュー切替時 */
 const onViewChange = (_idx: number) => {
@@ -701,6 +741,13 @@ const getColWidth = (col: { key: string; label: string }): number => {
   return Math.max(w + 32, 100);
 };
 
+/** テーブル合計幅（列幅の総和 → table widthに動的設定） */
+const tableWidth = computed(() => {
+  const statusW = clColWidths.value['status'] ?? 70;
+  const colsW = visibleColumnDefs.value.reduce((sum, col) => sum + getColWidth(col), 0);
+  return statusW + colsW;
+});
+
 // --- ソート ---
 const sortKey = ref<string>('threeCode');
 const sortOrder = ref<'asc' | 'desc'>('asc');
@@ -725,7 +772,10 @@ const filteredRows = ref<Lead[]>([]);
 const PAGE_SIZE = 50;
 const currentPage = ref(1);
 const totalPages = ref(1);
+const leadTotalCount = ref(0);
 const pagedRows = computed(() => filteredRows.value);
+const leadPageStartIndex = computed(() => leadTotalCount.value === 0 ? 0 : (currentPage.value - 1) * PAGE_SIZE + 1);
+const leadPageEndIndex = computed(() => Math.min(currentPage.value * PAGE_SIZE, leadTotalCount.value));
 
 /** GET /api/leads で見込先一覧取得 */
 const fetchLeadList = async () => {
@@ -745,6 +795,7 @@ const fetchLeadList = async () => {
       rows = rows.filter((r: Lead) => r.status === statusFilter.value);
     }
     filteredRows.value = rows;
+    leadTotalCount.value = rows.length;
     totalPages.value = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   } catch (e) {
     console.error('[LeadsPage] リスト取得失敗:', e);
