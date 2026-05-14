@@ -740,6 +740,10 @@ onBeforeUnmount(() => {
 
 .dfg-container {
   width: 100%;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
 .dfg-rows {
