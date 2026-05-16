@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col overflow-hidden bg-gray-50 font-sans">
+  <div class="absolute inset-0 flex flex-col overflow-hidden bg-gray-50 font-sans">
     <div class="cm-settings">
         <!-- ヘッダー -->
         <div class="cm-header">
@@ -35,7 +35,7 @@
 
         <!-- テーブル -->
         <div class="cm-table-wrap">
-          <table class="cm-table" :style="{ tableLayout: 'fixed', width: staffTableWidth + 'px' }">
+          <table class="cm-table" :style="{ tableLayout: 'fixed', width: '100%', minWidth: staffTableWidth + 'px' }">
             <colgroup>
               <col :style="{ width: staffColWidths['status'] + 'px' }">
               <col :style="{ width: staffColWidths['uuid'] + 'px' }">

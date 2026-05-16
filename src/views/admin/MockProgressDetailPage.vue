@@ -1,5 +1,5 @@
 <template>
-  <div class="pg-container h-full flex flex-col overflow-hidden">
+  <div class="pg-container absolute inset-0 flex flex-col overflow-hidden">
     <div class="cm-settings">
     <!-- ページタイトル（青背景） -->
     <div class="cm-header">
@@ -44,7 +44,7 @@
 
     <!-- テーブル -->
     <div class="cm-table-wrap">
-      <table class="cm-table" :style="{ tableLayout: 'fixed', width: pgTableWidth + 'px' }">
+      <table class="cm-table" :style="{ tableLayout: 'fixed', width: '100%', minWidth: pgTableWidth + 'px' }">
         <colgroup>
           <col :style="{ width: pgColWidths['status'] + 'px' }">
           <col :style="{ width: pgColWidths['code'] + 'px' }">
