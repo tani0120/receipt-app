@@ -4,6 +4,30 @@
     <!-- ページタイトル（青背景） -->
     <div class="cm-header">
       <h1 class="cm-title">進捗管理</h1>
+      <div class="cm-header-actions" v-if="isAdmin">
+        <button
+          class="cm-admin-btn"
+          @click="$router.push({ name: 'ProgressViewSettings' })"
+        >
+          <i class="fa-solid fa-list-check"></i> 一覧管理
+        </button>
+        <button
+          class="cm-admin-btn"
+          :class="{ active: pgAdminMode === 'field' }"
+          :disabled="pgAdminMode === 'layout'"
+          @click="togglePgAdminMode('field')"
+        >
+          <i class="fa-solid fa-puzzle-piece"></i> フィールド管理
+        </button>
+        <button
+          class="cm-admin-btn"
+          :class="{ active: pgAdminMode === 'layout' }"
+          :disabled="pgAdminMode === 'field'"
+          @click="togglePgAdminMode('layout')"
+        >
+          <i class="fa-solid fa-grip"></i> レイアウト管理
+        </button>
+      </div>
     </div>
 
     <!-- ツールバー（共通コンポーネント） -->
@@ -25,9 +49,9 @@
     >
     </TableFilterToolbar>
 
-    <!-- 中段: ページネーション + アクション -->
-    <div class="pg-action-bar">
-      <div class="cm-pagination" style="padding: 0;">
+    <!-- ページネーション -->
+    <div class="cm-pagination-row">
+      <div class="cm-pagination">
         <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
         <span
           v-for="p in displayPages" :key="p"
@@ -36,9 +60,6 @@
         >{{ p }}</span>
         <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
         <span class="cm-page-info">{{ pageStartIndex }}~{{ pageEndIndex }} / 全{{ totalCount }}件</span>
-      </div>
-      <div class="pg-actions">
-        <button class="pg-btn pg-btn-secondary" @click="refreshData"><i class="fa-solid fa-arrows-rotate"></i> 更新</button>
       </div>
     </div>
 
@@ -152,23 +173,157 @@
       </table>
     </div>
     </div>
+
+    <!-- フィールド管理モーダル（全社共通） -->
+    <CustomFieldModal
+      :visible="showPgFieldModal"
+      :custom-defs="pgFieldLayout.customDefs.value"
+      :section-keys="pgSectionKeys"
+      :layout-fields="pgFieldLayout.fields.value"
+      :field-rows="pgFieldLayout.fieldRows.value"
+      :default-field-keys="pgFieldLayout.defaultFields.map(f => f.key)"
+      :label-overrides="pgFieldLayout.labelOverrides.value"
+      :hidden-fields="pgFieldLayout.hiddenFields.value"
+      :deleted-fields="pgFieldLayout.deletedFields.value"
+      :field-options="pgFieldLayout.fieldOptions.value"
+      @update:visible="showPgFieldModal = $event"
+      @save="handlePgFieldSave"
+    />
+
+    <!-- フィールド追加モーダル -->
+    <AddFieldModal
+      :visible="showPgAddFieldModal"
+      :section-keys="pgSectionKeys"
+      :default-section="pgAddFieldDefaultSection"
+      @update:visible="showPgAddFieldModal = $event"
+      @add="handlePgAddField"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onActivated } from 'vue';
+import { ref, computed, onMounted, onActivated, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProgress } from '@/features/progress-management/composables/useProgress';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useShareStatus } from '@/composables/useShareStatus';
+import { useCurrentUser } from '@/composables/useCurrentUser';
+import { useFieldLayout } from '@/composables/useFieldLayout';
+import type { CustomFieldDef } from '@/composables/useFieldLayout';
+import { progressSections, progressFieldsFlat } from '@/constants/progressFieldDefs';
 import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
+import CustomFieldModal from '@/components/CustomFieldModal.vue';
+import AddFieldModal from '@/components/AddFieldModal.vue';
 import type { FilterCondition, FilterColumnDef, SortSetting, FilterResult } from '@/components/list-view/types';
 import type { ViewDefWithDefaults } from '@/utils/urlFilterSync';
 import {
   STATUS_OPTIONS, TYPE_OPTIONS, getLabel,
 } from '@/constants/clientOptions';
 import { PROGRESS_ALL_COLUMNS, PROGRESS_FILTER_COLUMN_DEFS } from '@/constants/progressFieldDefs';
+
+const { isAdmin } = useCurrentUser();
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 全社共通フィールド管理・レイアウト管理
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 管理モード（排他制御: null=通常, 'field'=フィールド管理, 'layout'=レイアウト管理） */
+const pgAdminMode = ref<'field' | 'layout' | null>(null);
+
+/** 管理モード切替（排他制御） */
+const togglePgAdminMode = (mode: 'field' | 'layout') => {
+  if (pgAdminMode.value === mode) {
+    pgAdminMode.value = null;
+    if (mode === 'field') {
+      showPgFieldModal.value = false;
+    }
+  } else {
+    if (mode === 'field') {
+      pgAdminMode.value = mode;
+      showPgFieldModal.value = true;
+    } else {
+      router.push({ name: 'ProgressLayout' });
+      pgAdminMode.value = null;
+    }
+  }
+};
+
+/** フィールドレイアウト管理（全社共通） */
+const pgFieldLayout = useFieldLayout('progress', progressSections, progressFieldsFlat);
+pgFieldLayout.loadLayout();
+
+// カスタムフィールド復元
+for (const def of pgFieldLayout.customDefs.value) {
+  pgFieldLayout.addDynamicField({
+    key: def.key, label: def.label, section: def.section,
+    component: def.component, widthPercent: def.widthPercent, order: def.order,
+  });
+}
+
+const showPgFieldModal = ref(false);
+const showPgAddFieldModal = ref(false);
+const pgAddFieldDefaultSection = ref('');
+const pgSectionKeys = progressSections.map(s => s.key);
+
+/** フィールド追加ハンドラ */
+const handlePgAddField = (payload: { label: string; component: import('@/types/fieldLayout').FieldComponent; section: string }) => {
+  const key = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const def: CustomFieldDef = {
+    key, label: payload.label, section: payload.section,
+    component: payload.component, widthPercent: 20,
+    order: 100 + pgFieldLayout.customDefs.value.length,
+  };
+  pgFieldLayout.customDefs.value = [...pgFieldLayout.customDefs.value, def];
+  pgFieldLayout.addDynamicField({
+    key: def.key, label: def.label, section: def.section,
+    component: def.component, widthPercent: def.widthPercent, order: def.order,
+  });
+};
+
+/** フィールド管理保存ハンドラ */
+const handlePgFieldSave = (payload: {
+  customDefs: CustomFieldDef[];
+  labelOverrides: Record<string, string>;
+  hiddenFields: string[];
+  deletedFields: string[];
+  fieldOptions: Record<string, import('@/types/fieldLayout').FieldOption[]>;
+}) => {
+  const oldKeys = new Set(pgFieldLayout.customDefs.value.map(d => d.key));
+  const newKeys = new Set(payload.customDefs.map(d => d.key));
+  for (const key of oldKeys) {
+    if (!newKeys.has(key)) pgFieldLayout.removeDynamicField(key);
+  }
+  for (const def of payload.customDefs) {
+    const existing = pgFieldLayout.fields.value.find(f => f.key === def.key);
+    if (existing) {
+      existing.label = def.label; existing.section = def.section; existing.component = def.component;
+    } else {
+      pgFieldLayout.addDynamicField({
+        key: def.key, label: def.label, section: def.section,
+        component: def.component, widthPercent: def.widthPercent, order: def.order,
+      });
+    }
+  }
+  pgFieldLayout.customDefs.value = payload.customDefs;
+  for (const key of Object.keys(pgFieldLayout.labelOverrides.value)) pgFieldLayout.removeLabelOverride(key);
+  for (const [key, newLabel] of Object.entries(payload.labelOverrides)) pgFieldLayout.updateLabelOverride(key, newLabel);
+  for (const key of [...pgFieldLayout.hiddenFields.value]) pgFieldLayout.toggleFieldVisibility(key, true);
+  for (const key of payload.hiddenFields) pgFieldLayout.toggleFieldVisibility(key, false);
+  const currentDeleted = new Set(pgFieldLayout.deletedFields.value);
+  const newDeleted = new Set(payload.deletedFields);
+  for (const key of payload.deletedFields) { if (!currentDeleted.has(key)) pgFieldLayout.softDeleteField(key); }
+  for (const key of [...pgFieldLayout.deletedFields.value]) { if (!newDeleted.has(key)) pgFieldLayout.restoreDeletedField(key); }
+  for (const [key, opts] of Object.entries(payload.fieldOptions)) {
+    if (opts.length > 0) pgFieldLayout.updateFieldOptions(key, opts);
+  }
+  pgAdminMode.value = null;
+};
+
+/** CustomFieldModalが閉じられた時の管理モード解除 */
+watch(showPgFieldModal, (v) => {
+  if (!v && pgAdminMode.value === 'field') pgAdminMode.value = null;
+});
 
 const pgDefaultWidths: Record<string, number> = {
   status: 60, code: 60, companyName: 180, fiscalMonth: 60,
@@ -394,7 +549,6 @@ async function fetchProgressList() {
 }
 
 // フィルタ・ソート・ページ変更時に自動再取得（バッチ化で二重発火防止）
-import { watch, nextTick } from 'vue';
 let fetchPending = false;
 watch(
   [pgFilterConditions, pgFilterLogic, sortKey, sortOrder, currentPage],
@@ -414,11 +568,7 @@ watch([pgFilterConditions, pgFilterLogic], () => { currentPage.value = 1; }, { d
 // KeepAliveからの復帰時にデータを再取得
 onActivated(() => { fetchProgressList(); fetchAllJobs(); });
 
-const refreshData = async () => {
-  const { refresh } = await import('@/composables/useDocuments').then(m => ({ refresh: m.useDocuments().refresh }));
-  await refresh();
-  await fetchAllJobs();
-};
+
 
 // --- 行クリック: 仕訳一覧へ遷移 ---
 function goToJournalList(row: { clientId: string }) {

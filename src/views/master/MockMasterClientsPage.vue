@@ -50,16 +50,46 @@
         >
         </TableFilterToolbar>
 
-        <!-- ページネーション -->
-        <div class="cm-pagination">
-          <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="goToPage(currentPage - 1)">＜</span>
-          <span
-            v-for="p in totalPages" :key="p"
-            class="cm-page-num" :class="{ active: p === currentPage }"
-            @click="goToPage(p)"
-          >{{ p }}</span>
-          <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="goToPage(currentPage + 1)">＞</span>
-          <span class="cm-page-info">{{ pageStartIndex }}~{{ pageEndIndex }} / 全{{ totalCount }}件</span>
+        <!-- ページネーション + CSVボタン -->
+        <div class="cm-pagination-row">
+          <div class="cm-pagination">
+            <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="goToPage(currentPage - 1)">＜</span>
+            <span
+              v-for="p in totalPages" :key="p"
+              class="cm-page-num" :class="{ active: p === currentPage }"
+              @click="goToPage(p)"
+            >{{ p }}</span>
+            <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="goToPage(currentPage + 1)">＞</span>
+            <span class="cm-page-info">{{ pageStartIndex }}~{{ pageEndIndex }} / 全{{ totalCount }}件</span>
+          </div>
+          <div class="cm-csv-actions">
+            <div class="cm-io-dropdown" :class="{ open: importDropdownOpen }" @click.stop>
+              <button class="cm-admin-btn" @click="toggleImportDropdown">
+                <i class="fa-solid fa-file-import"></i> インポート <i class="fa-solid fa-caret-down" style="font-size:10px;margin-left:2px"></i>
+              </button>
+              <div class="cm-io-dropdown-menu">
+                <button class="cm-io-dropdown-item" @click="handleCsvImport(); importDropdownOpen = false">
+                  <i class="fa-solid fa-file-csv"></i> CSV
+                </button>
+                <button class="cm-io-dropdown-item" @click="handleCsvImport(); importDropdownOpen = false">
+                  <i class="fa-solid fa-file-excel"></i> Excel (.xlsx / .xls)
+                </button>
+              </div>
+            </div>
+            <div class="cm-io-dropdown" :class="{ open: exportDropdownOpen }" @click.stop>
+              <button class="cm-admin-btn" @click="toggleExportDropdown">
+                <i class="fa-solid fa-file-export"></i> エクスポート <i class="fa-solid fa-caret-down" style="font-size:10px;margin-left:2px"></i>
+              </button>
+              <div class="cm-io-dropdown-menu">
+                <button class="cm-io-dropdown-item" @click="handleCsvExport(); exportDropdownOpen = false">
+                  <i class="fa-solid fa-file-csv"></i> CSV
+                </button>
+                <button class="cm-io-dropdown-item" @click="handleExcelExport(); exportDropdownOpen = false">
+                  <i class="fa-solid fa-file-excel"></i> Excel (.xlsx)
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- テーブル -->
@@ -1405,10 +1435,8 @@ const commitStaffEdit = (_row: Client) => {
   refreshList();
 };
 
-// --- ドロップダウン外クリックで閉じる ---
-const closeDropdowns = () => { showIndustryDropdown.value = false; };
-onMounted(() => document.addEventListener('click', closeDropdowns));
-onUnmounted(() => document.removeEventListener('click', closeDropdowns));
+// --- ドロップダウン外クリックで閉じる（業種・CSV統合） ---
+// ※ closeAllDropdowns に統合済み（ファイル末尾で定義）
 
 // --- Drive取込 URL ---
 const driveUrlCopied = ref<string | null>(null);
@@ -1454,51 +1482,71 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
   }
 };
 
+// --- インポート / エクスポート ---
+import { exportCsv, exportExcel, importCsv } from '@/composables/useCsv';
+import type { CsvColumnDef } from '@/composables/useCsv';
+
+const importDropdownOpen = ref(false);
+const exportDropdownOpen = ref(false);
+
+/** 現在の表示列をCSV列定義に変換 */
+const clientCsvColumns = computed<CsvColumnDef[]>(() =>
+  visibleColumnDefs.value.map(col => ({ key: col.key, label: col.label }))
+);
+
+const handleCsvExport = () => {
+  const cols = clientCsvColumns.value;
+  const rows = filteredRows.value as unknown as Record<string, unknown>[];
+  const timestamp = new Date().toISOString().slice(0, 10);
+  exportCsv(`顧問先_${timestamp}.csv`, cols, rows);
+};
+
+const handleExcelExport = () => {
+  const cols = clientCsvColumns.value;
+  const rows = filteredRows.value as unknown as Record<string, unknown>[];
+  const timestamp = new Date().toISOString().slice(0, 10);
+  exportExcel(`顧問先_${timestamp}.xlsx`, cols, rows);
+};
+
+const handleCsvImport = async () => {
+  const cols = clientCsvColumns.value;
+  const result = await importCsv(cols);
+  if (!result) return;
+
+  if (result.unmatchedHeaders.length > 0) {
+    console.warn('[顧問先インポート] マッチしなかったヘッダー:', result.unmatchedHeaders);
+  }
+
+  console.log(`[顧問先インポート] ${result.rows.length}件を読み込み`, result.rows);
+  await modal.notify({
+    title: `インポート完了`,
+    message: `${result.rows.length}件のデータを読み込みました（全${result.totalRows}行）`,
+    variant: 'success',
+  });
+};
+
+// --- ドロップダウン外クリック閉じ ---
+const closeAllDropdowns = () => {
+  showIndustryDropdown.value = false;
+  importDropdownOpen.value = false;
+  exportDropdownOpen.value = false;
+};
+const toggleImportDropdown = () => {
+  exportDropdownOpen.value = false;
+  importDropdownOpen.value = !importDropdownOpen.value;
+};
+const toggleExportDropdown = () => {
+  importDropdownOpen.value = false;
+  exportDropdownOpen.value = !exportDropdownOpen.value;
+};
+
+
+onMounted(() => document.addEventListener('click', closeAllDropdowns));
+onUnmounted(() => document.removeEventListener('click', closeAllDropdowns));
+
 </script>
 
 <style>
+/* 共通CSS読込 */
 @import '@/styles/master-list.css';
-</style>
-
-<style scoped>
-/* ━━━━ フィールド管理・レイアウト管理ボタン ━━━━ */
-.cm-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.cm-header-actions {
-  display: flex;
-  gap: 8px;
-}
-.cm-admin-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 16px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #fff;
-  color: #475569;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.cm-admin-btn:hover:not(:disabled) {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-}
-.cm-admin-btn.active {
-  background: #3b82f6;
-  color: #fff;
-  border-color: #3b82f6;
-}
-.cm-admin-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.cm-admin-btn i {
-  font-size: 14px;
-}
 </style>

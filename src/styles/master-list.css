@@ -7,7 +7,7 @@
 
 /* レイアウト */
 .cm-settings { max-width: 100%; margin: 0 auto; padding: 8px 12px 0; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
-.cm-header { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; background: #3b82f6; padding: 10px 20px; border-radius: 6px; flex-shrink: 0; }
+.cm-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 8px; background: #3b82f6; padding: 10px 20px; border-radius: 6px; flex-shrink: 0; }
 .cm-back-link { color: #ffffff; font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 4px; }
 .cm-back-link:hover { text-decoration: underline; }
 .cm-title { font-size: 18px; font-weight: 700; color: #ffffff; }
@@ -105,6 +105,7 @@
 .cm-td-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ページネーション */
+.cm-pagination-row { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .cm-pagination { display: flex; align-items: center; gap: 4px; padding: 6px 16px; flex-shrink: 0; }
 .cm-page-arrow { cursor: pointer; padding: 2px 6px; font-size: 11px; color: #0969da; border: 1px solid #d0d7de; border-radius: 3px; background: white; user-select: none; }
 .cm-page-arrow:hover { background: #f0f4f8; }
@@ -113,6 +114,26 @@
 .cm-page-num:hover { background: #f0f4f8; }
 .cm-page-num.active { background: #0969da; color: white; border-color: #0969da; }
 .cm-page-info { font-size: 11px; color: #666; margin-left: 8px; }
+.cm-csv-actions { display: flex; gap: 8px; padding-right: 16px; }
+
+/* インポート/エクスポート ドロップダウン */
+.cm-io-dropdown { position: relative; display: inline-block; }
+.cm-io-dropdown-menu {
+  display: none; position: absolute; top: 100%; right: 0; z-index: 50;
+  min-width: 160px; margin-top: 4px; padding: 4px 0;
+  background: #fff; border: 1px solid #d0d7de; border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.cm-io-dropdown.open .cm-io-dropdown-menu { display: block; }
+.cm-io-dropdown-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 8px 14px; border: none; background: none;
+  font-family: 'Inter', 'Hiragino Sans', 'Meiryo', sans-serif;
+  font-size: 13px; color: #334155; cursor: pointer; text-align: left;
+  transition: background 0.1s;
+}
+.cm-io-dropdown-item:hover { background: #f1f5f9; }
+.cm-io-dropdown-item i { width: 16px; text-align: center; color: #64748b; font-size: 13px; }
 
 /* スライドインパネル */
 .cm-panel-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; display: flex; justify-content: flex-end; background: rgba(0,0,0,0.15); }
@@ -227,3 +248,19 @@
 
 /* Drive表示なし */
 .cm-drive-none { color: #94a3b8; }
+
+/* ━━━━ ヘッダー管理ボタン（一覧管理・フィールド管理・レイアウト管理） ━━━━ */
+.cm-header-actions { display: flex; gap: 8px; }
+.cm-admin-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border: 1px solid #cbd5e1; border-radius: 6px;
+  background: #fff; color: #475569;
+  font-family: 'Inter', 'Hiragino Sans', 'Meiryo', sans-serif;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
+  cursor: pointer; transition: all 0.15s ease;
+}
+.cm-admin-btn:hover:not(:disabled) { background: #f1f5f9; border-color: #94a3b8; }
+.cm-admin-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.cm-admin-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.cm-admin-btn i { font-size: 14px; }
+

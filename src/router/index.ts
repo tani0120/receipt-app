@@ -408,6 +408,23 @@ export const routes: RouteRecordRaw[] = [
     name: 'MasterSettings',
     component: () => import('@/views/MockSettingsHubPage.vue')
   },
+  // 進捗管理 一覧管理ページ（ビュー設定）
+  {
+    path: '/master/progress/view-settings',
+    name: 'ProgressViewSettings',
+    component: () => import('@/views/master/ListViewSettingsPage.vue')
+  },
+  {
+    path: '/master/progress/view-settings/:viewKey',
+    name: 'ProgressViewEdit',
+    component: () => import('@/views/master/ListViewEditPage.vue')
+  },
+  // 進捗管理 レイアウト管理（全社共通）
+  {
+    path: '/master/progress/layout',
+    name: 'ProgressLayout',
+    component: () => import('@/views/admin/ProgressEditPage.vue')
+  },
   {
     path: '/master/progress/:code?',
     name: 'ProgressDetail',

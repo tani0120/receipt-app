@@ -13,7 +13,17 @@
             </button>
             <button
               class="cm-admin-btn"
-              @click="$router.push({ name: 'LeadLayout' })"
+              :class="{ active: leadAdminMode === 'field' }"
+              :disabled="leadAdminMode === 'layout'"
+              @click="toggleLeadAdminMode('field')"
+            >
+              <i class="fa-solid fa-puzzle-piece"></i> フィールド管理
+            </button>
+            <button
+              class="cm-admin-btn"
+              :class="{ active: leadAdminMode === 'layout' }"
+              :disabled="leadAdminMode === 'field'"
+              @click="toggleLeadAdminMode('layout')"
             >
               <i class="fa-solid fa-grip"></i> レイアウト管理
             </button>
@@ -42,16 +52,46 @@
           </template>
         </TableFilterToolbar>
 
-        <!-- ページネーション -->
-        <div class="cm-pagination">
-          <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
-          <span
-            v-for="p in totalPages" :key="p"
-            class="cm-page-num" :class="{ active: p === currentPage }"
-            @click="currentPage = p"
-          >{{ p }}</span>
-          <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
-          <span class="cm-page-info">{{ leadPageStartIndex }}~{{ leadPageEndIndex }} / 全{{ leadTotalCount }}件</span>
+        <!-- ページネーション + CSVボタン -->
+        <div class="cm-pagination-row">
+          <div class="cm-pagination">
+            <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
+            <span
+              v-for="p in totalPages" :key="p"
+              class="cm-page-num" :class="{ active: p === currentPage }"
+              @click="currentPage = p"
+            >{{ p }}</span>
+            <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
+            <span class="cm-page-info">{{ leadPageStartIndex }}~{{ leadPageEndIndex }} / 全{{ leadTotalCount }}件</span>
+          </div>
+          <div class="cm-csv-actions">
+            <div class="cm-io-dropdown" :class="{ open: importDropdownOpen }" @click.stop>
+              <button class="cm-admin-btn" @click="toggleImportDropdown">
+                <i class="fa-solid fa-file-import"></i> インポート <i class="fa-solid fa-caret-down" style="font-size:10px;margin-left:2px"></i>
+              </button>
+              <div class="cm-io-dropdown-menu">
+                <button class="cm-io-dropdown-item" @click="handleLeadCsvImport(); importDropdownOpen = false">
+                  <i class="fa-solid fa-file-csv"></i> CSV
+                </button>
+                <button class="cm-io-dropdown-item" @click="handleLeadCsvImport(); importDropdownOpen = false">
+                  <i class="fa-solid fa-file-excel"></i> Excel (.xlsx / .xls)
+                </button>
+              </div>
+            </div>
+            <div class="cm-io-dropdown" :class="{ open: exportDropdownOpen }" @click.stop>
+              <button class="cm-admin-btn" @click="toggleExportDropdown">
+                <i class="fa-solid fa-file-export"></i> エクスポート <i class="fa-solid fa-caret-down" style="font-size:10px;margin-left:2px"></i>
+              </button>
+              <div class="cm-io-dropdown-menu">
+                <button class="cm-io-dropdown-item" @click="handleLeadCsvExport(); exportDropdownOpen = false">
+                  <i class="fa-solid fa-file-csv"></i> CSV
+                </button>
+                <button class="cm-io-dropdown-item" @click="handleLeadExcelExport(); exportDropdownOpen = false">
+                  <i class="fa-solid fa-file-excel"></i> Excel (.xlsx)
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- テーブル -->
@@ -414,6 +454,31 @@
       :variant="modal.notifyState.variant"
       @close="modal.onNotifyClose"
     />
+
+    <!-- フィールド管理モーダル（全社共通） -->
+    <CustomFieldModal
+      :visible="showLeadFieldModal"
+      :custom-defs="leadFieldLayout.customDefs.value"
+      :section-keys="leadSectionKeys"
+      :layout-fields="leadFieldLayout.fields.value"
+      :field-rows="leadFieldLayout.fieldRows.value"
+      :default-field-keys="leadFieldLayout.defaultFields.map(f => f.key)"
+      :label-overrides="leadFieldLayout.labelOverrides.value"
+      :hidden-fields="leadFieldLayout.hiddenFields.value"
+      :deleted-fields="leadFieldLayout.deletedFields.value"
+      :field-options="leadFieldLayout.fieldOptions.value"
+      @update:visible="showLeadFieldModal = $event"
+      @save="handleLeadFieldSave"
+    />
+
+    <!-- フィールド追加モーダル -->
+    <AddFieldModal
+      :visible="showLeadAddFieldModal"
+      :section-keys="leadSectionKeys"
+      :default-section="leadAddFieldDefaultSection"
+      @update:visible="showLeadAddFieldModal = $event"
+      @add="handleLeadAddField"
+    />
   </div>
 </template>
 
@@ -440,8 +505,11 @@ import {
   getLabel,
 } from '@/constants/clientOptions';
 import { useFieldLayout } from '@/composables/useFieldLayout';
-import { leadSections, leadFields } from '@/constants/leadFieldDefs';
+import type { CustomFieldDef } from '@/composables/useFieldLayout';
+import { leadSections, leadFields, leadFieldsFlat } from '@/constants/leadFieldDefs';
 import { UI_MSG } from '@/constants/uiMessages';
+import CustomFieldModal from '@/components/CustomFieldModal.vue';
+import AddFieldModal from '@/components/AddFieldModal.vue';
 import { LEAD_FIELD_LABELS } from '@/constants/fieldLabels';
 import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
@@ -473,6 +541,109 @@ const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnR
 const { leads, getStaffNameForLead, updateSharedFolderId, addLead, updateLeadLocal, refresh } = useLeads();
 const { staffList, activeStaff: activeStaffList } = useStaff();
 const { isAdmin } = useCurrentUser();
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 全社共通フィールド管理・レイアウト管理
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 管理モード（排他制御: null=通常, 'field'=フィールド管理, 'layout'=レイアウト管理） */
+const leadAdminMode = ref<'field' | 'layout' | null>(null);
+
+/** 管理モード切替（排他制御） */
+const toggleLeadAdminMode = (mode: 'field' | 'layout') => {
+  if (leadAdminMode.value === mode) {
+    leadAdminMode.value = null;
+    if (mode === 'field') {
+      showLeadFieldModal.value = false;
+    } else {
+      leadFieldLayout.isLayoutEditing.value = false;
+    }
+  } else {
+    if (mode === 'field') {
+      leadAdminMode.value = mode;
+      showLeadFieldModal.value = true;
+    } else {
+      router.push({ name: 'LeadLayout' });
+      leadAdminMode.value = null;
+    }
+  }
+};
+
+/** フィールドレイアウト管理（全社共通） */
+const leadFieldLayout = useFieldLayout('lead', leadSections, leadFieldsFlat);
+leadFieldLayout.loadLayout();
+
+// カスタムフィールド復元
+for (const def of leadFieldLayout.customDefs.value) {
+  leadFieldLayout.addDynamicField({
+    key: def.key, label: def.label, section: def.section,
+    component: def.component, widthPercent: def.widthPercent, order: def.order,
+  });
+}
+
+const showLeadFieldModal = ref(false);
+const showLeadAddFieldModal = ref(false);
+const leadAddFieldDefaultSection = ref('');
+const leadSectionKeys = leadSections.map(s => s.key);
+
+/** フィールド追加ハンドラ */
+const handleLeadAddField = (payload: { label: string; component: import('@/types/fieldLayout').FieldComponent; section: string }) => {
+  const key = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const def: CustomFieldDef = {
+    key, label: payload.label, section: payload.section,
+    component: payload.component, widthPercent: 20,
+    order: 100 + leadFieldLayout.customDefs.value.length,
+  };
+  leadFieldLayout.customDefs.value = [...leadFieldLayout.customDefs.value, def];
+  leadFieldLayout.addDynamicField({
+    key: def.key, label: def.label, section: def.section,
+    component: def.component, widthPercent: def.widthPercent, order: def.order,
+  });
+};
+
+/** フィールド管理保存ハンドラ */
+const handleLeadFieldSave = (payload: {
+  customDefs: CustomFieldDef[];
+  labelOverrides: Record<string, string>;
+  hiddenFields: string[];
+  deletedFields: string[];
+  fieldOptions: Record<string, import('@/types/fieldLayout').FieldOption[]>;
+}) => {
+  const oldKeys = new Set(leadFieldLayout.customDefs.value.map(d => d.key));
+  const newKeys = new Set(payload.customDefs.map(d => d.key));
+  for (const key of oldKeys) {
+    if (!newKeys.has(key)) leadFieldLayout.removeDynamicField(key);
+  }
+  for (const def of payload.customDefs) {
+    const existing = leadFieldLayout.fields.value.find(f => f.key === def.key);
+    if (existing) {
+      existing.label = def.label; existing.section = def.section; existing.component = def.component;
+    } else {
+      leadFieldLayout.addDynamicField({
+        key: def.key, label: def.label, section: def.section,
+        component: def.component, widthPercent: def.widthPercent, order: def.order,
+      });
+    }
+  }
+  leadFieldLayout.customDefs.value = payload.customDefs;
+  for (const key of Object.keys(leadFieldLayout.labelOverrides.value)) leadFieldLayout.removeLabelOverride(key);
+  for (const [key, newLabel] of Object.entries(payload.labelOverrides)) leadFieldLayout.updateLabelOverride(key, newLabel);
+  for (const key of [...leadFieldLayout.hiddenFields.value]) leadFieldLayout.toggleFieldVisibility(key, true);
+  for (const key of payload.hiddenFields) leadFieldLayout.toggleFieldVisibility(key, false);
+  const currentDeleted = new Set(leadFieldLayout.deletedFields.value);
+  const newDeleted = new Set(payload.deletedFields);
+  for (const key of payload.deletedFields) { if (!currentDeleted.has(key)) leadFieldLayout.softDeleteField(key); }
+  for (const key of [...leadFieldLayout.deletedFields.value]) { if (!newDeleted.has(key)) leadFieldLayout.restoreDeletedField(key); }
+  for (const [key, opts] of Object.entries(payload.fieldOptions)) {
+    if (opts.length > 0) leadFieldLayout.updateFieldOptions(key, opts);
+  }
+  leadAdminMode.value = null;
+};
+
+/** CustomFieldModalが閉じられた時の管理モード解除 */
+watch(showLeadFieldModal, (v) => {
+  if (!v && leadAdminMode.value === 'field') leadAdminMode.value = null;
+});
 
 // モーダルヘルパー
 const modal = useModalHelper();
@@ -1086,10 +1257,8 @@ const commitStaffEdit = (_row: Lead) => {
   refreshList();
 };
 
-// --- ドロップダウン外クリックで閉じる ---
-const closeDropdowns = () => { showIndustryDropdown.value = false; };
-onMounted(() => document.addEventListener('click', closeDropdowns));
-onUnmounted(() => document.removeEventListener('click', closeDropdowns));
+// --- ドロップダウン外クリックで閉じる（業種・CSV統合） ---
+// ※ closeAllDropdowns に統合済み（ファイル末尾で定義）
 
 // --- Drive取込 URL ---
 const driveUrlCopied = ref<string | null>(null);
@@ -1134,6 +1303,66 @@ const renameDriveFolderForLead = async (lead: Lead): Promise<string | null> => {
     return null;
   }
 };
+
+// --- インポート / エクスポート ---
+import { exportCsv, exportExcel, importCsv } from '@/composables/useCsv';
+import type { CsvColumnDef } from '@/composables/useCsv';
+
+const importDropdownOpen = ref(false);
+const exportDropdownOpen = ref(false);
+
+const leadCsvColumns = computed<CsvColumnDef[]>(() =>
+  visibleColumnDefs.value.map(col => ({ key: col.key, label: col.label }))
+);
+
+const handleLeadCsvExport = () => {
+  const cols = leadCsvColumns.value;
+  const rows = filteredRows.value as unknown as Record<string, unknown>[];
+  const timestamp = new Date().toISOString().slice(0, 10);
+  exportCsv(`見込先_${timestamp}.csv`, cols, rows);
+};
+
+const handleLeadExcelExport = () => {
+  const cols = leadCsvColumns.value;
+  const rows = filteredRows.value as unknown as Record<string, unknown>[];
+  const timestamp = new Date().toISOString().slice(0, 10);
+  exportExcel(`見込先_${timestamp}.xlsx`, cols, rows);
+};
+
+const handleLeadCsvImport = async () => {
+  const cols = leadCsvColumns.value;
+  const result = await importCsv(cols);
+  if (!result) return;
+
+  if (result.unmatchedHeaders.length > 0) {
+    console.warn('[見込先インポート] マッチしなかったヘッダー:', result.unmatchedHeaders);
+  }
+
+  console.log(`[見込先インポート] ${result.rows.length}件を読み込み`, result.rows);
+  await modal.notify({
+    title: `インポート完了`,
+    message: `${result.rows.length}件のデータを読み込みました（全${result.totalRows}行）`,
+    variant: 'success',
+  });
+};
+
+// --- ドロップダウン外クリック閉じ ---
+const closeAllDropdowns = () => {
+  showIndustryDropdown.value = false;
+  importDropdownOpen.value = false;
+  exportDropdownOpen.value = false;
+};
+const toggleImportDropdown = () => {
+  exportDropdownOpen.value = false;
+  importDropdownOpen.value = !importDropdownOpen.value;
+};
+const toggleExportDropdown = () => {
+  importDropdownOpen.value = false;
+  exportDropdownOpen.value = !exportDropdownOpen.value;
+};
+
+onMounted(() => document.addEventListener('click', closeAllDropdowns));
+onUnmounted(() => document.removeEventListener('click', closeAllDropdowns));
 
 </script>
 

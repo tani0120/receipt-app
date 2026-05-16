@@ -149,17 +149,25 @@ import type { ListViewDef, FilterCondition, SortSetting } from '@/components/lis
 import { useFieldLayout } from '@/composables/useFieldLayout';
 import { clientSections, clientFieldsFlat } from '@/constants/clientFieldDefs';
 import { leadSections, leadFields as leadFieldsFlat } from '@/constants/leadFieldDefs';
+import { progressSections, progressFieldsFlat } from '@/constants/progressFieldDefs';
 import { VueDraggable } from 'vue-draggable-plus';
 
 const route = useRoute();
 const router = useRouter();
 
 /** エンティティタイプとビューキーをルートから取得 */
-const entityType = computed(() => route.path.includes('/leads/') ? 'lead' : 'client');
+const entityType = computed(() => {
+  if (route.path.includes('/progress/')) return 'progress';
+  if (route.path.includes('/leads/')) return 'lead';
+  return 'client';
+});
 const viewKey = computed(() => route.params.viewKey as string);
 
 /** フィールドレイアウト（全列情報取得用） */
 const fieldLayout = computed(() => {
+  if (entityType.value === 'progress') {
+    return useFieldLayout('progress', progressSections, progressFieldsFlat);
+  }
   if (entityType.value === 'lead') {
     return useFieldLayout('lead', leadSections, leadFieldsFlat);
   }
@@ -303,8 +311,8 @@ const addSortSetting = () => {
 };
 
 const goBack = () => {
-  const name = entityType.value === 'lead' ? 'LeadViewSettings' : 'ClientViewSettings';
-  router.push({ name });
+  const nameMap: Record<string, string> = { progress: 'ProgressViewSettings', lead: 'LeadViewSettings', client: 'ClientViewSettings' };
+  router.push({ name: nameMap[entityType.value] ?? 'ClientViewSettings' });
 };
 
 onMounted(async () => {

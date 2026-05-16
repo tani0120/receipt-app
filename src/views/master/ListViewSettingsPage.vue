@@ -94,9 +94,15 @@ const router = useRouter();
 
 /** エンティティタイプ判定（URLパスから） */
 const entityType = computed(() => {
-  return route.path.includes('/leads/') ? 'lead' : 'client';
+  if (route.path.includes('/progress/')) return 'progress';
+  if (route.path.includes('/leads/')) return 'lead';
+  return 'client';
 });
-const entityLabel = computed(() => entityType.value === 'lead' ? '見込先' : '顧問先');
+const entityLabel = computed(() => {
+  if (entityType.value === 'progress') return '進捗';
+  if (entityType.value === 'lead') return '見込先';
+  return '顧問先';
+});
 
 /** ビューデータ */
 const views = ref<ListViewDef[]>([]);
@@ -131,14 +137,14 @@ const saveViews = async () => {
 
 /** 戻る */
 const goBack = () => {
-  const path = entityType.value === 'lead' ? '/master/leads' : '/master/clients';
-  router.push(path);
+  const pathMap: Record<string, string> = { progress: '/master/progress', lead: '/master/leads', client: '/master/clients' };
+  router.push(pathMap[entityType.value] ?? '/master/clients');
 };
 
 /** 編集 */
 const editView = (viewKey: string) => {
-  const baseName = entityType.value === 'lead' ? 'LeadViewEdit' : 'ClientViewEdit';
-  router.push({ name: baseName, params: { viewKey } });
+  const nameMap: Record<string, string> = { progress: 'ProgressViewEdit', lead: 'LeadViewEdit', client: 'ClientViewEdit' };
+  router.push({ name: nameMap[entityType.value] ?? 'ClientViewEdit', params: { viewKey } });
 };
 
 /** 追加 */

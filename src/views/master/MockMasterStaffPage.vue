@@ -21,16 +21,46 @@
           </div>
         </div>
 
-        <!-- ページネーション -->
-        <div class="cm-pagination">
-          <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
-          <span
-            v-for="p in totalPages" :key="p"
-            class="cm-page-num" :class="{ active: p === currentPage }"
-            @click="currentPage = p"
-          >{{ p }}</span>
-          <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
-          <span class="cm-page-info">{{ staffPageStartIndex }}~{{ staffPageEndIndex }} / 全{{ staffTotalCount }}件</span>
+        <!-- ページネーション + CSVボタン -->
+        <div class="cm-pagination-row">
+          <div class="cm-pagination">
+            <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
+            <span
+              v-for="p in totalPages" :key="p"
+              class="cm-page-num" :class="{ active: p === currentPage }"
+              @click="currentPage = p"
+            >{{ p }}</span>
+            <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
+            <span class="cm-page-info">{{ staffPageStartIndex }}~{{ staffPageEndIndex }} / 全{{ staffTotalCount }}件</span>
+          </div>
+          <div class="cm-csv-actions">
+            <div class="cm-io-dropdown" :class="{ open: importDropdownOpen }" @click.stop>
+              <button class="cm-admin-btn" @click="toggleImportDropdown">
+                <i class="fa-solid fa-file-import"></i> インポート <i class="fa-solid fa-caret-down" style="font-size:10px;margin-left:2px"></i>
+              </button>
+              <div class="cm-io-dropdown-menu">
+                <button class="cm-io-dropdown-item" @click="handleStaffCsvImport(); importDropdownOpen = false">
+                  <i class="fa-solid fa-file-csv"></i> CSV
+                </button>
+                <button class="cm-io-dropdown-item" @click="handleStaffCsvImport(); importDropdownOpen = false">
+                  <i class="fa-solid fa-file-excel"></i> Excel (.xlsx / .xls)
+                </button>
+              </div>
+            </div>
+            <div class="cm-io-dropdown" :class="{ open: exportDropdownOpen }" @click.stop>
+              <button class="cm-admin-btn" @click="toggleExportDropdown">
+                <i class="fa-solid fa-file-export"></i> エクスポート <i class="fa-solid fa-caret-down" style="font-size:10px;margin-left:2px"></i>
+              </button>
+              <div class="cm-io-dropdown-menu">
+                <button class="cm-io-dropdown-item" @click="handleStaffCsvExport(); exportDropdownOpen = false">
+                  <i class="fa-solid fa-file-csv"></i> CSV
+                </button>
+                <button class="cm-io-dropdown-item" @click="handleStaffExcelExport(); exportDropdownOpen = false">
+                  <i class="fa-solid fa-file-excel"></i> Excel (.xlsx)
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- テーブル -->
@@ -486,6 +516,68 @@ const restoreStaff = () => {
   panelForm.status = 'active';
   saveStaff();
 };
+
+// --- インポート / エクスポート ---
+import { exportCsv, exportExcel, importCsv } from '@/composables/useCsv';
+import type { CsvColumnDef } from '@/composables/useCsv';
+
+const importDropdownOpen = ref(false);
+const exportDropdownOpen = ref(false);
+
+const staffCsvColumns: CsvColumnDef[] = [
+  { key: 'status', label: 'ステータス' },
+  { key: 'uuid', label: '内部ID' },
+  { key: 'role', label: '権限' },
+  { key: 'name', label: '名前' },
+  { key: 'nameRomaji', label: '名前（ローマ字）' },
+  { key: 'email', label: 'メールアドレス' },
+];
+
+const handleStaffCsvExport = () => {
+  const rows = filteredRows.value as unknown as Record<string, unknown>[];
+  const timestamp = new Date().toISOString().slice(0, 10);
+  exportCsv(`スタッフ_${timestamp}.csv`, staffCsvColumns, rows);
+};
+
+const handleStaffExcelExport = () => {
+  const rows = filteredRows.value as unknown as Record<string, unknown>[];
+  const timestamp = new Date().toISOString().slice(0, 10);
+  exportExcel(`スタッフ_${timestamp}.xlsx`, staffCsvColumns, rows);
+};
+
+const handleStaffCsvImport = async () => {
+  const result = await importCsv(staffCsvColumns);
+  if (!result) return;
+
+  if (result.unmatchedHeaders.length > 0) {
+    console.warn('[スタッフインポート] マッチしなかったヘッダー:', result.unmatchedHeaders);
+  }
+
+  console.log(`[スタッフインポート] ${result.rows.length}件を読み込み`, result.rows);
+  await modal.notify({
+    title: `インポート完了`,
+    message: `${result.rows.length}件のデータを読み込みました（全${result.totalRows}行）`,
+    variant: 'success',
+  });
+};
+
+// --- ドロップダウン外クリック閉じ ---
+const closeAllDropdowns = () => {
+  importDropdownOpen.value = false;
+  exportDropdownOpen.value = false;
+};
+const toggleImportDropdown = () => {
+  exportDropdownOpen.value = false;
+  importDropdownOpen.value = !importDropdownOpen.value;
+};
+const toggleExportDropdown = () => {
+  importDropdownOpen.value = false;
+  exportDropdownOpen.value = !exportDropdownOpen.value;
+};
+
+import { onMounted, onUnmounted } from 'vue';
+onMounted(() => document.addEventListener('click', closeAllDropdowns));
+onUnmounted(() => document.removeEventListener('click', closeAllDropdowns));
 </script>
 
 <style>
