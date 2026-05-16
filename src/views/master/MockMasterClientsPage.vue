@@ -1517,11 +1517,74 @@ const handleCsvImport = async () => {
     console.warn('[顧問先インポート] マッチしなかったヘッダー:', result.unmatchedHeaders);
   }
 
-  console.log(`[顧問先インポート] ${result.rows.length}件を読み込み`, result.rows);
+  let successCount = 0;
+  let skipCount = 0;
+  let errorCount = 0;
+  const skipReasons: string[] = [];
+
+  const existingCodes = new Set(clients.value.map(c => c.threeCode?.toUpperCase()).filter(Boolean));
+  const existingNames = new Set(clients.value.map(c => c.companyName).filter(Boolean));
+
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows[i]!;
+    const rowNum = i + 1;
+
+    const companyName = String(row.companyName || '').trim();
+    if (!companyName) {
+      skipCount++;
+      skipReasons.push(`行${rowNum}: 会社名が空のためスキップ`);
+      continue;
+    }
+
+    const code = String(row.threeCode || '').trim().toUpperCase();
+    if (code && existingCodes.has(code)) {
+      skipCount++;
+      skipReasons.push(`行${rowNum}: 3コード「${code}」が既に存在するためスキップ`);
+      continue;
+    }
+    if (existingNames.has(companyName)) {
+      skipCount++;
+      skipReasons.push(`行${rowNum}: 会社名「${companyName}」が既に存在するためスキップ`);
+      continue;
+    }
+
+    try {
+      const base = emptyClientForm();
+      const data: Record<string, unknown> = { ...base };
+      for (const [key, value] of Object.entries(row)) {
+        if (value !== '' && value !== null && value !== undefined) {
+          data[key] = value;
+        }
+      }
+      if (!data.threeCode) {
+        data.threeCode = companyName.slice(0, 3).toUpperCase() || 'IMP';
+      }
+      data.contact = {
+        type: data.contactType || 'email',
+        value: data.contactValue || '',
+      };
+      await addClient(data as Omit<Client, 'clientId'>);
+      existingCodes.add(String(data.threeCode).toUpperCase());
+      existingNames.add(companyName);
+      successCount++;
+    } catch (err) {
+      errorCount++;
+      skipReasons.push(`行${rowNum}: 保存エラー — ${err}`);
+      console.error('[顧問先インポート] 保存エラー:', err);
+    }
+  }
+
+  await refresh();
+
+  const lines = [`保存: ${successCount}件`];
+  if (skipCount > 0) lines.push(`スキップ: ${skipCount}件`);
+  if (errorCount > 0) lines.push(`エラー: ${errorCount}件`);
+  if (skipReasons.length > 0) lines.push('', ...skipReasons.slice(0, 20));
+
   await modal.notify({
-    title: `インポート完了`,
-    message: `${result.rows.length}件のデータを読み込みました（全${result.totalRows}行）`,
-    variant: 'success',
+    title: 'インポート完了',
+    message: lines.join('\n'),
+    variant: (errorCount > 0 || skipCount > 0) ? 'warning' : 'success',
   });
 };
 

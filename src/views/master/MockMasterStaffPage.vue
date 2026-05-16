@@ -289,7 +289,7 @@ const staffTableWidth = computed(() => {
 });
 
 // --- スタッフデータ（composableから取得） ---
-const { addStaff, updateStaff } = useStaff();
+const { staffList, addStaff, updateStaff } = useStaff();
 
 // モーダルヘルパー
 const modal = useModalHelper();
@@ -553,11 +553,75 @@ const handleStaffCsvImport = async () => {
     console.warn('[スタッフインポート] マッチしなかったヘッダー:', result.unmatchedHeaders);
   }
 
-  console.log(`[スタッフインポート] ${result.rows.length}件を読み込み`, result.rows);
+  let successCount = 0;
+  let skipCount = 0;
+  let errorCount = 0;
+  const skipReasons: string[] = [];
+
+  // 既存メールアドレスのセット（重複チェック用）
+  const existingEmails = new Set(staffList.value.map(s => s.email?.toLowerCase()).filter(Boolean));
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows[i]!;
+    const rowNum = i + 1;
+
+    // --- バリデーション ---
+    const name = String(row.name || '').trim();
+    if (!name) {
+      skipCount++;
+      skipReasons.push(`行${rowNum}: 名前が空のためスキップ`);
+      continue;
+    }
+
+    const email = String(row.email || '').trim();
+    if (!email) {
+      skipCount++;
+      skipReasons.push(`行${rowNum}: メールアドレスが空のためスキップ`);
+      continue;
+    }
+    if (!emailRegex.test(email)) {
+      skipCount++;
+      skipReasons.push(`行${rowNum}: メールアドレス「${email}」の形式が不正のためスキップ`);
+      continue;
+    }
+
+    // --- 重複チェック ---
+    if (existingEmails.has(email.toLowerCase())) {
+      skipCount++;
+      skipReasons.push(`行${rowNum}: メールアドレス「${email}」が既に存在するためスキップ`);
+      continue;
+    }
+
+    try {
+      const data: Record<string, unknown> = {
+        name,
+        nameRomaji: row.nameRomaji || '',
+        email,
+        role: row.role || 'general',
+        status: row.status || 'active',
+      };
+      await addStaff(data as Omit<Staff, 'uuid'>);
+      existingEmails.add(email.toLowerCase());
+      successCount++;
+    } catch (err) {
+      errorCount++;
+      skipReasons.push(`行${rowNum}: 保存エラー — ${err}`);
+      console.error('[スタッフインポート] 保存エラー:', err);
+    }
+  }
+
+  await fetchStaffList();
+
+  const lines = [`保存: ${successCount}件`];
+  if (skipCount > 0) lines.push(`スキップ: ${skipCount}件`);
+  if (errorCount > 0) lines.push(`エラー: ${errorCount}件`);
+  if (skipReasons.length > 0) lines.push('', ...skipReasons.slice(0, 20));
+
   await modal.notify({
-    title: `インポート完了`,
-    message: `${result.rows.length}件のデータを読み込みました（全${result.totalRows}行）`,
-    variant: 'success',
+    title: 'インポート完了',
+    message: lines.join('\n'),
+    variant: (errorCount > 0 || skipCount > 0) ? 'warning' : 'success',
   });
 };
 
