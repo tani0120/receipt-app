@@ -23,6 +23,11 @@ export function getLabel<T>(options: readonly SelectOption<T>[], value: T): stri
   return options.find(o => o.value === value)?.label ?? String(value)
 }
 
+/** label → value 逆変換（見つからなければ label をそのまま返す） */
+export function getValueByLabel(options: readonly SelectOption<string>[], label: string): string {
+  return options.find(o => o.label === label)?.value ?? label
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 基本情報
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

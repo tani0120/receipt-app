@@ -141,8 +141,13 @@
                   <span v-else>{{ row.email }}</span>
                 </td>
               </tr>
-              <tr v-if="pagedRows.length === 0">
-                <td colspan="6" class="cm-empty">該当するスタッフがいません</td>
+              <tr v-if="isLoading || pagedRows.length === 0">
+                <td colspan="6" class="cm-empty">
+                  <template v-if="isLoading">
+                    <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i>{{ loadingMessage }}
+                  </template>
+                  <template v-else>該当するスタッフがいません</template>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -265,7 +270,7 @@ import type { Staff, StaffForm } from '@/features/staff-management/composables/u
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
-import { STAFF_STATUS_OPTIONS, STAFF_PERMISSION_OPTIONS, getLabel } from '@/constants/clientOptions';
+import { STAFF_STATUS_OPTIONS, STAFF_PERMISSION_OPTIONS, getLabel, getValueByLabel } from '@/constants/clientOptions';
 import { FILTER_ALL_LABEL } from '@/constants/vendorOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
@@ -328,10 +333,12 @@ const pagedRows = computed(() => filteredRows.value);
 const staffPageStartIndex = computed(() => staffTotalCount.value === 0 ? 0 : (currentPage.value - 1) * PAGE_SIZE + 1);
 const staffPageEndIndex = computed(() => Math.min(currentPage.value * PAGE_SIZE, staffTotalCount.value));
 const isLoading = ref(false);
+const loadingMessage = ref('読み込み中…');
 
 /** POST /api/staff/list でサーバー側でフィルタ+ソート+ページネーション */
 const fetchStaffList = async () => {
   isLoading.value = true;
+  loadingMessage.value = '読み込み中…';
   try {
     const res = await fetch('/api/staff/list', {
       method: 'POST',
@@ -521,28 +528,47 @@ const restoreStaff = () => {
 import { exportCsv, exportExcel, importCsv } from '@/composables/useCsv';
 import type { CsvColumnDef } from '@/composables/useCsv';
 
+
 const importDropdownOpen = ref(false);
 const exportDropdownOpen = ref(false);
 
 const staffCsvColumns: CsvColumnDef[] = [
-  { key: 'status', label: 'ステータス' },
+  {
+    key: 'status', label: 'ステータス',
+    format: (v) => getLabel(STAFF_STATUS_OPTIONS, v as string),
+    parse: (v) => getValueByLabel(STAFF_STATUS_OPTIONS as unknown as { value: string; label: string }[], v),
+  },
   { key: 'uuid', label: '内部ID' },
-  { key: 'role', label: '権限' },
+  {
+    key: 'role', label: '権限',
+    format: (v) => getLabel(STAFF_PERMISSION_OPTIONS, v as string),
+    parse: (v) => getValueByLabel(STAFF_PERMISSION_OPTIONS as unknown as { value: string; label: string }[], v),
+  },
   { key: 'name', label: '名前' },
   { key: 'nameRomaji', label: '名前（ローマ字）' },
   { key: 'email', label: 'メールアドレス' },
 ];
 
-const handleStaffCsvExport = () => {
-  const rows = filteredRows.value as unknown as Record<string, unknown>[];
+const handleStaffCsvExport = async () => {
+  const rows = staffList.value as unknown as Record<string, unknown>[];
   const timestamp = new Date().toISOString().slice(0, 10);
   exportCsv(`スタッフ_${timestamp}.csv`, staffCsvColumns, rows);
+  await modal.notify({
+    title: 'エクスポート完了',
+    message: `${rows.length}件をCSV出力しました`,
+    variant: 'success',
+  });
 };
 
-const handleStaffExcelExport = () => {
-  const rows = filteredRows.value as unknown as Record<string, unknown>[];
+const handleStaffExcelExport = async () => {
+  const rows = staffList.value as unknown as Record<string, unknown>[];
   const timestamp = new Date().toISOString().slice(0, 10);
   exportExcel(`スタッフ_${timestamp}.xlsx`, staffCsvColumns, rows);
+  await modal.notify({
+    title: 'エクスポート完了',
+    message: `${rows.length}件をExcel出力しました`,
+    variant: 'success',
+  });
 };
 
 const handleStaffCsvImport = async () => {
@@ -553,20 +579,27 @@ const handleStaffCsvImport = async () => {
     console.warn('[スタッフインポート] マッチしなかったヘッダー:', result.unmatchedHeaders);
   }
 
+  isLoading.value = true;
+  loadingMessage.value = 'インポート中…';
+
   let successCount = 0;
   let skipCount = 0;
   let errorCount = 0;
   const skipReasons: string[] = [];
 
-  // 既存メールアドレスのセット（重複チェック用）
+  // インポート前にstaffListを最新化（重複チェック精度向上）
+  await fetchStaffList();
+
   const existingEmails = new Set(staffList.value.map(s => s.email?.toLowerCase()).filter(Boolean));
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const validItems: Record<string, unknown>[] = [];
+  const validItemRowNums: number[] = [];
 
   for (let i = 0; i < result.rows.length; i++) {
     const row = result.rows[i]!;
     const rowNum = i + 1;
 
-    // --- バリデーション ---
     const name = String(row.name || '').trim();
     if (!name) {
       skipCount++;
@@ -586,32 +619,67 @@ const handleStaffCsvImport = async () => {
       continue;
     }
 
-    // --- 重複チェック ---
     if (existingEmails.has(email.toLowerCase())) {
       skipCount++;
       skipReasons.push(`行${rowNum}: メールアドレス「${email}」が既に存在するためスキップ`);
       continue;
     }
 
+    const data: Record<string, unknown> = {
+      name,
+      nameRomaji: row.nameRomaji || '',
+      email,
+      role: row.role || 'general',
+      status: row.status || 'active',
+    };
+
+    existingEmails.add(email.toLowerCase());
+    validItems.push(data);
+    validItemRowNums.push(rowNum);
+  }
+
+  // --- 確認ダイアログ ---
+  const confirmLines = [`インポート対象: ${validItems.length}件`];
+  if (skipCount > 0) confirmLines.push(`スキップ: ${skipCount}件`);
+  if (skipReasons.length > 0) confirmLines.push('', ...skipReasons.slice(0, 20));
+  confirmLines.push('', 'インポートしますか？');
+
+  const confirmed = await modal.confirm({
+    title: 'インポート確認',
+    message: confirmLines.join('\n'),
+  });
+  if (!confirmed) {
+    isLoading.value = false;
+    return;
+  }
+
+  if (validItems.length > 0) {
     try {
-      const data: Record<string, unknown> = {
-        name,
-        nameRomaji: row.nameRomaji || '',
-        email,
-        role: row.role || 'general',
-        status: row.status || 'active',
-      };
-      await addStaff(data as Omit<Staff, 'uuid'>);
-      existingEmails.add(email.toLowerCase());
-      successCount++;
+      const res = await fetch('/api/staff/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: validItems }),
+      });
+      const bulkResult = await res.json();
+      if (bulkResult.results) {
+        for (const r of bulkResult.results) {
+          if (r.ok) {
+            successCount++;
+          } else {
+            errorCount++;
+            skipReasons.push(`行${validItemRowNums[r.index]}: 保存エラー — ${r.error}`);
+          }
+        }
+      }
     } catch (err) {
-      errorCount++;
-      skipReasons.push(`行${rowNum}: 保存エラー — ${err}`);
-      console.error('[スタッフインポート] 保存エラー:', err);
+      errorCount += validItems.length;
+      skipReasons.push(`バルク保存エラー — ${err}`);
+      console.error('[スタッフインポート] バルク保存エラー:', err);
     }
   }
 
   await fetchStaffList();
+  isLoading.value = false;
 
   const lines = [`保存: ${successCount}件`];
   if (skipCount > 0) lines.push(`スキップ: ${skipCount}件`);

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * clientRoutes.ts — 顧問先JSON永続化APIルート（Hono）
  *
  * レイヤー: ★route★ → clientStore
@@ -19,7 +19,7 @@
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
 import { 未検出, 必須, コード重複, リソース_顧問先 } from '../../constants/apiMessages';
-import type { ClientStatus } from '../../repositories/types';
+import type { ClientStatus, Client } from '../../repositories/types';
 import {
   getAll,
   getById,
@@ -102,6 +102,49 @@ app.post('/', async (c) => {
   body.clientId = generateClientId();
   const client = create(body);
   return c.json({ ok: true, client });
+});
+
+// ============================================================
+// POST /bulk — 顧問先一括追加（インポート用）
+// ============================================================
+app.post('/bulk', async (c) => {
+  const { items } = await c.req.json<{ items: Record<string, unknown>[] }>();
+  if (!Array.isArray(items)) {
+    return apiError(c, 400, 必須('items（配列）'));
+  }
+  const existing = getAll();
+  const existingCodes = new Set(existing.map(cl => cl.threeCode?.toUpperCase()).filter(Boolean));
+  const existingNames = new Set(existing.map(cl => cl.companyName).filter(Boolean));
+  const results: { index: number; ok: boolean; clientId?: string; threeCode?: string; companyName?: string; error?: string }[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]!;
+    try {
+      if (!item.companyName && !item.repName) {
+        results.push({ index: i, ok: false, error: 'companyNameまたはrepNameが必須' });
+        continue;
+      }
+      // threeCode重複チェック（既存 + 同一バッチ内）
+      const code = String(item.threeCode || '').toUpperCase();
+      if (code && existingCodes.has(code)) {
+        results.push({ index: i, ok: false, error: `threeCode「${code}」が重複` });
+        continue;
+      }
+      // 会社名重複チェック（既存 + 同一バッチ内）
+      const name = String(item.companyName || '');
+      if (name && existingNames.has(name)) {
+        results.push({ index: i, ok: false, error: `会社名「${name}」が重複` });
+        continue;
+      }
+      item.clientId = generateClientId();
+      const saved = create(item as unknown as Client);
+      if (code) existingCodes.add(code);
+      if (name) existingNames.add(name);
+      results.push({ index: i, ok: true, clientId: saved.clientId, threeCode: saved.threeCode, companyName: saved.companyName });
+    } catch (err) {
+      results.push({ index: i, ok: false, error: String(err) });
+    }
+  }
+  return c.json({ ok: true, results, total: items.length });
 });
 
 // ============================================================

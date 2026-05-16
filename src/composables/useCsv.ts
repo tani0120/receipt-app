@@ -14,8 +14,12 @@ export interface CsvColumnDef {
   key: string;
   /** CSVヘッダーラベル */
   label: string;
+  /** フィールドの型（インポート時の自動変換に使用。省略時は'string'） */
+  type?: 'string' | 'number' | 'boolean';
   /** エクスポート時の値フォーマッタ（省略時はそのまま文字列化） */
   format?: (value: unknown, row: Record<string, unknown>) => string;
+  /** インポート時の逆変換（ラベル→内部値。format関数の逆。省略時はそのまま） */
+  parse?: (value: string) => string;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -154,7 +158,7 @@ function parseCsvText(text: string): string[][] {
 /**
  * CSVインポート結果
  */
-export interface CsvImportResult<T = Record<string, string>> {
+export interface CsvImportResult<T = Record<string, unknown>> {
   /** パース成功行 */
   rows: T[];
   /** ヘッダーにマッチしなかった列名 */
@@ -260,18 +264,36 @@ export function importCsv(
           }
         }
 
-        // データ行をパース（空白セル許容）
-        const dataRows: Record<string, string>[] = [];
+        // 列キー→列定義のマップ（型変換・parse用）
+        const colDefMap = new Map<string, CsvColumnDef>();
+        for (const col of columns) {
+          colDefMap.set(col.key, col);
+        }
+
+        // データ行をパース（空白セル許容 + 型変換）
+        const dataRows: Record<string, unknown>[] = [];
         for (let i = 1; i < parsed.length; i++) {
           const cells = parsed[i];
-          const row: Record<string, string> = {};
+          const row: Record<string, unknown> = {};
           let hasValue = false;
           for (let j = 0; j < columnMapping.length; j++) {
             const key = columnMapping[j];
             if (key) {
-              const val = (cells?.[j] ?? '').trim();
-              row[key] = val; // 空白もそのまま保持
+              let val: string = (cells?.[j] ?? '').trim();
               if (val.length > 0) hasValue = true;
+              const def = colDefMap.get(key);
+              // parse関数があればラベル→内部値に逆変換
+              if (def?.parse && val.length > 0) {
+                val = def.parse(val);
+              }
+              // type指定に従い型変換
+              if (def?.type === 'number' && val.length > 0) {
+                row[key] = Number(val);
+              } else if (def?.type === 'boolean') {
+                row[key] = val === 'true' || val === 'はい' || val === 'あり' || val === '1';
+              } else {
+                row[key] = val;
+              }
             }
           }
           // 完全空行はスキップ

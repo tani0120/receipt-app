@@ -1,4 +1,4 @@
-﻿/**
+/**
  * leadRoutes.ts — 見込先JSON永続化APIルート（Hono）
  *
  * clientRoutes.tsと同一構成。Client→Leadに置換。
@@ -18,7 +18,7 @@
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
 import { 未検出, 必須, リソース_見込先 } from '../../constants/apiMessages';
-import type { LeadStatus } from '../../repositories/types';
+import type { LeadStatus, Lead } from '../../repositories/types';
 import {
   getAll,
   getById,
@@ -76,6 +76,47 @@ app.post('/', async (c) => {
   body.leadId = generateLeadId();
   const lead = create(body);
   return c.json({ ok: true, lead });
+});
+
+// POST /bulk — 見込先一括追加（インポート用）
+app.post('/bulk', async (c) => {
+  const { items } = await c.req.json<{ items: Record<string, unknown>[] }>();
+  if (!Array.isArray(items)) {
+    return apiError(c, 400, 必須('items（配列）'));
+  }
+  const existing = getAll();
+  const existingCodes = new Set(existing.map(l => (l as Lead).threeCode?.toUpperCase()).filter(Boolean));
+  const existingNames = new Set(existing.map(l => (l as Lead).companyName).filter(Boolean));
+  const results: { index: number; ok: boolean; leadId?: string; threeCode?: string; companyName?: string; error?: string }[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]!;
+    try {
+      if (!item.companyName) {
+        results.push({ index: i, ok: false, error: 'companyNameが必須' });
+        continue;
+      }
+      // threeCode重複チェック（既存 + 同一バッチ内）
+      const code = String(item.threeCode || '').toUpperCase();
+      if (code && existingCodes.has(code)) {
+        results.push({ index: i, ok: false, error: `threeCode「${code}」が重複` });
+        continue;
+      }
+      // 会社名重複チェック（既存 + 同一バッチ内）
+      const name = String(item.companyName || '');
+      if (name && existingNames.has(name)) {
+        results.push({ index: i, ok: false, error: `会社名「${name}」が重複` });
+        continue;
+      }
+      item.leadId = generateLeadId();
+      const saved = create(item as unknown as Lead);
+      if (code) existingCodes.add(code);
+      if (name) existingNames.add(name);
+      results.push({ index: i, ok: true, leadId: saved.leadId, threeCode: saved.threeCode, companyName: saved.companyName });
+    } catch (err) {
+      results.push({ index: i, ok: false, error: String(err) });
+    }
+  }
+  return c.json({ ok: true, results, total: items.length });
 });
 
 // PUT /:leadId — 見込先更新

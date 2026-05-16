@@ -1,4 +1,4 @@
-﻿/**
+/**
  * staffRoutes.ts — スタッフJSON永続化APIルート（Hono）
  *
  * レイヤー: ★route★ → staffStore
@@ -17,6 +17,7 @@
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
 import { 未検出, 必須, リソース_スタッフ } from '../../constants/apiMessages';
+import type { Staff } from '../../repositories/types';
 import {
   getAll,
   getById,
@@ -85,6 +86,40 @@ app.post('/', async (c) => {
   }
   const staff = create(body);
   return c.json({ ok: true, staff });
+});
+
+// ============================================================
+// POST /bulk — スタッフ一括追加（インポート用）
+// ============================================================
+app.post('/bulk', async (c) => {
+  const { items } = await c.req.json<{ items: Record<string, unknown>[] }>();
+  if (!Array.isArray(items)) {
+    return apiError(c, 400, 必須('items（配列）'));
+  }
+  const existing = getAll();
+  const existingEmails = new Set(existing.map(s => s.email?.toLowerCase()).filter(Boolean));
+  const results: { index: number; ok: boolean; error?: string }[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]!;
+    try {
+      if (!item.name || !item.email) {
+        results.push({ index: i, ok: false, error: 'nameとemailが必須' });
+        continue;
+      }
+      // メール重複チェック（既存 + 同一バッチ内）
+      const email = String(item.email).toLowerCase();
+      if (existingEmails.has(email)) {
+        results.push({ index: i, ok: false, error: `メール「${item.email}」が重複` });
+        continue;
+      }
+      create(item as Omit<Staff, 'uuid'> & { uuid?: string });
+      existingEmails.add(email);
+      results.push({ index: i, ok: true });
+    } catch (err) {
+      results.push({ index: i, ok: false, error: String(err) });
+    }
+  }
+  return c.json({ ok: true, results, total: items.length });
 });
 
 // ============================================================

@@ -193,7 +193,7 @@
               <tr v-if="isLoading || pagedRows.length === 0">
                 <td :colspan="visibleColumnDefs.length + 1" class="cm-empty">
                   <template v-if="isLoading">
-                    <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i>読み込み中…
+                    <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i>{{ loadingMessage }}
                   </template>
                   <template v-else>該当する見込先がありません</template>
                 </td>
@@ -502,7 +502,7 @@ import {
   CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
   TYPE_OPTIONS, CONTACT_METHOD_OPTIONS, LEAD_STATUS_OPTIONS,
   PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
-  getLabel,
+  getLabel, getValueByLabel,
 } from '@/constants/clientOptions';
 import { useFieldLayout } from '@/composables/useFieldLayout';
 import type { CustomFieldDef } from '@/composables/useFieldLayout';
@@ -939,6 +939,7 @@ const getSortIcon = (key: string) => {
 
 // --- フィルター＋ソート済みデータ ---
 const isLoading = ref(true);
+const loadingMessage = ref('読み込み中…');
 const filteredRows = ref<Lead[]>([]);
 const PAGE_SIZE = 50;
 const currentPage = ref(1);
@@ -1311,22 +1312,66 @@ import type { CsvColumnDef } from '@/composables/useCsv';
 const importDropdownOpen = ref(false);
 const exportDropdownOpen = ref(false);
 
-const leadCsvColumns = computed<CsvColumnDef[]>(() =>
-  visibleColumnDefs.value.map(col => ({ key: col.key, label: col.label }))
-);
-
-const handleLeadCsvExport = () => {
-  const cols = leadCsvColumns.value;
-  const rows = filteredRows.value as unknown as Record<string, unknown>[];
-  const timestamp = new Date().toISOString().slice(0, 10);
-  exportCsv(`見込先_${timestamp}.csv`, cols, rows);
+/** CSV列ごとのformat/parse/type拡張 */
+const leadCsvExtensions: Record<string, Partial<CsvColumnDef>> = {
+  status: {
+    format: (v) => getLabel(LEAD_STATUS_OPTIONS, v as string),
+    parse: (v) => getValueByLabel(LEAD_STATUS_OPTIONS as unknown as { value: string; label: string }[], v),
+  },
+  type: {
+    format: (v) => getLabel(TYPE_OPTIONS, v as string),
+    parse: (v) => getValueByLabel(TYPE_OPTIONS as unknown as { value: string; label: string }[], v),
+  },
+  consumptionTaxMode: {
+    format: (v) => getLabel(TAX_MODE_OPTIONS, v as string),
+    parse: (v) => getValueByLabel(TAX_MODE_OPTIONS as unknown as { value: string; label: string }[], v),
+  },
+  accountingSoftware: {
+    format: (v) => getLabel(ACCOUNTING_SOFTWARE_OPTIONS, v as string),
+    parse: (v) => getValueByLabel(ACCOUNTING_SOFTWARE_OPTIONS as unknown as { value: string; label: string }[], v),
+  },
+  staffId: {
+    format: (v) => staffList.value.find(s => s.uuid === v)?.name ?? String(v ?? ''),
+    parse: (v) => staffList.value.find(s => s.name === v)?.uuid ?? v,
+  },
+  fiscalMonth: { type: 'number' as const },
+  fiscalDay: { type: 'number' as const },
+  isInvoiceRegistered: {
+    type: 'boolean' as const,
+    format: (v) => v ? 'あり' : 'なし',
+  },
 };
 
-const handleLeadExcelExport = () => {
+const leadCsvColumns = computed<CsvColumnDef[]>(() =>
+  visibleColumnDefs.value.map(col => ({
+    key: col.key,
+    label: col.label,
+    ...leadCsvExtensions[col.key],
+  }))
+);
+
+const handleLeadCsvExport = async () => {
   const cols = leadCsvColumns.value;
-  const rows = filteredRows.value as unknown as Record<string, unknown>[];
+  const rows = leads.value as unknown as Record<string, unknown>[];
+  const timestamp = new Date().toISOString().slice(0, 10);
+  exportCsv(`見込先_${timestamp}.csv`, cols, rows);
+  await modal.notify({
+    title: 'エクスポート完了',
+    message: `${rows.length}件をCSV出力しました`,
+    variant: 'success',
+  });
+};
+
+const handleLeadExcelExport = async () => {
+  const cols = leadCsvColumns.value;
+  const rows = leads.value as unknown as Record<string, unknown>[];
   const timestamp = new Date().toISOString().slice(0, 10);
   exportExcel(`見込先_${timestamp}.xlsx`, cols, rows);
+  await modal.notify({
+    title: 'エクスポート完了',
+    message: `${rows.length}件をExcel出力しました`,
+    variant: 'success',
+  });
 };
 
 const handleLeadCsvImport = async () => {
@@ -1338,20 +1383,29 @@ const handleLeadCsvImport = async () => {
     console.warn('[見込先インポート] マッチしなかったヘッダー:', result.unmatchedHeaders);
   }
 
+  isLoading.value = true;
+  loadingMessage.value = 'インポート中…';
+
   let successCount = 0;
   let skipCount = 0;
   let errorCount = 0;
   const skipReasons: string[] = [];
 
+  // インポート前にleads.valueを最新化（重複チェック精度向上）
+  await refresh();
+
   // 既存データのthreeCode/会社名セットを構築（重複チェック用）
   const existingCodes = new Set(leads.value.map(l => l.threeCode?.toUpperCase()).filter(Boolean));
   const existingNames = new Set(leads.value.map(l => l.companyName).filter(Boolean));
+
+  // バリデーション + 重複チェック（フロント側）
+  const validItems: Record<string, unknown>[] = [];
+  const validItemRowNums: number[] = [];
 
   for (let i = 0; i < result.rows.length; i++) {
     const row = result.rows[i]!;
     const rowNum = i + 1;
 
-    // --- バリデーション ---
     const companyName = String(row.companyName || '').trim();
     if (!companyName) {
       skipCount++;
@@ -1359,7 +1413,6 @@ const handleLeadCsvImport = async () => {
       continue;
     }
 
-    // --- 重複チェック ---
     const code = String(row.threeCode || '').trim().toUpperCase();
     if (code && existingCodes.has(code)) {
       skipCount++;
@@ -1372,34 +1425,99 @@ const handleLeadCsvImport = async () => {
       continue;
     }
 
+    const base = emptyLeadForm();
+    const data: Record<string, unknown> = { ...base };
+    for (const [key, value] of Object.entries(row)) {
+      if (value !== '' && value !== null && value !== undefined) {
+        data[key] = value;
+      }
+    }
+    if (!data.threeCode) {
+      skipCount++;
+      skipReasons.push(`行${rowNum}: 3コードが空のためスキップ`);
+      continue;
+    }
+    // 3コード形式チェック（大文字アルファベット3文字 — 新規登録画面と同じ制約）
+    const codeStr = String(data.threeCode).toUpperCase().replace(/[^A-Z]/g, '');
+    if (codeStr.length !== 3) {
+      skipCount++;
+      skipReasons.push(`行${rowNum}: 3コード「${data.threeCode}」が不正（大文字A-Z 3文字）`);
+      continue;
+    }
+    data.threeCode = codeStr;
+    data.contact = {
+      type: data.contactType || 'email',
+      value: data.contactValue || '',
+    };
+    // contactsデフォルト3行生成（通常の新規登録と同じ）
+    if (!data.contacts || (data.contacts as unknown[]).length < 3) {
+      data.contacts = [
+        { name: '', method: '電話', value: '', usage: '', memo: '' },
+        { name: '', method: 'メール', value: '', usage: '', memo: '' },
+        { name: '', method: 'チャット', value: '', usage: '', memo: '' },
+      ];
+    }
+
+    existingCodes.add(String(data.threeCode).toUpperCase());
+    existingNames.add(companyName);
+    validItems.push(data);
+    validItemRowNums.push(rowNum);
+  }
+
+  // --- 確認ダイアログ ---
+  const confirmLines = [`インポート対象: ${validItems.length}件`];
+  if (skipCount > 0) confirmLines.push(`スキップ: ${skipCount}件`);
+  if (skipReasons.length > 0) confirmLines.push('', ...skipReasons.slice(0, 20));
+  confirmLines.push('', 'インポートしますか？');
+
+  const confirmed = await modal.confirm({
+    title: 'インポート確認',
+    message: confirmLines.join('\n'),
+  });
+  if (!confirmed) {
+    isLoading.value = false;
+    return;
+  }
+
+  // バルクAPIで一括保存
+  if (validItems.length > 0) {
     try {
-      const base = emptyLeadForm();
-      const data: Record<string, unknown> = { ...base };
-      for (const [key, value] of Object.entries(row)) {
-        if (value !== '' && value !== null && value !== undefined) {
-          data[key] = value;
+      const res = await fetch('/api/leads/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: validItems }),
+      });
+      const bulkResult = await res.json();
+      if (bulkResult.results) {
+        for (const r of bulkResult.results) {
+          if (r.ok) {
+            successCount++;
+            // Driveフォルダ自動作成（通常の新規登録と同じ処理を発火）
+            if (r.leadId && r.threeCode && r.companyName) {
+              createDriveFolderForLead({
+                leadId: r.leadId,
+                threeCode: r.threeCode,
+                companyName: r.companyName,
+                sharedEmail: String(validItems[r.index]?.sharedEmail || ''),
+              } as Lead).catch(err => {
+                console.error(`[見込先インポート] Driveフォルダ作成失敗 (${r.companyName}):`, err);
+              });
+            }
+          } else {
+            errorCount++;
+            skipReasons.push(`行${validItemRowNums[r.index]}: 保存エラー — ${r.error}`);
+          }
         }
       }
-      if (!data.threeCode) {
-        data.threeCode = companyName.slice(0, 3).toUpperCase() || 'IMP';
-      }
-      data.contact = {
-        type: data.contactType || 'email',
-        value: data.contactValue || '',
-      };
-      await addLead(data as Omit<Lead, 'leadId'>);
-      // 登録済みセットに追加（同一ファイル内の重複防止）
-      existingCodes.add(String(data.threeCode).toUpperCase());
-      existingNames.add(companyName);
-      successCount++;
     } catch (err) {
-      errorCount++;
-      skipReasons.push(`行${rowNum}: 保存エラー — ${err}`);
-      console.error('[見込先インポート] 保存エラー:', err);
+      errorCount += validItems.length;
+      skipReasons.push(`バルク保存エラー — ${err}`);
+      console.error('[見込先インポート] バルク保存エラー:', err);
     }
   }
 
-  await refresh();
+  await refreshList();
+  isLoading.value = false;
 
   const lines = [`保存: ${successCount}件`];
   if (skipCount > 0) lines.push(`スキップ: ${skipCount}件`);
