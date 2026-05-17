@@ -81,9 +81,9 @@
         </div>
       </VueDraggable>
       <!-- 非表示中のフィールド一覧 -->
-      <div v-if="hiddenFieldDefs.length" class="fp-hidden-list">
-        <div v-for="item in hiddenFieldDefs" :key="item.key" class="fp-item fp-item-hidden">
-          <i class="fa-solid fa-eye-slash"></i>
+      <div v-if="sortedHiddenFieldDefs.length" class="fp-hidden-list">
+        <div v-for="item in sortedHiddenFieldDefs" :key="item.key" class="fp-item" :class="isSystemField(item) ? 'fp-item-hidden-system' : 'fp-item-hidden'">
+          <i :class="isSystemField(item) ? 'fa-solid fa-lock' : 'fa-solid fa-eye-slash'"></i>
           <span>{{ item.label }}</span>
           <button class="fp-restore-btn" @click="emit('restore-field', item.key)" title="表示に戻す">
             <i class="fa-solid fa-eye"></i>
@@ -226,10 +226,22 @@ const emit = defineEmits<{
   (e: 'update:fieldOptions', key: string, options: FieldOption[]): void;
 }>();
 
+/** フィールドがシステムフィールド（削除不可）か判定 */
+const isSystemField = (f: FieldDef): boolean => {
+  return f.deletable !== true && !f.key.startsWith('custom_');
+};
+
 /** 非表示中のフィールド定義 */
 const hiddenFieldDefs = computed(() =>
   props.allFields.filter(f => props.hiddenKeys.includes(f.key))
 );
+
+/** ソート済み非表示フィールド: システムフィールドを最上位に */
+const sortedHiddenFieldDefs = computed(() => {
+  const system = hiddenFieldDefs.value.filter(f => isSystemField(f));
+  const custom = hiddenFieldDefs.value.filter(f => !isSystemField(f));
+  return [...system, ...custom];
+});
 
 /** ゴミ箱ドロップ受け */
 const trashBin = ref<FieldDef[]>([]);
@@ -266,11 +278,11 @@ const trashDropGroup = computed(() => ({
   put: canAcceptDrop,
 }));
 
-/** 非表示ドロップグループ（putコールバックで保護フィールドを拒否） */
+/** 非表示ドロップグループ（全フィールド受け入れ可能） */
 const hideDropGroup = computed(() => ({
   name: props.dragGroup,
   pull: false as const,
-  put: canAcceptDrop,
+  put: true,
 }));
 
 const onTrashDrop = () => {
@@ -316,18 +328,9 @@ const onHideDrop = () => {
   if (hideBin.value.length > 0) {
     const dropped = [...hideBin.value];
     hideBin.value = [];
-    const hideable = dropped.filter(f => isDeletable(f));
-    const protectedHide = dropped.filter(f => !isDeletable(f));
-    // 保護フィールドは即座にグリッドに復元
-    if (protectedHide.length > 0) {
-      for (const f of protectedHide) {
-        emit('restore-field', f.key);
-      }
-      protectedFieldNames.value = protectedHide.map(f => f.label || f.key);
-      showProtectedNotice.value = true;
-    }
-    if (hideable.length > 0) {
-      pendingHideFields.value = hideable;
+    // 全フィールド（システムフィールド含む）を非表示可能
+    if (dropped.length > 0) {
+      pendingHideFields.value = dropped;
       showHideConfirm.value = true;
     }
   }
@@ -503,6 +506,16 @@ const syncOptions = () => {
 }
 .fp-item-hidden:hover {
   background: #fde68a;
+}
+/* システムフィールド（削除不可）: 非表示一覧で強調表示 */
+.fp-item-hidden-system {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #a5b4fc;
+  font-weight: 600;
+}
+.fp-item-hidden-system:hover {
+  background: #c7d2fe;
 }
 .fp-restore-btn {
   margin-left: auto;

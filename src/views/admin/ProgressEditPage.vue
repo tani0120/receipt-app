@@ -14,8 +14,9 @@
           <!-- レイアウト編集ボタン（常時表示、管理者のみ有効） -->
           <button class="ce-icon-btn" :class="{ 'ce-icon-active': layout.isLayoutEditing.value, 'ce-icon-disabled': !isAdmin }" :title="!isAdmin ? 'レイアウト編集（管理者のみ）' : layout.isLayoutEditing.value ? 'レイアウト編集終了' : 'レイアウト編集'" :disabled="!isAdmin" @click="layout.isLayoutEditing.value = !layout.isLayoutEditing.value"><i class="fa-solid fa-grip"></i></button>
           <template v-if="layout.isLayoutEditing.value && isAdmin">
-            <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-save ce-btn-sm" @click="layout.saveLayout(currentUserName ?? '不明')"><i class="fa-solid fa-save"></i> レイアウト保存</button>
-            <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">リセット</button>
+            <button class="ce-btn ce-btn-save ce-btn-sm" :disabled="!layout.isLayoutDirty.value" @click="layout.saveLayout(currentUserName ?? '不明')"><i class="fa-solid fa-save"></i> レイアウト保存</button>
+            <button class="ce-btn ce-btn-cancel ce-btn-sm" :disabled="!layout.isLayoutDirty.value" @click="layout.cancelLayoutEditing()"><i class="fa-solid fa-xmark"></i> レイアウトキャンセル</button>
+            <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">初期化</button>
           </template>
         </div>
       </div>
@@ -152,6 +153,7 @@ const goBack = () => router.push('/master/progress');
 .ce-btn-cancel { background: #f1f5f9; color: #475569; }
 .ce-btn-cancel:hover { background: #e2e8f0; }
 .ce-btn-sm { font-size: 12px; padding: 5px 10px; }
+.ce-btn-save:disabled, .ce-btn-cancel:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 
 /* アイコンボタン */
 .ce-action-icons { display: flex; align-items: center; gap: 8px; }

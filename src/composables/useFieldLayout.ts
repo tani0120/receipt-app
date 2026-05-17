@@ -9,7 +9,7 @@
  *
  * useStaffと同じシングルトンパターンを適用
  */
-import { ref, computed, watch, type Ref } from 'vue';
+import { ref, computed, type Ref } from 'vue';
 import type { FieldDef, FieldOption, SectionDef, SavedFieldLayout, TableColumnDef } from '@/types/fieldLayout';
 
 /** カスタムフィールド定義（useCustomFieldsから統合） */
@@ -100,8 +100,7 @@ export function useFieldLayout(
   const maxUndoSize = 50;
   /** 直前の安定状態（操作前のスナップショット） */
   let prevSnapshot: string | null = null;
-  /** restoreSnapshot実行中フラグ（watchの二重発火防止） */
-  let isRestoring = false;
+
 
   /** 現在の状態をスナップショットとして取得 */
   const takeSnapshot = (): string => {
@@ -119,7 +118,7 @@ export function useFieldLayout(
 
   /** スナップショットを復元 */
   const restoreSnapshot = (snapshot: string) => {
-    isRestoring = true;
+
     const snap = JSON.parse(snapshot);
     fields.value = snap.fields;
     sectionOrder.value = snap.sectionOrder;
@@ -131,7 +130,7 @@ export function useFieldLayout(
     fieldRows.value = snap.fieldRows || [];
     // 復元後にprevSnapshotを更新
     prevSnapshot = takeSnapshot();
-    isRestoring = false;
+
   };
 
   /** UNDO実行 */
@@ -182,6 +181,7 @@ export function useFieldLayout(
 
     const doLoad = async () => {
       try {
+
         // 1. APIから取得
         const res = await fetch(`/api/field-layout/${pageId}`);
         if (res.ok) {
@@ -205,6 +205,9 @@ export function useFieldLayout(
           }
 
           applyLayout(saved);
+          isLayoutDirty.value = false;
+          prevSnapshot = takeSnapshot();
+
           return;
         }
 
@@ -250,8 +253,12 @@ export function useFieldLayout(
           localStorage.removeItem(customKey);
           console.log(`[useFieldLayout] localStorage → API移行完了: ${pageId}`);
         }
+        isLayoutDirty.value = false;
+        prevSnapshot = takeSnapshot();
+
       } catch {
         // 保存済レイアウトがない場合はデフォルトを使用
+
       }
     };
 
@@ -448,6 +455,21 @@ export function useFieldLayout(
       if (!res.ok) throw new Error(`API保存失敗: ${res.status}`);
 
       isLayoutDirty.value = false;
+      // 保存成功後、現在の状態をスナップショットとして保存（キャンセル時に使用）
+      layoutSnapshot = JSON.stringify({
+        fields: fields.value,
+        sectionOrder: sectionOrder.value,
+        sectionHeights: sectionHeights.value,
+        labelOverrides: labelOverrides.value,
+        hiddenFields: hiddenFields.value,
+        deletedFields: deletedFields.value,
+        fieldOptions: fieldOptions.value,
+        fieldRows: fieldRows.value,
+      });
+      prevSnapshot = takeSnapshot();
+      undoStack.value = [];
+      redoStack.value = [];
+
     } catch (e) {
       console.error('レイアウト保存失敗:', e);
     }
@@ -457,6 +479,7 @@ export function useFieldLayout(
 
   /** レイアウト編集を開始（スナップショットを保存） */
   const startLayoutEditing = () => {
+
     layoutSnapshot = JSON.stringify({
       fields: fields.value,
       sectionOrder: sectionOrder.value,
@@ -473,10 +496,12 @@ export function useFieldLayout(
     redoStack.value = [];
     isLayoutEditing.value = true;
     isLayoutDirty.value = false;
+
   };
 
   /** レイアウト編集をキャンセル（スナップショットから復元） */
   const cancelLayoutEditing = () => {
+
     if (layoutSnapshot) {
       const snap = JSON.parse(layoutSnapshot);
       fields.value = snap.fields;
@@ -490,10 +515,11 @@ export function useFieldLayout(
     }
     // isLayoutEditingはtrueのまま（レイアウトページに留まる）
     isLayoutDirty.value = false;
-    layoutSnapshot = null;
+    // layoutSnapshotは保持（再度キャンセルできるように）
     prevSnapshot = takeSnapshot();
     undoStack.value = [];
     redoStack.value = [];
+
   };
 
   /** レイアウトをデフォルトにリセット */
@@ -833,12 +859,6 @@ export function useFieldLayout(
     if (visible) {
       hiddenFields.value = hiddenFields.value.filter(k => k !== fieldKey);
     } else {
-      // 削除不可フィールドは非表示にできない
-      const f = fields.value.find(ff => ff.key === fieldKey);
-      if (f && !fieldKey.startsWith('custom_') && f.deletable !== true) {
-        console.warn(`[レイアウト] 非表示不可フィールド: ${fieldKey}`);
-        return;
-      }
       if (!hiddenFields.value.includes(fieldKey)) {
         hiddenFields.value.push(fieldKey);
       }
@@ -915,12 +935,7 @@ export function useFieldLayout(
       .filter((s): s is SectionDef => !!s);
   });
 
-  // 変更検知（UNDO不要: 個別操作で既にpushUndoされている）
-  watch(fields, () => {
-    if (isLayoutEditing.value && !isRestoring) {
-      isLayoutDirty.value = true;
-    }
-  }, { deep: true });
+  // 変更検知: markDirty()で管理（deep watcherは不要 — loadLayout等で副作用が発生するため廃止）
 
   return {
     fields,

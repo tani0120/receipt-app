@@ -423,9 +423,9 @@ const displayRows = computed(() => {
   return props.fieldRows ?? localRows.value;
 });
 
-/** propsのfieldRows変更を監視（キーリストで比較） */
+/** propsのfieldRows変更を監視（キー・ラベル・幅で比較） */
 const fieldRowsSignature = computed(() =>
-  props.fieldRows?.map(r => r.map(f => f.key).join(',')).join('|') ?? ''
+  props.fieldRows?.map(r => r.map(f => `${f.key}:${f.label}:${f.widthPercent}`).join(',')).join('|') ?? ''
 );
 watch(fieldRowsSignature, () => {
   // レイアウト編集時のみlocalRowsを同期
@@ -462,24 +462,22 @@ const getRowDragGroup = (row: FieldDef[]) => {
   return dragGroupNormal.value;
 };
 
-/** ドラッグ移動時の制御: 保護フィールドがゴミ箱/非表示エリアに移動しようとした場合にブロック */
+/** ドラッグ移動時の制御: 保護フィールドはゴミ箱へのドロップのみ拒否（非表示は許可） */
 const onDragMove = (evt: { dragged: HTMLElement; to: HTMLElement; related: HTMLElement; draggedContext?: { element?: FieldDef }; relatedContext?: { element?: FieldDef } }) => {
   // draggedContext.elementからFieldDefを取得（vue-draggable-plus方式）
   const field = evt.draggedContext?.element;
   // フォールバック: DOM属性からキーを取得
   const fieldKey = field?.key || evt.dragged?.getAttribute?.('data-field-key') || '';
-  // ドロップ先がゴミ箱または非表示エリアか判定
+  // ドロップ先がゴミ箱か判定（非表示エリアは対象外）
   const toEl = evt.to;
-  const isDropZone = toEl && (
+  const isTrashZone = toEl && (
     toEl.classList.contains('fp-drop-trash') ||
-    toEl.classList.contains('fp-drop-hide') ||
-    toEl.closest?.('.fp-drop-trash') ||
-    toEl.closest?.('.fp-drop-hide')
+    toEl.closest?.('.fp-drop-trash')
   );
-  if (isDropZone) {
-    // 保護フィールドかチェック
+  if (isTrashZone) {
+    // 保護フィールドはゴミ箱へのドロップを拒否
     if (field && field.deletable !== true && !fieldKey.startsWith('custom_')) {
-      return false; // ドロップを拒否
+      return false;
     }
     if (!field && fieldKey && !fieldKey.startsWith('custom_')) {
       const found = props.fields.find(f => f.key === fieldKey);
@@ -531,9 +529,7 @@ const onRowDragEnd = (_rowIdx: number) => {
 
 /** 行へのD&D追加時 */
 const onRowDragAdd = (rowIdx: number, _evt: unknown) => {
-  // ① まずlocalRowsの現在状態（VueDraggableが既に挿入済み）をfieldRowsに反映
-  emitRowsUpdate();
-  // ② 次に新規フィールドをfields配列に追加
+  // ① 先に新規フィールドをfields配列に追加（getFieldRowsでのfind解決に必要）
   const allKnown = new Set(props.fields.map(f => f.key));
   const row = localRows.value[rowIdx];
   if (row) {
@@ -543,6 +539,8 @@ const onRowDragAdd = (rowIdx: number, _evt: unknown) => {
       }
     }
   }
+  // ② 次にlocalRowsの現在状態（VueDraggableが既に挿入済み）をfieldRowsに反映
+  emitRowsUpdate();
 };
 
 /** 行更新を親に通知 */

@@ -45,8 +45,8 @@
         <div class="ce-action-icons">
           <!-- レイアウト管理モード: 全社共通の標準フォーマット操作のみ（プレビュー時は非表示） -->
           <template v-if="isLayoutMode && !isPreviewMode && layout.isLayoutEditing.value && isAdmin">
-            <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-save ce-btn-sm" @click="layout.saveLayout(currentUserName ?? UI_MSG.不明)"><i class="fa-solid fa-save"></i> レイアウト保存</button>
-            <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-sm ce-btn-layout-cancel" @click="cancelLayoutEditing"><i class="fa-solid fa-xmark"></i> レイアウトキャンセル</button>
+            <button class="ce-btn ce-btn-save ce-btn-sm" :disabled="!layout.isLayoutDirty.value" @click="layout.saveLayout(currentUserName ?? UI_MSG.不明)"><i class="fa-solid fa-save"></i> レイアウト保存</button>
+            <button class="ce-btn ce-btn-sm ce-btn-layout-cancel" :disabled="!layout.isLayoutDirty.value" @click="cancelLayoutEditing"><i class="fa-solid fa-xmark"></i> レイアウトキャンセル</button>
             <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">初期化</button>
             <button class="ce-btn ce-btn-sm ce-btn-custom" @click="showCustomFieldModal = true"><i class="fa-solid fa-puzzle-piece"></i> フィールド管理</button>
           </template>
@@ -653,7 +653,7 @@ const handleDriveCreate = async () => {
     await modal.notify({ title: 'Googleドライブ', message: 'フォルダを作成しました', variant: 'success' });
     window.open(`https://drive.google.com/drive/folders/${newFolderId}`, '_blank');
   } catch (e) {
-    await modal.notify({ title: 'Googleドライブ', message: `作成に失敗しました: ${e}`, variant: 'error' });
+    await modal.notify({ title: 'Googleドライブ', message: `作成に失敗しました: ${e}`, variant: 'warning' });
   }
 };
 
@@ -1167,6 +1167,7 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 .ce-btn-undo, .ce-btn-redo { background: #f1f5f9; color: #475569; min-width: 32px; padding: 4px 8px; }
 .ce-btn-undo:hover, .ce-btn-redo:hover { background: #e2e8f0; }
 .ce-btn-undo:disabled, .ce-btn-redo:disabled { opacity: 0.35; cursor: not-allowed; }
+.ce-btn-save:disabled, .ce-btn-layout-cancel:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 .ce-btn-preview { background: #f1f5f9; color: #475569; padding: 4px 12px; gap: 4px; display: inline-flex; align-items: center; }
 .ce-btn-preview:hover { background: #e2e8f0; }
 .ce-btn-preview.active { background: #3b82f6; color: #fff; }
