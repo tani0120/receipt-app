@@ -34,6 +34,7 @@ import {
   generateClientId,
 } from '../services/clientStore';
 import { getClientList } from '../services/clientListService';
+import { getClientAccounts, getClientTaxCategories } from '../services/accountMasterStore';
 
 const app = new Hono();
 
@@ -101,6 +102,9 @@ app.post('/', async (c) => {
   // clientIdをサーバー側で発番（フロントからのID受け取りは無視）
   body.clientId = generateClientId();
   const client = create(body);
+  // 勘定科目マスタ・税区分マスタを即時コピー（遅延初期化を廃止）
+  getClientAccounts(client.clientId);
+  getClientTaxCategories(client.clientId);
   return c.json({ ok: true, client });
 });
 
@@ -137,6 +141,9 @@ app.post('/bulk', async (c) => {
       }
       item.clientId = generateClientId();
       const saved = create(item as unknown as Client);
+      // 勘定科目マスタ・税区分マスタを即時コピー（遅延初期化を廃止）
+      getClientAccounts(saved.clientId);
+      getClientTaxCategories(saved.clientId);
       if (code) existingCodes.add(code);
       if (name) existingNames.add(name);
       results.push({ index: i, ok: true, clientId: saved.clientId, threeCode: saved.threeCode, companyName: saved.companyName });

@@ -56,6 +56,11 @@ export function getById(leadId: string): Lead | undefined {
   return leads.find(l => l.leadId === leadId);
 }
 
+/** 3文字コードで検索 */
+export function getByThreeCode(code: string): Lead | undefined {
+  return leads.find(l => l.threeCode.toUpperCase() === code.toUpperCase());
+}
+
 /** 1件追加 */
 export function create(lead: Lead): Lead {
   leads.push(lead);
@@ -124,6 +129,10 @@ export function generateLeadId(): string {
   let id = 'l_';
   for (let i = 0; i < 8; i++) {
     id += chars[bytes[i]! % chars.length];
+  }
+  // 衝突チェック（実質不要だが念のため）
+  if (leads.some(l => l.leadId === id)) {
+    return generateLeadId();
   }
   return id;
 }

@@ -1,7 +1,7 @@
 # Supabase移行タスク一覧
 
 > 作成日: 2026-04-23
-> 最終更新: 2026-05-05 v13（v12 + Phase 3完了反映、29/31文書統合に伴うリンク修正）
+> 最終更新: 2026-05-17 v14（v13 + Supabase Realtime組込みタスク詳細化、遅延初期化→即時初期化の根本原因記録）
 > ソース:
 > - [task_unified.md](file:///c:/dev/receipt-app/docs/task_unified.md)（セクションC-0, C-1, D, H, L-2）
 > - [supabase_security_report_260214.md](file:///c:/dev/receipt-app/docs/genzai/01_tools_and_setups/supabase_security_report_260214.md)（RLS, validateStaffAccess, Google OAuth）
@@ -514,7 +514,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 |---|---|---|---|
 | L-2: 重複判定ハッシュ記録 | A案実装済み（localStorage） | B案: Supabase DBでライフサイクル管理 | task_unified L492 |
 | DL-038: ハッシュ記録管理 | A案→Supabase移行時B案 | 同上 | task_unified L492 |
-| Supabase Realtime | share_status以外のsubscription未実装 | 必要時に追加 | pipeline DL-032 L1945 |
+| Supabase Realtime組込み（データ変更のリアルタイム同期） | 現在: 画面間の同期はVue refの共有（同一タブ内のみ）またはAPIリクエスト時の再取得（リロード必要）。WebSocket/SSE未実装。admin-dashboardやCSV変換画面は、顧問先登録後にリロードしなければ最新データが反映されない。**根本原因: localStorage時代の「composable初アクセス時に初期化」パターンをAPI化時にそのまま移植したため、サーバー側のインメモリキャッシュとフロント側のrefキャッシュが独立して動作する設計になっている** | Supabase移行時に`supabase.channel()`でテーブル変更をサブスクライブし、フロント側のrefを自動更新。対象テーブル・画面: ①`clients`テーブル→admin-dashboard（`registeredClients`/`activeClients`/`clientAnalysis`）、進捗管理（`progressRows`）、CSV変換（顧問先選択） ②`staff`テーブル→admin-dashboard（`staffCount`/`staffAnalysis`）、スタッフ一覧 ③`documents`テーブル→進捗管理（`unsorted`/`receivedDate`）、通知センター ④`journals`テーブル→進捗管理（`monthlyJournals`/`unexported`）。実装方法: 各composable（useClients/useStaff/useDocuments/useProgress）の初期化時に`supabase.channel('table-changes').on('postgres_changes', ...)`を登録し、INSERT/UPDATE/DELETEイベントでref配列を差分更新。admin-dashboardはcomposableのref変更がcomputedで自動伝播するため追加対応不要 | pipeline DL-032 L1945 |
 | `documents`テーブル `drive_file_id UNIQUE`制約追加 | 未適用 | 冪等性保証用 | 24番 L1174 |
 | ~~excluded ZIPダウンロードルート接続~~ | ~~✅ 本セッションで完了~~ | — | — |
 | ~~PC D&D→Drive uploadルート~~ | ~~✅ 本セッションで完了~~ | — | — |

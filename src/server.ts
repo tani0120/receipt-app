@@ -1,4 +1,4 @@
-// src/server.ts — API + 静的ファイル提供
+﻿// src/server.ts — API + 静的ファイル提供
 import { config } from 'dotenv'
 config({ path: '.env.local' })  // .env.localを明示的に読み込む（VERTEX_PROJECT_ID等）
 

@@ -26,6 +26,26 @@ export const emptyLeadForm = (): LeadForm => ({
   hasDepartmentManagement: false, hasRentalIncome: false,
   staffId: null, sharedFolderId: '', sharedEmail: '',
   advisoryFee: 0, bookkeepingFee: 0, settlementFee: 0, taxFilingFee: 0,
+  // ── Kintone拡張フィールド（Client版と統一） ──
+  engagementStartDate: '', engagementEndDate: null,
+  subStaffId: null, payrollStaffId: null,
+  corporateNumber: '', repTitle: '',
+  websiteUrl: '', annualRevenue: '', employeeCount: null,
+  businessDescription: '', parentCompany: '', memo: '',
+  pastStaffHistory: [], contacts: [],
+  // ニーズ管理
+  needsInsurance: '', needsTaxSaving: '', needsSubsidy: '', needsLoan: '', needsRealEstate: '',
+  // 税務関連
+  consumptionTaxInterim: 'none',
+  // システム導入状況
+  accountingSoftwareMemo: '', payrollSoftware: '', payrollSoftwareMemo: '',
+  attendanceSystem: '', attendanceSystemMemo: '', otherSystem: '', otherSystemMemo: '',
+  // 報酬情報拡張
+  contractScope: '', bookkeepingType: '',
+  hasSocialInsuranceContract: 'no', hasPayrollService: 'no', hasAccountingService: 'no',
+  socialInsuranceFee: 0, payrollFee: 0, accountingServiceFee: 0, systemFee: 0,
+  contractDocUrl: '', paymentMethod: '', paymentDay: '', feeNotes: '',
+  attachmentFiles: [],
 });
 
 const API_BASE = '/api/leads'
@@ -84,11 +104,13 @@ export function useLeads() {
   const route = useRoute();
 
   const currentLead = computed<Lead | null>(() => {
+    // 1. route.params.leadId
     const paramLeadId = route.params.leadId;
     if (paramLeadId && typeof paramLeadId === 'string') {
       const found = leads.value.find(l => l.leadId === paramLeadId);
       if (found) return found;
     }
+    // 2. /leads/:leadId パターン
     const path = route.path;
     const leadsMatch = path.match(/\/leads\/([^/]+)/);
     if (leadsMatch && leadsMatch[1]) {
@@ -96,6 +118,13 @@ export function useLeads() {
       const found = leads.value.find(l => l.threeCode.toLowerCase() === paramId.toLowerCase() || l.leadId === paramId);
       if (found) return found;
     }
+    // 3. クエリパラメータ ?lead=leadId から取得（互換用）
+    const leadQuery = route.query.lead;
+    if (leadQuery && typeof leadQuery === 'string') {
+      const found = leads.value.find(l => l.leadId === leadQuery);
+      if (found) return found;
+    }
+    // 4. 該当なし → null
     return null;
   });
 
@@ -148,6 +177,19 @@ export function useLeads() {
     }
   }
 
+  /**
+   * POST /api/leads/list — サーバー側でフィルタ+ソート+ページネーション
+   */
+  async function listLeads(query: {
+    filters?: { field: string; operator: string; value: string | string[] }[]
+    logic?: 'and' | 'or'
+    sorts?: { key: string; order: 'asc' | 'desc' }[]
+    page?: number
+    pageSize?: number
+  }): Promise<{ rows: Lead[]; totalCount: number; page: number; pageSize: number; totalPages: number }> {
+    return apiPost<{ rows: Lead[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
+  }
+
   return {
     leads,
     currentLead,
@@ -155,6 +197,7 @@ export function useLeads() {
     updateSharedFolderId,
     addLead,
     updateLeadLocal,
+    listLeads,
     refresh,
     lastError,
   };

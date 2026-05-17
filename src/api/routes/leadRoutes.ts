@@ -17,8 +17,8 @@
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { 未検出, 必須, リソース_見込先 } from '../../constants/apiMessages';
-import type { LeadStatus, Lead } from '../../repositories/types';
+import { 未検出, 必須, コード重複, リソース_見込先 } from '../../constants/apiMessages';
+import type { LeadStatus, Lead, Client } from '../../repositories/types';
 import {
   getAll,
   getById,
@@ -32,8 +32,20 @@ import {
   updateSharedEmail,
   generateLeadId,
 } from '../services/leadStore';
+import { getLeadList } from '../services/leadListService';
+import { create as createClient, generateClientId } from '../services/clientStore';
+import { getClientAccounts, getClientTaxCategories } from '../services/accountMasterStore';
 
 const app = new Hono();
+
+// ============================================================
+// POST /list — 見込先一覧（フィルタ+ソート+ページネーション）
+// ============================================================
+app.post('/list', async (c) => {
+  const body = await c.req.json();
+  const result = getLeadList(body);
+  return c.json(result);
+});
 
 // GET / — 全見込先取得
 app.get('/', (c) => {
@@ -69,8 +81,17 @@ app.get('/:leadId', (c) => {
 // POST / — 見込先追加（サーバーが常にID発番）
 app.post('/', async (c) => {
   const body = await c.req.json();
-  if (!body.threeCode || !body.companyName) {
-    return apiError(c, 400, 必須('threeCode と companyName'));
+  if (!body.threeCode) {
+    return apiError(c, 400, 必須('threeCode'));
+  }
+  if (!body.companyName && !body.repName) {
+    return apiError(c, 400, 必須('companyName または repName'));
+  }
+  // threeCode重複チェック
+  const existing = getAll();
+  const dup = existing.find(l => l.threeCode === body.threeCode && l.leadId !== body.leadId);
+  if (dup) {
+    return apiError(c, 409, コード重複(body.threeCode, dup.companyName, dup.leadId));
   }
   // サーバーが常にIDを発番。フロントからのIDは無視。
   body.leadId = generateLeadId();
@@ -91,8 +112,8 @@ app.post('/bulk', async (c) => {
   for (let i = 0; i < items.length; i++) {
     const item = items[i]!;
     try {
-      if (!item.companyName) {
-        results.push({ index: i, ok: false, error: 'companyNameが必須' });
+      if (!item.companyName && !item.repName) {
+        results.push({ index: i, ok: false, error: 'companyNameまたはrepNameが必須' });
         continue;
       }
       // threeCode重複チェック（既存 + 同一バッチ内）
@@ -123,6 +144,21 @@ app.post('/bulk', async (c) => {
 app.put('/:leadId', async (c) => {
   const leadId = c.req.param('leadId');
   const body = await c.req.json();
+  // バリデーション（顧問先と統一）
+  if (body.threeCode !== undefined && !body.threeCode) {
+    return apiError(c, 400, 必須('threeCode'));
+  }
+  if (body.companyName !== undefined && body.repName !== undefined && !body.companyName && !body.repName) {
+    return apiError(c, 400, 必須('companyName または repName'));
+  }
+  // threeCode重複チェック（変更時のみ）
+  if (body.threeCode) {
+    const existing = getAll();
+    const dup = existing.find(l => l.threeCode === body.threeCode && l.leadId !== leadId);
+    if (dup) {
+      return apiError(c, 409, コード重複(body.threeCode, dup.companyName, dup.leadId));
+    }
+  }
   const ok = updateLead(leadId, body);
   if (!ok) {
     return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
@@ -161,6 +197,44 @@ app.put('/:leadId/shared-email', async (c) => {
     return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
   return c.json({ ok: true });
+});
+
+// ============================================================
+// POST /:leadId/convert — 見込先→顧問先昇格（コピー方式）
+// ============================================================
+app.post('/:leadId/convert', async (c) => {
+  const leadId = c.req.param('leadId');
+  const lead = getById(leadId);
+  if (!lead) {
+    return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
+  }
+  // 既にconvertedの場合はエラー
+  if (lead.status === 'converted') {
+    return apiError(c, 409, `見込先「${lead.companyName}」は既に顧問先化済みです`);
+  }
+
+  // 見込先の共通フィールドを顧問先にコピー（見込先固有フィールド除外）
+  const clientId = generateClientId();
+  const { leadId: _lid, status: _status, ...commonFields } = lead as Record<string, unknown>;
+  const clientData: Client = {
+    ...(commonFields as Omit<Client, 'clientId' | 'sourceLeadId'>),
+    clientId,
+    status: 'active',
+    sourceLeadId: leadId,
+  } as Client;
+
+  // 顧問先として登録
+  const saved = createClient(clientData);
+
+  // 勘定科目マスタ・税区分マスタを即時コピー
+  getClientAccounts(saved.clientId);
+  getClientTaxCategories(saved.clientId);
+
+  // 元見込先のstatusを'converted'に変更
+  updateLead(leadId, { status: 'converted' as LeadStatus });
+
+  console.log(`[leads] 昇格完了: ${lead.companyName} (${leadId} → ${clientId})`);
+  return c.json({ ok: true, client: saved, sourceLeadId: leadId });
 });
 
 export default app;

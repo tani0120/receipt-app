@@ -2,41 +2,82 @@
   <div class="ce-page">
     <!-- ヘッダー1行目: ページタイトル -->
     <div class="ce-header-top">
-      <span class="ce-page-label">見込管理</span>
+      <span class="ce-page-label">{{ isPreviewMode ? 'プレビュー' : (isLayoutMode ? UI_MSG.標準フォーマット編集 : UI_MSG.見込先管理) }}</span>
     </div>
     <!-- ヘッダー2行目: アクション -->
     <div class="ce-header">
       <div class="ce-header-left">
-        <button class="ce-btn ce-btn-cancel" @click="goBack">キャンセル</button>
-        <button class="ce-btn ce-btn-save" @click="saveLead">
-          <i class="fa-solid fa-save"></i> 保存
-        </button>
+        <template v-if="isLayoutMode">
+          <button class="ce-btn ce-btn-back" @click="exitLayoutMode"><i class="fa-solid fa-arrow-left"></i> 一覧に戻る</button>
+          <button class="ce-btn ce-btn-sm ce-btn-undo" :disabled="!layout.canUndo.value" @click="layout.undo()" title="元に戻す"><i class="fa-solid fa-rotate-left"></i></button>
+          <button class="ce-btn ce-btn-sm ce-btn-redo" :disabled="!layout.canRedo.value" @click="layout.redo()" title="やり直す"><i class="fa-solid fa-rotate-right"></i></button>
+          <button class="ce-btn ce-btn-sm ce-btn-preview" :class="{ active: isPreviewMode }" @click="isPreviewMode = !isPreviewMode" title="プレビュー表示">
+            <i class="fa-solid fa-eye"></i> プレビュー
+          </button>
+        </template>
+        <!-- 閲覧モード -->
+        <template v-else-if="!isEditing">
+          <button class="ce-btn ce-btn-back" @click="$router.push('/master/leads')"><i class="fa-solid fa-arrow-left"></i> 一覧に戻る</button>
+          <button
+            v-if="!isNew && form.status !== 'converted'"
+            class="ce-btn ce-btn-convert"
+            :disabled="isConverting"
+            @click="convertToClient"
+          ><i class="fa-solid fa-arrow-up-right-from-square"></i> 顧問先ページを作成</button>
+          <span v-else-if="!isNew && form.status === 'converted'" class="ce-converted-badge">
+            <i class="fa-solid fa-check-circle"></i> 顧問先化済
+          </span>
+        </template>
+        <!-- 編集モード -->
+        <template v-else>
+          <button class="ce-btn ce-btn-cancel" @click="onCancel">キャンセル</button>
+          <button class="ce-btn ce-btn-save" @click="saveLead"><i class="fa-solid fa-save"></i> 保存</button>
+        </template>
       </div>
       <div class="ce-header-right">
         <div class="ce-action-icons">
-          <button class="ce-icon-btn" title="新規追加" @click="$router.push('/master/leads/new')">
-            <i class="fa-solid fa-plus"></i>
-          </button>
-          <button class="ce-icon-btn ce-icon-active" title="編集" @click="saveLead">
-            <i class="fa-solid fa-pen"></i>
-          </button>
-          <button
-            v-if="!isNew"
-            class="ce-icon-btn"
-            :title="UI_MSG.コピーして新規作成"
-            @click="copyAndCreate"
-          >
-            <i class="fa-regular fa-copy"></i>
-          </button>
-          <!-- レイアウト編集ボタン（常時表示、管理者のみ有効） -->
-          <button class="ce-icon-btn" :class="{ 'ce-icon-active': layout.isLayoutEditing.value, 'ce-icon-disabled': !isAdmin }" :title="!isAdmin ? 'レイアウト編集（管理者のみ）' : layout.isLayoutEditing.value ? 'レイアウト編集終了' : 'レイアウト編集'" :disabled="!isAdmin" @click="layout.isLayoutEditing.value = !layout.isLayoutEditing.value"><i class="fa-solid fa-grip"></i></button>
-          <template v-if="layout.isLayoutEditing.value && isAdmin">
+          <!-- レイアウト管理モード: 全社共通の標準フォーマット操作のみ（プレビュー時は非表示） -->
+          <template v-if="isLayoutMode && !isPreviewMode && layout.isLayoutEditing.value && isAdmin">
             <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-save ce-btn-sm" @click="layout.saveLayout(currentUserName ?? UI_MSG.不明)"><i class="fa-solid fa-save"></i> レイアウト保存</button>
-            <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">リセット</button>
+            <button v-if="layout.isLayoutDirty.value" class="ce-btn ce-btn-sm ce-btn-layout-cancel" @click="cancelLayoutEditing"><i class="fa-solid fa-xmark"></i> レイアウトキャンセル</button>
+            <button class="ce-btn ce-btn-cancel ce-btn-sm" @click="layout.resetLayout()">初期化</button>
+            <button class="ce-btn ce-btn-sm ce-btn-custom" @click="showCustomFieldModal = true"><i class="fa-solid fa-puzzle-piece"></i> フィールド管理</button>
+          </template>
+          <!-- 個別顧問先モード: 個別の会社用操作ボタン -->
+          <template v-else>
+            <button class="ce-icon-btn" title="新規登録" @click="$router.push('/master/leads/new')"><i class="fa-solid fa-plus"></i></button>
+            <button v-if="!isEditing && !isNew" class="ce-icon-btn" title="編集" @click="startEditing"><i class="fa-solid fa-pen"></i></button>
+            <button v-if="!isEditing && !isNew" class="ce-icon-btn" title="コピーして新規作成" @click="copyAndCreate"><i class="fa-regular fa-copy"></i></button>
           </template>
         </div>
       </div>
     </div>
+
+    <!-- レイアウト管理モード用モーダル -->
+    <template v-if="isLayoutMode">
+      <CustomFieldModal
+        :visible="showCustomFieldModal"
+        :custom-defs="layout.customDefs.value"
+        :section-keys="sectionKeys"
+        :layout-fields="layout.fields.value"
+        :field-rows="layout.fieldRows.value"
+        :default-field-keys="defaultFieldKeys"
+        :label-overrides="layout.labelOverrides.value"
+        :hidden-fields="layout.hiddenFields.value"
+        :deleted-fields="layout.deletedFields.value"
+        :field-options="layout.fieldOptions.value"
+        @update:visible="showCustomFieldModal = $event"
+        @save="handleSaveFieldManagement"
+        @focus-field="scrollToField"
+      />
+      <AddFieldModal
+        :visible="showAddFieldModal"
+        :section-keys="sectionKeys"
+        :default-section="addFieldDefaultSection"
+        @update:visible="showAddFieldModal = $event"
+        @add="handleAddField"
+      />
+    </template>
 
     <div class="ce-body">
       <!-- 左カラム: フォーム -->
@@ -44,56 +85,165 @@
         <!-- フラットレイアウト: 1つのDraggableFieldGridで全フィールドを管理 -->
         <DraggableFieldGrid
           :fields="flatFields"
-          :is-layout-editing="layout.isLayoutEditing.value"
-          :form-data="(form as unknown as Record<string, unknown>)"
-          :is-editing="true"
+          :is-layout-editing="isLayoutMode && !isPreviewMode && layout.isLayoutEditing.value"
+          :form-data="isPreviewMode ? {} : (isLayoutMode ? undefined : enrichedFormData)"
+          :is-editing="isPreviewMode ? true : (isLayoutMode ? false : isEditing)"
           :resolve-options="resolveOptions"
-          :field-rows="layout.getFieldRows.value"
-          @update:rows="(rows: string[][]) => layout.updateAllRows(rows)"
           :staff-list="activeStaffList"
-          :drag-group="layout.isLayoutEditing.value ? 'leadLayout' : undefined"
+          :drag-group="isLayoutMode && !isPreviewMode ? 'LeadLayout' : undefined"
+          :selected-field-key="selectedPaletteField?.key"
+          :field-rows="layout.getFieldRows.value"
           @update:order="(keys: string[]) => layout.updateFieldOrderFlat(keys)"
           @update:width="(key: string, span: number) => layout.updateFieldWidth(key, span)"
           @update:lineBreak="(key: string, val: boolean) => layout.updateFieldLineBreak(key, val)"
           @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)"
           @label-edit="(key: string, label: string) => layout.updateLabelOverride(key, label)"
+          @add-field="openAddFieldModal"
           @update:headingSize="(key: string, size: number) => layout.updateHeadingSize(key, size)"
           @update:headingBg="(key: string, color: string) => layout.updateHeadingBg(key, color)"
+          @update:headingColor="(key: string, color: string) => layout.updateHeadingColor(key, color)"
           @update:spacerHeight="(key: string, height: number) => layout.updateSpacerHeight(key, height)"
+          @update:fieldHeight="(key: string, height: number) => layout.updateFieldHeight(key, height)"
           @update:fieldValue="(key: string, value: unknown) => { (form as Record<string, unknown>)[key] = value }"
           @field-added="(field: import('@/types/fieldLayout').FieldDef) => layout.addDynamicField(field)"
+          @select-field="(field: import('@/types/fieldLayout').FieldDef) => selectedPaletteField = field"
+          @update:field-options="(key: string, opts: import('@/types/fieldLayout').FieldOption[]) => layout.updateFieldOptions(key, opts)"
+          @update:rows="(rows: string[][]) => layout.updateAllRows(rows)"
+          @file-upload="handleFileUpload"
+          @file-delete="handleFileDelete"
         >
-            <template #type="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-radio-group"><label><input type="radio" v-model="form.type" value="corp" /><span>法人</span></label><label><input type="radio" v-model="form.type" value="individual" /><span>個人</span></label></div></div></template>
-            <template #leadId="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" :value="isNew ? '（自動生成）' : leadId" class="ce-input" disabled /></div></template>
-            <template #threeCode="{ field }"><div class="ce-field"><label>{{ field.label }} <span class="ce-hint">※大文字3文字</span></label><input type="text" v-model="form.threeCode" class="ce-input ce-w-sm" maxlength="3" placeholder="ABC" @input="form.threeCode = form.threeCode.toUpperCase().replace(/[^A-Z]/g, '')" /></div></template>
-            <template #companyName="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.companyName" class="ce-input" placeholder="株式会社サンプル" /></div></template>
-            <template #companyNameKana="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.companyNameKana" class="ce-input" placeholder="カブシキガイシャサンプル" @input="form.companyNameKana = form.companyNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')" /></div></template>
-            <template #repName="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.repName" class="ce-input" placeholder="山田 太郎" /></div></template>
-            <template #repNameKana="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.repNameKana" class="ce-input" placeholder="ヤマダ タロウ" @input="form.repNameKana = form.repNameKana.replace(/[^\u30A0-\u30F6\u30FC\u3000 ]/g, '')" /></div></template>
-            <template #staffId="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="staffId" class="ce-select"><option value="">{{ PLACEHOLDER_UNSET }}</option><option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option></select></div></template>
-            <template #contactType="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-radio-group"><label><input type="radio" v-model="form.contactType" value="email" /><span>メール</span></label><label><input type="radio" v-model="form.contactType" value="chatwork" /><span>チャットワーク</span></label></div></div></template>
-            <template #contactValue="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.contactValue" class="ce-input" :placeholder="form.contactType === 'email' ? 'example@mail.com' : 'Chatwork ID'" /></div></template>
-            <template #sharedEmail="{ field}"><div class="ce-field"><label>{{ field.label }} <span class="ce-hint">※自動取得</span></label><input type="email" v-model="sharedEmail" class="ce-input" placeholder="shared@example.com" /></div></template>
-            <template #fiscalDate="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-date-group"><select v-model="form.fiscalMonth" class="ce-select ce-w-sm"><option v-for="m in 12" :key="m" :value="m">{{ m }}月</option></select><span>/</span><select v-model="form.fiscalDay" class="ce-select ce-w-sm"><option :value="FISCAL_DAY_END_LABEL">{{ FISCAL_DAY_END_LABEL }}</option><option v-for="d in 31" :key="d" :value="d">{{ d }}日</option></select></div></div></template>
-            <template #industry="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.industry" class="ce-select"><option v-for="opt in industryOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option></select></div></template>
-            <template #establishedDate="{ field }"><div class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.establishedDate" class="ce-input ce-w-sm" placeholder="YYYYMMDD" maxlength="8" /></div></template>
-            <template #accountingSoftware="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.accountingSoftware" class="ce-select"><option v-for="o in ACCOUNTING_SOFTWARE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
-            <template #taxFilingType="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.taxFilingType" class="ce-select"><option v-for="o in TAX_FILING_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
-            <template #consumptionTaxMode="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.consumptionTaxMode" class="ce-select"><option v-for="o in TAX_MODE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
-            <template #simplifiedTaxCategory="{ field }"><div v-if="form.consumptionTaxMode === 'simplified'" class="ce-field"><label>{{ field.label }}</label><select v-model="form.simplifiedTaxCategory" class="ce-select"><option :value="undefined">{{ PLACEHOLDER_UNSET }}</option><option v-for="o in SIMPLIFIED_CATEGORY_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
-            <template #taxMethod="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.taxMethod" class="ce-select"><option v-for="o in TAX_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
-            <template #calculationMethod="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.calculationMethod" class="ce-select"><option v-for="o in CALCULATION_METHOD_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
-            <template #defaultPaymentMethod="{ field }"><div class="ce-field"><label>{{ field.label }}</label><select v-model="form.defaultPaymentMethod" class="ce-select"><option v-for="o in DEFAULT_PAYMENT_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option></select></div></template>
-            <template #isInvoiceRegistered><div class="ce-field"><label class="ce-checkbox"><input type="checkbox" v-model="form.isInvoiceRegistered" /><span>インボイス登録事業者</span></label></div></template>
-            <template #invoiceRegistrationNumber="{ field }"><div v-if="form.isInvoiceRegistered" class="ce-field"><label>{{ field.label }}</label><input type="text" v-model="form.invoiceRegistrationNumber" class="ce-input" placeholder="T1234567890123" /></div></template>
-            <template #hasDepartmentManagement><div class="ce-field"><label class="ce-checkbox"><input type="checkbox" v-model="form.hasDepartmentManagement" /><span>部門管理あり</span></label></div></template>
-            <template #hasRentalIncome><div v-if="form.type === 'individual' || form.type === 'sole_proprietor'" class="ce-field"><label class="ce-checkbox"><input type="checkbox" v-model="form.hasRentalIncome" /><span>不動産所得あり</span></label><span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span></div></template>
-            <template #advisoryFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.advisoryFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
-            <template #bookkeepingFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.bookkeepingFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
-            <template #monthlyTotal><div class="ce-field ce-computed"><label>月次合計（自動算出）</label><span class="ce-computed-val">{{ (form.advisoryFee + form.bookkeepingFee).toLocaleString() }} 円</span></div></template>
-            <template #settlementFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.settlementFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
-            <template #taxFilingFee="{ field }"><div class="ce-field"><label>{{ field.label }}</label><div class="ce-amount"><input type="number" v-model.number="form.taxFilingFee" class="ce-input ce-w-sm" min="0" /><span>円</span></div></div></template>
-            <template #annualTotal><div class="ce-field ce-computed"><label>年間総報酬（自動算出）</label><span class="ce-computed-val">{{ annualTotal.toLocaleString() }} 円</span></div></template>
+          <!-- status: 契約状況の表示 -->
+          <template v-if="!isLayoutMode" #status>
+            <div class="ce-field">
+              <template v-if="isEditing">
+                <select v-model="form.status" class="ce-select" :class="'ce-status-' + form.status">
+                  <option v-for="opt in STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </template>
+              <span v-else class="ce-readonly" :class="'ce-status-' + form.status">{{ getLabel(STATUS_OPTIONS, form.status) }}</span>
+            </div>
+          </template>
+          <!-- staffId: 担当者選択 -->
+          <template v-if="!isLayoutMode" #staffId>
+            <div class="ce-field">
+              <template v-if="isEditing">
+                <select v-model="staffId" class="ce-select">
+                  <option value="">{{ PLACEHOLDER_UNSET }}</option>
+                  <option v-for="s in activeStaffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
+                </select>
+              </template>
+              <span v-else class="ce-readonly">{{ staffLabel }}</span>
+            </div>
+          </template>
+          <!-- progressLink: 進捗管理リンク -->
+          <template v-if="!isLayoutMode" #progressLink>
+            <div class="ce-field">
+              <div v-if="leadId" class="ce-url-row">
+                <a :href="journalListUrl" target="_blank" class="ce-link-url">{{ journalListUrl }}</a>
+                <button class="ce-copy-btn" @click="copyToClipboard(journalListUrl)" title="コピー"><i class="fa-regular fa-copy"></i></button>
+              </div>
+              <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
+            </div>
+          </template>
+          <!-- threeCode: 3コード入力 -->
+          <template v-if="!isLayoutMode" #threeCode>
+            <div class="ce-field">
+              <input v-if="isEditing" type="text" v-model="form.threeCode" class="ce-input ce-w-sm" maxlength="3" placeholder="ABC" @input="form.threeCode = form.threeCode.toUpperCase().replace(/[^A-Z]/g, '')">
+              <span v-else class="ce-readonly ce-code">{{ form.threeCode || '—' }}</span>
+            </div>
+          </template>
+          <!-- fiscalDate: 決算日（月/日選択） -->
+          <template v-if="!isLayoutMode" #fiscalDate>
+            <div class="ce-field">
+              <template v-if="isEditing">
+                <div class="ce-date-group">
+                  <select v-model="form.fiscalMonth" class="ce-select ce-w-sm">
+                    <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
+                  </select>
+                  <span>/</span>
+                  <select v-model="form.fiscalDay" class="ce-select ce-w-sm">
+                    <option :value="FISCAL_DAY_END_LABEL">{{ FISCAL_DAY_END_LABEL }}</option>
+                    <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
+                  </select>
+                </div>
+              </template>
+              <span v-else class="ce-readonly">{{ form.fiscalMonth }}月 / {{ form.fiscalDay === FISCAL_DAY_END_LABEL ? FISCAL_DAY_END_LABEL : form.fiscalDay + '日' }}</span>
+            </div>
+          </template>
+          <!-- uploadUrlStaff: 社内用URL -->
+          <template v-if="!isLayoutMode" #uploadUrlStaff>
+            <div class="ce-field">
+              <div v-if="leadId" class="ce-url-row">
+                <a :href="uploadUrlStaff" target="_blank" class="ce-link-url">{{ uploadUrlStaff }}</a>
+                <button class="ce-copy-btn" @click="copyToClipboard(uploadUrlStaff)" title="コピー"><i class="fa-regular fa-copy"></i></button>
+              </div>
+              <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
+            </div>
+          </template>
+          <!-- uploadUrlGuest: 顧問先用URL -->
+          <template v-if="!isLayoutMode" #uploadUrlGuest>
+            <div class="ce-field">
+              <div v-if="leadId" class="ce-url-row">
+                <a :href="uploadUrlGuest" target="_blank" class="ce-link-url">{{ uploadUrlGuest }}</a>
+                <button class="ce-copy-btn" @click="copyToClipboard(uploadUrlGuest)" title="コピー"><i class="fa-regular fa-copy"></i></button>
+              </div>
+              <span v-else class="ce-readonly ce-muted">（保存後に表示）</span>
+            </div>
+          </template>
+          <!-- contactTable: 連絡先テーブル -->
+          <template #contactTable>
+            <ContactTable
+              :contacts="form.contacts || []"
+              :columns="layout.tableColumns.value['contactTable']"
+              :is-editing="isEditing"
+              :is-layout-mode="isLayoutMode"
+              @update:contacts="(v: ClientContact[]) => form.contacts = v"
+              @update:columns="(cols: ContactColumn[]) => layout.updateTableColumns('contactTable', cols)"
+            />
+          </template>
+          <!-- table部品: 汎用テーブル（動的スロット） -->
+          <template v-for="tf in tableFields" :key="tf.key" #[tf.key]>
+            <ContactTable
+              :contacts="getTableData(tf.key)"
+              :columns="layout.tableColumns.value[tf.key]"
+              :is-editing="isEditing"
+              :is-layout-mode="isLayoutMode"
+              @update:contacts="(v: ClientContact[]) => setTableData(tf.key, v)"
+              @update:columns="(cols: ContactColumn[]) => layout.updateTableColumns(tf.key, cols)"
+            />
+          </template>
+          <!-- hasRentalIncome: 不動産所得チェック -->
+          <template v-if="!isLayoutMode" #hasRentalIncome>
+            <div v-if="form.type === 'individual' || form.type === 'sole_proprietor'" class="ce-field">
+              <template v-if="isEditing">
+                <label class="ce-checkbox"><input type="checkbox" v-model="form.hasRentalIncome"><span>不動産所得あり</span></label>
+                <span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span>
+              </template>
+              <template v-else>
+                <span class="ce-readonly">{{ form.hasRentalIncome ? 'あり' : 'なし' }}</span>
+              </template>
+            </div>
+          </template>
+          <!-- accountingSoftwareDisplay: 会計ソフト表示 -->
+          <template v-if="!isLayoutMode" #accountingSoftwareDisplay>
+            <div class="ce-field">
+              <span class="ce-readonly">{{ accountingSoftwareLabel }}</span>
+            </div>
+          </template>
+          <!-- monthlyTotal: 月次合計 -->
+          <template v-if="!isLayoutMode" #monthlyTotal>
+            <div class="ce-field ce-computed">
+              <label>月次合計（自動算出）</label>
+              <span class="ce-computed-val">{{ (form.advisoryFee + form.bookkeepingFee + (form.socialInsuranceFee ?? 0) + (form.payrollFee ?? 0) + (form.accountingServiceFee ?? 0) + (form.systemFee ?? 0)).toLocaleString() }} 円</span>
+            </div>
+          </template>
+          <!-- annualTotal: 年間総報酬 -->
+          <template v-if="!isLayoutMode" #annualTotal>
+            <div class="ce-field ce-computed">
+              <label>年間総報酬（自動算出）</label>
+              <span class="ce-computed-val">{{ annualTotal.toLocaleString() }} 円</span>
+            </div>
+          </template>
         </DraggableFieldGrid>
 
       <!-- マスタ自動コピー通知 -->
@@ -102,45 +252,33 @@
         新規作成時、勘定科目マスタと税区分マスタ（デフォルト表示27件）が自動的にコピーされます。
       </div>
       </div>
-      <!-- 右カラム: コメント -->
-      <aside class="ce-comment-panel">
+      <!-- 右カラム: レイアウト管理モード時はパーツパレット -->
+      <aside v-if="isLayoutMode && !isPreviewMode" class="ce-palette-panel">
+        <FieldPalette
+          drag-group="leadLayout"
+          :all-fields="layout.fields.value"
+          :hidden-keys="layout.hiddenFields.value"
+          :selected-field="selectedPaletteField"
+          :field-options="layout.fieldOptions.value"
+          @restore-field="(key: string) => { layout.toggleFieldVisibility(key, true); layout.restoreFieldToGrid(key); }"
+          @hide-field="(key: string) => layout.toggleFieldVisibility(key, false)"
+          @delete-field="(key: string) => layout.removeDynamicField(key)"
+          @update:field-options="(key: string, opts: import('@/types/fieldLayout').FieldOption[]) => layout.updateFieldOptions(key, opts)"
+        />
+      </aside>
+      <!-- 右カラム: コメント（レイアウト管理モード時は非表示） -->
+      <aside v-if="!isLayoutMode" class="ce-comment-panel">
         <h3 class="ce-comment-title"><i class="fa-regular fa-comment-dots"></i> コメント</h3>
         <div class="ce-comment-input-area">
           <div class="ce-mention-wrapper">
-            <textarea
-              ref="commentTextarea"
-              v-model="newComment"
-              class="ce-comment-input"
-              :placeholder="UI_MSG.コメント"
-              rows="1"
-              @keydown.ctrl.enter="addComment"
-              @input="onCommentInput"
-              @keydown.exact="onMentionKeydown"
-            ></textarea>
-            <button class="ce-comment-submit" :disabled="!newComment.trim()" @click="addComment">
-              <i class="fa-solid fa-paper-plane"></i>
-            </button>
+            <textarea ref="commentTextarea" v-model="newComment" class="ce-comment-input" :placeholder="UI_MSG.コメント" rows="1" @keydown.ctrl.enter="addComment" @input="onCommentInput" @keydown.exact="onMentionKeydown"></textarea>
+            <button class="ce-comment-submit" :disabled="!newComment.trim()" @click="addComment"><i class="fa-solid fa-paper-plane"></i></button>
           </div>
         </div>
         <!-- メンションポップアップ（overflow制約回避のためパネル直下に配置） -->
         <div v-if="showMentionPopup" class="ce-mention-popup">
           <div v-if="mentionCandidates.length === 0" class="ce-mention-empty">該当なし</div>
-          <button
-            v-for="(s, i) in mentionCandidates"
-            :key="s.uuid"
-            class="ce-mention-item"
-            :class="{
-              active: i === mentionIndex,
-              inactive: s.status === 'inactive',
-              'mention-all': s.uuid === '__all__',
-            }"
-            @mousedown.prevent="selectMention(s)"
-          >
-            <span v-if="s.uuid === '__all__'" class="ce-mention-all-icon">👥</span
-            ><span class="ce-mention-name">{{ s.name }}</span
-            ><span v-if="s.nameRomaji" class="ce-mention-romaji">{{ s.nameRomaji }}</span
-            ><span v-if="s.status === 'inactive'" class="ce-mention-badge-inactive">停止中</span>
-          </button>
+          <button v-for="(s, i) in mentionCandidates" :key="s.uuid" class="ce-mention-item" :class="{ active: i === mentionIndex, inactive: s.status === 'inactive', 'mention-all': s.uuid === '__all__' }" @mousedown.prevent="selectMention(s)"><span v-if="s.uuid === '__all__'" class="ce-mention-all-icon">👥</span><span class="ce-mention-name">{{ s.name }}</span><span v-if="s.nameRomaji" class="ce-mention-romaji">{{ s.nameRomaji }}</span><span v-if="s.status === 'inactive'" class="ce-mention-badge-inactive">停止中</span></button>
         </div>
         <div class="ce-comment-list">
           <div v-if="comments.length === 0" class="ce-comment-empty">コメントはありません。</div>
@@ -148,9 +286,7 @@
             <div class="ce-comment-meta">
               <span class="ce-comment-author">{{ c.author }}</span>
               <span class="ce-comment-date">{{ c.date }}</span>
-              <button class="ce-comment-delete" title="削除" @click="deleteComment(c.id)">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
+              <button class="ce-comment-delete" title="削除" @click="deleteComment(c.id)"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <p class="ce-comment-body" v-html="renderMentions(c.body)"></p>
           </div>
@@ -158,52 +294,48 @@
       </aside>
     </div>
 
-    <ConfirmModal
-      :show="modal.confirmState.show"
-      :title="modal.confirmState.title"
-      :message="modal.confirmState.message"
-      :confirm-label="modal.confirmState.confirmLabel"
-      :cancel-label="modal.confirmState.cancelLabel"
-      :variant="modal.confirmState.variant"
-      @confirm="modal.onConfirm"
-      @cancel="modal.onCancel"
-    />
-    <NotifyModal
-      :show="modal.notifyState.show"
-      :title="modal.notifyState.title"
-      :message="modal.notifyState.message"
-      :variant="modal.notifyState.variant"
-      @close="modal.onNotifyClose"
-    />
+    <ConfirmModal :show="modal.confirmState.show" :title="modal.confirmState.title" :message="modal.confirmState.message" :confirm-label="modal.confirmState.confirmLabel" :cancel-label="modal.confirmState.cancelLabel" :variant="modal.confirmState.variant" @confirm="modal.onConfirm" @cancel="modal.onCancel" />
+    <NotifyModal :show="modal.notifyState.show" :title="modal.notifyState.title" :message="modal.notifyState.message" :variant="modal.notifyState.variant" @close="modal.onNotifyClose" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch, nextTick } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import {
-  useLeads,
-  emptyLeadForm,
-} from "@/features/lead-management/composables/useLeads";
-import type { Lead, LeadForm } from "@/features/lead-management/composables/useLeads";
-import { useStaff } from "@/features/staff-management/composables/useStaff";
-import type { Staff } from "@/features/staff-management/composables/useStaff";
-import { useCurrentUser } from "@/composables/useCurrentUser";
-import { useNotificationCenter } from "@/composables/useNotificationCenter";
-import { useModalHelper } from "@/composables/useModalHelper";
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useLeads, emptyLeadForm } from '@/features/lead-management/composables/useLeads';
+import type { Lead, LeadForm } from '@/features/lead-management/composables/useLeads';
+import { useStaff } from '@/features/staff-management/composables/useStaff';
+import type { Staff } from '@/features/staff-management/composables/useStaff';
+import { useCurrentUser } from '@/composables/useCurrentUser';
+import { useNotificationCenter } from '@/composables/useNotificationCenter';
+import { useModalHelper } from '@/composables/useModalHelper';
 import { useDriveFolder } from '@/composables/useDriveFolder';
 import { useFieldLayout } from '@/composables/useFieldLayout';
 import {
-  INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_FILING_OPTIONS,
-  TAX_MODE_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
-  CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
-  PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
+  TYPE_OPTIONS, INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS,
+  TAX_FILING_OPTIONS, TAX_MODE_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS,
+  TAX_METHOD_OPTIONS, CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
+  CONSUMPTION_TAX_INTERIM_OPTIONS, NEEDS_OPTIONS, CONTRACT_SCOPE_OPTIONS,
+  BOOKKEEPING_TYPE_OPTIONS, YES_NO_OPTIONS, PAYMENT_METHOD_OPTIONS,
+  PAYMENT_DAY_OPTIONS, ANNUAL_REVENUE_OPTIONS,
+  STATUS_OPTIONS, PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
+  getLabel,
 } from '@/constants/clientOptions';
-import { leadSections, leadFieldsFlat } from '@/constants/leadFieldDefs';
+import {
+  leadSections, leadFieldsFlat,
+} from '@/constants/leadFieldDefs';
 import { MENTION_ALL_KEYWORD } from '@/constants/vendorOptions';
 import DraggableFieldGrid from '@/components/DraggableFieldGrid.vue';
-import ConfirmModal from "@/components/ConfirmModal.vue";
-import NotifyModal from "@/components/NotifyModal.vue";
+import FieldPalette from '@/components/FieldPalette.vue';
+import ContactTable from '@/components/ContactTable.vue';
+import type { ContactColumn } from '@/components/ContactTable.vue';
+import type { ClientContact } from '@/repositories/types';
+import ConfirmModal from '@/components/ConfirmModal.vue';
+import NotifyModal from '@/components/NotifyModal.vue';
+import CustomFieldModal from '@/components/CustomFieldModal.vue';
+import type { CustomFieldDef } from '@/composables/useFieldLayout';
+import AddFieldModal from '@/components/AddFieldModal.vue';
+
 import { UI_MSG } from '@/constants/uiMessages';
 
 const route = useRoute();
@@ -217,77 +349,346 @@ const { createFolder, renameFolder } = useDriveFolder();
 
 /** フィールドレイアウト管理 */
 const layout = useFieldLayout('lead', leadSections, leadFieldsFlat);
+// デフォルトレイアウトをlocalStorageから読み込み
+layout.loadLayout();
+/** フラットフィールド一覧（テンプレートで使用） */
 const flatFields = layout.getAllFieldsFlat;
 
-/** 選択肢解決関数（DFG自動レンダリング用） */
-const resolveOptions = (_optionsKey: string): readonly { value: string; label: string }[] => {
-  return [];
+/** table部品のフィールド一覧 */
+const tableFields = computed(() =>
+  layout.getAllFieldsFlat.value.filter(f => f.component === 'table')
+);
+/** テーブルデータ取得 */
+const getTableData = (fieldKey: string): ClientContact[] => {
+  return ((form as Record<string, unknown>)[fieldKey] as ClientContact[]) ?? [{}];
+};
+/** テーブルデータ設定 */
+const setTableData = (fieldKey: string, v: ClientContact[]) => {
+  (form as Record<string, unknown>)[fieldKey] = v;
 };
 
-/** 新規 or 編集判定 */
-const leadId = computed(() => route.params.leadId as string | undefined);
-const isNew = computed(() => !leadId.value || route.name === "LeadNew");
+/** パレットで選択中のフィールド（選択肢編集用） */
+const selectedPaletteField = ref<import('@/types/fieldLayout').FieldDef | null>(null);
+
+/** 選択肢文字列→配列を解決するマップ */
+const optionsMap: Record<string, readonly import('@/types/fieldLayout').FieldOption[]> = {
+  TYPE_OPTIONS,
+  INDUSTRY_OPTIONS,
+  ANNUAL_REVENUE_OPTIONS,
+  ACCOUNTING_SOFTWARE_OPTIONS,
+  TAX_FILING_OPTIONS,
+  TAX_MODE_OPTIONS,
+  SIMPLIFIED_CATEGORY_OPTIONS,
+  TAX_METHOD_OPTIONS,
+  CALCULATION_METHOD_OPTIONS,
+  DEFAULT_PAYMENT_OPTIONS,
+  CONSUMPTION_TAX_INTERIM_OPTIONS,
+  NEEDS_OPTIONS,
+  CONTRACT_SCOPE_OPTIONS,
+  BOOKKEEPING_TYPE_OPTIONS,
+  YES_NO_OPTIONS,
+  PAYMENT_METHOD_OPTIONS,
+  PAYMENT_DAY_OPTIONS,
+  STATUS_OPTIONS,
+};
+/** DFGの自動レンダリングに渡す選択肢解決関数 */
+const resolveOptions = (key: string) => optionsMap[key] ?? [];
+
+// カスタムフィールドはlayout.customDefsに統合済み（loadLayout時にAPIから復元）
+// 初期化時にカスタムフィールドをlayout.fieldsに追加
+for (const def of layout.customDefs.value) {
+  layout.addDynamicField({
+    key: def.key,
+    label: def.label,
+    section: def.section,
+    component: def.component,
+    widthPercent: def.widthPercent,
+    order: def.order,
+  });
+}
+
+/** レイアウト管理モード用変数・ハンドラ */
+const isPreviewMode = ref(false);
+const showCustomFieldModal = ref(false);
+const showAddFieldModal = ref(false);
+const addFieldDefaultSection = ref('');
+const sectionKeys = leadSections.map(s => s.key);
+
+/** ＋ボタン→追加専用モーダルを開く */
+const openAddFieldModal = () => {
+  showAddFieldModal.value = true;
+};
+
+/** 初期フィールドのキー一覧（削除不可判定用） */
+const defaultFieldKeys = layout.defaultFields.map(f => f.key);
+
+/** フィールド管理からのフォーカス：該当フィールドへスクロール＋ハイライト */
+const scrollToField = (key: string) => {
+  const el = document.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('dfg-flash');
+    setTimeout(() => el.classList.remove('dfg-flash'), 1500);
+  }
+};
+
+/** フィールド追加ハンドラ */
+const handleAddField = (payload: { label: string; component: import('@/types/fieldLayout').FieldComponent; section: string }) => {
+  const key = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const def: CustomFieldDef = {
+    key,
+    label: payload.label,
+    section: payload.section,
+    component: payload.component,
+    widthPercent: 20,
+    order: 100 + layout.customDefs.value.length,
+  };
+  layout.customDefs.value = [...layout.customDefs.value, def];
+  layout.addDynamicField({
+    key: def.key,
+    label: def.label,
+    section: def.section,
+    component: def.component,
+    widthPercent: def.widthPercent,
+    order: def.order,
+  });
+};
+
+/** フィールド管理保存ハンドラ */
+const handleSaveFieldManagement = (payload: {
+  customDefs: CustomFieldDef[];
+  labelOverrides: Record<string, string>;
+  hiddenFields: string[];
+  deletedFields: string[];
+  fieldOptions: Record<string, import('@/types/fieldLayout').FieldOption[]>;
+}) => {
+  // カスタムフィールドの差分管理（fieldRows順序を壊さない）
+  const oldKeys = new Set(layout.customDefs.value.map(d => d.key));
+  const newKeys = new Set(payload.customDefs.map(d => d.key));
+
+  // 削除されたカスタムフィールドを除去
+  for (const key of oldKeys) {
+    if (!newKeys.has(key)) {
+      layout.removeDynamicField(key);
+    }
+  }
+
+  // 新規追加 or 既存更新
+  for (const def of payload.customDefs) {
+    const existing = layout.fields.value.find(f => f.key === def.key);
+    if (existing) {
+      // 既存: ラベル・セクション等を更新（fieldRows順序は維持）
+      existing.label = def.label;
+      existing.section = def.section;
+      existing.component = def.component;
+    } else {
+      // 新規: 追加（addDynamicFieldがfieldRowsにも追加）
+      layout.addDynamicField({
+        key: def.key,
+        label: def.label,
+        section: def.section,
+        component: def.component,
+        widthPercent: def.widthPercent,
+        order: def.order,
+      });
+    }
+  }
+  layout.customDefs.value = payload.customDefs;
+
+  // ラベル上書きの同期
+  for (const key of Object.keys(layout.labelOverrides.value)) {
+    layout.removeLabelOverride(key);
+  }
+  for (const [key, newLabel] of Object.entries(payload.labelOverrides)) {
+    layout.updateLabelOverride(key, newLabel);
+  }
+
+  // 非表示の同期
+  for (const key of [...layout.hiddenFields.value]) {
+    layout.toggleFieldVisibility(key, true);
+  }
+  for (const key of payload.hiddenFields) {
+    layout.toggleFieldVisibility(key, false);
+  }
+
+  // 論理削除の同期
+  const currentDeleted = new Set(layout.deletedFields.value);
+  const newDeleted = new Set(payload.deletedFields);
+  for (const key of payload.deletedFields) {
+    if (!currentDeleted.has(key)) {
+      layout.softDeleteField(key);
+    }
+  }
+  for (const key of [...layout.deletedFields.value]) {
+    if (!newDeleted.has(key)) {
+      layout.restoreDeletedField(key);
+    }
+  }
+
+  // 選択肢の同期
+  for (const [key, opts] of Object.entries(payload.fieldOptions)) {
+    if (opts.length > 0) {
+      layout.updateFieldOptions(key, opts);
+    }
+  }
+};
+
+const exitLayoutMode = () => {
+  // 未保存の変更がある場合のみスナップショットに巻き戻す
+  // 保存済み（dirty=false）の場合は現在の状態（=保存後の状態）を維持
+  if (layout.isLayoutDirty.value) {
+    layout.cancelLayoutEditing();
+  } else {
+    // 保存済み: 編集状態フラグのみ解除（スナップショット復元しない）
+    layout.isLayoutEditing.value = false;
+  }
+  router.push('/master/leads');
+};
 
 /** 一覧画面からの「レイアウト管理」遷移対応（/master/leads/layout ルート） */
 const isLayoutMode = computed(() => route.name === 'LeadLayout');
-// レイアウト管理モードで遷移された場合のみレイアウト編集をON
+// レイアウト管理モードで遷移された場合のみレイアウト編集をON、それ以外は常にOFF
 watch(isLayoutMode, (v) => {
   if (v && isAdmin) {
     layout.startLayoutEditing();
-  } else if (!v) {
+  } else {
     layout.isLayoutEditing.value = false;
   }
 }, { immediate: true });
 
-const form = reactive<LeadForm>(emptyLeadForm());
-const staffId = ref("");
-const sharedEmail = ref("");
+/** レイアウト編集キャンセル */
+const cancelLayoutEditing = () => {
+  layout.cancelLayoutEditing();
+};
 
-/** 業種リスト（clientOptions.tsから一元参照） */
-const industryOptions = INDUSTRY_OPTIONS;
+/** 新規 or 編集判定 */
+const leadId = computed(() => route.params.leadId as string | undefined);
+const routeIsNew = computed(() => !leadId.value || route.name === 'LeadNew');
+/** コピー新規モード（画面遷移なしで新規作成として保存する） */
+const isCopyNew = ref(false);
+/** 実質的な新規判定（ルート上の新規 or コピー新規） */
+const isNew = computed(() => routeIsNew.value || isCopyNew.value);
+/** 編集モード（false=閲覧、true=編集） */
+const isEditing = ref(false);
+
+const form = reactive<LeadForm>(emptyLeadForm());
+const staffId = ref('');
+const sharedEmail = ref('');
+/** 編集前のスナップショット（キャンセル時の復元用） */
+let originalSnapshot: string = '';
+
+/** 閲覧モード用ラベル変換（leadOptions.ts の getLabel に統一） */
+const accountingSoftwareLabel = computed(() => getLabel(ACCOUNTING_SOFTWARE_OPTIONS, form.accountingSoftware));
+const staffLabel = computed(() => {
+  if (!staffId.value) return UI_MSG.未設定;
+  const s = activeStaffList.value.find(s => s.uuid === staffId.value);
+  return s?.name ?? UI_MSG.不明;
+});
+/** 自動生成URL */
+const uploadUrlStaff = computed(() => leadId.value ? `${location.origin}/#/upload/${leadId.value}/staff` : '');
+const uploadUrlGuest = computed(() => leadId.value ? `${location.origin}/#/guest/${leadId.value}` : '');
+const journalListUrl = computed(() => leadId.value ? `${location.origin}/#/journal-list/${leadId.value}` : '');
+
+/** Drive取込の表示値（自動生成） */
+const driveUrlDisplay = computed(() => {
+  const c = leadId.value ? leads.value.find(cl => cl.leadId === leadId.value) : null;
+  if (!c?.sharedFolderId) return '※保存後に自動生成';
+  return `https://drive.google.com/drive/folders/${c.sharedFolderId}`;
+});
+
+/** 主な連絡手段の表示値（自動判定: contacts配列から判定） */
+const contactDisplay = computed(() => {
+  const contacts = (form as Record<string, unknown>).contacts as { method: string; value: string }[] | undefined;
+  const chatRow = contacts?.find(c => c.method === 'チャット' && c.value);
+  if (chatRow) return 'チャットワーク';
+  const emailRow = contacts?.find(c => c.method === 'メール' && c.value);
+  if (emailRow) return 'メール';
+  // 旧フィールドフォールバック
+  if (form.chatRoomUrl) return 'チャットワーク';
+  if (form.email) return 'メール';
+  return '—';
+});
+
+/** DFGに渡す拡張フォームデータ（自動生成フィールドを含む） */
+const enrichedFormData = computed(() => ({
+  ...(form as unknown as Record<string, unknown>),
+  leadId: leadId.value ?? '（自動発番）',
+  driveUrl: driveUrlDisplay.value,
+  contact: contactDisplay.value,
+  staffId: staffId.value,
+  sharedEmail: sharedEmail.value,
+  uploadUrlStaff: uploadUrlStaff.value,
+  uploadUrlGuest: uploadUrlGuest.value,
+}));
+/** クリップボードコピー */
+const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text); };
+
+/** スナップショット取得（現在のフォーム状態を文字列化） */
+const takeSnapshot = () => JSON.stringify({ ...form, staffId: staffId.value, sharedEmail: sharedEmail.value });
+
+/** 編集モードに入る */
+const startEditing = () => {
+  originalSnapshot = takeSnapshot();
+  isEditing.value = true;
+};
+
+/** 変更があるか判定 */
+const hasChanges = () => takeSnapshot() !== originalSnapshot;
 
 const annualTotal = computed(() => {
-  const monthly = form.advisoryFee + form.bookkeepingFee;
+  const monthly = form.advisoryFee + form.bookkeepingFee
+    + (form.socialInsuranceFee ?? 0) + (form.payrollFee ?? 0)
+    + (form.accountingServiceFee ?? 0) + (form.systemFee ?? 0);
   return monthly * 12 + form.settlementFee + form.taxFilingFee;
 });
 
 /** 法人→個人切替時にhasRentalIncomeリセット */
-watch(
-  () => form.type,
-  (v) => {
-    if (v === "corp") form.hasRentalIncome = false;
-  },
-);
+watch(() => form.type, (v) => { if (v === 'corp') form.hasRentalIncome = false; });
+
+/** ファイルアップロードハンドラ */
+const handleFileUpload = async (fieldKey: string, files: FileList) => {
+  console.log('[leadEdit] ファイルアップロード開始:', leadId.value, fieldKey, Array.from(files).map(f => f.name));
+  if (!leadId.value) { console.warn('[leadEdit] leadIdがない'); return; }
+  for (const file of Array.from(files)) {
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch(`/api/attachments/${leadId.value}`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.ok && data.attachment) {
+        const current = ((form as Record<string, unknown>)[fieldKey] as unknown[]) ?? [];
+        const updated = [...current, data.attachment];
+        (form as Record<string, unknown>)[fieldKey] = updated;
+        console.log(`[leadEdit] form[${fieldKey}]更新:`, updated.length, '件');
+      } else {
+        console.error('[leadEdit] APIエラー:', data);
+      }
+    } catch (err) {
+      console.error('[leadEdit] ファイルアップロード失敗:', err);
+    }
+  }
+};
+
+/** ファイル削除ハンドラ */
+const handleFileDelete = async (fieldKey: string, fileId: string) => {
+  if (!leadId.value) return;
+  try {
+    await fetch(`/api/attachments/${leadId.value}/${fileId}`, { method: 'DELETE' });
+    const list = (form as Record<string, unknown>)[fieldKey] as { id: string }[] ?? [];
+    (form as Record<string, unknown>)[fieldKey] = list.filter(f => f.id !== fileId);
+  } catch (err) {
+    console.error('[leadEdit] ファイル削除失敗:', err);
+  }
+};
 
 /** メンション用スタッフリスト（useStaffから取得） */
 const { staffList: mentionStaffList } = useStaff();
 
-/** 編集モード: 既存データをフォームに読み込み */
-onMounted(async () => {
-  layout.loadLayout();
-
-  // レイアウト管理モード: データ読込不要
-  if (isLayoutMode.value) return;
-
-  // コピーデータがあれば復元
-  const copyRaw = sessionStorage.getItem("clientCopyData");
-  if (isNew.value && copyRaw) {
-    try {
-      const copyData = JSON.parse(copyRaw);
-      const { staffId: sId, sharedEmail: sEmail, ...rest } = copyData;
-      Object.assign(form, rest);
-      staffId.value = sId ?? "";
-      sharedEmail.value = sEmail ?? "";
-    } catch {
-      /* 無視 */
-    }
-    sessionStorage.removeItem("clientCopyData");
-  } else if (!isNew.value && leadId.value) {
-    const c = leads.value.find((cl: Lead) => cl.leadId === leadId.value);
-    if (!c) {
-      router.replace("/master/leads");
-      return;
-    }
+/** 既存データをフォームに読み込み */
+const loadLeadData = () => {
+  if (leadId.value) {
+    const c = leads.value.find(cl => cl.leadId === leadId.value);
+    if (!c) { router.replace('/master/leads'); return; }
     const { leadId: _id, contact, extraFields: ef, ...rest } = c;
     Object.assign(form, { ...rest, contactType: contact.type, contactValue: contact.value });
     // カスタムフィールドの値をextraFieldsからフォームのトップレベルに展開
@@ -303,53 +704,113 @@ onMounted(async () => {
         { name: '', method: 'メール', value: c.email || '', usage: '', memo: '' },
         { name: '', method: 'チャット', value: c.chatRoomUrl || '', usage: '', memo: '' },
       ];
+      // 既存contactsがあればマージ
       if (c.contacts) {
         for (let i = 0; i < c.contacts.length && i < 3; i++) {
           const src = c.contacts[i];
-          if (!src) continue;
+          const dst = defaultContacts[i];
+          if (!src || !dst) continue;
           defaultContacts[i] = {
-            name: src.name ?? defaultContacts[i].name,
-            method: src.method ?? defaultContacts[i].method,
-            value: src.value ?? defaultContacts[i].value,
-            usage: src.usage ?? defaultContacts[i].usage,
-            memo: src.memo ?? defaultContacts[i].memo,
+            name: src.name ?? dst.name,
+            method: src.method ?? dst.method,
+            value: src.value ?? dst.value,
+            usage: src.usage ?? dst.usage,
+            memo: src.memo ?? dst.memo,
           };
         }
       }
       (form as Record<string, unknown>).contacts = defaultContacts;
     }
-    staffId.value = c.staffId ?? "";
-    sharedEmail.value = c.sharedEmail ?? "";
+    staffId.value = c.staffId ?? '';
+    sharedEmail.value = c.sharedEmail ?? '';
   }
-  loadComments();
+};
+
+/** スナップショットからフォームを復元 */
+const restoreFromSnapshot = () => {
+  try {
+    const data = JSON.parse(originalSnapshot);
+    const { staffId: sId, sharedEmail: sEmail, ...rest } = data;
+    Object.assign(form, rest);
+    staffId.value = sId ?? '';
+    sharedEmail.value = sEmail ?? '';
+  } catch { /* 復元失敗時は何もしない */ }
+};
+
+onMounted(async () => {
+  initPage();
 });
 
-const goBack = () => router.push("/master/leads");
+/** ルート変更時（同一コンポーネント間遷移）にフォームを再初期化 */
+watch(() => route.fullPath, () => {
+  initPage();
+});
 
-/** コピーして新規作成 */
+/** ページ初期化（新規/既存の判定とフォーム設定） */
+const initPage = () => {
+  // コピー新規モードをリセット
+  isCopyNew.value = false;
+
+  // レイアウト管理モード: データ読込不要（空フォームでプレビュー）
+  if (isLayoutMode.value) {
+    Object.assign(form, emptyLeadForm());
+    staffId.value = '';
+    sharedEmail.value = '';
+    isEditing.value = false;
+    return;
+  }
+
+  if (routeIsNew.value) {
+    // 新規作成: フォームをまっさらにして編集モード
+    Object.assign(form, emptyLeadForm());
+    staffId.value = '';
+    sharedEmail.value = '';
+    isEditing.value = true;
+    comments.value = [];
+  } else {
+    // 既存顧問先: データ読み込み → 閲覧モード
+    loadLeadData();
+    isEditing.value = false;
+  }
+  originalSnapshot = takeSnapshot();
+  loadComments();
+};
+
+/** キャンセル処理 */
+const onCancel = async () => {
+  // 変更があればconfirm
+  if (hasChanges()) {
+    const ok = await modal.confirm({ title: UI_MSG.変更破棄確認, message: UI_MSG.変更破棄補足, confirmLabel: UI_MSG.破棄する, cancelLabel: UI_MSG.編集を続ける, variant: 'danger' });
+    if (!ok) return;
+  }
+
+  if (routeIsNew.value) {
+    // 新規登録 or コピー新規: 直前の画面に戻る
+    router.back();
+    return;
+  }
+
+  // 既存編集: スナップショットから復元 → 閲覧モードに戻る（画面遷移なし）
+  restoreFromSnapshot();
+  isEditing.value = false;
+  isCopyNew.value = false;
+};
+
+/** コピーして新規作成（画面遷移なし） */
 const copyAndCreate = () => {
-  // 現在のフォームデータをsessionStorageに保存して新規ページに遷移
-  sessionStorage.setItem(
-    "clientCopyData",
-    JSON.stringify({
-      ...form,
-      staffId: staffId.value,
-      sharedEmail: sharedEmail.value,
-    }),
-  );
-  router.push("/master/leads/new");
+  // leadId・3コードをクリアして新規作成モードに切替
+  form.threeCode = '';
+  isCopyNew.value = true;
+  isEditing.value = true;
+  comments.value = [];
+  originalSnapshot = takeSnapshot();
 };
 
 // --- コメント機能 ---
-interface LeadComment {
-  id: string;
-  author: string;
-  body: string;
-  date: string;
-}
-const newComment = ref("");
+interface LeadComment { id: string; author: string; body: string; date: string; }
+const newComment = ref('');
 const comments = ref<LeadComment[]>([]);
-const commentStorageKey = computed(() => `lead-comments-${leadId.value || "new"}`);
+const commentStorageKey = computed(() => `lead-comments-${leadId.value || 'new'}`);
 const commentTextarea = ref<HTMLTextAreaElement | null>(null);
 
 const loadComments = async () => {
@@ -361,6 +822,7 @@ const loadComments = async () => {
     if (lsRaw) {
       const lsComments = JSON.parse(lsRaw) as LeadComment[];
       if (lsComments.length > 0) {
+        // localStorageのデータをAPIに移行
         for (const c of lsComments) {
           await fetch('/api/comments', {
             method: 'POST',
@@ -368,7 +830,7 @@ const loadComments = async () => {
             body: JSON.stringify({ ...c, entityType: 'lead', entityId: leadId.value }),
           });
         }
-        console.log(`[LeadEdit] コメント${lsComments.length}件をlocalStorage→APIに移行`);
+        console.log(`[leadEdit] コメント${lsComments.length}件をlocalStorage→APIに移行`);
       }
       localStorage.removeItem(lsKey);
     }
@@ -391,84 +853,62 @@ const addComment = async () => {
   showMentionPopup.value = false;
   const body = newComment.value.trim();
   const cmtId = `cmt-${crypto.randomUUID().slice(0, 8)}`;
-  const comment: LeadComment = {
-    id: cmtId,
-    author: currentUserName.value,
-    body,
-    date: new Date().toLocaleString("ja-JP"),
-  };
+  const comment: LeadComment = { id: cmtId, author: currentUserName.value, body, date: new Date().toLocaleString('ja-JP') };
   comments.value.unshift(comment);
-  newComment.value = "";
+  newComment.value = '';
   // テキストエリアの高さをリセット
   if (commentTextarea.value) {
-    commentTextarea.value.style.height = "auto";
+    commentTextarea.value.style.height = 'auto';
   }
   await saveComment(comment);
   // メンション通知をサーバーAPIに委譲（フロントにロジックなし）
-  if (body.includes("@")) {
+  if (body.includes('@')) {
     sendMentionNotification({
       commentBody: body,
       authorName: currentUserName.value,
-      authorStaffId: myStaffId.value ?? "",
-      leadId: leadId.value ?? "",
+      authorStaffId: myStaffId.value ?? '',
+      leadId: leadId.value ?? '',
       clientName: form.companyName || UI_MSG.新規見込先,
     });
   }
 };
 const deleteComment = async (id: string) => {
-  comments.value = comments.value.filter((c) => c.id !== id);
+  comments.value = comments.value.filter(c => c.id !== id);
   await fetch(`/api/comments/${id}`, { method: 'DELETE' });
 };
 
 /** @メンションをハイライト表示 */
 const renderMentions = (text: string): string => {
   // URL自動リンク化（メンション処理の前に実行）
-  let html = text.replace(
-    /(https?:\/\/[^\s<]+)/g,
-    '<a href="$1" target="_blank" rel="noopener" class="ce-comment-link">$1</a>',
-  );
+  let html = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="ce-comment-link">$1</a>');
   // @メンションハイライト
-  html = html.replace(
-    /@([\u3000-\u9FFF\w\s]+?)(?=\s|$|@)/g,
-    '<span class="ce-mention-tag">@$1</span>',
-  );
+  html = html.replace(/@([\u3000-\u9FFF\w\s]+?)(?=\s|$|@)/g, '<span class="ce-mention-tag">@$1</span>');
   return html;
 };
 
 // --- メンションポップアップ ---
 const showMentionPopup = ref(false);
-const mentionQuery = ref("");
+const mentionQuery = ref('');
 const mentionStart = ref(0);
 const mentionIndex = ref(0);
 
 const mentionCandidates = computed(() => {
   // @all 候補を先頭に追加
-  const allEntry: Staff = {
-    uuid: "__all__",
-    name: UI_MSG.全員候補名,
-    email: "",
-    role: "general" as const,
-    status: "active" as const,
-  };
+  const allEntry: Staff = { uuid: '__all__', name: UI_MSG.全員候補名, email: '', role: 'general' as const, status: 'active' as const };
   const staffEntries = mentionStaffList.value;
   if (!mentionQuery.value) return [allEntry, ...staffEntries];
   const q = mentionQuery.value.toLowerCase();
-  if ("all".includes(q) || MENTION_ALL_KEYWORD.includes(q)) {
-    return [
-      allEntry,
-      ...staffEntries.filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) ||
-          s.email.toLowerCase().includes(q) ||
-          (s.nameRomaji && s.nameRomaji.toLowerCase().includes(q)),
-      ),
-    ];
-  }
-  return staffEntries.filter(
-    (s) =>
+  if ('all'.includes(q) || MENTION_ALL_KEYWORD.includes(q)) {
+    return [allEntry, ...staffEntries.filter(s =>
       s.name.toLowerCase().includes(q) ||
       s.email.toLowerCase().includes(q) ||
-      (s.nameRomaji && s.nameRomaji.toLowerCase().includes(q)),
+      (s.nameRomaji && s.nameRomaji.toLowerCase().includes(q))
+    )];
+  }
+  return staffEntries.filter(s =>
+    s.name.toLowerCase().includes(q) ||
+    s.email.toLowerCase().includes(q) ||
+    (s.nameRomaji && s.nameRomaji.toLowerCase().includes(q))
   );
 });
 
@@ -476,17 +916,16 @@ const onCommentInput = () => {
   const ta = commentTextarea.value;
   if (!ta) return;
   // テキストエリア自動拡張
-  ta.style.height = "auto";
-  ta.style.height = ta.scrollHeight + "px";
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
   const pos = ta.selectionStart;
   const text = newComment.value.slice(0, pos);
   const atMatch = text.match(/@([^@]*)$/);
   if (atMatch) {
-    const query = atMatch[1] ?? "";
+    const query = atMatch[1] ?? '';
     // 確定済みメンションチェック: @名前 の後にスペースがあれば確定済み
-    const isConfirmed =
-      query.startsWith("all ") ||
-      mentionStaffList.value.some((s) => query.startsWith(s.name + " "));
+    const isConfirmed = query.startsWith('all ') ||
+      mentionStaffList.value.some(s => query.startsWith(s.name + ' '));
     if (isConfirmed) {
       showMentionPopup.value = false;
       return;
@@ -502,24 +941,24 @@ const onCommentInput = () => {
 
 const onMentionKeydown = (e: KeyboardEvent) => {
   if (!showMentionPopup.value) return;
-  if (e.key === "ArrowDown") {
+  if (e.key === 'ArrowDown') {
     e.preventDefault();
     mentionIndex.value = Math.min(mentionIndex.value + 1, mentionCandidates.value.length - 1);
-  } else if (e.key === "ArrowUp") {
+  } else if (e.key === 'ArrowUp') {
     e.preventDefault();
     mentionIndex.value = Math.max(mentionIndex.value - 1, 0);
-  } else if (e.key === "Enter" && !e.ctrlKey) {
+  } else if (e.key === 'Enter' && !e.ctrlKey) {
     e.preventDefault();
     const candidate = mentionCandidates.value[mentionIndex.value];
     if (candidate) selectMention(candidate);
-  } else if (e.key === "Escape") {
+  } else if (e.key === 'Escape') {
     showMentionPopup.value = false;
   }
 };
 
 const selectMention = (staff: Staff) => {
   if (!commentTextarea.value) return;
-  const insertName = staff.uuid === "__all__" ? "all" : staff.name;
+  const insertName = staff.uuid === '__all__' ? 'all' : staff.name;
   const before = newComment.value.slice(0, mentionStart.value);
   const after = newComment.value.slice(commentTextarea.value?.selectionStart ?? mentionStart.value);
   newComment.value = `${before}@${insertName} ${after}`;
@@ -532,23 +971,18 @@ const selectMention = (staff: Staff) => {
 };
 
 const saveLead = async () => {
+  if (!form.threeCode) {
+    await modal.notify({ title: UI_MSG.コード必須, message: UI_MSG.コード必須補足, variant: 'warning' });
+    return;
+  }
   if (!form.companyName && !form.repName) {
-    await modal.notify({
-      title: UI_MSG.名前必須,
-      variant: "warning",
-    });
+    await modal.notify({ title: UI_MSG.名前必須, variant: 'warning' });
     return;
   }
   if (form.threeCode) {
-    const dup = leads.value.find(
-      (c: Lead) => c.threeCode === form.threeCode && c.leadId !== leadId.value,
-    );
+    const dup = leads.value.find(c => c.threeCode === form.threeCode && c.leadId !== leadId.value);
     if (dup) {
-      await modal.notify({
-        title: UI_MSG.コード重複,
-        message: `「${dup.companyName}（${dup.leadId}）」${UI_MSG.コード既使用}`,
-        variant: "warning",
-      });
+      await modal.notify({ title: UI_MSG.コード重複, message: `「${dup.companyName}（${dup.leadId}）」${UI_MSG.コード既使用}`, variant: 'warning' });
       return;
     }
   }
@@ -569,6 +1003,13 @@ const saveLead = async () => {
     cleanFields.extraFields = extraFields;
   }
 
+  // 自動算出: 月次合計・年間総報酬を計算
+  const monthly = (form.advisoryFee || 0) + (form.bookkeepingFee || 0)
+    + ((form as any).socialInsuranceFee ?? 0) + ((form as any).payrollFee ?? 0)
+    + ((form as any).accountingServiceFee ?? 0) + ((form as any).systemFee ?? 0);
+  cleanFields.monthlyTotal = monthly;
+  cleanFields.annualTotal = monthly * 12 + (form.settlementFee || 0) + (form.taxFilingFee || 0);
+
   // contacts→旧フィールド同期（後方互換）
   const contacts = (cleanFields.contacts as { method: string; value: string }[]) ?? [];
   const phoneRow = contacts.find(r => r.method === '電話');
@@ -583,34 +1024,33 @@ const saveLead = async () => {
     const data = { ...cleanFields, staffId: staffId.value || null, sharedEmail: sharedEmail.value, contact: { type: contactType, value: contactValue } };
     try {
       const saved = await addLead(data as Omit<Lead, 'leadId'>);
-      createDriveFolderForLead(saved).catch((e) => console.error("[leads] Driveフォルダ作成失敗:", e));
-      await modal.notify({
-        title: `「${saved.companyName}」${UI_MSG.追加完了}`,
-        message: UI_MSG.マスタ自動コピー完了,
-        variant: "success",
-      });
+      createDriveFolderForLead(saved).catch(e => console.error('[leads] Driveフォルダ作成失敗:', e));
+      await modal.notify({ title: `「${saved.companyName}」${UI_MSG.追加完了}`, message: UI_MSG.マスタ自動コピー完了, variant: 'success' });
       router.push(`/master/leads/${saved.leadId}`);
     } catch (err) {
       await modal.notify({ title: UI_MSG.見込先追加失敗, message: String(err), variant: 'warning' });
     }
   } else {
+    // 既存更新
     const id = leadId.value!;
-    const data = { ...cleanFields, leadId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, contact: { type: contactType, value: contactValue } } as Lead;
+    const data: Lead = { ...cleanFields, leadId: id, staffId: staffId.value || null, sharedEmail: sharedEmail.value, contact: { type: contactType, value: contactValue } } as Lead;
     try {
-      const old = leads.value.find((l: Lead) => l.leadId === id);
+      const old = leads.value.find(c => c.leadId === id);
       await updateLeadLocal(id, data);
       if (old && old.threeCode !== data.threeCode) {
         const renamed = await renameDriveFolderForLead(data);
-        if (renamed)
-          await modal.notify({ title: `${UI_MSG.ドライブ名変更}${renamed}${UI_MSG.に変更}`, variant: "success" });
+        if (renamed) await modal.notify({ title: `${UI_MSG.ドライブ名変更}${renamed}${UI_MSG.に変更}`, variant: 'success' });
       }
-      await modal.notify({ title: `「${data.companyName}」${UI_MSG.更新完了}`, variant: "success" });
-      router.push("/master/leads");
+      await modal.notify({ title: `「${data.companyName}」${UI_MSG.更新完了}`, variant: 'success' });
+      isEditing.value = false;
+      isCopyNew.value = false;
+      originalSnapshot = takeSnapshot();
     } catch (err) {
       await modal.notify({ title: UI_MSG.見込先更新失敗, message: String(err), variant: 'warning' });
     }
   }
 };
+
 
 /** Driveフォルダ自動作成 */
 const createDriveFolderForLead = async (lead: Lead) => {
@@ -618,539 +1058,243 @@ const createDriveFolderForLead = async (lead: Lead) => {
   try {
     const folderId = await createFolder(folderName, lead.sharedEmail || undefined);
     updateSharedFolderId(lead.leadId, folderId);
-  } catch (e) {
-    console.error(`[leads] Driveフォルダ作成失敗:`, e);
-  }
+  } catch (e) { console.error(`[leads] Driveフォルダ作成失敗:`, e); }
 };
 
 /** Driveフォルダリネーム */
-const renameDriveFolderForLead = async (ld: Lead): Promise<string | null> => {
-  if (!ld.sharedFolderId) return null;
-  const newName = `${ld.threeCode}_${ld.companyName}`;
+const renameDriveFolderForLead = async (lead: Lead): Promise<string | null> => {
+  if (!lead.sharedFolderId) return null;
+  const newName = `${lead.threeCode}_${lead.companyName}`;
   try {
-    return await renameFolder(ld.sharedFolderId, newName);
+    return await renameFolder(lead.sharedFolderId, newName);
+  } catch (e) { console.error(`[leads] Driveフォルダリネーム失敗:`, e); return null; }
+};
+
+// ============================================================
+// 見込先→顧問先昇格
+// ============================================================
+
+const isConverting = ref(false);
+
+/** 見込先→顧問先昇格 */
+const convertToClient = async () => {
+  const leadId = route.params.leadId as string;
+  if (!leadId || isNew.value) return;
+
+  const confirmed = await modal.confirm({
+    title: '顧問先ページを作成',
+    message: `「${form.companyName || form.repName}」を顧問先として登録しますか？\n\n見込先のデータが顧問先にコピーされ、この見込先は「顧問先化済」に変更されます。`,
+  });
+  if (!confirmed) return;
+
+  isConverting.value = true;
+  try {
+    const res = await fetch(`/api/leads/${encodeURIComponent(leadId)}/convert`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
+      throw new Error((err as { message?: string }).message || `HTTP ${res.status}`);
+    }
+    const data = await res.json() as { ok: boolean; client: { clientId: string; companyName: string; threeCode: string; sharedEmail: string } };
+
+    // Driveフォルダ自動作成（失敗しても昇格自体は成功扱い）
+    try {
+      const folderName = `${data.client.threeCode}_${data.client.companyName}`;
+      const folderId = await createFolder(folderName, data.client.sharedEmail || undefined);
+      // 顧問先のsharedFolderIdを更新
+      await fetch(`/api/clients/${data.client.clientId}/shared-folder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderId }),
+      });
+    } catch (driveErr) {
+      console.error('[leads] 昇格時Driveフォルダ作成失敗:', driveErr);
+    }
+
+    await modal.notify({
+      title: '顧問先化完了',
+      message: `「${data.client.companyName}」を顧問先として登録しました。\n顧問先ページに移動します。`,
+      variant: 'success',
+    });
+    router.push(`/master/clients/${data.client.clientId}`);
   } catch (e) {
-    console.error(`[leads] Driveフォルダリネーム失敗:`, e);
-    return null;
+    await modal.notify({
+      title: '顧問先化失敗',
+      message: String(e),
+      variant: 'error',
+    });
+  } finally {
+    isConverting.value = false;
   }
 };
 </script>
 
 <style scoped>
 /* ページ全体 */
-.ce-page {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  font-family: "Meiryo", "Noto Sans JP", sans-serif;
-  font-size: 13px;
-}
+.ce-page { height: 100%; display: flex; flex-direction: column; background: #fff; font-family: 'Meiryo', 'Noto Sans JP', sans-serif; font-size: 13px; }
 
-/* ヘッダー1行目: 見込管理タイトル */
-.ce-header-top {
-  padding: 12px 24px;
-  background: #0284c7;
-}
-.ce-page-label {
-  font-size: 18px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.5px;
-}
+/* ヘッダー1行目: 顧問先管理タイトル */
+.ce-header-top { padding: 12px 24px; background: #0284c7; }
+.ce-page-label { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
 
 /* ヘッダー2行目 */
-.ce-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 24px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
-  flex-shrink: 0;
-}
-.ce-header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.ce-header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.ce-back-btn {
-  background: none;
-  border: none;
-  color: #3b82f6;
-  cursor: pointer;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  transition: background 0.15s;
-}
-.ce-back-btn:hover {
-  background: #eff6ff;
-}
-.ce-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0;
-}
-.ce-client-id {
-  font-size: 12px;
-  color: #94a3b8;
-  background: #f1f5f9;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
+.ce-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background: #fff; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
+.ce-header-left { display: flex; align-items: center; gap: 16px; }
+.ce-header-right { display: flex; align-items: center; gap: 8px; }
+.ce-back-btn { background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 6px; transition: background 0.15s; }
+.ce-back-btn:hover { background: #eff6ff; }
+.ce-title { font-size: 18px; font-weight: 700; color: #1e293b; margin: 0; }
+.ce-lead-id { font-size: 12px; color: #94a3b8; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; }
 
 /* ボタン */
-.ce-btn {
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.ce-btn-save {
-  background: #3b82f6;
-  color: #fff;
-}
-.ce-btn-save:hover {
-  background: #2563eb;
-}
-.ce-btn-cancel {
-  background: #f1f5f9;
-  color: #475569;
-}
-.ce-btn-cancel:hover {
-  background: #e2e8f0;
-}
-.ce-btn-warn {
-  background: #fef3c7;
-  color: #92400e;
-}
-.ce-btn-warn:hover {
-  background: #fde68a;
-}
-.ce-btn-danger {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.ce-btn-danger:hover {
-  background: #fecaca;
-}
-.ce-btn-restore {
-  background: #dcfce7;
-  color: #166534;
-}
-.ce-btn-restore:hover {
-  background: #bbf7d0;
-}
+.ce-btn { border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.ce-btn-save { background: #3b82f6; color: #fff; }
+.ce-btn-save:hover { background: #2563eb; }
+.ce-btn-cancel { background: #f1f5f9; color: #475569; }
+.ce-btn-cancel:hover { background: #e2e8f0; }
+.ce-btn-layout-cancel { background: #ef4444; color: #fff; }
+.ce-btn-layout-cancel:hover { background: #dc2626; }
+.ce-btn-undo, .ce-btn-redo { background: #f1f5f9; color: #475569; min-width: 32px; padding: 4px 8px; }
+.ce-btn-undo:hover, .ce-btn-redo:hover { background: #e2e8f0; }
+.ce-btn-undo:disabled, .ce-btn-redo:disabled { opacity: 0.35; cursor: not-allowed; }
+.ce-btn-preview { background: #f1f5f9; color: #475569; padding: 4px 12px; gap: 4px; display: inline-flex; align-items: center; }
+.ce-btn-preview:hover { background: #e2e8f0; }
+.ce-btn-preview.active { background: #3b82f6; color: #fff; }
+
+.ce-link-url { color: #2563eb; text-decoration: underline; word-break: break-all; }
+.ce-btn-custom { background: #8b5cf6; color: #fff; }
+.ce-btn-custom:hover { background: #7c3aed; }
+.ce-btn-back { background: none; border: 1px solid #d1d5db; color: #475569; display: flex; align-items: center; gap: 6px; }
+.ce-btn-back:hover { background: #f1f5f9; color: #1e293b; }
+.ce-btn-convert { background: #059669; color: #fff; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.ce-btn-convert:hover { background: #047857; }
+.ce-btn-convert:disabled { opacity: 0.5; cursor: not-allowed; }
+.ce-converted-badge { display: inline-flex; align-items: center; gap: 4px; color: #6b7280; font-size: 13px; padding: 4px 10px; background: #f3f4f6; border-radius: 4px; }
+
+/* 閲覧モード用テキスト表示（薄灰色背景の枠付きボックス） */
+.ce-readonly { font-size: 13px; color: #333; padding: 6px 8px; min-height: 18px; line-height: 1.4; background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 3px; }
+.ce-readonly.ce-muted { color: #999; font-size: 12px; background: #fafafa; }
+.ce-readonly.ce-code { font-family: 'Consolas', 'Monaco', monospace; font-weight: 700; font-size: 13px; color: #0284c7; letter-spacing: 1px; }
+.ce-btn-warn { background: #fef3c7; color: #92400e; }
+.ce-btn-warn:hover { background: #fde68a; }
+.ce-btn-danger { background: #fee2e2; color: #991b1b; }
+.ce-btn-danger:hover { background: #fecaca; }
+.ce-btn-restore { background: #dcfce7; color: #166534; }
+.ce-btn-restore:hover { background: #bbf7d0; }
 
 /* ボディ */
-.ce-body {
-  flex: 1;
+.ce-body { flex: 1; overflow-y: auto; padding: 0 16px 16px; display: flex; gap: 16px; }
+.ce-main { flex: 1; min-width: 0; overflow-y: auto; }
+
+/* レイアウト管理モード: パーツパレット（右1/4） */
+.ce-palette-panel {
+  flex: 0 0 25%;
+  max-width: 280px;
+  min-width: 200px;
   overflow-y: auto;
-  padding: 0 16px 16px;
-  display: flex;
-  gap: 16px;
-}
-.ce-main {
-  flex: 1;
-  min-width: 0;
-  overflow-y: auto;
+  border-radius: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 
 /* セクション（kintone風: フラット、カードなし） */
-.ce-section {
-  background: none;
-  border-radius: 0;
-  padding: 0;
-  margin-bottom: 8px;
-  box-shadow: none;
-}
-.ce-section-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  margin: 0 0 12px;
-  padding: 6px 12px;
-  border-bottom: none;
-  background: #4a8dc9;
-  border-radius: 0;
-}
+.ce-section { background: none; border-radius: 0; padding: 0; margin-bottom: 8px; box-shadow: none; }
+.ce-section-title { font-size: 14px; font-weight: 700; color: #fff; margin: 0 0 12px; padding: 6px 12px; border-bottom: none; background: #4a8dc9; border-radius: 0; }
 
 /* グリッド */
-.ce-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-.ce-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-.ce-grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-.ce-grid-5 {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
-}
-.ce-field-wide {
-  grid-column: span 2;
-}
+.ce-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.ce-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 12px; }
+.ce-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 12px; }
+.ce-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px 12px; }
+.ce-field-wide { grid-column: span 2; }
 
 /* フィールド */
-.ce-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.ce-field label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #333;
-}
-.ce-input {
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  padding: 6px 8px;
-  font-size: 13px;
-  transition: border-color 0.15s;
-  background: #fff;
-}
-.ce-input:focus {
-  border-color: #4a8dc9;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(74, 141, 201, 0.15);
-}
+.ce-field { display: flex; flex-direction: column; gap: 2px; }
+.ce-field label { font-size: 11px; font-weight: 700; color: #333; }
+.ce-input { width: 100%; border: 1px solid #ccc; border-radius: 3px; padding: 6px 8px; font-size: 13px; transition: border-color 0.15s; background: #fff; box-sizing: border-box; }
+.ce-input:focus { border-color: #4a8dc9; outline: none; box-shadow: 0 0 0 2px rgba(74,141,201,0.15); }
 .ce-input:disabled { background: #f5f5f5; color: #999; }
-.ce-select {
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  padding: 6px 8px;
-  font-size: 13px;
-  background: #fff;
-}
+.ce-select { width: 100%; border: 1px solid #ccc; border-radius: 3px; padding: 6px 8px; font-size: 13px; background: #fff; box-sizing: border-box; }
 .ce-w-sm { max-width: 160px; }
 .ce-hint { font-size: 10px; color: #999; font-weight: 400; }
+.ce-required { color: #e74c3c; font-weight: 700; font-size: 13px; }
 
 /* ラジオ/チェックボックス */
-.ce-radio-group {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-.ce-radio-group label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.ce-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-}
+.ce-radio-group { display: flex; gap: 16px; align-items: center; }
+.ce-radio-group label { display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; }
+.ce-checkbox { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
 /* 日付グループ */
-.ce-date-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.ce-date-group { display: flex; align-items: center; gap: 8px; }
 
 /* 金額 */
-.ce-amount {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.ce-amount span {
-  font-size: 13px;
-  color: #475569;
-}
-.ce-computed {
-  background: #f8fafc;
-  padding: 12px;
-  border-radius: 8px;
-}
-.ce-computed-val {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1e293b;
-}
+.ce-amount { display: flex; align-items: center; gap: 8px; }
+.ce-amount span { font-size: 13px; color: #475569; }
+.ce-computed { background: #f8fafc; padding: 12px; border-radius: 8px; }
+.ce-computed-val { font-size: 16px; font-weight: 700; color: #1e293b; }
 
 /* 通知 */
-.ce-notice {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 8px;
-  padding: 12px 16px;
-  font-size: 13px;
-  color: #1e40af;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.ce-notice { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #1e40af; display: flex; align-items: center; gap: 8px; }
 
 /* アクションアイコン */
-.ce-action-icons {
-  display: flex;
-  gap: 4px;
-  margin-left: 8px;
-}
-.ce-icon-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid #d1d5db;
-  background: #fff;
-  color: #64748b;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  transition: all 0.15s;
-}
-.ce-icon-btn:hover {
-  background: #f1f5f9;
-  color: #3b82f6;
-  border-color: #3b82f6;
-}
-.ce-icon-active {
-  background: #3b82f6;
-  color: #fff;
-  border-color: #3b82f6;
-}
-.ce-icon-active:hover {
-  background: #2563eb;
-}
+.ce-action-icons { display: flex; gap: 4px; margin-left: 8px; }
+.ce-icon-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #d1d5db; background: #fff; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.15s; }
+.ce-icon-btn:hover { background: #f1f5f9; color: #3b82f6; border-color: #3b82f6; }
+.ce-icon-active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.ce-icon-active:hover { background: #2563eb; }
 
 /* コメントパネル */
-.ce-comment-panel {
-  width: 320px;
-  flex-shrink: 0;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 100px);
-}
-.ce-comment-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0;
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.ce-comment-input-area {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f1f5f9;
-}
-.ce-comment-input {
-  width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 8px 40px 8px 12px;
-  font-size: 13px;
-  resize: none;
-  font-family: inherit;
-  overflow: hidden;
-  min-height: 36px;
-  box-sizing: border-box;
-  field-sizing: content;
-}
-.ce-comment-input:focus {
-  border-color: #3b82f6;
-  outline: none;
-}
-.ce-comment-submit {
-  position: absolute;
-  right: 8px;
-  bottom: 6px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: none;
-  background: #3b82f6;
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  transition: background 0.15s;
-  flex-shrink: 0;
-}
-.ce-comment-submit:hover {
-  background: #2563eb;
-}
-.ce-comment-submit:disabled {
-  background: #cbd5e1;
-  cursor: not-allowed;
-}
-.ce-comment-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 0;
-}
-.ce-comment-empty {
-  padding: 24px 16px;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 13px;
-}
-.ce-comment-item {
-  padding: 10px 16px;
-  border-bottom: 1px solid #f8fafc;
-}
-.ce-comment-item:hover {
-  background: #f8fafc;
-}
-.ce-comment-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-.ce-comment-author {
-  font-size: 12px;
-  font-weight: 600;
-  color: #1e293b;
-}
-.ce-comment-date {
-  font-size: 10px;
-  color: #94a3b8;
-}
-.ce-comment-delete {
-  background: none;
-  border: none;
-  color: #cbd5e1;
-  cursor: pointer;
-  font-size: 11px;
-  margin-left: auto;
-  padding: 2px;
-}
-.ce-comment-delete:hover {
-  color: #ef4444;
-}
-.ce-comment-body {
-  font-size: 13px;
-  color: #475569;
-  margin: 0;
-  white-space: pre-wrap;
-  line-height: 1.5;
-}
+.ce-comment-panel { width: 320px; flex-shrink: 0; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; flex-direction: column; max-height: calc(100vh - 100px); }
+.ce-comment-title { font-size: 14px; font-weight: 700; color: #1e293b; margin: 0; padding: 16px 16px 12px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
+.ce-comment-input-area { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; }
+.ce-comment-input { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 40px 8px 12px; font-size: 13px; resize: none; font-family: inherit; overflow: hidden; min-height: 36px; box-sizing: border-box; field-sizing: content; }
+.ce-comment-input:focus { border-color: #3b82f6; outline: none; }
+.ce-comment-submit { position: absolute; right: 8px; bottom: 6px; width: 28px; height: 28px; border-radius: 50%; border: none; background: #3b82f6; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: background 0.15s; flex-shrink: 0; }
+.ce-comment-submit:hover { background: #2563eb; }
+.ce-comment-submit:disabled { background: #cbd5e1; cursor: not-allowed; }
+.ce-comment-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+.ce-comment-empty { padding: 24px 16px; text-align: center; color: #94a3b8; font-size: 13px; }
+.ce-comment-item { padding: 10px 16px; border-bottom: 1px solid #f8fafc; }
+.ce-comment-item:hover { background: #f8fafc; }
+.ce-comment-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ce-comment-author { font-size: 12px; font-weight: 600; color: #1e293b; }
+.ce-comment-date { font-size: 10px; color: #94a3b8; }
+.ce-comment-delete { background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 11px; margin-left: auto; padding: 2px; }
+.ce-comment-delete:hover { color: #ef4444; }
+.ce-comment-body { font-size: 13px; color: #475569; margin: 0; white-space: pre-wrap; line-height: 1.5; }
 
 /* メンション */
-.ce-mention-wrapper {
-  position: relative;
-}
-.ce-mention-popup {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  max-height: 360px;
-  overflow-y: auto;
-  z-index: 10;
-  margin: 0 0 4px 0;
-}
-.ce-mention-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 14px;
-  border: none;
-  background: none;
-  text-align: left;
-  font-size: 13px;
-  cursor: pointer;
-  color: #1e293b;
-  transition: background 0.1s;
-  border-bottom: 1px solid #f8fafc;
-}
-.ce-mention-item:last-child {
-  border-bottom: none;
-}
-.ce-mention-item:hover,
-.ce-mention-item.active {
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-.ce-mention-name {
-  font-weight: 600;
-}
-.ce-mention-romaji {
-  font-size: 12px;
-  color: #64748b;
-  font-style: italic;
-}
-.ce-mention-item.inactive {
-  opacity: 0.5;
-}
-.ce-mention-badge-inactive {
-  font-size: 10px;
-  color: #ef4444;
-  background: #fee2e2;
-  padding: 1px 6px;
-  border-radius: 8px;
-  margin-left: auto;
-}
-.ce-mention-item.mention-all {
-  background: #eff6ff;
-  border-bottom: 2px solid #dbeafe;
-}
-.ce-mention-item.mention-all .ce-mention-name {
-  color: #2563eb;
-}
-.ce-mention-all-icon {
-  font-size: 16px;
-}
-.ce-mention-empty {
-  padding: 12px;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 12px;
-}
-.ce-comment-body :deep(.ce-mention-tag) {
-  color: #2563eb;
-  font-weight: 600;
-  background: #eff6ff;
-  padding: 0 4px;
-  border-radius: 3px;
-}
-.ce-comment-body :deep(.ce-comment-link) {
-  color: #2563eb;
-  text-decoration: underline;
-  word-break: break-all;
-}
-.ce-comment-body :deep(.ce-comment-link:hover) {
-  color: #1d4ed8;
-}
+.ce-mention-wrapper { position: relative; }
+.ce-mention-popup { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); max-height: 360px; overflow-y: auto; z-index: 10; margin: 0 0 4px 0; }
+.ce-mention-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border: none; background: none; text-align: left; font-size: 13px; cursor: pointer; color: #1e293b; transition: background 0.1s; border-bottom: 1px solid #f8fafc; }
+.ce-mention-item:last-child { border-bottom: none; }
+.ce-mention-item:hover, .ce-mention-item.active { background: #eff6ff; color: #1d4ed8; }
+.ce-mention-name { font-weight: 600; }
+.ce-mention-romaji { font-size: 12px; color: #64748b; font-style: italic; }
+.ce-mention-item.inactive { opacity: 0.5; }
+.ce-mention-badge-inactive { font-size: 10px; color: #ef4444; background: #fee2e2; padding: 1px 6px; border-radius: 8px; margin-left: auto; }
+.ce-mention-item.mention-all { background: #eff6ff; border-bottom: 2px solid #dbeafe; }
+.ce-mention-item.mention-all .ce-mention-name { color: #2563eb; }
+.ce-mention-all-icon { font-size: 16px; }
+.ce-mention-empty { padding: 12px; text-align: center; color: #94a3b8; font-size: 12px; }
+.ce-comment-body :deep(.ce-mention-tag) { color: #2563eb; font-weight: 600; background: #eff6ff; padding: 0 4px; border-radius: 3px; }
+.ce-comment-body :deep(.ce-comment-link) { color: #2563eb; text-decoration: underline; word-break: break-all; }
+.ce-comment-body :deep(.ce-comment-link:hover) { color: #1d4ed8; }
+
+/* Kintone拡張スタイル */
+.ce-sub-title { font-size: 13px; font-weight: 700; color: #fff; margin: 12px 0 8px; padding: 4px 10px; background: #7fb0d4; border-radius: 0; border-bottom: none; }
+.ce-warn-text { color: #ef4444; font-size: 10px; font-weight: 400; }
+.ce-grid-full { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.ce-textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+.ce-pre-wrap { white-space: pre-wrap; }
+.ce-url-row { display: flex; align-items: center; gap: 6px; }
+.ce-url-text { font-size: 12px; color: #64748b; word-break: break-all; }
+.ce-copy-btn { background: none; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: #64748b; font-size: 12px; transition: all 0.15s; }
+.ce-copy-btn:hover { background: #eff6ff; color: #3b82f6; border-color: #3b82f6; }
+.ce-link-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #eff6ff; color: #2563eb; border-radius: 6px; font-size: 13px; text-decoration: none; transition: background 0.15s; }
+.ce-link-btn:hover { background: #dbeafe; }
+.ce-status-active { color: #16a34a; font-weight: 600; }
+.ce-status-suspension { color: #d97706; font-weight: 600; }
+.ce-status-inactive { color: #dc2626; font-weight: 600; }
 
 /* レイアウト編集ボタン */
 .ce-icon-active { background: #dbeafe !important; color: #2563eb !important; border-color: #2563eb !important; }
@@ -1158,3 +1302,5 @@ const renameDriveFolderForLead = async (ld: Lead): Promise<string | null> => {
 .ce-icon-disabled:hover { background: inherit; color: inherit; }
 .ce-btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 4px; }
 </style>
+
+

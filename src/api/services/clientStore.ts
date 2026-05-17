@@ -137,10 +137,6 @@ export function getByStatus(status: ClientStatus): Client[] {
   return clients.filter(c => c.status === status);
 }
 
-/** 会計ソフト別取得 */
-export function getByAccountingSoftware(sw: string): Client[] {
-  return clients.filter(c => c.accountingSoftware === sw);
-}
 
 /** 新しいclientIdを生成（nanoidベースのランダムID。3コード非依存） */
 export function generateClientId(): string {

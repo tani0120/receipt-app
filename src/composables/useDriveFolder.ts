@@ -50,5 +50,16 @@ export function useDriveFolder() {
     return newName
   }
 
-  return { createFolder, renameFolder }
+  /**
+   * Driveフォルダ存在確認（削除済み検知）
+   * @param folderId 対象フォルダID
+   * @returns { exists: true, name: string } または { exists: false }
+   */
+  async function checkFolder(folderId: string): Promise<{ exists: boolean; name?: string }> {
+    const res = await fetch(`${API_BASE}/check?folderId=${encodeURIComponent(folderId)}`)
+    if (!res.ok) return { exists: false }
+    return res.json()
+  }
+
+  return { createFolder, renameFolder, checkFolder }
 }

@@ -18,6 +18,22 @@
         <!-- 閲覧モード -->
         <template v-else-if="!isEditing">
           <button class="ce-btn ce-btn-back" @click="$router.push('/master/clients')"><i class="fa-solid fa-arrow-left"></i> 一覧に戻る</button>
+          <!-- 関連ページリンク（常に表示。リンク先未設定時はモーダル通知） -->
+          <button class="ce-nav-link" @click="onNavClick('見込管理', currentClient?.sourceLeadId ? `/master/leads/${currentClient.sourceLeadId}` : '')">
+            <i class="fa-solid fa-user-clock"></i> 見込管理
+          </button>
+          <button class="ce-nav-link" @click="onNavClick('進捗管理', isNew ? '' : `/journal-list/${route.params.clientId}`)">
+            <i class="fa-solid fa-list-check"></i> 進捗管理
+          </button>
+          <button class="ce-nav-link" @click="onNavDrive()">
+            <i class="fa-brands fa-google-drive"></i> Googleドライブ
+          </button>
+          <button class="ce-nav-link" @click="onNavClick('社内用アップロード', isNew ? '' : `/upload-v2/${route.params.clientId}`)">
+            <i class="fa-solid fa-cloud-arrow-up"></i> 社内用アップロード
+          </button>
+          <button class="ce-nav-link" @click="onNavClick('顧問先用アップロード', isNew ? '' : `/guest/${route.params.clientId}`)">
+            <i class="fa-solid fa-user-group"></i> 顧問先用アップロード
+          </button>
         </template>
         <!-- 編集モード -->
         <template v-else>
@@ -336,7 +352,7 @@ const { activeStaff: activeStaffList } = useStaff();
 const { userName: currentUserName, currentStaffId: myStaffId, isAdmin } = useCurrentUser();
 const { sendMentionNotification } = useNotificationCenter();
 const modal = useModalHelper();
-const { createFolder, renameFolder } = useDriveFolder();
+const { createFolder, renameFolder, checkFolder } = useDriveFolder();
 
 /** フィールドレイアウト管理 */
 const layout = useFieldLayout('client', clientSections, clientFieldsFlat);
@@ -579,6 +595,67 @@ const staffLabel = computed(() => {
 const uploadUrlStaff = computed(() => clientId.value ? `${location.origin}/#/upload/${clientId.value}/staff` : '');
 const uploadUrlGuest = computed(() => clientId.value ? `${location.origin}/#/guest/${clientId.value}` : '');
 const journalListUrl = computed(() => clientId.value ? `${location.origin}/#/journal-list/${clientId.value}` : '');
+
+/** 現在の顧問先オブジェクト（テンプレートのナビゲーションリンク用） */
+const currentClient = computed(() => clientId.value ? clients.value.find(cl => cl.clientId === clientId.value) : null);
+
+/** 関連ページリンクのクリック（リンク先がない場合は「未作成です」モーダル） */
+const onNavClick = async (label: string, path: string) => {
+  if (!path) {
+    await modal.notify({ title: label, message: '未作成です', variant: 'warning' });
+    return;
+  }
+  router.push(path);
+};
+
+/** Googleドライブリンクのクリック（外部リンクなので別処理） */
+const onNavDrive = async () => {
+  const folderId = currentClient.value?.sharedFolderId;
+  if (!folderId) {
+    // 未作成 → 作成確認
+    await handleDriveCreate();
+    return;
+  }
+
+  // フォルダ存在確認（削除済み検知）
+  try {
+    const check = await checkFolder(folderId);
+    if (!check.exists) {
+      // 削除済み → 再作成確認
+      const ok = await modal.confirm({
+        title: 'Googleドライブ',
+        message: 'Driveフォルダが削除されています。再作成しますか？',
+      });
+      if (!ok) return;
+      await handleDriveCreate();
+      return;
+    }
+  } catch {
+    // チェック失敗時はそのまま開く（Drive APIダウン時に開けなくなるのを防止）
+  }
+
+  window.open(`https://drive.google.com/drive/folders/${folderId}`, '_blank');
+};
+
+/** Driveフォルダ作成（新規 or 再作成の共通処理） */
+const handleDriveCreate = async () => {
+  const ok = await modal.confirm({
+    title: 'Googleドライブ',
+    message: 'Driveフォルダが未作成です。今すぐ作成しますか？',
+  });
+  if (!ok) return;
+  const client = currentClient.value;
+  if (!client) return;
+  try {
+    const folderName = `${client.threeCode}_${client.companyName}`;
+    const newFolderId = await createFolder(folderName, client.sharedEmail || undefined);
+    await updateSharedFolderId(client.clientId, newFolderId);
+    await modal.notify({ title: 'Googleドライブ', message: 'フォルダを作成しました', variant: 'success' });
+    window.open(`https://drive.google.com/drive/folders/${newFolderId}`, '_blank');
+  } catch (e) {
+    await modal.notify({ title: 'Googleドライブ', message: `作成に失敗しました: ${e}`, variant: 'error' });
+  }
+};
 
 /** Drive取込の表示値（自動生成） */
 const driveUrlDisplay = computed(() => {
@@ -1099,6 +1176,8 @@ const renameDriveFolderForClient = async (client: Client): Promise<string | null
 .ce-btn-custom:hover { background: #7c3aed; }
 .ce-btn-back { background: none; border: 1px solid #d1d5db; color: #475569; display: flex; align-items: center; gap: 6px; }
 .ce-btn-back:hover { background: #f1f5f9; color: #1e293b; }
+.ce-nav-link { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; font-size: 13px; color: #4f46e5; text-decoration: none; border: 1px solid #c7d2fe; border-radius: 6px; background: #eef2ff; transition: all 0.15s; white-space: nowrap; }
+.ce-nav-link:hover { background: #4f46e5; color: #fff; border-color: #4f46e5; }
 
 /* 閲覧モード用テキスト表示（薄灰色背景の枠付きボックス） */
 .ce-readonly { font-size: 13px; color: #333; padding: 6px 8px; min-height: 18px; line-height: 1.4; background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 3px; }

@@ -3,7 +3,7 @@
     <div class="cm-settings">
         <!-- ヘッダー -->
         <div class="cm-header">
-          <h1 class="cm-title">見込管理</h1>
+          <h1 class="cm-title">見込先管理</h1>
           <div class="cm-header-actions" v-if="isAdmin">
             <button
               class="cm-admin-btn"
@@ -41,8 +41,11 @@
           :filter-conditions="filterConditions"
           :filter-logic="filterLogic"
           :filter-sorts="filterSortSettings"
+          :default-conditions="currentViewDefaults.filters"
+          :default-sorts="currentViewDefaults.sorts"
           @filter-change="onFilterChange"
           @filter-apply="onFilterApply"
+          @filter-remove="onFilterRemove"
           @view-change="onViewChange"
         >
           <template #actions>
@@ -55,13 +58,13 @@
         <!-- ページネーション + CSVボタン -->
         <div class="cm-pagination-row">
           <div class="cm-pagination">
-            <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="currentPage = Math.max(1, currentPage - 1)">＜</span>
+            <span class="cm-page-arrow" :class="{ disabled: currentPage <= 1 }" @click="goToPage(currentPage - 1)">＜</span>
             <span
               v-for="p in totalPages" :key="p"
               class="cm-page-num" :class="{ active: p === currentPage }"
-              @click="currentPage = p"
+              @click="goToPage(p)"
             >{{ p }}</span>
-            <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="currentPage = Math.min(totalPages, currentPage + 1)">＞</span>
+            <span class="cm-page-arrow" :class="{ disabled: currentPage >= totalPages }" @click="goToPage(currentPage + 1)">＞</span>
             <span class="cm-page-info">{{ leadPageStartIndex }}~{{ leadPageEndIndex }} / 全{{ leadTotalCount }}件</span>
           </div>
           <div class="cm-csv-actions">
@@ -500,22 +503,31 @@ import {
   INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_MODE_OPTIONS,
   TAX_FILING_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
   CALCULATION_METHOD_OPTIONS, DEFAULT_PAYMENT_OPTIONS,
-  TYPE_OPTIONS, CONTACT_METHOD_OPTIONS, LEAD_STATUS_OPTIONS,
+  TYPE_OPTIONS, LEAD_STATUS_OPTIONS,
   PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
-  getLabel, getValueByLabel,
+  getLabel, getValueByLabel, resolveFieldOptions,
 } from '@/constants/clientOptions';
 import { useFieldLayout } from '@/composables/useFieldLayout';
 import type { CustomFieldDef } from '@/composables/useFieldLayout';
-import { leadSections, leadFields, leadFieldsFlat } from '@/constants/leadFieldDefs';
+import { leadSections, leadFieldsFlat } from '@/constants/leadFieldDefs';
 import { UI_MSG } from '@/constants/uiMessages';
 import CustomFieldModal from '@/components/CustomFieldModal.vue';
 import AddFieldModal from '@/components/AddFieldModal.vue';
 import { LEAD_FIELD_LABELS } from '@/constants/fieldLabels';
 import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
+import type { FieldComponent } from '@/types/fieldLayout';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import TableFilterToolbar from '@/components/TableFilterToolbar.vue';
 import type { FilterColumnDef, FilterCondition, FilterResult, SortSetting } from '@/components/list-view/types';
+import {
+  parseViewFromQuery,
+  parseFiltersFromQuery,
+  parseLogicFromQuery,
+  parseSortsFromQuery,
+  buildQueryParams,
+  findViewByKey,
+} from '@/utils/urlFilterSync';
 import type { ViewDefWithDefaults } from '@/utils/urlFilterSync';
 
 // 列幅カスタマイズ
@@ -535,10 +547,10 @@ const clDefaultWidths: Record<string, number> = {
   driveUrl: 100,
   chatRoomUrl: 140,
 };
-const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnResize('master-clients', clDefaultWidths);
+const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnResize('master-leads', clDefaultWidths);
 
 // --- 見込先データ（composableから取得） ---
-const { leads, getStaffNameForLead, updateSharedFolderId, addLead, updateLeadLocal, refresh } = useLeads();
+const { leads, getStaffNameForLead, updateSharedFolderId, addLead, updateLeadLocal, listLeads, refresh } = useLeads();
 const { staffList, activeStaff: activeStaffList } = useStaff();
 const { isAdmin } = useCurrentUser();
 
@@ -657,17 +669,12 @@ const industryOptions = INDUSTRY_OPTIONS;
 // --- ステータスフィルター（単一値ドロップダウン） ---
 const route = useRoute();
 const router = useRouter();
-const statusFilter = ref<string>((route.query.status as string) || '');
 
-/** フィールドレイアウト管理 */
-const fieldLayout = useFieldLayout('lead', leadSections, leadFields);
-fieldLayout.loadLayout();
 
-// fieldLayout.fieldsからラベルを取得（ラベル上書き適用済み）
-const getFieldLabel = (key: string): string => {
-  const f = fieldLayout.fields.value.find(ff => ff.key === key);
-  return f?.label ?? key;
-};
+/** fieldLayout は leadFieldLayout のエイリアス（後方互換） */
+const fieldLayout = leadFieldLayout;
+
+
 
 // 一覧テーブルで表示不可のコンポーネント種別
 const NON_LIST_COMPONENTS = ['heading', 'spacer', 'contactTable', 'table'];
@@ -701,8 +708,6 @@ const basicViewCols = [
   'sharedEmail', 'driveUrl', 'contact',
 ];
 
-const colsFromUrl = route.query.cols ? (route.query.cols as string).split(',') : null;
-const visibleColumns = ref<string[]>(colsFromUrl || [...basicViewCols]);
 
 // allColumnsがcomputedになったためvisibleColumnDefsの参照を.valueに統一
 
@@ -725,8 +730,23 @@ const defaultLeadViews: ViewDefWithDefaults[] = [
   },
 ];
 const leadViews = ref<ViewDefWithDefaults[]>([...defaultLeadViews]);
-const activeViewIndex = ref(0);
 
+// URLからビュー・フィルタ・ソートを復元
+const urlViewKey = parseViewFromQuery(route.query);
+const initialView = findViewByKey(leadViews.value, urlViewKey) ?? leadViews.value[0]!;
+const activeViewIndex = ref(leadViews.value.indexOf(initialView));
+
+// URLにフィルタ条件がある場合はそれを使い、なければビューのデフォルトを適用
+const urlFilters = parseFiltersFromQuery(route.query);
+const initialFilters = urlFilters.length > 0 ? urlFilters : [...initialView.defaultFilters];
+const initialSorts = parseSortsFromQuery(route.query, initialView.defaultSorts);
+
+// 表示列復元
+const visibleColumns = ref<string[]>(
+  initialView.columns === null
+    ? allColumns.value.map(c => c.key)
+    : [...initialView.columns]
+);
 /** API: ビュー一覧取得（「(すべて)」は末尾に自動追加）+ 表示状態を再同期 */
 const loadListViews = async () => {
   try {
@@ -755,91 +775,129 @@ const loadListViews = async () => {
     };
     leadViews.value = [...apiViews, allView];
 
-    // ビュー定義更新後に表示列を再同期
-    const currentIdx = Math.min(activeViewIndex.value, leadViews.value.length - 1);
-    activeViewIndex.value = currentIdx >= 0 ? currentIdx : 0;
-    const view = leadViews.value[activeViewIndex.value];
-    if (view) {
-      visibleColumns.value = view.columns === null
-        ? allColumns.value.map(c => c.key)
-        : [...view.columns];
-    }
+    // ビュー定義更新後に表示状態を再同期
+    const urlViewKey2 = parseViewFromQuery(route.query);
+    const view = findViewByKey(leadViews.value, urlViewKey2) ?? leadViews.value[0]!;
+    const viewIdx = leadViews.value.indexOf(view);
+    activeViewIndex.value = viewIdx >= 0 ? viewIdx : 0;
+    visibleColumns.value = view.columns === null
+      ? allColumns.value.map(c => c.key)
+      : [...view.columns];
+    // URLにフィルタ/ソートが明示されていなければビューのデフォルトを適用
+    const urlF = parseFiltersFromQuery(route.query);
+    filterConditions.value = urlF.length > 0 ? urlF : [...view.defaultFilters];
+    const urlS = parseSortsFromQuery(route.query, view.defaultSorts);
+    filterSortSettings.value = urlS;
+    sortKey.value = urlS[0]?.key ?? 'threeCode';
+    sortOrder.value = urlS[0]?.order ?? 'asc';
+    syncUrlQuery();
   } catch (e) {
     console.error('[LeadList] ビュー一覧取得失敗:', e);
   }
 };
-loadListViews();
 
-// KeepAliveからの復帰時にAPIからビュー定義を再取得
-let isFirstActivation = true;
-onActivated(async () => {
-  if (isFirstActivation) {
-    isFirstActivation = false;
-    return;
-  }
-  await loadListViews();
+/** 現在のビューのデフォルト値（フィルタモーダルの「デフォルトに戻す」用） */
+const currentViewDefaults = computed(() => {
+  const view = leadViews.value[activeViewIndex.value] ?? leadViews.value[0]!;
+  return {
+    filters: view.defaultFilters,
+    sorts: view.defaultSorts,
+  };
 });
 
-/** ビュー切替時 */
-const onViewChange = (_idx: number) => {
-  const query: Record<string, string> = {};
-  if (statusFilter.value) query.status = statusFilter.value;
+/** URLクエリパラメータを現在の状態で更新 */
+function syncUrlQuery() {
+  const currentView = leadViews.value[activeViewIndex.value] ?? leadViews.value[0]!;
+  const query = buildQueryParams({
+    viewName: currentView.key,
+    conditions: filterConditions.value,
+    logic: filterLogic.value,
+    sorts: filterSortSettings.value,
+    defaultConditions: currentView.defaultFilters,
+    defaultSorts: currentView.defaultSorts,
+  });
   router.replace({ query });
-  // fetchLeadList()はwatch発火に任せる（二重呼び出し防止）
+}
+
+/** ビュー切替時: デフォルトフィルタ・ソート・列に切替 + URL更新 + データ再取得 */
+const onViewChange = (idx: number) => {
+  const view = leadViews.value[idx] ?? leadViews.value[0]!;
+  // 表示列をビューの定義に切替
+  visibleColumns.value = view.columns
+    ? [...view.columns]
+    : allColumns.value.map(c => c.key);
+  // フィルタ・ソートをビューのデフォルトに戻す
+  filterConditions.value = [...view.defaultFilters];
+  filterSortSettings.value = [...view.defaultSorts];
+  sortKey.value = view.defaultSorts[0]?.key ?? 'threeCode';
+  sortOrder.value = view.defaultSorts[0]?.order ?? 'asc';
+  syncUrlQuery();
+  fetchLeadList();
 };
 
-// ステータス選択肢（clientOptions.tsから一元参照）
-const leadStatusOptions = LEAD_STATUS_OPTIONS;
+// 一覧テーブルで絞り込み不可のコンポーネント種別
+const NON_FILTER_COMPONENTS: FieldComponent[] = ['heading', 'spacer', 'contactTable', 'table'];
 
-// --- 絞り込みモーダル用列定義（LeadEditPageの全フィールド） ---
-const leadFilterColumns = computed<FilterColumnDef[]>(() => [
-  // ステータス
-  { key: 'status', label: getFieldLabel('status') || UI_MSG.ステータス, filterType: 'select', filterOptions: leadStatusOptions },
-  // 基本情報
-  { key: 'type', label: getFieldLabel('type'), filterType: 'select', filterOptions: TYPE_OPTIONS },
-  { key: 'leadId', label: getFieldLabel('leadId'), filterType: 'text' },
-  { key: 'threeCode', label: getFieldLabel('threeCode'), filterType: 'text' },
-  { key: 'companyName', label: getFieldLabel('companyName'), filterType: 'text' },
-  { key: 'companyNameKana', label: getFieldLabel('companyNameKana'), filterType: 'text' },
-  { key: 'repName', label: getFieldLabel('repName'), filterType: 'text' },
-  { key: 'repNameKana', label: getFieldLabel('repNameKana'), filterType: 'text' },
-  { key: 'staffId', label: getFieldLabel('staffId'), filterType: 'text' },
-  { key: 'contactType', label: getFieldLabel('contactType'), filterType: 'select', filterOptions: [...CONTACT_METHOD_OPTIONS] },
-  { key: 'contactValue', label: getFieldLabel('contactValue'), filterType: 'text' },
-  { key: 'sharedEmail', label: getFieldLabel('sharedEmail'), filterType: 'text' },
-  { key: 'fiscalDate', label: getFieldLabel('fiscalDate'), filterType: 'number' },
-  { key: 'industry', label: getFieldLabel('industry'), filterType: 'select', filterOptions: INDUSTRY_OPTIONS.filter(o => o.value !== '') },
-  { key: 'establishedDate', label: getFieldLabel('establishedDate'), filterType: 'text' },
-  // 会計設定
-  { key: 'accountingSoftware', label: getFieldLabel('accountingSoftware'), filterType: 'select', filterOptions: ACCOUNTING_SOFTWARE_OPTIONS },
-  { key: 'taxFilingType', label: getFieldLabel('taxFilingType'), filterType: 'select', filterOptions: TAX_FILING_OPTIONS },
-  { key: 'consumptionTaxMode', label: getFieldLabel('consumptionTaxMode'), filterType: 'select', filterOptions: TAX_MODE_OPTIONS },
-  { key: 'simplifiedTaxCategory', label: getFieldLabel('simplifiedTaxCategory'), filterType: 'select', filterOptions: SIMPLIFIED_CATEGORY_OPTIONS.map(o => ({ value: String(o.value), label: o.label })) },
-  { key: 'taxMethod', label: getFieldLabel('taxMethod'), filterType: 'select', filterOptions: TAX_METHOD_OPTIONS },
-  { key: 'calculationMethod', label: getFieldLabel('calculationMethod'), filterType: 'select', filterOptions: CALCULATION_METHOD_OPTIONS },
-  { key: 'defaultPaymentMethod', label: getFieldLabel('defaultPaymentMethod'), filterType: 'select', filterOptions: DEFAULT_PAYMENT_OPTIONS },
-  { key: 'isInvoiceRegistered', label: getFieldLabel('isInvoiceRegistered'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
-  { key: 'invoiceRegistrationNumber', label: getFieldLabel('invoiceRegistrationNumber'), filterType: 'text' },
-  { key: 'hasDepartmentManagement', label: getFieldLabel('hasDepartmentManagement'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
-  { key: 'hasRentalIncome', label: getFieldLabel('hasRentalIncome'), filterType: 'select', filterOptions: BOOLEAN_FILTER_OPTIONS },
-  // 報酬設定
-  { key: 'advisoryFee', label: getFieldLabel('advisoryFee'), filterType: 'number' },
-  { key: 'bookkeepingFee', label: getFieldLabel('bookkeepingFee'), filterType: 'number' },
-  { key: 'settlementFee', label: getFieldLabel('settlementFee'), filterType: 'number' },
-  { key: 'taxFilingFee', label: getFieldLabel('taxFilingFee'), filterType: 'number' },
-]);
+/**
+ * FieldComponent → FilterType のマッピング
+ * fieldLayout.fieldsのコンポーネント種別から絞り込みのフィルタタイプを自動決定
+ */
+function componentToFilterType(component: FieldComponent, hasOptions: boolean): FilterColumnDef['filterType'] {
+  if (hasOptions) return 'select';
+  switch (component) {
+    case 'select':
+    case 'staffSelect':
+      return 'select';
+    case 'checkbox':
+      return 'select';
+    case 'number':
+    case 'amount':
+      return 'number';
+    case 'date':
+      return 'date';
+    default:
+      return 'text';
+  }
+}
 
-// --- 絞り込み条件state ---
-const filterConditions = ref<FilterCondition[]>([]);
-const filterLogic = ref<'and' | 'or'>('and');
-const filterSortSettings = ref<SortSetting[]>([{ key: 'threeCode', order: 'asc' }]);
+/**
+ * 絞り込みモーダル用列定義 — fieldLayout.fieldsから動的生成（顧問先と統一）
+ */
+const leadFilterColumns = computed<FilterColumnDef[]>(() => {
+  return fieldLayout.fields.value
+    .filter(f => !NON_FILTER_COMPONENTS.includes(f.component))
+    .filter(f => !f.isDeleted)
+    .map(f => {
+      const filterType = componentToFilterType(f.component, !!f.options);
+      const col: FilterColumnDef = {
+        key: f.key,
+        label: f.label,
+        filterType,
+      };
+      // staffSelectの場合は動的にスタッフリストを使用
+      if (f.component === 'staffSelect') {
+        col.filterOptions = staffList.value.map(s => ({ value: s.uuid, label: s.name }));
+      } else if (f.component === 'checkbox') {
+        col.filterOptions = BOOLEAN_FILTER_OPTIONS;
+      } else if (f.component === 'dateGroup') {
+        col.filterOptions = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}${UI_MSG.列月}` }));
+      } else if (filterType === 'select' && f.options) {
+        col.filterOptions = resolveFieldOptions(f.options);
+      }
+      return col;
+    });
+});
 
-/** フィルター変更時: URLクエリパラメータを更新 */
+
+
+const filterConditions = ref<FilterCondition[]>(initialFilters);
+const filterLogic = ref<'and' | 'or'>(parseLogicFromQuery(route.query));
+const filterSortSettings = ref<SortSetting[]>(initialSorts);
+
+/** フィルター変更時: URL同期 + データ再取得 */
 const onFilterChange = () => {
-  const query: Record<string, string> = {};
-  if (statusFilter.value) query.status = statusFilter.value;
-  router.replace({ query });
-  // fetchLeadList()はwatch発火に任せる（二重呼び出し防止）
+  syncUrlQuery();
+  fetchLeadList();
 };
 
 /** 絞り込みモーダル適用時 */
@@ -847,20 +905,18 @@ const onFilterApply = (result: FilterResult) => {
   filterConditions.value = result.conditions;
   filterLogic.value = result.logic;
   filterSortSettings.value = result.sorts;
-  // ソート設定をローカルstateに反映（1位のソートをヘッダーソートに使用）
   sortKey.value = result.sorts[0]?.key ?? 'threeCode';
   sortOrder.value = result.sorts[0]?.order ?? 'asc';
-  // ステータス条件が含まれていればstatusFilterにも反映
-  const statusCond = result.conditions.find(c => c.field === 'status');
-  if (statusCond && typeof statusCond.value === 'string') {
-    statusFilter.value = statusCond.value;
-  } else if (statusCond && Array.isArray(statusCond.value) && statusCond.value.length === 1) {
-    statusFilter.value = statusCond.value[0] ?? '';
-  }
-  // fetchLeadList()はsortKey/sortOrder/statusFilter変更でwatch発火する（二重呼び出し防止）
+  syncUrlQuery();
+  fetchLeadList();
 };
 
-
+/** フィルタ条件を個別削除（タグの×ボタン） */
+const onFilterRemove = (index: number) => {
+  filterConditions.value = filterConditions.value.filter((_, i) => i !== index);
+  syncUrlQuery();
+  fetchLeadList();
+};
 /** allColumnsの順序（レイアウト管理準拠）で、表示対象の列だけを返す */
 const visibleColumnDefs = computed(() => {
   const visible = new Set(visibleColumns.value);
@@ -894,10 +950,22 @@ const isTextEditCol = (_key: string): boolean => {
 
 /** データ行から動的フィールド値を取得（汎用） */
 const getFieldValue = (row: Record<string, unknown>, key: string): string => {
-  const val = row[key];
+  // カスタムフィールド(custom_*)はextraFieldsから取得
+  const val = key.startsWith('custom_')
+    ? (row as Record<string, unknown>).extraFields != null
+      ? ((row as Record<string, unknown>).extraFields as Record<string, unknown>)[key]
+      : undefined
+    : row[key];
   if (val === undefined || val === null) return '—';
   if (typeof val === 'boolean') return val ? UI_MSG.あり : UI_MSG.なし;
   if (typeof val === 'number') return val.toLocaleString();
+  // select型フィールドの値→ラベル変換（fieldLayout.fieldsからoptions参照）
+  const fieldDef = leadFieldLayout.fields.value.find(f => f.key === key);
+  if (fieldDef?.options) {
+    const resolved = resolveFieldOptions(fieldDef.options);
+    const found = resolved.find(o => o.value === String(val));
+    if (found) return found.label;
+  }
   return String(val);
 };
 
@@ -920,8 +988,8 @@ const tableWidth = computed(() => {
 });
 
 // --- ソート ---
-const sortKey = ref<string>('threeCode');
-const sortOrder = ref<'asc' | 'desc'>('asc');
+const sortKey = ref<string>(initialSorts[0]?.key ?? 'threeCode');
+const sortOrder = ref<'asc' | 'desc'>(initialSorts[0]?.order ?? 'asc');
 
 const sortBy = (key: string) => {
   if (sortKey.value === key) {
@@ -930,6 +998,9 @@ const sortBy = (key: string) => {
     sortKey.value = key;
     sortOrder.value = 'asc';
   }
+  filterSortSettings.value = [{ key: sortKey.value, order: sortOrder.value }];
+  syncUrlQuery();
+  fetchLeadList();
 };
 
 const getSortIcon = (key: string) => {
@@ -949,46 +1020,73 @@ const pagedRows = computed(() => filteredRows.value);
 const leadPageStartIndex = computed(() => leadTotalCount.value === 0 ? 0 : (currentPage.value - 1) * PAGE_SIZE + 1);
 const leadPageEndIndex = computed(() => Math.min(currentPage.value * PAGE_SIZE, leadTotalCount.value));
 
-/** GET /api/leads で見込先一覧取得 */
+/** ページ変更 */
+const goToPage = (page: number) => {
+  const clamped = Math.max(1, Math.min(page, totalPages.value));
+  if (currentPage.value === clamped) return;
+  currentPage.value = clamped;
+  fetchLeadList();
+};
+
+/** POST /api/leads/list でサーバー側でフィルタ+ソート+ページネーション */
+let fetchRequestId = 0;
 const fetchLeadList = async () => {
+  const myRequestId = ++fetchRequestId;
   isLoading.value = true;
+  const filtersToSend = filterConditions.value.length > 0 ? [...filterConditions.value] : undefined;
+  const sortsToSend = filterSortSettings.value.length > 0 ? [...filterSortSettings.value] : undefined;
+  console.log(`[fetchLeadList #${myRequestId}] filters:`, JSON.stringify(filtersToSend), 'sorts:', JSON.stringify(sortsToSend));
   try {
-    // composable経由で最新データを取得
+    // composable経由で最新の全件データも同期（インライン編集の3コード重複チェック用）
     await refresh();
-    let rows = [...leads.value];
-    // フロント側ソート
-    rows.sort((a: Lead, b: Lead) => {
-      const aVal = String((a as unknown as Record<string, unknown>)[sortKey.value] ?? '');
-      const bVal = String((b as unknown as Record<string, unknown>)[sortKey.value] ?? '');
-      return sortOrder.value === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-    });
-    // ステータスフィルタ
-    if (statusFilter.value) {
-      rows = rows.filter((r: Lead) => r.status === statusFilter.value);
+    // race condition防止: より新しいリクエストが発行されていたら結果を破棄
+    if (myRequestId !== fetchRequestId) {
+      console.log(`[fetchLeadList #${myRequestId}] 破棄（新しいリクエスト #${fetchRequestId} が発行済み）`);
+      return;
     }
-    filteredRows.value = rows;
-    leadTotalCount.value = rows.length;
-    totalPages.value = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+    // サーバー側でフィルタ+ソート+ページネーション
+    const result = await listLeads({
+      filters: filtersToSend,
+      logic: filterLogic.value,
+      sorts: sortsToSend,
+      page: currentPage.value,
+      pageSize: PAGE_SIZE,
+    });
+    // race condition防止
+    if (myRequestId !== fetchRequestId) {
+      console.log(`[fetchLeadList #${myRequestId}] 破棄（新しいリクエスト #${fetchRequestId} が発行済み）`);
+      return;
+    }
+    console.log(`[fetchLeadList #${myRequestId}] 結果: ${result.totalCount}件`);
+    filteredRows.value = result.rows;
+    totalPages.value = result.totalPages;
+    leadTotalCount.value = result.totalCount ?? 0;
   } catch (e) {
+    if (myRequestId !== fetchRequestId) return;
     console.error('[LeadsPage] リスト取得失敗:', e);
   } finally {
-    isLoading.value = false;
+    if (myRequestId === fetchRequestId) isLoading.value = false;
   }
 };
 
-// フィルタ・ソート・ページ変更時に自動でAPI再呼び出し（バッチ化で二重発火防止）
-let fetchPending = false;
-watch([statusFilter, sortKey, sortOrder, currentPage], () => {
-  if (fetchPending) return;
-  fetchPending = true;
-  nextTick(() => {
-    fetchPending = false;
-    fetchLeadList();
-  });
-}, { immediate: true });
+// イベント駆動: watchは使わず、各ハンドラから直接fetchLeadListを呼ぶ
+// 初回表示: APIからビュー定義を取得してから初期化
+const initPage = async () => {
+  await loadListViews();
+  fetchLeadList();
+};
+initPage();
 
-// KeepAliveからの復帰時にデータを再取得
-onActivated(() => fetchLeadList());
+// KeepAliveからの復帰時にAPIからビュー定義を再取得 + データ再取得
+let isFirstActivation = true;
+onActivated(async () => {
+  if (isFirstActivation) {
+    isFirstActivation = false;
+    return;
+  }
+  await loadListViews();
+  fetchLeadList();
+});
 
 /** データ変更後にリストを再取得 */
 const refreshList = () => fetchLeadList();
@@ -1336,7 +1434,19 @@ const leadCsvExtensions: Record<string, Partial<CsvColumnDef>> = {
   },
   fiscalMonth: { type: 'number' as const },
   fiscalDay: { type: 'number' as const },
+  advisoryFee: { type: 'number' as const },
+  bookkeepingFee: { type: 'number' as const },
+  settlementFee: { type: 'number' as const },
+  taxFilingFee: { type: 'number' as const },
   isInvoiceRegistered: {
+    type: 'boolean' as const,
+    format: (v) => v ? 'あり' : 'なし',
+  },
+  hasDepartmentManagement: {
+    type: 'boolean' as const,
+    format: (v) => v ? 'あり' : 'なし',
+  },
+  hasRentalIncome: {
     type: 'boolean' as const,
     format: (v) => v ? 'あり' : 'なし',
   },
