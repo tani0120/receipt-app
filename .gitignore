@@ -48,6 +48,7 @@ __screenshots__/
 # Sensitive data（秘密鍵・認証情報）
 service-account-key.json
 service-account*.json
+data/mf-tokens.json
 serviceAccount*.json
 *-private-key.json
 **/certs/*.json

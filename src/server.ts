@@ -1,4 +1,4 @@
-﻿// src/server.ts — API + 静的ファイル提供
+// src/server.ts — API + 静的ファイル提供
 import { config } from 'dotenv'
 config({ path: '.env.local' })  // .env.localを明示的に読み込む（VERTEX_PROJECT_ID等）
 
@@ -170,6 +170,12 @@ app.route('/api/comments', commentRoutes)
 // Attachment API: 添付ファイル管理
 import attachmentRoutes from './api/routes/attachmentRoutes'
 app.route('/api/attachments', attachmentRoutes)
+
+// MF（マネーフォワード）API: OAuth認証 + データ取得
+import mfAuthRoutes from './api/routes/mfAuthRoutes'
+import mfRoutes from './api/routes/mfRoutes'
+app.route('/api/mf', mfAuthRoutes)
+app.route('/api/mf', mfRoutes)
 
 // AIPrompt API: AIプロンプト管理（GET/PUT）
 import aiPromptRoutes from './api/routes/aiPromptRoutes'

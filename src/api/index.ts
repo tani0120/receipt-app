@@ -29,6 +29,8 @@ import pipeline from './routes/pipeline'
 import shareStatusRoutes from './routes/shareStatusRoutes'
 import learningRuleRoutes from './routes/learningRuleRoutes'
 import progressRoutes from './routes/progressRoutes'
+import mfAuthRoutes from './routes/mfAuthRoutes'
+import mfRoutes from './routes/mfRoutes'
 import { exportRoutes } from './routes/exportRoutes'
 import { TAX_OPTIONS } from '../shared/schema_dictionary'
 
@@ -70,6 +72,8 @@ const routes = app
     .route('/api/export', exportRoutes)
     .route('/api/comments', commentRoutes)
     .route('/api/attachments', attachmentRoutes)
+    .route('/api/mf', mfAuthRoutes)
+    .route('/api/mf', mfRoutes)
     .get('/api/tax-options', (c) => {
         return c.json(TAX_OPTIONS)
     })
