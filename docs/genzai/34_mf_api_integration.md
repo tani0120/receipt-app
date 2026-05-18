@@ -342,7 +342,7 @@ oauth_tokens（トークンテーブル）
 | 1-14 | CursorにMCPサーバーを設定・疎通テスト | ⬜ 未着手 |
 | 1-15 | MCPサーバー経由で仕訳一覧を取得 | ⬜ 未着手 |
 | 1-16 | 事業所切替UIの実装 | 未着手 |
-| 1-17 | デバッグコード（`/debug-token`等）削除 | ⬜ 未着手 |
+| 1-17 | デバッグコード（`/debug-token`）削除 | ✅ 完了（2026-05-18） |
 
 ### フェーズ2：会計事務所アカウントへの移行（将来）
 
@@ -475,10 +475,11 @@ refresh_token を暗号化してSupabaseに保存
 | **P0** | CursorにMCPサーバーを設定（beta URL） | 権限付与完了 |
 | **P0** | MCPサーバー経由で事業者情報を取得テスト | MCP設定完了 |
 | **P1** | MCPサーバー経由で仕訳一覧を取得 | P0完了後 |
-| **P1** | デバッグコード（`/debug-token`、`fetchAccountingOffice`）削除 | なし |
+| **P1** | ~~デバッグコード（`/debug-token`）削除~~ | ✅ 完了（2026-05-18） |
+| **P1** | ~~デッドコード（`fetchAccountingOffice`・`fetchOffice`）削除 → MCP化で置換~~ | ✅ 完了（2026-05-18）MCPクライアント実装済み |
 | **P2** | テナント管理テーブルの設計・実装（Supabase migration SQL） | P1完了後 |
 | **P2** | 事業所切替UIの実装 | P1完了後 |
-| **P3** | MCPサーバーを自社バックエンドに統合（プログラマティック利用） | P2完了後 |
+| **P3** | ~~MCPサーバーを自社バックエンドに統合（プログラマティック利用）~~ | ✅ 完了（2026-05-18）mfMcpClient.ts |
 
 ---
 
@@ -508,14 +509,15 @@ refresh_token を暗号化してSupabaseに保存
 
 ---
 
-## 13. 実装済みファイル一覧（2026-05-17）
+## 13. 実装済みファイル一覧（2026-05-18更新）
 
 | ファイル | 役割 |
 |---|---|
-| `src/api/services/mfAuthService.ts` | OAuth認証サービス（認可URL生成・トークン取得・リフレッシュ・メモリ保持） |
-| `src/api/services/mfApiClient.ts` | MF APIクライアント（認証ヘッダー自動付与・事業所情報取得） |
+| `src/api/services/mfAuthService.ts` | OAuth認証サービス（認可URL生成・トークン取得・リフレッシュ・永続化） |
+| `src/api/services/mfMcpClient.ts` | **★MCPサーバークライアント（JSON-RPC通信・全19ツール対応）** |
+| `src/api/services/mfApiClient.ts` | 認可サーバーAPIクライアント（事業者情報取得のみ。会計APIはMCP経由に移行済み） |
 | `src/api/routes/mfAuthRoutes.ts` | OAuth認証ルート（4エンドポイント: `/auth/url`, `/auth/callback`, `/auth/status`, `/auth/logout`） |
-| `src/api/routes/mfRoutes.ts` | データ取得ルート（事業所情報） |
+| `src/api/routes/mfRoutes.ts` | データ取得ルート（6エンドポイント: `/tenant`, `/office`, `/accounts`, `/taxes`, `/journals`, `/term-settings`） |
 | `src/api/index.ts` | ルート登録追加（`/api/mf` 配下に2ルート） |
 | `src/server.ts` | ルート登録追加（`/api/mf` 配下に2ルート） |
 | `.env.local` | `MF_CLIENT_ID` / `MF_CLIENT_SECRET` / `MF_REDIRECT_URI` |
