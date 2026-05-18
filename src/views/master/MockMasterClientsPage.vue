@@ -193,6 +193,11 @@
                       <span v-else class="cm-drive-link" @click.stop="copyDriveUrl(row)">📋 URLコピー</span>
                     </template>
                   </template>
+                  <!-- MF連携 -->
+                  <template v-else-if="col.key === 'mfStatus'">
+                    <span v-if="mfStatusMap[row.clientId]" class="cm-mf-linked">🟢 連携済み</span>
+                    <span v-else class="cm-mf-unlinked">○ 未連携</span>
+                  </template>
                   <!-- 主な連絡手段 -->
                   <template v-else-if="col.key === 'contact'">
                     <span v-if="row.contacts?.find((c: any) => c.method === 'チャット' && c.value)">チャットワーク</span>
@@ -564,6 +569,7 @@ const clDefaultWidths: Record<string, number> = {
   email: 140,
   sharedEmail: 140,
   driveUrl: 100,
+  mfStatus: 90,
   chatRoomUrl: 140,
 };
 const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnResize('master-clients', clDefaultWidths);
@@ -769,14 +775,21 @@ const allColumns = computed(() => {
     return ia - ib;
   });
 
-  return fromLayout;
+  // mfStatus を driveUrl の直後に固定挿入（フィールド管理対象外・副作用なし）
+  const mfCol = { key: 'mfStatus', label: 'MF連携' };
+  const driveIdx2 = fromLayout.findIndex(c => c.key === 'driveUrl');
+  const withMf = driveIdx2 >= 0
+    ? [...fromLayout.slice(0, driveIdx2 + 1), mfCol, ...fromLayout.slice(driveIdx2 + 1)]
+    : [...fromLayout, mfCol];
+
+  return withMf;
 });
 
 /** 基本情報ビューで表示する列キー（ビジネスロジック上の固定列） */
 const basicViewCols = [
   'clientId', 'threeCode', 'type', 'consumptionTaxMode', 'companyName', 'staffId',
   'accountingSoftware', 'fiscalDate',
-  'sharedEmail', 'driveUrl', 'contact',
+  'sharedEmail', 'driveUrl', 'mfStatus', 'contact',
 ];
 
 // --- ビュー定義（デフォルトフィルタ・ソート付き） ---
@@ -808,13 +821,36 @@ const loadListViews = async () => {
 
     // APIが空の場合: デフォルトビューをシーディング（「すべて」は除外して保存）
     if (apiViews.length === 0) {
-      const seedViews = defaultClientViews.filter(v => v.key !== 'all');
+      const seedViews = defaultClientViews.filter((v) => v.key !== 'all');
       await fetch('/api/list-views/client', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ views: seedViews }),
       });
       apiViews = seedViews;
+    }
+
+    // 新列追加互換パッチ: mfStatus が各ビューの columns にない場合は driveUrl の直後に挿入
+    let _needsSave = false;
+    apiViews = apiViews.map((view) => {
+      if (!view.columns) return view;
+      if (view.columns.includes('mfStatus')) return view;
+      const cols = [...view.columns];
+      const driveIdx = cols.indexOf('driveUrl');
+      if (driveIdx >= 0) {
+        cols.splice(driveIdx + 1, 0, 'mfStatus');
+      } else {
+        cols.push('mfStatus');
+      }
+      _needsSave = true;
+      return { ...view, columns: cols };
+    });
+    if (_needsSave) {
+      fetch('/api/list-views/client', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ views: apiViews.filter((v) => v.key !== 'all') }),
+      }).catch(() => {});
     }
 
     // APIビュー + 末尾に「(すべて)」固定ビュー
@@ -1007,6 +1043,7 @@ const getCellClass = (key: string): string => {
   if (key === 'companyName') classes.push('cm-company-name');
   if (key === 'fiscalDate') classes.push('cm-fiscal');
   if (key === 'driveUrl') classes.push('cm-drive-cell');
+  if (key === 'mfStatus') classes.push('cm-drive-cell');
   if (key === 'contact') classes.push('cm-contact-cell');
   if (key === 'clientId') classes.push('cm-client-id');
   if (key === 'threeCode') classes.push('cm-code');
@@ -1148,7 +1185,8 @@ const fetchClientList = async () => {
 // 初回表示: APIからビュー定義を取得してから初期化
 const initPage = async () => {
   await loadListViews();   // API取得 → ビュー状態再同期（syncUrlQuery含む）
-  fetchClientList();
+  await fetchClientList(); // clientsロード完了を待つ
+  fetchMfStatuses();       // clients.valueが提わってからMF認証状態を取得
 };
 initPage();
 
@@ -1162,7 +1200,8 @@ onActivated(async () => {
   }
   // 一覧管理ページからの復帰時: APIから最新ビュー定義を再取得 → 表示状態も再同期
   await loadListViews();
-  fetchClientList();
+  await fetchClientList();
+  fetchMfStatuses();
 });
 
 // route.query watchは削除済み（無限ループの原因）
@@ -1453,6 +1492,48 @@ const copyDriveUrl = async (row: Client) => {
     window.prompt(UI_MSG.URLコピープロンプト, url);
   }
 };
+
+// --- MF連携ステータス ---
+/** clientId → 認証済みかどうか */
+const mfStatusMap = ref<Record<string, boolean>>({});
+
+/** 全顧問先のMF認証状態を一括取得 */
+const fetchMfStatuses = async () => {
+  // clients.valueが未ロードの場合は再取得（サーバー起動直後の500エラーリカバリ）
+  if (clients.value.length === 0) {
+    await refresh();
+  }
+  const ids = clients.value.map(c => c.clientId);
+  console.log('[MF連携] fetchMfStatuses 開始: clientIds =', ids);
+  if (ids.length === 0) {
+    console.warn('[MF連携] clients.value が空 → スキップ');
+    return;
+  }
+  try {
+    const res = await fetch('/api/mf/auth/status/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientIds: ids }),
+    });
+    if (!res.ok) {
+      console.warn('[MF連携] bulk API エラー:', res.status);
+      return;
+    }
+    const data = await res.json() as Record<string, { authenticated: boolean }>;
+    console.log('[MF連携] APIレスポンス:', JSON.stringify(data));
+    const map: Record<string, boolean> = {};
+    for (const [id, v] of Object.entries(data)) {
+      map[id] = v.authenticated;
+    }
+    console.log('[MF連携] mfStatusMap 更新:', JSON.stringify(map));
+    mfStatusMap.value = map;
+  } catch (e) {
+    console.warn('[MF連携] 認証状態取得失敗:', e);
+  }
+};
+
+
+
 /** Driveフォルダ自動作成（新規登録時） */
 const createDriveFolderForClient = async (client: Client) => {
   const folderName = `${client.threeCode}_${client.companyName}`;

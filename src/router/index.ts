@@ -514,6 +514,13 @@ export const routes: RouteRecordRaw[] = [
       return `/guest/${clientId}/login`
     },
   },
+  // --- MF OAuth 完了ページ（認証不要・社長向けサンクスページ） ---
+  {
+    path: '/mf/connected',
+    name: 'MfConnected',
+    component: () => import('@/views/MfConnectedPage.vue'),
+    meta: { guestAllowed: true },
+  },
   // --- 404ページ ---
   {
     path: '/404',

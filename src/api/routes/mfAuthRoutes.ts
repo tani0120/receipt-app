@@ -25,19 +25,22 @@ import {
   clearToken,
 } from '../services/mfAuthService'
 
+/** フロントエンドのOrigin。本番環境では環境変数 FRONTEND_URL で上書き可能 */
+const FRONTEND_ORIGIN = process.env.FRONTEND_URL ?? 'http://localhost:5173'
+
 const app = new Hono()
 
 // CSRF防止用stateの一時保存（メモリ。有効期限10分）
 // TODO: Phase 2（Supabase移行）完了時にセッションストアに差し替え (2026-05-17)
-const pendingStates = new Map<string, number>()
+const pendingStates = new Map<string, { createdAt: number; clientId: string }>()
 
 /** 期限切れstateの定期クリーンアップ（10分） */
 const STATE_TTL_MS = 10 * 60 * 1000
 
 function cleanExpiredStates(): void {
   const now = Date.now()
-  for (const [state, createdAt] of pendingStates) {
-    if (now - createdAt > STATE_TTL_MS) {
+  for (const [state, entry] of pendingStates) {
+    if (now - entry.createdAt > STATE_TTL_MS) {
       pendingStates.delete(state)
     }
   }
@@ -54,8 +57,10 @@ function cleanExpiredStates(): void {
 app.get('/auth/url', (c) => {
   cleanExpiredStates()
 
+  const clientId = c.req.query('clientId') ?? 'unknown'
   const state = crypto.randomBytes(32).toString('hex')
-  pendingStates.set(state, Date.now())
+  // clientIdはMapのvalueに保存（URLエンコード問題を回避）
+  pendingStates.set(state, { createdAt: Date.now(), clientId })
 
   const url = buildAuthorizationUrl(state)
   return c.json({ url })
@@ -78,42 +83,66 @@ app.get('/auth/callback', async (c) => {
   // MF側でユーザーが拒否した場合
   if (error) {
     console.error(`[mfAuthRoutes] 認可エラー: ${error}`)
-    return c.redirect('/?mf_auth=error&reason=' + encodeURIComponent(error))
+    return c.redirect(`${FRONTEND_ORIGIN}/#/mf/connected?mf_auth=error&reason=${encodeURIComponent(error)}`)
   }
 
   // パラメータ不足
   if (!code || !state) {
-    console.error('[mfAuthRoutes] コールバックにcode/stateがありません')
-    return c.redirect('/?mf_auth=error&reason=missing_params')
+    console.error('[mfAuthRoutes] コールバックはcode/stateがありません')
+    return c.redirect(`${FRONTEND_ORIGIN}/#/mf/connected?mf_auth=error&reason=missing_params`)
   }
 
   // CSRF検証
-  if (!pendingStates.has(state)) {
+  const entry = pendingStates.get(state)
+  if (!entry) {
     console.error('[mfAuthRoutes] 不正なstateパラメータ')
-    return c.redirect('/?mf_auth=error&reason=invalid_state')
+    return c.redirect(`${FRONTEND_ORIGIN}/#/mf/connected?mf_auth=error&reason=invalid_state`)
   }
   pendingStates.delete(state)
 
+  const tokenKey = entry.clientId && entry.clientId !== 'unknown' ? entry.clientId : 'default'
+  console.log(`[mfAuthRoutes] コールバック: clientId=${tokenKey}`)
+
   try {
-    // 認可コード → アクセストークン交換
-    await exchangeCodeForToken(code)
-    console.log('[mfAuthRoutes] MF OAuth認証成功')
-    return c.redirect('/?mf_auth=success')
+    // 認可code → アクセストークン交換（clientId別に保存）
+    await exchangeCodeForToken(code, tokenKey)
+    console.log(`[mfAuthRoutes] MF OAuth認証成功: clientId=${tokenKey}`)
+    return c.redirect(`${FRONTEND_ORIGIN}/#/mf/connected?mf_auth=success`)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`[mfAuthRoutes] トークン交換失敗: ${message}`)
-    return c.redirect('/?mf_auth=error&reason=' + encodeURIComponent('token_exchange_failed'))
+    return c.redirect(`${FRONTEND_ORIGIN}/#/mf/connected?mf_auth=error&reason=${encodeURIComponent('token_exchange_failed')}`)
   }
 })
 
 /**
  * GET /auth/status — 現在の認証状態を取得
  *
+ * クエリ: clientId（省略時は 'default'）
  * レスポンス: { authenticated: boolean, expiresAt: string|null, officeId: string|null, officeName: string|null }
  */
 app.get('/auth/status', (c) => {
-  const status = getAuthStatus()
+  const clientId = c.req.query('clientId') ?? 'default'
+  const status = getAuthStatus(clientId)
   return c.json(status)
+})
+
+/**
+ * POST /auth/status/bulk — 複数clientIdの認証状態を一括取得
+ *
+ * ボディ: { clientIds: string[] }
+ * レスポンス: { [clientId]: { authenticated: boolean } }
+ *
+ * Supabase移行後: WHERE client_id = ANY($1) の1クエリで高速化予定
+ */
+app.post('/auth/status/bulk', async (c) => {
+  const body = await c.req.json<{ clientIds: string[] }>()
+  const result: Record<string, { authenticated: boolean }> = {}
+  for (const id of body.clientIds ?? []) {
+    const s = getAuthStatus(id)
+    result[id] = { authenticated: s.authenticated }
+  }
+  return c.json(result)
 })
 
 /**

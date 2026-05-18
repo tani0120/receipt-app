@@ -149,12 +149,12 @@ export function buildAuthorizationUrl(state: string): string {
  * @param code MFから返された認可コード
  * @returns トークン情報
  */
-export async function exchangeCodeForToken(code: string): Promise<MfTokenData> {
-  const clientId = getClientId()
+export async function exchangeCodeForToken(code: string, clientId: string): Promise<MfTokenData> {
+  const mfClientId = getClientId()
   const clientSecret = getClientSecret()
 
   // CLIENT_SECRET_BASIC: Authorization ヘッダーに Base64(client_id:client_secret)
-  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+  const basicAuth = Buffer.from(`${mfClientId}:${clientSecret}`).toString('base64')
 
   const res = await fetch(MF_TOKEN_URL, {
     method: 'POST',
@@ -187,9 +187,10 @@ export async function exchangeCodeForToken(code: string): Promise<MfTokenData> {
     expiresAt: Date.now() + data.expires_in * 1000,
   }
 
-  // デフォルトキーで保存（メモリ + ファイル）
-  tokenStore.set(DEFAULT_TOKEN_KEY, tokenData)
+  // clientId別に保存（メモリ + ファイル）
+  tokenStore.set(clientId, tokenData)
   saveTokensToFile()
+  console.log(`[mfAuthService] トークン保存: clientId=${clientId}`)
 
   return tokenData
 }

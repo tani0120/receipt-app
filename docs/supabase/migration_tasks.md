@@ -261,6 +261,7 @@ USING (
 | `client_users` | 顧問先×ユーザー紐付（認可） | **新規** | 001_share_status.sql | **pipeline DL-031 L1808** |
 | `confirmed_journals` | 確定済み仕訳 | 未作成（T-03待ち） | 未作成 | **pipeline DL-032 L1883** |
 | `migration_jobs` | Drive→Supabase移行ジョブ管理 | **新規** | **005_migration_jobs.sql ✅** | 本セッション |
+| `mf_tokens` | MFクラウドOAuthトークン（clientId別） | `data/mf-tokens.json` | **未作成** | MF連携実装セッション |
 | `notifications` | アプリ通知（バックグラウンド処理完了/失敗通知） | **新規**（現在メモリ管理。型定義は`repositories/types.ts`に`AppNotification`として準備済み） | 未作成 | 2026-04-24セッション |
 
 > **注意**: `user_client_access`（security_report）と`client_users`（DL-031）は同一目的。DL-031の`client_users`が最新設計。
@@ -516,8 +517,7 @@ Drive（仮置き場）→ 選別画面 → 3分類:
 | DL-038: ハッシュ記録管理 | A案→Supabase移行時B案 | 同上 | task_unified L492 |
 | Supabase Realtime組込み（データ変更のリアルタイム同期） | 現在: 画面間の同期はVue refの共有（同一タブ内のみ）またはAPIリクエスト時の再取得（リロード必要）。WebSocket/SSE未実装。admin-dashboardやCSV変換画面は、顧問先登録後にリロードしなければ最新データが反映されない。**根本原因: localStorage時代の「composable初アクセス時に初期化」パターンをAPI化時にそのまま移植したため、サーバー側のインメモリキャッシュとフロント側のrefキャッシュが独立して動作する設計になっている** | Supabase移行時に`supabase.channel()`でテーブル変更をサブスクライブし、フロント側のrefを自動更新。対象テーブル・画面: ①`clients`テーブル→admin-dashboard（`registeredClients`/`activeClients`/`clientAnalysis`）、進捗管理（`progressRows`）、CSV変換（顧問先選択） ②`staff`テーブル→admin-dashboard（`staffCount`/`staffAnalysis`）、スタッフ一覧 ③`documents`テーブル→進捗管理（`unsorted`/`receivedDate`）、通知センター ④`journals`テーブル→進捗管理（`monthlyJournals`/`unexported`）。実装方法: 各composable（useClients/useStaff/useDocuments/useProgress）の初期化時に`supabase.channel('table-changes').on('postgres_changes', ...)`を登録し、INSERT/UPDATE/DELETEイベントでref配列を差分更新。admin-dashboardはcomposableのref変更がcomputedで自動伝播するため追加対応不要 | pipeline DL-032 L1945 |
 | `documents`テーブル `drive_file_id UNIQUE`制約追加 | 未適用 | 冪等性保証用 | 24番 L1174 |
-| ~~excluded ZIPダウンロードルート接続~~ | ~~✅ 本セッションで完了~~ | — | — |
-| ~~PC D&D→Drive uploadルート~~ | ~~✅ 本セッションで完了~~ | — | — |
+| `mfAuthService.ts` tokenStoreのDB化（`data/mf-tokens.json` → `mf_tokens`テーブル） | `mfAuthService.ts` の tokenStore操作（メモリ+JSON）が現従。外部IF（`exchangeCodeForToken`等）は変更不要。内部の `tokenStore.set/get/delete` を Supabase `mf_tokens` テーブル操作に差し替えるだけ。`/api/mf/auth/status/bulk` は `WHERE client_id = ANY($1)` 1クエリで高速化可能 | Supabase移行時 | MF連携実装セッション |
 | F-4: documentStore.ts（279行）+ docStore.tsルート廃止 | useDocuments/useProgressが`/api/doc-store`に依存 | Supabase DB documentsテーブルに切替後に削除 | task.md.resolved Phase F |
 | F-7: useDocuments.tsの`/api/doc-store`参照廃止 | 進捗管理（useProgress）が依存 | Supabase版DocumentRepositoryに切替後に削除 | task.md.resolved Phase F |
 | pipeline.tsのsaveUploadedFile + GET /file廃止 | useUploadチャンクアップロードが`data/uploads/`に依存 | Drive upload完全移行後に削除 | task.md.resolved Phase F |

@@ -6,6 +6,81 @@
 
     <main class="portal-main">
 
+      <!-- ===== 初回設定バナー（未連携時のみ表示） ===== -->
+      <div v-if="!mfLinked" class="mf-setup-banner">
+        <div class="mf-setup-banner-inner">
+          <div class="mf-setup-banner-text">
+            <span class="mf-setup-badge">初回設定（1回のみ）</span>
+            <p class="mf-setup-title">マネーフォワードとの連携設定が必要です</p>
+            <p class="mf-setup-desc">連携設定をお願いいたします。一度設定すると次回以降は不要です。</p>
+          </div>
+          <button class="mf-setup-btn" @click="showMfModal = true">
+            設定する
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ===== 連携済みバッジ（認証済み時のみ表示） ===== -->
+      <div v-else class="mf-linked-badge">
+        <span class="mf-linked-icon">
+          <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+            <circle cx="10" cy="10" r="10" fill="#22c55e" fill-opacity="0.15"/>
+            <path d="M6 10.5l3 3 5-5" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="mf-linked-label">MF連携済み</span>
+      </div>
+
+      <!-- ===== MF連携設定モーダル ===== -->
+      <Teleport to="body">
+        <div v-if="showMfModal" class="mf-modal-overlay" @click.self="showMfModal = false">
+          <div class="mf-modal">
+            <div class="mf-modal-header">
+              <span class="mf-modal-icon">🔗</span>
+              <h2 class="mf-modal-title">マネーフォワードとの連携設定</h2>
+            </div>
+            <p class="mf-modal-lead">マネーフォワードと当社システムの連携設定をお願いいたします。<br>なお、一度の設定で完了いたしますので、次回以降は認証は不要です。</p>
+            <ol class="mf-modal-steps">
+              <li class="mf-modal-step">
+                <span class="mf-step-num">1</span>
+                <div class="mf-step-body">
+                  <span class="mf-step-title">マネーフォワードのアカウントを選択</span>
+                  <span class="mf-step-note">MFに登録済みのメールアドレスが表示されます</span>
+                </div>
+              </li>
+              <li class="mf-modal-step">
+                <span class="mf-step-num">2</span>
+                <div class="mf-step-body">
+                  <span class="mf-step-title">連携する事業者（貴社名）を選択して「次へ」</span>
+                  <span class="mf-step-note">会社名と事業者番号が一覧で表示されます</span>
+                </div>
+              </li>
+              <li class="mf-modal-step">
+                <span class="mf-step-num">3</span>
+                <div class="mf-step-body">
+                  <span class="mf-step-title">権限の確認画面が表示されます</span>
+                  <span class="mf-step-note">内容をご確認のうえ「許可する」を押してください（チェック操作は不要です）</span>
+                </div>
+              </li>
+              <li class="mf-modal-step">
+                <span class="mf-step-num">4</span>
+                <div class="mf-step-body">
+                  <span class="mf-step-title">「連携が完了しました」のページが表示されたら完了です</span>
+                </div>
+              </li>
+            </ol>
+            <div class="mf-modal-actions">
+              <button class="mf-modal-cancel" @click="showMfModal = false">キャンセル</button>
+              <button class="mf-modal-go" @click="goToMf">
+                マネーフォワードへ進む
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
       <!-- ヒーローセクション -->
       <div class="hero">
         <div class="hero-icon-wrap">
@@ -131,7 +206,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import PortalHeader from '@/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useRoute, useRouter } from 'vue-router'
@@ -183,6 +258,43 @@ const tips = [
 const goUpload = () => {
   router.push(`/upload/${clientId}/guest`)
 }
+
+/** MF連携状態（APIから動的に取得） */
+const mfLinked = ref(false)
+const showMfModal = ref(false)
+
+// ページ表示時にclientId別の認証状態を取得
+onMounted(async () => {
+  try {
+    const res = await fetch(`/api/mf/auth/status?clientId=${encodeURIComponent(clientId)}`)
+    if (res.ok) {
+      const data = await res.json() as { authenticated: boolean }
+      mfLinked.value = data.authenticated
+    }
+  } catch {
+    // 取得失敗時は未連携とみなす（バナー表示）
+  }
+})
+
+/**
+ * モーダル「マネーフォワードへ進む」ボタン
+ * /api/mf/auth/url をclientId付きで呼び出してOAuthフローを開始
+ */
+const goToMf = async () => {
+  showMfModal.value = false
+  try {
+    const res = await fetch(`/api/mf/auth/url?clientId=${encodeURIComponent(clientId)}`)
+    const data = await res.json() as { url?: string; error?: string }
+    if (data.url) {
+      window.open(data.url, '_blank', 'noopener,noreferrer')
+    } else {
+      alert('認証URLの取得に失敗しました。担当者までお問い合わせください。')
+    }
+  } catch {
+    alert('ネットワークエラーが発生しました。時間をおいて再度お試しください。')
+  }
+}
+
 
 </script>
 
@@ -396,6 +508,200 @@ const goUpload = () => {
 .tips-footer-note {
   font-size: 11px; color: #94a3b8;
   margin: 12px 0 0; line-height: 1.6; text-align: center;
+}
+
+/* ===== 連携済みバッジ ===== */
+.mf-linked-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  border-radius: 14px;
+  padding: 9px 16px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  animation: fade-up 0.3s cubic-bezier(0.16,1,0.3,1) both;
+}
+.mf-linked-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.mf-linked-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #16a34a;
+  letter-spacing: 0.02em;
+}
+
+/* ===== 初回設定バナー ===== */
+.mf-setup-banner {
+  background: linear-gradient(135deg, #fff7ed, #fef3c7);
+  border-radius: 14px;
+  border: 1.5px solid #fcd34d;
+  margin-bottom: 20px;
+  overflow: hidden;
+  animation: fade-up 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.mf-setup-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  flex-wrap: wrap;
+}
+.mf-setup-banner-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mf-setup-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  width: fit-content;
+  margin-bottom: 3px;
+}
+.mf-setup-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #92400e;
+  margin: 0;
+  line-height: 1.4;
+}
+.mf-setup-desc {
+  font-size: 11px;
+  color: #b45309;
+  margin: 0;
+  line-height: 1.5;
+}
+.mf-setup-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.mf-setup-btn:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+/* ===== MF連携モーダル ===== */
+.mf-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: overlay-in 0.2s ease;
+}
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.mf-modal {
+  background: #fff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 24px 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  animation: modal-in 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.mf-modal-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.mf-modal-icon { font-size: 24px; }
+.mf-modal-title {
+  font-size: 17px; font-weight: 900; color: #1e293b; margin: 0;
+}
+.mf-modal-lead {
+  font-size: 13px; color: #475569; line-height: 1.7;
+  margin: 0 0 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.mf-modal-steps {
+  list-style: none; margin: 0 0 22px; padding: 0;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.mf-modal-step {
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.mf-step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff; font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.mf-step-body {
+  display: flex; flex-direction: column; gap: 2px; padding-top: 2px;
+}
+.mf-step-title {
+  font-size: 13px; font-weight: 700; color: #1e293b; line-height: 1.4;
+}
+.mf-step-note {
+  font-size: 11px; color: #64748b; line-height: 1.5;
+}
+.mf-modal-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+.mf-modal-cancel {
+  padding: 10px 18px;
+  border: 1.5px solid #e2e8f0; border-radius: 10px;
+  background: #fff; color: #64748b;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.mf-modal-cancel:hover { background: #f8fafc; }
+.mf-modal-go {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 20px;
+  border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+}
+.mf-modal-go:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(245,158,11,0.4);
 }
 
 /* ===== フッター ===== */
