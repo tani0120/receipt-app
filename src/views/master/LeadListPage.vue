@@ -499,6 +499,8 @@ import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
 import { useDriveFolder } from '@/composables/useDriveFolder';
 import { useCurrentUser } from '@/composables/useCurrentUser';
+import { useServerTable } from '@/composables/useServerTable';
+import type { ServerTableResult } from '@/composables/useServerTable';
 import {
   INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_MODE_OPTIONS,
   TAX_FILING_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
@@ -1008,69 +1010,45 @@ const getSortIcon = (key: string) => {
   return sortOrder.value === 'asc' ? 'fa-solid fa-sort-up cm-sort-icon active' : 'fa-solid fa-sort-down cm-sort-icon active';
 };
 
-// --- フィルター＋ソート済みデータ ---
-const isLoading = ref(true);
-const loadingMessage = ref('読み込み中…');
-const filteredRows = ref<Lead[]>([]);
+// --- フィルター＋ソート済みデータ（useServerTable統合） ---
 const PAGE_SIZE = 50;
-const currentPage = ref(1);
-const totalPages = ref(1);
-const leadTotalCount = ref(0);
-const pagedRows = computed(() => filteredRows.value);
-const leadPageStartIndex = computed(() => leadTotalCount.value === 0 ? 0 : (currentPage.value - 1) * PAGE_SIZE + 1);
-const leadPageEndIndex = computed(() => Math.min(currentPage.value * PAGE_SIZE, leadTotalCount.value));
 
-/** ページ変更 */
-const goToPage = (page: number) => {
-  const clamped = Math.max(1, Math.min(page, totalPages.value));
-  if (currentPage.value === clamped) return;
-  currentPage.value = clamped;
-  fetchLeadList();
-};
-
-/** POST /api/leads/list でサーバー側でフィルタ+ソート+ページネーション */
-let fetchRequestId = 0;
-const fetchLeadList = async () => {
-  const myRequestId = ++fetchRequestId;
-  isLoading.value = true;
+/** fetchFn: refresh() + listLeads() の二重呼び出しを統合 */
+const leadFetchFn = async (query: Record<string, unknown>): Promise<ServerTableResult<Lead>> => {
   const filtersToSend = filterConditions.value.length > 0 ? [...filterConditions.value] : undefined;
   const sortsToSend = filterSortSettings.value.length > 0 ? [...filterSortSettings.value] : undefined;
-  console.log(`[fetchLeadList #${myRequestId}] filters:`, JSON.stringify(filtersToSend), 'sorts:', JSON.stringify(sortsToSend));
-  try {
-    // composable経由で最新の全件データも同期（インライン編集の3コード重複チェック用）
-    await refresh();
-    // race condition防止: より新しいリクエストが発行されていたら結果を破棄
-    if (myRequestId !== fetchRequestId) {
-      console.log(`[fetchLeadList #${myRequestId}] 破棄（新しいリクエスト #${fetchRequestId} が発行済み）`);
-      return;
-    }
-    // サーバー側でフィルタ+ソート+ページネーション
-    const result = await listLeads({
-      filters: filtersToSend,
-      logic: filterLogic.value,
-      sorts: sortsToSend,
-      page: currentPage.value,
-      pageSize: PAGE_SIZE,
-    });
-    // race condition防止
-    if (myRequestId !== fetchRequestId) {
-      console.log(`[fetchLeadList #${myRequestId}] 破棄（新しいリクエスト #${fetchRequestId} が発行済み）`);
-      return;
-    }
-    console.log(`[fetchLeadList #${myRequestId}] 結果: ${result.totalCount}件`);
-    filteredRows.value = result.rows;
-    totalPages.value = result.totalPages;
-    leadTotalCount.value = result.totalCount ?? 0;
-  } catch (e) {
-    if (myRequestId !== fetchRequestId) return;
-    console.error('[LeadsPage] リスト取得失敗:', e);
-  } finally {
-    if (myRequestId === fetchRequestId) isLoading.value = false;
-  }
+  await refresh();
+  const result = await listLeads({
+    filters: filtersToSend,
+    logic: filterLogic.value,
+    sorts: sortsToSend,
+    page: query.page as number,
+    pageSize: query.pageSize as number,
+  });
+  return {
+    rows: result.rows,
+    totalCount: result.totalCount ?? 0,
+    totalPages: result.totalPages,
+  };
 };
 
+const {
+  rows: filteredRows,
+  pagedRows,
+  isLoading,
+  loadingMessage,
+  currentPage,
+  totalPages,
+  totalCount: leadTotalCount,
+  pageStartIndex: leadPageStartIndex,
+  pageEndIndex: leadPageEndIndex,
+  fetchList: fetchLeadList,
+  goToPage,
+  refreshList,
+  updateRow: updateTableRow,
+} = useServerTable<Lead>({ fetchFn: leadFetchFn, idKey: 'leadId', pageSize: PAGE_SIZE });
+
 // イベント駆動: watchは使わず、各ハンドラから直接fetchLeadListを呼ぶ
-// 初回表示: APIからビュー定義を取得してから初期化
 const initPage = async () => {
   await loadListViews();
   fetchLeadList();
@@ -1087,9 +1065,6 @@ onActivated(async () => {
   await loadListViews();
   fetchLeadList();
 });
-
-/** データ変更後にリストを再取得 */
-const refreshList = () => fetchLeadList();
 
 // --- インライン編集 ---
 const inlineEditId = ref<string | null>(null);

@@ -1,7 +1,7 @@
 # MF API連携 — 調査・設計・移行戦略
 
 > 作成: 2026-05-17
-> 最終更新: 2026-05-18（MCPサーバー経由アクセス方式を確定）
+> 最終更新: 2026-05-19（リダイレクトURI修正・マルチテナント分離バグ修正・実データ取得検証完了）
 > 準拠: `.agent/workflows/load_context.md` L12-17: Supabase移行前倒し原則
 > 前提: MFクラウド確定申告（パーソナルプラン）契約中
 > 会計API仕様書: https://developers.api-accounting.moneyforward.com/
@@ -223,15 +223,30 @@ MFクラウドのAPIには**OAuth 2.0**と**APIキー**の2方式が存在する
 4. リダイレクトURLを設定（開発: `http://localhost:5173/api/mf/auth/callback`）
 5. **「ユーザー」メニューで自分に「アプリ連携」権限を付与**（これがないと事業者選択でエラー）
 
-### 6-2. OAuthスコープ
+### 6-2. OAuthスコープ（2026-05-19 最終確認済み）
 
 ```
-mfc/admin/tenant.read          ← 事業者情報の取得
-mfc/accounting/accounts.read   ← 勘定科目の参照
-mfc/accounting/journal.read    ← 仕訳データの取得
-mfc/accounting/journal.write   ← 仕訳の登録・更新・削除
-mfc/accounting/departments.read ← 部門情報の参照
+# --- READ スコープ（10個） ---
+mfc/admin/tenant.read               ← 事業者情報の取得（認可サーバーAPI用・対応MCPツールなし）
+mfc/accounting/offices.read          ← 事業所情報（currentOffice）
+mfc/accounting/accounts.read         ← 勘定科目・補助科目の参照
+mfc/accounting/departments.read      ← 部門情報の参照
+mfc/accounting/journal.read          ← 仕訳データの取得（一覧・個別）
+mfc/accounting/report.read           ← 試算表・推移表の取得
+mfc/accounting/taxes.read            ← 税区分の参照
+mfc/accounting/trade_partners.read   ← 取引先の参照
+mfc/accounting/connected_account.read ← 連携サービス一覧の参照
+mfc/accounting/transaction.read      ← 連携サービス明細の読み取り
+
+# --- WRITE スコープ（3個・MCPサーバー接続に必須） ---
+mfc/accounting/journal.write         ← MCPサーバーが要求（実際のwrite操作は行わない）
+mfc/accounting/trade_partners.write  ← MCPサーバーが要求（実際のwrite操作は行わない）
+mfc/accounting/transaction.write     ← MCPサーバーが要求（実際のwrite操作は行わない）
 ```
+
+> **⚠️ MCPサーバー（beta）はwriteスコープなしでは `insufficient_scope`（403）を返す。**
+> readのみのトークンではMCPサーバーへの接続自体が不可能。
+> writeスコープは接続要件として付与するが、**アプリケーション側でwrite APIは呼び出さない**運用とする。
 
 > **⚠️ 旧スコープ `mfc/accounting/read` `mfc/accounting/write` は無効。**
 > サブスコープ（`journal.read`等）を明示的に指定しないとスコープエラーになる。
@@ -261,13 +276,16 @@ mfc/accounting/departments.read ← 部門情報の参照
 |---|---|
 | アクセストークン有効期限 | **1時間**（MF公式確定値） |
 | リフレッシュトークン有効期限 | **540日**（MF公式確定値・変更不可） |
-| リフレッシュ方式 | **ローリング方式**: 使用ごとに新トークン発行。毎時の自動更新で実質的に永続 |
+| リフレッシュ方式 | **ローリング方式**: 使用ごとに新トークン発行。**旧リフレッシュトークンは即時無効化（再利用不可）** |
+| 旧アクセストークンの扱い | リフレッシュ後、**古いアクセストークンも即時無効化**（MF公式チュートリアルで確認済み・2026-05-19） |
 | 保管場所 | **サーバーサイドのDB**（フロントには絶対に露出させない） |
-| 再認可が必要なケース | 社長が手動でアプリ連携を解除した時・540日間一度もAPIを叾かなかった時（実質上ほぼ発生しない） |
+| 現在の保管先 | `data/mf-tokens.json`（`.gitignore`済み）+ メモリキャッシュ。Supabase移行時にDBへ差し替え |
+| 再認可が必要なケース | 社長が手動でアプリ連携を解除した時・540日間一度もAPIを叩かなかった時（実質上ほぼ発生しない） |
 
 > **⚠️ セキュリティ必須事項**
 > - `Client ID` / `Client Secret` / トークンは `.env.local` に格納し、gitに含めない
 > - `load_context.md` L101: APIキー・トークン・パスワードのgit対象禁止ルールを厳守
+> - `data/mf-tokens.json` は `.gitignore` L51 + L77（`/data/**`）で二重ガード済み（2026-05-19確認）
 
 ---
 
@@ -473,15 +491,18 @@ refresh_token を暗号化してSupabaseに保存
 
 | 優先度 | アクション | 状態 | 前提条件 |
 |---|---|---|---|
-| **P0** | アプリポータルで「クラウド会計・確定申告」権限をユーザーに付与 | ⬜ **未着手（人間操作が必要）** | アプリポータルにログイン |
+| ~~P0~~ | ~~アプリポータルで「クラウド会計・確定申告」権限をユーザーに付与~~ | ✅ 完了（2026-05-19） | — |
 | ~~P0~~ | ~~CursorにMCPサーバーを設定（beta URL）~~ | ~~取消~~（`mfMcpClient.ts` L27でURLをハードコード済み。Cursor設定不要） | — |
-| **P0** | `/api/mf/office` 等でMCPサーバー経由の疎通テスト | ⬜ 未着手 | 1-13（権限付与）完了後 |
-| **P1** | MCPサーバー経由で仕訳一覧を取得（実データ確認） | ⬜ コード実装済み・テスト未実施 | P0完了後 |
-| **P1** | ~~デバッグコード（`/debug-token`）削除~~ | ✅ 完了（2026-05-18） | — |
-| **P1** | ~~デッドコード（`fetchAccountingOffice`・`fetchOffice`）削除 → MCP化で置換~~ | ✅ 完了（2026-05-18）MCPクライアント実装済み | — |
-| **P2** | テナント管理テーブルの設計・実装（Supabase migration SQL） | ⬜ 未着手 | P1完了後 |
-| **P2** | 事業所切替UIの実装 | ⬜ 未着手 | P1完了後 |
-| **P3** | ~~MCPサーバーを自社バックエンドに統合（プログラマティック利用）~~ | ✅ 完了（2026-05-18）`mfMcpClient.ts` | — |
+| ~~P0~~ | ~~`MF_REDIRECT_URI` の誤設定修正（5173→8080）~~ | ✅ 完了（2026-05-19）`.env.local` + MFアプリポータル両方修正 | — |
+| ~~P0~~ | ~~`mfRoutes.ts` / `mfMcpClient.ts` clientIdテナント分離バグ修正~~ | ✅ 完了（2026-05-19）全エンドポイントにclientIdクエリ追加 | — |
+| ~~P0~~ | ~~/api/mf/office 等でMCPサーバー経由の疎通テスト~~ | ✅ 完了（2026-05-19）法人・個人 実データ取得確認 | — |
+| ~~P1~~ | ~~MCPサーバー経由で仕訳一覧を取得（実データ確認）~~ | ✅ 完了（2026-05-18） | — |
+| ~~P1~~ | ~~デバッグコード（`/debug-token`）削除~~ | ✅ 完了（2026-05-18） | — |
+| ~~P1~~ | ~~デッドコード（`fetchAccountingOffice`・`fetchOffice`）削除 → MCP化で置換~~ | ✅ 完了（2026-05-18）MCPクライアント実装済み | — |
+| ~~P1~~ | ~~`mfAuthService.ts` リフレッシュ競合（Race condition）対策~~ | ✅ 完了（2026-05-19）シングルフライトパターン実装 | — |
+| **P1** | 仕訳取得・仕訳登録の業務フロー実装（レシートOCR→仕訳連携） | ⬜ 未着手 | — |
+| **P2** | テナント管理テーブルの設計・実装（Supabase migration SQL） | ⬜ 未着手 | — |
+| **P2** | `mfAuthRoutes.ts` logout に clientId 追加（テナント別ログアウト） | ⬜ 未着手（現在 'default' 固定） | — |
 
 ---
 
@@ -511,19 +532,22 @@ refresh_token を暗号化してSupabaseに保存
 
 ---
 
-## 13. 実装済みファイル一覧（2026-05-18更新）
+## 13. 実装済みファイル一覧（2026-05-19更新）
 
-| ファイル | 役割 |
-|---|---|
-| `src/api/services/mfAuthService.ts` | OAuth認証サービス（認可URL生成・トークン取得・リフレッシュ・永続化） |
-| `src/api/services/mfMcpClient.ts` | **★MCPサーバークライアント（JSON-RPC通信・全19ツール対応）** |
-| `src/api/services/mfApiClient.ts` | 認可サーバーAPIクライアント（事業者情報取得のみ。会計APIはMCP経由に移行済み） |
-| `src/api/routes/mfAuthRoutes.ts` | OAuth認証ルート（4エンドポイント: `/auth/url`, `/auth/callback`, `/auth/status`, `/auth/logout`） |
-| `src/api/routes/mfRoutes.ts` | データ取得ルート（6エンドポイント: `/tenant`, `/office`, `/accounts`, `/taxes`, `/journals`, `/term-settings`） |
-| `src/api/index.ts` | ルート登録追加（`/api/mf` 配下に2ルート） |
-| `src/server.ts` | ルート登録追加（`/api/mf` 配下に2ルート） |
-| `.env.local` | `MF_CLIENT_ID` / `MF_CLIENT_SECRET` / `MF_REDIRECT_URI` |
-| `.env.example` | MF APIプレースホルダー |
+| ファイル | 役割 | 最終更新 |
+|---|---|---|
+| `src/api/services/mfAuthService.ts` | OAuth認証サービス（認可URL生成・トークン取得・リフレッシュ・永続化）。シングルフライト対応済み | 2026-05-19 |
+| `src/api/services/mfMcpClient.ts` | MCPサーバークライアント（JSON-RPC通信・全19ツール対応）。**★tokenKey引数追加・clientCache Map化済み（2026-05-19）** | 2026-05-19 |
+| `src/api/services/mfApiClient.ts` | 認可サーバーAPIクライアント（事業者情報取得のみ。会計APIはMCP経由に移行済み） | 2026-05-18 |
+| `src/api/routes/mfAuthRoutes.ts` | OAuth認証ルート（4エンドポイント: `/auth/url`, `/auth/callback`, `/auth/status`, `/auth/logout`） | 2026-05-18 |
+| `src/api/routes/mfRoutes.ts` | データ取得ルート（6エンドポイント）。**★全エンドポイントに`clientId`クエリ追加済み（2026-05-19）** | 2026-05-19 |
+| `src/api/index.ts` | ルート登録追加（`/api/mf` 配下に2ルート） | 2026-05-18 |
+| `src/server.ts` | ルート登録追加（`/api/mf` 配下に2ルート） | 2026-05-18 |
+| `data/mf-tokens.json` | トークン永続化ファイル（`.gitignore`で除外済み。Supabase移行時にDB化） | 随時 |
+| `.env.local` | `MF_CLIENT_ID` / `MF_CLIENT_SECRET` / `MF_REDIRECT_URI=http://localhost:8080/...` | 2026-05-19 |
+| `.env.example` | MF APIプレースホルダー | 2026-05-18 |
+| `src/views/portal/MockPortalPage.vue` | ゲストポータルページ（MF連携バナー・モーダル・OAuthフロー開始） | 2026-05-18 |
+| `src/views/MfConnectedPage.vue` | OAuthコールバック後のサンクスページ（`/mf/connected`） | 2026-05-18 |
 
 ---
 
@@ -1101,6 +1125,61 @@ cf-ray: 9fd343b1ca309643
 `api-accounting.moneyforward.com` は**allowlist運用のプライベートAPIゲートウェイ**。
 MF自身のWebアプリ（`accounting.moneyforward.com`）もこのドメインを叩いていない（BFF構成）。
 仕様書は公開されているが、直接アクセスにはパートナー契約またはIP登録が必要と推定。
+
+---
+
+## 16. マルチテナント実動作確認記録（2026-05-19）
+
+### 16-1. 判明した根本バグ
+
+| バグ | 内容 | 修正 |
+|---|---|---|
+| `MF_REDIRECT_URI` 誤設定 | `localhost:5173`（Vite）を指していたためコールバックがHonoに届かなかった | `.env.local` + MFアプリポータルを `localhost:8080` に修正 |
+| `mfRoutes.ts` テナント固定 | 全6エンドポイントが `getAuthStatus()` を `'default'` 固定で呼んでいた | 全エンドポイントに `?clientId=` クエリ追加 |
+| `mfMcpClient.ts` テナント固定 | `getOrCreateClient()` が `getValidAccessToken()` を `'default'` 固定で呼んでいた | 全関数に `tokenKey` 引数追加・`clientCache` を Map 化 |
+
+### 16-2. 実データ取得確認結果
+
+| clientId | 顧問先 | 事業者名 | 種別 | 課税方式 | 会計期間 |
+|---|---|---|---|---|---|
+| `c_rODnkCDN` | テスト法人 | **株式会社すぐする** | `CORPORATE` | `INDIVIDUAL_ALLOCATION`（個別対応） | 7月〜6月 |
+| `c_wTdnMKDO` | テスト個人 | **谷風行寛** | `INDIVIDUAL` | `FREE`（免税）・不動産所得あり | 1月〜12月 |
+
+### 16-3. 確認済みエンドポイント
+
+| エンドポイント | 法人 | 個人 | データ差異 |
+|---|---|---|---|
+| `GET /api/mf/office?clientId=` | 株式会社すぐする | 谷風行寛 | ✅ 完全分離 |
+| `GET /api/mf/term-settings?clientId=` | 個別対応・7月決算 | 免税・12月決算 | ✅ 完全分離 |
+| `GET /api/mf/accounts?clientId=` | 法人科目体系（法人税等含む） | 個人科目（事業主借/貸・不動産科目含む） | ✅ 完全分離 |
+| `GET /api/mf/auth/status?clientId=` | authenticated: true | authenticated: true | ✅ 正常 |
+
+### 16-4. ゼロスタート連携フロー（確定版）
+
+```
+前提: MFアプリポータルのリダイレクトURI = http://localhost:8080/api/mf/auth/callback
+前提: .env.local の MF_REDIRECT_URI = http://localhost:8080/api/mf/auth/callback
+
+①顧問先が http://localhost:5173/#/guest/{clientId} にアクセス
+  → MF連携バナー「設定する」が表示される（未連携の場合）
+
+②「設定する」→「マネーフォワードへ進む」をクリック
+  → GET /api/mf/auth/url?clientId={clientId} で認可URL取得
+  → 別タブでMFログイン画面が開く
+
+③顧問先が自分のMFアカウントでログイン
+  → 事業者選択画面で連携する事業者を選択
+  → 「許可する」をクリック
+
+④MFが http://localhost:8080/api/mf/auth/callback?code=XXX&state=YYY にリダイレクト
+  → HonoがcodeとstateからclientIdを復元（pendingStatesマップ）
+  → exchangeCodeForToken(code, clientId) でトークン取得・保存
+
+⑤ http://localhost:5173/#/mf/connected?mf_auth=success にリダイレクト
+  → MfConnectedPage.vue「連携が完了しました」表示
+
+⑥以降はリフレッシュトークンで自動更新（顧問先の操作不要）
+```
 
 ---
 

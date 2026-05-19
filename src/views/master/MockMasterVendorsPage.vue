@@ -198,6 +198,8 @@ import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import { normalizeVendorName } from '@/utils/pipeline/vendorIdentification';
 import { DIRECTION_OPTIONS, FILTER_ALL_LABEL, PLACEHOLDER_DASH } from '@/constants/vendorOptions';
 import { UI_MSG } from '@/constants/uiMessages';
+import { useServerTable } from '@/composables/useServerTable';
+import type { ServerTableResult } from '@/composables/useServerTable';
 
 // ============================================================
 // データ（API経由で取得。編集はローカルrefに対して行う）
@@ -358,44 +360,47 @@ function getSortIcon(key: string) {
 /** 業種一覧（API応答から取得） */
 const uniqueVectors = ref<string[]>([]);
 
-const filteredRows = ref<Vendor[]>([]);
-const totalCount = ref(0);
-
-const totalPages = ref(1);
-const pageStart = computed(() => (page.value - 1) * PAGE_SIZE + 1);
-const pageEnd = computed(() => Math.min(page.value * PAGE_SIZE, totalCount.value));
-const pagedRows = computed(() => filteredRows.value);
-const isLoading = ref(false);
-
-/** POST /api/vendors/list でサーバー側でフィルタ+ソート+ページネーション */
-const fetchVendorList = async () => {
-  isLoading.value = true;
-  try {
-    const res = await fetch('/api/vendors/list', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        search: searchQuery.value || undefined,
-        vectorFilter: vectorFilter.value || undefined,
-        directionFilter: directionFilter.value || undefined,
-        sortKey: sortKey.value || undefined,
-        sortOrder: sortAsc.value ? 'asc' : 'desc',
-        page: page.value,
-        pageSize: PAGE_SIZE,
-        type: 'vendor',
-      }),
-    });
-    const data = await res.json();
-    filteredRows.value = data.rows;
-    totalCount.value = data.totalCount;
-    totalPages.value = data.totalPages;
-    uniqueVectors.value = data.uniqueVectors ?? [];
-  } catch (e) {
-    console.error('[VendorsPage] リスト取得失敗:', e);
-  } finally {
-    isLoading.value = false;
-  }
+/** fetchFn: POST /api/vendors/list */
+const vendorFetchFn = async (query: Record<string, unknown>): Promise<ServerTableResult<Vendor>> => {
+  const res = await fetch('/api/vendors/list', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      search: searchQuery.value || undefined,
+      vectorFilter: vectorFilter.value || undefined,
+      directionFilter: directionFilter.value || undefined,
+      sortKey: sortKey.value || undefined,
+      sortOrder: sortAsc.value ? 'asc' : 'desc',
+      page: query.page,
+      pageSize: query.pageSize,
+      type: 'vendor',
+    }),
+  });
+  const data = await res.json();
+  uniqueVectors.value = data.uniqueVectors ?? [];
+  return {
+    rows: data.rows,
+    totalCount: data.totalCount,
+    totalPages: data.totalPages,
+  };
 };
+
+const {
+  rows: filteredRows,
+  pagedRows,
+  isLoading,
+  currentPage: _stPage,
+  totalPages,
+  totalCount,
+  pageStartIndex: pageStart,
+  pageEndIndex: pageEnd,
+  fetchList: fetchVendorList,
+  refreshList,
+} = useServerTable<Vendor>({ fetchFn: vendorFetchFn, idKey: 'vendor_id', pageSize: PAGE_SIZE });
+
+// useServerTableのcurrentPageとpage refを同期
+watch(page, (v) => { _stPage.value = v; });
+watch(_stPage, (v) => { page.value = v; });
 
 // フィルタ・ソート・ページ・検索変更時に自動でAPI再呼び出し（バッチ化で二重発火防止）
 let fetchPending = false;
@@ -408,11 +413,8 @@ watch([searchQuery, vectorFilter, directionFilter, sortKey, sortAsc, page], () =
   });
 }, { immediate: true });
 
-
 // KeepAliveからの復帰時にデータを再取得
 onActivated(() => fetchVendorList());
-/** データ変更後にリストを再取得 */
-const refreshList = () => fetchVendorList();
 </script>
 
 <style>

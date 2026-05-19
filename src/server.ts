@@ -249,3 +249,5 @@ httpServer.on('listening', () => {
 // SIGTERM（docker stop, Cloud Run）+ SIGINT（Ctrl+C, nodemon restart）の両方を処理
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
 process.on('SIGINT', () => gracefulShutdown('SIGINT'))
+
+ 

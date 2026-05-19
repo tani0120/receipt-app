@@ -14,4 +14,3 @@
 <script setup lang="ts">
 // MockNavBarはApp.vueで描画済みのため不要
 </script>
-

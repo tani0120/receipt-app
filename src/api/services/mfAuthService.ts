@@ -26,20 +26,27 @@ const MF_TOKEN_URL = 'https://api.biz.moneyforward.com/token'
 /** MF API ベースURL */
 export const MF_API_BASE_URL = 'https://api.biz.moneyforward.com'
 
-/** OAuthスコープ（MCPサーバー要求スコープ + 事業者情報） */
+/**
+ * OAuthスコープ
+ *
+ * 方針: 原則 read only。ただしMCPサーバー（beta）はwriteスコープなしで
+ *   insufficient_scope（403）を返すため、接続要件として3つのwriteスコープを付与。
+ *   アプリケーション側ではwrite APIを呼び出さない運用とする。（2026-05-19 検証済み）
+ */
 const MF_SCOPES = [
   'mfc/admin/tenant.read',
   'mfc/accounting/offices.read',
   'mfc/accounting/accounts.read',
   'mfc/accounting/departments.read',
   'mfc/accounting/journal.read',
-  'mfc/accounting/journal.write',
   'mfc/accounting/report.read',
   'mfc/accounting/taxes.read',
   'mfc/accounting/trade_partners.read',
-  'mfc/accounting/trade_partners.write',
   'mfc/accounting/connected_account.read',
-  'mfc/accounting/transaction.write',
+  'mfc/accounting/transaction.read',    // 連携サービス明細の読み取り
+  'mfc/accounting/journal.write',       // ⚠️ MCPサーバー接続に必要（実際のwrite操作は行わない）
+  'mfc/accounting/trade_partners.write', // ⚠️ MCPサーバー接続に必要（実際のwrite操作は行わない）
+  'mfc/accounting/transaction.write',   // ⚠️ MCPサーバー接続に必要（実際のwrite操作は行わない）
 ].join(' ')
 
 // ---------- 環境変数 ----------
@@ -85,6 +92,13 @@ const tokenStore = new Map<string, MfTokenData>()
 
 /** デフォルトのトークンキー（シングルテナント開発用） */
 const DEFAULT_TOKEN_KEY = 'default'
+
+/**
+ * シングルフライトキャッシュ — 同一キーのリフレッシュ中Promiseを保持する。
+ * MFの「リフレッシュトークンは一度限り」仕様に対応するため、
+ * 複数リクエストが同時に期限切れを検知しても実際のMFリクエストは1回だけ行う。
+ */
+const refreshInFlight = new Map<string, Promise<MfTokenData>>()
 
 // ---------- ファイル永続化ヘルパー ----------
 
@@ -198,11 +212,11 @@ export async function exchangeCodeForToken(code: string, clientId: string): Prom
 // ---------- トークンリフレッシュ ----------
 
 /**
- * リフレッシュトークンでアクセストークンを再取得する
+ * MFに実際のリフレッシュリクエストを送る内部実装。
+ * 外部からは refreshAccessToken / getValidAccessToken 経由でのみ呼ぶこと。
  * @param key トークンストアのキー
- * @returns 更新されたトークン情報
  */
-export async function refreshAccessToken(key: string = DEFAULT_TOKEN_KEY): Promise<MfTokenData> {
+async function _doRefreshAccessToken(key: string): Promise<MfTokenData> {
   const current = tokenStore.get(key)
   if (!current?.refreshToken) {
     throw new Error(`[mfAuthService] リフレッシュトークンが存在しません (key=${key})`)
@@ -238,7 +252,7 @@ export async function refreshAccessToken(key: string = DEFAULT_TOKEN_KEY): Promi
   const updated: MfTokenData = {
     ...current,
     accessToken: data.access_token,
-    refreshToken: data.refresh_token,
+    refreshToken: data.refresh_token, // MF仕様: リフレッシュトークンは1回限り。必ず新トークンで上書き
     expiresAt: Date.now() + data.expires_in * 1000,
   }
 
@@ -248,10 +262,39 @@ export async function refreshAccessToken(key: string = DEFAULT_TOKEN_KEY): Promi
   return updated
 }
 
+/**
+ * リフレッシュトークンでアクセストークンを再取得する（シングルフライト保証付き）。
+ *
+ * MFの「リフレッシュトークンは一度限り」仕様により、
+ * 同一キーに対して並走するリフレッシュは2件目が invalid_grant で失敗する。
+ * シングルフライトにより、進行中のリフレッシュが完了するまで後続は待機し、
+ * 同一のPromise結果を共有する。
+ *
+ * @param key トークンストアのキー
+ * @returns 更新されたトークン情報
+ */
+export async function refreshAccessToken(key: string = DEFAULT_TOKEN_KEY): Promise<MfTokenData> {
+  // 既にリフレッシュ中なら同じPromiseを返す（シングルフライト）
+  const inFlight = refreshInFlight.get(key)
+  if (inFlight) {
+    console.log(`[mfAuthService] リフレッシュ進行中のPromiseを再利用 (key=${key})`)
+    return inFlight
+  }
+
+  // 新規リフレッシュ開始。完了後にキャッシュをクリアする
+  const promise = _doRefreshAccessToken(key).finally(() => {
+    refreshInFlight.delete(key)
+  })
+
+  refreshInFlight.set(key, promise)
+  return promise
+}
+
 // ---------- トークン取得（自動リフレッシュ付き） ----------
 
 /**
- * 有効なアクセストークンを取得する（期限切れなら自動リフレッシュ）
+ * 有効なアクセストークンを取得する（期限切れなら自動リフレッシュ）。
+ * リフレッシュはシングルフライト保証付きのため並走しても安全。
  * @param key トークンストアのキー
  * @returns アクセストークン文字列
  */

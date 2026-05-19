@@ -209,37 +209,29 @@ export interface MfMcpJournal {
 
 // ---------- 接続管理 ----------
 
-/** キャッシュされたMCPクライアント */
-let cachedClient: Client | null = null
-/** キャッシュ作成時のトークン（トークン変更検知用） */
-let cachedToken: string | null = null
+/**
+ * トークン別にMCPクライアントをキャッシュする。
+ * テナント（clientId）ごとに異なるアクセストークンを使い分けるため Map で管理。
+ * key: accessToken文字列 / value: Clientインスタンス
+ */
+const clientCache = new Map<string, Client>()
 
 /**
  * MCPサーバーに接続し、Clientインスタンスを返す。
- * トークンが変わった場合は再接続する。
+ * tokenKey が変わると異なるトークンで接続するためキャッシュミスになる。
  *
  * 接続順序:
  *   1. StreamableHTTP（推奨・MCP標準）
  *   2. SSE（レガシーフォールバック）
+ *
+ * @param tokenKey mfAuthService のトークンストアキー（clientId = 顧問先ID）
  */
-async function getOrCreateClient(): Promise<Client> {
-  const accessToken = await getValidAccessToken()
+async function getOrCreateClient(tokenKey: string): Promise<Client> {
+  const accessToken = await getValidAccessToken(tokenKey)
 
-  // キャッシュが有効ならそのまま返す
-  if (cachedClient && cachedToken === accessToken) {
-    return cachedClient
-  }
-
-  // 古いクライアントがあれば切断
-  if (cachedClient) {
-    try {
-      await cachedClient.close()
-    } catch {
-      // 切断エラーは無視（既に切断済みの場合など）
-    }
-    cachedClient = null
-    cachedToken = null
-  }
+  // 同一トークンのキャッシュがあればそのまま返す
+  const cached = clientCache.get(accessToken)
+  if (cached) return cached
 
   const url = new URL(MF_MCP_URL)
   const headers: Record<string, string> = {
@@ -253,9 +245,8 @@ async function getOrCreateClient(): Promise<Client> {
     })
     const client = new Client(CLIENT_INFO)
     await client.connect(transport)
-    cachedClient = client
-    cachedToken = accessToken
-    console.log('[mfMcpClient] MCPサーバー接続成功（StreamableHTTP）')
+    clientCache.set(accessToken, client)
+    console.log(`[mfMcpClient] MCPサーバー接続成功（StreamableHTTP）tokenKey=${tokenKey}`)
     return client
   } catch (streamableErr) {
     console.warn(
@@ -271,9 +262,8 @@ async function getOrCreateClient(): Promise<Client> {
     })
     const client = new Client(CLIENT_INFO)
     await client.connect(transport)
-    cachedClient = client
-    cachedToken = accessToken
-    console.log('[mfMcpClient] MCPサーバー接続成功（SSE フォールバック）')
+    clientCache.set(accessToken, client)
+    console.log(`[mfMcpClient] MCPサーバー接続成功（SSE フォールバック）tokenKey=${tokenKey}`)
     return client
   } catch (sseErr) {
     throw new Error(
@@ -289,13 +279,15 @@ async function getOrCreateClient(): Promise<Client> {
  *
  * @param toolName ツール名（例: 'mfc_ca_currentOffice'）
  * @param args ツール引数（省略時は空オブジェクト）
+ * @param tokenKey mfAuthService のトークンストアキー（省略時: 'default'）
  * @returns パース済みのJSONオブジェクト
  */
 export async function callMcpTool<T = unknown>(
   toolName: string,
   args: Record<string, unknown> = {},
+  tokenKey: string = 'default',
 ): Promise<T> {
-  const client = await getOrCreateClient()
+  const client = await getOrCreateClient(tokenKey)
 
   const result = await client.callTool({
     name: toolName,
@@ -324,41 +316,47 @@ export async function callMcpTool<T = unknown>(
 }
 
 // ---------- 個別ツールラッパー ----------
+// 全ラッパーに tokenKey 引数を追加。省略時は 'default'（後方互換）
 
 /**
  * 事業者情報を取得する（mfc_ca_currentOffice）
+ * @param tokenKey mfAuthService のトークンストアキー（顧問先clientId）
  */
-export async function mcpFetchCurrentOffice(): Promise<MfMcpOffice> {
-  return await callMcpTool<MfMcpOffice>('mfc_ca_currentOffice')
+export async function mcpFetchCurrentOffice(tokenKey: string = 'default'): Promise<MfMcpOffice> {
+  return await callMcpTool<MfMcpOffice>('mfc_ca_currentOffice', {}, tokenKey)
 }
 
 /**
  * 会計年度設定を取得する（mfc_ca_getTermSettings）
  * @param fiscalYear 会計年度（省略時: 最新）
+ * @param tokenKey mfAuthService のトークンストアキー
  */
-export async function mcpFetchTermSettings(fiscalYear?: number): Promise<MfMcpTermSettings> {
+export async function mcpFetchTermSettings(fiscalYear?: number, tokenKey: string = 'default'): Promise<MfMcpTermSettings> {
   const args: Record<string, unknown> = {}
   if (fiscalYear !== undefined) args.fiscal_year = fiscalYear
-  return await callMcpTool<MfMcpTermSettings>('mfc_ca_getTermSettings', args)
+  return await callMcpTool<MfMcpTermSettings>('mfc_ca_getTermSettings', args, tokenKey)
 }
 
 /**
  * 勘定科目一覧を取得する（mfc_ca_getAccounts）
+ * @param tokenKey mfAuthService のトークンストアキー
  */
-export async function mcpFetchAccounts(): Promise<MfMcpAccount[]> {
-  return await callMcpTool<MfMcpAccount[]>('mfc_ca_getAccounts')
+export async function mcpFetchAccounts(tokenKey: string = 'default'): Promise<MfMcpAccount[]> {
+  return await callMcpTool<MfMcpAccount[]>('mfc_ca_getAccounts', {}, tokenKey)
 }
 
 /**
  * 税区分一覧を取得する（mfc_ca_getTaxes）
+ * @param tokenKey mfAuthService のトークンストアキー
  */
-export async function mcpFetchTaxes(): Promise<MfMcpTax[]> {
-  return await callMcpTool<MfMcpTax[]>('mfc_ca_getTaxes')
+export async function mcpFetchTaxes(tokenKey: string = 'default'): Promise<MfMcpTax[]> {
+  return await callMcpTool<MfMcpTax[]>('mfc_ca_getTaxes', {}, tokenKey)
 }
 
 /**
  * 仕訳一覧を取得する（mfc_ca_getJournals）
  * @param params 検索パラメータ
+ * @param tokenKey mfAuthService のトークンストアキー
  */
 export async function mcpFetchJournals(params?: {
   /** 取引日の開始日（YYYY-MM-DD） */
@@ -373,28 +371,30 @@ export async function mcpFetchJournals(params?: {
   page?: number
   /** 1ページあたり件数 */
   per_page?: number
-}): Promise<MfMcpJournal[]> {
+}, tokenKey: string = 'default'): Promise<MfMcpJournal[]> {
   const args: Record<string, unknown> = {}
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined) args[key] = value
     }
   }
-  return await callMcpTool<MfMcpJournal[]>('mfc_ca_getJournals', args)
+  return await callMcpTool<MfMcpJournal[]>('mfc_ca_getJournals', args, tokenKey)
 }
 
 /**
  * 仕訳を個別取得する（mfc_ca_getJournalById）
  * @param journalId 仕訳ID
+ * @param tokenKey mfAuthService のトークンストアキー
  */
-export async function mcpFetchJournalById(journalId: string): Promise<MfMcpJournal> {
-  return await callMcpTool<MfMcpJournal>('mfc_ca_getJournalById', { id: journalId })
+export async function mcpFetchJournalById(journalId: string, tokenKey: string = 'default'): Promise<MfMcpJournal> {
+  return await callMcpTool<MfMcpJournal>('mfc_ca_getJournalById', { id: journalId }, tokenKey)
 }
 
 /**
  * 取引先一覧を取得する（mfc_ca_getTradePartners）
+ * @param tokenKey mfAuthService のトークンストアキー
  */
-export async function mcpFetchTradePartners(): Promise<Array<{
+export async function mcpFetchTradePartners(tokenKey: string = 'default'): Promise<Array<{
   code: string
   name: string
   search_key: string
@@ -402,40 +402,43 @@ export async function mcpFetchTradePartners(): Promise<Array<{
   invoice_registration_number: string
   available: boolean
 }>> {
-  return await callMcpTool('mfc_ca_getTradePartners')
+  return await callMcpTool('mfc_ca_getTradePartners', {}, tokenKey)
 }
 
 /**
  * 部門一覧を取得する（mfc_ca_getDepartments）
+ * @param tokenKey mfAuthService のトークンストアキー
  */
-export async function mcpFetchDepartments(): Promise<Array<{
+export async function mcpFetchDepartments(tokenKey: string = 'default'): Promise<Array<{
   id: string
   name: string
 }>> {
-  return await callMcpTool('mfc_ca_getDepartments')
+  return await callMcpTool('mfc_ca_getDepartments', {}, tokenKey)
 }
 
 /**
  * 補助科目一覧を取得する（mfc_ca_getSubAccounts）
+ * @param tokenKey mfAuthService のトークンストアキー
  */
-export async function mcpFetchSubAccounts(): Promise<Array<{
+export async function mcpFetchSubAccounts(tokenKey: string = 'default'): Promise<Array<{
   id: string
   account_id: string
   name: string
   search_key: string | null
   tax_id: string
 }>> {
-  return await callMcpTool('mfc_ca_getSubAccounts')
+  return await callMcpTool('mfc_ca_getSubAccounts', {}, tokenKey)
 }
 
 /**
  * 連携サービス一覧を取得する（mfc_ca_getConnectedAccounts）
+ * @param tokenKey mfAuthService のトークンストアキー
  */
-export async function mcpFetchConnectedAccounts(): Promise<Array<{
+export async function mcpFetchConnectedAccounts(tokenKey: string = 'default'): Promise<Array<{
   id: string
   name: string
 }>> {
-  return await callMcpTool('mfc_ca_getConnectedAccounts')
+  return await callMcpTool('mfc_ca_getConnectedAccounts', {}, tokenKey)
 }
 
 // ---------- WRITE系ツール ----------
@@ -514,17 +517,16 @@ export async function mcpCreateTradePartner(partner: {
 // ---------- 接続管理 ----------
 
 /**
- * MCPクライアントを切断する（サーバーシャットダウン時に呼ぶ）
+ * 全MCPクライアントを切断する（サーバーシャットダウン時に呼ぶ）
  */
 export async function disconnectMcp(): Promise<void> {
-  if (cachedClient) {
+  for (const [token, client] of clientCache) {
     try {
-      await cachedClient.close()
+      await client.close()
     } catch {
       // 無視
     }
-    cachedClient = null
-    cachedToken = null
-    console.log('[mfMcpClient] MCPサーバー切断')
+    clientCache.delete(token)
   }
+  console.log('[mfMcpClient] 全MCPクライアント切断')
 }

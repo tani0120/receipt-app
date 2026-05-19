@@ -94,7 +94,7 @@ interface MenuItem {
 }
 
 const defaultMenuItems: MenuItem[] = [
-  { key: 'pipeline',   label: UI_MSG.ナビ見込管理,     icon: 'fa-solid fa-chart-line',             color: 'linear-gradient(135deg, #f97316, #ea580c)', path: null },
+  { key: 'pipeline',   label: UI_MSG.ナビ見込管理,     icon: 'fa-solid fa-chart-line',             color: 'linear-gradient(135deg, #f97316, #ea580c)', path: '/master/leads' },
   { key: 'progress',   label: UI_MSG.ナビ進捗管理,     icon: 'fa-solid fa-bars-progress',          color: 'linear-gradient(135deg, #3b82f6, #2563eb)', path: '/master/progress' },
   { key: 'clients',    label: UI_MSG.ナビ顧問先管理,   icon: 'fa-solid fa-building',               color: 'linear-gradient(135deg, #06b6d4, #0891b2)', path: '/master/clients' },
   { key: 'collection', label: UI_MSG.ナビ資料回収,     icon: 'fa-solid fa-folder-open',            color: 'linear-gradient(135deg, #14b8a6, #0d9488)', path: '/collection' },

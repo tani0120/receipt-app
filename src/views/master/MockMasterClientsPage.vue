@@ -195,7 +195,18 @@
                   </template>
                   <!-- MF連携 -->
                   <template v-else-if="col.key === 'mfStatus'">
-                    <span v-if="mfStatusMap[row.clientId]" class="cm-mf-linked">🟢 連携済み</span>
+                    <span v-if="mfStatusMap[row.clientId]" class="cm-mf-linked">
+                      🟢 連携済み
+                      <button
+                        class="cm-fiscal-check-btn"
+                        :disabled="fiscalCheckLoading === row.clientId"
+                        @click.stop="checkFiscalMonth(row)"
+                        title="MFクラウドとの決算月を照合"
+                      >
+                        <i v-if="fiscalCheckLoading === row.clientId" class="fa-solid fa-spinner fa-spin"></i>
+                        <i v-else class="fa-solid fa-scale-balanced"></i>
+                      </button>
+                    </span>
                     <span v-else class="cm-mf-unlinked">○ 未連携</span>
                   </template>
                   <!-- 主な連絡手段 -->
@@ -521,6 +532,8 @@ import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
 import { useDriveFolder } from '@/composables/useDriveFolder';
+import { useServerTable } from '@/composables/useServerTable';
+import type { ServerTableResult } from '@/composables/useServerTable';
 import {
   INDUSTRY_OPTIONS, ACCOUNTING_SOFTWARE_OPTIONS, TAX_MODE_OPTIONS,
   TAX_FILING_OPTIONS, SIMPLIFIED_CATEGORY_OPTIONS, TAX_METHOD_OPTIONS,
@@ -569,7 +582,7 @@ const clDefaultWidths: Record<string, number> = {
   email: 140,
   sharedEmail: 140,
   driveUrl: 100,
-  mfStatus: 90,
+  mfStatus: 130,
   chatRoomUrl: 140,
 };
 const { columnWidths: clColWidths, onResizeStart: onClResizeStart } = useColumnResize('master-clients', clDefaultWidths);
@@ -1061,7 +1074,7 @@ const isTextEditCol = (_key: string): boolean => {
 };
 
 /** データ行から動的フィールド値を取得（汎用） */
-const getFieldValue = (row: Record<string, unknown>, key: string): string => {
+const getFieldValue = (row: Record<string, unknown> | Client, key: string): string => {
   // カスタムフィールド(custom_*)はextraFieldsから取得
   const val = key.startsWith('custom_')
     ? (row as Record<string, unknown>).extraFields != null
@@ -1080,6 +1093,71 @@ const getFieldValue = (row: Record<string, unknown>, key: string): string => {
   }
   return String(val);
 };
+
+// --- フィルター＋ソート済みデータ（useServerTable統合） ---
+const PAGE_SIZE = 50;
+
+/** fetchFn: refresh() + listClients() の二重呼び出しを統合 */
+const clientFetchFn = async (query: Record<string, unknown>): Promise<ServerTableResult<Client>> => {
+  const filtersToSend = filterConditions.value.length > 0 ? [...filterConditions.value] : undefined;
+  const sortsToSend = filterSortSettings.value.length > 0 ? [...filterSortSettings.value] : undefined;
+  // composable経由で最新の全件データも同期（インライン編集の3コード重複チェック用）
+  await refresh();
+  const result = await listClients({
+    filters: filtersToSend,
+    logic: filterLogic.value,
+    sorts: sortsToSend,
+    page: query.page as number,
+    pageSize: query.pageSize as number,
+  });
+  return {
+    rows: result.rows,
+    totalCount: result.totalCount ?? 0,
+    totalPages: result.totalPages,
+  };
+};
+
+const {
+  rows: filteredRows,
+  pagedRows,
+  isLoading,
+  loadingMessage,
+  currentPage,
+  totalPages,
+  totalCount,
+  pageStartIndex,
+  pageEndIndex,
+  fetchList: fetchClientList,
+  goToPage,
+  refreshList,
+  updateRow: updateTableRow,
+} = useServerTable<Client>({ fetchFn: clientFetchFn, idKey: 'clientId', pageSize: PAGE_SIZE });
+
+// イベント駆動: watchは使わず、各ハンドラから直接fetchClientListを呼ぶ
+// 初回表示: APIからビュー定義を取得してから初期化
+const initPage = async () => {
+  await loadListViews();   // API取得 → ビュー状態再同期（syncUrlQuery含む）
+  await fetchClientList(); // clientsロード完了を待つ
+  fetchMfStatuses();       // clients.valueが揃ってからMF認証状態を取得
+};
+initPage();
+
+// KeepAliveからの復帰時にAPIからビュー定義を再取得 + データ再取得
+// 初回マウント時はinitPage()で処理済みなのでスキップ
+let isFirstActivation = true;
+onActivated(async () => {
+  if (isFirstActivation) {
+    isFirstActivation = false;
+    return;
+  }
+  // 一覧管理ページからの復帰時: APIから最新ビュー定義を再取得 → 表示状態も再同期
+  await loadListViews();
+  await fetchClientList();
+  fetchMfStatuses();
+});
+
+// route.query watchは削除済み（無限ループの原因）
+// KeepAlive復帰時はonActivatedでURL→state復元する
 
 /** 列幅をラベル文字数から動的算出 or 保存値から取得 */
 const getColWidth = (col: { key: string; label: string }): number => {
@@ -1120,95 +1198,6 @@ const getSortIcon = (key: string) => {
   return sortOrder.value === 'asc' ? 'fa-solid fa-sort-up cm-sort-icon active' : 'fa-solid fa-sort-down cm-sort-icon active';
 };
 
-// --- フィルター＋ソート済みデータ（API化済み） ---
-const isLoading = ref(true);
-const loadingMessage = ref('読み込み中…');
-const filteredRows = ref<Client[]>([]);
-const PAGE_SIZE = 50;
-const currentPage = ref(1);
-const totalPages = ref(1);
-const totalCount = ref(0);
-const pagedRows = computed(() => filteredRows.value);
-const pageStartIndex = computed(() => totalCount.value === 0 ? 0 : (currentPage.value - 1) * PAGE_SIZE + 1);
-const pageEndIndex = computed(() => Math.min(currentPage.value * PAGE_SIZE, totalCount.value));
-
-/** ページ変更 */
-const goToPage = (page: number) => {
-  const clamped = Math.max(1, Math.min(page, totalPages.value));
-  if (currentPage.value === clamped) return;
-  currentPage.value = clamped;
-  fetchClientList();
-};
-
-/** POST /api/clients/list でサーバー側でフィルタ+ソート+ページネーション */
-let fetchRequestId = 0;
-const fetchClientList = async () => {
-  const myRequestId = ++fetchRequestId;
-  isLoading.value = true;
-  const filtersToSend = filterConditions.value.length > 0 ? [...filterConditions.value] : undefined;
-  const sortsToSend = filterSortSettings.value.length > 0 ? [...filterSortSettings.value] : undefined;
-  console.log(`[fetchClientList #${myRequestId}] filters:`, JSON.stringify(filtersToSend), 'sorts:', JSON.stringify(sortsToSend));
-  try {
-    // composable経由で最新の全件データも同期（インライン編集の3コード重複チェック用）
-    await refresh();
-    // race condition防止: より新しいリクエストが発行されていたら結果を破棄
-    if (myRequestId !== fetchRequestId) {
-      console.log(`[fetchClientList #${myRequestId}] 破棄（新しいリクエスト #${fetchRequestId} が発行済み）`);
-      return;
-    }
-    // サーバー側でフィルタ+ソート+ページネーション
-    const result = await listClients({
-      filters: filtersToSend,
-      logic: filterLogic.value,
-      sorts: sortsToSend,
-      page: currentPage.value,
-      pageSize: PAGE_SIZE,
-    });
-    // race condition防止: より新しいリクエストが発行されていたら結果を破棄
-    if (myRequestId !== fetchRequestId) {
-      console.log(`[fetchClientList #${myRequestId}] 破棄（新しいリクエスト #${fetchRequestId} が発行済み）`);
-      return;
-    }
-    console.log(`[fetchClientList #${myRequestId}] 結果: ${result.totalCount}件`);
-    filteredRows.value = result.rows;
-    totalPages.value = result.totalPages;
-    totalCount.value = result.totalCount ?? 0;
-  } catch (e) {
-    if (myRequestId !== fetchRequestId) return;
-    console.error('[ClientsPage] リスト取得失敗:', e);
-  } finally {
-    if (myRequestId === fetchRequestId) isLoading.value = false;
-  }
-};
-
-// イベント駆動: watchは使わず、各ハンドラから直接fetchClientListを呼ぶ
-// 初回表示: APIからビュー定義を取得してから初期化
-const initPage = async () => {
-  await loadListViews();   // API取得 → ビュー状態再同期（syncUrlQuery含む）
-  await fetchClientList(); // clientsロード完了を待つ
-  fetchMfStatuses();       // clients.valueが提わってからMF認証状態を取得
-};
-initPage();
-
-// KeepAliveからの復帰時にAPIからビュー定義を再取得 + データ再取得
-// 初回マウント時はinitPage()で処理済みなのでスキップ
-let isFirstActivation = true;
-onActivated(async () => {
-  if (isFirstActivation) {
-    isFirstActivation = false;
-    return;
-  }
-  // 一覧管理ページからの復帰時: APIから最新ビュー定義を再取得 → 表示状態も再同期
-  await loadListViews();
-  await fetchClientList();
-  fetchMfStatuses();
-});
-
-// route.query watchは削除済み（無限ループの原因）
-// KeepAlive復帰時はonActivatedでURL→state復元する
-
-/** データ変更後にリストを再取得 */
-const refreshList = () => fetchClientList();
 
 // --- インライン編集 ---
 const inlineEditId = ref<string | null>(null);
@@ -1284,6 +1273,7 @@ const commitFiscalEdit = (_row: Client) => {
   markDirty(UI_MSG.決算日を変更);
   markClean();
   cancelInlineEdit();
+  refreshList();
 };
 
 const cancelInlineEdit = () => {
@@ -1529,6 +1519,55 @@ const fetchMfStatuses = async () => {
     mfStatusMap.value = map;
   } catch (e) {
     console.warn('[MF連携] 認証状態取得失敗:', e);
+  }
+};
+
+// --- MF決算月チェック ---
+/** チェック中のclientId（ローディング表示用） */
+const fiscalCheckLoading = ref<string | null>(null);
+
+/** MFクラウドとの決算月を照合 */
+const checkFiscalMonth = async (row: Client) => {
+  fiscalCheckLoading.value = row.clientId;
+  try {
+    const res = await fetch(`/api/mf/fiscal-check?clientId=${row.clientId}`);
+    if (!res.ok) {
+      modal.notify({ title: 'エラー', message: `決算月チェックに失敗しました（${res.status}）`, variant: 'warning' });
+      return;
+    }
+    const data = await res.json();
+    if (!data.mfLinked) {
+      modal.notify({ title: '未連携', message: 'MFクラウドと未連携です。先に認証を完了してください。', variant: 'warning' });
+      return;
+    }
+    if (!data.mismatch) {
+      modal.notify({ title: '✅ 一致', message: `決算月: ${data.localFiscalMonth}月（MFと一致）`, variant: 'success' });
+      return;
+    }
+    // 不一致 → 確認モーダル表示
+    const confirmed = await modal.confirm({
+      title: '⚠️ 決算月の不一致を検出',
+      message: `sugu-sru: ${data.localFiscalMonth}月\nMFクラウド: ${data.mfFiscalMonth}月（期末: ${data.mfEndDate}）\n\nMFクラウドの値で修正しますか？`,
+      variant: 'danger',
+      confirmLabel: 'MFに合わせる',
+      cancelLabel: 'そのまま',
+    });
+    if (confirmed) {
+      try {
+        // composable経由で更新（clients ref即反映 + サーバー保存）
+        await updateClientLocal(row.clientId, { fiscalMonth: data.mfFiscalMonth });
+        // 楽観的更新: テーブル表示用refも即時更新
+        updateTableRow(row.clientId, { fiscalMonth: data.mfFiscalMonth } as Partial<Client>);
+        modal.notify({ title: '✅ 修正完了', message: `決算月を ${data.mfFiscalMonth}月 に更新しました`, variant: 'success' });
+      } catch {
+        modal.notify({ title: 'エラー', message: '決算月の更新に失敗しました', variant: 'warning' });
+      }
+    }
+  } catch (e) {
+    console.error('[MF決算月チェック] エラー:', e);
+    modal.notify({ title: 'エラー', message: '決算月チェック中にエラーが発生しました', variant: 'warning' });
+  } finally {
+    fiscalCheckLoading.value = null;
   }
 };
 
@@ -1823,4 +1862,32 @@ onUnmounted(() => document.removeEventListener('click', closeAllDropdowns));
 <style>
 /* 共通CSS読込 */
 @import '@/styles/master-list.css';
+
+/* MF決算月チェックボタン */
+.cm-fiscal-check-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 4px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s;
+  vertical-align: middle;
+}
+.cm-fiscal-check-btn:hover:not(:disabled) {
+  background: #e0e7ff;
+  border-color: #818cf8;
+  color: #4f46e5;
+}
+.cm-fiscal-check-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 </style>

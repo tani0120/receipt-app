@@ -408,6 +408,12 @@ export const routes: RouteRecordRaw[] = [
     name: 'MasterSettings',
     component: () => import('@/views/MockSettingsHubPage.vue')
   },
+  {
+    // MF MCPサーバー取得情報一覧（調査・検証ページ）
+    path: '/master/mcp',
+    name: 'MasterMcpInfo',
+    component: () => import('@/views/master/MasterMcpInfoPage.vue')
+  },
   // 進捗管理 一覧管理ページ（ビュー設定）
   {
     path: '/master/progress/view-settings',

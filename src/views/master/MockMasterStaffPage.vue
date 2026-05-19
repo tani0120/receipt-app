@@ -270,6 +270,8 @@ import type { Staff, StaffForm } from '@/features/staff-management/composables/u
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
+import { useServerTable } from '@/composables/useServerTable';
+import type { ServerTableResult } from '@/composables/useServerTable';
 import { STAFF_STATUS_OPTIONS, STAFF_PERMISSION_OPTIONS, getLabel, getValueByLabel } from '@/constants/clientOptions';
 import { FILTER_ALL_LABEL } from '@/constants/vendorOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
@@ -323,44 +325,42 @@ const getSortIcon = (key: string) => {
   return sortOrder.value === 'asc' ? 'fa-solid fa-sort-up cm-sort-icon active' : 'fa-solid fa-sort-down cm-sort-icon active';
 };
 
-// --- サーバー側フィルタ+ソート+ページネーション（API化済み） ---
-const filteredRows = ref<Staff[]>([]);
-const PAGE_SIZE = 50;
-const currentPage = ref(1);
-const totalPages = ref(1);
-const staffTotalCount = ref(0);
-const pagedRows = computed(() => filteredRows.value);
-const staffPageStartIndex = computed(() => staffTotalCount.value === 0 ? 0 : (currentPage.value - 1) * PAGE_SIZE + 1);
-const staffPageEndIndex = computed(() => Math.min(currentPage.value * PAGE_SIZE, staffTotalCount.value));
-const isLoading = ref(false);
-const loadingMessage = ref('読み込み中…');
-
-/** POST /api/staff/list でサーバー側でフィルタ+ソート+ページネーション */
-const fetchStaffList = async () => {
-  isLoading.value = true;
-  loadingMessage.value = '読み込み中…';
-  try {
-    const res = await fetch('/api/staff/list', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        statusFilter: statusFilter.value,
-        sortKey: sortKey.value,
-        sortOrder: sortOrder.value,
-        page: currentPage.value,
-        pageSize: PAGE_SIZE,
-      }),
-    });
-    const data = await res.json();
-    filteredRows.value = data.rows;
-    totalPages.value = data.totalPages;
-    staffTotalCount.value = data.totalCount ?? data.rows.length;
-  } catch (e) {
-    console.error('[StaffPage] リスト取得失敗:', e);
-  } finally {
-    isLoading.value = false;
-  }
+// --- サーバー側フィルタ+ソート+ページネーション（useServerTable統合） ---
+/** fetchFn: POST /api/staff/list */
+const staffFetchFn = async (query: Record<string, unknown>): Promise<ServerTableResult<Staff>> => {
+  const res = await fetch('/api/staff/list', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      statusFilter: statusFilter.value,
+      sortKey: sortKey.value,
+      sortOrder: sortOrder.value,
+      page: query.page,
+      pageSize: query.pageSize,
+    }),
+  });
+  const data = await res.json();
+  return {
+    rows: data.rows,
+    totalCount: data.totalCount ?? data.rows.length,
+    totalPages: data.totalPages,
+  };
 };
+
+const {
+  rows: filteredRows,
+  pagedRows,
+  isLoading,
+  loadingMessage,
+  currentPage,
+  totalPages,
+  totalCount: staffTotalCount,
+  pageStartIndex: staffPageStartIndex,
+  pageEndIndex: staffPageEndIndex,
+  fetchList: fetchStaffList,
+  refreshList,
+  updateRow,
+} = useServerTable<Staff>({ fetchFn: staffFetchFn, idKey: 'uuid' });
 
 // フィルタ・ソート・ページ変更時に自動でAPI再呼び出し（バッチ化で二重発火防止）
 let fetchPending = false;
@@ -373,13 +373,8 @@ watch([statusFilter, sortKey, sortOrder, currentPage], () => {
   });
 }, { immediate: true });
 
-
-
-
 // KeepAliveからの復帰時にデータを再取得
 onActivated(() => fetchStaffList());
-// データ変更後（追加・更新・削除）にリストを再取得
-const refreshList = () => fetchStaffList();
 
 
 // --- パネル ---
@@ -412,14 +407,16 @@ const commitInlineEdit = () => {
     cancelInlineEdit();
     return;
   }
+  const patch = { [inlineEditField.value]: inlineEditValue.value } as Partial<Staff>;
+  // 楽観的更新: テーブル即時反映
+  updateRow(inlineEditId.value, patch);
   // composable経由でサーバーに永続化
-  updateStaff(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Staff>);
+  updateStaff(inlineEditId.value, patch);
   const fieldLabels = STAFF_FIELD_LABELS;
   const label = fieldLabels[inlineEditField.value] ?? inlineEditField.value;
   markDirty(`${label}${UI_MSG.を変更}`);
   markClean();
   cancelInlineEdit();
-  refreshList();
 };
 
 const cancelInlineEdit = () => {

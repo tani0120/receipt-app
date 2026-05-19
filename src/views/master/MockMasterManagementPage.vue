@@ -4,6 +4,7 @@
       <div class="h-full overflow-auto relative">
         <!-- カードグリッド -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+
           <!-- カード1: 勘定科目マスタ（全社） -->
           <div class="settings-card" @click="navigateTo('accounts')">
             <div class="settings-card-header">
@@ -50,9 +51,20 @@
               <i class="fa-solid fa-shuffle card-icon"></i>
               <h3 class="card-title">取引先外マスタ（全社）</h3>
             </div>
-            <p class="card-description">取引先特定不要の取引（ATM・手数料・利息・借入金等）24種）の科目マッピングを確認・編集します。法人用/個人用切替対応。</p>
+            <p class="card-description">取引先特定不要の取引（ATM・手数料・利息・借入金等）24種の科目マッピングを確認・編集します。法人用/個人用切替対応。</p>
             <a class="card-link">設定する</a>
           </div>
+
+          <!-- カード6: MF MCP取得情報一覧 -->
+          <div class="settings-card settings-card--mf" @click="navigateTo('mf-mcp-info')">
+            <div class="settings-card-header">
+              <i class="fa-solid fa-cloud-arrow-down card-icon card-icon--mf"></i>
+              <h3 class="card-title">MF MCP取得情報一覧</h3>
+            </div>
+            <p class="card-description">マネーフォワードMCPサーバーから取得できる全19ツールの仕様・実測データを掲載。事業者情報・勘定科目・仕訳・試算表など各APIの詳細フィールドを確認できます。</p>
+            <a class="card-link card-link--mf">確認する</a>
+          </div>
+
         </div>
       </div>
     </div>
@@ -82,6 +94,7 @@ const navigateTo = (section: string) => {
     'vectors': '/master/vectors',
     'vendors-list': '/master/vendors/list',
     'non-vendor': '/master/vendors/non-vendor',
+    'mf-mcp-info': '/master/mcp',
   };
   if (routes[section]) {
     router.push(routes[section]);
@@ -109,6 +122,16 @@ const navigateTo = (section: string) => {
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
 }
 
+.settings-card--mf {
+  border-color: #22c55e;
+  background: linear-gradient(135deg, #f0fdf4 0%, #fff 100%);
+}
+
+.settings-card--mf:hover {
+  border-color: #16a34a;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+}
+
 .settings-card-header {
   margin-bottom: 12px;
 }
@@ -118,6 +141,10 @@ const navigateTo = (section: string) => {
   font-size: 14px;
   margin-bottom: 8px;
   display: block;
+}
+
+.card-icon--mf {
+  color: #16a34a;
 }
 
 .card-title {
@@ -144,5 +171,9 @@ const navigateTo = (section: string) => {
 
 .card-link:hover {
   text-decoration: underline;
+}
+
+.card-link--mf {
+  color: #16a34a;
 }
 </style>
