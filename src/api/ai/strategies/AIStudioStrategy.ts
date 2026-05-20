@@ -2,6 +2,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import type { AIProvider, ModelInfo, ReceiptAnalysisResult } from '../types';
+import { getDefaultModelId } from '../modelConfig';
 
 export class AIStudioStrategy implements AIProvider {
     private client: GoogleGenAI;
@@ -13,7 +14,7 @@ export class AIStudioStrategy implements AIProvider {
     async listAvailableModels(): Promise<ModelInfo[]> {
         return [
             {
-                id: 'gemini-2.5-flash',
+                id: getDefaultModelId(),
                 name: 'Gemini 2.5 Flash',
                 provider: 'ai_studio',
                 capabilities: { batch: false, image: true }
@@ -28,7 +29,7 @@ export class AIStudioStrategy implements AIProvider {
     }
 
     async analyzeReceipt(storagePath: string, modelId?: string): Promise<ReceiptAnalysisResult> {
-        const finalModelId = modelId || 'gemini-2.5-flash';
+        const finalModelId = modelId || getDefaultModelId();
 
         // Supabase Storageからファイルをダウンロード
         const fileBuffer = await this.downloadFile(storagePath);

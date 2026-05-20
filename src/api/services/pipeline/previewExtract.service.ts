@@ -29,6 +29,8 @@
 
 import { GoogleGenAI } from '@google/genai';
 import { Type } from '@google/genai';
+import { resolveLocation } from '../../ai/AIProviderFactory';
+import { getDefaultModelId, MODEL_PRICING, USD_JPY_RATE } from '../../ai/modelConfig';
 import { preprocessImage } from './image_preprocessor';
 import type { MimeType } from './image_preprocessor';
 import { buildKeywordsPrompt } from './source_type_keywords';
@@ -70,23 +72,27 @@ export function isKnownHash(hash: string): boolean {
 
 // シングルトン（リクエスト毎に生成しない）
 let _ai: GoogleGenAI | null = null;
+let _aiLocation: string | null = null;
 
 function getAI(): GoogleGenAI {
-  if (!_ai) {
-    // ESMではimportが先に解決されるため、トップレベルではなくここで遅延取得する
+  const modelId = getModelId();
+  const location = resolveLocation(modelId);
+
+  // locationが変わったらクライアントを再生成
+  if (!_ai || _aiLocation !== location) {
     const projectId = process.env['VERTEX_PROJECT_ID'] ?? '';
-    const location  = process.env['VERTEX_LOCATION']   ?? 'us-central1';
     if (!projectId) {
       throw new Error('VERTEX_PROJECT_ID 環境変数が未設定です');
     }
     _ai = new GoogleGenAI({ vertexai: true, project: projectId, location });
-    console.log(`[pipeline/service] Vertex AI初期化完了: project=${projectId}, location=${location}, model=${getModelId()}`);
+    _aiLocation = location;
+    console.log(`[pipeline] ✅ Vertex AI初期化: project=${projectId}, location=${location}, model=${modelId}`);
   }
   return _ai;
 }
 
 function getModelId(): string {
-  return process.env['VERTEX_MODEL_ID'] ?? 'gemini-2.5-flash';
+  return getDefaultModelId();
 }
 
 // ============================================================
@@ -322,9 +328,8 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
         responseMimeType: 'application/json',
         responseSchema: PREVIEW_EXTRACT_SCHEMA,
         temperature: 0,
-        thinkingConfig: {
-          thinkingBudget: 2048,
-        },
+        // 思考機能: gemini-3.1-flash-liteは思考なし、それ以外は2048トークン
+        ...(getModelId().includes('flash-lite') ? {} : { thinkingConfig: { thinkingBudget: 2048 } }),
       },
     });
 
@@ -364,12 +369,15 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
 
   // postprocess（③ fallback設計）
   const totalTokens = promptTokens + completionTokens;
-  // gemini-2.5-flash料金: 入力$0.15/1M, 出力$0.60/1M, thinking$3.50/1M (1USD=150JPY)
+  const modelId = getModelId();
+
+  // モデル別料金テーブル（modelConfig.ts一元管理）
+  const price = MODEL_PRICING[modelId] ?? MODEL_PRICING[getDefaultModelId()]!;
   const costYen = (
-    (promptTokens * 0.15 / 1_000_000) +
-    (completionTokens * 0.60 / 1_000_000) +
-    (thinkingTokens * 3.50 / 1_000_000)
-  ) * 150;
+    (promptTokens * price.input / 1_000_000) +
+    (completionTokens * price.output / 1_000_000) +
+    (thinkingTokens * price.thinking / 1_000_000)
+  ) * USD_JPY_RATE;
 
   const result = postprocessPreviewExtract(raw, {
     duration_ms: durationMs,
@@ -379,7 +387,7 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
     thinking_tokens: thinkingTokens,
     token_count: totalTokens,
     cost_yen: Math.round(costYen * 10000) / 10000,  // 小数4桁
-    model: getModelId(),
+    model: modelId,
     original_size_kb: Math.round(originalSize / 1024),
     processed_size_kb: Math.round(ppSize / 1024),
     preprocess_reduction_pct: Math.round((1 - ppSize / originalSize) * 100),
@@ -393,7 +401,22 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
     fallback_applied: result.fallback_applied,
   };
 
-  // ログ出力
+  // ━━ 人間向けサマリログ ━━
+  const srcType = result.source_type ?? '不明';
+  const dir = result.direction ?? '不明';
+  const amt = raw?.total_amount != null ? `¥${raw.total_amount.toLocaleString()}` : '-';
+  const issuer = raw?.issuer_name ?? '-';
+  const lineCount = raw?.line_items?.length ?? 0;
+  const dSec = (durationMs / 1000).toFixed(1);
+  console.log(
+    `[pipeline] 📄 ${filename} → ${srcType}(${dir}) | ${issuer} ${amt} | ` +
+    `${lineCount}行 | ${dSec}秒 ¥${costYen.toFixed(2)} | ${modelId} ` +
+    `[in=${promptTokens} out=${completionTokens} think=${thinkingTokens}]`
+  );
+  if (error) console.error(`[pipeline] ❌ エラー: ${error}`);
+  if (result.fallback_applied) console.warn(`[pipeline] ⚠️ フォールバック適用`);
+
+  // ━━ 詳細ログ（元のJSON出力を維持）━━
   console.log(`[pipeline/service] previewExtract完了:`, JSON.stringify(logEntry, null, 0));
 
   // ━━ Step4-C: 科目確定（辞書接続）━━━━━━━━━━━━━━━━━━

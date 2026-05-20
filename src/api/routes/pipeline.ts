@@ -1,4 +1,4 @@
-﻿/**
+/**
  * パイプラインAPIルート（Hono）
  *
  * レイヤー: ★route★ → service → postprocess
@@ -18,6 +18,7 @@ import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync, writeF
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { UI_MSG } from '../../constants/uiMessages';
+import { getDefaultModelId } from '../ai/modelConfig';
 
 /** ファイル本体の永続保存先（data/uploads/{clientId}/{fileName}） */
 const UPLOADS_DIR = join(process.cwd(), 'data', 'uploads');
@@ -444,7 +445,7 @@ app.get('/health', (c) => {
   return c.json({
     status: 'ok',
     project: process.env['VERTEX_PROJECT_ID'] ?? UI_MSG.ヘルスチェック未設定,
-    model: process.env['VERTEX_MODEL_ID'] ?? 'gemini-2.5-flash-preview-04-17',
+    model: process.env['VERTEX_MODEL_ID'] ?? getDefaultModelId(),
   });
 });
 

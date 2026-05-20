@@ -15,7 +15,7 @@
  *
  * 準拠:
  *   - load_context.md L150: 既存エンドポイントを拡張せよ
- *   - 34_mf_api_integration.md: MF API連携設計
+ *   - 34_mf_mcp_integration.md: MF MCP連携設計
  */
 
 import { Hono } from 'hono'

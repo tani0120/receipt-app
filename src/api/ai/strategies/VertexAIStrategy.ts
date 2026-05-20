@@ -1,6 +1,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 import type { AIProvider, ModelInfo, ReceiptAnalysisResult } from '../types';
+import { getDefaultModelId } from '../modelConfig';
 
 export class VertexAIStrategy implements AIProvider {
     private client: GoogleGenAI;
@@ -12,7 +13,7 @@ export class VertexAIStrategy implements AIProvider {
     async listAvailableModels(): Promise<ModelInfo[]> {
         return [
             {
-                id: 'gemini-2.5-flash',
+                id: getDefaultModelId(),
                 name: 'Vertex Gemini 2.5 Flash',
                 provider: 'vertex_ai',
                 capabilities: { batch: true, image: true }
@@ -27,7 +28,7 @@ export class VertexAIStrategy implements AIProvider {
     }
 
     async analyzeReceipt(gcsUri: string, modelId?: string): Promise<ReceiptAnalysisResult> {
-        const finalModelId = modelId || 'gemini-2.5-flash';
+        const finalModelId = modelId || getDefaultModelId();
 
         const prompt = `
             Analyze this receipt image and extract the following JSON:

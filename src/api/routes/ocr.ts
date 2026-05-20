@@ -42,7 +42,7 @@ ocrRoute.post(
             console.log(`[OCR API] リクエスト受信: clientId=${clientId}`);
 
             // 環境変数から設定取得
-            const projectId = process.env.VERTEX_PROJECT_ID || 'sugu-suru';
+            const projectId = process.env.VERTEX_PROJECT_ID || '';
             const location = process.env.VERTEX_LOCATION || 'asia-northeast1';
 
             // Vertex OCR実行

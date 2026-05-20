@@ -618,7 +618,7 @@
 - **実査結果**: previewExtract APIで取得しDocEntryに保存済みの15フィールド（aiDate, aiAmount, aiVendor, aiSourceType, aiDirection等）が、全107 Vueファイルのどこでも参照されていない
 - **影響**: AI分類の精度確認・人間によるレビューがUI上で不可能
 - **対処**: 選別画面（`/drive-select/:clientId`）でAI結果を表示するUI実装。L-8で管理
-- **詳細**: [field_audit.md v3 問題4](file:///C:/Users/kazen/.gemini/antigravity/brain/b29e23e6-88c0-4691-a867-4f898f874cd8/field_audit.md)
+- **詳細**: [field_audit.md v3 問題4](file:///{LOCAL_USER}/.gemini/antigravity/brain/b29e23e6-88c0-4691-a867-4f898f874cd8/field_audit.md)
 - **2026-04-29 実査**: `MockDriveSelectPage.vue`にaiSourceTypeが1件ヒット。**選別画面で部分的にAI結果表示済み**。全15件の表示状況は要詳細確認
 
 ### ✅ E-9: useAccountingSystem.ts 巨大ファイル分割 — **完了（2026-05-03）**
@@ -662,7 +662,7 @@
 | L-5 | PipelineResult.source_typeの型差し替え | JournalableType確定後    | —                                 |
 | L-6 | healthエンドポイントにADC疎通確認追加   | パイプライン安定化後     | 現状はproject/model名を返すだけで認証有効性を検証していない |
 | L-7 | UI撮影ガイド表示（1枚ずつ平置き撮影の案内） | UI実装フェーズ      | 重畳撮影の間接的防止策 |
-| L-8 | drive-select画面にAI分類結果表示 + 選別時仕訳統合 | **仕訳一覧UI（C-7）完了後** | DL-048でDocEntryにAI結果が保存済み。UIに表示するだけの作業。さらに、選別時に過去仕訳候補を表示し選択するだけで仕訳完了できれば、選別と仕訳を1画面で同時実施可能。ただし仕訳一覧UIの精度・制度設計の結果次第で要否・設計が変わるため、C-7完了後に着手判断。**DL-051で15フィールド全件Vue未参照を確認済み（E-8）。[field_audit.md](file:///C:/Users/kazen/.gemini/antigravity/brain/b29e23e6-88c0-4691-a867-4f898f874cd8/field_audit.md) 参照** |
+| L-8 | drive-select画面にAI分類結果表示 + 選別時仕訳統合 | **仕訳一覧UI（C-7）完了後** | DL-048でDocEntryにAI結果が保存済み。UIに表示するだけの作業。さらに、選別時に過去仕訳候補を表示し選択するだけで仕訳完了できれば、選別と仕訳を1画面で同時実施可能。ただし仕訳一覧UIの精度・制度設計の結果次第で要否・設計が変わるため、C-7完了後に着手判断。**DL-051で15フィールド全件Vue未参照を確認済み（E-8）。[field_audit.md](file:///{LOCAL_USER}/.gemini/antigravity/brain/b29e23e6-88c0-4691-a867-4f898f874cd8/field_audit.md) 参照** |
 
 ---
 

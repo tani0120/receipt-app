@@ -10,7 +10,7 @@
  *
  * 準拠:
  *   - load_context.md: 新規ロジック禁止（表示変換のみ）
- *   - 34_mf_api_integration.md §8 1-12: リダイレクトUI実装
+ *   - 34_mf_mcp_integration.md §8 1-12: リダイレクトUI実装
  */
 import { computed } from "vue";
 import { useRoute } from "vue-router";

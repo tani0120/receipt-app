@@ -329,10 +329,10 @@ WITH CHECK (true);
 ## 📸 証跡
 
 **確認画像**:
-- [supabase_security_warning_1770831424485.webp](file:///C:/Users/kazen/.gemini/antigravity/brain/738bd95a-e545-4f4a-9d65-0a0317a4158c/supabase_security_warning_1770831424485.webp)
-- [supabase_security_errors_1770831494464.webp](file:///C:/Users/kazen/.gemini/antigravity/brain/738bd95a-e545-4f4a-9d65-0a0317a4158c/supabase_security_errors_1770831494464.webp)
-- [security_advisor_warnings_1771057850164.png](file:///C:/Users/kazen/.gemini/antigravity/brain/01de6e60-7ea6-405f-909d-030c2baf4421/security_advisor_warnings_1771057850164.png)
-- [sql_execution_success_1771058486227.png](file:///C:/Users/kazen/.gemini/antigravity/brain/01de6e60-7ea6-405f-909d-030c2baf4421/sql_execution_success_1771058486227.png)
+- [supabase_security_warning_1770831424485.webp](file:///{LOCAL_USER}/.gemini/antigravity/brain/738bd95a-e545-4f4a-9d65-0a0317a4158c/supabase_security_warning_1770831424485.webp)
+- [supabase_security_errors_1770831494464.webp](file:///{LOCAL_USER}/.gemini/antigravity/brain/738bd95a-e545-4f4a-9d65-0a0317a4158c/supabase_security_errors_1770831494464.webp)
+- [security_advisor_warnings_1771057850164.png](file:///{LOCAL_USER}/.gemini/antigravity/brain/01de6e60-7ea6-405f-909d-030c2baf4421/security_advisor_warnings_1771057850164.png)
+- [sql_execution_success_1771058486227.png](file:///{LOCAL_USER}/.gemini/antigravity/brain/01de6e60-7ea6-405f-909d-030c2baf4421/sql_execution_success_1771058486227.png)
 
 ---
 
@@ -420,7 +420,7 @@ WHERE tablename IN ('receipts', 'audit_logs');
 
 | 項目 | 設定値 |
 |---|---|
-| **GCPプロジェクト** | `sugu-suru` |
+| **GCPプロジェクト** | `{GCP_PROJECT_ID}` |
 | **OAuthクライアントID** | `Supabase Auth`（ウェブアプリケーション） |
 | **リダイレクトURI** | `https://cujksbvnzjxbklhofyfu.supabase.co/auth/v1/callback` |
 | **OAuth同意画面** | 公開（基本スコープのみ、審査不要） |
@@ -434,7 +434,7 @@ WHERE tablename IN ('receipts', 'audit_logs');
 | Supabase Auth | ログイン受付 | Googleトークンを受け取る |
 | **アプリ側（validateStaffAccess）** | **スタッフマスタ照合** | **ここで制御** |
 
-- `admin@sugu-suru.com` は必須ユーザー（スタッフマスタから削除不可）
+- `{ADMIN_EMAIL}` は必須ユーザー（スタッフマスタから削除不可）
 - `/master/staff` でスタッフの登録・削除・修正 → 即座にログイン許可に反映
 - `src/utils/auth.ts` の `validateStaffAccess()` で照合
 

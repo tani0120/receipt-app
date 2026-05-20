@@ -2,14 +2,46 @@ import type { AIProvider, AIPhase, PhaseConfig } from './types';
 import { VertexAIStrategy } from './strategies/VertexAIStrategy';
 import { AIStudioStrategy } from './strategies/AIStudioStrategy';
 import { config } from '../config';
+import { DEFAULT_MODEL_ID } from './modelConfig';
 // 設定はデフォルト値を使用。Supabase移行後にsystem_configsテーブルから読み込み予定。
 
-// Mock config for fallback
+// ============================================================
+// モデル → location 自動判定
+// ============================================================
+// Gemini 3系は現時点で asia-northeast1 未対応。global のみ。
+// 東京リージョンに展開され次第、このマップから該当モデルを削除すれば
+// 自動的に asia-northeast1（デフォルト）に切り替わる。
+// ============================================================
+
+/** globalエンドポイントが必須なモデル一覧（東京リージョン未対応） */
+const GLOBAL_ONLY_MODELS = new Set([
+    'gemini-3.5-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-3-flash-preview',
+]);
+
+/** デフォルトのリージョン（環境変数から取得、未設定時は asia-northeast1） */
+const DEFAULT_LOCATION = process.env['VERTEX_LOCATION'] ?? 'asia-northeast1';
+
+/**
+ * モデル名からVertex AIのlocationを自動判定する。
+ * - GLOBAL_ONLY_MODELS に含まれるモデル → 'global'
+ * - それ以外 → DEFAULT_LOCATION（通常 asia-northeast1）
+ */
+export function resolveLocation(modelId: string): string {
+    if (GLOBAL_ONLY_MODELS.has(modelId)) {
+        return 'global';
+    }
+    return DEFAULT_LOCATION;
+}
+
+// デフォルト設定
 const DEFAULT_CONFIGS: Record<AIPhase, PhaseConfig> = {
-    ocr: { provider: 'vertex_ai', mode: 'realtime', model: 'gemini-1.5-flash-001' },
-    learning: { provider: 'ai_studio', mode: 'realtime', model: 'gemini-1.5-pro-001' },
-    conversion: { provider: 'vertex_ai', mode: 'realtime', model: 'gemini-1.5-flash-001' },
-    optimization: { provider: 'vertex_ai', mode: 'batch', model: 'gemini-1.5-flash-001' }
+    ocr: { provider: 'vertex_ai', mode: 'realtime', model: DEFAULT_MODEL_ID },
+    learning: { provider: 'vertex_ai', mode: 'realtime', model: DEFAULT_MODEL_ID },
+    conversion: { provider: 'vertex_ai', mode: 'realtime', model: DEFAULT_MODEL_ID },
+    optimization: { provider: 'vertex_ai', mode: 'batch', model: DEFAULT_MODEL_ID },
+    command: { provider: 'vertex_ai', mode: 'realtime', model: 'gemini-3.5-flash' }
 };
 
 export class AIProviderFactory {
@@ -26,11 +58,15 @@ export class AIProviderFactory {
         // 2. Instantiate Strategy based on provider type
         let strategy: AIProvider;
 
+        // モデルに応じたlocationを自動判定
+        const location = resolveLocation(phaseConfig.model);
+
         switch (phaseConfig.provider) {
             case 'vertex_ai':
                 // Check if Vertex credentials exist, else fallback or throw
                 if (config.GCP_PROJECT_ID) {
-                    strategy = new VertexAIStrategy(config.GCP_PROJECT_ID);
+                    strategy = new VertexAIStrategy(config.GCP_PROJECT_ID, location);
+                    console.log(`[AI Factory] Vertex AI: model=${phaseConfig.model}, location=${location}`);
                 } else {
                     console.warn(`[AI Factory] Vertex AI requested for ${phase} but no Project ID found. Falling back to AI Studio.`);
                     strategy = new AIStudioStrategy(config.GEMINI_API_KEY || 'mock-key');
@@ -41,7 +77,7 @@ export class AIProviderFactory {
                 break;
             default:
                 // Fallback / Unknown
-                strategy = new VertexAIStrategy(config.GCP_PROJECT_ID || 'demo');
+                strategy = new VertexAIStrategy(config.GCP_PROJECT_ID || 'demo', location);
         }
 
         // 3. Wrap strategy to inject configured model and mode

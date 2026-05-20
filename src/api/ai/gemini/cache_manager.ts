@@ -11,6 +11,7 @@ import type { CachedContentInfo, CacheConfig } from '../../../types/GeminiOCR.ty
 import { SYSTEM_INSTRUCTION } from './system_instruction';
 import { GoogleGenAI } from '@google/genai';
 import { readFileSync } from 'fs';
+import { getDefaultModelId } from '../modelConfig';
 
 /**
  * Cache DB（仮実装）
@@ -77,7 +78,7 @@ async function createContextCache(
 
     try {
         const cache = await ai.caches.create({
-            model: 'gemini-2.5-flash',
+            model: getDefaultModelId(),
             config: {
                 displayName: `audit_master_${clientId}`,
                 systemInstruction: SYSTEM_INSTRUCTION,

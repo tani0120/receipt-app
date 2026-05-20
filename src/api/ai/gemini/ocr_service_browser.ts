@@ -110,7 +110,7 @@ async function callGeminiAPIBrowser(
         console.log('📤 [Browser] Gemini API呼び出し中...');
 
         const result = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: import.meta.env.VITE_MODEL_ID || 'gemini-3.1-flash-lite',
             contents: [
                 {
                     role: 'user',

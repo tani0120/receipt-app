@@ -24,7 +24,7 @@ VITE_GEMINI_API_KEY=your_gemini_api_key_here
 
 # Vertex AI
 VITE_API_PROVIDER=vertex
-VERTEX_PROJECT_ID=sugu-suru
+VERTEX_PROJECT_ID={GCP_PROJECT_ID}
 VERTEX_LOCATION=asia-northeast1
 
 # Supabase（サーバー側）
@@ -50,7 +50,7 @@ ENABLE_OCR=false         # ローカル開発では無効化
 ```bash
 # プロジェクト確認
 $ gcloud config get-value project
-→ sugu-suru ✅
+→ {GCP_PROJECT_ID} ✅
 
 # ADC認証状態
 認証済み（Application Default Credentials設定完了）
@@ -148,14 +148,14 @@ Test-Path .git\hooks\pre-commit  # → True になればOK
 **Firebase依存**: 完全排除済み（2026-04-18）— import残存0件、npm削除済み
 
 **Google OAuth**: 設定完了（2026-04-18）
-- GCPプロジェクト「sugu-suru」にOAuthクライアントID「Supabase Auth」作成済み
+- GCPプロジェクト「{GCP_PROJECT_ID}」にOAuthクライアントID「Supabase Auth」作成済み
 - Supabaseダッシュボード Googleプロバイダー Enabled
 - GCP OAuth同意画面「公開」設定済み（基本スコープのみ、審査不要）
 - アクセス制御: スタッフマスタ（/master/staff）登録メールのみログイン許可
-- admin@sugu-suru.com: 必須ユーザー（削除不可）
+- {ADMIN_EMAIL}: 必須ユーザー（削除不可）
 
 **Drive API SA権限**: 共有ドライブ「管理者」に昇格（2026-04-18）
-- SA: `sugu-suru@gen-lang-client-0837543731.iam.gserviceaccount.com`
+- SA: `{SA_EMAIL}`
 - 共有ドライブID: `0AIOLCboQ_R-nUk9PVA`
 - 目的: 顧問先メール登録時にDrive APIでメンバー自動追加/削除（permissions.createにorganizer権限が必要）
 

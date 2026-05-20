@@ -10,6 +10,7 @@ import { GoogleGenAI } from '@google/genai';
 import { getPromptContent } from '../../routes/aiPromptRoutes';
 import { getOrCreateCache } from './cache_manager_vertex';
 import type { AIIntermediateOutput } from '../../../types/GeminiOCR.types';
+import { getDefaultModelId } from '../modelConfig';
 
 /**
  * Vertex AI OCR実行
@@ -18,12 +19,12 @@ export async function executeOCRVertex(
     imageBase64: string,
     mimeType: string,
     clientId: string = 'CL-001',
-    projectId: string = 'sugu-suru',
+    projectId: string = process.env.VERTEX_PROJECT_ID ?? '',
     location: string = 'asia-northeast1'
 ): Promise<AIIntermediateOutput> {
     console.log(`🔍 [Vertex] OCR実行開始: clientId=${clientId}`);
 
-    const MODEL_NAME = 'gemini-2.5-flash';
+    const MODEL_NAME = getDefaultModelId();
 
     // Context Cache取得
     const cacheInfo = await getOrCreateCache({

@@ -10,7 +10,7 @@
  *
  * 準拠:
  *   - load_context.md L130: ロジックはAPI側に書け
- *   - 34_mf_api_integration.md §14: MCPサーバー設計
+ *   - 34_mf_mcp_integration.md §14: MCPサーバー設計
  *   - code_quality.md §0: Supabase移行後にも壊れない構造
  *
  * Supabase移行時: トランスポート層の差し替えのみ。ツール呼び出しインターフェースは不変。
@@ -27,7 +27,7 @@ import { getValidAccessToken } from './mfAuthService'
 const MF_MCP_URL = 'https://beta.mcp.developers.biz.moneyforward.com/mcp/ca/v3'
 
 /** MCPクライアント識別情報 */
-const CLIENT_INFO = { name: 'sugu-suru', version: '1.0.0' }
+const CLIENT_INFO = { name: process.env['APP_NAME'] ?? 'app', version: '1.0.0' }
 
 // ---------- 型定義（MCPツールレスポンス） ----------
 

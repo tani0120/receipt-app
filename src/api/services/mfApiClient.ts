@@ -9,7 +9,7 @@
  *
  * 準拠:
  *   - load_context.md L130: ロジックはAPI側に書け
- *   - 34_mf_api_integration.md §15: WAFブロック調査記録
+ *   - 34_mf_mcp_integration.md §15: WAFブロック調査記録
  */
 
 import { getValidAccessToken, MF_API_BASE_URL } from './mfAuthService'

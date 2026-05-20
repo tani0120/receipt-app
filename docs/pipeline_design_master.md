@@ -1904,7 +1904,7 @@ DL-029で「Supabase接続なしでパイプライン精度テストを完結さ
            │ ADC認証（gcloud auth application-default login）
 ┌──────────▼──────────────────────────────────────────────────┐
 │  Vertex AI (gemini-2.5-flash-preview-04-17)                  │
-│  project: sugu-suru / location: asia-northeast1              │
+│  project: {GCP_PROJECT_ID} / location: asia-northeast1              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -3095,7 +3095,7 @@ previewExtract APIで取得してDocEntryに保存済みの15フィールド（a
 
 ### 監査レポート
 
-詳細は [field_audit.md v3](file:///C:/Users/kazen/.gemini/antigravity/brain/b29e23e6-88c0-4691-a867-4f898f874cd8/field_audit.md) を参照。
+詳細は [field_audit.md v3](file:///{LOCAL_USER}/.gemini/antigravity/brain/b29e23e6-88c0-4691-a867-4f898f874cd8/field_audit.md) を参照。
 
 ### 実施済み検証ツール
 

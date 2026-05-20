@@ -11,6 +11,7 @@ import { extractJSONFromResponse } from './schemas';
 import { GoogleGenAI } from '@google/genai';
 import { getPromptContent } from '../../routes/aiPromptRoutes';
 import { readFileSync } from 'fs';
+import { getDefaultModelId } from '../modelConfig';
 
 /**
  * OCRリクエストパラメータ
@@ -84,7 +85,7 @@ async function callGeminiAPI(
     const mimeType = imagePath.endsWith('.png') ? 'image/png' : 'image/jpeg';
 
     const result = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: getDefaultModelId(),
       contents: [
         {
           role: 'user',

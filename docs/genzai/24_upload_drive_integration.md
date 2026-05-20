@@ -557,7 +557,7 @@ Authorization: Bearer {accessToken}
 | 項目 | 値 |
 |---|---|
 | プロジェクトID | `gen-lang-client-0837543731`（Vertex AIと共用） |
-| SAメールアドレス | `sugu-suru@gen-lang-client-0837543731.iam.gserviceaccount.com` |
+| SAメールアドレス | `{SA_EMAIL}` |
 | 鍵ファイル | `./service-account-key.json`（`.gitignore`除外済み） |
 | 共有ドライブID | `0AIOLCboQ_R-nUk9PVA` |
 | SA権限 | 共有ドライブ「**管理者**」（2026-04-18 昇格。メンバー自動追加/削除に必要） |

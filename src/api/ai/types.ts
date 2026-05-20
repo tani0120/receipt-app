@@ -1,7 +1,7 @@
 
 export type AIProviderType = 'vertex_ai' | 'ai_studio';
 
-export type AIPhase = 'ocr' | 'learning' | 'conversion' | 'optimization';
+export type AIPhase = 'ocr' | 'learning' | 'conversion' | 'optimization' | 'command';
 
 export interface PhaseConfig {
     provider: AIProviderType;
