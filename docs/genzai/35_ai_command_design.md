@@ -22,7 +22,7 @@ sugu-sru上で自然言語の指示を受け付け、MF MCPツール呼び出し
 | 項目 | 決定 |
 |---|---|
 | LLM翻訳層の配置 | **バックエンド内（Hono）**。フロントはAPIを叩くだけ |
-| AI基盤 | **Vertex AI（Gemini 2.0 Flash）** |
+| AI基盤 | **Vertex AI（Gemini 2.5 Flash）** |
 | WRITE操作 | **確認モーダル付きで許可**（AIが提案 → 人間が承認 → 実行） |
 | ストリーミング応答 | **SSE**（文字がポロポロ出る） |
 | 言語 | **日本語のみ** |
@@ -33,27 +33,7 @@ sugu-sru上で自然言語の指示を受け付け、MF MCPツール呼び出し
 
 #### MF MCPツール（19個）
 
-| ツール | 種別 | 用途 |
-|---|---|---|
-| `mfc_ca_currentOffice` | READ | 事業者情報 |
-| `mfc_ca_getTermSettings` | READ | 会計年度設定 |
-| `mfc_ca_getAccounts` | READ | 勘定科目一覧 |
-| `mfc_ca_getTaxes` | READ | 税区分一覧 |
-| `mfc_ca_getJournals` | READ | 仕訳一覧 |
-| `mfc_ca_getJournalById` | READ | 仕訳個別 |
-| `mfc_ca_getTradePartners` | READ | 取引先一覧 |
-| `mfc_ca_getDepartments` | READ | 部門一覧 |
-| `mfc_ca_getSubAccounts` | READ | 補助科目一覧 |
-| `mfc_ca_getConnectedAccounts` | READ | 連携サービス一覧 |
-| `mfc_ca_getReportsTrialBalanceBalanceSheet` | READ | 残高試算表（BS） |
-| `mfc_ca_getReportsTrialBalanceProfitLoss` | READ | 残高試算表（PL） |
-| `mfc_ca_getReportsTransitionBalanceSheet` | READ | 推移表（BS） |
-| `mfc_ca_getReportsTransitionProfitLoss` | READ | 推移表（PL） |
-| `mfc_ca_en_ja_dictionary` | READ | 英日辞書 |
-| `mfc_ca_postJournals` | **WRITE** | 仕訳作成 |
-| `mfc_ca_putJournals` | **WRITE** | 仕訳更新 |
-| `mfc_ca_postTradePartners` | **WRITE** | 取引先作成 |
-| `mfc_ca_postTransactions` | **WRITE** | 明細作成 |
+READ 15個 + WRITE 4個。全ツールの詳細スキーマは [34_mf_mcp_integration.md セクション14-5](34_mf_mcp_integration.md) を参照。
 
 #### sugu-sru内部API
 
@@ -254,7 +234,10 @@ AI（要約だけ）:
 | `sub_accounts` | 補助科目 | `mfc_ca_getSubAccounts` | — |
 | `connected` | 連携サービス、銀行口座 | `mfc_ca_getConnectedAccounts` | — |
 | `term_settings` | 会計年度、決算月 | `mfc_ca_getTermSettings` | — |
-| `data_compare` | MFとの差分、データ比較 | `currentOffice` + `sugusru_getClient` | 両方実行して差分 |
+| `data_compare` | MFとの差分、データ比較 | `currentOffice` + アプリ内部API | 両方実行して差分 |
+
+※ 上記は「データ取得」の定型パターン。
+分析系の定型パターン（売上ランキング、経費ランキング、月次変動等）は [36_ai_command_catalog.md](36_ai_command_catalog.md) を参照。
 
 #### オープン対応（フォールバック）
 
@@ -301,7 +284,8 @@ AI（自律判断）:
 
 > **MF MCPに`select_tenant`ツールは存在しない。**
 > MCPは「1つのOAuthトークン = 1つの事業所」で固定。
-> テナント切替はMCPではなく、sugu-sru側の責務。
+> テナント切替はMCPではなくアプリ側の責務。
+> 詳細は [34_mf_mcp_integration.md セクション7](34_mf_mcp_integration.md) を参照。
 
 ```
 ユーザー: 「株式会社すぐするの4月試算表を出して」
@@ -543,10 +527,12 @@ AI: ○○商事の情報を各システムから取得しました。
 
 ---
 
-## 6. 関連ドキュメント
+## 7. 関連ドキュメント
 
 | ドキュメント | 関連 |
 |---|---|
 | [34_mf_mcp_integration.md](34_mf_mcp_integration.md) | MF MCP連携基盤（全19ツール） |
+| [36_ai_command_catalog.md](36_ai_command_catalog.md) | AIコマンド全28パターンカタログ |
+| [37_monthly_sync_design.md](37_monthly_sync_design.md) | MFデータ月次同期+共通エンジン設計 |
 | [load_context.md](../../.agent/workflows/load_context.md) | API設計方針 |
 | [28_api_migration_plan.md](28_api_migration_plan.md) | API化計画 |
