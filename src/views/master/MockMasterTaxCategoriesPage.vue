@@ -182,7 +182,6 @@
 import { ref, reactive, computed, watch } from 'vue';
 import type { TaxCategory, TaxDirection } from '@/types/shared-tax-category';
 import { extractRateFromName } from '@/types/shared-tax-category';
-import { TAX_CATEGORY_MASTER } from '@/data/master/tax-category-master';
 import { getInitialCopyCounter } from '@/utils/copy-utils';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useColumnResize } from '@/composables/useColumnResize';
@@ -486,7 +485,7 @@ async function saveChanges() {
     }
 
     // composable側のoverridesにも同期（顧問先ページへの反映用）
-    const defaultTaxIds = new Set(TAX_CATEGORY_MASTER.map(t => t.id));
+    const defaultTaxIds = settings.defaultTaxIds.value;
     const hiddenIds = allTaxRows.filter(r => r.deprecated).map(r => r.id);
     const customTaxCategories = allTaxRows.filter(r => !defaultTaxIds.has(r.id));
     taxMasterOverrides.value = {

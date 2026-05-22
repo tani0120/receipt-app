@@ -3,8 +3,6 @@ import { useAccountMaster } from '@/features/account-management/composables/useA
 import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster'
 import { useClientAccounts } from '@/features/account-management/composables/useClientAccounts'
 import { useClientTaxCategories } from '@/features/tax-management/composables/useClientTaxCategories'
-import { ACCOUNT_MASTER } from '@/data/master/account-master'
-import { TAX_CATEGORY_MASTER } from '@/data/master/tax-category-master'
 import type { Account } from '@/types/shared-account'
 import type { TaxCategory } from '@/types/shared-tax-category'
 import type { UnifiedAccount, UnifiedTaxCategory, AccountSettingsReturn } from '../types/account-settings.types'
@@ -88,9 +86,9 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
     clientAccountsComposable ? clientAccountsComposable.newMasterAccounts.value : []
   )
 
-  // デフォルト科目順序（ACCOUNT_MASTERの元順序）
+  // デフォルト科目順序（allAccountsの元順序）
   const defaultAccountOrder = computed(() =>
-    new Map(ACCOUNT_MASTER.map((a, i) => [a.id, i]))
+    new Map(accountMaster.allAccounts.value.map((a, i) => [a.id, i]))
   )
 
   // ==============================
@@ -148,9 +146,9 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
     taxCategories.value.filter(tc => !tc.hidden && !tc.hiddenInMaster)
   )
 
-  // デフォルト税区分順序（TAX_CATEGORY_MASTERの元順序）
+  // デフォルト税区分順序（allTaxCategoriesの元順序）
   const defaultTaxOrder = computed(() =>
-    new Map(TAX_CATEGORY_MASTER.map((t, i) => [t.id, i]))
+    new Map(taxMaster.allTaxCategories.value.map((t, i) => [t.id, i]))
   )
 
   // ==============================
@@ -288,7 +286,9 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       const hiddenIds = allRows
         .filter(r => !r.isCustom && (r.deprecated || r.effectiveTo))
         .map(r => r.id)
-      const defaultAccountIds = new Set(ACCOUNT_MASTER.map(a => a.id))
+      const defaultAccountIds = new Set(
+        accountMaster.allAccounts.value.filter(a => !(a as any).isCustom).map(a => a.id)
+      )
       const customAccounts = allRows.filter(r => !defaultAccountIds.has(r.id))
       accountMaster.overrides.value = { hiddenIds, customAccounts }
     } else {
@@ -301,7 +301,9 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
     if (scope === 'master') {
       // マスタスコープ: overrides同期（autoSaveで自動保存される）
       const hiddenIds = allRows.filter(r => r.deprecated).map(r => r.id)
-      const defaultTaxIds = new Set(TAX_CATEGORY_MASTER.map(t => t.id))
+      const defaultTaxIds = new Set(
+        taxMaster.allTaxCategories.value.filter(t => !t.isCustom).map(t => t.id)
+      )
       const customTaxCategories = allRows.filter(r => !defaultTaxIds.has(r.id))
       taxMaster.overrides.value = {
         ...taxMaster.overrides.value,
@@ -317,8 +319,12 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // ==============================
   // デフォルトIDセット（出自判定用。カスタム追加行の末尾ソートに使用）
   // ==============================
-  const defaultAccountIds = computed(() => new Set(ACCOUNT_MASTER.map(a => a.id)))
-  const defaultTaxIds = computed(() => new Set(TAX_CATEGORY_MASTER.map(t => t.id)))
+  const defaultAccountIds = computed(() => new Set(
+    accountMaster.allAccounts.value.filter(a => !(a as any).isCustom).map(a => a.id)
+  ))
+  const defaultTaxIds = computed(() => new Set(
+    taxMaster.allTaxCategories.value.filter(t => !t.isCustom).map(t => t.id)
+  ))
 
   // ==============================
   // return

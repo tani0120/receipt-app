@@ -1,8 +1,10 @@
-# MFデータ月次同期 + AIコマンド共通エンジン設計
+# DB基盤・月次同期設計
 
 > 作成: 2026-05-21
 > 準拠: [load_context.md](../../.agent/workflows/load_context.md) Supabase移行前倒し原則
-> 関連: [34_mf_mcp_integration.md](34_mf_mcp_integration.md) / [36_ai_command_catalog.md](36_ai_command_catalog.md)
+> コマンドカタログ: [34_command_catalog.md](34_command_catalog.md)
+> 部品カタログ: [35_parts_catalog.md](35_parts_catalog.md)
+> MCP基盤: [37_infra_mcp.md](37_infra_mcp.md)
 
 ## 背景
 
@@ -219,7 +221,28 @@ Phase 2: PDF出力ボタン（必要時のみ）
 
 ---
 
-## 7. 共通エンジンアーキテクチャ
+## 7. 部品アーキテクチャ
+
+### 方針: 今MCP版で作り、DB移行時にfetch*の内部だけ差し替える
+
+> **Repository層パターンと同じ考え方。**
+> 部品のインターフェース（入出力の型）を固定すれば、
+> 呼び出し側（コマンドレシピ）はデータソース変更の影響を受けない。
+> 部品定義の詳細は [35_parts_catalog.md](35_parts_catalog.md) を参照。
+
+```
+今:       fetchJournals(token, opts) → 内部でMCP呼び出し → Journal[] を返す
+DB移行後: fetchJournals(token, opts) → 内部でDBクエリ   → Journal[] を返す
+                                        ↑ここだけ差し替え
+```
+
+| パーツ種別 | DB移行時の影響 |
+|---|---|
+| `fetch*`系（データ取得） | 内部実装をMCP→DBに差し替え |
+| `aggregate*`系（集計） | **変更なし**（純粋なロジック） |
+| `nayose`（名寄せ） | **変更なし**（既に分離済み） |
+| `formatRanking`（出力） | **変更なし**（純粋なフォーマット） |
+| `calcChange`（増減算出） | **変更なし**（純粋な算出） |
 
 ### ファイル構成
 
@@ -227,21 +250,21 @@ Phase 2: PDF出力ボタン（必要時のみ）
 src/ai-commands/
   engine/
     parts/
-      fetchAccounts.ts          ← 科目取得+フィルタ（DBから）
-      fetchJournals.ts          ← 仕訳取得（DBから。未同期ならMCPフォールバック）
-      fetchPL.ts                ← PL試算表/推移表取得（DBから）
-      fetchDataSources.ts       ← 口座/カード取得（DBから）
-      aggregateByPartner.ts     ← 取引先別集計（未確定カウント含む）
-      aggregateByDepartment.ts  ← 部門別集計
-      aggregateByMonth.ts       ← 月別集計
-      nayose.ts                 ← 名寄せ（DBキャッシュ優先。新規のみAI）
-      calcChange.ts             ← 増減算出
-      formatRanking.ts          ← テーブル出力（⚠未確定マーク対応）
-      aiSummarize.ts            ← AI要約
+      fetchAccounts.ts          ← 科目取得+フィルタ（現在MCP、DB移行時に内部差し替え）
+      fetchJournals.ts          ← 仕訳取得（現在MCP、DB移行時に内部差し替え）
+      fetchPL.ts                ← PL試算表/推移表取得（現在MCP、DB移行時に内部差し替え）
+      fetchDataSources.ts       ← 口座/カード取得（現在MCP、DB移行時に内部差し替え）
+      aggregateByPartner.ts     ← 取引先別集計（データソース非依存）
+      aggregateByDepartment.ts  ← 部門別集計（データソース非依存）
+      aggregateByMonth.ts       ← 月別集計（データソース非依存）
+      nayose.ts                 ← 名寄せ（データソース非依存。新規のみAI）
+      calcChange.ts             ← 増減算出（データソース非依存）
+      formatRanking.ts          ← テーブル出力（データソース非依存。⚠未確定マーク対応）
+      aiSummarize.ts            ← AI要約（データソース非依存）
     sync/
-      monthlySync.ts            ← 月次同期バッチ
-      diffDetector.ts           ← 差分検出（新規取引先/口座/カード）
-      reportGenerator.ts        ← レポート自動生成+保管
+      monthlySync.ts            ← 月次同期バッチ（DB移行後に実装）
+      diffDetector.ts           ← 差分検出（DB移行後に実装）
+      reportGenerator.ts        ← レポート自動生成+保管（DB移行後に実装）
   patterns/
     p01_sales_ranking.ts        ← パーツ組み合わせ（5〜10行）
     p02_expense_ranking.ts
@@ -266,8 +289,9 @@ src/ai-commands/
 
 ## 関連ドキュメント
 
-| ドキュメント | 関連 |
-|---|---|
-| [34_mf_mcp_integration.md](34_mf_mcp_integration.md) | MF MCP連携基盤（全19ツール・レート制限） |
-| [35_ai_command_design.md](35_ai_command_design.md) | AIコマンド機能設計（UI・モード設計） |
-| [36_ai_command_catalog.md](36_ai_command_catalog.md) | AIコマンド全28パターンカタログ |
+| ドキュメント | 層 | 関連 |
+|---|---|---|
+| [34_command_catalog.md](34_command_catalog.md) | 完成品 | コマンドカタログ |
+| [35_parts_catalog.md](35_parts_catalog.md) | 部品 | 入力/処理/出力の全部品定義 |
+| [36_infra_ui.md](36_infra_ui.md) | 基盤 | UI設計・フロー設計 |
+| [37_infra_mcp.md](37_infra_mcp.md) | 基盤 | MCP接続基盤（全19ツール・レート制限） |

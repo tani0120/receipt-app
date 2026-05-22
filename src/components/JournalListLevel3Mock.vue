@@ -244,7 +244,7 @@
                 <!-- 証票ポップオーバー -->
                 <div
                   v-if="legendModalType === 'labelType' && col.key === 'labelType'"
-                  class="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-[110] transform scale-[0.9] origin-top"
+                  class="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-110 transform scale-[0.9] origin-top"
                 >
                   <div
                     class="bg-gray-900/90 rounded-xl shadow-2xl w-56 overflow-hidden border border-gray-700"
@@ -275,7 +275,7 @@
                 <!-- 警告ポップオーバー -->
                 <div
                   v-if="legendModalType === 'warning' && col.key === 'warning'"
-                  class="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-[110] transform scale-[0.9] origin-top"
+                  class="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-110 transform scale-[0.9] origin-top"
                 >
                   <div
                     class="bg-gray-900/90 rounded-xl shadow-2xl w-60 overflow-hidden border border-gray-700"
@@ -323,13 +323,13 @@
               <!-- 証票意味ポップオーバー -->
               <div
                 v-if="legendModalType === 'voucher_type' && col.key === 'voucher_type'"
-                class="absolute top-full left-0 mt-1 z-[110] transform origin-top-left"
+                class="absolute top-full left-0 mt-1 z-110 transform origin-top-left"
               >
                 <div
                   class="bg-gray-900/95 rounded-xl shadow-2xl w-[520px] overflow-hidden border border-gray-700"
                 >
                   <div
-                    class="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 bg-gradient-to-r from-blue-900/40 to-purple-900/40"
+                    class="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 bg-linear-to-r from-blue-900/40 to-purple-900/40"
                   >
                     <span class="text-white font-bold text-[14px] flex items-center gap-1.5"
                       >📋 証票意味ごとの許容科目ルール</span
@@ -959,9 +959,9 @@
                       'p-0.5 border-r border-gray-200 text-[10px] relative jl-editable',
                       getWarningCellClass(journal, col.key),
                       isDragOver(journalIndex, 0, col.key)
-                        ? 'ring-2 ring-blue-500 !bg-yellow-200 !text-black'
+                        ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
                         : '',
-                      isDragCompatibleCol(col.key) ? '!bg-blue-50' : '',
+                      isDragCompatibleCol(col.key) ? 'bg-blue-50!' : '',
                       isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                     ]"
                     @dblclick.stop="
@@ -1009,7 +1009,7 @@
                     'p-0.5 relative border-r border-gray-200 text-[10px]',
                     hasEntry(row, col.key) ? 'jl-editable' : '',
                     isDragOver(journalIndex, rowIndex, col.key)
-                      ? 'ring-2 ring-blue-500 !bg-yellow-200 !text-black'
+                      ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
                       : '',
                     isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '',
                     getWarningCellClass(
@@ -1017,7 +1017,7 @@
                       col.key,
                       row[col.key.startsWith('debit') ? 'debit' : 'credit'] ?? undefined,
                     ),
-                    isDragCompatibleCol(col.key) ? '!bg-blue-50' : '',
+                    isDragCompatibleCol(col.key) ? 'bg-blue-50!' : '',
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                   ]"
                   @dblclick.stop="
@@ -1154,12 +1154,12 @@
                       'p-0.5 flex items-center border-r border-gray-200 relative jl-editable',
                       col.key === 'voucher_date' ? 'justify-center text-[8px]' : '',
                       isDragOver(journalIndex, rowIndex, col.key)
-                        ? 'ring-2 ring-blue-500 !bg-yellow-200 !text-black'
+                        ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
                         : '',
                       isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '',
                       getWarningCellClass(journal, col.key),
                       col.key === 'voucher_date' ? getDatePeriodClass(journal.voucher_date) : '',
-                      isDragCompatibleCol(col.key) ? '!bg-blue-50' : '',
+                      isDragCompatibleCol(col.key) ? 'bg-blue-50!' : '',
                       isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                     ]"
                     @dblclick.stop="
@@ -1232,7 +1232,7 @@
                     'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative',
                     hasEntry(row, col.key) ? 'jl-editable' : '',
                     isDragOver(journalIndex, rowIndex, col.key)
-                      ? 'ring-2 ring-blue-500 !bg-yellow-200 !text-black'
+                      ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
                       : '',
                     isFillTargetCell(journalIndex, col.key) ? 'fill-target-cell' : '',
                     getWarningCellClass(
@@ -1240,7 +1240,7 @@
                       col.key,
                       row[col.key.split('.')[0] as 'debit' | 'credit'] ?? undefined,
                     ),
-                    isDragCompatibleCol(col.key) ? '!bg-blue-50' : '',
+                    isDragCompatibleCol(col.key) ? 'bg-blue-50!' : '',
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                   ]"
                   @dblclick.stop="
@@ -1368,9 +1368,9 @@
                       row[col.key.split('.')[0] as 'debit' | 'credit'] ?? undefined,
                     ),
                     isDragOver(journalIndex, rowIndex, col.key)
-                      ? 'ring-2 ring-blue-500 !bg-yellow-200 !text-black'
+                      ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
                       : '',
-                    isDragCompatibleCol(col.key) ? '!bg-blue-50' : '',
+                    isDragCompatibleCol(col.key) ? 'bg-blue-50!' : '',
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                   ]"
                   @dblclick.stop="
@@ -1723,7 +1723,7 @@
       >
         <!-- ヘッダー（ドラッグハンドル） -->
         <div
-          class="bg-gradient-to-r from-amber-100 to-orange-50 px-3 py-1.5 flex justify-between items-center cursor-move rounded-t-lg select-none border-b border-amber-200"
+          class="bg-linear-to-r from-amber-100 to-orange-50 px-3 py-1.5 flex justify-between items-center cursor-move rounded-t-lg select-none border-b border-amber-200"
           @mousedown="startSupportingSearchDrag"
         >
           <span class="text-xs font-bold text-amber-900 flex items-center gap-2">
@@ -2202,7 +2202,7 @@
         </div>
         <!-- リサイズグリップインジケーター -->
         <div
-          class="sticky bottom-0 ml-auto w-5 h-5 pointer-events-none flex-shrink-0"
+          class="sticky bottom-0 ml-auto w-5 h-5 pointer-events-none shrink-0"
           style="
             background: linear-gradient(
               135deg,
@@ -2233,7 +2233,7 @@
       >
         <!-- ヘッダー（ドラッグハンドル） -->
         <div
-          class="bg-gradient-to-r from-amber-50 to-amber-100 px-5 py-3 border-b flex items-center justify-between rounded-t-xl cursor-move select-none"
+          class="bg-linear-to-r from-amber-50 to-amber-100 px-5 py-3 border-b flex items-center justify-between rounded-t-xl cursor-move select-none"
           @mousedown="startHintDrag"
         >
           <div class="flex items-center gap-2">
@@ -2291,7 +2291,7 @@
                 v.level === 'error' ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-800',
               ]"
             >
-              <span class="text-base flex-shrink-0">{{ v.level === "error" ? "❌" : "⚠️" }}</span>
+              <span class="text-base shrink-0">{{ v.level === "error" ? "❌" : "⚠️" }}</span>
               <span>{{ v.message }}</span>
             </div>
           </div>
@@ -2314,12 +2314,12 @@
             >
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                  <span class="text-blue-600 font-bold flex-shrink-0">{{
+                  <span class="text-blue-600 font-bold shrink-0">{{
                     s.side === "debit" ? SIDE_DEBIT : SIDE_CREDIT
                   }}</span>
-                  <span class="text-gray-500 flex-shrink-0">{{ s.field }}:</span>
-                  <span class="text-red-500 line-through flex-shrink-0">{{ s.currentLabel }}</span>
-                  <span class="text-gray-400 flex-shrink-0">→</span>
+                  <span class="text-gray-500 shrink-0">{{ s.field }}:</span>
+                  <span class="text-red-500 line-through shrink-0">{{ s.currentLabel }}</span>
+                  <span class="text-gray-400 shrink-0">→</span>
                   <!-- 択一候補: ドロップダウン -->
                   <select
                     v-if="s.alternatives.length > 1"
@@ -2340,7 +2340,7 @@
                 </div>
                 <button
                   @click="applyHintSuggestion(s)"
-                  class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-bold transition-colors flex-shrink-0 ml-2"
+                  class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-bold transition-colors shrink-0 ml-2"
                 >
                   適用
                 </button>
@@ -2415,7 +2415,7 @@
     <div
       v-if="commentModalJournalId"
       ref="commentModalRef"
-      class="fixed z-[90]"
+      class="fixed z-90"
       :style="{
         left: commentModalPos.left + 'px',
         top: commentModalPos.top + 'px',
@@ -2566,12 +2566,12 @@
   <!-- 税区分矛盾モーダル（非ブロッキング: 右上フローティング） -->
   <div
     v-if="showTaxMismatchModal"
-    class="fixed inset-0 z-[89]"
+    class="fixed inset-0 z-89"
     @click="showTaxMismatchModal = false"
   ></div>
   <div
     v-if="showTaxMismatchModal"
-    class="fixed top-20 right-4 z-[90] w-80 bg-white rounded-lg shadow-2xl border border-red-200 p-4 text-sm"
+    class="fixed top-20 right-4 z-90 w-80 bg-white rounded-lg shadow-2xl border border-red-200 p-4 text-sm"
   >
     <h3 class="font-bold mb-2 text-red-600 flex items-center gap-1 text-xs">
       <span class="text-base">⚠</span> 税区分の不整合
@@ -2632,7 +2632,7 @@
   <!-- 確認ダイアログ（モーダル） -->
   <div
     v-if="confirmDialog.show"
-    class="fixed inset-0 z-[100] flex items-center justify-center bg-black/30"
+    class="fixed inset-0 z-100 flex items-center justify-center bg-black/30"
     @click.self="confirmDialog.show = false"
   >
     <div class="bg-white rounded-lg shadow-xl p-4 w-72 text-sm" @click.stop>
@@ -2662,7 +2662,7 @@
   <Teleport to="body">
     <div
       v-show="tooltipVisible"
-      class="fixed z-[9999] pointer-events-none transition-opacity duration-100"
+      class="fixed z-9999 pointer-events-none transition-opacity duration-100"
       :class="tooltipVisible ? 'opacity-100' : 'opacity-0'"
       :style="{ left: tooltipX + 'px', top: tooltipY + 'px', transform: 'translateX(-50%)' }"
     >
@@ -2681,7 +2681,7 @@
   <Teleport to="body">
     <div
       v-if="dragLabelVisible"
-      class="fixed z-[9999] pointer-events-none bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded shadow-lg whitespace-nowrap flex items-center gap-1"
+      class="fixed z-9999 pointer-events-none bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded shadow-lg whitespace-nowrap flex items-center gap-1"
       :style="{ left: dragLabelX + 'px', top: dragLabelY + 'px' }"
     >
       📋 コピー: {{ dragLabelText || "--" }}
@@ -2727,7 +2727,7 @@ import {
   PLACEHOLDER_EMPTY, PLACEHOLDER_SELECT,
   VOUCHER_DOC_FILTER_OPTIONS, VOUCHER_TYPES,
 } from '@/constants/vendorOptions';
-import { ACCOUNT_MASTER } from '@/data/master/account-master';
+import { useAccountMaster } from '@/features/account-management/composables/useAccountMaster';
 import type { SelectOption } from '@/constants/clientOptions';
 import { UI_MSG } from '@/constants/uiMessages';
 import {
@@ -2740,9 +2740,10 @@ import {
   WARN_SALES_EQUITY, WARN_EXPENSE_EQUITY, WARN_EQUITY_EQUITY,
 } from '@/constants/validationMessages';
 
-/** 勘定科目選択肢—ACCOUNT_MASTERから動的生成 */
+/** 勘定科目選択肢—API取得のマスタ科目から動的生成 */
+const { masterAccounts: masterAccountList } = useAccountMaster();
 const accountOptions = computed<SelectOption[]>(() =>
-  ACCOUNT_MASTER
+  masterAccountList.value
     .filter(a => !a.deprecated && a.target === 'both')
     .map(a => ({ value: a.name, label: a.name }))
 );
@@ -3533,7 +3534,7 @@ function getWarningCellClass(
     const acctName = entry.account;
     if (acctName) {
       const overlap = sameAccountBothSidesMap.get(journal.id);
-      if (overlap && overlap.has(acctName)) return "!bg-yellow-300 !text-black";
+      if (overlap && overlap.has(acctName)) return "!bg-yellow-300 text-black!";
     }
   }
 

@@ -194,7 +194,7 @@
 import { ref, computed, watch, nextTick, onMounted, onActivated } from 'vue';
 import type { Vendor, VendorVector } from '@/types/pipeline/vendor.type';
 import { VENDOR_VECTOR_LABELS, VENDOR_VECTORS } from '@/types/pipeline/vendor.type';
-import { ACCOUNT_MASTER } from '@/data/master/account-master';
+import { useAccountMaster } from '@/features/account-management/composables/useAccountMaster';
 import { normalizeVendorName } from '@/utils/pipeline/vendorIdentification';
 import { DIRECTION_OPTIONS, FILTER_ALL_LABEL, PLACEHOLDER_DASH } from '@/constants/vendorOptions';
 import { UI_MSG } from '@/constants/uiMessages';
@@ -231,9 +231,10 @@ function vectorLabel(v: VendorVector): string {
 
 
 
-/** 科目ドロップダウン選択肢（ACCOUNT_MASTER準拠） */
+/** 科目ドロップダウン選択肢（API取得のマスタ科目準拠） */
+const { masterAccounts: masterAccountList } = useAccountMaster();
 const accountOptions = computed(() =>
-  ACCOUNT_MASTER.map(a => ({ id: a.id, name: a.name }))
+  masterAccountList.value.map(a => ({ id: a.id, name: a.name }))
 );
 
 /** 業種ドロップダウン選択肢（VENDOR_VECTORS準拠） */

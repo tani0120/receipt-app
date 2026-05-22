@@ -95,8 +95,26 @@ async function apiPut(path: string, body: unknown): Promise<void> {
 // モジュールスコープ（シングルトン）
 // ============================================================
 
+const CACHE_KEY = 'sugu-suru:clients-cache'
 const clients = ref<Client[]>([])
 let initialized = false
+
+/** sessionStorageからキャッシュを即座にrefに設定（楽観的UI） */
+function loadCache(): void {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY)
+    if (raw) {
+      const cached = JSON.parse(raw) as Client[]
+      if (Array.isArray(cached) && cached.length > 0) {
+        clients.value = cached
+        initialized = true
+        console.log(`[useClients] キャッシュから${cached.length}件を即座に表示`)
+      }
+    }
+  } catch {
+    // キャッシュ破損時は無視（APIから取得）
+  }
+}
 
 /** サーバーから顧問先一覧を取得してrefに設定 */
 async function refresh(): Promise<void> {
@@ -107,6 +125,13 @@ async function refresh(): Promise<void> {
     clients.value = list
     initialized = true
     console.log(`[useClients] ${list.length}件をサーバーから取得`)
+
+    // キャッシュ更新
+    try {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(list))
+    } catch {
+      // sessionStorage容量超過時は無視
+    }
 
     // DL-042マイグレーション: localStorageのsharedFolderIdをサーバーデータにマージ
     migrateSharedFolderIds()
@@ -153,7 +178,8 @@ function migrateSharedFolderIds(): void {
 /** 初回のみサーバーから読み込み */
 async function ensureLoaded(): Promise<void> {
   if (!initialized) {
-    await refresh()
+    loadCache()   // ① キャッシュから即座に表示
+    await refresh() // ② 裏でAPIから最新を取得→差し替え
   }
 }
 

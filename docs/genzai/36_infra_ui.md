@@ -1,10 +1,12 @@
-# AIコマンド機能 — 設計定義書
+# UI設計・フロー設計
 
 > 作成: 2026-05-20
 > 準拠: `load_context.md` L130: ロジックはAPI側に書け
-> 前提: 34_mf_mcp_integration.md（MF MCP連携基盤）
+> 前提: [37_infra_mcp.md](37_infra_mcp.md)（MCP接続基盤）
 > AI基盤: Vertex AI（Gemini）— GCP統一
 > LLM翻訳層: バックエンド内（Hono）で完結
+> コマンドカタログ: [34_command_catalog.md](34_command_catalog.md)
+> 部品カタログ: [35_parts_catalog.md](35_parts_catalog.md)
 
 ---
 
@@ -33,7 +35,7 @@ sugu-sru上で自然言語の指示を受け付け、MF MCPツール呼び出し
 
 #### MF MCPツール（19個）
 
-READ 15個 + WRITE 4個。全ツールの詳細スキーマは [34_mf_mcp_integration.md セクション14-5](34_mf_mcp_integration.md) を参照。
+READ 15個 + WRITE 4個。全ツールの詳細スキーマは [37_infra_mcp.md セクション14-5](37_infra_mcp.md) を参照。
 
 #### sugu-sru内部API
 
@@ -216,34 +218,77 @@ AI（要約だけ）:
 → AIはツール選定にも引数にも関与していない。要約しただけ。
 ```
 
-#### 定型パターン一覧
+#### Layer 1 定型パターン一覧
 
-| パターンID | マッチキーワード例 | 実行するツール | 引数の決め方 |
+> データ取得系コマンド（Layer 1パターンマッチ）の詳細は [34_command_catalog.md](34_command_catalog.md) の「データ取得系」セクションに移動。
+> 本セクションでは処理フロー（Layer 1/2/3）の概要のみ記載。
+
+```
+処理フロー（3層構造）:
+  ユーザー入力
+    ↓
+  Layer 1: コード側パターンマッチ（34_command_catalog.md データ取得系）
+    「科目一覧」→ accounts_list → 即座にMCP実行 → 表示
+    「先月の仕訳を見せて」→ journals_period → 即座にMCP実行 → 表示
+    ↓ マッチしない場合
+  Layer 2: AIルーティング（本セクション）
+    「銀行明細を仕訳して」→ 銀行/カード仕訳候補 → 部品組み合わせで実行
+    「売上トップ10は？」→ 売上ランキング → 部品組み合わせで実行
+    ↓ それもマッチしない場合
+  Layer 3: オープン対応（フォールバック）
+    AIにFunction Callingの裁量を与える
+```
+
+#### Layer 2: AIルーティング
+
+> ルーティングは部品ではなくフロー制御。コマンドを選ぶ行為。
+
+| 項目 | 内容 |
+|---|---|
+| 目的 | 自然言語入力をコマンドに振り分ける |
+| 入力 | ユーザーの自然言語テキスト |
+| 出力 | JSON: `{"command": "コマンド名"}` |
+| **モデル** | **gemini-3.5-flash**（決定: 2026-05-22） |
+| コスト | ~¥0.001/回（入力~415トークン + 出力~10トークン） |
+
+```
+やること:
+  ✅ コマンドカタログを読み、最適なコマンドを返す
+  ✅ 該当なしの場合は "unknown" を返す
+
+やってはダメ:
+  ❌ カタログに存在しないコマンドを生成しない
+  ❌ コマンドをスキップして直接処理しない
+  ❌ ユーザーの意図を推測で補完しない
+```
+
+紛らわしいコマンドの境界定義:
+
+| 曖昧性 | 判定基準 |
+|---|---|
+| 銀行仕訳 vs 領収書仕訳 | 「銀行」「カード」→ 銀行/カード / 「領収書」「レシート」→ 領収書 |
+| 経費ランキング vs 月次変動 | 「ランキング」→ 経費ランキング / 「増えた」「変動」→ 月次変動 |
+| 仕訳投入 vs 仕訳取消 | 「登録」「投入」→ 投入 / 「修正」「取消」→ 取消 |
+
+ルーティングテスト結果:
+
+| モデル | 正解率 | 平均ms | 判定 |
 |---|---|---|---|
-| `office_info` | 事業者情報、会社情報 | `mfc_ca_currentOffice` | 引数なし |
-| `accounts_list` | 勘定科目、科目一覧 | `mfc_ca_getAccounts` | `available: true` |
-| `taxes_list` | 税区分 | `mfc_ca_getTaxes` | `available: true` |
-| `journals_period` | 仕訳、ジャーナル、取引 | `mfc_ca_getJournals` | 日付計算はコード |
-| `journal_detail` | 仕訳ID xxx | `mfc_ca_getJournalById` | IDをパース |
-| `pl_trial` | PL試算表、損益計算書 | `getReportsTrialBalanceProfitLoss` | `fiscal_year` をコードで算出 |
-| `bs_trial` | BS試算表、貸借対照表 | `getReportsTrialBalanceBalanceSheet` | 同上 |
-| `pl_transition` | PL推移、月別推移 | `getReportsTransitionProfitLoss` | `type: "monthly"` 固定 |
-| `bs_transition` | BS推移 | `getReportsTransitionBalanceSheet` | `type: "monthly"` 固定 |
-| `partners_list` | 取引先 | `mfc_ca_getTradePartners` | — |
-| `departments` | 部門 | `mfc_ca_getDepartments` | — |
-| `sub_accounts` | 補助科目 | `mfc_ca_getSubAccounts` | — |
-| `connected` | 連携サービス、銀行口座 | `mfc_ca_getConnectedAccounts` | — |
-| `term_settings` | 会計年度、決算月 | `mfc_ca_getTermSettings` | — |
-| `data_compare` | MFとの差分、データ比較 | `currentOffice` + アプリ内部API | 両方実行して差分 |
+| gemini-2.5-flash | 20/20 (100%) | 1731ms | ✅ 採用可 |
+| gemini-3-flash-preview | 19/20 (95%) | 5113ms | ✅ 採用可 |
+| gemini-3.1-flash-lite | 20/20 (100%) | 2165ms | ✅ 採用可 |
+| **gemini-3.5-flash** | **20/20 (100%)** | **3067ms** | **✅ 採用（決定）** |
 
-※ 上記は「データ取得」の定型パターン。
-分析系の定型パターン（売上ランキング、経費ランキング、月次変動等）は [36_ai_command_catalog.md](36_ai_command_catalog.md) を参照。
+テストスクリプト: [test_routing.ts](../../src/scripts/test_routing.ts)
+
+> **決定: gemini-3.5-flash を採用。** 1万回呼んでも¥10。コストは無視できる。
+
 
 #### オープン対応（フォールバック）
 
 - 定型パターンにマッチしなかった場合**のみ**発動
 - **やむを得ない**のでAIにFunction Callingの裁量を与える
-- AIに34_/35_の関連セクションを検索させて（`search_design_docs`）、自分でツールを選ばせる
+- AIに設計書の関連セクションを検索させて（`search_design_docs`）、自分でツールを選ばせる
 - ブレるリスクがあるが、「対応できません」より良い
 
 ```
@@ -285,7 +330,7 @@ AI（自律判断）:
 > **MF MCPに`select_tenant`ツールは存在しない。**
 > MCPは「1つのOAuthトークン = 1つの事業所」で固定。
 > テナント切替はMCPではなくアプリ側の責務。
-> 詳細は [34_mf_mcp_integration.md セクション7](34_mf_mcp_integration.md) を参照。
+> 詳細は [37_infra_mcp.md セクション7](37_infra_mcp.md) を参照。
 
 ```
 ユーザー: 「株式会社すぐするの4月試算表を出して」
@@ -529,10 +574,13 @@ AI: ○○商事の情報を各システムから取得しました。
 
 ## 7. 関連ドキュメント
 
-| ドキュメント | 関連 |
-|---|---|
-| [34_mf_mcp_integration.md](34_mf_mcp_integration.md) | MF MCP連携基盤（全19ツール） |
-| [36_ai_command_catalog.md](36_ai_command_catalog.md) | AIコマンド全28パターンカタログ |
-| [37_monthly_sync_design.md](37_monthly_sync_design.md) | MFデータ月次同期+共通エンジン設計 |
-| [load_context.md](../../.agent/workflows/load_context.md) | API設計方針 |
-| [28_api_migration_plan.md](28_api_migration_plan.md) | API化計画 |
+| ドキュメント | 層 | 関連 |
+|---|---|---|
+| [34_command_catalog.md](34_command_catalog.md) | 完成品 | コマンドカタログ（Layer 1データ取得系含む） |
+| [34a_command_journal.md](34a_command_journal.md) | 完成品 | 仕訳系コマンドレシピ |
+| [34b_command_business.md](34b_command_business.md) | 完成品 | ビジネス系コマンドレシピ |
+| [35_parts_catalog.md](35_parts_catalog.md) | 部品 | 入力/処理/出力の全部品定義 |
+| [37_infra_mcp.md](37_infra_mcp.md) | 基盤 | MCP接続基盤（全19ツール） |
+| [38_infra_db.md](38_infra_db.md) | 基盤 | DB基盤・月次同期 |
+| [load_context.md](../../.agent/workflows/load_context.md) | — | API設計方針 |
+| [28_api_migration_plan.md](28_api_migration_plan.md) | — | API化計画 |

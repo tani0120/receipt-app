@@ -1,10 +1,10 @@
 /**
  * accountMasterStore.ts — 科目・税区分マスタストア（サーバー側）
  *
- * Phase 2（2026-05-03）
+ * Phase 2（2026-05-03）→ Phase 3（2026-05-22 JSON化）
  *
- * shared/data/ の ACCOUNT_MASTER / TAX_CATEGORY_MASTER を
- * サーバー側から直接参照し、API各サービスに提供する。
+ * data/account-master.json / data/tax-category-master.json を
+ * サーバー起動時に読み込み、API各サービスに提供する。
  *
  * 将来のSupabase移行時はDB読み込みに差し替える。
  * 現時点では顧問先カスタム科目は未対応（マスタのみ）。
@@ -12,17 +12,47 @@
  * 準拠: DL-042
  */
 
-import { ACCOUNT_MASTER } from '../../data/master/account-master'
-import { TAX_CATEGORY_MASTER } from '../../data/master/tax-category-master'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import type { Account } from '../../types/shared-account'
 import type { TaxCategory } from '../../types/shared-tax-category'
+
+// ────────────────────────────────────────────
+// JSONファイルからマスタデータを読み込み
+// ────────────────────────────────────────────
+
+const DATA_DIR = join(process.cwd(), 'data')
+
+function loadAccounts(): Account[] {
+  try {
+    const raw = readFileSync(join(DATA_DIR, 'account-master.json'), 'utf-8')
+    const accounts = JSON.parse(raw) as Account[]
+    console.log(`[accountMasterStore] 科目${accounts.length}件をJSONから読み込み`)
+    return accounts
+  } catch (err) {
+    console.error('[accountMasterStore] account-master.json読み込み失敗:', err)
+    return []
+  }
+}
+
+function loadTaxCategories(): TaxCategory[] {
+  try {
+    const raw = readFileSync(join(DATA_DIR, 'tax-category-master.json'), 'utf-8')
+    const taxes = JSON.parse(raw) as TaxCategory[]
+    console.log(`[accountMasterStore] 税区分${taxes.length}件をJSONから読み込み`)
+    return taxes
+  } catch (err) {
+    console.error('[accountMasterStore] tax-category-master.json読み込み失敗:', err)
+    return []
+  }
+}
 
 // ────────────────────────────────────────────
 // インメモリストア（将来Supabase移行時にDB呼び出しに差し替え）
 // ────────────────────────────────────────────
 
 /** マスタ科目一覧（変更可能。saveで上書き） */
-let masterAccounts: Account[] = [...ACCOUNT_MASTER]
+let masterAccounts: Account[] = loadAccounts()
 
 // ────────────────────────────────────────────
 // 科目マスタ — 取得系
@@ -262,7 +292,7 @@ export function saveClientAccounts(
 // ────────────────────────────────────────────
 
 /** マスタ税区分一覧（変更可能。saveで上書き） */
-let masterTaxCategories: TaxCategory[] = [...TAX_CATEGORY_MASTER]
+let masterTaxCategories: TaxCategory[] = loadTaxCategories()
 
 /** 全税区分を取得 */
 export function getAllTaxCategories(): readonly TaxCategory[] {
@@ -458,4 +488,4 @@ export function saveClientTaxCategories(
   return { ok: true, count: taxCategories.length }
 }
 
-console.log(`[accountMasterStore] 科目${ACCOUNT_MASTER.length}件 / 税区分${TAX_CATEGORY_MASTER.length}件をロード`)
+console.log(`[accountMasterStore] 科目${masterAccounts.length}件 / 税区分${masterTaxCategories.length}件をロード`)

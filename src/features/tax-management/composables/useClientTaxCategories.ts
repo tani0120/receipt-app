@@ -10,7 +10,6 @@
  * 準拠: DL-042, Phase 2 Step 5
  */
 import { ref, computed, watch, type Ref } from 'vue'
-import { TAX_CATEGORY_MASTER } from '@/data/master/tax-category-master'
 import { useTaxMaster } from './useTaxMaster'
 import type { TaxCategory } from '@/types/shared-tax-category'
 
@@ -82,7 +81,7 @@ const clientCacheMap = new Map<string, ClientTaxCache>()
 // =============================================
 
 export function useClientTaxCategories(clientId: string) {
-  const { masterTaxCategories } = useTaxMaster()
+  const { masterTaxCategories, allTaxCategories } = useTaxMaster()
 
   function createInitialCopy(): ClientTaxOverrides {
     return {
@@ -139,7 +138,7 @@ export function useClientTaxCategories(clientId: string) {
   function buildAiSelectableOverrides(items: TaxCategory[]): Record<string, boolean> {
     const result: Record<string, boolean> = {}
     items.forEach(tc => {
-      const master = TAX_CATEGORY_MASTER.find(m => m.id === tc.id)
+      const master = allTaxCategories.value.find(m => m.id === tc.id)
       if (master && tc.aiSelectable !== master.aiSelectable) {
         result[tc.id] = tc.aiSelectable
       }
@@ -211,7 +210,7 @@ export function useClientTaxCategories(clientId: string) {
     const customTaxCategories = allRows.filter(r => r.isCustom)
     const aiSelectableOverrides: Record<string, boolean> = {}
     allRows.forEach(r => {
-      const master = TAX_CATEGORY_MASTER.find(m => m.id === r.id)
+      const master = allTaxCategories.value.find(m => m.id === r.id)
       if (master && r.aiSelectable !== master.aiSelectable) {
         aiSelectableOverrides[r.id] = r.aiSelectable
       }
@@ -220,7 +219,7 @@ export function useClientTaxCategories(clientId: string) {
       hiddenIds,
       customTaxCategories,
       aiSelectableOverrides,
-      copiedMasterIds: TAX_CATEGORY_MASTER.map(t => t.id),
+      copiedMasterIds: allTaxCategories.value.map(t => t.id),
     }
     // autoSaveで自動的にサーバーへ保存される
   }

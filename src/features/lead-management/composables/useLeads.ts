@@ -75,8 +75,23 @@ async function apiPut(path: string, body: unknown): Promise<void> {
   if (!res.ok) throw new Error(`API PUT ${path} failed: ${res.status}`)
 }
 
+const CACHE_KEY = 'sugu-suru:leads-cache'
 const leads = ref<Lead[]>([])
 let initialized = false
+
+function loadCache(): void {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY)
+    if (raw) {
+      const cached = JSON.parse(raw) as Lead[]
+      if (Array.isArray(cached) && cached.length > 0) {
+        leads.value = cached
+        initialized = true
+        console.log(`[useLeads] キャッシュから${cached.length}件を即座に表示`)
+      }
+    }
+  } catch { /* 無視 */ }
+}
 
 async function refresh(): Promise<void> {
   try {
@@ -85,6 +100,7 @@ async function refresh(): Promise<void> {
     leads.value = list
     initialized = true
     console.log(`[useLeads] ${list.length}件をサーバーから取得`)
+    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(list)) } catch { /* 無視 */ }
   } catch (err) {
     console.error('[useLeads] サーバー取得失敗:', err)
   }
@@ -92,6 +108,7 @@ async function refresh(): Promise<void> {
 
 async function ensureLoaded(): Promise<void> {
   if (!initialized) {
+    loadCache()
     await refresh()
   }
 }

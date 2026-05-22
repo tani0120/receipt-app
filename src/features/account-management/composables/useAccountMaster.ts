@@ -1,16 +1,15 @@
 /**
  * useAccountMaster — 勘定科目マスタ composable（API接続版）
  *
- * 【設計原則】useJournals.tsパターン準拠
- * - サーバーAPI（/api/accounts/master）を通じてデータを永続化
+ * 【設計原則】useClients.tsパターン準拠
+ * - サーバーAPI（/api/accounts/master）から全件取得
+ * - sessionStorageキャッシュで楽観的UI（即座に表示）
  * - モジュールスコープのシングルトンrefでフロント側キャッシュ
  * - 変更操作時にサーバーへ自動保存（デバウンス300ms）
- * - 初回アクセス時にサーバーから読み込み
  *
- * 準拠: DL-042, Phase 2 Step 2
+ * 準拠: DL-042, Phase 3（ハードコード廃止）
  */
-import { ref, computed, watch } from 'vue'
-import { ACCOUNT_MASTER } from '@/data/master/account-master'
+import { ref, computed } from 'vue'
 import type { Account } from '@/types/shared-account'
 
 // =============================================
@@ -25,102 +24,96 @@ export interface MasterAccount extends Account {
   isCustom: boolean
 }
 
-/** マスタ差分データ（非表示ID + カスタム科目） */
-interface MasterOverrides {
-  /** 非表示にした科目IDの一覧 */
-  hiddenIds: string[]
-  /** カスタム追加した科目の一覧 */
-  customAccounts: Account[]
-}
-
 // =============================================
 // API通信ヘルパー
 // =============================================
 
 const API_BASE = '/api/accounts'
 
-async function fetchMasterFromServer(): Promise<MasterOverrides | null> {
-  try {
-    const res = await fetch(`${API_BASE}/master?pageSize=200`)
-    if (!res.ok) return null
-    const data = await res.json() as { items: Account[] }
-    // サーバーから返された全件データからoverrides形式を復元
-    const defaultIds = new Set(ACCOUNT_MASTER.map(a => a.id))
-    const hiddenIds = data.items
-      .filter((a: Account) => a.deprecated || a.effectiveTo)
-      .filter((a: Account) => !a.isCustom)
-      .map((a: Account) => a.id)
-    const customAccounts = data.items.filter((a: Account) => !defaultIds.has(a.id))
-    return { hiddenIds, customAccounts }
-  } catch (err) {
-    console.error('[useAccountMaster] サーバー取得失敗:', err)
-    return null
-  }
-}
-
-async function saveOverridesToServer(overrides: MasterOverrides): Promise<void> {
-  try {
-    // overridesからフル科目リストを再構成してPUT
-    const defaultAccounts = ACCOUNT_MASTER.map(a => ({
-      ...a,
-      deprecated: overrides.hiddenIds.includes(a.id) ? true : a.deprecated,
-    }))
-    const allAccounts = [...defaultAccounts, ...overrides.customAccounts]
-    await fetch(`${API_BASE}/master`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accounts: allAccounts }),
-    })
-  } catch (err) {
-    console.error('[useAccountMaster] サーバー保存失敗:', err)
-  }
-}
-
 // =============================================
 // モジュールスコープ（シングルトン）
 // =============================================
 
-const overrides = ref<MasterOverrides>({ hiddenIds: [], customAccounts: [] })
+const CACHE_KEY = 'sugu-suru:account-master-cache'
+const allAccounts = ref<Account[]>([])
 let initialized = false
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
-// autoSave: overrides変更時にサーバーへ自動保存（デバウンス300ms）
-watch(overrides, () => {
-  if (!initialized) return
-  if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => saveOverridesToServer(overrides.value), 300)
-}, { deep: true })
+/** sessionStorageからキャッシュを即座にrefに設定（楽観的UI） */
+function loadCache(): void {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY)
+    if (raw) {
+      const cached = JSON.parse(raw) as Account[]
+      if (Array.isArray(cached) && cached.length > 0) {
+        allAccounts.value = cached
+        initialized = true
+        console.log(`[useAccountMaster] キャッシュから${cached.length}件を即座に表示`)
+      }
+    }
+  } catch { /* キャッシュ破損時は無視 */ }
+}
 
-// 非同期でサーバーから初期データを取得
-fetchMasterFromServer().then(serverData => {
-  if (serverData) {
-    overrides.value = serverData
-    console.log('[useAccountMaster] サーバーからマスタ科目を取得')
+/** サーバーから科目マスタを取得してrefに設定 */
+async function refresh(): Promise<void> {
+  try {
+    const res = await fetch(`${API_BASE}/master?pageSize=200`)
+    if (!res.ok) return
+    const data = await res.json() as { items: Account[] }
+    allAccounts.value = data.items
+    initialized = true
+    console.log(`[useAccountMaster] ${data.items.length}件をサーバーから取得`)
+    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(data.items)) } catch { /* 容量超過時は無視 */ }
+  } catch (err) {
+    console.error('[useAccountMaster] サーバー取得失敗:', err)
   }
-  initialized = true
-})
+}
+
+/** 変更をサーバーに保存（デバウンス300ms） */
+function debounceSave(): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    fetch(`${API_BASE}/master`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accounts: allAccounts.value }),
+    }).catch(err => console.error('[useAccountMaster] サーバー保存失敗:', err))
+    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(allAccounts.value)) } catch { /* 無視 */ }
+  }, 300)
+}
+
+/** 初回のみサーバーから読み込み */
+async function ensureLoaded(): Promise<void> {
+  if (!initialized) {
+    loadCache()
+    await refresh()
+  }
+}
+
+// 初回自動読み込み（fire-and-forget）
+ensureLoaded()
 
 /** デフォルト科目 ＋ カスタム科目を統合した全科目リスト */
 const masterAccounts = computed<MasterAccount[]>(() => {
-  const defaultAccounts: MasterAccount[] = ACCOUNT_MASTER.map(a => ({
-    ...a,
-    hiddenInMaster: overrides.value.hiddenIds.includes(a.id),
-    isCustom: false,
-  }))
-
-  const customAccounts: MasterAccount[] = overrides.value.customAccounts.map(a => ({
-    ...a,
-    hiddenInMaster: overrides.value.hiddenIds.includes(a.id),
-    isCustom: a.isCustom ?? true,
-  }))
-
-  return [...defaultAccounts, ...customAccounts].sort((a, b) => a.sortOrder - b.sortOrder)
+  return allAccounts.value
+    .map(a => ({
+      ...a,
+      hiddenInMaster: a.deprecated === true,
+      isCustom: (a as MasterAccount).isCustom ?? false,
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder)
 })
 
 /** 表示中の科目のみ（非表示を除外） */
 const visibleMasterAccounts = computed<MasterAccount[]>(() =>
   masterAccounts.value.filter(a => !a.hiddenInMaster)
 )
+
+/** 非表示科目IDの一覧（overrides互換） */
+const overrides = computed(() => ({
+  hiddenIds: allAccounts.value.filter(a => a.deprecated).map(a => a.id),
+  customAccounts: allAccounts.value.filter(a => (a as MasterAccount).isCustom),
+}))
 
 // =============================================
 // Composable
@@ -129,38 +122,41 @@ const visibleMasterAccounts = computed<MasterAccount[]>(() =>
 export function useAccountMaster() {
   /** 科目の表示/非表示をトグル */
   function toggleVisibility(accountId: string): void {
-    const idx = overrides.value.hiddenIds.indexOf(accountId)
+    const idx = allAccounts.value.findIndex(a => a.id === accountId)
     if (idx >= 0) {
-      overrides.value.hiddenIds.splice(idx, 1)
-    } else {
-      overrides.value.hiddenIds.push(accountId)
+      const current = allAccounts.value[idx]!
+      allAccounts.value[idx] = { ...current, deprecated: !current.deprecated }
+      debounceSave()
     }
   }
 
   /** カスタム科目を追加 */
   function addCustomAccount(account: Account): void {
-    overrides.value.customAccounts.push(account)
+    allAccounts.value.push({ ...account, isCustom: true } as Account)
+    debounceSave()
   }
 
   /** カスタム科目を削除（デフォルト科目は削除不可） */
   function removeCustomAccount(accountId: string): boolean {
-    const idx = overrides.value.customAccounts.findIndex(a => a.id === accountId)
+    const idx = allAccounts.value.findIndex(a => a.id === accountId && (a as MasterAccount).isCustom)
     if (idx < 0) return false
-    overrides.value.customAccounts.splice(idx, 1)
-    // 非表示リストからも除去
-    const hidIdx = overrides.value.hiddenIds.indexOf(accountId)
-    if (hidIdx >= 0) overrides.value.hiddenIds.splice(hidIdx, 1)
+    allAccounts.value.splice(idx, 1)
+    debounceSave()
     return true
   }
 
   /** デフォルト設定にリセット */
   function resetToDefault(): void {
-    overrides.value = { hiddenIds: [], customAccounts: [] }
+    // カスタム科目を削除、全科目のdeprecatedをfalseに
+    allAccounts.value = allAccounts.value
+      .filter(a => !(a as MasterAccount).isCustom)
+      .map(a => ({ ...a, deprecated: false }))
+    debounceSave()
   }
 
   /** 科目が非表示かどうか */
   function isHidden(accountId: string): boolean {
-    return overrides.value.hiddenIds.includes(accountId)
+    return allAccounts.value.find(a => a.id === accountId)?.deprecated === true
   }
 
   return {
@@ -168,8 +164,10 @@ export function useAccountMaster() {
     masterAccounts,
     /** 表示中の科目のみ */
     visibleMasterAccounts,
-    /** 現在の差分データ（顧問先コピー用） */
+    /** 現在の差分データ（顧問先コピー用。overrides互換） */
     overrides,
+    /** 生データ（API直接取得結果） */
+    allAccounts,
     toggleVisibility,
     addCustomAccount,
     removeCustomAccount,

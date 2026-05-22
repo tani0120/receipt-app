@@ -231,7 +231,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
 import type { Account } from '@/types/shared-account';
-import { ACCOUNT_MASTER } from '@/data/master/account-master';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { getInitialCopyCounter } from '@/utils/copy-utils';
 import { useColumnResize } from '@/composables/useColumnResize';
@@ -468,7 +467,7 @@ async function saveChanges() {
     }
 
     // composable側のoverridesにも同期（顧問先ページへの反映用）
-    const defaultAccountIds = new Set(ACCOUNT_MASTER.map(a => a.id));
+    const defaultAccountIds = settings.defaultAccountIds.value;
     const customRows = accountRows.filter(r => !defaultAccountIds.has(r.id));
     const hiddenIds = accountRows.filter(r => r.deprecated || r.effectiveTo).map(r => r.id);
     overrides.value = { hiddenIds, customAccounts: customRows };

@@ -259,8 +259,8 @@
 import { ref, computed, watch, nextTick, onMounted, onActivated } from "vue";
 import type { NonVendorType } from "@/types/pipeline/non_vendor.type";
 import type { Vendor } from "@/types/pipeline/vendor.type";
-import { ACCOUNT_MASTER } from "@/data/master/account-master";
-import { TAX_CATEGORY_MASTER } from "@/data/master/tax-category-master";
+import { useAccountMaster } from "@/features/account-management/composables/useAccountMaster";
+import { useTaxMaster } from "@/features/tax-management/composables/useTaxMaster";
 import { normalizeVendorName } from "@/utils/pipeline/vendorIdentification";
 import {
   SOURCE_CATEGORY_FILTER_OPTIONS, SOURCE_CATEGORY_OPTIONS,
@@ -292,12 +292,14 @@ onMounted(async () => {
 // ラベル変換・選択肢
 // ============================================================
 
-/** 科目ドロップダウン選択肢（ACCOUNT_MASTER準拠） */
-const accountOptions = computed(() => ACCOUNT_MASTER.map((a) => ({ id: a.id, name: a.name })));
+/** 科目ドロップダウン選択肢（API取得のマスタ科目準拠） */
+const { masterAccounts: masterAccountList } = useAccountMaster();
+const accountOptions = computed(() => masterAccountList.value.map((a) => ({ id: a.id, name: a.name })));
 
-/** 税区分ドロップダウン選択肢（TAX_CATEGORY_MASTER準拠） */
+/** 税区分ドロップダウン選択肢（API取得のマスタ税区分準拠） */
+const { masterTaxCategories: masterTaxList } = useTaxMaster();
 const taxCategoryOptions = computed(() =>
-  TAX_CATEGORY_MASTER.map((t) => ({ id: t.id, name: t.name })),
+  masterTaxList.value.map((t) => ({ id: t.id, name: t.name })),
 );
 
 /** NonVendorType一覧（データから動的取得） */

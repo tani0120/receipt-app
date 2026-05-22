@@ -76,8 +76,26 @@ async function apiPut(path: string, body: unknown): Promise<void> {
 // モジュールスコープ（シングルトン）
 // ============================================================
 
+const CACHE_KEY = 'sugu-suru:staff-cache'
 const staffList = ref<Staff[]>([])
 let initialized = false
+
+/** sessionStorageからキャッシュを即座にrefに設定（楽観的UI） */
+function loadCache(): void {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY)
+    if (raw) {
+      const cached = JSON.parse(raw) as Staff[]
+      if (Array.isArray(cached) && cached.length > 0) {
+        staffList.value = cached
+        initialized = true
+        console.log(`[useStaff] キャッシュから${cached.length}件を即座に表示`)
+      }
+    }
+  } catch {
+    // キャッシュ破損時は無視
+  }
+}
 
 /** サーバーからスタッフ一覧を取得してrefに設定 */
 async function refresh(): Promise<void> {
@@ -86,6 +104,13 @@ async function refresh(): Promise<void> {
     staffList.value = data.staff
     initialized = true
     console.log(`[useStaff] ${data.staff.length}件をサーバーから取得`)
+
+    // キャッシュ更新
+    try {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(data.staff))
+    } catch {
+      // sessionStorage容量超過時は無視
+    }
   } catch (err) {
     console.error('[useStaff] サーバー取得失敗:', err)
   }
@@ -94,6 +119,7 @@ async function refresh(): Promise<void> {
 /** 初回のみサーバーから読み込み */
 async function ensureLoaded(): Promise<void> {
   if (!initialized) {
+    loadCache()
     await refresh()
   }
 }

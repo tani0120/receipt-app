@@ -185,7 +185,7 @@
 import { ref, computed, watch, onMounted, onActivated } from 'vue';
 import { VENDOR_VECTOR_LABELS } from '@/types/pipeline/vendor.type';
 import type { VendorVector, IndustryVectorEntry } from '@/types/pipeline/vendor.type';
-import { ACCOUNT_MASTER } from '@/data/master/account-master';
+import { useAccountMaster } from '@/features/account-management/composables/useAccountMaster';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { FILTER_ALL_LABEL, PLACEHOLDER_ADD } from '@/constants/vendorOptions';
 import { UI_MSG } from '@/constants/uiMessages';
@@ -298,11 +298,12 @@ function findCategory(vector: string): CategoryDef {
 // ============================================================
 // 科目
 // ============================================================
-const accountMap = new Map(ACCOUNT_MASTER.map(a => [a.id, a.name]));
-const accountOptions = computed(() => ACCOUNT_MASTER.map(a => ({ id: a.id, name: a.name })));
+const { masterAccounts: masterAccountList } = useAccountMaster();
+const accountMap = computed(() => new Map(masterAccountList.value.map(a => [a.id, a.name])));
+const accountOptions = computed(() => masterAccountList.value.map(a => ({ id: a.id, name: a.name })));
 
 function accountName(id: string): string {
-  return accountMap.get(id) ?? id;
+  return accountMap.value.get(id) ?? id;
 }
 
 function vectorLabel(v: string): string {
