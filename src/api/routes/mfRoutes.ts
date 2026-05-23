@@ -27,6 +27,7 @@ import {
   mcpFetchTaxes,
   mcpFetchJournals,
   mcpFetchTermSettings,
+  mcpCreateJournal,
 } from '../services/mfMcpClient'
 import { getById } from '../services/clientStore'
 
@@ -172,7 +173,7 @@ app.get('/term-settings', async (c) => {
     const fyParam = c.req.query('fiscal_year')
     const fiscalYear = fyParam ? Number(fyParam) : undefined
     const settings = await mcpFetchTermSettings(fiscalYear, clientId)
-    return c.json({ settings, source: 'mcp/mfc_ca_getTermSettings' })
+    return c.json({ settings: { term_settings: settings }, source: 'mcp/mfc_ca_getTermSettings' })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`[mfRoutes] MCP会計年度設定取得失敗: ${message}`)
@@ -210,10 +211,9 @@ app.get('/fiscal-check', async (c) => {
 
   // 3. MFから会計期間を取得
   try {
-    const termData = await mcpFetchTermSettings(undefined, clientId)
-    // term_settingsは配列で返る。最新年度（先頭）のend_dateから決算月を抽出
-    const settings = (termData as any)?.term_settings ?? [termData]
-    const latest = Array.isArray(settings) ? settings[0] : settings
+    const termList = await mcpFetchTermSettings(undefined, clientId)
+    // 最新年度（先頭）のend_dateから決算月を抽出
+    const latest = termList[0]
     if (!latest?.end_date) {
       return c.json({ error: 'MFから会計期間を取得できませんでした', detail: 'end_dateが空' }, 500)
     }
@@ -236,6 +236,29 @@ app.get('/fiscal-check', async (c) => {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`[mfRoutes] 決算月チェック失敗: ${message}`)
     return c.json({ error: '決算月チェックに失敗しました', detail: message }, 500)
+  }
+})
+
+// ---------- WRITE系 ----------
+
+/**
+ * POST /journals — MCPサーバー経由でMFに仕訳を登録（mfc_ca_postJournals）
+ * 準拠: 34a_command_journal.md 仕訳投入コマンド / 35_parts_catalog.md postJournals出力部品
+ * body: { clientId: string, journal: { transaction_date, journal_type, branches[], memo?, tags? } }
+ */
+app.post('/journals', async (c) => {
+  try {
+    const body = await c.req.json()
+    const clientId = body.clientId as string
+    if (!clientId) return c.json({ error: 'clientId必須' }, 400)
+    if (!body.journal) return c.json({ error: 'journal必須' }, 400)
+
+    const result = await mcpCreateJournal(body.journal, clientId)
+    return c.json({ result, source: 'mcp/mfc_ca_postJournals' })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[mfRoutes] 仕訳登録失敗: ${message}`)
+    return c.json({ error: '仕訳登録に失敗しました', detail: message }, 500)
   }
 })
 

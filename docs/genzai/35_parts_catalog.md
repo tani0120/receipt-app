@@ -3,7 +3,7 @@
 > コマンド（34_command_catalog.md）を構成する部品の定義。
 > 部品 = 入力 / 処理 / 出力 の3ジャンル。
 > AI部品には「目的・許可・禁止・プロンプト」を定義する。
-> 最終更新: 2026-05-22
+> 最終更新: 2026-05-23
 
 ---
 
@@ -76,6 +76,63 @@
 | idParse | テキストからIDを抽出 | 仕訳取得（ID） |
 
 ### AI（馬鹿。裁量最小。各部品に許可/禁止/プロンプトを定義）
+
+---
+
+#### aiSuggest（コマンド提案）← 方針転換: 2026-05-22追加
+
+| 項目 | 内容 |
+|---|---|
+| 目的 | ユーザーの自由テキストからコマンド候補を3〜5個提案する |
+| 入力 | ユーザーの自然言語テキスト + コマンドカタログJSON |
+| 出力 | JSON: suggestions配列（command, label, description） |
+| モデル | **gemini-3.5-flash**（決定: 2026-05-22） |
+| コスト | ~¥0.002/回（カタログ~800トークン + 出力~100トークン） |
+| 使用箇所 | チャットUI → パターンマッチ不成功時 + パターンマッチ成功時の追加提案 |
+
+```
+やること:
+  ✅ コマンドカタログから意図に合う候補を3〜5個選ぶ
+  ✅ 各候補にユーザー入力に合わせた1行説明を付ける
+  ✅ 該当なしの場合は suggestions を空配列で返す
+
+やってはダメ:
+  ❌ カタログに存在しないコマンドIDを生成しない
+  ❌ コマンドを直接実行しない（候補を出すだけ）
+  ❌ パラメータを返さない（人間が入力する）
+  ❌ ユーザーの意図を推測で補完しない
+```
+
+```
+システムプロンプト:
+あなたは会計事務所向け業務アプリ「sugu-sru」のコマンドアシスタントです。
+ユーザーの自然言語入力を受け取り、以下のコマンドカタログから
+意図に合うものを3〜5個選んでください。
+
+ルール:
+1. カタログに存在するコマンドIDのみ返すこと。存在しないIDを生成するな。
+2. 各候補に「このコマンドでできること」の1行説明を付けること。
+   説明はユーザーの入力に合わせてカスタマイズせよ。
+3. 入力が曖昧な場合は、広めに候補を出すこと（絞りすぎるな）。
+4. パラメータは返すな（人間が入力する）。
+5. 該当するコマンドが全くない場合は suggestions を空配列 [] で返せ。
+
+レスポンス形式（JSON）:
+{
+  "suggestions": [
+    { "command": "コマンドID", "label": "表示名", "description": "1行説明" }
+  ]
+}
+
+コマンドカタログ:
+{commandCatalogJson}
+```
+
+```
+ユーザープロンプト:
+ユーザー入力: 「{userText}」
+顧問先: {clientName}（{clientId}）
+```
 
 ---
 
@@ -219,9 +276,9 @@
   ❌ 科目や税区分を判定しない（それは仕訳生成の責務）
 ```
 
-> **注意: aiRouting（ルーティング）は部品ではなくフロー制御。**
-> ルーティングはコマンドを選ぶ行為であり、入力/処理/出力の部品ではない。
-> Layer 2 AIルーティングの定義は [36_infra_ui.md](36_infra_ui.md) に記載。
+> **注意: aiSuggestがルーティングを兼ねる（方針転換: 2026-05-22）。**
+> 旧Layer 2のAIルーティング（1コマンド返却）はaiSuggest（複数候補提案）に統合。
+> フロー設計は [36_infra_ui.md §2-12](36_infra_ui.md) に記載。
 
 ---
 
@@ -239,10 +296,16 @@
 
 ### MF投入
 
-| 部品名 | MCP API | 用途 | 使用コマンド |
-|---|---|---|---|
-| postJournals | mfc_ca_postJournals | 仕訳をMFに一括登録 | 仕訳投入 |
-| putJournals | mfc_ca_putJournals | 仕訳を修正 | 仕訳取消 |
+| 部品名 | MCP API | 用途 | 実装ファイル | 使用コマンド | 状態 |
+|---|---|---|---|---|---|
+| convertToMfJournal | — | Sugusru仕訳→MF形式変換 | [journalToMfConverter.ts](../../src/api/services/journalToMfConverter.ts) | 仕訳投入 | ✅ |
+| stripInvoiceKind | — | invoice_kind除去（API制限対応） | [mfJournalSender.ts](../../src/api/services/mfJournalSender.ts) | 仕訳投入 | ✅ |
+| postJournals | mfc_ca_postJournals | 仕訳をMFに登録 | [mfMcpClient.ts](../../src/api/services/mfMcpClient.ts) | 仕訳投入 | ✅ |
+| putJournals | mfc_ca_putJournals | 仕訳を修正 | [mfMcpClient.ts](../../src/api/services/mfMcpClient.ts) | 仕訳取消 | ✅ |
+| applyMfSendResults | — | MF-ID紐付け（送信結果→DB書戾し） | [mfJournalSender.ts](../../src/api/services/mfJournalSender.ts) | 仕訳投入後 | ✅ |
+| buildAllMaps | — | Sugusru→MF IDマッピング | [mfMappingService.ts](../../src/api/services/mfMappingService.ts) | 仕訳投入 | ✅ |
+
+> 詳細: [39_mf_field_mapping.md](39_mf_field_mapping.md)
 
 ### DB保存
 
@@ -269,26 +332,107 @@
 
 ---
 
-### ルーティング（Layer 1: パターンマッチ）
+### チャットUI（ユーザーとコマンドの接点）
+
+| 項目 | 内容 |
+|---|---|
+| 入力 | ユーザーの自然言語テキスト or ボタンクリック |
+| 出力 | AI応答（テキスト/テーブル/候補ボタン/パラメータフォーム） |
+| 方式 | 同期レスポンス（Step 1） → SSEストリーミング（将来） |
+| 詳細 | [36_infra_ui.md §2-12](36_infra_ui.md) |
+
+#### 実装ファイル
+
+| ファイル | 用途 | 状態 |
+|---|---|---|
+| `src/components/ai/AiFloatingButton.vue` | 右下固定ボタン。クリックでチャット開閉 | ✅ 実装済 |
+| `src/components/ai/AiChatWindow.vue` | チャットウィンドウ本体。ドラッグ移動対応 | ✅ 実装済 |
+| `src/components/ai/AiCommandBrowser.vue` | コマンドブラウザ（カテゴリタブ+検索フィルタ） | 未実装 |
+| `src/components/ai/AiParamForm.vue` | コマンドパラメータ入力フォーム | 未実装 |
+| `src/components/ai/AiConfirmModal.vue` | WRITE操作の確認モーダル | 未実装 |
+| `src/composables/useAiCommand.ts` | API呼び出し+状態管理 | ✅ 実装済 |
+
+#### バックエンドAPI
+
+| ファイル | 用途 | 状態 |
+|---|---|---|
+| `src/api/routes/aiCommandRoutes.ts` | POST /api/ai-command | ✅ 実装済 |
+| `src/api/services/aiPatternMatcher.ts` | パターンマッチ（高速パス） | ✅ 実装済（モック） |
+| `src/api/services/aiSuggestService.ts` | AI提案（gemini-3.5-flash呼び出し） | 未実装 |
+| `src/api/services/aiCommandExecutor.ts` | コマンド実行（コード側で引数確定） | 未実装 |
+| `src/api/services/aiCommandLogger.ts` | 操作ログ記録 | 未実装 |
+
+#### AI応答の構造
+
+```
+{
+  type: 'text' | 'table' | 'suggestions' | 'params' | 'mixed',
+  content: string,          // テキスト本文（Markdown対応）
+  table?: { headers, rows },// テーブルデータ
+  suggestions?: [           // AI提案のコマンド候補ボタン
+    { command, label, description }
+  ],
+  params?: [                // パラメータ入力フォーム定義
+    { key, label, type, options?, default? }
+  ],
+}
+```
+
+#### コマンドブラウザ（「その他のコマンドを見る」）
+
+```
+チャット内インライン展開（別ウィンドウではない）:
+
+┌─────────────────────────────┐
+│ コマンドを探す              │
+│ [🔍 検索...]                │
+│                             │
+│ [仕訳] [分析] [管理] [データ] ← カテゴリタブ
+│                             │
+│ ▸ 銀行/カード明細の仕訳候補 │
+│   銀行・カード明細から自動生成│
+│ ▸ 領収書の仕訳候補          │
+│   領収書・レシートから自動生成│
+│ ...                         │
+│                             │
+│ [閉じる]                    │
+└─────────────────────────────┘
+
+動作:
+  カテゴリタブ → 仕訳/分析/管理/データ切替
+  検索ボックス → コマンド名・説明をフィルタ（クライアント側。API不要）
+  コマンド押下 → パラメータ入力フォーム表示
+  AI不要（カタログJSONをフロントに持たせる）
+```
+
+---
+
+### ルーティング（方針転換: 2026-05-22）
+
+> 旧3層構造（L1パターンマッチ → L2 AIルーティング → L3フォールバック）を廃止。
+> AI提案フロー + パターンマッチ高速パスに統一。
+
+#### パターンマッチ（高速パス）
 
 | 項目 | 内容 |
 |---|---|
 | 入力 | ユーザーの自然言語テキスト |
-| 出力 | コマンド名 or 「マッチなし→Layer 2へ」 |
-| 方式 | コード側キーワードマッチ（AI不使用） |
-| 詳細 | [36_infra_ui.md](36_infra_ui.md) / [34_command_catalog.md](34_command_catalog.md) データ取得系 |
+| 出力 | コマンド実行結果（ヒット時） |
+| 方式 | コード側キーワードマッチ（AI不使用。0ms） |
+| 実装 | `src/api/services/aiPatternMatcher.ts` |
 
-### ルーティング（Layer 2: AIルーティング）
+#### AI提案（メインフロー）
 
 | 項目 | 内容 |
 |---|---|
-| 入力 | ユーザーの自然言語テキスト |
-| 出力 | JSON: `{"command": "コマンド名"}` |
-| モデル | **gemini-3.5-flash**（決定: 2026-05-22） |
-| コスト | ~¥0.001/回 |
-| 詳細 | [36_infra_ui.md](36_infra_ui.md) |
+| 入力 | ユーザーの自然言語テキスト + コマンドカタログJSON |
+| 出力 | コマンド候補3〜5個（人間が選択する） |
+| モデル | **gemini-3.5-flash** |
+| コスト | ~¥0.002/回 |
+| 実装 | `src/api/services/aiSuggestService.ts` |
+| プロンプト | 処理部品 aiSuggest 参照 |
 
-### ルーティング（Layer 3: フォールバック）
+#### フォールバック（Layer 3）
 
 | 項目 | 内容 |
 |---|---|
@@ -337,6 +481,7 @@
 |---|---|
 | 入力 | コマンド実行の全情報（入力/ツール/結果） |
 | 出力 | ログレコード（再実行ボタン + WRITE修復ボタン） |
+| 実装 | `src/api/services/aiCommandLogger.ts` |
 | 詳細 | [36_infra_ui.md](36_infra_ui.md) |
 
 ### コスト管理
@@ -361,6 +506,7 @@
 |---|---|
 | 入力 | AIが提案したWRITE操作（仕訳作成等） |
 | 出力 | 人間の承認 or 拒否 |
+| 実装 | `src/components/ai/AiConfirmModal.vue` |
 | 詳細 | [36_infra_ui.md](36_infra_ui.md) |
 
 ### コンテキスト認識
@@ -383,4 +529,6 @@
 | [36_infra_ui.md](36_infra_ui.md) | 基盤 | UI設計・フロー・ルーティング |
 | [37_infra_mcp.md](37_infra_mcp.md) | 基盤 | MCP接続基盤 |
 | [38_infra_db.md](38_infra_db.md) | 基盤 | DB基盤・月次同期 |
+| [39_mf_field_mapping.md](39_mf_field_mapping.md) | 基盤 | MF↔Sugusruフィールド対応表（invoice_kind実機テスト結果含む） |
+
 

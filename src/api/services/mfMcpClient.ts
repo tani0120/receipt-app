@@ -327,34 +327,48 @@ export async function mcpFetchCurrentOffice(tokenKey: string = 'default'): Promi
 }
 
 /**
- * 会計年度設定を取得する（mfc_ca_getTermSettings）
- * @param fiscalYear 会計年度（省略時: 最新）
+ * 会計年度設定一覧を取得する（mfc_ca_getTermSettings）
+ * MCPレスポンス: {term_settings: [...]} → 配列を剥がして返す
+ * @param fiscalYear 会計年度（省略時: 全期分）
  * @param tokenKey mfAuthService のトークンストアキー
  */
-export async function mcpFetchTermSettings(fiscalYear?: number, tokenKey: string = 'default'): Promise<MfMcpTermSettings> {
+export async function mcpFetchTermSettings(fiscalYear?: number, tokenKey: string = 'default'): Promise<MfMcpTermSettings[]> {
   const args: Record<string, unknown> = {}
   if (fiscalYear !== undefined) args.fiscal_year = fiscalYear
-  return await callMcpTool<MfMcpTermSettings>('mfc_ca_getTermSettings', args, tokenKey)
+  const raw = await callMcpTool<{ term_settings: MfMcpTermSettings[] } | MfMcpTermSettings[]>('mfc_ca_getTermSettings', args, tokenKey)
+  if (Array.isArray(raw)) return raw
+  if ('term_settings' in raw && Array.isArray(raw.term_settings)) return raw.term_settings
+  return []
 }
 
 /**
  * 勘定科目一覧を取得する（mfc_ca_getAccounts）
+ * MCPレスポンス: {accounts: [...]} → 配列を剥がして返す
  * @param tokenKey mfAuthService のトークンストアキー
  */
 export async function mcpFetchAccounts(tokenKey: string = 'default'): Promise<MfMcpAccount[]> {
-  return await callMcpTool<MfMcpAccount[]>('mfc_ca_getAccounts', {}, tokenKey)
+  const raw = await callMcpTool<{ accounts: MfMcpAccount[] } | MfMcpAccount[]>('mfc_ca_getAccounts', {}, tokenKey)
+  if (Array.isArray(raw)) return raw
+  if ('accounts' in raw && Array.isArray(raw.accounts)) return raw.accounts
+  return []
 }
 
 /**
  * 税区分一覧を取得する（mfc_ca_getTaxes）
+ * MCPレスポンス: {taxes: [...]} → 配列を剥がして返す
  * @param tokenKey mfAuthService のトークンストアキー
  */
 export async function mcpFetchTaxes(tokenKey: string = 'default'): Promise<MfMcpTax[]> {
-  return await callMcpTool<MfMcpTax[]>('mfc_ca_getTaxes', {}, tokenKey)
+  const raw = await callMcpTool<{ taxes: MfMcpTax[] } | MfMcpTax[]>('mfc_ca_getTaxes', {}, tokenKey)
+  if (Array.isArray(raw)) return raw
+  if ('taxes' in raw && Array.isArray(raw.taxes)) return raw.taxes
+  return []
 }
 
 /**
- * 仕訳一覧を取得する（mfc_ca_getJournals）
+ * 仕訳一覧を全件取得する（mfc_ca_getJournals）
+ * 1ページ目でcountを取得 → 残りを並列チャンクで取得
+ * 429レート制限時は並列数を3→2→1に段階縮退 → 1並列でもダメならbackoff+リトライ → 諦め
  * @param params 検索パラメータ
  * @param tokenKey mfAuthService のトークンストアキー
  */
@@ -367,18 +381,118 @@ export async function mcpFetchJournals(params?: {
   account_id?: string
   /** 未実現仕訳フラグ */
   is_realized?: boolean
-  /** ページ番号 */
+  /** ページ番号（指定時は単一ページのみ取得） */
   page?: number
-  /** 1ページあたり件数 */
+  /** 1ページあたり件数（省略時: 500） */
   per_page?: number
 }, tokenKey: string = 'default'): Promise<MfMcpJournal[]> {
-  const args: Record<string, unknown> = {}
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined) args[key] = value
+  const perPage = params?.per_page ?? 500
+
+  /** 共通の検索パラメータを組み立てる */
+  const buildArgs = (page: number): Record<string, unknown> => {
+    const args: Record<string, unknown> = { per_page: perPage, page }
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && key !== 'per_page' && key !== 'page') {
+          args[key] = value
+        }
+      }
+    }
+    return args
+  }
+
+  /** MCPレスポンスから仕訳配列を取り出す */
+  const extractJournals = (raw: { journals: MfMcpJournal[]; count?: number } | MfMcpJournal[]): { journals: MfMcpJournal[]; count: number } => {
+    if (Array.isArray(raw)) return { journals: raw, count: raw.length }
+    if ('journals' in raw && Array.isArray(raw.journals)) return { journals: raw.journals, count: raw.count ?? raw.journals.length }
+    return { journals: [], count: 0 }
+  }
+
+  /** 1ページ取得（リトライなし） */
+  const fetchPage = async (page: number): Promise<MfMcpJournal[]> => {
+    const raw = await callMcpTool<{ journals: MfMcpJournal[]; count?: number } | MfMcpJournal[]>('mfc_ca_getJournals', buildArgs(page), tokenKey)
+    return extractJournals(raw).journals
+  }
+
+  /** 429エラー判定 */
+  const is429 = (err: unknown): boolean => {
+    const msg = err instanceof Error ? err.message : String(err)
+    return msg.includes('429')
+  }
+
+  // 明示的にpage指定 → 単一ページのみ取得
+  if (params?.page !== undefined) {
+    return await fetchPage(params.page)
+  }
+
+  // 1ページ目を取得 → countで総ページ数を計算
+  const firstRaw = await callMcpTool<{ journals: MfMcpJournal[]; count?: number } | MfMcpJournal[]>('mfc_ca_getJournals', buildArgs(1), tokenKey)
+  const first = extractJournals(firstRaw)
+
+  // 1ページで全件収まった場合
+  if (first.count <= perPage || first.journals.length < perPage) {
+    return first.journals
+  }
+
+  // 残りのページを並列チャンクで取得（429時に段階縮退）
+  const totalPages = Math.ceil(first.count / perPage)
+  const allJournals = [...first.journals]
+  const pendingPages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
+  /** 並列数: 3→2→1 の順に縮退 */
+  let concurrency = 3
+  /** 1並列でのbackoffリトライ回数 */
+  const MAX_SERIAL_RETRIES = 3
+
+  console.log(`[mfMcpClient] 仕訳 ${first.count}件 → ${totalPages}ページ（${concurrency}並列で取得開始）`)
+
+  let idx = 0
+  while (idx < pendingPages.length) {
+    const chunk = pendingPages.slice(idx, idx + concurrency)
+
+    try {
+      const results = await Promise.all(chunk.map(p => fetchPage(p)))
+      for (const journals of results) {
+        allJournals.push(...journals)
+      }
+      idx += chunk.length
+    } catch (err) {
+      if (!is429(err)) throw err
+
+      // 429 → 並列数を下げる
+      if (concurrency > 1) {
+        concurrency--
+        console.log(`[mfMcpClient] 429レート制限 → 並列数を${concurrency}に縮退`)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        // 同じidxからリトライ（chunkを小さくして再実行）
+        continue
+      }
+
+      // 1並列でも429 → backoffリトライ
+      let recovered = false
+      for (let retry = 0; retry < MAX_SERIAL_RETRIES; retry++) {
+        const waitMs = 1000 * Math.pow(2, retry) // 1s, 2s, 4s
+        console.log(`[mfMcpClient] 1並列でも429 → ${waitMs}ms後にリトライ (${retry + 1}/${MAX_SERIAL_RETRIES})`)
+        await new Promise(resolve => setTimeout(resolve, waitMs))
+        try {
+          const results = await Promise.all(chunk.map(p => fetchPage(p)))
+          for (const journals of results) {
+            allJournals.push(...journals)
+          }
+          idx += chunk.length
+          recovered = true
+          break
+        } catch (retryErr) {
+          if (!is429(retryErr)) throw retryErr
+        }
+      }
+
+      if (!recovered) {
+        throw new Error(`MF APIレート制限: 並列数1・リトライ${MAX_SERIAL_RETRIES}回でも429。${allJournals.length}件まで取得済み。`)
+      }
     }
   }
-  return await callMcpTool<MfMcpJournal[]>('mfc_ca_getJournals', args, tokenKey)
+
+  return allJournals
 }
 
 /**
@@ -443,8 +557,28 @@ export async function mcpFetchConnectedAccounts(tokenKey: string = 'default'): P
 
 // ---------- WRITE系ツール ----------
 
+/** MF仕訳作成レスポンス */
+export interface MfJournalResponse {
+  /** MF内部ID */
+  id: string
+  /** 仕訳番号 */
+  number: number
+  /** 取引日 */
+  transaction_date: string
+  /** branches配列（レスポンスにはinvoice_kindが含まれる場合あり） */
+  branches: Array<Record<string, unknown>>
+}
+
 /**
  * 仕訳を作成する（mfc_ca_postJournals）
+ *
+ * invoice_kind送信ルール（実機テスト 2026-05-23確認済み）:
+ *   - QUALIFIED: 受理
+ *   - UNQUALIFIED_80: 受理
+ *   - NOT_TARGET: 対象外税区分とセットなら受理。課税税区分とセットなら拒否
+ *   - UNQUALIFIED_50/NOT_QUALIFIED_0: MF未対応ならenumエラー
+ *   - 省略: MFが税区分から自動判定（課税→QUALIFIED、対象外→NOT_TARGET）
+ *
  * @param journal 仕訳データ
  */
 export async function mcpCreateJournal(journal: {
@@ -458,6 +592,7 @@ export async function mcpCreateJournal(journal: {
       sub_account_id?: string
       department_id?: string
       trade_partner_code?: string
+      /** インボイス区分（省略可。MFが税区分から自動判定する） */
       invoice_kind?: string
     }
     creditor: {
@@ -467,14 +602,18 @@ export async function mcpCreateJournal(journal: {
       sub_account_id?: string
       department_id?: string
       trade_partner_code?: string
+      /** インボイス区分（省略可。MFが税区分から自動判定する） */
       invoice_kind?: string
     }
     remark?: string
   }>
   memo?: string
   tags?: string[]
-}): Promise<unknown> {
-  return await callMcpTool('mfc_ca_postJournals', journal as unknown as Record<string, unknown>)
+}, tokenKey: string = 'default'): Promise<MfJournalResponse> {
+  const raw = await callMcpTool<{ journal: MfJournalResponse } | MfJournalResponse>('mfc_ca_postJournals', { journal } as unknown as Record<string, unknown>, tokenKey)
+  // MCPレスポンスが { journal: {...} } でラップされている場合を考慮
+  if ('journal' in raw && raw.journal) return raw.journal as MfJournalResponse
+  return raw as MfJournalResponse
 }
 
 /**
@@ -497,21 +636,29 @@ export async function mcpUpdateJournal(journal: {
       tax_id?: string
     }
     remark?: string
-  }>
-}): Promise<unknown> {
-  return await callMcpTool('mfc_ca_putJournals', journal as unknown as Record<string, unknown>)
+}> 
+}, tokenKey: string = 'default'): Promise<unknown> {
+  return await callMcpTool('mfc_ca_putJournals', { journal } as unknown as Record<string, unknown>, tokenKey)
 }
 
 /**
  * 取引先を作成する（mfc_ca_postTradePartners）
+ *
+ * 注意（実機テスト 2026-05-23確認済み）:
+ *   - パラメータは`trade_partners`配列で送る必要がある
+ *   - invoice_registration_numberは**13桁半角数字のみ**（T接頭辞なし）
+ *   - MFが国税庁DBに照会して実在を検証する。存在しない番号は拒否
+ *   - 桁数不正（12桁以下、14桁以上）も拒否
+ *   - 番号なし（省略）は許容される
  */
 export async function mcpCreateTradePartner(partner: {
   name: string
   search_key?: string
   corporate_number?: string
+  /** 13桁半角数字のみ（T接頭辞なし）。MFが国税庁DBで実在を検証する */
   invoice_registration_number?: string
-}): Promise<unknown> {
-  return await callMcpTool('mfc_ca_postTradePartners', partner as unknown as Record<string, unknown>)
+}, tokenKey: string = 'default'): Promise<unknown> {
+  return await callMcpTool('mfc_ca_postTradePartners', { trade_partners: [partner] } as unknown as Record<string, unknown>, tokenKey)
 }
 
 // ---------- 接続管理 ----------

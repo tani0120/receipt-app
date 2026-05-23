@@ -96,6 +96,16 @@ export interface ConfirmedJournal {
    * 同一 client_id + mf_transaction_no + voucher_date で UNIQUE
    */
   mf_transaction_no: number | null
+
+  /**
+   * MF API生レスポンス（全フィールド保持）
+   *
+   * MFデータ取込時にMfMcpJournalをまるごと格納。
+   * UI表示には不要だが、将来的にフィールド追加が必要になった際に
+   * MF APIから再取得せずに済むようにするため保持する。
+   * CSVインポート時はnull。
+   */
+  mf_raw?: Record<string, unknown> | null
 }
 
 // ============================================================

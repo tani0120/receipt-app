@@ -3,7 +3,7 @@
 > コマンド = ユーザーが得たい結果。入力部品 + 処理部品 + 出力部品の組み合わせで実現する。
 > 部品の詳細: [35_parts_catalog.md](35_parts_catalog.md)
 > ✅ = 実機検証済み / 🔧 = 実装可能 / ❌ = 現行MCPでは困難
-> 最終更新: 2026-05-22
+> 最終更新: 2026-05-23
 
 ---
 
@@ -111,7 +111,7 @@ Layer 3: オープン対応（フォールバック）
 | **銀行/カード明細の仕訳候補** | DB: journals, accounts, taxes | matchByRemark | 画面 | リスト→モーダル | 未実装 |
 | **領収書の仕訳候補** | DB: journals, accounts, taxes | matchByRemark + nayose(AI) | 画面 | リスト→モーダル | 未実装 |
 | **仕訳✓（確認・選択）** | 前コマンドの出力 | UIフロー | 画面 | モーダル | 未実装 |
-| **仕訳投入（MFへ登録）** | 承認済みリスト | postJournals | MF + DB | モーダル→結果テキスト | 未実装 |
+| **仕訳投入（MFへ登録）** | 承認済みリスト | convertToMfJournal + stripInvoiceKind + postJournals + applyMfSendResults | MF + DB | モーダル→結果テキスト | ✅ 部品実装済 |
 | **仕訳取消（修正・削除）** | DB: journals | putJournals | MF + DB | モーダル | 未実装 |
 | 売掛消込リスト | DB: journals（売掛+入金） | pairing | 画面 | テーブル→モーダル | 🔧 |
 | 買掛消込リスト | DB: journals（買掛+出金） | pairing | 画面 | テーブル→モーダル | 🔧 |
@@ -212,3 +212,4 @@ AIモデル変更時にルーティングがブレないかの回帰テスト。
 | [36_infra_ui.md](36_infra_ui.md) | 基盤 | UI設計・フロー設計・Layer 1/2/3 |
 | [37_infra_mcp.md](37_infra_mcp.md) | 基盤 | MCP接続・認証・レート制限 |
 | [38_infra_db.md](38_infra_db.md) | 基盤 | DB基盤・月次同期 |
+| [39_mf_field_mapping.md](39_mf_field_mapping.md) | 基盤 | MF↔Sugusruフィールド対応表（invoice_kind実機テスト結果含む） |

@@ -199,6 +199,12 @@ export interface JournalPhase5Mock {
   staff_notes?: StaffNotes | null;       // 4カテゴリの対応情報
   staff_notes_author?: string | null;    // 担当者名
 
+  // MF送信結果（MCP経由送信後に紐付け）
+  // MF-IDが設定されている仕訳は送信済みとみなし、再送信をスキップする
+  mf_journal_id?: string | null;         // MF内部ID（Base64エンコード文字列）
+  mf_journal_number?: number | null;     // MF取引No（自動採番）
+  mf_sent_at?: string | null;            // MF送信日時（ISO 8601）
+
   // 出力関連（12_full_schema_design §5.1準拠）
   exported_at?: string | null;            // CSV出力日時（ISO 8601）
   exported_by?: string | null;            // CSV出力者（スタッフID）

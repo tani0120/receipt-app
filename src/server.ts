@@ -181,6 +181,10 @@ app.route('/api/mf', mfRoutes)
 import aiPromptRoutes from './api/routes/aiPromptRoutes'
 app.route('/api/ai-prompts', aiPromptRoutes)
 
+// AICommand API: チャットUIからのコマンド実行
+import aiCommandRoutes from './api/routes/aiCommandRoutes'
+app.route('/api/ai-command', aiCommandRoutes)
+
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 app.use('/*', serveStatic({ root: './dist/client' }))
 

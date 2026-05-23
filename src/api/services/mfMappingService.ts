@@ -1,0 +1,346 @@
+/**
+ * mfMappingService.ts — Sugusru概念ID → MF-ID 変換マップ生成
+ *
+ * Sugusruマスタ（account-master.json / tax-category-master.json）の名前と
+ * MF API（MCP経由getAccounts/getTaxes等）の名前を突合し、
+ * { sugusru概念ID: mf固有ID } のマッピングテーブルを生成する。
+ *
+ * 準拠: mf_sugusru_field_mapping.md §5
+ */
+
+import { join } from 'path'
+import { getCategoryDirection } from '../../data/master/account-category-rules'
+import {
+  mcpFetchAccounts,
+  mcpFetchTaxes,
+  mcpFetchSubAccounts,
+  mcpFetchDepartments,
+  mcpFetchTradePartners,
+  type MfMcpAccount,
+  type MfMcpTax,
+} from './mfMcpClient'
+
+// ────────────────────────────────────────────
+// 型定義
+// ────────────────────────────────────────────
+
+/** 科目マッピング（Sugusru概念ID → MF科目ID） */
+export interface AccountMapping {
+  /** Sugusru概念ID（例: 'CASH'） */
+  sugusruId: string
+  /** Sugusru科目名（例: '現金'） */
+  sugusruName: string
+  /** MF科目ID（例: 'cqFKUwCs6dvrA8AitD0DzA%3D%3D'）。未マッチならnull */
+  mfId: string | null
+  /** MF科目名（マッチした場合。通常sugusruNameと同一） */
+  mfName: string | null
+}
+
+/** 税区分マッピング（Sugusru概念ID → MF税区分ID） */
+export interface TaxMapping {
+  sugusruId: string
+  sugusruName: string
+  mfId: string | null
+  mfName: string | null
+}
+
+/** 全マッピングテーブル */
+export interface MfMappingTables {
+  /** 科目: { [sugusru概念ID]: mf科目ID } */
+  accountMap: Map<string, string>
+  /** 税区分: { [sugusru概念ID]: mf税区分ID } */
+  taxMap: Map<string, string>
+  /** 補助科目: { [名前]: mf補助科目ID } */
+  subAccountMap: Map<string, string>
+  /** 部門: { [名前]: mf部門ID } */
+  departmentMap: Map<string, string>
+  /** 取引先: { [名前]: mf取引先コード } */
+  tradePartnerMap: Map<string, string>
+  /** 科目方向: { [sugusru概念ID]: 'sales' | 'purchase' | 'common' } */
+  accountDirectionMap: Map<string, 'sales' | 'purchase' | 'common'>
+  /** 税区分方向: { [sugusru概念ID]: 'sales' | 'purchase' | 'common' } */
+  taxDirectionMap: Map<string, 'sales' | 'purchase' | 'common'>
+  /** 逆マップ: MF科目名 → Sugusru概念ID（MF→Sugusru取込用） */
+  reverseAccountMap: Map<string, string>
+  /** 逆マップ: MF税区分名 → Sugusru概念ID（MF→Sugusru取込用） */
+  reverseTaxMap: Map<string, string>
+  /** マッチ失敗の科目（送信前警告用） */
+  unmatchedAccounts: AccountMapping[]
+  /** マッチ失敗の税区分（送信前警告用） */
+  unmatchedTaxes: TaxMapping[]
+  /** 生成日時 */
+  createdAt: Date
+}
+
+// ────────────────────────────────────────────
+// Sugusruマスタ読み込み
+// ────────────────────────────────────────────
+
+import { readFile } from 'fs/promises'
+
+interface SugusruAccount {
+  id: string
+  name: string
+  accountGroup?: string
+  category?: string
+}
+
+interface SugusruTax {
+  id: string
+  name: string
+  direction?: 'sales' | 'purchase' | 'common'
+}
+
+async function loadSugusruAccounts(): Promise<SugusruAccount[]> {
+  const raw = await readFile(join(process.cwd(), 'data/account-master.json'), 'utf8')
+  return JSON.parse(raw)
+}
+
+async function loadSugusruTaxes(): Promise<SugusruTax[]> {
+  const raw = await readFile(join(process.cwd(), 'data/tax-category-master.json'), 'utf8')
+  return JSON.parse(raw)
+}
+
+// ────────────────────────────────────────────
+// キャッシュ
+// ────────────────────────────────────────────
+
+const TTL_MS = 5 * 60 * 1000 // 5分
+
+interface CacheEntry {
+  tables: MfMappingTables
+  expiresAt: number
+}
+
+const cache = new Map<string, CacheEntry>()
+
+// ────────────────────────────────────────────
+// マッピング生成
+// ────────────────────────────────────────────
+
+/**
+ * 科目マッピングを生成する
+ * Sugusruマスタの名前 → MFマスタの名前で突合 → MFのaccount_idを返す
+ */
+export async function buildAccountMap(tokenKey: string): Promise<{
+  map: Map<string, string>
+  details: AccountMapping[]
+}> {
+  const sugusruAccounts = await loadSugusruAccounts()
+  const mfAccounts = await mcpFetchAccounts(tokenKey)
+
+  // MF科目を名前→IDのマップに変換（available=trueのみ）
+  const mfByName = new Map<string, MfMcpAccount>()
+  for (const mf of mfAccounts) {
+    if (mf.available !== false) {
+      mfByName.set(mf.name, mf)
+    }
+  }
+
+  const map = new Map<string, string>()
+  const details: AccountMapping[] = []
+
+  for (const sug of sugusruAccounts) {
+    const mf = mfByName.get(sug.name)
+    const mapping: AccountMapping = {
+      sugusruId: sug.id,
+      sugusruName: sug.name,
+      mfId: mf?.id ?? null,
+      mfName: mf?.name ?? null,
+    }
+    details.push(mapping)
+    if (mf) {
+      map.set(sug.id, mf.id)
+    }
+  }
+
+  return { map, details }
+}
+
+/**
+ * 税区分マッピングを生成する
+ * Sugusruマスタの名前 → MFマスタの名前で突合 → MFのtax_idを返す
+ */
+export async function buildTaxMap(tokenKey: string): Promise<{
+  map: Map<string, string>
+  details: TaxMapping[]
+}> {
+  const sugusruTaxes = await loadSugusruTaxes()
+  const mfTaxes = await mcpFetchTaxes(tokenKey)
+
+  // MF税区分を名前→IDのマップに変換
+  const mfByName = new Map<string, MfMcpTax>()
+  for (const mf of mfTaxes) {
+    mfByName.set(mf.name, mf)
+  }
+
+  const map = new Map<string, string>()
+  const details: TaxMapping[] = []
+
+  for (const sug of sugusruTaxes) {
+    const mf = mfByName.get(sug.name)
+    const mapping: TaxMapping = {
+      sugusruId: sug.id,
+      sugusruName: sug.name,
+      mfId: mf?.id ?? null,
+      mfName: mf?.name ?? null,
+    }
+    details.push(mapping)
+    if (mf) {
+      map.set(sug.id, mf.id)
+    }
+  }
+
+  return { map, details }
+}
+
+/**
+ * 補助科目マッピングを生成する（名前→MF-ID）
+ */
+export async function buildSubAccountMap(tokenKey: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  try {
+    const raw = await mcpFetchSubAccounts(tokenKey)
+    const mfSubs = Array.isArray(raw) ? raw : (raw as Record<string, unknown>)?.sub_accounts ?? []
+    for (const sub of mfSubs as Array<{ id: string; name: string }>) {
+      map.set(sub.name, sub.id)
+    }
+  } catch (err) {
+    console.warn('[mfMapping] 補助科目取得失敗（空マップで続行）:', err instanceof Error ? err.message : err)
+  }
+  return map
+}
+
+/**
+ * 部門マッピングを生成する（名前→MF-ID）
+ */
+export async function buildDepartmentMap(tokenKey: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  try {
+    const raw = await mcpFetchDepartments(tokenKey)
+    const mfDepts = Array.isArray(raw) ? raw : (raw as Record<string, unknown>)?.departments ?? []
+    for (const dept of mfDepts as Array<{ id: string; name: string }>) {
+      map.set(dept.name, dept.id)
+    }
+  } catch (err) {
+    console.warn('[mfMapping] 部門取得失敗（空マップで続行）:', err instanceof Error ? err.message : err)
+  }
+  return map
+}
+
+/**
+ * 取引先マッピングを生成する（名前→MFコード）
+ */
+export async function buildTradePartnerMap(tokenKey: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  try {
+    const raw = await mcpFetchTradePartners(tokenKey)
+    const mfPartners = Array.isArray(raw) ? raw : (raw as Record<string, unknown>)?.trade_partners ?? []
+    for (const p of mfPartners as Array<{ name: string; code: string; available?: boolean }>) {
+      if (p.available !== false) {
+        map.set(p.name, p.code)
+      }
+    }
+  } catch (err) {
+    console.warn('[mfMapping] 取引先取得失敗（空マップで続行）:', err instanceof Error ? err.message : err)
+  }
+  return map
+}
+
+/**
+ * 全マッピングテーブルを一括生成する（キャッシュ付き・TTL 5分）
+ *
+ * @param tokenKey mfAuthServiceのトークンストアキー（顧問先ID）
+ * @param forceRefresh true指定でキャッシュを無視して再取得
+ */
+export async function buildAllMaps(tokenKey: string, forceRefresh = false): Promise<MfMappingTables> {
+  // キャッシュ確認
+  if (!forceRefresh) {
+    const cached = cache.get(tokenKey)
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.tables
+    }
+  }
+
+  console.log(`[mfMapping] マッピングテーブル生成開始（tokenKey: ${tokenKey}）`)
+  const startMs = Date.now()
+
+  // 5種類を並列取得
+  const [accountResult, taxResult, subAccountMap, departmentMap, tradePartnerMap] = await Promise.all([
+    buildAccountMap(tokenKey),
+    buildTaxMap(tokenKey),
+    buildSubAccountMap(tokenKey),
+    buildDepartmentMap(tokenKey),
+    buildTradePartnerMap(tokenKey),
+  ])
+
+  const unmatchedAccounts = accountResult.details.filter(d => d.mfId === null)
+  const unmatchedTaxes = taxResult.details.filter(d => d.mfId === null)
+
+  // 科目方向マップ生成（Sugusruマスタのcategoryから導出）
+  const sugusruAccounts = await loadSugusruAccounts()
+  const accountDirectionMap = new Map<string, 'sales' | 'purchase' | 'common'>()
+  for (const acct of sugusruAccounts) {
+    accountDirectionMap.set(acct.id, getCategoryDirection(acct.category ?? ''))
+  }
+
+  // 税区分方向マップ生成（Sugusruマスタのdirectionから）
+  const sugusruTaxes = await loadSugusruTaxes()
+  const taxDirectionMap = new Map<string, 'sales' | 'purchase' | 'common'>()
+  for (const tax of sugusruTaxes) {
+    taxDirectionMap.set(tax.id, tax.direction ?? 'common')
+  }
+
+  // 逆マップ生成（MF名前 → Sugusru概念ID。MF→Sugusru取込で科目・税区分を概念IDに変換するため）
+  const reverseAccountMap = new Map<string, string>()
+  for (const d of accountResult.details) {
+    if (d.mfName) {
+      reverseAccountMap.set(d.mfName, d.sugusruId)
+    }
+  }
+  const reverseTaxMap = new Map<string, string>()
+  for (const d of taxResult.details) {
+    if (d.mfName) {
+      reverseTaxMap.set(d.mfName, d.sugusruId)
+    }
+  }
+
+  const tables: MfMappingTables = {
+    accountMap: accountResult.map,
+    taxMap: taxResult.map,
+    subAccountMap,
+    departmentMap,
+    tradePartnerMap,
+    accountDirectionMap,
+    taxDirectionMap,
+    reverseAccountMap,
+    reverseTaxMap,
+    unmatchedAccounts,
+    unmatchedTaxes,
+    createdAt: new Date(),
+  }
+
+  const elapsedMs = Date.now() - startMs
+  console.log(
+    `[mfMapping] 生成完了 ${elapsedMs}ms | ` +
+    `科目: ${accountResult.map.size}件マッチ, ${unmatchedAccounts.length}件未マッチ | ` +
+    `税区分: ${taxResult.map.size}件マッチ, ${unmatchedTaxes.length}件未マッチ | ` +
+    `補助科目: ${subAccountMap.size}件 | 部門: ${departmentMap.size}件 | 取引先: ${tradePartnerMap.size}件`
+  )
+
+  // キャッシュ保存
+  cache.set(tokenKey, { tables, expiresAt: Date.now() + TTL_MS })
+
+  return tables
+}
+
+/**
+ * キャッシュクリア
+ */
+export function clearMappingCache(tokenKey?: string): void {
+  if (tokenKey) {
+    cache.delete(tokenKey)
+  } else {
+    cache.clear()
+  }
+}

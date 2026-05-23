@@ -32,6 +32,7 @@ import progressRoutes from './routes/progressRoutes'
 import mfAuthRoutes from './routes/mfAuthRoutes'
 import mfRoutes from './routes/mfRoutes'
 import { exportRoutes } from './routes/exportRoutes'
+import aiCommandRoutes from './routes/aiCommandRoutes'
 import { TAX_OPTIONS } from '../shared/schema_dictionary'
 
 const app = new Hono()
@@ -77,6 +78,9 @@ const routes = app
     .get('/api/tax-options', (c) => {
         return c.json(TAX_OPTIONS)
     })
+
+// チェーン外で登録（Honoのチェーン長によるルート脱落防止）
+app.route('/api/ai-command', aiCommandRoutes)
 
 export default app
 export type AppType = typeof routes

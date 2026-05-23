@@ -3,7 +3,7 @@
 > 各コマンドの部品組み合わせ手順。
 > コマンド一覧: [34_command_catalog.md](34_command_catalog.md)
 > 部品定義: [35_parts_catalog.md](35_parts_catalog.md)
-> 最終更新: 2026-05-22
+> 最終更新: 2026-05-23
 
 ---
 
@@ -279,16 +279,55 @@ aiClassify（処理部品AI）→ 銀行/カード/領収書を判別
 
 ```
 入力:
-  仕訳✓の出力（承認済みリスト）
+  仕訳✓の出力（承認済みリスト: SourceJournal[]）
 
 処理:
-  postJournals → MCP WRITE（300行/リクエスト制限あり）
+  ① buildAllMaps(tokenKey)
+     Sugusru概念ID → MF-ID の変換テーブルを生成（5分キャッシュ）
+     科目: 108件マッチ / 税区分: 151件 / 補助科目: 16件 / 取引先: 2件
+
+  ② convertToMfJournal(journal, maps)
+     - validateBeforeConvert: 科目存在・税区分・金額・日付・貸借一致検証
+     - toInvoiceKind: invoice_status → invoice_kind 変換（内部保持）
+     - convertBranches: N:N → branches変換（対向金額一致方式）
+     - 戻り値: { payload, errors, hasNonQualified, invoiceKind }
+
+  ③ stripInvoiceKind
+     MF APIがinvoice_kind送信を拒否するため、送信前に全branchから除去
+     （課税方式変更時に壊れないため）
+
+  ④ mcpCreateJournal(sendPayload, tokenKey)
+     MCP経由でMFに送信。MfJournalResponse型でid/number取得
+
+  ⑤ applyMfSendResults(journals, results)
+     送信成功した仕訳に mf_journal_id / mf_journal_number / mf_sent_at を書き戻し
+     status を 'exported' に変更
 
 出力:
   MF投入 → postJournals でMFに登録
-  DB保存 → saveJournals でmf_journalsに追記（次回の検索インデックス）
-  resultView → 投入結果（成功/失敗/件数）
+  DB保存 → mf_journal_id紐付け済み仕訳を永続化
+  resultView → 投入結果（成功/失敗/件数 + 非適格警告）
+    ┌────────────────────────────────────┐
+    │ MF仕訳投入 完了                       │
+    │                                     │
+    │ 成功: 8件 / 失敗: 0件                │
+    │ 所要時間: 3.2秒                       │
+    │                                     │
+    │ ⚠️ 非適格仕訳: 2件                   │
+    │   MF管理画面で「非適格」に手動修正     │
+    │   が必要です                          │
+    └────────────────────────────────────┘
+
+実装ファイル:
+  journalToMfConverter.ts  … 変換ロジック
+  mfJournalSender.ts       … 送信 + MF-ID紐付け + 429リトライ
+  mfMappingService.ts      … IDマッピング
+  mfMcpClient.ts           … MCPクライアント
+
+詳細: 39_mf_field_mapping.md
 ```
+
+### 実装状態: ✅ 部品実装済み（実機テスト確認済み 2026-05-23）
 
 ---
 

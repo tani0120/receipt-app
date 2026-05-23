@@ -325,10 +325,15 @@ tenants（事業所テーブル）
   ├── mf_office_id     MFの事業所ID（APIアクセスキー）
   ├── name             事業所名
   ├── type             'corporate' | 'individual'
-  ├── tax_scheme       'general_tax' | 'simplified_tax' | 'tax_exempt'
+  ├── tax_scheme       MFのtax_method値: 'FREE'（免税）| 'GENERAL'（一般/一括比例）| 'SIMPLIFIED'（簡易）| 'INDIVIDUAL_ALLOCATION'（個別対応）
   ├── fiscal_year_start  現在期の期首日
   ├── fiscal_year_end    現在期の期末日
   └── created_at       作成日時
+
+  ※ tax_schemeは税区分のavailableフィルタに使用（2026-05-23検証済み）:
+    FREE（免税）→ 全151件使用（全件available=false）
+    その他 → available=trueのみ使用（44〜78件）
+  ※ 科目はtax_schemeに依存しない。type（個人/法人）のみで決まる（2026-05-23検証済み）
 
 oauth_tokens（トークンテーブル）
   ├── token_id         PK
