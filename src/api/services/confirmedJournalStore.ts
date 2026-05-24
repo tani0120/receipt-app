@@ -134,6 +134,36 @@ export function countByClientId(client_id: string): number {
 }
 
 /**
+ * MF送信結果を確定済み仕訳に書き戻す
+ *
+ * mfJournalSender.sendBatchToMf() の結果を受け取り、
+ * 対応する ConfirmedJournal に MF-ID / 送信日時 / ステータスを設定する。
+ *
+ * @returns 更新件数
+ */
+export function applyMfIds(
+  results: Array<{ sugusruId: string; mfId?: string; mfNumber?: number }>
+): number {
+  const now = new Date().toISOString();
+  let count = 0;
+  for (const r of results) {
+    if (!r.mfId) continue;
+    const j = journals.find(j => j.id === r.sugusruId);
+    if (!j) continue;
+    j.mf_journal_id = r.mfId;
+    j.mf_journal_number = r.mfNumber ?? null;
+    j.mf_sent_at = now;
+    j.export_status = 'exported';
+    count++;
+  }
+  if (count > 0) {
+    save();
+    console.log(`[confirmedJournalStore] MF-ID紐付け: ${count}件`);
+  }
+  return count;
+}
+
+/**
  * バッチIDで仕訳取得（CSVダウンロード用）
  */
 export function getByBatchId(import_batch_id: string): ConfirmedJournal[] {

@@ -52,5 +52,16 @@ export type Account = {
     hidden?: boolean
     /** マスタカスタム科目フラグ */
     isMasterCustom?: boolean
+
+    // ── MF連携フィールド（MF取込時のみ設定。MF未連携顧問先はundefined） ──
+
+    /** MF勘定科目ID（Base64。仕訳送信・差分検知用） */
+    mfAccountId?: string | null
+    /** MF大分類（'ASSET'/'LIABILITY'/'CAPITAL'/'REVENUE'/'EXPENSE'） */
+    mfAccountGroup?: string | null
+    /** MF財務諸表区分（'BALANCE_SHEET'/'PROFIT_LOSS'/'REAL_ESTATE'） */
+    mfFinancialStatementType?: string | null
+    /** MFデフォルト税区分ID */
+    mfDefaultTaxId?: string | null
 }
 

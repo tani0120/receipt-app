@@ -20,6 +20,11 @@ const app = new Hono();
 /** メモリ上の現在スタッフUUID（サーバー再起動でリセット） */
 let currentStaffUuid: string | null = null;
 
+/** 現在のログインスタッフUUIDを取得（他ルートから参照用） */
+export function getCurrentStaffUuid(): string | null {
+  return currentStaffUuid;
+}
+
 /** GET /current — 現在のログインスタッフ取得 */
 app.get('/current', (c) => {
   const staffList = getAll();

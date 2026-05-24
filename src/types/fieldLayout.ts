@@ -106,6 +106,11 @@ export interface FieldDef {
   deletable?: boolean;
   /** 論理削除済みフラグ（trueの場合レイアウトから除外されるがデータは保持） */
   isDeleted?: boolean;
+  /** MF連携由来フラグ
+   *  true = 常にMF由来
+   *  { when: { field, value } } = 条件付きMF由来（formData[field]がvalueと一致するとき）
+   */
+  mfSource?: boolean | { when: { field: string; value: string | string[] } };
 }
 
 /** セクション定義 */

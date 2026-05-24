@@ -29,7 +29,8 @@ import {
   mcpFetchTermSettings,
   mcpCreateJournal,
 } from '../services/mfMcpClient'
-import { getById } from '../services/clientStore'
+import { getById, updateClient } from '../services/clientStore'
+import { mapOfficeToClient, mapTermSettingsToClient, getMfMappedFieldKeys } from '../../constants/mfFieldMapping'
 
 const app = new Hono()
 
@@ -260,6 +261,102 @@ app.post('/journals', async (c) => {
     console.error(`[mfRoutes] 仕訳登録失敗: ${message}`)
     return c.json({ error: '仕訳登録に失敗しました', detail: message }, 500)
   }
+})
+
+// ---------- MFインポート ----------
+
+/**
+ * POST /import-offices — MF連携済み顧問先の事業所情報をMCPから取得し、clientStoreに反映
+ * body: { clientIds: string[] }
+ *
+ * mfFieldMapping.ts のマッピングテーブル駆動で自動変換。
+ * MFが正（Single Source of Truth）— MFに値があれば sugusuru を上書き。
+ *
+ * 取得元:
+ *   1. currentOffice → 会社名, 種別, 不動産所得, 従業員数, 決算月日
+ *   2. getTermSettings → 課税方式, 経理方式, 業種
+ */
+app.post('/import-offices', async (c) => {
+  const body = await c.req.json()
+  const clientIds = body.clientIds as string[]
+  if (!clientIds?.length) {
+    return c.json({ error: 'clientIds必須' }, 400)
+  }
+
+  const results: {
+    updated: number;
+    skipped: number;
+    errors: string[];
+    details: Array<{ clientId: string; threeCode: string; name: string; changes: string[] }>;
+  } = { updated: 0, skipped: 0, errors: [], details: [] }
+
+  for (const clientId of clientIds) {
+    const client = getById(clientId)
+    if (!client) {
+      results.errors.push(`${clientId}: 顧問先が見つかりません`)
+      continue
+    }
+
+    const status = getAuthStatus(clientId)
+    if (!status.authenticated) {
+      results.errors.push(`${client.threeCode || clientId}: MF未認証`)
+      continue
+    }
+
+    try {
+      // 1. currentOffice からマッピング
+      const office = await mcpFetchCurrentOffice(clientId)
+      const clientRecord = client as unknown as Record<string, unknown>
+      const officeResult = mapOfficeToClient(office, clientRecord)
+
+      // 2. getTermSettings からマッピング（最新年度）
+      const termSettingsList = await mcpFetchTermSettings(undefined, clientId)
+      let termResult = { updates: {} as Record<string, unknown>, changes: [] as string[] }
+      if (termSettingsList.length > 0) {
+        termResult = mapTermSettingsToClient(termSettingsList[0]!, clientRecord)
+      }
+
+      // マージ（termSettings側が後勝ち）
+      const allUpdates = { ...officeResult.updates, ...termResult.updates }
+      const allChanges = [...officeResult.changes, ...termResult.changes]
+
+      // MFから取得できた全フィールドキーを記録（青文字表示用）
+      // 差分がなくても、MFから値を取得したフィールドは記録する
+      const mfMappedKeys = getMfMappedFieldKeys(office, termSettingsList[0])
+      const existingMfFields = (clientRecord.mfImportedFields as string[]) || []
+      const mergedMfFields = [...new Set([...existingMfFields, ...mfMappedKeys])]
+
+      console.log(`[MFインポート] ${clientId}: mfMappedKeys=${JSON.stringify(mfMappedKeys)}, existing=${JSON.stringify(existingMfFields)}, merged=${JSON.stringify(mergedMfFields)}`)
+
+      if (Object.keys(allUpdates).length > 0) {
+        allUpdates.mfImportedFields = mergedMfFields
+        updateClient(clientId, allUpdates)
+        results.updated++
+      } else {
+        // 差分なしでもmfImportedFieldsが未保存なら保存
+        const needsSave = JSON.stringify(existingMfFields.sort()) !== JSON.stringify(mergedMfFields.sort())
+        console.log(`[MFインポート] ${clientId}: needsSave=${needsSave}`)
+        if (needsSave) {
+          updateClient(clientId, { mfImportedFields: mergedMfFields } as Record<string, unknown>)
+          console.log(`[MFインポート] ${clientId}: mfImportedFields保存完了`)
+        }
+        results.skipped++
+      }
+
+      results.details.push({
+        clientId,
+        threeCode: client.threeCode || '',
+        name: client.companyName || client.repName || '',
+        changes: allChanges,
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      results.errors.push(`${client.threeCode || clientId}: ${message}`)
+    }
+  }
+
+  console.log(`[MFインポート] 完了: 更新=${results.updated}, スキップ=${results.skipped}, エラー=${results.errors.length}`)
+  return c.json(results)
 })
 
 export default app

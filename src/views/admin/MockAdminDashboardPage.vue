@@ -253,7 +253,11 @@
             <h3 class="ad-card-title"><i class="fa-solid fa-coins"></i> 今月のAPI費用</h3>
             <div class="ad-metric">
               <span class="ad-metric-value">¥{{ adminData.kpiProductivity.apiCost?.thisMonthForecast?.toLocaleString() }}</span>
-              <span class="ad-metric-label">Gemini API（{{ new Date().getFullYear() }}年{{ new Date().getMonth() + 1 }}月） / {{ adminData.kpiProductivity.apiCost?.totalCalls ?? 0 }}回呼出</span>
+              <span class="ad-metric-label">{{ new Date().getFullYear() }}年{{ new Date().getMonth() + 1 }}月 / {{ adminData.kpiProductivity.apiCost?.totalCalls ?? 0 }}回呼出</span>
+            </div>
+            <div class="ad-metric-sub">
+              <div>AIコマンド: <strong class="font-mono">{{ costConfig.currentModel }}</strong></div>
+              <div>OCR: <strong class="font-mono">{{ costConfig.ocrModel }}</strong></div>
             </div>
           </div>
           <div class="ad-card">
@@ -268,10 +272,41 @@
             </div>
           </div>
           <div class="ad-card ad-card--wide">
+            <h3 class="ad-card-title"><i class="fa-solid fa-robot"></i> モデル・単価設定</h3>
+            <div class="ad-table-wrap">
+              <table class="ad-dark-table">
+                <thead>
+                  <tr>
+                    <th>項目</th>
+                    <th class="text-right">値</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>AIコマンドモデル</td>
+                    <td class="text-right font-mono">{{ costConfig.currentModel }}</td>
+                  </tr>
+                  <tr>
+                    <td>OCRモデル</td>
+                    <td class="text-right font-mono">{{ costConfig.ocrModel }}</td>
+                  </tr>
+                  <tr>
+                    <td>為替レート</td>
+                    <td class="text-right">¥{{ costConfig.usdJpyRate }} / $1</td>
+                  </tr>
+                  <tr v-for="(price, modelName) in costConfig.pricing" :key="modelName">
+                    <td class="font-mono">{{ modelName }}</td>
+                    <td class="text-right">¥{{ (price.input * costConfig.usdJpyRate / 1000).toFixed(2) }}/1Kトークン入力, ¥{{ (price.output * costConfig.usdJpyRate / 1000).toFixed(2) }}/1Kトークン出力</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="ad-card ad-card--wide">
             <h3 class="ad-card-title"><i class="fa-solid fa-chart-line"></i> 月次推移</h3>
             <div class="ad-placeholder">
               <i class="fa-solid fa-chart-area"></i>
-              <p>Supabase移行後にグラフ表示が利用可能になります</p>
+              <p>BigQuery Billing Export接続後にグラフ表示が利用可能になります</p>
             </div>
           </div>
         </div>
@@ -281,7 +316,7 @@
       <!-- フッター注記 -->
       <div class="ad-footer">
         <i class="fa-solid fa-circle-info"></i>
-        スタッフ別指標・AIコストタブの数値はダミーデータです。Supabase移行後に実データに切り替わります。
+        各指標はサーバーの実データ（スタッフ・顧問先マスタ、CSV出力履歴、AI利用ログ、活動ログ）から動的に集計しています。過去データが未蓄積の項目は0で表示されます。
       </div>
     </div>
 
@@ -299,6 +334,32 @@ import { UI_MSG } from '@/constants/uiMessages';
 const route = useRoute();
 const router = useRouter();
 const { data: adminData } = useAdminDashboard();
+
+// コスト設定（モデル名・単価・為替レートをサーバーから動的取得）
+interface PriceEntry { input: number; output: number; thinking: number }
+const costConfig = ref<{
+  currentModel: string;
+  ocrModel: string;
+  pricing: Record<string, PriceEntry>;
+  usdJpyRate: number;
+}>({
+  currentModel: '読込中...',
+  ocrModel: '読込中...',
+  pricing: {},
+  usdJpyRate: 150,
+});
+
+async function fetchCostConfig() {
+  try {
+    const res = await fetch('/api/ai-command/cost/config');
+    if (!res.ok) return;
+    const body = await res.json() as typeof costConfig.value;
+    costConfig.value = body;
+  } catch {
+    // 取得失敗時はデフォルト値のまま
+  }
+}
+fetchCostConfig();
 
 // 活動ログ集計: 今月の合計処理時間（ミリ秒）
 const activityTotalMs = ref(0);

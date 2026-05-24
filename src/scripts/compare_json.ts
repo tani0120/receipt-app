@@ -31,10 +31,10 @@ const MODELS = [
 ];
 
 const PRICING: Record<string, { input: number; output: number; thinking: number }> = {
-  'gemini-2.5-flash':       { input: 0.15, output: 0.60, thinking: 3.50 },
+  'gemini-2.5-flash':       { input: 0.30, output: 2.50, thinking: 0 },
   'gemini-3-flash-preview': { input: 0.50, output: 3.00, thinking: 0 },
   'gemini-3.1-flash-lite':  { input: 0.25, output: 1.50, thinking: 0 },
-  'gemini-3.5-flash':       { input: 0.15, output: 0.60, thinking: 3.50 },
+  'gemini-3.5-flash':       { input: 1.50, output: 9.00, thinking: 0 },
 };
 
 const SYSTEM_INSTRUCTION_BASE = `あなたは日本の会計事務所向けのAI証票分類エンジンです。

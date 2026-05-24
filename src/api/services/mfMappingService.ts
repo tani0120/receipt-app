@@ -16,6 +16,7 @@ import {
   mcpFetchSubAccounts,
   mcpFetchDepartments,
   mcpFetchTradePartners,
+  mcpFetchTermSettings,
   type MfMcpAccount,
   type MfMcpTax,
 } from './mfMcpClient'
@@ -68,6 +69,12 @@ export interface MfMappingTables {
   unmatchedAccounts: AccountMapping[]
   /** マッチ失敗の税区分（送信前警告用） */
   unmatchedTaxes: TaxMapping[]
+  /**
+   * 事業者の課税方式（MF APIから自動取得）
+   * 'FREE'=免税 / 'SIMPLIFIED'=簡易 / 'GENERAL'=本則一括 / 'INDIVIDUAL_ALLOCATION'=本則個別 / 'PROPORTIONAL_ALLOCATION'=本則比例
+   * null=取得失敗（安全策としてinvoice_kind除去）
+   */
+  taxMethod: string | null
   /** 生成日時 */
   createdAt: Date
 }
@@ -265,13 +272,17 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
   console.log(`[mfMapping] マッピングテーブル生成開始（tokenKey: ${tokenKey}）`)
   const startMs = Date.now()
 
-  // 5種類を並列取得
-  const [accountResult, taxResult, subAccountMap, departmentMap, tradePartnerMap] = await Promise.all([
+  // 6種類を並列取得（課税方式含む）
+  const [accountResult, taxResult, subAccountMap, departmentMap, tradePartnerMap, termSettings] = await Promise.all([
     buildAccountMap(tokenKey),
     buildTaxMap(tokenKey),
     buildSubAccountMap(tokenKey),
     buildDepartmentMap(tokenKey),
     buildTradePartnerMap(tokenKey),
+    mcpFetchTermSettings(undefined, tokenKey).catch(err => {
+      console.warn('[mfMapping] 会計年度設定取得失敗（安全策としてinvoice_kind除去）:', err instanceof Error ? err.message : err)
+      return [] as Awaited<ReturnType<typeof mcpFetchTermSettings>>
+    }),
   ])
 
   const unmatchedAccounts = accountResult.details.filter(d => d.mfId === null)
@@ -317,6 +328,10 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
     reverseTaxMap,
     unmatchedAccounts,
     unmatchedTaxes,
+    // 最新年度の課税方式を取得（複数年度がある場合は最新）
+    taxMethod: termSettings.length > 0
+      ? termSettings.sort((a, b) => b.fiscal_year - a.fiscal_year)[0]!.tax_method
+      : null,
     createdAt: new Date(),
   }
 

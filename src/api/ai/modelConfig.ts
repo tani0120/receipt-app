@@ -31,3 +31,36 @@ export const MODEL_PRICING: Record<string, { input: number; output: number; thin
 
 /** 為替レート（USD → JPY） */
 export const USD_JPY_RATE = 150;
+
+/** コスト計算結果 */
+export interface CostCalcResult {
+  /** 推定コスト（円） */
+  costYen: number
+  /** 入力単価（$/1Mトークン） */
+  inputPricePerM: number
+  /** 出力単価（$/1Mトークン） */
+  outputPricePerM: number
+}
+
+/**
+ * トークン数とモデル名からコスト（円）を計算する。
+ * 記録時点の単価も返す（後の検算用）。
+ */
+export function calculateCost(
+  modelId: string,
+  promptTokens: number,
+  completionTokens: number,
+  thinkingTokens = 0,
+): CostCalcResult {
+  const price = MODEL_PRICING[modelId] ?? MODEL_PRICING[DEFAULT_MODEL_ID]!;
+  const costUsd =
+    (promptTokens * price.input / 1_000_000) +
+    (completionTokens * price.output / 1_000_000) +
+    (thinkingTokens * price.thinking / 1_000_000);
+  return {
+    costYen: Math.round(costUsd * USD_JPY_RATE * 10000) / 10000,
+    inputPricePerM: price.input,
+    outputPricePerM: price.output,
+  };
+}
+

@@ -33,9 +33,9 @@ const MODELS = [
 ];
 
 const PRICING: Record<string, { input: number; output: number; thinking: number }> = {
-  'gemini-2.5-flash':       { input: 0.15, output: 0.60, thinking: 3.50 },
+  'gemini-2.5-flash':       { input: 0.30, output: 2.50, thinking: 0 },
   'gemini-3-flash-preview': { input: 0.50, output: 3.00, thinking: 0 },
-  'gemini-3.5-flash':       { input: 0.15, output: 0.60, thinking: 3.50 },
+  'gemini-3.5-flash':       { input: 1.50, output: 9.00, thinking: 0 },
 };
 const USD_JPY = 150;
 

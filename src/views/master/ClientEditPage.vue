@@ -112,7 +112,7 @@
           @update:spacerHeight="(key: string, height: number) => layout.updateSpacerHeight(key, height)"
           @update:fieldHeight="(key: string, height: number) => layout.updateFieldHeight(key, height)"
           @update:fieldValue="(key: string, value: unknown) => { (form as Record<string, unknown>)[key] = value }"
-          @field-added="(field: import('@/types/fieldLayout').FieldDef) => layout.addDynamicField(field)"
+          @field-added="(field: import('@/types/fieldLayout').FieldDef) => layout.addDynamicField(field, true)"
           @select-field="(field: import('@/types/fieldLayout').FieldDef) => selectedPaletteField = field"
           @update:field-options="(key: string, opts: import('@/types/fieldLayout').FieldOption[]) => layout.updateFieldOptions(key, opts)"
           @update:rows="(rows: string[][]) => layout.updateAllRows(rows)"

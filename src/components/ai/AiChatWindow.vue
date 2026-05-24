@@ -63,7 +63,7 @@
               </div>
             </transition>
           </div>
-          <button class="ai-chat-close-btn" @click="$emit('close')" title="閉じる">
+          <button class="ai-chat-close-btn" @click="handleClose" title="閉じる">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
@@ -74,7 +74,7 @@
         <!-- 初期メッセージ -->
         <div v-if="messages.length === 0" class="ai-chat-welcome">
           <i class="fa-solid fa-wand-magic-sparkles ai-chat-welcome-icon"></i>
-          <p class="ai-chat-welcome-text">何を調べますか？</p>
+          <p class="ai-chat-welcome-text">質問を入力すると、AIがデータを取得して直接回答します</p>
           <p class="ai-chat-welcome-hint">自由にテキストを入力、または左下の <i class="fa-solid fa-list" style="font-size:11px;color:#6366f1"></i> から選択</p>
           <div class="ai-chat-welcome-suggestions">
             <button
@@ -145,7 +145,7 @@
           class="ai-chat-browse-toggle"
           :class="{
             'ai-chat-browse-toggle--active': showBrowser,
-            'ai-chat-browse-toggle--pulse': highlightBrowse,
+            'ai-chat-browse-toggle--pulse': highlightBrowse || messages.length === 0,
           }"
           @click="toggleBrowser"
           title="全コマンド一覧"
@@ -156,7 +156,7 @@
           ref="inputRef"
           v-model="inputText"
           class="ai-chat-input"
-          placeholder="何を調べますか？ (例: 先月の経費)"
+          placeholder="質問を入力...（例: TSKの年商は？）"
           rows="1"
           @keydown.enter.exact.prevent="handleSend"
           @input="autoResize"
@@ -210,13 +210,23 @@ const emit = defineEmits<{
   close: []
 }>()
 
-const { messages, isLoading, selectedClientId, sendMessage, sendMessageDirect } = useAiCommand()
+const { messages, isLoading, selectedClientId, sendMessage, sendMessageDirect, clearMessages } = useAiCommand()
 const { clients } = useClients()
 
 const inputText = ref('')
 const inputRef = ref<HTMLTextAreaElement | null>(null)
 const messagesContainer = ref<HTMLDivElement | null>(null)
 const windowRef = ref<HTMLDivElement | null>(null)
+
+/** モーダルを閉じる（履歴・入力をクリア） */
+const handleClose = () => {
+  clearMessages()
+  inputText.value = ''
+  selectedClientId.value = ''
+  pendingCommand.value = null
+  showBrowser.value = false
+  emit('close')
+}
 
 // ---------- ドラッグ移動 ----------
 const dragOffset = ref({ x: 0, y: 0 })
@@ -309,9 +319,44 @@ const toggleDropdown = () => {
   }
 }
 
-const selectClient = (id: string) => {
-  selectedClientId.value = id
+/** MF認証状態を動的チェック（clientIdベース） */
+const checkMfAuth = async (clientId: string): Promise<boolean> => {
+  if (clientId === 'all') return true  // 全社一括はスキップ
+  try {
+    const res = await fetch(`/api/mf/auth/status?clientId=${encodeURIComponent(clientId)}`)
+    const data = await res.json()
+    return !!data.authenticated
+  } catch {
+    // API通信失敗時は通過させる（コマンド実行時に再チェックされる）
+    return true
+  }
+}
+
+const selectClient = async (id: string) => {
   showDropdown.value = false
+  if (id !== 'all') {
+    const ok = await checkMfAuth(id)
+    const cl = clientList.value.find(c => c.clientId === id)
+    const name = cl ? `${cl.threeCode} ${cl.companyName || cl.repName}` : id
+    if (!ok) {
+      messages.value.push({
+        id: `msg-${Date.now()}-ai`,
+        role: 'ai',
+        content: `⚠️ **${name}** はMF未連携です。\n\n先に設定画面からマネーフォワード連携（OAuth認可）を完了してください。`,
+        timestamp: new Date(),
+      })
+      selectedClientId.value = ''
+      return
+    }
+    // 連携済み → 選択メッセージ表示
+    messages.value.push({
+      id: `msg-${Date.now()}-ai`,
+      role: 'ai',
+      content: `✅ **${name}** — MF連携済み。コマンドを実行できます。`,
+      timestamp: new Date(),
+    })
+  }
+  selectedClientId.value = id
 }
 
 /** ドロップダウン外クリックで閉じる */
@@ -324,7 +369,7 @@ onMounted(() => document.addEventListener('click', onClickOutside))
 onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 /** 初期サジェスチョン */
-const defaultSuggestions = ['科目一覧', '仕訳一覧', '取引先一覧', '事業者情報']
+const defaultSuggestions = ['TSKの年商は？', '科目一覧', '事業者情報', '連携サービス一覧']
 
 // ---------- コマンドブラウザ ----------
 const showBrowser = ref(false)
@@ -436,12 +481,25 @@ const searchClientAndSelect = (text: string) => {
   }
 }
 
-/** 顧問先確定 → 保留コマンド実行 */
-const confirmClient = (clientId: string) => {
-  selectedClientId.value = clientId
-
+/** 顧問先確定 → MF連携チェック → 保留コマンド実行 */
+const confirmClient = async (clientId: string) => {
   const cl = clientList.value.find(c => c.clientId === clientId)
   const name = cl ? `${cl.threeCode} ${cl.companyName || cl.repName}` : clientId
+
+  // MF連携チェック
+  const ok = await checkMfAuth(clientId)
+  if (!ok) {
+    messages.value.push({
+      id: `msg-${Date.now()}-ai`,
+      role: 'ai',
+      content: `⚠️ **${name}** はMF未連携です。\n\n先に設定画面からマネーフォワード連携（OAuth認可）を完了してください。\nコマンドをキャンセルしました。`,
+      timestamp: new Date(),
+    })
+    pendingCommand.value = null
+    return
+  }
+
+  selectedClientId.value = clientId
 
   messages.value.push({
     id: `msg-${Date.now()}-ai`,
@@ -458,6 +516,15 @@ const confirmClient = (clientId: string) => {
   }
 }
 
+/** 3コード完全一致で顧問先を検索。一意ならその顧問先を返す */
+const findClientByThreeCode = (text: string): { isThreeCode: boolean; client: typeof clientList.value[0] | null } => {
+  const q = text.trim().toUpperCase()
+  // 3コードは英字大文字3文字（例: LDI, TAN, YMD）
+  if (!/^[A-Z]{3}$/.test(q)) return { isThreeCode: false, client: null }
+  const matches = clientList.value.filter(cl => (cl.threeCode ?? '').toUpperCase() === q)
+  return { isThreeCode: true, client: matches.length === 1 ? matches[0]! : null }
+}
+
 /** 送信 */
 const handleSend = () => {
   if (!inputText.value.trim() || isLoading.value) return
@@ -467,6 +534,29 @@ const handleSend = () => {
   inputText.value = ''
   if (inputRef.value) {
     inputRef.value.style.height = 'auto'
+  }
+
+  // 3コード形式 → どのフェーズでも顧問先選択として処理
+  const { isThreeCode, client: matchedClient } = findClientByThreeCode(text)
+  if (isThreeCode) {
+    messages.value.push({
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: text,
+      timestamp: new Date(),
+    })
+    if (matchedClient) {
+      confirmClient(matchedClient.clientId)
+    } else {
+      // 架空の3コード
+      messages.value.push({
+        id: `msg-${Date.now()}-ai`,
+        role: 'ai',
+        content: `❌ 「${text.trim().toUpperCase()}」に該当する顧問先はありません。正しい3コードを入力してください。`,
+        timestamp: new Date(),
+      })
+    }
+    return
   }
 
   // 顧問先待ちモード → 会社名検索として処理

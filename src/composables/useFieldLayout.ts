@@ -637,6 +637,7 @@ export function useFieldLayout(
     if (rowIndex >= 0 && rowIndex < fieldRows.value.length) {
       fieldRows.value[rowIndex] = [...newKeys];
       syncOrderFromRows();
+      markDirty();
     }
   };
 
@@ -645,6 +646,7 @@ export function useFieldLayout(
     // 空行を除去してデータ層に保存
     fieldRows.value = newRows.filter(r => r.length > 0);
     syncOrderFromRows();
+    markDirty();
   };
 
 
@@ -729,19 +731,23 @@ export function useFieldLayout(
     }
   };
 
-  /** カスタムフィールドを動的追加 */
-  const addDynamicField = (fieldDef: FieldDef) => {
+  /** カスタムフィールドを動的追加
+   * @param skipRowUpdate D&D経由の場合true（emitRowsUpdateが配置を反映するため、fieldRows追加とmarkDirtyをスキップ）
+   */
+  const addDynamicField = (fieldDef: FieldDef, skipRowUpdate = false) => {
     // 既に存在する場合はスキップ
     if (fields.value.find(f => f.key === fieldDef.key)) return;
     fields.value.push({ ...fieldDef });
-    // fieldRowsにも追加（既に含まれていなければ末尾行へ）
-    const allKeys = fieldRows.value.flat();
-    if (!allKeys.includes(fieldDef.key)) {
-      const lastRow = fieldRows.value[fieldRows.value.length - 1];
-      if (lastRow) {
-        lastRow.push(fieldDef.key);
-      } else {
-        fieldRows.value.push([fieldDef.key]);
+    if (!skipRowUpdate) {
+      // fieldRowsにも追加（既に含まれていなければ末尾行へ）
+      const allKeys = fieldRows.value.flat();
+      if (!allKeys.includes(fieldDef.key)) {
+        const lastRow = fieldRows.value[fieldRows.value.length - 1];
+        if (lastRow) {
+          lastRow.push(fieldDef.key);
+        } else {
+          fieldRows.value.push([fieldDef.key]);
+        }
       }
     }
     // customDefsにも登録（custom_プレフィックスまたはデフォルト定義に存在しないフィールド）
@@ -771,7 +777,9 @@ export function useFieldLayout(
         ],
       };
     }
-    markDirty();
+    if (!skipRowUpdate) {
+      markDirty();
+    }
   };
 
   /** カスタムフィールドを動的削除 */
@@ -779,6 +787,10 @@ export function useFieldLayout(
     fields.value = fields.value.filter(f => f.key !== fieldKey);
     // fieldRowsからも削除
     fieldRows.value = fieldRows.value.map(row => row.filter(k => k !== fieldKey)).filter(row => row.length > 0);
+    // hiddenFieldsからも削除
+    hiddenFields.value = hiddenFields.value.filter(k => k !== fieldKey);
+    // customDefsからも削除
+    shared.customDefs.value = shared.customDefs.value.filter(d => d.key !== fieldKey);
     markDirty();
   };
 

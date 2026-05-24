@@ -57,12 +57,12 @@
                 <template v-else>
                   <div class="dfg-label-area">
                     <input v-if="isLayoutEditing" type="text" :value="field.label" class="dfg-label-input" @blur="onLabelBlur(field.key, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()">
-                    <label v-else class="dfg-label">{{ field.label }}</label>
+                    <label v-else class="dfg-label">{{ field.label }}<MfCloudIcon v-if="isMfSource(field)" /></label>
                     <span v-if="isLayoutEditing && field.deletable !== true && !field.key.startsWith('custom_')" class="dfg-lock-icon" title="クライアント型フィールド（削除不可）">🔒</span>
                   </div>
-                  <div class="dfg-content" :class="{ 'dfg-editing': isEditing }">
+                  <div class="dfg-content" :class="{ 'dfg-editing': isEditing, 'ce-mf-imported': isMfImported(field) }">
                     <slot :name="field.key" :field="field">
-                      <div v-if="formData" class="ce-field" :class="field.cssClass">
+                      <div v-if="formData" class="ce-field" :class="[field.cssClass]">
                         <template v-if="(field.component === 'readonly' || field.alwaysReadonly) && field.component !== 'url'"><span class="ce-readonly" :class="field.cssClass">{{ getFieldDisplayValue(field) }}</span></template>
                         <template v-else-if="field.component === 'text'"><input v-if="isEditing" type="text" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :placeholder="field.placeholder" :maxlength="field.maxLength"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
                         <template v-else-if="field.component === 'number'"><input v-if="isEditing" type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :min="field.min"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
@@ -171,10 +171,10 @@
                   <div class="dfg-spacer" :style="{ height: (field.spacerHeight || 20) + 'px' }"></div>
                 </template>
                 <template v-else>
-                  <div class="dfg-label-area"><label class="dfg-label">{{ field.label }}</label></div>
-                  <div class="dfg-content" :class="{ 'dfg-editing': isEditing }">
+                  <div class="dfg-label-area"><label class="dfg-label">{{ field.label }}<MfCloudIcon v-if="isMfSource(field)" /></label></div>
+                  <div class="dfg-content" :class="{ 'dfg-editing': isEditing, 'ce-mf-imported': isMfImported(field) }">
                     <slot :name="field.key" :field="field">
-                      <div v-if="formData" class="ce-field" :class="field.cssClass">
+                      <div v-if="formData" class="ce-field" :class="[field.cssClass]">
                         <template v-if="(field.component === 'readonly' || field.alwaysReadonly) && field.component !== 'url'"><span class="ce-readonly" :class="field.cssClass">{{ getFieldDisplayValue(field) }}</span></template>
                         <template v-else-if="field.component === 'text'"><input v-if="isEditing" type="text" :value="getFieldValue(field)" @input="setFieldValue(field, ($event.target as HTMLInputElement).value)" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :placeholder="field.placeholder" :maxlength="field.maxLength"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
                         <template v-else-if="field.component === 'number'"><input v-if="isEditing" type="number" :value="getFieldValue(field)" @input="setFieldValue(field, Number(($event.target as HTMLInputElement).value))" class="ce-input" :class="{ 'ce-w-sm': field.smallWidth }" :min="field.min"><span v-else class="ce-readonly">{{ getFieldDisplayValue(field) }}</span></template>
@@ -246,6 +246,7 @@ import { VueDraggable } from 'vue-draggable-plus';
 import type { FieldDef, FieldOption } from '@/types/fieldLayout';
 import { PLACEHOLDER_UNSET } from '@/constants/clientOptions';
 import { UI_MSG } from '@/constants/uiMessages';
+import MfCloudIcon from './MfCloudIcon.vue';
 
 const props = defineProps<{
   /** 表示するフィールド一覧（order順） */
@@ -291,6 +292,38 @@ const emit = defineEmits<{
   (e: 'file-upload', fieldKey: string, files: FileList): void;
   (e: 'file-delete', fieldKey: string, fileId: string): void;
 }>();
+
+/** MF連携由来フラグの動的判定（条件付きmfSourceに対応） */
+const isMfSource = (field: FieldDef): boolean => {
+  if (!field.mfSource) return false
+  if (field.mfSource === true) return true
+  // 条件付き: formData[field]がvalueと一致するか
+  const { field: condField, value: condValue } = field.mfSource.when
+  const actual = props.formData?.[condField]
+  if (Array.isArray(condValue)) return condValue.includes(actual as string)
+  return actual === condValue
+}
+
+/** MFインポートで値が設定されたフィールドか判定（青文字表示用）
+ * クラウドアイコン（isMfSource）が表示されているフィールドと同条件。
+ * MF由来のフィールドに実際に値が入っていれば青文字にする。 */
+const isMfImported = (field: FieldDef): boolean => {
+  if (!props.formData) return false
+  // mfSourceが設定されていなければ対象外
+  if (!isMfSource(field)) return false
+  // mfImportedFieldsに含まれるか（インポート実績がある場合のみ青文字）
+  const mfFields = props.formData.mfImportedFields as string[] | undefined
+  if (!mfFields?.length) return false
+  const key = field.modelKey || field.key
+  if (mfFields.includes(key)) return true
+  // 複合キー（fiscalDate → fiscalMonth/fiscalDay）
+  const MF_FIELD_ALIAS: Record<string, string[]> = {
+    fiscalDate: ['fiscalMonth', 'fiscalDay'],
+  }
+  const aliases = MF_FIELD_ALIAS[key]
+  if (aliases) return aliases.some(a => mfFields.includes(a))
+  return false
+}
 
 /** フォームからフィールド値を取得 */
 const getFieldValue = (field: FieldDef): unknown => {
@@ -836,6 +869,15 @@ onBeforeUnmount(() => {
   color: #333;
   font-weight: 400;
 }
+/* MFインポートで取得された値 → 青文字（dfg-content配下の全テキスト要素に適用） */
+.dfg-content.ce-mf-imported :deep(.ce-readonly),
+.dfg-content.ce-mf-imported :deep(.ce-input),
+.dfg-content.ce-mf-imported :deep(.ce-select),
+.dfg-content.ce-mf-imported :deep(.ce-checkbox span),
+.dfg-content.ce-mf-imported :deep(.ce-date-group),
+.dfg-content.ce-mf-imported :deep(.ce-field) {
+  color: #1a73e8;
+}
 .dfg-content :deep(.ce-input) {
   border: none;
   background: transparent;
@@ -1379,4 +1421,6 @@ onBeforeUnmount(() => {
   vertical-align: middle;
   cursor: help;
 }
+
 </style>
+

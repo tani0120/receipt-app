@@ -45,7 +45,7 @@
           @update:headingBg="(key: string, color: string) => layout.updateHeadingBg(key, color)"
           @update:spacerHeight="(key: string, height: number) => layout.updateSpacerHeight(key, height)"
           @update:fieldValue="() => {}"
-          @field-added="(field: import('@/types/fieldLayout').FieldDef) => layout.addDynamicField(field)"
+          @field-added="(field: import('@/types/fieldLayout').FieldDef) => layout.addDynamicField(field, true)"
         >
           <!-- ステータスフィールド -->
           <template #status="{ field }"><div class="ce-field"><label>{{ field.label }}</label><span class="ce-readonly-val">—</span></div></template>

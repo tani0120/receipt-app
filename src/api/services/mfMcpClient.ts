@@ -272,6 +272,48 @@ async function getOrCreateClient(tokenKey: string): Promise<Client> {
   }
 }
 
+// ---------- ツール一覧取得 ----------
+
+/** ツール一覧キャッシュ（tokenKey別） */
+const toolListCache = new Map<string, { tools: McpToolInfo[]; cachedAt: number }>()
+const TOOL_CACHE_TTL_MS = 60 * 60 * 1000 // 1時間
+
+/** MCPツール情報 */
+export interface McpToolInfo {
+  /** ツール名（例: mfc_ca_getAccounts） */
+  name: string
+  /** ツール説明 */
+  description?: string
+  /** 入力スキーマ（JSON Schema） */
+  inputSchema?: Record<string, unknown>
+}
+
+/**
+ * MCPサーバーからツール一覧を取得する（キャッシュ付き）
+ * @param tokenKey mfAuthService のトークンストアキー
+ */
+export async function listMcpTools(tokenKey: string = 'default'): Promise<McpToolInfo[]> {
+  // キャッシュチェック
+  const cached = toolListCache.get(tokenKey)
+  if (cached && Date.now() - cached.cachedAt < TOOL_CACHE_TTL_MS) {
+    return cached.tools
+  }
+
+  const client = await getOrCreateClient(tokenKey)
+  const result = await client.listTools()
+
+  const tools: McpToolInfo[] = (result.tools ?? []).map(t => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: t.inputSchema as Record<string, unknown> | undefined,
+  }))
+
+  toolListCache.set(tokenKey, { tools, cachedAt: Date.now() })
+  console.log(`[mfMcpClient] ツール一覧取得: ${tools.length}件 (tokenKey=${tokenKey})`)
+
+  return tools
+}
+
 // ---------- 汎用ツール呼び出し ----------
 
 /**

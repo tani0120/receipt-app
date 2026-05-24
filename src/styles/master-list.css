@@ -254,6 +254,19 @@
 /* MF未連携アイコン */
 .cm-mf-unlinked { font-size: 11px; color: #94a3b8; }
 
+/* MFインポートボタン */
+.cm-mf-import-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border: 1px solid #3b82f6; border-radius: 6px;
+  background: #fff; color: #3b82f6;
+  font-family: 'Inter', 'Hiragino Sans', 'Meiryo', sans-serif;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
+  cursor: pointer; transition: all 0.15s ease;
+}
+.cm-mf-import-btn:hover:not(:disabled) { background: #eff6ff; border-color: #2563eb; color: #2563eb; }
+.cm-mf-import-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cm-mf-import-btn i { font-size: 14px; }
+
 
 
 /* ━━━━ ヘッダー管理ボタン（一覧管理・フィールド管理・レイアウト管理） ━━━━ */

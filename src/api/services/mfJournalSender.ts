@@ -90,21 +90,34 @@ export async function sendJournalToMf(
       }
     }
 
-    // 3. invoice_kindはそのまま送信（実機テスト 2026-05-23確認済み）
-    //    QUALIFIED/UNQUALIFIED_80: MF API受理
-    //    NOT_TARGET: 対象外税区分とセットならMF API受理。課税税区分とセットなら拒否
-    //    UNQUALIFIED_50/NOT_QUALIFIED_0: MF未対応ならenumエラーで自然停止
-    //    省略: MFが税区分から自動判定（課税→QUALIFIED、対象外→NOT_TARGET）
+    // 3. 課税方式に応じたinvoice_kind制御
+    //    - 本則（GENERAL/INDIVIDUAL_ALLOCATION/PROPORTIONAL_ALLOCATION）: そのまま送信
+    //    - 免税（FREE）: 除去（MFが拒否する）
+    //    - 簡易（SIMPLIFIED）: 除去（MFが拒否する）
+    //    - 取得失敗（null）: 安全策として除去
+    const taxMethod = mappingTables.taxMethod
+    const shouldStripInvoiceKind = !taxMethod || taxMethod === 'FREE' || taxMethod === 'SIMPLIFIED'
 
-    // 4. 非適格仕訳のログ（情報のみ。手動修正は不要）
+    if (shouldStripInvoiceKind) {
+      // 免税/簡易/不明: invoice_kindを全branchの借方・貸方から除去
+      for (const branch of payload.branches) {
+        delete (branch.debitor as Record<string, unknown>).invoice_kind
+        delete (branch.creditor as Record<string, unknown>).invoice_kind
+      }
+      if (invoiceKind) {
+        console.log(`[mfSender] invoice_kind除去: ${sugusruId}（taxMethod=${taxMethod ?? '不明'}, 元値=${invoiceKind}）`)
+      }
+    }
+
+    // 4. 非適格仕訳のログ（情報のみ。本則の場合のみMFに送信される）
     if (hasNonQualified) {
       console.log(
-        `[mfSender] 非適格仕訳: ${sugusruId}（invoice_kind=${invoiceKind}）MFにそのまま送信`
+        `[mfSender] 非適格仕訳: ${sugusruId}（invoice_kind=${invoiceKind}, taxMethod=${taxMethod}）${shouldStripInvoiceKind ? '→除去済み' : '→そのまま送信'}`
       )
     }
 
-    // 5. MCP送信（invoice_kind含むペイロードをそのまま送信）
-    console.log(`[mfSender] 送信: ${sugusruId} → MF（${payload.branches.length}行, ${payload.transaction_date}）`)
+    // 5. MCP送信
+    console.log(`[mfSender] 送信: ${sugusruId} → MF（${payload.branches.length}行, ${payload.transaction_date}, taxMethod=${taxMethod ?? '不明'}）`)
     const response = await mcpCreateJournal(payload, tokenKey)
 
     // 6. レスポンス解析（MfJournalResponse型）

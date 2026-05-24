@@ -55,7 +55,7 @@ export const clientFieldsFlat: FieldDef[] = [
   // ── 基本情報 ──
   { key: 'heading_basic', label: '基本情報', section: '', component: 'heading', widthPercent: 100, order: 1, headingSize: 14, headingBg: '#4a8dc9', deletable: true },
   { key: 'status', label: '契約状況', section: '', component: 'select', widthPercent: 20, order: 2, cssClass: 'ce-status', options: 'STATUS_OPTIONS' },
-  { key: 'type', label: '区分', section: '', component: 'select', widthPercent: 20, order: 3, options: 'TYPE_OPTIONS' },
+  { key: 'type', label: '区分', section: '', component: 'select', widthPercent: 20, order: 3, options: 'TYPE_OPTIONS', mfSource: true },
   { key: 'engagementStartDate', label: '関与開始日', section: '', component: 'date', widthPercent: 20, order: 4, smallWidth: true },
   { key: 'engagementEndDate', label: '関与終了日', section: '', component: 'date', widthPercent: 20, order: 5, smallWidth: true },
   { key: 'staffId', label: '担当者', section: '', component: 'staffSelect', widthPercent: 20, order: 6, modelKey: 'staffId' },
@@ -64,11 +64,11 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'progressLink', label: '進捗管理', section: '', component: 'link', widthPercent: 20, order: 9 },
   { key: 'clientId', label: '内部ID', section: '', component: 'readonly', widthPercent: 20, order: 10, alwaysReadonly: true, cssClass: 'ce-muted' },
   { key: 'threeCode', label: '3コード', section: '', component: 'text', widthPercent: 20, order: 11, required: true, maxLength: 3, placeholder: 'ABC', smallWidth: true, cssClass: 'ce-code' },
-  { key: 'companyName', label: '会社名', section: '', component: 'text', widthPercent: 20, order: 12, placeholder: '株式会社サンプル' },
+  { key: 'companyName', label: '会社名', section: '', component: 'text', widthPercent: 20, order: 12, placeholder: '株式会社サンプル', mfSource: { when: { field: 'type', value: 'corp' } } },
   { key: 'companyNameKana', label: '会社名（カナ）', section: '', component: 'text', widthPercent: 20, order: 13, placeholder: 'カブシキガイシャサンプル' },
   { key: 'corporateNumber', label: '法人番号', section: '', component: 'text', widthPercent: 20, order: 14, maxLength: 13, placeholder: '13桁', smallWidth: true, warnText: '※マイナンバーは入れない' },
   { key: 'repTitle', label: '代表肩書', section: '', component: 'text', widthPercent: 20, order: 15, placeholder: '代表取締役' },
-  { key: 'repName', label: '代表者名', section: '', component: 'text', widthPercent: 20, order: 16, placeholder: '山田 太郎' },
+  { key: 'repName', label: '代表者名', section: '', component: 'text', widthPercent: 20, order: 16, placeholder: '山田 太郎', mfSource: { when: { field: 'type', value: ['individual', 'sole_proprietor'] } } },
   { key: 'repNameKana', label: '代表者名（カナ）', section: '', component: 'text', widthPercent: 20, order: 17, placeholder: 'ヤマダ タロウ' },
 
   // ── ニーズ管理 ──
@@ -81,7 +81,7 @@ export const clientFieldsFlat: FieldDef[] = [
 
   // ── 決算・税務 ──
   { key: 'heading_fiscal', label: '決算・税務', section: '', component: 'heading', widthPercent: 100, order: 30, headingSize: 13, headingBg: '#7fb0d4', deletable: true },
-  { key: 'fiscalDate', label: '決算日', section: '', component: 'dateGroup', widthPercent: 20, order: 31 },
+  { key: 'fiscalDate', label: '決算日', section: '', component: 'dateGroup', widthPercent: 20, order: 31, mfSource: true },
   { key: 'consumptionTaxInterim', label: '消費税中間申告', section: '', component: 'select', widthPercent: 20, order: 32, options: 'CONSUMPTION_TAX_INTERIM_OPTIONS' },
   { key: 'isInvoiceRegistered', label: 'インボイス登録', section: '', component: 'checkbox', widthPercent: 20, order: 33 },
   { key: 'invoiceRegistrationNumber', label: '登録番号', section: '', component: 'text', widthPercent: 20, order: 34, placeholder: 'T1234567890123', visibleWhen: { field: 'isInvoiceRegistered', value: true } },
@@ -95,8 +95,8 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'uploadUrlStaff', label: '社内用アップロードURL（自動）', section: '', component: 'url', widthPercent: 20, order: 44, alwaysReadonly: true },
   { key: 'uploadUrlGuest', label: '顧問先用アップロードURL（自動）', section: '', component: 'url', widthPercent: 20, order: 45, alwaysReadonly: true },
   { key: 'annualRevenue', label: '売上高', section: '', component: 'select', widthPercent: 20, order: 46, options: 'ANNUAL_REVENUE_OPTIONS' },
-  { key: 'employeeCount', label: '総従業員数', section: '', component: 'number', widthPercent: 20, order: 47, smallWidth: true, min: 0 },
-  { key: 'industry', label: '業種', section: '', component: 'select', widthPercent: 20, order: 48, options: 'INDUSTRY_OPTIONS' },
+  { key: 'employeeCount', label: '総従業員数', section: '', component: 'number', widthPercent: 20, order: 47, smallWidth: true, min: 0, mfSource: { when: { field: 'type', value: 'corp' } } },
+  { key: 'industry', label: '業種', section: '', component: 'select', widthPercent: 20, order: 48, options: 'INDUSTRY_OPTIONS', mfSource: true },
   { key: 'parentCompany', label: '親号先/グループ会社', section: '', component: 'text', widthPercent: 20, order: 49 },
   { key: 'businessDescription', label: '事業内容', section: '', component: 'textarea', widthPercent: 60, order: 50, placeholder: '事業内容の詳細' },
   { key: 'attachmentFiles', label: '添付ファイル', section: '', component: 'file', widthPercent: 40, order: 51 },
@@ -117,13 +117,13 @@ export const clientFieldsFlat: FieldDef[] = [
   { key: 'heading_accounting', label: '会計設定', section: '', component: 'heading', widthPercent: 100, order: 70, headingSize: 14, headingBg: '#4a8dc9', deletable: true },
   { key: 'accountingSoftware', label: '会計ソフト', section: '', component: 'select', widthPercent: 20, order: 71, options: 'ACCOUNTING_SOFTWARE_OPTIONS' },
   { key: 'taxFilingType', label: '確定申告', section: '', component: 'select', widthPercent: 20, order: 72, options: 'TAX_FILING_OPTIONS' },
-  { key: 'consumptionTaxMode', label: '課税方式', section: '', component: 'select', widthPercent: 20, order: 73, options: 'TAX_MODE_OPTIONS' },
+  { key: 'consumptionTaxMode', label: '課税方式', section: '', component: 'select', widthPercent: 20, order: 73, options: 'TAX_MODE_OPTIONS', mfSource: true },
   { key: 'simplifiedTaxCategory', label: '事業区分', section: '', component: 'select', widthPercent: 20, order: 74, options: 'SIMPLIFIED_CATEGORY_OPTIONS', visibleWhen: { field: 'consumptionTaxMode', value: 'simplified' } },
-  { key: 'taxMethod', label: '税込/税抜', section: '', component: 'select', widthPercent: 20, order: 75, options: 'TAX_METHOD_OPTIONS' },
+  { key: 'taxMethod', label: '税込/税抜', section: '', component: 'select', widthPercent: 20, order: 75, options: 'TAX_METHOD_OPTIONS', mfSource: { when: { field: 'type', value: 'corp' } } },
   { key: 'calculationMethod', label: '経理方式', section: '', component: 'select', widthPercent: 20, order: 76, options: 'CALCULATION_METHOD_OPTIONS' },
   { key: 'defaultPaymentMethod', label: 'デフォルト支払方法', section: '', component: 'select', widthPercent: 20, order: 77, options: 'DEFAULT_PAYMENT_OPTIONS' },
-  { key: 'hasDepartmentManagement', label: '部門管理', section: '', component: 'checkbox', widthPercent: 20, order: 78 },
-  { key: 'hasRentalIncome', label: '不動産所得', section: '', component: 'checkbox', widthPercent: 20, order: 79, hint: '有効にすると不動産関連15科目が選択可能になります', visibleWhen: { field: 'type', value: ['individual', 'sole_proprietor'] } },
+  { key: 'hasDepartmentManagement', label: '部門管理', section: '', component: 'checkbox', widthPercent: 20, order: 78, mfSource: true },
+  { key: 'hasRentalIncome', label: '不動産所得', section: '', component: 'checkbox', widthPercent: 20, order: 79, hint: '有効にすると不動産関連15科目が選択可能になります', visibleWhen: { field: 'type', value: ['individual', 'sole_proprietor'] }, mfSource: { when: { field: 'type', value: ['individual', 'sole_proprietor'] } } },
 
   // ── スペーサー ──
   { key: 'spacer_3', label: '', section: '', component: 'spacer', widthPercent: 100, order: 85, spacerHeight: 20, deletable: true },

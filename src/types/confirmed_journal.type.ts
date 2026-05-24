@@ -106,6 +106,17 @@ export interface ConfirmedJournal {
    * CSVインポート時はnull。
    */
   mf_raw?: Record<string, unknown> | null
+
+  // ── MF送信結果（Sugusru→MF送信時に付与） ──
+
+  /** MF仕訳ID（送信成功時にMF APIが返すID。Base64エンコード文字列） */
+  mf_journal_id?: string | null
+  /** MF取引No（送信成功時にMF APIが返す番号。自動採番） */
+  mf_journal_number?: number | null
+  /** MF送信日時（ISO 8601） */
+  mf_sent_at?: string | null
+  /** 送信ステータス: null=未送信, 'exported'=送信済み */
+  export_status?: 'exported' | null
 }
 
 // ============================================================

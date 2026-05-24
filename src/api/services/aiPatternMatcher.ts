@@ -23,7 +23,9 @@ import {
   mcpFetchTermSettings,
 } from "./mfMcpClient";
 import { importMfJournals, commitMfImport, discardMfImport } from "./mfJournalImporter";
-import { saveClientAccounts, saveClientTaxCategories } from "./accountMasterStore";
+import { saveClientAccounts, saveClientTaxCategories, getAllAccounts } from "./accountMasterStore";
+import type { Account, AccountTarget, AccountGroup, TaxDetermination } from "../../types/shared-account";
+import type { TaxCategory, TaxDirection } from "../../types/shared-tax-category";
 
 /** パターンマッチ結果 */
 export interface PatternMatchResult {
@@ -560,30 +562,67 @@ async function executeMfSync(
     }
 
     if (subLabel === '全データ取込' || subLabel === '科目マスタのみ') {
-      // mcpFetchAccountsはラッパーを剥がしてMfMcpAccount[]を返す
-      const accounts = await mcpFetchAccounts(clientId);
-      const mapped = accounts.map((a) => ({
+      const allAccounts = await mcpFetchAccounts(clientId);
+      // available=trueのみ保存（利用不可科目を除外）
+      const available = allAccounts.filter((a) => a.available);
+      const mapped: Account[] = available.map((a, idx) => ({
         id: a.id,
         name: a.name,
+        target: 'both' as AccountTarget,
+        accountGroup: 'PL_EXPENSE' as AccountGroup, // MF→Sugusru変換はSupabase移行時に実施
         category: a.category,
-        subCategory: '',
-        code: a.search_key ?? '',
+        defaultTaxCategoryId: undefined,
+        taxDetermination: 'fixed' as TaxDetermination,
+        deprecated: false,
+        effectiveFrom: '2019-10-01',
+        effectiveTo: null,
+        sortOrder: idx + 1,
+        // MF連携フィールド
+        mfAccountId: a.id,
+        mfAccountGroup: a.account_group,
+        mfFinancialStatementType: a.financial_statement_type,
+        mfDefaultTaxId: a.tax_id,
       }));
-      saveClientAccounts(clientId, mapped as never[]);
-      results.push(`✅ 勘定科目: ${accounts.length}件を取得・保存`);
+      saveClientAccounts(clientId, mapped);
+
+      // Sugusruマスタと名前突合 → 未マッチ科目を警告表示
+      const sugusruAccounts = getAllAccounts();
+      const sugusruNames = new Set(sugusruAccounts.map(a => a.name));
+      const matchedCount = available.filter(a => sugusruNames.has(a.name)).length;
+      const unmatched = available.filter(a => !sugusruNames.has(a.name));
+
+      let msg = `✅ 勘定科目: ${allAccounts.length}件取得 → ${available.length}件保存`;
+      msg += `（Sugusruマスタとのマッチ: ${matchedCount}件 / 未マッチ: ${unmatched.length}件）`;
+      if (unmatched.length > 0) {
+        msg += `\n\n⚠️ **Sugusruマスタにない科目（${unmatched.length}件）:**\n`;
+        msg += unmatched.slice(0, 20).map(a => `- ${a.name}`).join('\n');
+        if (unmatched.length > 20) {
+          msg += `\n- …他${unmatched.length - 20}件`;
+        }
+      }
+      results.push(msg);
     }
 
     if (subLabel === '全データ取込' || subLabel === '税区分マスタのみ') {
-      // mcpFetchTaxesはラッパーを剥がしてMfMcpTax[]を返す
-      const taxes = await mcpFetchTaxes(clientId);
-      const mapped = taxes.map((t) => ({
+      const allTaxes = await mcpFetchTaxes(clientId);
+      // 免税事業者は全件available=false → フィルタなしで全件保存
+      // activeプロパティにavailableを設定し、UI側のフィルタで制御
+      const mapped: TaxCategory[] = allTaxes.map((t, idx) => ({
         id: t.id,
         name: t.name,
-        code: t.abbreviation ?? '',
-        rate: t.tax_rate,
+        shortName: t.abbreviation ?? '',
+        direction: 'common' as TaxDirection,
+        qualified: false,
+        aiSelectable: t.available,
+        active: t.available,
+        deprecated: !t.available,
+        effectiveFrom: '2019-10-01',
+        effectiveTo: null,
+        defaultVisible: t.available,
+        displayOrder: idx + 1,
       }));
-      saveClientTaxCategories(clientId, mapped as never[]);
-      results.push(`✅ 税区分: ${taxes.length}件を取得・保存`);
+      saveClientTaxCategories(clientId, mapped);
+      results.push(`✅ 税区分: ${allTaxes.length}件を取得・保存（available=${allTaxes.filter(t => t.available).length}件）`);
     }
 
     if (subLabel === '取引先マスタのみ') {

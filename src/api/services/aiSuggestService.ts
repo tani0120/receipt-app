@@ -1,17 +1,21 @@
 /**
- * aiSuggestService.ts — AI提案サービス（gemini-3.5-flash）
+ * aiSuggestService.ts — AI提案サービス（層2: コマンド提案 + 自由回答）
  *
  * レイヤー: aiCommandRoutes → ★service★
- * 責務: ユーザーの自由テキスト → コマンドカタログから3〜5個の候補を提案
+ * 責務:
+ *   - ユーザーの自由テキスト → コマンド候補提案 or 自由回答
+ *   - LLM自身がモード（suggest/answer）を判定
  *
  * 準拠:
+ *   - 34_command_catalog.md 処理フロー（Layer構造）
  *   - 35_parts_catalog.md 処理部品 aiSuggest
  *   - 36_infra_ui.md §2-12 AI提案フロー
  */
 
-import { GoogleGenAI } from '@google/genai'
-import { COMMAND_CATALOG, CATALOG_JSON_FOR_PROMPT, VALID_COMMAND_IDS } from './commandCatalog'
+import { GoogleGenAI, ThinkingLevel } from '@google/genai'
+import { COMMAND_CATALOG, VALID_COMMAND_IDS } from './commandCatalog'
 import type { CommandDef } from './commandCatalog'
+import { getLayer2SystemPrompt } from './aiContextProvider'
 
 /** AI提案の1件 */
 export interface AiSuggestion {
@@ -20,66 +24,70 @@ export interface AiSuggestion {
   description: string
 }
 
-/** AI提案レスポンス */
+/** 層2 AI応答（suggest or answer） */
+export interface AiLayer2Response {
+  /** モード: suggest=コマンド候補, answer=自由回答 */
+  mode: 'suggest' | 'answer'
+  /** コマンド候補（suggestモード） */
+  suggestions: AiSuggestion[]
+  /** 自由回答テキスト（answerモード） */
+  answer?: string
+  /** 補足説明（任意） */
+  supplement?: string
+  /** トークン使用量（コスト計算用） */
+  usage?: {
+    inputTokens: number
+    outputTokens: number
+    totalTokens: number
+  }
+}
+
+/** 後方互換: 旧レスポンス型 */
 export interface AiSuggestResponse {
   suggestions: AiSuggestion[]
 }
 
-// ---------- システムプロンプト（35_parts_catalog.md aiSuggest準拠） ----------
-const SYSTEM_PROMPT = `あなたは会計事務所向け業務アプリ「sugu-sru」のコマンドアシスタントです。
-ユーザーの自然言語入力を受け取り、以下のコマンドカタログから
-意図に合うものを3〜5個選んでください。
-
-ルール:
-1. カタログに存在するコマンドIDのみ返すこと。存在しないIDを生成するな。
-2. 各候補に「このコマンドでできること」の1行説明を付けること。
-   説明はユーザーの入力に合わせてカスタマイズせよ。
-3. 入力が曖昧な場合は、広めに候補を出すこと（絞りすぎるな）。
-4. パラメータは返すな（人間が入力する）。
-5. 該当するコマンドが全くない場合は suggestions を空配列 [] で返せ。
-
-レスポンス形式（JSON）:
-{
-  "suggestions": [
-    { "command": "コマンドID", "label": "表示名", "description": "1行説明" }
-  ]
-}
-
-コマンドカタログ:
-${CATALOG_JSON_FOR_PROMPT}`
-
 /**
- * AI提案を取得（gemini-3.5-flash）
+ * 層2 AI応答を取得（コマンド提案 or 自由回答）
+ *
+ * @param userText ユーザー入力テキスト
+ * @param clientId 選択中の顧問先ID
+ * @param model 使用モデル（デフォルト: gemini-3.5-flash）
+ * @param thinkingLevel thinking設定（デフォルト: low）
  */
-export async function suggestCommands(
+export async function suggestCommandsLayer2(
   userText: string,
   clientId: string,
-): Promise<AiSuggestResponse> {
+  model = 'gemini-3.5-flash',
+  thinkingLevel: ThinkingLevel = ThinkingLevel.LOW,
+): Promise<AiLayer2Response> {
   const apiKey = process.env['GEMINI_API_KEY']
   if (!apiKey) {
     console.warn('[aiSuggestService] GEMINI_API_KEY未設定。空の提案を返します')
-    return { suggestions: [] }
+    return { mode: 'suggest', suggestions: [] }
   }
 
   const client = new GoogleGenAI({ apiKey })
+  const systemPrompt = getLayer2SystemPrompt()
   const userPrompt = `ユーザー入力: 「${userText}」\n顧問先: ${clientId}`
 
   try {
     const response = await client.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model,
       contents: userPrompt,
       config: {
-        systemInstruction: SYSTEM_PROMPT,
+        systemInstruction: systemPrompt,
         temperature: 0,
         responseMimeType: 'application/json',
+        thinkingConfig: { thinkingLevel },
       },
     })
 
     const text = response.text?.trim() ?? '{}'
-    const parsed = JSON.parse(text) as AiSuggestResponse
+    const parsed = JSON.parse(text) as AiLayer2Response
 
-    // バリデーション: カタログに存在するコマンドIDのみ残す
-    const validated = (parsed.suggestions ?? []).filter(s => {
+    // suggestionsのバリデーション: カタログに存在するコマンドIDのみ残す
+    const validatedSuggestions = (parsed.suggestions ?? []).filter(s => {
       if (!VALID_COMMAND_IDS.has(s.command)) {
         console.warn(`[aiSuggestService] カタログ外コマンド除外: ${s.command}`)
         return false
@@ -87,12 +95,39 @@ export async function suggestCommands(
       return true
     })
 
-    return { suggestions: validated }
+    // トークン使用量を取得
+    const usage = response.usageMetadata
+      ? {
+          inputTokens: response.usageMetadata.promptTokenCount ?? 0,
+          outputTokens: response.usageMetadata.candidatesTokenCount ?? 0,
+          totalTokens: response.usageMetadata.totalTokenCount ?? 0,
+        }
+      : undefined
+
+    return {
+      mode: parsed.mode ?? (validatedSuggestions.length > 0 ? 'suggest' : 'answer'),
+      suggestions: validatedSuggestions,
+      answer: parsed.answer,
+      supplement: parsed.supplement,
+      usage,
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`[aiSuggestService] AI提案失敗: ${message}`)
-    return { suggestions: [] }
+    return { mode: 'suggest', suggestions: [] }
   }
+}
+
+/**
+ * 後方互換: 層1 AI提案（コマンド候補のみ）
+ * 既存のaiCommandRoutes.tsから呼ばれている箇所用
+ */
+export async function suggestCommands(
+  userText: string,
+  clientId: string,
+): Promise<AiSuggestResponse> {
+  const result = await suggestCommandsLayer2(userText, clientId)
+  return { suggestions: result.suggestions }
 }
 
 /** コマンドカタログを公開（フロントのコマンドブラウザ用） */

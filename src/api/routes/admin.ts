@@ -10,6 +10,7 @@ import { getAll as getAllClients } from '../services/clientStore'
 import { getAll as getAllStaff } from '../services/staffStore'
 import { getJournals } from '../services/journalStore'
 import type { DocEntry } from '../../repositories/types'
+import { getMonthlyTotalCost, getStaffMonthlyCosts, getClientMonthlyCosts, getStaffAnnualCost, getAnnualTotalCost } from '../services/aiLogStore'
 
 const app = new Hono()
 
@@ -197,21 +198,25 @@ const route = app
       // スタッフ集計
       const activeStaffCount = staff.filter(s => s.status === 'active').length
 
-      // スタッフ分析データ生成
-      const staffAnalysis = staff.map(s => ({
-        staffId: s.uuid,
-        name: s.name,
-        role: s.role ?? '一般',
-        status: s.status,
-        performance: {
-          monthlyJournals: 0, processingTime: '0h', velocityPerHour: 0,
-          thisMonthJournals: 0, monthlyAvgJournals: 0, annualApiCost: 0,
-          velocityThisMonth: 0, velocityAvg: 0, velocityPerHourAvg: 0,
-          velocity: { draftAvg: 0 }
-        },
-        backlogs: { total: 0, draft: 0 },
-        backlog: {}
-      }))
+      // スタッフ分析データ生成（annualApiCostはaiLogStoreから実データ取得）
+      const staffAnalysis = staff.map(s => {
+        const annualCost = getStaffAnnualCost(s.uuid);
+        return {
+          staffId: s.uuid,
+          name: s.name,
+          role: s.role ?? '一般',
+          status: s.status,
+          performance: {
+            monthlyJournals: 0, processingTime: '0h', velocityPerHour: 0,
+            thisMonthJournals: 0, monthlyAvgJournals: 0,
+            annualApiCost: Math.round(annualCost),
+            velocityThisMonth: 0, velocityAvg: 0, velocityPerHourAvg: 0,
+            velocity: { draftAvg: 0 }
+          },
+          backlogs: { total: 0, draft: 0 },
+          backlog: {}
+        };
+      })
 
       // ステータス別カウント（T-31-6: ページ側のfilterカウントをサーバー移植）
       const staffStatusCounts = {
@@ -326,7 +331,7 @@ const route = app
       const byClient = aggregateMetrics(docs, 'clientId');
       const byStaff = aggregateMetrics(docs, 'createdBy');
 
-      // 全体集計
+      // 全体集計（OCRパイプライン）
       let promptTokens = 0, completionTokens = 0, thinkingTokens = 0;
       let totalCostYen = 0, totalLatency = 0;
       for (const doc of withMetrics) {
@@ -338,16 +343,76 @@ const route = app
         totalLatency += m.duration_ms;
       }
 
+      // AIコマンドコストを統合（aiLogStoreから）
+      const aiCmdTotal = getMonthlyTotalCost();
+      const aiCmdByStaff = getStaffMonthlyCosts();
+      const aiCmdByClient = getClientMonthlyCosts();
+
+      // 全体にAIコマンドコストを加算
+      const mergedTotal = {
+        totalCalls: withMetrics.length + aiCmdTotal.requestCount,
+        promptTokens: promptTokens + aiCmdTotal.promptTokens,
+        completionTokens: completionTokens + aiCmdTotal.completionTokens,
+        thinkingTokens,
+        totalTokens: promptTokens + completionTokens + aiCmdTotal.promptTokens + aiCmdTotal.completionTokens,
+        totalCostYen: Math.round((totalCostYen + aiCmdTotal.estimatedCostYen) * 10000) / 10000,
+        avgLatencyMs: withMetrics.length > 0 ? Math.round(totalLatency / withMetrics.length) : 0,
+      };
+
+      // スタッフ別: AIコマンドコストをマージ
+      for (const sc of aiCmdByStaff) {
+        const existing = byStaff.find(s => s.key === sc.staffId);
+        if (existing) {
+          existing.totalCalls += sc.requestCount;
+          existing.promptTokens += sc.promptTokens;
+          existing.completionTokens += sc.completionTokens;
+          existing.totalTokens += sc.totalTokens;
+          existing.totalCostYen = Math.round((existing.totalCostYen + sc.estimatedCostYen) * 10000) / 10000;
+        } else {
+          byStaff.push({
+            key: sc.staffId,
+            totalCalls: sc.requestCount,
+            promptTokens: sc.promptTokens,
+            completionTokens: sc.completionTokens,
+            thinkingTokens: sc.thinkingTokens,
+            totalTokens: sc.totalTokens,
+            totalCostYen: Math.round(sc.estimatedCostYen * 10000) / 10000,
+            avgLatencyMs: 0,
+            model: 'gemini-3.5-flash',
+          });
+        }
+      }
+
+      // 顧問先別: AIコマンドコストをマージ
+      for (const cc of aiCmdByClient) {
+        const existing = byClient.find(c => c.key === cc.clientId);
+        if (existing) {
+          existing.totalCalls += cc.requestCount;
+          existing.promptTokens += cc.promptTokens;
+          existing.completionTokens += cc.completionTokens;
+          existing.totalTokens += cc.totalTokens;
+          existing.totalCostYen = Math.round((existing.totalCostYen + cc.estimatedCostYen) * 10000) / 10000;
+        } else {
+          byClient.push({
+            key: cc.clientId,
+            totalCalls: cc.requestCount,
+            promptTokens: cc.promptTokens,
+            completionTokens: cc.completionTokens,
+            thinkingTokens: 0,
+            totalTokens: cc.totalTokens,
+            totalCostYen: Math.round(cc.estimatedCostYen * 10000) / 10000,
+            avgLatencyMs: 0,
+            model: 'gemini-3.5-flash',
+          });
+        }
+      }
+
+      // コスト降順で再ソート
+      byStaff.sort((a, b) => b.totalCostYen - a.totalCostYen);
+      byClient.sort((a, b) => b.totalCostYen - a.totalCostYen);
+
       return c.json({
-        total: {
-          totalCalls: withMetrics.length,
-          promptTokens,
-          completionTokens,
-          thinkingTokens,
-          totalTokens: promptTokens + completionTokens,
-          totalCostYen: Math.round(totalCostYen * 10000) / 10000,
-          avgLatencyMs: withMetrics.length > 0 ? Math.round(totalLatency / withMetrics.length) : 0,
-        },
+        total: mergedTotal,
         byClient,
         byStaff,
       });

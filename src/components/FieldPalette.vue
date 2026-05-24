@@ -88,6 +88,9 @@
           <button class="fp-restore-btn" @click="emit('restore-field', item.key)" title="表示に戻す">
             <i class="fa-solid fa-eye"></i>
           </button>
+          <button v-if="isDeletable(item)" class="fp-delete-btn" @click="onDeleteHiddenField(item)" title="完全に削除">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -144,6 +147,15 @@
       :message="`「${protectedFieldNames.join(', ')}」はクライアント型のフィールドのため削除できません。非表示にすることは可能です。`"
       variant="warning"
       @close="showProtectedNotice = false"
+    />
+    <!-- 非表示フィールド完全削除確認モーダル -->
+    <ConfirmModal
+      :show="showDeleteHiddenConfirm"
+      title="完全に削除しますか？"
+      :message="`「${pendingDeleteHiddenField?.label || ''}」を完全に削除します。この操作は取り消せません。`"
+      variant="danger"
+      @confirm="confirmDeleteHidden"
+      @cancel="cancelDeleteHidden"
     />
   </div>
 </template>
@@ -351,6 +363,26 @@ const cancelHideDrop = () => {
   showHideConfirm.value = false;
 };
 
+/** 非表示一覧から完全削除（確認モーダル表示） */
+const pendingDeleteHiddenField = ref<FieldDef | null>(null);
+const showDeleteHiddenConfirm = ref(false);
+
+const onDeleteHiddenField = (field: FieldDef) => {
+  pendingDeleteHiddenField.value = field;
+  showDeleteHiddenConfirm.value = true;
+};
+const confirmDeleteHidden = () => {
+  if (pendingDeleteHiddenField.value) {
+    emit('delete-field', pendingDeleteHiddenField.value.key);
+  }
+  pendingDeleteHiddenField.value = null;
+  showDeleteHiddenConfirm.value = false;
+};
+const cancelDeleteHidden = () => {
+  pendingDeleteHiddenField.value = null;
+  showDeleteHiddenConfirm.value = false;
+};
+
 /** 構造部材のクローン（ユニークキー生成） */
 const cloneStructurePart = (item: PaletteItem): FieldDef => ({
   key: `${item.component}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
@@ -529,6 +561,20 @@ const syncOptions = () => {
 }
 .fp-restore-btn:hover {
   background: rgba(0,0,0,0.1);
+}
+.fp-delete-btn {
+  background: none;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  margin-left: 2px;
+}
+.fp-delete-btn:hover {
+  background: #fee2e2;
+  color: #991b1b;
 }
 /* ドロップゾーン共通 */
 .fp-drop-zone {

@@ -528,10 +528,23 @@ export function useAdminDashboard() {
         byStaff: { key: string; totalCostYen: number }[];
       };
 
+      // コスト設定（モデル・単価・為替・年間合計）を取得
+      let annualTotal = 0;
+      try {
+        const configRes = await fetch('/api/ai-command/cost/config');
+        if (configRes.ok) {
+          const config = await configRes.json() as { annualTotalCostYen: number };
+          annualTotal = config.annualTotalCostYen;
+        }
+      } catch { /* 取得失敗時は0 */ }
+
       // 全社指標: API費用・トークン数を反映
+      const thisMonthCost = Math.round(body.total.totalCostYen);
       data.value.kpiProductivity.apiCost = {
         ...data.value.kpiProductivity.apiCost,
-        thisMonthForecast: Math.round(body.total.totalCostYen),
+        thisMonthForecast: thisMonthCost,
+        thisYear: Math.round(annualTotal + thisMonthCost),
+        monthlyAvg: thisMonthCost > 0 ? thisMonthCost : 0, // 初月は今月=月平均
         promptTokens: body.total.promptTokens,
         completionTokens: body.total.completionTokens,
         totalTokens: body.total.totalTokens,
@@ -551,7 +564,17 @@ export function useAdminDashboard() {
         }
       }
 
-      console.log(`[useAdminDashboard] AI費用: ¥${Math.round(body.total.totalCostYen)}, ${body.total.totalCalls}回, ${body.total.totalTokens}トークン`);
+      // スタッフ別: API費用を反映
+      if (body.byStaff && data.value.staffAnalysis) {
+        for (const ss of body.byStaff) {
+          const match = data.value.staffAnalysis.find(s => s.staffId === ss.key);
+          if (match) {
+            match.performance.annualApiCost = Math.round(ss.totalCostYen);
+          }
+        }
+      }
+
+      console.log(`[useAdminDashboard] AI費用: ¥${thisMonthCost}, ${body.total.totalCalls}回, ${body.total.totalTokens}トークン, 年間: ¥${Math.round(annualTotal)}`);
     } catch (e) {
       console.warn('[useAdminDashboard] AI費用集計取得失敗:', e);
     }

@@ -193,7 +193,7 @@ export function getAllChatSessions(): AiChatSession[] {
 }
 
 // ============================================================
-// コスト管理（§2-7: 仕訳操作 vs MCP質問の2分類）
+// コスト管理（§2-7: 実データ集計）
 // ============================================================
 
 /** 今月のYYYY-MM文字列を取得 */
@@ -202,22 +202,37 @@ function getCurrentYearMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-/** 今月のコスト集計（操作ログから算出） */
-export function getMonthlyCost(category: AiCostCategory): AiCostRecord {
-  const yearMonth = getCurrentYearMonth();
-  const monthLogs = commandLogs.filter(l => {
-    return l.costCategory === category && l.executedAt.startsWith(yearMonth);
-  });
+/** 指定年月のログをフィルタ */
+function filterByYearMonth(yearMonth: string): AiCommandLog[] {
+  return commandLogs.filter(l => l.executedAt.startsWith(yearMonth));
+}
 
+/** ログ配列からコスト集計 */
+function aggregateCost(logs: AiCommandLog[], yearMonth: string, category?: AiCostCategory): AiCostRecord {
+  const filtered = category ? logs.filter(l => l.costCategory === category) : logs;
   return {
     yearMonth,
-    category,
-    requestCount: monthLogs.length,
-    // TODO: 実際のトークン数・費用はAI応答のメタデータから取得する。現在は0
-    estimatedCostYen: 0,
-    promptTokens: 0,
-    completionTokens: 0,
+    category: category ?? 'mcp_query',
+    requestCount: filtered.length,
+    estimatedCostYen: filtered.reduce((sum, l) => sum + (l.estimatedCostYen ?? 0), 0),
+    promptTokens: filtered.reduce((sum, l) => sum + (l.promptTokens ?? 0), 0),
+    completionTokens: filtered.reduce((sum, l) => sum + (l.completionTokens ?? 0), 0),
   };
+}
+
+/** 今月のコスト集計（カテゴリ別） */
+export function getMonthlyCost(category: AiCostCategory): AiCostRecord {
+  const yearMonth = getCurrentYearMonth();
+  return aggregateCost(filterByYearMonth(yearMonth), yearMonth, category);
+}
+
+/** 今月の全コスト集計（カテゴリ横断） */
+export function getMonthlyTotalCost(): AiCostRecord {
+  const yearMonth = getCurrentYearMonth();
+  const logs = filterByYearMonth(yearMonth);
+  const result = aggregateCost(logs, yearMonth);
+  result.requestCount = logs.length;
+  return result;
 }
 
 /** 両分類のコスト取得 */
@@ -226,6 +241,169 @@ export function getAllMonthlyCosts(): AiCostRecord[] {
     getMonthlyCost('journal_operation'),
     getMonthlyCost('mcp_query'),
   ];
+}
+
+/** スタッフ別コスト集計結果 */
+export interface StaffCostSummary {
+  staffId: string
+  requestCount: number
+  promptTokens: number
+  completionTokens: number
+  thinkingTokens: number
+  totalTokens: number
+  estimatedCostYen: number
+}
+
+/** スタッフ別の今月コスト集計 */
+export function getStaffMonthlyCosts(): StaffCostSummary[] {
+  const yearMonth = getCurrentYearMonth();
+  const logs = filterByYearMonth(yearMonth);
+
+  const map = new Map<string, StaffCostSummary>();
+  for (const l of logs) {
+    const key = l.staffId || 'unknown';
+    const existing = map.get(key) ?? {
+      staffId: key,
+      requestCount: 0,
+      promptTokens: 0,
+      completionTokens: 0,
+      thinkingTokens: 0,
+      totalTokens: 0,
+      estimatedCostYen: 0,
+    };
+    existing.requestCount++;
+    existing.promptTokens += l.promptTokens ?? 0;
+    existing.completionTokens += l.completionTokens ?? 0;
+    existing.thinkingTokens += l.thinkingTokens ?? 0;
+    existing.totalTokens += l.totalTokens ?? 0;
+    existing.estimatedCostYen += l.estimatedCostYen ?? 0;
+    map.set(key, existing);
+  }
+  return [...map.values()];
+}
+
+/** スタッフ別の年間コスト（管理画面staffタブ用） */
+export function getStaffAnnualCost(staffId: string): number {
+  const year = String(new Date().getFullYear());
+  return commandLogs
+    .filter(l => l.staffId === staffId && l.executedAt.startsWith(year))
+    .reduce((sum, l) => sum + (l.estimatedCostYen ?? 0), 0);
+}
+
+/** 顧問先別コスト集計結果 */
+export interface ClientCostSummary {
+  clientId: string
+  requestCount: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  estimatedCostYen: number
+}
+
+/** 顧問先別の今月コスト集計 */
+export function getClientMonthlyCosts(): ClientCostSummary[] {
+  const yearMonth = getCurrentYearMonth();
+  const logs = filterByYearMonth(yearMonth);
+
+  const map = new Map<string, ClientCostSummary>();
+  for (const l of logs) {
+    const key = l.clientId || 'unknown';
+    const existing = map.get(key) ?? {
+      clientId: key,
+      requestCount: 0,
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      estimatedCostYen: 0,
+    };
+    existing.requestCount++;
+    existing.promptTokens += l.promptTokens ?? 0;
+    existing.completionTokens += l.completionTokens ?? 0;
+    existing.totalTokens += l.totalTokens ?? 0;
+    existing.estimatedCostYen += l.estimatedCostYen ?? 0;
+    map.set(key, existing);
+  }
+  return [...map.values()];
+}
+
+/** スタッフ×顧問先クロス集計結果 */
+export interface CrossCostSummary {
+  staffId: string
+  clientId: string
+  requestCount: number
+  totalTokens: number
+  estimatedCostYen: number
+}
+
+/** スタッフ×顧問先のクロス集計（今月） */
+export function getCrossMonthlyCosts(): CrossCostSummary[] {
+  const yearMonth = getCurrentYearMonth();
+  const logs = filterByYearMonth(yearMonth);
+
+  const map = new Map<string, CrossCostSummary>();
+  for (const l of logs) {
+    const key = `${l.staffId || 'unknown'}:${l.clientId || 'unknown'}`;
+    const existing = map.get(key) ?? {
+      staffId: l.staffId || 'unknown',
+      clientId: l.clientId || 'unknown',
+      requestCount: 0,
+      totalTokens: 0,
+      estimatedCostYen: 0,
+    };
+    existing.requestCount++;
+    existing.totalTokens += l.totalTokens ?? 0;
+    existing.estimatedCostYen += l.estimatedCostYen ?? 0;
+    map.set(key, existing);
+  }
+  return [...map.values()];
+}
+
+/** モデル別集計結果 */
+export interface ModelCostSummary {
+  model: string
+  requestCount: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  estimatedCostYen: number
+  inputPricePerM: number
+  outputPricePerM: number
+}
+
+/** モデル別コスト集計（今月） */
+export function getModelMonthlyCosts(): ModelCostSummary[] {
+  const yearMonth = getCurrentYearMonth();
+  const logs = filterByYearMonth(yearMonth);
+
+  const map = new Map<string, ModelCostSummary>();
+  for (const l of logs) {
+    const key = l.model || 'unknown';
+    const existing = map.get(key) ?? {
+      model: key,
+      requestCount: 0,
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      estimatedCostYen: 0,
+      inputPricePerM: l.inputPricePerM ?? 0,
+      outputPricePerM: l.outputPricePerM ?? 0,
+    };
+    existing.requestCount++;
+    existing.promptTokens += l.promptTokens ?? 0;
+    existing.completionTokens += l.completionTokens ?? 0;
+    existing.totalTokens += l.totalTokens ?? 0;
+    existing.estimatedCostYen += l.estimatedCostYen ?? 0;
+    map.set(key, existing);
+  }
+  return [...map.values()];
+}
+
+/** 今年のAIコマンド費用合計（全スタッフ） */
+export function getAnnualTotalCost(): number {
+  const year = String(new Date().getFullYear());
+  return commandLogs
+    .filter(l => l.executedAt.startsWith(year))
+    .reduce((sum, l) => sum + (l.estimatedCostYen ?? 0), 0);
 }
 
 /** コスト上限設定を取得 */

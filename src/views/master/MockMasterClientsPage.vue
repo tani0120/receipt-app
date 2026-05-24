@@ -63,6 +63,16 @@
             <span class="cm-page-info">{{ pageStartIndex }}~{{ pageEndIndex }} / 全{{ totalCount }}件</span>
           </div>
           <div class="cm-csv-actions">
+            <button
+              class="cm-mf-import-btn"
+              :disabled="mfImportLoading"
+              @click="handleMfImport"
+              title="MF連携済み顧問先の事業所情報をインポート"
+            >
+              <i v-if="mfImportLoading" class="fa-solid fa-spinner fa-spin"></i>
+              <i v-else class="fa-solid fa-cloud-arrow-down"></i>
+              MFインポート
+            </button>
             <div class="cm-io-dropdown" :class="{ open: importDropdownOpen }" @click.stop>
               <button class="cm-admin-btn" @click="toggleImportDropdown">
                 <i class="fa-solid fa-file-import"></i> インポート <i class="fa-solid fa-caret-down" style="font-size:10px;margin-left:2px"></i>
@@ -145,7 +155,7 @@
                   <!-- 会社名 -->
                   <template v-else-if="col.key === 'companyName'">
                     <input v-if="inlineEditId === row.clientId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <span v-else>{{ (row.type === 'individual' || row.type === 'sole_proprietor') && row.repName ? row.repName : row.companyName }}</span>
+                    <span v-else><MfCloudIcon v-if="mfStatusMap[row.clientId]" :size="12" tooltip="MF連携済み" />{{ (row.type === 'individual' || row.type === 'sole_proprietor') && row.repName ? row.repName : row.companyName }}</span>
                   </template>
                   <!-- 担当者 -->
                   <template v-else-if="col.key === 'staffId'">
@@ -557,6 +567,7 @@ import { UI_MSG } from '@/constants/uiMessages';
 import { CLIENT_FIELD_LABELS } from '@/constants/fieldLabels';
 import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
 import type { FieldComponent } from '@/types/fieldLayout';
+import MfCloudIcon from '@/components/MfCloudIcon.vue';
 import {
   parseViewFromQuery,
   parseFiltersFromQuery,
@@ -1571,7 +1582,67 @@ const checkFiscalMonth = async (row: Client) => {
   }
 };
 
+// --- MFインポート ---
+const mfImportLoading = ref(false);
 
+/** MF連携済み顧問先の事業所情報をMCPから取得し、clientStoreに反映 */
+const handleMfImport = async () => {
+  const linkedIds = Object.entries(mfStatusMap.value)
+    .filter(([, v]) => v)
+    .map(([id]) => id);
+
+  if (linkedIds.length === 0) {
+    modal.notify({ title: 'MFインポート', message: 'MF連携済みの顧問先がありません。\n先に設定画面からOAuth連携を完了してください。', variant: 'warning' });
+    return;
+  }
+
+  const confirmed = await modal.confirm({
+    title: 'MFインポート',
+    message: `MF連携済みの ${linkedIds.length}件 の顧問先の事業所情報をMFクラウドから取得します。\n\n実行しますか？`,
+    confirmLabel: 'インポート実行',
+    cancelLabel: 'キャンセル',
+  });
+  if (!confirmed) return;
+
+  mfImportLoading.value = true;
+  try {
+    const res = await fetch('/api/mf/import-offices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientIds: linkedIds }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      modal.notify({ title: 'エラー', message: `MFインポートに失敗しました（${res.status}）\n${err}`, variant: 'warning' });
+      return;
+    }
+    const result = await res.json() as {
+      updated: number;
+      skipped: number;
+      errors: string[];
+      details: Array<{ clientId: string; threeCode: string; name: string; changes: string[] }>;
+    };
+
+    await refresh();
+
+    const detailLines = result.details
+      .filter((d: { changes: string[] }) => d.changes.length > 0)
+      .map((d: { threeCode: string; name: string; changes: string[] }) => `${d.threeCode}(${d.name}): ${d.changes.join(', ')}`)
+      .join('\n');
+    const errorLines = result.errors.length > 0 ? `\n\nエラー:\n${result.errors.join('\n')}` : '';
+
+    modal.notify({
+      title: '✅ MFインポート完了',
+      message: `更新: ${result.updated}件 / スキップ: ${result.skipped}件${detailLines ? `\n\n変更内容:\n${detailLines}` : ''}${errorLines}`,
+      variant: result.errors.length > 0 ? 'warning' : 'success',
+    });
+  } catch (e) {
+    console.error('[MFインポート] エラー:', e);
+    modal.notify({ title: 'エラー', message: 'MFインポート中にエラーが発生しました', variant: 'warning' });
+  } finally {
+    mfImportLoading.value = false;
+  }
+};
 
 /** Driveフォルダ自動作成（新規登録時） */
 const createDriveFolderForClient = async (client: Client) => {

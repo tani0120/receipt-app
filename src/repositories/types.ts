@@ -1001,6 +1001,8 @@ export interface AiCommandLog {
   executedAt: string
   /** 実行したスタッフID */
   staffId: string
+  /** 対象顧問先ID（クロス集計用） */
+  clientId: string
   /** ユーザーの自然言語入力 */
   inputText: string
   /** AIが判定したツール名 */
@@ -1021,6 +1023,29 @@ export interface AiCommandLog {
   context: AiCommandContext | null
   /** コスト分類 */
   costCategory: AiCostCategory
+
+  // ── クロス集計用フィールド（コスト追跡） ──
+
+  /** 使用モデル名（例: 'gemini-3.5-flash'） */
+  model?: string
+  /** 処理層（2=カタログ+FAQ, 3=Function Calling） */
+  layer?: 2 | 3
+  /** 入力トークン数 */
+  promptTokens?: number
+  /** 出力トークン数 */
+  completionTokens?: number
+  /** 思考トークン数 */
+  thinkingTokens?: number
+  /** 合計トークン数 */
+  totalTokens?: number
+  /** 入力単価（$/1Mトークン。記録時点の料金。後の検算用） */
+  inputPricePerM?: number
+  /** 出力単価（$/1Mトークン） */
+  outputPricePerM?: number
+  /** 推定コスト（円） */
+  estimatedCostYen?: number
+  /** 層3で呼び出したMCPツール名一覧 */
+  toolsCalled?: string[]
 }
 
 /** AIコマンドのコンテキスト情報（§2-10: 4レベル） */

@@ -88,7 +88,13 @@ export function useAiCommand() {
         throw new Error(`サーバーからJSON以外のレスポンス (${res.status}): ${raw.slice(0, 100)}`)
       }
 
-      const data: AiResponse = await res.json()
+      const data = await res.json() as AiResponse & { resolvedClientId?: string; resolvedClientName?: string }
+
+      // 顧問先が自動推定された場合、UIの選択状態を連動
+      if (data.resolvedClientId && data.resolvedClientId !== selectedClientId.value) {
+        selectedClientId.value = data.resolvedClientId
+        console.log(`[useAiCommand] 顧問先自動切替: ${data.resolvedClientId} (${data.resolvedClientName})`)
+      }
 
       // AI応答メッセージ追加
       const aiMsg: ChatMessage = {

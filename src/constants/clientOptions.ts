@@ -57,29 +57,32 @@ export const LEAD_STATUS_OPTIONS: readonly SelectOption[] = [
 /** 業種リスト */
 export const INDUSTRY_OPTIONS: readonly SelectOption[] = [
   { value: '', label: '—' },
+  // MF準拠（13種）
+  { value: '製造業', label: '製造業' },
+  { value: '教育', label: '教育' },
+  { value: '医療/福祉', label: '医療/福祉' },
+  { value: '情報通信', label: '情報通信' },
   { value: '飲食業', label: '飲食業' },
   { value: '建設業', label: '建設業' },
-  { value: '製造業・メーカー', label: '製造業・メーカー' },
-  { value: '卸売業・小売業', label: '卸売業・小売業' },
-  { value: '商社', label: '商社' },
+  { value: '運送業', label: '運送業' },
+  { value: '卸売業', label: '卸売業' },
+  { value: '小売業', label: '小売業' },
+  { value: '金融保険業', label: '金融保険業' },
   { value: '不動産業', label: '不動産業' },
-  { value: '銀行・金融', label: '銀行・金融' },
+  { value: 'サービス業', label: 'サービス業' },
+  { value: 'その他', label: 'その他' },
+  // sugusuru独自
+  { value: '商社', label: '商社' },
   { value: '保険業', label: '保険業' },
-  { value: '医療・福祉関係業', label: '医療・福祉関係業' },
   { value: 'コンサルティング', label: 'コンサルティング' },
   { value: '専門事務所', label: '専門事務所' },
-  { value: '運輸・運送業', label: '運輸・運送業' },
   { value: '旅行／宿泊／レジャー', label: '旅行／宿泊／レジャー' },
-  { value: 'IT・ソフトウェア関連', label: 'IT・ソフトウェア関連' },
   { value: 'スポーツ・ヘルス関連', label: 'スポーツ・ヘルス関連' },
   { value: '理容・美容・サロン', label: '理容・美容・サロン' },
   { value: '冠婚葬祭', label: '冠婚葬祭' },
   { value: '警備関連', label: '警備関連' },
   { value: '清掃業', label: '清掃業' },
-  { value: '教育業', label: '教育業' },
-  { value: '他サービス業', label: '他サービス業' },
   { value: '官公庁・自治体', label: '官公庁・自治体' },
-  { value: 'その他', label: 'その他' },
 ] as const
 
 /** 売上高（年間売上規模） */
@@ -114,9 +117,10 @@ export const TAX_FILING_OPTIONS: readonly SelectOption[] = [
   { value: 'white', label: '白色' },
 ] as const
 
-/** 課税方式 */
+/** 課税方式（MF実測値: FREE / SIMPLE / INDIVIDUAL_ALLOCATION / PROPORTIONAL_ALLOCATION） */
 export const TAX_MODE_OPTIONS: readonly SelectOption[] = [
-  { value: 'general', label: '原則課税' },
+  { value: 'individual_allocation', label: '原則課税（個別対応方式）' },
+  { value: 'proportional_allocation', label: '原則課税（一括比例配分方式）' },
   { value: 'simplified', label: '簡易課税' },
   { value: 'exempt', label: '免税' },
 ] as const
@@ -131,10 +135,11 @@ export const SIMPLIFIED_CATEGORY_OPTIONS: readonly SelectOption<number>[] = [
   { value: 6, label: '第六種（不動産業）40%' },
 ] as const
 
-/** 税込/税抜 */
+/** 経理方式（MF実測値: TAX_INCLUDED / TAX_EXCLUDED_INCLUDED / TAX_EXCLUDED_SEPARATE） */
 export const TAX_METHOD_OPTIONS: readonly SelectOption[] = [
-  { value: 'inclusive', label: '税込' },
-  { value: 'exclusive', label: '税抜' },
+  { value: 'tax_included', label: '税込' },
+  { value: 'tax_excluded_included', label: '税抜（内税）' },
+  { value: 'tax_excluded_separate', label: '税抜（別記）' },
 ] as const
 
 /** 経理方式 */

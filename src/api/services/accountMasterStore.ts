@@ -12,7 +12,7 @@
  * 準拠: DL-042
  */
 
-import { readFileSync } from 'fs'
+import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs'
 import { join } from 'path'
 import type { Account } from '../../types/shared-account'
 import type { TaxCategory } from '../../types/shared-tax-category'
@@ -209,6 +209,36 @@ interface ClientAccountData {
 /** インメモリストア: clientId → ClientAccountData */
 const clientAccountStore = new Map<string, ClientAccountData>()
 
+// ── 永続化ヘルパー（科目） ──
+
+/** 顧問先別科目をJSONに永続化 */
+function persistClientAccounts(clientId: string, data: ClientAccountData): void {
+  try {
+    const filePath = join(DATA_DIR, `accounts-${clientId}.json`)
+    writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
+    console.log(`[accountMasterStore] 顧問先${clientId}の科目をJSONに永続化`)
+  } catch (err) {
+    console.error(`[accountMasterStore] 顧問先${clientId}の科目永続化に失敗:`, err)
+  }
+}
+
+/** 起動時: data/accounts-{clientId}.json を読み込んで復元 */
+function restoreAllClientAccounts(): void {
+  if (!existsSync(DATA_DIR)) return
+  const files = readdirSync(DATA_DIR)
+    .filter(f => f.startsWith('accounts-') && f.endsWith('.json') && f !== 'account-master.json')
+  for (const file of files) {
+    const clientId = file.replace('accounts-', '').replace('.json', '')
+    try {
+      const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
+      clientAccountStore.set(clientId, JSON.parse(raw))
+      console.log(`[accountMasterStore] 顧問先${clientId}の科目をJSONから復元`)
+    } catch (err) {
+      console.error(`[accountMasterStore] ${file}の読み込み失敗:`, err)
+    }
+  }
+}
+
 /**
  * 顧問先別の科目一覧を取得する
  *
@@ -279,10 +309,12 @@ export function saveClientAccounts(
   accounts: Account[],
   subAccounts?: Record<string, string>,
 ): { ok: true; count: number } {
-  clientAccountStore.set(clientId, {
+  const data: ClientAccountData = {
     accounts: [...accounts],
     subAccounts: subAccounts ?? clientAccountStore.get(clientId)?.subAccounts ?? {},
-  })
+  }
+  clientAccountStore.set(clientId, data)
+  persistClientAccounts(clientId, data)
   console.log(`[accountMasterStore] 顧問先${clientId}の科目を${accounts.length}件保存`)
   return { ok: true, count: accounts.length }
 }
@@ -418,6 +450,36 @@ export function saveAllTaxCategories(taxCategories: TaxCategory[]): { ok: true; 
 /** インメモリストア: clientId → TaxCategory[] */
 const clientTaxStore = new Map<string, TaxCategory[]>()
 
+// ── 永続化ヘルパー（税区分） ──
+
+/** 顧問先別税区分をJSONに永続化 */
+function persistClientTaxCategories(clientId: string, data: TaxCategory[]): void {
+  try {
+    const filePath = join(DATA_DIR, `tax-categories-${clientId}.json`)
+    writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
+    console.log(`[accountMasterStore] 顧問先${clientId}の税区分をJSONに永続化`)
+  } catch (err) {
+    console.error(`[accountMasterStore] 顧問先${clientId}の税区分永続化に失敗:`, err)
+  }
+}
+
+/** 起動時: data/tax-categories-{clientId}.json を読み込んで復元 */
+function restoreAllClientTaxCategories(): void {
+  if (!existsSync(DATA_DIR)) return
+  const files = readdirSync(DATA_DIR)
+    .filter(f => f.startsWith('tax-categories-') && f.endsWith('.json') && f !== 'tax-category-master.json')
+  for (const file of files) {
+    const clientId = file.replace('tax-categories-', '').replace('.json', '')
+    try {
+      const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
+      clientTaxStore.set(clientId, JSON.parse(raw))
+      console.log(`[accountMasterStore] 顧問先${clientId}の税区分をJSONから復元`)
+    } catch (err) {
+      console.error(`[accountMasterStore] ${file}の読み込み失敗:`, err)
+    }
+  }
+}
+
 /**
  * 顧問先別の税区分一覧を取得する
  *
@@ -483,9 +545,15 @@ export function saveClientTaxCategories(
   clientId: string,
   taxCategories: TaxCategory[],
 ): { ok: true; count: number } {
-  clientTaxStore.set(clientId, [...taxCategories])
+  const data = [...taxCategories]
+  clientTaxStore.set(clientId, data)
+  persistClientTaxCategories(clientId, data)
   console.log(`[accountMasterStore] 顧問先${clientId}の税区分を${taxCategories.length}件保存`)
   return { ok: true, count: taxCategories.length }
 }
 
-console.log(`[accountMasterStore] 科目${masterAccounts.length}件 / 税区分${masterTaxCategories.length}件をロード`)
+// 起動時に永続化済みの顧問先別データを復元
+restoreAllClientAccounts()
+restoreAllClientTaxCategories()
+
+console.log(`[accountMasterStore] 科目${masterAccounts.length}件 / 税区分${masterTaxCategories.length}件をロード（顧問先別: 科目${clientAccountStore.size}社 / 税区分${clientTaxStore.size}社を復元）`)
