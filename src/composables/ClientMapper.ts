@@ -72,11 +72,11 @@ export function mapClientToUi(api: unknown): ClientUi {
             learningCsvFolderId: '',
 
             taxFilingType: 'blue',
-            consumptionTaxMode: 'general',
+            consumptionTaxMode: 'individual_allocation',
             simplifiedTaxCategory: undefined,
             simplifiedTaxCategoryLabel: '特になし',
             defaultTaxRate: 10,
-            taxMethod: 'inclusive',
+            taxMethod: 'tax_included',
 
             // 新規フィールド
             taxCalculationMethod: 'stack',
@@ -158,7 +158,7 @@ export function mapClientToUi(api: unknown): ClientUi {
     const taxFilingType = (['blue', 'white'].includes(taxTypeRaw) ? taxTypeRaw : 'blue') as TaxFilingTypeUi;
 
     const taxModeRaw = safeString(raw.consumptionTaxMode);
-    const consumptionTaxMode = (['general', 'simplified', 'exempt'].includes(taxModeRaw) ? taxModeRaw : 'general') as ConsumptionTaxModeUi;
+    const consumptionTaxMode = (['individual_allocation', 'proportional_allocation', 'simplified', 'exempt'].includes(taxModeRaw) ? taxModeRaw : 'individual_allocation') as ConsumptionTaxModeUi;
 
     const simplifiedTaxCategoryRaw = safeNumber(raw.simplifiedTaxCategory);
     const simplifiedTaxCategory = (
@@ -172,7 +172,7 @@ export function mapClientToUi(api: unknown): ClientUi {
     const defaultTaxRate = safeNumber(raw.defaultTaxRate);
 
     const taxMethodRaw = safeString(raw.taxMethod);
-    const taxMethod = (['inclusive', 'exclusive'].includes(taxMethodRaw) ? taxMethodRaw : 'inclusive') as 'inclusive' | 'exclusive';
+    const taxMethod = (['tax_included', 'tax_excluded_included', 'tax_excluded_separate'].includes(taxMethodRaw) ? taxMethodRaw : 'tax_included') as 'tax_included' | 'tax_excluded_included' | 'tax_excluded_separate';
 
     const softRaw = safeString(raw.accountingSoftware);
     const accountingSoftware = (['yayoi', 'freee', 'mf', 'other'].includes(softRaw) ? softRaw : 'yayoi') as 'yayoi' | 'freee' | 'mf' | 'other';
@@ -213,7 +213,7 @@ export function mapClientToUi(api: unknown): ClientUi {
 
     // 複合ラベル
     const shortCalc = calculationMethodLabel.replace('主義', '');
-    const taxMethodLabel = taxMethod === 'inclusive' ? '税込' : '税抜';
+    const taxMethodLabel = taxMethod === 'tax_included' ? '税込' : '税抜';
 
     // フォーマット: "税込 / 発生"
 

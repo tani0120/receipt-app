@@ -90,13 +90,8 @@
 .cm-admin-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .cm-admin-btn i { font-size: 14px; }
 
-/* インライン編集 */
-.cm-inline-input { width: 100%; border: 1px solid #3b82f6; border-radius: 3px; padding: 4px 6px; font-size: 12px; color: #334155; outline: none; background: #eff6ff; box-sizing: border-box; }
-.cm-inline-select { width: 100%; border: 1px solid #3b82f6; border-radius: 3px; padding: 3px 4px; font-size: 12px; color: #334155; outline: none; background: #eff6ff; box-sizing: border-box; cursor: pointer; }
 
-/* 編集可能セルホバー（accounts準拠） */
-.td-editable { cursor: text; }
-.td-editable:hover { background: #fff9c4; outline: 1px dashed #fbc02d; }
+
 
 /* スライドインパネル */
 .cm-panel-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; display: flex; justify-content: flex-end; background: rgba(0,0,0,0.15); }

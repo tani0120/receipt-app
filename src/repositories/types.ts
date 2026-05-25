@@ -94,9 +94,9 @@ export interface Client {
   status: ClientStatus;
   accountingSoftware: 'mf' | 'freee' | 'yayoi' | 'tkc' | 'other';
   taxFilingType: 'blue' | 'white';
-  consumptionTaxMode: 'general' | 'simplified' | 'exempt';
+  consumptionTaxMode: 'individual_allocation' | 'proportional_allocation' | 'simplified' | 'exempt';
   simplifiedTaxCategory?: number;
-  taxMethod: 'inclusive' | 'exclusive';
+  taxMethod: 'tax_included' | 'tax_excluded_included' | 'tax_excluded_separate';
   calculationMethod: 'accrual' | 'cash' | 'interim_cash';
   defaultPaymentMethod: 'cash' | 'owner_loan' | 'accounts_payable';
   isInvoiceRegistered: boolean;
@@ -305,9 +305,9 @@ export interface Lead {
   status: LeadStatus;
   accountingSoftware: 'mf' | 'freee' | 'yayoi' | 'tkc' | 'other';
   taxFilingType: 'blue' | 'white';
-  consumptionTaxMode: 'general' | 'simplified' | 'exempt';
+  consumptionTaxMode: 'individual_allocation' | 'proportional_allocation' | 'simplified' | 'exempt';
   simplifiedTaxCategory?: number;
-  taxMethod: 'inclusive' | 'exclusive';
+  taxMethod: 'tax_included' | 'tax_excluded_included' | 'tax_excluded_separate';
   calculationMethod: 'accrual' | 'cash' | 'interim_cash';
   defaultPaymentMethod: 'cash' | 'owner_loan' | 'accounts_payable';
   isInvoiceRegistered: boolean;

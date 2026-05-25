@@ -136,63 +136,26 @@
                 <!-- 動的列（全列統一v-for） -->
                 <td v-for="col in visibleColumnDefs" :key="'td-'+col.key" class="cm-td-cell"
                   :class="getCellClass(col.key)"
-                  @dblclick.stop="isEditableCol(col.key) ? (col.key === 'staffId' ? startStaffInlineEdit(row, $event) : startInlineEdit(row, col.key as InlineEditableField, $event)) : undefined"
                 >
                   <!-- 3コード -->
-                  <template v-if="col.key === 'threeCode'">
-                    <input v-if="inlineEditId === row.clientId && inlineEditField === 'threeCode'" v-model="inlineEditValue" class="cm-inline-input" maxlength="3" @input="inlineEditValue = String(inlineEditValue).toUpperCase().replace(/[^A-Z]/g, '')" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <span v-else>{{ row.threeCode }}</span>
-                  </template>
+                  <template v-if="col.key === 'threeCode'">{{ row.threeCode }}</template>
                   <!-- 種別 -->
-                  <template v-else-if="col.key === 'type'">
-                    <select v-if="inlineEditId === row.clientId && inlineEditField === 'type'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                      <option v-for="o in TYPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-                    </select>
-                    <span v-else>{{ getLabel(TYPE_OPTIONS, row.type) }}</span>
-                  </template>
+                  <template v-else-if="col.key === 'type'">{{ getLabel(TYPE_OPTIONS, row.type) }}</template>
                   <!-- 課税方式 -->
                   <template v-else-if="col.key === 'consumptionTaxMode'">{{ taxModeLabel(row.consumptionTaxMode) }}</template>
                   <!-- 会社名 -->
                   <template v-else-if="col.key === 'companyName'">
-                    <input v-if="inlineEditId === row.clientId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <span v-else><MfCloudIcon v-if="mfStatusMap[row.clientId]" :size="12" tooltip="MF連携済み" />{{ (row.type === 'individual' || row.type === 'sole_proprietor') && row.repName ? row.repName : row.companyName }}</span>
+                    <span><MfCloudIcon v-if="mfStatusMap[row.clientId]" :size="12" tooltip="MF連携済み" />{{ (row.type === 'individual' || row.type === 'sole_proprietor') && row.repName ? row.repName : row.companyName }}</span>
                   </template>
                   <!-- 担当者 -->
-                  <template v-else-if="col.key === 'staffId'">
-                    <select v-if="inlineEditId === row.clientId && inlineEditField === 'staffId'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitStaffEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                      <option value="">{{ PLACEHOLDER_UNSET }}</option>
-                      <option v-for="s in staffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
-                    </select>
-                    <span v-else>{{ getStaffNameForClient(row.clientId) || '—' }}</span>
-                  </template>
+                  <template v-else-if="col.key === 'staffId'">{{ getStaffNameForClient(row.clientId) || '—' }}</template>
                   <!-- 会計ソフト -->
-                  <template v-else-if="col.key === 'accountingSoftware'">
-                    <select v-if="inlineEditId === row.clientId && inlineEditField === 'accountingSoftware'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                      <option v-for="o in ACCOUNTING_SOFTWARE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-                    </select>
-                    <span v-else>{{ softwareLabel(row.accountingSoftware) }}</span>
-                  </template>
+                  <template v-else-if="col.key === 'accountingSoftware'">{{ softwareLabel(row.accountingSoftware) }}</template>
                   <!-- 決算日 -->
-                  <template v-else-if="col.key === 'fiscalDate'">
-                    <template v-if="inlineEditId === row.clientId && inlineEditField === 'fiscalDate'">
-                      <div class="cm-inline-fiscal-group">
-                        <select v-model="inlineEditValue" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop>
-                          <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
-                        </select>
-                        <span class="cm-inline-fiscal-sep">/</span>
-                        <select v-model="inlineEditFiscalDay" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop>
-                          <option :value="FISCAL_DAY_END_LABEL">{{ FISCAL_DAY_END_LABEL }}</option>
-                          <option v-for="d in 31" :key="d" :value="d">{{ d }}日</option>
-                        </select>
-                        <button class="cm-inline-fiscal-ok" @click.stop="commitFiscalEdit(row)">✓</button>
-                      </div>
-                    </template>
-                    <span v-else>{{ row.fiscalMonth }}月/{{ row.fiscalDay === FISCAL_DAY_END_LABEL ? FISCAL_DAY_END_LABEL : row.fiscalDay + '日' }}</span>
-                  </template>
+                  <template v-else-if="col.key === 'fiscalDate'">{{ row.fiscalMonth }}月/{{ row.fiscalDay === FISCAL_DAY_END_LABEL ? FISCAL_DAY_END_LABEL : row.fiscalDay + '日' }}</template>
                   <!-- sharedEmail -->
                   <template v-else-if="col.key === 'sharedEmail'">
-                    <input v-if="inlineEditId === row.clientId && inlineEditField === 'sharedEmail'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <span v-else-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
+                    <span v-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
                     <span v-else class="cm-shared-email-none">未取得（顧問先が登録）</span>
                   </template>
                   <!-- Drive取込 -->
@@ -226,11 +189,6 @@
                     <span v-else-if="row.chatRoomUrl">チャットワーク</span>
                     <span v-else-if="row.email" class="cm-contact-fallback">メール <i class="fa-solid fa-triangle-exclamation cm-contact-warn" title="チャットワークURLが空白です。"></i></span>
                     <span v-else>—</span>
-                  </template>
-                  <!-- 汎用テキスト入力（phoneNumber, email, chatRoomUrl等） -->
-                  <template v-else-if="isTextEditCol(col.key)">
-                    <input v-if="inlineEditId === row.clientId && inlineEditField === col.key" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <span v-else>{{ (row as any)[col.key] || '—' }}</span>
                   </template>
                   <!-- 汎用表示（追加フィールド等） -->
                   <template v-else>{{ getFieldValue(row, col.key) }}</template>
@@ -530,7 +488,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, onActivated, nextTick, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, onActivated, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   useClients,
@@ -564,7 +522,7 @@ import { useFieldLayout } from '@/composables/useFieldLayout';
 import { useCurrentUser } from '@/composables/useCurrentUser';
 import { clientSections, clientFieldsFlat } from '@/constants/clientFieldDefs';
 import { UI_MSG } from '@/constants/uiMessages';
-import { CLIENT_FIELD_LABELS } from '@/constants/fieldLabels';
+
 import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
 import type { FieldComponent } from '@/types/fieldLayout';
 import MfCloudIcon from '@/components/MfCloudIcon.vue';
@@ -1060,9 +1018,7 @@ const visibleColumnDefs = computed(() => {
 
 /** セルのCSSクラスを列キーから動的取得 */
 const getCellClass = (key: string): string => {
-  const editableKeys = new Set(['threeCode', 'type', 'companyName', 'staffId', 'accountingSoftware', 'fiscalDate', 'sharedEmail']);
   const classes: string[] = [];
-  if (editableKeys.has(key)) classes.push('td-editable');
   if (['sharedEmail'].includes(key)) classes.push('cm-ellipsis');
   if (key === 'companyName') classes.push('cm-company-name');
   if (key === 'fiscalDate') classes.push('cm-fiscal');
@@ -1074,16 +1030,6 @@ const getCellClass = (key: string): string => {
   return classes.join(' ');
 };
 
-/** インライン編集可能列か（dblclick対象） */
-const isEditableCol = (key: string): boolean => {
-  return ['threeCode', 'type', 'companyName', 'staffId', 'accountingSoftware', 'fiscalDate', 'sharedEmail'].includes(key);
-};
-
-/** 汎用テキスト入力で編集する列 */
-const isTextEditCol = (_key: string): boolean => {
-  return false; // phoneNumber/email/chatRoomUrlはcontactsに統合済み
-};
-
 /** データ行から動的フィールド値を取得（汎用） */
 const getFieldValue = (row: Record<string, unknown> | Client, key: string): string => {
   // カスタムフィールド(custom_*)はextraFieldsから取得
@@ -1091,7 +1037,7 @@ const getFieldValue = (row: Record<string, unknown> | Client, key: string): stri
     ? (row as Record<string, unknown>).extraFields != null
       ? ((row as Record<string, unknown>).extraFields as Record<string, unknown>)[key]
       : undefined
-    : row[key];
+    : (row as Record<string, unknown>)[key];
   if (val === undefined || val === null) return '—';
   if (typeof val === 'boolean') return val ? UI_MSG.あり : UI_MSG.なし;
   if (typeof val === 'number') return val.toLocaleString();
@@ -1210,89 +1156,7 @@ const getSortIcon = (key: string) => {
 };
 
 
-// --- インライン編集 ---
-const inlineEditId = ref<string | null>(null);
-const inlineEditField = ref<string | null>(null);
-const inlineEditValue = ref<string | number>('');
-const inlineEditFiscalDay = ref<string | number>(FISCAL_DAY_END_LABEL);
 
-/** インライン編集対象フィールド（Client型のキーに限定） */
-type InlineEditableField = 'status' | 'threeCode' | 'type' | 'companyName' | 'accountingSoftware' | 'fiscalDate' | 'sharedEmail';
-
-const startInlineEdit = (row: Client, field: InlineEditableField, event: Event) => {
-  event.stopPropagation();
-  inlineEditId.value = row.clientId;
-  inlineEditField.value = field;
-  if (field === 'fiscalDate') {
-    inlineEditValue.value = row.fiscalMonth ?? '';
-    inlineEditFiscalDay.value = row.fiscalDay ?? FISCAL_DAY_END_LABEL;
-  } else {
-    inlineEditValue.value = row[field] ?? '';
-  }
-  nextTick(() => {
-    const el = document.querySelector('.cm-inline-input, .cm-inline-select') as HTMLElement;
-    if (el) el.focus();
-  });
-};
-
-const commitInlineEdit = async (_row: Client) => {
-  if (inlineEditId.value && inlineEditField.value) {
-    // --- 3コード重複チェック（インライン編集時） ---
-    if (inlineEditField.value === 'threeCode' && inlineEditValue.value) {
-      const duplicate = clients.value.find(
-        c => c.threeCode === inlineEditValue.value && c.clientId !== inlineEditId.value
-      );
-      if (duplicate) {
-        await modal.notify({
-          title: UI_MSG.コード重複,
-          message: `「${duplicate.companyName}（${duplicate.clientId}）」${UI_MSG.コード重複使用中}`,
-          variant: 'warning',
-        });
-        cancelInlineEdit();
-        return;
-      }
-    }
-    // composable経由でサーバーに永続化
-    updateClientLocal(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Client>);
-    // 3コード変更時はDriveフォルダもリネーム
-    if (inlineEditField.value === 'threeCode') {
-      const client = clients.value.find(c => c.clientId === inlineEditId.value);
-      if (client) {
-        const renamed = await renameDriveFolderForClient(client);
-        if (renamed) {
-          await modal.notify({ title: `Googleドライブ名を「${renamed}」${UI_MSG.ドライブ名変更済}`, variant: 'success' });
-        }
-      }
-    }
-  }
-  const clFieldLabels = CLIENT_FIELD_LABELS;
-  const clLabel = clFieldLabels[inlineEditField.value ?? ''] ?? inlineEditField.value;
-  markDirty(`${clLabel}${UI_MSG.フィールド変更}`);
-  markClean();
-  cancelInlineEdit();
-  refreshList();
-};
-
-const commitFiscalEdit = (_row: Client) => {
-  if (inlineEditId.value) {
-    // composable経由でサーバーに永続化
-    updateClientLocal(inlineEditId.value, {
-      fiscalMonth: Number(inlineEditValue.value),
-      fiscalDay: inlineEditFiscalDay.value,
-    });
-  }
-  markDirty(UI_MSG.決算日を変更);
-  markClean();
-  cancelInlineEdit();
-  refreshList();
-};
-
-const cancelInlineEdit = () => {
-  inlineEditId.value = null;
-  inlineEditField.value = null;
-  inlineEditValue.value = '';
-  inlineEditFiscalDay.value = FISCAL_DAY_END_LABEL;
-};
 
 // --- パネル ---
 const panelMode = ref<'add' | 'edit' | null>(null);
@@ -1451,30 +1315,7 @@ const annualTotal = computed(() => {
   return monthly * 12 + panelForm.settlementFee + panelForm.taxFilingFee;
 });
 
-// --- スタッフ紐付けインライン編集 ---
-const startStaffInlineEdit = (row: Client, event: Event) => {
-  event.stopPropagation();
-  inlineEditId.value = row.clientId;
-  inlineEditField.value = 'staffId';
-  // Client.staffIdから直接取得
-  inlineEditValue.value = row.staffId ?? '';
-  nextTick(() => {
-    const el = document.querySelector('.cm-inline-select') as HTMLElement;
-    if (el) el.focus();
-  });
-};
 
-const commitStaffEdit = (_row: Client) => {
-  if (inlineEditId.value) {
-    const staffId = inlineEditValue.value as string;
-    // composable経由でサーバーに永続化
-    updateClientLocal(inlineEditId.value, { staffId: staffId || null });
-  }
-  markDirty(UI_MSG.担当者を変更);
-  markClean();
-  cancelInlineEdit();
-  refreshList();
-};
 
 // --- ドロップダウン外クリックで閉じる（業種・CSV統合） ---
 // ※ closeAllDropdowns に統合済み（ファイル末尾で定義）
@@ -1624,6 +1465,7 @@ const handleMfImport = async () => {
     };
 
     await refresh();
+    await refreshList();
 
     const detailLines = result.details
       .filter((d: { changes: string[] }) => d.changes.length > 0)

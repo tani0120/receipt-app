@@ -30,7 +30,7 @@ import {
   mcpCreateJournal,
 } from '../services/mfMcpClient'
 import { getById, updateClient } from '../services/clientStore'
-import { mapOfficeToClient, mapTermSettingsToClient, getMfMappedFieldKeys } from '../../constants/mfFieldMapping'
+import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFieldMapping'
 
 const app = new Hono()
 
@@ -320,26 +320,10 @@ app.post('/import-offices', async (c) => {
       const allUpdates = { ...officeResult.updates, ...termResult.updates }
       const allChanges = [...officeResult.changes, ...termResult.changes]
 
-      // MFから取得できた全フィールドキーを記録（青文字表示用）
-      // 差分がなくても、MFから値を取得したフィールドは記録する
-      const mfMappedKeys = getMfMappedFieldKeys(office, termSettingsList[0])
-      const existingMfFields = (clientRecord.mfImportedFields as string[]) || []
-      const mergedMfFields = [...new Set([...existingMfFields, ...mfMappedKeys])]
-
-      console.log(`[MFインポート] ${clientId}: mfMappedKeys=${JSON.stringify(mfMappedKeys)}, existing=${JSON.stringify(existingMfFields)}, merged=${JSON.stringify(mergedMfFields)}`)
-
       if (Object.keys(allUpdates).length > 0) {
-        allUpdates.mfImportedFields = mergedMfFields
         updateClient(clientId, allUpdates)
         results.updated++
       } else {
-        // 差分なしでもmfImportedFieldsが未保存なら保存
-        const needsSave = JSON.stringify(existingMfFields.sort()) !== JSON.stringify(mergedMfFields.sort())
-        console.log(`[MFインポート] ${clientId}: needsSave=${needsSave}`)
-        if (needsSave) {
-          updateClient(clientId, { mfImportedFields: mergedMfFields } as Record<string, unknown>)
-          console.log(`[MFインポート] ${clientId}: mfImportedFields保存完了`)
-        }
         results.skipped++
       }
 

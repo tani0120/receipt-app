@@ -10,7 +10,7 @@
       hideNavBar ? 'bg-white p-0' : 'bg-slate-100 p-4'
     ]">
          <router-view v-slot="{ Component, route: viewRoute }">
-            <KeepAlive :max="5">
+             <KeepAlive :max="5" :exclude="keepAliveExclude">
               <component :is="Component" :key="viewRoute.path" />
             </KeepAlive>
           </router-view>
@@ -37,6 +37,9 @@ import { computed, ref } from 'vue';
 
 /** AIチャットウィンドウ開閉状態 */
 const aiChatOpen = ref(false);
+
+/** KeepAlive除外: 編集系ページはキャッシュしない（MFインポート等の即時反映保証） */
+const keepAliveExclude = ['ClientEditPage'];
 
 const route = useRoute();
 

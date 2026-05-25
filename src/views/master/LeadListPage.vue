@@ -126,50 +126,18 @@
                 </td>
                 <td v-for="col in visibleColumnDefs" :key="'td-'+col.key" class="cm-td-cell"
                   :class="getCellClass(col.key)"
-                  @dblclick.stop="isEditableCol(col.key) ? (col.key === 'staffId' ? startStaffInlineEdit(row, $event) : startInlineEdit(row, col.key as InlineEditableField, $event)) : undefined"
                 >
-                  <template v-if="col.key === 'threeCode'">
-                    <input v-if="inlineEditId === row.leadId && inlineEditField === 'threeCode'" v-model="inlineEditValue" class="cm-inline-input" maxlength="3" @input="inlineEditValue = String(inlineEditValue).toUpperCase().replace(/[^A-Z]/g, '')" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <span v-else>{{ row.threeCode }}</span>
-                  </template>
-                  <template v-else-if="col.key === 'type'">
-                    <select v-if="inlineEditId === row.leadId && inlineEditField === 'type'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                      <option v-for="o in TYPE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-                    </select>
-                    <span v-else>{{ getLabel(TYPE_OPTIONS, row.type) }}</span>
-                  </template>
+                  <template v-if="col.key === 'threeCode'">{{ row.threeCode }}</template>
+                  <template v-else-if="col.key === 'type'">{{ getLabel(TYPE_OPTIONS, row.type) }}</template>
                   <template v-else-if="col.key === 'consumptionTaxMode'">{{ taxModeLabel(row.consumptionTaxMode) }}</template>
                   <template v-else-if="col.key === 'companyName'">
-                    <input v-if="inlineEditId === row.leadId && inlineEditField === 'companyName'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <span v-else>{{ (row.type === 'individual' || row.type === 'sole_proprietor') && row.repName ? row.repName : row.companyName }}</span>
+                    <span>{{ (row.type === 'individual' || row.type === 'sole_proprietor') && row.repName ? row.repName : row.companyName }}</span>
                   </template>
-                  <template v-else-if="col.key === 'staffId'">
-                    <select v-if="inlineEditId === row.leadId && inlineEditField === 'staffId'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitStaffEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                      <option value="">{{ PLACEHOLDER_UNSET }}</option>
-                      <option v-for="s in staffList" :key="s.uuid" :value="s.uuid">{{ s.name }}</option>
-                    </select>
-                    <span v-else>{{ getStaffNameForLead(row.leadId) || '—' }}</span>
-                  </template>
-                  <template v-else-if="col.key === 'accountingSoftware'">
-                    <select v-if="inlineEditId === row.leadId && inlineEditField === 'accountingSoftware'" v-model="inlineEditValue" class="cm-inline-select" @blur="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                      <option v-for="o in ACCOUNTING_SOFTWARE_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-                    </select>
-                    <span v-else>{{ softwareLabel(row.accountingSoftware) }}</span>
-                  </template>
-                  <template v-else-if="col.key === 'fiscalDate'">
-                    <template v-if="inlineEditId === row.leadId && inlineEditField === 'fiscalDate'">
-                      <div class="cm-inline-fiscal-group">
-                        <select v-model="inlineEditValue" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop><option v-for="m in 12" :key="m" :value="m">{{ m }}月</option></select>
-                        <span class="cm-inline-fiscal-sep">/</span>
-                        <select v-model="inlineEditFiscalDay" class="cm-inline-select cm-inline-fiscal-sel" @keydown.escape="cancelInlineEdit" @click.stop><option :value="FISCAL_DAY_END_LABEL">{{ FISCAL_DAY_END_LABEL }}</option><option v-for="d in 31" :key="d" :value="d">{{ d }}日</option></select>
-                        <button class="cm-inline-fiscal-ok" @click.stop="commitFiscalEdit(row)">✓</button>
-                      </div>
-                    </template>
-                    <span v-else>{{ row.fiscalMonth }}月/{{ row.fiscalDay === FISCAL_DAY_END_LABEL ? FISCAL_DAY_END_LABEL : row.fiscalDay + '日' }}</span>
-                  </template>
+                  <template v-else-if="col.key === 'staffId'">{{ getStaffNameForLead(row.leadId) || '—' }}</template>
+                  <template v-else-if="col.key === 'accountingSoftware'">{{ softwareLabel(row.accountingSoftware) }}</template>
+                  <template v-else-if="col.key === 'fiscalDate'">{{ row.fiscalMonth }}月/{{ row.fiscalDay === FISCAL_DAY_END_LABEL ? FISCAL_DAY_END_LABEL : row.fiscalDay + '日' }}</template>
                   <template v-else-if="col.key === 'sharedEmail'">
-                    <input v-if="inlineEditId === row.leadId && inlineEditField === 'sharedEmail'" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <span v-else-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
+                    <span v-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
                     <span v-else class="cm-shared-email-none">未取得（見込先が登録）</span>
                   </template>
                   <template v-else-if="col.key === 'driveUrl'">
@@ -185,10 +153,6 @@
                     <span v-else-if="row.chatRoomUrl">チャットワーク</span>
                     <span v-else-if="row.email" class="cm-contact-fallback">メール <i class="fa-solid fa-triangle-exclamation cm-contact-warn" title="チャットワークURLが空白です。"></i></span>
                     <span v-else>—</span>
-                  </template>
-                  <template v-else-if="isTextEditCol(col.key)">
-                    <input v-if="inlineEditId === row.leadId && inlineEditField === col.key" v-model="inlineEditValue" class="cm-inline-input" @blur="commitInlineEdit(row)" @keydown.enter="commitInlineEdit(row)" @keydown.escape="cancelInlineEdit" @click.stop>
-                    <span v-else>{{ (row as any)[col.key] || '—' }}</span>
                   </template>
                   <template v-else>{{ getFieldValue(row, col.key) }}</template>
                 </td>
@@ -927,9 +891,7 @@ const visibleColumnDefs = computed(() => {
 
 /** セルのCSSクラスを列キーから動的取得 */
 const getCellClass = (key: string): string => {
-  const editableKeys = new Set(['threeCode', 'type', 'companyName', 'staffId', 'accountingSoftware', 'fiscalDate', 'sharedEmail']);
   const classes: string[] = [];
-  if (editableKeys.has(key)) classes.push('td-editable');
   if (['sharedEmail'].includes(key)) classes.push('cm-ellipsis');
   if (key === 'companyName') classes.push('cm-company-name');
   if (key === 'fiscalDate') classes.push('cm-fiscal');
@@ -938,16 +900,6 @@ const getCellClass = (key: string): string => {
   if (key === 'leadId') classes.push('cm-client-id');
   if (key === 'threeCode') classes.push('cm-code');
   return classes.join(' ');
-};
-
-/** インライン編集可能列か */
-const isEditableCol = (key: string): boolean => {
-  return ['threeCode', 'type', 'companyName', 'staffId', 'accountingSoftware', 'fiscalDate', 'sharedEmail'].includes(key);
-};
-
-/** 汎用テキスト入力で編集する列 */
-const isTextEditCol = (_key: string): boolean => {
-  return false; // phoneNumber/email/chatRoomUrlはcontactsに統合済み
 };
 
 /** データ行から動的フィールド値を取得（汎用） */
@@ -1066,88 +1018,7 @@ onActivated(async () => {
   fetchLeadList();
 });
 
-// --- インライン編集 ---
-const inlineEditId = ref<string | null>(null);
-const inlineEditField = ref<string | null>(null);
-const inlineEditValue = ref<string | number>('');
-const inlineEditFiscalDay = ref<string | number>(FISCAL_DAY_END_LABEL);
 
-/** インライン編集対象フィールド（Lead型のキーに限定） */
-type InlineEditableField = 'status' | 'threeCode' | 'type' | 'companyName' | 'accountingSoftware' | 'fiscalDate' | 'sharedEmail';
-
-const startInlineEdit = (row: Lead, field: InlineEditableField, event: Event) => {
-  event.stopPropagation();
-  inlineEditId.value = row.leadId;
-  inlineEditField.value = field;
-  if (field === 'fiscalDate') {
-    inlineEditValue.value = row.fiscalMonth ?? '';
-    inlineEditFiscalDay.value = row.fiscalDay ?? FISCAL_DAY_END_LABEL;
-  } else {
-    inlineEditValue.value = row[field] ?? '';
-  }
-  nextTick(() => {
-    const el = document.querySelector('.cm-inline-input, .cm-inline-select') as HTMLElement;
-    if (el) el.focus();
-  });
-};
-
-const commitInlineEdit = async (_row: Lead) => {
-  if (inlineEditId.value && inlineEditField.value) {
-    // --- 3コード重複チェック（インライン編集時） ---
-    if (inlineEditField.value === 'threeCode' && inlineEditValue.value) {
-      const duplicate = leads.value.find(
-        c => c.threeCode === inlineEditValue.value && c.leadId !== inlineEditId.value
-      );
-      if (duplicate) {
-        await modal.notify({
-          title: UI_MSG.コード重複,
-          message: `「${duplicate.companyName}（${duplicate.leadId}）」${UI_MSG.コード重複使用中}`,
-          variant: 'warning',
-        });
-        cancelInlineEdit();
-        return;
-      }
-    }
-    // composable経由でサーバーに永続化
-    updateLeadLocal(inlineEditId.value, { [inlineEditField.value]: inlineEditValue.value } as Partial<Lead>);
-    // 3コード変更時はDriveフォルダもリネーム
-    if (inlineEditField.value === 'threeCode') {
-      const client = leads.value.find(c => c.leadId === inlineEditId.value);
-      if (client) {
-        const renamed = await renameDriveFolderForLead(client);
-        if (renamed) {
-          await modal.notify({ title: `Googleドライブ名を「${renamed}」${UI_MSG.ドライブ名変更済}`, variant: 'success' });
-        }
-      }
-    }
-  }
-  const clFieldLabels = LEAD_FIELD_LABELS;
-  const clLabel = clFieldLabels[inlineEditField.value ?? ''] ?? inlineEditField.value;
-  markDirty(`${clLabel}${UI_MSG.フィールド変更}`);
-  markClean();
-  cancelInlineEdit();
-  refreshList();
-};
-
-const commitFiscalEdit = (_row: Lead) => {
-  if (inlineEditId.value) {
-    // composable経由でサーバーに永続化
-    updateLeadLocal(inlineEditId.value, {
-      fiscalMonth: Number(inlineEditValue.value),
-      fiscalDay: inlineEditFiscalDay.value,
-    });
-  }
-  markDirty(UI_MSG.決算日を変更);
-  markClean();
-  cancelInlineEdit();
-};
-
-const cancelInlineEdit = () => {
-  inlineEditId.value = null;
-  inlineEditField.value = null;
-  inlineEditValue.value = '';
-  inlineEditFiscalDay.value = FISCAL_DAY_END_LABEL;
-};
 
 // --- パネル ---
 const panelMode = ref<'add' | 'edit' | null>(null);
@@ -1307,29 +1178,7 @@ const annualTotal = computed(() => {
 });
 
 // --- スタッフ紐付けインライン編集 ---
-const startStaffInlineEdit = (row: Lead, event: Event) => {
-  event.stopPropagation();
-  inlineEditId.value = row.leadId;
-  inlineEditField.value = 'staffId';
-  // Lead.staffIdから直接取得
-  inlineEditValue.value = row.staffId ?? '';
-  nextTick(() => {
-    const el = document.querySelector('.cm-inline-select') as HTMLElement;
-    if (el) el.focus();
-  });
-};
 
-const commitStaffEdit = (_row: Lead) => {
-  if (inlineEditId.value) {
-    const staffId = inlineEditValue.value as string;
-    // composable経由でサーバーに永続化
-    updateLeadLocal(inlineEditId.value, { staffId: staffId || null });
-  }
-  markDirty(UI_MSG.担当者を変更);
-  markClean();
-  cancelInlineEdit();
-  refreshList();
-};
 
 // --- ドロップダウン外クリックで閉じる（業種・CSV統合） ---
 // ※ closeAllDropdowns に統合済み（ファイル末尾で定義）

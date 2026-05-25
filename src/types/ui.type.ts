@@ -55,7 +55,7 @@ export type TaxRateUi =
   | 'unknown';
 
 export type TaxFilingTypeUi = 'blue' | 'white';
-export type ConsumptionTaxModeUi = 'general' | 'simplified' | 'exempt';
+export type ConsumptionTaxModeUi = 'individual_allocation' | 'proportional_allocation' | 'simplified' | 'exempt';
 
 export type StepStateUi = 'pending' | 'processing' | 'done' | 'error' | 'ready' | 'none';
 
@@ -240,7 +240,7 @@ export interface ClientUi {
   // New Fields
   readonly accountingSoftware: 'yayoi' | 'freee' | 'mf' | 'other';
   readonly defaultTaxRate: number;
-  readonly taxMethod: 'inclusive' | 'exclusive';
+  readonly taxMethod: 'tax_included' | 'tax_excluded_included' | 'tax_excluded_separate';
   readonly taxCalculationMethod: 'stack' | 'back';
   readonly isInvoiceRegistered: boolean;
   readonly roundingSettings: 'floor' | 'round' | 'ceil';

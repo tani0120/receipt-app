@@ -263,37 +263,4 @@ export function mapDepartmentsToClient(
   return { updates, changes }
 }
 
-/**
- * MFから値が取得できたフィールドキーの一覧を返す（青文字表示用）
- * 差分の有無に関係なく、MFにデータが存在するフィールドを列挙
- */
-export function getMfMappedFieldKeys(
-  office: MfMcpOffice,
-  termSettings?: MfMcpTermSettings,
-): string[] {
-  const keys: string[] = []
 
-  // currentOffice由来
-  if (office.name) {
-    const t = office.type
-    if (t === 'INDIVIDUAL') keys.push('repName')
-    else keys.push('companyName')
-  }
-  if (office.type) keys.push('type')
-  if (office.is_real_estate != null) keys.push('hasRentalIncome')
-  if (office.employee_count) keys.push('employeeCount')
-  if (office.accounting_periods?.length) {
-    keys.push('fiscalMonth', 'fiscalDay')
-  }
-  // MF連携済みクライアントの部門管理フラグもMF由来として扱う
-  keys.push('hasDepartmentManagement')
-
-  // termSettings由来
-  if (termSettings) {
-    if (termSettings.tax_method) keys.push('consumptionTaxMode')
-    if (termSettings.accounting_method) keys.push('taxMethod')
-    if (termSettings.business_types?.length) keys.push('industry')
-  }
-
-  return keys
-}

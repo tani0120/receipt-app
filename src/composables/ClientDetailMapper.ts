@@ -50,7 +50,7 @@ export function mapClientDetailToUi(api: unknown): ClientDetailUi {
             : UI_MSG.原則課税;
 
     // baseUi already has taxMethodLabel ('税込' / '税抜') but detail might want Explicit '税込経理'
-    const taxMethodExplicitLabel = (baseUi.taxMethod === 'exclusive') ? UI_MSG.税抜経理 : UI_MSG.税込経理;
+    const taxMethodExplicitLabel = (baseUi.taxMethod !== 'tax_included') ? UI_MSG.税抜経理 : UI_MSG.税込経理;
 
     // fractionAdjustmentLabel -> Use baseUi.roundingSettingsLabel
     const fractionAdjustmentLabel = baseUi.roundingSettingsLabel;

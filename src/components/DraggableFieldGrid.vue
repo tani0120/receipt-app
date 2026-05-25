@@ -60,7 +60,7 @@
                     <label v-else class="dfg-label">{{ field.label }}<MfCloudIcon v-if="isMfSource(field)" /></label>
                     <span v-if="isLayoutEditing && field.deletable !== true && !field.key.startsWith('custom_')" class="dfg-lock-icon" title="クライアント型フィールド（削除不可）">🔒</span>
                   </div>
-                  <div class="dfg-content" :class="{ 'dfg-editing': isEditing, 'ce-mf-imported': isMfImported(field) }">
+                  <div class="dfg-content" :class="{ 'dfg-editing': isEditing }">
                     <slot :name="field.key" :field="field">
                       <div v-if="formData" class="ce-field" :class="[field.cssClass]">
                         <template v-if="(field.component === 'readonly' || field.alwaysReadonly) && field.component !== 'url'"><span class="ce-readonly" :class="field.cssClass">{{ getFieldDisplayValue(field) }}</span></template>
@@ -172,7 +172,7 @@
                 </template>
                 <template v-else>
                   <div class="dfg-label-area"><label class="dfg-label">{{ field.label }}<MfCloudIcon v-if="isMfSource(field)" /></label></div>
-                  <div class="dfg-content" :class="{ 'dfg-editing': isEditing, 'ce-mf-imported': isMfImported(field) }">
+                  <div class="dfg-content" :class="{ 'dfg-editing': isEditing }">
                     <slot :name="field.key" :field="field">
                       <div v-if="formData" class="ce-field" :class="[field.cssClass]">
                         <template v-if="(field.component === 'readonly' || field.alwaysReadonly) && field.component !== 'url'"><span class="ce-readonly" :class="field.cssClass">{{ getFieldDisplayValue(field) }}</span></template>
@@ -304,26 +304,7 @@ const isMfSource = (field: FieldDef): boolean => {
   return actual === condValue
 }
 
-/** MFインポートで値が設定されたフィールドか判定（青文字表示用）
- * クラウドアイコン（isMfSource）が表示されているフィールドと同条件。
- * MF由来のフィールドに実際に値が入っていれば青文字にする。 */
-const isMfImported = (field: FieldDef): boolean => {
-  if (!props.formData) return false
-  // mfSourceが設定されていなければ対象外
-  if (!isMfSource(field)) return false
-  // mfImportedFieldsに含まれるか（インポート実績がある場合のみ青文字）
-  const mfFields = props.formData.mfImportedFields as string[] | undefined
-  if (!mfFields?.length) return false
-  const key = field.modelKey || field.key
-  if (mfFields.includes(key)) return true
-  // 複合キー（fiscalDate → fiscalMonth/fiscalDay）
-  const MF_FIELD_ALIAS: Record<string, string[]> = {
-    fiscalDate: ['fiscalMonth', 'fiscalDay'],
-  }
-  const aliases = MF_FIELD_ALIAS[key]
-  if (aliases) return aliases.some(a => mfFields.includes(a))
-  return false
-}
+
 
 /** フォームからフィールド値を取得 */
 const getFieldValue = (field: FieldDef): unknown => {
@@ -869,15 +850,7 @@ onBeforeUnmount(() => {
   color: #333;
   font-weight: 400;
 }
-/* MFインポートで取得された値 → 青文字（dfg-content配下の全テキスト要素に適用） */
-.dfg-content.ce-mf-imported :deep(.ce-readonly),
-.dfg-content.ce-mf-imported :deep(.ce-input),
-.dfg-content.ce-mf-imported :deep(.ce-select),
-.dfg-content.ce-mf-imported :deep(.ce-checkbox span),
-.dfg-content.ce-mf-imported :deep(.ce-date-group),
-.dfg-content.ce-mf-imported :deep(.ce-field) {
-  color: #1a73e8;
-}
+
 .dfg-content :deep(.ce-input) {
   border: none;
   background: transparent;

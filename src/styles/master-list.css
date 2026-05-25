@@ -84,18 +84,8 @@
 .cm-filter-cb input[type="checkbox"] { accent-color: #3b82f6; }
 .cb-label { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
 
-/* インライン編集 */
-.cm-inline-input { width: 100%; border: 1px solid #3b82f6; border-radius: 3px; padding: 4px 6px; font-size: 12px; color: #334155; outline: none; background: #eff6ff; box-sizing: border-box; }
-.cm-inline-select { width: 100%; border: 1px solid #3b82f6; border-radius: 3px; padding: 3px 4px; font-size: 12px; color: #334155; outline: none; background: #eff6ff; box-sizing: border-box; cursor: pointer; }
-.cm-inline-fiscal-group { display: flex; align-items: center; gap: 2px; }
-.cm-inline-fiscal-sel { width: auto !important; min-width: 52px; padding: 2px 3px; font-size: 11px; }
-.cm-inline-fiscal-sep { font-size: 11px; color: #64748b; }
-.cm-inline-fiscal-ok { background: #3b82f6; color: white; border: none; border-radius: 3px; padding: 2px 6px; font-size: 11px; cursor: pointer; line-height: 1; }
-.cm-inline-fiscal-ok:hover { background: #2563eb; }
 
-/* 編集可能セルホバー */
-.td-editable { cursor: text; }
-.td-editable:hover { background: #fff9c4; outline: 1px dashed #fbc02d; }
+
 
 /* 省略表示 */
 .cm-ellipsis { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }

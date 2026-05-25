@@ -306,8 +306,12 @@
   </div>
 </template>
 
+<script lang="ts">
+export default { name: 'ClientEditPage' }
+</script>
+
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onActivated, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useClients, emptyClientForm } from '@/features/client-management/composables/useClients';
 import type { Client, ClientForm } from '@/features/client-management/composables/useClients';
@@ -809,9 +813,26 @@ onMounted(async () => {
   initPage();
 });
 
+/** KeepAliveキャッシュから復活した際に最新データを再読み込み（MFインポート等の反映） */
+onActivated(() => {
+  if (!isEditing.value && !isNew.value && !isLayoutMode.value && clientId.value) {
+    loadClientData();
+  }
+});
+
 /** ルート変更時（同一コンポーネント間遷移）にフォームを再初期化 */
 watch(() => route.fullPath, () => {
   initPage();
+});
+
+/**
+ * clients ref 更新時にフォームを再読み込み（MFインポート等で外部から更新された場合の反映）
+ * 閲覧モード（編集中でない・新規でない・レイアウトモードでない）のみ適用
+ */
+watch(clients, () => {
+  if (!isEditing.value && !isNew.value && !isLayoutMode.value && clientId.value) {
+    loadClientData();
+  }
 });
 
 /** ページ初期化（新規/既存の判定とフォーム設定） */
@@ -1093,7 +1114,8 @@ const saveClient = async () => {
     try {
       const saved = await addClient(data as Omit<Client, 'clientId'>);
       createDriveFolderForClient(saved).catch(e => console.error('[clients] Driveフォルダ作成失敗:', e));
-      await modal.notify({ title: `「${saved.companyName}」${UI_MSG.追加完了}`, message: UI_MSG.マスタ自動コピー完了, variant: 'success' });
+      const displayName = (saved.type === 'individual' || saved.type === 'sole_proprietor') && saved.repName ? saved.repName : saved.companyName;
+      await modal.notify({ title: `「${displayName}」${UI_MSG.追加完了}`, message: UI_MSG.マスタ自動コピー完了, variant: 'success' });
       router.push(`/master/clients/${saved.clientId}`);
     } catch (err) {
       await modal.notify({ title: UI_MSG.顧問先追加失敗, message: String(err), variant: 'warning' });
@@ -1109,7 +1131,8 @@ const saveClient = async () => {
         const renamed = await renameDriveFolderForClient(data);
         if (renamed) await modal.notify({ title: `${UI_MSG.ドライブ名変更}${renamed}${UI_MSG.に変更}`, variant: 'success' });
       }
-      await modal.notify({ title: `「${data.companyName}」${UI_MSG.更新完了}`, variant: 'success' });
+      const displayName = (data.type === 'individual' || data.type === 'sole_proprietor') && data.repName ? data.repName : data.companyName;
+      await modal.notify({ title: `「${displayName}」${UI_MSG.更新完了}`, variant: 'success' });
       isEditing.value = false;
       isCopyNew.value = false;
       originalSnapshot = takeSnapshot();

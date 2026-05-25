@@ -30,8 +30,8 @@ export const emptyClientForm = (): ClientForm => ({
   repName: '', repNameKana: '',
   contactType: 'email', contactValue: '',
   fiscalMonth: 3, fiscalDay: '末日', industry: '', establishedDate: '', status: 'active',
-  accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'general',
-  taxMethod: 'inclusive', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
+  accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'individual_allocation',
+  taxMethod: 'tax_included', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
   isInvoiceRegistered: false, invoiceRegistrationNumber: '',
   hasDepartmentManagement: false, hasRentalIncome: false,
   staffId: null, sharedFolderId: '', sharedEmail: '',
@@ -56,8 +56,6 @@ export const emptyClientForm = (): ClientForm => ({
   socialInsuranceFee: 0, payrollFee: 0, accountingServiceFee: 0, systemFee: 0,
   contractDocUrl: '', paymentMethod: '', paymentDay: '', feeNotes: '',
   attachmentFiles: [],
-  // MFインポート済みフィールド記録（青文字表示用）
-  mfImportedFields: [] as string[],
   // 昇格元見込先
   sourceLeadId: null,
 });

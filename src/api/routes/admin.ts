@@ -10,7 +10,7 @@ import { getAll as getAllClients } from '../services/clientStore'
 import { getAll as getAllStaff } from '../services/staffStore'
 import { getJournals } from '../services/journalStore'
 import type { DocEntry } from '../../repositories/types'
-import { getMonthlyTotalCost, getStaffMonthlyCosts, getClientMonthlyCosts, getStaffAnnualCost, getAnnualTotalCost } from '../services/aiLogStore'
+import { getMonthlyTotalCost, getStaffMonthlyCosts, getClientMonthlyCosts, getStaffAnnualCost } from '../services/aiLogStore'
 
 const app = new Hono()
 
