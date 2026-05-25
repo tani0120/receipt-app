@@ -4,6 +4,10 @@
  * レイヤー: aiCommandRoutes → ★service★
  * 責務: ユーザーの自然言語テキストからコマンドをキーワードマッチで判定
  *
+ * 再編（2026-05-25）:
+ *   旧30コマンド→7コマンド統合。COMMAND_OPTIONSも7コマンド分に簡素化。
+ *   mf_sync_all（MF全データ同期）は常に3期分・全データ一括取込に統合。
+ *
  * コマンド定義はcommandCatalog.tsの唯一の真実を参照。
  * コマンド追加時はcommandCatalog.tsだけ修正すればここにも反映される。
  *
@@ -35,297 +39,123 @@ export interface PatternMatchResult {
 }
 
 /**
- * コマンド別のサブ選択肢定義
- * コマンドにパラメータや選択肢がある場合に返す
+ * コマンド別のサブ選択肢定義（7コマンド）
+ * サブ選択肢が不要なコマンドは省略（直接実行 or 層3 FCに委譲）
  */
 const COMMAND_OPTIONS: Record<string, { content: string; suggestions: AiSuggestion[] }> = {
-  // ===== 管理系 =====
-  sync_mf_data: {
-    content: "MFデータ取込 — 何を取り込みますか？",
+  // ===== P1: MF全データ同期 — サブ選択肢なし（常に全データ・3期分） =====
+  mf_sync_all: {
+    content: "MF全データ同期を実行します（事業者情報・科目・税区分・仕訳を3期分一括取込）",
     suggestions: [
       {
-        command: "sync_mf_data",
-        label: "全データ取込",
-        description: "仕訳・科目・税区分・取引先をまとめて取込",
-      },
-      {
-        command: "sync_mf_data",
-        label: "仕訳データのみ",
-        description: "仕訳一覧をMFから取得してDBに保存",
-      },
-      {
-        command: "sync_mf_data",
-        label: "科目マスタのみ",
-        description: "勘定科目マスタをMFから取得",
-      },
-      {
-        command: "sync_mf_data",
-        label: "税区分マスタのみ",
-        description: "税区分マスタをMFから取得",
-      },
-      {
-        command: "sync_mf_data",
-        label: "取引先マスタのみ",
-        description: "取引先マスタをMFから取得",
+        command: "__exec__:mf_sync_all:全データ:three",
+        label: "▶ MF全データ同期を実行",
+        description: "事業者情報・科目・税区分・仕訳を3期分一括取込",
       },
     ],
   },
 
-  // ===== 仕訳系 =====
-  bank_journal: {
-    content: "銀行/カード明細の仕訳候補 — 資料の種類は？",
+  // ===== P2: 仕訳取得・確認 =====
+  journal_view: {
+    content: "仕訳取得・確認 — 対象を選んでください",
     suggestions: [
       {
-        command: "bank_journal",
+        command: "__exec__:journal_view:今月の仕訳:current",
+        label: "今月の仕訳",
+        description: "当月の仕訳一覧を取得",
+      },
+      {
+        command: "__exec__:journal_view:先月の仕訳:prev",
+        label: "先月の仕訳",
+        description: "前月の仕訳一覧を取得",
+      },
+      {
+        command: "__exec__:journal_view:今期の仕訳:term",
+        label: "今期の仕訳",
+        description: "当期の全仕訳を取得",
+      },
+    ],
+  },
+
+  // ===== P3: 仕訳投入 =====
+  journal_write: {
+    content: "仕訳投入 — 入力方法を選んでください",
+    suggestions: [
+      {
+        command: "__exec__:journal_write:銀行明細から仕訳:bank",
         label: "銀行明細から仕訳",
         description: "銀行口座の入出金明細を取り込み",
       },
       {
-        command: "bank_journal",
-        label: "カード明細から仕訳",
-        description: "クレジットカード明細を取り込み",
-      },
-    ],
-  },
-  receipt_journal: {
-    content: "領収書の仕訳候補 — 入力方法は？",
-    suggestions: [
-      {
-        command: "receipt_journal",
-        label: "領収書を撮影/アップロード",
+        command: "__exec__:journal_write:領収書から仕訳:receipt",
+        label: "領収書から仕訳",
         description: "PDF・画像ファイルから自動読み取り",
       },
       {
-        command: "receipt_journal",
-        label: "手入力で仕訳",
-        description: "日付・金額・取引先を手動で入力",
-      },
-    ],
-  },
-  journal_confirm: {
-    content: "仕訳✓（確認・選択） — 対象を選んでください",
-    suggestions: [
-      {
-        command: "journal_confirm",
-        label: "未確認の仕訳すべて",
-        description: "未承認の仕訳候補を一覧表示",
-      },
-      {
-        command: "journal_confirm",
-        label: "要注意の仕訳のみ",
-        description: "AIが注意フラグを付けた仕訳のみ表示",
-      },
-      { command: "journal_confirm", label: "今月分のみ", description: "当月の仕訳候補を表示" },
-    ],
-  },
-  journal_post: {
-    content: "仕訳投入（MFへ登録） — 対象を選んでください",
-    suggestions: [
-      {
-        command: "journal_post",
+        command: "__exec__:journal_write:確認済みを投入:post",
         label: "確認済みを全件投入",
         description: "承認済みの仕訳をまとめてMFに投入",
       },
-      { command: "journal_post", label: "選択して投入", description: "投入する仕訳を個別に選択" },
     ],
   },
+
+  // ===== P4: 仕訳取消 =====
   journal_cancel: {
-    content: "仕訳取消（修正・削除） — 操作を選んでください",
+    content: "仕訳取消 — 操作を選んでください",
     suggestions: [
       {
-        command: "journal_cancel",
+        command: "__exec__:journal_cancel:直近の投入を取消:latest",
         label: "直近の投入を取消",
         description: "最後に投入した仕訳を取り消す",
       },
       {
-        command: "journal_cancel",
+        command: "__exec__:journal_cancel:仕訳IDを指定:byid",
         label: "仕訳IDを指定して取消",
         description: "特定の仕訳IDを指定して修正・削除",
       },
     ],
   },
-  ar_matching: {
-    content: "売掛消込リスト — 期間を選んでください",
-    suggestions: [
-      { command: "ar_matching", label: "今月の売掛消込", description: "当月の売掛金と入金を突合" },
-      { command: "ar_matching", label: "先月の売掛消込", description: "前月の売掛金と入金を突合" },
-      { command: "ar_matching", label: "未消込すべて", description: "未消込の売掛金をすべて表示" },
-    ],
-  },
-  ap_matching: {
-    content: "買掛消込リスト — 期間を選んでください",
-    suggestions: [
-      { command: "ap_matching", label: "今月の買掛消込", description: "当月の買掛金と出金を突合" },
-      { command: "ap_matching", label: "先月の買掛消込", description: "前月の買掛金と出金を突合" },
-      { command: "ap_matching", label: "未消込すべて", description: "未消込の買掛金をすべて表示" },
-    ],
-  },
-  past_similar: {
-    content: "過去同一取引の仕訳 — 検索方法を選んでください",
-    suggestions: [
-      {
-        command: "past_similar",
-        label: "摘要で検索",
-        description: "摘要キーワードで過去仕訳を検索",
-      },
-      { command: "past_similar", label: "取引先で検索", description: "取引先名で過去仕訳を検索" },
-      {
-        command: "past_similar",
-        label: "金額帯で検索",
-        description: "金額範囲を指定して過去仕訳を検索",
-      },
-    ],
-  },
 
-  // ===== 分析系 =====
-  sales_ranking: {
-    content: "売上ランキング — 集計方法を選んでください",
+  // ===== P5: マスタ参照 =====
+  master_ref: {
+    content: "マスタ参照 — 参照したいデータを選んでください",
     suggestions: [
       {
-        command: "sales_ranking",
-        label: "取引先別ランキング",
-        description: "取引先ごとの売上合計でランキング",
-      },
-      {
-        command: "sales_ranking",
-        label: "科目別ランキング",
-        description: "売上科目ごとの合計でランキング",
-      },
-      { command: "sales_ranking", label: "月別推移", description: "月ごとの売上推移を表示" },
-    ],
-  },
-  expense_ranking: {
-    content: "経費ランキング — 集計方法を選んでください",
-    suggestions: [
-      {
-        command: "expense_ranking",
-        label: "科目別ランキング",
-        description: "経費科目ごとの合計でランキング",
-      },
-      {
-        command: "expense_ranking",
-        label: "取引先別ランキング",
-        description: "取引先ごとの経費合計でランキング",
-      },
-      { command: "expense_ranking", label: "月別推移", description: "月ごとの経費推移を表示" },
-    ],
-  },
-  monthly_variance: {
-    content: "月次変動科目 — 比較方法を選んでください",
-    suggestions: [
-      {
-        command: "monthly_variance",
-        label: "前月比で検出",
-        description: "前月と比較して異常な変動がある科目を検出",
-      },
-      {
-        command: "monthly_variance",
-        label: "前年同月比で検出",
-        description: "前年同月と比較して変動を検出",
-      },
-      {
-        command: "monthly_variance",
-        label: "今期の月次推移",
-        description: "今期全月の推移から変動科目を検出",
-      },
-    ],
-  },
-  partner_list: {
-    content: "売上先・仕入先・外注先一覧 — 分類を選んでください",
-    suggestions: [
-      {
-        command: "partner_list",
-        label: "全取引先",
+        command: "__exec__:master_ref:取引先一覧:partners",
+        label: "取引先一覧",
         description: "売上先・仕入先・外注先をまとめて表示",
       },
-      { command: "partner_list", label: "売上先のみ", description: "売上計上のある取引先のみ表示" },
-      { command: "partner_list", label: "仕入先のみ", description: "仕入計上のある取引先のみ表示" },
       {
-        command: "partner_list",
-        label: "外注先のみ",
-        description: "外注費計上のある取引先のみ表示",
-      },
-    ],
-  },
-  payroll_trend: {
-    content: "給与・役員報酬月次推移 — 表示範囲を選んでください",
-    suggestions: [
-      { command: "payroll_trend", label: "今期の推移", description: "当期の人件費月次推移を表示" },
-      { command: "payroll_trend", label: "前期比", description: "前期と比較した人件費推移を表示" },
-    ],
-  },
-  three_year_plan: {
-    content: "過去3期計画 — 比較対象を選んでください",
-    suggestions: [
-      {
-        command: "three_year_plan",
-        label: "PL（損益）3期比較",
-        description: "過去3期の損益計算書を比較",
+        command: "__exec__:master_ref:定期取引検出:recurring",
+        label: "定期取引検出",
+        description: "毎月発生する定期取引を自動検出",
       },
       {
-        command: "three_year_plan",
-        label: "BS（資産）3期比較",
-        description: "過去3期の貸借対照表を比較",
+        command: "__exec__:master_ref:仕訳ルール:rules",
+        label: "仕訳ルールの言語化",
+        description: "過去仕訳のパターンをテキストで説明",
       },
-      {
-        command: "three_year_plan",
-        label: "主要指標の3期推移",
-        description: "売上・利益率・人件費率等を3期で比較",
-      },
-    ],
-  },
-  sales_change: {
-    content: "売上増減ランキング — 比較期間を選んでください",
-    suggestions: [
-      { command: "sales_change", label: "前期比", description: "前期と比較した売上増減ランキング" },
-      { command: "sales_change", label: "前月比", description: "前月と比較した売上増減ランキング" },
     ],
   },
 
-  // ===== データ取得系 =====
-  journals_period: {
-    content: "仕訳取得 — 期間を選んでください",
+  // ===== P6: 消込 =====
+  matching: {
+    content: "消込 — 種別を選んでください",
     suggestions: [
-      { command: "journals_period", label: "今月の仕訳", description: "当月の仕訳一覧を取得" },
-      { command: "journals_period", label: "先月の仕訳", description: "前月の仕訳一覧を取得" },
-      { command: "journals_period", label: "今期の仕訳", description: "当期の全仕訳を取得" },
       {
-        command: "journals_period",
-        label: "期間を指定",
-        description: "開始日・終了日を指定して取得",
+        command: "__exec__:matching:売掛消込:ar",
+        label: "売掛消込リスト",
+        description: "売掛金と入金を突合して消込候補を表示",
+      },
+      {
+        command: "__exec__:matching:買掛消込:ap",
+        label: "買掛消込リスト",
+        description: "買掛金と出金を突合して消込候補を表示",
       },
     ],
   },
-  pl_trial: {
-    content: "PL試算表 — 期間を選んでください",
-    suggestions: [
-      { command: "pl_trial", label: "今月", description: "当月のPL試算表を取得" },
-      { command: "pl_trial", label: "先月", description: "前月のPL試算表を取得" },
-      { command: "pl_trial", label: "今期累計", description: "当期累計のPL試算表を取得" },
-    ],
-  },
-  bs_trial: {
-    content: "BS試算表 — 期間を選んでください",
-    suggestions: [
-      { command: "bs_trial", label: "今月末時点", description: "当月末時点のBS試算表を取得" },
-      { command: "bs_trial", label: "先月末時点", description: "前月末時点のBS試算表を取得" },
-      { command: "bs_trial", label: "期末時点", description: "直近決算期末のBS試算表を取得" },
-    ],
-  },
-  pl_transition: {
-    content: "PL推移表 — 期間を選んでください",
-    suggestions: [
-      { command: "pl_transition", label: "今期の月次推移", description: "当期の月次PL推移を取得" },
-      { command: "pl_transition", label: "前期の月次推移", description: "前期の月次PL推移を取得" },
-    ],
-  },
-  bs_transition: {
-    content: "BS推移表 — 期間を選んでください",
-    suggestions: [
-      { command: "bs_transition", label: "今期の月次推移", description: "当期の月次BS推移を取得" },
-      { command: "bs_transition", label: "前期の月次推移", description: "前期の月次BS推移を取得" },
-    ],
-  },
+
+  // P7: 財務分析 — サブ選択肢なし（層3 FCに委譲）
 };
 
 /**
@@ -339,9 +169,9 @@ export async function matchPattern(
 ): Promise<PatternMatchResult | null> {
   const normalized = text.trim();
 
-  // サブ選択肢ラベルのマッチ（実行フェーズ）
-  const subMatch = await matchSubOption(normalized, clientId);
-  if (subMatch) return subMatch;
+  // 内部コマンドプレフィックスのマッチ（__exec__, __commit__）
+  const internalMatch = await matchInternalCommand(normalized, clientId);
+  if (internalMatch) return internalMatch;
 
   const withKeywords = COMMAND_CATALOG.filter((c) => c.keywords && c.keywords.length > 0);
 
@@ -363,11 +193,10 @@ export async function matchPattern(
 }
 
 /**
+ * 内部コマンドのマッチ（__exec__, __commit__）
  * サブ選択肢ラベルのマッチ → 期間選択 or 実行
- * 1. __exec__:cmdId:subLabel:period → 実際にAPI実行
- * 2. COMMAND_OPTIONSのlabel → 期間選択肢を返す（MFデータ取込の場合）
  */
-async function matchSubOption(text: string, clientId: string): Promise<PatternMatchResult | null> {
+async function matchInternalCommand(text: string, clientId: string): Promise<PatternMatchResult | null> {
   /** 顧問先ラベル */
   let clientLabel = '';
   if (clientId === 'all') {
@@ -412,12 +241,13 @@ async function matchSubOption(text: string, clientId: string): Promise<PatternMa
     const parts = text.split(':');
     const cmdId = parts[1] ?? '';
     const subLabel = parts[2] ?? '';
-    const periodKey = parts[3] ?? 'current';
+    // parts[3]はパラメータキー（将来の拡張用に予約）
 
-    if (cmdId === 'sync_mf_data') {
-      return await executeMfSync(subLabel, clientId, targetLine, periodKey);
+    if (cmdId === 'mf_sync_all') {
+      return await executeMfSyncAll(clientId, targetLine);
     }
 
+    // 暫定: 他コマンドはモック
     const cmd = COMMAND_CATALOG.find(c => c.id === cmdId);
     const cmdName = cmd?.name ?? cmdId;
     return {
@@ -431,24 +261,9 @@ async function matchSubOption(text: string, clientId: string): Promise<PatternMa
     const matched = options.suggestions.find(s => s.label === text);
     if (!matched) continue;
 
-    // MFデータ取込 → 期間選択肢を返す
-    if (cmdId === 'sync_mf_data') {
-      return {
-        type: 'suggestions',
-        content: `${targetLine}**${text}** — 取込期間を選んでください`,
-        suggestions: [
-          {
-            command: `__exec__:sync_mf_data:${text}:latest`,
-            label: '最新だけ取込',
-            description: '進行期のデータのみ取込',
-          },
-          {
-            command: `__exec__:sync_mf_data:${text}:three`,
-            label: '3期分（直近2期分＋進行期）',
-            description: '直近2期分と進行期のデータをまとめて取込',
-          },
-        ],
-      };
+    // __exec__プレフィックス付きのcommandならそのまま実行フェーズへ
+    if (matched.command.startsWith('__exec__:')) {
+      return matchInternalCommand(matched.command, clientId);
     }
 
     const cmd = COMMAND_CATALOG.find(c => c.id === cmdId);
@@ -458,18 +273,22 @@ async function matchSubOption(text: string, clientId: string): Promise<PatternMa
       content: `${targetLine}⏳ **${cmdName}** → **${text}** を実行しています...\n\n（DB基盤完成後に実データ処理に差し替えます）`,
     };
   }
+
   return null;
 }
 
 /**
- * MFデータ取込の実行（MCP API呼び出し + データ保存）
- * @param periodKey 'latest'=最新だけ, 'three'=3期分
+ * MF全データ同期の実行（常に3期分・全データ一括取込）
+ *
+ * 取込内容:
+ *   1. 仕訳データ（3期分）
+ *   2. 勘定科目マスタ
+ *   3. 税区分マスタ
+ *   ※ 取引先・部門・補助科目・連携サービスは保存先が未整備のため後日追加
  */
-async function executeMfSync(
-  subLabel: string,
+async function executeMfSyncAll(
   clientId: string,
   targetLine: string,
-  periodKey: string = 'latest',
 ): Promise<PatternMatchResult> {
   // MF認証チェック
   const status = getAuthStatus(clientId);
@@ -480,165 +299,147 @@ async function executeMfSync(
     };
   }
 
-  // 期間ラベル
-  const periodLabels: Record<string, string> = {
-    latest: '最新（進行期）',
-    three: '3期分（直近2期＋進行期）',
-  };
-  const periodLabel = periodLabels[periodKey] ?? '最新';
-
   const results: string[] = [];
 
   try {
-    if (subLabel === '全データ取込' || subLabel === '仕訳データのみ') {
-      const termList = await mcpFetchTermSettings(undefined, clientId);
-      const periodCount = periodKey === 'three' ? 3 : 1;
+    // ===== 1. 仕訳データ（3期分） =====
+    const termList = await mcpFetchTermSettings(undefined, clientId);
+    const periodCount = 3; // 常に3期分
 
-      // 全バッチのbatchIdを集約（承認ボタン用）
-      const batchIds: string[] = [];
-      let hasWarnings = false;
+    // 全バッチのbatchIdを集約（承認ボタン用）
+    const batchIds: string[] = [];
+    let hasWarnings = false;
 
-      for (let i = 0; i < periodCount; i++) {
-        const selected = termList[i];
-        if (!selected) break;
+    for (let i = 0; i < periodCount; i++) {
+      const selected = termList[i];
+      if (!selected) break;
 
-        const journals = await mcpFetchJournals(
-          { start_date: selected.start_date, end_date: selected.end_date },
-          clientId,
+      const journals = await mcpFetchJournals(
+        { start_date: selected.start_date, end_date: selected.end_date },
+        clientId,
+      );
+
+      const importResult = await importMfJournals(journals, clientId);
+      batchIds.push(importResult.batchId);
+
+      // 結果表示
+      if (importResult.committed) {
+        // 警告なし→即座に保存済み
+        results.push(
+          `✅ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
+          `${journals.length}件取得 → ${importResult.added}件追加, ${importResult.skipped}件スキップ（重複）`
         );
-
-        const importResult = await importMfJournals(journals, clientId);
-        batchIds.push(importResult.batchId);
-
-        // 結果表示
-        if (importResult.committed) {
-          // 警告なし→即座に保存済み
-          results.push(
-            `✅ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
-            `${journals.length}件取得 → ${importResult.added}件追加, ${importResult.skipped}件スキップ（重複）`
-          );
-        } else {
-          // 警告あり→承認待ち
-          results.push(
-            `⏳ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
-            `${journals.length}件取得 → **承認待ち**（${importResult.converted.length}件変換済み）`
-          );
-          hasWarnings = true;
-        }
-
-        // エラー表示
-        for (const err of importResult.skippedErrors) {
-          results.push(`  ❌ ${err.message}`);
-        }
-
-        // 警告表示
-        for (const warn of importResult.warnings) {
-          results.push(`  ⚠️ ${warn.message}`);
-        }
+      } else {
+        // 警告あり→承認待ち
+        results.push(
+          `⏳ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
+          `${journals.length}件取得 → **承認待ち**（${importResult.converted.length}件変換済み）`
+        );
+        hasWarnings = true;
       }
 
-      // 警告があれば承認ボタンをsuggestionsで返す
-      if (hasWarnings) {
-        const approveCommands: AiSuggestion[] = [];
-        for (const bid of batchIds) {
-          approveCommands.push({
-            command: `__commit__:approve:${bid}`,
-            label: '✅ 承認して取込',
-            description: '警告を確認しました。過去仕訳CSVに保存します',
-          });
-        }
+      // エラー表示
+      for (const err of importResult.skippedErrors) {
+        results.push(`  ❌ ${err.message}`);
+      }
+
+      // 警告表示
+      for (const warn of importResult.warnings) {
+        results.push(`  ⚠️ ${warn.message}`);
+      }
+    }
+
+    // ===== 2. 勘定科目マスタ =====
+    const allAccounts = await mcpFetchAccounts(clientId);
+    const available = allAccounts.filter((a) => a.available);
+    const mapped: Account[] = available.map((a, idx) => ({
+      id: a.id,
+      name: a.name,
+      target: 'both' as AccountTarget,
+      accountGroup: 'PL_EXPENSE' as AccountGroup,
+      category: a.category,
+      defaultTaxCategoryId: undefined,
+      taxDetermination: 'fixed' as TaxDetermination,
+      deprecated: false,
+      effectiveFrom: '2019-10-01',
+      effectiveTo: null,
+      sortOrder: idx + 1,
+      mfAccountId: a.id,
+      mfAccountGroup: a.account_group,
+      mfFinancialStatementType: a.financial_statement_type,
+      mfDefaultTaxId: a.tax_id,
+    }));
+    saveClientAccounts(clientId, mapped);
+
+    // Sugusruマスタと名前突合
+    const sugusruAccounts = getAllAccounts();
+    const sugusruNames = new Set(sugusruAccounts.map(a => a.name));
+    const matchedCount = available.filter(a => sugusruNames.has(a.name)).length;
+    const unmatched = available.filter(a => !sugusruNames.has(a.name));
+
+    let accountMsg = `✅ 勘定科目: ${allAccounts.length}件取得 → ${available.length}件保存`;
+    accountMsg += `（Sugusruマスタとのマッチ: ${matchedCount}件 / 未マッチ: ${unmatched.length}件）`;
+    if (unmatched.length > 0) {
+      accountMsg += `\n\n⚠️ **Sugusruマスタにない科目（${unmatched.length}件）:**\n`;
+      accountMsg += unmatched.slice(0, 20).map(a => `- ${a.name}`).join('\n');
+      if (unmatched.length > 20) {
+        accountMsg += `\n- …他${unmatched.length - 20}件`;
+      }
+    }
+    results.push(accountMsg);
+
+    // ===== 3. 税区分マスタ =====
+    const allTaxes = await mcpFetchTaxes(clientId);
+    const taxMapped: TaxCategory[] = allTaxes.map((t, idx) => ({
+      id: t.id,
+      name: t.name,
+      shortName: t.abbreviation ?? '',
+      direction: 'common' as TaxDirection,
+      qualified: false,
+      aiSelectable: t.available,
+      active: t.available,
+      deprecated: !t.available,
+      effectiveFrom: '2019-10-01',
+      effectiveTo: null,
+      defaultVisible: t.available,
+      displayOrder: idx + 1,
+    }));
+    saveClientTaxCategories(clientId, taxMapped);
+    results.push(`✅ 税区分: ${allTaxes.length}件を取得・保存（available=${allTaxes.filter(t => t.available).length}件）`);
+
+    // 警告があれば承認ボタンをsuggestionsで返す
+    if (hasWarnings) {
+      const approveCommands: AiSuggestion[] = [];
+      for (const bid of batchIds) {
         approveCommands.push({
-          command: `__commit__:discard:${batchIds[0]}`,
-          label: '🗑️ 破棄',
-          description: '取込を中止し、データを破棄します',
+          command: `__commit__:approve:${bid}`,
+          label: '✅ 承認して取込',
+          description: '警告を確認しました。過去仕訳CSVに保存します',
         });
-
-        return {
-          type: 'suggestions',
-          content: `${targetLine}⚠️ **MFデータ取込 — 承認が必要です**（${periodLabel}）\n\n${results.join('\n')}\n\n↑ の内容を確認し、承認または破棄を選んでください。`,
-          suggestions: approveCommands,
-        };
       }
-    }
+      approveCommands.push({
+        command: `__commit__:discard:${batchIds[0]}`,
+        label: '🗑️ 破棄',
+        description: '取込を中止し、データを破棄します',
+      });
 
-    if (subLabel === '全データ取込' || subLabel === '科目マスタのみ') {
-      const allAccounts = await mcpFetchAccounts(clientId);
-      // available=trueのみ保存（利用不可科目を除外）
-      const available = allAccounts.filter((a) => a.available);
-      const mapped: Account[] = available.map((a, idx) => ({
-        id: a.id,
-        name: a.name,
-        target: 'both' as AccountTarget,
-        accountGroup: 'PL_EXPENSE' as AccountGroup, // MF→Sugusru変換はSupabase移行時に実施
-        category: a.category,
-        defaultTaxCategoryId: undefined,
-        taxDetermination: 'fixed' as TaxDetermination,
-        deprecated: false,
-        effectiveFrom: '2019-10-01',
-        effectiveTo: null,
-        sortOrder: idx + 1,
-        // MF連携フィールド
-        mfAccountId: a.id,
-        mfAccountGroup: a.account_group,
-        mfFinancialStatementType: a.financial_statement_type,
-        mfDefaultTaxId: a.tax_id,
-      }));
-      saveClientAccounts(clientId, mapped);
-
-      // Sugusruマスタと名前突合 → 未マッチ科目を警告表示
-      const sugusruAccounts = getAllAccounts();
-      const sugusruNames = new Set(sugusruAccounts.map(a => a.name));
-      const matchedCount = available.filter(a => sugusruNames.has(a.name)).length;
-      const unmatched = available.filter(a => !sugusruNames.has(a.name));
-
-      let msg = `✅ 勘定科目: ${allAccounts.length}件取得 → ${available.length}件保存`;
-      msg += `（Sugusruマスタとのマッチ: ${matchedCount}件 / 未マッチ: ${unmatched.length}件）`;
-      if (unmatched.length > 0) {
-        msg += `\n\n⚠️ **Sugusruマスタにない科目（${unmatched.length}件）:**\n`;
-        msg += unmatched.slice(0, 20).map(a => `- ${a.name}`).join('\n');
-        if (unmatched.length > 20) {
-          msg += `\n- …他${unmatched.length - 20}件`;
-        }
-      }
-      results.push(msg);
-    }
-
-    if (subLabel === '全データ取込' || subLabel === '税区分マスタのみ') {
-      const allTaxes = await mcpFetchTaxes(clientId);
-      // 免税事業者は全件available=false → フィルタなしで全件保存
-      // activeプロパティにavailableを設定し、UI側のフィルタで制御
-      const mapped: TaxCategory[] = allTaxes.map((t, idx) => ({
-        id: t.id,
-        name: t.name,
-        shortName: t.abbreviation ?? '',
-        direction: 'common' as TaxDirection,
-        qualified: false,
-        aiSelectable: t.available,
-        active: t.available,
-        deprecated: !t.available,
-        effectiveFrom: '2019-10-01',
-        effectiveTo: null,
-        defaultVisible: t.available,
-        displayOrder: idx + 1,
-      }));
-      saveClientTaxCategories(clientId, mapped);
-      results.push(`✅ 税区分: ${allTaxes.length}件を取得・保存（available=${allTaxes.filter(t => t.available).length}件）`);
-    }
-
-    if (subLabel === '取引先マスタのみ') {
-      results.push('⏳ 取引先マスタ取込はDB基盤完成後に実装予定です');
+      return {
+        type: 'suggestions',
+        content: `${targetLine}⚠️ **MF全データ同期 — 承認が必要です**（3期分）\n\n${results.join('\n')}\n\n↑ の内容を確認し、承認または破棄を選んでください。`,
+        suggestions: approveCommands,
+      };
     }
 
     return {
       type: 'text',
-      content: `${targetLine}🎉 **MFデータ取込完了**（${periodLabel}）\n\n${results.join('\n')}`,
+      content: `${targetLine}🎉 **MF全データ同期完了**（3期分）\n\n${results.join('\n')}`,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`[aiPatternMatcher] MFデータ取込失敗: ${message}`);
+    console.error(`[aiPatternMatcher] MF全データ同期失敗: ${message}`);
     return {
       type: 'text',
-      content: `${targetLine}❌ **MFデータ取込に失敗しました**\n\n${message}`,
+      content: `${targetLine}❌ **MF全データ同期に失敗しました**\n\n${message}`,
     };
   }
 }
@@ -665,7 +466,7 @@ function buildResult(cmdId: string, cmdName: string, clientId: string): PatternM
     };
   }
 
-  // サブ選択肢なし → モック結果
+  // サブ選択肢なし（財務分析等は層3 FCに委譲）
   return {
     type: "text",
     content: `**対象:** ${clientLabel}\n\n[モック] 「${cmdName}」を実行しました。\n\nDB基盤完成後に実データに差し替えます。`,

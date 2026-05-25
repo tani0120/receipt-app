@@ -48,34 +48,34 @@ const TEST_CASES: TestCase[] = [
   // ===== コマンド提案テスト =====
   {
     id: 1, input: '科目の一覧を見たい',
-    expectedMode: 'suggest', expectedCommands: ['accounts_list'],
+    expectedMode: 'suggest', expectedCommands: ['mf_sync_all'],
     カテゴリ: 'コマンド提案',
   },
   {
     id: 2, input: '売上のランキングを出して',
-    expectedMode: 'suggest', expectedCommands: ['sales_ranking'],
+    expectedMode: 'suggest', expectedCommands: ['financial_analysis'],
     カテゴリ: 'コマンド提案',
   },
   {
     id: 3, input: 'MFからデータを取り込みたい',
-    expectedMode: 'suggest', expectedCommands: ['sync_mf_data'],
+    expectedMode: 'suggest', expectedCommands: ['mf_sync_all'],
     カテゴリ: 'コマンド提案',
   },
   {
     id: 4, input: '仕訳をMFに送りたい',
-    expectedMode: 'suggest', expectedCommands: ['journal_post'],
+    expectedMode: 'suggest', expectedCommands: ['journal_write'],
     カテゴリ: 'コマンド提案',
   },
   {
     id: 5, input: '先月の経費が高い科目は？',
-    expectedMode: 'suggest', expectedCommands: ['expense_ranking', 'monthly_variance'],
+    expectedMode: 'suggest', expectedCommands: ['financial_analysis'],
     カテゴリ: 'コマンド提案',
   },
 
   // ===== 自由質問テスト =====
   {
     id: 6, input: 'まず何をすればいい？',
-    expectedMode: 'answer', expectedKeywords: ['MF', '連携', 'データ取込', 'sync'],
+    expectedMode: 'answer', expectedKeywords: ['MF', '連携', 'データ', '同期', 'mf_sync_all'],
     カテゴリ: '自由質問',
   },
   {

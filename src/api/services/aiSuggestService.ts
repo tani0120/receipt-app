@@ -131,6 +131,6 @@ export async function suggestCommands(
 }
 
 /** コマンドカタログを公開（フロントのコマンドブラウザ用） */
-export function getCommandCatalog(): Omit<CommandDef, 'keywords'>[] {
-  return COMMAND_CATALOG.map(({ id, name, cat, desc }) => ({ id, name, cat, desc }))
+export function getCommandCatalog(): Omit<CommandDef, 'keywords' | 'legacyIds'>[] {
+  return COMMAND_CATALOG.map(({ id, name, cat, desc, actionType, apiEndpoint, status, costPerCall }) => ({ id, name, cat, desc, actionType, apiEndpoint, status, costPerCall }))
 }

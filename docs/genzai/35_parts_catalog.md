@@ -3,7 +3,7 @@
 > コマンド（34_command_catalog.md）を構成する部品の定義。
 > 部品 = 入力 / 処理 / 出力 の3ジャンル。
 > AI部品には「目的・許可・禁止・プロンプト」を定義する。
-> 最終更新: 2026-05-23
+> 最終更新: 2026-05-25
 
 ---
 
@@ -17,9 +17,9 @@
 | getJournalById | mfc_ca_getJournalById | 仕訳1件取得 | 仕訳取消 |
 | getAccounts | mfc_ca_getAccounts | 科目マスタ取得 | 仕訳生成, 科目一覧 |
 | getTaxes | mfc_ca_getTaxes | 税区分マスタ取得 | 仕訳生成 |
-| getPL | getReportsTrialBalanceProfitLoss | PL試算表 | 売上/経費ランキング |
+| getPL | getReportsTrialBalanceProfitLoss | PL試算表 | 財務分析 (financial_analysis) |
 | getBS | getReportsTrialBalanceBalanceSheet | BS試算表 | BS表示 |
-| getTransitionPL | getReportsTransitionProfitLoss | PL推移表 | 月次変動, 給与推移 |
+| getTransitionPL | getReportsTransitionProfitLoss | PL推移表 | 財務分析 (financial_analysis) |
 | getTransitionBS | getReportsTransitionBalanceSheet | BS推移表 | BS推移表示 |
 | getTradePartners | mfc_ca_getTradePartners | 取引先一覧 | 取引先一覧 |
 | getDepartments | mfc_ca_getDepartments | 部門一覧 | 部門別分析 |
@@ -46,7 +46,7 @@
 | 部品名 | 入力 | 用途 | 使用コマンド |
 |---|---|---|---|
 | fileReceive | PDF/CSV/画像 | 客からの資料を取り込み | 仕訳生成（領収書） |
-| csvParse | CSVファイル | 銀行明細CSVを構造化 | 仕訳生成（銀行/カード） |
+| csvParse | CSVファイル | 銀行明細CSVを構造化 | 仕訳投入 (journal_write) |
 
 ### ユーザー入力
 
@@ -66,7 +66,7 @@
 | matchByRemark | 摘要ILIKE検索 + 科目集計 + 使用回数 | 仕訳生成, 過去同一取引 |
 | aggregate | 科目別/取引先別の集計 | ランキング系全般 |
 | aggregateByDepartment | 部門別集計 | 部門別分析 |
-| aggregateByMonth | 月別集計 | 月次変動, 給与推移 |
+| aggregateByMonth | 月別集計 | 財務分析 (financial_analysis) |
 | pairing | 売掛/買掛と入出金のペアリング | 消込リスト |
 | calcChange | 増減算出（昨期比） | 増減ランキング |
 | formatRanking | ランキング出力整形 | ランキング系全般 |
@@ -83,7 +83,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| 目的 | ユーザーの自由テキストからコマンド候補を3〜5個提案する |
+| 目的 | ユーザーの自由テキストからコマンド候補を1〜3個提案する |
 | 入力 | ユーザーの自然言語テキスト + コマンドカタログJSON |
 | 出力 | JSON: suggestions配列（command, label, description） |
 | モデル | **gemini-3.5-flash**（決定: 2026-05-22） |
@@ -143,7 +143,7 @@
 | 目的 | 表記ゆれを統合して同一取引先を特定する |
 | 入力 | 摘要リスト（文字列配列）+ 対象摘要（1件） |
 | 出力 | JSON配列: 同一取引先と判定された摘要の原文 |
-| 使用コマンド | 領収書仕訳候補, 過去同一取引, 売上先一覧, 売上増減ランキング |
+| 使用コマンド | 仕訳投入 (journal_write), 仕訳取得・確認 (journal_view), マスタ参照 (master_ref) |
 
 ```
 やること:
@@ -181,7 +181,7 @@
 | 目的 | 数値データをテキストに変換する |
 | 入力 | 構造化データ（JSON/テーブル） |
 | 出力 | テキスト: 要約文 |
-| 使用コマンド | 月次変動, ビジネス概況, 過去3期計画, 口座資金フロー |
+| 使用コマンド | 財務分析 (financial_analysis) |
 
 ```
 やること:
@@ -211,7 +211,7 @@
 | 目的 | 月次変動等の原因を摘要から推定する |
 | 入力 | 異常科目テーブル（科目名・月・金額・摘要一覧） |
 | 出力 | テキスト: 理由を1行で推定 |
-| 使用コマンド | 月次変動, 残高不一致の根拠 |
+| 使用コマンド | 財務分析 (financial_analysis) |
 
 ```
 やること:
@@ -290,8 +290,8 @@
 |---|---|---|
 | tableView | テーブル表示（ランキング, 一覧, 推移） | 分析系全般, データ取得系 |
 | listView | リスト表示（仕訳候補を1件ずつ提示） | 仕訳生成 |
-| modalView | モーダル表示（確認, 承認, 最終確認） | 仕訳✓, 仕訳投入 |
-| textView | テキスト表示（要約, 概況, 根拠） | ビジネス概況, 仕訳ルール |
+| modalView | モーダル表示（確認, 承認, 最終確認） | 仕訳取得・確認 (journal_view), 仕訳投入 (journal_write) |
+| textView | テキスト表示（要約, 概況, 根拠） | 財務分析 (financial_analysis), マスタ参照 (master_ref) |
 | resultView | 結果表示（成功/失敗/件数） | 仕訳投入結果 |
 
 ### MF投入
@@ -347,7 +347,7 @@
 |---|---|---|
 | `src/components/ai/AiFloatingButton.vue` | 右下固定ボタン。クリックでチャット開閉 | ✅ 実装済 |
 | `src/components/ai/AiChatWindow.vue` | チャットウィンドウ本体。ドラッグ移動対応 | ✅ 実装済 |
-| `src/components/ai/AiCommandBrowser.vue` | コマンドブラウザ（カテゴリタブ+検索フィルタ） | 未実装 |
+| `src/components/ai/AiCommandBrowser.vue` | コマンドブラウザ（カテゴリタブ+検索フィルタ+actionTypeバッジ） | ✅ 実装済 |
 | `src/components/ai/AiParamForm.vue` | コマンドパラメータ入力フォーム | 未実装 |
 | `src/components/ai/AiConfirmModal.vue` | WRITE操作の確認モーダル | 未実装 |
 | `src/composables/useAiCommand.ts` | API呼び出し+状態管理 | ✅ 実装済 |
@@ -387,21 +387,21 @@
 │ コマンドを探す              │
 │ [🔍 検索...]                │
 │                             │
-│ [仕訳] [分析] [管理] [データ] ← カテゴリタブ
+│ [仕訳] [分析] [データ]      ← カテゴリタブ（3カテゴリ）
 │                             │
-│ ▸ 銀行/カード明細の仕訳候補 │
-│   銀行・カード明細から自動生成│
-│ ▸ 領収書の仕訳候補          │
-│   領収書・レシートから自動生成│
+│ ▸ MF全データ同期  ⚡直接実行 │
+│   事業者情報・科目・仕訳を一括│
+│ ▸ 仕訳取得・確認  📡MCP     │
+│   仕訳一覧の取得・検索・確認 │
 │ ...                         │
 │                             │
 │ [閉じる]                    │
 └─────────────────────────────┘
 
 動作:
-  カテゴリタブ → 仕訳/分析/管理/データ切替
+  カテゴリタブ → 仕訳/分析/データ切替
   検索ボックス → コマンド名・説明をフィルタ（クライアント側。API不要）
-  コマンド押下 → パラメータ入力フォーム表示
+  コマンド押下 → actionTypeに応じて実行方式分岐
   AI不要（カタログJSONをフロントに持たせる）
 ```
 
@@ -426,7 +426,7 @@
 | 項目 | 内容 |
 |---|---|
 | 入力 | ユーザーの自然言語テキスト + コマンドカタログJSON |
-| 出力 | コマンド候補3〜5個（人間が選択する） |
+| 出力 | コマンド候補1〜3個（人間が選択する） |
 | モデル | **gemini-3.5-flash** |
 | コスト | ~¥0.002/回 |
 | 実装 | `src/api/services/aiSuggestService.ts` |
@@ -523,9 +523,9 @@
 
 | ファイル | 層 | 内容 |
 |---|---|---|
-| [34_command_catalog.md](34_command_catalog.md) | 完成品 | コマンドカタログ |
-| [34a_command_journal.md](34a_command_journal.md) | 完成品 | 仕訳系レシピ |
-| [34b_command_business.md](34b_command_business.md) | 完成品 | ビジネス系レシピ |
+| [34_command_catalog.md](34_command_catalog.md) | 完成品 | コマンドカタログ（7コマンド、実行方式・ロードマップ含む） |
+| [34a_command_journal.md](34a_command_journal.md) | 完成品 | 仕訳系コマンドレシピ（P1〜P6） |
+| [34b_command_business.md](34b_command_business.md) | 完成品 | 分析系コマンドレシピ（P7: 財務分析） |
 | [36_infra_ui.md](36_infra_ui.md) | 基盤 | UI設計・フロー・ルーティング |
 | [37_infra_mcp.md](37_infra_mcp.md) | 基盤 | MCP接続基盤 |
 | [38_infra_db.md](38_infra_db.md) | 基盤 | DB基盤・月次同期 |

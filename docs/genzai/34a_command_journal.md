@@ -3,11 +3,21 @@
 > 各コマンドの部品組み合わせ手順。
 > コマンド一覧: [34_command_catalog.md](34_command_catalog.md)
 > 部品定義: [35_parts_catalog.md](35_parts_catalog.md)
-> 最終更新: 2026-05-23
+> 最終更新: 2026-05-25
+>
+> …… 再編対応表 ……
+> | 旧コマンド | 新コマンド |
+> |---|---|
+> | MFデータ取込 + 科目一覧 + 税区分一覧 + 事業者情報 + 会計年度設定 + 部門一覧 + 補助科目一覧 + 連携サービス一覧 + 取引先一覧 | **P1: MF全データ同期** (`mf_sync_all`) |
+> | 銀行/カード明細の仕訳候補 + 領収書の仕訳候補 + 仕訳投入 | **P3: 仕訳投入** (`journal_write`) |
+> | 仕訳取得（期間） + 仕訳取得（ID） + 仕訳✓ + 過去同一取引 | **P2: 仕訳取得・確認** (`journal_view`) |
+> | 仕訳取消 | **P4: 仕訳取消** (`journal_cancel`) |
+> | 売掛消込 + 買掛消込 | **P6: 消込** (`matching`) |
+> | 仕訳ルール言語化 + 定期取引検出 + 中間勘定パターン | **P5: マスタ参照** (`master_ref`) |
 
 ---
 
-## MFデータ取込（仕訳、科目マスタ、税区分マスタ）
+## P1: MF全データ同期 (`mf_sync_all`)
 
 > 仕訳パイプラインはDB上のデータで動く。
 > MFのデータをDBに入れるのが最初のステップ。
@@ -15,15 +25,17 @@
 | 項目 | 内容 |
 |---|---|
 | 得たい結果 | MFクラウド会計のデータをローカルDBに取り込む |
-| UIタグ | 管理 |
-| 出力UI | 結果テキスト |
+| カテゴリ | データ |
+| 実行方式 | direct_api（`/api/mf/sync-all`） |
+| コスト | 0円 |
+| 出力UI | チャット内結果テキスト |
 
 ### パラメータ
 
-| パラメータ | 選択肢 | デフォルト |
+| パラメータ | 値 | 備考 |
 |---|---|---|
-| 対象 | 全顧問先 / 特定の顧問先 | 全顧問先 |
-| 範囲 | 3期分 / 2期分 / 今期分 / 前回差分のみ | 今期分 |
+| 対象 | 全顧問先 / 特定の顧問先 | チャットの顧問先選択に従う |
+| 範囲 | **常に3期分**（固定） | MCP無料なので選択肢不要 |
 | 頻度 | 今すぐ / 毎月20日（自動） | 今すぐ |
 
 ### 部品レシピ
@@ -416,20 +428,26 @@ aiClassify（処理部品AI）→ 銀行/カード/領収書を判別
 
 ---
 
-## 実装順序
+## 実装順序（P1〜P6）
 
 ```
-★最優先: 銀行/カード仕訳候補 → 仕訳✓ → 仕訳投入（パイプライン通しで動かす）
-  → fetchJournals, fetchAccounts, fetchTaxes, matchByRemark
+P1: MF全データ同期 (mf_sync_all) → 事業者情報・科目・税区分・仕訳・取引先を一括取込
+  → 直接API化済み（/api/mf/sync-all）
+
+P2: 仕訳取得・確認 (journal_view) → 仕訳一覧・検索・過去同一取引
+  → fetchJournals, fetchAccounts, fetchTaxes
+  → listView, tableView
+
+P3: 仕訳投入 (journal_write) → 銀行明細・領収書から仕訳生成・MF投入
+  → matchByRemark, nayose, postJournals
   → listView, modalView, resultView
-  → postJournals, saveJournals
 
-次: 領収書仕訳候補
-  → ocr, nayose, fileReceive 追加
+P4: 仕訳取消 (journal_cancel) → 投入済み仕訳の修正・削除
+  → putJournals
 
-次: 消込リスト
-  → pairing 追加
+P5: マスタ参照 (master_ref) → 取引先一覧・定期取引・仕訳ルール
+  → aggregate, aiSummarize
 
-次: 仕訳参考情報（ルール言語化, 定期取引等）
-  → aiSummarize 追加
+P6: 消込 (matching) → 売掛・買掛消込
+  → pairing
 ```

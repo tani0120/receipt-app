@@ -40,7 +40,12 @@
         class="ai-cmd-item"
         @click="$emit('select', cmd)"
       >
-        <span class="ai-cmd-item-name">{{ cmd.name }}</span>
+        <div class="ai-cmd-item-top">
+          <span class="ai-cmd-item-name">{{ cmd.name }}</span>
+          <span v-if="cmd.actionType === 'direct_api'" class="ai-cmd-badge ai-cmd-badge--direct">⚡ 直接実行</span>
+          <span v-else-if="cmd.actionType === 'ai_fc'" class="ai-cmd-badge ai-cmd-badge--ai">🤖 AI分析</span>
+          <span v-else class="ai-cmd-badge ai-cmd-badge--mcp">📡 MCP</span>
+        </div>
         <span class="ai-cmd-item-desc">{{ cmd.desc }}</span>
       </button>
       <div v-if="filteredCommands.length === 0" class="ai-cmd-empty">
@@ -61,7 +66,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import type { CommandDef } from '@/api/services/commandCatalog'
 
-export type CatalogCommand = Omit<CommandDef, 'keywords'>
+export type CatalogCommand = Omit<CommandDef, 'keywords' | 'legacyIds'>
 
 const props = defineProps<{
   catalog: CatalogCommand[]
@@ -80,7 +85,6 @@ const categories = [
   { key: '全て', label: '全て' },
   { key: '仕訳', label: '仕訳' },
   { key: '分析', label: '分析' },
-  { key: '管理', label: '管理' },
   { key: 'データ', label: 'データ' },
 ]
 
@@ -266,6 +270,35 @@ onMounted(() => {
 
 .ai-cmd-item:hover .ai-cmd-item-name {
   color: #4f46e5;
+}
+
+.ai-cmd-item-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-cmd-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ai-cmd-badge--direct {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ai-cmd-badge--ai {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.ai-cmd-badge--mcp {
+  background: #e0e7ff;
+  color: #3730a3;
 }
 
 .ai-cmd-item-desc {
