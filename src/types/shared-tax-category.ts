@@ -41,6 +41,10 @@ export type TaxCategory = {
     displayOrder: number
     /** カスタム税区分フラグ（ユーザー追加=true、システム提供=false/undefined → ルール4） */
     isCustom?: boolean
+    /** データ出典（'mf'=MFインポート、'master'=マスタ、'custom'=顧問先独自。未設定=マスタ） */
+    source?: 'mf' | 'master' | 'custom'
+    /** MFクラウドの税区分ID（MFインポート時にセット。名称変更時の突合に使用） */
+    mfId?: string
     /** デフォルト順復元用: コピー/追加時の挿入位置直前の行ID */
     insertAfter?: string
 }
@@ -55,4 +59,36 @@ export type TaxCategory = {
 export function extractRateFromName(name: string): string {
     const match = name.match(/[\d.]+%/)
     return match ? match[0] : ''
+}
+
+/**
+ * MF税区分名から取引区分（direction）を推定する
+ *
+ * 消費税法の法定用語に基づいて判定:
+ * - 「売上」「輸出」を含む → sales
+ * - 「仕入」「輸入」「特定課税」を含む → purchase
+ * - それ以外（「対象外」「不明」等）→ common
+ *
+ * 税制改正で新税率（0%/7%等）が追加されても、
+ * 法定用語は変わらないため安全に動作する。
+ */
+export function guessDirectionFromName(name: string): TaxDirection {
+    if (name.includes('売上') || name.includes('輸出')) return 'sales'
+    if (name.includes('仕入') || name.includes('輸入') || name.includes('特定課税')) return 'purchase'
+    return 'common'
+}
+
+/**
+ * MF税区分名から適格判定対象（qualified）を推定する
+ *
+ * 適格判定対象 = インボイス登録番号の確認が必要な税区分。
+ * 仕入側の課税取引のみが対象。
+ *
+ * @param name MF税区分名
+ * @param direction guessDirectionFromNameで推定した取引区分
+ */
+export function guessQualifiedFromName(name: string, direction: TaxDirection): boolean {
+    if (direction !== 'purchase') return false
+    if (name.includes('非課税仕入') || name.includes('対象外仕入')) return false
+    return name.includes('課税仕入') || name.includes('輸入仕入') || name.includes('特定課税仕入')
 }

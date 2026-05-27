@@ -106,6 +106,7 @@ function convertSide(
   maps: MfMappingTables,
   unmatchedAccounts: Set<string>,
   unmatchedTaxes: Set<string>,
+  isTaxExclusive: boolean,
 ): ConfirmedJournalEntry {
   // 科目: MF名前 → Sugusru概念ID（逆マッピング）
   let account = side.account_name
@@ -128,6 +129,13 @@ function convertSide(
     }
   }
 
+  // MF GET: value=税抜額。経理方式で分岐:
+  //   税込経理（99%）: amount = value + tax_value（税込復元）
+  //   税抜経理（大手）: amount = value（税抜のまま）
+  const amount = isTaxExclusive
+    ? side.value
+    : side.value + (side.tax_value ?? 0)
+
   return {
     id: crypto.randomUUID(),
     account,
@@ -136,7 +144,7 @@ function convertSide(
     vendor_name: side.trade_partner_name ?? null,
     tax_category_id: taxCategoryId,
     invoice: reverseInvoiceKind(side.invoice_kind),
-    amount: side.value,
+    amount,
     tax_amount: side.tax_value ?? null,
   }
 }
@@ -214,6 +222,8 @@ function validateMfJournal(mfJournal: MfMcpJournal): ImportIssue | null {
 export async function prepareMfImport(
   journals: MfMcpJournal[],
   clientId: string,
+  /** 事業者の経理方式。税抜なら'tax_excluded_included'|'tax_excluded_separate' */
+  taxMethod: string = 'tax_included',
 ): Promise<PrepareResult> {
   cleanupPending()
 
@@ -221,6 +231,8 @@ export async function prepareMfImport(
   const batchId = `mf-api-${Date.now()}`
   const unmatchedAccounts = new Set<string>()
   const unmatchedTaxes = new Set<string>()
+  // 税抜経理: taxMethodが'tax_excluded_*'で始まる場合
+  const isTaxExclusive = taxMethod.startsWith('tax_excluded')
 
   const converted: ConfirmedJournal[] = []
   const skippedErrors: ImportIssue[] = []
@@ -239,8 +251,8 @@ export async function prepareMfImport(
     const debitEntries: ConfirmedJournalEntry[] = []
     const creditEntries: ConfirmedJournalEntry[] = []
     for (const branch of mfJournal.branches) {
-      debitEntries.push(convertSide(branch.debitor, maps, unmatchedAccounts, unmatchedTaxes))
-      creditEntries.push(convertSide(branch.creditor, maps, unmatchedAccounts, unmatchedTaxes))
+      debitEntries.push(convertSide(branch.debitor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive))
+      creditEntries.push(convertSide(branch.creditor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive))
     }
 
     const description = mfJournal.branches[0]?.remark || mfJournal.memo || ''
@@ -366,8 +378,9 @@ export function discardMfImport(batchId: string): boolean {
 export async function importMfJournals(
   journals: MfMcpJournal[],
   clientId: string,
+  taxMethod: string = 'tax_included',
 ): Promise<PrepareResult & { committed: boolean; added?: number; skipped?: number }> {
-  const result = await prepareMfImport(journals, clientId)
+  const result = await prepareMfImport(journals, clientId, taxMethod)
 
   // 警告もエラーもなければ即保存
   if (result.warnings.length === 0 && result.skippedErrors.length === 0) {

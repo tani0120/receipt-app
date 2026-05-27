@@ -366,8 +366,8 @@ export function getTaxCategoryNameMap(): Record<string, string> {
 
 /** 税区分フィルタ条件 */
 export interface TaxCategoryFilterParams {
-  /** 課税方式: general / simplified / exempt */
-  taxMethod?: 'general' | 'simplified' | 'exempt'
+  /** 課税方式: general / simplified / exempt / all（全件） */
+  taxMethod?: 'general' | 'simplified' | 'exempt' | 'all'
   /** ページ番号（1始まり） */
   page?: number
   /** 1ページあたりの件数（デフォルト50） */
@@ -398,8 +398,10 @@ export function getFilteredTaxCategories(params: TaxCategoryFilterParams): TaxCa
   const isT = (id: string) => /_T[1-6]$/.test(id)
 
   const filtered = masterTaxCategories.filter(row => {
+    if (taxMethod === 'all') return true
     if (taxMethod === 'exempt') {
-      return row.id === 'COMMON_EXEMPT'
+      // 免税事業者: direction='common'（「対象外」「不明」）のみ
+      return row.direction === 'common'
     }
     if (taxMethod === 'simplified') {
       if (!row.active && !isT(row.id)) return false
@@ -508,16 +510,14 @@ export function getFilteredClientTaxCategories(
   const filtered = data.filter(row => {
     if (!row.active) return false
     if (taxMethod === 'exempt') {
-      return row.id === 'COMMON_EXEMPT'
+      // 免税事業者: direction='common'（「対象外」「不明」）のみ
+      return row.direction === 'common'
     }
     if (taxMethod === 'simplified') {
       return row.defaultVisible && (
         row.direction === 'common' ||
         row.direction === 'sales' ||
-        row.id === 'PURCHASE_TAXABLE_10' ||
-        row.id === 'PURCHASE_REDUCED_8' ||
-        row.id === 'PURCHASE_NON_TAXABLE' ||
-        row.id === 'PURCHASE_EXEMPT'
+        row.direction === 'purchase'
       )
     }
     return row.defaultVisible

@@ -1,0 +1,6 @@
+ENV: Windows. Always use 'cmd /c' for all shell executions to ensure the process terminates correctly and sends an EOF signal.
+Example: Use 'cmd /c npm run dev' instead of just 'npm run dev'.
+Example: Use 'cmd /c git status' instead of just 'git status'.
+Avoid interactive shells. Use absolute paths for node/npm when C:\nvm4w\nodejs symlink is inaccessible:
+  node: C:\Users\kazen\AppData\Local\nvm\v22.22.1\node.exe
+  npm:  cmd /c "set PATH=C:\Users\kazen\AppData\Local\nvm\v22.22.1;%PATH% && npm"

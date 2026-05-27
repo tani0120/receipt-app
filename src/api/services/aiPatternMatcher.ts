@@ -278,169 +278,73 @@ async function matchInternalCommand(text: string, clientId: string): Promise<Pat
 }
 
 /**
- * MF全データ同期の実行（常に3期分・全データ一括取込）
+ * MF全データ同期の実行 — /api/mf/sync-all エンドポイントに委譲
  *
- * 取込内容:
- *   1. 仕訳データ（3期分）
- *   2. 勘定科目マスタ
- *   3. 税区分マスタ
- *   ※ 取引先・部門・補助科目・連携サービスは保存先が未整備のため後日追加
+ * ロジック本体はmfRoutes.tsの POST /sync-all に移動済み。
+ * ここではエンドポイントを内部呼び出しし、結果をチャット用に整形する。
  */
 async function executeMfSyncAll(
   clientId: string,
   targetLine: string,
 ): Promise<PatternMatchResult> {
-  // MF認証チェック
-  const status = getAuthStatus(clientId);
-  if (!status.authenticated) {
-    return {
-      type: 'text',
-      content: `${targetLine}❌ MF未認証です。\n\n先に設定画面からマネーフォワード連携（OAuth認可）を完了してください。`,
-    };
-  }
-
-  const results: string[] = [];
-
   try {
-    // ===== 1. 仕訳データ（3期分） =====
-    const termList = await mcpFetchTermSettings(undefined, clientId);
-    const periodCount = 3; // 常に3期分
+    const res = await fetch('http://localhost:8080/api/mf/sync-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId }),
+    })
 
-    // 全バッチのbatchIdを集約（承認ボタン用）
-    const batchIds: string[] = [];
-    let hasWarnings = false;
+    const data = await res.json() as {
+      success: boolean
+      error?: string
+      hasWarnings?: boolean
+      batchIds?: string[]
+      results?: string[]
+    }
 
-    for (let i = 0; i < periodCount; i++) {
-      const selected = termList[i];
-      if (!selected) break;
-
-      const journals = await mcpFetchJournals(
-        { start_date: selected.start_date, end_date: selected.end_date },
-        clientId,
-      );
-
-      const importResult = await importMfJournals(journals, clientId);
-      batchIds.push(importResult.batchId);
-
-      // 結果表示
-      if (importResult.committed) {
-        // 警告なし→即座に保存済み
-        results.push(
-          `✅ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
-          `${journals.length}件取得 → ${importResult.added}件追加, ${importResult.skipped}件スキップ（重複）`
-        );
-      } else {
-        // 警告あり→承認待ち
-        results.push(
-          `⏳ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
-          `${journals.length}件取得 → **承認待ち**（${importResult.converted.length}件変換済み）`
-        );
-        hasWarnings = true;
-      }
-
-      // エラー表示
-      for (const err of importResult.skippedErrors) {
-        results.push(`  ❌ ${err.message}`);
-      }
-
-      // 警告表示
-      for (const warn of importResult.warnings) {
-        results.push(`  ⚠️ ${warn.message}`);
+    if (!data.success) {
+      return {
+        type: 'text',
+        content: `${targetLine}❌ ${data.error ?? 'MF全データ同期に失敗しました'}`,
       }
     }
 
-    // ===== 2. 勘定科目マスタ =====
-    const allAccounts = await mcpFetchAccounts(clientId);
-    const available = allAccounts.filter((a) => a.available);
-    const mapped: Account[] = available.map((a, idx) => ({
-      id: a.id,
-      name: a.name,
-      target: 'both' as AccountTarget,
-      accountGroup: 'PL_EXPENSE' as AccountGroup,
-      category: a.category,
-      defaultTaxCategoryId: undefined,
-      taxDetermination: 'fixed' as TaxDetermination,
-      deprecated: false,
-      effectiveFrom: '2019-10-01',
-      effectiveTo: null,
-      sortOrder: idx + 1,
-      mfAccountId: a.id,
-      mfAccountGroup: a.account_group,
-      mfFinancialStatementType: a.financial_statement_type,
-      mfDefaultTaxId: a.tax_id,
-    }));
-    saveClientAccounts(clientId, mapped);
+    const resultText = data.results?.join('\n') ?? ''
 
-    // Sugusruマスタと名前突合
-    const sugusruAccounts = getAllAccounts();
-    const sugusruNames = new Set(sugusruAccounts.map(a => a.name));
-    const matchedCount = available.filter(a => sugusruNames.has(a.name)).length;
-    const unmatched = available.filter(a => !sugusruNames.has(a.name));
-
-    let accountMsg = `✅ 勘定科目: ${allAccounts.length}件取得 → ${available.length}件保存`;
-    accountMsg += `（Sugusruマスタとのマッチ: ${matchedCount}件 / 未マッチ: ${unmatched.length}件）`;
-    if (unmatched.length > 0) {
-      accountMsg += `\n\n⚠️ **Sugusruマスタにない科目（${unmatched.length}件）:**\n`;
-      accountMsg += unmatched.slice(0, 20).map(a => `- ${a.name}`).join('\n');
-      if (unmatched.length > 20) {
-        accountMsg += `\n- …他${unmatched.length - 20}件`;
-      }
-    }
-    results.push(accountMsg);
-
-    // ===== 3. 税区分マスタ =====
-    const allTaxes = await mcpFetchTaxes(clientId);
-    const taxMapped: TaxCategory[] = allTaxes.map((t, idx) => ({
-      id: t.id,
-      name: t.name,
-      shortName: t.abbreviation ?? '',
-      direction: 'common' as TaxDirection,
-      qualified: false,
-      aiSelectable: t.available,
-      active: t.available,
-      deprecated: !t.available,
-      effectiveFrom: '2019-10-01',
-      effectiveTo: null,
-      defaultVisible: t.available,
-      displayOrder: idx + 1,
-    }));
-    saveClientTaxCategories(clientId, taxMapped);
-    results.push(`✅ 税区分: ${allTaxes.length}件を取得・保存（available=${allTaxes.filter(t => t.available).length}件）`);
-
-    // 警告があれば承認ボタンをsuggestionsで返す
-    if (hasWarnings) {
-      const approveCommands: AiSuggestion[] = [];
-      for (const bid of batchIds) {
+    // 警告があれば承認ボタン
+    if (data.hasWarnings && data.batchIds?.length) {
+      const approveCommands: AiSuggestion[] = []
+      for (const bid of data.batchIds) {
         approveCommands.push({
           command: `__commit__:approve:${bid}`,
           label: '✅ 承認して取込',
           description: '警告を確認しました。過去仕訳CSVに保存します',
-        });
+        })
       }
       approveCommands.push({
-        command: `__commit__:discard:${batchIds[0]}`,
+        command: `__commit__:discard:${data.batchIds[0]}`,
         label: '🗑️ 破棄',
         description: '取込を中止し、データを破棄します',
-      });
+      })
 
       return {
         type: 'suggestions',
-        content: `${targetLine}⚠️ **MF全データ同期 — 承認が必要です**（3期分）\n\n${results.join('\n')}\n\n↑ の内容を確認し、承認または破棄を選んでください。`,
+        content: `${targetLine}⚠️ **MF全データ同期 — 承認が必要です**（3期分）\n\n${resultText}\n\n↑ の内容を確認し、承認または破棄を選んでください。`,
         suggestions: approveCommands,
-      };
+      }
     }
 
     return {
       type: 'text',
-      content: `${targetLine}🎉 **MF全データ同期完了**（3期分）\n\n${results.join('\n')}`,
-    };
+      content: `${targetLine}🎉 **MF全データ同期完了**（3期分）\n\n${resultText}`,
+    }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`[aiPatternMatcher] MF全データ同期失敗: ${message}`);
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[aiPatternMatcher] MF全データ同期失敗: ${message}`)
     return {
       type: 'text',
       content: `${targetLine}❌ **MF全データ同期に失敗しました**\n\n${message}`,
-    };
+    }
   }
 }
 

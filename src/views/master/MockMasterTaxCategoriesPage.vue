@@ -8,16 +8,23 @@
           <span class="as-header-label">税区分マスタ（事務所共通）</span>
         </div>
 
-        <!-- 課税方式切替（排他選択） -->
+        <!-- 課税方式切替（4種） -->
         <div class="as-selectors-center">
           <div class="as-selector-group-lg">
             <span class="as-selector-label-lg">課税方式:</span>
-            <label v-for="o in TAX_METHOD_TYPE_OPTIONS" :key="o.value" class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" :value="o.value" class="as-checkbox-lg"><span>{{ o.label }}</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="proportional" class="as-checkbox-lg"><span>原則（一括比例）</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="individual" class="as-checkbox-lg"><span>原則（個別対応）</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="simplified" class="as-checkbox-lg"><span>簡易</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="exempt" class="as-checkbox-lg"><span>免税</span></label>
           </div>
         </div>
 
         <!-- 注意バナー -->
-        <div class="as-info-banner">
+        <div v-if="hasMfData" class="as-info-banner" style="background:#e3f2fd;border-color:#90caf9;color:#1565c0;">
+          <i class="fa-solid fa-cloud-arrow-down"></i>
+          MFで登録されている税区分をダウンロードしています。変更する場合はMF側で変更してください。
+        </div>
+        <div v-else class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
           デフォルト税区分（<i class="fa-solid fa-circle-check" style="font-size:14px;color:#4caf50"></i>）の名称は編集できません。コピー・追加したカスタム税区分のみ編集可能です。
         </div>
@@ -47,6 +54,20 @@
             </template>
           </div>
           <div class="as-actions">
+            <button
+              v-if="mfAuthenticated"
+              class="cm-mf-import-btn"
+              :disabled="mfImporting"
+              @click="importFromMf"
+              title="MFから税区分をインポート"
+            >
+              <i v-if="mfImporting" class="fa-solid fa-spinner fa-spin"></i>
+              <i v-else class="fa-solid fa-cloud-arrow-down"></i>
+              MFインポート
+            </button>
+            <button v-else class="cm-mf-import-btn" disabled title="MF未連携">
+              <i class="fa-solid fa-cloud"></i> MF未連携
+            </button>
             <button class="as-action-btn" @click="resetTaxOrder"><i class="fa-solid fa-rotate"></i> デフォルト順</button>
             <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button>
             <button class="as-action-btn save" @click="saveChanges"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
@@ -57,6 +78,7 @@
             <colgroup>
               <col style="width: 38px;">
               <col :style="{ width: taxColWidths['mfCompliance'] + 'px' }">
+              <col :style="{ width: taxColWidths['source'] + 'px' }">
               <col :style="{ width: taxColWidths['qualified'] + 'px' }">
               <col :style="{ width: taxColWidths['direction'] + 'px' }">
               <col style="width: auto;">
@@ -67,8 +89,11 @@
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
-                <th class="as-th-check relative" style="text-align:center;">MF公式
+                <th class="as-th-check relative" style="text-align:center;">{{ hasMfData ? '表示' : 'MF公式' }}
                   <div class="resize-handle" @mousedown.stop="onTaxResizeStart('mfCompliance', $event)"></div>
+                </th>
+                <th class="relative" style="text-align:center;font-size:11px;">出典
+                  <div class="resize-handle" @mousedown.stop="onTaxResizeStart('source', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortTax('qualified')">
                   適格判定対象 <i class="fa-solid fa-circle-question th-help" title="この税区分を使う際、取引先のインボイス登録番号の確認が必要かどうか。仕入側の課税取引にのみ○がつきます。"></i>
@@ -102,8 +127,13 @@
               >
                 <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
                 <td class="as-td-actions">
-                  <span v-if="!row.isCustom" class="td-mf-badge mf-official" title="MF公式">MF公式</span>
-                  <i v-else class="fa-solid fa-triangle-exclamation td-mf-unknown" title="MFインポート時に項目の紐付けが必要になる可能性があります"></i>
+                  <i v-if="row.deprecated" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
+                  <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
+                </td>
+                <td style="text-align:center;font-size:11px;color:#666;">
+                  <span v-if="row.source === 'mf'" style="color:#1976D2;"><MfCloudIcon :size="12" tooltip="MFクラウド" /> MF</span>
+                  <span v-else-if="row.isCustom" style="color:#e65100;">カスタム</span>
+                  <span v-else><i class="fa-solid fa-circle-check" style="color:#4caf50;font-size:12px;"></i> マスタ</span>
                 </td>
                 <!-- 適格判定対象 -->
                 <td style="text-align: center;" @dblclick="startEdit(row, 'qualified')">
@@ -181,7 +211,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
 import type { TaxCategory, TaxDirection } from '@/types/shared-tax-category';
-import { extractRateFromName } from '@/types/shared-tax-category';
+import { extractRateFromName, guessDirectionFromName, guessQualifiedFromName } from '@/types/shared-tax-category';
 import { getInitialCopyCounter } from '@/utils/copy-utils';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useColumnResize } from '@/composables/useColumnResize';
@@ -189,16 +219,18 @@ import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
+import MfCloudIcon from '@/components/MfCloudIcon.vue';
 import { getLabel } from '@/constants/clientOptions';
 import { UI_MSG } from '@/constants/uiMessages';
 import { TAX_CATEGORY_FIELD_LABELS } from '@/constants/fieldLabels';
 import {
-  TAX_DIRECTION_OPTIONS, QUALIFIED_OPTIONS, TAX_METHOD_TYPE_OPTIONS,
+  TAX_DIRECTION_OPTIONS, QUALIFIED_OPTIONS,
 } from '@/constants/vendorOptions';
 
 // 列幅カスタマイズ
 const taxDefaultWidths: Record<string, number> = {
   mfCompliance: 60,
+  source: 70,
   qualified: 80,
   direction: 80,
   rate: 60,
@@ -216,11 +248,75 @@ const masterTaxCategories = settings.taxCategories;
 const taxMasterOverrides = settings._taxMasterOverrides;
 
 // =============== 税区分マスタ ===============
-type TaxMethodType = 'general' | 'simplified' | 'exempt';
-const taxMethod = ref<TaxMethodType>('general');
+type TaxMethodType = 'proportional' | 'individual' | 'simplified' | 'exempt';
+const taxMethod = ref<TaxMethodType>('proportional');
 const taxPage = ref(1);
 
-const allTaxRows: TaxCategory[] = reactive([...masterTaxCategories.value]);
+const allTaxRows: TaxCategory[] = reactive(
+  masterTaxCategories.value.map(({ hidden, hiddenInMaster, visibilityOverride, source, ...rest }) => ({
+    ...rest,
+    deprecated: hidden,
+  }))
+);
+
+// =============== MF連携状態 ===============
+const mfAuthenticated = ref(false);
+const mfImporting = ref(false);
+const hasMfData = computed(() => allTaxRows.some(r => r.source === 'mf'));
+
+import { onMounted } from 'vue';
+onMounted(async () => {
+  try {
+    // 任意の顧問先IDでMF認証状態を確認
+    const res = await fetch('/api/mf/auth/status?clientId=c_wTdnMKDO');
+    const data = await res.json();
+    mfAuthenticated.value = data.authenticated ?? false;
+  } catch {
+    mfAuthenticated.value = false;
+  }
+});
+
+/** MFから税区分を取得して全社マスタを更新 */
+async function importFromMf() {
+  if (mfImporting.value) return;
+  mfImporting.value = true;
+  try {
+    const res = await fetch('/api/mf/taxes?clientId=c_wTdnMKDO');
+    if (!res.ok) throw new Error('MF税区分取得失敗');
+    const data = await res.json();
+    const mfTaxes = data.taxes ?? [];
+
+    const imported: TaxCategory[] = mfTaxes.map((t: { id: string; name: string; abbreviation?: string; available: boolean; tax_rate?: number }, idx: number) => {
+      const dir = guessDirectionFromName(t.name);
+      return {
+        id: 'MF_' + t.name.replace(/\s+/g, '_').replace(/[()\uff08\uff09]/g, '').replace(/-/g, '_').replace(/%/g, 'PCT').replace(/\./g, 'D'),
+        name: t.name,
+        shortName: t.abbreviation ?? '',
+        direction: dir,
+        qualified: guessQualifiedFromName(t.name, dir),
+        aiSelectable: true,
+        active: true,
+        deprecated: false,
+        effectiveFrom: '2019-10-01',
+        effectiveTo: null,
+        defaultVisible: true,
+        source: 'mf' as const,
+        mfId: t.id,
+        displayOrder: idx + 1,
+      };
+    });
+
+    // 全社マスタを置換
+    allTaxRows.splice(0, allTaxRows.length, ...imported);
+    markDirty('MFから税区分を取込');
+    await modal.notify({ title: `MFから${imported.length}件の税区分を取込みました`, variant: 'success' });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+  } finally {
+    mfImporting.value = false;
+  }
+}
 
 // モーダルヘルパー
 const modal = useModalHelper();
@@ -232,19 +328,22 @@ const filteredTaxRows = computed(() => {
   const isT = (id: string) => /_T[1-6]$/.test(id);
   return allTaxRows.filter(row => {
     // --- 免税 ---
+    // 免税事業者は消費税区分不要。direction='common'（「対象外」「不明」）のみ表示。
     if (taxMethod.value === 'exempt') {
-      return row.id === 'COMMON_EXEMPT';
+      return row.direction === 'common';
     }
     // --- 簡易 ---
     if (taxMethod.value === 'simplified') {
-      // active=falseでもT系（事業区分付き）は通す
       if (!row.active && !isT(row.id)) return false;
-      // 事業区分なしの原則用売上を除外
       if (row.direction === 'sales' && !isT(row.id)) return false;
-      // T系（事業区分付き売上）+ 仕入系 + 共通系を表示
       return isT(row.id) || row.direction === 'purchase' || row.direction === 'common';
     }
-    // --- 本則 ---
+    // --- 原則（個別対応） ---
+    if (taxMethod.value === 'individual') {
+      if (!row.active) return false;
+      return true; // 共通課税仕入/非課税対応仕入も表示
+    }
+    // --- 原則（一括比例） ---
     if (!row.active) return false;
     return row.defaultVisible;
   });
@@ -262,6 +361,17 @@ const checkedIds = ref<string[]>([]);
 function toggleAllChecked(e: Event) {
   const checked = (e.target as HTMLInputElement).checked;
   checkedIds.value = checked ? pagedTaxRows.value.map(r => r.id) : [];
+}
+
+// =============== 非表示化・表示化 ===============
+function hideRow(row: TaxCategory) {
+  const today = new Date().toISOString().slice(0, 10);
+  row.deprecated = true;
+  row.effectiveTo = today;
+}
+function showRow(row: TaxCategory) {
+  row.deprecated = false;
+  row.effectiveTo = null;
 }
 
 

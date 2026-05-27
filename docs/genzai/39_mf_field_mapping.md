@@ -38,7 +38,7 @@
 |---|---|---|---|---|---|---|---|
 | 1 | `account_id` | string | `account` | string &#124; null | 名前マッチで変換（buildAllMaps） | 双方向 | ✅ MF#28〜#44（108件マッチ） |
 | 2 | `account_name` | string | — | — | MFが名前解決済みで返す | 出力のみ | ✅ |
-| 3 | `value` | integer | `amount` | Yen &#124; null | 金額（円）。**整数のみ。0・負数・小数は拒否** | 双方向 | ✅ 下記§2-1参照 |
+| 3 | `value` | integer | `amount` | Yen &#124; null | **POST送信=税込額、GET取得=税抜額**。整数のみ。0・負数・小数は拒否。インポート時は`value+tax_value`で税込復元（実機テストMF#48-49で確認） | 双方向 | ✅ 下記§2-1参照 |
 | 4 | `tax_id` | string &#124; null | `tax_category_id` | string &#124; null | 名前マッチで変換 | 双方向 | ✅ MF#40 |
 | 5 | `tax_name` | string | — | — | 免税事業者ではnullが返る | 出力のみ | ✅ MF#40（null確認） |
 | 6 | `sub_account_id` | string &#124; null | `sub_account` | string &#124; null | 名前→ID変換（buildAllMaps） | 入力のみ | ✅ MF#41（通勤手当） |

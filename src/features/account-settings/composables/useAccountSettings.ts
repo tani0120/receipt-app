@@ -169,8 +169,8 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       // 課税方式フィルタ（consumptionTaxMode省略時は従来動作）
       if (!consumptionTaxMode) return true
 
-      // 免税事業者: 「対象外」のみ
-      if (consumptionTaxMode === 'exempt') return tc.id === 'COMMON_EXEMPT'
+      // 免税事業者: direction='common'（「対象外」「不明」）のみ
+      if (consumptionTaxMode === 'exempt') return tc.direction === 'common'
 
       // 簡易課税判定: IDサフィックス _T1〜_T6
       const isSimplifiedTaxCategory = /_T[1-6]$/.test(tc.id)
@@ -282,15 +282,8 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // ==============================
   function saveAccounts(allRows: Account[], subAccountsInput?: Record<string, string>): void {
     if (scope === 'master') {
-      // マスタスコープ: overrides同期（autoSaveで自動保存される）
-      const hiddenIds = allRows
-        .filter(r => !r.isCustom && (r.deprecated || r.effectiveTo))
-        .map(r => r.id)
-      const defaultAccountIds = new Set(
-        accountMaster.allAccounts.value.filter(a => !(a as any).isCustom).map(a => a.id)
-      )
-      const customAccounts = allRows.filter(r => !defaultAccountIds.has(r.id))
-      accountMaster.overrides.value = { hiddenIds, customAccounts }
+      // allAccountsを直接更新（overridesはcomputed、自動でdebounceSave発火）
+      accountMaster.allAccounts.value = allRows
     } else {
       // 顧問先スコープ: composable.saveAll()に委譲
       clientAccountsComposable?.saveAll(allRows, subAccountsInput)
@@ -299,17 +292,8 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
 
   function saveTaxCategories(allRows: TaxCategory[]): void {
     if (scope === 'master') {
-      // マスタスコープ: overrides同期（autoSaveで自動保存される）
-      const hiddenIds = allRows.filter(r => r.deprecated).map(r => r.id)
-      const defaultTaxIds = new Set(
-        taxMaster.allTaxCategories.value.filter(t => !t.isCustom).map(t => t.id)
-      )
-      const customTaxCategories = allRows.filter(r => !defaultTaxIds.has(r.id))
-      taxMaster.overrides.value = {
-        ...taxMaster.overrides.value,
-        hiddenIds,
-        customTaxCategories,
-      }
+      // allTaxCategoriesを直接更新（overridesはcomputed、自動でdebounceSave発火）
+      taxMaster.allTaxCategories.value = allRows
     } else {
       // 顧問先スコープ: composable.saveAll()に委譲
       clientTaxComposable?.saveAll(allRows)
@@ -320,7 +304,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // デフォルトIDセット（出自判定用。カスタム追加行の末尾ソートに使用）
   // ==============================
   const defaultAccountIds = computed(() => new Set(
-    accountMaster.allAccounts.value.filter(a => !(a as any).isCustom).map(a => a.id)
+    accountMaster.allAccounts.value.filter(a => !a.isCustom).map(a => a.id)
   ))
   const defaultTaxIds = computed(() => new Set(
     taxMaster.allTaxCategories.value.filter(t => !t.isCustom).map(t => t.id)

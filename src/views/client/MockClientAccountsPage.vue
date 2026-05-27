@@ -297,7 +297,12 @@ const clientId = computed(() => props.clientId);
 const currentClientData = computed(() => clients.value.find(c => c.clientId === clientId.value) ?? null);
 const accountBusinessType = computed<'corp' | 'individual'>(() => currentClientData.value?.type === 'corp' ? 'corp' : 'individual');
 const accountHasRealEstate = computed(() => currentClientData.value?.hasRentalIncome ?? false);
-const clientTaxMethod = computed<'general' | 'simplified' | 'exempt'>(() => currentClientData.value?.consumptionTaxMode ?? 'general');
+const clientTaxMethod = computed<'general' | 'simplified' | 'exempt'>(() => {
+  const raw = currentClientData.value?.consumptionTaxMode;
+  if (raw === 'exempt') return 'exempt';
+  if (raw === 'simplified') return 'simplified';
+  return 'general'; // individual_allocation, proportional_allocation → 原則課税
+});
 
 // =============== composable接続（useAccountSettings経由） ===============
 // clientIdはprops経由で必須。defineProps<{ clientId: string }>()で型安全。

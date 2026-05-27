@@ -77,7 +77,7 @@ export const COMMAND_CATALOG: CommandDef[] = [
       'sub_accounts', 'connected', 'office_info', 'term_settings',
       'partners_list',
     ],
-    status: 'partial',
+    status: 'ready',
     costPerCall: '0円',
   },
 

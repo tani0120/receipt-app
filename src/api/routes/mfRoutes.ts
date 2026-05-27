@@ -31,6 +31,10 @@ import {
 } from '../services/mfMcpClient'
 import { getById, updateClient } from '../services/clientStore'
 import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFieldMapping'
+import { importMfJournals } from '../services/mfJournalImporter'
+import { saveClientAccounts, saveClientTaxCategories, getAllAccounts } from '../services/accountMasterStore'
+import type { Account, AccountTarget, AccountGroup, TaxDetermination } from '../../types/shared-account'
+import type { TaxCategory, TaxDirection } from '../../types/shared-tax-category'
 
 const app = new Hono()
 
@@ -341,6 +345,157 @@ app.post('/import-offices', async (c) => {
 
   console.log(`[MFインポート] 完了: 更新=${results.updated}, スキップ=${results.skipped}, エラー=${results.errors.length}`)
   return c.json(results)
+})
+
+// ---------- P1: MF全データ同期（直接API実行） ----------
+
+/**
+ * POST /sync-all — MFの全データを一括取込（常に3期分）
+ *
+ * ボディ: { clientId: string }
+ * 取込内容:
+ *   1. 仕訳データ（3期分ループ）
+ *   2. 勘定科目マスタ
+ *   3. 税区分マスタ
+ *   4. 事業者情報（事業所ID・名前をトークンに紐付け）
+ *
+ * 方針: Geminiトークン0円。直接API実行。
+ * actionType: direct_api
+ * costPerCall: 0
+ */
+app.post('/sync-all', async (c) => {
+  const body = await c.req.json<{ clientId?: string }>()
+  const clientId = body.clientId ?? 'default'
+
+  // MF認証チェック
+  const status = getAuthStatus(clientId)
+  if (!status.authenticated) {
+    return c.json({
+      success: false,
+      error: 'MF未認証です。先にOAuth認可を完了してください。',
+    }, 401)
+  }
+
+  const results: string[] = []
+  const batchIds: string[] = []
+  let hasWarnings = false
+
+  try {
+    // ===== 1. 事業者情報 =====
+    const office = await mcpFetchCurrentOffice(clientId)
+    setOfficeInfo(clientId, office.code, office.name)
+    results.push(`✅ 事業者情報: ${office.name}（${office.type}）`)
+
+    // ===== 2. 仕訳データ（3期分） =====
+    const termList = await mcpFetchTermSettings(undefined, clientId)
+    const periodCount = 3
+
+    for (let i = 0; i < periodCount; i++) {
+      const selected = termList[i]
+      if (!selected) break
+
+      const journals = await mcpFetchJournals(
+        { start_date: selected.start_date, end_date: selected.end_date },
+        clientId,
+      )
+
+      const importResult = await importMfJournals(journals, clientId)
+      batchIds.push(importResult.batchId)
+
+      if (importResult.committed) {
+        results.push(
+          `✅ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
+          `${journals.length}件取得 → ${importResult.added}件追加, ${importResult.skipped}件スキップ（重複）`
+        )
+      } else {
+        results.push(
+          `⏳ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
+          `${journals.length}件取得 → 承認待ち（${importResult.converted.length}件変換済み）`
+        )
+        hasWarnings = true
+      }
+
+      for (const err of importResult.skippedErrors) {
+        results.push(`  ❌ ${err.message}`)
+      }
+      for (const warn of importResult.warnings) {
+        results.push(`  ⚠️ ${warn.message}`)
+      }
+    }
+
+    // ===== 3. 勘定科目マスタ =====
+    const allAccounts = await mcpFetchAccounts(clientId)
+    const available = allAccounts.filter((a) => a.available)
+    const mapped: Account[] = available.map((a, idx) => ({
+      id: a.id,
+      name: a.name,
+      target: 'both' as AccountTarget,
+      accountGroup: 'PL_EXPENSE' as AccountGroup,
+      category: a.category,
+      defaultTaxCategoryId: undefined,
+      taxDetermination: 'fixed' as TaxDetermination,
+      deprecated: false,
+      effectiveFrom: '2019-10-01',
+      effectiveTo: null,
+      sortOrder: idx + 1,
+      mfAccountId: a.id,
+      mfAccountGroup: a.account_group,
+      mfFinancialStatementType: a.financial_statement_type,
+      mfDefaultTaxId: a.tax_id,
+    }))
+    saveClientAccounts(clientId, mapped)
+
+    const sugusruAccounts = getAllAccounts()
+    const sugusruNames = new Set(sugusruAccounts.map(a => a.name))
+    const matchedCount = available.filter(a => sugusruNames.has(a.name)).length
+    const unmatchedList = available.filter(a => !sugusruNames.has(a.name))
+
+    let accountMsg = `✅ 勘定科目: ${allAccounts.length}件取得 → ${available.length}件保存`
+    accountMsg += `（マッチ: ${matchedCount}件 / 未マッチ: ${unmatchedList.length}件）`
+    results.push(accountMsg)
+
+    // ===== 4. 税区分マスタ =====
+    const allTaxes = await mcpFetchTaxes(clientId)
+    const taxMapped: TaxCategory[] = allTaxes.map((t, idx) => ({
+      id: t.id,
+      name: t.name,
+      shortName: t.abbreviation ?? '',
+      direction: 'common' as TaxDirection,
+      qualified: false,
+      aiSelectable: t.available,
+      active: t.available,
+      deprecated: !t.available,
+      effectiveFrom: '2019-10-01',
+      effectiveTo: null,
+      defaultVisible: t.available,
+      displayOrder: idx + 1,
+    }))
+    saveClientTaxCategories(clientId, taxMapped)
+    results.push(`✅ 税区分: ${allTaxes.length}件取得・保存（available=${allTaxes.filter(t => t.available).length}件）`)
+
+    return c.json({
+      success: true,
+      hasWarnings,
+      batchIds,
+      results,
+      summary: {
+        office: office.name,
+        periods: termList.slice(0, periodCount).map(t => t.fiscal_year),
+        accountCount: available.length,
+        taxCount: allTaxes.length,
+        unmatchedAccounts: unmatchedList.map(a => a.name),
+      },
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[mfRoutes] sync-all失敗: ${message}`)
+    return c.json({
+      success: false,
+      error: 'MF全データ同期に失敗しました',
+      detail: message,
+      results,
+    }, 500)
+  }
 })
 
 export default app
