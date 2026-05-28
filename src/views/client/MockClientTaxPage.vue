@@ -11,42 +11,19 @@
           <span class="as-header-label">顧問先用税区分</span>
         </div>
 
-        <!-- 切替チェックボックス（編集不可） -->
+        <!-- 課税方式表示（セグメントボタン・編集不可） -->
         <div class="as-selectors-center">
-          <div class="as-selector-group-lg">
-            <span class="as-selector-label-lg">課税方式:</span>
-            <label class="as-checkbox-label-lg"
-              ><input
-                type="checkbox"
-                :checked="rawTaxMode === 'proportional_allocation'"
-                disabled
-                class="as-checkbox-lg"
-              /><span>原則（一括比例）</span></label
+          <div class="tax-method-segment">
+            <button
+              v-for="m in taxMethods"
+              :key="m.value"
+              class="tax-method-btn"
+              :class="{ active: taxTabMethod === m.value }"
+              disabled
             >
-            <label class="as-checkbox-label-lg"
-              ><input
-                type="checkbox"
-                :checked="rawTaxMode === 'individual_allocation'"
-                disabled
-                class="as-checkbox-lg"
-              /><span>原則（個別対応）</span></label
-            >
-            <label class="as-checkbox-label-lg"
-              ><input
-                type="checkbox"
-                :checked="rawTaxMode === 'simplified'"
-                disabled
-                class="as-checkbox-lg"
-              /><span>簡易</span></label
-            >
-            <label class="as-checkbox-label-lg"
-              ><input
-                type="checkbox"
-                :checked="rawTaxMode === 'exempt'"
-                disabled
-                class="as-checkbox-lg"
-              /><span>免税</span></label
-            >
+              <i :class="m.icon"></i>
+              {{ m.label }}
+            </button>
           </div>
         </div>
 
@@ -431,20 +408,23 @@ const currentClientData = computed(
   () => clients.value.find((c) => c.clientId === clientId.value) ?? null,
 );
 
-type TaxMethodType = "general" | "simplified" | "exempt";
-/** MFの4値→UI 3値（フィルタ用） */
+type TaxMethodType = 'proportional' | 'individual' | 'simplified' | 'exempt';
+/** MFの課税方式値→UI フィルタ値 */
 function toTaxMethodType(raw?: string): TaxMethodType {
-  if (raw === "exempt") return "exempt";
-  if (raw === "simplified") return "simplified";
-  return "general";
+  if (raw === 'exempt') return 'exempt';
+  if (raw === 'simplified') return 'simplified';
+  if (raw === 'individual_allocation') return 'individual';
+  return 'proportional'; // proportional_allocation or デフォルト
 }
 const taxTabMethod = computed<TaxMethodType>(() =>
   toTaxMethodType(currentClientData.value?.consumptionTaxMode),
 );
-/** MFの生値（チェックボックス表示用） */
-const rawTaxMode = computed(
-  () => currentClientData.value?.consumptionTaxMode ?? "individual_allocation",
-);
+const taxMethods = [
+  { value: 'proportional' as const, label: '原則（一括比例）', icon: 'fa-solid fa-scale-balanced' },
+  { value: 'individual' as const, label: '原則（個別対応）', icon: 'fa-solid fa-list-check' },
+  { value: 'simplified' as const, label: '簡易', icon: 'fa-solid fa-bolt' },
+  { value: 'exempt' as const, label: '免税', icon: 'fa-solid fa-ban' },
+];
 
 const mfWarningMessage = ref("");
 const taxPage = ref(1);
@@ -471,12 +451,48 @@ async function importFromMf() {
   if (mfImporting.value) return;
   mfImporting.value = true;
   try {
+    // ① MFから税区分を取得
     const res = await fetch(`/api/mf/taxes?clientId=${props.clientId}`);
     if (!res.ok) throw new Error("MF税区分取得失敗");
     const data = await res.json();
     const mfTaxes = data.taxes ?? [];
 
-    // マスタを参照して各フィールドを解決（mfIdで突合）
+    // ② MFからtermSettingsを取得してconsumptionTaxModeを自動更新
+    try {
+      const termRes = await fetch(`/api/mf/term-settings?clientId=${props.clientId}`);
+      if (termRes.ok) {
+        const termData = await termRes.json();
+        const taxMethod = termData.settings?.term_settings?.[0]?.tax_method;
+        if (taxMethod) {
+          // TAX_METHOD_MAPと同じマッピング
+          const methodMap: Record<string, string> = {
+            'FREE': 'exempt',
+            'SIMPLE': 'simplified',
+            'INDIVIDUAL_ALLOCATION': 'individual_allocation',
+            'PROPORTIONAL_ALLOCATION': 'proportional_allocation',
+            'SIMPLIFIED': 'simplified',
+            'GENERAL': 'individual_allocation',
+          };
+          const mapped = methodMap[taxMethod];
+          if (mapped) {
+            await fetch(`/api/clients/${props.clientId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ consumptionTaxMode: mapped }),
+            });
+            // フロント側も即時反映（useClientsのキャッシュ更新）
+            const client = currentClientData.value;
+            if (client) {
+              (client as Record<string, unknown>).consumptionTaxMode = mapped;
+            }
+          }
+        }
+      }
+    } catch {
+      // termSettings取得失敗は致命的ではない（税区分インポートは続行）
+    }
+
+    // ③ マスタを参照して各フィールドを解決（mfIdで突合）
     const masterRes = await fetch("/api/tax-categories/master?taxMethod=all&pageSize=200");
     const masterData = await masterRes.json();
     const masterItems: TaxCategory[] = masterData.items ?? [];
@@ -485,41 +501,71 @@ async function importFromMf() {
     );
 
     // MFの税区分をTaxCategory形式に変換（マスタ突合 + フォールバック推定）
+    let matchedCount = 0;
+    let customCount = 0;
+    const today = new Date().toISOString().slice(0, 10);
+    // 免税事業者は消費税申告不要 → 全件deprecated=true
+    const isExempt = currentClientData.value?.consumptionTaxMode === 'exempt';
     const imported: TaxCategory[] = mfTaxes.map(
       (
-        t: { id: string; name: string; abbreviation?: string; available: boolean },
+        t: { id: string; name: string; abbreviation?: string; available: boolean; tax_rate?: number },
         idx: number,
       ) => {
         const master = masterByMfId.get(t.id);
-        const dir = master?.direction ?? guessDirectionFromName(t.name);
+        if (master) {
+          // mfId照合成功 → マスタの属性を維持 + MFのavailable/税率・インポート日を反映
+          matchedCount++;
+          return {
+            ...master,
+            // 免税: マスタのdeprecatedをそのまま使用 / それ以外: MFのavailableが正
+            deprecated: isExempt ? master.deprecated : !t.available,
+            displayOrder: idx + 1,
+            source: 'mf' as const,
+            mfId: t.id,
+            taxRate: t.tax_rate ?? master.taxRate,
+            effectiveFrom: master.effectiveFrom || today,
+          };
+        }
+        // mfIdがマッチしない → MF独自カスタム税区分
+        customCount++;
+        const dir = guessDirectionFromName(t.name);
         return {
-          id: master?.id ?? t.id,
+          id: `MF_CUSTOM_${t.id}`,
           name: t.name,
-          shortName: master?.shortName ?? t.abbreviation ?? "",
+          shortName: t.abbreviation ?? '',
           direction: dir,
-          qualified: master?.qualified ?? guessQualifiedFromName(t.name, dir),
-          aiSelectable: t.available,
-          active: t.available,
-          deprecated: !t.available,
-          effectiveFrom: master?.effectiveFrom ?? "2019-10-01",
-          effectiveTo: master?.effectiveTo ?? null,
-          defaultVisible: t.available,
-          source: "mf" as const,
+          qualified: guessQualifiedFromName(t.name, dir),
+          aiSelectable: true,
+          active: true,
+          deprecated: false,
+          effectiveFrom: today,
+          effectiveTo: null,
+          defaultVisible: true,
+          source: 'mf' as const,
           mfId: t.id,
+          taxRate: t.tax_rate,
           displayOrder: idx + 1,
+          isCustom: true,
         };
       },
     );
 
-    // テーブルを置換
-    const activeImported = imported.filter((t) => t.active);
-    allTaxRows.splice(0, allTaxRows.length, ...activeImported);
-    // 出典追跡用にIDを記録
-    mfImportedIds.value = activeImported.map((t) => t.id);
-    markDirty("MFから税区分を取込");
+    // ④ テーブルを置換
+    allTaxRows.splice(0, allTaxRows.length, ...imported);
+    mfImportedIds.value = imported.map((t) => t.id);
+
+    // ⑤ 自動保存（保存ボタン不要）
+    await fetch(`/api/tax-categories/client/${clientId.value}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taxCategories: imported }),
+    });
+    settings.saveTaxCategories(imported);
+    markClean();
+
     await modal.notify({
-      title: `MFから${activeImported.length}件の税区分を取込みました`,
-      variant: "success",
+      title: `MFから${imported.length}件取込（マスタ照合${matchedCount}件, カスタム${customCount}件）`,
+      variant: 'success',
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -562,24 +608,59 @@ const modal = useModalHelper();
 // 未保存変更ガード
 const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
+// --- IDパターンマッチ（フォールバック用: availableデータ未取得時のみ使用） ---
+const isSimplifiedSales = (id: string) => /_T[1-6]$/.test(id);
+const isIndividualPurchase = (id: string) =>
+  /COMMON/.test(id) || /_NT_/.test(id) || /^PURCHASE_NT_/.test(id) || /^IMPORT_NT_/.test(id);
+const isObsoleteRate = (name: string) => / 5%/.test(name) && !name.includes('(軽)');
+
+// --- MFのavailableデータ（4方式分） ---
+type TaxAvailableMap = Record<string, Record<string, boolean>>;
+const mfTaxAvailable = ref<TaxAvailableMap>({});
+
+// 起動時にavailableデータを取得
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/mf/tax-available');
+    if (res.ok) {
+      mfTaxAvailable.value = await res.json();
+    }
+  } catch { /* availableデータなし → フォールバック */ }
+});
+
 const filteredTaxRows = computed(() => {
   return allTaxRows.filter((row) => {
+    const method = taxTabMethod.value;
+
+    // MF独自カスタム税区分は常に表示（顧問先が意図的に作成したため）
+    if (row.isCustom && row.source === 'mf') return true;
+    // direction='common'（不明・対象外）は全方式で常に表示
+    if (row.direction === 'common') return true;
+
+    // --- MFのavailableベースのフィルタ ---
+    const availableData = mfTaxAvailable.value[method] ?? null;
+    if (availableData && row.mfId) {
+      return availableData[row.mfId] === true;
+    }
+
+    // --- フォールバック: IDパターンマッチ（availableデータ未取得時） ---
+    if (method === 'exempt') {
+      return false;
+    }
+    if (method === 'simplified') {
+      if (row.direction === 'sales') {
+        return isSimplifiedSales(row.id) && !isObsoleteRate(row.name);
+      }
+      return row.active && !isIndividualPurchase(row.id);
+    }
+    if (method === 'individual') {
+      if (isObsoleteRate(row.name)) return false;
+      if (row.direction === 'sales') return row.active;
+      return row.active || isIndividualPurchase(row.id);
+    }
+    // 一括比例（デフォルト）
     if (!row.active) return false;
-    // --- 免税 ---
-    // 免税事業者は消費税区分不要。「対象外」「不明」のみ表示。
-    if (taxTabMethod.value === "exempt") {
-      return row.direction === "common";
-    }
-    // --- 簡易 ---
-    if (taxTabMethod.value === "simplified") {
-      return (
-        row.defaultVisible &&
-        (row.direction === "common" ||
-          row.direction === "sales" ||
-          row.direction === "purchase")
-      );
-    }
-    // --- 原則 ---
+    if (isIndividualPurchase(row.id)) return false;
     return row.defaultVisible;
   });
 });
@@ -1347,4 +1428,47 @@ function resetTaxOrder() {
 .resize-handle:hover {
   background: #1976d2;
 }
+
+/* ========== 課税方式セグメントボタン ========== */
+.tax-method-segment {
+  display: inline-flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1.5px solid #d0d7de;
+  background: #f6f8fa;
+}
+.tax-method-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.tax-method-btn + .tax-method-btn {
+  border-left: 1px solid #d0d7de;
+}
+.tax-method-btn:hover:not(.active):not(:disabled) {
+  background: #e8eef4;
+  color: #333;
+}
+.tax-method-btn.active {
+  background: #1976D2;
+  color: #fff;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+.tax-method-btn.active + .tax-method-btn,
+.tax-method-btn + .tax-method-btn.active {
+  border-left-color: transparent;
+}
+.tax-method-btn.active i { color: #fff; }
+.tax-method-btn i { font-size: 12px; color: #888; transition: color 0.2s ease; }
+.tax-method-btn:disabled { cursor: default; opacity: 0.5; }
+.tax-method-btn:disabled.active { opacity: 1; background: #1976D2; color: #fff; }
 </style>

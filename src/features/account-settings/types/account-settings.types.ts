@@ -31,7 +31,7 @@ export interface UnifiedTaxCategory extends TaxCategory {
   /** マスタでの表示設定の上書き値（null=デフォルトを使用。scope='master'のみ有効） */
   visibilityOverride: boolean | null
   /** ソース区分 */
-  source: 'default' | 'master-custom' | 'client-custom'
+  source: 'default' | 'master-custom' | 'client-custom' | 'mf'
 }
 
 // =============================================

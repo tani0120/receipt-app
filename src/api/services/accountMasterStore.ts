@@ -13,6 +13,7 @@
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs'
+import { getTaxAvailableForMethod } from './mfTaxAvailableStore'
 import { join } from 'path'
 import type { Account } from '../../types/shared-account'
 import type { TaxCategory } from '../../types/shared-tax-category'
@@ -382,6 +383,67 @@ export interface TaxCategoryFilterResult {
   page: number
   totalPages: number
 }
+// --- 課税方式別フィルタ共通関数 ---
+// IDパターンマッチ（フォールバック用: availableデータ未取得時のみ使用）
+const isSimplifiedSales = (id: string) => /_T[1-6]$/.test(id)
+const isIndividualPurchase = (id: string) =>
+  /COMMON/.test(id) || /_NT_/.test(id) || /^PURCHASE_NT_/.test(id) || /^IMPORT_NT_/.test(id)
+const isObsoleteRate = (name: string) => / 5%/.test(name) && !name.includes('(軽)')
+
+/**
+ * 課税方式に基づいて税区分をフィルタする共通関数
+ *
+ * 優先順位:
+ * 1. MFのavailableデータが存在する場合 → availableで判定
+ * 2. availableデータなし → IDパターンマッチ（フォールバック）
+ *
+ * 共通ルール:
+ * - direction='common'（不明・対象外）は常に表示
+ * - MF独自カスタム税区分（isCustom && source='mf'）は常に表示
+ */
+function filterByTaxMethod(row: TaxCategory, taxMethod: string): boolean {
+  // MF独自カスタム税区分は常に表示（顧問先が意図的に作成したため）
+  if (row.isCustom && row.source === 'mf') return true
+  // direction='common'（不明・対象外）は全方式で常に表示
+  if (row.direction === 'common') return true
+
+  // --- MFのavailableベースのフィルタ ---
+  const methodKeyMap: Record<string, string> = {
+    'general': 'proportional',
+    'proportional_allocation': 'proportional',
+    'individual_allocation': 'individual',
+    'individual': 'individual',
+    'simplified': 'simplified',
+    'exempt': 'exempt',
+  }
+  const methodKey = (methodKeyMap[taxMethod] ?? taxMethod) as import('./mfTaxAvailableStore').TaxMethodKey
+  const availableData = getTaxAvailableForMethod(methodKey)
+
+  if (availableData && row.mfId) {
+    // availableデータあり → MFの判定を使用
+    return availableData[row.mfId] === true
+  }
+
+  // --- フォールバック: IDパターンマッチ（availableデータ未取得時） ---
+  if (taxMethod === 'exempt') {
+    return false // commonは上で処理済み
+  }
+  if (taxMethod === 'simplified') {
+    if (row.direction === 'sales') {
+      return isSimplifiedSales(row.id) && !isObsoleteRate(row.name)
+    }
+    return row.active && !isIndividualPurchase(row.id)
+  }
+  if (taxMethod === 'individual' || taxMethod === 'individual_allocation') {
+    if (isObsoleteRate(row.name)) return false
+    if (row.direction === 'sales') return row.active
+    return row.active || isIndividualPurchase(row.id)
+  }
+  // 一括比例（デフォルト）
+  if (!row.active) return false
+  if (isIndividualPurchase(row.id)) return false
+  return row.defaultVisible
+}
 
 /**
  * マスタ税区分をフィルタ・ページネーションして返す
@@ -395,22 +457,9 @@ export function getFilteredTaxCategories(params: TaxCategoryFilterParams): TaxCa
     pageSize = 50,
   } = params
 
-  const isT = (id: string) => /_T[1-6]$/.test(id)
-
   const filtered = masterTaxCategories.filter(row => {
     if (taxMethod === 'all') return true
-    if (taxMethod === 'exempt') {
-      // 免税事業者: direction='common'（「対象外」「不明」）のみ
-      return row.direction === 'common'
-    }
-    if (taxMethod === 'simplified') {
-      if (!row.active && !isT(row.id)) return false
-      if (row.direction === 'sales' && !isT(row.id)) return false
-      return isT(row.id) || row.direction === 'purchase' || row.direction === 'common'
-    }
-    // 本則
-    if (!row.active) return false
-    return row.defaultVisible
+    return filterByTaxMethod(row, taxMethod)
   })
 
   const totalCount = filtered.length
@@ -507,21 +556,7 @@ export function getFilteredClientTaxCategories(
     pageSize = 50,
   } = params
 
-  const filtered = data.filter(row => {
-    if (!row.active) return false
-    if (taxMethod === 'exempt') {
-      // 免税事業者: direction='common'（「対象外」「不明」）のみ
-      return row.direction === 'common'
-    }
-    if (taxMethod === 'simplified') {
-      return row.defaultVisible && (
-        row.direction === 'common' ||
-        row.direction === 'sales' ||
-        row.direction === 'purchase'
-      )
-    }
-    return row.defaultVisible
-  })
+  const filtered = data.filter(row => filterByTaxMethod(row, taxMethod))
 
   const totalCount = filtered.length
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))

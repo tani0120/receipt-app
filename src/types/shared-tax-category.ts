@@ -41,10 +41,12 @@ export type TaxCategory = {
     displayOrder: number
     /** カスタム税区分フラグ（ユーザー追加=true、システム提供=false/undefined → ルール4） */
     isCustom?: boolean
-    /** データ出典（'mf'=MFインポート、'master'=マスタ、'custom'=顧問先独自。未設定=マスタ） */
-    source?: 'mf' | 'master' | 'custom'
+    /** データ出典（'mf'=MFインポート、'default'=システム提供、'master'/'master-custom'=マスタ、'custom'/'client-custom'=顧問先独自） */
+    source?: 'mf' | 'master' | 'custom' | 'default' | 'master-custom' | 'client-custom'
     /** MFクラウドの税区分ID（MFインポート時にセット。名称変更時の突合に使用） */
     mfId?: string
+    /** 税率（MFインポート時にセット。0.10 = 10%。UI表示用。税額計算はMFに委譲） */
+    taxRate?: number
     /** デフォルト順復元用: コピー/追加時の挿入位置直前の行ID */
     insertAfter?: string
 }

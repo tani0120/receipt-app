@@ -32,7 +32,7 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
 
   async function fetchFresh() {
     try {
-      const res = await fetch(`${API_BASE}/master?pageSize=200`)
+      const res = await fetch(`${API_BASE}/master?pageSize=200&taxMethod=all`)
       if (!res.ok) return
       const data = await res.json() as { items: TaxCategory[] }
       allTaxCategories.value = data.items

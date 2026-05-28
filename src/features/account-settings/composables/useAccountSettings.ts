@@ -97,7 +97,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   const taxCategories = computed<UnifiedTaxCategory[]>(() => {
     if (scope === 'master') {
       return taxMaster.masterTaxCategories.value.map(tc => {
-        const source: UnifiedTaxCategory['source'] = tc.isCustom ? 'master-custom' : 'default'
+        const source: UnifiedTaxCategory['source'] = tc.source === 'mf' ? 'mf' : tc.isCustom ? 'master-custom' : 'default'
         return {
           ...tc,
           hidden: tc.hiddenInMaster,
@@ -112,7 +112,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       console.error('[useAccountSettings] scope="client" but clientTaxComposable is null (clientId missing?)')
       // フォールバック: マスタ税区分を返す
       return taxMaster.masterTaxCategories.value.map(tc => {
-        const source: UnifiedTaxCategory['source'] = tc.isCustom ? 'master-custom' : 'default'
+        const source: UnifiedTaxCategory['source'] = tc.source === 'mf' ? 'mf' : tc.isCustom ? 'master-custom' : 'default'
         return {
           ...tc,
           hidden: tc.hiddenInMaster,
@@ -131,7 +131,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       )
       const isMasterCustom = masterCustomIds.has(tc.id) && tc.isCustom
       const isClientCustom = tc.isCustom && !isMasterCustom
-      const source: UnifiedTaxCategory['source'] = isMasterCustom ? 'master-custom' : isClientCustom ? 'client-custom' : 'default'
+      const source: UnifiedTaxCategory['source'] = tc.source === 'mf' ? 'mf' : isMasterCustom ? 'master-custom' : isClientCustom ? 'client-custom' : 'default'
       return {
         ...tc,
         hidden: tc.hiddenInClient || tc.hiddenInMaster,

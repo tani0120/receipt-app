@@ -32,9 +32,11 @@ import {
 import { getById, updateClient } from '../services/clientStore'
 import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFieldMapping'
 import { importMfJournals } from '../services/mfJournalImporter'
-import { saveClientAccounts, saveClientTaxCategories, getAllAccounts } from '../services/accountMasterStore'
+import { saveClientAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories } from '../services/accountMasterStore'
 import type { Account, AccountTarget, AccountGroup, TaxDetermination } from '../../types/shared-account'
-import type { TaxCategory, TaxDirection } from '../../types/shared-tax-category'
+import type { TaxCategory } from '../../types/shared-tax-category'
+import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
+import { getAllTaxAvailable, saveTaxAvailable, invalidateCache, type TaxMethodKey } from '../services/mfTaxAvailableStore'
 
 const app = new Hono()
 
@@ -364,8 +366,8 @@ app.post('/import-offices', async (c) => {
  * costPerCall: 0
  */
 app.post('/sync-all', async (c) => {
-  const body = await c.req.json<{ clientId?: string }>()
-  const clientId = body.clientId ?? 'default'
+  const body = await c.req.json<{ clientId?: string }>().catch(() => ({} as { clientId?: string }))
+  const clientId = c.req.query('clientId') ?? body.clientId ?? 'default'
 
   // MF認証チェック
   const status = getAuthStatus(clientId)
@@ -454,24 +456,52 @@ app.post('/sync-all', async (c) => {
     accountMsg += `（マッチ: ${matchedCount}件 / 未マッチ: ${unmatchedList.length}件）`
     results.push(accountMsg)
 
-    // ===== 4. 税区分マスタ =====
+    // ===== 4. 税区分マスタ（mfId照合でマスタ属性を引き継ぐ） =====
     const allTaxes = await mcpFetchTaxes(clientId)
-    const taxMapped: TaxCategory[] = allTaxes.map((t, idx) => ({
-      id: t.id,
-      name: t.name,
-      shortName: t.abbreviation ?? '',
-      direction: 'common' as TaxDirection,
-      qualified: false,
-      aiSelectable: t.available,
-      active: t.available,
-      deprecated: !t.available,
-      effectiveFrom: '2019-10-01',
-      effectiveTo: null,
-      defaultVisible: t.available,
-      displayOrder: idx + 1,
-    }))
+    // マスタの全社税区分をmfIdでインデックス化
+    const masterTaxes = getAllTaxCategories()
+    const mfIdToMaster = new Map<string, TaxCategory>()
+    for (const mt of masterTaxes) {
+      if (mt.mfId) mfIdToMaster.set(mt.mfId, mt as TaxCategory)
+    }
+
+    let matchedTaxCount = 0
+    let unmatchedTaxCount = 0
+    const taxMapped: TaxCategory[] = allTaxes.map((t, idx) => {
+      const master = mfIdToMaster.get(t.id)
+      if (master) {
+        // mfId照合成功 → マスタの属性をそのまま維持（MFのavailableは信頼しない）
+        matchedTaxCount++
+        return {
+          ...master,
+          displayOrder: idx + 1,
+          source: 'mf' as const,
+          mfId: t.id,
+        }
+      }
+      // mfIdがマッチしない → MF独自のカスタム税区分
+      unmatchedTaxCount++
+      const dir = guessDirectionFromName(t.name)
+      return {
+        id: `MF_CUSTOM_${t.id}`,
+        name: t.name,
+        shortName: t.abbreviation ?? '',
+        direction: dir,
+        qualified: guessQualifiedFromName(t.name, dir),
+        aiSelectable: true,
+        active: true,
+        deprecated: false,
+        effectiveFrom: '2019-10-01',
+        effectiveTo: null,
+        defaultVisible: true,
+        displayOrder: idx + 1,
+        isCustom: true,
+        source: 'mf' as const,
+        mfId: t.id,
+      }
+    })
     saveClientTaxCategories(clientId, taxMapped)
-    results.push(`✅ 税区分: ${allTaxes.length}件取得・保存（available=${allTaxes.filter(t => t.available).length}件）`)
+    results.push(`✅ 税区分: ${allTaxes.length}件取得 → マスタ照合${matchedTaxCount}件, カスタム${unmatchedTaxCount}件（available=${allTaxes.filter(t => t.available).length}件）`)
 
     return c.json({
       success: true,
@@ -496,6 +526,26 @@ app.post('/sync-all', async (c) => {
       results,
     }, 500)
   }
+})
+
+// ===== MF課税方式別available管理 =====
+
+/** GET /tax-available — 4方式分のavailableデータを返す */
+app.get('/tax-available', (c) => {
+  invalidateCache()
+  return c.json(getAllTaxAvailable())
+})
+
+/** PUT /tax-available/:method — 特定方式のavailableを更新 */
+app.put('/tax-available/:method', async (c) => {
+  const method = c.req.param('method') as TaxMethodKey
+  const validMethods: TaxMethodKey[] = ['proportional', 'individual', 'simplified', 'exempt']
+  if (!validMethods.includes(method)) {
+    return c.json({ error: `無効な方式: ${method}` }, 400)
+  }
+  const body = await c.req.json<{ available: Record<string, boolean> }>()
+  saveTaxAvailable(method, body.available)
+  return c.json({ ok: true, method, count: Object.values(body.available).filter(v => v).length })
 })
 
 export default app

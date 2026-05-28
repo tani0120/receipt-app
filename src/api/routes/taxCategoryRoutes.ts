@@ -23,6 +23,7 @@ import {
   saveClientTaxCategories,
 } from '../services/accountMasterStore'
 import type { TaxCategory } from '../../types/shared-tax-category'
+import { getAuthStatus } from '../services/mfAuthService'
 
 const app = new Hono()
 
@@ -38,8 +39,8 @@ function parseTaxFilterParams(c: { req: { query: (key: string) => string | undef
 }
 
 function validateTaxFilterParams(params: { taxMethod: string; page: number; pageSize: number }): string | null {
-  if (!['general', 'simplified', 'exempt', 'all'].includes(params.taxMethod)) {
-    return 'taxMethod は general / simplified / exempt / all のいずれかを指定してください'
+  if (!['general', 'individual', 'simplified', 'exempt', 'all'].includes(params.taxMethod)) {
+    return 'taxMethod は general / individual / simplified / exempt / all のいずれかを指定してください'
   }
   if (isNaN(params.page) || params.page < 1) {
     return 'page は1以上の数値を指定してください'
@@ -103,11 +104,14 @@ app.get('/client/:clientId', (c) => {
   if (err) return apiError(c, 400, err)
 
   const result = getFilteredClientTaxCategories(clientId, params)
+  // データ駆動: MF連携状態を既存のgetAuthStatusから取得してレスポンスに含める
+  const mfStatus = getAuthStatus(clientId)
   return c.json({
     items: result.pagedItems,
     totalCount: result.totalCount,
     page: result.page,
     totalPages: result.totalPages,
+    mfLinked: mfStatus.authenticated,
   })
 })
 

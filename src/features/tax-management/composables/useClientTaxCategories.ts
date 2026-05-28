@@ -41,12 +41,17 @@ interface ClientTaxOverrides {
 
 const API_BASE = '/api/tax-categories'
 
-async function fetchClientFromServer(clientId: string): Promise<TaxCategory[] | null> {
+interface ClientFetchResult {
+  items: TaxCategory[]
+  mfLinked: boolean
+}
+
+async function fetchClientFromServer(clientId: string): Promise<ClientFetchResult | null> {
   try {
     const res = await fetch(`${API_BASE}/client/${encodeURIComponent(clientId)}?pageSize=200`)
     if (!res.ok) return null
-    const data = await res.json() as { items: TaxCategory[] }
-    return data.items
+    const data = await res.json() as { items: TaxCategory[]; mfLinked?: boolean }
+    return { items: data.items, mfLinked: data.mfLinked ?? false }
   } catch (err) {
     console.error(`[useClientTaxCategories] サーバー取得失敗 (${clientId}):`, err)
     return null
@@ -72,6 +77,8 @@ async function saveClientToServer(clientId: string, taxCategories: TaxCategory[]
 interface ClientTaxCache {
   overrides: Ref<ClientTaxOverrides>
   initialized: boolean
+  /** MF連携済みかどうか（サーバーAPIからデータ駆動で取得） */
+  mfLinked: Ref<boolean>
 }
 
 const clientCacheMap = new Map<string, ClientTaxCache>()
@@ -97,7 +104,8 @@ export function useClientTaxCategories(clientId: string) {
   // キャッシュから取得、なければ新規作成
   if (!clientCacheMap.has(clientId)) {
     const overridesRef = ref<ClientTaxOverrides>(createInitialCopy())
-    const cache: ClientTaxCache = { overrides: overridesRef, initialized: false }
+    const mfLinkedRef = ref(false)
+    const cache: ClientTaxCache = { overrides: overridesRef, initialized: false, mfLinked: mfLinkedRef }
     clientCacheMap.set(clientId, cache)
 
     // autoSave: overrides変更時にサーバーへ自動保存（デバウンス300ms）
@@ -112,8 +120,11 @@ export function useClientTaxCategories(clientId: string) {
     }, { deep: true })
 
     // 非同期でサーバーから初期データを取得
-    fetchClientFromServer(clientId).then(serverData => {
-      if (serverData && serverData.length > 0) {
+    fetchClientFromServer(clientId).then(result => {
+      if (result && result.items.length > 0) {
+        const serverData = result.items
+        // MF連携状態をデータ駆動で取得（サーバーAPIから）
+        mfLinkedRef.value = result.mfLinked
         const masterIds = new Set(masterTaxCategories.value.map(tc => tc.id))
         overridesRef.value = {
           hiddenIds: serverData.filter(tc => tc.deprecated).map(tc => tc.id),
@@ -121,7 +132,7 @@ export function useClientTaxCategories(clientId: string) {
           copiedMasterIds: serverData.filter(tc => masterIds.has(tc.id)).map(tc => tc.id),
           customTaxCategories: serverData.filter(tc => !masterIds.has(tc.id)),
         }
-        console.log(`[useClientTaxCategories] ${clientId}: サーバーから${serverData.length}件を取得`)
+        console.log(`[useClientTaxCategories] ${clientId}: サーバーから${serverData.length}件を取得 (MF連携=${result.mfLinked})`)
       } else {
         const allRows = buildFullTaxCategoryList(overridesRef.value, masterTaxCategories.value)
         saveClientToServer(clientId, allRows)
@@ -162,7 +173,9 @@ export function useClientTaxCategories(clientId: string) {
       return {
         ...tc,
         hiddenInClient: overrides.value.hiddenIds.includes(tc.id),
-        hiddenInMaster: tc.hiddenInMaster,
+        // MF連携済み: hiddenInMasterを無視（MFインポートが正）
+        // MF未連携: hiddenInMasterをそのまま使う（全社マスタが正）
+        hiddenInMaster: cache.mfLinked.value ? false : tc.hiddenInMaster,
         aiSelectableOverride: aiOverride,
         aiSelectable: aiOverride !== null ? aiOverride : tc.aiSelectable,
       }
