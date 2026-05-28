@@ -1,18 +1,18 @@
 /**
- * useClients — 顧問先管理composable（API接続版）
+ * useClients — 顧問先管理composable（Piniaストア委譲版）
  *
  * 【設計原則】
- * - 型はrepositories/types.tsから一元参照（二重定義禁止）
- * - モジュールスコープrefでキャッシュ（ページ遷移しても保持）
- * - ref即反映 + サーバーfire-and-forget（useDocumentsと同パターン）
- * - CRUDはサーバー側clientStore.tsに委譲
- * - sharedFolderIdのlocalStorage永続化は廃止（サーバーJSON永続化に統一）
+ * - 内部はclientStoreに完全委譲
+ * - returnインターフェースは変更ゼロ（全ページのimportは一切変更不要）
+ * - storeToRefsで状態をref化（Piniaの反応性を維持）
  *
- * 準拠: DL-042
+ * 準拠: DL-042, plan_pinia_persistedstate移行.md
  */
 
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useClientStore } from '@/stores/clientStore'
 import { useStaff } from '@/features/staff-management/composables/useStaff'
 import type { Client, ClientStatus, ClientForm } from '@/repositories/types'
 import { UI_MSG } from '@/constants/uiMessages'
@@ -61,139 +61,12 @@ export const emptyClientForm = (): ClientForm => ({
 });
 
 // ============================================================
-// API通信ヘルパー
-// ============================================================
-
-const API_BASE = '/api/clients'
-
-async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`)
-  if (!res.ok) throw new Error(`API GET ${path} failed: ${res.status}`)
-  return res.json()
-}
-
-async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`API POST ${path} failed: ${res.status}`)
-  return res.json()
-}
-
-async function apiPut(path: string, body: unknown): Promise<void> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`API PUT ${path} failed: ${res.status}`)
-}
-
-// ============================================================
-// モジュールスコープ（シングルトン）
-// ============================================================
-
-const CACHE_KEY = 'sugu-suru:clients-cache'
-const clients = ref<Client[]>([])
-let initialized = false
-
-/** sessionStorageからキャッシュを即座にrefに設定（楽観的UI） */
-function loadCache(): void {
-  try {
-    const raw = sessionStorage.getItem(CACHE_KEY)
-    if (raw) {
-      const cached = JSON.parse(raw) as Client[]
-      if (Array.isArray(cached) && cached.length > 0) {
-        clients.value = cached
-        initialized = true
-        console.log(`[useClients] キャッシュから${cached.length}件を即座に表示`)
-      }
-    }
-  } catch {
-    // キャッシュ破損時は無視（APIから取得）
-  }
-}
-
-/** サーバーから顧問先一覧を取得してrefに設定 */
-async function refresh(): Promise<void> {
-  try {
-    const raw = await apiGet<{ clients: Client[] } | Client[]>('')
-    // APIレスポンスが { clients: [...] } か [...] のどちらでも対応
-    const list = Array.isArray(raw) ? raw : raw.clients
-    clients.value = list
-    initialized = true
-    console.log(`[useClients] ${list.length}件をサーバーから取得`)
-
-    // キャッシュ更新
-    try {
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify(list))
-    } catch {
-      // sessionStorage容量超過時は無視
-    }
-
-    // DL-042マイグレーション: localStorageのsharedFolderIdをサーバーデータにマージ
-    migrateSharedFolderIds()
-  } catch (err) {
-    console.error('[useClients] サーバー取得失敗:', err)
-  }
-}
-
-/**
- * localStorageに残っている旧sharedFolderIdをサーバーに移行する。
- * マージ完了後にlocalStorageから削除する。
- */
-function migrateSharedFolderIds(): void {
-  const raw = localStorage.getItem('sugu-suru:shared-folder-ids')
-  if (!raw) return  // 移行済みまたはデータなし
-
-  try {
-    const stored = JSON.parse(raw) as Record<string, string>
-    let migrated = 0
-    for (const [clientId, folderId] of Object.entries(stored)) {
-      if (!folderId) continue
-      const client = clients.value.find(c => c.clientId === clientId)
-      if (client && !client.sharedFolderId) {
-        // サーバー側にsharedFolderIdがない場合のみlocalStorageの値をマージ
-        client.sharedFolderId = folderId
-        apiPut(`/${clientId}/shared-folder`, { folderId })
-          .catch(err => console.error(`[useClients] sharedFolderId移行エラー (${clientId}):`, err))
-        migrated++
-      }
-    }
-    if (migrated > 0) {
-      console.log(`[useClients] ${migrated}件のsharedFolderIdをlocalStorageからサーバーに移行`)
-    }
-  } catch (err) {
-    console.error('[useClients] sharedFolderIdマイグレーションエラー:', err)
-  }
-
-  // 移行完了後にlocalStorageから削除（二重移行防止）
-  localStorage.removeItem('sugu-suru:shared-folder-ids')
-  // 旧staff-assignmentsも不要（Client.staffIdがsource of truth）
-  localStorage.removeItem('sugu-suru:staff-assignments')
-}
-
-/** 初回のみサーバーから読み込み */
-async function ensureLoaded(): Promise<void> {
-  if (!initialized) {
-    loadCache()   // ① キャッシュから即座に表示
-    await refresh() // ② 裏でAPIから最新を取得→差し替え
-  }
-}
-
-// 初回自動読み込み（fire-and-forget）
-ensureLoaded()
-
-// ============================================================
 // Composable
 // ============================================================
 
-/** API通信エラーメッセージ（UIで表示可能） */
-const lastError = ref<string | null>(null)
-
 export function useClients() {
+  const store = useClientStore()
+  const { clients, lastError } = storeToRefs(store)
   const route = useRoute();
 
   /** ルートパスまたはクエリパラメータから現在選択中のクライアントを動的に取得 */
@@ -230,75 +103,36 @@ export function useClients() {
     return getStaffName(client.staffId)
   }
 
-  /** sharedFolderId（共有フォルダID）を更新（ref即反映 + サーバーfire-and-forget） */
-  function updateSharedFolderId(clientId: string, folderId: string) {
-    const idx = clients.value.findIndex(c => c.clientId === clientId)
-    if (idx >= 0) {
-      // ref即反映（computedの再計算をトリガー）
-      clients.value[idx] = { ...clients.value[idx]!, sharedFolderId: folderId }
-      // サーバーに非同期送信
-      apiPut(`/${clientId}/shared-folder`, { folderId })
-        .catch(err => console.error('[useClients] sharedFolderId更新エラー:', err))
-    }
-  }
-
-  /** 顧問先追加（サーバーでID発番 → ref反映） */
+  /** 顧問先追加（UI_MSGエラーメッセージ互換ラッパー） */
   async function addClient(client: Omit<Client, 'clientId'> & { clientId?: string }): Promise<Client> {
-    lastError.value = null
     try {
-      const res = await apiPost<{ ok: boolean; client: Client }>('', client)
-      const saved = res.client
-      clients.value.push(saved)
-      return saved
+      return await store.addClient(client)
     } catch (err) {
-      const msg = `${UI_MSG.顧問先追加保存失敗} ${err}`
-      console.error('[useClients]', msg)
-      lastError.value = msg
+      // lastErrorは store 側で設定済み。UI_MSGフォーマットに変換
+      store.lastError = `${UI_MSG.顧問先追加保存失敗} ${err}`
       throw err
     }
   }
 
-  /** 顧問先更新（サーバー保存成功 → ref反映） */
+  /** 顧問先更新（UI_MSGエラーメッセージ互換ラッパー） */
   async function updateClientLocal(clientId: string, data: Partial<Client>): Promise<void> {
-    lastError.value = null
     try {
-      await apiPut(`/${clientId}`, data)
-      // サーバー成功後にref反映
-      const idx = clients.value.findIndex(c => c.clientId === clientId)
-      if (idx >= 0) {
-        clients.value[idx] = { ...clients.value[idx]!, ...data, clientId }
-      }
+      await store.updateClient(clientId, data)
     } catch (err) {
-      const msg = `${UI_MSG.顧問先更新保存失敗} ${err}`
-      console.error('[useClients]', msg)
-      lastError.value = msg
+      store.lastError = `${UI_MSG.顧問先更新保存失敗} ${err}`
       throw err
     }
-  }
-
-  /**
-   * POST /api/clients/list — サーバー側でフィルタ+ソート+ページネーション
-   * fetchClientListの代替。フロント側でのフィルタ・ソートを廃止する。
-   */
-  async function listClients(query: {
-    filters?: { field: string; operator: string; value: string | string[] }[]
-    logic?: 'and' | 'or'
-    sorts?: { key: string; order: 'asc' | 'desc' }[]
-    page?: number
-    pageSize?: number
-  }): Promise<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }> {
-    return apiPost<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
   }
 
   return {
     clients,
     currentClient,
     getStaffNameForClient,
-    updateSharedFolderId,
+    updateSharedFolderId: store.updateSharedFolderId,
     addClient,
     updateClientLocal,
-    listClients,
-    refresh,
+    listClients: store.listClients,
+    refresh: store.fetchFresh,
     lastError,
   };
 }

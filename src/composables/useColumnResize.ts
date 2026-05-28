@@ -1,49 +1,38 @@
 import { ref, onMounted, type Ref } from 'vue'
+import { useColumnResizeStore } from '@/stores/columnResizeStore'
 
 /**
- * テーブル列幅カスタマイズ用composable
+ * テーブル列幅カスタマイズ用composable（Piniaストア委譲版）
  *
- * - ドラッグで列幅変更
- * - localStorageで永続化
- * - リロード後に復元
+ * 内部はcolumnResizeStoreに完全委譲。returnインターフェース変更ゼロ。
  *
- * @param pageKey - ページ識別子（localStorageキーに使用）
+ * @param pageKey - ページ識別子
  * @param defaultWidths - 列keyごとのデフォルト幅(px)
  */
 export function useColumnResize(
   pageKey: string,
   defaultWidths: Record<string, number>
 ) {
-  const STORAGE_KEY = `sugu-suru:column-widths:${pageKey}`
+  const store = useColumnResizeStore()
   const MIN_WIDTH = 24
 
   // --- 列幅state ---
   const columnWidths: Ref<Record<string, number>> = ref({ ...defaultWidths })
 
-  // --- localStorage復元 ---
+  // --- ストアから復元 ---
   onMounted(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) {
-        const parsed = JSON.parse(saved) as Record<string, number>
-        // デフォルトにないキーは無視、あるキーだけマージ
-        for (const key of Object.keys(defaultWidths)) {
-          if (typeof parsed[key] === 'number' && parsed[key] >= MIN_WIDTH) {
-            columnWidths.value[key] = parsed[key]
-          }
-        }
+    const saved = store.getWidths(pageKey, defaultWidths)
+    for (const key of Object.keys(defaultWidths)) {
+      if (typeof saved[key] === 'number' && saved[key] >= MIN_WIDTH) {
+        columnWidths.value[key] = saved[key]
       }
-    } catch {
-      // パースエラーは無視
     }
   })
 
-  // --- localStorage保存 ---
+  // --- ストア保存 ---
   function saveWidths() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(columnWidths.value))
-    } catch {
-      // ストレージ満杯等は無視
+    for (const [key, width] of Object.entries(columnWidths.value)) {
+      store.setWidth(pageKey, key, width)
     }
   }
 
@@ -80,11 +69,7 @@ export function useColumnResize(
   // --- 幅リセット ---
   function resetWidths() {
     columnWidths.value = { ...defaultWidths }
-    try {
-      localStorage.removeItem(STORAGE_KEY)
-    } catch {
-      // 無視
-    }
+    store.resetPage(pageKey)
   }
 
   return {

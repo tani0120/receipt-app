@@ -69,10 +69,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useHomeMenuStore } from '@/stores/homeMenuStore'
 import { UI_MSG } from '@/constants/uiMessages'
 
 const router = useRouter()
 const { currentStaffId } = useCurrentUser()
+const homeMenuStore = useHomeMenuStore()
 
 // ===== トースト =====
 const showToast = ref(false)
@@ -107,31 +109,18 @@ const defaultMenuItems: MenuItem[] = [
   { key: 'tasks',      label: UI_MSG.ナビタスク管理,   icon: 'fa-solid fa-list-check',             color: 'linear-gradient(135deg, #ef4444, #dc2626)', path: '/task-board' },
 ]
 
-// ===== スタッフ別メニュー順序永続化 =====
+// ===== スタッフ別メニュー順序永続化（Piniaストア委譲） =====
+const defaultKeys = defaultMenuItems.map(m => m.key)
 const menuOrder = ref<string[]>([])
 
-const storageKey = computed(() =>
-  `home_menu_order_${currentStaffId.value || 'default'}`
-)
-
 function loadMenuOrder() {
-  try {
-    const saved = localStorage.getItem(storageKey.value)
-    if (saved) {
-      const keys = JSON.parse(saved) as string[]
-      // 保存済みキーが全メニューをカバーしているか検証
-      const allKeys = defaultMenuItems.map(m => m.key)
-      if (keys.length === allKeys.length && keys.every(k => allKeys.includes(k))) {
-        menuOrder.value = keys
-        return
-      }
-    }
-  } catch { /* 破損データは無視 */ }
-  menuOrder.value = defaultMenuItems.map(m => m.key)
+  const staffId = currentStaffId.value || 'default'
+  menuOrder.value = homeMenuStore.getOrder(staffId, defaultKeys)
 }
 
 function saveMenuOrder() {
-  localStorage.setItem(storageKey.value, JSON.stringify(menuOrder.value))
+  const staffId = currentStaffId.value || 'default'
+  homeMenuStore.setOrder(staffId, menuOrder.value)
 }
 
 const sortedMenuItems = computed<MenuItem[]>(() => {
