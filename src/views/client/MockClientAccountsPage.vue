@@ -21,7 +21,9 @@
           </div>
           <div class="as-selector-group-lg">
             <span class="as-selector-label-lg">課税方式:</span>
-            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod !== 'exempt'" disabled class="as-checkbox-lg"><span>課税（本則・簡易）</span></label>
+            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod === 'proportional'" disabled class="as-checkbox-lg"><span>原則（一括比例）</span></label>
+            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod === 'individual'" disabled class="as-checkbox-lg"><span>原則（個別対応）</span></label>
+            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod === 'simplified'" disabled class="as-checkbox-lg"><span>簡易</span></label>
             <label class="as-checkbox-label-lg"><input type="checkbox" :checked="clientTaxMethod === 'exempt'" disabled class="as-checkbox-lg"><span>免税</span></label>
           </div>
         </div>
@@ -69,6 +71,12 @@
             </template>
           </div>
           <div class="as-actions">
+            <MfImportButton
+              :authenticated="mfAuthenticated"
+              :loading="mfImporting"
+              tooltip="MFから勘定科目をインポート"
+              @import="importFromMf"
+            />
             <button class="as-action-btn" @click="resetAccountOrder"><i class="fa-solid fa-rotate"></i> デフォルト順</button>
             <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button>
             <button class="as-action-btn save" @click="saveChanges"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
@@ -262,6 +270,7 @@ import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import { QUALIFIED_OPTIONS } from '@/constants/vendorOptions';
+import MfImportButton from '@/components/MfImportButton.vue';
 import { UI_MSG } from '@/constants/uiMessages';
 import { CLIENT_ACCOUNT_FIELD_LABELS } from '@/constants/fieldLabels';
 import {
@@ -290,6 +299,13 @@ const { columnWidths: caColWidths, onResizeStart: onCaResizeStart } = useColumnR
 const props = defineProps<{ clientId: string }>();
 
 const PAGE_SIZE = 50;
+
+// =============== MFインポート（ボタン設置のみ。ロジックは後続タスクで実装） ===============
+const mfAuthenticated = ref(false);
+const mfImporting = ref(false);
+async function importFromMf() {
+  modal.notify({ title: 'MFインポート', message: '勘定科目のMFインポート機能は後続タスクで実装予定です。', variant: 'warning' });
+}
 const { clients } = useClients();
 
 // =============== 顧問先情報取得 ===============
@@ -297,11 +313,12 @@ const clientId = computed(() => props.clientId);
 const currentClientData = computed(() => clients.value.find(c => c.clientId === clientId.value) ?? null);
 const accountBusinessType = computed<'corp' | 'individual'>(() => currentClientData.value?.type === 'corp' ? 'corp' : 'individual');
 const accountHasRealEstate = computed(() => currentClientData.value?.hasRentalIncome ?? false);
-const clientTaxMethod = computed<'general' | 'simplified' | 'exempt'>(() => {
+const clientTaxMethod = computed<'proportional' | 'individual' | 'simplified' | 'exempt'>(() => {
   const raw = currentClientData.value?.consumptionTaxMode;
   if (raw === 'exempt') return 'exempt';
   if (raw === 'simplified') return 'simplified';
-  return 'general'; // individual_allocation, proportional_allocation → 原則課税
+  if (raw === 'individual_allocation') return 'individual';
+  return 'proportional'; // general, proportional_allocation, その他 → 原則（一括比例）
 });
 
 // =============== composable接続（useAccountSettings経由） ===============

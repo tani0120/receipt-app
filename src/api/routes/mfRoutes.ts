@@ -21,6 +21,7 @@
 import { Hono } from 'hono'
 import { fetchTenant } from '../services/mfApiClient'
 import { getAuthStatus, setOfficeInfo } from '../services/mfAuthService'
+import { saveMfRawData, loadMfRawData, listMfRawPatterns } from '../services/mfRawDataStore'
 import {
   mcpFetchCurrentOffice,
   mcpFetchAccounts,
@@ -32,6 +33,7 @@ import {
 import { getById, updateClient } from '../services/clientStore'
 import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFieldMapping'
 import { importMfJournals } from '../services/mfJournalImporter'
+import { previewTaxImport, applyTaxImport } from '../services/mfTaxImportService'
 import { saveClientAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories } from '../services/accountMasterStore'
 import type { Account, AccountTarget, AccountGroup, TaxDetermination } from '../../types/shared-account'
 import type { TaxCategory } from '../../types/shared-tax-category'
@@ -548,4 +550,93 @@ app.put('/tax-available/:method', async (c) => {
   return c.json({ ok: true, method, count: Object.values(body.available).filter(v => v).length })
 })
 
+// ---------- MF生データ保存・取得 ----------
+
+/**
+ * PUT /raw-data/:pattern — MF生データを保存
+ *
+ * ボディ: MfRawDataEnvelope（clientId, clientName, pattern, items等）
+ */
+app.put('/raw-data/:pattern', async (c) => {
+  const pattern = c.req.param('pattern')
+  const body = await c.req.json()
+  saveMfRawData({ ...body, pattern })
+  return c.json({ ok: true, pattern })
+})
+
+/**
+ * GET /raw-data/:pattern — MF生データを取得（前回データ）
+ */
+app.get('/raw-data/:pattern', (c) => {
+  const pattern = c.req.param('pattern')
+  const data = loadMfRawData(pattern)
+  if (!data) return c.json({ exists: false })
+  return c.json({ exists: true, data })
+})
+
+/**
+ * GET /raw-data — 全パターンのインポート履歴一覧
+ */
+app.get('/raw-data', (_c) => {
+  const patterns = listMfRawPatterns()
+  return _c.json({ patterns })
+})
+
+// ---------- 税区分インポート（バックエンド処理） ----------
+
+/**
+ * POST /import-taxes/preview — 差分プレビュー
+ * body: { clientId: string }
+ *
+ * MFから税区分を取得し、マスタと照合して差分レポートを返す。
+ * データの変更は行わない（自動ルールのavailable更新は行う）。
+ */
+app.post('/import-taxes/preview', async (c) => {
+  const body = await c.req.json<{ clientId?: string }>()
+  const clientId = body.clientId
+  if (!clientId) return c.json({ error: 'clientId必須' }, 400)
+
+  const status = getAuthStatus(clientId)
+  if (!status.authenticated) {
+    return c.json({ error: 'MF未認証です。先にOAuth認可を完了してください' }, 401)
+  }
+
+  try {
+    const result = await previewTaxImport(clientId)
+    return c.json(result)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[mfRoutes] import-taxes/preview失敗: ${message}`)
+    return c.json({ error: '税区分インポートのプレビューに失敗しました', detail: message }, 500)
+  }
+})
+
+/**
+ * POST /import-taxes/apply — 差分適用
+ * body: { clientId: string }
+ *
+ * 差分検知を再実行し（冪等性保証）、マスタに適用して保存する。
+ */
+app.post('/import-taxes/apply', async (c) => {
+  const body = await c.req.json<{ clientId?: string }>()
+  const clientId = body.clientId
+  if (!clientId) return c.json({ error: 'clientId必須' }, 400)
+
+  const status = getAuthStatus(clientId)
+  if (!status.authenticated) {
+    return c.json({ error: 'MF未認証です。先にOAuth認可を完了してください' }, 401)
+  }
+
+  try {
+    const result = await applyTaxImport(clientId)
+    return c.json(result)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[mfRoutes] import-taxes/apply失敗: ${message}`)
+    return c.json({ error: '税区分インポートの適用に失敗しました', detail: message }, 500)
+  }
+})
+
 export default app
+
+

@@ -286,3 +286,137 @@
   background: #1976D2;
   color: #fff;
 }
+
+/* =============== 顧問先選択モーダル =============== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.15s ease;
+}
+.modal-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.22);
+  width: 100%;
+  animation: slideUp 0.2s ease;
+}
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.modal-body {
+  padding: 16px 20px;
+}
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.btn-cancel {
+  padding: 8px 22px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #e5e7eb;
+  color: #555;
+  transition: background 0.15s;
+}
+.btn-cancel:hover { background: #d1d5db; }
+.btn-confirm {
+  padding: 8px 22px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #3b82f6;
+  color: #fff;
+  transition: background 0.15s;
+}
+.btn-confirm:hover { background: #2563eb; }
+.btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mf-client-row {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mf-client-row:hover {
+  border-color: #93c5fd;
+  background: #f0f7ff;
+}
+.mf-client-row.selected {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+.mf-star {
+  color: #f59e0b;
+  font-size: 16px;
+}
+
+.mf-pattern-row {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mf-pattern-row:hover {
+  border-color: #93c5fd;
+  background: #f0f7ff;
+}
+.mf-pattern-row.selected {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+.mf-pattern-row.done {
+  opacity: 0.7;
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+.mf-guide-box {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: #1e40af;
+  line-height: 1.5;
+}
+.mf-pattern-row.just-imported {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+

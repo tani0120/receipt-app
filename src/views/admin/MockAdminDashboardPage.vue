@@ -320,12 +320,31 @@
       </div>
     </div>
 
-
+    <!-- MCP認証フローティングボタン（admin-dashboardのみ） -->
+    <button
+      class="mcp-auth-fab"
+      :class="{
+        'mcp-auth-fab--ok': mcpAuthStatus === 'authenticated',
+        'mcp-auth-fab--ng': mcpAuthStatus === 'unauthenticated',
+        'mcp-auth-fab--loading': mcpAuthStatus === 'loading',
+      }"
+      :title="mcpAuthTooltip"
+      @click="onMcpAuthClick"
+      :disabled="mcpAuthStatus === 'loading'"
+    >
+      <template v-if="mcpAuthStatus === 'loading'">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size: 20px"></i>
+      </template>
+      <template v-else>
+        <span>MCP</span>
+        <span>認証</span>
+      </template>
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { useAdminDashboard } from '@/composables/useAdminDashboard';
@@ -544,9 +563,102 @@ const staffStatusCounts = computed(() => adminData.value.staffStatusCounts ?? { 
 const clientStatusCounts = computed(() => adminData.value.clientStatusCounts ?? { all: 0, active: 0, inactive: 0, suspension: 0 });
 
 
+// ======== MCP認証フローティングボタン ========
+type McpAuthStatusType = 'loading' | 'authenticated' | 'unauthenticated';
+const mcpAuthStatus = ref<McpAuthStatusType>('loading');
+const mcpAuthExpires = ref<string | null>(null);
+
+const mcpAuthTooltip = computed(() => {
+  if (mcpAuthStatus.value === 'loading') return 'MCP認証状態を確認中…';
+  if (mcpAuthStatus.value === 'authenticated') {
+    const exp = mcpAuthExpires.value ? new Date(mcpAuthExpires.value).toLocaleString('ja-JP') : '不明';
+    return `MCP認証済み（有効期限: ${exp}）\nクリックで再認証`;
+  }
+  return 'MCP未認証 — クリックして認証開始';
+});
+
+async function checkMcpAuth() {
+  mcpAuthStatus.value = 'loading';
+  try {
+    const res = await fetch('/api/mf/auth/status?clientId=c_wTdnMKDO');
+    const data = await res.json();
+    mcpAuthStatus.value = data.authenticated ? 'authenticated' : 'unauthenticated';
+    mcpAuthExpires.value = data.expiresAt ?? null;
+  } catch {
+    mcpAuthStatus.value = 'unauthenticated';
+  }
+}
+
+async function onMcpAuthClick() {
+  try {
+    const res = await fetch('/api/mf/auth/url?clientId=c_wTdnMKDO');
+    const data = await res.json();
+    if (data.url) {
+      window.open(data.url, '_blank');
+    }
+  } catch (e) {
+    console.error('[MCP認証] URL取得失敗:', e);
+  }
+}
+
+onMounted(() => {
+  checkMcpAuth();
+});
 </script>
 
 <style scoped>
+/* MCP認証フローティングボタン */
+.mcp-auth-fab {
+  position: fixed;
+  bottom: 88px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.mcp-auth-fab:hover {
+  transform: scale(1.1);
+}
+.mcp-auth-fab:active {
+  transform: scale(0.95);
+}
+.mcp-auth-fab--ok {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
+}
+.mcp-auth-fab--ok:hover {
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.5);
+}
+.mcp-auth-fab--ng {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.4);
+  animation: mcp-pulse 2s infinite;
+}
+.mcp-auth-fab--ng:hover {
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5);
+}
+.mcp-auth-fab--loading {
+  background: rgba(100, 116, 139, 0.6);
+  color: #94a3b8;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+@keyframes mcp-pulse {
+  0%, 100% { box-shadow: 0 3px 10px rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 3px 16px rgba(239, 68, 68, 0.7); }
+}
 .admin-dashboard {
   height: 100%;
   overflow-y: auto;

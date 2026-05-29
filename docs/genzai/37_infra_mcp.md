@@ -1,7 +1,7 @@
 # MF MCP連携 — 調査・設計・移行戦略
 
 > 作成: 2026-05-17
-> 最終更新: 2026-05-19（リダイレクトURI修正・マルチテナント分離バグ修正・実データ取得検証完了）
+> 最終更新: 2026-05-29（実装済みファイル一覧更新・税区分インポートバックエンド移行反映）
 > 準拠: `.agent/workflows/load_context.md` L12-17: Supabase移行前倒し原則
 > 前提: MFクラウド確定申告（パーソナルプラン）契約中
 > 会計API仕様書: https://developers.api-accounting.moneyforward.com/
@@ -558,9 +558,12 @@ refresh_token を暗号化してSupabaseに保存
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------- |
 | `src/api/services/mfAuthService.ts`   | OAuth認証サービス（認可URL生成・トークン取得・リフレッシュ・永続化）。シングルフライト対応済み                      | 2026-05-19 |
 | `src/api/services/mfMcpClient.ts`     | MCPサーバークライアント（JSON-RPC通信・全19ツール対応）。**★tokenKey引数追加・clientCache Map化済み（2026-05-19）** | 2026-05-19 |
+| `src/api/services/mfTaxImportService.ts` | **★税区分インポート処理（バックエンド）。** preview/apply/detectDiff。フロントから完全移行（2026-05-29） | 2026-05-29 |
+| `src/api/services/mfTaxAvailableStore.ts` | 4方式分available管理ストア。ゴミデータ清掃バリデーション付き（2026-05-29） | 2026-05-29 |
+| `src/api/services/mfRawDataStore.ts`   | MF生レスポンス永続化ストア（パターン別JSONファイル保存） | 2026-05-28 |
 | `src/api/services/mfApiClient.ts`     | 認可サーバーAPIクライアント（事業者情報取得のみ。会計APIはMCP経由に移行済み）                                       | 2026-05-18 |
 | `src/api/routes/mfAuthRoutes.ts`      | OAuth認証ルート（4エンドポイント: `/auth/url`, `/auth/callback`, `/auth/status`, `/auth/logout`）                   | 2026-05-18 |
-| `src/api/routes/mfRoutes.ts`          | データ取得ルート（6エンドポイント）。**★全エンドポイントに`clientId`クエリ追加済み（2026-05-19）**                  | 2026-05-19 |
+| `src/api/routes/mfRoutes.ts`          | データ取得・インポートルート。**★import-taxes/preview, import-taxes/applyエンドポイント追加（2026-05-29）** | 2026-05-29 |
 | `src/api/index.ts`                    | ルート登録追加（`/api/mf` 配下に2ルート）                                                                           | 2026-05-18 |
 | `src/server.ts`                       | ルート登録追加（`/api/mf` 配下に2ルート）                                                                           | 2026-05-18 |
 | `data/mf-tokens.json`                 | トークン永続化ファイル（`.gitignore`で除外済み。Supabase移行時にDB化）                                              | 随時       |

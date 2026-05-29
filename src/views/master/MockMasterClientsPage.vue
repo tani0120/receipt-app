@@ -63,16 +63,12 @@
             <span class="cm-page-info">{{ pageStartIndex }}~{{ pageEndIndex }} / 全{{ totalCount }}件</span>
           </div>
           <div class="cm-csv-actions">
-            <button
-              class="cm-mf-import-btn"
-              :disabled="mfImportLoading"
-              @click="handleMfImport"
-              title="MF連携済み顧問先の事業所情報をインポート"
-            >
-              <i v-if="mfImportLoading" class="fa-solid fa-spinner fa-spin"></i>
-              <i v-else class="fa-solid fa-cloud-arrow-down"></i>
-              MFインポート
-            </button>
+            <MfImportButton
+              :authenticated="true"
+              :loading="mfImportLoading"
+              tooltip="MF連携済み顧問先の事業所情報をインポート"
+              @import="handleMfImport"
+            />
             <div class="cm-io-dropdown" :class="{ open: importDropdownOpen }" @click.stop>
               <button class="cm-admin-btn" @click="toggleImportDropdown">
                 <i class="fa-solid fa-file-import"></i> インポート <i class="fa-solid fa-caret-down" style="font-size:10px;margin-left:2px"></i>
@@ -526,6 +522,7 @@ import { UI_MSG } from '@/constants/uiMessages';
 import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
 import type { FieldComponent } from '@/types/fieldLayout';
 import MfCloudIcon from '@/components/MfCloudIcon.vue';
+import MfImportButton from '@/components/MfImportButton.vue';
 import {
   parseViewFromQuery,
   parseFiltersFromQuery,

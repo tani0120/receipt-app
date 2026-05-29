@@ -71,7 +71,7 @@ export interface MfMappingTables {
   unmatchedTaxes: TaxMapping[]
   /**
    * 事業者の課税方式（MF APIから自動取得）
-   * 'FREE'=免税 / 'SIMPLIFIED'=簡易 / 'GENERAL'=本則一括 / 'INDIVIDUAL_ALLOCATION'=本則個別 / 'PROPORTIONAL_ALLOCATION'=本則比例
+   * 実測値: 'FREE'=免税 / 'SIMPLE'=簡易 / 'INDIVIDUAL_ALLOCATION'=個別対応 / 'PROPORTIONAL_ALLOCATION'=一括比例
    * null=取得失敗（安全策としてinvoice_kind除去）
    */
   taxMethod: string | null

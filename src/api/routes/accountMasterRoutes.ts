@@ -1,4 +1,4 @@
-﻿/**
+/**
  * accountMasterRoutes.ts — 勘定科目APIルート（Hono）
  *
  * レイヤー: ★route★ → accountMasterStore
@@ -31,15 +31,16 @@ const app = new Hono()
 // ============================================================
 
 function parseFilterParams(c: { req: { query: (key: string) => string | undefined } }) {
-  const businessType = (c.req.query('businessType') ?? 'corp') as 'corp' | 'individual' | 'realEstate'
+  const rawBt = c.req.query('businessType')
+  const businessType = rawBt ? rawBt as 'corp' | 'individual' | 'realEstate' : undefined
   const search = c.req.query('search') ?? ''
   const page = Number(c.req.query('page') ?? '1')
   const pageSize = Number(c.req.query('pageSize') ?? '50')
   return { businessType, search, page, pageSize }
 }
 
-function validateFilterParams(params: { businessType: string; page: number; pageSize: number }) {
-  if (!['corp', 'individual', 'realEstate'].includes(params.businessType)) {
+function validateFilterParams(params: { businessType?: string; page: number; pageSize: number }) {
+  if (params.businessType && !['corp', 'individual', 'realEstate'].includes(params.businessType)) {
     return 'businessType は corp / individual / realEstate のいずれかを指定してください'
   }
   if (isNaN(params.page) || params.page < 1) {

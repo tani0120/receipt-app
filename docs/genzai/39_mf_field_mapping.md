@@ -1,7 +1,7 @@
 # MF API ↔ Sugusru フィールド対応表
 
 > 根拠: [MfMcpJournal](file:///c:/dev/receipt-app/src/api/services/mfMcpClient.ts#L174-L208) / [JournalPhase5Mock](file:///c:/dev/receipt-app/src/types/journal_phase5_mock.type.ts#L73-L220) / [JournalEntryLine](file:///c:/dev/receipt-app/src/types/domain-journal.ts#L169-L211)
-> 最終改訂: 2026-05-23（ゼロベース見直し。全項目に検証ステータスを付与）
+> 最終改訂: 2026-05-29（税区分インポートバックエンド移行反映・availableデータ駆動化反映）
 
 **凡例:**
 - ✅ 実機テスト済み（MF#番号 or エラーメッセージで確認）
@@ -143,7 +143,7 @@
 | [account-category-rules.ts](file:///c:/dev/receipt-app/src/data/master/account-category-rules.ts) | `getCategoryDirection()` | 科目カテゴリ→方向（sales/purchase/common）の導出 |
 | 同上 | `getAllowedTaxDeterminations()` | 科目+課税方式→許可される税区分自動判定値 |
 | 同上 | `deriveCategoryDefaults()` | カテゴリ変更→accountGroup+taxDetermination+defaultTaxCategoryIdの自動連動 |
-| [MockMasterTaxCategoriesPage.vue](file:///c:/dev/receipt-app/src/views/master/MockMasterTaxCategoriesPage.vue#L231-L251) | `filteredTaxRows` | 課税方式別の税区分フィルタ（免税→COMMON_EXEMPTのみ、簡易→T系+仕入+共通） |
+| [MockMasterTaxCategoriesPage.vue](file:///c:/dev/receipt-app/src/views/master/MockMasterTaxCategoriesPage.vue) | `filteredTaxRows` | 課税方式別の税区分フィルタ（`mf-tax-available.json`のavailableデータ駆動。~~IDパターンマッチは削除済み~~） |
 
 > [!WARNING]
 > **これらのルールはUIマスタ編集画面でのみ適用されている。** MF送信バリデーション（`validateBeforeConvert`）やjournal-listの仕訳入力画面には一切適用されていない。
@@ -172,8 +172,8 @@
 
 > [!IMPORTANT]
 > **MF APIの`available`フラグが正。** 課税方式ごとに使える税区分がMF側で制御されている。
-> 現在はSugusru側ではIDパターンマッチ（`_T[1-6]`/`_COMMON_`/`_NT_`）で代替実装済み。
-> 将来的に`MfMappingTables`にavailable情報を追加するとより正確になるが、現状でも実用上十分。
+> 全社マスタのフィルタは`mf-tax-available.json`のavailableデータで駆動。
+> ~~旧実装のIDパターンマッチ（`_T[1-6]`/`_COMMON_`/`_NT_`）は2026-05-29に完全削除済み。~~
 
 ---
 
@@ -208,6 +208,9 @@
 | 部品 | ファイル | 状態 |
 |---|---|---|
 | MCPクライアント（callMcpTool） | [mfMcpClient.ts](file:///c:/dev/receipt-app/src/api/services/mfMcpClient.ts) | ✅ |
+| 税区分インポート（preview/apply） | [mfTaxImportService.ts](file:///c:/dev/receipt-app/src/api/services/mfTaxImportService.ts) | ✅ バックエンド移行済み（2026-05-29） |
+| 4方式available管理 | [mfTaxAvailableStore.ts](file:///c:/dev/receipt-app/src/api/services/mfTaxAvailableStore.ts) | ✅ ゴミデータ清掃付き |
+| MF生データ永続化 | [mfRawDataStore.ts](file:///c:/dev/receipt-app/src/api/services/mfRawDataStore.ts) | ✅ |
 | postJournals（mcpCreateJournal） | 同上 | ✅ |
 | putJournals（mcpUpdateJournal） | 同上 | ✅ |
 | 科目一覧取得（mcpFetchAccounts） | 同上 | ✅ |
@@ -249,3 +252,4 @@
 | 2026-05-23 改訂14 | **🐛 簡易課税でinvoice_kind設定→拒否も誤り。** MFを簡易に変更してテスト。QUALIFIED(MF#12)/UNQUALIFIED_80(MF#13)/NOT_TARGET+対象外(MF#14)全て受理。省略時は課税→QUALIFIED(MF#15)、対象外→NOT_TARGET(MF#16) |
 | 2026-05-23 改訂15 | **🐛 免税でinvoice_kind設定→拒否も誤り。** MFを免税に変更してテスト。QUALIFIED(MF#17)/UNQUALIFIED_80(MF#18)/NOT_TARGET(MF#19)全受理。省略→課税:QUALIFIED(MF#20)、対象外:NOT_TARGET(MF#21)。**結論: 全課税方式で全invoice_kindが受理される。MFは課税方式でinvoice_kindを制限しない** |
 | 2026-05-23 改訂16 | **MF→Sugusru逆変換コンバーター実装。** `mfJournalImporter.ts`新規作成。MfMcpJournal→ConfirmedJournal変換。科目・税区分は逆マップ（reverseAccountMap/reverseTaxMap）でSugusru概念IDに変換。invoice_kindはSugusru形式に逆変換。mf_rawで生レスポンスまるごと保持。保存先をjournalStore→confirmedJournalStore（過去仕訳CSV）に変更 |
+| 2026-05-29 改訂17 | **税区分インポートバックエンド移行。** `mfTaxImportService.ts`新規作成（preview/apply/detectDiff）。フロントの200行超→85行（API呼び出しのみ）に簡素化。IDパターンマッチフォールバック完全削除。`mfTaxAvailableStore`にゴミデータ清掃バリデーション追加。`MF_TAX_METHOD_TO_PATTERN`定数（実測値`SIMPLE`を含む） |

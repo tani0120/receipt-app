@@ -18,7 +18,9 @@
           </div>
           <div class="as-selector-group-lg">
             <span class="as-selector-label-lg">課税方式:</span>
-            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="taxable" class="as-checkbox-lg"><span>課税（本則・簡易）</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="proportional" class="as-checkbox-lg"><span>原則（一括比例）</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="individual" class="as-checkbox-lg"><span>原則（個別対応）</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="simplified" class="as-checkbox-lg"><span>簡易</span></label>
             <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="exempt" class="as-checkbox-lg"><span>免税</span></label>
           </div>
         </div>
@@ -63,6 +65,12 @@
             </template>
           </div>
           <div class="as-actions">
+            <MfImportButton
+              :authenticated="mfAuthenticated"
+              :loading="mfImporting"
+              tooltip="MFから勘定科目をインポート"
+              @import="importFromMf"
+            />
             <button class="as-action-btn" @click="resetAccountOrder"><i class="fa-solid fa-rotate"></i> デフォルト順</button>
             <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button>
             <button class="as-action-btn save" @click="saveChanges"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
@@ -132,9 +140,10 @@
                 @dragend="dragIdx = -1"
               >
                 <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
-                <td class="as-td-actions">
-                  <span v-if="!row.isCustom" class="td-mf-badge mf-official" title="MF公式">MF公式</span>
-                  <i v-else class="fa-solid fa-triangle-exclamation td-mf-unknown" title="MFインポート時に項目の紐付けが必要になる可能性があります"></i>
+                <td style="text-align:center;font-size:11px;color:#666;">
+                  <span v-if="row.mfAccountId" style="color:#1976D2;"><MfCloudIcon :size="12" tooltip="MFクラウド" /> MF</span>
+                  <span v-else-if="row.isCustom" style="color:#e65100;">カスタム</span>
+                  <span v-else><i class="fa-solid fa-circle-check" style="color:#4caf50;font-size:12px;"></i> マスタ</span>
                 </td>
                 <td class="td-ai" @dblclick="row.isCustom && startEdit(row, 'aiDetermination')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'aiDetermination'">
@@ -229,8 +238,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
 import type { Account } from '@/types/shared-account';
+import { MF_CATEGORY_MAP, deriveMfAccountGroup, deriveTaxDetermination, deriveTarget } from '@/data/master/mf-account-category-mapping';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { getInitialCopyCounter } from '@/utils/copy-utils';
 import { useColumnResize } from '@/composables/useColumnResize';
@@ -239,6 +249,8 @@ import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import { QUALIFIED_OPTIONS } from '@/constants/vendorOptions';
+import MfImportButton from '@/components/MfImportButton.vue';
+import MfCloudIcon from '@/components/MfCloudIcon.vue';
 import { UI_MSG } from '@/constants/uiMessages';
 import { ACCOUNT_FIELD_LABELS } from '@/constants/fieldLabels';
 import {
@@ -265,6 +277,171 @@ const { columnWidths: acctColWidths, onResizeStart: onAcctResizeStart } = useCol
 
 const PAGE_SIZE = 50;
 
+// =============== MFインポート ===============
+const mfAuthenticated = ref(false);
+const mfImporting = ref(false);
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/mf/auth/status?clientId=c_rODnkCDN');
+    const data = await res.json();
+    mfAuthenticated.value = data.authenticated ?? false;
+  } catch {
+    mfAuthenticated.value = false;
+  }
+});
+
+/** MFから勘定科目を取得して全社マスタを差分マージ */
+async function importFromMf() {
+  if (mfImporting.value) return;
+  mfImporting.value = true;
+  try {
+    // 1. MCP経由で勘定科目取得
+    const res = await fetch('/api/mf/accounts?clientId=c_rODnkCDN');
+    if (!res.ok) throw new Error('MF勘定科目取得失敗');
+    const data = await res.json();
+    const mfAccounts: {
+      id: string; name: string; account_group: string;
+      category: string; financial_statement_type: string;
+      available: boolean; tax_id: string;
+    }[] = data.accounts ?? [];
+
+    // 2. 税区分マスタ読み込み（tax_id変換用）
+    const taxRes = await fetch('/api/tax-categories/master?page=1&pageSize=200');
+    const taxData = await taxRes.json() as { items: { id: string; name: string; mfId?: string }[] };
+    const taxCategories = taxData.items ?? [];
+    const mfTaxIdToMasterId = new Map<string, string>();
+    for (const t of taxCategories) {
+      if (t.mfId) mfTaxIdToMasterId.set(t.mfId, t.id);
+    }
+
+    // 3. MFデータ→全社マスタ変換（データ駆動: mf-account-category-mapping.ts）
+
+    // 4. 名前照合＋差分検知
+    const mfIdToRow = new Map<string, Account>();
+    for (const row of accountRows) {
+      if (row.mfAccountId) mfIdToRow.set(row.mfAccountId, row);
+    }
+    const nameToRow = new Map<string, Account>();
+    for (const row of accountRows) {
+      nameToRow.set(row.name, row);
+    }
+
+    const diff = {
+      updated: [] as { name: string; mfId: string }[],
+      added: [] as { name: string; mfId: string; category: string }[],
+      nameChanged: [] as { mfId: string; oldName: string; newName: string }[],
+      unchanged: 0,
+    };
+
+    let maxSort = Math.max(...accountRows.map(a => a.sortOrder), 0);
+
+    for (const mf of mfAccounts) {
+      // まずmfAccountIdで照合、なければ名前で照合
+      const byMfId = mfIdToRow.get(mf.id);
+      const byName = nameToRow.get(mf.name);
+      const existing = byMfId ?? byName;
+
+      const masterCat = MF_CATEGORY_MAP[mf.category] ?? '経費';
+      const masterTaxId = mfTaxIdToMasterId.get(mf.tax_id);
+
+      if (existing) {
+        // MFフィールド付与
+        existing.mfAccountId = mf.id;
+        existing.mfAccountGroup = mf.account_group;
+        existing.mfFinancialStatementType = mf.financial_statement_type;
+        existing.mfDefaultTaxId = mf.tax_id;
+
+        // デフォルト税区分未設定の場合のみ補完
+        if (!existing.defaultTaxCategoryId && masterTaxId) {
+          existing.defaultTaxCategoryId = masterTaxId;
+        }
+
+        // 名前変更検知（mfAccountIdで照合して名前が違う場合）
+        if (byMfId && byMfId.name !== mf.name) {
+          diff.nameChanged.push({ mfId: mf.id, oldName: byMfId.name, newName: mf.name });
+        } else {
+          diff.updated.push({ name: mf.name, mfId: mf.id });
+        }
+      } else {
+        // 新規追加
+        maxSort++;
+        const newAccount: Account = {
+          id: `MF_${mf.name.replace(/[^a-zA-Z0-9\u3000-\u9FFF]/g, '_')}`,
+          name: mf.name,
+          target: deriveTarget(masterCat, mf.financial_statement_type),
+          accountGroup: deriveMfAccountGroup(mf.account_group, mf.category),
+          category: masterCat,
+          defaultTaxCategoryId: masterTaxId,
+          taxDetermination: deriveTaxDetermination(masterCat),
+          deprecated: false,
+          effectiveFrom: '2019-10-01',
+          effectiveTo: null,
+          sortOrder: maxSort,
+          isCustom: false,
+          mfAccountId: mf.id,
+          mfAccountGroup: mf.account_group,
+          mfFinancialStatementType: mf.financial_statement_type,
+          mfDefaultTaxId: mf.tax_id,
+        };
+        accountRows.push(newAccount);
+        diff.added.push({ name: mf.name, mfId: mf.id, category: masterCat });
+      }
+    }
+
+    // 5. 差分レポート表示
+    const reportLines: string[] = [];
+    reportLines.push(`📥 MF勘定科目 ${mfAccounts.length}件を照合`);
+    if (diff.updated.length > 0) {
+      reportLines.push(`✅ MFフィールド付与: ${diff.updated.length}件`);
+    }
+    if (diff.added.length > 0) {
+      reportLines.push(`➕ 新規追加: ${diff.added.length}件`);
+      for (const a of diff.added.slice(0, 5)) reportLines.push(`  ・${a.name}（${a.category}）`);
+      if (diff.added.length > 5) reportLines.push(`  …他${diff.added.length - 5}件`);
+    }
+    if (diff.nameChanged.length > 0) {
+      reportLines.push(`✏️ 名前変更: ${diff.nameChanged.length}件`);
+      for (const c of diff.nameChanged) reportLines.push(`  ・${c.oldName} → ${c.newName}`);
+    }
+
+    const hasDiff = diff.added.length > 0 || diff.nameChanged.length > 0;
+
+    if (!hasDiff) {
+      await modal.notify({ title: `MF勘定科目 ${mfAccounts.length}件と照合完了`, message: reportLines.join('\n'), variant: 'success' });
+      markDirty('MFインポート: MFフィールド付与');
+      return;
+    }
+
+    const confirmed = await modal.confirm({
+      title: 'MF勘定科目インポート差分レポート',
+      message: reportLines.join('\n'),
+      confirmLabel: '適用する',
+      cancelLabel: 'キャンセル',
+    });
+    if (!confirmed) return;
+
+    // 名前変更の適用
+    for (const c of diff.nameChanged) {
+      const row = mfIdToRow.get(c.mfId);
+      if (row) row.name = c.newName;
+    }
+
+    markDirty('MFから勘定科目を差分マージ');
+    const summary = [
+      diff.updated.length > 0 ? `更新${diff.updated.length}` : '',
+      diff.added.length > 0 ? `追加${diff.added.length}` : '',
+      diff.nameChanged.length > 0 ? `名前変更${diff.nameChanged.length}` : '',
+    ].filter(Boolean).join(', ');
+    await modal.notify({ title: `MF差分マージ完了（${summary}）`, variant: 'success' });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+  } finally {
+    mfImporting.value = false;
+  }
+}
+
 // =============== composable接続（useAccountSettings経由） ===============
 const settings = useAccountSettings('master');
 // テンプレート互換用のローカル参照
@@ -275,9 +452,9 @@ function isHidden(id: string) { return settings.isAccountHidden(id); }
 
 // =============== 勘定科目マスタ ===============
 type BusinessTypeValue = 'corp' | 'individual' | 'realEstate';
-type TaxMethodType = 'taxable' | 'exempt';
+type TaxMethodType = 'proportional' | 'individual' | 'simplified' | 'exempt';
 const businessType = ref<BusinessTypeValue>('corp');
-const taxMethod = ref<TaxMethodType>('taxable');
+const taxMethod = ref<TaxMethodType>('proportional');
 const accountFilter = ref('');
 const accountPage = ref(1);
 

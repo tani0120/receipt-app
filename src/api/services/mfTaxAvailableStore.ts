@@ -23,6 +23,9 @@ export type TaxAvailableMap = Record<string, Record<string, boolean>>
 
 let cache: TaxAvailableMap | null = null
 
+/** 有効な課税方式キー一覧 */
+const VALID_METHODS: readonly string[] = ['proportional', 'individual', 'simplified', 'exempt']
+
 /** JSONから読み込み（キャッシュ付き） */
 export function loadTaxAvailable(): TaxAvailableMap {
   if (cache) return cache
@@ -33,7 +36,22 @@ export function loadTaxAvailable(): TaxAvailableMap {
   }
   try {
     const raw = readFileSync(DATA_PATH, 'utf-8')
-    cache = JSON.parse(raw) as TaxAvailableMap
+    const parsed = JSON.parse(raw) as TaxAvailableMap
+    // ゴミデータ清掃: 有効なキー（4方式）以外を除去
+    const cleaned: TaxAvailableMap = {}
+    let removedCount = 0
+    for (const key of Object.keys(parsed)) {
+      if (VALID_METHODS.includes(key)) {
+        cleaned[key] = parsed[key]!
+      } else {
+        removedCount++
+      }
+    }
+    if (removedCount > 0) {
+      console.log(`[mfTaxAvailableStore] ゴミデータ${removedCount}件を除去`)
+      writeFileSync(DATA_PATH, JSON.stringify(cleaned, null, 2), 'utf-8')
+    }
+    cache = cleaned
     const methods = Object.keys(cache)
     console.log(`[mfTaxAvailableStore] ${methods.length}方式を読み込み (${methods.join(', ')})`)
     return cache

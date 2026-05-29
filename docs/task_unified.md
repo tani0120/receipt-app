@@ -2,7 +2,7 @@
 
 > 統合元: task_restored.md / task_03_resolved29.md / task_01_bd8b5ef7.md / task_02_prev_task.md / task.md / prev_task.md（bd8b5ef7）
 > 統合日: 2026-04-08（セッション 1cd25cab）
-> 最終更新: 2026-05-03（技術負債解消: useAccountingSystem.ts分割・死コード削除・英語コメント日本語化）
+> 最終更新: 2026-05-29（税区分マスタ: 方式マスタ+MFインポート差分マージ+mfId照合 追記）
 > 実査方法: git log・grep_search・view_file・list_dir による実ファイル確認
 > ルール: **型・コード・シグネチャは今やる。実行行為（テスト実施・データ整備）のみ先送り可。**
 
@@ -324,6 +324,25 @@
 ### B-23. Step4-C/Step4-A: 科目確定エンジン実装 + previewExtract API接続 + 学習ページ新型対応
 
 > 設計書: [27_account_determination.md](file:///c:/dev/receipt-app/docs/genzai/27_account_determination.md) §4 優先度1,2,4,5
+
+### B-24. 税区分マスタ: 方式マスタ + MFインポート差分マージ + mfId照合
+
+> 設計書: docs/genzai/tax_method_master.md（方式マスタ+MFインポート差分マージ+mfId照合。計画書と課題レポートを統合）
+> 概要: MFが税区分の唯一ソース。全社マスタは方式マスタ（mf-tax-available.json）でフィルタ。MFインポートはmfId照合+差分マージ+自動ルール（一種〜六種の強制非表示化）。カスタム税区分は `MF_CUSTOM_${id}` 形式。
+
+| タスク | 内容 | 対象ファイル | 状態 |
+|---|---|---|---|
+| TAX-1 | `mfTaxAvailableStore.ts`新規作成（4方式分available管理。JSON永続化+キャッシュ） | `src/api/services/mfTaxAvailableStore.ts` | ✅ |
+| TAX-2 | `GET /api/mf/tax-available` + `PUT /api/mf/tax-available/:method` エンドポイント追加 | `src/api/routes/mfRoutes.ts` L531-549 | ✅ |
+| TAX-3 | `mf-tax-available.json`（614行）4方式分availableデータ作成 | `data/mf-tax-available.json` | ✅ |
+| TAX-4 | 全社マスタ: セグメントボタン→方式マスタ（`mf-tax-available.json`）でフィルタに変更。顧問先依存の`available`廃止 | `MockMasterTaxCategoriesPage.vue` L577-621 | ✅ |
+| TAX-5 | 全社マスタ: MFインポート差分マージ（mfId照合→追加/名前変更/税率変更/削除候補検知→差分レポートモーダル→確認後適用） | `MockMasterTaxCategoriesPage.vue` L293-555 | ✅ |
+| TAX-6 | 全社マスタ: 自動ルール（一種〜六種付き税区分を一括比例・個別対応・免税で強制MFインポート利用非表示化） | `MockMasterTaxCategoriesPage.vue` L303-334 | ✅ |
+| TAX-7 | 全社マスタ: 新規税区分の方式推定（名前パターンで4方式へのavailable自動分類） | `MockMasterTaxCategoriesPage.vue` L496-535 | ✅ |
+| TAX-8 | sync-all: mfId照合でマスタ属性引き継ぎ。`direction:'common'`固定値排除。カスタム税区分は`MF_CUSTOM_${id}`形式 | `mfRoutes.ts` L459-504 | ✅ |
+| TAX-9 | 顧問先ページ: mfId照合でマスタ属性引き継ぎ + consumptionTaxMode自動更新 | `MockClientTaxPage.vue` L449-576 | ✅ |
+| TAX-10 | フラグ分離: 「MFインポート表示/利用非表示化」と「表示/非表示（deprecated）」を独立管理 | 全社マスタ + 顧問先ページ | ✅ |
+| TAX-P | ⏸️ TaxCategory型に構造化属性（`tax_type`/`business_type`/`purpose_type`）追加 | Supabase移行時にENUMカラムで実施 | ⏸️ 計画通り保留 |
 
 | タスク | 内容 | git |
 |---|---|---|

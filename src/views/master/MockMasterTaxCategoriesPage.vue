@@ -58,20 +58,12 @@
             </template>
           </div>
           <div class="as-actions">
-            <button
-              v-if="mfAuthenticated"
-              class="cm-mf-import-btn"
-              :disabled="mfImporting"
-              @click="importFromMf"
-              title="MFから税区分をインポート"
-            >
-              <i v-if="mfImporting" class="fa-solid fa-spinner fa-spin"></i>
-              <i v-else class="fa-solid fa-cloud-arrow-down"></i>
-              MFインポート
-            </button>
-            <button v-else class="cm-mf-import-btn" disabled title="MF未連携">
-              <i class="fa-solid fa-cloud"></i> MF未連携
-            </button>
+            <MfImportButton
+              :authenticated="mfAuthenticated"
+              :loading="mfImporting"
+              tooltip="MFから税区分をインポート"
+              @import="importFromMf"
+            />
             <button class="as-action-btn" @click="resetTaxOrder"><i class="fa-solid fa-rotate"></i> デフォルト順</button>
             <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button>
             <button class="as-action-btn save" @click="saveChanges"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
@@ -210,20 +202,100 @@
     :variant="modal.notifyState.variant"
     @close="modal.onNotifyClose"
   />
+
+  <!-- MFインポート ウィザードモーダル -->
+  <div v-if="mfImportStep > 0" class="modal-overlay" @click.self="mfImportStep = 0">
+    <div class="modal-card" style="max-width:520px;">
+
+      <!-- Step1: 顧問先選択 → 即インポート -->
+      <template v-if="mfImportStep === 1">
+        <div class="modal-header">
+          <h3 style="margin:0;font-size:16px;"><i class="fa-solid fa-cloud-arrow-down"></i> MFインポート — 顧問先選択</h3>
+        </div>
+        <div class="modal-body" style="max-height:400px;overflow-y:auto;">
+          <p style="margin:0 0 12px;color:#666;font-size:13px;">MF連携済みの顧問先を選択してください。MF側の現在の課税方式設定で自動インポートします。</p>
+          <div v-if="mfClients.length === 0" style="color:#999;text-align:center;padding:24px;">
+            MF連携済みの顧問先がありません
+          </div>
+          <div
+            v-for="cl in mfClients" :key="cl.clientId"
+            class="mf-client-row"
+            :class="{ selected: mfSelectedClientId === cl.clientId }"
+            @click="mfSelectedClientId = cl.clientId"
+          >
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="radio" :checked="mfSelectedClientId === cl.clientId" style="margin:0;" />
+              <span style="font-weight:600;">{{ cl.threeCode }}</span>
+              <span>{{ cl.companyName }}</span>
+              <span v-if="cl.lastImported" class="mf-star" title="前回インポート元">★</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" @click="mfImportStep = 0">キャンセル</button>
+          <button class="btn-confirm" :disabled="!mfSelectedClientId" @click="executeImport">インポート実行</button>
+        </div>
+      </template>
+
+      <!-- Step2: インポート結果 — パターン進捗 -->
+      <template v-if="mfImportStep === 2">
+        <div class="modal-header">
+          <h3 style="margin:0;font-size:16px;"><i class="fa-solid fa-list-check"></i> MFインポート — パターン進捗</h3>
+        </div>
+        <div class="modal-body">
+          <p style="margin:0 0 12px;color:#666;font-size:13px;">
+            MF側の課税方式を変更して再インポートすることで、全パターンを網羅できます。
+          </p>
+          <div
+            v-for="pm in patternMethods" :key="pm.key"
+            class="mf-pattern-row"
+            :class="{ done: pm.imported, 'just-imported': pm.key === lastImportedPattern }"
+          >
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span v-if="pm.imported" style="color:#4caf50;font-size:16px;font-weight:bold;">✓</span>
+              <span v-else style="color:#ccc;font-size:16px;">○</span>
+              <span style="font-weight:600;">{{ pm.label }}</span>
+              <span v-if="pm.key === lastImportedPattern" style="color:#1976D2;font-size:12px;font-weight:600;">← 今回</span>
+            </div>
+            <div v-if="pm.imported" style="font-size:12px;color:#4caf50;margin-left:30px;">
+              {{ pm.importedAt }} インポート済
+            </div>
+          </div>
+
+          <!-- 未完了パターンのガイド -->
+          <div v-if="remainingPatterns.length > 0" class="mf-guide-box">
+            <i class="fa-solid fa-circle-info" style="color:#1976D2;"></i>
+            <span>残り: <b>{{ remainingPatterns.map(p => p.label).join('、') }}</b><br/>MF側の課税方式を変更してから再度インポートしてください。</span>
+          </div>
+          <div v-else class="mf-guide-box" style="background:#f0fdf4;border-color:#86efac;color:#166534;">
+            <i class="fa-solid fa-circle-check" style="color:#16a34a;"></i>
+            <span><b>全パターンのインポートが完了しました。</b></span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" @click="mfImportStep = 1">別の顧問先</button>
+          <button class="btn-confirm" @click="mfImportStep = 0">閉じる</button>
+        </div>
+      </template>
+
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import type { TaxCategory, TaxDirection } from '@/types/shared-tax-category';
-import { extractRateFromName, guessDirectionFromName, guessQualifiedFromName } from '@/types/shared-tax-category';
+import { extractRateFromName } from '@/types/shared-tax-category';
 import { getInitialCopyCounter } from '@/utils/copy-utils';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
+import { useTaxMasterStore } from '@/stores/taxMasterStore';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import MfCloudIcon from '@/components/MfCloudIcon.vue';
+import MfImportButton from '@/components/MfImportButton.vue';
 import { getLabel } from '@/constants/clientOptions';
 import { UI_MSG } from '@/constants/uiMessages';
 import { TAX_CATEGORY_FIELD_LABELS } from '@/constants/fieldLabels';
@@ -279,280 +351,217 @@ const mfAuthenticated = ref(false);
 const mfImporting = ref(false);
 const hasMfData = computed(() => allTaxRows.some(r => r.source === 'mf'));
 
-onMounted(async () => {
+// --- MFインポート ウィザード状態 ---
+const mfImportStep = ref(0); // 0:非表示 1:顧問先選択 2:パターン進捗
+const mfSelectedClientId = ref('');
+interface MfClientInfo {
+  clientId: string;
+  threeCode: string;
+  companyName: string;
+  lastImported?: string;
+}
+const mfClients = ref<MfClientInfo[]>([]);
+
+// --- パターン進捗 ---
+interface PatternMethod {
+  key: string;
+  label: string;
+  imported: boolean;
+  importedAt?: string;
+}
+const patternMethods = ref<PatternMethod[]>([
+  { key: 'proportional', label: '原則（一括比例）', imported: false },
+  { key: 'individual', label: '原則（個別対応）', imported: false },
+  { key: 'simplified', label: '簡易', imported: false },
+  { key: 'exempt', label: '免税', imported: false },
+]);
+
+/** パターン進捗をMF生データから更新 */
+async function refreshPatternProgress() {
   try {
-    // 任意の顧問先IDでMF認証状態を確認
-    const res = await fetch('/api/mf/auth/status?clientId=c_wTdnMKDO');
-    const data = await res.json();
-    mfAuthenticated.value = data.authenticated ?? false;
+    const histRes = await fetch('/api/mf/raw-data');
+    const histData = await histRes.json();
+    const patterns = histData.patterns ?? [];
+    for (const pm of patternMethods.value) {
+      const found = patterns.find((p: { pattern: string }) => p.pattern === `taxes-${pm.key}`);
+      if (found) {
+        pm.imported = true;
+        pm.importedAt = new Date(found.importedAt).toLocaleDateString('ja-JP');
+      } else {
+        pm.imported = false;
+        pm.importedAt = undefined;
+      }
+    }
+    // 顧問先の★マーク更新
+    for (const cl of mfClients.value) {
+      cl.lastImported = undefined;
+    }
+    for (const p of patterns) {
+      if (p.pattern.startsWith('taxes-')) {
+        const cl = mfClients.value.find(c => c.clientId === p.clientId);
+        if (cl && (!cl.lastImported || p.importedAt > cl.lastImported)) {
+          cl.lastImported = new Date(p.importedAt).toLocaleDateString('ja-JP');
+        }
+      }
+    }
+  } catch { /* 履歴取得失敗は無視 */ }
+}
+
+onMounted(async () => {
+  // ストアの最新データを取得してallTaxRowsを再構築
+  // （Pinia persistedstateのlocalStorageキャッシュが古い場合への対策）
+  const taxStore = useTaxMasterStore();
+  await taxStore.fetchFresh();
+  const freshRows = masterTaxCategories.value.map(({ hidden, hiddenInMaster, visibilityOverride, source: rawSource, ...rest }) => {
+    const source: TaxCategory['source'] =
+      rawSource === 'mf' ? 'mf' :
+      rawSource === 'master-custom' ? 'master' :
+      rawSource === 'client-custom' ? 'custom' :
+      undefined;
+    return { ...rest, deprecated: hidden, source };
+  });
+  allTaxRows.splice(0, allTaxRows.length, ...freshRows);
+
+  // 全顧問先のMF認証状態を一括チェック
+  try {
+    const clientsRes = await fetch('/api/clients');
+    const clientsData = await clientsRes.json();
+    const allClients = clientsData.clients ?? clientsData ?? [];
+    const ids = allClients.map((c: { clientId: string }) => c.clientId);
+    if (ids.length === 0) return;
+
+    const bulkRes = await fetch('/api/mf/auth/status/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientIds: ids }),
+    });
+    const bulkData = await bulkRes.json() as Record<string, { authenticated: boolean }>;
+
+    // MF連携済み顧問先のみ抽出
+    const authenticatedClients: MfClientInfo[] = [];
+    for (const cl of allClients) {
+      if (bulkData[cl.clientId]?.authenticated) {
+        authenticatedClients.push({
+          clientId: cl.clientId,
+          threeCode: cl.threeCode ?? '',
+          companyName: cl.companyName ?? '',
+        });
+      }
+    }
+
+    // MFから最新の事業者名を取得
+    for (const cl of authenticatedClients) {
+      try {
+        const officeRes = await fetch(`/api/mf/office?clientId=${cl.clientId}`);
+        if (officeRes.ok) {
+          const officeData = await officeRes.json();
+          if (officeData.office?.name) cl.companyName = officeData.office.name;
+        }
+      } catch { /* MF取得失敗はclients.jsonのデータで表示 */ }
+    }
+
+    mfClients.value = authenticatedClients;
+    mfAuthenticated.value = authenticatedClients.length > 0;
+
+    // パターン進捗を取得
+    await refreshPatternProgress();
   } catch {
     mfAuthenticated.value = false;
   }
 });
 
-/** MFから税区分を取得して全社マスタを更新（mfId照合でマスタ属性を維持） */
+/** MFインポートボタン押下 → Step1: 顧問先選択 */
 async function importFromMf() {
-  if (mfImporting.value) return;
+  mfSelectedClientId.value = '';
+  lastImportedPattern.value = '';
+  await refreshPatternProgress();
+  mfImportStep.value = 1;
+}
+
+/** 今回インポートしたパターン */
+const lastImportedPattern = ref('');
+
+/** 未完了パターン */
+const remainingPatterns = computed(() =>
+  patternMethods.value.filter(pm => !pm.imported)
+);
+
+/** Step1 → インポート実行（バックエンドAPI経由） */
+async function executeImport() {
+  const clientId = mfSelectedClientId.value;
+  if (!clientId) return;
+  mfImportStep.value = 0;
   mfImporting.value = true;
   try {
-    const res = await fetch('/api/mf/taxes?clientId=c_wTdnMKDO');
-    if (!res.ok) throw new Error('MF税区分取得失敗');
-    const data = await res.json();
-    const mfTaxes: { id: string; name: string; abbreviation?: string; available: boolean; tax_rate?: number }[] = data.taxes ?? [];
-
-    // --- 自動ルール: 一種〜六種が付く税区分を一括比例・個別対応・免税でMFインポート利用非表示化 ---
-    const shuPattern = /(一種|二種|三種|四種|五種|六種)/;
-    const autoRuleMethods: (keyof typeof methodKeyMap)[] = ['proportional', 'individual', 'exempt'];
-    const methodKeyMap = { proportional: '一括比例', individual: '個別対応', simplified: '簡易', exempt: '免税' } as const;
-    let autoRuleApplied = 0;
-    // availableデータのコピーを取得して自動ルール適用
-    const availRes = await fetch('/api/mf/tax-available');
-    const availData: Record<string, Record<string, boolean>> = availRes.ok ? await availRes.json() : {};
-    for (const t of mfTaxes) {
-      if (shuPattern.test(t.name)) {
-        for (const method of autoRuleMethods) {
-          if (availData[method] && availData[method][t.id] === true) {
-            availData[method][t.id] = false;
-            autoRuleApplied++;
-          }
-        }
-      }
-    }
-    // 自動ルール適用結果を保存
-    if (autoRuleApplied > 0) {
-      for (const method of autoRuleMethods) {
-        if (availData[method]) {
-          await fetch(`/api/mf/tax-available/${method}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ available: availData[method] }),
-          });
-        }
-      }
-      // フロントエンドのavailableキャッシュも更新
-      mfTaxAvailable.value = availData;
-    }
-
-    // --- 差分検知 ---
-    const mfIdToRow = new Map<string, TaxCategory>();
-    for (const row of allTaxRows) {
-      if (row.mfId) mfIdToRow.set(row.mfId, row);
-    }
-    const mfIdSet = new Set(mfTaxes.map(t => t.id));
-
-    const today = new Date().toISOString().slice(0, 10);
-    const diff = {
-      added: [] as { name: string; mfId: string; taxRate?: number }[],
-      nameChanged: [] as { mfId: string; oldName: string; newName: string }[],
-      rateChanged: [] as { name: string; mfId: string; oldRate?: number; newRate?: number }[],
-      deleteCandidates: [] as { id: string; name: string; mfId: string }[],
-      unchanged: 0,
-    };
-
-    // MFの税区分を走査 → 追加/名前変更/税率変更を検知
-    for (const t of mfTaxes) {
-      const existing = mfIdToRow.get(t.id);
-      if (!existing) {
-        diff.added.push({ name: t.name, mfId: t.id, taxRate: t.tax_rate });
-      } else {
-        let changed = false;
-        if (existing.name !== t.name) {
-          diff.nameChanged.push({ mfId: t.id, oldName: existing.name, newName: t.name });
-          changed = true;
-        }
-        if (t.tax_rate !== undefined && existing.taxRate !== undefined && t.tax_rate !== existing.taxRate) {
-          diff.rateChanged.push({ name: t.name, mfId: t.id, oldRate: existing.taxRate, newRate: t.tax_rate });
-          changed = true;
-        }
-        if (!changed) diff.unchanged++;
-      }
-    }
-
-    // マスタにあるがMFにない → 削除候補
-    for (const row of allTaxRows) {
-      if (row.mfId && !mfIdSet.has(row.mfId) && row.source === 'mf') {
-        diff.deleteCandidates.push({ id: row.id, name: row.name, mfId: row.mfId });
-      }
-    }
-
-    // --- 差分レポートモーダル ---
-    const reportLines: string[] = [];
-    if (autoRuleApplied > 0) {
-      reportLines.push(`🔧 自動ルール: 一種〜六種の税区分 ${autoRuleApplied}件をMFインポート利用非表示化`);
-    }
-    if (diff.added.length > 0) {
-      reportLines.push(`➕ 追加: ${diff.added.length}件`);
-      for (const a of diff.added.slice(0, 5)) reportLines.push(`  ・${a.name}`);
-      if (diff.added.length > 5) reportLines.push(`  …他${diff.added.length - 5}件`);
-    }
-    if (diff.nameChanged.length > 0) {
-      reportLines.push(`✏️ 名前変更: ${diff.nameChanged.length}件`);
-      for (const c of diff.nameChanged.slice(0, 5)) reportLines.push(`  ・${c.oldName} → ${c.newName}`);
-    }
-    if (diff.rateChanged.length > 0) {
-      reportLines.push(`📊 税率変更: ${diff.rateChanged.length}件`);
-      for (const c of diff.rateChanged.slice(0, 5)) {
-        const oldR = c.oldRate != null ? `${Math.round(c.oldRate * 100)}%` : '-';
-        const newR = c.newRate != null ? `${Math.round(c.newRate * 100)}%` : '-';
-        reportLines.push(`  ・${c.name}: ${oldR} → ${newR}`);
-      }
-    }
-    if (diff.deleteCandidates.length > 0) {
-      reportLines.push(`🗑️ 削除候補（非表示化）: ${diff.deleteCandidates.length}件`);
-      for (const d of diff.deleteCandidates.slice(0, 5)) reportLines.push(`  ・${d.name}`);
-    }
-    reportLines.push(`✅ 変更なし: ${diff.unchanged}件`);
-
-    // --- mf-tax-available.jsonでtrue（有効）の税区分のdeprecatedをfalse（表示）にリセット ---
-    let deprecatedReset = 0;
-    for (const method of ['proportional', 'individual', 'simplified', 'exempt'] as const) {
-      const methodAvail = availData[method] ?? {};
-      for (const row of allTaxRows) {
-        if (row.mfId && methodAvail[row.mfId] === true && row.deprecated) {
-          row.deprecated = false;
-          deprecatedReset++;
-        }
-      }
-    }
-
-    if (deprecatedReset > 0) {
-      reportLines.push(`🔄 表示リセット: ${deprecatedReset}件`);
-    }
-
-    const hasDiff = diff.added.length > 0 || diff.nameChanged.length > 0 || diff.rateChanged.length > 0 || diff.deleteCandidates.length > 0;
-
-    if (!hasDiff && autoRuleApplied === 0 && deprecatedReset === 0) {
-      await modal.notify({ title: `MF税区分 ${mfTaxes.length}件と照合完了。差分なし。`, variant: 'success' });
-      return;
-    }
-
-    // 差分なしだが表示リセットのみの場合はそのまま保存
-    if (!hasDiff && deprecatedReset > 0) {
-      markDirty('MFインポート: 表示リセット');
-      await modal.notify({ title: `MF差分マージ完了（表示リセット${deprecatedReset}件）`, variant: 'success' });
-      return;
-    }
-
-    // 差分レポートを表示して確認
-    const confirmed = await modal.confirm({
-      title: 'MFインポート差分レポート',
-      message: reportLines.join('\n'),
-      confirmLabel: '適用する',
-      cancelLabel: 'キャンセル',
+    // 1. プレビュー: 差分検知（サーバー側で照合）
+    const previewRes = await fetch('/api/mf/import-taxes/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId }),
     });
+    if (!previewRes.ok) {
+      const err = await previewRes.json().catch(() => ({}));
+      throw new Error(err.error ?? err.detail ?? 'プレビュー失敗');
+    }
+    const preview = await previewRes.json();
+    lastImportedPattern.value = preview.pattern;
+
+    // 2. 差分なし＆自動ルールなし＆リセットなし → 即完了
+    if (!preview.hasDiff && preview.autoRuleApplied === 0 && preview.deprecatedReset === 0) {
+      await fetch('/api/mf/import-taxes/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId }),
+      });
+      await modal.notify({ title: `MF税区分 照合完了。差分なし。`, variant: 'success' });
+      return;
+    }
+
+    // 3. 差分レポートを表示して確認
+    const confirmed = preview.hasDiff
+      ? await modal.confirm({
+          title: 'MFインポート差分レポート',
+          message: preview.reportLines.join('\n'),
+          confirmLabel: '適用する',
+          cancelLabel: 'キャンセル',
+        })
+      : true; // 差分なし（自動ルール/リセットのみ）→ 自動適用
     if (!confirmed) return;
 
-    // --- 差分を適用 ---
-    // 名前変更
-    for (const c of diff.nameChanged) {
-      const row = mfIdToRow.get(c.mfId);
-      if (row) row.name = c.newName;
+    // 4. 適用: サーバーで差分適用→マスタ保存
+    const applyRes = await fetch('/api/mf/import-taxes/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId }),
+    });
+    if (!applyRes.ok) {
+      const err = await applyRes.json().catch(() => ({}));
+      throw new Error(err.error ?? err.detail ?? '適用失敗');
     }
-    // 税率変更
-    for (const c of diff.rateChanged) {
-      const row = mfIdToRow.get(c.mfId);
-      if (row && c.newRate !== undefined) row.taxRate = c.newRate;
-    }
-    // 追加
-    for (const a of diff.added) {
-      const dir = guessDirectionFromName(a.name);
-      const newRow: TaxCategory = {
-        id: `MF_CUSTOM_${a.mfId}`,
-        name: a.name,
-        shortName: '',
-        direction: dir,
-        qualified: guessQualifiedFromName(a.name, dir),
-        aiSelectable: true,
-        active: true,
-        deprecated: false,
-        effectiveFrom: today,
-        effectiveTo: null,
-        defaultVisible: true,
-        isCustom: true,
-        source: 'mf' as const,
-        mfId: a.mfId,
-        taxRate: a.taxRate,
-        displayOrder: allTaxRows.length + 1,
-      };
-      allTaxRows.push(newRow);
-    }
-    // 削除候補 → 非表示化
-    for (const d of diff.deleteCandidates) {
-      const row = allTaxRows.find(r => r.id === d.id);
-      if (row) row.deprecated = true;
+    const result = await applyRes.json();
+
+    // 5. フロントのallTaxRowsを更新後マスタで置換
+    allTaxRows.splice(0, allTaxRows.length, ...result.updatedMaster);
+
+    // 6. availableキャッシュも更新
+    const availRes = await fetch('/api/mf/tax-available');
+    if (availRes.ok) {
+      mfTaxAvailable.value = await availRes.json();
     }
 
-    // source='mf'とtaxRateを既存行にも反映
-    for (const t of mfTaxes) {
-      const existing = mfIdToRow.get(t.id);
-      if (existing) {
-        existing.source = 'mf' as const;
-        if (t.tax_rate !== undefined) existing.taxRate = t.tax_rate;
-        if (!existing.effectiveFrom) existing.effectiveFrom = today;
-      }
-    }
-
-    // --- 新しい税区分をmf-tax-available.jsonに追加（名前パターンで方式推定）---
-    if (diff.added.length > 0) {
-      const allMethods = ['proportional', 'individual', 'simplified', 'exempt'] as const;
-      for (const a of diff.added) {
-        // 名前パターンで方式を推定
-        const isShu = shuPattern.test(a.name);
-        const isKobetsu = /共通|非課税対応/.test(a.name);
-        const isCommon = /^(不明|対象外)$/.test(a.name);
-
-        for (const method of allMethods) {
-          if (!availData[method]) availData[method] = {};
-          if (isCommon) {
-            // 不明・対象外 → 全方式でtrue（有効）
-            availData[method][a.mfId] = true;
-          } else if (isShu) {
-            // 一種〜六種 → 簡易のみtrue（有効）
-            availData[method][a.mfId] = method === 'simplified';
-          } else if (isKobetsu) {
-            // 共通/非課税対応 → 個別対応のみtrue（有効）
-            availData[method][a.mfId] = method === 'individual';
-          } else if (method === 'exempt') {
-            // 免税 → false（偽）
-            availData[method][a.mfId] = false;
-          } else {
-            // それ以外 → 一括比例・個別対応・簡易でtrue（有効）
-            availData[method][a.mfId] = true;
-          }
-        }
-      }
-      // 更新を保存
-      for (const method of allMethods) {
-        if (availData[method]) {
-          await fetch(`/api/mf/tax-available/${method}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ available: availData[method] }),
-          });
-        }
-      }
-      mfTaxAvailable.value = availData;
-    }
-
-
-
-    markDirty('MFから税区分を差分マージ');
-    const summary = [
-      diff.added.length > 0 ? `追加${diff.added.length}` : '',
-      diff.nameChanged.length > 0 ? `名前変更${diff.nameChanged.length}` : '',
-      diff.rateChanged.length > 0 ? `税率変更${diff.rateChanged.length}` : '',
-      diff.deleteCandidates.length > 0 ? `非表示化${diff.deleteCandidates.length}` : '',
-      autoRuleApplied > 0 ? `自動ルール${autoRuleApplied}` : '',
-      deprecatedReset > 0 ? `表示リセット${deprecatedReset}` : '',
-    ].filter(Boolean).join(', ');
-    await modal.notify({ title: `MF差分マージ完了（${summary}）`, variant: 'success' });
+    await modal.notify({ title: `MF差分マージ完了（${result.summary}）`, variant: 'success' });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
   } finally {
     mfImporting.value = false;
+    await refreshPatternProgress();
+    if (lastImportedPattern.value) {
+      mfImportStep.value = 2;
+    }
   }
 }
+
 
 // モーダルヘルパー
 const modal = useModalHelper();
@@ -560,14 +569,7 @@ const modal = useModalHelper();
 // 未保存変更ガード
 const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
-// --- フィルタ判定ヘルパー ---
-// 簡易課税用: 事業区分付き売上税区分（_T1〜_T6）
-const isSimplifiedSales = (id: string) => /_T[1-6]$/.test(id);
-// 個別対応方式用: 用途区分付き仕入税区分（共通課税仕入/非課税対応仕入）
-const isIndividualPurchase = (id: string) =>
-  /COMMON/.test(id) || /_NT_/.test(id) || /^PURCHASE_NT_/.test(id) || /^IMPORT_NT_/.test(id);
-// 旧税率判定: 5%は旧税率（現行は10%/8%/(軽)8%）
-const isObsoleteRate = (name: string) => / 5%/.test(name) && !name.includes('(軽)');
+
 
 // --- MFのavailableデータ（4方式分） ---
 type TaxAvailableMap = Record<string, Record<string, boolean>>;
@@ -598,24 +600,7 @@ const filteredTaxRows = computed(() => {
       return availableData[row.mfId] === true;
     }
 
-    // --- フォールバック: IDパターンマッチ（availableデータ未取得時） ---
-    if (taxMethod.value === 'exempt') {
-      return false; // commonは上で処理済み
-    }
-    if (taxMethod.value === 'simplified') {
-      if (row.direction === 'sales') {
-        return isSimplifiedSales(row.id) && !isObsoleteRate(row.name);
-      }
-      return row.active && !isIndividualPurchase(row.id);
-    }
-    if (taxMethod.value === 'individual') {
-      if (isObsoleteRate(row.name)) return false;
-      if (row.direction === 'sales') return row.active;
-      return row.active || isIndividualPurchase(row.id);
-    }
-    // 一括比例（デフォルト）
-    if (!row.active) return false;
-    if (isIndividualPurchase(row.id)) return false;
+    // availableデータなし → 全件表示（MF未連携の初期状態）
     return row.defaultVisible;
   });
 });

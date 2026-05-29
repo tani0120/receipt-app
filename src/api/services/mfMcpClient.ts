@@ -81,7 +81,7 @@ export interface MfMcpTermSettings {
   start_date: string
   /** 期末日 */
   end_date: string
-  /** 課税形式（'FREE'=免税 / 'GENERAL'=一般 / 'SIMPLIFIED'=簡易 / 'INDIVIDUAL_ALLOCATION'=個別対応 / 'PROPORTIONAL_ALLOCATION'=一括比例） */
+  /** 課税形式（実測値: 'FREE'=免税 / 'SIMPLE'=簡易 / 'INDIVIDUAL_ALLOCATION'=個別対応 / 'PROPORTIONAL_ALLOCATION'=一括比例） */
   tax_method: string
   /** 経理方式（法人のみ） */
   accounting_method?: string

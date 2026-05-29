@@ -93,7 +93,7 @@ const sections = [
   },
   {
     title: '2. mfc_ca_getTermSettings — 会計年度設定',
-    note: 'tax_method値: FREE（免税）/ GENERAL（一般課税）/ SIMPLIFIED（簡易課税）/ INDIVIDUAL_ALLOCATION（個別対応）/ PROPORTIONAL_ALLOCATION（一括比例）',
+    note: '課税方式(tax_method)実測値: FREE（免税）/ SIMPLE（簡易課税）/ INDIVIDUAL_ALLOCATION（個別対応）/ PROPORTIONAL_ALLOCATION（一括比例）',
     rows: [
       { field: 'fiscal_year',                label: '会計年度',          val: '2026（個人）/ 2025（法人）',                  note: '' },
       { field: 'start_date / end_date',       label: '期首・期末日',      val: '01-01〜12-31（個人）/ 07-01〜06-30（法人）', note: '' },

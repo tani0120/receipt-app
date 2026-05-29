@@ -136,7 +136,7 @@ export interface AccountFilterResult {
  */
 export function getFilteredAccounts(params: AccountFilterParams): AccountFilterResult {
   const {
-    businessType = 'corp',
+    businessType,
     search = '',
     page = 1,
     pageSize = 50,
@@ -144,16 +144,18 @@ export function getFilteredAccounts(params: AccountFilterParams): AccountFilterR
 
   // フィルタ
   let filtered = masterAccounts.filter(row => {
-    // 事業形態フィルタ（排他選択）
-    if (businessType === 'corp') {
-      if (row.target !== 'both' && row.target !== 'corp') return false
-    } else {
-      // individual または realEstate
-      if (row.target !== 'both' && row.target !== 'individual') return false
-    }
-    // 不動産フィルタ（realEstate以外は不動産科目非表示）
-    if (businessType !== 'realEstate') {
-      if (row.category === '不動産収入' || row.category === '不動産経費' || row.category === '不動産') return false
+    // 事業形態フィルタ（未指定時は全件）
+    if (businessType) {
+      if (businessType === 'corp') {
+        if (row.target !== 'both' && row.target !== 'corp') return false
+      } else {
+        // individual または realEstate
+        if (row.target !== 'both' && row.target !== 'individual') return false
+      }
+      // 不動産フィルタ（realEstate以外は不動産科目非表示）
+      if (businessType !== 'realEstate') {
+        if (row.category === '不動産収入' || row.category === '不動産経費' || row.category === '不動産') return false
+      }
     }
     // テキスト検索
     if (search && !row.name.includes(search)) return false

@@ -93,16 +93,16 @@ export async function sendJournalToMf(
     // 3. 課税方式に応じたinvoice_kind制御
     //    - 本則（GENERAL/INDIVIDUAL_ALLOCATION/PROPORTIONAL_ALLOCATION）: そのまま送信
     //    - 免税（FREE）: 除去（MFが拒否する）
-    //    - 簡易（SIMPLIFIED）: 除去（MFが拒否する）
+    //    - 簡易（SIMPLE）: 除去（MFが拒否する）
     //    - 取得失敗（null）: 安全策として除去
     const taxMethod = mappingTables.taxMethod
-    const shouldStripInvoiceKind = !taxMethod || taxMethod === 'FREE' || taxMethod === 'SIMPLIFIED'
+    const shouldStripInvoiceKind = !taxMethod || taxMethod === 'FREE' || taxMethod === 'SIMPLE'
 
     if (shouldStripInvoiceKind) {
       // 免税/簡易/不明: invoice_kindを全branchの借方・貸方から除去
       for (const branch of payload.branches) {
-        delete (branch.debitor as Record<string, unknown>).invoice_kind
-        delete (branch.creditor as Record<string, unknown>).invoice_kind
+        branch.debitor.invoice_kind = undefined
+        branch.creditor.invoice_kind = undefined
       }
       if (invoiceKind) {
         console.log(`[mfSender] invoice_kind除去: ${sugusruId}（taxMethod=${taxMethod ?? '不明'}, 元値=${invoiceKind}）`)

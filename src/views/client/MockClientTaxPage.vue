@@ -98,20 +98,12 @@
             </template>
           </div>
           <div class="as-actions">
-            <button
-              v-if="mfAuthenticated"
-              class="cm-mf-import-btn"
-              :disabled="mfImporting"
-              @click="importFromMf"
-              title="MFから税区分をインポート"
-            >
-              <i v-if="mfImporting" class="fa-solid fa-spinner fa-spin"></i>
-              <i v-else class="fa-solid fa-cloud-arrow-down"></i>
-              MFインポート
-            </button>
-            <button v-else class="cm-mf-import-btn" disabled title="MF未連携">
-              <i class="fa-solid fa-cloud"></i> MF未連携
-            </button>
+            <MfImportButton
+              :authenticated="mfAuthenticated"
+              :loading="mfImporting"
+              tooltip="MFから税区分をインポート"
+              @import="importFromMf"
+            />
             <button class="as-action-btn" @click="resetTaxOrder">
               <i class="fa-solid fa-rotate"></i> デフォルト順
             </button>
@@ -377,6 +369,7 @@ import { useModalHelper } from "@/composables/useModalHelper";
 import ConfirmModal from "@/components/ConfirmModal.vue";
 import NotifyModal from "@/components/NotifyModal.vue";
 import MfCloudIcon from "@/components/MfCloudIcon.vue";
+import MfImportButton from "@/components/MfImportButton.vue";
 import { getLabel } from "@/constants/clientOptions";
 import { TAX_DIRECTION_OPTIONS, QUALIFIED_OPTIONS } from "@/constants/vendorOptions";
 import { UI_MSG } from "@/constants/uiMessages";
@@ -1381,36 +1374,6 @@ function resetTaxOrder() {
   font-size: 16px;
   cursor: pointer;
   padding: 0 4px;
-}
-
-/* MFインポートボタン（master-list.css .cm-mf-import-btn と統一） */
-.cm-mf-import-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 16px;
-  border: 1px solid #3b82f6;
-  border-radius: 6px;
-  background: #fff;
-  color: #3b82f6;
-  font-family: "Inter", "Hiragino Sans", "Meiryo", sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.cm-mf-import-btn:hover:not(:disabled) {
-  background: #eff6ff;
-  border-color: #2563eb;
-  color: #2563eb;
-}
-.cm-mf-import-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.cm-mf-import-btn i {
-  font-size: 14px;
 }
 
 /* リサイズハンドル */
