@@ -47,6 +47,8 @@ export type TaxCategory = {
     mfId?: string
     /** 税率（MFインポート時にセット。0.10 = 10%。UI表示用。税額計算はMFに委譲） */
     taxRate?: number
+    /** 簡易課税専用フラグ（true=簡易課税方式でのみ使用。原則課税・免税では非表示） */
+    simplifiedOnly?: boolean
     /** デフォルト順復元用: コピー/追加時の挿入位置直前の行ID */
     insertAfter?: string
 }

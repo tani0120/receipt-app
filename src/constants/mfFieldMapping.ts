@@ -16,11 +16,11 @@
 export const TAX_METHOD_MAP: Record<string, string> = {
   'FREE':                      'exempt',                  // 免税事業者
   'SIMPLE':                    'simplified',              // 簡易課税（★ドキュメントのSIMPLIFIEDは誤り）
-  'INDIVIDUAL_ALLOCATION':     'individual_allocation',   // 原則課税（個別対応方式）
-  'PROPORTIONAL_ALLOCATION':   'proportional_allocation', // 原則課税（一括比例配分方式）
+  'INDIVIDUAL_ALLOCATION':     'individual',              // 原則課税（個別対応方式）
+  'PROPORTIONAL_ALLOCATION':   'proportional',            // 原則課税（一括比例配分方式）
   // フォールバック: ドキュメント記載の値（実環境で出現する可能性は低い）
   'SIMPLIFIED':                'simplified',              // ドキュメント記載値（実測ではSIMPLE）
-  'GENERAL':                   'individual_allocation',   // ドキュメント記載値（MF画面に選択肢なし）
+  'GENERAL':                   'individual',              // ドキュメント記載値（MF画面に選択肢なし）
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -207,8 +207,8 @@ export function mapTermSettingsToClient(
       const label = (v: string) => {
         const labels: Record<string, string> = {
           exempt: '免税', simplified: '簡易課税',
-          individual_allocation: '原則課税（個別対応）',
-          proportional_allocation: '原則課税（一括比例）',
+          individual: '原則課税（個別対応）',
+          proportional: '原則課税（一括比例）',
           general: '原則課税',
         }
         return labels[v] ?? v

@@ -2,7 +2,7 @@
 
 > 作成: 2026-05-28
 > 実装完了: 2026-05-29
-> 最終更新: 2026-05-29（バックエンド移行完了・フォールバックフィルタ削除・ゴミデータ清掃追加）
+> 最終更新: 2026-05-29（simplifiedOnlyフラグ追加・名前パターンマッチ完全排除・taxRate優先化）
 > 統合元: tax_method_master_plan.md（計画書） + report_tax_master_issues.md（課題レポート）
 
 ---
@@ -115,13 +115,17 @@ export const MF_TAX_METHOD_TO_PATTERN: Record<string, TaxMethodKey> = {
 
 **実装**: `mfTaxImportService.ts` `detectDiff`内
 
-税区分名に「一種〜六種」が含まれる場合:
+`TaxCategory.simplifiedOnly`フラグが`true`の税区分（マスタの`mfId`で逆引き）:
 - 簡易 → MFインポート表示
 - 一括比例 → MFインポート利用非表示化（MFの値に関わらず強制）
 - 個別対応 → MFインポート利用非表示化（MFの値に関わらず強制）
 - 免税 → MFインポート利用非表示化（MFの値に関わらず強制）
 
 対象: 48件（151件中）。MFは特定顧問先の簡易N種設定に依存して、一括比例・個別対応でもTrue（有効）を返すことがあるため。
+
+> [!NOTE]
+> 旧実装では名前パターンマッチ `/(一種|二種|三種|四種|五種|六種)/` で判定していたが、
+> `simplifiedOnly`フラグ導入により名前依存を完全排除（2026-05-29）。
 
 ### 5. 新規税区分の方式推定
 
@@ -151,6 +155,8 @@ export const MF_TAX_METHOD_TO_PATTERN: Record<string, TaxMethodKey> = {
 - 引き続きMFのリアルタイム `available` でフィルタ（顧問先の課税方式に依存するため正しい）
 - mfId照合でマスタ属性を引き継ぐ処理を実装済み
 - MFインポート時に `consumptionTaxMode`（課税方式）を自動更新
+- IDパターンマッチ・名前パターンマッチは完全削除。`simplifiedOnly`フラグ + `taxRate`フィールドでデータ駆動
+- 詳細は 41_tax_client_design.md を参照
 
 ### 8. MFカスタム税区分
 
@@ -193,3 +199,4 @@ TaxCategory型に構造化属性（`tax_type` / `business_type` / `purpose_type`
 | 2026-05-28 | 初版作成 |
 | 2026-05-29 | 実装完了 |
 | 2026-05-29 | **バックエンド移行完了。** `mfTaxImportService.ts`新規作成。フロントexecuteImport 200行→85行。IDパターンマッチフォールバック削除。`mfTaxAvailableStore`にゴミデータ清掃バリデーション追加。`MF_TAX_METHOD_TO_PATTERN`定数をサービスに定義（実測値`SIMPLE`を含む） |
+| 2026-05-29 | **データ駆動化完了。** `simplifiedOnly`フラグ追加（276件JSON更新）。名前パターンマッチ`/(一種|二種|三種|四種|五種|六種)/`を完全排除。`extractRateFromName`→`taxRate`優先化。顧問先設計を41_tax_client_design.mdに分離 |

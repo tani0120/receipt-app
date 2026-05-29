@@ -55,7 +55,7 @@ export type TaxRateUi =
   | 'unknown';
 
 export type TaxFilingTypeUi = 'blue' | 'white';
-export type ConsumptionTaxModeUi = 'individual_allocation' | 'proportional_allocation' | 'simplified' | 'exempt';
+export type ConsumptionTaxModeUi = 'individual' | 'proportional' | 'simplified' | 'exempt';
 
 export type StepStateUi = 'pending' | 'processing' | 'done' | 'error' | 'ready' | 'none';
 

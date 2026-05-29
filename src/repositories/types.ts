@@ -94,7 +94,7 @@ export interface Client {
   status: ClientStatus;
   accountingSoftware: 'mf' | 'freee' | 'yayoi' | 'tkc' | 'other';
   taxFilingType: 'blue' | 'white';
-  consumptionTaxMode: 'individual_allocation' | 'proportional_allocation' | 'simplified' | 'exempt';
+  consumptionTaxMode: 'individual' | 'proportional' | 'simplified' | 'exempt';
   simplifiedTaxCategory?: number;
   taxMethod: 'tax_included' | 'tax_excluded_included' | 'tax_excluded_separate';
   calculationMethod: 'accrual' | 'cash' | 'interim_cash';
@@ -305,7 +305,7 @@ export interface Lead {
   status: LeadStatus;
   accountingSoftware: 'mf' | 'freee' | 'yayoi' | 'tkc' | 'other';
   taxFilingType: 'blue' | 'white';
-  consumptionTaxMode: 'individual_allocation' | 'proportional_allocation' | 'simplified' | 'exempt';
+  consumptionTaxMode: 'individual' | 'proportional' | 'simplified' | 'exempt';
   simplifiedTaxCategory?: number;
   taxMethod: 'tax_included' | 'tax_excluded_included' | 'tax_excluded_separate';
   calculationMethod: 'accrual' | 'cash' | 'interim_cash';

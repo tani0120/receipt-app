@@ -119,8 +119,8 @@ export const TAX_FILING_OPTIONS: readonly SelectOption[] = [
 
 /** 課税方式（MF実測値: FREE / SIMPLE / INDIVIDUAL_ALLOCATION / PROPORTIONAL_ALLOCATION） */
 export const TAX_MODE_OPTIONS: readonly SelectOption[] = [
-  { value: 'individual_allocation', label: '原則課税（個別対応方式）' },
-  { value: 'proportional_allocation', label: '原則課税（一括比例配分方式）' },
+  { value: 'individual', label: '原則課税（個別対応方式）' },
+  { value: 'proportional', label: '原則課税（一括比例配分方式）' },
   { value: 'simplified', label: '簡易課税' },
   { value: 'exempt', label: '免税' },
 ] as const

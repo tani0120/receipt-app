@@ -317,8 +317,8 @@ const clientTaxMethod = computed<'proportional' | 'individual' | 'simplified' | 
   const raw = currentClientData.value?.consumptionTaxMode;
   if (raw === 'exempt') return 'exempt';
   if (raw === 'simplified') return 'simplified';
-  if (raw === 'individual_allocation') return 'individual';
-  return 'proportional'; // general, proportional_allocation, その他 → 原則（一括比例）
+  if (raw === 'individual') return 'individual';
+  return 'proportional'; // デフォルト → 原則（一括比例）
 });
 
 // =============== composable接続（useAccountSettings経由） ===============

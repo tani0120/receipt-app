@@ -61,10 +61,38 @@ export const useClientStore = defineStore('clients', () => {
       cachedAt.value = Date.now()
       console.log(`[clientStore] ${list.length}件をサーバーから取得`)
 
+      // consumptionTaxMode旧値→新値マイグレーション
+      migrateConsumptionTaxMode()
+
       // DL-042マイグレーション: localStorageのsharedFolderIdをサーバーデータにマージ
       migrateSharedFolderIds()
     } catch (err) {
       console.error('[clientStore] サーバー取得失敗:', err)
+    }
+  }
+
+  /**
+   * consumptionTaxModeの旧値（individual_allocation / proportional_allocation）を
+   * 新値（individual / proportional）に自動変換する。
+   * 変換したらサーバーにも保存。
+   */
+  function migrateConsumptionTaxMode(): void {
+    const migrationMap: Record<string, Client['consumptionTaxMode']> = {
+      'individual_allocation': 'individual',
+      'proportional_allocation': 'proportional',
+    }
+    let migrated = 0
+    for (const client of clients.value) {
+      const newValue = migrationMap[client.consumptionTaxMode as string]
+      if (newValue) {
+        client.consumptionTaxMode = newValue
+        apiPut(`/${client.clientId}`, { consumptionTaxMode: newValue })
+          .catch(err => console.error(`[clientStore] consumptionTaxMode移行エラー (${client.clientId}):`, err))
+        migrated++
+      }
+    }
+    if (migrated > 0) {
+      console.log(`[clientStore] ${migrated}件のconsumptionTaxModeを新値に移行`)
     }
   }
 

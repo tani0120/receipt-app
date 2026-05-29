@@ -33,7 +33,7 @@ import {
 import { getById, updateClient } from '../services/clientStore'
 import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFieldMapping'
 import { importMfJournals } from '../services/mfJournalImporter'
-import { previewTaxImport, applyTaxImport } from '../services/mfTaxImportService'
+import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services/mfTaxImportService'
 import { saveClientAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories } from '../services/accountMasterStore'
 import type { Account, AccountTarget, AccountGroup, TaxDetermination } from '../../types/shared-account'
 import type { TaxCategory } from '../../types/shared-tax-category'
@@ -481,7 +481,7 @@ app.post('/sync-all', async (c) => {
           mfId: t.id,
         }
       }
-      // mfIdがマッチしない → MF独自のカスタム税区分
+      // mfIdがマッチしない → MF独自のカスタム税区分（マスタに情報なし→名前から推定は正当）
       unmatchedTaxCount++
       const dir = guessDirectionFromName(t.name)
       return {
@@ -637,6 +637,30 @@ app.post('/import-taxes/apply', async (c) => {
   }
 })
 
+/**
+ * POST /import-client-taxes — 顧問先用税区分インポート（1回で全処理）
+ * body: { clientId: string }
+ *
+ * consumptionTaxMode自動更新 + 税区分取得 + マスタ突合 + 保存 + available更新を一括実行。
+ */
+app.post('/import-client-taxes', async (c) => {
+  const body = await c.req.json<{ clientId?: string }>()
+  const clientId = body.clientId
+  if (!clientId) return c.json({ error: 'clientId必須' }, 400)
+
+  const status = getAuthStatus(clientId)
+  if (!status.authenticated) {
+    return c.json({ error: 'MF未認証です。先にOAuth認可を完了してください' }, 401)
+  }
+
+  try {
+    const result = await importClientTaxes(clientId)
+    return c.json(result)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[mfRoutes] import-client-taxes失敗: ${message}`)
+    return c.json({ error: '顧問先税区分インポートに失敗しました', detail: message }, 500)
+  }
+})
+
 export default app
-
-

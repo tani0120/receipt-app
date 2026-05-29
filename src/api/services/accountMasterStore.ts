@@ -386,18 +386,12 @@ export interface TaxCategoryFilterResult {
   totalPages: number
 }
 // --- 課税方式別フィルタ共通関数 ---
-// IDパターンマッチ（フォールバック用: availableデータ未取得時のみ使用）
-const isSimplifiedSales = (id: string) => /_T[1-6]$/.test(id)
-const isIndividualPurchase = (id: string) =>
-  /COMMON/.test(id) || /_NT_/.test(id) || /^PURCHASE_NT_/.test(id) || /^IMPORT_NT_/.test(id)
-const isObsoleteRate = (name: string) => / 5%/.test(name) && !name.includes('(軽)')
 
 /**
  * 課税方式に基づいて税区分をフィルタする共通関数
  *
- * 優先順位:
- * 1. MFのavailableデータが存在する場合 → availableで判定
- * 2. availableデータなし → IDパターンマッチ（フォールバック）
+ * MFのavailableデータで判定（データ駆動）。
+ * availableデータなし → active && defaultVisible（安全なデフォルト）
  *
  * 共通ルール:
  * - direction='common'（不明・対象外）は常に表示
@@ -409,11 +403,10 @@ function filterByTaxMethod(row: TaxCategory, taxMethod: string): boolean {
   // direction='common'（不明・対象外）は全方式で常に表示
   if (row.direction === 'common') return true
 
-  // --- MFのavailableベースのフィルタ ---
+  // --- MFのavailableベースのフィルタ（データ駆動） ---
   const methodKeyMap: Record<string, string> = {
     'general': 'proportional',
-    'proportional_allocation': 'proportional',
-    'individual_allocation': 'individual',
+    'proportional': 'proportional',
     'individual': 'individual',
     'simplified': 'simplified',
     'exempt': 'exempt',
@@ -426,25 +419,9 @@ function filterByTaxMethod(row: TaxCategory, taxMethod: string): boolean {
     return availableData[row.mfId] === true
   }
 
-  // --- フォールバック: IDパターンマッチ（availableデータ未取得時） ---
-  if (taxMethod === 'exempt') {
-    return false // commonは上で処理済み
-  }
-  if (taxMethod === 'simplified') {
-    if (row.direction === 'sales') {
-      return isSimplifiedSales(row.id) && !isObsoleteRate(row.name)
-    }
-    return row.active && !isIndividualPurchase(row.id)
-  }
-  if (taxMethod === 'individual' || taxMethod === 'individual_allocation') {
-    if (isObsoleteRate(row.name)) return false
-    if (row.direction === 'sales') return row.active
-    return row.active || isIndividualPurchase(row.id)
-  }
-  // 一括比例（デフォルト）
-  if (!row.active) return false
-  if (isIndividualPurchase(row.id)) return false
-  return row.defaultVisible
+  // availableデータなし → デフォルト表示（active行のみ）
+  if (taxMethod === 'exempt') return false
+  return row.active && row.defaultVisible
 }
 
 /**

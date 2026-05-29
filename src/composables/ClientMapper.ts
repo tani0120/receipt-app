@@ -72,7 +72,7 @@ export function mapClientToUi(api: unknown): ClientUi {
             learningCsvFolderId: '',
 
             taxFilingType: 'blue',
-            consumptionTaxMode: 'individual_allocation',
+            consumptionTaxMode: 'individual',
             simplifiedTaxCategory: undefined,
             simplifiedTaxCategoryLabel: '特になし',
             defaultTaxRate: 10,
@@ -158,7 +158,7 @@ export function mapClientToUi(api: unknown): ClientUi {
     const taxFilingType = (['blue', 'white'].includes(taxTypeRaw) ? taxTypeRaw : 'blue') as TaxFilingTypeUi;
 
     const taxModeRaw = safeString(raw.consumptionTaxMode);
-    const consumptionTaxMode = (['individual_allocation', 'proportional_allocation', 'simplified', 'exempt'].includes(taxModeRaw) ? taxModeRaw : 'individual_allocation') as ConsumptionTaxModeUi;
+    const consumptionTaxMode = (['individual', 'proportional', 'simplified', 'exempt'].includes(taxModeRaw) ? taxModeRaw : 'individual') as ConsumptionTaxModeUi;
 
     const simplifiedTaxCategoryRaw = safeNumber(raw.simplifiedTaxCategory);
     const simplifiedTaxCategory = (

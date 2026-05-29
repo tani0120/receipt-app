@@ -122,9 +122,7 @@ async function detectDiff(clientId: string, dryRun: boolean = false): Promise<De
   const mfNameSet = new Set(mfTaxes.map(t => t.name))
 
   // 4. 自動ルール: 簡易課税専用税区分を他方式で非表示化
-  //    判定基準: directionではなく名前パターン（MFの命名規則が統一されているため）
-  //    → マスタにsimplifiedOnlyフラグを追加すれば名前依存を排除可能（将来課題）
-  const shuPattern = /(一種|二種|三種|四種|五種|六種)/
+  //    判定基準: マスタのsimplifiedOnlyフラグ（データ駆動）
   const autoRuleMethods: TaxMethodKey[] = ['proportional', 'individual', 'exempt']
   let autoRuleApplied = 0
 
@@ -137,8 +135,16 @@ async function detectDiff(clientId: string, dryRun: boolean = false): Promise<De
     }
   }
 
+  // マスタのsimplifiedOnlyフラグでmfIdを逆引き
+  const simplifiedOnlyMfIds = new Set<string>()
+  for (const row of masterItems) {
+    if (row.simplifiedOnly && row.mfId) {
+      simplifiedOnlyMfIds.add(row.mfId)
+    }
+  }
+
   for (const t of mfTaxes) {
-    if (shuPattern.test(t.name)) {
+    if (simplifiedOnlyMfIds.has(t.id)) {
       for (const method of autoRuleMethods) {
         if (availData[method] && availData[method][t.id] === true) {
           availData[method][t.id] = false
@@ -369,3 +375,152 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
     pattern,
   }
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 顧問先用: 税区分インポート（1回のAPI呼び出しで全処理）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** MF課税方式→consumptionTaxMode（mf-tax-available.jsonのキーと同じ値） */
+export const MF_TAX_METHOD_TO_CONSUMPTION_MODE: Record<string, string> = {
+  'FREE': 'exempt',
+  'SIMPLE': 'simplified',
+  'INDIVIDUAL_ALLOCATION': 'individual',
+  'PROPORTIONAL_ALLOCATION': 'proportional',
+  'SIMPLIFIED': 'simplified',
+  'GENERAL': 'individual',
+}
+
+export interface ClientTaxImportResult {
+  success: boolean
+  imported: TaxCategory[]
+  matchedCount: number
+  customCount: number
+  consumptionTaxMode: string | null
+  availableUpdated: boolean
+}
+
+/**
+ * 顧問先の税区分をMFからインポート（バックエンド一括処理）
+ *
+ * 処理内容:
+ * 1. MFからtermSettings取得 → consumptionTaxMode自動更新
+ * 2. MFから税区分一覧取得
+ * 3. 全社マスタとmfIdで突合（マスタ属性を継承）
+ * 4. 未マッチ → MF_CUSTOM_{mfId}で新規作成
+ * 5. 結果をクライアントストアに保存
+ * 6. available（利用可否）データを更新
+ */
+export async function importClientTaxes(clientId: string): Promise<ClientTaxImportResult> {
+  const { updateClient } = await import('./clientStore')
+  const { getClientTaxCategories, saveClientTaxCategories } = await import('./accountMasterStore')
+
+  // 1. consumptionTaxMode自動更新
+  let consumptionTaxMode: string | null = null
+  try {
+    const termSettings = await mcpFetchTermSettings(undefined, clientId)
+    const currentTerm = termSettings[0]
+    if (currentTerm?.tax_method) {
+      const mapped = MF_TAX_METHOD_TO_CONSUMPTION_MODE[currentTerm.tax_method]
+      if (mapped) {
+        consumptionTaxMode = mapped
+        updateClient(clientId, { consumptionTaxMode: mapped as 'individual' | 'proportional' | 'simplified' | 'exempt' })
+        console.log(`[mfTaxImportService] consumptionTaxMode更新: ${currentTerm.tax_method} → ${mapped}`)
+      }
+    }
+  } catch (err) {
+    console.warn('[mfTaxImportService] termSettings取得失敗（続行）:', err)
+  }
+
+  // 2. MFから税区分一覧取得
+  const mfTaxes = await mcpFetchTaxes(clientId) as MfTax[]
+
+  // 3. 全社マスタとmfIdで突合
+  const masterItems = getAllTaxCategories()
+  const masterByMfId = new Map<string, TaxCategory>()
+  for (const m of masterItems) {
+    if (m.mfId) masterByMfId.set(m.mfId, m)
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const isExempt = consumptionTaxMode === 'exempt'
+  let matchedCount = 0
+  let customCount = 0
+
+  const imported: TaxCategory[] = mfTaxes.map((t, idx) => {
+    const master = masterByMfId.get(t.id)
+    if (master) {
+      matchedCount++
+      return {
+        ...master,
+        deprecated: isExempt ? master.deprecated : !t.available,
+        displayOrder: idx + 1,
+        source: 'mf' as const,
+        mfId: t.id,
+        taxRate: t.tax_rate ?? master.taxRate,
+        effectiveFrom: master.effectiveFrom || today,
+      }
+    }
+    // 未マッチ → MF独自カスタム税区分
+    customCount++
+    const dir = guessDirectionFromName(t.name)
+    return {
+      id: `MF_CUSTOM_${t.id}`,
+      name: t.name,
+      shortName: t.abbreviation ?? '',
+      direction: dir,
+      qualified: guessQualifiedFromName(t.name, dir),
+      aiSelectable: true,
+      active: true,
+      deprecated: false,
+      effectiveFrom: today,
+      effectiveTo: null,
+      defaultVisible: true,
+      source: 'mf' as const,
+      mfId: t.id,
+      taxRate: t.tax_rate,
+      displayOrder: idx + 1,
+      isCustom: true,
+    }
+  })
+
+  // 4. 顧問先ストアに保存
+  saveClientTaxCategories(clientId, imported)
+
+  // 5. available（利用可否）データを更新
+  let availableUpdated = false
+  if (consumptionTaxMode) {
+    const patternKey = consumptionTaxMode as TaxMethodKey
+    if (VALID_METHODS.includes(patternKey)) {
+      const availMap: Record<string, boolean> = {}
+      for (const t of mfTaxes) {
+        availMap[t.id] = t.available
+      }
+      saveTaxAvailable(patternKey, availMap)
+      availableUpdated = true
+      console.log(`[mfTaxImportService] available更新: ${patternKey}, ${mfTaxes.length}件`)
+    }
+  }
+
+  // 6. MF生データを保存
+  const client = getById(clientId)
+  saveMfRawData({
+    clientId,
+    clientName: client?.companyName ?? client?.repName ?? '',
+    pattern: `client-taxes-${consumptionTaxMode ?? 'unknown'}`,
+    importedAt: new Date().toISOString(),
+    itemCount: mfTaxes.length,
+    items: mfTaxes,
+  })
+
+  console.log(`[mfTaxImportService] 顧問先インポート完了: clientId=${clientId}, マスタ照合=${matchedCount}, カスタム=${customCount}`)
+
+  return {
+    success: true,
+    imported,
+    matchedCount,
+    customCount,
+    consumptionTaxMode,
+    availableUpdated,
+  }
+}
+

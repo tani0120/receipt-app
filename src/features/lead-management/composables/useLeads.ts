@@ -22,7 +22,7 @@ export const emptyLeadForm = (): LeadForm => ({
   repName: '', repNameKana: '',
   contactType: 'email', contactValue: '',
   fiscalMonth: 3, fiscalDay: '末日', industry: '', establishedDate: '', status: 'active',
-  accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'individual_allocation',
+  accountingSoftware: 'mf', taxFilingType: 'blue', consumptionTaxMode: 'individual',
   taxMethod: 'tax_included', calculationMethod: 'accrual', defaultPaymentMethod: 'cash',
   isInvoiceRegistered: false, invoiceRegistrationNumber: '',
   hasDepartmentManagement: false, hasRentalIncome: false,

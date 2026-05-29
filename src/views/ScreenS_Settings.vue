@@ -212,7 +212,7 @@
               <label class="panel-label">課税方式</label>
               <div class="panel-radio-group">
                 <label class="panel-radio">
-                  <input type="radio" :checked="currentClient.consumptionTaxMode === 'individual_allocation' || currentClient.consumptionTaxMode === 'proportional_allocation'" disabled>
+                  <input type="radio" :checked="currentClient.consumptionTaxMode === 'individual' || currentClient.consumptionTaxMode === 'proportional'" disabled>
                   <span>原則課税</span>
                 </label>
                 <label class="panel-radio">

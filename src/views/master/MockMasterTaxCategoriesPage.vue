@@ -780,7 +780,7 @@ function startEdit(row: TaxCategory, field: EditableField) {
   switch (field) {
     case 'direction': editValue.value = row.direction; break;
     case 'name': editValue.value = row.name; break;
-    case 'rate': editValue.value = extractRateFromName(row.name).replace('%', ''); break;
+    case 'rate': editValue.value = row.taxRate != null ? String(Math.round(row.taxRate * 100)) : extractRateFromName(row.name).replace('%', ''); break;
     case 'qualified': editValue.value = String(row.qualified); break;
   }
 }
@@ -899,10 +899,8 @@ function sortTax(key: keyof TaxCategory) {
 function sortTaxByRate() {
   if (sortState.key === '_rate') { sortState.asc = !sortState.asc; } else { sortState.key = '_rate'; sortState.asc = true; }
   allTaxRows.sort((a, b) => {
-    const pa = parseFloat(extractRateFromName(a.name));
-    const pb = parseFloat(extractRateFromName(b.name));
-    const ra = isNaN(pa) ? -1 : pa;
-    const rb = isNaN(pb) ? -1 : pb;
+    const ra = a.taxRate != null ? a.taxRate * 100 : parseFloat(extractRateFromName(a.name)) || -1;
+    const rb = b.taxRate != null ? b.taxRate * 100 : parseFloat(extractRateFromName(b.name)) || -1;
     return sortState.asc ? ra - rb : rb - ra;
   });
 }
