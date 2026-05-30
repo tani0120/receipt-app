@@ -2,7 +2,7 @@
 
 > 統合元: task_restored.md / task_03_resolved29.md / task_01_bd8b5ef7.md / task_02_prev_task.md / task.md / prev_task.md（bd8b5ef7）
 > 統合日: 2026-04-08（セッション 1cd25cab）
-> 最終更新: 2026-05-29（税区分マスタ: 方式マスタ+MFインポート差分マージ+mfId照合 追記）
+> 最終更新: 2026-05-30（ハードコード駆逐P1〜P13: 8件完了/4件Supabase移行時/1件スキップ）
 > 実査方法: git log・grep_search・view_file・list_dir による実ファイル確認
 > ルール: **型・コード・シグネチャは今やる。実行行為（テスト実施・データ整備）のみ先送り可。**
 
@@ -682,6 +682,85 @@
 | L-6 | healthエンドポイントにADC疎通確認追加   | パイプライン安定化後     | 現状はproject/model名を返すだけで認証有効性を検証していない |
 | L-7 | UI撮影ガイド表示（1枚ずつ平置き撮影の案内） | UI実装フェーズ      | 重畳撮影の間接的防止策 |
 | L-8 | drive-select画面にAI分類結果表示 + 選別時仕訳統合 | **仕訳一覧UI（C-7）完了後** | DL-048でDocEntryにAI結果が保存済み。UIに表示するだけの作業。さらに、選別時に過去仕訳候補を表示し選択するだけで仕訳完了できれば、選別と仕訳を1画面で同時実施可能。ただし仕訳一覧UIの精度・制度設計の結果次第で要否・設計が変わるため、C-7完了後に着手判断。**DL-051で15フィールド全件Vue未参照を確認済み（E-8）。[field_audit.md](file:///{LOCAL_USER}/.gemini/antigravity/brain/b29e23e6-88c0-4691-a867-4f898f874cd8/field_audit.md) 参照** |
+
+---
+
+## I. Supabase移行後タスク（データ駆動化完遂）
+
+> 作成日: 2026-05-30（ハードコード完全監査セッション febbf661）
+> 前提: `VOUCHER_TYPE_RULES` 引数化 Phase 1 完了済み。コアロジックはデータソース非依存。
+> 監査詳細: [hardcode_audit.md](file:///C:/Users/kazen/.gemini/antigravity-ide/brain/febbf661-f716-4eef-9a6a-de40a107c647/hardcode_audit.md)
+
+### I-1. 型管理: `supabase gen types` + Pick二層構造
+
+| タスク | 内容 | 対象ファイル | 状態 |
+|---|---|---|---|
+| SB-TYPE-1 | `supabase gen types typescript` → `src/types/supabase.ts` 自動生成パイプライン構築 | `src/types/supabase.ts`（新規） | ❌ |
+| SB-TYPE-2 | `shared-account.ts` を `Pick<Database['public']['Tables']['accounts']['Row'], ...>` に変更 | `src/types/shared-account.ts` | ❌ |
+| SB-TYPE-3 | CI/CDに `supabase gen types` + `tsc --noEmit` 自動検証追加 | CI設定 | ❌ |
+
+### I-2. VOUCHER_TYPE_RULES のDB化
+
+| タスク | 内容 | 対象ファイル | 状態 |
+|---|---|---|---|
+| SB-VTR-1 | `voucher_type_rules` テーブル作成（SQL migration） | `supabase/migrations/` | ❌ |
+| SB-VTR-2 | seedスクリプトで `voucherTypeRules.ts` のデータをDB投入 | `supabase/seed/` | ❌ |
+| SB-VTR-3 | サーバー側: `journalValidation.ts` の `import { VOUCHER_TYPE_RULES }` → DB取得に差し替え | `src/api/services/journalValidation.ts` | ❌ |
+| SB-VTR-4 | フロント側: Vue `import { VOUCHER_TYPE_RULES }` → Piniaストア（APIキャッシュ）に差し替え | `JournalListLevel3Mock.vue`, `MockExportPage.vue` | ❌ |
+| SB-VTR-5 | `voucherTypeRules.ts` をseedスクリプト専用に移動 or 削除 | `src/data/master/voucherTypeRules.ts` | ❌ |
+
+> **前提完了済み**: `journalValidationCore.ts` の3関数は `voucherRules` を引数で受け取る形に変更済み（Phase 1: 2026-05-30）。呼出元7箇所で `VOUCHER_TYPE_RULES` を明示的に渡している。DB差し替えは import の変更のみで完了する。
+
+### I-3. TSシード安全退避
+
+| タスク | 内容 | 対象ファイル | 状態 |
+|---|---|---|---|
+| SB-SEED-1 | `scripts/seed/seed-data.ts` 作成（JSON不在時にTSシードからJSON生成） | `scripts/seed/seed-data.ts` | ✅ |
+| SB-SEED-2 | TSシード3ファイルを `scripts/seed/` に移動 | `vendors_global.ts`, `industry_vector_sole.ts`, `industry_vector_corporate.ts` | ✅ |
+| SB-SEED-3 | 各Storeのimportパス更新 + `package.json` に `seed` スクリプト追加 | `vendorStore.ts`, `industryVectorStore.ts`, `package.json` | ✅ |
+| SB-SEED-4 | `data/README.md` にセットアップ手順記載 | `data/README.md` | ❌ |
+
+### I-4. カテゴリルール・マッピングのDB化
+
+| タスク | 内容 | 対象ファイル | 状態 |
+|---|---|---|---|
+| SB-CAT-1 | `account_categories` テーブル作成（`parentGroup`, `direction` カラム） | `supabase/migrations/` | ❌ |
+| SB-CAT-2 | `account-category-rules.ts` の定数 → DB照合に段階的移行 | `src/data/master/account-category-rules.ts` | ❌ |
+| SB-CAT-3 | `mf-account-category-mapping.ts` → `data/mf-category-mapping.json` → DB移行 | `src/data/master/mf-account-category-mapping.ts` | ❌ |
+| SB-CAT-4 | `TaxCategory` 型に構造化属性追加（`tax_type`/`business_type`/`purpose_type`）— TAX-P と統合 | `supabase/migrations/` | ❌ |
+
+### I-5. 個別ハードコード駆逐（13カテゴリ）
+
+> 監査結果 P1〜P13。Phase 1で確立した引数パターンを踏襲。
+> **最終更新: 2026-05-30 — 9件完了 / 3件Supabase移行時 / 1件実験用スキップ**
+
+#### ✅ 完了済み（9件 — Supabase不要・ヘルパー/定数集約のみ）
+
+| 優先 | カテゴリ | 修正内容 | 修正ファイル |
+|------|---------|---------|-------------|
+| P3 | C1: 事業者種別判定 | `isIndividualType()` ヘルパー関数 | `clientOptions.ts` 新規 + 10ファイル20+箇所 |
+| P6 | D1-D3: MF API定数 | `mfApiConstants.ts` 新規作成 | `journalToMfConverter.ts` + `mfJournalImporter.ts` |
+| P7 | B2: MFカテゴリマッピング | 現行維持（関数+データ密結合でJSON化不適） | — |
+| P8 | C2: 個人固定値 | 決算月/申告猶予月定数+ヘルパー | `collection.ts` + `ScreenC_CollectionStatus.vue` |
+| P9 | E1: sourceCategory変換 | `SOURCE_CATEGORY_MAP` + `getSourceCategory()` | `source_type.type.ts` + `matchLearningRule.ts` |
+| P10 | A3: デフォルト科目 | `defaultDebitId`/`defaultCreditId`追加 | `voucherTypeRules.ts` + `journalHintService.ts` |
+| P11 | F1-F3: effectiveFrom等 | `DEFAULT_EFFECTIVE_FROM` + F1修正 | `mfApiConstants.ts` + 4ファイル5箇所 |
+| P13 | D2: 経過措置日付 | D1に包含 | `mfApiConstants.ts` |
+| P5 | A4: 業種ベクトル辞書 | TSシード退避（Phase 2） | `scripts/seed/` に移動 + Storeのimportパス更新 |
+
+#### 🔒 Supabase移行時に実施（3件 — フロント直接importのためDB化+API経由が必須）
+
+| 優先 | カテゴリ | フロント参照 | 対策 | 対応タスク |
+|------|---------|-------------|------|-----------|
+| P1 | A1: 科目IDリスト | Vue 4ファイル | `voucherRole`フラグ→動的フィルタ | SB-VTR-1〜5 |
+| P2 | A2: COUNTERPART_MAP | Vue 1ファイル | マスタフラグ化→DB照合 | SB-CAT系 |
+| P4 | B1: カテゴリ定数 | Vue 2ファイル | DB化 | SB-CAT-1〜4 |
+
+> **先送り根拠**: P1/P2/P4はVueから`import { VOUCHER_TYPE_RULES }`等で直接import。DB化にはAPI経由取得→Piniaキャッシュの構造変更が必要。Supabase移行と同時実施がコスト最小。
+
+#### ⏸️ 実験用スクリプト（1件 — 本番未使用）
+
+| P12 | A5: Gemini APIスキーマ | `scripts/`配下の実験用。本番は`src/api/services/pipeline/`を使用 |
 
 ---
 

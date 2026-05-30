@@ -24,6 +24,7 @@ import {
   deriveTaxDetermination,
   deriveTarget,
 } from '../data/master/mf-account-category-mapping'
+import { DEFAULT_EFFECTIVE_FROM } from '../constants/mfApiConstants'
 
 const DATA_DIR = join(process.cwd(), 'data')
 const MF_PATH = join(process.cwd(), 'docs/genzai/mf_accounts_raw_TSK.json')
@@ -151,7 +152,7 @@ for (const mf of mfAccounts) {
       defaultTaxCategoryId: masterTaxId,
       taxDetermination,
       deprecated: false,
-      effectiveFrom: '2019-10-01',
+      effectiveFrom: DEFAULT_EFFECTIVE_FROM,
       effectiveTo: null,
       sortOrder: maxSortOrder,
       isCustom: false,

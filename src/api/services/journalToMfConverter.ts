@@ -12,6 +12,7 @@
  * 準拠: mf_sugusru_field_mapping.md
  */
 import type { MfMappingTables } from './mfMappingService'
+import { toMfInvoiceKind, MF_JOURNAL_TYPE_ENTRY, MF_SUGUSURU_TAG } from '../../constants/mfApiConstants'
 
 // ────────────────────────────────────────────
 // 入力型（JournalPhase5Mockの必要フィールドのみ）
@@ -225,31 +226,31 @@ export function validateBeforeConvert(journal: SourceJournal, maps: MfMappingTab
     }
   }
 
-  // ── 簡易課税の売上税区分チェック（T系のみ許可） ──
+  // ── 簡易課税の売上税区分チェック（簡易課税専用のみ許可） ──
   if (journal.consumption_tax_mode === 'simplified') {
     for (const entry of allEntries) {
       if (!entry.tax_category_id) continue
       const taxDir = maps.taxDirectionMap.get(entry.tax_category_id)
       if (taxDir !== 'sales') continue
-      // 売上方向の税区分はT系（事業区分付き）のみ許可
-      // T系IDパターン: _T1, _T2, ... _T6
-      if (!/_T[1-6]$/.test(entry.tax_category_id)) {
+      // 売上方向の税区分は簡易課税専用（simplifiedOnly=true）のみ許可
+      // データ駆動: IDパターンマッチ（_T[1-6]）に依存しない
+      if (!maps.taxSimplifiedOnlySet.has(entry.tax_category_id)) {
         errors.push({
           type: 'TAX_SIMPLIFIED_VIOLATION',
-          message: `${entry.side}[${entry.idx}] 簡易課税で原則用売上税区分「${entry.tax_category_id}」を使用（事業区分付きT系のみ許可）`,
+          message: `${entry.side}[${entry.idx}] 簡易課税で原則用売上税区分「${entry.tax_category_id}」を使用（事業区分付きのみ許可）`,
           field: `${entry.side === '借方' ? 'debit' : 'credit'}_entries[${entry.idx}].tax_category_id`,
         })
       }
     }
   }
 
-  // ── 本則（一括比例）のCOMMON/NT系税区分禁止 ──
+  // ── 本則（一括比例）の個別対応専用税区分禁止 ──
   // 一括比例では「共通課税仕入」「非課税対応仕入」が使えない（MF available=false）
-  // IDパターン: _COMMON_ または _NT_
+  // データ駆動: individualOnlyフラグで判定（IDパターンマッチに依存しない）
   if (journal.consumption_tax_mode === 'general_proportional') {
     for (const entry of allEntries) {
       if (!entry.tax_category_id) continue
-      if (/_COMMON_/.test(entry.tax_category_id) || /_NT_/.test(entry.tax_category_id)) {
+      if (maps.taxIndividualOnlySet.has(entry.tax_category_id)) {
         errors.push({
           type: 'TAX_PROPORTIONAL_VIOLATION',
           message: `${entry.side}[${entry.idx}] 本則（一括比例）で個別対応用税区分「${entry.tax_category_id}」を使用（共通/非課税対応は個別対応のみ）`,
@@ -474,34 +475,8 @@ export function toInvoiceKind(
   isTaxExempt?: boolean,
   voucherDate?: string | null,
 ): string | null {
-  // 免税事業者は省略（MFが自動判定）。送信自体は可能だが消費税申告しないため無意味
-  if (isTaxExempt) return null
-
-  switch (status) {
-    case 'qualified': return 'INVOICE_KIND_QUALIFIED'
-    case 'not_qualified': {
-      // 経過措置期間の日付分岐
-      // 2023/10/01〜2026/09/30: 80%控除 (UNQUALIFIED_80)
-      // 2026/10/01〜2029/09/30: 50%控除 (UNQUALIFIED_50)
-      // 2029/10/01〜:           控除なし（MF APIにenum値が追加されるまでエラーで止まる）
-      //
-      // MF APIに該当enum値が存在しない場合、MCP呼び出し時に
-      //   enum: INVOICE_KIND_UNQUALIFIED_50 does not equal any of [...]
-      // でエラーになる。80%で代替送信するのは過大控除（税務リスク）のため、
-      // エラーで止めて人間に判断させる方が正しい。
-      // MFがenum追加した瞬間にコード変更なしで通るようになる。
-      if (voucherDate && voucherDate >= '2029-10-01') {
-        // 経過措置終了後。控除なし。
-        // MF APIに対応するenum値が追加されるまでエラーで止まる
-        return 'INVOICE_KIND_NOT_QUALIFIED_0'
-      }
-      if (voucherDate && voucherDate >= '2026-10-01') {
-        return 'INVOICE_KIND_UNQUALIFIED_50'
-      }
-      return 'INVOICE_KIND_UNQUALIFIED_80'
-    }
-    default: return 'INVOICE_KIND_NOT_TARGET'
-  }
+  // 共通定数・ロジックは mfApiConstants.ts に集約
+  return toMfInvoiceKind(status, !!isTaxExempt, voucherDate)
 }
 
 // ────────────────────────────────────────────
@@ -559,10 +534,10 @@ export function convertToMfJournal(
 
   const payload: MfJournalPayload = {
     transaction_date: journal.voucher_date!,
-    journal_type: 'journal_entry',
+    journal_type: MF_JOURNAL_TYPE_ENTRY,
     branches,
     memo: journal.description || '',
-    tags: ['SUGUSRU'],
+    tags: [MF_SUGUSURU_TAG],
   }
 
   return { payload, errors: [], hasNonQualified, invoiceKind }

@@ -16,7 +16,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import type { Vendor } from '../../types/pipeline/vendor.type'
-import { VENDORS_GLOBAL } from '../../data/pipeline/vendors_global'
+import { VENDORS_GLOBAL } from '../../../scripts/seed/vendors_global'
 
 const DATA_DIR = join(process.cwd(), 'data')
 const DATA_FILE = join(DATA_DIR, 'vendors.json')

@@ -102,6 +102,7 @@ export function revenueToRange(amount: number): string {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import type { MfMcpOffice, MfMcpTermSettings } from '../api/services/mfMcpClient'
+import { isIndividualType } from './clientOptions'
 
 /** MF事業者情報からsugusuruフィールドへの変換結果 */
 export interface MfMappingResult {
@@ -127,7 +128,7 @@ export function mapOfficeToClient(
   // MFのnameは事業者名1つのみ（代表者名/会社名の区別なし）
   if (office.name) {
     const clientType = (currentClient.type as string) || ''
-    if (clientType === 'individual' || clientType === 'sole_proprietor') {
+    if (isIndividualType(clientType)) {
       // 個人: 事業者名 → repName（代表者名/屋号）
       if (office.name !== currentClient.repName) {
         changes.push(`代表者名: ${currentClient.repName || '(空)'} → ${office.name}`)

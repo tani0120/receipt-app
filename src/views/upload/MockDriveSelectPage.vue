@@ -418,9 +418,11 @@ import type { LineItem } from '@/types/pipeline/line_item.type';
 import type { SourceType } from '@/types/pipeline/source_type.type';
 import { useJournals } from '@/composables/useJournals';
 import { useDocuments } from '@/composables/useDocuments';
+import { useAccountMasterStore } from '@/stores/accountMasterStore';
 
 const { journals } = useJournals(clientId);
 const { allDocuments, clearAiFields } = useDocuments();
+const accountMasterStore = useAccountMasterStore();
 
 /**
  * DocEntry.aiLineItems → LineItem[] に変換するヘルパー
@@ -484,6 +486,8 @@ const sendToProcess = async () => {
         clientId.value,
         false,               // isCreditCardPayment（将来: DocEntryに追加予定）
         docEntry.id,         // documentId
+        null,                // accountResults
+        accountMasterStore.allAccounts, // accountMaster（相手勘定税区分のデータ駆動解決）
       );
 
       // useJournals に追加（autoSave watchで自動的にサーバー保存される）

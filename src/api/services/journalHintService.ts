@@ -238,17 +238,16 @@ export function generateHintSuggestions(
   }
 
   // デフォルト候補選択（証票意味に応じた賢い初期値）
-  const pickDefault = (vt: string | null, alts: HintAlternative[]): HintAlternative | undefined => {
+  const pickDefault = (vt: string | null, alts: HintAlternative[], side?: 'debit' | 'credit'): HintAlternative | undefined => {
     if (alts.length === 0) return undefined
-    // クレカ → 未払金を優先
-    if (vt === UI_MSG.証票意味_クレカ) {
-      const accrued = alts.find(a => a.value === 'ACCRUED_EXPENSES')
-      if (accrued) return accrued
-    }
-    // 売上 → 売掛金を優先
-    if (vt === UI_MSG.証票意味_売上) {
-      const receivable = alts.find(a => a.value === 'ACCOUNTS_RECEIVABLE')
-      if (receivable) return receivable
+    // VOUCHER_TYPE_RULES の defaultDebitId / defaultCreditId を参照
+    const vtRule = vt ? VOUCHER_TYPE_RULES[vt] : null
+    if (vtRule) {
+      const defaultId = side === 'debit' ? vtRule.defaultDebitId : vtRule.defaultCreditId
+      if (defaultId) {
+        const matched = alts.find(a => a.value === defaultId)
+        if (matched) return matched
+      }
     }
     return alts[0]
   }
@@ -270,7 +269,7 @@ export function generateHintSuggestions(
       // ケース1: null科目 → 候補提案
       if (!acct) {
         const alts = buildAlternatives(sideRule, '')
-        const def = pickDefault(vt, alts)
+        const def = pickDefault(vt, alts, side)
         if (def) {
           suggestions.push({
             side, field: FIELD_ACCOUNT, currentValue: null,
@@ -285,7 +284,7 @@ export function generateHintSuggestions(
       // ケース2: マスタ外科目 → 候補提案
       if (!accountIds.has(acct)) {
         const alts = buildAlternatives(sideRule, acct)
-        const def = pickDefault(vt, alts)
+        const def = pickDefault(vt, alts, side)
         if (def) {
           suggestions.push({
             side, field: FIELD_ACCOUNT, currentValue: acct,
@@ -314,7 +313,7 @@ export function generateHintSuggestions(
 
       if (!allowed) {
         const alts = buildAlternatives(sideRule, acct)
-        const def = pickDefault(vt, alts)
+        const def = pickDefault(vt, alts, side)
         if (def) {
           suggestions.push({
             side, field: FIELD_ACCOUNT, currentValue: acct,

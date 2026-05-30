@@ -23,6 +23,8 @@
     "type-check:legacy": "vue-tsc -p tsconfig.legacy.json --noEmit || exit 0",
     "lint": "eslint . --fix --cache",
     "test": "vitest",
+    "seed": "npx tsx scripts/seed/seed-data.ts",
+    "lint:hardcode": "npx tsx scripts/check-hardcode.ts",
     "prepare": "husky"
   },
   "dependencies": {

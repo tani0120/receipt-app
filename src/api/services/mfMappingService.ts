@@ -61,6 +61,10 @@ export interface MfMappingTables {
   accountDirectionMap: Map<string, 'sales' | 'purchase' | 'common'>
   /** 税区分方向: { [sugusru概念ID]: 'sales' | 'purchase' | 'common' } */
   taxDirectionMap: Map<string, 'sales' | 'purchase' | 'common'>
+  /** 簡易課税専用税区分IDのSet（データ駆動。IDパターンマッチ代替） */
+  taxSimplifiedOnlySet: Set<string>
+  /** 個別対応方式専用税区分IDのSet（データ駆動。_COMMON_/_NT_パターン代替） */
+  taxIndividualOnlySet: Set<string>
   /** 逆マップ: MF科目名 → Sugusru概念ID（MF→Sugusru取込用） */
   reverseAccountMap: Map<string, string>
   /** 逆マップ: MF税区分名 → Sugusru概念ID（MF→Sugusru取込用） */
@@ -96,6 +100,8 @@ interface SugusruTax {
   id: string
   name: string
   direction?: 'sales' | 'purchase' | 'common'
+  simplifiedOnly?: boolean
+  individualOnly?: boolean
 }
 
 async function loadSugusruAccounts(): Promise<SugusruAccount[]> {
@@ -298,8 +304,12 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
   // 税区分方向マップ生成（Sugusruマスタのdirectionから）
   const sugusruTaxes = await loadSugusruTaxes()
   const taxDirectionMap = new Map<string, 'sales' | 'purchase' | 'common'>()
+  const taxSimplifiedOnlySet = new Set<string>()
+  const taxIndividualOnlySet = new Set<string>()
   for (const tax of sugusruTaxes) {
     taxDirectionMap.set(tax.id, tax.direction ?? 'common')
+    if (tax.simplifiedOnly) taxSimplifiedOnlySet.add(tax.id)
+    if (tax.individualOnly) taxIndividualOnlySet.add(tax.id)
   }
 
   // 逆マップ生成（MF名前 → Sugusru概念ID。MF→Sugusru取込で科目・税区分を概念IDに変換するため）
@@ -324,6 +334,8 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
     tradePartnerMap,
     accountDirectionMap,
     taxDirectionMap,
+    taxSimplifiedOnlySet,
+    taxIndividualOnlySet,
     reverseAccountMap,
     reverseTaxMap,
     unmatchedAccounts,

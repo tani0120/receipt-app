@@ -52,6 +52,10 @@ export type Account = {
     hidden?: boolean
     /** マスタカスタム科目フラグ */
     isMasterCustom?: boolean
+    /** 売上返品科目フラグ（逆仕訳例外判定用。売上値引・売上返品等） */
+    isContraRevenue?: boolean
+    /** 仕入返品科目フラグ（逆仕訳例外判定用。仕入値引・仕入返品等） */
+    isContraExpense?: boolean
 
     // ── MF連携フィールド（MF取込時のみ設定。MF未連携顧問先はundefined） ──
 

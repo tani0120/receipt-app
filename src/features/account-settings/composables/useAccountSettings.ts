@@ -156,8 +156,12 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // ==============================
   function filteredTaxCategories(
     direction: 'sales' | 'purchase' | 'common',
-    consumptionTaxMode?: 'general' | 'simplified' | 'exempt'
+    consumptionTaxMode?: 'general' | 'individual' | 'proportional' | 'simplified' | 'exempt'
   ): UnifiedTaxCategory[] {
+    // individual/proportional は general（原則課税）の細分化。税区分フィルタでは同一扱い
+    const normalizedMode = consumptionTaxMode === 'individual' || consumptionTaxMode === 'proportional'
+      ? 'general' : consumptionTaxMode
+
     return taxCategories.value.filter(tc => {
       if (tc.hidden || tc.hiddenInMaster) return false
 
@@ -167,19 +171,19 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       if (direction === 'common' && tc.direction !== 'common') return false
 
       // 課税方式フィルタ（consumptionTaxMode省略時は従来動作）
-      if (!consumptionTaxMode) return true
+      if (!normalizedMode) return true
 
       // 免税事業者: direction='common'（「対象外」「不明」）のみ
-      if (consumptionTaxMode === 'exempt') return tc.direction === 'common'
+      if (normalizedMode === 'exempt') return tc.direction === 'common'
 
-      // 簡易課税判定: IDサフィックス _T1〜_T6
-      const isSimplifiedTaxCategory = /_T[1-6]$/.test(tc.id)
+      // 簡易課税専用判定: simplifiedOnlyフラグ（データ駆動。IDパターンに依存しない）
+      const isSimplifiedTaxCategory = tc.simplifiedOnly === true
 
-      // 本則課税: 業種区分付き税区分を除外
-      if (consumptionTaxMode === 'general') return !isSimplifiedTaxCategory
+      // 本則課税: 簡易課税専用の税区分を除外
+      if (normalizedMode === 'general') return !isSimplifiedTaxCategory
 
       // 簡易課税: 一般 + 業種区分付き（売上側のみ）
-      if (consumptionTaxMode === 'simplified') {
+      if (normalizedMode === 'simplified') {
         if (isSimplifiedTaxCategory && tc.direction !== 'sales') return false
         return true
       }

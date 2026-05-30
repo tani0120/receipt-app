@@ -21,6 +21,7 @@ import type { MfMappingTables } from './mfMappingService'
 import { buildAllMaps } from './mfMappingService'
 import { importJournals } from './confirmedJournalStore'
 import { normalizeVendorName } from '../../utils/pipeline/vendorIdentification'
+import { fromMfInvoiceKind, MF_JOURNAL_TYPE_ADJUSTING } from '../../constants/mfApiConstants'
 
 // ────────────────────────────────────────────
 // バリデーション結果型
@@ -90,11 +91,8 @@ function cleanupPending(): void {
 // ────────────────────────────────────────────
 
 function reverseInvoiceKind(mfKind: string | null | undefined): string | null {
-  if (!mfKind) return null
-  if (mfKind === 'INVOICE_KIND_QUALIFIED') return 'qualified'
-  if (mfKind.startsWith('INVOICE_KIND_UNQUALIFIED')) return 'not_qualified'
-  if (mfKind === 'INVOICE_KIND_NOT_TARGET') return null
-  return null
+  // 共通定数・ロジックは mfApiConstants.ts に集約
+  return fromMfInvoiceKind(mfKind)
 }
 
 // ────────────────────────────────────────────
@@ -272,7 +270,7 @@ export async function prepareMfImport(
       credit_entries: creditEntries,
       source: 'mf_import',
       mf_journal_type: mfJournal.journal_type ?? null,
-      is_closing_entry: mfJournal.journal_type === 'adjusting_entry',
+      is_closing_entry: mfJournal.journal_type === MF_JOURNAL_TYPE_ADJUSTING,
       memo: mfJournal.memo || null,
       tags: mfJournal.tags?.join(',') || null,
       import_batch_id: batchId,
@@ -282,7 +280,7 @@ export async function prepareMfImport(
     })
 
     // 決算整理仕訳の警告
-    if (mfJournal.journal_type === 'adjusting_entry') {
+    if (mfJournal.journal_type === MF_JOURNAL_TYPE_ADJUSTING) {
       warnings.push({
         severity: 'warning', type: 'IMPORT_CLOSING_ENTRY', mfNumber: mfJournal.number,
         message: `MF#${mfJournal.number}: 決算整理仕訳`,

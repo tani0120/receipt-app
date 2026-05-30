@@ -38,6 +38,9 @@ export const OTHER_PL_CATEGORIES: readonly string[] = ['繰戻額等']
 /** BS資産のうちauto_purchaseを許可する中分類（資産取得＝課税仕入）*/
 export const BS_ASSET_PURCHASE_CATEGORIES: readonly string[] = ['有形固定資産', '無形固定資産']
 
+/** 不動産関連カテゴリ（個人事業(不動産所得あり)選択時のみ表示） */
+export const REAL_ESTATE_CATEGORIES: readonly string[] = ['不動産収入', '不動産経費', '不動産']
+
 /**
  * カテゴリグループ定義（UIのセレクトボックス用optgroup） */
 export const CATEGORY_GROUPS: readonly { label: string; items: readonly string[] }[] = [
@@ -116,22 +119,32 @@ export function taxDetLabel(td: string): string {
 }
 
 /**
- * category変更時のaccountGroup・taxDetermination・defaultTaxCategoryIdの自動連動設定 *
+ * category変更時のaccountGroup・taxDetermination・defaultTaxCategoryIdの自動連動設定
+ *
+ * taxCategoriesが渡された場合はマスタからデフォルト税区分を動的に解決する（データ駆動）。
+ * 渡されない場合はフォールバックとして空文字を返す。
+ *
  * @param newCategory - 変更先のcategory
+ * @param taxCategories - 税区分マスタ（デフォルトID解決用。省略時はフォールバック）
  * @returns { accountGroup, taxDetermination, defaultTaxCategoryId } の推奨値
  */
-export function deriveCategoryDefaults(newCategory: string): {
+export function deriveCategoryDefaults(newCategory: string, taxCategories?: { id: string; isSalesDefault?: boolean; isPurchaseDefault?: boolean; isExemptDefault?: boolean }[]): {
   accountGroup: AccountGroup
   taxDetermination: TaxDetermination
   defaultTaxCategoryId: string
 } {
   const accountGroup = getCategoryAccountGroup(newCategory)
 
+  // データ駆動: マスタのフラグからデフォルト税区分IDを解決
+  const salesDefault = taxCategories?.find(t => t.isSalesDefault)?.id ?? ''
+  const purchaseDefault = taxCategories?.find(t => t.isPurchaseDefault)?.id ?? ''
+  const exemptDefault = taxCategories?.find(t => t.isExemptDefault)?.id ?? ''
+
   if (SALES_CATEGORIES.includes(newCategory)) {
-    return { accountGroup, taxDetermination: 'auto_sales', defaultTaxCategoryId: 'SALES_TAXABLE_10' }
+    return { accountGroup, taxDetermination: 'auto_sales', defaultTaxCategoryId: salesDefault }
   }
   if (PURCHASE_CATEGORIES.includes(newCategory)) {
-    return { accountGroup, taxDetermination: 'auto_purchase', defaultTaxCategoryId: 'PURCHASE_TAXABLE_10' }
+    return { accountGroup, taxDetermination: 'auto_purchase', defaultTaxCategoryId: purchaseDefault }
   }
-  return { accountGroup, taxDetermination: 'fixed', defaultTaxCategoryId: 'COMMON_EXEMPT' }
+  return { accountGroup, taxDetermination: 'fixed', defaultTaxCategoryId: exemptDefault }
 }

@@ -412,7 +412,7 @@ export interface Vendor {
    *   vendors_clientで顧問先固有値に上書き可能。
    *
    * 【取引先外（non_vendor_type設定）の場合】
-   *   直接設定（例: 'COMMON_EXEMPT', 'PURCHASE_TAXABLE_10'）。
+   *   直接設定（科目マスタのdefaultTaxCategoryIdから動的解決）。
    *   取引先外は科目と税区分がセットで確定するため自動導出しない。
    */
   debit_tax_category: string | null;

@@ -9,6 +9,7 @@
 
 import type { Vendor } from '@/types/pipeline/vendor.type'
 import type { Account } from '@/types/shared-account'
+import { DEFAULT_EFFECTIVE_FROM } from '@/constants/mfApiConstants'
 
 /** DB行 → Vendor型への変換 */
 export function toVendor(row: Record<string, unknown>): Vendor {
@@ -86,7 +87,7 @@ export function toAccount(row: Record<string, unknown>): Account {
     defaultTaxCategoryId: (row.default_tax_category_id as string) ?? undefined,
     taxDetermination: (row.tax_determination as Account['taxDetermination']) ?? 'auto_purchase',
     deprecated: (row.deprecated as boolean) ?? false,
-    effectiveFrom: (row.effective_from as string) ?? '2019-10-01',
+    effectiveFrom: (row.effective_from as string) ?? DEFAULT_EFFECTIVE_FROM,
     effectiveTo: (row.effective_to as string) ?? null,
     sortOrder: (row.sort_order as number) ?? 0,
     isCustom: (row.is_custom as boolean) ?? false,

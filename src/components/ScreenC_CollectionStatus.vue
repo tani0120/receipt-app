@@ -23,7 +23,7 @@
                           <span class="bg-slate-100 text-slate-600 text-sm px-2 py-1 rounded font-mono font-bold">{{ currentClient.clientCode }}</span>
                           <h1 class="text-2xl font-bold text-slate-800">{{ currentClient.companyName }}</h1>
                           <span class="text-xs bg-slate-100 px-2 py-1 rounded border text-slate-500">
-                              {{ (currentClient.type === 'individual' || currentClient.type === 'sole_proprietor') ? UI_MSG.個人 : UI_MSG.法人 }} ({{ currentClient.fiscalMonth }}{{ UI_MSG.月決算接尾 }})
+                              {{ isIndividualType(currentClient.type) ? UI_MSG.個人 : UI_MSG.法人 }} ({{ currentClient.fiscalMonth }}{{ UI_MSG.月決算接尾 }})
                           </span>
                       </div>
                       <div class="flex items-center gap-3 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 inline-flex">
@@ -290,7 +290,7 @@
                                   <div class="w-10 bg-slate-100 flex items-center justify-center border-r border-slate-200 text-[10px] font-mono font-bold text-slate-500 shrink-0">{{ client.code }}</div>
                                   <div class="flex-1 px-3 flex flex-col justify-center min-w-0 hover:bg-blue-50">
                                       <div class="font-bold text-slate-700 text-xs truncate">{{ client.name }}</div>
-                                      <div class="flex gap-1"><span class="text-[9px] text-blue-600 font-bold">{{ (client.type === 'individual' || client.type === 'sole_proprietor') ? '個人(12月)' : client.fiscalMonth + '月決算' }}</span></div>
+                                      <div class="flex gap-1"><span class="text-[9px] text-blue-600 font-bold">{{ isIndividualType(client.type) ? '個人(12月)' : client.fiscalMonth + '月決算' }}</span></div>
                                   </div>
                                   <div class="w-8 flex items-center justify-center border-l border-slate-100 shrink-0"><i class="fa-solid fa-folder-open text-slate-300 hover:text-blue-600"></i></div>
                               </div>
@@ -315,6 +315,7 @@
 import { ref, computed } from 'vue';
 import moment from 'moment';
 import { UI_MSG } from '@/constants/uiMessages';
+import { isIndividualType, getEffectiveFiscalMonth, getFilingOffsetMonths } from '@/constants/clientOptions';
 
 /** 回収カレンダー一覧で使用する顧問先データ型 */
 interface CollectionClient {
@@ -361,7 +362,7 @@ const clients = ref([
 const clientSelectOptions = computed(() =>
   clients.value.map(c => ({
     clientCode: c.clientCode,
-    companyName: c.companyName + ((c.type === 'individual' || c.type === 'sole_proprietor') ? UI_MSG.個人接尾 : ''),
+    companyName: c.companyName + (isIndividualType(c.type) ? UI_MSG.個人接尾 : ''),
   }))
 );
 
@@ -409,7 +410,7 @@ const getDateForCell = (m: number) => {
 };
 
 const getFiscalTermEnd = (client: CollectionClient, targetDate: moment.Moment) => {
-    const fiscalMonth = (client.type === 'individual' || client.type === 'sole_proprietor') ? 12 : client.fiscalMonth;
+    const fiscalMonth = getEffectiveFiscalMonth(client.type, client.fiscalMonth);
     const month = targetDate.month() + 1;
     let year = targetDate.year();
     if (month > fiscalMonth) {
@@ -424,7 +425,7 @@ const getActiveTerm1End = (client: CollectionClient) => {
 
     for (let i = 0; i < 5; i++) {
         const termEnd = getFiscalTermEnd(client, checkDate);
-        const filingOffset = (client.type === 'individual' || client.type === 'sole_proprietor') ? 3 : 2;
+        const filingOffset = getFilingOffsetMonths(client.type);
         const filingDeadline = termEnd.clone().add(filingOffset, 'months').endOf('month');
 
         if (today.isSameOrBefore(filingDeadline)) {
@@ -457,7 +458,7 @@ const getCellStyle = (client: CollectionClient, m: number) => {
 const isFiscalMonth = (client: CollectionClient, m: number) => {
      const displayMonth = m <= 12 ? m : m - 12;
      // Handle individual case if hardcoded in logic (usually 12)
-     const fiscalMonth = (client.type === 'individual' || client.type === 'sole_proprietor') ? 12 : client.fiscalMonth;
+     const fiscalMonth = getEffectiveFiscalMonth(client.type, client.fiscalMonth);
      return fiscalMonth === displayMonth;
 };
 

@@ -1,6 +1,8 @@
 import { globalIgnores } from 'eslint/config'
 import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
 import pluginVue from 'eslint-plugin-vue'
+// @ts-expect-error CJSカスタムルール（型宣言不要）
+import noHardcodedAccountId from './eslint-rules/no-hardcoded-account-id.cjs'
 
 // To allow more languages other than `ts` in `.vue` files, uncomment the following lines:
 // import { configureVueProject } from '@vue/eslint-config-typescript'
@@ -98,6 +100,28 @@ export default defineConfigWithVueTs(
           message: 'API層（tsx実行）では @/ エイリアス禁止。相対パスを使用してください。',
         }],
       }],
+    },
+  },
+
+  // ────────────────────────────────────────────
+  // ハードコード検知ルール（カスタム）
+  //
+  // ファイル保存時にIDEが自動実行。科目ID・日付・事業者種別の
+  // ハードコードを検知し、赤波線+問題パネルに表示する。
+  // ────────────────────────────────────────────
+  {
+    name: 'app/no-hardcode',
+    files: ['src/**/*.{ts,vue}'],
+    ignores: ['src/scripts/**'],
+    plugins: {
+      'custom': {
+        rules: {
+          'no-hardcoded-account-id': noHardcodedAccountId,
+        },
+      },
+    },
+    rules: {
+      'custom/no-hardcoded-account-id': 'error',
     },
   },
 )

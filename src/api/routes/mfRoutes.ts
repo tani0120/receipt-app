@@ -34,11 +34,14 @@ import { getById, updateClient } from '../services/clientStore'
 import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFieldMapping'
 import { importMfJournals } from '../services/mfJournalImporter'
 import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services/mfTaxImportService'
+import { importMasterAccounts } from '../services/mfAccountImportService'
 import { saveClientAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories } from '../services/accountMasterStore'
-import type { Account, AccountTarget, AccountGroup, TaxDetermination } from '../../types/shared-account'
+import type { Account } from '../../types/shared-account'
+import { deriveMfAccountGroup, deriveTaxDetermination, deriveTarget } from '../../data/master/mf-account-category-mapping'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
 import { getAllTaxAvailable, saveTaxAvailable, invalidateCache, type TaxMethodKey } from '../services/mfTaxAvailableStore'
+import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
 
 const app = new Hono()
 
@@ -433,13 +436,13 @@ app.post('/sync-all', async (c) => {
     const mapped: Account[] = available.map((a, idx) => ({
       id: a.id,
       name: a.name,
-      target: 'both' as AccountTarget,
-      accountGroup: 'PL_EXPENSE' as AccountGroup,
+      target: deriveTarget(a.category, a.financial_statement_type),
+      accountGroup: deriveMfAccountGroup(a.account_group, a.category),
       category: a.category,
       defaultTaxCategoryId: undefined,
-      taxDetermination: 'fixed' as TaxDetermination,
+      taxDetermination: deriveTaxDetermination(a.category),
       deprecated: false,
-      effectiveFrom: '2019-10-01',
+      effectiveFrom: DEFAULT_EFFECTIVE_FROM,
       effectiveTo: null,
       sortOrder: idx + 1,
       mfAccountId: a.id,
@@ -493,7 +496,7 @@ app.post('/sync-all', async (c) => {
         aiSelectable: true,
         active: true,
         deprecated: false,
-        effectiveFrom: '2019-10-01',
+        effectiveFrom: DEFAULT_EFFECTIVE_FROM,
         effectiveTo: null,
         defaultVisible: true,
         displayOrder: idx + 1,
@@ -660,6 +663,33 @@ app.post('/import-client-taxes', async (c) => {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`[mfRoutes] import-client-taxes失敗: ${message}`)
     return c.json({ error: '顧問先税区分インポートに失敗しました', detail: message }, 500)
+  }
+})
+
+/**
+ * POST /import-master-accounts — マスタ勘定科目インポート（差分マージ）
+ * body: { clientId: string, applyNameChanges?: boolean }
+ *
+ * MFから勘定科目を取得し、全社マスタと差分マージして保存する。
+ * clientIdはMF認証用（MCPトークンキー）。マスタ側は全社共通。
+ */
+app.post('/import-master-accounts', async (c) => {
+  const body = await c.req.json<{ clientId?: string; applyNameChanges?: boolean }>()
+  const clientId = body.clientId
+  if (!clientId) return c.json({ error: 'clientId必須' }, 400)
+
+  const status = getAuthStatus(clientId)
+  if (!status.authenticated) {
+    return c.json({ error: 'MF未認証です。先にOAuth認可を完了してください' }, 401)
+  }
+
+  try {
+    const result = await importMasterAccounts(clientId, body.applyNameChanges ?? false)
+    return c.json(result)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[mfRoutes] import-master-accounts失敗: ${message}`)
+    return c.json({ error: 'マスタ勘定科目インポートに失敗しました', detail: message }, 500)
   }
 })
 

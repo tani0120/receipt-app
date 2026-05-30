@@ -148,6 +148,7 @@ import { useAccountMaster } from '@/features/account-management/composables/useA
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useClients } from '@/features/client-management/composables/useClients';
 import { FILTER_ALL_LABEL, PLACEHOLDER_ADD } from '@/constants/vendorOptions';
+import { isIndividualType } from '@/constants/clientOptions';
 import { UI_MSG } from '@/constants/uiMessages';
 
 // ============================================================
@@ -157,7 +158,7 @@ const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) ?? '');
 const { currentClient } = useClients();
 
-const isCorporate = computed(() => currentClient.value?.type !== 'individual');
+const isCorporate = computed(() => !isIndividualType(currentClient.value?.type));
 const clientLabel = computed(() => currentClient.value?.companyName ?? clientId.value);
 
 // ============================================================

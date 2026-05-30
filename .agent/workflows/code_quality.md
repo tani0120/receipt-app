@@ -263,7 +263,7 @@ layout.loadLayout()
 
 ### 検出スクリプト
 
-`scripts/audit-hardcode.cjs` を配置し、以下のタイミングで実行：
+`npm run lint:hardcode`（`scripts/check-hardcode.ts`）を以下のタイミングで実行：
 
 | タイミング | 実行義務 |
 |---|---|
@@ -290,7 +290,7 @@ layout.loadLayout()
 | 2 | `npx eslint src/ --ext .ts,.vue` | Lintエラー | エラー0件 |
 | 3 | `npx vite build` | ビルド可否 | 成功 |
 | 4 | `git status --short` | 一時ファイル残存 | 出力ゼロ |
-| 5 | `node scripts/audit-hardcode.cjs` | ハードコード残存数 | 前回以下 |
+| 5 | `npm run lint:hardcode` | ハードコード残存数 | エラー0件 |
 
 ### 実行タイミング（厳守）
 

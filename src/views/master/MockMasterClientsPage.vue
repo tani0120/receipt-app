@@ -141,7 +141,7 @@
                   <template v-else-if="col.key === 'consumptionTaxMode'">{{ taxModeLabel(row.consumptionTaxMode) }}</template>
                   <!-- 会社名 -->
                   <template v-else-if="col.key === 'companyName'">
-                    <span><MfCloudIcon v-if="mfStatusMap[row.clientId]" :size="12" tooltip="MF連携済み" />{{ (row.type === 'individual' || row.type === 'sole_proprietor') && row.repName ? row.repName : row.companyName }}</span>
+                    <span><MfCloudIcon v-if="mfStatusMap[row.clientId]" :size="12" tooltip="MF連携済み" />{{ isIndividualType(row.type) && row.repName ? row.repName : row.companyName }}</span>
                   </template>
                   <!-- 担当者 -->
                   <template v-else-if="col.key === 'staffId'">{{ getStaffNameForClient(row.clientId) || '—' }}</template>
@@ -376,7 +376,7 @@
                 </label>
               </div>
               <!-- 不動産所得あり（個人事業主のみ表示） -->
-              <div v-if="panelForm.type === 'individual' || panelForm.type === 'sole_proprietor'" class="cm-field">
+              <div v-if="isIndividualType(panelForm.type)" class="cm-field">
                 <label class="cm-checkbox-label">
                   <input type="checkbox" v-model="panelForm.hasRentalIncome">
                   <span>不動産所得あり</span>
@@ -505,6 +505,7 @@ import {
   TYPE_OPTIONS, STATUS_OPTIONS,
   PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
   getLabel, getValueByLabel, resolveFieldOptions,
+  isIndividualType,
 } from '@/constants/clientOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';

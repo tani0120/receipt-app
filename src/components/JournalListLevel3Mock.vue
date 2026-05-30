@@ -2720,8 +2720,9 @@ import type { StaffNoteKey } from "../types/staff_notes";
 import type { ConfirmedJournal } from "../types/confirmed_journal.type";
 
 import { toMfCsvDate } from "@/utils/mf-csv-date";
-import { validateByVoucherType, getVoucherTypeConflictAccounts } from "@/utils/journalWarningSync";
-// VOUCHER_TYPE_RULES, getBaseAccountId は API側 (journalHintService.ts) に移設済み (Step 6-A3)
+import { syncWarningLabelsCore, validateByVoucherType, getMegaGroup, validateDebitCreditCombination, isTaxCategoryInvalidForMode, resolveValidTaxCategoryForMode } from "@/utils/journalWarningSync";
+import type { SyncWarningResult } from "@/utils/journalWarningSync";
+import { VOUCHER_TYPE_RULES } from '@/data/master/voucherTypeRules';
 import {
   CHECK_STATUS_OPTIONS, PAGE_SIZE_OPTIONS, AMOUNT_CONDITION_OPTIONS,
   PLACEHOLDER_EMPTY, PLACEHOLDER_SELECT,
@@ -2729,15 +2730,11 @@ import {
 } from '@/constants/vendorOptions';
 import { useAccountMaster } from '@/features/account-management/composables/useAccountMaster';
 import type { SelectOption } from '@/constants/clientOptions';
+import { isIndividualType } from '@/constants/clientOptions';
 import { UI_MSG } from '@/constants/uiMessages';
 import {
   FIELD_ACCOUNT, FIELD_TAX_CATEGORY, FIELD_AMOUNT, FIELD_AMOUNT_DIFF,
   SIDE_DEBIT, SIDE_CREDIT, LABEL_UNSET,
-  WARN_SALES_DEBIT, WARN_EXPENSE_CREDIT,
-  WARN_SALES_SALES, WARN_EXPENSE_EXPENSE,
-  WARN_SALES_EXPENSE, WARN_EXPENSE_SALES,
-  WARN_EQUITY_SALES, WARN_EQUITY_EXPENSE,
-  WARN_SALES_EQUITY, WARN_EXPENSE_EQUITY, WARN_EQUITY_EQUITY,
 } from '@/constants/validationMessages';
 
 /** 勘定科目選択肢—API取得のマスタ科目から動的生成 */
@@ -2797,7 +2794,7 @@ const filteredAccounts = computed(() => {
       if (acc.deprecated) return false;
       if (acc.target === "both") return true;
       if (acc.target === clientType) {
-        if (clientType === "individual" && !hasRental && acc.category.includes(UI_MSG.カテゴリ_不動産))
+        if (isIndividualType(clientType) && !hasRental && acc.category.includes(UI_MSG.カテゴリ_不動産))
           return false;
         return true;
       }
@@ -2829,13 +2826,6 @@ import {
   TAX_GROUP_SALES,
   TAX_GROUP_PURCHASE,
   TAX_GROUP_COMMON,
-  CONTRA_REVENUE_IDS,
-  CONTRA_EXPENSE_IDS,
-  AG_PL_REVENUE,
-  AG_PL_EXPENSE,
-  AG_BS_EQUITY,
-  AG_BS_ASSET,
-  AG_BS_LIABILITY,
   WARNING_LABEL_MAP,
   LABEL_KEY_MAP,
   TIP_RULE_APPLIED,
@@ -2856,8 +2846,9 @@ import type { MegaGroupType } from "@/constants/journalConstants";
  */
 function resolveDefaultTaxForClient(defaultTaxName: string): string {
   const taxMode = activeClientFull.value?.consumptionTaxMode;
-  if (taxMode === "exempt") return "COMMON_EXEMPT";
-  return defaultTaxName;
+  if (!taxMode) return defaultTaxName;
+  // 免税時はCOMMON_EXEMPTに変換（sharedのSSOTと同じロジック）
+  return resolveValidTaxCategoryForMode(defaultTaxName, taxMode, clientSettings.taxCategories.value);
 }
 
 /**
@@ -2871,15 +2862,8 @@ function isTaxCategoryInvalid(taxCategoryId: string | null | undefined): boolean
   if (!taxCategoryId) return false;
   const taxMode = activeClientFull.value?.consumptionTaxMode;
   if (!taxMode) return false;
-
-  if (taxMode === "exempt") {
-    return taxCategoryId !== "COMMON_EXEMPT";
-  }
-  if (taxMode === "general") {
-    // 概念IDで判定: 業種区分付きは _T1〜_T6 で終わる
-    return /_T[1-6]$/.test(taxCategoryId);
-  }
-  return false;
+  // sharedの共通判定関数を使用（データ駆動。IDパターンマッチに依存しない）
+  return isTaxCategoryInvalidForMode(taxCategoryId, taxMode, clientSettings.taxCategories.value);
 }
 
 // ── 税区分矛盾モーダル ──
@@ -2900,9 +2884,7 @@ const taxMismatchSummary = computed(() => {
   }
 
   const resolveTo = (from: string): string => {
-    if (taxMode === "exempt") return "COMMON_EXEMPT";
-    if (taxMode === "general") return from.replace(/_T[1-6]$/, "");
-    return from;
+    return resolveValidTaxCategoryForMode(from, taxMode, clientSettings.taxCategories.value);
   };
 
   const items = [...countMap.entries()].map(([from, count]) => ({
@@ -2940,9 +2922,7 @@ function fixAllTaxMismatches() {
     if (!targetJournalIds.has(j.id)) continue;
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (!e || !isTaxCategoryInvalid(e.tax_category_id)) continue;
-      if (taxMode === "exempt") e.tax_category_id = "COMMON_EXEMPT";
-      else if (taxMode === "general")
-        e.tax_category_id = (e.tax_category_id ?? "").replace(/_T[1-6]$/, "");
+      e.tax_category_id = resolveValidTaxCategoryForMode(e.tax_category_id ?? "", taxMode, clientSettings.taxCategories.value);
     }
   }
 
@@ -3061,36 +3041,8 @@ function filterTaxGroups(row: CombinedRow, colKey: string, query: string) {
 }
 
 // ────── 貸借科目バリデーション（5分類 + 逆仕訳例外） ──────
-// MegaGroupType / CONTRA_REVENUE_IDS / CONTRA_EXPENSE_IDS / AG_* は
-// constants/journalConstants.ts からimport済み
-
-/** 勘定科目名から5分類グループを判定（accountGroupベース） */
-function getMegaGroup(accountName: string | null): MegaGroupType {
-  if (!accountName) return null;
-  const allAccounts = clientSettings.accounts.value;
-  const acc = allAccounts.find((a) => a.id === accountName);
-  if (!acc) return null;
-  if (acc.accountGroup === AG_PL_REVENUE) return "sales";
-  if (acc.accountGroup === AG_PL_EXPENSE) return "expense";
-  if (acc.accountGroup === AG_BS_EQUITY) return "bs_equity";
-  if (acc.accountGroup === AG_BS_ASSET || acc.accountGroup === AG_BS_LIABILITY) return "bs_al";
-  return null;
-}
-
-/** 勘定科目が逆仕訳科目かどうか判定 */
-function isContraAccount(accountName: string | null): {
-  isContraRevenue: boolean;
-  isContraExpense: boolean;
-} {
-  if (!accountName) return { isContraRevenue: false, isContraExpense: false };
-  const allAccounts = clientSettings.accounts.value;
-  const acc = allAccounts.find((a) => a.id === accountName);
-  if (!acc) return { isContraRevenue: false, isContraExpense: false };
-  return {
-    isContraRevenue: CONTRA_REVENUE_IDS.includes(acc.id),
-    isContraExpense: CONTRA_EXPENSE_IDS.includes(acc.id),
-  };
-}
+// getMegaGroup / validateDebitCreditCombination は
+// shared/validation/journalValidationCore.ts（SSOT）から import済み
 
 /** 5分類グループの表示名 */
 function megaGroupLabel(group: MegaGroupType): string {
@@ -3127,59 +3079,7 @@ function megaGroupLabel(group: MegaGroupType): string {
  *
  * @returns null=正常、string=警告メッセージ
  */
-function validateDebitCreditCombination(
-  debitGroup: MegaGroupType,
-  creditGroup: MegaGroupType,
-  debitAccount?: string | null,
-  creditAccount?: string | null,
-): string | null {
-  if (!debitGroup || !creditGroup) return null;
-
-  // ── 正常パターン ──
-  if (debitGroup === "expense" && creditGroup === "bs_al") return null;
-  if (debitGroup === "bs_al" && creditGroup === "sales") return null;
-  if (debitGroup === "bs_al" && creditGroup === "bs_al") return null;
-  if (debitGroup === "expense" && creditGroup === "bs_equity") return null;
-  if (debitGroup === "bs_equity" && creditGroup === "bs_al") return null;
-  if (debitGroup === "bs_al" && creditGroup === "bs_equity") return null;
-
-  // ── 逆仕訳許容パターン（例外科目チェック） ──
-  // 売上 × 資産負債: 売上値引き・返品なら許容
-  if (debitGroup === "sales" && creditGroup === "bs_al") {
-    const { isContraRevenue } = isContraAccount(debitAccount ?? null);
-    if (isContraRevenue) return null;
-    return WARN_SALES_DEBIT;
-  }
-  // 資産負債 × 経費: 仕入値引き・返品なら許容
-  if (debitGroup === "bs_al" && creditGroup === "expense") {
-    const { isContraExpense } = isContraAccount(creditAccount ?? null);
-    if (isContraExpense) return null;
-    return WARN_EXPENSE_CREDIT;
-  }
-
-  // ── 不正パターン ──
-  if (debitGroup === "sales" && creditGroup === "sales")
-    return WARN_SALES_SALES;
-  if (debitGroup === "expense" && creditGroup === "expense")
-    return WARN_EXPENSE_EXPENSE;
-  if (debitGroup === "sales" && creditGroup === "expense")
-    return WARN_SALES_EXPENSE;
-  if (debitGroup === "expense" && creditGroup === "sales")
-    return WARN_EXPENSE_SALES;
-  // 純資産 × PL系
-  if (debitGroup === "bs_equity" && creditGroup === "sales")
-    return WARN_EQUITY_SALES;
-  if (debitGroup === "bs_equity" && creditGroup === "expense")
-    return WARN_EQUITY_EXPENSE;
-  if (debitGroup === "sales" && creditGroup === "bs_equity")
-    return WARN_SALES_EQUITY;
-  if (debitGroup === "expense" && creditGroup === "bs_equity")
-    return WARN_EXPENSE_EQUITY;
-  if (debitGroup === "bs_equity" && creditGroup === "bs_equity")
-    return WARN_EQUITY_EQUITY;
-
-  return null;
-}
+// validateDebitCreditCombination は shared からimport済み（上記参照）
 
 /** 勘定科目選択後の3大グループバリデーション実行 */
 function runAccountValidation(journal: JournalPhase5Mock): void {
@@ -3187,6 +3087,7 @@ function runAccountValidation(journal: JournalPhase5Mock): void {
   syncWarningLabels(journal);
 
   // 全借方×全貸方のクロスチェック（複合仕訳対応）
+  const accounts = clientSettings.accounts.value;
   let warning: string | null = null;
   let debitAccount: string | null = null;
   let creditAccount: string | null = null;
@@ -3196,9 +3097,9 @@ function runAccountValidation(journal: JournalPhase5Mock): void {
     for (const cEntry of journal.credit_entries) {
       const dAcct = dEntry.account ?? null;
       const cAcct = cEntry.account ?? null;
-      const dGrp = getMegaGroup(dAcct);
-      const cGrp = getMegaGroup(cAcct);
-      const w = validateDebitCreditCombination(dGrp, cGrp, dAcct, cAcct);
+      const dGrp = getMegaGroup(dAcct, accounts);
+      const cGrp = getMegaGroup(cAcct, accounts);
+      const w = validateDebitCreditCombination(dGrp, cGrp, dAcct, cAcct, accounts);
       if (w) {
         warning = w;
         debitAccount = dAcct;
@@ -3236,7 +3137,7 @@ function runAccountValidation(journal: JournalPhase5Mock): void {
   if (!voucherType || !debitAccount || !creditAccount) return;
 
   const accts = clientSettings.accounts.value;
-  const voucherWarning = validateByVoucherType(voucherType, journal, accts);
+  const voucherWarning = validateByVoucherType(voucherType, journal, accts, VOUCHER_TYPE_RULES);
   if (voucherWarning) {
     confirmDialog.value = {
       show: true,
@@ -3257,188 +3158,42 @@ const voucherTypeConflictMap = new Map<string, { debit: Set<string>; credit: Set
 
 /**
  * 段階A: 警告列バリデーション（双方向同期）
- * 6条件を判定し、labels[]を自動的に追加/除去する。
- * 新規追加されたラベルがあれば警告モーダルを表示する。
+ * shared/validation/journalValidationCore.ts（SSOT）を呼び出し、
+ * UI固有のセルハイライトMap更新 + モーダル表示を行う。
  */
 function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
-  const labels = journal.labels;
-  const addedLabels: JournalLabelMock[] = [];
-  const removedLabels: JournalLabelMock[] = [];
-
-  // ヘルパー: ラベル追加（重複なし）＋モーダル表示用記録（既存でも記録）
-  function addLabel(key: JournalLabelMock) {
-    if (!labels.includes(key)) {
-      labels.push(key);
-    }
-    addedLabels.push(key);
-  }
-  // ヘルパー: ラベル除去（実際に除去した場合にremovedLabelsに記録）
-  function removeLabel(key: JournalLabelMock) {
-    const idx = labels.indexOf(key);
-    if (idx >= 0) {
-      labels.splice(idx, 1);
-      removedLabels.push(key);
-    }
-  }
-
-  // 1. ACCOUNT_UNKNOWN（勘定科目不明）: 全エントリのaccountが非null かつ マスタに存在
   const allAccounts = clientSettings.accounts.value;
-  const accountIds = new Set(allAccounts.map((a) => a.id));
-  const isValidAccount = (id: string | null) => id != null && id !== "" && accountIds.has(id);
-  const allAccountsValid =
-    journal.debit_entries.every((e) => isValidAccount(e.account)) &&
-    journal.credit_entries.every((e) => isValidAccount(e.account));
-  if (allAccountsValid) removeLabel("ACCOUNT_UNKNOWN");
-  else addLabel("ACCOUNT_UNKNOWN");
-
-  // 2. TAX_UNKNOWN（税区分不明）: 全エントリのtax_category_idが非null かつ マスタ/顧問先設定に存在
   const allTaxCategories = clientSettings.taxCategories.value;
-  const taxCategoryIds = new Set(allTaxCategories.map((t) => t.id));
-  const isValidTax = (id: string | null | undefined) =>
-    id != null && id !== "" && taxCategoryIds.has(id);
-  const allTaxValid =
-    journal.debit_entries.every((e) => isValidTax(e.tax_category_id)) &&
-    journal.credit_entries.every((e) => isValidTax(e.tax_category_id));
-  if (allTaxValid) removeLabel("TAX_UNKNOWN");
-  else addLabel("TAX_UNKNOWN");
 
-  // 3. DESCRIPTION_UNKNOWN（摘要不明）: descriptionが非null
-  if (journal.description != null && journal.description !== "") removeLabel("DESCRIPTION_UNKNOWN");
-  else addLabel("DESCRIPTION_UNKNOWN");
+  // shared（SSOT）を呼び出し — labels を直接 mutate する
+  const result: SyncWarningResult = syncWarningLabelsCore(journal, allAccounts, allTaxCategories, VOUCHER_TYPE_RULES);
 
-  // 4. DATE_UNKNOWN（日付不明）: voucher_dateが非null
-  if (journal.voucher_date != null && journal.voucher_date !== "") removeLabel("DATE_UNKNOWN");
-  else addLabel("DATE_UNKNOWN");
+  // ── UI固有: セルハイライトMap更新 ──
 
-  // 5. AMOUNT_UNCLEAR（金額不明）: 全エントリのamountが非null
-  const allAmountsFilled =
-    journal.debit_entries.every((e) => e.amount != null) &&
-    journal.credit_entries.every((e) => e.amount != null);
-  if (allAmountsFilled) removeLabel("AMOUNT_UNCLEAR");
-  else addLabel("AMOUNT_UNCLEAR");
-
-  // 6. DEBIT_CREDIT_MISMATCH（貸借不一致）: 借方合計 = 貸方合計
-  const debitSum = journal.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
-  const creditSum = journal.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0);
-  if (debitSum === creditSum && debitSum > 0) removeLabel("DEBIT_CREDIT_MISMATCH");
-  else addLabel("DEBIT_CREDIT_MISMATCH");
-
-  // 7. CATEGORY_CONFLICT（貸借科目矛盾）: 5分類バリデーション（全借方×全貸方クロスチェック）
-  const conflictDebitAccounts = new Set<string>();
-  const conflictCreditAccounts = new Set<string>();
-  for (const dEntry of journal.debit_entries) {
-    for (const cEntry of journal.credit_entries) {
-      const dAcct = dEntry.account ?? null;
-      const cAcct = cEntry.account ?? null;
-      if (
-        dAcct &&
-        cAcct &&
-        validateDebitCreditCombination(getMegaGroup(dAcct), getMegaGroup(cAcct), dAcct, cAcct)
-      ) {
-        conflictDebitAccounts.add(dAcct);
-        conflictCreditAccounts.add(cAcct);
-      }
-    }
-  }
-  if (conflictDebitAccounts.size > 0 || conflictCreditAccounts.size > 0) {
-    addLabel("CATEGORY_CONFLICT");
-    categoryConflictMap.set(journal.id, {
-      debit: conflictDebitAccounts,
-      credit: conflictCreditAccounts,
-    });
+  // #7 CATEGORY_CONFLICT
+  if (result.categoryConflicts.debit.size > 0 || result.categoryConflicts.credit.size > 0) {
+    categoryConflictMap.set(journal.id, result.categoryConflicts);
   } else {
-    removeLabel("CATEGORY_CONFLICT");
     categoryConflictMap.delete(journal.id);
   }
 
-  // 7b. SAME_ACCOUNT_BOTH_SIDES（借方貸方に同一科目）
-  const debitAccountSet = new Set(
-    journal.debit_entries.map((e) => e.account).filter((v): v is string => v != null),
-  );
-  const creditAccountSet = new Set(
-    journal.credit_entries.map((e) => e.account).filter((v): v is string => v != null),
-  );
-  const sameAccounts = [...debitAccountSet].filter((a) => creditAccountSet.has(a));
-  if (sameAccounts.length > 0) {
-    addLabel("SAME_ACCOUNT_BOTH_SIDES");
-    sameAccountBothSidesMap.set(journal.id, new Set(sameAccounts));
+  // #8 VOUCHER_TYPE_CONFLICT
+  if (result.voucherTypeConflicts.debit.size > 0 || result.voucherTypeConflicts.credit.size > 0) {
+    voucherTypeConflictMap.set(journal.id, result.voucherTypeConflicts);
   } else {
-    removeLabel("SAME_ACCOUNT_BOTH_SIDES");
-    sameAccountBothSidesMap.delete(journal.id);
-  }
-
-  // 8. VOUCHER_TYPE_CONFLICT（証票意味矛盾）: 証票タイプ別バリデーション
-  const voucherType = journal.voucher_type;
-  if (voucherType && validateByVoucherType(voucherType, journal, allAccounts)) {
-    addLabel("VOUCHER_TYPE_CONFLICT");
-    // 矛盾科目のマップを更新（セルハイライト用）
-    const conflictInfo = getVoucherTypeConflictAccounts(voucherType, journal, allAccounts);
-    voucherTypeConflictMap.set(journal.id, conflictInfo);
-  } else {
-    removeLabel("VOUCHER_TYPE_CONFLICT");
     voucherTypeConflictMap.delete(journal.id);
   }
 
-  // 9. TAX_ACCOUNT_MISMATCH（税区分科目矛盾）: taxDeterminationベースの方向チェック
-  const allEntries = [...journal.debit_entries, ...journal.credit_entries];
-  let hasTaxAccountMismatch = false;
-  const settings = clientSettings;
-  const accounts = settings.accounts.value;
-  const taxCats = clientSettings.taxCategories.value;
-  for (const entry of allEntries) {
-    if (!entry.account || !entry.tax_category_id) continue;
-    const acct = accounts.find((a) => a.id === entry.account);
-    if (!acct) continue;
-    const taxCat = taxCats.find((t) => t.id === entry.tax_category_id);
-    if (!taxCat) continue;
-    if (acct.taxDetermination === "fixed") {
-      // 厳密一致: defaultTaxCategoryIdと一致必須
-      if (acct.defaultTaxCategoryId) {
-        const defaultTax = taxCats.find((t) => t.id === acct.defaultTaxCategoryId);
-        if (defaultTax && taxCat.id !== defaultTax.id) {
-          hasTaxAccountMismatch = true;
-          break;
-        }
-      }
-    } else if (acct.taxDetermination === "auto_purchase") {
-      // 方向一致: purchase/commonのみ正常
-      if (taxCat.direction === "sales") {
-        hasTaxAccountMismatch = true;
-        break;
-      }
-    } else if (acct.taxDetermination === "auto_sales") {
-      // 方向一致: sales/commonのみ正常
-      if (taxCat.direction === "purchase") {
-        hasTaxAccountMismatch = true;
-        break;
-      }
-    }
-  }
-  if (hasTaxAccountMismatch) {
-    addLabel("TAX_ACCOUNT_MISMATCH");
+  // #7b SAME_ACCOUNT_BOTH_SIDES
+  if (result.sameAccountBothSides.size > 0) {
+    sameAccountBothSidesMap.set(journal.id, result.sameAccountBothSides);
   } else {
-    removeLabel("TAX_ACCOUNT_MISMATCH");
+    sameAccountBothSidesMap.delete(journal.id);
   }
 
-  // 10. FUTURE_DATE（未来日付）: voucher_dateが明日以降
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`; // ローカルTZ
-  if (
-    journal.voucher_date != null &&
-    journal.voucher_date !== "" &&
-    journal.voucher_date >= tomorrowStr
-  ) {
-    addLabel("FUTURE_DATE");
-  } else {
-    removeLabel("FUTURE_DATE");
-  }
-
-  // 新規追加されたラベルがあれば警告モーダルを表示（silentモードでは非表示）
-  if (addedLabels.length > 0 && !silent) {
-    const warningText = addedLabels.map((l) => warningLabelMap[l]?.label ?? l).join("\n");
+  // ── UI固有: モーダル表示 ──
+  if (result.addedLabels.length > 0 && !silent) {
+    const warningText = result.addedLabels.map((l) => warningLabelMap[l]?.label ?? l).join("\n");
     confirmDialog.value = {
       show: true,
       title: UI_MSG.警告検出,
@@ -3449,9 +3204,8 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
       confirmLabel: UI_MSG.確認,
       showCancel: false,
     };
-  } else if (removedLabels.length > 0 && !silent) {
-    // 警告が解消された場合のフィードバック
-    const resolvedText = removedLabels.map((l) => warningLabelMap[l]?.label ?? l).join("\n");
+  } else if (result.removedLabels.length > 0 && !silent) {
+    const resolvedText = result.removedLabels.map((l) => warningLabelMap[l]?.label ?? l).join("\n");
     confirmDialog.value = {
       show: true,
       title: UI_MSG.警告解消,

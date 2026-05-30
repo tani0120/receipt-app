@@ -89,11 +89,16 @@
               <col :style="{ width: caColWidths['mfCompliance'] + 'px' }">
               <col :style="{ width: caColWidths['source'] + 'px' }">
               <col :style="{ width: caColWidths['aiSelectable'] + 'px' }">
+              <col :style="{ width: caColWidths['masterId'] + 'px' }">
               <col :style="{ width: caColWidths['name'] + 'px' }">
               <col :style="{ width: caColWidths['subAccount'] + 'px' }">
+              <col :style="{ width: caColWidths['target'] + 'px' }">
+              <col :style="{ width: caColWidths['accountGroup'] + 'px' }">
+              <col :style="{ width: caColWidths['direction'] + 'px' }">
               <col :style="{ width: caColWidths['category'] + 'px' }">
               <col :style="{ width: caColWidths['taxDetermination'] + 'px' }">
               <col :style="{ width: caColWidths['defaultTaxCategoryId'] + 'px' }">
+              <col :style="{ width: caColWidths['allowedVoucherTypes'] + 'px' }">
               <col :style="{ width: caColWidths['effectiveFrom'] + 'px' }">
               <col :style="{ width: caColWidths['effectiveTo'] + 'px' }">
             </colgroup>
@@ -109,6 +114,10 @@
                 <th class="relative">税区分自動判定
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('aiSelectable', $event)"></div>
                 </th>
+                <th class="sortable relative" @click="sortAccounts('id')">
+                  マスタID <i :class="getSortIcon('id')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('masterId', $event)"></div>
+                </th>
                 <th class="sortable relative" @click="sortAccounts('name')">
                   勘定科目 <i :class="getSortIcon('name')"></i>
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('name', $event)"></div>
@@ -116,6 +125,18 @@
                 <th class="relative">
                   補助科目 <span class="th-help-wrap" data-tooltip="ダブルクリックで入力できます"><i class="fa-solid fa-circle-question th-help"></i></span>
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('subAccount', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortAccounts('target')">
+                  事業形態 <i :class="getSortIcon('target')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('target', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortAccounts('accountGroup')">
+                  大分類 <i :class="getSortIcon('accountGroup')"></i>
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('accountGroup', $event)"></div>
+                </th>
+                <th class="relative">
+                  方向
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('direction', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('category')">
                   科目分類 <i :class="getSortIcon('category')"></i>
@@ -128,6 +149,10 @@
                 <th class="sortable relative" @click="sortAccounts('defaultTaxCategoryId')">
                   デフォルト税区分 <i :class="getSortIcon('defaultTaxCategoryId')"></i>
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('defaultTaxCategoryId', $event)"></div>
+                </th>
+                <th class="relative">
+                  証票意味許容
+                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('allowedVoucherTypes', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('effectiveFrom')">
                   適用開始 <i :class="getSortIcon('effectiveFrom')"></i>
@@ -173,6 +198,7 @@
                   </template>
                   <template v-else>{{ getDisplayAiDet(row) }}</template>
                 </td>
+                <td class="td-master-id" :title="row.id">{{ row.id }}</td>
                 <td @dblclick="row.isCustom && startEdit(row, 'name')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'name'">
                     <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" ref="editInput" autofocus>
@@ -188,6 +214,9 @@
                   </template>
                   <template v-else>{{ row.subAccount ?? '' }}</template>
                 </td>
+                <td class="td-target">{{ targetLabel(row.target) }}</td>
+                <td class="td-account-group">{{ accountGroupLabel(row.accountGroup) }}</td>
+                <td class="td-direction">{{ directionLabel(row.category) }}</td>
                 <!-- 科目分類 -->
                 <td @dblclick="row.isCustom && startEdit(row, 'category')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'category'">
@@ -217,6 +246,7 @@
                   </template>
                   <template v-else>{{ getDisplayDefaultTax(row) }}</template>
                 </td>
+                <td class="td-voucher-types" :title="getAllowedVoucherTypes(row)">{{ getAllowedVoucherTypes(row) }}</td>
                 <td class="td-date">{{ row.effectiveFrom }}</td>
                 <td class="td-date">{{ row.effectiveTo ?? UI_MSG.現役 }}</td>
               </tr>
@@ -280,20 +310,79 @@ import {
   taxDetLabel,
   deriveCategoryDefaults,
 } from '@/data/master/account-category-rules';
+import { VOUCHER_TYPE_RULES } from '@/data/master/voucherTypeRules';
 
 // 列幅カスタマイズ
 const caDefaultWidths: Record<string, number> = {
   mfCompliance: 60,
   source: 70,
   aiSelectable: 80,
+  masterId: 120,
   name: 140,
   subAccount: 100,
+  target: 70,
+  accountGroup: 80,
+  direction: 60,
   category: 100,
   taxDetermination: 100,
   defaultTaxCategoryId: 120,
+  allowedVoucherTypes: 140,
   effectiveFrom: 80,
   effectiveTo: 80,
 };
+
+/** accountGroup（大分類）の日本語ラベル */
+function accountGroupLabel(ag: string): string {
+  switch (ag) {
+    case 'BS_ASSET': return 'BS資産';
+    case 'BS_LIABILITY': return 'BS負債';
+    case 'BS_EQUITY': return 'BS純資産';
+    case 'PL_REVENUE': return 'PL収益';
+    case 'PL_EXPENSE': return 'PL費用';
+    default: return ag;
+  }
+}
+
+/** target（事業形態）の日本語ラベル */
+function targetLabel(t: string): string {
+  switch (t) {
+    case 'both': return '共通';
+    case 'corp': return '法人';
+    case 'individual': return '個人';
+    default: return t;
+  }
+}
+
+/** direction（方向）の日本語ラベル（categoryから導出） */
+function directionLabel(category: string): string {
+  const dir = getCategoryDirection(category);
+  switch (dir) {
+    case 'sales': return '売上';
+    case 'purchase': return '仕入';
+    case 'common': return '共通';
+    default: return dir;
+  }
+}
+
+/** 科目が許容されるvoucher_typeを算出 */
+function getAllowedVoucherTypes(row: { id: string; accountGroup: string; category: string }): string {
+  const debitTypes: string[] = [];
+  const creditTypes: string[] = [];
+  for (const [vtName, rule] of Object.entries(VOUCHER_TYPE_RULES)) {
+    const d = rule.debit;
+    if (d.allowedGroups?.includes(row.accountGroup) || d.allowedIds?.includes(row.id) || d.allowedCategories?.includes(row.category)) {
+      debitTypes.push(vtName);
+    }
+    const c = rule.credit;
+    if (c.allowedGroups?.includes(row.accountGroup) || c.allowedIds?.includes(row.id) || c.allowedCategories?.includes(row.category)) {
+      creditTypes.push(vtName);
+    }
+  }
+  const parts: string[] = [];
+  if (debitTypes.length > 0) parts.push(`借:${debitTypes.join(',')}`);
+  if (creditTypes.length > 0) parts.push(`貸:${creditTypes.join(',')}`);
+  return parts.join(' / ') || '—';
+}
 const { columnWidths: caColWidths, onResizeStart: onCaResizeStart } = useColumnResize('client-accounts', caDefaultWidths);
 
 const props = defineProps<{ clientId: string }>();
@@ -519,7 +608,7 @@ async function addAfterChecked() {
     target: accountBusinessType.value === 'corp' ? 'corp' : 'individual',
     accountGroup: 'PL_EXPENSE',
     category: UI_MSG.デフォルト科目カテゴリ,
-    defaultTaxCategoryId: 'COMMON_EXEMPT',
+    defaultTaxCategoryId: settings.taxCategories.value.find(t => t.isExemptDefault)?.id ?? '',
     taxDetermination: 'fixed',
     deprecated: false,
     effectiveFrom: new Date().toISOString().slice(0, 10),
@@ -602,7 +691,7 @@ function commitEdit(row: Account) {
       row.category = editValue.value;
       // category変更時にaccountGroup・taxDetermination・defaultTaxCategoryIdを自動設定
       {
-        const defaults = deriveCategoryDefaults(editValue.value);
+        const defaults = deriveCategoryDefaults(editValue.value, settings.taxCategories.value);
         row.accountGroup = defaults.accountGroup;
         row.taxDetermination = defaults.taxDetermination;
         row.defaultTaxCategoryId = defaults.defaultTaxCategoryId;

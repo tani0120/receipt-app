@@ -22,7 +22,7 @@ import type { LearningRule, LearningRuleEntryLine } from '../../types/learning_r
 import { normalizeVendorName } from './vendorIdentification'
 import { validateTNumber, extractTNumber } from './vendorIdentification'
 import { matchLearningRule } from './matchLearningRule'
-import { VENDORS_GLOBAL } from '../../data/pipeline/vendors_global'
+import { getAll as getAllVendors, findByTNumber as findVendorByTNumber, findByMatchKey as findVendorByMatchKey } from '../../api/services/vendorStore'
 
 // ============================================================
 // § 結果型
@@ -171,7 +171,7 @@ export function determineAccount(
   if (tNumberRaw) {
     const tNumber = validateTNumber(tNumberRaw) ?? extractTNumber(tNumberRaw)
     if (tNumber) {
-      const vendor = VENDORS_GLOBAL.find(v => v.t_numbers.includes(tNumber))
+      const vendor = findVendorByTNumber(tNumber)
       if (vendor) {
         applyVendor(result, vendor, 't_number', amount, direction)
         return result
@@ -188,11 +188,11 @@ export function determineAccount(
     const matchKey = normalizeVendorName(vendorNameRaw)
     if (matchKey) {
       // match_key完全一致
-      matchedVendor = VENDORS_GLOBAL.find(v => v.match_key === matchKey)
+      matchedVendor = findVendorByMatchKey(matchKey)
 
       // aliases照合（match_key不一致の場合、aliasesの中に一致するものがあるか）
       if (!matchedVendor) {
-        matchedVendor = VENDORS_GLOBAL.find(v =>
+        matchedVendor = getAllVendors().find(v =>
           v.aliases.includes(matchKey),
         )
       }
@@ -203,9 +203,9 @@ export function determineAccount(
   if (!matchedVendor && description) {
     const descKey = normalizeVendorName(description)
     if (descKey) {
-      matchedVendor = VENDORS_GLOBAL.find(v => v.match_key === descKey)
+      matchedVendor = findVendorByMatchKey(descKey)
       if (!matchedVendor) {
-        matchedVendor = VENDORS_GLOBAL.find(v =>
+        matchedVendor = getAllVendors().find(v =>
           v.aliases.includes(descKey),
         )
       }

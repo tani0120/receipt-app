@@ -19,6 +19,7 @@ import { countUnsorted, latestReceivedDate } from '../../utils/documentUtils'
 import type { ProgressRow } from '../../features/progress-management/types'
 import { applyFilterConditions } from '../helpers/applyFilterConditions'
 import type { FilterCondition } from '../../components/list-view/types'
+import { isIndividualType } from '../../constants/clientOptions'
 
 // ────────────────────────────────────────────
 // 仕訳サマリ取得（useProgress.ts から移植）
@@ -167,7 +168,7 @@ const statusOrder = (s: string): number => s === 'active' ? 0 : s === 'suspensio
 
 /** 決算月ソート値: 法人は月そのまま（1-12）、個人は13 */
 const fiscalMonthSort = (row: ProgressRow): number => {
-  if (row.type === 'individual' || row.type === 'sole_proprietor') return 13
+  if (isIndividualType(row.type)) return 13
   return row.fiscalMonth
 }
 

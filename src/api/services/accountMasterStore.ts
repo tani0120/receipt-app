@@ -17,6 +17,7 @@ import { getTaxAvailableForMethod } from './mfTaxAvailableStore'
 import { join } from 'path'
 import type { Account } from '../../types/shared-account'
 import type { TaxCategory } from '../../types/shared-tax-category'
+import { REAL_ESTATE_CATEGORIES } from '../../data/master/account-category-rules'
 
 // ────────────────────────────────────────────
 // JSONファイルからマスタデータを読み込み
@@ -154,7 +155,7 @@ export function getFilteredAccounts(params: AccountFilterParams): AccountFilterR
       }
       // 不動産フィルタ（realEstate以外は不動産科目非表示）
       if (businessType !== 'realEstate') {
-        if (row.category === '不動産収入' || row.category === '不動産経費' || row.category === '不動産') return false
+        if (REAL_ESTATE_CATEGORIES.includes(row.category)) return false
       }
     }
     // テキスト検索
@@ -192,7 +193,13 @@ export function getFilteredAccounts(params: AccountFilterParams): AccountFilterR
  */
 export function saveAllAccounts(accounts: Account[]): { ok: true; count: number } {
   masterAccounts = [...accounts]
-  console.log(`[accountMasterStore] マスタ科目を${accounts.length}件保存`)
+  // JSON永続化（サーバー再起動でも変更を維持）
+  try {
+    writeFileSync(join(DATA_DIR, 'account-master.json'), JSON.stringify(accounts, null, 2), 'utf-8')
+    console.log(`[accountMasterStore] マスタ科目を${accounts.length}件保存・永続化`)
+  } catch (err) {
+    console.error('[accountMasterStore] account-master.json永続化失敗:', err)
+  }
   return { ok: true, count: accounts.length }
 }
 
@@ -279,7 +286,7 @@ export function getFilteredClientAccounts(
       if (row.target !== 'both' && row.target !== 'individual') return false
     }
     if (businessType !== 'realEstate') {
-      if (row.category === '不動産収入' || row.category === '不動産経費' || row.category === '不動産') return false
+      if (REAL_ESTATE_CATEGORIES.includes(row.category)) return false
     }
     if (search && !row.name.includes(search)) return false
     return true
@@ -369,8 +376,8 @@ export function getTaxCategoryNameMap(): Record<string, string> {
 
 /** 税区分フィルタ条件 */
 export interface TaxCategoryFilterParams {
-  /** 課税方式: general / simplified / exempt / all（全件） */
-  taxMethod?: 'general' | 'simplified' | 'exempt' | 'all'
+  /** 課税方式: general / individual / proportional / simplified / exempt / all（全件） */
+  taxMethod?: 'general' | 'individual' | 'proportional' | 'simplified' | 'exempt' | 'all'
   /** ページ番号（1始まり） */
   page?: number
   /** 1ページあたりの件数（デフォルト50） */
@@ -468,7 +475,13 @@ export function getFilteredTaxCategories(params: TaxCategoryFilterParams): TaxCa
  */
 export function saveAllTaxCategories(taxCategories: TaxCategory[]): { ok: true; count: number } {
   masterTaxCategories = [...taxCategories]
-  console.log(`[accountMasterStore] マスタ税区分を${taxCategories.length}件保存`)
+  // JSON永続化（サーバー再起動でも変更を維持）
+  try {
+    writeFileSync(join(DATA_DIR, 'tax-category-master.json'), JSON.stringify(taxCategories, null, 2), 'utf-8')
+    console.log(`[accountMasterStore] マスタ税区分を${taxCategories.length}件保存・永続化`)
+  } catch (err) {
+    console.error('[accountMasterStore] tax-category-master.json永続化失敗:', err)
+  }
   return { ok: true, count: taxCategories.length }
 }
 

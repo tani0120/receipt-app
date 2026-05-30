@@ -5,39 +5,39 @@
       <div class="account-settings">
         <!-- ヘッダー -->
         <div class="as-header">
-          <span class="as-header-label">勘定科目マスタ（事務所共通）</span>
+          <span class="as-header-label">{{ UI_MSG.マスタ科目_ページタイトル }}</span>
         </div>
 
         <!-- 事業形態・課税方式切替（排他選択） -->
         <div class="as-selectors-center">
           <div class="as-selector-group-lg">
-            <span class="as-selector-label-lg">事業形態:</span>
-            <label class="as-checkbox-label-lg"><input type="radio" v-model="businessType" value="corp" class="as-checkbox-lg"><span>法人</span></label>
-            <label class="as-checkbox-label-lg"><input type="radio" v-model="businessType" value="individual" class="as-checkbox-lg"><span>個人事業</span></label>
-            <label class="as-checkbox-label-lg"><input type="radio" v-model="businessType" value="realEstate" class="as-checkbox-lg"><span>個人事業(不動産所得あり)</span></label>
+            <span class="as-selector-label-lg">{{ UI_MSG.マスタ科目_事業形態ラベル }}</span>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="businessType" value="corp" class="as-checkbox-lg"><span>{{ UI_MSG.マスタ科目_法人 }}</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="businessType" value="individual" class="as-checkbox-lg"><span>{{ UI_MSG.マスタ科目_個人事業 }}</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="businessType" value="realEstate" class="as-checkbox-lg"><span>{{ UI_MSG.マスタ科目_個人事業不動産 }}</span></label>
           </div>
           <div class="as-selector-group-lg">
-            <span class="as-selector-label-lg">課税方式:</span>
-            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="proportional" class="as-checkbox-lg"><span>原則（一括比例）</span></label>
-            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="individual" class="as-checkbox-lg"><span>原則（個別対応）</span></label>
-            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="simplified" class="as-checkbox-lg"><span>簡易</span></label>
-            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="exempt" class="as-checkbox-lg"><span>免税</span></label>
+            <span class="as-selector-label-lg">{{ UI_MSG.マスタ科目_課税方式ラベル }}</span>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="proportional" class="as-checkbox-lg"><span>{{ UI_MSG.マスタ科目_原則一括比例 }}</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="individual" class="as-checkbox-lg"><span>{{ UI_MSG.マスタ科目_原則個別対応 }}</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="simplified" class="as-checkbox-lg"><span>{{ UI_MSG.マスタ科目_簡易 }}</span></label>
+            <label class="as-checkbox-label-lg"><input type="radio" v-model="taxMethod" value="exempt" class="as-checkbox-lg"><span>{{ UI_MSG.マスタ科目_免税 }}</span></label>
           </div>
         </div>
 
         <div class="as-filters">
-          <input type="text" v-model="accountFilter" placeholder="科目名で絞り込み" class="as-filter-input">
+          <input type="text" v-model="accountFilter" :placeholder="UI_MSG.マスタ科目_絞り込みプレースホルダ" class="as-filter-input">
           <span class="as-page-info-text">全{{ filteredAccountRows.length }}件</span>
         </div>
 
         <!-- 注意コメント -->
         <div class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
-          デフォルト科目（<i class="fa-solid fa-circle-check" style="font-size:14px;color:#4caf50"></i>）の勘定科目名・税区分は編集できません。コピー・追加したカスタム科目のみ編集可能です。免税・本則・簡易の税額はMF側で計算されます。
+          <span v-html="UI_MSG.マスタ科目_デフォルト科目注記"></span>
         </div>
         <div class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
-          簡易課税の場合、複数の事業種別があるときは売上に関する勘定科目または補助科目を分けて登録してください。（例：売上高（卸売）、売上高（小売）等）
+          {{ UI_MSG.マスタ科目_簡易課税注記 }}
         </div>
 
         <div class="as-toolbar">
@@ -53,15 +53,15 @@
             <!-- チェック時の一括操作ボタン -->
             <template v-if="checkedIds.length">
               <span class="as-bulk-badge">{{ checkedIds.length }}件選択中</span>
-              <button class="as-bulk-btn blue" @click="promoteToMfChecked"><i class="fa-solid fa-circle-check"></i> MF公式</button>
-              <button class="as-bulk-btn red" @click="demoteFromMfChecked"><i class="fa-solid fa-triangle-exclamation"></i> MF非公式</button>
+              <button class="as-bulk-btn blue" @click="promoteToMfChecked"><i class="fa-solid fa-circle-check"></i> {{ UI_MSG.マスタ科目_MF公式ボタン }}</button>
+              <button class="as-bulk-btn red" @click="demoteFromMfChecked"><i class="fa-solid fa-triangle-exclamation"></i> {{ UI_MSG.マスタ科目_MF非公式ボタン }}</button>
               <span class="as-bulk-divider"></span>
-              <button class="as-bulk-btn blue" @click="showChecked"><i class="fa-solid fa-eye"></i> 表示化</button>
-              <button class="as-bulk-btn red" @click="hideChecked"><i class="fa-solid fa-eye-slash"></i> 非表示化</button>
+              <button class="as-bulk-btn blue" @click="showChecked"><i class="fa-solid fa-eye"></i> {{ UI_MSG.マスタ科目_表示化ボタン }}</button>
+              <button class="as-bulk-btn red" @click="hideChecked"><i class="fa-solid fa-eye-slash"></i> {{ UI_MSG.マスタ科目_非表示化ボタン }}</button>
               <span class="as-bulk-divider"></span>
-              <button class="as-bulk-btn red" @click="deleteChecked"><i class="fa-solid fa-trash-can"></i> 削除（復元できません）</button>
-              <button class="as-bulk-btn blue" @click="copyChecked"><i class="fa-solid fa-copy"></i> コピー</button>
-              <button class="as-bulk-btn blue" @click="addAfterChecked"><i class="fa-solid fa-plus"></i> 追加</button>
+              <button class="as-bulk-btn red" @click="deleteChecked"><i class="fa-solid fa-trash-can"></i> {{ UI_MSG.マスタ科目_削除ボタン }}</button>
+              <button class="as-bulk-btn blue" @click="copyChecked"><i class="fa-solid fa-copy"></i> {{ UI_MSG.マスタ科目_コピーボタン }}</button>
+              <button class="as-bulk-btn blue" @click="addAfterChecked"><i class="fa-solid fa-plus"></i> {{ UI_MSG.マスタ科目_追加ボタン }}</button>
             </template>
           </div>
           <div class="as-actions">
@@ -71,9 +71,9 @@
               tooltip="MFから勘定科目をインポート"
               @import="importFromMf"
             />
-            <button class="as-action-btn" @click="resetAccountOrder"><i class="fa-solid fa-rotate"></i> デフォルト順</button>
-            <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button>
-            <button class="as-action-btn save" @click="saveChanges"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
+            <button class="as-action-btn" @click="resetAccountOrder"><i class="fa-solid fa-rotate"></i> {{ UI_MSG.マスタ科目_デフォルト順ボタン }}</button>
+            <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> {{ UI_MSG.マスタ科目_追加ボタン }}</button>
+            <button class="as-action-btn save" @click="saveChanges"><i class="fa-solid fa-floppy-disk"></i> {{ UI_MSG.マスタ科目_保存ボタン }}</button>
           </div>
         </div>
         <div class="as-table-wrap">
@@ -82,49 +82,74 @@
               <col style="width: 38px;">
               <col :style="{ width: acctColWidths['mfCompliance'] + 'px' }">
               <col :style="{ width: acctColWidths['aiSelectable'] + 'px' }">
+              <col :style="{ width: acctColWidths['masterId'] + 'px' }">
               <col :style="{ width: acctColWidths['name'] + 'px' }">
               <col :style="{ width: acctColWidths['subAccount'] + 'px' }">
+              <col :style="{ width: acctColWidths['target'] + 'px' }">
+              <col :style="{ width: acctColWidths['accountGroup'] + 'px' }">
+              <col :style="{ width: acctColWidths['direction'] + 'px' }">
               <col :style="{ width: acctColWidths['category'] + 'px' }">
               <col :style="{ width: acctColWidths['taxDetermination'] + 'px' }">
               <col :style="{ width: acctColWidths['defaultTaxCategoryId'] + 'px' }">
+              <col :style="{ width: acctColWidths['allowedVoucherTypes'] + 'px' }">
               <col :style="{ width: acctColWidths['effectiveFrom'] + 'px' }">
               <col :style="{ width: acctColWidths['effectiveTo'] + 'px' }">
             </colgroup>
             <thead>
               <tr>
                 <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
-                <th class="relative" style="text-align:center;">MF公式
+                <th class="relative" style="text-align:center;">{{ UI_MSG.マスタ科目_列MF公式 }}
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('mfCompliance', $event)"></div>
                 </th>
-                <th class="relative">税区分自動判定
+                <th class="relative">{{ UI_MSG.マスタ科目_列税区分自動判定 }}
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('aiSelectable', $event)"></div>
                 </th>
+                <th class="sortable relative" @click="sortAccounts('id')">
+                  マスタID <i :class="getSortIcon('id')"></i>
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('masterId', $event)"></div>
+                </th>
                 <th class="sortable relative" @click="sortAccounts('name')">
-                  勘定科目 <i :class="getSortIcon('name')"></i>
+                  {{ UI_MSG.マスタ科目_列勘定科目 }} <i :class="getSortIcon('name')"></i>
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('name', $event)"></div>
                 </th>
                 <th class="relative">
-                  補助科目 <span class="th-help-wrap" data-tooltip="補助科目は顧問先ごとの設定で入力します。マスタでは空白です。"><i class="fa-solid fa-circle-question th-help"></i></span>
+                  {{ UI_MSG.マスタ科目_列補助科目 }} <span class="th-help-wrap" :data-tooltip="UI_MSG.マスタ科目_補助科目ヘルプ"><i class="fa-solid fa-circle-question th-help"></i></span>
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('subAccount', $event)"></div>
                 </th>
+                <th class="sortable relative" @click="sortAccounts('target')">
+                  事業形態 <i :class="getSortIcon('target')"></i>
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('target', $event)"></div>
+                </th>
+                <th class="sortable relative" @click="sortAccounts('accountGroup')">
+                  大分類 <i :class="getSortIcon('accountGroup')"></i>
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('accountGroup', $event)"></div>
+                </th>
+                <th class="relative">
+                  方向
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('direction', $event)"></div>
+                </th>
                 <th class="sortable relative" @click="sortAccounts('category')">
-                  科目分類 <i :class="getSortIcon('category')"></i>
+                  {{ UI_MSG.マスタ科目_列科目分類 }} <i :class="getSortIcon('category')"></i>
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('category', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('taxDetermination')">
-                  税区分判定 <i :class="getSortIcon('taxDetermination')"></i>
+                  {{ UI_MSG.マスタ科目_列税区分判定 }} <i :class="getSortIcon('taxDetermination')"></i>
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('taxDetermination', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('defaultTaxCategoryId')">
-                  デフォルト税区分 <i :class="getSortIcon('defaultTaxCategoryId')"></i>
+                  {{ UI_MSG.マスタ科目_列デフォルト税区分 }} <i :class="getSortIcon('defaultTaxCategoryId')"></i>
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('defaultTaxCategoryId', $event)"></div>
                 </th>
+                <th class="relative">
+                  証票意味許容
+                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('allowedVoucherTypes', $event)"></div>
+                </th>
                 <th class="sortable relative" @click="sortAccounts('effectiveFrom')">
-                  適用開始 <i :class="getSortIcon('effectiveFrom')"></i>
+                  {{ UI_MSG.マスタ科目_列適用開始 }} <i :class="getSortIcon('effectiveFrom')"></i>
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('effectiveFrom', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('effectiveTo')">
-                  適用終了 <i :class="getSortIcon('effectiveTo')"></i>
+                  {{ UI_MSG.マスタ科目_列適用終了 }} <i :class="getSortIcon('effectiveTo')"></i>
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('effectiveTo', $event)"></div>
                 </th>
               </tr>
@@ -158,6 +183,7 @@
                   </template>
                   <template v-else>{{ getDisplayAiDet(row) }}</template>
                 </td>
+                <td class="td-master-id" :title="row.id">{{ row.id }}</td>
                 <td @dblclick="row.isCustom && startEdit(row, 'name')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'name'">
                     <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" ref="editInput" autofocus>
@@ -167,6 +193,9 @@
                   </template>
                 </td>
                 <td class="td-sub-account"></td>
+                <td class="td-target">{{ targetLabel(row.target) }}</td>
+                <td class="td-account-group">{{ accountGroupLabel(row.accountGroup) }}</td>
+                <td class="td-direction">{{ directionLabel(row.category) }}</td>
                 <!-- 科目分類 -->
                 <td @dblclick="row.isCustom && startEdit(row, 'category')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'category'">
@@ -196,6 +225,7 @@
                   </template>
                   <template v-else>{{ getDisplayDefaultTax(row) }}</template>
                 </td>
+                <td class="td-voucher-types" :title="getAllowedVoucherTypes(row)">{{ getAllowedVoucherTypes(row) }}</td>
                 <td class="td-date">{{ row.effectiveFrom }}</td>
                 <td class="td-date">{{ row.effectiveTo ?? UI_MSG.現役 }}</td>
               </tr>
@@ -240,7 +270,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import type { Account } from '@/types/shared-account';
-import { MF_CATEGORY_MAP, deriveMfAccountGroup, deriveTaxDetermination, deriveTarget } from '@/data/master/mf-account-category-mapping';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { getInitialCopyCounter } from '@/utils/copy-utils';
 import { useColumnResize } from '@/composables/useColumnResize';
@@ -260,30 +289,91 @@ import {
   taxDetLabel,
   deriveCategoryDefaults,
 } from '@/data/master/account-category-rules';
+import { VOUCHER_TYPE_RULES } from '@/data/master/voucherTypeRules';
 
 // 列幅カスタマイズ
 const acctDefaultWidths: Record<string, number> = {
   mfCompliance: 60,
   aiSelectable: 80,
+  masterId: 120,
   name: 140,
   subAccount: 100,
+  target: 70,
+  accountGroup: 80,
+  direction: 60,
   category: 100,
   taxDetermination: 100,
   defaultTaxCategoryId: 120,
+  allowedVoucherTypes: 140,
   effectiveFrom: 80,
   effectiveTo: 80,
 };
+
+/** accountGroup（大分類）の日本語ラベル */
+function accountGroupLabel(ag: string): string {
+  switch (ag) {
+    case 'BS_ASSET': return 'BS資産';
+    case 'BS_LIABILITY': return 'BS負債';
+    case 'BS_EQUITY': return 'BS純資産';
+    case 'PL_REVENUE': return 'PL収益';
+    case 'PL_EXPENSE': return 'PL費用';
+    default: return ag;
+  }
+}
+
+/** target（事業形態）の日本語ラベル */
+function targetLabel(t: string): string {
+  switch (t) {
+    case 'both': return '共通';
+    case 'corp': return '法人';
+    case 'individual': return '個人';
+    default: return t;
+  }
+}
+
+/** direction（方向）の日本語ラベル（categoryから導出） */
+function directionLabel(category: string): string {
+  const dir = getCategoryDirection(category);
+  switch (dir) {
+    case 'sales': return '売上';
+    case 'purchase': return '仕入';
+    case 'common': return '共通';
+    default: return dir;
+  }
+}
+
+/** 科目が許容されるvoucher_typeを算出 */
+function getAllowedVoucherTypes(row: { id: string; accountGroup: string; category: string }): string {
+  const debitTypes: string[] = [];
+  const creditTypes: string[] = [];
+  for (const [vtName, rule] of Object.entries(VOUCHER_TYPE_RULES)) {
+    const d = rule.debit;
+    if (d.allowedGroups?.includes(row.accountGroup) || d.allowedIds?.includes(row.id) || d.allowedCategories?.includes(row.category)) {
+      debitTypes.push(vtName);
+    }
+    const c = rule.credit;
+    if (c.allowedGroups?.includes(row.accountGroup) || c.allowedIds?.includes(row.id) || c.allowedCategories?.includes(row.category)) {
+      creditTypes.push(vtName);
+    }
+  }
+  const parts: string[] = [];
+  if (debitTypes.length > 0) parts.push(`借:${debitTypes.join(',')}`);
+  if (creditTypes.length > 0) parts.push(`貸:${creditTypes.join(',')}`);
+  return parts.join(' / ') || '—';
+}
 const { columnWidths: acctColWidths, onResizeStart: onAcctResizeStart } = useColumnResize('master-accounts', acctDefaultWidths);
 
 const PAGE_SIZE = 50;
 
 // =============== MFインポート ===============
+// clientIdはMF認証用（MCPトークンキー）。マスタは全社共通だが、MFアクセスには認証済み顧問先が必要
+const MF_AUTH_CLIENT_ID = 'c_rODnkCDN'; // TODO: Supabase移行時にUI選択に変更
 const mfAuthenticated = ref(false);
 const mfImporting = ref(false);
 
 onMounted(async () => {
   try {
-    const res = await fetch('/api/mf/auth/status?clientId=c_rODnkCDN');
+    const res = await fetch(`/api/mf/auth/status?clientId=${MF_AUTH_CLIENT_ID}`);
     const data = await res.json();
     mfAuthenticated.value = data.authenticated ?? false;
   } catch {
@@ -291,149 +381,69 @@ onMounted(async () => {
   }
 });
 
-/** MFから勘定科目を取得して全社マスタを差分マージ */
+/** MFから勘定科目を取得して全社マスタを差分マージ（バックエンドAPI経由） */
 async function importFromMf() {
   if (mfImporting.value) return;
   mfImporting.value = true;
   try {
-    // 1. MCP経由で勘定科目取得
-    const res = await fetch('/api/mf/accounts?clientId=c_rODnkCDN');
-    if (!res.ok) throw new Error('MF勘定科目取得失敗');
-    const data = await res.json();
-    const mfAccounts: {
-      id: string; name: string; account_group: string;
-      category: string; financial_statement_type: string;
-      available: boolean; tax_id: string;
-    }[] = data.accounts ?? [];
-
-    // 2. 税区分マスタ読み込み（tax_id変換用）
-    const taxRes = await fetch('/api/tax-categories/master?page=1&pageSize=200');
-    const taxData = await taxRes.json() as { items: { id: string; name: string; mfId?: string }[] };
-    const taxCategories = taxData.items ?? [];
-    const mfTaxIdToMasterId = new Map<string, string>();
-    for (const t of taxCategories) {
-      if (t.mfId) mfTaxIdToMasterId.set(t.mfId, t.id);
+    // バックエンドAPIで差分検知 + マスタ保存を一括実行
+    const res = await fetch('/api/mf/import-master-accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId: MF_AUTH_CLIENT_ID }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'MF勘定科目インポート失敗' }));
+      throw new Error(err.error ?? err.detail ?? 'MF勘定科目インポート失敗');
     }
-
-    // 3. MFデータ→全社マスタ変換（データ駆動: mf-account-category-mapping.ts）
-
-    // 4. 名前照合＋差分検知
-    const mfIdToRow = new Map<string, Account>();
-    for (const row of accountRows) {
-      if (row.mfAccountId) mfIdToRow.set(row.mfAccountId, row);
-    }
-    const nameToRow = new Map<string, Account>();
-    for (const row of accountRows) {
-      nameToRow.set(row.name, row);
-    }
-
-    const diff = {
-      updated: [] as { name: string; mfId: string }[],
-      added: [] as { name: string; mfId: string; category: string }[],
-      nameChanged: [] as { mfId: string; oldName: string; newName: string }[],
-      unchanged: 0,
+    const result = await res.json() as {
+      success: boolean;
+      mfCount: number;
+      diff: { updated: unknown[]; added: unknown[]; nameChanged: { mfId: string; oldName: string; newName: string }[] };
+      summary: string;
+      reportLines: string[];
+      updatedAccounts: Account[];
+      hasDiff: boolean;
     };
 
-    let maxSort = Math.max(...accountRows.map(a => a.sortOrder), 0);
-
-    for (const mf of mfAccounts) {
-      // まずmfAccountIdで照合、なければ名前で照合
-      const byMfId = mfIdToRow.get(mf.id);
-      const byName = nameToRow.get(mf.name);
-      const existing = byMfId ?? byName;
-
-      const masterCat = MF_CATEGORY_MAP[mf.category] ?? '経費';
-      const masterTaxId = mfTaxIdToMasterId.get(mf.tax_id);
-
-      if (existing) {
-        // MFフィールド付与
-        existing.mfAccountId = mf.id;
-        existing.mfAccountGroup = mf.account_group;
-        existing.mfFinancialStatementType = mf.financial_statement_type;
-        existing.mfDefaultTaxId = mf.tax_id;
-
-        // デフォルト税区分未設定の場合のみ補完
-        if (!existing.defaultTaxCategoryId && masterTaxId) {
-          existing.defaultTaxCategoryId = masterTaxId;
-        }
-
-        // 名前変更検知（mfAccountIdで照合して名前が違う場合）
-        if (byMfId && byMfId.name !== mf.name) {
-          diff.nameChanged.push({ mfId: mf.id, oldName: byMfId.name, newName: mf.name });
-        } else {
-          diff.updated.push({ name: mf.name, mfId: mf.id });
-        }
-      } else {
-        // 新規追加
-        maxSort++;
-        const newAccount: Account = {
-          id: `MF_${mf.name.replace(/[^a-zA-Z0-9\u3000-\u9FFF]/g, '_')}`,
-          name: mf.name,
-          target: deriveTarget(masterCat, mf.financial_statement_type),
-          accountGroup: deriveMfAccountGroup(mf.account_group, mf.category),
-          category: masterCat,
-          defaultTaxCategoryId: masterTaxId,
-          taxDetermination: deriveTaxDetermination(masterCat),
-          deprecated: false,
-          effectiveFrom: '2019-10-01',
-          effectiveTo: null,
-          sortOrder: maxSort,
-          isCustom: false,
-          mfAccountId: mf.id,
-          mfAccountGroup: mf.account_group,
-          mfFinancialStatementType: mf.financial_statement_type,
-          mfDefaultTaxId: mf.tax_id,
-        };
-        accountRows.push(newAccount);
-        diff.added.push({ name: mf.name, mfId: mf.id, category: masterCat });
-      }
-    }
-
-    // 5. 差分レポート表示
-    const reportLines: string[] = [];
-    reportLines.push(`📥 MF勘定科目 ${mfAccounts.length}件を照合`);
-    if (diff.updated.length > 0) {
-      reportLines.push(`✅ MFフィールド付与: ${diff.updated.length}件`);
-    }
-    if (diff.added.length > 0) {
-      reportLines.push(`➕ 新規追加: ${diff.added.length}件`);
-      for (const a of diff.added.slice(0, 5)) reportLines.push(`  ・${a.name}（${a.category}）`);
-      if (diff.added.length > 5) reportLines.push(`  …他${diff.added.length - 5}件`);
-    }
-    if (diff.nameChanged.length > 0) {
-      reportLines.push(`✏️ 名前変更: ${diff.nameChanged.length}件`);
-      for (const c of diff.nameChanged) reportLines.push(`  ・${c.oldName} → ${c.newName}`);
-    }
-
-    const hasDiff = diff.added.length > 0 || diff.nameChanged.length > 0;
-
-    if (!hasDiff) {
-      await modal.notify({ title: `MF勘定科目 ${mfAccounts.length}件と照合完了`, message: reportLines.join('\n'), variant: 'success' });
-      markDirty('MFインポート: MFフィールド付与');
+    if (!result.hasDiff) {
+      // 差分なし → MFフィールド付与のみ
+      // バックエンドが既に保存済みなので、フロントのreactiveも同期
+      accountRows.splice(0, accountRows.length, ...result.updatedAccounts);
+      await modal.notify({ title: `MF勘定科目 ${result.mfCount}件と照合完了`, message: result.reportLines.join('\n'), variant: 'success' });
+      markClean(); // バックエンド保存済み
       return;
     }
 
+    // 差分あり → 確認モーダル表示
     const confirmed = await modal.confirm({
       title: 'MF勘定科目インポート差分レポート',
-      message: reportLines.join('\n'),
+      message: result.reportLines.join('\n'),
       confirmLabel: '適用する',
       cancelLabel: 'キャンセル',
     });
     if (!confirmed) return;
 
-    // 名前変更の適用
-    for (const c of diff.nameChanged) {
-      const row = mfIdToRow.get(c.mfId);
-      if (row) row.name = c.newName;
+    // 名前変更がある場合は再度APIを呼んで適用
+    if (result.diff.nameChanged.length > 0) {
+      const applyRes = await fetch('/api/mf/import-master-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: MF_AUTH_CLIENT_ID, applyNameChanges: true }),
+      });
+      if (applyRes.ok) {
+        const applyResult = await applyRes.json() as { updatedAccounts: Account[]; summary: string };
+        accountRows.splice(0, accountRows.length, ...applyResult.updatedAccounts);
+        await modal.notify({ title: `MF差分マージ完了（${applyResult.summary}）`, variant: 'success' });
+        markClean(); // バックエンド保存済み
+        return;
+      }
     }
 
-    markDirty('MFから勘定科目を差分マージ');
-    const summary = [
-      diff.updated.length > 0 ? `更新${diff.updated.length}` : '',
-      diff.added.length > 0 ? `追加${diff.added.length}` : '',
-      diff.nameChanged.length > 0 ? `名前変更${diff.nameChanged.length}` : '',
-    ].filter(Boolean).join(', ');
-    await modal.notify({ title: `MF差分マージ完了（${summary}）`, variant: 'success' });
+    // 名前変更なしの差分 → バックエンドが既に保存済みなのでreactiveを同期
+    accountRows.splice(0, accountRows.length, ...result.updatedAccounts);
+    await modal.notify({ title: `MF差分マージ完了（${result.summary}）`, variant: 'success' });
+    markClean(); // バックエンド保存済み
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
@@ -616,7 +626,7 @@ async function addAfterChecked() {
     target: businessType.value === 'corp' ? 'corp' : 'individual',
     accountGroup: 'PL_EXPENSE',
     category: UI_MSG.デフォルト科目カテゴリ,
-    defaultTaxCategoryId: 'COMMON_EXEMPT',
+    defaultTaxCategoryId: settings.taxCategories.value.find(t => t.isExemptDefault)?.id ?? '',
     taxDetermination: 'fixed',
     deprecated: false,
     effectiveFrom: new Date().toISOString().slice(0, 10),
@@ -690,7 +700,7 @@ function commitEdit(row: Account) {
       row.category = editValue.value;
       // category変更時にaccountGroup・taxDetermination・defaultTaxCategoryIdを自動設定
       {
-        const defaults = deriveCategoryDefaults(editValue.value);
+        const defaults = deriveCategoryDefaults(editValue.value, settings.taxCategories.value);
         row.accountGroup = defaults.accountGroup;
         row.taxDetermination = defaults.taxDetermination;
         row.defaultTaxCategoryId = defaults.defaultTaxCategoryId;

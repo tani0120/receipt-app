@@ -1,4 +1,4 @@
-﻿import { Hono } from 'hono'
+import { Hono } from 'hono'
 import { apiError } from '../helpers/apiError'
 import { 未検出 } from '../../constants/apiMessages'
 import { z } from 'zod'
@@ -6,6 +6,7 @@ import { zValidator } from '@hono/zod-validator'
 import { zodHook } from '../helpers/zodHook'
 import moment from 'moment'
 import * as clientStore from '../services/clientStore'
+import { isIndividualType, getEffectiveFiscalMonth, getFilingOffsetMonths, INDIVIDUAL_DEFAULT_FISCAL_MONTH, CORP_DEFAULT_FISCAL_MONTH } from '../../constants/clientOptions'
 
 const app = new Hono()
 
@@ -58,7 +59,7 @@ function getCollectionClients() {
     return allClients.map(c => ({
         clientCode: c.clientId.split('-')[0] || c.clientId,
         companyName: c.companyName,
-        fiscalMonth: c.fiscalMonth ?? (c.type === 'individual' || c.type === 'sole_proprietor' ? 12 : 3),
+        fiscalMonth: c.fiscalMonth ?? (isIndividualType(c.type) ? INDIVIDUAL_DEFAULT_FISCAL_MONTH : CORP_DEFAULT_FISCAL_MONTH),
         type: c.type as 'corp' | 'individual' | 'sole_proprietor',
         jobId: c.clientId.split('-')[0] || c.clientId,
     }));
@@ -76,7 +77,7 @@ export { CollectionConfigSchema, CollectionClientSchema, CollectionDetailSchema,
 const currentDateMock = moment('2025-12-28'); // Fixed Date for Consistency
 
 const getFiscalTermEnd = (client: ReturnType<typeof getCollectionClients>[0], targetDate: moment.Moment) => {
-    const fiscalMonth = (client.type === 'individual' || client.type === 'sole_proprietor') ? 12 : client.fiscalMonth;
+    const fiscalMonth = getEffectiveFiscalMonth(client.type, client.fiscalMonth);
     const month = targetDate.month() + 1;
     let year = targetDate.year();
     if (month > fiscalMonth) {
@@ -91,7 +92,7 @@ const getActiveTerm1End = (client: ReturnType<typeof getCollectionClients>[0]) =
 
     for (let i = 0; i < 5; i++) {
         const termEnd = getFiscalTermEnd(client, checkDate);
-        const filingOffset = (client.type === 'individual' || client.type === 'sole_proprietor') ? 3 : 2;
+        const filingOffset = getFilingOffsetMonths(client.type);
         const filingDeadline = termEnd.clone().add(filingOffset, 'months').endOf('month');
 
         if (today.isSameOrBefore(filingDeadline)) {
@@ -128,7 +129,7 @@ const calculateCellData = (client: ReturnType<typeof getCollectionClients>[0], v
         else if (cellDate.isBetween(term2Start, term2End, 'month', '[]')) style = 'active-2';
 
         // Fiscal Month Marker
-        const fiscalMonth = (client.type === 'individual' || client.type === 'sole_proprietor') ? 12 : client.fiscalMonth;
+        const fiscalMonth = getEffectiveFiscalMonth(client.type, client.fiscalMonth);
         const isFiscalMonth = (fiscalMonth === month);
 
         // Status Icon (Using generic logic from Vue: mod calculation)

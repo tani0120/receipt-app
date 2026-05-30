@@ -126,6 +126,11 @@
   box-shadow: 0 2px 6px rgba(0,0,0,0.18);
 }
 .td-ai { text-align: center; color: #1976D2; font-weight: 600; }
+.td-master-id { font-size: 10px; color: #888; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+.td-target { text-align: center; font-size: 11px; color: #666; }
+.td-account-group { text-align: center; font-size: 10px; color: #666; white-space: nowrap; }
+.td-direction { text-align: center; font-size: 11px; color: #1565c0; font-weight: 500; }
+.td-voucher-types { font-size: 9px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
 .td-date { text-align: center; color: #888; font-size: 10px; white-space: nowrap; }
 
 /* deprecated行のグレーアウト（ルール3） */

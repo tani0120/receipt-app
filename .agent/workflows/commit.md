@@ -53,7 +53,7 @@ Select-String -Path .git/diff_output.txt -Pattern "key|secret|token|password|api
 - `write_to_file`ツールで `.git/COMMIT_MSG.txt` にUTF-8でメッセージを書く
 - コメントには作成/修正/削除したファイル、修正内容を**詳細に**記載
 
-コミットコメントは修正した内容や目的、修正したファイルやなどを詳細にかけ
+コミットコメントは修正した内容や目的、修正したファイルやなどを詳細にかけ　120行以上で書け
 
 ## Step 5: コミット
 

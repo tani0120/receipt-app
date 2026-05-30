@@ -35,16 +35,14 @@ import type { AccountDeterminationResult } from './pipeline/accountDetermination
  * source_type（証票種別）× direction（入出金方向）から導出される
  * 仕訳の相手勘定（貸方 or 借方のうち「決まっている側」）。
  *
- * 税区分は相手勘定（資産・負債科目）側は全件 COMMON_EXEMPT（対象外）。
- * 税区分の実質的な設定は主科目（determined_account）側で行う。
+ * 税区分は相手勘定科目のdefaultTaxCategoryId（マスタ定義）から動的に解決する。
+ * ハードコードしない（データ駆動）。
  *
  * account = null の場合: insufficient（人間判断が必要）
  */
 export interface CounterpartEntry {
   /** 相手勘定科目（ACCOUNT_MASTER ID）。null = insufficient */
   account: string | null
-  /** 税区分（TAX_CATEGORY_MASTER ID）。相手勘定は全件 COMMON_EXEMPT */
-  tax_category: string | null
 }
 
 // ============================================================
@@ -85,50 +83,50 @@ export const COUNTERPART_ACCOUNT_MAP: Partial<
   // ── 🏦 通帳・銀行明細（bank_statement）──────────────────────
   // 相手勘定: 普通預金（ORDINARY_DEPOSIT）
   bank_statement: {
-    expense: { account: 'ORDINARY_DEPOSIT', tax_category: 'COMMON_EXEMPT' }, // 普通預金
-    income:  { account: 'ORDINARY_DEPOSIT', tax_category: 'COMMON_EXEMPT' }, // 普通預金
+    expense: { account: 'ORDINARY_DEPOSIT' }, // 普通預金
+    income:  { account: 'ORDINARY_DEPOSIT' }, // 普通預金
   },
 
   // ── 💳 クレカ・Pay・スマホ決済明細（credit_card）────────────
   // 相手勘定: 未払金（ACCRUED_EXPENSES）
   credit_card: {
-    expense: { account: 'ACCRUED_EXPENSES', tax_category: 'COMMON_EXEMPT' }, // 未払金
-    income:  { account: 'ACCRUED_EXPENSES', tax_category: 'COMMON_EXEMPT' }, // 未払金
+    expense: { account: 'ACCRUED_EXPENSES' }, // 未払金
+    income:  { account: 'ACCRUED_EXPENSES' }, // 未払金
   },
 
   // ── 🧾 領収書・レシート（receipt）──────────────────────────
   // 相手勘定: 現金（CASH）が基本。is_credit_card_payment=true 時は未払金（ACCRUED_EXPENSES）
   // ※分岐は resolveCounterpartAccount() で処理。ここはデフォルト（現金払い）を定義。
   receipt: {
-    expense: { account: 'CASH', tax_category: 'COMMON_EXEMPT' }, // 現金（クレカ払い時はACCRUED_EXPENSES）
+    expense: { account: 'CASH' }, // 現金（クレカ払い時はACCRUED_EXPENSES）
     // income は通常発生しない（返金などで稀に発生する場合も現金）
-    income:  { account: 'CASH', tax_category: 'COMMON_EXEMPT' }, // 現金
+    income:  { account: 'CASH' }, // 現金
   },
 
   // ── 📄 受取請求書（invoice_received）────────────────────────
   // 相手勘定: 買掛金（ACCOUNTS_PAYABLE）
   invoice_received: {
-    expense: { account: 'ACCOUNTS_PAYABLE', tax_category: 'COMMON_EXEMPT' }, // 買掛金
+    expense: { account: 'ACCOUNTS_PAYABLE' }, // 買掛金
   },
 
   // ── 🏛️ 納付書（tax_payment）─────────────────────────────────
   // 相手勘定: 普通預金（ORDINARY_DEPOSIT）（口座振替での納付）
   tax_payment: {
-    expense: { account: 'ORDINARY_DEPOSIT', tax_category: 'COMMON_EXEMPT' }, // 普通預金
+    expense: { account: 'ORDINARY_DEPOSIT' }, // 普通預金
   },
 
   // ── 📒 現金出納帳（cash_ledger）─────────────────────────────
   // 相手勘定: 現金（CASH）
   cash_ledger: {
-    expense: { account: 'CASH', tax_category: 'COMMON_EXEMPT' }, // 現金
-    income:  { account: 'CASH', tax_category: 'COMMON_EXEMPT' }, // 現金
+    expense: { account: 'CASH' }, // 現金
+    income:  { account: 'CASH' }, // 現金
   },
 
   // ── 📋 振替伝票（journal_voucher）───────────────────────────
   // 相手勘定: 文脈依存（一律定義不可）→ null（insufficient）
   journal_voucher: {
-    expense: { account: null, tax_category: null },
-    income:  { account: null, tax_category: null },
+    expense: { account: null },
+    income:  { account: null },
   },
 
   // ── 手入力仕訳・仕訳対象外 ──────────────────────────────────
@@ -148,7 +146,6 @@ export const COUNTERPART_ACCOUNT_MAP: Partial<
  */
 export const COUNTERPART_RECEIPT_CREDIT_CARD: CounterpartEntry = {
   account: 'ACCRUED_EXPENSES', // 未払金（クレカ払い時）
-  tax_category: 'COMMON_EXEMPT',
 }
 
 // ============================================================
@@ -181,7 +178,7 @@ export function resolveCounterpartAccount(
   if (entry !== undefined) return entry
 
   // マップ外（手入力仕訳・仕訳対象外 等）
-  return { account: null, tax_category: null }
+  return { account: null }
 }
 
 // ============================================================
@@ -223,6 +220,30 @@ function resolveVoucherType(
     return 'クレカ'
   }
   return VOUCHER_TYPE_MAP[sourceType]?.[direction] ?? null
+}
+
+// ============================================================
+// § 相手勘定の税区分をマスタから動的解決（データ駆動）
+// ============================================================
+
+/**
+ * 科目マスタから相手勘定のデフォルト税区分IDを解決する
+ *
+ * 相手勘定（BS科目: 現金、普通預金、未払金、買掛金等）の税区分は
+ * 科目マスタのdefaultTaxCategoryIdから動的に取得する。
+ * マスタが提供されない場合はnull（バリデーション時に補完される）。
+ *
+ * @param accountId    - 相手勘定科目ID
+ * @param accountMaster - 科目マスタ配列
+ * @returns 税区分ID（マスタから解決）またはnull
+ */
+function resolveAccountDefaultTaxCategory(
+  accountId: string | null,
+  accountMaster: { id: string; defaultTaxCategoryId?: string | null }[] | null,
+): string | null {
+  if (!accountId || !accountMaster) return null
+  const acc = accountMaster.find(a => a.id === accountId)
+  return acc?.defaultTaxCategoryId ?? null
 }
 
 // ============================================================
@@ -269,6 +290,7 @@ function generateJournalEntryId(): string {
  * @param isCreditCardPayment - クレカ払いフラグ（receipt の相手勘定・voucher_type 分岐に使用）
  * @param documentId          - 証票ID（crypto.randomUUID()でアップロード時に生成済み。未指定時はnull）
  * @param accountResults      - 科目確定結果の配列（Step4-C辞書接続。items[i]に対応。未指定時は従来ロジック）
+ * @param accountMaster       - 科目マスタ（相手勘定の税区分をdefaultTaxCategoryIdから動的解決。省略時はnull）
  * @returns JournalPhase5Mock[]
  */
 export function lineItemToJournalMock(
@@ -278,6 +300,7 @@ export function lineItemToJournalMock(
   isCreditCardPayment = false,
   documentId: string | null = null,
   accountResults: AccountDeterminationResult[] | null = null,
+  accountMaster: { id: string; defaultTaxCategoryId?: string | null }[] | null = null,
 ): JournalPhase5Mock[] {
   return items.map((item, index) => {
     // Step4-C: 科目確定結果がある場合はそちらを使用
@@ -306,9 +329,9 @@ export function lineItemToJournalMock(
 
       // D-4: tax_category（税区分）のマッピング
       //   主科目側: LineItem.tax_category（実際の税区分）
-      //   相手勘定側: counterpart.tax_category（全件 COMMON_EXEMPT）
+      //   相手勘定側: 科目マスタのdefaultTaxCategoryIdから動的解決（データ駆動）
       const mainTaxCategoryId = acctResult?.taxCategory ?? item.tax_category ?? null
-      const counterpartTaxCategoryId = counterpart.tax_category
+      const counterpartTaxCategoryId = resolveAccountDefaultTaxCategory(counterpart.account, accountMaster)
 
       // 主科目エントリ（主科目は account_on_document: true で扱う）
       const mainEntry: JournalEntryLine = {
@@ -365,7 +388,7 @@ export function lineItemToJournalMock(
         department:         null,
         amount:             item.amount,
         amount_on_document: true,
-        tax_category_id:    counterpartInsuf.tax_category,
+        tax_category_id:    resolveAccountDefaultTaxCategory(counterpartInsuf.account, accountMaster),
       }
       if (item.direction === 'expense') {
         debitEntries  = [placeholderMain]

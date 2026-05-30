@@ -145,6 +145,49 @@ export function getProcessingMode(type: SourceType): ProcessingMode {
 }
 
 // ============================================================
+// SourceCategory（学習ルール照合用カテゴリ — 4種）
+// ============================================================
+
+/**
+ * 学習ルール照合用のカテゴリ（4種）
+ *
+ * SourceType（12種）を学習ルールの照合に必要な粒度に集約する。
+ * matchLearningRule.ts で使用。
+ */
+export type SourceCategory = 'receipt' | 'bank' | 'credit' | 'all'
+
+/**
+ * SourceType → SourceCategory 変換テーブル
+ *
+ * 学習ルールは sourceCategory 単位で照合する。
+ * null = 学習ルール照合対象外（手入力・対象外の証票）
+ */
+export const SOURCE_CATEGORY_MAP: Record<SourceType, SourceCategory | null> = {
+  // 領収書系 → 'receipt'
+  receipt:          'receipt',
+  invoice_received: 'receipt',
+  tax_payment:      'receipt',
+  // 銀行系 → 'bank'
+  bank_statement:   'bank',
+  cash_ledger:      'bank',
+  // クレカ系 → 'credit'
+  credit_card:      'credit',
+  // 以下は学習ルール照合対象外
+  journal_voucher:  null,
+  invoice_issued:   null,
+  receipt_issued:   null,
+  non_journal:      null,
+  supplementary_doc: null,
+  other:            null,
+}
+
+/** SourceType → SourceCategory に変換する */
+export function getSourceCategory(type: SourceType | string | null): SourceCategory | null {
+  if (!type) return null
+  return SOURCE_CATEGORY_MAP[type as SourceType] ?? null
+}
+
+// ============================================================
 // Direction（仕訳方向 — 4種）
 // ============================================================
 

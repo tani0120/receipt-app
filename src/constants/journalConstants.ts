@@ -64,20 +64,16 @@ export const TAX_GROUP_PURCHASE = '仕入系'
 export const TAX_GROUP_COMMON = '共通'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 逆仕訳科目ID
+// 逆仕訳科目ID — マスタのisContraRevenue/isContraExpenseフラグに移行済み
+// journalValidationCore.ts → isContraAccount() でデータ駆動判定
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-/** 逆仕訳科目: 借方に出ても正当な売上系科目（値引き・返品等） */
-export const CONTRA_REVENUE_IDS: readonly string[] = ['SALES_RETURNS', 'SALES_RETURNS_CORP']
-/** 逆仕訳科目: 貸方に出ても正当な経費系科目（値引き・返品等） */
-export const CONTRA_EXPENSE_IDS: readonly string[] = ['PURCHASE_RETURNS', 'PURCHASE_RETURNS_CORP']
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 5分類グループ型（貸借バリデーション用）
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/** 勘定科目の5分類グループ */
-export type MegaGroupType = 'sales' | 'expense' | 'bs_al' | 'bs_equity' | null
+/** 勘定科目の5分類グループ（shared/validation/journalValidationCore.ts からre-export） */
+export type { MegaGroupType } from '@/shared/validation/journalValidationCore'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // accountGroupキー定数

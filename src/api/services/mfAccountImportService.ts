@@ -1,0 +1,226 @@
+/**
+ * mfAccountImportService.ts — MF勘定科目インポート処理（バックエンド）
+ *
+ * フロント（MockMasterAccountsPage.vue）に分散していたインポートの
+ * MF取得・税区分照合・差分検知・マスタ保存処理をバックエンドに集約。
+ * フロントはAPI呼び出しと結果表示のみ。
+ *
+ * エンドポイント:
+ *   POST /api/mf/import-master-accounts — マスタ勘定科目インポート（差分マージ）
+ *
+ * 準拠:
+ *   - load_context.md: ★supabase移行できるようにすべてのロジックをapi化せよ
+ *   - mfTaxImportService.ts と同じアーキテクチャ
+ */
+
+import { mcpFetchAccounts } from './mfMcpClient'
+import { getAllAccounts, saveAllAccounts, getAllTaxCategories } from './accountMasterStore'
+import { saveMfRawData } from './mfRawDataStore'
+import { getById } from './clientStore'
+import {
+  MF_CATEGORY_MAP,
+  deriveMfAccountGroup,
+  deriveTaxDetermination,
+  deriveTarget,
+} from '../../data/master/mf-account-category-mapping'
+import type { Account } from '../../types/shared-account'
+import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 差分検知結果
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** MFとマスタの差分情報 */
+export interface AccountImportDiff {
+  /** MFフィールド付与（既存行にmfAccountId等を追加） */
+  updated: Array<{ name: string; mfId: string }>
+  /** 新規追加（MFにあってマスタにない） */
+  added: Array<{ name: string; mfId: string; category: string }>
+  /** 名前変更検知（mfAccountIdで照合したが名前が異なる） */
+  nameChanged: Array<{ mfId: string; oldName: string; newName: string }>
+  /** 変更なし件数 */
+  unchanged: number
+}
+
+/** インポート結果 */
+export interface AccountImportResult {
+  /** 処理成功 */
+  success: boolean
+  /** MFから取得した件数 */
+  mfCount: number
+  /** 差分情報 */
+  diff: AccountImportDiff
+  /** サマリーテキスト */
+  summary: string
+  /** レポート行（UI表示用） */
+  reportLines: string[]
+  /** 更新後のマスタ科目一覧 */
+  updatedAccounts: Account[]
+  /** 差分あり（追加 or 名前変更） */
+  hasDiff: boolean
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// インポート処理本体
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * MFから勘定科目を取得して全社マスタと差分マージする
+ *
+ * 処理フロー:
+ * 1. MFから勘定科目一覧を取得（mcpFetchAccounts）
+ * 2. 税区分マスタを読み込み（mfTaxId→マスタID変換用）
+ * 3. マスタの既存データとmfAccountId/名前で照合
+ * 4. 差分検知（MFフィールド付与 / 新規追加 / 名前変更）
+ * 5. 差分をマスタに適用して保存
+ * 6. MF生データを保存
+ *
+ * @param clientId MF認証済みの顧問先ID（MCP tokenKeyとして使用）
+ * @param applyNameChanges 名前変更を自動適用するか（デフォルト: false）
+ */
+export async function importMasterAccounts(
+  clientId: string,
+  applyNameChanges: boolean = false,
+): Promise<AccountImportResult> {
+  // 1. MFから勘定科目取得
+  const mfAccounts = await mcpFetchAccounts(clientId)
+
+  // 2. 税区分マスタ読み込み（mfTaxId→マスタID変換用）
+  const taxCategories = getAllTaxCategories()
+  const mfTaxIdToMasterId = new Map<string, string>()
+  for (const t of taxCategories) {
+    if (t.mfId) mfTaxIdToMasterId.set(t.mfId, t.id)
+  }
+
+  // 3. マスタのディープコピーを作成（元データ非破壊）
+  const masterItems: Account[] = JSON.parse(JSON.stringify(getAllAccounts()))
+  const mfIdToRow = new Map<string, Account>()
+  for (const row of masterItems) {
+    if (row.mfAccountId) mfIdToRow.set(row.mfAccountId, row)
+  }
+  const nameToRow = new Map<string, Account>()
+  for (const row of masterItems) {
+    nameToRow.set(row.name, row)
+  }
+
+  // 4. 差分検知
+  const diff: AccountImportDiff = {
+    updated: [],
+    added: [],
+    nameChanged: [],
+    unchanged: 0,
+  }
+
+  let maxSort = Math.max(...masterItems.map(a => a.sortOrder), 0)
+
+  for (const mf of mfAccounts) {
+    // mfAccountIdで照合 → なければ名前で照合
+    const byMfId = mfIdToRow.get(mf.id)
+    const byName = nameToRow.get(mf.name)
+    const existing = byMfId ?? byName
+
+    const masterCat = MF_CATEGORY_MAP[mf.category] ?? '経費'
+    const masterTaxId = mfTaxIdToMasterId.get(mf.tax_id)
+
+    if (existing) {
+      // MFフィールド付与（既存行にMF連携情報を追加）
+      existing.mfAccountId = mf.id
+      existing.mfAccountGroup = mf.account_group
+      existing.mfFinancialStatementType = mf.financial_statement_type
+      existing.mfDefaultTaxId = mf.tax_id
+
+      // デフォルト税区分が未設定の場合のみMFから補完
+      if (!existing.defaultTaxCategoryId && masterTaxId) {
+        existing.defaultTaxCategoryId = masterTaxId
+      }
+
+      // 名前変更検知（mfAccountIdで照合して名前が異なる場合）
+      if (byMfId && byMfId.name !== mf.name) {
+        diff.nameChanged.push({ mfId: mf.id, oldName: byMfId.name, newName: mf.name })
+      } else {
+        diff.updated.push({ name: mf.name, mfId: mf.id })
+      }
+    } else {
+      // 新規追加（MFにあってマスタにない）
+      maxSort++
+      const newAccount: Account = {
+        id: `MF_${mf.name.replace(/[^a-zA-Z0-9\u3000-\u9FFF]/g, '_')}`,
+        name: mf.name,
+        target: deriveTarget(masterCat, mf.financial_statement_type),
+        accountGroup: deriveMfAccountGroup(mf.account_group, mf.category),
+        category: masterCat,
+        defaultTaxCategoryId: masterTaxId,
+        taxDetermination: deriveTaxDetermination(masterCat),
+        deprecated: false,
+        effectiveFrom: DEFAULT_EFFECTIVE_FROM,
+        effectiveTo: null,
+        sortOrder: maxSort,
+        isCustom: false,
+        mfAccountId: mf.id,
+        mfAccountGroup: mf.account_group,
+        mfFinancialStatementType: mf.financial_statement_type,
+        mfDefaultTaxId: mf.tax_id,
+      }
+      masterItems.push(newAccount)
+      diff.added.push({ name: mf.name, mfId: mf.id, category: masterCat })
+    }
+  }
+
+  // 5. 名前変更の適用（applyNameChanges=trueの場合）
+  if (applyNameChanges) {
+    for (const c of diff.nameChanged) {
+      const row = mfIdToRow.get(c.mfId)
+      if (row) row.name = c.newName
+    }
+  }
+
+  // 6. マスタを保存
+  saveAllAccounts(masterItems)
+
+  // 7. MF生データを保存
+  const client = getById(clientId)
+  saveMfRawData({
+    clientId,
+    clientName: client?.companyName ?? client?.repName ?? '',
+    pattern: 'master-accounts',
+    importedAt: new Date().toISOString(),
+    itemCount: mfAccounts.length,
+    items: mfAccounts,
+  })
+
+  // 8. レポート生成
+  const reportLines: string[] = []
+  reportLines.push(`📥 MF勘定科目 ${mfAccounts.length}件を照合`)
+  if (diff.updated.length > 0) {
+    reportLines.push(`✅ MFフィールド付与: ${diff.updated.length}件`)
+  }
+  if (diff.added.length > 0) {
+    reportLines.push(`➕ 新規追加: ${diff.added.length}件`)
+    for (const a of diff.added.slice(0, 5)) reportLines.push(`  ・${a.name}（${a.category}）`)
+    if (diff.added.length > 5) reportLines.push(`  …他${diff.added.length - 5}件`)
+  }
+  if (diff.nameChanged.length > 0) {
+    reportLines.push(`✏️ 名前変更: ${diff.nameChanged.length}件`)
+    for (const c of diff.nameChanged) reportLines.push(`  ・${c.oldName} → ${c.newName}`)
+  }
+
+  const hasDiff = diff.added.length > 0 || diff.nameChanged.length > 0
+
+  const summaryParts = [
+    diff.updated.length > 0 ? `更新${diff.updated.length}` : '',
+    diff.added.length > 0 ? `追加${diff.added.length}` : '',
+    diff.nameChanged.length > 0 ? `名前変更${diff.nameChanged.length}` : '',
+  ].filter(Boolean).join(', ')
+
+  console.log(`[mfAccountImportService] マスタインポート完了: clientId=${clientId}, ${summaryParts || '差分なし'}`)
+
+  return {
+    success: true,
+    mfCount: mfAccounts.length,
+    diff,
+    summary: summaryParts || '差分なし',
+    reportLines,
+    updatedAccounts: masterItems,
+    hasDiff,
+  }
+}

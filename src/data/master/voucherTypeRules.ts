@@ -30,6 +30,10 @@ export type VoucherTypeRule = {
   debit: VoucherTypeSideRule
   /** 貸方に許容される科目 */
   credit: VoucherTypeSideRule
+  /** 借方デフォルト科目ID（ヒント候補の初期値に使用） */
+  defaultDebitId?: string
+  /** 貸方デフォルト科目ID（ヒント候補の初期値に使用） */
+  defaultCreditId?: string
 }
 
 // ────────────────────────────────────────────
@@ -104,6 +108,7 @@ export const VOUCHER_TYPE_RULES: Record<string, VoucherTypeRule> = {
   '売上': {
     label: '売上',
     description: '収益が発生した証票。借方に受取手段（売掛金・現金・預金）、貸方に収益科目。',
+    defaultDebitId: 'ACCOUNTS_RECEIVABLE',
     debit: {
       allowedIds: [...RECEIVABLE_IDS],
       allowedCategories: ['売上債権', '現金及び預金'],
@@ -116,6 +121,7 @@ export const VOUCHER_TYPE_RULES: Record<string, VoucherTypeRule> = {
   'クレカ': {
     label: 'クレカ',
     description: 'クレジットカード利用明細。借方に費用科目、貸方は未払金のみ。',
+    defaultCreditId: 'ACCRUED_EXPENSES',
     debit: {
       allowedGroups: ['PL_EXPENSE'],
     },

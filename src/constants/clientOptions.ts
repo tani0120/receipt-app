@@ -39,6 +39,35 @@ export const TYPE_OPTIONS: readonly SelectOption[] = [
   { value: 'individual', label: '個人' },
 ] as const
 
+/** 個人系（個人 or 個人事業）かどうかを判定 */
+export function isIndividualType(type: string | null | undefined): boolean {
+  return type === 'individual' || type === 'sole_proprietor'
+}
+
+/** 法人かどうかを判定（個人系でない） */
+export function isCorporateType(type: string | null | undefined): boolean {
+  return type != null && !isIndividualType(type)
+}
+
+/** 個人事業主のデフォルト決算月 */
+export const INDIVIDUAL_DEFAULT_FISCAL_MONTH = 12
+/** 法人のデフォルト決算月 */
+export const CORP_DEFAULT_FISCAL_MONTH = 3
+/** 個人事業主の申告猶予月数（確定申告: 3月15日 ≒ 3ヶ月） */
+export const INDIVIDUAL_FILING_OFFSET_MONTHS = 3
+/** 法人の申告猶予月数（決算後2ヶ月） */
+export const CORP_FILING_OFFSET_MONTHS = 2
+
+/** 事業者種別に応じた決算月を返す（個人=12月固定、法人=引数のfiscalMonth） */
+export function getEffectiveFiscalMonth(type: string | null | undefined, fiscalMonth: number): number {
+  return isIndividualType(type) ? INDIVIDUAL_DEFAULT_FISCAL_MONTH : fiscalMonth
+}
+
+/** 事業者種別に応じた申告猶予月数を返す（個人=3、法人=2） */
+export function getFilingOffsetMonths(type: string | null | undefined): number {
+  return isIndividualType(type) ? INDIVIDUAL_FILING_OFFSET_MONTHS : CORP_FILING_OFFSET_MONTHS
+}
+
 /** ステータス（顧問先用） */
 export const STATUS_OPTIONS: readonly SelectOption[] = [
   { value: 'active', label: '契約中' },

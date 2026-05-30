@@ -15,29 +15,18 @@
 
 import type { LearningRule } from '../../types/learning_rule.type'
 import { learningRulesTST00011 } from '../../data/learning_rules_TST00011'
+import { getSourceCategory } from '../../types/pipeline/source_type.type'
 
 /**
  * 証票種別 → 学習ルールのsourceCategory への変換
  *
- * SourceType（11種）→ LearningRule.sourceCategory（4種）
+ * SourceType（12種）→ LearningRule.sourceCategory（4種）
+ * 共通マッピングは source_type.type.ts の SOURCE_CATEGORY_MAP に集約。
  */
 function toSourceCategory(
   sourceType: string | null,
 ): 'receipt' | 'bank' | 'credit' | 'all' | null {
-  if (!sourceType) return null
-  switch (sourceType) {
-    case 'receipt':
-    case 'invoice_received':
-    case 'tax_payment':
-      return 'receipt'
-    case 'bank_statement':
-    case 'cash_ledger':
-      return 'bank'
-    case 'credit_card':
-      return 'credit'
-    default:
-      return null
-  }
+  return getSourceCategory(sourceType)
 }
 
 /**

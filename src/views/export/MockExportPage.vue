@@ -278,6 +278,7 @@ import {
   downloadMfCsv,
 } from "@/utils/exportMfCsv";
 import { syncWarningLabelsCore } from "@/utils/journalWarningSync";
+import { VOUCHER_TYPE_RULES } from '@/data/master/voucherTypeRules';
 import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { useCurrentUser } from "@/composables/useCurrentUser";
 import { UI_MSG } from '@/constants/uiMessages';
@@ -316,7 +317,7 @@ onMounted(() => {
   // 顧問先設定の科目・税区分でバリデーション（顧問先設定外→ACCOUNT_UNKNOWN/TAX_UNKNOWN）
   const accounts = clientSettings.accounts.value;
   const taxCategories = clientSettings.taxCategories.value;
-  journals.value.forEach((j) => syncWarningLabelsCore(j, accounts, taxCategories));
+  journals.value.forEach((j) => syncWarningLabelsCore(j, accounts, taxCategories, VOUCHER_TYPE_RULES));
 });
 
 // --- 勘定科目名リスト（T-31-7: サーバーから取得） ---

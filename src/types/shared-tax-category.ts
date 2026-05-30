@@ -49,6 +49,16 @@ export type TaxCategory = {
     taxRate?: number
     /** 簡易課税専用フラグ（true=簡易課税方式でのみ使用。原則課税・免税では非表示） */
     simplifiedOnly?: boolean
+    /** 原則用ベース税区分ID（simplifiedOnly=trueの場合のみ設定。対応する原則用税区分のID） */
+    baseId?: string
+    /** 個別対応方式専用フラグ（true=個別対応方式でのみ使用可。一括比例では不正） */
+    individualOnly?: boolean
+    /** 免税事業者デフォルトフラグ（免税時の矛盾修正先。マスタで1件のみtrue） */
+    isExemptDefault?: boolean
+    /** 売上系のデフォルト税区分フラグ（新規売上科目のデフォルト。マスタで1件のみtrue） */
+    isSalesDefault?: boolean
+    /** 仕入系のデフォルト税区分フラグ（新規仕入科目のデフォルト。マスタで1件のみtrue） */
+    isPurchaseDefault?: boolean
     /** デフォルト順復元用: コピー/追加時の挿入位置直前の行ID */
     insertAfter?: string
 }

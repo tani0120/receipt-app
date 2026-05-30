@@ -131,7 +131,7 @@
                   <template v-else-if="col.key === 'type'">{{ getLabel(TYPE_OPTIONS, row.type) }}</template>
                   <template v-else-if="col.key === 'consumptionTaxMode'">{{ taxModeLabel(row.consumptionTaxMode) }}</template>
                   <template v-else-if="col.key === 'companyName'">
-                    <span>{{ (row.type === 'individual' || row.type === 'sole_proprietor') && row.repName ? row.repName : row.companyName }}</span>
+                    <span>{{ isIndividualType(row.type) && row.repName ? row.repName : row.companyName }}</span>
                   </template>
                   <template v-else-if="col.key === 'staffId'">{{ getStaffNameForLead(row.leadId) || '—' }}</template>
                   <template v-else-if="col.key === 'accountingSoftware'">{{ softwareLabel(row.accountingSoftware) }}</template>
@@ -342,7 +342,7 @@
                 </label>
               </div>
               <!-- 不動産所得あり（個人事業主のみ表示） -->
-              <div v-if="panelForm.type === 'individual' || panelForm.type === 'sole_proprietor'" class="cm-field">
+              <div v-if="isIndividualType(panelForm.type)" class="cm-field">
                 <label class="cm-checkbox-label">
                   <input type="checkbox" v-model="panelForm.hasRentalIncome">
                   <span>不動産所得あり</span>
@@ -472,6 +472,7 @@ import {
   TYPE_OPTIONS, LEAD_STATUS_OPTIONS,
   PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
   getLabel, getValueByLabel, resolveFieldOptions,
+  isIndividualType,
 } from '@/constants/clientOptions';
 import { useFieldLayout } from '@/composables/useFieldLayout';
 import type { CustomFieldDef } from '@/composables/useFieldLayout';

@@ -221,7 +221,7 @@
           </template>
           <!-- hasRentalIncome: 不動産所得チェック -->
           <template v-if="!isLayoutMode" #hasRentalIncome>
-            <div v-if="form.type === 'individual' || form.type === 'sole_proprietor'" class="ce-field">
+            <div v-if="isIndividualType(form.type)" class="ce-field">
               <template v-if="isEditing">
                 <label class="ce-checkbox"><input type="checkbox" v-model="form.hasRentalIncome"><span>不動産所得あり</span></label>
                 <span class="ce-hint">有効にすると不動産関連15科目が選択可能になります</span>
@@ -331,6 +331,7 @@ import {
   PAYMENT_DAY_OPTIONS, ANNUAL_REVENUE_OPTIONS,
   STATUS_OPTIONS, PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
   getLabel,
+  isIndividualType,
 } from '@/constants/clientOptions';
 import {
   clientSections, clientFieldsFlat,
@@ -1114,7 +1115,7 @@ const saveClient = async () => {
     try {
       const saved = await addClient(data as Omit<Client, 'clientId'>);
       createDriveFolderForClient(saved).catch(e => console.error('[clients] Driveフォルダ作成失敗:', e));
-      const displayName = (saved.type === 'individual' || saved.type === 'sole_proprietor') && saved.repName ? saved.repName : saved.companyName;
+      const displayName = isIndividualType(saved.type) && saved.repName ? saved.repName : saved.companyName;
       await modal.notify({ title: `「${displayName}」${UI_MSG.追加完了}`, message: UI_MSG.マスタ自動コピー完了, variant: 'success' });
       router.push(`/master/clients/${saved.clientId}`);
     } catch (err) {
@@ -1131,7 +1132,7 @@ const saveClient = async () => {
         const renamed = await renameDriveFolderForClient(data);
         if (renamed) await modal.notify({ title: `${UI_MSG.ドライブ名変更}${renamed}${UI_MSG.に変更}`, variant: 'success' });
       }
-      const displayName = (data.type === 'individual' || data.type === 'sole_proprietor') && data.repName ? data.repName : data.companyName;
+      const displayName = isIndividualType(data.type) && data.repName ? data.repName : data.companyName;
       await modal.notify({ title: `「${displayName}」${UI_MSG.更新完了}`, variant: 'success' });
       isEditing.value = false;
       isCopyNew.value = false;
