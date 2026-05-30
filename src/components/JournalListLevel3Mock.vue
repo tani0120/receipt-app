@@ -3165,8 +3165,14 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
   const allAccounts = clientSettings.accounts.value;
   const allTaxCategories = clientSettings.taxCategories.value;
 
+  // 顧問先コンテキスト（期外日付・役員貸付金・少額適格用）
+  const client = activeClientFull.value;
+  const validationContext = {
+    fiscalMonth: client?.fiscalMonth ?? 3,
+  };
+
   // shared（SSOT）を呼び出し — labels を直接 mutate する
-  const result: SyncWarningResult = syncWarningLabelsCore(journal, allAccounts, allTaxCategories, VOUCHER_TYPE_RULES);
+  const result: SyncWarningResult = syncWarningLabelsCore(journal, allAccounts, allTaxCategories, VOUCHER_TYPE_RULES, validationContext);
 
   // ── UI固有: セルハイライトMap更新 ──
 

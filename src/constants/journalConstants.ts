@@ -171,6 +171,24 @@ export const WARNING_LABEL_MAP: Record<string, WarningLabelDef> = {
     color: 'text-yellow-600',
     weight: 6.7,
   },
+  DATE_OUT_OF_RANGE: {
+    level: 'warn',
+    label: '日付が当期の範囲外',
+    color: 'text-yellow-600',
+    weight: 8,
+  },
+  DIRECTOR_LOAN: {
+    level: 'warn',
+    label: '役員貸付金（税務リスク注意）',
+    color: 'text-yellow-600',
+    weight: 5,
+  },
+  AUTO_INVOICE_SMALL: {
+    level: 'warn',
+    label: '少額特例（インボイス不要）',
+    color: 'text-blue-500',
+    weight: 1,
+  },
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

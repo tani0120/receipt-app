@@ -196,3 +196,16 @@ export const sideRowLabel = (side: string, idx: number) =>
 export const warnFutureDate = (date: string) =>
   `未来日付です（${date}）。日付を確認してください`
 
+/** 期外日付（決算期外） */
+export const warnDateOutOfRange = (date: string, rangeStart: string, rangeEnd: string) =>
+  `日付${date}は当期（${rangeStart}〜${rangeEnd}）の範囲外です`
+
+/** 役員貸付金検出 */
+export const warnDirectorLoan = (side: string, accountName: string) =>
+  `${side}に「${accountName}」が計上されています。税務リスク注意`
+
+/** 少額自動適格（インボイス不要） */
+export const warnAutoInvoiceSmall = (amount: string) =>
+  `取引金額${amount}円（税込1万円未満）はインボイス不要（少額特例 2029年9月まで）`
+
+

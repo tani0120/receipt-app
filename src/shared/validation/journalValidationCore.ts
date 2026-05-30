@@ -26,7 +26,11 @@ import {
   warnSameAccountBothSides, WARN_TAX_ACCOUNT_MISMATCH,
   SIDE_DEBIT, SIDE_CREDIT, sideAccountLabel, sideRowLabel,
   warnFutureDate,
+  warnDateOutOfRange,
+  warnDirectorLoan,
+  warnAutoInvoiceSmall,
 } from '../../constants/validationMessages'
+import { INVOICE_TRANSITION_0_DATE } from '../../constants/mfApiConstants'
 
 // ────────────────────────────────────────────
 // 型定義（正式型からPick — 乖離を構造的に防止）
@@ -72,6 +76,19 @@ export interface JournalForValidation {
   labels: string[]
   warning_dismissals?: string[]
   warning_details?: Record<string, string>
+  /** インボイスステータス（少額特例判定用。オプショナル） */
+  invoice_status?: string | null
+}
+
+/**
+ * バリデーション用の顧問先コンテキスト（オプショナル）
+ * DATE_OUT_OF_RANGE, DIRECTOR_LOAN, AUTO_INVOICE_SMALL の判定に使用。
+ */
+export interface ValidationContext {
+  /** 決算月（1-12）。個人事業主=12。 */
+  fiscalMonth?: number
+  /** 役員貸付金として検出する科目IDリスト */
+  directorLoanAccountIds?: string[]
 }
 
 /** syncWarningLabelsCore の返り値 */
@@ -370,7 +387,8 @@ export function syncWarningLabelsCore(
   journal: JournalForValidation,
   accounts: AccountForValidation[],
   taxCategories: TaxCategoryForValidation[],
-  voucherRules: Record<string, VoucherTypeRule> = {}
+  voucherRules: Record<string, VoucherTypeRule> = {},
+  context?: ValidationContext
 ): SyncWarningResult {
   const labels = journal.labels
   const addedLabels: string[] = []
@@ -542,6 +560,63 @@ export function syncWarningLabelsCore(
     addLabel('FUTURE_DATE', warnFutureDate(journal.voucher_date))
   } else {
     removeLabel('FUTURE_DATE')
+  }
+
+  // ── 11. DATE_OUT_OF_RANGE（期外日付） ──
+  if (context?.fiscalMonth && journal.voucher_date != null && journal.voucher_date !== '') {
+    const fm = context.fiscalMonth
+    const vd = new Date(journal.voucher_date)
+    // 決算月から会計年度の開始月を計算（決算月の翌月が開始月）
+    // 例: 3月決算 → 4月開始、12月決算 → 1月開始
+    const fyStartMonth = fm === 12 ? 0 : fm // 0-indexed（0=1月）
+    // 今日の日付から当期を判定
+    const todayDate = new Date()
+    let fyStartYear = todayDate.getFullYear()
+    // 現在の月が会計年度開始月より前なら、前年開始の会計年度
+    if (todayDate.getMonth() < fyStartMonth) {
+      fyStartYear -= 1
+    }
+    const fyStart = new Date(fyStartYear, fyStartMonth, 1)
+    const fyEnd = new Date(fyStartYear + 1, fyStartMonth, 0) // 決算月末日
+    if (vd < fyStart || vd > fyEnd) {
+      const fmtDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      addLabel('DATE_OUT_OF_RANGE', warnDateOutOfRange(journal.voucher_date, fmtDate(fyStart), fmtDate(fyEnd)))
+    } else {
+      removeLabel('DATE_OUT_OF_RANGE')
+    }
+  } else {
+    // コンテキストなし → チェックしない（既存ラベルがあれば維持）
+  }
+
+  // ── 12. DIRECTOR_LOAN（役員貸付金検出） ──
+  const dlAccountIds = context?.directorLoanAccountIds ?? ['OFFICER_LOANS']
+  const dlEntries = [
+    ...journal.debit_entries.filter(e => e.account != null && dlAccountIds.includes(e.account)).map(e => warnDirectorLoan('借方', e.account!)),
+    ...journal.credit_entries.filter(e => e.account != null && dlAccountIds.includes(e.account)).map(e => warnDirectorLoan('貸方', e.account!)),
+  ]
+  if (dlEntries.length > 0) {
+    addLabel('DIRECTOR_LOAN', dlEntries.join('。'))
+  } else {
+    removeLabel('DIRECTOR_LOAN')
+  }
+
+  // ── 13. AUTO_INVOICE_SMALL（少額自動適格判定） ──
+  // 条件: 税込金額 < 10,000 && インボイスステータス未設定 && 少額特例期間内（〜2029/09/30）
+  const SMALL_INVOICE_THRESHOLD = 10000
+  const SMALL_INVOICE_DEADLINE = INVOICE_TRANSITION_0_DATE
+  const totalAmount = Math.max(
+    journal.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0),
+    journal.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0)
+  )
+  const isSmallInvoiceEligible =
+    totalAmount > 0 &&
+    totalAmount < SMALL_INVOICE_THRESHOLD &&
+    !journal.invoice_status &&
+    (journal.voucher_date == null || journal.voucher_date < SMALL_INVOICE_DEADLINE)
+  if (isSmallInvoiceEligible) {
+    addLabel('AUTO_INVOICE_SMALL', warnAutoInvoiceSmall(totalAmount.toLocaleString()))
+  } else {
+    removeLabel('AUTO_INVOICE_SMALL')
   }
 
   return {

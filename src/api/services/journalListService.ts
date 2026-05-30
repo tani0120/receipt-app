@@ -183,6 +183,9 @@ const WARNING_WEIGHTS: Record<string, number> = {
   DATE_UNKNOWN: 45,
   DESCRIPTION_UNKNOWN: 40,
   DATE_OUT_OF_RANGE: 35,
+  FUTURE_DATE: 30,
+  DIRECTOR_LOAN: 25,
+  AUTO_INVOICE_SMALL: 5,
 }
 
 function getWarningWeight(labels: string[]): number {
