@@ -77,6 +77,8 @@ serviceAccount*.json
 /data/**
 !/data/.gitkeep
 !/data/README.md
+!/data/tax-category-master.json
+!/data/account-master.json
 analysis/
 
 # テスト関連
