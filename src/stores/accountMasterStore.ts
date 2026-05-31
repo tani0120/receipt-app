@@ -8,6 +8,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Account } from '@/types/shared-account'
+import { createApiClient } from '@/utils/apiClient'
 
 /** マスタレベルの科目拡張（非表示フラグ＋カスタム識別） */
 export interface MasterAccount extends Account {
@@ -15,8 +16,8 @@ export interface MasterAccount extends Account {
   isCustom: boolean
 }
 
-const API_BASE = '/api/accounts'
-const STALE_MS = 5 * 60 * 1000
+const api = createApiClient('/api/accounts')
+
 
 export const useAccountMasterStore = defineStore('accountMaster', () => {
   const allAccounts = ref<Account[]>([])
@@ -24,18 +25,18 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   let saveTimer: ReturnType<typeof setTimeout> | null = null
 
   async function load() {
-    if (allAccounts.value.length && cachedAt.value && Date.now() - cachedAt.value < STALE_MS) {
+    if (allAccounts.value.length) {
+      // キャッシュあり → 即時表示。裏でAPI取得（fire-and-forget）
       fetchFresh()
       return
     }
+    // キャッシュなし → APIを待つ
     await fetchFresh()
   }
 
   async function fetchFresh() {
     try {
-      const res = await fetch(`${API_BASE}/master?pageSize=200`)
-      if (!res.ok) return
-      const data = await res.json() as { items: Account[] }
+      const data = await api.get<{ items: Account[] }>('/master?pageSize=200')
       allAccounts.value = data.items
       cachedAt.value = Date.now()
       console.log(`[accountMasterStore] ${data.items.length}件をサーバーから取得`)
@@ -47,11 +48,8 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   function debounceSave(): void {
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
-      fetch(`${API_BASE}/master`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accounts: allAccounts.value }),
-      }).catch(err => console.error('[accountMasterStore] サーバー保存失敗:', err))
+      api.put('/master', { accounts: allAccounts.value })
+        .catch(err => console.error('[accountMasterStore] サーバー保存失敗:', err))
     }, 300)
   }
 

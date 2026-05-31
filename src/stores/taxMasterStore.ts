@@ -8,14 +8,15 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { TaxCategory } from '@/types/shared-tax-category'
+import { createApiClient } from '@/utils/apiClient'
 
 /** マスタレベルの税区分拡張 */
 export interface MasterTaxCategory extends TaxCategory {
   hiddenInMaster: boolean
 }
 
-const API_BASE = '/api/tax-categories'
-const STALE_MS = 5 * 60 * 1000
+const api = createApiClient('/api/tax-categories')
+
 
 export const useTaxMasterStore = defineStore('taxMaster', () => {
   const allTaxCategories = ref<TaxCategory[]>([])
@@ -23,18 +24,18 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
   let saveTimer: ReturnType<typeof setTimeout> | null = null
 
   async function load() {
-    if (allTaxCategories.value.length && cachedAt.value && Date.now() - cachedAt.value < STALE_MS) {
+    if (allTaxCategories.value.length) {
+      // キャッシュあり → 即時表示。裏でAPI取得（fire-and-forget）
       fetchFresh()
       return
     }
+    // キャッシュなし → APIを待つ
     await fetchFresh()
   }
 
   async function fetchFresh() {
     try {
-      const res = await fetch(`${API_BASE}/master?pageSize=200&taxMethod=all`)
-      if (!res.ok) return
-      const data = await res.json() as { items: TaxCategory[] }
+      const data = await api.get<{ items: TaxCategory[] }>('/master?pageSize=200&taxMethod=all')
       allTaxCategories.value = data.items
       cachedAt.value = Date.now()
       console.log(`[taxMasterStore] ${data.items.length}件をサーバーから取得`)
@@ -46,11 +47,8 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
   function debounceSave(): void {
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
-      fetch(`${API_BASE}/master`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taxCategories: allTaxCategories.value }),
-      }).catch(err => console.error('[taxMasterStore] サーバー保存失敗:', err))
+      api.put('/master', { taxCategories: allTaxCategories.value })
+        .catch(err => console.error('[taxMasterStore] サーバー保存失敗:', err))
     }, 300)
   }
 

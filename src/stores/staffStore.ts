@@ -8,34 +8,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Staff } from '@/repositories/types'
+import { createApiClient } from '@/utils/apiClient'
 
-const API_BASE = '/api/staff'
-const STALE_MS = 5 * 60 * 1000
-
-async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`)
-  if (!res.ok) throw new Error(`API GET ${path} failed: ${res.status}`)
-  return res.json()
-}
-
-async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`API POST ${path} failed: ${res.status}`)
-  return res.json()
-}
-
-async function apiPut(path: string, body: unknown): Promise<void> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`API PUT ${path} failed: ${res.status}`)
-}
+const api = createApiClient('/api/staff')
 
 export const useStaffStore = defineStore('staff', () => {
   const staffList = ref<Staff[]>([])
@@ -43,16 +18,18 @@ export const useStaffStore = defineStore('staff', () => {
   const lastError = ref<string | null>(null)
 
   async function load() {
-    if (staffList.value.length && cachedAt.value && Date.now() - cachedAt.value < STALE_MS) {
+    if (staffList.value.length) {
+      // キャッシュあり → 即時表示。裏でAPI取得（fire-and-forget）
       fetchFresh()
       return
     }
+    // キャッシュなし → APIを待つ
     await fetchFresh()
   }
 
   async function fetchFresh() {
     try {
-      const data = await apiGet<{ staff: Staff[] }>('')
+      const data = await api.get<{ staff: Staff[] }>('')
       staffList.value = data.staff
       cachedAt.value = Date.now()
       console.log(`[staffStore] ${data.staff.length}件をサーバーから取得`)
@@ -64,7 +41,7 @@ export const useStaffStore = defineStore('staff', () => {
   async function addStaff(staff: Omit<Staff, 'uuid'> & { uuid?: string }): Promise<Staff> {
     lastError.value = null
     try {
-      const res = await apiPost<{ ok: boolean; staff: Staff }>('', staff)
+      const res = await api.post<{ ok: boolean; staff: Staff }>('', staff)
       const saved = res.staff
       staffList.value.push(saved)
       return saved
@@ -79,7 +56,7 @@ export const useStaffStore = defineStore('staff', () => {
   async function updateStaff(uuid: string, data: Partial<Staff>): Promise<void> {
     lastError.value = null
     try {
-      await apiPut(`/${uuid}`, data)
+      await api.put(`/${uuid}`, data)
       const idx = staffList.value.findIndex(s => s.uuid === uuid)
       if (idx >= 0) {
         const current = staffList.value[idx]!

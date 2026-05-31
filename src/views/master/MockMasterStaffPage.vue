@@ -348,7 +348,6 @@ const staffFetchFn = async (query: Record<string, unknown>): Promise<ServerTable
 };
 
 const {
-  rows: filteredRows,
   pagedRows,
   isLoading,
   loadingMessage,

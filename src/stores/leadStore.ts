@@ -8,34 +8,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Lead } from '@/repositories/types'
+import { createApiClient } from '@/utils/apiClient'
 
-const API_BASE = '/api/leads'
-const STALE_MS = 5 * 60 * 1000
+const api = createApiClient('/api/leads')
 
-async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`)
-  if (!res.ok) throw new Error(`API GET ${path} failed: ${res.status}`)
-  return res.json()
-}
-
-async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`API POST ${path} failed: ${res.status}`)
-  return res.json()
-}
-
-async function apiPut(path: string, body: unknown): Promise<void> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`API PUT ${path} failed: ${res.status}`)
-}
 
 export const useLeadStore = defineStore('leads', () => {
   const leads = ref<Lead[]>([])
@@ -43,16 +19,18 @@ export const useLeadStore = defineStore('leads', () => {
   const lastError = ref<string | null>(null)
 
   async function load() {
-    if (leads.value.length && cachedAt.value && Date.now() - cachedAt.value < STALE_MS) {
+    if (leads.value.length) {
+      // キャッシュあり → 即時表示。裏でAPI取得（fire-and-forget）
       fetchFresh()
       return
     }
+    // キャッシュなし → APIを待つ
     await fetchFresh()
   }
 
   async function fetchFresh() {
     try {
-      const raw = await apiGet<{ leads: Lead[] } | Lead[]>('')
+      const raw = await api.get<{ leads: Lead[] } | Lead[]>('')
       const list = Array.isArray(raw) ? raw : raw.leads
       leads.value = list
       cachedAt.value = Date.now()
@@ -66,7 +44,7 @@ export const useLeadStore = defineStore('leads', () => {
     const idx = leads.value.findIndex(l => l.leadId === leadId)
     if (idx >= 0) {
       leads.value[idx] = { ...leads.value[idx]!, sharedFolderId: folderId }
-      apiPut(`/${leadId}/shared-folder`, { folderId })
+      api.put(`/${leadId}/shared-folder`, { folderId })
         .catch(err => console.error('[leadStore] sharedFolderId更新エラー:', err))
     }
   }
@@ -74,7 +52,7 @@ export const useLeadStore = defineStore('leads', () => {
   async function addLead(lead: Omit<Lead, 'leadId'> & { leadId?: string }): Promise<Lead> {
     lastError.value = null
     try {
-      const res = await apiPost<{ ok: boolean; lead: Lead }>('', lead)
+      const res = await api.post<{ ok: boolean; lead: Lead }>('', lead)
       const saved = res.lead
       leads.value.push(saved)
       return saved
@@ -89,7 +67,7 @@ export const useLeadStore = defineStore('leads', () => {
   async function updateLead(leadId: string, data: Partial<Lead>): Promise<void> {
     lastError.value = null
     try {
-      await apiPut(`/${leadId}`, data)
+      await api.put(`/${leadId}`, data)
       const idx = leads.value.findIndex(l => l.leadId === leadId)
       if (idx >= 0) {
         leads.value[idx] = { ...leads.value[idx]!, ...data, leadId }
@@ -109,7 +87,7 @@ export const useLeadStore = defineStore('leads', () => {
     page?: number
     pageSize?: number
   }): Promise<{ rows: Lead[]; totalCount: number; page: number; pageSize: number; totalPages: number }> {
-    return apiPost<{ rows: Lead[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
+    return api.post<{ rows: Lead[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
   }
 
   load()

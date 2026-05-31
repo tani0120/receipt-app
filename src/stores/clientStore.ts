@@ -9,34 +9,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Client } from '@/repositories/types'
+import { createApiClient } from '@/utils/apiClient'
 
-const API_BASE = '/api/clients'
-const STALE_MS = 5 * 60 * 1000 // 5分
-
-async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`)
-  if (!res.ok) throw new Error(`API GET ${path} failed: ${res.status}`)
-  return res.json()
-}
-
-async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`API POST ${path} failed: ${res.status}`)
-  return res.json()
-}
-
-async function apiPut(path: string, body: unknown): Promise<void> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`API PUT ${path} failed: ${res.status}`)
-}
+const api = createApiClient('/api/clients')
 
 export const useClientStore = defineStore('clients', () => {
   // --- state ---
@@ -46,16 +21,18 @@ export const useClientStore = defineStore('clients', () => {
 
   // --- stale-while-revalidate ---
   async function load() {
-    if (clients.value.length && cachedAt.value && Date.now() - cachedAt.value < STALE_MS) {
-      fetchFresh() // fire-and-forget（裏で差し替え）
+    if (clients.value.length) {
+      // キャッシュあり → 即時表示。裏でAPI取得（fire-and-forget）
+      fetchFresh()
       return
     }
+    // キャッシュなし（初回起動 or localStorage消去後）→ APIを待つ
     await fetchFresh()
   }
 
   async function fetchFresh() {
     try {
-      const raw = await apiGet<{ clients: Client[] } | Client[]>('')
+      const raw = await api.get<{ clients: Client[] } | Client[]>('')
       const list = Array.isArray(raw) ? raw : raw.clients
       clients.value = list
       cachedAt.value = Date.now()
@@ -86,7 +63,7 @@ export const useClientStore = defineStore('clients', () => {
       const newValue = migrationMap[client.consumptionTaxMode as string]
       if (newValue) {
         client.consumptionTaxMode = newValue
-        apiPut(`/${client.clientId}`, { consumptionTaxMode: newValue })
+        api.put(`/${client.clientId}`, { consumptionTaxMode: newValue })
           .catch(err => console.error(`[clientStore] consumptionTaxMode移行エラー (${client.clientId}):`, err))
         migrated++
       }
@@ -112,7 +89,7 @@ export const useClientStore = defineStore('clients', () => {
         const client = clients.value.find(c => c.clientId === clientId)
         if (client && !client.sharedFolderId) {
           client.sharedFolderId = folderId
-          apiPut(`/${clientId}/shared-folder`, { folderId })
+          api.put(`/${clientId}/shared-folder`, { folderId })
             .catch(err => console.error(`[clientStore] sharedFolderId移行エラー (${clientId}):`, err))
           migrated++
         }
@@ -132,7 +109,7 @@ export const useClientStore = defineStore('clients', () => {
     const idx = clients.value.findIndex(c => c.clientId === clientId)
     if (idx >= 0) {
       clients.value[idx] = { ...clients.value[idx]!, sharedFolderId: folderId }
-      apiPut(`/${clientId}/shared-folder`, { folderId })
+      api.put(`/${clientId}/shared-folder`, { folderId })
         .catch(err => console.error('[clientStore] sharedFolderId更新エラー:', err))
     }
   }
@@ -140,7 +117,7 @@ export const useClientStore = defineStore('clients', () => {
   async function addClient(client: Omit<Client, 'clientId'> & { clientId?: string }): Promise<Client> {
     lastError.value = null
     try {
-      const res = await apiPost<{ ok: boolean; client: Client }>('', client)
+      const res = await api.post<{ ok: boolean; client: Client }>('', client)
       const saved = res.client
       clients.value.push(saved)
       return saved
@@ -155,7 +132,7 @@ export const useClientStore = defineStore('clients', () => {
   async function updateClient(clientId: string, data: Partial<Client>): Promise<void> {
     lastError.value = null
     try {
-      await apiPut(`/${clientId}`, data)
+      await api.put(`/${clientId}`, data)
       const idx = clients.value.findIndex(c => c.clientId === clientId)
       if (idx >= 0) {
         clients.value[idx] = { ...clients.value[idx]!, ...data, clientId }
@@ -175,7 +152,7 @@ export const useClientStore = defineStore('clients', () => {
     page?: number
     pageSize?: number
   }): Promise<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }> {
-    return apiPost<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
+    return api.post<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
   }
 
   // 初回自動ロード（fire-and-forget）

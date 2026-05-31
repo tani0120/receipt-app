@@ -450,7 +450,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, onActivated, nextTick, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, onActivated, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   useLeads,
@@ -480,7 +480,7 @@ import { leadSections, leadFieldsFlat } from '@/constants/leadFieldDefs';
 import { UI_MSG } from '@/constants/uiMessages';
 import CustomFieldModal from '@/components/CustomFieldModal.vue';
 import AddFieldModal from '@/components/AddFieldModal.vue';
-import { LEAD_FIELD_LABELS } from '@/constants/fieldLabels';
+// LEAD_FIELD_LABELS: 未使用（将来のフィルタラベル表示用に温存）
 import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
 import type { FieldComponent } from '@/types/fieldLayout';
 import ConfirmModal from '@/components/ConfirmModal.vue';
@@ -904,13 +904,13 @@ const getCellClass = (key: string): string => {
 };
 
 /** データ行から動的フィールド値を取得（汎用） */
-const getFieldValue = (row: Record<string, unknown>, key: string): string => {
+const getFieldValue = (row: Record<string, unknown> | Lead, key: string): string => {
   // カスタムフィールド(custom_*)はextraFieldsから取得
   const val = key.startsWith('custom_')
     ? (row as Record<string, unknown>).extraFields != null
       ? ((row as Record<string, unknown>).extraFields as Record<string, unknown>)[key]
       : undefined
-    : row[key];
+    : (row as Record<string, unknown>)[key];
   if (val === undefined || val === null) return '—';
   if (typeof val === 'boolean') return val ? UI_MSG.あり : UI_MSG.なし;
   if (typeof val === 'number') return val.toLocaleString();
@@ -998,7 +998,7 @@ const {
   fetchList: fetchLeadList,
   goToPage,
   refreshList,
-  updateRow: updateTableRow,
+  updateRow: _updateTableRow,
 } = useServerTable<Lead>({ fetchFn: leadFetchFn, idKey: 'leadId', pageSize: PAGE_SIZE });
 
 // イベント駆動: watchは使わず、各ハンドラから直接fetchLeadListを呼ぶ

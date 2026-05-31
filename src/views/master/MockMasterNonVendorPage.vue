@@ -455,9 +455,7 @@ const nonVendorFetchFn = async (query: Record<string, unknown>): Promise<ServerT
 };
 
 const {
-  rows: filteredRows,
   pagedRows,
-  isLoading,
   currentPage: _stPage,
   totalPages,
   totalCount,

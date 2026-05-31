@@ -9,7 +9,7 @@
   "scripts": {
     "predev": "node scripts/check-key-rotation.cjs",
     "dev": "run-p dev:frontend dev:api",
-    "dev:frontend": "vite",
+    "dev:frontend": "wait-on tcp:8080 && vite",
     "dev:api": "nodemon --signal SIGINT --watch src/api --watch src/server.ts --watch src/scripts --watch src/constants --watch src/shared --watch src/data -e ts --exec \"npx tsx src/server.ts\"",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "vite build --outDir dist/client",
@@ -83,6 +83,7 @@
     "vite": "^7.2.4",
     "vite-plugin-vue-devtools": "^8.0.5",
     "vitest": "^4.0.16",
-    "vue-tsc": "^3.1.5"
+    "vue-tsc": "^3.1.5",
+    "wait-on": "^9.0.10"
   }
 }

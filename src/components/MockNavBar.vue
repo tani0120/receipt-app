@@ -245,3 +245,4 @@ const handleNavClick = (item: NavItem): void => {
   }
 };
 </script>
+

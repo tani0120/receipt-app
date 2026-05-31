@@ -387,9 +387,7 @@ const vendorFetchFn = async (query: Record<string, unknown>): Promise<ServerTabl
 };
 
 const {
-  rows: filteredRows,
   pagedRows,
-  isLoading,
   currentPage: _stPage,
   totalPages,
   totalCount,

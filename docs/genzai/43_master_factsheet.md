@@ -534,7 +534,7 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 
 ---
 
-## 13. AI自動設定方針
+## 13. AI自動設定方針（2026-05-31改訂）
 
 ### 13-1. 背景
 
@@ -559,20 +559,121 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 
 → **AIが判定すべきは`category`と`target`の2フィールドのみ**。
 
-### 13-3. AI判定が必要なケース
+### 13-3. G1テスト結果（2026-05-31実施）
 
-| ケース | AI必要？ | 理由 |
+8科目×2モデル×3回（延べ48判定）で検証。
+
+| フィールド | 3.0-flash | 3.5-flash | 評価 |
+|-----------|:---------:|:---------:|------|
+| **category** | **100%** | **100%** | ✅ 完璧 |
+| **accountGroup** | **100%** | **100%** | ✅ categoryと完全連動 |
+| **target** | **100%** | **100%** | ✅ 全列挙+根拠ベースルールで解決 |
+| **englishId** | 意味正確 | 意味正確 | ✅ 完全一致は不要（新規IDに正解は1つではない） |
+
+**テストで判明した重要事項:**
+1. target判定: 既存マスタのcorp/individual全科目（49件+52件）を全列挙し「合理的な根拠がなければboth」ルールで100%達成
+2. 3.0-flashで十分（精度同等でコスト1/3）
+3. テストスクリプト: [test-account-classifier.ts](file:///c:/dev/receipt-app/src/scripts/test-account-classifier.ts)
+
+### 13-4. MCP制約の発見（★重大）
+
+> [!CAUTION]
+> **MF MCPに科目作成ツール（postAccounts）は存在しない。**
+> REST API（api-accounting.moneyforward.com）もCloudflare WAFで全面403ブロック。
+> **→ 未登録科目のMFへの自動登録は現時点で不可能。**
+
+| 手段 | 科目作成 | 状態 |
+|------|---------|------|
+| MCP | `postAccounts`ツールなし | ❌ 存在しない |
+| REST API | `api-accounting.moneyforward.com` | ❌ WAFで全面403 |
+| MF管理画面 | 手動追加 | ✅ 唯一の手段 |
+
+MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しないIDはエラー。
+
+### 13-5. `target`フィールドの再評価
+
+`target`（corp/individual/both）はsugusuru独自のフィールド。MFには存在しない概念。
+
+**用途**: UI表示フィルタ。法人ユーザーに「事業主貸」を見せない、個人ユーザーに「役員報酬」を見せないために使用。
+
+**使用箇所**:
+- [accountMasterStore.ts L147-160](file:///c:/dev/receipt-app/src/api/services/accountMasterStore.ts#L147-L160): 科目一覧API（businessTypeでフィルタ）
+- [accountMasterStore.ts L282-287](file:///c:/dev/receipt-app/src/api/services/accountMasterStore.ts#L282-L287): 同上（Supabase版）
+
+> [!IMPORTANT]
+> **MF連携済みの場合、target判定のためのAI分類は不要。**
+> MFは事業所ごとに法人/個人の科目を管理しており、`mfc_ca_getAccounts`で取得した科目だけ表示すれば
+> targetフィルタと同じ効果が得られる。
+
+### 13-6. AI分類の必要性まとめ
+
+| ケース | AI必要？ | 対応 |
 |--------|:---:|------|
-| MFインポート新規 | ❌ | MFの`account_group`+`category`→`MF_CATEGORY_MAP`で変換可能（既存ロジック） |
-| マスタに手動追加 | ✅ | 科目名しか手がかりがない |
-| 顧問先独自追加 | ✅ | 科目名しか手がかりがない |
+| MF連携済み・MFの科目で足りる | ❌ | MFから取得 |
+| MF連携済み・MFに科目がない | ❌ | 人間に通知→MFで登録→再同期 |
+| MF連携済み・MFに新科目追加 | ❌ | MCPで取得→マスタに反映 |
+| MF未連携・全社マスタで足りる | ❌ | 既存マスタで運用 |
+| MF未連携・マスタに科目がない | ❌ | 警告→手動追加 |
+| 将来: MCPにpostAccountsが追加 | ✅ | AI判定で自動登録 |
 
-### 13-4. テスト方針
+> [!NOTE]
+> **結論: AI分類（category/target判定）は現時点で本番に組み込む場所がない。**
+> G1テストで得たプロンプト設計（category100%/target100%）は将来MCPが拡張された際の準備として保持。
 
-- **入力**: 科目名（例: `"未収賃貸料"`）
-- **出力**: `{ category: "その他流動資産", target: "both" }`
-- **モデル候補**: Gemini 3.5 Flash / 3.0 Flash（29種のカテゴリ分類は明確なルールがあり、高価なProモデルは不要）
-- **検証**: 157件の既存マスタ科目で正解率を測定
+---
+
+## 15. 科目/税区分の追加禁止ルール（2026-05-31策定）
+
+### 15-1. 設計方針
+
+> [!CAUTION]
+> **sugusuru側での科目/税区分の独自追加は設計矛盾。**
+> MFに存在しない科目で仕訳を作成するとMF送信時にエラーになる。
+> MFがSSOTなら、追加・編集のSSOTもMFであるべき。
+
+### 15-2. 操作制御ルール
+
+| 操作 | MF連携済み | MF未連携 |
+|---|---|---|
+| 科目/税区分の**追加** | ❌ **禁止**（MFで追加→同期） | ⚠️ 全社マスタのみ使用（追加不可。不足時は警告） |
+| 科目/税区分の**編集** | ❌ **禁止**（MFが正） | ⚠️ 読み取り専用 |
+| 科目/税区分の**非表示** | ✅ 顧問先ごとのhiddenフラグのみ許可 | ✅ 同上 |
+| MFからの**同期** | ✅ `mfc_ca_getAccounts`で取得→反映 | — |
+
+### 15-3. 設計フロー
+
+```
+┌──────────────────────────────────────────────────┐
+│ 全社マスタ（account-master.json）                 │
+│ = MFデフォルト科目ベース（読み取り専用）           │
+└──────────────────────┬───────────────────────────┘
+                       │
+        ┌──────────────┴──────────────┐
+        ▼                             ▼
+  MF連携済み顧問先              MF未連携顧問先
+  ┌────────────────┐         ┌────────────────┐
+  │ MFの科目 = SSOT│         │ 全社マスタのみ  │
+  │ 追加/編集 = MF │         │ 追加/編集 = 不可│
+  │                │         │                │
+  │ AIが科目判定    │         │ AIが科目判定    │
+  │   ↓            │         │   ↓            │
+  │ MFに未登録?    │         │ マスタに未登録? │
+  │ → 人間に通知    │         │ → 警告表示     │
+  │ → MF画面で登録 │         │                │
+  │                │         │                │
+  │ MFに新科目あり?│         │                │
+  │ → MCPで取得    │         │                │
+  │ → マスタに反映 │         │                │
+  └────────────────┘         └────────────────┘
+```
+
+### 15-4. 現状の要改修箇所
+
+| ファイル | 該当機能 | 現状 | 必要な対応 |
+|---------|---------|------|----------|
+| [MockClientAccountsPage.vue L589](file:///c:/dev/receipt-app/src/views/client/MockClientAccountsPage.vue#L589) | 顧問先独自科目追加 | `isCustom: true`で追加可能 | MF連携済みなら追加ボタンを非表示/無効化 |
+| [MockClientTaxPage.vue L663](file:///c:/dev/receipt-app/src/views/client/MockClientTaxPage.vue#L663) | 顧問先独自税区分追加 | `isCustom: true`で追加可能 | 同上 |
+| [useClientTaxCategories.ts L192](file:///c:/dev/receipt-app/src/features/tax-management/composables/useClientTaxCategories.ts#L192) | 税区分カスタム追加ロジック | `isCustom: true`で追加 | MF連携時はエラーを返す |
 
 ---
 
