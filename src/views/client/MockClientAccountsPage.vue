@@ -177,8 +177,8 @@
                 <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
                 <td class="td-visibility">
                   <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
-                  <i v-if="isAccountHidden(row.id)" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
-                  <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
+                  <i v-if="isAccountHidden(row.id)" class="fa-solid fa-eye-slash td-hide" @click="showRow(row)" title="表示化"></i>
+                  <i v-else class="fa-solid fa-eye td-show" @click="hideRow(row)" title="非表示化"></i>
                 </td>
                 <td style="text-align:center;font-size:11px;color:#666;">
                   <span v-if="row.isCustom && !isMasterCustomAccount(row.id)" style="color:#E65100;">顧問先独自</span>

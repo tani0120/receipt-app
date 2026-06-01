@@ -43,19 +43,7 @@
             >{{ p }}</span>
             <span class="as-page-arrow" :class="{ disabled: taxPage >= taxTotalPages }" @click="taxPage = Math.min(taxTotalPages, taxPage + 1)">＞</span>
             <span class="as-page-range">{{ taxPageStart }}~{{ taxPageEnd }} / {{ filteredTaxRows.length }}件</span>
-            <!-- チェック時の一括操作ボタン -->
-            <template v-if="checkedIds.length">
-              <span class="as-bulk-badge">{{ checkedIds.length }}件選択中</span>
-              <button class="as-bulk-btn blue" @click="promoteToMfChecked"><i class="fa-solid fa-circle-check"></i> MF公式</button>
-              <button class="as-bulk-btn red" @click="demoteFromMfChecked"><i class="fa-solid fa-triangle-exclamation"></i> MF非公式</button>
-              <span class="as-bulk-divider"></span>
-              <button class="as-bulk-btn blue" @click="showChecked"><i class="fa-solid fa-eye"></i> 表示化</button>
-              <button class="as-bulk-btn red" @click="hideChecked"><i class="fa-solid fa-eye-slash"></i> 非表示化</button>
-              <span class="as-bulk-divider"></span>
-              <button class="as-bulk-btn red" @click="deleteChecked"><i class="fa-solid fa-trash-can"></i> 削除（復元できません）</button>
-              <button class="as-bulk-btn blue" @click="copyChecked"><i class="fa-solid fa-copy"></i> コピー</button>
-              <button class="as-bulk-btn blue" @click="addAfterChecked"><i class="fa-solid fa-plus"></i> 追加</button>
-            </template>
+            <!-- §15追加禁止: MFがSSOTのため一括操作（MF公式/非公式切替・コピー・削除・追加）を全て無効化。表示/非表示は個別の目アイコンで操作可能 -->
           </div>
           <div class="as-actions">
             <MfImportButton
@@ -65,14 +53,15 @@
               @import="importFromMf"
             />
             <button class="as-action-btn" @click="resetTaxOrder"><i class="fa-solid fa-rotate"></i> デフォルト順</button>
-            <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button>
+            <!-- §15追加禁止: MFインポートが唯一の正規ルート -->
+            <!-- <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button> -->
             <button class="as-action-btn save" @click="saveChanges"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
           </div>
         </div>
         <div class="as-table-wrap">
           <table class="as-table" style="table-layout: fixed;">
             <colgroup>
-              <col style="width: 38px;">
+              <!-- §15: チェックボックス列削除（一括操作無効化に伴い不要） -->
               <col :style="{ width: taxColWidths['mfCompliance'] + 'px' }">
               <col :style="{ width: taxColWidths['source'] + 'px' }">
               <col :style="{ width: taxColWidths['qualified'] + 'px' }">
@@ -84,7 +73,7 @@
             </colgroup>
             <thead>
               <tr>
-                <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
+                <!-- §15: 全選択チェックボックス削除 -->
                 <th class="as-th-check relative" style="text-align:center;">{{ hasMfData ? '表示' : 'MF公式' }}
                   <div class="resize-handle" @mousedown.stop="onTaxResizeStart('mfCompliance', $event)"></div>
                 </th>
@@ -121,10 +110,10 @@
               <tr v-for="row in pagedTaxRows" :key="row.id"
                 :class="{ 'row-deprecated': row.deprecated, 'row-custom': row.isCustom }"
               >
-                <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
+                <!-- §15: 行チェックボックス削除 -->
                 <td class="as-td-actions">
-                  <i v-if="row.deprecated" class="fa-solid fa-eye td-show" @click="showRow(row)" title="表示化"></i>
-                  <i v-else class="fa-solid fa-eye-slash td-hide" @click="hideRow(row)" title="非表示化"></i>
+                  <i v-if="row.deprecated" class="fa-solid fa-eye-slash td-hide" @click="showRow(row)" title="表示化"></i>
+                  <i v-else class="fa-solid fa-eye td-show" @click="hideRow(row)" title="非表示化"></i>
                 </td>
                 <td style="text-align:center;font-size:11px;color:#666;">
                   <span v-if="row.source === 'mf'" style="color:#1976D2;"><MfCloudIcon :size="12" tooltip="MFクラウド" /> MF</span>
@@ -163,8 +152,21 @@
                   </template>
                   <template v-else>{{ getRate(row) }}</template>
                 </td>
-                <td class="td-date">{{ row.effectiveFrom || '—' }}</td>
-                <td class="td-date">{{ row.effectiveTo || UI_MSG.現役 }}</td>
+                <td class="td-date td-editable" @dblclick="startEdit(row, 'effectiveFrom')">
+                  <template v-if="isEditing(row.id, 'effectiveFrom')">
+                    <input type="date" v-model="editValue" @change="commitEdit(row, 'effectiveFrom')" @blur="cancelEdit()" class="inline-input date-input" ref="editInput" />
+                  </template>
+                  <template v-else>{{ row.effectiveFrom || '—' }}</template>
+                </td>
+                <td class="td-date td-editable" @dblclick="startEdit(row, 'effectiveTo')">
+                  <template v-if="isEditing(row.id, 'effectiveTo')">
+                    <div class="date-edit-wrap-v">
+                      <input type="date" v-model="editValue" @change="commitEdit(row, 'effectiveTo')" @blur="onDateBlur(row)" class="inline-input date-input" ref="editInput" />
+                      <button class="date-active-btn" @mousedown.prevent="editValue = ''; commitEdit(row, 'effectiveTo')">現役</button>
+                    </div>
+                  </template>
+                  <template v-else>{{ row.effectiveTo || UI_MSG.現役 }}</template>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -283,10 +285,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
 import type { TaxCategory, TaxDirection } from '@/types/shared-tax-category';
 import { extractRateFromName } from '@/types/shared-tax-category';
-import { getInitialCopyCounter } from '@/utils/copy-utils';
+// §15追加禁止: getInitialCopyCounter（コピー・追加用）は不要のため削除
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useTaxMasterStore } from '@/stores/taxMasterStore';
 import { useColumnResize } from '@/composables/useColumnResize';
@@ -612,15 +614,11 @@ const pagedTaxRows = computed(() => filteredTaxRows.value.slice(taxPageStart.val
 
 watch(filteredTaxRows, () => { if (taxPage.value > taxTotalPages.value) taxPage.value = 1; });
 
-// =============== チェックボックス ===============
-const checkedIds = ref<string[]>([]);
-function toggleAllChecked(e: Event) {
-  const checked = (e.target as HTMLInputElement).checked;
-  checkedIds.value = checked ? pagedTaxRows.value.map(r => r.id) : [];
-}
-
-// =============== 非表示化・表示化 ===============
+// =============== 非表示化・表示化（個別の目アイコン用） ===============
 function hideRow(row: TaxCategory) {
+  if (!row.isCustom) {
+    modal.notify({ title: 'MFインポートで自動復元されます', message: 'MF公式税区分の非表示はインポート時にavailable=trueで上書きされます。', variant: 'warning' });
+  }
   const today = new Date().toISOString().slice(0, 10);
   row.deprecated = true;
   row.effectiveTo = today;
@@ -630,138 +628,11 @@ function showRow(row: TaxCategory) {
   row.effectiveTo = null;
 }
 
-
-
-function hideChecked() {
-  const today = new Date().toISOString().slice(0, 10);
-  checkedIds.value.forEach(id => {
-    const row = allTaxRows.find(r => r.id === id);
-    if (row) { row.deprecated = true; row.effectiveTo = today; }
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分非表示);
-}
-async function promoteToMfChecked() {
-  const customIds = checkedIds.value.filter(id => {
-    const row = allTaxRows.find(r => r.id === id);
-    return row?.isCustom;
-  });
-  if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム税区分のみMF公式, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}${UI_MSG.税区分MF公式変更}` });
-  if (!ok) return;
-  customIds.forEach(id => {
-    const row = allTaxRows.find(r => r.id === id);
-    if (row) row.isCustom = false;
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分MF公式);
-}
-async function demoteFromMfChecked() {
-  const officialIds = checkedIds.value.filter(id => {
-    const row = allTaxRows.find(r => r.id === id);
-    return row && !row.isCustom;
-  });
-  if (!officialIds.length) { await modal.notify({ title: UI_MSG.MF公式税区分のみMF非公式, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${officialIds.length}${UI_MSG.税区分MF非公式変更}`, message: UI_MSG.MF非公式警告, variant: 'danger' });
-  if (!ok) return;
-  officialIds.forEach(id => {
-    const row = allTaxRows.find(r => r.id === id);
-    if (row) row.isCustom = true;
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分MF非公式);
-}
-function showChecked() {
-  checkedIds.value.forEach(id => {
-    const row = allTaxRows.find(r => r.id === id);
-    if (row) { row.deprecated = false; row.effectiveTo = null; }
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分表示);
-}
-
-
-
-async function deleteChecked() {
-  const customIds = checkedIds.value.filter(id => {
-    const row = allTaxRows.find(r => r.id === id);
-    return row?.isCustom;
-  });
-  if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム税区分のみ, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}${UI_MSG.税区分削除確認}`, message: UI_MSG.復元不可, variant: 'danger' });
-  if (!ok) return;
-  customIds.forEach(id => {
-    const idx = allTaxRows.findIndex(r => r.id === id);
-    if (idx !== -1) allTaxRows.splice(idx, 1);
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分削除);
-}
-
-// =============== コピー・追加 ===============
-let copyCounter = getInitialCopyCounter(allTaxRows);
-async function copyChecked() {
-  if (!checkedIds.value.length) return;
-  const ok = await modal.confirm({ title: `${checkedIds.value.length}${UI_MSG.税区分コピー確認}` });
-  if (!ok) return;
-  const ids = [...checkedIds.value];
-  ids.reverse().forEach(id => {
-    const srcIdx = allTaxRows.findIndex(r => r.id === id);
-    if (srcIdx === -1) return;
-    const src = allTaxRows[srcIdx];
-    if (!src) return;
-    copyCounter++;
-    const copy: TaxCategory = {
-      id: `${src.id}_COPY_${copyCounter}`,
-      name: `${src.name}${UI_MSG.コピー接尾}`,
-      shortName: `${src.shortName}${UI_MSG.コピー接尾}`,
-      direction: src.direction,
-      qualified: src.qualified,
-      aiSelectable: src.aiSelectable,
-      active: true,
-      deprecated: false,
-      effectiveFrom: new Date().toISOString().slice(0, 10),
-      effectiveTo: null,
-      defaultVisible: true,
-      displayOrder: src.displayOrder + 0.5,
-      isCustom: true,
-      insertAfter: src.id,
-    };
-    allTaxRows.splice(srcIdx + 1, 0, copy);
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分コピー);
-}
-async function addAfterChecked() {
-  const ok = await modal.confirm({ title: UI_MSG.税区分追加確認 });
-  if (!ok) return;
-  const ids = [...checkedIds.value];
-  const lastId = ids[ids.length - 1];
-  const insertIdx = lastId ? allTaxRows.findIndex(r => r.id === lastId) + 1 : allTaxRows.length;
-  copyCounter++;
-  const newRow: TaxCategory = {
-    id: `NEW_TAX_${copyCounter}`,
-    name: UI_MSG.新規税区分名,
-    shortName: UI_MSG.新規税区分略称,
-    direction: 'common',
-    qualified: false,
-    aiSelectable: false,
-    active: true,
-    deprecated: false,
-    effectiveFrom: new Date().toISOString().slice(0, 10),
-    effectiveTo: null,
-    defaultVisible: true,
-    displayOrder: insertIdx,
-    isCustom: true,
-    insertAfter: lastId ?? allTaxRows[allTaxRows.length - 1]?.id,
-  };
-  allTaxRows.splice(insertIdx, 0, newRow);
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分追加);
-}
+// §15追加禁止: 以下の一括操作関数は削除済み（toggleAllChecked, hideChecked, promoteToMfChecked, demoteFromMfChecked, showChecked, deleteChecked, copyChecked, addAfterChecked）
+// MFがSSOTのため一括操作は設計矛盾。個別の目アイコンで表示/非表示は操作可能。
 
 // =============== インライン編集 ===============
-type EditableField = 'direction' | 'name' | 'rate' | 'qualified';
+type EditableField = 'direction' | 'name' | 'rate' | 'qualified' | 'effectiveFrom' | 'effectiveTo';
 const editingRowId = ref('');
 const editingFieldName = ref<EditableField | ''>('');
 const editValue = ref('');
@@ -771,7 +642,9 @@ function isEditing(rowId: string, field: string): boolean {
 }
 
 function startEdit(row: TaxCategory, field: EditableField) {
-  if (!row.isCustom) {
+  // sugusuru独自項目（適用開始日/終了日）はisCustomに関係なく編集可能
+  const sugusuruOnlyFields: EditableField[] = ['effectiveFrom', 'effectiveTo'];
+  if (!row.isCustom && !sugusuruOnlyFields.includes(field)) {
     modal.notify({ title: UI_MSG.デフォルト税区分編集不可, message: UI_MSG.コピーしてから編集, variant: 'warning' });
     return;
   }
@@ -782,6 +655,8 @@ function startEdit(row: TaxCategory, field: EditableField) {
     case 'name': editValue.value = row.name; break;
     case 'rate': editValue.value = row.taxRate != null ? String(Math.round(row.taxRate * 100)) : extractRateFromName(row.name).replace('%', ''); break;
     case 'qualified': editValue.value = String(row.qualified); break;
+    case 'effectiveFrom': editValue.value = row.effectiveFrom || ''; break;
+    case 'effectiveTo': editValue.value = row.effectiveTo || ''; break;
   }
 }
 
@@ -812,6 +687,12 @@ function commitEdit(row: TaxCategory, field: EditableField) {
     case 'qualified':
       row.qualified = editValue.value === 'true';
       break;
+    case 'effectiveFrom':
+      row.effectiveFrom = editValue.value || '';
+      break;
+    case 'effectiveTo':
+      row.effectiveTo = editValue.value || null;
+      break;
   }
   const txFieldLabels = TAX_CATEGORY_FIELD_LABELS;
   markDirty(`${UI_MSG.税区分変更}${txFieldLabels[field] ?? field}${UI_MSG.を変更}`);
@@ -821,6 +702,27 @@ function commitEdit(row: TaxCategory, field: EditableField) {
 function cancelEdit() {
   editingRowId.value = '';
   editingFieldName.value = '';
+}
+
+// 文書全体のクリックで編集を閉じる
+function onDocumentClick(e: MouseEvent) {
+  if (!editingRowId.value) return;
+  const target = e.target as HTMLElement;
+  // 編集中のinput/select/button内のクリックは無視
+  if (target.closest('.inline-input, .inline-select, .date-active-btn, .date-edit-wrap-v')) return;
+  cancelEdit();
+}
+onMounted(() => document.addEventListener('click', onDocumentClick));
+onUnmounted(() => document.removeEventListener('click', onDocumentClick));
+
+/** 適用終了日のblur処理（現役ボタンの@mousedown.preventが先に発火するため、blur時は単純にcancelEdit） */
+function onDateBlur(row: TaxCategory) {
+  // 値が変更されていたらcommit、されていなければcancel
+  if (editValue.value && editValue.value !== (row.effectiveTo || '')) {
+    commitEdit(row, 'effectiveTo');
+  } else {
+    cancelEdit();
+  }
 }
 
 function onRateInput(e: Event) {

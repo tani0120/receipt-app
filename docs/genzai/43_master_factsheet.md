@@ -1,6 +1,6 @@
 # 勘定科目・税区分マスタ — 統合ファクトシート
 
-> 調査日: 2026-05-30（最終更新: 2026-05-30 23:42 — factベース全項目突合完了）
+> 調査日: 2026-05-30（最終更新: 2026-06-01 23:55 — MF ID実機検証結果反映）
 > 対象: `c:\dev\receipt-app`
 
 ---
@@ -171,6 +171,12 @@ category（中分類）を設定すると:
 | `mfId`の由来 | 全件exempt（免税）方式のMF ID |
 | 方式間でmfIdが同一 | **0件/151件**（全件異なる） |
 | 照合方式 | **名前ベース**（マスタ名前↔MF名前） |
+
+> [!CAUTION]
+> **2026-06-01 MCP実機検証で確定: `mfId`は事業者（テナント）ごとに異なる。**
+> 全社マスタの`mfId`は特定の1事業者からインポートしたIDであり、他の事業者では使えない。
+> 全社マスタに`mfId`を保持する意味は一切ない。
+> 詳細: `docs/genzai/45_mf_id_comparison.md`
 | 中間対応表/UUID | **存在しない** |
 | スナップショット取得 | 4パターン完了 |
 | 基準顧問先 | 1つ（c_rODnkCDN = 法人） |
@@ -232,8 +238,10 @@ category（中分類）を設定すると:
 | カスタム科目追加 | MFで追加可能 | **MFで追加可能 + マスタ手動追加** |
 
 > [!IMPORTANT]
+> **2026-06-01実機検証確定: 税区分も勘定科目も、MF IDは事業者固有。事業者間のID照合は不可能。**
 > 税区分で名前ベースが成立するのは「名前重複0件 + MF側で名前変更がほぼ起きない」条件があるから。
-> 勘定科目はその条件を**満たさない**。
+> 勘定科目はその条件を**満たさない**（14件重複 + MF上で変更可能）。
+> MCP仕訳送信の49パターンテスト結果: `docs/genzai/46_mf_journal_send_49patterns.md`
 
 ---
 
@@ -589,6 +597,8 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 | MF管理画面 | 手動追加 | ✅ 唯一の手段 |
 
 MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しないIDはエラー。
+**49パターン実機テスト（`docs/genzai/46_mf_journal_send_49patterns.md`）で確認済み。**
+名前での送信、他社IDの流用、いずれも不可。
 
 ### 13-5. `target`フィールドの再評価
 
@@ -622,9 +632,9 @@ MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しない
 
 ---
 
-## 15. 科目/税区分の追加禁止ルール（2026-05-31策定）
+## 15. 科目/税区分マスタ — 追加禁止ルール（2026-05-31策定）
 
-### 15-1. 設計方針
+### 15-1. 背景
 
 > [!CAUTION]
 > **sugusuru側での科目/税区分の独自追加は設計矛盾。**
@@ -652,7 +662,7 @@ MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しない
         ▼                             ▼
   MF連携済み顧問先              MF未連携顧問先
   ┌────────────────┐         ┌────────────────┐
-  │ MFの科目 = SSOT│         │ 全社マスタのみ  │
+  │ MFが科目SSOT   │         │ 全社マスタのみ  │
   │ 追加/編集 = MF │         │ 追加/編集 = 不可│
   │                │         │                │
   │ AIが科目判定    │         │ AIが科目判定    │
@@ -741,23 +751,23 @@ MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しない
 | スナップショット8パターン | `mf-snapshot-*.json` 8ファイル確認（読み取り専用。インポート実行ではない） |
 | `mf-tax-available.json` | 構築済み |
 
-### 📋 実装順序（2026-05-31 00:25 factベース検証追記）
+### 📋 実装順序（2026-05-31 08:57 順序修正 — G1をT1前に移動）
 
 > [!CAUTION]
-> T1（MF実機テスト）が最優先。全社マスタ勘定科目のフィールドが正しくないため、
-> 他の改修（PP1-PP4, G1等）をやっても正しくないデータに基づく作業になる。
-> TST(`c_rODnkCDN`法人)・TSK(`c_wTdnMKDO`個人不動産あり)はclients.json登録済み・MF認証済み。
-> 課税方式切替は人間がMF管理画面で操作、MCPインポートはAIが実行。
+> G1（Geminiテスト）が最優先。P8（AI英語変換）はG1のテスト結果に基づいて実装する。
+> G1のテスト対象は既存マスタ157件（人間設定済み）であり、T1依存はない。今すぐ実行可能。
+> MFインポートは繰り返し実行されるインフラであり、MF側の仕様変更で科目追加が起きた際に
+> 自動検知・自動で正しい英語IDを生成できる仕組みが必要。P8はその仕組みの実装。
+> 旧順序（P8→T1→D1→G1→G2）はP8でAI英語変換を使う前提を反映していなかった。
 
 #### 依存関係図
 
 ```mermaid
 graph TD
-    P8["P8: ID日本語修正"] -->|T1と同時| T1
-    T1["① T1: MF実機テスト 12パターン<br>（最優先）"] --> D1["② D1/D2: データ構築"]
-    D1 --> PP["③ PP1-PP4: パイプラインclientId対応"]
-    D1 --> G1["④ G1: Geminiテスト"]
-    G1 --> G2["⑤ G2: AI分類実装"]
+    G1["① G1: Geminiテスト 157件<br>（最優先・今すぐ可能）"] --> P8G2["② P8+G2: AI英語変換+分類実装"]
+    P8G2 --> T1["③ T1: MF実機テスト 12パターン"]
+    T1 --> D1["④ D1/D2: データ構築"]
+    D1 --> PP["⑤ PP1-PP4: パイプラインclientId対応"]
     P5["P5: clientId修正"] -.->|独立| PP
 ```
 
@@ -765,37 +775,59 @@ graph TD
 
 | 順 | 項目 | fact根拠（§参照） | なぜこの順序か |
 |:--:|------|-----------------|-------------|
-| ①+P8 | T1 + P8 | §4-2: `mfAccountId`充足率69%（31%欠損）、available未構築（§4-2 L185）、名前重複14件（§4-5 L228）、照合が名前ベースのみ（§4-2 L186）。§7-1 L360: `MF_未収賃貸料`等の日本語ID混入 | **全社マスタのデータが不正確なまま他の改修をしても意味がない**。mfAccountId欠損31%・available未構築は全てT1未実施が原因 |
-| ② | D1/D2 | §4-2 L185: `mf-account-available.json` **未構築**。§5 L255: 案B推奨だがmapping **実装0行** | T1結果がないと構築不可能。これがないと科目フィルタ（§12）もMF照合（§4-4）も正しく動かない |
-| ③ | PP1-PP4 | §6-1 L313-317: 全段階❌。§6-2 L324-328: 顧問先別ファイル5社分存在するが**全て未使用** | 正しいデータ（②完了後）が入った状態で修正しないと検証不可能。現状isCustom=0でマスタと同一（§6-2 L339）なので②前に修正しても効果なし |
-| ④ | G1 | §13-4 L575: 「157件の既存マスタ科目で正解率を測定」 | **正しいcategoryが入った状態でテストしないと精度測定が無意味**。§3-2 L136: MFインポート新規科目のcategoryは`MF_CATEGORY_MAP`で変換 — T1でこの変換が正しく動くか確認してから |
-| ⑤ | G2 | §13-3 L567-568: 手動追加・顧問先独自追加で必要 | ④の精度結果がないと実装方針が決まらない |
+| ① | G1 | §13-4: 「157件の既存マスタ科目で正解率を測定」。テスト対象は既存マスタ157件（人間設定済み）でありT1結果は不要。§7-2: 合意済み方針は「英語表記でID化」→ AIで英語変換。テスト前にAI実装はできない | **G1はT1依存なし。今すぐ実行可能。** P8でAI英語変換を使うため、先にAIの精度を確認する必要がある |
+| ② | P8+G2 | §7-1 L360: `MF_未収賃貸料`等の日本語ID混入。§7-2: 合意は英語ID。§13-3: 手動追加・顧問先独自追加でAI必要 | G1の精度結果に基づいてAI英語変換+AI分類を実装。MFインポートは繰り返し実行されるインフラであり、将来のMF仕様変更による科目追加を自動検知・自動対応できる仕組みが必要 |
+| ③ | T1 | §4-2: `mfAccountId`充足率69%（31%欠損）、available未構築。TST/TSKはclients.json登録済み・MF認証済み | P8完了後にT1を実行することで、新規科目が出た場合もAI英語IDが自動生成される。mfAccountId欠損49件の充足もここで実施 |
+| ④ | D1/D2 | §4-2 L185: `mf-account-available.json` **未構築**。§5 L255: 案B推奨だがmapping **実装0行** | T1結果がないと構築不可能。これがないと科目フィルタ（§12）もMF照合（§4-4）も正しく動かない |
+| ⑤ | PP1-PP4 | §6-1 L313-317: 全段階❌。§6-2 L324-328: 顧問先別ファイル5社分存在するが**全て未使用** | 正しいデータ（④完了後）が入った状態で修正しないと検証不可能 |
 
 #### 各項目の具体的修正内容
 
-##### ①+P8: T1（MF実機テスト）+ P8（ID日本語修正）
+##### ① G1: Geminiテスト（最優先・今すぐ可能）
 
-**T1の作業フロー:**
-1. 人間がMF管理画面でTST/TSKの課税方式を切替
-2. AIが`POST /api/mf/import-master-accounts` body:`{ clientId: "c_rODnkCDN" }`を実行
-3. 差分レポートを確認（新規科目のcategory/target/mfAccountIdが正しいか検証）
-4. 1-3を12パターン繰り返し
-5. 全パターン完了後、`mfAccountId`の欠損49件を充足
+| 内容 | 詳細 |
+|------|------|
+| 入力 | `account-master.json`の157件の`name`フィールド |
+| 期待出力 | `{ category: "経費"等29値, target: "corp"/"individual"/"both", englishId: "CASH"等 }` |
+| 正解データ | 既存マスタの`category`、`target`、`id` |
+| 評価指標 | category正解率、target正解率、englishId妥当性、category+target同時正解率 |
+| モデル | Gemini 3.5 Flash / 3.0 Flash（§13-4: 29種分類は明確なルールがありPro不要） |
+| 実装 | `src/scripts/test-account-classifier.ts`として新規作成 |
+| T1依存 | **なし**（テスト対象は既存157件。人間設定済みのcategory/targetが正解データ） |
 
-**P8の修正（T1開始前に実施）:**
+##### ② P8+G2: AI英語変換 + AI分類実装
+
+**P8の修正:**
 
 | ファイル | 行 | 現状 | 修正内容 |
 |---------|:--:|------|---------|
-| `mfAccountImportService.ts` | L147 | `` id: `MF_${mf.name.replace(/[^a-zA-Z0-9\u3000-\u9FFF]/g, '_')}` `` | 正規表現を`/[^a-zA-Z0-9]/g`に変更（日本語を除外）+ 科目名の英語変換関数を追加。または連番方式`MF_NEW_{連番}`に変更 |
+| `mfAccountImportService.ts` | L147 | `` id: `MF_${mf.name.replace(/[^a-zA-Z0-9\u3000-\u9FFF]/g, '_')}` `` | G1テスト結果に基づき、Gemini FlashでAI英語ID変換関数を実装。科目名→英語ID（例: `未収賃貸料`→`ACCRUED_RENTAL_INCOME`） |
 
-##### ② D1/D2: データ構築
+**G2の実装:**
+
+| 内容 | 詳細 |
+|------|------|
+| 対象 | マスタ手動追加・顧問先独自追加時のcategory+target自動判定 |
+| 実装 | `accountCategoryClassifier.ts`として新規作成（§13設計に基づく） |
+| 顧問先独自追加のID | `{3コード}_{英語名}`（§7-2合意。例: `LDI_SPECIAL_SALES`） |
+
+##### ③ T1: MF実機テスト
+
+**作業フロー:**
+1. 人間がMF管理画面でTST/TSKの課税方式を切替
+2. AIが`POST /api/mf/import-master-accounts` body:`{ clientId: "c_rODnkCDN" }`を実行
+3. 差分レポートを確認（新規科目のcategory/target/mfAccountId/英語IDが正しいか検証）
+4. 1-3を12パターン繰り返し
+5. 全パターン完了後、`mfAccountId`の欠損49件を充足
+
+##### ④ D1/D2: データ構築
 
 | ファイル | 現状 | 修正内容 |
 |---------|------|---------|
 | `data/mf-account-available.json` | 存在しない | T1の12パターン結果から`{ "exempt": { "mfAccountId": true/false }, ... }`形式で構築。税区分の`mf-tax-available.json`と同構造 |
 | `data/mf-account-mapping.json` | 存在しない | §5案Bの中間対応表を構築。`{ "tst": { "CASH": "MF科目ID", ... }, "tsk": { ... } }`形式 |
 
-##### ③ PP1-PP4: パイプラインclientId対応
+##### ⑤ PP1-PP4: パイプラインclientId対応
 
 | # | ファイル | 行 | 現状 | 修正内容 |
 |---|---------|:--:|------|---------|
@@ -803,17 +835,6 @@ graph TD
 | PP2 | `journalRoutes.ts` | L125 | `getAccountNameMap()` | `getClientAccounts(clientId).accounts`からnameMapを生成して渡す |
 | PP3 | `mfMappingService.ts` | L142 | `loadSugusruAccounts()` = `readFile('account-master.json')` | `getClientAccounts(tokenKey).accounts`に変更。シグネチャ不変 |
 | PP4 | `mfMappingService.ts` | L181 | `loadSugusruTaxes()` = `readFile('tax-category-master.json')` | `getClientTaxCategories(tokenKey)`に変更。シグネチャ不変 |
-
-##### ④ G1: Geminiカテゴリ分類テスト
-
-| 内容 | 詳細 |
-|------|------|
-| 入力 | `account-master.json`の157件の`name`フィールド |
-| 期待出力 | `{ category: "経費"等29値, target: "corp"/"individual"/"both" }` |
-| 正解データ | 既存マスタの`category`と`target` |
-| 評価指標 | category正解率、target正解率、category+target同時正解率 |
-| モデル | Gemini 3.5 Flash（§13-4: 29種分類は明確なルールがありPro不要） |
-| 実装 | `src/scripts/test-account-classifier.ts`として新規作成 |
 
 ##### P5: clientId修正（独立）
 
@@ -837,7 +858,8 @@ graph TD
 | 9-12 | 個人不動産なし（**顧問先不足**） | 全4方式 | ❌ |
 
 > [!IMPORTANT]
-> **即着手**: P8修正 → ①T1（8パターン）
-> **人間操作**: MF管理画面で課税方式を切替
+> **即着手**: ① G1（Geminiテスト — 既存157件で精度測定。T1依存なし・今すぐ可能）
+> **G1完了後**: ② P8+G2（AI英語変換+分類実装）→ ③ T1（MF実機テスト8パターン）
+> **T1の人間操作**: MF管理画面で課税方式を切替
 > **個人不動産なし**: 顧問先の確保が必要（既存で代用 or 新規作成）
 

@@ -18,6 +18,32 @@ import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shar
 import type { TaxCategory } from '../../types/shared-tax-category'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ルールベース自動判定（simplifiedOnly / individualOnly / baseId）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 簡易課税専用か判定（名前に「一種〜六種」を含む） */
+function guessSimplifiedOnly(name: string): boolean {
+  return /[一二三四五六]種/.test(name)
+}
+
+/** 個別対応専用か判定（名前に「共通」or「非課税対応」を含む） */
+function guessIndividualOnly(name: string): boolean {
+  return /共通|非課税対応/.test(name)
+}
+
+/**
+ * 簡易課税専用税区分の原則用baseIdを推測
+ * 「課税売上 10% 一種」→「課税売上 10%」でマスタ検索
+ * 見つからなければundefined（バリデーションの根幹には影響しない）
+ */
+function guessBaseId(name: string, masterItems: readonly TaxCategory[]): string | undefined {
+  const baseName = name.replace(/\s*[一二三四五六]種\s*$/, '').trim()
+  if (baseName === name) return undefined
+  const base = masterItems.find(m => m.name === baseName)
+  return base?.id
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 定数（データ駆動化済み）
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -57,7 +83,7 @@ interface MfTax {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export interface TaxImportDiff {
-  added: Array<{ name: string; mfId: string; taxRate?: number }>
+  added: Array<{ name: string; mfId: string; taxRate?: number; abbreviation?: string }>
   rateChanged: Array<{ name: string; mfId: string; oldRate?: number; newRate?: number }>
   deleteCandidates: Array<{ id: string; name: string; mfId: string }>
   unchanged: number
@@ -174,7 +200,7 @@ async function detectDiff(clientId: string, dryRun: boolean = false): Promise<De
   for (const t of mfTaxes) {
     const existing = nameToRow.get(t.name)
     if (!existing) {
-      diff.added.push({ name: t.name, mfId: t.id, taxRate: t.tax_rate })
+      diff.added.push({ name: t.name, mfId: t.id, taxRate: t.tax_rate, abbreviation: t.abbreviation })
     } else {
       let changed = false
       if (t.tax_rate !== undefined && existing.taxRate !== undefined && t.tax_rate !== existing.taxRate) {
@@ -287,10 +313,11 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
   // 追加
   for (const a of diff.added) {
     const dir = guessDirectionFromName(a.name)
+    const simplified = guessSimplifiedOnly(a.name)
     const newRow: TaxCategory = {
       id: `MF_CUSTOM_${a.mfId}`,
       name: a.name,
-      shortName: '',
+      shortName: a.abbreviation ?? '',
       direction: dir,
       qualified: guessQualifiedFromName(a.name, dir),
       aiSelectable: true,
@@ -304,6 +331,9 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
       mfId: a.mfId,
       taxRate: a.taxRate,
       displayOrder: masterItems.length + 1,
+      simplifiedOnly: simplified,
+      individualOnly: guessIndividualOnly(a.name),
+      baseId: simplified ? guessBaseId(a.name, masterItems) : undefined,
     }
     masterItems.push(newRow)
   }
@@ -412,7 +442,7 @@ export interface ClientTaxImportResult {
  */
 export async function importClientTaxes(clientId: string): Promise<ClientTaxImportResult> {
   const { updateClient } = await import('./clientStore')
-  const { getClientTaxCategories, saveClientTaxCategories } = await import('./accountMasterStore')
+  const { saveClientTaxCategories } = await import('./accountMasterStore')
 
   // 1. consumptionTaxMode自動更新
   let consumptionTaxMode: string | null = null
@@ -463,6 +493,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
     // 未マッチ → MF独自カスタム税区分
     customCount++
     const dir = guessDirectionFromName(t.name)
+    const simplified = guessSimplifiedOnly(t.name)
     return {
       id: `MF_CUSTOM_${t.id}`,
       name: t.name,
@@ -480,6 +511,9 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
       taxRate: t.tax_rate,
       displayOrder: idx + 1,
       isCustom: true,
+      simplifiedOnly: simplified,
+      individualOnly: guessIndividualOnly(t.name),
+      baseId: simplified ? guessBaseId(t.name, masterItems) : undefined,
     }
   })
 

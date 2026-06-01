@@ -202,13 +202,13 @@
                 <td class="as-td-actions">
                   <i
                     v-if="row.deprecated"
-                    class="fa-solid fa-eye td-show"
+                    class="fa-solid fa-eye-slash td-hide"
                     @click="showRow(row)"
                     title="表示化"
                   ></i>
                   <i
                     v-else
-                    class="fa-solid fa-eye-slash td-hide"
+                    class="fa-solid fa-eye td-show"
                     @click="hideRow(row)"
                     title="非表示化"
                   ></i>

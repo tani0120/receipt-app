@@ -82,7 +82,7 @@
 }
 .as-th-check, .as-td-check { width: 38px; text-align: center; }
 .as-table td { padding: 5px 10px; border: 1px solid #e0e0e0; color: #333; }
-.as-table tbody tr { cursor: grab; }
+.as-table tbody tr { cursor: default; }
 .as-table tbody tr:hover { background: #f5f9ff; }
 
 .td-ai { text-align: center; color: #1976D2; font-weight: 600; }
@@ -170,6 +170,20 @@
 
 /* 適用終了日 */
 .td-date { white-space: nowrap; text-align: center; font-size: 11px; }
+
+/* 編集可能セル（ダブルクリック編集対応） */
+.td-editable { cursor: default; transition: background 0.15s; }
+.td-editable:hover { background: #fff3e0; }
+
+/* 日付編集ラップ（縦並び: input + 現役ボタン） */
+.date-edit-wrap-v { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.date-input { width: 100%; text-align: center; }
+.date-active-btn {
+  background: #e8f5e9; border: 1px solid #4caf50; border-radius: 3px;
+  color: #2e7d32; font-size: 11px; font-weight: 600; cursor: pointer;
+  padding: 2px 8px; line-height: 1.4; white-space: nowrap;
+}
+.date-active-btn:hover { background: #c8e6c9; border-color: #2e7d32; }
 
 /* MF公式バッジ */
 .td-mf-badge {
