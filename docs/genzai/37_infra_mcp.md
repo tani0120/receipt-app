@@ -259,6 +259,9 @@ mfc/accounting/transaction.write     ← MCPサーバーが要求（実際のwri
 > **⚠️ MCPサーバー（beta）はwriteスコープなしでは `insufficient_scope`（403）を返す。**
 > readのみのトークンではMCPサーバーへの接続自体が不可能。
 > writeスコープは接続要件として付与するが、**アプリケーション側でwrite APIは呼び出さない**運用とする。
+>
+> **📋 監査メモ（2026-06-04）:** 書込スコープが本当にMCPサーバー接続に必須かの検証は省略。
+> 理由: 人間判断により検証不要と決定。書込スコープを外すとトークンが壊れるリスクがあり、検証コストに見合わない。
 
 > **⚠️ 旧スコープ `mfc/accounting/read` `mfc/accounting/write` は無効。**
 > サブスコープ（`journal.read`等）を明示的に指定しないとスコープエラーになる。
@@ -294,6 +297,9 @@ mfc/accounting/transaction.write     ← MCPサーバーが要求（実際のwri
 | 現在の保管先                 | `data/mf-tokens.json`（`.gitignore`済み）+ メモリキャッシュ。Supabase移行時にDBへ差し替え          |
 | 再認可が必要なケース         | 社長が手動でアプリ連携を解除した時・540日間一度もAPIを叩かなかった時（実質上ほぼ発生しない）       |
 
+> **📋 監査メモ（2026-06-04）:** ローリング方式・540日有効期限・旧トークン即時無効の検証は省略。
+> 理由: 以前人間がMF公式ドキュメントで確認済み（2026-05-19）。
+
 > **⚠️ セキュリティ必須事項**
 >
 > - `Client ID` / `Client Secret` / トークンは `.env.local` に格納し、gitに含めない
@@ -325,15 +331,20 @@ tenants（事業所テーブル）
   ├── mf_office_id     MFの事業所ID（APIアクセスキー）
   ├── name             事業所名
   ├── type             'corporate' | 'individual'
-  ├── tax_scheme       MFのtax_method値: 'FREE'（免税）| 'GENERAL'（一般/一括比例）| 'SIMPLIFIED'（簡易）| 'INDIVIDUAL_ALLOCATION'（個別対応）
+  ├── tax_method       MFのtax_method値: 'FREE'（免税事業者）| 'SIMPLE'（簡易課税）| 'PROPORTIONAL_ALLOCATION'（原則課税・一括比例配分方式）| 'INDIVIDUAL_ALLOCATION'（原則課税・個別対応方式）
   ├── fiscal_year_start  現在期の期首日
   ├── fiscal_year_end    現在期の期末日
   └── created_at       作成日時
 
-  ※ tax_schemeは税区分のavailableフィルタに使用（2026-05-23検証済み）:
-    FREE（免税）→ 全151件使用（全件available=false）
+  ※ tax_methodは税区分のavailableフィルタに使用（2026-05-23検証済み）:
+    FREE（免税事業者）→ 全151件使用（全件available=false）
     その他 → available=trueのみ使用（44〜78件）
-  ※ 科目はtax_schemeに依存しない。type（個人/法人）のみで決まる（2026-05-23検証済み）
+  ※ 科目はtax_methodに依存しない。type（個人/法人）のみで決まる（2026-05-23検証済み）
+
+  📋 監査メモ（2026-06-04）: フィールド名をtax_scheme→tax_methodに修正。
+  値をMCP実測値（getTermSettings）+ MF管理画面の日本語名（人間確認済み）に修正。
+  MCP実機で確認済みの値: FREE, INDIVIDUAL_ALLOCATION（法人TST）。
+  SIMPLE, PROPORTIONAL_ALLOCATIONはMF管理画面の選択肢として存在（人間確認）。
 
 oauth_tokens（トークンテーブル）
   ├── token_id         PK
