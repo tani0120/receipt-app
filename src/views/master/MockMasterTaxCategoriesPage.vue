@@ -598,8 +598,8 @@ const filteredTaxRows = computed(() => {
     if (row.direction === 'common') return true;
 
     // --- MFのavailableベースのフィルタ ---
-    if (availableData && row.mfId) {
-      return availableData[row.mfId] === true;
+    if (availableData && row.id) {
+      return availableData[row.id] === true;
     }
 
     // availableデータなし → 全件表示（MF未連携の初期状態）

@@ -13,7 +13,6 @@
     "defaultVisible": true,
     "displayOrder": 1,
     "isCustom": false,
-    "mfId": "NDmgf%2B1zDq%2FwlKf9qckMZg%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -31,7 +30,6 @@
     "defaultVisible": true,
     "displayOrder": 2,
     "isCustom": false,
-    "mfId": "uk0H3oqRin4kem7SijLXEg%3D%3D",
     "isExemptDefault": true,
     "taxRate": 0,
     "source": "mf"
@@ -50,7 +48,6 @@
     "defaultVisible": true,
     "displayOrder": 3,
     "isCustom": false,
-    "mfId": "JADP5Ohw2u502mymBPZiFw%3D%3D",
     "isSalesDefault": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -69,7 +66,6 @@
     "defaultVisible": false,
     "displayOrder": 4,
     "isCustom": false,
-    "mfId": "3lN0Ex%2B2L5iscf0dm9xMSQ%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
@@ -89,7 +85,6 @@
     "defaultVisible": false,
     "displayOrder": 5,
     "isCustom": false,
-    "mfId": "31gv%2BtcUT62VyXit4Nr%2BFA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
@@ -109,7 +104,6 @@
     "defaultVisible": false,
     "displayOrder": 6,
     "isCustom": false,
-    "mfId": "Jqpclz%2FCg0HDVXXWewqMYA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
@@ -129,7 +123,6 @@
     "defaultVisible": false,
     "displayOrder": 7,
     "isCustom": false,
-    "mfId": "B%2Fdesyukutw5JFfpPbOFSw%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
@@ -149,7 +142,6 @@
     "defaultVisible": false,
     "displayOrder": 8,
     "isCustom": false,
-    "mfId": "2NFW1XwF1mgTyoeBo3XGzw%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
@@ -169,7 +161,6 @@
     "defaultVisible": false,
     "displayOrder": 9,
     "isCustom": false,
-    "mfId": "YsETvYN421FsFgKPYQHyxg%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
@@ -189,7 +180,6 @@
     "defaultVisible": true,
     "displayOrder": 10,
     "isCustom": false,
-    "mfId": "WC8Qq4Kpr6Zq5dHxKGblxA%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -207,7 +197,6 @@
     "defaultVisible": false,
     "displayOrder": 11,
     "isCustom": false,
-    "mfId": "45vDWP9bnSOchCUudtIrxg%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
@@ -227,7 +216,6 @@
     "defaultVisible": false,
     "displayOrder": 12,
     "isCustom": false,
-    "mfId": "QdHpz%2BahtJ%2FRgb0M7dhnBQ%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
@@ -247,7 +235,6 @@
     "defaultVisible": false,
     "displayOrder": 13,
     "isCustom": false,
-    "mfId": "rQDVV%2B2NKOmY5bgVOZ2OLQ%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
@@ -267,7 +254,6 @@
     "defaultVisible": false,
     "displayOrder": 14,
     "isCustom": false,
-    "mfId": "%2BZRqwqBctE5dnh%2FH9u9fYQ%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
@@ -287,7 +273,6 @@
     "defaultVisible": false,
     "displayOrder": 15,
     "isCustom": false,
-    "mfId": "hvX%2FUcCK8wg0VgXaCEiNlg%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
@@ -307,7 +292,6 @@
     "defaultVisible": false,
     "displayOrder": 16,
     "isCustom": false,
-    "mfId": "NR7NuBLZkY8MkW387ktSdA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
@@ -327,7 +311,6 @@
     "defaultVisible": true,
     "displayOrder": 17,
     "isCustom": false,
-    "mfId": "Sr3NRqJkeRDGTtcoS6kVkQ%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -345,7 +328,6 @@
     "defaultVisible": false,
     "displayOrder": 18,
     "isCustom": false,
-    "mfId": "%2FCQpI3zbC0brO8jrl527ZA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
@@ -365,7 +347,6 @@
     "defaultVisible": false,
     "displayOrder": 19,
     "isCustom": false,
-    "mfId": "vWgeWo3nZYa%2B%2FfiBFhgdFw%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
@@ -385,7 +366,6 @@
     "defaultVisible": false,
     "displayOrder": 20,
     "isCustom": false,
-    "mfId": "tZ9RGhytGtBE%2BgeKF3mGLA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
@@ -405,7 +385,6 @@
     "defaultVisible": false,
     "displayOrder": 21,
     "isCustom": false,
-    "mfId": "I73o5HJSPCzIeHjjfRLr%2FQ%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
@@ -425,7 +404,6 @@
     "defaultVisible": false,
     "displayOrder": 22,
     "isCustom": false,
-    "mfId": "0Lm481eaxMgn20ziFhwC6g%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
@@ -445,7 +423,6 @@
     "defaultVisible": false,
     "displayOrder": 23,
     "isCustom": false,
-    "mfId": "F51dN8GxskSpQwo2pfMXig%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
@@ -465,7 +442,6 @@
     "defaultVisible": false,
     "displayOrder": 24,
     "isCustom": false,
-    "mfId": "pJJWx3uKmefsUivxll933Q%3D%3D",
     "taxRate": 0.05,
     "source": "mf"
   },
@@ -483,7 +459,6 @@
     "defaultVisible": false,
     "displayOrder": 25,
     "isCustom": false,
-    "mfId": "pR8HISyiKykjjYtlxWAzGw%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
@@ -503,7 +478,6 @@
     "defaultVisible": false,
     "displayOrder": 26,
     "isCustom": false,
-    "mfId": "M9txcdEu0leA%2Bjq3qrOk3A%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
@@ -523,7 +497,6 @@
     "defaultVisible": false,
     "displayOrder": 27,
     "isCustom": false,
-    "mfId": "WLMA638lHgq8K71t%2FGwheA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
@@ -543,7 +516,6 @@
     "defaultVisible": false,
     "displayOrder": 28,
     "isCustom": false,
-    "mfId": "dPUVfl%2BQE2pQehN1VikIaA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
@@ -563,7 +535,6 @@
     "defaultVisible": false,
     "displayOrder": 29,
     "isCustom": false,
-    "mfId": "frTwHI%2FhnntNoesFIoVd1A%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
@@ -583,7 +554,6 @@
     "defaultVisible": false,
     "displayOrder": 30,
     "isCustom": false,
-    "mfId": "1lriURnbp%2FEl%2BM45ZtYf8w%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
@@ -603,7 +573,6 @@
     "defaultVisible": true,
     "displayOrder": 31,
     "isCustom": false,
-    "mfId": "%2B9AO0FQgx1pDffMie7IcGA%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -621,7 +590,6 @@
     "defaultVisible": true,
     "displayOrder": 32,
     "isCustom": false,
-    "mfId": "jq2EPFY%2FC61PkJlCPKaTWQ%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -639,7 +607,6 @@
     "defaultVisible": true,
     "displayOrder": 33,
     "isCustom": false,
-    "mfId": "8gxPGTARnbBr2AwcdMkgBA%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -657,7 +624,6 @@
     "defaultVisible": true,
     "displayOrder": 34,
     "isCustom": false,
-    "mfId": "l5M%2F8K%2F5Ru3%2FtA9uImcyWg%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -675,7 +641,6 @@
     "defaultVisible": true,
     "displayOrder": 35,
     "isCustom": false,
-    "mfId": "BlxMXi6pxiBxMJlwYKjNQA%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -693,7 +658,6 @@
     "defaultVisible": true,
     "displayOrder": 36,
     "isCustom": false,
-    "mfId": "V5KL8SAI5QpnHj3wAKurAg%3D%3D",
     "taxRate": 0.1,
     "source": "mf"
   },
@@ -711,7 +675,6 @@
     "defaultVisible": false,
     "displayOrder": 37,
     "isCustom": false,
-    "mfId": "dUhK5CUO%2F0BFitJrtmYm4g%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
@@ -731,7 +694,6 @@
     "defaultVisible": false,
     "displayOrder": 38,
     "isCustom": false,
-    "mfId": "Lr888ZI%2FwOEADUulgesk1g%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
@@ -751,7 +713,6 @@
     "defaultVisible": false,
     "displayOrder": 39,
     "isCustom": false,
-    "mfId": "Q5LYFpUMhoW6yYgdfnfRVA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
@@ -771,7 +732,6 @@
     "defaultVisible": false,
     "displayOrder": 40,
     "isCustom": false,
-    "mfId": "dmLG9bSOe5PxENqU23PdmQ%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
@@ -791,7 +751,6 @@
     "defaultVisible": false,
     "displayOrder": 41,
     "isCustom": false,
-    "mfId": "6VjuQBTBOQM43ktVQ7jDKA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
@@ -811,7 +770,6 @@
     "defaultVisible": false,
     "displayOrder": 42,
     "isCustom": false,
-    "mfId": "1BF0%2FUKnnbGlhHM4KEKFMQ%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
@@ -831,7 +789,6 @@
     "defaultVisible": true,
     "displayOrder": 43,
     "isCustom": false,
-    "mfId": "ZpEJoNaimTqpUW2loFicUQ%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -849,7 +806,6 @@
     "defaultVisible": false,
     "displayOrder": 44,
     "isCustom": false,
-    "mfId": "DWpmt3k66ogOsOToMObHXA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
@@ -869,7 +825,6 @@
     "defaultVisible": false,
     "displayOrder": 45,
     "isCustom": false,
-    "mfId": "kakiLdtNfRZgadhZeKnh9Q%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
@@ -889,7 +844,6 @@
     "defaultVisible": false,
     "displayOrder": 46,
     "isCustom": false,
-    "mfId": "FUIkv9Zc5bBJdP4XT3Dzqw%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
@@ -909,7 +863,6 @@
     "defaultVisible": false,
     "displayOrder": 47,
     "isCustom": false,
-    "mfId": "7sU%2BLSf8HMZUhmalbTKjOA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
@@ -929,7 +882,6 @@
     "defaultVisible": false,
     "displayOrder": 48,
     "isCustom": false,
-    "mfId": "RLsH7mcbDPGh0Pu%2Fhf8ATg%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
@@ -949,7 +901,6 @@
     "defaultVisible": false,
     "displayOrder": 49,
     "isCustom": false,
-    "mfId": "m4p1%2FWLgysyguQuisk9erQ%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
@@ -969,7 +920,6 @@
     "defaultVisible": true,
     "displayOrder": 50,
     "isCustom": false,
-    "mfId": "GIjx8kEhXSSVtwedQvmHKA%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -987,7 +937,6 @@
     "defaultVisible": false,
     "displayOrder": 51,
     "isCustom": false,
-    "mfId": "pdFIb5Jy0G9Yhi72t%2FuIEw%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
@@ -1007,7 +956,6 @@
     "defaultVisible": false,
     "displayOrder": 52,
     "isCustom": false,
-    "mfId": "Rqk%2BWUTuOyvfaUr6%2FxQHpA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
@@ -1027,7 +975,6 @@
     "defaultVisible": false,
     "displayOrder": 53,
     "isCustom": false,
-    "mfId": "ZkNOa0uzAl58scaQ%2FWo6rw%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
@@ -1047,7 +994,6 @@
     "defaultVisible": false,
     "displayOrder": 54,
     "isCustom": false,
-    "mfId": "vUpWea9gfBgr66v3MYrcaw%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
@@ -1067,7 +1013,6 @@
     "defaultVisible": false,
     "displayOrder": 55,
     "isCustom": false,
-    "mfId": "8UyhZXge7kNTrIwv7IftRQ%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
@@ -1087,7 +1032,6 @@
     "defaultVisible": false,
     "displayOrder": 56,
     "isCustom": false,
-    "mfId": "00pe%2FY92pKNKbljcWNOXzA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
@@ -1107,7 +1051,6 @@
     "defaultVisible": false,
     "displayOrder": 57,
     "isCustom": false,
-    "mfId": "P6E5C0kpXk0oIewyUS2I8g%3D%3D",
     "taxRate": 0.05,
     "source": "mf"
   },
@@ -1125,7 +1068,6 @@
     "defaultVisible": false,
     "displayOrder": 58,
     "isCustom": false,
-    "mfId": "ra4%2F0FPO%2BYOsEPCwJ6W8kA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
@@ -1145,7 +1087,6 @@
     "defaultVisible": false,
     "displayOrder": 59,
     "isCustom": false,
-    "mfId": "eVscHLcbhB7hj8wmTHU%2BIA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
@@ -1165,7 +1106,6 @@
     "defaultVisible": false,
     "displayOrder": 60,
     "isCustom": false,
-    "mfId": "fGFDvPF9AFo0xIfeuIIczg%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
@@ -1185,7 +1125,6 @@
     "defaultVisible": false,
     "displayOrder": 61,
     "isCustom": false,
-    "mfId": "xABMlKSLpyOgbC2imXMshg%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
@@ -1205,7 +1144,6 @@
     "defaultVisible": false,
     "displayOrder": 62,
     "isCustom": false,
-    "mfId": "ow%2B1ByHEPOOM%2FDbrONHdQA%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
@@ -1225,7 +1163,6 @@
     "defaultVisible": false,
     "displayOrder": 63,
     "isCustom": false,
-    "mfId": "CZ%2Bg5Fw%2BSGoO7Rn4jt0oIw%3D%3D",
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
@@ -1245,7 +1182,6 @@
     "defaultVisible": true,
     "displayOrder": 64,
     "isCustom": false,
-    "mfId": "fpsOBm9bFrxsvXm18G67tA%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -1263,7 +1199,6 @@
     "defaultVisible": true,
     "displayOrder": 65,
     "isCustom": false,
-    "mfId": "WufDp0cw35hw3kdQsd%2FwJA%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -1281,7 +1216,6 @@
     "defaultVisible": true,
     "displayOrder": 66,
     "isCustom": false,
-    "mfId": "M8Yg42jxPA8xUNDcYz1rhw%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -1299,7 +1233,6 @@
     "defaultVisible": true,
     "displayOrder": 67,
     "isCustom": false,
-    "mfId": "fjYj%2FTpy1NxNaDoO9OVnIQ%3D%3D",
     "taxRate": 0.1,
     "source": "mf"
   },
@@ -1317,7 +1250,6 @@
     "defaultVisible": true,
     "displayOrder": 68,
     "isCustom": false,
-    "mfId": "DG2Fn5YOHdvljgyyG36XRg%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -1335,7 +1267,6 @@
     "defaultVisible": true,
     "displayOrder": 69,
     "isCustom": false,
-    "mfId": "yDaB5YUpbXi1b3maYfqKXA%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -1353,7 +1284,6 @@
     "defaultVisible": false,
     "displayOrder": 70,
     "isCustom": false,
-    "mfId": "YHh1b1Fl0cXfIO3DRs5IsQ%3D%3D",
     "taxRate": 0.05,
     "source": "mf"
   },
@@ -1371,7 +1301,6 @@
     "defaultVisible": true,
     "displayOrder": 71,
     "isCustom": false,
-    "mfId": "pbdihph4FOoVrtZTLej59Q%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -1389,7 +1318,6 @@
     "defaultVisible": true,
     "displayOrder": 72,
     "isCustom": false,
-    "mfId": "0%2F90SQi3vdxc73PPTlMZEQ%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -1407,7 +1335,6 @@
     "defaultVisible": true,
     "displayOrder": 73,
     "isCustom": false,
-    "mfId": "k%2BY0O7MGzBMHcqRD3YmNJw%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -1425,7 +1352,6 @@
     "defaultVisible": true,
     "displayOrder": 74,
     "isCustom": false,
-    "mfId": "cu0S33DO2NFciqvRy7Ev8A%3D%3D",
     "taxRate": 0.1,
     "source": "mf"
   },
@@ -1443,7 +1369,6 @@
     "defaultVisible": true,
     "displayOrder": 75,
     "isCustom": false,
-    "mfId": "Xbj1efcfzSOgBvvIbHfvQA%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -1461,7 +1386,6 @@
     "defaultVisible": true,
     "displayOrder": 76,
     "isCustom": false,
-    "mfId": "0I2QT7l0v5rSXJn5VG%2BufQ%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -1479,7 +1403,6 @@
     "defaultVisible": false,
     "displayOrder": 77,
     "isCustom": false,
-    "mfId": "4H992dMWThgGi8roO%2BSVpA%3D%3D",
     "taxRate": 0.05,
     "source": "mf"
   },
@@ -1497,7 +1420,6 @@
     "defaultVisible": true,
     "displayOrder": 78,
     "isCustom": false,
-    "mfId": "4L25mHcviZUIjyk7dLqr3Q%3D%3D",
     "isPurchaseDefault": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -1516,7 +1438,6 @@
     "defaultVisible": true,
     "displayOrder": 79,
     "isCustom": false,
-    "mfId": "R61jw88x%2FBuRdkBWw8oTMA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -1535,7 +1456,6 @@
     "defaultVisible": true,
     "displayOrder": 80,
     "isCustom": false,
-    "mfId": "oA9O2U5XbNlxVN8QjkSJMQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -1554,7 +1474,6 @@
     "defaultVisible": true,
     "displayOrder": 81,
     "isCustom": false,
-    "mfId": "k50XJj%2BSVyy63tN2FRLBKA%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -1572,7 +1491,6 @@
     "defaultVisible": true,
     "displayOrder": 82,
     "isCustom": false,
-    "mfId": "hXOiav%2BT04AP9X3%2F%2Fyk8%2BQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -1591,7 +1509,6 @@
     "defaultVisible": true,
     "displayOrder": 83,
     "isCustom": false,
-    "mfId": "RrWTy7rD33CfLsZ2bfNSeA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -1610,7 +1527,6 @@
     "defaultVisible": true,
     "displayOrder": 84,
     "isCustom": false,
-    "mfId": "zch%2F69gbXkgti%2BzsFa9tMg%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -1628,7 +1544,6 @@
     "defaultVisible": true,
     "displayOrder": 85,
     "isCustom": false,
-    "mfId": "UAyR9eXFQecY5%2Bh5kzA%2BNA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -1647,7 +1562,6 @@
     "defaultVisible": true,
     "displayOrder": 86,
     "isCustom": false,
-    "mfId": "WBAdW2tX1lcLRt%2FwbslBdg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -1666,7 +1580,6 @@
     "defaultVisible": false,
     "displayOrder": 87,
     "isCustom": false,
-    "mfId": "3oozS20o9hdGESpfX5stnA%3D%3D",
     "taxRate": 0.05,
     "source": "mf"
   },
@@ -1684,7 +1597,6 @@
     "defaultVisible": false,
     "displayOrder": 88,
     "isCustom": false,
-    "mfId": "6PFv5S4V3%2B4loYgh5eFqfg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.05,
     "source": "mf"
@@ -1703,7 +1615,6 @@
     "defaultVisible": false,
     "displayOrder": 89,
     "isCustom": false,
-    "mfId": "ecZ54ittSOxnLNrkPNWKLA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.05,
     "source": "mf"
@@ -1722,7 +1633,6 @@
     "defaultVisible": true,
     "displayOrder": 90,
     "isCustom": false,
-    "mfId": "1SOZsAojflN%2B3BRQpncPdQ%3D%3D",
     "taxRate": 0.1,
     "source": "mf"
   },
@@ -1740,7 +1650,6 @@
     "defaultVisible": true,
     "displayOrder": 91,
     "isCustom": false,
-    "mfId": "yZuLUmYofD60zYfIFyyM7w%3D%3D",
     "taxRate": 0.078,
     "source": "mf"
   },
@@ -1758,7 +1667,6 @@
     "defaultVisible": true,
     "displayOrder": 92,
     "isCustom": false,
-    "mfId": "Qgis5V%2BdgZTLoPu0TSVZcg%3D%3D",
     "taxRate": 0.022,
     "source": "mf"
   },
@@ -1776,7 +1684,6 @@
     "defaultVisible": false,
     "displayOrder": 93,
     "isCustom": false,
-    "mfId": "Elqkk4hgVAH%2B%2BP6JWCL3Qw%3D%3D",
     "individualOnly": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -1795,7 +1702,6 @@
     "defaultVisible": false,
     "displayOrder": 94,
     "isCustom": false,
-    "mfId": "dgfwHC4pg1ZMPMcWiT3GVQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.078,
     "source": "mf"
@@ -1814,7 +1720,6 @@
     "defaultVisible": false,
     "displayOrder": 95,
     "isCustom": false,
-    "mfId": "DzyVGXIbzsgELEjTIBgxlg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.022,
     "source": "mf"
@@ -1833,7 +1738,6 @@
     "defaultVisible": false,
     "displayOrder": 96,
     "isCustom": false,
-    "mfId": "u3rD2jRWCJnW7AUfir5o0g%3D%3D",
     "individualOnly": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -1852,7 +1756,6 @@
     "defaultVisible": false,
     "displayOrder": 97,
     "isCustom": false,
-    "mfId": "kysRCRsXDmqRPQ7ftK2zqw%3D%3D",
     "individualOnly": true,
     "taxRate": 0.078,
     "source": "mf"
@@ -1871,7 +1774,6 @@
     "defaultVisible": false,
     "displayOrder": 98,
     "isCustom": false,
-    "mfId": "fWBXzm4QRA8kebJMnDFprg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.022,
     "source": "mf"
@@ -1890,7 +1792,6 @@
     "defaultVisible": false,
     "displayOrder": 99,
     "isCustom": false,
-    "mfId": "dTZpq7OBZihgt2ZufrZWNQ%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -1908,7 +1809,6 @@
     "defaultVisible": false,
     "displayOrder": 100,
     "isCustom": false,
-    "mfId": "YuHXaGc8Bm89LgFctiHoPg%3D%3D",
     "taxRate": 0.0624,
     "source": "mf"
   },
@@ -1926,7 +1826,6 @@
     "defaultVisible": false,
     "displayOrder": 101,
     "isCustom": false,
-    "mfId": "gFixS0nNTp08oKhkWtm6XQ%3D%3D",
     "taxRate": 0.0176,
     "source": "mf"
   },
@@ -1944,7 +1843,6 @@
     "defaultVisible": false,
     "displayOrder": 102,
     "isCustom": false,
-    "mfId": "0sNy172jzz6Z9YBDdSYjaQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -1963,7 +1861,6 @@
     "defaultVisible": false,
     "displayOrder": 103,
     "isCustom": false,
-    "mfId": "ODyXX04kGviH3wrI0Q4sUA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.0624,
     "source": "mf"
@@ -1982,7 +1879,6 @@
     "defaultVisible": false,
     "displayOrder": 104,
     "isCustom": false,
-    "mfId": "V2XI0zIXaeAHZ1pCzif0lQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.0176,
     "source": "mf"
@@ -2001,7 +1897,6 @@
     "defaultVisible": false,
     "displayOrder": 105,
     "isCustom": false,
-    "mfId": "6GixQOPWwE1oqxTAyG%2FIaA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -2020,7 +1915,6 @@
     "defaultVisible": false,
     "displayOrder": 106,
     "isCustom": false,
-    "mfId": "PAbMAguzRapxlTaarhNOkA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.0624,
     "source": "mf"
@@ -2039,7 +1933,6 @@
     "defaultVisible": false,
     "displayOrder": 107,
     "isCustom": false,
-    "mfId": "DvGdEBFzEy3EPAJhkAFXtg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.0176,
     "source": "mf"
@@ -2058,7 +1951,6 @@
     "defaultVisible": false,
     "displayOrder": 108,
     "isCustom": false,
-    "mfId": "nrtQO8t7O%2FsEk%2BMJjy%2Bv0g%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -2076,7 +1968,6 @@
     "defaultVisible": false,
     "displayOrder": 109,
     "isCustom": false,
-    "mfId": "hZaVj2TYk%2FvTBWFXva94mQ%3D%3D",
     "taxRate": 0.063,
     "source": "mf"
   },
@@ -2094,7 +1985,6 @@
     "defaultVisible": false,
     "displayOrder": 110,
     "isCustom": false,
-    "mfId": "zfNwug7yQp62iz5NTJ%2FbOA%3D%3D",
     "taxRate": 0.017,
     "source": "mf"
   },
@@ -2112,7 +2002,6 @@
     "defaultVisible": false,
     "displayOrder": 111,
     "isCustom": false,
-    "mfId": "15VM0fdZuJdNubM8Sq9CKg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -2131,7 +2020,6 @@
     "defaultVisible": false,
     "displayOrder": 112,
     "isCustom": false,
-    "mfId": "TyR6LvLmQBugYdlCvgN6fA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.063,
     "source": "mf"
@@ -2150,7 +2038,6 @@
     "defaultVisible": false,
     "displayOrder": 113,
     "isCustom": false,
-    "mfId": "C6yuEpvGTIswyYq5visEng%3D%3D",
     "individualOnly": true,
     "taxRate": 0.017,
     "source": "mf"
@@ -2169,7 +2056,6 @@
     "defaultVisible": false,
     "displayOrder": 114,
     "isCustom": false,
-    "mfId": "Vs3Cv38zFjc7X%2F4j%2F9Covg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -2188,7 +2074,6 @@
     "defaultVisible": false,
     "displayOrder": 115,
     "isCustom": false,
-    "mfId": "4uWkMlWNMNHri7i6Se0Vrw%3D%3D",
     "individualOnly": true,
     "taxRate": 0.063,
     "source": "mf"
@@ -2207,7 +2092,6 @@
     "defaultVisible": false,
     "displayOrder": 116,
     "isCustom": false,
-    "mfId": "UCuxFCassyB82j6OpPBhaQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.017,
     "source": "mf"
@@ -2226,7 +2110,6 @@
     "defaultVisible": false,
     "displayOrder": 117,
     "isCustom": false,
-    "mfId": "8EDTr652Z6em%2FAKDIHD4uQ%3D%3D",
     "taxRate": 0.05,
     "source": "mf"
   },
@@ -2244,7 +2127,6 @@
     "defaultVisible": false,
     "displayOrder": 118,
     "isCustom": false,
-    "mfId": "cW3VZEo1MRNPBmG%2FgMf7zA%3D%3D",
     "taxRate": 0.04,
     "source": "mf"
   },
@@ -2262,7 +2144,6 @@
     "defaultVisible": false,
     "displayOrder": 119,
     "isCustom": false,
-    "mfId": "x39V4n4nRrxDhSspsb7xVw%3D%3D",
     "taxRate": 0.01,
     "source": "mf"
   },
@@ -2280,7 +2161,6 @@
     "defaultVisible": false,
     "displayOrder": 120,
     "isCustom": false,
-    "mfId": "6W0VLHuVsWulLo3QqCpxBA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.05,
     "source": "mf"
@@ -2299,7 +2179,6 @@
     "defaultVisible": false,
     "displayOrder": 121,
     "isCustom": false,
-    "mfId": "iT1JCppyFbA5CjbgnZ9QuQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.04,
     "source": "mf"
@@ -2318,7 +2197,6 @@
     "defaultVisible": false,
     "displayOrder": 122,
     "isCustom": false,
-    "mfId": "RhYO1ijAdo9NQsQqTGqXDA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.01,
     "source": "mf"
@@ -2337,7 +2215,6 @@
     "defaultVisible": false,
     "displayOrder": 123,
     "isCustom": false,
-    "mfId": "%2FiHOTz%2BWOUYyKd6oLUmwdQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.05,
     "source": "mf"
@@ -2356,7 +2233,6 @@
     "defaultVisible": false,
     "displayOrder": 124,
     "isCustom": false,
-    "mfId": "t4S6xN5czBdZeqeiansL7Q%3D%3D",
     "individualOnly": true,
     "taxRate": 0.04,
     "source": "mf"
@@ -2375,7 +2251,6 @@
     "defaultVisible": false,
     "displayOrder": 125,
     "isCustom": false,
-    "mfId": "iwm%2Fc2cbApI5eO%2BgysYUgw%3D%3D",
     "individualOnly": true,
     "taxRate": 0.01,
     "source": "mf"
@@ -2394,7 +2269,6 @@
     "defaultVisible": false,
     "displayOrder": 126,
     "isCustom": false,
-    "mfId": "GHWxnu%2Bh6nRruTH4b93Z2w%3D%3D",
     "taxRate": 0.1,
     "source": "mf"
   },
@@ -2412,7 +2286,6 @@
     "defaultVisible": false,
     "displayOrder": 127,
     "isCustom": false,
-    "mfId": "EJ5QIzzIgcvoU4Du6RnnEg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -2431,7 +2304,6 @@
     "defaultVisible": false,
     "displayOrder": 128,
     "isCustom": false,
-    "mfId": "82U9Hr1G8QRI%2BSYw%2FiYJXQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -2450,7 +2322,6 @@
     "defaultVisible": false,
     "displayOrder": 129,
     "isCustom": false,
-    "mfId": "PG6KuLfNoYuNh9AuqR0C8g%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -2468,7 +2339,6 @@
     "defaultVisible": false,
     "displayOrder": 130,
     "isCustom": false,
-    "mfId": "uSzdCwWCE5HvxCHk%2Ftwljg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -2487,7 +2357,6 @@
     "defaultVisible": false,
     "displayOrder": 131,
     "isCustom": false,
-    "mfId": "3hsC1VmR3wEEvdJgbq6LUQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -2506,7 +2375,6 @@
     "defaultVisible": true,
     "displayOrder": 132,
     "isCustom": false,
-    "mfId": "WnMKDkjoiyejE1sVD9hcsg%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -2524,7 +2392,6 @@
     "defaultVisible": true,
     "displayOrder": 133,
     "isCustom": false,
-    "mfId": "BROC1QmbtglUxVE51rb49w%3D%3D",
     "taxRate": 0,
     "source": "mf"
   },
@@ -2542,7 +2409,6 @@
     "defaultVisible": true,
     "displayOrder": 134,
     "isCustom": false,
-    "mfId": "vdXMByJWdXymQ0MeByMRhw%3D%3D",
     "taxRate": 0.1,
     "source": "mf"
   },
@@ -2560,7 +2426,6 @@
     "defaultVisible": false,
     "displayOrder": 135,
     "isCustom": false,
-    "mfId": "h6P6i1%2BUi%2Bc8d468VOwApA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -2579,7 +2444,6 @@
     "defaultVisible": false,
     "displayOrder": 136,
     "isCustom": false,
-    "mfId": "UUp%2BmB85g8XCY%2BaBKxsGNg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -2598,7 +2462,6 @@
     "defaultVisible": true,
     "displayOrder": 137,
     "isCustom": false,
-    "mfId": "eSf5GOERqrHwF923L36%2FLQ%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -2616,7 +2479,6 @@
     "defaultVisible": false,
     "displayOrder": 138,
     "isCustom": false,
-    "mfId": "amaP08nBIGExgDpH0Z%2BVaQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -2635,7 +2497,6 @@
     "defaultVisible": false,
     "displayOrder": 139,
     "isCustom": false,
-    "mfId": "zne4%2FJ9u79HdwDJ4VQUmGQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -2654,7 +2515,6 @@
     "defaultVisible": true,
     "displayOrder": 140,
     "isCustom": false,
-    "mfId": "F0B6U%2BcUJudLwMRcfixmnA%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -2672,7 +2532,6 @@
     "defaultVisible": false,
     "displayOrder": 141,
     "isCustom": false,
-    "mfId": "SRvxHIJ8cKXuRODNAhFlLg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -2691,7 +2550,6 @@
     "defaultVisible": false,
     "displayOrder": 142,
     "isCustom": false,
-    "mfId": "SvX%2BZ8YAe2FUP%2FvA1zYHIg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -2710,7 +2568,6 @@
     "defaultVisible": false,
     "displayOrder": 143,
     "isCustom": false,
-    "mfId": "MNUw9CbJy11JFHYoUcPjjg%3D%3D",
     "taxRate": 0.05,
     "source": "mf"
   },
@@ -2728,7 +2585,6 @@
     "defaultVisible": false,
     "displayOrder": 144,
     "isCustom": false,
-    "mfId": "wKvY1O77YiEuNxTmkBwlbg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.05,
     "source": "mf"
@@ -2747,7 +2603,6 @@
     "defaultVisible": false,
     "displayOrder": 145,
     "isCustom": false,
-    "mfId": "axFBhJVYjnJEv1%2FZvcdy3w%3D%3D",
     "individualOnly": true,
     "taxRate": 0.05,
     "source": "mf"
@@ -2766,7 +2621,6 @@
     "defaultVisible": false,
     "displayOrder": 146,
     "isCustom": false,
-    "mfId": "hnWxAoKvcqAv7Ffqx8A6IQ%3D%3D",
     "taxRate": 0.1,
     "source": "mf"
   },
@@ -2784,7 +2638,6 @@
     "defaultVisible": false,
     "displayOrder": 147,
     "isCustom": false,
-    "mfId": "7Hbq6oLsuPcdcL79gBhHRg%3D%3D",
     "individualOnly": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -2803,7 +2656,6 @@
     "defaultVisible": false,
     "displayOrder": 148,
     "isCustom": false,
-    "mfId": "E6UMRmMODlKIUGYWoQAZNA%3D%3D",
     "individualOnly": true,
     "taxRate": 0.1,
     "source": "mf"
@@ -2822,7 +2674,6 @@
     "defaultVisible": false,
     "displayOrder": 149,
     "isCustom": false,
-    "mfId": "F8QanxgHfnYgMG37i9318A%3D%3D",
     "taxRate": 0.08,
     "source": "mf"
   },
@@ -2840,7 +2691,6 @@
     "defaultVisible": false,
     "displayOrder": 150,
     "isCustom": false,
-    "mfId": "PZ24mA6L0YM%2Fel5%2FSrNBhQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"
@@ -2859,7 +2709,6 @@
     "defaultVisible": false,
     "displayOrder": 151,
     "isCustom": false,
-    "mfId": "qUnhgTxewvBCket0W0eKfQ%3D%3D",
     "individualOnly": true,
     "taxRate": 0.08,
     "source": "mf"

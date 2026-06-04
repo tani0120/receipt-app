@@ -288,7 +288,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, nextTick } from 'vue';
+import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue';
 
 import type { Account } from '@/types/shared-account';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
@@ -389,9 +389,20 @@ const props = defineProps<{ clientId: string }>();
 
 const PAGE_SIZE = 50;
 
-// =============== MFインポート（ボタン設置のみ。ロジックは後続タスクで実装） ===============
+// =============== MF連携状態 ===============
 const mfAuthenticated = ref(false);
 const mfImporting = ref(false);
+
+onMounted(async () => {
+  try {
+    const res = await fetch(`/api/mf/auth/status?clientId=${props.clientId}`);
+    const data = await res.json();
+    mfAuthenticated.value = data.authenticated ?? false;
+  } catch {
+    mfAuthenticated.value = false;
+  }
+});
+
 async function importFromMf() {
   modal.notify({ title: 'MFインポート', message: '勘定科目のMFインポート機能は後続タスクで実装予定です。', variant: 'warning' });
 }

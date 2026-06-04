@@ -4,9 +4,18 @@
  * フロント（Vue）に分散していたインポートの照合・差分検知・差分適用・保存処理を
  * バックエンドに集約。フロントはAPI呼び出しと結果表示のみ。
  *
+ * ■ 照合方式: 名前ベース（MF税区分名 = マスタ税区分名）
+ *   - MF IDは事業者（テナント）固有。事業者間で一致しない（MCP実機検証: TSK vs TST 0/151件一致）
+ *   - 税区分名は全事業者で共通（MCP実機検証: 151/151件一致）
+ *   - 2026-06-04: mfIdによる照合を全て名前照合に統一
+ *
+ * ■ available.jsonのキー: マスタID（例: SALES_TAXABLE_10）
+ *   - 2026-06-04: mfId→マスタIDに移行（604件変換）。事業者非依存
+ *
  * エンドポイント:
  *   POST /api/mf/import-taxes/preview — 差分プレビュー
  *   POST /api/mf/import-taxes/apply   — 差分適用
+ *   POST /api/mf/import-client-taxes  — 顧問先税区分インポート
  */
 
 import { mcpFetchTaxes, mcpFetchTermSettings } from './mfMcpClient'
@@ -161,19 +170,21 @@ async function detectDiff(clientId: string, dryRun: boolean = false): Promise<De
     }
   }
 
-  // マスタのsimplifiedOnlyフラグでmfIdを逆引き
-  const simplifiedOnlyMfIds = new Set<string>()
+  // マスタのsimplifiedOnlyフラグでマスタIDを収集
+  const simplifiedOnlyMasterIds = new Set<string>()
   for (const row of masterItems) {
-    if (row.simplifiedOnly && row.mfId) {
-      simplifiedOnlyMfIds.add(row.mfId)
+    if (row.simplifiedOnly) {
+      simplifiedOnlyMasterIds.add(row.id)
     }
   }
 
+  // MFの税区分名→マスタIDで照合し、simplifiedOnlyならautoRule適用
   for (const t of mfTaxes) {
-    if (simplifiedOnlyMfIds.has(t.id)) {
+    const masterRow = nameToRow.get(t.name)
+    if (masterRow && simplifiedOnlyMasterIds.has(masterRow.id)) {
       for (const method of autoRuleMethods) {
-        if (availData[method] && availData[method][t.id] === true) {
-          availData[method][t.id] = false
+        if (availData[method] && availData[method][masterRow.id] === true) {
+          availData[method][masterRow.id] = false
           autoRuleApplied++
         }
       }
@@ -223,7 +234,7 @@ async function detectDiff(clientId: string, dryRun: boolean = false): Promise<De
   for (const method of VALID_METHODS) {
     const methodAvail = availData[method] ?? {}
     for (const row of masterItems) {
-      if (row.mfId && methodAvail[row.mfId] === true && row.deprecated) {
+      if (methodAvail[row.id] === true && row.deprecated) {
         row.deprecated = false
         deprecatedReset++
       }
@@ -347,20 +358,21 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
   // --- 新規税区分をavailableに追加（directionベースで判定） ---
   if (diff.added.length > 0) {
     for (const a of diff.added) {
-      const row = masterItems.find(r => r.mfId === a.mfId)
-      const dir = row?.direction ?? 'common'
+      const newRow = masterItems.find(r => r.name === a.name)
+      const masterId = newRow?.id ?? `MF_CUSTOM_${a.mfId}`
+      const dir = newRow?.direction ?? 'common'
 
       for (const method of VALID_METHODS) {
         if (!availData[method]) availData[method] = {}
         if (dir === 'common') {
           // 不明・対象外 → 全方式で有効
-          availData[method][a.mfId] = true
+          availData[method][masterId] = true
         } else if (method === 'exempt') {
           // 免税 → 常に無効
-          availData[method][a.mfId] = false
+          availData[method][masterId] = false
         } else {
           // それ以外 → 有効（簡易/一括比例/個別対応共通）
-          availData[method][a.mfId] = true
+          availData[method][masterId] = true
         }
       }
     }
@@ -464,11 +476,11 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
   // 2. MFから税区分一覧取得
   const mfTaxes = await mcpFetchTaxes(clientId) as MfTax[]
 
-  // 3. 全社マスタとmfIdで突合
+  // 3. 全社マスタと名前で突合（MF IDは事業者固有のため名前照合が正しい）
   const masterItems = getAllTaxCategories()
-  const masterByMfId = new Map<string, TaxCategory>()
+  const masterByName = new Map<string, TaxCategory>()
   for (const m of masterItems) {
-    if (m.mfId) masterByMfId.set(m.mfId, m)
+    masterByName.set(m.name, m)
   }
 
   const today = new Date().toISOString().slice(0, 10)
@@ -477,7 +489,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
   let customCount = 0
 
   const imported: TaxCategory[] = mfTaxes.map((t, idx) => {
-    const master = masterByMfId.get(t.id)
+    const master = masterByName.get(t.name)
     if (master) {
       matchedCount++
       return {
@@ -527,7 +539,9 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
     if (VALID_METHODS.includes(patternKey)) {
       const availMap: Record<string, boolean> = {}
       for (const t of mfTaxes) {
-        availMap[t.id] = t.available
+        const master = masterByName.get(t.name)
+        const key = master?.id ?? `MF_CUSTOM_${t.id}`
+        availMap[key] = t.available
       }
       saveTaxAvailable(patternKey, availMap)
       availableUpdated = true

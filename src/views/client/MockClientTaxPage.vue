@@ -543,8 +543,8 @@ const filteredTaxRows = computed(() => {
 
     // --- MFのavailableベースのフィルタ（データ駆動） ---
     const availableData = mfTaxAvailable.value[method] ?? null;
-    if (availableData && row.mfId) {
-      return availableData[row.mfId] === true;
+    if (availableData && row.id) {
+      return availableData[row.id] === true;
     }
 
     // availableデータ未取得 → デフォルト表示（active行のみ）

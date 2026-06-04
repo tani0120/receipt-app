@@ -265,6 +265,40 @@
     :variant="modal.notifyState.variant"
     @close="modal.onNotifyClose"
   />
+
+  <!-- MFインポート 顧問先選択モーダル -->
+  <div v-if="mfImportStep > 0" class="modal-overlay" @click.self="mfImportStep = 0">
+    <div class="modal-card" style="max-width:520px;">
+      <template v-if="mfImportStep === 1">
+        <div class="modal-header">
+          <h3 style="margin:0;font-size:16px;"><i class="fa-solid fa-cloud-arrow-down"></i> MFインポート — 顧問先選択</h3>
+        </div>
+        <div class="modal-body" style="max-height:400px;overflow-y:auto;">
+          <p style="margin:0 0 12px;color:#666;font-size:13px;">MF連携済みの顧問先を選択してください。選択した顧問先のMCPトークンで勘定科目をインポートします。</p>
+          <div v-if="mfClients.length === 0" style="color:#999;text-align:center;padding:24px;">
+            MF連携済みの顧問先がありません
+          </div>
+          <div
+            v-for="cl in mfClients" :key="cl.clientId"
+            class="mf-client-row"
+            :class="{ selected: mfSelectedClientId === cl.clientId }"
+            @click="mfSelectedClientId = cl.clientId"
+          >
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="radio" :checked="mfSelectedClientId === cl.clientId" style="margin:0;" />
+              <span style="font-weight:600;">{{ cl.threeCode }}</span>
+              <span>{{ cl.companyName }}</span>
+              <span v-if="cl.lastImported" class="mf-star" title="前回インポート元">★</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" @click="mfImportStep = 0">キャンセル</button>
+          <button class="btn-confirm" :disabled="!mfSelectedClientId" @click="executeImport">インポート実行</button>
+        </div>
+      </template>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -365,32 +399,74 @@ const { columnWidths: acctColWidths, onResizeStart: onAcctResizeStart } = useCol
 
 const PAGE_SIZE = 50;
 
-// =============== MFインポート ===============
-// clientIdはMF認証用（MCPトークンキー）。マスタは全社共通だが、MFアクセスには認証済み顧問先が必要
-const MF_AUTH_CLIENT_ID = 'c_rODnkCDN'; // TODO: Supabase移行時にUI選択に変更
+// =============== MF連携状態 ===============
 const mfAuthenticated = ref(false);
 const mfImporting = ref(false);
 
+// --- MFインポート 顧問先選択UI状態 ---
+const mfImportStep = ref(0); // 0:非表示 1:顧問先選択
+const mfSelectedClientId = ref('');
+interface MfClientInfo {
+  clientId: string;
+  threeCode: string;
+  companyName: string;
+  lastImported?: string;
+}
+const mfClients = ref<MfClientInfo[]>([]);
+
 onMounted(async () => {
+  // 全顧問先のMF認証状態を一括チェック
   try {
-    const res = await fetch(`/api/mf/auth/status?clientId=${MF_AUTH_CLIENT_ID}`);
-    const data = await res.json();
-    mfAuthenticated.value = data.authenticated ?? false;
+    const clientsRes = await fetch('/api/clients');
+    const clientsData = await clientsRes.json();
+    const allClients = clientsData.clients ?? clientsData ?? [];
+    const ids = allClients.map((c: { clientId: string }) => c.clientId);
+    if (ids.length === 0) return;
+
+    const bulkRes = await fetch('/api/mf/auth/status/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientIds: ids }),
+    });
+    const bulkData = await bulkRes.json() as Record<string, { authenticated: boolean }>;
+
+    // MF連携済み顧問先のみ抽出
+    const authenticatedClients: MfClientInfo[] = [];
+    for (const cl of allClients) {
+      if (bulkData[cl.clientId]?.authenticated) {
+        authenticatedClients.push({
+          clientId: cl.clientId,
+          threeCode: cl.threeCode ?? '',
+          companyName: cl.companyName ?? '',
+        });
+      }
+    }
+
+    mfClients.value = authenticatedClients;
+    mfAuthenticated.value = authenticatedClients.length > 0;
   } catch {
     mfAuthenticated.value = false;
   }
 });
 
-/** MFから勘定科目を取得して全社マスタを差分マージ（バックエンドAPI経由） */
+/** MFインポートボタン押下 → 顧問先選択モーダル表示 */
 async function importFromMf() {
-  if (mfImporting.value) return;
+  mfSelectedClientId.value = '';
+  mfImportStep.value = 1;
+}
+
+/** 顧問先選択後 → インポート実行（バックエンドAPI経由） */
+async function executeImport() {
+  const clientId = mfSelectedClientId.value;
+  if (!clientId) return;
+  mfImportStep.value = 0;
   mfImporting.value = true;
   try {
     // バックエンドAPIで差分検知 + マスタ保存を一括実行
     const res = await fetch('/api/mf/import-master-accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId: MF_AUTH_CLIENT_ID }),
+      body: JSON.stringify({ clientId }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'MF勘定科目インポート失敗' }));
@@ -408,10 +484,9 @@ async function importFromMf() {
 
     if (!result.hasDiff) {
       // 差分なし → MFフィールド付与のみ
-      // バックエンドが既に保存済みなので、フロントのreactiveも同期
       accountRows.splice(0, accountRows.length, ...result.updatedAccounts);
       await modal.notify({ title: `MF勘定科目 ${result.mfCount}件と照合完了`, message: result.reportLines.join('\n'), variant: 'success' });
-      markClean(); // バックエンド保存済み
+      markClean();
       return;
     }
 
@@ -429,21 +504,21 @@ async function importFromMf() {
       const applyRes = await fetch('/api/mf/import-master-accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId: MF_AUTH_CLIENT_ID, applyNameChanges: true }),
+        body: JSON.stringify({ clientId, applyNameChanges: true }),
       });
       if (applyRes.ok) {
         const applyResult = await applyRes.json() as { updatedAccounts: Account[]; summary: string };
         accountRows.splice(0, accountRows.length, ...applyResult.updatedAccounts);
         await modal.notify({ title: `MF差分マージ完了（${applyResult.summary}）`, variant: 'success' });
-        markClean(); // バックエンド保存済み
+        markClean();
         return;
       }
     }
 
-    // 名前変更なしの差分 → バックエンドが既に保存済みなのでreactiveを同期
+    // 名前変更なしの差分 → reactiveを同期
     accountRows.splice(0, accountRows.length, ...result.updatedAccounts);
     await modal.notify({ title: `MF差分マージ完了（${result.summary}）`, variant: 'success' });
-    markClean(); // バックエンド保存済み
+    markClean();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });

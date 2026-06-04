@@ -461,21 +461,21 @@ app.post('/sync-all', async (c) => {
     accountMsg += `（マッチ: ${matchedCount}件 / 未マッチ: ${unmatchedList.length}件）`
     results.push(accountMsg)
 
-    // ===== 4. 税区分マスタ（mfId照合でマスタ属性を引き継ぐ） =====
+    // ===== 4. 税区分マスタ（名前照合でマスタ属性を引き継ぐ） =====
     const allTaxes = await mcpFetchTaxes(clientId)
-    // マスタの全社税区分をmfIdでインデックス化
+    // マスタの全社税区分を名前でインデックス化（MF IDは事業者固有のため名前照合が正しい）
     const masterTaxes = getAllTaxCategories()
-    const mfIdToMaster = new Map<string, TaxCategory>()
+    const nameToMaster = new Map<string, TaxCategory>()
     for (const mt of masterTaxes) {
-      if (mt.mfId) mfIdToMaster.set(mt.mfId, mt as TaxCategory)
+      nameToMaster.set(mt.name, mt as TaxCategory)
     }
 
     let matchedTaxCount = 0
     let unmatchedTaxCount = 0
     const taxMapped: TaxCategory[] = allTaxes.map((t, idx) => {
-      const master = mfIdToMaster.get(t.id)
+      const master = nameToMaster.get(t.name)
       if (master) {
-        // mfId照合成功 → マスタの属性をそのまま維持（MFのavailableは信頼しない）
+        // 名前照合成功 → マスタの属性をそのまま維持（MFのavailableは信頼しない）
         matchedTaxCount++
         return {
           ...master,
@@ -484,7 +484,7 @@ app.post('/sync-all', async (c) => {
           mfId: t.id,
         }
       }
-      // mfIdがマッチしない → MF独自のカスタム税区分（マスタに情報なし→名前から推定は正当）
+      // 名前がマッチしない → MF独自のカスタム税区分（マスタに情報なし→名前から推定）
       unmatchedTaxCount++
       const dir = guessDirectionFromName(t.name)
       return {

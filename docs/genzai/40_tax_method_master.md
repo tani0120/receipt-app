@@ -2,7 +2,7 @@
 
 > 作成: 2026-05-28
 > 実装完了: 2026-05-29
-> 最終更新: 2026-05-29（simplifiedOnlyフラグ追加・名前パターンマッチ完全排除・taxRate優先化）
+> 最終更新: 2026-06-04（MF IDは事業者固有と確定。全照合を名前ベースに統一。available.jsonキーをマスタIDに移行）
 > 統合元: tax_method_master_plan.md（計画書） + report_tax_master_issues.md（課題レポート）
 
 ---
@@ -12,8 +12,10 @@
 - MFが税区分の唯一の正しいソース
 - MFのMCP `mfc_ca_getTaxes` は引数なし。トークンに紐づく事業者（顧問先）の税区分を返す
 - 全社マスタは顧問先非依存 → MFの `available` は特定顧問先の課税方式に依存するため、全社マスタのフィルタに使えない
-- MFインポートは特定顧問先経由でしかできないが、税区分定義（ID、名前、税率）は全顧問先で共通
-- 全社マスタの全151件に `mfId` フィールドが設定済み（スグスルID ↔ MF IDの対応表）
+- 税区分定義（ID、名前、税率）は全顧問先で共通（MCP実機検証済み: 151/151件名前一致）
+- **MF IDは事業者（テナント）固有。事業者間で一致しない**（MCP実機検証済み: TSK vs TST 0/151件一致）
+- 全社マスタから `mfId` フィールドは削除済み（2026-06-04）。照合は全て名前ベース
+- `mf-tax-available.json` のキーはマスタID（`SALES_TAXABLE_10`等）に移行済み（2026-06-04）
 
 ---
 
@@ -144,16 +146,17 @@ export const MF_TAX_METHOD_TO_PATTERN: Record<string, TaxMethodKey> = {
 
 **実装**: `src/api/routes/mfRoutes.ts` sync-allエンドポイント
 
-- mfIdでマスタの全社税区分と照合 → マスタの属性（id/direction/active/qualified等）をそのまま維持
+- **名前で**マスタの全社税区分と照合 → マスタの属性（id/direction/active/qualified等）をそのまま維持
 - マッチしない場合 → `MF_CUSTOM_${t.id}` IDで新規追加、`guessDirectionFromName()` でフォールバック推定
 - 旧問題の `direction: 'common'` 固定値は完全に排除済み
+- ~~旧実装はmfIdで照合していたが、MF IDは事業者固有のため名前照合に修正（2026-06-04）~~
 
 ### 7. 顧問先ページ（MFリアルタイムavailable使用）
 
 **実装**: `MockClientTaxPage.vue`
 
 - 引き続きMFのリアルタイム `available` でフィルタ（顧問先の課税方式に依存するため正しい）
-- mfId照合でマスタ属性を引き継ぐ処理を実装済み
+- 名前照合でマスタ属性を引き継ぐ処理を実装済み（2026-06-04修正: mfId照合→名前照合）
 - MFインポート時に `consumptionTaxMode`（課税方式）を自動更新
 - IDパターンマッチ・名前パターンマッチは完全削除。`simplifiedOnly`フラグ + `taxRate`フィールドでデータ駆動
 - 詳細は 41_tax_client_design.md を参照
@@ -184,8 +187,8 @@ TaxCategory型に構造化属性（`tax_type` / `business_type` / `purpose_type`
 | `src/api/services/mfTaxImportService.ts` | **税区分インポート処理（バックエンド）** preview/apply/detectDiff |
 | `src/api/services/mfTaxAvailableStore.ts` | 4方式分available管理ストア（ゴミデータ清掃バリデーション付き） |
 | `src/api/routes/mfRoutes.ts` | MF API・sync-all・tax-available・import-taxes エンドポイント |
-| `data/mf-tax-available.json` | 4方式分availableデータ（永続化） |
-| `data/tax-category-master.json` | 全社マスタ税区分151件（mfId付き） |
+| `data/mf-tax-available.json` | 4方式分availableデータ（永続化）— キーはマスタID（`SALES_TAXABLE_10`等） |
+| `data/tax-category-master.json` | 全社マスタ税区分151件（mfId削除済み・名前照合） |
 | `src/views/master/MockMasterTaxCategoriesPage.vue` | 全社マスタUI（フィルタ・API呼び出し） |
 | `src/views/client/MockClientTaxPage.vue` | 顧問先税区分UI（MF available使用） |
 | `src/types/shared-tax-category.ts` | TaxCategory型・ユーティリティ関数 |
@@ -200,3 +203,57 @@ TaxCategory型に構造化属性（`tax_type` / `business_type` / `purpose_type`
 | 2026-05-29 | 実装完了 |
 | 2026-05-29 | **バックエンド移行完了。** `mfTaxImportService.ts`新規作成。フロントexecuteImport 200行→85行。IDパターンマッチフォールバック削除。`mfTaxAvailableStore`にゴミデータ清掃バリデーション追加。`MF_TAX_METHOD_TO_PATTERN`定数をサービスに定義（実測値`SIMPLE`を含む） |
 | 2026-05-29 | **データ駆動化完了。** `simplifiedOnly`フラグ追加（276件JSON更新）。名前パターンマッチ`/(一種|二種|三種|四種|五種|六種)/`を完全排除。`extractRateFromName`→`taxRate`優先化。顧問先設計を41_tax_client_design.mdに分離 |
+| 2026-06-04 | **MF ID事業者固有確定。以下の変更を実施:** |
+|            | • `tax-category-master.json`から`mfId`フィールドを削除（全社マスタに事業者固有IDを持つ意味がない） |
+|            | • `mf-tax-available.json`のキーをmfId→マスタID（`SALES_TAXABLE_10`等）に移行（604件変換・事業者非依存） |
+|            | • MFインポート時の照合を全て名前ベースに統一（importClientTaxes/detectDiff/sync-all） |
+|            | • Vueフィルタを`row.mfId`→`row.id`（マスタID）に変更 |
+|            | • 設計書40/41のmfId照合の嘘を訂正 |
+
+---
+
+## 削除済みスクリプト（過去の手順記録）
+
+以下のスクリプトは`mfAccountImportService.ts`のバックエンドAPI化により不要となったため削除（2026-06-04）。
+処理フローと考え方は`importMasterAccounts()`に引き継がれている。
+
+### merge_mf_accounts.ts（MF勘定科目マージ）
+
+**目的**: MFの生データJSONから全社マスタに差分マージする
+**対象**: 個人事業・不動産所得あり（`target='individual'` or `'both'`）
+**入力**: `docs/genzai/mf_accounts_raw_TSK.json`（TSK事業者のMF生データ）
+
+**処理フロー**:
+1. MF生データ（`mf_accounts_raw_TSK.json`）を読み込み
+2. 全社マスタ（`account-master.json`）を読み込み
+3. 税区分マスタから`tax_id`変換テーブルを構築（MFのtax_id→マスタ税区分ID）
+4. **名前で照合**（MF科目名 = マスタ科目名）
+   - 一致 → 既存マスタの属性（id/category/target等）を維持し、MFフィールド（mfAccountId/mfAccountGroup/mfFinancialStatementType/mfDefaultTaxId）を付与
+   - 不一致 → MFのcategoryから`MF_CATEGORY_MAP`でマスタcategoryを推定し、新規Account生成（フォールバック: `'経費'`）
+5. デフォルト税区分は既存マスタ設定を優先し、未設定時のみMFのtax_idから変換して補完
+6. 差分レポート出力:
+   - 名前一致（MFフィールド付与）件数
+   - 新規追加件数
+   - tax_id変換失敗件数（MFのtax_idがマスタに変換できなかった科目）
+   - category変換失敗件数（MFのcategoryがマッピングテーブルにない科目）
+7. マスタJSONに上書き保存
+8. 差分レポートJSONを`docs/genzai/mf_account_merge_report.json`に保存
+
+**考え方**:
+- MF IDは事業者固有なので照合は常に名前ベース
+- MFのcategory（`売上原価`等）→マスタcategory（`売上原価`等）の変換テーブル（`MF_CATEGORY_MAP`）が必要
+- 新規科目のaccountGroup/taxDetermination/targetは`deriveMfAccountGroup()`/`deriveTaxDetermination()`/`deriveTarget()`で自動推定
+
+**代替**: `importMasterAccounts()` API（MCPからリアルタイム取得→同じ処理フロー）
+
+### analyze_mf_accounts.ts（MF照合分析）
+
+**目的**: MF勘定科目と全社マスタの照合状況を分析し、マッピングテーブルを生成
+
+**出力**:
+- MFのaccount_group/category → マスタのaccountGroup/categoryの対応表（頻度付き）
+- 名前一致/不一致リスト
+- MFのtax_id → マスタ税区分IDの変換テーブル
+
+**代替**: `importMasterAccounts()` のdiff出力
+

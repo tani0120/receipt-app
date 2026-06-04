@@ -5,7 +5,7 @@
  * IDパターンマッチ（想像）を廃止し、MFのavailableを正解として使用する。
  *
  * データ構造:
- *   { proportional: { mfId: boolean }, individual: {...}, simplified: {...}, exempt: {...} }
+ *   { proportional: { masterId: boolean }, individual: {...}, simplified: {...}, exempt: {...} }
  *
  * ファイル: data/mf-tax-available.json
  */
@@ -18,7 +18,7 @@ const DATA_PATH = join(process.cwd(), 'data', 'mf-tax-available.json')
 /** 課税方式キー（スグスル内部名） */
 export type TaxMethodKey = 'proportional' | 'individual' | 'simplified' | 'exempt'
 
-/** 4方式分のavailableマップ: { mfId: boolean } */
+/** 4方式分のavailableマップ: { マスタID: boolean } */
 export type TaxAvailableMap = Record<string, Record<string, boolean>>
 
 let cache: TaxAvailableMap | null = null
@@ -88,15 +88,15 @@ export function getTaxAvailableForMethod(method: TaxMethodKey): Record<string, b
 }
 
 /**
- * mfIdからavailableを判定
+ * マスタIDからavailableを判定
  * @param method 課税方式
- * @param mfId MF税区分ID
- * @returns true=表示 / false=非表示 / null=データなし（フォールバック必要）
+ * @param masterId 税区分マスタID（例: SALES_TAXABLE_10）
+ * @returns true=利用可 / false=利用不可 / null=データなし
  */
-export function isAvailableByMfId(method: TaxMethodKey, mfId: string): boolean | null {
-  const methodData = getTaxAvailableForMethod(method)
+export function isAvailableByMasterId(method: TaxMethodKey, masterId: string): boolean | null {
+  const methodData = getAllTaxAvailable()[method]
   if (!methodData) return null
-  return methodData[mfId] ?? null
+  return methodData[masterId] ?? null
 }
 
 // 起動時に読み込み

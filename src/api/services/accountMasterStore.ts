@@ -404,13 +404,21 @@ export interface TaxCategoryFilterResult {
  * - direction='common'（不明・対象外）は常に表示
  * - MF独自カスタム税区分（isCustom && source='mf'）は常に表示
  */
+/**
+ * 課税方式で税区分をフィルタする
+ *
+ * available.jsonのキーはマスタID（例: SALES_TAXABLE_10）。
+ * 2026-06-04にmfId→マスタIDに移行したため、row.idで直接参照可能。
+ * MF IDは事業者固有で事業者間一致しないため、マスタIDをキーにすることで
+ * 事業者切替（TSK→TST等）してもフィルタが壊れない。
+ */
 function filterByTaxMethod(row: TaxCategory, taxMethod: string): boolean {
   // MF独自カスタム税区分は常に表示（顧問先が意図的に作成したため）
   if (row.isCustom && row.source === 'mf') return true
   // direction='common'（不明・対象外）は全方式で常に表示
   if (row.direction === 'common') return true
 
-  // --- MFのavailableベースのフィルタ（データ駆動） ---
+  // --- MFのavailableベースのフィルタ（データ駆動。キー=マスタID） ---
   const methodKeyMap: Record<string, string> = {
     'general': 'proportional',
     'proportional': 'proportional',
@@ -421,9 +429,9 @@ function filterByTaxMethod(row: TaxCategory, taxMethod: string): boolean {
   const methodKey = (methodKeyMap[taxMethod] ?? taxMethod) as import('./mfTaxAvailableStore').TaxMethodKey
   const availableData = getTaxAvailableForMethod(methodKey)
 
-  if (availableData && row.mfId) {
-    // availableデータあり → MFの判定を使用
-    return availableData[row.mfId] === true
+  if (availableData && row.id) {
+    // availableデータあり → マスタIDでフィルタ
+    return availableData[row.id] === true
   }
 
   // availableデータなし → デフォルト表示（active行のみ）

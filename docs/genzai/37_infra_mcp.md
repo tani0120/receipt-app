@@ -28,16 +28,18 @@
 ### 1-1. OAuth 2.0 を採用した理由
 
 MFクラウドのAPIには**OAuth 2.0**と**APIキー**の2方式が存在するが、
-**クラウド会計API（仕訳・勘定科目等）はOAuth 2.0のみ対応。APIキーは非対応。**
+**クラウド会計API（仕訳・勘定科目等）はOAuth 2.0のみ対応。APIキーは非対応。ただしOAuth直接APIはWAF 403でブロックされるためMCPサーバー経由が必須。**
+さらに、**OAuth 2.0トークンによる直接APIアクセスはCloudflare WAF 403でブロックされるため、
+MCPサーバー経由でのみアクセス可能**（§1-11で確認済み）。
 
-| サービス                              | APIキー       | OAuth 2.0   |
-| ------------------------------------- | ------------- | ----------- |
-| 認可サーバーAPI（事業者情報取得等）   | ✅ 対応       | ✅ 対応     |
-| **クラウド会計API（仕訳・勘定科目）** | **❌ 非対応** | **✅ 対応** |
-| 連結会計等の一部サービス              | ✅ 対応       | ✅ 対応     |
+| サービス                              | APIキー       | OAuth 2.0（直接API） | OAuth 2.0 + MCPサーバー |
+| ------------------------------------- | ------------- | -------------------- | ----------------------- |
+| 認可サーバーAPI（事業者情報取得等）   | ✅ 対応       | ✅ 対応              | ✅ 対応                 |
+| **クラウド会計API（仕訳・勘定科目）** | **❌ 非対応** | **❌ WAF 403**       | **✅ 対応**             |
+| 連結会計等の一部サービス              | ✅ 対応       | ✅ 対応              | ✅ 対応                 |
 
-> **結論**: 主要ユースケース（仕訳取得・登録、勘定科目取得）がOAuth必須のため、
-> 認証方式を2本立てにせず**OAuth一本に統一**する。
+> **結論**: 主要ユースケース（仕訳取得・登録、勘定科目取得）がOAuth + MCPサーバー必須のため、
+> 認証方式を2本立てにせず**OAuth一本に統一**し、データ取得は全て**MCPサーバー経由**で行う。
 > APIキーで使える事業者情報取得もOAuthスコープ（`mfc/admin/tenant.read`）で取れる。
 
 ### 1-2. 参考URL
@@ -225,6 +227,37 @@ MFクラウドのAPIには**OAuth 2.0**と**APIキー**の2方式が存在する
 
 ---
 
+### 5-5. MCPサーバー alpha版 vs beta版（2026-06-04 MCP実機テスト）
+
+MF MCPサーバーには2つのエンドポイントが存在する。
+
+| 項目 | alpha版 | beta版（現行採用） |
+|---|---|---|
+| URL | `https://alpha.mcp.developers.biz.moneyforward.com/mcp/ca/v3` | `https://beta.mcp.developers.biz.moneyforward.com/mcp/ca/v3` |
+| 提供開始 | 2026-03-26 | 2026-04-01 |
+| ツール数 | 21（+authorize, exchange） | 19 |
+| 接続時認証 | 不要 | OAuth Bearer必須（401） |
+| ツール呼出時 | 全ツールに`access_token`引数必須 | Bearerヘッダーで認証済み。引数不要 |
+| 再認証 | 1時間ごと | 自動化対応 |
+| resource_metadata | なし（404） | あり（200） |
+| 機能差異（認証以外） | **なし（同一スキーマ・同一データ）** | — |
+
+**alpha版のみのツール:**
+
+| ツール | 説明 | 引数 |
+|---|---|---|
+| `mfc_ca_authorize` | 認可URL生成（Suzaku認可サーバー） | なし |
+| `mfc_ca_exchange` | 認可コード→アクセストークン交換 | `code`（必須） |
+
+> **📋 監査メモ（2026-06-04）:**
+> - alpha版はAIツール（Claude Desktop等）向け。AIが`authorize`で認可URL生成→ユーザーがブラウザで許可→AIが`exchange`でトークン取得→以後全ツールに`access_token`引数で渡す。
+> - beta版はバックエンドアプリ向け。外部でOAuth認証→Bearerヘッダーで接続→ツール呼出に認証情報不要。
+> - MF公式MCPドキュメントにはOAuth認証の記載がない。AIツール向けの説明のみ。実機はBearer認証を要求する（beta版）。
+> - 認証以外のスキーマ差異: access_tokenプロパティを除外すると19ツール全て同一。返却データも同一（税区分で確認済み）。
+> - 現行コードはbeta版を採用。人間判断で継続使用を決定（2026-06-04）。
+
+---
+
 ## 6. OAuth認証フロー
 
 ### 6-1. 事前準備
@@ -235,33 +268,81 @@ MFクラウドのAPIには**OAuth 2.0**と**APIキー**の2方式が存在する
 4. リダイレクトURLを設定（開発: `http://localhost:5173/api/mf/auth/callback`）
 5. **「ユーザー」メニューで自分に「アプリ連携」権限を付与**（これがないと事業者選択でエラー）
 
-### 6-2. OAuthスコープ（2026-05-19 最終確認済み）
+### 6-2. OAuthスコープ（2026-05-19 最終確認済み → 2026-06-04 MCP実機メタデータで再検証）
 
 ```
-# --- READ スコープ（10個） ---
-mfc/admin/tenant.read               ← 事業者情報の取得（認可サーバーAPI用・対応MCPツールなし）
+# --- MCPサーバーが要求するスコープ（11個・resource_metadata実測値） ---
+# ★ MCP実機の .well-known/oauth-protected-resource/mcp/ca/v3 で確認（2026-06-04）
 mfc/accounting/offices.read          ← 事業所情報（currentOffice）
 mfc/accounting/accounts.read         ← 勘定科目・補助科目の参照
 mfc/accounting/departments.read      ← 部門情報の参照
 mfc/accounting/journal.read          ← 仕訳データの取得（一覧・個別）
+mfc/accounting/journal.write         ← MCPサーバーが要求（接続要件）
 mfc/accounting/report.read           ← 試算表・推移表の取得
 mfc/accounting/taxes.read            ← 税区分の参照
 mfc/accounting/trade_partners.read   ← 取引先の参照
+mfc/accounting/trade_partners.write  ← MCPサーバーが要求（接続要件）
 mfc/accounting/connected_account.read ← 連携サービス一覧の参照
-mfc/accounting/transaction.read      ← 連携サービス明細の読み取り
+mfc/accounting/transaction.write     ← MCPサーバーが要求（接続要件）
 
-# --- WRITE スコープ（3個・MCPサーバー接続に必須） ---
-mfc/accounting/journal.write         ← MCPサーバーが要求（実際のwrite操作は行わない）
-mfc/accounting/trade_partners.write  ← MCPサーバーが要求（実際のwrite操作は行わない）
-mfc/accounting/transaction.write     ← MCPサーバーが要求（実際のwrite操作は行わない）
+# --- 追加スコープ（MCPメタデータには含まれないが現行で付与中） ---
+mfc/admin/tenant.read               ← 事業者情報の取得（認可サーバーAPI用・MCPツールなし）
+mfc/accounting/transaction.read      ← 連携サービス明細の読み取り（MCPメタデータに含まれず）
 ```
 
-> **⚠️ MCPサーバー（beta）はwriteスコープなしでは `insufficient_scope`（403）を返す。**
-> readのみのトークンではMCPサーバーへの接続自体が不可能。
+> **⚠️ MCPサーバー（beta）はwriteスコープなしでは `invalid_token`（401）を返す。**
+> MCPサーバーの`WWW-Authenticate`ヘッダーにwrite 3スコープが明記されている（MCP実機確認済み）。
 > writeスコープは接続要件として付与するが、**アプリケーション側でwrite APIは呼び出さない**運用とする。
 >
-> **📋 監査メモ（2026-06-04）:** 書込スコープが本当にMCPサーバー接続に必須かの検証は省略。
-> 理由: 人間判断により検証不要と決定。書込スコープを外すとトークンが壊れるリスクがあり、検証コストに見合わない。
+> **📋 監査メモ（2026-06-04）:**
+> - 書込スコープ必須はMCPサーバーのresource_metadataで確定。検証不要の判断は正しかった。
+> - MCPサーバーが要求するスコープは11個。現行の13個との差異:
+>   - `mfc/admin/tenant.read`: MCP不要（認可サーバーAPI用）。付与しても害はない。
+>   - `mfc/accounting/transaction.read`: MCPメタデータに含まれず。付与しても害はない。
+> - MCPサーバーの認証方式: OAuth 2.0 Bearer認証（authorization_server: api.biz.moneyforward.com）。
+>   MCP実機の401レスポンスで確認。MF公式MCPドキュメントには認証方式の記載がないが、
+>   実機はBearerトークンを要求する。
+
+**MCP実機 resource_metadata（2026-06-04取得）:**
+
+```
+GET https://beta.mcp.developers.biz.moneyforward.com/.well-known/oauth-protected-resource/mcp/ca/v3
+HTTP 200
+
+{
+  "resource": "https://beta.mcp.developers.biz.moneyforward.com/mcp/ca/v3",
+  "authorization_servers": ["https://api.biz.moneyforward.com"],
+  "scopes_supported": [
+    "mfc/accounting/offices.read",
+    "mfc/accounting/accounts.read",
+    "mfc/accounting/departments.read",
+    "mfc/accounting/journal.read",
+    "mfc/accounting/journal.write",
+    "mfc/accounting/report.read",
+    "mfc/accounting/taxes.read",
+    "mfc/accounting/trade_partners.read",
+    "mfc/accounting/trade_partners.write",
+    "mfc/accounting/connected_account.read",
+    "mfc/accounting/transaction.write"
+  ]
+}
+```
+
+**MCP実機 トークンなし接続時のレスポンス（2026-06-04取得）:**
+
+```
+POST https://beta.mcp.developers.biz.moneyforward.com/mcp/ca/v3
+HTTP 401
+
+WWW-Authenticate: Bearer error="invalid_token",
+  scope="mfc/accounting/offices.read mfc/accounting/accounts.read
+    mfc/accounting/departments.read mfc/accounting/journal.read
+    mfc/accounting/journal.write mfc/accounting/report.read
+    mfc/accounting/taxes.read mfc/accounting/trade_partners.read
+    mfc/accounting/trade_partners.write mfc/accounting/connected_account.read
+    mfc/accounting/transaction.write",
+  resource_metadata="https://beta.mcp.developers.biz.moneyforward.com/.well-known/oauth-protected-resource/mcp/ca/v3"
+```
 
 > **⚠️ 旧スコープ `mfc/accounting/read` `mfc/accounting/write` は無効。**
 > サブスコープ（`journal.read`等）を明示的に指定しないとスコープエラーになる。
@@ -387,25 +468,39 @@ oauth_tokens（トークンテーブル）
 | 1-10 | 事業者情報取得API（`GET /v2/tenant`）疎通テスト                     | ✅ 完了（tenant_code: XXXX-XXXX, tenant_name: （個人名A））                     |
 | 1-11 | 会計API直接アクセス（`api-accounting.moneyforward.com`）テスト      | ❌ **失敗** — Cloudflare WAF 403（全環境ブロック）                              |
 | 1-12 | **MCPサーバー経由のアクセスに方針転換**                             | ✅ 完了（2026-05-18）`mfMcpClient.ts` 実装済み                                  |
-| 1-13 | アプリポータルで「クラウド会計・確定申告」権限を付与                | ⬜ **未着手（P0ブロッカー・人間操作が必要）**                                   |
+| 1-13 | アプリポータルで「クラウド会計・確定申告」権限を付与                | ✅ 完了（MCP実機で会計データ取得成功が証拠・監査2026-06-04確認）               |
 | 1-14 | ~~CursorにMCPサーバーを設定・疎通テスト~~                           | ~~取消~~（`mfMcpClient.ts` でバックエンド直接接続を実装済み。Cursor設定は不要） |
-| 1-15 | MCPサーバー経由で仕訳一覧を取得（疎通テスト）                       | ⬜ コード実装済み・実疎通テスト未実施（1-13完了後に確認）                       |
+| 1-15 | MCPサーバー経由で仕訳一覧を取得（疎通テスト）                       | ✅ 完了（confirmed_journals.json 1.97MB実在・監査2026-06-04確認）              |
 | 1-16 | 事業所切替UIの実装                                                  | 未着手                                                                          |
 | 1-17 | デバッグコード（`/debug-token`）削除                                | ✅ 完了（2026-05-18）                                                           |
 
+> **📋 監査メモ（2026-06-04）:**
+> - 1-13: ⬜未着手→✅完了に修正。MCP実機で会計データ（科目・仕訳・会計年度設定）取得に成功しており、権限付与済み。
+> - 1-15: ⬜未実施→✅完了に修正。confirmed_journals.json（1.97MB）が実在し、仕訳取得済み。
+> - 1-11: WAF 403ブロックをブラウザで確認済み（2026-06-04）。api-accounting.moneyforward.comにアクセス→Cloudflare WAF「Sorry, you have been blocked」403。Ray ID: a06329e1dd50d1c6。
+> - フェーズ名「個人アカウントでの基盤構築」は古い。法人（株式会社すぐする）も追加済み。
+
 ### フェーズ2：会計事務所アカウントへの移行（将来）
 
-#### 2-0. 前提: なぜOAuth必須か
+#### 2-0. 前提: なぜOAuth + MCPサーバー必須か
 
-| データ種別                    | APIキー       | OAuth 2.0   |
-| ----------------------------- | ------------- | ----------- |
-| 事業者情報（tenant）          | ✅ 対応       | ✅ 対応     |
-| **仕訳（journals）**          | **❌ 非対応** | **✅ 対応** |
-| **勘定科目（account_items）** | **❌ 非対応** | **✅ 対応** |
-| **クラウド会計API全般**       | **❌ 非対応** | **✅ 対応** |
+| データ種別                    | APIキー       | OAuth 2.0（直接API） | OAuth 2.0 + MCPサーバー |
+| ----------------------------- | ------------- | -------------------- | ----------------------- |
+| 事業者情報（tenant）          | ✅ 対応       | ✅ 対応              | ✅ 対応                 |
+| **仕訳（journals）**          | **❌ 非対応** | **❌ WAF 403**       | **✅ 対応**             |
+| **勘定科目（account_items）** | **❌ 非対応** | **❌ WAF 403**       | **✅ 対応**             |
+| **クラウド会計API全般**       | **❌ 非対応** | **❌ WAF 403**       | **✅ 対応**             |
 
-> MF公式: 「クラウド会計APIはOAuth 2.0を使用しています。APIキーでの認可には対応していません」
-> APIキーは認可サーバーAPI・連結会計等の一部サービスのみ対応。
+> MF公式: 「各APIエンドポイントがサポートする認証方式（OAuth、APIキー、または両方）は異なります。
+> 使用予定のAPIエンドポイントがどの認証方式をサポートしているか、APIリファレンスで確認してください。」
+> ※ 旧記載「クラウド会計APIはOAuth 2.0を使用…APIキーでの認可には対応していません」は不正確な引用だった（2026-06-04確認）。
+>
+> **📋 監査メモ（2026-06-04）:**
+> - 旧記載は「OAuth 2.0 ✅対応」だったが、§1-11で確認した通り会計API直接アクセス
+>   （api-accounting.moneyforward.com）はCloudflare WAF 403でブロックされる。
+> - 実際にはOAuth 2.0トークンをMCPサーバーに渡してMCP経由でのみアクセス可能。
+> - 表を3列（APIキー/OAuth直接/OAuth+MCP）に修正。
+> - フェーズ2の将来計画（2-1〜2-4）は全て未検証。設計方針としてのみ記載。
 
 #### 2-1. 実装手順
 
@@ -471,25 +566,25 @@ refresh_token を暗号化してSupabaseに保存
 | 法人・個人でAPI仕様は同一                                | MF公式：エンドポイント・構造に差異なし                                       |
 | 1アカウントで複数事業所作成可能                          | MF公式：画面右上から「新規事業者作成」                                       |
 | 事業所ごとにOAuthトークンを個別管理                      | MF API仕様：認可は事業所単位                                                 |
-| **クラウド会計APIはOAuth 2.0のみ対応**                   | MF公式: 「APIキーでの認可には対応していません」                              |
+| **クラウド会計APIはOAuth 2.0 + MCPサーバー経由でのみ対応** | MF公式 + §1-11でWAF 403確認済み。OAuth直接APIはブロックされる                    |
 | **事業者情報（tenant）はAPIキーでもOAuthでも取得可能**   | `/v2/tenant` は両方対応                                                      |
 | **スコープはサブスコープ（`journal.read`等）を明示指定** | 疎通テストで確認（旧形式はエラー）                                           |
 | **アプリポータルで「アプリ連携」権限が必要**             | 疎通テストで確認（権限なしだと事業者選択でエラー）                           |
 | **APIキー対応はエンドポイントごとに異なる**              | MF公式: 「呼び出すエンドポイントがどちらに対応しているかによって異なります」 |
 | **`GET /v2/tenant` で事業者情報取得成功**                | 疎通テスト完了（tenant_code: XXXX-XXXX, tenant_name: （個人名A））           |
 
-### APIキー vs OAuth：エンドポイント別対応状況
+### APIキー vs OAuth vs OAuth+MCP：アクセス方式別対応状況
 
-| エンドポイント              | APIキー | OAuth | 備考          |
-| --------------------------- | ------- | ----- | ------------- |
-| `/v2/tenant`（事業者情報）  | ✅      | ✅    | 両方対応      |
-| `/auth/exchange`（JWT交換） | ✅      | -     | APIキー専用   |
-| 仕訳（journals）            | ❌      | ✅    | **OAuth必須** |
-| 勘定科目（account_items）   | ❌      | ✅    | **OAuth必須** |
-| クラウド会計API全般         | ❌      | ✅    | **OAuth必須** |
-| 連結会計等の一部サービス    | ✅      | ✅    | 両方対応      |
+| エンドポイント              | APIキー | OAuth（直接API） | OAuth + MCP | 備考                    |
+| --------------------------- | ------- | ---------------- | ----------- | ----------------------- |
+| `/v2/tenant`（事業者情報）  | ✅      | ✅               | ✅          | 両方対応                |
+| `/auth/exchange`（JWT交換） | ✅      | -                | -           | APIキー専用             |
+| 仕訳（journals）            | ❌      | ❌ WAF 403       | ✅          | **OAuth + MCP必須**     |
+| 勘定科目（account_items）   | ❌      | ❌ WAF 403       | ✅          | **OAuth + MCP必須**     |
+| クラウド会計API全般         | ❌      | ❌ WAF 403       | ✅          | **OAuth + MCP必須**     |
+| 連結会計等の一部サービス    | ✅      | ✅               | ✅          | 両方対応                |
 
-> **結論**: 仕訳・勘定科目を扱う限りOAuth一択。APIキーは混在させない。
+> **結論**: 仕訳・勘定科目を扱う限りOAuth + MCPサーバー経由が必須。APIキーは混在させない。
 
 ---
 
@@ -503,7 +598,7 @@ refresh_token を暗号化してSupabaseに保存
 | `repositories/types.ts`        | → MFレスポンス型を追加定義                                     |
 | `composables/`                 | → データ取得先がモック→MCPに変わるだけ（インターフェース不変） |
 | `constants/clientFieldDefs.ts` | → MFから取得した科目マスタで補完/上書き                        |
-| `constants/vendorOptions.ts`   | → `tax_scheme`に基づく選択肢フィルタリング追加                 |
+| `constants/vendorOptions.ts`   | → `tax_method`に基づく選択肢フィルタリング追加                 |
 
 ### 10-2. `load_context.md` との整合性
 

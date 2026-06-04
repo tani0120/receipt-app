@@ -5,6 +5,11 @@
  * MF取得・税区分照合・差分検知・マスタ保存処理をバックエンドに集約。
  * フロントはAPI呼び出しと結果表示のみ。
  *
+ * ■ 科目照合: mfAccountId → なければ名前で照合
+ * ■ 税区分ID変換: MFのtax_id→MF税区分名→マスタ税区分ID の二段階変換
+ *   - MFのtax_idは事業者固有IDなので直接マスタIDに変換不可
+ *   - MFから税区分リストを取得し名前でマスタと照合する（2026-06-04修正）
+ *
  * エンドポイント:
  *   POST /api/mf/import-master-accounts — マスタ勘定科目インポート（差分マージ）
  *
@@ -85,11 +90,28 @@ export async function importMasterAccounts(
   // 1. MFから勘定科目取得
   const mfAccounts = await mcpFetchAccounts(clientId)
 
-  // 2. 税区分マスタ読み込み（mfTaxId→マスタID変換用）
+  // 2. 税区分マスタ読み込み + MFから税区分取得して名前照合
+  //    MFのtax_idは事業者固有IDなので直接照合不可。
+  //    MFの税区分リストから「tax_id→名前」を取得し、「名前→マスタID」で変換する。
   const taxCategories = getAllTaxCategories()
-  const mfTaxIdToMasterId = new Map<string, string>()
+  const taxNameToMasterId = new Map<string, string>()
   for (const t of taxCategories) {
-    if (t.mfId) mfTaxIdToMasterId.set(t.mfId, t.id)
+    taxNameToMasterId.set(t.name, t.id)
+  }
+
+  // MFから税区分リストを取得してtax_id→名前マップを構築
+  const { mcpFetchTaxes } = await import('./mfMcpClient')
+  const mfTaxes = await mcpFetchTaxes(clientId)
+  const mfTaxIdToName = new Map<string, string>()
+  for (const mt of mfTaxes) {
+    mfTaxIdToName.set(mt.id, mt.name)
+  }
+
+  // MFのtax_id → MF税区分名 → マスタ税区分ID の二段階変換
+  const mfTaxIdToMasterId = new Map<string, string>()
+  for (const [mfTaxId, mfTaxName] of mfTaxIdToName) {
+    const masterId = taxNameToMasterId.get(mfTaxName)
+    if (masterId) mfTaxIdToMasterId.set(mfTaxId, masterId)
   }
 
   // 3. マスタのディープコピーを作成（元データ非破壊）

@@ -1,7 +1,7 @@
 # 税区分 個別会社設計（顧問先税区分ページ + バックエンドAPI）
 
 > 作成: 2026-05-29
-> 最終更新: 2026-05-29（初版。consumptionTaxMode値統一・バックエンドAPI集約・データ駆動化完了）
+> 最終更新: 2026-06-04（MF IDは事業者固有と確定。全照合を名前ベースに統一。available.jsonキーをマスタIDに移行）
 > 前提: 40_tax_method_master.md（全社マスタ設計）
 
 ---
@@ -62,7 +62,7 @@ MFの`tax_method`値（`INDIVIDUAL_ALLOCATION`等）と内部値の変換は `MF
 処理フロー:
 1. MFから`termSettings`取得 → `consumptionTaxMode`自動更新（`clients.json`に保存）
 2. MFから税区分一覧取得（`mcpFetchTaxes(clientId)`）
-3. 全社マスタと`mfId`で突合（マスタ属性を継承）
+3. 全社マスタと**名前で突合**（マスタ属性を継承）— †MF IDは事業者固有のため名前照合が正しい（2026-06-04修正）
 4. 未マッチ → `MF_CUSTOM_{mfId}`で新規作成（`guessDirectionFromName()`で初期推定）
 5. 顧問先ストアに保存（`data/tax-categories-{clientId}.json`）
 6. `available`データを更新（`mf-tax-available.json`の該当方式）
