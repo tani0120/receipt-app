@@ -225,7 +225,7 @@ async function detectDiff(clientId: string, dryRun: boolean = false): Promise<De
   // マスタにあるがMFにない → 削除候補（source='mf'の行のみ）
   for (const row of masterItems) {
     if (row.source === 'mf' && !mfNameSet.has(row.name)) {
-      diff.deleteCandidates.push({ id: row.id, name: row.name, mfId: row.mfId ?? '' })
+      diff.deleteCandidates.push({ id: row.id, name: row.name, mfId: '' })
     }
   }
 
@@ -339,7 +339,6 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
       defaultVisible: true,
       isCustom: true,
       source: 'mf' as const,
-      mfId: a.mfId,
       taxRate: a.taxRate,
       displayOrder: masterItems.length + 1,
       simplifiedOnly: simplified,
