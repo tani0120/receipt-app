@@ -687,6 +687,33 @@ MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しない
 
 ---
 
+## 16. 会計ソフト別対応方針（2026-06-04確定）
+
+**対応順序: MF → freee・弥生**
+
+1. MF（マネーフォワード）を最優先で完成させる
+2. freee・弥生はMF完了後に着手
+
+**理由:**
+- MFはMCP API連携あり。科目・税区分の同期が自動化できる
+- freee・弥生はAPI連携なし。CSV出力→手動インポートの運用
+- MF形式CSVをfreee・弥生にそのままインポートできない（CSV列構造が異なる）
+- 科目名・税区分名の不一致時は会計ソフト側で手動マッピングが必要
+- 変換・マッピング対応は工数が大きく、MF完成前に着手する意味がない
+
+**現状:**
+- CSVエクスポートはMF形式のみ実装済み（exportMfCsv.ts）
+- 弥生・freee用のCSV列定義・税区分変換マッピングは定義済み（accountingConstants.ts）
+- ただし定義を使うCSV出力コードは未実装（TaxCodeMapper.ts, CsvExportService.tsは削除済み）
+
+**freee・弥生対応時にやること（MF完了後）:**
+- 弥生インポート形式のCSV出力関数を実装
+- freeeインポート形式のCSV出力関数を実装
+- 税区分名の変換（MF名→弥生名/freee名）を実装
+- 顧問先のaccountingSoftwareに応じて出力形式を切り替え
+
+---
+
 ## 14. 未実施・未解決 全件一覧（2026-05-30 23:53 ゼロベースfact確認）
 
 > [!IMPORTANT]
