@@ -497,7 +497,6 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
         deprecated: isExempt ? master.deprecated : !t.available,
         displayOrder: idx + 1,
         source: 'mf' as const,
-        mfId: t.id,
         taxRate: t.tax_rate ?? master.taxRate,
         effectiveFrom: master.effectiveFrom || today,
       }
@@ -519,7 +518,6 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
       effectiveTo: null,
       defaultVisible: true,
       source: 'mf' as const,
-      mfId: t.id,
       taxRate: t.tax_rate,
       displayOrder: idx + 1,
       isCustom: true,

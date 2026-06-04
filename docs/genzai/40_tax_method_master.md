@@ -228,7 +228,8 @@ TaxCategory型に構造化属性（`tax_type` / `business_type` / `purpose_type`
 2. 全社マスタ（`account-master.json`）を読み込み
 3. 税区分マスタから`tax_id`変換テーブルを構築（MFのtax_id→マスタ税区分ID）
 4. **名前で照合**（MF科目名 = マスタ科目名）
-   - 一致 → 既存マスタの属性（id/category/target等）を維持し、MFフィールド（mfAccountId/mfAccountGroup/mfFinancialStatementType/mfDefaultTaxId）を付与
+   - 一致 → 既存マスタの属性（id/category/target等）を維持し、MFフィールド（mfAccountId/mfAccountGroup/mfFinancialStatementType）を付与
+     ※mfDefaultTaxIdは削除済み（2026-06-04）。MFのtax_idは事業者固有で保存する意味がない。仕訳送信時はMCPリアルタイム名前照合で解決
    - 不一致 → MFのcategoryから`MF_CATEGORY_MAP`でマスタcategoryを推定し、新規Account生成（フォールバック: `'経費'`）
 5. デフォルト税区分は既存マスタ設定を優先し、未設定時のみMFのtax_idから変換して補完
 6. 差分レポート出力:

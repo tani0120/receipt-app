@@ -43,13 +43,9 @@ export type TaxCategory = {
     isCustom?: boolean
     /** データ出典（'mf'=MFインポート、'default'=システム提供、'master'/'master-custom'=マスタ、'custom'/'client-custom'=顧問先独自） */
     source?: 'mf' | 'master' | 'custom' | 'default' | 'master-custom' | 'client-custom'
-    /**
-     * MFクラウドの税区分ID（事業者固有・事業者間で一致しない）
-     * 全社マスタ（tax-category-master.json）では削除済み（2026-06-04）。
-     * 顧問先別データ（tax-categories-{clientId}.json）でのみ使用。
-     * 用途: MFインポート時の名前変更検知の補助、仕訳送信時のMF側ID参照。
-     */
-    mfId?: string
+    // mfId は完全削除済み（2026-06-04）。
+    // MFのtax_idは事業者固有IDで事業者間一致しない（MCP実機: TSK vs TST 0/151件一致）。
+    // 全社マスタ・顧問先データの両方から削除。仕訳送信はMCPリアルタイム名前照合で解決。
     /** 税率（MFインポート時にセット。0.10 = 10%。UI表示用。税額計算はMFに委譲） */
     taxRate?: number
     /** 簡易課税専用フラグ（true=簡易課税方式でのみ使用。原則課税・免税では非表示） */

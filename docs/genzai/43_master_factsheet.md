@@ -25,7 +25,7 @@
 | `mfAccountId` | MF勘定科目ID | string\|undefined | あり=108件, なし=49件（31%欠損） |
 | `mfAccountGroup` | MF勘定科目グループ | string\|undefined | `ASSET`, `EXPENSE` 等 |
 | `mfFinancialStatementType` | MF財務諸表区分 | string\|undefined | `BALANCE_SHEET`, `PROFIT_LOSS` |
-| `mfDefaultTaxId` | MFデフォルト税区分ID | string\|undefined | Base64エンコードID |
+| ~~`mfDefaultTaxId`~~ | ~~MFデフォルト税区分ID~~ | — | 削除済み（2026-06-04）。MFのtax_idは事業者固有で保存する意味がない。仕訳送信はMCPリアルタイム名前照合で解決 |
 
 **マスタID統計**: 長さ 最小=4文字, 最大=28文字, 平均=13文字
 
@@ -43,7 +43,7 @@
 | `aiSelectable` | AI選択可能 | boolean | |
 | `deprecated` | 非表示フラグ | boolean | |
 | `simplifiedOnly` | 簡易課税専用 | boolean | 48件がtrue |
-| `mfId` | MF税区分ID | string | 151件全てあり（欠損0件） |
+| ~~`mfId`~~ | ~~MF税区分ID~~ | — | 全社マスタからは削除済み（2026-06-04）。MF IDは事業者固有で事業者間一致しない。顧問先別データでのみ使用 |
 
 **マスタID統計**: 長さ 最小=12文字, 最大=34文字, 平均=20文字
 
@@ -157,25 +157,25 @@ category（中分類）を設定すると:
 
 ```
 税区分マスタ                        mf-tax-available.json
-┌──────────────────────────┐      ┌──────────────────────────────────┐
-│ id: SALES_TAXABLE_10     │      │ exempt:     { "JADP5..": false } │
-│ name: "課税売上 10%"      │      │ simplified: { "JADP5..": true  } │
-│ mfId: "JADP5..." ←基準ID │──キー→│ individual: { "JADP5..": true  } │
-│   ※exempt方式のMF ID     │      │ proportional:{ "JADP5..": true } │
-└──────────────────────────┘      └──────────────────────────────────┘
+┌──────────────────────────┐      ┌──────────────────────────────────────────┐
+│ id: SALES_TAXABLE_10     │      │ exempt:     { "SALES_TAXABLE_10": false } │
+│ name: "課税売上 10%"      │      │ simplified: { "SALES_TAXABLE_10": true  } │
+│ ※mfIdは削除済み          │──キー→│ individual: { "SALES_TAXABLE_10": true  } │
+│                          │      │ proportional:{"SALES_TAXABLE_10": true  } │
+└──────────────────────────┘      └──────────────────────────────────────────┘
 ```
 
 | 事実 | 数値 |
 |------|------|
-| マスタ`mfId`充足率 | **100%**（151/151） |
-| `mfId`の由来 | 全件exempt（免税）方式のMF ID |
-| 方式間でmfIdが同一 | **0件/151件**（全件異なる） |
-| 照合方式 | **名前ベース**（マスタ名前↔MF名前） |
+| ~~マスタ`mfId`充足率~~ | `mfId`は全社マスタから削除済み（2026-06-04） |
+| available.jsonのキー | **マスタID**（`SALES_TAXABLE_10`等）。2026-06-04にmfId→マスタIDに移行（604件変換） |
+| 照合方式 | **名前ベース**（マスタ名前↔MF名前。151/151件一致） |
+| MF IDの性質 | 事業者固有。TSK vs TST で 0/151件一致（MCP実機検証 2026-06-01/06-04） |
 
 > [!CAUTION]
 > **2026-06-01 MCP実機検証で確定: `mfId`は事業者（テナント）ごとに異なる。**
-> 全社マスタの`mfId`は特定の1事業者からインポートしたIDであり、他の事業者では使えない。
-> 全社マスタに`mfId`を保持する意味は一切ない。
+> 全社マスタの`mfId`は削除済み。available.jsonのキーもマスタIDに移行済み。
+> 仕訳送信時はmfMappingServiceがMCPからリアルタイムに取得し名前照合で解決する。
 > 詳細: `docs/genzai/45_mf_id_comparison.md`
 | 中間対応表/UUID | **存在しない** |
 | スナップショット取得 | 4パターン完了 |

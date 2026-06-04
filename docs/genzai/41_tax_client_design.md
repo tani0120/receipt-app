@@ -46,7 +46,7 @@ MFの`tax_method`値（`INDIVIDUAL_ALLOCATION`等）と内部値の変換は `MF
 
 | 判定 | データ駆動の方法 | 旧実装（削除済み） |
 |------|-------------|-------------|
-| 課税方式フィルタ | `mf-tax-available.json`の`available[method][mfId]` | IDパターンマッチ（`_T[1-6]$`等） |
+| 課税方式フィルタ | `mf-tax-available.json`の`available[method][masterId]` | IDパターンマッチ（`_T[1-6]$`等） |
 | 簡易課税専用判定 | `TaxCategory.simplifiedOnly`フラグ | 名前パターンマッチ（`/(一種|二種|三種|四種|五種|六種)/`） |
 | 税率表示 | `TaxCategory.taxRate`フィールド優先 | `extractRateFromName()`（名前正規表現） |
 | 課税方式 | `consumptionTaxMode`直接使用 | `toTaxMethodType()`変換関数 |
@@ -107,7 +107,7 @@ Response: {
 判定順序:
 1. isCustom && source === 'mf' → 常に表示（顧問先が意図的に作成）
 2. direction === 'common' → 常に表示（不明・対象外は全方式共通）
-3. availableData[method][mfId] === true → 表示（MFデータ駆動）
+3. availableData[method][row.id] === true → 表示（マスタIDキーでデータ駆動）
 4. availableデータなし → active && defaultVisible（安全なデフォルト）
 5. method === 'exempt' → 非表示（免税はcommonのみ表示）
 ```

@@ -448,7 +448,6 @@ app.post('/sync-all', async (c) => {
       mfAccountId: a.id,
       mfAccountGroup: a.account_group,
       mfFinancialStatementType: a.financial_statement_type,
-      mfDefaultTaxId: a.tax_id,
     }))
     saveClientAccounts(clientId, mapped)
 
@@ -481,7 +480,6 @@ app.post('/sync-all', async (c) => {
           ...master,
           displayOrder: idx + 1,
           source: 'mf' as const,
-          mfId: t.id,
         }
       }
       // 名前がマッチしない → MF独自のカスタム税区分（マスタに情報なし→名前から推定）
@@ -502,7 +500,6 @@ app.post('/sync-all', async (c) => {
         displayOrder: idx + 1,
         isCustom: true,
         source: 'mf' as const,
-        mfId: t.id,
       }
     })
     saveClientTaxCategories(clientId, taxMapped)

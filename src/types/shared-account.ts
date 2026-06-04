@@ -65,7 +65,8 @@ export type Account = {
     mfAccountGroup?: string | null
     /** MF財務諸表区分（'BALANCE_SHEET'/'PROFIT_LOSS'/'REAL_ESTATE'） */
     mfFinancialStatementType?: string | null
-    /** MFデフォルト税区分ID */
-    mfDefaultTaxId?: string | null
+    // mfDefaultTaxId は削除済み（2026-06-04）。
+    // MFのtax_idは事業者固有IDで事業者間一致しないため保存する意味がない。
+    // 仕訳送信時はmfMappingServiceがMCPからリアルタイム取得+名前照合で解決する。
 }
 

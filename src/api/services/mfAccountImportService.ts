@@ -149,7 +149,6 @@ export async function importMasterAccounts(
       existing.mfAccountId = mf.id
       existing.mfAccountGroup = mf.account_group
       existing.mfFinancialStatementType = mf.financial_statement_type
-      existing.mfDefaultTaxId = mf.tax_id
 
       // デフォルト税区分が未設定の場合のみMFから補完
       if (!existing.defaultTaxCategoryId && masterTaxId) {
@@ -181,7 +180,6 @@ export async function importMasterAccounts(
         mfAccountId: mf.id,
         mfAccountGroup: mf.account_group,
         mfFinancialStatementType: mf.financial_statement_type,
-        mfDefaultTaxId: mf.tax_id,
       }
       masterItems.push(newAccount)
       diff.added.push({ name: mf.name, mfId: mf.id, category: masterCat })
