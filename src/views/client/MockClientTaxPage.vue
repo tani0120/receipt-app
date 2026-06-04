@@ -471,8 +471,10 @@ async function importFromMf() {
       } catch { /* 取得失敗は致命的ではない */ }
     }
 
+    const methodLabel = taxMethods.find(m => m.value === taxTabMethod.value)?.label ?? taxTabMethod.value;
     await modal.notify({
-      title: `MFから${imported.length}件取込（マスタ照合${result.matchedCount}件, カスタム${result.customCount}件）`,
+      title: 'MFの最新状態に更新しました',
+      message: `※${methodLabel}: ${filteredTaxRows.value.length}件表示`,
       variant: 'success',
     });
   } catch (err) {

@@ -508,6 +508,11 @@ async function executeImport() {
     const preview = await previewRes.json();
     lastImportedPattern.value = preview.pattern;
 
+    // MF側の課税方式にタブを切替
+    if (preview.pattern && ['proportional', 'individual', 'simplified', 'exempt'].includes(preview.pattern)) {
+      taxMethod.value = preview.pattern as TaxMethodType;
+    }
+
     // 2. 差分なし＆自動ルールなし＆リセットなし → 即完了
     if (!preview.hasDiff && preview.autoRuleApplied === 0 && preview.deprecatedReset === 0) {
       await fetch('/api/mf/import-taxes/apply', {
@@ -515,7 +520,11 @@ async function executeImport() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId }),
       });
-      await modal.notify({ title: `MF税区分 照合完了。差分なし。`, variant: 'success' });
+      // availableキャッシュも更新
+      const availRes0 = await fetch('/api/mf/tax-available');
+      if (availRes0.ok) { mfTaxAvailable.value = await availRes0.json(); }
+      const methodLabel = taxMethods.find(m => m.value === taxMethod.value)?.label ?? taxMethod.value;
+      await modal.notify({ title: 'MFの最新状態に更新しました', message: `※${methodLabel}: ${filteredTaxRows.value.length}件表示`, variant: 'success' });
       return;
     }
 
@@ -551,7 +560,8 @@ async function executeImport() {
       mfTaxAvailable.value = await availRes.json();
     }
 
-    await modal.notify({ title: `MF差分マージ完了（${result.summary}）`, variant: 'success' });
+    const methodLabel2 = taxMethods.find(m => m.value === taxMethod.value)?.label ?? taxMethod.value;
+    await modal.notify({ title: 'MFの最新状態に更新しました', message: `※${methodLabel2}: ${filteredTaxRows.value.length}件表示`, variant: 'success' });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });

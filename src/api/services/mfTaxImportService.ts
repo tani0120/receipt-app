@@ -133,7 +133,7 @@ interface DetectResult {
 /**
  * MFからデータ取得 → マスタ照合 → 差分検知（preview/apply共通）
  */
-async function detectDiff(clientId: string, dryRun: boolean = false): Promise<DetectResult> {
+async function detectDiff(clientId: string, _dryRun: boolean = false): Promise<DetectResult> {
   // 1. MFのtermSettingsから課税方式を自動検知
   const termSettings = await mcpFetchTermSettings(undefined, clientId)
   const currentTerm = termSettings[0]
@@ -156,12 +156,7 @@ async function detectDiff(clientId: string, dryRun: boolean = false): Promise<De
   }
   const mfNameSet = new Set(mfTaxes.map(t => t.name))
 
-  // 4. 自動ルール: 簡易課税専用税区分を他方式で非表示化
-  //    判定基準: マスタのsimplifiedOnlyフラグ（データ駆動）
-  const autoRuleMethods: TaxMethodKey[] = ['proportional', 'individual', 'exempt']
-  let autoRuleApplied = 0
-
-  // availableデータをディープコピー（元データを変異させない）
+  // 4. availableデータを取得（MCP実機のavailableをそのまま使用。自動ルール廃止済み）
   const availData: Record<string, Record<string, boolean>> = JSON.parse(JSON.stringify(getAllTaxAvailable()))
   // ゴミデータ清掃: 有効なキー以外を除去
   for (const key of Object.keys(availData)) {
@@ -169,36 +164,8 @@ async function detectDiff(clientId: string, dryRun: boolean = false): Promise<De
       delete availData[key]
     }
   }
+  const autoRuleApplied = 0
 
-  // マスタのsimplifiedOnlyフラグでマスタIDを収集
-  const simplifiedOnlyMasterIds = new Set<string>()
-  for (const row of masterItems) {
-    if (row.simplifiedOnly) {
-      simplifiedOnlyMasterIds.add(row.id)
-    }
-  }
-
-  // MFの税区分名→マスタIDで照合し、simplifiedOnlyならautoRule適用
-  for (const t of mfTaxes) {
-    const masterRow = nameToRow.get(t.name)
-    if (masterRow && simplifiedOnlyMasterIds.has(masterRow.id)) {
-      for (const method of autoRuleMethods) {
-        if (availData[method] && availData[method][masterRow.id] === true) {
-          availData[method][masterRow.id] = false
-          autoRuleApplied++
-        }
-      }
-    }
-  }
-
-  // 自動ルール適用結果を保存（dryRun時はスキップ）
-  if (autoRuleApplied > 0 && !dryRun) {
-    for (const method of autoRuleMethods) {
-      if (availData[method]) {
-        saveTaxAvailable(method, availData[method])
-      }
-    }
-  }
 
   // 5. 差分検知（名前ベース照合）
   const diff: TaxImportDiff = {
@@ -354,7 +321,19 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
     if (row) row.deprecated = true
   }
 
-  // --- 新規税区分をavailableに追加（directionベースで判定） ---
+  // --- MFの生データのavailableを現在の課税方式に保存（差分有無に関わらず常に実行） ---
+  {
+    const availMap: Record<string, boolean> = {}
+    for (const t of mfTaxes) {
+      const masterRow = nameToRow.get(t.name)
+      const key = masterRow?.id ?? `MF_CUSTOM_${t.id}`
+      availMap[key] = t.available
+    }
+    saveTaxAvailable(pattern as TaxMethodKey, availMap)
+    console.log(`[mfTaxImportService] available更新: ${pattern}, true=${Object.values(availMap).filter(v => v).length}件`)
+  }
+
+  // --- 新規税区分をavailableの他方式にも追加（directionベースで判定） ---
   if (diff.added.length > 0) {
     for (const a of diff.added) {
       const newRow = masterItems.find(r => r.name === a.name)
@@ -362,23 +341,22 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
       const dir = newRow?.direction ?? 'common'
 
       for (const method of VALID_METHODS) {
+        if (method === pattern) continue // 現在の方式は上で保存済み
         if (!availData[method]) availData[method] = {}
         if (dir === 'common') {
-          // 不明・対象外 → 全方式で有効
           availData[method][masterId] = true
         } else if (method === 'exempt') {
-          // 免税 → 常に無効
           availData[method][masterId] = false
         } else {
-          // それ以外 → 有効（簡易/一括比例/個別対応共通）
           availData[method][masterId] = true
         }
       }
     }
-    // 更新を保存
+    // 他方式の更新を保存
     for (const method of VALID_METHODS) {
+      if (method === pattern) continue
       if (availData[method]) {
-        saveTaxAvailable(method, availData[method])
+        saveTaxAvailable(method as TaxMethodKey, availData[method])
       }
     }
   }

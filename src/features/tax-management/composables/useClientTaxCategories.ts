@@ -161,7 +161,10 @@ export function useClientTaxCategories(clientId: string) {
   function buildFullTaxCategoryList(ov: ClientTaxOverrides, master: TaxCategory[]): TaxCategory[] {
     const defaultRows = master.map(tc => ({
       ...tc,
-      deprecated: ov.hiddenIds.includes(tc.id) ? true : tc.deprecated,
+      // hiddenIdsだけで非表示を決定。マスタのdeprecatedにフォールバックしない。
+      // MFインポート時: saveAll()がdeprecated=trueの全IDをhiddenIdsに保存済み。
+      // マスタにフォールバックすると、MFのavailableで設定した非表示がマスタ値に戻される。
+      deprecated: ov.hiddenIds.includes(tc.id),
       aiSelectable: ov.aiSelectableOverrides[tc.id] ?? tc.aiSelectable,
     }))
     return [...defaultRows, ...ov.customTaxCategories]

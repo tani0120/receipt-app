@@ -2835,6 +2835,8 @@ import {
   TIP_NOT_QUALIFIED,
 } from "@/constants/journalConstants";
 import type { MegaGroupType } from "@/constants/journalConstants";
+import { resolveTaxNameForSoftware } from '@/shared/mappings/taxCategoryMappings';
+import type { AccountingSoftwareKey } from '@/shared/mappings/taxCategoryMappings';
 
 /** 証票意味選択肢 — vendorOptionsの共有定数を使用 */
 // VOUCHER_TYPES は vendorOptions.ts からimport済み
@@ -5445,12 +5447,19 @@ function getValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknown {
   return raw;
 }
 
-/** 概念IDからMF正式名称を取得。顧問先税区分を優先、なければマスタフォールバック */
+/**
+ * 概念IDから会計ソフト別の税区分名を取得（データ駆動）。
+ * 顧問先のaccountingSoftwareに応じて変換テーブルから名前を返す。
+ * MF: マスタのnameをそのまま返す（マスタがSSOT）
+ * 弥生/Freee: オーバーライドテーブルから取得、なければMF名にフォールバック
+ */
 function resolveTaxCategoryName(id: string | null | undefined): string {
   if (!id) return "";
   const allTaxCats = clientSettings.taxCategories.value;
-  const entry = allTaxCats.find((tc) => tc.id === id);
-  return entry ? entry.name : id;
+  const software = (activeClientFull.value?.accountingSoftware ?? 'mf') as AccountingSoftwareKey;
+  // 'other'の場合はMFにフォールバック
+  const resolvedSoftware: AccountingSoftwareKey = (['mf', 'yayoi', 'freee'] as const).includes(software as AccountingSoftwareKey) ? software : 'mf';
+  return resolveTaxNameForSoftware(id, resolvedSoftware, allTaxCats);
 }
 
 /** IDから勘定科目の表示名を取得。顧問先科目を優先、なければマスタフォールバック */
