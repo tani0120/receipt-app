@@ -38,6 +38,7 @@ import { importMasterAccounts } from '../services/mfAccountImportService'
 import { saveClientAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories } from '../services/accountMasterStore'
 import type { Account } from '../../types/shared-account'
 import { deriveMfAccountGroup, deriveTaxDetermination, deriveTarget } from '../../data/master/mf-account-category-mapping'
+import { generateTaxMasterId } from '../services/taxIdGenerator'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
 import { getAllTaxAvailable, saveTaxAvailable, invalidateCache, type TaxMethodKey } from '../services/mfTaxAvailableStore'
@@ -478,15 +479,23 @@ app.post('/sync-all', async (c) => {
         matchedTaxCount++
         return {
           ...master,
+          mfTaxId: t.id, // MF事業者固有ID（仕訳送信時に使用）
           displayOrder: idx + 1,
           source: 'mf' as const,
         }
       }
-      // 名前がマッチしない → MF独自のカスタム税区分（マスタに情報なし→名前から推定）
+      // 名前がマッチしない → MF独自のカスタム税区分（ルールベースでマスタIDを生成）
       unmatchedTaxCount++
+      const generatedId = generateTaxMasterId(t.name)
+      if (!generatedId) {
+        // ルール不一致 → 警告を追加（管理者に通知）
+        hasWarnings = true
+        results.push(`⚠️ 税区分「${t.name}」のマスタID自動生成に失敗。管理者に通知が必要です`)
+        console.warn(`[mfRoutes] ルールベースID変換失敗: 「${t.name}」`)
+      }
       const dir = guessDirectionFromName(t.name)
       return {
-        id: `MF_CUSTOM_${t.id}`,
+        id: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         name: t.name,
         shortName: t.abbreviation ?? '',
         direction: dir,
@@ -500,6 +509,7 @@ app.post('/sync-all', async (c) => {
         displayOrder: idx + 1,
         isCustom: true,
         source: 'mf' as const,
+        mfTaxId: t.id, // MF事業者固有ID（仕訳送信時に使用）
       }
     })
     saveClientTaxCategories(clientId, taxMapped)

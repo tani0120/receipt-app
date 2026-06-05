@@ -25,6 +25,7 @@ import { saveMfRawData } from './mfRawDataStore'
 import { getById } from './clientStore'
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
 import type { TaxCategory } from '../../types/shared-tax-category'
+import { generateTaxMasterId } from './taxIdGenerator'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ルールベース自動判定（simplifiedOnly / individualOnly / baseId）
@@ -113,6 +114,8 @@ export interface TaxImportApplyResult {
   summary: string
   updatedMaster: TaxCategory[]
   pattern: TaxMethodKey
+  /** ルールベースID変換に失敗した税区分名（呼び出し元で警告表示用） */
+  unknownTaxNames?: string[]
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -288,12 +291,19 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
     if (row && c.newRate !== undefined) row.taxRate = c.newRate
   }
 
-  // 追加
+  // 追加（ルールベースID生成。変換失敗はunknownTaxNamesに記録）
+  const unknownTaxNames: string[] = []
   for (const a of diff.added) {
+    const generatedId = generateTaxMasterId(a.name)
+    if (!generatedId) {
+      // ルール不一致 → 警告リストに追加し、仮IDで登録（後で管理者が修正）
+      unknownTaxNames.push(a.name)
+      console.warn(`[mfTaxImportService] ルールベースID変換失敗: 「${a.name}」。仮ID: UNKNOWN_${Date.now()}`)
+    }
     const dir = guessDirectionFromName(a.name)
     const simplified = guessSimplifiedOnly(a.name)
     const newRow: TaxCategory = {
-      id: `MF_CUSTOM_${a.mfId}`,
+      id: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       name: a.name,
       shortName: a.abbreviation ?? '',
       direction: dir,
@@ -326,7 +336,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
     const availMap: Record<string, boolean> = {}
     for (const t of mfTaxes) {
       const masterRow = nameToRow.get(t.name)
-      const key = masterRow?.id ?? `MF_CUSTOM_${t.id}`
+      const key = masterRow?.id ?? generateTaxMasterId(t.name) ?? `UNKNOWN_${t.name}`
       availMap[key] = t.available
     }
     saveTaxAvailable(pattern as TaxMethodKey, availMap)
@@ -337,7 +347,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
   if (diff.added.length > 0) {
     for (const a of diff.added) {
       const newRow = masterItems.find(r => r.name === a.name)
-      const masterId = newRow?.id ?? `MF_CUSTOM_${a.mfId}`
+      const masterId = newRow?.id ?? generateTaxMasterId(a.name) ?? `UNKNOWN_${a.name}`
       const dir = newRow?.direction ?? 'common'
 
       for (const method of VALID_METHODS) {
@@ -392,6 +402,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
     summary: summaryParts || '差分なし',
     updatedMaster: masterItems,
     pattern,
+    unknownTaxNames: unknownTaxNames.length > 0 ? unknownTaxNames : undefined,
   }
 }
 
@@ -425,7 +436,7 @@ export interface ClientTaxImportResult {
  * 1. MFからtermSettings取得 → consumptionTaxMode自動更新
  * 2. MFから税区分一覧取得
  * 3. 全社マスタとmfIdで突合（マスタ属性を継承）
- * 4. 未マッチ → MF_CUSTOM_{mfId}で新規作成
+ * 4. 未マッチ → ルールベースでマスタIDを生成（generateTaxMasterId）
  * 5. 結果をクライアントストアに保存
  * 6. available（利用可否）データを更新
  */
@@ -471,6 +482,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
       matchedCount++
       return {
         ...master,
+        mfTaxId: t.id, // MF事業者固有ID（仕訳送信時に使用）
         deprecated: isExempt ? master.deprecated : !t.available,
         displayOrder: idx + 1,
         source: 'mf' as const,
@@ -478,12 +490,16 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
         effectiveFrom: master.effectiveFrom || today,
       }
     }
-    // 未マッチ → MF独自カスタム税区分
+    // 未マッチ → MF独自カスタム税区分（ルールベースでマスタID生成）
     customCount++
+    const generatedId = generateTaxMasterId(t.name)
+    if (!generatedId) {
+      console.warn(`[mfTaxImportService] 顧問先インポート: ルールベースID変換失敗: 「${t.name}」`)
+    }
     const dir = guessDirectionFromName(t.name)
     const simplified = guessSimplifiedOnly(t.name)
     return {
-      id: `MF_CUSTOM_${t.id}`,
+      id: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       name: t.name,
       shortName: t.abbreviation ?? '',
       direction: dir,
@@ -501,6 +517,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
       simplifiedOnly: simplified,
       individualOnly: guessIndividualOnly(t.name),
       baseId: simplified ? guessBaseId(t.name, masterItems) : undefined,
+      mfTaxId: t.id, // MF事業者固有ID（仕訳送信時に使用）
     }
   })
 
@@ -515,7 +532,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
       const availMap: Record<string, boolean> = {}
       for (const t of mfTaxes) {
         const master = masterByName.get(t.name)
-        const key = master?.id ?? `MF_CUSTOM_${t.id}`
+        const key = master?.id ?? generateTaxMasterId(t.name) ?? `UNKNOWN_${t.name}`
         availMap[key] = t.available
       }
       saveTaxAvailable(patternKey, availMap)

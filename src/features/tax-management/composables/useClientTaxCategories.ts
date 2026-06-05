@@ -33,6 +33,8 @@ interface ClientTaxOverrides {
   copiedMasterIds: string[]
   /** ページで追加されたカスタム税区分 */
   customTaxCategories: TaxCategory[]
+  /** MF事業者固有ID保持マップ（税区分マスタID → mfTaxId）。PUT上書き時にmfTaxIdが消えないようにする */
+  mfTaxIdMap: Record<string, string>
 }
 
 // =============================================
@@ -98,6 +100,7 @@ export function useClientTaxCategories(clientId: string) {
       aiSelectableOverrides: {},
       copiedMasterIds: masterTaxCategories.value.map(tc => tc.id),
       customTaxCategories: [],
+      mfTaxIdMap: {},
     }
   }
 
@@ -126,11 +129,17 @@ export function useClientTaxCategories(clientId: string) {
         // MF連携状態をデータ駆動で取得（サーバーAPIから）
         mfLinkedRef.value = result.mfLinked
         const masterIds = new Set(masterTaxCategories.value.map(tc => tc.id))
+        // mfTaxIdマップを構築（PUT上書き時に消えないようにする）
+        const mfTaxIdMap: Record<string, string> = {}
+        for (const tc of serverData) {
+          if (tc.mfTaxId) mfTaxIdMap[tc.id] = tc.mfTaxId
+        }
         overridesRef.value = {
           hiddenIds: serverData.filter(tc => tc.deprecated).map(tc => tc.id),
           aiSelectableOverrides: buildAiSelectableOverrides(serverData),
           copiedMasterIds: serverData.filter(tc => masterIds.has(tc.id)).map(tc => tc.id),
           customTaxCategories: serverData.filter(tc => !masterIds.has(tc.id)),
+          mfTaxIdMap,
         }
         console.log(`[useClientTaxCategories] ${clientId}: サーバーから${serverData.length}件を取得 (MF連携=${result.mfLinked})`)
       } else {
@@ -166,6 +175,8 @@ export function useClientTaxCategories(clientId: string) {
       // マスタにフォールバックすると、MFのavailableで設定した非表示がマスタ値に戻される。
       deprecated: ov.hiddenIds.includes(tc.id),
       aiSelectable: ov.aiSelectableOverrides[tc.id] ?? tc.aiSelectable,
+      // MF事業者固有IDを保持（PUT上書き時に消えないようにする）
+      mfTaxId: ov.mfTaxIdMap[tc.id] ?? tc.mfTaxId,
     }))
     return [...defaultRows, ...ov.customTaxCategories]
   }
@@ -231,11 +242,17 @@ export function useClientTaxCategories(clientId: string) {
         aiSelectableOverrides[r.id] = r.aiSelectable
       }
     })
+    // allRowsからmfTaxIdMapを再構築（import-client-taxes結果のmfTaxIdを保持）
+    const mfTaxIdMap: Record<string, string> = { ...overrides.value.mfTaxIdMap }
+    for (const r of allRows) {
+      if (r.mfTaxId) mfTaxIdMap[r.id] = r.mfTaxId
+    }
     overrides.value = {
       hiddenIds,
       customTaxCategories,
       aiSelectableOverrides,
       copiedMasterIds: allTaxCategories.value.map(t => t.id),
+      mfTaxIdMap,
     }
     // autoSaveで自動的にサーバーへ保存される
   }

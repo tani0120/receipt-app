@@ -515,14 +515,30 @@ async function executeImport() {
 
     // 2. 差分なし＆自動ルールなし＆リセットなし → 即完了
     if (!preview.hasDiff && preview.autoRuleApplied === 0 && preview.deprecatedReset === 0) {
-      await fetch('/api/mf/import-taxes/apply', {
+      const noDiffRes = await fetch('/api/mf/import-taxes/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId }),
       });
+      const noDiffResult = noDiffRes.ok ? await noDiffRes.json() : {};
       // availableキャッシュも更新
       const availRes0 = await fetch('/api/mf/tax-available');
       if (availRes0.ok) { mfTaxAvailable.value = await availRes0.json(); }
+      // ルールベースID変換失敗チェック
+      if (noDiffResult.unknownTaxNames?.length > 0) {
+        await modal.notify({
+          title: '⚠️ 税区分マスタID自動生成に失敗した項目があります',
+          message: [
+            `以下の${noDiffResult.unknownTaxNames.length}件の税区分名はルールベース変換に失敗し、仮IDで登録されました。`,
+            '管理者がtaxIdGenerator.tsに変換ルールを追加する必要があります。',
+            '',
+            '--- コピペ用 ---',
+            noDiffResult.unknownTaxNames.join('\n'),
+            '--- ここまで ---',
+          ].join('\n'),
+          variant: 'warning',
+        });
+      }
       const methodLabel = taxMethods.find(m => m.value === taxMethod.value)?.label ?? taxMethod.value;
       await modal.notify({ title: 'MFの最新状態に更新しました', message: `※${methodLabel}: ${filteredTaxRows.value.length}件表示`, variant: 'success' });
       return;
@@ -558,6 +574,23 @@ async function executeImport() {
     const availRes = await fetch('/api/mf/tax-available');
     if (availRes.ok) {
       mfTaxAvailable.value = await availRes.json();
+    }
+
+    // 7. ルールベースID変換に失敗した税区分がある場合 → 管理者に警告（コピペ可能）
+    if (result.unknownTaxNames && result.unknownTaxNames.length > 0) {
+      const unknownList = result.unknownTaxNames.join('\n');
+      await modal.notify({
+        title: '⚠️ 税区分マスタID自動生成に失敗した項目があります',
+        message: [
+          `以下の${result.unknownTaxNames.length}件の税区分名はルールベース変換に失敗し、仮IDで登録されました。`,
+          '管理者がtaxIdGenerator.tsに変換ルールを追加する必要があります。',
+          '',
+          '--- コピペ用 ---',
+          unknownList,
+          '--- ここまで ---',
+        ].join('\n'),
+        variant: 'warning',
+      });
     }
 
     const methodLabel2 = taxMethods.find(m => m.value === taxMethod.value)?.label ?? taxMethod.value;

@@ -200,7 +200,59 @@ export function saveAllAccounts(accounts: Account[]): { ok: true; count: number 
   } catch (err) {
     console.error('[accountMasterStore] account-master.json永続化失敗:', err)
   }
+
+  // 全顧問先のクローンデータに差分同期（新規追加・名前変更を反映）
+  syncMasterAccountsToClients(accounts)
+
   return { ok: true, count: accounts.length }
+}
+
+/**
+ * 全社マスタ更新時に全顧問先のクローンデータを差分同期する（科目）
+ *
+ * - マスタに新規追加された科目 → 顧問先データに追加
+ * - マスタで名前が変更された科目 → 顧問先データの名前を更新
+ * - マスタから削除された科目 → 顧問先データからは削除しない（仕訳参照を壊さないため）
+ * - MFフィールド（mfAccountId等）は顧問先データにコピーしない
+ */
+function syncMasterAccountsToClients(masterItems: Account[]): void {
+  const masterById = new Map(masterItems.map(a => [a.id, a]))
+  let syncCount = 0
+
+  for (const [clientId, clientData] of clientAccountStore.entries()) {
+    const clientIdSet = new Set(clientData.accounts.map(a => a.id))
+    let changed = false
+
+    // 新規追加: マスタにあって顧問先にない科目を追加
+    for (const master of masterItems) {
+      if (!clientIdSet.has(master.id)) {
+        // MFフィールドを除外してクローン
+        const { mfAccountId, mfAccountGroup, mfFinancialStatementType, ...rest } = master as Account & {
+          mfAccountId?: string; mfAccountGroup?: string; mfFinancialStatementType?: string
+        }
+        clientData.accounts.push({ ...rest })
+        changed = true
+      }
+    }
+
+    // 名前変更: マスタとIDが一致する科目の名前を同期
+    for (const clientAccount of clientData.accounts) {
+      const master = masterById.get(clientAccount.id)
+      if (master && master.name !== clientAccount.name) {
+        clientAccount.name = master.name
+        changed = true
+      }
+    }
+
+    if (changed) {
+      persistClientAccounts(clientId, clientData)
+      syncCount++
+      console.log(`[accountMasterStore] 顧問先${clientId}の科目を${clientData.accounts.length}件に同期`)
+    }
+  }
+  if (syncCount > 0) {
+    console.log(`[accountMasterStore] マスタ科目変更を${syncCount}社に反映`)
+  }
 }
 
 // ────────────────────────────────────────────
@@ -490,7 +542,59 @@ export function saveAllTaxCategories(taxCategories: TaxCategory[]): { ok: true; 
   } catch (err) {
     console.error('[accountMasterStore] tax-category-master.json永続化失敗:', err)
   }
+
+  // 全顧問先のクローンデータに差分同期（新規追加・名前変更を反映）
+  syncMasterTaxCategoriesToClients(taxCategories)
+
   return { ok: true, count: taxCategories.length }
+}
+
+/**
+ * 全社マスタ更新時に全顧問先のクローンデータを差分同期する（税区分）
+ *
+ * - マスタに新規追加された税区分 → 顧問先データに追加
+ * - マスタで名前・税率が変更された税区分 → 顧問先データを更新
+ * - マスタから削除された税区分 → 顧問先データからは削除しない（仕訳参照を壊さないため）
+ */
+function syncMasterTaxCategoriesToClients(masterItems: TaxCategory[]): void {
+  const masterById = new Map(masterItems.map(t => [t.id, t]))
+  let syncCount = 0
+
+  for (const [clientId, clientTaxes] of clientTaxStore.entries()) {
+    const clientIdSet = new Set(clientTaxes.map(t => t.id))
+    let changed = false
+
+    // 新規追加: マスタにあって顧問先にない税区分を追加
+    for (const master of masterItems) {
+      if (!clientIdSet.has(master.id)) {
+        clientTaxes.push({ ...master })
+        changed = true
+      }
+    }
+
+    // 名前・税率変更: マスタとIDが一致する税区分を同期
+    for (const clientTax of clientTaxes) {
+      const master = masterById.get(clientTax.id)
+      if (!master) continue
+      if (master.name !== clientTax.name) {
+        clientTax.name = master.name
+        changed = true
+      }
+      if (master.taxRate !== clientTax.taxRate) {
+        clientTax.taxRate = master.taxRate
+        changed = true
+      }
+    }
+
+    if (changed) {
+      persistClientTaxCategories(clientId, clientTaxes)
+      syncCount++
+      console.log(`[accountMasterStore] 顧問先${clientId}の税区分を${clientTaxes.length}件に同期`)
+    }
+  }
+  if (syncCount > 0) {
+    console.log(`[accountMasterStore] マスタ税区分変更を${syncCount}社に反映`)
+  }
 }
 
 // ────────────────────────────────────────────
