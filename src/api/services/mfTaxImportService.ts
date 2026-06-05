@@ -435,7 +435,7 @@ export interface ClientTaxImportResult {
  * 処理内容:
  * 1. MFからtermSettings取得 → consumptionTaxMode自動更新
  * 2. MFから税区分一覧取得
- * 3. 全社マスタとmfIdで突合（マスタ属性を継承）
+ * 3. 全社マスタと名前で突合（マスタ属性を継承。MF IDは事業者固有のため名前照合が正しい）
  * 4. 未マッチ → ルールベースでマスタIDを生成（generateTaxMasterId）
  * 5. 結果をクライアントストアに保存
  * 6. available（利用可否）データを更新

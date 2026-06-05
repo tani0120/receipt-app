@@ -675,13 +675,15 @@ app.post('/import-client-taxes', async (c) => {
 
 /**
  * POST /import-master-accounts — マスタ勘定科目インポート（差分マージ）
- * body: { clientId: string, applyNameChanges?: boolean }
+ * body: { clientId: string }
  *
  * MFから勘定科目を取得し、全社マスタと差分マージして保存する。
  * clientIdはMF認証用（MCPトークンキー）。マスタ側は全社共通。
+ * 名前変更検知は全社マスタにmfAccountIdがないため実施不可。
+ * 顧問先データのmfAccountIdで検知する設計に移行予定。
  */
 app.post('/import-master-accounts', async (c) => {
-  const body = await c.req.json<{ clientId?: string; applyNameChanges?: boolean }>()
+  const body = await c.req.json<{ clientId?: string }>()
   const clientId = body.clientId
   if (!clientId) return c.json({ error: 'clientId必須' }, 400)
 
@@ -691,7 +693,7 @@ app.post('/import-master-accounts', async (c) => {
   }
 
   try {
-    const result = await importMasterAccounts(clientId, body.applyNameChanges ?? false)
+    const result = await importMasterAccounts(clientId)
     return c.json(result)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

@@ -9,7 +9,7 @@
  */
 
 import { join } from 'path'
-import { getCategoryDirection } from '../../data/master/account-category-rules'
+import { getAccountGroupDirection } from '../../data/master/account-category-rules'
 import {
   mcpFetchAccounts,
   mcpFetchTaxes,
@@ -294,11 +294,11 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
   const unmatchedAccounts = accountResult.details.filter(d => d.mfId === null)
   const unmatchedTaxes = taxResult.details.filter(d => d.mfId === null)
 
-  // 科目方向マップ生成（Sugusruマスタのcategoryから導出）
+  // 科目方向マップ生成（accountGroupから直接判定。データ駆動）
   const sugusruAccounts = await loadSugusruAccounts()
   const accountDirectionMap = new Map<string, 'sales' | 'purchase' | 'common'>()
   for (const acct of sugusruAccounts) {
-    accountDirectionMap.set(acct.id, getCategoryDirection(acct.category ?? ''))
+    accountDirectionMap.set(acct.id, getAccountGroupDirection(acct.accountGroup ?? ''))
   }
 
   // 税区分方向マップ生成（Sugusruマスタのdirectionから）

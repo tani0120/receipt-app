@@ -57,13 +57,15 @@ export type Account = {
     /** 仕入返品科目フラグ（逆仕訳例外判定用。仕入値引・仕入返品等） */
     isContraExpense?: boolean
 
-    // ── MF連携フィールド（MF取込時のみ設定。MF未連携顧問先はundefined） ──
+    // ── MF連携フィールド（顧問先データでのみ使用。全社マスタではundefined） ──
+    // MF IDは事業者（テナント）固有のため、全社テンプレートには持たない。
+    // 顧問先別データにのみ保存し、MCP仕訳送信（account_id必須）に使用する。
 
-    /** MF勘定科目ID（Base64。仕訳送信・差分検知用） */
+    /** MF勘定科目ID（Base64。顧問先データでのみ設定。MCP仕訳送信のaccount_idに使用） */
     mfAccountId?: string | null
-    /** MF大分類（'ASSET'/'LIABILITY'/'CAPITAL'/'REVENUE'/'EXPENSE'） */
+    /** MF大分類（'ASSET'/'LIABILITY'/'CAPITAL'/'REVENUE'/'EXPENSE'。顧問先データでのみ設定） */
     mfAccountGroup?: string | null
-    /** MF財務諸表区分（'BALANCE_SHEET'/'PROFIT_LOSS'/'REAL_ESTATE'） */
+    /** MF財務諸表区分（'BALANCE_SHEET'/'PROFIT_LOSS'/'REAL_ESTATE'。顧問先データでのみ設定） */
     mfFinancialStatementType?: string | null
     // mfDefaultTaxId は削除済み（2026-06-04）。
     // MFのtax_idは事業者固有IDで事業者間一致しないため保存する意味がない。

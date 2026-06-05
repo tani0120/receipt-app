@@ -15,7 +15,7 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs'
 import { getTaxAvailableForMethod } from './mfTaxAvailableStore'
 import { join } from 'path'
-import type { Account } from '../../types/shared-account'
+import type { Account, AccountGroup, TaxDetermination } from '../../types/shared-account'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { REAL_ESTATE_CATEGORIES } from '../../data/master/account-category-rules'
 
@@ -70,24 +70,46 @@ export function getAccountById(id: string): Account | undefined {
   return masterAccounts.find(a => a.id === id)
 }
 
-/** バリデーション/ヒント用の最小形式で全科目を返す */
-export function getAccountsForValidation(): {
+
+/** 顧問先別の科目をバリデーション用最小形式で返す（データ駆動） */
+export function getClientAccountsForValidation(clientId: string): {
   id: string
   name: string
-  sub?: string | null
-  accountGroup?: string | null
-  category?: string | null
-  taxDetermination?: string | null
-  defaultTaxCategoryId?: string | null
+  accountGroup: AccountGroup
+  category: string
+  taxDetermination: TaxDetermination
+  defaultTaxCategoryId?: string
+  isContraRevenue?: boolean
+  isContraExpense?: boolean
 }[] {
-  return masterAccounts.map(a => ({
+  const data = getClientAccounts(clientId)
+  return data.accounts.map(a => ({
     id: a.id,
     name: a.name,
-    sub: null, // マスタには補助科目なし（顧問先カスタムはPhase 3以降）
-    accountGroup: a.accountGroup ?? null,
-    category: a.category ?? null,
-    taxDetermination: a.taxDetermination ?? null,
-    defaultTaxCategoryId: a.defaultTaxCategoryId ?? null,
+    accountGroup: a.accountGroup as AccountGroup,
+    category: a.category,
+    taxDetermination: a.taxDetermination as TaxDetermination,
+    defaultTaxCategoryId: a.defaultTaxCategoryId,
+    isContraRevenue: a.isContraRevenue,
+    isContraExpense: a.isContraExpense,
+  }))
+}
+
+/** 顧問先別の税区分をバリデーション用最小形式で返す */
+export function getClientTaxCategoriesForValidation(clientId: string): {
+  id: string
+  direction: string
+  simplifiedOnly?: boolean
+  baseId?: string
+  isExemptDefault?: boolean
+}[] {
+  const data = getClientTaxCategories(clientId)
+  return data.map(t => ({
+    id: t.id,
+    direction: t.direction ?? 'common',
+    simplifiedOnly: t.simplifiedOnly,
+    baseId: t.baseId,
+    isExemptDefault: t.isExemptDefault,
   }))
 }
 
@@ -226,7 +248,7 @@ function syncMasterAccountsToClients(masterItems: Account[]): void {
     // 新規追加: マスタにあって顧問先にない科目を追加
     for (const master of masterItems) {
       if (!clientIdSet.has(master.id)) {
-        // MFフィールドを除外してクローン
+        // MFフィールドを除外してクローン（全社マスタにMFフィールドは存在しないが安全装置として残す）
         const { mfAccountId, mfAccountGroup, mfFinancialStatementType, ...rest } = master as Account & {
           mfAccountId?: string; mfAccountGroup?: string; mfFinancialStatementType?: string
         }
@@ -398,20 +420,6 @@ export function getTaxCategoryById(id: string): TaxCategory | undefined {
   return masterTaxCategories.find(t => t.id === id)
 }
 
-/** バリデーション/ヒント用の最小形式で全税区分を返す */
-export function getTaxCategoriesForValidation(): {
-  id: string
-  name: string
-  shortName?: string | null
-  direction?: string | null
-}[] {
-  return masterTaxCategories.map(t => ({
-    id: t.id,
-    name: t.name,
-    shortName: t.shortName ?? null,
-    direction: t.direction ?? null,
-  }))
-}
 
 /** 税区分名マップ（ID→名前）を返す */
 export function getTaxCategoryNameMap(): Record<string, string> {

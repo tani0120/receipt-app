@@ -166,9 +166,8 @@
               >
                 <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
                 <td style="text-align:center;font-size:11px;color:#666;">
-                  <span v-if="row.mfAccountId" style="color:#1976D2;"><MfCloudIcon :size="12" tooltip="MFクラウド" /> MF</span>
+                  <span v-if="!row.isCustom" style="color:#1976D2;"><MfCloudIcon :size="12" tooltip="MFクラウド" /> MF</span>
                   <span v-else-if="row.isCustom" style="color:#e65100;">カスタム</span>
-                  <span v-else><i class="fa-solid fa-circle-check" style="color:#4caf50;font-size:12px;"></i> マスタ</span>
                 </td>
                 <td class="td-ai" @dblclick="row.isCustom && startEdit(row, 'aiDetermination')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'aiDetermination'">
@@ -195,17 +194,17 @@
                 <td class="td-sub-account"></td>
                 <td class="td-target">{{ targetLabel(row.target) }}</td>
                 <td class="td-account-group">{{ accountGroupLabel(row.accountGroup) }}</td>
-                <td class="td-direction">{{ directionLabel(row.category) }}</td>
+                <td class="td-direction">{{ directionLabel(row.accountGroup) }}</td>
                 <!-- 科目分類 -->
                 <td @dblclick="row.isCustom && startEdit(row, 'category')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'category'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
                       <optgroup v-for="g in categoryGroups" :key="g.label" :label="g.label">
-                        <option v-for="c in g.items" :key="c" :value="c">{{ c }}</option>
+                        <option v-for="c in g.items" :key="c.value" :value="c.value">{{ c.label }}</option>
                       </optgroup>
                     </select>
                   </template>
-                  <template v-else>{{ row.category }}</template>
+                  <template v-else>{{ getCategoryLabel(row.category) }}</template>
                 </td>
                 <!-- 税区分判定 -->
                 <td @dblclick="row.isCustom && startEdit(row, 'taxDetermination')" :class="{ 'td-editable': row.isCustom }">
@@ -220,7 +219,7 @@
                 <td @dblclick="row.isCustom && startEdit(row, 'defaultTaxCategoryId')" :class="{ 'td-editable': row.isCustom }">
                   <template v-if="editingRow === row.id && editingField === 'defaultTaxCategoryId'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
-                      <option v-for="tc in filteredTaxCategories(row.category)" :key="tc.id" :value="tc.id">{{ tc.shortName }}</option>
+                      <option v-for="tc in filteredTaxCategories(row.accountGroup)" :key="tc.id" :value="tc.id">{{ tc.shortName }}</option>
                     </select>
                   </template>
                   <template v-else>{{ getDisplayDefaultTax(row) }}</template>
@@ -317,12 +316,13 @@ import MfCloudIcon from '@/components/MfCloudIcon.vue';
 import { UI_MSG } from '@/constants/uiMessages';
 import { ACCOUNT_FIELD_LABELS } from '@/constants/fieldLabels';
 import {
-  CATEGORY_GROUPS,
-  getCategoryDirection,
+  getAccountGroupDirection,
   getAllowedTaxDeterminations as getAllowedTaxDeterminationsRaw,
   taxDetLabel,
   deriveCategoryDefaults,
+  getCategoryLabel,
 } from '@/data/master/account-category-rules';
+import { useCategoryGroups } from '@/composables/useCategoryGroups';
 import { VOUCHER_TYPE_RULES } from '@/data/master/voucherTypeRules';
 
 // 列幅カスタマイズ
@@ -365,9 +365,9 @@ function targetLabel(t: string): string {
   }
 }
 
-/** direction（方向）の日本語ラベル（categoryから導出） */
-function directionLabel(category: string): string {
-  const dir = getCategoryDirection(category);
+/** direction（方向）の日本語ラベル（accountGroupから直接判定。データ駆動） */
+function directionLabel(accountGroup: string): string {
+  const dir = getAccountGroupDirection(accountGroup);
   switch (dir) {
     case 'sales': return '売上';
     case 'purchase': return '仕入';
@@ -475,7 +475,7 @@ async function executeImport() {
     const result = await res.json() as {
       success: boolean;
       mfCount: number;
-      diff: { updated: unknown[]; added: unknown[]; nameChanged: { mfId: string; oldName: string; newName: string }[] };
+      diff: { matched: unknown[]; added: unknown[] };
       summary: string;
       reportLines: string[];
       updatedAccounts: Account[];
@@ -499,23 +499,7 @@ async function executeImport() {
     });
     if (!confirmed) return;
 
-    // 名前変更がある場合は再度APIを呼んで適用
-    if (result.diff.nameChanged.length > 0) {
-      const applyRes = await fetch('/api/mf/import-master-accounts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId, applyNameChanges: true }),
-      });
-      if (applyRes.ok) {
-        const applyResult = await applyRes.json() as { updatedAccounts: Account[]; summary: string };
-        accountRows.splice(0, accountRows.length, ...applyResult.updatedAccounts);
-        await modal.notify({ title: `MF差分マージ完了（${applyResult.summary}）`, variant: 'success' });
-        markClean();
-        return;
-      }
-    }
-
-    // 名前変更なしの差分 → reactiveを同期
+    // 差分適用 → reactiveを同期
     accountRows.splice(0, accountRows.length, ...result.updatedAccounts);
     await modal.notify({ title: `MF差分マージ完了（${result.summary}）`, variant: 'success' });
     markClean();
@@ -564,7 +548,7 @@ const filteredAccountRows = computed(() => {
     }
     // 不動産フィルタ（realEstate以外は不動産科目非表示）
     if (businessType.value !== 'realEstate') {
-      if (row.category === UI_MSG.不動産収入 || row.category === UI_MSG.不動産経費 || row.category === UI_MSG.不動産) return false;
+      if (row.category === 'REAL_ESTATE_INCOME' || row.category === 'REAL_ESTATE_EXPENSES' || row.category === 'REAL_ESTATE_EMPLOYEE_SALARY') return false;
     }
     if (accountFilter.value && !row.name.includes(accountFilter.value)) return false;
     return true;
@@ -775,8 +759,7 @@ function commitEdit(row: Account) {
       row.category = editValue.value;
       // category変更時にaccountGroup・taxDetermination・defaultTaxCategoryIdを自動設定
       {
-        const defaults = deriveCategoryDefaults(editValue.value, settings.taxCategories.value);
-        row.accountGroup = defaults.accountGroup;
+        const defaults = deriveCategoryDefaults(row.accountGroup, settings.taxCategories.value);
         row.taxDetermination = defaults.taxDetermination;
         row.defaultTaxCategoryId = defaults.defaultTaxCategoryId;
       }
@@ -790,7 +773,7 @@ function commitEdit(row: Account) {
     case 'aiDetermination':
       if (editValue.value === 'true') {
         if (row.taxDetermination === 'fixed') {
-          const dir = getCategoryDirection(row.category);
+          const dir = getAccountGroupDirection(row.accountGroup);
           row.taxDetermination = dir === 'sales' ? 'auto_sales' : 'auto_purchase';
         }
       } else {
@@ -808,8 +791,8 @@ function cancelEdit() {
   editingField.value = '';
 }
 
-// =============== categoryグループ分類（shared/data/account-category-rules.ts からimport済み） ===============
-const categoryGroups = CATEGORY_GROUPS;
+// =============== categoryグループ分類（composable化済み。DRY） ===============
+const { categoryGroups } = useCategoryGroups(accountRows);
 
 /** 科目の大分類+中分類+課税方式に基づいて許可されるtaxDetermination値を返す */
 function getAllowedTaxDeterminations(row: Account): string[] {
@@ -834,8 +817,8 @@ function getDisplayDefaultTax(row: Account): string {
   return getTaxCategoryName(row.defaultTaxCategoryId);
 }
 
-function filteredTaxCategories(category: string) {
-  const dir = getCategoryDirection(category);
+function filteredTaxCategories(accountGroup: string) {
+  const dir = getAccountGroupDirection(accountGroup);
   return settings.filteredTaxCategories(dir);
 }
 

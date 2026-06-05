@@ -2819,7 +2819,8 @@ function getRawValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknow
 // 科目分類定数は shared/data/account-category-rules.ts に統合済み
 // 3大グループ・BS全カテゴリは constants/journalConstants.ts に集約
 import {
-  getCategoryDirection,
+  getAccountGroupDirection,
+  getCategoryLabel,
 } from "@/data/master/account-category-rules";
 import {
   MEGA_GROUPS,
@@ -2945,7 +2946,7 @@ watch(
   },
   { immediate: true },
 );
-/** 仕訳入力用: 勘定科目をカテゴリでグルーピング */
+/** 仕訳入力用: 勘定科目をカテゴリでグルーピング（ラベルは日本語表示） */
 const accountGroupsForJournal = computed(() => {
   const categoryMap = new Map<string, typeof filteredAccounts.value>();
   for (const acc of filteredAccounts.value) {
@@ -2954,8 +2955,8 @@ const accountGroupsForJournal = computed(() => {
     categoryMap.get(cat)!.push(acc);
   }
   const groups: { label: string; items: typeof filteredAccounts.value }[] = [];
-  for (const [label, items] of categoryMap) {
-    groups.push({ label, items });
+  for (const [cat, items] of categoryMap) {
+    groups.push({ label: getCategoryLabel(cat), items });
   }
   return groups;
 });
@@ -2989,8 +2990,7 @@ function getTaxGroupsForEntry(row: CombinedRow, colKey: string) {
     ].filter((g) => g.items.length > 0);
   }
 
-  const cat = acc.category;
-  const direction = getCategoryDirection(cat);
+  const direction = getAccountGroupDirection(acc.accountGroup ?? '');
 
   const taxMode = activeClientFull.value?.consumptionTaxMode;
   const filtered = settings.filteredTaxCategories(direction, taxMode);
@@ -3028,7 +3028,7 @@ function getAccountsForMegaGroup(megaLabel: string) {
   const mega = MEGA_GROUPS.find((g) => g.label === megaLabel);
   if (!mega) return [];
   return filteredAccounts.value
-    .filter((acc) => mega.categories.includes(acc.category))
+    .filter((acc) => mega.accountGroups.includes(acc.accountGroup as any))
     .sort((a, b) => a.sortOrder - b.sortOrder);
 }
 

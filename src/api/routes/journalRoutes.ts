@@ -1,4 +1,4 @@
-﻿/**
+/**
  * journalRoutes.ts — 仕訳JSON永続化APIルート（Hono）
  *
  * エンドポイント:
@@ -36,8 +36,8 @@ import {
 } from '../services/journalSupportingService';
 import { searchSupporting } from '../services/migration/supportingSearchService';
 import {
-  getAccountsForValidation,
-  getTaxCategoriesForValidation,
+  getClientAccountsForValidation,
+  getClientTaxCategoriesForValidation,
   getAccountNameMap,
   getTaxCategoryNameMap,
 } from '../services/accountMasterStore';
@@ -168,9 +168,9 @@ app.post('/:clientId/:journalId/validate', async (c) => {
   const clientId = c.req.param('clientId');
   const journalId = c.req.param('journalId');
 
-  // サーバー側マスタから科目・税区分を取得（Phase 2）
-  const accounts = getAccountsForValidation();
-  const taxCategories = getTaxCategoriesForValidation();
+  // 顧問先別の科目・税区分を取得（データ駆動）
+  const accounts = getClientAccountsForValidation(clientId);
+  const taxCategories = getClientTaxCategoriesForValidation(clientId);
 
   // サーバー側ストアから仕訳データ取得
   const journals = getJournals(clientId) as JournalForValidation[];
@@ -191,9 +191,9 @@ app.post('/:clientId/:journalId/validate', async (c) => {
 app.post('/:clientId/validate-all', async (c) => {
   const clientId = c.req.param('clientId');
 
-  // サーバー側マスタから科目・税区分を取得（Phase 2）
-  const accounts = getAccountsForValidation();
-  const taxCategories = getTaxCategoriesForValidation();
+  // 顧問先別の科目・税区分を取得（データ駆動）
+  const accounts = getClientAccountsForValidation(clientId);
+  const taxCategories = getClientTaxCategoriesForValidation(clientId);
 
   const journals = getJournals(clientId) as JournalForValidation[];
   const results = journals.map(journal =>
@@ -213,9 +213,9 @@ app.post('/:clientId/:journalId/hints', async (c) => {
   const clientId = c.req.param('clientId');
   const journalId = c.req.param('journalId');
 
-  // サーバー側マスタから科目・税区分を取得（Phase 2）
-  const accounts = getAccountsForValidation();
-  const taxCategories = getTaxCategoriesForValidation();
+  // 顧問先別の科目・税区分を取得（データ駆動）
+  const accounts = getClientAccountsForValidation(clientId);
+  const taxCategories = getClientTaxCategoriesForValidation(clientId);
 
   // サーバー側ストアから仕訳データ取得
   const journals = getJournals(clientId) as JournalForHint[];

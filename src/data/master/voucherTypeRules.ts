@@ -101,7 +101,7 @@ export const VOUCHER_TYPE_RULES: Record<string, VoucherTypeRule> = {
     },
     credit: {
       allowedIds: [...PAYMENT_IDS],
-      allowedCategories: ['現金及び預金', 'その他流動資産', 'その他流動負債'],
+      allowedCategories: ['CASH_AND_DEPOSITS', 'OTHER_CURRENT_ASSETS', 'OTHER_CURRENT_LIABILITIES'],
     },
   },
 
@@ -111,7 +111,7 @@ export const VOUCHER_TYPE_RULES: Record<string, VoucherTypeRule> = {
     defaultDebitId: 'ACCOUNTS_RECEIVABLE',
     debit: {
       allowedIds: [...RECEIVABLE_IDS],
-      allowedCategories: ['売上債権', '現金及び預金'],
+      allowedCategories: ['TRADE_RECEIVABLES', 'CASH_AND_DEPOSITS'],
     },
     credit: {
       allowedGroups: ['PL_REVENUE'],
@@ -138,7 +138,7 @@ export const VOUCHER_TYPE_RULES: Record<string, VoucherTypeRule> = {
     },
     credit: {
       allowedIds: [...DEPOSIT_IDS],
-      allowedCategories: ['現金及び預金'],
+      allowedCategories: ['CASH_AND_DEPOSITS'],
     },
   },
 
@@ -151,7 +151,7 @@ export const VOUCHER_TYPE_RULES: Record<string, VoucherTypeRule> = {
     },
     credit: {
       allowedIds: [...SALARY_CREDIT_IDS],
-      allowedCategories: ['現金及び預金', 'その他流動負債'],
+      allowedCategories: ['CASH_AND_DEPOSITS', 'OTHER_CURRENT_LIABILITIES'],
     },
   },
 
@@ -163,7 +163,7 @@ export const VOUCHER_TYPE_RULES: Record<string, VoucherTypeRule> = {
     },
     credit: {
       allowedIds: [...ADVANCE_IDS],
-      allowedCategories: ['その他流動資産'],
+      allowedCategories: ['OTHER_CURRENT_ASSETS'],
     },
   },
 

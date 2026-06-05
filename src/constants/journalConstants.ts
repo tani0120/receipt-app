@@ -9,47 +9,24 @@
  * 移行先: Supabase移行時にマスタテーブルへ投入するデータソース
  */
 
-import {
-  SALES_CATEGORIES,
-  PURCHASE_CATEGORIES,
-} from '@/data/master/account-category-rules'
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// BS全カテゴリ（UI表示用: 資産+負債+純資産の統合リスト）
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-/**
- * BS全カテゴリ（UIドロップダウン用）
- * account-category-rules.tsの3分類を統合。
- * 注意: 項目名はaccount-category-rules.tsのBS系と若干異なる
- *       （例: '投資その他の資産' vs '投資その他'）ため、
- *       UI表示専用の固定リストとして独立定義。
- */
-export const BS_CATEGORIES: readonly string[] = [
-  '現金及び預金',
-  '売上債権',
-  '有価証券',
-  'その他流動資産',
-  '有形固定資産',
-  '無形固定資産',
-  '投資その他の資産',
-  '買入債務',
-  '短期借入金',
-  'その他流動負債',
-  '長期借入金',
-  'その他固定負債',
-  '純資産',
-]
+import type { AccountGroup } from '@/types/shared-account'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 3大グループ定義（科目選択ドロップダウン用）
+// accountGroupベースで判定（データ駆動）
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/** 3大グループ（勘定科目選択時のメガグループ表示用） */
-export const MEGA_GROUPS: readonly { label: string; categories: readonly string[] }[] = [
-  { label: '💰 売上', categories: SALES_CATEGORIES },
-  { label: '📋 経費・仕入', categories: PURCHASE_CATEGORIES },
-  { label: '🏦 資産・負債', categories: BS_CATEGORIES },
+/** 3大グループ定義 */
+export interface MegaGroupDef {
+  label: string
+  accountGroups: AccountGroup[]
+}
+
+/** 3大グループ（勘定科目選択時のメガグループ表示用。accountGroupで判定） */
+export const MEGA_GROUPS: readonly MegaGroupDef[] = [
+  { label: '💰 売上', accountGroups: ['PL_REVENUE'] },
+  { label: '📋 経費・仕入', accountGroups: ['PL_EXPENSE'] },
+  { label: '🏦 資産・負債', accountGroups: ['BS_ASSET', 'BS_LIABILITY', 'BS_EQUITY'] },
 ]
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
