@@ -9,14 +9,14 @@ const mfAccts = await mcpFetchAccounts(TK)
 console.log('MF科目数:', mfAccts.length)
 const mfNames = new Set(mfAccts.map(a => a.name))
 
-const sugAccts = JSON.parse(readFileSync('data/account-master.json', 'utf8')) as Array<{id: string; name: string; accountGroup: string}>
+const sugAccts = JSON.parse(readFileSync('data/account-master.json', 'utf8')) as Array<{accountId: string; name: string; accountGroup: string}>
 const unmatched = sugAccts.filter(s => !mfNames.has(s.name))
 console.log('Sugusru科目数:', sugAccts.length)
 console.log('マッチ:', sugAccts.length - unmatched.length, '件')
 console.log('未マッチ:', unmatched.length, '件')
 console.log('')
 for (const [i, u] of unmatched.entries()) {
-  console.log(`${i+1}. ${u.id} | ${u.name} | ${u.accountGroup}`)
+  console.log(`${i+1}. ${u.accountId} | ${u.name} | ${u.accountGroup}`)
 }
 
 const sugNames = new Set(sugAccts.map(s => s.name))

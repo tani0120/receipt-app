@@ -91,8 +91,8 @@
                 <th class="relative">{{ UI_MSG.マスタ科目_列税区分自動判定 }}
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('aiSelectable', $event)"></div>
                 </th>
-                <th class="sortable relative" @click="sortAccounts('id')">
-                  マスタID <i :class="getSortIcon('id')"></i>
+                <th class="sortable relative" @click="sortAccounts('accountId')">
+                  マスタID <i :class="getSortIcon('accountId')"></i>
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('masterId', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('name')">
@@ -143,13 +143,13 @@
             </thead>
             <tbody>
               <tr
-                v-for="row in pagedAccountRows" :key="row.id"
-                :class="{ 'row-deprecated': isHidden(row.id) }"
+                v-for="row in pagedAccountRows" :key="row.accountId"
+                :class="{ 'row-deprecated': isHidden(row.accountId) }"
               >
                 <!-- 表示/非表示トグル -->
                 <td class="td-visibility" style="text-align:center;">
-                  <i v-if="isHidden(row.id)" class="fa-solid fa-eye-slash td-hide" @click="toggleVisibility(row.id)" title="表示する"></i>
-                  <i v-else class="fa-solid fa-eye td-show" @click="toggleVisibility(row.id)" title="非表示にする"></i>
+                  <i v-if="isHidden(row.accountId)" class="fa-solid fa-eye-slash td-hide" @click="toggleVisibility(row.accountId)" title="表示する"></i>
+                  <i v-else class="fa-solid fa-eye td-show" @click="toggleVisibility(row.accountId)" title="非表示にする"></i>
                 </td>
                 <td style="text-align:center;font-size:11px;color:#666;">
                   <span v-if="!row.isCustom" style="color:#1976D2;"><MfCloudIcon :size="12" tooltip="MFクラウド" /> MF</span>
@@ -158,7 +158,7 @@
                 <td class="td-ai">
                   {{ getDisplayAiDet(row) }}
                 </td>
-                <td class="td-master-id" :title="row.id">{{ row.id }}</td>
+                <td class="td-master-id" :title="row.accountId">{{ row.accountId }}</td>
                 <!-- 科目名（読み取り専用。修正はMF側で行う） -->
                 <td>{{ row.name }}</td>
                 <td class="td-sub-account"></td>
@@ -320,16 +320,16 @@ function directionLabel(accountGroup: string): string {
 }
 
 /** 科目が許容されるvoucher_typeを算出 */
-function getAllowedVoucherTypes(row: { id: string; accountGroup: string; category: string }): string {
+function getAllowedVoucherTypes(row: { accountId: string; accountGroup: string; category: string }): string {
   const debitTypes: string[] = [];
   const creditTypes: string[] = [];
   for (const [vtName, rule] of Object.entries(VOUCHER_TYPE_RULES)) {
     const d = rule.debit;
-    if (d.allowedGroups?.includes(row.accountGroup) || d.allowedIds?.includes(row.id) || d.allowedCategories?.includes(row.category)) {
+    if (d.allowedGroups?.includes(row.accountGroup) || d.allowedIds?.includes(row.accountId) || d.allowedCategories?.includes(row.category)) {
       debitTypes.push(vtName);
     }
     const c = rule.credit;
-    if (c.allowedGroups?.includes(row.accountGroup) || c.allowedIds?.includes(row.id) || c.allowedCategories?.includes(row.category)) {
+    if (c.allowedGroups?.includes(row.accountGroup) || c.allowedIds?.includes(row.accountId) || c.allowedCategories?.includes(row.category)) {
       creditTypes.push(vtName);
     }
   }
@@ -526,8 +526,8 @@ async function saveChanges() {
 
     // composable側のoverridesにも同期（顧問先ページへの反映用）
     const defaultAccountIds = settings.defaultAccountIds.value;
-    const customRows = accountRows.filter(r => !defaultAccountIds.has(r.id));
-    const hiddenIds = accountRows.filter(r => r.deprecated || r.effectiveTo).map(r => r.id);
+    const customRows = accountRows.filter(r => !defaultAccountIds.has(r.accountId));
+    const hiddenIds = accountRows.filter(r => r.deprecated || r.effectiveTo).map(r => r.accountId);
     overrides.value = { hiddenIds, customAccounts: customRows };
     // ★DL-042: localStorage書き込み廃止済み（API保存に一本化）
 

@@ -88,7 +88,7 @@ function setTestStatus(status: string) {
   // 開発用テストのため、不正ステータスも含めてDocumentStatus型にキャスト
   // fallbackのテスト用途で意図的に型境界を超える
   document.value = {
-    id: 'test-001',
+    documentId: 'test-001',
     clientId: 'client-001',
     driveFileId: 'drive-file-001',
     status: status as DocumentStatus,

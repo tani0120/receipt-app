@@ -19,8 +19,8 @@
 
 /** 複合仕訳テンプレート1行（借方または貸方） */
 export interface LearningRuleEntryLine {
-  /** 行ID（PK。Supabase learning_rule_entries テーブルのPK） */
-  id: string
+  /** 行のID（PK。Supabase learning_rule_entries テーブルのPK） */
+  entryId: string
 
   /** 親ルールID（FK。LearningRule.id への参照） */
   ruleId: string
@@ -75,7 +75,7 @@ export interface LearningRuleEntryLine {
 /** 学習ルール */
 export interface LearningRule {
   /** ルールID（PK。journal.rule_id の FK元） */
-  id: string
+  ruleId: string
 
   /** 顧問先ID（LDI-00008形式） */
   clientId: string

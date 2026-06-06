@@ -93,9 +93,9 @@ export function useClientAccounts(clientId: string) {
     return {
       hiddenIds: masterAccounts.value
         .filter(a => a.hiddenInMaster)
-        .map(a => a.id),
+        .map(a => a.accountId),
       customAccounts: [],
-      copiedMasterIds: masterAccounts.value.map(a => a.id),
+      copiedMasterIds: masterAccounts.value.map(a => a.accountId),
     }
   }
 
@@ -122,11 +122,11 @@ export function useClientAccounts(clientId: string) {
     fetchClientFromServer(clientId).then(serverData => {
       if (serverData && serverData.accounts.length > 0) {
         // サーバーデータからoverrides形式を復元
-        const masterIds = new Set(masterAccounts.value.map(a => a.id))
+        const masterIds = new Set(masterAccounts.value.map(a => a.accountId))
         overridesRef.value = {
-          hiddenIds: serverData.accounts.filter(a => a.deprecated).map(a => a.id),
-          customAccounts: serverData.accounts.filter(a => !masterIds.has(a.id)),
-          copiedMasterIds: serverData.accounts.filter(a => masterIds.has(a.id)).map(a => a.id),
+          hiddenIds: serverData.accounts.filter(a => a.deprecated).map(a => a.accountId),
+          customAccounts: serverData.accounts.filter(a => !masterIds.has(a.accountId)),
+          copiedMasterIds: serverData.accounts.filter(a => masterIds.has(a.accountId)).map(a => a.accountId),
         }
         console.log(`[useClientAccounts] ${clientId}: サーバーから${serverData.accounts.length}件を取得`)
       } else {
@@ -147,7 +147,7 @@ export function useClientAccounts(clientId: string) {
   function buildFullAccountList(ov: ClientOverrides, master: Account[]): Account[] {
     const defaultAccounts = master.map(a => ({
       ...a,
-      deprecated: ov.hiddenIds.includes(a.id) ? true : a.deprecated,
+      deprecated: ov.hiddenIds.includes(a.accountId) ? true : a.deprecated,
     }))
     return [...defaultAccounts, ...ov.customAccounts]
   }
@@ -155,7 +155,7 @@ export function useClientAccounts(clientId: string) {
   /** マスタから新規追加された科目を検出（ルール8） */
   const newMasterAccounts = computed<Account[]>(() => {
     const copiedIds = new Set(overrides.value.copiedMasterIds)
-    return masterAccounts.value.filter(a => !copiedIds.has(a.id) && !a.isCustom)
+    return masterAccounts.value.filter(a => !copiedIds.has(a.accountId) && !a.isCustom)
   })
 
   /** 全科目リスト（マスタデフォルト+マスタカスタム+顧問先カスタム） */
@@ -163,19 +163,19 @@ export function useClientAccounts(clientId: string) {
     // マスタの全科目をベースにする
     const baseAccounts: ClientAccount[] = masterAccounts.value.map(a => ({
       ...a,
-      hiddenInClient: overrides.value.hiddenIds.includes(a.id),
+      hiddenInClient: overrides.value.hiddenIds.includes(a.accountId),
       isCustom: a.isCustom ?? false,
       hiddenInMaster: a.hiddenInMaster,
       isMasterCustom: a.isCustom ?? false,
     }))
 
     // 顧問先固有のカスタム科目
-    const masterIds = new Set(masterAccounts.value.map(a => a.id))
+    const masterIds = new Set(masterAccounts.value.map(a => a.accountId))
     const clientCustom: ClientAccount[] = overrides.value.customAccounts
-      .filter(a => !masterIds.has(a.id))
+      .filter(a => !masterIds.has(a.accountId))
       .map(a => ({
         ...a,
-        hiddenInClient: overrides.value.hiddenIds.includes(a.id),
+        hiddenInClient: overrides.value.hiddenIds.includes(a.accountId),
         isCustom: true,
         hiddenInMaster: false,
         isMasterCustom: false,
@@ -206,7 +206,7 @@ export function useClientAccounts(clientId: string) {
     if (newAccounts.length === 0) return 0
 
     for (const a of newAccounts) {
-      overrides.value.copiedMasterIds.push(a.id)
+      overrides.value.copiedMasterIds.push(a.accountId)
     }
     return newAccounts.length
   }
@@ -218,10 +218,10 @@ export function useClientAccounts(clientId: string) {
 
   /** ページから全行データを受け取り、composableの保存形式に分解して保存 */
   function saveAll(allRows: Account[], subAccountsInput?: Record<string, string>): void {
-    const masterIds = new Set(masterAccounts.value.map(a => a.id))
-    const hiddenIds = allRows.filter(r => r.deprecated).map(r => r.id)
-    const customAccounts = allRows.filter(r => r.isCustom && !masterIds.has(r.id))
-    const copiedMasterIds = allRows.filter(r => !r.isCustom).map(r => r.id)
+    const masterIds = new Set(masterAccounts.value.map(a => a.accountId))
+    const hiddenIds = allRows.filter(r => r.deprecated).map(r => r.accountId)
+    const customAccounts = allRows.filter(r => r.isCustom && !masterIds.has(r.accountId))
+    const copiedMasterIds = allRows.filter(r => !r.isCustom).map(r => r.accountId)
     overrides.value = {
       hiddenIds,
       customAccounts,

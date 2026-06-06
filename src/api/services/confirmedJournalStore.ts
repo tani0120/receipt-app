@@ -148,7 +148,7 @@ export function applyMfIds(
   let count = 0;
   for (const r of results) {
     if (!r.mfId) continue;
-    const j = journals.find(j => j.id === r.sugusruId);
+    const j = journals.find(j => j.journalId === r.sugusruId);
     if (!j) continue;
     j.mf_journal_id = r.mfId;
     j.mf_journal_number = r.mfNumber ?? null;

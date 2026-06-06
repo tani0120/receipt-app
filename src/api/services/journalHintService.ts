@@ -72,7 +72,7 @@ export interface AccountForHint extends AccountForValidation {
 
 /** ヒント生成対象の仕訳 */
 export interface JournalForHint {
-  id: string
+  journalId: string
   voucher_date: string | null
   description: string
   voucher_type: string | null
@@ -108,7 +108,7 @@ export function generateHintValidations(
 ): HintValidation[] {
   const results: HintValidation[] = []
   const labels = journal.labels
-  const accountIds = new Set(accounts.map(a => a.id))
+  const accountIds = new Set(accounts.map(a => a.accountId))
 
   // 各warningLabelに対応するメッセージ
   if (labels.includes('ACCOUNT_UNKNOWN')) {
@@ -175,18 +175,18 @@ export function generateHintSuggestions(
   const suggestions: HintSuggestion[] = []
   const labels = journal.labels
 
-  const accountIds = new Set(accounts.map(a => a.id))
+  const accountIds = new Set(accounts.map(a => a.accountId))
 
   // 「科目名（補助科目）」形式のラベル生成
   const acctLabel = (id: string | null): string => {
     if (!id) return LABEL_UNSET
-    const a = accounts.find(x => x.id === id)
+    const a = accounts.find(x => x.accountId === id)
     if (!a) return id
     return a.sub ? `${a.name}（${a.sub}）` : a.name
   }
   const taxName = (id: string | null | undefined): string => {
     if (!id) return LABEL_UNSET
-    const t = taxCategories.find(x => x.id === id)
+    const t = taxCategories.find(x => x.taxCategoryId === id)
     return t ? (t.shortName ?? t.name) : id
   }
 
@@ -208,30 +208,30 @@ export function generateHintSuggestions(
       }
       // コピー科目も候補に含める
       for (const a of accounts) {
-        if (seen.has(a.id) || a.id === excludeId) continue
-        const baseId = getBaseAccountId(a.id)
-        if (baseId !== a.id && sideRule.allowedIds.includes(baseId)) {
-          seen.add(a.id)
-          alts.push({ value: a.id, label: acctLabel(a.id) })
+        if (seen.has(a.accountId) || a.accountId === excludeId) continue
+        const baseId = getBaseAccountId(a.accountId)
+        if (baseId !== a.accountId && sideRule.allowedIds.includes(baseId)) {
+          seen.add(a.accountId)
+          alts.push({ value: a.accountId, label: acctLabel(a.accountId) })
         }
       }
     }
     // allowedGroupsから全件
     if (sideRule.allowedGroups) {
       for (const a of accounts) {
-        if (seen.has(a.id) || a.id === excludeId) continue
+        if (seen.has(a.accountId) || a.accountId === excludeId) continue
         if (!sideRule.allowedGroups.includes(a.accountGroup ?? '')) continue
-        seen.add(a.id)
-        alts.push({ value: a.id, label: acctLabel(a.id) })
+        seen.add(a.accountId)
+        alts.push({ value: a.accountId, label: acctLabel(a.accountId) })
       }
     }
     // allowedCategoriesから全件
     if (sideRule.allowedCategories) {
       for (const a of accounts) {
-        if (seen.has(a.id) || a.id === excludeId) continue
+        if (seen.has(a.accountId) || a.accountId === excludeId) continue
         if (!sideRule.allowedCategories.includes(a.category ?? '')) continue
-        seen.add(a.id)
-        alts.push({ value: a.id, label: acctLabel(a.id) })
+        seen.add(a.accountId)
+        alts.push({ value: a.accountId, label: acctLabel(a.accountId) })
       }
     }
     return alts
@@ -297,7 +297,7 @@ export function generateHintSuggestions(
       }
 
       // ケース3: マスタ内だがグループ不一致 → 候補提案
-      const acctObj = accounts.find(a => a.id === acct)
+      const acctObj = accounts.find(a => a.accountId === acct)
       if (!acctObj) return
 
       let allowed = false
@@ -337,7 +337,7 @@ export function generateHintSuggestions(
       entries.forEach((entry, idx) => {
         const acct = entry.account
         if (!acct) return
-        const acctObj = accounts.find(a => a.id === acct)
+        const acctObj = accounts.find(a => a.accountId === acct)
         if (!acctObj?.defaultTaxCategoryId) return
 
         const currentTax = entry.tax_category_id

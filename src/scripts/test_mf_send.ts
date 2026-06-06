@@ -60,7 +60,7 @@ async function main() {
 
   // テスト仕訳A: 1:1（消耗品費/現金 1円）
   const testA: SourceJournal = {
-    id: 'test-send-1to1',
+    journalId: 'test-send-1to1',
     voucher_date: '2026-05-23',
     description: '【送信テスト】1:1 消耗品費/現金 1円',
     debit_entries: [
@@ -73,7 +73,7 @@ async function main() {
 
   // テスト仕訳B: 3:1 金額バラバラ（対向金額一致方式の検証）
   const testB: SourceJournal = {
-    id: 'test-send-3to1-varied',
+    journalId: 'test-send-3to1-varied',
     voucher_date: '2026-05-23',
     description: '【送信テスト】3:1 N:N 金額バラバラ 10円',
     debit_entries: [
@@ -89,7 +89,7 @@ async function main() {
   const tests = [testA, testB]
 
   for (const test of tests) {
-    console.log(`  テスト: ${test.id}`)
+    console.log(`  テスト: ${test.journalId}`)
     console.log(`    摘要: ${test.description}`)
     console.log(`    借方: ${test.debit_entries.map(e => `${e.account} ¥${e.amount}`).join(' + ')}`)
     console.log(`    貸方: ${test.credit_entries.map(e => `${e.account} ¥${e.amount}`).join(' + ')}`)
@@ -102,9 +102,9 @@ async function main() {
   for (const test of tests) {
     const errors = validateBeforeConvert(test, maps)
     if (errors.length === 0) {
-      console.log(`  ✅ ${test.id}: バリデーションOK`)
+      console.log(`  ✅ ${test.journalId}: バリデーションOK`)
     } else {
-      console.log(`  ❌ ${test.id}: バリデーションNG`)
+      console.log(`  ❌ ${test.journalId}: バリデーションNG`)
       errors.forEach(e => console.log(`    - ${e.type}: ${e.message}`))
     }
   }
@@ -116,7 +116,7 @@ async function main() {
   for (const test of tests) {
     const { payload, errors } = convertToMfJournal(test, maps)
     if (payload) {
-      console.log(`  ✅ ${test.id}: 変換成功`)
+      console.log(`  ✅ ${test.journalId}: 変換成功`)
       console.log(`    transaction_date: ${payload.transaction_date}`)
       console.log(`    branches: ${payload.branches.length}行`)
       for (const [i, b] of payload.branches.entries()) {
@@ -125,7 +125,7 @@ async function main() {
       console.log(`    memo: ${payload.memo}`)
       console.log(`    tags: ${payload.tags?.join(', ')}`)
     } else {
-      console.log(`  ❌ ${test.id}: 変換失敗`)
+      console.log(`  ❌ ${test.journalId}: 変換失敗`)
       errors.forEach(e => console.log(`    - ${e.message}`))
     }
     console.log()
@@ -145,7 +145,7 @@ async function main() {
   }
 
   for (const test of sendTargets) {
-    console.log(`  送信中: ${test.id}...`)
+    console.log(`  送信中: ${test.journalId}...`)
     const result = await sendJournalToMf(test, TK, maps)
 
     if (result.success) {

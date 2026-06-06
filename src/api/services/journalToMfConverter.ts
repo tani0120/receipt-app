@@ -37,7 +37,7 @@ interface SourceEntryLine {
 
 /** 変換元の仕訳 */
 export interface SourceJournal {
-  id: string
+  journalId: string
   voucher_date: string | null
   description: string
   /**

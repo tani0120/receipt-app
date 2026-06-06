@@ -434,22 +434,25 @@ app.post('/sync-all', async (c) => {
     // ===== 3. 勘定科目マスタ =====
     const allAccounts = await mcpFetchAccounts(clientId)
     const available = allAccounts.filter((a) => a.available)
-    const mapped: Account[] = available.map((a, idx) => ({
-      id: a.id,
-      name: a.name,
-      target: deriveTarget(a.category, a.financial_statement_type),
-      accountGroup: deriveMfAccountGroup(a.account_group, a.category),
-      category: a.category,
-      defaultTaxCategoryId: undefined,
-      taxDetermination: deriveTaxDetermination(a.category),
-      deprecated: false,
-      effectiveFrom: DEFAULT_EFFECTIVE_FROM,
-      effectiveTo: null,
-      sortOrder: idx + 1,
-      mfAccountId: a.id,
-      mfAccountGroup: a.account_group,
-      mfFinancialStatementType: a.financial_statement_type,
-    }))
+    const mapped: Account[] = available.map((a, idx) => {
+      const group = deriveMfAccountGroup(a.account_group, a.category)
+      return {
+        accountId: a.id,
+        name: a.name,
+        target: deriveTarget(a.category, a.financial_statement_type),
+        accountGroup: group,
+        category: a.category,
+        defaultTaxCategoryId: undefined,
+        taxDetermination: deriveTaxDetermination(group),
+        deprecated: false,
+        effectiveFrom: DEFAULT_EFFECTIVE_FROM,
+        effectiveTo: null,
+        sortOrder: idx + 1,
+        mfAccountId: a.id,
+        mfAccountGroup: a.account_group,
+        mfFinancialStatementType: a.financial_statement_type,
+      }
+    })
     saveClientAccounts(clientId, mapped)
 
     const sugusruAccounts = getAllAccounts()
@@ -495,7 +498,7 @@ app.post('/sync-all', async (c) => {
       }
       const dir = guessDirectionFromName(t.name)
       return {
-        id: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        taxCategoryId: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         name: t.name,
         shortName: t.abbreviation ?? '',
         direction: dir,

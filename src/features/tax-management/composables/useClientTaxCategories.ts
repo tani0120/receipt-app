@@ -96,9 +96,9 @@ export function useClientTaxCategories(clientId: string) {
     return {
       hiddenIds: masterTaxCategories.value
         .filter(tc => tc.hiddenInMaster)
-        .map(tc => tc.id),
+        .map(tc => tc.taxCategoryId),
       aiSelectableOverrides: {},
-      copiedMasterIds: masterTaxCategories.value.map(tc => tc.id),
+      copiedMasterIds: masterTaxCategories.value.map(tc => tc.taxCategoryId),
       customTaxCategories: [],
       mfTaxIdMap: {},
     }
@@ -128,17 +128,17 @@ export function useClientTaxCategories(clientId: string) {
         const serverData = result.items
         // MF連携状態をデータ駆動で取得（サーバーAPIから）
         mfLinkedRef.value = result.mfLinked
-        const masterIds = new Set(masterTaxCategories.value.map(tc => tc.id))
+        const masterIds = new Set(masterTaxCategories.value.map(tc => tc.taxCategoryId))
         // mfTaxIdマップを構築（PUT上書き時に消えないようにする）
         const mfTaxIdMap: Record<string, string> = {}
         for (const tc of serverData) {
-          if (tc.mfTaxId) mfTaxIdMap[tc.id] = tc.mfTaxId
+          if (tc.mfTaxId) mfTaxIdMap[tc.taxCategoryId] = tc.mfTaxId
         }
         overridesRef.value = {
-          hiddenIds: serverData.filter(tc => tc.deprecated).map(tc => tc.id),
+          hiddenIds: serverData.filter(tc => tc.deprecated).map(tc => tc.taxCategoryId),
           aiSelectableOverrides: buildAiSelectableOverrides(serverData),
-          copiedMasterIds: serverData.filter(tc => masterIds.has(tc.id)).map(tc => tc.id),
-          customTaxCategories: serverData.filter(tc => !masterIds.has(tc.id)),
+          copiedMasterIds: serverData.filter(tc => masterIds.has(tc.taxCategoryId)).map(tc => tc.taxCategoryId),
+          customTaxCategories: serverData.filter(tc => !masterIds.has(tc.taxCategoryId)),
           mfTaxIdMap,
         }
         console.log(`[useClientTaxCategories] ${clientId}: サーバーから${serverData.length}件を取得 (MF連携=${result.mfLinked})`)
@@ -158,9 +158,9 @@ export function useClientTaxCategories(clientId: string) {
   function buildAiSelectableOverrides(items: TaxCategory[]): Record<string, boolean> {
     const result: Record<string, boolean> = {}
     items.forEach(tc => {
-      const master = allTaxCategories.value.find(m => m.id === tc.id)
+      const master = allTaxCategories.value.find(m => m.taxCategoryId === tc.taxCategoryId)
       if (master && tc.aiSelectable !== master.aiSelectable) {
-        result[tc.id] = tc.aiSelectable
+        result[tc.taxCategoryId] = tc.aiSelectable
       }
     })
     return result
@@ -173,20 +173,20 @@ export function useClientTaxCategories(clientId: string) {
       // hiddenIdsだけで非表示を決定。マスタのdeprecatedにフォールバックしない。
       // MFインポート時: saveAll()がdeprecated=trueの全IDをhiddenIdsに保存済み。
       // マスタにフォールバックすると、MFのavailableで設定した非表示がマスタ値に戻される。
-      deprecated: ov.hiddenIds.includes(tc.id),
-      aiSelectable: ov.aiSelectableOverrides[tc.id] ?? tc.aiSelectable,
+      deprecated: ov.hiddenIds.includes(tc.taxCategoryId),
+      aiSelectable: ov.aiSelectableOverrides[tc.taxCategoryId] ?? tc.aiSelectable,
       // MF事業者固有IDを保持（PUT上書き時に消えないようにする）
-      mfTaxId: ov.mfTaxIdMap[tc.id] ?? tc.mfTaxId,
+      mfTaxId: ov.mfTaxIdMap[tc.taxCategoryId] ?? tc.mfTaxId,
     }))
     return [...defaultRows, ...ov.customTaxCategories]
   }
 
   const clientTaxCategories = computed<ClientTaxCategory[]>(() => {
     const baseRows: ClientTaxCategory[] = masterTaxCategories.value.map(tc => {
-      const aiOverride = overrides.value.aiSelectableOverrides[tc.id] ?? null
+      const aiOverride = overrides.value.aiSelectableOverrides[tc.taxCategoryId] ?? null
       return {
         ...tc,
-        hiddenInClient: overrides.value.hiddenIds.includes(tc.id),
+        hiddenInClient: overrides.value.hiddenIds.includes(tc.taxCategoryId),
         // MF連携済み: hiddenInMasterを無視（MFインポートが正）
         // MF未連携: hiddenInMasterをそのまま使う（全社マスタが正）
         hiddenInMaster: cache.mfLinked.value ? false : tc.hiddenInMaster,
@@ -195,14 +195,14 @@ export function useClientTaxCategories(clientId: string) {
       }
     })
 
-    const masterIds = new Set(masterTaxCategories.value.map(tc => tc.id))
+    const masterIds = new Set(masterTaxCategories.value.map(tc => tc.taxCategoryId))
     const clientCustomRows: ClientTaxCategory[] = (overrides.value.customTaxCategories ?? [])
-      .filter(tc => !masterIds.has(tc.id))
+      .filter(tc => !masterIds.has(tc.taxCategoryId))
       .map(tc => ({
         ...tc,
-        hiddenInClient: overrides.value.hiddenIds.includes(tc.id),
+        hiddenInClient: overrides.value.hiddenIds.includes(tc.taxCategoryId),
         hiddenInMaster: false,
-        aiSelectableOverride: overrides.value.aiSelectableOverrides[tc.id] ?? null,
+        aiSelectableOverride: overrides.value.aiSelectableOverrides[tc.taxCategoryId] ?? null,
         isCustom: true,
       }))
 
@@ -233,25 +233,25 @@ export function useClientTaxCategories(clientId: string) {
 
   /** ページから全行データを受け取り、composableの保存形式に分解して保存 */
   function saveAll(allRows: TaxCategory[]): void {
-    const hiddenIds = allRows.filter(r => r.deprecated).map(r => r.id)
+    const hiddenIds = allRows.filter(r => r.deprecated).map(r => r.taxCategoryId)
     const customTaxCategories = allRows.filter(r => r.isCustom)
     const aiSelectableOverrides: Record<string, boolean> = {}
     allRows.forEach(r => {
-      const master = allTaxCategories.value.find(m => m.id === r.id)
+      const master = allTaxCategories.value.find(m => m.taxCategoryId === r.taxCategoryId)
       if (master && r.aiSelectable !== master.aiSelectable) {
-        aiSelectableOverrides[r.id] = r.aiSelectable
+        aiSelectableOverrides[r.taxCategoryId] = r.aiSelectable
       }
     })
     // allRowsからmfTaxIdMapを再構築（import-client-taxes結果のmfTaxIdを保持）
     const mfTaxIdMap: Record<string, string> = { ...overrides.value.mfTaxIdMap }
     for (const r of allRows) {
-      if (r.mfTaxId) mfTaxIdMap[r.id] = r.mfTaxId
+      if (r.mfTaxId) mfTaxIdMap[r.taxCategoryId] = r.mfTaxId
     }
     overrides.value = {
       hiddenIds,
       customTaxCategories,
       aiSelectableOverrides,
-      copiedMasterIds: allTaxCategories.value.map(t => t.id),
+      copiedMasterIds: allTaxCategories.value.map(t => t.taxCategoryId),
       mfTaxIdMap,
     }
     // autoSaveで自動的にサーバーへ保存される

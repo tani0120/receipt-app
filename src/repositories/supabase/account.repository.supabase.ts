@@ -58,7 +58,7 @@ export const supabaseAccountRepo: AccountRepository = {
 
     return (allAccounts ?? []).map(row => {
       const base = toAccount(row)
-      const ov = overrideMap.get(base.id)
+      const ov = overrideMap.get(base.accountId)
       if (!ov) return base
       return {
         ...base,

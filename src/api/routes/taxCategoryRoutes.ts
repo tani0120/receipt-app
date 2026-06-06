@@ -56,8 +56,8 @@ function validateTaxCategoriesBody(body: { taxCategories?: TaxCategory[] }): str
     return 'taxCategories 配列が必要です'
   }
   for (const tc of body.taxCategories) {
-    if (!tc.id || !tc.name) {
-      return `税区分にid/nameが必要です: ${JSON.stringify(tc).slice(0, 100)}`
+    if (!tc.taxCategoryId || !tc.name) {
+      return `税区分にtaxCategoryId/nameが必要です: ${JSON.stringify(tc).slice(0, 100)}`
     }
   }
   return null

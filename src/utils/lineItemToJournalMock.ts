@@ -239,10 +239,10 @@ function resolveVoucherType(
  */
 function resolveAccountDefaultTaxCategory(
   accountId: string | null,
-  accountMaster: { id: string; defaultTaxCategoryId?: string | null }[] | null,
+  accountMaster: { accountId: string; defaultTaxCategoryId?: string | null }[] | null,
 ): string | null {
   if (!accountId || !accountMaster) return null
-  const acc = accountMaster.find(a => a.id === accountId)
+  const acc = accountMaster.find(a => a.accountId === accountId)
   return acc?.defaultTaxCategoryId ?? null
 }
 
@@ -300,7 +300,7 @@ export function lineItemToJournalMock(
   isCreditCardPayment = false,
   documentId: string | null = null,
   accountResults: AccountDeterminationResult[] | null = null,
-  accountMaster: { id: string; defaultTaxCategoryId?: string | null }[] | null = null,
+  accountMaster: { accountId: string; defaultTaxCategoryId?: string | null }[] | null = null,
 ): JournalPhase5Mock[] {
   return items.map((item, index) => {
     // Step4-C: 科目確定結果がある場合はそちらを使用
@@ -335,7 +335,7 @@ export function lineItemToJournalMock(
 
       // 主科目エントリ（主科目は account_on_document: true で扱う）
       const mainEntry: JournalEntryLine = {
-        id:                 generateJournalEntryId(),
+        entryId:            generateJournalEntryId(),
         account:            item.determined_account,
         account_on_document: true,
         sub_account:        mainSubAccount,
@@ -347,7 +347,7 @@ export function lineItemToJournalMock(
 
       // 相手勘定エントリ（相手勘定は account_on_document: false で扱う）
       const counterpartEntry: JournalEntryLine = {
-        id:                 generateJournalEntryId(),
+        entryId:            generateJournalEntryId(),
         account:            counterpart.account,
         account_on_document: false,
         sub_account:        null,
@@ -371,7 +371,7 @@ export function lineItemToJournalMock(
       // account=null だが金額は保持。仕訳一覧で行として表示し、担当者が科目を手入力できる
       const counterpartInsuf = resolveCounterpartAccount(sourceType, item.direction, isCreditCardPayment)
       const placeholderMain: JournalEntryLine = {
-        id:                 generateJournalEntryId(),
+        entryId:            generateJournalEntryId(),
         account:            null,
         account_on_document: false,
         sub_account:        null,
@@ -381,7 +381,7 @@ export function lineItemToJournalMock(
         tax_category_id:    null,
       }
       const placeholderCounter: JournalEntryLine = {
-        id:                 generateJournalEntryId(),
+        entryId:            generateJournalEntryId(),
         account:            counterpartInsuf.account,  // 相手勘定は source_type から確定可能
         account_on_document: false,
         sub_account:        null,
@@ -408,7 +408,7 @@ export function lineItemToJournalMock(
     const voucherType = resolveVoucherType(sourceType, item.direction, isCreditCardPayment)
 
     const journal: JournalPhase5Mock = {
-      id:                   generateJournalId(),
+      journalId:              generateJournalId(),
       client_id:            clientId,
       display_order:        index + 1,
       voucher_date:         item.date,

@@ -16,7 +16,7 @@ export type TaxDirection = 'sales' | 'purchase' | 'common'
 /** 税区分 */
 export type TaxCategory = {
     /** 概念ID（不変・意味付き）例: PURCHASE_TAXABLE_10 */
-    id: string
+    taxCategoryId: string
     /** MF正式名称。CSV出力時にそのまま使用。MF登録名と完全一致必須 */
     name: string
     /** 省略名（UI表示用） */

@@ -88,7 +88,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
 
   // デフォルト科目順序（allAccountsの元順序）
   const defaultAccountOrder = computed(() =>
-    new Map(accountMaster.allAccounts.value.map((a, i) => [a.id, i]))
+    new Map(accountMaster.allAccounts.value.map((a, i) => [a.accountId, i]))
   )
 
   // ==============================
@@ -103,7 +103,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
           hidden: tc.hiddenInMaster,
           hiddenInMaster: false,
           defaultVisible: tc.defaultVisible,
-          visibilityOverride: taxMaster.overrides.value.visibilityOverrides[tc.id] ?? null,
+          visibilityOverride: taxMaster.overrides.value.visibilityOverrides[tc.taxCategoryId] ?? null,
           source,
         }
       })
@@ -118,7 +118,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
           hidden: tc.hiddenInMaster,
           hiddenInMaster: false,
           defaultVisible: tc.defaultVisible,
-          visibilityOverride: taxMaster.overrides.value.visibilityOverrides[tc.id] ?? null,
+          visibilityOverride: taxMaster.overrides.value.visibilityOverrides[tc.taxCategoryId] ?? null,
           source,
         }
       })
@@ -127,9 +127,9 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       // マスタカスタムか顧問先カスタムかの判定
       // マスタのcustomTaxCategoriesリストにIDが含まれるかで判定（hiddenInMasterに依存しない）
       const masterCustomIds = new Set(
-        (taxMaster.overrides.value.customTaxCategories ?? []).map(c => c.id)
+        (taxMaster.overrides.value.customTaxCategories ?? []).map(c => c.taxCategoryId)
       )
-      const isMasterCustom = masterCustomIds.has(tc.id) && tc.isCustom
+      const isMasterCustom = masterCustomIds.has(tc.taxCategoryId) && tc.isCustom
       const isClientCustom = tc.isCustom && !isMasterCustom
       const source: UnifiedTaxCategory['source'] = tc.source === 'mf' ? 'mf' : isMasterCustom ? 'master-custom' : isClientCustom ? 'client-custom' : 'default'
       return {
@@ -148,7 +148,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
 
   // デフォルト税区分順序（allTaxCategoriesの元順序）
   const defaultTaxOrder = computed(() =>
-    new Map(taxMaster.allTaxCategories.value.map((t, i) => [t.id, i]))
+    new Map(taxMaster.allTaxCategories.value.map((t, i) => [t.taxCategoryId, i]))
   )
 
   // ==============================
@@ -194,13 +194,13 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
 
   function resolveTaxCategoryName(id: string | null | undefined): string {
     if (!id) return ''
-    const found = taxCategories.value.find(tc => tc.id === id)
+    const found = taxCategories.value.find(tc => tc.taxCategoryId === id)
     return found ? found.name : id
   }
 
   function resolveTaxCategoryShortName(id: string | null | undefined): string {
     if (!id) return ''
-    const found = taxCategories.value.find(tc => tc.id === id)
+    const found = taxCategories.value.find(tc => tc.taxCategoryId === id)
     return found ? found.shortName : id
   }
 
@@ -220,7 +220,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       return accountMaster.isHidden(accountId)
     }
     if (!clientAccountsComposable) return false
-    const entry = clientAccountsComposable.clientAccounts.value.find(a => a.id === accountId)
+    const entry = clientAccountsComposable.clientAccounts.value.find(a => a.accountId === accountId)
     if (!entry) return false
     return entry.hiddenInClient || entry.hiddenInMaster
   }
@@ -308,10 +308,10 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // デフォルトIDセット（出自判定用。カスタム追加行の末尾ソートに使用）
   // ==============================
   const defaultAccountIds = computed(() => new Set(
-    accountMaster.allAccounts.value.filter(a => !a.isCustom).map(a => a.id)
+    accountMaster.allAccounts.value.filter(a => !a.isCustom).map(a => a.accountId)
   ))
   const defaultTaxIds = computed(() => new Set(
-    taxMaster.allTaxCategories.value.filter(t => !t.isCustom).map(t => t.id)
+    taxMaster.allTaxCategories.value.filter(t => !t.isCustom).map(t => t.taxCategoryId)
   ))
 
   // ==============================

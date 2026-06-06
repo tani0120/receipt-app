@@ -463,10 +463,10 @@
 
       <!-- テーブルボディ -->
       <div>
-        <template v-for="(journal, journalIndex) in paginatedJournals" :key="journal.id">
+        <template v-for="(journal, journalIndex) in paginatedJournals" :key="journal.journalId">
           <div
             v-for="(row, rowIndex) in getCombinedRows(journal)"
-            :key="`${journal.id}-${rowIndex}`"
+            :key="`${journal.journalId}-${rowIndex}`"
             :data-journal-index="journalIndex"
             :class="[
               'flex text-[10px] min-w-[1400px]',
@@ -490,8 +490,8 @@
                   v-if="rowIndex === 0"
                   type="checkbox"
                   class="w-2.5 h-2.5 cursor-pointer"
-                  :checked="selectedIds.has(journal.id)"
-                  @change="toggleSelect(journal.id)"
+                  :checked="selectedIds.has(journal.journalId)"
+                  @change="toggleSelect(journal.journalId)"
                 />
               </div>
 
@@ -529,9 +529,9 @@
                     <i
                       class="fa-solid fa-camera text-[10px] text-gray-800 cursor-pointer"
                       :title="UI_MSG.ツールチップ_写真"
-                      @mouseenter="showImageModal(journal.id, journal.document_id)"
+                      @mouseenter="showImageModal(journal.journalId, journal.document_id)"
                       @mouseleave="hideImageModal"
-                      @click="togglePinModal(journal.id, journal.document_id)"
+                      @click="togglePinModal(journal.journalId, journal.document_id)"
                     ></i>
                   </div>
                   <div
@@ -558,7 +558,7 @@
                       :title="UI_MSG.ツールチップ_根拠資料あり"
                       @click="
                         previewSupportingImage(
-                          supportingMatchMap.get(journal.id)?.[0] ?? { previewUrl: '' },
+                          supportingMatchMap.get(journal.journalId)?.[0] ?? { previewUrl: '' },
                         )
                       "
                     ></i>
@@ -615,7 +615,7 @@
                     @mouseenter="hoverOpenCommentModal(journal)"
                     @mouseleave="scheduleHoverCloseCommentModal()"
                     @click.stop="
-                      openCommentModal(journal.id);
+                      openCommentModal(journal.journalId);
                       pinCommentModal();
                     "
                   >
@@ -648,11 +648,11 @@
                     <template v-for="noteKey in staffNoteKeys" :key="noteKey">
                       <div
                         class="relative"
-                        @mouseenter="showNeedPopup(journal.id, noteKey)"
+                        @mouseenter="showNeedPopup(journal.journalId, noteKey)"
                         @mouseleave="scheduleHideNeedPopup()"
                       >
                         <button
-                          @click="toggleStaffNote(journal.id, noteKey)"
+                          @click="toggleStaffNote(journal.journalId, noteKey)"
                           :class="[
                             getStaffNoteEnabled(journal, noteKey)
                               ? staffNoteConfig[noteKey].activeColor
@@ -665,7 +665,7 @@
                         <!-- ホバーポップアップ（JS制御、マウスオーバーで消えない） -->
                         <div
                           v-if="
-                            needPopupJournalId === journal.id &&
+                            needPopupJournalId === journal.journalId &&
                             needPopupKey === noteKey &&
                             getStaffNoteEnabled(journal, noteKey) &&
                             (getStaffNoteText(journal, noteKey) ||
@@ -890,7 +890,7 @@
                     ]"
                     @dblclick.stop="
                       startCellEdit(
-                        journal.id,
+                        journal.journalId,
                         rowIndex,
                         'invoice',
                         journal.labels.includes('INVOICE_QUALIFIED')
@@ -901,7 +901,7 @@
                       )
                     "
                   >
-                    <template v-if="isEditing(journal.id, rowIndex, 'invoice')">
+                    <template v-if="isEditing(journal.journalId, rowIndex, 'invoice')">
                       <select
                         class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0"
                         style="height: 100%; min-height: 0; line-height: 1"
@@ -965,11 +965,11 @@
                       isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                     ]"
                     @dblclick.stop="
-                      startCellEdit(journal.id, 0, col.key, journal.voucher_type || '')
+                      startCellEdit(journal.journalId, 0, col.key, journal.voucher_type || '')
                     "
                     @mousedown="startCellDrag(col.key, journal.voucher_type || '', $event)"
                   >
-                    <template v-if="isEditing(journal.id, 0, col.key)">
+                    <template v-if="isEditing(journal.journalId, 0, col.key)">
                       <select
                         class="inline-edit-input w-full text-[9px] bg-white border border-blue-400 rounded outline-none px-0.5 py-0"
                         v-model="editingValue"
@@ -1023,7 +1023,7 @@
                   @dblclick.stop="
                     hasEntry(row, col.key) &&
                     (startCellEdit(
-                      journal.id,
+                      journal.journalId,
                       rowIndex,
                       col.key,
                       (getRawValue(row, col.key) as string) ?? '',
@@ -1035,7 +1035,7 @@
                     startCellDrag(col.key, getRawValue(row, col.key), $event)
                   "
                 >
-                  <template v-if="isEditing(journal.id, rowIndex, col.key)">
+                  <template v-if="isEditing(journal.journalId, rowIndex, col.key)">
                     <div class="relative">
                       <input
                         type="text"
@@ -1061,7 +1061,7 @@
                               v-for="a in g.items"
                               :key="a.name"
                               class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-4"
-                              @mousedown.prevent="selectAccountItem(journal, row, col.key, a.id)"
+                              @mousedown.prevent="selectAccountItem(journal, row, col.key, a.accountId)"
                             >
                               {{ a.name }}
                             </div>
@@ -1108,7 +1108,7 @@
                                 v-for="a in getAccountsForMegaGroup(mega.label)"
                                 :key="a.name"
                                 class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-5"
-                                @mousedown.prevent="selectAccountItem(journal, row, col.key, a.id)"
+                                @mousedown.prevent="selectAccountItem(journal, row, col.key, a.accountId)"
                               >
                                 {{ a.name }}
                               </div>
@@ -1124,7 +1124,7 @@
                   <span
                     v-if="
                       isFillable(col.key) &&
-                      !isEditing(journal.id, rowIndex, col.key) &&
+                      !isEditing(journal.journalId, rowIndex, col.key) &&
                       !isCompoundJournal(journal)
                     "
                     class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10"
@@ -1163,13 +1163,13 @@
                       isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                     ]"
                     @dblclick.stop="
-                      startCellEdit(journal.id, rowIndex, col.key, getValue(journal, col.key))
+                      startCellEdit(journal.journalId, rowIndex, col.key, getValue(journal, col.key))
                     "
                     @mousedown="startCellDrag(col.key, getValue(journal, col.key), $event)"
                   >
                     <!-- 日付: 編集中はdate input -->
                     <template
-                      v-if="col.key === 'voucher_date' && isEditing(journal.id, rowIndex, col.key)"
+                      v-if="col.key === 'voucher_date' && isEditing(journal.journalId, rowIndex, col.key)"
                     >
                       <input
                         type="date"
@@ -1183,7 +1183,7 @@
                     <!-- 摘要: 編集中はtext input -->
                     <template
                       v-else-if="
-                        col.key === 'description' && isEditing(journal.id, rowIndex, col.key)
+                        col.key === 'description' && isEditing(journal.journalId, rowIndex, col.key)
                       "
                     >
                       <input
@@ -1206,7 +1206,7 @@
                     <span
                       v-if="
                         isFillable(col.key) &&
-                        !isEditing(journal.id, rowIndex, col.key) &&
+                        !isEditing(journal.journalId, rowIndex, col.key) &&
                         !isCompoundJournal(journal)
                       "
                       class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10"
@@ -1245,13 +1245,13 @@
                   ]"
                   @dblclick.stop="
                     hasEntry(row, col.key) &&
-                    startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))
+                    startCellEdit(journal.journalId, rowIndex, col.key, getValue(row, col.key))
                   "
                   @mousedown="
                     hasEntry(row, col.key) && startCellDrag(col.key, getValue(row, col.key), $event)
                   "
                 >
-                  <template v-if="isEditing(journal.id, rowIndex, col.key)">
+                  <template v-if="isEditing(journal.journalId, rowIndex, col.key)">
                     <!-- F4: 税区分は検索付きoptgroupコンボボックス（方向フィルタ） -->
                     <div v-if="col.key.endsWith('.tax_category_id')" class="relative">
                       <input
@@ -1276,9 +1276,9 @@
                             </div>
                             <div
                               v-for="tc in g.items"
-                              :key="tc.id"
+                              :key="tc.taxCategoryId"
                               class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-4"
-                              @mousedown.prevent="selectTaxItem(journal, tc.id)"
+                              @mousedown.prevent="selectTaxItem(journal, tc.taxCategoryId)"
                             >
                               {{ tc.name }}
                             </div>
@@ -1298,9 +1298,9 @@
                             </div>
                             <div
                               v-for="tc in g.items"
-                              :key="tc.id"
+                              :key="tc.taxCategoryId"
                               class="px-2 py-0.5 text-[9px] truncate hover:bg-blue-100 cursor-pointer text-gray-800 pl-4"
-                              @mousedown.prevent="selectTaxItem(journal, tc.id)"
+                              @mousedown.prevent="selectTaxItem(journal, tc.taxCategoryId)"
                             >
                               {{ tc.name }}
                             </div>
@@ -1340,7 +1340,7 @@
                   <span
                     v-if="
                       isFillable(col.key) &&
-                      !isEditing(journal.id, rowIndex, col.key) &&
+                      !isEditing(journal.journalId, rowIndex, col.key) &&
                       !isCompoundJournal(journal)
                     "
                     class="fill-handle absolute bottom-0 right-0 w-[3px] h-[3px] bg-blue-500 cursor-crosshair z-10"
@@ -1375,13 +1375,13 @@
                   ]"
                   @dblclick.stop="
                     hasEntry(row, col.key) &&
-                    startCellEdit(journal.id, rowIndex, col.key, getValue(row, col.key))
+                    startCellEdit(journal.journalId, rowIndex, col.key, getValue(row, col.key))
                   "
                   @mousedown="
                     hasEntry(row, col.key) && startCellDrag(col.key, getValue(row, col.key), $event)
                   "
                 >
-                  <template v-if="isEditing(journal.id, rowIndex, col.key)">
+                  <template v-if="isEditing(journal.journalId, rowIndex, col.key)">
                     <input
                       type="text"
                       inputmode="numeric"
@@ -1420,7 +1420,7 @@
 
                 <!-- ドロップダウンメニュー（w-44固定、拡張対応） -->
                 <div
-                  v-if="rowIndex === 0 && openDropdownId === journal.id"
+                  v-if="rowIndex === 0 && openDropdownId === journal.journalId"
                   class="absolute right-full top-0 z-50 w-44 bg-white border border-gray-300 rounded shadow-lg text-[10px] whitespace-nowrap"
                   @click.stop
                 >
@@ -2908,7 +2908,7 @@ function fixAllTaxMismatches() {
   for (const j of localJournals.value) {
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (e && isTaxCategoryInvalid(e.tax_category_id)) {
-        targetJournalIds.add(j.id);
+        targetJournalIds.add(j.journalId);
       }
     }
   }
@@ -2921,7 +2921,7 @@ function fixAllTaxMismatches() {
 
   // 修正を適用
   for (const j of localJournals.value) {
-    if (!targetJournalIds.has(j.id)) continue;
+    if (!targetJournalIds.has(j.journalId)) continue;
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (!e || !isTaxCategoryInvalid(e.tax_category_id)) continue;
       e.tax_category_id = resolveValidTaxCategoryForMode(e.tax_category_id ?? "", taxMode, clientSettings.taxCategories.value);
@@ -2979,7 +2979,7 @@ function getTaxGroupsForEntry(row: CombinedRow, colKey: string) {
   }
 
   const allAccounts = settings.accounts.value;
-  const acc = allAccounts.find((a) => a.id === accountName);
+  const acc = allAccounts.find((a) => a.accountId === accountName);
   if (!acc) {
     const visible = settings.visibleTaxCategories.value;
     return [
@@ -3179,23 +3179,23 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
 
   // #7 CATEGORY_CONFLICT
   if (result.categoryConflicts.debit.size > 0 || result.categoryConflicts.credit.size > 0) {
-    categoryConflictMap.set(journal.id, result.categoryConflicts);
+    categoryConflictMap.set(journal.journalId, result.categoryConflicts);
   } else {
-    categoryConflictMap.delete(journal.id);
+    categoryConflictMap.delete(journal.journalId);
   }
 
   // #8 VOUCHER_TYPE_CONFLICT
   if (result.voucherTypeConflicts.debit.size > 0 || result.voucherTypeConflicts.credit.size > 0) {
-    voucherTypeConflictMap.set(journal.id, result.voucherTypeConflicts);
+    voucherTypeConflictMap.set(journal.journalId, result.voucherTypeConflicts);
   } else {
-    voucherTypeConflictMap.delete(journal.id);
+    voucherTypeConflictMap.delete(journal.journalId);
   }
 
   // #7b SAME_ACCOUNT_BOTH_SIDES
   if (result.sameAccountBothSides.size > 0) {
-    sameAccountBothSidesMap.set(journal.id, result.sameAccountBothSides);
+    sameAccountBothSidesMap.set(journal.journalId, result.sameAccountBothSides);
   } else {
-    sameAccountBothSidesMap.delete(journal.id);
+    sameAccountBothSidesMap.delete(journal.journalId);
   }
 
   // ── UI固有: モーダル表示 ──
@@ -3257,7 +3257,7 @@ function getWarningCellClass(
     if (entry.account == null || entry.account === "") return W;
     // マスタに存在しない科目も赤背景
     const acctList = clientSettings.accounts.value;
-    const acctIdSet = new Set(acctList.map((a) => a.id));
+    const acctIdSet = new Set(acctList.map((a) => a.accountId));
     if (!acctIdSet.has(entry.account)) return W;
   }
 
@@ -3276,7 +3276,7 @@ function getWarningCellClass(
     const acctName = entry.account;
     if (!acctName) return "";
     const side = colKey.startsWith("debit") ? "debit" : "credit";
-    const conflict = categoryConflictMap.get(journal.id);
+    const conflict = categoryConflictMap.get(journal.journalId);
     if (
       conflict &&
       ((side === "debit" && conflict.debit.has(acctName)) ||
@@ -3294,7 +3294,7 @@ function getWarningCellClass(
   ) {
     const acctName = entry.account;
     if (acctName) {
-      const overlap = sameAccountBothSidesMap.get(journal.id);
+      const overlap = sameAccountBothSidesMap.get(journal.journalId);
       if (overlap && overlap.has(acctName)) return "!bg-yellow-300 text-black!";
     }
   }
@@ -3316,7 +3316,7 @@ function getWarningCellClass(
       const acctName = entry.account;
       if (!acctName) return W; // null科目は無条件で赤背景
       const side = colKey.startsWith("debit") ? "debit" : "credit";
-      const vtConflict = voucherTypeConflictMap.get(journal.id);
+      const vtConflict = voucherTypeConflictMap.get(journal.journalId);
       if (
         vtConflict &&
         ((side === "debit" && vtConflict.debit.has(acctName)) ||
@@ -3388,7 +3388,7 @@ function selectAccountItem(
   accountId: string,
 ): void {
   // Undo記録: 変更前スナップショット
-  const beforeSnap = snapshotJournal(journal.id);
+  const beforeSnap = snapshotJournal(journal.journalId);
   const side = colKey.startsWith("debit") ? "debit" : ("credit" as const);
   const entry = row[side];
   if (!entry) {
@@ -3400,13 +3400,13 @@ function selectAccountItem(
 
   if (accountId) {
     const allAccounts = clientSettings.accounts.value;
-    const acc = allAccounts.find((a) => a.id === accountId);
+    const acc = allAccounts.find((a) => a.accountId === accountId);
     if (acc?.defaultTaxCategoryId) {
       // デフォルト税区分IDを直接セット（免税時はCOMMON_EXEMPTに変換）
       entry.tax_category_id = resolveDefaultTaxForClient(acc.defaultTaxCategoryId);
     }
     if (acc) {
-      const sub = clientSettings.subAccounts.value[acc.id];
+      const sub = clientSettings.subAccounts.value[acc.accountId];
       entry.sub_account = sub || null;
     }
   } else {
@@ -3423,7 +3423,7 @@ function selectAccountItem(
   runAccountValidation(journal);
   // Undo記録: 変更後スナップショット
   if (beforeSnap) {
-    const afterSnap = snapshotJournal(journal.id);
+    const afterSnap = snapshotJournal(journal.journalId);
     if (afterSnap) pushUndo([beforeSnap], [afterSnap]);
   }
 }
@@ -3442,9 +3442,9 @@ function blurAccountEdit(journal: JournalPhase5Mock, row: CombinedRow, colKey: s
   if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
   const val = editingValue.value;
   // 入力値がID一致 or 名前一致する科目を検索
-  const matched = filteredAccounts.value.find((a) => a.id === val || a.name === val);
+  const matched = filteredAccounts.value.find((a) => a.accountId === val || a.name === val);
   if (matched) {
-    selectAccountItem(journal, row, colKey, matched.id);
+    selectAccountItem(journal, row, colKey, matched.accountId);
     return;
   }
   editingCell.value = null;
@@ -3457,10 +3457,10 @@ function blurTaxEdit(journal: JournalPhase5Mock): void {
   const settings = clientSettings;
   // 入力値がID一致 or 名前一致する税区分を検索
   const matched = settings.visibleTaxCategories.value.find(
-    (tc) => tc.id === val || tc.name === val,
+    (tc) => tc.taxCategoryId === val || tc.name === val,
   );
   if (matched) {
-    editingValue.value = matched.id; // IDで保存
+    editingValue.value = matched.taxCategoryId; // IDで保存
     commitCellEdit();
     journal.is_read = true;
     return;
@@ -3487,13 +3487,13 @@ const redoStack = ref<UndoEntry[]>([]);
 const UNDO_MAX = 50;
 
 function snapshotJournal(journalId: string): UndoSnapshot | null {
-  const j = localJournals.value.find((x) => x.id === journalId);
+  const j = localJournals.value.find((x) => x.journalId === journalId);
   if (!j) return null;
   return { journalId, json: JSON.stringify(j) };
 }
 
 function restoreSnapshot(snap: UndoSnapshot): void {
-  const idx = localJournals.value.findIndex((x) => x.id === snap.journalId);
+  const idx = localJournals.value.findIndex((x) => x.journalId === snap.journalId);
   if (idx < 0) return;
   localJournals.value[idx] = JSON.parse(snap.json) as JournalPhase5Mock;
 }
@@ -3542,7 +3542,7 @@ function startCellEdit(
   // 勘定科目列の場合: IDを日本語名に変換して検索欄に表示
   if (colKey.endsWith(".account") && val) {
     const allAccts = clientSettings.accounts.value;
-    const acc = allAccts.find((a) => a.id === val);
+    const acc = allAccts.find((a) => a.accountId === val);
     if (acc) val = acc.name;
   }
   editingValue.value = val;
@@ -3562,7 +3562,7 @@ function startCellEdit(
 function commitCellEdit(): void {
   const e = editingCell.value;
   if (!e) return;
-  const journal = paginatedJournals.value.find((j) => j.id === e.journalId);
+  const journal = paginatedJournals.value.find((j) => j.journalId === e.journalId);
   if (!journal) {
     editingCell.value = null;
     return;
@@ -3571,7 +3571,7 @@ function commitCellEdit(): void {
   const val = editingValue.value;
 
   // Undo記録: 変更前スナップショット
-  const beforeSnap = snapshotJournal(journal.id);
+  const beforeSnap = snapshotJournal(journal.journalId);
 
   // 適格列の特殊処理
   if (e.colKey === "invoice") {
@@ -3619,7 +3619,7 @@ function commitCellEdit(): void {
   syncWarningLabels(journal);
   // Undo記録: 変更後スナップショット
   if (beforeSnap) {
-    const afterSnap = snapshotJournal(journal.id);
+    const afterSnap = snapshotJournal(journal.journalId);
     if (afterSnap) pushUndo([beforeSnap], [afterSnap]);
   }
 }
@@ -3742,7 +3742,7 @@ function endFillDrag(): void {
   const beforeSnaps = targetJournalIndices
     .map((idx) => paginatedJournals.value[idx])
     .filter((x): x is JournalPhase5Mock => !!x)
-    .map((j) => snapshotJournal(j.id))
+    .map((j) => snapshotJournal(j.journalId))
     .filter(Boolean) as UndoSnapshot[];
   for (const idx of targetJournalIndices) {
     const journal = paginatedJournals.value[idx];
@@ -3792,14 +3792,14 @@ function applyFillValue(
         const accountId = value as string;
         if (accountId) {
           const allAccts = clientSettings.accounts.value;
-          const acc = allAccts.find((a) => a.id === accountId);
+          const acc = allAccts.find((a) => a.accountId === accountId);
           // デフォルト税区分の自動設定
           if (acc?.defaultTaxCategoryId) {
             entry.tax_category_id = resolveDefaultTaxForClient(acc.defaultTaxCategoryId);
           }
           // 補助科目連動
           if (acc) {
-            const sub = clientSettings.subAccounts.value[acc.id];
+            const sub = clientSettings.subAccounts.value[acc.accountId];
             entry.sub_account = sub || null;
           }
         } else {
@@ -3939,7 +3939,7 @@ function endCellDrag(): void {
     const journal = paginatedJournals.value[cellDrag.value.dropJournalIndex];
     if (journal && journal.status !== "exported" && journal.deleted_at === null) {
       // Undo記録: 変更前スナップショット
-      const beforeSnap = snapshotJournal(journal.id);
+      const beforeSnap = snapshotJournal(journal.journalId);
       applyFillValue(
         journal,
         cellDrag.value.dropColKey,
@@ -3949,7 +3949,7 @@ function endCellDrag(): void {
       syncWarningLabels(journal);
       // Undo記録: 変更後スナップショット
       if (beforeSnap) {
-        const afterSnap = snapshotJournal(journal.id);
+        const afterSnap = snapshotJournal(journal.journalId);
         if (afterSnap) pushUndo([beforeSnap], [afterSnap]);
       }
     }
@@ -4167,7 +4167,7 @@ const hintLoading = ref(false);
 
 const hintModalJournalIndex = computed(() => {
   if (!hintModalJournal.value) return -1;
-  return paginatedJournals.value.findIndex((j) => j.id === hintModalJournal.value!.id);
+  return paginatedJournals.value.findIndex((j) => j.journalId === hintModalJournal.value!.journalId);
 });
 
 /** ヒントAPIを呼び出してvalidations/suggestionsを更新 */
@@ -4200,7 +4200,7 @@ async function openHintModal(journal: JournalPhase5Mock): Promise<void> {
     top: Math.max(50, (window.innerHeight - 500) / 2),
     left: Math.max(50, (window.innerWidth - 520) / 2),
   };
-  await fetchHintsFromAPI(journal.id);
+  await fetchHintsFromAPI(journal.journalId);
 }
 
 // generateHintValidations / generateHintSuggestions は
@@ -4223,7 +4223,7 @@ function applyHintSuggestion(s: HintSuggestion): void {
   const journal = hintModalJournal.value;
   if (!journal) return;
 
-  const beforeSnap = snapshotJournal(journal.id);
+  const beforeSnap = snapshotJournal(journal.journalId);
 
   const entries = s.side === "debit" ? journal.debit_entries : journal.credit_entries;
 
@@ -4233,7 +4233,7 @@ function applyHintSuggestion(s: HintSuggestion): void {
     entry.account = s.selectedValue;
     // 科目に連動して税区分・補助科目を自動補完
     const allAccts = clientSettings.accounts.value;
-    const acctObj = allAccts.find((a) => a.id === s.selectedValue);
+    const acctObj = allAccts.find((a) => a.accountId === s.selectedValue);
     if (acctObj) {
       if (acctObj.defaultTaxCategoryId) entry.tax_category_id = acctObj.defaultTaxCategoryId;
       // 補助科目: selectAccountItemと同じくclientSettings.subAccountsから取得
@@ -4256,14 +4256,14 @@ function applyHintSuggestion(s: HintSuggestion): void {
   journal.is_read = true;
   syncWarningLabels(journal);
 
-  const afterSnap = snapshotJournal(journal.id);
+  const afterSnap = snapshotJournal(journal.journalId);
   if (beforeSnap && afterSnap) {
     undoStack.value.push({ before: [beforeSnap], after: [afterSnap] });
     redoStack.value = [];
   }
 
   // ヒントをAPI経由で再計算（Phase 1 Step 6-A3）
-  fetchHintsFromAPI(journal.id);
+  fetchHintsFromAPI(journal.journalId);
 
   console.log(
     `[Hint] 修正適用: ${s.side} [${s.entryIndex}] ${s.field}: ${s.currentLabel} → ${s.selectedLabel}`,
@@ -4277,7 +4277,7 @@ function closeDropdown() {
 // ────── ワークフローハブ操作（レベル②ローカル状態変更） ──────
 
 function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
-  const target = localJournals.value.find((j) => j.id === journal.id);
+  const target = localJournals.value.find((j) => j.journalId === journal.journalId);
   if (!target || target.is_read === value) return; // 同じ状態なら何もしない
   closeDropdown();
   confirmDialog.value = {
@@ -4290,7 +4290,7 @@ function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
         target.read_by = currentStaffId.value ?? null;
         target.read_at = new Date().toISOString();
       }
-      console.log(`[DD] 既読変更: ${journal.id} → is_read=${value} by ${currentStaffId.value}`);
+      console.log(`[DD] 既読変更: ${journal.journalId} → is_read=${value} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
         title: UI_MSG.完了,
@@ -4302,7 +4302,7 @@ function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
 }
 
 function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
-  const target = localJournals.value.find((j) => j.id === journal.id);
+  const target = localJournals.value.find((j) => j.journalId === journal.journalId);
   if (!target) return;
   const hasLabel = target.labels.includes("EXPORT_EXCLUDE");
   if (exclude === hasLabel) return; // 同じ状態なら何もしない
@@ -4314,11 +4314,11 @@ function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
     onConfirm: () => {
       if (exclude) {
         target.labels.push("EXPORT_EXCLUDE");
-        console.log(`[DD] 出力対象外に変更: ${journal.id}`);
+        console.log(`[DD] 出力対象外に変更: ${journal.journalId}`);
       } else {
         const idx = target.labels.indexOf("EXPORT_EXCLUDE");
         if (idx >= 0) target.labels.splice(idx, 1);
-        console.log(`[DD] 出力対象に変更: ${journal.id}`);
+        console.log(`[DD] 出力対象に変更: ${journal.journalId}`);
       }
       confirmDialog.value = {
         show: true,
@@ -4338,7 +4338,7 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
     message: `「${journal.description}」${UI_MSG.を未出力にコピーしますか}`,
     onConfirm: () => {
       const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(journal));
-      clone.id = `copy-${crypto.randomUUID().slice(0, 12)}`;
+      clone.journalId = `copy-${crypto.randomUUID().slice(0, 12)}`;
       clone.display_order = journal.display_order + 0.5;
       clone.description = `${UI_MSG.コピー接頭_星}${journal.description}`;
       clone.is_read = false;
@@ -4349,11 +4349,11 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
       clone.memo_target = null;
       clone.memo_created_at = null;
       clone.deleted_at = null;
-      const originalIndex = localJournals.value.findIndex((j) => j.id === journal.id);
+      const originalIndex = localJournals.value.findIndex((j) => j.journalId === journal.journalId);
       if (originalIndex >= 0) {
         localJournals.value.splice(originalIndex + 1, 0, clone);
       }
-      console.log(`[DD] コピー作成: ${clone.id} (元: ${journal.id})`);
+      console.log(`[DD] コピー作成: ${clone.journalId} (元: ${journal.journalId})`);
       confirmDialog.value = {
         show: true,
         title: UI_MSG.コピー完了,
@@ -4367,7 +4367,7 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
 function trashJournal(journal: JournalPhase5Mock) {
   // 制約: 出力済みはゴミ箱不可
   if (journal.status === "exported") {
-    console.warn(`[DD] exported journal cannot be trashed: ${journal.id}`);
+    console.warn(`[DD] exported journal cannot be trashed: ${journal.journalId}`);
     return;
   }
   closeDropdown();
@@ -4376,11 +4376,11 @@ function trashJournal(journal: JournalPhase5Mock) {
     title: UI_MSG.ゴミ箱に移動,
     message: `「${journal.description}」${UI_MSG.をゴミ箱に移動しますか}`,
     onConfirm: () => {
-      const target = localJournals.value.find((j) => j.id === journal.id);
+      const target = localJournals.value.find((j) => j.journalId === journal.journalId);
       if (!target) return;
       target.deleted_at = new Date().toISOString();
       target.deleted_by = currentStaffId.value ?? null;
-      console.log(`[DD] ゴミ箱: ${journal.id} by ${currentStaffId.value}`);
+      console.log(`[DD] ゴミ箱: ${journal.journalId} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
         title: UI_MSG.完了,
@@ -4392,7 +4392,7 @@ function trashJournal(journal: JournalPhase5Mock) {
 }
 
 function restoreJournal(journal: JournalPhase5Mock) {
-  const target = localJournals.value.find((j) => j.id === journal.id);
+  const target = localJournals.value.find((j) => j.journalId === journal.journalId);
   if (!target || target.deleted_at === null) return;
   closeDropdown();
   confirmDialog.value = {
@@ -4402,7 +4402,7 @@ function restoreJournal(journal: JournalPhase5Mock) {
     onConfirm: () => {
       target.deleted_at = null;
       target.deleted_by = null;
-      console.log(`[DD] 復活: ${journal.id} by ${currentStaffId.value}`);
+      console.log(`[DD] 復活: ${journal.journalId} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
         title: UI_MSG.復活完了,
@@ -4575,7 +4575,7 @@ function showBulkCopyDialog() {
     onConfirm: () => {
       targets.forEach((j) => {
         const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(j));
-        clone.id = `copy-${crypto.randomUUID().slice(0, 12)}`;
+        clone.journalId = `copy-${crypto.randomUUID().slice(0, 12)}`;
         clone.display_order = j.display_order + 0.5;
         clone.description = `${UI_MSG.コピー接頭_星}${j.description}`;
         clone.is_read = false;
@@ -4586,7 +4586,7 @@ function showBulkCopyDialog() {
         clone.memo_target = null;
         clone.memo_created_at = null;
         clone.deleted_at = null;
-        const originalIndex = localJournals.value.findIndex((lj) => lj.id === j.id);
+        const originalIndex = localJournals.value.findIndex((lj) => lj.journalId === j.journalId);
         if (originalIndex >= 0) {
           localJournals.value.splice(originalIndex + 1, 0, clone);
         }
@@ -4799,7 +4799,7 @@ async function fetchSupportingMatches() {
 
 /** 仕訳に紐づく根拠資料があるか */
 function hasSupportingMatch(journal: JournalPhase5Mock): boolean {
-  return supportingMatchMap.value.has(journal.id);
+  return supportingMatchMap.value.has(journal.journalId);
 }
 
 // マウント時に証票マッチング取得
@@ -5037,7 +5037,7 @@ const filteredPastJournals = computed(() => {
     }
     // JournalPhase5Mock互換オブジェクトに変換して返す
     return cjResults.map((cj) => ({
-      id: cj.id,
+      id: cj.journalId,
       voucher_date: cj.voucher_date,
       description: cj.description,
       debit_entries: cj.debit_entries.map((e) => ({
@@ -5288,10 +5288,10 @@ fetchJournalList();
 /** ページネーション適用済み仕訳リスト（APIがページング済みなのでjournalsそのまま） */
 const paginatedJournals = computed(() => journals.value);
 
-const visibleIds = computed(() => journals.value.map((j) => j.id));
+const visibleIds = computed(() => journals.value.map((j) => j.journalId));
 
 const selectedJournals = computed(() =>
-  localJournals.value.filter((j) => selectedIds.value.has(j.id)),
+  localJournals.value.filter((j) => selectedIds.value.has(j.journalId)),
 );
 
 const isSelectionMode = computed(() => selectedIds.value.size > 0);
@@ -5342,7 +5342,7 @@ function resetToDefaultOrder() {
     const va = a.voucher_date ?? "\uffff";
     const vb = b.voucher_date ?? "\uffff";
     if (va !== vb) return va < vb ? -1 : 1;
-    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    return a.journalId < b.journalId ? -1 : a.journalId > b.journalId ? 1 : 0;
   });
 }
 
@@ -5421,7 +5421,7 @@ function getRowBackground(journal: JournalPhase5Mock): string {
 }
 
 function hasPastJournal(journal: JournalPhase5Mock): boolean {
-  return localJournals.value.findIndex((j) => j.id === journal.id) < 25;
+  return localJournals.value.findIndex((j) => j.journalId === journal.journalId) < 25;
 }
 
 /**
@@ -5465,7 +5465,7 @@ function resolveTaxCategoryName(id: string | null | undefined): string {
 function resolveAccountName(id: string | null | undefined): string {
   if (!id) return "";
   const allAccts = clientSettings.accounts.value;
-  const account = allAccts.find((a) => a.id === id);
+  const account = allAccts.find((a) => a.accountId === id);
   return account ? account.name : id;
 }
 
@@ -5547,7 +5547,7 @@ function hoverOpenCommentModal(journal: JournalPhase5Mock) {
     clearTimeout(commentHoverCloseTimer);
     commentHoverCloseTimer = null;
   }
-  openCommentModal(journal.id);
+  openCommentModal(journal.journalId);
 }
 
 function pinCommentModal() {
@@ -5605,7 +5605,7 @@ function syncLabelsFromStaffNotes(journal: JournalPhase5Mock) {
 }
 
 function toggleStaffNote(journalId: string, key: StaffNoteKey) {
-  const journal = localJournals.value.find((j) => j.id === journalId);
+  const journal = localJournals.value.find((j) => j.journalId === journalId);
   if (!journal) return;
 
   // staff_notesがなければ初期化
@@ -5637,11 +5637,11 @@ watch(userName, (v) => {
 
 const commentModalJournal = computed(() => {
   if (!commentModalJournalId.value) return null;
-  return localJournals.value.find((j) => j.id === commentModalJournalId.value) ?? null;
+  return localJournals.value.find((j) => j.journalId === commentModalJournalId.value) ?? null;
 });
 
 function openCommentModal(journalId: string) {
-  const journal = localJournals.value.find((j) => j.id === journalId);
+  const journal = localJournals.value.find((j) => j.journalId === journalId);
   if (!journal) return;
 
   // staff_notesがなければ初期化

@@ -10,7 +10,7 @@
 
 import { readFileSync } from 'fs'
 
-const CLIENT_ID = process.argv[2]
+const CLIENT_ID: string = process.argv[2] ?? ''
 if (!CLIENT_ID) {
   console.error('使い方: npx tsx src/scripts/test_validation.ts <clientId>')
   process.exit(1)
@@ -35,14 +35,14 @@ interface MfTax {
 }
 
 interface SugAccount {
-  id: string
+  accountId: string
   name: string
   accountGroup?: string
   category?: string
 }
 
 interface SugTax {
-  id: string
+  taxCategoryId: string
   name: string
 }
 
@@ -111,7 +111,7 @@ async function main() {
 
   if (accOnlySug.length > 0) {
     console.log('  【⚠️ Sugusruにあり、MFにない科目（仕訳で使うと送信時エラー）】')
-    accOnlySug.forEach(a => console.log('    ✗ ' + a.name + ' (' + a.id + ')'))
+    accOnlySug.forEach(a => console.log('    ✗ ' + a.name + ' (' + a.accountId + ')'))
     console.log()
   }
 

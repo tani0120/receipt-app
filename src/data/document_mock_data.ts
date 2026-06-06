@@ -9,7 +9,7 @@ import type { DocumentMock } from '../types/document_mock.type'
 
 export const MOCK_DOCUMENTS: DocumentMock[] = [
   {
-    id: 'receipt-001',
+    documentId: 'receipt-001',
     client_id: 'client-001',
     image_url: '/images/cafe-veloce-receipt.jpg',
     uploaded_at: '2025-01-20T13:12:00Z',
@@ -20,6 +20,6 @@ export const MOCK_DOCUMENTS: DocumentMock[] = [
 // ヘルパー関数: document_idから画像URLを取得
 export function getDocumentImageUrl(documentId: string | null): string | null {
   if (!documentId) return null
-  const document = MOCK_DOCUMENTS.find(r => r.id === documentId)
+  const document = MOCK_DOCUMENTS.find(r => r.documentId === documentId)
   return document?.image_url || null
 }

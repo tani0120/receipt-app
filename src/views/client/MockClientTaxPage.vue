@@ -193,11 +193,11 @@
             <tbody>
               <tr
                 v-for="row in pagedTaxRows"
-                :key="row.id"
+                :key="row.taxCategoryId"
                 :class="{ 'row-deprecated': row.deprecated, 'row-custom': row.isCustom }"
               >
                 <td class="as-td-check">
-                  <input type="checkbox" v-model="checkedIds" :value="row.id" />
+                  <input type="checkbox" v-model="checkedIds" :value="row.taxCategoryId" />
                 </td>
                 <td class="as-td-actions">
                   <i
@@ -218,11 +218,11 @@
                     ><MfCloudIcon :size="12" tooltip="MFクラウド" /> MF</span
                   >
                   <span
-                    v-else-if="row.isCustom && !isMasterCustomTax(row.id)"
+                    v-else-if="row.isCustom && !isMasterCustomTax(row.taxCategoryId)"
                     style="color: #e65100"
                     >顧問先独自</span
                   >
-                  <span v-else-if="isMasterCustomTax(row.id)" style="color: #1976d2"
+                  <span v-else-if="isMasterCustomTax(row.taxCategoryId)" style="color: #1976d2"
                     ><i
                       class="fa-solid fa-circle-check"
                       style="font-size: 12px; color: #4caf50"
@@ -239,7 +239,7 @@
                 </td>
                 <!-- 適格判定対象 -->
                 <td style="text-align: center" @dblclick="startEdit(row, 'qualified')">
-                  <template v-if="isEditing(row.id, 'qualified')">
+                  <template v-if="isEditing(row.taxCategoryId, 'qualified')">
                     <select
                       v-model="editValue"
                       @change="commitEdit(row, 'qualified')"
@@ -259,7 +259,7 @@
                   :class="'dir-' + row.direction"
                   @dblclick="startEdit(row, 'direction')"
                 >
-                  <template v-if="isEditing(row.id, 'direction')">
+                  <template v-if="isEditing(row.taxCategoryId, 'direction')">
                     <select
                       v-model="editValue"
                       @change="commitEdit(row, 'direction')"
@@ -277,7 +277,7 @@
                 <!-- 税区分 -->
                 <td @dblclick="startEdit(row, 'name')">
                   <i v-if="!row.isCustom" class="fa-solid fa-circle-check td-mf-ok"></i>
-                  <template v-if="isEditing(row.id, 'name')">
+                  <template v-if="isEditing(row.taxCategoryId, 'name')">
                     <input
                       v-model="editValue"
                       @keydown.enter="commitEdit(row, 'name')"
@@ -290,7 +290,7 @@
                 </td>
                 <!-- 税率 -->
                 <td style="text-align: center" @dblclick="startEdit(row, 'rate')">
-                  <template v-if="isEditing(row.id, 'rate')">
+                  <template v-if="isEditing(row.taxCategoryId, 'rate')">
                     <input
                       v-model="editValue"
                       @input="onRateInput"
@@ -452,7 +452,7 @@ async function importFromMf() {
 
     // テーブルを置換
     allTaxRows.splice(0, allTaxRows.length, ...imported);
-    mfImportedIds.value = imported.map((t) => t.id);
+    mfImportedIds.value = imported.map((t) => t.taxCategoryId);
 
     // composable側にも同期
     settings.saveTaxCategories(imported);
@@ -493,7 +493,7 @@ const settings = useAccountSettings("client", props.clientId);
 
 /** マスタレベルで追加されたカスタム税区分か */
 function isMasterCustomTax(taxId: string): boolean {
-  const entry = settings.taxCategories.value.find((t) => t.id === taxId);
+  const entry = settings.taxCategories.value.find((t) => t.taxCategoryId === taxId);
   return entry ? entry.source === "master-custom" : false;
 }
 
@@ -545,8 +545,8 @@ const filteredTaxRows = computed(() => {
 
     // --- MFのavailableベースのフィルタ（データ駆動） ---
     const availableData = mfTaxAvailable.value[method] ?? null;
-    if (availableData && row.id) {
-      return availableData[row.id] === true;
+    if (availableData && row.taxCategoryId) {
+      return availableData[row.taxCategoryId] === true;
     }
 
     // availableデータ未取得 → デフォルト表示（active行のみ）
@@ -574,7 +574,7 @@ watch(filteredTaxRows, () => {
 const checkedIds = ref<string[]>([]);
 function toggleAllChecked(e: Event) {
   const checked = (e.target as HTMLInputElement).checked;
-  checkedIds.value = checked ? pagedTaxRows.value.map((r) => r.id) : [];
+  checkedIds.value = checked ? pagedTaxRows.value.map((r) => r.taxCategoryId) : [];
 }
 
 // =============== 非表示化・表示化 ===============
@@ -590,7 +590,7 @@ function showRow(row: TaxCategory) {
 function hideChecked() {
   const today = new Date().toISOString().slice(0, 10);
   checkedIds.value.forEach((id) => {
-    const row = allTaxRows.find((r) => r.id === id);
+    const row = allTaxRows.find((r) => r.taxCategoryId === id);
     if (row) {
       row.deprecated = true;
       row.effectiveTo = today;
@@ -601,7 +601,7 @@ function hideChecked() {
 }
 function showChecked() {
   checkedIds.value.forEach((id) => {
-    const row = allTaxRows.find((r) => r.id === id);
+    const row = allTaxRows.find((r) => r.taxCategoryId === id);
     if (row) {
       row.deprecated = false;
       row.effectiveTo = null;
@@ -613,7 +613,7 @@ function showChecked() {
 
 async function deleteChecked() {
   const customIds = checkedIds.value.filter((id) => {
-    const row = allTaxRows.find((r) => r.id === id);
+    const row = allTaxRows.find((r) => r.taxCategoryId === id);
     return row?.isCustom;
   });
   if (!customIds.length) {
@@ -627,7 +627,7 @@ async function deleteChecked() {
   });
   if (!ok) return;
   customIds.forEach((id) => {
-    const idx = allTaxRows.findIndex((r) => r.id === id);
+    const idx = allTaxRows.findIndex((r) => r.taxCategoryId === id);
     if (idx !== -1) allTaxRows.splice(idx, 1);
   });
   checkedIds.value = [];
@@ -644,13 +644,13 @@ async function copyChecked() {
   if (!ok) return;
   const ids = [...checkedIds.value];
   ids.reverse().forEach((id) => {
-    const srcIdx = allTaxRows.findIndex((r) => r.id === id);
+    const srcIdx = allTaxRows.findIndex((r) => r.taxCategoryId === id);
     if (srcIdx === -1) return;
     const src = allTaxRows[srcIdx];
     if (!src) return;
     copyCounter++;
     const copy: TaxCategory = {
-      id: `${src.id}_COPY_${copyCounter}`,
+      taxCategoryId: `${src.taxCategoryId}_COPY_${copyCounter}`,
       name: `${src.name}${UI_MSG.コピー接尾}`,
       shortName: `${src.shortName}${UI_MSG.コピー接尾}`,
       direction: src.direction,
@@ -663,7 +663,7 @@ async function copyChecked() {
       defaultVisible: true,
       displayOrder: src.displayOrder + 0.5,
       isCustom: true,
-      insertAfter: src.id,
+      insertAfter: src.taxCategoryId,
     };
     allTaxRows.splice(srcIdx + 1, 0, copy);
   });
@@ -675,10 +675,10 @@ async function addAfterChecked() {
   if (!ok) return;
   const ids = [...checkedIds.value];
   const lastId = ids[ids.length - 1];
-  const insertIdx = lastId ? allTaxRows.findIndex((r) => r.id === lastId) + 1 : allTaxRows.length;
+  const insertIdx = lastId ? allTaxRows.findIndex((r) => r.taxCategoryId === lastId) + 1 : allTaxRows.length;
   copyCounter++;
   const newRow: TaxCategory = {
-    id: `NEW_TAX_${copyCounter}`,
+    taxCategoryId: `NEW_TAX_${copyCounter}`,
     name: UI_MSG.新規税区分名,
     shortName: UI_MSG.新規税区分略称,
     direction: "common",
@@ -691,7 +691,7 @@ async function addAfterChecked() {
     defaultVisible: true,
     displayOrder: insertIdx,
     isCustom: true,
-    insertAfter: lastId ?? allTaxRows[allTaxRows.length - 1]?.id,
+    insertAfter: lastId ?? allTaxRows[allTaxRows.length - 1]?.taxCategoryId,
   };
   allTaxRows.splice(insertIdx, 0, newRow);
   checkedIds.value = [];
@@ -717,7 +717,7 @@ function startEdit(row: TaxCategory, field: EditableField) {
     });
     return;
   }
-  editingRowId.value = row.id;
+  editingRowId.value = row.taxCategoryId;
   editingFieldName.value = field;
   switch (field) {
     case "direction":

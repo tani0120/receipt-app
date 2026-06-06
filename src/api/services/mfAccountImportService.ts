@@ -91,7 +91,7 @@ export async function importMasterAccounts(
   const taxCategories = getAllTaxCategories()
   const taxNameToMasterId = new Map<string, string>()
   for (const t of taxCategories) {
-    taxNameToMasterId.set(t.name, t.id)
+    taxNameToMasterId.set(t.name, t.taxCategoryId)
   }
 
   // MFから税区分リストを取得してtax_id→名前マップを構築
@@ -146,7 +146,7 @@ export async function importMasterAccounts(
       // 新規追加（MFにあってマスタにない）
       maxSort++
       const newAccount: Account = {
-        id: `MF_${mf.name.replace(/[^a-zA-Z0-9\u3000-\u9FFF]/g, '_')}`,
+        accountId: `MF_${mf.name.replace(/[^a-zA-Z0-9\u3000-\u9FFF]/g, '_')}`,
         name: mf.name,
         target: deriveTarget(mf.category, mf.financial_statement_type),
         accountGroup: mfAccountGroup,

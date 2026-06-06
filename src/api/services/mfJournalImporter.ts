@@ -135,7 +135,7 @@ function convertSide(
     : side.value + (side.tax_value ?? 0)
 
   return {
-    id: crypto.randomUUID(),
+    entryId: crypto.randomUUID(),
     account,
     sub_account: side.sub_account_name ?? null,
     department: side.department_name ?? null,
@@ -258,7 +258,7 @@ export async function prepareMfImport(
     const matchKey = normalizeVendorName(description) ?? ''
 
     converted.push({
-      id: crypto.randomUUID(),
+      journalId: crypto.randomUUID(),
       client_id: clientId,
       voucher_date: mfJournal.transaction_date,
       description,

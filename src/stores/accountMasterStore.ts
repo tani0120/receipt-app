@@ -68,12 +68,12 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   )
 
   const overrides = computed(() => ({
-    hiddenIds: allAccounts.value.filter(a => a.deprecated).map(a => a.id),
+    hiddenIds: allAccounts.value.filter(a => a.deprecated).map(a => a.accountId),
     customAccounts: allAccounts.value.filter(a => (a as MasterAccount).isCustom),
   }))
 
   function toggleVisibility(accountId: string): void {
-    const idx = allAccounts.value.findIndex(a => a.id === accountId)
+    const idx = allAccounts.value.findIndex(a => a.accountId === accountId)
     if (idx >= 0) {
       const current = allAccounts.value[idx]!
       allAccounts.value[idx] = { ...current, deprecated: !current.deprecated }
@@ -87,7 +87,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   }
 
   function removeCustomAccount(accountId: string): boolean {
-    const idx = allAccounts.value.findIndex(a => a.id === accountId && (a as MasterAccount).isCustom)
+    const idx = allAccounts.value.findIndex(a => a.accountId === accountId && (a as MasterAccount).isCustom)
     if (idx < 0) return false
     allAccounts.value.splice(idx, 1)
     debounceSave()
@@ -102,7 +102,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   }
 
   function isHidden(accountId: string): boolean {
-    return allAccounts.value.find(a => a.id === accountId)?.deprecated === true
+    return allAccounts.value.find(a => a.accountId === accountId)?.deprecated === true
   }
 
   load()

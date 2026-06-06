@@ -108,7 +108,7 @@
                 <td class="vm-td">
                   <select v-model="row.debit_account" class="vm-edit-select">
                     <option :value="null">{{ PLACEHOLDER_DASH }}</option>
-                    <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
+                    <option v-for="acc in accountOptions" :key="acc.accountId" :value="acc.accountId">{{ acc.name }}</option>
                   </select>
                 </td>
 
@@ -116,7 +116,7 @@
                 <td class="vm-td">
                   <select v-model="row.debit_account_over" class="vm-edit-select">
                     <option :value="null">{{ PLACEHOLDER_DASH }}</option>
-                    <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
+                    <option v-for="acc in accountOptions" :key="acc.accountId" :value="acc.accountId">{{ acc.name }}</option>
                   </select>
                 </td>
 
@@ -124,7 +124,7 @@
                 <td class="vm-td">
                   <select v-model="row.credit_account" class="vm-edit-select">
                     <option :value="null">{{ PLACEHOLDER_DASH }}</option>
-                    <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
+                    <option v-for="acc in accountOptions" :key="acc.accountId" :value="acc.accountId">{{ acc.name }}</option>
                   </select>
                 </td>
 
@@ -234,7 +234,7 @@ function vectorLabel(v: VendorVector): string {
 /** 科目ドロップダウン選択肢（API取得のマスタ科目準拠） */
 const { masterAccounts: masterAccountList } = useAccountMaster();
 const accountOptions = computed(() =>
-  masterAccountList.value.map(a => ({ id: a.id, name: a.name }))
+  masterAccountList.value.map(a => ({ accountId: a.accountId, name: a.name }))
 );
 
 /** 業種ドロップダウン選択肢（VENDOR_VECTORS準拠） */

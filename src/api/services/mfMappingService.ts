@@ -90,14 +90,14 @@ export interface MfMappingTables {
 import { readFile } from 'fs/promises'
 
 interface SugusruAccount {
-  id: string
+  accountId: string
   name: string
   accountGroup?: string
   category?: string
 }
 
 interface SugusruTax {
-  id: string
+  taxCategoryId: string
   name: string
   direction?: 'sales' | 'purchase' | 'common'
   simplifiedOnly?: boolean
@@ -156,14 +156,14 @@ export async function buildAccountMap(tokenKey: string): Promise<{
   for (const sug of sugusruAccounts) {
     const mf = mfByName.get(sug.name)
     const mapping: AccountMapping = {
-      sugusruId: sug.id,
+      sugusruId: sug.accountId,
       sugusruName: sug.name,
       mfId: mf?.id ?? null,
       mfName: mf?.name ?? null,
     }
     details.push(mapping)
     if (mf) {
-      map.set(sug.id, mf.id)
+      map.set(sug.accountId, mf.id)
     }
   }
 
@@ -193,14 +193,14 @@ export async function buildTaxMap(tokenKey: string): Promise<{
   for (const sug of sugusruTaxes) {
     const mf = mfByName.get(sug.name)
     const mapping: TaxMapping = {
-      sugusruId: sug.id,
+      sugusruId: sug.taxCategoryId,
       sugusruName: sug.name,
       mfId: mf?.id ?? null,
       mfName: mf?.name ?? null,
     }
     details.push(mapping)
     if (mf) {
-      map.set(sug.id, mf.id)
+      map.set(sug.taxCategoryId, mf.id)
     }
   }
 
@@ -298,7 +298,7 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
   const sugusruAccounts = await loadSugusruAccounts()
   const accountDirectionMap = new Map<string, 'sales' | 'purchase' | 'common'>()
   for (const acct of sugusruAccounts) {
-    accountDirectionMap.set(acct.id, getAccountGroupDirection(acct.accountGroup ?? ''))
+    accountDirectionMap.set(acct.accountId, getAccountGroupDirection(acct.accountGroup ?? ''))
   }
 
   // 税区分方向マップ生成（Sugusruマスタのdirectionから）
@@ -307,9 +307,9 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
   const taxSimplifiedOnlySet = new Set<string>()
   const taxIndividualOnlySet = new Set<string>()
   for (const tax of sugusruTaxes) {
-    taxDirectionMap.set(tax.id, tax.direction ?? 'common')
-    if (tax.simplifiedOnly) taxSimplifiedOnlySet.add(tax.id)
-    if (tax.individualOnly) taxIndividualOnlySet.add(tax.id)
+    taxDirectionMap.set(tax.taxCategoryId, tax.direction ?? 'common')
+    if (tax.simplifiedOnly) taxSimplifiedOnlySet.add(tax.taxCategoryId)
+    if (tax.individualOnly) taxIndividualOnlySet.add(tax.taxCategoryId)
   }
 
   // 逆マップ生成（MF名前 → Sugusru概念ID。MF→Sugusru取込で科目・税区分を概念IDに変換するため）

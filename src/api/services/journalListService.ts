@@ -25,7 +25,7 @@ import crypto from 'crypto'
 
 /** 仕訳エントリ行（ソート・検索用） */
 interface JournalEntry {
-  id?: string
+  entryId?: string
   account: string | null
   account_on_document?: boolean
   sub_account: string | null
@@ -38,7 +38,7 @@ interface JournalEntry {
 
 /** 統合仕訳行（通常 + 過去仕訳CSV） */
 interface JournalRow {
-  id: string
+  journalId: string
   client_id: string
   display_order: number
   voucher_date: string | null
@@ -95,7 +95,7 @@ export interface JournalListResponse {
 
 function confirmedToJournalRow(cj: ConfirmedJournal, idx: number, clientId: string): JournalRow {
   return {
-    id: `past-csv-${idx}`,
+    journalId: `past-csv-${idx}`,
     client_id: clientId,
     display_order: 90000 + idx,
     voucher_date: cj.voucher_date || null,
@@ -103,7 +103,7 @@ function confirmedToJournalRow(cj: ConfirmedJournal, idx: number, clientId: stri
     voucher_type: null,
     document_id: null,
     debit_entries: (cj.debit_entries || []).map(e => ({
-      id: e.id || `past-de-${idx}-${crypto.randomBytes(4).toString('hex')}`,
+      entryId: e.entryId || `past-de-${idx}-${crypto.randomBytes(4).toString('hex')}`,
       account: e.account || null,
       account_on_document: false,
       sub_account: e.sub_account || null,
@@ -114,7 +114,7 @@ function confirmedToJournalRow(cj: ConfirmedJournal, idx: number, clientId: stri
       vendor_name: e.vendor_name || null,
     })),
     credit_entries: (cj.credit_entries || []).map(e => ({
-      id: e.id || `past-ce-${idx}-${crypto.randomBytes(4).toString('hex')}`,
+      entryId: e.entryId || `past-ce-${idx}-${crypto.randomBytes(4).toString('hex')}`,
       account: e.account || null,
       account_on_document: false,
       sub_account: e.sub_account || null,
@@ -241,8 +241,8 @@ function sortJournals(
         break
       }
       case 'past_journal':
-        aVal = allJournalIds.indexOf(a.id) < 25 ? 1 : 0
-        bVal = allJournalIds.indexOf(b.id) < 25 ? 1 : 0
+        aVal = allJournalIds.indexOf(a.journalId) < 25 ? 1 : 0
+        bVal = allJournalIds.indexOf(b.journalId) < 25 ? 1 : 0
         break
       case 'requires_action': {
         const getNeedWeight = (j: JournalRow): number => {
@@ -421,7 +421,7 @@ function filterJournals(
 ): JournalRow[] {
   return result.filter(journal => {
     // 過去仕訳CSV行はステータスフィルタの対象外（showPastCsvの判断は結合段階で完了）
-    if (journal.id.startsWith('past-csv-')) return true
+    if (journal.journalId.startsWith('past-csv-')) return true
 
     // ゴミ箱フィルタ（AND条件: OFFならtrashed非表示）
     if (journal.deleted_at !== null && !opts.showTrashed) return false
@@ -457,7 +457,7 @@ export function getJournalList(clientId: string, query: JournalListQuery): Journ
   })
 
   // 元の仕訳IDリスト（past_journalソート用）
-  const allJournalIds = rawJournals.map(j => j.id)
+  const allJournalIds = rawJournals.map(j => j.journalId)
 
   // 2. 過去仕訳CSVの結合（ソート前）
   if (query.showPastCsv) {

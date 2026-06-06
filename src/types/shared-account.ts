@@ -19,7 +19,7 @@ export type AccountGroup = 'BS_ASSET' | 'BS_LIABILITY' | 'BS_EQUITY' | 'PL_REVEN
 /** 勘定科目 */
 export type Account = {
     /** 内部ID（不変） */
-    id: string
+    accountId: string
     /** MF正式科目名。CSV出力時にそのまま使用 */
     name: string
     /** 補助科目 */
@@ -30,7 +30,7 @@ export type Account = {
     accountGroup: AccountGroup
     /** 科目分類（中分類。例: '現金及び預金', '経費'） */
     category: string
-    /** デフォルト税区分ID（TaxCategory.id への参照） */
+    /** デフォルト税区分ID（TaxCategory.taxCategoryId への参照） */
     defaultTaxCategoryId?: string
     /** 税区分判定モード: auto_purchase=自動判定（仕入）, auto_sales=自動判定（売上）, fixed=固定 */
     taxDetermination: TaxDetermination

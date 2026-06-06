@@ -216,7 +216,7 @@ function buildJournal(
     const debit_account = col(row, header_map, '借方勘定科目')
     if (debit_account) {
       debit_entries.push({
-        id: generateId('cje_'),
+        entryId: generateId('cje_'),
         account: debit_account,
         sub_account: col(row, header_map, '借方補助科目') || null,
         department: col(row, header_map, '借方部門') || null,
@@ -232,7 +232,7 @@ function buildJournal(
     const credit_account = col(row, header_map, '貸方勘定科目')
     if (credit_account) {
       credit_entries.push({
-        id: generateId('cje_'),
+        entryId: generateId('cje_'),
         account: credit_account,
         sub_account: col(row, header_map, '貸方補助科目') || null,
         department: col(row, header_map, '貸方部門') || null,
@@ -249,7 +249,7 @@ function buildJournal(
   const direction = estimateDirection(debit_entries, credit_entries)
 
   return {
-    id: generateId('cj_'),
+    journalId: generateId('cj_'),
     client_id,
     voucher_date,
     description,

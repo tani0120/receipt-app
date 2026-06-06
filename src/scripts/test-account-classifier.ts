@@ -60,7 +60,7 @@ const USD_JPY = 150;
 
 /** 既存マスタ（参考データ） */
 interface MasterAccount {
-  id: string;
+  accountId: string;
   name: string;
   target: string;
   category: string;
@@ -148,7 +148,7 @@ function buildReferenceData(master: MasterAccount[]): string {
   const header = '科目名 | category | target | accountGroup | englishId';
   const separator = '─'.repeat(70);
   const rows = master.map(a =>
-    `${a.name} | ${a.category} | ${a.target} | ${a.accountGroup} | ${a.id}`
+    `${a.name} | ${a.category} | ${a.target} | ${a.accountGroup} | ${a.accountId}`
   );
   return [header, separator, ...rows].join('\n');
 }

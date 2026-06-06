@@ -107,7 +107,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in pagedTaxRows" :key="row.id"
+              <tr v-for="row in pagedTaxRows" :key="row.taxCategoryId"
                 :class="{ 'row-deprecated': row.deprecated, 'row-custom': row.isCustom }"
               >
                 <!-- §15: 行チェックボックス削除 -->
@@ -122,7 +122,7 @@
                 </td>
                 <!-- 適格判定対象 -->
                 <td style="text-align: center;" @dblclick="startEdit(row, 'qualified')">
-                  <template v-if="isEditing(row.id, 'qualified')">
+                  <template v-if="isEditing(row.taxCategoryId, 'qualified')">
                     <select v-model="editValue" @change="commitEdit(row, 'qualified')" @blur="cancelEdit()" class="inline-select">
                       <option v-for="o in QUALIFIED_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
@@ -131,7 +131,7 @@
                 </td>
                 <!-- 取引区分 -->
                 <td class="td-direction" :class="'dir-' + row.direction" @dblclick="startEdit(row, 'direction')">
-                  <template v-if="isEditing(row.id, 'direction')">
+                  <template v-if="isEditing(row.taxCategoryId, 'direction')">
                     <select v-model="editValue" @change="commitEdit(row, 'direction')" @blur="cancelEdit()" class="inline-select" ref="editInput">
                       <option v-for="o in TAX_DIRECTION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
@@ -140,26 +140,26 @@
                 </td>
                 <!-- 税区分 -->
                 <td @dblclick="startEdit(row, 'name')">
-                  <template v-if="isEditing(row.id, 'name')">
+                  <template v-if="isEditing(row.taxCategoryId, 'name')">
                     <input v-model="editValue" @keydown.enter="commitEdit(row, 'name')" @blur="commitEdit(row, 'name')" class="inline-input" ref="editInput" />
                   </template>
                   <template v-else>{{ row.name }}</template>
                 </td>
                 <!-- 税率 -->
                 <td style="text-align: center;" @dblclick="startEdit(row, 'rate')">
-                  <template v-if="isEditing(row.id, 'rate')">
+                  <template v-if="isEditing(row.taxCategoryId, 'rate')">
                     <input v-model="editValue" @input="onRateInput" @keydown.enter="commitEdit(row, 'rate')" @blur="commitEdit(row, 'rate')" class="inline-input rate-input" ref="editInput" placeholder="例: 10" />
                   </template>
                   <template v-else>{{ getRate(row) }}</template>
                 </td>
                 <td class="td-date td-editable" @dblclick="startEdit(row, 'effectiveFrom')">
-                  <template v-if="isEditing(row.id, 'effectiveFrom')">
+                  <template v-if="isEditing(row.taxCategoryId, 'effectiveFrom')">
                     <input type="date" v-model="editValue" @change="commitEdit(row, 'effectiveFrom')" @blur="cancelEdit()" class="inline-input date-input" ref="editInput" />
                   </template>
                   <template v-else>{{ row.effectiveFrom || '—' }}</template>
                 </td>
                 <td class="td-date td-editable" @dblclick="startEdit(row, 'effectiveTo')">
-                  <template v-if="isEditing(row.id, 'effectiveTo')">
+                  <template v-if="isEditing(row.taxCategoryId, 'effectiveTo')">
                     <div class="date-edit-wrap-v">
                       <input type="date" v-model="editValue" @change="commitEdit(row, 'effectiveTo')" @blur="onDateBlur(row)" class="inline-input date-input" ref="editInput" />
                       <button class="date-active-btn" @mousedown.prevent="editValue = ''; commitEdit(row, 'effectiveTo')">現役</button>
@@ -641,8 +641,8 @@ const filteredTaxRows = computed(() => {
     if (row.direction === 'common') return true;
 
     // --- MFのavailableベースのフィルタ ---
-    if (availableData && row.id) {
-      return availableData[row.id] === true;
+    if (availableData && row.taxCategoryId) {
+      return availableData[row.taxCategoryId] === true;
     }
 
     // availableデータなし → 全件表示（MF未連携の初期状態）
@@ -691,7 +691,7 @@ function startEdit(row: TaxCategory, field: EditableField) {
     modal.notify({ title: UI_MSG.デフォルト税区分編集不可, message: UI_MSG.コピーしてから編集, variant: 'warning' });
     return;
   }
-  editingRowId.value = row.id;
+  editingRowId.value = row.taxCategoryId;
   editingFieldName.value = field;
   switch (field) {
     case 'direction': editValue.value = row.direction; break;
@@ -802,8 +802,8 @@ async function saveChanges() {
 
     // composable側のoverridesにも同期（顧問先ページへの反映用）
     const defaultTaxIds = settings.defaultTaxIds.value;
-    const hiddenIds = allTaxRows.filter(r => r.deprecated).map(r => r.id);
-    const customTaxCategories = allTaxRows.filter(r => !defaultTaxIds.has(r.id));
+    const hiddenIds = allTaxRows.filter(r => r.deprecated).map(r => r.taxCategoryId);
+    const customTaxCategories = allTaxRows.filter(r => !defaultTaxIds.has(r.taxCategoryId));
     taxMasterOverrides.value = {
       hiddenIds,
       visibilityOverrides: taxMasterOverrides.value.visibilityOverrides,

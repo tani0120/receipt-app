@@ -101,8 +101,8 @@
                 <th class="relative">税区分自動判定
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('aiSelectable', $event)"></div>
                 </th>
-                <th class="sortable relative" @click="sortAccounts('id')">
-                  マスタID <i :class="getSortIcon('id')"></i>
+                <th class="sortable relative" @click="sortAccounts('accountId')">
+                  マスタID <i :class="getSortIcon('accountId')"></i>
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('masterId', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('name')">
@@ -153,8 +153,8 @@
             </thead>
             <tbody>
               <tr
-                v-for="(row, idx) in pagedAccountRows" :key="row.id"
-                :class="{ 'row-deprecated': isAccountHidden(row.id), 'row-dragging': dragIdx === idx, 'row-custom': row.isCustom }"
+                v-for="(row, idx) in pagedAccountRows" :key="row.accountId"
+                :class="{ 'row-deprecated': isAccountHidden(row.accountId), 'row-dragging': dragIdx === idx, 'row-custom': row.isCustom }"
                 draggable="true"
                 @dragstart="onDragStart(idx, $event)"
                 @dragover.prevent="onDragOver(idx)"
@@ -164,16 +164,16 @@
 
                 <td class="td-visibility">
                   <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
-                  <i v-if="isAccountHidden(row.id)" class="fa-solid fa-eye-slash td-hide" @click="showRow(row)" title="表示化"></i>
+                  <i v-if="isAccountHidden(row.accountId)" class="fa-solid fa-eye-slash td-hide" @click="showRow(row)" title="表示化"></i>
                   <i v-else class="fa-solid fa-eye td-show" @click="hideRow(row)" title="非表示化"></i>
                 </td>
                 <td style="text-align:center;font-size:11px;color:#666;">
-                  <span v-if="row.isCustom && !isMasterCustomAccount(row.id)" style="color:#E65100;">顧問先独自</span>
-                  <span v-else-if="isMasterCustomAccount(row.id)" style="color:#1976D2;"><i class="fa-solid fa-building-columns" style="font-size:12px;"></i> マスタ（カスタム）</span>
+                  <span v-if="row.isCustom && !isMasterCustomAccount(row.accountId)" style="color:#E65100;">顧問先独自</span>
+                  <span v-else-if="isMasterCustomAccount(row.accountId)" style="color:#1976D2;"><i class="fa-solid fa-building-columns" style="font-size:12px;"></i> マスタ（カスタム）</span>
                   <span v-else><i class="fa-solid fa-building-columns" style="color:#1976D2;font-size:12px;"></i> マスタ</span>
                 </td>
                 <td class="td-ai" @dblclick="row.isCustom && startEdit(row, 'aiDetermination')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.id && editingField === 'aiDetermination'">
+                  <template v-if="editingRow === row.accountId && editingField === 'aiDetermination'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
                       <template v-if="getAllowedTaxDeterminations(row).length > 1">
                         <option v-for="o in QUALIFIED_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
@@ -185,9 +185,9 @@
                   </template>
                   <template v-else>{{ getDisplayAiDet(row) }}</template>
                 </td>
-                <td class="td-master-id" :title="row.id">{{ row.id }}</td>
+                <td class="td-master-id" :title="row.accountId">{{ row.accountId }}</td>
                 <td @dblclick="row.isCustom && startEdit(row, 'name')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.id && editingField === 'name'">
+                  <template v-if="editingRow === row.accountId && editingField === 'name'">
                     <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" ref="editInput" autofocus>
                   </template>
                   <template v-else>
@@ -196,7 +196,7 @@
                   </template>
                 </td>
                 <td @dblclick="startEdit(row, 'subAccount')" class="td-sub-account td-editable">
-                  <template v-if="editingRow === row.id && editingField === 'subAccount'">
+                  <template v-if="editingRow === row.accountId && editingField === 'subAccount'">
                     <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" autofocus>
                   </template>
                   <template v-else>{{ row.subAccount ?? '' }}</template>
@@ -206,7 +206,7 @@
                 <td class="td-direction">{{ directionLabel(row.accountGroup) }}</td>
                 <!-- 科目分類 -->
                 <td @dblclick="row.isCustom && startEdit(row, 'category')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.id && editingField === 'category'">
+                  <template v-if="editingRow === row.accountId && editingField === 'category'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
                       <optgroup v-for="g in categoryGroups" :key="g.label" :label="g.label">
                         <option v-for="c in g.items" :key="c.value" :value="c.value">{{ c.label }}</option>
@@ -217,7 +217,7 @@
                 </td>
                 <!-- 税区分判定 -->
                 <td @dblclick="row.isCustom && startEdit(row, 'taxDetermination')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.id && editingField === 'taxDetermination'">
+                  <template v-if="editingRow === row.accountId && editingField === 'taxDetermination'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
                       <option v-for="td in getAllowedTaxDeterminations(row)" :key="td" :value="td">{{ taxDetLabel(td) }}</option>
                     </select>
@@ -226,9 +226,9 @@
                 </td>
                 <!-- デフォルト税区分 -->
                 <td @dblclick="row.isCustom && startEdit(row, 'defaultTaxCategoryId')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.id && editingField === 'defaultTaxCategoryId'">
+                  <template v-if="editingRow === row.accountId && editingField === 'defaultTaxCategoryId'">
                     <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
-                      <option v-for="tc in filteredTaxCategories(row.accountGroup)" :key="tc.id" :value="tc.id">{{ tc.shortName }}</option>
+                      <option v-for="tc in filteredTaxCategories(row.accountGroup)" :key="tc.taxCategoryId" :value="tc.taxCategoryId">{{ tc.shortName }}</option>
                     </select>
                   </template>
                   <template v-else>{{ getDisplayDefaultTax(row) }}</template>
@@ -352,16 +352,16 @@ function directionLabel(accountGroup: string): string {
 }
 
 /** 科目が許容されるvoucher_typeを算出 */
-function getAllowedVoucherTypes(row: { id: string; accountGroup: string; category: string }): string {
+function getAllowedVoucherTypes(row: { accountId: string; accountGroup: string; category: string }): string {
   const debitTypes: string[] = [];
   const creditTypes: string[] = [];
   for (const [vtName, rule] of Object.entries(VOUCHER_TYPE_RULES)) {
     const d = rule.debit;
-    if (d.allowedGroups?.includes(row.accountGroup) || d.allowedIds?.includes(row.id) || d.allowedCategories?.includes(row.category)) {
+    if (d.allowedGroups?.includes(row.accountGroup) || d.allowedIds?.includes(row.accountId) || d.allowedCategories?.includes(row.category)) {
       debitTypes.push(vtName);
     }
     const c = rule.credit;
-    if (c.allowedGroups?.includes(row.accountGroup) || c.allowedIds?.includes(row.id) || c.allowedCategories?.includes(row.category)) {
+    if (c.allowedGroups?.includes(row.accountGroup) || c.allowedIds?.includes(row.accountId) || c.allowedCategories?.includes(row.category)) {
       creditTypes.push(vtName);
     }
   }
@@ -435,7 +435,7 @@ if (clientId.value) {
   watch(settings.accounts, (newVal) => {
     const today = new Date().toISOString().slice(0, 10);
     accountRows.forEach(row => {
-      const unified = newVal.find(a => a.id === row.id);
+      const unified = newVal.find(a => a.accountId === row.accountId);
       if (unified) {
         const isHidden = unified.hidden;
         if (isHidden && !row.deprecated) {
@@ -457,7 +457,7 @@ function isAccountHidden(accountId: string): boolean {
 
 /** マスタレベルで追加されたカスタム科目か */
 function isMasterCustomAccount(accountId: string): boolean {
-  const entry = settings.accounts.value.find(a => a.id === accountId);
+  const entry = settings.accounts.value.find(a => a.accountId === accountId);
   return entry ? entry.isMasterCustom : false;
 }
 
@@ -479,24 +479,24 @@ watch(filteredAccountRows, () => { if (accountPage.value > accountTotalPages.val
 // =============== チェックボックス選択 ===============
 
 function hideRow(row: Account) {
-  const id = row.id;
+  const id = row.accountId;
   const today = new Date().toISOString().slice(0, 10);
   if (clientId.value) {
     settings.toggleAccountVisibility(id);
   }
   // watch発火後のaccountRowsから対象を再取得して更新
   nextTick(() => {
-    const target = accountRows.find(r => r.id === id);
+    const target = accountRows.find(r => r.accountId === id);
     if (target) { target.effectiveTo = today; target.deprecated = true; }
   });
 }
 function showRow(row: Account) {
-  const id = row.id;
+  const id = row.accountId;
   if (clientId.value) {
     settings.toggleAccountVisibility(id);
   }
   nextTick(() => {
-    const target = accountRows.find(r => r.id === id);
+    const target = accountRows.find(r => r.accountId === id);
     if (target) { target.effectiveTo = null; target.deprecated = false; }
   });
 }
@@ -504,7 +504,7 @@ async function deleteRow(row: Account) {
   if (!row.isCustom) return;
   const ok = await modal.confirm({ title: `「${row.name}」${UI_MSG.削除確認接尾}`, message: UI_MSG.復元不可, variant: 'danger' });
   if (!ok) return;
-  const idx = accountRows.findIndex(r => r.id === row.id);
+  const idx = accountRows.findIndex(r => r.accountId === row.accountId);
   if (idx !== -1) accountRows.splice(idx, 1);
   markDirty(`「${row.name}」${UI_MSG.削除操作接尾}`);
 }
@@ -514,7 +514,7 @@ async function saveChanges() {
   const subAccounts: Record<string, string> = {};
   accountRows.forEach(r => {
     const sub = r.subAccount;
-    if (sub) subAccounts[r.id] = sub;
+    if (sub) subAccounts[r.accountId] = sub;
   });
 
   try {
@@ -552,7 +552,7 @@ function startEdit(row: Account, field: AccountEditField) {
     modal.notify({ title: UI_MSG.デフォルト科目編集不可, message: UI_MSG.コピーしてから編集, variant: 'warning' });
     return;
   }
-  editingRow.value = row.id;
+  editingRow.value = row.accountId;
   editingField.value = field;
   switch (field) {
     case 'name': editValue.value = row.name; editOriginalName.value = row.name; break;

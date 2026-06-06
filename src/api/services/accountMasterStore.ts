@@ -16,7 +16,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs'
 import { getTaxAvailableForMethod } from './mfTaxAvailableStore'
 import { join } from 'path'
 import type { Account, AccountGroup, TaxDetermination } from '../../types/shared-account'
-import type { TaxCategory } from '../../types/shared-tax-category'
+import type { TaxCategory, TaxDirection } from '../../types/shared-tax-category'
 
 // ────────────────────────────────────────────
 // JSONファイルからマスタデータを読み込み
@@ -66,13 +66,13 @@ export function getAllAccounts(): readonly Account[] {
 
 /** 科目IDで1件取得 */
 export function getAccountById(id: string): Account | undefined {
-  return masterAccounts.find(a => a.id === id)
+  return masterAccounts.find(a => a.accountId === id)
 }
 
 
 /** 顧問先別の科目をバリデーション用最小形式で返す（データ駆動） */
 export function getClientAccountsForValidation(clientId: string): {
-  id: string
+  accountId: string
   name: string
   accountGroup: AccountGroup
   category: string
@@ -83,7 +83,7 @@ export function getClientAccountsForValidation(clientId: string): {
 }[] {
   const data = getClientAccounts(clientId)
   return data.accounts.map(a => ({
-    id: a.id,
+    accountId: a.accountId,
     name: a.name,
     accountGroup: a.accountGroup as AccountGroup,
     category: a.category,
@@ -96,8 +96,8 @@ export function getClientAccountsForValidation(clientId: string): {
 
 /** 顧問先別の税区分をバリデーション用最小形式で返す */
 export function getClientTaxCategoriesForValidation(clientId: string): {
-  id: string
-  direction: string
+  taxCategoryId: string
+  direction: TaxDirection
   simplifiedOnly?: boolean
   baseId?: string
   isExemptDefault?: boolean
@@ -105,8 +105,8 @@ export function getClientTaxCategoriesForValidation(clientId: string): {
 }[] {
   const data = getClientTaxCategories(clientId)
   return data.map(t => ({
-    id: t.id,
-    direction: t.direction ?? 'common',
+    taxCategoryId: t.taxCategoryId,
+    direction: (t.direction ?? 'common') as TaxDirection,
     simplifiedOnly: t.simplifiedOnly,
     baseId: t.baseId,
     isExemptDefault: t.isExemptDefault,
@@ -118,7 +118,7 @@ export function getClientTaxCategoriesForValidation(clientId: string): {
 export function getAccountNameMap(): Record<string, string> {
   const map: Record<string, string> = {}
   for (const a of masterAccounts) {
-    map[a.id] = a.name
+    map[a.accountId] = a.name
   }
   return map
 }
@@ -230,16 +230,16 @@ export function saveAllAccounts(accounts: Account[]): { ok: true; count: number 
  * - MFフィールド（mfAccountId等）は顧問先データにコピーしない
  */
 function syncMasterAccountsToClients(masterItems: Account[]): void {
-  const masterById = new Map(masterItems.map(a => [a.id, a]))
+  const masterById = new Map(masterItems.map(a => [a.accountId, a]))
   let syncCount = 0
 
   for (const [clientId, clientData] of clientAccountStore.entries()) {
-    const clientIdSet = new Set(clientData.accounts.map(a => a.id))
+    const clientIdSet = new Set(clientData.accounts.map(a => a.accountId))
     let changed = false
 
     // 新規追加: マスタにあって顧問先にない科目を追加
     for (const master of masterItems) {
-      if (!clientIdSet.has(master.id)) {
+      if (!clientIdSet.has(master.accountId)) {
         // MFフィールドを除外してクローン（全社マスタにMFフィールドは存在しないが安全装置として残す）
         const { mfAccountId, mfAccountGroup, mfFinancialStatementType, ...rest } = master as Account & {
           mfAccountId?: string; mfAccountGroup?: string; mfFinancialStatementType?: string
@@ -251,7 +251,7 @@ function syncMasterAccountsToClients(masterItems: Account[]): void {
 
     // 名前変更: マスタとIDが一致する科目の名前を同期
     for (const clientAccount of clientData.accounts) {
-      const master = masterById.get(clientAccount.id)
+      const master = masterById.get(clientAccount.accountId)
       if (master && master.name !== clientAccount.name) {
         clientAccount.name = master.name
         changed = true
@@ -402,7 +402,7 @@ export function getAllTaxCategories(): readonly TaxCategory[] {
 
 /** 税区分IDで1件取得 */
 export function getTaxCategoryById(id: string): TaxCategory | undefined {
-  return masterTaxCategories.find(t => t.id === id)
+  return masterTaxCategories.find(t => t.taxCategoryId === id)
 }
 
 
@@ -410,7 +410,7 @@ export function getTaxCategoryById(id: string): TaxCategory | undefined {
 export function getTaxCategoryNameMap(): Record<string, string> {
   const map: Record<string, string> = {}
   for (const t of masterTaxCategories) {
-    map[t.id] = t.name
+    map[t.taxCategoryId] = t.name
   }
   return map
 }
@@ -453,7 +453,7 @@ export interface TaxCategoryFilterResult {
  * 課税方式で税区分をフィルタする
  *
  * available.jsonのキーはマスタID（例: SALES_TAXABLE_10）。
- * 2026-06-04にmfId→マスタIDに移行したため、row.idで直接参照可能。
+ * 2026-06-04にmfId→マスタIDに移行したため、row.taxCategoryIdで直接参照可能。
  * MF IDは事業者固有で事業者間一致しないため、マスタIDをキーにすることで
  * 事業者切替（TSK→TST等）してもフィルタが壊れない。
  */
@@ -474,9 +474,9 @@ function filterByTaxMethod(row: TaxCategory, taxMethod: string): boolean {
   const methodKey = (methodKeyMap[taxMethod] ?? taxMethod) as import('./mfTaxAvailableStore').TaxMethodKey
   const availableData = getTaxAvailableForMethod(methodKey)
 
-  if (availableData && row.id) {
+  if (availableData && row.taxCategoryId) {
     // availableデータあり → マスタIDでフィルタ
-    return availableData[row.id] === true
+    return availableData[row.taxCategoryId] === true
   }
 
   // availableデータなし → デフォルト表示（active行のみ）
@@ -550,16 +550,16 @@ export function saveAllTaxCategories(taxCategories: TaxCategory[]): { ok: true; 
  * - マスタから削除された税区分 → 顧問先データからは削除しない（仕訳参照を壊さないため）
  */
 function syncMasterTaxCategoriesToClients(masterItems: TaxCategory[]): void {
-  const masterById = new Map(masterItems.map(t => [t.id, t]))
+  const masterById = new Map(masterItems.map(t => [t.taxCategoryId, t]))
   let syncCount = 0
 
   for (const [clientId, clientTaxes] of clientTaxStore.entries()) {
-    const clientIdSet = new Set(clientTaxes.map(t => t.id))
+    const clientIdSet = new Set(clientTaxes.map(t => t.taxCategoryId))
     let changed = false
 
     // 新規追加: マスタにあって顧問先にない税区分を追加
     for (const master of masterItems) {
-      if (!clientIdSet.has(master.id)) {
+      if (!clientIdSet.has(master.taxCategoryId)) {
         clientTaxes.push({ ...master })
         changed = true
       }
@@ -567,7 +567,7 @@ function syncMasterTaxCategoriesToClients(masterItems: TaxCategory[]): void {
 
     // 名前・税率変更: マスタとIDが一致する税区分を同期
     for (const clientTax of clientTaxes) {
-      const master = masterById.get(clientTax.id)
+      const master = masterById.get(clientTax.taxCategoryId)
       if (!master) continue
       if (master.name !== clientTax.name) {
         clientTax.name = master.name

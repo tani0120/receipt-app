@@ -75,7 +75,7 @@ export function validateJournal(
   const result: SyncWarningResult = syncWarningLabelsCore(journalCopy, accounts, taxCategories, VOUCHER_TYPE_RULES)
 
   return {
-    journalId: journal.id,
+    journalId: journal.journalId,
     labels: journalCopy.labels,
     warning_details: journalCopy.warning_details ?? {},
     addedLabels: result.addedLabels,

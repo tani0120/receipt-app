@@ -41,13 +41,13 @@ import type { TaxCategory } from '../../types/shared-tax-category'
 
 /** バリデーション用の勘定科目最小インターフェース（Account型からPick） */
 export type AccountForValidation = Pick<Account,
-  'id' | 'accountGroup' | 'category' | 'taxDetermination' |
+  'accountId' | 'accountGroup' | 'category' | 'taxDetermination' |
   'defaultTaxCategoryId' | 'isContraRevenue' | 'isContraExpense'
 >
 
 /** バリデーション用の税区分最小インターフェース（TaxCategory型からPick） */
 export type TaxCategoryForValidation = Pick<TaxCategory,
-  'id' | 'direction' | 'simplifiedOnly' | 'baseId' | 'isExemptDefault' | 'isUnknownDefault'
+  'taxCategoryId' | 'direction' | 'simplifiedOnly' | 'baseId' | 'isExemptDefault' | 'isUnknownDefault'
 >
 
 /** 5分類グループ型 */
@@ -67,7 +67,7 @@ export interface JournalEntryForValidation {
  * TypeScriptの構造的型付けによりキャストなしで渡せる。
  */
 export interface JournalForValidation {
-  id: string
+  journalId: string
   voucher_date: string | null
   description: string | null
   voucher_type: string | null
@@ -132,14 +132,14 @@ export function isTaxCategoryInvalidForMode(
   if (consumptionTaxMode === 'exempt') {
     // 免税事業者: isUnknownDefault=trueの税区分（不明）は税区分未確定の一時保存用として有効
     const unknownDefault = taxCategories.find(t => t.isUnknownDefault)
-    if (unknownDefault && taxCategoryId === unknownDefault.id) return false
+    if (unknownDefault && taxCategoryId === unknownDefault.taxCategoryId) return false
     // isExemptDefault=trueの税区分（対象外）以外は不正
     const exemptDefault = taxCategories.find(t => t.isExemptDefault)
-    return exemptDefault ? taxCategoryId !== exemptDefault.id : true
+    return exemptDefault ? taxCategoryId !== exemptDefault.taxCategoryId : true
   }
   if (consumptionTaxMode === 'individual' || consumptionTaxMode === 'proportional') {
     // 原則課税: 簡易課税専用の税区分は不正
-    const tc = taxCategories.find(t => t.id === taxCategoryId)
+    const tc = taxCategories.find(t => t.taxCategoryId === taxCategoryId)
     return tc?.simplifiedOnly === true
   }
   return false
@@ -166,11 +166,11 @@ export function resolveValidTaxCategoryForMode(
   if (consumptionTaxMode === 'exempt') {
     // データ駆動: isExemptDefault=trueの税区分IDを返す
     const exemptDefault = taxCategories.find(t => t.isExemptDefault)
-    return exemptDefault ? exemptDefault.id : taxCategoryId
+    return exemptDefault ? exemptDefault.taxCategoryId : taxCategoryId
   }
   if (consumptionTaxMode === 'individual' || consumptionTaxMode === 'proportional') {
     // データ駆動: baseIdフィールドで原則用税区分を直接参照
-    const tc = taxCategories.find(t => t.id === taxCategoryId)
+    const tc = taxCategories.find(t => t.taxCategoryId === taxCategoryId)
     if (tc?.baseId) return tc.baseId
   }
   return taxCategoryId
@@ -186,7 +186,7 @@ export function getExemptDefaultTaxCategoryId(
   taxCategories: TaxCategoryForValidation[]
 ): string {
   const exemptDefault = taxCategories.find(t => t.isExemptDefault)
-  return exemptDefault ? exemptDefault.id : ''
+  return exemptDefault ? exemptDefault.taxCategoryId : ''
 }
 
 // ────────────────────────────────────────────
@@ -196,7 +196,7 @@ export function getExemptDefaultTaxCategoryId(
 /** 勘定科目IDから5分類グループを判定（accountGroupベース） */
 export function getMegaGroup(accountName: string | null, accounts: AccountForValidation[]): MegaGroupType {
   if (!accountName) return null
-  const acc = accounts.find(a => a.id === accountName)
+  const acc = accounts.find(a => a.accountId === accountName)
   if (!acc) return null
   if (acc.accountGroup === 'PL_REVENUE') return 'sales'
   if (acc.accountGroup === 'PL_EXPENSE') return 'expense'
@@ -208,7 +208,7 @@ export function getMegaGroup(accountName: string | null, accounts: AccountForVal
 /** 逆仕訳科目（売上返品・仕入返品）の判定（データ駆動。マスタのフラグで判定） */
 function isContraAccount(accountName: string | null, accounts: AccountForValidation[]): { isContraRevenue: boolean; isContraExpense: boolean } {
   if (!accountName) return { isContraRevenue: false, isContraExpense: false }
-  const acc = accounts.find(a => a.id === accountName)
+  const acc = accounts.find(a => a.accountId === accountName)
   if (!acc) return { isContraRevenue: false, isContraExpense: false }
   return {
     isContraRevenue: acc.isContraRevenue === true,
@@ -283,7 +283,7 @@ export function validateByVoucherType(
   const rule = voucherRules[voucherType]
   if (!rule) return null // ルール未定義の証票意味はスキップ
 
-  const accountMap = new Map(accounts.map(a => [a.id, a]))
+  const accountMap = new Map(accounts.map(a => [a.accountId, a]))
 
   function isAllowed(accountId: string, sideRule: { allowedGroups?: string[]; allowedIds?: string[]; allowedCategories?: string[] }): boolean {
     // allowedIdsに含まれていればOK（コピー元IDも照合）
@@ -341,7 +341,7 @@ export function getVoucherTypeConflictAccounts(
   const rule = voucherRules[voucherType]
   if (!rule) return result
 
-  const accountMap = new Map(accounts.map(a => [a.id, a]))
+  const accountMap = new Map(accounts.map(a => [a.accountId, a]))
 
   function isAllowed(accountId: string, sideRule: { allowedGroups?: string[]; allowedIds?: string[]; allowedCategories?: string[] }): boolean {
     if (sideRule.allowedIds) {
@@ -430,7 +430,7 @@ export function syncWarningLabelsCore(
   }
 
   // ── 1. ACCOUNT_UNKNOWN（科目不明） ──
-  const accountIds = new Set(accounts.map(a => a.id))
+  const accountIds = new Set(accounts.map(a => a.accountId))
   const isValidAccount = (id: string | null) => id != null && id !== '' && accountIds.has(id)
   const unknownAccounts = [
     ...journal.debit_entries.filter(e => !isValidAccount(e.account)).map(e => sideAccountLabel(SIDE_DEBIT, e.account)),
@@ -440,7 +440,7 @@ export function syncWarningLabelsCore(
   else addLabel('ACCOUNT_UNKNOWN', warnAccountUnknown(unknownAccounts))
 
   // ── 2. TAX_UNKNOWN（税区分不明 or マスタ未存在） ──
-  const taxCategoryIds = new Set(taxCategories.map(t => t.id))
+  const taxCategoryIds = new Set(taxCategories.map(t => t.taxCategoryId))
   const emptyTaxEntries = [
     ...journal.debit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty(SIDE_DEBIT, i + 1)),
     ...journal.credit_entries.filter(e => !e.tax_category_id).map((_, i) => warnTaxEmpty(SIDE_CREDIT, i + 1)),
@@ -532,14 +532,14 @@ export function syncWarningLabelsCore(
   let hasTaxAccountMismatch = false
   for (const entry of allEntries) {
     if (!entry.account || !entry.tax_category_id) continue
-    const acct = accounts.find(a => a.id === entry.account)
+    const acct = accounts.find(a => a.accountId === entry.account)
     if (!acct) continue
-    const taxCat = taxCategories.find(t => t.id === entry.tax_category_id)
+    const taxCat = taxCategories.find(t => t.taxCategoryId === entry.tax_category_id)
     if (!taxCat) continue
     if (acct.taxDetermination === 'fixed') {
       if (acct.defaultTaxCategoryId) {
-        const defaultTax = taxCategories.find(t => t.id === acct.defaultTaxCategoryId)
-        if (defaultTax && taxCat.id !== defaultTax.id) {
+        const defaultTax = taxCategories.find(t => t.taxCategoryId === acct.defaultTaxCategoryId)
+        if (defaultTax && taxCat.taxCategoryId !== defaultTax.taxCategoryId) {
           hasTaxAccountMismatch = true
           break
         }

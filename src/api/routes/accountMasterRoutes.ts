@@ -57,8 +57,8 @@ function validateAccountsBody(body: { accounts?: Account[] }): string | null {
     return 'accounts 配列が必要です'
   }
   for (const acc of body.accounts) {
-    if (!acc.id || !acc.name) {
-      return `科目にid/nameが必要です: ${JSON.stringify(acc).slice(0, 100)}`
+    if (!acc.accountId || !acc.name) {
+      return `科目にaccountId/nameが必要です: ${JSON.stringify(acc).slice(0, 100)}`
     }
   }
   return null

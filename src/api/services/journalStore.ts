@@ -115,16 +115,16 @@ export function addJournals(clientId: string, newJournals: unknown[]): number {
   // サーバーがID上書き発番（フロントが送ったIDは信頼しない）
   for (const j of newJournals) {
     const journal = j as Record<string, unknown>;
-    journal.id = generateJournalId();
+    journal.journalId = generateJournalId();
     // debit_entries / credit_entries のIDも上書き
     if (Array.isArray(journal.debit_entries)) {
       for (const entry of journal.debit_entries as Record<string, unknown>[]) {
-        entry.id = generateJournalEntryId();
+        entry.entryId = generateJournalEntryId();
       }
     }
     if (Array.isArray(journal.credit_entries)) {
       for (const entry of journal.credit_entries as Record<string, unknown>[]) {
-        entry.id = generateJournalEntryId();
+        entry.entryId = generateJournalEntryId();
       }
     }
   }

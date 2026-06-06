@@ -10,7 +10,7 @@ import type { LearningRule } from '../types/learning_rule.type'
 
 export const learningRulesTST00011: LearningRule[] = [
   {
-    "id": "LR-001",
+    "ruleId": "LR-001",
     "clientId": "TST-00011",
     "keyword": "タクシー",
     "matchType": "exact",
@@ -20,7 +20,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-001-1",
+        "entryId": "LRE-001-1",
         "ruleId": "LR-001",
         "side": "debit",
         "account": "旅費交通費",
@@ -35,7 +35,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-001-2",
+        "entryId": "LRE-001-2",
         "ruleId": "LR-001",
         "side": "credit",
         "account": "現金",
@@ -57,7 +57,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-03-20T14:30:00Z"
   },
   {
-    "id": "LR-003",
+    "ruleId": "LR-003",
     "clientId": "TST-00011",
     "keyword": "スターバックス",
     "matchType": "exact",
@@ -67,7 +67,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": 10000,
     "entries": [
       {
-        "id": "LRE-003-1",
+        "entryId": "LRE-003-1",
         "ruleId": "LR-003",
         "side": "debit",
         "account": "会議費",
@@ -82,7 +82,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-003-2",
+        "entryId": "LRE-003-2",
         "ruleId": "LR-003",
         "side": "credit",
         "account": "現金",
@@ -104,7 +104,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-02-14T09:45:00Z"
   },
   {
-    "id": "LR-003b",
+    "ruleId": "LR-003b",
     "clientId": "TST-00011",
     "keyword": "スターバックス",
     "matchType": "exact",
@@ -114,7 +114,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-003b-1",
+        "entryId": "LRE-003b-1",
         "ruleId": "LR-003b",
         "side": "debit",
         "account": "接待交際費",
@@ -129,7 +129,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-003b-2",
+        "entryId": "LRE-003b-2",
         "ruleId": "LR-003b",
         "side": "credit",
         "account": "現金",
@@ -151,7 +151,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-02-14T09:45:00Z"
   },
   {
-    "id": "LR-011",
+    "ruleId": "LR-011",
     "clientId": "TST-00011",
     "keyword": "ゴルフ",
     "matchType": "contains",
@@ -161,7 +161,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-011-1",
+        "entryId": "LRE-011-1",
         "ruleId": "LR-011",
         "side": "debit",
         "account": "接待交際費",
@@ -176,7 +176,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-011-2",
+        "entryId": "LRE-011-2",
         "ruleId": "LR-011",
         "side": "debit",
         "account": "租税公課",
@@ -191,7 +191,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 2
       },
       {
-        "id": "LRE-011-3",
+        "entryId": "LRE-011-3",
         "ruleId": "LR-011",
         "side": "credit",
         "account": "現金",
@@ -213,7 +213,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-04-15T10:00:00Z"
   },
   {
-    "id": "LR-004",
+    "ruleId": "LR-004",
     "clientId": "TST-00011",
     "keyword": "NTT",
     "matchType": "contains",
@@ -223,7 +223,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-004-1",
+        "entryId": "LRE-004-1",
         "ruleId": "LR-004",
         "side": "debit",
         "account": "通信費",
@@ -238,7 +238,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-004-2",
+        "entryId": "LRE-004-2",
         "ruleId": "LR-004",
         "side": "credit",
         "account": "普通預金",
@@ -260,7 +260,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-01-30T16:20:00Z"
   },
   {
-    "id": "LR-005",
+    "ruleId": "LR-005",
     "clientId": "TST-00011",
     "keyword": "家賃",
     "matchType": "contains",
@@ -270,7 +270,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-005-1",
+        "entryId": "LRE-005-1",
         "ruleId": "LR-005",
         "side": "debit",
         "account": "地代家賃",
@@ -285,7 +285,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-005-2",
+        "entryId": "LRE-005-2",
         "ruleId": "LR-005",
         "side": "credit",
         "account": "普通預金",
@@ -307,7 +307,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-04-01T10:00:00Z"
   },
   {
-    "id": "LR-007",
+    "ruleId": "LR-007",
     "clientId": "TST-00011",
     "keyword": "振込手数料",
     "matchType": "contains",
@@ -317,7 +317,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-007-1",
+        "entryId": "LRE-007-1",
         "ruleId": "LR-007",
         "side": "debit",
         "account": "支払手数料",
@@ -332,7 +332,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-007-2",
+        "entryId": "LRE-007-2",
         "ruleId": "LR-007",
         "side": "credit",
         "account": "普通預金",
@@ -354,7 +354,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-04-15T12:00:00Z"
   },
   {
-    "id": "LR-008",
+    "ruleId": "LR-008",
     "clientId": "TST-00011",
     "keyword": "タナカタロウ",
     "matchType": "exact",
@@ -364,7 +364,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": 220000,
     "entries": [
       {
-        "id": "LRE-008-1",
+        "entryId": "LRE-008-1",
         "ruleId": "LR-008",
         "side": "debit",
         "account": "外注費",
@@ -379,7 +379,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-008-2",
+        "entryId": "LRE-008-2",
         "ruleId": "LR-008",
         "side": "debit",
         "account": "仮払消費税",
@@ -394,7 +394,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 2
       },
       {
-        "id": "LRE-008-3",
+        "entryId": "LRE-008-3",
         "ruleId": "LR-008",
         "side": "credit",
         "account": "普通預金",
@@ -416,7 +416,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-04-20T09:00:00Z"
   },
   {
-    "id": "LR-009",
+    "ruleId": "LR-009",
     "clientId": "TST-00011",
     "keyword": "売上入金",
     "matchType": "contains",
@@ -426,7 +426,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-009-1",
+        "entryId": "LRE-009-1",
         "ruleId": "LR-009",
         "side": "debit",
         "account": "普通預金",
@@ -441,7 +441,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-009-2",
+        "entryId": "LRE-009-2",
         "ruleId": "LR-009",
         "side": "credit",
         "account": "売上高",
@@ -463,7 +463,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-04-20T09:00:00Z"
   },
   {
-    "id": "LR-012",
+    "ruleId": "LR-012",
     "clientId": "TST-00011",
     "keyword": "給与振込",
     "matchType": "exact",
@@ -473,7 +473,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-012-1",
+        "entryId": "LRE-012-1",
         "ruleId": "LR-012",
         "side": "debit",
         "account": "給料手当",
@@ -488,7 +488,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-012-2",
+        "entryId": "LRE-012-2",
         "ruleId": "LR-012",
         "side": "debit",
         "account": "法定福利費",
@@ -503,7 +503,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 2
       },
       {
-        "id": "LRE-012-3",
+        "entryId": "LRE-012-3",
         "ruleId": "LR-012",
         "side": "credit",
         "account": "普通預金",
@@ -518,7 +518,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 3
       },
       {
-        "id": "LRE-012-4",
+        "entryId": "LRE-012-4",
         "ruleId": "LR-012",
         "side": "credit",
         "account": "預り金",
@@ -533,7 +533,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 4
       },
       {
-        "id": "LRE-012-5",
+        "entryId": "LRE-012-5",
         "ruleId": "LR-012",
         "side": "credit",
         "account": "預り金",
@@ -555,7 +555,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-04-20T10:00:00Z"
   },
   {
-    "id": "LR-002",
+    "ruleId": "LR-002",
     "clientId": "TST-00011",
     "keyword": "Amazon",
     "matchType": "contains",
@@ -565,7 +565,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": 10000,
     "entries": [
       {
-        "id": "LRE-002-1",
+        "entryId": "LRE-002-1",
         "ruleId": "LR-002",
         "side": "debit",
         "account": "消耗品費",
@@ -580,7 +580,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-002-2",
+        "entryId": "LRE-002-2",
         "ruleId": "LR-002",
         "side": "credit",
         "account": "未払金",
@@ -602,7 +602,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-04-10T11:00:00Z"
   },
   {
-    "id": "LR-002b",
+    "ruleId": "LR-002b",
     "clientId": "TST-00011",
     "keyword": "Amazon",
     "matchType": "contains",
@@ -612,7 +612,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-002b-1",
+        "entryId": "LRE-002b-1",
         "ruleId": "LR-002b",
         "side": "debit",
         "account": "工具器具備品",
@@ -627,7 +627,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-002b-2",
+        "entryId": "LRE-002b-2",
         "ruleId": "LR-002b",
         "side": "credit",
         "account": "未払金",
@@ -649,7 +649,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-04-10T11:00:00Z"
   },
   {
-    "id": "LR-006",
+    "ruleId": "LR-006",
     "clientId": "TST-00011",
     "keyword": "ENEOS",
     "matchType": "exact",
@@ -659,7 +659,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-006-1",
+        "entryId": "LRE-006-1",
         "ruleId": "LR-006",
         "side": "debit",
         "account": "車両費",
@@ -674,7 +674,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-006-2",
+        "entryId": "LRE-006-2",
         "ruleId": "LR-006",
         "side": "credit",
         "account": "未払金",
@@ -696,7 +696,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-03-05T08:30:00Z"
   },
   {
-    "id": "LR-010",
+    "ruleId": "LR-010",
     "clientId": "TST-00011",
     "keyword": "Adobe",
     "matchType": "exact",
@@ -706,7 +706,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-010-1",
+        "entryId": "LRE-010-1",
         "ruleId": "LR-010",
         "side": "debit",
         "account": "通信費",
@@ -721,7 +721,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-010-2",
+        "entryId": "LRE-010-2",
         "ruleId": "LR-010",
         "side": "credit",
         "account": "未払金",
@@ -743,7 +743,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-04-01T10:00:00Z"
   },
   {
-    "id": "LR-013",
+    "ruleId": "LR-013",
     "clientId": "TST-00011",
     "keyword": "AWS",
     "matchType": "contains",
@@ -753,7 +753,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-013-1",
+        "entryId": "LRE-013-1",
         "ruleId": "LR-013",
         "side": "debit",
         "account": "通信費",
@@ -768,7 +768,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-013-2",
+        "entryId": "LRE-013-2",
         "ruleId": "LR-013",
         "side": "debit",
         "account": "仮払消費税",
@@ -783,7 +783,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 2
       },
       {
-        "id": "LRE-013-3",
+        "entryId": "LRE-013-3",
         "ruleId": "LR-013",
         "side": "credit",
         "account": "未払金",
@@ -805,7 +805,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "updatedAt": "2026-04-20T10:00:00Z"
   },
   {
-    "id": "LR-014",
+    "ruleId": "LR-014",
     "clientId": "TST-00011",
     "keyword": "売上返金",
     "matchType": "contains",
@@ -815,7 +815,7 @@ export const learningRulesTST00011: LearningRule[] = [
     "amountMax": null,
     "entries": [
       {
-        "id": "LRE-014-1",
+        "entryId": "LRE-014-1",
         "ruleId": "LR-014",
         "side": "debit",
         "account": "売上高",
@@ -830,7 +830,7 @@ export const learningRulesTST00011: LearningRule[] = [
         "displayOrder": 1
       },
       {
-        "id": "LRE-014-2",
+        "entryId": "LRE-014-2",
         "ruleId": "LR-014",
         "side": "credit",
         "account": "普通預金",

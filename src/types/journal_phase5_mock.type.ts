@@ -69,8 +69,8 @@ export type JournalLabelMock =
 
 export interface JournalPhase5Mock {
   // 基本情報
-  // TODO (2026-04) Supabase: id→VARCHAR(20) PK, client_id→VARCHAR(20) FK
-  id: string;                           // jrn-00000001形式（接頭辞+連番、一意ID）
+  // TODO (2026-04) Supabase: journalId→VARCHAR(20) PK, client_id→VARCHAR(20) FK
+  journalId: string;                           // jrn-00000001形式（接頭辞+連番、一意ID）
   client_id: string;                     // 顧問先ID（例: LDI-00008、接頭辞+連番）
   display_order: number;                 // 表示順
   /**

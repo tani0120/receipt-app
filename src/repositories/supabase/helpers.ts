@@ -78,7 +78,7 @@ export function fromVendor(vendor: Vendor): Record<string, unknown> {
 /** DB行 → Account型への変換 */
 export function toAccount(row: Record<string, unknown>): Account {
   return {
-    id: row.id as string,
+    accountId: row.id as string,
     name: row.name as string,
     sub: (row.sub as string) ?? undefined,
     target: (row.target as Account['target']) ?? 'corp',

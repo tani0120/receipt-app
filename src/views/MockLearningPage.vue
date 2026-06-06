@@ -79,7 +79,7 @@
                 <i class="fa-solid fa-inbox"></i> 条件に一致するルールがありません
               </td>
             </tr>
-            <template v-for="(rule, idx) in filteredRules" :key="rule.id">
+            <template v-for="(rule, idx) in filteredRules" :key="rule.ruleId">
               <!-- 表示行（1行目） -->
               <tr class="data-row" :class="{ 'data-row--inactive': !rule.isActive }" @click="openModal(rule)">
                 <td class="td-num" :rowspan="entryPairCount(rule)">{{ idx + 1 }}</td>
@@ -101,7 +101,7 @@
                 <td class="td-tax">{{ firstCredit(rule)?.taxCategory || '—' }}</td>
                 <td class="td-status" :rowspan="entryPairCount(rule)">
                   <button class="status-toggle" :class="rule.isActive ? 'status-toggle--active' : 'status-toggle--inactive'"
-                    @click.stop="toggleActive(rule.id)">{{ rule.isActive ? UI_MSG.有効 : UI_MSG.無効 }}</button>
+                    @click.stop="toggleActive(rule.ruleId)">{{ rule.isActive ? UI_MSG.有効 : UI_MSG.無効 }}</button>
                 </td>
                 <td class="td-hit" :rowspan="entryPairCount(rule)"><span class="hit-count">{{ rule.hitCount }}</span></td>
                 <td class="td-gen" :rowspan="entryPairCount(rule)">
@@ -109,7 +109,7 @@
                 </td>
               </tr>
               <!-- 複合仕訳の追加行 -->
-              <tr v-for="(pair, pi) in extraPairs(rule)" :key="rule.id + '-p' + pi"
+              <tr v-for="(pair, pi) in extraPairs(rule)" :key="rule.ruleId + '-p' + pi"
                 class="data-row data-row--extra" :class="{ 'data-row--inactive': !rule.isActive }" @click="openModal(rule)">
                 <td class="td-account">{{ pair.debit?.account || '' }}</td>
                 <td class="td-sub">{{ pair.debit?.subAccount || '—' }}</td>
@@ -423,7 +423,7 @@ function formatAmountCondition(rule: LearningRule): string {
 
 // --- 有効/無効トグル（API永続化） ---
 const toggleActive = async (id: string) => {
-  const rule = rules.value.find(r => r.id === id)
+  const rule = rules.value.find(r => r.ruleId === id)
   if (!rule) return
   const newActive = !rule.isActive
   try {
@@ -454,7 +454,7 @@ interface EntryPair {
 const modalEntryPairs = ref<EntryPair[]>([])
 
 function emptyEntry(side: 'debit' | 'credit', ruleId: string): LearningRuleEntryLine {
-  return { id: `LRE-NEW-${crypto.randomUUID().slice(0, 8)}-${side}`, ruleId, side, account: '', subAccount: null, taxCategory: null, department: null, amountType: 'auto', fixedAmount: null, displayName: null, description: null, targetMonth: null, displayOrder: 0 }
+  return { entryId: `LRE-NEW-${crypto.randomUUID().slice(0, 8)}-${side}`, ruleId, side, account: '', subAccount: null, taxCategory: null, department: null, amountType: 'auto', fixedAmount: null, displayName: null, description: null, targetMonth: null, displayOrder: 0 }
 }
 
 function detectAmountMode(rule: LearningRule): 'none' | 'min' | 'max' | 'exact' | 'range' {
@@ -478,16 +478,16 @@ function buildPairs(entries: LearningRuleEntryLine[], ruleId: string): EntryPair
 }
 
 function openModal(rule: LearningRule) {
-  modalOriginalId.value = rule.id
+  modalOriginalId.value = rule.ruleId
   modalRule.value = { ...rule, entries: rule.entries.map(e => ({ ...e })) }
   amountMode.value = detectAmountMode(rule)
-  modalEntryPairs.value = buildPairs(rule.entries, rule.id)
+  modalEntryPairs.value = buildPairs(rule.entries, rule.ruleId)
 }
 
 function closeModal() { modalRule.value = null }
 
 function addModalPair() {
-  const ruleId = modalRule.value?.id || ''
+  const ruleId = modalRule.value?.ruleId || ''
   modalEntryPairs.value.push({ debit: emptyEntry('debit', ruleId), credit: emptyEntry('credit', ruleId) })
 }
 
@@ -534,7 +534,7 @@ async function saveModal(mode: 'rule' | 'all') {
       }
       const data = await res.json() as { rule: LearningRule }
       // ローカル配列を更新（仮IDの行をサーバー返却のルールに差し替え）
-      const idx = rules.value.findIndex(r => r.id === modalOriginalId.value)
+      const idx = rules.value.findIndex(r => r.ruleId === modalOriginalId.value)
       if (idx !== -1) rules.value[idx] = data.rule
       else rules.value.push(data.rule)
     } else {
@@ -550,7 +550,7 @@ async function saveModal(mode: 'rule' | 'all') {
         return
       }
       // ローカル配列を更新
-      const idx = rules.value.findIndex(r => r.id === modalOriginalId.value)
+      const idx = rules.value.findIndex(r => r.ruleId === modalOriginalId.value)
       if (idx !== -1) rules.value[idx] = { ...modalRule.value!, entries: modalRule.value!.entries.map(e => ({ ...e })) }
     }
     if (mode === 'all') alert(UI_MSG.一括適用完了)
@@ -568,7 +568,7 @@ async function handleDeleteModal() {
       method: 'DELETE',
     })
     if (res.ok) {
-      rules.value = rules.value.filter(r => r.id !== modalOriginalId.value)
+      rules.value = rules.value.filter(r => r.ruleId !== modalOriginalId.value)
       closeModal()
     } else {
       console.error('[LearningPage] ルール削除失敗:', await res.text())
@@ -582,7 +582,7 @@ async function handleDeleteModal() {
 
 function handleAdd() {
   const newRule: LearningRule = {
-    id: `NEW-${crypto.randomUUID().slice(0, 8)}`, clientId: clientId.value, keyword: '', matchType: 'exact',
+    ruleId: `NEW-${crypto.randomUUID().slice(0, 8)}`, clientId: clientId.value, keyword: '', matchType: 'exact',
     direction: 'expense', sourceCategory: null, amountMin: null, amountMax: null,
     entries: [emptyEntry('debit', ''), emptyEntry('credit', '')],
     isActive: true, hitCount: 0, generatedBy: 'human',

@@ -89,26 +89,26 @@ export function getByClientId(clientId: string): LearningRule[] {
 /** 学習ルール1件取得 */
 export function getById(clientId: string, ruleId: string): LearningRule | undefined {
   const list = rulesByClient.get(clientId)
-  const rule = list?.find(r => r.id === ruleId)
+  const rule = list?.find(r => r.ruleId === ruleId)
   if (!rule) return undefined
   return { ...rule, entries: rule.entries.map(e => ({ ...e })) }
 }
 
 /** 学習ルール追加（サーバーがIDを発番） */
-export function create(clientId: string, rule: Partial<LearningRule> & Omit<LearningRule, 'id'>): LearningRule {
+export function create(clientId: string, rule: Partial<LearningRule> & Omit<LearningRule, 'ruleId'>): LearningRule {
   const list = rulesByClient.get(clientId) ?? []
   // サーバーが常にIDを発番
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   const bytes = crypto.randomBytes(8)
-  let id = 'lr_'
+  let ruleId = 'lr_'
   for (let i = 0; i < 8; i++) {
-    id += chars[bytes[i]! % chars.length]
+    ruleId += chars[bytes[i]! % chars.length]
   }
-  const cloned: LearningRule = { ...rule, id, entries: (rule.entries ?? []).map(e => ({ ...e })) } as LearningRule
+  const cloned: LearningRule = { ...rule, ruleId, entries: (rule.entries ?? []).map(e => ({ ...e })) } as LearningRule
   list.push(cloned)
   rulesByClient.set(clientId, list)
   saveAll()
-  console.log(`[learningRuleStore] ${clientId} にルール「${rule.keyword}」を追加（ID: ${id}）`)
+  console.log(`[learningRuleStore] ${clientId} にルール「${rule.keyword}」を追加（ID: ${ruleId}）`)
   return cloned
 }
 
@@ -116,7 +116,7 @@ export function create(clientId: string, rule: Partial<LearningRule> & Omit<Lear
 export function update(clientId: string, ruleId: string, patch: Partial<LearningRule>): boolean {
   const list = rulesByClient.get(clientId)
   if (!list) return false
-  const idx = list.findIndex(r => r.id === ruleId)
+  const idx = list.findIndex(r => r.ruleId === ruleId)
   if (idx === -1) return false
   list[idx] = { ...list[idx]!, ...patch, entries: patch.entries ? patch.entries.map(e => ({ ...e })) : list[idx]!.entries }
   saveAll()
@@ -127,7 +127,7 @@ export function update(clientId: string, ruleId: string, patch: Partial<Learning
 export function remove(clientId: string, ruleId: string): boolean {
   const list = rulesByClient.get(clientId)
   if (!list) return false
-  const idx = list.findIndex(r => r.id === ruleId)
+  const idx = list.findIndex(r => r.ruleId === ruleId)
   if (idx === -1) return false
   list.splice(idx, 1)
   saveAll()

@@ -38,6 +38,7 @@ import { searchSupporting } from '../services/migration/supportingSearchService'
 import {
   getClientAccountsForValidation,
   getClientTaxCategoriesForValidation,
+  getClientTaxCategories,
   getAccountNameMap,
   getTaxCategoryNameMap,
 } from '../services/accountMasterStore';
@@ -154,7 +155,7 @@ app.post('/:clientId', async (c) => {
   }
   const added = addJournals(clientId, body.journals);
   // サーバーが上書き発番したIDリストを返す
-  const serverIds = body.journals.map((j: unknown) => (j as Record<string, unknown>).id as string);
+  const serverIds = body.journals.map((j: unknown) => (j as Record<string, unknown>).journalId as string);
   return c.json({ ok: true, added, serverIds });
 });
 
@@ -174,7 +175,7 @@ app.post('/:clientId/:journalId/validate', async (c) => {
 
   // サーバー側ストアから仕訳データ取得
   const journals = getJournals(clientId) as JournalForValidation[];
-  const journal = journals.find(j => j.id === journalId);
+  const journal = journals.find(j => j.journalId === journalId);
   if (!journal) {
     return apiError(c, 404, `仕訳ID '${journalId}' が見つかりません`);
   }
@@ -215,11 +216,11 @@ app.post('/:clientId/:journalId/hints', async (c) => {
 
   // 顧問先別の科目・税区分を取得（データ駆動）
   const accounts = getClientAccountsForValidation(clientId);
-  const taxCategories = getClientTaxCategoriesForValidation(clientId);
+  const taxCategories = getClientTaxCategories(clientId);
 
   // サーバー側ストアから仕訳データ取得
   const journals = getJournals(clientId) as JournalForHint[];
-  const journal = journals.find(j => j.id === journalId);
+  const journal = journals.find(j => j.journalId === journalId);
   if (!journal) {
     return apiError(c, 404, `仕訳ID '${journalId}' が見つかりません`);
   }

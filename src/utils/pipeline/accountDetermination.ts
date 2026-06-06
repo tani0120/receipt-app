@@ -87,7 +87,7 @@ function expandRuleEntries(
     .sort((a, b) => a.displayOrder - b.displayOrder)
 
   return entries.map(e => ({
-    id: generateJournalEntryId(),
+    entryId: generateJournalEntryId(),
     account: e.account,
     account_on_document: false, // ルール適用 = 証憑由来ではない
     sub_account: e.subAccount,

@@ -50,7 +50,7 @@ function guessBaseId(name: string, masterItems: readonly TaxCategory[]): string 
   const baseName = name.replace(/\s*[一二三四五六]種\s*$/, '').trim()
   if (baseName === name) return undefined
   const base = masterItems.find(m => m.name === baseName)
-  return base?.id
+  return base?.taxCategoryId
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -195,7 +195,7 @@ async function detectDiff(clientId: string, _dryRun: boolean = false): Promise<D
   // マスタにあるがMFにない → 削除候補（source='mf'の行のみ）
   for (const row of masterItems) {
     if (row.source === 'mf' && !mfNameSet.has(row.name)) {
-      diff.deleteCandidates.push({ id: row.id, name: row.name, mfId: '' })
+      diff.deleteCandidates.push({ id: row.taxCategoryId, name: row.name, mfId: '' })
     }
   }
 
@@ -204,7 +204,7 @@ async function detectDiff(clientId: string, _dryRun: boolean = false): Promise<D
   for (const method of VALID_METHODS) {
     const methodAvail = availData[method] ?? {}
     for (const row of masterItems) {
-      if (methodAvail[row.id] === true && row.deprecated) {
+      if (methodAvail[row.taxCategoryId] === true && row.deprecated) {
         row.deprecated = false
         deprecatedReset++
       }
@@ -303,7 +303,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
     const dir = guessDirectionFromName(a.name)
     const simplified = guessSimplifiedOnly(a.name)
     const newRow: TaxCategory = {
-      id: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      taxCategoryId: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       name: a.name,
       shortName: a.abbreviation ?? '',
       direction: dir,
@@ -327,7 +327,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
 
   // 削除候補 → 非表示化
   for (const d of diff.deleteCandidates) {
-    const row = masterItems.find(r => r.id === d.id)
+    const row = masterItems.find(r => r.taxCategoryId === d.id)
     if (row) row.deprecated = true
   }
 
@@ -336,7 +336,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
     const availMap: Record<string, boolean> = {}
     for (const t of mfTaxes) {
       const masterRow = nameToRow.get(t.name)
-      const key = masterRow?.id ?? generateTaxMasterId(t.name) ?? `UNKNOWN_${t.name}`
+      const key = masterRow?.taxCategoryId ?? generateTaxMasterId(t.name) ?? `UNKNOWN_${t.name}`
       availMap[key] = t.available
     }
     saveTaxAvailable(pattern as TaxMethodKey, availMap)
@@ -347,7 +347,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
   if (diff.added.length > 0) {
     for (const a of diff.added) {
       const newRow = masterItems.find(r => r.name === a.name)
-      const masterId = newRow?.id ?? generateTaxMasterId(a.name) ?? `UNKNOWN_${a.name}`
+      const masterId = newRow?.taxCategoryId ?? generateTaxMasterId(a.name) ?? `UNKNOWN_${a.name}`
       const dir = newRow?.direction ?? 'common'
 
       for (const method of VALID_METHODS) {
@@ -499,7 +499,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
     const dir = guessDirectionFromName(t.name)
     const simplified = guessSimplifiedOnly(t.name)
     return {
-      id: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      taxCategoryId: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       name: t.name,
       shortName: t.abbreviation ?? '',
       direction: dir,
@@ -532,7 +532,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
       const availMap: Record<string, boolean> = {}
       for (const t of mfTaxes) {
         const master = masterByName.get(t.name)
-        const key = master?.id ?? generateTaxMasterId(t.name) ?? `UNKNOWN_${t.name}`
+        const key = master?.taxCategoryId ?? generateTaxMasterId(t.name) ?? `UNKNOWN_${t.name}`
         availMap[key] = t.available
       }
       saveTaxAvailable(patternKey, availMap)

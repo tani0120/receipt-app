@@ -74,7 +74,7 @@ export async function sendJournalToMf(
   tokenKey: string,
   maps?: MfMappingTables,
 ): Promise<SendResult> {
-  const sugusruId = journal.id
+  const sugusruId = journal.journalId
 
   try {
     // 1. マッピングテーブル取得（キャッシュ利用）
@@ -198,7 +198,7 @@ export async function sendBatchToMf(
       // 429レート制限エラーならリトライ
       if (!result.success && result.sendError?.includes('429') && retries < MAX_RETRIES) {
         const waitMs = RETRY_BASE_MS * Math.pow(2, retries) // 指数バックオフ: 1s→2s→4s
-        console.warn(`[mfSender] 429レート制限: ${journals[i]!.id}（${waitMs}ms後にリトライ ${retries + 1}/${MAX_RETRIES}）`)
+        console.warn(`[mfSender] 429レート制限: ${journals[i]!.journalId}（${waitMs}ms後にリトライ ${retries + 1}/${MAX_RETRIES}）`)
         await new Promise(resolve => setTimeout(resolve, waitMs))
         retries++
         continue
@@ -259,7 +259,7 @@ export async function sendBatchToMf(
  */
 export function applyMfSendResults(
   journals: Array<{
-    id: string
+    journalId: string
     mf_journal_id?: string | null
     mf_journal_number?: number | null
     mf_sent_at?: string | null
@@ -273,7 +273,7 @@ export function applyMfSendResults(
   for (const result of results) {
     if (!result.success || !result.mfId) continue
 
-    const journal = journals.find(j => j.id === result.sugusruId)
+    const journal = journals.find(j => j.journalId === result.sugusruId)
     if (!journal) continue
 
     journal.mf_journal_id = result.mfId

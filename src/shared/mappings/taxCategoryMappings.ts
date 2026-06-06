@@ -51,7 +51,7 @@ export function resolveTaxNameForSoftware(
 ): string {
   // MFの場合: マスタのnameをそのまま返す（マスタがSSOT）
   if (software === 'mf') {
-    const master = masterTaxCategories.find(t => t.id === masterId)
+    const master = masterTaxCategories.find(t => t.taxCategoryId === masterId)
     return master?.name ?? masterId
   }
 
@@ -60,7 +60,7 @@ export function resolveTaxNameForSoftware(
   if (override) return override
 
   // フォールバック: マスタのnameを返す
-  const master = masterTaxCategories.find(t => t.id === masterId)
+  const master = masterTaxCategories.find(t => t.taxCategoryId === masterId)
   return master?.name ?? masterId
 }
 
@@ -77,7 +77,7 @@ export function resolveTaxShortNameForSoftware(
   software: AccountingSoftwareKey,
   masterTaxCategories: TaxCategory[],
 ): string {
-  const master = masterTaxCategories.find(t => t.id === masterId)
+  const master = masterTaxCategories.find(t => t.taxCategoryId === masterId)
   if (!master) return masterId
 
   // MFの場合: shortNameがあればそれを返す

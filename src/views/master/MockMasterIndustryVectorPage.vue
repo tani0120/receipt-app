@@ -112,7 +112,7 @@
                     </span>
                     <select class="iv-add-account-select" @change="addAccount(row.expense, $event)">
                       <option value="">{{ PLACEHOLDER_ADD }}</option>
-                      <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
+                      <option v-for="acc in accountOptions" :key="acc.accountId" :value="acc.accountId">{{ acc.name }}</option>
                     </select>
                   </div>
                 </td>
@@ -126,7 +126,7 @@
                     </span>
                     <select class="iv-add-account-select" @change="addAccount(row.income, $event)">
                       <option value="">{{ PLACEHOLDER_ADD }}</option>
-                      <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
+                      <option v-for="acc in accountOptions" :key="acc.accountId" :value="acc.accountId">{{ acc.name }}</option>
                     </select>
                   </div>
                 </td>
@@ -299,8 +299,8 @@ function findCategory(vector: string): CategoryDef {
 // 科目
 // ============================================================
 const { masterAccounts: masterAccountList } = useAccountMaster();
-const accountMap = computed(() => new Map(masterAccountList.value.map(a => [a.id, a.name])));
-const accountOptions = computed(() => masterAccountList.value.map(a => ({ id: a.id, name: a.name })));
+const accountMap = computed(() => new Map(masterAccountList.value.map(a => [a.accountId, a.name])));
+const accountOptions = computed(() => masterAccountList.value.map(a => ({ accountId: a.accountId, name: a.name })));
 
 function accountName(id: string): string {
   return accountMap.value.get(id) ?? id;

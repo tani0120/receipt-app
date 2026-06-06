@@ -7,7 +7,7 @@
  */
 
 export interface DocumentMock {
-    id: string;                           // 証票ID（doc-00000001形式）
+    documentId: string;                   // 証票ID（doc-00000001形式）
     client_id: string;                    // 顧問先ID
     source_type?: string | null;          // 証票種類（receipt, invoice, bank_statement等）
     file_path?: string | null;            // ファイルパス

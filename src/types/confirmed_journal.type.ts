@@ -31,7 +31,7 @@
  */
 export interface ConfirmedJournal {
   /** 仕訳ID（UUID） */
-  id: string
+  journalId: string
 
   /** 顧問先ID（例: LDI-00008） */
   client_id: string
@@ -140,7 +140,7 @@ export interface ConfirmedJournal {
  */
 export interface ConfirmedJournalEntry {
   /** 行ID（UUID） */
-  id: string
+  entryId: string
 
   /** 勘定科目（MF科目名。必須） */
   account: string

@@ -165,15 +165,15 @@ export function taxDetLabel(td: string): string {
  */
 export function deriveCategoryDefaults(
   accountGroup: AccountGroup,
-  taxCategories?: { id: string; isSalesDefault?: boolean; isPurchaseDefault?: boolean; isExemptDefault?: boolean }[],
+  taxCategories?: { taxCategoryId: string; isSalesDefault?: boolean; isPurchaseDefault?: boolean; isExemptDefault?: boolean }[],
 ): {
   taxDetermination: TaxDetermination
   defaultTaxCategoryId: string
 } {
   // データ駆動: マスタのフラグからデフォルト税区分IDを解決
-  const salesDefault = taxCategories?.find(t => t.isSalesDefault)?.id ?? ''
-  const purchaseDefault = taxCategories?.find(t => t.isPurchaseDefault)?.id ?? ''
-  const exemptDefault = taxCategories?.find(t => t.isExemptDefault)?.id ?? ''
+  const salesDefault = taxCategories?.find(t => t.isSalesDefault)?.taxCategoryId ?? ''
+  const purchaseDefault = taxCategories?.find(t => t.isPurchaseDefault)?.taxCategoryId ?? ''
+  const exemptDefault = taxCategories?.find(t => t.isExemptDefault)?.taxCategoryId ?? ''
 
   const direction = getAccountGroupDirection(accountGroup)
   if (direction === 'sales') {

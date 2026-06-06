@@ -329,13 +329,13 @@ const creditAccountFilter = ref("");
 function resolveAccountName(id: string | null | undefined): string {
   if (!id) return "";
   // 顧問先設定を優先、見つからなければマスタ全体からフォールバック
-  const account = clientSettings.accounts.value.find((a) => a.id === id);
+  const account = clientSettings.accounts.value.find((a) => a.accountId === id);
   return account ? account.name : id;
 }
 
 function resolveTaxCategoryName(id: string | null | undefined): string {
   if (!id) return "";
-  const entry = clientSettings.taxCategories.value.find((tc) => tc.id === id);
+  const entry = clientSettings.taxCategories.value.find((tc) => tc.taxCategoryId === id);
   return entry ? entry.name : id;
 }
 
@@ -363,7 +363,7 @@ const startDownload = async () => {
   const sourceJournals = journals.value;
   const checkedJournalIds = new Set([...checkedIds.value].map((rid) => rid.replace(/-\d+$/, "")));
   const checkedJournals = sourceJournals.filter(
-    (j) => j.deleted_at === null && checkedJournalIds.has(j.id),
+    (j) => j.deleted_at === null && checkedJournalIds.has(j.journalId),
   );
   if (checkedJournals.length === 0) {
     isDownloading.value = false;
@@ -398,7 +398,7 @@ const startDownload = async () => {
     // ダウンロード履歴をサーバーに保存（サーバーがhistoryIdを発番）
     const historyId = await saveDownloadHistory(`${fname}.csv`, valid.length, csvLineCount);
     for (const v of valid) {
-      const target = journals.value.find((j) => j.id === v.id);
+      const target = journals.value.find((j) => j.journalId === v.journalId);
       if (target) {
         target.status = "exported";
         target.exported_at = exportedAt;

@@ -1,7 +1,7 @@
 import type { DocumentStatus } from '@/shared/documentStatus'
 
 export interface DocumentViewModel {
-    id: string
+    documentId: string
     status: DocumentStatus
     clientId: string
     driveFileId: string

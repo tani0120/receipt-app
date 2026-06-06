@@ -21,7 +21,7 @@ vi.mock('vue-router', () => ({
  */
 function createTestDocument(overrides: Record<string, unknown> = {}): DocumentViewModel {
   return {
-    id: '1',
+    documentId: '1',
     status: 'uploaded',
     clientId: 'test',
     driveFileId: 'test',

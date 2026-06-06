@@ -8,7 +8,7 @@ export type { DocumentStatus } from '@/shared/documentStatus'
 
 
 export interface Document {
-    id: string;
+    documentId: string;
     client_id: string;
     drive_file_id: string;
     status: DocumentStatus;
@@ -20,7 +20,7 @@ export interface Document {
 }
 
 export interface AuditLog {
-    id: number;
+    auditLogId: number;
     entity_type: string;
     entity_id: string;
     action: string;

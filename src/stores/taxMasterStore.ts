@@ -69,13 +69,13 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
   )
 
   const overrides = computed(() => ({
-    hiddenIds: allTaxCategories.value.filter(tc => tc.deprecated).map(tc => tc.id),
+    hiddenIds: allTaxCategories.value.filter(tc => tc.deprecated).map(tc => tc.taxCategoryId),
     visibilityOverrides: {} as Record<string, boolean>,
     customTaxCategories: allTaxCategories.value.filter(tc => tc.isCustom),
   }))
 
   function toggleVisibility(taxCategoryId: string): void {
-    const idx = allTaxCategories.value.findIndex(tc => tc.id === taxCategoryId)
+    const idx = allTaxCategories.value.findIndex(tc => tc.taxCategoryId === taxCategoryId)
     if (idx >= 0) {
       const current = allTaxCategories.value[idx]!
       allTaxCategories.value[idx] = { ...current, deprecated: !current.deprecated }
@@ -84,7 +84,7 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
   }
 
   function setDefaultVisible(taxCategoryId: string, visible: boolean): void {
-    const idx = allTaxCategories.value.findIndex(tc => tc.id === taxCategoryId)
+    const idx = allTaxCategories.value.findIndex(tc => tc.taxCategoryId === taxCategoryId)
     if (idx >= 0) {
       const current = allTaxCategories.value[idx]!
       allTaxCategories.value[idx] = { ...current, defaultVisible: visible }

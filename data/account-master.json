@@ -1,6 +1,5 @@
 [
   {
-    "id": "GENKIN_CORP",
     "name": "現金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -16,10 +15,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "GENKIN_CORP"
   },
   {
-    "id": "GENKIN_IND",
     "name": "現金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -35,10 +34,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "GENKIN_IND"
   },
   {
-    "id": "FUTSUUYOKIN_CORP",
     "name": "普通預金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -54,10 +53,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "FUTSUUYOKIN_CORP"
   },
   {
-    "id": "FUTSUUYOKIN_IND",
     "name": "普通預金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -73,10 +72,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "FUTSUUYOKIN_IND"
   },
   {
-    "id": "TOUZAYOKIN_CORP",
     "name": "当座預金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -92,10 +91,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TOUZAYOKIN_CORP"
   },
   {
-    "id": "TOUZAYOKIN_IND",
     "name": "当座預金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -111,10 +110,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TOUZAYOKIN_IND"
   },
   {
-    "id": "TEIKIYOKIN_CORP",
     "name": "定期預金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -130,10 +129,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TEIKIYOKIN_CORP"
   },
   {
-    "id": "TEIKIYOKIN_IND",
     "name": "定期預金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -149,10 +148,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TEIKIYOKIN_IND"
   },
   {
-    "id": "UKETORITEGATA_CORP",
     "name": "受取手形",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -168,10 +167,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "UKETORITEGATA_CORP"
   },
   {
-    "id": "UKETORITEGATA_IND",
     "name": "受取手形",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -187,10 +186,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "UKETORITEGATA_IND"
   },
   {
-    "id": "URIKAKEKIN_CORP",
     "name": "売掛金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -206,10 +205,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "URIKAKEKIN_CORP"
   },
   {
-    "id": "URIKAKEKIN_IND",
     "name": "売掛金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -225,10 +224,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "URIKAKEKIN_IND"
   },
   {
-    "id": "YUUKASHOUKEN_CORP",
     "name": "有価証券",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -244,10 +243,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "YUUKASHOUKEN_CORP"
   },
   {
-    "id": "YUUKASHOUKEN_IND",
     "name": "有価証券",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -263,10 +262,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "YUUKASHOUKEN_IND"
   },
   {
-    "id": "MAEBARAIKIN_CORP",
     "name": "前払金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -282,10 +281,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MAEBARAIKIN_CORP"
   },
   {
-    "id": "MAEBARAIKIN_IND",
     "name": "前払金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -301,10 +300,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MAEBARAIKIN_IND"
   },
   {
-    "id": "KARIBARAIKIN_CORP",
     "name": "仮払金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -320,10 +319,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KARIBARAIKIN_CORP"
   },
   {
-    "id": "KARIBARAIKIN_IND",
     "name": "仮払金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -339,10 +338,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KARIBARAIKIN_IND"
   },
   {
-    "id": "TATEMONO_CORP",
     "name": "建物",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -358,10 +357,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TATEMONO_CORP"
   },
   {
-    "id": "TATEMONO_IND",
     "name": "建物",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -377,10 +376,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TATEMONO_IND"
   },
   {
-    "id": "KOUCHIKUBUTSU_CORP",
     "name": "構築物",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -396,10 +395,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KOUCHIKUBUTSU_CORP"
   },
   {
-    "id": "KOUCHIKUBUTSU_IND",
     "name": "構築物",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -415,10 +414,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KOUCHIKUBUTSU_IND"
   },
   {
-    "id": "SHARYOUUNPANGU_CORP",
     "name": "車両運搬具",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -434,10 +433,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHARYOUUNPANGU_CORP"
   },
   {
-    "id": "SHARYOUUNPANGU_IND",
     "name": "車両運搬具",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -453,10 +452,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHARYOUUNPANGU_IND"
   },
   {
-    "id": "TOCHI_CORP",
     "name": "土地",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -472,10 +471,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TOCHI_CORP"
   },
   {
-    "id": "TOCHI_IND",
     "name": "土地",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -491,10 +490,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TOCHI_IND"
   },
   {
-    "id": "DENWAKANYUUKEN_CORP",
     "name": "電話加入権",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -510,10 +509,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "DENWAKANYUUKEN_CORP"
   },
   {
-    "id": "DENWAKANYUUKEN_IND",
     "name": "電話加入権",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -529,10 +528,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "DENWAKANYUUKEN_IND"
   },
   {
-    "id": "SHIKIKIN_CORP",
     "name": "敷金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -548,10 +547,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIKIKIN_CORP"
   },
   {
-    "id": "SHIKIKIN_IND",
     "name": "敷金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -567,10 +566,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIKIKIN_IND"
   },
   {
-    "id": "SASHIIREHOSHOUKIN_CORP",
     "name": "差入保証金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -586,10 +585,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SASHIIREHOSHOUKIN_CORP"
   },
   {
-    "id": "SASHIIREHOSHOUKIN_IND",
     "name": "差入保証金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -605,10 +604,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SASHIIREHOSHOUKIN_IND"
   },
   {
-    "id": "SHIHARAITEGATA_CORP",
     "name": "支払手形",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -624,10 +623,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIHARAITEGATA_CORP"
   },
   {
-    "id": "SHIHARAITEGATA_IND",
     "name": "支払手形",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -643,10 +642,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIHARAITEGATA_IND"
   },
   {
-    "id": "KAIKAKEKIN_CORP",
     "name": "買掛金",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -662,10 +661,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KAIKAKEKIN_CORP"
   },
   {
-    "id": "KAIKAKEKIN_IND",
     "name": "買掛金",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -681,10 +680,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KAIKAKEKIN_IND"
   },
   {
-    "id": "MIHARAIKIN_CORP",
     "name": "未払金",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -700,10 +699,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MIHARAIKIN_CORP"
   },
   {
-    "id": "MIHARAIKIN_IND",
     "name": "未払金",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -719,10 +718,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MIHARAIKIN_IND"
   },
   {
-    "id": "AZUKARIKIN_CORP",
     "name": "預り金",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -738,10 +737,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "AZUKARIKIN_CORP"
   },
   {
-    "id": "AZUKARIKIN_IND",
     "name": "預り金",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -757,10 +756,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "AZUKARIKIN_IND"
   },
   {
-    "id": "MAEUKEKIN_CORP",
     "name": "前受金",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -776,10 +775,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MAEUKEKIN_CORP"
   },
   {
-    "id": "MAEUKEKIN_IND",
     "name": "前受金",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -795,10 +794,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MAEUKEKIN_IND"
   },
   {
-    "id": "KARIUKEKIN_CORP",
     "name": "仮受金",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -814,10 +813,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KARIUKEKIN_CORP"
   },
   {
-    "id": "KARIUKEKIN_IND",
     "name": "仮受金",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -833,10 +832,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KARIUKEKIN_IND"
   },
   {
-    "id": "CHOUKIKARIIREKIN_CORP",
     "name": "長期借入金",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -852,10 +851,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "CHOUKIKARIIREKIN_CORP"
   },
   {
-    "id": "CHOUKIKARIIREKIN_IND",
     "name": "長期借入金",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -871,10 +870,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "CHOUKIKARIIREKIN_IND"
   },
   {
-    "id": "URIAGEDAKA_CORP",
     "name": "売上高",
     "target": "corp",
     "accountGroup": "PL_REVENUE",
@@ -890,10 +889,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "URIAGEDAKA_CORP"
   },
   {
-    "id": "URIAGEDAKA_IND",
     "name": "売上高",
     "target": "individual",
     "accountGroup": "PL_REVENUE",
@@ -909,10 +908,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "URIAGEDAKA_IND"
   },
   {
-    "id": "FUKURIKOUSEIHI_CORP",
     "name": "福利厚生費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -928,10 +927,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "FUKURIKOUSEIHI_CORP"
   },
   {
-    "id": "FUKURIKOUSEIHI_IND",
     "name": "福利厚生費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -947,10 +946,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "FUKURIKOUSEIHI_IND"
   },
   {
-    "id": "HOUTEIFUKURIHI_CORP",
     "name": "法定福利費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -966,10 +965,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "HOUTEIFUKURIHI_CORP"
   },
   {
-    "id": "HOUTEIFUKURIHI_IND",
     "name": "法定福利費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -985,10 +984,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "HOUTEIFUKURIHI_IND"
   },
   {
-    "id": "TSUUSHINHI_CORP",
     "name": "通信費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1004,10 +1003,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TSUUSHINHI_CORP"
   },
   {
-    "id": "TSUUSHINHI_IND",
     "name": "通信費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1023,10 +1022,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TSUUSHINHI_IND"
   },
   {
-    "id": "NIZUKURIUNCHIN_CORP",
     "name": "荷造運賃",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1042,10 +1041,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "NIZUKURIUNCHIN_CORP"
   },
   {
-    "id": "NIZUKURIUNCHIN_IND",
     "name": "荷造運賃",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1061,10 +1060,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "NIZUKURIUNCHIN_IND"
   },
   {
-    "id": "SUIDOUKOUNETSUHI_CORP",
     "name": "水道光熱費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1080,10 +1079,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SUIDOUKOUNETSUHI_CORP"
   },
   {
-    "id": "SUIDOUKOUNETSUHI_IND",
     "name": "水道光熱費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1099,10 +1098,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SUIDOUKOUNETSUHI_IND"
   },
   {
-    "id": "RYOHIKOUTSUUHI_CORP",
     "name": "旅費交通費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1118,10 +1117,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "RYOHIKOUTSUUHI_CORP"
   },
   {
-    "id": "RYOHIKOUTSUUHI_IND",
     "name": "旅費交通費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1137,10 +1136,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "RYOHIKOUTSUUHI_IND"
   },
   {
-    "id": "KOUKOKUSENDENHI_CORP",
     "name": "広告宣伝費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1156,10 +1155,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KOUKOKUSENDENHI_CORP"
   },
   {
-    "id": "KOUKOKUSENDENHI_IND",
     "name": "広告宣伝費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1175,10 +1174,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KOUKOKUSENDENHI_IND"
   },
   {
-    "id": "SETTAIKOUSAIHI_CORP",
     "name": "接待交際費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1194,10 +1193,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SETTAIKOUSAIHI_CORP"
   },
   {
-    "id": "SETTAIKOUSAIHI_IND",
     "name": "接待交際費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1213,10 +1212,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SETTAIKOUSAIHI_IND"
   },
   {
-    "id": "KAIGIHI_CORP",
     "name": "会議費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1232,10 +1231,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KAIGIHI_CORP"
   },
   {
-    "id": "KAIGIHI_IND",
     "name": "会議費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1251,10 +1250,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KAIGIHI_IND"
   },
   {
-    "id": "SHUUZENHI_CORP",
     "name": "修繕費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1270,10 +1269,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHUUZENHI_CORP"
   },
   {
-    "id": "SHUUZENHI_IND",
     "name": "修繕費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1289,10 +1288,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHUUZENHI_IND"
   },
   {
-    "id": "CHIDAIYACHIN_CORP",
     "name": "地代家賃",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1308,10 +1307,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "CHIDAIYACHIN_CORP"
   },
   {
-    "id": "CHIDAIYACHIN_IND",
     "name": "地代家賃",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1327,10 +1326,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "CHIDAIYACHIN_IND"
   },
   {
-    "id": "SOZEIKOUKAI_CORP",
     "name": "租税公課",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1346,10 +1345,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SOZEIKOUKAI_CORP"
   },
   {
-    "id": "SOZEIKOUKAI_IND",
     "name": "租税公課",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1365,10 +1364,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SOZEIKOUKAI_IND"
   },
   {
-    "id": "SHIHARAITESUURYOU_CORP",
     "name": "支払手数料",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1384,10 +1383,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIHARAITESUURYOU_CORP"
   },
   {
-    "id": "SHIHARAITESUURYOU_IND",
     "name": "支払手数料",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1403,10 +1402,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIHARAITESUURYOU_IND"
   },
   {
-    "id": "GENKASHOUKYAKUHI_CORP",
     "name": "減価償却費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1422,10 +1421,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "GENKASHOUKYAKUHI_CORP"
   },
   {
-    "id": "GENKASHOUKYAKUHI_IND",
     "name": "減価償却費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1441,10 +1440,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "GENKASHOUKYAKUHI_IND"
   },
   {
-    "id": "ZAPPI_CORP",
     "name": "雑費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1460,10 +1459,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "ZAPPI_CORP"
   },
   {
-    "id": "ZAPPI_IND",
     "name": "雑費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1479,10 +1478,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "ZAPPI_IND"
   },
   {
-    "id": "SHARYOUHI_CORP",
     "name": "車両費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1498,10 +1497,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHARYOUHI_CORP"
   },
   {
-    "id": "SHARYOUHI_IND",
     "name": "車両費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1517,10 +1516,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHARYOUHI_IND"
   },
   {
-    "id": "RIISURYOU_CORP",
     "name": "リース料",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1536,10 +1535,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "RIISURYOU_CORP"
   },
   {
-    "id": "RIISURYOU_IND",
     "name": "リース料",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1555,10 +1554,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "RIISURYOU_IND"
   },
   {
-    "id": "SHINBUNTOSHOHI_CORP",
     "name": "新聞図書費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1574,10 +1573,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHINBUNTOSHOHI_CORP"
   },
   {
-    "id": "SHINBUNTOSHOHI_IND",
     "name": "新聞図書費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1593,10 +1592,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHINBUNTOSHOHI_IND"
   },
   {
-    "id": "KURINOBESHISANSHOUKYAKU_CORP",
     "name": "繰延資産償却",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -1612,10 +1611,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KURINOBESHISANSHOUKYAKU_CORP"
   },
   {
-    "id": "KURINOBESHISANSHOUKYAKU_IND",
     "name": "繰延資産償却",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -1631,10 +1630,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KURINOBESHISANSHOUKYAKU_IND"
   },
   {
-    "id": "SONOTANOYOKIN_IND",
     "name": "その他の預金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1650,10 +1649,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SONOTANOYOKIN_IND"
   },
   {
-    "id": "SHOUHIN_IND",
     "name": "商品",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1669,10 +1668,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHOUHIN_IND"
   },
   {
-    "id": "CHOZOUHIN_IND",
     "name": "貯蔵品",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1688,10 +1687,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "CHOZOUHIN_IND"
   },
   {
-    "id": "ZAIRYOU_IND",
     "name": "材料",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1707,10 +1706,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "ZAIRYOU_IND"
   },
   {
-    "id": "SHIKAKARIHIN_IND",
     "name": "仕掛品",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1726,10 +1725,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIKAKARIHIN_IND"
   },
   {
-    "id": "SEIHIN_IND",
     "name": "製品",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1745,10 +1744,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SEIHIN_IND"
   },
   {
-    "id": "KASHITSUKEKIN_IND",
     "name": "貸付金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1764,10 +1763,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KASHITSUKEKIN_IND"
   },
   {
-    "id": "TATEKAEKIN_IND",
     "name": "立替金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1783,10 +1782,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TATEKAEKIN_IND"
   },
   {
-    "id": "MISHUUKIN_IND",
     "name": "未収金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1802,10 +1801,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MISHUUKIN_IND"
   },
   {
-    "id": "KOUGUKIGUBIHIN_IND",
     "name": "工具器具備品",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1821,10 +1820,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KOUGUKIGUBIHIN_IND"
   },
   {
-    "id": "KIKAISOUCHI_IND",
     "name": "機械装置",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1840,10 +1839,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KIKAISOUCHI_IND"
   },
   {
-    "id": "KAIGYOUHI_CORP",
     "name": "開業費",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -1859,10 +1858,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KAIGYOUHI_CORP"
   },
   {
-    "id": "KAIGYOUHI_IND",
     "name": "開業費",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1878,10 +1877,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KAIGYOUHI_IND"
   },
   {
-    "id": "JIGYOUNUSHIKASHI_IND",
     "name": "事業主貸",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -1897,10 +1896,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "JIGYOUNUSHIKASHI_IND"
   },
   {
-    "id": "JIGYOUNUSHIKARI_IND",
     "name": "事業主借",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -1916,10 +1915,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "JIGYOUNUSHIKARI_IND"
   },
   {
-    "id": "MOTOIREKIN_IND",
     "name": "元入金",
     "target": "individual",
     "accountGroup": "BS_EQUITY",
@@ -1935,10 +1934,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MOTOIREKIN_IND"
   },
   {
-    "id": "KARIIREKIN_IND",
     "name": "借入金",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -1954,10 +1953,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KARIIREKIN_IND"
   },
   {
-    "id": "KASHIDAOREHIKIATEKIN_IND",
     "name": "貸倒引当金",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -1973,10 +1972,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KASHIDAOREHIKIATEKIN_IND"
   },
   {
-    "id": "MIKAKUTEIKANJOU_CORP",
     "name": "未確定勘定",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -1992,10 +1991,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MIKAKUTEIKANJOU_CORP"
   },
   {
-    "id": "MIKAKUTEIKANJOU_IND",
     "name": "未確定勘定",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -2011,10 +2010,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MIKAKUTEIKANJOU_IND"
   },
   {
-    "id": "URIAGENEBIKIHENPIN_IND",
     "name": "売上値引・返品",
     "target": "individual",
     "accountGroup": "PL_REVENUE",
@@ -2031,10 +2030,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "URIAGENEBIKIHENPIN_IND"
   },
   {
-    "id": "KAJISHOUHITOU_IND",
     "name": "家事消費等",
     "target": "individual",
     "accountGroup": "PL_REVENUE",
@@ -2050,10 +2049,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KAJISHOUHITOU_IND"
   },
   {
-    "id": "ZATSUSHUUNYUU_IND",
     "name": "雑収入",
     "target": "individual",
     "accountGroup": "PL_REVENUE",
@@ -2069,10 +2068,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "ZATSUSHUUNYUU_IND"
   },
   {
-    "id": "KISHUSHOUHINTANAOROSHIDAKA_CORP",
     "name": "期首商品棚卸高",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -2088,10 +2087,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KISHUSHOUHINTANAOROSHIDAKA_CORP"
   },
   {
-    "id": "KISHUSHOUHINTANAOROSHIDAKA_IND",
     "name": "期首商品棚卸高",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2107,10 +2106,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KISHUSHOUHINTANAOROSHIDAKA_IND"
   },
   {
-    "id": "SHIIREDAKA_IND",
     "name": "仕入高",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2126,10 +2125,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIIREDAKA_IND"
   },
   {
-    "id": "SHIIRENEBIKIHENPIN_IND",
     "name": "仕入値引・返品",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2146,10 +2145,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIIRENEBIKIHENPIN_IND"
   },
   {
-    "id": "KIMATSUSHOUHINTANAOROSHIDAKA_CORP",
     "name": "期末商品棚卸高",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -2165,10 +2164,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KIMATSUSHOUHINTANAOROSHIDAKA_CORP"
   },
   {
-    "id": "KIMATSUSHOUHINTANAOROSHIDAKA_IND",
     "name": "期末商品棚卸高",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2184,10 +2183,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KIMATSUSHOUHINTANAOROSHIDAKA_IND"
   },
   {
-    "id": "SONGAIHOKENRYOU_IND",
     "name": "損害保険料",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2203,10 +2202,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SONGAIHOKENRYOU_IND"
   },
   {
-    "id": "SHOUMOUHINHI_IND",
     "name": "消耗品費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2222,10 +2221,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHOUMOUHINHI_IND"
   },
   {
-    "id": "KYUURYOUCHINGIN_IND",
     "name": "給料賃金",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2241,10 +2240,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KYUURYOUCHINGIN_IND"
   },
   {
-    "id": "TAISHOKUKYUUYO_CORP",
     "name": "退職給与",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -2260,10 +2259,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TAISHOKUKYUUYO_CORP"
   },
   {
-    "id": "TAISHOKUKYUUYO_IND",
     "name": "退職給与",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2279,10 +2278,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TAISHOKUKYUUYO_IND"
   },
   {
-    "id": "GAICHUUKOUCHIN_IND",
     "name": "外注工賃",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2298,10 +2297,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "GAICHUUKOUCHIN_IND"
   },
   {
-    "id": "RISHIWARIBIKIRYOU_IND",
     "name": "利子割引料",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2317,10 +2316,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "RISHIWARIBIKIRYOU_IND"
   },
   {
-    "id": "KASHIDAOREKIN_IND",
     "name": "貸倒金(損失)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2336,10 +2335,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KASHIDAOREKIN_IND"
   },
   {
-    "id": "KENSHUUSAIYOUHI_CORP",
     "name": "研修採用費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -2355,10 +2354,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KENSHUUSAIYOUHI_CORP"
   },
   {
-    "id": "KENSHUUSAIYOUHI_IND",
     "name": "研修採用費",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2374,10 +2373,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KENSHUUSAIYOUHI_IND"
   },
   {
-    "id": "KASHIDAOREHIKIATEKINMODOSHIIRE_IND",
     "name": "貸倒引当金戻入",
     "target": "individual",
     "accountGroup": "PL_REVENUE",
@@ -2393,10 +2392,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KASHIDAOREHIKIATEKINMODOSHIIRE_IND"
   },
   {
-    "id": "SENJUSHAKYUUYO_IND",
     "name": "専従者給与",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2412,10 +2411,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SENJUSHAKYUUYO_IND"
   },
   {
-    "id": "KASHIDAOREHIKIATEKINKUNIIRE_IND",
     "name": "貸倒引当金繰入",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2431,10 +2430,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KASHIDAOREHIKIATEKINKUNIIRE_IND"
   },
   {
-    "id": "CHINTAIRYOU_FUDOUSAN_IND",
     "name": "賃貸料(不動産)",
     "target": "individual",
     "accountGroup": "PL_REVENUE",
@@ -2450,10 +2449,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "CHINTAIRYOU_FUDOUSAN_IND"
   },
   {
-    "id": "REIKINKENRIKINKOUSHINRYOU_FUDOUSAN_IND",
     "name": "礼金・権利金更新料(不動産)",
     "target": "individual",
     "accountGroup": "PL_REVENUE",
@@ -2469,10 +2468,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "REIKINKENRIKINKOUSHINRYOU_FUDOUSAN_IND"
   },
   {
-    "id": "MEIGIKAKIKAESONOTA_FUDOUSAN_IND",
     "name": "名義書換料その他(不動産)",
     "target": "individual",
     "accountGroup": "PL_REVENUE",
@@ -2488,10 +2487,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MEIGIKAKIKAESONOTA_FUDOUSAN_IND"
   },
   {
-    "id": "SOZEIKOUKAI_FUDOUSAN_IND",
     "name": "租税公課(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2507,10 +2506,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SOZEIKOUKAI_FUDOUSAN_IND"
   },
   {
-    "id": "SONGAIHOKENRYOU_FUDOUSAN_IND",
     "name": "損害保険料(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2526,10 +2525,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SONGAIHOKENRYOU_FUDOUSAN_IND"
   },
   {
-    "id": "SHUUZENHI_FUDOUSAN_IND",
     "name": "修繕費(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2545,10 +2544,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHUUZENHI_FUDOUSAN_IND"
   },
   {
-    "id": "GENKASHOUKYAKUHI_FUDOUSAN_IND",
     "name": "減価償却費(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2564,10 +2563,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "GENKASHOUKYAKUHI_FUDOUSAN_IND"
   },
   {
-    "id": "KARIIREKINRISHI_FUDOUSAN_IND",
     "name": "借入金利子(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2583,10 +2582,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KARIIREKINRISHI_FUDOUSAN_IND"
   },
   {
-    "id": "CHIDAIYACHIN_FUDOUSAN_IND",
     "name": "地代家賃(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2602,10 +2601,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "CHIDAIYACHIN_FUDOUSAN_IND"
   },
   {
-    "id": "KYUURYOUCHINGIN_FUDOUSAN_IND",
     "name": "給料賃金(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2621,10 +2620,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KYUURYOUCHINGIN_FUDOUSAN_IND"
   },
   {
-    "id": "GAICHUUKANRIHI_FUDOUSAN_IND",
     "name": "外注管理費(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2640,10 +2639,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "GAICHUUKANRIHI_FUDOUSAN_IND"
   },
   {
-    "id": "RYOHIKOUTSUUHI_FUDOUSAN_IND",
     "name": "旅費交通費(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2659,10 +2658,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "RYOHIKOUTSUUHI_FUDOUSAN_IND"
   },
   {
-    "id": "SHINBUNTOSHOHI_FUDOUSAN_IND",
     "name": "新聞図書費(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2678,10 +2677,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHINBUNTOSHOHI_FUDOUSAN_IND"
   },
   {
-    "id": "SONOTANOKEIHI_FUDOUSAN_IND",
     "name": "その他の経費(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2697,10 +2696,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SONOTANOKEIHI_FUDOUSAN_IND"
   },
   {
-    "id": "SENJUSHAKYUUYO_FUDOUSAN_IND",
     "name": "専従者給与(不動産)",
     "target": "individual",
     "accountGroup": "PL_EXPENSE",
@@ -2716,10 +2715,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SENJUSHAKYUUYO_FUDOUSAN_IND"
   },
   {
-    "id": "SONOTANOYOKIN_CORP",
     "name": "その他の預金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2735,10 +2734,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SONOTANOYOKIN_CORP"
   },
   {
-    "id": "SHOUHIN_CORP",
     "name": "商品",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2754,10 +2753,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHOUHIN_CORP"
   },
   {
-    "id": "SEIHIN_CORP",
     "name": "製品",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2773,10 +2772,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SEIHIN_CORP"
   },
   {
-    "id": "ZAIRYOU_CORP",
     "name": "材料",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2792,10 +2791,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "ZAIRYOU_CORP"
   },
   {
-    "id": "SHIKAKARIHIN_CORP",
     "name": "仕掛品",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2811,10 +2810,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIKAKARIHIN_CORP"
   },
   {
-    "id": "CHOZOUHIN_CORP",
     "name": "貯蔵品",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2830,10 +2829,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "CHOZOUHIN_CORP"
   },
   {
-    "id": "TANKIKASHITSUKEKIN_CORP",
     "name": "短期貸付金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2849,10 +2848,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TANKIKASHITSUKEKIN_CORP"
   },
   {
-    "id": "MISHUUNYUUKIN_CORP",
     "name": "未収入金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2868,10 +2867,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MISHUUNYUUKIN_CORP"
   },
   {
-    "id": "TATEKAEKIN_CORP",
     "name": "立替金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2887,10 +2886,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TATEKAEKIN_CORP"
   },
   {
-    "id": "KASHIDAOREHIKIATEKIN_CORP",
     "name": "貸倒引当金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2906,10 +2905,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KASHIDAOREHIKIATEKIN_CORP"
   },
   {
-    "id": "KIKAISOUCHI_CORP",
     "name": "機械装置",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2925,10 +2924,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KIKAISOUCHI_CORP"
   },
   {
-    "id": "KOUGUKIGUBIHIN_CORP",
     "name": "工具器具備品",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2944,10 +2943,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KOUGUKIGUBIHIN_CORP"
   },
   {
-    "id": "SOFUTOWEA_CORP",
     "name": "ソフトウェア",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2963,10 +2962,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SOFUTOWEA_CORP"
   },
   {
-    "id": "TOUSHIYUUKASHOUKEN_CORP",
     "name": "投資有価証券",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -2982,10 +2981,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TOUSHIYUUKASHOUKEN_CORP"
   },
   {
-    "id": "CHOUKIKASHITSUKEKIN_CORP",
     "name": "長期貸付金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3001,10 +3000,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "CHOUKIKASHITSUKEKIN_CORP"
   },
   {
-    "id": "CHOUKIMAEBARAIHIYOU_CORP",
     "name": "長期前払費用",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3020,10 +3019,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "CHOUKIMAEBARAIHIYOU_CORP"
   },
   {
-    "id": "TANKIKARIIREKIN_CORP",
     "name": "短期借入金",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -3039,10 +3038,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "TANKIKARIIREKIN_CORP"
   },
   {
-    "id": "MIHARAIHIYOU_CORP",
     "name": "未払費用",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -3058,10 +3057,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MIHARAIHIYOU_CORP"
   },
   {
-    "id": "SHIHONKIN_CORP",
     "name": "資本金",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -3077,10 +3076,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIHONKIN_CORP"
   },
   {
-    "id": "SHIHONJUNBIKIN_CORP",
     "name": "資本準備金",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -3096,10 +3095,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIHONJUNBIKIN_CORP"
   },
   {
-    "id": "KURIKOSHIRIEKIJOURYOKIN_CORP",
     "name": "繰越利益剰余金",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -3115,10 +3114,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KURIKOSHIRIEKIJOURYOKIN_CORP"
   },
   {
-    "id": "URIAGENEBIKIHENPIN_CORP",
     "name": "売上値引・返品",
     "target": "corp",
     "accountGroup": "PL_REVENUE",
@@ -3135,10 +3134,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "URIAGENEBIKIHENPIN_CORP"
   },
   {
-    "id": "SHIIREDAKA_CORP",
     "name": "仕入高",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3154,10 +3153,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIIREDAKA_CORP"
   },
   {
-    "id": "SHIIRENEBIKIHENPIN_CORP",
     "name": "仕入値引・返品",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3174,10 +3173,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIIRENEBIKIHENPIN_CORP"
   },
   {
-    "id": "YAKUINHOUSHUU_CORP",
     "name": "役員報酬",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3193,10 +3192,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "YAKUINHOUSHUU_CORP"
   },
   {
-    "id": "KYUURYOUCHINGIN_CORP",
     "name": "給料賃金",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3212,10 +3211,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KYUURYOUCHINGIN_CORP"
   },
   {
-    "id": "SHOUYO_CORP",
     "name": "賞与",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3231,10 +3230,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHOUYO_CORP"
   },
   {
-    "id": "HOKENRYOU_CORP",
     "name": "保険料",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3250,10 +3249,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "HOKENRYOU_CORP"
   },
   {
-    "id": "KIFUKIN_CORP",
     "name": "寄付金",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3269,10 +3268,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KIFUKIN_CORP"
   },
   {
-    "id": "KASHIDAOREHIKIATEKINKUNIREGAKU_CORP",
     "name": "貸倒引当金繰入額",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3288,10 +3287,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KASHIDAOREHIKIATEKINKUNIREGAKU_CORP"
   },
   {
-    "id": "KASHIDAORESONSHITSU_CORP",
     "name": "貸倒損失",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3307,10 +3306,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KASHIDAORESONSHITSU_CORP"
   },
   {
-    "id": "UKETORIRISOKU_CORP",
     "name": "受取利息",
     "target": "corp",
     "accountGroup": "PL_REVENUE",
@@ -3326,10 +3325,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "UKETORIRISOKU_CORP"
   },
   {
-    "id": "UKETORIHAITOUKIN_CORP",
     "name": "受取配当金",
     "target": "corp",
     "accountGroup": "PL_REVENUE",
@@ -3345,10 +3344,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "UKETORIHAITOUKIN_CORP"
   },
   {
-    "id": "ZATSUSHUUNYUU_CORP",
     "name": "雑収入",
     "target": "corp",
     "accountGroup": "PL_REVENUE",
@@ -3364,10 +3363,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "ZATSUSHUUNYUU_CORP"
   },
   {
-    "id": "SHIHARAIRISOKU_CORP",
     "name": "支払利息",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3383,10 +3382,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHIHARAIRISOKU_CORP"
   },
   {
-    "id": "ZATSUSONSHITSU_CORP",
     "name": "雑損失",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3402,10 +3401,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "ZATSUSONSHITSU_CORP"
   },
   {
-    "id": "KOTEISHISANBAIKYAKUEKI_CORP",
     "name": "固定資産売却益",
     "target": "corp",
     "accountGroup": "PL_REVENUE",
@@ -3421,10 +3420,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KOTEISHISANBAIKYAKUEKI_CORP"
   },
   {
-    "id": "KOTEISHISANBAIKYAKUSON_CORP",
     "name": "固定資産売却損",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -3440,10 +3439,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KOTEISHISANBAIKYAKUSON_CORP"
   },
   {
-    "id": "MISHUUCHINTAIRYOU_CORP",
     "name": "未収賃貸料",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3459,10 +3458,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MISHUUCHINTAIRYOU_CORP"
   },
   {
-    "id": "MISHUUCHINTAIRYOU_IND",
     "name": "未収賃貸料",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -3478,10 +3477,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MISHUUCHINTAIRYOU_IND"
   },
   {
-    "id": "KARIBARAISHYOUHIZEI_CORP",
     "name": "仮払消費税",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3497,10 +3496,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KARIBARAISHYOUHIZEI_CORP"
   },
   {
-    "id": "KARIBARAISHYOUHIZEI_IND",
     "name": "仮払消費税",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -3516,10 +3515,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KARIBARAISHYOUHIZEI_IND"
   },
   {
-    "id": "FUZOKUSETSUBI_CORP",
     "name": "附属設備",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3535,10 +3534,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "FUZOKUSETSUBI_CORP"
   },
   {
-    "id": "FUZOKUSETSUBI_IND",
     "name": "附属設備",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -3554,10 +3553,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "FUZOKUSETSUBI_IND"
   },
   {
-    "id": "SENPAKU_CORP",
     "name": "船舶",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3573,10 +3572,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SENPAKU_CORP"
   },
   {
-    "id": "SENPAKU_IND",
     "name": "船舶",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -3592,10 +3591,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SENPAKU_IND"
   },
   {
-    "id": "IKKATSUSHOUKYAKUSHISAN_CORP",
     "name": "一括償却資産",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3611,10 +3610,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "IKKATSUSHOUKYAKUSHISAN_CORP"
   },
   {
-    "id": "IKKATSUSHOUKYAKUSHISAN_IND",
     "name": "一括償却資産",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -3630,10 +3629,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "IKKATSUSHOUKYAKUSHISAN_IND"
   },
   {
-    "id": "GENKASHOUKYAKURUIKEIGAKU_CORP",
     "name": "減価償却累計額",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3649,10 +3648,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "GENKASHOUKYAKURUIKEIGAKU_CORP"
   },
   {
-    "id": "GENKASHOUKYAKURUIKEIGAKU_IND",
     "name": "減価償却累計額",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -3668,10 +3667,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "GENKASHOUKYAKURUIKEIGAKU_IND"
   },
   {
-    "id": "SHAKKUCHIKEN_CORP",
     "name": "借地権",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3687,10 +3686,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHAKKUCHIKEN_CORP"
   },
   {
-    "id": "SHAKKUCHIKEN_IND",
     "name": "借地権",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -3706,10 +3705,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHAKKUCHIKEN_IND"
   },
   {
-    "id": "KOUKYOUSHISETSUFUTANKIN_CORP",
     "name": "公共施設負担金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3725,10 +3724,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KOUKYOUSHISETSUFUTANKIN_CORP"
   },
   {
-    "id": "KOUKYOUSHISETSUFUTANKIN_IND",
     "name": "公共施設負担金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -3744,10 +3743,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KOUKYOUSHISETSUFUTANKIN_IND"
   },
   {
-    "id": "YOTAKUKIN_CORP",
     "name": "預託金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3763,10 +3762,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "YOTAKUKIN_CORP"
   },
   {
-    "id": "YOTAKUKIN_IND",
     "name": "預託金",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -3782,10 +3781,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "YOTAKUKIN_IND"
   },
   {
-    "id": "SHISANJOUTOSON_IND",
     "name": "資産譲渡損",
     "target": "individual",
     "accountGroup": "BS_ASSET",
@@ -3801,10 +3800,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHISANJOUTOSON_IND"
   },
   {
-    "id": "MIHARAISHYOUHIZEI_CORP",
     "name": "未払消費税",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -3820,10 +3819,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MIHARAISHYOUHIZEI_CORP"
   },
   {
-    "id": "MIHARAISHYOUHIZEI_IND",
     "name": "未払消費税",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -3839,10 +3838,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "MIHARAISHYOUHIZEI_IND"
   },
   {
-    "id": "HOSHOUKINSHIKIKIN_CORP",
     "name": "保証金・敷金",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -3858,10 +3857,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "HOSHOUKINSHIKIKIN_CORP"
   },
   {
-    "id": "HOSHOUKINSHIKIKIN_IND",
     "name": "保証金・敷金",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -3877,10 +3876,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "HOSHOUKINSHIKIKIN_IND"
   },
   {
-    "id": "SHOUHINKEN_CORP",
     "name": "商品券",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -3896,10 +3895,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHOUHINKEN_CORP"
   },
   {
-    "id": "SHOUHINKEN_IND",
     "name": "商品券",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -3915,10 +3914,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "SHOUHINKEN_IND"
   },
   {
-    "id": "KARIUKESHYOUHIZEI_CORP",
     "name": "仮受消費税",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -3934,10 +3933,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KARIUKESHYOUHIZEI_CORP"
   },
   {
-    "id": "KARIUKESHYOUHIZEI_IND",
     "name": "仮受消費税",
     "target": "individual",
     "accountGroup": "BS_LIABILITY",
@@ -3953,10 +3952,10 @@
     "hidden": false,
     "isMasterCustom": false,
     "isClientCustom": false,
-    "source": "default"
+    "source": "default",
+    "accountId": "KARIUKESHYOUHIZEI_IND"
   },
   {
-    "id": "KURINOBEZEIKINSHISAN_RYUU_CORP",
     "name": "繰延税金資産(流)",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3967,10 +3966,10 @@
     "effectiveTo": null,
     "sortOrder": 366,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "KURINOBEZEIKINSHISAN_RYUU_CORP"
   },
   {
-    "id": "SHUSSHIKIN_CORP",
     "name": "出資金",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3981,10 +3980,10 @@
     "effectiveTo": null,
     "sortOrder": 367,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "SHUSSHIKIN_CORP"
   },
   {
-    "id": "KURINOBEZEIKINSHISAN_KO_CORP",
     "name": "繰延税金資産(固)",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -3995,10 +3994,10 @@
     "effectiveTo": null,
     "sortOrder": 368,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "KURINOBEZEIKINSHISAN_KO_CORP"
   },
   {
-    "id": "SOURITSUHI_CORP",
     "name": "創立費",
     "target": "corp",
     "accountGroup": "BS_ASSET",
@@ -4009,10 +4008,10 @@
     "effectiveTo": null,
     "sortOrder": 369,
     "isCustom": false,
-    "defaultTaxCategoryId": "PURCHASE_TAXABLE_10"
+    "defaultTaxCategoryId": "PURCHASE_TAXABLE_10",
+    "accountId": "SOURITSUHI_CORP"
   },
   {
-    "id": "KURINOBEZEIKINFUSAI_RYUU_CORP",
     "name": "繰延税金負債(流)",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -4023,10 +4022,10 @@
     "effectiveTo": null,
     "sortOrder": 370,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "KURINOBEZEIKINFUSAI_RYUU_CORP"
   },
   {
-    "id": "AZUKARIHOSHOUKIN_CORP",
     "name": "預り保証金",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -4037,10 +4036,10 @@
     "effectiveTo": null,
     "sortOrder": 371,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "AZUKARIHOSHOUKIN_CORP"
   },
   {
-    "id": "MIHARAIHOUJINZEITOU_CORP",
     "name": "未払法人税等",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -4051,10 +4050,10 @@
     "effectiveTo": null,
     "sortOrder": 372,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "MIHARAIHOUJINZEITOU_CORP"
   },
   {
-    "id": "KURINOBEZEIKINFUSAI_KO_CORP",
     "name": "繰延税金負債(固)",
     "target": "corp",
     "accountGroup": "BS_LIABILITY",
@@ -4065,10 +4064,10 @@
     "effectiveTo": null,
     "sortOrder": 373,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "KURINOBEZEIKINFUSAI_KO_CORP"
   },
   {
-    "id": "SHINKABUSHIKIMOUSHIKOMISHOUKOKIN_CORP",
     "name": "新株式申込証拠金",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -4079,10 +4078,10 @@
     "effectiveTo": null,
     "sortOrder": 374,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "SHINKABUSHIKIMOUSHIKOMISHOUKOKIN_CORP"
   },
   {
-    "id": "SONOTASHIHONJOURYOKIN_CORP",
     "name": "その他資本剰余金",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -4093,10 +4092,10 @@
     "effectiveTo": null,
     "sortOrder": 375,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "SONOTASHIHONJOURYOKIN_CORP"
   },
   {
-    "id": "RIEKIJUNBIKIN_CORP",
     "name": "利益準備金",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -4107,10 +4106,10 @@
     "effectiveTo": null,
     "sortOrder": 376,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "RIEKIJUNBIKIN_CORP"
   },
   {
-    "id": "BETTOTSUMITATEKIN_CORP",
     "name": "別途積立金",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -4121,10 +4120,10 @@
     "effectiveTo": null,
     "sortOrder": 377,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "BETTOTSUMITATEKIN_CORP"
   },
   {
-    "id": "JIKOKABUSHIKI_CORP",
     "name": "自己株式",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -4135,10 +4134,10 @@
     "effectiveTo": null,
     "sortOrder": 378,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "JIKOKABUSHIKI_CORP"
   },
   {
-    "id": "JIKOKABUSHIKIMOUSHIKOMISHOUKOKIN_CORP",
     "name": "自己株式申込証拠金",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -4149,10 +4148,10 @@
     "effectiveTo": null,
     "sortOrder": 379,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "JIKOKABUSHIKIMOUSHIKOMISHOUKOKIN_CORP"
   },
   {
-    "id": "SONOTAYUUKASHOUKENHYOUKASAGAKUKIN_CORP",
     "name": "その他有価証券評価差額金",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -4163,10 +4162,10 @@
     "effectiveTo": null,
     "sortOrder": 380,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "SONOTAYUUKASHOUKENHYOUKASAGAKUKIN_CORP"
   },
   {
-    "id": "TOCHISAIHYOUKASAGAKUKIN_CORP",
     "name": "土地再評価差額金",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -4177,10 +4176,10 @@
     "effectiveTo": null,
     "sortOrder": 381,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "TOCHISAIHYOUKASAGAKUKIN_CORP"
   },
   {
-    "id": "SHINKABUYOYAKUKEN_CORP",
     "name": "新株予約権",
     "target": "corp",
     "accountGroup": "BS_EQUITY",
@@ -4191,10 +4190,10 @@
     "effectiveTo": null,
     "sortOrder": 382,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "SHINKABUYOYAKUKEN_CORP"
   },
   {
-    "id": "TAKANJOUFURIKAEDAKA_CORP",
     "name": "他勘定振替高",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -4205,10 +4204,10 @@
     "effectiveTo": null,
     "sortOrder": 383,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "TAKANJOUFURIKAEDAKA_CORP"
   },
   {
-    "id": "ZAKKYUU_CORP",
     "name": "雑給",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -4219,10 +4218,10 @@
     "effectiveTo": null,
     "sortOrder": 384,
     "isCustom": false,
-    "defaultTaxCategoryId": "PURCHASE_EXEMPT"
+    "defaultTaxCategoryId": "PURCHASE_EXEMPT",
+    "accountId": "ZAKKYUU_CORP"
   },
   {
-    "id": "GYOUMUITAKURYOU_CORP",
     "name": "業務委託料",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -4233,10 +4232,10 @@
     "effectiveTo": null,
     "sortOrder": 385,
     "isCustom": false,
-    "defaultTaxCategoryId": "PURCHASE_TAXABLE_10"
+    "defaultTaxCategoryId": "PURCHASE_TAXABLE_10",
+    "accountId": "GYOUMUITAKURYOU_CORP"
   },
   {
-    "id": "BIHINSHOUMOUHINHI_CORP",
     "name": "備品・消耗品費",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -4247,10 +4246,10 @@
     "effectiveTo": null,
     "sortOrder": 386,
     "isCustom": false,
-    "defaultTaxCategoryId": "PURCHASE_TAXABLE_10"
+    "defaultTaxCategoryId": "PURCHASE_TAXABLE_10",
+    "accountId": "BIHINSHOUMOUHINHI_CORP"
   },
   {
-    "id": "SHIHARAIHOUSHUU_CORP",
     "name": "支払報酬",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -4261,10 +4260,10 @@
     "effectiveTo": null,
     "sortOrder": 387,
     "isCustom": false,
-    "defaultTaxCategoryId": "PURCHASE_TAXABLE_10"
+    "defaultTaxCategoryId": "PURCHASE_TAXABLE_10",
+    "accountId": "SHIHARAIHOUSHUU_CORP"
   },
   {
-    "id": "KASHIDAOREHIKIATEKINMODOSHIIREGAKU_CORP",
     "name": "貸倒引当金戻入額",
     "target": "corp",
     "accountGroup": "PL_REVENUE",
@@ -4275,10 +4274,10 @@
     "effectiveTo": null,
     "sortOrder": 388,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "KASHIDAOREHIKIATEKINMODOSHIIREGAKU_CORP"
   },
   {
-    "id": "YUUKASHOUKENBAIKYAKUEKI_CORP",
     "name": "有価証券売却益",
     "target": "corp",
     "accountGroup": "PL_REVENUE",
@@ -4289,10 +4288,10 @@
     "effectiveTo": null,
     "sortOrder": 389,
     "isCustom": false,
-    "defaultTaxCategoryId": "SALES_NON_TAXABLE_SECURITIES"
+    "defaultTaxCategoryId": "SALES_NON_TAXABLE_SECURITIES",
+    "accountId": "YUUKASHOUKENBAIKYAKUEKI_CORP"
   },
   {
-    "id": "SHIIREWARIBIKI_CORP",
     "name": "仕入割引",
     "target": "corp",
     "accountGroup": "PL_REVENUE",
@@ -4303,10 +4302,10 @@
     "effectiveTo": null,
     "sortOrder": 390,
     "isCustom": false,
-    "defaultTaxCategoryId": "PURCHASE_RETURN_10"
+    "defaultTaxCategoryId": "PURCHASE_RETURN_10",
+    "accountId": "SHIIREWARIBIKI_CORP"
   },
   {
-    "id": "YUUKASHOUKENBAIKYAKUSON_CORP",
     "name": "有価証券売却損",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -4317,10 +4316,10 @@
     "effectiveTo": null,
     "sortOrder": 391,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "YUUKASHOUKENBAIKYAKUSON_CORP"
   },
   {
-    "id": "URIAGEWARIBIKI_CORP",
     "name": "売上割引",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -4331,10 +4330,10 @@
     "effectiveTo": null,
     "sortOrder": 392,
     "isCustom": false,
-    "defaultTaxCategoryId": "SALES_RETURN_10"
+    "defaultTaxCategoryId": "SALES_RETURN_10",
+    "accountId": "URIAGEWARIBIKI_CORP"
   },
   {
-    "id": "ZENKISONEKISHUUSEIEKI_CORP",
     "name": "前期損益修正益",
     "target": "corp",
     "accountGroup": "PL_REVENUE",
@@ -4345,10 +4344,10 @@
     "effectiveTo": null,
     "sortOrder": 393,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "ZENKISONEKISHUUSEIEKI_CORP"
   },
   {
-    "id": "TOUSHIYUUKASHOUKENBAIKYAKUEKI_CORP",
     "name": "投資有価証券売却益",
     "target": "corp",
     "accountGroup": "PL_REVENUE",
@@ -4359,10 +4358,10 @@
     "effectiveTo": null,
     "sortOrder": 394,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "TOUSHIYUUKASHOUKENBAIKYAKUEKI_CORP"
   },
   {
-    "id": "ZENKISONEKISHUUSEISON_CORP",
     "name": "前期損益修正損",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -4373,10 +4372,10 @@
     "effectiveTo": null,
     "sortOrder": 395,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "ZENKISONEKISHUUSEISON_CORP"
   },
   {
-    "id": "TOUSHIYUUKASHOUKENBAIKYAKUSON_CORP",
     "name": "投資有価証券売却損",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -4387,10 +4386,10 @@
     "effectiveTo": null,
     "sortOrder": 396,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "TOUSHIYUUKASHOUKENBAIKYAKUSON_CORP"
   },
   {
-    "id": "HOUJINZEITOU_CORP",
     "name": "法人税等",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -4401,10 +4400,10 @@
     "effectiveTo": null,
     "sortOrder": 397,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "HOUJINZEITOU_CORP"
   },
   {
-    "id": "HOUJINZEITOUCHOUSEIGAKU_CORP",
     "name": "法人税等調整額",
     "target": "corp",
     "accountGroup": "PL_EXPENSE",
@@ -4415,6 +4414,7 @@
     "effectiveTo": null,
     "sortOrder": 398,
     "isCustom": false,
-    "defaultTaxCategoryId": "COMMON_EXEMPT"
+    "defaultTaxCategoryId": "COMMON_EXEMPT",
+    "accountId": "HOUJINZEITOUCHOUSEIGAKU_CORP"
   }
 ]

@@ -86,7 +86,7 @@ function buildAccountNameResolver(clientId: string): (id: string | null | undefi
   const data = getClientAccounts(clientId)
   const map = new Map<string, string>()
   for (const a of data.accounts) {
-    map.set(a.id, a.name)
+    map.set(a.accountId, a.name)
   }
   return (id) => {
     if (!id) return ''
@@ -98,7 +98,7 @@ function buildTaxNameResolver(clientId: string): (id: string | null | undefined)
   const cats = getClientTaxCategories(clientId)
   const map = new Map<string, string>()
   for (const t of cats) {
-    map.set(t.id, t.name)
+    map.set(t.taxCategoryId, t.name)
   }
   return (id) => {
     if (!id) return ''
@@ -137,7 +137,7 @@ export function getExportList(query: ExportListQuery): ExportListResult {
 
   // 1. 仕訳取得（unknown[] → 型アサーション）
   type JournalRaw = {
-    id: string
+    journalId: string
     deleted_at: string | null
     status: string
     labels: string[]
@@ -169,7 +169,7 @@ export function getExportList(query: ExportListQuery): ExportListResult {
       const debit = j.debit_entries[i]
       const credit = j.credit_entries[i]
       allRows.push({
-        id: `${j.id}-${i}`,
+        id: `${j.journalId}-${i}`,
         qualified: i === 0 ? (j.invoice_status === 'qualified' ? '○' : '') : '',
         date: i === 0 ? toDisplayDate(j.voucher_date) : '',
         description: i === 0 ? j.description : '',
@@ -319,7 +319,7 @@ export function getExportDetail(query: ExportDetailQuery): ExportDetailResult {
   const resolveTax = buildTaxNameResolver(clientId)
 
   type JournalRaw = {
-    id: string
+    journalId: string
     deleted_at: string | null
     status: string
     export_batch_id?: string
@@ -344,7 +344,7 @@ export function getExportDetail(query: ExportDetailQuery): ExportDetailResult {
       const debit = j.debit_entries[i]
       const credit = j.credit_entries[i]
       allRows.push({
-        id: `${j.id}-${i}`,
+        id: `${j.journalId}-${i}`,
         qualified: i === 0 ? (j.invoice_status === 'qualified' ? '○' : '') : '',
         date: i === 0 ? toDisplayDate(j.voucher_date) : '',
         description: i === 0 ? j.description : '',

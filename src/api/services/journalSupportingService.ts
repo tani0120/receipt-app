@@ -27,7 +27,7 @@ export interface SupportingMetaItem {
 
 /** マッチング対象の仕訳最小インターフェース */
 export interface JournalForMatching {
-  id: string
+  journalId: string
   voucher_date: string | null
   description: string
   vendor_name?: string | null
@@ -116,7 +116,7 @@ export function getSupportingMatches(
       }
     }
     if (journalMatches.length > 0) {
-      matches[journal.id] = journalMatches
+      matches[journal.journalId] = journalMatches
       matchedCount++
     }
   }

@@ -171,9 +171,9 @@ export interface JournalEntryLine {
      * 行ID（PK）
      * Supabase journal_entries テーブルのPK。
      * 複合仕訳の各行を一意に識別するために必須。
-     * null = レガシーデータ（id付与前に生成された行）
+     * null = レガシーデータ（entryId付与前に生成された行）
      */
-    id: string | null;
+    entryId: string | null;
     /**
      * 勘定科目
      * nullable（null許容）: AIが勘定科目を判定できない場合null

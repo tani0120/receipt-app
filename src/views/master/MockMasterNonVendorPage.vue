@@ -160,7 +160,7 @@
                 <td class="vm-td">
                   <select v-model="row.debit_account" class="vm-edit-select">
                     <option :value="null">{{ PLACEHOLDER_DASH }}</option>
-                    <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">
+                    <option v-for="acc in accountOptions" :key="acc.accountId" :value="acc.accountId">
                       {{ acc.name }}
                     </option>
                   </select>
@@ -170,7 +170,7 @@
                 <td class="vm-td">
                   <select v-model="row.credit_account" class="vm-edit-select">
                     <option :value="null">{{ PLACEHOLDER_DASH }}</option>
-                    <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">
+                    <option v-for="acc in accountOptions" :key="acc.accountId" :value="acc.accountId">
                       {{ acc.name }}
                     </option>
                   </select>
@@ -180,7 +180,7 @@
                 <td class="vm-td">
                   <select v-model="row.debit_tax_category" class="vm-edit-select">
                     <option :value="null">{{ PLACEHOLDER_DASH }}</option>
-                    <option v-for="tc in taxCategoryOptions" :key="tc.id" :value="tc.id">
+                    <option v-for="tc in taxCategoryOptions" :key="tc.taxCategoryId" :value="tc.taxCategoryId">
                       {{ tc.name }}
                     </option>
                   </select>
@@ -294,12 +294,12 @@ onMounted(async () => {
 
 /** 科目ドロップダウン選択肢（API取得のマスタ科目準拠） */
 const { masterAccounts: masterAccountList } = useAccountMaster();
-const accountOptions = computed(() => masterAccountList.value.map((a) => ({ id: a.id, name: a.name })));
+const accountOptions = computed(() => masterAccountList.value.map((a) => ({ accountId: a.accountId, name: a.name })));
 
 /** 税区分ドロップダウン選択肢（API取得のマスタ税区分準拠） */
 const { masterTaxCategories: masterTaxList } = useTaxMaster();
 const taxCategoryOptions = computed(() =>
-  masterTaxList.value.map((t) => ({ id: t.id, name: t.name })),
+  masterTaxList.value.map((t) => ({ taxCategoryId: t.taxCategoryId, name: t.name })),
 );
 
 /** NonVendorType一覧（データから動的取得） */

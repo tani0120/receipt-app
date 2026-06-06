@@ -1,6 +1,6 @@
 [
   {
-    "id": "COMMON_UNKNOWN",
+    "taxCategoryId": "COMMON_UNKNOWN",
     "name": "不明",
     "shortName": "不明",
     "direction": "common",
@@ -18,7 +18,7 @@
     "isUnknownDefault": true
   },
   {
-    "id": "COMMON_EXEMPT",
+    "taxCategoryId": "COMMON_EXEMPT",
     "name": "対象外",
     "shortName": "対象外",
     "direction": "common",
@@ -36,7 +36,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_10",
+    "taxCategoryId": "SALES_TAXABLE_10",
     "name": "課税売上 10%",
     "shortName": "課売 10%",
     "direction": "sales",
@@ -54,7 +54,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_10_T1",
+    "taxCategoryId": "SALES_TAXABLE_10_T1",
     "name": "課税売上 10% 一種",
     "shortName": "課売 10% 一種",
     "direction": "sales",
@@ -73,7 +73,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_10_T2",
+    "taxCategoryId": "SALES_TAXABLE_10_T2",
     "name": "課税売上 10% 二種",
     "shortName": "課売 10% 二種",
     "direction": "sales",
@@ -92,7 +92,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_10_T3",
+    "taxCategoryId": "SALES_TAXABLE_10_T3",
     "name": "課税売上 10% 三種",
     "shortName": "課売 10% 三種",
     "direction": "sales",
@@ -111,7 +111,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_10_T4",
+    "taxCategoryId": "SALES_TAXABLE_10_T4",
     "name": "課税売上 10% 四種",
     "shortName": "課売 10% 四種",
     "direction": "sales",
@@ -130,7 +130,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_10_T5",
+    "taxCategoryId": "SALES_TAXABLE_10_T5",
     "name": "課税売上 10% 五種",
     "shortName": "課売 10% 五種",
     "direction": "sales",
@@ -149,7 +149,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_10_T6",
+    "taxCategoryId": "SALES_TAXABLE_10_T6",
     "name": "課税売上 10% 六種",
     "shortName": "課売 10% 六種",
     "direction": "sales",
@@ -168,7 +168,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_REDUCED_8",
+    "taxCategoryId": "SALES_REDUCED_8",
     "name": "課税売上 (軽)8%",
     "shortName": "課売 (軽)8%",
     "direction": "sales",
@@ -185,7 +185,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_REDUCED_8_T1",
+    "taxCategoryId": "SALES_REDUCED_8_T1",
     "name": "課税売上 (軽)8% 一種",
     "shortName": "課売 (軽)8% 一種",
     "direction": "sales",
@@ -204,7 +204,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_REDUCED_8_T2",
+    "taxCategoryId": "SALES_REDUCED_8_T2",
     "name": "課税売上 (軽)8% 二種",
     "shortName": "課売 (軽)8% 二種",
     "direction": "sales",
@@ -223,7 +223,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_REDUCED_8_T3",
+    "taxCategoryId": "SALES_REDUCED_8_T3",
     "name": "課税売上 (軽)8% 三種",
     "shortName": "課売 (軽)8% 三種",
     "direction": "sales",
@@ -242,7 +242,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_REDUCED_8_T4",
+    "taxCategoryId": "SALES_REDUCED_8_T4",
     "name": "課税売上 (軽)8% 四種",
     "shortName": "課売 (軽)8% 四種",
     "direction": "sales",
@@ -261,7 +261,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_REDUCED_8_T5",
+    "taxCategoryId": "SALES_REDUCED_8_T5",
     "name": "課税売上 (軽)8% 五種",
     "shortName": "課売 (軽)8% 五種",
     "direction": "sales",
@@ -280,7 +280,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_REDUCED_8_T6",
+    "taxCategoryId": "SALES_REDUCED_8_T6",
     "name": "課税売上 (軽)8% 六種",
     "shortName": "課売 (軽)8% 六種",
     "direction": "sales",
@@ -299,7 +299,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_8",
+    "taxCategoryId": "SALES_TAXABLE_8",
     "name": "課税売上 8%",
     "shortName": "課売 8%",
     "direction": "sales",
@@ -316,7 +316,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_8_T1",
+    "taxCategoryId": "SALES_TAXABLE_8_T1",
     "name": "課税売上 8% 一種",
     "shortName": "課売 8% 一種",
     "direction": "sales",
@@ -335,7 +335,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_8_T2",
+    "taxCategoryId": "SALES_TAXABLE_8_T2",
     "name": "課税売上 8% 二種",
     "shortName": "課売 8% 二種",
     "direction": "sales",
@@ -354,7 +354,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_8_T3",
+    "taxCategoryId": "SALES_TAXABLE_8_T3",
     "name": "課税売上 8% 三種",
     "shortName": "課売 8% 三種",
     "direction": "sales",
@@ -373,7 +373,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_8_T4",
+    "taxCategoryId": "SALES_TAXABLE_8_T4",
     "name": "課税売上 8% 四種",
     "shortName": "課売 8% 四種",
     "direction": "sales",
@@ -392,7 +392,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_8_T5",
+    "taxCategoryId": "SALES_TAXABLE_8_T5",
     "name": "課税売上 8% 五種",
     "shortName": "課売 8% 五種",
     "direction": "sales",
@@ -411,7 +411,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_8_T6",
+    "taxCategoryId": "SALES_TAXABLE_8_T6",
     "name": "課税売上 8% 六種",
     "shortName": "課売 8% 六種",
     "direction": "sales",
@@ -430,7 +430,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_5",
+    "taxCategoryId": "SALES_TAXABLE_5",
     "name": "課税売上 5%",
     "shortName": "課売 5%",
     "direction": "sales",
@@ -447,7 +447,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_5_T1",
+    "taxCategoryId": "SALES_TAXABLE_5_T1",
     "name": "課税売上 5% 一種",
     "shortName": "課売 5% 一種",
     "direction": "sales",
@@ -466,7 +466,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_5_T2",
+    "taxCategoryId": "SALES_TAXABLE_5_T2",
     "name": "課税売上 5% 二種",
     "shortName": "課売 5% 二種",
     "direction": "sales",
@@ -485,7 +485,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_5_T3",
+    "taxCategoryId": "SALES_TAXABLE_5_T3",
     "name": "課税売上 5% 三種",
     "shortName": "課売 5% 三種",
     "direction": "sales",
@@ -504,7 +504,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_5_T4",
+    "taxCategoryId": "SALES_TAXABLE_5_T4",
     "name": "課税売上 5% 四種",
     "shortName": "課売 5% 四種",
     "direction": "sales",
@@ -523,7 +523,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_5_T5",
+    "taxCategoryId": "SALES_TAXABLE_5_T5",
     "name": "課税売上 5% 五種",
     "shortName": "課売 5% 五種",
     "direction": "sales",
@@ -542,7 +542,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_TAXABLE_5_T6",
+    "taxCategoryId": "SALES_TAXABLE_5_T6",
     "name": "課税売上 5% 六種",
     "shortName": "課売 5% 六種",
     "direction": "sales",
@@ -561,7 +561,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_EXPORT_0",
+    "taxCategoryId": "SALES_EXPORT_0",
     "name": "輸出売上 0%",
     "shortName": "輸売 0%",
     "direction": "sales",
@@ -578,7 +578,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_NON_TAXABLE",
+    "taxCategoryId": "SALES_NON_TAXABLE",
     "name": "非課税売上",
     "shortName": "非売",
     "direction": "sales",
@@ -595,7 +595,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_NON_TAXABLE_SECURITIES",
+    "taxCategoryId": "SALES_NON_TAXABLE_SECURITIES",
     "name": "非課税売上-有価証券譲渡",
     "shortName": "非売-有証",
     "direction": "sales",
@@ -612,7 +612,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_NON_TAXABLE_EXPORT",
+    "taxCategoryId": "SALES_NON_TAXABLE_EXPORT",
     "name": "非課税資産輸出",
     "shortName": "非輸",
     "direction": "sales",
@@ -629,7 +629,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_EXEMPT",
+    "taxCategoryId": "SALES_EXEMPT",
     "name": "対象外売上",
     "shortName": "対象外売",
     "direction": "sales",
@@ -646,7 +646,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_10",
+    "taxCategoryId": "SALES_RETURN_10",
     "name": "課税売上-返還等 10%",
     "shortName": "課売-返還 10%",
     "direction": "sales",
@@ -663,7 +663,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_10_T1",
+    "taxCategoryId": "SALES_RETURN_10_T1",
     "name": "課税売上-返還等 10% 一種",
     "shortName": "課売-返還 10% 一種",
     "direction": "sales",
@@ -682,7 +682,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_10_T2",
+    "taxCategoryId": "SALES_RETURN_10_T2",
     "name": "課税売上-返還等 10% 二種",
     "shortName": "課売-返還 10% 二種",
     "direction": "sales",
@@ -701,7 +701,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_10_T3",
+    "taxCategoryId": "SALES_RETURN_10_T3",
     "name": "課税売上-返還等 10% 三種",
     "shortName": "課売-返還 10% 三種",
     "direction": "sales",
@@ -720,7 +720,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_10_T4",
+    "taxCategoryId": "SALES_RETURN_10_T4",
     "name": "課税売上-返還等 10% 四種",
     "shortName": "課売-返還 10% 四種",
     "direction": "sales",
@@ -739,7 +739,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_10_T5",
+    "taxCategoryId": "SALES_RETURN_10_T5",
     "name": "課税売上-返還等 10% 五種",
     "shortName": "課売-返還 10% 五種",
     "direction": "sales",
@@ -758,7 +758,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_10_T6",
+    "taxCategoryId": "SALES_RETURN_10_T6",
     "name": "課税売上-返還等 10% 六種",
     "shortName": "課売-返還 10% 六種",
     "direction": "sales",
@@ -777,7 +777,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_REDUCED_8",
+    "taxCategoryId": "SALES_RETURN_REDUCED_8",
     "name": "課税売上-返還等 (軽)8%",
     "shortName": "課売-返還 (軽)8%",
     "direction": "sales",
@@ -794,7 +794,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_REDUCED_8_T1",
+    "taxCategoryId": "SALES_RETURN_REDUCED_8_T1",
     "name": "課税売上-返還等 (軽)8% 一種",
     "shortName": "課売-返還 (軽)8% 一種",
     "direction": "sales",
@@ -813,7 +813,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_REDUCED_8_T2",
+    "taxCategoryId": "SALES_RETURN_REDUCED_8_T2",
     "name": "課税売上-返還等 (軽)8% 二種",
     "shortName": "課売-返還 (軽)8% 二種",
     "direction": "sales",
@@ -832,7 +832,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_REDUCED_8_T3",
+    "taxCategoryId": "SALES_RETURN_REDUCED_8_T3",
     "name": "課税売上-返還等 (軽)8% 三種",
     "shortName": "課売-返還 (軽)8% 三種",
     "direction": "sales",
@@ -851,7 +851,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_REDUCED_8_T4",
+    "taxCategoryId": "SALES_RETURN_REDUCED_8_T4",
     "name": "課税売上-返還等 (軽)8% 四種",
     "shortName": "課売-返還 (軽)8% 四種",
     "direction": "sales",
@@ -870,7 +870,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_REDUCED_8_T5",
+    "taxCategoryId": "SALES_RETURN_REDUCED_8_T5",
     "name": "課税売上-返還等 (軽)8% 五種",
     "shortName": "課売-返還 (軽)8% 五種",
     "direction": "sales",
@@ -889,7 +889,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_REDUCED_8_T6",
+    "taxCategoryId": "SALES_RETURN_REDUCED_8_T6",
     "name": "課税売上-返還等 (軽)8% 六種",
     "shortName": "課売-返還 (軽)8% 六種",
     "direction": "sales",
@@ -908,7 +908,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_8",
+    "taxCategoryId": "SALES_RETURN_8",
     "name": "課税売上-返還等 8%",
     "shortName": "課売-返還 8%",
     "direction": "sales",
@@ -925,7 +925,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_8_T1",
+    "taxCategoryId": "SALES_RETURN_8_T1",
     "name": "課税売上-返還等 8% 一種",
     "shortName": "課売-返還 8% 一種",
     "direction": "sales",
@@ -944,7 +944,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_8_T2",
+    "taxCategoryId": "SALES_RETURN_8_T2",
     "name": "課税売上-返還等 8% 二種",
     "shortName": "課売-返還 8% 二種",
     "direction": "sales",
@@ -963,7 +963,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_8_T3",
+    "taxCategoryId": "SALES_RETURN_8_T3",
     "name": "課税売上-返還等 8% 三種",
     "shortName": "課売-返還 8% 三種",
     "direction": "sales",
@@ -982,7 +982,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_8_T4",
+    "taxCategoryId": "SALES_RETURN_8_T4",
     "name": "課税売上-返還等 8% 四種",
     "shortName": "課売-返還 8% 四種",
     "direction": "sales",
@@ -1001,7 +1001,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_8_T5",
+    "taxCategoryId": "SALES_RETURN_8_T5",
     "name": "課税売上-返還等 8% 五種",
     "shortName": "課売-返還 8% 五種",
     "direction": "sales",
@@ -1020,7 +1020,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_8_T6",
+    "taxCategoryId": "SALES_RETURN_8_T6",
     "name": "課税売上-返還等 8% 六種",
     "shortName": "課売-返還 8% 六種",
     "direction": "sales",
@@ -1039,7 +1039,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_5",
+    "taxCategoryId": "SALES_RETURN_5",
     "name": "課税売上-返還等 5%",
     "shortName": "課売-返還 5%",
     "direction": "sales",
@@ -1056,7 +1056,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_5_T1",
+    "taxCategoryId": "SALES_RETURN_5_T1",
     "name": "課税売上-返還等 5% 一種",
     "shortName": "課売-返還 5% 一種",
     "direction": "sales",
@@ -1075,7 +1075,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_5_T2",
+    "taxCategoryId": "SALES_RETURN_5_T2",
     "name": "課税売上-返還等 5% 二種",
     "shortName": "課売-返還 5% 二種",
     "direction": "sales",
@@ -1094,7 +1094,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_5_T3",
+    "taxCategoryId": "SALES_RETURN_5_T3",
     "name": "課税売上-返還等 5% 三種",
     "shortName": "課売-返還 5% 三種",
     "direction": "sales",
@@ -1113,7 +1113,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_5_T4",
+    "taxCategoryId": "SALES_RETURN_5_T4",
     "name": "課税売上-返還等 5% 四種",
     "shortName": "課売-返還 5% 四種",
     "direction": "sales",
@@ -1132,7 +1132,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_5_T5",
+    "taxCategoryId": "SALES_RETURN_5_T5",
     "name": "課税売上-返還等 5% 五種",
     "shortName": "課売-返還 5% 五種",
     "direction": "sales",
@@ -1151,7 +1151,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RETURN_5_T6",
+    "taxCategoryId": "SALES_RETURN_5_T6",
     "name": "課税売上-返還等 5% 六種",
     "shortName": "課売-返還 5% 六種",
     "direction": "sales",
@@ -1170,7 +1170,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_EXPORT_RETURN_0",
+    "taxCategoryId": "SALES_EXPORT_RETURN_0",
     "name": "輸出売上-返還等 0%",
     "shortName": "輸売-返還 0%",
     "direction": "sales",
@@ -1187,7 +1187,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_NON_TAXABLE_RETURN",
+    "taxCategoryId": "SALES_NON_TAXABLE_RETURN",
     "name": "非課税売上-返還等",
     "shortName": "非売-返還",
     "direction": "sales",
@@ -1204,7 +1204,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_NON_TAXABLE_EXPORT_RETURN",
+    "taxCategoryId": "SALES_NON_TAXABLE_EXPORT_RETURN",
     "name": "非課税資産輸出-返還等",
     "shortName": "非輸-返還",
     "direction": "sales",
@@ -1221,7 +1221,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_BAD_DEBT_10",
+    "taxCategoryId": "SALES_BAD_DEBT_10",
     "name": "課税売上-貸倒 10%",
     "shortName": "課売-貸倒 10%",
     "direction": "sales",
@@ -1238,7 +1238,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_BAD_DEBT_REDUCED_8",
+    "taxCategoryId": "SALES_BAD_DEBT_REDUCED_8",
     "name": "課税売上-貸倒 (軽)8%",
     "shortName": "課売-貸倒 (軽)8%",
     "direction": "sales",
@@ -1255,7 +1255,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_BAD_DEBT_8",
+    "taxCategoryId": "SALES_BAD_DEBT_8",
     "name": "課税売上-貸倒 8%",
     "shortName": "課売-貸倒 8%",
     "direction": "sales",
@@ -1272,7 +1272,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_BAD_DEBT_5",
+    "taxCategoryId": "SALES_BAD_DEBT_5",
     "name": "課税売上-貸倒 5%",
     "shortName": "課売-貸倒 5%",
     "direction": "sales",
@@ -1289,7 +1289,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_EXPORT_BAD_DEBT_0",
+    "taxCategoryId": "SALES_EXPORT_BAD_DEBT_0",
     "name": "輸出売上-貸倒 0%",
     "shortName": "輸売-貸倒 0%",
     "direction": "sales",
@@ -1306,7 +1306,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_NON_TAXABLE_BAD_DEBT",
+    "taxCategoryId": "SALES_NON_TAXABLE_BAD_DEBT",
     "name": "非課税売上-貸倒",
     "shortName": "非売-貸倒",
     "direction": "sales",
@@ -1323,7 +1323,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_NON_TAXABLE_EXPORT_BAD_DEBT",
+    "taxCategoryId": "SALES_NON_TAXABLE_EXPORT_BAD_DEBT",
     "name": "非課税資産輸出-貸倒",
     "shortName": "非輸-貸倒",
     "direction": "sales",
@@ -1340,7 +1340,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RECOVERY_10",
+    "taxCategoryId": "SALES_RECOVERY_10",
     "name": "課税売上-貸倒回収 10%",
     "shortName": "課売-回収 10%",
     "direction": "sales",
@@ -1357,7 +1357,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RECOVERY_REDUCED_8",
+    "taxCategoryId": "SALES_RECOVERY_REDUCED_8",
     "name": "課税売上-貸倒回収 (軽)8%",
     "shortName": "課売-回収 (軽)8%",
     "direction": "sales",
@@ -1374,7 +1374,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RECOVERY_8",
+    "taxCategoryId": "SALES_RECOVERY_8",
     "name": "課税売上-貸倒回収 8%",
     "shortName": "課売-回収 8%",
     "direction": "sales",
@@ -1391,7 +1391,7 @@
     "source": "mf"
   },
   {
-    "id": "SALES_RECOVERY_5",
+    "taxCategoryId": "SALES_RECOVERY_5",
     "name": "課税売上-貸倒回収 5%",
     "shortName": "課売-回収 5%",
     "direction": "sales",
@@ -1408,7 +1408,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_TAXABLE_10",
+    "taxCategoryId": "PURCHASE_TAXABLE_10",
     "name": "課税仕入 10%",
     "shortName": "課仕 10%",
     "direction": "purchase",
@@ -1426,7 +1426,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_COMMON_10",
+    "taxCategoryId": "PURCHASE_COMMON_10",
     "name": "共通課税仕入 10%",
     "shortName": "共-課仕 10%",
     "direction": "purchase",
@@ -1444,7 +1444,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_NT_10",
+    "taxCategoryId": "PURCHASE_NT_10",
     "name": "非課税対応仕入 10%",
     "shortName": "非-課仕 10%",
     "direction": "purchase",
@@ -1462,7 +1462,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_REDUCED_8",
+    "taxCategoryId": "PURCHASE_REDUCED_8",
     "name": "課税仕入 (軽)8%",
     "shortName": "課仕 (軽)8%",
     "direction": "purchase",
@@ -1479,7 +1479,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_COMMON_REDUCED_8",
+    "taxCategoryId": "PURCHASE_COMMON_REDUCED_8",
     "name": "共通課税仕入 (軽)8%",
     "shortName": "共-課仕 (軽)8%",
     "direction": "purchase",
@@ -1497,7 +1497,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_NT_REDUCED_8",
+    "taxCategoryId": "PURCHASE_NT_REDUCED_8",
     "name": "非課税対応仕入 (軽)8%",
     "shortName": "非-課仕 (軽)8%",
     "direction": "purchase",
@@ -1515,7 +1515,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_TAXABLE_8",
+    "taxCategoryId": "PURCHASE_TAXABLE_8",
     "name": "課税仕入 8%",
     "shortName": "課仕 8%",
     "direction": "purchase",
@@ -1532,7 +1532,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_COMMON_8",
+    "taxCategoryId": "PURCHASE_COMMON_8",
     "name": "共通課税仕入 8%",
     "shortName": "共-課仕 8%",
     "direction": "purchase",
@@ -1550,7 +1550,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_NT_8",
+    "taxCategoryId": "PURCHASE_NT_8",
     "name": "非課税対応仕入 8%",
     "shortName": "非-課仕 8%",
     "direction": "purchase",
@@ -1568,7 +1568,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_TAXABLE_5",
+    "taxCategoryId": "PURCHASE_TAXABLE_5",
     "name": "課税仕入 5%",
     "shortName": "課仕 5%",
     "direction": "purchase",
@@ -1585,7 +1585,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_COMMON_5",
+    "taxCategoryId": "PURCHASE_COMMON_5",
     "name": "共通課税仕入 5%",
     "shortName": "共-課仕 5%",
     "direction": "purchase",
@@ -1603,7 +1603,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_NT_5",
+    "taxCategoryId": "PURCHASE_NT_5",
     "name": "非課税対応仕入 5%",
     "shortName": "非-課仕 5%",
     "direction": "purchase",
@@ -1621,7 +1621,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_BODY_10",
+    "taxCategoryId": "IMPORT_BODY_10",
     "name": "輸入仕入-本体 10%",
     "shortName": "輸仕-本体 10%",
     "direction": "purchase",
@@ -1638,7 +1638,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_TAX_7_8",
+    "taxCategoryId": "IMPORT_TAX_7_8",
     "name": "輸入仕入-消費税額 7.8%",
     "shortName": "輸仕-消税 7.8%",
     "direction": "purchase",
@@ -1655,7 +1655,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_LOCAL_2_2",
+    "taxCategoryId": "IMPORT_LOCAL_2_2",
     "name": "輸入仕入-地方消費税額 2.2%",
     "shortName": "輸仕-地税 2.2%",
     "direction": "purchase",
@@ -1672,7 +1672,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_BODY_10",
+    "taxCategoryId": "IMPORT_COMMON_BODY_10",
     "name": "共通輸入仕入-本体 10%",
     "shortName": "共-輸仕 10%",
     "direction": "purchase",
@@ -1690,7 +1690,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_TAX_7_8",
+    "taxCategoryId": "IMPORT_COMMON_TAX_7_8",
     "name": "共通輸入仕入-消費税額 7.8%",
     "shortName": "共-輸仕-消税 7.8%",
     "direction": "purchase",
@@ -1708,7 +1708,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_LOCAL_2_2",
+    "taxCategoryId": "IMPORT_COMMON_LOCAL_2_2",
     "name": "共通輸入仕入-地方消費税額 2.2%",
     "shortName": "共-輸仕-地税 2.2%",
     "direction": "purchase",
@@ -1726,7 +1726,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_BODY_10",
+    "taxCategoryId": "IMPORT_NT_BODY_10",
     "name": "非課税対応輸入-本体 10%",
     "shortName": "非-輸仕 10%",
     "direction": "purchase",
@@ -1744,7 +1744,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_TAX_7_8",
+    "taxCategoryId": "IMPORT_NT_TAX_7_8",
     "name": "非課税対応輸入-消費税額 7.8%",
     "shortName": "非-輸仕-消税 7.8%",
     "direction": "purchase",
@@ -1762,7 +1762,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_LOCAL_2_2",
+    "taxCategoryId": "IMPORT_NT_LOCAL_2_2",
     "name": "非課税対応輸入-地方消費税額 2.2%",
     "shortName": "非-輸仕-地税 2.2%",
     "direction": "purchase",
@@ -1780,7 +1780,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_BODY_REDUCED_8",
+    "taxCategoryId": "IMPORT_BODY_REDUCED_8",
     "name": "輸入仕入-本体 (軽)8%",
     "shortName": "輸仕-本体 (軽)8%",
     "direction": "purchase",
@@ -1797,7 +1797,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_TAX_REDUCED_6_24",
+    "taxCategoryId": "IMPORT_TAX_REDUCED_6_24",
     "name": "輸入仕入-消費税額 (軽)6.24%",
     "shortName": "輸仕-消税 (軽)6.24%",
     "direction": "purchase",
@@ -1814,7 +1814,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_LOCAL_REDUCED_1_76",
+    "taxCategoryId": "IMPORT_LOCAL_REDUCED_1_76",
     "name": "輸入仕入-地方消費税額 (軽)1.76%",
     "shortName": "輸仕-地税 (軽)1.76%",
     "direction": "purchase",
@@ -1831,7 +1831,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_BODY_REDUCED_8",
+    "taxCategoryId": "IMPORT_COMMON_BODY_REDUCED_8",
     "name": "共通輸入仕入-本体 (軽)8%",
     "shortName": "共-輸仕 (軽)8%",
     "direction": "purchase",
@@ -1849,7 +1849,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_TAX_REDUCED_6_24",
+    "taxCategoryId": "IMPORT_COMMON_TAX_REDUCED_6_24",
     "name": "共通輸入仕入-消費税額 (軽)6.24%",
     "shortName": "共-輸仕-消税 (軽)6.24%",
     "direction": "purchase",
@@ -1867,7 +1867,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_LOCAL_REDUCED_1_76",
+    "taxCategoryId": "IMPORT_COMMON_LOCAL_REDUCED_1_76",
     "name": "共通輸入仕入-地方消費税額 (軽)1.76%",
     "shortName": "共-輸仕-地税 (軽)1.76%",
     "direction": "purchase",
@@ -1885,7 +1885,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_BODY_REDUCED_8",
+    "taxCategoryId": "IMPORT_NT_BODY_REDUCED_8",
     "name": "非課税対応輸入-本体 (軽)8%",
     "shortName": "非-輸仕 (軽)8%",
     "direction": "purchase",
@@ -1903,7 +1903,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_TAX_REDUCED_6_24",
+    "taxCategoryId": "IMPORT_NT_TAX_REDUCED_6_24",
     "name": "非課税対応輸入-消費税額 (軽)6.24%",
     "shortName": "非-輸仕-消税 (軽)6.24%",
     "direction": "purchase",
@@ -1921,7 +1921,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_LOCAL_REDUCED_1_76",
+    "taxCategoryId": "IMPORT_NT_LOCAL_REDUCED_1_76",
     "name": "非課税対応輸入-地方消費税額 (軽)1.76%",
     "shortName": "非-輸仕-地税 (軽)1.76%",
     "direction": "purchase",
@@ -1939,7 +1939,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_BODY_8",
+    "taxCategoryId": "IMPORT_BODY_8",
     "name": "輸入仕入-本体 8%",
     "shortName": "輸仕-本体 8%",
     "direction": "purchase",
@@ -1956,7 +1956,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_TAX_6_3",
+    "taxCategoryId": "IMPORT_TAX_6_3",
     "name": "輸入仕入-消費税額 6.3%",
     "shortName": "輸仕-消税 6.3%",
     "direction": "purchase",
@@ -1973,7 +1973,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_LOCAL_1_7",
+    "taxCategoryId": "IMPORT_LOCAL_1_7",
     "name": "輸入仕入-地方消費税額 1.7%",
     "shortName": "輸仕-地税 1.7%",
     "direction": "purchase",
@@ -1990,7 +1990,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_BODY_8",
+    "taxCategoryId": "IMPORT_COMMON_BODY_8",
     "name": "共通輸入仕入-本体 8%",
     "shortName": "共-輸仕 8%",
     "direction": "purchase",
@@ -2008,7 +2008,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_TAX_6_3",
+    "taxCategoryId": "IMPORT_COMMON_TAX_6_3",
     "name": "共通輸入仕入-消費税額 6.3%",
     "shortName": "共-輸仕-消税 6.3%",
     "direction": "purchase",
@@ -2026,7 +2026,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_LOCAL_1_7",
+    "taxCategoryId": "IMPORT_COMMON_LOCAL_1_7",
     "name": "共通輸入仕入-地方消費税額 1.7%",
     "shortName": "共-輸仕-地税 1.7%",
     "direction": "purchase",
@@ -2044,7 +2044,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_BODY_8",
+    "taxCategoryId": "IMPORT_NT_BODY_8",
     "name": "非課税対応輸入-本体 8%",
     "shortName": "非-輸仕 8%",
     "direction": "purchase",
@@ -2062,7 +2062,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_TAX_6_3",
+    "taxCategoryId": "IMPORT_NT_TAX_6_3",
     "name": "非課税対応輸入-消費税額 6.3%",
     "shortName": "非-輸仕-消税 6.3%",
     "direction": "purchase",
@@ -2080,7 +2080,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_LOCAL_1_7",
+    "taxCategoryId": "IMPORT_NT_LOCAL_1_7",
     "name": "非課税対応輸入-地方消費税額 1.7%",
     "shortName": "非-輸仕-地税 1.7%",
     "direction": "purchase",
@@ -2098,7 +2098,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_BODY_5",
+    "taxCategoryId": "IMPORT_BODY_5",
     "name": "輸入仕入-本体 5%",
     "shortName": "輸仕-本体 5%",
     "direction": "purchase",
@@ -2115,7 +2115,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_TAX_4",
+    "taxCategoryId": "IMPORT_TAX_4",
     "name": "輸入仕入-消費税額 4%",
     "shortName": "輸仕-消税 4%",
     "direction": "purchase",
@@ -2132,7 +2132,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_LOCAL_1",
+    "taxCategoryId": "IMPORT_LOCAL_1",
     "name": "輸入仕入-地方消費税額 1%",
     "shortName": "輸仕-地税 1%",
     "direction": "purchase",
@@ -2149,7 +2149,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_BODY_5",
+    "taxCategoryId": "IMPORT_COMMON_BODY_5",
     "name": "共通輸入仕入-本体 5%",
     "shortName": "共-輸仕 5%",
     "direction": "purchase",
@@ -2167,7 +2167,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_TAX_4",
+    "taxCategoryId": "IMPORT_COMMON_TAX_4",
     "name": "共通輸入仕入-消費税額 4%",
     "shortName": "共-輸仕-消税 4%",
     "direction": "purchase",
@@ -2185,7 +2185,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_COMMON_LOCAL_1",
+    "taxCategoryId": "IMPORT_COMMON_LOCAL_1",
     "name": "共通輸入仕入-地方消費税額 1%",
     "shortName": "共-輸仕-地税 1%",
     "direction": "purchase",
@@ -2203,7 +2203,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_BODY_5",
+    "taxCategoryId": "IMPORT_NT_BODY_5",
     "name": "非課税対応輸入-本体 5%",
     "shortName": "非-輸仕 5%",
     "direction": "purchase",
@@ -2221,7 +2221,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_TAX_4",
+    "taxCategoryId": "IMPORT_NT_TAX_4",
     "name": "非課税対応輸入-消費税額 4%",
     "shortName": "非-輸仕-消税 4%",
     "direction": "purchase",
@@ -2239,7 +2239,7 @@
     "source": "mf"
   },
   {
-    "id": "IMPORT_NT_LOCAL_1",
+    "taxCategoryId": "IMPORT_NT_LOCAL_1",
     "name": "非課税対応輸入-地方消費税額 1%",
     "shortName": "非-輸仕-地税 1%",
     "direction": "purchase",
@@ -2257,7 +2257,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_10",
+    "taxCategoryId": "PURCHASE_SPECIFIC_10",
     "name": "特定課税仕入 10%",
     "shortName": "特定課仕 10%",
     "direction": "purchase",
@@ -2274,7 +2274,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_COMMON_10",
+    "taxCategoryId": "PURCHASE_SPECIFIC_COMMON_10",
     "name": "共通特定課税仕入 10%",
     "shortName": "共-特定課仕 10%",
     "direction": "purchase",
@@ -2292,7 +2292,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_NT_10",
+    "taxCategoryId": "PURCHASE_SPECIFIC_NT_10",
     "name": "非課税対応特定課税仕入 10%",
     "shortName": "非-特定課仕 10%",
     "direction": "purchase",
@@ -2310,7 +2310,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_8",
+    "taxCategoryId": "PURCHASE_SPECIFIC_8",
     "name": "特定課税仕入 8%",
     "shortName": "特定課仕 8%",
     "direction": "purchase",
@@ -2327,7 +2327,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_COMMON_8",
+    "taxCategoryId": "PURCHASE_SPECIFIC_COMMON_8",
     "name": "共通特定課税仕入 8%",
     "shortName": "共-特定課仕 8%",
     "direction": "purchase",
@@ -2345,7 +2345,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_NT_8",
+    "taxCategoryId": "PURCHASE_SPECIFIC_NT_8",
     "name": "非課税対応特定課税仕入 8%",
     "shortName": "非-特定課仕 8%",
     "direction": "purchase",
@@ -2363,7 +2363,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_NON_TAXABLE",
+    "taxCategoryId": "PURCHASE_NON_TAXABLE",
     "name": "非課税仕入",
     "shortName": "非仕",
     "direction": "purchase",
@@ -2380,7 +2380,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_EXEMPT",
+    "taxCategoryId": "PURCHASE_EXEMPT",
     "name": "対象外仕入",
     "shortName": "対象外仕",
     "direction": "purchase",
@@ -2397,7 +2397,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_10",
+    "taxCategoryId": "PURCHASE_RETURN_10",
     "name": "課税仕入-返還等 10%",
     "shortName": "課仕-返還 10%",
     "direction": "purchase",
@@ -2414,7 +2414,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_COMMON_10",
+    "taxCategoryId": "PURCHASE_RETURN_COMMON_10",
     "name": "共通課税仕入-返還等 10%",
     "shortName": "共-課仕-返還 10%",
     "direction": "purchase",
@@ -2432,7 +2432,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_NT_10",
+    "taxCategoryId": "PURCHASE_RETURN_NT_10",
     "name": "非課税対応仕入-返還等 10%",
     "shortName": "非-課仕-返還 10%",
     "direction": "purchase",
@@ -2450,7 +2450,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_REDUCED_8",
+    "taxCategoryId": "PURCHASE_RETURN_REDUCED_8",
     "name": "課税仕入-返還等 (軽)8%",
     "shortName": "課仕-返還 (軽)8%",
     "direction": "purchase",
@@ -2467,7 +2467,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_COMMON_REDUCED_8",
+    "taxCategoryId": "PURCHASE_RETURN_COMMON_REDUCED_8",
     "name": "共通課税仕入-返還等 (軽)8%",
     "shortName": "共-課仕-返還 (軽)8%",
     "direction": "purchase",
@@ -2485,7 +2485,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_NT_REDUCED_8",
+    "taxCategoryId": "PURCHASE_RETURN_NT_REDUCED_8",
     "name": "非課税対応仕入-返還等 (軽)8%",
     "shortName": "非-課仕-返還 (軽)8%",
     "direction": "purchase",
@@ -2503,7 +2503,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_8",
+    "taxCategoryId": "PURCHASE_RETURN_8",
     "name": "課税仕入-返還等 8%",
     "shortName": "課仕-返還 8%",
     "direction": "purchase",
@@ -2520,7 +2520,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_COMMON_8",
+    "taxCategoryId": "PURCHASE_RETURN_COMMON_8",
     "name": "共通課税仕入-返還等 8%",
     "shortName": "共-課仕-返還 8%",
     "direction": "purchase",
@@ -2538,7 +2538,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_NT_8",
+    "taxCategoryId": "PURCHASE_RETURN_NT_8",
     "name": "非課税対応仕入-返還等 8%",
     "shortName": "非-課仕-返還 8%",
     "direction": "purchase",
@@ -2556,7 +2556,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_5",
+    "taxCategoryId": "PURCHASE_RETURN_5",
     "name": "課税仕入-返還等 5%",
     "shortName": "課仕-返還 5%",
     "direction": "purchase",
@@ -2573,7 +2573,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_COMMON_5",
+    "taxCategoryId": "PURCHASE_RETURN_COMMON_5",
     "name": "共通課税仕入-返還等 5%",
     "shortName": "共-課仕-返還 5%",
     "direction": "purchase",
@@ -2591,7 +2591,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_RETURN_NT_5",
+    "taxCategoryId": "PURCHASE_RETURN_NT_5",
     "name": "非課税対応仕入-返還等 5%",
     "shortName": "非-課仕-返還 5%",
     "direction": "purchase",
@@ -2609,7 +2609,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_RETURN_10",
+    "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_10",
     "name": "特定課税仕入-返還等 10%",
     "shortName": "特定課仕-返還 10%",
     "direction": "purchase",
@@ -2626,7 +2626,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_RETURN_COMMON_10",
+    "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_COMMON_10",
     "name": "共通特定課税仕入-返還等 10%",
     "shortName": "共-特定課仕-返還 10%",
     "direction": "purchase",
@@ -2644,7 +2644,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_RETURN_NT_10",
+    "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_NT_10",
     "name": "非課税対応特定課税仕入-返還等 10%",
     "shortName": "非-特定課仕-返還 10%",
     "direction": "purchase",
@@ -2662,7 +2662,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_RETURN_8",
+    "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_8",
     "name": "特定課税仕入-返還等 8%",
     "shortName": "特定課仕-返還 8%",
     "direction": "purchase",
@@ -2679,7 +2679,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_RETURN_COMMON_8",
+    "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_COMMON_8",
     "name": "共通特定課税仕入-返還等 8%",
     "shortName": "共-特定課仕-返還 8%",
     "direction": "purchase",
@@ -2697,7 +2697,7 @@
     "source": "mf"
   },
   {
-    "id": "PURCHASE_SPECIFIC_RETURN_NT_8",
+    "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_NT_8",
     "name": "非課税対応特定課税仕入-返還等 8%",
     "shortName": "非-特定課仕-返還 8%",
     "direction": "purchase",
