@@ -59,15 +59,6 @@
             >{{ p }}</span>
             <span class="as-page-arrow" :class="{ disabled: accountPage >= accountTotalPages }" @click="accountPage = Math.min(accountTotalPages, accountPage + 1)">＞</span>
             <span class="as-page-range">{{ accountPageStart }}~{{ accountPageEnd }} / {{ filteredAccountRows.length }}件</span>
-            <!-- チェック時の一括操作ボタン -->
-            <template v-if="checkedIds.length">
-              <span class="as-bulk-badge">{{ checkedIds.length }}件選択中</span>
-              <button class="as-bulk-btn" @click="showChecked"><i class="fa-solid fa-eye"></i> 表示化</button>
-              <button class="as-bulk-btn" @click="hideChecked"><i class="fa-solid fa-eye-slash"></i> 非表示化</button>
-              <button class="as-bulk-btn danger" @click="deleteChecked"><i class="fa-solid fa-trash-can"></i> 削除（復元できません）</button>
-              <button class="as-bulk-btn" @click="copyChecked"><i class="fa-solid fa-copy"></i> コピー</button>
-              <button class="as-bulk-btn" @click="addAfterChecked"><i class="fa-solid fa-plus"></i> 追加</button>
-            </template>
           </div>
           <div class="as-actions">
             <MfImportButton
@@ -76,15 +67,13 @@
               tooltip="MFから勘定科目をインポート"
               @import="importFromMf"
             />
-            <button class="as-action-btn" @click="resetAccountOrder"><i class="fa-solid fa-rotate"></i> デフォルト順</button>
-            <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button>
+            <!-- 追加ボタン廃止。科目の追加はMF側で行う -->
             <button class="as-action-btn save" @click="saveChanges"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
           </div>
         </div>
         <div class="as-table-wrap">
           <table class="as-table" style="table-layout: fixed;">
             <colgroup>
-              <col style="width: 38px;">
               <col :style="{ width: caColWidths['mfCompliance'] + 'px' }">
               <col :style="{ width: caColWidths['source'] + 'px' }">
               <col :style="{ width: caColWidths['aiSelectable'] + 'px' }">
@@ -103,7 +92,6 @@
             </colgroup>
             <thead>
               <tr>
-                <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
                 <th class="th-visibility relative">MF公式
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('mfCompliance', $event)"></div>
                 </th>
@@ -173,7 +161,7 @@
                 @drop="onDrop(idx)"
                 @dragend="dragIdx = -1"
               >
-                <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
+
                 <td class="td-visibility">
                   <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
                   <i v-if="isAccountHidden(row.id)" class="fa-solid fa-eye-slash td-hide" @click="showRow(row)" title="表示化"></i>
@@ -292,7 +280,7 @@ import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue';
 import type { Account } from '@/types/shared-account';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useClients } from '@/features/client-management/composables/useClients';
-import { getInitialCopyCounter } from '@/utils/copy-utils';
+
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
@@ -489,11 +477,7 @@ const pagedAccountRows = computed(() => filteredAccountRows.value.slice(accountP
 watch(filteredAccountRows, () => { if (accountPage.value > accountTotalPages.value) accountPage.value = 1; });
 
 // =============== チェックボックス選択 ===============
-const checkedIds = ref<string[]>([]);
-function toggleAllChecked(e: Event) {
-  const checked = (e.target as HTMLInputElement).checked;
-  checkedIds.value = checked ? pagedAccountRows.value.map(r => r.id) : [];
-}
+
 function hideRow(row: Account) {
   const id = row.id;
   const today = new Date().toISOString().slice(0, 10);
@@ -516,35 +500,6 @@ function showRow(row: Account) {
     if (target) { target.effectiveTo = null; target.deprecated = false; }
   });
 }
-function hideChecked() {
-  const today = new Date().toISOString().slice(0, 10);
-  const ids = [...checkedIds.value];
-  ids.forEach(id => {
-    if (!isAccountHidden(id) && clientId.value) settings.toggleAccountVisibility(id);
-  });
-  nextTick(() => {
-    ids.forEach(id => {
-      const row = accountRows.find(r => r.id === id);
-      if (row) { row.effectiveTo = today; row.deprecated = true; }
-    });
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目非表示);
-}
-function showChecked() {
-  const ids = [...checkedIds.value];
-  ids.forEach(id => {
-    if (isAccountHidden(id) && clientId.value) settings.toggleAccountVisibility(id);
-  });
-  nextTick(() => {
-    ids.forEach(id => {
-      const row = accountRows.find(r => r.id === id);
-      if (row) { row.effectiveTo = null; row.deprecated = false; }
-    });
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目表示);
-}
 async function deleteRow(row: Account) {
   if (!row.isCustom) return;
   const ok = await modal.confirm({ title: `「${row.name}」${UI_MSG.削除確認接尾}`, message: UI_MSG.復元不可, variant: 'danger' });
@@ -552,81 +507,6 @@ async function deleteRow(row: Account) {
   const idx = accountRows.findIndex(r => r.id === row.id);
   if (idx !== -1) accountRows.splice(idx, 1);
   markDirty(`「${row.name}」${UI_MSG.削除操作接尾}`);
-}
-async function deleteChecked() {
-  const customIds = checkedIds.value.filter(id => {
-    const row = accountRows.find(r => r.id === id);
-    return row?.isCustom;
-  });
-  if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム科目のみ, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}${UI_MSG.カスタム科目削除確認接尾}`, message: UI_MSG.復元不可, variant: 'danger' });
-  if (!ok) return;
-  customIds.forEach(id => {
-    const idx = accountRows.findIndex(r => r.id === id);
-    if (idx !== -1) accountRows.splice(idx, 1);
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目削除);
-}
-let copyCounter = getInitialCopyCounter(accountRows);
-async function copyChecked() {
-  if (!checkedIds.value.length) return;
-  const ok = await modal.confirm({ title: `${checkedIds.value.length}${UI_MSG.科目コピー確認接尾}` });
-  if (!ok) return;
-  // チェック行を逆順にし、各行の直下にコピーを挿入
-  const ids = [...checkedIds.value];
-  ids.reverse().forEach(id => {
-    const srcIdx = accountRows.findIndex(r => r.id === id);
-    if (srcIdx === -1) return;
-    const src = accountRows[srcIdx];
-    if (!src) return;
-    copyCounter++;
-    const copy: Account = {
-      id: `${src.id}_COPY_${copyCounter}`,
-      name: `${src.name}${UI_MSG.コピー接尾}`,
-      target: src.target,
-      accountGroup: src.accountGroup,
-      category: src.category,
-      defaultTaxCategoryId: src.defaultTaxCategoryId,
-      taxDetermination: src.taxDetermination,
-      deprecated: src.deprecated,
-      effectiveFrom: new Date().toISOString().slice(0, 10),
-      effectiveTo: null,
-      sortOrder: src.sortOrder + 0.5,
-      isCustom: true,
-      insertAfter: src.id,
-    };
-    accountRows.splice(srcIdx + 1, 0, copy);
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目コピー);
-}
-async function addAfterChecked() {
-  const ok = await modal.confirm({ title: UI_MSG.科目追加確認 });
-  if (!ok) return;
-  // 最後にチェックした行の直下に新規行を挿入
-  const ids = [...checkedIds.value];
-  const lastId = ids[ids.length - 1];
-  const insertIdx = lastId ? accountRows.findIndex(r => r.id === lastId) + 1 : accountRows.length;
-  copyCounter++;
-  const newRow: Account = {
-    id: `NEW_${copyCounter}`,
-    name: UI_MSG.新規科目名,
-    target: accountBusinessType.value === 'corp' ? 'corp' : 'individual',
-    accountGroup: 'PL_EXPENSE',
-    category: UI_MSG.デフォルト科目カテゴリ,
-    defaultTaxCategoryId: settings.taxCategories.value.find(t => t.isExemptDefault)?.id ?? '',
-    taxDetermination: 'fixed',
-    deprecated: false,
-    effectiveFrom: new Date().toISOString().slice(0, 10),
-    effectiveTo: null,
-    sortOrder: insertIdx,
-    isCustom: true,
-    insertAfter: lastId ?? accountRows[accountRows.length - 1]?.id,
-  };
-  accountRows.splice(insertIdx, 0, newRow);
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目追加);
 }
 async function saveChanges() {
   if (!clientId.value) { modal.notify({ title: UI_MSG.顧問先ID不明, variant: 'warning' }); return; }
@@ -816,11 +696,6 @@ function sortAccounts(key: keyof Account) {
 
 
 
-function resetAccountOrder() {
-  // sortOrderでソート（初期ロードと同じ並び順に復元）
-  accountRows.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
-  sortState.key = '';
-}
 </script>
 
 <style scoped>

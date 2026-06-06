@@ -49,20 +49,7 @@
               @click="accountPage = p"
             >{{ p }}</span>
             <span class="as-page-arrow" :class="{ disabled: accountPage >= accountTotalPages }" @click="accountPage = Math.min(accountTotalPages, accountPage + 1)">＞</span>
-            <span class="as-page-range">{{ accountPageStart }}~{{ accountPageEnd }} / {{ filteredAccountRows.length }}件</span>
-            <!-- チェック時の一括操作ボタン -->
-            <template v-if="checkedIds.length">
-              <span class="as-bulk-badge">{{ checkedIds.length }}件選択中</span>
-              <button class="as-bulk-btn blue" @click="promoteToMfChecked"><i class="fa-solid fa-circle-check"></i> {{ UI_MSG.マスタ科目_MF公式ボタン }}</button>
-              <button class="as-bulk-btn red" @click="demoteFromMfChecked"><i class="fa-solid fa-triangle-exclamation"></i> {{ UI_MSG.マスタ科目_MF非公式ボタン }}</button>
-              <span class="as-bulk-divider"></span>
-              <button class="as-bulk-btn blue" @click="showChecked"><i class="fa-solid fa-eye"></i> {{ UI_MSG.マスタ科目_表示化ボタン }}</button>
-              <button class="as-bulk-btn red" @click="hideChecked"><i class="fa-solid fa-eye-slash"></i> {{ UI_MSG.マスタ科目_非表示化ボタン }}</button>
-              <span class="as-bulk-divider"></span>
-              <button class="as-bulk-btn red" @click="deleteChecked"><i class="fa-solid fa-trash-can"></i> {{ UI_MSG.マスタ科目_削除ボタン }}</button>
-              <button class="as-bulk-btn blue" @click="copyChecked"><i class="fa-solid fa-copy"></i> {{ UI_MSG.マスタ科目_コピーボタン }}</button>
-              <button class="as-bulk-btn blue" @click="addAfterChecked"><i class="fa-solid fa-plus"></i> {{ UI_MSG.マスタ科目_追加ボタン }}</button>
-            </template>
+
           </div>
           <div class="as-actions">
             <MfImportButton
@@ -71,15 +58,15 @@
               tooltip="MFから勘定科目をインポート"
               @import="importFromMf"
             />
+            <!-- 追加ボタン廃止。科目の追加はMF側で行う -->
             <button class="as-action-btn" @click="resetAccountOrder"><i class="fa-solid fa-rotate"></i> {{ UI_MSG.マスタ科目_デフォルト順ボタン }}</button>
-            <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> {{ UI_MSG.マスタ科目_追加ボタン }}</button>
             <button class="as-action-btn save" @click="saveChanges"><i class="fa-solid fa-floppy-disk"></i> {{ UI_MSG.マスタ科目_保存ボタン }}</button>
           </div>
         </div>
         <div class="as-table-wrap">
           <table class="as-table" style="table-layout: fixed;">
             <colgroup>
-              <col style="width: 38px;">
+              <col style="width: 50px;">
               <col :style="{ width: acctColWidths['mfCompliance'] + 'px' }">
               <col :style="{ width: acctColWidths['aiSelectable'] + 'px' }">
               <col :style="{ width: acctColWidths['masterId'] + 'px' }">
@@ -97,7 +84,7 @@
             </colgroup>
             <thead>
               <tr>
-                <th class="as-th-check"><input type="checkbox" @change="toggleAllChecked($event)"></th>
+                <th style="text-align:center;width:50px;">表示</th>
                 <th class="relative" style="text-align:center;">{{ UI_MSG.マスタ科目_列MF公式 }}
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('mfCompliance', $event)"></div>
                 </th>
@@ -156,74 +143,37 @@
             </thead>
             <tbody>
               <tr
-                v-for="(row, idx) in pagedAccountRows" :key="row.id"
-                :class="{ 'row-deprecated': isHidden(row.id), 'row-dragging': dragIdx === idx, 'row-custom': row.isCustom }"
-                draggable="true"
-                @dragstart="onDragStart(idx, $event)"
-                @dragover.prevent="onDragOver(idx)"
-                @drop="onDrop(idx)"
-                @dragend="dragIdx = -1"
+                v-for="row in pagedAccountRows" :key="row.id"
+                :class="{ 'row-deprecated': isHidden(row.id) }"
               >
-                <td class="as-td-check"><input type="checkbox" v-model="checkedIds" :value="row.id"></td>
+                <!-- 表示/非表示トグル -->
+                <td class="td-visibility" style="text-align:center;">
+                  <i v-if="isHidden(row.id)" class="fa-solid fa-eye-slash td-hide" @click="toggleVisibility(row.id)" title="表示する"></i>
+                  <i v-else class="fa-solid fa-eye td-show" @click="toggleVisibility(row.id)" title="非表示にする"></i>
+                </td>
                 <td style="text-align:center;font-size:11px;color:#666;">
                   <span v-if="!row.isCustom" style="color:#1976D2;"><MfCloudIcon :size="12" tooltip="MFクラウド" /> MF</span>
                   <span v-else-if="row.isCustom" style="color:#e65100;">カスタム</span>
                 </td>
-                <td class="td-ai" @dblclick="row.isCustom && startEdit(row, 'aiDetermination')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.id && editingField === 'aiDetermination'">
-                    <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
-                      <template v-if="getAllowedTaxDeterminations(row).length > 1">
-                        <option v-for="o in QUALIFIED_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-                      </template>
-                      <template v-else>
-                        <option v-for="o in QUALIFIED_OPTIONS.filter(o => o.value === 'false')" :key="o.value" :value="o.value">{{ o.label }}</option>
-                      </template>
-                    </select>
-                  </template>
-                  <template v-else>{{ getDisplayAiDet(row) }}</template>
+                <td class="td-ai">
+                  {{ getDisplayAiDet(row) }}
                 </td>
                 <td class="td-master-id" :title="row.id">{{ row.id }}</td>
-                <td @dblclick="row.isCustom && startEdit(row, 'name')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.id && editingField === 'name'">
-                    <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" ref="editInput" autofocus>
-                  </template>
-                  <template v-else>
-                    {{ row.name }}
-                  </template>
-                </td>
+                <!-- 科目名（読み取り専用。修正はMF側で行う） -->
+                <td>{{ row.name }}</td>
                 <td class="td-sub-account"></td>
                 <td class="td-target">{{ targetLabel(row.target) }}</td>
                 <td class="td-account-group">{{ accountGroupLabel(row.accountGroup) }}</td>
                 <td class="td-direction">{{ directionLabel(row.accountGroup) }}</td>
                 <!-- 科目分類 -->
-                <td @dblclick="row.isCustom && startEdit(row, 'category')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.id && editingField === 'category'">
-                    <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
-                      <optgroup v-for="g in categoryGroups" :key="g.label" :label="g.label">
-                        <option v-for="c in g.items" :key="c.value" :value="c.value">{{ c.label }}</option>
-                      </optgroup>
-                    </select>
-                  </template>
-                  <template v-else>{{ getCategoryLabel(row.category) }}</template>
-                </td>
+                <!-- 科目分類（読み取り専用） -->
+                <td>{{ getCategoryLabel(row.category) }}</td>
                 <!-- 税区分判定 -->
-                <td @dblclick="row.isCustom && startEdit(row, 'taxDetermination')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.id && editingField === 'taxDetermination'">
-                    <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
-                      <option v-for="td in getAllowedTaxDeterminations(row)" :key="td" :value="td">{{ taxDetLabel(td) }}</option>
-                    </select>
-                  </template>
-                  <template v-else>{{ getDisplayTaxDet(row) }}</template>
-                </td>
+                <!-- 税区分判定（読み取り専用） -->
+                <td>{{ getDisplayTaxDet(row) }}</td>
                 <!-- デフォルト税区分 -->
-                <td @dblclick="row.isCustom && startEdit(row, 'defaultTaxCategoryId')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.id && editingField === 'defaultTaxCategoryId'">
-                    <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
-                      <option v-for="tc in filteredTaxCategories(row.accountGroup)" :key="tc.id" :value="tc.id">{{ tc.shortName }}</option>
-                    </select>
-                  </template>
-                  <template v-else>{{ getDisplayDefaultTax(row) }}</template>
-                </td>
+                <!-- デフォルト税区分（読み取り専用） -->
+                <td>{{ getDisplayDefaultTax(row) }}</td>
                 <td class="td-voucher-types" :title="getAllowedVoucherTypes(row)">{{ getAllowedVoucherTypes(row) }}</td>
                 <td class="td-date">{{ row.effectiveFrom }}</td>
                 <td class="td-date">{{ row.effectiveTo ?? UI_MSG.現役 }}</td>
@@ -304,25 +254,19 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import type { Account } from '@/types/shared-account';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
-import { getInitialCopyCounter } from '@/utils/copy-utils';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
-import { QUALIFIED_OPTIONS } from '@/constants/vendorOptions';
 import MfImportButton from '@/components/MfImportButton.vue';
 import MfCloudIcon from '@/components/MfCloudIcon.vue';
 import { UI_MSG } from '@/constants/uiMessages';
-import { ACCOUNT_FIELD_LABELS } from '@/constants/fieldLabels';
 import {
   getAccountGroupDirection,
-  getAllowedTaxDeterminations as getAllowedTaxDeterminationsRaw,
   taxDetLabel,
-  deriveCategoryDefaults,
   getCategoryLabel,
 } from '@/data/master/account-category-rules';
-import { useCategoryGroups } from '@/composables/useCategoryGroups';
 import { VOUCHER_TYPE_RULES } from '@/data/master/voucherTypeRules';
 
 // 列幅カスタマイズ
@@ -528,11 +472,18 @@ const accountPage = ref(1);
 
 const accountRows: Account[] = reactive([...masterAccounts.value]);
 
+// SWR再検証完了後にaccountRowsを最新データに同期する
+// localStorageキャッシュ→即時描画→fetchFresh()完了→ストア更新→ここでaccountRows再同期
+// マスタ画面は編集機能全廃済みのため、編集中データ上書きのリスクなし
+watch(masterAccounts, (newVal) => {
+  accountRows.splice(0, accountRows.length, ...newVal);
+}, { deep: true });
+
 // モーダルヘルパー
 const modal = useModalHelper();
 
 // 未保存変更ガード
-const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
+const { markClean } = useUnsavedGuard(saveChanges, modal);
 
 
 
@@ -557,141 +508,8 @@ const pagedAccountRows = computed(() => filteredAccountRows.value.slice(accountP
 watch(filteredAccountRows, () => { if (accountPage.value > accountTotalPages.value) accountPage.value = 1; });
 
 // =============== チェックボックス選択 ===============
-const checkedIds = ref<string[]>([]);
-function toggleAllChecked(e: Event) {
-  const checked = (e.target as HTMLInputElement).checked;
-  checkedIds.value = checked ? pagedAccountRows.value.map(r => r.id) : [];
-}
 
-function hideChecked() {
-  const today = new Date().toISOString().slice(0, 10);
-  checkedIds.value.forEach(id => {
-    if (!isHidden(id)) {
-      const row = accountRows.find(r => r.id === id);
-      if (row) row.effectiveTo = today;
-      toggleVisibility(id);
-    }
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目非表示);
-}
-function showChecked() {
-  checkedIds.value.forEach(id => {
-    if (isHidden(id)) {
-      const row = accountRows.find(r => r.id === id);
-      if (row) row.effectiveTo = null;
-      toggleVisibility(id);
-    }
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目表示);
-}
-async function promoteToMfChecked() {
-  const customIds = checkedIds.value.filter(id => {
-    const row = accountRows.find(r => r.id === id);
-    return row?.isCustom;
-  });
-  if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム科目のみMF公式, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}${UI_MSG.MF公式変更確認}` });
-  if (!ok) return;
-  customIds.forEach(id => {
-    const row = accountRows.find(r => r.id === id);
-    if (row) row.isCustom = false;
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目MF公式);
-}
-async function demoteFromMfChecked() {
-  const officialIds = checkedIds.value.filter(id => {
-    const row = accountRows.find(r => r.id === id);
-    return row && !row.isCustom;
-  });
-  if (!officialIds.length) { await modal.notify({ title: UI_MSG.MF公式科目のみMF非公式, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${officialIds.length}${UI_MSG.MF非公式変更確認}`, message: UI_MSG.MF非公式警告, variant: 'danger' });
-  if (!ok) return;
-  officialIds.forEach(id => {
-    const row = accountRows.find(r => r.id === id);
-    if (row) row.isCustom = true;
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目MF非公式);
-}
 
-async function deleteChecked() {
-  const customIds = checkedIds.value.filter(id => {
-    const row = accountRows.find(r => r.id === id);
-    return row?.isCustom;
-  });
-  if (!customIds.length) { await modal.notify({ title: UI_MSG.カスタム科目のみ, variant: 'warning' }); return; }
-  const ok = await modal.confirm({ title: `${customIds.length}${UI_MSG.カスタム科目削除確認}`, message: UI_MSG.復元不可, variant: 'danger' });
-  if (!ok) return;
-  customIds.forEach(id => {
-    const idx = accountRows.findIndex(r => r.id === id);
-    if (idx !== -1) accountRows.splice(idx, 1);
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目削除);
-}
-let copyCounter = getInitialCopyCounter(accountRows);
-async function copyChecked() {
-  if (!checkedIds.value.length) return;
-  const ok = await modal.confirm({ title: `${checkedIds.value.length}${UI_MSG.科目コピー確認}` });
-  if (!ok) return;
-  // チェック行を逆順にし、各行の直下にコピーを挿入
-  const ids = [...checkedIds.value];
-  ids.reverse().forEach(id => {
-    const srcIdx = accountRows.findIndex(r => r.id === id);
-    if (srcIdx === -1) return;
-    const src = accountRows[srcIdx];
-    if (!src) return;
-    copyCounter++;
-    const copy: Account = {
-      id: `${src.id}_COPY_${copyCounter}`,
-      name: `${src.name}${UI_MSG.コピー接尾}`,
-      target: src.target,
-      accountGroup: src.accountGroup,
-      category: src.category,
-      defaultTaxCategoryId: src.defaultTaxCategoryId,
-      taxDetermination: src.taxDetermination,
-      deprecated: src.deprecated,
-      effectiveFrom: new Date().toISOString().slice(0, 10),
-      effectiveTo: null,
-      sortOrder: src.sortOrder + 0.5,
-      isCustom: true,
-      insertAfter: src.id,
-    };
-    accountRows.splice(srcIdx + 1, 0, copy);
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目コピー);
-}
-async function addAfterChecked() {
-  const ok = await modal.confirm({ title: UI_MSG.科目追加確認 });
-  if (!ok) return;
-  // 最後にチェックした行の直下に新規行を挿入
-  const ids = [...checkedIds.value];
-  const lastId = ids[ids.length - 1];
-  const insertIdx = lastId ? accountRows.findIndex(r => r.id === lastId) + 1 : accountRows.length;
-  copyCounter++;
-  const newRow: Account = {
-    id: `NEW_${copyCounter}`,
-    name: UI_MSG.新規科目名,
-    target: businessType.value === 'corp' ? 'corp' : 'individual',
-    accountGroup: 'PL_EXPENSE',
-    category: UI_MSG.デフォルト科目カテゴリ,
-    defaultTaxCategoryId: settings.taxCategories.value.find(t => t.isExemptDefault)?.id ?? '',
-    taxDetermination: 'fixed',
-    deprecated: false,
-    effectiveFrom: new Date().toISOString().slice(0, 10),
-    effectiveTo: null,
-    sortOrder: insertIdx,
-    isCustom: true,
-    insertAfter: lastId ?? accountRows[accountRows.length - 1]?.id,
-  };
-  accountRows.splice(insertIdx, 0, newRow);
-  checkedIds.value = [];
-  markDirty(UI_MSG.科目追加);
-}
 async function saveChanges() {
   try {
     // API経由でサーバー側に保存
@@ -720,79 +538,6 @@ async function saveChanges() {
   }
 }
 
-// =============== インライン編集 ===============
-const editingRow = ref('');
-const editingField = ref('');
-const editValue = ref('');
-
-type AccountEditField = 'name' | 'category' | 'taxDetermination' | 'defaultTaxCategoryId' | 'aiDetermination';
-
-function startEdit(row: Account, field: AccountEditField) {
-  if (!row.isCustom) {
-    modal.notify({ title: UI_MSG.デフォルト科目編集不可, message: UI_MSG.コピーしてから編集, variant: 'warning' });
-    return;
-  }
-  editingRow.value = row.id;
-  editingField.value = field;
-  switch (field) {
-    case 'name': editValue.value = row.name; break;
-    case 'category': editValue.value = row.category; break;
-    case 'taxDetermination': editValue.value = row.taxDetermination; break;
-    case 'defaultTaxCategoryId': editValue.value = row.defaultTaxCategoryId ?? ''; break;
-    case 'aiDetermination': editValue.value = String(row.taxDetermination !== 'fixed'); break;
-  }
-}
-
-function commitEdit(row: Account) {
-  switch (editingField.value) {
-    case 'name':
-      if (!editValue.value.trim()) { modal.notify({ title: UI_MSG.科目名空, variant: 'warning' }); return; }
-      row.name = editValue.value;
-      break;
-    case 'category':
-      row.category = editValue.value;
-      // category変更時にaccountGroup・taxDetermination・defaultTaxCategoryIdを自動設定
-      {
-        const defaults = deriveCategoryDefaults(row.accountGroup, settings.taxCategories.value);
-        row.taxDetermination = defaults.taxDetermination;
-        row.defaultTaxCategoryId = defaults.defaultTaxCategoryId;
-      }
-      break;
-    case 'taxDetermination':
-      row.taxDetermination = editValue.value as 'auto_purchase' | 'auto_sales' | 'fixed';
-      break;
-    case 'defaultTaxCategoryId':
-      row.defaultTaxCategoryId = editValue.value;
-      break;
-    case 'aiDetermination':
-      if (editValue.value === 'true') {
-        if (row.taxDetermination === 'fixed') {
-          const dir = getAccountGroupDirection(row.accountGroup);
-          row.taxDetermination = dir === 'sales' ? 'auto_sales' : 'auto_purchase';
-        }
-      } else {
-        row.taxDetermination = 'fixed';
-      }
-      break;
-  }
-  const acFieldLabels = ACCOUNT_FIELD_LABELS;
-  markDirty(`${UI_MSG.勘定科目変更}${acFieldLabels[editingField.value] ?? editingField.value}${UI_MSG.を変更}`);
-  cancelEdit();
-}
-
-function cancelEdit() {
-  editingRow.value = '';
-  editingField.value = '';
-}
-
-// =============== categoryグループ分類（composable化済み。DRY） ===============
-const { categoryGroups } = useCategoryGroups(accountRows);
-
-/** 科目の大分類+中分類+課税方式に基づいて許可されるtaxDetermination値を返す */
-function getAllowedTaxDeterminations(row: Account): string[] {
-  return getAllowedTaxDeterminationsRaw(row.accountGroup, row.category, taxMethod.value);
-}
-
 /** 課税方式に応じた「税区分自動判定」列の表示値 */
 function getDisplayAiDet(row: Account): string {
   if (taxMethod.value === 'exempt') return '';
@@ -811,35 +556,6 @@ function getDisplayDefaultTax(row: Account): string {
   return getTaxCategoryName(row.defaultTaxCategoryId);
 }
 
-function filteredTaxCategories(accountGroup: string) {
-  const dir = getAccountGroupDirection(accountGroup);
-  return settings.filteredTaxCategories(dir);
-}
-
-// =============== ドラッグ並替え ===============
-const dragIdx = ref(-1);
-function onDragStart(idx: number, e: DragEvent) {
-  dragIdx.value = idx;
-  e.dataTransfer!.effectAllowed = 'move';
-}
-function onDragOver(_idx: number) {
-  // placeholder for future hover highlight
-}
-function onDrop(targetIdx: number) {
-  if (dragIdx.value === -1 || dragIdx.value === targetIdx) return;
-  const startIdx = (accountPage.value - 1) * PAGE_SIZE;
-  const srcGlobal = startIdx + dragIdx.value;
-  const dstGlobal = startIdx + targetIdx;
-  const removed = accountRows.splice(srcGlobal, 1);
-  if (removed.length > 0) {
-    accountRows.splice(dstGlobal, 0, removed[0]!);
-    accountRows.forEach((r, i) => { r.sortOrder = i + 1; });
-    markDirty(UI_MSG.科目並び順変更);
-  }
-  dragIdx.value = -1;
-}
-
-// =============== 共通ユーティリティ ===============
 function getTaxCategoryName(id?: string): string {
   if (!id) return '';
   return settings.resolveTaxCategoryShortName(id);
@@ -877,4 +593,13 @@ function resetAccountOrder() {
 
 <style>
 @import '@/styles/master-accounts.css';
+</style>
+
+<style scoped>
+/* 表示/非表示トグル（顧問先画面と同じスタイル） */
+.td-visibility { white-space: nowrap; text-align: center; }
+.td-hide { color: #999; cursor: pointer; font-size: 14px; }
+.td-hide:hover { color: #616161; }
+.td-show { color: #4caf50; cursor: pointer; font-size: 14px; }
+.td-show:hover { color: #2e7d32; }
 </style>
