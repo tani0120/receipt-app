@@ -47,7 +47,7 @@ export type AccountForValidation = Pick<Account,
 
 /** バリデーション用の税区分最小インターフェース（TaxCategory型からPick） */
 export type TaxCategoryForValidation = Pick<TaxCategory,
-  'id' | 'direction' | 'simplifiedOnly' | 'baseId' | 'isExemptDefault'
+  'id' | 'direction' | 'simplifiedOnly' | 'baseId' | 'isExemptDefault' | 'isUnknownDefault'
 >
 
 /** 5分類グループ型 */
@@ -130,9 +130,10 @@ export function isTaxCategoryInvalidForMode(
   taxCategories: TaxCategoryForValidation[]
 ): boolean {
   if (consumptionTaxMode === 'exempt') {
-    // 免税事業者: 「不明」（COMMON_UNKNOWN）は税区分未確定の一時保存用として有効
-    if (taxCategoryId === 'COMMON_UNKNOWN') return false
-    // isExemptDefault=trueの税区分（COMMON_EXEMPT: 対象外）以外は不正
+    // 免税事業者: isUnknownDefault=trueの税区分（不明）は税区分未確定の一時保存用として有効
+    const unknownDefault = taxCategories.find(t => t.isUnknownDefault)
+    if (unknownDefault && taxCategoryId === unknownDefault.id) return false
+    // isExemptDefault=trueの税区分（対象外）以外は不正
     const exemptDefault = taxCategories.find(t => t.isExemptDefault)
     return exemptDefault ? taxCategoryId !== exemptDefault.id : true
   }

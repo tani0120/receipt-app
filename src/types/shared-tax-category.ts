@@ -65,6 +65,8 @@ export type TaxCategory = {
     individualOnly?: boolean
     /** 免税事業者デフォルトフラグ（免税時の矛盾修正先。マスタで1件のみtrue） */
     isExemptDefault?: boolean
+    /** 不明（未確定）税区分フラグ（一時保存用。マスタで1件のみtrue） */
+    isUnknownDefault?: boolean
     /** 売上系のデフォルト税区分フラグ（新規売上科目のデフォルト。マスタで1件のみtrue） */
     isSalesDefault?: boolean
     /** 仕入系のデフォルト税区分フラグ（新規仕入科目のデフォルト。マスタで1件のみtrue） */

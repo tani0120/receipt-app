@@ -14,7 +14,8 @@
     "displayOrder": 1,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mf",
+    "isUnknownDefault": true
   },
   {
     "id": "COMMON_EXEMPT",

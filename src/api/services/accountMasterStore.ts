@@ -101,6 +101,7 @@ export function getClientTaxCategoriesForValidation(clientId: string): {
   simplifiedOnly?: boolean
   baseId?: string
   isExemptDefault?: boolean
+  isUnknownDefault?: boolean
 }[] {
   const data = getClientTaxCategories(clientId)
   return data.map(t => ({
@@ -109,6 +110,7 @@ export function getClientTaxCategoriesForValidation(clientId: string): {
     simplifiedOnly: t.simplifiedOnly,
     baseId: t.baseId,
     isExemptDefault: t.isExemptDefault,
+    isUnknownDefault: t.isUnknownDefault,
   }))
 }
 
