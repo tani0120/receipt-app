@@ -92,27 +92,51 @@ interface ClassifyResult {
 // ============================================================
 
 const ALL_CATEGORIES = {
-  'PL収益': ['売上', '不動産収入', '営業外収益', '特別利益'],
-  'PL費用': ['経費', '売上原価', '販管費', '不動産経費', '営業外費用', '繰入額等', '特別損失'],
-  'BS資産': ['現金及び預金', '売上債権', '有価証券', 'その他流動資産', '有形固定資産', '無形固定資産', '投資その他', '棚卸資産', '繰延資産'],
-  'BS負債': ['仕入債務', 'その他流動負債', '固定負債'],
-  'BS純資産': ['純資産', '事業主貸', '事業主借', '資本の部', '諸口'],
-  'PLその他': ['繰戻額等'],
+  'PL_REVENUE': [
+    'NET_SALES', 'SALES_REVENUE', 'REAL_ESTATE_INCOME',
+    'NON_OPERATING_INCOME', 'EXTRAORDINARY_INCOME', 'REVERSALS',
+  ],
+  'PL_EXPENSE': [
+    'COST_OF_PURCHASED_GOODS', 'BEGINNING_INVENTORY', 'BEGINNING_MERCHANDISE_INVENTORY',
+    'ENDING_INVENTORY', 'ENDING_MERCHANDISE_INVENTORY',
+    'SELLING_GENERAL_AND_ADMINISTRATIVE_EXPENSES', 'EXPENSES',
+    'REAL_ESTATE_EXPENSES', 'REAL_ESTATE_EMPLOYEE_SALARY',
+    'NON_OPERATING_EXPENSES', 'EXTRAORDINARY_LOSSES',
+    'PROVISIONS', 'CORPORATE_INCOME_TAXES_CURRENT', 'CORPORATE_INCOME_TAXES_DEFERRED',
+    'TRANSFERS_TO_OTHER_ACCOUNTS',
+  ],
+  'BS_ASSET': [
+    'CASH_AND_DEPOSITS', 'TRADE_RECEIVABLES', 'MARKETABLE_SECURITIES',
+    'INVENTORIES', 'OTHER_CURRENT_ASSETS', 'PROPERTY_PLANT_AND_EQUIPMENT',
+    'INTANGIBLE_ASSETS', 'INVESTMENTS_AND_OTHER_ASSETS', 'DEFERRED_ASSETS',
+    'OWNERS_DRAWINGS', 'SUNDRIES',
+  ],
+  'BS_LIABILITY': [
+    'TRADE_PAYABLES', 'OTHER_CURRENT_LIABILITIES', 'NON_CURRENT_LIABILITIES',
+    'OWNERS_CAPITAL',
+  ],
+  'BS_EQUITY': [
+    'CAPITAL_STOCK', 'EQUITY', 'LEGAL_CAPITAL_SURPLUS', 'OTHER_CAPITAL_SURPLUS',
+    'STOCK_SUBSCRIPTION_DEPOSITS', 'LEGAL_RETAINED_EARNINGS',
+    'APPROPRIATED_RETAINED_EARNINGS', 'RETAINED_EARNINGS_BROUGHT_FORWARD',
+    'TREASURY_STOCK', 'TREASURY_STOCK_SUBSCRIPTION_DEPOSITS',
+    'VALUATION_AND_TRANSLATION_ADJUSTMENTS', 'SUBSCRIPTION_RIGHTS_TO_SHARES',
+  ],
 } as const;
 
 const VALID_CATEGORIES = Object.values(ALL_CATEGORIES).flat();
 
-/** categoryからaccountGroupを導出（account-category-rules.tsと同一ロジック） */
-const SALES_CATEGORIES = ALL_CATEGORIES['PL収益'];
-const PURCHASE_CATEGORIES = [...ALL_CATEGORIES['PL費用'], ...ALL_CATEGORIES['PLその他']];
-const BS_ASSET_CATEGORIES = ALL_CATEGORIES['BS資産'];
-const BS_LIABILITY_CATEGORIES = ALL_CATEGORIES['BS負債'];
+/** categoryからaccountGroupを導出（MF英語categoryベース。MCP実機データに準拠） */
+const REVENUE_CATEGORIES = ALL_CATEGORIES['PL_REVENUE'];
+const EXPENSE_CATEGORIES = ALL_CATEGORIES['PL_EXPENSE'];
+const ASSET_CATEGORIES = ALL_CATEGORIES['BS_ASSET'];
+const LIABILITY_CATEGORIES = ALL_CATEGORIES['BS_LIABILITY'];
 
 function deriveAccountGroup(category: string): string {
-  if ((SALES_CATEGORIES as readonly string[]).includes(category)) return 'PL_REVENUE';
-  if ((PURCHASE_CATEGORIES as readonly string[]).includes(category)) return 'PL_EXPENSE';
-  if ((BS_ASSET_CATEGORIES as readonly string[]).includes(category)) return 'BS_ASSET';
-  if ((BS_LIABILITY_CATEGORIES as readonly string[]).includes(category)) return 'BS_LIABILITY';
+  if ((REVENUE_CATEGORIES as readonly string[]).includes(category)) return 'PL_REVENUE';
+  if ((EXPENSE_CATEGORIES as readonly string[]).includes(category)) return 'PL_EXPENSE';
+  if ((ASSET_CATEGORIES as readonly string[]).includes(category)) return 'BS_ASSET';
+  if ((LIABILITY_CATEGORIES as readonly string[]).includes(category)) return 'BS_LIABILITY';
   return 'BS_EQUITY';
 }
 

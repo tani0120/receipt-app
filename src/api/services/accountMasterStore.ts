@@ -17,7 +17,6 @@ import { getTaxAvailableForMethod } from './mfTaxAvailableStore'
 import { join } from 'path'
 import type { Account, AccountGroup, TaxDetermination } from '../../types/shared-account'
 import type { TaxCategory } from '../../types/shared-tax-category'
-import { REAL_ESTATE_CATEGORIES } from '../../data/master/account-category-rules'
 
 // ────────────────────────────────────────────
 // JSONファイルからマスタデータを読み込み
@@ -128,8 +127,8 @@ export function getAccountNameMap(): Record<string, string> {
 
 /** フィルタ条件 */
 export interface AccountFilterParams {
-  /** 事業形態フィルタ: corp / individual / realEstate */
-  businessType?: 'corp' | 'individual' | 'realEstate'
+  /** 事業形態フィルタ: corp / individual */
+  businessType?: 'corp' | 'individual'
   /** テキスト検索（科目名部分一致） */
   search?: string
   /** ページ番号（1始まり） */
@@ -169,16 +168,7 @@ export function getFilteredAccounts(params: AccountFilterParams): AccountFilterR
   let filtered = masterAccounts.filter(row => {
     // 事業形態フィルタ（未指定時は全件）
     if (businessType) {
-      if (businessType === 'corp') {
-        if (row.target !== 'both' && row.target !== 'corp') return false
-      } else {
-        // individual または realEstate
-        if (row.target !== 'both' && row.target !== 'individual') return false
-      }
-      // 不動産フィルタ（realEstate以外は不動産科目非表示）
-      if (businessType !== 'realEstate') {
-        if (REAL_ESTATE_CATEGORIES.includes(row.category)) return false
-      }
+      if (row.target !== businessType) return false
     }
     // テキスト検索
     if (search && !row.name.includes(search)) return false
@@ -354,14 +344,7 @@ export function getFilteredClientAccounts(
   } = params
 
   let filtered = data.accounts.filter(row => {
-    if (businessType === 'corp') {
-      if (row.target !== 'both' && row.target !== 'corp') return false
-    } else {
-      if (row.target !== 'both' && row.target !== 'individual') return false
-    }
-    if (businessType !== 'realEstate') {
-      if (REAL_ESTATE_CATEGORIES.includes(row.category)) return false
-    }
+    if (row.target !== businessType) return false
     if (search && !row.name.includes(search)) return false
     return true
   })

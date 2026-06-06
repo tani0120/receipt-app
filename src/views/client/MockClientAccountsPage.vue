@@ -16,8 +16,7 @@
           <div class="as-selector-group-lg">
             <span class="as-selector-label-lg">事業形態:</span>
             <label class="as-checkbox-label-lg"><input type="checkbox" :checked="accountBusinessType === 'corp'" disabled class="as-checkbox-lg"><span>法人</span></label>
-            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="accountBusinessType === 'individual' && !accountHasRealEstate" disabled class="as-checkbox-lg"><span>個人事業</span></label>
-            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="accountBusinessType === 'individual' && accountHasRealEstate" disabled class="as-checkbox-lg"><span>個人事業(不動産所得あり)</span></label>
+            <label class="as-checkbox-label-lg"><input type="checkbox" :checked="accountBusinessType === 'individual'" disabled class="as-checkbox-lg"><span>個人事業</span></label>
           </div>
           <div class="as-selector-group-lg">
             <span class="as-selector-label-lg">課税方式:</span>
@@ -347,7 +346,6 @@ function accountGroupLabel(ag: string): string {
 /** target（事業形態）の日本語ラベル */
 function targetLabel(t: string): string {
   switch (t) {
-    case 'both': return '共通';
     case 'corp': return '法人';
     case 'individual': return '個人';
     default: return t;
@@ -413,7 +411,7 @@ const { clients } = useClients();
 const clientId = computed(() => props.clientId);
 const currentClientData = computed(() => clients.value.find(c => c.clientId === clientId.value) ?? null);
 const accountBusinessType = computed<'corp' | 'individual'>(() => currentClientData.value?.type === 'corp' ? 'corp' : 'individual');
-const accountHasRealEstate = computed(() => currentClientData.value?.hasRentalIncome ?? false);
+
 const clientTaxMethod = computed<'proportional' | 'individual' | 'simplified' | 'exempt'>(() => {
   const raw = currentClientData.value?.consumptionTaxMode;
   if (raw === 'exempt') return 'exempt';
@@ -477,10 +475,7 @@ function isMasterCustomAccount(accountId: string): boolean {
 
 const filteredAccountRows = computed(() => {
   return accountRows.filter(row => {
-    if (row.target !== 'both' && row.target !== accountBusinessType.value) return false;
-    if (accountBusinessType.value === 'individual' && !accountHasRealEstate.value) {
-      if (row.category === 'REAL_ESTATE_INCOME' || row.category === 'REAL_ESTATE_EXPENSES' || row.category === 'REAL_ESTATE_EMPLOYEE_SALARY') return false;
-    }
+    if (row.target !== accountBusinessType.value) return false;
     if (accountFilter.value && !row.name.includes(accountFilter.value)) return false;
     return true;
   });

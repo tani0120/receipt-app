@@ -14,7 +14,7 @@
             <span class="as-selector-label-lg">{{ UI_MSG.マスタ科目_事業形態ラベル }}</span>
             <label class="as-checkbox-label-lg"><input type="radio" v-model="businessType" value="corp" class="as-checkbox-lg"><span>{{ UI_MSG.マスタ科目_法人 }}</span></label>
             <label class="as-checkbox-label-lg"><input type="radio" v-model="businessType" value="individual" class="as-checkbox-lg"><span>{{ UI_MSG.マスタ科目_個人事業 }}</span></label>
-            <label class="as-checkbox-label-lg"><input type="radio" v-model="businessType" value="realEstate" class="as-checkbox-lg"><span>{{ UI_MSG.マスタ科目_個人事業不動産 }}</span></label>
+
           </div>
           <div class="as-selector-group-lg">
             <span class="as-selector-label-lg">{{ UI_MSG.マスタ科目_課税方式ラベル }}</span>
@@ -358,7 +358,6 @@ function accountGroupLabel(ag: string): string {
 /** target（事業形態）の日本語ラベル */
 function targetLabel(t: string): string {
   switch (t) {
-    case 'both': return '共通';
     case 'corp': return '法人';
     case 'individual': return '個人';
     default: return t;
@@ -520,7 +519,7 @@ function toggleVisibility(id: string) { settings.toggleAccountVisibility(id); }
 function isHidden(id: string) { return settings.isAccountHidden(id); }
 
 // =============== 勘定科目マスタ ===============
-type BusinessTypeValue = 'corp' | 'individual' | 'realEstate';
+type BusinessTypeValue = 'corp' | 'individual';
 type TaxMethodType = 'proportional' | 'individual' | 'simplified' | 'exempt';
 const businessType = ref<BusinessTypeValue>('corp');
 const taxMethod = ref<TaxMethodType>('proportional');
@@ -541,14 +540,9 @@ const filteredAccountRows = computed(() => {
   return accountRows.filter(row => {
     // 事業形態フィルタ（排他選択）
     if (businessType.value === 'corp') {
-      if (row.target !== 'both' && row.target !== 'corp') return false;
+      if (row.target !== 'corp') return false;
     } else {
-      // individual または realEstate
-      if (row.target !== 'both' && row.target !== 'individual') return false;
-    }
-    // 不動産フィルタ（realEstate以外は不動産科目非表示）
-    if (businessType.value !== 'realEstate') {
-      if (row.category === 'REAL_ESTATE_INCOME' || row.category === 'REAL_ESTATE_EXPENSES' || row.category === 'REAL_ESTATE_EMPLOYEE_SALARY') return false;
+      if (row.target !== 'individual') return false;
     }
     if (accountFilter.value && !row.name.includes(accountFilter.value)) return false;
     return true;

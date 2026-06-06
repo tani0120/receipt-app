@@ -172,11 +172,11 @@ export const VOUCHER_TYPE_RULES: Record<string, VoucherTypeRule> = {
     description: '口座間の資金移動。借方・貸方ともに預金科目（普通預金・当座預金・定期預金）。',
     debit: {
       allowedIds: [...DEPOSIT_IDS],
-      allowedCategories: ['現金及び預金'],
+      allowedCategories: ['CASH_AND_DEPOSITS'],
     },
     credit: {
       allowedIds: [...DEPOSIT_IDS],
-      allowedCategories: ['現金及び預金'],
+      allowedCategories: ['CASH_AND_DEPOSITS'],
     },
   },
 }

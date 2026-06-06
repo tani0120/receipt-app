@@ -193,11 +193,13 @@ category（中分類）を設定すると:
 | スナップショット取得 | **8パターン**（法人4 + 個人4） |
 | 取得済み顧問先 | c_rODnkCDN（法人）+ c_wTdnMKDO（個人） |
 
-> [!WARNING]
-> **MFインポートのテスト範囲が不十分。** 取得済みの8パターンはいずれも実運用顧問先であり、
-> 全12パターンの体系的テスト（不動産あり/なし×4課税方式）は**未完了**。
-> 特に「不動産所得なし×個人」の4パターンが未取得。
-> `mf-account-available.json`（勘定科目の方式別表示可否テーブル）は**未構築**のまま。
+> [!NOTE]
+> **2026-06-05 MCP実機テスト完了（t1_mcp_factsheet.md）:**
+> 全11パターン（法人5 + 個人6）で検証済み。
+> 法人は133件・36種で完全固定。個人は108件・26種で完全固定。
+> 課税方式・経理方式・業種・不動産有無で勘定科目に差はない（差分ゼロ）。
+> `mf-account-available.json`は**不要**（科目は全パターン同一のため、方式別表示可否テーブルは不要）。
+> **不動産フィルタは廃止済み（2026-06-06）。**
 
 ### 4-3. MFスナップショット取得状況（実態）
 
@@ -207,11 +209,18 @@ category（中分類）を設定すると:
 | 2 | c_rODnkCDN | 法人 | 簡易 | `mf-snapshot-c_rODnkCDN-simplified.json` | ✅ |
 | 3 | c_rODnkCDN | 法人 | 原則（個別） | `mf-snapshot-c_rODnkCDN-general_specific.json` | ✅ |
 | 4 | c_rODnkCDN | 法人 | 原則（一括） | `mf-snapshot-c_rODnkCDN-general_proportional.json` | ✅ |
-| 5 | c_wTdnMKDO | 個人（不動産あり） | 免税 | `mf-snapshot-c_wTdnMKDO-exempt.json` | ✅ |
-| 6 | c_wTdnMKDO | 個人（不動産あり） | 簡易 | `mf-snapshot-c_wTdnMKDO-simplified.json` | ✅ |
-| 7 | c_wTdnMKDO | 個人（不動産あり） | 原則（個別） | `mf-snapshot-c_wTdnMKDO-general_specific.json` | ✅ |
-| 8 | c_wTdnMKDO | 個人（不動産あり） | 原則（一括） | `mf-snapshot-c_wTdnMKDO-general_proportional.json` | ✅ |
-| 9-12 | （個人・不動産なし） | 個人 | 全4方式 | — | ❌ 未取得 |
+| 5 | c_wTdnMKDO | 個人 | 免税 | `tsk-free.json` | ✅ |
+| 6 | c_wTdnMKDO | 個人 | 簡易 | `tsk-simple-taxinc.json` | ✅ |
+| 7 | c_wTdnMKDO | 個人 | 原則（個別） | `tsk-individual-taxinc.json` | ✅ |
+| 8 | c_wTdnMKDO | 個人 | 原則（一括） | `tsk-proportional-taxinc.json` | ✅ |
+| 9 | c_wTdnMKDO | 個人（不動産） | 免税 | `tsk-free-realestate.json` | ✅ |
+| 10 | c_wTdnMKDO | 個人（一般不動産） | 免税 | `tsk-free-general-realestate.json` | ✅ |
+
+> [!NOTE]
+> **2026-06-05 MCP実機テスト結果:**
+> 個人6パターン全て108件・26種で完全固定。不動産の有無・課税方式・業種の影響ゼロ。
+> 「不動産なし×個人」の別パターンは不要（MFが出し分けない）。
+> 詳細: [t1_mcp_factsheet.md](file:///C:/Users/kazen/.gemini/antigravity-ide/brain/577033d8-ef53-449e-8548-cf7c5de7fe9d/t1_mcp_factsheet.md)
 
 ### 4-4. 照合チェーン
 
@@ -470,7 +479,7 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 | P3 | フィルタロジックがフロント/バックエンドで重複 | フロント`filteredAccountRows` computed + バックエンド`getFilteredAccounts()`。インライン編集・ドラッグ並替えはフロントでOK（合意済み） |
 | P4 | テンプレート内のハードコード | テンプレート（HTML）内に日本語ラベルが直書き。UI_MSGへの定数化進行中だが一部残存 |
 | P5 | clientIdのハードコード | MF認証で`c_rODnkCDN`がL370にハードコード（`TODO: Supabase移行時にUI選択に変更`コメントあり） |
-| P7 | `mf-account-available.json`未構築 | 勘定科目の方式別表示可否テーブルが存在しない。個人（不動産なし）4パターンのスナップショットも未取得 |
+| ~~P7~~ | ~~`mf-account-available.json`未構築~~ | **不要と判明（2026-06-05）。** MCP実機テスト11パターンで勘定科目は全パターン同一。方式別表示可否テーブルは不要 |
 | P8 | MFインポート新規IDに日本語混入 | `MF_${mf.name}` で生成されるため`MF_未収賃貸料`等のIDが発生（L147） |
 
 ### 🟢 良い点（既に実装済み）
@@ -725,7 +734,7 @@ MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しない
 | # | 項目 | fact根拠 | 次アクション |
 |---|------|---------|------------|
 | T1 | MF勘定科目インポート実機テスト | `mf-raw/`に`pattern: master-accounts`のログ0件 | TST/TSK全12パターンで実行 |
-| T2 | 個人（不動産なし）テスト顧問先 | TST(`c_rODnkCDN`法人)とTSK(`c_wTdnMKDO`個人不動産あり)は**clients.jsonに登録済み・MFインポート済み**。ただし個人（不動産なし）の顧問先がない | 個人不動産なしパターン用の顧問先をMFで作成 or 既存で代用 |
+| ~~T2~~ | ~~個人（不動産なし）テスト顧問先~~ | **不要と判明（2026-06-05）。** MCP実機テストで個人6パターン全て108件同一。不動産の有無で科目に差がないため、不動産なし専用の顧問先は不要 | — |
 
 ### 🔴 B. 未構築データ
 
@@ -878,15 +887,17 @@ graph TD
 | 2 | TST(法人 `c_rODnkCDN`) | 簡易 | ❌ |
 | 3 | TST(法人 `c_rODnkCDN`) | 原則（個別） | ❌ |
 | 4 | TST(法人 `c_rODnkCDN`) | 原則（一括） | ❌ |
-| 5 | TSK(個人不動産あり `c_wTdnMKDO`) | 免税 | ❌ |
-| 6 | TSK(個人不動産あり `c_wTdnMKDO`) | 簡易 | ❌ |
-| 7 | TSK(個人不動産あり `c_wTdnMKDO`) | 原則（個別） | ❌ |
-| 8 | TSK(個人不動産あり `c_wTdnMKDO`) | 原則（一括） | ❌ |
-| 9-12 | 個人不動産なし（**顧問先不足**） | 全4方式 | ❌ |
+| 5 | TSK(個人 `c_wTdnMKDO`) | 免税 | ✅ 完了 |
+| 6 | TSK(個人 `c_wTdnMKDO`) | 簡易 | ✅ 完了 |
+| 7 | TSK(個人 `c_wTdnMKDO`) | 原則（個別） | ✅ 完了 |
+| 8 | TSK(個人 `c_wTdnMKDO`) | 原則（一括） | ✅ 完了 |
+| 9 | TSK(個人不動産 `c_wTdnMKDO`) | 免税 | ✅ 完了 |
+| 10 | TSK(個人一般不動産 `c_wTdnMKDO`) | 免税 | ✅ 完了 |
+| ~~9-12~~ | ~~個人不動産なし~~ | — | **不要**（MFが出し分けない） |
 
-> [!IMPORTANT]
-> **即着手**: ① G1（Geminiテスト — 既存157件で精度測定。T1依存なし・今すぐ可能）
-> **G1完了後**: ② P8+G2（AI英語変換+分類実装）→ ③ T1（MF実機テスト8パターン）
-> **T1の人間操作**: MF管理画面で課税方式を切替
-> **個人不動産なし**: 顧問先の確保が必要（既存で代用 or 新規作成）
+> [!NOTE]
+> **2026-06-05 T1完了（t1_mcp_factsheet.md）:**
+> 全11パターン（法人5 + 個人6）で検証済み。法人133件・個人108件で完全固定。
+> 「個人不動産なし」は不要（MFが出し分けない）。不動産フィルタは廃止済み。
+> 詳細: [t1_mcp_factsheet.md](file:///C:/Users/kazen/.gemini/antigravity-ide/brain/577033d8-ef53-449e-8548-cf7c5de7fe9d/t1_mcp_factsheet.md)
 

@@ -81,7 +81,7 @@ export function toAccount(row: Record<string, unknown>): Account {
     id: row.id as string,
     name: row.name as string,
     sub: (row.sub as string) ?? undefined,
-    target: (row.target as Account['target']) ?? 'both',
+    target: (row.target as Account['target']) ?? 'corp',
     accountGroup: (row.account_group as Account['accountGroup']) ?? 'PL_EXPENSE',
     category: (row.category as string) ?? '',
     defaultTaxCategoryId: (row.default_tax_category_id as string) ?? undefined,

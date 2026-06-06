@@ -32,7 +32,7 @@ const app = new Hono()
 
 function parseFilterParams(c: { req: { query: (key: string) => string | undefined } }) {
   const rawBt = c.req.query('businessType')
-  const businessType = rawBt ? rawBt as 'corp' | 'individual' | 'realEstate' : undefined
+  const businessType = rawBt ? rawBt as 'corp' | 'individual' : undefined
   const search = c.req.query('search') ?? ''
   const page = Number(c.req.query('page') ?? '1')
   const pageSize = Number(c.req.query('pageSize') ?? '50')
@@ -40,8 +40,8 @@ function parseFilterParams(c: { req: { query: (key: string) => string | undefine
 }
 
 function validateFilterParams(params: { businessType?: string; page: number; pageSize: number }) {
-  if (params.businessType && !['corp', 'individual', 'realEstate'].includes(params.businessType)) {
-    return 'businessType は corp / individual / realEstate のいずれかを指定してください'
+  if (params.businessType && !['corp', 'individual'].includes(params.businessType)) {
+    return 'businessType は corp / individual のいずれかを指定してください'
   }
   if (isNaN(params.page) || params.page < 1) {
     return 'page は1以上の数値を指定してください'

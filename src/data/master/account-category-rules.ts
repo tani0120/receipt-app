@@ -6,7 +6,7 @@
  *   - ハードコードのSALES_CATEGORIES等は廃止
  *   - getCategoryAccountGroup()は廃止（accountGroupを直接参照）
  *   - categoryが必要な箇所のみハードコード維持
- *     （BS_ASSET_PURCHASE_CATEGORIES, REAL_ESTATE_CATEGORIES, allowedCategories 4種）
+ *     （BS_ASSET_PURCHASE_CATEGORIES, allowedCategories 4種）
  *
  * 参照元:
  *   - views/master/MockMasterAccountsPage.vue
@@ -25,10 +25,7 @@ export const BS_ASSET_PURCHASE_CATEGORIES: readonly string[] = [
   'PROPERTY_PLANT_AND_EQUIPMENT', 'INTANGIBLE_ASSETS',
 ]
 
-/** 不動産関連MFカテゴリ（個人事業(不動産所得あり)選択時のみ表示） */
-export const REAL_ESTATE_CATEGORIES: readonly string[] = [
-  'REAL_ESTATE_INCOME', 'REAL_ESTATE_EXPENSES', 'REAL_ESTATE_EMPLOYEE_SALARY',
-]
+
 
 // ========================================
 // MFカテゴリ → 日本語ラベル（UI表示用）

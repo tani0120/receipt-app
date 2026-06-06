@@ -2741,7 +2741,7 @@ import {
 const { masterAccounts: masterAccountList } = useAccountMaster();
 const accountOptions = computed<SelectOption[]>(() =>
   masterAccountList.value
-    .filter(a => !a.deprecated && a.target === 'both')
+    .filter(a => !a.deprecated)
     .map(a => ({ value: a.name, label: a.name }))
 );
 
@@ -2792,7 +2792,6 @@ const filteredAccounts = computed(() => {
   return source
     .filter((acc) => {
       if (acc.deprecated) return false;
-      if (acc.target === "both") return true;
       if (acc.target === clientType) {
         if (isIndividualType(clientType) && !hasRental && acc.category.includes(UI_MSG.カテゴリ_不動産))
           return false;

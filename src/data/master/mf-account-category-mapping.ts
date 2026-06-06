@@ -62,9 +62,9 @@ const INDIVIDUAL_ONLY_CATEGORIES = [
   'REAL_ESTATE_INCOME', 'REAL_ESTATE_EXPENSES', 'REAL_ESTATE_EMPLOYEE_SALARY',
 ]
 
-/** MFのcategoryからtargetを推定する */
+/** MF\u306ecategory\u304b\u3089target\u3092\u63a8\u5b9a\u3059\u308b\uff08both\u5ec3\u6b62\u6e08\u307f\u3002\u500b\u4eba\u5c02\u7528\u4ee5\u5916\u306fcorp\u3092\u8fd4\u3059\uff09 */
 export function deriveTarget(mfCategory: string, mfFsType?: string): AccountTarget {
   if (INDIVIDUAL_ONLY_CATEGORIES.includes(mfCategory)) return 'individual'
   if (mfFsType === 'REAL_ESTATE') return 'individual'
-  return 'both'
+  return 'corp'
 }

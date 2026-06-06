@@ -7,8 +7,8 @@
  * - MFクラウド会計（法人）/ MFクラウド確定申告（個人）でデフォルト科目が異なる
  */
 
-/** 対象区分 */
-export type AccountTarget = 'corp' | 'individual' | 'both'
+/** 対象区分（法人 or 個人。MFの科目体系に準拠。both廃止済み） */
+export type AccountTarget = 'corp' | 'individual'
 
 /** 税区分判定モード（STREAMED準拠） */
 export type TaxDetermination = 'auto_purchase' | 'auto_sales' | 'fixed'
@@ -24,7 +24,7 @@ export type Account = {
     name: string
     /** 補助科目 */
     sub?: string
-    /** 対象: 法人/個人/共通 */
+    /** 対象: 法人/個人（MFの科目体系に準拠。both廃止済み） */
     target: AccountTarget
     /** 大分類: BS資産/BS負債/BS純資産/PL収益/PL費用 */
     accountGroup: AccountGroup
