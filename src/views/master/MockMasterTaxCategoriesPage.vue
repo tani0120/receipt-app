@@ -42,7 +42,7 @@
               @click="taxPage = p"
             >{{ p }}</span>
             <span class="as-page-arrow" :class="{ disabled: taxPage >= taxTotalPages }" @click="taxPage = Math.min(taxTotalPages, taxPage + 1)">＞</span>
-            <span class="as-page-range">{{ taxPageStart }}~{{ taxPageEnd }} / {{ filteredTaxRows.length }}件</span>
+            <span class="as-page-range">{{ taxPageStart }}~{{ taxPageEnd }} / {{ displayTaxRows.length }}件</span>
             <!-- §15追加禁止: MFがSSOTのため一括操作（MF公式/非公式切替・コピー・削除・追加）を全て無効化。表示/非表示は個別の目アイコンで操作可能 -->
           </div>
           <div class="as-actions">
@@ -521,9 +521,8 @@ async function executeImport() {
         body: JSON.stringify({ clientId }),
       });
       const noDiffResult = noDiffRes.ok ? await noDiffRes.json() : {};
-      // availableキャッシュも更新
-      const availRes0 = await fetch('/api/mf/tax-available');
-      if (availRes0.ok) { mfTaxAvailable.value = await availRes0.json(); }
+      // apply後にAPI再取得して表示用refを更新（#8: mfTaxAvailable個別fetchは廃止）
+      await refreshDisplayTaxRows();
       // ルールベースID変換失敗チェック
       if (noDiffResult.unknownTaxNames?.length > 0) {
         await modal.notify({
@@ -540,7 +539,7 @@ async function executeImport() {
         });
       }
       const methodLabel = taxMethods.find(m => m.value === taxMethod.value)?.label ?? taxMethod.value;
-      await modal.notify({ title: 'MFの最新状態に更新しました', message: `※${methodLabel}: ${filteredTaxRows.value.length}件表示`, variant: 'success' });
+      await modal.notify({ title: 'MFの最新状態に更新しました', message: `※${methodLabel}: ${displayTaxRows.value.length}件表示`, variant: 'success' });
       return;
     }
 
@@ -567,14 +566,19 @@ async function executeImport() {
     }
     const result = await applyRes.json();
 
-    // 5. フロントのallTaxRowsを更新後マスタで置換
-    allTaxRows.splice(0, allTaxRows.length, ...result.updatedMaster);
+    // 5. フロントのallTaxRowsを更新後マスタで置換（source変換をonMountedと統一）
+    const converted = result.updatedMaster.map(({ hidden, hiddenInMaster, visibilityOverride, source: rawSource, ...rest }: Record<string, unknown>) => {
+      const source =
+        rawSource === 'mf' ? 'mf' :
+        rawSource === 'master-custom' ? 'master' :
+        rawSource === 'client-custom' ? 'custom' :
+        undefined;
+      return { ...rest, deprecated: hidden, source };
+    });
+    allTaxRows.splice(0, allTaxRows.length, ...converted);
 
-    // 6. availableキャッシュも更新
-    const availRes = await fetch('/api/mf/tax-available');
-    if (availRes.ok) {
-      mfTaxAvailable.value = await availRes.json();
-    }
+    // 6. apply後にAPI再取得して表示用refを更新（#8: mfTaxAvailable個別fetchは廃止。API側filterByTaxMethodが担当）
+    await refreshDisplayTaxRows();
 
     // 7. ルールベースID変換に失敗した税区分がある場合 → 管理者に警告（コピペ可能）
     if (result.unknownTaxNames && result.unknownTaxNames.length > 0) {
@@ -594,7 +598,7 @@ async function executeImport() {
     }
 
     const methodLabel2 = taxMethods.find(m => m.value === taxMethod.value)?.label ?? taxMethod.value;
-    await modal.notify({ title: 'MFの最新状態に更新しました', message: `※${methodLabel2}: ${filteredTaxRows.value.length}件表示`, variant: 'success' });
+    await modal.notify({ title: 'MFの最新状態に更新しました', message: `※${methodLabel2}: ${displayTaxRows.value.length}件表示`, variant: 'success' });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
@@ -616,46 +620,35 @@ const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 
 
-// --- MFのavailableデータ（4方式分） ---
-type TaxAvailableMap = Record<string, Record<string, boolean>>;
-const mfTaxAvailable = ref<TaxAvailableMap>({});
+// --- 表示用ref: API取得結果（フィルタ済み）---
+// Phase 4 #6: filteredTaxRows(Vue側computed) → displayTaxRows(API取得結果)に置換
+// Phase 4 #8: mfTaxAvailable個別fetch廃止。API側filterByTaxMethodが担当
+const displayTaxRows = ref<TaxCategory[]>([]);
 
-// 起動時にavailableデータを取得
-onMounted(async () => {
+/** API呼び出しで表示用refを更新 */
+async function refreshDisplayTaxRows() {
   try {
-    const res = await fetch('/api/mf/tax-available');
+    const res = await fetch(`/api/tax-categories/master?taxMethod=${taxMethod.value}&pageSize=200`);
     if (res.ok) {
-      mfTaxAvailable.value = await res.json();
+      const data = await res.json();
+      displayTaxRows.value = data.items ?? [];
     }
-  } catch { /* availableデータなし → フォールバック */ }
-});
+  } catch (err) {
+    console.error('[全社税区分] API取得失敗:', err);
+  }
+}
 
-const filteredTaxRows = computed(() => {
-  const methodKey = taxMethod.value;
-  const availableData = mfTaxAvailable.value[methodKey] ?? null;
+// taxMethod切替時にAPI再取得
+watch(taxMethod, () => { refreshDisplayTaxRows(); });
+// 起動時にも取得
+onMounted(() => { refreshDisplayTaxRows(); });
 
-  return allTaxRows.filter(row => {
-    // MF独自カスタム税区分は常に表示（顧問先が意図的に作成したため）
-    if (row.isCustom && row.source === 'mf') return true;
-    // direction='common'（不明・対象外）は全方式で常に表示
-    if (row.direction === 'common') return true;
-
-    // --- MFのavailableベースのフィルタ ---
-    if (availableData && row.taxCategoryId) {
-      return availableData[row.taxCategoryId] === true;
-    }
-
-    // availableデータなし → 全件表示（MF未連携の初期状態）
-    return row.defaultVisible;
-  });
-});
-
-const taxTotalPages = computed(() => Math.max(1, Math.ceil(filteredTaxRows.value.length / PAGE_SIZE)));
+const taxTotalPages = computed(() => Math.max(1, Math.ceil(displayTaxRows.value.length / PAGE_SIZE)));
 const taxPageStart = computed(() => (taxPage.value - 1) * PAGE_SIZE + 1);
-const taxPageEnd = computed(() => Math.min(taxPage.value * PAGE_SIZE, filteredTaxRows.value.length));
-const pagedTaxRows = computed(() => filteredTaxRows.value.slice(taxPageStart.value - 1, taxPageEnd.value));
+const taxPageEnd = computed(() => Math.min(taxPage.value * PAGE_SIZE, displayTaxRows.value.length));
+const pagedTaxRows = computed(() => displayTaxRows.value.slice(taxPageStart.value - 1, taxPageEnd.value));
 
-watch(filteredTaxRows, () => { if (taxPage.value > taxTotalPages.value) taxPage.value = 1; });
+watch(displayTaxRows, () => { if (taxPage.value > taxTotalPages.value) taxPage.value = 1; });
 
 // =============== 非表示化・表示化（個別の目アイコン用） ===============
 function hideRow(row: TaxCategory) {

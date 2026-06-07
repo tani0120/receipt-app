@@ -275,7 +275,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
 
 import type { Account } from '@/types/shared-account';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
@@ -391,7 +391,36 @@ onMounted(async () => {
 });
 
 async function importFromMf() {
-  modal.notify({ title: 'MFインポート', message: '勘定科目のMFインポート機能は後続タスクで実装予定です。', variant: 'warning' });
+  mfImporting.value = true;
+  try {
+    const res = await fetch(`/api/mf/import-client-accounts?clientId=${props.clientId}`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'MF勘定科目インポート失敗' }));
+      throw new Error(err.error ?? err.detail ?? 'MF勘定科目インポート失敗');
+    }
+    const data = await res.json();
+    // API経由でサーバー側のクライアント科目を再取得して画面に反映
+    const refreshRes = await fetch(`/api/accounts/client/${props.clientId}`);
+    if (refreshRes.ok) {
+      const refreshData = await refreshRes.json();
+      if (refreshData.accounts) {
+        accountRows.splice(0, accountRows.length, ...refreshData.accounts);
+      }
+    }
+
+    await modal.notify({
+      title: 'MFインポート完了',
+      message: data.message ?? `${data.available}件の勘定科目をインポートしました`,
+      variant: 'success',
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+  } finally {
+    mfImporting.value = false;
+  }
 }
 const { clients } = useClients();
 
@@ -430,25 +459,8 @@ const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 // 復元はsettings.accounts（API GET）から取得する設計に移行予定。
 // 現時点ではsettings.accounts.valueにsubAccountが含まれるため、初期値から復元される。
 
-// composableの変更を監視して非表示フラグのみ同期（順序は維持）
-if (clientId.value) {
-  watch(settings.accounts, (newVal) => {
-    const today = new Date().toISOString().slice(0, 10);
-    accountRows.forEach(row => {
-      const unified = newVal.find(a => a.accountId === row.accountId);
-      if (unified) {
-        const isHidden = unified.hidden;
-        if (isHidden && !row.deprecated) {
-          row.effectiveTo = row.effectiveTo ?? today;
-          row.deprecated = true;
-        } else if (!isHidden && row.deprecated) {
-          row.effectiveTo = null;
-          row.deprecated = false;
-        }
-      }
-    });
-  }, { deep: true, immediate: true });
-}
+// composableのtoggleVisibility → buildFullAccountListでhiddenIds→deprecated変換済み
+// Vue側のwatch変換は不要（Phase 3 #12で削除）
 
 /** 科目が非表示か（マスタ非表示 or 顧問先非表示） */
 function isAccountHidden(accountId: string): boolean {
@@ -480,25 +492,19 @@ watch(filteredAccountRows, () => { if (accountPage.value > accountTotalPages.val
 
 function hideRow(row: Account) {
   const id = row.accountId;
-  const today = new Date().toISOString().slice(0, 10);
   if (clientId.value) {
     settings.toggleAccountVisibility(id);
   }
-  // watch発火後のaccountRowsから対象を再取得して更新
-  nextTick(() => {
-    const target = accountRows.find(r => r.accountId === id);
-    if (target) { target.effectiveTo = today; target.deprecated = true; }
-  });
+  row.deprecated = true;
+  row.effectiveTo = row.effectiveTo ?? new Date().toISOString().slice(0, 10);
 }
 function showRow(row: Account) {
   const id = row.accountId;
   if (clientId.value) {
     settings.toggleAccountVisibility(id);
   }
-  nextTick(() => {
-    const target = accountRows.find(r => r.accountId === id);
-    if (target) { target.effectiveTo = null; target.deprecated = false; }
-  });
+  row.deprecated = false;
+  row.effectiveTo = null;
 }
 async function deleteRow(row: Account) {
   if (!row.isCustom) return;

@@ -25,7 +25,7 @@ import { saveMfRawData } from './mfRawDataStore'
 import { getById } from './clientStore'
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
 import type { TaxCategory } from '../../types/shared-tax-category'
-import { generateTaxMasterId } from './taxIdGenerator'
+import { generateTaxMasterId, ensureUniqueTaxId } from './taxIdGenerator'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ルールベース自動判定（simplifiedOnly / individualOnly / baseId）
@@ -199,17 +199,10 @@ async function detectDiff(clientId: string, _dryRun: boolean = false): Promise<D
     }
   }
 
-  // 6. deprecated自動リセット（availableでtrue=有効なのにdeprecated=trueの行）
-  let deprecatedReset = 0
-  for (const method of VALID_METHODS) {
-    const methodAvail = availData[method] ?? {}
-    for (const row of masterItems) {
-      if (methodAvail[row.taxCategoryId] === true && row.deprecated) {
-        row.deprecated = false
-        deprecatedReset++
-      }
-    }
-  }
+  // 6. deprecated自動リセット — 廃止
+  // 設計書40_tax_method_master.md L32-39: 「MFインポート表示」と「表示（deprecated）」は独立。
+  // available=trueでもdeprecated=trueのまま維持する（5%旧税率等は非表示のままにすべき）。
+  const deprecatedReset = 0
 
   return { pattern, mfTaxes, masterItems, nameToRow, diff, autoRuleApplied, deprecatedReset, availData }
 }
@@ -291,19 +284,22 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
     if (row && c.newRate !== undefined) row.taxRate = c.newRate
   }
 
-  // 追加（ルールベースID生成。変換失敗はunknownTaxNamesに記録）
+  // 追加（ルールベースID生成。変換失敗はthrowで停止 — 不正ID流入防止）
   const unknownTaxNames: string[] = []
+  // 既存IDセット（重複チェック用）: ループ外で1回だけ構築
+  const existingTaxIds = new Set(masterItems.map(r => r.taxCategoryId))
   for (const a of diff.added) {
-    const generatedId = generateTaxMasterId(a.name)
-    if (!generatedId) {
-      // ルール不一致 → 警告リストに追加し、仮IDで登録（後で管理者が修正）
-      unknownTaxNames.push(a.name)
-      console.warn(`[mfTaxImportService] ルールベースID変換失敗: 「${a.name}」。仮ID: UNKNOWN_${Date.now()}`)
+    const baseId = generateTaxMasterId(a.name)
+    if (!baseId) {
+      // ルール不一致 → data/tax-id-rules.json にルール追加が必要
+      throw new Error(`[mfTaxImportService] 税区分「${a.name}」のルールベースID変換に失敗。data/tax-id-rules.json にルールを追加してください`)
     }
+    const generatedId = ensureUniqueTaxId(baseId, existingTaxIds)
+    existingTaxIds.add(generatedId) // 次の重複チェック用に追加
     const dir = guessDirectionFromName(a.name)
     const simplified = guessSimplifiedOnly(a.name)
     const newRow: TaxCategory = {
-      taxCategoryId: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      taxCategoryId: generatedId,
       name: a.name,
       shortName: a.abbreviation ?? '',
       direction: dir,
@@ -475,6 +471,8 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
   const isExempt = consumptionTaxMode === 'exempt'
   let matchedCount = 0
   let customCount = 0
+  // 既存IDセット（重複チェック用）: 全社マスタのIDを含む
+  const existingClientTaxIds = new Set(masterItems.map(m => m.taxCategoryId))
 
   const imported: TaxCategory[] = mfTaxes.map((t, idx) => {
     const master = masterByName.get(t.name)
@@ -492,14 +490,17 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
     }
     // 未マッチ → MF独自カスタム税区分（ルールベースでマスタID生成）
     customCount++
-    const generatedId = generateTaxMasterId(t.name)
-    if (!generatedId) {
-      console.warn(`[mfTaxImportService] 顧問先インポート: ルールベースID変換失敗: 「${t.name}」`)
+    const baseId = generateTaxMasterId(t.name)
+    if (!baseId) {
+      // ルール不一致 → data/tax-id-rules.json にルール追加が必要
+      throw new Error(`[mfTaxImportService] 税区分「${t.name}」のルールベースID変換に失敗。data/tax-id-rules.json にルールを追加してください`)
     }
+    const generatedId = ensureUniqueTaxId(baseId, existingClientTaxIds)
+    existingClientTaxIds.add(generatedId) // 次の重複チェック用に追加
     const dir = guessDirectionFromName(t.name)
     const simplified = guessSimplifiedOnly(t.name)
     return {
-      taxCategoryId: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      taxCategoryId: generatedId,
       name: t.name,
       shortName: t.abbreviation ?? '',
       direction: dir,
@@ -521,7 +522,26 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
     }
   })
 
-  // 4. 顧問先ストアに保存
+  // 4a. 前回の顧問先税区分にあって今回MFにない税区分 → deprecated=trueで保持
+  // 過去仕訳の参照先を保護（TAX_UNKNOWNにしない）
+  const { getClientTaxCategories } = await import('./accountMasterStore')
+  let deprecatedCount = 0
+  try {
+    const prevTaxCategories = getClientTaxCategories(clientId)
+    if (prevTaxCategories.length > 0) {
+      const currentNames = new Set(imported.map(t => t.name))
+      for (const prev of prevTaxCategories) {
+        if (!currentNames.has(prev.name) && !prev.deprecated) {
+          imported.push({ ...prev, deprecated: true })
+          deprecatedCount++
+        }
+      }
+    }
+  } catch {
+    // 初回インポート時は前回データがない。スキップ
+  }
+
+  // 4b. 顧問先ストアに保存
   saveClientTaxCategories(clientId, imported)
 
   // 5. available（利用可否）データを更新
@@ -552,7 +572,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
     items: mfTaxes,
   })
 
-  console.log(`[mfTaxImportService] 顧問先インポート完了: clientId=${clientId}, マスタ照合=${matchedCount}, カスタム=${customCount}`)
+  console.log(`[mfTaxImportService] 顧問先インポート完了: clientId=${clientId}, マスタ照合=${matchedCount}, カスタム=${customCount}, 非表示化=${deprecatedCount}`)
 
   return {
     success: true,

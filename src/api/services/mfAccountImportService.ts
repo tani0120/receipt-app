@@ -22,6 +22,7 @@ import { mcpFetchAccounts } from './mfMcpClient'
 import { getAllAccounts, saveAllAccounts, getAllTaxCategories } from './accountMasterStore'
 import { saveMfRawData } from './mfRawDataStore'
 import { getById } from './clientStore'
+import { generateMasterId } from './generateMasterId'
 import {
   deriveMfAccountGroup,
   deriveTaxDetermination,
@@ -40,6 +41,8 @@ export interface AccountImportDiff {
   matched: Array<{ name: string }>
   /** 新規追加（MFにあってマスタにない） */
   added: Array<{ name: string; category: string }>
+  /** 削除候補（マスタにあるがMFにない。source='mf'の行のみ） */
+  deprecatedCandidates: Array<{ accountId: string; name: string }>
   /** 変更なし件数 */
   unchanged: number
 }
@@ -120,10 +123,13 @@ export async function importMasterAccounts(
   const diff: AccountImportDiff = {
     matched: [],
     added: [],
+    deprecatedCandidates: [],
     unchanged: 0,
   }
 
   let maxSort = Math.max(...masterItems.map(a => a.sortOrder), 0)
+  // 既存IDセット（重複チェック用）: ループ外で1回だけ構築
+  const existingIds = new Set(masterItems.map(a => a.accountId))
 
   for (const mf of mfAccounts) {
     // 名前で照合（MF IDは事業者固有のため名前照合のみ）
@@ -144,11 +150,16 @@ export async function importMasterAccounts(
       diff.matched.push({ name: mf.name })
     } else {
       // 新規追加（MFにあってマスタにない）
+      // Gemini 3.5-flashでローマ字IDを生成（データ駆動フォールバック）
       maxSort++
+      const target = deriveTarget(mf.category, mf.financial_statement_type)
+      const suffix = target === 'individual' ? 'IND' : 'CORP'
+      const accountId = await generateMasterId(mf.name, suffix, existingIds)
+      existingIds.add(accountId) // 次の重複チェック用に追加
       const newAccount: Account = {
-        accountId: `MF_${mf.name.replace(/[^a-zA-Z0-9\u3000-\u9FFF]/g, '_')}`,
+        accountId,
         name: mf.name,
-        target: deriveTarget(mf.category, mf.financial_statement_type),
+        target,
         accountGroup: mfAccountGroup,
         category: mf.category,
         defaultTaxCategoryId: masterTaxId,
@@ -158,6 +169,7 @@ export async function importMasterAccounts(
         effectiveTo: null,
         sortOrder: maxSort,
         isCustom: false,
+        source: 'mf' as const,
         // 全社マスタにはMFフィールドを含めない
       }
       masterItems.push(newAccount)
@@ -165,8 +177,15 @@ export async function importMasterAccounts(
     }
   }
 
-  // 名前変更検知は全社マスタにmfAccountIdがないため実施不可
-  // 顧問先データのmfAccountIdで検知する設計に移行予定
+  // 5. 削除候補検知（マスタにあるがMFにない行。source='mf'のみ対象）
+  // deprecated=trueにすることで過去仕訳の参照先を保持しつつ選択肢から除外
+  const mfNameSet = new Set(mfAccounts.map(a => a.name))
+  for (const row of masterItems) {
+    if (row.source === 'mf' && !mfNameSet.has(row.name) && !row.deprecated) {
+      row.deprecated = true
+      diff.deprecatedCandidates.push({ accountId: row.accountId, name: row.name })
+    }
+  }
 
   // 6. マスタを保存
   saveAllAccounts(masterItems)
@@ -194,11 +213,12 @@ export async function importMasterAccounts(
     if (diff.added.length > 5) reportLines.push(`  …他${diff.added.length - 5}件`)
   }
 
-  const hasDiff = diff.added.length > 0
+  const hasDiff = diff.added.length > 0 || diff.deprecatedCandidates.length > 0
 
   const summaryParts = [
     diff.matched.length > 0 ? `マッチ${diff.matched.length}` : '',
     diff.added.length > 0 ? `追加${diff.added.length}` : '',
+    diff.deprecatedCandidates.length > 0 ? `非表示化${diff.deprecatedCandidates.length}` : '',
   ].filter(Boolean).join(', ')
 
   console.log(`[mfAccountImportService] マスタインポート完了: clientId=${clientId}, ${summaryParts || '差分なし'}`)

@@ -327,6 +327,14 @@ function restoreAllClientAccounts(): void {
 }
 
 /**
+ * 顧問先マスタがストアに存在するか（ファイルから復元済み or saveClientAccounts済み）
+ * 存在しない場合、getClientAccountsは全社マスタのクローンを返す（初回）
+ */
+export function hasClientAccounts(clientId: string): boolean {
+  return clientAccountStore.has(clientId)
+}
+
+/**
  * 顧問先別の科目一覧を取得する
  *
  * 初回アクセス時はマスタからクローンして初期化する。
@@ -699,4 +707,10 @@ export function saveClientTaxCategories(
 restoreAllClientAccounts()
 restoreAllClientTaxCategories()
 
-console.log(`[accountMasterStore] 科目${masterAccounts.length}件 / 税区分${masterTaxCategories.length}件をロード（顧問先別: 科目${clientAccountStore.size}社 / 税区分${clientTaxStore.size}社を復元）`)
+// 起動時に全顧問先をマスタと同期（新規科目追加・フィールド変更を反映）
+// マスタ変更後にsyncを経由せず永続化されたケース（ID移行スクリプト等）の
+// 不整合を起動時に自動修復する
+syncMasterAccountsToClients(masterAccounts)
+syncMasterTaxCategoriesToClients(masterTaxCategories)
+
+console.log(`[accountMasterStore] 科目${masterAccounts.length}件 / 税区分${masterTaxCategories.length}件をロード（顧問先別: 科目${clientAccountStore.size}社 / 税区分${clientTaxStore.size}社を復元・同期）`)

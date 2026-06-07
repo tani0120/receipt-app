@@ -101,7 +101,7 @@ Response: {
 
 ### 3. 税区分フィルタ（データ駆動）
 
-**実装**: `MockClientTaxPage.vue` `filteredTaxRows`
+**実装**: `MockClientTaxPage.vue` `displayTaxRows`（API取得+2ref方式）
 
 ```
 判定順序:
@@ -212,3 +212,4 @@ export const MF_TAX_METHOD_TO_CONSUMPTION_MODE = {
 | 日付 | 内容 |
 |------|------|
 | 2026-05-29 | 初版作成。consumptionTaxMode値統一（12ファイル横断）、バックエンドAPI集約（`importClientTaxes`）、IDパターンマッチ完全削除、`simplifiedOnly`フラグ追加（276件）、`extractRateFromName`→`taxRate`優先化を実施済み |
+| 2026-06-07 | **顧問先税区分フィルタ方式変更:** `filteredTaxRows`（computed）→`displayTaxRows`（API取得+2ref方式）に移行。`refreshDisplayTaxRows()`でインポート後にAPI再取得。全社税区分と同一パターン |

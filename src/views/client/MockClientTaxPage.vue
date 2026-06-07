@@ -75,7 +75,7 @@
               >＞</span
             >
             <span class="as-page-range"
-              >{{ taxPageStart }}~{{ taxPageEnd }} / {{ filteredTaxRows.length }}件</span
+              >{{ taxPageStart }}~{{ taxPageEnd }} / {{ displayTaxRows.length }}件</span
             >
             <!-- チェック時の一括操作ボタン -->
             <template v-if="checkedIds.length">
@@ -463,18 +463,13 @@ async function importFromMf() {
       (currentClientData.value as Record<string, unknown>).consumptionTaxMode = result.consumptionTaxMode;
     }
 
-    // availableデータを再取得
-    if (result.availableUpdated) {
-      try {
-        const availRes = await fetch('/api/mf/tax-available');
-        if (availRes.ok) mfTaxAvailable.value = await availRes.json();
-      } catch { /* 取得失敗は致命的ではない */ }
-    }
+    // apply後にAPI再取得して表示用refを更新（Phase 5 #8: mfTaxAvailable個別fetchは廃止）
+    await refreshDisplayTaxRows();
 
     const methodLabel = taxMethods.find(m => m.value === taxTabMethod.value)?.label ?? taxTabMethod.value;
     await modal.notify({
       title: 'MFの最新状態に更新しました',
-      message: `※${methodLabel}: ${filteredTaxRows.value.length}件表示`,
+      message: `※${methodLabel}: ${displayTaxRows.value.length}件表示`,
       variant: 'success',
     });
   } catch (err) {
@@ -520,53 +515,42 @@ const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 
 
-// --- MFのavailableデータ（4方式分） ---
-type TaxAvailableMap = Record<string, Record<string, boolean>>;
-const mfTaxAvailable = ref<TaxAvailableMap>({});
+// --- 表示用ref: API取得結果（フィルタ済み）---
+// Phase 5 #7: filteredTaxRows(Vue側computed) → displayTaxRows(API取得結果)に置換
+// Phase 5 #8: mfTaxAvailable個別fetch廃止。API側filterByTaxMethodが担当
+const displayTaxRows = ref<TaxCategory[]>([]);
 
-// 起動時にavailableデータを取得
-onMounted(async () => {
+/** API呼び出しで表示用refを更新 */
+async function refreshDisplayTaxRows() {
+  if (!clientId.value) return;
   try {
-    const res = await fetch('/api/mf/tax-available');
+    const res = await fetch(`/api/tax-categories/client/${encodeURIComponent(clientId.value)}?taxMethod=${taxTabMethod.value}&pageSize=200`);
     if (res.ok) {
-      mfTaxAvailable.value = await res.json();
+      const data = await res.json();
+      displayTaxRows.value = data.items ?? [];
     }
-  } catch { /* availableデータなし → フォールバック */ }
-});
+  } catch (err) {
+    console.error('[顧問先税区分] API取得失敗:', err);
+  }
+}
 
-const filteredTaxRows = computed(() => {
-  return allTaxRows.filter((row) => {
-    const method = taxTabMethod.value;
-
-    // MF独自カスタム税区分は常に表示（顧問先が意図的に作成したため）
-    if (row.isCustom && row.source === 'mf') return true;
-    // direction='common'（不明・対象外）は全方式で常に表示
-    if (row.direction === 'common') return true;
-
-    // --- MFのavailableベースのフィルタ（データ駆動） ---
-    const availableData = mfTaxAvailable.value[method] ?? null;
-    if (availableData && row.taxCategoryId) {
-      return availableData[row.taxCategoryId] === true;
-    }
-
-    // availableデータ未取得 → デフォルト表示（active行のみ）
-    if (method === 'exempt') return false;
-    return row.active && row.defaultVisible;
-  });
-});
+// taxTabMethod切替時にAPI再取得
+watch(taxTabMethod, () => { refreshDisplayTaxRows(); });
+// 起動時にも取得
+onMounted(() => { refreshDisplayTaxRows(); });
 
 const taxTotalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredTaxRows.value.length / PAGE_SIZE)),
+  Math.max(1, Math.ceil(displayTaxRows.value.length / PAGE_SIZE)),
 );
 const taxPageStart = computed(() => (taxPage.value - 1) * PAGE_SIZE + 1);
 const taxPageEnd = computed(() =>
-  Math.min(taxPage.value * PAGE_SIZE, filteredTaxRows.value.length),
+  Math.min(taxPage.value * PAGE_SIZE, displayTaxRows.value.length),
 );
 const pagedTaxRows = computed(() =>
-  filteredTaxRows.value.slice(taxPageStart.value - 1, taxPageEnd.value),
+  displayTaxRows.value.slice(taxPageStart.value - 1, taxPageEnd.value),
 );
 
-watch(filteredTaxRows, () => {
+watch(displayTaxRows, () => {
   if (taxPage.value > taxTotalPages.value) taxPage.value = 1;
 });
 

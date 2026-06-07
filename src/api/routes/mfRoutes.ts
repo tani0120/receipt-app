@@ -35,10 +35,11 @@ import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFi
 import { importMfJournals } from '../services/mfJournalImporter'
 import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services/mfTaxImportService'
 import { importMasterAccounts } from '../services/mfAccountImportService'
-import { saveClientAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories } from '../services/accountMasterStore'
+import { saveClientAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories, getClientAccounts, hasClientAccounts } from '../services/accountMasterStore'
 import type { Account } from '../../types/shared-account'
 import { deriveMfAccountGroup, deriveTaxDetermination, deriveTarget } from '../../data/master/mf-account-category-mapping'
-import { generateTaxMasterId } from '../services/taxIdGenerator'
+import { generateMasterId } from '../services/generateMasterId'
+import { generateTaxMasterId, ensureUniqueTaxId } from '../services/taxIdGenerator'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
 import { getAllTaxAvailable, saveTaxAvailable, invalidateCache, type TaxMethodKey } from '../services/mfTaxAvailableStore'
@@ -431,18 +432,95 @@ app.post('/sync-all', async (c) => {
       }
     }
 
-    // ===== 3. 勘定科目マスタ =====
+    // ===== 3. 勘定科目マスタ（名前照合でマスタID継承 + 税区分紐づけ） =====
+    // P2修正（2026-06-07）: MFのBase64 IDではなくマスタのローマ字IDを継承
+    // P3修正（2026-06-07）: defaultTaxCategoryIdをBの二段階変換で設定
     const allAccounts = await mcpFetchAccounts(clientId)
     const available = allAccounts.filter((a) => a.available)
-    const mapped: Account[] = available.map((a, idx) => {
+
+    // 名前照合用: 全社マスタ + 現在の顧問先マスタの名前→科目マップ
+    // 全社マスタを先に登録し、顧問先マスタで追加（顧問先の既存IDを優先）
+    // → sync-all再実行時に前回生成したIDを継承し、AIの非決定性によるID不一致を防止
+    const masterAccountsList = getAllAccounts()
+    const nameToMaster = new Map<string, Account>()
+    for (const ma of masterAccountsList) {
+      nameToMaster.set(ma.name, ma)
+    }
+    // 顧問先マスタが保存済みの場合のみ、独自科目の既存IDを継承
+    // 初回sync-allでは未保存なのでスキップ（全社マスタクローンの2重登録を防止）
+    const hasExistingClientData = hasClientAccounts(clientId)
+    if (hasExistingClientData) {
+      const clientAccountData = getClientAccounts(clientId)
+      for (const ca of clientAccountData.accounts) {
+        if (!nameToMaster.has(ca.name)) {
+          nameToMaster.set(ca.name, ca)
+        }
+      }
+    }
+
+    // 税区分紐づけ用: MFのtax_id→マスタ税区分IDの二段階変換
+    // （B系統 mfAccountImportService.ts L88-110 と同じロジック）
+    const masterTaxesForAccounts = getAllTaxCategories()
+    const taxNameToMasterId = new Map<string, string>()
+    for (const t of masterTaxesForAccounts) {
+      taxNameToMasterId.set(t.name, t.taxCategoryId)
+    }
+    const mfTaxesForAccounts = await mcpFetchTaxes(clientId)
+    const mfTaxIdToMasterId = new Map<string, string>()
+    for (const mt of mfTaxesForAccounts) {
+      const masterId = taxNameToMasterId.get(mt.name)
+      if (masterId) mfTaxIdToMasterId.set(mt.id, masterId)
+    }
+
+    const unmatchedAccountNames: string[] = []
+    // 既存IDセット（重複チェック用）: 全社 + 顧問先（保存済みの場合）両方のIDを含む
+    const existingIds = new Set(masterAccountsList.map(a => a.accountId))
+    if (hasExistingClientData) {
+      const clientAccounts = getClientAccounts(clientId)
+      for (const ca of clientAccounts.accounts) {
+        existingIds.add(ca.accountId)
+      }
+    }
+    const mapped: Account[] = []
+    for (const [idx, a] of available.entries()) {
       const group = deriveMfAccountGroup(a.account_group, a.category)
-      return {
-        accountId: a.id,
+      const master = nameToMaster.get(a.name)
+      const masterTaxId = mfTaxIdToMasterId.get(a.tax_id)
+
+      if (master) {
+        // マスタにマッチ → マスタのローマ字IDを継承、MFフィールドを付与
+        mapped.push({
+          ...master,
+           // MFから更新するフィールド（MFがSSOT: MF管理画面で設定される科目分類）
+          // ※マスタの手動調整を上書きするが、MFの科目分類変更を反映するために必要
+          category: a.category,
+          accountGroup: group,
+          // 税区分: マスタに値があればマスタ優先、未設定時のみMFから補完
+          defaultTaxCategoryId: master.defaultTaxCategoryId || masterTaxId,
+          // taxDeterminationはマスタを維持（手動調整済みの場合があるため）
+          sortOrder: idx + 1,
+          // MF連携フィールド（顧問先データでのみ使用）
+          mfAccountId: a.id,
+          mfAccountGroup: a.account_group,
+          mfFinancialStatementType: a.financial_statement_type,
+        })
+        continue
+      }
+
+      // マスタに未マッチ → Gemini 3.5-flashでローマ字ID生成（データ駆動フォールバック）
+      unmatchedAccountNames.push(a.name)
+      const target = deriveTarget(a.category, a.financial_statement_type)
+      const suffix = target === 'individual' ? 'IND' : 'CORP'
+      const accountId = await generateMasterId(a.name, suffix, existingIds)
+      existingIds.add(accountId) // 次の重複チェック用に追加
+
+      mapped.push({
+        accountId,
         name: a.name,
-        target: deriveTarget(a.category, a.financial_statement_type),
+        target,
         accountGroup: group,
         category: a.category,
-        defaultTaxCategoryId: undefined,
+        defaultTaxCategoryId: masterTaxId,
         taxDetermination: deriveTaxDetermination(group),
         deprecated: false,
         effectiveFrom: DEFAULT_EFFECTIVE_FROM,
@@ -451,32 +529,54 @@ app.post('/sync-all', async (c) => {
         mfAccountId: a.id,
         mfAccountGroup: a.account_group,
         mfFinancialStatementType: a.financial_statement_type,
-      }
-    })
+      })
+    }
     saveClientAccounts(clientId, mapped)
 
-    const sugusruAccounts = getAllAccounts()
-    const sugusruNames = new Set(sugusruAccounts.map(a => a.name))
-    const matchedCount = available.filter(a => sugusruNames.has(a.name)).length
-    const unmatchedList = available.filter(a => !sugusruNames.has(a.name))
+    // 5b. 前回の顧問先マスタにあって今回MFにない科目 → deprecated=trueで保持
+    // 過去仕訳の参照先を保護（ACCOUNT_UNKNOWNにしない）
+    let deprecatedCount = 0
+    if (hasExistingClientData) {
+      const prevAccounts = getClientAccounts(clientId).accounts
+      const currentNames = new Set(mapped.map(a => a.name))
+      for (const prev of prevAccounts) {
+        if (!currentNames.has(prev.name) && !prev.deprecated) {
+          mapped.push({ ...prev, deprecated: true })
+          deprecatedCount++
+        }
+      }
+      if (deprecatedCount > 0) {
+        // deprecated行を含めて再保存
+        saveClientAccounts(clientId, mapped)
+      }
+    }
 
+    if (unmatchedAccountNames.length > 0) {
+      console.warn(`[mfRoutes] sync-all: マスタ未マッチ科目${unmatchedAccountNames.length}件（暫定ID）: ${unmatchedAccountNames.join(', ')}`)
+      hasWarnings = true
+    }
+
+    const matchedCount = available.length - unmatchedAccountNames.length
     let accountMsg = `✅ 勘定科目: ${allAccounts.length}件取得 → ${available.length}件保存`
-    accountMsg += `（マッチ: ${matchedCount}件 / 未マッチ: ${unmatchedList.length}件）`
+    accountMsg += `（マッチ: ${matchedCount}件 / 未マッチ: ${unmatchedAccountNames.length}件）`
+    if (deprecatedCount > 0) accountMsg += `（非表示化: ${deprecatedCount}件）`
     results.push(accountMsg)
 
     // ===== 4. 税区分マスタ（名前照合でマスタ属性を引き継ぐ） =====
     const allTaxes = await mcpFetchTaxes(clientId)
     // マスタの全社税区分を名前でインデックス化（MF IDは事業者固有のため名前照合が正しい）
-    const masterTaxes = getAllTaxCategories()
-    const nameToMaster = new Map<string, TaxCategory>()
-    for (const mt of masterTaxes) {
-      nameToMaster.set(mt.name, mt as TaxCategory)
+    const masterTaxList = getAllTaxCategories()
+    const nameToMasterTax = new Map<string, TaxCategory>()
+    for (const mt of masterTaxList) {
+      nameToMasterTax.set(mt.name, mt)
     }
 
     let matchedTaxCount = 0
     let unmatchedTaxCount = 0
+    // 既存IDセット（重複チェック用）: 全社マスタのIDを含む
+    const existingTaxIds = new Set(masterTaxList.map(mt => mt.taxCategoryId))
     const taxMapped: TaxCategory[] = allTaxes.map((t, idx) => {
-      const master = nameToMaster.get(t.name)
+      const master = nameToMasterTax.get(t.name)
       if (master) {
         // 名前照合成功 → マスタの属性をそのまま維持（MFのavailableは信頼しない）
         matchedTaxCount++
@@ -489,16 +589,16 @@ app.post('/sync-all', async (c) => {
       }
       // 名前がマッチしない → MF独自のカスタム税区分（ルールベースでマスタIDを生成）
       unmatchedTaxCount++
-      const generatedId = generateTaxMasterId(t.name)
-      if (!generatedId) {
-        // ルール不一致 → 警告を追加（管理者に通知）
-        hasWarnings = true
-        results.push(`⚠️ 税区分「${t.name}」のマスタID自動生成に失敗。管理者に通知が必要です`)
-        console.warn(`[mfRoutes] ルールベースID変換失敗: 「${t.name}」`)
+      const baseId = generateTaxMasterId(t.name)
+      if (!baseId) {
+        // ルール不一致 → throw で停止（data/tax-id-rules.json にルール追加が必要）
+        throw new Error(`税区分「${t.name}」のルールベースID変換に失敗。data/tax-id-rules.json にルールを追加してください`)
       }
+      const generatedId = ensureUniqueTaxId(baseId, existingTaxIds)
+      existingTaxIds.add(generatedId) // 次の重複チェック用に追加
       const dir = guessDirectionFromName(t.name)
       return {
-        taxCategoryId: generatedId ?? `UNKNOWN_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        taxCategoryId: generatedId,
         name: t.name,
         shortName: t.abbreviation ?? '',
         direction: dir,
@@ -528,7 +628,7 @@ app.post('/sync-all', async (c) => {
         periods: termList.slice(0, periodCount).map(t => t.fiscal_year),
         accountCount: available.length,
         taxCount: allTaxes.length,
-        unmatchedAccounts: unmatchedList.map(a => a.name),
+        unmatchedAccounts: unmatchedAccountNames,
       },
     })
   } catch (err) {
@@ -702,6 +802,133 @@ app.post('/import-master-accounts', async (c) => {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`[mfRoutes] import-master-accounts失敗: ${message}`)
     return c.json({ error: 'マスタ勘定科目インポートに失敗しました', detail: message }, 500)
+  }
+})
+
+// ---------- 顧問先別 勘定科目MFインポート ----------
+
+/**
+ * POST /import-client-accounts — 顧問先の勘定科目をMFから取得して保存
+ *
+ * sync-allの科目処理と同じロジック:
+ * 1. 全社マスタ + 顧問先マスタと名前照合 → マッチしたらマスタIDを継承
+ * 2. 未マッチ → Gemini 3.5-flashでローマ字ID生成
+ * 3. 税区分は二段階変換（MF tax_id → MF税区分名 → マスタ税区分ID）
+ *
+ * フロント: MockClientAccountsPage.vue のMFインポートボタンから呼ばれる
+ */
+app.post('/import-client-accounts', async (c) => {
+  const clientId = c.req.query('clientId') ?? 'default'
+  const status = getAuthStatus(clientId)
+  if (!status.authenticated) {
+    return c.json({ error: 'MF未認証です。先にOAuth認可を完了してください' }, 401)
+  }
+
+  try {
+    // 1. MFから勘定科目取得
+    const allAccounts = await mcpFetchAccounts(clientId)
+    const available = allAccounts.filter((a) => a.available)
+
+    // 2. 名前照合マップ構築（全社マスタ + 顧問先マスタ）
+    const masterAccountsList = getAllAccounts()
+    const nameToMaster = new Map<string, Account>()
+    for (const ma of masterAccountsList) {
+      nameToMaster.set(ma.name, ma)
+    }
+    const hasExisting = hasClientAccounts(clientId)
+    if (hasExisting) {
+      const clientData = getClientAccounts(clientId)
+      for (const ca of clientData.accounts) {
+        if (!nameToMaster.has(ca.name)) {
+          nameToMaster.set(ca.name, ca)
+        }
+      }
+    }
+
+    // 3. 税区分紐づけ（二段階変換）
+    const masterTaxes = getAllTaxCategories()
+    const taxNameToId = new Map<string, string>()
+    for (const t of masterTaxes) {
+      taxNameToId.set(t.name, t.taxCategoryId)
+    }
+    const mfTaxes = await mcpFetchTaxes(clientId)
+    const mfTaxIdToMasterId = new Map<string, string>()
+    for (const mt of mfTaxes) {
+      const mid = taxNameToId.get(mt.name)
+      if (mid) mfTaxIdToMasterId.set(mt.id, mid)
+    }
+
+    // 4. 科目マッピング
+    const unmatchedNames: string[] = []
+    const existingIds = new Set(masterAccountsList.map(a => a.accountId))
+    if (hasExisting) {
+      const clientAccounts = getClientAccounts(clientId)
+      for (const ca of clientAccounts.accounts) {
+        existingIds.add(ca.accountId)
+      }
+    }
+
+    const mapped: Account[] = []
+    for (const [idx, a] of available.entries()) {
+      const group = deriveMfAccountGroup(a.account_group, a.category)
+      const master = nameToMaster.get(a.name)
+      const masterTaxId = mfTaxIdToMasterId.get(a.tax_id)
+
+      if (master) {
+        mapped.push({
+          ...master,
+          category: a.category,
+          accountGroup: group,
+          defaultTaxCategoryId: master.defaultTaxCategoryId || masterTaxId,
+          sortOrder: idx + 1,
+          mfAccountId: a.id,
+          mfAccountGroup: a.account_group,
+          mfFinancialStatementType: a.financial_statement_type,
+        })
+        continue
+      }
+
+      unmatchedNames.push(a.name)
+      const target = deriveTarget(a.category, a.financial_statement_type)
+      const suffix = target === 'individual' ? 'IND' : 'CORP'
+      const accountId = await generateMasterId(a.name, suffix, existingIds)
+      existingIds.add(accountId)
+
+      mapped.push({
+        accountId,
+        name: a.name,
+        target,
+        accountGroup: group,
+        category: a.category,
+        defaultTaxCategoryId: masterTaxId,
+        taxDetermination: deriveTaxDetermination(group),
+        deprecated: false,
+        effectiveFrom: DEFAULT_EFFECTIVE_FROM,
+        effectiveTo: null,
+        sortOrder: idx + 1,
+        mfAccountId: a.id,
+        mfAccountGroup: a.account_group,
+        mfFinancialStatementType: a.financial_statement_type,
+      })
+    }
+
+    // 5. 保存
+    saveClientAccounts(clientId, mapped)
+
+    const matchedCount = available.length - unmatchedNames.length
+    return c.json({
+      ok: true,
+      total: allAccounts.length,
+      available: available.length,
+      matched: matchedCount,
+      unmatched: unmatchedNames.length,
+      unmatchedNames,
+      message: `勘定科目${available.length}件を保存（マッチ: ${matchedCount}件 / 未マッチ: ${unmatchedNames.length}件）`,
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[mfRoutes] import-client-accounts失敗: ${message}`)
+    return c.json({ error: '顧問先勘定科目インポートに失敗しました', detail: message }, 500)
   }
 })
 

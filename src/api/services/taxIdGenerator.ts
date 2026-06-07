@@ -132,3 +132,20 @@ export function generateTaxMasterId(name: string): string | null {
   // どのルールにも当てはまらない → null（呼び出し元で警告処理）
   return null
 }
+
+/**
+ * 生成されたIDが既存IDと重複しないことを保証する
+ * 重複がある場合はサフィックス _2, _3... を付与
+ *
+ * @param baseId generateTaxMasterIdで生成されたID
+ * @param existingIds 既存のtaxCategoryIdのSet
+ * @returns 重複のないID
+ */
+export function ensureUniqueTaxId(baseId: string, existingIds: Set<string>): string {
+  if (!existingIds.has(baseId)) return baseId
+  let counter = 2
+  while (existingIds.has(`${baseId}_${counter}`)) counter++
+  const uniqueId = `${baseId}_${counter}`
+  console.warn(`[taxIdGenerator] ID重複回避: ${baseId} → ${uniqueId}`)
+  return uniqueId
+}

@@ -11,7 +11,7 @@
 
 | # | ファイル | 行数 | 役割 |
 |---|---------|------|------|
-| **SSOT** | [journalValidationCore.ts](file:///c:/dev/receipt-app/src/shared/validation/journalValidationCore.ts) | ~630行 | **全13種チェック + セルハイライト情報の統合ロジック** |
+| **SSOT** | [journalValidationCore.ts](file:///c:/dev/receipt-app/src/shared/validation/journalValidationCore.ts) | 632行 | **全13種チェック + セルハイライト情報の統合ロジック** |
 | **A** | [journalValidation.ts](file:///c:/dev/receipt-app/src/api/services/journalValidation.ts) (API側) | ~90行 | sharedの薄いラッパー（非破壊コピー + Set→配列変換） |
 | **B** | [journalWarningSync.ts](file:///c:/dev/receipt-app/src/utils/journalWarningSync.ts) (フロント共通) | ~24行 | sharedへのre-export（後方互換） |
 | **C** | [JournalListLevel3Mock.vue syncWarningLabels L3164](file:///c:/dev/receipt-app/src/components/JournalListLevel3Mock.vue#L3164) (Vue内) | ~60行 | sharedの`syncWarningLabelsCore`呼出 + UI固有制御 + `ValidationContext`渡し |

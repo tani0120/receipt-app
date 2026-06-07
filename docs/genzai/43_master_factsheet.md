@@ -1,33 +1,38 @@
 # 勘定科目・税区分マスタ — 統合ファクトシート
 
-> 調査日: 2026-05-30（最終更新: 2026-06-01 23:55 — MF ID実機検証結果反映）
+> 調査日: 2026-05-30（最終更新: 2026-06-07 — Phase 1-7修正実績反映、件数・行数・target分布更新）
 > 対象: `c:\dev\receipt-app`
 
 ---
 
 ## 1. データ構造
 
-### 1-1. 勘定科目マスタ（account-master.json）: 全157件
+### 1-1. 勘定科目マスタ（account-master.json）: 全237件（default200 + mf37）
 
 | フィールド | 日本語 | 型 | 値域 | 件数分布 |
 |-----------|--------|-----|------|---------|
-| `id` | マスタID（一意キー） | string | `CASH`, `TRAVEL` 等 | 157件ユニーク |
-| `name` | 科目名 | string | `現金`, `旅費交通費` 等 | 143ユニーク（14件重複） |
-| `target` | 事業形態対象 | string | `both`（共通）=56, `individual`（個人）=52, `corp`（法人）=49 |
-| `accountGroup` | 勘定科目グループ（大分類） | string | `BS_ASSET`（資産）=57, `PL_EXPENSE`（費用）=63, `BS_LIABILITY`（負債）=17, `PL_REVENUE`（収益）=12, `BS_EQUITY`（純資産）=8 |
-| `category` | 科目分類（中分類） | string | 29種（`経費`, `売上`, `現金及び預金` 等） |
+| `id` | マスタID（一意キー） | string | `CASH`, `TRAVEL` 等 | 237件ユニーク |
+| `name` | 科目名 | string | `現金`, `旅費交通費` 等 | ユニーク（法人/個人で同名あり） |
+| `target` | 事業形態対象 | string | `corp`（法人）=133, `individual`（個人）=104。`both`は廃止済み（2026-06-06） |
+| `accountGroup` | 勘定科目グループ（大分類） | string | `PL_EXPENSE`（費用）=91, `BS_ASSET`（資産）=87, `BS_LIABILITY`（負債）=27, `PL_REVENUE`（収益）=19, `BS_EQUITY`（純資産）=13 |
+| `category` | 科目分類（中分類） | string | 48種（`経費`, `売上`, `現金及び預金` 等） |
 | `defaultTaxCategoryId` | デフォルト税区分ID | string | `COMMON_EXEMPT`, `PURCHASE_TAXABLE_10` 等 |
-| `taxDetermination` | 税区分判定モード | string | `fixed`（固定）=105, `auto_purchase`（自動仕入）=43, `auto_sales`（自動売上）=9 |
-| `deprecated` | 非表示フラグ | boolean | true=0, false=157 |
+| `taxDetermination` | 税区分判定モード | string | `fixed`（固定）=155, `auto_purchase`（自動仕入）=67, `auto_sales`（自動売上）=15 |
+| `deprecated` | 非表示フラグ | boolean | true=33, false=204 |
 | `effectiveFrom` | 有効開始日 | string | `2019-10-01` 等 |
 | `effectiveTo` | 有効終了日 | string\|null | 全件null |
-| `sortOrder` | 表示順 | number | 1〜157 |
-| `mfAccountId` | MF勘定科目ID | string\|undefined | あり=108件, なし=49件（31%欠損） |
+| `sortOrder` | 表示順 | number | 1〜398 |
+| `mfAccountId` | MF勘定科目ID | string\|undefined | 全社マスタJSONからは削除済み（2026-06-07）。顧問先別データにのみ保持 |
 | `mfAccountGroup` | MF勘定科目グループ | string\|undefined | `ASSET`, `EXPENSE` 等 |
 | `mfFinancialStatementType` | MF財務諸表区分 | string\|undefined | `BALANCE_SHEET`, `PROFIT_LOSS` |
 | ~~`mfDefaultTaxId`~~ | ~~MFデフォルト税区分ID~~ | — | 削除済み（2026-06-04）。MFのtax_idは事業者固有で保存する意味がない。仕訳送信はMCPリアルタイム名前照合で解決 |
 
-**マスタID統計**: 長さ 最小=4文字, 最大=28文字, 平均=13文字
+**マスタID統計**: 長さ 最小=9文字, 最大=38文字, 平均=19文字
+
+> [!NOTE]
+> **2026-06-07 MFインポート実施後の件数変動:**
+> MFインポート前: 200件（default。法人96+個人104）。MFインポート後: 237件（default200+mf37。法人133+個人104）。
+> MFインポートで法人向け37件が追加された。個人向けは追加なし（MFの個人専用カテゴリ5種に該当する科目が全てdefaultに既存）。
 
 **uuidフィールド**: なし
 
@@ -185,10 +190,10 @@ category（中分類）を設定すると:
 
 | 事実 | 数値 |
 |------|------|
-| マスタ`mfAccountId`充足率 | **69%**（108/157） |
+| マスタ`mfAccountId`充足率 | 全社マスタJSONからは削除済み。顧問先別データにのみ保持 |
 | `mfAccountId`の由来 | c_rODnkCDN（法人1社）のMF科目ID |
-| 名前重複 | **14件**（法人/個人で同名） |
-| `mf-account-available.json` | **⚠️ 未構築** |
+| 名前重複 | **146件（73組）**（法人/個人で同名） |
+| `mf-account-available.json` | **不要**（MCP実機テストで科目は全パターン同一。方式別表示可否テーブルは不要） |
 | 照合方式（MF送信時） | **名前ベース**（mfMappingService） |
 | スナップショット取得 | **8パターン**（法人4 + 個人4） |
 | 取得済み顧問先 | c_rODnkCDN（法人）+ c_wTdnMKDO（個人） |
@@ -240,16 +245,16 @@ category（中分類）を設定すると:
 
 | 項目 | 税区分 | 勘定科目 |
 |------|--------|---------|
-| 名前重複 | **0件** | **14件**（法人/個人で同名） |
+| 名前重複 | **0件** | **146件（73組）**（法人/個人で同名） |
 | 基準顧問先 | 1つ（課税方式だけ切替） | **2つ必要**（法人 + 個人） |
-| マスタ件数 | 151件 | 157件（法人49 + 個人52 + 共通56） |
+| マスタ件数 | 151件 | 237件（法人133 + 個人104。both廃止済み） |
 | MFでの名前変更 | ほぼない（MF固定名） | **ユーザーがMF上で変更可能** |
 | カスタム科目追加 | MFで追加可能 | **MFで追加可能 + マスタ手動追加** |
 
 > [!IMPORTANT]
 > **2026-06-01実機検証確定: 税区分も勘定科目も、MF IDは事業者固有。事業者間のID照合は不可能。**
 > 税区分で名前ベースが成立するのは「名前重複0件 + MF側で名前変更がほぼ起きない」条件があるから。
-> 勘定科目はその条件を**満たさない**（14件重複 + MF上で変更可能）。
+> 勘定科目はその条件を**満たさない**（146件重複 + MF上で変更可能）。
 > MCP仕訳送信の49パターンテスト結果: `docs/genzai/46_mf_journal_send_49patterns.md`
 
 ---
@@ -264,7 +269,7 @@ category（中分類）を設定すると:
 
 | メリット | デメリット |
 |---------|----------|
-| ✅ 税区分と同一アーキテクチャ | ❌ 名前重複14件が解決不能（先勝ち問題） |
+| ✅ 税区分と同一アーキテクチャ | ❌ 名前重複146件が解決不能（先勝ち問題） |
 | ✅ 中間テーブル不要 | ❌ MFで科目名変更したら照合が切れる |
 | ✅ MFに科目追加→名前で自動マッチ | ❌ mfMappingServiceも壊れる |
 | ✅ 人間にとって直感的 | |
@@ -280,7 +285,7 @@ category（中分類）を設定すると:
 
 | メリット | デメリット |
 |---------|----------|
-| ✅ 名前重複14件が完全解決 | ⚠️ 初回構築コスト（12パターンのスナップショットから生成） |
+| ✅ 名前重複146件が完全解決 | ⚠️ 初回構築コスト（12パターンのスナップショットから生成） |
 | ✅ MFで科目名変更しても壊れない | ⚠️ MF新規科目追加時に対応表更新が必要 |
 | ✅ 仕訳送信が安全（IDで直接引き） | ⚠️ 税区分と異なるアーキテクチャ |
 | ✅ Supabase移行時にJOINテーブル化容易 | |
@@ -312,7 +317,7 @@ function resolveMfId(accountId, businessType, mfAccounts) {
 
 | 評価軸 | 案A 名前ベース | 案B 中間対応表 | 案C 中間UUID |
 |--------|:---:|:---:|:---:|
-| 名前重複14件の解決 | △ 追加ロジック | ✅ 完全解決 | ✅ 完全解決 |
+| 名前重複146件の解決 | △ 追加ロジック | ✅ 完全解決 | ✅ 完全解決 |
 | MF科目名変更耐性 | ❌ 壊れる | ✅ 壊れない | ✅ 壊れない |
 | 実装コスト | ◎ 最小 | ○ 中 | ❌ 最大 |
 | 税区分との統一性 | ◎ 同一 | △ 異なるが類似 | ❌ 全く異なる |
@@ -331,13 +336,13 @@ function resolveMfId(accountId, businessType, mfAccounts) {
 | ② 仕訳保存 | [domain-journal.ts](file:///c:/dev/receipt-app/src/types/domain-journal.ts) | `entry.account` = 全社マスタID | — |
 | ③ バリデーション | [journalValidation.ts](file:///c:/dev/receipt-app/src/api/services/journalValidation.ts) | `syncWarningLabelsCore()`にaccounts引数で渡す | ❌ |
 | ④ MF送信照合 | [mfMappingService.ts](file:///c:/dev/receipt-app/src/api/services/mfMappingService.ts) | `loadSugusruAccounts()` = `account-master.json`直接読込 | ❌ |
-| ⑤ MF変換 | [journalToMfConverter.ts](file:///c:/dev/receipt-app/src/api/services/journalToMfConverter.ts) (545行) | `maps.accountMap.get(entry.account)` | ❌ |
+| ⑤ MF変換 | [journalToMfConverter.ts](file:///c:/dev/receipt-app/src/api/services/journalToMfConverter.ts) (544行) | `maps.accountMap.get(entry.account)` | ❌ |
 
 ### 6-2. 顧問先別データの現状（実測値）
 
 | ファイル | 件数 | パイプライン使用 |
 |---------|------|---------------|
-| `data/account-master.json` | 157件 | ③④⑤で使用 |
+| `data/account-master.json` | 237件（default200+mf37） | ③④⑤で使用 |
 | `data/accounts-c_2sAINrqz.json` | 92件 | **未使用** |
 | `data/accounts-c_46bSeC38.json` | 92件 | **未使用** |
 | `data/accounts-c_LEaq8AXu.json` | 92件 | **未使用** |
@@ -420,7 +425,7 @@ function resolveMfId(accountId, businessType, mfAccounts) {
 
 | 項目 | 全社マスタ | 顧問先別 |
 |------|----------|---------|
-| 件数 | 157件 | 92件（c_2sAINrqz等3社）/ 157件（c_VdAnGFq3, c_wTdnMKDO） |
+| 件数 | 237件（default200+mf37） | 237件（c_I9YZIpVE）/ 245件（c_wTdnMKDO）/ 249件（他8社） |
 | MFフィールド | `mfAccountId`等あり | **なし** |
 | `isCustom` | 全件false | 全件false |
 | `hiddenInMaster` | なし | あり |
@@ -447,19 +452,19 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 
 | ファイル | 行数 | 役割 |
 |---------|------|------|
-| [MockMasterAccountsPage.vue](file:///c:/dev/receipt-app/src/views/master/MockMasterAccountsPage.vue) | 829行 | 勘定科目マスタUI（フィルタ・編集・MFインポートAPI呼出・保存） |
+| [MockMasterAccountsPage.vue](file:///c:/dev/receipt-app/src/views/master/MockMasterAccountsPage.vue) | 607行 | 勘定科目マスタUI（フィルタ・編集・MFインポートAPI呼出・保存） |
 | [accountMasterRoutes.ts](file:///c:/dev/receipt-app/src/api/routes/accountMasterRoutes.ts) | 135行 | GET/PUT API（マスタ + 顧問先） |
-| [accountMasterStore.ts](file:///c:/dev/receipt-app/src/api/services/accountMasterStore.ts) | 587行 | インメモリストア + JSON永続化 |
-| [shared-account.ts](file:///c:/dev/receipt-app/src/types/shared-account.ts) | 72行 | `Account`型定義 |
-| [mf-account-category-mapping.ts](file:///c:/dev/receipt-app/src/data/master/mf-account-category-mapping.ts) | 113行 | MFカテゴリ→マスタカテゴリ変換 |
-| [account-category-rules.ts](file:///c:/dev/receipt-app/src/data/master/account-category-rules.ts) | 151行 | 科目分類ルール（カテゴリ→グループ・方向・導出） |
-| [mfAccountImportService.ts](file:///c:/dev/receipt-app/src/api/services/mfAccountImportService.ts) | 227行 | MF科目インポートサービス（バックエンド） |
-| **[journalValidationCore.ts](file:///c:/dev/receipt-app/src/shared/validation/journalValidationCore.ts)** | **630行** | **仕訳バリデーションSSOT（13種チェック統合）** |
+| [accountMasterStore.ts](file:///c:/dev/receipt-app/src/api/services/accountMasterStore.ts) | 716行 | インメモリストア + JSON永続化 |
+| [shared-account.ts](file:///c:/dev/receipt-app/src/types/shared-account.ts) | 76行 | `Account`型定義 |
+| [mf-account-category-mapping.ts](file:///c:/dev/receipt-app/src/data/master/mf-account-category-mapping.ts) | 70行 | MFカテゴリ→マスタカテゴリ変換 |
+| [account-category-rules.ts](file:///c:/dev/receipt-app/src/data/master/account-category-rules.ts) | 188行 | 科目分類ルール（カテゴリ→グループ・方向・導出） |
+| [mfAccountImportService.ts](file:///c:/dev/receipt-app/src/api/services/mfAccountImportService.ts) | 235行 | MF科目インポートサービス（バックエンド） |
+| **[journalValidationCore.ts](file:///c:/dev/receipt-app/src/shared/validation/journalValidationCore.ts)** | **632行** | **仕訳バリデーションSSOT（13種チェック統合）** |
 | [journalValidation.ts](file:///c:/dev/receipt-app/src/api/services/journalValidation.ts) | 90行 | 仕訳バリデーション（API側ラッパー） |
 | [journalWarningSync.ts](file:///c:/dev/receipt-app/src/utils/journalWarningSync.ts) | 27行 | フロント共通バリデーション（sharedへのre-export） |
-| [mfMappingService.ts](file:///c:/dev/receipt-app/src/api/services/mfMappingService.ts) | 374行 | MF送信時のID変換マップ生成 |
-| [journalToMfConverter.ts](file:///c:/dev/receipt-app/src/api/services/journalToMfConverter.ts) | 545行 | 仕訳→MF形式変換 + MF送信バリデーション |
-| [accountDetermination.ts](file:///c:/dev/receipt-app/src/utils/pipeline/accountDetermination.ts) | 323行 | AI科目判定（第一層〜第四層） |
+| [mfMappingService.ts](file:///c:/dev/receipt-app/src/api/services/mfMappingService.ts) | 373行 | MF送信時のID変換マップ生成 |
+| [journalToMfConverter.ts](file:///c:/dev/receipt-app/src/api/services/journalToMfConverter.ts) | 544行 | 仕訳→MF形式変換 + MF送信バリデーション |
+| [accountDetermination.ts](file:///c:/dev/receipt-app/src/utils/pipeline/accountDetermination.ts) | 322行 | AI科目判定（第一層〜第四層） |
 
 ---
 
@@ -492,6 +497,18 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 - ✅ カテゴリ変更時のaccountGroup・taxDetermination自動連動実装済み
 - ✅ MFインポートがバックエンドAPI化済み（mfAccountImportService.ts）
 - ✅ マスタ保存のJSON永続化実装済み（writeFileSync）
+
+### 2026-06-07 Phase 1〜7 修正実績
+
+| Phase | 修正内容 | 対象ファイル |
+|---|---|---|
+| 1 | MFインポートapplyガード削除（「未変更時の再適用ブロック」を除去） | `mfTaxImportService.ts` |
+| 2 | effectiveToバグ修正（null判定欠落でdeprecatedが不正に上書きされる問題） | `MockMasterAccountsPage.vue`, `shared-account.ts` |
+| 3 | 勘定科目watch/nextTick削除（不要なリアクティブ監視を除去） | `MockMasterAccountsPage.vue` |
+| 4 | 全社税区分: `filteredTaxRows`→`displayTaxRows`（API取得+2ref方式）に移行 | `MockMasterTaxCategoriesPage.vue` |
+| 5 | 顧問先税区分: 同上の2ref方式移行 | `MockClientTaxPage.vue` |
+| 6 | apply後source変換修正（onMountedと同じsource変換をapply後にも適用） | `MockMasterTaxCategoriesPage.vue` |
+| 7 | 検証#14-#19全合格（ブラウザUI・API・MFインポート・保存・リロード） | — |
 
 ---
 
@@ -588,7 +605,7 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 | **englishId** | 意味正確 | 意味正確 | ✅ 完全一致は不要（新規IDに正解は1つではない） |
 
 **テストで判明した重要事項:**
-1. target判定: 既存マスタのcorp/individual全科目（49件+52件）を全列挙し「合理的な根拠がなければboth」ルールで100%達成
+1. target判定: 既存マスタのcorp/individual全科目（133件+104件）を全列挙し「合理的な根拠がなければcorp」ルールで100%達成（both廃止済み）
 2. 3.0-flashで十分（精度同等でコスト1/3）
 3. テストスクリプト: [test-account-classifier.ts](file:///c:/dev/receipt-app/src/scripts/test-account-classifier.ts)
 
@@ -765,7 +782,7 @@ MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しない
 
 | # | 項目 | fact根拠 | 内容 |
 |---|------|---------|------|
-| G1 | カテゴリ分類正解率テスト | `src/utils/pipeline/`に`category`分類ファイル**0件** | 157件既存マスタ科目でGemini Flashの`category`+`target`判定精度を測定 |
+| G1 | カテゴリ分類正解率テスト | `src/utils/pipeline/`に`category`分類ファイル**0件** | 200件既存マスタ科目（default）でGemini Flashの`category`+`target`判定精度を測定 |
 | G2 | AI科目分類の実装 | `accountCategoryClassifier.ts` **存在しない** | §13設計に基づき実装 |
 
 ### 🟡 E. 合意済み（現時点で対応不要）
@@ -779,9 +796,9 @@ MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しない
 
 | 項目 | fact根拠 |
 |------|---------|
-| MFインポートAPI化 | `POST /api/mf/import-master-accounts` 実装済み（mfAccountImportService.ts 227行） |
+| MFインポートAPI化 | `POST /api/mf/import-master-accounts` 実装済み（mfAccountImportService.ts 235行） |
 | マスタ保存JSON永続化 | `saveAllAccounts()` L196-202に`writeFileSync`確認 |
-| バリデーションSSOT | `journalValidationCore.ts` 630行・13種チェック |
+| バリデーションSSOT | `journalValidationCore.ts` 632行・13種チェック |
 | 顧問先別科目取得API | `getClientAccounts(clientId)` accountMasterStore.ts L257に存在 |
 | 顧問先別税区分取得API | `getClientTaxCategories(clientId)` accountMasterStore.ts L531に存在 |
 | スナップショット8パターン | `mf-snapshot-*.json` 8ファイル確認（読み取り専用。インポート実行ではない） |
@@ -791,7 +808,7 @@ MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しない
 
 > [!CAUTION]
 > G1（Geminiテスト）が最優先。P8（AI英語変換）はG1のテスト結果に基づいて実装する。
-> G1のテスト対象は既存マスタ157件（人間設定済み）であり、T1依存はない。今すぐ実行可能。
+> G1のテスト対象は既存マスタ200件（default。人間設定済み）であり、T1依存はない。今すぐ実行可能。
 > MFインポートは繰り返し実行されるインフラであり、MF側の仕様変更で科目追加が起きた際に
 > 自動検知・自動で正しい英語IDを生成できる仕組みが必要。P8はその仕組みの実装。
 > 旧順序（P8→T1→D1→G1→G2）はP8でAI英語変換を使う前提を反映していなかった。
@@ -800,7 +817,7 @@ MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しない
 
 ```mermaid
 graph TD
-    G1["① G1: Geminiテスト 157件<br>（最優先・今すぐ可能）"] --> P8G2["② P8+G2: AI英語変換+分類実装"]
+    G1["① G1: Geminiテスト 200件<br>（最優先・今すぐ可能）"] --> P8G2["② P8+G2: AI英語変換+分類実装"]
     P8G2 --> T1["③ T1: MF実機テスト 12パターン"]
     T1 --> D1["④ D1/D2: データ構築"]
     D1 --> PP["⑤ PP1-PP4: パイプラインclientId対応"]
@@ -811,9 +828,9 @@ graph TD
 
 | 順 | 項目 | fact根拠（§参照） | なぜこの順序か |
 |:--:|------|-----------------|-------------|
-| ① | G1 | §13-4: 「157件の既存マスタ科目で正解率を測定」。テスト対象は既存マスタ157件（人間設定済み）でありT1結果は不要。§7-2: 合意済み方針は「英語表記でID化」→ AIで英語変換。テスト前にAI実装はできない | **G1はT1依存なし。今すぐ実行可能。** P8でAI英語変換を使うため、先にAIの精度を確認する必要がある |
+| ① | G1 | §13-4: 「200件の既存マスタ科目（default）で正解率を測定」。テスト対象は既存マスタ200件（人間設定済み）でありT1結果は不要。§7-2: 合意済み方針は「英語表記でID化」→ AIで英語変換。テスト前にAI実装はできない | **G1はT1依存なし。今すぐ実行可能。** P8でAI英語変換を使うため、先にAIの精度を確認する必要がある |
 | ② | P8+G2 | §7-1 L360: `MF_未収賃貸料`等の日本語ID混入。§7-2: 合意は英語ID。§13-3: 手動追加・顧問先独自追加でAI必要 | G1の精度結果に基づいてAI英語変換+AI分類を実装。MFインポートは繰り返し実行されるインフラであり、将来のMF仕様変更による科目追加を自動検知・自動対応できる仕組みが必要 |
-| ③ | T1 | §4-2: `mfAccountId`充足率69%（31%欠損）、available未構築。TST/TSKはclients.json登録済み・MF認証済み | P8完了後にT1を実行することで、新規科目が出た場合もAI英語IDが自動生成される。mfAccountId欠損49件の充足もここで実施 |
+| ③ | T1 | §4-2: `mfAccountId`充足率0%（全社マスタJSONからは削除済み）、available不要。TST/TSKはclients.json登録済み・MF認証済み | P8完了後にT1を実行することで、新規科目が出た場合もAI英語IDが自動生成される。mfAccountId欠損49件の充足もここで実施 |
 | ④ | D1/D2 | §4-2 L185: `mf-account-available.json` **未構築**。§5 L255: 案B推奨だがmapping **実装0行** | T1結果がないと構築不可能。これがないと科目フィルタ（§12）もMF照合（§4-4）も正しく動かない |
 | ⑤ | PP1-PP4 | §6-1 L313-317: 全段階❌。§6-2 L324-328: 顧問先別ファイル5社分存在するが**全て未使用** | 正しいデータ（④完了後）が入った状態で修正しないと検証不可能 |
 
@@ -823,13 +840,13 @@ graph TD
 
 | 内容 | 詳細 |
 |------|------|
-| 入力 | `account-master.json`の157件の`name`フィールド |
+| 入力 | `account-master.json`の200件（default）の`name`フィールド |
 | 期待出力 | `{ category: "経費"等29値, target: "corp"/"individual"/"both", englishId: "CASH"等 }` |
 | 正解データ | 既存マスタの`category`、`target`、`id` |
 | 評価指標 | category正解率、target正解率、englishId妥当性、category+target同時正解率 |
-| モデル | Gemini 3.5 Flash / 3.0 Flash（§13-4: 29種分類は明確なルールがありPro不要） |
+| モデル | Gemini 3.5 Flash / 3.0 Flash（§13-4: 48種分類は明確なルールがありPro不要） |
 | 実装 | `src/scripts/test-account-classifier.ts`として新規作成 |
-| T1依存 | **なし**（テスト対象は既存157件。人間設定済みのcategory/targetが正解データ） |
+| T1依存 | **なし**（テスト対象は既存200件（default）。人間設定済みのcategory/targetが正解データ） |
 
 ##### ② P8+G2: AI英語変換 + AI分類実装
 

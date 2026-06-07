@@ -143,7 +143,7 @@
 | [account-category-rules.ts](file:///c:/dev/receipt-app/src/data/master/account-category-rules.ts) | `getCategoryDirection()` | 科目カテゴリ→方向（sales/purchase/common）の導出 |
 | 同上 | `getAllowedTaxDeterminations()` | 科目+課税方式→許可される税区分自動判定値 |
 | 同上 | `deriveCategoryDefaults()` | カテゴリ変更→accountGroup+taxDetermination+defaultTaxCategoryIdの自動連動 |
-| [MockMasterTaxCategoriesPage.vue](file:///c:/dev/receipt-app/src/views/master/MockMasterTaxCategoriesPage.vue) | `filteredTaxRows` | 課税方式別の税区分フィルタ（`mf-tax-available.json`のavailableデータ駆動。~~IDパターンマッチは削除済み~~） |
+| [MockMasterTaxCategoriesPage.vue](file:///c:/dev/receipt-app/src/views/master/MockMasterTaxCategoriesPage.vue) | `displayTaxRows`（API取得+2ref方式） | 課税方式別の税区分フィルタ（`mf-tax-available.json`のavailableデータ駆動。~~IDパターンマッチは削除済み~~） |
 
 > [!WARNING]
 > **これらのルールはUIマスタ編集画面でのみ適用されている。** MF送信バリデーション（`validateBeforeConvert`）やjournal-listの仕訳入力画面には一切適用されていない。

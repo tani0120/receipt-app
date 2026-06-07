@@ -49,6 +49,7 @@
               @click="accountPage = p"
             >{{ p }}</span>
             <span class="as-page-arrow" :class="{ disabled: accountPage >= accountTotalPages }" @click="accountPage = Math.min(accountTotalPages, accountPage + 1)">＞</span>
+            <span class="as-page-range">{{ accountPageStart }}~{{ accountPageEnd }} / {{ filteredAccountRows.length }}件</span>
 
           </div>
           <div class="as-actions">
@@ -527,7 +528,8 @@ async function saveChanges() {
     // composable側のoverridesにも同期（顧問先ページへの反映用）
     const defaultAccountIds = settings.defaultAccountIds.value;
     const customRows = accountRows.filter(r => !defaultAccountIds.has(r.accountId));
-    const hiddenIds = accountRows.filter(r => r.deprecated || r.effectiveTo).map(r => r.accountId);
+    const today = new Date().toISOString().slice(0, 10);
+    const hiddenIds = accountRows.filter(r => r.deprecated || (r.effectiveTo && r.effectiveTo <= today)).map(r => r.accountId);
     overrides.value = { hiddenIds, customAccounts: customRows };
     // ★DL-042: localStorage書き込み廃止済み（API保存に一本化）
 

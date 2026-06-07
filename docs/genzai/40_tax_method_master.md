@@ -59,7 +59,7 @@
 
 ### 2. 全社マスタのフィルタ（方式マスタベース・データ駆動）
 
-**実装**: `MockMasterTaxCategoriesPage.vue` `filteredTaxRows`
+**実装**: `MockMasterTaxCategoriesPage.vue` `displayTaxRows`（API取得+2ref方式）
 
 - セグメントボタンで方式を選択 → `mf-tax-available.json` の方式マスタデータでフィルタ
 - 顧問先依存のMFリアルタイム `available` は使わない
@@ -209,6 +209,7 @@ TaxCategory型に構造化属性（`tax_type` / `business_type` / `purpose_type`
 |            | • MFインポート時の照合を全て名前ベースに統一（importClientTaxes/detectDiff/sync-all） |
 |            | • Vueフィルタを`row.mfId`→`row.id`（マスタID）に変更 |
 |            | • 設計書40/41のmfId照合の嘘を訂正 |
+| 2026-06-07 | **全社税区分フィルタ方式変更:** `filteredTaxRows`（computed）→`displayTaxRows`（API取得+2ref方式）に移行。保存用`allTaxRows`と表示用`displayTaxRows`の分離。`refreshDisplayTaxRows()`で方式切替時にAPI再取得。apply後のsource変換修正（onMountedと同じ変換をapply後にも適用） |
 
 ---
 

@@ -42,6 +42,8 @@ export type Account = {
     effectiveTo: string | null
     /** 表示順 */
     sortOrder: number
+    /** データの出自（'default'=初期データ, 'mf'=MFインポートで追加, 'master-custom'=マスタカスタム, 'client-custom'=顧問先カスタム） */
+    source?: 'default' | 'mf' | 'master-custom' | 'client-custom'
     /** カスタム科目フラグ（ユーザー追加=true、システム提供=false/undefined → ルール4） */
     isCustom?: boolean
     /** デフォルト順復元用: コピー/追加時の挿入位置直前の行ID */
