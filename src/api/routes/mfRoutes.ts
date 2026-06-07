@@ -495,8 +495,8 @@ app.post('/sync-all', async (c) => {
           // ※マスタの手動調整を上書きするが、MFの科目分類変更を反映するために必要
           category: a.category,
           accountGroup: group,
-          // 税区分: マスタに値があればマスタ優先、未設定時のみMFから補完
-          defaultTaxCategoryId: master.defaultTaxCategoryId || masterTaxId,
+          // 税区分: MCPの値を優先（顧問先のMFが正）、取れない場合のみ全社マスタでフォールバック
+          defaultTaxCategoryId: masterTaxId || master.defaultTaxCategoryId,
           // taxDeterminationはマスタを維持（手動調整済みの場合があるため）
           sortOrder: idx + 1,
           // MF連携フィールド（顧問先データでのみ使用）

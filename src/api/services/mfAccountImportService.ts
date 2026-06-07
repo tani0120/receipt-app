@@ -23,10 +23,10 @@ import { getAllAccounts, saveAllAccounts, getAllTaxCategories } from './accountM
 import { saveMfRawData } from './mfRawDataStore'
 import { getById } from './clientStore'
 import { generateMasterId } from './generateMasterId'
+import { isIndividualType } from '../../constants/clientOptions'
 import {
   deriveMfAccountGroup,
   deriveTaxDetermination,
-  deriveTarget,
 } from '../../data/master/mf-account-category-mapping'
 import type { Account } from '../../types/shared-account'
 import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
@@ -113,10 +113,16 @@ export async function importMasterAccounts(
   }
 
   // 3. マスタのディープコピーを作成（元データ非破壊）
+  //    顧問先の事業形態（法人/個人）でフィルタし、同名科目の誤マッチを防止
   const masterItems: Account[] = JSON.parse(JSON.stringify(getAllAccounts()))
+  const client = getById(clientId)
+  const clientType = isIndividualType(client?.type) ? 'individual' : 'corp'
   const nameToRow = new Map<string, Account>()
   for (const row of masterItems) {
-    nameToRow.set(row.name, row)
+    // 事業形態が一致する科目のみマップに追加（73件の同名科目対策）
+    if (row.target === clientType) {
+      nameToRow.set(row.name, row)
+    }
   }
 
   // 4. 差分検知（名前照合のみ。MFフィールドは全社マスタに書き込まない）
@@ -142,8 +148,9 @@ export async function importMasterAccounts(
       // 既存行とマッチ。全社マスタにはMFフィールドを書き込まない
       // （MF IDは事業者固有。全社テンプレートに特定1社のIDを持つのは不正）
 
-      // デフォルト税区分が未設定の場合のみMFから補完
-      if (!existing.defaultTaxCategoryId && masterTaxId) {
+      // デフォルト税区分をMCPの値で常に上書き（MCP実機が正確。手動設定は不正確）
+      // 仕訳バリデーション・ヒント・AI生成で使われるため正確な値が必須
+      if (masterTaxId) {
         existing.defaultTaxCategoryId = masterTaxId
       }
 
@@ -151,8 +158,10 @@ export async function importMasterAccounts(
     } else {
       // 新規追加（MFにあってマスタにない）
       // Gemini 3.5-flashでローマ字IDを生成（データ駆動フォールバック）
+      // 新規追加時のtargetは顧問先の事業形態を使う
+      // deriveTarget()はMFカテゴリから推定するが法人/個人の判定には使えない
       maxSort++
-      const target = deriveTarget(mf.category, mf.financial_statement_type)
+      const target = clientType
       const suffix = target === 'individual' ? 'IND' : 'CORP'
       const accountId = await generateMasterId(mf.name, suffix, existingIds)
       existingIds.add(accountId) // 次の重複チェック用に追加
@@ -191,7 +200,6 @@ export async function importMasterAccounts(
   saveAllAccounts(masterItems)
 
   // 7. MF生データを保存
-  const client = getById(clientId)
   saveMfRawData({
     clientId,
     clientName: client?.companyName ?? client?.repName ?? '',

@@ -1,7 +1,7 @@
 # ローマ字ID移行計画
 
 > 作成: 2026-06-06（セッション 341b2d01）
-> 最終更新: 2026-06-07（セッション fb7d9e69。P1/P2/P3修正完了、税区分重複チェック追加）
+> 最終更新: 2026-06-08（セッション ad30eff1。P6/P7/P8追加: defaultTaxCategoryId MCP上書き+事業形態フィルタ+顧問先別MCP優先+target判定バグ修正）
 
 ---
 
@@ -47,6 +47,9 @@
 | **P3** | C: `defaultTaxCategoryId`が常にundefined | ✅ **修正済み（2026-06-07）** | MFのtax_id→名前→マスタIDの二段階変換をB系統から移植                                                   |
 | **P4** | B/C: 削除検知なし                        | ⚠️ 未対処                     | Bでは追加のみ / Cでは全上書き                                                                         |
 | **P5** | B: 名前変更検知不可                      | ⚠️ 未対処                     | 全社マスタにmfAccountIdなし                                                                           |
+| **P6** | B: `defaultTaxCategoryId`がMCP実機と不一致（法人10件+個人8件） | ✅ **修正済み（2026-06-08）** | MCPの値で常に上書き + 事業形態フィルタ（73件同名科目対策）+ `isIndividualType()`ヘルパー使用 |
+| **P7** | C: `defaultTaxCategoryId`が全社マスタ優先でMCP変更を無視 | ✅ **修正済み（2026-06-08）** | `masterTaxId \|\| master.defaultTaxCategoryId` に順序逆転。MCP優先、未取得時のみ全社フォールバック |
+| **P8** | B: 新規科目のtargetが常にcorp（個人4件が法人として追加される） | ✅ **修正済み（2026-06-08）** | `deriveTarget(mf.category)`→`clientType`（顧問先の事業形態）に変更。`deriveTarget()`はMFカテゴリから推定するが法人/個人判別に使えないため廃止 |
 
 > [!IMPORTANT]
 > **P1/P2の修正 = `generateMasterId()`実装がそのまま解決策。**
@@ -120,10 +123,14 @@ sync-all   → accountId = "DI7rnB..."（Base64 ID）        ❌ 全件不一致
    - 未マッチ → `generateMasterId()`（Gemini 3.5-flash）でローマ字ID生成
 3. 税区分紐づけ（二段階変換）をB系統から移植:
    - `mcpFetchTaxes` → `mfTaxIdToMasterId`マップ構築
-   - `defaultTaxCategoryId`はマスタに値があればマスタ優先、未設定時のみMFから補完
+   - B系統: `defaultTaxCategoryId`はMCPの値で常に上書き（MCP実機が正。手動設定は不正確）
+   - C系統: `defaultTaxCategoryId`はMCPの値を優先、取れない場合のみ全社マスタでフォールバック
 4. `hasClientAccounts(clientId)`で初回sync-allの2重登録防止
 5. `existingIds`をループ外で1回構築、生成後に`add`で累積追加（重複防止）
-6. 顧問先MFインポートボタン接続: `POST /api/mf/import-client-accounts`新設
+6. B系統の名前照合に事業形態フィルタ追加（法人/個人で73件の同名科目の誤マッチ防止）
+7. B系統の`client?.type`直接比較を`isIndividualType()`ヘルパーに変更（lintルール準拠）
+8. B系統の新規追加科目target判定を`deriveTarget(mf.category)`→`clientType`に変更（`deriveTarget()`はMFカテゴリから推定するが`OTHER_CURRENT_LIABILITIES`等で常にcorpを返すバグ。importも削除）
+9. 顧問先MFインポートボタン接続: `POST /api/mf/import-client-accounts`新設
 7. 税区分のUNKNOWN\_ランダム→throw Error化（3箇所）
 8. 税区分のexistingIds重複チェック追加（3箇所）+ ensureUniqueTaxIdヘルパー追加
 9. `vue-tsc --noEmit` パス確認: ✅ エラー0件

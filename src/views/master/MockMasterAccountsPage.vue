@@ -162,7 +162,7 @@
                 <td class="td-master-id" :title="row.accountId">{{ row.accountId }}</td>
                 <!-- 科目名（読み取り専用。修正はMF側で行う） -->
                 <td>{{ row.name }}</td>
-                <td class="td-sub-account"></td>
+                <td class="td-sub-account"><span class="sub-account-hint">顧問先で設定</span></td>
                 <td class="td-target">{{ targetLabel(row.target) }}</td>
                 <td class="td-account-group">{{ accountGroupLabel(row.accountGroup) }}</td>
                 <td class="td-direction">{{ directionLabel(row.accountGroup) }}</td>
@@ -604,4 +604,5 @@ function resetAccountOrder() {
 .td-hide:hover { color: #616161; }
 .td-show { color: #4caf50; cursor: pointer; font-size: 14px; }
 .td-show:hover { color: #2e7d32; }
+.sub-account-hint { color: #c0c0c0; font-size: 11px; user-select: none; }
 </style>

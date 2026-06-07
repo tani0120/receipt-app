@@ -7,13 +7,13 @@
 
 ## 1. データ構造
 
-### 1-1. 勘定科目マスタ（account-master.json）: 全237件（default200 + mf37）
+### 1-1. 勘定科目マスタ（account-master.json）: 全241件（default200 + mf41）
 
 | フィールド | 日本語 | 型 | 値域 | 件数分布 |
 |-----------|--------|-----|------|---------|
-| `id` | マスタID（一意キー） | string | `CASH`, `TRAVEL` 等 | 237件ユニーク |
+| `id` | マスタID（一意キー） | string | `CASH`, `TRAVEL` 等 | 241件ユニーク |
 | `name` | 科目名 | string | `現金`, `旅費交通費` 等 | ユニーク（法人/個人で同名あり） |
-| `target` | 事業形態対象 | string | `corp`（法人）=133, `individual`（個人）=104。`both`は廃止済み（2026-06-06） |
+| `target` | 事業形態対象 | string | `corp`（法人）=133, `individual`（個人）=108。`both`は廃止済み（2026-06-06） |
 | `accountGroup` | 勘定科目グループ（大分類） | string | `PL_EXPENSE`（費用）=91, `BS_ASSET`（資産）=87, `BS_LIABILITY`（負債）=27, `PL_REVENUE`（収益）=19, `BS_EQUITY`（純資産）=13 |
 | `category` | 科目分類（中分類） | string | 48種（`経費`, `売上`, `現金及び預金` 等） |
 | `defaultTaxCategoryId` | デフォルト税区分ID | string | `COMMON_EXEMPT`, `PURCHASE_TAXABLE_10` 等 |
@@ -30,9 +30,9 @@
 **マスタID統計**: 長さ 最小=9文字, 最大=38文字, 平均=19文字
 
 > [!NOTE]
-> **2026-06-07 MFインポート実施後の件数変動:**
-> MFインポート前: 200件（default。法人96+個人104）。MFインポート後: 237件（default200+mf37。法人133+個人104）。
-> MFインポートで法人向け37件が追加された。個人向けは追加なし（MFの個人専用カテゴリ5種に該当する科目が全てdefaultに既存）。
+> **2026-06-07〜08 MFインポート実施後の件数変動:**
+> MFインポート前: 200件（default。法人96+個人104）。MFインポート後: 241件（default200+mf41。法人133+個人108）。
+> MFインポートで法人向け37件+個人向け4件が追加された。個人追加4件（未払消費税/保証金・敷金/商品券/仮受消費税）は法人にもある共通科目だが、事業形態フィルタで個人マスタに未マッチ→自動追加される。
 
 **uuidフィールド**: なし
 
@@ -136,11 +136,11 @@ category（中分類）を設定すると:
 |-----------|---------------|-----------------|---------------|
 | `id` | 人間が英語で命名 | `MF_{科目名}` ❌日本語混入 | `{3コード}_{英語名}` |
 | `name` | 人間が設定 | MFの`name`を使用 | 人間が設定 |
-| `target` | 人間が設定 | `deriveTarget()`で推定 | 人間が設定 |
+| `target` | 人間が設定 | インポート先顧問先の事業形態（`clientType`）から動的決定。`deriveTarget()`はMFカテゴリから推定するが法人/個人の判別に使えないため廃止（2026-06-08） | 人間が設定 |
 | `accountGroup` | `category`から自動導出 | `category`から自動導出 | `category`から自動導出 |
 | `category` | 人間が設定 | MF `category`→`MF_CATEGORY_MAP`変換 | 人間が設定 |
 | `taxDetermination` | `category`から自動導出 | `category`から自動導出 | `category`から自動導出 |
-| `defaultTaxCategoryId` | 人間 or 自動 | MF `tax_id`→マスタID変換 | 人間 or 自動 |
+| `defaultTaxCategoryId` | 人間 or 自動 | B系統: MCPの値で常に上書き。C系統: MCP優先、取れない場合のみ全社マスタでフォールバック | 人間 or 自動 |
 | `mfAccountId` | MFインポートで付与 | MFの`id`を設定 | MFインポートで付与 |
 
 実装: [mfAccountImportService.ts L81-226](file:///c:/dev/receipt-app/src/api/services/mfAccountImportService.ts#L81-L226)
@@ -247,7 +247,7 @@ category（中分類）を設定すると:
 |------|--------|---------|
 | 名前重複 | **0件** | **146件（73組）**（法人/個人で同名） |
 | 基準顧問先 | 1つ（課税方式だけ切替） | **2つ必要**（法人 + 個人） |
-| マスタ件数 | 151件 | 237件（法人133 + 個人104。both廃止済み） |
+| マスタ件数 | 151件 | 241件（法人133 + 個人108。both廃止済み） |
 | MFでの名前変更 | ほぼない（MF固定名） | **ユーザーがMF上で変更可能** |
 | カスタム科目追加 | MFで追加可能 | **MFで追加可能 + マスタ手動追加** |
 
@@ -342,7 +342,7 @@ function resolveMfId(accountId, businessType, mfAccounts) {
 
 | ファイル | 件数 | パイプライン使用 |
 |---------|------|---------------|
-| `data/account-master.json` | 237件（default200+mf37） | ③④⑤で使用 |
+| `data/account-master.json` | 241件（default200+mf41） | ③④⑤で使用 |
 | `data/accounts-c_2sAINrqz.json` | 92件 | **未使用** |
 | `data/accounts-c_46bSeC38.json` | 92件 | **未使用** |
 | `data/accounts-c_LEaq8AXu.json` | 92件 | **未使用** |
@@ -425,7 +425,7 @@ function resolveMfId(accountId, businessType, mfAccounts) {
 
 | 項目 | 全社マスタ | 顧問先別 |
 |------|----------|---------|
-| 件数 | 237件（default200+mf37） | 237件（c_I9YZIpVE）/ 245件（c_wTdnMKDO）/ 249件（他8社） |
+| 件数 | 241件（default200+mf41） | 241件（c_I9YZIpVE）/ 249件（c_wTdnMKDO）/ 253件（他8社） |
 | MFフィールド | `mfAccountId`等あり | **なし** |
 | `isCustom` | 全件false | 全件false |
 | `hiddenInMaster` | なし | あり |
@@ -605,7 +605,7 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 | **englishId** | 意味正確 | 意味正確 | ✅ 完全一致は不要（新規IDに正解は1つではない） |
 
 **テストで判明した重要事項:**
-1. target判定: 既存マスタのcorp/individual全科目（133件+104件）を全列挙し「合理的な根拠がなければcorp」ルールで100%達成（both廃止済み）
+1. target判定: 既存マスタのcorp/individual全科目（133件+108件）を全列挙し「合理的な根拠がなければcorp」ルールで100%達成（both廃止済み）
 2. 3.0-flashで十分（精度同等でコスト1/3）
 3. テストスクリプト: [test-account-classifier.ts](file:///c:/dev/receipt-app/src/scripts/test-account-classifier.ts)
 

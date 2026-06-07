@@ -232,7 +232,7 @@ TaxCategory型に構造化属性（`tax_type` / `business_type` / `purpose_type`
    - 一致 → 既存マスタの属性（id/category/target等）を維持し、MFフィールド（mfAccountId/mfAccountGroup/mfFinancialStatementType）を付与
      ※mfDefaultTaxIdは削除済み（2026-06-04）。MFのtax_idは事業者固有で保存する意味がない。仕訳送信時はMCPリアルタイム名前照合で解決
    - 不一致 → MFのcategoryから`MF_CATEGORY_MAP`でマスタcategoryを推定し、新規Account生成（フォールバック: `'経費'`）
-5. デフォルト税区分は既存マスタ設定を優先し、未設定時のみMFのtax_idから変換して補完
+5. デフォルト税区分はMCPの値で常に上書き（B系統）。C系統はMCPの値を優先し、取れない場合のみ全社マスタでフォールバック
 6. 差分レポート出力:
    - 名前一致（MFフィールド付与）件数
    - 新規追加件数
@@ -244,7 +244,7 @@ TaxCategory型に構造化属性（`tax_type` / `business_type` / `purpose_type`
 **考え方**:
 - MF IDは事業者固有なので照合は常に名前ベース
 - MFのcategory（`売上原価`等）→マスタcategory（`売上原価`等）の変換テーブル（`MF_CATEGORY_MAP`）が必要
-- 新規科目のaccountGroup/taxDetermination/targetは`deriveMfAccountGroup()`/`deriveTaxDetermination()`/`deriveTarget()`で自動推定
+- 新規科目のaccountGroup/taxDeterminationは`deriveMfAccountGroup()`/`deriveTaxDetermination()`で自動推定。targetはインポート先顧問先の事業形態（`clientType`）から動的決定（`deriveTarget()`はMFカテゴリから推定するが法人/個人判別に使えないため廃止。2026-06-08）
 
 **代替**: `importMasterAccounts()` API（MCPからリアルタイム取得→同じ処理フロー）
 
