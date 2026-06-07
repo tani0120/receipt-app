@@ -249,12 +249,23 @@ function syncMasterAccountsToClients(masterItems: Account[]): void {
       }
     }
 
-    // 名前変更: マスタとIDが一致する科目の名前を同期
+    // コアフィールド同期: マスタとIDが一致する科目のフィールドを同期
+    // （MFフィールド mfAccountId等は顧問先固有なので同期しない）
+    const syncFields: (keyof Account)[] = [
+      'name', 'accountGroup', 'category', 'taxDetermination',
+      'target', 'deprecated', 'defaultTaxCategoryId',
+      'isContraRevenue', 'isContraExpense',
+    ]
     for (const clientAccount of clientData.accounts) {
       const master = masterById.get(clientAccount.accountId)
-      if (master && master.name !== clientAccount.name) {
-        clientAccount.name = master.name
-        changed = true
+      if (!master) continue
+      for (const field of syncFields) {
+        const masterVal = master[field]
+        const clientVal = clientAccount[field]
+        if (masterVal !== clientVal && masterVal !== undefined) {
+          ;(clientAccount as Record<string, unknown>)[field] = masterVal
+          changed = true
+        }
       }
     }
 

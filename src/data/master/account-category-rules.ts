@@ -43,7 +43,9 @@ export const MF_CATEGORY_LABELS: Record<string, string> = {
   // PL費用
   'COST_OF_PURCHASED_GOODS': '売上原価（仕入）',
   'BEGINNING_INVENTORY': '期首棚卸高',
+  'BEGINNING_MERCHANDISE_INVENTORY': '期首商品棚卸高',
   'ENDING_INVENTORY': '期末棚卸高',
+  'ENDING_MERCHANDISE_INVENTORY': '期末商品棚卸高',
   'SELLING_GENERAL_AND_ADMINISTRATIVE_EXPENSES': '販管費',
   'EXPENSES': '経費（個人）',
   'REAL_ESTATE_EXPENSES': '不動産経費',
