@@ -188,9 +188,10 @@ export async function importMasterAccounts(
 
   // 5. 削除候補検知（マスタにあるがMFにない行。source='mf'のみ対象）
   // deprecated=trueにすることで過去仕訳の参照先を保持しつつ選択肢から除外
+  // ★ row.target === clientType で事業形態を限定（法人インポート時に個人科目を誤って非推奨化しない）
   const mfNameSet = new Set(mfAccounts.map(a => a.name))
   for (const row of masterItems) {
-    if (row.source === 'mf' && !mfNameSet.has(row.name) && !row.deprecated) {
+    if (row.source === 'mf' && row.target === clientType && !mfNameSet.has(row.name) && !row.deprecated) {
       row.deprecated = true
       diff.deprecatedCandidates.push({ accountId: row.accountId, name: row.name })
     }
