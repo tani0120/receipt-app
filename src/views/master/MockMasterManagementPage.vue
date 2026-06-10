@@ -65,6 +65,16 @@
             <a class="card-link card-link--mf">確認する</a>
           </div>
 
+          <!-- カード7: MF→マスタ→仕訳一覧 フィールド遷移 -->
+          <div class="settings-card settings-card--flow" @click="navigateTo('field-flow')">
+            <div class="settings-card-header">
+              <i class="fa-solid fa-arrows-left-right card-icon card-icon--flow"></i>
+              <h3 class="card-title">MF⇒マスタ⇒仕訳一覧 フィールド遷移</h3>
+            </div>
+            <p class="card-description">MFから取得したフィールドがマスタ管理を経て仕訳一覧のバリデーションでどう使われるかを3段階で可視化。フロント/バックエンドの区分も表示。</p>
+            <a class="card-link card-link--flow">確認する</a>
+          </div>
+
         </div>
       </div>
     </div>
@@ -95,6 +105,7 @@ const navigateTo = (section: string) => {
     'vendors-list': '/master/vendors/list',
     'non-vendor': '/master/vendors/non-vendor',
     'mf-mcp-info': '/master/mcp',
+    'field-flow': '/master/field-flow',
   };
   if (routes[section]) {
     router.push(routes[section]);
@@ -175,5 +186,23 @@ const navigateTo = (section: string) => {
 
 .card-link--mf {
   color: #16a34a;
+}
+
+.settings-card--flow {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #fff 100%);
+}
+
+.settings-card--flow:hover {
+  border-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.card-icon--flow {
+  color: #2563eb;
+}
+
+.card-link--flow {
+  color: #2563eb;
 }
 </style>

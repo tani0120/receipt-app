@@ -414,6 +414,12 @@ export const routes: RouteRecordRaw[] = [
     name: 'MasterMcpInfo',
     component: () => import('@/views/master/MasterMcpInfoPage.vue')
   },
+  {
+    // MF→マスタ→仕訳一覧 フィールド遷移（バリデーション設計の可視化）
+    path: '/master/field-flow',
+    name: 'MasterFieldFlow',
+    component: () => import('@/views/master/MasterFieldFlowPage.vue')
+  },
   // 進捗管理 一覧管理ページ（ビュー設定）
   {
     path: '/master/progress/view-settings',

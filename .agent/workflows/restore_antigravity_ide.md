@@ -104,8 +104,7 @@ Copy-Item "C:\Users\kazen\.vscode\extensions" "$backup\extensions" -Recurse
   "editor.renderWhitespace": "all",
   "editor.wordWrap": "on",
   "emmet.triggerExpansionOnTab": true,
-  "editor.minimap.showSlider": "always",
-  "geminicodeassist.project": "rising-water-pjcz2"
+  "editor.minimap.showSlider": "always"
 }
 ```
 
@@ -129,7 +128,7 @@ $cli = "antigravity-ide"
 & $cli --install-extension usernamehw.errorlens                   # Error Lens（エラー行内表示）
 & $cli --install-extension gruntfuggly.todo-tree                  # TODO Tree（TODO/HACK検索）
 & $cli --install-extension eamodio.gitlens                        # GitLens（Git履歴）
-& $cli --install-extension google.geminicodeassist                # Gemini Code Assist
+# google.geminicodeassist は2026-06-18にサービス終了のため削除
 & $cli --install-extension ms-ceintl.vscode-language-pack-ja      # 日本語パック
 
 # ===== 推奨（効率化） =====
@@ -200,10 +199,7 @@ npm ci     # node_modules再構築（必要な場合のみ）
 
 1. `Ctrl + Shift + P` → 「Gemini: Sign In」
 2. Googleアカウントでログイン
-3. 設定でプロジェクトIDを確認:
-   ```json
-   "geminicodeassist.project": "rising-water-pjcz2"
-   ```
+3. 設定でプロジェクトIDを確認（Gemini Code Assistは2026-06-18にサービス終了済み。不要。）
 
 ---
 
