@@ -7,11 +7,9 @@
  * 設計方針（2026-06-05）:
  *   - categoryはMFの値をそのまま保持（29種への変換を廃止）
  *   - accountGroupはMFのaccount_groupから直接変換
- *   - taxDeterminationはaccountGroupから直接判定（データ駆動）
  */
 
-import type { AccountGroup, AccountTarget, TaxDetermination } from '../../types/shared-account'
-import { getAccountGroupDirection } from './account-category-rules'
+import type { AccountGroup, AccountTarget } from '../../types/shared-account'
 
 // ========================================
 // MF account_group → 全社マスタ大分類（accountGroup）マッピング
@@ -33,23 +31,6 @@ export function deriveMfAccountGroup(mfAccountGroup: string, _mfCategory?: strin
     case 'REVENUE': return 'PL_REVENUE'
     default: return 'PL_EXPENSE' // フォールバック
   }
-}
-
-// ========================================
-// accountGroup → 税区分判定モード（taxDetermination）導出
-// ========================================
-
-/**
- * accountGroupから税区分判定モードを導出する（データ駆動）
- *
- * 旧: SALES_CATEGORIES/PURCHASE_CATEGORIESのハードコード配列で判定
- * 新: accountGroupから直接判定
- */
-export function deriveTaxDetermination(accountGroup: AccountGroup): TaxDetermination {
-  const direction = getAccountGroupDirection(accountGroup)
-  if (direction === 'sales') return 'auto_sales'
-  if (direction === 'purchase') return 'auto_purchase'
-  return 'fixed'
 }
 
 // ========================================

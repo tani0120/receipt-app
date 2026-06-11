@@ -37,7 +37,7 @@ import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services
 import { importMasterAccounts } from '../services/mfAccountImportService'
 import { saveClientAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories, getClientAccounts, hasClientAccounts } from '../services/accountMasterApi'
 import type { Account } from '../../types/shared-account'
-import { deriveMfAccountGroup, deriveTaxDetermination, deriveTarget } from '../../data/master/mf-account-category-mapping'
+import { deriveMfAccountGroup, deriveTarget } from '../../data/master/mf-account-category-mapping'
 import { generateMasterId } from '../services/generateMasterId'
 import { generateTaxMasterId, ensureUniqueTaxId } from '../services/taxIdGenerator'
 import type { TaxCategory } from '../../types/shared-tax-category'
@@ -497,7 +497,6 @@ app.post('/sync-all', async (c) => {
           accountGroup: group,
           // 税区分: MCPの値を優先（顧問先のMFが正）、取れない場合のみ全社マスタでフォールバック
           defaultTaxCategoryId: masterTaxId || master.defaultTaxCategoryId,
-          // taxDeterminationはマスタを維持（手動調整済みの場合があるため）
           sortOrder: idx + 1,
           // MF連携フィールド（顧問先データでのみ使用）
           mfAccountId: a.id,
@@ -521,7 +520,6 @@ app.post('/sync-all', async (c) => {
         accountGroup: group,
         category: a.category,
         defaultTaxCategoryId: masterTaxId,
-        taxDetermination: deriveTaxDetermination(group),
         deprecated: false,
         effectiveFrom: DEFAULT_EFFECTIVE_FROM,
         effectiveTo: null,
@@ -901,7 +899,6 @@ app.post('/import-client-accounts', async (c) => {
         accountGroup: group,
         category: a.category,
         defaultTaxCategoryId: masterTaxId,
-        taxDetermination: deriveTaxDetermination(group),
         deprecated: false,
         effectiveFrom: DEFAULT_EFFECTIVE_FROM,
         effectiveTo: null,

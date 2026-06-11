@@ -206,6 +206,8 @@ export const VOUCHER_TYPE_MAP: Partial<
   tax_payment:      { expense: '経費'                  },
   cash_ledger:      { expense: '経費',   income: null },    // income は内容次第
   journal_voucher:  { expense: '振替',   income: '振替' },
+  invoice_issued:   {                    income: '売上' },   // 発行請求書 = 売上（提案B）
+  receipt_issued:   {                    income: '売上' },   // 発行領収書 = 売上（提案B）
 }
 
 /**

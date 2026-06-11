@@ -85,7 +85,6 @@ export function toAccount(row: Record<string, unknown>): Account {
     accountGroup: (row.account_group as Account['accountGroup']) ?? 'PL_EXPENSE',
     category: (row.category as string) ?? '',
     defaultTaxCategoryId: (row.default_tax_category_id as string) ?? undefined,
-    taxDetermination: (row.tax_determination as Account['taxDetermination']) ?? 'auto_purchase',
     deprecated: (row.deprecated as boolean) ?? false,
     effectiveFrom: (row.effective_from as string) ?? DEFAULT_EFFECTIVE_FROM,
     effectiveTo: (row.effective_to as string) ?? null,

@@ -41,7 +41,7 @@ import type { TaxCategory } from '../../types/shared-tax-category'
 
 /** バリデーション用の勘定科目最小インターフェース（Account型からPick） */
 export type AccountForValidation = Pick<Account,
-  'accountId' | 'accountGroup' | 'category' | 'taxDetermination' |
+  'accountId' | 'accountGroup' | 'category' |
   'defaultTaxCategoryId' | 'isContraRevenue' | 'isContraExpense'
 >
 
@@ -528,6 +528,7 @@ export function syncWarningLabelsCore(
   }
 
   // ── 9. TAX_ACCOUNT_MISMATCH（科目×税区分不整合） ──
+  // 既定税区分のdirectionを直接参照して方向一致を判定
   const allEntries = [...journal.debit_entries, ...journal.credit_entries]
   let hasTaxAccountMismatch = false
   for (const entry of allEntries) {
@@ -536,18 +537,20 @@ export function syncWarningLabelsCore(
     if (!acct) continue
     const taxCat = taxCategories.find(t => t.taxCategoryId === entry.tax_category_id)
     if (!taxCat) continue
-    if (acct.taxDetermination === 'fixed') {
-      if (acct.defaultTaxCategoryId) {
-        const defaultTax = taxCategories.find(t => t.taxCategoryId === acct.defaultTaxCategoryId)
-        if (defaultTax && taxCat.taxCategoryId !== defaultTax.taxCategoryId) {
-          hasTaxAccountMismatch = true
-          break
+
+    // 既定税区分が設定されている場合、そのdirectionと実際の税区分のdirectionを比較
+    if (acct.defaultTaxCategoryId) {
+      const defaultTax = taxCategories.find(t => t.taxCategoryId === acct.defaultTaxCategoryId)
+      if (defaultTax) {
+        // direction=common（共通/対象外）はどの方向とも矛盾しない
+        if (defaultTax.direction !== 'common' && taxCat.direction !== 'common') {
+          // 既定税区分の方向と実際の税区分の方向が異なれば矛盾
+          if (defaultTax.direction !== taxCat.direction) {
+            hasTaxAccountMismatch = true
+            break
+          }
         }
       }
-    } else if (acct.taxDetermination === 'auto_purchase') {
-      if (taxCat.direction === 'sales') { hasTaxAccountMismatch = true; break }
-    } else if (acct.taxDetermination === 'auto_sales') {
-      if (taxCat.direction === 'purchase') { hasTaxAccountMismatch = true; break }
     }
   }
   if (hasTaxAccountMismatch) addLabel('TAX_ACCOUNT_MISMATCH', WARN_TAX_ACCOUNT_MISMATCH)

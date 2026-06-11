@@ -142,8 +142,6 @@ CREATE TABLE IF NOT EXISTS accounts (
                           CHECK (account_group IN ('BS_ASSET', 'BS_LIABILITY', 'BS_EQUITY', 'PL_REVENUE', 'PL_EXPENSE')),
   category                TEXT NOT NULL DEFAULT '',        -- 中分類
   default_tax_category_id TEXT,                            -- TaxCategory.id参照
-  tax_determination       TEXT NOT NULL DEFAULT 'auto_purchase'
-                          CHECK (tax_determination IN ('auto_purchase', 'auto_sales', 'fixed')),
   deprecated              BOOLEAN NOT NULL DEFAULT false,
   effective_from          TEXT NOT NULL DEFAULT '2019-10-01',
   effective_to            TEXT,

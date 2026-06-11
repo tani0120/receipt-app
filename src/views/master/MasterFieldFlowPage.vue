@@ -485,30 +485,6 @@ const glossaryTerms = [
       { role: '科目フィルタ', sufficient: true, description: '科目一覧の法人/個人表示切替' },
     ],
     problems: [],
-    proposal: [],
-  },
-  // ── 11. taxDetermination ──
-  {
-    id: '②-5', phase: 2, code: 'taxDetermination', typeName: 'TaxDetermination', japanese: '税区分判定方式（3種）',
-    definedAt: '科目マスタの属性。マスタ独自定義。MFにはない',
-    purpose: '#9(TAX_ACCOUNT_MISMATCH)で科目のtaxDeterminationと税区分のdirection（税区分方向）の矛盾を判定するために存在する。',
-    allValues: [
-      { value: 'fixed', label: '固定', note: '既定税区分と完全一致必須。BS科目に設定', highlight: false },
-      { value: 'auto_purchase', label: '自動判定/仕入方向', note: '売上方向の税区分なら矛盾。費用科目に設定', highlight: false },
-      { value: 'auto_sales', label: '自動判定/売上方向', note: '仕入方向の税区分なら矛盾。売上科目に設定', highlight: false },
-    ],
-    roles: [
-      { role: '#9: 税区分方向との矛盾判定', sufficient: false, description: '60件の不一致が構造的に残る' },
-    ],
-    problems: [
-      '廃止検討中のまま放置されている。60件の不一致が構造的に残る',
-      '既定税区分のdirectionを直接参照すれば、taxDetermination自体が不要になる',
-      'taxDetermination = auto_purchase なのに defaultTaxCategoryId の direction = sales、のような矛盾がマスタに存在する',
-    ],
-    proposal: [
-      'taxDetermination（3値）を廃止。defaultTaxCategoryId → 税区分マスタ → direction を直接参照する方式へ移行',
-      '移行後はtaxDeterminationフィールド自体を削除可能',
-    ],
   },
   // ── 12. isContra系 ──
   {
@@ -534,21 +510,20 @@ const glossaryTerms = [
   {
     id: '②-7', phase: 2, code: 'direction（税区分）', typeName: 'TaxDirection', japanese: '税区分の方向（3種）',
     definedAt: 'src/types/shared-tax-category.ts。マスタ独自定義。MFにはない',
-    purpose: '#9(TAX_ACCOUNT_MISMATCH)で科目のtaxDeterminationと組合せて、科目の期待する方向と税区分の方向が一致するかを判定する。',
+    purpose: '#9(TAX_ACCOUNT_MISMATCH)で科目のaccountGroupから導出した期待方向と税区分のdirectionが一致するかを直接判定する。',
     allValues: [
       { value: 'sales', label: '売上方向', note: '売上系の税区分（課税売上等）', highlight: false },
       { value: 'purchase', label: '仕入方向', note: '仕入系の税区分（課税仕入等）', highlight: false },
       { value: 'common', label: '共通/対象外', note: '対象外・不課税等（どの科目にも使える）', highlight: false },
     ],
     roles: [
-      { role: '#9: 科目の期待方向との一致判定', sufficient: true, description: 'taxDeterminationと組合せて判定' },
+      { role: '#9: 既定税区分のdirection → 科目の期待方向との一致判定', sufficient: true, description: 'defaultTaxCategoryId経由で直接参照' },
     ],
     problems: [
-      'taxDetermination廃止に伴い、direction直接参照方式への移行が必要。ただしdirection自体は正しい概念なので残る',
       '⚠️ 仕訳方向のDirection（A2）/ 行方向のLineItemDirection（A3）とは全く別の概念。値も異なる（sales/purchase vs expense/income）',
     ],
     proposal: [
-      'taxDetermination廃止後は、科目のdefaultTaxCategoryId → 税区分マスタのdirectionを直接参照して方向判定する',
+      '既定税区分のdefaultTaxCategoryId → 税区分マスタのdirectionを直接参照して方向判定する方式に移行済み（2026-06-11）',
     ],
   },
   // ── 14. simplifiedOnly ──
@@ -615,7 +590,8 @@ accountGroup（5種）
        └→ validateDebitCreditCombination()  ← #7
             └ isContraRevenue / isContraExpense（例外判定）
 
-taxDetermination（3種）× TaxDirection（3種）
+
+defaultTaxCategoryId → TaxCategory.direction × accountGroup → getAccountGroupDirection()
   └→ #9: TAX_ACCOUNT_MISMATCH
 
 consumptionTaxMode（3種）× simplifiedOnly / isExemptDefault
@@ -652,8 +628,7 @@ const fieldSections: { title: string; note: string; hasMf: boolean; hasMaster: b
       { field: 'accountId',            label: '科目ID',                 mf: '🔄', master: '✅', validation: '全チェックの起点。仕訳行のaccount（選択された科目ID）でマスタを検索し以下の属性を取得。#1(ACCOUNT_UNKNOWN)で存在チェック。#8(allowedIds)でIDそのものをホワイトリスト照合',  side: 'both',  note: 'MFのBase64 IDをローマ字IDに変換', highlight: true },
       { field: 'accountGroup',         label: '大分類',                 mf: '🔄', master: '✅', validation: '#7(CATEGORY_CONFLICT): 4分類に変換し借方×貸方の組合せ判定。#8(VOUCHER_TYPE_CONFLICT): allowedGroupsでホワイトリスト照合',  side: 'both',  note: 'MFの5分類→マスタの大分類→4分類', highlight: true },
       { field: 'category',            label: '科目分類',               mf: '✅', master: '✅', validation: '#8(VOUCHER_TYPE_CONFLICT): allowedCategoriesでホワイトリスト照合。accountGroupのallowedGroups、accountIdのallowedIdsと合わせて3方式で判定',  side: 'both',  note: 'CASH_AND_DEPOSITS等。証票意味とは別の概念', highlight: true },
-      { field: 'defaultTaxCategoryId', label: '既定の税区分',           mf: '🔄', master: '✅', validation: '#9(TAX_ACCOUNT_MISMATCH): taxDetermination=fixedの場合、この値と仕訳行の税区分IDが完全一致するか判定',  side: 'both',  note: 'MFのBase64 IDをマスタIDに変換', highlight: true },
-      { field: 'taxDetermination',     label: '税区分判定方式',         mf: '❌', master: '✅', validation: '#9(TAX_ACCOUNT_MISMATCH): fixed=既定税区分と完全一致必須、auto_purchase=売上方向の税区分なら矛盾、auto_sales=仕入方向の税区分なら矛盾（廃止検討中→既定税区分のdirectionを直接参照する方式へ移行予定）', side: 'both', note: 'fixed/auto_purchase/auto_salesの3値', highlight: true },
+      { field: 'defaultTaxCategoryId', label: '既定の税区分',           mf: '🔄', master: '✅', validation: '#9(TAX_ACCOUNT_MISMATCH): 既定税区分のdirectionと科目のaccountGroupから導出した期待方向を照合',  side: 'both',  note: 'MFのBase64 IDをマスタIDに変換', highlight: true },
       { field: 'isContraRevenue',      label: '逆仕訳許容（収益）',     mf: '❌', master: '✅', validation: '#7(CATEGORY_CONFLICT)の例外: この科目が借方にあっても「収益が借方にある」警告を出さない（売上返品の振替仕訳用）', side: 'both', note: '2科目×2対象=計4件。売上値引・返品（個人/法人各1件）', highlight: true },
       { field: 'isContraExpense',      label: '逆仕訳許容（費用）',     mf: '❌', master: '✅', validation: '#7(CATEGORY_CONFLICT)の例外: この科目が貸方にあっても「費用が貸方にある」警告を出さない（仕入返品の振替仕訳用）', side: 'both', note: '2科目×2対象=計4件。仕入値引・返品（個人/法人各1件）', highlight: true },
       // --- マスタ管理フィールド（バリデーション不使用） ---
@@ -688,7 +663,7 @@ const fieldSections: { title: string; note: string; hasMf: boolean; hasMaster: b
     rows: [
       // --- バリデーションで使用する6フィールド（TaxCategoryForValidation型） ---
       { field: 'taxCategoryId',   label: '税区分ID',           mf: '🔄', master: '✅', validation: '仕訳行のtax_category_idでマスタを検索し以下の属性を取得。#2(TAX_UNKNOWN)で存在チェック',  side: 'both',  note: 'MFのBase64 IDをマスタIDに変換', highlight: true },
-      { field: 'direction',       label: '方向（売上/仕入/共通）', mf: '❌', master: '✅', validation: '#9(TAX_ACCOUNT_MISMATCH): 科目のtaxDeterminationと組合せ、科目の期待する方向と税区分の方向が一致するかを判定',  side: 'both', note: 'sales/purchase/common。マスタ独自定義', highlight: true },
+      { field: 'direction',       label: '方向（売上/仕入/共通）', mf: '❌', master: '✅', validation: '#9(TAX_ACCOUNT_MISMATCH): 科目のaccountGroupから導出した期待方向と税区分のdirectionが一致するかを判定',  side: 'both', note: 'sales/purchase/common。マスタ独自定義', highlight: true },
       { field: 'simplifiedOnly',  label: '簡易課税専用',       mf: '❌', master: '✅', validation: '課税方式チェック: 顧問先が原則課税の場合にtrueの税区分は使用不可（isTaxCategoryInvalidForMode関数）',  side: 'both',  note: '48件がtrue', highlight: true },
       { field: 'baseId',          label: '基本税区分ID',       mf: '❌', master: '✅', validation: '課税方式不一致の修正: 簡易課税専用税区分から原則用の対応税区分を特定（resolveTaxCategoryForMode関数）',  side: 'both',  note: '48件に設定', highlight: false },
       { field: 'isExemptDefault', label: '免税時の既定',       mf: '❌', master: '✅', validation: '免税事業者の判定: 免税事業者はこの税区分（対象外）以外を使用すると矛盾（isTaxCategoryInvalidForMode関数）',  side: 'both',  note: '1件のみtrue', highlight: true },
@@ -733,7 +708,7 @@ const fieldSections: { title: string; note: string; hasMf: boolean; hasMaster: b
     hasMf: false,
     hasMaster: false,
     rows: [
-      { field: 'account',            label: '選択された科目ID',   mf: '', master: '', validation: 'マスタ検索のキー。この値で科目マスタからaccountGroup/category/defaultTaxCategoryId/taxDetermination/isContra系を取得し、#1/#7/#8/#9/#12で使用',  side: 'front', note: '科目セルで選択', highlight: true },
+      { field: 'account',            label: '選択された科目ID',   mf: '', master: '', validation: 'マスタ検索のキー。この値で科目マスタからaccountGroup/category/defaultTaxCategoryId/isContra系を取得し、#1/#7/#8/#9/#12で使用',  side: 'front', note: '科目セルで選択', highlight: true },
       { field: 'tax_category_id',    label: '選択された税区分ID', mf: '', master: '', validation: '#9(TAX_ACCOUNT_MISMATCH): この値で税区分マスタからdirectionを取得し科目の方向と照合。#2(TAX_UNKNOWN): 未入力またはマスタ未存在なら警告',  side: 'front', note: '税区分セルで選択', highlight: true },
       { field: 'amount',             label: '金額',               mf: '', master: '', validation: '#6(DEBIT_CREDIT_MISMATCH): 借方全行の合計と貸方全行の合計が一致するか判定。#5(AMOUNT_UNCLEAR): 未入力なら警告。#13(AUTO_INVOICE_SMALL): 合計額が1万円未満かの判定にも使用',  side: 'front', note: '金額セルに入力', highlight: false },
       { field: 'voucher_date',       label: '取引日',             mf: '', master: '', validation: '#4(DATE_UNKNOWN): 未入力なら警告。#10(FUTURE_DATE): 未来日なら警告。#11(DATE_OUT_OF_RANGE): 会計期間外なら警告',  side: 'front', note: '日付セルに入力', highlight: false },
@@ -784,7 +759,7 @@ const validationRules = [
   { num: '#7',  id: 'CATEGORY_CONFLICT',       name: '貸借組合せ矛盾',       fields: 'accountGroup→4分類変換 + isContraRevenue/isContraExpense（逆仕訳例外）。二重ループで全ペアチェック',  sideClass: 'side-both',  sideLabel: '共用' },
   { num: '#7b', id: 'SAME_ACCOUNT_BOTH_SIDES', name: '借方貸方に同一科目',   fields: 'account（科目ID）× 借方全行と貸方全行の集合比較',  sideClass: 'side-both',  sideLabel: '共用' },
   { num: '#8',  id: 'VOUCHER_TYPE_CONFLICT',   name: '証票意味ルール矛盾',   fields: 'voucher_type（証票意味） → ルールテーブル → allowedGroups(accountGroup) / allowedIds(accountId) / allowedCategories(category) の3方式で判定',  sideClass: 'side-both',  sideLabel: '共用' },
-  { num: '#9',  id: 'TAX_ACCOUNT_MISMATCH',    name: '科目×税区分矛盾',     fields: 'taxDetermination + defaultTaxCategoryId + direction（税区分の方向）。科目の期待する方向と選択された税区分の方向を照合',  sideClass: 'side-both',  sideLabel: '共用' },
+  { num: '#9',  id: 'TAX_ACCOUNT_MISMATCH',    name: '科目×税区分矛盾',     fields: 'defaultTaxCategoryId → 税区分マスタのdirectionを直接参照。科目のaccountGroupから導出した期待方向と選択された税区分の方向を照合',  sideClass: 'side-both',  sideLabel: '共用' },
   { num: '#10', id: 'FUTURE_DATE',             name: '未来日付',             fields: 'voucher_date（取引日）。翌日以降なら警告',  sideClass: 'side-both',  sideLabel: '共用' },
   { num: '#11', id: 'DATE_OUT_OF_RANGE',       name: '期間外日付',           fields: 'voucher_date + fiscalMonth（決算月。ValidationContext）。会計年度の開始月〜決算月末の範囲外なら警告',  sideClass: 'side-both',  sideLabel: '共用' },
   { num: '#12', id: 'DIRECTOR_LOAN',           name: '役員貸付金検出',       fields: 'account（科目ID）+ directorLoanAccountIds（ValidationContext）。一致する科目があれば警告',  sideClass: 'side-both',  sideLabel: '共用' },

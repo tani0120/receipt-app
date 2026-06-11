@@ -179,4 +179,28 @@ export const VOUCHER_TYPE_RULES: Record<string, VoucherTypeRule> = {
       allowedCategories: ['CASH_AND_DEPOSITS'],
     },
   },
+
+  '売上返品': {
+    label: '売上返品',
+    description: '売上の返品・値引。借方に収益科目（売上の取消）、貸方に売掛金等の受取手段。isContra科目が借方に来る。',
+    debit: {
+      allowedGroups: ['PL_REVENUE'],
+    },
+    credit: {
+      allowedIds: [...RECEIVABLE_IDS],
+      allowedCategories: ['TRADE_RECEIVABLES', 'CASH_AND_DEPOSITS'],
+    },
+  },
+
+  '仕入返品': {
+    label: '仕入返品',
+    description: '仕入・経費の返品・値引。借方に買掛金等の支払手段、貸方に費用科目（費用の取消）。isContra科目が貸方に来る。',
+    debit: {
+      allowedIds: [...PAYMENT_IDS],
+      allowedCategories: ['TRADE_PAYABLES', 'CASH_AND_DEPOSITS', 'OTHER_CURRENT_LIABILITIES'],
+    },
+    credit: {
+      allowedGroups: ['PL_EXPENSE'],
+    },
+  },
 }

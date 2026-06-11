@@ -1,4 +1,4 @@
-﻿/**
+/**
  * accountMasterApi.ts — 科目・税区分マスタデータアクセス層（共通）
  *
  * 【責務】
@@ -16,7 +16,7 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs'
 import { getTaxAvailableForMethod } from './mfTaxAvailableStore'
 import { join } from 'path'
-import type { Account, AccountGroup, TaxDetermination } from '../../types/shared-account'
+import type { Account, AccountGroup } from '../../types/shared-account'
 import type { TaxCategory, TaxDirection } from '../../types/shared-tax-category'
 
 // ────────────────────────────────────────────
@@ -77,7 +77,6 @@ export function getClientAccountsForValidation(clientId: string): {
   name: string
   accountGroup: AccountGroup
   category: string
-  taxDetermination: TaxDetermination
   defaultTaxCategoryId?: string
   isContraRevenue?: boolean
   isContraExpense?: boolean
@@ -88,7 +87,6 @@ export function getClientAccountsForValidation(clientId: string): {
     name: a.name,
     accountGroup: a.accountGroup as AccountGroup,
     category: a.category,
-    taxDetermination: a.taxDetermination as TaxDetermination,
     defaultTaxCategoryId: a.defaultTaxCategoryId,
     isContraRevenue: a.isContraRevenue,
     isContraExpense: a.isContraExpense,
@@ -253,7 +251,7 @@ function syncMasterAccountsToClients(masterItems: Account[]): void {
     // コアフィールド同期: マスタとIDが一致する科目のフィールドを同期
     // （MFフィールド mfAccountId等は顧問先固有なので同期しない）
     const syncFields: (keyof Account)[] = [
-      'name', 'accountGroup', 'category', 'taxDetermination',
+      'name', 'accountGroup', 'category',
       'target', 'deprecated', 'defaultTaxCategoryId',
       'isContraRevenue', 'isContraExpense',
     ]

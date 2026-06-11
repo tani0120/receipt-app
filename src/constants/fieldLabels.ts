@@ -24,7 +24,6 @@
 export const ACCOUNT_FIELD_LABELS: Record<string, string> = {
   name: '科目名',
   category: '科目分類',
-  taxDetermination: '税区分判定',
   defaultTaxCategoryId: 'デフォルト税区分',
   aiDetermination: '自動判定',
 }

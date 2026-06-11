@@ -10,9 +10,6 @@
 /** 対象区分（法人 or 個人。MFの科目体系に準拠。both廃止済み） */
 export type AccountTarget = 'corp' | 'individual'
 
-/** 税区分判定モード（STREAMED準拠） */
-export type TaxDetermination = 'auto_purchase' | 'auto_sales' | 'fixed'
-
 /** 大分類（財務諸表上の位置） */
 export type AccountGroup = 'BS_ASSET' | 'BS_LIABILITY' | 'BS_EQUITY' | 'PL_REVENUE' | 'PL_EXPENSE'
 
@@ -32,8 +29,6 @@ export type Account = {
     category: string
     /** デフォルト税区分ID（TaxCategory.taxCategoryId への参照） */
     defaultTaxCategoryId?: string
-    /** 税区分判定モード: auto_purchase=自動判定（仕入）, auto_sales=自動判定（売上）, fixed=固定 */
-    taxDetermination: TaxDetermination
     /** 非推奨フラグ（true=グレーアウト表示。物理削除禁止 → ルール3） */
     deprecated: boolean
     /** 適用開始日（ISO 8601形式。例: '2019-10-01'） */

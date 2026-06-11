@@ -26,7 +26,6 @@ import { generateMasterId } from './generateMasterId'
 import { isIndividualType } from '../../constants/clientOptions'
 import {
   deriveMfAccountGroup,
-  deriveTaxDetermination,
 } from '../../data/master/mf-account-category-mapping'
 import type { Account } from '../../types/shared-account'
 import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
@@ -172,7 +171,6 @@ export async function importMasterAccounts(
         accountGroup: mfAccountGroup,
         category: mf.category,
         defaultTaxCategoryId: masterTaxId,
-        taxDetermination: deriveTaxDetermination(mfAccountGroup),
         deprecated: false,
         effectiveFrom: DEFAULT_EFFECTIVE_FROM,
         effectiveTo: null,

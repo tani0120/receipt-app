@@ -84,7 +84,6 @@
               <col :style="{ width: caColWidths['accountGroup'] + 'px' }">
               <col :style="{ width: caColWidths['direction'] + 'px' }">
               <col :style="{ width: caColWidths['category'] + 'px' }">
-              <col :style="{ width: caColWidths['taxDetermination'] + 'px' }">
               <col :style="{ width: caColWidths['defaultTaxCategoryId'] + 'px' }">
               <col :style="{ width: caColWidths['allowedVoucherTypes'] + 'px' }">
               <col :style="{ width: caColWidths['effectiveFrom'] + 'px' }">
@@ -129,10 +128,6 @@
                   科目分類 <i :class="getSortIcon('category')"></i>
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('category', $event)"></div>
                 </th>
-                <th class="sortable relative" @click="sortAccounts('taxDetermination')">
-                  税区分判定 <i :class="getSortIcon('taxDetermination')"></i>
-                  <div class="resize-handle" @mousedown.stop="onCaResizeStart('taxDetermination', $event)"></div>
-                </th>
                 <th class="sortable relative" @click="sortAccounts('defaultTaxCategoryId')">
                   デフォルト税区分 <i :class="getSortIcon('defaultTaxCategoryId')"></i>
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('defaultTaxCategoryId', $event)"></div>
@@ -172,18 +167,8 @@
                   <span v-else-if="isMasterCustomAccount(row.accountId)" style="color:#1976D2;"><i class="fa-solid fa-building-columns" style="font-size:12px;"></i> マスタ（カスタム）</span>
                   <span v-else><i class="fa-solid fa-building-columns" style="color:#1976D2;font-size:12px;"></i> マスタ</span>
                 </td>
-                <td class="td-ai" @dblclick="row.isCustom && startEdit(row, 'aiDetermination')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.accountId && editingField === 'aiDetermination'">
-                    <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
-                      <template v-if="getAllowedTaxDeterminations(row).length > 1">
-                        <option v-for="o in QUALIFIED_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-                      </template>
-                      <template v-else>
-                        <option v-for="o in QUALIFIED_OPTIONS.filter(o => o.value === 'false')" :key="o.value" :value="o.value">{{ o.label }}</option>
-                      </template>
-                    </select>
-                  </template>
-                  <template v-else>{{ getDisplayAiDet(row) }}</template>
+                <td class="td-ai">
+                  {{ getDisplayAiDet(row) }}
                 </td>
                 <td class="td-master-id" :title="row.accountId">{{ row.accountId }}</td>
                 <td @dblclick="row.isCustom && startEdit(row, 'name')" :class="{ 'td-editable': row.isCustom }">
@@ -214,15 +199,6 @@
                     </select>
                   </template>
                   <template v-else>{{ getCategoryLabel(row.category) }}</template>
-                </td>
-                <!-- 税区分判定 -->
-                <td @dblclick="row.isCustom && startEdit(row, 'taxDetermination')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.accountId && editingField === 'taxDetermination'">
-                    <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
-                      <option v-for="td in getAllowedTaxDeterminations(row)" :key="td" :value="td">{{ taxDetLabel(td) }}</option>
-                    </select>
-                  </template>
-                  <template v-else>{{ getDisplayTaxDet(row) }}</template>
                 </td>
                 <!-- デフォルト税区分 -->
                 <td @dblclick="row.isCustom && startEdit(row, 'defaultTaxCategoryId')" :class="{ 'td-editable': row.isCustom }">
@@ -286,14 +262,11 @@ import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
-import { QUALIFIED_OPTIONS } from '@/constants/vendorOptions';
 import MfImportButton from '@/components/MfImportButton.vue';
 import { UI_MSG } from '@/constants/uiMessages';
 import { CLIENT_ACCOUNT_FIELD_LABELS } from '@/constants/fieldLabels';
 import {
   getAccountGroupDirection,
-  getAllowedTaxDeterminations as getAllowedTaxDeterminationsRaw,
-  taxDetLabel,
   deriveCategoryDefaults,
   getCategoryLabel,
 } from '@/data/master/account-category-rules';
@@ -312,7 +285,6 @@ const caDefaultWidths: Record<string, number> = {
   accountGroup: 80,
   direction: 60,
   category: 100,
-  taxDetermination: 100,
   defaultTaxCategoryId: 120,
   allowedVoucherTypes: 140,
   effectiveFrom: 80,
@@ -542,7 +514,7 @@ const editingField = ref('');
 const editValue = ref('');
 const editOriginalName = ref('');
 
-type AccountEditField = 'name' | 'category' | 'taxDetermination' | 'defaultTaxCategoryId' | 'subAccount' | 'aiDetermination';
+type AccountEditField = 'name' | 'category' | 'defaultTaxCategoryId' | 'subAccount';
 
 function startEdit(row: Account, field: AccountEditField) {
   if (field !== 'subAccount' && !row.isCustom) {
@@ -554,10 +526,8 @@ function startEdit(row: Account, field: AccountEditField) {
   switch (field) {
     case 'name': editValue.value = row.name; editOriginalName.value = row.name; break;
     case 'category': editValue.value = row.category; break;
-    case 'taxDetermination': editValue.value = row.taxDetermination; break;
     case 'defaultTaxCategoryId': editValue.value = row.defaultTaxCategoryId ?? ''; break;
     case 'subAccount': editValue.value = row.subAccount ?? ''; break;
-    case 'aiDetermination': editValue.value = String(row.taxDetermination !== 'fixed'); break;
   }
 }
 
@@ -573,31 +543,17 @@ function commitEdit(row: Account) {
       break;
     case 'category':
       row.category = editValue.value;
-      // category変更時にaccountGroup・taxDetermination・defaultTaxCategoryIdを自動設定
+      // category変更時にdefaultTaxCategoryIdを自動設定
       {
         const defaults = deriveCategoryDefaults(row.accountGroup, settings.taxCategories.value);
-        row.taxDetermination = defaults.taxDetermination;
         row.defaultTaxCategoryId = defaults.defaultTaxCategoryId;
       }
-      break;
-    case 'taxDetermination':
-      row.taxDetermination = editValue.value as 'auto_purchase' | 'auto_sales' | 'fixed';
       break;
     case 'defaultTaxCategoryId':
       row.defaultTaxCategoryId = editValue.value;
       break;
     case 'subAccount':
       row.subAccount = editValue.value;
-      break;
-    case 'aiDetermination':
-      if (editValue.value === 'true') {
-        if (row.taxDetermination === 'fixed') {
-          const dir = getAccountGroupDirection(row.accountGroup);
-          row.taxDetermination = dir === 'sales' ? 'auto_sales' : 'auto_purchase';
-        }
-      } else {
-        row.taxDetermination = 'fixed';
-      }
       break;
   }
   const caFieldLabels = CLIENT_ACCOUNT_FIELD_LABELS;
@@ -613,21 +569,12 @@ function cancelEdit() {
 // =============== categoryグループ分類（composable化済み。DRY） ===============
 const { categoryGroups } = useCategoryGroups(accountRows);
 
-/** 科目の大分類+中分類に基づいて許可されるtaxDetermination値を返す */
-function getAllowedTaxDeterminations(row: Account): string[] {
-  return getAllowedTaxDeterminationsRaw(row.accountGroup, row.category, clientTaxMethod.value);
-}
 
-/** 課税方式に応じた「税区分自動判定」列の表示値 */
+/** 課税方式に応じた「税区分自動判定」列の表示値（accountGroupのdirectionから導出） */
 function getDisplayAiDet(row: Account): string {
   if (clientTaxMethod.value === 'exempt') return '';
-  return row.taxDetermination !== 'fixed' ? '○' : '';
-}
-
-/** 課税方式に応じた「税区分判定」列の表示値 */
-function getDisplayTaxDet(row: Account): string {
-  if (clientTaxMethod.value === 'exempt') return UI_MSG.免税固定;
-  return taxDetLabel(row.taxDetermination);
+  const dir = getAccountGroupDirection(row.accountGroup);
+  return dir !== 'common' ? '○' : '';
 }
 
 /** 課税方式に応じた「デフォルト税区分」列の表示値 */

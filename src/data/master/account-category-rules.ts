@@ -5,8 +5,6 @@
  *   - accountGroupから直接判定（データ駆動）
  *   - ハードコードのSALES_CATEGORIES等は廃止
  *   - getCategoryAccountGroup()は廃止（accountGroupを直接参照）
- *   - categoryが必要な箇所のみハードコード維持
- *     （BS_ASSET_PURCHASE_CATEGORIES, allowedCategories 4種）
  *
  * 参照元:
  *   - views/master/MockMasterAccountsPage.vue
@@ -14,17 +12,7 @@
  *   - api/services/accountMasterApi.ts
  *   - shared/validation/journalValidationCore.ts（間接）
  */
-import type { AccountGroup, TaxDetermination } from '@/types/shared-account'
-
-// ========================================
-// MFカテゴリ定数（categoryレベルの判定が必要な箇所のみ）
-// ========================================
-
-/** BS資産のうちauto_purchaseを許可するMFカテゴリ（資産取得＝課税仕入） */
-export const BS_ASSET_PURCHASE_CATEGORIES: readonly string[] = [
-  'PROPERTY_PLANT_AND_EQUIPMENT', 'INTANGIBLE_ASSETS',
-]
-
+import type { AccountGroup } from '@/types/shared-account'
 
 
 // ========================================
@@ -117,59 +105,18 @@ export function getAccountGroupDirection(accountGroup: AccountGroup | string): '
 }
 
 /**
- * 科目のaccountGroup・categoryに基づいて許可されるtaxDetermination値を返す
- *
- * @param accountGroup - 勘定科目グループ（BS_ASSET等）
- * @param category - MFカテゴリ名（BS_ASSET_PURCHASE判定用）
- * @param taxMethod - 課税方式
- * @returns 許可されるTaxDetermination値の配列
- */
-export function getAllowedTaxDeterminations(
-  accountGroup: AccountGroup,
-  category: string,
-  taxMethod: string,
-): TaxDetermination[] {
-  // 免税事業者: 全科目 fixed のみ
-  if (taxMethod === 'exempt') return ['fixed']
-
-  if (accountGroup === 'PL_REVENUE') return ['auto_sales', 'fixed']
-  if (accountGroup === 'PL_EXPENSE') return ['auto_purchase', 'fixed']
-  if (accountGroup === 'BS_ASSET'
-    && BS_ASSET_PURCHASE_CATEGORIES.includes(category)) {
-    return ['auto_purchase', 'fixed']
-  }
-  return ['fixed']
-}
-
-/**
- * taxDetermination値の日本語ラベル
- *
- * @param td - TaxDetermination値
- * @returns 日本語表示ラベル
- */
-export function taxDetLabel(td: string): string {
-  switch (td) {
-    case 'auto_purchase': return '自動(仕入)'
-    case 'auto_sales': return '自動(売上)'
-    case 'fixed': return '固定'
-    default: return td
-  }
-}
-
-/**
- * category変更時のtaxDetermination・defaultTaxCategoryIdの自動連動設定（データ駆動）
+ * category変更時のdefaultTaxCategoryIdの自動連動設定（データ駆動）
  *
  * accountGroupは呼び出し元で直接保持しているため、categoryから導出しない。
  *
  * @param accountGroup - 勘定科目グループ（直接指定）
  * @param taxCategories - 税区分マスタ（デフォルトID解決用。省略時はフォールバック）
- * @returns { taxDetermination, defaultTaxCategoryId } の推奨値
+ * @returns { defaultTaxCategoryId } の推奨値
  */
 export function deriveCategoryDefaults(
   accountGroup: AccountGroup,
   taxCategories?: { taxCategoryId: string; isSalesDefault?: boolean; isPurchaseDefault?: boolean; isExemptDefault?: boolean }[],
 ): {
-  taxDetermination: TaxDetermination
   defaultTaxCategoryId: string
 } {
   // データ駆動: マスタのフラグからデフォルト税区分IDを解決
@@ -179,10 +126,10 @@ export function deriveCategoryDefaults(
 
   const direction = getAccountGroupDirection(accountGroup)
   if (direction === 'sales') {
-    return { taxDetermination: 'auto_sales', defaultTaxCategoryId: salesDefault }
+    return { defaultTaxCategoryId: salesDefault }
   }
   if (direction === 'purchase') {
-    return { taxDetermination: 'auto_purchase', defaultTaxCategoryId: purchaseDefault }
+    return { defaultTaxCategoryId: purchaseDefault }
   }
-  return { taxDetermination: 'fixed', defaultTaxCategoryId: exemptDefault }
+  return { defaultTaxCategoryId: exemptDefault }
 }

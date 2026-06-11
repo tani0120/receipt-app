@@ -77,7 +77,6 @@
               <col :style="{ width: acctColWidths['accountGroup'] + 'px' }">
               <col :style="{ width: acctColWidths['direction'] + 'px' }">
               <col :style="{ width: acctColWidths['category'] + 'px' }">
-              <col :style="{ width: acctColWidths['taxDetermination'] + 'px' }">
               <col :style="{ width: acctColWidths['defaultTaxCategoryId'] + 'px' }">
               <col :style="{ width: acctColWidths['allowedVoucherTypes'] + 'px' }">
               <col :style="{ width: acctColWidths['effectiveFrom'] + 'px' }">
@@ -119,10 +118,6 @@
                 <th class="sortable relative" @click="sortAccounts('category')">
                   {{ UI_MSG.マスタ科目_列科目分類 }} <i :class="getSortIcon('category')"></i>
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('category', $event)"></div>
-                </th>
-                <th class="sortable relative" @click="sortAccounts('taxDetermination')">
-                  {{ UI_MSG.マスタ科目_列税区分判定 }} <i :class="getSortIcon('taxDetermination')"></i>
-                  <div class="resize-handle" @mousedown.stop="onAcctResizeStart('taxDetermination', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('defaultTaxCategoryId')">
                   {{ UI_MSG.マスタ科目_列デフォルト税区分 }} <i :class="getSortIcon('defaultTaxCategoryId')"></i>
@@ -169,10 +164,6 @@
                 <!-- 科目分類 -->
                 <!-- 科目分類（読み取り専用） -->
                 <td>{{ getCategoryLabel(row.category) }}</td>
-                <!-- 税区分判定 -->
-                <!-- 税区分判定（読み取り専用） -->
-                <td>{{ getDisplayTaxDet(row) }}</td>
-                <!-- デフォルト税区分 -->
                 <!-- デフォルト税区分（読み取り専用） -->
                 <td>{{ getDisplayDefaultTax(row) }}</td>
                 <td class="td-voucher-types" :title="getAllowedVoucherTypes(row)">{{ getAllowedVoucherTypes(row) }}</td>
@@ -265,7 +256,6 @@ import MfCloudIcon from '@/components/MfCloudIcon.vue';
 import { UI_MSG } from '@/constants/uiMessages';
 import {
   getAccountGroupDirection,
-  taxDetLabel,
   getCategoryLabel,
 } from '@/data/master/account-category-rules';
 import { VOUCHER_TYPE_RULES } from '@/data/master/voucherTypeRules';
@@ -281,7 +271,6 @@ const acctDefaultWidths: Record<string, number> = {
   accountGroup: 80,
   direction: 60,
   category: 100,
-  taxDetermination: 100,
   defaultTaxCategoryId: 120,
   allowedVoucherTypes: 140,
   effectiveFrom: 80,
@@ -533,16 +522,11 @@ async function saveChanges() {
   }
 }
 
-/** 課税方式に応じた「税区分自動判定」列の表示値 */
+/** 課税方式に応じた「税区分自動判定」列の表示値（accountGroupのdirectionから導出） */
 function getDisplayAiDet(row: Account): string {
   if (taxMethod.value === 'exempt') return '';
-  return row.taxDetermination !== 'fixed' ? '○' : '';
-}
-
-/** 課税方式に応じた「税区分判定」列の表示値 */
-function getDisplayTaxDet(row: Account): string {
-  if (taxMethod.value === 'exempt') return UI_MSG.免税固定;
-  return taxDetLabel(row.taxDetermination);
+  const dir = getAccountGroupDirection(row.accountGroup);
+  return dir !== 'common' ? '○' : '';
 }
 
 /** 課税方式に応じた「デフォルト税区分」列の表示値 */
