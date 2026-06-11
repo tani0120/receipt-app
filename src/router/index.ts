@@ -420,6 +420,18 @@ export const routes: RouteRecordRaw[] = [
     name: 'MasterFieldFlow',
     component: () => import('@/views/master/MasterFieldFlowPage.vue')
   },
+  {
+    // MCP活用事例セミナー（実証テスト結果の可視化）
+    path: '/master/mcp-case-study',
+    name: 'McpCaseStudy',
+    component: () => import('@/views/master/McpCaseStudyPage.vue')
+  },
+  {
+    // バリデーションルール一覧（決定論的+税務品質チェック）
+    path: '/master/validation-rules',
+    name: 'ValidationRules',
+    component: () => import('@/views/master/ValidationRulesPage.vue')
+  },
   // 進捗管理 一覧管理ページ（ビュー設定）
   {
     path: '/master/progress/view-settings',

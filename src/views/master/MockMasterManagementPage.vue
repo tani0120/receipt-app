@@ -55,6 +55,16 @@
             <a class="card-link">設定する</a>
           </div>
 
+          <!-- カード6: バリデーションルール一覧 -->
+          <div class="settings-card settings-card--validation" @click="navigateTo('validation-rules')">
+            <div class="settings-card-header">
+              <i class="fa-solid fa-clipboard-check card-icon card-icon--validation"></i>
+              <h3 class="card-title">バリデーションルール一覧</h3>
+            </div>
+            <p class="card-description">仕訳チェックルール（決定論的チェック＋税務品質チェック）の一覧・管理。ルールID・指摘内容・修正提案・自動修正対応を確認できます。</p>
+            <a class="card-link card-link--validation">設定する</a>
+          </div>
+
           <!-- カード6: MF MCP取得情報一覧 -->
           <div class="settings-card settings-card--mf" @click="navigateTo('mf-mcp-info')">
             <div class="settings-card-header">
@@ -73,6 +83,16 @@
             </div>
             <p class="card-description">MFから取得したフィールドがマスタ管理を経て仕訳一覧のバリデーションでどう使われるかを3段階で可視化。フロント/バックエンドの区分も表示。</p>
             <a class="card-link card-link--flow">確認する</a>
+          </div>
+
+          <!-- カード8: MCP活用事例セミナー -->
+          <div class="settings-card settings-card--seminar" @click="navigateTo('mcp-case-study')">
+            <div class="settings-card-header">
+              <i class="fa-solid fa-graduation-cap card-icon card-icon--seminar"></i>
+              <h3 class="card-title">MCP活用事例セミナー</h3>
+            </div>
+            <p class="card-description">MCPサーバーの実機テスト結果と最適な活用方法を解説。postJournals vs postTransactionsの完全比較、MF自動仕訳の精度検証、sugu-suruの存在価値の分析。</p>
+            <a class="card-link card-link--seminar">確認する</a>
           </div>
 
         </div>
@@ -104,8 +124,10 @@ const navigateTo = (section: string) => {
     'vectors': '/master/vectors',
     'vendors-list': '/master/vendors/list',
     'non-vendor': '/master/vendors/non-vendor',
+    'validation-rules': '/master/validation-rules',
     'mf-mcp-info': '/master/mcp',
     'field-flow': '/master/field-flow',
+    'mcp-case-study': '/master/mcp-case-study',
   };
   if (routes[section]) {
     router.push(routes[section]);
@@ -204,5 +226,41 @@ const navigateTo = (section: string) => {
 
 .card-link--flow {
   color: #2563eb;
+}
+
+.settings-card--seminar {
+  border-color: #8b5cf6;
+  background: linear-gradient(135deg, #f5f3ff 0%, #fff 100%);
+}
+
+.settings-card--seminar:hover {
+  border-color: #7c3aed;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+}
+
+.card-icon--seminar {
+  color: #7c3aed;
+}
+
+.card-link--seminar {
+  color: #7c3aed;
+}
+
+.settings-card--validation {
+  border-color: #ef4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #fff 100%);
+}
+
+.settings-card--validation:hover {
+  border-color: #dc2626;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.card-icon--validation {
+  color: #dc2626;
+}
+
+.card-link--validation {
+  color: #dc2626;
 }
 </style>
