@@ -16,7 +16,7 @@ import { trashDriveFile } from '../drive/driveService';
 import { StorageService } from '../../ai/storage';
 import { previewExtractImage } from '../pipeline/previewExtract.service';
 import type { PreviewExtractResponse } from '../pipeline/types';
-import { updateAiResults } from '../documentStore';
+import { updateAiResults } from '../documentsApi';
 import {
   dequeueJobs,
   markJobDone,

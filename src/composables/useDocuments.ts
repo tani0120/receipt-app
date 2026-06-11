@@ -2,15 +2,15 @@
  * useDocuments — 資料管理 composable
  *
  * 【設計原則】
- * - サーバーAPIを通じてデータを永続化（JSON永続化ストア）
+ * - DocumentRepository経由でデータを永続化
  * - モジュールスコープのrefでフロント側のキャッシュを保持
- * - API経由でデータ操作 → サーバー側でJSON永続化
+ * - Repository経由でデータ操作 → サーバー側で永続化
  *
  * 【移行時】
- * - サーバー側のdocumentStoreをDB操作に差し替え
- * - フロント側のAPI呼び出しは変更不要
+ * - createRepositories()内のdocument実装をSupabase版に差し替えるだけ
+ * - このcomposableの変更は不要
  *
- * 準拠: DL-039
+ * 準拠: DL-039, DL-042
  */
 import { ref, computed } from 'vue'
 import type { DocEntry, DocStatus } from '@/repositories/types'
@@ -24,17 +24,17 @@ const allDocuments = ref<DocEntry[]>([])
 const loaded = ref(false)
 
 // ============================================================
-// API通信ヘルパー
+// Repository取得ヘルパー（遅延インポートで循環参照回避）
 // ============================================================
-const API_BASE = '/api/doc-store'
+async function getDocRepo() {
+  const { createRepositories } = await import('@/repositories')
+  return createRepositories().document
+}
 
 async function fetchFromServer(clientId?: string): Promise<DocEntry[]> {
   try {
-    const url = clientId ? `${API_BASE}?clientId=${encodeURIComponent(clientId)}` : API_BASE
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = await res.json() as { documents: DocEntry[] }
-    return data.documents
+    const repo = await getDocRepo()
+    return clientId ? await repo.getByClientId(clientId) : await repo.getAll()
   } catch (err) {
     console.error('[useDocuments] サーバーからの取得に失敗:', err)
     return []
@@ -79,11 +79,9 @@ export function useDocuments() {
     }
 
     // サーバーにも反映（fire-and-forget。ローカルと同じnowを使用）
-    fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, statusChangedBy: resolvedStaffId, statusChangedAt: now, updatedBy: resolvedStaffId, updatedAt: now }),
-    }).catch(err => console.error('[useDocuments] ステータス更新エラー:', err))
+    getDocRepo().then(repo =>
+      repo.updateStatus(id, { status, statusChangedBy: resolvedStaffId, statusChangedAt: now, updatedBy: resolvedStaffId, updatedAt: now })
+    ).catch(err => console.error('[useDocuments] ステータス更新エラー:', err))
   }
 
   /** 顧問先の全資料をrefから消去（仕訳処理送出後） */
@@ -91,14 +89,9 @@ export function useDocuments() {
     allDocuments.value = allDocuments.value.filter(d => d.clientId !== clientId)
 
     // サーバーにも反映（エラー時はユーザーに通知）
-    fetch(`${API_BASE}/client/${encodeURIComponent(clientId)}`, {
-      method: 'DELETE',
-    }).then(res => {
-      if (!res.ok) {
-        console.error(`[useDocuments] サーバー削除失敗: HTTP ${res.status}`)
-        alert(UI_MSG.データ削除失敗再試行)
-      }
-    }).catch(err => {
+    getDocRepo().then(repo =>
+      repo.removeByClientId(clientId)
+    ).catch(err => {
       console.error('[useDocuments] 削除エラー:', err)
       alert(UI_MSG.データ削除失敗ネットワーク)
     })
@@ -124,14 +117,11 @@ export function useDocuments() {
 
     // サーバーにも反映（エラー時はユーザーに通知）
     if (newDocs.length > 0) {
-      fetch(API_BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documents: newDocs }),
-      }).then(res => {
-        if (!res.ok) {
-          console.error(`[useDocuments] サーバー保存失敗: HTTP ${res.status}`)
-          alert(UI_MSG.データ保存失敗リロード)
+      getDocRepo().then(repo =>
+        repo.saveBatch(newDocs)
+      ).then(result => {
+        if (result && result.added === 0 && newDocs.length > 0) {
+          console.warn(`[useDocuments] サーバー保存: 追加0件（全件重複）`)
         }
       }).catch(err => {
         console.error('[useDocuments] 追加エラー:', err)
@@ -145,16 +135,8 @@ export function useDocuments() {
   /** 選別完了→送出時にbatchId/journalIdを全件付与（サーバー発番） */
   async function assignBatchAndJournalIds(clientId: string) {
     try {
-      const res = await fetch(`${API_BASE}/batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId }),
-      })
-      if (!res.ok) {
-        console.error(`[useDocuments] バッチ付与失敗: HTTP ${res.status}`)
-        return { batchId: '', count: 0 }
-      }
-      const data = await res.json() as { batchId: string; count: number }
+      const repo = await getDocRepo()
+      const data = await repo.assignBatch(clientId)
       // サーバー発番済みデータでrefを更新
       await refresh(clientId)
       console.log(`[useDocuments] batchId=${data.batchId} journalId付与: ${data.count}件（サーバー発番）`)
@@ -183,24 +165,13 @@ export function useDocuments() {
   /**
    * previewExtractデータ（ai*フィールド）を完全削除
    *
-   * 確定送信後に呼び出す。仕訳変換完了後に実行すること。
-   * 設計方針: previewExtract.service.ts ヘッダー参照
-   */
-  /**
-   * previewExtractデータ（ai*フィールド）を完全削除
-   *
    * サーバーAPIでフィールド削除後、refresh()でrefを再取得する。
    * ローカルrefの直接書き換えは行わない（設計方針: composableにロジック禁止）。
    */
   async function clearAiFields(clientId: string) {
     try {
-      const res = await fetch(`${API_BASE}/clear-ai/${encodeURIComponent(clientId)}`, {
-        method: 'POST',
-      })
-      if (!res.ok) {
-        console.error(`[useDocuments] previewExtractデータ削除失敗: HTTP ${res.status}`)
-        return
-      }
+      const repo = await getDocRepo()
+      await repo.clearAiFields(clientId)
       // サーバーで削除完了後、refを再取得して反映
       await refresh(clientId)
       console.log(`[useDocuments] previewExtractデータ削除+再取得完了: ${clientId}`)

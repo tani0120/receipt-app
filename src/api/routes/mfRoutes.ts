@@ -35,7 +35,7 @@ import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFi
 import { importMfJournals } from '../services/mfJournalImporter'
 import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services/mfTaxImportService'
 import { importMasterAccounts } from '../services/mfAccountImportService'
-import { saveClientAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories, getClientAccounts, hasClientAccounts } from '../services/accountMasterStore'
+import { saveClientAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories, getClientAccounts, hasClientAccounts } from '../services/accountMasterApi'
 import type { Account } from '../../types/shared-account'
 import { deriveMfAccountGroup, deriveTaxDetermination, deriveTarget } from '../../data/master/mf-account-category-mapping'
 import { generateMasterId } from '../services/generateMasterId'

@@ -1102,11 +1102,9 @@ const convertToClient = async () => {
       const folderName = `${data.client.threeCode}_${data.client.companyName}`;
       const folderId = await createFolder(folderName, data.client.sharedEmail || undefined);
       // 顧問先のsharedFolderIdを更新
-      await fetch(`/api/clients/${data.client.clientId}/shared-folder`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderId }),
-      });
+      const { createRepositories } = await import('@/repositories');
+      const repos = createRepositories();
+      await repos.client.update(data.client.clientId, { sharedFolderId: folderId });
     } catch (driveErr) {
       console.error('[leads] 昇格時Driveフォルダ作成失敗:', driveErr);
     }

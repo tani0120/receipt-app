@@ -328,18 +328,15 @@ const getSortIcon = (key: string) => {
 // --- サーバー側フィルタ+ソート+ページネーション（useServerTable統合） ---
 /** fetchFn: POST /api/staff/list */
 const staffFetchFn = async (query: Record<string, unknown>): Promise<ServerTableResult<Staff>> => {
-  const res = await fetch('/api/staff/list', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      statusFilter: statusFilter.value,
-      sortKey: sortKey.value,
-      sortOrder: sortOrder.value,
-      page: query.page,
-      pageSize: query.pageSize,
-    }),
+  const { createRepositories } = await import('@/repositories');
+  const repos = createRepositories();
+  const data = await repos.staff.list({
+    statusFilter: statusFilter.value,
+    sortKey: sortKey.value,
+    sortOrder: sortOrder.value,
+    page: query.page as number,
+    pageSize: query.pageSize as number,
   });
-  const data = await res.json();
   return {
     rows: data.rows,
     totalCount: data.totalCount ?? data.rows.length,
@@ -651,12 +648,9 @@ const handleStaffCsvImport = async () => {
 
   if (validItems.length > 0) {
     try {
-      const res = await fetch('/api/staff/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: validItems }),
-      });
-      const bulkResult = await res.json();
+      const { createRepositories } = await import('@/repositories');
+      const repos = createRepositories();
+      const bulkResult = await repos.staff.bulkCreate(validItems);
       if (bulkResult.results) {
         for (const r of bulkResult.results) {
           if (r.ok) {

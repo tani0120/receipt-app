@@ -426,9 +426,9 @@ onMounted(async () => {
 
   // 全顧問先のMF認証状態を一括チェック
   try {
-    const clientsRes = await fetch('/api/clients');
-    const clientsData = await clientsRes.json();
-    const allClients = clientsData.clients ?? clientsData ?? [];
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const allClients = await repos.client.getAll();
     const ids = allClients.map((c: { clientId: string }) => c.clientId);
     if (ids.length === 0) return;
 

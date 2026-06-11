@@ -21,7 +21,7 @@ import {
   saveAllTaxCategories,
   getFilteredClientTaxCategories,
   saveClientTaxCategories,
-} from '../services/accountMasterStore'
+} from '../services/accountMasterApi'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { getAuthStatus } from '../services/mfAuthService'
 

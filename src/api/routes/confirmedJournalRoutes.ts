@@ -1,4 +1,4 @@
-﻿/**
+/**
  * confirmedJournalRoutes.ts — 確定済み仕訳APIルート（Hono）
  *
  * レイヤー: ★route★ → confirmedJournalStore + mfCsvParser
@@ -29,7 +29,7 @@ import {
   getImportBatches,
   countByClientId,
   loadConfirmedJournals,
-} from "../services/confirmedJournalStore";
+} from "../services/confirmedJournalsApi";
 
 const app = new Hono();
 

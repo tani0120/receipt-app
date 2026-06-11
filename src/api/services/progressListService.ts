@@ -13,7 +13,7 @@
 
 import { getAll as getAllClients } from './clientsApi'
 import { getAll as getAllStaff } from './staffsApi'
-import { getDocuments } from './documentStore'
+import { getDocuments } from './documentsApi'
 import { getJournals } from './journalStore'
 import { countUnsorted, latestReceivedDate } from '../../utils/documentUtils'
 import type { ProgressRow } from '../../features/progress-management/types'

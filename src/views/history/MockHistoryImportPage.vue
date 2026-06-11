@@ -224,28 +224,18 @@ const formatDate = (isoStr: string): string => {
 // ── サーバーからバッチ一覧を取得 ──
 const refreshBatches = async () => {
   try {
-    const response = await fetch(`/api/confirmed-journals/${clientId}/batches`)
-    if (response.ok) {
-      const data = await response.json() as {
-        batches: {
-          import_batch_id: string;
-          client_id?: string;
-          count: number;
-          imported_at: string;
-          min_voucher_date?: string;
-          max_voucher_date?: string;
-        }[];
-      }
-      importedFiles.value = (data.batches || []).map((b) => ({
-        id: b.import_batch_id,
-        clientId: b.client_id || clientId,
-        rowCount: b.count,
-        importedAt: b.imported_at,
-        minVoucherDate: b.min_voucher_date || '',
-        maxVoucherDate: b.max_voucher_date || '',
-      }))
-      console.log(`[HistoryImport] ${importedFiles.value.length}バッチをサーバーから読み込み`)
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const data = await repos.confirmedJournal.listBatches(clientId);
+    importedFiles.value = (data.batches || []).map((b) => ({
+      id: b.import_batch_id,
+      clientId: b.client_id || clientId,
+      rowCount: b.count,
+      importedAt: b.imported_at,
+      minVoucherDate: b.min_voucher_date || '',
+      maxVoucherDate: b.max_voucher_date || '',
+    }))
+    console.log(`[HistoryImport] ${importedFiles.value.length}バッチをサーバーから読み込み`)
   } catch (err) {
     console.error('[HistoryImport] バッチ一覧の取得失敗:', err)
   }
@@ -307,16 +297,12 @@ const executeImport = async () => {
     // CSVテキストを読み取り（UTF-8 / Shift-JIS 自動検出）
     const csv_text = await readCsvFileAutoEncoding(uploadedFile.value)
 
-    // APIにPOST
-    const response = await fetch(`/api/confirmed-journals/${clientId}/import`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ csv_text }),
-    })
+    // APIにPOST（Repository経由）
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const result = await repos.confirmedJournal.importCsv(clientId, csv_text);
 
-    const result = await response.json()
-
-    if (!response.ok) {
+    if (!result.ok) {
       alert(`${UI_MSG.取込エラー}: ${result.message || UI_MSG.不明なエラー}`)
       isImporting.value = false
       return
@@ -327,9 +313,9 @@ const executeImport = async () => {
       console.warn('[HistoryImport] 警告:', result.warnings)
     }
 
-    if (!result.ok || result.added === 0) {
+    if (result.added === 0) {
       const warning_msg = result.warnings?.join('\n') || UI_MSG.パース失敗
-      alert(`取込できませんでした:\n${warning_msg}`)
+      alert(`取込できませんでした：\n${warning_msg}`)
       isImporting.value = false
       return
     }
@@ -356,16 +342,11 @@ const removeImported = async (id: string) => {
   if (!confirm(UI_MSG.取込データ削除確認)) return
 
   try {
-    const response = await fetch(`/api/confirmed-journals/batch/${id}`, {
-      method: 'DELETE',
-    })
-    const result = await response.json()
-    if (response.ok) {
-      importedFiles.value = importedFiles.value.filter(f => f.id !== id)
-      console.log(`[HistoryImport] バッチ${id}削除完了（${result.removed}件）`)
-    } else {
-      alert(UI_MSG.削除失敗)
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const result = await repos.confirmedJournal.deleteBatch(id);
+    importedFiles.value = importedFiles.value.filter(f => f.id !== id)
+    console.log(`[HistoryImport] バッチ${id}削除完了（${result.removed}件）`)
   } catch (err) {
     console.error('[HistoryImport] 削除失敗:', err)
     alert(UI_MSG.削除失敗サーバー)
@@ -385,13 +366,9 @@ const executeDownload = async () => {
   isDownloading.value = true
 
   try {
-    const response = await fetch(`/api/confirmed-journals/batch/${downloadTarget.value.id}/journals`)
-    if (!response.ok) {
-      alert(UI_MSG.仕訳データ取得失敗)
-      return
-    }
-
-    const data = await response.json()
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const data = await repos.confirmedJournal.getJournalsByBatch(downloadTarget.value.id);
     const journals = data.journals || []
 
     if (journals.length === 0) {

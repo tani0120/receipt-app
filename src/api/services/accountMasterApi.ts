@@ -1,15 +1,16 @@
-/**
- * accountMasterStore.ts — 科目・税区分マスタストア（サーバー側）
+﻿/**
+ * accountMasterApi.ts — 科目・税区分マスタデータアクセス層（共通）
  *
- * Phase 2（2026-05-03）→ Phase 3（2026-05-22 JSON化）
+ * 【責務】
+ * - 科目・税区分マスタの読み書き
+ * - サーバー側のインメモリ + JSONファイル永続化
  *
- * data/account-master.json / data/tax-category-master.json を
- * サーバー起動時に読み込み、API各サービスに提供する。
+ * 【依存関係】
+ * - AccountRepository（mock実装）がこのファイルをラップする
+ * - accountMasterRoutes.ts / taxCategoryRoutes.ts がこのファイルを直接呼ぶ
+ * - Supabase移行時にDB操作に差し替え
  *
- * 将来のSupabase移行時はDB読み込みに差し替える。
- * 現時点では顧問先カスタム科目は未対応（マスタのみ）。
- *
- * 準拠: DL-042
+ * 準拠: DL-042, DL-030
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs'
@@ -28,10 +29,10 @@ function loadAccounts(): Account[] {
   try {
     const raw = readFileSync(join(DATA_DIR, 'account-master.json'), 'utf-8')
     const accounts = JSON.parse(raw) as Account[]
-    console.log(`[accountMasterStore] 科目${accounts.length}件をJSONから読み込み`)
+    console.log(`[accountMasterApi] 科目${accounts.length}件をJSONから読み込み`)
     return accounts
   } catch (err) {
-    console.error('[accountMasterStore] account-master.json読み込み失敗:', err)
+    console.error('[accountMasterApi] account-master.json読み込み失敗:', err)
     return []
   }
 }
@@ -40,10 +41,10 @@ function loadTaxCategories(): TaxCategory[] {
   try {
     const raw = readFileSync(join(DATA_DIR, 'tax-category-master.json'), 'utf-8')
     const taxes = JSON.parse(raw) as TaxCategory[]
-    console.log(`[accountMasterStore] 税区分${taxes.length}件をJSONから読み込み`)
+    console.log(`[accountMasterApi] 税区分${taxes.length}件をJSONから読み込み`)
     return taxes
   } catch (err) {
-    console.error('[accountMasterStore] tax-category-master.json読み込み失敗:', err)
+    console.error('[accountMasterApi] tax-category-master.json読み込み失敗:', err)
     return []
   }
 }
@@ -210,9 +211,9 @@ export function saveAllAccounts(accounts: Account[]): { ok: true; count: number 
   // JSON永続化（サーバー再起動でも変更を維持）
   try {
     writeFileSync(join(DATA_DIR, 'account-master.json'), JSON.stringify(accounts, null, 2), 'utf-8')
-    console.log(`[accountMasterStore] マスタ科目を${accounts.length}件保存・永続化`)
+    console.log(`[accountMasterApi] マスタ科目を${accounts.length}件保存・永続化`)
   } catch (err) {
-    console.error('[accountMasterStore] account-master.json永続化失敗:', err)
+    console.error('[accountMasterApi] account-master.json永続化失敗:', err)
   }
 
   // 全顧問先のクローンデータに差分同期（新規追加・名前変更を反映）
@@ -272,11 +273,11 @@ function syncMasterAccountsToClients(masterItems: Account[]): void {
     if (changed) {
       persistClientAccounts(clientId, clientData)
       syncCount++
-      console.log(`[accountMasterStore] 顧問先${clientId}の科目を${clientData.accounts.length}件に同期`)
+      console.log(`[accountMasterApi] 顧問先${clientId}の科目を${clientData.accounts.length}件に同期`)
     }
   }
   if (syncCount > 0) {
-    console.log(`[accountMasterStore] マスタ科目変更を${syncCount}社に反映`)
+    console.log(`[accountMasterApi] マスタ科目変更を${syncCount}社に反映`)
   }
 }
 
@@ -303,9 +304,9 @@ function persistClientAccounts(clientId: string, data: ClientAccountData): void 
   try {
     const filePath = join(DATA_DIR, `accounts-${clientId}.json`)
     writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
-    console.log(`[accountMasterStore] 顧問先${clientId}の科目をJSONに永続化`)
+    console.log(`[accountMasterApi] 顧問先${clientId}の科目をJSONに永続化`)
   } catch (err) {
-    console.error(`[accountMasterStore] 顧問先${clientId}の科目永続化に失敗:`, err)
+    console.error(`[accountMasterApi] 顧問先${clientId}の科目永続化に失敗:`, err)
   }
 }
 
@@ -319,9 +320,9 @@ function restoreAllClientAccounts(): void {
     try {
       const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
       clientAccountStore.set(clientId, JSON.parse(raw))
-      console.log(`[accountMasterStore] 顧問先${clientId}の科目をJSONから復元`)
+      console.log(`[accountMasterApi] 顧問先${clientId}の科目をJSONから復元`)
     } catch (err) {
-      console.error(`[accountMasterStore] ${file}の読み込み失敗:`, err)
+      console.error(`[accountMasterApi] ${file}の読み込み失敗:`, err)
     }
   }
 }
@@ -346,7 +347,7 @@ export function getClientAccounts(clientId: string): ClientAccountData {
       accounts: masterAccounts.map(a => ({ ...a })),
       subAccounts: {},
     })
-    console.log(`[accountMasterStore] 顧問先${clientId}の科目をマスタから初期化`)
+    console.log(`[accountMasterApi] 顧問先${clientId}の科目をマスタから初期化`)
   }
   return clientAccountStore.get(clientId)!
 }
@@ -403,7 +404,7 @@ export function saveClientAccounts(
   }
   clientAccountStore.set(clientId, data)
   persistClientAccounts(clientId, data)
-  console.log(`[accountMasterStore] 顧問先${clientId}の科目を${accounts.length}件保存`)
+  console.log(`[accountMasterApi] 顧問先${clientId}の科目を${accounts.length}件保存`)
   return { ok: true, count: accounts.length }
 }
 
@@ -550,9 +551,9 @@ export function saveAllTaxCategories(taxCategories: TaxCategory[]): { ok: true; 
   // JSON永続化（サーバー再起動でも変更を維持）
   try {
     writeFileSync(join(DATA_DIR, 'tax-category-master.json'), JSON.stringify(taxCategories, null, 2), 'utf-8')
-    console.log(`[accountMasterStore] マスタ税区分を${taxCategories.length}件保存・永続化`)
+    console.log(`[accountMasterApi] マスタ税区分を${taxCategories.length}件保存・永続化`)
   } catch (err) {
-    console.error('[accountMasterStore] tax-category-master.json永続化失敗:', err)
+    console.error('[accountMasterApi] tax-category-master.json永続化失敗:', err)
   }
 
   // 全顧問先のクローンデータに差分同期（新規追加・名前変更を反映）
@@ -601,11 +602,11 @@ function syncMasterTaxCategoriesToClients(masterItems: TaxCategory[]): void {
     if (changed) {
       persistClientTaxCategories(clientId, clientTaxes)
       syncCount++
-      console.log(`[accountMasterStore] 顧問先${clientId}の税区分を${clientTaxes.length}件に同期`)
+      console.log(`[accountMasterApi] 顧問先${clientId}の税区分を${clientTaxes.length}件に同期`)
     }
   }
   if (syncCount > 0) {
-    console.log(`[accountMasterStore] マスタ税区分変更を${syncCount}社に反映`)
+    console.log(`[accountMasterApi] マスタ税区分変更を${syncCount}社に反映`)
   }
 }
 
@@ -624,9 +625,9 @@ function persistClientTaxCategories(clientId: string, data: TaxCategory[]): void
   try {
     const filePath = join(DATA_DIR, `tax-categories-${clientId}.json`)
     writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
-    console.log(`[accountMasterStore] 顧問先${clientId}の税区分をJSONに永続化`)
+    console.log(`[accountMasterApi] 顧問先${clientId}の税区分をJSONに永続化`)
   } catch (err) {
-    console.error(`[accountMasterStore] 顧問先${clientId}の税区分永続化に失敗:`, err)
+    console.error(`[accountMasterApi] 顧問先${clientId}の税区分永続化に失敗:`, err)
   }
 }
 
@@ -640,9 +641,9 @@ function restoreAllClientTaxCategories(): void {
     try {
       const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
       clientTaxStore.set(clientId, JSON.parse(raw))
-      console.log(`[accountMasterStore] 顧問先${clientId}の税区分をJSONから復元`)
+      console.log(`[accountMasterApi] 顧問先${clientId}の税区分をJSONから復元`)
     } catch (err) {
-      console.error(`[accountMasterStore] ${file}の読み込み失敗:`, err)
+      console.error(`[accountMasterApi] ${file}の読み込み失敗:`, err)
     }
   }
 }
@@ -655,7 +656,7 @@ function restoreAllClientTaxCategories(): void {
 export function getClientTaxCategories(clientId: string): TaxCategory[] {
   if (!clientTaxStore.has(clientId)) {
     clientTaxStore.set(clientId, masterTaxCategories.map(t => ({ ...t })))
-    console.log(`[accountMasterStore] 顧問先${clientId}の税区分をマスタから初期化`)
+    console.log(`[accountMasterApi] 顧問先${clientId}の税区分をマスタから初期化`)
   }
   return clientTaxStore.get(clientId)!
 }
@@ -699,7 +700,7 @@ export function saveClientTaxCategories(
   const data = [...taxCategories]
   clientTaxStore.set(clientId, data)
   persistClientTaxCategories(clientId, data)
-  console.log(`[accountMasterStore] 顧問先${clientId}の税区分を${taxCategories.length}件保存`)
+  console.log(`[accountMasterApi] 顧問先${clientId}の税区分を${taxCategories.length}件保存`)
   return { ok: true, count: taxCategories.length }
 }
 
@@ -713,4 +714,4 @@ restoreAllClientTaxCategories()
 syncMasterAccountsToClients(masterAccounts)
 syncMasterTaxCategoriesToClients(masterTaxCategories)
 
-console.log(`[accountMasterStore] 科目${masterAccounts.length}件 / 税区分${masterTaxCategories.length}件をロード（顧問先別: 科目${clientAccountStore.size}社 / 税区分${clientTaxStore.size}社を復元・同期）`)
+console.log(`[accountMasterApi] 科目${masterAccounts.length}件 / 税区分${masterTaxCategories.length}件をロード（顧問先別: 科目${clientAccountStore.size}社 / 税区分${clientTaxStore.size}社を復元・同期）`)

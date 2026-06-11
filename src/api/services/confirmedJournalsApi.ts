@@ -1,15 +1,19 @@
-/**
- * confirmedJournalStore.ts — 確定済み仕訳JSON永続化ストア（更新: 2026-04-29）
+﻿/**
+ * confirmedJournalsApi.ts — 確定済み仕訳データアクセス層（共通）
  *
- * 【設計原則】
- * - サーバー側のインメモリ + JSONファイル永続化（documentStore.tsと同パターン）
- * - 起動時にJSONから読み込み、更新時にJSONに書き出し
+ * 【責務】
+ * - データの読み書きだけ。ビジネスロジックなし。
+ * - サーバー側のインメモリ + JSONファイル永続化
+ *
+ * 【依存関係】
+ * - ConfirmedJournalRepository（mock実装）がこのファイルをラップする
+ * - confirmedJournalRoutes.ts（Honoルート）がこのファイルを直接呼ぶ
  * - Supabase移行時にDB操作に差し替え
  *
  * 【ファイル場所】
- * - data/confirmed_journals.json（.gitignoreに追加すること）
+ * - data/confirmed_journals.json
  *
- * 設計根拠: docs/genzai/25_past_journal.md §5
+ * 準拠: DL-042, DL-030
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -34,13 +38,13 @@ export function loadConfirmedJournals(): void {
     if (existsSync(DATA_FILE)) {
       const raw = readFileSync(DATA_FILE, 'utf-8');
       journals = JSON.parse(raw) as ConfirmedJournal[];
-      console.log(`[confirmedJournalStore] ${journals.length}件をJSONから読み込み`);
+      console.log(`[confirmedJournalsApi] ${journals.length}件をJSONから読み込み`);
     } else {
       journals = [];
-      console.log('[confirmedJournalStore] JSONファイルなし。空で起動');
+      console.log('[confirmedJournalsApi] JSONファイルなし。空で起動');
     }
   } catch (err) {
-    console.error('[confirmedJournalStore] JSON読み込みエラー:', err);
+    console.error('[confirmedJournalsApi] JSON読み込みエラー:', err);
     journals = [];
   }
 }
@@ -55,7 +59,7 @@ function save(): void {
     }
     writeFileSync(DATA_FILE, JSON.stringify(journals, null, 2), 'utf-8');
   } catch (err) {
-    console.error('[confirmedJournalStore] JSON書き出しエラー:', err);
+    console.error('[confirmedJournalsApi] JSON書き出しエラー:', err);
   }
 }
 
@@ -98,7 +102,7 @@ export function importJournals(new_journals: ConfirmedJournal[]): { added: numbe
   save();
 
   const skipped = new_journals.length - to_add.length;
-  console.log(`[confirmedJournalStore] ${to_add.length}件追加（重複${skipped}件スキップ）`);
+  console.log(`[confirmedJournalsApi] ${to_add.length}件追加（重複${skipped}件スキップ）`);
   return { added: to_add.length, skipped };
 }
 
@@ -158,7 +162,7 @@ export function applyMfIds(
   }
   if (count > 0) {
     save();
-    console.log(`[confirmedJournalStore] MF-ID紐付け: ${count}件`);
+    console.log(`[confirmedJournalsApi] MF-ID紐付け: ${count}件`);
   }
   return count;
 }

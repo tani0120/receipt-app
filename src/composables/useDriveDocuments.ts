@@ -162,15 +162,14 @@ export function useDriveDocuments(
     }
   };
 
-  /** doc-storeからpending状態の独自アップロードファイルを取得 */
+  /** doc-storeからpending状態の独自アップロードファイルを取得（useDocuments経由） */
   const fetchUploadedDocs = async () => {
     try {
-      const res = await fetch(`/api/doc-store?clientId=${encodeURIComponent(clientId.value)}`);
-      if (!res.ok) return;
-      const data = await res.json() as { documents: DocEntry[] };
-      // 独自アップロードファイルを取得（Driveファイルは除外、全status表示）
-      uploadedDocs.value = data.documents.filter(
-        (d: DocEntry) => d.source !== 'drive'
+      const { refresh } = useDocuments();
+      await refresh(clientId.value);
+      // allDocumentsから独自アップロードファイルをフィルタ（Driveファイルは除外）
+      uploadedDocs.value = allDocuments.value.filter(
+        (d: DocEntry) => d.clientId === clientId.value && d.source !== 'drive'
       );
       console.log(`[useDriveDocuments] doc-store: ${uploadedDocs.value.length}件（独自アップロード）`);
     } catch (err) {

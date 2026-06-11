@@ -401,13 +401,11 @@ async function importFromMf() {
       throw new Error(err.error ?? err.detail ?? 'MF勘定科目インポート失敗');
     }
     const data = await res.json();
-    // API経由でサーバー側のクライアント科目を再取得して画面に反映
-    const refreshRes = await fetch(`/api/accounts/client/${props.clientId}`);
-    if (refreshRes.ok) {
-      const refreshData = await refreshRes.json();
-      if (refreshData.accounts) {
-        accountRows.splice(0, accountRows.length, ...refreshData.accounts);
-      }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const refreshData = await repos.accountMaster.getClient(props.clientId);
+    if (refreshData.accounts) {
+      accountRows.splice(0, accountRows.length, ...refreshData.accounts);
     }
 
     await modal.notify({
@@ -524,17 +522,10 @@ async function saveChanges() {
   });
 
   try {
-    // API経由でサーバー側に保存
-    const response = await fetch(`/api/accounts/client/${clientId.value}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accounts: accountRows, subAccounts }),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ message: UI_MSG.保存失敗 }));
-      await modal.notify({ title: err.message ?? UI_MSG.保存失敗, variant: 'warning' });
-      return;
-    }
+    // API経由でサーバー側に保存（Repository経由）
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    await repos.accountMaster.saveClient(clientId.value, { accounts: accountRows, subAccounts });
 
     // composable側にも同期（他ページへのリアルタイム反映用）
     settings.saveAccounts(accountRows, subAccounts);

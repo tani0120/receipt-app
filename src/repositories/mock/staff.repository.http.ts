@@ -43,10 +43,23 @@ export const httpStaffRepo: StaffRepository = {
   },
 
   create: async (staff) => {
-    await api.post('', staff)
+    const res = await api.post<{ ok: boolean; staff: Staff }>('', staff)
+    return res.staff
   },
 
   update: async (uuid, partial) => {
     await api.put(`/${uuid}`, partial)
+  },
+
+  list: async (query) => {
+    return api.post<{ rows: Staff[]; totalCount: number; totalPages: number }>('/list', query)
+  },
+
+  bulkCreate: async (items) => {
+    return api.post<{
+      ok: boolean
+      results: { index: number; ok: boolean; uuid?: string; error?: string }[]
+      total: number
+    }>('/bulk', { items })
   },
 }

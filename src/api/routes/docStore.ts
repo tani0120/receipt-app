@@ -1,4 +1,4 @@
-﻿/**
+/**
  * docStore.ts — ドキュメントJSON永続化APIルート（Hono）
  *
  * レイヤー: ★route★ → documentStore
@@ -29,7 +29,7 @@ import {
   deleteById,
   countDocuments,
   clearAiFieldsByClientId,
-} from "../services/documentStore";
+} from "../services/documentsApi";
 
 const app = new Hono();
 

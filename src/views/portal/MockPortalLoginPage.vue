@@ -342,11 +342,9 @@ const handleGoogleLogin = () => {
         // sharedEmailをサーバーに永続化（フォルダ再作成時の自動権限付与に必要）
         if (!client?.sharedEmail || client.sharedEmail !== email) {
           try {
-            await fetch(`/api/clients/${clientId}/shared-email`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email }),
-            })
+            const { createRepositories } = await import('@/repositories')
+            const repos = createRepositories()
+            await repos.client.update(clientId, { sharedEmail: email })
             console.log('[GoogleLogin] sharedEmail保存:', email)
           } catch {
             console.warn('[GoogleLogin] sharedEmail保存失敗')

@@ -34,7 +34,7 @@ import {
 } from '../services/leadStore';
 import { getLeadList } from '../services/leadListService';
 import { create as createClient, generateClientId } from '../services/clientsApi';
-import { getClientAccounts, getClientTaxCategories } from '../services/accountMasterStore';
+import { getClientAccounts, getClientTaxCategories } from '../services/accountMasterApi';
 
 const app = new Hono();
 
@@ -215,7 +215,7 @@ app.post('/:leadId/convert', async (c) => {
 
   // 見込先の共通フィールドを顧問先にコピー（見込先固有フィールド除外）
   const clientId = generateClientId();
-  const { leadId: _lid, status: _status, ...commonFields } = lead as Record<string, unknown>;
+  const { leadId: _lid, status: _status, ...commonFields } = lead as unknown as Record<string, unknown>;
   const clientData: Client = {
     ...(commonFields as Omit<Client, 'clientId' | 'sourceLeadId'>),
     clientId,

@@ -8,9 +8,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Lead } from '@/repositories/types'
-import { createApiClient } from '@/utils/apiClient'
+import type { FilterOperator } from '@/api/helpers/applyFilterConditions'
+import { createRepositories } from '@/repositories'
 
-const api = createApiClient('/api/leads')
+// Repository経由でデータアクセス
+const repos = createRepositories()
 
 
 export const useLeadStore = defineStore('leads', () => {
@@ -30,8 +32,7 @@ export const useLeadStore = defineStore('leads', () => {
 
   async function fetchFresh() {
     try {
-      const raw = await api.get<{ leads: Lead[] } | Lead[]>('')
-      const list = Array.isArray(raw) ? raw : raw.leads
+      const list = await repos.lead.getAll()
       leads.value = list
       cachedAt.value = Date.now()
       console.log(`[leadStore] ${list.length}件をサーバーから取得`)
@@ -44,7 +45,7 @@ export const useLeadStore = defineStore('leads', () => {
     const idx = leads.value.findIndex(l => l.leadId === leadId)
     if (idx >= 0) {
       leads.value[idx] = { ...leads.value[idx]!, sharedFolderId: folderId }
-      api.put(`/${leadId}/shared-folder`, { folderId })
+      repos.lead.updateSharedFolderId(leadId, folderId)
         .catch(err => console.error('[leadStore] sharedFolderId更新エラー:', err))
     }
   }
@@ -52,8 +53,7 @@ export const useLeadStore = defineStore('leads', () => {
   async function addLead(lead: Omit<Lead, 'leadId'> & { leadId?: string }): Promise<Lead> {
     lastError.value = null
     try {
-      const res = await api.post<{ ok: boolean; lead: Lead }>('', lead)
-      const saved = res.lead
+      const saved = await repos.lead.create(lead as Lead)
       leads.value.push(saved)
       return saved
     } catch (err) {
@@ -67,7 +67,7 @@ export const useLeadStore = defineStore('leads', () => {
   async function updateLead(leadId: string, data: Partial<Lead>): Promise<void> {
     lastError.value = null
     try {
-      await api.put(`/${leadId}`, data)
+      await repos.lead.update(leadId, data)
       const idx = leads.value.findIndex(l => l.leadId === leadId)
       if (idx >= 0) {
         leads.value[idx] = { ...leads.value[idx]!, ...data, leadId }
@@ -81,13 +81,13 @@ export const useLeadStore = defineStore('leads', () => {
   }
 
   async function listLeads(query: {
-    filters?: { field: string; operator: string; value: string | string[] }[]
+    filters?: { field: string; operator: FilterOperator; value: string | string[] }[]
     logic?: 'and' | 'or'
     sorts?: { key: string; order: 'asc' | 'desc' }[]
     page?: number
     pageSize?: number
   }): Promise<{ rows: Lead[]; totalCount: number; page: number; pageSize: number; totalPages: number }> {
-    return api.post<{ rows: Lead[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
+    return repos.lead.list(query)
   }
 
   load()

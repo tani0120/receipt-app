@@ -16,7 +16,8 @@
  */
 
 import type { VendorRepository } from '@/repositories/types'
-import { getAll as getAllVendors, findByMatchKey, findByTNumber } from '@/api/services/vendorStore'
+import { getAll as getAllVendors, findByMatchKey, findByTNumber, create as createVendor, remove as removeVendor } from '@/api/services/vendorStore'
+import { getVendorList } from '@/api/services/vendorListService'
 
 /**
  * 全社取引先マスタのモック実装
@@ -25,32 +26,31 @@ import { getAll as getAllVendors, findByMatchKey, findByTNumber } from '@/api/se
  * Supabase移行時は supabaseVendorRepo に差し替えるだけ。
  */
 export const mockVendorRepo: VendorRepository = {
-  /**
-   * 全社共通取引先マスタ全件取得
-   * vendorStore.getAll() → data/vendors.json
-   */
   getAll: async () => getAllVendors(),
 
-  /**
-   * match_key（照合キー）で完全一致検索（Step 3-3）
-   * vendorStore.findByMatchKey() → data/vendors.json
-   * Supabase: .eq('match_key', key).maybeSingle()
-   */
+  getByType: async (type) => getAllVendors(
+    type === 'vendor' ? { vendorOnly: true } : { nonVendorOnly: true }
+  ),
+
   findByMatchKey: async (key) => findByMatchKey(key),
 
-  /**
-   * T番号（インボイス番号）で検索（Step 3-1）
-   * vendorStore.findByTNumber() → data/vendors.json
-   * Supabase: .contains('t_numbers', [tNumber]).maybeSingle()
-   */
   findByTNumber: async (tNumber) => findByTNumber(tNumber),
 
-  /**
-   * 電話番号で検索（Step 3-2）
-   * vendorStore.getAll()から線形探索 → data/vendors.json
-   * Supabase: .contains('phone_numbers', [phone]).maybeSingle()
-   */
   findByPhoneNumber: async (phone) =>
     getAllVendors().find((v) => v.phone_numbers?.includes(phone)),
+
+  create: async (vendor) => createVendor(vendor),
+
+  deleteById: async (vendorId) => { removeVendor(vendorId) },
+
+  list: async (query) => {
+    const result = getVendorList(query)
+    return {
+      rows: result.rows,
+      totalCount: result.totalCount,
+      totalPages: result.totalPages,
+      uniqueVectors: result.uniqueVectors,
+    }
+  },
 }
 

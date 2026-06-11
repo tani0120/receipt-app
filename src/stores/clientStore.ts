@@ -12,14 +12,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Client } from '@/repositories/types'
+import type { FilterOperator } from '@/api/helpers/applyFilterConditions'
 import { createRepositories } from '@/repositories'
-import { createApiClient } from '@/utils/apiClient'
 
 // Repository経由でデータアクセス
 const repos = createRepositories()
-
-// listClients専用（ClientRepositoryにlistメソッドがないため）
-const listApi = createApiClient('/api/clients')
 
 export const useClientStore = defineStore('clients', () => {
   // --- state ---
@@ -124,9 +121,7 @@ export const useClientStore = defineStore('clients', () => {
   async function addClient(client: Omit<Client, 'clientId'> & { clientId?: string }): Promise<Client> {
     lastError.value = null
     try {
-      // createはサーバー側でclientIdを発番するため、HTTP API経由で呼ぶ
-      const res = await listApi.post<{ ok: boolean; client: Client }>('', client)
-      const saved = res.client
+      const saved = await repos.client.create(client as Client)
       clients.value.push(saved)
       return saved
     } catch (err) {
@@ -154,14 +149,13 @@ export const useClientStore = defineStore('clients', () => {
   }
 
   async function listClients(query: {
-    filters?: { field: string; operator: string; value: string | string[] }[]
+    filters?: { field: string; operator: FilterOperator; value: string | string[] }[]
     logic?: 'and' | 'or'
     sorts?: { key: string; order: 'asc' | 'desc' }[]
     page?: number
     pageSize?: number
   }): Promise<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }> {
-    // listClientsはClientRepositoryに定義がないため、API直結を維持
-    return listApi.post<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
+    return repos.client.list(query)
   }
 
   // 初回自動ロード（fire-and-forget）

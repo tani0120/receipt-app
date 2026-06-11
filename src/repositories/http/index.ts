@@ -16,6 +16,12 @@ import { mockVendorRepo } from '../mock/vendor.repository.mock'
 import { mockShareStatusRepo } from '../mock/shareStatus.repository.mock'
 import { httpClientRepo } from '../mock/client.repository.http'
 import { httpStaffRepo } from '../mock/staff.repository.http'
+import { httpDocumentRepo } from '../mock/document.repository.http'
+import { httpConfirmedJournalRepo } from '../mock/confirmedJournal.repository.http'
+import { httpAccountRepo } from '../mock/account.repository.http'
+import { httpAccountMasterRepo } from '../mock/accountMaster.repository.http'
+import { httpTaxMasterRepo } from '../mock/taxMaster.repository.http'
+import { httpLeadRepo } from '../mock/lead.repository.http'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /**
@@ -42,26 +48,20 @@ export function createHttpRepositories(): Repositories {
       findByVector: async () => { throw new Error(UI_MSG.未実装接頭_IndustryVector) },
     },
 
-    account: {
-      getAll: async () => { throw new Error(UI_MSG.未実装接頭_Account) },
-      findById: async () => { throw new Error(UI_MSG.未実装接頭_Account) },
-      getAllForClient: async () => { throw new Error(UI_MSG.未実装接頭_Account) },
-    },
+    account: httpAccountRepo,
 
-    confirmedJournal: {
-      getByClientId: async () => { throw new Error(UI_MSG.未実装接頭_ConfirmedJournal) },
-      findByMatchKey: async () => { throw new Error(UI_MSG.未実装接頭_ConfirmedJournal) },
-    },
+    accountMaster: httpAccountMasterRepo,
+
+    taxMaster: httpTaxMasterRepo,
+
+    lead: httpLeadRepo,
+
+    confirmedJournal: httpConfirmedJournalRepo,
 
     staff: httpStaffRepo,
 
     client: httpClientRepo,
 
-    document: {
-      getByClientId: async () => { throw new Error(UI_MSG.未実装接頭_Document) },
-      updateStatus: async () => { throw new Error(UI_MSG.未実装接頭_Document) },
-      save: async () => { throw new Error(UI_MSG.未実装接頭_Document) },
-      saveBatch: async () => { throw new Error(UI_MSG.未実装接頭_Document) },
-    },
+    document: httpDocumentRepo,
   }
 }

@@ -18,6 +18,7 @@ export interface ApiClient {
   get: <T>(path: string) => Promise<T>
   post: <T>(path: string, body: unknown) => Promise<T>
   put: (path: string, body: unknown) => Promise<void>
+  del: (path: string) => Promise<void>
 }
 
 /**
@@ -50,6 +51,11 @@ export function createApiClient(baseUrl: string): ApiClient {
         body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error(`API PUT ${baseUrl}${path} failed: ${res.status}`)
+    },
+
+    async del(path: string): Promise<void> {
+      const res = await fetch(`${baseUrl}${path}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error(`API DELETE ${baseUrl}${path} failed: ${res.status}`)
     },
   }
 }

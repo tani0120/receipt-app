@@ -361,9 +361,9 @@ const mfClients = ref<MfClientInfo[]>([]);
 onMounted(async () => {
   // 全顧問先のMF認証状態を一括チェック
   try {
-    const clientsRes = await fetch('/api/clients');
-    const clientsData = await clientsRes.json();
-    const allClients = clientsData.clients ?? clientsData ?? [];
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const allClients = await repos.client.getAll();
     const ids = allClients.map((c: { clientId: string }) => c.clientId);
     if (ids.length === 0) return;
 
@@ -513,17 +513,10 @@ watch(filteredAccountRows, () => { if (accountPage.value > accountTotalPages.val
 
 async function saveChanges() {
   try {
-    // API経由でサーバー側に保存
-    const response = await fetch('/api/accounts/master', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accounts: accountRows }),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ message: UI_MSG.保存失敗 }));
-      await modal.notify({ title: err.message ?? UI_MSG.保存失敗, variant: 'warning' });
-      return;
-    }
+    // API経由でサーバー側に保存（Repository経由）
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    await repos.accountMaster.saveMaster(accountRows);
 
     // composable側のoverridesにも同期（顧問先ページへの反映用）
     const defaultAccountIds = settings.defaultAccountIds.value;

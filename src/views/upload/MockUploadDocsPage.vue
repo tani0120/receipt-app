@@ -456,20 +456,12 @@ const handleConfirm = async () => {
     });
   }
 
-  // 2. documentStoreに保存
+  // 2. documentStoreに保存（useDocuments composable経由）
   try {
-    const res = await fetch("/api/doc-store", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ documents: docEntries }),
-    });
-    if (!res.ok) {
-      alert("データ保存に失敗しました。再度お試しください。");
-      isConfirming.value = false;
-      return;
-    }
-    const result = (await res.json()) as { added: number };
-    console.log(`[DocsPage] ${result.added}件をサーバーに保存`);
+    const { useDocuments } = await import('@/composables/useDocuments');
+    const { addDocuments } = useDocuments();
+    const added = addDocuments(docEntries as unknown as import('@/repositories/types').DocEntry[]);
+    console.log(`[DocsPage] ${added}件をサーバーに保存`);
   } catch (err) {
     console.error("[DocsPage] 保存エラー:", err);
     alert("データ保存に失敗しました。ネットワーク接続を確認してください。");

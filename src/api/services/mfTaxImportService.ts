@@ -19,7 +19,7 @@
  */
 
 import { mcpFetchTaxes, mcpFetchTermSettings } from './mfMcpClient'
-import { getAllTaxCategories, saveAllTaxCategories } from './accountMasterStore'
+import { getAllTaxCategories, saveAllTaxCategories } from './accountMasterApi'
 import { getAllTaxAvailable, saveTaxAvailable, type TaxMethodKey } from './mfTaxAvailableStore'
 import { saveMfRawData } from './mfRawDataStore'
 import { getById } from './clientsApi'
@@ -438,7 +438,7 @@ export interface ClientTaxImportResult {
  */
 export async function importClientTaxes(clientId: string): Promise<ClientTaxImportResult> {
   const { updateClient } = await import('./clientsApi')
-  const { saveClientTaxCategories } = await import('./accountMasterStore')
+  const { saveClientTaxCategories } = await import('./accountMasterApi')
 
   // 1. consumptionTaxMode自動更新
   let consumptionTaxMode: string | null = null
@@ -524,7 +524,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
 
   // 4a. 前回の顧問先税区分にあって今回MFにない税区分 → deprecated=trueで保持
   // 過去仕訳の参照先を保護（TAX_UNKNOWNにしない）
-  const { getClientTaxCategories } = await import('./accountMasterStore')
+  const { getClientTaxCategories } = await import('./accountMasterApi')
   let deprecatedCount = 0
   try {
     const prevTaxCategories = getClientTaxCategories(clientId)

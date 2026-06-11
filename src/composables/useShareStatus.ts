@@ -8,14 +8,16 @@
  *    判断ロジック（例: pendingをactiveに変えるべきかの判断）は呼び出し側が行う。
  *
  * 【通信方式】ローカルref即反映 + サーバーfire-and-forget
- * - updateStatus: refを更新 → PUTをfire-and-forget
- * - saveInviteCode: refを更新 → POSTをfire-and-forget
- * - loadAll: サーバーからGET → refを差し替え
- * - resolveInviteCode: サーバーにGET（別ブラウザでも動く）
+ * - updateStatus: refを更新 → Repository.updateStatusをfire-and-forget
+ * - saveInviteCode: refを更新 → Repository.generateInviteCodeで取得
+ * - loadAll: Repositoryから全件取得 → refを差し替え
+ * - resolveInviteCode: Repository経由で逆引き
  *
  * 【移行メモ】
- * Supabase移行時にAPI側（shareStatusStore.ts）をDB操作に差し替えるだけ。
+ * createRepositories()内のshareStatus実装をSupabase版に差し替えるだけ。
  * フロント側は変更不要。
+ *
+ * 準拠: DL-039, DL-042
  */
 
 import { ref } from 'vue'
@@ -32,6 +34,12 @@ const allRecords = ref<ShareStatusRecord[]>([])
 /** 最終ロード時刻 */
 const lastLoaded = ref<number>(0)
 
+// Repository取得ヘルパー（遅延インポートで循環参照回避）
+async function getShareStatusRepo() {
+  const { createRepositories } = await import('@/repositories')
+  return createRepositories().shareStatus
+}
+
 export function useShareStatus() {
   /**
    * 全顧問先の共有設定をサーバーからロード
@@ -39,11 +47,8 @@ export function useShareStatus() {
    */
   async function loadAll(): Promise<void> {
     try {
-      const res = await fetch('/api/share-status')
-      if (res.ok) {
-        const data = await res.json()
-        allRecords.value = data.records ?? []
-      }
+      const repo = await getShareStatusRepo()
+      allRecords.value = await repo.getAll()
     } catch (err) {
       console.warn('[useShareStatus] サーバーからの読み込み失敗。ローカルrefを維持:', err)
     }
@@ -70,12 +75,10 @@ export function useShareStatus() {
         updatedAt: new Date().toISOString(),
       })
     }
-    // ② サーバーfire-and-forget
-    fetch(`/api/share-status/${clientId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    }).catch(err => console.warn('[useShareStatus] ステータス更新の永続化失敗:', err))
+    // ② サーバーfire-and-forget（Repository経由）
+    getShareStatusRepo().then(repo =>
+      repo.updateStatus(clientId, status)
+    ).catch(err => console.warn('[useShareStatus] ステータス更新の永続化失敗:', err))
   }
 
   /**
@@ -84,13 +87,8 @@ export function useShareStatus() {
    */
   async function saveInviteCode(clientId: string): Promise<string> {
     try {
-      const res = await fetch('/api/share-status/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId }),
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json() as { ok: boolean; code: string }
+      const repo = await getShareStatusRepo()
+      const data = await repo.generateInviteCode(clientId)
       const code = data.code
       // サーバー成功後にローカルref反映
       const existing = allRecords.value.find(r => r.clientId === clientId)
@@ -139,13 +137,10 @@ export function useShareStatus() {
     const cached = getClientIdByInviteCode(code)
     if (cached) return cached
 
-    // ② キャッシュになければサーバーに問い合わせ
+    // ② キャッシュになければRepository経由でサーバーに問い合わせ
     try {
-      const res = await fetch(`/api/share-status/invite/${code}`)
-      if (res.ok) {
-        const data = await res.json()
-        return data.clientId ?? null
-      }
+      const repo = await getShareStatusRepo()
+      return await repo.resolveInviteCode(code)
     } catch (err) {
       console.warn('[useShareStatus] 招待コード逆引き失敗:', err)
     }

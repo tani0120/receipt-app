@@ -8,14 +8,15 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { TaxCategory } from '@/types/shared-tax-category'
-import { createApiClient } from '@/utils/apiClient'
+import { createRepositories } from '@/repositories'
 
 /** マスタレベルの税区分拡張 */
 export interface MasterTaxCategory extends TaxCategory {
   hiddenInMaster: boolean
 }
 
-const api = createApiClient('/api/tax-categories')
+// Repository経由でデータアクセス
+const repos = createRepositories()
 
 
 export const useTaxMasterStore = defineStore('taxMaster', () => {
@@ -35,10 +36,10 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
 
   async function fetchFresh() {
     try {
-      const data = await api.get<{ items: TaxCategory[] }>('/master?pageSize=200&taxMethod=all')
-      allTaxCategories.value = data.items
+      const items = await repos.taxMaster.getMaster()
+      allTaxCategories.value = items
       cachedAt.value = Date.now()
-      console.log(`[taxMasterStore] ${data.items.length}件をサーバーから取得`)
+      console.log(`[taxMasterStore] ${items.length}件をサーバーから取得`)
     } catch (err) {
       console.error('[taxMasterStore] サーバー取得失敗:', err)
     }
@@ -47,7 +48,7 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
   function debounceSave(): void {
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
-      api.put('/master', { taxCategories: allTaxCategories.value })
+      repos.taxMaster.saveMaster(allTaxCategories.value)
         .catch(err => console.error('[taxMasterStore] サーバー保存失敗:', err))
     }, 300)
   }

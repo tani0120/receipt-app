@@ -1,14 +1,20 @@
-/**
- * documentStore.ts — ドキュメントJSON永続化ストア
+﻿/**
+ * documentsApi.ts — ドキュメントデータアクセス層（共通）
  *
- * 【設計原則】
+ * 【責務】
+ * - データの読み書きだけ。ビジネスロジックなし。
  * - サーバー側のインメモリ + JSONファイル永続化
  * - 起動時にJSONから読み込み、更新時にJSONに書き出し
+ *
+ * 【依存関係】
+ * - DocumentRepository（mock実装）がこのファイルをラップする
+ * - docStore.ts（Honoルート）がこのファイルを直接呼ぶ
  * - Supabase移行時にDB操作に差し替え
- * - 型はrepositories/types.tsから一元参照（二重定義禁止）
  *
  * 【ファイル場所】
  * - data/documents.json（.gitignoreに追加済み）
+ *
+ * 準拠: DL-042, DL-030
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -58,15 +64,15 @@ export function loadDocuments(): void {
       }
       if (migrated) {
         save();
-        console.log('[documentStore] 新フィールドをnullで補完（マイグレーション）');
+        console.log('[documentsApi] 新フィールドをnullで補完（マイグレーション）');
       }
-      console.log(`[documentStore] ${documents.length}件をJSONから読み込み`);
+      console.log(`[documentsApi] ${documents.length}件をJSONから読み込み`);
     } else {
       documents = [];
-      console.log('[documentStore] JSONファイルなし。空で起動');
+      console.log('[documentsApi] JSONファイルなし。空で起動');
     }
   } catch (err) {
-    console.error('[documentStore] JSON読み込みエラー:', err);
+    console.error('[documentsApi] JSON読み込みエラー:', err);
     documents = [];
   }
 }
@@ -81,7 +87,7 @@ function save(): void {
     }
     writeFileSync(DATA_FILE, JSON.stringify(documents, null, 2), 'utf-8');
   } catch (err) {
-    console.error('[documentStore] JSON書き出しエラー:', err);
+    console.error('[documentsApi] JSON書き出しエラー:', err);
   }
 }
 
@@ -115,7 +121,7 @@ export function addDocuments(docs: DocEntry[]): { added: number; skipped: number
   documents.push(...newDocs);
   save();
 
-  console.log(`[documentStore] ${newDocs.length}件追加（重複${docs.length - newDocs.length}件スキップ）`);
+  console.log(`[documentsApi] ${newDocs.length}件追加（重複${docs.length - newDocs.length}件スキップ）`);
   return { added: newDocs.length, skipped: docs.length - newDocs.length };
 }
 
@@ -157,7 +163,7 @@ export function assignBatchAndJournalIds(clientId: string): { batchId: string; c
     doc.journalId = `doc_${crypto.randomBytes(8).toString('hex').slice(0, 8)}`;
   }
   save();
-  console.log(`[documentStore] batchId=${batchId} journalId付与: ${targets.length}件`);
+  console.log(`[documentsApi] batchId=${batchId} journalId付与: ${targets.length}件`);
   return { batchId, count: targets.length };
 }
 
@@ -243,7 +249,7 @@ export function updateAiResults(
 ): boolean {
   const doc = documents.find(d => d.driveFileId === driveFileId);
   if (!doc) {
-    console.warn(`[documentStore] updateAiResults: driveFileId=${driveFileId} が見つからない`);
+    console.warn(`[documentsApi] updateAiResults: driveFileId=${driveFileId} が見つからない`);
     return false;
   }
 
@@ -284,7 +290,7 @@ export function updateAiResults(
 
   save();
   console.log(
-    `[documentStore] AI分類結果書き込み: ${driveFileId}`
+    `[documentsApi] AI分類結果書き込み: ${driveFileId}`
     + ` → ${result.source_type} (${result.source_type_confidence})`
     + ` ${result.line_items.length}行`,
   );
@@ -341,7 +347,7 @@ export function clearAiFieldsByClientId(clientId: string): number {
     doc.updatedAt = new Date().toISOString();
   }
   if (targets.length > 0) save();
-  console.log(`[documentStore] previewExtractデータ削除: ${clientId} → ${targets.length}件`);
+  console.log(`[documentsApi] previewExtractデータ削除: ${clientId} → ${targets.length}件`);
   return targets.length;
 }
 

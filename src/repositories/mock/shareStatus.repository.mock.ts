@@ -10,46 +10,38 @@
  */
 
 import type { ShareStatusRecord, ShareStatusRepository } from '@/repositories/types'
-
-/** インメモリストア（同一プロセス内でシングルトン） */
-const store = new Map<string, ShareStatusRecord>()
+import {
+  getAllShareStatus,
+  getByClientId as getByClientIdFromStore,
+  updateStatus as updateStatusInStore,
+  saveInviteCode as saveInviteCodeInStore,
+  getClientIdByInviteCode,
+} from '../../api/services/shareStatusStore'
 
 export const mockShareStatusRepo: ShareStatusRepository = {
   async getAll(): Promise<ShareStatusRecord[]> {
-    return Array.from(store.values())
+    return getAllShareStatus()
   },
 
   async getByClientId(clientId: string): Promise<ShareStatusRecord | undefined> {
-    return store.get(clientId)
+    return getByClientIdFromStore(clientId)
   },
 
   async updateStatus(clientId: string, status): Promise<void> {
-    const existing = store.get(clientId)
-    if (existing) {
-      existing.status = status
-      existing.updatedAt = new Date().toISOString()
-    } else {
-      store.set(clientId, {
-        clientId,
-        status,
-        inviteCode: null,
-        updatedAt: new Date().toISOString(),
-      })
-    }
+    updateStatusInStore(clientId, status)
   },
 
   async saveInviteCode(clientId: string, code: string): Promise<void> {
-    const existing = store.get(clientId)
-    if (existing) {
-      existing.inviteCode = code
-      existing.updatedAt = new Date().toISOString()
-    } else {
-      store.set(clientId, {
-        clientId,
-        status: 'pending',
-        inviteCode: code,
-        updatedAt: new Date().toISOString(),
-      })
-    }
+    saveInviteCodeInStore(clientId, code)
+  },
+
+  async generateInviteCode(clientId: string): Promise<{ code: string }> {
+    const code = Math.random().toString(36).substring(2, 10)
+    saveInviteCodeInStore(clientId, code)
+    return { code }
+  },
+
+  async resolveInviteCode(code: string): Promise<string | null> {
+    return getClientIdByInviteCode(code)
   },
 }

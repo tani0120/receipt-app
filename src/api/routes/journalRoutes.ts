@@ -41,7 +41,7 @@ import {
   getClientTaxCategories,
   getAccountNameMap,
   getTaxCategoryNameMap,
-} from '../services/accountMasterStore';
+} from '../services/accountMasterApi';
 
 const app = new Hono();
 

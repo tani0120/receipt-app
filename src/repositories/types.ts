@@ -20,6 +20,8 @@
 
 import type { Vendor, IndustryVectorEntry, VendorVector } from '@/types/pipeline/vendor.type'
 import type { Account } from '@/types/shared-account'
+import type { FilterOperator } from '@/api/helpers/applyFilterConditions'
+import type { TaxCategory } from '@/types/shared-tax-category'
 
 // ============================================================
 // § 0-1. Staff（スタッフ）— DL-042で追加
@@ -458,6 +460,9 @@ export type VendorRepository = {
   /** 全社共通取引先マスタ全件取得 */
   getAll(): Promise<Vendor[]>
 
+  /** type指定で取得（'vendor' | 'non-vendor'） */
+  getByType(type: 'vendor' | 'non-vendor'): Promise<Vendor[]>
+
   /**
    * match_key（照合キー）で完全一致検索
    * normalizeVendorName()の出力値を渡す（DL-027）
@@ -475,6 +480,29 @@ export type VendorRepository = {
    * phone_numbers配列のいずれかに一致した場合にヒット（Layer 2照合）
    */
   findByPhoneNumber(phone: string): Promise<Vendor | undefined>
+
+  /** 取引先を新規作成（サーバーでvendor_id発番） */
+  create(vendor: Omit<Vendor, 'vendor_id'> & { vendor_id?: string }): Promise<Vendor>
+
+  /** 取引先を削除 */
+  deleteById(vendorId: string): Promise<void>
+
+  /** 一覧取得（フィルタ+ソート+ページネーション） */
+  list(query: {
+    type?: 'vendor' | 'non-vendor'
+    search?: string
+    vectorFilter?: string
+    directionFilter?: string
+    sortKey?: string
+    sortOrder?: 'asc' | 'desc'
+    page?: number
+    pageSize?: number
+  }): Promise<{
+    rows: Vendor[]
+    totalCount: number
+    totalPages: number
+    uniqueVectors?: string[]
+  }>
 }
 
 // ============================================================
@@ -556,6 +584,85 @@ export type AccountRepository = {
 }
 
 // ============================================================
+// § 4b. AccountMasterRepository（勘定科目マスタ編集）
+// ============================================================
+
+/**
+ * 勘定科目マスタ編集へのデータアクセス
+ *
+ * 対象データ: account-master.json（マスタ科目一覧）
+ * 用途: マスタ管理画面での科目編集・保存
+ *
+ * AccountRepositoryとの責務分離:
+ * - AccountRepository: 仕訳処理・バリデーション用の参照系
+ * - AccountMasterRepository: マスタメンテナンス・管理画面編集用
+ */
+export type AccountMasterRepository = {
+  /** マスタ科目全件取得（管理画面用） */
+  getMaster(): Promise<Account[]>
+
+  /** マスタ科目全件上書き保存 */
+  saveMaster(accounts: Account[]): Promise<void>
+
+  /** 顧問先科目全件取得 */
+  getClient(clientId: string): Promise<{ accounts: Account[] }>
+
+  /** 顧問先科目全件上書き保存 */
+  saveClient(clientId: string, data: { accounts: Account[]; subAccounts?: Record<string, string> }): Promise<void>
+}
+
+// ============================================================
+// § 4c. TaxMasterRepository（税区分マスタ編集）
+// ============================================================
+
+/**
+ * 税区分マスタ編集へのデータアクセス
+ *
+ * 対象データ: tax-categories-master.json（マスタ税区分一覧）
+ * 用途: マスタ管理画面での税区分編集・保存
+ *
+ * AccountMasterRepositoryと同パターン。
+ */
+export type TaxMasterRepository = {
+  /** マスタ税区分全件取得（管理画面用） */
+  getMaster(): Promise<TaxCategory[]>
+
+  /** マスタ税区分全件上書き保存 */
+  saveMaster(taxCategories: TaxCategory[]): Promise<void>
+}
+
+// ============================================================
+// § 4d. LeadRepository（見込先マスタ）
+// ============================================================
+
+/**
+ * 見込先マスタへのデータアクセス
+ *
+ * 対象データ: leads.json（見込先一覧）
+ * 用途: 見込先管理画面でのCRUD・一覧表示
+ */
+export type LeadRepository = {
+  /** 全見込先取得 */
+  getAll(): Promise<Lead[]>
+  /** leadIdで1件取得 */
+  getById(leadId: string): Promise<Lead | undefined>
+  /** 見込先追加（サーバーでleadId発番。作成されたLeadを返す） */
+  create(lead: Lead): Promise<Lead>
+  /** 見込先更新（部分更新） */
+  update(leadId: string, partial: Partial<Lead>): Promise<void>
+  /** Drive共有フォルダ設定 */
+  updateSharedFolderId(leadId: string, folderId: string): Promise<void>
+  /** 見込先一覧（フィルタ+ソート+ページネーション） */
+  list(query: {
+    filters?: { field: string; operator: FilterOperator; value: string | string[] }[]
+    logic?: 'and' | 'or'
+    sorts?: { key: string; order: 'asc' | 'desc' }[]
+    page?: number
+    pageSize?: number
+  }): Promise<{ rows: Lead[]; totalCount: number; page: number; pageSize: number; totalPages: number }>
+}
+
+// ============================================================
 // § 5. ConfirmedJournalRepository（確定済み仕訳マスタ）
 // ============================================================
 
@@ -576,6 +683,34 @@ export type ConfirmedJournalRepository = {
    * 過去仕訳照合（Step 2）のコアメソッド
    */
   findByMatchKey(clientId: string, matchKey: string): Promise<ConfirmedJournal[]>
+
+  /** 顧問先のインポートバッチ一覧を取得 */
+  listBatches(clientId: string): Promise<{
+    batches: {
+      import_batch_id: string
+      client_id?: string
+      count: number
+      imported_at: string
+      min_voucher_date?: string
+      max_voucher_date?: string
+    }[]
+  }>
+
+  /** CSVテキストをパースしてインポート */
+  importCsv(clientId: string, csvText: string): Promise<{
+    ok: boolean
+    added: number
+    skipped: number
+    total_in_db: number
+    warnings?: string[]
+    message?: string
+  }>
+
+  /** バッチを削除 */
+  deleteBatch(batchId: string): Promise<{ removed: number }>
+
+  /** バッチ内の仕訳一覧を取得 */
+  getJournalsByBatch(batchId: string): Promise<{ journals: ConfirmedJournal[] }>
 }
 
 // ============================================================
@@ -616,6 +751,12 @@ export type ShareStatusRepository = {
 
   /** 招待コードを保存 */
   saveInviteCode(clientId: string, code: string): Promise<void>
+
+  /** 招待コードをサーバーで生成して返す */
+  generateInviteCode(clientId: string): Promise<{ code: string }>
+
+  /** 招待コードからclientIdを逆引き */
+  resolveInviteCode(code: string): Promise<string | null>
 }
 
 // ============================================================
@@ -777,17 +918,29 @@ export const AI_FIELD_KEYS: (keyof DocEntry)[] = [
  *    移行時にこのRepository経由に差し替え。
  */
 export type DocumentRepository = {
+  /** 全資料を取得 */
+  getAll(): Promise<DocEntry[]>
+
   /** 顧問先の全資料を取得 */
   getByClientId(clientId: string): Promise<DocEntry[]>
 
   /** 資料の選別ステータスを更新（データ書き換えのみ） */
-  updateStatus(id: string, status: DocStatus): Promise<void>
+  updateStatus(id: string, updates: Partial<DocEntry>): Promise<void>
 
   /** 資料を1件保存（Drive取り込み/PCアップロード時） */
   save(doc: DocEntry): Promise<void>
 
   /** 資料を複数件一括保存（バッチ取り込み用） */
-  saveBatch(docs: DocEntry[]): Promise<void>
+  saveBatch(docs: DocEntry[]): Promise<{ added: number; skipped: number }>
+
+  /** 顧問先の全資料を削除 */
+  removeByClientId(clientId: string): Promise<void>
+
+  /** 選別完了→送出時にbatchId/journalIdを全件付与 */
+  assignBatch(clientId: string): Promise<{ batchId: string; count: number }>
+
+  /** previewExtractデータ（ai*フィールド）を完全削除 */
+  clearAiFields(clientId: string): Promise<void>
 }
 
 // ============================================================
@@ -811,6 +964,12 @@ export type Repositories = {
   industryVector: IndustryVectorRepository
   /** 勘定科目マスタ */
   account: AccountRepository
+  /** 勘定科目マスタ編集（管理画面用） */
+  accountMaster: AccountMasterRepository
+  /** 税区分マスタ編集（管理画面用） */
+  taxMaster: TaxMasterRepository
+  /** 見込先マスタ */
+  lead: LeadRepository
   /** 確定済み仕訳マスタ（過去仕訳照合用） */
   confirmedJournal: ConfirmedJournalRepository
   /** 共有設定マスタ（DL-031） */
@@ -838,10 +997,24 @@ export type StaffRepository = {
   getByEmail(email: string): Promise<Staff | undefined>
   /** 有効スタッフのみ取得（担当者選択ドロップダウン用） */
   getActiveStaff(): Promise<Staff[]>
-  /** スタッフ追加 */
-  create(staff: Staff): Promise<void>
+  /** スタッフ追加（サーバーでuuid発番。作成されたStaffを返す） */
+  create(staff: Staff): Promise<Staff>
   /** スタッフ更新（部分更新） */
   update(uuid: string, partial: Partial<Staff>): Promise<void>
+  /** スタッフ一覧（フィルタ+ソート+ページネーション） */
+  list(query: {
+    statusFilter?: 'all' | 'active' | 'inactive'
+    sortKey?: string
+    sortOrder?: 'asc' | 'desc'
+    page?: number
+    pageSize?: number
+  }): Promise<{ rows: Staff[]; totalCount: number; totalPages: number }>
+  /** スタッフ一括追加（CSVインポート用） */
+  bulkCreate(items: Record<string, unknown>[]): Promise<{
+    ok: boolean
+    results: { index: number; ok: boolean; uuid?: string; error?: string }[]
+    total: number
+  }>
 }
 
 // ============================================================
@@ -863,10 +1036,24 @@ export type ClientRepository = {
   getByStaffId(staffId: string): Promise<Client[]>
   /** 有効顧問先のみ取得 */
   getActiveClients(): Promise<Client[]>
-  /** 顧問先追加 */
-  create(client: Client): Promise<void>
+  /** 顧問先追加（サーバーでclientId発番。作成されたClientを返す） */
+  create(client: Client): Promise<Client>
   /** 顧問先更新（部分更新） */
   update(clientId: string, partial: Partial<Client>): Promise<void>
+  /** 顧問先一覧（フィルタ+ソート+ページネーション） */
+  list(query: {
+    filters?: { field: string; operator: FilterOperator; value: string | string[] }[]
+    logic?: 'and' | 'or'
+    sorts?: { key: string; order: 'asc' | 'desc' }[]
+    page?: number
+    pageSize?: number
+  }): Promise<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }>
+  /** 顧問先一括追加（CSVインポート用） */
+  bulkCreate(items: Record<string, unknown>[]): Promise<{
+    ok: boolean
+    results: { index: number; ok: boolean; clientId?: string; threeCode?: string; companyName?: string; error?: string }[]
+    total: number
+  }>
 }
 
 // ============================================================

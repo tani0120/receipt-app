@@ -11,7 +11,7 @@
  * 参照元:
  *   - views/master/MockMasterAccountsPage.vue
  *   - views/client/MockClientAccountsPage.vue
- *   - api/services/accountMasterStore.ts
+ *   - api/services/accountMasterApi.ts
  *   - shared/validation/journalValidationCore.ts（間接）
  */
 import type { AccountGroup, TaxDetermination } from '@/types/shared-account'

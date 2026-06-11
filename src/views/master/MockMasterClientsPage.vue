@@ -1700,12 +1700,9 @@ const handleCsvImport = async () => {
 
   if (validItems.length > 0) {
     try {
-      const res = await fetch('/api/clients/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: validItems }),
-      });
-      const bulkResult = await res.json();
+      const { createRepositories } = await import('@/repositories');
+      const repos = createRepositories();
+      const bulkResult = await repos.client.bulkCreate(validItems);
       if (bulkResult.results) {
         for (const r of bulkResult.results) {
           if (r.ok) {

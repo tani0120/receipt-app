@@ -19,7 +19,7 @@
  */
 
 import { mcpFetchAccounts } from './mfMcpClient'
-import { getAllAccounts, saveAllAccounts, getAllTaxCategories } from './accountMasterStore'
+import { getAllAccounts, saveAllAccounts, getAllTaxCategories } from './accountMasterApi'
 import { saveMfRawData } from './mfRawDataStore'
 import { getById } from './clientsApi'
 import { generateMasterId } from './generateMasterId'

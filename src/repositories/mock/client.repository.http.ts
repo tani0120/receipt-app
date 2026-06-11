@@ -43,10 +43,23 @@ export const httpClientRepo: ClientRepository = {
   },
 
   create: async (client) => {
-    await api.post('', client)
+    const res = await api.post<{ ok: boolean; client: Client }>('', client)
+    return res.client
   },
 
   update: async (clientId, partial) => {
     await api.put(`/${clientId}`, partial)
+  },
+
+  list: async (query) => {
+    return api.post<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
+  },
+
+  bulkCreate: async (items) => {
+    return api.post<{
+      ok: boolean
+      results: { index: number; ok: boolean; clientId?: string; threeCode?: string; companyName?: string; error?: string }[]
+      total: number
+    }>('/bulk', { items })
   },
 }

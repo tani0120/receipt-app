@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { zValidator } from '@hono/zod-validator'
 import { zodHook } from '../helpers/zodHook'
-import { getDocuments } from '../services/documentStore'
+import { getDocuments } from '../services/documentsApi'
 import { summarizeCsvLines as summarizeCsvLinesImport } from '../services/exportHistoryStore'
 import { getAll as getAllClients } from '../services/clientsApi'
 import { getAll as getAllStaff } from '../services/staffsApi'

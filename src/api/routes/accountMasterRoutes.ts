@@ -21,7 +21,7 @@ import {
   saveAllAccounts,
   getFilteredClientAccounts,
   saveClientAccounts,
-} from '../services/accountMasterStore'
+} from '../services/accountMasterApi'
 import type { Account } from '../../types/shared-account'
 
 const app = new Hono()

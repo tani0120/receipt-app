@@ -15,7 +15,7 @@
  */
 
 import { getJournals } from './journalStore'
-import { getByClientId as getConfirmedJournals } from './confirmedJournalStore'
+import { getByClientId as getConfirmedJournals } from './confirmedJournalsApi'
 import type { ConfirmedJournal } from '../../types/confirmed_journal.type'
 import crypto from 'crypto'
 

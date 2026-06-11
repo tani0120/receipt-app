@@ -940,21 +940,11 @@ export function useUpload() {
       })
     }
 
-    // 2. documentStoreにPOST（awaitでエラーを捕捉）
+    // 2. documentStoreにPOST（useDocuments composable経由）
     try {
-      const res = await fetch('/api/doc-store', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documents: docEntries }),
-      })
-      if (!res.ok) {
-        console.error(`[useUpload] documentStore保存失敗: HTTP ${res.status}`)
-        alert(UI_MSG.データ保存失敗再試行)
-        isConfirming.value = false
-        return
-      }
-      const result = await res.json() as { added: number; skipped: number }
-      console.log(`[useUpload] handleConfirm: サーバーに${result.added}件保存（重複${result.skipped}件スキップ）(role=${role})`)
+      const { addDocuments } = useDocuments()
+      const added = addDocuments(docEntries)
+      console.log(`[useUpload] handleConfirm: ${added}件保存(role=${role})`)
     } catch (err) {
       console.error('[useUpload] documentStore保存エラー:', err)
       alert(UI_MSG.データ保存失敗ネットワーク)

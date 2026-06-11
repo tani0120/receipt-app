@@ -2,13 +2,14 @@
  * accountMasterStore — 勘定科目マスタ Piniaストア
  *
  * useAccountMaster.tsのモジュールスコープをPinia + persistedstateに移行。
+ * AccountMasterRepository経由でデータアクセス（API直結を排除）。
  *
- * 準拠: DL-042, plan_pinia_persistedstate移行.md
+ * 準拠: DL-042, DL-030, plan_pinia_persistedstate移行.md
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Account } from '@/types/shared-account'
-import { createApiClient } from '@/utils/apiClient'
+import { createRepositories } from '@/repositories'
 
 /** マスタレベルの科目拡張（非表示フラグ＋カスタム識別） */
 export interface MasterAccount extends Account {
@@ -16,7 +17,7 @@ export interface MasterAccount extends Account {
   isCustom: boolean
 }
 
-const api = createApiClient('/api/accounts')
+const repos = createRepositories()
 
 
 export const useAccountMasterStore = defineStore('accountMaster', () => {
@@ -36,10 +37,10 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
 
   async function fetchFresh() {
     try {
-      const data = await api.get<{ items: Account[] }>('/master?pageSize=200')
-      allAccounts.value = data.items
+      const data = await repos.accountMaster.getMaster()
+      allAccounts.value = data
       cachedAt.value = Date.now()
-      console.log(`[accountMasterStore] ${data.items.length}件をサーバーから取得`)
+      console.log(`[accountMasterStore] ${data.length}件をサーバーから取得`)
     } catch (err) {
       console.error('[accountMasterStore] サーバー取得失敗:', err)
     }
@@ -48,7 +49,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   function debounceSave(): void {
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
-      api.put('/master', { accounts: allAccounts.value })
+      repos.accountMaster.saveMaster(allAccounts.value)
         .catch(err => console.error('[accountMasterStore] サーバー保存失敗:', err))
     }, 300)
   }

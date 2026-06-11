@@ -12,13 +12,9 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Staff } from '@/repositories/types'
 import { createRepositories } from '@/repositories'
-import { createApiClient } from '@/utils/apiClient'
 
 // Repository経由でデータアクセス
 const repos = createRepositories()
-
-// listStaff専用（StaffRepositoryにlistメソッドがないため）
-const listApi = createApiClient('/api/staff')
 
 export const useStaffStore = defineStore('staff', () => {
   const staffList = ref<Staff[]>([])
@@ -49,9 +45,7 @@ export const useStaffStore = defineStore('staff', () => {
   async function addStaff(staff: Omit<Staff, 'uuid'> & { uuid?: string }): Promise<Staff> {
     lastError.value = null
     try {
-      // createはサーバー側でuuidを発番するため、HTTP API経由で呼ぶ
-      const res = await listApi.post<{ ok: boolean; staff: Staff }>('', staff)
-      const saved = res.staff
+      const saved = await repos.staff.create(staff as Staff)
       staffList.value.push(saved)
       return saved
     } catch (err) {

@@ -208,11 +208,9 @@ const vendors = ref<Vendor[]>([]);
 
 onMounted(async () => {
   try {
-    const res = await fetch('/api/vendors?type=vendor');
-    if (res.ok) {
-      const data = await res.json() as { vendors: Vendor[] };
-      vendors.value = data.vendors;
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    vendors.value = await repos.vendor.getByType('vendor');
   } catch (e) {
     console.error('[VendorsPage] API取得失敗:', e);
   }
@@ -274,12 +272,12 @@ function confirmDelete(row: Vendor) {
 async function executeDelete() {
   if (!deleteTarget.value) return;
   try {
-    const res = await fetch(`/api/vendors/${deleteTarget.value.vendor_id}`, { method: 'DELETE' });
-    if (res.ok) {
-      const idx = vendors.value.findIndex(v => v.vendor_id === deleteTarget.value!.vendor_id);
-      if (idx !== -1) vendors.value.splice(idx, 1);
-      refreshList();
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    await repos.vendor.deleteById(deleteTarget.value.vendor_id);
+    const idx = vendors.value.findIndex(v => v.vendor_id === deleteTarget.value!.vendor_id);
+    if (idx !== -1) vendors.value.splice(idx, 1);
+    refreshList();
   } catch (e) {
     console.error('[VendorsPage] 削除失敗:', e);
   }
@@ -320,17 +318,12 @@ async function addVendor() {
   };
 
   try {
-    const res = await fetch('/api/vendors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newVendor),
-    });
-    if (res.ok) {
-      const created = await res.json() as Vendor;
-      vendors.value.unshift(created);
-      page.value = 1;
-      refreshList();
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const created = await repos.vendor.create(newVendor);
+    vendors.value.unshift(created);
+    page.value = 1;
+    refreshList();
   } catch (e) {
     console.error('[VendorsPage] 追加失敗:', e);
   }
@@ -363,21 +356,18 @@ const uniqueVectors = ref<string[]>([]);
 
 /** fetchFn: POST /api/vendors/list */
 const vendorFetchFn = async (query: Record<string, unknown>): Promise<ServerTableResult<Vendor>> => {
-  const res = await fetch('/api/vendors/list', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      search: searchQuery.value || undefined,
-      vectorFilter: vectorFilter.value || undefined,
-      directionFilter: directionFilter.value || undefined,
-      sortKey: sortKey.value || undefined,
-      sortOrder: sortAsc.value ? 'asc' : 'desc',
-      page: query.page,
-      pageSize: query.pageSize,
-      type: 'vendor',
-    }),
+  const { createRepositories } = await import('@/repositories');
+  const repos = createRepositories();
+  const data = await repos.vendor.list({
+    search: searchQuery.value || undefined,
+    vectorFilter: vectorFilter.value || undefined,
+    directionFilter: directionFilter.value || undefined,
+    sortKey: sortKey.value || undefined,
+    sortOrder: sortAsc.value ? 'asc' : 'desc',
+    page: query.page as number,
+    pageSize: query.pageSize as number,
+    type: 'vendor',
   });
-  const data = await res.json();
   uniqueVectors.value = data.uniqueVectors ?? [];
   return {
     rows: data.rows,

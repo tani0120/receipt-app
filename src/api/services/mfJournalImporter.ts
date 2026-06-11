@@ -19,7 +19,7 @@ import type { ConfirmedJournal, ConfirmedJournalEntry } from '../../types/confir
 import type { MfMcpJournal, MfMcpJournalSide } from './mfMcpClient'
 import type { MfMappingTables } from './mfMappingService'
 import { buildAllMaps } from './mfMappingService'
-import { importJournals } from './confirmedJournalStore'
+import { importJournals } from './confirmedJournalsApi'
 import { normalizeVendorName } from '../../utils/pipeline/vendorIdentification'
 import { fromMfInvoiceKind, MF_JOURNAL_TYPE_ADJUSTING } from '../../constants/mfApiConstants'
 
