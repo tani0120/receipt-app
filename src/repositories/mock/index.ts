@@ -11,11 +11,13 @@
  * - StaffRepository:            ✅ 実装済み（staff.repository.mock.ts）
  * - DocumentRepository:         ✅ 実装済み（document.repository.mock.ts）
  * - ClientVendorRepository:     ❌ 未実装（フェーズ4: R-6）
- * - IndustryVectorRepository:   ❌ 未実装（フェーズ4: R-3）
+ * - IndustryVectorRepository:   ✅ 実装済み（industryVector.repository.mock.ts）
  * - AccountRepository:          ✅ 実装済み（account.repository.mock.ts）
  * - AccountMasterRepository:    ✅ 実装済み（accountMaster.repository.mock.ts）
  * - TaxMasterRepository:        ✅ 実装済み（taxMaster.repository.mock.ts）
  * - ConfirmedJournalRepository: ✅ 実装済み（confirmedJournal.repository.mock.ts）
+ * - LeadRepository:             ✅ 実装済み（lead.repository.mock.ts）
+ * - LearningRuleRepository:     ✅ 実装済み（learningRule.repository.mock.ts）
  */
 
 import type { Repositories } from '@/repositories/types'
@@ -29,6 +31,8 @@ import { mockAccountRepo } from './account.repository.mock'
 import { mockAccountMasterRepo } from './accountMaster.repository.mock'
 import { mockTaxMasterRepo } from './taxMaster.repository.mock'
 import { mockLeadRepo } from './lead.repository.mock'
+import { mockLearningRuleRepo } from './learningRule.repository.mock'
+import { mockIndustryVectorRepo } from './industryVector.repository.mock'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /**
@@ -42,7 +46,7 @@ export function createMockRepositories(): Repositories {
     vendor: mockVendorRepo,
     shareStatus: mockShareStatusRepo,
 
-    // ── 以下はフェーズ4で実装予定。呼び出すとエラーを投げる ──
+    // ── clientVendorのみ未実装。呼び出すとエラーを投げる ──
 
     clientVendor: {
       getByClientId: async () => { throw new Error(UI_MSG.未実装接頭_ClientVendor) },
@@ -50,10 +54,7 @@ export function createMockRepositories(): Repositories {
       save: async () => { throw new Error(UI_MSG.未実装接頭_ClientVendor) },
     },
 
-    industryVector: {
-      getAll: async () => { throw new Error(UI_MSG.未実装接頭_IndustryVector) },
-      findByVector: async () => { throw new Error(UI_MSG.未実装接頭_IndustryVector) },
-    },
+    industryVector: mockIndustryVectorRepo,
 
     account: mockAccountRepo,
 
@@ -70,5 +71,7 @@ export function createMockRepositories(): Repositories {
     client: mockClientRepo,
 
     document: mockDocumentRepo,
+
+    learningRule: mockLearningRuleRepo,
   }
 }

@@ -12,8 +12,8 @@
  */
 
 import type { Repositories } from '@/repositories/types'
-import { mockVendorRepo } from '../mock/vendor.repository.mock'
-import { mockShareStatusRepo } from '../mock/shareStatus.repository.mock'
+import { httpVendorRepo } from '../mock/vendor.repository.http'
+import { httpShareStatusRepo } from '../mock/shareStatus.repository.http'
 import { httpClientRepo } from '../mock/client.repository.http'
 import { httpStaffRepo } from '../mock/staff.repository.http'
 import { httpDocumentRepo } from '../mock/document.repository.http'
@@ -22,20 +22,22 @@ import { httpAccountRepo } from '../mock/account.repository.http'
 import { httpAccountMasterRepo } from '../mock/accountMaster.repository.http'
 import { httpTaxMasterRepo } from '../mock/taxMaster.repository.http'
 import { httpLeadRepo } from '../mock/lead.repository.http'
+import { httpLearningRuleRepo } from '../mock/learningRule.repository.http'
+import { httpIndustryVectorRepo } from '../mock/industryVector.repository.http'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /**
  * HTTP版Repositories生成（フロントエンド用）
  *
- * clientのみHTTP実装。他はmock/スタブのまま。
- * 各Repositoryが実装されたら差し替える。
+ * clientVendor以外は全てHTTP実装済み。
+ * clientVendorのみスタブ（呼び出すとエラー）。
  */
 export function createHttpRepositories(): Repositories {
   return {
-    vendor: mockVendorRepo,
-    shareStatus: mockShareStatusRepo,
+    vendor: httpVendorRepo,
+    shareStatus: httpShareStatusRepo,
 
-    // ── 以下はフェーズ4で実装予定。呼び出すとエラーを投げる ──
+    // ── clientVendorのみ未実装。呼び出すとエラーを投げる ──
 
     clientVendor: {
       getByClientId: async () => { throw new Error(UI_MSG.未実装接頭_ClientVendor) },
@@ -43,10 +45,7 @@ export function createHttpRepositories(): Repositories {
       save: async () => { throw new Error(UI_MSG.未実装接頭_ClientVendor) },
     },
 
-    industryVector: {
-      getAll: async () => { throw new Error(UI_MSG.未実装接頭_IndustryVector) },
-      findByVector: async () => { throw new Error(UI_MSG.未実装接頭_IndustryVector) },
-    },
+    industryVector: httpIndustryVectorRepo,
 
     account: httpAccountRepo,
 
@@ -63,5 +62,7 @@ export function createHttpRepositories(): Repositories {
     client: httpClientRepo,
 
     document: httpDocumentRepo,
+
+    learningRule: httpLearningRuleRepo,
   }
 }

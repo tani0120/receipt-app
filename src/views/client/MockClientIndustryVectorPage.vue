@@ -184,18 +184,14 @@ const soleEntries = ref<EditableEntry[]>([]);
 
 onMounted(async () => {
   try {
-    const [corpRes, soleRes] = await Promise.all([
-      fetch('/api/industry-vectors?type=corporate'),
-      fetch('/api/industry-vectors?type=sole'),
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const [corpData, soleData] = await Promise.all([
+      repos.industryVector.getAll('corporate'),
+      repos.industryVector.getAll('sole'),
     ]);
-    if (corpRes.ok) {
-      const data = await corpRes.json() as { entries: IndustryVectorEntry[] };
-      corporateEntries.value = toEditable(data.entries);
-    }
-    if (soleRes.ok) {
-      const data = await soleRes.json() as { entries: IndustryVectorEntry[] };
-      soleEntries.value = toEditable(data.entries);
-    }
+    corporateEntries.value = toEditable(corpData);
+    soleEntries.value = toEditable(soleData);
   } catch (e) {
     console.error('[ClientIndustryVectorPage] API取得失敗:', e);
   }

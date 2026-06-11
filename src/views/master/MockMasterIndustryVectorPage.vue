@@ -234,11 +234,10 @@ const isLoading = ref(true);
 
 async function fetchEntries(type: 'corporate' | 'sole'): Promise<EditableEntry[]> {
   try {
-    const res = await fetch(`/api/industry-vectors?type=${type}`);
-    if (res.ok) {
-      const data = await res.json() as { entries: IndustryVectorEntry[] };
-      return toEditable(data.entries);
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const entries = await repos.industryVector.getAll(type);
+    return toEditable(entries);
   } catch (e) {
     console.error(`[IndustryVectorPage] ${type}取得失敗:`, e);
   }

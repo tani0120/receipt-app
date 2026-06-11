@@ -628,11 +628,9 @@ const displayTaxRows = ref<TaxCategory[]>([]);
 /** API呼び出しで表示用refを更新 */
 async function refreshDisplayTaxRows() {
   try {
-    const res = await fetch(`/api/tax-categories/master?taxMethod=${taxMethod.value}&pageSize=200`);
-    if (res.ok) {
-      const data = await res.json();
-      displayTaxRows.value = data.items ?? [];
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    displayTaxRows.value = await repos.taxMaster.getMaster();
   } catch (err) {
     console.error('[全社税区分] API取得失敗:', err);
   }
@@ -781,17 +779,10 @@ function getRate(row: TaxCategory): string {
 // =============== 保存 ===============
 async function saveChanges() {
   try {
-    // API経由でサーバー側に保存
-    const response = await fetch('/api/tax-categories/master', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ taxCategories: allTaxRows }),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ message: UI_MSG.保存失敗 }));
-      await modal.notify({ title: err.message ?? UI_MSG.保存失敗, variant: 'warning' });
-      return;
-    }
+    // API経由でサーバー側に保存（Repository経由）
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    await repos.taxMaster.saveMaster(allTaxRows);
 
     // composable側のoverridesにも同期（顧問先ページへの反映用）
     const defaultTaxIds = settings.defaultTaxIds.value;

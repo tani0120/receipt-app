@@ -11,6 +11,8 @@
 import {
   getFilteredTaxCategories,
   saveAllTaxCategories,
+  getClientTaxCategories,
+  saveClientTaxCategories,
 } from '../../api/services/accountMasterApi'
 import type { TaxMasterRepository } from '../types'
 
@@ -21,5 +23,12 @@ export const mockTaxMasterRepo: TaxMasterRepository = {
   },
   saveMaster: async (taxCategories) => {
     saveAllTaxCategories(taxCategories)
+  },
+  getClient: async (clientId) => {
+    const taxCategories = getClientTaxCategories(clientId)
+    return { taxCategories }
+  },
+  saveClient: async (clientId, taxCategories) => {
+    saveClientTaxCategories(clientId, taxCategories)
   },
 }

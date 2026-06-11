@@ -22,6 +22,8 @@ import type { Vendor, IndustryVectorEntry, VendorVector } from '@/types/pipeline
 import type { Account } from '@/types/shared-account'
 import type { FilterOperator } from '@/api/helpers/applyFilterConditions'
 import type { TaxCategory } from '@/types/shared-tax-category'
+import type { LearningRule } from '@/types/learning_rule.type'
+export type { LearningRule }
 
 // ============================================================
 // § 0-1. Staff（スタッフ）— DL-042で追加
@@ -629,6 +631,12 @@ export type TaxMasterRepository = {
 
   /** マスタ税区分全件上書き保存 */
   saveMaster(taxCategories: TaxCategory[]): Promise<void>
+
+  /** 顧問先税区分全件取得 */
+  getClient(clientId: string): Promise<{ taxCategories: TaxCategory[] }>
+
+  /** 顧問先税区分全件上書き保存 */
+  saveClient(clientId: string, taxCategories: TaxCategory[]): Promise<void>
 }
 
 // ============================================================
@@ -711,6 +719,43 @@ export type ConfirmedJournalRepository = {
 
   /** バッチ内の仕訳一覧を取得 */
   getJournalsByBatch(batchId: string): Promise<{ journals: ConfirmedJournal[] }>
+}
+
+// ============================================================
+// § 5b. LearningRuleRepository（学習ルールマスタ）
+// ============================================================
+
+
+/**
+ * 学習ルールマスタへのデータアクセス
+ *
+ * 対象データ: learning_rules（顧問先別の学習ルール一覧）
+ * 用途: 学習ルール管理画面でのCRUD・一覧表示
+ */
+export type LearningRuleRepository = {
+  /** 顧問先のルール全件取得 */
+  getByClientId(clientId: string): Promise<{ rules: LearningRule[] }>
+
+  /** フィルタ付き一覧取得 */
+  list(clientId: string, query: {
+    sourceFilter?: string
+    filterMode?: string
+    searchText?: string
+  }): Promise<{
+    rules: LearningRule[]
+    sourceCounts: { all: number; receipt: number; bank: number; credit: number }
+    statusCounts: { all: number; active: number; inactive: number }
+    generatedByCounts: { ai: number; human: number }
+  }>
+
+  /** ルール新規作成 */
+  create(clientId: string, rule: LearningRule): Promise<{ rule: LearningRule }>
+
+  /** ルール更新（部分更新） */
+  update(clientId: string, ruleId: string, rule: Partial<LearningRule>): Promise<void>
+
+  /** ルール削除 */
+  deleteById(clientId: string, ruleId: string): Promise<void>
 }
 
 // ============================================================
@@ -976,6 +1021,8 @@ export type Repositories = {
   shareStatus: ShareStatusRepository
   /** 資料マスタ（DL-039） */
   document: DocumentRepository
+  /** 学習ルールマスタ */
+  learningRule: LearningRuleRepository
 }
 
 // ============================================================

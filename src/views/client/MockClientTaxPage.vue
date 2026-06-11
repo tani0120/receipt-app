@@ -524,11 +524,10 @@ const displayTaxRows = ref<TaxCategory[]>([]);
 async function refreshDisplayTaxRows() {
   if (!clientId.value) return;
   try {
-    const res = await fetch(`/api/tax-categories/client/${encodeURIComponent(clientId.value)}?taxMethod=${taxTabMethod.value}&pageSize=200`);
-    if (res.ok) {
-      const data = await res.json();
-      displayTaxRows.value = data.items ?? [];
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const data = await repos.taxMaster.getClient(clientId.value);
+    displayTaxRows.value = data.taxCategories ?? [];
   } catch (err) {
     console.error('[顧問先税区分] API取得失敗:', err);
   }
@@ -779,17 +778,10 @@ async function saveChanges() {
   }
 
   try {
-    // API経由でサーバー側に保存
-    const response = await fetch(`/api/tax-categories/client/${clientId.value}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ taxCategories: allTaxRows }),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ message: UI_MSG.保存失敗 }));
-      await modal.notify({ title: err.message ?? UI_MSG.保存失敗, variant: "warning" });
-      return;
-    }
+    // API経由でサーバー側に保存（Repository経由）
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    await repos.taxMaster.saveClient(clientId.value, allTaxRows);
 
     // composable側にも同期（他ページへのリアルタイム反映用）
     settings.saveTaxCategories(allTaxRows);

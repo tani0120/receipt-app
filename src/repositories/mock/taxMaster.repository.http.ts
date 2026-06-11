@@ -22,4 +22,10 @@ export const httpTaxMasterRepo: TaxMasterRepository = {
   saveMaster: async (taxCategories) => {
     await api.put('/master', { taxCategories })
   },
+  getClient: async (clientId) => {
+    return api.get<{ taxCategories: TaxCategory[] }>(`/client/${clientId}`)
+  },
+  saveClient: async (clientId, taxCategories) => {
+    await api.put(`/client/${clientId}`, { taxCategories })
+  },
 }

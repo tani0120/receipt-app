@@ -311,11 +311,10 @@ const rules = ref<LearningRule[]>([])
 
 onMounted(async () => {
   try {
-    const res = await fetch(`/api/learning-rules/${clientId.value}`)
-    if (res.ok) {
-      const data = await res.json() as { rules: LearningRule[] }
-      rules.value = data.rules
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const data = await repos.learningRule.getByClientId(clientId.value);
+    rules.value = data.rules;
   } catch (e) {
     console.error('[LearningPage] API取得失敗:', e)
   }
@@ -352,22 +351,13 @@ const humanCount = computed(() => generatedByCounts.value.human)
 
 async function fetchRuleList() {
   try {
-    const res = await fetch(`/api/learning-rules/${clientId.value}/list`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sourceFilter: sourceFilter.value,
-        filterMode: filterMode.value,
-        searchText: searchText.value,
-      }),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = await res.json() as {
-      rules: LearningRule[]
-      sourceCounts: typeof sourceCounts.value
-      statusCounts: typeof statusCounts.value
-      generatedByCounts: typeof generatedByCounts.value
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    const data = await repos.learningRule.list(clientId.value, {
+      sourceFilter: sourceFilter.value,
+      filterMode: filterMode.value,
+      searchText: searchText.value,
+    });
     filteredRules.value = data.rules
     sourceCounts.value = data.sourceCounts
     statusCounts.value = data.statusCounts
@@ -427,16 +417,10 @@ const toggleActive = async (id: string) => {
   if (!rule) return
   const newActive = !rule.isActive
   try {
-    const res = await fetch(`/api/learning-rules/${clientId.value}/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive: newActive }),
-    })
-    if (res.ok) {
-      rule.isActive = newActive
-    } else {
-      console.error('[LearningPage] トグル失敗:', await res.text())
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    await repos.learningRule.update(clientId.value, id, { isActive: newActive });
+    rule.isActive = newActive
   } catch (err) {
     console.error('[LearningPage] トグルAPI通信失敗:', err)
   }
@@ -520,36 +504,17 @@ async function saveModal(mode: 'rule' | 'all') {
   modalRule.value.updatedAt = new Date().toISOString()
 
   try {
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
     if (modalOriginalId.value?.startsWith('NEW-')) {
-      // 新規作成: POST
-      const res = await fetch(`/api/learning-rules/${clientId.value}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(modalRule.value),
-      })
-      if (!res.ok) {
-        console.error('[LearningPage] ルール作成失敗:', await res.text())
-        alert(UI_MSG.ルール保存失敗)
-        return
-      }
-      const data = await res.json() as { rule: LearningRule }
-      // ローカル配列を更新（仮IDの行をサーバー返却のルールに差し替え）
+      // 新規作成
+      const data = await repos.learningRule.create(clientId.value, modalRule.value!);
       const idx = rules.value.findIndex(r => r.ruleId === modalOriginalId.value)
       if (idx !== -1) rules.value[idx] = data.rule
       else rules.value.push(data.rule)
     } else {
-      // 既存更新: PUT
-      const res = await fetch(`/api/learning-rules/${clientId.value}/${modalOriginalId.value}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(modalRule.value),
-      })
-      if (!res.ok) {
-        console.error('[LearningPage] ルール更新失敗:', await res.text())
-        alert(UI_MSG.ルール保存失敗)
-        return
-      }
-      // ローカル配列を更新
+      // 既存更新
+      await repos.learningRule.update(clientId.value, modalOriginalId.value!, modalRule.value!);
       const idx = rules.value.findIndex(r => r.ruleId === modalOriginalId.value)
       if (idx !== -1) rules.value[idx] = { ...modalRule.value!, entries: modalRule.value!.entries.map(e => ({ ...e })) }
     }
@@ -564,16 +529,11 @@ async function saveModal(mode: 'rule' | 'all') {
 async function handleDeleteModal() {
   if (!modalRule.value || !confirm(UI_MSG.ルール削除確認)) return
   try {
-    const res = await fetch(`/api/learning-rules/${clientId.value}/${modalOriginalId.value}`, {
-      method: 'DELETE',
-    })
-    if (res.ok) {
-      rules.value = rules.value.filter(r => r.ruleId !== modalOriginalId.value)
-      closeModal()
-    } else {
-      console.error('[LearningPage] ルール削除失敗:', await res.text())
-      alert(UI_MSG.ルール削除失敗)
-    }
+    const { createRepositories } = await import('@/repositories');
+    const repos = createRepositories();
+    await repos.learningRule.deleteById(clientId.value, modalOriginalId.value!);
+    rules.value = rules.value.filter(r => r.ruleId !== modalOriginalId.value)
+    closeModal()
   } catch (err) {
     console.error('[LearningPage] 削除API通信失敗:', err)
     alert(UI_MSG.ルール削除失敗)
