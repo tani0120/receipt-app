@@ -1,4 +1,4 @@
-﻿/**
+/**
  * attachmentRoutes.ts — 添付ファイルAPIルート（Hono）
  *
  * エンドポイント:
@@ -20,7 +20,7 @@ import { join, extname } from 'path';
 import crypto from 'crypto';
 import { apiError, apiCatchError } from '../helpers/apiError';
 import { ファイル必須, 未検出, リソース_顧問先 } from '../../constants/apiMessages';
-import { getById } from '../services/clientStore';
+import { getById } from '../services/clientsApi';
 import type { AttachmentFile } from '../../repositories/types';
 
 const ATTACHMENTS_DIR = join(process.cwd(), 'data', 'attachments');

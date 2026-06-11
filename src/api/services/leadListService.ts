@@ -9,7 +9,7 @@
  */
 
 import { getAll } from './leadStore'
-import { getAll as getAllStaff } from './staffStore'
+import { getAll as getAllStaff } from './staffsApi'
 import type { Lead } from '../../repositories/types'
 import { applyFilterConditions } from '../helpers/applyFilterConditions'
 import type { FilterCondition } from '../helpers/applyFilterConditions'

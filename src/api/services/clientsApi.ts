@@ -1,16 +1,20 @@
 /**
- * clientStore.ts — 顧問先JSON永続化ストア
+ * clientsApi.ts — 顧問先データアクセス層（共通）
  *
- * 【設計原則】
+ * 【責務】
+ * - データの読み書きだけ。ビジネスロジックなし。
  * - サーバー側のインメモリ + JSONファイル永続化
- * - 起動時にJSONから読み込み。JSONが存在しなければ初期シードを投入
+ * - 起動時にJSONから読み込み。JSONが存在しなければ空配列で初期化
+ *
+ * 【依存関係】
+ * - ClientRepository（mock実装）がこのファイルをラップする
+ * - clientRoutes.ts（Honoルート）がこのファイルを直接呼ぶ
  * - Supabase移行時にDB操作に差し替え
- * - 型はrepositories/types.tsから一元参照（二重定義禁止）
  *
  * 【ファイル場所】
  * - data/clients.json（.gitignoreに追加済み）
  *
- * 準拠: DL-042
+ * 準拠: DL-042, DL-030
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -35,7 +39,7 @@ function save(): void {
     }
     writeFileSync(DATA_FILE, JSON.stringify(clients, null, 2), 'utf-8');
   } catch (err) {
-    console.error('[clientStore] JSON書き出しエラー:', err);
+    console.error('[clientsApi] JSON書き出しエラー:', err);
   }
 }
 
@@ -45,14 +49,14 @@ export function loadClients(): void {
     if (existsSync(DATA_FILE)) {
       const raw = readFileSync(DATA_FILE, 'utf-8');
       clients = JSON.parse(raw) as Client[];
-      console.log(`[clientStore] ${clients.length}件をJSONから読み込み`);
+      console.log(`[clientsApi] ${clients.length}件をJSONから読み込み`);
     } else {
       clients = [];
       save();
-      console.log('[clientStore] JSONなし。空配列で初期化');
+      console.log('[clientsApi] JSONなし。空配列で初期化');
     }
   } catch (err) {
-    console.error('[clientStore] JSON読み込みエラー:', err);
+    console.error('[clientsApi] JSON読み込みエラー:', err);
     clients = [];
   }
 }
@@ -80,7 +84,7 @@ export function getByThreeCode(code: string): Client | undefined {
 export function create(client: Client): Client {
   clients.push(client);
   save();
-  console.log(`[clientStore] 追加: ${client.companyName} (${client.clientId})`);
+  console.log(`[clientsApi] 追加: ${client.companyName} (${client.clientId})`);
   return client;
 }
 

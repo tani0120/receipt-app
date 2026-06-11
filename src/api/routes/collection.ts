@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { zodHook } from '../helpers/zodHook'
 import moment from 'moment'
-import * as clientStore from '../services/clientStore'
+import * as clientStore from '../services/clientsApi'
 import { isIndividualType, getEffectiveFiscalMonth, getFilingOffsetMonths, INDIVIDUAL_DEFAULT_FISCAL_MONTH, CORP_DEFAULT_FISCAL_MONTH } from '../../constants/clientOptions'
 
 const app = new Hono()

@@ -1,17 +1,25 @@
 /**
  * clientStore — 顧問先管理Piniaストア
  *
+ * 【依存方向】
+ * clientStore(Pinia) → ClientRepository(HTTP) → /api/clients → clientsApi.ts
+ *
  * useClients.tsのモジュールスコープ（localStorage手動管理 + stale-while-revalidate）を
  * Pinia + persistedstateに移行。composableのreturnインターフェースは維持。
  *
- * 準拠: DL-042, plan_pinia_persistedstate移行.md
+ * 準拠: DL-042, DL-030, plan_pinia_persistedstate移行.md
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Client } from '@/repositories/types'
+import { createRepositories } from '@/repositories'
 import { createApiClient } from '@/utils/apiClient'
 
-const api = createApiClient('/api/clients')
+// Repository経由でデータアクセス
+const repos = createRepositories()
+
+// listClients専用（ClientRepositoryにlistメソッドがないため）
+const listApi = createApiClient('/api/clients')
 
 export const useClientStore = defineStore('clients', () => {
   // --- state ---
@@ -32,8 +40,7 @@ export const useClientStore = defineStore('clients', () => {
 
   async function fetchFresh() {
     try {
-      const raw = await api.get<{ clients: Client[] } | Client[]>('')
-      const list = Array.isArray(raw) ? raw : raw.clients
+      const list = await repos.client.getAll()
       clients.value = list
       cachedAt.value = Date.now()
       console.log(`[clientStore] ${list.length}件をサーバーから取得`)
@@ -63,7 +70,7 @@ export const useClientStore = defineStore('clients', () => {
       const newValue = migrationMap[client.consumptionTaxMode as string]
       if (newValue) {
         client.consumptionTaxMode = newValue
-        api.put(`/${client.clientId}`, { consumptionTaxMode: newValue })
+        repos.client.update(client.clientId, { consumptionTaxMode: newValue })
           .catch(err => console.error(`[clientStore] consumptionTaxMode移行エラー (${client.clientId}):`, err))
         migrated++
       }
@@ -89,7 +96,7 @@ export const useClientStore = defineStore('clients', () => {
         const client = clients.value.find(c => c.clientId === clientId)
         if (client && !client.sharedFolderId) {
           client.sharedFolderId = folderId
-          api.put(`/${clientId}/shared-folder`, { folderId })
+          repos.client.update(clientId, { sharedFolderId: folderId })
             .catch(err => console.error(`[clientStore] sharedFolderId移行エラー (${clientId}):`, err))
           migrated++
         }
@@ -109,7 +116,7 @@ export const useClientStore = defineStore('clients', () => {
     const idx = clients.value.findIndex(c => c.clientId === clientId)
     if (idx >= 0) {
       clients.value[idx] = { ...clients.value[idx]!, sharedFolderId: folderId }
-      api.put(`/${clientId}/shared-folder`, { folderId })
+      repos.client.update(clientId, { sharedFolderId: folderId })
         .catch(err => console.error('[clientStore] sharedFolderId更新エラー:', err))
     }
   }
@@ -117,7 +124,8 @@ export const useClientStore = defineStore('clients', () => {
   async function addClient(client: Omit<Client, 'clientId'> & { clientId?: string }): Promise<Client> {
     lastError.value = null
     try {
-      const res = await api.post<{ ok: boolean; client: Client }>('', client)
+      // createはサーバー側でclientIdを発番するため、HTTP API経由で呼ぶ
+      const res = await listApi.post<{ ok: boolean; client: Client }>('', client)
       const saved = res.client
       clients.value.push(saved)
       return saved
@@ -132,7 +140,7 @@ export const useClientStore = defineStore('clients', () => {
   async function updateClient(clientId: string, data: Partial<Client>): Promise<void> {
     lastError.value = null
     try {
-      await api.put(`/${clientId}`, data)
+      await repos.client.update(clientId, data)
       const idx = clients.value.findIndex(c => c.clientId === clientId)
       if (idx >= 0) {
         clients.value[idx] = { ...clients.value[idx]!, ...data, clientId }
@@ -152,7 +160,8 @@ export const useClientStore = defineStore('clients', () => {
     page?: number
     pageSize?: number
   }): Promise<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }> {
-    return api.post<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
+    // listClientsはClientRepositoryに定義がないため、API直結を維持
+    return listApi.post<{ rows: Client[]; totalCount: number; page: number; pageSize: number; totalPages: number }>('/list', query)
   }
 
   // 初回自動ロード（fire-and-forget）

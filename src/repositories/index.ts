@@ -1,39 +1,45 @@
 /**
  * Repository DIポイント（DL-030: データアクセス抽象化）
  *
- * 環境変数 VITE_USE_MOCK でモック/Supabase実装を切り替える。
- * パイプラインロジック層はこのfactory関数経由でRepositoryを取得する。
+ * フロントエンド専用。HTTP API経由でデータにアクセスする。
+ * サーバー側からは repositories/mock/index.ts を直接使用する。
  *
- * 【使い方】
+ * 【切り替え方式】
+ * - VITE_USE_MOCK=true（デフォルト）: HTTP API経由でモックサーバーにアクセス
+ * - VITE_USE_MOCK=false: Supabaseからデータ取得
+ *
+ * 【使い方（フロント）】
  * ```ts
  * import { createRepositories } from '@/repositories'
  * const repos = createRepositories()
- * const vendor = await repos.vendor.findByMatchKey('マクドナルド')
+ * const client = await repos.client.getById('c_abc12345')
  * ```
  *
- * 【切り替え方式】
- * - VITE_USE_MOCK=true（デフォルト）: TSファイルからデータ取得
- * - VITE_USE_MOCK=false: Supabaseからデータ取得
+ * 【使い方（サーバー）】
+ * ```ts
+ * import { createMockRepositories } from '@/repositories/mock'
+ * const repos = createMockRepositories()
+ * ```
+ *
+ * 準拠: DL-030, DL-042
  */
 
 import type { Repositories } from '@/repositories/types'
-import { createMockRepositories } from './mock'
+import { createHttpRepositories } from './http'
 import { createSupabaseRepositories } from './supabase'
 
 /**
- * Repository群を生成するfactory関数
+ * Repository群を生成するfactory関数（フロントエンド用）
  *
- * newしない・関数で返す。テスト時はmockReposを直接渡せる。
- * Supabase実装追加時はelse分岐に createSupabaseRepositories() を追加するだけ。
+ * フロントからはHTTP API経由でアクセス。Node.js fsに依存しない。
  */
 export function createRepositories(): Repositories {
   const useMock = import.meta.env.VITE_USE_MOCK !== 'false'
 
   if (useMock) {
-    return createMockRepositories()
+    return createHttpRepositories()
   }
 
   // フェーズ5: Supabase実装（.envでVITE_USE_MOCK=falseに設定で有効化）
   return createSupabaseRepositories()
 }
-

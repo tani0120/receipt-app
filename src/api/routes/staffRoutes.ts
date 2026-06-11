@@ -25,7 +25,7 @@ import {
   update,
   getByEmail,
   getActiveStaff,
-} from '../services/staffStore';
+} from '../services/staffsApi';
 import { getStaffList } from '../services/staffListService';
 
 const app = new Hono();

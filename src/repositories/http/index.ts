@@ -1,34 +1,30 @@
 /**
- * モックRepository集約（DL-030）
+ * HTTP版Repository集約（フロントエンド用）
  *
- * 全モックRepository実装をまとめてexportする。
- * フェーズ4で R-3〜R-6 を追加したらここにもexportを追加する。
+ * フロントエンド（Vite環境）で使用するRepository実装。
+ * Node.js fsに依存せず、HTTP API経由でデータにアクセスする。
  *
- * 【現在の実装状況】
- * - VendorRepository:           ✅ 実装済み（vendor.repository.mock.ts）
- * - ShareStatusRepository:      ✅ 実装済み（shareStatus.repository.mock.ts）
- * - ClientRepository:           ✅ 実装済み（client.repository.mock.ts）
- * - StaffRepository:            ✅ 実装済み（staff.repository.mock.ts）
- * - ClientVendorRepository:     ❌ 未実装（フェーズ4: R-6）
- * - IndustryVectorRepository:   ❌ 未実装（フェーズ4: R-3）
- * - AccountRepository:          ❌ 未実装（フェーズ4: R-4）
- * - ConfirmedJournalRepository: ❌ 未実装（フェーズ4: R-5。T-03完了後）
+ * 【使い分け】
+ * - フロント: createHttpRepositories()（このファイル）
+ * - サーバー: createMockRepositories()（mock/index.ts）
+ *
+ * 準拠: DL-030, DL-042
  */
 
 import type { Repositories } from '@/repositories/types'
-import { mockVendorRepo } from './vendor.repository.mock'
-import { mockShareStatusRepo } from './shareStatus.repository.mock'
-import { mockClientRepo } from './client.repository.mock'
-import { mockStaffRepo } from './staff.repository.mock'
+import { mockVendorRepo } from '../mock/vendor.repository.mock'
+import { mockShareStatusRepo } from '../mock/shareStatus.repository.mock'
+import { httpClientRepo } from '../mock/client.repository.http'
+import { httpStaffRepo } from '../mock/staff.repository.http'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /**
- * モック版Repositories生成
+ * HTTP版Repositories生成（フロントエンド用）
  *
- * 未実装のRepositoryはエラーを投げるスタブで仮実装。
+ * clientのみHTTP実装。他はmock/スタブのまま。
  * 各Repositoryが実装されたら差し替える。
  */
-export function createMockRepositories(): Repositories {
+export function createHttpRepositories(): Repositories {
   return {
     vendor: mockVendorRepo,
     shareStatus: mockShareStatusRepo,
@@ -57,9 +53,9 @@ export function createMockRepositories(): Repositories {
       findByMatchKey: async () => { throw new Error(UI_MSG.未実装接頭_ConfirmedJournal) },
     },
 
-    staff: mockStaffRepo,
+    staff: httpStaffRepo,
 
-    client: mockClientRepo,
+    client: httpClientRepo,
 
     document: {
       getByClientId: async () => { throw new Error(UI_MSG.未実装接頭_Document) },

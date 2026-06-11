@@ -41,6 +41,7 @@ import type {
   PipelineLogEntry,
 } from './types';
 import { postprocessPreviewExtract } from './postprocess';
+import type { CalculationMethod } from './postprocess';
 import { validatePreviewExtractResult } from './validatePreviewExtractResult';
 import { determineAccount } from '../../../utils/pipeline/accountDetermination';
 import {
@@ -379,6 +380,16 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
     (thinkingTokens * price.thinking / 1_000_000)
   ) * USD_JPY_RATE;
 
+  // 顧問先のcalculationMethodを取得（ProcessingMode動的分岐用）
+  let calculationMethod: CalculationMethod | undefined;
+  if (req.clientId) {
+    const { getById: getClientById } = await import('../clientsApi');
+    const client = getClientById(req.clientId);
+    if (client?.calculationMethod) {
+      calculationMethod = client.calculationMethod as CalculationMethod;
+    }
+  }
+
   const result = postprocessPreviewExtract(raw, {
     duration_ms: durationMs,
     duration_seconds: Math.round(durationMs / 100) / 10,  // 小数1桁
@@ -391,7 +402,7 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
     original_size_kb: Math.round(originalSize / 1024),
     processed_size_kb: Math.round(ppSize / 1024),
     preprocess_reduction_pct: Math.round((1 - ppSize / originalSize) * 100),
-  });
+  }, calculationMethod);
 
   // ログにpostprocess結果を追加
   logEntry.postprocess = {

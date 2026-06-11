@@ -17,7 +17,7 @@
  */
 
 import { COMMAND_CATALOG } from "./commandCatalog";
-import { getById as getClientById } from "./clientStore";
+import { getById as getClientById } from "./clientsApi";
 import type { AiSuggestion } from "./aiSuggestService";
 import { commitMfImport, discardMfImport } from "./mfJournalImporter";
 

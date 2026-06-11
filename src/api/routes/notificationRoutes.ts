@@ -22,7 +22,7 @@ import {
   deleteNotification,
   clearAllNotifications,
 } from '../services/notificationStore';
-import { getAll as getAllStaff } from '../services/staffStore';
+import { getAll as getAllStaff } from '../services/staffsApi';
 import type { AppNotification } from '../../repositories/types';
 import { randomBytes } from 'crypto';
 

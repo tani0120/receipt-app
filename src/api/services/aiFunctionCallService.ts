@@ -25,8 +25,8 @@ import { callMcpTool, listMcpTools } from './mfMcpClient'
 import type { McpToolInfo } from './mfMcpClient'
 import { getLayer2SystemPrompt } from './aiContextProvider'
 import { VALID_COMMAND_IDS } from './commandCatalog'
-import { getAll as getAllClients } from './clientStore'
-import { getAll as getAllStaff } from './staffStore'
+import { getAll as getAllClients } from './clientsApi'
+import { getAll as getAllStaff } from './staffsApi'
 import { getAuthStatus } from './mfAuthService'
 
 /** AIコマンドで使用するモデル（環境変数 > デフォルト: gemini-3.5-flash） */

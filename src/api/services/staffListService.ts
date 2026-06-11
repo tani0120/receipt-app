@@ -7,7 +7,7 @@
  * Supabase移行時: getAll() を SELECT ... WHERE ... ORDER BY に差し替えるだけ。
  */
 
-import { getAll } from './staffStore'
+import { getAll } from './staffsApi'
 import type { Staff } from '../../repositories/types'
 
 // ────────────────────────────────────────────

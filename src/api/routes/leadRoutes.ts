@@ -33,7 +33,7 @@ import {
   generateLeadId,
 } from '../services/leadStore';
 import { getLeadList } from '../services/leadListService';
-import { create as createClient, generateClientId } from '../services/clientStore';
+import { create as createClient, generateClientId } from '../services/clientsApi';
 import { getClientAccounts, getClientTaxCategories } from '../services/accountMasterStore';
 
 const app = new Hono();

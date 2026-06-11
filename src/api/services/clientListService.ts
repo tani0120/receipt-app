@@ -9,8 +9,8 @@
  * Supabase移行時: getAll() を JOIN ... WHERE ... ORDER BY に差し替えるだけ。
  */
 
-import { getAll } from './clientStore'
-import { getAll as getAllStaff } from './staffStore'
+import { getAll } from './clientsApi'
+import { getAll as getAllStaff } from './staffsApi'
 import type { Client } from '../../repositories/types'
 import { applyFilterConditions } from '../helpers/applyFilterConditions'
 import type { FilterCondition } from '../helpers/applyFilterConditions'

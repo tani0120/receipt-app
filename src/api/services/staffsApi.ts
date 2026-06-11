@@ -1,16 +1,20 @@
 /**
- * staffStore.ts — スタッフJSON永続化ストア
+ * staffsApi.ts — スタッフデータアクセス層（共通）
  *
- * 【設計原則】
+ * 【責務】
+ * - データの読み書きだけ。ビジネスロジックなし。
  * - サーバー側のインメモリ + JSONファイル永続化
- * - 起動時にJSONから読み込み。JSONが存在しなければ初期シードを投入
+ * - 起動時にJSONから読み込み。JSONが存在しなければ空配列で初期化
+ *
+ * 【依存関係】
+ * - StaffRepository（mock実装）がこのファイルをラップする
+ * - staffRoutes.ts（Honoルート）がこのファイルを直接呼ぶ
  * - Supabase移行時にDB操作に差し替え
- * - 型はrepositories/types.tsから一元参照（二重定義禁止）
  *
  * 【ファイル場所】
  * - data/staff.json（.gitignoreに追加済み）
  *
- * 準拠: DL-042
+ * 準拠: DL-042, DL-030
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -38,7 +42,7 @@ function save(): void {
     }
     writeFileSync(DATA_FILE, JSON.stringify(staffList, null, 2), 'utf-8');
   } catch (err) {
-    console.error('[staffStore] JSON書き出しエラー:', err);
+    console.error('[staffsApi] JSON書き出しエラー:', err);
   }
 }
 
@@ -48,14 +52,14 @@ export function loadStaff(): void {
     if (existsSync(DATA_FILE)) {
       const raw = readFileSync(DATA_FILE, 'utf-8');
       staffList = JSON.parse(raw) as Staff[];
-      console.log(`[staffStore] ${staffList.length}件をJSONから読み込み`);
+      console.log(`[staffsApi] ${staffList.length}件をJSONから読み込み`);
     } else {
       staffList = [];
       save();
-      console.log('[staffStore] JSONなし。空配列で初期化');
+      console.log('[staffsApi] JSONなし。空配列で初期化');
     }
   } catch (err) {
-    console.error('[staffStore] JSON読み込みエラー:', err);
+    console.error('[staffsApi] JSON読み込みエラー:', err);
     staffList = [];
   }
   // IDカウンターを既存データの最大値に設定
@@ -88,7 +92,7 @@ export function create(staff: Omit<Staff, 'uuid'> & { uuid?: string }): Staff {
   const newStaff: Staff = { ...staff, uuid };
   staffList.push(newStaff);
   save();
-  console.log(`[staffStore] 追加: ${newStaff.name} (${uuid})`);
+  console.log(`[staffsApi] 追加: ${newStaff.name} (${uuid})`);
   return newStaff;
 }
 

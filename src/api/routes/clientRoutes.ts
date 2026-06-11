@@ -32,7 +32,7 @@ import {
   updateSharedFolderId,
   updateSharedEmail,
   generateClientId,
-} from '../services/clientStore';
+} from '../services/clientsApi';
 import { getClientList } from '../services/clientListService';
 import { getClientAccounts, getClientTaxCategories } from '../services/accountMasterStore';
 

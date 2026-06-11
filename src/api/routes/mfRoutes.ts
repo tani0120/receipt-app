@@ -30,7 +30,7 @@ import {
   mcpFetchTermSettings,
   mcpCreateJournal,
 } from '../services/mfMcpClient'
-import { getById, updateClient } from '../services/clientStore'
+import { getById, updateClient } from '../services/clientsApi'
 import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFieldMapping'
 import { importMfJournals } from '../services/mfJournalImporter'
 import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services/mfTaxImportService'

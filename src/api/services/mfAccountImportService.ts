@@ -21,7 +21,7 @@
 import { mcpFetchAccounts } from './mfMcpClient'
 import { getAllAccounts, saveAllAccounts, getAllTaxCategories } from './accountMasterStore'
 import { saveMfRawData } from './mfRawDataStore'
-import { getById } from './clientStore'
+import { getById } from './clientsApi'
 import { generateMasterId } from './generateMasterId'
 import { isIndividualType } from '../../constants/clientOptions'
 import {

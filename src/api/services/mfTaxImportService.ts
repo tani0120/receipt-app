@@ -22,7 +22,7 @@ import { mcpFetchTaxes, mcpFetchTermSettings } from './mfMcpClient'
 import { getAllTaxCategories, saveAllTaxCategories } from './accountMasterStore'
 import { getAllTaxAvailable, saveTaxAvailable, type TaxMethodKey } from './mfTaxAvailableStore'
 import { saveMfRawData } from './mfRawDataStore'
-import { getById } from './clientStore'
+import { getById } from './clientsApi'
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { generateTaxMasterId, ensureUniqueTaxId } from './taxIdGenerator'
@@ -437,7 +437,7 @@ export interface ClientTaxImportResult {
  * 6. available（利用可否）データを更新
  */
 export async function importClientTaxes(clientId: string): Promise<ClientTaxImportResult> {
-  const { updateClient } = await import('./clientStore')
+  const { updateClient } = await import('./clientsApi')
   const { saveClientTaxCategories } = await import('./accountMasterStore')
 
   // 1. consumptionTaxMode自動更新

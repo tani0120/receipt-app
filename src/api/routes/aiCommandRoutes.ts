@@ -29,7 +29,7 @@ import { getAuthStatus } from '../services/mfAuthService'
 import { getCurrentStaffUuid } from './authRoutes'
 import { addCommandLog, getMonthlyTotalCost, getAllMonthlyCosts, getStaffMonthlyCosts, getClientMonthlyCosts, getCrossMonthlyCosts, getModelMonthlyCosts, getAnnualTotalCost } from '../services/aiLogStore'
 import { calculateCost, MODEL_PRICING, USD_JPY_RATE } from '../ai/modelConfig'
-import { getByThreeCode, getAll as getAllClients } from '../services/clientStore'
+import { getByThreeCode, getAll as getAllClients } from '../services/clientsApi'
 import { isBqConfigured, getMonthlySummaries, getCurrentMonthCost } from '../services/bigqueryCostService'
 
 const app = new Hono()

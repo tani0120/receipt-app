@@ -13,7 +13,7 @@
  */
 
 import { Hono } from 'hono';
-import { getAll } from '../services/staffStore';
+import { getAll } from '../services/staffsApi';
 
 const app = new Hono();
 

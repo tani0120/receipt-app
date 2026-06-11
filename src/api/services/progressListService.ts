@@ -11,8 +11,8 @@
  * Supabase移行時: store呼び出しを SELECT ... JOIN ... WHERE ... ORDER BY に差し替えるだけ。
  */
 
-import { getAll as getAllClients } from './clientStore'
-import { getAll as getAllStaff } from './staffStore'
+import { getAll as getAllClients } from './clientsApi'
+import { getAll as getAllStaff } from './staffsApi'
 import { getDocuments } from './documentStore'
 import { getJournals } from './journalStore'
 import { countUnsorted, latestReceivedDate } from '../../utils/documentUtils'

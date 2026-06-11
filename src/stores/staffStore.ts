@@ -1,16 +1,24 @@
 /**
  * staffStore — スタッフ管理Piniaストア
  *
+ * 【依存方向】
+ * staffStore(Pinia) → StaffRepository(HTTP) → /api/staff → staffsApi.ts
+ *
  * useStaff.tsのモジュールスコープをPinia + persistedstateに移行。
  *
- * 準拠: DL-042, plan_pinia_persistedstate移行.md
+ * 準拠: DL-042, DL-030, plan_pinia_persistedstate移行.md
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Staff } from '@/repositories/types'
+import { createRepositories } from '@/repositories'
 import { createApiClient } from '@/utils/apiClient'
 
-const api = createApiClient('/api/staff')
+// Repository経由でデータアクセス
+const repos = createRepositories()
+
+// listStaff専用（StaffRepositoryにlistメソッドがないため）
+const listApi = createApiClient('/api/staff')
 
 export const useStaffStore = defineStore('staff', () => {
   const staffList = ref<Staff[]>([])
@@ -29,10 +37,10 @@ export const useStaffStore = defineStore('staff', () => {
 
   async function fetchFresh() {
     try {
-      const data = await api.get<{ staff: Staff[] }>('')
-      staffList.value = data.staff
+      const list = await repos.staff.getAll()
+      staffList.value = list
       cachedAt.value = Date.now()
-      console.log(`[staffStore] ${data.staff.length}件をサーバーから取得`)
+      console.log(`[staffStore] ${list.length}件をサーバーから取得`)
     } catch (err) {
       console.error('[staffStore] サーバー取得失敗:', err)
     }
@@ -41,7 +49,8 @@ export const useStaffStore = defineStore('staff', () => {
   async function addStaff(staff: Omit<Staff, 'uuid'> & { uuid?: string }): Promise<Staff> {
     lastError.value = null
     try {
-      const res = await api.post<{ ok: boolean; staff: Staff }>('', staff)
+      // createはサーバー側でuuidを発番するため、HTTP API経由で呼ぶ
+      const res = await listApi.post<{ ok: boolean; staff: Staff }>('', staff)
       const saved = res.staff
       staffList.value.push(saved)
       return saved
@@ -56,7 +65,7 @@ export const useStaffStore = defineStore('staff', () => {
   async function updateStaff(uuid: string, data: Partial<Staff>): Promise<void> {
     lastError.value = null
     try {
-      await api.put(`/${uuid}`, data)
+      await repos.staff.update(uuid, data)
       const idx = staffList.value.findIndex(s => s.uuid === uuid)
       if (idx >= 0) {
         const current = staffList.value[idx]!

@@ -17,10 +17,11 @@ import {
 } from './types';
 
 // ============================================================
-// source_type → ProcessingMode マッピング
+// source_type → ProcessingMode 解決
 // ============================================================
 
-const MODE_MAP: Record<SourceType, ProcessingMode> = {
+/** calculationMethodに依存しないベースマッピング */
+const BASE_MODE_MAP: Record<SourceType, ProcessingMode> = {
   receipt: 'auto',
   invoice_received: 'auto',
   tax_payment: 'auto',
@@ -28,12 +29,34 @@ const MODE_MAP: Record<SourceType, ProcessingMode> = {
   bank_statement: 'auto',
   credit_card: 'auto',
   cash_ledger: 'auto',
-  supplementary_doc: 'auto',
-  invoice_issued: 'manual',
-  receipt_issued: 'manual',
+  supplementary_doc: 'excluded',
+  invoice_issued: 'manual',    // デフォルト（calculationMethod未指定時）
+  receipt_issued: 'manual',    // デフォルト（calculationMethod未指定時）
   non_journal: 'excluded',
   other: 'excluded',
 };
+
+/** 顧問先の計算方式 */
+export type CalculationMethod = 'accrual' | 'cash' | 'interim_cash';
+
+/**
+ * source_type + calculationMethod → ProcessingMode を解決する。
+ *
+ * invoice_issued / receipt_issued は計算方式で分岐:
+ *   - 発生主義(accrual) → auto（売上/売掛を自動仕訳）
+ *   - 現金主義(cash) / 期中現金(interim_cash) → excluded（入金時に仕訳）
+ *   - 未指定 → manual（デフォルト。人間が判断）
+ */
+function resolveProcessingMode(
+  sourceType: SourceType,
+  calculationMethod?: CalculationMethod,
+): ProcessingMode {
+  if (sourceType === 'invoice_issued' || sourceType === 'receipt_issued') {
+    if (!calculationMethod) return 'manual';
+    return calculationMethod === 'accrual' ? 'auto' : 'excluded';
+  }
+  return BASE_MODE_MAP[sourceType];
+}
 
 // ============================================================
 // fallback定数
@@ -77,11 +100,12 @@ function isValidDirection(v: unknown): v is Direction {
 export function postprocessPreviewExtract(
   raw: PreviewExtractRawResponse | null,
   metadata: PreviewExtractResponse['metadata'],
+  calculationMethod?: CalculationMethod,
 ): PreviewExtractResponse {
   // AI出力がnull（API呼び出し失敗等）→ 全面fallback
   if (!raw) {
     console.warn('[pipeline/postprocess] AI出力がnull → fallback適用');
-    return buildResponse(FALLBACK_PREVIEW_EXTRACT, true, [], metadata);
+    return buildResponse(FALLBACK_PREVIEW_EXTRACT, true, [], metadata, calculationMethod);
   }
 
   let fallbackApplied = false;
@@ -134,7 +158,7 @@ export function postprocessPreviewExtract(
     balance: typeof item.balance === 'number' ? Math.round(item.balance) : null,
   }));
 
-  return buildResponse(validated, fallbackApplied, lineItems, metadata);
+  return buildResponse(validated, fallbackApplied, lineItems, metadata, calculationMethod);
 }
 
 // ============================================================
@@ -146,6 +170,7 @@ function buildResponse(
   fallbackApplied: boolean,
   lineItems: PreviewExtractLineItem[],
   metadata: PreviewExtractResponse['metadata'],
+  calculationMethod?: CalculationMethod,
 ): PreviewExtractResponse {
   const sourceType = raw.source_type as SourceType;
   const direction = raw.direction as Direction;
@@ -155,7 +180,7 @@ function buildResponse(
     source_type_confidence: raw.source_type_confidence,
     direction,
     direction_confidence: raw.direction_confidence,
-    processing_mode: MODE_MAP[sourceType],
+    processing_mode: resolveProcessingMode(sourceType, calculationMethod),
     preview_extract_reason: raw.preview_extract_reason ?? null,
     document_count: raw.document_count ?? 1,
     document_count_reason: raw.document_count_reason ?? null,
