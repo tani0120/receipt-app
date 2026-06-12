@@ -481,25 +481,78 @@ export function syncWarningLabelsCore(
   else addLabel('DEBIT_CREDIT_MISMATCH', warnDebitCreditMismatch(debitSum.toLocaleString(), creditSum.toLocaleString()))
 
   // ── 7. CATEGORY_CONFLICT（5分類矛盾） + セルハイライト ──
+  // 複合仕訳対応: 各行のMegaGroupが相手側に正常ペア相手を1つでも持てば矛盾なし。
+  // 全ペアのデカルト積チェック（旧方式）は複合仕訳で偽陽性を生むため廃止。
   const categoryConflictDebit = new Set<string>()
   const categoryConflictCredit = new Set<string>()
   let conflictDetail = ''
-  for (const dEntry of journal.debit_entries) {
-    for (const cEntry of journal.credit_entries) {
-      const dAcct = dEntry.account ?? null
-      const cAcct = cEntry.account ?? null
-      if (dAcct && cAcct) {
-        const msg = validateDebitCreditCombination(
-          getMegaGroup(dAcct, accounts), getMegaGroup(cAcct, accounts), dAcct, cAcct, accounts
-        )
-        if (msg) {
-          categoryConflictDebit.add(dAcct)
-          categoryConflictCredit.add(cAcct)
-          conflictDetail = `${dAcct}×${cAcct}: ${msg}`
-        }
+
+  // 借方・貸方のMegaGroupを事前計算
+  const debitMegas = journal.debit_entries.map(e => ({
+    account: e.account ?? null,
+    mega: getMegaGroup(e.account ?? null, accounts),
+    contra: isContraAccount(e.account ?? null, accounts),
+  }))
+  const creditMegas = journal.credit_entries.map(e => ({
+    account: e.account ?? null,
+    mega: getMegaGroup(e.account ?? null, accounts),
+    contra: isContraAccount(e.account ?? null, accounts),
+  }))
+
+  // ネット決済型判定: sales + expense + BS勘定 が同時存在する場合
+  // 不動産管理・EC・クレカ入金等の「ネット入金」仕訳で頻出するパターン。
+  // expense×sales の組合せは通常は警告だが、BS勘定（決済勘定）が存在する場合は
+  // 相殺仕訳として正常扱いにする。
+  // 例: 普通預金 100,675 / 不動産収入 107,000
+  //     支払手数料 5,885 /
+  //     支払手数料   440 /
+  const allMegas = new Set([
+    ...debitMegas.map(d => d.mega).filter(Boolean),
+    ...creditMegas.map(c => c.mega).filter(Boolean),
+  ])
+  const isNetSettlement = allMegas.has('sales') && allMegas.has('expense')
+    && (allMegas.has('bs_al') || allMegas.has('bs_equity'))
+
+  // 各借方行: 貸方に正常ペア相手が1つでもあるか
+  for (const d of debitMegas) {
+    if (!d.mega || !d.account) continue
+    const hasValidPair = creditMegas.some(c => {
+      if (!c.mega || !c.account) return false
+      const result = validateDebitCreditCombination(d.mega, c.mega, d.account, c.account, accounts)
+      if (result === null) return true
+      // ネット決済型: expense×sales は相殺仕訳として正常扱い
+      if (isNetSettlement && d.mega === 'expense' && c.mega === 'sales') return true
+      return false
+    })
+    if (!hasValidPair) {
+      categoryConflictDebit.add(d.account)
+      const firstBadCredit = creditMegas.find(c => c.mega && c.account)
+      if (firstBadCredit?.account) {
+        conflictDetail = `${d.account}×${firstBadCredit.account}: 借方${d.mega}に対する正常な貸方ペアなし`
       }
     }
   }
+
+  // 各貸方行: 借方に正常ペア相手が1つでもあるか
+  for (const c of creditMegas) {
+    if (!c.mega || !c.account) continue
+    const hasValidPair = debitMegas.some(d => {
+      if (!d.mega || !d.account) return false
+      const result = validateDebitCreditCombination(d.mega, c.mega, d.account, c.account, accounts)
+      if (result === null) return true
+      // ネット決済型: sales×expense は相殺仕訳として正常扱い（貸方視点）
+      if (isNetSettlement && c.mega === 'sales' && d.mega === 'expense') return true
+      return false
+    })
+    if (!hasValidPair) {
+      categoryConflictCredit.add(c.account)
+      const firstBadDebit = debitMegas.find(d => d.mega && d.account)
+      if (firstBadDebit?.account) {
+        conflictDetail = `${firstBadDebit.account}×${c.account}: 貸方${c.mega}に対する正常な借方ペアなし`
+      }
+    }
+  }
+
   if (categoryConflictDebit.size > 0 || categoryConflictCredit.size > 0) {
     addLabel('CATEGORY_CONFLICT', conflictDetail)
   } else {

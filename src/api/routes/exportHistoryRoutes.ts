@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 出力履歴 + CSVスナップショット APIルート
  *
  * GET  /api/export-history/:clientId         → 履歴一覧

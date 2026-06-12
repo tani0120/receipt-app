@@ -5,15 +5,19 @@
  * index.ts のfactory関数から呼ばれる。
  *
  * 【現在の実装状況】
- * - ShareStatusRepository:      ✅ 実装済み
- * - VendorRepository:           ✅ 実装済み
- * - ClientVendorRepository:     ✅ 実装済み
- * - IndustryVectorRepository:   ✅ 実装済み
- * - AccountRepository:          ✅ 実装済み
- * - ConfirmedJournalRepository: ❌ 未実装（T-03で型確定後）
- * - StaffRepository:            ❌ 未実装（フェーズ4: DL-042）
- * - ClientRepository:           ❌ 未実装（フェーズ4: DL-042）
- * - DocumentRepository:         ❌ 未実装（フェーズ4: DL-039）
+ * - ShareStatusRepository:      ✅ 実装済み（Supabase）
+ * - VendorRepository:           ✅ 実装済み（Supabase）
+ * - ClientVendorRepository:     ✅ 実装済み（Supabase）
+ * - IndustryVectorRepository:   ✅ 実装済み（Supabase）
+ * - AccountRepository:          ✅ 実装済み（Supabase）
+ * - AccountMasterRepository:    🔄 HTTP版フォールバック
+ * - TaxMasterRepository:        🔄 HTTP版フォールバック
+ * - LeadRepository:             🔄 HTTP版フォールバック
+ * - LearningRuleRepository:     🔄 HTTP版フォールバック
+ * - ConfirmedJournalRepository: 🔄 HTTP版フォールバック
+ * - StaffRepository:            🔄 HTTP版フォールバック
+ * - ClientRepository:           🔄 HTTP版フォールバック
+ * - DocumentRepository:         🔄 HTTP版フォールバック
  */
 
 import type { Repositories } from '@/repositories/types'
@@ -22,53 +26,39 @@ import { supabaseVendorRepo } from './vendor.repository.supabase'
 import { supabaseClientVendorRepo } from './clientVendor.repository.supabase'
 import { supabaseIndustryVectorRepo } from './industryVector.repository.supabase'
 import { supabaseAccountRepo } from './account.repository.supabase'
-import { UI_MSG } from '@/constants/uiMessages'
+
+// Supabase未実装分はHTTP版をフォールバックとして使用
+import { httpAccountMasterRepo } from '../mock/accountMaster.repository.http'
+import { httpTaxMasterRepo } from '../mock/taxMaster.repository.http'
+import { httpLeadRepo } from '../mock/lead.repository.http'
+import { httpLearningRuleRepo } from '../mock/learningRule.repository.http'
+import { httpConfirmedJournalRepo } from '../mock/confirmedJournal.repository.http'
+import { httpStaffRepo } from '../mock/staff.repository.http'
+import { httpClientRepo } from '../mock/client.repository.http'
+import { httpDocumentRepo } from '../mock/document.repository.http'
 
 /**
  * Supabase版Repositories生成
  *
- * ConfirmedJournalのみ未実装（T-03完了待ち）。
- * それ以外は全てSupabase版が動作可能。
+ * Supabase実装済み分はSupabase版、未実装分はHTTP版にフォールバック。
  */
 export function createSupabaseRepositories(): Repositories {
   return {
-    // ── 実装済み ──
+    // ── Supabase実装済み ──
     shareStatus: supabaseShareStatusRepo,
     vendor: supabaseVendorRepo,
     clientVendor: supabaseClientVendorRepo,
     industryVector: supabaseIndustryVectorRepo,
     account: supabaseAccountRepo,
 
-    // ── 以下はフェーズ4で実装予定。呼び出すとエラーを投げる（モック版と同一パターン） ──
-
-    confirmedJournal: {
-      getByClientId: async () => { throw new Error(UI_MSG.未実装接頭_ConfirmedJournal) },
-      findByMatchKey: async () => { throw new Error(UI_MSG.未実装接頭_ConfirmedJournal) },
-    },
-
-    staff: {
-      getAll: async () => { throw new Error(UI_MSG.未実装接頭_Staff) },
-      getById: async () => { throw new Error(UI_MSG.未実装接頭_Staff) },
-      getByEmail: async () => { throw new Error(UI_MSG.未実装接頭_Staff) },
-      getActiveStaff: async () => { throw new Error(UI_MSG.未実装接頭_Staff) },
-      create: async () => { throw new Error(UI_MSG.未実装接頭_Staff) },
-      update: async () => { throw new Error(UI_MSG.未実装接頭_Staff) },
-    },
-
-    client: {
-      getAll: async () => { throw new Error(UI_MSG.未実装接頭_Client) },
-      getById: async () => { throw new Error(UI_MSG.未実装接頭_Client) },
-      getByStaffId: async () => { throw new Error(UI_MSG.未実装接頭_Client) },
-      getActiveClients: async () => { throw new Error(UI_MSG.未実装接頭_Client) },
-      create: async () => { throw new Error(UI_MSG.未実装接頭_Client) },
-      update: async () => { throw new Error(UI_MSG.未実装接頭_Client) },
-    },
-
-    document: {
-      getByClientId: async () => { throw new Error(UI_MSG.未実装接頭_Document) },
-      updateStatus: async () => { throw new Error(UI_MSG.未実装接頭_Document) },
-      save: async () => { throw new Error(UI_MSG.未実装接頭_Document) },
-      saveBatch: async () => { throw new Error(UI_MSG.未実装接頭_Document) },
-    },
+    // ── HTTP版フォールバック（Supabase未実装） ──
+    accountMaster: httpAccountMasterRepo,
+    taxMaster: httpTaxMasterRepo,
+    lead: httpLeadRepo,
+    learningRule: httpLearningRuleRepo,
+    confirmedJournal: httpConfirmedJournalRepo,
+    staff: httpStaffRepo,
+    client: httpClientRepo,
+    document: httpDocumentRepo,
   }
 }

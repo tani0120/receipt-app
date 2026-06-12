@@ -1,4 +1,4 @@
-﻿/**
+/**
  * shareStatusRoutes.ts — 共有設定JSON永続化APIルート（Hono）
  *
  * レイヤー: ★route★ → shareStatusStore

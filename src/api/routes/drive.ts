@@ -1,4 +1,4 @@
-﻿/**
+/**
  * drive.ts — Google Drive APIルート（Hono）
  *
  * レイヤー: ★route★ → driveService

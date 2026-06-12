@@ -1,4 +1,4 @@
-﻿/**
+/**
  * confirmedJournalsApi.ts — 確定済み仕訳データアクセス層（共通）
  *
  * 【責務】

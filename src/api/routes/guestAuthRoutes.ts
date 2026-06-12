@@ -1,4 +1,4 @@
-﻿/**
+/**
  * guestAuthRoutes.ts — ゲスト認証APIルート（Hono）
  *
  * レイヤー: ★route★ → guestUserStore

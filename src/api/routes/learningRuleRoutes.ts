@@ -1,4 +1,4 @@
-﻿/**
+/**
  * learningRuleRoutes.ts — 学習ルールAPIルート（Hono）
  *
  * レイヤー: ★route★ → learningRuleStore

@@ -64,6 +64,7 @@
           </div>
           <div class="cm-csv-actions">
             <MfImportButton
+              ref="mfImportBtnRef"
               :authenticated="true"
               :loading="mfImportLoading"
               tooltip="MF連携済み顧問先の事業所情報をインポート"
@@ -1423,6 +1424,7 @@ const checkFiscalMonth = async (row: Client) => {
 
 // --- MFインポート ---
 const mfImportLoading = ref(false);
+const mfImportBtnRef = ref<InstanceType<typeof MfImportButton> | null>(null);
 
 /** MF連携済み顧問先の事業所情報をMCPから取得し、clientStoreに反映 */
 const handleMfImport = async () => {
@@ -1478,7 +1480,13 @@ const handleMfImport = async () => {
     });
   } catch (e) {
     console.error('[MFインポート] エラー:', e);
-    modal.notify({ title: 'エラー', message: 'MFインポート中にエラーが発生しました', variant: 'warning' });
+    const msg = e instanceof Error ? e.message : String(e);
+    const log = e instanceof Error ? `${e.name}: ${e.message}\n${e.stack ?? ''}` : String(e);
+    if (mfImportBtnRef.value) {
+      mfImportBtnRef.value.showError('エラー', msg, log);
+    } else {
+      modal.notify({ title: 'エラー', message: 'MFインポート中にエラーが発生しました', variant: 'warning' });
+    }
   } finally {
     mfImportLoading.value = false;
   }

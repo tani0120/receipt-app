@@ -1,6 +1,6 @@
 # 勘定科目・税区分マスタ — 統合ファクトシート
 
-> 調査日: 2026-05-30（最終更新: 2026-06-07 — Phase 1-7修正実績反映、件数・行数・target分布更新）
+> 調査日: 2026-05-30（最終更新: 2026-06-12 — taxDetermination廃止反映、baseId正規化追加、8-A検証結果追記、ローマ字ID移行反映）
 > 対象: `c:\dev\receipt-app`
 
 ---
@@ -16,8 +16,8 @@
 | `target` | 事業形態対象 | string | `corp`（法人）=133, `individual`（個人）=108。`both`は廃止済み（2026-06-06） |
 | `accountGroup` | 勘定科目グループ（大分類） | string | `PL_EXPENSE`（費用）=91, `BS_ASSET`（資産）=87, `BS_LIABILITY`（負債）=27, `PL_REVENUE`（収益）=19, `BS_EQUITY`（純資産）=13 |
 | `category` | 科目分類（中分類） | string | 48種（`経費`, `売上`, `現金及び預金` 等） |
-| `defaultTaxCategoryId` | デフォルト税区分ID | string | `COMMON_EXEMPT`, `PURCHASE_TAXABLE_10` 等 |
-| `taxDetermination` | 税区分判定モード | string | `fixed`（固定）=155, `auto_purchase`（自動仕入）=67, `auto_sales`（自動売上）=15 |
+| `defaultTaxCategoryId` | デフォルト税区分ID | string | `COMMON_EXEMPT`, `PURCHASE_TAXABLE_10` 等。MFインポート時はbaseId正規化適用（§4-6参照） |
+| ~~`taxDetermination`~~ | ~~税区分判定モード~~ | — | **廃止済み（2026-06-11 コミットb132228）。** JSON・コード・UIから完全削除。#9は`defaultTaxCategoryId→TaxCategory.direction`直接参照方式に移行 |
 | `deprecated` | 非表示フラグ | boolean | true=33, false=204 |
 | `effectiveFrom` | 有効開始日 | string | `2019-10-01` 等 |
 | `effectiveTo` | 有効終了日 | string\|null | 全件null |
@@ -73,7 +73,7 @@
 | 7 | 貸借科目矛盾 | `CATEGORY_CONFLICT` | **`accountGroup`（大分類）** | — |
 | 7b | 同一科目借貸 | `SAME_ACCOUNT_BOTH_SIDES` | `id` | — |
 | 8 | 証票意味矛盾 | `VOUCHER_TYPE_CONFLICT` | `id`, **`accountGroup`**, **`category`** | — |
-| 9 | 科目×税区分不整合 | `TAX_ACCOUNT_MISMATCH` | **`taxDetermination`**, **`defaultTaxCategoryId`** | **`direction`** |
+| 9 | 科目×税区分不整合 | `TAX_ACCOUNT_MISMATCH` | **`defaultTaxCategoryId`** | **`direction`** |
 | 10 | 未来日付 | `FUTURE_DATE` | — | — |
 | 11 | 期外日付 | `DATE_OUT_OF_RANGE` | — | — |
 | 12 | 役員貸付金 | `DIRECTOR_LOAN` | `id` | — |
@@ -107,8 +107,7 @@
 仕訳行 entry.account ───→ マスタIDで勘定科目マスタを引く
                             ├→ accountGroup（大分類）     → #7 貸借科目矛盾
                             ├→ category（中分類）         → #8 証票意味矛盾
-                            ├→ taxDetermination（判定）   → #9 科目×税区分不整合
-                            └→ defaultTaxCategoryId      → #9 固定税区分照合
+                            └→ defaultTaxCategoryId      → #9 科目×税区分不整合
 
 仕訳行 entry.tax_category_id → マスタIDで税区分マスタを引く
                             └→ direction（方向）          → #9 科目×税区分不整合
@@ -123,10 +122,12 @@
 ```
 category（中分類）を設定すると:
   ├→ accountGroup      getCategoryAccountGroup()
-  ├→ taxDetermination  deriveTaxDetermination()
   ├→ defaultTaxCategoryId  deriveCategoryDefaults()
   └→ direction（方向）  getCategoryDirection()
 ```
+
+> [!NOTE]
+> `taxDetermination`は廃止済み（2026-06-11）。`deriveTaxDetermination()`は@deprecated。
 
 実装: [account-category-rules.ts](file:///c:/dev/receipt-app/src/data/master/account-category-rules.ts)
 
@@ -139,11 +140,11 @@ category（中分類）を設定すると:
 | `target` | 人間が設定 | インポート先顧問先の事業形態（`clientType`）から動的決定。`deriveTarget()`はMFカテゴリから推定するが法人/個人の判別に使えないため廃止（2026-06-08） | 人間が設定 |
 | `accountGroup` | `category`から自動導出 | `category`から自動導出 | `category`から自動導出 |
 | `category` | 人間が設定 | MF `category`→`MF_CATEGORY_MAP`変換 | 人間が設定 |
-| `taxDetermination` | `category`から自動導出 | `category`から自動導出 | `category`から自動導出 |
-| `defaultTaxCategoryId` | 人間 or 自動 | B系統: MCPの値で常に上書き。C系統: MCP優先、取れない場合のみ全社マスタでフォールバック | 人間 or 自動 |
+| ~~`taxDetermination`~~ | — | — | — | **廃止済み（2026-06-11）** |
+| `defaultTaxCategoryId` | 人間 or 自動 | B系統: MCPの値で上書き（**baseId正規化適用**。§4-6参照）。C系統: MCP優先、取れない場合のみ全社マスタでフォールバック | 人間 or 自動 |
 | `mfAccountId` | MFインポートで付与 | MFの`id`を設定 | MFインポートで付与 |
 
-実装: [mfAccountImportService.ts L81-226](file:///c:/dev/receipt-app/src/api/services/mfAccountImportService.ts#L81-L226)
+実装: [mfAccountImportService.ts L84-255](file:///c:/dev/receipt-app/src/api/services/mfAccountImportService.ts#L84-L255)
 
 ### 3-3. 税区分の付与タイミング
 
@@ -226,6 +227,54 @@ category（中分類）を設定すると:
 > 個人6パターン全て108件・26種で完全固定。不動産の有無・課税方式・業種の影響ゼロ。
 > 「不動産なし×個人」の別パターンは不要（MFが出し分けない）。
 > 詳細: [t1_mcp_factsheet.md](file:///C:/Users/kazen/.gemini/antigravity-ide/brain/577033d8-ef53-449e-8548-cf7c5de7fe9d/t1_mcp_factsheet.md)
+
+### 4-6. 簡易課税種別のbaseId正規化（2026-06-12実装）
+
+#### 問題
+
+MFインポート時、簡易課税の顧問先から「課税売上10% 三種」（`SALES_TAXABLE_10_T3`）が返される。
+この値で全社マスタの`defaultTaxCategoryId`を上書きすると、全社マスタが特定1社の簡易課税種別（三種）で汚染される。
+全社マスタは全顧問先共通テンプレートのため、一種～六種のどの顧問先でも使えなければならない。
+
+#### 対応（方法C: baseId正規化）
+
+税区分マスタの`baseId`フィールドを活用。簡易課税の種別付き税区分は基本形に正規化してから全社マスタに保存する。
+
+```
+MFデフォルト税区分 → 名称マッピング → マスタID → baseIdがあるか？
+  ├─ ある → baseIdに正規化（例: SALES_TAXABLE_10_T3 → SALES_TAXABLE_10）
+  └─ ない → そのまま使用（例: PURCHASE_TAXABLE_1 → そのまま）
+```
+
+#### 実装箇所
+
+[mfAccountImportService.ts](file:///c:/dev/receipt-app/src/api/services/mfAccountImportService.ts):
+- **L95-104**: 税区分マスタ読込時に`taxIdToBaseId`正規化マップを構築
+- **L151-155**: `rawMasterTaxId`を取得後、`baseId`があれば基本形に正規化
+
+#### 新税率対応
+
+将来1%等の新税率が追加された場合:
+- 基本形（`PURCHASE_TAXABLE_1`等）: `baseId`なし → そのまま保存
+- 簡易課税種別付き（`SALES_TAXABLE_1_T3`等）: `baseId`あり → 基本形に正規化
+- 税区分マスタに`baseId`が正しく設定されていれば自動で正規化される
+
+#### 8-A検証結果（2026-06-12）
+
+MCPスナップショット8種（法人4課税方式 + 個人4課税方式）と全社マスタの全フィールドを比較検証:
+
+| 課税方式 | 科目名 | 大分類 | 科目分類 | 既定税区分 | 結果 |
+|---|---|---|---|---|---|
+| TST法人-原則個別 (133件) | ✅ | ✅ | ✅ | ✅ | **完全一致** |
+| TST法人-原則一括 (133件) | ✅ | ✅ | ✅ | ✅ | **完全一致** |
+| TST法人-簡易 (133件) | ✅ | ✅ | ✅ | ✅ | **完全一致**（baseId正規化後） |
+| TST法人-免税 (133件) | ✅ | ✅ | ✅ | ✅ | **完全一致** |
+| TSK個人-原則個別 (108件) | ✅ | ✅ | ✅ | ✅ | **完全一致** |
+| TSK個人-原則一括 (108件) | ✅ | ✅ | ✅ | ✅ | **完全一致** |
+| TSK個人-簡易 (108件) | ✅ | ✅ | ✅ | ✅ | **完全一致**（baseId正規化後） |
+| TSK個人-免税 (108件) | ✅ | ✅ | ✅ | ✅ | **完全一致** |
+
+比較方法: スナップショット内の税区分データで名称マッピング（MF税区分ID→税区分名→マスタID→baseId正規化）
 
 ### 4-4. 照合チェーン
 
@@ -458,7 +507,7 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 | [shared-account.ts](file:///c:/dev/receipt-app/src/types/shared-account.ts) | 76行 | `Account`型定義 |
 | [mf-account-category-mapping.ts](file:///c:/dev/receipt-app/src/data/master/mf-account-category-mapping.ts) | 70行 | MFカテゴリ→マスタカテゴリ変換 |
 | [account-category-rules.ts](file:///c:/dev/receipt-app/src/data/master/account-category-rules.ts) | 188行 | 科目分類ルール（カテゴリ→グループ・方向・導出） |
-| [mfAccountImportService.ts](file:///c:/dev/receipt-app/src/api/services/mfAccountImportService.ts) | 235行 | MF科目インポートサービス（バックエンド） |
+| [mfAccountImportService.ts](file:///c:/dev/receipt-app/src/api/services/mfAccountImportService.ts) | 255行 | MF科目インポートサービス（バックエンド。baseId正規化含む） |
 | **[journalValidationCore.ts](file:///c:/dev/receipt-app/src/shared/validation/journalValidationCore.ts)** | **632行** | **仕訳バリデーションSSOT（13種チェック統合）** |
 | [journalValidation.ts](file:///c:/dev/receipt-app/src/api/services/journalValidation.ts) | 90行 | 仕訳バリデーション（API側ラッパー） |
 | [journalWarningSync.ts](file:///c:/dev/receipt-app/src/utils/journalWarningSync.ts) | 27行 | フロント共通バリデーション（sharedへのre-export） |
@@ -485,7 +534,7 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 | P4 | テンプレート内のハードコード | テンプレート（HTML）内に日本語ラベルが直書き。UI_MSGへの定数化進行中だが一部残存 |
 | P5 | clientIdのハードコード | MF認証で`c_rODnkCDN`がL370にハードコード（`TODO: Supabase移行時にUI選択に変更`コメントあり） |
 | ~~P7~~ | ~~`mf-account-available.json`未構築~~ | **不要と判明（2026-06-05）。** MCP実機テスト11パターンで勘定科目は全パターン同一。方式別表示可否テーブルは不要 |
-| P8 | MFインポート新規IDに日本語混入 | `MF_${mf.name}` で生成されるため`MF_未収賃貸料`等のIDが発生（L147） |
+| ~~P8~~ | ~~MFインポート新規IDに日本語混入~~ | **解消済み（2026-06-08）。** Gemini 3.5-flashによるローマ字ID生成に移行。`generateMasterId()`で英語IDを自動生成 |
 
 ### 🟢 良い点（既に実装済み）
 
@@ -556,8 +605,8 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 | **`accountGroup`（大分類）** | ✅ | ✅ | **#7 貸借科目矛盾** |
 | **`direction`（方向）** | ✅ | ✅ | #9 科目×税区分不整合（間接） |
 | 科目分類（`category`） | ✅ | ✅ | #8 証票意味矛盾 |
-| 税区分判定（`taxDetermination`） | ✅ | ✅ | #9 科目×税区分不整合 |
-| デフォルト税区分（`defaultTaxCategoryId`） | ✅ | ✅ | #9 固定税区分照合 |
+| ~~税区分判定（`taxDetermination`）~~ | 削除済み | 削除済み | ~~#9~~ 廃止済み（2026-06-11） |
+| デフォルト税区分（`defaultTaxCategoryId`） | ✅ | ✅ | #9 科目×税区分不整合 |
 | **証票意味許容** | ✅ | ✅ | #8 可視化 |
 | 適用開始/終了 | ✅ | ✅ | — |
 | 出典 | ❌ | ✅ | — |
@@ -573,7 +622,7 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 ### 13-1. 背景
 
 勘定科目の付随フィールド（§3参照）は人間が手動設定すると破綻する:
-- `accountGroup`（5値）、`category`（29値）、`taxDetermination`（3値）、`defaultTaxCategoryId`（151択）、`target`（3値）
+- `accountGroup`（5値）、`category`（29値）、`defaultTaxCategoryId`（151択）、`target`（3値）
 - 組み合わせが多すぎて人間が正しく設定するのは困難
 - 設定を間違えるとバリデーション（§2）が誤動作する
 
@@ -586,7 +635,6 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 
 自動導出（deriveCategoryDefaults()）:
   ├→ accountGroup      getCategoryAccountGroup()
-  ├→ taxDetermination  deriveTaxDetermination()
   ├→ defaultTaxCategoryId  deriveCategoryDefaults()
   └→ direction         getCategoryDirection()
 ```

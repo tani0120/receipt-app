@@ -42,11 +42,12 @@
               @click="taxPage = p"
             >{{ p }}</span>
             <span class="as-page-arrow" :class="{ disabled: taxPage >= taxTotalPages }" @click="taxPage = Math.min(taxTotalPages, taxPage + 1)">＞</span>
-            <span class="as-page-range">{{ taxPageStart }}~{{ taxPageEnd }} / {{ displayTaxRows.length }}件</span>
+            <span class="as-page-range">{{ taxPageStart }}~{{ taxPageEnd }} / {{ filteredTaxRows.length }}件</span>
             <!-- §15追加禁止: MFがSSOTのため一括操作（MF公式/非公式切替・コピー・削除・追加）を全て無効化。表示/非表示は個別の目アイコンで操作可能 -->
           </div>
           <div class="as-actions">
             <MfImportButton
+              ref="mfImportBtnRef"
               :authenticated="mfAuthenticated"
               :loading="mfImporting"
               tooltip="MFから税区分をインポート"
@@ -351,6 +352,7 @@ const allTaxRows: TaxCategory[] = reactive(
 // =============== MF連携状態 ===============
 const mfAuthenticated = ref(false);
 const mfImporting = ref(false);
+const mfImportBtnRef = ref<InstanceType<typeof MfImportButton> | null>(null);
 const hasMfData = computed(() => allTaxRows.some(r => r.source === 'mf'));
 
 // --- MFインポート ウィザード状態 ---
@@ -521,8 +523,7 @@ async function executeImport() {
         body: JSON.stringify({ clientId }),
       });
       const noDiffResult = noDiffRes.ok ? await noDiffRes.json() : {};
-      // apply後にAPI再取得して表示用refを更新（#8: mfTaxAvailable個別fetchは廃止）
-      await refreshDisplayTaxRows();
+      // allTaxRows.spliceで更新済み → filteredTaxRows(computed)が自動再計算
       // ルールベースID変換失敗チェック
       if (noDiffResult.unknownTaxNames?.length > 0) {
         await modal.notify({
@@ -539,7 +540,7 @@ async function executeImport() {
         });
       }
       const methodLabel = taxMethods.find(m => m.value === taxMethod.value)?.label ?? taxMethod.value;
-      await modal.notify({ title: 'MFの最新状態に更新しました', message: `※${methodLabel}: ${displayTaxRows.value.length}件表示`, variant: 'success' });
+      await modal.notify({ title: 'MFの最新状態に更新しました', message: `※${methodLabel}: ${filteredTaxRows.value.length}件表示`, variant: 'success' });
       return;
     }
 
@@ -577,8 +578,7 @@ async function executeImport() {
     });
     allTaxRows.splice(0, allTaxRows.length, ...converted);
 
-    // 6. apply後にAPI再取得して表示用refを更新（#8: mfTaxAvailable個別fetchは廃止。API側filterByTaxMethodが担当）
-    await refreshDisplayTaxRows();
+    // allTaxRows.spliceで更新済み → filteredTaxRows(computed)が自動再計算
 
     // 7. ルールベースID変換に失敗した税区分がある場合 → 管理者に警告（コピペ可能）
     if (result.unknownTaxNames && result.unknownTaxNames.length > 0) {
@@ -598,10 +598,15 @@ async function executeImport() {
     }
 
     const methodLabel2 = taxMethods.find(m => m.value === taxMethod.value)?.label ?? taxMethod.value;
-    await modal.notify({ title: 'MFの最新状態に更新しました', message: `※${methodLabel2}: ${displayTaxRows.value.length}件表示`, variant: 'success' });
+    await modal.notify({ title: 'MFの最新状態に更新しました', message: `※${methodLabel2}: ${filteredTaxRows.value.length}件表示`, variant: 'success' });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+    const log = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err);
+    if (mfImportBtnRef.value) {
+      mfImportBtnRef.value.showError('MFインポート失敗', msg, log);
+    } else {
+      await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+    }
   } finally {
     mfImporting.value = false;
     await refreshPatternProgress();
@@ -620,33 +625,28 @@ const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 
 
-// --- 表示用ref: API取得結果（フィルタ済み）---
-// Phase 4 #6: filteredTaxRows(Vue側computed) → displayTaxRows(API取得結果)に置換
-// Phase 4 #8: mfTaxAvailable個別fetch廃止。API側filterByTaxMethodが担当
-const displayTaxRows = ref<TaxCategory[]>([]);
+// --- 表示用computed: allTaxRowsから課税方式フィルタ ---
+// Repository直叩き(displayTaxRows ref)を廃止。allTaxRowsからcomputedでフィルタ。
+const filteredTaxRows = computed(() => {
+  const mode = taxMethod.value;
+  return allTaxRows.filter(row => {
+    // 免税: direction='common'（対象外・不明）のみ表示
+    if (mode === 'exempt') return row.direction === 'common';
+    // direction='common'は全方式で常に表示
+    if (row.direction === 'common') return true;
+    // 本則（一括比例/個別対応）: simplifiedOnly=trueを除外
+    if (mode === 'proportional' || mode === 'individual') return !row.simplifiedOnly;
+    // 簡易: 全件表示
+    return true;
+  });
+});
 
-/** API呼び出しで表示用refを更新 */
-async function refreshDisplayTaxRows() {
-  try {
-    const { createRepositories } = await import('@/repositories');
-    const repos = createRepositories();
-    displayTaxRows.value = await repos.taxMaster.getMaster();
-  } catch (err) {
-    console.error('[全社税区分] API取得失敗:', err);
-  }
-}
-
-// taxMethod切替時にAPI再取得
-watch(taxMethod, () => { refreshDisplayTaxRows(); });
-// 起動時にも取得
-onMounted(() => { refreshDisplayTaxRows(); });
-
-const taxTotalPages = computed(() => Math.max(1, Math.ceil(displayTaxRows.value.length / PAGE_SIZE)));
+const taxTotalPages = computed(() => Math.max(1, Math.ceil(filteredTaxRows.value.length / PAGE_SIZE)));
 const taxPageStart = computed(() => (taxPage.value - 1) * PAGE_SIZE + 1);
-const taxPageEnd = computed(() => Math.min(taxPage.value * PAGE_SIZE, displayTaxRows.value.length));
-const pagedTaxRows = computed(() => displayTaxRows.value.slice(taxPageStart.value - 1, taxPageEnd.value));
+const taxPageEnd = computed(() => Math.min(taxPage.value * PAGE_SIZE, filteredTaxRows.value.length));
+const pagedTaxRows = computed(() => filteredTaxRows.value.slice(taxPageStart.value - 1, taxPageEnd.value));
 
-watch(displayTaxRows, () => { if (taxPage.value > taxTotalPages.value) taxPage.value = 1; });
+watch(filteredTaxRows, () => { if (taxPage.value > taxTotalPages.value) taxPage.value = 1; });
 
 // =============== 非表示化・表示化（個別の目アイコン用） ===============
 function hideRow(row: TaxCategory) {

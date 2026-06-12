@@ -1,4 +1,4 @@
-﻿/**
+/**
  * commentRoutes.ts — コメントAPI ルート（Hono）
  *
  * エンドポイント:

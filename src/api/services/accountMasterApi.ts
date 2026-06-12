@@ -671,7 +671,10 @@ export function getFilteredClientTaxCategories(
     pageSize = 50,
   } = params
 
-  const filtered = data.filter(row => filterByTaxMethod(row, taxMethod))
+  const filtered = data.filter(row => {
+    if (taxMethod === 'all') return true
+    return filterByTaxMethod(row, taxMethod)
+  })
 
   const totalCount = filtered.length
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))

@@ -75,7 +75,7 @@
               >＞</span
             >
             <span class="as-page-range"
-              >{{ taxPageStart }}~{{ taxPageEnd }} / {{ displayTaxRows.length }}件</span
+              >{{ taxPageStart }}~{{ taxPageEnd }} / {{ filteredTaxRows.length }}件</span
             >
             <!-- チェック時の一括操作ボタン -->
             <template v-if="checkedIds.length">
@@ -99,6 +99,7 @@
           </div>
           <div class="as-actions">
             <MfImportButton
+              ref="mfImportBtnRef"
               :authenticated="mfAuthenticated"
               :loading="mfImporting"
               tooltip="MFから税区分をインポート"
@@ -419,6 +420,7 @@ const taxPage = ref(1);
 // =============== MF連携状態 ===============
 const mfAuthenticated = ref(false);
 const mfImporting = ref(false);
+const mfImportBtnRef = ref<InstanceType<typeof MfImportButton> | null>(null);
 const mfImportedIds = ref<string[]>([]);
 /** MFからインポートされたデータが存在するか（source='mf'の行が1件以上） */
 const hasMfData = computed(() => allTaxRows.some((r) => r.source === "mf"));
@@ -463,18 +465,23 @@ async function importFromMf() {
       (currentClientData.value as Record<string, unknown>).consumptionTaxMode = result.consumptionTaxMode;
     }
 
-    // apply後にAPI再取得して表示用refを更新（Phase 5 #8: mfTaxAvailable個別fetchは廃止）
-    await refreshDisplayTaxRows();
+
+    // allTaxRows.spliceで更新済み → filteredTaxRows(computed)が自動再計算
 
     const methodLabel = taxMethods.find(m => m.value === taxTabMethod.value)?.label ?? taxTabMethod.value;
     await modal.notify({
       title: 'MFの最新状態に更新しました',
-      message: `※${methodLabel}: ${displayTaxRows.value.length}件表示`,
+      message: `※${methodLabel}: ${filteredTaxRows.value.length}件表示`,
       variant: 'success',
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: "warning" });
+    const log = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err);
+    if (mfImportBtnRef.value) {
+      mfImportBtnRef.value.showError('MFインポート失敗', msg, log);
+    } else {
+      await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+    }
   } finally {
     mfImporting.value = false;
   }
@@ -515,41 +522,34 @@ const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 
 
-// --- 表示用ref: API取得結果（フィルタ済み）---
-// Phase 5 #7: filteredTaxRows(Vue側computed) → displayTaxRows(API取得結果)に置換
-// Phase 5 #8: mfTaxAvailable個別fetch廃止。API側filterByTaxMethodが担当
-const displayTaxRows = ref<TaxCategory[]>([]);
-
-/** API呼び出しで表示用refを更新 */
-async function refreshDisplayTaxRows() {
-  if (!clientId.value) return;
-  try {
-    const { createRepositories } = await import('@/repositories');
-    const repos = createRepositories();
-    const data = await repos.taxMaster.getClient(clientId.value);
-    displayTaxRows.value = data.taxCategories ?? [];
-  } catch (err) {
-    console.error('[顧問先税区分] API取得失敗:', err);
-  }
-}
-
-// taxTabMethod切替時にAPI再取得
-watch(taxTabMethod, () => { refreshDisplayTaxRows(); });
-// 起動時にも取得
-onMounted(() => { refreshDisplayTaxRows(); });
+// --- 表示用computed: allTaxRowsから課税方式フィルタ ---
+// Repository直叩き(displayTaxRows ref)を廃止。composable経由のallTaxRowsからcomputedでフィルタ。
+const filteredTaxRows = computed(() => {
+  const mode = taxTabMethod.value;
+  return allTaxRows.filter(row => {
+    // 免税: direction='common'（対象外・不明）のみ表示
+    if (mode === 'exempt') return row.direction === 'common';
+    // direction='common'は全方式で常に表示
+    if (row.direction === 'common') return true;
+    // 本則（一括比例/個別対応）: simplifiedOnly=trueを除外
+    if (mode === 'proportional' || mode === 'individual') return !row.simplifiedOnly;
+    // 簡易: 全件表示
+    return true;
+  });
+});
 
 const taxTotalPages = computed(() =>
-  Math.max(1, Math.ceil(displayTaxRows.value.length / PAGE_SIZE)),
+  Math.max(1, Math.ceil(filteredTaxRows.value.length / PAGE_SIZE)),
 );
 const taxPageStart = computed(() => (taxPage.value - 1) * PAGE_SIZE + 1);
 const taxPageEnd = computed(() =>
-  Math.min(taxPage.value * PAGE_SIZE, displayTaxRows.value.length),
+  Math.min(taxPage.value * PAGE_SIZE, filteredTaxRows.value.length),
 );
 const pagedTaxRows = computed(() =>
-  displayTaxRows.value.slice(taxPageStart.value - 1, taxPageEnd.value),
+  filteredTaxRows.value.slice(taxPageStart.value - 1, taxPageEnd.value),
 );
 
-watch(displayTaxRows, () => {
+watch(filteredTaxRows, () => {
   if (taxPage.value > taxTotalPages.value) taxPage.value = 1;
 });
 

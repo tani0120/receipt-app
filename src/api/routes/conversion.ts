@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CSV変換APIルート（Hono）
  *
  * レイヤー: ★route★ → conversionStore（JSON永続化）

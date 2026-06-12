@@ -54,6 +54,7 @@
           </div>
           <div class="as-actions">
             <MfImportButton
+              ref="mfImportBtnRef"
               :authenticated="mfAuthenticated"
               :loading="mfImporting"
               tooltip="MFから勘定科目をインポート"
@@ -335,6 +336,7 @@ const PAGE_SIZE = 50;
 // =============== MF連携状態 ===============
 const mfAuthenticated = ref(false);
 const mfImporting = ref(false);
+const mfImportBtnRef = ref<InstanceType<typeof MfImportButton> | null>(null);
 
 // --- MFインポート 顧問先選択UI状態 ---
 const mfImportStep = ref(0); // 0:非表示 1:顧問先選択
@@ -438,7 +440,12 @@ async function executeImport() {
     markClean();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+    const log = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err);
+    if (mfImportBtnRef.value) {
+      mfImportBtnRef.value.showError('MFインポート失敗', msg, log);
+    } else {
+      await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+    }
   } finally {
     mfImporting.value = false;
   }

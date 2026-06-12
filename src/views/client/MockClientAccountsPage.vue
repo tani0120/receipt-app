@@ -62,6 +62,7 @@
           </div>
           <div class="as-actions">
             <MfImportButton
+              ref="mfImportBtnRef"
               :authenticated="mfAuthenticated"
               :loading="mfImporting"
               tooltip="MFから勘定科目をインポート"
@@ -351,6 +352,7 @@ const PAGE_SIZE = 50;
 // =============== MF連携状態 ===============
 const mfAuthenticated = ref(false);
 const mfImporting = ref(false);
+const mfImportBtnRef = ref<InstanceType<typeof MfImportButton> | null>(null);
 
 onMounted(async () => {
   try {
@@ -373,11 +375,9 @@ async function importFromMf() {
       throw new Error(err.error ?? err.detail ?? 'MF勘定科目インポート失敗');
     }
     const data = await res.json();
-    const { createRepositories } = await import('@/repositories');
-    const repos = createRepositories();
-    const refreshData = await repos.accountMaster.getClient(props.clientId);
-    if (refreshData.accounts) {
-      accountRows.splice(0, accountRows.length, ...refreshData.accounts);
+    // APIレスポンスにupdatedAccountsがあれば直接使用（Repository直叩き廃止）
+    if (data.updatedAccounts) {
+      accountRows.splice(0, accountRows.length, ...data.updatedAccounts);
     }
 
     await modal.notify({
@@ -387,7 +387,12 @@ async function importFromMf() {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+    const log = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err);
+    if (mfImportBtnRef.value) {
+      mfImportBtnRef.value.showError('MFインポート失敗', msg, log);
+    } else {
+      await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+    }
   } finally {
     mfImporting.value = false;
   }

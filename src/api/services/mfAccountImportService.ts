@@ -92,8 +92,16 @@ export async function importMasterAccounts(
   //    MFの税区分リストから「tax_id→名前」を取得し、「名前→マスタID」で変換する。
   const taxCategories = getAllTaxCategories()
   const taxNameToMasterId = new Map<string, string>()
+  // 簡易課税の種別付き税区分（一種～六種）→ 基本形への正規化マップ
+  // 例: SALES_TAXABLE_10_T3（三種）→ SALES_TAXABLE_10（基本形）
+  // 全社マスタが特定顧問先の簡易課税種別で汚染されるのを防止する
+  // 新税率（1%等）追加時もbaseIdが設定されていれば自動で正規化される
+  const taxIdToBaseId = new Map<string, string>()
   for (const t of taxCategories) {
     taxNameToMasterId.set(t.name, t.taxCategoryId)
+    if (t.baseId) {
+      taxIdToBaseId.set(t.taxCategoryId, t.baseId)
+    }
   }
 
   // MFから税区分リストを取得してtax_id→名前マップを構築
@@ -140,14 +148,18 @@ export async function importMasterAccounts(
     // 名前で照合（MF IDは事業者固有のため名前照合のみ）
     const existing = nameToRow.get(mf.name)
 
-    const masterTaxId = mfTaxIdToMasterId.get(mf.tax_id)
+    const rawMasterTaxId = mfTaxIdToMasterId.get(mf.tax_id)
+    // 簡易課税の種別（一種～六種）を基本形に正規化
+    // 例: 簡易課税の顧問先から「課税売上10% 三種」が来ても「課税売上10%」として保存
+    // baseIdがなければ（基本形 or 新規税区分）そのまま使用
+    const masterTaxId = rawMasterTaxId ? (taxIdToBaseId.get(rawMasterTaxId) ?? rawMasterTaxId) : undefined
     const mfAccountGroup = deriveMfAccountGroup(mf.account_group, mf.category)
 
     if (existing) {
       // 既存行とマッチ。全社マスタにはMFフィールドを書き込まない
       // （MF IDは事業者固有。全社テンプレートに特定1社のIDを持つのは不正）
 
-      // デフォルト税区分をMCPの値で常に上書き（MCP実機が正確。手動設定は不正確）
+      // デフォルト税区分をMCP（マネーフォワード連携）の値で常に上書き
       // 仕訳バリデーション・ヒント・AI生成で使われるため正確な値が必須
       if (masterTaxId) {
         existing.defaultTaxCategoryId = masterTaxId

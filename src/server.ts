@@ -198,6 +198,9 @@ console.log('🔧 Starting HTTP server...')
 // Phase D-5: 移行バックグラウンドワーカー起動
 import { startMigrationWorker, stopMigrationWorker } from './api/services/migration/migrationWorker'
 
+// MF自動取得スケジューラ
+import { startMfSyncScheduler, stopMfSyncScheduler } from './api/services/mfSyncScheduler'
+
 // Keep-aliveタイマー（Cloud Runログ確認用）
 const heartbeatTimer = setInterval(() => {
     console.log('💓 Server heartbeat - still running')
@@ -213,6 +216,7 @@ function gracefulShutdown(signal: string) {
     console.log(`🛑 ${signal} received, shutting down gracefully`)
     clearInterval(heartbeatTimer)
     stopMigrationWorker()
+    stopMfSyncScheduler()
     httpServer.close(() => {
         console.log('✅ HTTP server closed')
         process.exit(0)
@@ -248,6 +252,8 @@ httpServer.on('listening', () => {
     startMigrationWorker().catch(err => {
         console.warn('⚠️ migrationWorker起動失敗（Supabase未接続の可能性）:', err instanceof Error ? err.message : String(err))
     })
+    // MF自動取得スケジューラ起動
+    startMfSyncScheduler()
 })
 
 // SIGTERM（docker stop, Cloud Run）+ SIGINT（Ctrl+C, nodemon restart）の両方を処理

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * vendorRoutes.ts — 取引先JSON永続化APIルート（Hono）
  *
  * レイヤー: ★route★ → vendorStore
