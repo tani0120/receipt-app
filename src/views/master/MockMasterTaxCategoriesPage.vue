@@ -355,6 +355,17 @@ const mfImporting = ref(false);
 const mfImportBtnRef = ref<InstanceType<typeof MfImportButton> | null>(null);
 const hasMfData = computed(() => allTaxRows.some(r => r.source === 'mf'));
 
+// MF課税方式別availableデータ（表示フィルタの判定基準。mf-tax-available.jsonから取得）
+const taxAvailable = ref<Record<string, Record<string, boolean>>>({});
+
+/** /api/mf/tax-available からavailableデータを取得 */
+async function fetchTaxAvailable(): Promise<void> {
+  try {
+    const res = await fetch('/api/mf/tax-available');
+    if (res.ok) taxAvailable.value = await res.json();
+  } catch { /* MF未連携時は空→フォールバック */ }
+}
+
 // --- MFインポート ウィザード状態 ---
 const mfImportStep = ref(0); // 0:非表示 1:顧問先選択 2:パターン進捗
 const mfSelectedClientId = ref('');
@@ -469,6 +480,9 @@ onMounted(async () => {
 
     // パターン進捗を取得
     await refreshPatternProgress();
+
+    // MF availableデータを取得（表示フィルタ用）
+    await fetchTaxAvailable();
   } catch {
     mfAuthenticated.value = false;
   }
@@ -610,6 +624,8 @@ async function executeImport() {
   } finally {
     mfImporting.value = false;
     await refreshPatternProgress();
+    // インポート後にavailableデータを再取得（フィルタ件数を即時更新）
+    await fetchTaxAvailable();
     if (lastImportedPattern.value) {
       mfImportStep.value = 2;
     }
@@ -625,19 +641,25 @@ const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 
 
-// --- 表示用computed: allTaxRowsから課税方式フィルタ ---
-// Repository直叩き(displayTaxRows ref)を廃止。allTaxRowsからcomputedでフィルタ。
+// --- 表示用computed: allTaxRowsからMF availableデータでフィルタ ---
+// 判定基準: mf-tax-available.json（MF実データ）。設計書§4-1準拠。
+// simplifiedOnlyフラグはバリデーション用であり、表示フィルタには使用しない。
 const filteredTaxRows = computed(() => {
   const mode = taxMethod.value;
+  const modeAvail = taxAvailable.value[mode] ?? {};
+  const hasAvail = Object.keys(modeAvail).length > 0;
   return allTaxRows.filter(row => {
-    // 免税: direction='common'（対象外・不明）のみ表示
-    if (mode === 'exempt') return row.direction === 'common';
-    // direction='common'は全方式で常に表示
+    // MFカスタム税区分は常に表示
+    if (row.isCustom && row.source === 'mf') return true;
+    // direction='common'（対象外・不明）は全方式で常に表示
     if (row.direction === 'common') return true;
-    // 本則（一括比例/個別対応）: simplifiedOnly=trueを除外
-    if (mode === 'proportional' || mode === 'individual') return !row.simplifiedOnly;
-    // 簡易: 全件表示
-    return true;
+    // availableデータあり → MF実データで判定
+    if (hasAvail && row.taxCategoryId) {
+      return modeAvail[row.taxCategoryId] === true;
+    }
+    // フォールバック（availableデータなし = MF未連携）
+    if (mode === 'exempt') return false;
+    return row.active !== false && row.defaultVisible !== false;
   });
 });
 

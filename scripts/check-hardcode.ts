@@ -75,6 +75,7 @@ const RULES: HardcodeRule[] = [
       'journalHintService.ts',        // A3: defaultDebitId/defaultCreditId参照
       'preview_extract_schema.ts',    // P12: 実験用スキーマ
       'test_mf_send.ts',             // テスト用
+      'MasterFieldFlowPage.vue',     // 設計ドキュメント（用語定義の全選択肢を列挙するリファレンス画面）
       '.type.ts',                     // 型定義ファイル全般
     ],
     severity: 'error',
