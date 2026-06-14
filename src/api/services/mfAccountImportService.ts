@@ -40,7 +40,7 @@ export interface AccountImportDiff {
   matched: Array<{ name: string }>
   /** 新規追加（MFにあってマスタにない） */
   added: Array<{ name: string; category: string }>
-  /** 削除候補（マスタにあるがMFにない。source='mf'の行のみ） */
+  /** 削除候補（マスタにあるがMFにない。source='mcp'の行のみ） */
   deprecatedCandidates: Array<{ accountId: string; name: string }>
   /** 変更なし件数 */
   unchanged: number
@@ -156,8 +156,8 @@ export async function importMasterAccounts(
     const mfAccountGroup = deriveMfAccountGroup(mf.account_group, mf.category)
 
     if (existing) {
-      // 既存行とマッチ。全社マスタにはMFフィールドを書き込まない
-      // （MF IDは事業者固有。全社テンプレートに特定1社のIDを持つのは不正）
+      // 既存行とマッチ。source='mcp'に更新（MFで確認済みデータ）
+      existing.source = 'mcp' as const
 
       // デフォルト税区分をMCP（マネーフォワード連携）の値で常に上書き
       // 仕訳バリデーション・ヒント・AI生成で使われるため正確な値が必須
@@ -188,7 +188,7 @@ export async function importMasterAccounts(
         effectiveTo: null,
         sortOrder: maxSort,
         isCustom: false,
-        source: 'mf' as const,
+        source: 'mcp' as const,
         // 全社マスタにはMFフィールドを含めない
       }
       masterItems.push(newAccount)
@@ -196,12 +196,12 @@ export async function importMasterAccounts(
     }
   }
 
-  // 5. 削除候補検知（マスタにあるがMFにない行。source='mf'のみ対象）
+  // 5. 削除候補検知（マスタにあるがMFにない行。source='mcp'のみ対象）
   // deprecated=trueにすることで過去仕訳の参照先を保持しつつ選択肢から除外
   // ★ row.target === clientType で事業形態を限定（法人インポート時に個人科目を誤って非推奨化しない）
   const mfNameSet = new Set(mfAccounts.map(a => a.name))
   for (const row of masterItems) {
-    if (row.source === 'mf' && row.target === clientType && !mfNameSet.has(row.name) && !row.deprecated) {
+    if (row.source === 'mcp' && row.target === clientType && !mfNameSet.has(row.name) && !row.deprecated) {
       row.deprecated = true
       diff.deprecatedCandidates.push({ accountId: row.accountId, name: row.name })
     }

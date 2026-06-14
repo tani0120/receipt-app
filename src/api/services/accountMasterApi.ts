@@ -465,7 +465,7 @@ export interface TaxCategoryFilterResult {
  *
  * 共通ルール:
  * - direction='common'（不明・対象外）は常に表示
- * - MF独自カスタム税区分（isCustom && source='mf'）は常に表示
+ * - MF独自カスタム税区分（isCustom && source='mcp'）は常に表示
  */
 /**
  * 課税方式で税区分をフィルタする
@@ -477,7 +477,7 @@ export interface TaxCategoryFilterResult {
  */
 function filterByTaxMethod(row: TaxCategory, taxMethod: string): boolean {
   // MF独自カスタム税区分は常に表示（顧問先が意図的に作成したため）
-  if (row.isCustom && row.source === 'mf') return true
+  if (row.isCustom && row.source === 'mcp') return true
   // direction='common'（不明・対象外）は全方式で常に表示
   if (row.direction === 'common') return true
 

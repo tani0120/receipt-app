@@ -31,18 +31,25 @@ export type TaxCategory = {
     active: boolean
     /** 非推奨フラグ（true=グレーアウト表示。物理削除禁止 → ルール3。active=falseと連動） */
     deprecated: boolean
-    /** 適用開始日（ISO 8601形式。例: '2019-10-01'） */
-    effectiveFrom: string
+    /** 適用開始日（ISO 8601形式。例: '2019-10-01'。MF未照合行はnull=不明） */
+    effectiveFrom: string | null
     /** 適用終了日（null=現役。旧税率は日付を設定 → ルール1） */
     effectiveTo: string | null
+    /** 利用開始日（この事務所/顧問先で使い始めた日。MFインポート日など） */
+    enabledFrom?: string | null
+    /** 利用停止日（非表示化した日。null=利用中） */
+    enabledTo?: string | null
     /** デフォルト表示（27件=true） */
     defaultVisible: boolean
     /** 表示順（CSV並び順と一致） */
     displayOrder: number
     /** カスタム税区分フラグ（ユーザー追加=true、システム提供=false/undefined → ルール4） */
     isCustom?: boolean
-    /** データ出典（'mf'=MFインポート、'default'=システム提供、'master'/'master-custom'=マスタ、'custom'/'client-custom'=顧問先独自） */
-    source?: 'mf' | 'master' | 'custom' | 'default' | 'master-custom' | 'client-custom'
+    /** データ出典
+     * - 'mcp': MFのMCP APIからインポート（全社マスタ・MF連携先の顧問先）
+     * - 'client-custom': MF未連携の顧問先で手動追加したカスタム税区分
+     */
+    source?: 'mcp' | 'client-custom'
     // mfId（旧: 全社マスタ・顧問先共通）は2026-06-04に削除済み。
     // MFのtax_idは事業者固有IDで事業者間一致しない（MCP実機: TSK vs TST 0/151件一致）。
     // → 全社マスタには持たない。

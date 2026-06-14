@@ -404,8 +404,8 @@ async function executeImport() {
       body: JSON.stringify({ clientId }),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'MF勘定科目インポート失敗' }));
-      throw new Error(err.error ?? err.detail ?? 'MF勘定科目インポート失敗');
+      const err = await res.json().catch(() => ({ error: UI_MSG.MF勘定科目インポート失敗 }));
+      throw new Error(err.error ?? err.detail ?? UI_MSG.MF勘定科目インポート失敗);
     }
     const result = await res.json() as {
       success: boolean;
@@ -427,7 +427,7 @@ async function executeImport() {
 
     // 差分あり → 確認モーダル表示
     const confirmed = await modal.confirm({
-      title: 'MF勘定科目インポート差分レポート',
+      title: UI_MSG.MF勘定科目差分レポート,
       message: result.reportLines.join('\n'),
       confirmLabel: '適用する',
       cancelLabel: 'キャンセル',
@@ -442,9 +442,9 @@ async function executeImport() {
     const msg = err instanceof Error ? err.message : String(err);
     const log = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err);
     if (mfImportBtnRef.value) {
-      mfImportBtnRef.value.showError('MFインポート失敗', msg, log);
+      mfImportBtnRef.value.showError(UI_MSG.MFインポート失敗タイトル, msg, log);
     } else {
-      await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+      await modal.notify({ title: `${UI_MSG.MFインポート失敗タイトル}: ${msg}`, variant: 'warning' });
     }
   } finally {
     mfImporting.value = false;
@@ -455,7 +455,6 @@ async function executeImport() {
 const settings = useAccountSettings('master');
 // テンプレート互換用のローカル参照
 const masterAccounts = settings.accounts;
-const overrides = settings._accountMasterOverrides;
 function toggleVisibility(id: string) { settings.toggleAccountVisibility(id); }
 function isHidden(id: string) { return settings.isAccountHidden(id); }
 
@@ -509,18 +508,8 @@ watch(filteredAccountRows, () => { if (accountPage.value > accountTotalPages.val
 
 async function saveChanges() {
   try {
-    // API経由でサーバー側に保存（Repository経由）
-    const { createRepositories } = await import('@/repositories');
-    const repos = createRepositories();
-    await repos.accountMaster.saveMaster(accountRows);
-
-    // composable側のoverridesにも同期（顧問先ページへの反映用）
-    const defaultAccountIds = settings.defaultAccountIds.value;
-    const customRows = accountRows.filter(r => !defaultAccountIds.has(r.accountId));
-    const today = new Date().toISOString().slice(0, 10);
-    const hiddenIds = accountRows.filter(r => r.deprecated || (r.effectiveTo && r.effectiveTo <= today)).map(r => r.accountId);
-    overrides.value = { hiddenIds, customAccounts: customRows };
-    // ★DL-042: localStorage書き込み廃止済み（API保存に一本化）
+    // composable経由で保存（autoSaveでサーバーに自動保存される）
+    settings.saveAccounts(accountRows);
 
     markClean();
     modal.notify({ title: UI_MSG.保存成功, variant: 'success' });

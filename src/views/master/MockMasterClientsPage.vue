@@ -1383,25 +1383,25 @@ const checkFiscalMonth = async (row: Client) => {
   try {
     const res = await fetch(`/api/mf/fiscal-check?clientId=${row.clientId}`);
     if (!res.ok) {
-      modal.notify({ title: 'エラー', message: `決算月チェックに失敗しました（${res.status}）`, variant: 'warning' });
+      modal.notify({ title: UI_MSG.エラー, message: `${UI_MSG.決算月チェック失敗}（${res.status}）`, variant: 'warning' });
       return;
     }
     const data = await res.json();
     if (!data.mfLinked) {
-      modal.notify({ title: '未連携', message: 'MFクラウドと未連携です。先に認証を完了してください。', variant: 'warning' });
+      modal.notify({ title: UI_MSG.MF未連携タイトル, message: UI_MSG.MF未連携メッセージ, variant: 'warning' });
       return;
     }
     if (!data.mismatch) {
-      modal.notify({ title: '✅ 一致', message: `決算月: ${data.localFiscalMonth}月（MFと一致）`, variant: 'success' });
+      modal.notify({ title: UI_MSG.決算月一致タイトル, message: `決算月: ${data.localFiscalMonth}月（MFと一致）`, variant: 'success' });
       return;
     }
     // 不一致 → 確認モーダル表示
     const confirmed = await modal.confirm({
-      title: '⚠️ 決算月の不一致を検出',
+      title: UI_MSG.決算月不一致タイトル,
       message: `sugu-sru: ${data.localFiscalMonth}月\nMFクラウド: ${data.mfFiscalMonth}月（期末: ${data.mfEndDate}）\n\nMFクラウドの値で修正しますか？`,
       variant: 'danger',
-      confirmLabel: 'MFに合わせる',
-      cancelLabel: 'そのまま',
+      confirmLabel: UI_MSG.MFに合わせる,
+      cancelLabel: UI_MSG.そのまま,
     });
     if (confirmed) {
       try {
@@ -1409,14 +1409,14 @@ const checkFiscalMonth = async (row: Client) => {
         await updateClientLocal(row.clientId, { fiscalMonth: data.mfFiscalMonth });
         // 楽観的更新: テーブル表示用refも即時更新
         updateTableRow(row.clientId, { fiscalMonth: data.mfFiscalMonth } as Partial<Client>);
-        modal.notify({ title: '✅ 修正完了', message: `決算月を ${data.mfFiscalMonth}月 に更新しました`, variant: 'success' });
+        modal.notify({ title: UI_MSG.決算月修正完了タイトル, message: `決算月を ${data.mfFiscalMonth}月 に更新しました`, variant: 'success' });
       } catch {
-        modal.notify({ title: 'エラー', message: '決算月の更新に失敗しました', variant: 'warning' });
+        modal.notify({ title: UI_MSG.エラー, message: UI_MSG.決算月更新失敗, variant: 'warning' });
       }
     }
   } catch (e) {
     console.error('[MF決算月チェック] エラー:', e);
-    modal.notify({ title: 'エラー', message: '決算月チェック中にエラーが発生しました', variant: 'warning' });
+    modal.notify({ title: UI_MSG.エラー, message: UI_MSG.決算月チェックエラー, variant: 'warning' });
   } finally {
     fiscalCheckLoading.value = null;
   }
@@ -1433,15 +1433,15 @@ const handleMfImport = async () => {
     .map(([id]) => id);
 
   if (linkedIds.length === 0) {
-    modal.notify({ title: 'MFインポート', message: 'MF連携済みの顧問先がありません。\n先に設定画面からOAuth連携を完了してください。', variant: 'warning' });
+    modal.notify({ title: UI_MSG.MFインポートタイトル, message: UI_MSG.MF連携なし, variant: 'warning' });
     return;
   }
 
   const confirmed = await modal.confirm({
-    title: 'MFインポート',
+    title: UI_MSG.MFインポートタイトル,
     message: `MF連携済みの ${linkedIds.length}件 の顧問先の事業所情報をMFクラウドから取得します。\n\n実行しますか？`,
-    confirmLabel: 'インポート実行',
-    cancelLabel: 'キャンセル',
+    confirmLabel: UI_MSG.MFインポート実行,
+    cancelLabel: UI_MSG.キャンセル,
   });
   if (!confirmed) return;
 
@@ -1454,7 +1454,7 @@ const handleMfImport = async () => {
     });
     if (!res.ok) {
       const err = await res.text();
-      modal.notify({ title: 'エラー', message: `MFインポートに失敗しました（${res.status}）\n${err}`, variant: 'warning' });
+      modal.notify({ title: UI_MSG.エラー, message: `${UI_MSG.MFインポート事業所失敗}（${res.status}）\n${err}`, variant: 'warning' });
       return;
     }
     const result = await res.json() as {
@@ -1474,7 +1474,7 @@ const handleMfImport = async () => {
     const errorLines = result.errors.length > 0 ? `\n\nエラー:\n${result.errors.join('\n')}` : '';
 
     modal.notify({
-      title: '✅ MFインポート完了',
+      title: UI_MSG.MFインポート事業所完了,
       message: `更新: ${result.updated}件 / スキップ: ${result.skipped}件${detailLines ? `\n\n変更内容:\n${detailLines}` : ''}${errorLines}`,
       variant: result.errors.length > 0 ? 'warning' : 'success',
     });
@@ -1483,9 +1483,9 @@ const handleMfImport = async () => {
     const msg = e instanceof Error ? e.message : String(e);
     const log = e instanceof Error ? `${e.name}: ${e.message}\n${e.stack ?? ''}` : String(e);
     if (mfImportBtnRef.value) {
-      mfImportBtnRef.value.showError('エラー', msg, log);
+      mfImportBtnRef.value.showError(UI_MSG.エラー, msg, log);
     } else {
-      modal.notify({ title: 'エラー', message: 'MFインポート中にエラーが発生しました', variant: 'warning' });
+      modal.notify({ title: UI_MSG.エラー, message: UI_MSG.MFインポートエラー, variant: 'warning' });
     }
   } finally {
     mfImportLoading.value = false;
@@ -1586,7 +1586,7 @@ const handleCsvExport = async () => {
   const timestamp = new Date().toISOString().slice(0, 10);
   exportCsv(`顧問先_${timestamp}.csv`, cols, rows);
   await modal.notify({
-    title: 'エクスポート完了',
+    title: UI_MSG.エクスポート完了,
     message: `${rows.length}件をCSV出力しました`,
     variant: 'success',
   });
@@ -1598,7 +1598,7 @@ const handleExcelExport = async () => {
   const timestamp = new Date().toISOString().slice(0, 10);
   exportExcel(`顧問先_${timestamp}.xlsx`, cols, rows);
   await modal.notify({
-    title: 'エクスポート完了',
+    title: UI_MSG.エクスポート完了,
     message: `${rows.length}件をExcel出力しました`,
     variant: 'success',
   });
@@ -1614,7 +1614,7 @@ const handleCsvImport = async () => {
   }
 
   isLoading.value = true;
-  loadingMessage.value = 'インポート中…';
+  loadingMessage.value = UI_MSG.インポート中;
 
   let successCount = 0;
   let skipCount = 0;
@@ -1698,7 +1698,7 @@ const handleCsvImport = async () => {
   confirmLines.push('', 'インポートしますか？');
 
   const confirmed = await modal.confirm({
-    title: 'インポート確認',
+    title: UI_MSG.インポート確認,
     message: confirmLines.join('\n'),
   });
   if (!confirmed) {
@@ -1748,7 +1748,7 @@ const handleCsvImport = async () => {
   if (skipReasons.length > 0) lines.push('', ...skipReasons.slice(0, 20));
 
   await modal.notify({
-    title: 'インポート完了',
+    title: UI_MSG.インポート完了,
     message: lines.join('\n'),
     variant: (errorCount > 0 || skipCount > 0) ? 'warning' : 'success',
   });

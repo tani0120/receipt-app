@@ -25,8 +25,6 @@ export interface ClientAccount extends Account {
   isCustom: boolean
   /** マスタレベルで非表示か（参照情報） */
   hiddenInMaster: boolean
-  /** マスタレベルで追加されたカスタム科目か（マスタカスタム vs 顧問先カスタムの区別用） */
-  isMasterCustom: boolean
 }
 
 /** 顧問先ごとの差分データ */
@@ -166,7 +164,6 @@ export function useClientAccounts(clientId: string) {
       hiddenInClient: overrides.value.hiddenIds.includes(a.accountId),
       isCustom: a.isCustom ?? false,
       hiddenInMaster: a.hiddenInMaster,
-      isMasterCustom: a.isCustom ?? false,
     }))
 
     // 顧問先固有のカスタム科目
@@ -178,7 +175,6 @@ export function useClientAccounts(clientId: string) {
         hiddenInClient: overrides.value.hiddenIds.includes(a.accountId),
         isCustom: true,
         hiddenInMaster: false,
-        isMasterCustom: false,
       }))
 
     return [...baseAccounts, ...clientCustom]

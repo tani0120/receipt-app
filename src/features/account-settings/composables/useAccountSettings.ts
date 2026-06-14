@@ -39,13 +39,11 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   const accounts = computed<UnifiedAccount[]>(() => {
     if (scope === 'master') {
       return accountMaster.masterAccounts.value.map(a => {
-        const source: UnifiedAccount['source'] = a.isCustom ? 'master-custom' : 'default'
+        const source: UnifiedAccount['source'] = a.source ?? 'mcp'
         return {
           ...a,
           hidden: a.hiddenInMaster,
           hiddenInMaster: false,
-          isMasterCustom: a.isCustom,
-          isClientCustom: false,
           source,
         }
       })
@@ -55,24 +53,20 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       console.error('[useAccountSettings] scope="client" but clientAccountsComposable is null (clientId missing?)')
       // フォールバック: マスタデータを返す（呼び出し側でmasterSettings参照を不要にする）
       return accountMaster.masterAccounts.value.map(a => {
-        const source: UnifiedAccount['source'] = a.isCustom ? 'master-custom' : 'default'
+        const source: UnifiedAccount['source'] = a.source ?? 'mcp'
         return {
           ...a,
           hidden: a.hiddenInMaster,
           hiddenInMaster: false,
-          isMasterCustom: a.isCustom,
-          isClientCustom: false,
           source,
         }
       })
     }
     return clientAccountsComposable.clientAccounts.value.map(a => {
-      const source: UnifiedAccount['source'] = a.isMasterCustom ? 'master-custom' : a.isCustom ? 'client-custom' : 'default'
+      const source: UnifiedAccount['source'] = a.source ?? 'mcp'
       return {
         ...a,
         hidden: a.hiddenInClient,
-        isMasterCustom: a.isMasterCustom,
-        isClientCustom: a.isCustom && !a.isMasterCustom,
         source,
       }
     })
@@ -97,7 +91,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   const taxCategories = computed<UnifiedTaxCategory[]>(() => {
     if (scope === 'master') {
       return taxMaster.masterTaxCategories.value.map(tc => {
-        const source: UnifiedTaxCategory['source'] = tc.source === 'mf' ? 'mf' : tc.isCustom ? 'master-custom' : 'default'
+        const source: UnifiedTaxCategory['source'] = tc.source ?? 'mcp'
         return {
           ...tc,
           hidden: tc.hiddenInMaster,
@@ -112,7 +106,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       console.error('[useAccountSettings] scope="client" but clientTaxComposable is null (clientId missing?)')
       // フォールバック: マスタ税区分を返す
       return taxMaster.masterTaxCategories.value.map(tc => {
-        const source: UnifiedTaxCategory['source'] = tc.source === 'mf' ? 'mf' : tc.isCustom ? 'master-custom' : 'default'
+        const source: UnifiedTaxCategory['source'] = tc.source ?? 'mcp'
         return {
           ...tc,
           hidden: tc.hiddenInMaster,
@@ -124,14 +118,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       })
     }
     return clientTaxComposable.clientTaxCategories.value.map(tc => {
-      // マスタカスタムか顧問先カスタムかの判定
-      // マスタのcustomTaxCategoriesリストにIDが含まれるかで判定（hiddenInMasterに依存しない）
-      const masterCustomIds = new Set(
-        (taxMaster.overrides.value.customTaxCategories ?? []).map(c => c.taxCategoryId)
-      )
-      const isMasterCustom = masterCustomIds.has(tc.taxCategoryId) && tc.isCustom
-      const isClientCustom = tc.isCustom && !isMasterCustom
-      const source: UnifiedTaxCategory['source'] = tc.source === 'mf' ? 'mf' : isMasterCustom ? 'master-custom' : isClientCustom ? 'client-custom' : 'default'
+      const source: UnifiedTaxCategory['source'] = tc.source ?? 'mcp'
       return {
         ...tc,
         hidden: tc.hiddenInClient || tc.hiddenInMaster,

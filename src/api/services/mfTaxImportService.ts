@@ -103,7 +103,6 @@ export interface TaxImportPreviewResult {
   pattern: TaxMethodKey
   diff: TaxImportDiff
   autoRuleApplied: number
-  deprecatedReset: number
   reportLines: string[]
   hasDiff: boolean
   masterCount: number
@@ -129,7 +128,6 @@ interface DetectResult {
   nameToRow: Map<string, TaxCategory>
   diff: TaxImportDiff
   autoRuleApplied: number
-  deprecatedReset: number
   availData: Record<string, Record<string, boolean>>
 }
 
@@ -192,25 +190,20 @@ async function detectDiff(clientId: string, _dryRun: boolean = false): Promise<D
     }
   }
 
-  // マスタにあるがMFにない → 削除候補（source='mf'の行のみ）
+  // マスタにあるがMFにない → 削除候補（source='mcp'の行のみ）
   for (const row of masterItems) {
-    if (row.source === 'mf' && !mfNameSet.has(row.name)) {
+    if (row.source === 'mcp' && !mfNameSet.has(row.name)) {
       diff.deleteCandidates.push({ id: row.taxCategoryId, name: row.name, mfId: '' })
     }
   }
 
-  // 6. deprecated自動リセット — 廃止
-  // 設計書40_tax_method_master.md L32-39: 「MFインポート表示」と「表示（deprecated）」は独立。
-  // available=trueでもdeprecated=trueのまま維持する（5%旧税率等は非表示のままにすべき）。
-  const deprecatedReset = 0
-
-  return { pattern, mfTaxes, masterItems, nameToRow, diff, autoRuleApplied, deprecatedReset, availData }
+  return { pattern, mfTaxes, masterItems, nameToRow, diff, autoRuleApplied, availData }
 }
 
 /**
  * 差分レポート行を生成
  */
-function buildReportLines(diff: TaxImportDiff, autoRuleApplied: number, deprecatedReset: number): string[] {
+function buildReportLines(diff: TaxImportDiff, autoRuleApplied: number): string[] {
   const lines: string[] = []
   if (autoRuleApplied > 0) {
     lines.push(`🔧 自動ルール: 一種〜六種の税区分 ${autoRuleApplied}件をMFインポート利用非表示化`)
@@ -233,9 +226,7 @@ function buildReportLines(diff: TaxImportDiff, autoRuleApplied: number, deprecat
     for (const d of diff.deleteCandidates.slice(0, 5)) lines.push(`  ・${d.name}`)
   }
   lines.push(`✅ 変更なし: ${diff.unchanged}件`)
-  if (deprecatedReset > 0) {
-    lines.push(`🔄 表示リセット: ${deprecatedReset}件`)
-  }
+
   return lines
 }
 
@@ -244,15 +235,14 @@ function buildReportLines(diff: TaxImportDiff, autoRuleApplied: number, deprecat
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export async function previewTaxImport(clientId: string): Promise<TaxImportPreviewResult> {
-  const { pattern, diff, autoRuleApplied, deprecatedReset, masterItems } = await detectDiff(clientId, true)
+  const { pattern, diff, autoRuleApplied, masterItems } = await detectDiff(clientId, true)
   const hasDiff = diff.added.length > 0 || diff.rateChanged.length > 0 || diff.deleteCandidates.length > 0
-  const reportLines = buildReportLines(diff, autoRuleApplied, deprecatedReset)
+  const reportLines = buildReportLines(diff, autoRuleApplied)
 
   return {
     pattern,
     diff,
     autoRuleApplied,
-    deprecatedReset,
     reportLines,
     hasDiff,
     masterCount: masterItems.length,
@@ -264,16 +254,16 @@ export async function previewTaxImport(clientId: string): Promise<TaxImportPrevi
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export async function applyTaxImport(clientId: string): Promise<TaxImportApplyResult> {
-  const { pattern, mfTaxes, masterItems, nameToRow, diff, autoRuleApplied, deprecatedReset, availData } = await detectDiff(clientId, false)
+  const { pattern, mfTaxes, masterItems, nameToRow, diff, autoRuleApplied, availData } = await detectDiff(clientId, false)
   const today = new Date().toISOString().slice(0, 10)
 
-  // --- source='mf'とtaxRateを既存行に反映 ---
+  // --- source='mcp'とtaxRateを既存行に反映 ---
   for (const t of mfTaxes) {
     const existing = nameToRow.get(t.name)
     if (existing) {
-      existing.source = 'mf' as const
+      existing.source = 'mcp' as const
       if (t.tax_rate !== undefined) existing.taxRate = t.tax_rate
-      if (!existing.effectiveFrom) existing.effectiveFrom = today
+      if (!existing.enabledFrom) existing.enabledFrom = today
     }
   }
 
@@ -307,11 +297,12 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
       aiSelectable: true,
       active: true,
       deprecated: false,
-      effectiveFrom: today,
+      effectiveFrom: null,
       effectiveTo: null,
+      enabledFrom: today,
       defaultVisible: true,
-      isCustom: true,
-      source: 'mf' as const,
+      isCustom: false,
+      source: 'mcp' as const,
       taxRate: a.taxRate,
       displayOrder: masterItems.length + 1,
       simplifiedOnly: simplified,
@@ -388,7 +379,6 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
     diff.rateChanged.length > 0 ? `税率変更${diff.rateChanged.length}` : '',
     diff.deleteCandidates.length > 0 ? `非表示化${diff.deleteCandidates.length}` : '',
     autoRuleApplied > 0 ? `自動ルール${autoRuleApplied}` : '',
-    deprecatedReset > 0 ? `表示リセット${deprecatedReset}` : '',
   ].filter(Boolean).join(', ')
 
   console.log(`[mfTaxImportService] apply完了: clientId=${clientId}, pattern=${pattern}, ${summaryParts || '差分なし'}`)
@@ -483,9 +473,11 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
         mfTaxId: t.id, // MF事業者固有ID（仕訳送信時に使用）
         deprecated: isExempt ? master.deprecated : !t.available,
         displayOrder: idx + 1,
-        source: 'mf' as const,
+        source: 'mcp' as const,
+        shortName: t.abbreviation ?? master.shortName,
         taxRate: t.tax_rate ?? master.taxRate,
-        effectiveFrom: master.effectiveFrom || today,
+        effectiveFrom: master.effectiveFrom,
+        enabledFrom: today,
       }
     }
     // 未マッチ → MF独自カスタム税区分（ルールベースでマスタID生成）
@@ -508,13 +500,14 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
       aiSelectable: true,
       active: true,
       deprecated: false,
-      effectiveFrom: today,
+      effectiveFrom: null,
       effectiveTo: null,
+      enabledFrom: today,
       defaultVisible: true,
-      source: 'mf' as const,
+      source: 'mcp' as const,
       taxRate: t.tax_rate,
       displayOrder: idx + 1,
-      isCustom: true,
+      isCustom: false,
       simplifiedOnly: simplified,
       individualOnly: guessIndividualOnly(t.name),
       baseId: simplified ? guessBaseId(t.name, masterItems) : undefined,

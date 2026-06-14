@@ -14,8 +14,9 @@
     "displayOrder": 1,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf",
-    "isUnknownDefault": true
+    "source": "mcp",
+    "isUnknownDefault": true,
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "COMMON_EXEMPT",
@@ -33,7 +34,8 @@
     "isCustom": false,
     "isExemptDefault": true,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_10",
@@ -51,7 +53,8 @@
     "isCustom": false,
     "isSalesDefault": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_10_T1",
@@ -70,7 +73,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_10_T2",
@@ -89,7 +93,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_10_T3",
@@ -108,7 +113,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_10_T4",
@@ -127,7 +133,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_10_T5",
@@ -146,7 +153,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_10_T6",
@@ -165,7 +173,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_REDUCED_8",
@@ -182,7 +191,8 @@
     "displayOrder": 10,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_REDUCED_8_T1",
@@ -201,7 +211,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_REDUCED_8_T2",
@@ -220,7 +231,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_REDUCED_8_T3",
@@ -239,7 +251,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_REDUCED_8_T4",
@@ -258,7 +271,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_REDUCED_8_T5",
@@ -277,7 +291,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_REDUCED_8_T6",
@@ -296,7 +311,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_8",
@@ -308,12 +324,14 @@
     "active": true,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-06-01",
+    "effectiveTo": null,
     "defaultVisible": true,
     "displayOrder": 17,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-06-01",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_8_T1",
@@ -332,7 +350,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_8_T2",
@@ -351,7 +370,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_8_T3",
@@ -370,7 +390,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_8_T4",
@@ -389,7 +410,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_8_T5",
@@ -408,7 +430,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_8_T6",
@@ -427,7 +450,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_5",
@@ -444,7 +468,8 @@
     "displayOrder": 24,
     "isCustom": false,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_5_T1",
@@ -463,7 +488,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_5_T2",
@@ -482,7 +508,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_5_T3",
@@ -501,7 +528,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_5_T4",
@@ -520,7 +548,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_5_T5",
@@ -539,7 +568,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_TAXABLE_5_T6",
@@ -550,7 +580,7 @@
     "aiSelectable": false,
     "active": false,
     "deprecated": false,
-    "effectiveFrom": "2015-04-01",
+    "effectiveFrom": "1997-04-01",
     "effectiveTo": "2014-03-31",
     "defaultVisible": false,
     "displayOrder": 30,
@@ -558,7 +588,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_TAXABLE_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_EXPORT_0",
@@ -575,7 +606,8 @@
     "displayOrder": 31,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_NON_TAXABLE",
@@ -592,7 +624,8 @@
     "displayOrder": 32,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_NON_TAXABLE_SECURITIES",
@@ -609,7 +642,8 @@
     "displayOrder": 33,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_NON_TAXABLE_EXPORT",
@@ -626,7 +660,8 @@
     "displayOrder": 34,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_EXEMPT",
@@ -643,7 +678,8 @@
     "displayOrder": 35,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_10",
@@ -660,7 +696,8 @@
     "displayOrder": 36,
     "isCustom": false,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_10_T1",
@@ -679,7 +716,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_10_T2",
@@ -698,7 +736,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_10_T3",
@@ -717,7 +756,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_10_T4",
@@ -736,7 +776,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_10_T5",
@@ -755,7 +796,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_10_T6",
@@ -774,7 +816,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_10",
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_REDUCED_8",
@@ -791,7 +834,8 @@
     "displayOrder": 43,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_REDUCED_8_T1",
@@ -810,7 +854,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_REDUCED_8_T2",
@@ -829,7 +874,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_REDUCED_8_T3",
@@ -848,7 +894,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_REDUCED_8_T4",
@@ -867,7 +914,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_REDUCED_8_T5",
@@ -886,7 +934,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_REDUCED_8_T6",
@@ -905,7 +954,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_REDUCED_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_8",
@@ -917,12 +967,14 @@
     "active": true,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": true,
     "displayOrder": 50,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_8_T1",
@@ -934,14 +986,16 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 51,
     "isCustom": false,
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_8_T2",
@@ -953,14 +1007,16 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 52,
     "isCustom": false,
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_8_T3",
@@ -972,14 +1028,16 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 53,
     "isCustom": false,
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_8_T4",
@@ -991,14 +1049,16 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 54,
     "isCustom": false,
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_8_T5",
@@ -1010,14 +1070,16 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 55,
     "isCustom": false,
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_8_T6",
@@ -1029,14 +1091,16 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2015-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 56,
     "isCustom": false,
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_8",
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_5",
@@ -1053,7 +1117,8 @@
     "displayOrder": 57,
     "isCustom": false,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_5_T1",
@@ -1072,7 +1137,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_5_T2",
@@ -1091,7 +1157,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_5_T3",
@@ -1110,7 +1177,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_5_T4",
@@ -1129,7 +1197,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_5_T5",
@@ -1148,7 +1217,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RETURN_5_T6",
@@ -1159,7 +1229,7 @@
     "aiSelectable": false,
     "active": false,
     "deprecated": false,
-    "effectiveFrom": "2015-04-01",
+    "effectiveFrom": "1997-04-01",
     "effectiveTo": "2014-03-31",
     "defaultVisible": false,
     "displayOrder": 63,
@@ -1167,7 +1237,8 @@
     "simplifiedOnly": true,
     "baseId": "SALES_RETURN_5",
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_EXPORT_RETURN_0",
@@ -1184,7 +1255,8 @@
     "displayOrder": 64,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_NON_TAXABLE_RETURN",
@@ -1201,7 +1273,8 @@
     "displayOrder": 65,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_NON_TAXABLE_EXPORT_RETURN",
@@ -1218,7 +1291,8 @@
     "displayOrder": 66,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_BAD_DEBT_10",
@@ -1235,7 +1309,8 @@
     "displayOrder": 67,
     "isCustom": false,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_BAD_DEBT_REDUCED_8",
@@ -1252,7 +1327,8 @@
     "displayOrder": 68,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_BAD_DEBT_8",
@@ -1264,12 +1340,14 @@
     "active": true,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": true,
     "displayOrder": 69,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_BAD_DEBT_5",
@@ -1286,7 +1364,8 @@
     "displayOrder": 70,
     "isCustom": false,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_EXPORT_BAD_DEBT_0",
@@ -1303,7 +1382,8 @@
     "displayOrder": 71,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_NON_TAXABLE_BAD_DEBT",
@@ -1320,7 +1400,8 @@
     "displayOrder": 72,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_NON_TAXABLE_EXPORT_BAD_DEBT",
@@ -1337,7 +1418,8 @@
     "displayOrder": 73,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RECOVERY_10",
@@ -1354,7 +1436,8 @@
     "displayOrder": 74,
     "isCustom": false,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RECOVERY_REDUCED_8",
@@ -1371,7 +1454,8 @@
     "displayOrder": 75,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RECOVERY_8",
@@ -1383,12 +1467,14 @@
     "active": true,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": true,
     "displayOrder": 76,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "SALES_RECOVERY_5",
@@ -1405,7 +1491,8 @@
     "displayOrder": 77,
     "isCustom": false,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_TAXABLE_10",
@@ -1423,7 +1510,8 @@
     "isCustom": false,
     "isPurchaseDefault": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_COMMON_10",
@@ -1441,7 +1529,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_NT_10",
@@ -1459,7 +1548,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_REDUCED_8",
@@ -1476,7 +1566,8 @@
     "displayOrder": 81,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_COMMON_REDUCED_8",
@@ -1494,7 +1585,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_NT_REDUCED_8",
@@ -1512,7 +1604,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_TAXABLE_8",
@@ -1524,12 +1617,14 @@
     "active": true,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": true,
     "displayOrder": 84,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_COMMON_8",
@@ -1541,13 +1636,15 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": true,
     "displayOrder": 85,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_NT_8",
@@ -1559,13 +1656,15 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": true,
     "displayOrder": 86,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_TAXABLE_5",
@@ -1582,7 +1681,8 @@
     "displayOrder": 87,
     "isCustom": false,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_COMMON_5",
@@ -1600,7 +1700,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_NT_5",
@@ -1618,7 +1719,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_BODY_10",
@@ -1635,7 +1737,8 @@
     "displayOrder": 90,
     "isCustom": false,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_TAX_7_8",
@@ -1647,12 +1750,14 @@
     "active": true,
     "deprecated": false,
     "effectiveFrom": "2019-10-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": true,
     "displayOrder": 91,
     "isCustom": false,
     "taxRate": 0.078,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_LOCAL_2_2",
@@ -1669,7 +1774,8 @@
     "displayOrder": 92,
     "isCustom": false,
     "taxRate": 0.022,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_BODY_10",
@@ -1687,7 +1793,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_TAX_7_8",
@@ -1699,13 +1806,14 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2019-10-01",
-    "effectiveTo": "2019-09-30",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 94,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.078,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_LOCAL_2_2",
@@ -1723,7 +1831,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.022,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_BODY_10",
@@ -1741,7 +1850,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_TAX_7_8",
@@ -1753,13 +1863,14 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2019-10-01",
-    "effectiveTo": "2019-09-30",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 97,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.078,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_LOCAL_2_2",
@@ -1777,7 +1888,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.022,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_BODY_REDUCED_8",
@@ -1794,7 +1906,8 @@
     "displayOrder": 99,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_TAX_REDUCED_6_24",
@@ -1806,12 +1919,14 @@
     "active": true,
     "deprecated": false,
     "effectiveFrom": "2019-10-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 100,
     "isCustom": false,
     "taxRate": 0.0624,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_LOCAL_REDUCED_1_76",
@@ -1828,7 +1943,8 @@
     "displayOrder": 101,
     "isCustom": false,
     "taxRate": 0.0176,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_BODY_REDUCED_8",
@@ -1846,7 +1962,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_TAX_REDUCED_6_24",
@@ -1858,13 +1975,14 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2019-10-01",
-    "effectiveTo": "2014-03-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 103,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.0624,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_LOCAL_REDUCED_1_76",
@@ -1882,7 +2000,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.0176,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_BODY_REDUCED_8",
@@ -1900,7 +2019,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_TAX_REDUCED_6_24",
@@ -1912,13 +2032,15 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2019-10-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 106,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.0624,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_LOCAL_REDUCED_1_76",
@@ -1936,7 +2058,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.0176,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_BODY_8",
@@ -1948,12 +2071,14 @@
     "active": true,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 108,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_TAX_6_3",
@@ -1965,12 +2090,14 @@
     "active": true,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 109,
     "isCustom": false,
     "taxRate": 0.063,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_LOCAL_1_7",
@@ -1982,12 +2109,14 @@
     "active": true,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 110,
     "isCustom": false,
     "taxRate": 0.017,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_BODY_8",
@@ -1999,13 +2128,15 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 111,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_TAX_6_3",
@@ -2017,13 +2148,15 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 112,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.063,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_LOCAL_1_7",
@@ -2035,13 +2168,15 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 113,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.017,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_BODY_8",
@@ -2053,13 +2188,15 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 114,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_TAX_6_3",
@@ -2071,13 +2208,15 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 115,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.063,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_LOCAL_1_7",
@@ -2089,13 +2228,15 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 116,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.017,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_BODY_5",
@@ -2112,7 +2253,8 @@
     "displayOrder": 117,
     "isCustom": false,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_TAX_4",
@@ -2129,7 +2271,8 @@
     "displayOrder": 118,
     "isCustom": false,
     "taxRate": 0.04,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_LOCAL_1",
@@ -2146,7 +2289,8 @@
     "displayOrder": 119,
     "isCustom": false,
     "taxRate": 0.01,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_BODY_5",
@@ -2164,7 +2308,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_TAX_4",
@@ -2182,7 +2327,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.04,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_COMMON_LOCAL_1",
@@ -2200,7 +2346,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.01,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_BODY_5",
@@ -2218,7 +2365,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_TAX_4",
@@ -2236,7 +2384,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.04,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "IMPORT_NT_LOCAL_1",
@@ -2254,7 +2403,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.01,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_10",
@@ -2271,7 +2421,8 @@
     "displayOrder": 126,
     "isCustom": false,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_COMMON_10",
@@ -2289,7 +2440,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_NT_10",
@@ -2307,7 +2459,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_8",
@@ -2324,7 +2477,8 @@
     "displayOrder": 129,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_COMMON_8",
@@ -2342,7 +2496,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_NT_8",
@@ -2360,7 +2515,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_NON_TAXABLE",
@@ -2377,7 +2533,8 @@
     "displayOrder": 132,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_EXEMPT",
@@ -2394,7 +2551,8 @@
     "displayOrder": 133,
     "isCustom": false,
     "taxRate": 0,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_10",
@@ -2411,7 +2569,8 @@
     "displayOrder": 134,
     "isCustom": false,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_COMMON_10",
@@ -2429,7 +2588,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_NT_10",
@@ -2447,7 +2607,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_REDUCED_8",
@@ -2464,7 +2625,8 @@
     "displayOrder": 137,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_COMMON_REDUCED_8",
@@ -2482,7 +2644,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_NT_REDUCED_8",
@@ -2500,7 +2663,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_8",
@@ -2512,12 +2676,14 @@
     "active": true,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": true,
     "displayOrder": 140,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_COMMON_8",
@@ -2529,13 +2695,15 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 141,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_NT_8",
@@ -2547,13 +2715,15 @@
     "active": false,
     "deprecated": false,
     "effectiveFrom": "2014-04-01",
-    "effectiveTo": "2026-05-31",
+    "effectiveTo": null,
     "defaultVisible": false,
     "displayOrder": 142,
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledTo": "2026-05-31",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_5",
@@ -2570,7 +2740,8 @@
     "displayOrder": 143,
     "isCustom": false,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_COMMON_5",
@@ -2588,7 +2759,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_RETURN_NT_5",
@@ -2606,7 +2778,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.05,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_10",
@@ -2623,7 +2796,8 @@
     "displayOrder": 146,
     "isCustom": false,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_COMMON_10",
@@ -2641,7 +2815,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_NT_10",
@@ -2659,7 +2834,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.1,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_8",
@@ -2676,7 +2852,8 @@
     "displayOrder": 149,
     "isCustom": false,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_COMMON_8",
@@ -2694,7 +2871,8 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   },
   {
     "taxCategoryId": "PURCHASE_SPECIFIC_RETURN_NT_8",
@@ -2712,6 +2890,7 @@
     "isCustom": false,
     "individualOnly": true,
     "taxRate": 0.08,
-    "source": "mf"
+    "source": "mcp",
+    "enabledFrom": "2026-06-14"
   }
 ]

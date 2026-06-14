@@ -159,13 +159,12 @@
               >
 
                 <td class="td-visibility">
-                  <i v-if="row.isCustom" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
+                  <i v-if="row.isCustom && !hasMfData" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
                   <i v-if="isAccountHidden(row.accountId)" class="fa-solid fa-eye-slash td-hide" @click="showRow(row)" title="表示化"></i>
                   <i v-else class="fa-solid fa-eye td-show" @click="hideRow(row)" title="非表示化"></i>
                 </td>
                 <td style="text-align:center;font-size:11px;color:#666;">
-                  <span v-if="row.isCustom && !isMasterCustomAccount(row.accountId)" style="color:#E65100;">顧問先独自</span>
-                  <span v-else-if="isMasterCustomAccount(row.accountId)" style="color:#1976D2;"><i class="fa-solid fa-building-columns" style="font-size:12px;"></i> マスタ（カスタム）</span>
+                  <span v-if="row.isCustom" style="color:#E65100;">顧問先独自</span>
                   <span v-else><i class="fa-solid fa-building-columns" style="color:#1976D2;font-size:12px;"></i> マスタ</span>
                 </td>
                 <td class="td-ai">
@@ -353,6 +352,8 @@ const PAGE_SIZE = 50;
 const mfAuthenticated = ref(false);
 const mfImporting = ref(false);
 const mfImportBtnRef = ref<InstanceType<typeof MfImportButton> | null>(null);
+/** MFからインポートされたデータが存在するか（source='mcp'の行が1件以上） */
+const hasMfData = computed(() => accountRows.some(r => r.source === 'mcp'));
 
 onMounted(async () => {
   try {
@@ -371,8 +372,8 @@ async function importFromMf() {
       method: 'POST',
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'MF勘定科目インポート失敗' }));
-      throw new Error(err.error ?? err.detail ?? 'MF勘定科目インポート失敗');
+      const err = await res.json().catch(() => ({ error: UI_MSG.MF勘定科目インポート失敗 }));
+      throw new Error(err.error ?? err.detail ?? UI_MSG.MF勘定科目インポート失敗);
     }
     const data = await res.json();
     // APIレスポンスにupdatedAccountsがあれば直接使用（Repository直叩き廃止）
@@ -381,7 +382,7 @@ async function importFromMf() {
     }
 
     await modal.notify({
-      title: 'MFインポート完了',
+      title: UI_MSG.MFインポート完了,
       message: data.message ?? `${data.available}件の勘定科目をインポートしました`,
       variant: 'success',
     });
@@ -389,9 +390,9 @@ async function importFromMf() {
     const msg = err instanceof Error ? err.message : String(err);
     const log = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err);
     if (mfImportBtnRef.value) {
-      mfImportBtnRef.value.showError('MFインポート失敗', msg, log);
+      mfImportBtnRef.value.showError(UI_MSG.MFインポート失敗タイトル, msg, log);
     } else {
-      await modal.notify({ title: `MFインポート失敗: ${msg}`, variant: 'warning' });
+      await modal.notify({ title: `${UI_MSG.MFインポート失敗タイトル}: ${msg}`, variant: 'warning' });
     }
   } finally {
     mfImporting.value = false;
@@ -442,11 +443,7 @@ function isAccountHidden(accountId: string): boolean {
   return settings.isAccountHidden(accountId);
 }
 
-/** マスタレベルで追加されたカスタム科目か */
-function isMasterCustomAccount(accountId: string): boolean {
-  const entry = settings.accounts.value.find(a => a.accountId === accountId);
-  return entry ? entry.isMasterCustom : false;
-}
+// isMasterCustomAccountはmaster-custom削除により不要（常にfalse）。削除済み。
 
 const filteredAccountRows = computed(() => {
   return accountRows.filter(row => {
@@ -499,12 +496,7 @@ async function saveChanges() {
   });
 
   try {
-    // API経由でサーバー側に保存（Repository経由）
-    const { createRepositories } = await import('@/repositories');
-    const repos = createRepositories();
-    await repos.accountMaster.saveClient(clientId.value, { accounts: accountRows, subAccounts });
-
-    // composable側にも同期（他ページへのリアルタイム反映用）
+    // composable経由で保存（autoSaveでサーバーに自動保存される）
     settings.saveAccounts(accountRows, subAccounts);
     markClean();
     modal.notify({ title: UI_MSG.保存成功, variant: 'success' });

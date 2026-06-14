@@ -582,7 +582,7 @@ app.post('/sync-all', async (c) => {
           ...master,
           mfTaxId: t.id, // MF事業者固有ID（仕訳送信時に使用）
           displayOrder: idx + 1,
-          source: 'mf' as const,
+          source: 'mcp' as const,
         }
       }
       // 名前がマッチしない → MF独自のカスタム税区分（ルールベースでマスタIDを生成）
@@ -609,7 +609,7 @@ app.post('/sync-all', async (c) => {
         defaultVisible: true,
         displayOrder: idx + 1,
         isCustom: true,
-        source: 'mf' as const,
+        source: 'mcp' as const,
         mfTaxId: t.id, // MF事業者固有ID（仕訳送信時に使用）
       }
     })

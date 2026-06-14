@@ -640,10 +640,8 @@ const fieldSections: { title: string; note: string; hasMf: boolean; hasMaster: b
       { field: 'hidden',              label: '非表示フラグ',           mf: '❌', master: '✅', validation: '—（顧問先別の科目表示/非表示制御）',  side: 'front', note: '', highlight: false },
       { field: 'hiddenInMaster',      label: '全社マスタ非表示',       mf: '❌', master: '📊', validation: '—（deprecated=trueから導出。全社マスタ画面の表示制御）',  side: 'front', note: '導出値。26箇所以上で使用', highlight: false },
       { field: 'deprecated',          label: '廃止フラグ',             mf: '❌', master: '✅', validation: '—',  side: 'back',  note: '', highlight: false },
-      { field: 'source',              label: '出所',                   mf: '❌', master: '✅', validation: '—（default/mf/master-custom/client-custom）',  side: 'back',  note: '', highlight: false },
+      { field: 'source',              label: '出所',                   mf: '❌', master: '✅', validation: '—（mcp/client-custom）',  side: 'back',  note: '', highlight: false },
       { field: 'isCustom',            label: 'カスタム科目フラグ',     mf: '❌', master: '✅', validation: '—（現在は全件false）',  side: 'back',  note: '', highlight: false },
-      { field: 'isMasterCustom',      label: 'マスタカスタム',         mf: '❌', master: '✅', validation: '—（現在は全件false）',  side: 'back',  note: '', highlight: false },
-      { field: 'isClientCustom',      label: '顧問先カスタム',         mf: '❌', master: '✅', validation: '—（現在は全件false）',  side: 'back',  note: '', highlight: false },
       { field: 'sub',                 label: '補助科目',               mf: '❌', master: '✅', validation: '—',  side: 'back',  note: '', highlight: false },
       { field: 'insertAfter',         label: '挿入位置ID',             mf: '❌', master: '✅', validation: '—（表示順復元用）',  side: 'back',  note: '', highlight: false },
       // --- MF連携フィールド（顧問先データのみ） ---

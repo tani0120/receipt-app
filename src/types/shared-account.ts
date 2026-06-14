@@ -37,8 +37,11 @@ export type Account = {
     effectiveTo: string | null
     /** 表示順 */
     sortOrder: number
-    /** データの出自（'default'=初期データ, 'mf'=MFインポートで追加, 'master-custom'=マスタカスタム, 'client-custom'=顧問先カスタム） */
-    source?: 'default' | 'mf' | 'master-custom' | 'client-custom'
+    /** データの出自
+     * - 'mcp': MFのMCP APIからインポート（全社マスタ・MF連携先の顧問先）
+     * - 'client-custom': MF未連携の顧問先で手動追加したカスタム科目
+     */
+    source?: 'mcp' | 'client-custom'
     /** カスタム科目フラグ（ユーザー追加=true、システム提供=false/undefined → ルール4） */
     isCustom?: boolean
     /** デフォルト順復元用: コピー/追加時の挿入位置直前の行ID */
@@ -47,8 +50,6 @@ export type Account = {
     subAccount?: string
     /** 非表示フラグ（勘定科目設定で使用） */
     hidden?: boolean
-    /** マスタカスタム科目フラグ */
-    isMasterCustom?: boolean
     /** 売上返品科目フラグ（逆仕訳例外判定用。売上値引・売上返品等） */
     isContraRevenue?: boolean
     /** 仕入返品科目フラグ（逆仕訳例外判定用。仕入値引・仕入返品等） */

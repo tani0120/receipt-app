@@ -12,12 +12,8 @@ export interface UnifiedAccount extends Account {
   hidden: boolean
   /** マスタレベルで非表示か（scope='client'のみ。scope='master'では常にfalse） */
   hiddenInMaster: boolean
-  /** マスタカスタム科目か */
-  isMasterCustom: boolean
-  /** 顧問先カスタム科目か（scope='client'のみ） */
-  isClientCustom: boolean
   /** ソース区分（テンプレート表示用） */
-  source: 'default' | 'master-custom' | 'client-custom'
+  source: 'mcp' | 'client-custom'
 }
 
 /** 統一税区分型 */
@@ -31,7 +27,7 @@ export interface UnifiedTaxCategory extends TaxCategory {
   /** マスタでの表示設定の上書き値（null=デフォルトを使用。scope='master'のみ有効） */
   visibilityOverride: boolean | null
   /** ソース区分 */
-  source: 'default' | 'master-custom' | 'client-custom' | 'mf'
+  source: 'mcp' | 'client-custom'
 }
 
 // =============================================

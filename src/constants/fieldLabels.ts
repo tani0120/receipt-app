@@ -44,6 +44,8 @@ export const TAX_CATEGORY_FIELD_LABELS: Record<string, string> = {
   name: '名称',
   rate: '税率',
   qualified: '適格',
+  enabledFrom: '利用開始',
+  enabledTo: '利用停止',
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
