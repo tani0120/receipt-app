@@ -40,13 +40,25 @@ export const CLIENT_ACCOUNT_FIELD_LABELS: Record<string, string> = {
 
 /** 税区分ページ用フィールドラベル（マスタ/顧問先共通） */
 export const TAX_CATEGORY_FIELD_LABELS: Record<string, string> = {
-  direction: '方向',
-  name: '名称',
+  direction: '取引区分',
+  name: '税区分',
   rate: '税率',
-  qualified: '適格',
+  qualified: '適格判定対象',
   enabledFrom: '利用開始',
   enabledTo: '利用停止',
+  effectiveFrom: '施行日',
+  effectiveTo: '廃止日',
+  mfCompliance: '表示',
+  source: '出典',
 }
+
+/** 課税方式ラベル定数（セグメントボタン・パターン進捗で共用） */
+export const TAX_METHOD_LABELS = [
+  { value: 'proportional' as const, label: '原則（一括比例）', icon: 'fa-solid fa-scale-balanced' },
+  { value: 'individual' as const, label: '原則（個別対応）', icon: 'fa-solid fa-list-check' },
+  { value: 'simplified' as const, label: '簡易', icon: 'fa-solid fa-bolt' },
+  { value: 'exempt' as const, label: '免税', icon: 'fa-solid fa-ban' },
+] as const;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 顧問先/見込先フィールドラベル
