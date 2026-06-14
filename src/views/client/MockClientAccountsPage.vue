@@ -150,7 +150,7 @@
             <tbody>
               <tr
                 v-for="(row, idx) in pagedAccountRows" :key="row.accountId"
-                :class="{ 'row-deprecated': isAccountHidden(row.accountId), 'row-dragging': dragIdx === idx, 'row-custom': row.isCustom }"
+                :class="{ 'row-hidden': isAccountHidden(row.accountId), 'row-dragging': dragIdx === idx, 'row-custom': row.isCustom }"
                 draggable="true"
                 @dragstart="onDragStart(idx, $event)"
                 @dragover.prevent="onDragOver(idx)"
@@ -435,7 +435,7 @@ const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 // 復元はsettings.accounts（API GET）から取得する設計に移行予定。
 // 現時点ではsettings.accounts.valueにsubAccountが含まれるため、初期値から復元される。
 
-// composableのtoggleVisibility → buildFullAccountListでhiddenIds→deprecated変換済み
+// composableのtoggleVisibility → buildFullAccountListでhiddenIds→hidden変換済み
 // Vue側のwatch変換は不要（Phase 3 #12で削除）
 
 /** 科目が非表示か（マスタ非表示 or 顧問先非表示） */
@@ -467,7 +467,7 @@ function hideRow(row: Account) {
   if (clientId.value) {
     settings.toggleAccountVisibility(id);
   }
-  row.deprecated = true;
+  row.hidden = true;
   row.effectiveTo = row.effectiveTo ?? new Date().toISOString().slice(0, 10);
 }
 function showRow(row: Account) {
@@ -475,7 +475,7 @@ function showRow(row: Account) {
   if (clientId.value) {
     settings.toggleAccountVisibility(id);
   }
-  row.deprecated = false;
+  row.hidden = false;
   row.effectiveTo = null;
 }
 async function deleteRow(row: Account) {
@@ -769,9 +769,9 @@ function sortAccounts(key: keyof Account) {
 .td-ai { text-align: center; color: #1976D2; font-weight: 600; }
 .td-date { text-align: center; color: #888; font-size: 10px; white-space: nowrap; }
 
-/* deprecated行のグレーアウト（ルール3） */
-.row-deprecated { opacity: 0.4; }
-.row-deprecated td { text-decoration: line-through; color: #999; }
+/* 非表示行のグレーアウト（ルール3） */
+.row-hidden { opacity: 0.4; }
+.row-hidden td { text-decoration: line-through; color: #999; }
 
 /* ドラッグ中の行 */
 .row-dragging { opacity: 0.5; background: #e3f2fd; }

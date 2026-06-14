@@ -107,8 +107,8 @@
 .as-info-banner i { font-size: 14px; flex-shrink: 0; }
 
 /* deprecated行のグレーアウト */
-.row-deprecated { opacity: 0.4; }
-.row-deprecated td { text-decoration: line-through; color: #999; }
+.row-hidden { opacity: 0.4; }
+.row-hidden td { text-decoration: line-through; color: #999; }
 
 /* カスタム行の背景色（薄黄） */
 .row-custom { background: #fffde7; }

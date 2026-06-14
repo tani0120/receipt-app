@@ -29,8 +29,8 @@ export type Account = {
     category: string
     /** デフォルト税区分ID（TaxCategory.taxCategoryId への参照） */
     defaultTaxCategoryId?: string
-    /** 非推奨フラグ（true=グレーアウト表示。物理削除禁止 → ルール3） */
-    deprecated: boolean
+    /** 表示/非表示フラグ（true=UIで非表示。物理削除禁止 → ルール3） */
+    hidden: boolean
     /** 適用開始日（ISO 8601形式。例: '2019-10-01'） */
     effectiveFrom: string
     /** 適用終了日（null=現役。終了した科目は日付を設定 → ルール1） */
@@ -48,8 +48,7 @@ export type Account = {
     insertAfter?: string
     /** 補助科目（顧問先別設定画面で動的に付与） */
     subAccount?: string
-    /** 非表示フラグ（勘定科目設定で使用） */
-    hidden?: boolean
+
     /** 売上返品科目フラグ（逆仕訳例外判定用。売上値引・売上返品等） */
     isContraRevenue?: boolean
     /** 仕入返品科目フラグ（逆仕訳例外判定用。仕入値引・仕入返品等） */

@@ -295,8 +295,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
       direction: dir,
       qualified: guessQualifiedFromName(a.name, dir),
       aiSelectable: true,
-      active: true,
-      deprecated: false,
+      hidden: false,
       effectiveFrom: null,
       effectiveTo: null,
       enabledFrom: today,
@@ -315,7 +314,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
   // 削除候補 → 非表示化
   for (const d of diff.deleteCandidates) {
     const row = masterItems.find(r => r.taxCategoryId === d.id)
-    if (row) row.deprecated = true
+    if (row) row.hidden = true
   }
 
   // --- MFの生データのavailableを現在の課税方式に保存（差分有無に関わらず常に実行） ---
@@ -471,7 +470,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
       return {
         ...master,
         mfTaxId: t.id, // MF事業者固有ID（仕訳送信時に使用）
-        deprecated: isExempt ? master.deprecated : !t.available,
+        hidden: isExempt ? master.hidden : !t.available,
         displayOrder: idx + 1,
         source: 'mcp' as const,
         shortName: t.abbreviation ?? master.shortName,
@@ -498,8 +497,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
       direction: dir,
       qualified: guessQualifiedFromName(t.name, dir),
       aiSelectable: true,
-      active: true,
-      deprecated: false,
+      hidden: false,
       effectiveFrom: null,
       effectiveTo: null,
       enabledFrom: today,
@@ -515,18 +513,18 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
     }
   })
 
-  // 4a. 前回の顧問先税区分にあって今回MFにない税区分 → deprecated=trueで保持
+  // 4a. 前回の顧問先税区分にあって今回MFにない税区分 → hidden=trueで保持
   // 過去仕訳の参照先を保護（TAX_UNKNOWNにしない）
   const { getClientTaxCategories } = await import('./accountMasterApi')
-  let deprecatedCount = 0
+  let hiddenCount = 0
   try {
     const prevTaxCategories = getClientTaxCategories(clientId)
     if (prevTaxCategories.length > 0) {
       const currentNames = new Set(imported.map(t => t.name))
       for (const prev of prevTaxCategories) {
-        if (!currentNames.has(prev.name) && !prev.deprecated) {
-          imported.push({ ...prev, deprecated: true })
-          deprecatedCount++
+        if (!currentNames.has(prev.name) && !prev.hidden) {
+          imported.push({ ...prev, hidden: true })
+          hiddenCount++
         }
       }
     }
@@ -565,7 +563,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
     items: mfTaxes,
   })
 
-  console.log(`[mfTaxImportService] 顧問先インポート完了: clientId=${clientId}, マスタ照合=${matchedCount}, カスタム=${customCount}, 非表示化=${deprecatedCount}`)
+  console.log(`[mfTaxImportService] 顧問先インポート完了: clientId=${clientId}, マスタ照合=${matchedCount}, カスタム=${customCount}, 非表示化=${hiddenCount}`)
 
   return {
     success: true,

@@ -236,7 +236,7 @@ export function getExportList(query: ExportListQuery): ExportListResult {
   // 8. 科目名リスト（フィルタセレクトボックス用）
   const clientAccounts = getClientAccounts(clientId)
   const accountNames = [...new Set(
-    clientAccounts.accounts.filter(a => !a.deprecated).map(a => a.name)
+    clientAccounts.accounts.filter(a => !a.hidden).map(a => a.name)
   )]
 
   return {

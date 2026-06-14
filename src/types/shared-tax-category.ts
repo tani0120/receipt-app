@@ -27,10 +27,8 @@ export type TaxCategory = {
     qualified: boolean
     /** AI自動選択可否（マスタ初期値。顧問先単位で上書き可能 → ルール9） */
     aiSelectable: boolean
-    /** 新規利用可否（廃止時はfalse。削除禁止） */
-    active: boolean
-    /** 非推奨フラグ（true=グレーアウト表示。物理削除禁止 → ルール3。active=falseと連動） */
-    deprecated: boolean
+    /** 表示/非表示フラグ（true=UIで非表示。物理削除禁止 → ルール3） */
+    hidden: boolean
     /** 適用開始日（ISO 8601形式。例: '2019-10-01'。MF未照合行はnull=不明） */
     effectiveFrom: string | null
     /** 適用終了日（null=現役。旧税率は日付を設定 → ルール1） */

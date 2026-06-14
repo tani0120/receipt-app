@@ -140,3 +140,32 @@ export async function fetchMfLinkedClients(): Promise<MfClientInfo[]> {
 
   return authenticatedClients
 }
+
+// ---------- 顧問先個別API（MockClientTaxPage用） ----------
+
+/** 顧問先のMF認証状態を取得 */
+export async function fetchMfAuthStatus(clientId: string): Promise<{ authenticated: boolean }> {
+  const res = await fetch(`/api/mf/auth/status?clientId=${clientId}`)
+  if (!res.ok) return { authenticated: false }
+  return res.json()
+}
+
+/** 顧問先MFインポート結果 */
+export interface MfClientImportResult {
+  imported: unknown[]
+  consumptionTaxMode?: string
+}
+
+/** 顧問先税区分をMFからインポート */
+export async function importClientTaxes(clientId: string): Promise<MfClientImportResult> {
+  const res = await fetch('/api/mf/import-client-taxes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clientId }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? err.detail ?? 'インポート失敗')
+  }
+  return res.json()
+}

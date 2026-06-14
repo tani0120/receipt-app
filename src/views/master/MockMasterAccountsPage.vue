@@ -141,7 +141,7 @@
             <tbody>
               <tr
                 v-for="row in pagedAccountRows" :key="row.accountId"
-                :class="{ 'row-deprecated': isHidden(row.accountId) }"
+                :class="{ 'row-hidden': isHidden(row.accountId) }"
               >
                 <!-- 表示/非表示トグル -->
                 <td class="td-visibility" style="text-align:center;">

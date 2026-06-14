@@ -38,12 +38,27 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   async function fetchFresh() {
     try {
       const data = await repos.accountMaster.getMaster()
-      allAccounts.value = data
+      allAccounts.value = migrateLegacyFields(data)
       cachedAt.value = Date.now()
       console.log(`[accountMasterStore] ${data.length}件をサーバーから取得`)
     } catch (err) {
       console.error('[accountMasterStore] サーバー取得失敗:', err)
     }
+  }
+
+  /** Piniaキャッシュ互換性: 旧deprecatedをhiddenに変換 */
+  function migrateLegacyFields(items: Account[]): Account[] {
+    return items.map(a => {
+      const row = a as Record<string, unknown>
+      if ('deprecated' in row && !('hidden' in row)) {
+        row.hidden = row.deprecated
+        delete row.deprecated
+      }
+      if (!('hidden' in row)) {
+        row.hidden = false
+      }
+      return a
+    })
   }
 
   function debounceSave(): void {
@@ -58,7 +73,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
     return allAccounts.value
       .map(a => ({
         ...a,
-        hiddenInMaster: a.deprecated === true,
+        hiddenInMaster: a.hidden === true,
         isCustom: (a as MasterAccount).isCustom ?? false,
       }))
       .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -69,7 +84,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   )
 
   const overrides = computed(() => ({
-    hiddenIds: allAccounts.value.filter(a => a.deprecated).map(a => a.accountId),
+    hiddenIds: allAccounts.value.filter(a => a.hidden).map(a => a.accountId),
     customAccounts: allAccounts.value.filter(a => (a as MasterAccount).isCustom),
   }))
 
@@ -77,7 +92,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
     const idx = allAccounts.value.findIndex(a => a.accountId === accountId)
     if (idx >= 0) {
       const current = allAccounts.value[idx]!
-      allAccounts.value[idx] = { ...current, deprecated: !current.deprecated }
+      allAccounts.value[idx] = { ...current, hidden: !current.hidden }
       debounceSave()
     }
   }
@@ -98,12 +113,12 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   function resetToDefault(): void {
     allAccounts.value = allAccounts.value
       .filter(a => !(a as MasterAccount).isCustom)
-      .map(a => ({ ...a, deprecated: false }))
+      .map(a => ({ ...a, hidden: false }))
     debounceSave()
   }
 
   function isHidden(accountId: string): boolean {
-    return allAccounts.value.find(a => a.accountId === accountId)?.deprecated === true
+    return allAccounts.value.find(a => a.accountId === accountId)?.hidden === true
   }
 
   load()

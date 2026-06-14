@@ -115,7 +115,7 @@
             </thead>
             <tbody>
               <tr v-for="row in pagedTaxRows" :key="row.taxCategoryId"
-                :class="{ 'row-deprecated': row.hidden, 'row-custom': row.isCustom }"
+                :class="{ 'row-hidden': row.hidden, 'row-custom': row.isCustom }"
               >
 
                 <!-- §15: 行チェックボックス削除 -->
@@ -556,6 +556,7 @@ const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 
 
+
 // --- 表示用computed: allTaxRowsからMF availableデータでフィルタ ---
 // 判定基準: mf-tax-available.json（MF実データ）。設計書§4-1準拠。
 // simplifiedOnlyフラグはバリデーション用であり、表示フィルタには使用しない。
@@ -568,14 +569,22 @@ const filteredTaxRows = computed(() => {
     if (row.isCustom && row.source === 'mcp') return true;
     // direction='common'（対象外・不明）は全方式で常に表示
     if (row.direction === 'common') return true;
+    // 免税 → commonのみ
+    if (mode === 'exempt') return false;
+    // 廃止済み（effectiveTo < 今日）→ 該当タブでのみ表示（グレーアウト）
+    const today = new Date().toISOString().slice(0, 10);
+    if (row.effectiveTo && row.effectiveTo < today) {
+      // simplifiedOnly=true → 簡易タブのみ。それ以外 → 原則タブのみ
+      if (row.simplifiedOnly) return mode === 'simplified';
+      return mode !== 'simplified';
+    }
     // availableデータあり → MF実データで判定
     if (hasAvail && row.taxCategoryId) {
       return modeAvail[row.taxCategoryId] === true;
     }
-    // フォールバック（availableデータなし = MF未連携）
-    if (mode === 'exempt') return false;
+    // フォールバック（MF未連携）
     if (row.hidden) return false;
-    return row.active !== false && row.defaultVisible !== false;
+    return row.defaultVisible !== false;
   });
 });
 
@@ -593,13 +602,10 @@ function hideRow(row: UnifiedTaxCategory) {
   }
   const today = new Date().toISOString().slice(0, 10);
   row.hidden = true;
-  // deprecated: 後方互換のためhiddenと同期（将来hiddenに一本化予定）
-  row.deprecated = true;
   row.enabledTo = today;
 }
 function showRow(row: UnifiedTaxCategory) {
   row.hidden = false;
-  row.deprecated = false;
   row.enabledTo = null;
 }
 

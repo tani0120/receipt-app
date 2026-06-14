@@ -8,8 +8,6 @@ import type { TaxCategory } from '@/types/shared-tax-category'
 
 /** 統一科目型 */
 export interface UnifiedAccount extends Account {
-  /** 非表示か（scope='master'ならマスタ非表示、scope='client'なら顧問先非表示） */
-  hidden: boolean
   /** マスタレベルで非表示か（scope='client'のみ。scope='master'では常にfalse） */
   hiddenInMaster: boolean
   /** ソース区分（テンプレート表示用） */
@@ -18,8 +16,6 @@ export interface UnifiedAccount extends Account {
 
 /** 統一税区分型 */
 export interface UnifiedTaxCategory extends TaxCategory {
-  /** 非表示か */
-  hidden: boolean
   /** マスタレベルで非表示か */
   hiddenInMaster: boolean
   /** デフォルト表示設定 */

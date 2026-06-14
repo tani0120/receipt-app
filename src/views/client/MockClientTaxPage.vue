@@ -6,9 +6,9 @@
         <!-- ヘッダー -->
         <div class="as-header">
           <router-link to="/master/clients" class="as-back-link">
-            <i class="fa-solid fa-arrow-left"></i> 顧問先管理
+            <i class="fa-solid fa-arrow-left"></i> {{ UI_MSG.顧問先管理 }}
           </router-link>
-          <span class="as-header-label">顧問先用税区分</span>
+          <span class="as-header-label">{{ UI_MSG.顧問先用税区分 }}</span>
         </div>
 
         <!-- 課税方式表示（セグメントボタン・編集不可） -->
@@ -34,15 +34,11 @@
           style="background: #e3f2fd; border-color: #90caf9; color: #1565c0"
         >
           <i class="fa-solid fa-cloud-arrow-down"></i>
-          MFで登録されている税区分をダウンロードしています。変更する場合はMF側で変更してください。
+          {{ UI_MSG.MF税区分バナー }}
         </div>
         <div v-else class="as-info-banner">
           <i class="fa-solid fa-circle-info"></i>
-          デフォルト税区分（<i
-            class="fa-solid fa-circle-check"
-            style="font-size: 14px; color: #4caf50"
-          ></i
-          >）の名称は変更できません。表示切替は編集可能です。カスタム税区分は全項目を編集できます。
+          <span v-html="UI_MSG.顧問先税区分デフォルトバナー"></span>
         </div>
 
         <!-- MF名称変更警告（ルール5） -->
@@ -58,7 +54,7 @@
               class="as-page-arrow"
               :class="{ disabled: taxPage <= 1 }"
               @click="taxPage = Math.max(1, taxPage - 1)"
-              >＜</span
+              >{{ UI_MSG.ページ前 }}</span
             >
             <span
               v-for="p in taxTotalPages"
@@ -72,28 +68,28 @@
               class="as-page-arrow"
               :class="{ disabled: taxPage >= taxTotalPages }"
               @click="taxPage = Math.min(taxTotalPages, taxPage + 1)"
-              >＞</span
+              >{{ UI_MSG.ページ次 }}</span
             >
             <span class="as-page-range"
-              >{{ taxPageStart }}~{{ taxPageEnd }} / {{ filteredTaxRows.length }}件</span
+              >{{ taxPageStart }}~{{ taxPageEnd }} / {{ filteredTaxRows.length }}{{ UI_MSG.件 }}</span
             >
             <!-- チェック時の一括操作ボタン -->
             <template v-if="checkedIds.length">
-              <span class="as-bulk-badge">{{ checkedIds.length }}件選択中</span>
+              <span class="as-bulk-badge">{{ checkedIds.length }}{{ UI_MSG.件選択中 }}</span>
               <button class="as-bulk-btn" @click="showChecked">
-                <i class="fa-solid fa-eye"></i> 表示化
+                <i class="fa-solid fa-eye"></i> {{ UI_MSG.表示化 }}
               </button>
               <button class="as-bulk-btn" @click="hideChecked">
-                <i class="fa-solid fa-eye-slash"></i> 非表示化
+                <i class="fa-solid fa-eye-slash"></i> {{ UI_MSG.非表示化 }}
               </button>
               <button class="as-bulk-btn danger" :disabled="hasMfData" @click="deleteChecked">
-                <i class="fa-solid fa-trash-can"></i> 削除（復元できません）
+                <i class="fa-solid fa-trash-can"></i> {{ UI_MSG.削除復元不可 }}
               </button>
               <button class="as-bulk-btn" :disabled="hasMfData" @click="copyChecked">
-                <i class="fa-solid fa-copy"></i> コピー
+                <i class="fa-solid fa-copy"></i> {{ UI_MSG.コピー }}
               </button>
               <button class="as-bulk-btn" :disabled="hasMfData" @click="addAfterChecked">
-                <i class="fa-solid fa-plus"></i> 追加
+                <i class="fa-solid fa-plus"></i> {{ UI_MSG.追加 }}
               </button>
             </template>
           </div>
@@ -102,15 +98,15 @@
               ref="mfImportBtnRef"
               :authenticated="mfAuthenticated"
               :loading="mfImporting"
-              tooltip="MFから税区分をインポート"
+              :tooltip="UI_MSG.MFインポートツールチップ"
               @import="importFromMf"
             />
             <button class="as-action-btn" @click="resetTaxOrder">
-              <i class="fa-solid fa-rotate"></i> デフォルト順
+              <i class="fa-solid fa-rotate"></i> {{ UI_MSG.デフォルト順 }}
             </button>
-            <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> 追加</button>
+            <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> {{ UI_MSG.追加 }}</button>
             <button class="as-action-btn save" @click="saveChanges">
-              <i class="fa-solid fa-floppy-disk"></i> 保存
+              <i class="fa-solid fa-floppy-disk"></i> {{ UI_MSG.保存 }}
             </button>
           </div>
         </div>
@@ -135,24 +131,24 @@
                   <input type="checkbox" @change="toggleAllChecked($event)" />
                 </th>
                 <th class="as-th-check relative">
-                  表示
+                  {{ UI_MSG.列表示 }}
                   <div
                     class="resize-handle"
                     @mousedown.stop="onCtResizeStart('mfCompliance', $event)"
                   ></div>
                 </th>
                 <th class="relative" style="text-align: center; font-size: 11px">
-                  出典
+                  {{ UI_MSG.列出典 }}
                   <div
                     class="resize-handle"
                     @mousedown.stop="onCtResizeStart('source', $event)"
                   ></div>
                 </th>
                 <th class="sortable relative" @click="sortTax('qualified')">
-                  適格判定対象
+                  {{ UI_MSG.列適格判定対象 }}
                   <i
                     class="fa-solid fa-circle-question th-help"
-                    title="この税区分を使う際、取引先のインボイス登録番号の確認が必要かどうか。仕入側の課税取引にのみ○がつきます。"
+                    :title="UI_MSG.適格判定ツールチップ"
                   ></i>
                   <i :class="getSortIcon('qualified')"></i>
                   <div
@@ -161,45 +157,45 @@
                   ></div>
                 </th>
                 <th class="sortable relative" @click="sortTax('direction')">
-                  取引区分 <i :class="getSortIcon('direction')"></i>
+                  {{ UI_MSG.列取引区分 }} <i :class="getSortIcon('direction')"></i>
                   <div
                     class="resize-handle"
                     @mousedown.stop="onCtResizeStart('direction', $event)"
                   ></div>
                 </th>
                 <th class="sortable" @click="sortTax('name')">
-                  税区分 <i :class="getSortIcon('name')"></i>
+                  {{ UI_MSG.列税区分 }} <i :class="getSortIcon('name')"></i>
                 </th>
                 <th class="sortable relative" @click="sortTaxByRate()">
-                  税率 <i :class="getSortIcon('_rate')"></i>
+                  {{ UI_MSG.列税率 }} <i :class="getSortIcon('_rate')"></i>
                   <div
                     class="resize-handle"
                     @mousedown.stop="onCtResizeStart('rate', $event)"
                   ></div>
                 </th>
                 <th class="sortable relative" @click="sortTax('enabledFrom')">
-                  利用開始 <i :class="getSortIcon('enabledFrom')"></i>
+                  {{ UI_MSG.列利用開始 }} <i :class="getSortIcon('enabledFrom')"></i>
                   <div
                     class="resize-handle"
                     @mousedown.stop="onCtResizeStart('enabledFrom', $event)"
                   ></div>
                 </th>
                 <th class="sortable relative" @click="sortTax('enabledTo')">
-                  利用停止 <i :class="getSortIcon('enabledTo')"></i>
+                  {{ UI_MSG.列利用停止 }} <i :class="getSortIcon('enabledTo')"></i>
                   <div
                     class="resize-handle"
                     @mousedown.stop="onCtResizeStart('enabledTo', $event)"
                   ></div>
                 </th>
                 <th class="sortable relative" @click="sortTax('effectiveFrom')">
-                  施行日 <i :class="getSortIcon('effectiveFrom')"></i>
+                  {{ UI_MSG.列施行日 }} <i :class="getSortIcon('effectiveFrom')"></i>
                   <div
                     class="resize-handle"
                     @mousedown.stop="onCtResizeStart('effectiveFrom', $event)"
                   ></div>
                 </th>
                 <th class="sortable relative" @click="sortTax('effectiveTo')">
-                  廃止日 <i :class="getSortIcon('effectiveTo')"></i>
+                  {{ UI_MSG.列廃止日 }} <i :class="getSortIcon('effectiveTo')"></i>
                   <div
                     class="resize-handle"
                     @mousedown.stop="onCtResizeStart('effectiveTo', $event)"
@@ -211,40 +207,40 @@
               <tr
                 v-for="row in pagedTaxRows"
                 :key="row.taxCategoryId"
-                :class="{ 'row-deprecated': row.deprecated, 'row-custom': row.isCustom }"
+                :class="{ 'row-hidden': row.hidden, 'row-custom': row.isCustom }"
               >
                 <td class="as-td-check">
                   <input type="checkbox" v-model="checkedIds" :value="row.taxCategoryId" />
                 </td>
                 <td class="as-td-actions">
                   <i
-                    v-if="row.deprecated"
+                    v-if="row.hidden"
                     class="fa-solid fa-eye-slash td-hide"
                     @click="showRow(row)"
-                    title="表示化"
+                    :title="UI_MSG.表示化"
                   ></i>
                   <i
                     v-else
                     class="fa-solid fa-eye td-show"
                     @click="hideRow(row)"
-                    title="非表示化"
+                    :title="UI_MSG.非表示化"
                   ></i>
                 </td>
                 <td style="text-align: center; font-size: 11px; color: #666">
                   <span v-if="row.source === 'mcp'" style="color: #1976d2"
-                    ><MfCloudIcon :size="12" tooltip="MFクラウド" /> MF</span
+                    ><MfCloudIcon :size="12" :tooltip="UI_MSG.出典MFクラウド" /> {{ UI_MSG.出典MF }}</span
                   >
                   <span
                     v-else-if="row.isCustom"
                     style="color: #e65100"
-                    >顧問先独自</span
+                    >{{ UI_MSG.出典カスタム }}</span
                   >
                   <span v-else
                     ><i
                       class="fa-solid fa-circle-check"
                       style="color: #4caf50; font-size: 12px"
                     ></i>
-                    マスタ</span
+                    {{ UI_MSG.出典マスタ }}</span
                   >
                 </td>
                 <!-- 適格判定対象 -->
@@ -308,7 +304,7 @@
                       @blur="commitEdit(row, 'rate')"
                       class="inline-input rate-input"
                       ref="editInput"
-                      placeholder="例: 10"
+                      :placeholder="UI_MSG.税率プレースホルダー"
                     />
                   </template>
                   <template v-else>{{ getRate(row) }}</template>
@@ -327,7 +323,7 @@
             class="as-page-arrow"
             :class="{ disabled: taxPage <= 1 }"
             @click="taxPage = Math.max(1, taxPage - 1)"
-            >＜</span
+            >{{ UI_MSG.ページ前 }}</span
           >
           <span
             v-for="p in taxTotalPages"
@@ -341,7 +337,7 @@
             class="as-page-arrow"
             :class="{ disabled: taxPage >= taxTotalPages }"
             @click="taxPage = Math.min(taxTotalPages, taxPage + 1)"
-            >＞</span
+            >{{ UI_MSG.ページ次 }}</span
           >
         </div>
       </div>
@@ -386,7 +382,8 @@ import MfImportButton from "@/components/MfImportButton.vue";
 import { getLabel } from "@/constants/clientOptions";
 import { TAX_DIRECTION_OPTIONS, QUALIFIED_OPTIONS } from "@/constants/vendorOptions";
 import { UI_MSG } from "@/constants/uiMessages";
-import { TAX_CATEGORY_FIELD_LABELS } from "@/constants/fieldLabels";
+import { fetchTaxAvailable as apiFetchTaxAvailable, fetchMfAuthStatus, importClientTaxes as apiImportClientTaxes } from "@/composables/useMfTaxApi";
+import { TAX_CATEGORY_FIELD_LABELS, TAX_METHOD_LABELS } from "@/constants/fieldLabels";
 
 // 列幅カスタマイズ
 const ctDefaultWidths: Record<string, number> = {
@@ -421,12 +418,7 @@ type TaxMethodType = 'proportional' | 'individual' | 'simplified' | 'exempt';
 const taxTabMethod = computed<TaxMethodType>(() =>
   (currentClientData.value?.consumptionTaxMode as TaxMethodType) ?? 'proportional',
 );
-const taxMethods = [
-  { value: 'proportional' as const, label: '原則（一括比例）', icon: 'fa-solid fa-scale-balanced' },
-  { value: 'individual' as const, label: '原則（個別対応）', icon: 'fa-solid fa-list-check' },
-  { value: 'simplified' as const, label: '簡易', icon: 'fa-solid fa-bolt' },
-  { value: 'exempt' as const, label: '免税', icon: 'fa-solid fa-ban' },
-];
+const taxMethods = TAX_METHOD_LABELS;
 
 const mfWarningMessage = ref("");
 const taxPage = ref(1);
@@ -442,18 +434,16 @@ const hasMfData = computed(() => allTaxRows.some((r) => r.source === "mcp"));
 // MF課税方式別availableデータ（表示フィルタの判定基準。mf-tax-available.jsonから取得）
 const taxAvailable = ref<Record<string, Record<string, boolean>>>({});
 
-/** /api/mf/tax-available からavailableデータを取得 */
+/** /api/mf/tax-available からavailableデータを取得（useMfTaxApi経由） */
 async function fetchTaxAvailable(): Promise<void> {
   try {
-    const res = await fetch('/api/mf/tax-available');
-    if (res.ok) taxAvailable.value = await res.json();
+    taxAvailable.value = await apiFetchTaxAvailable();
   } catch { /* MF未連携時は空→フォールバック */ }
 }
 
 onMounted(async () => {
   try {
-    const res = await fetch(`/api/mf/auth/status?clientId=${props.clientId}`);
-    const data = await res.json();
+    const data = await fetchMfAuthStatus(props.clientId);
     mfAuthenticated.value = data.authenticated ?? false;
   } catch {
     mfAuthenticated.value = false;
@@ -468,22 +458,14 @@ async function importFromMf() {
   if (mfImporting.value) return;
   mfImporting.value = true;
   try {
-    const res = await fetch('/api/mf/import-client-taxes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId: props.clientId }),
-    });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({ error: UI_MSG.MF税区分インポート失敗 }));
-      throw new Error(errData.error ?? errData.detail ?? UI_MSG.MF税区分インポート失敗);
-    }
-    const result = await res.json();
-    const imported: TaxCategory[] = result.imported ?? [];
+    const result = await apiImportClientTaxes(props.clientId);
+
+    const imported: TaxCategory[] = (result.imported ?? []) as TaxCategory[];
 
     // imported(TaxCategory[])をUnifiedTaxCategory[]に変換してテーブル置換
     const unifiedImported: UnifiedTaxCategory[] = imported.map(tc => ({
       ...tc,
-      hidden: tc.deprecated,
+      hidden: tc.hidden ?? false,
       hiddenInMaster: false,
       visibilityOverride: null as boolean | null,
       source: (tc.source ?? 'mcp') as UnifiedTaxCategory['source'],
@@ -506,7 +488,7 @@ async function importFromMf() {
     const methodLabel = taxMethods.find(m => m.value === taxTabMethod.value)?.label ?? taxTabMethod.value;
     await modal.notify({
       title: UI_MSG.MFインポート成功,
-      message: `※${methodLabel}: ${filteredTaxRows.value.length}件表示`,
+      message: `※${methodLabel}: ${filteredTaxRows.value.length}${UI_MSG.件表示}`,
       variant: 'success',
     });
   } catch (err) {
@@ -544,6 +526,7 @@ const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 
 
+
 // --- 表示用computed: allTaxRowsからMF availableデータでフィルタ ---
 // 判定基準: mf-tax-available.json（MF実データ）。設計書§4-1準拠。
 // simplifiedOnlyフラグはバリデーション用であり、表示フィルタには使用しない。
@@ -556,13 +539,20 @@ const filteredTaxRows = computed(() => {
     if (row.isCustom && row.source === 'mcp') return true;
     // direction='common'（対象外・不明）は全方式で常に表示
     if (row.direction === 'common') return true;
+    // 免税 → commonのみ
+    if (mode === 'exempt') return false;
+    // 廃止済み（effectiveTo < 今日）→ 該当タブでのみ表示（グレーアウト）
+    const today = new Date().toISOString().slice(0, 10);
+    if (row.effectiveTo && row.effectiveTo < today) {
+      if (row.simplifiedOnly) return mode === 'simplified';
+      return mode !== 'simplified';
+    }
     // availableデータあり → MF実データで判定
     if (hasAvail && row.taxCategoryId) {
       return modeAvail[row.taxCategoryId] === true;
     }
-    // フォールバック（availableデータなし = MF未連携）
-    if (mode === 'exempt') return false;
-    return row.active !== false && row.defaultVisible !== false;
+    // フォールバック（MF未連携）
+    return !row.hidden && row.defaultVisible !== false;
   });
 });
 
@@ -589,23 +579,22 @@ function toggleAllChecked(e: Event) {
 }
 
 // =============== 非表示化・表示化 ===============
+/** hidden/enabledTo同期ヘルパー */
+function setRowVisibility(row: UnifiedTaxCategory, hidden: boolean) {
+  row.hidden = hidden;
+  row.enabledTo = hidden ? new Date().toISOString().slice(0, 10) : null;
+}
+
 function hideRow(row: UnifiedTaxCategory) {
-  const today = new Date().toISOString().slice(0, 10);
-  row.deprecated = true;
-  row.enabledTo = today;
+  setRowVisibility(row, true);
 }
 function showRow(row: UnifiedTaxCategory) {
-  row.deprecated = false;
-  row.enabledTo = null;
+  setRowVisibility(row, false);
 }
 function hideChecked() {
-  const today = new Date().toISOString().slice(0, 10);
   checkedIds.value.forEach((id) => {
     const row = allTaxRows.find((r) => r.taxCategoryId === id);
-    if (row) {
-      row.deprecated = true;
-      row.enabledTo = today;
-    }
+    if (row) setRowVisibility(row, true);
   });
   checkedIds.value = [];
   markDirty(UI_MSG.税区分非表示);
@@ -613,10 +602,7 @@ function hideChecked() {
 function showChecked() {
   checkedIds.value.forEach((id) => {
     const row = allTaxRows.find((r) => r.taxCategoryId === id);
-    if (row) {
-      row.deprecated = false;
-      row.enabledTo = null;
-    }
+    if (row) setRowVisibility(row, false);
   });
   checkedIds.value = [];
   markDirty(UI_MSG.税区分表示);
@@ -632,7 +618,7 @@ async function deleteChecked() {
     return;
   }
   const ok = await modal.confirm({
-    title: `${customIds.length}件のカスタム税区分を削除しますか？`,
+    title: `${customIds.length}${UI_MSG.カスタム税区分削除確認}`,
     message: UI_MSG.復元不可,
     variant: "danger",
   });
@@ -650,7 +636,7 @@ let copyCounter = getInitialCopyCounter(allTaxRows as unknown as Record<string, 
 async function copyChecked() {
   if (!checkedIds.value.length) return;
   const ok = await modal.confirm({
-    title: `${checkedIds.value.length}件の税区分をコピーしますか？`,
+    title: `${checkedIds.value.length}${UI_MSG.税区分コピー確認}`,
   });
   if (!ok) return;
   const ids = [...checkedIds.value];
@@ -667,8 +653,7 @@ async function copyChecked() {
       direction: src.direction,
       qualified: src.qualified,
       aiSelectable: src.aiSelectable,
-      active: true,
-      deprecated: false,
+      hidden: false,
       enabledFrom: new Date().toISOString().slice(0, 10),
       effectiveFrom: null,
       effectiveTo: null,
@@ -676,7 +661,6 @@ async function copyChecked() {
       displayOrder: src.displayOrder + 0.5,
       isCustom: true,
       insertAfter: src.taxCategoryId,
-      hidden: false,
       hiddenInMaster: false,
       visibilityOverride: null,
       source: 'client-custom',
@@ -700,8 +684,7 @@ async function addAfterChecked() {
     direction: "common",
     qualified: false,
     aiSelectable: false,
-    active: true,
-    deprecated: false,
+    hidden: false,
     enabledFrom: new Date().toISOString().slice(0, 10),
     effectiveFrom: null,
     effectiveTo: null,
@@ -709,7 +692,6 @@ async function addAfterChecked() {
     displayOrder: insertIdx,
     isCustom: true,
     insertAfter: lastId ?? allTaxRows[allTaxRows.length - 1]?.taxCategoryId,
-    hidden: false,
     hiddenInMaster: false,
     visibilityOverride: null,
     source: 'client-custom',
@@ -817,7 +799,7 @@ async function saveChanges() {
 
   try {
     // composable経由で保存（autoSaveでサーバーに自動保存される）
-    settings.saveTaxCategories(allTaxRows as TaxCategory[]);
+    settings.saveTaxCategories(allTaxRows as unknown as TaxCategory[]);
     markClean();
     modal.notify({ title: UI_MSG.保存成功, variant: "success" });
   } catch {
@@ -1133,11 +1115,11 @@ function resetTaxOrder() {
   flex-shrink: 0;
 }
 
-/* deprecated行のグレーアウト */
-.row-deprecated {
+/* 非表示行のグレーアウト */
+.row-hidden {
   opacity: 0.4;
 }
-.row-deprecated td {
+.row-hidden td {
   text-decoration: line-through;
   color: #999;
 }

@@ -520,7 +520,7 @@ app.post('/sync-all', async (c) => {
         accountGroup: group,
         category: a.category,
         defaultTaxCategoryId: masterTaxId,
-        deprecated: false,
+        hidden: false,
         effectiveFrom: DEFAULT_EFFECTIVE_FROM,
         effectiveTo: null,
         sortOrder: idx + 1,
@@ -531,20 +531,19 @@ app.post('/sync-all', async (c) => {
     }
     saveClientAccounts(clientId, mapped)
 
-    // 5b. 前回の顧問先マスタにあって今回MFにない科目 → deprecated=trueで保持
-    // 過去仕訳の参照先を保護（ACCOUNT_UNKNOWNにしない）
-    let deprecatedCount = 0
+    // 5b. 前回の顧問先マスタにあって今回MFにない科目 → hidden=trueで保持
+    let hiddenCount = 0
     if (hasExistingClientData) {
       const prevAccounts = getClientAccounts(clientId).accounts
       const currentNames = new Set(mapped.map(a => a.name))
       for (const prev of prevAccounts) {
-        if (!currentNames.has(prev.name) && !prev.deprecated) {
-          mapped.push({ ...prev, deprecated: true })
-          deprecatedCount++
+        if (!currentNames.has(prev.name) && !prev.hidden) {
+          mapped.push({ ...prev, hidden: true })
+          hiddenCount++
         }
       }
-      if (deprecatedCount > 0) {
-        // deprecated行を含めて再保存
+      if (hiddenCount > 0) {
+        // hidden行を含めて再保存
         saveClientAccounts(clientId, mapped)
       }
     }
@@ -557,7 +556,7 @@ app.post('/sync-all', async (c) => {
     const matchedCount = available.length - unmatchedAccountNames.length
     let accountMsg = `✅ 勘定科目: ${allAccounts.length}件取得 → ${available.length}件保存`
     accountMsg += `（マッチ: ${matchedCount}件 / 未マッチ: ${unmatchedAccountNames.length}件）`
-    if (deprecatedCount > 0) accountMsg += `（非表示化: ${deprecatedCount}件）`
+    if (hiddenCount > 0) accountMsg += `（非表示化: ${hiddenCount}件）`
     results.push(accountMsg)
 
     // ===== 4. 税区分マスタ（名前照合でマスタ属性を引き継ぐ） =====
@@ -602,8 +601,7 @@ app.post('/sync-all', async (c) => {
         direction: dir,
         qualified: guessQualifiedFromName(t.name, dir),
         aiSelectable: true,
-        active: true,
-        deprecated: false,
+        hidden: false,
         effectiveFrom: DEFAULT_EFFECTIVE_FROM,
         effectiveTo: null,
         defaultVisible: true,
@@ -899,7 +897,7 @@ app.post('/import-client-accounts', async (c) => {
         accountGroup: group,
         category: a.category,
         defaultTaxCategoryId: masterTaxId,
-        deprecated: false,
+        hidden: false,
         effectiveFrom: DEFAULT_EFFECTIVE_FROM,
         effectiveTo: null,
         sortOrder: idx + 1,

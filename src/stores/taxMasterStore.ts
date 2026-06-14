@@ -37,12 +37,25 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
   async function fetchFresh() {
     try {
       const items = await repos.taxMaster.getMaster()
-      allTaxCategories.value = items
+      allTaxCategories.value = migrateLegacyFields(items)
       cachedAt.value = Date.now()
       console.log(`[taxMasterStore] ${items.length}件をサーバーから取得`)
     } catch (err) {
       console.error('[taxMasterStore] サーバー取得失敗:', err)
     }
+  }
+
+  /** Piniaキャッシュ互換性: 旧deprecated/activeをhiddenに変換 */
+  function migrateLegacyFields(items: TaxCategory[]): TaxCategory[] {
+    return items.map(tc => {
+      const row = tc as Record<string, unknown>
+      if ('deprecated' in row && !('hidden' in row)) {
+        row.hidden = row.deprecated
+        delete row.deprecated
+      }
+      delete row.active
+      return tc
+    })
   }
 
   function debounceSave(): void {
@@ -57,7 +70,7 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
     return allTaxCategories.value
       .map(tc => ({
         ...tc,
-        hiddenInMaster: tc.deprecated === true,
+        hiddenInMaster: tc.hidden === true,
       }))
       .sort((a, b) => (a.displayOrder ?? 9999) - (b.displayOrder ?? 9999))
   })
@@ -70,7 +83,7 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
   )
 
   const overrides = computed(() => ({
-    hiddenIds: allTaxCategories.value.filter(tc => tc.deprecated).map(tc => tc.taxCategoryId),
+    hiddenIds: allTaxCategories.value.filter(tc => tc.hidden).map(tc => tc.taxCategoryId),
     visibilityOverrides: {} as Record<string, boolean>,
     customTaxCategories: allTaxCategories.value.filter(tc => tc.isCustom),
   }))
@@ -79,7 +92,7 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
     const idx = allTaxCategories.value.findIndex(tc => tc.taxCategoryId === taxCategoryId)
     if (idx >= 0) {
       const current = allTaxCategories.value[idx]!
-      allTaxCategories.value[idx] = { ...current, deprecated: !current.deprecated }
+      allTaxCategories.value[idx] = { ...current, hidden: !current.hidden }
       debounceSave()
     }
   }
@@ -96,7 +109,7 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
   function resetToDefault(): void {
     allTaxCategories.value = allTaxCategories.value
       .filter(tc => !tc.isCustom)
-      .map(tc => ({ ...tc, deprecated: false }))
+      .map(tc => ({ ...tc, hidden: false }))
     debounceSave()
   }
 

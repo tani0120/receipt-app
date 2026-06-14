@@ -135,7 +135,7 @@ export function useClientTaxCategories(clientId: string) {
           if (tc.mfTaxId) mfTaxIdMap[tc.taxCategoryId] = tc.mfTaxId
         }
         overridesRef.value = {
-          hiddenIds: serverData.filter(tc => tc.deprecated).map(tc => tc.taxCategoryId),
+          hiddenIds: serverData.filter(tc => tc.hidden).map(tc => tc.taxCategoryId),
           aiSelectableOverrides: buildAiSelectableOverrides(serverData),
           copiedMasterIds: serverData.filter(tc => masterIds.has(tc.taxCategoryId)).map(tc => tc.taxCategoryId),
           customTaxCategories: serverData.filter(tc => !masterIds.has(tc.taxCategoryId)),
@@ -170,10 +170,7 @@ export function useClientTaxCategories(clientId: string) {
   function buildFullTaxCategoryList(ov: ClientTaxOverrides, master: TaxCategory[]): TaxCategory[] {
     const defaultRows = master.map(tc => ({
       ...tc,
-      // hiddenIdsだけで非表示を決定。マスタのdeprecatedにフォールバックしない。
-      // MFインポート時: saveAll()がdeprecated=trueの全IDをhiddenIdsに保存済み。
-      // マスタにフォールバックすると、MFのavailableで設定した非表示がマスタ値に戻される。
-      deprecated: ov.hiddenIds.includes(tc.taxCategoryId),
+      hidden: tc.hidden || ov.hiddenIds.includes(tc.taxCategoryId),
       aiSelectable: ov.aiSelectableOverrides[tc.taxCategoryId] ?? tc.aiSelectable,
       // MF事業者固有IDを保持（PUT上書き時に消えないようにする）
       mfTaxId: ov.mfTaxIdMap[tc.taxCategoryId] ?? tc.mfTaxId,
@@ -186,10 +183,10 @@ export function useClientTaxCategories(clientId: string) {
       const aiOverride = overrides.value.aiSelectableOverrides[tc.taxCategoryId] ?? null
       return {
         ...tc,
-        hiddenInClient: overrides.value.hiddenIds.includes(tc.taxCategoryId),
+        hiddenInClient: overrides.value.hiddenIds.includes(tc.taxCategoryId) || tc.hidden,
         // MF連携済み: hiddenInMasterを無視（MFインポートが正）
         // MF未連携: hiddenInMasterをそのまま使う（全社マスタが正）
-        hiddenInMaster: cache.mfLinked.value ? false : tc.hiddenInMaster,
+        hiddenInMaster: tc.hidden || (cache.mfLinked.value ? false : tc.hiddenInMaster),
         aiSelectableOverride: aiOverride,
         aiSelectable: aiOverride !== null ? aiOverride : tc.aiSelectable,
       }
@@ -233,7 +230,8 @@ export function useClientTaxCategories(clientId: string) {
 
   /** ページから全行データを受け取り、composableの保存形式に分解して保存 */
   function saveAll(allRows: TaxCategory[]): void {
-    const hiddenIds = allRows.filter(r => r.deprecated).map(r => r.taxCategoryId)
+    // hidden=trueの行を非表示IDに含める
+    const hiddenIds = allRows.filter(r => r.hidden).map(r => r.taxCategoryId)
     const customTaxCategories = allRows.filter(r => r.isCustom)
     const aiSelectableOverrides: Record<string, boolean> = {}
     allRows.forEach(r => {

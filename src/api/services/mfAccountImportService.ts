@@ -41,7 +41,7 @@ export interface AccountImportDiff {
   /** 新規追加（MFにあってマスタにない） */
   added: Array<{ name: string; category: string }>
   /** 削除候補（マスタにあるがMFにない。source='mcp'の行のみ） */
-  deprecatedCandidates: Array<{ accountId: string; name: string }>
+  hiddenCandidates: Array<{ accountId: string; name: string }>
   /** 変更なし件数 */
   unchanged: number
 }
@@ -136,7 +136,7 @@ export async function importMasterAccounts(
   const diff: AccountImportDiff = {
     matched: [],
     added: [],
-    deprecatedCandidates: [],
+    hiddenCandidates: [],
     unchanged: 0,
   }
 
@@ -183,7 +183,7 @@ export async function importMasterAccounts(
         accountGroup: mfAccountGroup,
         category: mf.category,
         defaultTaxCategoryId: masterTaxId,
-        deprecated: false,
+        hidden: false,
         effectiveFrom: DEFAULT_EFFECTIVE_FROM,
         effectiveTo: null,
         sortOrder: maxSort,
@@ -198,12 +198,12 @@ export async function importMasterAccounts(
 
   // 5. 削除候補検知（マスタにあるがMFにない行。source='mcp'のみ対象）
   // deprecated=trueにすることで過去仕訳の参照先を保持しつつ選択肢から除外
-  // ★ row.target === clientType で事業形態を限定（法人インポート時に個人科目を誤って非推奨化しない）
+  // ★ row.target === clientType で事業形態を限定（法人インポート時に個人科目を誤って非表示化しない）
   const mfNameSet = new Set(mfAccounts.map(a => a.name))
   for (const row of masterItems) {
-    if (row.source === 'mcp' && row.target === clientType && !mfNameSet.has(row.name) && !row.deprecated) {
-      row.deprecated = true
-      diff.deprecatedCandidates.push({ accountId: row.accountId, name: row.name })
+    if (row.source === 'mcp' && row.target === clientType && !mfNameSet.has(row.name) && !row.hidden) {
+      row.hidden = true
+      diff.hiddenCandidates.push({ accountId: row.accountId, name: row.name })
     }
   }
 
@@ -232,12 +232,12 @@ export async function importMasterAccounts(
     if (diff.added.length > 5) reportLines.push(`  …他${diff.added.length - 5}件`)
   }
 
-  const hasDiff = diff.added.length > 0 || diff.deprecatedCandidates.length > 0
+  const hasDiff = diff.added.length > 0 || diff.hiddenCandidates.length > 0
 
   const summaryParts = [
     diff.matched.length > 0 ? `マッチ${diff.matched.length}` : '',
     diff.added.length > 0 ? `追加${diff.added.length}` : '',
-    diff.deprecatedCandidates.length > 0 ? `非表示化${diff.deprecatedCandidates.length}` : '',
+    diff.hiddenCandidates.length > 0 ? `非表示化${diff.hiddenCandidates.length}` : '',
   ].filter(Boolean).join(', ')
 
   console.log(`[mfAccountImportService] マスタインポート完了: clientId=${clientId}, ${summaryParts || '差分なし'}`)

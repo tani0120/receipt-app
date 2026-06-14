@@ -134,8 +134,8 @@
 .td-date { text-align: center; color: #888; font-size: 10px; white-space: nowrap; }
 
 /* deprecated行のグレーアウト（ルール3） */
-.row-deprecated { opacity: 0.4; }
-.row-deprecated td { text-decoration: line-through; color: #999; }
+.row-hidden { opacity: 0.4; }
+.row-hidden td { text-decoration: line-through; color: #999; }
 
 /* ドラッグ中の行 */
 .row-dragging { opacity: 0.5; background: #e3f2fd; }

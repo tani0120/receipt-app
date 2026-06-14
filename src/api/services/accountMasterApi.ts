@@ -252,7 +252,7 @@ function syncMasterAccountsToClients(masterItems: Account[]): void {
     // （MFフィールド mfAccountId等は顧問先固有なので同期しない）
     const syncFields: (keyof Account)[] = [
       'name', 'accountGroup', 'category',
-      'target', 'deprecated', 'defaultTaxCategoryId',
+      'target', 'hidden', 'defaultTaxCategoryId',
       'isContraRevenue', 'isContraExpense',
     ]
     for (const clientAccount of clientData.accounts) {
@@ -476,12 +476,20 @@ export interface TaxCategoryFilterResult {
  * 事業者切替（TSK→TST等）してもフィルタが壊れない。
  */
 function filterByTaxMethod(row: TaxCategory, taxMethod: string): boolean {
-  // MF独自カスタム税区分は常に表示（顧問先が意図的に作成したため）
+  // MF独自カスタム税区分は常に表示
   if (row.isCustom && row.source === 'mcp') return true
   // direction='common'（不明・対象外）は全方式で常に表示
   if (row.direction === 'common') return true
+  // 免税 → commonのみ
+  if (taxMethod === 'exempt') return false
+  // 廃止済み（effectiveTo < 今日）→ 該当タブでのみ表示（グレーアウト）
+  const today = new Date().toISOString().slice(0, 10)
+  if (row.effectiveTo && row.effectiveTo < today) {
+    if (row.simplifiedOnly) return taxMethod === 'simplified'
+    return taxMethod !== 'simplified'
+  }
 
-  // --- MFのavailableベースのフィルタ（データ駆動。キー=マスタID） ---
+  // --- MFのavailableベースのフィルタ ---
   const methodKeyMap: Record<string, string> = {
     'general': 'proportional',
     'proportional': 'proportional',
@@ -493,13 +501,12 @@ function filterByTaxMethod(row: TaxCategory, taxMethod: string): boolean {
   const availableData = getTaxAvailableForMethod(methodKey)
 
   if (availableData && row.taxCategoryId) {
-    // availableデータあり → マスタIDでフィルタ
     return availableData[row.taxCategoryId] === true
   }
 
-  // availableデータなし → デフォルト表示（active行のみ）
-  if (taxMethod === 'exempt') return false
-  return row.active && row.defaultVisible
+  // フォールバック（MF未連携）
+  if (row.effectiveTo && row.effectiveTo < today) return true
+  return !row.hidden && row.defaultVisible
 }
 
 /**
