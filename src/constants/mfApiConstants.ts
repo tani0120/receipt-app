@@ -44,8 +44,11 @@ export const MF_SUGUSURU_TAG = 'SUGUSRU'
 // デフォルト値
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/** 科目・税区分のデフォルト適用開始日（軽減税率制度開始日） */
+/** 税区分のデフォルト施行日（軽減税率制度開始日） */
 export const DEFAULT_EFFECTIVE_FROM = '2019-10-01'
+
+/** 勘定科目のデフォルト施行日（勘定科目に施行日の概念はないためnull） */
+export const DEFAULT_ACCOUNT_EFFECTIVE_FROM: string | null = null
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ヘルパー

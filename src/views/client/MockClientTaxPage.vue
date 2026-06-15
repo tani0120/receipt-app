@@ -307,7 +307,7 @@
                       :placeholder="UI_MSG.税率プレースホルダー"
                     />
                   </template>
-                  <template v-else>{{ getRate(row) }}</template>
+                  <template v-else>{{ row.displayRate || "-" }}</template>
                 </td>
                 <td class="td-date">{{ row.enabledFrom || "—" }}</td>
                 <td class="td-date">{{ row.enabledTo || "—" }}</td>
@@ -368,7 +368,7 @@ import { ref, reactive, computed, watch, onMounted } from "vue";
 
 import type { TaxCategory, TaxDirection } from "@/types/shared-tax-category";
 import type { UnifiedTaxCategory } from "@/features/account-settings/types/account-settings.types";
-import { extractRateFromName } from "@/types/shared-tax-category";
+
 import { useAccountSettings } from "@/features/account-settings/composables/useAccountSettings";
 import { useClients } from "@/features/client-management/composables/useClients";
 import { getInitialCopyCounter } from "@/utils/copy-utils";
@@ -382,7 +382,7 @@ import MfImportButton from "@/components/MfImportButton.vue";
 import { getLabel } from "@/constants/clientOptions";
 import { TAX_DIRECTION_OPTIONS, QUALIFIED_OPTIONS } from "@/constants/vendorOptions";
 import { UI_MSG } from "@/constants/uiMessages";
-import { fetchTaxAvailable as apiFetchTaxAvailable, fetchMfAuthStatus, importClientTaxes as apiImportClientTaxes } from "@/composables/useMfTaxApi";
+import { fetchMfAuthStatus, importClientTaxes as apiImportClientTaxes } from "@/composables/useMfTaxApi";
 import { TAX_CATEGORY_FIELD_LABELS, TAX_METHOD_LABELS } from "@/constants/fieldLabels";
 
 // 列幅カスタマイズ
@@ -431,16 +431,6 @@ const mfImportedIds = ref<string[]>([]);
 /** MFからインポートされたデータが存在するか（source='mcp'の行が1件以上） */
 const hasMfData = computed(() => allTaxRows.some((r) => r.source === "mcp"));
 
-// MF課税方式別availableデータ（表示フィルタの判定基準。mf-tax-available.jsonから取得）
-const taxAvailable = ref<Record<string, Record<string, boolean>>>({});
-
-/** /api/mf/tax-available からavailableデータを取得（useMfTaxApi経由） */
-async function fetchTaxAvailable(): Promise<void> {
-  try {
-    taxAvailable.value = await apiFetchTaxAvailable();
-  } catch { /* MF未連携時は空→フォールバック */ }
-}
-
 onMounted(async () => {
   try {
     const data = await fetchMfAuthStatus(props.clientId);
@@ -449,8 +439,6 @@ onMounted(async () => {
     mfAuthenticated.value = false;
   }
 
-  // MF availableデータを取得（表示フィルタ用）
-  await fetchTaxAvailable();
 });
 
 /** MFから税区分を取得してテーブルに反映（バックエンドAPI一括処理） */
@@ -501,8 +489,6 @@ async function importFromMf() {
     }
   } finally {
     mfImporting.value = false;
-    // インポート後にavailableデータを再取得（フィルタ件数を即時更新）
-    await fetchTaxAvailable();
   }
 }
 
@@ -527,33 +513,11 @@ const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 
 
-// --- 表示用computed: allTaxRowsからMF availableデータでフィルタ ---
-// 判定基準: mf-tax-available.json（MF実データ）。設計書§4-1準拠。
-// simplifiedOnlyフラグはバリデーション用であり、表示フィルタには使用しない。
+// --- 表示用computed: バックエンドが付与したvisibleInでフィルタ ---
+// フロントにフィルタ責務なし。フロントにデータ補完責務なし。
 const filteredTaxRows = computed(() => {
   const mode = taxTabMethod.value;
-  const modeAvail = taxAvailable.value[mode] ?? {};
-  const hasAvail = Object.keys(modeAvail).length > 0;
-  return allTaxRows.filter(row => {
-    // MFカスタム税区分は常に表示
-    if (row.isCustom && row.source === 'mcp') return true;
-    // direction='common'（対象外・不明）は全方式で常に表示
-    if (row.direction === 'common') return true;
-    // 免税 → commonのみ
-    if (mode === 'exempt') return false;
-    // 廃止済み（effectiveTo < 今日）→ 該当タブでのみ表示（グレーアウト）
-    const today = new Date().toISOString().slice(0, 10);
-    if (row.effectiveTo && row.effectiveTo < today) {
-      if (row.simplifiedOnly) return mode === 'simplified';
-      return mode !== 'simplified';
-    }
-    // availableデータあり → MF実データで判定
-    if (hasAvail && row.taxCategoryId) {
-      return modeAvail[row.taxCategoryId] === true;
-    }
-    // フォールバック（MF未連携）
-    return !row.hidden && row.defaultVisible !== false;
-  });
+  return allTaxRows.filter(row => row.visibleIn?.[mode] === true);
 });
 
 const taxTotalPages = computed(() =>
@@ -730,7 +694,7 @@ function startEdit(row: TaxCategory, field: EditableField) {
       editValue.value = row.name;
       break;
     case "rate":
-      editValue.value = row.taxRate != null ? String(Math.round(row.taxRate * 100)) : extractRateFromName(row.name).replace("%", "");
+      editValue.value = row.taxRate != null ? String(Math.round(row.taxRate * 100)) : (row.displayRate ?? "-").replace("%", "");
       break;
     case "qualified":
       editValue.value = String(row.qualified);
@@ -784,11 +748,7 @@ function onRateInput(e: Event) {
   editValue.value = input.value;
 }
 
-function getRate(row: TaxCategory): string {
-  if (row.taxRate != null) return `${Math.round(row.taxRate * 100)}%`;
-  const rate = extractRateFromName(row.name);
-  return rate || "-";
-}
+
 
 // =============== 保存 ===============
 async function saveChanges() {
@@ -846,8 +806,8 @@ function sortTaxByRate() {
     sortState.asc = true;
   }
   allTaxRows.sort((a, b) => {
-    const ra = a.taxRate != null ? a.taxRate * 100 : parseFloat(extractRateFromName(a.name)) || -1;
-    const rb = b.taxRate != null ? b.taxRate * 100 : parseFloat(extractRateFromName(b.name)) || -1;
+    const ra = a.taxRate != null ? a.taxRate * 100 : parseFloat(a.displayRate ?? "") || -1;
+    const rb = b.taxRate != null ? b.taxRate * 100 : parseFloat(b.displayRate ?? "") || -1;
     return sortState.asc ? ra - rb : rb - ra;
   });
 }

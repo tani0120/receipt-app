@@ -158,7 +158,7 @@
                   <template v-if="isEditing(row.taxCategoryId, 'rate')">
                     <input v-model="editValue" @input="onRateInput" @keydown.enter="commitEdit(row, 'rate')" @blur="commitEdit(row, 'rate')" class="inline-input rate-input" ref="editInput" :placeholder="UI_MSG.税率プレースホルダー" />
                   </template>
-                  <template v-else>{{ getRate(row) }}</template>
+                  <template v-else>{{ row.displayRate ?? '-' }}</template>
                 </td>
                 <!-- 利用開始（編集可能） -->
                 <td class="td-date td-editable" @dblclick="startEdit(row, 'enabledFrom')">
@@ -302,12 +302,10 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
 import type { TaxCategory, TaxDirection } from '@/types/shared-tax-category';
 import type { UnifiedTaxCategory } from '@/features/account-settings/types/account-settings.types';
-import { extractRateFromName } from '@/types/shared-tax-category';
 // §15追加禁止: getInitialCopyCounter（コピー・追加用）は不要のため削除
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useTaxMasterStore } from '@/stores/taxMasterStore';
 import {
-  fetchTaxAvailable as fetchTaxAvailableApi,
   fetchMfRawData,
   fetchMfLinkedClients,
   previewMfImport,
@@ -366,15 +364,7 @@ const mfImporting = ref(false);
 const mfImportBtnRef = ref<InstanceType<typeof MfImportButton> | null>(null);
 // hasMfData: 全データがsource='mcp'のため常にtrue → バナーv-if削除に伴い不要。削除済み。
 
-// MF課税方式別availableデータ（表示フィルタの判定基準。mf-tax-available.jsonから取得）
-const taxAvailable = ref<Record<string, Record<string, boolean>>>({}); 
-
-/** composable経由でavailableデータを取得 */
-async function fetchTaxAvailable(): Promise<void> {
-  try {
-    taxAvailable.value = await fetchTaxAvailableApi();
-  } catch { /* MF未連携時は空→フォールバック */ }
-}
+// MF課税方式別availableデータ → バックエンドに集約済み。フロントにフィルタ責務なし。
 
 // --- MFインポート ウィザード状態 ---
 const mfImportStep = ref(0); // 0:非表示 1:顧問先選択 2:パターン進捗
@@ -437,8 +427,7 @@ onMounted(async () => {
     // パターン進捗を取得
     await refreshPatternProgress();
 
-    // MF availableデータを取得（表示フィルタ用）
-    await fetchTaxAvailable();
+    // visibleIn + displayRateはバックエンド判定済み。フロントにフィルタ責務なし。
   } catch {
     mfAuthenticated.value = false;
   }
@@ -539,8 +528,7 @@ async function executeImport() {
   } finally {
     mfImporting.value = false;
     await refreshPatternProgress();
-    // インポート後にavailableデータを再取得（フィルタ件数を即時更新）
-    await fetchTaxAvailable();
+    // visibleIn + displayRateはバックエンド判定済み。フロントにフィルタ責務なし。
     if (lastImportedPattern.value) {
       mfImportStep.value = 2;
     }
@@ -557,36 +545,11 @@ const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
 
 
-// --- 表示用computed: allTaxRowsからMF availableデータでフィルタ ---
-// 判定基準: mf-tax-available.json（MF実データ）。設計書§4-1準拠。
-// simplifiedOnlyフラグはバリデーション用であり、表示フィルタには使用しない。
-const filteredTaxRows = computed(() => {
-  const mode = taxMethod.value;
-  const modeAvail = taxAvailable.value[mode] ?? {};
-  const hasAvail = Object.keys(modeAvail).length > 0;
-  return allTaxRows.filter(row => {
-    // MFカスタム税区分は常に表示
-    if (row.isCustom && row.source === 'mcp') return true;
-    // direction='common'（対象外・不明）は全方式で常に表示
-    if (row.direction === 'common') return true;
-    // 免税 → commonのみ
-    if (mode === 'exempt') return false;
-    // 廃止済み（effectiveTo < 今日）→ 該当タブでのみ表示（グレーアウト）
-    const today = new Date().toISOString().slice(0, 10);
-    if (row.effectiveTo && row.effectiveTo < today) {
-      // simplifiedOnly=true → 簡易タブのみ。それ以外 → 原則タブのみ
-      if (row.simplifiedOnly) return mode === 'simplified';
-      return mode !== 'simplified';
-    }
-    // availableデータあり → MF実データで判定
-    if (hasAvail && row.taxCategoryId) {
-      return modeAvail[row.taxCategoryId] === true;
-    }
-    // フォールバック（MF未連携）
-    if (row.hidden) return false;
-    return row.defaultVisible !== false;
-  });
-});
+// --- 表示用computed: バックエンド判定済みvisibleInでUIフィルタのみ ---
+// フロントにフィルタ責務なし。ドメインルールはバックエンドのassignVisibility()に集約。
+const filteredTaxRows = computed(() =>
+  allTaxRows.filter(row => (row as TaxCategory).visibleIn?.[taxMethod.value] === true)
+);
 
 const taxTotalPages = computed(() => Math.max(1, Math.ceil(filteredTaxRows.value.length / PAGE_SIZE)));
 const taxPageStart = computed(() => (taxPage.value - 1) * PAGE_SIZE + 1);
@@ -634,7 +597,7 @@ function startEdit(row: UnifiedTaxCategory, field: EditableField) {
   switch (field) {
     case 'direction': editValue.value = row.direction; break;
     case 'name': editValue.value = row.name; break;
-    case 'rate': editValue.value = row.taxRate != null ? String(Math.round(row.taxRate * 100)) : extractRateFromName(row.name).replace('%', ''); break;
+    case 'rate': editValue.value = row.taxRate != null ? String(Math.round(row.taxRate * 100)) : ((row as TaxCategory).displayRate ?? '-').replace('%', ''); break;
     case 'qualified': editValue.value = String(row.qualified); break;
     case 'enabledFrom': editValue.value = row.enabledFrom || ''; break;
     case 'enabledTo': editValue.value = row.enabledTo || ''; break;
@@ -696,7 +659,7 @@ function onDocumentClick(e: MouseEvent) {
 onMounted(() => document.addEventListener('click', onDocumentClick));
 onUnmounted(() => document.removeEventListener('click', onDocumentClick));
 
-/** 適用終了日のblur処理（現役ボタンの@mousedown.preventが先に発火するため、blur時は単純にcancelEdit） */
+/** 廃止日のblur処理（現役ボタンの@mousedown.preventが先に発火するため、blur時は単純にcancelEdit） */
 function onDateBlur(row: UnifiedTaxCategory) {
   // 値が変更されていたらcommit、されていなければcancel
   if (editValue.value && editValue.value !== (row.enabledTo || '')) {
@@ -713,15 +676,8 @@ function onRateInput(e: Event) {
   editValue.value = input.value;
 }
 
-function getRate(row: UnifiedTaxCategory): string {
-  // MFのtax_rateがあればそちらを優先表示
-  if (row.taxRate != null) {
-    if (row.taxRate === 0) return '-';
-    return `${Math.round(row.taxRate * 100)}%`;
-  }
-  const rate = extractRateFromName(row.name);
-  return rate || '-';
-}
+// getRate() → 削除済み。バックエンドのbuildDisplayRate()に集約。フロントにデータ補完責務なし。
+// 表示は {{ row.displayRate }} で直接参照。
 
 // =============== 保存 ===============
 async function saveChanges() {
@@ -763,8 +719,8 @@ function sortTax(key: keyof UnifiedTaxCategory) {
 function sortTaxByRate() {
   if (sortState.key === '_rate') { sortState.asc = !sortState.asc; } else { sortState.key = '_rate'; sortState.asc = true; }
   allTaxRows.sort((a, b) => {
-    const ra = a.taxRate != null ? a.taxRate * 100 : parseFloat(extractRateFromName(a.name)) || -1;
-    const rb = b.taxRate != null ? b.taxRate * 100 : parseFloat(extractRateFromName(b.name)) || -1;
+    const ra = a.taxRate != null ? a.taxRate * 100 : parseFloat(a.displayRate ?? "") || -1;
+    const rb = b.taxRate != null ? b.taxRate * 100 : parseFloat(b.displayRate ?? "") || -1;
     return sortState.asc ? ra - rb : rb - ra;
   });
 }

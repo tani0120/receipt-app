@@ -14,6 +14,7 @@ import { ref } from 'vue'
 import type { Client } from '@/repositories/types'
 import type { FilterOperator } from '@/api/helpers/applyFilterConditions'
 import { createRepositories } from '@/repositories'
+import { isCacheExpired } from '@/utils/cacheUtils'
 
 // Repository経由でデータアクセス
 const repos = createRepositories()
@@ -26,12 +27,12 @@ export const useClientStore = defineStore('clients', () => {
 
   // --- stale-while-revalidate ---
   async function load() {
-    if (clients.value.length) {
-      // キャッシュあり → 即時表示。裏でAPI取得（fire-and-forget）
+    if (clients.value.length && !isCacheExpired(cachedAt.value)) {
+      // キャッシュ有効 → 即時表示。裏でAPI取得（fire-and-forget）
       fetchFresh()
       return
     }
-    // キャッシュなし（初回起動 or localStorage消去後）→ APIを待つ
+    // キャッシュなし or 期限切れ → APIを待つ
     await fetchFresh()
   }
 
@@ -49,6 +50,7 @@ export const useClientStore = defineStore('clients', () => {
       migrateSharedFolderIds()
     } catch (err) {
       console.error('[clientStore] サーバー取得失敗:', err)
+      cachedAt.value = null // 次回load()でawaitに戻す
     }
   }
 

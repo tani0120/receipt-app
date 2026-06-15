@@ -129,11 +129,11 @@
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('allowedVoucherTypes', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('effectiveFrom')">
-                  {{ UI_MSG.マスタ科目_列適用開始 }} <i :class="getSortIcon('effectiveFrom')"></i>
+                  {{ UI_MSG.マスタ科目_列施行日 }} <i :class="getSortIcon('effectiveFrom')"></i>
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('effectiveFrom', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('effectiveTo')">
-                  {{ UI_MSG.マスタ科目_列適用終了 }} <i :class="getSortIcon('effectiveTo')"></i>
+                  {{ UI_MSG.マスタ科目_列廃止日 }} <i :class="getSortIcon('effectiveTo')"></i>
                   <div class="resize-handle" @mousedown.stop="onAcctResizeStart('effectiveTo', $event)"></div>
                 </th>
               </tr>
@@ -153,23 +153,22 @@
                   <span v-else-if="row.isCustom" style="color:#e65100;">カスタム</span>
                 </td>
                 <td class="td-ai">
-                  {{ getDisplayAiDet(row) }}
+                  {{ row.aiDetermination[taxMethod] }}
                 </td>
                 <td class="td-master-id" :title="row.accountId">{{ row.accountId }}</td>
                 <!-- 科目名（読み取り専用。修正はMF側で行う） -->
                 <td>{{ row.name }}</td>
                 <td class="td-sub-account"><span class="sub-account-hint">顧問先で設定</span></td>
-                <td class="td-target">{{ targetLabel(row.target) }}</td>
-                <td class="td-account-group">{{ accountGroupLabel(row.accountGroup) }}</td>
-                <td class="td-direction">{{ directionLabel(row.accountGroup) }}</td>
-                <!-- 科目分類 -->
+                <td class="td-target">{{ row.targetLabel }}</td>
+                <td class="td-account-group">{{ row.accountGroupLabel }}</td>
+                <td class="td-direction">{{ row.directionLabel }}</td>
                 <!-- 科目分類（読み取り専用） -->
-                <td>{{ getCategoryLabel(row.category) }}</td>
+                <td>{{ row.categoryLabel }}</td>
                 <!-- デフォルト税区分（読み取り専用） -->
-                <td>{{ getDisplayDefaultTax(row) }}</td>
-                <td class="td-voucher-types" :title="getAllowedVoucherTypes(row)">{{ getAllowedVoucherTypes(row) }}</td>
-                <td class="td-date">{{ row.effectiveFrom }}</td>
-                <td class="td-date">{{ row.effectiveTo ?? UI_MSG.現役 }}</td>
+                <td>{{ row.defaultTaxes[taxMethod] }}</td>
+                <td class="td-voucher-types" :title="row.displayAllowedVoucherTypes">{{ row.displayAllowedVoucherTypes }}</td>
+                <td class="td-date">{{ row.displayEffectiveFrom }}</td>
+                <td class="td-date">{{ row.displayEffectiveTo }}</td>
               </tr>
             </tbody>
           </table>
@@ -246,6 +245,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import type { Account } from '@/types/shared-account';
+import type { EnrichedAccount } from '@/api/services/accountMasterApi';
 import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
@@ -255,11 +255,7 @@ import NotifyModal from '@/components/NotifyModal.vue';
 import MfImportButton from '@/components/MfImportButton.vue';
 import MfCloudIcon from '@/components/MfCloudIcon.vue';
 import { UI_MSG } from '@/constants/uiMessages';
-import {
-  getAccountGroupDirection,
-  getCategoryLabel,
-} from '@/data/master/account-category-rules';
-import { VOUCHER_TYPE_RULES } from '@/data/master/voucherTypeRules';
+
 
 // 列幅カスタマイズ
 const acctDefaultWidths: Record<string, number> = {
@@ -278,57 +274,6 @@ const acctDefaultWidths: Record<string, number> = {
   effectiveTo: 80,
 };
 
-/** accountGroup（大分類）の日本語ラベル */
-function accountGroupLabel(ag: string): string {
-  switch (ag) {
-    case 'BS_ASSET': return 'BS資産';
-    case 'BS_LIABILITY': return 'BS負債';
-    case 'BS_EQUITY': return 'BS純資産';
-    case 'PL_REVENUE': return 'PL収益';
-    case 'PL_EXPENSE': return 'PL費用';
-    default: return ag;
-  }
-}
-
-/** target（事業形態）の日本語ラベル */
-function targetLabel(t: string): string {
-  switch (t) {
-    case 'corp': return '法人';
-    case 'individual': return '個人';
-    default: return t;
-  }
-}
-
-/** direction（方向）の日本語ラベル（accountGroupから直接判定。データ駆動） */
-function directionLabel(accountGroup: string): string {
-  const dir = getAccountGroupDirection(accountGroup);
-  switch (dir) {
-    case 'sales': return '売上';
-    case 'purchase': return '仕入';
-    case 'common': return '共通';
-    default: return dir;
-  }
-}
-
-/** 科目が許容されるvoucher_typeを算出 */
-function getAllowedVoucherTypes(row: { accountId: string; accountGroup: string; category: string }): string {
-  const debitTypes: string[] = [];
-  const creditTypes: string[] = [];
-  for (const [vtName, rule] of Object.entries(VOUCHER_TYPE_RULES)) {
-    const d = rule.debit;
-    if (d.allowedGroups?.includes(row.accountGroup) || d.allowedIds?.includes(row.accountId) || d.allowedCategories?.includes(row.category)) {
-      debitTypes.push(vtName);
-    }
-    const c = rule.credit;
-    if (c.allowedGroups?.includes(row.accountGroup) || c.allowedIds?.includes(row.accountId) || c.allowedCategories?.includes(row.category)) {
-      creditTypes.push(vtName);
-    }
-  }
-  const parts: string[] = [];
-  if (debitTypes.length > 0) parts.push(`借:${debitTypes.join(',')}`);
-  if (creditTypes.length > 0) parts.push(`貸:${creditTypes.join(',')}`);
-  return parts.join(' / ') || '—';
-}
 const { columnWidths: acctColWidths, onResizeStart: onAcctResizeStart } = useColumnResize('master-accounts', acctDefaultWidths);
 
 const PAGE_SIZE = 50;
@@ -419,7 +364,7 @@ async function executeImport() {
 
     if (!result.hasDiff) {
       // 差分なし → MFフィールド付与のみ
-      accountRows.splice(0, accountRows.length, ...result.updatedAccounts);
+      accountRows.splice(0, accountRows.length, ...(result.updatedAccounts as unknown as EnrichedAccount[]));
       await modal.notify({ title: `MF勘定科目 ${result.mfCount}件と照合完了`, message: result.reportLines.join('\n'), variant: 'success' });
       markClean();
       return;
@@ -435,7 +380,7 @@ async function executeImport() {
     if (!confirmed) return;
 
     // 差分適用 → reactiveを同期
-    accountRows.splice(0, accountRows.length, ...result.updatedAccounts);
+    accountRows.splice(0, accountRows.length, ...(result.updatedAccounts as unknown as EnrichedAccount[]));
     await modal.notify({ title: `MF差分マージ完了（${result.summary}）`, variant: 'success' });
     markClean();
   } catch (err) {
@@ -466,13 +411,13 @@ const taxMethod = ref<TaxMethodType>('proportional');
 const accountFilter = ref('');
 const accountPage = ref(1);
 
-const accountRows: Account[] = reactive([...masterAccounts.value]);
+const accountRows: EnrichedAccount[] = reactive([...masterAccounts.value] as unknown as EnrichedAccount[]);
 
 // SWR再検証完了後にaccountRowsを最新データに同期する
 // localStorageキャッシュ→即時描画→fetchFresh()完了→ストア更新→ここでaccountRows再同期
 // マスタ画面は編集機能全廃済みのため、編集中データ上書きのリスクなし
 watch(masterAccounts, (newVal) => {
-  accountRows.splice(0, accountRows.length, ...newVal);
+  accountRows.splice(0, accountRows.length, ...(newVal as unknown as EnrichedAccount[]));
 }, { deep: true });
 
 // モーダルヘルパー
@@ -518,23 +463,9 @@ async function saveChanges() {
   }
 }
 
-/** 課税方式に応じた「税区分自動判定」列の表示値（accountGroupのdirectionから導出） */
-function getDisplayAiDet(row: Account): string {
-  if (taxMethod.value === 'exempt') return '';
-  const dir = getAccountGroupDirection(row.accountGroup);
-  return dir !== 'common' ? '○' : '';
-}
 
-/** 課税方式に応じた「デフォルト税区分」列の表示値 */
-function getDisplayDefaultTax(row: Account): string {
-  if (taxMethod.value === 'exempt') return UI_MSG.免税対象外;
-  return getTaxCategoryName(row.defaultTaxCategoryId);
-}
 
-function getTaxCategoryName(id?: string): string {
-  if (!id) return '';
-  return settings.resolveTaxCategoryShortName(id);
-}
+
 
 function compareByKey<T>(arr: T[], key: keyof T, asc: boolean): void {
   arr.sort((a, b) => {

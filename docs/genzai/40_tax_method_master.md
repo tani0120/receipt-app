@@ -2,7 +2,7 @@
 
 > 作成: 2026-05-28
 > 実装完了: 2026-05-29
-> 最終更新: 2026-06-04（MF IDは事業者固有と確定。全照合を名前ベースに統一。available.jsonキーをマスタIDに移行）
+> 最終更新: 2026-06-15（フィルタ責務をバックエンドに集約。visibleIn+displayRate導入。フロントにフィルタ責務なし・データ補完責務なし）
 > 統合元: tax_method_master_plan.md（計画書） + report_tax_master_issues.md（課題レポート）
 
 ---
@@ -49,7 +49,7 @@
 
 - `data/mf-tax-available.json` に4方式分（proportional/individual/simplified/exempt）のavailableデータを永続化
 - インメモリキャッシュ + JSON読み書き
-- `loadTaxAvailable()` / `saveTaxAvailable()` / `getAllTaxAvailable()` / `isAvailableByMfId()`
+- `loadTaxAvailable()` / `saveTaxAvailable()` / `getAllTaxAvailable()` / `getTaxAvailableForMethod()`
 - **ゴミデータ清掃**: `loadTaxAvailable()`で有効キー（4方式）以外を自動除去。過去のバグでmfIdがルートキーに混入したデータを起動時に清掃
 
 **APIエンドポイント**: `src/api/routes/mfRoutes.ts`
@@ -57,19 +57,36 @@
 - `GET /api/mf/tax-available` — 4方式分のavailableデータ取得
 - `PUT /api/mf/tax-available/:method` — 特定方式のavailable更新
 
-### 2. 全社マスタのフィルタ（方式マスタベース・データ駆動）
+### 2. 全社マスタのフィルタ（バックエンド集約・visibleIn方式）
 
-**実装**: `MockMasterTaxCategoriesPage.vue` `displayTaxRows`（API取得+2ref方式）
+> **フロントにフィルタ責務なし。フロントにデータ補完責務なし。**
 
-- セグメントボタンで方式を選択 → `mf-tax-available.json` の方式マスタデータでフィルタ
-- 顧問先依存のMFリアルタイム `available` は使わない
-- ~~IDパターンマッチはフォールバック~~ → **削除済み（2026-05-29）。availableデータなし時は`defaultVisible`で全件表示**
-- `direction='common'`（不明・対象外）は全方式で常に表示
-- MF独自カスタム税区分（`isCustom && source === 'mf'`）は常に表示
+**バックエンド実装**: `src/api/services/accountMasterApi.ts`
+
+- `assignVisibility(row)` — 各行に`visibleIn`フラグ（4方式分のboolean）を付与。ドメインルール集約
+- `buildDisplayRate(row)` — 税率の表示文字列を生成。taxRateがあれば変換、なければ名前から抽出
+- `enrichRow(row)` — `assignVisibility` + `buildDisplayRate`を一括付与
+- `getAllTaxCategories()` — 常にenrichRow付きで全件返却
+- `getFilteredTaxCategories(params)` — enrichRow付き + visibleInベースでフィルタ
+
+**フィルタルール**（`assignVisibility`内）:
+- `direction='common'`（不明・対象外）→ 全方式で常に表示
+- MF独自カスタム税区分（`isCustom && source === 'mcp'`）→ 全方式で常に表示
+- 免税タブ → commonのみ（上2つで処理済み。それ以外はfalse）
+- MFのavailableデータ（`mf-tax-available.json`）で判定（データ駆動）
+- availableデータなし → `!hidden && defaultVisible`（安全なフォールバック）
+
+**フロント実装**: `MockMasterTaxCategoriesPage.vue`
+
+- `filteredTaxRows = computed(() => allTaxRows.filter(row => row.visibleIn?.[taxMethod.value] === true))`
+- 税率表示: `{{ row.displayRate }}`
+- フロントにはフィルタ判定ロジックもデータ補完ロジックもない
 
 > [!IMPORTANT]
-> IDパターンマッチヘルパー（`isSimplifiedSales`/`isIndividualPurchase`/`isObsoleteRate`）は2026-05-29に完全削除。
-> availableデータが存在する限りIDベースのフィルタは不要であり、IDの命名規則変更時に壊れるリスクがあった。
+> 2026-06-15: フィルタ責務をフロント→バックエンドに完全集約。
+> 旧: `filteredTaxRows`（computed 17行）+ `fetchTaxAvailable()` + `getRate()`
+> 新: `row.visibleIn?.[mode]`（1行）+ `{{ row.displayRate }}`
+> IDパターンマッチヘルパーは2026-05-29に削除済み。
 
 ### 3. MFインポート差分マージ（バックエンドAPI）
 
@@ -151,14 +168,17 @@ export const MF_TAX_METHOD_TO_PATTERN: Record<string, TaxMethodKey> = {
 - 旧問題の `direction: 'common'` 固定値は完全に排除済み
 - ~~旧実装はmfIdで照合していたが、MF IDは事業者固有のため名前照合に修正（2026-06-04）~~
 
-### 7. 顧問先ページ（MFリアルタイムavailable使用）
+### 7. 顧問先ページ（Phase 2: 完了）
 
 **実装**: `MockClientTaxPage.vue`
 
-- 引き続きMFのリアルタイム `available` でフィルタ（顧問先の課税方式に依存するため正しい）
+- **全社マスタと同じvisibleIn方式に移行完了（2026-06-15）**
+- フロント: `row.visibleIn?.[mode]`（1行）+ `{{ row.displayRate }}`
+- バックエンド: `getClientTaxCategories()` がenrichRow付きで返却
+- `importClientTaxes()`のレスポンスにもenrichRow適用済み
+- フロントから`extractRateFromName`/`getRate()`/`fetchTaxAvailable()`を完全削除
 - 名前照合でマスタ属性を引き継ぐ処理を実装済み（2026-06-04修正: mfId照合→名前照合）
 - MFインポート時に `consumptionTaxMode`（課税方式）を自動更新
-- IDパターンマッチ・名前パターンマッチは完全削除。`simplifiedOnly`フラグ + `taxRate`フィールドでデータ駆動
 - 詳細は 41_tax_client_design.md を参照
 
 ### 8. MFカスタム税区分
@@ -184,14 +204,16 @@ TaxCategory型に構造化属性（`tax_type` / `business_type` / `purpose_type`
 
 | ファイル | 役割 |
 |---------|------|
+| `src/api/services/accountMasterApi.ts` | **フィルタ責務集約**: `assignVisibility()` / `buildDisplayRate()` / `enrichRow()` |
 | `src/api/services/mfTaxImportService.ts` | **税区分インポート処理（バックエンド）** preview/apply/detectDiff |
-| `src/api/services/mfTaxAvailableStore.ts` | 4方式分available管理ストア（ゴミデータ清掃バリデーション付き） |
+| `src/api/services/mfTaxAvailableStore.ts` | 4方式分available管理ストア（`getTaxAvailableForMethod()`をassignVisibilityが参照） |
 | `src/api/routes/mfRoutes.ts` | MF API・sync-all・tax-available・import-taxes エンドポイント |
+| `src/api/routes/taxCategoryRoutes.ts` | 税区分API（GET /master等。enrichRow付きレスポンス） |
 | `data/mf-tax-available.json` | 4方式分availableデータ（永続化）— キーはマスタID（`SALES_TAXABLE_10`等） |
 | `data/tax-category-master.json` | 全社マスタ税区分151件（mfId削除済み・名前照合） |
-| `src/views/master/MockMasterTaxCategoriesPage.vue` | 全社マスタUI（フィルタ・API呼び出し） |
-| `src/views/client/MockClientTaxPage.vue` | 顧問先税区分UI（MF available使用） |
-| `src/types/shared-tax-category.ts` | TaxCategory型・ユーティリティ関数 |
+| `src/views/master/MockMasterTaxCategoriesPage.vue` | 全社マスタUI（UIフィルタ`row.visibleIn`のみ。ドメインルールなし） |
+| `src/views/client/MockClientTaxPage.vue` | 顧問先税区分UI（visibleInフィルタ・displayRate表示。全社マスタと同一パターン） |
+| `src/types/shared-tax-category.ts` | TaxCategory型（`visibleIn` / `displayRate`フィールド追加済み） |
 
 ---
 
@@ -210,6 +232,21 @@ TaxCategory型に構造化属性（`tax_type` / `business_type` / `purpose_type`
 |            | • Vueフィルタを`row.mfId`→`row.id`（マスタID）に変更 |
 |            | • 設計書40/41のmfId照合の嘘を訂正 |
 | 2026-06-07 | **全社税区分フィルタ方式変更:** `filteredTaxRows`（computed）→`displayTaxRows`（API取得+2ref方式）に移行。保存用`allTaxRows`と表示用`displayTaxRows`の分離。`refreshDisplayTaxRows()`で方式切替時にAPI再取得。apply後のsource変換修正（onMountedと同じ変換をapply後にも適用） |
+| 2026-06-15 | **フィルタ責務バックエンド集約（Phase 1: 全社マスタ完了）:** |
+|            | • `filterByTaxMethod()` → `assignVisibility()` に置換。各行に`visibleIn`（4方式分boolean）を付与 |
+|            | • `buildDisplayRate()` 新規追加。`getRate()`/`extractRateFromName()`のデータ補完をバックエンドに集約 |
+|            | • `enrichRow()` 新規追加。`assignVisibility` + `buildDisplayRate`を一括付与 |
+|            | • `getAllTaxCategories()` / `getFilteredTaxCategories()` が常にenrichRow付きで返却 |
+|            | • フロント: `filteredTaxRows`を17行→1行（`row.visibleIn?.[mode]`）に簡素化 |
+|            | • フロント: `taxAvailable` / `fetchTaxAvailable()` / `getRate()` / `extractRateFromName` import を削除 |
+|            | • TaxCategory型に`visibleIn`/`displayRate`フィールド追加 |
+|            | • 検証: API実測値 proportional=44, individual=73, simplified=78, exempt=2（全て期待値一致） |
+| 2026-06-15 | **Phase 2完了: 顧問先税区分もvisibleIn方式に移行:** |
+|            | • `getClientTaxCategories()` にenrichRow適用。`getFilteredClientTaxCategories()`の`filterByTaxMethod`参照切れを修正 |
+|            | • `importClientTaxes()`のレスポンスにenrichRow適用（インポート直後の0件表示バグ防止） |
+|            | • `enrichRow()`をexport化（`mfTaxImportService.ts`から参照） |
+|            | • フォールバック改善: `!hidden && defaultVisible` → simplifiedOnly/individualOnlyの静的属性で方式別判定 |
+|            | • フロント: `filteredTaxRows`17行→1行、`extractRateFromName`/`getRate()`/`fetchTaxAvailable()`全削除 |
 
 ---
 

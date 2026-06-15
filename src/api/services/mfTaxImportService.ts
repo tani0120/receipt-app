@@ -565,9 +565,14 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
 
   console.log(`[mfTaxImportService] 顧問先インポート完了: clientId=${clientId}, マスタ照合=${matchedCount}, カスタム=${customCount}, 非表示化=${hiddenCount}`)
 
+  // 7. レスポンスにvisibleIn（方式別表示可否）/displayRate（表示用税率）を付与
+  //    L549でavailable更新済みなので、enrichRowは最新のavailableデータを参照する
+  const { enrichRow } = await import('./accountMasterApi')
+  const enrichedImported: TaxCategory[] = imported.map(row => enrichRow(row))
+
   return {
     success: true,
-    imported,
+    imported: enrichedImported,
     matchedCount,
     customCount,
     consumptionTaxMode,

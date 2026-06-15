@@ -9,6 +9,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { TaxCategory } from '@/types/shared-tax-category'
 import { createRepositories } from '@/repositories'
+import { isCacheExpired } from '@/utils/cacheUtils'
 
 /** マスタレベルの税区分拡張 */
 export interface MasterTaxCategory extends TaxCategory {
@@ -25,12 +26,12 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
   let saveTimer: ReturnType<typeof setTimeout> | null = null
 
   async function load() {
-    if (allTaxCategories.value.length) {
-      // キャッシュあり → 即時表示。裏でAPI取得（fire-and-forget）
+    if (allTaxCategories.value.length && !isCacheExpired(cachedAt.value)) {
+      // キャッシュ有効 → 即時表示。裏でAPI取得（fire-and-forget）
       fetchFresh()
       return
     }
-    // キャッシュなし → APIを待つ
+    // キャッシュなし or 期限切れ → APIを待つ
     await fetchFresh()
   }
 
@@ -42,6 +43,7 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
       console.log(`[taxMasterStore] ${items.length}件をサーバーから取得`)
     } catch (err) {
       console.error('[taxMasterStore] サーバー取得失敗:', err)
+      cachedAt.value = null // 次回load()でawaitに戻す
     }
   }
 

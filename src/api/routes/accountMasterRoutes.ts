@@ -46,8 +46,8 @@ function validateFilterParams(params: { businessType?: string; page: number; pag
   if (isNaN(params.page) || params.page < 1) {
     return 'page は1以上の数値を指定してください'
   }
-  if (isNaN(params.pageSize) || params.pageSize < 1 || params.pageSize > 200) {
-    return 'pageSize は1〜200の数値を指定してください'
+  if (isNaN(params.pageSize) || params.pageSize < 1 || params.pageSize > 500) {
+    return 'pageSize は1〜500の数値を指定してください'
   }
   return null
 }

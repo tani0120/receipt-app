@@ -10,6 +10,7 @@ import { ref } from 'vue'
 import type { Lead } from '@/repositories/types'
 import type { FilterOperator } from '@/api/helpers/applyFilterConditions'
 import { createRepositories } from '@/repositories'
+import { isCacheExpired } from '@/utils/cacheUtils'
 
 // Repository経由でデータアクセス
 const repos = createRepositories()
@@ -21,12 +22,10 @@ export const useLeadStore = defineStore('leads', () => {
   const lastError = ref<string | null>(null)
 
   async function load() {
-    if (leads.value.length) {
-      // キャッシュあり → 即時表示。裏でAPI取得（fire-and-forget）
+    if (leads.value.length && !isCacheExpired(cachedAt.value)) {
       fetchFresh()
       return
     }
-    // キャッシュなし → APIを待つ
     await fetchFresh()
   }
 
@@ -38,6 +37,7 @@ export const useLeadStore = defineStore('leads', () => {
       console.log(`[leadStore] ${list.length}件をサーバーから取得`)
     } catch (err) {
       console.error('[leadStore] サーバー取得失敗:', err)
+      cachedAt.value = null
     }
   }
 

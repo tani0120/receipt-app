@@ -12,6 +12,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Staff } from '@/repositories/types'
 import { createRepositories } from '@/repositories'
+import { isCacheExpired } from '@/utils/cacheUtils'
 
 // Repository経由でデータアクセス
 const repos = createRepositories()
@@ -22,12 +23,10 @@ export const useStaffStore = defineStore('staff', () => {
   const lastError = ref<string | null>(null)
 
   async function load() {
-    if (staffList.value.length) {
-      // キャッシュあり → 即時表示。裏でAPI取得（fire-and-forget）
+    if (staffList.value.length && !isCacheExpired(cachedAt.value)) {
       fetchFresh()
       return
     }
-    // キャッシュなし → APIを待つ
     await fetchFresh()
   }
 
@@ -39,6 +38,7 @@ export const useStaffStore = defineStore('staff', () => {
       console.log(`[staffStore] ${list.length}件をサーバーから取得`)
     } catch (err) {
       console.error('[staffStore] サーバー取得失敗:', err)
+      cachedAt.value = null
     }
   }
 

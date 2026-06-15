@@ -559,6 +559,18 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 | 6 | apply後source変換修正（onMountedと同じsource変換をapply後にも適用） | `MockMasterTaxCategoriesPage.vue` |
 | 7 | 検証#14-#19全合格（ブラウザUI・API・MFインポート・保存・リロード） | — |
 
+### 2026-06-15 Phase 8: フィルタ責務バックエンド集約（全社マスタ）
+
+| 修正内容 | 対象ファイル |
+|---|---|
+| `filterByTaxMethod()` → `assignVisibility()` に置換。各行に`visibleIn`（4方式分boolean）を付与 | `accountMasterApi.ts` |
+| `buildDisplayRate()` 新規追加。`getRate()`/`extractRateFromName()`のデータ補完をバックエンド集約 | `accountMasterApi.ts` |
+| `enrichRow()` 新規追加。`assignVisibility` + `buildDisplayRate`を一括付与 | `accountMasterApi.ts` |
+| TaxCategory型に`visibleIn`/`displayRate`フィールド追加 | `shared-tax-category.ts` |
+| `filteredTaxRows`を17行→1行（`row.visibleIn?.[mode]`）に簡素化 | `MockMasterTaxCategoriesPage.vue` |
+| `taxAvailable`/`fetchTaxAvailable()`/`getRate()`/`extractRateFromName` import を削除 | `MockMasterTaxCategoriesPage.vue` |
+| API実測値: proportional=44, individual=73, simplified=78, exempt=2（全て期待値一致） | — |
+
 ---
 
 ## 11. 前セッション実績（税区分適正化）と対比
@@ -571,7 +583,7 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 | 2 | 顧問先インポートのバックエンド移行 | フロント200行→40行。API 1本化 |
 | 3 | IDパターンマッチ完全削除 | 4関数削除。ID命名規則変更に耐える設計 |
 | 4 | `simplifiedOnly`フラグ追加 | 名前パターンマッチ→データ駆動。276件JSON更新 |
-| 5 | `taxRate`優先化 | `extractRateFromName()`→`taxRate`フィールド優先使用 |
+| 5 | `taxRate`優先化 → **`displayRate`化（2026-06-15）** | `extractRateFromName()`→`taxRate`→`displayRate`（バックエンド生成）に完全集約 |
 
 ### 11-2. 勘定科目で対応すべき内容
 
@@ -582,7 +594,7 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 | IDパターンマッチ削除 | 該当なし（勘定科目はIDパターンマッチなし） | — |
 | `simplifiedOnly`フラグ（データ駆動化） | 該当なし（不要） | — |
 | `taxRate`優先化 | 該当なし | — |
-| availableデータでフィルタ（データ駆動） | `target` + `category`ベース（既にデータ駆動） | — |
+| availableデータでフィルタ → **visibleIn方式（2026-06-15）** | `target` + `category`ベース（既にデータ駆動） | — |
 | — | **バリデーションSSOT統合** | **✅ 完了** |
 | — | **consumptionTaxMode型統一** | **✅ 完了** |
 | — | **二重定義・import残留解消** | **✅ 完了** |

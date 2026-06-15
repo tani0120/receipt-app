@@ -31,9 +31,9 @@ export type Account = {
     defaultTaxCategoryId?: string
     /** 表示/非表示フラグ（true=UIで非表示。物理削除禁止 → ルール3） */
     hidden: boolean
-    /** 適用開始日（ISO 8601形式。例: '2019-10-01'） */
-    effectiveFrom: string
-    /** 適用終了日（null=現役。終了した科目は日付を設定 → ルール1） */
+    /** 施行日（ISO 8601形式。null=常に有効。勘定科目は通常null） */
+    effectiveFrom: string | null
+    /** 廃止日（null=現役。終了した科目は日付を設定 → ルール1） */
     effectiveTo: string | null
     /** 表示順 */
     sortOrder: number

@@ -10,7 +10,7 @@ import { createApiClient } from '@/utils/apiClient'
 import type { Account } from '@/types/shared-account'
 import type { AccountMasterRepository } from '../types'
 
-const api = createApiClient('/api/account-master')
+const api = createApiClient('/api/accounts')
 
 export const httpAccountMasterRepo: AccountMasterRepository = {
   getMaster: async () => {

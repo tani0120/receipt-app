@@ -28,7 +28,7 @@ import {
   deriveMfAccountGroup,
 } from '../../data/master/mf-account-category-mapping'
 import type { Account } from '../../types/shared-account'
-import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
+import { DEFAULT_ACCOUNT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 差分検知結果
@@ -184,7 +184,7 @@ export async function importMasterAccounts(
         category: mf.category,
         defaultTaxCategoryId: masterTaxId,
         hidden: false,
-        effectiveFrom: DEFAULT_EFFECTIVE_FROM,
+        effectiveFrom: DEFAULT_ACCOUNT_EFFECTIVE_FROM,
         effectiveTo: null,
         sortOrder: maxSort,
         isCustom: false,

@@ -29,9 +29,9 @@ export type TaxCategory = {
     aiSelectable: boolean
     /** 表示/非表示フラグ（true=UIで非表示。物理削除禁止 → ルール3） */
     hidden: boolean
-    /** 適用開始日（ISO 8601形式。例: '2019-10-01'。MF未照合行はnull=不明） */
+    /** 施行日（ISO 8601形式。例: '2019-10-01'。MF未照合行はnull=不明） */
     effectiveFrom: string | null
-    /** 適用終了日（null=現役。旧税率は日付を設定 → ルール1） */
+    /** 廃止日（null=現役。旧税率は日付を設定 → ルール1） */
     effectiveTo: string | null
     /** 利用開始日（この事務所/顧問先で使い始めた日。MFインポート日など） */
     enabledFrom?: string | null
@@ -78,6 +78,15 @@ export type TaxCategory = {
     isPurchaseDefault?: boolean
     /** デフォルト順復元用: コピー/追加時の挿入位置直前の行ID */
     insertAfter?: string
+    /** 課税方式別の表示可否（バックエンドで判定済み。読み取り専用） */
+    visibleIn?: {
+      proportional: boolean
+      individual: boolean
+      simplified: boolean
+      exempt: boolean
+    }
+    /** 表示用税率文字列（バックエンドで生成。読み取り専用）例: "10%", "7.8%", "-" */
+    displayRate?: string
 }
 
 /**

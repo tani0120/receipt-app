@@ -10,6 +10,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Account } from '@/types/shared-account'
 import { createRepositories } from '@/repositories'
+import { isCacheExpired } from '@/utils/cacheUtils'
 
 /** マスタレベルの科目拡張（非表示フラグ＋カスタム識別） */
 export interface MasterAccount extends Account {
@@ -26,12 +27,12 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   let saveTimer: ReturnType<typeof setTimeout> | null = null
 
   async function load() {
-    if (allAccounts.value.length) {
-      // キャッシュあり → 即時表示。裏でAPI取得（fire-and-forget）
+    if (allAccounts.value.length && !isCacheExpired(cachedAt.value)) {
+      // キャッシュ有効 → 即時表示。裏でAPI取得（fire-and-forget）
       fetchFresh()
       return
     }
-    // キャッシュなし → APIを待つ
+    // キャッシュなし or 期限切れ → APIを待つ
     await fetchFresh()
   }
 
@@ -43,6 +44,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
       console.log(`[accountMasterStore] ${data.length}件をサーバーから取得`)
     } catch (err) {
       console.error('[accountMasterStore] サーバー取得失敗:', err)
+      cachedAt.value = null // 次回load()でawaitに戻す
     }
   }
 

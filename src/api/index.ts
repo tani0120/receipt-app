@@ -16,6 +16,7 @@ import taxCategory from './routes/taxCategoryRoutes'
 import vendorRoutes from './routes/vendorRoutes'
 import industryVectorRoutes from './routes/industryVectorRoutes'
 import staffRoutes from './routes/staffRoutes'
+import authRoutes from './routes/authRoutes'
 import confirmedJournalRoutes from './routes/confirmedJournalRoutes'
 import docStore from './routes/docStore'
 import documents from './routes/documents'
@@ -57,6 +58,7 @@ const routes = app
     .route('/api/vendors', vendorRoutes)
     .route('/api/industry-vectors', industryVectorRoutes)
     .route('/api/staff', staffRoutes)
+    .route('/api/auth', authRoutes)
     .route('/api/confirmed-journals', confirmedJournalRoutes)
     .route('/api/doc-store', docStore)
     .route('/api/documents', documents)
