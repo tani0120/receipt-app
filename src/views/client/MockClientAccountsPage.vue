@@ -164,8 +164,7 @@
                   <i v-else class="fa-solid fa-eye td-show" @click="hideRow(row)" title="非表示化"></i>
                 </td>
                 <td style="text-align:center;font-size:11px;color:#666;">
-                  <span v-if="row.source === 'mf'" style="color:#E65100;">MF連携</span>
-                  <span v-else><i class="fa-solid fa-building-columns" style="color:#1976D2;font-size:12px;"></i> 全社</span>
+                  {{ row.sourceLabel }}
                 </td>
                 <td class="td-ai">
                   {{ row.aiDetermination[clientTaxMethod] }}
@@ -254,8 +253,9 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 
 import type { Account } from '@/types/shared-account';
-import type { EnrichedAccount } from '@/api/services/accountMasterApi';
-import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
+import type { EnrichedAccount } from '@/types/shared-account';
+import type { TaxCategory } from '@/types/shared-tax-category';
+import { useClientAccountStore } from '@/stores/clientAccountStore';
 import { useClients } from '@/features/client-management/composables/useClients';
 
 import { useColumnResize } from '@/composables/useColumnResize';
@@ -324,11 +324,12 @@ async function importFromMf() {
       throw new Error(err.error ?? err.detail ?? UI_MSG.MF勘定科目インポート失敗);
     }
     const data = await res.json();
-    // APIレスポンスにupdatedAccountsがあれば直接使用（Repository直叩き廃止）
-    if (data.updatedAccounts) {
-      accountRows.splice(0, accountRows.length, ...data.updatedAccounts);
-    }
 
+    // バックエンドで保存完了済み → Store再フェッチでenrich済みデータを取得（SSOT）
+    await clientAccountStore.fetchFresh(props.clientId);
+    // watchでaccountRowsに自動同期される
+
+    markClean();
     await modal.notify({
       title: UI_MSG.MFインポート完了,
       message: data.message ?? `${data.available}件の勘定科目をインポートしました`,
@@ -360,17 +361,40 @@ const clientTaxMethod = computed<'proportional' | 'individual' | 'simplified' | 
   if (raw === 'individual') return 'individual';
   return 'proportional'; // デフォルト → 原則（一括比例）
 });
-
-// =============== composable接続（useAccountSettings経由） ===============
-// clientIdはprops経由で必須。defineProps<{ clientId: string }>()で型安全。
-const settings = useAccountSettings('client', props.clientId);
+// =============== データソース（SSOT: バックエンド） ===============
+const clientAccountStore = useClientAccountStore();
 const accountFilter = ref('');
 const accountPage = ref(1);
 
-// =============== composable接続 ===============
+// 税区分リスト（科目編集時のドロップダウン用。API直接取得）
+const clientTaxCategories = ref<TaxCategory[]>([]);
+
+// 初回ロード（onMounted内で非同期実行。トップレベルawaitはSuspense必須のため使わない）
+onMounted(async () => {
+  clientAccountStore.load(props.clientId);
+  // 税区分もAPI直接取得（科目編集時のドロップダウン用）
+  try {
+    const res = await fetch(`/api/tax-categories/client/${encodeURIComponent(props.clientId)}?pageSize=200&taxMethod=all`);
+    if (res.ok) {
+      const data = await res.json() as { items: TaxCategory[] };
+      clientTaxCategories.value = data.items;
+    }
+  } catch (err) {
+    console.error('[顧問先科目] 税区分取得失敗:', err);
+  }
+});
+
+// =============== 科目データ（Store直結） ===============
 const accountRows: EnrichedAccount[] = reactive(
-  [...settings.accounts.value] as unknown as EnrichedAccount[]
+  [...clientAccountStore.getAccounts(props.clientId)]
 );
+
+// Store更新時にaccountRowsを同期
+watch(() => clientAccountStore.getAccounts(props.clientId), (newVal) => {
+  if (newVal.length > 0) {
+    accountRows.splice(0, accountRows.length, ...newVal);
+  }
+}, { deep: true });
 
 // モーダルヘルパー
 const modal = useModalHelper();
@@ -378,17 +402,10 @@ const modal = useModalHelper();
 // 未保存変更ガード
 const { markDirty, markClean } = useUnsavedGuard(saveChanges, modal);
 
-// ★DL-042: subAccountのlocalStorage復元を廃止
-// subAccountはsaveChanges()でAPI経由でサーバー保存済み。
-// 復元はsettings.accounts（API GET）から取得する設計に移行予定。
-// 現時点ではsettings.accounts.valueにsubAccountが含まれるため、初期値から復元される。
-
-// composableのtoggleVisibility → buildFullAccountListでhiddenIds→hidden変換済み
-// Vue側のwatch変換は不要（Phase 3 #12で削除）
-
-/** 科目が非表示か（マスタ非表示 or 顧問先非表示） */
+/** 科目が非表示か */
 function isAccountHidden(accountId: string): boolean {
-  return settings.isAccountHidden(accountId);
+  const row = accountRows.find(a => a.accountId === accountId);
+  return row?.hidden === true;
 }
 
 // isMasterCustomAccountはmaster-custom削除により不要（常にfalse）。削除済み。
@@ -411,20 +428,14 @@ watch(filteredAccountRows, () => { if (accountPage.value > accountTotalPages.val
 // =============== チェックボックス選択 ===============
 
 function hideRow(row: Account) {
-  const id = row.accountId;
-  if (clientId.value) {
-    settings.toggleAccountVisibility(id);
-  }
   row.hidden = true;
   row.effectiveTo = row.effectiveTo ?? new Date().toISOString().slice(0, 10);
+  markDirty('科目の非表示化');
 }
 function showRow(row: Account) {
-  const id = row.accountId;
-  if (clientId.value) {
-    settings.toggleAccountVisibility(id);
-  }
   row.hidden = false;
   row.effectiveTo = null;
+  markDirty('科目の表示復元');
 }
 async function deleteRow(row: Account) {
   if (!row.isCustom) return;
@@ -444,8 +455,8 @@ async function saveChanges() {
   });
 
   try {
-    // composable経由で保存（autoSaveでサーバーに自動保存される）
-    settings.saveAccounts(accountRows, subAccounts);
+    // Store経由で保存（debounceSaveでサーバーに自動保存される）
+    clientAccountStore.saveAll(clientId.value, accountRows, subAccounts);
     markClean();
     modal.notify({ title: UI_MSG.保存成功, variant: 'success' });
   } catch {
@@ -490,7 +501,7 @@ function commitEdit(row: Account) {
       row.category = editValue.value;
       // category変更時にdefaultTaxCategoryIdを自動設定
       {
-        const defaults = deriveCategoryDefaults(row.accountGroup, settings.taxCategories.value);
+       const defaults = deriveCategoryDefaults(row.accountGroup, clientTaxCategories.value);
         row.defaultTaxCategoryId = defaults.defaultTaxCategoryId;
       }
       break;
@@ -519,7 +530,12 @@ const { categoryGroups } = useCategoryGroups(accountRows);
 
 function filteredTaxCategories(accountGroup: string) {
   const dir = getAccountGroupDirection(accountGroup);
-  return settings.filteredTaxCategories(dir);
+  // API直接取得した税区分からdirectionでフィルタ（SSOT: バックエンド）
+  return clientTaxCategories.value.filter(tc => {
+    if (tc.hidden) return false;
+    if (dir === 'common') return true;
+    return tc.direction === dir || tc.direction === 'common';
+  });
 }
 
 // =============== ドラッグ並替え ===============

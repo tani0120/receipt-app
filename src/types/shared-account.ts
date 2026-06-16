@@ -69,3 +69,38 @@ export type Account = {
     // 仕訳送信時はmfMappingServiceがMCPからリアルタイム取得+名前照合で解決する。
 }
 
+// ────────────────────────────────────────────
+// APIレスポンス用 enrich済み型（表示フィールド付き）
+// ────────────────────────────────────────────
+
+/**
+ * enrich済み勘定科目（APIレスポンス用）
+ *
+ * Account（永続化形式）に表示用の派生フィールドを付与した型。
+ * バックエンドの enrichAccountRow() で生成される。
+ * フロントはこの値をそのまま表示するだけ（ドメイン変換はバックエンド責務）。
+ *
+ * 永続化対象ではない。保存時はバックエンドがAccountフィールドのみ抽出して永続化する。
+ */
+export interface EnrichedAccount extends Account {
+    /** 大分類ラベル（例: 'BS資産'） */
+    accountGroupLabel: string
+    /** 事業形態ラベル（例: '法人'） */
+    targetLabel: string
+    /** 方向ラベル（例: '売上'） */
+    directionLabel: string
+    /** 科目分類ラベル（例: '現金及び預金'） */
+    categoryLabel: string
+    /** 施行日表示（null → '—'） */
+    displayEffectiveFrom: string
+    /** 廃止日表示（null → '現役'） */
+    displayEffectiveTo: string
+    /** 証票意味許容表示（例: '借:領収書,請求書 / 貸:振替'） */
+    displayAllowedVoucherTypes: string
+    /** 出典ラベル（'MCP' / 'カスタム' / '全社'） */
+    sourceLabel: string
+    /** 課税方式別AI判定フラグマップ（例: { proportional: '○', exempt: '' }） */
+    aiDetermination: Record<string, string>
+    /** 課税方式別デフォルト税区分名マップ（例: { proportional: '課税売上10%', exempt: '対象外' }） */
+    defaultTaxes: Record<string, string>
+}

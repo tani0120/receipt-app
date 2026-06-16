@@ -18,7 +18,7 @@
  * 【NonVendorAccountEntry / FlatNonVendorAccountRow】
  *   科目候補辞書の型定義（Step 4 将来実装用）。
  *   INDUSTRY_VECTOR_CORPORATE / INDUSTRY_VECTOR_SOLE と同じ位置づけ（辞書定義のみ）。
- *   実際の仕訳生成時は useClientAccounts(clientId) から動的に科目を取得すること。
+ *   実際の仕訳生成時は clientAccountStore.getAccounts(clientId) から動的に科目を取得すること。
  *
  *   vendors_global.ts に Vendor型として統合済み（DL027-4）。non_vendor_type フィールドで識別。
  *

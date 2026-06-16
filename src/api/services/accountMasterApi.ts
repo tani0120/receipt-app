@@ -16,7 +16,7 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs'
 import { getTaxAvailableForMethod } from './mfTaxAvailableStore'
 import { join } from 'path'
-import type { Account, AccountGroup } from '../../types/shared-account'
+import type { Account, AccountGroup, EnrichedAccount } from '../../types/shared-account'
 import type { TaxCategory, TaxDirection } from '../../types/shared-tax-category'
 import { getAccountGroupDirection, getCategoryLabel } from '../../data/master/account-category-rules'
 import { VOUCHER_TYPE_RULES } from '../../data/master/voucherTypeRules'
@@ -39,7 +39,7 @@ function loadAccounts(): Account[] {
   }
 }
 
-function loadTaxCategories(): TaxCategory[] {
+export function loadTaxCategories(): TaxCategory[] {
   try {
     const raw = readFileSync(join(DATA_DIR, 'tax-category-master.json'), 'utf-8')
     const taxes = JSON.parse(raw) as TaxCategory[]
@@ -60,24 +60,8 @@ let masterAccounts: Account[] = loadAccounts()
 
 // ────────────────────────────────────────────
 // 科目マスタ — enrichAccountRow（バックエンド責務集約）
+// EnrichedAccount型はshared-account.tsで定義（ドメイン型）
 // ────────────────────────────────────────────
-
-/** enrich済み勘定科目型（APIレスポンス用） */
-export type EnrichedAccount = Account & {
-  accountGroupLabel: string
-  targetLabel: string
-  directionLabel: string
-  categoryLabel: string
-  displayEffectiveFrom: string
-  displayEffectiveTo: string
-  displayAllowedVoucherTypes: string
-  /** 出典ラベル（全社/MF連携） */
-  sourceLabel: string
-  /** 課税方式別のAI判定フラグマップ */
-  aiDetermination: Record<string, string>
-  /** 課税方式別のデフォルト税区分名マップ */
-  defaultTaxes: Record<string, string>
-}
 
 /** accountGroupの日本語ラベル */
 function toAccountGroupLabel(ag: string): string {
@@ -145,15 +129,35 @@ function buildAiDeterminationMap(accountGroup: string): Record<string, string> {
 
 /** 課税方式別のデフォルト税区分名マップを生成 */
 function buildDefaultTaxesMap(defaultTaxCategoryId: string | undefined, taxCategories: TaxCategory[]): Record<string, string> {
-  const baseName = defaultTaxCategoryId
-    ? taxCategories.find(tc => tc.taxCategoryId === defaultTaxCategoryId)?.shortName ?? defaultTaxCategoryId
-    : ''
-  // TODO: 簡易課税時は事業種別に応じた税区分名に変換する（Phase 2拡張）
+  // 免税のデフォルト表示名: データ駆動（COMMON_EXEMPTのname）
+  const exemptName = taxCategories.find(tc => tc.taxCategoryId === 'COMMON_EXEMPT')?.name ?? '対象外'
+
+  if (!defaultTaxCategoryId) {
+    return { proportional: '', individual: '', simplified: '', exempt: exemptName }
+  }
+
+  const baseTc = taxCategories.find(tc => tc.taxCategoryId === defaultTaxCategoryId)
+  // 正式名称（name）を使用。全社税区分マスタと表示統一。
+  const baseName = baseTc?.name ?? defaultTaxCategoryId
+
+  // 対象外系（COMMON_EXEMPT等）は全方式で同じ名前
+  if (baseTc && (baseTc.direction === 'common' && defaultTaxCategoryId.includes('EXEMPT'))) {
+    return { proportional: baseName, individual: baseName, simplified: baseName, exempt: baseName }
+  }
+
+  // 簡易課税: baseIdで逆引き → 事業種別バリアントがあるなら「(種別選択)」付記
+  let simplifiedName = baseName
+  const simplifiedVariants = taxCategories.filter(tc => tc.baseId === defaultTaxCategoryId)
+  if (simplifiedVariants.length > 0) {
+    // 事業種別バリアントが存在 → 全社マスタでは種別未確定
+    simplifiedName = `${baseName} (種別選択)`
+  }
+
   return {
     proportional: baseName,
     individual: baseName,
-    simplified: baseName, // 今後: 事業種別付き名称に変換
-    exempt: '対象外',
+    simplified: simplifiedName,
+    exempt: exemptName,
   }
 }
 
@@ -163,7 +167,7 @@ function buildDefaultTaxesMap(defaultTaxCategoryId: string | undefined, taxCateg
  * 税区分のenrichRow()と同じアーキテクチャ。
  * フロントはこの値をそのまま表示するだけ。
  */
-function enrichAccountRow(row: Account, taxCategories: TaxCategory[]): EnrichedAccount {
+export function enrichAccountRow(row: Account, taxCategories: TaxCategory[]): EnrichedAccount {
   return {
     ...row,
     accountGroupLabel: toAccountGroupLabel(row.accountGroup),
@@ -173,7 +177,7 @@ function enrichAccountRow(row: Account, taxCategories: TaxCategory[]): EnrichedA
     displayEffectiveFrom: row.effectiveFrom ?? '—',
     displayEffectiveTo: row.effectiveTo ?? '現役',
     displayAllowedVoucherTypes: toAllowedVoucherTypes(row),
-    sourceLabel: row.source === 'mf' ? 'MF連携' : '全社',
+    sourceLabel: row.isCustom || row.source === 'client-custom' ? 'カスタム' : row.source === 'mcp' ? 'MCP' : '全社',
     aiDetermination: buildAiDeterminationMap(row.accountGroup),
     defaultTaxes: buildDefaultTaxesMap(row.defaultTaxCategoryId, taxCategories),
   }
@@ -237,10 +241,19 @@ export function getClientTaxCategoriesForValidation(clientId: string): {
 }
 
 /** 科目名マップ（ID→名前）を返す */
-export function getAccountNameMap(): Record<string, string> {
+export function getAccountNameMap(clientId?: string): Record<string, string> {
   const map: Record<string, string> = {}
-  for (const a of masterAccounts) {
-    map[a.accountId] = a.name
+  if (clientId) {
+    // clientId指定時: その顧問先のEnrichedAccount[]から生成
+    const data = getClientAccounts(clientId)
+    for (const a of data.accounts) {
+      map[a.accountId] = a.name
+    }
+  } else {
+    // 未指定時: 全社マスタから生成（後方互換）
+    for (const a of masterAccounts) {
+      map[a.accountId] = a.name
+    }
   }
   return map
 }
@@ -341,140 +354,212 @@ export function saveAllAccounts(accounts: Account[]): { ok: true; count: number 
     console.error('[accountMasterApi] account-master.json永続化失敗:', err)
   }
 
-  // 全顧問先のクローンデータに差分同期（新規追加・名前変更を反映）
-  syncMasterAccountsToClients(accounts)
+  // syncMasterAccountsToClients 廃止。Override方式ではマスタ直接参照のため同期不要。
 
   return { ok: true, count: accounts.length }
 }
 
-/**
- * 全社マスタ更新時に全顧問先のクローンデータを差分同期する（科目）
- *
- * - マスタに新規追加された科目 → 顧問先データに追加
- * - マスタで名前が変更された科目 → 顧問先データの名前を更新
- * - マスタから削除された科目 → 顧問先データからは削除しない（仕訳参照を壊さないため）
- * - MFフィールド（mfAccountId等）は顧問先データにコピーしない
- */
-function syncMasterAccountsToClients(masterItems: Account[]): void {
-  const masterById = new Map(masterItems.map(a => [a.accountId, a]))
-  let syncCount = 0
+// syncMasterAccountsToClients 廃止済み（Override方式移行。§53 §2参照）
 
-  for (const [clientId, clientData] of clientAccountStore.entries()) {
-    const clientIdSet = new Set(clientData.accounts.map(a => a.accountId))
-    let changed = false
+// ────────────────────────────────────────────
+// 顧問先別 Override ストア（§53 §3 確定アーキテクチャ）
+// MF未連携: accounts_master + overrides → EnrichedAccount[]
+// MF連携済み: client_mf_accounts + overrides → EnrichedAccount[]
+// 将来: Supabase client_account_overrides テーブルに差し替え
+// ────────────────────────────────────────────
 
-    // 新規追加: マスタにあって顧問先にない科目を追加
-    for (const master of masterItems) {
-      if (!clientIdSet.has(master.accountId)) {
-        // MFフィールドを除外してクローン（全社マスタにMFフィールドは存在しないが安全装置として残す）
-        const { mfAccountId, mfAccountGroup, mfFinancialStatementType, ...rest } = master as Account & {
-          mfAccountId?: string; mfAccountGroup?: string; mfFinancialStatementType?: string
-        }
-        clientData.accounts.push({ ...rest })
-        changed = true
-      }
-    }
-
-    // コアフィールド同期: マスタとIDが一致する科目のフィールドを同期
-    // （MFフィールド mfAccountId等は顧問先固有なので同期しない）
-    const syncFields: (keyof Account)[] = [
-      'name', 'accountGroup', 'category',
-      'target', 'hidden', 'defaultTaxCategoryId',
-      'isContraRevenue', 'isContraExpense',
-    ]
-    for (const clientAccount of clientData.accounts) {
-      const master = masterById.get(clientAccount.accountId)
-      if (!master) continue
-      for (const field of syncFields) {
-        const masterVal = master[field]
-        const clientVal = clientAccount[field]
-        if (masterVal !== clientVal && masterVal !== undefined) {
-          ;(clientAccount as Record<string, unknown>)[field] = masterVal
-          changed = true
-        }
-      }
-    }
-
-    if (changed) {
-      persistClientAccounts(clientId, clientData)
-      syncCount++
-      console.log(`[accountMasterApi] 顧問先${clientId}の科目を${clientData.accounts.length}件に同期`)
-    }
-  }
-  if (syncCount > 0) {
-    console.log(`[accountMasterApi] マスタ科目変更を${syncCount}社に反映`)
-  }
+/** Override対象フィールド（§53 Q2: hidden / sortOrder / defaultTaxCategoryId） */
+interface AccountOverride {
+  accountId: string
+  hidden?: boolean
+  sortOrder?: number
+  defaultTaxCategoryId?: string
 }
 
-// ────────────────────────────────────────────
-// 顧問先別科目ストア（clientId別に管理）
-// 将来: Supabase client_accounts テーブルに差し替え
-// ────────────────────────────────────────────
-
-/** 顧問先別科目データ */
-interface ClientAccountData {
-  /** 科目一覧（マスタ + カスタム、非表示含む） */
-  accounts: Account[]
-  /** 補助科目マップ（科目ID → 補助科目名） */
+/** 顧問先別Overrideデータ */
+interface ClientOverrideData {
+  accountOverrides: AccountOverride[]
   subAccounts: Record<string, string>
 }
 
-/** インメモリストア: clientId → ClientAccountData */
-const clientAccountStore = new Map<string, ClientAccountData>()
+/** 旧形式との後方互換用 */
+interface ClientAccountData {
+  accounts: Account[]
+  subAccounts: Record<string, string>
+}
 
-// ── 永続化ヘルパー（科目） ──
+/** Overrideストア: clientId → ClientOverrideData */
+const clientOverrideStore = new Map<string, ClientOverrideData>()
 
-/** 顧問先別科目をJSONに永続化 */
-function persistClientAccounts(clientId: string, data: ClientAccountData): void {
+/** MFインポートデータストア: clientId → Account[]（MF連携済みの科目一覧） */
+const clientMfAccountStore = new Map<string, Account[]>()
+
+// ── 永続化ヘルパー（Override） ──
+
+/** OverrideをJSONに永続化 */
+function persistOverrides(clientId: string, data: ClientOverrideData): void {
   try {
-    const filePath = join(DATA_DIR, `accounts-${clientId}.json`)
+    const filePath = join(DATA_DIR, `overrides-${clientId}.json`)
     writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
-    console.log(`[accountMasterApi] 顧問先${clientId}の科目をJSONに永続化`)
+    console.log(`[accountMasterApi] 顧問先${clientId}のOverrideを永続化（${data.accountOverrides.length}件）`)
   } catch (err) {
-    console.error(`[accountMasterApi] 顧問先${clientId}の科目永続化に失敗:`, err)
+    console.error(`[accountMasterApi] 顧問先${clientId}のOverride永続化に失敗:`, err)
   }
 }
 
-/** 起動時: data/accounts-{clientId}.json を読み込んで復元 */
+/** MFインポートデータをJSONに永続化 */
+function persistMfAccounts(clientId: string, accounts: Account[]): void {
+  try {
+    const filePath = join(DATA_DIR, `mf-accounts-${clientId}.json`)
+    writeFileSync(filePath, JSON.stringify(accounts, null, 2), 'utf-8')
+    console.log(`[accountMasterApi] 顧問先${clientId}のMFデータを永続化（${accounts.length}件）`)
+  } catch (err) {
+    console.error(`[accountMasterApi] 顧問先${clientId}のMFデータ永続化に失敗:`, err)
+  }
+}
+
+/** 旧形式（accounts-{clientId}.json）からOverride/MFデータへマイグレーション */
+function migrateFromLegacy(clientId: string, legacy: ClientAccountData): void {
+  const hasMfData = legacy.accounts.some(a => (a as Record<string, unknown>).mfAccountId != null)
+
+  if (hasMfData) {
+    // MF連携済み: 全件をMFデータとして保存
+    clientMfAccountStore.set(clientId, legacy.accounts)
+    persistMfAccounts(clientId, legacy.accounts)
+    console.log(`[accountMasterApi] 顧問先${clientId}: 旧データ→MFデータにマイグレーション（${legacy.accounts.length}件）`)
+  }
+
+  // Override抽出: マスタとの差分をOverrideとして保存
+  const overrides: AccountOverride[] = []
+  const masterById = new Map(masterAccounts.map(a => [a.accountId, a]))
+  const baseAccounts = hasMfData ? legacy.accounts : masterAccounts
+
+  for (const acc of legacy.accounts) {
+    const master = masterById.get(acc.accountId)
+    if (!master) continue // マスタにない科目（旧ID残骸等）はスキップ
+
+    const override: AccountOverride = { accountId: acc.accountId }
+    let hasDiff = false
+
+    if (acc.hidden !== master.hidden) {
+      override.hidden = acc.hidden
+      hasDiff = true
+    }
+    if (acc.sortOrder !== master.sortOrder) {
+      override.sortOrder = acc.sortOrder
+      hasDiff = true
+    }
+    if (acc.defaultTaxCategoryId !== master.defaultTaxCategoryId) {
+      override.defaultTaxCategoryId = acc.defaultTaxCategoryId
+      hasDiff = true
+    }
+
+    if (hasDiff) {
+      overrides.push(override)
+    }
+  }
+
+  const overrideData: ClientOverrideData = {
+    accountOverrides: overrides,
+    subAccounts: legacy.subAccounts ?? {},
+  }
+  clientOverrideStore.set(clientId, overrideData)
+  if (overrides.length > 0) {
+    persistOverrides(clientId, overrideData)
+    console.log(`[accountMasterApi] 顧問先${clientId}: Override${overrides.length}件を抽出・永続化`)
+  }
+}
+
+/**
+ * 起動時: Override + MFデータを復元
+ * 1. overrides-{clientId}.json → Override復元
+ * 2. mf-accounts-{clientId}.json → MFデータ復元
+ * 3. 旧accounts-{clientId}.json → マイグレーション（overrides/mf-accountsが未作成の場合）
+ */
 function restoreAllClientAccounts(): void {
   if (!existsSync(DATA_DIR)) return
   const files = readdirSync(DATA_DIR)
-    .filter(f => f.startsWith('accounts-') && f.endsWith('.json') && f !== 'account-master.json')
-  for (const file of files) {
-    const clientId = file.replace('accounts-', '').replace('.json', '')
+
+  // 1. Override復元
+  for (const file of files.filter(f => f.startsWith('overrides-') && f.endsWith('.json'))) {
+    const clientId = file.replace('overrides-', '').replace('.json', '')
     try {
       const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
-      clientAccountStore.set(clientId, JSON.parse(raw))
-      console.log(`[accountMasterApi] 顧問先${clientId}の科目をJSONから復元`)
+      clientOverrideStore.set(clientId, JSON.parse(raw))
+      console.log(`[accountMasterApi] 顧問先${clientId}のOverrideを復元`)
     } catch (err) {
       console.error(`[accountMasterApi] ${file}の読み込み失敗:`, err)
     }
   }
+
+  // 2. MFデータ復元
+  for (const file of files.filter(f => f.startsWith('mf-accounts-') && f.endsWith('.json'))) {
+    const clientId = file.replace('mf-accounts-', '').replace('.json', '')
+    try {
+      const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
+      clientMfAccountStore.set(clientId, JSON.parse(raw))
+      console.log(`[accountMasterApi] 顧問先${clientId}のMFデータを復元`)
+    } catch (err) {
+      console.error(`[accountMasterApi] ${file}の読み込み失敗:`, err)
+    }
+  }
+
+  // 3. 旧形式マイグレーション（overrides未作成の場合のみ）
+  for (const file of files.filter(f => f.startsWith('accounts-') && f.endsWith('.json') && f !== 'account-master.json')) {
+    const clientId = file.replace('accounts-', '').replace('.json', '')
+    if (clientOverrideStore.has(clientId)) continue // 既にOverrideがあればスキップ
+    try {
+      const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
+      const legacy: ClientAccountData = JSON.parse(raw)
+      migrateFromLegacy(clientId, legacy)
+      console.log(`[accountMasterApi] 顧問先${clientId}: 旧データからマイグレーション完了`)
+    } catch (err) {
+      console.error(`[accountMasterApi] ${file}のマイグレーション失敗:`, err)
+    }
+  }
 }
 
 /**
- * 顧問先マスタがストアに存在するか（ファイルから復元済み or saveClientAccounts済み）
- * 存在しない場合、getClientAccountsは全社マスタのクローンを返す（初回）
+ * 顧問先のOverrideデータが存在するか
  */
 export function hasClientAccounts(clientId: string): boolean {
-  return clientAccountStore.has(clientId)
+  return clientOverrideStore.has(clientId) || clientMfAccountStore.has(clientId)
 }
 
 /**
- * 顧問先別の科目一覧を取得する
+ * 顧問先別の科目一覧を取得する（マスタ + Override 合成）
  *
- * 初回アクセス時はマスタからクローンして初期化する。
+ * §53 §3 確定アーキテクチャ:
+ *   MF未連携: accounts_master + overrides → { accounts, subAccounts }
+ *   MF連携済み: client_mf_accounts + overrides → { accounts, subAccounts }
  */
 export function getClientAccounts(clientId: string): ClientAccountData {
-  if (!clientAccountStore.has(clientId)) {
-    // 初期化: マスタからクローン
-    clientAccountStore.set(clientId, {
-      accounts: masterAccounts.map(a => ({ ...a })),
-      subAccounts: {},
-    })
-    console.log(`[accountMasterApi] 顧問先${clientId}の科目をマスタから初期化`)
+  // ベースデータ: MFデータがあればMF、なければマスタ
+  const baseAccounts = clientMfAccountStore.has(clientId)
+    ? clientMfAccountStore.get(clientId)!
+    : masterAccounts
+
+  // Override適用
+  const overrideData = clientOverrideStore.get(clientId)
+  const overrideMap = new Map(
+    (overrideData?.accountOverrides ?? []).map(o => [o.accountId, o])
+  )
+
+  const accounts = baseAccounts.map(a => {
+    const override = overrideMap.get(a.accountId)
+    if (!override) return { ...a }
+    return {
+      ...a,
+      ...(override.hidden !== undefined && { hidden: override.hidden }),
+      ...(override.sortOrder !== undefined && { sortOrder: override.sortOrder }),
+      ...(override.defaultTaxCategoryId !== undefined && { defaultTaxCategoryId: override.defaultTaxCategoryId }),
+    }
+  })
+
+  return {
+    accounts,
+    subAccounts: overrideData?.subAccounts ?? {},
   }
-  return clientAccountStore.get(clientId)!
 }
 
 /** フィルタ付き顧問先科目取得 */
@@ -484,21 +569,20 @@ export function getFilteredClientAccounts(
 ): AccountFilterResult {
   const data = getClientAccounts(clientId)
   const {
-    businessType = 'corp',
+    businessType,
     search = '',
     page = 1,
     pageSize = 50,
   } = params
 
   let filtered = data.accounts.filter(row => {
-    if (row.target !== businessType) return false
+    if (businessType && row.target !== businessType) return false
     if (search && !row.name.includes(search)) return false
     return true
   })
 
   filtered = filtered.sort((a, b) => a.sortOrder - b.sortOrder)
 
-  // enrich: 表示用フィールドを付与（defaultTaxCategoryIdは全社マスタと同一ID体系）
   const taxCategories = loadTaxCategories()
   const enriched = filtered.map(row => enrichAccountRow(row, taxCategories))
 
@@ -518,24 +602,77 @@ export function getFilteredClientAccounts(
 }
 
 /**
- * 顧問先別の科目を全件上書き保存する
+ * 顧問先別の科目を保存する（diff抽出→Override保存）
  *
- * フロントの saveChanges → localStorage書き込みを置換する。
+ * §53 §4 Rule 4: 保存APIは完成形を受け取り、差分抽出はバックエンド責務。
+ * フロントからEnrichedAccount[]→Account[]を受け取り、ベースとの差分をOverrideとして保存。
  */
 export function saveClientAccounts(
   clientId: string,
   accounts: Account[],
   subAccounts?: Record<string, string>,
 ): { ok: true; count: number } {
-  const data: ClientAccountData = {
-    accounts: [...accounts],
-    subAccounts: subAccounts ?? clientAccountStore.get(clientId)?.subAccounts ?? {},
+  // ベースデータ（MF or マスタ）
+  const baseAccounts = clientMfAccountStore.has(clientId)
+    ? clientMfAccountStore.get(clientId)!
+    : masterAccounts
+  const baseMap = new Map(baseAccounts.map(a => [a.accountId, a]))
+
+  // diff抽出: ベースと異なるフィールドのみOverrideとして保存
+  const overrides: AccountOverride[] = []
+  for (const acc of accounts) {
+    const base = baseMap.get(acc.accountId)
+    if (!base) continue
+
+    const override: AccountOverride = { accountId: acc.accountId }
+    let hasDiff = false
+
+    if (acc.hidden !== base.hidden) {
+      override.hidden = acc.hidden
+      hasDiff = true
+    }
+    if (acc.sortOrder !== base.sortOrder) {
+      override.sortOrder = acc.sortOrder
+      hasDiff = true
+    }
+    if (acc.defaultTaxCategoryId !== base.defaultTaxCategoryId) {
+      override.defaultTaxCategoryId = acc.defaultTaxCategoryId
+      hasDiff = true
+    }
+
+    if (hasDiff) {
+      overrides.push(override)
+    }
   }
-  clientAccountStore.set(clientId, data)
-  persistClientAccounts(clientId, data)
-  console.log(`[accountMasterApi] 顧問先${clientId}の科目を${accounts.length}件保存`)
+
+  const existingSub = clientOverrideStore.get(clientId)?.subAccounts ?? {}
+  const overrideData: ClientOverrideData = {
+    accountOverrides: overrides,
+    subAccounts: subAccounts ?? existingSub,
+  }
+
+  clientOverrideStore.set(clientId, overrideData)
+  persistOverrides(clientId, overrideData)
+  console.log(`[accountMasterApi] 顧問先${clientId}: Override${overrides.length}件保存（ベース${baseAccounts.length}件）`)
   return { ok: true, count: accounts.length }
 }
+
+/**
+ * MFインポートデータを保存する（MF連携済み顧問先用）
+ *
+ * mfRoutes.tsのMFインポート処理から呼ばれる。
+ * 全件上書き（MFから取得した科目リストを丸ごと保存）。
+ */
+export function saveMfAccounts(
+  clientId: string,
+  accounts: Account[],
+): { ok: true; count: number } {
+  clientMfAccountStore.set(clientId, [...accounts])
+  persistMfAccounts(clientId, accounts)
+  console.log(`[accountMasterApi] 顧問先${clientId}のMFデータを${accounts.length}件保存`)
+  return { ok: true, count: accounts.length }
+}
+
 
 // ────────────────────────────────────────────
 // 税区分マスタ
@@ -724,7 +861,6 @@ export function getFilteredTaxCategories(params: TaxCategoryFilterParams): TaxCa
  */
 export function saveAllTaxCategories(taxCategories: TaxCategory[]): { ok: true; count: number } {
   masterTaxCategories = [...taxCategories]
-  // JSON永続化（サーバー再起動でも変更を維持）
   try {
     writeFileSync(join(DATA_DIR, 'tax-category-master.json'), JSON.stringify(taxCategories, null, 2), 'utf-8')
     console.log(`[accountMasterApi] マスタ税区分を${taxCategories.length}件保存・永続化`)
@@ -732,71 +868,45 @@ export function saveAllTaxCategories(taxCategories: TaxCategory[]): { ok: true; 
     console.error('[accountMasterApi] tax-category-master.json永続化失敗:', err)
   }
 
-  // 全顧問先のクローンデータに差分同期（新規追加・名前変更を反映）
-  syncMasterTaxCategoriesToClients(taxCategories)
+  // syncMasterTaxCategoriesToClients 廃止。Override方式ではマスタ直接参照のため同期不要。
 
   return { ok: true, count: taxCategories.length }
 }
 
-/**
- * 全社マスタ更新時に全顧問先のクローンデータを差分同期する（税区分）
- *
- * - マスタに新規追加された税区分 → 顧問先データに追加
- * - マスタで名前・税率が変更された税区分 → 顧問先データを更新
- * - マスタから削除された税区分 → 顧問先データからは削除しない（仕訳参照を壊さないため）
- */
-function syncMasterTaxCategoriesToClients(masterItems: TaxCategory[]): void {
-  const masterById = new Map(masterItems.map(t => [t.taxCategoryId, t]))
-  let syncCount = 0
+// syncMasterTaxCategoriesToClients 廃止済み（Override方式移行。§53 §3参照）
 
-  for (const [clientId, clientTaxes] of clientTaxStore.entries()) {
-    const clientIdSet = new Set(clientTaxes.map(t => t.taxCategoryId))
-    let changed = false
+// ────────────────────────────────────────────
+// 顧問先別税区分 Override ストア（§53 Q3: 科目と同じ設計）
+// マスタ直接参照 + Override（hidden）で合成
+// 将来: Supabase client_tax_overrides テーブルに差し替え
+// ────────────────────────────────────────────
 
-    // 新規追加: マスタにあって顧問先にない税区分を追加
-    for (const master of masterItems) {
-      if (!clientIdSet.has(master.taxCategoryId)) {
-        clientTaxes.push({ ...master })
-        changed = true
-      }
-    }
+/** 税区分Override（hiddenのみ） */
+interface TaxCategoryOverride {
+  taxCategoryId: string
+  hidden?: boolean
+}
 
-    // 名前・税率変更: マスタとIDが一致する税区分を同期
-    for (const clientTax of clientTaxes) {
-      const master = masterById.get(clientTax.taxCategoryId)
-      if (!master) continue
-      if (master.name !== clientTax.name) {
-        clientTax.name = master.name
-        changed = true
-      }
-      if (master.taxRate !== clientTax.taxRate) {
-        clientTax.taxRate = master.taxRate
-        changed = true
-      }
-    }
+/** 税区分Overrideストア: clientId → TaxCategoryOverride[] */
+const clientTaxOverrideStore = new Map<string, TaxCategoryOverride[]>()
 
-    if (changed) {
-      persistClientTaxCategories(clientId, clientTaxes)
-      syncCount++
-      console.log(`[accountMasterApi] 顧問先${clientId}の税区分を${clientTaxes.length}件に同期`)
-    }
-  }
-  if (syncCount > 0) {
-    console.log(`[accountMasterApi] マスタ税区分変更を${syncCount}社に反映`)
+/** 旧形式ストア: 旧tax-categories-{clientId}.jsonからの復元用 */
+const clientTaxStore = new Map<string, TaxCategory[]>()
+
+// ── 永続化ヘルパー（税区分Override） ──
+
+/** 税区分OverrideをJSONに永続化 */
+function persistTaxOverrides(clientId: string, overrides: TaxCategoryOverride[]): void {
+  try {
+    const filePath = join(DATA_DIR, `tax-overrides-${clientId}.json`)
+    writeFileSync(filePath, JSON.stringify(overrides, null, 2), 'utf-8')
+    console.log(`[accountMasterApi] 顧問先${clientId}の税区分Override${overrides.length}件を永続化`)
+  } catch (err) {
+    console.error(`[accountMasterApi] 顧問先${clientId}の税区分Override永続化に失敗:`, err)
   }
 }
 
-// ────────────────────────────────────────────
-// 顧問先別税区分ストア（clientId別に管理）
-// 将来: Supabase client_tax_categories テーブルに差し替え
-// ────────────────────────────────────────────
-
-/** インメモリストア: clientId → TaxCategory[] */
-const clientTaxStore = new Map<string, TaxCategory[]>()
-
-// ── 永続化ヘルパー（税区分） ──
-
-/** 顧問先別税区分をJSONに永続化 */
+/** 顧問先別税区分をJSONに永続化（旧形式・MFインポート時用） */
 function persistClientTaxCategories(clientId: string, data: TaxCategory[]): void {
   try {
     const filePath = join(DATA_DIR, `tax-categories-${clientId}.json`)
@@ -807,16 +917,57 @@ function persistClientTaxCategories(clientId: string, data: TaxCategory[]): void
   }
 }
 
-/** 起動時: data/tax-categories-{clientId}.json を読み込んで復元 */
+/** 旧形式からOverrideへマイグレーション */
+function migrateTaxFromLegacy(clientId: string, legacyTaxes: TaxCategory[]): void {
+  const masterById = new Map(masterTaxCategories.map(t => [t.taxCategoryId, t]))
+  const overrides: TaxCategoryOverride[] = []
+
+  for (const tax of legacyTaxes) {
+    const master = masterById.get(tax.taxCategoryId)
+    if (!master) continue
+
+    if (tax.hidden !== master.hidden) {
+      overrides.push({ taxCategoryId: tax.taxCategoryId, hidden: tax.hidden })
+    }
+  }
+
+  if (overrides.length > 0) {
+    clientTaxOverrideStore.set(clientId, overrides)
+    persistTaxOverrides(clientId, overrides)
+    console.log(`[accountMasterApi] 顧問先${clientId}: 税区分Override${overrides.length}件を抽出`)
+  }
+}
+
+/**
+ * 起動時: 税区分Override + 旧データを復元
+ */
 function restoreAllClientTaxCategories(): void {
   if (!existsSync(DATA_DIR)) return
   const files = readdirSync(DATA_DIR)
-    .filter(f => f.startsWith('tax-categories-') && f.endsWith('.json') && f !== 'tax-category-master.json')
-  for (const file of files) {
+
+  // 1. 税区分Override復元
+  for (const file of files.filter(f => f.startsWith('tax-overrides-') && f.endsWith('.json'))) {
+    const clientId = file.replace('tax-overrides-', '').replace('.json', '')
+    try {
+      const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
+      clientTaxOverrideStore.set(clientId, JSON.parse(raw))
+      console.log(`[accountMasterApi] 顧問先${clientId}の税区分Overrideを復元`)
+    } catch (err) {
+      console.error(`[accountMasterApi] ${file}の読み込み失敗:`, err)
+    }
+  }
+
+  // 2. 旧形式マイグレーション（tax-overridesが未作成の場合のみ）
+  for (const file of files.filter(f => f.startsWith('tax-categories-') && f.endsWith('.json') && f !== 'tax-category-master.json')) {
     const clientId = file.replace('tax-categories-', '').replace('.json', '')
     try {
       const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
-      clientTaxStore.set(clientId, JSON.parse(raw))
+      const legacy: TaxCategory[] = JSON.parse(raw)
+      clientTaxStore.set(clientId, legacy) // 旧形式も保持（後方互換）
+
+      if (!clientTaxOverrideStore.has(clientId)) {
+        migrateTaxFromLegacy(clientId, legacy)
+      }
       console.log(`[accountMasterApi] 顧問先${clientId}の税区分をJSONから復元`)
     } catch (err) {
       console.error(`[accountMasterApi] ${file}の読み込み失敗:`, err)
@@ -825,16 +976,19 @@ function restoreAllClientTaxCategories(): void {
 }
 
 /**
- * 顧問先別の税区分一覧を取得する
- *
- * 初回アクセス時はマスタからクローンして初期化する。
+ * 顧問先別の税区分一覧を取得する（マスタ + Override 合成）
  */
 export function getClientTaxCategories(clientId: string): TaxCategory[] {
-  if (!clientTaxStore.has(clientId)) {
-    clientTaxStore.set(clientId, masterTaxCategories.map(t => ({ ...t })))
-    console.log(`[accountMasterApi] 顧問先${clientId}の税区分をマスタから初期化`)
-  }
-  return clientTaxStore.get(clientId)!.map(enrichRow)
+  const overrides = clientTaxOverrideStore.get(clientId) ?? []
+  const overrideMap = new Map(overrides.map(o => [o.taxCategoryId, o]))
+
+  return masterTaxCategories.map(t => {
+    const override = overrideMap.get(t.taxCategoryId)
+    const merged = override
+      ? { ...t, ...(override.hidden !== undefined && { hidden: override.hidden }) }
+      : { ...t }
+    return enrichRow(merged)
+  })
 }
 
 /** フィルタ付き顧問先税区分取得 */
@@ -849,8 +1003,7 @@ export function getFilteredClientTaxCategories(
     pageSize = 50,
   } = params
 
-  const enriched = data.map(enrichRow)
-  const filtered = enriched.filter(row => {
+  const filtered = data.filter(row => {
     if (taxMethod === 'all') return true
     return row.visibleIn?.[taxMethod as keyof NonNullable<TaxCategory['visibleIn']>] === true
   })
@@ -871,16 +1024,32 @@ export function getFilteredClientTaxCategories(
 }
 
 /**
- * 顧問先別の税区分を全件上書き保存する
+ * 顧問先別の税区分を保存する（diff抽出→Override保存）
  */
 export function saveClientTaxCategories(
   clientId: string,
   taxCategories: TaxCategory[],
 ): { ok: true; count: number } {
-  const data = [...taxCategories]
-  clientTaxStore.set(clientId, data)
-  persistClientTaxCategories(clientId, data)
-  console.log(`[accountMasterApi] 顧問先${clientId}の税区分を${taxCategories.length}件保存`)
+  const masterById = new Map(masterTaxCategories.map(t => [t.taxCategoryId, t]))
+  const overrides: TaxCategoryOverride[] = []
+
+  for (const tax of taxCategories) {
+    const master = masterById.get(tax.taxCategoryId)
+    if (!master) continue
+
+    if (tax.hidden !== master.hidden) {
+      overrides.push({ taxCategoryId: tax.taxCategoryId, hidden: tax.hidden })
+    }
+  }
+
+  clientTaxOverrideStore.set(clientId, overrides)
+  persistTaxOverrides(clientId, overrides)
+
+  // 旧形式も更新（後方互換）
+  clientTaxStore.set(clientId, [...taxCategories])
+  persistClientTaxCategories(clientId, taxCategories)
+
+  console.log(`[accountMasterApi] 顧問先${clientId}: 税区分Override${overrides.length}件保存`)
   return { ok: true, count: taxCategories.length }
 }
 
@@ -888,10 +1057,98 @@ export function saveClientTaxCategories(
 restoreAllClientAccounts()
 restoreAllClientTaxCategories()
 
-// 起動時に全顧問先をマスタと同期（新規科目追加・フィールド変更を反映）
-// マスタ変更後にsyncを経由せず永続化されたケース（ID移行スクリプト等）の
-// 不整合を起動時に自動修復する
-syncMasterAccountsToClients(masterAccounts)
-syncMasterTaxCategoriesToClients(masterTaxCategories)
+// syncMasterAccountsToClients / syncMasterTaxCategoriesToClients 廃止済み
+// Override方式ではマスタ直接参照のため同期不要。
 
-console.log(`[accountMasterApi] 科目${masterAccounts.length}件 / 税区分${masterTaxCategories.length}件をロード（顧問先別: 科目${clientAccountStore.size}社 / 税区分${clientTaxStore.size}社を復元・同期）`)
+// ────────────────────────────────────────────
+// §53 Rule 5/6: 孤立Override検出（安全弁・低優先）
+// ────────────────────────────────────────────
+
+/**
+ * 孤立Overrideを検出してコンソールに警告ログを出力する
+ *
+ * §53 Rule 5: MFインポート後にOverride.accountIdに対応する科目が存在するか確認
+ * §53 Rule 6: 孤立Overrideは自動削除しない。警告のみ。
+ */
+export function detectOrphanedOverrides(clientId: string): string[] {
+  const overrideData = clientOverrideStore.get(clientId)
+  if (!overrideData) return []
+
+  // ベースデータのaccountId一覧
+  const baseAccounts = clientMfAccountStore.has(clientId)
+    ? clientMfAccountStore.get(clientId)!
+    : masterAccounts
+  const baseIdSet = new Set(baseAccounts.map(a => a.accountId))
+
+  const orphaned: string[] = []
+  for (const override of overrideData.accountOverrides) {
+    if (!baseIdSet.has(override.accountId)) {
+      orphaned.push(override.accountId)
+    }
+  }
+
+  if (orphaned.length > 0) {
+    console.warn(`[accountMasterApi] ⚠️ 顧問先${clientId}: 孤立Override ${orphaned.length}件検出: ${orphaned.join(', ')}`)
+  }
+
+  return orphaned
+}
+
+// 起動時に全顧問先の孤立Overrideをチェック
+for (const clientId of clientOverrideStore.keys()) {
+  detectOrphanedOverrides(clientId)
+}
+
+// ────────────────────────────────────────────
+// §53 Rule 2: accountIdリネームマイグレーション
+// ────────────────────────────────────────────
+
+/**
+ * accountIdをリネームする（マイグレーション用ユーティリティ）
+ *
+ * §53 Rule 2: 変更が必要な場合は専用マイグレーション経由のみ。
+ * 更新対象: accounts_master, client_account_overrides, client_mf_accounts
+ *
+ * 注意: 仕訳データ（journal entries）とtax_mappingsは別途マイグレーションが必要。
+ * Supabase移行後はFOREIGN KEY ON UPDATE CASCADEで強制可能。
+ */
+export function renameAccountId(oldId: string, newId: string): {
+  updated: { master: boolean; overrides: string[]; mfAccounts: string[] }
+} {
+  const result = { master: false, overrides: [] as string[], mfAccounts: [] as string[] }
+
+  // 1. マスタ更新
+  const masterIdx = masterAccounts.findIndex(a => a.accountId === oldId)
+  if (masterIdx >= 0) {
+    masterAccounts[masterIdx] = { ...masterAccounts[masterIdx], accountId: newId }
+    result.master = true
+    saveAllAccounts(masterAccounts)
+    console.log(`[renameAccountId] マスタ: ${oldId} → ${newId}`)
+  }
+
+  // 2. Override更新
+  for (const [clientId, data] of clientOverrideStore.entries()) {
+    const override = data.accountOverrides.find(o => o.accountId === oldId)
+    if (override) {
+      override.accountId = newId
+      persistOverrides(clientId, data)
+      result.overrides.push(clientId)
+      console.log(`[renameAccountId] Override(${clientId}): ${oldId} → ${newId}`)
+    }
+  }
+
+  // 3. MFデータ更新
+  for (const [clientId, accounts] of clientMfAccountStore.entries()) {
+    const account = accounts.find(a => a.accountId === oldId)
+    if (account) {
+      account.accountId = newId
+      persistMfAccounts(clientId, accounts)
+      result.mfAccounts.push(clientId)
+      console.log(`[renameAccountId] MFデータ(${clientId}): ${oldId} → ${newId}`)
+    }
+  }
+
+  return { updated: result }
+}
+
+console.log(`[accountMasterApi] 科目${masterAccounts.length}件 / 税区分${masterTaxCategories.length}件をロード（Override: ${clientOverrideStore.size}社 / MF: ${clientMfAccountStore.size}社 / 税区分: ${clientTaxStore.size}社）`)

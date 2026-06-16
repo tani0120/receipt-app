@@ -384,7 +384,7 @@ function resolveMfId(accountId, businessType, mfAccounts) {
 | ① AI判定 | [accountDetermination.ts](file:///c:/dev/receipt-app/src/utils/pipeline/accountDetermination.ts) | vendorStore経由（`findByTNumber`/`findByMatchKey`）→ `vendor.debit_account`（マスタID） | ❌ |
 | ② 仕訳保存 | [domain-journal.ts](file:///c:/dev/receipt-app/src/types/domain-journal.ts) | `entry.account` = 全社マスタID | — |
 | ③ バリデーション | [journalValidation.ts](file:///c:/dev/receipt-app/src/api/services/journalValidation.ts) | `syncWarningLabelsCore()`にaccounts引数で渡す | ❌ |
-| ④ MF送信照合 | [mfMappingService.ts](file:///c:/dev/receipt-app/src/api/services/mfMappingService.ts) | `loadSugusruAccounts()` = `account-master.json`直接読込 | ❌ |
+| ⑤ MF送信照合 | [mfMappingService.ts](file:///c:/dev/receipt-app/src/api/services/mfMappingService.ts) | `loadClientAccountsForMapping(clientId)` = `getClientAccounts(clientId)`経由 | ✅ §53実装完了 |
 | ⑤ MF変換 | [journalToMfConverter.ts](file:///c:/dev/receipt-app/src/api/services/journalToMfConverter.ts) (544行) | `maps.accountMap.get(entry.account)` | ❌ |
 
 ### 6-2. 顧問先別データの現状（実測値）
@@ -447,7 +447,11 @@ function resolveMfId(accountId, businessType, mfAccounts) {
 
 ## 8. 顧問先別データ構造
 
-### 8-1. 現状（accounts-{clientId}.json）
+### 8-1. 現状（Override方式に移行済み。§53参照）
+
+> [!NOTE]
+> 旧形式 `accounts-{clientId}.json` は起動時に自動マイグレーションされ、`overrides-{clientId}.json` + `mf-accounts-{clientId}.json` に分離される。
+> `getClientAccounts(clientId)` はマスタ直接参照 + Override合成で返す（物理クローン廃止）。
 
 ```json
 {
@@ -503,7 +507,7 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 |---------|------|------|
 | [MockMasterAccountsPage.vue](file:///c:/dev/receipt-app/src/views/master/MockMasterAccountsPage.vue) | 607行 | 勘定科目マスタUI（フィルタ・編集・MFインポートAPI呼出・保存） |
 | [accountMasterRoutes.ts](file:///c:/dev/receipt-app/src/api/routes/accountMasterRoutes.ts) | 135行 | GET/PUT API（マスタ + 顧問先） |
-| [accountMasterStore.ts](file:///c:/dev/receipt-app/src/api/services/accountMasterStore.ts) | 716行 | インメモリストア + JSON永続化 |
+| [accountMasterApi.ts](file:///c:/dev/receipt-app/src/api/services/accountMasterApi.ts) | インメモリストア + JSON永続化（§53 Override方式実装済み） |
 | [shared-account.ts](file:///c:/dev/receipt-app/src/types/shared-account.ts) | 76行 | `Account`型定義 |
 | [mf-account-category-mapping.ts](file:///c:/dev/receipt-app/src/data/master/mf-account-category-mapping.ts) | 70行 | MFカテゴリ→マスタカテゴリ変換 |
 | [account-category-rules.ts](file:///c:/dev/receipt-app/src/data/master/account-category-rules.ts) | 188行 | 科目分類ルール（カテゴリ→グループ・方向・導出） |
@@ -824,10 +828,10 @@ MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しない
 
 | # | 項目 | fact根拠 | 改修内容 |
 |---|------|---------|---------|
-| PP1 | バリデーションが全社マスタのみ参照 | `journalRoutes.ts L172,L195`: `getAccountsForValidation()`引数なし。**`clientId`はL168/L191で取得済み**。`getClientAccounts(clientId)`は**accountMasterStore.ts L257に既に存在** | `getAccountsForValidation()`を`clientId`対応に変更。`getClientAccounts()`からバリデーション用形式に変換する関数を追加 |
-| PP2 | 名前ソートマップが全社マスタのみ | `journalRoutes.ts L125`: `getAccountNameMap()`引数なし。**`clientId`はL109で取得済み** | `getAccountNameMap(clientId)`を追加 |
-| PP3 | MF送信照合が全社マスタ直接読込 | `mfMappingService.ts`: `loadSugusruAccounts()`が`account-master.json`をreadFile。**名前ベース照合のみ**（`mfAccountId`未使用） | `clientId`引数追加→`getClientAccounts(clientId)`経由に変更 |
-| PP4 | MF税区分照合が同上 | `mfMappingService.ts`: `loadSugusruTaxes()`が`tax-category-master.json`をreadFile | 同上。`getClientTaxCategories(clientId)`経由に変更 |
+| PP1 | バリデーションが全社マスタのみ参照 | `getClientAccountsForValidation(clientId)` → 内部で`getClientAccounts(clientId)`経由 | ✅ §53実装で自動対応済み |
+| PP2 | 名前ソートマップが全社マスタのみ | `getAccountNameMap(clientId?)` clientId引数追加済み | ✅ §53実装完了 |
+| PP3 | MF送信照合が全社マスタ直接読込 | `loadClientAccountsForMapping(clientId)` = `getClientAccounts(clientId)`経由 | ✅ §53実装完了 |
+| PP4 | MF税区分照合が同上 | `loadSugusruTaxes()`はマスタ直接読込のまま（Override方式でマスタ直接参照が正解） | ✅ 対応不要 |
 | P8 | 新規IDに日本語混入 | `mfAccountImportService.ts L147`: `` id: `MF_${mf.name.replace(...)}` `` — 正規表現が`\u3000-\u9FFF`を**許可**しており日本語が残る | ID生成を英語化（科目名→英語変換 or 連番） |
 | P5 | clientIdハードコード | `MockMasterAccountsPage.vue L370`: `const MF_AUTH_CLIENT_ID = 'c_rODnkCDN'` | ルーターから`clientId`受取 or UI選択に変更 |
 
@@ -859,8 +863,8 @@ MCP `mfc_ca_postJournals`は`account_id`（MF内部ID）必須。存在しない
 | MFインポートAPI化 | `POST /api/mf/import-master-accounts` 実装済み（mfAccountImportService.ts 235行） |
 | マスタ保存JSON永続化 | `saveAllAccounts()` L196-202に`writeFileSync`確認 |
 | バリデーションSSOT | `journalValidationCore.ts` 632行・13種チェック |
-| 顧問先別科目取得API | `getClientAccounts(clientId)` accountMasterStore.ts L257に存在 |
-| 顧問先別税区分取得API | `getClientTaxCategories(clientId)` accountMasterStore.ts L531に存在 |
+| 顧問先別科目取得API | `getClientAccounts(clientId)` accountMasterApi.ts — マスタ+Override合成（§53実装完了） |
+| 顧問先別税区分取得API | `getClientTaxCategories(clientId)` accountMasterApi.ts — マスタ+Override合成（§53実装完了） |
 | スナップショット8パターン | `mf-snapshot-*.json` 8ファイル確認（読み取り専用。インポート実行ではない） |
 | `mf-tax-available.json` | 構築済み |
 
@@ -944,10 +948,10 @@ graph TD
 
 | # | ファイル | 行 | 現状 | 修正内容 |
 |---|---------|:--:|------|---------|
-| PP1 | `journalRoutes.ts` | L172,L195,L217 | `getAccountsForValidation()` | `getClientAccounts(clientId).accounts`からバリデーション用形式に変換して渡す |
-| PP2 | `journalRoutes.ts` | L125 | `getAccountNameMap()` | `getClientAccounts(clientId).accounts`からnameMapを生成して渡す |
-| PP3 | `mfMappingService.ts` | L142 | `loadSugusruAccounts()` = `readFile('account-master.json')` | `getClientAccounts(tokenKey).accounts`に変更。シグネチャ不変 |
-| PP4 | `mfMappingService.ts` | L181 | `loadSugusruTaxes()` = `readFile('tax-category-master.json')` | `getClientTaxCategories(tokenKey)`に変更。シグネチャ不変 |
+| PP1 | `journalRoutes.ts` | L172,L195,L217 | `getClientAccountsForValidation(clientId)` | ✅ 内部で`getClientAccounts(clientId)`経由に自動対応済み |
+| PP2 | `accountMasterApi.ts` | L244 | `getAccountNameMap(clientId?)` | ✅ clientId引数追加済み（後方互換） |
+| PP3 | `mfMappingService.ts` | L107 | `loadClientAccountsForMapping(clientId)` | ✅ `getClientAccounts(clientId)`経由に変更済み |
+| PP4 | `mfMappingService.ts` | L117 | `loadSugusruTaxes()` = `readFile('tax-category-master.json')` | ― Override方式でマスタ直接参照が正解のため対応不要 |
 
 ##### P5: clientId修正（独立）
 

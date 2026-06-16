@@ -1,9 +1,27 @@
+/**
+ * useAccountSettings — 統合設定 composable（縮退版）
+ *
+ * 【設計経緯】
+ * 元々は勘定科目と税区分の両方を管理するcomposableだったが、
+ * 勘定科目側はaccountMasterStore / clientAccountStoreに直結化（SSOT化）したため、
+ * 科目側はStore参照のみに縮退。enrichロジック・overrides分解・再構成は全て廃止済み。
+ *
+ * TODO(Phase TaxCategory):
+ * Account側のStore直結化完了後、
+ * TaxCategoryも同じパターンへ移行する。
+ *
+ * 現在は互換性維持のため旧composableを利用。
+ * 移行対象: filteredTaxCategories, resolveTaxCategoryName,
+ *           saveTaxCategories, toggleTaxVisibility 等
+ *
+ * 移行完了後、このcomposable自体が不要になる可能性がある。
+ */
 import { ref, computed, type Ref } from 'vue'
 import { useAccountMaster } from '@/features/account-management/composables/useAccountMaster'
 import { useTaxMaster } from '@/features/tax-management/composables/useTaxMaster'
-import { useClientAccounts } from '@/features/account-management/composables/useClientAccounts'
 import { useClientTaxCategories } from '@/features/tax-management/composables/useClientTaxCategories'
-import type { Account } from '@/types/shared-account'
+import { useClientAccountStore } from '@/stores/clientAccountStore'
+import type { Account, EnrichedAccount } from '@/types/shared-account'
 import type { TaxCategory } from '@/types/shared-tax-category'
 import type { UnifiedAccount, UnifiedTaxCategory, AccountSettingsReturn } from '../types/account-settings.types'
 
@@ -14,30 +32,31 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // ==============================
   // 内部composable接続
   // ==============================
-  // ※ ページから直接importさせない。ここで全て接続する。
   const accountMaster = useAccountMaster()
   const taxMaster = useTaxMaster()
-  const clientAccountsComposable = scope === 'client' && clientId
-    ? useClientAccounts(clientId) : null
+  const clientAccountStore = useClientAccountStore()
   const clientTaxComposable = scope === 'client' && clientId
     ? useClientTaxCategories(clientId) : null
 
-  // ==============================
-  // 旧キーマイグレーションは不要（API接続版に移行済み）
-  // ==============================
+  // 旧useClientAccountsと同様に、初回アクセスで自動ロード（fire-and-forget）
+  // SWRパターン: キャッシュがあれば即時表示 → 裏でfetchFresh
+  if (scope === 'client' && clientId) {
+    clientAccountStore.load(clientId)
+  }
 
   // ==============================
   // 補助科目（scope='client'のみ有効）
   // ==============================
-  const subAccounts: Ref<Record<string, string>> = scope === 'client' && clientAccountsComposable
-    ? clientAccountsComposable.subAccounts
+  const subAccounts: Ref<Record<string, string>> = scope === 'client' && clientId
+    ? computed(() => clientAccountStore.subAccountsMap[clientId] ?? {}) as unknown as Ref<Record<string, string>>
     : ref<Record<string, string>>({})
 
   // ==============================
-  // accounts computed
+  // accounts computed（Store直結。overrides再構成は廃止済み）
   // ==============================
   const accounts = computed<UnifiedAccount[]>(() => {
     if (scope === 'master') {
+      // accountMasterStore.masterAccounts → EnrichedAccount[] → UnifiedAccount互換
       return accountMaster.masterAccounts.value.map(a => {
         const source: UnifiedAccount['source'] = a.source ?? 'mcp'
         return {
@@ -48,25 +67,17 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
         }
       })
     }
-    // scope === 'client'
-    if (!clientAccountsComposable) {
-      console.error('[useAccountSettings] scope="client" but clientAccountsComposable is null (clientId missing?)')
-      // フォールバック: マスタデータを返す（呼び出し側でmasterSettings参照を不要にする）
-      return accountMaster.masterAccounts.value.map(a => {
-        const source: UnifiedAccount['source'] = a.source ?? 'mcp'
-        return {
-          ...a,
-          hidden: a.hiddenInMaster,
-          hiddenInMaster: false,
-          source,
-        }
-      })
+    // scope === 'client': clientAccountStore直結
+    if (!clientId) {
+      console.error('[useAccountSettings] scope="client" but clientId missing')
+      return []
     }
-    return clientAccountsComposable.clientAccounts.value.map(a => {
+    const clientAccounts = clientAccountStore.getAccounts(clientId)
+    return clientAccounts.map(a => {
       const source: UnifiedAccount['source'] = a.source ?? 'mcp'
       return {
         ...a,
-        hidden: a.hiddenInClient,
+        hiddenInMaster: false,
         source,
       }
     })
@@ -76,9 +87,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
     accounts.value.filter(a => !a.hidden && !a.hiddenInMaster)
   )
 
-  const newMasterAccounts = computed(() =>
-    clientAccountsComposable ? clientAccountsComposable.newMasterAccounts.value : []
-  )
+  const newMasterAccounts = computed(() => [] as Account[])
 
   // デフォルト科目順序（allAccountsの元順序）
   const defaultAccountOrder = computed(() =>
@@ -86,7 +95,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   )
 
   // ==============================
-  // taxCategories computed
+  // taxCategories computed（税区分 — 現行維持）
   // ==============================
   const taxCategories = computed<UnifiedTaxCategory[]>(() => {
     if (scope === 'master') {
@@ -104,7 +113,6 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
     }
     if (!clientTaxComposable) {
       console.error('[useAccountSettings] scope="client" but clientTaxComposable is null (clientId missing?)')
-      // フォールバック: マスタ税区分を返す
       return taxMaster.masterTaxCategories.value.map(tc => {
         const source: UnifiedTaxCategory['source'] = tc.source ?? 'mcp'
         return {
@@ -145,36 +153,22 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
     direction: 'sales' | 'purchase' | 'common',
     consumptionTaxMode?: 'general' | 'individual' | 'proportional' | 'simplified' | 'exempt'
   ): UnifiedTaxCategory[] {
-    // individual/proportional は general（原則課税）の細分化。税区分フィルタでは同一扱い
     const normalizedMode = consumptionTaxMode === 'individual' || consumptionTaxMode === 'proportional'
       ? 'general' : consumptionTaxMode
 
     return taxCategories.value.filter(tc => {
       if (tc.hidden || tc.hiddenInMaster) return false
-
-      // 方向フィルタ（既存ロジック）
       if (direction === 'sales' && tc.direction !== 'sales' && tc.direction !== 'common') return false
       if (direction === 'purchase' && tc.direction !== 'purchase' && tc.direction !== 'common') return false
       if (direction === 'common' && tc.direction !== 'common') return false
-
-      // 課税方式フィルタ（consumptionTaxMode省略時は従来動作）
       if (!normalizedMode) return true
-
-      // 免税事業者: direction='common'（「対象外」「不明」）のみ
       if (normalizedMode === 'exempt') return tc.direction === 'common'
-
-      // 簡易課税専用判定: simplifiedOnlyフラグ（データ駆動。IDパターンに依存しない）
       const isSimplifiedTaxCategory = tc.simplifiedOnly === true
-
-      // 本則課税: 簡易課税専用の税区分を除外
       if (normalizedMode === 'general') return !isSimplifiedTaxCategory
-
-      // 簡易課税: 一般 + 業種区分付き（売上側のみ）
       if (normalizedMode === 'simplified') {
         if (isSimplifiedTaxCategory && tc.direction !== 'sales') return false
         return true
       }
-
       return true
     })
   }
@@ -192,13 +186,13 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   }
 
   // ==============================
-  // 勘定科目 書き込み操作
+  // 勘定科目 書き込み操作（Store直結）
   // ==============================
   function toggleAccountVisibility(accountId: string): void {
     if (scope === 'master') {
       accountMaster.toggleVisibility(accountId)
-    } else {
-      clientAccountsComposable?.toggleVisibility(accountId)
+    } else if (clientId) {
+      clientAccountStore.toggleHidden(clientId, accountId)
     }
   }
 
@@ -206,10 +200,9 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
     if (scope === 'master') {
       return accountMaster.isHidden(accountId)
     }
-    if (!clientAccountsComposable) return false
-    const entry = clientAccountsComposable.clientAccounts.value.find(a => a.accountId === accountId)
-    if (!entry) return false
-    return entry.hiddenInClient || entry.hiddenInMaster
+    if (!clientId) return false
+    const accts = clientAccountStore.getAccounts(clientId)
+    return accts.find(a => a.accountId === accountId)?.hidden === true
   }
 
   function addCustomAccount(account: Account): void {
@@ -231,14 +224,13 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   function resetAccountsToDefault(): void {
     if (scope === 'master') {
       accountMaster.resetToDefault()
-    } else {
-      clientAccountsComposable?.resetToDefault()
     }
+    // 顧問先: 未実装（Store直結化後に必要ならStore側に追加）
   }
 
   function syncAccountsFromMaster(): number {
-    if (scope !== 'client' || !clientAccountsComposable) return 0
-    return clientAccountsComposable.syncFromMaster()
+    // 旧composable依存を削除。Store直結化後は不要
+    return 0
   }
 
   // ==============================
@@ -273,26 +265,24 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // ==============================
   function saveAccounts(allRows: Account[], subAccountsInput?: Record<string, string>): void {
     if (scope === 'master') {
-      // allAccountsを直接更新（overridesはcomputed、自動でdebounceSave発火）
-      accountMaster.allAccounts.value = allRows
-    } else {
-      // 顧問先スコープ: composable.saveAll()に委譲
-      clientAccountsComposable?.saveAll(allRows, subAccountsInput)
+      // EnrichedAccountはAccount extends。実行時にはenrichフィールドが存在する
+      accountMaster.allAccounts.value = allRows as EnrichedAccount[]
+    } else if (clientId) {
+      // 仕訳ページからの互換呼び出し用
+      clientAccountStore.saveAll(clientId, allRows as EnrichedAccount[], subAccountsInput)
     }
   }
 
   function saveTaxCategories(allRows: TaxCategory[]): void {
     if (scope === 'master') {
-      // allTaxCategoriesを直接更新（overridesはcomputed、自動でdebounceSave発火）
       taxMaster.allTaxCategories.value = allRows
     } else {
-      // 顧問先スコープ: composable.saveAll()に委譲
       clientTaxComposable?.saveAll(allRows)
     }
   }
 
   // ==============================
-  // デフォルトIDセット（出自判定用。カスタム追加行の末尾ソートに使用）
+  // デフォルトIDセット
   // ==============================
   const defaultAccountIds = computed(() => new Set(
     accountMaster.allAccounts.value.filter(a => !a.isCustom).map(a => a.accountId)
@@ -305,7 +295,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // return
   // ==============================
   return {
-    // 勘定科目（読み取り）
+    // 勘定科目（読み取り — Store直結。仕訳ページ互換）
     accounts,
     visibleAccounts,
     subAccounts,
@@ -319,7 +309,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
     filteredTaxCategories,
     resolveTaxCategoryName,
     resolveTaxCategoryShortName,
-    // 勘定科目（書き込み）
+    // 勘定科目（書き込み — Store直結）
     toggleAccountVisibility,
     isAccountHidden,
     addCustomAccount,

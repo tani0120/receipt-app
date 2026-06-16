@@ -1,20 +1,30 @@
 /**
  * accountMasterStore — 勘定科目マスタ Piniaストア
  *
- * useAccountMaster.tsのモジュールスコープをPinia + persistedstateに移行。
- * AccountMasterRepository経由でデータアクセス（API直結を排除）。
+ * 【設計原則】バックエンドSSOT
+ * - APIから EnrichedAccount[] をそのまま保持（enrichフィールド含む）
+ * - SWRパターン: キャッシュがあれば即時表示 → 裏でfetchFresh
+ * - 楽観的更新: Store即時更新 → API保存（デバウンス300ms）
  *
- * 準拠: DL-042, DL-030, plan_pinia_persistedstate移行.md
+ * 準拠: plan_account_ssot.md Step 3
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Account } from '@/types/shared-account'
+import type { Account, EnrichedAccount } from '@/types/shared-account'
 import { createRepositories } from '@/repositories'
 import { isCacheExpired } from '@/utils/cacheUtils'
 
-/** マスタレベルの科目拡張（非表示フラグ＋カスタム識別） */
-export interface MasterAccount extends Account {
+/**
+ * マスタレベルの科目拡張（hiddenInMaster + isCustom）
+ *
+ * EnrichedAccountを拡張し、マスタ画面固有のフラグを追加。
+ * EnrichedAccountのenrichフィールド（accountGroupLabel等）は
+ * APIレスポンスに含まれるため、実行時には存在する。
+ */
+export interface MasterAccount extends EnrichedAccount {
+  /** マスタレベルで非表示か */
   hiddenInMaster: boolean
+  /** カスタム科目か */
   isCustom: boolean
 }
 
@@ -22,7 +32,9 @@ const repos = createRepositories()
 
 
 export const useAccountMasterStore = defineStore('accountMaster', () => {
-  const allAccounts = ref<Account[]>([])
+  // APIからはEnrichedAccount[]が返るが、Repositoryの型定義はAccount[]のまま。
+  // 実行時にはenrichフィールドが存在するため、EnrichedAccount[]として保持する。
+  const allAccounts = ref<EnrichedAccount[]>([])
   const cachedAt = ref<number | null>(null)
   let saveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -39,7 +51,8 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   async function fetchFresh() {
     try {
       const data = await repos.accountMaster.getMaster()
-      allAccounts.value = migrateLegacyFields(data)
+      // Repository型はAccount[]だが、APIは実際にはEnrichedAccount[]を返す
+      allAccounts.value = migrateLegacyFields(data) as EnrichedAccount[]
       cachedAt.value = Date.now()
       console.log(`[accountMasterStore] ${data.length}件をサーバーから取得`)
     } catch (err) {
@@ -66,6 +79,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   function debounceSave(): void {
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
+      // 保存時はenrichフィールドを含んだまま送信しても、バックエンドがAccount部分のみ永続化する
       repos.accountMaster.saveMaster(allAccounts.value)
         .catch(err => console.error('[accountMasterStore] サーバー保存失敗:', err))
     }, 300)
@@ -100,7 +114,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   }
 
   function addCustomAccount(account: Account): void {
-    allAccounts.value.push({ ...account, isCustom: true } as Account)
+    allAccounts.value.push({ ...account, isCustom: true } as EnrichedAccount)
     debounceSave()
   }
 

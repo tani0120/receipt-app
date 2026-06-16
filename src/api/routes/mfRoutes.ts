@@ -35,7 +35,7 @@ import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFi
 import { importMfJournals } from '../services/mfJournalImporter'
 import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services/mfTaxImportService'
 import { importMasterAccounts } from '../services/mfAccountImportService'
-import { saveClientAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories, getClientAccounts, hasClientAccounts } from '../services/accountMasterApi'
+import { saveClientAccounts, saveMfAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories, getClientAccounts, hasClientAccounts } from '../services/accountMasterApi'
 import type { Account } from '../../types/shared-account'
 import { deriveMfAccountGroup, deriveTarget } from '../../data/master/mf-account-category-mapping'
 import { generateMasterId } from '../services/generateMasterId'
@@ -44,6 +44,7 @@ import type { TaxCategory } from '../../types/shared-tax-category'
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
 import { getAllTaxAvailable, saveTaxAvailable, invalidateCache, type TaxMethodKey } from '../services/mfTaxAvailableStore'
 import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
+import { isIndividualType } from '../../constants/clientOptions'
 
 const app = new Hono()
 
@@ -529,7 +530,7 @@ app.post('/sync-all', async (c) => {
         mfFinancialStatementType: a.financial_statement_type,
       })
     }
-    saveClientAccounts(clientId, mapped)
+    saveMfAccounts(clientId, mapped)
 
     // 5b. 前回の顧問先マスタにあって今回MFにない科目 → hidden=trueで保持
     let hiddenCount = 0
@@ -544,7 +545,7 @@ app.post('/sync-all', async (c) => {
       }
       if (hiddenCount > 0) {
         // hidden行を含めて再保存
-        saveClientAccounts(clientId, mapped)
+        saveMfAccounts(clientId, mapped)
       }
     }
 
@@ -821,6 +822,10 @@ app.post('/import-client-accounts', async (c) => {
   }
 
   try {
+    // 0. 顧問先のtype（corp/individual）を取得 → 科目のtargetに使用
+    const clientData = getById(clientId)
+    const clientType = isIndividualType(clientData?.type) ? 'individual' : 'corp'
+
     // 1. MFから勘定科目取得
     const allAccounts = await mcpFetchAccounts(clientId)
     const available = allAccounts.filter((a) => a.available)
@@ -873,6 +878,7 @@ app.post('/import-client-accounts', async (c) => {
       if (master) {
         mapped.push({
           ...master,
+          target: clientType,
           category: a.category,
           accountGroup: group,
           defaultTaxCategoryId: master.defaultTaxCategoryId || masterTaxId,
@@ -885,15 +891,14 @@ app.post('/import-client-accounts', async (c) => {
       }
 
       unmatchedNames.push(a.name)
-      const target = deriveTarget(a.category, a.financial_statement_type)
-      const suffix = target === 'individual' ? 'IND' : 'CORP'
+      const suffix = isIndividualType(clientType) ? 'IND' : 'CORP'
       const accountId = await generateMasterId(a.name, suffix, existingIds)
       existingIds.add(accountId)
 
       mapped.push({
         accountId,
         name: a.name,
-        target,
+        target: clientType,
         accountGroup: group,
         category: a.category,
         defaultTaxCategoryId: masterTaxId,
@@ -908,7 +913,7 @@ app.post('/import-client-accounts', async (c) => {
     }
 
     // 5. 保存
-    saveClientAccounts(clientId, mapped)
+    saveMfAccounts(clientId, mapped)
 
     const matchedCount = available.length - unmatchedNames.length
     return c.json({

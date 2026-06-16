@@ -3,7 +3,7 @@
  *
  * 内部はaccountMasterStoreに完全委譲。returnインターフェース変更ゼロ。
  *
- * 準拠: DL-042, plan_pinia_persistedstate移行.md
+ * 準拠: DL-042, plan_account_ssot.md Step 3
  */
 import { storeToRefs } from 'pinia'
 import { useAccountMasterStore } from '@/stores/accountMasterStore'
@@ -23,7 +23,7 @@ export function useAccountMaster() {
     visibleMasterAccounts,
     /** 現在の差分データ（顧問先コピー用。overrides互換） */
     overrides,
-    /** 生データ（API直接取得結果） */
+    /** 生データ（API直接取得結果。EnrichedAccount[]） */
     allAccounts,
     toggleVisibility: store.toggleVisibility,
     addCustomAccount: store.addCustomAccount,

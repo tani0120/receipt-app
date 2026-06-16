@@ -137,7 +137,7 @@ Layer 3: オープン対応（フォールバック）
 | **コマンドID** | `mf_sync_all` |
 | **統合元** | sync_mf_data, accounts_list, taxes_list, departments, sub_accounts, connected, office_info, term_settings, partners_list |
 | **入力** | MCP: currentOffice + getTermSettings + getAccounts + getTaxes + getJournals + getTradePartners + getDepartments + getSubAccounts + getConnectedAccounts |
-| **処理** | mapOfficeToClient + mapTermSettingsToClient + saveClientAccounts + saveClientTaxCategories + importMfJournals |
+| **処理** | mapOfficeToClient + mapTermSettingsToClient + saveMfAccounts + saveClientTaxCategories + importMfJournals |
 | **出力先** | DB（clientStore, accountMasterStore） + チャット内結果テキスト |
 | **取込期間** | 常に3期分（直近2期＋進行期） |
 | **エンドポイント** | `POST /api/mf/sync-all` |

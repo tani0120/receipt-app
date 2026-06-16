@@ -1,15 +1,16 @@
 /**
  * mfMappingService.ts — Sugusru概念ID → MF-ID 変換マップ生成
  *
- * Sugusruマスタ（account-master.json / tax-category-master.json）の名前と
+ * 顧問先別の科目データ（マスタ+Override合成結果）の名前と
  * MF API（MCP経由getAccounts/getTaxes等）の名前を突合し、
  * { sugusru概念ID: mf固有ID } のマッピングテーブルを生成する。
  *
- * 準拠: mf_sugusru_field_mapping.md §5
+ * 準拠: mf_sugusru_field_mapping.md §5、§53 §11
  */
 
 import { join } from 'path'
 import { getAccountGroupDirection } from '../../data/master/account-category-rules'
+import { getClientAccounts } from './accountMasterApi'
 import {
   mcpFetchAccounts,
   mcpFetchTaxes,
@@ -104,9 +105,13 @@ interface SugusruTax {
   individualOnly?: boolean
 }
 
-async function loadSugusruAccounts(): Promise<SugusruAccount[]> {
-  const raw = await readFile(join(process.cwd(), 'data/account-master.json'), 'utf8')
-  return JSON.parse(raw)
+/**
+ * 顧問先別の科目データを取得（マスタ+Override合成結果）
+ * §53 §11: loadSugusruAccounts() → clientId対応
+ */
+function loadClientAccountsForMapping(clientId: string): SugusruAccount[] {
+  const data = getClientAccounts(clientId)
+  return data.accounts
 }
 
 async function loadSugusruTaxes(): Promise<SugusruTax[]> {
@@ -139,7 +144,7 @@ export async function buildAccountMap(tokenKey: string): Promise<{
   map: Map<string, string>
   details: AccountMapping[]
 }> {
-  const sugusruAccounts = await loadSugusruAccounts()
+  const sugusruAccounts = loadClientAccountsForMapping(tokenKey)
   const mfAccounts = await mcpFetchAccounts(tokenKey)
 
   // MF科目を名前→IDのマップに変換（available=trueのみ）
@@ -295,7 +300,7 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
   const unmatchedTaxes = taxResult.details.filter(d => d.mfId === null)
 
   // 科目方向マップ生成（accountGroupから直接判定。データ駆動）
-  const sugusruAccounts = await loadSugusruAccounts()
+  const sugusruAccounts = loadClientAccountsForMapping(tokenKey)
   const accountDirectionMap = new Map<string, 'sales' | 'purchase' | 'common'>()
   for (const acct of sugusruAccounts) {
     accountDirectionMap.set(acct.accountId, getAccountGroupDirection(acct.accountGroup ?? ''))

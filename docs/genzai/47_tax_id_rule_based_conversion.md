@@ -209,7 +209,7 @@ TaxCategory型（shared-tax-category.ts）:
 |---|---|---|
 | 顧問先MFインポート | `POST /api/mf/import-client-taxes` | MCPから取得した`t.id`をセット |
 | sync-all | `POST /api/mf/sync-all` | MCPから取得した`t.id`をセット |
-| 全社マスタ同期 | `syncMasterTaxCategoriesToClients()` | セットしない（MFに未接続） |
+| 全社マスタ同期 | ~~`syncMasterTaxCategoriesToClients()`~~ 削除済み（§53実装完了。Override方式で同期不要） | セットしない（MFに未接続） |
 | フロントPUT上書き | `PUT /api/tax-categories/client/:id` | composableのmfTaxIdMapから復元 |
 
 ### 4-3. 連携/未連携の挙動
@@ -230,7 +230,7 @@ TaxCategory型（shared-tax-category.ts）:
 
 ```
 ① 全社マスタのsaveAllTaxCategories()実行時に自動呼出
-② syncMasterTaxCategoriesToClients()
+② ~~syncMasterTaxCategoriesToClients()~~ 削除済み（§53実装完了。Override方式で同期不要）
 ③ マスタにあって顧問先にないID → 追加（mfTaxIdなし）
 ④ 名前・税率変更 → 更新
 ⑤ マスタから消えたID → 削除しない（仕訳参照を壊さない）
@@ -448,7 +448,7 @@ TST（株式会社すぐする）とTSK（あああ/谷風行寛）の2事業者
 | `src/api/services/mfTaxImportService.ts` | 全社マスタ・顧問先インポート | mfTaxIdの保存追加。MF_CUSTOM全廃 |
 | `src/api/routes/mfRoutes.ts` | sync-all（MF全データ一括取込） | mfTaxIdの保存追加。MF_CUSTOM全廃 |
 | `src/types/shared-tax-category.ts` | TaxCategory型定義 | `mfTaxId?: string`フィールド追加 |
-| `src/api/services/accountMasterStore.ts` | 全社マスタ管理・顧問先別ストア | syncMasterTaxCategoriesToClients（mfTaxIdなしで同期） |
+| `src/api/services/accountMasterApi.ts` | 全社マスタ管理・顧問先別ストア | ~~syncMasterTaxCategoriesToClients~~ 削除済み（§53実装完了。Override方式で同期不要） |
 
 ### 8-2. フロントエンド
 

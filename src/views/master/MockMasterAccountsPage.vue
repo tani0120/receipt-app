@@ -244,9 +244,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue';
-import type { Account } from '@/types/shared-account';
-import type { EnrichedAccount } from '@/api/services/accountMasterApi';
-import { useAccountSettings } from '@/features/account-settings/composables/useAccountSettings';
+import type { Account, EnrichedAccount } from '@/types/shared-account';
+import { useAccountMasterStore } from '@/stores/accountMasterStore';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useModalHelper } from '@/composables/useModalHelper';
@@ -358,13 +357,13 @@ async function executeImport() {
       diff: { matched: unknown[]; added: unknown[] };
       summary: string;
       reportLines: string[];
-      updatedAccounts: Account[];
+      updatedAccounts: EnrichedAccount[];
       hasDiff: boolean;
     };
 
     if (!result.hasDiff) {
       // 差分なし → MFフィールド付与のみ
-      accountRows.splice(0, accountRows.length, ...(result.updatedAccounts as unknown as EnrichedAccount[]));
+      accountRows.splice(0, accountRows.length, ...result.updatedAccounts);
       await modal.notify({ title: `MF勘定科目 ${result.mfCount}件と照合完了`, message: result.reportLines.join('\n'), variant: 'success' });
       markClean();
       return;
@@ -380,7 +379,7 @@ async function executeImport() {
     if (!confirmed) return;
 
     // 差分適用 → reactiveを同期
-    accountRows.splice(0, accountRows.length, ...(result.updatedAccounts as unknown as EnrichedAccount[]));
+    accountRows.splice(0, accountRows.length, ...result.updatedAccounts);
     await modal.notify({ title: `MF差分マージ完了（${result.summary}）`, variant: 'success' });
     markClean();
   } catch (err) {
@@ -396,12 +395,12 @@ async function executeImport() {
   }
 }
 
-// =============== composable接続（useAccountSettings経由） ===============
-const settings = useAccountSettings('master');
-// テンプレート互換用のローカル参照
-const masterAccounts = settings.accounts;
-function toggleVisibility(id: string) { settings.toggleAccountVisibility(id); }
-function isHidden(id: string) { return settings.isAccountHidden(id); }
+// =============== composable接続 ===============
+// 科目: accountMasterStore直結（SSOT化）
+const accountMasterStore = useAccountMasterStore();
+const masterAccounts = computed(() => accountMasterStore.masterAccounts);
+function toggleVisibility(id: string) { accountMasterStore.toggleVisibility(id); }
+function isHidden(id: string) { return accountMasterStore.isHidden(id); }
 
 // =============== 勘定科目マスタ ===============
 type BusinessTypeValue = 'corp' | 'individual';
@@ -411,13 +410,13 @@ const taxMethod = ref<TaxMethodType>('proportional');
 const accountFilter = ref('');
 const accountPage = ref(1);
 
-const accountRows: EnrichedAccount[] = reactive([...masterAccounts.value] as unknown as EnrichedAccount[]);
+const accountRows: EnrichedAccount[] = reactive([...masterAccounts.value]);
 
 // SWR再検証完了後にaccountRowsを最新データに同期する
 // localStorageキャッシュ→即時描画→fetchFresh()完了→ストア更新→ここでaccountRows再同期
 // マスタ画面は編集機能全廃済みのため、編集中データ上書きのリスクなし
 watch(masterAccounts, (newVal) => {
-  accountRows.splice(0, accountRows.length, ...(newVal as unknown as EnrichedAccount[]));
+  accountRows.splice(0, accountRows.length, ...newVal);
 }, { deep: true });
 
 // モーダルヘルパー
@@ -453,8 +452,8 @@ watch(filteredAccountRows, () => { if (accountPage.value > accountTotalPages.val
 
 async function saveChanges() {
   try {
-    // composable経由で保存（autoSaveでサーバーに自動保存される）
-    settings.saveAccounts(accountRows);
+    // Store経由で保存（debounceSaveでサーバーに自動保存される）
+    accountMasterStore.allAccounts = [...accountRows];
 
     markClean();
     modal.notify({ title: UI_MSG.保存成功, variant: 'success' });

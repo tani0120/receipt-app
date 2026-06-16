@@ -19,7 +19,7 @@
  */
 
 import { mcpFetchAccounts } from './mfMcpClient'
-import { getAllAccounts, saveAllAccounts, getAllTaxCategories } from './accountMasterApi'
+import { getAllAccounts, saveAllAccounts, getAllTaxCategories, enrichAccountRow, loadTaxCategories } from './accountMasterApi'
 import { saveMfRawData } from './mfRawDataStore'
 import { getById } from './clientsApi'
 import { generateMasterId } from './generateMasterId'
@@ -248,7 +248,7 @@ export async function importMasterAccounts(
     diff,
     summary: summaryParts || '差分なし',
     reportLines,
-    updatedAccounts: masterItems,
+    updatedAccounts: masterItems.map(row => enrichAccountRow(row, loadTaxCategories())),
     hasDiff,
   }
 }

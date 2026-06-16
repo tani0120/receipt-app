@@ -73,25 +73,7 @@
             <span class="as-page-range"
               >{{ taxPageStart }}~{{ taxPageEnd }} / {{ filteredTaxRows.length }}{{ UI_MSG.件 }}</span
             >
-            <!-- チェック時の一括操作ボタン -->
-            <template v-if="checkedIds.length">
-              <span class="as-bulk-badge">{{ checkedIds.length }}{{ UI_MSG.件選択中 }}</span>
-              <button class="as-bulk-btn" @click="showChecked">
-                <i class="fa-solid fa-eye"></i> {{ UI_MSG.表示化 }}
-              </button>
-              <button class="as-bulk-btn" @click="hideChecked">
-                <i class="fa-solid fa-eye-slash"></i> {{ UI_MSG.非表示化 }}
-              </button>
-              <button class="as-bulk-btn danger" :disabled="hasMfData" @click="deleteChecked">
-                <i class="fa-solid fa-trash-can"></i> {{ UI_MSG.削除復元不可 }}
-              </button>
-              <button class="as-bulk-btn" :disabled="hasMfData" @click="copyChecked">
-                <i class="fa-solid fa-copy"></i> {{ UI_MSG.コピー }}
-              </button>
-              <button class="as-bulk-btn" :disabled="hasMfData" @click="addAfterChecked">
-                <i class="fa-solid fa-plus"></i> {{ UI_MSG.追加 }}
-              </button>
-            </template>
+            <!-- チェックボックス一括操作 廃止。税区分の追加・削除・コピーはMF側で行う -->
           </div>
           <div class="as-actions">
             <MfImportButton
@@ -104,7 +86,7 @@
             <button class="as-action-btn" @click="resetTaxOrder">
               <i class="fa-solid fa-rotate"></i> {{ UI_MSG.デフォルト順 }}
             </button>
-            <button class="as-action-btn primary"><i class="fa-solid fa-plus"></i> {{ UI_MSG.追加 }}</button>
+            <!-- 追加ボタン廃止。税区分の追加はMF側で行う -->
             <button class="as-action-btn save" @click="saveChanges">
               <i class="fa-solid fa-floppy-disk"></i> {{ UI_MSG.保存 }}
             </button>
@@ -113,7 +95,7 @@
         <div class="as-table-wrap">
           <table class="as-table" style="table-layout: fixed">
             <colgroup>
-              <col style="width: 38px" />
+              <!-- チェックボックス列 廃止 -->
               <col :style="{ width: ctColWidths['mfCompliance'] + 'px' }" />
               <col :style="{ width: ctColWidths['source'] + 'px' }" />
               <col :style="{ width: ctColWidths['qualified'] + 'px' }" />
@@ -127,9 +109,7 @@
             </colgroup>
             <thead>
               <tr>
-                <th class="as-th-check">
-                  <input type="checkbox" @change="toggleAllChecked($event)" />
-                </th>
+                <!-- チェックボックスヘッダー 廃止 -->
                 <th class="as-th-check relative">
                   {{ UI_MSG.列表示 }}
                   <div
@@ -209,9 +189,7 @@
                 :key="row.taxCategoryId"
                 :class="{ 'row-hidden': row.hidden, 'row-custom': row.isCustom }"
               >
-                <td class="as-td-check">
-                  <input type="checkbox" v-model="checkedIds" :value="row.taxCategoryId" />
-                </td>
+                <!-- チェックボックス 廃止 -->
                 <td class="as-td-actions">
                   <i
                     v-if="row.hidden"
@@ -369,9 +347,7 @@ import { ref, reactive, computed, watch, onMounted } from "vue";
 import type { TaxCategory, TaxDirection } from "@/types/shared-tax-category";
 import type { UnifiedTaxCategory } from "@/features/account-settings/types/account-settings.types";
 
-import { useAccountSettings } from "@/features/account-settings/composables/useAccountSettings";
 import { useClients } from "@/features/client-management/composables/useClients";
-import { getInitialCopyCounter } from "@/utils/copy-utils";
 import { useColumnResize } from "@/composables/useColumnResize";
 import { useUnsavedGuard } from "@/composables/useUnsavedGuard";
 import { useModalHelper } from "@/composables/useModalHelper";
@@ -382,7 +358,7 @@ import MfImportButton from "@/components/MfImportButton.vue";
 import { getLabel } from "@/constants/clientOptions";
 import { TAX_DIRECTION_OPTIONS, QUALIFIED_OPTIONS } from "@/constants/vendorOptions";
 import { UI_MSG } from "@/constants/uiMessages";
-import { fetchMfAuthStatus, importClientTaxes as apiImportClientTaxes } from "@/composables/useMfTaxApi";
+import { importClientTaxes as apiImportClientTaxes } from "@/composables/useMfTaxApi";
 import { TAX_CATEGORY_FIELD_LABELS, TAX_METHOD_LABELS } from "@/constants/fieldLabels";
 
 // 列幅カスタマイズ
@@ -428,17 +404,32 @@ const mfAuthenticated = ref(false);
 const mfImporting = ref(false);
 const mfImportBtnRef = ref<InstanceType<typeof MfImportButton> | null>(null);
 const mfImportedIds = ref<string[]>([]);
-/** MFからインポートされたデータが存在するか（source='mcp'の行が1件以上） */
-const hasMfData = computed(() => allTaxRows.some((r) => r.source === "mcp"));
+/** 顧問先でMFインポートが実施済みか（バックエンドのmfLinkedフラグで判定） */
+const mfLinked = ref(false);
+const hasMfData = computed(() => mfLinked.value);
 
+// ★ 初期ロード: API直接フェッチ（enrichRow済み・visibleIn付き）
 onMounted(async () => {
   try {
-    const data = await fetchMfAuthStatus(props.clientId);
-    mfAuthenticated.value = data.authenticated ?? false;
-  } catch {
-    mfAuthenticated.value = false;
+    const res = await fetch(`/api/tax-categories/client/${encodeURIComponent(props.clientId)}?pageSize=200&taxMethod=all`);
+    if (res.ok) {
+      const data = await res.json() as { items: TaxCategory[]; mfLinked?: boolean };
+      const items: UnifiedTaxCategory[] = data.items.map(tc => ({
+        ...tc,
+        hidden: tc.hidden ?? false,
+        hiddenInMaster: false,
+        visibilityOverride: null as boolean | null,
+        source: (tc.source ?? 'master') as UnifiedTaxCategory['source'],
+      }));
+      allTaxRows.splice(0, allTaxRows.length, ...items);
+      // MF連携状態をAPIレスポンスからデータ駆動で取得
+      mfLinked.value = data.mfLinked ?? false;
+      mfAuthenticated.value = data.mfLinked ?? false;
+      console.log(`[顧問先税区分] ${props.clientId}: API直接取得 ${items.length}件 (MF連携=${data.mfLinked})`);
+    }
+  } catch (err) {
+    console.error('[顧問先税区分] 初期ロード失敗:', err);
   }
-
 });
 
 /** MFから税区分を取得してテーブルに反映（バックエンドAPI一括処理） */
@@ -461,8 +452,8 @@ async function importFromMf() {
     allTaxRows.splice(0, allTaxRows.length, ...unifiedImported);
     mfImportedIds.value = imported.map((t) => t.taxCategoryId);
 
-    // composable側にも同期
-    settings.saveTaxCategories(imported);
+    // バックエンドで既に保存済み（mfTaxImportService.importClientTaxes内で永続化）
+    mfLinked.value = true;
     markClean();
 
     // consumptionTaxModeの更新をフロントにも反映
@@ -492,17 +483,11 @@ async function importFromMf() {
   }
 }
 
-// =============== composable接続（useAccountSettings経由） ===============
-// clientIdはprops経由で必須。defineProps<{ clientId: string }>()で型安全。
-const settings = useAccountSettings("client", props.clientId);
-
-// 旧キーマイグレーションはuseAccountSettings内部で実行済み
-
-// isMasterCustomTaxはmaster-custom削除により不要（常にfalse）。削除済み。
-
-// loadTaxRows廃止済み。composable出力(UnifiedTaxCategory[])をそのまま使用。
-// source/hidden/hiddenInMaster等のプロパティを保持し、hasMfDataが正しく機能する。
-const allTaxRows: UnifiedTaxCategory[] = reactive([...settings.taxCategories.value]);
+// =============== データソース: API直接フェッチ（SSOT: バックエンド） ===============
+// composableチェーン（useAccountSettings→useClientTaxCategories→overrides分解）を廃止。
+// バックエンドのenrichRow()が付与したvisibleIn/displayRateをそのまま保持する。
+// 初期データはonMountedでAPI取得。MFインポート時もバックエンドのレスポンスをそのまま使用。
+const allTaxRows: UnifiedTaxCategory[] = reactive([]);
 
 // モーダルヘルパー
 const modal = useModalHelper();
@@ -535,12 +520,8 @@ watch(filteredTaxRows, () => {
   if (taxPage.value > taxTotalPages.value) taxPage.value = 1;
 });
 
-// =============== チェックボックス ===============
-const checkedIds = ref<string[]>([]);
-function toggleAllChecked(e: Event) {
-  const checked = (e.target as HTMLInputElement).checked;
-  checkedIds.value = checked ? pagedTaxRows.value.map((r) => r.taxCategoryId) : [];
-}
+// =============== チェックボックス（廃止） ===============
+// 税区分の追加・削除・コピーはMF側で行う。チェックボックス一括操作は廃止。
 
 // =============== 非表示化・表示化 ===============
 /** hidden/enabledTo同期ヘルパー */
@@ -555,115 +536,7 @@ function hideRow(row: UnifiedTaxCategory) {
 function showRow(row: UnifiedTaxCategory) {
   setRowVisibility(row, false);
 }
-function hideChecked() {
-  checkedIds.value.forEach((id) => {
-    const row = allTaxRows.find((r) => r.taxCategoryId === id);
-    if (row) setRowVisibility(row, true);
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分非表示);
-}
-function showChecked() {
-  checkedIds.value.forEach((id) => {
-    const row = allTaxRows.find((r) => r.taxCategoryId === id);
-    if (row) setRowVisibility(row, false);
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分表示);
-}
 
-async function deleteChecked() {
-  const customIds = checkedIds.value.filter((id) => {
-    const row = allTaxRows.find((r) => r.taxCategoryId === id);
-    return row?.isCustom;
-  });
-  if (!customIds.length) {
-    await modal.notify({ title: UI_MSG.カスタム税区分のみ, variant: "warning" });
-    return;
-  }
-  const ok = await modal.confirm({
-    title: `${customIds.length}${UI_MSG.カスタム税区分削除確認}`,
-    message: UI_MSG.復元不可,
-    variant: "danger",
-  });
-  if (!ok) return;
-  customIds.forEach((id) => {
-    const idx = allTaxRows.findIndex((r) => r.taxCategoryId === id);
-    if (idx !== -1) allTaxRows.splice(idx, 1);
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分削除);
-}
-
-// =============== コピー・追加 ===============
-let copyCounter = getInitialCopyCounter(allTaxRows as unknown as Record<string, unknown>[]);
-async function copyChecked() {
-  if (!checkedIds.value.length) return;
-  const ok = await modal.confirm({
-    title: `${checkedIds.value.length}${UI_MSG.税区分コピー確認}`,
-  });
-  if (!ok) return;
-  const ids = [...checkedIds.value];
-  ids.reverse().forEach((id) => {
-    const srcIdx = allTaxRows.findIndex((r) => r.taxCategoryId === id);
-    if (srcIdx === -1) return;
-    const src = allTaxRows[srcIdx];
-    if (!src) return;
-    copyCounter++;
-    const copy: UnifiedTaxCategory = {
-      taxCategoryId: `${src.taxCategoryId}_COPY_${copyCounter}`,
-      name: `${src.name}${UI_MSG.コピー接尾}`,
-      shortName: `${src.shortName}${UI_MSG.コピー接尾}`,
-      direction: src.direction,
-      qualified: src.qualified,
-      aiSelectable: src.aiSelectable,
-      hidden: false,
-      enabledFrom: new Date().toISOString().slice(0, 10),
-      effectiveFrom: null,
-      effectiveTo: null,
-      defaultVisible: true,
-      displayOrder: src.displayOrder + 0.5,
-      isCustom: true,
-      insertAfter: src.taxCategoryId,
-      hiddenInMaster: false,
-      visibilityOverride: null,
-      source: 'client-custom',
-    };
-    allTaxRows.splice(srcIdx + 1, 0, copy);
-  });
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分コピー);
-}
-async function addAfterChecked() {
-  const ok = await modal.confirm({ title: UI_MSG.税区分追加確認 });
-  if (!ok) return;
-  const ids = [...checkedIds.value];
-  const lastId = ids[ids.length - 1];
-  const insertIdx = lastId ? allTaxRows.findIndex((r) => r.taxCategoryId === lastId) + 1 : allTaxRows.length;
-  copyCounter++;
-  const newRow: UnifiedTaxCategory = {
-    taxCategoryId: `NEW_TAX_${copyCounter}`,
-    name: UI_MSG.新規税区分名,
-    shortName: UI_MSG.新規税区分略称,
-    direction: "common",
-    qualified: false,
-    aiSelectable: false,
-    hidden: false,
-    enabledFrom: new Date().toISOString().slice(0, 10),
-    effectiveFrom: null,
-    effectiveTo: null,
-    defaultVisible: true,
-    displayOrder: insertIdx,
-    isCustom: true,
-    insertAfter: lastId ?? allTaxRows[allTaxRows.length - 1]?.taxCategoryId,
-    hiddenInMaster: false,
-    visibilityOverride: null,
-    source: 'client-custom',
-  };
-  allTaxRows.splice(insertIdx, 0, newRow);
-  checkedIds.value = [];
-  markDirty(UI_MSG.税区分追加);
-}
 
 // =============== インライン編集 ===============
 type EditableField = "direction" | "name" | "rate" | "qualified";
@@ -758,8 +631,13 @@ async function saveChanges() {
   }
 
   try {
-    // composable経由で保存（autoSaveでサーバーに自動保存される）
-    settings.saveTaxCategories(allTaxRows as unknown as TaxCategory[]);
+    // API直接PUT（composable経由を廃止）
+    const res = await fetch(`/api/tax-categories/client/${encodeURIComponent(clientId.value)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taxCategories: allTaxRows }),
+    });
+    if (!res.ok) throw new Error(`保存失敗: ${res.status}`);
     markClean();
     modal.notify({ title: UI_MSG.保存成功, variant: "success" });
   } catch {
