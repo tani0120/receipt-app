@@ -266,6 +266,9 @@ import PortalHeader from "@/components/PortalHeader.vue";
 import { useClients } from "@/features/client-management/composables/useClients";
 import { MSG_DUPLICATE_SHORT } from "@/constants/validationMessages";
 import { UI_MSG } from '@/constants/uiMessages';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 // ===== ルート =====
 const route = useRoute();
@@ -423,11 +426,8 @@ const handleConfirm = async () => {
         const formData = new FormData();
         formData.append("file", f.file);
         formData.append("folderId", folderId);
-        const res = await fetch("/api/drive/upload", { method: "POST", body: formData });
-        if (res.ok) {
-          const data = (await res.json()) as { fileId: string };
-          driveFileId = data.fileId;
-        }
+        const data = await repos.drive.upload(formData) as { fileId: string };
+        driveFileId = data.fileId;
       }
     } catch (err) {
       console.error(`[DocsPage] ファイルアップロード失敗 (${f.file.name}):`, err);

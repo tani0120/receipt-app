@@ -349,6 +349,9 @@ import type { CustomFieldDef } from '@/composables/useFieldLayout';
 import AddFieldModal from '@/components/AddFieldModal.vue';
 
 import { UI_MSG } from '@/constants/uiMessages';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 const route = useRoute();
 const router = useRouter();
@@ -726,8 +729,7 @@ const handleFileUpload = async (fieldKey: string, files: FileList) => {
     const fd = new FormData();
     fd.append('file', file);
     try {
-      const res = await fetch(`/api/attachments/${clientId.value}`, { method: 'POST', body: fd });
-      const data = await res.json();
+      const data = await repos.attachment.upload(clientId.value, fd) as { ok: boolean; attachment?: unknown };
       if (data.ok && data.attachment) {
         const current = ((form as Record<string, unknown>)[fieldKey] as unknown[]) ?? [];
         const updated = [...current, data.attachment];
@@ -746,7 +748,7 @@ const handleFileUpload = async (fieldKey: string, files: FileList) => {
 const handleFileDelete = async (fieldKey: string, fileId: string) => {
   if (!clientId.value) return;
   try {
-    await fetch(`/api/attachments/${clientId.value}/${fileId}`, { method: 'DELETE' });
+    await repos.attachment.deleteFile(clientId.value, fileId);
     const list = (form as Record<string, unknown>)[fieldKey] as { id: string }[] ?? [];
     (form as Record<string, unknown>)[fieldKey] = list.filter(f => f.id !== fileId);
   } catch (err) {
@@ -914,29 +916,20 @@ const loadComments = async () => {
       if (lsComments.length > 0) {
         // localStorageのデータをAPIに移行
         for (const c of lsComments) {
-          await fetch('/api/comments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...c, entityType: 'client', entityId: clientId.value }),
-          });
+          await repos.comment.create({ ...c, entityType: 'client', entityId: clientId.value });
         }
         console.log(`[ClientEdit] コメント${lsComments.length}件をlocalStorage→APIに移行`);
       }
       localStorage.removeItem(lsKey);
     }
     // APIからコメント取得
-    const res = await fetch(`/api/comments?entityType=client&entityId=${clientId.value}`);
-    const data = await res.json();
+    const data = await repos.comment.getByEntity('client', clientId.value) as { comments: ClientComment[] };
     comments.value = (data.comments ?? []) as ClientComment[];
   } catch { comments.value = []; }
 };
 const saveComment = async (comment: ClientComment) => {
   if (!clientId.value) return;
-  await fetch('/api/comments', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...comment, entityType: 'client', entityId: clientId.value }),
-  });
+  await repos.comment.create({ ...comment, entityType: 'client', entityId: clientId.value });
 };
 const addComment = async () => {
   if (!newComment.value.trim()) return;
@@ -964,7 +957,7 @@ const addComment = async () => {
 };
 const deleteComment = async (id: string) => {
   comments.value = comments.value.filter(c => c.id !== id);
-  await fetch(`/api/comments/${id}`, { method: 'DELETE' });
+  await repos.comment.deleteById(id);
 };
 
 /** @メンションをハイライト表示 */

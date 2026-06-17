@@ -142,7 +142,7 @@ export interface ConfirmedJournalEntry {
   /** 行ID（UUID） */
   entryId: string
 
-  /** 勘定科目（MF科目名。必須） */
+  /** 勘定科目（accountId。MCP経由取込時はaccountIdに正規化済み。MCP外科目は自動発番） */
   account: string
 
   /** 補助科目 */
@@ -154,7 +154,7 @@ export interface ConfirmedJournalEntry {
   /** 取引先（MF CSV 借方取引先 or 貸方取引先） */
   vendor_name: string | null
 
-  /** 税区分（MF税区分名。例: 「課税仕入 10%」） */
+  /** 税区分（taxCategoryId。MCP経由取込時はtaxCategoryIdに正規化済み。MCP外税区分は自動発番） */
   tax_category_id: string | null
 
   /** インボイス（MF CSV 借方/貸方インボイス） */

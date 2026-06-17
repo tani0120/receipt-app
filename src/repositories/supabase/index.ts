@@ -36,6 +36,15 @@ import { httpConfirmedJournalRepo } from '../mock/confirmedJournal.repository.ht
 import { httpStaffRepo } from '../mock/staff.repository.http'
 import { httpClientRepo } from '../mock/client.repository.http'
 import { httpDocumentRepo } from '../mock/document.repository.http'
+import { httpListViewRepo } from '../mock/listView.repository.http'
+import { httpDriveRepo } from '../mock/drive.repository.http'
+import { httpExportRepo } from '../mock/export.repository.http'
+import { httpMfAuthRepo } from '../mock/mfAuth.repository.http'
+import { httpAttachmentRepo } from '../mock/attachment.repository.http'
+import { httpCommentRepo } from '../mock/comment.repository.http'
+import { httpAdminRepo } from '../mock/admin.repository.http'
+import { httpClientTaxCategoryRepo } from '../mock/clientTaxCategory.repository.http'
+import { httpLeadExtraRepo } from '../mock/leadExtra.repository.http'
 
 /**
  * Supabase版Repositories生成
@@ -60,5 +69,16 @@ export function createSupabaseRepositories(): Repositories {
     staff: httpStaffRepo,
     client: httpClientRepo,
     document: httpDocumentRepo,
+
+    // ── P3: フロント抽象化用Repository（HTTP版フォールバック） ──
+    listView: httpListViewRepo,
+    drive: httpDriveRepo,
+    export: httpExportRepo,
+    mfAuth: httpMfAuthRepo,
+    attachment: httpAttachmentRepo,
+    comment: httpCommentRepo,
+    admin: httpAdminRepo,
+    clientTaxCategory: httpClientTaxCategoryRepo,
+    leadExtra: httpLeadExtraRepo,
   }
 }

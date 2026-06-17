@@ -566,7 +566,10 @@ function restoreAllClientAccounts(): void {
     const clientId = file.replace('mf-accounts-', '').replace('.json', '')
     try {
       const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
-      clientMfAccountStore.set(clientId, JSON.parse(raw))
+      const parsed = JSON.parse(raw)
+      // ファイル形式が Account[] か { accounts: Account[] } の両方に対応
+      const accounts: Account[] = Array.isArray(parsed) ? parsed : (parsed.accounts ?? [])
+      clientMfAccountStore.set(clientId, accounts)
       console.log(`[accountMasterApi] 顧問先${clientId}のMFデータを復元`)
     } catch (err) {
       console.error(`[accountMasterApi] ${file}の読み込み失敗:`, err)

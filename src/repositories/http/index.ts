@@ -24,6 +24,15 @@ import { httpTaxMasterRepo } from '../mock/taxMaster.repository.http'
 import { httpLeadRepo } from '../mock/lead.repository.http'
 import { httpLearningRuleRepo } from '../mock/learningRule.repository.http'
 import { httpIndustryVectorRepo } from '../mock/industryVector.repository.http'
+import { httpListViewRepo } from '../mock/listView.repository.http'
+import { httpDriveRepo } from '../mock/drive.repository.http'
+import { httpExportRepo } from '../mock/export.repository.http'
+import { httpMfAuthRepo } from '../mock/mfAuth.repository.http'
+import { httpAttachmentRepo } from '../mock/attachment.repository.http'
+import { httpCommentRepo } from '../mock/comment.repository.http'
+import { httpAdminRepo } from '../mock/admin.repository.http'
+import { httpClientTaxCategoryRepo } from '../mock/clientTaxCategory.repository.http'
+import { httpLeadExtraRepo } from '../mock/leadExtra.repository.http'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /**
@@ -64,5 +73,16 @@ export function createHttpRepositories(): Repositories {
     document: httpDocumentRepo,
 
     learningRule: httpLearningRuleRepo,
+
+    // ── P3: フロント抽象化用Repository ──
+    listView: httpListViewRepo,
+    drive: httpDriveRepo,
+    export: httpExportRepo,
+    mfAuth: httpMfAuthRepo,
+    attachment: httpAttachmentRepo,
+    comment: httpCommentRepo,
+    admin: httpAdminRepo,
+    clientTaxCategory: httpClientTaxCategoryRepo,
+    leadExtra: httpLeadExtraRepo,
   }
 }

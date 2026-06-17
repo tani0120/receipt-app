@@ -525,6 +525,9 @@ import { BOOLEAN_FILTER_OPTIONS } from '@/constants/vendorOptions';
 import type { FieldComponent } from '@/types/fieldLayout';
 import MfCloudIcon from '@/components/MfCloudIcon.vue';
 import MfImportButton from '@/components/MfImportButton.vue';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 import {
   parseViewFromQuery,
   parseFiltersFromQuery,
@@ -793,21 +796,16 @@ const defaultClientViews: ViewDefWithDefaults[] = [
 ];
 const clientViews = ref<ViewDefWithDefaults[]>([...defaultClientViews]);
 
-/** API: ビュー一覧取得（「(すべて)」は末尾に自動追加）+ 表示状態を再同期 */
+/** API: ビュー一覧取得（「(すべて)」は末尾に自動追加）+ 表示状態を再同期（repos経由: P3-1） */
 const loadListViews = async () => {
   try {
-    const res = await fetch('/api/list-views/client');
-    const data = await res.json();
-    let apiViews: ViewDefWithDefaults[] = data.views ?? [];
+    const data = await repos.listView.getViews('client');
+    let apiViews: ViewDefWithDefaults[] = (data.views ?? []) as ViewDefWithDefaults[];
 
     // APIが空の場合: デフォルトビューをシーディング（「すべて」は除外して保存）
     if (apiViews.length === 0) {
       const seedViews = defaultClientViews.filter((v) => v.key !== 'all');
-      await fetch('/api/list-views/client', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ views: seedViews }),
-      });
+      await repos.listView.saveViews('client', { views: seedViews });
       apiViews = seedViews;
     }
 
@@ -827,11 +825,7 @@ const loadListViews = async () => {
       return { ...view, columns: cols };
     });
     if (_needsSave) {
-      fetch('/api/list-views/client', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ views: apiViews.filter((v) => v.key !== 'all') }),
-      }).catch(() => {});
+      repos.listView.saveViews('client', { views: apiViews.filter((v) => v.key !== 'all') }).catch(() => {});
     }
 
     // APIビュー + 末尾に「(すべて)」固定ビュー
@@ -1351,16 +1345,7 @@ const fetchMfStatuses = async () => {
     return;
   }
   try {
-    const res = await fetch('/api/mf/auth/status/bulk', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientIds: ids }),
-    });
-    if (!res.ok) {
-      console.warn('[MF連携] bulk API エラー:', res.status);
-      return;
-    }
-    const data = await res.json() as Record<string, { authenticated: boolean }>;
+    const data = await repos.mfAuth.getAuthStatusBulk(ids) as Record<string, { authenticated: boolean }>;
     console.log('[MF連携] APIレスポンス:', JSON.stringify(data));
     const map: Record<string, boolean> = {};
     for (const [id, v] of Object.entries(data)) {
@@ -1381,12 +1366,7 @@ const fiscalCheckLoading = ref<string | null>(null);
 const checkFiscalMonth = async (row: Client) => {
   fiscalCheckLoading.value = row.clientId;
   try {
-    const res = await fetch(`/api/mf/fiscal-check?clientId=${row.clientId}`);
-    if (!res.ok) {
-      modal.notify({ title: UI_MSG.エラー, message: `${UI_MSG.決算月チェック失敗}（${res.status}）`, variant: 'warning' });
-      return;
-    }
-    const data = await res.json();
+    const data = await repos.mfAuth.fiscalCheck(row.clientId) as { mfLinked: boolean; mismatch: boolean; localFiscalMonth: number; mfFiscalMonth: number; mfEndDate: string };
     if (!data.mfLinked) {
       modal.notify({ title: UI_MSG.MF未連携タイトル, message: UI_MSG.MF未連携メッセージ, variant: 'warning' });
       return;
@@ -1447,17 +1427,7 @@ const handleMfImport = async () => {
 
   mfImportLoading.value = true;
   try {
-    const res = await fetch('/api/mf/import-offices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientIds: linkedIds }),
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      modal.notify({ title: UI_MSG.エラー, message: `${UI_MSG.MFインポート事業所失敗}（${res.status}）\n${err}`, variant: 'warning' });
-      return;
-    }
-    const result = await res.json() as {
+    const result = await repos.mfAuth.importOffices({ clientIds: linkedIds }) as {
       updated: number;
       skipped: number;
       errors: string[];

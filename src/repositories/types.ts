@@ -1023,6 +1023,24 @@ export type Repositories = {
   document: DocumentRepository
   /** 学習ルールマスタ */
   learningRule: LearningRuleRepository
+  /** 一覧ビュー設定（P3-1） */
+  listView: ListViewRepository
+  /** Drive連携（P3-2） */
+  drive: DriveRepository
+  /** エクスポート（P3-3） */
+  export: ExportRepository
+  /** MF認証・連携（P3-4） */
+  mfAuth: MfAuthRepository
+  /** 添付ファイル（P3-5） */
+  attachment: AttachmentRepository
+  /** コメント（P3-5） */
+  comment: CommentRepository
+  /** 管理画面（P3-6） */
+  admin: AdminRepository
+  /** 顧問先別税区分（P3-7） */
+  clientTaxCategory: ClientTaxCategoryRepository
+  /** 見込先拡張（一括・変換）（P3-7） */
+  leadExtra: LeadExtraRepository
 }
 
 // ============================================================
@@ -1366,3 +1384,155 @@ export interface AiCostLimit {
   monthlyCostLimitYen: number
 }
 
+// ============================================================
+// § P3-1: ListViewRepository（一覧ビュー設定）
+// ============================================================
+
+export type ListViewRepository = {
+  /** エンティティ別のビュー一覧取得 */
+  getViews(entityType: string): Promise<{ views: unknown[] }>
+  /** エンティティ別のビュー一覧保存（全件上書き） */
+  saveViews(entityType: string, data: unknown): Promise<{ success: boolean }>
+}
+
+// ============================================================
+// § P3-2: DriveRepository（Drive連携）
+// ============================================================
+
+export type DriveRepository = {
+  /** フォルダ内ファイル一覧取得 */
+  getFiles(folderId: string, withThumbnails?: boolean): Promise<unknown>
+  /** フォルダ作成 */
+  createFolder(data: { clientId: string; parentFolderId?: string }): Promise<unknown>
+  /** フォルダ存在確認 */
+  checkFolder(folderId: string): Promise<unknown>
+  /** ファイルアップロード */
+  upload(formData: FormData): Promise<unknown>
+  /** 移行ジョブ開始 */
+  migrate(data: unknown): Promise<unknown>
+  /** 移行ステータス確認 */
+  getMigrateStatus(jobId: string): Promise<unknown>
+  /** 移行ジョブ一覧（顧問先別） */
+  getMigrateJobs(clientId: string): Promise<unknown>
+  /** 検証済みダウンロード（顧問先別） */
+  downloadSupporting(clientId: string, params?: { jobId?: string; all?: boolean }): Promise<unknown>
+  /** 除外ダウンロード（顧問先別） */
+  downloadExcluded(clientId: string, params?: { jobId?: string; all?: boolean }): Promise<unknown>
+  /** 検証済み履歴（顧問先別） */
+  getSupportingHistory(clientId: string): Promise<unknown>
+  /** 除外履歴（顧問先別） */
+  getExcludedHistory(clientId: string): Promise<unknown>
+  /** 検証済みメタ保存 */
+  saveSupportingMeta(clientId: string, data: unknown): Promise<unknown>
+  /** 権限付与 */
+  grantPermission(data: { email: string; folderId: string }): Promise<unknown>
+  /** 権限取り消し */
+  revokePermission(data: { email: string; folderId: string }): Promise<unknown>
+  /** 仕訳外件数取得 */
+  getExcludedCount(clientId: string): Promise<unknown>
+}
+
+// ============================================================
+// § P3-3: ExportRepository（エクスポート）
+// ============================================================
+
+export type ExportRepository = {
+  /** エクスポート一覧取得 */
+  getExportList(data: unknown): Promise<unknown>
+  /** エクスポート詳細取得 */
+  getExportDetail(data: unknown): Promise<unknown>
+  /** エクスポート履歴取得（顧問先別） */
+  getHistory(clientId: string): Promise<unknown>
+  /** エクスポート履歴保存（顧問先別） */
+  saveHistory(clientId: string, data: unknown): Promise<unknown>
+  /** CSVスナップショット取得 */
+  getCsvSnapshot(clientId: string, historyId: string): Promise<unknown>
+  /** CSVスナップショット保存 */
+  saveCsvSnapshot(clientId: string, data: unknown): Promise<unknown>
+}
+
+// ============================================================
+// § P3-4: MfAuthRepository（MF認証・連携）
+// ============================================================
+
+export type MfAuthRepository = {
+  /** 認証ステータス確認（顧問先別） */
+  getAuthStatus(clientId: string): Promise<unknown>
+  /** 認証ステータス一括確認 */
+  getAuthStatusBulk(clientIds: string[]): Promise<unknown>
+  /** 認証URL取得 */
+  getAuthUrl(clientId: string): Promise<unknown>
+  /** MFマスター科目インポート */
+  importMasterAccounts(): Promise<unknown>
+  /** MF顧問先科目インポート */
+  importClientAccounts(clientId: string): Promise<unknown>
+  /** MF決算期チェック */
+  fiscalCheck(clientId: string): Promise<unknown>
+  /** MF事業所インポート */
+  importOffices(data: unknown): Promise<unknown>
+}
+
+// ============================================================
+// § P3-5a: AttachmentRepository（添付ファイル）
+// ============================================================
+
+export type AttachmentRepository = {
+  /** 添付ファイルアップロード */
+  upload(entityId: string, formData: FormData): Promise<unknown>
+  /** 添付ファイル削除 */
+  deleteFile(entityId: string, fileId: string): Promise<void>
+}
+
+// ============================================================
+// § P3-5b: CommentRepository（コメント）
+// ============================================================
+
+export type CommentRepository = {
+  /** コメント一覧取得 */
+  getByEntity(entityType: string, entityId: string): Promise<unknown>
+  /** コメント追加（id/author/body/date + entityType/entityIdを含むオブジェクト） */
+  create(data: unknown): Promise<unknown>
+  /** コメント削除 */
+  deleteById(commentId: string): Promise<void>
+  /** コメント更新 */
+  update(commentId: string, data: { body: string; mentions?: string[] }): Promise<unknown>
+}
+
+// ============================================================
+// § P3-6: AdminRepository（管理画面）
+// ============================================================
+
+export type AdminRepository = {
+  /** AIコスト設定取得 */
+  getAiCostConfig(): Promise<unknown>
+  /** 活動ログサマリー取得 */
+  getActivitySummary(): Promise<unknown>
+  /** タスクサマリー取得 */
+  getTaskSummary(): Promise<unknown>
+  /** 進捗一覧取得 */
+  getProgressList(data: unknown): Promise<unknown>
+  /** 移行ジョブ一覧（顧問先別） */
+  getMigrateJobs(clientId: string): Promise<unknown>
+}
+
+// ============================================================
+// § P3-7a: ClientTaxCategoryRepository（顧問先別税区分）
+// ============================================================
+
+export type ClientTaxCategoryRepository = {
+  /** 顧問先の税区分一覧取得 */
+  getByClient(clientId: string, params?: { pageSize?: number; taxMethod?: string }): Promise<unknown>
+  /** 顧問先の税区分保存 */
+  saveByClient(clientId: string, data: unknown): Promise<unknown>
+}
+
+// ============================================================
+// § P3-7b: LeadRepository拡張（一括作成・顧問先変換）
+// ============================================================
+
+export type LeadExtraRepository = {
+  /** 一括インポート */
+  bulkCreate(data: unknown): Promise<unknown>
+  /** 見込先→顧問先変換 */
+  convert(leadId: string): Promise<unknown>
+}

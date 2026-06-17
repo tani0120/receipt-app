@@ -275,6 +275,9 @@ import { useClients } from '@/features/client-management/composables/useClients'
 import { useShareStatus } from '@/composables/useShareStatus'
 import type { ShareStatus } from '@/repositories/types'
 import { UI_MSG } from '@/constants/uiMessages'
+import { useRepositories } from '@/composables/useRepositories'
+
+const { repos } = useRepositories()
 
 const route = useRoute()
 const router = useRouter()
@@ -313,16 +316,7 @@ const createDriveFolder = async () => {
   try {
     const folderName = `${clientId}_${company}`
     const sharedEmail = clientData.value?.sharedEmail || ''
-    const res = await fetch('/api/drive/folder', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ folderName, sharedEmail: sharedEmail || undefined }),
-    })
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(data.error || `HTTP ${res.status}`)
-    }
-    const data = await res.json() as { folderId: string }
+    const data = await repos.drive.createFolder({ clientId, parentFolderId: undefined, folderName, sharedEmail: sharedEmail || undefined }) as { folderId: string }
     // useClientsのモジュールスコープrefを更新 → リアクティブに反映
     updateSharedFolderId(clientId, data.folderId)
     console.log(`[upload-v2] Driveフォルダ作成完了: ${folderName} (id=${data.folderId})`)
@@ -350,9 +344,7 @@ async function checkDriveFolderExists() {
   if (!folderId) return // 未設定なら確認不要
 
   try {
-    const res = await fetch(`/api/drive/folder/check?folderId=${encodeURIComponent(folderId)}`)
-    if (!res.ok) return // API失敗時は現状維持
-    const data = await res.json() as { exists: boolean; trashed?: boolean }
+    const data = await repos.drive.checkFolder(folderId) as { exists: boolean; trashed?: boolean }
     if (!data.exists || data.trashed) {
       // フォルダ削除済み → sharedFolderIdをクリア
       updateSharedFolderId(clientId, '')
@@ -378,17 +370,8 @@ async function setStatus(status: ShareStatus) {
   // 共有停止時: Drive共有フォルダの権限をrevokeする
   if (status === 'revoked' && folderId && email) {
     try {
-      const res = await fetch('/api/drive/revoke-permission', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderId, email }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        console.log(`[upload-v2] Drive権限削除成功: ${email}`)
-      } else {
-        console.warn(`[upload-v2] Drive権限削除失敗:`, data.error)
-      }
+      await repos.drive.revokePermission({ folderId, email })
+      console.log(`[upload-v2] Drive権限削除成功: ${email}`)
     } catch {
       console.warn('[upload-v2] Drive権限削除API接続失敗')
     }
@@ -397,17 +380,8 @@ async function setStatus(status: ShareStatus) {
   // 共有OK時: Drive共有フォルダの権限を再付与する
   if (status === 'active' && folderId && email) {
     try {
-      const res = await fetch('/api/drive/grant-permission', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderId, email, role: 'writer' }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        console.log(`[upload-v2] Drive権限再付与成功: ${email}`)
-      } else {
-        console.warn(`[upload-v2] Drive権限再付与失敗:`, data.error)
-      }
+      await repos.drive.grantPermission({ folderId, email })
+      console.log(`[upload-v2] Drive権限再付与成功: ${email}`)
     } catch {
       console.warn('[upload-v2] Drive権限再付与API接続失敗')
     }

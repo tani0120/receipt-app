@@ -212,6 +212,9 @@ import { useClients } from '@/features/client-management/composables/useClients'
 import { useRoute, useRouter } from 'vue-router'
 import { useShareStatus } from '@/composables/useShareStatus'
 import { UI_MSG } from '@/constants/uiMessages'
+import { useRepositories } from '@/composables/useRepositories'
+
+const { repos } = useRepositories()
 
 const route = useRoute()
 const router = useRouter()
@@ -266,11 +269,8 @@ const showMfModal = ref(false)
 // ページ表示時にclientId別の認証状態を取得
 onMounted(async () => {
   try {
-    const res = await fetch(`/api/mf/auth/status?clientId=${encodeURIComponent(clientId)}`)
-    if (res.ok) {
-      const data = await res.json() as { authenticated: boolean }
-      mfLinked.value = data.authenticated
-    }
+    const data = await repos.mfAuth.getAuthStatus(clientId) as { authenticated: boolean }
+    mfLinked.value = data.authenticated
   } catch {
     // 取得失敗時は未連携とみなす（バナー表示）
   }
@@ -283,8 +283,7 @@ onMounted(async () => {
 const goToMf = async () => {
   showMfModal.value = false
   try {
-    const res = await fetch(`/api/mf/auth/url?clientId=${encodeURIComponent(clientId)}`)
-    const data = await res.json() as { url?: string; error?: string }
+    const data = await repos.mfAuth.getAuthUrl(clientId) as { url?: string; error?: string }
     if (data.url) {
       window.open(data.url, '_blank', 'noopener,noreferrer')
     } else {

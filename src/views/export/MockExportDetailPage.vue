@@ -89,6 +89,9 @@ import { UI_MSG } from '@/constants/uiMessages';
 
 import { exportColumns } from '@/shared/journalColumns';
 import type { ExportColumn } from '@/shared/journalColumns';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) ?? 'ABC-00001');
@@ -138,20 +141,14 @@ const pageEnd = computed(() => Math.min(currentPage.value * PAGE_SIZE, totalCoun
 
 async function fetchExportDetail() {
   try {
-    const res = await fetch('/api/export/detail', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        clientId: clientId.value,
-        historyId: historyId.value,
-        sortKey: sortKey.value,
-        sortDir: sortDir.value,
-        page: currentPage.value,
-        pageSize: PAGE_SIZE,
-      }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json() as {
+    const data = await repos.export.getExportDetail({
+      clientId: clientId.value,
+      historyId: historyId.value,
+      sortKey: sortKey.value,
+      sortDir: sortDir.value,
+      page: currentPage.value,
+      pageSize: PAGE_SIZE,
+    }) as {
       rows: DetailRow[];
       totalCount: number;
       totalPages: number;

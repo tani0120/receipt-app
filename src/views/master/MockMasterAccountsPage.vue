@@ -254,6 +254,9 @@ import NotifyModal from '@/components/NotifyModal.vue';
 import MfImportButton from '@/components/MfImportButton.vue';
 import MfCloudIcon from '@/components/MfCloudIcon.vue';
 import { UI_MSG } from '@/constants/uiMessages';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 
 // 列幅カスタマイズ
@@ -296,18 +299,11 @@ const mfClients = ref<MfClientInfo[]>([]);
 onMounted(async () => {
   // 全顧問先のMF認証状態を一括チェック
   try {
-    const { createRepositories } = await import('@/repositories');
-    const repos = createRepositories();
     const allClients = await repos.client.getAll();
-    const ids = allClients.map((c: { clientId: string }) => c.clientId);
+    const ids = (allClients as Array<{ clientId: string }>).map((c) => c.clientId);
     if (ids.length === 0) return;
 
-    const bulkRes = await fetch('/api/mf/auth/status/bulk', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientIds: ids }),
-    });
-    const bulkData = await bulkRes.json() as Record<string, { authenticated: boolean }>;
+    const bulkData = await repos.mfAuth.getAuthStatusBulk(ids) as Record<string, { authenticated: boolean }>;
 
     // MF連携済み顧問先のみ抽出
     const authenticatedClients: MfClientInfo[] = [];
@@ -342,16 +338,7 @@ async function executeImport() {
   mfImporting.value = true;
   try {
     // バックエンドAPIで差分検知 + マスタ保存を一括実行
-    const res = await fetch('/api/mf/import-master-accounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: UI_MSG.MF勘定科目インポート失敗 }));
-      throw new Error(err.error ?? err.detail ?? UI_MSG.MF勘定科目インポート失敗);
-    }
-    const result = await res.json() as {
+    const result = await repos.mfAuth.importMasterAccounts() as {
       success: boolean;
       mfCount: number;
       diff: { matched: unknown[]; added: unknown[] };

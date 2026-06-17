@@ -496,6 +496,9 @@ import {
   findViewByKey,
 } from '@/utils/urlFilterSync';
 import type { ViewDefWithDefaults } from '@/utils/urlFilterSync';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 // 列幅カスタマイズ
 const clDefaultWidths: Record<string, number> = {
@@ -714,21 +717,16 @@ const visibleColumns = ref<string[]>(
     ? allColumns.value.map(c => c.key)
     : [...initialView.columns]
 );
-/** API: ビュー一覧取得（「(すべて)」は末尾に自動追加）+ 表示状態を再同期 */
+/** API: ビュー一覧取得（「(すべて)」は末尾に自動追加）+ 表示状態を再同期（repos経由: P3-1） */
 const loadListViews = async () => {
   try {
-    const res = await fetch('/api/list-views/lead');
-    const data = await res.json();
-    let apiViews: ViewDefWithDefaults[] = data.views ?? [];
+    const data = await repos.listView.getViews('lead');
+    let apiViews: ViewDefWithDefaults[] = (data.views ?? []) as ViewDefWithDefaults[];
 
     // APIが空の場合: デフォルトビューをシーディング（「すべて」は除外して保存）
     if (apiViews.length === 0) {
       const seedViews = defaultLeadViews.filter(v => v.key !== 'all');
-      await fetch('/api/list-views/lead', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ views: seedViews }),
-      });
+      await repos.listView.saveViews('lead', { views: seedViews });
       apiViews = seedViews;
     }
 
@@ -1417,12 +1415,7 @@ const handleLeadCsvImport = async () => {
   // バルクAPIで一括保存
   if (validItems.length > 0) {
     try {
-      const res = await fetch('/api/leads/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: validItems }),
-      });
-      const bulkResult = await res.json();
+      const bulkResult = await repos.leadExtra.bulkCreate({ items: validItems }) as { results: Array<{ ok: boolean; leadId?: string; threeCode?: string; companyName?: string; index: number }> };
       if (bulkResult.results) {
         for (const r of bulkResult.results) {
           if (r.ok) {

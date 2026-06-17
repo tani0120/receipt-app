@@ -21,7 +21,13 @@ import type { MfMappingTables } from './mfMappingService'
 import { buildAllMaps } from './mfMappingService'
 import { importJournals } from './confirmedJournalsApi'
 import { normalizeVendorName } from '../../utils/pipeline/vendorIdentification'
-import { fromMfInvoiceKind, MF_JOURNAL_TYPE_ADJUSTING } from '../../constants/mfApiConstants'
+import { fromMfInvoiceKind, MF_JOURNAL_TYPE_ADJUSTING, DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
+import { generateMasterId } from './generateMasterId'
+import { generateTaxMasterId, ensureUniqueTaxId } from './taxIdGenerator'
+import { getClientAccounts, saveMfAccounts, getAllAccounts, getAllTaxCategories } from './accountMasterApi'
+import { getById as getClientById } from './clientsApi'
+import { isIndividualType } from '../../constants/clientOptions'
+import type { Account } from '../../types/shared-account'
 
 // ────────────────────────────────────────────
 // バリデーション結果型
@@ -99,20 +105,48 @@ function reverseInvoiceKind(mfKind: string | null | undefined): string | null {
 // MfMcpJournalSide → ConfirmedJournalEntry
 // ────────────────────────────────────────────
 
-function convertSide(
+/**
+ * MfMcpJournalSide → ConfirmedJournalEntry変換
+ *
+ * A-3: async化（generateMasterIdがGemini API呼び出しのため）
+ * A-4: MISS時自動発番（科目: generateMasterId, 税区分: generateTaxMasterId）
+ */
+async function convertSide(
   side: MfMcpJournalSide,
   maps: MfMappingTables,
   unmatchedAccounts: Set<string>,
   unmatchedTaxes: Set<string>,
   isTaxExclusive: boolean,
-): ConfirmedJournalEntry {
+  suffix: string,
+  existingAccountIds: Set<string>,
+  existingTaxIds: Set<string>,
+  newAccounts: Account[],
+): Promise<ConfirmedJournalEntry> {
   // 科目: MF名前 → Sugusru概念ID（逆マッピング）
   let account = side.account_name
   const conceptId = maps.reverseAccountMap.get(side.account_name)
   if (conceptId) {
     account = conceptId
   } else {
+    // ケース2: MCPが返さない過去科目 → generateMasterId()で自動発番
+    const newId = await generateMasterId(side.account_name, suffix, existingAccountIds)
+    account = newId
+    existingAccountIds.add(newId)
+    maps.reverseAccountMap.set(side.account_name, newId) // 同バッチ内の2件目以降用
     unmatchedAccounts.add(side.account_name)
+    // client_mf_accountsへの追加保存用に蓄積（A-6）
+    newAccounts.push({
+      accountId: newId,
+      name: side.account_name,
+      target: suffix === 'IND' ? 'individual' : 'corp',
+      accountGroup: 'PL_EXPENSE', // MCP外科目は分類不明。経費をデフォルト
+      category: '',
+      defaultTaxCategoryId: undefined,
+      hidden: false,
+      effectiveFrom: DEFAULT_EFFECTIVE_FROM,
+      effectiveTo: null,
+      sortOrder: 9999,
+    })
   }
 
   // 税区分: MF名前 → Sugusru概念ID（逆マッピング）
@@ -122,7 +156,16 @@ function convertSide(
     if (taxConceptId) {
       taxCategoryId = taxConceptId
     } else {
-      taxCategoryId = side.tax_name
+      // F-1: generateTaxMasterId()でルールベース発番（同期）
+      const baseId = generateTaxMasterId(side.tax_name)
+      if (baseId) {
+        taxCategoryId = ensureUniqueTaxId(baseId, existingTaxIds)
+        existingTaxIds.add(taxCategoryId)
+      } else {
+        // ルール不一致: MF名のまま保存（従来動作）
+        taxCategoryId = side.tax_name
+      }
+      maps.reverseTaxMap.set(side.tax_name, taxCategoryId) // 同バッチ内の2件目以降用
       unmatchedTaxes.add(side.tax_name)
     }
   }
@@ -228,15 +271,37 @@ export async function prepareMfImport(
   clientId: string,
   /** 事業者の経理方式。税抜なら'tax_excluded_included'|'tax_excluded_separate' */
   taxMethod: string = 'tax_included',
+  /** 事前構築済みマッピング。渡された場合はbuildAllMaps()をスキップ（MCP二重呼び出し回避） */
+  prebuiltMaps?: MfMappingTables,
 ): Promise<PrepareResult> {
   cleanupPending()
 
-  const maps = await buildAllMaps(clientId)
+  const maps = prebuiltMaps ?? await buildAllMaps(clientId)
   const batchId = `mf-api-${Date.now()}`
   const unmatchedAccounts = new Set<string>()
   const unmatchedTaxes = new Set<string>()
   // 税抜経理: taxMethodが'tax_excluded_*'で始まる場合
   const isTaxExclusive = taxMethod.startsWith('tax_excluded')
+
+  // A-5: clientType判定（SUFFIX決定）
+  const client = getClientById(clientId)
+  const suffix = (client && isIndividualType(client.type)) ? 'IND' : 'CORP'
+
+  // A-4: 既存IDセット（重複チェック用）
+  const existingAccountIds = new Set<string>()
+  const allAccounts = getAllAccounts()
+  for (const a of allAccounts) existingAccountIds.add(a.accountId)
+  try {
+    const clientAcctData = getClientAccounts(clientId)
+    for (const a of clientAcctData.accounts) existingAccountIds.add(a.accountId)
+  } catch { /* 未保存の場合はスキップ */ }
+
+  const existingTaxIds = new Set<string>()
+  const allTaxes = getAllTaxCategories()
+  for (const t of allTaxes) existingTaxIds.add(t.taxCategoryId)
+
+  // A-6: 自動発番した科目を蓄積（バッチ完了後に一括保存）
+  const newAccounts: Account[] = []
 
   const converted: ConfirmedJournal[] = []
   const skippedErrors: ImportIssue[] = []
@@ -255,8 +320,8 @@ export async function prepareMfImport(
     const debitEntries: ConfirmedJournalEntry[] = []
     const creditEntries: ConfirmedJournalEntry[] = []
     for (const branch of mfJournal.branches) {
-      debitEntries.push(convertSide(branch.debitor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive))
-      creditEntries.push(convertSide(branch.creditor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive))
+      debitEntries.push(await convertSide(branch.debitor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive, suffix, existingAccountIds, existingTaxIds, newAccounts))
+      creditEntries.push(await convertSide(branch.creditor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive, suffix, existingAccountIds, existingTaxIds, newAccounts))
     }
 
     const description = mfJournal.branches[0]?.remark || mfJournal.memo || ''
@@ -294,17 +359,37 @@ export async function prepareMfImport(
     }
   }
 
-  // 未マッチ科目の警告
+  // A-6: 自動発番した科目をclient_mf_accountsに差分追加保存
+  if (newAccounts.length > 0) {
+    try {
+      const clientAcctData = getClientAccounts(clientId)
+      const existingList = [...clientAcctData.accounts]
+      const existingNameSet = new Set(existingList.map(a => a.name))
+      const toAdd = newAccounts.filter(a => !existingNameSet.has(a.name))
+      if (toAdd.length > 0) {
+        saveMfAccounts(clientId, [...existingList, ...toAdd])
+        console.log(`[mfJournalImporter] 自動発番科目${toAdd.length}件をclient_mf_accountsに追加保存: ${toAdd.map(a => `${a.name}→${a.accountId}`).join(', ')}`)
+      }
+    } catch {
+      // 未保存の場合は新規保存
+      saveMfAccounts(clientId, newAccounts)
+      console.log(`[mfJournalImporter] 自動発番科目${newAccounts.length}件をclient_mf_accountsに新規保存`)
+    }
+  }
+
+  // 未マッチ科目の通知（自動発番済み → info扱い。warningにすると承認待ちになり定期実行で仕訳消失）
   for (const name of unmatchedAccounts) {
-    warnings.push({
-      severity: 'warning', type: 'IMPORT_ACCOUNT_UNMATCHED', mfNumber: 0,
-      message: `科目「${name}」がSugusruマスタに未マッチ（MF名前でフォールバック）`,
+    const autoId = maps.reverseAccountMap.get(name)
+    infos.push({
+      severity: 'info', type: 'IMPORT_ACCOUNT_UNMATCHED', mfNumber: 0,
+      message: `科目「${name}」がMCPに未マッチ → 自動発番: ${autoId ?? 'unknown'}`,
     })
   }
   for (const name of unmatchedTaxes) {
-    warnings.push({
-      severity: 'warning', type: 'IMPORT_TAX_UNMATCHED', mfNumber: 0,
-      message: `税区分「${name}」がSugusruマスタに未マッチ（MF名前でフォールバック）`,
+    const autoId = maps.reverseTaxMap.get(name)
+    infos.push({
+      severity: 'info', type: 'IMPORT_TAX_UNMATCHED', mfNumber: 0,
+      message: `税区分「${name}」がMCPに未マッチ → 自動発番: ${autoId ?? name}`,
     })
   }
 
@@ -383,8 +468,10 @@ export async function importMfJournals(
   journals: MfMcpJournal[],
   clientId: string,
   taxMethod: string = 'tax_included',
+  /** 事前構築済みマッピング。渡された場合はbuildAllMaps()をスキップ（MCP二重呼び出し回避） */
+  prebuiltMaps?: MfMappingTables,
 ): Promise<PrepareResult & { committed: boolean; added?: number; skipped?: number }> {
-  const result = await prepareMfImport(journals, clientId, taxMethod)
+  const result = await prepareMfImport(journals, clientId, taxMethod, prebuiltMaps)
 
   // 警告もエラーもなければ即保存
   if (result.warnings.length === 0 && result.skippedErrors.length === 0) {

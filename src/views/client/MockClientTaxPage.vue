@@ -360,6 +360,9 @@ import { TAX_DIRECTION_OPTIONS, QUALIFIED_OPTIONS } from "@/constants/vendorOpti
 import { UI_MSG } from "@/constants/uiMessages";
 import { importClientTaxes as apiImportClientTaxes } from "@/composables/useMfTaxApi";
 import { TAX_CATEGORY_FIELD_LABELS, TAX_METHOD_LABELS } from "@/constants/fieldLabels";
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 // 列幅カスタマイズ
 const ctDefaultWidths: Record<string, number> = {
@@ -411,22 +414,19 @@ const hasMfData = computed(() => mfLinked.value);
 // ★ 初期ロード: API直接フェッチ（enrichRow済み・visibleIn付き）
 onMounted(async () => {
   try {
-    const res = await fetch(`/api/tax-categories/client/${encodeURIComponent(props.clientId)}?pageSize=200&taxMethod=all`);
-    if (res.ok) {
-      const data = await res.json() as { items: TaxCategory[]; mfLinked?: boolean };
-      const items: UnifiedTaxCategory[] = data.items.map(tc => ({
-        ...tc,
-        hidden: tc.hidden ?? false,
-        hiddenInMaster: false,
-        visibilityOverride: null as boolean | null,
-        source: (tc.source ?? 'master') as UnifiedTaxCategory['source'],
-      }));
-      allTaxRows.splice(0, allTaxRows.length, ...items);
-      // MF連携状態をAPIレスポンスからデータ駆動で取得
-      mfLinked.value = data.mfLinked ?? false;
-      mfAuthenticated.value = data.mfLinked ?? false;
-      console.log(`[顧問先税区分] ${props.clientId}: API直接取得 ${items.length}件 (MF連携=${data.mfLinked})`);
-    }
+    const data = await repos.clientTaxCategory.getByClient(props.clientId, { pageSize: 200, taxMethod: 'all' }) as { items: TaxCategory[]; mfLinked?: boolean };
+    const items: UnifiedTaxCategory[] = data.items.map(tc => ({
+      ...tc,
+      hidden: tc.hidden ?? false,
+      hiddenInMaster: false,
+      visibilityOverride: null as boolean | null,
+      source: (tc.source ?? 'master') as UnifiedTaxCategory['source'],
+    }));
+    allTaxRows.splice(0, allTaxRows.length, ...items);
+    // MF連携状態をAPIレスポンスからデータ駆動で取得
+    mfLinked.value = data.mfLinked ?? false;
+    mfAuthenticated.value = data.mfLinked ?? false;
+    console.log(`[顧問先税区分] ${props.clientId}: API直接取得 ${items.length}件 (MF連携=${data.mfLinked})`);
   } catch (err) {
     console.error('[顧問先税区分] 初期ロード失敗:', err);
   }
@@ -632,12 +632,7 @@ async function saveChanges() {
 
   try {
     // API直接PUT（composable経由を廃止）
-    const res = await fetch(`/api/tax-categories/client/${encodeURIComponent(clientId.value)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ taxCategories: allTaxRows }),
-    });
-    if (!res.ok) throw new Error(`保存失敗: ${res.status}`);
+    await repos.clientTaxCategory.saveByClient(clientId.value, { taxCategories: allTaxRows });
     markClean();
     modal.notify({ title: UI_MSG.保存成功, variant: "success" });
   } catch {

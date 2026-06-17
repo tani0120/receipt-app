@@ -325,3 +325,137 @@ layout.loadLayout();
 - **修正不可能なエラー**: 人間に必ず報告（隠蔽禁止）
 
 > ⚠️ 「確認しますか？」と人間に聞くな。定義されたタイミングで自動的に実行しろ。
+
+---
+
+## 11. 🔴 【絶対禁止】更新経路の一元化ルール（DL-050）
+
+### 考え方
+
+> **問題の本質は「永続化先が複数ある」ことではなく、「更新経路が複数ある」こと。**
+> JSON→Supabaseに移行しても、書き込みパスが2本あれば同じ問題が再発する。
+
+### 設計原則: 更新経路は1つ
+
+```
+Rule A: データ変更は Application Service 経由のみ
+```
+
+```
+❌ 禁止（直接書き込み）
+
+  script → writeFileSync(file)
+  script → supabase.from('table').insert()
+  script → db.query('INSERT ...')
+
+✅ 許可（サービス経由）
+
+  script ─┐
+           ├→ ApplicationService → Repository → Storage
+  API    ─┘
+```
+
+### 禁止パターンと正解
+
+```ts
+// ❌ 絶対禁止: スクリプトからファイル/DB直接操作
+import { readFileSync, writeFileSync } from 'fs'
+const journals = JSON.parse(readFileSync('data/confirmed_journals.json', 'utf-8'))
+journals.forEach(j => { /* 変換 */ })
+writeFileSync('data/confirmed_journals.json', JSON.stringify(journals), 'utf-8')
+
+// ❌ 将来も禁止: スクリプトからDB直接操作
+import { supabase } from './lib/supabase'
+await supabase.from('confirmed_journals').update({ account: newId }).eq('id', id)
+```
+
+```ts
+// ✅ 正解: ApplicationServiceを経由
+// サービス層（ビジネスロジック）
+class NormalizeService {
+  constructor(private repo: ConfirmedJournalRepository) {}
+  async execute(): Promise<NormalizeResult> {
+    const journals = await this.repo.getAll()
+    const normalized = this.normalize(journals)
+    await this.repo.replaceAll(normalized)
+    return { converted: normalized.length }
+  }
+}
+
+// API（HTTP経路）
+app.post('/confirmed-journals/normalize', async (c) => {
+  const service = new NormalizeService(repo)
+  const result = await service.execute()
+  return c.json(result)
+})
+
+// CLI（コマンドライン経路）
+// npx tsx normalize.ts
+const service = new NormalizeService(repo)
+await service.execute()
+```
+
+### なぜ「永続化先」ではなく「更新経路」か
+
+| 状況 | 永続化先 | 更新経路 | 壊れるか |
+|---|---|---|---|
+| script→writeFileSync + server→save() | 1つ（JSON） | **2本** | ✅ 壊れる（今回の事故） |
+| script→supabase + server→repository→supabase | 1つ（Supabase） | **2本** | ✅ 壊れる（キャッシュ不整合） |
+| script→Service→repo + server→Service→repo | 1つ | **1本** | ❌ 壊れない |
+
+### Repository パターン
+
+```
+ApplicationService（ビジネスロジック）
+  ↓
+Repository（データアクセスインターフェース）
+  ↓
+├─ JsonRepository（現在: JSON読み書き）
+└─ SupabaseRepository（将来: DB操作）
+```
+
+Supabase移行時にRepositoryの実装を差し替えるだけ。ApplicationServiceは変更不要。
+
+### 今回の事故（2026-06-17）
+
+**現象**: 正規化スクリプトがJSONファイルを直接書き換え→サーバーのインメモリストアが古いデータを保持→APIリクエストでsave()が発火→正規化済みデータが古いデータで上書きされた
+
+**根本原因**: 書き込み経路が2本あった（スクリプト→writeFileSync / サーバー→インメモリ→save()）
+
+**教訓**: 永続化先を1つにしても更新経路が2本なら壊れる。更新経路の一元化が本質。
+
+### チェックリスト
+
+1. **データ変更をApplicationService経由で行っているか？** ← ファイル/DB直接操作は禁止
+2. **スクリプトとAPIで同じServiceを呼んでいるか？** ← ロジック重複は禁止
+3. **Repositoryを介してストレージにアクセスしているか？** ← 直接import禁止
+4. **HTTP起動必須になっていないか？** ← CLIからもServiceを呼べること
+
+### 適用範囲
+
+DL-050が対象とするのは**サーバー側の永続化更新経路**のみ。
+
+```
+DL-050の対象（サーバー側の永続化経路）:
+  script → writeFileSync / supabase直叩き → ❌ 禁止
+  server → save() → ✅ 唯一の書き込み口
+
+DL-050の対象外（フロントの呼び出し方法）:
+  Vue → fetch('/api/...') → HTTP API → server → save()
+  Vue → repos.xxx()      → HTTP API → server → save()
+  → サーバー側から見ると同じ経路。フロントの抽象化はDL-050とは別問題
+```
+
+> **フロントのfetch()直叩きはDL-050違反ではない。**
+> 「APIパス変更」「認証変更」「レスポンス形式変更」の際に影響が大きいという
+> 「フロントの抽象化不足」は別の技術的負債であり、DL-050とは分けて管理する。
+
+### 優先順位
+
+| 優先度 | 対象 | 理由 |
+|---|---|---|
+| **P0** | file write / db writeをサービス層を通さず実行することの禁止 | データ破壊の直接原因 |
+| **P1** | サーバー側Repository統一（全Storeがsave()に一元化） | 更新経路の分岐を防ぐ |
+| **P2** | Application Service統一（Route→Store直呼びのService化） | ビジネスロジックの一元化 |
+| **P3** | フロントの直接fetch削減 | DL-050とは無関係。APIパス変更時の影響軽減 |
+

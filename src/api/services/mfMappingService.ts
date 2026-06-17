@@ -319,16 +319,21 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
     if (tax.individualOnly) taxIndividualOnlySet.add(tax.taxCategoryId)
   }
 
-  // 逆マップ生成（MF名前 → Sugusru概念ID。MF→Sugusru取込で科目・税区分を概念IDに変換するため）
+  // 逆マップ生成（MF科目名 → Sugusru概念ID）
+  // MCP経由のbuildAccountMap()結果から構築。MF連携先ではMCPが正（SSOT）。
+  // ※ MCPが返さない過去科目（ケース2）はconvertSide()側でgenerateMasterId()自動発番（§17）
   const reverseAccountMap = new Map<string, string>()
   for (const d of accountResult.details) {
-    if (d.mfName) {
+    if (d.mfName && d.sugusruId) {
       reverseAccountMap.set(d.mfName, d.sugusruId)
     }
   }
+
+  // 逆マップ生成（MF税区分名 → Sugusru概念ID）
+  // MCP経由のbuildTaxMap()結果から構築
   const reverseTaxMap = new Map<string, string>()
   for (const d of taxResult.details) {
-    if (d.mfName) {
+    if (d.mfName && d.sugusruId) {
       reverseTaxMap.set(d.mfName, d.sugusruId)
     }
   }

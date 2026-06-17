@@ -274,6 +274,9 @@ import NotifyModal from '@/components/NotifyModal.vue';
 import MfImportButton from '@/components/MfImportButton.vue';
 import { UI_MSG } from '@/constants/uiMessages';
 import { CLIENT_ACCOUNT_FIELD_LABELS } from '@/constants/fieldLabels';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 import {
   getAccountGroupDirection,
   deriveCategoryDefaults,
@@ -313,8 +316,7 @@ const hasMfData = computed(() => accountRows.some(r => r.source === 'mcp'));
 
 onMounted(async () => {
   try {
-    const res = await fetch(`/api/mf/auth/status?clientId=${props.clientId}`);
-    const data = await res.json();
+    const data = await repos.mfAuth.getAuthStatus(props.clientId) as { authenticated: boolean };
     mfAuthenticated.value = data.authenticated ?? false;
   } catch {
     mfAuthenticated.value = false;
@@ -324,14 +326,7 @@ onMounted(async () => {
 async function importFromMf() {
   mfImporting.value = true;
   try {
-    const res = await fetch(`/api/mf/import-client-accounts?clientId=${props.clientId}`, {
-      method: 'POST',
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: UI_MSG.MF勘定科目インポート失敗 }));
-      throw new Error(err.error ?? err.detail ?? UI_MSG.MF勘定科目インポート失敗);
-    }
-    const data = await res.json();
+    const data = await repos.mfAuth.importClientAccounts(props.clientId) as { available: number; message?: string };
 
     // バックエンドで保存完了済み → Store再フェッチでenrich済みデータを取得（SSOT）
     await clientAccountStore.fetchFresh(props.clientId);
@@ -382,11 +377,8 @@ onMounted(async () => {
   clientAccountStore.load(props.clientId);
   // 税区分もAPI直接取得（科目編集時のドロップダウン用）
   try {
-    const res = await fetch(`/api/tax-categories/client/${encodeURIComponent(props.clientId)}?pageSize=200&taxMethod=all`);
-    if (res.ok) {
-      const data = await res.json() as { items: TaxCategory[] };
-      clientTaxCategories.value = data.items;
-    }
+    const data = await repos.clientTaxCategory.getByClient(props.clientId, { pageSize: 200, taxMethod: 'all' }) as { items: TaxCategory[] };
+    clientTaxCategories.value = data.items;
   } catch (err) {
     console.error('[顧問先科目] 税区分取得失敗:', err);
   }

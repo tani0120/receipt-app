@@ -283,6 +283,9 @@ import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { useCurrentUser } from "@/composables/useCurrentUser";
 import { UI_MSG } from '@/constants/uiMessages';
 import { exportColumns } from '@/shared/journalColumns';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 const route = useRoute();
 const { currentStaffId } = useCurrentUser();
@@ -407,16 +410,12 @@ const startDownload = async () => {
       }
     }
     // CSVスナップショットをサーバーに保存（再ダウンロード用）
-    fetch(`/api/export-history/${encodeURIComponent(clientId.value)}/csv`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        historyId,
-        fileName: fname,
-        exportDate: toMfCsvDate(new Date().toISOString().slice(0, 10)),
-        journalCount: valid.length,
-        csvContent,
-      }),
+    repos.export.saveCsvSnapshot(clientId.value, {
+      historyId,
+      fileName: fname,
+      exportDate: toMfCsvDate(new Date().toISOString().slice(0, 10)),
+      journalCount: valid.length,
+      csvContent,
     }).catch(err => console.error('[ExportPage] CSVスナップショット保存エラー:', err));
     isDownloading.value = false;
     showDownloadModal.value = false;
@@ -427,20 +426,14 @@ const startDownload = async () => {
 async function saveDownloadHistory(fileName: string, count: number, csvLineCount: number): Promise<string> {
   const today = new Date();
   try {
-    const res = await fetch(`/api/export-history/${encodeURIComponent(clientId.value)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        exportDate: toMfCsvDate(today.toISOString().slice(0, 10)),
-        fileName,
-        count,
-        csvLineCount,
-        staffId: currentStaffId.value ?? 'unknown',
-        status: UI_MSG.出力済,
-      }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json() as { ok: boolean; id: string };
+    const data = await repos.export.saveHistory(clientId.value, {
+      exportDate: toMfCsvDate(today.toISOString().slice(0, 10)),
+      fileName,
+      count,
+      csvLineCount,
+      staffId: currentStaffId.value ?? 'unknown',
+      status: UI_MSG.出力済,
+    }) as { ok: boolean; id: string };
     return data.id;
   } catch (err) {
     console.error('[ExportPage] 履歴保存エラー:', err);
@@ -511,24 +504,18 @@ const filteredRows = computed(() => ({ length: totalCount.value }));
 
 async function fetchExportList() {
   try {
-    const res = await fetch('/api/export/list', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        clientId: clientId.value,
-        showTargetOnly: showTargetOnly.value,
-        showExcluded: showExcluded.value,
-        showWarnings: showWarnings.value,
-        debitAccountFilter: debitAccountFilter.value || undefined,
-        creditAccountFilter: creditAccountFilter.value || undefined,
-        sortKey: sortKey.value,
-        sortDir: sortDir.value,
-        page: currentPage.value,
-        pageSize: PAGE_SIZE,
-      }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json() as {
+    const data = await repos.export.getExportList({
+      clientId: clientId.value,
+      showTargetOnly: showTargetOnly.value,
+      showExcluded: showExcluded.value,
+      showWarnings: showWarnings.value,
+      debitAccountFilter: debitAccountFilter.value || undefined,
+      creditAccountFilter: creditAccountFilter.value || undefined,
+      sortKey: sortKey.value,
+      sortDir: sortDir.value,
+      page: currentPage.value,
+      pageSize: PAGE_SIZE,
+    }) as {
       rows: ExportRow[];
       totalCount: number;
       totalPages: number;

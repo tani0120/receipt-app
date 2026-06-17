@@ -212,6 +212,9 @@ import { useRoute, useRouter } from 'vue-router'
 import PortalHeader from '@/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useShareStatus } from '@/composables/useShareStatus'
+import { useRepositories } from '@/composables/useRepositories'
+
+const { repos } = useRepositories()
 
 const route = useRoute()
 const router = useRouter()
@@ -323,17 +326,8 @@ const handleGoogleLogin = () => {
         const folderId = client?.sharedFolderId
         if (folderId && email) {
           try {
-            const res = await fetch('/api/drive/grant-permission', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ folderId, email, role: 'writer' }),
-            })
-            const data = await res.json()
-            if (res.ok) {
-              console.log('[GoogleLogin] Drive権限付与成功:', data)
-            } else {
-              console.warn('[GoogleLogin] Drive権限付与失敗:', data.error)
-            }
+            await repos.drive.grantPermission({ folderId, email })
+            console.log('[GoogleLogin] Drive権限付与成功')
           } catch {
             console.warn('[GoogleLogin] Drive権限付与API接続失敗')
           }
@@ -342,8 +336,6 @@ const handleGoogleLogin = () => {
         // sharedEmailをサーバーに永続化（フォルダ再作成時の自動権限付与に必要）
         if (!client?.sharedEmail || client.sharedEmail !== email) {
           try {
-            const { createRepositories } = await import('@/repositories')
-            const repos = createRepositories()
             await repos.client.update(clientId, { sharedEmail: email })
             console.log('[GoogleLogin] sharedEmail保存:', email)
           } catch {

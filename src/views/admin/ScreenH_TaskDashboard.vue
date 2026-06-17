@@ -354,6 +354,9 @@
 import { ref, computed, onMounted, onActivated } from 'vue';
 import { useRouter } from 'vue-router';
 import { UI_MSG } from '@/constants/uiMessages';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 // [Internal_Logic_Flow] Items 233-310 (Exact Copy)
 const router = useRouter();
@@ -490,9 +493,7 @@ onActivated(() => { fetchTaskData(); });
 async function fetchTaskData() {
     isLoading.value = true;
     try {
-        const res = await fetch('/api/admin/task-summary');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json() as {
+        const data = await repos.admin.getTaskSummary() as {
             widgets: TaskWidgets;
             clients: MockClient[];
         };

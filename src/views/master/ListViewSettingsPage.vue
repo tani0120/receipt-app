@@ -88,6 +88,9 @@ import { useRoute, useRouter } from 'vue-router';
 import type { ListViewDef } from '@/components/list-view/types';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import { VueDraggable } from 'vue-draggable-plus';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 const route = useRoute();
 const router = useRouter();
@@ -111,25 +114,20 @@ const editableViews = computed(() => views.value.filter(v => !v.isBuiltin));
 /** D&D用の書き込み可能な配列 */
 const editableViewsList = ref<ListViewDef[]>([]);
 
-/** API: ビュー一覧取得 */
+/** API: ビュー一覧取得（repos経由: P3-1） */
 const loadViews = async () => {
   try {
-    const res = await fetch(`/api/list-views/${entityType.value}`);
-    const data = await res.json();
-    views.value = data.views ?? [];
+    const data = await repos.listView.getViews(entityType.value);
+    views.value = (data.views ?? []) as ListViewDef[];
   } catch (e) {
     console.error('[ListViewSettings] ビュー取得失敗:', e);
   }
 };
 
-/** API: ビュー一覧保存 */
+/** API: ビュー一覧保存（repos経由: P3-1） */
 const saveViews = async () => {
   try {
-    await fetch(`/api/list-views/${entityType.value}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ views: views.value }),
-    });
+    await repos.listView.saveViews(entityType.value, { views: views.value });
   } catch (e) {
     console.error('[ListViewSettings] ビュー保存失敗:', e);
   }

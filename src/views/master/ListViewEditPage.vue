@@ -151,6 +151,9 @@ import { clientSections, clientFieldsFlat } from '@/constants/clientFieldDefs';
 import { leadSections, leadFields as leadFieldsFlat } from '@/constants/leadFieldDefs';
 import { progressSections, progressFieldsFlat } from '@/constants/progressFieldDefs';
 import { VueDraggable } from 'vue-draggable-plus';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 const route = useRoute();
 const router = useRouter();
@@ -230,12 +233,11 @@ const filteredAvailable = computed(() => {
   );
 });
 
-/** API: ビュー一覧取得 */
+/** API: ビュー一覧取得（repos経由: P3-1） */
 const loadViews = async () => {
   try {
-    const res = await fetch(`/api/list-views/${entityType.value}`);
-    const data = await res.json();
-    allViews.value = data.views ?? [];
+    const data = await repos.listView.getViews(entityType.value);
+    allViews.value = (data.views ?? []) as ListViewDef[];
 
     // 対象ビューを探す
     const target = allViews.value.find(v => v.key === viewKey.value);
@@ -268,11 +270,7 @@ const save = async () => {
   };
 
   try {
-    await fetch(`/api/list-views/${entityType.value}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ views: allViews.value }),
-    });
+    await repos.listView.saveViews(entityType.value, { views: allViews.value });
     goBack();
   } catch (e) {
     console.error('[ListViewEdit] 保存失敗:', e);

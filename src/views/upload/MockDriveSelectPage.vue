@@ -313,6 +313,9 @@ import { usePreviewZoom } from '@/composables/usePreviewZoom';
 import type { DocEntry } from '@/repositories/types';
 import { DOC_STATUS_LABELS, SOURCE_TYPE_LABELS, DIRECTION_LABELS } from '@/constants/vendorOptions';
 import { UI_MSG } from '@/constants/uiMessages';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 const route = useRoute();
 const clientId = computed(() => (route.params.clientId as string) || '');
@@ -520,11 +523,7 @@ const sendToProcess = async () => {
       }));
 
       try {
-        await fetch(`/api/drive/save-supporting-meta/${encodeURIComponent(clientId.value)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: metaItems }),
-        });
+        await repos.drive.saveSupportingMeta(clientId.value, { items: metaItems });
         console.log(`[sendToProcess] 根拠資料メタデータ${metaItems.length}件保存`);
       } catch (err) {
         console.warn('[sendToProcess] 根拠資料メタ保存失敗（続行）:', err);
@@ -543,21 +542,10 @@ const sendToProcess = async () => {
     const nonTargetFiles = filesToMigrate.filter(f => f.status !== 'target');
 
     if (nonTargetFiles.length > 0) {
-      const res = await fetch('/api/drive/migrate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientId: clientId.value,
-          files: nonTargetFiles,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(data.error || `HTTP ${res.status}`);
-      }
-
-      const result = await res.json() as { jobId: string; queued: number };
+      const result = await repos.drive.migrate({
+        clientId: clientId.value,
+        files: nonTargetFiles,
+      }) as { jobId: string; queued: number };
       console.log(`[sendToProcess] 移行ジョブ登録: jobId=${result.jobId}, queued=${result.queued}`);
 
       // ポーリングをグローバルcomposableに委譲（Driveファイルがある場合のみ）

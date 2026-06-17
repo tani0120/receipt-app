@@ -73,5 +73,71 @@ export function createMockRepositories(): Repositories {
     document: mockDocumentRepo,
 
     learningRule: mockLearningRuleRepo,
+
+    // ── P3: フロント抽象化用Repository（サーバーサイドでは未使用。未実装スタブ） ──
+    // 呼び出し時に即座にエラーを投げることで、未実装を検知可能にする
+    listView: {
+      getViews: async () => { throw new Error('mockListViewRepo.getViews not implemented') },
+      saveViews: async () => { throw new Error('mockListViewRepo.saveViews not implemented') },
+    },
+    drive: {
+      getFiles: async () => { throw new Error('mockDriveRepo.getFiles not implemented') },
+      createFolder: async () => { throw new Error('mockDriveRepo.createFolder not implemented') },
+      checkFolder: async () => { throw new Error('mockDriveRepo.checkFolder not implemented') },
+      upload: async () => { throw new Error('mockDriveRepo.upload not implemented') },
+      migrate: async () => { throw new Error('mockDriveRepo.migrate not implemented') },
+      getMigrateStatus: async () => { throw new Error('mockDriveRepo.getMigrateStatus not implemented') },
+      getMigrateJobs: async () => { throw new Error('mockDriveRepo.getMigrateJobs not implemented') },
+      downloadSupporting: async () => { throw new Error('mockDriveRepo.downloadSupporting not implemented') },
+      downloadExcluded: async () => { throw new Error('mockDriveRepo.downloadExcluded not implemented') },
+      getSupportingHistory: async () => { throw new Error('mockDriveRepo.getSupportingHistory not implemented') },
+      getExcludedHistory: async () => { throw new Error('mockDriveRepo.getExcludedHistory not implemented') },
+      saveSupportingMeta: async () => { throw new Error('mockDriveRepo.saveSupportingMeta not implemented') },
+      grantPermission: async () => { throw new Error('mockDriveRepo.grantPermission not implemented') },
+      revokePermission: async () => { throw new Error('mockDriveRepo.revokePermission not implemented') },
+      getExcludedCount: async () => { throw new Error('mockDriveRepo.getExcludedCount not implemented') },
+    },
+    export: {
+      getExportList: async () => { throw new Error('mockExportRepo.getExportList not implemented') },
+      getExportDetail: async () => { throw new Error('mockExportRepo.getExportDetail not implemented') },
+      getHistory: async () => { throw new Error('mockExportRepo.getHistory not implemented') },
+      saveHistory: async () => { throw new Error('mockExportRepo.saveHistory not implemented') },
+      getCsvSnapshot: async () => { throw new Error('mockExportRepo.getCsvSnapshot not implemented') },
+      saveCsvSnapshot: async () => { throw new Error('mockExportRepo.saveCsvSnapshot not implemented') },
+    },
+    mfAuth: {
+      getAuthStatus: async () => { throw new Error('mockMfAuthRepo.getAuthStatus not implemented') },
+      getAuthStatusBulk: async () => { throw new Error('mockMfAuthRepo.getAuthStatusBulk not implemented') },
+      getAuthUrl: async () => { throw new Error('mockMfAuthRepo.getAuthUrl not implemented') },
+      importMasterAccounts: async () => { throw new Error('mockMfAuthRepo.importMasterAccounts not implemented') },
+      importClientAccounts: async () => { throw new Error('mockMfAuthRepo.importClientAccounts not implemented') },
+      fiscalCheck: async () => { throw new Error('mockMfAuthRepo.fiscalCheck not implemented') },
+      importOffices: async () => { throw new Error('mockMfAuthRepo.importOffices not implemented') },
+    },
+    attachment: {
+      upload: async () => { throw new Error('mockAttachmentRepo.upload not implemented') },
+      deleteFile: async () => { throw new Error('mockAttachmentRepo.deleteFile not implemented') },
+    },
+    comment: {
+      getByEntity: async () => { throw new Error('mockCommentRepo.getByEntity not implemented') },
+      create: async () => { throw new Error('mockCommentRepo.create not implemented') },
+      deleteById: async () => { throw new Error('mockCommentRepo.deleteById not implemented') },
+      update: async () => { throw new Error('mockCommentRepo.update not implemented') },
+    },
+    admin: {
+      getAiCostConfig: async () => { throw new Error('mockAdminRepo.getAiCostConfig not implemented') },
+      getActivitySummary: async () => { throw new Error('mockAdminRepo.getActivitySummary not implemented') },
+      getTaskSummary: async () => { throw new Error('mockAdminRepo.getTaskSummary not implemented') },
+      getProgressList: async () => { throw new Error('mockAdminRepo.getProgressList not implemented') },
+      getMigrateJobs: async () => { throw new Error('mockAdminRepo.getMigrateJobs not implemented') },
+    },
+    clientTaxCategory: {
+      getByClient: async () => { throw new Error('mockClientTaxCategoryRepo.getByClient not implemented') },
+      saveByClient: async () => { throw new Error('mockClientTaxCategoryRepo.saveByClient not implemented') },
+    },
+    leadExtra: {
+      bulkCreate: async () => { throw new Error('mockLeadExtraRepo.bulkCreate not implemented') },
+      convert: async () => { throw new Error('mockLeadExtraRepo.convert not implemented') },
+    },
   }
 }

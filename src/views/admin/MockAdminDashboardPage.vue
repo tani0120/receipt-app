@@ -349,6 +349,9 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { useAdminDashboard } from '@/composables/useAdminDashboard';
 import { UI_MSG } from '@/constants/uiMessages';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 const route = useRoute();
 const router = useRouter();
@@ -370,9 +373,7 @@ const costConfig = ref<{
 
 async function fetchCostConfig() {
   try {
-    const res = await fetch('/api/ai-command/cost/config');
-    if (!res.ok) return;
-    const body = await res.json() as typeof costConfig.value;
+    const body = await repos.admin.getAiCostConfig() as typeof costConfig.value;
     costConfig.value = body;
   } catch {
     // 取得失敗時はデフォルト値のまま
@@ -385,9 +386,7 @@ const activityTotalMs = ref(0);
 
 async function fetchActivityTotal() {
   try {
-    const res = await fetch('/api/activity-log/summary');
-    if (!res.ok) return;
-    const body = await res.json() as {
+    const body = await repos.admin.getActivitySummary() as {
       byStaff: { totalActiveMs: number }[];
     };
     // 全スタッフの合計
@@ -580,8 +579,7 @@ const mcpAuthTooltip = computed(() => {
 async function checkMcpAuth() {
   mcpAuthStatus.value = 'loading';
   try {
-    const res = await fetch('/api/mf/auth/status?clientId=c_wTdnMKDO');
-    const data = await res.json();
+    const data = await repos.mfAuth.getAuthStatus('c_wTdnMKDO') as { authenticated: boolean; expiresAt?: string };
     mcpAuthStatus.value = data.authenticated ? 'authenticated' : 'unauthenticated';
     mcpAuthExpires.value = data.expiresAt ?? null;
   } catch {
@@ -591,8 +589,7 @@ async function checkMcpAuth() {
 
 async function onMcpAuthClick() {
   try {
-    const res = await fetch('/api/mf/auth/url?clientId=c_wTdnMKDO');
-    const data = await res.json();
+    const data = await repos.mfAuth.getAuthUrl('c_wTdnMKDO') as { url?: string };
     if (data.url) {
       window.open(data.url, '_blank');
     }

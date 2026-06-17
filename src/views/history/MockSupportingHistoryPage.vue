@@ -101,6 +101,9 @@ import { useRoute } from 'vue-router'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useGlobalToast } from '@/composables/useGlobalToast'
 import { UI_MSG } from '@/constants/uiMessages'
+import { useRepositories } from '@/composables/useRepositories'
+
+const { repos } = useRepositories()
 
 const route = useRoute()
 const clientId = computed(() => (route.params.clientId as string) || '')
@@ -144,12 +147,7 @@ const checkedIds = ref<Set<string>>(new Set())
 async function loadHistory() {
   isLoading.value = true
   try {
-    const res = await fetch(`/api/drive/supporting-history/${encodeURIComponent(clientId.value)}`)
-    if (!res.ok) {
-      rows.value = []
-      return
-    }
-    const data = await res.json() as SupportingHistoryRow[]
+    const data = await repos.drive.getSupportingHistory(clientId.value) as SupportingHistoryRow[]
     rows.value = data
   } catch {
     rows.value = []

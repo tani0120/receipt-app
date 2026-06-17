@@ -221,6 +221,9 @@ import {
   STATUS_OPTIONS, TYPE_OPTIONS, getLabel, isIndividualType,
 } from '@/constants/clientOptions';
 import { PROGRESS_ALL_COLUMNS, PROGRESS_FILTER_COLUMN_DEFS } from '@/constants/progressFieldDefs';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 const { isAdmin } = useCurrentUser();
 
@@ -382,9 +385,7 @@ async function fetchAllJobs(): Promise<void> {
     const batch = clients.slice(i, i + batchSize);
     await Promise.all(batch.map(async (row) => {
       try {
-        const res = await fetch(`/api/drive/migrate/jobs/${encodeURIComponent(row.clientId)}`);
-        if (!res.ok) return;
-        const data = await res.json() as { jobs: Array<{ jobId: string; createdAt: string; total: number; done: number; failed: number; excluded: number }> };
+        const data = await repos.drive.getMigrateJobs(row.clientId) as { jobs: Array<{ jobId: string; createdAt: string; total: number; done: number; failed: number; excluded: number }> };
         results[row.clientId] = data.jobs.map(j => ({
           ...j,
           status: j.failed > 0 ? 'failed' : j.done >= j.total ? 'completed' : j.done > 0 ? 'processing' : 'queued',
@@ -522,19 +523,13 @@ const isLoading = ref(true);
 async function fetchProgressList() {
   isLoading.value = true;
   try {
-    const res = await fetch('/api/progress/list', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        filters: pgFilterConditions.value,
-        logic: pgFilterLogic.value,
-        sorts: pgFilterSortSettings.value,
-        page: currentPage.value,
-        pageSize: PAGE_SIZE,
-      }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const data = await repos.admin.getProgressList({
+      filters: pgFilterConditions.value,
+      logic: pgFilterLogic.value,
+      sorts: pgFilterSortSettings.value,
+      page: currentPage.value,
+      pageSize: PAGE_SIZE,
+    }) as { rows: typeof filteredRows.value; totalCount: number; totalPages: number };
     filteredRows.value = data.rows;
     totalCount.value = data.totalCount;
     totalPages.value = data.totalPages;

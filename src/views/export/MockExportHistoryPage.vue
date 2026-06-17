@@ -101,6 +101,9 @@ import { toMfCsvDate } from '@/utils/mf-csv-date';
 import { useModalHelper } from '@/composables/useModalHelper';
 import { UI_MSG } from '@/constants/uiMessages';
 import NotifyModal from '@/components/NotifyModal.vue';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 const route = useRoute();
 const router = useRouter();
@@ -121,10 +124,9 @@ const modal = useModalHelper();
 /** サーバーから履歴を取得 */
 async function loadHistory() {
   try {
-    const res = await fetch(`/api/export-history/${encodeURIComponent(clientId.value)}`);
-    const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) {
-      historyData.value = data;
+    const data = await repos.export.getHistory(clientId.value);
+    if (Array.isArray(data) && (data as HistoryRow[]).length > 0) {
+      historyData.value = data as HistoryRow[];
     } else {
       // フォールバック：サンプル履歴（日付はtoMfCsvDateで統一）
       historyData.value = [
@@ -194,18 +196,15 @@ const startDownload = () => {
     let downloadCount = 0;
     for (const hid of checkedArr) {
       try {
-        const res = await fetch(`/api/export-history/${encodeURIComponent(clientId.value)}/csv/${encodeURIComponent(hid)}`);
-        if (res.ok) {
-          const snapshot = await res.json();
-          const blob = new Blob(['\uFEFF' + snapshot.csvContent], { type: 'text/csv;charset=utf-8;' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = snapshot.fileName + '.csv';
-          a.click();
-          URL.revokeObjectURL(url);
-          downloadCount++;
-        }
+        const snapshot = await repos.export.getCsvSnapshot(clientId.value, hid) as { csvContent: string; fileName: string };
+        const blob = new Blob(['\uFEFF' + snapshot.csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = snapshot.fileName + '.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+        downloadCount++;
       } catch { /* 取得エラーは無視 */ }
     }
     isDownloading.value = false;

@@ -214,6 +214,9 @@ import { useUnsavedGuard } from '@/composables/useUnsavedGuard'
 import type { DocStatus } from '@/repositories/types'
 import type { DriveFileItemWithThumbnail } from '@/api/services/drive/driveService'
 import { UI_MSG } from '@/constants/uiMessages'
+import { useRepositories } from '@/composables/useRepositories'
+
+const { repos } = useRepositories()
 
 // ===== ルート =====
 const route = useRoute()
@@ -294,13 +297,7 @@ const fetchFiles = async () => {
       return
     }
 
-    const res = await fetch(`/api/drive/files?folderId=${encodeURIComponent(folderId)}&withThumbnails=true`)
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(data.error || `HTTP ${res.status}`)
-    }
-
-    const data = await res.json() as { files: DriveFileItemWithThumbnail[] }
+    const data = await repos.drive.getFiles(folderId, true) as { files: DriveFileItemWithThumbnail[] }
 
     driveFiles.value = data.files
     // 新規ファイルにはpendingを設定（既存の選別結果は保持）
@@ -342,29 +339,17 @@ const sendToProcess = async () => {
   migrationDone.value = false
 
   try {
-    const res = await fetch('/api/drive/migrate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        clientId,
-        files: filesToMigrate,
-      }),
-    })
+    const result = await repos.drive.migrate({
+      clientId,
+      files: filesToMigrate,
+    }) as { jobId: string; queued: number }
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(data.error || `HTTP ${res.status}`)
-    }
-
-    const result = await res.json() as { jobId: string; queued: number }
     migrationProgress.value = { total: result.queued, queued: result.queued, processing: 0, done: 0, failed: 0 }
 
     // ポーリング（3秒間隔）
     const pollInterval = setInterval(async () => {
       try {
-        const statusRes = await fetch(`/api/drive/migrate/status/${result.jobId}`)
-        if (!statusRes.ok) return
-        const status = await statusRes.json() as { total: number; queued: number; processing: number; done: number; failed: number }
+        const status = await repos.drive.getMigrateStatus(result.jobId) as { total: number; queued: number; processing: number; done: number; failed: number }
         migrationProgress.value = status
 
         if (status.queued === 0 && status.processing === 0) {
@@ -400,11 +385,8 @@ const excludedInMigration = computed(() => counts.value.excluded)
 
 const fetchExcludedCount = async () => {
   try {
-    const res = await fetch(`/api/drive/excluded-count/${clientId}`)
-    if (res.ok) {
-      const data = await res.json() as { count: number }
-      excludedCount.value = data.count
-    }
+    const data = await repos.drive.getExcludedCount(clientId) as { count: number }
+    excludedCount.value = data.count
   } catch { /* 無視 */ }
 }
 
