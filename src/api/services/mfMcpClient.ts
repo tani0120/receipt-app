@@ -561,29 +561,62 @@ export async function mcpFetchTradePartners(tokenKey: string = 'default'): Promi
   return await callMcpTool('mfc_ca_getTradePartners', {}, tokenKey)
 }
 
+/** MF部門（実機確認 2026-06-17: { departments: [...] } でラップ。parent_id/search_keyあり） */
+export interface MfMcpDepartment {
+  /** 部門ID（URLエンコード済みBase64） */
+  id: string
+  /** 部門名 */
+  name: string
+  /** 親部門ID（null=ルート部門。木構造を形成） */
+  parent_id: string | null
+  /** 検索キー */
+  search_key: string | null
+}
+
 /**
  * 部門一覧を取得する（mfc_ca_getDepartments）
+ *
+ * 実機レスポンス（2026-06-17確認）:
+ *   { departments: [{ id, name, parent_id, search_key }] }
+ *   ※ 配列直接ではなくオブジェクトでラップされている
+ *
  * @param tokenKey mfAuthService のトークンストアキー
  */
-export async function mcpFetchDepartments(tokenKey: string = 'default'): Promise<Array<{
+export async function mcpFetchDepartments(tokenKey: string = 'default'): Promise<MfMcpDepartment[]> {
+  const raw = await callMcpTool('mfc_ca_getDepartments', {}, tokenKey)
+  // 実機: { departments: [...] } でラップされている
+  if (Array.isArray(raw)) return raw as MfMcpDepartment[]
+  return (raw as Record<string, unknown>)?.departments as MfMcpDepartment[] ?? []
+}
+
+/** MF補助科目（実機確認 2026-06-17: { sub_accounts: [...] } でラップ） */
+export interface MfMcpSubAccount {
+  /** 補助科目ID（URLエンコード済みBase64） */
   id: string
+  /** 親勘定科目ID（getAccountsのidと対応） */
+  account_id: string
+  /** 補助科目名 */
   name: string
-}>> {
-  return await callMcpTool('mfc_ca_getDepartments', {}, tokenKey)
+  /** 検索キー */
+  search_key: string | null
+  /** デフォルト税区分ID */
+  tax_id: string
 }
 
 /**
  * 補助科目一覧を取得する（mfc_ca_getSubAccounts）
+ *
+ * 実機レスポンス（2026-06-17確認）:
+ *   { sub_accounts: [{ id, account_id, name, search_key, tax_id }] }
+ *   ※ 配列直接ではなくオブジェクトでラップされている
+ *
  * @param tokenKey mfAuthService のトークンストアキー
  */
-export async function mcpFetchSubAccounts(tokenKey: string = 'default'): Promise<Array<{
-  id: string
-  account_id: string
-  name: string
-  search_key: string | null
-  tax_id: string
-}>> {
-  return await callMcpTool('mfc_ca_getSubAccounts', {}, tokenKey)
+export async function mcpFetchSubAccounts(tokenKey: string = 'default'): Promise<MfMcpSubAccount[]> {
+  const raw = await callMcpTool('mfc_ca_getSubAccounts', {}, tokenKey)
+  // 実機: { sub_accounts: [...] } でラップされている
+  if (Array.isArray(raw)) return raw as MfMcpSubAccount[]
+  return (raw as Record<string, unknown>)?.sub_accounts as MfMcpSubAccount[] ?? []
 }
 
 /**

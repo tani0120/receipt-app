@@ -30,19 +30,32 @@ export const useClientAccountStore = defineStore('clientAccounts', () => {
   const accountsMap = ref<Record<string, EnrichedAccount[]>>({})
   /** clientId → キャッシュ取得時刻 */
   const cachedAtMap = ref<Record<string, number>>({})
-  /** clientId → 補助科目マップ（科目ID → 補助科目名） */
-  const subAccountsMap = ref<Record<string, Record<string, string>>>({})
+  /** clientId → 補助科目マップ（sugusru科目ID → MF補助科目配列）バックエンドから取得したキャッシュ */
+  const subAccountsMap = ref<Record<string, Record<string, Array<{ mfSubId: string; name: string; mfTaxId: string }>>>>({})
+  /** clientId → 部門配列。バックエンドから取得したキャッシュ */
+  const departmentsMap = ref<Record<string, Array<{ mfDeptId: string; name: string; parentId: string | null }>>>({})
 
   // =============================================
   // API通信
   // =============================================
 
-  /** サーバーからEnrichedAccount[]を取得 */
+  /** サーバーからEnrichedAccount[]+補助科目+部門を取得 */
   async function fetchFromServer(clientId: string): Promise<EnrichedAccount[] | null> {
     try {
       const res = await fetch(`${API_BASE}/client/${encodeURIComponent(clientId)}?pageSize=500`)
       if (!res.ok) return null
-      const data = await res.json() as { items: EnrichedAccount[] }
+      const data = await res.json() as {
+        items: EnrichedAccount[]
+        subAccountsMap?: Record<string, Array<{ mfSubId: string; name: string; mfTaxId: string }>>
+        departments?: Array<{ mfDeptId: string; name: string; parentId: string | null }>
+      }
+      // 補助科目・部門をストアに保存（バックエンドが返したデータをそのまま保持）
+      if (data.subAccountsMap) {
+        subAccountsMap.value[clientId] = data.subAccountsMap
+      }
+      if (data.departments) {
+        departmentsMap.value[clientId] = data.departments
+      }
       return data.items
     } catch (err) {
       console.error(`[clientAccountStore] サーバー取得失敗 (${clientId}):`, err)
@@ -50,7 +63,7 @@ export const useClientAccountStore = defineStore('clientAccounts', () => {
     }
   }
 
-  /** サーバーへ全件PUT保存 */
+  /** サーバーへ全件PUT保存（科目Overrideのみ。補助科目・部門はバックエンドが管理） */
   async function saveToServer(clientId: string): Promise<void> {
     const accounts = accountsMap.value[clientId]
     if (!accounts) return
@@ -60,7 +73,6 @@ export const useClientAccountStore = defineStore('clientAccounts', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           accounts: stripEnrichFields(accounts),
-          subAccounts: subAccountsMap.value[clientId] ?? {},
         }),
       })
       console.log(`[clientAccountStore] ${clientId}: ${accounts.length}件を保存`)
@@ -151,12 +163,9 @@ export const useClientAccountStore = defineStore('clientAccounts', () => {
     return accountsMap.value[clientId] ?? []
   }
 
-  /** 全件データを受け取ってStoreを更新 + 保存 */
-  function saveAll(clientId: string, allRows: EnrichedAccount[], subAccounts?: Record<string, string>): void {
+  /** 全件データを受け取ってStoreを更新 + 保存（科目Overrideのみ） */
+  function saveAll(clientId: string, allRows: EnrichedAccount[]): void {
     accountsMap.value[clientId] = [...allRows]
-    if (subAccounts !== undefined) {
-      subAccountsMap.value[clientId] = { ...subAccounts }
-    }
     debounceSave(clientId)
   }
 
@@ -164,6 +173,7 @@ export const useClientAccountStore = defineStore('clientAccounts', () => {
     accountsMap,
     cachedAtMap,
     subAccountsMap,
+    departmentsMap,
     load,
     fetchFresh,
     toggleHidden,

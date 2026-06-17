@@ -183,6 +183,12 @@ function validateMfJournal(mfJournal: MfMcpJournal): ImportIssue | null {
   // 金額チェック
   for (const branch of mfJournal.branches) {
     for (const side of [branch.debitor, branch.creditor]) {
+      if (!side) {
+        return {
+          severity: 'error', type: 'IMPORT_AMOUNT_INVALID', mfNumber: mfJournal.number,
+          message: `MF#${mfJournal.number}: 仕訳行の借方/貸方がnull`,
+        }
+      }
       if (side.value === 0 || side.value < 0 || !Number.isFinite(side.value)) {
         return {
           severity: 'error', type: 'IMPORT_AMOUNT_INVALID', mfNumber: mfJournal.number,

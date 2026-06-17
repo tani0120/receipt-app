@@ -28,6 +28,7 @@ import {
   mcpFetchTaxes,
   mcpFetchJournals,
   mcpFetchTermSettings,
+  mcpFetchDepartments,
   mcpCreateJournal,
 } from '../services/mfMcpClient'
 import { getById, updateClient } from '../services/clientsApi'
@@ -35,7 +36,8 @@ import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFi
 import { importMfJournals } from '../services/mfJournalImporter'
 import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services/mfTaxImportService'
 import { importMasterAccounts } from '../services/mfAccountImportService'
-import { saveClientAccounts, saveMfAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories, getClientAccounts, hasClientAccounts } from '../services/accountMasterApi'
+import { saveMfAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories, getClientAccounts, hasClientAccounts, persistSubAccounts, persistDepartments } from '../services/accountMasterApi'
+import type { MfSubAccountEntry, MfDepartmentEntry } from '../services/accountMasterApi'
 import type { Account } from '../../types/shared-account'
 import { deriveMfAccountGroup, deriveTarget } from '../../data/master/mf-account-category-mapping'
 import { generateMasterId } from '../services/generateMasterId'
@@ -560,6 +562,41 @@ app.post('/sync-all', async (c) => {
     if (hiddenCount > 0) accountMsg += `（非表示化: ${hiddenCount}件）`
     results.push(accountMsg)
 
+    // ===== 3b. 補助科目（科目データからsub_accounts抽出） =====
+    const subAccountsMap: Record<string, MfSubAccountEntry[]> = {}
+    for (const mfAcct of allAccounts) {
+      if (!mfAcct.sub_accounts || mfAcct.sub_accounts.length === 0) continue
+      // MF科目名→sugusru科目IDに変換（名前照合）
+      const matched = mapped.find(m => m.name === mfAcct.name)
+      if (!matched) continue
+      subAccountsMap[matched.accountId] = mfAcct.sub_accounts.map(s => ({
+        mfSubId: s.id,
+        name: s.name,
+        mfTaxId: s.tax_id,
+        searchKey: s.search_key,
+      }))
+    }
+    persistSubAccounts(clientId, subAccountsMap)
+    const subTotal = Object.values(subAccountsMap).reduce((s, arr) => s + arr.length, 0)
+    results.push(`✅ 補助科目: ${subTotal}件（${Object.keys(subAccountsMap).length}科目）`)
+
+    // ===== 3c. 部門（MCPから独立取得） =====
+    try {
+      const mfDepts = await mcpFetchDepartments(clientId)
+      const deptEntries: MfDepartmentEntry[] = mfDepts.map(d => ({
+        mfDeptId: d.id,
+        name: d.name,
+        parentId: d.parent_id,
+        searchKey: d.search_key,
+      }))
+      persistDepartments(clientId, deptEntries)
+      results.push(`✅ 部門: ${deptEntries.length}件`)
+    } catch (deptErr) {
+      console.warn(`[mfRoutes] sync-all: 部門取得失敗（続行）:`, deptErr instanceof Error ? deptErr.message : deptErr)
+      results.push(`⚠️ 部門: 取得失敗（スキップ）`)
+      hasWarnings = true
+    }
+
     // ===== 4. 税区分マスタ（名前照合でマスタ属性を引き継ぐ） =====
     const allTaxes = await mcpFetchTaxes(clientId)
     // マスタの全社税区分を名前でインデックス化（MF IDは事業者固有のため名前照合が正しい）
@@ -631,6 +668,7 @@ app.post('/sync-all', async (c) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`[mfRoutes] sync-all失敗: ${message}`)
+    if (err instanceof Error && err.stack) console.error(err.stack)
     return c.json({
       success: false,
       error: 'MF全データ同期に失敗しました',
@@ -912,8 +950,87 @@ app.post('/import-client-accounts', async (c) => {
       })
     }
 
-    // 5. 保存
+    // 5. 科目保存
     saveMfAccounts(clientId, mapped)
+
+    // 6. 補助科目（科目データからsub_accounts抽出）
+    const subAccountsMap: Record<string, MfSubAccountEntry[]> = {}
+    for (const mfAcct of allAccounts) {
+      if (!mfAcct.sub_accounts || mfAcct.sub_accounts.length === 0) continue
+      const matchedAcct = mapped.find(m => m.name === mfAcct.name)
+      if (!matchedAcct) continue
+      subAccountsMap[matchedAcct.accountId] = mfAcct.sub_accounts.map(s => ({
+        mfSubId: s.id,
+        name: s.name,
+        mfTaxId: s.tax_id,
+        searchKey: s.search_key,
+      }))
+    }
+    persistSubAccounts(clientId, subAccountsMap)
+    const subTotal = Object.values(subAccountsMap).reduce((s, arr) => s + arr.length, 0)
+
+    // 7. 部門（MCPから独立取得）
+    let deptCount = 0
+    try {
+      const mfDepts = await mcpFetchDepartments(clientId)
+      const deptEntries: MfDepartmentEntry[] = mfDepts.map(d => ({
+        mfDeptId: d.id,
+        name: d.name,
+        parentId: d.parent_id,
+        searchKey: d.search_key,
+      }))
+      persistDepartments(clientId, deptEntries)
+      deptCount = deptEntries.length
+    } catch (deptErr) {
+      console.warn(`[mfRoutes] import-client-accounts: 部門取得失敗（続行）:`, deptErr instanceof Error ? deptErr.message : deptErr)
+    }
+
+    // 8. 税区分（名前照合でマスタ属性を引き継ぐ）
+    const masterTaxList = getAllTaxCategories()
+    const nameToMasterTax = new Map<string, TaxCategory>()
+    for (const mt of masterTaxList) {
+      nameToMasterTax.set(mt.name, mt)
+    }
+    const existingTaxIds = new Set(masterTaxList.map(mt => mt.taxCategoryId))
+    let matchedTaxCount = 0
+    let unmatchedTaxCount = 0
+    const taxMapped: TaxCategory[] = mfTaxes.map((t, idx) => {
+      const masterTax = nameToMasterTax.get(t.name)
+      if (masterTax) {
+        matchedTaxCount++
+        return {
+          ...masterTax,
+          mfTaxId: t.id,
+          displayOrder: idx + 1,
+          source: 'mcp' as const,
+        }
+      }
+      unmatchedTaxCount++
+      const baseId = generateTaxMasterId(t.name)
+      if (!baseId) {
+        throw new Error(`税区分「${t.name}」のルールベースID変換に失敗。data/tax-id-rules.json にルールを追加してください`)
+      }
+      const generatedId = ensureUniqueTaxId(baseId, existingTaxIds)
+      existingTaxIds.add(generatedId)
+      const dir = guessDirectionFromName(t.name)
+      return {
+        taxCategoryId: generatedId,
+        name: t.name,
+        shortName: t.abbreviation ?? '',
+        direction: dir,
+        qualified: guessQualifiedFromName(t.name, dir),
+        aiSelectable: true,
+        hidden: false,
+        effectiveFrom: DEFAULT_EFFECTIVE_FROM,
+        effectiveTo: null,
+        defaultVisible: true,
+        displayOrder: idx + 1,
+        isCustom: true,
+        source: 'mcp' as const,
+        mfTaxId: t.id,
+      }
+    })
+    saveClientTaxCategories(clientId, taxMapped)
 
     const matchedCount = available.length - unmatchedNames.length
     return c.json({
@@ -923,7 +1040,12 @@ app.post('/import-client-accounts', async (c) => {
       matched: matchedCount,
       unmatched: unmatchedNames.length,
       unmatchedNames,
-      message: `勘定科目${available.length}件を保存（マッチ: ${matchedCount}件 / 未マッチ: ${unmatchedNames.length}件）`,
+      subAccountCount: subTotal,
+      departmentCount: deptCount,
+      taxCount: mfTaxes.length,
+      taxMatched: matchedTaxCount,
+      taxUnmatched: unmatchedTaxCount,
+      message: `勘定科目${available.length}件 / 補助科目${subTotal}件 / 部門${deptCount}件 / 税区分${mfTaxes.length}件を保存`,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

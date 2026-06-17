@@ -376,16 +376,41 @@ interface AccountOverride {
   defaultTaxCategoryId?: string
 }
 
+/** MFから取得した補助科目（事業者ごと、1:N） */
+export interface MfSubAccountEntry {
+  /** MF補助科目ID（URLエンコード済みBase64） */
+  mfSubId: string
+  /** 補助科目名 */
+  name: string
+  /** MFデフォルト税区分ID */
+  mfTaxId: string
+  /** 検索キー */
+  searchKey?: string | null
+}
+
+/** MFから取得した部門（事業者ごと、木構造） */
+export interface MfDepartmentEntry {
+  /** MF部門ID（URLエンコード済みBase64） */
+  mfDeptId: string
+  /** 部門名 */
+  name: string
+  /** 親部門ID（null=ルート部門） */
+  parentId: string | null
+  /** 検索キー */
+  searchKey?: string | null
+}
+
 /** 顧問先別Overrideデータ */
 interface ClientOverrideData {
   accountOverrides: AccountOverride[]
-  subAccounts: Record<string, string>
+  /** @deprecated 旧1:1型。新規保存ではsubAccountsMapを使用 */
+  subAccounts?: Record<string, string>
 }
 
 /** 旧形式との後方互換用 */
 interface ClientAccountData {
   accounts: Account[]
-  subAccounts: Record<string, string>
+  subAccounts?: Record<string, string>
 }
 
 /** Overrideストア: clientId → ClientOverrideData */
@@ -393,6 +418,12 @@ const clientOverrideStore = new Map<string, ClientOverrideData>()
 
 /** MFインポートデータストア: clientId → Account[]（MF連携済みの科目一覧） */
 const clientMfAccountStore = new Map<string, Account[]>()
+
+/** 補助科目キャッシュ: clientId → { sugusruAccountId → MfSubAccountEntry[] } */
+const clientSubAccountStore = new Map<string, Record<string, MfSubAccountEntry[]>>()
+
+/** 部門キャッシュ: clientId → MfDepartmentEntry[] */
+const clientDepartmentStore = new Map<string, MfDepartmentEntry[]>()
 
 // ── 永続化ヘルパー（Override） ──
 
@@ -418,6 +449,41 @@ function persistMfAccounts(clientId: string, accounts: Account[]): void {
   }
 }
 
+/** 補助科目をJSONに永続化 */
+export function persistSubAccounts(clientId: string, data: Record<string, MfSubAccountEntry[]>): void {
+  try {
+    clientSubAccountStore.set(clientId, data)
+    const filePath = join(DATA_DIR, `sub-accounts-${clientId}.json`)
+    writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
+    const total = Object.values(data).reduce((s, arr) => s + arr.length, 0)
+    console.log(`[accountMasterApi] 顧問先${clientId}の補助科目を永続化（${total}件）`)
+  } catch (err) {
+    console.error(`[accountMasterApi] 顧問先${clientId}の補助科目永続化に失敗:`, err)
+  }
+}
+
+/** 部門をJSONに永続化 */
+export function persistDepartments(clientId: string, data: MfDepartmentEntry[]): void {
+  try {
+    clientDepartmentStore.set(clientId, data)
+    const filePath = join(DATA_DIR, `departments-${clientId}.json`)
+    writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
+    console.log(`[accountMasterApi] 顧問先${clientId}の部門を永続化（${data.length}件）`)
+  } catch (err) {
+    console.error(`[accountMasterApi] 顧問先${clientId}の部門永続化に失敗:`, err)
+  }
+}
+
+/** 補助科目を取得 */
+export function getClientSubAccounts(clientId: string): Record<string, MfSubAccountEntry[]> {
+  return clientSubAccountStore.get(clientId) ?? {}
+}
+
+/** 部門を取得 */
+export function getClientDepartments(clientId: string): MfDepartmentEntry[] {
+  return clientDepartmentStore.get(clientId) ?? []
+}
+
 /** 旧形式（accounts-{clientId}.json）からOverride/MFデータへマイグレーション */
 function migrateFromLegacy(clientId: string, legacy: ClientAccountData): void {
   const hasMfData = legacy.accounts.some(a => (a as Record<string, unknown>).mfAccountId != null)
@@ -429,10 +495,12 @@ function migrateFromLegacy(clientId: string, legacy: ClientAccountData): void {
     console.log(`[accountMasterApi] 顧問先${clientId}: 旧データ→MFデータにマイグレーション（${legacy.accounts.length}件）`)
   }
 
-  // Override抽出: マスタとの差分をOverrideとして保存
+  // Override抽出: ベースデータとの差分をOverrideとして保存
+  // M1修正: MF連携時はMFデータと比較する（マスタ比較ではない）
   const overrides: AccountOverride[] = []
-  const masterById = new Map(masterAccounts.map(a => [a.accountId, a]))
-  const baseAccounts = hasMfData ? legacy.accounts : masterAccounts
+  const baseData = hasMfData ? legacy.accounts : masterAccounts
+  const masterById = new Map(baseData.map(a => [a.accountId, a]))
+
 
   for (const acc of legacy.accounts) {
     const master = masterById.get(acc.accountId)
@@ -461,7 +529,6 @@ function migrateFromLegacy(clientId: string, legacy: ClientAccountData): void {
 
   const overrideData: ClientOverrideData = {
     accountOverrides: overrides,
-    subAccounts: legacy.subAccounts ?? {},
   }
   clientOverrideStore.set(clientId, overrideData)
   if (overrides.length > 0) {
@@ -471,10 +538,12 @@ function migrateFromLegacy(clientId: string, legacy: ClientAccountData): void {
 }
 
 /**
- * 起動時: Override + MFデータを復元
+ * 起動時: Override + MFデータ + 補助科目 + 部門を復元
  * 1. overrides-{clientId}.json → Override復元
  * 2. mf-accounts-{clientId}.json → MFデータ復元
- * 3. 旧accounts-{clientId}.json → マイグレーション（overrides/mf-accountsが未作成の場合）
+ * 3. sub-accounts-{clientId}.json → 補助科目復元
+ * 4. departments-{clientId}.json → 部門復元
+ * 5. 旧accounts-{clientId}.json → マイグレーション（overrides/mf-accountsが未作成の場合）
  */
 function restoreAllClientAccounts(): void {
   if (!existsSync(DATA_DIR)) return
@@ -504,7 +573,31 @@ function restoreAllClientAccounts(): void {
     }
   }
 
-  // 3. 旧形式マイグレーション（overrides未作成の場合のみ）
+  // 3. 補助科目復元
+  for (const file of files.filter(f => f.startsWith('sub-accounts-') && f.endsWith('.json'))) {
+    const clientId = file.replace('sub-accounts-', '').replace('.json', '')
+    try {
+      const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
+      clientSubAccountStore.set(clientId, JSON.parse(raw))
+      console.log(`[accountMasterApi] 顧問先${clientId}の補助科目を復元`)
+    } catch (err) {
+      console.error(`[accountMasterApi] ${file}の読み込み失敗:`, err)
+    }
+  }
+
+  // 4. 部門復元
+  for (const file of files.filter(f => f.startsWith('departments-') && f.endsWith('.json'))) {
+    const clientId = file.replace('departments-', '').replace('.json', '')
+    try {
+      const raw = readFileSync(join(DATA_DIR, file), 'utf-8')
+      clientDepartmentStore.set(clientId, JSON.parse(raw))
+      console.log(`[accountMasterApi] 顧問先${clientId}の部門を復元`)
+    } catch (err) {
+      console.error(`[accountMasterApi] ${file}の読み込み失敗:`, err)
+    }
+  }
+
+  // 5. 旧形式マイグレーション（overrides未作成の場合のみ）
   for (const file of files.filter(f => f.startsWith('accounts-') && f.endsWith('.json') && f !== 'account-master.json')) {
     const clientId = file.replace('accounts-', '').replace('.json', '')
     if (clientOverrideStore.has(clientId)) continue // 既にOverrideがあればスキップ
@@ -530,10 +623,16 @@ export function hasClientAccounts(clientId: string): boolean {
  * 顧問先別の科目一覧を取得する（マスタ + Override 合成）
  *
  * §53 §3 確定アーキテクチャ:
- *   MF未連携: accounts_master + overrides → { accounts, subAccounts }
- *   MF連携済み: client_mf_accounts + overrides → { accounts, subAccounts }
+ *   MF未連携: accounts_master + overrides → { accounts, subAccounts, departments }
+ *   MF連携済み: client_mf_accounts + overrides → { accounts, subAccounts, departments }
+ *
+ * subAccounts: MFから取得した補助科目（sugusru科目ID→MfSubAccountEntry[]）
+ * departments: MFから取得した部門（MfDepartmentEntry[]）
  */
-export function getClientAccounts(clientId: string): ClientAccountData {
+export function getClientAccounts(clientId: string): ClientAccountData & {
+  subAccountsMap: Record<string, MfSubAccountEntry[]>
+  departments: MfDepartmentEntry[]
+} {
   // ベースデータ: MFデータがあればMF、なければマスタ
   const baseAccounts = clientMfAccountStore.has(clientId)
     ? clientMfAccountStore.get(clientId)!
@@ -558,7 +657,8 @@ export function getClientAccounts(clientId: string): ClientAccountData {
 
   return {
     accounts,
-    subAccounts: overrideData?.subAccounts ?? {},
+    subAccountsMap: getClientSubAccounts(clientId),
+    departments: getClientDepartments(clientId),
   }
 }
 
@@ -610,7 +710,6 @@ export function getFilteredClientAccounts(
 export function saveClientAccounts(
   clientId: string,
   accounts: Account[],
-  subAccounts?: Record<string, string>,
 ): { ok: true; count: number } {
   // ベースデータ（MF or マスタ）
   const baseAccounts = clientMfAccountStore.has(clientId)
@@ -645,10 +744,8 @@ export function saveClientAccounts(
     }
   }
 
-  const existingSub = clientOverrideStore.get(clientId)?.subAccounts ?? {}
   const overrideData: ClientOverrideData = {
     accountOverrides: overrides,
-    subAccounts: subAccounts ?? existingSub,
   }
 
   clientOverrideStore.set(clientId, overrideData)
@@ -1120,7 +1217,7 @@ export function renameAccountId(oldId: string, newId: string): {
   // 1. マスタ更新
   const masterIdx = masterAccounts.findIndex(a => a.accountId === oldId)
   if (masterIdx >= 0) {
-    masterAccounts[masterIdx] = { ...masterAccounts[masterIdx], accountId: newId }
+    masterAccounts[masterIdx] = { ...masterAccounts[masterIdx]!, accountId: newId }
     result.master = true
     saveAllAccounts(masterAccounts)
     console.log(`[renameAccountId] マスタ: ${oldId} → ${newId}`)

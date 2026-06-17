@@ -20,6 +20,8 @@ import {
   mcpFetchTermSettings,
   type MfMcpAccount,
   type MfMcpTax,
+  type MfMcpSubAccount,
+  type MfMcpDepartment,
 } from './mfMcpClient'
 
 // ────────────────────────────────────────────
@@ -214,13 +216,13 @@ export async function buildTaxMap(tokenKey: string): Promise<{
 
 /**
  * 補助科目マッピングを生成する（名前→MF-ID）
+ * mcpFetchSubAccountsがオブジェクトラッパー解決済みなのでArray直接受け取り
  */
 export async function buildSubAccountMap(tokenKey: string): Promise<Map<string, string>> {
   const map = new Map<string, string>()
   try {
-    const raw = await mcpFetchSubAccounts(tokenKey)
-    const mfSubs = Array.isArray(raw) ? raw : (raw as Record<string, unknown>)?.sub_accounts ?? []
-    for (const sub of mfSubs as Array<{ id: string; name: string }>) {
+    const subs: MfMcpSubAccount[] = await mcpFetchSubAccounts(tokenKey)
+    for (const sub of subs) {
       map.set(sub.name, sub.id)
     }
   } catch (err) {
@@ -231,13 +233,13 @@ export async function buildSubAccountMap(tokenKey: string): Promise<Map<string, 
 
 /**
  * 部門マッピングを生成する（名前→MF-ID）
+ * mcpFetchDepartmentsがオブジェクトラッパー解決済みなのでArray直接受け取り
  */
 export async function buildDepartmentMap(tokenKey: string): Promise<Map<string, string>> {
   const map = new Map<string, string>()
   try {
-    const raw = await mcpFetchDepartments(tokenKey)
-    const mfDepts = Array.isArray(raw) ? raw : (raw as Record<string, unknown>)?.departments ?? []
-    for (const dept of mfDepts as Array<{ id: string; name: string }>) {
+    const depts: MfMcpDepartment[] = await mcpFetchDepartments(tokenKey)
+    for (const dept of depts) {
       map.set(dept.name, dept.id)
     }
   } catch (err) {

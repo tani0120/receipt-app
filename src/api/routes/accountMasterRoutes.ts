@@ -21,6 +21,8 @@ import {
   saveAllAccounts,
   getFilteredClientAccounts,
   saveClientAccounts,
+  getClientSubAccounts,
+  getClientDepartments,
 } from '../services/accountMasterApi'
 import type { Account } from '../../types/shared-account'
 
@@ -110,6 +112,8 @@ app.get('/client/:clientId', (c) => {
     totalCount: result.totalCount,
     page: result.page,
     totalPages: result.totalPages,
+    subAccountsMap: getClientSubAccounts(clientId),
+    departments: getClientDepartments(clientId),
   })
 })
 
@@ -122,12 +126,11 @@ app.put('/client/:clientId', async (c) => {
 
   const body = await c.req.json<{
     accounts?: Account[]
-    subAccounts?: Record<string, string>
   }>()
   const err = validateAccountsBody(body)
   if (err) return apiError(c, 400, err)
 
-  const result = saveClientAccounts(clientId, body.accounts!, body.subAccounts)
+  const result = saveClientAccounts(clientId, body.accounts!)
   return c.json(result)
 })
 

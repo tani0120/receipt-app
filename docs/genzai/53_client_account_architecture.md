@@ -196,7 +196,7 @@ Overrideは残る。
 例: hidden=trueのまま運用していた科目が、MF連携後にhidden=falseに戻るのはUX破綻。
 ```
 
-### Q2: Override対象フィールド（✅ 3フィールド + subAccountは別エンティティ）
+### Q2: Override対象フィールド（✅ 3フィールド + subAccount/departmentはMFキャッシュ）
 
 **Override対象:**
 | フィールド | Override |
@@ -205,10 +205,13 @@ Overrideは残る。
 | `sortOrder` | ✅ |
 | `defaultTaxCategoryId` | ✅ |
 
-**別エンティティ:**
-| フィールド | 方式 |
-|---|---|
-| `subAccount` | `ClientSubAccount`テーブル（1:Nの関係。Overrideの1:1とは性質が異なる） |
+**Overrideではなく、MFキャッシュとして別ファイルに保存:**
+| データ | 保存方式 | ファイル |
+|---|---|---|
+| 補助科目 | MFのsub_accountsデータをそのまま保存（1:N、MF-IDがキー） | `sub-accounts-{clientId}.json` |
+| 部門 | MFのdepartmentsデータをそのまま保存（木構造、MF-IDがキー） | `departments-{clientId}.json` |
+
+> 補助科目・部門はOverride方式ではない。MFから取得したデータをキャッシュとして保存し、フロントは表示するだけ。詳細は[54_sub_accounts_departments.md](file:///c:/dev/receipt-app/docs/genzai/54_sub_accounts_departments.md)を参照。
 
 ### Q3: 税区分も同じ設計か（✅ YES、ただし後回し）
 
@@ -375,8 +378,10 @@ Rule 5/6は安全弁として残すが、優先度は低い。
 | 要素 | 状態 | 備考 |
 |---|---|---|
 | 科目追加ボタン | ❌ 廃止済み（L71コメント） | 「追加ボタン廃止。科目の追加はMF側で行う」 |
-| MFインポートボタン | ✅ 維持 | MFから科目取得 |
+| MFインポートボタン | ✅ 維持 | MFから科目+補助科目+部門+税区分を一括取得・保存 |
 | 保存ボタン | ✅ 維持 | hidden/sortOrder等の変更保存 |
+| 補助科目列 | ✅ rowspan行展開（2026-06-17） | 補助科目ごとにtr行を分割。他列はrowspanで結合。継続行は薄い背景色+点線ボーダー |
+| 部門一覧セクション | ✅ 新設（2026-06-17） | テーブル下部にタグ表示。子部門は└プレフィックス付き |
 
 ### 個別企業 税区分画面（MockClientTaxPage.vue）
 
@@ -442,6 +447,8 @@ Rule 5/6は安全弁として残すが、優先度は低い。
 | `overrides-{clientId}.json` | 科目Override（hidden / sortOrder / defaultTaxCategoryId） |
 | `mf-accounts-{clientId}.json` | MFインポートデータ（MF連携済みのベースデータ） |
 | `tax-overrides-{clientId}.json` | 税区分Override（hidden） |
+| `sub-accounts-{clientId}.json` | MFの補助科目キャッシュ（1:N。キー=sugusuru科目ID、値=MF補助科目配列）（§54で追加） |
+| `departments-{clientId}.json` | MFの部門キャッシュ（木構造。parentIdで親子関係を表現）（§54で追加） |
 
 ### 旧ファイルとの関係
 

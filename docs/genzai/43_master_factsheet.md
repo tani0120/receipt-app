@@ -470,7 +470,9 @@ function resolveMfId(accountId, businessType, mfAccounts) {
       "isCustom": false
     }
   ],
-  "subAccounts": null
+  // 補助科目は sub-accounts-{clientId}.json に分離保存（1:N、MF-IDがキー）
+  // 部門は departments-{clientId}.json に分離保存（木構造、parentIdで親子関係）
+  // 詳細は §54_sub_accounts_departments.md を参照
 }
 ```
 
@@ -616,7 +618,7 @@ MockMasterAccountsPage.vue       accountMasterRoutes.ts
 | 税区分自動判定 | ✅ | ✅ | — |
 | **`id`（マスタID）** | ✅ | ✅ | #1 科目不明・デバッグ |
 | 勘定科目名（`name`） | ✅ | ✅ | — |
-| 補助科目 | ✅ | ✅ | — |
+| 補助科目 | ✅ | ✅（rowspan行展開。1:Nの補助科目ごとにtr行を生成。§54参照） | — |
 | **`target`（事業形態）** | ✅ | ✅ | フィルタ・パイプライン |
 | **`accountGroup`（大分類）** | ✅ | ✅ | **#7 貸借科目矛盾** |
 | **`direction`（方向）** | ✅ | ✅ | #9 科目×税区分不整合（間接） |

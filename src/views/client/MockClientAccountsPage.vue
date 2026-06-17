@@ -110,7 +110,7 @@
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('name', $event)"></div>
                 </th>
                 <th class="relative">
-                  補助科目 <span class="th-help-wrap" data-tooltip="ダブルクリックで入力できます"><i class="fa-solid fa-circle-question th-help"></i></span>
+                  補助科目
                   <div class="resize-handle" @mousedown.stop="onCaResizeStart('subAccount', $event)"></div>
                 </th>
                 <th class="sortable relative" @click="sortAccounts('target')">
@@ -149,68 +149,66 @@
             </thead>
             <tbody>
               <tr
-                v-for="(row, idx) in pagedAccountRows" :key="row.accountId"
-                :class="{ 'row-hidden': isAccountHidden(row.accountId), 'row-dragging': dragIdx === idx, 'row-custom': row.isCustom }"
-                draggable="true"
-                @dragstart="onDragStart(idx, $event)"
-                @dragover.prevent="onDragOver(idx)"
-                @drop="onDrop(idx)"
+                v-for="(ex, exIdx) in expandedRows" :key="ex.row.accountId + '-' + exIdx"
+                :class="{ 'row-hidden': isAccountHidden(ex.row.accountId), 'row-dragging': dragIdx === ex.pageIdx, 'row-custom': ex.row.isCustom, 'row-sub-continuation': !ex.isFirst }"
+                :draggable="ex.isFirst"
+                @dragstart="ex.isFirst && onDragStart(ex.pageIdx, $event)"
+                @dragover.prevent="onDragOver(ex.pageIdx)"
+                @drop="onDrop(ex.pageIdx)"
                 @dragend="dragIdx = -1"
               >
 
-                <td class="td-visibility">
-                  <i v-if="row.isCustom && !hasMfData" class="fa-solid fa-trash-can td-delete" @click="deleteRow(row)" title="削除（復元不可）"></i>
-                  <i v-if="isAccountHidden(row.accountId)" class="fa-solid fa-eye-slash td-hide" @click="showRow(row)" title="表示化"></i>
-                  <i v-else class="fa-solid fa-eye td-show" @click="hideRow(row)" title="非表示化"></i>
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" class="td-visibility">
+                  <i v-if="ex.row.isCustom && !hasMfData" class="fa-solid fa-trash-can td-delete" @click="deleteRow(ex.row)" title="削除（復元不可）"></i>
+                  <i v-if="isAccountHidden(ex.row.accountId)" class="fa-solid fa-eye-slash td-hide" @click="showRow(ex.row)" title="表示化"></i>
+                  <i v-else class="fa-solid fa-eye td-show" @click="hideRow(ex.row)" title="非表示化"></i>
                 </td>
-                <td style="text-align:center;font-size:11px;color:#666;">
-                  {{ row.sourceLabel }}
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" style="text-align:center;font-size:11px;color:#666;">
+                  {{ ex.row.sourceLabel }}
                 </td>
-                <td class="td-ai">
-                  {{ row.aiDetermination[clientTaxMethod] }}
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" class="td-ai">
+                  {{ ex.row.aiDetermination[clientTaxMethod] }}
                 </td>
-                <td class="td-master-id" :title="row.accountId">{{ row.accountId }}</td>
-                <td @dblclick="row.isCustom && startEdit(row, 'name')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.accountId && editingField === 'name'">
-                    <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" ref="editInput" autofocus>
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" class="td-master-id" :title="ex.row.accountId">{{ ex.row.accountId }}</td>
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" @dblclick="ex.row.isCustom && startEdit(ex.row, 'name')" :class="{ 'td-editable': ex.row.isCustom }">
+                  <template v-if="editingRow === ex.row.accountId && editingField === 'name'">
+                    <input class="inline-edit" v-model="editValue" @blur="commitEdit(ex.row)" @keyup.enter="commitEdit(ex.row)" ref="editInput" autofocus>
                   </template>
                   <template v-else>
-                    <i v-if="!row.isCustom" class="fa-solid fa-circle-check td-mf-ok"></i>
-                    {{ row.name }}
+                    <i v-if="!ex.row.isCustom" class="fa-solid fa-circle-check td-mf-ok"></i>
+                    {{ ex.row.name }}
                   </template>
                 </td>
-                <td @dblclick="startEdit(row, 'subAccount')" class="td-sub-account td-editable">
-                  <template v-if="editingRow === row.accountId && editingField === 'subAccount'">
-                    <input class="inline-edit" v-model="editValue" @blur="commitEdit(row)" @keyup.enter="commitEdit(row)" autofocus>
-                  </template>
-                  <template v-else>{{ row.subAccount ?? '' }}</template>
+                <td class="td-sub-account">
+                  <span v-if="ex.subName" class="sub-account-line">{{ ex.subName }}</span>
+                  <span v-else class="text-muted">—</span>
                 </td>
-                <td class="td-target">{{ row.targetLabel }}</td>
-                <td class="td-account-group">{{ row.accountGroupLabel }}</td>
-                <td class="td-direction">{{ row.directionLabel }}</td>
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" class="td-target">{{ ex.row.targetLabel }}</td>
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" class="td-account-group">{{ ex.row.accountGroupLabel }}</td>
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" class="td-direction">{{ ex.row.directionLabel }}</td>
                 <!-- 科目分類 -->
-                <td @dblclick="row.isCustom && startEdit(row, 'category')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.accountId && editingField === 'category'">
-                    <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" @dblclick="ex.row.isCustom && startEdit(ex.row, 'category')" :class="{ 'td-editable': ex.row.isCustom }">
+                  <template v-if="editingRow === ex.row.accountId && editingField === 'category'">
+                    <select class="inline-select" v-model="editValue" @change="commitEdit(ex.row)" @blur="cancelEdit()">
                       <optgroup v-for="g in categoryGroups" :key="g.label" :label="g.label">
                         <option v-for="c in g.items" :key="c.value" :value="c.value">{{ c.label }}</option>
                       </optgroup>
                     </select>
                   </template>
-                  <template v-else>{{ row.categoryLabel }}</template>
+                  <template v-else>{{ ex.row.categoryLabel }}</template>
                 </td>
                 <!-- デフォルト税区分 -->
-                <td @dblclick="row.isCustom && startEdit(row, 'defaultTaxCategoryId')" :class="{ 'td-editable': row.isCustom }">
-                  <template v-if="editingRow === row.accountId && editingField === 'defaultTaxCategoryId'">
-                    <select class="inline-select" v-model="editValue" @change="commitEdit(row)" @blur="cancelEdit()">
-                      <option v-for="tc in filteredTaxCategories(row.accountGroup)" :key="tc.taxCategoryId" :value="tc.taxCategoryId">{{ tc.shortName }}</option>
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" @dblclick="ex.row.isCustom && startEdit(ex.row, 'defaultTaxCategoryId')" :class="{ 'td-editable': ex.row.isCustom }">
+                  <template v-if="editingRow === ex.row.accountId && editingField === 'defaultTaxCategoryId'">
+                    <select class="inline-select" v-model="editValue" @change="commitEdit(ex.row)" @blur="cancelEdit()">
+                      <option v-for="tc in filteredTaxCategories(ex.row.accountGroup)" :key="tc.taxCategoryId" :value="tc.taxCategoryId">{{ tc.shortName }}</option>
                     </select>
                   </template>
-                  <template v-else>{{ row.defaultTaxes[clientTaxMethod] }}</template>
+                  <template v-else>{{ ex.row.defaultTaxes[clientTaxMethod] }}</template>
                 </td>
-                <td class="td-voucher-types" :title="row.displayAllowedVoucherTypes">{{ row.displayAllowedVoucherTypes }}</td>
-                <td class="td-date">{{ row.displayEffectiveFrom }}</td>
-                <td class="td-date">{{ row.displayEffectiveTo }}</td>
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" class="td-voucher-types" :title="ex.row.displayAllowedVoucherTypes">{{ ex.row.displayAllowedVoucherTypes }}</td>
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" class="td-date">{{ ex.row.displayEffectiveFrom }}</td>
+                <td v-if="ex.isFirst" :rowspan="ex.rowSpan" class="td-date">{{ ex.row.displayEffectiveTo }}</td>
               </tr>
             </tbody>
           </table>
@@ -224,6 +222,16 @@
             @click="accountPage = p"
           >{{ p }}</span>
           <span class="as-page-arrow" :class="{ disabled: accountPage >= accountTotalPages }" @click="accountPage = Math.min(accountTotalPages, accountPage + 1)">＞</span>
+        </div>
+      </div>
+
+      <!-- 部門一覧（MFから取得したキャッシュ。0件時は非表示） -->
+      <div v-if="departments.length > 0" class="dept-section">
+        <h3 class="dept-title">部門一覧（MFから取得）</h3>
+        <div class="dept-list">
+          <span v-for="dept in departments" :key="dept.mfDeptId" class="dept-tag" :class="{ 'dept-child': dept.parentId }">
+            <template v-if="dept.parentId">└ </template>{{ dept.name }}
+          </span>
         </div>
       </div>
     </div>
@@ -396,6 +404,17 @@ watch(() => clientAccountStore.getAccounts(props.clientId), (newVal) => {
   }
 }, { deep: true });
 
+/** 科目IDからMF補助科目配列を取得（バックエンドから取得したキャッシュをそのまま表示） */
+function subAccountsForRow(accountId: string): Array<{ mfSubId: string; name: string; mfTaxId: string }> {
+  const clientSubs = clientAccountStore.subAccountsMap[props.clientId];
+  return clientSubs?.[accountId] ?? [];
+}
+
+/** 部門一覧（バックエンドから取得したキャッシュ） */
+const departments = computed(() => {
+  return clientAccountStore.departmentsMap[props.clientId] ?? [];
+});
+
 // モーダルヘルパー
 const modal = useModalHelper();
 
@@ -423,6 +442,35 @@ const accountPageStart = computed(() => (accountPage.value - 1) * PAGE_SIZE + 1)
 const accountPageEnd = computed(() => Math.min(accountPage.value * PAGE_SIZE, filteredAccountRows.value.length));
 const pagedAccountRows = computed(() => filteredAccountRows.value.slice(accountPageStart.value - 1, accountPageEnd.value));
 
+/** 補助科目ごとにtr行を展開した行リスト */
+interface ExpandedRow {
+  row: (typeof accountRows)[number]
+  /** この行に表示する補助科目名（nullなら「—」） */
+  subName: string | null
+  /** 最初の展開行か（trueなら他列にrowspanをつける） */
+  isFirst: boolean
+  /** この科目の展開行数（rowspan値） */
+  rowSpan: number
+  /** ページ内インデックス（drag用） */
+  pageIdx: number
+}
+const expandedRows = computed<ExpandedRow[]>(() => {
+  const result: ExpandedRow[] = []
+  for (let i = 0; i < pagedAccountRows.value.length; i++) {
+    const row = pagedAccountRows.value[i]
+    if (!row) continue
+    const subs = subAccountsForRow(row.accountId)
+    if (subs.length === 0) {
+      result.push({ row, subName: null, isFirst: true, rowSpan: 1, pageIdx: i })
+    } else {
+      for (let s = 0; s < subs.length; s++) {
+        result.push({ row, subName: subs[s]!.name, isFirst: s === 0, rowSpan: subs.length, pageIdx: i })
+      }
+    }
+  }
+  return result
+});
+
 watch(filteredAccountRows, () => { if (accountPage.value > accountTotalPages.value) accountPage.value = 1; });
 
 // =============== チェックボックス選択 ===============
@@ -447,16 +495,10 @@ async function deleteRow(row: Account) {
 }
 async function saveChanges() {
   if (!clientId.value) { modal.notify({ title: UI_MSG.顧問先ID不明, variant: 'warning' }); return; }
-  // subAccount情報を全行から収集
-  const subAccounts: Record<string, string> = {};
-  accountRows.forEach(r => {
-    const sub = r.subAccount;
-    if (sub) subAccounts[r.accountId] = sub;
-  });
 
   try {
-    // Store経由で保存（debounceSaveでサーバーに自動保存される）
-    clientAccountStore.saveAll(clientId.value, accountRows, subAccounts);
+    // Store経由で保存（科目Overrideのみ。補助科目・部門はバックエンドが管理）
+    clientAccountStore.saveAll(clientId.value, accountRows);
     markClean();
     modal.notify({ title: UI_MSG.保存成功, variant: 'success' });
   } catch {
@@ -470,10 +512,10 @@ const editingField = ref('');
 const editValue = ref('');
 const editOriginalName = ref('');
 
-type AccountEditField = 'name' | 'category' | 'defaultTaxCategoryId' | 'subAccount';
+type AccountEditField = 'name' | 'category' | 'defaultTaxCategoryId';
 
 function startEdit(row: Account, field: AccountEditField) {
-  if (field !== 'subAccount' && !row.isCustom) {
+  if (!row.isCustom) {
     modal.notify({ title: UI_MSG.デフォルト科目編集不可, message: UI_MSG.コピーしてから編集, variant: 'warning' });
     return;
   }
@@ -483,7 +525,6 @@ function startEdit(row: Account, field: AccountEditField) {
     case 'name': editValue.value = row.name; editOriginalName.value = row.name; break;
     case 'category': editValue.value = row.category; break;
     case 'defaultTaxCategoryId': editValue.value = row.defaultTaxCategoryId ?? ''; break;
-    case 'subAccount': editValue.value = row.subAccount ?? ''; break;
   }
 }
 
@@ -507,9 +548,6 @@ function commitEdit(row: Account) {
       break;
     case 'defaultTaxCategoryId':
       row.defaultTaxCategoryId = editValue.value;
-      break;
-    case 'subAccount':
-      row.subAccount = editValue.value;
       break;
   }
   const caFieldLabels = CLIENT_ACCOUNT_FIELD_LABELS;
@@ -691,7 +729,18 @@ function sortAccounts(key: keyof Account) {
 
 .td-trash { color: #bbb; cursor: pointer; font-size: 12px; }
 .td-trash:hover { color: #e53935; }
-.td-sub-account { color: #888; font-size: 11px; }
+.td-sub-account { color: #888; font-size: 11px; vertical-align: middle; }
+.sub-account-line { color: #1976d2; }
+.text-muted { color: #ccc; }
+.row-sub-continuation { background: #f9fbff; }
+.row-sub-continuation td { border-top: 1px dotted #dde4ec !important; }
+
+/* 部門一覧セクション */
+.dept-section { margin-top: 16px; padding: 12px 16px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e0e0e0; }
+.dept-title { font-size: 13px; font-weight: 600; color: #555; margin: 0 0 8px 0; }
+.dept-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.dept-tag { font-size: 12px; padding: 4px 10px; background: #fff; border: 1px solid #d0d7de; border-radius: 4px; color: #333; }
+.dept-child { color: #666; font-style: italic; }
 
 /* カスタムツールチップ */
 .th-help-wrap {

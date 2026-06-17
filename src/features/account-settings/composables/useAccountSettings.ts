@@ -269,7 +269,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       accountMaster.allAccounts.value = allRows as EnrichedAccount[]
     } else if (clientId) {
       // 仕訳ページからの互換呼び出し用
-      clientAccountStore.saveAll(clientId, allRows as EnrichedAccount[], subAccountsInput)
+      clientAccountStore.saveAll(clientId, allRows as EnrichedAccount[])
     }
   }
 

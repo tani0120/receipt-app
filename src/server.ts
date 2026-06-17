@@ -235,11 +235,28 @@ const httpServer = serve({
     hostname: '0.0.0.0',
 })
 
-// EADDRINUSEエラーハンドリング: 旧プロセスが残っている場合にクラッシュせず終了
-httpServer.on('error', (err: NodeJS.ErrnoException) => {
-    if (err.code === 'EADDRINUSE') {
-        console.error(`❌ ポート ${port} は既に使用中です。旧プロセスを停止してください。`)
-        console.error(`   → 対処法: npx kill-port ${port}`)
+// EADDRINUSEエラーハンドリング: 旧プロセスが残っている場合にポートをkillしてリトライ
+let retried = false
+httpServer.on('error', async (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE' && !retried) {
+        retried = true
+        console.warn(`⚠️ ポート ${port} が使用中。旧プロセスをkillしてリトライ...`)
+        try {
+            const { execSync } = await import('node:child_process')
+            execSync(`npx kill-port ${port}`, { timeout: 5000, stdio: 'pipe' })
+            console.log(`✅ ポート ${port} を解放。2秒後にリトライ`)
+            setTimeout(() => {
+                httpServer.listen({ port, hostname: '0.0.0.0' })
+            }, 2000)
+        } catch {
+            console.error(`❌ ポート ${port} のkillに失敗。手動で npx kill-port ${port} を実行してください`)
+            clearInterval(heartbeatTimer)
+            process.exit(1)
+        }
+        return
+    }
+    if (err.code === 'EADDRINUSE' && retried) {
+        console.error(`❌ ポート ${port} リトライ失敗。手動で npx kill-port ${port} を実行してください`)
         clearInterval(heartbeatTimer)
         process.exit(1)
     }
