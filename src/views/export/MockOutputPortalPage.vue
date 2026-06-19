@@ -4,7 +4,7 @@
     <div class="op-header">
       <i class="fa-solid fa-download op-header-icon"></i>
       <span class="op-title">出力</span>
-      <span v-if="currentClient" class="op-client-name">— {{ currentClient.companyName }}</span>
+      <span v-if="currentClient" class="op-client-name">— {{ getClientDisplayName(currentClient) }}</span>
     </div>
 
     <!-- カードグリッド: 出力アクション -->
@@ -44,6 +44,26 @@
           <div class="op-card-desc">仕訳データをMF形式のCSVファイルとしてダウンロードします</div>
         </div>
         <i class="fa-solid fa-chevron-right op-card-arrow"></i>
+      </button>
+
+      <!-- MFにMCPで送信 -->
+      <button
+        :class="['op-card', (!isMfLinked && !mfLinkChecking) && 'op-card-disabled']"
+        :disabled="!isMfLinked || mcpSending || mfLinkChecking"
+        @click="sendToMfViaMcp"
+      >
+        <div class="op-card-icon op-card-icon-mcp">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+        </div>
+        <div class="op-card-body">
+          <div class="op-card-title">MFにMCPでインポート</div>
+          <div class="op-card-desc" v-if="mfLinkChecking">MF連携状態を確認中…</div>
+          <div class="op-card-desc" v-else-if="!isMfLinked">MF未連携のため利用できません</div>
+          <div class="op-card-desc" v-else-if="mcpSending">送信中… {{ mcpProgress }}</div>
+          <div class="op-card-desc" v-else>未出力の仕訳をMCP経由でMFクラウド会計に直接送信します</div>
+        </div>
+        <i v-if="mcpSending" class="fa-solid fa-spinner fa-spin op-card-arrow"></i>
+        <i v-else class="fa-solid fa-chevron-right op-card-arrow"></i>
       </button>
     </div>
 
@@ -99,10 +119,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useGlobalToast } from '@/composables/useGlobalToast'
+import { getClientDisplayName } from '@/constants/clientOptions'
 import { UI_MSG } from '@/constants/uiMessages'
 
 const route = useRoute()
@@ -110,6 +131,28 @@ const router = useRouter()
 const clientId = computed(() => (route.params.clientId as string) || '')
 const { currentClient } = useClients()
 const { showToast } = useGlobalToast()
+
+/** MF OAuth認証済みか（実際にMCPで通信可能か） */
+const isMfLinked = ref(false)
+const mfLinkChecking = ref(true)
+
+onMounted(async () => {
+  try {
+    const res = await fetch(`/api/mf/auth/status?clientId=${encodeURIComponent(clientId.value)}`)
+    if (res.ok) {
+      const data = await res.json()
+      isMfLinked.value = data.authenticated === true
+    }
+  } catch {
+    isMfLinked.value = false
+  } finally {
+    mfLinkChecking.value = false
+  }
+})
+
+/** MCP送信中フラグ */
+const mcpSending = ref(false)
+const mcpProgress = ref('')
 
 // --- 出力アクション ---
 
@@ -181,6 +224,43 @@ function goExportHistory() {
 
 function goExport() {
   router.push(`/export/${clientId.value}`)
+}
+
+/** MFにMCP送信 */
+async function sendToMfViaMcp() {
+  if (!isMfLinked.value || mcpSending.value) return
+  mcpSending.value = true
+  mcpProgress.value = '準備中…'
+  try {
+    const res = await fetch(`/api/mf/send-journals/${encodeURIComponent(clientId.value)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      showToast({ message: data.error || 'MCP送信に失敗しました', type: 'error' })
+      return
+    }
+    if (data.total === 0) {
+      showToast({ message: data.message || '送信対象の仕訳がありません', type: 'info' })
+      return
+    }
+    const msg = `MF送信完了: ${data.successCount}/${data.total}件成功` +
+      (data.failureCount > 0 ? `、${data.failureCount}件失敗` : '') +
+      `（${Math.round(data.elapsedMs / 1000)}秒）`
+    showToast({
+      message: msg,
+      type: data.failureCount > 0 ? 'error' : 'success',
+      icon: 'fa-solid fa-cloud-arrow-up',
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    showToast({ message: `MCP送信エラー: ${msg}`, type: 'error' })
+  } finally {
+    mcpSending.value = false
+    mcpProgress.value = ''
+  }
 }
 </script>
 
@@ -371,5 +451,24 @@ function goExport() {
   color: #64748b;
   letter-spacing: 0.3px;
   flex-shrink: 0;
+}
+
+/* MCPカードアイコン色 */
+.op-card-icon-mcp {
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  color: #2563eb;
+}
+
+/* グレーアウトカード（MF未連携） */
+.op-card-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.op-card-disabled:hover {
+  border-color: #e2e8f0;
+  box-shadow: none;
+  transform: none;
 }
 </style>

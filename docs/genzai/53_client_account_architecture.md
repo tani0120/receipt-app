@@ -422,11 +422,108 @@ Rule 5/6は安全弁として残すが、優先度は低い。
 | mfRoutes.ts L533, L548, L916（MFインポート） | `saveClientAccounts()` | `saveMfAccounts()` → MFデータ全件保存 |
 | accountMaster.repository.mock.ts | `saveClientAccounts()` | 変更なし（内部でdiff→Override保存に自動対応） |
 
+### MF仕訳インポート時の自動発番フロー（✅ 完了 2026-06-19）
+
+**目的:** MFから取得した仕訳のaccount/tax_category_idを安定IDに正規化する
+
+**対象ファイル:** [mfJournalImporter.ts](file:///c:/dev/receipt-app/src/api/services/mfJournalImporter.ts)
+
+#### 科目（accountId）の自動発番
+
+```
+MFから仕訳取得 → convertSide()
+  ↓
+side.account_name（MF科目名）
+  ↓ reverseAccountMap.get(name)
+  ├── ヒット → sugusru概念IDを使用
+  └── ミス → generateMasterId(name, suffix, existingIds)で自動発番
+        ↓
+     新規ID: MF科目名を基に[ROMAJI_SUFFIX]形式で生成
+     例: 「扇風機費」→ SENPUUKIHI_CORP
+        ↓
+     client_mf_accountsに蓄積（バッチ完了後に一括saveMfAccounts()）
+     全社マスタ（accounts_master）は汚染されない
+```
+
+#### 税区分（taxCategoryId）の自動発番
+
+```
+MFから仕訳取得 → convertSide()
+  ↓
+side.tax_name（MF税区分名）
+  ├── 空文字列 + 免税事業者 → COMMON_EXEMPT（対象外）を自動代入
+  ├── 空文字列 + 非免税 → null（税区分なし）
+  └── 非空 → reverseTaxMap.get(name)
+        ├── ヒット → sugusru概念IDを使用
+        └── ミス → generateTaxMasterId(name)でルールベース発番
+              例: 「課税売上 内税 10%」→ INPUT_TAX_10_INCLUDED
+```
+
+#### 免税事業者の税区分自動代入（✅ 完了 2026-06-19）
+
+**背景:** MF APIは免税事業者（`consumptionTaxMode: exempt`）の仕訳でtax_nameを空文字列("")で返す。
+`convertSide()`の`if(side.tax_name)`は空文字列をfalsyと判定するため、`tax_category_id=null`のまま保存されていた。
+
+**対策:**
+- `convertSide()`に`isExempt`フラグと`exemptDefaultTaxId`を追加
+- 免税事業者でtax_name空の場合、マスタの`isExemptDefault=true`の税区分ID（`COMMON_EXEMPT`）を自動代入
+- データ駆動: IDのハードコード禁止。マスタの`isExemptDefault`フラグで動的解決
+
+**MF実機テスト結果（2026-06-19）:**
+- 免税事業者でtax_idを省略して仕訳送信 → MFが自動的にINVOICE_KIND_NOT_TARGETを設定
+- sugusuru側のCOMMON_EXEMPT代入はMF送信に影響なし（表示目的のみ）
+
+**正規化サービス:** [normalizeConfirmedJournalsService.ts](file:///c:/dev/receipt-app/src/api/services/normalizeConfirmedJournalsService.ts)
+- 既存データも一括正規化: 免税事業者のtax_category_id=null → COMMON_EXEMPTに変換
+- `taxExemptFilled`統計フィールドで変換件数を追跡
+
+### 仕訳一覧の全列横断検索（✅ 修正完了 2026-06-19）
+
+**問題:** `searchJournals()`が`e.account`（accountId形式: `FUTSUUYOKIN_IND`）をそのまま検索対象にしていた。ユーザーが「普通預金」で検索してもヒットしない。
+
+**修正:** [journalListService.ts](file:///c:/dev/receipt-app/src/api/services/journalListService.ts) `searchJournals()`に`accountMap`/`taxMap`を渡し、名前解決済み文字列も検索対象に含める。
+
+```
+検索フィールド:
+  accountId（FUTSUUYOKIN_IND）+ 解決済み名前（普通預金）
+  taxCategoryId（COMMON_EXEMPT）+ 解決済み名前（対象外）
+  → 両方で検索ヒットする
+```
+
+### 仕訳一覧の補助科目ドロップダウン（✅ 実装完了 2026-06-19）
+
+**問題:** 補助科目列はプレーンテキスト入力のみだった。勘定科目選択時に`clientSettings.subAccounts.value[accountId]`（`MfSubAccountEntry[]`）がそのまま`entry.sub_account`（string型）に代入され、JSON生表示バグが発生。
+
+**修正:**
+
+| 修正内容 | 対象箇所 |
+|---|---|
+| 1:N代入バグ修正 | selectAccountItem / handleAccountPaste / フィルハンドル（3箇所） |
+| ドロップダウンUI追加 | テンプレート（F5セクション）+ 4関数追加 |
+
+```
+補助科目自動代入ルール:
+  勘定科目を選択
+    ↓ clientSettings.subAccounts.value[accountId]
+    ├── 配列0件 → sub_account = null
+    ├── 配列1件 → sub_account = sub[0].name（自動代入）
+    └── 配列2件以上 → sub_account = null（ユーザーがドロップダウンで選択）
+
+補助科目ドロップダウン:
+  ダブルクリック → テキスト入力 + ドロップダウン表示
+    ↓ getSubAccountCandidates(row, colKey) → MfSubAccountEntry[]
+    ↓ filterSubAccountCandidates(row, colKey, query) → 部分一致フィルタ
+    ↓ selectSubAccountItem(journal, name) → entry.sub_account = name
+  候補が0件の科目 → 従来通りプレーンテキスト入力
+```
+
+**変更ファイル:** [JournalListLevel3Mock.vue](file:///c:/dev/receipt-app/src/components/JournalListLevel3Mock.vue)
+
 ---
 
 ## 12. タスク完了状況
 
-### 全9項目 ✅ 実装完了（2026-06-17）
+### 全9項目 + 追加5項目 ✅ 実装完了（2026-06-19更新）
 
 | # | 項目 | 根拠 | ステータス |
 |---|---|---|---|
@@ -439,6 +536,19 @@ Rule 5/6は安全弁として残すが、優先度は低い。
 | 7 | 税区分のOverride方式横展開 | Q3 | ✅ TaxCategoryOverride型 + 合成 + diff保存 |
 | 8 | 孤立Override検出（Rule 5/6） | §9 | ✅ detectOrphanedOverrides() + 起動時自動実行 |
 | 9 | accountIdリネームマイグレーション | Rule 2 | ✅ renameAccountId(oldId, newId) |
+| 10 | MF仕訳インポート時のaccountId/taxCategoryId自動発番 | §11 追記 | ✅ convertSide() + generateMasterId/generateTaxMasterId |
+| 11 | 免税事業者の税区分自動代入 | §11 追記 | ✅ isExempt + exemptDefaultTaxId（データ駆動） |
+| 12 | 仕訳一覧検索の名前解決 | §11 追記 | ✅ searchJournals()にaccountMap/taxMap追加 |
+| 13 | 補助科目1:Nバグ修正 | §11 追記 | ✅ MfSubAccountEntry[]の直接代入バグ修正（3箇所） |
+| 14 | 補助科目ドロップダウンUI | §11 追記 | ✅ 勘定科目連動の検索付きドロップダウン新設 |
+
+### Phase E 検証結果（2026-06-19）
+
+| # | 検証項目 | 結果 |
+|---|---|---|
+| E-1 | accountIdベースのフィルタ・検索 | ✅ 「普通預金」で検索→4件ヒット（名前解決済み検索が正常動作） |
+| E-2 | showPastCsv=ONでの実機表示 | ✅ 全361件表示。科目名「普通預金」「売掛金」等、税区分「対象外」で日本語表示 |
+| E-3 | 設計書§53更新 | ✅ 自動発番フローを追記、補助科目ドロップダウン追記 |
 
 ### 新規データファイル（実装で追加）
 
@@ -460,4 +570,5 @@ Rule 5/6は安全弁として残すが、優先度は低い。
 ### 未解決（設計判断が未確定）
 
 なし。全項目が設計確定・実装完了済み。
+
 

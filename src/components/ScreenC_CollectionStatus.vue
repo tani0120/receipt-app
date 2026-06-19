@@ -6,7 +6,7 @@
           <label><input type="checkbox" v-model="mockIsDetailView"> 詳細モード</label>
           <select v-model="mockRouteParamsCode" class="border rounded px-1">
               <option value="">コードなし (一覧)</option>
-              <option v-for="c in clientSelectOptions" :key="c.clientCode" :value="c.clientCode">{{ c.clientCode }}: {{ c.companyName }}</option>
+              <option v-for="c in clientSelectOptions" :key="c.clientCode" :value="c.clientCode">{{ c.clientCode }}: {{ c.displayName }}</option>
           </select>
       </div>
 
@@ -21,7 +21,7 @@
                   <div>
                       <div class="flex items-center gap-3 mb-2">
                           <span class="bg-slate-100 text-slate-600 text-sm px-2 py-1 rounded font-mono font-bold">{{ currentClient.clientCode }}</span>
-                          <h1 class="text-2xl font-bold text-slate-800">{{ currentClient.companyName }}</h1>
+                          <h1 class="text-2xl font-bold text-slate-800">{{ getClientDisplayName(currentClient) }}</h1>
                           <span class="text-xs bg-slate-100 px-2 py-1 rounded border text-slate-500">
                               {{ isIndividualType(currentClient.type) ? UI_MSG.個人 : UI_MSG.法人 }} ({{ currentClient.fiscalMonth }}{{ UI_MSG.月決算接尾 }})
                           </span>
@@ -315,7 +315,7 @@
 import { ref, computed } from 'vue';
 import moment from 'moment';
 import { UI_MSG } from '@/constants/uiMessages';
-import { isIndividualType, getEffectiveFiscalMonth, getFilingOffsetMonths } from '@/constants/clientOptions';
+import { isIndividualType, getEffectiveFiscalMonth, getFilingOffsetMonths, getClientDisplayName } from '@/constants/clientOptions';
 
 /** 回収カレンダー一覧で使用する顧問先データ型 */
 interface CollectionClient {
@@ -362,7 +362,7 @@ const clients = ref([
 const clientSelectOptions = computed(() =>
   clients.value.map(c => ({
     clientCode: c.clientCode,
-    companyName: c.companyName + (isIndividualType(c.type) ? UI_MSG.個人接尾 : ''),
+    displayName: getClientDisplayName(c),
   }))
 );
 
@@ -375,7 +375,7 @@ const currentClient = computed(() => {
 const sortedCalendarDocs = computed(() => {
     return clients.value.map(c => ({
         code: c.clientCode,
-        name: c.companyName,
+        name: getClientDisplayName(c),
         fiscalMonth: c.fiscalMonth,
         type: c.type as CollectionClient['type'],
         jobId: c.jobId

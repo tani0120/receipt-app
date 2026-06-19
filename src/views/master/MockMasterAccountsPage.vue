@@ -228,7 +228,7 @@
             <div style="display:flex;align-items:center;gap:8px;">
               <input type="radio" :checked="mfSelectedClientId === cl.clientId" style="margin:0;" />
               <span style="font-weight:600;">{{ cl.threeCode }}</span>
-              <span>{{ cl.companyName }}</span>
+              <span>{{ getClientDisplayName(cl) }}</span>
               <span v-if="cl.lastImported" class="mf-star" title="前回インポート元">★</span>
             </div>
           </div>
@@ -254,6 +254,7 @@ import NotifyModal from '@/components/NotifyModal.vue';
 import MfImportButton from '@/components/MfImportButton.vue';
 import MfCloudIcon from '@/components/MfCloudIcon.vue';
 import { UI_MSG } from '@/constants/uiMessages';
+import { getClientDisplayName } from '@/constants/clientOptions';
 import { useRepositories } from '@/composables/useRepositories';
 
 const { repos } = useRepositories();
@@ -292,6 +293,8 @@ interface MfClientInfo {
   clientId: string;
   threeCode: string;
   companyName: string;
+  repName?: string;
+  type?: string;
   lastImported?: string;
 }
 const mfClients = ref<MfClientInfo[]>([]);
@@ -313,6 +316,8 @@ onMounted(async () => {
           clientId: cl.clientId,
           threeCode: cl.threeCode ?? '',
           companyName: cl.companyName ?? '',
+          repName: cl.repName ?? '',
+          type: cl.type ?? '',
         });
       }
     }

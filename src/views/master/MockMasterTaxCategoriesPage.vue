@@ -242,7 +242,7 @@
             <div style="display:flex;align-items:center;gap:8px;">
               <input type="radio" :checked="mfSelectedClientId === cl.clientId" style="margin:0;" />
               <span style="font-weight:600;">{{ cl.threeCode }}</span>
-              <span>{{ cl.companyName }}</span>
+              <span>{{ getClientDisplayName(cl) }}</span>
               <span v-if="cl.lastImported" class="mf-star" :title="UI_MSG.前回インポート元">★</span>
             </div>
           </div>
@@ -319,7 +319,7 @@ import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';
 import MfCloudIcon from '@/components/MfCloudIcon.vue';
 import MfImportButton from '@/components/MfImportButton.vue';
-import { getLabel } from '@/constants/clientOptions';
+import { getLabel, getClientDisplayName } from '@/constants/clientOptions';
 import { UI_MSG } from '@/constants/uiMessages';
 import { TAX_CATEGORY_FIELD_LABELS, TAX_METHOD_LABELS } from '@/constants/fieldLabels';
 import {

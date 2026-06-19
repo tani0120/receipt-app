@@ -215,6 +215,7 @@ import type { DocStatus } from '@/repositories/types'
 import type { DriveFileItemWithThumbnail } from '@/api/services/drive/driveService'
 import { UI_MSG } from '@/constants/uiMessages'
 import { useRepositories } from '@/composables/useRepositories'
+import { getClientDisplayName } from '@/constants/clientOptions'
 
 const { repos } = useRepositories()
 
@@ -223,7 +224,10 @@ const route = useRoute()
 const router = useRouter()
 const clientId = route.params.clientId as string
 const { clients } = useClients()
-const clientName = computed(() => clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId)
+const clientName = computed(() => {
+  const c = clients.value.find(c => c.clientId === clientId)
+  return c ? getClientDisplayName(c) : clientId
+})
 
 // --- ページ離脱ガード（選別中の離脱を警告） ---
 const { markDirty, markClean } = useUnsavedGuard(null)

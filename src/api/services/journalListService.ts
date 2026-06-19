@@ -389,15 +389,40 @@ function sortJournals(
 // 全列横断検索
 // ────────────────────────────────────────────
 
-function searchJournals(result: JournalRow[], query: string): JournalRow[] {
+function searchJournals(
+  result: JournalRow[],
+  query: string,
+  accountMap?: Record<string, string>,
+  taxMap?: Record<string, string>,
+): JournalRow[] {
   const q = query.trim().toLowerCase()
   if (!q) return result
+  // accountId/taxCategoryId → 表示名に変換（マップがあれば）
+  const resolveAccount = (id: string | null | undefined): string => {
+    if (!id) return ''
+    return accountMap?.[id] ?? id
+  }
+  const resolveTax = (id: string | null | undefined): string => {
+    if (!id) return ''
+    return taxMap?.[id] ?? id
+  }
   return result.filter(j => {
     const fields = [
       j.voucher_date ?? '',
       j.description ?? '',
-      ...(j.debit_entries ?? []).flatMap(e => [e.account ?? '', e.sub_account ?? '', e.tax_category_id ?? '', String(e.amount ?? '')]),
-      ...(j.credit_entries ?? []).flatMap(e => [e.account ?? '', e.sub_account ?? '', e.tax_category_id ?? '', String(e.amount ?? '')]),
+      // accountId + 解決済み名前、taxCategoryId + 解決済み名前の両方を検索対象に含める
+      ...(j.debit_entries ?? []).flatMap(e => [
+        e.account ?? '', resolveAccount(e.account),
+        e.sub_account ?? '',
+        e.tax_category_id ?? '', resolveTax(e.tax_category_id),
+        String(e.amount ?? ''),
+      ]),
+      ...(j.credit_entries ?? []).flatMap(e => [
+        e.account ?? '', resolveAccount(e.account),
+        e.sub_account ?? '',
+        e.tax_category_id ?? '', resolveTax(e.tax_category_id),
+        String(e.amount ?? ''),
+      ]),
       j.memo ?? '',
       j.voucher_type ?? '',
     ]
@@ -471,9 +496,9 @@ export function getJournalList(clientId: string, query: JournalListQuery): Journ
     result = sortJournals(result, query.sort, query.order ?? 'asc', allJournalIds, query.accountMap, query.taxMap)
   }
 
-  // 4. 全列横断検索
+  // 4. 全列横断検索（科目名・税区分名の解決済み文字列も検索対象に含める）
   if (query.search) {
-    result = searchJournals(result, query.search)
+    result = searchJournals(result, query.search, query.accountMap, query.taxMap)
   }
 
   // 5. チェックボックスフィルタ

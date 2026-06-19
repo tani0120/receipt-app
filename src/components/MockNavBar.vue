@@ -10,7 +10,7 @@
         <!-- クライアント名動的表示 -->
         <div v-if="currentClient && !isMasterPage" class="flex items-center gap-2 border-l-2 border-sky-400 pl-3 ml-2">
           <span class="bg-sky-600 text-white font-extrabold px-2 py-0.5 rounded text-[13px] tracking-wider shadow-sm">{{ currentClient.threeCode }}</span>
-          <span class="text-[14px] font-bold text-sky-800">{{ currentClient.companyName }}</span>
+          <span class="text-[14px] font-bold text-sky-800">{{ getClientDisplayName(currentClient) }}</span>
         </div>
 
         <button
@@ -113,6 +113,7 @@ import { useCurrentUser } from '@/composables/useCurrentUser';
 import { useNotificationCenter } from '@/composables/useNotificationCenter';
 import NotificationCenter from '@/components/NotificationCenter.vue';
 import { UI_MSG } from '@/constants/uiMessages';
+import { getClientDisplayName } from '@/constants/clientOptions';
 
 const router = useRouter();
 const route = useRoute();

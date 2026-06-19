@@ -54,7 +54,7 @@
                     @click="selectClient(cl.clientId)"
                   >
                     <span class="ai-client-code">{{ cl.threeCode }}</span>
-                    {{ cl.companyName || cl.repName || cl.clientId }}
+                    {{ getClientDisplayName(cl) }}
                   </button>
                   <div v-if="filteredClientList.length === 0" class="ai-client-dropdown-empty">
                     該当する顧問先がありません
@@ -199,6 +199,7 @@ import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { useAiCommand } from '@/composables/useAiCommand'
 import { useClients } from '@/features/client-management/composables/useClients'
 import AiCommandBrowser from './AiCommandBrowser.vue'
+import { getClientDisplayName } from '@/constants/clientOptions'
 import type { CommandDef } from '@/api/services/commandCatalog'
 type CatalogCommand = Omit<CommandDef, 'keywords'>
 
@@ -297,7 +298,7 @@ const selectedClientLabel = computed(() => {
   if (selectedClientId.value === 'all') return '📊 全社一括'
   if (!selectedClientId.value) return '顧問先を選択...'
   const cl = clientList.value.find(c => c.clientId === selectedClientId.value)
-  return cl ? `${cl.threeCode} ${cl.companyName || cl.repName}` : selectedClientId.value
+  return cl ? `${cl.threeCode} ${getClientDisplayName(cl)}` : selectedClientId.value
 })
 
 /** 検索フィルタ済みリスト */
@@ -337,7 +338,7 @@ const selectClient = async (id: string) => {
   if (id !== 'all') {
     const ok = await checkMfAuth(id)
     const cl = clientList.value.find(c => c.clientId === id)
-    const name = cl ? `${cl.threeCode} ${cl.companyName || cl.repName}` : id
+    const name = cl ? `${cl.threeCode} ${getClientDisplayName(cl)}` : id
     if (!ok) {
       messages.value.push({
         id: `msg-${Date.now()}-ai`,
@@ -464,7 +465,7 @@ const searchClientAndSelect = (text: string) => {
         content: '',
         suggestions: candidates.slice(0, 8).map(cl => ({
           command: `__select_client__${cl.clientId}`,
-          label: `${cl.threeCode} ${cl.companyName || cl.repName}`,
+          label: `${cl.threeCode} ${getClientDisplayName(cl)}`,
           description: '',
         })),
       },
@@ -484,7 +485,7 @@ const searchClientAndSelect = (text: string) => {
 /** 顧問先確定 → MF連携チェック → 保留コマンド実行 */
 const confirmClient = async (clientId: string) => {
   const cl = clientList.value.find(c => c.clientId === clientId)
-  const name = cl ? `${cl.threeCode} ${cl.companyName || cl.repName}` : clientId
+  const name = cl ? `${cl.threeCode} ${getClientDisplayName(cl)}` : clientId
 
   // MF連携チェック
   const ok = await checkMfAuth(clientId)

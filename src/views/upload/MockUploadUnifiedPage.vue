@@ -349,6 +349,7 @@ import {
 import type { UploadEntry } from '@/composables/useUpload'
 import { MSG_DUPLICATE_SHORT } from '@/constants/validationMessages'
 import { UI_MSG } from '@/constants/uiMessages'
+import { getClientDisplayName } from '@/constants/clientOptions'
 
 /** File System Access API（Chrome 86+）の型宣言 */
 interface FilePickerHandle {
@@ -369,7 +370,10 @@ const {
 } = useUpload()
 
 const { clients } = useClients()
-const clientName = computed(() => clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId)
+const clientName = computed(() => {
+  const c = clients.value.find(c => c.clientId === clientId)
+  return c ? getClientDisplayName(c) : clientId
+})
 
 // 画面遷移時にサーバー側の重複ハッシュ記録をクリア（DL-038）
 onBeforeUnmount(() => {

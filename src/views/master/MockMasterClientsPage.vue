@@ -142,7 +142,7 @@
                   <template v-else-if="col.key === 'consumptionTaxMode'">{{ taxModeLabel(row.consumptionTaxMode) }}</template>
                   <!-- 会社名 -->
                   <template v-else-if="col.key === 'companyName'">
-                    <span><MfCloudIcon v-if="mfStatusMap[row.clientId]" :size="12" tooltip="MF連携済み" />{{ isIndividualType(row.type) && row.repName ? row.repName : row.companyName }}</span>
+                    <span><MfCloudIcon v-if="mfStatusMap[row.clientId]" :size="12" tooltip="MF連携済み" />{{ getClientDisplayName(row) }}</span>
                   </template>
                   <!-- 担当者 -->
                   <template v-else-if="col.key === 'staffId'">{{ getStaffNameForClient(row.clientId) || '—' }}</template>
@@ -506,7 +506,7 @@ import {
   TYPE_OPTIONS, STATUS_OPTIONS,
   PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
   getLabel, getValueByLabel, resolveFieldOptions,
-  isIndividualType,
+  isIndividualType, getClientDisplayName,
 } from '@/constants/clientOptions';
 import ConfirmModal from '@/components/ConfirmModal.vue';
 import NotifyModal from '@/components/NotifyModal.vue';

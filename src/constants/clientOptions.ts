@@ -44,6 +44,18 @@ export function isIndividualType(type: string | null | undefined): boolean {
   return type === 'individual' || type === 'sole_proprietor'
 }
 
+/**
+ * 顧問先の表示名を返す
+ * - 法人: companyName（会社名）
+ * - 個人/個人事業: repName（代表者名）。repNameが空ならcompanyNameにフォールバック
+ */
+export function getClientDisplayName(client: { type?: string | null; companyName?: string; repName?: string } | null | undefined): string {
+  if (!client) return ''
+  return isIndividualType(client.type) && client.repName
+    ? client.repName
+    : client.companyName ?? ''
+}
+
 /** 法人かどうかを判定（個人系でない） */
 export function isCorporateType(type: string | null | undefined): boolean {
   return type != null && !isIndividualType(type)

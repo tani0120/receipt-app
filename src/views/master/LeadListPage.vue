@@ -131,7 +131,7 @@
                   <template v-else-if="col.key === 'type'">{{ getLabel(TYPE_OPTIONS, row.type) }}</template>
                   <template v-else-if="col.key === 'consumptionTaxMode'">{{ taxModeLabel(row.consumptionTaxMode) }}</template>
                   <template v-else-if="col.key === 'companyName'">
-                    <span>{{ isIndividualType(row.type) && row.repName ? row.repName : row.companyName }}</span>
+                    <span>{{ getClientDisplayName(row) }}</span>
                   </template>
                   <template v-else-if="col.key === 'staffId'">{{ getStaffNameForLead(row.leadId) || '—' }}</template>
                   <template v-else-if="col.key === 'accountingSoftware'">{{ softwareLabel(row.accountingSoftware) }}</template>
@@ -472,7 +472,7 @@ import {
   TYPE_OPTIONS, LEAD_STATUS_OPTIONS,
   PLACEHOLDER_UNSET, FISCAL_DAY_END_LABEL,
   getLabel, getValueByLabel, resolveFieldOptions,
-  isIndividualType,
+  isIndividualType, getClientDisplayName,
 } from '@/constants/clientOptions';
 import { useFieldLayout } from '@/composables/useFieldLayout';
 import type { CustomFieldDef } from '@/composables/useFieldLayout';
@@ -1415,7 +1415,7 @@ const handleLeadCsvImport = async () => {
   // バルクAPIで一括保存
   if (validItems.length > 0) {
     try {
-      const bulkResult = await repos.leadExtra.bulkCreate({ items: validItems }) as { results: Array<{ ok: boolean; leadId?: string; threeCode?: string; companyName?: string; index: number }> };
+      const bulkResult = await repos.leadExtra.bulkCreate({ items: validItems }) as { results: Array<{ ok: boolean; leadId?: string; threeCode?: string; companyName?: string; error?: string; index: number }> };
       if (bulkResult.results) {
         for (const r of bulkResult.results) {
           if (r.ok) {

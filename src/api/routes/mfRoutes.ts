@@ -1393,5 +1393,71 @@ app.post('/normalize-journals', (c) => {
   })
 })
 
-export default app
+// ────────────────────────────────────────────
+// MCP仕訳送信（sugusuru → MF）
+// ────────────────────────────────────────────
+import { sendBatchToMf, applyMfSendResults } from '../services/mfJournalSender'
+import type { SourceJournal } from '../services/journalToMfConverter'
+import { getJournals, saveJournals } from '../services/journalStore'
 
+/**
+ * POST /send-journals/:clientId — 未出力仕訳をMFにMCP送信
+ *
+ * リクエストボディ（任意）:
+ *   { journalIds?: string[] }  — 送信対象を絞り込む場合
+ *
+ * レスポンス:
+ *   { total, successCount, failureCount, results, elapsedMs }
+ */
+app.post('/send-journals/:clientId', async (c) => {
+  const clientId = c.req.param('clientId')
+  if (!clientId) return c.json({ error: '顧問先IDが未指定です' }, 400)
+
+  // MF OAuth認証チェック（実際にMCPで通信可能か）
+  const authStatus = getAuthStatus(clientId)
+  if (!authStatus.authenticated) {
+    return c.json({ error: 'MF未連携（OAuth未認証）です。先にMF連携を完了してください。' }, 401)
+  }
+
+  // 送信対象の取得（未出力仕訳）
+  const allJournals = getJournals(clientId) as Array<Record<string, unknown>>
+  let targets = allJournals.filter(j =>
+    j.status === null &&
+    j.deleted_at === null &&
+    !((j.labels as string[]) || []).includes('EXPORT_EXCLUDE')
+  )
+
+  // journalIds指定時は絞り込み
+  const body = await c.req.json().catch(() => ({}))
+  const requestedIds = (body as Record<string, unknown>).journalIds as string[] | undefined
+  if (requestedIds && Array.isArray(requestedIds) && requestedIds.length > 0) {
+    targets = targets.filter(j => requestedIds.includes(j.journalId as string))
+  }
+
+  if (targets.length === 0) {
+    return c.json({ total: 0, successCount: 0, failureCount: 0, results: [], elapsedMs: 0, message: '送信対象の仕訳がありません' })
+  }
+
+  // SourceJournal形式に変換
+  const sourceJournals: SourceJournal[] = targets.map(j => ({
+    journalId: j.journalId as string,
+    voucher_date: j.voucher_date as string,
+    description: (j.description as string) || '',
+    debit_entries: (j.debit_entries as SourceJournal['debit_entries']) || [],
+    credit_entries: (j.credit_entries as SourceJournal['credit_entries']) || [],
+  }))
+
+  // バッチ送信
+  const tokenKey = clientId
+  const batchResult = await sendBatchToMf(sourceJournals, tokenKey)
+
+  // 送信成功した仕訳にMF-IDを書き戻し、status='exported'に変更
+  const updatedCount = applyMfSendResults(allJournals as Parameters<typeof applyMfSendResults>[0], batchResult.results)
+  if (updatedCount > 0) {
+    saveJournals(clientId, allJournals)
+  }
+
+  return c.json(batchResult)
+})
+
+export default app

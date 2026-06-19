@@ -267,6 +267,7 @@ import { useClients } from "@/features/client-management/composables/useClients"
 import { MSG_DUPLICATE_SHORT } from "@/constants/validationMessages";
 import { UI_MSG } from '@/constants/uiMessages';
 import { useRepositories } from '@/composables/useRepositories';
+import { getClientDisplayName } from '@/constants/clientOptions';
 
 const { repos } = useRepositories();
 
@@ -274,9 +275,10 @@ const { repos } = useRepositories();
 const route = useRoute();
 const clientId = route.params.clientId as string;
 const { clients } = useClients();
-const clientName = computed(
-  () => clients.value.find((c) => c.clientId === clientId)?.companyName ?? clientId,
-);
+const clientName = computed(() => {
+  const c = clients.value.find((c) => c.clientId === clientId)
+  return c ? getClientDisplayName(c) : clientId
+});
 
 // ===== 型 =====
 type FileStatus = "queued" | "uploading" | "done" | "failed";

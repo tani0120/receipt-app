@@ -213,6 +213,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useShareStatus } from '@/composables/useShareStatus'
 import { UI_MSG } from '@/constants/uiMessages'
 import { useRepositories } from '@/composables/useRepositories'
+import { getClientDisplayName } from '@/constants/clientOptions'
 
 const { repos } = useRepositories()
 
@@ -233,7 +234,7 @@ onMounted(async () => {
 })
 
 const client = computed(() => clients.value.find(c => c.clientId === clientId))
-const clientName = computed(() => client.value?.companyName ?? clientId)
+const clientName = computed(() => getClientDisplayName(client.value))
 
 /* Drive統一: スマホボタンは常時表示（sharedFolderIdの有無で制御） */
 

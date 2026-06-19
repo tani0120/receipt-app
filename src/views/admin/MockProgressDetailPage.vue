@@ -134,7 +134,7 @@
               }">{{ getLabel(STATUS_OPTIONS, row.status) }}</span>
             </td>
             <td class="pg-td-code">{{ row.code }}</td>
-            <td class="pg-td-client">{{ isIndividualType(row.type) && row.repName ? row.repName : row.companyName }}</td>
+            <td class="pg-td-client">{{ getClientDisplayName(row) }}</td>
             <td class="pg-td-narrow">{{ getStaffNameForClient(row.clientId) || '' }}</td>
             <td class="pg-td-fiscal">{{ row.fiscalMonth }}月</td>
             <td class="pg-td-narrow pg-td-share">
@@ -218,7 +218,7 @@ import AddFieldModal from '@/components/AddFieldModal.vue';
 import type { FilterCondition, FilterColumnDef, SortSetting, FilterResult } from '@/components/list-view/types';
 import type { ViewDefWithDefaults } from '@/utils/urlFilterSync';
 import {
-  STATUS_OPTIONS, TYPE_OPTIONS, getLabel, isIndividualType,
+  STATUS_OPTIONS, TYPE_OPTIONS, getLabel, getClientDisplayName,
 } from '@/constants/clientOptions';
 import { PROGRESS_ALL_COLUMNS, PROGRESS_FILTER_COLUMN_DEFS } from '@/constants/progressFieldDefs';
 import { useRepositories } from '@/composables/useRepositories';

@@ -5,7 +5,7 @@
       <div class="sh-header-left">
         <i class="fa-solid fa-file-lines sh-header-icon"></i>
         <span class="sh-title">根拠資料ダウンロード履歴</span>
-        <span v-if="currentClient" class="sh-client-name">— {{ currentClient.companyName }}</span>
+        <span v-if="currentClient" class="sh-client-name">— {{ getClientDisplayName(currentClient) }}</span>
       </div>
       <div class="sh-header-right">
         <button
@@ -101,6 +101,7 @@ import { useRoute } from 'vue-router'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useGlobalToast } from '@/composables/useGlobalToast'
 import { UI_MSG } from '@/constants/uiMessages'
+import { getClientDisplayName } from '@/constants/clientOptions'
 import { useRepositories } from '@/composables/useRepositories'
 
 const { repos } = useRepositories()

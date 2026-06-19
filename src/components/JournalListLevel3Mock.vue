@@ -31,15 +31,9 @@
               class="w-2.5 h-2.5"
             />未出力を表示</label
           >
+          <!-- 「過去出力済を表示」廃止: 出力済みはダウンロード履歴画面で確認。仕訳一覧に混在表示しない -->
           <label class="flex items-center gap-1 cursor-pointer"
-            ><input
-              type="checkbox"
-              v-model="showExported"
-              class="w-2.5 h-2.5"
-            />過去出力済を表示</label
-          >
-          <label class="flex items-center gap-1 cursor-pointer"
-            ><input type="checkbox" v-model="showPastCsv" class="w-2.5 h-2.5" />過去仕訳CSV</label
+            ><input type="checkbox" v-model="showPastCsv" class="w-2.5 h-2.5" />過去仕訳CSV（MFインポート）</label
           >
           <label class="flex items-center gap-1 cursor-pointer"
             ><input
@@ -1306,6 +1300,36 @@
                             </div>
                           </template>
                         </template>
+                      </div>
+                    </div>
+                    <!-- F5: 補助科目は検索付きドロップダウン（勘定科目に紐づく補助科目候補） -->
+                    <div v-else-if="col.key.endsWith('.sub_account') && getSubAccountCandidates(row, col.key).length > 0" class="relative">
+                      <input
+                        type="text"
+                        class="inline-edit-input w-full text-[9px] bg-white border border-green-400 rounded outline-none px-0.5 py-0"
+                        v-model="editingValue"
+                        :placeholder="UI_MSG.検索"
+                        @keydown.enter="commitCellEdit()"
+                        @keydown.escape="cancelCellEdit()"
+                        @blur="blurSubAccountEdit()"
+                      />
+                      <div
+                        class="absolute left-0 top-full z-50 bg-white border border-gray-300 shadow-lg rounded max-h-40 overflow-y-auto w-56"
+                      >
+                        <div
+                          v-for="sa in filterSubAccountCandidates(row, col.key, editingValue)"
+                          :key="sa.mfSubId"
+                          class="px-2 py-0.5 text-[9px] truncate hover:bg-green-100 cursor-pointer text-gray-800"
+                          @mousedown.prevent="selectSubAccountItem(journal, sa.name)"
+                        >
+                          {{ sa.name }}
+                        </div>
+                        <div
+                          v-if="filterSubAccountCandidates(row, col.key, editingValue).length === 0"
+                          class="px-2 py-1 text-[9px] text-gray-400"
+                        >
+                          該当なし
+                        </div>
                       </div>
                     </div>
                     <!-- その他はテキスト入力 -->
@@ -2583,7 +2607,7 @@
       </button>
     </h3>
     <p class="text-gray-600 mb-2 text-[11px]">
-      <span class="font-bold">{{ activeClientFull?.companyName }}</span>
+      <span class="font-bold">{{ getClientDisplayName(activeClientFull) }}</span>
       （{{
         activeClientFull?.consumptionTaxMode === "exempt"
           ? UI_MSG.ラベル_免税事業者
@@ -2730,7 +2754,7 @@ import {
 } from '@/constants/vendorOptions';
 import { useAccountMaster } from '@/features/account-management/composables/useAccountMaster';
 import type { SelectOption } from '@/constants/clientOptions';
-import { isIndividualType } from '@/constants/clientOptions';
+import { isIndividualType, getClientDisplayName } from '@/constants/clientOptions';
 import { UI_MSG } from '@/constants/uiMessages';
 import {
   FIELD_ACCOUNT, FIELD_TAX_CATEGORY, FIELD_AMOUNT, FIELD_AMOUNT_DIFF,
@@ -3407,7 +3431,12 @@ function selectAccountItem(
     }
     if (acc) {
       const sub = clientSettings.subAccounts.value[acc.accountId];
-      entry.sub_account = sub || null;
+      // 補助科目が配列（MfSubAccountEntry[]）の場合: 1件→name自動代入、複数→null（ユーザー選択）
+      if (Array.isArray(sub)) {
+        entry.sub_account = sub.length === 1 ? sub[0].name : null;
+      } else {
+        entry.sub_account = sub || null;
+      }
     }
   } else {
     entry.sub_account = null;
@@ -3466,6 +3495,58 @@ function blurTaxEdit(journal: JournalPhase5Mock): void {
     return;
   }
   editingCell.value = null;
+}
+
+// ────── 補助科目ドロップダウン（F5: 勘定科目に紐づく補助科目候補） ──────
+
+/** 補助科目の型定義（MfSubAccountEntry互換） */
+interface SubAccountCandidate {
+  mfSubId: string;
+  name: string;
+  mfTaxId: string;
+  searchKey?: string | null;
+}
+
+/** 指定行の勘定科目に紐づく補助科目候補を取得 */
+function getSubAccountCandidates(
+  row: CombinedRow,
+  colKey: string,
+): SubAccountCandidate[] {
+  const side = colKey.startsWith("debit") ? "debit" : "credit";
+  const entry = row[side];
+  if (!entry?.account) return [];
+  const subs = clientSettings.subAccounts.value[entry.account];
+  if (Array.isArray(subs)) return subs as SubAccountCandidate[];
+  return [];
+}
+
+/** 補助科目候補をテキストフィルタして返す */
+function filterSubAccountCandidates(
+  row: CombinedRow,
+  colKey: string,
+  query: string,
+): SubAccountCandidate[] {
+  const all = getSubAccountCandidates(row, colKey);
+  if (!query) return all;
+  const q = query.toLowerCase();
+  return all.filter(
+    (sa) =>
+      sa.name.toLowerCase().includes(q) ||
+      (sa.searchKey && sa.searchKey.toLowerCase().includes(q)),
+  );
+}
+
+/** 補助科目をドロップダウンから選択 */
+function selectSubAccountItem(journal: JournalPhase5Mock, name: string): void {
+  editingValue.value = name;
+  commitCellEdit();
+  journal.is_read = true;
+}
+
+/** 補助科目blur: 入力値がそのまま確定（手入力もOK） */
+function blurSubAccountEdit(): void {
+  if (!editingCell.value) return;
+  commitCellEdit();
 }
 
 // ────── インライン編集（ダブルクリック） ──────
@@ -3537,6 +3618,8 @@ function startCellEdit(
   colKey: string,
   currentValue: unknown,
 ): void {
+  // 確定仕訳（past-csv-*）はセル編集不可（外部取込の確定データ、編集しても永続化されない）
+  if (journalId.startsWith('past-csv-')) return;
   editingCell.value = { journalId, rowIndex, colKey };
   let val = currentValue != null ? String(currentValue) : "";
   // 勘定科目列の場合: IDを日本語名に変換して検索欄に表示
@@ -3800,7 +3883,12 @@ function applyFillValue(
           // 補助科目連動
           if (acc) {
             const sub = clientSettings.subAccounts.value[acc.accountId];
-            entry.sub_account = sub || null;
+            // 補助科目が配列（MfSubAccountEntry[]）の場合: 1件→name自動代入、複数→null（ユーザー選択）
+            if (Array.isArray(sub)) {
+              entry.sub_account = sub.length === 1 ? sub[0].name : null;
+            } else {
+              entry.sub_account = sub || null;
+            }
           }
         } else {
           entry.sub_account = null;
@@ -4003,7 +4091,7 @@ onUnmounted(() => {
 
 // フィルタリング状態（チェックボックス）
 const showUnexported = ref<boolean>(true); // 未出力を表示（初期: ON）
-const showExported = ref<boolean>(false); // 出力済を表示（初期: OFF）
+const showExported = ref<boolean>(false); // 出力済を表示: 廃止（常にfalse。出力済みはダウンロード履歴画面で確認）
 const showExcluded = ref<boolean>(false); // 出力対象外を表示（初期: OFF）
 const showTrashed = ref<boolean>(false); // ゴミ箱を表示（初期: OFF）
 const showPastCsv = ref<boolean>(false); // 過去仕訳CSVを表示（初期: OFF）
@@ -4238,7 +4326,12 @@ function applyHintSuggestion(s: HintSuggestion): void {
       if (acctObj.defaultTaxCategoryId) entry.tax_category_id = acctObj.defaultTaxCategoryId;
       // 補助科目: selectAccountItemと同じくclientSettings.subAccountsから取得
       const sub = clientSettings.subAccounts.value[s.selectedValue];
-      entry.sub_account = sub || null;
+      // 補助科目が配列（MfSubAccountEntry[]）の場合: 1件→name自動代入、複数→null（ユーザー選択）
+      if (Array.isArray(sub)) {
+        entry.sub_account = sub.length === 1 ? sub[0].name : null;
+      } else {
+        entry.sub_account = sub || null;
+      }
     }
   } else if (s.field === FIELD_TAX_CATEGORY) {
     const entry = entries[s.entryIndex];
@@ -5246,7 +5339,7 @@ watch(
     sortDirection,
     showPastCsv,
     showUnexported,
-    showExported,
+    // showExported は廃止（常にfalse）。watch不要
     showExcluded,
     showTrashed,
     voucherFilter,

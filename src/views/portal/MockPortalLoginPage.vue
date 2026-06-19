@@ -213,6 +213,7 @@ import PortalHeader from '@/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
 import { useShareStatus } from '@/composables/useShareStatus'
 import { useRepositories } from '@/composables/useRepositories'
+import { getClientDisplayName } from '@/constants/clientOptions'
 
 const { repos } = useRepositories()
 
@@ -221,7 +222,10 @@ const router = useRouter()
 const clientId = route.params.clientId as string
 
 const { clients } = useClients()
-const clientName = computed(() => clients.value.find(c => c.clientId === clientId)?.companyName ?? clientId)
+const clientName = computed(() => {
+  const c = clients.value.find(c => c.clientId === clientId)
+  return c ? getClientDisplayName(c) : clientId
+})
 
 /** 認証エラーメッセージ */
 const authError = ref('')
