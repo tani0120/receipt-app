@@ -263,7 +263,7 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // ==============================
   // 保存
   // ==============================
-  function saveAccounts(allRows: Account[], subAccountsInput?: Record<string, string>): void {
+  function saveAccounts(allRows: Account[], _subAccountsInput?: Record<string, string>): void {
     if (scope === 'master') {
       // EnrichedAccountはAccount extends。実行時にはenrichフィールドが存在する
       accountMaster.allAccounts.value = allRows as EnrichedAccount[]

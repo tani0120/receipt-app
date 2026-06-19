@@ -38,6 +38,7 @@ module.exports = {
       'preview_extract_schema.ts',
       'test_mf_send.ts',
       'check-hardcode.ts',
+      'MasterFieldFlowPage.vue', // 科目フィールド解説UI（表示用データのみ）
       '.type.ts',
       'scripts/seed/',
       'scripts/',

@@ -7,17 +7,32 @@
 import * as fs from 'fs'
 import * as path from 'path'
 
+/** スクリプト用簡易型: 全社マスタ科目 */
+interface MasterAccount {
+  name: string
+  category: string
+  [key: string]: unknown
+}
+
+/** スクリプト用簡易型: MFスナップショット科目 */
+interface MfAccount {
+  name: string
+  category: string
+  account_group: string
+  [key: string]: unknown
+}
+
 // 全社マスタ読み込み
 const masterPath = path.resolve('data/account-master.json')
-const master: any[] = JSON.parse(fs.readFileSync(masterPath, 'utf8'))
+const master: MasterAccount[] = JSON.parse(fs.readFileSync(masterPath, 'utf8'))
 
 // MFスナップショット（法人TST・免税）読み込み
 const snapshotPath = path.resolve('data/mf-snapshot-c_rODnkCDN-exempt.json')
 const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'))
-const mfAccounts: any[] = snapshot.accounts || snapshot
+const mfAccounts: MfAccount[] = (snapshot.accounts || snapshot) as MfAccount[]
 
 // 名前→全社マスタの科目を引く
-const masterByName = new Map<string, any>()
+const masterByName = new Map<string, MasterAccount>()
 for (const a of master) {
   masterByName.set(a.name, a)
 }
@@ -27,7 +42,7 @@ console.log('=== MF法人科目 → 全社マスタ 名前照合 ===\n')
 
 // MFのcategory → すぐするcategoryのマッピングを集計
 const mapping: Record<string, Set<string>> = {}
-const unmatchedMf: any[] = []
+const unmatchedMf: { name: string; mfCategory: string; mfGroup: string }[] = []
 let matchCount = 0
 
 for (const mf of mfAccounts) {

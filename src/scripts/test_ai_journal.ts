@@ -15,17 +15,17 @@ async function main() {
 
   // 1. 勘定科目取得
   console.log('━━━ 勘定科目取得 ━━━')
-  const accts = await callMcpTool('mfc_ca_getAccounts', {}, TK) as any
-  const acctNames = (accts.accounts || [])
-    .filter((a: any) => a.available !== false)
-    .map((a: any) => a.name)
+  const accts = await callMcpTool('mfc_ca_getAccounts', {}, TK) as Record<string, unknown>
+  const acctNames = ((accts.accounts || []) as Record<string, unknown>[])
+    .filter((a: Record<string, unknown>) => a.available !== false)
+    .map((a: Record<string, unknown>) => a.name)
   console.log(`  ${acctNames.length}件\n`)
 
   // 2. 過去仕訳取得
   console.log('━━━ 過去仕訳取得 ━━━')
   const js = await callMcpTool('mfc_ca_getJournals', {
     start_date: '2025-01-01', end_date: '2025-12-31', per_page: 500,
-  }, TK) as any
+  }, TK) as Record<string, unknown>
   const journals = js.journals || []
   console.log(`  ${journals.length}件`)
 

@@ -999,8 +999,8 @@ const saveLead = async () => {
 
   // 自動算出: 月次合計・年間総報酬を計算
   const monthly = (form.advisoryFee || 0) + (form.bookkeepingFee || 0)
-    + ((form as any).socialInsuranceFee ?? 0) + ((form as any).payrollFee ?? 0)
-    + ((form as any).accountingServiceFee ?? 0) + ((form as any).systemFee ?? 0);
+    + ((form as unknown as Record<string, number>).socialInsuranceFee ?? 0) + ((form as unknown as Record<string, number>).payrollFee ?? 0)
+    + ((form as unknown as Record<string, number>).accountingServiceFee ?? 0) + ((form as unknown as Record<string, number>).systemFee ?? 0);
   cleanFields.monthlyTotal = monthly;
   cleanFields.annualTotal = monthly * 12 + (form.settlementFee || 0) + (form.taxFilingFee || 0);
 

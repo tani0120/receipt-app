@@ -25,7 +25,7 @@ async function main() {
     console.log(`\n=== 補助科目あり: ${withSubs.length}件 ===`)
     withSubs.forEach(a => {
       console.log(`  ${a.name}: ${a.sub_accounts.length}件`)
-      a.sub_accounts.forEach((s: any) => console.log(`    - ${JSON.stringify(s)}`))
+      a.sub_accounts.forEach((s: Record<string, unknown>) => console.log(`    - ${JSON.stringify(s)}`))
     })
   } else {
     console.log('\n補助科目を持つ科目: 0件')

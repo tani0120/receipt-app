@@ -8,7 +8,7 @@ import { callMcpTool } from '../api/services/mfMcpClient'
 async function checkOffice(tokenKey: string) {
   console.log(`━━━ ${tokenKey} ━━━`)
   try {
-    const office = await callMcpTool('mfc_ca_currentOffice', {}, tokenKey) as any
+    const office = await callMcpTool('mfc_ca_currentOffice', {}, tokenKey) as Record<string, unknown>
     console.log(`  事業者名: ${office.name}`)
     console.log(`  事業形態: ${office.business_type}`)
     console.log(`  課税方式: ${office.tax_method ?? '不明'}`)

@@ -13,8 +13,8 @@ const entries: { model: string; file: string; data: Record<string, unknown> }[] 
 
 // モデル順序を追跡
 const MODELS = ['gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
-const currentModelIdx = 0;
-const fileCount = 0;
+const _currentModelIdx = 0;
+const _fileCount = 0;
 
 let match;
 while ((match = jsonPattern.exec(log)) !== null) {

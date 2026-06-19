@@ -3027,7 +3027,7 @@ function getAccountsForMegaGroup(megaLabel: string) {
   const mega = MEGA_GROUPS.find((g) => g.label === megaLabel);
   if (!mega) return [];
   return filteredAccounts.value
-    .filter((acc) => mega.accountGroups.includes(acc.accountGroup as any))
+    .filter((acc) => mega.accountGroups.includes(acc.accountGroup))
     .sort((a, b) => a.sortOrder - b.sortOrder);
 }
 

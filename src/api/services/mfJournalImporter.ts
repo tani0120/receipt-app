@@ -121,6 +121,10 @@ async function convertSide(
   existingAccountIds: Set<string>,
   existingTaxIds: Set<string>,
   newAccounts: Account[],
+  /** 免税事業者フラグ。trueの場合、MFのtax_name空を「対象外」（exemptDefault）として正規化 */
+  isExempt: boolean = false,
+  /** 免税デフォルト税区分ID（マスタからisExemptDefault=trueで取得済み） */
+  exemptDefaultTaxId: string | null = null,
 ): Promise<ConfirmedJournalEntry> {
   // 科目: MF名前 → Sugusru概念ID（逆マッピング）
   let account = side.account_name
@@ -168,6 +172,10 @@ async function convertSide(
       maps.reverseTaxMap.set(side.tax_name, taxCategoryId) // 同バッチ内の2件目以降用
       unmatchedTaxes.add(side.tax_name)
     }
+  } else if (isExempt && exemptDefaultTaxId) {
+    // 免税事業者: MFはtax_nameを空文字で返す → 「対象外」として正規化
+    // MF実機テスト確認済み: 免税ではtax_id省略でMFが自動的にNOT_TARGETを設定する
+    taxCategoryId = exemptDefaultTaxId
   }
 
   // MF GET: value=税抜額。経理方式で分岐:
@@ -287,6 +295,12 @@ export async function prepareMfImport(
   const client = getClientById(clientId)
   const suffix = (client && isIndividualType(client.type)) ? 'IND' : 'CORP'
 
+  // 免税事業者判定: マスタからisExemptDefault=trueの税区分IDを取得（データ駆動）
+  const isExempt = client?.consumptionTaxMode === 'exempt'
+  const exemptDefaultTaxId = isExempt
+    ? (getAllTaxCategories().find(t => t.isExemptDefault)?.taxCategoryId ?? null)
+    : null
+
   // A-4: 既存IDセット（重複チェック用）
   const existingAccountIds = new Set<string>()
   const allAccounts = getAllAccounts()
@@ -320,8 +334,8 @@ export async function prepareMfImport(
     const debitEntries: ConfirmedJournalEntry[] = []
     const creditEntries: ConfirmedJournalEntry[] = []
     for (const branch of mfJournal.branches) {
-      debitEntries.push(await convertSide(branch.debitor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive, suffix, existingAccountIds, existingTaxIds, newAccounts))
-      creditEntries.push(await convertSide(branch.creditor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive, suffix, existingAccountIds, existingTaxIds, newAccounts))
+      debitEntries.push(await convertSide(branch.debitor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive, suffix, existingAccountIds, existingTaxIds, newAccounts, isExempt, exemptDefaultTaxId))
+      creditEntries.push(await convertSide(branch.creditor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive, suffix, existingAccountIds, existingTaxIds, newAccounts, isExempt, exemptDefaultTaxId))
     }
 
     const description = mfJournal.branches[0]?.remark || mfJournal.memo || ''
