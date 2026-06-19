@@ -133,6 +133,17 @@ export function addJournals(clientId: string, newJournals: unknown[]): number {
   return newJournals.length;
 }
 
+/** 1件の仕訳を部分更新（PATCH用） */
+export function updateJournal(clientId: string, journalId: string, patch: Record<string, unknown>): unknown | null {
+  const journals = loadClient(clientId);
+  const journal = journals.find((j) => (j as Record<string, unknown>).journalId === journalId) as Record<string, unknown> | undefined;
+  if (!journal) return null;
+  // パッチ適用（トップレベルフィールドのみ。ネストは全置換）
+  Object.assign(journal, patch);
+  save(clientId);
+  return journal;
+}
+
 /** 件数取得 */
 export function countJournals(clientId: string): number {
   return loadClient(clientId).length;

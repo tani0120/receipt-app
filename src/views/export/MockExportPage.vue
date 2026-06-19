@@ -406,7 +406,18 @@ const startDownload = async () => {
         target.status = "exported";
         target.exported_at = exportedAt;
         target.exported_by = currentStaffId.value ?? 'unknown';
-        target.export_batch_id = historyId; // サーバーが発番したバッチIDを紐付け
+        target.export_batch_id = historyId;
+        // Phase C: PATCH APIで永続化
+        fetch(`/api/journals/${encodeURIComponent(clientId.value)}/${encodeURIComponent(v.journalId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'exported',
+            exported_at: exportedAt,
+            exported_by: currentStaffId.value ?? 'unknown',
+            export_batch_id: historyId,
+          }),
+        }).catch(err => console.error(`[ExportPage] PATCH失敗: ${v.journalId}`, err));
       }
     }
     // CSVスナップショットをサーバーに保存（再ダウンロード用）

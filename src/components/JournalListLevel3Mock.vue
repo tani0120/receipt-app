@@ -880,7 +880,8 @@
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
-                      'p-0.5 flex items-center justify-center border-r border-gray-200 relative jl-editable',
+                      'p-0.5 flex items-center justify-center border-r border-gray-200 relative',
+                      journal.status !== 'exported' ? 'jl-editable' : '',
                     ]"
                     @dblclick.stop="
                       startCellEdit(
@@ -950,7 +951,8 @@
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
-                      'p-0.5 border-r border-gray-200 text-[10px] relative jl-editable',
+                      'p-0.5 border-r border-gray-200 text-[10px] relative',
+                      journal.status !== 'exported' ? 'jl-editable' : '',
                       getWarningCellClass(journal, col.key),
                       isDragOver(journalIndex, 0, col.key)
                         ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
@@ -971,6 +973,11 @@
                           journal.voucher_type = editingValue;
                           journal.is_read = true;
                           syncWarningLabels(journal);
+                          updateJournalField(journal.journalId, {
+                            voucher_type: journal.voucher_type,
+                            is_read: true,
+                            labels: [...journal.labels],
+                          });
                           editingCell = null;
                         "
                         @blur="editingCell = null"
@@ -1001,7 +1008,7 @@
                   :class="[
                     colWidthClass(col),
                     'p-0.5 relative border-r border-gray-200 text-[10px]',
-                    hasEntry(row, col.key) ? 'jl-editable' : '',
+                    hasEntry(row, col.key) && journal.status !== 'exported' ? 'jl-editable' : '',
                     isDragOver(journalIndex, rowIndex, col.key)
                       ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
                       : '',
@@ -1145,7 +1152,8 @@
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
-                      'p-0.5 flex items-center border-r border-gray-200 relative jl-editable',
+                      'p-0.5 flex items-center border-r border-gray-200 relative',
+                      journal.status !== 'exported' ? 'jl-editable' : '',
                       col.key === 'voucher_date' ? 'justify-center text-[8px]' : '',
                       isDragOver(journalIndex, rowIndex, col.key)
                         ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
@@ -1224,7 +1232,7 @@
                   :class="[
                     colWidthClass(col),
                     'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative',
-                    hasEntry(row, col.key) ? 'jl-editable' : '',
+                    hasEntry(row, col.key) && journal.status !== 'exported' ? 'jl-editable' : '',
                     isDragOver(journalIndex, rowIndex, col.key)
                       ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
                       : '',
@@ -1384,7 +1392,7 @@
                   :class="[
                     colWidthClass(col),
                     'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px]',
-                    hasEntry(row, col.key) ? 'jl-editable' : '',
+                    hasEntry(row, col.key) && journal.status !== 'exported' ? 'jl-editable' : '',
                     col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '',
                     getWarningCellClass(
                       journal,
@@ -2731,7 +2739,7 @@ import { useDraggable } from "@/composables/useDraggable";
 import { useCurrentUser } from "@/composables/useCurrentUser";
 import { journalColumns, getDefaultColumnWidths } from "@/shared/journalColumns";
 import { useColumnResize } from "@/composables/useColumnResize";
-import { useJournals } from "@/composables/useJournals";
+// import { useJournals } from "@/composables/useJournals"; // Phase C: 廃止
 import { useRoute } from "vue-router";
 import { getDocumentImageUrl } from "../data/document_mock_data";
 import type {
@@ -2785,10 +2793,12 @@ function colWidthStyle(col: { defaultPx: number; key: string }) {
   return col.defaultPx > 0 ? { width: columnWidths.value[col.key] + "px", flexShrink: 0 } : {};
 }
 
-// ローカル可変データ（useJournals composableで統一管理）
+// Phase C: localJournals廃止。全更新はupdateJournalField()経由のPATCH API。
 const route = useRoute();
 const journalClientId = computed(() => (route.params.clientId as string) || "default");
-const { journals: localJournals } = useJournals(journalClientId);
+// const { journals: localJournals } = useJournals(journalClientId); // ← 廃止
+// Phase C: journalsはshallowRefで管理。API経由で取得。
+const journals = shallowRef<JournalPhase5Mock[]>([]);
 
 // ────── 顧問先連動（勘定科目・税区分フィルタ） ──────
 const { clients, currentClient } = useClients();
@@ -2901,7 +2911,7 @@ const taxMismatchSummary = computed(() => {
   if (!taxMode) return { total: 0, items: [] as { from: string; to: string; count: number }[] };
 
   const countMap = new Map<string, number>();
-  for (const j of localJournals.value) {
+  for (const j of journals.value) {
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (isTaxCategoryInvalid(e.tax_category_id)) {
         countMap.set(e.tax_category_id!, (countMap.get(e.tax_category_id!) || 0) + 1);
@@ -2929,7 +2939,7 @@ function fixAllTaxMismatches() {
 
   // 修正対象の仕訳IDを収集
   const targetJournalIds = new Set<string>();
-  for (const j of localJournals.value) {
+  for (const j of journals.value) {
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (e && isTaxCategoryInvalid(e.tax_category_id)) {
         targetJournalIds.add(j.journalId);
@@ -2944,7 +2954,7 @@ function fixAllTaxMismatches() {
     .filter(Boolean) as UndoSnapshot[];
 
   // 修正を適用
-  for (const j of localJournals.value) {
+  for (const j of journals.value) {
     if (!targetJournalIds.has(j.journalId)) continue;
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (!e || !isTaxCategoryInvalid(e.tax_category_id)) continue;
@@ -2957,6 +2967,14 @@ function fixAllTaxMismatches() {
     .map((id) => snapshotJournal(id))
     .filter(Boolean) as UndoSnapshot[];
   pushUndo(beforeSnapshots, afterSnapshots);
+  // Phase C: 変更した仕訳のentriesをPATCH送信
+  for (const j of journals.value) {
+    if (!targetJournalIds.has(j.journalId)) continue;
+    updateJournalField(j.journalId, {
+      debit_entries: j.debit_entries,
+      credit_entries: j.credit_entries,
+    });
+  }
 }
 
 // ページ初回表示時: 矛盾があればモーダルを自動表示
@@ -3450,6 +3468,15 @@ function selectAccountItem(
 
   // 勘定科目選択確定後、3大グループバリデーションを実行
   runAccountValidation(journal);
+  // Phase C: PATCH送信（entry変更 + is_read + labels）
+  updateJournalField(journal.journalId, {
+    debit_entries: journal.debit_entries,
+    credit_entries: journal.credit_entries,
+    is_read: true,
+    updated_by: journal.updated_by,
+    updated_at: journal.updated_at,
+    labels: [...journal.labels],
+  });
   // Undo記録: 変更後スナップショット
   if (beforeSnap) {
     const afterSnap = snapshotJournal(journal.journalId);
@@ -3568,15 +3595,31 @@ const redoStack = ref<UndoEntry[]>([]);
 const UNDO_MAX = 50;
 
 function snapshotJournal(journalId: string): UndoSnapshot | null {
-  const j = localJournals.value.find((x) => x.journalId === journalId);
+  const j = journals.value.find((x) => x.journalId === journalId);
   if (!j) return null;
   return { journalId, json: JSON.stringify(j) };
 }
 
 function restoreSnapshot(snap: UndoSnapshot): void {
-  const idx = localJournals.value.findIndex((x) => x.journalId === snap.journalId);
+  const idx = journals.value.findIndex((x) => x.journalId === snap.journalId);
   if (idx < 0) return;
-  localJournals.value[idx] = JSON.parse(snap.json) as JournalPhase5Mock;
+  const restored = JSON.parse(snap.json) as JournalPhase5Mock;
+  journals.value[idx] = restored;
+  // Phase C: 復元後の全フィールドをPATCH送信
+  updateJournalField(snap.journalId, {
+    voucher_date: restored.voucher_date,
+    description: restored.description,
+    debit_entries: restored.debit_entries,
+    credit_entries: restored.credit_entries,
+    labels: [...restored.labels],
+    is_read: restored.is_read,
+    status: restored.status,
+    deleted_at: restored.deleted_at,
+    deleted_by: restored.deleted_by,
+    voucher_type: restored.voucher_type,
+    staff_notes: restored.staff_notes,
+    warning_dismissals: restored.warning_dismissals,
+  });
 }
 
 function pushUndo(before: UndoSnapshot[], after: UndoSnapshot[]): void {
@@ -3666,6 +3709,11 @@ function commitCellEdit(): void {
     if (val === "◯") labels.push("INVOICE_QUALIFIED");
     else if (val === "✕") labels.push("INVOICE_NOT_QUALIFIED");
     journal.is_read = true;
+    // Phase C: PATCH送信（labels + is_read）
+    updateJournalField(e.journalId, {
+      labels: [...journal.labels],
+      is_read: true,
+    });
     editingCell.value = null;
     return;
   }
@@ -3700,6 +3748,21 @@ function commitCellEdit(): void {
   editingCell.value = null;
   // 変更4: セル編集確定時に警告列バリデーション（段階A: 双方向同期）を実行
   syncWarningLabels(journal);
+  // Phase C: PATCH送信（変更フィールド + syncWarningLabelsで変更されたlabels）
+  const _patch: Record<string, unknown> = {
+    is_read: true,
+    updated_by: journal.updated_by,
+    updated_at: journal.updated_at,
+    labels: [...journal.labels],
+  };
+  if (!e.colKey.includes(".")) {
+    if (e.colKey === "voucher_date") _patch.voucher_date = journal.voucher_date;
+    else if (e.colKey === "description") _patch.description = journal.description;
+  } else {
+    _patch.debit_entries = journal.debit_entries;
+    _patch.credit_entries = journal.credit_entries;
+  }
+  updateJournalField(e.journalId, _patch);
   // Undo記録: 変更後スナップショット
   if (beforeSnap) {
     const afterSnap = snapshotJournal(journal.journalId);
@@ -4082,7 +4145,7 @@ onMounted(() => {
   document.addEventListener("mousemove", onGlobalMouseMove);
   document.addEventListener("mouseup", onGlobalMouseUp);
   // 初回ロード時: 全仕訳に対して警告ラベルを同期（モーダルなし）
-  localJournals.value.forEach((j) => syncWarningLabels(j, true));
+  journals.value.forEach((j) => syncWarningLabels(j, true));
 });
 onUnmounted(() => {
   document.removeEventListener("mousemove", onGlobalMouseMove);
@@ -4226,6 +4289,11 @@ function openWarningConfirmModal(journal: JournalPhase5Mock) {
       journal.labels = journal.labels.filter(
         (l) => !warningKeys.includes(l) && l !== "EXPORT_EXCLUDE",
       );
+      // Phase C: PATCH送信
+      updateJournalField(journal.journalId, {
+        warning_dismissals: [...journal.warning_dismissals!],
+        labels: [...journal.labels],
+      });
     },
   };
 }
@@ -4348,6 +4416,13 @@ function applyHintSuggestion(s: HintSuggestion): void {
 
   journal.is_read = true;
   syncWarningLabels(journal);
+  // Phase C: PATCH送信
+  updateJournalField(journal.journalId, {
+    debit_entries: journal.debit_entries,
+    credit_entries: journal.credit_entries,
+    is_read: true,
+    labels: [...journal.labels],
+  });
 
   const afterSnap = snapshotJournal(journal.journalId);
   if (beforeSnap && afterSnap) {
@@ -4370,7 +4445,7 @@ function closeDropdown() {
 // ────── ワークフローハブ操作（レベル②ローカル状態変更） ──────
 
 function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
-  const target = localJournals.value.find((j) => j.journalId === journal.journalId);
+  const target = journals.value.find((j) => j.journalId === journal.journalId);
   if (!target || target.is_read === value) return; // 同じ状態なら何もしない
   closeDropdown();
   confirmDialog.value = {
@@ -4379,10 +4454,14 @@ function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
     message: `「${journal.description}」を${value ? UI_MSG.既読 : UI_MSG.未読}${UI_MSG.にしますか}`,
     onConfirm: () => {
       target.is_read = value;
+      const patch: Record<string, unknown> = { is_read: value };
       if (value) {
         target.read_by = currentStaffId.value ?? null;
         target.read_at = new Date().toISOString();
+        patch.read_by = target.read_by;
+        patch.read_at = target.read_at;
       }
+      updateJournalField(journal.journalId, patch);
       console.log(`[DD] 既読変更: ${journal.journalId} → is_read=${value} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
@@ -4395,7 +4474,7 @@ function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
 }
 
 function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
-  const target = localJournals.value.find((j) => j.journalId === journal.journalId);
+  const target = journals.value.find((j) => j.journalId === journal.journalId);
   if (!target) return;
   const hasLabel = target.labels.includes("EXPORT_EXCLUDE");
   if (exclude === hasLabel) return; // 同じ状態なら何もしない
@@ -4413,6 +4492,7 @@ function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
         if (idx >= 0) target.labels.splice(idx, 1);
         console.log(`[DD] 出力対象に変更: ${journal.journalId}`);
       }
+      updateJournalField(journal.journalId, { labels: [...target.labels] });
       confirmDialog.value = {
         show: true,
         title: UI_MSG.完了,
@@ -4429,7 +4509,7 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
     show: true,
     title: UI_MSG.コピー,
     message: `「${journal.description}」${UI_MSG.を未出力にコピーしますか}`,
-    onConfirm: () => {
+    onConfirm: async () => {
       const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(journal));
       clone.journalId = `copy-${crypto.randomUUID().slice(0, 12)}`;
       clone.display_order = journal.display_order + 0.5;
@@ -4442,9 +4522,16 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
       clone.memo_target = null;
       clone.memo_created_at = null;
       clone.deleted_at = null;
-      const originalIndex = localJournals.value.findIndex((j) => j.journalId === journal.journalId);
-      if (originalIndex >= 0) {
-        localJournals.value.splice(originalIndex + 1, 0, clone);
+      // Phase C: POST APIでサーバーに追加
+      try {
+        await fetch(`/api/journals/${encodeURIComponent(journalClientId.value)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ journals: [clone] }),
+        });
+        await fetchJournalList();
+      } catch (err) {
+        console.error('[copyJournal] POST失敗:', err);
       }
       console.log(`[DD] コピー作成: ${clone.journalId} (元: ${journal.journalId})`);
       confirmDialog.value = {
@@ -4469,10 +4556,14 @@ function trashJournal(journal: JournalPhase5Mock) {
     title: UI_MSG.ゴミ箱に移動,
     message: `「${journal.description}」${UI_MSG.をゴミ箱に移動しますか}`,
     onConfirm: () => {
-      const target = localJournals.value.find((j) => j.journalId === journal.journalId);
+      const target = journals.value.find((j) => j.journalId === journal.journalId);
       if (!target) return;
       target.deleted_at = new Date().toISOString();
       target.deleted_by = currentStaffId.value ?? null;
+      updateJournalField(journal.journalId, {
+        deleted_at: target.deleted_at,
+        deleted_by: target.deleted_by,
+      });
       console.log(`[DD] ゴミ箱: ${journal.journalId} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
@@ -4485,7 +4576,7 @@ function trashJournal(journal: JournalPhase5Mock) {
 }
 
 function restoreJournal(journal: JournalPhase5Mock) {
-  const target = localJournals.value.find((j) => j.journalId === journal.journalId);
+  const target = journals.value.find((j) => j.journalId === journal.journalId);
   if (!target || target.deleted_at === null) return;
   closeDropdown();
   confirmDialog.value = {
@@ -4495,6 +4586,10 @@ function restoreJournal(journal: JournalPhase5Mock) {
     onConfirm: () => {
       target.deleted_at = null;
       target.deleted_by = null;
+      updateJournalField(journal.journalId, {
+        deleted_at: null,
+        deleted_by: null,
+      });
       console.log(`[DD] 復活: ${journal.journalId} by ${currentStaffId.value}`);
       confirmDialog.value = {
         show: true,
@@ -4645,6 +4740,7 @@ function bulkSetExportExclude(exclude: boolean) {
           const idx = j.labels.indexOf("EXPORT_EXCLUDE");
           if (idx >= 0) j.labels.splice(idx, 1);
         }
+        updateJournalField(j.journalId, { labels: [...j.labels] });
       });
       console.log(`[一括] ${exclude ? "対象外" : "対象"}: ${capturedTargets.length}件変更`);
       const count = capturedTargets.length;
@@ -4665,7 +4761,8 @@ function showBulkCopyDialog() {
     show: true,
     title: UI_MSG.コピー,
     message: `${targets.length}${UI_MSG.件を}${UI_MSG.を未出力にコピーしますか}`,
-    onConfirm: () => {
+    onConfirm: async () => {
+      const clones: JournalPhase5Mock[] = [];
       targets.forEach((j) => {
         const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(j));
         clone.journalId = `copy-${crypto.randomUUID().slice(0, 12)}`;
@@ -4679,11 +4776,19 @@ function showBulkCopyDialog() {
         clone.memo_target = null;
         clone.memo_created_at = null;
         clone.deleted_at = null;
-        const originalIndex = localJournals.value.findIndex((lj) => lj.journalId === j.journalId);
-        if (originalIndex >= 0) {
-          localJournals.value.splice(originalIndex + 1, 0, clone);
-        }
+        clones.push(clone);
       });
+      // Phase C: POST APIでサーバーに追加
+      try {
+        await fetch(`/api/journals/${encodeURIComponent(journalClientId.value)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ journals: clones }),
+        });
+        await fetchJournalList();
+      } catch (err) {
+        console.error('[showBulkCopyDialog] POST失敗:', err);
+      }
       console.log(`[一括] コピー: ${targets.length}件`);
       clearSelection();
       confirmDialog.value = {
@@ -4727,6 +4832,10 @@ function showBulkTrashDialog() {
       capturedTargets.forEach((j) => {
         j.deleted_at = now;
         j.deleted_by = currentStaffId.value ?? null;
+        updateJournalField(j.journalId, {
+          deleted_at: j.deleted_at,
+          deleted_by: j.deleted_by,
+        });
       });
       console.log(`[一括] ゴミ箱: ${capturedTargets.length}件 by ${currentStaffId.value}`);
       clearSelection();
@@ -5021,7 +5130,7 @@ function closePastJournalModal() {
 }
 
 const filteredPastJournals = computed(() => {
-  let results = [...localJournals.value];
+  let results = [...journals.value];
 
   // 支払先フィルタ
   if (pastJournalSearch.value.vendor) {
@@ -5277,14 +5386,56 @@ function onMouseUp() {
 // Step 5: journals をAPI統合一覧で取得（Phase 1 Step 4のAPIを使用）
 // 旧 journals computed (290行のソート・フィルタ・検索・pastRows統合) を削除。
 // API側の journalListService がソート・フィルタ・検索・pastRows統合・ページネーションを実行。
-// セル編集の即時反映は localJournals の deep watch → autoSave → fetchJournalList で維持。
+// Phase C: 全更新はupdateJournalField()経由のPATCH API。localJournals廃止済み。
 // ────────────────────────────────────────────
 
-const journals = shallowRef<JournalPhase5Mock[]>([]);
+// ↑ journals shallowRefはL2800付近に移動済み（setup内の参照順序制約）
+// 全てのデータ変更はこの関数を経由する。
+// 楽観的UI更新 → journalId単位マージ → 500msデバウンスでPATCH送信。
+const _patchQueue = new Map<string, Record<string, unknown>>();
+let _patchTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * 仕訳1件の部分更新（単一更新入口）
+ * @param journalId 更新対象の仕訳ID
+ * @param patch 変更フィールドのオブジェクト
+ */
+function updateJournalField(journalId: string, patch: Record<string, unknown>) {
+  // 1. 楽観的UI更新（表示中のjournalsに即反映）
+  const journal = journals.value.find((j) => j.journalId === journalId);
+  if (journal) {
+    Object.assign(journal, patch);
+    triggerRef(journals);
+  }
+  // 2. デバウンスキュー（journalId単位マージ）
+  const existing = _patchQueue.get(journalId) ?? {};
+  _patchQueue.set(journalId, { ...existing, ...patch });
+  if (_patchTimer) clearTimeout(_patchTimer);
+  _patchTimer = setTimeout(() => flushPendingPatches(), 500);
+}
+
+/** 保留中のPATCHを全て送信（fetchJournalList前に呼ぶ） */
+async function flushPendingPatches(): Promise<void> {
+  if (_patchQueue.size === 0) return;
+  const entries = [..._patchQueue.entries()];
+  _patchQueue.clear();
+  if (_patchTimer) { clearTimeout(_patchTimer); _patchTimer = null; }
+  await Promise.all(
+    entries.map(([journalId, patch]) =>
+      fetch(`/api/journals/${encodeURIComponent(journalClientId.value)}/${encodeURIComponent(journalId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      }).catch((err) => console.error(`[updateJournalField] PATCH失敗: ${journalId}`, err)),
+    ),
+  );
+}
 
 /** 統合一覧APIの呼び出し（POST: 科目名マッピング付き） */
 let _fetchVersion = 0;
 async function fetchJournalList() {
+  // 保留中のPATCHを先に送信してからfetch（データ整合性保証）
+  await flushPendingPatches();
   const version = ++_fetchVersion;
 
   // Phase 2: accountMap/taxMapはサーバー側マスタから自動生成（POSTボディ送信不要）
@@ -5355,23 +5506,8 @@ watch(globalSearchQuery, () => {
   _searchTimer = setTimeout(() => fetchJournalList(), 300);
 });
 
-// autoSave完了後にAPI再フェッチ（localJournalsのdeep watch）
-// useJournals内のautoSaveは500msデバウンス。その完了後にfetchJournalListを呼ぶ。
-// localJournalsの変更は即座にセル上に反映される（テンプレートがlocalJournalsを直接参照する行もある）が、
-// journals ref（ソート・フィルタ済みリスト）はAPI再フェッチで更新される。
-let _localSaveTimer: ReturnType<typeof setTimeout> | null = null;
-watch(
-  localJournals,
-  () => {
-    if (_localSaveTimer) clearTimeout(_localSaveTimer);
-    // autoSaveの500ms + 余裕200ms = 700ms後にfetchJournalList + 証票マッチング再取得
-    _localSaveTimer = setTimeout(() => {
-      fetchJournalList();
-      fetchSupportingMatches(); // 仕訳変更後にマッチング結果を再計算（Step 6 #4修正）
-    }, 700);
-  },
-  { deep: true },
-);
+// Phase C: autoSave watch廃止。全更新はupdateJournalField()経由のPATCH API。
+// 以前のlocalJournals deep watch + autoSaveは不要。
 
 // 初期ロード
 fetchJournalList();
@@ -5384,7 +5520,7 @@ const paginatedJournals = computed(() => journals.value);
 const visibleIds = computed(() => journals.value.map((j) => j.journalId));
 
 const selectedJournals = computed(() =>
-  localJournals.value.filter((j) => selectedIds.value.has(j.journalId)),
+  journals.value.filter((j) => selectedIds.value.has(j.journalId)),
 );
 
 const isSelectionMode = computed(() => selectedIds.value.size > 0);
@@ -5422,13 +5558,13 @@ function resetToDefaultOrder() {
   sortDirection.value = "asc";
   // 3キーソート: document_idグループの最小日付 → 同一証票内日付昇順 → id昇順
   const minDateMap = new Map<string, string>();
-  localJournals.value.forEach((j) => {
+  journals.value.forEach((j) => {
     const docId = j.document_id ?? "";
     const date = j.voucher_date ?? "\uffff";
     const cur = minDateMap.get(docId);
     if (!cur || date < cur) minDateMap.set(docId, date);
   });
-  localJournals.value.sort((a, b) => {
+  journals.value.sort((a, b) => {
     const da = minDateMap.get(a.document_id ?? "") ?? "\uffff";
     const db = minDateMap.get(b.document_id ?? "") ?? "\uffff";
     if (da !== db) return da < db ? -1 : 1;
@@ -5514,7 +5650,7 @@ function getRowBackground(journal: JournalPhase5Mock): string {
 }
 
 function hasPastJournal(journal: JournalPhase5Mock): boolean {
-  return localJournals.value.findIndex((j) => j.journalId === journal.journalId) < 25;
+  return journals.value.findIndex((j) => j.journalId === journal.journalId) < 25;
 }
 
 /**
@@ -5698,7 +5834,7 @@ function syncLabelsFromStaffNotes(journal: JournalPhase5Mock) {
 }
 
 function toggleStaffNote(journalId: string, key: StaffNoteKey) {
-  const journal = localJournals.value.find((j) => j.journalId === journalId);
+  const journal = journals.value.find((j) => j.journalId === journalId);
   if (!journal) return;
 
   // staff_notesがなければ初期化
@@ -5715,6 +5851,12 @@ function toggleStaffNote(journalId: string, key: StaffNoteKey) {
   if (journal.staff_notes[key].enabled) {
     journal.is_read = false; // フラグON時は未読にする
   }
+  // Phase C: PATCH送信
+  updateJournalField(journalId, {
+    staff_notes: journal.staff_notes,
+    labels: [...journal.labels],
+    is_read: journal.is_read,
+  });
   console.log(`StaffNote toggled: ${key} = ${journal.staff_notes[key].enabled} for ${journalId}`);
 }
 
@@ -5730,11 +5872,11 @@ watch(userName, (v) => {
 
 const commentModalJournal = computed(() => {
   if (!commentModalJournalId.value) return null;
-  return localJournals.value.find((j) => j.journalId === commentModalJournalId.value) ?? null;
+  return journals.value.find((j) => j.journalId === commentModalJournalId.value) ?? null;
 });
 
 function openCommentModal(journalId: string) {
-  const journal = localJournals.value.find((j) => j.journalId === journalId);
+  const journal = journals.value.find((j) => j.journalId === journalId);
   if (!journal) return;
 
   // staff_notesがなければ初期化
@@ -5749,6 +5891,16 @@ function closeCommentModal() {
   if (commentModalJournal.value) {
     commentModalJournal.value.staff_notes_author = commentModalAuthor.value;
     syncLabelsFromStaffNotes(commentModalJournal.value);
+    // Phase C: モーダル閉じる時にまとめてPATCH送信
+    updateJournalField(commentModalJournal.value.journalId, {
+      staff_notes: commentModalJournal.value.staff_notes,
+      staff_notes_author: commentModalJournal.value.staff_notes_author,
+      labels: [...commentModalJournal.value.labels],
+      memo: commentModalJournal.value.memo,
+      memo_author: commentModalJournal.value.memo_author,
+      memo_target: commentModalJournal.value.memo_target,
+      memo_created_at: commentModalJournal.value.memo_created_at,
+    });
   }
   commentModalJournalId.value = null;
   commentModalPinned.value = false;
@@ -5794,9 +5946,23 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 出力済み行: 縦罫線も白に */
+/* 出力済み行: 背景グレー統一 + 編集不可の外観 */
 .exported-row > div {
-  border-right-color: white !important;
+  background: #e5e7eb !important; /* gray-200 */
+  border-right-color: #d1d5db !important; /* gray-300 */
+  cursor: default !important;
+}
+.exported-row > div:hover {
+  background: #e5e7eb !important;
+  outline: none !important;
+}
+.exported-row .jl-editable {
+  background: #e5e7eb !important;
+  cursor: default !important;
+}
+.exported-row .jl-editable:hover {
+  background: #e5e7eb !important;
+  outline: none !important;
 }
 /* E: フィル対象セルのみハイライト（行全体ではなくセル単位） */
 .fill-target-cell {

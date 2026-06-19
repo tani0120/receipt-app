@@ -419,11 +419,11 @@ const isSending = ref(false);
 import { lineItemToJournalMock } from '@/utils/lineItemToJournalMock';
 import type { LineItem } from '@/types/pipeline/line_item.type';
 import type { SourceType } from '@/types/pipeline/source_type.type';
-import { useJournals } from '@/composables/useJournals';
+// import { useJournals } from '@/composables/useJournals'; // Phase C: 廃止
 import { useDocuments } from '@/composables/useDocuments';
 import { useAccountMasterStore } from '@/stores/accountMasterStore';
 
-const { journals } = useJournals(clientId);
+// const { journals } = useJournals(clientId); // Phase C: 廃止
 const { allDocuments, clearAiFields } = useDocuments();
 const accountMasterStore = useAccountMasterStore();
 
@@ -493,8 +493,16 @@ const sendToProcess = async () => {
         accountMasterStore.allAccounts, // accountMaster（相手勘定税区分のデータ駆動解決）
       );
 
-      // useJournals に追加（autoSave watchで自動的にサーバー保存される）
-      journals.value.push(...newJournals);
+      // Phase C: POST APIでサーバーに追加（useJournals廃止）
+      try {
+        await fetch(`/api/journals/${encodeURIComponent(clientId.value)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ journals: newJournals }),
+        });
+      } catch (err) {
+        console.error('[sendToProcess] POST失敗:', err);
+      }
       generatedCount += newJournals.length;
 
       console.log(
@@ -504,7 +512,7 @@ const sendToProcess = async () => {
     }
 
     if (generatedCount > 0) {
-      console.log(`[sendToProcess] 合計${generatedCount}件の仕訳を journals-${clientId.value}.json に追加`);
+      console.log(`[sendToProcess] 合計${generatedCount}件の仕訳をPOST APIで追加`);
     }
 
     // ━━━ 1.5. 根拠資料メタデータ保存（clearAiFieldsの前に実行。AI抽出値を検索用に保存する） ━━━

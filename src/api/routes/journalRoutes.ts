@@ -18,6 +18,7 @@ import {
   getJournals,
   saveJournals,
   addJournals,
+  updateJournal,
 } from '../services/journalStore';
 import {
   validateJournal,
@@ -157,6 +158,23 @@ app.post('/:clientId', async (c) => {
   // サーバーが上書き発番したIDリストを返す
   const serverIds = body.journals.map((j: unknown) => (j as Record<string, unknown>).journalId as string);
   return c.json({ ok: true, added, serverIds });
+});
+
+// ============================================================
+// PATCH /:clientId/:journalId — 1件の仕訳を部分更新
+// Phase C（2026-06-19）: セル編集消失バグ修正の一環
+// ============================================================
+app.patch('/:clientId/:journalId', async (c) => {
+  const clientId = c.req.param('clientId');
+  const journalId = c.req.param('journalId');
+  const patch = await c.req.json<Record<string, unknown>>();
+  // journalIdの上書きは禁止
+  delete patch.journalId;
+  const updated = updateJournal(clientId, journalId, patch);
+  if (!updated) {
+    return apiError(c, 404, `仕訳ID '${journalId}' が見つかりません`);
+  }
+  return c.json({ ok: true, journalId });
 });
 
 // ============================================================
