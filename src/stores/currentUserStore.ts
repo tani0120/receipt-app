@@ -46,12 +46,23 @@ export const useCurrentUserStore = defineStore('currentUser', () => {
   }
 
   // 旧localStorageからのマイグレーション（1回限り）
-  const oldKey = 'sugu-suru:current-staff-uuid'
-  const oldValue = localStorage.getItem(oldKey)
+  // 注意: Pinia永続化キー(L60)も 'sugu-suru:current-staff-uuid' だが、
+  //   Piniaは {"selectedUuid":"..."} 形式でJSON保存する。
+  //   旧形式は "staff-0001" のような生文字列。両方をハンドリングする。
+  const PERSIST_KEY = 'sugu-suru:current-staff-uuid'
+  const oldValue = localStorage.getItem(PERSIST_KEY)
   if (oldValue && !selectedUuid.value) {
-    selectedUuid.value = oldValue
-    localStorage.removeItem(oldKey)
-    console.log('[currentUserStore] localStorage → Pinia移行完了')
+    // Pinia永続化形式（JSON）か旧形式（生文字列）かを判定
+    try {
+      const parsed = JSON.parse(oldValue) as { selectedUuid?: string }
+      if (parsed.selectedUuid) {
+        selectedUuid.value = parsed.selectedUuid
+      }
+    } catch {
+      // JSON.parseに失敗 = 旧形式の生文字列
+      selectedUuid.value = oldValue
+    }
+    console.log(`[currentUserStore] localStorage復元: ${selectedUuid.value}`)
   }
 
   return { selectedUuid, setUuid, syncFromServer }

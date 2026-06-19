@@ -186,7 +186,16 @@ import aiCommandRoutes from './api/routes/aiCommandRoutes'
 app.route('/api/ai-command', aiCommandRoutes)
 
 // Phase 2: 静的ファイル提供（フロントエンドUI）
-app.use('/*', serveStatic({ root: './dist/client' }))
+// 開発時はVite開発サーバーが配信するため、dist/clientが存在する本番時のみ有効化
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+const distClientPath = resolve(process.cwd(), 'dist', 'client')
+if (existsSync(distClientPath)) {
+  app.use('/*', serveStatic({ root: './dist/client' }))
+  console.log('✅ 静的ファイル配信: dist/client')
+} else {
+  console.log('ℹ️ dist/client未検出（開発モード: Viteが配信）')
+}
 
 app.get('/', (c) => {
     console.log('Root request received')

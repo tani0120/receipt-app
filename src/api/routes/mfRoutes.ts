@@ -33,7 +33,7 @@ import {
 } from '../services/mfMcpClient'
 import { getById, updateClient } from '../services/clientsApi'
 import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFieldMapping'
-import { importMfJournals } from '../services/mfJournalImporter'
+import { importMfJournals, commitMfImport } from '../services/mfJournalImporter'
 import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services/mfTaxImportService'
 import { importMasterAccounts } from '../services/mfAccountImportService'
 import { saveMfAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories, getClientAccounts, hasClientAccounts, persistSubAccounts, persistDepartments } from '../services/accountMasterApi'
@@ -48,6 +48,9 @@ import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shar
 import { getAllTaxAvailable, saveTaxAvailable, invalidateCache, type TaxMethodKey } from '../services/mfTaxAvailableStore'
 import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
 import { isIndividualType } from '../../constants/clientOptions'
+import { readdirSync, existsSync as fsExists, readFileSync as fsRead } from 'fs'
+import { join as pathJoin } from 'path'
+import { getAll as getAllJournals, replaceAll as replaceAllJournals, deleteByClientId as deleteConfirmedByClientId } from '../services/confirmedJournalsApi'
 
 const app = new Hono()
 
@@ -1184,6 +1187,13 @@ app.post('/import-journals', async (c) => {
     // ===== 3. 仕訳取得（periodCount期分） =====
     const termList = await mcpFetchTermSettings(undefined, clientId)
 
+    // 強制取込: 既存のconfirmed仕訳を全削除してから再挿入
+    // MF連携先ではCSV無効（グレーアウト済み）なので全削除で安全
+    const deletedCount = deleteConfirmedByClientId(clientId)
+    if (deletedCount > 0) {
+      results.push(`🗑️ 既存データ${deletedCount}件を削除（最新データで再取込）`)
+    }
+
     for (let i = 0; i < periodCount; i++) {
       const selected = termList[i]
       if (!selected) break
@@ -1202,10 +1212,21 @@ app.post('/import-journals', async (c) => {
           `${journals.length}件取得 → ${importResult.added}件追加, ${importResult.skipped}件スキップ（重複）`
         )
       } else {
-        results.push(
-          `⏳ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
-          `${journals.length}件取得 → 承認待ち（${importResult.converted.length}件変換済み）`
-        )
+        // 暫定: skippedErrors/warningsがあっても変換成功分（converted）は保存する
+        // skippedErrorsは変換前にスキップ済み→convertedに含まれない→保存して安全
+        // 将来UIで承認フローを実装した場合はこのブロックを削除
+        const forceResult = commitMfImport(importResult.batchId)
+        if (forceResult) {
+          results.push(
+            `✅ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
+            `${journals.length}件取得 → ${forceResult.added}件追加, ${forceResult.skipped}件スキップ（重複）`
+          )
+        } else {
+          results.push(
+            `⚠️ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
+            `${journals.length}件取得 → commit失敗`
+          )
+        }
       }
 
       // info（自動発番通知）も結果に含める
@@ -1229,6 +1250,12 @@ app.post('/import-journals', async (c) => {
         taxCount: mfTaxes.length,
         periodCount: Math.min(periodCount, termList.length),
       },
+      // 全期情報（フロントで年度別サマリーに使用）
+      fiscalYears: termList.map(t => ({
+        fiscalYear: t.fiscal_year,
+        startDate: t.start_date,
+        endDate: t.end_date,
+      })),
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -1267,14 +1294,13 @@ app.post('/normalize-journals', (c) => {
   }
 
   // 顧問先別MFデータ（より具体的なので上書き）
-  const { readdirSync, existsSync: fsExists, readFileSync: fsRead } = require('fs')
-  const clientMfDir = require('path').join(process.cwd(), 'data', 'client_mf_accounts')
+  const clientMfDir = pathJoin(process.cwd(), 'data', 'client_mf_accounts')
   if (fsExists(clientMfDir)) {
     const files: string[] = readdirSync(clientMfDir)
     for (const file of files) {
       if (!file.endsWith('.json')) continue
       try {
-        const raw = fsRead(require('path').join(clientMfDir, file), 'utf-8')
+        const raw = fsRead(pathJoin(clientMfDir, file), 'utf-8')
         const data = JSON.parse(raw)
         const accounts: Array<{ accountId: string; name: string }> = data.accounts ?? data
         for (const a of accounts) {
@@ -1295,11 +1321,7 @@ app.post('/normalize-journals', (c) => {
   const isNormalized = (v: string) => /^[A-Z][A-Z0-9_]+$/.test(v)
 
   // confirmed_journalsを全件取得して変換
-  const { getAll: getAllJournals, replaceAll: replaceAllJournals } = require('../services/confirmedJournalsApi')
-  const journals = getAllJournals() as Array<{
-    debit_entries: Array<{ account: string; tax_category_id: string | null }>
-    credit_entries: Array<{ account: string; tax_category_id: string | null }>
-  }>
+  const journals = getAllJournals()
 
   let accountConverted = 0
   let accountAlready = 0
