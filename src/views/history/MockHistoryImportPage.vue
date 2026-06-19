@@ -19,11 +19,11 @@
 
           <!-- D-2: MCPインポートカード（MF連携先のみ有効） -->
           <div class="upload-card" :class="{ 'card--disabled': !mfLinked }">
-            <h2 class="card-title"><i class="fa-solid fa-cloud-arrow-down"></i> MFから直接取込</h2>
+            <h2 class="card-title"><i class="fa-solid fa-cloud-arrow-down"></i> {{ UI_MSG.MFから直接取込 }}</h2>
 
             <div v-if="!mfLinked" class="disabled-message">
               <i class="fa-solid fa-link-slash"></i>
-              <p>MF連携を設定すると利用できます</p>
+              <p>{{ UI_MSG.MF連携設定必要 }}</p>
             </div>
 
             <div v-else class="mcp-import-area">
@@ -38,16 +38,16 @@
                 <div v-if="mcpImportResult" class="mcp-result-compact">
                   <div class="mcp-result-header" :class="mcpImportResult.success ? 'mcp-result--success' : 'mcp-result--error'">
                     <i :class="mcpImportResult.success ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'"></i>
-                    <span>{{ mcpImportResult.success ? '取込完了' : '取込失敗' }}</span>
+                    <span>{{ mcpImportResult.success ? UI_MSG.MF取込完了 : UI_MSG.MF取込失敗 }}</span>
                     <button class="mcp-toggle" @click="mcpDetailOpen = !mcpDetailOpen">
                       <i :class="mcpDetailOpen ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'"></i>
-                      {{ mcpDetailOpen ? '詳細を閉じる' : '詳細を見る' }}
+                      {{ mcpDetailOpen ? UI_MSG.MF取込詳細開 : UI_MSG.MF取込詳細閉 }}
                     </button>
                   </div>
                   <ul v-if="mcpDetailOpen && mcpImportResult.results.length" class="mcp-result-list">
                     <li v-for="(r, i) in mcpImportResult.results.slice(0, 15)" :key="i">{{ r }}</li>
                     <li v-if="mcpImportResult.results.length > 15" class="mcp-result-more">
-                      ...他{{ mcpImportResult.results.length - 15 }}件
+                      ...他{{ mcpImportResult.results.length - 15 }}{{ UI_MSG.件ラベル }}
                     </li>
                   </ul>
                 </div>
@@ -57,10 +57,10 @@
                   <div class="mcp-icon-wrapper">
                     <i class="fa-solid fa-cloud-arrow-down mcp-icon"></i>
                   </div>
-                  <p class="mcp-desc">マネーフォワードから仕訳データを直接取込みます（3期分）</p>
+                  <p class="mcp-desc">{{ UI_MSG.MF取込説明 }}</p>
                   <button class="btn-mcp-import" @click="executeMcpImport">
                     <i class="fa-solid fa-download"></i>
-                    {{ mcpImportResult ? '🔄 再取込する' : 'MFから取込実行' }}
+                    {{ mcpImportResult ? UI_MSG.再取込する : UI_MSG.MFから取込実行 }}
                   </button>
                 </div>
               </template>
@@ -73,7 +73,7 @@
 
             <div v-if="mfLinked" class="disabled-message">
               <i class="fa-solid fa-ban"></i>
-              <p>MF連携先はMFから直接取込してください</p>
+              <p>{{ UI_MSG.MF連携先CSV無効 }}</p>
             </div>
 
             <template v-else>
@@ -143,41 +143,41 @@
 
             <div v-if="importedFiles.length === 0" class="history-empty">
               <i class="fa-solid fa-inbox history-empty-icon"></i>
-              <p class="history-empty-text">まだ過去仕訳データがありません</p>
-              <p class="history-empty-sub">CSVをアップロードまたはMFから取込むと、ここに履歴が表示されます</p>
+              <p class="history-empty-text">{{ UI_MSG.取込データなし }}</p>
+              <p class="history-empty-sub">{{ UI_MSG.取込データなし補足 }}</p>
             </div>
 
             <template v-if="importedFiles.length > 0">
               <!-- 最終取込日 -->
               <div class="last-import-banner">
                 <i class="fa-solid fa-clock"></i>
-                <span>最終取込日：{{ latestImportDateTime }}</span>
+                <span>{{ UI_MSG.最終取込日ラベル }}{{ latestImportDateTime }}</span>
               </div>
 
               <!-- サマリー -->
               <div class="history-summary">
                 <div class="summary-item">
-                  <span class="summary-label">取込済み過去仕訳</span>
-                  <span class="summary-value">{{ totalRows }}件</span>
+                  <span class="summary-label">{{ UI_MSG.取込済み過去仕訳 }}</span>
+                  <span class="summary-value">{{ totalRows }}{{ UI_MSG.件ラベル }}</span>
                 </div>
                 <div class="summary-item">
-                  <span class="summary-label">年度数</span>
-                  <span class="summary-value">{{ fiscalYearGroups.length }}期</span>
+                  <span class="summary-label">{{ UI_MSG.年度数ラベル }}</span>
+                  <span class="summary-value">{{ fiscalYearGroups.length }}{{ UI_MSG.期ラベル }}</span>
                 </div>
               </div>
 
               <!-- ■ 上段: 年度別サマリー（全期表示・最新バッチのみ詳細） -->
-              <div class="history-section-title"><i class="fa-solid fa-layer-group"></i> 年度別サマリー</div>
+              <div class="history-section-title"><i class="fa-solid fa-layer-group"></i> {{ UI_MSG.年度別サマリー }}</div>
               <div class="history-list">
                 <div v-for="group in allFiscalYearGroups" :key="group.year" class="fiscal-year-group">
                   <div class="fiscal-year-header">
                     <span class="fiscal-year-icon">📅</span>
-                    <span class="fiscal-year-label">{{ group.year }}年度</span>
+                    <span class="fiscal-year-label">{{ group.year }}{{ UI_MSG.年度接尾 }}</span>
                     <template v-if="group.hasBatches">
                       <span class="fiscal-year-period">{{ group.minDate }} ～ {{ group.maxDate }}</span>
-                      <span class="fiscal-year-count">{{ group.totalCount }}件</span>
+                      <span class="fiscal-year-count">{{ group.totalCount }}{{ UI_MSG.件ラベル }}</span>
                     </template>
-                    <span v-else class="fiscal-year-empty">該当なし</span>
+                    <span v-else class="fiscal-year-empty">{{ UI_MSG.該当なし }}</span>
                   </div>
                   <!-- 最新バッチのみ表示 -->
                   <div v-if="group.latestBatch" class="fiscal-year-batches">
@@ -186,10 +186,10 @@
                         <div class="history-item-icon"><i class="fa-solid fa-check-circle"></i></div>
                         <div>
                           <p class="history-item-name">
-                            インポート日：{{ formatDateTime(group.latestBatch.importedAt) }}　<span class="history-item-count">{{ group.latestBatch.rowCount }}件</span>
+                            {{ UI_MSG.インポート日ラベル }}{{ formatDateTime(group.latestBatch.importedAt) }}　<span class="history-item-count">{{ group.latestBatch.rowCount }}{{ UI_MSG.件ラベル }}</span>
                           </p>
                           <p class="history-item-date">
-                            仕訳日付：{{ group.latestBatch.minVoucherDate }} ～ {{ group.latestBatch.maxVoucherDate }}
+                            {{ UI_MSG.仕訳日付ラベル }}{{ group.latestBatch.minVoucherDate }} ～ {{ group.latestBatch.maxVoucherDate }}
                           </p>
                         </div>
                       </div>
@@ -202,29 +202,29 @@
               </div>
 
               <!-- ■ 下段: 取込履歴（バッチ時刻単位・折りたたみ） -->
-              <div class="history-section-title"><i class="fa-solid fa-history"></i> 取込履歴</div>
+              <div class="history-section-title"><i class="fa-solid fa-history"></i> {{ UI_MSG.取込履歴 }}</div>
               <div class="batch-history-list">
                 <div v-for="histGroup in batchHistoryGroups" :key="histGroup.key" class="batch-history-group">
                   <button class="batch-history-header" @click="toggleBatchHistory(histGroup.key)">
                     <i :class="openBatchHistories.has(histGroup.key) ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-right'"></i>
-                    <span class="batch-history-date">取込日：{{ histGroup.label }}</span>
-                    <span class="batch-history-summary">{{ histGroup.totalCount }}件（{{ histGroup.batches.length }}バッチ）</span>
+                    <span class="batch-history-date">{{ UI_MSG.取込日ラベル }}{{ histGroup.label }}</span>
+                    <span class="batch-history-summary">{{ histGroup.totalCount }}{{ UI_MSG.件ラベル }}（{{ histGroup.batches.length }}{{ UI_MSG.バッチラベル }}）</span>
                   </button>
                   <div v-if="openBatchHistories.has(histGroup.key)" class="batch-history-detail">
                     <div v-for="group in histGroup.yearGroups" :key="group.year" class="batch-history-year">
                       <div class="batch-history-year-header">
-                        <span>📅 {{ group.year }}年度</span>
-                        <span class="batch-history-year-count">{{ group.count }}件</span>
+                        <span>📅 {{ group.year }}{{ UI_MSG.年度接尾 }}</span>
+                        <span class="batch-history-year-count">{{ group.count }}{{ UI_MSG.件ラベル }}</span>
                       </div>
                       <div v-for="b in group.batches" :key="b.id" class="history-item" @click="showDownloadModal(b)" style="cursor: pointer;">
                         <div class="history-item-info">
                           <div class="history-item-icon"><i class="fa-solid fa-check-circle"></i></div>
                           <div>
                             <p class="history-item-name">
-                              {{ b.rowCount }}件
+                              {{ b.rowCount }}{{ UI_MSG.件ラベル }}
                             </p>
                             <p class="history-item-date">
-                              仕訳日付：{{ b.minVoucherDate }} ～ {{ b.maxVoucherDate }}
+                              {{ UI_MSG.仕訳日付ラベル }}{{ b.minVoucherDate }} ～ {{ b.maxVoucherDate }}
                             </p>
                           </div>
                         </div>
@@ -236,8 +236,8 @@
                     <!-- 0件の期 -->
                     <div v-for="fy in histGroup.emptyYears" :key="fy" class="batch-history-year">
                       <div class="batch-history-year-header">
-                        <span>📅 {{ fy }}年度</span>
-                        <span class="batch-history-year-empty">0件</span>
+                        <span>📅 {{ fy }}{{ UI_MSG.年度接尾 }}</span>
+                        <span class="batch-history-year-empty">{{ UI_MSG.ゼロ件 }}</span>
                       </div>
                     </div>
                   </div>
