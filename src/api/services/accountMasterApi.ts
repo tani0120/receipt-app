@@ -382,8 +382,10 @@ export interface MfSubAccountEntry {
   mfSubId: string
   /** 補助科目名 */
   name: string
-  /** MFデフォルト税区分ID */
+  /** MFデフォルト税区分ID（MF固有。mfTaxIdToMasterIdで変換前の値） */
   mfTaxId: string
+  /** sugusuru税区分ID（mfTaxIdから変換済み。未変換時はundefined） */
+  taxCategoryId?: string
   /** 検索キー */
   searchKey?: string | null
 }

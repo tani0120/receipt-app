@@ -16,50 +16,7 @@
 
 import { getJournals } from './journalStore'
 import { getByClientId as getConfirmedJournals } from './confirmedJournalsApi'
-import type { ConfirmedJournal } from '../../types/confirmed_journal.type'
-import crypto from 'crypto'
-
-// ────────────────────────────────────────────
-// 型定義（API応答用の最小型。フロント側の巨大な型に依存しない）
-// ────────────────────────────────────────────
-
-/** 仕訳エントリ行（ソート・検索用） */
-interface JournalEntry {
-  entryId?: string
-  account: string | null
-  account_on_document?: boolean
-  sub_account: string | null
-  department: string | null
-  amount: number | null
-  amount_on_document?: boolean
-  tax_category_id: string | null
-  vendor_name?: string | null
-}
-
-/** 統合仕訳行（通常 + 過去仕訳CSV） */
-interface JournalRow {
-  journalId: string
-  client_id: string
-  display_order: number
-  voucher_date: string | null
-  description: string
-  voucher_type: string | null
-  document_id: string | null
-  debit_entries: JournalEntry[]
-  credit_entries: JournalEntry[]
-  status: 'exported' | null
-  is_read: boolean
-  deleted_at: string | null
-  labels: string[]
-  warning_dismissals: string[]
-  warning_details: Record<string, string>
-  is_credit_card_payment: boolean
-  rule_id: string | null
-  invoice_status: string | null
-  memo: string | null
-  staff_notes?: Record<string, { enabled: boolean; text?: string }> | null
-  [key: string]: unknown // 追加プロパティ許容
-}
+import { type JournalListRow, isMfJournal, isAiJournal } from '../../types/journal-list-row'
 
 /** クエリパラメータ */
 export interface JournalListQuery {
@@ -82,7 +39,7 @@ export interface JournalListQuery {
 
 /** API応答 */
 export interface JournalListResponse {
-  journals: JournalRow[]
+  journals: JournalListRow[]
   totalCount: number
   page: number
   pageSize: number
@@ -90,64 +47,33 @@ export interface JournalListResponse {
 }
 
 // ────────────────────────────────────────────
-// 過去仕訳CSV → JournalRow変換
+// ヘルパー: JournalListRowから安全にフィールド取得
+// 過去仕訳にはlabels/status/staff_notes等が存在しないため、
+// 型ガードで分岐して安全にアクセスする
 // ────────────────────────────────────────────
 
-function confirmedToJournalRow(cj: ConfirmedJournal, idx: number, clientId: string): JournalRow {
-  return {
-    journalId: `past-csv-${idx}`,
-    client_id: clientId,
-    display_order: 90000 + idx,
-    voucher_date: cj.voucher_date || null,
-    description: cj.description || '',
-    voucher_type: null,
-    document_id: null,
-    debit_entries: (cj.debit_entries || []).map(e => ({
-      entryId: e.entryId || `past-de-${idx}-${crypto.randomBytes(4).toString('hex')}`,
-      account: e.account || null,
-      account_on_document: false,
-      sub_account: e.sub_account || null,
-      department: e.department || null,
-      amount: e.amount ?? null,
-      amount_on_document: false,
-      tax_category_id: e.tax_category_id || null,
-      vendor_name: e.vendor_name || null,
-    })),
-    credit_entries: (cj.credit_entries || []).map(e => ({
-      entryId: e.entryId || `past-ce-${idx}-${crypto.randomBytes(4).toString('hex')}`,
-      account: e.account || null,
-      account_on_document: false,
-      sub_account: e.sub_account || null,
-      department: e.department || null,
-      amount: e.amount ?? null,
-      amount_on_document: false,
-      tax_category_id: e.tax_category_id || null,
-      vendor_name: e.vendor_name || null,
-    })),
-    status: 'exported' as const,
-    is_read: true,
-    deleted_at: null,
-    labels: [],
-    warning_dismissals: [],
-    warning_details: {},
-    is_credit_card_payment: false,
-    rule_id: null,
-    invoice_status: null,
-    memo: '過去仕訳CSV',
-    staff_notes: null,
-    // pastRows用の追加フィールド
-    date_on_document: true,
-    source_type: null,
-    direction: cj.direction || null,
-    vendor_vector: null,
-    vendor_id: cj.vendor_id || null,
-    vendor_name: cj.vendor_name || null,
-    line_id: null,
-    export_batch_id: null,
-    memo_author: null,
-    memo_target: null,
-    memo_created_at: null,
-  }
+/** 仕訳一覧行のID取得（通常仕訳: journalId、過去仕訳: id） */
+function getRowId(row: JournalListRow): string {
+  if (isMfJournal(row)) return row.id
+  return row.journalId
+}
+
+/** 仕訳一覧行のラベル取得（過去仕訳はラベル概念なし→空配列） */
+function getRowLabels(row: JournalListRow): string[] {
+  if (isMfJournal(row)) return []
+  return row.labels
+}
+
+/** 仕訳一覧行のステータス取得（過去仕訳→null） */
+function getRowStatus(row: JournalListRow): 'exported' | null {
+  if (isMfJournal(row)) return null
+  return row.status
+}
+
+/** 仕訳一覧行の論理削除日取得（過去仕訳→null） */
+function getRowDeletedAt(row: JournalListRow): string | null {
+  if (isMfJournal(row)) return null
+  return row.deleted_at
 }
 
 // ────────────────────────────────────────────
@@ -200,13 +126,13 @@ function getWarningWeight(labels: string[]): number {
 // ────────────────────────────────────────────
 
 function sortJournals(
-  result: JournalRow[],
+  result: JournalListRow[],
   column: string,
   direction: 'asc' | 'desc',
   allJournalIds: string[],
   accountMap?: Record<string, string>,
   taxMap?: Record<string, string>,
-): JournalRow[] {
+): JournalListRow[] {
   // 科目ID→科目名解決（マッピングがあれば使用、なければIDそのまま）
   const resolveAccount = (id: string | null | undefined): string | null => {
     if (!id) return null
@@ -224,15 +150,16 @@ function sortJournals(
 
     switch (column) {
       case 'display_order':
-        aVal = a.display_order
-        bVal = b.display_order
+        aVal = isAiJournal(a) ? a.display_order : 90000
+        bVal = isAiJournal(b) ? b.display_order : 90000
         break
       case 'has_photo':
-        aVal = a.document_id ? 1 : 0
-        bVal = b.document_id ? 1 : 0
+        aVal = isAiJournal(a) && a.document_id ? 1 : 0
+        bVal = isAiJournal(b) && b.document_id ? 1 : 0
         break
       case 'staff_notes': {
-        const hasNotes = (j: JournalRow): number => {
+        const hasNotes = (j: JournalListRow): number => {
+          if (isMfJournal(j)) return 0
           if (!j.staff_notes) return 0
           return Object.values(j.staff_notes).some((n: { enabled: boolean }) => n.enabled) ? 1 : 0
         }
@@ -241,11 +168,12 @@ function sortJournals(
         break
       }
       case 'past_journal':
-        aVal = allJournalIds.indexOf(a.journalId) < 25 ? 1 : 0
-        bVal = allJournalIds.indexOf(b.journalId) < 25 ? 1 : 0
+        aVal = isAiJournal(a) ? (allJournalIds.indexOf(a.journalId) < 25 ? 1 : 0) : 0
+        bVal = isAiJournal(b) ? (allJournalIds.indexOf(b.journalId) < 25 ? 1 : 0) : 0
         break
       case 'requires_action': {
-        const getNeedWeight = (j: JournalRow): number => {
+        const getNeedWeight = (j: JournalListRow): number => {
+          if (isMfJournal(j)) return 0
           if (!j.staff_notes) return 0
           let w = 0
           const sn = j.staff_notes as Record<string, { enabled: boolean }>
@@ -260,12 +188,12 @@ function sortJournals(
         break
       }
       case 'label_type':
-        aVal = a.labels.join(',')
-        bVal = b.labels.join(',')
+        aVal = getRowLabels(a).join(',')
+        bVal = getRowLabels(b).join(',')
         break
       case 'warning':
-        aVal = getWarningWeight(a.labels)
-        bVal = getWarningWeight(b.labels)
+        aVal = getWarningWeight(getRowLabels(a))
+        bVal = getWarningWeight(getRowLabels(b))
         break
       case 'rule': {
         const getRuleWeight = (labels: string[]) => {
@@ -273,17 +201,17 @@ function sortJournals(
           if (labels.includes('RULE_AVAILABLE')) return 1
           return 0
         }
-        aVal = getRuleWeight(a.labels)
-        bVal = getRuleWeight(b.labels)
+        aVal = getRuleWeight(getRowLabels(a))
+        bVal = getRuleWeight(getRowLabels(b))
         break
       }
       case 'is_credit_card_payment':
-        aVal = a.is_credit_card_payment ? 1 : 0
-        bVal = b.is_credit_card_payment ? 1 : 0
+        aVal = isAiJournal(a) && a.is_credit_card_payment ? 1 : 0
+        bVal = isAiJournal(b) && b.is_credit_card_payment ? 1 : 0
         break
       case 'tax_rate':
-        aVal = a.labels.includes('MULTI_TAX_RATE') ? 1 : 0
-        bVal = b.labels.includes('MULTI_TAX_RATE') ? 1 : 0
+        aVal = getRowLabels(a).includes('MULTI_TAX_RATE') ? 1 : 0
+        bVal = getRowLabels(b).includes('MULTI_TAX_RATE') ? 1 : 0
         break
       case 'memo':
         aVal = a.memo ? 1 : 0
@@ -295,8 +223,8 @@ function sortJournals(
           if (labels.includes('INVOICE_NOT_QUALIFIED')) return 1
           return 0
         }
-        aVal = getInvoiceWeight(a.labels)
-        bVal = getInvoiceWeight(b.labels)
+        aVal = getInvoiceWeight(getRowLabels(a))
+        bVal = getInvoiceWeight(getRowLabels(b))
         break
       }
       case 'voucher_date':
@@ -390,11 +318,11 @@ function sortJournals(
 // ────────────────────────────────────────────
 
 function searchJournals(
-  result: JournalRow[],
+  result: JournalListRow[],
   query: string,
   accountMap?: Record<string, string>,
   taxMap?: Record<string, string>,
-): JournalRow[] {
+): JournalListRow[] {
   const q = query.trim().toLowerCase()
   if (!q) return result
   // accountId/taxCategoryId → 表示名に変換（マップがあれば）
@@ -410,7 +338,7 @@ function searchJournals(
     const fields = [
       j.voucher_date ?? '',
       j.description ?? '',
-      // accountId + 解決済み名前、taxCategoryId + 解決済み名前の両方を検索対象に含める
+      // 借方・貸方エントリの科目・補助・税区分・金額（共通フィールド）
       ...(j.debit_entries ?? []).flatMap(e => [
         e.account ?? '', resolveAccount(e.account),
         e.sub_account ?? '',
@@ -424,7 +352,8 @@ function searchJournals(
         String(e.amount ?? ''),
       ]),
       j.memo ?? '',
-      j.voucher_type ?? '',
+      // 通常仕訳固有フィールド（証票意味）
+      ...(isAiJournal(j) ? [j.voucher_type ?? ''] : []),
     ]
     return fields.some(f => f.toLowerCase().includes(q))
   })
@@ -435,7 +364,7 @@ function searchJournals(
 // ────────────────────────────────────────────
 
 function filterJournals(
-  result: JournalRow[],
+  result: JournalListRow[],
   opts: {
     showUnexported: boolean
     showExported: boolean
@@ -443,11 +372,13 @@ function filterJournals(
     showTrashed: boolean
     voucherFilter?: string
   }
-): JournalRow[] {
+): JournalListRow[] {
   return result.filter(journal => {
-    // 過去仕訳CSV行はステータスフィルタの対象外（showPastCsvの判断は結合段階で完了）
-    if (journal.journalId.startsWith('past-csv-')) return true
+    // 過去仕訳（MFインポート/CSV）はステータスフィルタの対象外
+    // （showPastCsvの判断は結合段階で完了済み）
+    if (isMfJournal(journal)) return true
 
+    // 以下は通常仕訳のみの処理
     // ゴミ箱フィルタ（AND条件: OFFならtrashed非表示）
     if (journal.deleted_at !== null && !opts.showTrashed) return false
 
@@ -473,8 +404,8 @@ function filterJournals(
 
 export function getJournalList(clientId: string, query: JournalListQuery): JournalListResponse {
   // 1. 通常仕訳の取得（デフォルト日付ソート）
-  const rawJournals = getJournals(clientId) as JournalRow[]
-  let result = [...rawJournals].sort((a, b) => {
+  const rawJournals = getJournals(clientId) as JournalListRow[]
+  let result: JournalListRow[] = [...rawJournals].sort((a, b) => {
     return (
       new Date(a.voucher_date ?? '9999-12-31').getTime() -
       new Date(b.voucher_date ?? '9999-12-31').getTime()
@@ -482,13 +413,12 @@ export function getJournalList(clientId: string, query: JournalListQuery): Journ
   })
 
   // 元の仕訳IDリスト（past_journalソート用）
-  const allJournalIds = rawJournals.map(j => j.journalId)
+  const allJournalIds = rawJournals.map(j => isAiJournal(j) ? j.journalId : '')
 
-  // 2. 過去仕訳CSVの結合（ソート前）
+  // 2. 過去仕訳（MFインポート/CSV）の結合（偽装なし、そのまま追加）
   if (query.showPastCsv) {
     const confirmed = getConfirmedJournals(clientId)
-    const pastRows = confirmed.map((cj, idx) => confirmedToJournalRow(cj, idx, clientId))
-    result.push(...pastRows)
+    result.push(...confirmed)
   }
 
   // 3. カラムソート

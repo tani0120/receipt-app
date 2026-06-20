@@ -540,6 +540,7 @@ app.post('/sync-all', async (c) => {
         mfSubId: s.id,
         name: s.name,
         mfTaxId: s.tax_id,
+        taxCategoryId: mfTaxIdToMasterId.get(s.tax_id),
         searchKey: s.search_key,
       }))
     }
@@ -973,6 +974,7 @@ app.post('/import-client-accounts', async (c) => {
         mfSubId: s.id,
         name: s.name,
         mfTaxId: s.tax_id,
+        taxCategoryId: mfTaxIdToMasterId.get(s.tax_id),
         searchKey: s.search_key,
       }))
     }

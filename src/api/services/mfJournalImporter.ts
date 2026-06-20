@@ -204,9 +204,9 @@ async function convertSide(
 
 function inferDirection(mfJournal: MfMcpJournal): 'expense' | 'income' | 'transfer' {
   if (mfJournal.branches.length === 0) return 'expense'
-  const firstDebitAccount = mfJournal.branches[0]?.debitor.account_name ?? ''
+  const firstDebitAccount = mfJournal.branches[0]?.debitor?.account_name ?? ''
   if (/売上|収入|受取/.test(firstDebitAccount)) return 'income'
-  const firstCreditAccount = mfJournal.branches[0]?.creditor.account_name ?? ''
+  const firstCreditAccount = mfJournal.branches[0]?.creditor?.account_name ?? ''
   const bsKeywords = /現金|預金|銀行|当座|普通|定期|貯金|売掛|買掛|未払|未収|前受|前払|借入|貸付/
   if (bsKeywords.test(firstDebitAccount) && bsKeywords.test(firstCreditAccount)) return 'transfer'
   return 'expense'
@@ -232,32 +232,29 @@ function validateMfJournal(mfJournal: MfMcpJournal): ImportIssue | null {
     }
   }
   // 金額チェック
+  // MF複合仕訳(N:M): N≠Mの場合、短い側のbranch.debitor/creditorがnull（パディング）
+  // 片方nullは正常。両方nullはエラー。
   for (const branch of mfJournal.branches) {
-    for (const side of [branch.debitor, branch.creditor]) {
-      if (!side) {
-        return {
-          severity: 'error', type: 'IMPORT_AMOUNT_INVALID', mfNumber: mfJournal.number,
-          message: `MF#${mfJournal.number}: 仕訳行の借方/貸方がnull`,
-        }
+    if (!branch.debitor && !branch.creditor) {
+      return {
+        severity: 'error', type: 'IMPORT_AMOUNT_INVALID', mfNumber: mfJournal.number,
+        message: `MF#${mfJournal.number}: 仕訳行の借方・貸方が両方null`,
       }
+    }
+    // 非null側のみ金額・科目名チェック
+    for (const side of [branch.debitor, branch.creditor]) {
+      if (!side) continue // N:M複合仕訳のパディング（正常）
       if (side.value === 0 || side.value < 0 || !Number.isFinite(side.value)) {
         return {
           severity: 'error', type: 'IMPORT_AMOUNT_INVALID', mfNumber: mfJournal.number,
           message: `MF#${mfJournal.number}: 金額不正（${side.value}）科目: ${side.account_name}`,
         }
       }
-    }
-    // 科目名空
-    if (!branch.debitor.account_name) {
-      return {
-        severity: 'error', type: 'IMPORT_ACCOUNT_MISSING', mfNumber: mfJournal.number,
-        message: `MF#${mfJournal.number}: 借方科目名が空`,
-      }
-    }
-    if (!branch.creditor.account_name) {
-      return {
-        severity: 'error', type: 'IMPORT_ACCOUNT_MISSING', mfNumber: mfJournal.number,
-        message: `MF#${mfJournal.number}: 貸方科目名が空`,
+      if (!side.account_name) {
+        return {
+          severity: 'error', type: 'IMPORT_ACCOUNT_MISSING', mfNumber: mfJournal.number,
+          message: `MF#${mfJournal.number}: 科目名が空`,
+        }
       }
     }
   }
@@ -331,15 +328,20 @@ export async function prepareMfImport(
     }
 
     // 変換
+    // MF複合仕訳(N:M): debitor/creditorの一方がnullのbranchはパディング。非null側のみ取り込む。
     const debitEntries: ConfirmedJournalEntry[] = []
     const creditEntries: ConfirmedJournalEntry[] = []
     for (const branch of mfJournal.branches) {
-      debitEntries.push(await convertSide(branch.debitor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive, suffix, existingAccountIds, existingTaxIds, newAccounts, isExempt, exemptDefaultTaxId))
-      creditEntries.push(await convertSide(branch.creditor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive, suffix, existingAccountIds, existingTaxIds, newAccounts, isExempt, exemptDefaultTaxId))
+      if (branch.debitor) {
+        debitEntries.push(await convertSide(branch.debitor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive, suffix, existingAccountIds, existingTaxIds, newAccounts, isExempt, exemptDefaultTaxId))
+      }
+      if (branch.creditor) {
+        creditEntries.push(await convertSide(branch.creditor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive, suffix, existingAccountIds, existingTaxIds, newAccounts, isExempt, exemptDefaultTaxId))
+      }
     }
 
     const description = mfJournal.branches[0]?.remark || mfJournal.memo || ''
-    const vendorName = mfJournal.branches[0]?.debitor.trade_partner_name ?? null
+    const vendorName = mfJournal.branches[0]?.debitor?.trade_partner_name ?? null
     const matchKey = normalizeVendorName(description) ?? ''
 
     converted.push({

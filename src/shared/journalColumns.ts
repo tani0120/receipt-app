@@ -23,6 +23,7 @@ export const journalColumns: JournalColumn[] = [
   // --- 操作 ---
   { key: "select", label: "選", width: "w-6", defaultPx: 24, type: "checkbox" },
   { key: "no", label: "No.", width: "w-8", defaultPx: 32, type: "index", sortKey: "display_order" },
+  { key: "importedAt", label: "取込日", width: "w-14", defaultPx: 56, type: "component" },
 
   // --- 特殊描画（component型） ---
   { key: "photo", label: "写真", width: "w-12", defaultPx: 28, type: "component", sortKey: "has_photo" },
@@ -34,9 +35,11 @@ export const journalColumns: JournalColumn[] = [
   { key: "labelType", label: "証票", width: "w-12", defaultPx: 49, type: "component", sortKey: "label_type" },
   { key: "warning", label: "警告", width: "w-12", defaultPx: 45, type: "component", sortKey: "warning" },
   { key: "creditCardPayment", label: "クレ払い", width: "w-10", defaultPx: 33, type: "component", sortKey: "is_credit_card_payment" },
-  { key: "taxRate", label: "軽減", width: "w-8", defaultPx: 24, type: "component", sortKey: "tax_rate" },
+  { key: "taxRate", label: "軽減混在", width: "w-8", defaultPx: 24, type: "component", sortKey: "tax_rate" },
   { key: "memo", label: "証票メモ", width: "w-8", defaultPx: 32, type: "component", sortKey: "memo" },
+  { key: "mfMemo", label: "MFメモ", width: "w-8", defaultPx: 32, type: "component" },
   { key: "invoice", label: "適格", width: "w-10", defaultPx: 40, type: "component", sortKey: "invoice" },
+  { key: "closingEntry", label: "決算整理", width: "w-8", defaultPx: 32, type: "component" },
 
   // --- データ（journal-level: text型） ---
   { key: "voucher_type", label: "証票意味", width: "w-16", defaultPx: 64, type: "voucher-type-dropdown", sortKey: "voucher_type" },

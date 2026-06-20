@@ -33,7 +33,7 @@
           >
           <!-- 「過去出力済を表示」廃止: 出力済みはダウンロード履歴画面で確認。仕訳一覧に混在表示しない -->
           <label class="flex items-center gap-1 cursor-pointer"
-            ><input type="checkbox" v-model="showPastCsv" class="w-2.5 h-2.5" />過去仕訳CSV（MFインポート）</label
+            ><input type="checkbox" v-model="showPastCsv" class="w-2.5 h-2.5" />取込仕訳（MCP取込 / CSV取込）</label
           >
           <label class="flex items-center gap-1 cursor-pointer"
             ><input
@@ -481,7 +481,7 @@
                 ]"
               >
                 <input
-                  v-if="rowIndex === 0"
+                  v-if="rowIndex === 0 && !journal._isPastJournal"
                   type="checkbox"
                   class="w-2.5 h-2.5 cursor-pointer"
                   :checked="selectedIds.has(journal.journalId)"
@@ -508,12 +508,33 @@
                 ></div>
               </template>
 
+              <!-- 取込日（過去仕訳のみ: imported_at表示） -->
+              <template v-else-if="col.key === 'importedAt'">
+                <div
+                  v-if="rowIndex === 0"
+                  :style="colWidthStyle(col)"
+                  :class="[
+                    colWidthClass(col),
+                    'p-0.5 flex items-center justify-center border-r border-gray-200 text-[8px] text-gray-500',
+                  ]"
+                >
+                  <span v-if="journal._isPastJournal && journal.imported_at">{{
+                    formatDate(journal.imported_at.slice(0, 10))
+                  }}</span>
+                </div>
+                <div
+                  v-else
+                  :style="colWidthStyle(col)"
+                  :class="[colWidthClass(col), 'border-r border-gray-200']"
+                ></div>
+              </template>
+
               <!-- component型（col.key別に既存ロジック維持） -->
               <template v-else-if="col.type === 'component'">
                 <!-- 写真 -->
                 <template v-if="col.key === 'photo'">
                   <div
-                    v-if="rowIndex === 0"
+                    v-if="rowIndex === 0 && !journal._isPastJournal"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -538,7 +559,7 @@
                 <!-- 根拠資料（紐づけありなら即画像、なしなら検索モーダル） -->
                 <template v-else-if="col.key === 'supportingDoc'">
                   <div
-                    v-if="rowIndex === 0"
+                    v-if="rowIndex === 0 && !journal._isPastJournal"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -551,9 +572,8 @@
                       class="fa-solid fa-paperclip text-[10px] text-amber-600 cursor-pointer hover:text-amber-800 hover:scale-125 transition-all"
                       :title="UI_MSG.ツールチップ_根拠資料あり"
                       @click="
-                        previewSupportingImage(
-                          supportingMatchMap.get(journal.journalId)?.[0] ?? { previewUrl: '' },
-                        )
+                        modalImageUrl = supportingMatchMap.get(journal.journalId)?.[0]?.previewUrl ?? null;
+                        isModalPinned = true;
                       "
                     ></i>
                     <!-- 紐づけなし: グレー → クリックで検索モーダル -->
@@ -574,7 +594,7 @@
                 <!-- 過去仕訳 -->
                 <template v-else-if="col.key === 'pastJournal'">
                   <div
-                    v-if="rowIndex === 0"
+                    v-if="rowIndex === 0 && !journal._isPastJournal"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -600,7 +620,7 @@
                 <!-- コメント（staff_notesベース: ホバーでモーダル表示、クリックで固定） -->
                 <template v-else-if="col.key === 'comment'">
                   <div
-                    v-if="rowIndex === 0"
+                    v-if="rowIndex === 0 && !journal._isPastJournal"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -632,7 +652,7 @@
                 <!-- 要対応（4FAアイコン + ホバーポップアップ） -->
                 <template v-else-if="col.key === 'needAction'">
                   <div
-                    v-if="rowIndex === 0"
+                    v-if="rowIndex === 0 && !journal._isPastJournal"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -712,7 +732,7 @@
                 <!-- 証票 -->
                 <template v-else-if="col.key === 'labelType'">
                   <div
-                    v-if="rowIndex === 0"
+                    v-if="rowIndex === 0 && !journal._isPastJournal"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -740,7 +760,7 @@
                 <!-- 警告（STREAMED風: 赤△！統一、JS制御ツールチップ） -->
                 <template v-else-if="col.key === 'warning'">
                   <div
-                    v-if="rowIndex === 0"
+                    v-if="rowIndex === 0 && !journal._isPastJournal"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -748,7 +768,7 @@
                     ]"
                   >
                     <span
-                      v-if="journal.labels.some((l) => warningLabelMap[l])"
+                      v-if="journal.labels.some((l: string) => warningLabelMap[l])"
                       class="relative inline-flex items-center"
                     >
                       <i
@@ -758,9 +778,9 @@
                         @click.stop="openWarningConfirmModal(journal)"
                       ></i>
                       <span
-                        v-if="journal.labels.filter((l) => warningLabelMap[l]).length >= 2"
+                        v-if="journal.labels.filter((l: string) => warningLabelMap[l]).length >= 2"
                         class="absolute -top-1.5 -right-2 bg-red-500 text-white text-[7px] font-bold rounded-full w-3 h-3 flex items-center justify-center"
-                        >{{ journal.labels.filter((l) => warningLabelMap[l]).length }}</span
+                        >{{ journal.labels.filter((l: string) => warningLabelMap[l]).length }}</span
                       >
                     </span>
                   </div>
@@ -774,7 +794,7 @@
                 <!-- 学習 -->
                 <template v-else-if="col.key === 'rule'">
                   <div
-                    v-if="rowIndex === 0"
+                    v-if="rowIndex === 0 && !journal._isPastJournal"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -804,7 +824,7 @@
                 <!-- クレ払い -->
                 <template v-else-if="col.key === 'creditCardPayment'">
                   <div
-                    v-if="rowIndex === 0"
+                    v-if="rowIndex === 0 && !journal._isPastJournal"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -829,7 +849,7 @@
                 <!-- 軽減 -->
                 <template v-else-if="col.key === 'taxRate'">
                   <div
-                    v-if="rowIndex === 0"
+                    v-if="rowIndex === 0 && !journal._isPastJournal"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -849,7 +869,7 @@
                   ></div>
                 </template>
 
-                <!-- 証票メモ（journal.memo truthy判定、アイコンのみ） -->
+                <!-- 証票メモ（通常仕訳のみ: journal.memo truthy判定、アイコンのみ） -->
                 <template v-else-if="col.key === 'memo'">
                   <div
                     v-if="rowIndex === 0"
@@ -860,7 +880,7 @@
                     ]"
                   >
                     <i
-                      v-if="journal.memo"
+                      v-if="!journal._isPastJournal && journal.memo"
                       class="fa-solid fa-pencil text-[10px] text-gray-600 cursor-default"
                       @mouseenter="showTooltip($event, TIP_MEMO_EXISTS)"
                       @mouseleave="hideTooltip()"
@@ -873,7 +893,31 @@
                   ></div>
                 </template>
 
-                <!-- 適格 -->
+                <!-- MFメモ（過去仕訳のみ: MF仕訳メモをツールチップで表示） -->
+                <template v-else-if="col.key === 'mfMemo'">
+                  <div
+                    v-if="rowIndex === 0"
+                    :style="colWidthStyle(col)"
+                    :class="[
+                      colWidthClass(col),
+                      'p-0.5 flex items-center justify-center border-r border-gray-200',
+                    ]"
+                  >
+                    <i
+                      v-if="journal._isPastJournal && journal.memo"
+                      class="fa-solid fa-note-sticky text-[10px] text-blue-500 cursor-pointer"
+                      @mouseenter="showTooltip($event, journal.memo)"
+                      @mouseleave="hideTooltip()"
+                    ></i>
+                  </div>
+                  <div
+                    v-else
+                    :style="colWidthStyle(col)"
+                    :class="[colWidthClass(col), 'border-r border-gray-200']"
+                  ></div>
+                </template>
+
+                <!-- 適格（3値: 適/非/外） -->
                 <template v-else-if="col.key === 'invoice'">
                   <div
                     v-if="rowIndex === 0"
@@ -881,9 +925,10 @@
                     :class="[
                       colWidthClass(col),
                       'p-0.5 flex items-center justify-center border-r border-gray-200 relative',
-                      journal.status !== 'exported' ? 'jl-editable' : '',
+                      !journal._isPastJournal && journal.status !== 'exported' ? 'jl-editable' : '',
                     ]"
                     @dblclick.stop="
+                      !journal._isPastJournal &&
                       startCellEdit(
                         journal.journalId,
                         rowIndex,
@@ -896,7 +941,7 @@
                       )
                     "
                   >
-                    <template v-if="isEditing(journal.journalId, rowIndex, 'invoice')">
+                    <template v-if="!journal._isPastJournal && isEditing(journal.journalId, rowIndex, 'invoice')">
                       <select
                         class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0"
                         style="height: 100%; min-height: 0; line-height: 1"
@@ -913,7 +958,7 @@
                     <template v-else>
                       <span
                         v-if="journal.labels.includes('INVOICE_QUALIFIED')"
-                        class="text-green-600 text-sm font-bold cursor-pointer"
+                        class="text-green-600 text-[9px] font-bold cursor-pointer"
                         @mouseenter="
                           showTooltip(
                             $event,
@@ -923,16 +968,48 @@
                           )
                         "
                         @mouseleave="hideTooltip()"
-                        >◯</span
+                        >適</span
                       >
                       <span
                         v-else-if="journal.labels.includes('INVOICE_NOT_QUALIFIED')"
-                        class="text-red-600 text-sm font-bold cursor-pointer"
+                        class="text-red-600 text-[9px] font-bold cursor-pointer"
                         @mouseenter="showTooltip($event, TIP_NOT_QUALIFIED)"
                         @mouseleave="hideTooltip()"
-                        >✕</span
+                        >非</span
+                      >
+                      <span
+                        v-else
+                        class="text-gray-400 text-[9px] cursor-default"
+                        @mouseenter="showTooltip($event, 'インボイス対象外')"
+                        @mouseleave="hideTooltip()"
+                        >外</span
                       >
                     </template>
+                  </div>
+                  <div
+                    v-else
+                    :style="colWidthStyle(col)"
+                    :class="[colWidthClass(col), 'border-r border-gray-200']"
+                  ></div>
+                </template>
+
+                <!-- 決算整理（過去仕訳のみ: is_closing_entry=trueで「決」表示） -->
+                <template v-else-if="col.key === 'closingEntry'">
+                  <div
+                    v-if="rowIndex === 0"
+                    :style="colWidthStyle(col)"
+                    :class="[
+                      colWidthClass(col),
+                      'p-0.5 flex items-center justify-center border-r border-gray-200',
+                    ]"
+                  >
+                    <span
+                      v-if="journal._isPastJournal && journal.is_closing_entry"
+                      class="text-[9px] font-bold text-purple-600 bg-purple-50 px-1 rounded"
+                      @mouseenter="showTooltip($event, '決算整理仕訳')"
+                      @mouseleave="hideTooltip()"
+                      >決</span
+                    >
                   </div>
                   <div
                     v-else
@@ -944,7 +1021,7 @@
 
               <!-- voucher-type-dropdown型（証票意味: journal-levelデータ、ダブルクリック→ドロップダウン） -->
               <template v-else-if="col.type === 'voucher-type-dropdown'">
-                <template v-if="rowIndex === 0">
+                <template v-if="rowIndex === 0 && !journal._isPastJournal">
                   <div
                     :data-drag-col="col.key"
                     :data-drag-row="rowIndex"
@@ -970,13 +1047,8 @@
                         class="inline-edit-input w-full text-[9px] bg-white border border-blue-400 rounded outline-none px-0.5 py-0"
                         v-model="editingValue"
                         @change="
-                          journal.voucher_type = editingValue;
-                          journal.is_read = true;
-                          syncWarningLabels(journal);
                           updateJournalField(journal.journalId, {
-                            voucher_type: journal.voucher_type,
-                            is_read: true,
-                            labels: [...journal.labels],
+                            voucher_type: editingValue,
                           });
                           editingCell = null;
                         "
@@ -1008,7 +1080,7 @@
                   :class="[
                     colWidthClass(col),
                     'p-0.5 relative border-r border-gray-200 text-[10px]',
-                    hasEntry(row, col.key) && journal.status !== 'exported' ? 'jl-editable' : '',
+                    hasEntry(row, col.key) && !journal._isPastJournal && journal.status !== 'exported' ? 'jl-editable' : '',
                     isDragOver(journalIndex, rowIndex, col.key)
                       ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
                       : '',
@@ -1022,7 +1094,7 @@
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                   ]"
                   @dblclick.stop="
-                    hasEntry(row, col.key) &&
+                    !journal._isPastJournal && hasEntry(row, col.key) &&
                     (startCellEdit(
                       journal.journalId,
                       rowIndex,
@@ -1153,7 +1225,7 @@
                     :class="[
                       colWidthClass(col),
                       'p-0.5 flex items-center border-r border-gray-200 relative',
-                      journal.status !== 'exported' ? 'jl-editable' : '',
+                      !journal._isPastJournal && journal.status !== 'exported' ? 'jl-editable' : '',
                       col.key === 'voucher_date' ? 'justify-center text-[8px]' : '',
                       isDragOver(journalIndex, rowIndex, col.key)
                         ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
@@ -1165,6 +1237,7 @@
                       isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                     ]"
                     @dblclick.stop="
+                      !journal._isPastJournal &&
                       startCellEdit(journal.journalId, rowIndex, col.key, getValue(journal, col.key))
                     "
                     @mousedown="startCellDrag(col.key, getValue(journal, col.key), $event)"
@@ -1232,7 +1305,7 @@
                   :class="[
                     colWidthClass(col),
                     'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative',
-                    hasEntry(row, col.key) && journal.status !== 'exported' ? 'jl-editable' : '',
+                    hasEntry(row, col.key) && !journal._isPastJournal && journal.status !== 'exported' ? 'jl-editable' : '',
                     isDragOver(journalIndex, rowIndex, col.key)
                       ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
                       : '',
@@ -1246,7 +1319,7 @@
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                   ]"
                   @dblclick.stop="
-                    hasEntry(row, col.key) &&
+                    !journal._isPastJournal && hasEntry(row, col.key) &&
                     startCellEdit(journal.journalId, rowIndex, col.key, getValue(row, col.key))
                   "
                   @mousedown="
@@ -1392,7 +1465,7 @@
                   :class="[
                     colWidthClass(col),
                     'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px]',
-                    hasEntry(row, col.key) && journal.status !== 'exported' ? 'jl-editable' : '',
+                    hasEntry(row, col.key) && !journal._isPastJournal && journal.status !== 'exported' ? 'jl-editable' : '',
                     col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '',
                     getWarningCellClass(
                       journal,
@@ -1406,7 +1479,7 @@
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                   ]"
                   @dblclick.stop="
-                    hasEntry(row, col.key) &&
+                    !journal._isPastJournal && hasEntry(row, col.key) &&
                     startCellEdit(journal.journalId, rowIndex, col.key, getValue(row, col.key))
                   "
                   @mousedown="
@@ -1441,8 +1514,9 @@
                 :style="colWidthStyle(col)"
                 :class="[colWidthClass(col), 'p-0.5 flex items-center justify-center relative']"
               >
-                <!-- 💡 ヒントアイコン（全行表示） -->
+                <!-- 💡 ヒントアイコン（canShowHintで制御） -->
                 <span
+                  v-if="canShowHint(journal)"
                   class="text-amber-400 hover:text-amber-600 cursor-pointer text-xs"
                   :title="UI_MSG.ツールチップ_ヒント"
                   @click.stop="openHintModal(journal)"
@@ -1452,7 +1526,7 @@
 
                 <!-- ドロップダウンメニュー（w-44固定、拡張対応） -->
                 <div
-                  v-if="rowIndex === 0 && openDropdownId === journal.journalId"
+                  v-if="rowIndex === 0 && openDropdownId === journal.journalId && !journal._isPastJournal"
                   class="absolute right-full top-0 z-50 w-44 bg-white border border-gray-300 rounded shadow-lg text-[10px] whitespace-nowrap"
                   @click.stop
                 >
@@ -1645,293 +1719,20 @@
       </select>
     </div>
 
-    <!-- 画像モーダル（Teleportでbody直下に移動、ナビバーより前面に表示） -->
-    <Teleport to="body">
-      <div
-        v-if="modalImageUrl"
-        class="fixed inset-0 z-40 pointer-events-none"
-        @click="hideImageModal"
-      ></div>
-      <div
-        v-if="modalImageUrl"
-        ref="imageModalRef"
-        :style="{
-          top: imageModalPos.top + 'px',
-          left: imageModalPos.left + 'px',
-          zIndex: imageModalZ,
-        }"
-        class="fixed bg-white rounded-lg shadow-2xl flex flex-col pointer-events-auto overflow-auto cursor-move w-[300px] h-[400px]"
-        style="resize: both; min-width: 200px; min-height: 200px"
-        @mousedown="modalDrag(startImageDrag, $event)"
-      >
-        <!-- ドラッグハンドル（ヘッダー） -->
-        <div
-          class="bg-blue-100 px-3 py-1.5 flex justify-between items-center cursor-move rounded-t-lg select-none"
-          @mousedown="startImageDrag"
-        >
-          <span class="text-xs font-bold text-gray-900"
-            >画像プレビュー <span class="font-normal text-amber-600">※移動できます</span></span
-          >
-          <button @click="closeModal" class="text-gray-500 hover:text-gray-700">
-            <i class="fa-solid fa-xmark text-sm"></i>
-          </button>
-        </div>
-        <!-- ツールバー -->
-        <div class="flex items-center gap-1 px-2 py-1 bg-gray-100 border-b border-gray-200">
-          <button
-            @click.stop="rotationAngle = (rotationAngle + 90) % 360"
-            class="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            :title="UI_MSG.ツールチップ_回転"
-          >
-            <i class="fa-solid fa-rotate-right text-xs"></i>
-          </button>
-          <button
-            @click.stop="zoomIn"
-            class="bg-green-500 hover:bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            :title="UI_MSG.ツールチップ_拡大"
-          >
-            <i class="fa-solid fa-magnifying-glass-plus text-xs"></i>
-          </button>
-          <button
-            @click.stop="zoomOut"
-            class="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            :title="UI_MSG.ツールチップ_縮小"
-          >
-            <i class="fa-solid fa-magnifying-glass-minus text-xs"></i>
-          </button>
-        </div>
-        <!-- 画像表示エリア -->
-        <div class="flex-1 flex items-center justify-center overflow-hidden rounded-b-lg">
-          <template v-if="modalImageUrl?.toLowerCase().endsWith('.pdf')">
-            <iframe :src="modalImageUrl" class="w-full h-full border-0"></iframe>
-          </template>
-          <img
-            v-else
-            :src="modalImageUrl"
-            :alt="UI_MSG.画像ALT_領収書"
-            :style="{
-              transform: `translate(${offsetX}px, ${offsetY}px) rotate(${rotationAngle}deg) scale(${zoomScale})`,
-              imageOrientation: 'from-image',
-              cursor: isDragging ? 'grabbing' : 'grab',
-            }"
-            class="max-w-full max-h-full object-contain transition-transform duration-300"
-            @load="onImageLoad"
-            @mousedown="onMouseDown"
-            @mousemove="onMouseMove"
-            @mouseup="onMouseUp"
-            @mouseleave="onMouseUp"
-          />
-        </div>
-        <!-- リサイズグリップインジケーター -->
-        <div
-          class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none"
-          style="
-            background: linear-gradient(
-              135deg,
-              transparent 50%,
-              rgba(59, 130, 246, 0.5) 50%,
-              rgba(59, 130, 246, 0.7) 100%
-            );
-            border-radius: 0 0 0.5rem 0;
-          "
-        ></div>
-      </div>
-    </Teleport>
+    <!-- 画像モーダル（子コンポーネントに分離） -->
+    <ImageModal
+      :imageUrl="modalImageUrl"
+      @close="closeModal"
+      @hide="hideImageModal"
+    />
 
-    <!-- 根拠資料検索モーダル（ドラッグ移動・リサイズ可能） -->
-    <Teleport to="body">
-      <div
-        v-if="showSupportingSearchModal"
-        ref="supportingSearchModalRef"
-        :style="{
-          top: supportingSearchPos.top + 'px',
-          left: supportingSearchPos.left + 'px',
-          zIndex: supportingSearchZ,
-        }"
-        class="fixed bg-white rounded-lg shadow-2xl flex flex-col pointer-events-auto overflow-hidden cursor-move w-[400px] h-[500px] border-2 border-amber-300"
-        style="resize: both; min-width: 300px; min-height: 300px"
-        @mousedown="modalDrag(startSupportingSearchDrag, $event)"
-        @click.stop
-      >
-        <!-- ヘッダー（ドラッグハンドル） -->
-        <div
-          class="bg-linear-to-r from-amber-100 to-orange-50 px-3 py-1.5 flex justify-between items-center cursor-move rounded-t-lg select-none border-b border-amber-200"
-          @mousedown="startSupportingSearchDrag"
-        >
-          <span class="text-xs font-bold text-amber-900 flex items-center gap-2">
-            <i class="fa-solid fa-paperclip text-amber-600"></i>
-            根拠資料検索 <span class="font-normal text-amber-600">※移動できます</span>
-          </span>
-          <button @click="closeSupportingSearchModal" class="text-gray-500 hover:text-gray-700">
-            <i class="fa-solid fa-xmark text-sm"></i>
-          </button>
-        </div>
-        <!-- 検索バー -->
-        <div class="px-3 py-2 border-b border-gray-100 bg-gray-50">
-          <div class="relative">
-            <i
-              class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"
-            ></i>
-            <input
-              ref="supportingSearchInputRef"
-              v-model="supportingSearchQuery"
-              type="text"
-              :placeholder="UI_MSG.日付金額検索"
-              class="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
-              @input="debounceSupportingSearch"
-              @mousedown.stop
-            />
-          </div>
-          <div class="flex items-center justify-between mt-1 text-[9px] text-gray-500">
-            <span>スペース区切りAND検索</span>
-            <span v-if="supportingSearchResults.length > 0"
-              >{{ supportingSearchResults.length }}件</span
-            >
-          </div>
-        </div>
-        <!-- 検索結果 -->
-        <div class="flex-1 overflow-y-auto p-2" @mousedown.stop>
-          <div
-            v-if="isSupportingSearching"
-            class="flex items-center justify-center py-8 text-gray-400"
-          >
-            <i class="fa-solid fa-spinner fa-spin mr-2"></i>検索中...
-          </div>
-          <div
-            v-else-if="supportingSearchResults.length === 0 && supportingSearchDone"
-            class="text-center py-8 text-gray-400"
-          >
-            <i class="fa-solid fa-inbox text-2xl mb-2 block"></i>
-            <span class="text-[11px]">{{
-              supportingSearchQuery ? UI_MSG.検索結果_該当なし : UI_MSG.検索結果_未登録
-            }}</span>
-          </div>
-          <div v-else class="grid grid-cols-2 gap-1.5">
-            <div
-              v-for="item in supportingSearchResults"
-              :key="item.id"
-              class="border border-gray-200 rounded p-2 hover:bg-amber-50 hover:border-amber-300 cursor-pointer transition-colors"
-              @click="previewSupportingImage(item)"
-            >
-              <div
-                class="w-full h-16 bg-gray-100 rounded mb-1.5 overflow-hidden flex items-center justify-center"
-              >
-                <img
-                  v-if="item.previewUrl"
-                  :src="item.previewUrl"
-                  :alt="item.fileName"
-                  class="max-w-full max-h-full object-contain"
-                  @error="($event.target as HTMLImageElement).style.display = 'none'"
-                />
-                <i v-else class="fa-solid fa-file-image text-xl text-gray-300"></i>
-              </div>
-              <div class="text-[9px] space-y-0.5">
-                <div class="font-bold text-gray-800 truncate" :title="item.fileName">
-                  {{ item.fileName }}
-                </div>
-                <div v-if="item.date" class="text-gray-600">
-                  <i class="fa-solid fa-calendar text-[7px] mr-0.5 text-amber-500"></i
-                  >{{ item.date }}
-                </div>
-                <div v-if="item.amount != null" class="text-gray-600">
-                  <i class="fa-solid fa-yen-sign text-[7px] mr-0.5 text-green-500"></i
-                  >{{ Number(item.amount).toLocaleString() }}
-                </div>
-                <div v-if="item.vendor" class="text-gray-600 truncate">
-                  <i class="fa-solid fa-building text-[7px] mr-0.5 text-blue-500"></i
-                  >{{ item.vendor }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- リサイズグリップ -->
-        <div
-          class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none"
-          style="
-            background: linear-gradient(
-              135deg,
-              transparent 50%,
-              rgba(217, 119, 6, 0.5) 50%,
-              rgba(217, 119, 6, 0.7) 100%
-            );
-            border-radius: 0 0 0.5rem 0;
-          "
-        ></div>
-      </div>
+    <!-- 根拠資料検索モーダル（子コンポーネントに分離） -->
+    <EvidenceSearchModal
+      :visible="showSupportingSearchModal"
+      :clientId="journalClientId"
+      @close="closeSupportingSearchModal"
+    />
 
-      <!-- 根拠資料画像プレビュー（検索結果から選択時） -->
-      <div
-        v-if="supportingPreviewUrl"
-        ref="supportingImageModalRef"
-        :style="{
-          top: supportingImagePos.top + 'px',
-          left: supportingImagePos.left + 'px',
-          zIndex: supportingImageZ,
-        }"
-        class="fixed bg-white rounded-lg shadow-2xl flex flex-col pointer-events-auto overflow-auto cursor-move w-[300px] h-[400px]"
-        style="resize: both; min-width: 200px; min-height: 200px"
-        @mousedown="modalDrag(startSupportingImageDrag, $event)"
-      >
-        <div
-          class="bg-amber-100 px-3 py-1.5 flex justify-between items-center cursor-move rounded-t-lg select-none"
-          @mousedown="startSupportingImageDrag"
-        >
-          <span class="text-xs font-bold text-gray-900"
-            >根拠資料プレビュー <span class="font-normal text-amber-600">※移動できます</span></span
-          >
-          <button @click="closeSupportingPreview" class="text-gray-500 hover:text-gray-700">
-            <i class="fa-solid fa-xmark text-sm"></i>
-          </button>
-        </div>
-        <div class="flex items-center gap-1 px-2 py-1 bg-gray-100 border-b border-gray-200">
-          <button
-            @click.stop="supportingRotation = (supportingRotation + 90) % 360"
-            class="bg-amber-500 hover:bg-amber-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            :title="UI_MSG.ツールチップ_回転"
-          >
-            <i class="fa-solid fa-rotate-right text-xs"></i>
-          </button>
-          <button
-            @click.stop="supportingZoom = Math.min(supportingZoom + 0.25, 7)"
-            class="bg-green-500 hover:bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            :title="UI_MSG.ツールチップ_拡大"
-          >
-            <i class="fa-solid fa-magnifying-glass-plus text-xs"></i>
-          </button>
-          <button
-            @click.stop="supportingZoom = Math.max(supportingZoom - 0.25, 0.25)"
-            class="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow transition-colors"
-            :title="UI_MSG.ツールチップ_縮小"
-          >
-            <i class="fa-solid fa-magnifying-glass-minus text-xs"></i>
-          </button>
-        </div>
-        <div class="flex-1 flex items-center justify-center overflow-hidden rounded-b-lg">
-          <img
-            :src="supportingPreviewUrl"
-            :alt="UI_MSG.画像ALT_根拠資料"
-            :style="{
-              transform: `rotate(${supportingRotation}deg) scale(${supportingZoom})`,
-              imageOrientation: 'from-image',
-            }"
-            class="max-w-full max-h-full object-contain transition-transform duration-300"
-          />
-        </div>
-        <div
-          class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none"
-          style="
-            background: linear-gradient(
-              135deg,
-              transparent 50%,
-              rgba(217, 119, 6, 0.5) 50%,
-              rgba(217, 119, 6, 0.7) 100%
-            );
-            border-radius: 0 0 0.5rem 0;
-          "
-        ></div>
-      </div>
-    </Teleport>
 
     <!-- 過去仕訳検索モーダル（Teleportでbody直下に移動） -->
     <Teleport to="body">
@@ -2248,352 +2049,28 @@
       </div>
     </Teleport>
 
-    <!-- ────── ヒントモーダル（ドラッグ可能） ────── -->
-    <Teleport to="body">
-      <div
-        v-if="hintModalJournal"
-        ref="hintModalRef"
-        :style="{
-          top: hintModalPos.top + 'px',
-          left: hintModalPos.left + 'px',
-          zIndex: hintModalZ,
-        }"
-        class="fixed bg-white rounded-xl shadow-2xl w-[520px] max-h-[80vh] overflow-y-auto border border-gray-200 cursor-move"
-        style="resize: both; min-width: 360px; min-height: 200px"
-        @click.stop
-        @mousedown="modalDrag(startHintDrag, $event)"
-      >
-        <!-- ヘッダー（ドラッグハンドル） -->
-        <div
-          class="bg-linear-to-r from-amber-50 to-amber-100 px-5 py-3 border-b flex items-center justify-between rounded-t-xl cursor-move select-none"
-          @mousedown="startHintDrag"
-        >
-          <div class="flex items-center gap-2">
-            <span class="text-lg">💡</span>
-            <h3 class="text-sm font-bold text-gray-800">ヒント</h3>
-            <span class="text-[10px] text-gray-500 bg-white px-2 py-0.5 rounded-full border"
-              >No.{{ hintModalJournalIndex + 1 }}</span
-            >
-            <span class="text-[10px] text-amber-600">※移動できます</span>
-          </div>
-          <button
-            @click="hintModalJournal = null"
-            class="text-gray-400 hover:text-gray-700 text-lg"
-          >
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
+    <!-- ヒントモーダル（子コンポーネントに分離） -->
+    <HintModal
+      :journal="hintModalJournal"
+      :journalIndex="hintModalJournalIndex"
+      :clientId="journalClientId"
+      @close="hintModalJournal = null"
+      @apply-suggestion="applyHintSuggestion"
+    />
 
-        <!-- 仕訳概要 -->
-        <div class="px-5 py-3 bg-gray-50 border-b text-xs">
-          <div class="flex gap-4">
-            <span><b>{{ UI_MSG.ラベル_日付 }}</b> {{ hintModalJournal.voucher_date || LABEL_UNSET }}</span>
-            <span><b>{{ UI_MSG.ラベル_摘要 }}</b> {{ hintModalJournal.description || LABEL_UNSET }}</span>
-            <span><b>{{ UI_MSG.ラベル_証票意味 }}</b> {{ hintModalJournal.voucher_type || LABEL_UNSET }}</span>
-          </div>
-        </div>
 
-        <!-- ローディング表示（API待ち） -->
-        <div
-          v-if="hintLoading"
-          class="px-5 py-8 flex items-center justify-center gap-2 text-xs text-gray-500"
-        >
-          <i class="fa-solid fa-spinner fa-spin"></i>
-          <span>ヒントを取得中...</span>
-        </div>
+    <!-- コメントモーダル（子コンポーネントに分離） -->
+    <CommentModal
+      :journal="commentModalJournal"
+      :author="commentModalAuthor"
+      :staffList="staffList"
+      @close="closeCommentModal"
+      @toggle-note="toggleStaffNoteInModal"
+      @update-author="(v) => commentModalAuthor = v"
+      @mouseenter="cancelHoverCloseCommentModal"
+      @mouseleave="scheduleHoverCloseCommentModal"
+    />
 
-        <!-- ① バリデーション結果 -->
-        <div v-else class="px-5 py-3 border-b">
-          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
-            📋 バリデーション結果
-          </h4>
-          <div
-            v-if="hintValidations.length === 0"
-            class="flex items-center gap-2 text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2"
-          >
-            <span class="text-base">✅</span>
-            <span>この仕訳に問題は検出されませんでした</span>
-          </div>
-          <div v-else class="space-y-1.5">
-            <div
-              v-for="(v, vi) in hintValidations"
-              :key="vi"
-              :class="[
-                'flex items-start gap-2 text-xs rounded-lg px-3 py-2',
-                v.level === 'error' ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-800',
-              ]"
-            >
-              <span class="text-base shrink-0">{{ v.level === "error" ? "❌" : "⚠️" }}</span>
-              <span>{{ v.message }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- ② 修正候補（ルールベース） -->
-        <div class="px-5 py-3 border-b">
-          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">💡 修正候補</h4>
-          <div
-            v-if="hintSuggestions.length === 0"
-            class="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2"
-          >
-            修正候補はありません
-          </div>
-          <div v-else class="space-y-2">
-            <div
-              v-for="(s, si) in hintSuggestions"
-              :key="si"
-              class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs"
-            >
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                  <span class="text-blue-600 font-bold shrink-0">{{
-                    s.side === "debit" ? SIDE_DEBIT : SIDE_CREDIT
-                  }}</span>
-                  <span class="text-gray-500 shrink-0">{{ s.field }}:</span>
-                  <span class="text-red-500 line-through shrink-0">{{ s.currentLabel }}</span>
-                  <span class="text-gray-400 shrink-0">→</span>
-                  <!-- 択一候補: ドロップダウン -->
-                  <select
-                    v-if="s.alternatives.length > 1"
-                    :value="s.selectedValue"
-                    @change="
-                      onHintAlternativeChange(si, ($event.target as HTMLSelectElement).value)
-                    "
-                    class="border border-blue-300 rounded px-1.5 py-0.5 text-xs bg-white text-green-700 font-bold max-w-[200px] cursor-pointer"
-                    @click.stop
-                    @mousedown.stop
-                  >
-                    <option v-for="alt in s.alternatives" :key="alt.value" :value="alt.value">
-                      {{ alt.label }}
-                    </option>
-                  </select>
-                  <!-- 単一候補: テキスト表示 -->
-                  <span v-else class="text-green-700 font-bold">{{ s.selectedLabel }}</span>
-                </div>
-                <button
-                  @click="applyHintSuggestion(s)"
-                  class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-bold transition-colors shrink-0 ml-2"
-                >
-                  適用
-                </button>
-              </div>
-            </div>
-            <!-- 全て適用ボタン -->
-            <button
-              v-if="hintSuggestions.length > 1"
-              @click="
-                hintSuggestions.forEach((s) => applyHintSuggestion(s));
-                hintModalJournal = null;
-              "
-              class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-xs font-bold transition-colors mt-1"
-            >
-              ✨ 全て適用（各行の選択値を適用）
-            </button>
-          </div>
-        </div>
-
-        <!-- ③ AI推論（工事中） -->
-        <div class="px-5 py-3 border-b">
-          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">🤖 AI推論</h4>
-          <div
-            class="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-3 text-center flex items-center justify-center gap-2"
-          >
-            <span class="text-base">🚧</span>
-            <span>工事中 — Gemini連携による高精度推論を準備中です</span>
-          </div>
-        </div>
-
-        <!-- ④ 過去の類似仕訳（工事中） -->
-        <div class="px-5 py-3">
-          <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
-            📚 過去の類似仕訳
-          </h4>
-          <div
-            class="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-3 text-center flex items-center justify-center gap-2"
-          >
-            <span class="text-base">🚧</span>
-            <span>工事中 — DB接続後に有効化予定</span>
-          </div>
-        </div>
-
-        <!-- フッター -->
-        <div class="px-5 py-3 bg-gray-50 border-t rounded-b-xl flex justify-end">
-          <button
-            @click="hintModalJournal = null"
-            class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-1.5 rounded text-xs font-bold transition-colors"
-          >
-            閉じる
-          </button>
-        </div>
-
-        <!-- リサイズグリップ -->
-        <div
-          class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none"
-          style="
-            background: linear-gradient(
-              135deg,
-              transparent 50%,
-              rgba(217, 119, 6, 0.4) 50%,
-              rgba(217, 119, 6, 0.6) 100%
-            );
-            border-radius: 0 0 0.75rem 0;
-          "
-        ></div>
-      </div>
-    </Teleport>
-  </div>
-  <!-- コメントモーダル（Teleportでbody直下に移動） -->
-  <Teleport to="body">
-    <div
-      v-if="commentModalJournalId"
-      ref="commentModalRef"
-      class="fixed z-90"
-      :style="{
-        left: commentModalPos.left + 'px',
-        top: commentModalPos.top + 'px',
-        zIndex: commentModalZ,
-      }"
-      @mouseenter="cancelHoverCloseCommentModal()"
-      @mouseleave="scheduleHoverCloseCommentModal()"
-    >
-      <div
-        class="bg-white rounded-lg shadow-2xl border-2 border-blue-300 w-[480px] overflow-auto flex flex-col cursor-move"
-        style="resize: both; min-width: 200px; min-height: 150px"
-        @click.stop
-        @mousedown="modalDrag(startCommentDrag, $event)"
-      >
-        <!-- ドラッグ可能ヘッダー -->
-        <div
-          @mousedown="startCommentDrag"
-          class="bg-blue-100 px-3 py-2 rounded-t-lg cursor-move flex items-center justify-between select-none"
-        >
-          <span class="text-xs font-bold text-blue-800">
-            <i class="fa-solid fa-comment-dots mr-1"></i>
-            コメントを記入 ※移動できます
-          </span>
-          <button @click="closeCommentModal()" class="text-gray-500 hover:text-red-500 text-sm">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-
-        <!-- モーダル本体 -->
-        <div class="p-3 max-h-[500px] overflow-y-auto text-xs">
-          <!-- ヒントテキスト -->
-          <div
-            class="text-xs text-gray-500 mb-3 bg-gray-50 rounded px-2 py-1 border border-gray-200"
-          >
-            <i class="fa-solid fa-circle-info text-blue-400 mr-1"></i>
-            ✓を入れるとテキスト入力欄が表示されます
-          </div>
-          <!-- ◆顧問先に確認 -->
-          <div class="font-bold text-gray-800 mb-2 text-[11px]">◆ 顧問先に確認</div>
-          <template v-for="noteKey in ['NEED_DOCUMENT', 'NEED_INFO'] as const" :key="noteKey">
-            <div class="mb-3 ml-2">
-              <label class="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  :checked="getStaffNoteEnabled(commentModalJournal!, noteKey)"
-                  @change="toggleStaffNoteInModal(noteKey)"
-                  class="rounded border-gray-300"
-                />
-                <i
-                  :class="[
-                    'fa-solid',
-                    staffNoteConfig[noteKey].icon,
-                    staffNoteConfig[noteKey].activeColor,
-                    'text-[11px]',
-                  ]"
-                ></i>
-                <span class="text-gray-800">{{ staffNoteConfig[noteKey].label }}</span>
-              </label>
-              <div
-                v-if="getStaffNoteEnabled(commentModalJournal!, noteKey)"
-                class="ml-5 mt-1 space-y-1"
-              >
-                <textarea
-                  v-model="commentModalJournal!.staff_notes![noteKey].text"
-                  class="w-full border border-gray-300 rounded p-1.5 text-[10px] resize-none"
-                  rows="2"
-                  :placeholder="UI_MSG.テキスト入力"
-                ></textarea>
-                <input
-                  v-model="commentModalJournal!.staff_notes![noteKey].chatworkUrl"
-                  type="text"
-                  class="w-full border border-gray-300 rounded p-1 text-[10px]"
-                  :placeholder="UI_MSG.ChatworkURL"
-                />
-              </div>
-            </div>
-          </template>
-
-          <!-- ◆社内で確認 -->
-          <div class="font-bold text-gray-800 mb-2 mt-3 text-[11px]">◆ 社内で確認</div>
-          <template v-for="noteKey in ['REMINDER', 'NEED_CONSULT'] as const" :key="noteKey">
-            <div class="mb-3 ml-2">
-              <label class="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  :checked="getStaffNoteEnabled(commentModalJournal!, noteKey)"
-                  @change="toggleStaffNoteInModal(noteKey)"
-                  class="rounded border-gray-300"
-                />
-                <i
-                  :class="[
-                    'fa-solid',
-                    staffNoteConfig[noteKey].icon,
-                    staffNoteConfig[noteKey].activeColor,
-                    'text-[11px]',
-                  ]"
-                ></i>
-                <span class="text-gray-800">{{ staffNoteConfig[noteKey].label }}</span>
-              </label>
-              <div
-                v-if="getStaffNoteEnabled(commentModalJournal!, noteKey)"
-                class="ml-5 mt-1 space-y-1"
-              >
-                <textarea
-                  v-model="commentModalJournal!.staff_notes![noteKey].text"
-                  class="w-full border border-gray-300 rounded p-1.5 text-[10px] resize-none"
-                  rows="2"
-                  :placeholder="UI_MSG.テキスト入力"
-                ></textarea>
-                <input
-                  v-model="commentModalJournal!.staff_notes![noteKey].chatworkUrl"
-                  type="text"
-                  class="w-full border border-gray-300 rounded p-1 text-[10px]"
-                  :placeholder="UI_MSG.ChatworkURL"
-                />
-              </div>
-            </div>
-          </template>
-
-          <!-- 担当名 -->
-          <div class="border-t border-gray-200 pt-2 mt-2">
-            <label class="text-[10px] text-gray-600 font-bold">担当名</label>
-            <select
-              v-model="commentModalAuthor"
-              class="ml-2 border border-gray-300 rounded p-1 text-[10px]"
-            >
-              <option v-for="staff in staffList" :key="staff" :value="staff">{{ staff }}</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <!-- リサイズグリップインジケーター -->
-      <div
-        class="absolute bottom-0 right-0 w-5 h-5 pointer-events-none"
-        style="
-          background: linear-gradient(
-            135deg,
-            transparent 50%,
-            rgba(59, 130, 246, 0.5) 50%,
-            rgba(59, 130, 246, 0.7) 100%
-          );
-          border-radius: 0 0 0.5rem 0;
-        "
-      ></div>
-    </div>
-  </Teleport>
 
   <!-- 税区分矛盾モーダル（非ブロッキング: 右上フローティング） -->
   <div
@@ -2736,6 +2213,11 @@ import { useAccountSettings } from "@/features/account-settings/composables/useA
 import { useClients } from "@/features/client-management/composables/useClients";
 import { NULL_DISPLAY_UNKNOWN } from "@/shared/field-nullable-spec";
 import { useDraggable } from "@/composables/useDraggable";
+import ImageModal from "@/components/ImageModal.vue";
+import EvidenceSearchModal from "@/components/EvidenceSearchModal.vue";
+import HintModal from "@/components/HintModal.vue";
+import CommentModal from "@/components/CommentModal.vue";
+import { modalDrag } from "@/utils/modalDrag";
 import { useCurrentUser } from "@/composables/useCurrentUser";
 import { journalColumns, getDefaultColumnWidths } from "@/shared/journalColumns";
 import { useColumnResize } from "@/composables/useColumnResize";
@@ -2768,6 +2250,7 @@ import {
   FIELD_ACCOUNT, FIELD_TAX_CATEGORY, FIELD_AMOUNT, FIELD_AMOUNT_DIFF,
   SIDE_DEBIT, SIDE_CREDIT, LABEL_UNSET,
 } from '@/constants/validationMessages';
+import type { HintSuggestion } from '@/types/hintTypes';
 
 /** 勘定科目選択肢—API取得のマスタ科目から動的生成 */
 const { masterAccounts: masterAccountList } = useAccountMaster();
@@ -2798,7 +2281,7 @@ const route = useRoute();
 const journalClientId = computed(() => (route.params.clientId as string) || "default");
 // const { journals: localJournals } = useJournals(journalClientId); // ← 廃止
 // Phase C: journalsはshallowRefで管理。API経由で取得。
-const journals = shallowRef<JournalPhase5Mock[]>([]);
+const journals = shallowRef<any[]>([]);
 
 // ────── 顧問先連動（勘定科目・税区分フィルタ） ──────
 const { clients, currentClient } = useClients();
@@ -2912,6 +2395,7 @@ const taxMismatchSummary = computed(() => {
 
   const countMap = new Map<string, number>();
   for (const j of journals.value) {
+    if ((j as any)._isPastJournal) continue; // 過去仕訳は税区分不整合カウント対象外
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (isTaxCategoryInvalid(e.tax_category_id)) {
         countMap.set(e.tax_category_id!, (countMap.get(e.tax_category_id!) || 0) + 1);
@@ -2940,6 +2424,7 @@ function fixAllTaxMismatches() {
   // 修正対象の仕訳IDを収集
   const targetJournalIds = new Set<string>();
   for (const j of journals.value) {
+    if ((j as any)._isPastJournal) continue; // 過去仕訳は修正対象外
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (e && isTaxCategoryInvalid(e.tax_category_id)) {
         targetJournalIds.add(j.journalId);
@@ -2956,6 +2441,7 @@ function fixAllTaxMismatches() {
   // 修正を適用
   for (const j of journals.value) {
     if (!targetJournalIds.has(j.journalId)) continue;
+    if ((j as any)._isPastJournal) continue; // 過去仕訳は税区分修正対象外
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (!e || !isTaxCategoryInvalid(e.tax_category_id)) continue;
       e.tax_category_id = resolveValidTaxCategoryForMode(e.tax_category_id ?? "", taxMode, clientSettings.taxCategories.value);
@@ -3460,22 +2946,14 @@ function selectAccountItem(
     entry.sub_account = null;
   }
 
-  journal.is_read = true;
-  // 操作者追跡
-  journal.updated_by = currentStaffId.value ?? null;
-  journal.updated_at = new Date().toISOString();
   editingCell.value = null;
 
   // 勘定科目選択確定後、3大グループバリデーションを実行
   runAccountValidation(journal);
-  // Phase C: PATCH送信（entry変更 + is_read + labels）
+  // updateJournalFieldで一括処理（autoMeta + syncWarningLabels + PATCH送信）
   updateJournalField(journal.journalId, {
     debit_entries: journal.debit_entries,
     credit_entries: journal.credit_entries,
-    is_read: true,
-    updated_by: journal.updated_by,
-    updated_at: journal.updated_at,
-    labels: [...journal.labels],
   });
   // Undo記録: 変更後スナップショット
   if (beforeSnap) {
@@ -3485,10 +2963,9 @@ function selectAccountItem(
 }
 
 /** 税区分アイテム選択: 税区分セット + 既読化 + 編集モード解除 */
-function selectTaxItem(journal: JournalPhase5Mock, taxId: string): void {
+function selectTaxItem(_journal: JournalPhase5Mock, taxId: string): void {
   editingValue.value = taxId;
   commitCellEdit();
-  journal.is_read = true;
 }
 
 // ────── 検索付きコンボボックス: blur関数 ──────
@@ -3507,7 +2984,7 @@ function blurAccountEdit(journal: JournalPhase5Mock, row: CombinedRow, colKey: s
 }
 
 /** 税区分blur: 入力値が有効な税区分名なら確定、そうでなければキャンセル */
-function blurTaxEdit(journal: JournalPhase5Mock): void {
+function blurTaxEdit(_journal: JournalPhase5Mock): void {
   if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
   const val = editingValue.value;
   const settings = clientSettings;
@@ -3518,7 +2995,6 @@ function blurTaxEdit(journal: JournalPhase5Mock): void {
   if (matched) {
     editingValue.value = matched.taxCategoryId; // IDで保存
     commitCellEdit();
-    journal.is_read = true;
     return;
   }
   editingCell.value = null;
@@ -3564,10 +3040,9 @@ function filterSubAccountCandidates(
 }
 
 /** 補助科目をドロップダウンから選択 */
-function selectSubAccountItem(journal: JournalPhase5Mock, name: string): void {
+function selectSubAccountItem(_journal: JournalPhase5Mock, name: string): void {
   editingValue.value = name;
   commitCellEdit();
-  journal.is_read = true;
 }
 
 /** 補助科目blur: 入力値がそのまま確定（手入力もOK） */
@@ -3661,8 +3136,9 @@ function startCellEdit(
   colKey: string,
   currentValue: unknown,
 ): void {
-  // 確定仕訳（past-csv-*）はセル編集不可（外部取込の確定データ、編集しても永続化されない）
-  if (journalId.startsWith('past-csv-')) return;
+  // 過去仕訳はセル編集不可（読み取り専用）
+  const journal = paginatedJournals.value.find((j) => j.journalId === journalId);
+  if (!assertEditableJournal(journal, 'startCellEdit')) return;
   editingCell.value = { journalId, rowIndex, colKey };
   let val = currentValue != null ? String(currentValue) : "";
   // 勘定科目列の場合: IDを日本語名に変換して検索欄に表示
@@ -3693,6 +3169,10 @@ function commitCellEdit(): void {
     editingCell.value = null;
     return;
   }
+  if (!assertEditableJournal(journal, 'commitCellEdit')) {
+    editingCell.value = null;
+    return;
+  }
 
   const val = editingValue.value;
 
@@ -3701,29 +3181,30 @@ function commitCellEdit(): void {
 
   // 適格列の特殊処理
   if (e.colKey === "invoice") {
-    const labels = journal.labels;
-    const idx1 = labels.indexOf("INVOICE_QUALIFIED");
-    const idx2 = labels.indexOf("INVOICE_NOT_QUALIFIED");
-    if (idx1 >= 0) labels.splice(idx1, 1);
-    if (idx2 >= 0) labels.splice(idx2, 1);
-    if (val === "◯") labels.push("INVOICE_QUALIFIED");
-    else if (val === "✕") labels.push("INVOICE_NOT_QUALIFIED");
-    journal.is_read = true;
-    // Phase C: PATCH送信（labels + is_read）
-    updateJournalField(e.journalId, {
-      labels: [...journal.labels],
-      is_read: true,
-    });
+    const newLabels = journal.labels.filter(
+      (l: string) => l !== "INVOICE_QUALIFIED" && l !== "INVOICE_NOT_QUALIFIED",
+    );
+    if (val === "◯") newLabels.push("INVOICE_QUALIFIED");
+    else if (val === "✕") newLabels.push("INVOICE_NOT_QUALIFIED");
     editingCell.value = null;
+    updateJournalField(e.journalId, { labels: newLabels });
+    // Undo記録
+    if (beforeSnap) {
+      const afterSnap = snapshotJournal(journal.journalId);
+      if (afterSnap) pushUndo([beforeSnap], [afterSnap]);
+    }
     return;
   }
+
+  // patch構築（直接変更せずupdateJournalFieldに委譲）
+  const patch: Record<string, unknown> = {};
 
   // journal-level（keyにドットなし）
   if (!e.colKey.includes(".")) {
     if (e.colKey === "voucher_date") {
-      journal.voucher_date = parseDateInput(val);
+      patch.voucher_date = parseDateInput(val);
     } else if (e.colKey === "description") {
-      journal.description = val;
+      patch.description = val;
     }
   } else {
     // entry-level（debit.amount → row.debit.amount）
@@ -3740,29 +3221,16 @@ function commitCellEdit(): void {
         }
       }
     }
+    // entry変更後、entries全体をpatchに含める
+    patch.debit_entries = journal.debit_entries;
+    patch.credit_entries = journal.credit_entries;
   }
-  journal.is_read = true;
-  // 操作者追跡: 仕訳編集時にupdated_by/updated_atを記録
-  journal.updated_by = currentStaffId.value ?? null;
-  journal.updated_at = new Date().toISOString();
+
   editingCell.value = null;
-  // 変更4: セル編集確定時に警告列バリデーション（段階A: 双方向同期）を実行
-  syncWarningLabels(journal);
-  // Phase C: PATCH送信（変更フィールド + syncWarningLabelsで変更されたlabels）
-  const _patch: Record<string, unknown> = {
-    is_read: true,
-    updated_by: journal.updated_by,
-    updated_at: journal.updated_at,
-    labels: [...journal.labels],
-  };
-  if (!e.colKey.includes(".")) {
-    if (e.colKey === "voucher_date") _patch.voucher_date = journal.voucher_date;
-    else if (e.colKey === "description") _patch.description = journal.description;
-  } else {
-    _patch.debit_entries = journal.debit_entries;
-    _patch.credit_entries = journal.credit_entries;
-  }
-  updateJournalField(e.journalId, _patch);
+
+  // updateJournalFieldで一括処理（楽観的UI更新 + autoMeta + syncWarningLabels + PATCH送信）
+  updateJournalField(e.journalId, patch, { silent: false });
+
   // Undo記録: 変更後スナップショット
   if (beforeSnap) {
     const afterSnap = snapshotJournal(journal.journalId);
@@ -3893,8 +3361,18 @@ function endFillDrag(): void {
   for (const idx of targetJournalIndices) {
     const journal = paginatedJournals.value[idx];
     if (!journal) continue;
+    if ((journal as any)._isPastJournal) continue; // 取込仕訳はフィル対象外
     applyFillValue(journal, colKey, sourceValue);
-    syncWarningLabels(journal);
+    // updateJournalFieldで一括処理（autoMeta + syncWarningLabels + PATCH送信）
+    const fillPatch: Record<string, unknown> = {};
+    if (!colKey.includes('.')) {
+      if (colKey === 'voucher_date') fillPatch.voucher_date = journal.voucher_date;
+      else if (colKey === 'description') fillPatch.description = journal.description;
+    } else {
+      fillPatch.debit_entries = journal.debit_entries;
+      fillPatch.credit_entries = journal.credit_entries;
+    }
+    updateJournalField(journal.journalId, fillPatch);
   }
   // Undo記録: 変更後スナップショット
   if (beforeSnaps.length > 0) {
@@ -3912,6 +3390,7 @@ function applyFillValue(
   value: unknown,
   targetRowIndex?: number,
 ): void {
+  if (!assertEditableJournal(journal, 'applyFillValue')) return;
   if (!colKey.includes(".")) {
     if (colKey === "voucher_date") {
       journal.voucher_date = value as string | null;
@@ -4088,7 +3567,7 @@ function endCellDrag(): void {
     isDragColCompatible(cellDrag.value.sourceColKey, cellDrag.value.dropColKey)
   ) {
     const journal = paginatedJournals.value[cellDrag.value.dropJournalIndex];
-    if (journal && journal.status !== "exported" && journal.deleted_at === null) {
+    if (journal && assertEditableJournal(journal, 'endCellDrag') && journal.status !== "exported" && journal.deleted_at === null) {
       // Undo記録: 変更前スナップショット
       const beforeSnap = snapshotJournal(journal.journalId);
       applyFillValue(
@@ -4097,7 +3576,17 @@ function endCellDrag(): void {
         cellDrag.value.sourceValue,
         cellDrag.value.dropRowIndex ?? undefined,
       );
-      syncWarningLabels(journal);
+      // updateJournalFieldで一括処理（autoMeta + syncWarningLabels + PATCH送信）
+      const dragPatch: Record<string, unknown> = {};
+      const dColKey = cellDrag.value.dropColKey;
+      if (!dColKey.includes('.')) {
+        if (dColKey === 'voucher_date') dragPatch.voucher_date = journal.voucher_date;
+        else if (dColKey === 'description') dragPatch.description = journal.description;
+      } else {
+        dragPatch.debit_entries = journal.debit_entries;
+        dragPatch.credit_entries = journal.credit_entries;
+      }
+      updateJournalField(journal.journalId, dragPatch);
       // Undo記録: 変更後スナップショット
       if (beforeSnap) {
         const afterSnap = snapshotJournal(journal.journalId);
@@ -4268,6 +3757,7 @@ function hideTooltip() {
 
 /** B2: 警告モーダル — 確認済みとして警告をdismissalに記録 */
 function openWarningConfirmModal(journal: JournalPhase5Mock) {
+  if (!assertEditableJournal(journal, 'openWarningConfirmModal')) return;
   const warningKeys = Object.keys(warningLabelMap);
   const warnings = journal.labels.filter((l) => warningKeys.includes(l));
   if (warnings.length === 0) return;
@@ -4279,21 +3769,19 @@ function openWarningConfirmModal(journal: JournalPhase5Mock) {
     message: `${UI_MSG.警告確認して出力}${warningText}${UI_MSG.警告確認して出力接尾}`,
     onConfirm: () => {
       // warning_dismissalsに追加（syncWarningLabelsCore再実行時もスキップされる）
-      if (!journal.warning_dismissals) journal.warning_dismissals = [];
+      const newDismissals = [...(journal.warning_dismissals || [])];
       for (const w of warnings) {
-        if (!journal.warning_dismissals.includes(w)) {
-          journal.warning_dismissals.push(w);
-        }
+        if (!newDismissals.includes(w)) newDismissals.push(w);
       }
       // labelsから警告ラベルとEXPORT_EXCLUDEを除去
-      journal.labels = journal.labels.filter(
+      const newLabels = journal.labels.filter(
         (l) => !warningKeys.includes(l) && l !== "EXPORT_EXCLUDE",
       );
-      // Phase C: PATCH送信
+      // updateJournalFieldで一括処理
       updateJournalField(journal.journalId, {
-        warning_dismissals: [...journal.warning_dismissals!],
-        labels: [...journal.labels],
-      });
+        warning_dismissals: newDismissals,
+        labels: newLabels,
+      }, { syncWarnings: false });
     },
   };
 }
@@ -4303,81 +3791,31 @@ const errorLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level ==
 const warnLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level === "warn");
 
 // ────── ヒントモーダル ──────
-type HintValidation = { level: "error" | "warn"; message: string };
-type HintAlternative = { value: string; label: string };
-type HintSuggestion = {
-  side: "debit" | "credit";
-  field: string;
-  currentValue: string | null;
-  currentLabel: string;
-  selectedValue: string;
-  selectedLabel: string;
-  alternatives: HintAlternative[]; // ドロップダウン全候補（勘定科目のみ）
-  entryIndex: number;
-};
+// 型定義は types/hintTypes.ts に抽出済み
+// fetchHintsFromAPI / hintValidations / hintSuggestions / hintLoading / onHintAlternativeChange は HintModal.vue に移動済み
 
 const hintModalJournal = ref<JournalPhase5Mock | null>(null);
-const hintValidations = ref<HintValidation[]>([]);
-const hintSuggestions = ref<HintSuggestion[]>([]);
-const hintLoading = ref(false);
 
 const hintModalJournalIndex = computed(() => {
   if (!hintModalJournal.value) return -1;
   return paginatedJournals.value.findIndex((j) => j.journalId === hintModalJournal.value!.journalId);
 });
 
-/** ヒントAPIを呼び出してvalidations/suggestionsを更新 */
-async function fetchHintsFromAPI(journalId: string): Promise<void> {
-  hintLoading.value = true;
-  try {
-    // Phase 2: サーバー側マスタから科目・税区分を取得するため、POSTボディ不要
-    const res = await fetch(
-      `/api/journals/${encodeURIComponent(journalClientId.value)}/${encodeURIComponent(journalId)}/hints`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
-    );
-    if (res.ok) {
-      const data = await res.json();
-      hintValidations.value = data.validations;
-      hintSuggestions.value = data.suggestions;
-    } else {
-      console.warn("[Hint API] レスポンスエラー:", res.status);
-    }
-  } catch (err) {
-    console.error("[Hint API] 通信エラー:", err);
-  } finally {
-    hintLoading.value = false;
-  }
-}
 
 async function openHintModal(journal: JournalPhase5Mock): Promise<void> {
+  if (!canShowHint(journal)) return;
   hintModalJournal.value = journal;
-  // 画面中央に配置（モーダル幅520px, 想定高さ500px）
-  hintModalPos.value = {
-    top: Math.max(50, (window.innerHeight - 500) / 2),
-    left: Math.max(50, (window.innerWidth - 520) / 2),
-  };
-  await fetchHintsFromAPI(journal.journalId);
+  // ヒント取得は HintModal.vue の watch が自動実行
 }
 
 // generateHintValidations / generateHintSuggestions は
 // API側 (api/services/journalHintService.ts) に移設済み。
-// Phase 1 Step 6-A3 (2026-05-03)
-// フロントからは fetchHintsFromAPI() 経由で呼び出す。
-
-// ★ ドロップダウン変更時のハンドラ
-function onHintAlternativeChange(suggestionIndex: number, newValue: string): void {
-  const s = hintSuggestions.value[suggestionIndex];
-  if (!s) return;
-  const alt = s.alternatives.find((a) => a.value === newValue);
-  if (alt) {
-    s.selectedValue = newValue;
-    s.selectedLabel = alt.label;
-  }
-}
+// onHintAlternativeChange は HintModal.vue に移動済み。
 
 function applyHintSuggestion(s: HintSuggestion): void {
   const journal = hintModalJournal.value;
   if (!journal) return;
+  if (!assertEditableJournal(journal, 'applyHintSuggestion')) return;
 
   const beforeSnap = snapshotJournal(journal.journalId);
 
@@ -4414,14 +3852,10 @@ function applyHintSuggestion(s: HintSuggestion): void {
     return;
   }
 
-  journal.is_read = true;
-  syncWarningLabels(journal);
-  // Phase C: PATCH送信
+  // updateJournalFieldで一括処理（autoMeta + syncWarningLabels + PATCH送信）
   updateJournalField(journal.journalId, {
     debit_entries: journal.debit_entries,
     credit_entries: journal.credit_entries,
-    is_read: true,
-    labels: [...journal.labels],
   });
 
   const afterSnap = snapshotJournal(journal.journalId);
@@ -4430,8 +3864,7 @@ function applyHintSuggestion(s: HintSuggestion): void {
     redoStack.value = [];
   }
 
-  // ヒントをAPI経由で再計算（Phase 1 Step 6-A3）
-  fetchHintsFromAPI(journal.journalId);
+  // ヒント再計算は HintModal.vue の handleApply 内で自動実行
 
   console.log(
     `[Hint] 修正適用: ${s.side} [${s.entryIndex}] ${s.field}: ${s.currentLabel} → ${s.selectedLabel}`,
@@ -4445,6 +3878,7 @@ function closeDropdown() {
 // ────── ワークフローハブ操作（レベル②ローカル状態変更） ──────
 
 function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
+  if (!assertEditableJournal(journal, 'setReadStatus')) return;
   const target = journals.value.find((j) => j.journalId === journal.journalId);
   if (!target || target.is_read === value) return; // 同じ状態なら何もしない
   closeDropdown();
@@ -4474,6 +3908,7 @@ function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
 }
 
 function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
+  if (!assertEditableJournal(journal, 'setExportExclude')) return;
   const target = journals.value.find((j) => j.journalId === journal.journalId);
   if (!target) return;
   const hasLabel = target.labels.includes("EXPORT_EXCLUDE");
@@ -4545,6 +3980,7 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
 }
 
 function trashJournal(journal: JournalPhase5Mock) {
+  if (!assertEditableJournal(journal, 'trashJournal')) return;
   // 制約: 出力済みはゴミ箱不可
   if (journal.status === "exported") {
     console.warn(`[DD] exported journal cannot be trashed: ${journal.journalId}`);
@@ -4576,6 +4012,7 @@ function trashJournal(journal: JournalPhase5Mock) {
 }
 
 function restoreJournal(journal: JournalPhase5Mock) {
+  if (!assertEditableJournal(journal, 'restoreJournal')) return;
   const target = journals.value.find((j) => j.journalId === journal.journalId);
   if (!target || target.deleted_at === null) return;
   closeDropdown();
@@ -4628,7 +4065,7 @@ function clearSelection() {
 // ────── 一括操作関数（冪等 + 0件ガード） ──────
 
 function bulkSetReadStatus(value: boolean) {
-  const all = selectedJournals.value;
+  const all = selectedJournals.value.filter((j: any) => !j._isPastJournal);
   const exportedCount = all.filter((j) => j.status === "exported").length;
   const targets = all.filter((j) => j.status !== "exported" && j.is_read !== value);
   // 0件ガード
@@ -4678,7 +4115,7 @@ function bulkSetReadStatus(value: boolean) {
 }
 
 function bulkSetExportExclude(exclude: boolean) {
-  const all = selectedJournals.value;
+  const all = selectedJournals.value.filter((j: any) => !j._isPastJournal);
   const exportedCount = all.filter((j) => j.status === "exported").length;
   const targets = all.filter((j) => {
     if (j.status === "exported") return false;
@@ -4802,7 +4239,7 @@ function showBulkCopyDialog() {
 }
 
 function showBulkTrashDialog() {
-  const all = selectedJournals.value;
+  const all = selectedJournals.value.filter((j: any) => !j._isPastJournal);
   const exportedCount = all.filter((j) => j.status === "exported").length;
   const targets = all.filter((j) => j.status !== "exported" && j.deleted_at === null);
   // 0件ガード
@@ -4871,40 +4308,12 @@ watch(journalPageSize, () => {
   journalCurrentPage.value = 1;
 });
 
-// 画像モーダル用
+// 画像モーダル用（ImageModal.vue に分離。hoveredJournalId/modalImageUrl/isModalPinned は親で管理）
 const hoveredJournalId = ref<string | null>(null);
 const modalImageUrl = ref<string | null>(null);
-const rotationAngle = ref<number>(0);
 const isModalPinned = ref<boolean>(false);
-const zoomScale = ref<number>(1);
-const baseModalWidth = ref<number>(300);
-const baseModalHeight = ref<number>(400);
 
-// 画像ドラッグ用（画像パン操作）
-const offsetX = ref<number>(0);
-const offsetY = ref<number>(0);
-const isDragging = ref<boolean>(false);
-const dragStartX = ref<number>(0);
-const dragStartY = ref<number>(0);
-
-// 画像モーダル ドラッグ移動用
-const imageModalRef = ref<HTMLElement | null>(null);
-const {
-  position: imageModalPos,
-  zIndex: imageModalZ,
-  startDrag: startImageDrag,
-} = useDraggable(imageModalRef);
-
-/** モーダル全体ドラッグ用フィルタ（フォーム要素・リサイズ領域はドラッグ除外） */
-function modalDrag(startFn: (e: MouseEvent) => void, e: MouseEvent) {
-  const t = e.target as HTMLElement;
-  if (t.closest("input, select, button, textarea, a, [contenteditable], .fill-handle")) return;
-  // 右下角のリサイズ領域（20px）をドラッグから除外
-  const el = e.currentTarget as HTMLElement;
-  const rect = el.getBoundingClientRect();
-  if (e.clientX > rect.right - 20 && e.clientY > rect.bottom - 20) return;
-  startFn(e);
-}
+// modalDrag は utils/modalDrag.ts に抽出済み（import は上部に追加済み）
 
 // 過去仕訳検索モーダル用
 const pastJournalModalRef = ref<HTMLElement | null>(null);
@@ -4914,39 +4323,14 @@ const {
   startDrag: startPastJournalDrag,
 } = useDraggable(pastJournalModalRef);
 
-// コメントモーダル用
-const commentModalRef = ref<HTMLElement | null>(null);
-const {
-  position: commentModalPos,
-  zIndex: commentModalZ,
-  startDrag: startCommentDrag,
-} = useDraggable(commentModalRef);
+// コメントモーダル用 ref/useDraggable は CommentModal.vue に移動済み
+// ヒントモーダル用 ref/useDraggable は HintModal.vue に移動済み
 
-// ヒントモーダル用
-const hintModalRef = ref<HTMLElement | null>(null);
-const {
-  position: hintModalPos,
-  zIndex: hintModalZ,
-  startDrag: startHintDrag,
-} = useDraggable(hintModalRef);
-
-// ━━━ 根拠資料検索モーダル ━━━
-const supportingSearchModalRef = ref<HTMLElement | null>(null);
-const {
-  position: supportingSearchPos,
-  zIndex: supportingSearchZ,
-  startDrag: startSupportingSearchDrag,
-} = useDraggable(supportingSearchModalRef);
-
-const supportingImageModalRef = ref<HTMLElement | null>(null);
-const {
-  position: supportingImagePos,
-  zIndex: supportingImageZ,
-  startDrag: startSupportingImageDrag,
-} = useDraggable(supportingImageModalRef);
+// ━━━ 根拠資料検索モーダル UI → EvidenceSearchModal.vue に分離済み ━━━
+// 紐づけロジック（supportingMatchMap/hasSupportingMatch/fetchSupportingMatches）はテーブル行内で使用するため親に残す
 
 const showSupportingSearchModal = ref(false);
-const supportingSearchQuery = ref("");
+
 type SupportingMetaItem = {
   id: string;
   fileName: string;
@@ -4957,17 +4341,6 @@ type SupportingMetaItem = {
   description: string | null;
   sourceType: string | null;
 };
-const supportingSearchResults = ref<SupportingMetaItem[]>([]);
-const isSupportingSearching = ref(false);
-const supportingSearchDone = ref(false);
-const supportingSearchInputRef = ref<HTMLInputElement | null>(null);
-
-// 画像プレビュー
-const supportingPreviewUrl = ref<string | null>(null);
-const supportingRotation = ref(0);
-const supportingZoom = ref(1);
-
-let supportingSearchTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ━━━ 根拠資料 自動紐づけ（API経由）━━━
 // matchScore / supportingMatchMap computed は API側に移設済み。
@@ -5011,59 +4384,13 @@ onMounted(() => {
 
 function openSupportingSearchModal() {
   showSupportingSearchModal.value = true;
-  supportingSearchQuery.value = "";
-  supportingSearchResults.value = [];
-  supportingSearchDone.value = false;
-  // 開いた直後に全件取得
-  executeSupportingSearch();
-  // フォーカス
-  nextTick(() => {
-    supportingSearchInputRef.value?.focus();
-  });
 }
 
 function closeSupportingSearchModal() {
   showSupportingSearchModal.value = false;
-  supportingSearchQuery.value = "";
-  supportingSearchResults.value = [];
 }
 
-function debounceSupportingSearch() {
-  if (supportingSearchTimer) clearTimeout(supportingSearchTimer);
-  supportingSearchTimer = setTimeout(() => {
-    executeSupportingSearch();
-  }, 300);
-}
-
-async function executeSupportingSearch() {
-  isSupportingSearching.value = true;
-  supportingSearchDone.value = false;
-  try {
-    const q = encodeURIComponent(supportingSearchQuery.value.trim());
-    const res = await fetch(
-      `/api/drive/search-supporting/${encodeURIComponent(journalClientId.value)}?q=${q}`,
-    );
-    if (res.ok) {
-      const data = (await res.json()) as { results: typeof supportingSearchResults.value };
-      supportingSearchResults.value = data.results;
-    }
-  } catch (err) {
-    console.warn("[根拠資料検索] エラー:", err);
-  } finally {
-    isSupportingSearching.value = false;
-    supportingSearchDone.value = true;
-  }
-}
-
-function previewSupportingImage(item: { previewUrl: string }) {
-  supportingPreviewUrl.value = item.previewUrl || null;
-  supportingRotation.value = 0;
-  supportingZoom.value = 1;
-}
-
-function closeSupportingPreview() {
-  supportingPreviewUrl.value = null;
-}
+// 検索実行 / プレビュー / デバウンスは EvidenceSearchModal.vue に移動済み
 
 const showPastJournalModal = ref<boolean>(false);
 const pastJournalTab = ref<"streamed" | "accounting">("streamed");
@@ -5152,8 +4479,8 @@ const filteredPastJournals = computed(() => {
   // 金額フィルタ
   if (pastJournalSearch.value.amount !== null && pastJournalSearch.value.amountCondition) {
     results = results.filter((j) => {
-      const debitTotal = j.debit_entries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
-      const creditTotal = j.credit_entries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+      const debitTotal = j.debit_entries.reduce((sum: number, e: any) => sum + (e.amount ?? 0), 0);
+      const creditTotal = j.credit_entries.reduce((sum: number, e: any) => sum + (e.amount ?? 0), 0);
       const amount = Math.max(debitTotal, creditTotal);
 
       switch (pastJournalSearch.value.amountCondition) {
@@ -5173,7 +4500,7 @@ const filteredPastJournals = computed(() => {
   if (pastJournalSearch.value.debitAccount) {
     results = results.filter((j) =>
       j.debit_entries.some(
-        (e) =>
+        (e: any) =>
           resolveAccountName(e.account) === pastJournalSearch.value.debitAccount ||
           e.account === pastJournalSearch.value.debitAccount,
       ),
@@ -5184,7 +4511,7 @@ const filteredPastJournals = computed(() => {
   if (pastJournalSearch.value.creditAccount) {
     results = results.filter((j) =>
       j.credit_entries.some(
-        (e) =>
+        (e: any) =>
           resolveAccountName(e.account) === pastJournalSearch.value.creditAccount ||
           e.account === pastJournalSearch.value.creditAccount,
       ),
@@ -5294,15 +4621,11 @@ function goToPage(page: number) {
   }
 }
 
-// baseModalWidth/baseModalHeight は画像読込時の初期サイズ記録用（CSS resize: bothで管理）
+// baseModalWidth/baseModalHeight は ImageModal.vue に移動済み
 
 function showImageModal(journalId: string, documentId: string | null) {
   hoveredJournalId.value = journalId;
   modalImageUrl.value = getDocumentImageUrl(documentId);
-  rotationAngle.value = 0; // リセット
-  zoomScale.value = 1; // ズームリセット
-  offsetX.value = 0; // 位置リセット
-  offsetY.value = 0;
 }
 
 function hideImageModal() {
@@ -5323,10 +4646,6 @@ function togglePinModal(journalId: string, documentId: string | null) {
     isModalPinned.value = true;
     hoveredJournalId.value = journalId;
     modalImageUrl.value = getDocumentImageUrl(documentId);
-    rotationAngle.value = 0;
-    zoomScale.value = 1; // ズームリセット
-    offsetX.value = 0; // 位置リセット
-    offsetY.value = 0;
   }
 }
 
@@ -5336,51 +4655,8 @@ function closeModal() {
   modalImageUrl.value = null;
 }
 
-function zoomIn() {
-  zoomScale.value = Math.min(zoomScale.value + 0.25, 7); // 最大7倍
-}
-
-function zoomOut() {
-  zoomScale.value = Math.max(zoomScale.value - 0.25, 0.5); // 最小0.5倍
-}
-
-function onImageLoad(event: Event) {
-  const img = event.target as HTMLImageElement;
-  const aspectRatio = img.naturalWidth / img.naturalHeight;
-
-  // アスペクト比に応じてモーダルの基本サイズを調整
-  if (aspectRatio > 1.2) {
-    // 横長画像
-    baseModalWidth.value = 500;
-    baseModalHeight.value = 300;
-  } else if (aspectRatio < 0.8) {
-    // 縦長画像
-    baseModalWidth.value = 300;
-    baseModalHeight.value = 500;
-  } else {
-    // 正方形に近い
-    baseModalWidth.value = 400;
-    baseModalHeight.value = 400;
-  }
-}
-
-function onMouseDown(event: MouseEvent) {
-  isDragging.value = true;
-  dragStartX.value = event.clientX - offsetX.value;
-  dragStartY.value = event.clientY - offsetY.value;
-  event.preventDefault();
-}
-
-function onMouseMove(event: MouseEvent) {
-  if (isDragging.value) {
-    offsetX.value = event.clientX - dragStartX.value;
-    offsetY.value = event.clientY - dragStartY.value;
-  }
-}
-
-function onMouseUp() {
-  isDragging.value = false;
-}
+// ────── 画像モーダル関数は ImageModal.vue に移動済み ──────
+// zoomIn/zoomOut/onImageLoad/onMouseDown/onMouseMove/onMouseUp
 
 // ────────────────────────────────────────────
 // Step 5: journals をAPI統合一覧で取得（Phase 1 Step 4のAPIを使用）
@@ -5400,14 +4676,61 @@ let _patchTimer: ReturnType<typeof setTimeout> | null = null;
  * @param journalId 更新対象の仕訳ID
  * @param patch 変更フィールドのオブジェクト
  */
-function updateJournalField(journalId: string, patch: Record<string, unknown>) {
-  // 1. 楽観的UI更新（表示中のjournalsに即反映）
-  const journal = journals.value.find((j) => j.journalId === journalId);
-  if (journal) {
-    Object.assign(journal, patch);
-    triggerRef(journals);
+/**
+ * 過去仕訳（読み取り専用）への編集操作をブロックするガード関数。
+ * 全編集系関数の入口で呼び出す。サイレント失敗を防ぐためログ出力付き。
+ * @returns true=編集可能, false=過去仕訳のためブロック
+ */
+function assertEditableJournal(journal: any, caller: string): boolean {
+  if (journal?._isPastJournal) {
+    console.warn(`[JournalGuard] ${caller}: 過去仕訳への操作をブロック (${journal.journalId})`);
+    return false;
   }
-  // 2. デバウンスキュー（journalId単位マージ）
+  return true;
+}
+
+/**
+ * 💡ヒントアイコン表示可否（意味ベースで制御）。
+ * 現在はAI仕訳のみヒントあり。将来「仕訳詳細」等に拡張する場合はここを修正。
+ */
+function canShowHint(journal: any): boolean {
+  return !journal._isPastJournal;
+}
+
+function updateJournalField(
+  journalId: string,
+  patch: Record<string, unknown>,
+  options: { syncWarnings?: boolean; silent?: boolean; autoMeta?: boolean } = {},
+) {
+  const journal = journals.value.find((j) => j.journalId === journalId);
+  if (!journal) return;
+
+  // 最終防御: 取込仕訳への書き込み禁止（全書き込みの集約点）
+  if (journal._isPastJournal) {
+    console.error(`[JournalGuard][BLOCKED] updateJournalField: 取込仕訳への書き込み試行 (${journalId})`);
+    return;
+  }
+
+  // 自動メタデータ付与（autoMeta: false で抑制可。既読状態の一括変更等で使用）
+  if (options.autoMeta !== false) {
+    if (patch.is_read === undefined) patch.is_read = true;
+    if (!patch.updated_at) patch.updated_at = new Date().toISOString();
+    if (!patch.updated_by) patch.updated_by = currentStaffId.value ?? null;
+  }
+
+  // 1. 楽観的UI更新（表示中のjournalsに即反映）
+  Object.assign(journal, patch);
+
+  // 2. syncWarningLabels自動実行（syncWarnings: false で抑制可）
+  if (options.syncWarnings !== false) {
+    syncWarningLabels(journal, options.silent ?? true);
+    // labelsが変更された可能性があるのでpatchに追加
+    patch.labels = [...journal.labels];
+  }
+
+  triggerRef(journals);
+
+  // 3. デバウンスキュー（journalId単位マージ）
   const existing = _patchQueue.get(journalId) ?? {};
   _patchQueue.set(journalId, { ...existing, ...patch });
   if (_patchTimer) clearTimeout(_patchTimer);
@@ -5429,6 +4752,41 @@ async function flushPendingPatches(): Promise<void> {
       }).catch((err) => console.error(`[updateJournalField] PATCH失敗: ${journalId}`, err)),
     ),
   );
+}
+/**
+ * 過去仕訳（ConfirmedJournal）にUI互換デフォルト値を付与する正規化関数
+ *
+ * ConfirmedJournalにはlabels/status/is_read等が存在しないため、
+ * テンプレートでの安全なアクセスのためにデフォルト値を設定する。
+ *
+ * confirmedToJournalRow()偽装との違い:
+ * - journalId: 実際のUUID（'past-csv-${idx}'ではない）
+ * - memo: 実際のメモ（'過去仕訳CSV'で潰さない）
+ * - _isPastJournal: 過去仕訳マーカー（テンプレートで描画切替に使用）
+ */
+function normalizeJournalForUI(row: any): any {
+  if (row.source === 'mf_import' || row.source === 'system') {
+    return {
+      ...row,
+      _isPastJournal: true,
+      // UI互換デフォルト値（ConfirmedJournalに存在しないフィールド）
+      labels: row.labels ?? [],
+      status: null,
+      is_read: true,
+      deleted_at: null,
+      warning_dismissals: row.warning_dismissals ?? [],
+      warning_details: row.warning_details ?? {},
+      is_credit_card_payment: false,
+      voucher_type: null,
+      document_id: null,
+      staff_notes: null,
+      display_order: 90000 + (row.mf_transaction_no ?? 0),
+      invoice_status: null,
+      rule_id: null,
+      invoice_number: null,
+    }
+  }
+  return { ...row, _isPastJournal: false }
 }
 
 /** 統合一覧APIの呼び出し（POST: 科目名マッピング付き） */
@@ -5473,7 +4831,7 @@ async function fetchJournalList() {
     const data = await res.json();
     // バージョンチェック: 新しいリクエストが発行されていたら棄却
     if (_fetchVersion !== version) return;
-    journals.value = data.journals ?? [];
+    journals.value = (data.journals ?? []).map(normalizeJournalForUI);
     _apiTotalCount.value = data.totalCount ?? 0;
     _apiTotalPages.value = data.totalPages ?? 1;
     triggerRef(journals);
@@ -5517,7 +4875,7 @@ fetchJournalList();
 /** ページネーション適用済み仕訳リスト（APIがページング済みなのでjournalsそのまま） */
 const paginatedJournals = computed(() => journals.value);
 
-const visibleIds = computed(() => journals.value.map((j) => j.journalId));
+const visibleIds = computed(() => journals.value.filter((j: any) => !j._isPastJournal).map((j) => j.journalId));
 
 const selectedJournals = computed(() =>
   journals.value.filter((j) => selectedIds.value.has(j.journalId)),
@@ -5628,7 +4986,7 @@ function getCombinedRows(journal: JournalPhase5Mock): CombinedRow[] {
  * 許可: export_exclude && deleted_at は許可（外部未出力のため）
  * フィルタ: showTrashed=ONは「追加表示型」（通常+ゴミ箱）
  */
-function getRowBackground(journal: JournalPhase5Mock): string {
+function getRowBackground(journal: any): string {
   // 優先度1: ゴミ箱 → 濃グレー+白字（最優先）
   if (journal.deleted_at !== null) {
     return "bg-gray-600 text-white";
@@ -5641,11 +4999,15 @@ function getRowBackground(journal: JournalPhase5Mock): string {
   if (journal.status === "exported") {
     return "bg-gray-200 exported-row";
   }
-  // 優先度4: 未読 → 黄色
+  // 優先度4: 過去仕訳（MFインポート） → 薄グレー
+  if (journal._isPastJournal) {
+    return "bg-gray-100";
+  }
+  // 優先度5: 未読 → 黄色
   if (!journal.is_read) {
     return "bg-yellow-100";
   }
-  // 優先度5: 通常 → 白
+  // 優先度6: 通常 → 白
   return "bg-white";
 }
 
@@ -5820,43 +5182,30 @@ function getStaffNoteChatworkUrl(journal: JournalPhase5Mock, key: StaffNoteKey):
   return journal.staff_notes?.[key]?.chatworkUrl ?? "";
 }
 
-// staff_notes → labels 同期関数
-function syncLabelsFromStaffNotes(journal: JournalPhase5Mock) {
-  const NEED_KEYS: readonly StaffNoteKey[] = STAFF_NOTE_KEYS;
-  // NEED_*系を一旦除去
-  journal.labels = journal.labels.filter((l) => !NEED_KEYS.includes(l as StaffNoteKey));
-  // enabledなものだけ追加
-  for (const key of NEED_KEYS) {
-    if (journal.staff_notes?.[key]?.enabled) {
-      journal.labels.push(key);
-    }
-  }
-}
+// staff_notes → labels 同期: toggleStaffNote / closeCommentModal / toggleStaffNoteInModal でインライン化済み
 
 function toggleStaffNote(journalId: string, key: StaffNoteKey) {
   const journal = journals.value.find((j) => j.journalId === journalId);
   if (!journal) return;
+  if (!assertEditableJournal(journal, 'toggleStaffNote')) return;
 
   // staff_notesがなければ初期化
-  if (!journal.staff_notes) {
-    journal.staff_notes = createEmptyStaffNotes();
+  const notes = journal.staff_notes ? { ...journal.staff_notes } : createEmptyStaffNotes();
+  notes[key] = { ...notes[key], enabled: !notes[key].enabled };
+
+  // labels同期（新しいnotesからlabels構築）
+  const NEED_KEYS: readonly StaffNoteKey[] = STAFF_NOTE_KEYS;
+  const newLabels = journal.labels.filter((l: string) => !NEED_KEYS.includes(l as StaffNoteKey));
+  for (const k of NEED_KEYS) {
+    if (notes[k]?.enabled) newLabels.push(k);
   }
 
-  // トグル
-  journal.staff_notes[key].enabled = !journal.staff_notes[key].enabled;
-
-  // 同期
-  syncLabelsFromStaffNotes(journal);
-
-  if (journal.staff_notes[key].enabled) {
-    journal.is_read = false; // フラグON時は未読にする
-  }
-  // Phase C: PATCH送信
+  // updateJournalFieldで一括処理
   updateJournalField(journalId, {
-    staff_notes: journal.staff_notes,
-    labels: [...journal.labels],
-    is_read: journal.is_read,
-  });
+    staff_notes: notes,
+    labels: newLabels,
+    is_read: notes[key].enabled ? false : undefined, // フラグON時は未読にする
+  }, { syncWarnings: false });
   console.log(`StaffNote toggled: ${key} = ${journal.staff_notes[key].enabled} for ${journalId}`);
 }
 
@@ -5878,10 +5227,12 @@ const commentModalJournal = computed(() => {
 function openCommentModal(journalId: string) {
   const journal = journals.value.find((j) => j.journalId === journalId);
   if (!journal) return;
+  if (!assertEditableJournal(journal, 'openCommentModal')) return;
 
   // staff_notesがなければ初期化
   if (!journal.staff_notes) {
-    journal.staff_notes = createEmptyStaffNotes();
+    // staff_notes初期化もupdateJournalField経由
+    updateJournalField(journalId, { staff_notes: createEmptyStaffNotes() }, { syncWarnings: false, autoMeta: false });
   }
 
   commentModalJournalId.value = journalId;
@@ -5889,18 +5240,27 @@ function openCommentModal(journalId: string) {
 
 function closeCommentModal() {
   if (commentModalJournal.value) {
-    commentModalJournal.value.staff_notes_author = commentModalAuthor.value;
-    syncLabelsFromStaffNotes(commentModalJournal.value);
-    // Phase C: モーダル閉じる時にまとめてPATCH送信
+    if (!assertEditableJournal(commentModalJournal.value, 'closeCommentModal')) {
+      commentModalJournalId.value = null;
+      commentModalPinned.value = false;
+      return;
+    }
+    // labels同期（notesからlabels構築）
+    const NEED_KEYS_CLOSE: readonly StaffNoteKey[] = STAFF_NOTE_KEYS;
+    const closingLabels = commentModalJournal.value.labels.filter((l: string) => !NEED_KEYS_CLOSE.includes(l as StaffNoteKey));
+    for (const k of NEED_KEYS_CLOSE) {
+      if (commentModalJournal.value.staff_notes?.[k]?.enabled) closingLabels.push(k);
+    }
+    // updateJournalFieldで一括処理（モーダル閉じる時にまとめてPATCH送信）
     updateJournalField(commentModalJournal.value.journalId, {
       staff_notes: commentModalJournal.value.staff_notes,
-      staff_notes_author: commentModalJournal.value.staff_notes_author,
-      labels: [...commentModalJournal.value.labels],
+      staff_notes_author: commentModalAuthor.value,
+      labels: closingLabels,
       memo: commentModalJournal.value.memo,
       memo_author: commentModalJournal.value.memo_author,
       memo_target: commentModalJournal.value.memo_target,
       memo_created_at: commentModalJournal.value.memo_created_at,
-    });
+    }, { syncWarnings: false });
   }
   commentModalJournalId.value = null;
   commentModalPinned.value = false;
@@ -5908,10 +5268,17 @@ function closeCommentModal() {
 
 function toggleStaffNoteInModal(key: StaffNoteKey) {
   if (!commentModalJournal.value || !commentModalJournal.value.staff_notes) return;
-  commentModalJournal.value.staff_notes[key].enabled =
-    !commentModalJournal.value.staff_notes[key].enabled;
-  // labels即時同期
-  syncLabelsFromStaffNotes(commentModalJournal.value);
+  if (!assertEditableJournal(commentModalJournal.value, 'toggleStaffNoteInModal')) return;
+  // 直接変更せずオブジェクトコピーで更新
+  const modalNotes = { ...commentModalJournal.value.staff_notes };
+  modalNotes[key] = { ...modalNotes[key], enabled: !modalNotes[key].enabled };
+  commentModalJournal.value.staff_notes = modalNotes;
+  // labels即時同期（直接変更せず再構築）
+  const NEED_KEYS_MODAL: readonly StaffNoteKey[] = STAFF_NOTE_KEYS;
+  commentModalJournal.value.labels = commentModalJournal.value.labels.filter((l: string) => !NEED_KEYS_MODAL.includes(l as StaffNoteKey));
+  for (const k of NEED_KEYS_MODAL) {
+    if (modalNotes[k]?.enabled) commentModalJournal.value.labels.push(k);
+  }
 }
 // ────── キーボードショートカット: Ctrl+Z / Ctrl+Y ──────
 function handleUndoRedoKeydown(e: KeyboardEvent): void {
