@@ -34,6 +34,7 @@ export type JournalStatusPhase5 =
 // ============================================================
 
 
+import type { StaffNoteKey } from './staff_notes'
 
 export type JournalLabelMock =
   | JournalLabel
@@ -54,10 +55,8 @@ export type JournalLabelMock =
   // --- 以下はPhase B/Cで除去予定（現在のモックで使用中） ---
 
   // 要対応（4個）— staff_notesに移行済み。syncLabelsFromStaffNotes()が書き戻し中（B4で廃止）
-  | 'NEED_DOCUMENT'          // 書類が不足
-  | 'NEED_INFO'              // 情報が不足
-  | 'REMINDER'               // 備忘メモ
-  | 'NEED_CONSULT'           // 社内相談する
+  // StaffNoteKey型を直接unionし、push互換性を保証
+  | StaffNoteKey
 
   // 出力制御（1個）— Phase Cでexport_excludeカラムに移行予定
   | 'EXPORT_EXCLUDE';        // 出力対象外
@@ -109,6 +108,13 @@ export interface JournalPhase5Mock {
    * 現在のUI表示・CSVエクスポートとの後方互換性のため残存。
    */
   voucher_type: string | null;           // 証票意味（売上/経費/給与/立替経費/振替/クレカ/クレカ引落/その他）
+
+  // ── 取込仕訳判定用（⑥-1追加 2026-06-20）──
+  // normalizeJournalForUIがConfirmedJournalから引き継ぐフィールド。
+  // 通常仕訳（AI生成）では未設定（undefined）。
+  // isImportedJournal() ヘルパで判定に使用。
+  source?: 'mf_import' | 'system';     // 取込仕訳のデータソース（未設定=通常仕訳）
+  // ─────────────────────────────────────────────────────────────
 
   // ── パイプライン3フィールド（T-00b追加 2026-04-02 / 再設計 2026-04-02）──
   // Step 0出力: 証票種類（11種。Gemini直接判定）

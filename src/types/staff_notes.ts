@@ -35,6 +35,11 @@ export const STAFF_NOTE_KEYS: readonly StaffNoteKey[] = [
     'NEED_CONSULT',
 ] as const
 
+/** 文字列がStaffNoteKeyかどうか判定する型ガード */
+export function isStaffNoteKey(value: string): value is StaffNoteKey {
+    return (STAFF_NOTE_KEYS as readonly string[]).includes(value)
+}
+
 /** 空のスタッフノートを生成 */
 export function createEmptyStaffNotes(): StaffNotes {
     return {

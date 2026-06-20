@@ -63,7 +63,7 @@
               <select
                 class="fm-select fm-operator-select"
                 :value="cond.operator"
-                @change="onOperatorChange(idx, ($event.target as HTMLSelectElement).value as any)"
+                @change="onOperatorChange(idx, ($event.target as HTMLSelectElement).value as FilterOperator)"
               >
                 <option
                   v-for="op in getOperatorsForField(cond.field)"

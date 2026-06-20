@@ -181,8 +181,8 @@
                   </template>
                   <!-- 主な連絡手段 -->
                   <template v-else-if="col.key === 'contact'">
-                    <span v-if="row.contacts?.find((c: any) => c.method === 'チャット' && c.value)">チャットワーク</span>
-                    <span v-else-if="row.contacts?.find((c: any) => c.method === 'メール' && c.value)" class="cm-contact-fallback">メール <i class="fa-solid fa-triangle-exclamation cm-contact-warn" title="チャットワークURLが空白です。"></i></span>
+                    <span v-if="row.contacts?.find((c: ClientContact) => c.method === 'チャット' && c.value)">チャットワーク</span>
+                    <span v-else-if="row.contacts?.find((c: ClientContact) => c.method === 'メール' && c.value)" class="cm-contact-fallback">メール <i class="fa-solid fa-triangle-exclamation cm-contact-warn" title="チャットワークURLが空白です。"></i></span>
                     <span v-else-if="row.chatRoomUrl">チャットワーク</span>
                     <span v-else-if="row.email" class="cm-contact-fallback">メール <i class="fa-solid fa-triangle-exclamation cm-contact-warn" title="チャットワークURLが空白です。"></i></span>
                     <span v-else>—</span>
@@ -492,6 +492,7 @@ import {
   emptyClientForm,
 } from '@/features/client-management/composables/useClients';
 import type { Client, ClientForm } from '@/features/client-management/composables/useClients';
+import type { ClientContact } from '@/repositories/types';
 import { useStaff } from '@/features/staff-management/composables/useStaff';
 import { useColumnResize } from '@/composables/useColumnResize';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';

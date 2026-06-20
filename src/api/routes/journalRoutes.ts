@@ -56,7 +56,7 @@ app.get('/:clientId', (c) => {
   const clientId = c.req.param('clientId');
   const url = new URL(c.req.url);
   const hasQueryParams = url.searchParams.has('sort') || url.searchParams.has('search')
-    || url.searchParams.has('showPastCsv') || url.searchParams.has('page')
+    || url.searchParams.has('showImported') || url.searchParams.has('page')
     || url.searchParams.has('filter') || url.searchParams.has('view');
 
   // パラメータなし → 後方互換（既存のautoSave等で使用）
@@ -70,7 +70,7 @@ app.get('/:clientId', (c) => {
     sort: url.searchParams.get('sort') || undefined,
     order: (url.searchParams.get('order') as 'asc' | 'desc') || undefined,
     search: url.searchParams.get('search') || undefined,
-    showPastCsv: url.searchParams.get('showPastCsv') === 'true',
+    showImported: url.searchParams.get('showImported') === 'true',
     showUnexported: url.searchParams.get('showUnexported') !== 'false', // デフォルトtrue
     showExported: url.searchParams.get('showExported') !== 'false',     // デフォルトtrue
     showExcluded: url.searchParams.get('showExcluded') === 'true',      // デフォルトfalse
@@ -95,7 +95,7 @@ interface ListRequestBody {
   sort?: string
   order?: 'asc' | 'desc'
   search?: string
-  showPastCsv?: boolean
+  showImported?: boolean
   showUnexported?: boolean
   showExported?: boolean
   showExcluded?: boolean
@@ -115,7 +115,7 @@ app.post('/:clientId/list', async (c) => {
     sort: body.sort || undefined,
     order: body.order || undefined,
     search: body.search || undefined,
-    showPastCsv: body.showPastCsv ?? false,
+    showImported: body.showImported ?? false,
     showUnexported: body.showUnexported ?? true,
     showExported: body.showExported ?? true,
     showExcluded: body.showExcluded ?? false,

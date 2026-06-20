@@ -33,7 +33,7 @@
           >
           <!-- 「過去出力済を表示」廃止: 出力済みはダウンロード履歴画面で確認。仕訳一覧に混在表示しない -->
           <label class="flex items-center gap-1 cursor-pointer"
-            ><input type="checkbox" v-model="showPastCsv" class="w-2.5 h-2.5" />取込仕訳（MCP取込 / CSV取込）</label
+            ><input type="checkbox" v-model="showImported" class="w-2.5 h-2.5" />取込仕訳（MCP取込 / CSV取込）</label
           >
           <label class="flex items-center gap-1 cursor-pointer"
             ><input
@@ -175,6 +175,7 @@
     >
       💡 チェックを入れると一括操作バーに切り替わります。全解除でフィルタに戻ります。
     </div>
+
 
     <!-- テーブルラッパー（横スクロール+縦スクロール） -->
     <div class="flex-1 overflow-x-auto overflow-y-scroll">
@@ -481,7 +482,7 @@
                 ]"
               >
                 <input
-                  v-if="rowIndex === 0 && !journal._isPastJournal"
+                  v-if="rowIndex === 0 && !isImportedJournal(journal)"
                   type="checkbox"
                   class="w-2.5 h-2.5 cursor-pointer"
                   :checked="selectedIds.has(journal.journalId)"
@@ -518,7 +519,7 @@
                     'p-0.5 flex items-center justify-center border-r border-gray-200 text-[8px] text-gray-500',
                   ]"
                 >
-                  <span v-if="journal._isPastJournal && journal.imported_at">{{
+                  <span v-if="isImportedJournal(journal) && journal.imported_at">{{
                     formatDate(journal.imported_at.slice(0, 10))
                   }}</span>
                 </div>
@@ -534,7 +535,7 @@
                 <!-- 写真 -->
                 <template v-if="col.key === 'photo'">
                   <div
-                    v-if="rowIndex === 0 && !journal._isPastJournal"
+                    v-if="rowIndex === 0 && !isImportedJournal(journal)"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -559,7 +560,7 @@
                 <!-- 根拠資料（紐づけありなら即画像、なしなら検索モーダル） -->
                 <template v-else-if="col.key === 'supportingDoc'">
                   <div
-                    v-if="rowIndex === 0 && !journal._isPastJournal"
+                    v-if="rowIndex === 0 && !isImportedJournal(journal)"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -594,7 +595,7 @@
                 <!-- 過去仕訳 -->
                 <template v-else-if="col.key === 'pastJournal'">
                   <div
-                    v-if="rowIndex === 0 && !journal._isPastJournal"
+                    v-if="rowIndex === 0 && !isImportedJournal(journal)"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -620,7 +621,7 @@
                 <!-- コメント（staff_notesベース: ホバーでモーダル表示、クリックで固定） -->
                 <template v-else-if="col.key === 'comment'">
                   <div
-                    v-if="rowIndex === 0 && !journal._isPastJournal"
+                    v-if="rowIndex === 0 && !isImportedJournal(journal)"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -652,7 +653,7 @@
                 <!-- 要対応（4FAアイコン + ホバーポップアップ） -->
                 <template v-else-if="col.key === 'needAction'">
                   <div
-                    v-if="rowIndex === 0 && !journal._isPastJournal"
+                    v-if="rowIndex === 0 && !isImportedJournal(journal)"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -732,7 +733,7 @@
                 <!-- 証票 -->
                 <template v-else-if="col.key === 'labelType'">
                   <div
-                    v-if="rowIndex === 0 && !journal._isPastJournal"
+                    v-if="rowIndex === 0 && !isImportedJournal(journal)"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -760,7 +761,7 @@
                 <!-- 警告（STREAMED風: 赤△！統一、JS制御ツールチップ） -->
                 <template v-else-if="col.key === 'warning'">
                   <div
-                    v-if="rowIndex === 0 && !journal._isPastJournal"
+                    v-if="rowIndex === 0 && !isImportedJournal(journal)"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -794,7 +795,7 @@
                 <!-- 学習 -->
                 <template v-else-if="col.key === 'rule'">
                   <div
-                    v-if="rowIndex === 0 && !journal._isPastJournal"
+                    v-if="rowIndex === 0 && !isImportedJournal(journal)"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -824,7 +825,7 @@
                 <!-- クレ払い -->
                 <template v-else-if="col.key === 'creditCardPayment'">
                   <div
-                    v-if="rowIndex === 0 && !journal._isPastJournal"
+                    v-if="rowIndex === 0 && !isImportedJournal(journal)"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -849,7 +850,7 @@
                 <!-- 軽減 -->
                 <template v-else-if="col.key === 'taxRate'">
                   <div
-                    v-if="rowIndex === 0 && !journal._isPastJournal"
+                    v-if="rowIndex === 0 && !isImportedJournal(journal)"
                     :style="colWidthStyle(col)"
                     :class="[
                       colWidthClass(col),
@@ -880,7 +881,7 @@
                     ]"
                   >
                     <i
-                      v-if="!journal._isPastJournal && journal.memo"
+                      v-if="!isImportedJournal(journal) && journal.memo"
                       class="fa-solid fa-pencil text-[10px] text-gray-600 cursor-default"
                       @mouseenter="showTooltip($event, TIP_MEMO_EXISTS)"
                       @mouseleave="hideTooltip()"
@@ -904,7 +905,7 @@
                     ]"
                   >
                     <i
-                      v-if="journal._isPastJournal && journal.memo"
+                      v-if="isImportedJournal(journal) && journal.memo"
                       class="fa-solid fa-note-sticky text-[10px] text-blue-500 cursor-pointer"
                       @mouseenter="showTooltip($event, journal.memo)"
                       @mouseleave="hideTooltip()"
@@ -925,10 +926,10 @@
                     :class="[
                       colWidthClass(col),
                       'p-0.5 flex items-center justify-center border-r border-gray-200 relative',
-                      !journal._isPastJournal && journal.status !== 'exported' ? 'jl-editable' : '',
+                      !isImportedJournal(journal) && journal.status !== 'exported' ? 'jl-editable' : '',
                     ]"
                     @dblclick.stop="
-                      !journal._isPastJournal &&
+                      !isImportedJournal(journal) &&
                       startCellEdit(
                         journal.journalId,
                         rowIndex,
@@ -941,7 +942,7 @@
                       )
                     "
                   >
-                    <template v-if="!journal._isPastJournal && isEditing(journal.journalId, rowIndex, 'invoice')">
+                    <template v-if="!isImportedJournal(journal) && isEditing(journal.journalId, rowIndex, 'invoice')">
                       <select
                         class="inline-edit-input w-full text-[9px] bg-yellow-50 border border-blue-400 rounded outline-none px-0.5 py-0"
                         style="height: 100%; min-height: 0; line-height: 1"
@@ -1004,7 +1005,7 @@
                     ]"
                   >
                     <span
-                      v-if="journal._isPastJournal && journal.is_closing_entry"
+                      v-if="isImportedJournal(journal) && journal.is_closing_entry"
                       class="text-[9px] font-bold text-purple-600 bg-purple-50 px-1 rounded"
                       @mouseenter="showTooltip($event, '決算整理仕訳')"
                       @mouseleave="hideTooltip()"
@@ -1021,7 +1022,7 @@
 
               <!-- voucher-type-dropdown型（証票意味: journal-levelデータ、ダブルクリック→ドロップダウン） -->
               <template v-else-if="col.type === 'voucher-type-dropdown'">
-                <template v-if="rowIndex === 0 && !journal._isPastJournal">
+                <template v-if="rowIndex === 0 && !isImportedJournal(journal)">
                   <div
                     :data-drag-col="col.key"
                     :data-drag-row="rowIndex"
@@ -1080,7 +1081,7 @@
                   :class="[
                     colWidthClass(col),
                     'p-0.5 relative border-r border-gray-200 text-[10px]',
-                    hasEntry(row, col.key) && !journal._isPastJournal && journal.status !== 'exported' ? 'jl-editable' : '',
+                    hasEntry(row, col.key) && !isImportedJournal(journal) && journal.status !== 'exported' ? 'jl-editable' : '',
                     isDragOver(journalIndex, rowIndex, col.key)
                       ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
                       : '',
@@ -1094,12 +1095,12 @@
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                   ]"
                   @dblclick.stop="
-                    !journal._isPastJournal && hasEntry(row, col.key) &&
+                    !isImportedJournal(journal) && hasEntry(row, col.key) &&
                     (startCellEdit(
                       journal.journalId,
                       rowIndex,
                       col.key,
-                      (getRawValue(row, col.key) as string) ?? '',
+                      getRawString(row, col.key),
                     ),
                     (expandedMegaGroup = null))
                   "
@@ -1149,12 +1150,12 @@
                         <!-- テキスト空: 既存科目先頭 + 3大グループ表示 -->
                         <template v-else>
                           <!-- 既存科目が入っている場合: 先頭に表示 -->
-                          <template v-if="getRawValue(row, col.key) as string">
+                          <template v-if="getRawString(row, col.key)">
                             <div
                               class="px-2 py-1 text-[9px] font-bold text-blue-700 bg-blue-50 border-b border-blue-200 flex items-center gap-1"
                             >
                               <i class="fa-solid fa-check text-[7px]"></i>
-                              {{ resolveAccountName(getRawValue(row, col.key) as string) }}
+                              {{ resolveAccountName(getRawString(row, col.key)) }}
                             </div>
                           </template>
                           <template v-for="mega in MEGA_GROUPS" :key="mega.label">
@@ -1192,7 +1193,7 @@
                     </div>
                   </template>
                   <template v-else>
-                    {{ resolveAccountName(getRawValue(row, col.key) as string) || "--" }}
+                    {{ resolveAccountName(getRawString(row, col.key)) || "--" }}
                   </template>
                   <span
                     v-if="
@@ -1205,7 +1206,7 @@
                       startFillDrag(
                         journalIndex,
                         col.key,
-                        getRawValue(row, col.key) as string,
+                        getRawString(row, col.key),
                         $event,
                       )
                     "
@@ -1225,7 +1226,7 @@
                     :class="[
                       colWidthClass(col),
                       'p-0.5 flex items-center border-r border-gray-200 relative',
-                      !journal._isPastJournal && journal.status !== 'exported' ? 'jl-editable' : '',
+                      !isImportedJournal(journal) && journal.status !== 'exported' ? 'jl-editable' : '',
                       col.key === 'voucher_date' ? 'justify-center text-[8px]' : '',
                       isDragOver(journalIndex, rowIndex, col.key)
                         ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
@@ -1237,7 +1238,7 @@
                       isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                     ]"
                     @dblclick.stop="
-                      !journal._isPastJournal &&
+                      !isImportedJournal(journal) &&
                       startCellEdit(journal.journalId, rowIndex, col.key, getValue(journal, col.key))
                     "
                     @mousedown="startCellDrag(col.key, getValue(journal, col.key), $event)"
@@ -1305,7 +1306,7 @@
                   :class="[
                     colWidthClass(col),
                     'p-0.5 flex items-center justify-center border-r border-gray-200 text-[10px] relative',
-                    hasEntry(row, col.key) && !journal._isPastJournal && journal.status !== 'exported' ? 'jl-editable' : '',
+                    hasEntry(row, col.key) && !isImportedJournal(journal) && journal.status !== 'exported' ? 'jl-editable' : '',
                     isDragOver(journalIndex, rowIndex, col.key)
                       ? 'ring-2 ring-blue-500 bg-yellow-200! text-black!'
                       : '',
@@ -1319,7 +1320,7 @@
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                   ]"
                   @dblclick.stop="
-                    !journal._isPastJournal && hasEntry(row, col.key) &&
+                    !isImportedJournal(journal) && hasEntry(row, col.key) &&
                     startCellEdit(journal.journalId, rowIndex, col.key, getValue(row, col.key))
                   "
                   @mousedown="
@@ -1428,7 +1429,7 @@
                     <span
                       v-if="
                         col.key.endsWith('.tax_category_id') &&
-                        isTaxCategoryInvalid(getRawValue(row, col.key) as string)
+                        isTaxCategoryInvalid(getRawString(row, col.key))
                       "
                       class="text-red-600 font-bold"
                       :title="
@@ -1465,7 +1466,7 @@
                   :class="[
                     colWidthClass(col),
                     'p-0.5 flex items-center justify-end border-r border-gray-200 font-mono text-[10px]',
-                    hasEntry(row, col.key) && !journal._isPastJournal && journal.status !== 'exported' ? 'jl-editable' : '',
+                    hasEntry(row, col.key) && !isImportedJournal(journal) && journal.status !== 'exported' ? 'jl-editable' : '',
                     col.key === 'debit.amount' ? 'border-r-2 border-r-blue-300' : '',
                     getWarningCellClass(
                       journal,
@@ -1479,7 +1480,7 @@
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
                   ]"
                   @dblclick.stop="
-                    !journal._isPastJournal && hasEntry(row, col.key) &&
+                    !isImportedJournal(journal) && hasEntry(row, col.key) &&
                     startCellEdit(journal.journalId, rowIndex, col.key, getValue(row, col.key))
                   "
                   @mousedown="
@@ -1526,7 +1527,7 @@
 
                 <!-- ドロップダウンメニュー（w-44固定、拡張対応） -->
                 <div
-                  v-if="rowIndex === 0 && openDropdownId === journal.journalId && !journal._isPastJournal"
+                  v-if="rowIndex === 0 && openDropdownId === journal.journalId && !isImportedJournal(journal)"
                   class="absolute right-full top-0 z-50 w-44 bg-white border border-gray-300 rounded shadow-lg text-[10px] whitespace-nowrap"
                   @click.stop
                 >
@@ -1734,320 +1735,22 @@
     />
 
 
-    <!-- 過去仕訳検索モーダル（Teleportでbody直下に移動） -->
-    <Teleport to="body">
-      <div
-        v-if="showPastJournalModal"
-        ref="pastJournalModalRef"
-        :style="{
-          top: pastJournalPos.top + 'px',
-          left: pastJournalPos.left + 'px',
-          zIndex: pastJournalZ,
-        }"
-        class="fixed bg-white rounded-lg shadow-2xl flex flex-col pointer-events-auto border-2 border-gray-300 overflow-auto w-[600px] h-[600px] cursor-move"
-        style="resize: both; min-width: 300px; min-height: 200px"
-        @click.stop
-        @mousedown="modalDrag(startPastJournalDrag, $event)"
-      >
-        <!-- モーダルヘッダー（ドラッグハンドル） -->
-        <div
-          class="bg-blue-100 px-4 py-3 border-b flex justify-between items-center cursor-move select-none rounded-t-lg"
-          @mousedown="startPastJournalDrag"
-        >
-          <h2 class="text-sm font-bold text-gray-900">
-            過去仕訳検索 <span class="font-normal text-xs text-amber-600">※移動できます</span>
-          </h2>
-          <button @click="closePastJournalModal()" class="text-gray-500 hover:text-gray-700">
-            <i class="fa-solid fa-xmark text-lg"></i>
-          </button>
-        </div>
-
-        <!-- 検索条件 -->
-        <div class="p-4 border-b bg-gray-50">
-          <div class="grid grid-cols-3 gap-4 mb-3">
-            <!-- 摘要 -->
-            <div>
-              <label class="text-xs text-gray-700 block mb-1">摘要</label>
-              <input
-                type="text"
-                v-model="pastJournalSearch.vendor"
-                :placeholder="UI_MSG.サンプル建物名"
-                class="w-full px-2 py-1 text-xs border rounded"
-              />
-            </div>
-          </div>
-
-          <!-- 日付 -->
-          <div class="mb-3">
-            <label class="text-xs text-gray-700 block mb-1">日付</label>
-            <div class="flex items-center gap-2">
-              <input
-                type="date"
-                v-model="pastJournalSearch.dateFrom"
-                class="w-40 px-2 py-1 text-xs border rounded"
-              />
-              <span class="text-xs">〜</span>
-              <input
-                type="date"
-                v-model="pastJournalSearch.dateTo"
-                class="w-40 px-2 py-1 text-xs border rounded"
-              />
-            </div>
-          </div>
-
-          <!-- 金額条件 -->
-          <div class="mb-3">
-            <label class="text-xs text-gray-700 block mb-1">金額条件</label>
-            <div class="flex items-center gap-2">
-              <select
-                v-model="pastJournalSearch.amountCondition"
-                class="w-40 px-2 py-1 text-xs border rounded"
-              >
-                <option value="">{{ PLACEHOLDER_SELECT }}</option>
-                <option v-for="o in AMOUNT_CONDITION_OPTIONS" :key="o.value" :value="o.value">
-                  {{ o.label }}
-                </option>
-              </select>
-              <input
-                type="number"
-                v-model.number="pastJournalSearch.amount"
-                :placeholder="UI_MSG.金額入力"
-                class="w-32 px-2 py-1 text-xs border rounded"
-              />
-            </div>
-          </div>
-
-          <!-- 借方勘定科目、貸方勘定科目 -->
-          <div class="grid grid-cols-2 gap-4 mb-3">
-            <div>
-              <label class="text-xs text-gray-700 block mb-1">借方勘定科目</label>
-              <select
-                v-model="pastJournalSearch.debitAccount"
-                class="w-full px-2 py-1 text-xs border rounded"
-              >
-                <option value="">{{ PLACEHOLDER_SELECT }}</option>
-                <option v-for="o in accountOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-xs text-gray-700 block mb-1">貸方勘定科目</label>
-              <select
-                v-model="pastJournalSearch.creditAccount"
-                class="w-full px-2 py-1 text-xs border rounded"
-              >
-                <option value="">{{ PLACEHOLDER_SELECT }}</option>
-                <option v-for="o in accountOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- 絞り込みボタン -->
-          <div class="flex gap-2">
-            <button
-              @click="
-                () => {
-                  /* TODO (2026-05): searchPastJournals。Supabase移行後に実装 */
-                }
-              "
-              class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded text-xs"
-            >
-              絞り込み
-            </button>
-          </div>
-        </div>
-
-        <!-- タブ -->
-        <div class="flex border-b">
-          <button
-            @click="pastJournalTab = 'streamed'"
-            :class="[
-              'px-4 py-2 text-xs font-medium',
-              pastJournalTab === 'streamed'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-800',
-            ]"
-          >
-            システム上の過去仕訳
-          </button>
-          <button
-            @click="
-              pastJournalTab = 'accounting';
-              fetchConfirmedJournals();
-            "
-            :class="[
-              'px-4 py-2 text-xs font-medium',
-              pastJournalTab === 'accounting'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-800',
-            ]"
-          >
-            会計ソフトから取り込んだ過去仕訳
-            <span
-              v-if="confirmedJournals.length > 0"
-              class="ml-1 px-1.5 py-0.5 text-[9px] bg-amber-100 text-amber-700 rounded-full font-bold"
-              >{{ confirmedJournals.length }}</span
-            >
-          </button>
-        </div>
-
-        <!-- 検索結果テーブル -->
-        <div class="flex-1 overflow-auto p-4">
-          <!-- ローディング表示（会計タブ） -->
-          <div
-            v-if="pastJournalTab === 'accounting' && isConfirmedLoading"
-            class="text-center py-8 text-gray-400 text-sm"
-          >
-            <i class="fa-solid fa-spinner fa-spin mr-2"></i>過去仕訳データを読み込み中...
-          </div>
-          <!-- 件数サマリー（会計タブ） -->
-          <div
-            v-if="
-              pastJournalTab === 'accounting' && !isConfirmedLoading && confirmedJournals.length > 0
-            "
-            class="text-xs text-gray-500 mb-2"
-          >
-            取込済み過去仕訳:
-            <span class="font-bold text-gray-700">{{ confirmedJournals.length }}件</span>
-            <span v-if="filteredPastJournals.length !== confirmedJournals.length" class="ml-2"
-              >→ 絞込結果:
-              <span class="font-bold text-blue-600">{{ filteredPastJournals.length }}件</span></span
-            >
-          </div>
-          <div class="text-xs text-gray-600 mb-2" v-if="pastJournalTab !== 'accounting'">
-            行の背景色:
-            <button
-              @click="toggleOutputFilter('unexported')"
-              :class="[
-                'inline-block px-4 py-0.5 ml-2 text-xs cursor-pointer rounded',
-                outputFilter === 'unexported'
-                  ? 'bg-blue-200 border-2 border-blue-500 font-bold'
-                  : 'bg-blue-50 border border-blue-300',
-              ]"
-            >
-              未出力
-            </button>
-            <button
-              @click="toggleOutputFilter('exported')"
-              :class="[
-                'inline-block px-4 py-0.5 ml-2 text-xs cursor-pointer rounded',
-                outputFilter === 'exported'
-                  ? 'bg-gray-200 border-2 border-black font-bold'
-                  : 'bg-white border border-black',
-              ]"
-            >
-              出力済み
-            </button>
-          </div>
-
-          <table class="w-full text-[10px] border-collapse">
-            <thead class="bg-gray-100 sticky top-0">
-              <tr>
-                <th class="border px-2 py-1 text-center">日付</th>
-                <th class="border px-2 py-1 text-center">摘要</th>
-                <th class="border px-2 py-1 text-center">借方勘定科目</th>
-                <th class="border px-2 py-1 text-center">借方補助科目</th>
-                <th class="border px-2 py-1 text-center">借方税区分</th>
-                <th class="border px-2 py-1 text-center">貸方勘定科目</th>
-                <th class="border px-2 py-1 text-center">貸方補助科目</th>
-                <th class="border px-2 py-1 text-center">貸方税区分</th>
-                <th class="border px-2 py-1 text-center">証憑種別</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(result, index) in paginatedPastJournals"
-                :key="index"
-                :class="result.status === 'exported' ? 'bg-white' : 'bg-blue-50'"
-                class="hover:bg-blue-100 cursor-pointer"
-              >
-                <td class="border px-2 py-1 text-center">
-                  {{ result.voucher_date ? formatDate(result.voucher_date) : "-" }}
-                </td>
-                <td class="border px-2 py-1">{{ result.description }}</td>
-                <td class="border px-2 py-1">
-                  {{ resolveAccountName(result.debit_entries[0]?.account) || "" }}
-                </td>
-                <td class="border px-2 py-1">{{ result.debit_entries[0]?.sub_account || "" }}</td>
-                <td class="border px-2 py-1 text-center">
-                  {{ resolveTaxCategoryName(result.debit_entries[0]?.tax_category_id) }}
-                </td>
-                <td class="border px-2 py-1">
-                  {{ resolveAccountName(result.credit_entries[0]?.account) || "" }}
-                </td>
-                <td class="border px-2 py-1">{{ result.credit_entries[0]?.sub_account || "" }}</td>
-                <td class="border px-2 py-1 text-center">
-                  {{ resolveTaxCategoryName(result.credit_entries[0]?.tax_category_id) }}
-                </td>
-                <td class="border px-2 py-1 text-center">
-                  <span v-if="result.labels.includes('TRANSPORT')">領</span>
-                  <span v-if="result.labels.includes('RECEIPT')">レ</span>
-                  <span v-if="result.labels.includes('INVOICE')">請</span>
-                </td>
-              </tr>
-              <tr v-if="paginatedPastJournals.length === 0">
-                <td colspan="9" class="border px-2 py-4 text-center text-gray-500">
-                  検索結果がありません
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- ページネーション -->
-          <div v-if="totalPages > 1" class="flex items-center justify-center gap-1 mt-3">
-            <button
-              @click="goToPage(pastJournalPage - 1)"
-              :disabled="pastJournalPage <= 1"
-              class="px-2 py-1 text-xs border rounded"
-              :class="
-                pastJournalPage <= 1
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-gray-600 hover:bg-gray-100 cursor-pointer'
-              "
-            >
-              &lt;
-            </button>
-            <button
-              v-for="page in totalPages"
-              :key="page"
-              @click="goToPage(page)"
-              class="px-2 py-1 text-xs border rounded min-w-[28px]"
-              :class="
-                page === pastJournalPage
-                  ? 'bg-blue-500 text-white border-blue-500 font-bold'
-                  : 'text-gray-600 hover:bg-gray-100 cursor-pointer'
-              "
-            >
-              {{ page }}
-            </button>
-            <button
-              @click="goToPage(pastJournalPage + 1)"
-              :disabled="pastJournalPage >= totalPages"
-              class="px-2 py-1 text-xs border rounded"
-              :class="
-                pastJournalPage >= totalPages
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-gray-600 hover:bg-gray-100 cursor-pointer'
-              "
-            >
-              &gt;
-            </button>
-          </div>
-        </div>
-        <!-- リサイズグリップインジケーター -->
-        <div
-          class="sticky bottom-0 ml-auto w-5 h-5 pointer-events-none shrink-0"
-          style="
-            background: linear-gradient(
-              135deg,
-              transparent 50%,
-              rgba(59, 130, 246, 0.5) 50%,
-              rgba(59, 130, 246, 0.7) 100%
-            );
-            border-radius: 0 0 0.5rem 0;
-          "
-        ></div>
-      </div>
-    </Teleport>
+    <!-- 過去仕訳検索モーダル（子コンポーネントに分離） -->
+    <PastJournalSearchModal
+      :visible="showPastJournalModal"
+      :pinned="isPastJournalModalPinned"
+      :journals="aiJournalsForModal"
+      :confirmedJournals="confirmedJournals"
+      :isConfirmedLoading="isConfirmedLoading"
+      :accountOptions="accountOptionsForModal"
+      :resolveAccountName="resolveAccountName"
+      :resolveTaxCategoryName="resolveTaxCategoryName"
+      @close="closePastJournalModal"
+      @toggle-pin="togglePastJournalSearchModalPin"
+      @fetch-confirmed="fetchConfirmedJournals"
+      @mouseenter="showPastJournalSearchModal()"
+      @mouseleave="hidePastJournalSearchModal()"
+    />
 
     <!-- ヒントモーダル（子コンポーネントに分離） -->
     <HintModal
@@ -2196,6 +1899,7 @@
       📋 コピー: {{ dragLabelText || "--" }}
     </div>
   </Teleport>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -2212,12 +1916,13 @@ import {
 import { useAccountSettings } from "@/features/account-settings/composables/useAccountSettings";
 import { useClients } from "@/features/client-management/composables/useClients";
 import { NULL_DISPLAY_UNKNOWN } from "@/shared/field-nullable-spec";
-import { useDraggable } from "@/composables/useDraggable";
+// useDraggable は PastJournalSearchModal.vue に移動済み
 import ImageModal from "@/components/ImageModal.vue";
 import EvidenceSearchModal from "@/components/EvidenceSearchModal.vue";
 import HintModal from "@/components/HintModal.vue";
 import CommentModal from "@/components/CommentModal.vue";
-import { modalDrag } from "@/utils/modalDrag";
+import PastJournalSearchModal from "@/components/PastJournalSearchModal.vue";
+// modalDrag は PastJournalSearchModal.vue に移動済み
 import { useCurrentUser } from "@/composables/useCurrentUser";
 import { journalColumns, getDefaultColumnWidths } from "@/shared/journalColumns";
 import { useColumnResize } from "@/composables/useColumnResize";
@@ -2229,35 +1934,40 @@ import type {
   JournalEntryLine,
   JournalLabelMock,
 } from "../types/journal_phase5_mock.type";
-import { createEmptyStaffNotes, STAFF_NOTE_KEYS } from "../types/staff_notes";
+import { createEmptyStaffNotes, STAFF_NOTE_KEYS, isStaffNoteKey } from "../types/staff_notes";
 import type { StaffNoteKey } from "../types/staff_notes";
-import type { ConfirmedJournal } from "../types/confirmed_journal.type";
+import type { ConfirmedJournal, ConfirmedJournalEntry } from "../types/confirmed_journal.type";
+import { isImportedJournal, isMfJournal } from "../types/journal-list-row";
+import type { JournalListRow } from "../types/journal-list-row";
+import type { UiJournal, NormalizedConfirmedJournal } from "../types/journal-ui.types";
 
 import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { syncWarningLabelsCore, validateByVoucherType, getMegaGroup, validateDebitCreditCombination, isTaxCategoryInvalidForMode, resolveValidTaxCategoryForMode } from "@/utils/journalWarningSync";
 import type { SyncWarningResult } from "@/utils/journalWarningSync";
 import { VOUCHER_TYPE_RULES } from '@/data/master/voucherTypeRules';
 import {
-  CHECK_STATUS_OPTIONS, PAGE_SIZE_OPTIONS, AMOUNT_CONDITION_OPTIONS,
-  PLACEHOLDER_EMPTY, PLACEHOLDER_SELECT,
+  CHECK_STATUS_OPTIONS, PAGE_SIZE_OPTIONS,
+  PLACEHOLDER_EMPTY,
   VOUCHER_DOC_FILTER_OPTIONS, VOUCHER_TYPES,
 } from '@/constants/vendorOptions';
-import { useAccountMaster } from '@/features/account-management/composables/useAccountMaster';
-import type { SelectOption } from '@/constants/clientOptions';
 import { isIndividualType, getClientDisplayName } from '@/constants/clientOptions';
+import type { SelectOption } from '@/constants/clientOptions';
 import { UI_MSG } from '@/constants/uiMessages';
 import {
   FIELD_ACCOUNT, FIELD_TAX_CATEGORY, FIELD_AMOUNT, FIELD_AMOUNT_DIFF,
-  SIDE_DEBIT, SIDE_CREDIT, LABEL_UNSET,
 } from '@/constants/validationMessages';
 import type { HintSuggestion } from '@/types/hintTypes';
 
-/** 勘定科目選択肢—API取得のマスタ科目から動的生成 */
-const { masterAccounts: masterAccountList } = useAccountMaster();
-const accountOptions = computed<SelectOption[]>(() =>
-  masterAccountList.value
-    .filter(a => !a.hidden)
-    .map(a => ({ value: a.name, label: a.name }))
+// 過去仕訳検索モーダル用の科目選択肢（顧問先科目から生成）
+const accountOptionsForModal = computed<SelectOption[]>(() =>
+  clientSettings.accounts.value
+    .filter((a) => !a.hidden)
+    .map((a) => ({ value: a.accountId, label: a.name })),
+);
+
+/** 過去仕訳検索モーダル用: AI仕訳のみ抽出（取込仕訳はconfirmedJournalsで別送） */
+const aiJournalsForModal = computed<JournalPhase5Mock[]>(() =>
+  journals.value.filter((j): j is JournalPhase5Mock => !isImportedJournal(j)),
 );
 
 // 列幅カスタマイズ
@@ -2278,10 +1988,13 @@ function colWidthStyle(col: { defaultPx: number; key: string }) {
 
 // Phase C: localJournals廃止。全更新はupdateJournalField()経由のPATCH API。
 const route = useRoute();
-const journalClientId = computed(() => (route.params.clientId as string) || "default");
+const journalClientId = computed(() => {
+  const id = route.params.clientId;
+  return typeof id === 'string' ? id : 'default';
+});
 // const { journals: localJournals } = useJournals(journalClientId); // ← 廃止
 // Phase C: journalsはshallowRefで管理。API経由で取得。
-const journals = shallowRef<any[]>([]);
+const journals = shallowRef<UiJournal[]>([]);
 
 // ────── 顧問先連動（勘定科目・税区分フィルタ） ──────
 const { clients, currentClient } = useClients();
@@ -2322,13 +2035,22 @@ const filteredAccounts = computed(() => {
 /** ドットパスで生値を取得（税区分名称変換なし）
  * 動的パスアクセスのためkeyof型安全性は保証できない。内部でunknown経由でRecordにキャストする。
  */
-function getRawValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknown {
+function getRawValue(obj: UiJournal | CombinedRow, path: string): unknown {
   return path
     .split(".")
     .reduce<unknown>(
-      (o, key) => (o as Record<string, unknown> | undefined)?.[key],
-      obj as Record<string, unknown>,
+      (o, key) => {
+        if (o == null || typeof o !== 'object') return undefined;
+        return (o as Record<string, unknown>)[key];
+      },
+      obj as unknown,
     );
+}
+
+/** getRawValueのstring特化版（テンプレートで安全に使用） */
+function getRawString(obj: UiJournal | CombinedRow, path: string): string {
+  const v = getRawValue(obj, path);
+  return typeof v === 'string' ? v : '';
 }
 
 // ────── 区分ドロップダウン（D7a: category-first選択の起点） ──────
@@ -2395,7 +2117,7 @@ const taxMismatchSummary = computed(() => {
 
   const countMap = new Map<string, number>();
   for (const j of journals.value) {
-    if ((j as any)._isPastJournal) continue; // 過去仕訳は税区分不整合カウント対象外
+    if (isImportedJournal(j)) continue; // 取込仕訳は税区分不整合カウント対象外
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (isTaxCategoryInvalid(e.tax_category_id)) {
         countMap.set(e.tax_category_id!, (countMap.get(e.tax_category_id!) || 0) + 1);
@@ -2424,7 +2146,7 @@ function fixAllTaxMismatches() {
   // 修正対象の仕訳IDを収集
   const targetJournalIds = new Set<string>();
   for (const j of journals.value) {
-    if ((j as any)._isPastJournal) continue; // 過去仕訳は修正対象外
+    if (isImportedJournal(j)) continue; // 取込仕訳は修正対象外
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (e && isTaxCategoryInvalid(e.tax_category_id)) {
         targetJournalIds.add(j.journalId);
@@ -2436,12 +2158,12 @@ function fixAllTaxMismatches() {
   // 修正前のスナップショットを保存
   const beforeSnapshots = [...targetJournalIds]
     .map((id) => snapshotJournal(id))
-    .filter(Boolean) as UndoSnapshot[];
+    .filter((s): s is UndoSnapshot => s !== null);
 
   // 修正を適用
   for (const j of journals.value) {
     if (!targetJournalIds.has(j.journalId)) continue;
-    if ((j as any)._isPastJournal) continue; // 過去仕訳は税区分修正対象外
+    if (isImportedJournal(j)) continue; // 取込仕訳は税区分修正対象外
     for (const e of [...j.debit_entries, ...j.credit_entries]) {
       if (!e || !isTaxCategoryInvalid(e.tax_category_id)) continue;
       e.tax_category_id = resolveValidTaxCategoryForMode(e.tax_category_id ?? "", taxMode, clientSettings.taxCategories.value);
@@ -2451,11 +2173,12 @@ function fixAllTaxMismatches() {
   // 修正後のスナップショットを保存 → pushUndo
   const afterSnapshots = [...targetJournalIds]
     .map((id) => snapshotJournal(id))
-    .filter(Boolean) as UndoSnapshot[];
+    .filter((s): s is UndoSnapshot => s !== null);
   pushUndo(beforeSnapshots, afterSnapshots);
   // Phase C: 変更した仕訳のentriesをPATCH送信
   for (const j of journals.value) {
     if (!targetJournalIds.has(j.journalId)) continue;
+    if (isImportedJournal(j)) continue;
     updateJournalField(j.journalId, {
       debit_entries: j.debit_entries,
       credit_entries: j.credit_entries,
@@ -2490,7 +2213,7 @@ const accountGroupsForJournal = computed(() => {
 
 /** 仕訳入力用: 選択中の勘定科目の区分から方向判定し、税区分をフィルタ+グルーピング */
 function getTaxGroupsForEntry(row: CombinedRow, colKey: string) {
-  const side = colKey.startsWith("debit") ? "debit" : ("credit" as const);
+  const side: "debit" | "credit" = colKey.startsWith("debit") ? "debit" : "credit";
   const entry = row[side];
   const accountName = entry?.account ?? null;
 
@@ -2611,7 +2334,7 @@ function megaGroupLabel(group: MegaGroupType): string {
 // validateDebitCreditCombination は shared からimport済み（上記参照）
 
 /** 勘定科目選択後の3大グループバリデーション実行 */
-function runAccountValidation(journal: JournalPhase5Mock): void {
+function runAccountValidation(journal: UiJournal): void {
   // まず全警告ラベルを同期（CATEGORY_CONFLICT / VOUCHER_TYPE_CONFLICT含む）
   syncWarningLabels(journal);
 
@@ -2690,7 +2413,9 @@ const voucherTypeConflictMap = new Map<string, { debit: Set<string>; credit: Set
  * shared/validation/journalValidationCore.ts（SSOT）を呼び出し、
  * UI固有のセルハイライトMap更新 + モーダル表示を行う。
  */
-function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
+function syncWarningLabels(journal: UiJournal, silent = false): void {
+  // 取込仕訳は確定済みなので警告ラベル同期不要
+  if (isImportedJournal(journal)) return;
   const allAccounts = clientSettings.accounts.value;
   const allTaxCategories = clientSettings.taxCategories.value;
 
@@ -2759,9 +2484,9 @@ function syncWarningLabels(journal: JournalPhase5Mock, silent = false): void {
  * 警告ラベルと列キーの対応を判定し、赤背景CSSクラスを返す。
  */
 function getWarningCellClass(
-  journal: JournalPhase5Mock,
+  journal: UiJournal,
   colKey: string,
-  entry?: JournalEntryLine | null,
+  entry?: UiEntryLine | null,
 ): string {
   const labels = journal.labels;
   /** 警告セルの共通背景CSSクラス（一箇所管理） */
@@ -2910,14 +2635,14 @@ function getDatePeriodClass(dateStr: string | null): string {
 // ────── 検索付きコンボボックス: 選択関数 ──────
 
 function selectAccountItem(
-  journal: JournalPhase5Mock,
+  journal: UiJournal,
   row: CombinedRow,
   colKey: string,
   accountId: string,
 ): void {
   // Undo記録: 変更前スナップショット
   const beforeSnap = snapshotJournal(journal.journalId);
-  const side = colKey.startsWith("debit") ? "debit" : ("credit" as const);
+  const side: "debit" | "credit" = colKey.startsWith("debit") ? "debit" : "credit";
   const entry = row[side];
   if (!entry) {
     editingCell.value = null;
@@ -2935,12 +2660,8 @@ function selectAccountItem(
     }
     if (acc) {
       const sub = clientSettings.subAccounts.value[acc.accountId];
-      // 補助科目が配列（MfSubAccountEntry[]）の場合: 1件→name自動代入、複数→null（ユーザー選択）
-      if (Array.isArray(sub)) {
-        entry.sub_account = sub.length === 1 ? sub[0].name : null;
-      } else {
-        entry.sub_account = sub || null;
-      }
+      // 補助科目: 1件→name自動代入、複数→null（ユーザー選択）、0件→null
+      entry.sub_account = sub?.length === 1 ? sub[0]?.name ?? null : null;
     }
   } else {
     entry.sub_account = null;
@@ -2951,10 +2672,12 @@ function selectAccountItem(
   // 勘定科目選択確定後、3大グループバリデーションを実行
   runAccountValidation(journal);
   // updateJournalFieldで一括処理（autoMeta + syncWarningLabels + PATCH送信）
-  updateJournalField(journal.journalId, {
-    debit_entries: journal.debit_entries,
-    credit_entries: journal.credit_entries,
-  });
+  if (!isImportedJournal(journal)) {
+    updateJournalField(journal.journalId, {
+      debit_entries: journal.debit_entries,
+      credit_entries: journal.credit_entries,
+    });
+  }
   // Undo記録: 変更後スナップショット
   if (beforeSnap) {
     const afterSnap = snapshotJournal(journal.journalId);
@@ -2963,7 +2686,7 @@ function selectAccountItem(
 }
 
 /** 税区分アイテム選択: 税区分セット + 既読化 + 編集モード解除 */
-function selectTaxItem(_journal: JournalPhase5Mock, taxId: string): void {
+function selectTaxItem(_journal: UiJournal, taxId: string): void {
   editingValue.value = taxId;
   commitCellEdit();
 }
@@ -2971,7 +2694,7 @@ function selectTaxItem(_journal: JournalPhase5Mock, taxId: string): void {
 // ────── 検索付きコンボボックス: blur関数 ──────
 
 /** 勘定科目blur: 入力値が有効な科目名なら確定、そうでなければキャンセル */
-function blurAccountEdit(journal: JournalPhase5Mock, row: CombinedRow, colKey: string): void {
+function blurAccountEdit(journal: UiJournal, row: CombinedRow, colKey: string): void {
   if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
   const val = editingValue.value;
   // 入力値がID一致 or 名前一致する科目を検索
@@ -2984,7 +2707,7 @@ function blurAccountEdit(journal: JournalPhase5Mock, row: CombinedRow, colKey: s
 }
 
 /** 税区分blur: 入力値が有効な税区分名なら確定、そうでなければキャンセル */
-function blurTaxEdit(_journal: JournalPhase5Mock): void {
+function blurTaxEdit(_journal: UiJournal): void {
   if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
   const val = editingValue.value;
   const settings = clientSettings;
@@ -3019,7 +2742,7 @@ function getSubAccountCandidates(
   const entry = row[side];
   if (!entry?.account) return [];
   const subs = clientSettings.subAccounts.value[entry.account];
-  if (Array.isArray(subs)) return subs as SubAccountCandidate[];
+  if (Array.isArray(subs)) return subs;
   return [];
 }
 
@@ -3040,7 +2763,7 @@ function filterSubAccountCandidates(
 }
 
 /** 補助科目をドロップダウンから選択 */
-function selectSubAccountItem(_journal: JournalPhase5Mock, name: string): void {
+function selectSubAccountItem(_journal: UiJournal, name: string): void {
   editingValue.value = name;
   commitCellEdit();
 }
@@ -3078,7 +2801,9 @@ function snapshotJournal(journalId: string): UndoSnapshot | null {
 function restoreSnapshot(snap: UndoSnapshot): void {
   const idx = journals.value.findIndex((x) => x.journalId === snap.journalId);
   if (idx < 0) return;
-  const restored = JSON.parse(snap.json) as JournalPhase5Mock;
+  const parsed: unknown = JSON.parse(snap.json);
+  if (!parsed || typeof parsed !== 'object' || !('journalId' in parsed)) return;
+  const restored: JournalPhase5Mock = parsed as JournalPhase5Mock;
   journals.value[idx] = restored;
   // Phase C: 復元後の全フィールドをPATCH送信
   updateJournalField(snap.journalId, {
@@ -3109,7 +2834,7 @@ function undo(): void {
   // 復元前に現在状態をredoスタックに保存
   const currentSnapshots = entry.before
     .map((s) => snapshotJournal(s.journalId))
-    .filter(Boolean) as UndoSnapshot[];
+    .filter((s): s is UndoSnapshot => s !== null);
   for (const snap of entry.before) restoreSnapshot(snap);
   redoStack.value.push({ before: currentSnapshots, after: entry.before });
 }
@@ -3120,7 +2845,7 @@ function redo(): void {
   // 復元前に現在状態をundoスタックに保存
   const currentSnapshots = entry.before
     .map((s) => snapshotJournal(s.journalId))
-    .filter(Boolean) as UndoSnapshot[];
+    .filter((s): s is UndoSnapshot => s !== null);
   for (const snap of entry.before) restoreSnapshot(snap);
   undoStack.value.push({ before: currentSnapshots, after: entry.before });
 }
@@ -3138,7 +2863,7 @@ function startCellEdit(
 ): void {
   // 過去仕訳はセル編集不可（読み取り専用）
   const journal = paginatedJournals.value.find((j) => j.journalId === journalId);
-  if (!assertEditableJournal(journal, 'startCellEdit')) return;
+  if (!journal || !assertEditableJournal(journal, 'startCellEdit')) return;
   editingCell.value = { journalId, rowIndex, colKey };
   let val = currentValue != null ? String(currentValue) : "";
   // 勘定科目列の場合: IDを日本語名に変換して検索欄に表示
@@ -3150,13 +2875,10 @@ function startCellEdit(
   editingValue.value = val;
   editingOriginalValue.value = val;
   nextTick(() => {
-    const el = document.querySelector(".inline-edit-input") as
-      | HTMLInputElement
-      | HTMLSelectElement
-      | null;
-    if (el) {
+    const el = document.querySelector(".inline-edit-input");
+    if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) {
       el.focus();
-      if ("select" in el) el.select();
+      if (el instanceof HTMLInputElement) el.select();
     }
   });
 }
@@ -3197,7 +2919,7 @@ function commitCellEdit(): void {
   }
 
   // patch構築（直接変更せずupdateJournalFieldに委譲）
-  const patch: Record<string, unknown> = {};
+  const patch: Partial<JournalPhase5Mock> = {};
 
   // journal-level（keyにドットなし）
   if (!e.colKey.includes(".")) {
@@ -3212,11 +2934,12 @@ function commitCellEdit(): void {
     const row = rows[e.rowIndex];
     if (row) {
       const parts = e.colKey.split(".");
-      const side = parts[0] as "debit" | "credit";
+      const sideStr = parts[0];
+      if (sideStr !== 'debit' && sideStr !== 'credit') return;
       const field = parts[1];
-      if (side && field) {
-        const entry = row[side];
-        if (entry) {
+      if (field) {
+        const entry = row[sideStr];
+        if (entry && 'account_on_document' in entry) {
           setEntryField(entry, field, val);
         }
       }
@@ -3244,9 +2967,9 @@ function cancelCellEdit(): void {
 
 /** 金額入力: 半角数字以外を除去 */
 function onAmountInput(event: Event): void {
-  const input = event.target as HTMLInputElement;
-  input.value = input.value.replace(/[^0-9]/g, "");
-  editingValue.value = input.value;
+  if (!(event.target instanceof HTMLInputElement)) return;
+  event.target.value = event.target.value.replace(/[^0-9]/g, "");
+  editingValue.value = event.target.value;
 }
 
 /** 日付入力: YYYYMMDD → YYYY-MM-DD変換 */
@@ -3277,13 +3000,13 @@ function isFillable(colKey: string): boolean {
 }
 
 /** 複合仕訳判定（1対N or N対N） — フィルハンドル無効化に使用 */
-function isCompoundJournal(journal: JournalPhase5Mock): boolean {
+function isCompoundJournal(journal: UiJournal): boolean {
   return journal.debit_entries.length > 1 || journal.credit_entries.length > 1;
 }
 
 /** エントリが存在するか判定（複合仕訳の空セル無反応化に使用） */
 function hasEntry(
-  row: { debit: JournalEntryLine | null; credit: JournalEntryLine | null },
+  row: CombinedRow,
   colKey: string,
 ): boolean {
   if (!colKey.includes(".")) return true; // journal-levelは常にtrue
@@ -3324,7 +3047,8 @@ function onFillMove(event: MouseEvent): void {
   const el = document.elementFromPoint(event.clientX, event.clientY);
   if (!el) return;
   // data-journal-index属性を持つ祖先を探す
-  const rowEl = (el as HTMLElement).closest("[data-journal-index]") as HTMLElement | null;
+  if (!(el instanceof HTMLElement)) return;
+  const rowEl = el.closest<HTMLElement>("[data-journal-index]");
   if (!rowEl) return;
   const idx = parseInt(rowEl.dataset.journalIndex ?? "", 10);
   if (isNaN(idx)) return;
@@ -3357,11 +3081,11 @@ function endFillDrag(): void {
     .map((idx) => paginatedJournals.value[idx])
     .filter((x): x is JournalPhase5Mock => !!x)
     .map((j) => snapshotJournal(j.journalId))
-    .filter(Boolean) as UndoSnapshot[];
+    .filter((s): s is UndoSnapshot => s !== null);
   for (const idx of targetJournalIndices) {
     const journal = paginatedJournals.value[idx];
     if (!journal) continue;
-    if ((journal as any)._isPastJournal) continue; // 取込仕訳はフィル対象外
+    if (isImportedJournal(journal)) continue; // 取込仕訳はフィル対象外
     applyFillValue(journal, colKey, sourceValue);
     // updateJournalFieldで一括処理（autoMeta + syncWarningLabels + PATCH送信）
     const fillPatch: Record<string, unknown> = {};
@@ -3378,7 +3102,7 @@ function endFillDrag(): void {
   if (beforeSnaps.length > 0) {
     const afterSnaps = beforeSnaps
       .map((s) => snapshotJournal(s.journalId))
-      .filter(Boolean) as UndoSnapshot[];
+      .filter((s): s is UndoSnapshot => s !== null);
     pushUndo(beforeSnaps, afterSnaps);
   }
   fillHandle.value = null;
@@ -3393,28 +3117,30 @@ function applyFillValue(
   if (!assertEditableJournal(journal, 'applyFillValue')) return;
   if (!colKey.includes(".")) {
     if (colKey === "voucher_date") {
-      journal.voucher_date = value as string | null;
+      journal.voucher_date = typeof value === 'string' ? value : null;
     } else if (colKey === "description") {
-      journal.description = value as string;
+      journal.description = typeof value === 'string' ? value : '';
     }
   } else {
     const parts = colKey.split(".");
-    const side = parts[0] as "debit" | "credit";
+    const sideStr = parts[0];
+    if (sideStr !== 'debit' && sideStr !== 'credit') return;
     const field = parts[1];
-    if (!side || !field) return;
+    if (!field) return;
 
     // 複合仕訳対応: targetRowIndex指定時はその行のみ、未指定時は全エントリ
-    const entries = side === "debit" ? journal.debit_entries : journal.credit_entries;
+    const entries = sideStr === "debit" ? journal.debit_entries : journal.credit_entries;
     const targetEntries = (
       targetRowIndex != null && targetRowIndex < entries.length
         ? [entries[targetRowIndex]]
         : entries
     ).filter((e): e is NonNullable<typeof e> => e != null);
+    const strValue = typeof value === 'string' ? value : '';
     for (const entry of targetEntries) {
       if (colKey.endsWith(".account")) {
         // 勘定科目フィル時に税区分・区分・補助科目も連動（selectAccountItemと同じ挙動）
-        entry.account = (value as string) || null;
-        const accountId = value as string;
+        entry.account = strValue || null;
+        const accountId = strValue;
         if (accountId) {
           const allAccts = clientSettings.accounts.value;
           const acc = allAccts.find((a) => a.accountId === accountId);
@@ -3425,12 +3151,8 @@ function applyFillValue(
           // 補助科目連動
           if (acc) {
             const sub = clientSettings.subAccounts.value[acc.accountId];
-            // 補助科目が配列（MfSubAccountEntry[]）の場合: 1件→name自動代入、複数→null（ユーザー選択）
-            if (Array.isArray(sub)) {
-              entry.sub_account = sub.length === 1 ? sub[0].name : null;
-            } else {
-              entry.sub_account = sub || null;
-            }
+            // 補助科目: 1件→name自動代入、複数→null（ユーザー選択）、0件→null
+            entry.sub_account = sub?.length === 1 ? sub[0]?.name ?? null : null;
           }
         } else {
           entry.sub_account = null;
@@ -3526,8 +3248,9 @@ function onCellDragMove(event: MouseEvent): void {
   // ドロップ先セルを特定
   const el = document.elementFromPoint(event.clientX, event.clientY);
   if (!el) return;
-  const cellEl = (el as HTMLElement).closest("[data-drag-col]") as HTMLElement | null;
-  const rowEl = (el as HTMLElement).closest("[data-journal-index]") as HTMLElement | null;
+  if (!(el instanceof HTMLElement)) return;
+  const cellEl = el.closest<HTMLElement>("[data-drag-col]");
+  const rowEl = el.closest<HTMLElement>("[data-journal-index]");
   if (cellEl && rowEl) {
     const ji = parseInt(rowEl.dataset.journalIndex ?? "", 10);
     const ri = parseInt(cellEl.dataset.dragRow ?? "0", 10);
@@ -3646,7 +3369,7 @@ const showUnexported = ref<boolean>(true); // 未出力を表示（初期: ON）
 const showExported = ref<boolean>(false); // 出力済を表示: 廃止（常にfalse。出力済みはダウンロード履歴画面で確認）
 const showExcluded = ref<boolean>(false); // 出力対象外を表示（初期: OFF）
 const showTrashed = ref<boolean>(false); // ゴミ箱を表示（初期: OFF）
-const showPastCsv = ref<boolean>(false); // 過去仕訳CSVを表示（初期: OFF）
+const showImported = ref<boolean>(false); // 過去仕訳CSVを表示（初期: OFF）
 const globalSearchQuery = ref<string>(""); // 全列横断検索クエリ
 
 // 証票種別フィルタ（空文字 = 全て） — vendorOptionsの共有定数を使用
@@ -3702,7 +3425,8 @@ const tooltipX = ref(0);
 const tooltipY = ref(0);
 
 function showTooltip(event: MouseEvent, text: string) {
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  if (!(event.currentTarget instanceof HTMLElement)) return;
+  const rect = event.currentTarget.getBoundingClientRect();
   tooltipText.value = text;
   tooltipHtml.value = "";
   tooltipX.value = rect.left + rect.width / 2;
@@ -3710,8 +3434,9 @@ function showTooltip(event: MouseEvent, text: string) {
   tooltipVisible.value = true;
 }
 
-function showWarningTooltip(event: MouseEvent, labels: string[], journal?: JournalPhase5Mock) {
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+function showWarningTooltip(event: MouseEvent, labels: string[], journal?: UiJournal) {
+  if (!(event.currentTarget instanceof HTMLElement)) return;
+  const rect = event.currentTarget.getBoundingClientRect();
   const warnings = labels.filter((l) => warningLabelMap[l]);
   tooltipHtml.value = warnings
     .map((l) => {
@@ -3723,23 +3448,26 @@ function showWarningTooltip(event: MouseEvent, labels: string[], journal?: Journ
         // warning_detailsに具体的な理由がある場合はそちらを優先
         const details = journal.warning_details;
         if (details && details[l]) {
-          msg = details[l];
-        } else if (l === "DATE_UNKNOWN") {
-            msg = journal.date_on_document
-              ? UI_MSG.OCR日付読取失敗
-              : UI_MSG.OCR日付記載なし;
-        } else if (l === "ACCOUNT_UNKNOWN") {
-          const onDoc =
-            journal.debit_entries[0]?.account_on_document ??
-            journal.credit_entries[0]?.account_on_document ??
-            false;
-          msg = onDoc ? UI_MSG.OCR科目読取失敗 : UI_MSG.OCR科目記載なし;
-        } else if (l === "AMOUNT_UNCLEAR") {
-          const onDoc =
-            journal.debit_entries[0]?.amount_on_document ??
-            journal.credit_entries[0]?.amount_on_document ??
-            false;
-          msg = onDoc ? UI_MSG.OCR金額読取失敗 : UI_MSG.OCR金額記載なし;
+          msg = String(details[l]);
+        } else if (!isImportedJournal(journal)) {
+          // on_document情報はAI仕訳のみ（取込仕訳にはdate_on_document等が存在しない）
+          if (l === "DATE_UNKNOWN") {
+              msg = journal.date_on_document
+                ? UI_MSG.OCR日付読取失敗
+                : UI_MSG.OCR日付記載なし;
+          } else if (l === "ACCOUNT_UNKNOWN") {
+            const onDoc =
+              journal.debit_entries[0]?.account_on_document ??
+              journal.credit_entries[0]?.account_on_document ??
+              false;
+            msg = onDoc ? UI_MSG.OCR科目読取失敗 : UI_MSG.OCR科目記載なし;
+          } else if (l === "AMOUNT_UNCLEAR") {
+            const onDoc =
+              journal.debit_entries[0]?.amount_on_document ??
+              journal.credit_entries[0]?.amount_on_document ??
+              false;
+            msg = onDoc ? UI_MSG.OCR金額読取失敗 : UI_MSG.OCR金額記載なし;
+          }
         }
       }
       return `<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}"></span>${msg}</span>`;
@@ -3756,7 +3484,7 @@ function hideTooltip() {
 }
 
 /** B2: 警告モーダル — 確認済みとして警告をdismissalに記録 */
-function openWarningConfirmModal(journal: JournalPhase5Mock) {
+function openWarningConfirmModal(journal: UiJournal) {
   if (!assertEditableJournal(journal, 'openWarningConfirmModal')) return;
   const warningKeys = Object.keys(warningLabelMap);
   const warnings = journal.labels.filter((l) => warningKeys.includes(l));
@@ -3802,8 +3530,10 @@ const hintModalJournalIndex = computed(() => {
 });
 
 
-async function openHintModal(journal: JournalPhase5Mock): Promise<void> {
+async function openHintModal(journal: UiJournal): Promise<void> {
   if (!canShowHint(journal)) return;
+  // canShowHint通過 = AI仕訳確定。isImportedJournalで明示narrow
+  if (isImportedJournal(journal)) return;
   hintModalJournal.value = journal;
   // ヒント取得は HintModal.vue の watch が自動実行
 }
@@ -3832,12 +3562,8 @@ function applyHintSuggestion(s: HintSuggestion): void {
       if (acctObj.defaultTaxCategoryId) entry.tax_category_id = acctObj.defaultTaxCategoryId;
       // 補助科目: selectAccountItemと同じくclientSettings.subAccountsから取得
       const sub = clientSettings.subAccounts.value[s.selectedValue];
-      // 補助科目が配列（MfSubAccountEntry[]）の場合: 1件→name自動代入、複数→null（ユーザー選択）
-      if (Array.isArray(sub)) {
-        entry.sub_account = sub.length === 1 ? sub[0].name : null;
-      } else {
-        entry.sub_account = sub || null;
-      }
+      // 補助科目: 1件→name自動代入、複数→null（ユーザー選択）、0件→null
+      entry.sub_account = sub?.length === 1 ? sub[0]?.name ?? null : null;
     }
   } else if (s.field === FIELD_TAX_CATEGORY) {
     const entry = entries[s.entryIndex];
@@ -3877,9 +3603,9 @@ function closeDropdown() {
 
 // ────── ワークフローハブ操作（レベル②ローカル状態変更） ──────
 
-function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
+function setReadStatus(journal: UiJournal, value: boolean) {
   if (!assertEditableJournal(journal, 'setReadStatus')) return;
-  const target = journals.value.find((j) => j.journalId === journal.journalId);
+  const target = findEditableJournal(journal.journalId);
   if (!target || target.is_read === value) return; // 同じ状態なら何もしない
   closeDropdown();
   confirmDialog.value = {
@@ -3907,9 +3633,9 @@ function setReadStatus(journal: JournalPhase5Mock, value: boolean) {
   };
 }
 
-function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
+function setExportExclude(journal: UiJournal, exclude: boolean) {
   if (!assertEditableJournal(journal, 'setExportExclude')) return;
-  const target = journals.value.find((j) => j.journalId === journal.journalId);
+  const target = findEditableJournal(journal.journalId);
   if (!target) return;
   const hasLabel = target.labels.includes("EXPORT_EXCLUDE");
   if (exclude === hasLabel) return; // 同じ状態なら何もしない
@@ -3938,7 +3664,7 @@ function setExportExclude(journal: JournalPhase5Mock, exclude: boolean) {
   };
 }
 
-function copyJournal(journal: JournalPhase5Mock, _index: number) {
+function copyJournal(journal: UiJournal, _index: number) {
   closeDropdown();
   confirmDialog.value = {
     show: true,
@@ -3979,7 +3705,7 @@ function copyJournal(journal: JournalPhase5Mock, _index: number) {
   };
 }
 
-function trashJournal(journal: JournalPhase5Mock) {
+function trashJournal(journal: UiJournal) {
   if (!assertEditableJournal(journal, 'trashJournal')) return;
   // 制約: 出力済みはゴミ箱不可
   if (journal.status === "exported") {
@@ -3992,7 +3718,7 @@ function trashJournal(journal: JournalPhase5Mock) {
     title: UI_MSG.ゴミ箱に移動,
     message: `「${journal.description}」${UI_MSG.をゴミ箱に移動しますか}`,
     onConfirm: () => {
-      const target = journals.value.find((j) => j.journalId === journal.journalId);
+      const target = findEditableJournal(journal.journalId);
       if (!target) return;
       target.deleted_at = new Date().toISOString();
       target.deleted_by = currentStaffId.value ?? null;
@@ -4011,9 +3737,9 @@ function trashJournal(journal: JournalPhase5Mock) {
   };
 }
 
-function restoreJournal(journal: JournalPhase5Mock) {
+function restoreJournal(journal: UiJournal) {
   if (!assertEditableJournal(journal, 'restoreJournal')) return;
-  const target = journals.value.find((j) => j.journalId === journal.journalId);
+  const target = findEditableJournal(journal.journalId);
   if (!target || target.deleted_at === null) return;
   closeDropdown();
   confirmDialog.value = {
@@ -4065,7 +3791,7 @@ function clearSelection() {
 // ────── 一括操作関数（冪等 + 0件ガード） ──────
 
 function bulkSetReadStatus(value: boolean) {
-  const all = selectedJournals.value.filter((j: any) => !j._isPastJournal);
+  const all = selectedJournals.value.filter((j): j is JournalPhase5Mock => !isImportedJournal(j));
   const exportedCount = all.filter((j) => j.status === "exported").length;
   const targets = all.filter((j) => j.status !== "exported" && j.is_read !== value);
   // 0件ガード
@@ -4115,7 +3841,7 @@ function bulkSetReadStatus(value: boolean) {
 }
 
 function bulkSetExportExclude(exclude: boolean) {
-  const all = selectedJournals.value.filter((j: any) => !j._isPastJournal);
+  const all = selectedJournals.value.filter((j): j is JournalPhase5Mock => !isImportedJournal(j));
   const exportedCount = all.filter((j) => j.status === "exported").length;
   const targets = all.filter((j) => {
     if (j.status === "exported") return false;
@@ -4239,7 +3965,7 @@ function showBulkCopyDialog() {
 }
 
 function showBulkTrashDialog() {
-  const all = selectedJournals.value.filter((j: any) => !j._isPastJournal);
+  const all = selectedJournals.value.filter((j): j is JournalPhase5Mock => !isImportedJournal(j));
   const exportedCount = all.filter((j) => j.status === "exported").length;
   const targets = all.filter((j) => j.status !== "exported" && j.deleted_at === null);
   // 0件ガード
@@ -4315,13 +4041,6 @@ const isModalPinned = ref<boolean>(false);
 
 // modalDrag は utils/modalDrag.ts に抽出済み（import は上部に追加済み）
 
-// 過去仕訳検索モーダル用
-const pastJournalModalRef = ref<HTMLElement | null>(null);
-const {
-  position: pastJournalPos,
-  zIndex: pastJournalZ,
-  startDrag: startPastJournalDrag,
-} = useDraggable(pastJournalModalRef);
 
 // コメントモーダル用 ref/useDraggable は CommentModal.vue に移動済み
 // ヒントモーダル用 ref/useDraggable は HintModal.vue に移動済み
@@ -4373,7 +4092,7 @@ async function fetchSupportingMatches() {
 }
 
 /** 仕訳に紐づく根拠資料があるか */
-function hasSupportingMatch(journal: JournalPhase5Mock): boolean {
+function hasSupportingMatch(journal: UiJournal): boolean {
   return supportingMatchMap.value.has(journal.journalId);
 }
 
@@ -4393,21 +4112,7 @@ function closeSupportingSearchModal() {
 // 検索実行 / プレビュー / デバウンスは EvidenceSearchModal.vue に移動済み
 
 const showPastJournalModal = ref<boolean>(false);
-const pastJournalTab = ref<"streamed" | "accounting">("streamed");
-const pastJournalSearch = ref({
-  vendor: "",
-  dateFrom: "",
-  dateTo: "",
-  amountCondition: "",
-  amount: null as number | null,
-  debitAccount: "",
-  creditAccount: "",
-});
-
 const isPastJournalModalPinned = ref<boolean>(false);
-const outputFilter = ref<"all" | "unexported" | "exported">("all");
-const pastJournalPage = ref<number>(1);
-const PAST_JOURNAL_PAGE_SIZE = 50;
 
 // ── 会計ソフトから取り込んだ過去仕訳（confirmed_journals API） ──
 const confirmedJournals = ref<ConfirmedJournal[]>([]);
@@ -4456,170 +4161,6 @@ function closePastJournalModal() {
   isPastJournalModalPinned.value = false;
 }
 
-const filteredPastJournals = computed(() => {
-  let results = [...journals.value];
-
-  // 支払先フィルタ
-  if (pastJournalSearch.value.vendor) {
-    results = results.filter((j) => j.description.includes(pastJournalSearch.value.vendor));
-  }
-
-  // 日付範囲フィルタ
-  if (pastJournalSearch.value.dateFrom) {
-    results = results.filter(
-      (j) => j.voucher_date !== null && j.voucher_date >= pastJournalSearch.value.dateFrom,
-    );
-  }
-  if (pastJournalSearch.value.dateTo) {
-    results = results.filter(
-      (j) => j.voucher_date !== null && j.voucher_date <= pastJournalSearch.value.dateTo,
-    );
-  }
-
-  // 金額フィルタ
-  if (pastJournalSearch.value.amount !== null && pastJournalSearch.value.amountCondition) {
-    results = results.filter((j) => {
-      const debitTotal = j.debit_entries.reduce((sum: number, e: any) => sum + (e.amount ?? 0), 0);
-      const creditTotal = j.credit_entries.reduce((sum: number, e: any) => sum + (e.amount ?? 0), 0);
-      const amount = Math.max(debitTotal, creditTotal);
-
-      switch (pastJournalSearch.value.amountCondition) {
-        case "equal":
-          return amount === pastJournalSearch.value.amount;
-        case "greater":
-          return amount >= (pastJournalSearch.value.amount || 0);
-        case "less":
-          return amount <= (pastJournalSearch.value.amount || 0);
-        default:
-          return true;
-      }
-    });
-  }
-
-  // 借方勘定科目フィルタ
-  if (pastJournalSearch.value.debitAccount) {
-    results = results.filter((j) =>
-      j.debit_entries.some(
-        (e: any) =>
-          resolveAccountName(e.account) === pastJournalSearch.value.debitAccount ||
-          e.account === pastJournalSearch.value.debitAccount,
-      ),
-    );
-  }
-
-  // 貸方勘定科目フィルタ
-  if (pastJournalSearch.value.creditAccount) {
-    results = results.filter((j) =>
-      j.credit_entries.some(
-        (e: any) =>
-          resolveAccountName(e.account) === pastJournalSearch.value.creditAccount ||
-          e.account === pastJournalSearch.value.creditAccount,
-      ),
-    );
-  }
-
-  // タブによる表示制御
-  if (pastJournalTab.value === "accounting") {
-    // 会計ソフトから取り込んだ過去仕訳（confirmed_journals API）
-    let cjResults = [...confirmedJournals.value];
-
-    // 摘要フィルタ
-    if (pastJournalSearch.value.vendor) {
-      cjResults = cjResults.filter((j) => j.description.includes(pastJournalSearch.value.vendor));
-    }
-    // 日付範囲フィルタ
-    if (pastJournalSearch.value.dateFrom) {
-      cjResults = cjResults.filter((j) => j.voucher_date >= pastJournalSearch.value.dateFrom);
-    }
-    if (pastJournalSearch.value.dateTo) {
-      cjResults = cjResults.filter((j) => j.voucher_date <= pastJournalSearch.value.dateTo);
-    }
-    // 金額フィルタ
-    if (pastJournalSearch.value.amount !== null && pastJournalSearch.value.amountCondition) {
-      cjResults = cjResults.filter((j) => {
-        const debitTotal = j.debit_entries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
-        const creditTotal = j.credit_entries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
-        const amount = Math.max(debitTotal, creditTotal);
-        switch (pastJournalSearch.value.amountCondition) {
-          case "equal":
-            return amount === pastJournalSearch.value.amount;
-          case "greater":
-            return amount >= (pastJournalSearch.value.amount || 0);
-          case "less":
-            return amount <= (pastJournalSearch.value.amount || 0);
-          default:
-            return true;
-        }
-      });
-    }
-    // 借方勘定科目フィルタ
-    if (pastJournalSearch.value.debitAccount) {
-      cjResults = cjResults.filter((j) =>
-        j.debit_entries.some((e) => e.account === pastJournalSearch.value.debitAccount),
-      );
-    }
-    // 貸方勘定科目フィルタ
-    if (pastJournalSearch.value.creditAccount) {
-      cjResults = cjResults.filter((j) =>
-        j.credit_entries.some((e) => e.account === pastJournalSearch.value.creditAccount),
-      );
-    }
-    // JournalPhase5Mock互換オブジェクトに変換して返す
-    return cjResults.map((cj) => ({
-      id: cj.journalId,
-      voucher_date: cj.voucher_date,
-      description: cj.description,
-      debit_entries: cj.debit_entries.map((e) => ({
-        account: e.account,
-        sub_account: e.sub_account,
-        tax_category_id: e.tax_category_id,
-        amount: e.amount,
-      })),
-      credit_entries: cj.credit_entries.map((e) => ({
-        account: e.account,
-        sub_account: e.sub_account,
-        tax_category_id: e.tax_category_id,
-        amount: e.amount,
-      })),
-      status: "exported" as const,
-      labels: [] as JournalLabelMock[],
-      source: cj.source,
-    }));
-  }
-
-  // 出力ステータスフィルタ
-  if (outputFilter.value === "unexported") {
-    results = results.filter((j) => j.status === null);
-  } else if (outputFilter.value === "exported") {
-    results = results.filter((j) => j.status === "exported");
-  }
-
-  return results;
-});
-
-const paginatedPastJournals = computed(() => {
-  const start = (pastJournalPage.value - 1) * PAST_JOURNAL_PAGE_SIZE;
-  return filteredPastJournals.value.slice(start, start + PAST_JOURNAL_PAGE_SIZE);
-});
-
-const totalPages = computed(() => {
-  return Math.max(1, Math.ceil(filteredPastJournals.value.length / PAST_JOURNAL_PAGE_SIZE));
-});
-
-function toggleOutputFilter(filter: "unexported" | "exported") {
-  if (outputFilter.value === filter) {
-    outputFilter.value = "all";
-  } else {
-    outputFilter.value = filter;
-  }
-  pastJournalPage.value = 1;
-}
-
-function goToPage(page: number) {
-  if (page >= 1 && page <= totalPages.value) {
-    pastJournalPage.value = page;
-  }
-}
 
 // baseModalWidth/baseModalHeight は ImageModal.vue に移動済み
 
@@ -4668,7 +4209,7 @@ function closeModal() {
 // ↑ journals shallowRefはL2800付近に移動済み（setup内の参照順序制約）
 // 全てのデータ変更はこの関数を経由する。
 // 楽観的UI更新 → journalId単位マージ → 500msデバウンスでPATCH送信。
-const _patchQueue = new Map<string, Record<string, unknown>>();
+const _patchQueue = new Map<string, Partial<JournalPhase5Mock>>();
 let _patchTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
@@ -4681,8 +4222,8 @@ let _patchTimer: ReturnType<typeof setTimeout> | null = null;
  * 全編集系関数の入口で呼び出す。サイレント失敗を防ぐためログ出力付き。
  * @returns true=編集可能, false=過去仕訳のためブロック
  */
-function assertEditableJournal(journal: any, caller: string): boolean {
-  if (journal?._isPastJournal) {
+function assertEditableJournal(journal: UiJournal, caller: string): journal is JournalPhase5Mock {
+  if (isImportedJournal(journal)) {
     console.warn(`[JournalGuard] ${caller}: 過去仕訳への操作をブロック (${journal.journalId})`);
     return false;
   }
@@ -4693,20 +4234,31 @@ function assertEditableJournal(journal: any, caller: string): boolean {
  * 💡ヒントアイコン表示可否（意味ベースで制御）。
  * 現在はAI仕訳のみヒントあり。将来「仕訳詳細」等に拡張する場合はここを修正。
  */
-function canShowHint(journal: any): boolean {
-  return !journal._isPastJournal;
+function canShowHint(journal: UiJournal): boolean {
+  return !isImportedJournal(journal);
+}
+
+/**
+ * 編集可能な仕訳をjournalIdで検索（型述語付き）。
+ * journals.value.find() + isImportedJournalガードを統合。
+ * 戻り値はJournalPhase5Mock | undefined（NormalizedConfirmedJournalは返さない）。
+ */
+function findEditableJournal(journalId: string): JournalPhase5Mock | undefined {
+  return journals.value.find(
+    (j): j is JournalPhase5Mock => j.journalId === journalId && !isImportedJournal(j)
+  );
 }
 
 function updateJournalField(
   journalId: string,
-  patch: Record<string, unknown>,
+  patch: Partial<JournalPhase5Mock>,
   options: { syncWarnings?: boolean; silent?: boolean; autoMeta?: boolean } = {},
 ) {
   const journal = journals.value.find((j) => j.journalId === journalId);
   if (!journal) return;
 
   // 最終防御: 取込仕訳への書き込み禁止（全書き込みの集約点）
-  if (journal._isPastJournal) {
+  if (isImportedJournal(journal)) {
     console.error(`[JournalGuard][BLOCKED] updateJournalField: 取込仕訳への書き込み試行 (${journalId})`);
     return;
   }
@@ -4762,20 +4314,20 @@ async function flushPendingPatches(): Promise<void> {
  * confirmedToJournalRow()偽装との違い:
  * - journalId: 実際のUUID（'past-csv-${idx}'ではない）
  * - memo: 実際のメモ（'過去仕訳CSV'で潰さない）
- * - _isPastJournal: 過去仕訳マーカー（テンプレートで描画切替に使用）
+ * - source: ConfirmedJournal由来のsourceをそのまま保持（isImportedJournal()で判定）
  */
-function normalizeJournalForUI(row: any): any {
-  if (row.source === 'mf_import' || row.source === 'system') {
-    return {
+function normalizeJournalForUI(row: JournalListRow): UiJournal {
+  if (isMfJournal(row)) {
+    const normalized: NormalizedConfirmedJournal = {
       ...row,
-      _isPastJournal: true,
+      // ⑥-1: _isPastJournal廃止。sourceはrow自体に既存のため追加不要。
       // UI互換デフォルト値（ConfirmedJournalに存在しないフィールド）
-      labels: row.labels ?? [],
+      labels: [],
       status: null,
       is_read: true,
       deleted_at: null,
-      warning_dismissals: row.warning_dismissals ?? [],
-      warning_details: row.warning_details ?? {},
+      warning_dismissals: [],
+      warning_details: {},
       is_credit_card_payment: false,
       voucher_type: null,
       document_id: null,
@@ -4785,8 +4337,9 @@ function normalizeJournalForUI(row: any): any {
       rule_id: null,
       invoice_number: null,
     }
+    return normalized
   }
-  return { ...row, _isPastJournal: false }
+  return { ...row }  // ⑥-1: _isPastJournal廃止。通常仕訳はsource未設定（isImportedJournal()=false）
 }
 
 /** 統合一覧APIの呼び出し（POST: 科目名マッピング付き） */
@@ -4799,7 +4352,7 @@ async function fetchJournalList() {
   // Phase 2: accountMap/taxMapはサーバー側マスタから自動生成（POSTボディ送信不要）
 
   const body: Record<string, unknown> = {
-    showPastCsv: showPastCsv.value,
+    showImported: showImported.value,
     showUnexported: showUnexported.value,
     showExported: showExported.value,
     showExcluded: showExcluded.value,
@@ -4846,7 +4399,7 @@ watch(
   [
     sortColumn,
     sortDirection,
-    showPastCsv,
+    showImported,
     showUnexported,
     // showExported は廃止（常にfalse）。watch不要
     showExcluded,
@@ -4875,7 +4428,7 @@ fetchJournalList();
 /** ページネーション適用済み仕訳リスト（APIがページング済みなのでjournalsそのまま） */
 const paginatedJournals = computed(() => journals.value);
 
-const visibleIds = computed(() => journals.value.filter((j: any) => !j._isPastJournal).map((j) => j.journalId));
+const visibleIds = computed(() => journals.value.filter((j: UiJournal) => !isImportedJournal(j)).map((j) => j.journalId));
 
 const selectedJournals = computed(() =>
   journals.value.filter((j) => selectedIds.value.has(j.journalId)),
@@ -4934,7 +4487,8 @@ function resetToDefaultOrder() {
 }
 
 /** getCombinedRowsの戳り値行型（getValue/getRawValueの引数型に使用） */
-type CombinedRow = { debit: JournalEntryLine | null; credit: JournalEntryLine | null };
+type UiEntryLine = JournalEntryLine | ConfirmedJournalEntry;
+type CombinedRow = { debit: UiEntryLine | null; credit: UiEntryLine | null };
 
 /**
  * JournalEntryLineの動的フィールド書き込み（型安全ヘルパー）
@@ -4943,21 +4497,22 @@ type CombinedRow = { debit: JournalEntryLine | null; credit: JournalEntryLine | 
  * JournalEntryLineの既知フィールドのみ書き込み可能。未知フィールドは無視。
  */
 function setEntryField(entry: JournalEntryLine, field: string, value: unknown): void {
+  const strVal = typeof value === 'string' ? value : '';
   switch (field) {
     case "account":
-      entry.account = (value as string) || null;
+      entry.account = strVal || null;
       break;
     case "sub_account":
-      entry.sub_account = (value as string) || null;
+      entry.sub_account = strVal || null;
       break;
     case "department":
-      entry.department = (value as string) || null;
+      entry.department = strVal || null;
       break;
     case "amount":
       entry.amount = value != null && value !== "" ? Number(value) : null;
       break;
     case "tax_category_id":
-      entry.tax_category_id = (value as string) || null;
+      entry.tax_category_id = strVal || null;
       break;
     default:
       // JournalEntryLineに存在しないフィールド（selectedCategory等）は書き込まない
@@ -4966,7 +4521,7 @@ function setEntryField(entry: JournalEntryLine, field: string, value: unknown): 
   }
 }
 
-function getCombinedRows(journal: JournalPhase5Mock): CombinedRow[] {
+function getCombinedRows(journal: UiJournal): CombinedRow[] {
   const maxRows = Math.max(journal.debit_entries.length, journal.credit_entries.length);
   return Array.from({ length: maxRows }, (_, i) => ({
     debit: journal.debit_entries[i] || null,
@@ -4986,7 +4541,7 @@ function getCombinedRows(journal: JournalPhase5Mock): CombinedRow[] {
  * 許可: export_exclude && deleted_at は許可（外部未出力のため）
  * フィルタ: showTrashed=ONは「追加表示型」（通常+ゴミ箱）
  */
-function getRowBackground(journal: any): string {
+function getRowBackground(journal: UiJournal): string {
   // 優先度1: ゴミ箱 → 濃グレー+白字（最優先）
   if (journal.deleted_at !== null) {
     return "bg-gray-600 text-white";
@@ -5000,7 +4555,7 @@ function getRowBackground(journal: any): string {
     return "bg-gray-200 exported-row";
   }
   // 優先度4: 過去仕訳（MFインポート） → 薄グレー
-  if (journal._isPastJournal) {
+  if (isImportedJournal(journal)) {
     return "bg-gray-100";
   }
   // 優先度5: 未読 → 黄色
@@ -5011,7 +4566,7 @@ function getRowBackground(journal: any): string {
   return "bg-white";
 }
 
-function hasPastJournal(journal: JournalPhase5Mock): boolean {
+function hasPastJournal(journal: UiJournal): boolean {
   return journals.value.findIndex((j) => j.journalId === journal.journalId) < 25;
 }
 
@@ -5019,12 +4574,15 @@ function hasPastJournal(journal: JournalPhase5Mock): boolean {
  * ドットパスで値を取得（税区分名称・勘定科目名変換付き）
  * 動的パスアクセスのためkeyof型安全性は保証できない。内部でunknown経由でRecordにキャストする。
  */
-function getValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknown {
+function getValue(obj: UiJournal | CombinedRow, path: string): unknown {
   const raw = path
     .split(".")
     .reduce<unknown>(
-      (o, key) => (o as Record<string, unknown> | undefined)?.[key],
-      obj as Record<string, unknown>,
+      (o, key) => {
+        if (o == null || typeof o !== 'object') return undefined;
+        return (o as Record<string, unknown>)[key];
+      },
+      obj as unknown,
     );
   // 概念ID → MF正式名称に変換（tax_category_idキーの場合）
   if (path.endsWith("tax_category_id") && typeof raw === "string") {
@@ -5046,9 +4604,10 @@ function getValue(obj: JournalPhase5Mock | CombinedRow, path: string): unknown {
 function resolveTaxCategoryName(id: string | null | undefined): string {
   if (!id) return "";
   const allTaxCats = clientSettings.taxCategories.value;
-  const software = (activeClientFull.value?.accountingSoftware ?? 'mf') as AccountingSoftwareKey;
-  // 'other'の場合はMFにフォールバック
-  const resolvedSoftware: AccountingSoftwareKey = (['mf', 'yayoi', 'freee'] as const).includes(software as AccountingSoftwareKey) ? software : 'mf';
+  const software = activeClientFull.value?.accountingSoftware ?? 'mf';
+  // 型ガード: AccountingSoftwareKeyに該当しないソフト（tkc/other）はmfにフォールバック
+  const resolvedSoftware: AccountingSoftwareKey =
+    software === 'mf' || software === 'yayoi' || software === 'freee' ? software : 'mf';
   return resolveTaxNameForSoftware(id, resolvedSoftware, allTaxCats);
 }
 
@@ -5132,7 +4691,7 @@ function cancelHideNeedPopup() {
 const commentModalPinned = ref(false);
 let commentHoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
-function hoverOpenCommentModal(journal: JournalPhase5Mock) {
+function hoverOpenCommentModal(journal: UiJournal) {
   if (commentModalPinned.value) return;
   if (commentHoverCloseTimer) {
     clearTimeout(commentHoverCloseTimer);
@@ -5165,29 +4724,28 @@ function cancelHoverCloseCommentModal() {
   }
 }
 
-function hasAnyStaffNote(journal: JournalPhase5Mock): boolean {
+function hasAnyStaffNote(journal: UiJournal): boolean {
   if (!journal.staff_notes) return false;
   return STAFF_NOTE_KEYS.some((key) => journal.staff_notes?.[key]?.enabled);
 }
 
-function getStaffNoteEnabled(journal: JournalPhase5Mock, key: StaffNoteKey): boolean {
+function getStaffNoteEnabled(journal: UiJournal, key: StaffNoteKey): boolean {
   return journal.staff_notes?.[key]?.enabled ?? false;
 }
 
-function getStaffNoteText(journal: JournalPhase5Mock, key: StaffNoteKey): string {
+function getStaffNoteText(journal: UiJournal, key: StaffNoteKey): string {
   return journal.staff_notes?.[key]?.text ?? "";
 }
 
-function getStaffNoteChatworkUrl(journal: JournalPhase5Mock, key: StaffNoteKey): string {
+function getStaffNoteChatworkUrl(journal: UiJournal, key: StaffNoteKey): string {
   return journal.staff_notes?.[key]?.chatworkUrl ?? "";
 }
 
 // staff_notes → labels 同期: toggleStaffNote / closeCommentModal / toggleStaffNoteInModal でインライン化済み
 
 function toggleStaffNote(journalId: string, key: StaffNoteKey) {
-  const journal = journals.value.find((j) => j.journalId === journalId);
+  const journal = findEditableJournal(journalId);
   if (!journal) return;
-  if (!assertEditableJournal(journal, 'toggleStaffNote')) return;
 
   // staff_notesがなければ初期化
   const notes = journal.staff_notes ? { ...journal.staff_notes } : createEmptyStaffNotes();
@@ -5195,7 +4753,7 @@ function toggleStaffNote(journalId: string, key: StaffNoteKey) {
 
   // labels同期（新しいnotesからlabels構築）
   const NEED_KEYS: readonly StaffNoteKey[] = STAFF_NOTE_KEYS;
-  const newLabels = journal.labels.filter((l: string) => !NEED_KEYS.includes(l as StaffNoteKey));
+  const newLabels: JournalLabelMock[] = journal.labels.filter((l) => !isStaffNoteKey(l));
   for (const k of NEED_KEYS) {
     if (notes[k]?.enabled) newLabels.push(k);
   }
@@ -5206,7 +4764,7 @@ function toggleStaffNote(journalId: string, key: StaffNoteKey) {
     labels: newLabels,
     is_read: notes[key].enabled ? false : undefined, // フラグON時は未読にする
   }, { syncWarnings: false });
-  console.log(`StaffNote toggled: ${key} = ${journal.staff_notes[key].enabled} for ${journalId}`);
+  console.log(`StaffNote toggled: ${key} = ${journal.staff_notes?.[key]?.enabled} for ${journalId}`);
 }
 
 // コメントモーダル
@@ -5221,7 +4779,7 @@ watch(userName, (v) => {
 
 const commentModalJournal = computed(() => {
   if (!commentModalJournalId.value) return null;
-  return journals.value.find((j) => j.journalId === commentModalJournalId.value) ?? null;
+  return findEditableJournal(commentModalJournalId.value) ?? null;
 });
 
 function openCommentModal(journalId: string) {
@@ -5247,7 +4805,7 @@ function closeCommentModal() {
     }
     // labels同期（notesからlabels構築）
     const NEED_KEYS_CLOSE: readonly StaffNoteKey[] = STAFF_NOTE_KEYS;
-    const closingLabels = commentModalJournal.value.labels.filter((l: string) => !NEED_KEYS_CLOSE.includes(l as StaffNoteKey));
+    const closingLabels: JournalLabelMock[] = commentModalJournal.value.labels.filter((l) => !isStaffNoteKey(l));
     for (const k of NEED_KEYS_CLOSE) {
       if (commentModalJournal.value.staff_notes?.[k]?.enabled) closingLabels.push(k);
     }
@@ -5275,7 +4833,7 @@ function toggleStaffNoteInModal(key: StaffNoteKey) {
   commentModalJournal.value.staff_notes = modalNotes;
   // labels即時同期（直接変更せず再構築）
   const NEED_KEYS_MODAL: readonly StaffNoteKey[] = STAFF_NOTE_KEYS;
-  commentModalJournal.value.labels = commentModalJournal.value.labels.filter((l: string) => !NEED_KEYS_MODAL.includes(l as StaffNoteKey));
+  commentModalJournal.value.labels = commentModalJournal.value.labels.filter((l) => !isStaffNoteKey(l));
   for (const k of NEED_KEYS_MODAL) {
     if (modalNotes[k]?.enabled) commentModalJournal.value.labels.push(k);
   }

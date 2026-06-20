@@ -23,6 +23,7 @@ import { useClientTaxCategories } from '@/features/tax-management/composables/us
 import { useClientAccountStore } from '@/stores/clientAccountStore'
 import type { Account, EnrichedAccount } from '@/types/shared-account'
 import type { TaxCategory } from '@/types/shared-tax-category'
+import type { SubAccountEntry } from '@/types/shared-sub-account'
 import type { UnifiedAccount, UnifiedTaxCategory, AccountSettingsReturn } from '../types/account-settings.types'
 
 export function useAccountSettings(scope: 'master'): AccountSettingsReturn
@@ -47,9 +48,9 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
   // ==============================
   // 補助科目（scope='client'のみ有効）
   // ==============================
-  const subAccounts: Ref<Record<string, string>> = scope === 'client' && clientId
-    ? computed(() => clientAccountStore.subAccountsMap[clientId] ?? {}) as unknown as Ref<Record<string, string>>
-    : ref<Record<string, string>>({})
+  const subAccounts: Ref<Record<string, SubAccountEntry[]>> = scope === 'client' && clientId
+    ? computed(() => clientAccountStore.subAccountsMap[clientId] ?? {})
+    : ref<Record<string, SubAccountEntry[]>>({})
 
   // ==============================
   // accounts computed（Store直結。overrides再構成は廃止済み）

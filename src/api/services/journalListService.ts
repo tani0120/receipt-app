@@ -23,7 +23,7 @@ export interface JournalListQuery {
   sort?: string
   order?: 'asc' | 'desc'
   search?: string
-  showPastCsv?: boolean
+  showImported?: boolean
   showUnexported?: boolean
   showExported?: boolean
   showExcluded?: boolean
@@ -52,11 +52,6 @@ export interface JournalListResponse {
 // 型ガードで分岐して安全にアクセスする
 // ────────────────────────────────────────────
 
-/** 仕訳一覧行のID取得（通常仕訳: journalId、過去仕訳: id） */
-function getRowId(row: JournalListRow): string {
-  if (isMfJournal(row)) return row.id
-  return row.journalId
-}
 
 /** 仕訳一覧行のラベル取得（過去仕訳はラベル概念なし→空配列） */
 function getRowLabels(row: JournalListRow): string[] {
@@ -64,17 +59,6 @@ function getRowLabels(row: JournalListRow): string[] {
   return row.labels
 }
 
-/** 仕訳一覧行のステータス取得（過去仕訳→null） */
-function getRowStatus(row: JournalListRow): 'exported' | null {
-  if (isMfJournal(row)) return null
-  return row.status
-}
-
-/** 仕訳一覧行の論理削除日取得（過去仕訳→null） */
-function getRowDeletedAt(row: JournalListRow): string | null {
-  if (isMfJournal(row)) return null
-  return row.deleted_at
-}
 
 // ────────────────────────────────────────────
 // null安全比較（compareWithNull相当）
@@ -375,7 +359,7 @@ function filterJournals(
 ): JournalListRow[] {
   return result.filter(journal => {
     // 過去仕訳（MFインポート/CSV）はステータスフィルタの対象外
-    // （showPastCsvの判断は結合段階で完了済み）
+    // （showImportedの判断は結合段階で完了済み）
     if (isMfJournal(journal)) return true
 
     // 以下は通常仕訳のみの処理
@@ -383,7 +367,7 @@ function filterJournals(
     if (journal.deleted_at !== null && !opts.showTrashed) return false
 
     // 証票種別フィルタ
-    if (opts.voucherFilter && !journal.labels.includes(opts.voucherFilter)) return false
+    if (opts.voucherFilter && !getRowLabels(journal).includes(opts.voucherFilter)) return false
 
     const isExcluded = journal.labels.includes('EXPORT_EXCLUDE')
     const isExported = journal.status === 'exported'
@@ -416,7 +400,7 @@ export function getJournalList(clientId: string, query: JournalListQuery): Journ
   const allJournalIds = rawJournals.map(j => isAiJournal(j) ? j.journalId : '')
 
   // 2. 過去仕訳（MFインポート/CSV）の結合（偽装なし、そのまま追加）
-  if (query.showPastCsv) {
+  if (query.showImported) {
     const confirmed = getConfirmedJournals(clientId)
     result.push(...confirmed)
   }

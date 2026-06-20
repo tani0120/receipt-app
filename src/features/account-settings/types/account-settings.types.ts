@@ -2,6 +2,8 @@ import type { Ref, ComputedRef } from 'vue'
 import type { Account } from '@/types/shared-account'
 import type { TaxCategory } from '@/types/shared-tax-category'
 
+import type { SubAccountEntry } from '@/types/shared-sub-account'
+
 // =============================================
 // 統一型（マスタ/顧問先の区別なく使える）
 // =============================================
@@ -36,8 +38,8 @@ export interface AccountSettingsReturn {
   accounts: ComputedRef<UnifiedAccount[]>
   /** 表示中の科目のみ（hiddenフラグがfalseの行） */
   visibleAccounts: ComputedRef<UnifiedAccount[]>
-  /** 補助科目マップ（科目ID → 補助科目名）。scope='client'のみ有効。scope='master'では空オブジェクト */
-  subAccounts: Ref<Record<string, string>>
+  /** 補助科目マップ（科目ID → MF補助科目配列）。scope='client'のみ有効。scope='master'では空オブジェクト */
+  subAccounts: Ref<Record<string, SubAccountEntry[]>>
   /** マスタから新規追加された科目（scope='client'のみ有効。scope='master'では空配列） */
   newMasterAccounts: ComputedRef<Account[]>
   /** デフォルト科目順序Map（id → index）。ソート「デフォルト順に戻す」用 */

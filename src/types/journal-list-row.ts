@@ -1,5 +1,6 @@
 import type { JournalPhase5Mock } from './journal_phase5_mock.type'
 import type { ConfirmedJournal } from './confirmed_journal.type'
+import type { UiJournal, NormalizedConfirmedJournal } from './journal-ui.types'
 
 /**
  * 仕訳一覧行（判別共用体）
@@ -29,4 +30,19 @@ export function isMfJournal(row: JournalListRow): row is ConfirmedJournal {
  */
 export function isAiJournal(row: JournalListRow): row is JournalPhase5Mock {
   return !isMfJournal(row)
+}
+
+/**
+ * 取込仕訳判定（UI用型ガード）
+ *
+ * UiJournal（normalizeJournalForUI通過後）で使用。
+ * trueの場合、NormalizedConfirmedJournal にnarrowされる。
+ * テンプレートで journal.imported_at 等にアクセス可能になる。
+ *
+ * JournalListRow / JournalPhase5Mock との後方互換あり（オーバーロード）。
+ */
+export function isImportedJournal(journal: UiJournal): journal is NormalizedConfirmedJournal
+export function isImportedJournal(journal: JournalListRow | JournalPhase5Mock): boolean
+export function isImportedJournal(journal: UiJournal | JournalListRow | JournalPhase5Mock): boolean {
+  return 'source' in journal && (journal.source === 'mf_import' || journal.source === 'system')
 }
