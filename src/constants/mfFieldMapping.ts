@@ -102,6 +102,7 @@ export function revenueToRange(amount: number): string {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import type { MfMcpOffice, MfMcpTermSettings } from '../api/services/mfMcpClient'
+import type { Client } from '../repositories/types'
 import { isIndividualType } from './clientOptions'
 
 /** MF事業者情報からsugusuruフィールドへの変換結果 */
@@ -119,7 +120,7 @@ export interface MfMappingResult {
  */
 export function mapOfficeToClient(
   office: MfMcpOffice,
-  currentClient: Record<string, unknown>,
+  currentClient: Client,
 ): MfMappingResult {
   const updates: Record<string, unknown> = {}
   const changes: string[] = []
@@ -127,7 +128,7 @@ export function mapOfficeToClient(
   // 事業者名 → 法人はcompanyName、個人はrepNameにマッピング
   // MFのnameは事業者名1つのみ（代表者名/会社名の区別なし）
   if (office.name) {
-    const clientType = (currentClient.type as string) || ''
+    const clientType = currentClient.type || ''
     if (isIndividualType(clientType)) {
       // 個人: 事業者名 → repName（代表者名/屋号）
       if (office.name !== currentClient.repName) {
@@ -148,7 +149,7 @@ export function mapOfficeToClient(
     const mfType = OFFICE_TYPE_MAP[office.type]
     if (mfType && mfType !== currentClient.type) {
       const typeLabel = (t: string) => t === 'individual' ? '個人' : t === 'corp' ? '法人' : t
-      changes.push(`区分: ${typeLabel(currentClient.type as string)} → ${typeLabel(mfType)}`)
+      changes.push(`区分: ${typeLabel(currentClient.type)} → ${typeLabel(mfType)}`)
       updates.type = mfType
     }
   }
@@ -196,7 +197,7 @@ export function mapOfficeToClient(
  */
 export function mapTermSettingsToClient(
   termSettings: MfMcpTermSettings,
-  currentClient: Record<string, unknown>,
+  currentClient: Client,
 ): MfMappingResult {
   const updates: Record<string, unknown> = {}
   const changes: string[] = []
@@ -214,7 +215,7 @@ export function mapTermSettingsToClient(
         }
         return labels[v] ?? v
       }
-      changes.push(`課税方式: ${label(currentClient.consumptionTaxMode as string ?? '')} → ${label(mapped)}`)
+      changes.push(`課税方式: ${label(currentClient.consumptionTaxMode ?? '')} → ${label(mapped)}`)
       updates.consumptionTaxMode = mapped
     }
   }
@@ -250,7 +251,7 @@ export function mapTermSettingsToClient(
  */
 export function mapDepartmentsToClient(
   departmentCount: number,
-  currentClient: Record<string, unknown>,
+  currentClient: Client,
 ): MfMappingResult {
   const updates: Record<string, unknown> = {}
   const changes: string[] = []

@@ -47,7 +47,8 @@ function generateJournalEntryId(): string {
 }
 
 // インメモリキャッシュ（clientIdごと）
-const journalCache = new Map<string, unknown[]>();
+// JSONから読み込んだオブジェクトはRecord<string, unknown>として保持
+const journalCache = new Map<string, Record<string, unknown>[]>();
 
 function getFilePath(clientId: string): string {
   // ファイル名にclientIdを含める（安全な文字のみ許可）
@@ -72,7 +73,7 @@ function save(clientId: string): void {
 }
 
 /** clientIdの仕訳データをJSONから読み込み */
-function loadClient(clientId: string): unknown[] {
+function loadClient(clientId: string): Record<string, unknown>[] {
   if (journalCache.has(clientId)) {
     return journalCache.get(clientId)!;
   }
@@ -80,7 +81,7 @@ function loadClient(clientId: string): unknown[] {
     const filePath = getFilePath(clientId);
     if (existsSync(filePath)) {
       const raw = readFileSync(filePath, 'utf-8');
-      const data = JSON.parse(raw) as unknown[];
+      const data = JSON.parse(raw) as Record<string, unknown>[];
       journalCache.set(clientId, data);
       console.log(`[journalStore] ${clientId}: ${data.length}件をJSONから読み込み`);
       return data;
@@ -97,24 +98,29 @@ function loadClient(clientId: string): unknown[] {
 // CRUD
 // ============================================================
 
-/** 顧問先の仕訳データを全件取得 */
-export function getJournals(clientId: string): unknown[] {
-  return loadClient(clientId);
+/**
+ * 顧問先の仕訳データを全件取得
+ *
+ * ジェネリクスで呼び出し元が期待する型を指定可能。
+ * JSONから読み込んだデータは構造的にTと互換であることが前提。
+ * Supabase移行時はDB型バリデーション済みデータが返るため安全。
+ */
+export function getJournals<T = Record<string, unknown>>(clientId: string): T[] {
+  return loadClient(clientId) as T[];
 }
 
 /** 顧問先の仕訳データを全件上書き保存 */
-export function saveJournals(clientId: string, journals: unknown[]): void {
+export function saveJournals(clientId: string, journals: Record<string, unknown>[]): void {
   journalCache.set(clientId, journals);
   save(clientId);
   console.log(`[journalStore] ${clientId}: ${journals.length}件を保存`);
 }
 
 /** 顧問先の仕訳データに追加（サーバーがIDを上書き発番） */
-export function addJournals(clientId: string, newJournals: unknown[]): number {
+export function addJournals(clientId: string, newJournals: Record<string, unknown>[]): number {
   const existing = loadClient(clientId);
   // サーバーがID上書き発番（フロントが送ったIDは信頼しない）
-  for (const j of newJournals) {
-    const journal = j as Record<string, unknown>;
+  for (const journal of newJournals) {
     journal.journalId = generateJournalId();
     // debit_entries / credit_entries のIDも上書き
     if (Array.isArray(journal.debit_entries)) {
@@ -134,9 +140,9 @@ export function addJournals(clientId: string, newJournals: unknown[]): number {
 }
 
 /** 1件の仕訳を部分更新（PATCH用） */
-export function updateJournal(clientId: string, journalId: string, patch: Record<string, unknown>): unknown | null {
+export function updateJournal(clientId: string, journalId: string, patch: Record<string, unknown>): Record<string, unknown> | null {
   const journals = loadClient(clientId);
-  const journal = journals.find((j) => (j as Record<string, unknown>).journalId === journalId) as Record<string, unknown> | undefined;
+  const journal = journals.find((j) => j.journalId === journalId);
   if (!journal) return null;
   // パッチ適用（トップレベルフィールドのみ。ネストは全置換）
   Object.assign(journal, patch);

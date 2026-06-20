@@ -149,7 +149,7 @@ export function getExportList(query: ExportListQuery): ExportListResult {
     credit_entries: { account: string; sub_account?: string; tax_category_id?: string; amount?: number }[]
     created_at?: string
   }
-  const journals = getJournals(clientId) as JournalRaw[]
+  const journals = getJournals<JournalRaw>(clientId)
 
   // 2. 全行展開（未出力・非削除のみ）
   const allRows: ExportRow[] = []
@@ -330,7 +330,7 @@ export function getExportDetail(query: ExportDetailQuery): ExportDetailResult {
     credit_entries: { account: string; sub_account?: string; tax_category_id?: string; amount?: number }[]
     created_at?: string
   }
-  const journals = getJournals(clientId) as JournalRaw[]
+  const journals = getJournals<JournalRaw>(clientId)
 
   // 非削除仕訳のみ（historyIdフィルタはexport_batch_idがあれば適用）
   const allRows: ExportDetailRow[] = []

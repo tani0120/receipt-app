@@ -153,7 +153,7 @@ const route = app
             let totalBacklog = 0
             let draftCount = 0
             for (const cl of assignedClients) {
-              const journals = getJournals(cl.clientId) as Record<string, unknown>[]
+              const journals = getJournals(cl.clientId)
               const active = journals.filter(j => !j.deleted_at)
               totalBacklog += active.length
               draftCount += active.filter(j => j.status === 'draft').length
@@ -493,7 +493,7 @@ const route = app
       };
 
       for (const client of allClients) {
-        const journals = getJournals(client.clientId) as JournalRecord[];
+        const journals = getJournals<JournalRecord>(client.clientId);
         // deleted_atがnullかつ今月作成分のみカウント
         const active = journals.filter(j =>
           (j.deleted_at === null || j.deleted_at === undefined) &&

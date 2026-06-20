@@ -1,4 +1,5 @@
 import type { ClientUi, TaxFilingTypeUi, ConsumptionTaxModeUi } from '@/types/ui.type';
+import { isRecord } from '@/utils/typeGuards';
 
 // ヘルパー関数
 function mapSimplifiedTaxCategoryLabel(category: number): string {
@@ -48,7 +49,7 @@ const safeNumber = (val: unknown): number => {
 
 export function mapClientToUi(api: unknown): ClientUi {
     // 1. Guard: Check if input is object
-    if (!api || typeof api !== 'object') {
+    if (!isRecord(api)) {
         // フォールバック
         return {
             clientId: 'UNKNOWN_ID',
@@ -107,7 +108,7 @@ export function mapClientToUi(api: unknown): ClientUi {
         };
     }
 
-    const raw = api as Record<string, unknown>;
+    const raw = api;
 
     // プリミティブの安全なマッピング
     const clientId = safeString(raw.clientId) || 'UNKNOWN_ID';

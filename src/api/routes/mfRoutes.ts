@@ -32,7 +32,7 @@ import {
   mcpCreateJournal,
 } from '../services/mfMcpClient'
 import { getById, updateClient } from '../services/clientsApi'
-import { mapOfficeToClient, mapTermSettingsToClient } from '../../constants/mfFieldMapping'
+import { mapOfficeToClient, mapTermSettingsToClient, type MfMappingResult } from '../../constants/mfFieldMapping'
 import { importMfJournals, commitMfImport } from '../services/mfJournalImporter'
 import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services/mfTaxImportService'
 import { importMasterAccounts } from '../services/mfAccountImportService'
@@ -269,8 +269,8 @@ app.get('/fiscal-check', async (c) => {
  */
 app.post('/journals', async (c) => {
   try {
-    const body = await c.req.json()
-    const clientId = body.clientId as string
+    const body = await c.req.json<{ clientId?: string; journal?: MfJournalPayload }>()
+    const clientId = body.clientId
     if (!clientId) return c.json({ error: 'clientId必須' }, 400)
     if (!body.journal) return c.json({ error: 'journal必須' }, 400)
 
@@ -297,8 +297,8 @@ app.post('/journals', async (c) => {
  *   2. getTermSettings → 課税方式, 経理方式, 業種
  */
 app.post('/import-offices', async (c) => {
-  const body = await c.req.json()
-  const clientIds = body.clientIds as string[]
+  const body = await c.req.json<{ clientIds?: string[] }>()
+  const clientIds = body.clientIds
   if (!clientIds?.length) {
     return c.json({ error: 'clientIds必須' }, 400)
   }
@@ -326,14 +326,13 @@ app.post('/import-offices', async (c) => {
     try {
       // 1. currentOffice からマッピング
       const office = await mcpFetchCurrentOffice(clientId)
-      const clientRecord = client as unknown as Record<string, unknown>
-      const officeResult = mapOfficeToClient(office, clientRecord)
+      const officeResult = mapOfficeToClient(office, client)
 
       // 2. getTermSettings からマッピング（最新年度）
       const termSettingsList = await mcpFetchTermSettings(undefined, clientId)
-      let termResult = { updates: {} as Record<string, unknown>, changes: [] as string[] }
+      let termResult: MfMappingResult = { updates: {}, changes: [] }
       if (termSettingsList.length > 0) {
-        termResult = mapTermSettingsToClient(termSettingsList[0]!, clientRecord)
+        termResult = mapTermSettingsToClient(termSettingsList[0]!, client)
       }
 
       // マージ（termSettings側が後勝ち）
@@ -380,7 +379,7 @@ app.post('/import-offices', async (c) => {
  * costPerCall: 0
  */
 app.post('/sync-all', async (c) => {
-  const body = await c.req.json<{ clientId?: string }>().catch(() => ({} as { clientId?: string }))
+  const body = await c.req.json<{ clientId?: string }>().catch((): { clientId?: string } => ({}))
   const clientId = c.req.query('clientId') ?? body.clientId ?? 'default'
 
   // MF認証チェック
@@ -699,11 +698,12 @@ app.get('/tax-available', (c) => {
 
 /** PUT /tax-available/:method — 特定方式のavailableを更新 */
 app.put('/tax-available/:method', async (c) => {
-  const method = c.req.param('method') as TaxMethodKey
+  const methodRaw = c.req.param('method')
   const validMethods: TaxMethodKey[] = ['proportional', 'individual', 'simplified', 'exempt']
-  if (!validMethods.includes(method)) {
-    return c.json({ error: `無効な方式: ${method}` }, 400)
+  if (!validMethods.includes(methodRaw as TaxMethodKey)) {
+    return c.json({ error: `無効な方式: ${methodRaw}` }, 400)
   }
+  const method: TaxMethodKey = methodRaw as TaxMethodKey
   const body = await c.req.json<{ available: Record<string, boolean> }>()
   saveTaxAvailable(method, body.available)
   return c.json({ ok: true, method, count: Object.values(body.available).filter(v => v).length })
@@ -1399,8 +1399,23 @@ app.post('/normalize-journals', (c) => {
 // MCP仕訳送信（sugusuru → MF）
 // ────────────────────────────────────────────
 import { sendBatchToMf, applyMfSendResults } from '../services/mfJournalSender'
-import type { SourceJournal } from '../services/journalToMfConverter'
+import type { SourceJournal, MfJournalPayload } from '../services/journalToMfConverter'
 import { getJournals, saveJournals } from '../services/journalStore'
+
+/** send-journalsエンドポイント用: getJournalsから取得する仕訳の最低限の型 */
+interface SendableJournal {
+  journalId: string
+  status: string | null
+  deleted_at: string | null
+  labels: string[]
+  voucher_date: string | null
+  description: string
+  debit_entries: SourceJournal['debit_entries']
+  credit_entries: SourceJournal['credit_entries']
+  mf_journal_id?: string | null
+  mf_journal_number?: number | null
+  mf_sent_at?: string | null
+}
 
 /**
  * POST /send-journals/:clientId — 未出力仕訳をMFにMCP送信
@@ -1422,18 +1437,18 @@ app.post('/send-journals/:clientId', async (c) => {
   }
 
   // 送信対象の取得（未出力仕訳）
-  const allJournals = getJournals(clientId) as Array<Record<string, unknown>>
+  const allJournals = getJournals<SendableJournal>(clientId)
   let targets = allJournals.filter(j =>
     j.status === null &&
     j.deleted_at === null &&
-    !((j.labels as string[]) || []).includes('EXPORT_EXCLUDE')
+    !(j.labels || []).includes('EXPORT_EXCLUDE')
   )
 
   // journalIds指定時は絞り込み
-  const body = await c.req.json().catch(() => ({}))
-  const requestedIds = (body as Record<string, unknown>).journalIds as string[] | undefined
+  const body = await c.req.json<{ journalIds?: string[] }>().catch((): { journalIds?: string[] } => ({}))
+  const requestedIds = body.journalIds
   if (requestedIds && Array.isArray(requestedIds) && requestedIds.length > 0) {
-    targets = targets.filter(j => requestedIds.includes(j.journalId as string))
+    targets = targets.filter(j => requestedIds.includes(j.journalId))
   }
 
   if (targets.length === 0) {
@@ -1442,11 +1457,11 @@ app.post('/send-journals/:clientId', async (c) => {
 
   // SourceJournal形式に変換
   const sourceJournals: SourceJournal[] = targets.map(j => ({
-    journalId: j.journalId as string,
-    voucher_date: j.voucher_date as string,
-    description: (j.description as string) || '',
-    debit_entries: (j.debit_entries as SourceJournal['debit_entries']) || [],
-    credit_entries: (j.credit_entries as SourceJournal['credit_entries']) || [],
+    journalId: j.journalId,
+    voucher_date: j.voucher_date,
+    description: j.description || '',
+    debit_entries: j.debit_entries || [],
+    credit_entries: j.credit_entries || [],
   }))
 
   // バッチ送信
@@ -1454,9 +1469,9 @@ app.post('/send-journals/:clientId', async (c) => {
   const batchResult = await sendBatchToMf(sourceJournals, tokenKey)
 
   // 送信成功した仕訳にMF-IDを書き戻し、status='exported'に変更
-  const updatedCount = applyMfSendResults(allJournals as Parameters<typeof applyMfSendResults>[0], batchResult.results)
+  const updatedCount = applyMfSendResults(allJournals, batchResult.results)
   if (updatedCount > 0) {
-    saveJournals(clientId, allJournals)
+    saveJournals(clientId, allJournals as unknown as Record<string, unknown>[])
   }
 
   return c.json(batchResult)

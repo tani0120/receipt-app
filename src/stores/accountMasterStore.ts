@@ -11,6 +11,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Account, EnrichedAccount } from '@/types/shared-account'
+import type { TaxCategory } from '@/types/shared-tax-category'
+import { enrichAccountRow } from '@/shared/enrichAccount'
 import { createRepositories } from '@/repositories'
 import { isCacheExpired } from '@/utils/cacheUtils'
 
@@ -52,7 +54,8 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
     try {
       const data = await repos.accountMaster.getMaster()
       // Repository型はAccount[]だが、APIは実際にはEnrichedAccount[]を返す
-      allAccounts.value = migrateLegacyFields(data) as EnrichedAccount[]
+      // TODO: Repository.getMaster()の戻り値型をEnrichedAccount[]に修正
+      allAccounts.value = migrateLegacyFields(data as EnrichedAccount[])
       cachedAt.value = Date.now()
       console.log(`[accountMasterStore] ${data.length}件をサーバーから取得`)
     } catch (err) {
@@ -62,15 +65,17 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
   }
 
   /** Piniaキャッシュ互換性: 旧deprecatedをhiddenに変換 */
-  function migrateLegacyFields(items: Account[]): Account[] {
+  function migrateLegacyFields(items: EnrichedAccount[]): EnrichedAccount[] {
     return items.map(a => {
-      const row = a as Record<string, unknown>
-      if ('deprecated' in row && !('hidden' in row)) {
-        row.hidden = row.deprecated
-        delete row.deprecated
+      // Piniaキャッシュには旧バージョンデータが残存する可能性がある。
+      // hidden が必須化される前のデータも扱うため、ここでは
+      // EnrichedAccount として扱わず Record<string, unknown> として検査する。
+      const raw = a as unknown as Record<string, unknown>
+      if ('deprecated' in raw && !('hidden' in raw)) {
+        return { ...a, hidden: Boolean(raw['deprecated']) }
       }
-      if (!('hidden' in row)) {
-        row.hidden = false
+      if (!('hidden' in raw)) {
+        return { ...a, hidden: false }
       }
       return a
     })
@@ -90,7 +95,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
       .map(a => ({
         ...a,
         hiddenInMaster: a.hidden === true,
-        isCustom: (a as MasterAccount).isCustom ?? false,
+        isCustom: a.isCustom ?? false,
       }))
       .sort((a, b) => a.sortOrder - b.sortOrder)
   })
@@ -101,7 +106,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
 
   const overrides = computed(() => ({
     hiddenIds: allAccounts.value.filter(a => a.hidden).map(a => a.accountId),
-    customAccounts: allAccounts.value.filter(a => (a as MasterAccount).isCustom),
+    customAccounts: allAccounts.value.filter(a => a.isCustom),
   }))
 
   function toggleVisibility(accountId: string): void {
@@ -113,13 +118,15 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
     }
   }
 
-  function addCustomAccount(account: Account): void {
-    allAccounts.value.push({ ...account, isCustom: true } as EnrichedAccount)
+  function addCustomAccount(account: Account, taxCategories: TaxCategory[]): void {
+    // enrichAccountRow() を通過させてから push（不変条件: 全要素が EnrichedAccount）
+    const enriched = enrichAccountRow({ ...account, isCustom: true }, taxCategories)
+    allAccounts.value.push(enriched)
     debounceSave()
   }
 
   function removeCustomAccount(accountId: string): boolean {
-    const idx = allAccounts.value.findIndex(a => a.accountId === accountId && (a as MasterAccount).isCustom)
+    const idx = allAccounts.value.findIndex(a => a.accountId === accountId && a.isCustom)
     if (idx < 0) return false
     allAccounts.value.splice(idx, 1)
     debounceSave()
@@ -128,7 +135,7 @@ export const useAccountMasterStore = defineStore('accountMaster', () => {
 
   function resetToDefault(): void {
     allAccounts.value = allAccounts.value
-      .filter(a => !(a as MasterAccount).isCustom)
+      .filter(a => !a.isCustom)
       .map(a => ({ ...a, hidden: false }))
     debounceSave()
   }

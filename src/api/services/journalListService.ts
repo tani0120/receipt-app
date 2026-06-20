@@ -17,6 +17,7 @@
 import { getJournals } from './journalStore'
 import { getByClientId as getConfirmedJournals } from './confirmedJournalsApi'
 import { type JournalListRow, isMfJournal, isAiJournal } from '../../types/journal-list-row'
+import type { StaffNotes } from '../../types/staff_notes'
 
 /** クエリパラメータ */
 export interface JournalListQuery {
@@ -160,7 +161,7 @@ function sortJournals(
           if (isMfJournal(j)) return 0
           if (!j.staff_notes) return 0
           let w = 0
-          const sn = j.staff_notes as Record<string, { enabled: boolean }>
+          const sn: StaffNotes = j.staff_notes
           if (sn.NEED_DOCUMENT?.enabled) w += 8
           if (sn.NEED_INFO?.enabled) w += 4
           if (sn.REMINDER?.enabled) w += 2
@@ -388,7 +389,7 @@ function filterJournals(
 
 export function getJournalList(clientId: string, query: JournalListQuery): JournalListResponse {
   // 1. 通常仕訳の取得（デフォルト日付ソート）
-  const rawJournals = getJournals(clientId) as JournalListRow[]
+  const rawJournals = getJournals<JournalListRow>(clientId)
   let result: JournalListRow[] = [...rawJournals].sort((a, b) => {
     return (
       new Date(a.voucher_date ?? '9999-12-31').getTime() -

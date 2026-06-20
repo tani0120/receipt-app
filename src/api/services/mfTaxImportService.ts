@@ -18,7 +18,7 @@
  *   POST /api/mf/import-client-taxes  — 顧問先税区分インポート
  */
 
-import { mcpFetchTaxes, mcpFetchTermSettings } from './mfMcpClient'
+import { mcpFetchTaxes, mcpFetchTermSettings, type MfMcpTax } from './mfMcpClient'
 import { getAllTaxCategories, saveAllTaxCategories } from './accountMasterApi'
 import { getAllTaxAvailable, saveTaxAvailable, type TaxMethodKey } from './mfTaxAvailableStore'
 import { saveMfRawData } from './mfRawDataStore'
@@ -77,18 +77,6 @@ export const PATTERN_LABELS: Record<TaxMethodKey, string> = {
 const VALID_METHODS: TaxMethodKey[] = ['proportional', 'individual', 'simplified', 'exempt']
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// MF税区分の型
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-interface MfTax {
-  id: string
-  name: string
-  abbreviation?: string
-  available: boolean
-  tax_rate?: number
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 差分検知結果
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -123,7 +111,7 @@ export interface TaxImportApplyResult {
 
 interface DetectResult {
   pattern: TaxMethodKey
-  mfTaxes: MfTax[]
+  mfTaxes: MfMcpTax[]
   masterItems: TaxCategory[]
   nameToRow: Map<string, TaxCategory>
   diff: TaxImportDiff
@@ -147,7 +135,7 @@ async function detectDiff(clientId: string, _dryRun: boolean = false): Promise<D
   }
 
   // 2. MFの税区分一覧を取得
-  const mfTaxes = await mcpFetchTaxes(clientId) as MfTax[]
+  const mfTaxes: MfMcpTax[] = await mcpFetchTaxes(clientId)
 
   // 3. サーバーのマスタデータから照合用Mapを構築（★フロント状態に依存しない）
   const masterItems: TaxCategory[] = JSON.parse(JSON.stringify(getAllTaxCategories()))
@@ -395,8 +383,10 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
 // 顧問先用: 税区分インポート（1回のAPI呼び出しで全処理）
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+import type { Client } from '../../repositories/types'
+
 /** MF課税方式→consumptionTaxMode（mf-tax-available.jsonのキーと同じ値） */
-export const MF_TAX_METHOD_TO_CONSUMPTION_MODE: Record<string, string> = {
+export const MF_TAX_METHOD_TO_CONSUMPTION_MODE: Record<string, Client['consumptionTaxMode']> = {
   'FREE': 'exempt',
   'SIMPLE': 'simplified',
   'INDIVIDUAL_ALLOCATION': 'individual',
@@ -438,7 +428,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
       const mapped = MF_TAX_METHOD_TO_CONSUMPTION_MODE[currentTerm.tax_method]
       if (mapped) {
         consumptionTaxMode = mapped
-        updateClient(clientId, { consumptionTaxMode: mapped as 'individual' | 'proportional' | 'simplified' | 'exempt' })
+        updateClient(clientId, { consumptionTaxMode: mapped })
         console.log(`[mfTaxImportService] consumptionTaxMode更新: ${currentTerm.tax_method} → ${mapped}`)
       }
     }
@@ -447,7 +437,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
   }
 
   // 2. MFから税区分一覧取得
-  const mfTaxes = await mcpFetchTaxes(clientId) as MfTax[]
+  const mfTaxes: MfMcpTax[] = await mcpFetchTaxes(clientId)
 
   // 3. 全社マスタと名前で突合（MF IDは事業者固有のため名前照合が正しい）
   const masterItems = getAllTaxCategories()

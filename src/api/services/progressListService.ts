@@ -36,9 +36,16 @@ interface JournalSummary {
   lastYearJournals: number
 }
 
+/** 仕訳のうち進捗集計に必要なフィールドのみの型 */
+interface ProgressJournalRecord {
+  voucher_date?: string | null
+  exported?: boolean
+  export_batch_id?: string | null
+}
+
 /** journalStoreから仕訳サマリを集計 */
 function buildJournalSummary(clientId: string, monthKeys: string[]): JournalSummary {
-  const journals = getJournals(clientId)
+  const journals = getJournals<ProgressJournalRecord>(clientId)
 
   // 月別仕訳数を集計
   const monthlyJournals: Record<string, number> = {}
@@ -50,7 +57,7 @@ function buildJournalSummary(clientId: string, monthKeys: string[]): JournalSumm
   let lastYearCount = 0
 
   for (const j of journals) {
-    const vd = (j as Record<string, unknown>).voucher_date as string | null | undefined
+    const vd = j.voucher_date
     if (!vd) continue
     const dateStr = vd.slice(0, 7) // "2025-04"
     if (dateStr in monthlyJournals) {
@@ -63,8 +70,7 @@ function buildJournalSummary(clientId: string, monthKeys: string[]): JournalSumm
 
   // 未出力（exported=false かつ export_batch_id=null）
   const unexported = journals.filter(j => {
-    const rec = j as Record<string, unknown>
-    return !rec.exported && !rec.export_batch_id
+    return !j.exported && !j.export_batch_id
   }).length
 
   return {
@@ -189,8 +195,11 @@ function getSortValue(row: ProgressRow, key: string): string | number {
     const monthKey = key.replace('month_', '')
     return row.monthlyJournals[monthKey] || 0
   }
-  const val = (row as Record<string, unknown>)[key]
-  return typeof val === 'string' || typeof val === 'number' ? val : ''
+  if (key in row) {
+    const val = row[key as keyof ProgressRow]
+    return typeof val === 'string' || typeof val === 'number' ? val : ''
+  }
+  return ''
 }
 
 // ────────────────────────────────────────────

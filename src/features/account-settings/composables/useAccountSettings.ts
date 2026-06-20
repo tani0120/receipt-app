@@ -211,7 +211,8 @@ export function useAccountSettings(scope: 'master' | 'client', clientId?: string
       console.warn('addCustomAccount はscope="master"でのみ使用可能')
       return
     }
-    accountMaster.addCustomAccount(account)
+    // 税区分マスタを注入（enrichAccountRow が税区分名解決に必要）
+    accountMaster.addCustomAccount(account, taxMaster.allTaxCategories.value)
   }
 
   function removeCustomAccount(accountId: string): boolean {

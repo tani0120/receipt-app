@@ -1,6 +1,7 @@
 import type { ClientDetailUi, DriveLinkUi } from '@/types/ui.type';
 import { mapClientToUi } from './ClientMapper';
 import { UI_MSG } from '@/constants/uiMessages';
+import { isRecord } from '@/utils/typeGuards';
 
 
 // Ironclad Helpers
@@ -20,7 +21,7 @@ const safeNumber = (val: unknown, fallback = 0): number => {
 export function mapClientDetailToUi(api: unknown): ClientDetailUi {
     // 1. Reuse List Mapper for base properties
     const baseUi = mapClientToUi(api);
-    const raw = (api && typeof api === 'object') ? (api as Record<string, unknown>) : {};
+    const raw = isRecord(api) ? api : {};
 
     // 2. Drive Links Logic
     const makeLink = (title: string, id: unknown, color: string): DriveLinkUi => {

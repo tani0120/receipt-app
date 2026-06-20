@@ -60,7 +60,7 @@ function getCollectionClients() {
         clientCode: c.clientId.split('-')[0] || c.clientId,
         companyName: c.companyName,
         fiscalMonth: c.fiscalMonth ?? (isIndividualType(c.type) ? INDIVIDUAL_DEFAULT_FISCAL_MONTH : CORP_DEFAULT_FISCAL_MONTH),
-        type: c.type as 'corp' | 'individual' | 'sole_proprietor',
+        type: c.type,
         jobId: c.clientId.split('-')[0] || c.clientId,
     }));
 }
@@ -124,7 +124,7 @@ const calculateCellData = (client: ReturnType<typeof getCollectionClients>[0], v
         const cellDate = moment(`${year}-${String(month).padStart(2, '0')}-01`);
 
         // Style
-        let style = 'inactive';
+        let style: 'active-1' | 'active-2' | 'inactive' = 'inactive';
         if (cellDate.isBetween(term1Start, term1End, 'month', '[]')) style = 'active-1';
         else if (cellDate.isBetween(term2Start, term2End, 'month', '[]')) style = 'active-2';
 
@@ -137,7 +137,7 @@ const calculateCellData = (client: ReturnType<typeof getCollectionClients>[0], v
         const charCode = client.jobId ? client.jobId.charCodeAt(2) : 0;
         const seed = charCode + m;
         const mod = seed % 10;
-        let status = 'none';
+        let status: 'check' | 'cross' | 'triangle' | 'none' | 'future' = 'none';
 
         const isFuture = cellDate.isAfter(currentDateMock, 'month');
 
@@ -154,8 +154,8 @@ const calculateCellData = (client: ReturnType<typeof getCollectionClients>[0], v
             year,
             month,
             isFiscalMonth,
-            style: style as 'active-1' | 'active-2' | 'inactive',
-            status: status as 'check' | 'cross' | 'triangle' | 'none' | 'future', // Cast to Zod Enum
+            style,
+            status,
             isFuture
         });
     }

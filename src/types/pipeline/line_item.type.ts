@@ -1,5 +1,6 @@
 import type { VendorVector } from './vendor.type'
 import type { NonVendorType, TaxPaymentType } from './non_vendor.type'
+import { isRecord } from '../../utils/typeGuards'
 
 /**
  * line_item.type.ts — T-LI1: LineItem v1型定義
@@ -271,18 +272,17 @@ export interface LineItem {
  * unknown を LineItem として安全に扱えるか検証する。
  */
 export function isLineItem(v: unknown): v is LineItem {
-  if (typeof v !== 'object' || v === null) return false;
-  const obj = v as Record<string, unknown>;
+  if (!isRecord(v)) return false;
   const dateOk =
-    obj['date'] === null ||
-    (typeof obj['date'] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(obj['date']));
+    v['date'] === null ||
+    (typeof v['date'] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v['date']));
   return (
     dateOk &&
-    typeof obj['description'] === 'string' &&
-    typeof obj['amount'] === 'number' &&
-    (obj['direction'] === 'expense' || obj['direction'] === 'income') &&
-    (typeof obj['balance'] === 'number' || obj['balance'] === null) &&
-    typeof obj['line_index'] === 'number'
+    typeof v['description'] === 'string' &&
+    typeof v['amount'] === 'number' &&
+    (v['direction'] === 'expense' || v['direction'] === 'income') &&
+    (typeof v['balance'] === 'number' || v['balance'] === null) &&
+    typeof v['line_index'] === 'number'
   );
 }
 

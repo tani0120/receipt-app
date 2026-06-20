@@ -1,15 +1,6 @@
-/**
- * 通知 JSON永続化ストア
- *
- * data/notifications.json に全通知を保存。
- * readBy[] でスタッフごとの既読管理。
- * staffIdフィルタで自分宛+全体通知のみ返却。
- *
- * 準拠: DL-047
- */
-
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { z } from 'zod';
 import type { AppNotification } from '../../repositories/types';
 
 const DATA_DIR = join(process.cwd(), 'data');
@@ -21,6 +12,39 @@ function ensureDir(): void {
 }
 
 // ============================================================
+// zodスキーマ（JSON永続化境界のバリデーション）
+// ============================================================
+
+/** 旧形式(isRead)→新形式(readBy)のマイグレーション付きスキーマ */
+const AppNotificationSchema = z.object({
+  id: z.string(),
+  type: z.enum(['migration_complete', 'migration_failed', 'batch_complete', 'error', 'mention']),
+  title: z.string(),
+  body: z.string(),
+  readBy: z.array(z.string()).default([]),
+  createdAt: z.string(),
+  clientId: z.string().optional(),
+  jobId: z.string().optional(),
+  action: z.object({
+    label: z.string(),
+    url: z.string(),
+  }).optional(),
+  targetStaffId: z.string().optional(),
+}).passthrough()
+
+import { isRecord } from '../../utils/typeGuards';
+
+/** 旧形式（isRead: boolean）を新形式（readBy: string[]）に前処理 */
+function migrateNotificationData(item: unknown): unknown {
+  if (!isRecord(item)) return item
+  if ('isRead' in item && !('readBy' in item)) {
+    const { isRead, ...rest } = item
+    return { ...rest, readBy: isRead ? ['__migrated__'] : [] }
+  }
+  return item
+}
+
+// ============================================================
 // 読み書き
 // ============================================================
 
@@ -28,16 +52,18 @@ function ensureDir(): void {
 export function getAllNotifications(): AppNotification[] {
   if (!existsSync(FILE_PATH)) return [];
   try {
-    const raw = JSON.parse(readFileSync(FILE_PATH, 'utf-8')) as unknown[];
-    // 旧形式（isRead: boolean）→ 新形式（readBy: string[]）の移行
-    return raw.map((item: unknown) => {
-      const n = item as Record<string, unknown>;
-      if ('isRead' in n && !('readBy' in n)) {
-        const { isRead, ...rest } = n;
-        return { ...rest, readBy: isRead ? ['__migrated__'] : [] } as AppNotification;
+    const raw: unknown = JSON.parse(readFileSync(FILE_PATH, 'utf-8'));
+    if (!Array.isArray(raw)) return [];
+    const results: AppNotification[] = [];
+    for (const item of raw) {
+      const migrated = migrateNotificationData(item);
+      const parsed = AppNotificationSchema.safeParse(migrated);
+      if (parsed.success) {
+        results.push(parsed.data);
       }
-      return n as unknown as AppNotification;
-    });
+      // バリデーション失敗 → 不正データとしてスキップ（サイレント）
+    }
+    return results;
   } catch {
     return [];
   }

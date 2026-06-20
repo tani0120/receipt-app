@@ -106,8 +106,8 @@ app.post('/bulk', async (c) => {
     return apiError(c, 400, 必須('items（配列）'));
   }
   const existing = getAll();
-  const existingCodes = new Set(existing.map(l => (l as Lead).threeCode?.toUpperCase()).filter(Boolean));
-  const existingNames = new Set(existing.map(l => (l as Lead).companyName).filter(Boolean));
+  const existingCodes = new Set(existing.map(l => l.threeCode?.toUpperCase()).filter(Boolean));
+  const existingNames = new Set(existing.map(l => l.companyName).filter(Boolean));
   const results: { index: number; ok: boolean; leadId?: string; threeCode?: string; companyName?: string; error?: string }[] = [];
   for (let i = 0; i < items.length; i++) {
     const item = items[i]!;
@@ -215,13 +215,15 @@ app.post('/:leadId/convert', async (c) => {
 
   // 見込先の共通フィールドを顧問先にコピー（見込先固有フィールド除外）
   const clientId = generateClientId();
-  const { leadId: _lid, status: _status, ...commonFields } = lead as unknown as Record<string, unknown>;
+  // Lead と Client は構造的に同一フィールドを持つ（repositories/types.ts 参照）
+  // leadId/status のみ Lead 固有なので除外し、Client 固有の clientId/status/sourceLeadId を付与
+  const { leadId: _lid, status: _status, ...commonFields } = lead;
   const clientData: Client = {
-    ...(commonFields as Omit<Client, 'clientId' | 'sourceLeadId'>),
+    ...commonFields,
     clientId,
     status: 'active',
     sourceLeadId: leadId,
-  } as Client;
+  };
 
   // 顧問先として登録
   const saved = createClient(clientData);
@@ -231,7 +233,7 @@ app.post('/:leadId/convert', async (c) => {
   getClientTaxCategories(saved.clientId);
 
   // 元見込先のstatusを'converted'に変更
-  updateLead(leadId, { status: 'converted' as LeadStatus });
+  updateLead(leadId, { status: 'converted' });
 
   console.log(`[leads] 昇格完了: ${lead.companyName} (${leadId} → ${clientId})`);
   return c.json({ ok: true, client: saved, sourceLeadId: leadId });

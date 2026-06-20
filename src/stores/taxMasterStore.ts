@@ -47,15 +47,15 @@ export const useTaxMasterStore = defineStore('taxMaster', () => {
     }
   }
 
-  /** Piniaキャッシュ互換性: 旧deprecated/activeをhiddenに変換 */
   function migrateLegacyFields(items: TaxCategory[]): TaxCategory[] {
     return items.map(tc => {
-      const row = tc as Record<string, unknown>
-      if ('deprecated' in row && !('hidden' in row)) {
-        row.hidden = row.deprecated
-        delete row.deprecated
+      // Piniaキャッシュには旧バージョンデータが残存する可能性がある。
+      // hidden が必須化される前のデータも扱うため、ここでは
+      // TaxCategory として扱わず Record<string, unknown> として検査する。
+      const raw = tc as unknown as Record<string, unknown>
+      if ('deprecated' in raw && !('hidden' in raw)) {
+        return { ...tc, hidden: Boolean(raw.deprecated) }
       }
-      delete row.active
       return tc
     })
   }

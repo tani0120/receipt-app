@@ -137,7 +137,7 @@ app.post('/:clientId/list', async (c) => {
 // ============================================================
 app.put('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
-  const body = await c.req.json<{ journals: unknown[] }>();
+  const body = await c.req.json<{ journals: Record<string, unknown>[] }>();
   if (!body.journals || !Array.isArray(body.journals)) {
     return apiError(c, 400, 配列必須('journals'));
   }
@@ -150,13 +150,13 @@ app.put('/:clientId', async (c) => {
 // ============================================================
 app.post('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
-  const body = await c.req.json<{ journals: unknown[] }>();
+  const body = await c.req.json<{ journals: Record<string, unknown>[] }>();
   if (!body.journals || !Array.isArray(body.journals)) {
     return apiError(c, 400, 配列必須('journals'));
   }
   const added = addJournals(clientId, body.journals);
   // サーバーが上書き発番したIDリストを返す
-  const serverIds = body.journals.map((j: unknown) => (j as Record<string, unknown>).journalId as string);
+  const serverIds = body.journals.map((j) => String(j.journalId ?? ''));
   return c.json({ ok: true, added, serverIds });
 });
 
@@ -192,7 +192,7 @@ app.post('/:clientId/:journalId/validate', async (c) => {
   const taxCategories = getClientTaxCategoriesForValidation(clientId);
 
   // サーバー側ストアから仕訳データ取得
-  const journals = getJournals(clientId) as JournalForValidation[];
+  const journals = getJournals<JournalForValidation>(clientId);
   const journal = journals.find(j => j.journalId === journalId);
   if (!journal) {
     return apiError(c, 404, `仕訳ID '${journalId}' が見つかりません`);
@@ -214,7 +214,7 @@ app.post('/:clientId/validate-all', async (c) => {
   const accounts = getClientAccountsForValidation(clientId);
   const taxCategories = getClientTaxCategoriesForValidation(clientId);
 
-  const journals = getJournals(clientId) as JournalForValidation[];
+  const journals = getJournals<JournalForValidation>(clientId);
   const results = journals.map(journal =>
     validateJournal(journal, accounts, taxCategories)
   );
@@ -237,7 +237,7 @@ app.post('/:clientId/:journalId/hints', async (c) => {
   const taxCategories = getClientTaxCategories(clientId);
 
   // サーバー側ストアから仕訳データ取得
-  const journals = getJournals(clientId) as JournalForHint[];
+  const journals = getJournals<JournalForHint>(clientId);
   const journal = journals.find(j => j.journalId === journalId);
   if (!journal) {
     return apiError(c, 404, `仕訳ID '${journalId}' が見つかりません`);
@@ -263,7 +263,7 @@ app.get('/:clientId/supporting-match', async (c) => {
   const clientId = c.req.param('clientId');
 
   // 仕訳データ取得
-  const journals = getJournals(clientId) as JournalForMatching[];
+  const journals = getJournals<JournalForMatching>(clientId);
 
   // 根拠資料メタデータ取得（search-supportingと同じサービスを使用）
   const supportingMeta = searchSupporting(clientId, '') as SupportingMetaItem[];

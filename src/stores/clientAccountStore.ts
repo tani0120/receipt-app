@@ -101,7 +101,7 @@ export const useClientAccountStore = defineStore('clientAccounts', () => {
         defaultTaxes: _10,
         ...account
       } = e
-      return account as Account
+      return account
     })
   }
 
