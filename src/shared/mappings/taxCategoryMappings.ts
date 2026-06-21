@@ -12,7 +12,7 @@
  * 生成日: 2026-06-04
  */
 
-import type { TaxCategory } from '@/types/shared-tax-category'
+import type { TaxCategory } from '../../types/shared-tax-category'
 
 /** 会計ソフト識別子 */
 export type AccountingSoftwareKey = 'mf' | 'yayoi' | 'freee'

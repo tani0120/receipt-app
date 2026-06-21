@@ -122,6 +122,53 @@ const settings = useAccountSettings("client", clientId.value);
 
 ---
 
+## 6-b. 🔴 【絶対禁止】shared配下での `@/` importエイリアス
+
+### ルール
+
+> **`src/shared/` 配下のファイルでは `@/` importエイリアスを使うな。相対パスを使え。**
+
+```ts
+// ❌ 絶対禁止: shared配下で @/ を使う
+import type { Account } from '@/types/shared-account'
+import { VOUCHER_TYPE_RULES } from '@/data/master/voucherTypeRules'
+
+// ✅ 正解: 相対パスを使う
+import type { Account } from '../types/shared-account'
+import { VOUCHER_TYPE_RULES } from '../data/master/voucherTypeRules'
+```
+
+### 理由
+
+`src/shared/` はフロント・バックエンド両方から利用される共用層。
+バックエンド実行（tsx / nodemon）では `tsconfig.app.json` の `paths` 設定が適用されないため、
+`@/` エイリアスが解決できずサーバーがクラッシュする。
+
+`import type` であってもランタイムでモジュール解決が走る場合があり、
+「型だけだから安全」とは言い切れない。規約として全廃する方が一貫する。
+
+### 事故事例（2026-06-21）
+
+`src/shared/enrichAccount.ts` が `@/data/master/...` と `@/types/...` を使用。
+バックエンド経路（`accountMasterApi.ts` → `enrichAccount.ts`）で
+`ERR_MODULE_NOT_FOUND` が発生しサーバー起動不能。
+
+### チェックリスト
+
+1. **`src/shared/` 配下で `@/` を使っていないか？**
+2. **新規ファイルを `shared/` に追加する場合、importは全て相対パスか？**
+3. **`shared/` から `@/` で始まるモジュールをimportしているファイルがあれば即修正**
+
+### 検出コマンド
+
+```powershell
+Select-String -Path "src/shared/*.ts","src/shared/**/*.ts" -Pattern "from '@/"
+```
+
+出力ゼロ行であること。
+
+---
+
 ## 7. 🔴 【絶対禁止】ファイル書き換えルール
 
 ### 禁止: PowerShell / シェルコマンドによるファイル直接書き換え

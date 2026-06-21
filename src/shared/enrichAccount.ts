@@ -16,10 +16,10 @@
  * Supabase移行時: DB側VIEWで生成するか、この関数を維持するか選択。
  */
 
-import type { Account, EnrichedAccount } from '@/types/shared-account'
-import type { TaxCategory } from '@/types/shared-tax-category'
-import { getAccountGroupDirection, getCategoryLabel } from '@/data/master/account-category-rules'
-import { VOUCHER_TYPE_RULES } from '@/data/master/voucherTypeRules'
+import type { Account, EnrichedAccount } from '../types/shared-account'
+import type { TaxCategory } from '../types/shared-tax-category'
+import { getAccountGroupDirection, getCategoryLabel } from '../data/master/account-category-rules'
+import { VOUCHER_TYPE_RULES } from '../data/master/voucherTypeRules'
 
 // ────────────────────────────────────────────
 // ラベル変換ヘルパー（純粋関数）

@@ -101,6 +101,12 @@ interface ListRequestBody {
   showExcluded?: boolean
   showTrashed?: boolean
   voucherFilter?: string
+  /** 期間フィルタ: 開始日（YYYY-MM-DD） */
+  dateFrom?: string
+  /** 期間フィルタ: 終了日（YYYY-MM-DD） */
+  dateTo?: string
+  /** 月フィルタ: 表示対象の月番号配列（1-12） */
+  filterMonths?: number[]
   page?: number
   pageSize?: number
   accountMap?: Record<string, string>
@@ -121,6 +127,9 @@ app.post('/:clientId/list', async (c) => {
     showExcluded: body.showExcluded ?? false,
     showTrashed: body.showTrashed ?? false,
     voucherFilter: body.voucherFilter || undefined,
+    dateFrom: body.dateFrom || undefined,
+    dateTo: body.dateTo || undefined,
+    filterMonths: body.filterMonths?.length ? body.filterMonths : undefined,
     page: body.page,
     pageSize: body.pageSize,
     // Phase 2: フロントからのマップがなければサーバー側マスタから自動生成

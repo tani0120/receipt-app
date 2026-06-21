@@ -1,5 +1,42 @@
 <template>
   <div class="h-full flex flex-col bg-gray-50 font-sans" @click="closeDropdown">
+    <!-- 決算年度バー（期間フィルタ） -->
+    <div
+      class="bg-white px-3 py-[3px] flex items-center gap-2 text-[10px] text-gray-600 border-b border-gray-200"
+      style="min-height: 26px; user-select: none"
+      @mousedown.prevent="onBarMouseDown"
+    >
+      <!-- 年度ピル（直近3期分、ドラッグでまとめて選択/解除） -->
+      <div class="flex items-center gap-[3px] pl-1">
+        <button
+          v-for="fy in fiscalYearOptions"
+          :key="fy.year"
+          :data-drag-year="fy.year"
+          @mousedown.prevent.stop="onYearMouseDown(fy.year)"
+          @mouseenter="onYearMouseEnter(fy.year)"
+          class="px-2 py-[1px] rounded text-[10px] font-medium transition-colors cursor-pointer"
+          :class="yearPillClass(fy.year)"
+        >{{ fy.label }}</button>
+      </div>
+      <!-- 区切り線 -->
+      <div class="border-l border-gray-300 h-3.5"></div>
+      <!-- 選択期間テキスト -->
+      <span class="text-[10px] text-gray-500 whitespace-nowrap">{{ fiscalPeriodLabel }}</span>
+      <!-- 区切り線 -->
+      <div class="border-l border-gray-300 h-3.5"></div>
+      <!-- 月タブ（ドラッグでまとめて選択/解除） -->
+      <div class="flex items-center gap-[2px] px-1">
+        <button
+          v-for="m in fiscalMonthTabs"
+          :key="m"
+          :data-drag-month="m"
+          @mousedown.prevent.stop="onMonthMouseDown(m)"
+          @mouseenter="onMonthMouseEnter(m)"
+          class="w-[22px] h-[18px] rounded text-[10px] text-center leading-[18px] transition-colors cursor-pointer"
+          :class="monthTabClass(m)"
+        >{{ m }}</button>
+      </div>
+    </div>
     <!-- L3ツールバー（共通ナビバー） -->
     <!-- 上部バー -->
     <div
@@ -2028,7 +2065,7 @@ const {
   commitCellEdit,
   cancelCellEdit,
   onAmountInput,
-  parseDateInput,
+  // parseDateInput — 現在未使用（将来の日付セル実装で復活予定）
   setEntryField,
   getCombinedRows,
   isCompoundJournal,
@@ -2043,12 +2080,12 @@ const {
 
 // ────── Phase C-2: セルドラッグ&フィルハンドル composable ──────
 const {
-  fillHandle,
+  // fillHandle — 現在未使用（将来のフィルハンドルUI実装で復活予定）
   isFillable,
   startFillDrag,
   isFillTargetCell,
-  applyFillValue,
-  cellDrag,
+  // applyFillValue — 現在未使用（フィル確定処理で復活予定）
+  // cellDrag — 現在未使用（ドラッグ状態管理で復活予定）
   dragLabelVisible,
   dragLabelText,
   dragLabelX,
@@ -2097,8 +2134,8 @@ const filteredAccounts = computed(() => {
 
 // ────── Phase C-3: 科目/税区分/補助科目コンボボックス composable ──────
 const {
-  accountGroupsForJournal,
-  getTaxGroupsForEntry,
+  // accountGroupsForJournal — 現在未使用（テンプレート側でfilterAccountGroupsを直接使用）
+  // getTaxGroupsForEntry — 現在未使用（テンプレート側でfilterTaxGroupsを直接使用）
   filterAccountGroups,
   expandedMegaGroup,
   getAccountsForMegaGroup,
@@ -2650,6 +2687,335 @@ const globalSearchQuery = ref<string>(""); // 全列横断検索クエリ
 // 証票種別フィルタ（空文字 = 全て） — vendorOptionsの共有定数を使用
 const voucherFilter = ref<string>("");
 const voucherFilterOptions = VOUCHER_DOC_FILTER_OPTIONS;
+
+// ────── 決算年度バー（期間フィルタ） ──────
+
+/**
+ * 決算月から会計年度の期首月を算出する。
+ * 例: fiscalMonth=6（6月決算）→ 期首月=7（7月始まり）
+ * 例: fiscalMonth=12（個人事業主）→ 期首月=1（1月始まり）
+ */
+function getFiscalStartMonth(fiscalMonth: number): number {
+  return (fiscalMonth % 12) + 1;
+}
+
+/**
+ * 指定年度の期首日・期末日を算出する。
+ * 年度ラベルは期末の暦年を使用（例: 2026年度 = 2026年の決算月末に終了する期）。
+ * 個人事業主（fiscalMonth=12）→ 2026年度 = 2026/01/01〜2026/12/31
+ * 法人（fiscalMonth=6）→ 2026年度 = 2025/07/01〜2026/06/30
+ */
+function getFiscalYearRange(year: number, fiscalMonth: number): { from: string; to: string } {
+  const startMonth = getFiscalStartMonth(fiscalMonth);
+  // 期首の暦年: 決算月が12月→期首も同年。それ以外→前年
+  const startYear = startMonth <= fiscalMonth ? year : year - 1;
+  const fromM = String(startMonth).padStart(2, '0');
+  const toM = String(fiscalMonth).padStart(2, '0');
+  // 期末日: 決算月の末日
+  const lastDay = new Date(year, fiscalMonth, 0).getDate();
+  const toD = String(lastDay).padStart(2, '0');
+  return {
+    from: `${startYear}-${fromM}-01`,
+    to: `${year}-${toM}-${toD}`,
+  };
+}
+
+/** 直近3期分の年度オプション */
+const fiscalYearOptions = computed(() => {
+  const fm = activeClientFull.value?.fiscalMonth ?? 12;
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // 1-12
+  const currentYear = now.getFullYear();
+  // 現在の暦年・月が決算月を超えていれば当年度の期末年=来年、そうでなければ今年
+  const currentFiscalEndYear = currentMonth > fm ? currentYear + 1 : currentYear;
+  const fmStr = String(fm).padStart(2, '0');
+  // 直近3期分（当期 + 過去2期）
+  const labels = ['2期前', '1期前', '進行期'];
+  return [0, 1, 2].map(i => {
+    const y = currentFiscalEndYear - 2 + i;
+    return {
+      year: y,
+      label: `${labels[i]}-${y}-${fmStr}月`,
+      ...getFiscalYearRange(y, fm),
+    };
+  });
+});
+
+/** 選択中の年度（Set: 複数選択可） */
+const selectedFiscalYears = ref<Set<number>>(new Set());
+
+// 初期値: 全期間（全年度を選択）
+watch(fiscalYearOptions, (opts) => {
+  if (selectedFiscalYears.value.size === 0 && opts.length > 0) {
+    selectedFiscalYears.value = new Set(opts.map(o => o.year));
+  }
+}, { immediate: true });
+
+/** 月タブ（決算月基準の12ヶ月配列） */
+const fiscalMonthTabs = computed(() => {
+  const fm = activeClientFull.value?.fiscalMonth ?? 12;
+  const start = getFiscalStartMonth(fm);
+  const tabs: number[] = [];
+  for (let i = 0; i < 12; i++) {
+    tabs.push(((start - 1 + i) % 12) + 1);
+  }
+  return tabs;
+});
+
+/** 選択中の月（Set: 全12月がデフォルト選択） */
+const selectedMonths = ref<Set<number>>(new Set());
+
+// 初期値: 全月を選択
+watch(fiscalMonthTabs, (tabs) => {
+  if (selectedMonths.value.size === 0 && tabs.length > 0) {
+    selectedMonths.value = new Set(tabs);
+  }
+}, { immediate: true });
+
+// ────── 期間バー: ドラッグ選択/解除（年度・月共通、スナップショット+範囲ベース） ──────
+const barDragType = ref<'none' | 'pending' | 'year' | 'month'>('none');
+const barDragMode = ref<'select' | 'deselect'>('select');
+const dragSnapshot = ref<Set<number>>(new Set());
+let _dragStartIndex = -1;
+let _dragMouseMoved = false; // ドラッグ中にマウスが動いたか
+
+/** バー余白: mousedown（ドラッグ待機状態） */
+function onBarMouseDown() {
+  barDragType.value = 'pending';
+  document.addEventListener('mousemove', onBarMouseMove);
+  document.addEventListener('mouseup', onBarMouseUp, { once: true });
+}
+
+/** バー: mouseup（ドラッグ終了） */
+function onBarMouseUp() {
+  barDragType.value = 'none';
+  dragSnapshot.value = new Set();
+  _dragStartIndex = -1;
+  _dragMouseMoved = false;
+  document.removeEventListener('mousemove', onBarMouseMove);
+}
+
+/** バー: mousemove（ドラッグ中のマウス追跡、mouseenterスキップ防止） */
+function onBarMouseMove(event: MouseEvent) {
+  const dt = barDragType.value;
+  if (dt !== 'year' && dt !== 'month' && dt !== 'pending') return;
+  _dragMouseMoved = true; // マウスが動いた
+  const el = document.elementFromPoint(event.clientX, event.clientY);
+  if (!el || !(el instanceof HTMLElement)) return;
+
+  // closest()で最寄りのdata属性を持つボタンを検出
+  const yearEl = el.closest('[data-drag-year]') as HTMLElement | null;
+  if (yearEl) {
+    const year = Number(yearEl.getAttribute('data-drag-year'));
+    if (dt === 'pending') {
+      onYearMouseEnter(year);
+    } else if (dt === 'year') {
+      const idx = fiscalYearOptions.value.findIndex(o => o.year === year);
+      if (idx !== -1) applyRangeDrag('year', idx);
+    }
+    return;
+  }
+
+  const monthEl = el.closest('[data-drag-month]') as HTMLElement | null;
+  if (monthEl) {
+    const month = Number(monthEl.getAttribute('data-drag-month'));
+    if (dt === 'pending') {
+      onMonthMouseEnter(month);
+    } else if (dt === 'month') {
+      const idx = fiscalMonthTabs.value.indexOf(month);
+      if (idx !== -1) applyRangeDrag('month', idx);
+    }
+    return;
+  }
+
+  // ボタン外（gap/余白）にマウスがある場合: 最寄りのボタンをX座標で判定
+  if (dt === 'month') {
+    const buttons = document.querySelectorAll<HTMLElement>('[data-drag-month]');
+    let closest: { idx: number; dist: number } | null = null;
+    buttons.forEach((btn) => {
+      const rect = btn.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const dist = Math.abs(event.clientX - centerX);
+      const month = Number(btn.getAttribute('data-drag-month'));
+      const idx = fiscalMonthTabs.value.indexOf(month);
+      if (idx !== -1 && (!closest || dist < closest.dist)) {
+        closest = { idx, dist };
+      }
+    });
+    if (closest) applyRangeDrag('month', (closest as { idx: number; dist: number }).idx);
+  } else if (dt === 'year') {
+    const buttons = document.querySelectorAll<HTMLElement>('[data-drag-year]');
+    let closest: { idx: number; dist: number } | null = null;
+    buttons.forEach((btn) => {
+      const rect = btn.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const dist = Math.abs(event.clientX - centerX);
+      const year = Number(btn.getAttribute('data-drag-year'));
+      const idx = fiscalYearOptions.value.findIndex(o => o.year === year);
+      if (idx !== -1 && (!closest || dist < closest.dist)) {
+        closest = { idx, dist };
+      }
+    });
+    if (closest) applyRangeDrag('year', (closest as { idx: number; dist: number }).idx);
+  }
+}
+
+// ── 年度ピル ──
+
+/** 年度ピル: mousedown */
+function onYearMouseDown(year: number) {
+  const idx = fiscalYearOptions.value.findIndex(o => o.year === year);
+  barDragType.value = 'year';
+  barDragMode.value = selectedFiscalYears.value.has(year) ? 'deselect' : 'select';
+  dragSnapshot.value = new Set(selectedFiscalYears.value);
+  _dragStartIndex = idx;
+  applyRangeDrag('year', idx);
+  document.addEventListener('mousemove', onBarMouseMove);
+  document.addEventListener('mouseup', onBarMouseUp, { once: true });
+}
+
+/** 年度ピル: mouseenter */
+function onYearMouseEnter(year: number) {
+  const idx = fiscalYearOptions.value.findIndex(o => o.year === year);
+  if (barDragType.value === 'pending') {
+    barDragType.value = 'year';
+    barDragMode.value = selectedFiscalYears.value.has(year) ? 'deselect' : 'select';
+    dragSnapshot.value = new Set(selectedFiscalYears.value);
+    _dragStartIndex = idx;
+  }
+  if (barDragType.value !== 'year') return;
+  applyRangeDrag('year', idx);
+}
+
+/** 年度ピルの色判定（4状態） */
+function yearPillClass(year: number): string {
+  const isSelected = selectedFiscalYears.value.has(year);
+  if (barDragType.value === 'year' && dragSnapshot.value.size > 0) {
+    const wasSelected = dragSnapshot.value.has(year);
+    if (isSelected && !wasSelected) return 'bg-blue-200 text-blue-800'; // 選択予定
+    if (!isSelected && wasSelected) return 'bg-red-100 text-red-600';   // 解除予定
+  }
+  return isSelected
+    ? 'bg-blue-600 text-white'
+    : 'bg-gray-100 text-gray-500 hover:bg-gray-200';
+}
+
+// ── 月タブ ──
+
+/** 月タブ: mousedown */
+function onMonthMouseDown(month: number) {
+  const idx = fiscalMonthTabs.value.indexOf(month);
+  barDragType.value = 'month';
+  barDragMode.value = selectedMonths.value.has(month) ? 'deselect' : 'select';
+  dragSnapshot.value = new Set(selectedMonths.value);
+  _dragStartIndex = idx;
+  applyRangeDrag('month', idx);
+  document.addEventListener('mousemove', onBarMouseMove);
+  document.addEventListener('mouseup', onBarMouseUp, { once: true });
+}
+
+/** 月タブ: mouseenter */
+function onMonthMouseEnter(month: number) {
+  const idx = fiscalMonthTabs.value.indexOf(month);
+  if (barDragType.value === 'pending') {
+    barDragType.value = 'month';
+    barDragMode.value = selectedMonths.value.has(month) ? 'deselect' : 'select';
+    dragSnapshot.value = new Set(selectedMonths.value);
+    _dragStartIndex = idx;
+  }
+  if (barDragType.value !== 'month') return;
+  applyRangeDrag('month', idx);
+}
+
+/** 月タブの色判定（4状態） */
+function monthTabClass(month: number): string {
+  const isSelected = selectedMonths.value.has(month);
+  if (barDragType.value === 'month' && dragSnapshot.value.size > 0) {
+    const wasSelected = dragSnapshot.value.has(month);
+    if (isSelected && !wasSelected) return 'bg-blue-200 text-blue-800'; // 選択予定
+    if (!isSelected && wasSelected) return 'bg-red-100 text-red-600';   // 解除予定
+  }
+  return isSelected
+    ? 'bg-blue-600 text-white'
+    : 'bg-gray-50 text-gray-500 hover:bg-gray-200';
+}
+
+// ── 共通: 範囲ベースドラッグ適用 ──
+
+/** スナップショットから復元し、範囲内のみモード適用（逆方向対応） */
+function applyRangeDrag(type: 'year' | 'month', currentIndex: number) {
+  // ドラッグ後に開始位置に戻った場合: スナップショットを完全復元
+  if (currentIndex === _dragStartIndex && _dragMouseMoved) {
+    if (type === 'year') {
+      selectedFiscalYears.value = new Set(dragSnapshot.value);
+    } else {
+      selectedMonths.value = new Set(dragSnapshot.value);
+    }
+    return;
+  }
+
+  const minIdx = Math.min(_dragStartIndex, currentIndex);
+  const maxIdx = Math.max(_dragStartIndex, currentIndex);
+
+  if (type === 'year') {
+    const opts = fiscalYearOptions.value;
+    const next = new Set(dragSnapshot.value); // スナップショットから復元
+    for (let i = 0; i < opts.length; i++) {
+      const y = opts[i]?.year;
+      if (y === undefined) continue;
+      if (i >= minIdx && i <= maxIdx) {
+        if (barDragMode.value === 'deselect') { next.delete(y); } else { next.add(y); }
+      }
+    }
+    selectedFiscalYears.value = next;
+  } else {
+    const tabs = fiscalMonthTabs.value;
+    const next = new Set(dragSnapshot.value);
+    for (let i = 0; i < tabs.length; i++) {
+      const m = tabs[i];
+      if (m === undefined) continue;
+      if (i >= minIdx && i <= maxIdx) {
+        if (barDragMode.value === 'deselect') { next.delete(m); } else { next.add(m); }
+      }
+    }
+    selectedMonths.value = next;
+  }
+}
+
+/** 全月が選択されているか判定 */
+const isAllMonthsSelected = computed(() => {
+  return selectedMonths.value.size === 12;
+});
+
+/** 選択期間のラベル（YYYY/MM/DD 〜 YYYY/MM/DD） */
+const fiscalPeriodLabel = computed(() => {
+  const opts = fiscalYearOptions.value;
+  const selected = [...selectedFiscalYears.value].sort();
+  if (selected.length === 0) return '';
+  const first = opts.find(o => o.year === selected[0]);
+  const last = opts.find(o => o.year === selected[selected.length - 1]);
+  if (!first || !last) return '';
+  const fmtDate = (d: string) => d.replace(/-/g, '/');
+  return `${fmtDate(first.from)} 〜 ${fmtDate(last.to)}`;
+});
+
+/** API送信用: 期間フィルタのdateFrom（選択年度の最小from） */
+const fiscalDateFrom = computed(() => {
+  const opts = fiscalYearOptions.value;
+  const selected = [...selectedFiscalYears.value].sort();
+  if (selected.length === 0) return undefined;
+  const first = opts.find(o => o.year === selected[0]);
+  return first?.from;
+});
+
+/** API送信用: 期間フィルタのdateTo（選択年度の最大to） */
+const fiscalDateTo = computed(() => {
+  const opts = fiscalYearOptions.value;
+  const selected = [...selectedFiscalYears.value].sort();
+  if (selected.length === 0) return undefined;
+  const last = opts.find(o => o.year === selected[selected.length - 1]);
+  return last?.to;
+});
 
 // ────── 選択状態管理（一括操作バー用） ──────
 const selectedIds = ref<Set<string>>(new Set());
@@ -3626,25 +3992,38 @@ async function fetchJournalList() {
 
   // Phase 2: accountMap/taxMapはサーバー側マスタから自動生成（POSTボディ送信不要）
 
-  const body: Record<string, unknown> = {
+  const body: {
+    showImported: boolean;
+    showUnexported: boolean;
+    showExported: boolean;
+    showExcluded: boolean;
+    showTrashed: boolean;
+    dateFrom: string | undefined;
+    dateTo: string | undefined;
+    filterMonths?: number[];
+    page: number;
+    pageSize: number;
+    sort?: string;
+    order?: 'asc' | 'desc';
+    search?: string;
+    voucherFilter?: string;
+  } = {
     showImported: showImported.value,
     showUnexported: showUnexported.value,
     showExported: showExported.value,
     showExcluded: showExcluded.value,
     showTrashed: showTrashed.value,
+    dateFrom: fiscalDateFrom.value,
+    dateTo: fiscalDateTo.value,
+    // 全月選択時はfilterMonths送信不要（サーバー側で全月扱い）
+    filterMonths: isAllMonthsSelected.value ? undefined : [...selectedMonths.value],
     page: journalCurrentPage.value,
     pageSize: journalPageSize.value,
+    sort: sortColumn.value || undefined,
+    order: sortColumn.value ? sortDirection.value : undefined,
+    search: globalSearchQuery.value.trim() || undefined,
+    voucherFilter: voucherFilter.value || undefined,
   };
-  if (sortColumn.value) {
-    body.sort = sortColumn.value;
-    body.order = sortDirection.value;
-  }
-  if (globalSearchQuery.value.trim()) {
-    body.search = globalSearchQuery.value.trim();
-  }
-  if (voucherFilter.value) {
-    body.voucherFilter = voucherFilter.value;
-  }
 
   try {
     const res = await fetch(`/api/journals/${journalClientId.value}/list`, {
@@ -3682,6 +4061,9 @@ watch(
     voucherFilter,
     journalCurrentPage,
     journalPageSize,
+    fiscalDateFrom,
+    fiscalDateTo,
+    selectedMonths,
   ],
   () => {
     fetchJournalList();

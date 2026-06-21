@@ -30,6 +30,12 @@ export interface JournalListQuery {
   showExcluded?: boolean
   showTrashed?: boolean
   voucherFilter?: string
+  /** 期間フィルタ: 開始日（YYYY-MM-DD）。決算年度バーから自動算出。 */
+  dateFrom?: string
+  /** 期間フィルタ: 終了日（YYYY-MM-DD）。決算年度バーから自動算出。 */
+  dateTo?: string
+  /** 月フィルタ: 表示対象の月番号配列（1-12）。歯抜け月選択対応。 */
+  filterMonths?: number[]
   page?: number
   pageSize?: number
   /** 科目ID→科目名マッピング（科目名ソート用。フロントからPOSTで送信） */
@@ -416,7 +422,24 @@ export function getJournalList(clientId: string, query: JournalListQuery): Journ
     result = searchJournals(result, query.search, query.accountMap, query.taxMap)
   }
 
-  // 5. チェックボックスフィルタ
+  // 5. 期間フィルタ（決算年度バー）
+  if (query.dateFrom || query.dateTo || query.filterMonths) {
+    const monthSet = query.filterMonths ? new Set(query.filterMonths) : null
+    result = result.filter(j => {
+      const d = j.voucher_date
+      if (!d) return true // 日付未設定の仕訳は常に表示
+      if (query.dateFrom && d < query.dateFrom) return false
+      if (query.dateTo && d > query.dateTo) return false
+      // 月フィルタ: voucher_dateの月が選択月に含まれているか
+      if (monthSet) {
+        const month = new Date(d).getMonth() + 1 // 1-12
+        if (!monthSet.has(month)) return false
+      }
+      return true
+    })
+  }
+
+  // 6. チェックボックスフィルタ
   result = filterJournals(result, {
     showUnexported: query.showUnexported ?? true,
     showExported: query.showExported ?? true,
@@ -425,7 +448,7 @@ export function getJournalList(clientId: string, query: JournalListQuery): Journ
     voucherFilter: query.voucherFilter,
   })
 
-  // 6. ページネーション
+  // 7. ページネーション
   const totalCount = result.length
   const page = query.page ?? 1
   const pageSize = query.pageSize ?? 30
