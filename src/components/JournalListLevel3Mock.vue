@@ -45,18 +45,21 @@
       <!-- フィルタモード（通常時） -->
       <template v-if="!isSelectionMode">
         <div class="flex items-center gap-3 text-[11px]">
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1" data-search-drop>
             <i class="fa-solid fa-magnifying-glass text-[10px] text-gray-400"></i>
             <input
               type="text"
               v-model="globalSearchQuery"
               :placeholder="UI_MSG.全列検索"
-              class="border border-blue-400 text-blue-700 text-[11px] px-2 py-0.5 rounded w-48 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              class="border text-[11px] px-2 py-0.5 rounded w-48 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+              :class="isSearchDropTarget
+                ? 'border-green-500 bg-green-50 ring-2 ring-green-400 text-green-800'
+                : 'border-blue-400 text-blue-700'"
             />
             <button
               v-if="globalSearchQuery"
               @click="globalSearchQuery = ''"
-              class="text-gray-400 hover:text-gray-600 text-[10px] -ml-5"
+              class="text-red-500 hover:text-red-700 text-[13px] font-bold -ml-6 z-10"
             >
               ✕
             </button>
@@ -1143,7 +1146,7 @@
                   "
                   @mousedown="
                     hasEntry(row, col.key) &&
-                    startCellDrag(col.key, getRawValue(row, col.key), $event)
+                    startCellDrag(col.key, getRawValue(row, col.key), $event, String(getValue(row, col.key) ?? ''))
                   "
                 >
                   <template v-if="isEditing(journal.journalId, rowIndex, col.key)">
@@ -2085,7 +2088,7 @@ const {
   startFillDrag,
   isFillTargetCell,
   // applyFillValue — 現在未使用（フィル確定処理で復活予定）
-  // cellDrag — 現在未使用（ドラッグ状態管理で復活予定）
+  cellDrag,
   dragLabelVisible,
   dragLabelText,
   dragLabelX,
@@ -2106,6 +2109,9 @@ const {
   resolveDefaultTaxForClient,
   accounts: computed(() => clientSettings.accounts.value),
   subAccounts: computed(() => clientSettings.subAccounts.value),
+  onDropToSearch: (text: string) => {
+    globalSearchQuery.value = text;
+  },
   onMountedCallback: () => {
     journals.value.forEach((j) => syncWarningLabels(j, true));
   },
@@ -2684,6 +2690,11 @@ const showTrashed = ref<boolean>(false); // ゴミ箱を表示（初期: OFF）
 const showImported = ref<boolean>(false); // 過去仕訳CSVを表示（初期: OFF）
 const globalSearchQuery = ref<string>(""); // 全列横断検索クエリ
 
+/** セルドラッグ中に検索窓の上にいるか（ドロップ先ハイライト用） */
+const isSearchDropTarget = computed(() => {
+  return cellDrag.value?.dragging === true && cellDrag.value?.dropToSearch === true;
+});
+
 // 証票種別フィルタ（空文字 = 全て） — vendorOptionsの共有定数を使用
 const voucherFilter = ref<string>("");
 const voucherFilterOptions = VOUCHER_DOC_FILTER_OPTIONS;
@@ -2730,7 +2741,7 @@ const fiscalYearOptions = computed(() => {
   const currentFiscalEndYear = currentMonth > fm ? currentYear + 1 : currentYear;
   const fmStr = String(fm).padStart(2, '0');
   // 直近3期分（当期 + 過去2期）
-  const labels = ['2期前', '1期前', '進行期'];
+  const labels = [UI_MSG.年度ラベル_2期前, UI_MSG.年度ラベル_1期前, UI_MSG.年度ラベル_進行期];
   return [0, 1, 2].map(i => {
     const y = currentFiscalEndYear - 2 + i;
     return {
@@ -3658,7 +3669,7 @@ const sortColumn = ref<string | null>(null);
 const sortDirection = ref<"asc" | "desc">("asc");
 
 // ────── メイン仕訳ページネーション ──────
-const journalPageSize = ref(30);
+const journalPageSize = ref(100);
 const journalCurrentPage = ref(1);
 // Step 5: API結果から取得（journals computedの依存を排除）
 const _apiTotalCount = ref(0);
@@ -4070,6 +4081,7 @@ watch(
   },
 );
 watch(globalSearchQuery, () => {
+  journalCurrentPage.value = 1; // 検索時はページ1にリセット
   if (_searchTimer) clearTimeout(_searchTimer);
   _searchTimer = setTimeout(() => fetchJournalList(), 300);
 });

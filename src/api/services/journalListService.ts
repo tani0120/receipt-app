@@ -316,6 +316,10 @@ function searchJournals(
 ): JournalListRow[] {
   const q = query.trim().toLowerCase()
   if (!q) return result
+  // 数値判定（カンマ除去後に純粋な数値かチェック）
+  const qNoComma = q.replace(/,/g, '')
+  const isNumericQuery = /^-?\d+(\.\d+)?$/.test(qNoComma)
+  const numericValue = isNumericQuery ? Number(qNoComma) : NaN
   // accountId/taxCategoryId → 表示名に変換（マップがあれば）
   const resolveAccount = (id: string | null | undefined): string => {
     if (!id) return ''
@@ -326,10 +330,19 @@ function searchJournals(
     return taxMap?.[id] ?? id
   }
   return result.filter(j => {
-    const fields = [
+    // 数値クエリ → 金額完全一致のみ（テキスト部分一致はスキップ）
+    if (isNumericQuery) {
+      const amounts = [
+        ...(j.debit_entries ?? []).map(e => e.amount),
+        ...(j.credit_entries ?? []).map(e => e.amount),
+      ]
+      return amounts.some(a => a != null && a === numericValue)
+    }
+
+    // テキストクエリ → 全フィールド部分一致
+    const textFields = [
       j.voucher_date ?? '',
       j.description ?? '',
-      // 借方・貸方エントリの科目・補助・税区分・金額（共通フィールド）
       ...(j.debit_entries ?? []).flatMap(e => [
         e.account ?? '', resolveAccount(e.account),
         e.sub_account ?? '',
@@ -343,10 +356,9 @@ function searchJournals(
         String(e.amount ?? ''),
       ]),
       j.memo ?? '',
-      // 通常仕訳固有フィールド（証票意味）
       ...(isAiJournal(j) ? [j.voucher_type ?? ''] : []),
     ]
-    return fields.some(f => f.toLowerCase().includes(q))
+    return textFields.some(f => f.toLowerCase().includes(q))
   })
 }
 

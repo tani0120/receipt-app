@@ -26,6 +26,7 @@ export interface CellDragState {
   dropJournalIndex: number | null
   dropRowIndex: number | null
   dropColKey: string | null
+  dropToSearch: boolean // 検索窓へのドロップ
 }
 
 export interface FillHandleState {
@@ -47,6 +48,8 @@ export interface UseCellDragAndFillOptions {
   resolveDefaultTaxForClient: (defaultTaxName: string) => string
   accounts: { value: { accountId: string; name: string; defaultTaxCategoryId?: string }[] }
   subAccounts: { value: Record<string, { name: string }[]> }
+  /** 検索窓へのドロップ時コールバック */
+  onDropToSearch?: (text: string) => void
   /** 初回ロード時に呼ばれるコールバック（syncWarningLabels等） */
   onMountedCallback?: () => void
 }
@@ -66,6 +69,7 @@ export function useCellDragAndFill(options: UseCellDragAndFillOptions) {
     resolveDefaultTaxForClient,
     accounts,
     subAccounts,
+    onDropToSearch,
     onMountedCallback,
   } = options
 
@@ -232,11 +236,11 @@ export function useCellDragAndFill(options: UseCellDragAndFillOptions) {
   const dragLabelX = ref(0)
   const dragLabelY = ref(0)
 
-  function startCellDrag(colKey: string, value: unknown, event: MouseEvent): void {
+  function startCellDrag(colKey: string, value: unknown, event: MouseEvent, displayLabel?: string): void {
     if (editingCell.value) return
     const x = event.clientX
     const y = event.clientY
-    const label = value != null ? String(value) : ''
+    const label = displayLabel ?? (value != null ? String(value) : '')
     cancelDragTimer()
     dragTimerId = setTimeout(() => {
       cellDrag.value = {
@@ -250,6 +254,7 @@ export function useCellDragAndFill(options: UseCellDragAndFillOptions) {
         dropJournalIndex: null,
         dropRowIndex: null,
         dropColKey: null,
+        dropToSearch: false,
       }
       document.body.classList.add('cell-drag-ready')
     }, DRAG_HOLD_MS)
@@ -290,13 +295,17 @@ export function useCellDragAndFill(options: UseCellDragAndFillOptions) {
         dropJournalIndex: ji,
         dropRowIndex: ri,
         dropColKey: ck,
+        dropToSearch: false,
       }
     } else {
+      // 検索窓の上にいるか判定
+      const searchEl = el.closest<HTMLElement>('[data-search-drop]')
       cellDrag.value = {
         ...cellDrag.value,
         dropJournalIndex: null,
         dropRowIndex: null,
         dropColKey: null,
+        dropToSearch: !!searchEl,
       }
     }
   }
@@ -312,34 +321,41 @@ export function useCellDragAndFill(options: UseCellDragAndFillOptions) {
   function endCellDrag(): void {
     cancelDragTimer()
     if (!cellDrag.value) return
-    if (
-      cellDrag.value.dragging &&
-      cellDrag.value.dropJournalIndex !== null &&
-      cellDrag.value.dropColKey &&
-      isDragColCompatible(cellDrag.value.sourceColKey, cellDrag.value.dropColKey)
-    ) {
-      const journal = journals.value[cellDrag.value.dropJournalIndex]
-      if (journal && assertEditableJournal(journal, 'endCellDrag') && journal.status !== 'exported' && journal.deleted_at === null) {
-        const beforeSnap = snapshotJournal(journal.journalId)
-        applyFillValue(
-          journal,
-          cellDrag.value.dropColKey,
-          cellDrag.value.sourceValue,
-          cellDrag.value.dropRowIndex ?? undefined,
-        )
-        const dragPatch: Record<string, unknown> = {}
-        const dColKey = cellDrag.value.dropColKey
-        if (!dColKey.includes('.')) {
-          if (dColKey === 'voucher_date') dragPatch.voucher_date = journal.voucher_date
-          else if (dColKey === 'description') dragPatch.description = journal.description
-        } else {
-          dragPatch.debit_entries = journal.debit_entries
-          dragPatch.credit_entries = journal.credit_entries
-        }
-        updateJournalField(journal.journalId, dragPatch)
-        if (beforeSnap) {
-          const afterSnap = snapshotJournal(journal.journalId)
-          if (afterSnap) pushUndo([beforeSnap], [afterSnap])
+    if (cellDrag.value.dragging) {
+      // 検索窓へのドロップ
+      if (cellDrag.value.dropToSearch && onDropToSearch) {
+        const text = cellDrag.value.sourceLabel
+        if (text) onDropToSearch(text)
+      }
+      // セルへのドロップ
+      else if (
+        cellDrag.value.dropJournalIndex !== null &&
+        cellDrag.value.dropColKey &&
+        isDragColCompatible(cellDrag.value.sourceColKey, cellDrag.value.dropColKey)
+      ) {
+        const journal = journals.value[cellDrag.value.dropJournalIndex]
+        if (journal && assertEditableJournal(journal, 'endCellDrag') && journal.status !== 'exported' && journal.deleted_at === null) {
+          const beforeSnap = snapshotJournal(journal.journalId)
+          applyFillValue(
+            journal,
+            cellDrag.value.dropColKey,
+            cellDrag.value.sourceValue,
+            cellDrag.value.dropRowIndex ?? undefined,
+          )
+          const dragPatch: Record<string, unknown> = {}
+          const dColKey = cellDrag.value.dropColKey
+          if (!dColKey.includes('.')) {
+            if (dColKey === 'voucher_date') dragPatch.voucher_date = journal.voucher_date
+            else if (dColKey === 'description') dragPatch.description = journal.description
+          } else {
+            dragPatch.debit_entries = journal.debit_entries
+            dragPatch.credit_entries = journal.credit_entries
+          }
+          updateJournalField(journal.journalId, dragPatch)
+          if (beforeSnap) {
+            const afterSnap = snapshotJournal(journal.journalId)
+            if (afterSnap) pushUndo([beforeSnap], [afterSnap])
+          }
         }
       }
     }
