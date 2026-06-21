@@ -18,6 +18,8 @@ import { getJournals } from './journalStore'
 import { getByClientId as getConfirmedJournals } from './confirmedJournalsApi'
 import { type JournalListRow, isMfJournal, isAiJournal } from '../../types/journal-list-row'
 import type { StaffNotes } from '../../types/staff_notes'
+import { getClientAccounts } from './accountMasterApi'
+import type { AccountGroup } from '../../types/shared-account'
 
 /** クエリパラメータ */
 export interface JournalListQuery {
@@ -44,6 +46,16 @@ export interface JournalListQuery {
   taxMap?: Record<string, string>
 }
 
+/** 売上/経費/差額の集計 */
+export interface JournalListSummary {
+  /** 売上合計（PL_REVENUE科目の貸方金額合計） */
+  revenue: number
+  /** 経費合計（PL_EXPENSE科目の借方金額合計） */
+  expense: number
+  /** 差額（売上 − 経費） */
+  profit: number
+}
+
 /** API応答 */
 export interface JournalListResponse {
   journals: JournalListRow[]
@@ -51,6 +63,8 @@ export interface JournalListResponse {
   page: number
   pageSize: number
   totalPages: number
+  /** 売上/経費/差額の集計（フィルタ適用後の全仕訳対象） */
+  summary: JournalListSummary
 }
 
 // ────────────────────────────────────────────
@@ -460,7 +474,10 @@ export function getJournalList(clientId: string, query: JournalListQuery): Journ
     voucherFilter: query.voucherFilter,
   })
 
-  // 7. ページネーション
+  // 7. 売上/経費/差額の集計（ページネーション前の全件対象）
+  const summary = calcSummary(result, clientId, query.accountMap)
+
+  // 8. ページネーション
   const totalCount = result.length
   const page = query.page ?? 1
   const pageSize = query.pageSize ?? 30
@@ -474,5 +491,67 @@ export function getJournalList(clientId: string, query: JournalListQuery): Journ
     page,
     pageSize,
     totalPages,
+    summary,
   }
+}
+
+// ────────────────────────────────────────────
+// 売上/経費/差額 集計
+// ────────────────────────────────────────────
+
+/**
+ * フィルタ適用後の全仕訳から売上/経費を集計する。
+ * - 売上（PL_REVENUE）: 貸方の金額合計
+ * - 経費（PL_EXPENSE）: 借方の金額合計
+ * - 差額: 売上 − 経費
+ *
+ * 仕訳データのentry.accountは2種類のID体系が混在する:
+ *   1. マスタID（SHOUMOUHINHI_IND等） → groupMapで直接解決
+ *   2. 英語概念ID（consumables等） → accountMap経由で名前取得 → 名前逆引き
+ */
+function calcSummary(
+  journals: JournalListRow[],
+  clientId: string,
+  accountMap?: Record<string, string>,
+): JournalListSummary {
+  // 科目ID → accountGroupマップを構築
+  const clientData = getClientAccounts(clientId)
+  const groupMap = new Map<string, AccountGroup>()
+  const nameToGroup = new Map<string, AccountGroup>()
+  for (const a of clientData.accounts) {
+    groupMap.set(a.accountId, a.accountGroup as AccountGroup)
+    nameToGroup.set(a.name, a.accountGroup as AccountGroup)
+  }
+
+  // accountIDからaccountGroupを解決する（フォールバック付き）
+  const resolveGroup = (accountId: string | null | undefined): AccountGroup | undefined => {
+    if (!accountId) return undefined
+    // 1. マスタIDで直接検索
+    const direct = groupMap.get(accountId)
+    if (direct) return direct
+    // 2. accountMap経由で名前取得 → 名前からaccountGroup逆引き
+    const name = accountMap?.[accountId]
+    if (name) return nameToGroup.get(name)
+    return undefined
+  }
+
+  let revenue = 0
+  let expense = 0
+
+  for (const j of journals) {
+    // 貸方エントリ: PL_REVENUE科目の金額を売上に加算
+    for (const e of j.credit_entries ?? []) {
+      if (resolveGroup(e.account) === 'PL_REVENUE') {
+        revenue += e.amount ?? 0
+      }
+    }
+    // 借方エントリ: PL_EXPENSE科目の金額を経費に加算
+    for (const e of j.debit_entries ?? []) {
+      if (resolveGroup(e.account) === 'PL_EXPENSE') {
+        expense += e.amount ?? 0
+      }
+    }
+  }
+
+  return { revenue, expense, profit: revenue - expense }
 }

@@ -36,6 +36,15 @@
           :class="monthTabClass(m)"
         >{{ m }}</button>
       </div>
+      <!-- 売上/経費/差額サマリー -->
+      <div class="ml-auto flex items-center gap-4 text-[14px] font-mono whitespace-nowrap pr-1">
+        <span class="text-blue-600 font-semibold">売上 <span class="font-bold text-[15px]">{{ formatSummaryAmount(journalSummary.revenue) }}</span></span>
+        <span class="text-red-500 font-semibold">経費 <span class="font-bold text-[15px]">{{ formatSummaryAmount(journalSummary.expense) }}</span></span>
+        <span
+          class="font-bold text-[15px] px-2 py-[2px] rounded"
+          :class="journalSummary.profit >= 0 ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'"
+        >差額 {{ formatSummaryAmount(journalSummary.profit) }}</span>
+      </div>
     </div>
     <!-- L3ツールバー（共通ナビバー） -->
     <!-- 上部バー -->
@@ -2037,6 +2046,8 @@ const journalClientId = computed(() => {
 // const { journals: localJournals } = useJournals(journalClientId); // ← 廃止
 // Phase C: journalsはshallowRefで管理。API経由で取得。
 const journals = shallowRef<UiJournal[]>([]);
+/** API応答の売上/経費/差額サマリー */
+const journalSummary = ref<{ revenue: number; expense: number; profit: number }>({ revenue: 0, expense: 0, profit: 0 });
 
 // ────── 顧問先連動（勘定科目・税区分フィルタ） ──────
 const { clients, currentClient } = useClients();
@@ -4052,6 +4063,7 @@ async function fetchJournalList() {
     journals.value = (data.journals ?? []).map(normalizeJournalForUI);
     _apiTotalCount.value = data.totalCount ?? 0;
     _apiTotalPages.value = data.totalPages ?? 1;
+    journalSummary.value = data.summary ?? { revenue: 0, expense: 0, profit: 0 };
     triggerRef(journals);
   } catch (err) {
     console.error("[fetchJournalList] fetch失敗:", err);
@@ -4246,6 +4258,13 @@ function resolveAccountName(id: string | null | undefined): string {
   const allAccts = clientSettings.accounts.value;
   const account = allAccts.find((a) => a.accountId === id);
   return account ? account.name : id;
+}
+
+/** サマリー金額をカンマ区切りで表示（マイナスは先頭に-） */
+function formatSummaryAmount(value: number): string {
+  const abs = Math.abs(Math.round(value));
+  const formatted = abs.toLocaleString('ja-JP');
+  return value < 0 ? `−${formatted}` : formatted;
 }
 
 function formatDate(date: unknown): string {
