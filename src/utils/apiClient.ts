@@ -18,6 +18,7 @@ export interface ApiClient {
   get: <T>(path: string) => Promise<T>
   post: <T>(path: string, body: unknown) => Promise<T>
   put: (path: string, body: unknown) => Promise<void>
+  patch: <T>(path: string, body: unknown) => Promise<T>
   del: (path: string) => Promise<void>
 }
 
@@ -51,6 +52,16 @@ export function createApiClient(baseUrl: string): ApiClient {
         body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error(`API PUT ${baseUrl}${path} failed: ${res.status}`)
+    },
+
+    async patch<T>(path: string, body: unknown): Promise<T> {
+      const res = await fetch(`${baseUrl}${path}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error(`API PATCH ${baseUrl}${path} failed: ${res.status}`)
+      return res.json()
     },
 
     async del(path: string): Promise<void> {

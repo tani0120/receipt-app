@@ -495,11 +495,7 @@ const sendToProcess = async () => {
 
       // Phase C: POST APIでサーバーに追加（useJournals廃止）
       try {
-        await fetch(`/api/journals/${encodeURIComponent(clientId.value)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ journals: newJournals }),
-        });
+        await repos.journal.createJournals(clientId.value, { journals: newJournals });
       } catch (err) {
         console.error('[sendToProcess] POST失敗:', err);
       }

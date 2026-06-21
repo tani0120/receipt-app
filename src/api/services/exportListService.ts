@@ -17,8 +17,8 @@
  */
 
 import { getJournals } from './journalStore'
-import { UI_MSG } from '../../constants/uiMessages'
 import { getClientAccounts, getClientTaxCategories } from './accountMasterApi'
+import { getExportHistory as getExportHistoryEntries } from './exportHistoryStore'
 
 // ━━━ 除外ラベル定義（exportMfCsv.ts と同一） ━━━
 const EXCLUDE_LABELS = [
@@ -290,19 +290,11 @@ export interface ExportDetailResult {
   historyFileName: string
 }
 
-/** 履歴IDからファイル名を解決 */
-const HISTORY_FILE_MAP: Record<string, string> = {
-  h01: `${UI_MSG.マネーフォワードファイル接頭}20250307`,
-  h02: `${UI_MSG.マネーフォワードファイル接頭}20250307_2`,
-  h03: `${UI_MSG.マネーフォワードファイル接頭}20250307_3`,
-  h04: `${UI_MSG.マネーフォワードファイル接頭}20240807`,
-  h05: `${UI_MSG.マネーフォワードファイル接頭}20240731`,
-  h06: `${UI_MSG.マネーフォワードファイル接頭}20240110`,
-  h07: `${UI_MSG.マネーフォワードファイル接頭}20240110_2`,
-  h08: `${UI_MSG.マネーフォワードファイル接頭}20240109`,
-  h09: `${UI_MSG.マネーフォワードファイル接頭}20240109_2`,
-  h10: `${UI_MSG.マネーフォワードファイル接頭}20230311`,
-  h11: `${UI_MSG.マネーフォワードファイル接頭}20230311_2`,
+/** 履歴IDからファイル名を解決（exportHistoryStoreから取得） */
+function resolveHistoryFileName(clientId: string, historyId: string): string {
+  const history = getExportHistoryEntries(clientId)
+  const entry = history.find(h => h.id === historyId)
+  return entry?.fileName ?? historyId
 }
 
 export function getExportDetail(query: ExportDetailQuery): ExportDetailResult {
@@ -332,12 +324,12 @@ export function getExportDetail(query: ExportDetailQuery): ExportDetailResult {
   }
   const journals = getJournals<JournalRaw>(clientId)
 
-  // 非削除仕訳のみ（historyIdフィルタはexport_batch_idがあれば適用）
+  // export_batch_idで絞り込み（historyIdに一致する仕訳のみ）
   const allRows: ExportDetailRow[] = []
   for (const j of journals) {
     if (j.deleted_at !== null) continue
-    // historyIdが指定されている場合、export_batch_idで絞り込み
-    if (historyId && j.export_batch_id && j.export_batch_id !== historyId) continue
+    // export_batch_idが一致する仕訳のみ表示
+    if (j.export_batch_id !== historyId) continue
 
     const maxLen = Math.max(j.debit_entries.length, j.credit_entries.length)
     for (let i = 0; i < maxLen; i++) {
@@ -390,6 +382,6 @@ export function getExportDetail(query: ExportDetailQuery): ExportDetailResult {
     totalPages,
     page: safePage,
     pageSize,
-    historyFileName: HISTORY_FILE_MAP[historyId] ?? historyId,
+    historyFileName: resolveHistoryFileName(clientId, historyId),
   }
 }

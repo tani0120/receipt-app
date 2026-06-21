@@ -160,12 +160,6 @@ export const WARNING_LABEL_MAP: Record<string, WarningLabelDef> = {
     color: 'text-yellow-600',
     weight: 5,
   },
-  AUTO_INVOICE_SMALL: {
-    level: 'warn',
-    label: '少額特例（インボイス不要）',
-    color: 'text-blue-500',
-    weight: 1,
-  },
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

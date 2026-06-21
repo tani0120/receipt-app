@@ -1041,6 +1041,8 @@ export type Repositories = {
   clientTaxCategory: ClientTaxCategoryRepository
   /** 見込先拡張（一括・変換）（P3-7） */
   leadExtra: LeadExtraRepository
+  /** 仕訳（P3-8） */
+  journal: JournalRepository
 }
 
 // ============================================================
@@ -1449,6 +1451,8 @@ export type ExportRepository = {
   getCsvSnapshot(clientId: string, historyId: string): Promise<unknown>
   /** CSVスナップショット保存 */
   saveCsvSnapshot(clientId: string, data: unknown): Promise<unknown>
+  /** 仕訳ステータスPATCH（出力済み更新） */
+  patchJournalStatus(clientId: string, journalId: string, data: unknown): Promise<unknown>
 }
 
 // ============================================================
@@ -1470,6 +1474,12 @@ export type MfAuthRepository = {
   fiscalCheck(clientId: string): Promise<unknown>
   /** MF事業所インポート */
   importOffices(data: unknown): Promise<unknown>
+  /** MCP仕訳送信 */
+  sendJournals(clientId: string, data: { journalIds: string[] }): Promise<unknown>
+  /** 期設定取得 */
+  getTermSettings(clientId: string): Promise<unknown>
+  /** MFインポート仕訳 */
+  importJournals(data: unknown): Promise<unknown>
 }
 
 // ============================================================
@@ -1535,4 +1545,13 @@ export type LeadExtraRepository = {
   bulkCreate(data: unknown): Promise<unknown>
   /** 見込先→顧問先変換 */
   convert(leadId: string): Promise<unknown>
+}
+
+// ============================================================
+// § P3-8: JournalRepository（仕訳）
+// ============================================================
+
+export type JournalRepository = {
+  /** 仕訳一括作成 */
+  createJournals(clientId: string, data: { journals: unknown[] }): Promise<unknown>
 }

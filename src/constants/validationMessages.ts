@@ -204,8 +204,4 @@ export const warnDateOutOfRange = (date: string, rangeStart: string, rangeEnd: s
 export const warnDirectorLoan = (side: string, accountName: string) =>
   `${side}に「${accountName}」が計上されています。税務リスク注意`
 
-/** 少額自動適格（インボイス不要） */
-export const warnAutoInvoiceSmall = (amount: string) =>
-  `取引金額${amount}円（税込1万円未満）はインボイス不要（少額特例 2029年9月まで）`
-
 

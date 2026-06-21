@@ -221,7 +221,7 @@ export function useInlineEdit(options: UseInlineEditOptions) {
         const field = parts[1]
         if (field) {
           const entry = row[sideStr]
-          if (entry && 'account_on_document' in entry) {
+          if (entry) {
             setEntryField(entry as JournalEntryLine, field, val)
           }
         }

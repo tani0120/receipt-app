@@ -49,7 +49,7 @@ export type JournalLabelMock =
   | 'SAME_ACCOUNT_BOTH_SIDES' // 借方貸方に同一科目
 
   // --- AI判定補助ラベル ---
-  | 'AUTO_INVOICE_SMALL'      // 少額自動適格判定
+
   | 'DIRECTOR_LOAN'           // 役員貸付金検出
 
   // --- 以下はPhase B/Cで除去予定（現在のモックで使用中） ---

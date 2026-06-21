@@ -37,4 +37,16 @@ export const httpMfAuthRepo: MfAuthRepository = {
   importOffices: async (data) => {
     return api.post('/import-offices', data)
   },
+
+  sendJournals: async (clientId, data) => {
+    return api.post(`/send-journals/${encodeURIComponent(clientId)}`, data)
+  },
+
+  getTermSettings: async (clientId) => {
+    return api.get(`/term-settings?clientId=${encodeURIComponent(clientId)}`)
+  },
+
+  importJournals: async (data) => {
+    return api.post('/import-journals', data)
+  },
 }

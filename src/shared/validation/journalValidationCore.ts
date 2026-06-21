@@ -28,9 +28,7 @@ import {
   warnFutureDate,
   warnDateOutOfRange,
   warnDirectorLoan,
-  warnAutoInvoiceSmall,
 } from '../../constants/validationMessages'
-import { INVOICE_TRANSITION_0_DATE } from '../../constants/mfApiConstants'
 
 // ────────────────────────────────────────────
 // 型定義（正式型からPick — 乖離を構造的に防止）
@@ -659,24 +657,6 @@ export function syncWarningLabelsCore(
     removeLabel('DIRECTOR_LOAN')
   }
 
-  // ── 13. AUTO_INVOICE_SMALL（少額自動適格判定） ──
-  // 条件: 税込金額 < 10,000 && インボイスステータス未設定 && 少額特例期間内（〜2029/09/30）
-  const SMALL_INVOICE_THRESHOLD = 10000
-  const SMALL_INVOICE_DEADLINE = INVOICE_TRANSITION_0_DATE
-  const totalAmount = Math.max(
-    journal.debit_entries.reduce((s, e) => s + (e.amount ?? 0), 0),
-    journal.credit_entries.reduce((s, e) => s + (e.amount ?? 0), 0)
-  )
-  const isSmallInvoiceEligible =
-    totalAmount > 0 &&
-    totalAmount < SMALL_INVOICE_THRESHOLD &&
-    !journal.invoice_status &&
-    (journal.voucher_date == null || journal.voucher_date < SMALL_INVOICE_DEADLINE)
-  if (isSmallInvoiceEligible) {
-    addLabel('AUTO_INVOICE_SMALL', warnAutoInvoiceSmall(totalAmount.toLocaleString()))
-  } else {
-    removeLabel('AUTO_INVOICE_SMALL')
-  }
 
   return {
     addedLabels,

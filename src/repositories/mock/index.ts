@@ -104,6 +104,7 @@ export function createMockRepositories(): Repositories {
       saveHistory: async () => { throw new Error('mockExportRepo.saveHistory not implemented') },
       getCsvSnapshot: async () => { throw new Error('mockExportRepo.getCsvSnapshot not implemented') },
       saveCsvSnapshot: async () => { throw new Error('mockExportRepo.saveCsvSnapshot not implemented') },
+      patchJournalStatus: async () => { throw new Error('mockExportRepo.patchJournalStatus not implemented') },
     },
     mfAuth: {
       getAuthStatus: async () => { throw new Error('mockMfAuthRepo.getAuthStatus not implemented') },
@@ -113,6 +114,9 @@ export function createMockRepositories(): Repositories {
       importClientAccounts: async () => { throw new Error('mockMfAuthRepo.importClientAccounts not implemented') },
       fiscalCheck: async () => { throw new Error('mockMfAuthRepo.fiscalCheck not implemented') },
       importOffices: async () => { throw new Error('mockMfAuthRepo.importOffices not implemented') },
+      sendJournals: async () => { throw new Error('mockMfAuthRepo.sendJournals not implemented') },
+      getTermSettings: async () => { throw new Error('mockMfAuthRepo.getTermSettings not implemented') },
+      importJournals: async () => { throw new Error('mockMfAuthRepo.importJournals not implemented') },
     },
     attachment: {
       upload: async () => { throw new Error('mockAttachmentRepo.upload not implemented') },
@@ -138,6 +142,9 @@ export function createMockRepositories(): Repositories {
     leadExtra: {
       bulkCreate: async () => { throw new Error('mockLeadExtraRepo.bulkCreate not implemented') },
       convert: async () => { throw new Error('mockLeadExtraRepo.convert not implemented') },
+    },
+    journal: {
+      createJournals: async () => { throw new Error('mockJournalRepo.createJournals not implemented') },
     },
   }
 }

@@ -9,6 +9,7 @@ import type { ExportRepository } from '../types'
 
 const exportApi = createApiClient('/api/export')
 const historyApi = createApiClient('/api/export-history')
+const journalApi = createApiClient('/api/journals')
 
 export const httpExportRepo: ExportRepository = {
   getExportList: async (data) => {
@@ -33,5 +34,9 @@ export const httpExportRepo: ExportRepository = {
 
   saveCsvSnapshot: async (clientId, data) => {
     return historyApi.post(`/${encodeURIComponent(clientId)}/csv`, data)
+  },
+
+  patchJournalStatus: async (clientId, journalId, data) => {
+    return journalApi.patch(`/${encodeURIComponent(clientId)}/${encodeURIComponent(journalId)}`, data)
   },
 }

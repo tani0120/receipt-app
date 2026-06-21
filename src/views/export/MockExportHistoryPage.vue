@@ -97,7 +97,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { toMfCsvDate } from '@/utils/mf-csv-date';
 import { useModalHelper } from '@/composables/useModalHelper';
 import { UI_MSG } from '@/constants/uiMessages';
 import NotifyModal from '@/components/NotifyModal.vue';
@@ -125,16 +124,7 @@ const modal = useModalHelper();
 async function loadHistory() {
   try {
     const data = await repos.export.getHistory(clientId.value);
-    if (Array.isArray(data) && (data as HistoryRow[]).length > 0) {
-      historyData.value = data as HistoryRow[];
-    } else {
-      // フォールバック：サンプル履歴（日付はtoMfCsvDateで統一）
-      historyData.value = [
-        { id: 'h01', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307',   count: 259, status: UI_MSG.出力済 },
-        { id: 'h02', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_2', count: 315, status: UI_MSG.出力済 },
-        { id: 'h03', exportDate: toMfCsvDate('2025-03-07'), fileName: 'マネーフォワード_20250307_3', count: 506, status: UI_MSG.出力済 },
-      ];
-    }
+    historyData.value = Array.isArray(data) ? (data as HistoryRow[]) : [];
   } catch {
     historyData.value = [];
   }

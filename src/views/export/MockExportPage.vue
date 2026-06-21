@@ -2,11 +2,22 @@
   <div class="h-full flex flex-col bg-gray-50 font-sans text-[10px] text-gray-700">
     <!-- アクションボタン -->
     <div class="bg-white px-3 py-1.5 flex items-center gap-3 border-b border-gray-300">
+      <!-- CSVモード -->
       <button
+        v-if="!isMcpMode"
         class="px-4 py-1 bg-blue-600 text-white rounded text-[10px] font-semibold hover:bg-blue-700"
         @click="showDownloadModal = true"
       >
         CSV形式でダウンロード
+      </button>
+      <!-- MCPモード -->
+      <button
+        v-if="isMcpMode"
+        class="px-4 py-1 bg-indigo-600 text-white rounded text-[10px] font-semibold hover:bg-indigo-700 flex items-center gap-1"
+        @click="showMcpModal = true"
+      >
+        <i class="fa-solid fa-cloud-arrow-up text-[9px]"></i>
+        MCPで直接インポート
       </button>
       <router-link
         :to="'/export-history/' + ($route.params.clientId ?? 'ABC-00001')"
@@ -17,8 +28,8 @@
 
     <!-- 出力形式行 + ダウンロードファイル名 -->
     <div class="bg-white px-3 py-1.5 flex items-center gap-3 border-b border-gray-200">
-      <span class="text-[13px] font-bold text-blue-700"
-        >出力形式：マネーフォワード クラウド会計</span
+      <span class="text-[13px] font-bold" :class="isMcpMode ? 'text-indigo-700' : 'text-blue-700'"
+        >{{ isMcpMode ? '出力形式：MCP直接インポート' : '出力形式：マネーフォワード クラウド会計' }}</span
       >
       <button
         class="px-2 py-0.5 bg-blue-600 text-white rounded text-[10px] font-semibold hover:bg-blue-700"
@@ -131,14 +142,14 @@
       <table class="w-full border-collapse text-[10px]" style="table-layout: fixed">
         <thead>
           <tr class="bg-blue-100 text-gray-800 sticky top-0">
-            <!-- ダウンロード対象列（ソート対応） -->
+            <!-- 対象列（ソート対応） -->
             <th
               class="p-1 border-r border-gray-300 text-center cursor-pointer hover:bg-blue-200 select-none relative"
               :style="{ width: exColWidths['checked'] + 'px' }"
               @click="handleSort('checked')"
             >
               <div>
-                ダウンロード対象
+                {{ isMcpMode ? 'インポート対象' : 'ダウンロード対象' }}
                 <span v-if="sortKey === 'checked'" class="text-[8px]">{{
                   sortDir === "asc" ? "▲" : "▼"
                 }}</span>
@@ -255,6 +266,47 @@
     </div>
   </div>
 
+    <!-- MCPインポート確認モーダル -->
+    <div
+      v-if="showMcpModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      @click.self="cancelMcp"
+    >
+      <div class="bg-white rounded-lg shadow-xl p-6 min-w-[340px] text-center">
+        <template v-if="!mcpSending">
+          <p class="text-[14px] font-semibold text-gray-800 mb-2">
+            MCPで直接インポートしますか？
+          </p>
+          <p class="text-[11px] text-gray-500 mb-4">
+            ✔が入った仕訳をMCP経由でMFクラウド会計に送信します
+          </p>
+          <div class="flex justify-center gap-4">
+            <button
+              class="px-6 py-2 bg-indigo-600 text-white rounded text-[12px] font-semibold hover:bg-indigo-700"
+              @click="startMcpImport"
+            >
+              はい
+            </button>
+            <button
+              class="px-6 py-2 border border-gray-300 rounded text-[12px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200"
+              @click="cancelMcp"
+            >
+              いいえ
+            </button>
+          </div>
+        </template>
+        <template v-else>
+          <div class="flex flex-col items-center gap-4">
+            <div
+              class="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"
+            ></div>
+            <p class="text-[14px] font-semibold text-gray-800">MCPインポート中です</p>
+            <p class="text-[11px] text-gray-500">{{ mcpProgress }}</p>
+          </div>
+        </template>
+      </div>
+    </div>
+
   <NotifyModal
     :show="modal.notifyState.show"
     :title="modal.notifyState.title"
@@ -290,6 +342,8 @@ const { repos } = useRepositories();
 const route = useRoute();
 const { currentStaffId } = useCurrentUser();
 const clientId = computed(() => (route.params.clientId as string) ?? "LDI-00008");
+/** MCPモード判定（クエリパラメータ ?mode=mcp） */
+const isMcpMode = computed(() => route.query.mode === 'mcp');
 const { journals } = useJournals(clientId);
 
 // 列幅カスタマイズ
@@ -408,15 +462,11 @@ const startDownload = async () => {
         target.exported_by = currentStaffId.value ?? 'unknown';
         target.export_batch_id = historyId;
         // Phase C: PATCH APIで永続化
-        fetch(`/api/journals/${encodeURIComponent(clientId.value)}/${encodeURIComponent(v.journalId)}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'exported',
-            exported_at: exportedAt,
-            exported_by: currentStaffId.value ?? 'unknown',
-            export_batch_id: historyId,
-          }),
+        repos.export.patchJournalStatus(clientId.value, v.journalId, {
+          status: 'exported',
+          exported_at: exportedAt,
+          exported_by: currentStaffId.value ?? 'unknown',
+          export_batch_id: historyId,
         }).catch(err => console.error(`[ExportPage] PATCH失敗: ${v.journalId}`, err));
       }
     }
@@ -601,6 +651,118 @@ const toggleAll = () => {
     pagedRows.value.forEach((r) => next.add(r.id));
   }
   checkedIds.value = next;
+};
+
+// --- MCPインポート ---
+const showMcpModal = ref(false);
+const mcpSending = ref(false);
+const mcpProgress = ref('');
+
+const cancelMcp = () => {
+  showMcpModal.value = false;
+  mcpSending.value = false;
+  mcpProgress.value = '';
+};
+
+/** MCPインポート実行: ✓が入った仕訳をMCP APIで送信 */
+const startMcpImport = async () => {
+  mcpSending.value = true;
+  mcpProgress.value = '対象仕訳を取得中…';
+
+  // checkedIdsは展開後のid（jrn-00000001-0）なので、元のjournal id（jrn-00000001）を抽出
+  const sourceJournals = journals.value;
+  const checkedJournalIds = new Set([...checkedIds.value].map((rid) => rid.replace(/-\d+$/, "")));
+  const checkedJournals = sourceJournals.filter(
+    (j) => j.deleted_at === null && checkedJournalIds.has(j.journalId),
+  );
+
+  if (checkedJournals.length === 0) {
+    mcpSending.value = false;
+    showMcpModal.value = false;
+    await modal.notify({ title: 'インポート対象の仕訳がありません', variant: 'warning' });
+    return;
+  }
+
+  // バリデーション適用（警告付き仕訳を除外）
+  const { valid, excluded } = validateForCsvExport(checkedJournals);
+  if (valid.length === 0) {
+    mcpSending.value = false;
+    showMcpModal.value = false;
+    await modal.notify({
+      title: 'インポート可能な仕訳がありません',
+      message: `除外: ${excluded.length}件`,
+      variant: 'warning',
+    });
+    return;
+  }
+
+  mcpProgress.value = `${valid.length}件の仕訳を送信中…`;
+
+  try {
+    const data = await repos.mfAuth.sendJournals(clientId.value, {
+      journalIds: valid.map((j) => j.journalId),
+    }) as { ok?: boolean; error?: string; total?: number; successCount?: number; failureCount?: number; message?: string; elapsedMs?: number };
+    if (data.error) {
+      mcpSending.value = false;
+      showMcpModal.value = false;
+      await modal.notify({ title: data.error || 'MCPインポートに失敗しました', variant: 'warning' });
+      return;
+    }
+    if (data.total === 0) {
+      mcpSending.value = false;
+      showMcpModal.value = false;
+      await modal.notify({ title: data.message || '送信対象の仕訳がありません', variant: 'info' });
+      return;
+    }
+
+    // 成功: ステータス更新 + 履歴保存
+    const now = new Date();
+    const jstOffset = 9 * 60;
+    const local = new Date(now.getTime() + jstOffset * 60000);
+    const exportedAt = local.toISOString().replace('Z', '+09:00');
+
+    // ダウンロード履歴に保存（export-historyに表示されるように）
+    const historyId = await saveDownloadHistory(
+      `MCP直接インポート_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`,
+      valid.length,
+      valid.length, // MCPの場合はCSV行数=仕訳件数
+    );
+
+    for (const v of valid) {
+      const target = journals.value.find((j) => j.journalId === v.journalId);
+      if (target) {
+        target.status = "exported";
+        target.exported_at = exportedAt;
+        target.exported_by = currentStaffId.value ?? 'unknown';
+        target.export_batch_id = historyId;
+        repos.export.patchJournalStatus(clientId.value, v.journalId, {
+          status: 'exported',
+          exported_at: exportedAt,
+          exported_by: currentStaffId.value ?? 'unknown',
+          export_batch_id: historyId,
+        }).catch(err => console.error(`[ExportPage] MCP PATCH失敗: ${v.journalId}`, err));
+      }
+    }
+
+    const msg = `MCPインポート完了: ${data.successCount ?? valid.length}/${data.total ?? valid.length}件成功` +
+      ((data.failureCount ?? 0) > 0 ? `、${data.failureCount}件失敗` : '') +
+      (data.elapsedMs ? `（${Math.round(data.elapsedMs / 1000)}秒）` : '');
+
+    mcpSending.value = false;
+    showMcpModal.value = false;
+    await modal.notify({
+      title: msg,
+      variant: (data.failureCount ?? 0) > 0 ? 'warning' : 'success',
+    });
+
+    // 一覧を再取得
+    fetchExportList();
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    mcpSending.value = false;
+    showMcpModal.value = false;
+    await modal.notify({ title: `MCPインポートエラー: ${errMsg}`, variant: 'warning' });
+  }
 };
 </script>
 

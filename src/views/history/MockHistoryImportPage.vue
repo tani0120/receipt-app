@@ -278,9 +278,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { UI_MSG } from '@/constants/uiMessages'
 import { MF_CSV_HEADER_KEYWORD, MF_CSV_HEADERS } from '@/constants/journalConstants'
+import { useRepositories } from '@/composables/useRepositories'
 
 const route = useRoute()
 const clientId = route.params.clientId as string
+const { repos } = useRepositories()
 
 /**
  * CSVファイルのエンコーディングを自動検出して読み取る
@@ -535,8 +537,7 @@ onMounted(async () => {
     // MF連携先の場合、全期情報を取得（年度別サマリーで「該当なし」表示用）
     if (mfLinked.value) {
       try {
-        const termRes = await fetch(`/api/mf/term-settings?clientId=${clientId}`)
-        const termData = await termRes.json() as { settings?: { term_settings?: Array<{ fiscal_year: number; start_date: string; end_date: string }> } }
+        const termData = await repos.mfAuth.getTermSettings(clientId) as { settings?: { term_settings?: Array<{ fiscal_year: number; start_date: string; end_date: string }> } }
         const terms = termData.settings?.term_settings || []
         if (Array.isArray(terms)) {
           mfFiscalYears.value = terms.map(t => ({
@@ -563,17 +564,12 @@ const executeMcpImport = async () => {
   mcpImportResult.value = null
 
   try {
-    const res = await fetch('/api/mf/import-journals', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId }),
-    })
-    const data = await res.json() as {
+    const data = await repos.mfAuth.importJournals({ clientId }) as {
       success?: boolean; results?: string[]; error?: string;
       fiscalYears?: FiscalYearInfo[]
     }
 
-    if (res.ok && data.success) {
+    if (data.success) {
       mcpImportResult.value = { success: true, results: data.results || [] }
       // 全期情報を保存（年度別サマリーで使用）
       if (data.fiscalYears) {
