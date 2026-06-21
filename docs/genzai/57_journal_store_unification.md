@@ -17,7 +17,7 @@
 | ファイル | `data/journals-{clientId}.json` | `data/confirmed_journals.json`（全顧問先混在） |
 | ID体系 | `jrn_XXXXXXXX` / `jre_XXXXXXXX` | UUID |
 | API | journalRoutes.ts（GET/POST/PATCH） | confirmedJournalRoutes.ts（GET/import/delete） |
-| UI表示 | 仕訳一覧に常時表示 | showPastCsvチェックボックスON時のみ表示 |
+| UI表示 | 仕訳一覧に常時表示 | showImportedチェックボックスON時のみ表示 |
 | CRUD | 全操作可能 | 読取+一括インポート+削除のみ |
 | ソート | journalListService.tsで統合ソート | confirmedToJournalRow()でJournalRowに変換してから統合 |
 
@@ -25,7 +25,7 @@
 
 1. **型の非互換**: ConfirmedJournal と JournalPhase5Mock は「互換」と書いてあるが、実際にはフィールド差異がある（labels, status, account_on_document, amount_on_document, entryId体系）。confirmedToJournalRow()（journalListService.ts L96-151）で毎回アダプタ変換が必要
 2. **ファイル分離**: 通常仕訳は顧問先別ファイル、confirmed仕訳は全顧問先が1ファイルに混在。顧問先が増えるとフィルタ（`j.client_id === clientId`）のO(N)コストが増大
-3. **検索の断絶**: 仕訳一覧の全列横断検索（journalListService.ts L392-431）は統合後のJournalRow[]に対して実行するが、showPastCsv=falseだとconfirmed仕訳は検索対象外
+3. **検索の断絶**: 仕訳一覧の全列横断検索（journalListService.ts L392-431）は統合後のJournalRow[]に対して実行するが、showImported=falseだとconfirmed仕訳は検索対象外
 4. **バリデーション適用範囲の曖昧さ**: 通常仕訳にはバリデーション（警告ラベル付与）があるが、confirmed仕訳はlabels=[]で固定。二重管理によりバリデーションの適用判断が複雑化
 5. **MF送信結果の二重保持**: confirmedJournalsApi.applyMfIds()でMF-IDをconfirmed仕訳に書き戻すが、通常仕訳側にも送信ステータス（status='exported'）がある。同じ仕訳のMF送信情報が2箇所に分散
 
@@ -53,15 +53,40 @@
 confirmed仕訳:
   MF MCP sync-all → importJournals() → confirmed_journals.json（全顧問先混在）
   MF CSV import  → importJournals() → 同上
-                                     → showPastCsv ON時のみ表示
+                                     → showImported ON時のみ表示
                                      → 読取専用（PATCHなし）
                                      → MF送信→applyMfIds()で書き戻し
 
 仕訳一覧（journalListService.ts）:
   getJournals(clientId) → 通常仕訳
-  + (showPastCsv ? getConfirmedJournals(clientId).map(confirmedToJournalRow) : [])
+  + (showImported ? getConfirmedJournals(clientId).map(confirmedToJournalRow) : [])
   → 統合 → ソート → 検索 → フィルタ → ページネーション
 ```
+
+---
+
+## 3-b. Phase C: C-lite confirmedToJournalRow偽装の解体 ✅ 完了
+
+> **元セッション**: d3cec2e6 component_analysis.md より転記（2026-06-21）
+
+### 方針
+
+ドメイン型は維持（JournalPhase5Mock / ConfirmedJournal）。
+表示型として `JournalListRow = JournalPhase5Mock | ConfirmedJournal` を新設。
+UIはsource判別で描画を切り替える。
+
+### 判別関数
+
+```typescript
+function isMfJournal(row: JournalListRow): row is ConfirmedJournal {
+  return 'source' in row && (row.source === 'mf_import' || row.source === 'system')
+}
+```
+
+### normalizeJournalForUI
+
+ConfirmedJournalに不足するフィールド（labels, status, is_read等）をデフォルト値で埋める。
+テンプレート側の大規模修正を回避。
 
 ---
 
@@ -140,7 +165,7 @@ confirmed仕訳:
 
 | ファイル | 影響内容 |
 |---|---|
-| JournalListLevel3Mock.vue | showPastCsvチェックボックスの扱い変更 |
+| JournalListLevel3Mock.vue | showImportedチェックボックスの扱い変更 |
 | MockHistoryImportPage.vue | インポート先ストア変更 |
 
 ### 型定義

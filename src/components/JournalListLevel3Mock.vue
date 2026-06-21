@@ -1905,7 +1905,6 @@
 <script setup lang="ts">
 import {
   computed,
-  nextTick,
   onMounted,
   onUnmounted,
   ref,
@@ -1931,12 +1930,11 @@ import { useRoute } from "vue-router";
 import { getDocumentImageUrl } from "../data/document_mock_data";
 import type {
   JournalPhase5Mock,
-  JournalEntryLine,
   JournalLabelMock,
 } from "../types/journal_phase5_mock.type";
 import { createEmptyStaffNotes, STAFF_NOTE_KEYS, isStaffNoteKey } from "../types/staff_notes";
 import type { StaffNoteKey } from "../types/staff_notes";
-import type { ConfirmedJournal, ConfirmedJournalEntry } from "../types/confirmed_journal.type";
+import type { ConfirmedJournal } from "../types/confirmed_journal.type";
 import { isImportedJournal, isMfJournal } from "../types/journal-list-row";
 import type { JournalListRow } from "../types/journal-list-row";
 import type { UiJournal, NormalizedConfirmedJournal } from "../types/journal-ui.types";
@@ -1957,6 +1955,10 @@ import {
   FIELD_ACCOUNT, FIELD_TAX_CATEGORY, FIELD_AMOUNT, FIELD_AMOUNT_DIFF,
 } from '@/constants/validationMessages';
 import type { HintSuggestion } from '@/types/hintTypes';
+import { useInlineEdit } from '@/composables/useInlineEdit';
+import type { CombinedRow, UndoSnapshot, UiEntryLine } from '@/composables/useInlineEdit';
+import { useCellDragAndFill } from '@/composables/useCellDragAndFill';
+import { useAccountCombobox } from '@/composables/useAccountCombobox';
 
 // 過去仕訳検索モーダル用の科目選択肢（顧問先科目から生成）
 const accountOptionsForModal = computed<SelectOption[]>(() =>
@@ -2010,7 +2012,68 @@ const activeClientFull = computed(() => {
 // ※ clientIdが変わった場合はVue Routerが再マウントするため、setupトップレベルで安全。
 const clientSettings = useAccountSettings("client", currentClient.value?.clientId ?? "");
 
-/** 顧問先のtype/hasRentalIncomeでフィルタ済み勘定科目リスト */
+// ────── Phase C-1: インライン編集 + Undo/Redo composable ──────
+const {
+  editingCell,
+  editingValue,
+  editingOriginalValue,
+  undoStack,
+  redoStack,
+  snapshotJournal,
+  pushUndo,
+  undo,
+  redo,
+  isEditing,
+  startCellEdit,
+  commitCellEdit,
+  cancelCellEdit,
+  onAmountInput,
+  parseDateInput,
+  setEntryField,
+  getCombinedRows,
+  isCompoundJournal,
+  hasEntry,
+} = useInlineEdit({
+  journals,
+  updateJournalField,
+  accounts: computed(() => clientSettings.accounts.value),
+  resolveDefaultTaxForClient,
+  assertEditableJournal,
+});
+
+// ────── Phase C-2: セルドラッグ&フィルハンドル composable ──────
+const {
+  fillHandle,
+  isFillable,
+  startFillDrag,
+  isFillTargetCell,
+  applyFillValue,
+  cellDrag,
+  dragLabelVisible,
+  dragLabelText,
+  dragLabelX,
+  dragLabelY,
+  startCellDrag,
+  isDragOver,
+  isDragCompatibleCol,
+  isDragIncompatibleCol,
+} = useCellDragAndFill({
+  journals,
+  editingCell,
+  updateJournalField,
+  snapshotJournal,
+  pushUndo,
+  setEntryField,
+  isCompoundJournal,
+  assertEditableJournal,
+  resolveDefaultTaxForClient,
+  accounts: computed(() => clientSettings.accounts.value),
+  subAccounts: computed(() => clientSettings.subAccounts.value),
+  onMountedCallback: () => {
+    journals.value.forEach((j) => syncWarningLabels(j, true));
+  },
+});
+
 const filteredAccounts = computed(() => {
   const client = activeClientFull.value;
   const clientType = client?.type ?? "corp";
@@ -2030,6 +2093,36 @@ const filteredAccounts = computed(() => {
       return false;
     })
     .sort((a, b) => a.sortOrder - b.sortOrder);
+});
+
+// ────── Phase C-3: 科目/税区分/補助科目コンボボックス composable ──────
+const {
+  accountGroupsForJournal,
+  getTaxGroupsForEntry,
+  filterAccountGroups,
+  expandedMegaGroup,
+  getAccountsForMegaGroup,
+  filterTaxGroups,
+  selectAccountItem,
+  selectTaxItem,
+  blurAccountEdit,
+  blurTaxEdit,
+  getSubAccountCandidates,
+  filterSubAccountCandidates,
+  selectSubAccountItem,
+  blurSubAccountEdit,
+} = useAccountCombobox({
+  editingCell,
+  editingValue,
+  commitCellEdit,
+  snapshotJournal,
+  pushUndo,
+  updateJournalField,
+  resolveDefaultTaxForClient,
+  runAccountValidation,
+  filteredAccounts,
+  clientSettings,
+  consumptionTaxMode: computed(() => activeClientFull.value?.consumptionTaxMode),
 });
 
 /** ドットパスで生値を取得（税区分名称変換なし）
@@ -2056,15 +2149,9 @@ function getRawString(obj: UiJournal | CombinedRow, path: string): string {
 // ────── 区分ドロップダウン（D7a: category-first選択の起点） ──────
 // 科目分類定数は shared/data/account-category-rules.ts に統合済み
 // 3大グループ・BS全カテゴリは constants/journalConstants.ts に集約
-import {
-  getAccountGroupDirection,
-  getCategoryLabel,
-} from "@/data/master/account-category-rules";
+// getAccountGroupDirection, getCategoryLabel → useAccountCombobox.ts に移動済み
 import {
   MEGA_GROUPS,
-  TAX_GROUP_SALES,
-  TAX_GROUP_PURCHASE,
-  TAX_GROUP_COMMON,
   WARNING_LABEL_MAP,
   LABEL_KEY_MAP,
   TIP_RULE_APPLIED,
@@ -2196,102 +2283,6 @@ watch(
   },
   { immediate: true },
 );
-/** 仕訳入力用: 勘定科目をカテゴリでグルーピング（ラベルは日本語表示） */
-const accountGroupsForJournal = computed(() => {
-  const categoryMap = new Map<string, typeof filteredAccounts.value>();
-  for (const acc of filteredAccounts.value) {
-    const cat = acc.category;
-    if (!categoryMap.has(cat)) categoryMap.set(cat, []);
-    categoryMap.get(cat)!.push(acc);
-  }
-  const groups: { label: string; items: typeof filteredAccounts.value }[] = [];
-  for (const [cat, items] of categoryMap) {
-    groups.push({ label: getCategoryLabel(cat), items });
-  }
-  return groups;
-});
-
-/** 仕訳入力用: 選択中の勘定科目の区分から方向判定し、税区分をフィルタ+グルーピング */
-function getTaxGroupsForEntry(row: CombinedRow, colKey: string) {
-  const side: "debit" | "credit" = colKey.startsWith("debit") ? "debit" : "credit";
-  const entry = row[side];
-  const accountName = entry?.account ?? null;
-
-  const settings = clientSettings;
-
-  if (!accountName) {
-    // 勘定科目未選択: 全表示税区分をグルーピング
-    const visible = settings.visibleTaxCategories.value;
-    return [
-      { label: TAX_GROUP_SALES, items: visible.filter((tc) => tc.direction === "sales") },
-      { label: TAX_GROUP_PURCHASE, items: visible.filter((tc) => tc.direction === "purchase") },
-      { label: TAX_GROUP_COMMON, items: visible.filter((tc) => tc.direction === "common") },
-    ].filter((g) => g.items.length > 0);
-  }
-
-  const allAccounts = settings.accounts.value;
-  const acc = allAccounts.find((a) => a.accountId === accountName);
-  if (!acc) {
-    const visible = settings.visibleTaxCategories.value;
-    return [
-      { label: TAX_GROUP_SALES, items: visible.filter((tc) => tc.direction === "sales") },
-      { label: TAX_GROUP_PURCHASE, items: visible.filter((tc) => tc.direction === "purchase") },
-      { label: TAX_GROUP_COMMON, items: visible.filter((tc) => tc.direction === "common") },
-    ].filter((g) => g.items.length > 0);
-  }
-
-  const direction = getAccountGroupDirection(acc.accountGroup ?? '');
-
-  const taxMode = activeClientFull.value?.consumptionTaxMode;
-  const filtered = settings.filteredTaxCategories(direction, taxMode);
-  if (direction === "sales") {
-    return [
-      { label: TAX_GROUP_SALES, items: filtered.filter((tc) => tc.direction === "sales") },
-      { label: TAX_GROUP_COMMON, items: filtered.filter((tc) => tc.direction === "common") },
-    ].filter((g) => g.items.length > 0);
-  } else if (direction === "purchase") {
-    return [
-      { label: TAX_GROUP_PURCHASE, items: filtered.filter((tc) => tc.direction === "purchase") },
-      { label: TAX_GROUP_COMMON, items: filtered.filter((tc) => tc.direction === "common") },
-    ].filter((g) => g.items.length > 0);
-  }
-  return [{ label: TAX_GROUP_COMMON, items: filtered }].filter((g) => g.items.length > 0);
-}
-
-// ────── 検索付きコンボボックス: フィルタ関数 ──────
-
-/** 勘定科目候補をテキストでフィルタ（区分連動廃止） */
-function filterAccountGroups(query: string, _row?: CombinedRow, _colKey?: string) {
-  const groups = accountGroupsForJournal.value;
-  if (!query) return groups;
-  const q = query.toLowerCase();
-  return groups
-    .map((g) => ({ ...g, items: g.items.filter((a) => a.name.toLowerCase().includes(q)) }))
-    .filter((g) => g.items.length > 0);
-}
-
-/** 3大グループの展開状態管理 */
-const expandedMegaGroup = ref<string | null>(null);
-
-/** 3大グループ配下の勘定科目を取得 */
-function getAccountsForMegaGroup(megaLabel: string) {
-  const mega = MEGA_GROUPS.find((g) => g.label === megaLabel);
-  if (!mega) return [];
-  return filteredAccounts.value
-    .filter((acc) => mega.accountGroups.includes(acc.accountGroup))
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
-/** 税区分候補をテキストでフィルタ（方向フィルタ済みグループに対してさらに検索） */
-function filterTaxGroups(row: CombinedRow, colKey: string, query: string) {
-  const groups = getTaxGroupsForEntry(row, colKey);
-  if (!query) return groups;
-  const q = query.toLowerCase();
-  return groups
-    .map((g) => ({ ...g, items: g.items.filter((tc) => tc.name.toLowerCase().includes(q)) }))
-    .filter((g) => g.items.length > 0);
-}
-
 // ────── 貸借科目バリデーション（5分類 + 逆仕訳例外） ──────
 // getMegaGroup / validateDebitCreditCombination は
 // shared/validation/journalValidationCore.ts（SSOT）から import済み
@@ -2632,737 +2623,21 @@ function getDatePeriodClass(dateStr: string | null): string {
 
 // validateByVoucherType は journalWarningSync.ts からインポート済み
 
-// ────── 検索付きコンボボックス: 選択関数 ──────
 
-function selectAccountItem(
-  journal: UiJournal,
-  row: CombinedRow,
-  colKey: string,
-  accountId: string,
-): void {
-  // Undo記録: 変更前スナップショット
-  const beforeSnap = snapshotJournal(journal.journalId);
-  const side: "debit" | "credit" = colKey.startsWith("debit") ? "debit" : "credit";
-  const entry = row[side];
-  if (!entry) {
-    editingCell.value = null;
-    return;
-  }
+// ────── インライン編集 + Undo/Redo → useInlineEdit.ts に移動済み ──────
 
-  entry.account = accountId || null;
+// ────── フィルハンドル + セルドラッグ + イベント登録 → useCellDragAndFill.ts に移動済み ──────
 
-  if (accountId) {
-    const allAccounts = clientSettings.accounts.value;
-    const acc = allAccounts.find((a) => a.accountId === accountId);
-    if (acc?.defaultTaxCategoryId) {
-      // デフォルト税区分IDを直接セット（免税時はCOMMON_EXEMPTに変換）
-      entry.tax_category_id = resolveDefaultTaxForClient(acc.defaultTaxCategoryId);
-    }
-    if (acc) {
-      const sub = clientSettings.subAccounts.value[acc.accountId];
-      // 補助科目: 1件→name自動代入、複数→null（ユーザー選択）、0件→null
-      entry.sub_account = sub?.length === 1 ? sub[0]?.name ?? null : null;
-    }
-  } else {
-    entry.sub_account = null;
-  }
 
-  editingCell.value = null;
 
-  // 勘定科目選択確定後、3大グループバリデーションを実行
-  runAccountValidation(journal);
-  // updateJournalFieldで一括処理（autoMeta + syncWarningLabels + PATCH送信）
-  if (!isImportedJournal(journal)) {
-    updateJournalField(journal.journalId, {
-      debit_entries: journal.debit_entries,
-      credit_entries: journal.credit_entries,
-    });
-  }
-  // Undo記録: 変更後スナップショット
-  if (beforeSnap) {
-    const afterSnap = snapshotJournal(journal.journalId);
-    if (afterSnap) pushUndo([beforeSnap], [afterSnap]);
-  }
-}
 
-/** 税区分アイテム選択: 税区分セット + 既読化 + 編集モード解除 */
-function selectTaxItem(_journal: UiJournal, taxId: string): void {
-  editingValue.value = taxId;
-  commitCellEdit();
-}
+// isCompoundJournal, hasEntry → useInlineEdit.ts に移動済み
 
-// ────── 検索付きコンボボックス: blur関数 ──────
-
-/** 勘定科目blur: 入力値が有効な科目名なら確定、そうでなければキャンセル */
-function blurAccountEdit(journal: UiJournal, row: CombinedRow, colKey: string): void {
-  if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
-  const val = editingValue.value;
-  // 入力値がID一致 or 名前一致する科目を検索
-  const matched = filteredAccounts.value.find((a) => a.accountId === val || a.name === val);
-  if (matched) {
-    selectAccountItem(journal, row, colKey, matched.accountId);
-    return;
-  }
-  editingCell.value = null;
-}
-
-/** 税区分blur: 入力値が有効な税区分名なら確定、そうでなければキャンセル */
-function blurTaxEdit(_journal: UiJournal): void {
-  if (!editingCell.value) return; // selectItemで既に閉じていたら何もしない（DOM削除時のblur再発火防止）
-  const val = editingValue.value;
-  const settings = clientSettings;
-  // 入力値がID一致 or 名前一致する税区分を検索
-  const matched = settings.visibleTaxCategories.value.find(
-    (tc) => tc.taxCategoryId === val || tc.name === val,
-  );
-  if (matched) {
-    editingValue.value = matched.taxCategoryId; // IDで保存
-    commitCellEdit();
-    return;
-  }
-  editingCell.value = null;
-}
-
-// ────── 補助科目ドロップダウン（F5: 勘定科目に紐づく補助科目候補） ──────
-
-/** 補助科目の型定義（MfSubAccountEntry互換） */
-interface SubAccountCandidate {
-  mfSubId: string;
-  name: string;
-  mfTaxId: string;
-  searchKey?: string | null;
-}
-
-/** 指定行の勘定科目に紐づく補助科目候補を取得 */
-function getSubAccountCandidates(
-  row: CombinedRow,
-  colKey: string,
-): SubAccountCandidate[] {
-  const side = colKey.startsWith("debit") ? "debit" : "credit";
-  const entry = row[side];
-  if (!entry?.account) return [];
-  const subs = clientSettings.subAccounts.value[entry.account];
-  if (Array.isArray(subs)) return subs;
-  return [];
-}
-
-/** 補助科目候補をテキストフィルタして返す */
-function filterSubAccountCandidates(
-  row: CombinedRow,
-  colKey: string,
-  query: string,
-): SubAccountCandidate[] {
-  const all = getSubAccountCandidates(row, colKey);
-  if (!query) return all;
-  const q = query.toLowerCase();
-  return all.filter(
-    (sa) =>
-      sa.name.toLowerCase().includes(q) ||
-      (sa.searchKey && sa.searchKey.toLowerCase().includes(q)),
-  );
-}
-
-/** 補助科目をドロップダウンから選択 */
-function selectSubAccountItem(_journal: UiJournal, name: string): void {
-  editingValue.value = name;
-  commitCellEdit();
-}
-
-/** 補助科目blur: 入力値がそのまま確定（手入力もOK） */
-function blurSubAccountEdit(): void {
-  if (!editingCell.value) return;
-  commitCellEdit();
-}
-
-// ────── インライン編集（ダブルクリック） ──────
-const editingCell = ref<{ journalId: string; rowIndex: number; colKey: string } | null>(null);
-const editingValue = ref<string>("");
-const editingOriginalValue = ref<string>("");
-
-// ────── Undo/Redo ──────
-interface UndoSnapshot {
-  journalId: string;
-  json: string;
-}
-interface UndoEntry {
-  before: UndoSnapshot[];
-  after: UndoSnapshot[];
-}
-const undoStack = ref<UndoEntry[]>([]);
-const redoStack = ref<UndoEntry[]>([]);
-const UNDO_MAX = 50;
-
-function snapshotJournal(journalId: string): UndoSnapshot | null {
-  const j = journals.value.find((x) => x.journalId === journalId);
-  if (!j) return null;
-  return { journalId, json: JSON.stringify(j) };
-}
-
-function restoreSnapshot(snap: UndoSnapshot): void {
-  const idx = journals.value.findIndex((x) => x.journalId === snap.journalId);
-  if (idx < 0) return;
-  const parsed: unknown = JSON.parse(snap.json);
-  if (!parsed || typeof parsed !== 'object' || !('journalId' in parsed)) return;
-  const restored: JournalPhase5Mock = parsed as JournalPhase5Mock;
-  journals.value[idx] = restored;
-  // Phase C: 復元後の全フィールドをPATCH送信
-  updateJournalField(snap.journalId, {
-    voucher_date: restored.voucher_date,
-    description: restored.description,
-    debit_entries: restored.debit_entries,
-    credit_entries: restored.credit_entries,
-    labels: [...restored.labels],
-    is_read: restored.is_read,
-    status: restored.status,
-    deleted_at: restored.deleted_at,
-    deleted_by: restored.deleted_by,
-    voucher_type: restored.voucher_type,
-    staff_notes: restored.staff_notes,
-    warning_dismissals: restored.warning_dismissals,
-  });
-}
-
-function pushUndo(before: UndoSnapshot[], after: UndoSnapshot[]): void {
-  undoStack.value.push({ before, after });
-  if (undoStack.value.length > UNDO_MAX) undoStack.value.shift();
-  redoStack.value = []; // 新しい操作でredoスタックをクリア
-}
-
-function undo(): void {
-  const entry = undoStack.value.pop();
-  if (!entry) return;
-  // 復元前に現在状態をredoスタックに保存
-  const currentSnapshots = entry.before
-    .map((s) => snapshotJournal(s.journalId))
-    .filter((s): s is UndoSnapshot => s !== null);
-  for (const snap of entry.before) restoreSnapshot(snap);
-  redoStack.value.push({ before: currentSnapshots, after: entry.before });
-}
-
-function redo(): void {
-  const entry = redoStack.value.pop();
-  if (!entry) return;
-  // 復元前に現在状態をundoスタックに保存
-  const currentSnapshots = entry.before
-    .map((s) => snapshotJournal(s.journalId))
-    .filter((s): s is UndoSnapshot => s !== null);
-  for (const snap of entry.before) restoreSnapshot(snap);
-  undoStack.value.push({ before: currentSnapshots, after: entry.before });
-}
-
-function isEditing(journalId: string, rowIndex: number, colKey: string): boolean {
-  const e = editingCell.value;
-  return e !== null && e.journalId === journalId && e.rowIndex === rowIndex && e.colKey === colKey;
-}
-
-function startCellEdit(
-  journalId: string,
-  rowIndex: number,
-  colKey: string,
-  currentValue: unknown,
-): void {
-  // 過去仕訳はセル編集不可（読み取り専用）
-  const journal = paginatedJournals.value.find((j) => j.journalId === journalId);
-  if (!journal || !assertEditableJournal(journal, 'startCellEdit')) return;
-  editingCell.value = { journalId, rowIndex, colKey };
-  let val = currentValue != null ? String(currentValue) : "";
-  // 勘定科目列の場合: IDを日本語名に変換して検索欄に表示
-  if (colKey.endsWith(".account") && val) {
-    const allAccts = clientSettings.accounts.value;
-    const acc = allAccts.find((a) => a.accountId === val);
-    if (acc) val = acc.name;
-  }
-  editingValue.value = val;
-  editingOriginalValue.value = val;
-  nextTick(() => {
-    const el = document.querySelector(".inline-edit-input");
-    if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) {
-      el.focus();
-      if (el instanceof HTMLInputElement) el.select();
-    }
-  });
-}
-
-function commitCellEdit(): void {
-  const e = editingCell.value;
-  if (!e) return;
-  const journal = paginatedJournals.value.find((j) => j.journalId === e.journalId);
-  if (!journal) {
-    editingCell.value = null;
-    return;
-  }
-  if (!assertEditableJournal(journal, 'commitCellEdit')) {
-    editingCell.value = null;
-    return;
-  }
-
-  const val = editingValue.value;
-
-  // Undo記録: 変更前スナップショット
-  const beforeSnap = snapshotJournal(journal.journalId);
-
-  // 適格列の特殊処理
-  if (e.colKey === "invoice") {
-    const newLabels = journal.labels.filter(
-      (l: string) => l !== "INVOICE_QUALIFIED" && l !== "INVOICE_NOT_QUALIFIED",
-    );
-    if (val === "◯") newLabels.push("INVOICE_QUALIFIED");
-    else if (val === "✕") newLabels.push("INVOICE_NOT_QUALIFIED");
-    editingCell.value = null;
-    updateJournalField(e.journalId, { labels: newLabels });
-    // Undo記録
-    if (beforeSnap) {
-      const afterSnap = snapshotJournal(journal.journalId);
-      if (afterSnap) pushUndo([beforeSnap], [afterSnap]);
-    }
-    return;
-  }
-
-  // patch構築（直接変更せずupdateJournalFieldに委譲）
-  const patch: Partial<JournalPhase5Mock> = {};
-
-  // journal-level（keyにドットなし）
-  if (!e.colKey.includes(".")) {
-    if (e.colKey === "voucher_date") {
-      patch.voucher_date = parseDateInput(val);
-    } else if (e.colKey === "description") {
-      patch.description = val;
-    }
-  } else {
-    // entry-level（debit.amount → row.debit.amount）
-    const rows = getCombinedRows(journal);
-    const row = rows[e.rowIndex];
-    if (row) {
-      const parts = e.colKey.split(".");
-      const sideStr = parts[0];
-      if (sideStr !== 'debit' && sideStr !== 'credit') return;
-      const field = parts[1];
-      if (field) {
-        const entry = row[sideStr];
-        if (entry && 'account_on_document' in entry) {
-          setEntryField(entry, field, val);
-        }
-      }
-    }
-    // entry変更後、entries全体をpatchに含める
-    patch.debit_entries = journal.debit_entries;
-    patch.credit_entries = journal.credit_entries;
-  }
-
-  editingCell.value = null;
-
-  // updateJournalFieldで一括処理（楽観的UI更新 + autoMeta + syncWarningLabels + PATCH送信）
-  updateJournalField(e.journalId, patch, { silent: false });
-
-  // Undo記録: 変更後スナップショット
-  if (beforeSnap) {
-    const afterSnap = snapshotJournal(journal.journalId);
-    if (afterSnap) pushUndo([beforeSnap], [afterSnap]);
-  }
-}
-
-function cancelCellEdit(): void {
-  editingCell.value = null;
-}
-
-/** 金額入力: 半角数字以外を除去 */
-function onAmountInput(event: Event): void {
-  if (!(event.target instanceof HTMLInputElement)) return;
-  event.target.value = event.target.value.replace(/[^0-9]/g, "");
-  editingValue.value = event.target.value;
-}
-
-/** 日付入力: YYYYMMDD → YYYY-MM-DD変換 */
-function parseDateInput(val: string): string {
-  // 既にYYYY-MM-DD形式ならそのまま
-  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
-  // YYYYMMDD形式
-  const digits = val.replace(/[^0-9]/g, "");
-  if (digits.length === 8) {
-    return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
-  }
-  return val;
-}
-
-// ────── フィルハンドル連続コピー ──────
-const FILL_HANDLE_COLS = new Set([
-  "voucher_date",
-  "description",
-  "debit.account",
-  "debit.sub_account",
-  "debit.tax_category_id",
-  "credit.account",
-  "credit.sub_account",
-  "credit.tax_category_id",
-]);
-function isFillable(colKey: string): boolean {
-  return FILL_HANDLE_COLS.has(colKey);
-}
-
-/** 複合仕訳判定（1対N or N対N） — フィルハンドル無効化に使用 */
-function isCompoundJournal(journal: UiJournal): boolean {
-  return journal.debit_entries.length > 1 || journal.credit_entries.length > 1;
-}
-
-/** エントリが存在するか判定（複合仕訳の空セル無反応化に使用） */
-function hasEntry(
-  row: CombinedRow,
-  colKey: string,
-): boolean {
-  if (!colKey.includes(".")) return true; // journal-levelは常にtrue
-  const side = colKey.startsWith("debit") ? "debit" : "credit";
-  return row[side] != null;
-}
 
 /** CATEGORY_CONFLICT: 問題のあるエントリ科目名を記録 */
 const categoryConflictMap = new Map<string, { debit: Set<string>; credit: Set<string> }>();
 /** SAME_ACCOUNT_BOTH_SIDES: 借方貸方の両方に存在する科目名を記録 */
 const sameAccountBothSidesMap = new Map<string, Set<string>>();
-
-const fillHandle = ref<{
-  colKey: string;
-  sourceJournalIndex: number;
-  sourceValue: unknown;
-  targetJournalIndices: number[];
-} | null>(null);
-
-function startFillDrag(
-  journalIndex: number,
-  colKey: string,
-  value: unknown,
-  event: MouseEvent,
-): void {
-  event.preventDefault();
-  fillHandle.value = {
-    colKey,
-    sourceJournalIndex: journalIndex,
-    sourceValue: value,
-    targetJournalIndices: [],
-  };
-}
-
-function onFillMove(event: MouseEvent): void {
-  if (!fillHandle.value) return;
-  // マウス位置から対象行を特定
-  const el = document.elementFromPoint(event.clientX, event.clientY);
-  if (!el) return;
-  // data-journal-index属性を持つ祖先を探す
-  if (!(el instanceof HTMLElement)) return;
-  const rowEl = el.closest<HTMLElement>("[data-journal-index]");
-  if (!rowEl) return;
-  const idx = parseInt(rowEl.dataset.journalIndex ?? "", 10);
-  if (isNaN(idx)) return;
-  const src = fillHandle.value.sourceJournalIndex;
-  if (idx === src) {
-    // ソース行自身は対象外
-    fillHandle.value = { ...fillHandle.value, targetJournalIndices: [] };
-    return;
-  }
-  // 上方向・下方向両対応
-  const start = Math.min(src, idx);
-  const end = Math.max(src, idx);
-  const indices: number[] = [];
-  for (let i = start; i <= end; i++) {
-    if (i === src) continue; // ソース行はスキップ
-    const j = paginatedJournals.value[i];
-    if (j && j.status !== "exported" && j.deleted_at === null && !isCompoundJournal(j)) {
-      indices.push(i);
-    }
-  }
-  // オブジェクト再代入でリアクティビティ確保
-  fillHandle.value = { ...fillHandle.value, targetJournalIndices: indices };
-}
-
-function endFillDrag(): void {
-  if (!fillHandle.value) return;
-  const { colKey, sourceValue, targetJournalIndices } = fillHandle.value;
-  // Undo記録: 変更前スナップショット（全対象ジャーナル）
-  const beforeSnaps = targetJournalIndices
-    .map((idx) => paginatedJournals.value[idx])
-    .filter((x): x is JournalPhase5Mock => !!x)
-    .map((j) => snapshotJournal(j.journalId))
-    .filter((s): s is UndoSnapshot => s !== null);
-  for (const idx of targetJournalIndices) {
-    const journal = paginatedJournals.value[idx];
-    if (!journal) continue;
-    if (isImportedJournal(journal)) continue; // 取込仕訳はフィル対象外
-    applyFillValue(journal, colKey, sourceValue);
-    // updateJournalFieldで一括処理（autoMeta + syncWarningLabels + PATCH送信）
-    const fillPatch: Record<string, unknown> = {};
-    if (!colKey.includes('.')) {
-      if (colKey === 'voucher_date') fillPatch.voucher_date = journal.voucher_date;
-      else if (colKey === 'description') fillPatch.description = journal.description;
-    } else {
-      fillPatch.debit_entries = journal.debit_entries;
-      fillPatch.credit_entries = journal.credit_entries;
-    }
-    updateJournalField(journal.journalId, fillPatch);
-  }
-  // Undo記録: 変更後スナップショット
-  if (beforeSnaps.length > 0) {
-    const afterSnaps = beforeSnaps
-      .map((s) => snapshotJournal(s.journalId))
-      .filter((s): s is UndoSnapshot => s !== null);
-    pushUndo(beforeSnaps, afterSnaps);
-  }
-  fillHandle.value = null;
-}
-
-function applyFillValue(
-  journal: JournalPhase5Mock,
-  colKey: string,
-  value: unknown,
-  targetRowIndex?: number,
-): void {
-  if (!assertEditableJournal(journal, 'applyFillValue')) return;
-  if (!colKey.includes(".")) {
-    if (colKey === "voucher_date") {
-      journal.voucher_date = typeof value === 'string' ? value : null;
-    } else if (colKey === "description") {
-      journal.description = typeof value === 'string' ? value : '';
-    }
-  } else {
-    const parts = colKey.split(".");
-    const sideStr = parts[0];
-    if (sideStr !== 'debit' && sideStr !== 'credit') return;
-    const field = parts[1];
-    if (!field) return;
-
-    // 複合仕訳対応: targetRowIndex指定時はその行のみ、未指定時は全エントリ
-    const entries = sideStr === "debit" ? journal.debit_entries : journal.credit_entries;
-    const targetEntries = (
-      targetRowIndex != null && targetRowIndex < entries.length
-        ? [entries[targetRowIndex]]
-        : entries
-    ).filter((e): e is NonNullable<typeof e> => e != null);
-    const strValue = typeof value === 'string' ? value : '';
-    for (const entry of targetEntries) {
-      if (colKey.endsWith(".account")) {
-        // 勘定科目フィル時に税区分・区分・補助科目も連動（selectAccountItemと同じ挙動）
-        entry.account = strValue || null;
-        const accountId = strValue;
-        if (accountId) {
-          const allAccts = clientSettings.accounts.value;
-          const acc = allAccts.find((a) => a.accountId === accountId);
-          // デフォルト税区分の自動設定
-          if (acc?.defaultTaxCategoryId) {
-            entry.tax_category_id = resolveDefaultTaxForClient(acc.defaultTaxCategoryId);
-          }
-          // 補助科目連動
-          if (acc) {
-            const sub = clientSettings.subAccounts.value[acc.accountId];
-            // 補助科目: 1件→name自動代入、複数→null（ユーザー選択）、0件→null
-            entry.sub_account = sub?.length === 1 ? sub[0]?.name ?? null : null;
-          }
-        } else {
-          entry.sub_account = null;
-        }
-      } else {
-        setEntryField(entry, field, value);
-      }
-    }
-  }
-}
-
-function isFillTargetCell(journalIndex: number, colKey: string): boolean {
-  if (!fillHandle.value) return false;
-  return (
-    fillHandle.value.targetJournalIndices.includes(journalIndex) &&
-    fillHandle.value.colKey === colKey
-  );
-}
-
-// ────── セル間ドラッグ&ドロップ（長押し150ms方式） ──────
-const DRAG_HOLD_MS = 150; // 長押し判定ミリ秒
-
-const cellDrag = ref<{
-  sourceColKey: string;
-  sourceValue: unknown;
-  sourceLabel: string; // フローティングラベル用の表示テキスト
-  startX: number;
-  startY: number;
-  dragReady: boolean; // 長押し完了でtrue
-  dragging: boolean; // 5px以上動いたらtrue
-  dropJournalIndex: number | null;
-  dropRowIndex: number | null;
-  dropColKey: string | null;
-} | null>(null);
-
-let dragTimerId: ReturnType<typeof setTimeout> | null = null;
-
-// フローティングラベル（ドラッグ中のコピー値表示）
-const dragLabelVisible = ref(false);
-const dragLabelText = ref("");
-const dragLabelX = ref(0);
-const dragLabelY = ref(0);
-
-function startCellDrag(colKey: string, value: unknown, event: MouseEvent): void {
-  // 編集中は無視
-  if (editingCell.value) return;
-  const x = event.clientX;
-  const y = event.clientY;
-  const label = value != null ? String(value) : "";
-  // 前回のタイマーをクリア
-  cancelDragTimer();
-  // 150ms長押しタイマー開始
-  dragTimerId = setTimeout(() => {
-    cellDrag.value = {
-      sourceColKey: colKey,
-      sourceValue: value,
-      sourceLabel: label,
-      startX: x,
-      startY: y,
-      dragReady: true,
-      dragging: false,
-      dropJournalIndex: null,
-      dropRowIndex: null,
-      dropColKey: null,
-    };
-    document.body.classList.add("cell-drag-ready");
-  }, DRAG_HOLD_MS);
-}
-
-function cancelDragTimer(): void {
-  if (dragTimerId !== null) {
-    clearTimeout(dragTimerId);
-    dragTimerId = null;
-  }
-}
-
-function onCellDragMove(event: MouseEvent): void {
-  if (!cellDrag.value || !cellDrag.value.dragReady) return;
-  // 5px以上動いたらドラッグモード開始
-  if (!cellDrag.value.dragging) {
-    const dx = event.clientX - cellDrag.value.startX;
-    const dy = event.clientY - cellDrag.value.startY;
-    if (Math.sqrt(dx * dx + dy * dy) < 5) return;
-    cellDrag.value = { ...cellDrag.value, dragging: true };
-    document.body.classList.remove("cell-drag-ready");
-    document.body.classList.add("cell-dragging");
-  }
-  // フローティングラベル表示（マウス付近）
-  dragLabelText.value = cellDrag.value.sourceLabel;
-  dragLabelX.value = event.clientX + 14;
-  dragLabelY.value = event.clientY - 10;
-  dragLabelVisible.value = true;
-  // ドロップ先セルを特定
-  const el = document.elementFromPoint(event.clientX, event.clientY);
-  if (!el) return;
-  if (!(el instanceof HTMLElement)) return;
-  const cellEl = el.closest<HTMLElement>("[data-drag-col]");
-  const rowEl = el.closest<HTMLElement>("[data-journal-index]");
-  if (cellEl && rowEl) {
-    const ji = parseInt(rowEl.dataset.journalIndex ?? "", 10);
-    const ri = parseInt(cellEl.dataset.dragRow ?? "0", 10);
-    const ck = cellEl.dataset.dragCol ?? "";
-    cellDrag.value = {
-      ...cellDrag.value,
-      dropJournalIndex: ji,
-      dropRowIndex: ri,
-      dropColKey: ck,
-    };
-  } else {
-    cellDrag.value = {
-      ...cellDrag.value,
-      dropJournalIndex: null,
-      dropRowIndex: null,
-      dropColKey: null,
-    };
-  }
-}
-
-/** D&D列一致判定（借方↔貸方の同フィールドも許可） */
-function isDragColCompatible(sourceColKey: string, dropColKey: string): boolean {
-  if (sourceColKey === dropColKey) return true;
-  // 例: debit.account（借方勘定科目）→ credit.account（貸方勘定科目）を許可
-  const srcField = sourceColKey.includes(".") ? sourceColKey.split(".")[1] : sourceColKey;
-  const dstField = dropColKey.includes(".") ? dropColKey.split(".")[1] : dropColKey;
-  return srcField === dstField;
-}
-
-function endCellDrag(): void {
-  cancelDragTimer();
-  if (!cellDrag.value) return;
-  if (
-    cellDrag.value.dragging &&
-    cellDrag.value.dropJournalIndex !== null &&
-    cellDrag.value.dropColKey &&
-    isDragColCompatible(cellDrag.value.sourceColKey, cellDrag.value.dropColKey)
-  ) {
-    const journal = paginatedJournals.value[cellDrag.value.dropJournalIndex];
-    if (journal && assertEditableJournal(journal, 'endCellDrag') && journal.status !== "exported" && journal.deleted_at === null) {
-      // Undo記録: 変更前スナップショット
-      const beforeSnap = snapshotJournal(journal.journalId);
-      applyFillValue(
-        journal,
-        cellDrag.value.dropColKey,
-        cellDrag.value.sourceValue,
-        cellDrag.value.dropRowIndex ?? undefined,
-      );
-      // updateJournalFieldで一括処理（autoMeta + syncWarningLabels + PATCH送信）
-      const dragPatch: Record<string, unknown> = {};
-      const dColKey = cellDrag.value.dropColKey;
-      if (!dColKey.includes('.')) {
-        if (dColKey === 'voucher_date') dragPatch.voucher_date = journal.voucher_date;
-        else if (dColKey === 'description') dragPatch.description = journal.description;
-      } else {
-        dragPatch.debit_entries = journal.debit_entries;
-        dragPatch.credit_entries = journal.credit_entries;
-      }
-      updateJournalField(journal.journalId, dragPatch);
-      // Undo記録: 変更後スナップショット
-      if (beforeSnap) {
-        const afterSnap = snapshotJournal(journal.journalId);
-        if (afterSnap) pushUndo([beforeSnap], [afterSnap]);
-      }
-    }
-  }
-  document.body.classList.remove("cell-drag-ready", "cell-dragging");
-  cellDrag.value = null;
-  dragLabelVisible.value = false;
-}
-
-/** ドロップ先ホバー判定（特定セルのみ） */
-function isDragOver(journalIndex: number, rowIndex: number, colKey: string): boolean {
-  if (!cellDrag.value || !cellDrag.value.dragging) return false;
-  return (
-    cellDrag.value.dropJournalIndex === journalIndex &&
-    cellDrag.value.dropRowIndex === rowIndex &&
-    cellDrag.value.dropColKey === colKey
-  );
-}
-
-/** ドラッグ中にドロップ可能列か判定（同フィールド全セル青背景用） */
-function isDragCompatibleCol(colKey: string): boolean {
-  if (!cellDrag.value || !cellDrag.value.dragging) return false;
-  return isDragColCompatible(cellDrag.value.sourceColKey, colKey);
-}
-
-/** ドラッグ中にドロップ不可列か判定（グレーアウト用） */
-function isDragIncompatibleCol(colKey: string): boolean {
-  if (!cellDrag.value || !cellDrag.value.dragging) return false;
-  return !isDragColCompatible(cellDrag.value.sourceColKey, colKey);
-}
-
-// グローバルイベント登録（フィルハンドル + ドラッグ&ドロップ統合）
-function onGlobalMouseMove(event: MouseEvent) {
-  onFillMove(event);
-  onCellDragMove(event);
-}
-function onGlobalMouseUp() {
-  endFillDrag();
-  endCellDrag();
-}
-onMounted(() => {
-  document.addEventListener("mousemove", onGlobalMouseMove);
-  document.addEventListener("mouseup", onGlobalMouseUp);
-  // 初回ロード時: 全仕訳に対して警告ラベルを同期（モーダルなし）
-  journals.value.forEach((j) => syncWarningLabels(j, true));
-});
-onUnmounted(() => {
-  document.removeEventListener("mousemove", onGlobalMouseMove);
-  document.removeEventListener("mouseup", onGlobalMouseUp);
-});
 
 // フィルタリング状態（チェックボックス）
 const showUnexported = ref<boolean>(true); // 未出力を表示（初期: ON）
@@ -4486,48 +3761,8 @@ function resetToDefaultOrder() {
   });
 }
 
-/** getCombinedRowsの戳り値行型（getValue/getRawValueの引数型に使用） */
-type UiEntryLine = JournalEntryLine | ConfirmedJournalEntry;
-type CombinedRow = { debit: UiEntryLine | null; credit: UiEntryLine | null };
+// UiEntryLine, CombinedRow, setEntryField, getCombinedRows → useInlineEdit.ts に移動済み
 
-/**
- * JournalEntryLineの動的フィールド書き込み（型安全ヘルパー）
- *
- * commitCellEdit / applyFillValue で entry[field] = value の動的書き込みが必要な箇所で使用。
- * JournalEntryLineの既知フィールドのみ書き込み可能。未知フィールドは無視。
- */
-function setEntryField(entry: JournalEntryLine, field: string, value: unknown): void {
-  const strVal = typeof value === 'string' ? value : '';
-  switch (field) {
-    case "account":
-      entry.account = strVal || null;
-      break;
-    case "sub_account":
-      entry.sub_account = strVal || null;
-      break;
-    case "department":
-      entry.department = strVal || null;
-      break;
-    case "amount":
-      entry.amount = value != null && value !== "" ? Number(value) : null;
-      break;
-    case "tax_category_id":
-      entry.tax_category_id = strVal || null;
-      break;
-    default:
-      // JournalEntryLineに存在しないフィールド（selectedCategory等）は書き込まない
-      console.warn(`[setEntryField] 未知のフィールド: ${field}`);
-      break;
-  }
-}
-
-function getCombinedRows(journal: UiJournal): CombinedRow[] {
-  const maxRows = Math.max(journal.debit_entries.length, journal.credit_entries.length);
-  return Array.from({ length: maxRows }, (_, i) => ({
-    debit: journal.debit_entries[i] || null,
-    credit: journal.credit_entries[i] || null,
-  }));
-}
 
 /**
  * 行背景色の優先順位

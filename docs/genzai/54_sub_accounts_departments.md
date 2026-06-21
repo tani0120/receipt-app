@@ -353,5 +353,5 @@ if (entry.department) {
 | 4 | sync-all実行で全データが正規化されることの実機検証 | P1 | ✅ 検証済み（科目108/108マッチ、税区分151/151マッチ、補助科目16件MF-ID永続化、部門3件）。仕訳: 当初32件エラースキップ→N:Mパディングバグが原因→修正後は2026期60件・2025期333件全取込。決算整理2件（MF#342減価償却、MF#343売上振替）はwarning通知+is_closing_entry=trueフラグで正しく処理。committed=false（承認待ち、設計通り） |
 | 5 | confirmed仕訳にバリデーション警告が出ないことの検証 | P1 | ✅ 検証済み（confirmedToJournalRow()でlabels:[]ハードコード。validate-allはgetJournals()のみ対象。設計通り） |
 | 6 | CSV出力で補助科目名・部門名が正しく表示されることの検証 | P1 | ✅ 検証済み（exportMfCsv.ts L178-188で名前文字列をそのまま出力。実データ1/3件に補助科目あり） |
-| 7 | showPastCsvデフォルトOFF検討 | P2 | 未着手（§57完了後に判断） |
+| 7 | showImportedデフォルトOFF検討（旧showPastCsv） | P2 | 未着手（§57完了後に判断） |
 | 8 | 取引先マスタのdebit_sub_account/debit_departmentの名前文字列依存 | P2 | 未着手（§57完了後に判断） |

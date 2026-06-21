@@ -8,7 +8,7 @@
 |---|---|
 | UI コンポーネント | `JournalListLevel3Mock.vue` |
 | composable | `useJournals.ts` |
-| 型定義 | `JournalPhase5Mock`（`src/mocks/types/journal_phase5_mock.type.ts`） |
+| 型定義 | `JournalPhase5Mock`（`src/types/journal_phase5_mock.type.ts`） |
 | 行エントリ型 | `JournalEntryLine`（`src/domain/types/journal.ts`） |
 | フィクスチャ | `journal_test_fixture_30cases.ts`（UI開発用サンプルデータ） |
 
@@ -181,11 +181,11 @@
 
 ## ソースファイル参照
 
-- 型定義: [journal_phase5_mock.type.ts](file:///c:/dev/receipt-app/src/mocks/types/journal_phase5_mock.type.ts)
-- 行エントリ型: [journal.ts](file:///c:/dev/receipt-app/src/domain/types/journal.ts)
-- 変換関数: [lineItemToJournalMock.ts](file:///c:/dev/receipt-app/src/mocks/utils/lineItemToJournalMock.ts)
-- UIコンポーネント: [JournalListLevel3Mock.vue](file:///c:/dev/receipt-app/src/mocks/components/JournalListLevel3Mock.vue)
-- フィクスチャ: [journal_test_fixture_30cases.ts](file:///c:/dev/receipt-app/src/mocks/data/journal_test_fixture_30cases.ts)
+- 型定義: src/types/journal_phase5_mock.type.ts
+- 行エントリ型: src/types/journal_phase5_mock.type.ts（JournalEntryLine）
+- 変換関数: src/utils/pipeline/lineItemToJournalMock.ts
+- UIコンポーネント: src/components/JournalListLevel3Mock.vue
+- フィクスチャ: src/data/mock/journal_test_fixture_30cases.ts
 ---
 
 ## 仕訳データの供給元
@@ -221,12 +221,12 @@ Extract APIが未実装のため、現在は以下の暫定フローで動作:
 
 ### ソースファイル参照
 
-- 型定義: [journal_phase5_mock.type.ts](file:///c:/dev/receipt-app/src/mocks/types/journal_phase5_mock.type.ts)
-- 行エントリ型: [journal.ts](file:///c:/dev/receipt-app/src/domain/types/journal.ts)
-- 暫定変換: [lineItemToJournalMock.ts](file:///c:/dev/receipt-app/src/mocks/utils/lineItemToJournalMock.ts)（Extract API実装後に廃止）
-- UIコンポーネント: [JournalListLevel3Mock.vue](file:///c:/dev/receipt-app/src/mocks/components/JournalListLevel3Mock.vue)
-- フィクスチャ: [journal_test_fixture_30cases.ts](file:///c:/dev/receipt-app/src/mocks/data/journal_test_fixture_30cases.ts)
-- composable: [useJournals.ts](file:///c:/dev/receipt-app/src/mocks/composables/useJournals.ts)
+- 型定義: src/types/journal_phase5_mock.type.ts
+- 行エントリ型: src/types/journal_phase5_mock.type.ts（JournalEntryLine）
+- 暫定変換: src/utils/pipeline/lineItemToJournalMock.ts（Extract API実装後に廃止）
+- UIコンポーネント: src/components/JournalListLevel3Mock.vue
+- フィクスチャ: src/data/mock/journal_test_fixture_30cases.ts
+- composable: src/composables/useJournals.ts
 
 ---
 
@@ -441,55 +441,236 @@ Extract API出力受信
 
 ### ソースファイル参照
 
-- 照合ロジック: [matchLearningRule.ts](file:///c:/dev/receipt-app/src/mocks/utils/pipeline/matchLearningRule.ts)
-- 科目確定: [accountDetermination.ts](file:///c:/dev/receipt-app/src/mocks/utils/pipeline/accountDetermination.ts)
+- 照合ロジック: src/utils/pipeline/matchLearningRule.ts
+- 科目確定: src/utils/pipeline/accountDetermination.ts
+
+---
+
+## JournalListLevel3Mock.vue 構造分析
+
+> **元セッション**: d3cec2e6 component_analysis.md より転記（2026-06-21）
+
+### 基本数値
+
+| セクション | 行範囲 | 行数 | 比率 |
+|---|---|---|---|
+| テンプレート | L1-L2201 | **2201行** | 41% |
+| スクリプト | L2203-L5315 | **3113行** | 58% |
+| スタイル | L5317-L5375 | **59行** | 1% |
+| **合計（初期値）** | | **6180行** | |
+| **合計（②〜⑤分離後）** | | **5373行** | **-807行（-13.1%）** |
+| **合計（⑥-1 + divタグ修正後）** | | **5375行** | **+2行（import追加+divタグ修正）** |
+| **合計（⑥-3分離後）** | | **~4890行** | **-485行（テンプレ300行+スクリプト185行）** |
+| **合計（Phase C composable抽出後）** | | **~4167行** | **-767行（C-1〜C-3合計）** |
+
+### テンプレート構造（2201行）
+
+| ブロック | 行範囲 | 行数 | 内容 |
+|---|---|---|---|
+| ツールバー | L1-L169 | 169 | 検索、フィルタチェックボックス、一括操作バー |
+| 初回選択ヘルプ | L170-L178 | 9 | fadeOutヘルプ |
+| テーブルヘッダー | L179-L425 | 247 | 列ヘッダー、列リサイズ |
+| **テーブルボディ** | L426-L1681 | **1256** | **仕訳行描画（全列テンプレート）** |
+| フッター | L1682-L1727 | 46 | ページネーション |
+| 過去仕訳検索モーダル | L1728-L2050 | 323 | 取込仕訳検索（⑥-3で分離済み） |
+| 税区分矛盾モーダル | L2075-L2169 | 95 | 税区分矛盾フローティング |
+| ツールチップ+ドラッグ | L2170-L2201 | 32 | グローバルUI部品 |
+
+> [!WARNING]
+> テーブルボディ（L426-L1681, **1256行**）が最大のブロック。
+> 1つの`v-for`ループ内に全列の描画ロジックが詰まっている。
+> 列ごとのif/else-ifチェーンが**20段以上**ネストしている。
+
+> [!IMPORTANT]
+> **divタグ不整合修正（2026-06-20 ⑥-1実施中に発見・修正）**:
+> 6c79c24（②〜⑤モーダル分離コミット）でルートdivの`</div>`が欠落していた。
+> L177の余分な`</div>`を削除し、テンプレート末尾（L2200）にルートdivの閉じタグを追加。
+> これにより`vite build`の`Element is missing end tag`エラーが解消。
+
+### スクリプト機能ブロック（3113行）
+
+| # | 機能 | 行範囲（概算） | 行数 | 状態変数数 | 関数数 |
+|---|---|---|---|---|---|
+| 1 | import/初期化 | L2203-L2280 | 78 | 3 | 2 |
+| 2 | 顧問先連動 | L2281-L2330 | 50 | 2 | 0 |
+| 3 | 区分ドロップダウン | L2331-L2384 | 54 | 4 | 2 |
+| 4 | 税区分矛盾 | L2385-L2534 | 150 | 3 | 2 |
+| 5 | コンボボックス検索 | L2535-L2906 | 372 | 6 | 8 |
+| 6 | コンボボックス選択 | L2907-L2976 | 70 | 0 | 3 |
+| 7 | コンボボックスblur | L2977-L3009 | 33 | 0 | 1 |
+| 8 | 補助科目ドロップダウン | L3010-L3061 | 52 | 2 | 1 |
+| 9 | インライン編集 | L3062-L3285 | 224 | 4 | 7 |
+| 10 | フィルハンドル | L3286-L3465 | 180 | 4 | 5 |
+| 11 | セル間ドラッグ | L3466-L3645 | 180 | 6 | 8 |
+| 12 | フィルタ/選択状態 | L3646-L3698 | 53 | 7 | 0 |
+| 13 | ツールチップ | L3700-L3797 | 98 | 6 | 5 |
+| 14 | ヒントモーダル（親側残留） | L3798-L3900 | 103 | 2 | 3 |
+| 15 | ワークフロー操作 | L3901-L4063 | 163 | 0 | 6 |
+| 16 | 一括操作 | L4064-L4315 | 252 | 1 | 7 |
+| 17 | 過去仕訳検索 | L4316-L4622 | 307 | 10 | 8 |
+| 18 | ページネーション | L4623-L4643 | 21 | 6 | 1 |
+| 19 | 編集ガード | L4670-L4700 | 31 | 0 | 3 |
+| 20 | normalizeJournalForUI | L4750-L4795 | 46 | 0 | 1 |
+| 21 | API通信/PATCH | L4796-L4880 | 85 | 3 | 4 |
+| 22 | journals依存computed | L4881-L4920 | 40 | 5 | 2 |
+| 23 | ユーティリティ | L4921-L5100 | 180 | 0 | 8 |
+| 24 | キーボード/計測 | L5280-L5315 | 36 | 1 | 1 |
+
+**合計: 状態変数 ~85個、関数 ~88個**（②〜⑤分離で-22変数, -27関数）
+
+> [!NOTE]
+> Phase C composable抽出後、#9（インライン編集）はuseInlineEdit.tsに、
+> #10-11（フィルハンドル/セル間ドラッグ）はuseCellDragAndFill.tsに、
+> #5-8（コンボボックス関連）はuseAccountCombobox.tsに移動済み。
+
+### 相互依存マップ
+
+**核心: `journals` ref**
+
+ほぼ全ての機能が`journals` (shallowRef) に依存している。
+
+```
+journals.value ← fetchJournalList() が設定
+    ↓
+    ├── paginatedJournals（computed → テンプレートのv-for）
+    ├── visibleIds（computed → 選択管理） ← isImportedJournal()で取込仕訳を除外
+    ├── selectedJournals（computed → 一括操作）
+    ├── taxMismatchSummary（computed → 税区分矛盾）← isImportedJournal()で取込仕訳を除外
+    ├── filteredPastJournals（computed → 取込仕訳検索モーダル）
+    ├── syncWarningLabels()（onMounted → 警告ラベル一括同期）
+    └── updateJournalField()（楽観的UI更新 + PATCHキュー）← isImportedJournal()でガード
+```
+
+### 分割戦略ロードマップ
+
+> 原則: 「付属器官を外してから心臓を触る」
+
+| 順序 | タスク | 効果 | リスク | 状態 |
+|---|---|---|---|---|
+| ① 編集禁止境界の確立 | updateJournalFieldを唯一の更新口にする | 取込仕訳ガード完全化 | — | ✅ 完了 |
+| ② ImageModal分離 | ImageModal.vue | -164行 | — | ✅ 完了 |
+| ③ EvidenceSearchModal分離 | EvidenceSearchModal.vue | -255行 | — | ✅ 完了 |
+| ④ CommentModal分離 | CommentModal.vue | -145行 | — | ✅ 完了 |
+| ⑤ HintModal分離 | HintModal.vue | -243行 | — | ✅ 完了 |
+| ⑥-1 `_isPastJournal`廃止→source判定移行 | 43箇所置換、as any削除 | 型安全化 | — | ✅ 完了（§25に詳細） |
+| ⑥-2 `showPastCsv`→`showImported`リネーム | 11箇所（4ファイル） | 命名統一 | — | ✅ 完了（§25に詳細） |
+| ⑥-3 PastJournalSearchModal分離 | PastJournalSearchModal.vue | -485行 | — | ✅ 完了（§25に詳細） |
+| ⑦ autoSave廃止 | Phase Cで完了 | — | — | ✅ 完了 |
+| ⑧ journals更新経路一本化 | 直接変更全廃 | — | — | ✅ ①で同時完了 |
+| Phase C-1 useInlineEdit抽出 | インライン編集+Undo/Redo | -230行 | — | ✅ 完了 |
+| Phase C-2 useCellDragAndFill抽出 | フィルハンドル+セル間D&D | -341行 | — | ✅ 完了 |
+| Phase C-3 useAccountCombobox抽出 | 科目/税区分/補助科目コンボ | -237行 | — | ✅ 完了 |
+| ⑨ テーブル本体分割 | 最後 | **高** | ⑥完了後 | 未着手（保留） |
+
+> [!CAUTION]
+> ⑨テーブル本体分割はcomposable抽出で代替済み。テンプレート分割はprops/emit爆発のため保留。
+
+### ②〜⑤ モーダル分離 ✅ 完了（2026-06-20 コミット 6c79c24）
+
+**実績行数**:
+
+```
+初期:          6180行
+② ImageModal:  -164行 → 6016行  ✅ 完了
+③ Evidence:    -255行 → 5761行  ✅ 完了
+⑤ Hint:        -243行 → 5518行  ✅ 完了
+④ Comment:     -145行 → 5373行  ✅ 完了
+                         --------
+                         5373行（-807行、-13.1%）
+```
+
+**共有関数の扱い**:
+
+| 関数 | 使用箇所 | 方針 |
+|---|---|---|
+| `modalDrag` | 全6モーダル | `utils/modalDrag.ts`に抽出済み |
+| `useDraggable` | 全6モーダル | 既にcomposable化済み。各子で個別呼出 |
+
+> [!WARNING]
+> **6c79c24でdivタグ不整合が混入**（open=143, close=142）。
+> ⑥-1実施中に発見・修正済み（L177の余分な`</div>`削除 + テンプレート末尾にルートdiv閉じタグ追加）。
 
 ---
 
 ## 外出しファイル構成（ロジック分離設計）
 
-> JournalListLevel3Mock.vue（5800行）のscript内116関数のうち、ビジネスルールをTS外出し対象とする。
 
-### 現状のファイル構成
+
+> JournalListLevel3Mock.vue は当初6180行だったが、モーダル分離（②〜⑤, ⑥-3）と
+> composable抽出（Phase C-1〜C-3）により **4167行（-32.6%）** に削減済み。
+
+### 現状のファイル構成（2026-06-21時点）
 
 | ファイル | 行数 | 内容 | 状態 |
 |---|---|---|---|
-| `JournalListLevel3Mock.vue` | 5,800行 | template+script+style全部入り | **肥大化** |
-| `journalWarningSync.ts` | 385行 | `syncWarningLabelsCore`, `validateDebitCreditCombination`, `validateByVoucherType` | ✅外出し済み |
-| `voucherTypeRules.ts` | ~150行 | `VOUCHER_TYPE_RULES`テーブル, `getBaseAccountId` | ✅外出し済み |
-| `journalColumns.ts` | ~120行 | 列定義配列, デフォルト幅 | ✅外出し済み |
-| `field-nullable-spec.ts` | ~120行 | null表示ルール, `compareWithNull` | ✅外出し済み |
+| JournalListLevel3Mock.vue | 4,167行 | template+script+style | composable抽出済み |
+| useInlineEdit.ts | 343行 | セルインライン編集 + Undo/Redo | ✅ Phase C-1で抽出 |
+| useCellDragAndFill.ts | ~350行 | フィルハンドル + セル間D&D + イベント登録 | ✅ Phase C-2で抽出 |
+| useAccountCombobox.ts | ~322行 | 科目/税区分/補助科目コンボボックス | ✅ Phase C-3で抽出 |
+| ImageModal.vue | ~170行 | 証票画像モーダル | ✅ ②で分離 |
+| EvidenceSearchModal.vue | ~260行 | 証憑検索モーダル | ✅ ③で分離 |
+| CommentModal.vue | ~150行 | コメントモーダル | ✅ ④で分離 |
+| HintModal.vue | ~250行 | ヒントモーダル | ✅ ⑤で分離 |
+| PastJournalSearchModal.vue | ~570行 | 過去仕訳検索モーダル | ✅ ⑥-3で分離 |
+| journalWarningSync.ts | 385行 | syncWarningLabelsCore, validateDebitCreditCombination, validateByVoucherType | ✅外出し済み |
+| voucherTypeRules.ts | ~150行 | VOUCHER_TYPE_RULESテーブル, getBaseAccountId | ✅外出し済み |
+| journalColumns.ts | ~120行 | 列定義配列, デフォルト幅 | ✅外出し済み |
+| field-nullable-spec.ts | ~120行 | null表示ルール, compareWithNull | ✅外出し済み |
 
-### 問題: Vue側に外出し済みロジックの重複が残存
+### 分離実績サマリ
 
-`syncWarningLabelsCore()`は外出し済みだが、**Vue側に200行の独自実装`syncWarningLabels()`が残存**。外出し版を呼んでいない。
+| フェーズ | 内容 | 削減行数 |
+|---|---|---|
+| ②〜⑤ モーダル分離 | ImageModal/EvidenceSearch/Comment/Hint | -807行 |
+| ⑥-1 _isPastJournal廃止 | source判定（isImportedJournal）へ統一 | 行数変動なし（型安全化） |
+| ⑥-2 showPastCsv→showImportedリネーム | 11箇所/4ファイル | 行数変動なし |
+| ⑥-3 PastJournalSearchModal分離 | 過去仕訳検索モーダル | -485行 |
+| Phase C-1 useInlineEdit | インライン編集 + Undo/Redo | -230行 |
+| Phase C-2 useCellDragAndFill | フィルハンドル + セル間D&D | -341行 |
+| Phase C-3 useAccountCombobox | 科目/税区分/補助科目コンボ | -237行 |
+| **合計** | | **-2013行（-32.6%）** |
 
-### 外出し計画（段階的実行）
-
-| # | 新規ファイル | 内容 | 削減行数 |
-|---|---|---|---|
-| 1 | `journalWarningLabels.ts` | warningLabelMap, labelKeyMap, labelTypeLegend（定数） | ~80行 |
-| 2 | `accountCategories.ts` | SALES/PURCHASE/BS_CATEGORIES, MEGA_GROUPS, VOUCHER_TYPES（定数） | ~40行 |
-| 3 | Vue側統合 | `syncWarningLabels()` → `syncWarningLabelsCore()`呼び出し + UIモーダルのみ | ~200行 |
-| 4 | `journalTaxRules.ts` | isTaxCategoryInvalid, resolveDefaultTaxForClient, computeTaxMismatchSummary | ~70行 |
-| 5 | `journalHintEngine.ts` | generateHintValidations, generateHintSuggestions（Extract API移行時にサーバー移動） | ~300行 |
-| | **合計削減** | | **~690行** |
-
-### Vue側に残すもの（外出し不可）
+### Vue側に残っている機能
 
 | カテゴリ | 理由 |
 |---|---|
-| インライン編集 | DOM操作・ref直結合 |
-| フィルハンドル | mouseイベント・DOM操作 |
-| セル間D&D | mouseイベント・DOM操作 |
-| undo/redo | localJournals ref直結合 |
-| モーダル制御 | ref直結合 |
-| ソート・フィルタ | computed直結合 |
-| ページネーション | computed直結合 |
+| バリデーション表示（syncWarningLabels） | UIモーダル表示（confirmDialog）に直結 |
+| フィルタ/選択状態 | journals shallowRefに直結 |
+| ツールチップ | DOMイベント直結 |
+| ワークフロー操作 | journals直接変更 + API呼出 |
+| 一括操作 | selectedJournals + journals直接変更 |
+| ページネーション | computed直結 |
+| キーボードショートカット | onMounted/onUnmounted直結 |
 
-### ソースファイル参照（外出し済み）
+### ⑨ テーブル本体分割（未着手・保留）
 
-- 警告同期コア: [journalWarningSync.ts](file:///c:/dev/receipt-app/src/mocks/utils/journalWarningSync.ts)
-- 証票意味ルール: [voucherTypeRules.ts](file:///c:/dev/receipt-app/src/mocks/utils/voucherTypeRules.ts)
-- 列定義: [journalColumns.ts](file:///c:/dev/receipt-app/src/mocks/columns/journalColumns.ts)
-- null表示仕様: [field-nullable-spec.ts](file:///c:/dev/receipt-app/src/mocks/definitions/field-nullable-spec.ts)
+テーブルボディ（L426-L1681, 1256行）の単一v-forループ内には:
+
+- インライン編集（dblclick → input/select → commitCellEdit）
+- ドラッグ&ドロップ（mousedown → mousemove → mouseup）
+- フィルハンドル（mousedown → 範囲選択 → 値コピー）
+- コンボボックス検索（input → filter → optgroup → blur）
+- Undo/Redo（snapshot → restore）
+- バリデーション（syncWarningLabels → セルハイライト）
+
+これらが**同一のjournalオブジェクト**に対して相互作用する。
+
+`<AccountCell />`等に分割すると:
+- props: journal, rowIndex, colKey, isEditing, editingValue, isDragOver, ...（10個以上）
+- emit: startEdit, commitEdit, startDrag, endDrag, ...（8個以上）
+
+**6180行 → 40ファイルになるだけで複雑性は減らない。**
+
+①〜⑧を完了して更新経路が一本化された後なら、テーブル行コンポーネント化は検討可能。
+ただしcomposable抽出（Phase C-1〜C-3）で-767行削減済みのため、テンプレート分割はSupabase移行後に再検討。
+
+### ソースファイル参照
+
+- composable: src/composables/useInlineEdit.ts
+- composable: src/composables/useCellDragAndFill.ts
+- composable: src/composables/useAccountCombobox.ts
+- 警告同期コア: src/shared/validation/journalValidationCore.ts
+- 証票意味ルール: src/shared/validation/voucherTypeRules.ts
+- 列定義: src/constants/journalColumns.ts
+- null表示仕様: src/shared/field-nullable-spec.ts
+

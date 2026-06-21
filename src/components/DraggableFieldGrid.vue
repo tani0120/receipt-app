@@ -300,7 +300,7 @@ const isMfSource = (field: FieldDef): boolean => {
   // 条件付き: formData[field]がvalueと一致するか
   const { field: condField, value: condValue } = field.mfSource.when
   const actual = props.formData?.[condField]
-  if (Array.isArray(condValue)) return condValue.includes(actual as string)
+  if (Array.isArray(condValue)) return condValue.includes(String(actual))
   return actual === condValue
 }
 
@@ -379,6 +379,7 @@ const getStaffLabel = (field: FieldDef): string => {
 interface FileItem { id: string; name: string; url: string; size: number; }
 const getFileList = (field: FieldDef): FileItem[] => {
   const val = getFieldValue(field);
+  // Array.isArray通過後。要素がFileItem構造を満たす保証はformData側の責務
   if (Array.isArray(val)) return val as FileItem[];
   return [];
 };

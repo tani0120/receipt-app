@@ -75,7 +75,40 @@ updateJournalField(journalId, patch)
 
 ---
 
+## ① 編集禁止境界の確立 ✅ 完了
+
+> **元セッション**: d3cec2e6 component_analysis.md より転記（2026-06-21）
+
+### updateJournalFieldの拡張
+
+```typescript
+function updateJournalField(
+  journalId: string,
+  patch: Record<string, unknown>,
+  options: { syncWarnings?: boolean; silent?: boolean; autoMeta?: boolean } = {},
+)
+```
+
+- `autoMeta` (デフォルト: true): `is_read`/`updated_at`/`updated_by`を自動付与
+- `syncWarnings` (デフォルト: true): `syncWarningLabels()`を自動実行、labelsをPATCHに自動含める
+- `silent` (デフォルト: true): syncWarningLabelsの警告モーダル抑制
+
+### 排除結果
+
+| カテゴリ | 排除数 | 手法 |
+|---|---|---|
+| journal.is_read直接代入 | 8箇所 | autoMeta自動付与 |
+| journal.updated_at/by直接代入 | 3箇所 | autoMeta自動付与 |
+| journal.voucher_type/date/description直接代入 | 3箇所 | patch構築→updateJournalField |
+| labels.splice/push/filter直接変更 | 4箇所 | newLabels構築→updateJournalField |
+| syncWarningLabels明示呼出 | 3箇所 | updateJournalField内自動実行 |
+| staff_notes直接変更 | 3箇所 | notesオブジェクト構築→updateJournalField |
+| **合計** | **21→3箇所** | |
+
+---
+
 ## JournalListLevel3Mock.vue 変更詳細
+
 
 ### 追加した関数
 
