@@ -41,6 +41,13 @@ export interface SourceJournal {
   voucher_date: string | null
   description: string
   /**
+   * 証票メモ（MF APIの「仕訳メモ」に対応）
+   *
+   * description（摘要）とは別。CSVの「仕訳メモ」列と同じフィールド。
+   * null/undefined時はMF側で空。
+   */
+  memo?: string | null
+  /**
    * インボイス区分（人間が判断した適格/非適格）
    *
    * MF API送信時にinvoice_kindとしてそのまま送信される（実機テスト確認済み 2026-05-23）。
@@ -536,7 +543,8 @@ export function convertToMfJournal(
     transaction_date: journal.voucher_date!,
     journal_type: MF_JOURNAL_TYPE_ENTRY,
     branches,
-    memo: journal.description || '',
+    // memo = 証票メモ（MFの「仕訳メモ」列相当）。摘要(description)はbranches[0].remarkで送信済み。
+    memo: journal.memo || undefined,
     tags: [MF_SUGUSURU_TAG],
   }
 

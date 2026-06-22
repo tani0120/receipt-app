@@ -41,12 +41,16 @@ export interface ExportRow {
   description: string
   debitAccount: string
   debitSub: string
+  debitDept: string
   debitTax: string
   debitAmount: number | null
   creditAccount: string
   creditSub: string
+  creditDept: string
   creditTax: string
   creditAmount: number | null
+  vendorName: string
+  memo: string
   importDate: string
   isExcluded: boolean
   isWarning: boolean
@@ -145,8 +149,11 @@ export function getExportList(query: ExportListQuery): ExportListResult {
     invoice_status?: string
     voucher_date?: string
     description: string
-    debit_entries: { account: string; sub_account?: string; tax_category_id?: string; amount?: number }[]
-    credit_entries: { account: string; sub_account?: string; tax_category_id?: string; amount?: number }[]
+    vendor_name?: string | null
+    direction?: string | null
+    memo?: string | null
+    debit_entries: { account: string; sub_account?: string; department?: string; tax_category_id?: string; amount?: number }[]
+    credit_entries: { account: string; sub_account?: string; department?: string; tax_category_id?: string; amount?: number }[]
     created_at?: string
   }
   const journals = getJournals<JournalRaw>(clientId)
@@ -175,12 +182,16 @@ export function getExportList(query: ExportListQuery): ExportListResult {
         description: i === 0 ? j.description : '',
         debitAccount: debit ? resolveAccount(debit.account) : '',
         debitSub: debit?.sub_account ?? '',
+        debitDept: debit?.department ?? '',
         debitTax: debit ? resolveTax(debit.tax_category_id) : '',
         debitAmount: debit?.amount ?? null,
         creditAccount: credit ? resolveAccount(credit.account) : '',
         creditSub: credit?.sub_account ?? '',
+        creditDept: credit?.department ?? '',
         creditTax: credit ? resolveTax(credit.tax_category_id) : '',
         creditAmount: credit?.amount ?? null,
+        vendorName: i === 0 ? (j.vendor_name ?? '') : '',
+        memo: i === 0 ? (j.memo ?? '') : '',
         importDate: toDisplayDate(j.created_at),
         isExcluded,
         isWarning,
@@ -261,12 +272,16 @@ export interface ExportDetailRow {
   description: string
   debitAccount: string
   debitSub: string
+  debitDept: string
   debitTax: string
   debitAmount: number | null
   creditAccount: string
   creditSub: string
+  creditDept: string
   creditTax: string
   creditAmount: number | null
+  vendorName: string
+  memo: string
   importDate: string
 }
 
@@ -318,8 +333,10 @@ export function getExportDetail(query: ExportDetailQuery): ExportDetailResult {
     invoice_status?: string
     voucher_date?: string
     description: string
-    debit_entries: { account: string; sub_account?: string; tax_category_id?: string; amount?: number }[]
-    credit_entries: { account: string; sub_account?: string; tax_category_id?: string; amount?: number }[]
+    vendor_name?: string | null
+    memo?: string | null
+    debit_entries: { account: string; sub_account?: string; department?: string; tax_category_id?: string; amount?: number }[]
+    credit_entries: { account: string; sub_account?: string; department?: string; tax_category_id?: string; amount?: number }[]
     created_at?: string
   }
   const journals = getJournals<JournalRaw>(clientId)
@@ -342,12 +359,16 @@ export function getExportDetail(query: ExportDetailQuery): ExportDetailResult {
         description: i === 0 ? j.description : '',
         debitAccount: debit ? resolveAccount(debit.account) : '',
         debitSub: debit?.sub_account ?? '',
+        debitDept: debit?.department ?? '',
         debitTax: debit ? resolveTax(debit.tax_category_id) : '',
         debitAmount: debit?.amount ?? null,
         creditAccount: credit ? resolveAccount(credit.account) : '',
         creditSub: credit?.sub_account ?? '',
+        creditDept: credit?.department ?? '',
         creditTax: credit ? resolveTax(credit.tax_category_id) : '',
         creditAmount: credit?.amount ?? null,
+        vendorName: i === 0 ? (j.vendor_name ?? '') : '',
+        memo: i === 0 ? (j.memo ?? '') : '',
         importDate: toDisplayDate(j.created_at),
       })
     }

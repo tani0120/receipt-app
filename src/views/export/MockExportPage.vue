@@ -533,12 +533,16 @@ interface ExportRow {
   description: string;
   debitAccount: string;
   debitSub: string;
+  debitDept: string;
   debitTax: string;
   debitAmount: number | null;
   creditAccount: string;
   creditSub: string;
+  creditDept: string;
   creditTax: string;
   creditAmount: number | null;
+  vendorName: string;
+  memo: string;
   importDate: string;
   isExcluded: boolean;
   isWarning: boolean;

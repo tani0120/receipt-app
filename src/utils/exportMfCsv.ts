@@ -166,6 +166,17 @@ export function expandJournalToMfRows(
   const invoiceDebit = resolveInvoiceCategory(journal, 'debit');
   const invoiceCredit = resolveInvoiceCategory(journal, 'credit');
 
+  // 取引先名の出力先をdirectionで振り分け
+  // expense（出金）→ 貸方取引先（支払先）、income（入金）→ 借方取引先（入金元）
+  // transfer/null → 借方取引先（デフォルト）
+  const vendorName = journal.vendor_name ?? '';
+  const isExpenseDirection = (journal as { direction?: string | null }).direction === 'expense';
+  const debitVendor = isExpenseDirection ? '' : vendorName;
+  const creditVendor = isExpenseDirection ? vendorName : '';
+
+  // 仕訳メモ（証票メモ。1行目のみ出力）
+  const memoText = journal.memo ?? '';
+
   for (let i = 0; i < rowCount; i++) {
     const debit: JournalEntryLine | undefined = debits[i];
     const credit: JournalEntryLine | undefined = credits[i];
@@ -177,7 +188,7 @@ export function expandJournalToMfRows(
       '借方勘定科目': debit ? resolveAccountName(debit.account) : '',
       '借方補助科目': debit?.sub_account ?? '',
       '借方部門': debit?.department ?? '',
-      '借方取引先': '',
+      '借方取引先': i === 0 ? debitVendor : '',
       '借方税区分': debit ? resolveTaxCategoryName(debit.tax_category_id) : '',
       '借方インボイス': i === 0 ? invoiceDebit : '',
       '借方金額(円)': debit?.amount != null ? String(debit.amount) : '',
@@ -186,14 +197,14 @@ export function expandJournalToMfRows(
       '貸方勘定科目': credit ? resolveAccountName(credit.account) : '',
       '貸方補助科目': credit?.sub_account ?? '',
       '貸方部門': credit?.department ?? '',
-      '貸方取引先': '',
+      '貸方取引先': i === 0 ? creditVendor : '',
       '貸方税区分': credit ? resolveTaxCategoryName(credit.tax_category_id) : '',
       '貸方インボイス': i === 0 ? invoiceCredit : '',
       '貸方金額(円)': credit?.amount != null ? String(credit.amount) : '',
       '貸方税額': '',
       // 共通
       '摘要': description,
-      '仕訳メモ': '',
+      '仕訳メモ': i === 0 ? memoText : '',
       'タグ': '',
       'MF仕訳タイプ': 'インポート',
       '決算整理仕訳': '',

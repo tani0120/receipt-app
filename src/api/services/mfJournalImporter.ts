@@ -341,7 +341,16 @@ export async function prepareMfImport(
     }
 
     const description = mfJournal.branches[0]?.remark || mfJournal.memo || ''
-    const vendorName = mfJournal.branches[0]?.debitor?.trade_partner_name ?? null
+    // 取引先名: directionに応じて借方/貸方から取得
+    // expense→貸方取引先（支払先）、income→借方取引先（入金元）、それ以外→最初に見つかった方
+    const direction = inferDirection(mfJournal)
+    const firstBranch = mfJournal.branches[0]
+    let vendorName: string | null = null
+    if (direction === 'income') {
+      vendorName = firstBranch?.creditor?.trade_partner_name ?? firstBranch?.debitor?.trade_partner_name ?? null
+    } else {
+      vendorName = firstBranch?.debitor?.trade_partner_name ?? firstBranch?.creditor?.trade_partner_name ?? null
+    }
     const matchKey = normalizeVendorName(description) ?? ''
 
     converted.push({
@@ -352,7 +361,7 @@ export async function prepareMfImport(
       match_key: matchKey,
       vendor_id: null,
       vendor_name: vendorName,
-      direction: inferDirection(mfJournal),
+      direction,
       debit_entries: debitEntries,
       credit_entries: creditEntries,
       source: 'mf_import',

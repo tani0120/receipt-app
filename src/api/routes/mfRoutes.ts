@@ -1415,6 +1415,12 @@ interface SendableJournal {
   mf_journal_id?: string | null
   mf_journal_number?: number | null
   mf_sent_at?: string | null
+  // フィールド断絶修正: 以下フィールドがSourceJournalに伝達されていなかった
+  invoice_status?: 'qualified' | 'not_qualified' | null
+  vendor_name?: string | null
+  direction?: string | null
+  memo?: string | null
+  consumption_tax_mode?: 'general' | 'general_proportional' | 'general_individual' | 'simplified' | 'exempt'
 }
 
 /**
@@ -1456,13 +1462,32 @@ app.post('/send-journals/:clientId', async (c) => {
   }
 
   // SourceJournal形式に変換
-  const sourceJournals: SourceJournal[] = targets.map(j => ({
-    journalId: j.journalId,
-    voucher_date: j.voucher_date,
-    description: j.description || '',
-    debit_entries: j.debit_entries || [],
-    credit_entries: j.credit_entries || [],
-  }))
+  // vendor_name→directionに応じてdebit/creditの適切な側にtrade_partner_name注入
+  // expense（出金）→借方に取引先、income（入金）→貸方に取引先
+  // consumption_tax_mode=exempt → is_tax_exempt=true を導出（免税事業者のinvoice_kind制御）
+  const sourceJournals: SourceJournal[] = targets.map(j => {
+    const isIncome = j.direction === 'income'
+    const vendorName = j.vendor_name ?? null
+    const debitEntries = (j.debit_entries || []).map((e, idx) => ({
+      ...e,
+      trade_partner_name: (!isIncome && idx === 0) ? vendorName : null,
+    }))
+    const creditEntries = (j.credit_entries || []).map((e, idx) => ({
+      ...e,
+      trade_partner_name: (isIncome && idx === 0) ? vendorName : null,
+    }))
+    return {
+      journalId: j.journalId,
+      voucher_date: j.voucher_date,
+      description: j.description || '',
+      memo: j.memo,
+      invoice_status: j.invoice_status,
+      is_tax_exempt: j.consumption_tax_mode === 'exempt',
+      consumption_tax_mode: j.consumption_tax_mode,
+      debit_entries: debitEntries,
+      credit_entries: creditEntries,
+    }
+  })
 
   // バッチ送信
   const tokenKey = clientId

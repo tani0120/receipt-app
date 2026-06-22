@@ -276,11 +276,14 @@
       <div v-if="showComplete" class="modal-overlay" @click.self="showComplete = false">
         <div class="modal-content">
           <div class="modal-emoji">🎉</div>
-          <h2 class="modal-title">アップロード完了！</h2>
+          <h2 class="modal-title">{{ UI_MSG.アップロード完了タイトル }}</h2>
           <p class="modal-desc">
-            <strong>{{ confirmedCount }}件</strong>の送付が完了しました。
+            <strong>{{ confirmedCount }}{{ UI_MSG.件ラベル }}</strong>{{ UI_MSG.送付完了メッセージ }}
           </p>
-          <button class="modal-btn" @click="resetAll">続けてアップロード</button>
+          <div class="modal-confirm-btns modal-complete-btns">
+            <button class="modal-btn modal-btn--primary" @click="goToJournalList">{{ UI_MSG.仕訳一覧で確認ボタン }}</button>
+            <button class="modal-btn modal-btn--cancel" @click="resetAll">{{ UI_MSG.続けてアップロードボタン }}</button>
+          </div>
         </div>
       </div>
     </transition>
@@ -336,6 +339,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import PortalHeader from '@/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
 import {
@@ -379,6 +383,13 @@ const clientName = computed(() => {
 onBeforeUnmount(() => {
   cleanup()
 })
+
+// 完了モーダル → 仕訳一覧遷移
+const router = useRouter()
+const goToJournalList = () => {
+  showComplete.value = false
+  router.push(`/journal-list/${clientId}`)
+}
 
 // モバイルDOM制限: 処理中を優先表示、完了済みは最新N件のみ（Rendererクラッシュ防止）
 const MAX_VISIBLE_DONE = 6 // 完了済みの最大表示数（2列×3行）
@@ -1244,6 +1255,19 @@ const doBulkDelete = () => {
   cursor: pointer; font-family: inherit; transition: background 0.2s;
 }
 .modal-btn:hover { background: #2563eb; }
+/* 完了モーダル: 2ボタン配置 */
+.modal-complete-btns {
+  flex-direction: column; gap: 10px;
+}
+.modal-btn--primary {
+  flex: 1; padding: clamp(10px, 2.5vw, 14px);
+  border-radius: clamp(10px, 2vw, 14px); border: none;
+  background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff;
+  font-size: clamp(12px, 3vw, 14px); font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(59,130,246,0.3);
+}
+.modal-btn--primary:hover { background: linear-gradient(135deg, #2563eb, #4f46e5); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,0.4); }
 
 /* 削除確認モーダル */
 .modal-box {

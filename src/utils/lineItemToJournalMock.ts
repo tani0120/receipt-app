@@ -442,9 +442,13 @@ export function lineItemToJournalMock(
       memo_author:          null,
       memo_target:          null,
       memo_created_at:      null,
+      staff_notes:          null,              // 明示初期化（undefinedだとJSON欠落）
+      staff_notes_author:   null,
       created_by:           'AI',
       created_at:           new Date().toISOString(),
       prediction_method:    acctResult?.predictionMethod ?? null,
+      prediction_score:     null,
+      model_version:        null,
     }
 
     return journal
