@@ -8,9 +8,22 @@
         </button>
         <h1 class="lve-title">一覧の編集: {{ viewName }}</h1>
       </div>
-      <button class="lve-save-btn" @click="save">
-        <i class="fa-solid fa-save"></i> 保存
-      </button>
+      <div class="lve-header-right">
+        <div class="lve-header-actions">
+          <button class="lve-save-btn" @click="save">
+            <i class="fa-solid fa-save"></i> 保存
+          </button>
+          <button class="lve-cancel-btn" @click="goBack">キャンセル</button>
+        </div>
+        <div class="lve-undo-redo">
+          <button class="lve-ur-btn" @click="undo" :disabled="undoStack.length === 0" title="元に戻す">
+            <i class="fa-solid fa-rotate-left"></i> 元に戻す
+          </button>
+          <button class="lve-ur-btn" @click="redo" :disabled="redoStack.length === 0" title="やり直し">
+            <i class="fa-solid fa-rotate-right"></i> やり直し
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- 一覧名 -->
@@ -143,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { ListViewDef, FilterCondition, SortSetting } from '@/components/list-view/types';
 import { useFieldLayout } from '@/composables/useFieldLayout';
@@ -243,7 +256,19 @@ const loadViews = async () => {
     const target = allViews.value.find(v => v.key === viewKey.value);
     if (target) {
       viewName.value = target.name;
-      selectedColumnKeys.value = target.columns ? [...target.columns] : [];
+      // allFieldOptions順（= fieldRows順 = 一覧ページの列順）でソート
+      // client.jsonのcolumns配列は「どの列を表示するか」のみ管理し、
+      // 列の並び順はfieldRows（レイアウト管理）が正とする
+      if (target.columns) {
+        const orderMap = new Map(allFieldOptions.value.map((f, i) => [f.key, i]));
+        selectedColumnKeys.value = [...target.columns].sort((a, b) => {
+          const ia = orderMap.get(a) ?? 99999;
+          const ib = orderMap.get(b) ?? 99999;
+          return ia - ib;
+        });
+      } else {
+        selectedColumnKeys.value = [];
+      }
       filterConditions.value = target.defaultFilters?.map(f => ({ ...f })) ?? [];
       sortSettings.value = target.defaultSorts?.map(s => ({ ...s })) ?? [];
       rebuildSelectedList();
@@ -313,9 +338,72 @@ const goBack = () => {
   router.push({ name: nameMap[entityType.value] ?? 'ClientViewSettings' });
 };
 
+// ━━━ UNDO / REDO ━━━
+type UndoSnapshot = {
+  columns: string[];
+  filters: { field: string; operator: string; value: string | string[] }[];
+  sorts: { key: string; order: 'asc' | 'desc' }[];
+};
+const undoStack = ref<UndoSnapshot[]>([]);
+const redoStack = ref<UndoSnapshot[]>([]);
+let isRestoring = false;
+let isInitialized = false;
+let lastSnapshot: UndoSnapshot | null = null;
+
+function takeSnapshot(): UndoSnapshot {
+  return {
+    columns: [...selectedColumnKeys.value],
+    filters: filterConditions.value.map(f => ({
+      ...f,
+      value: Array.isArray(f.value) ? [...f.value] : f.value,
+    })),
+    sorts: sortSettings.value.map(s => ({ ...s })),
+  };
+}
+
+function restoreSnapshot(snap: UndoSnapshot) {
+  isRestoring = true;
+  selectedColumnKeys.value = snap.columns;
+  filterConditions.value = snap.filters;
+  sortSettings.value = snap.sorts;
+  rebuildSelectedList();
+  nextTick(() => {
+    lastSnapshot = takeSnapshot();
+    isRestoring = false;
+  });
+}
+
+function undo() {
+  if (undoStack.value.length === 0) return;
+  redoStack.value.push(takeSnapshot());
+  restoreSnapshot(undoStack.value.pop()!);
+}
+
+function redo() {
+  if (redoStack.value.length === 0) return;
+  undoStack.value.push(takeSnapshot());
+  restoreSnapshot(redoStack.value.pop()!);
+}
+
+// 変更監視 → 操作前スナップショットをundo履歴に積む
+watch(
+  [selectedColumnKeys, filterConditions, sortSettings],
+  () => {
+    if (!isInitialized || isRestoring) return;
+    if (lastSnapshot) {
+      undoStack.value.push(lastSnapshot);
+      redoStack.value = [];
+    }
+    lastSnapshot = takeSnapshot();
+  },
+  { deep: true },
+);
+
 onMounted(async () => {
   fieldLayout.value.loadLayout();
   await loadViews();
+  lastSnapshot = takeSnapshot();
+  isInitialized = true;
 });
 </script>
 
@@ -672,5 +760,47 @@ onMounted(async () => {
 .lve-ghost {
   opacity: 0.4;
   background: #eff6ff;
+}
+
+/* ヘッダー右側 */
+.lve-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.lve-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* UNDO/REDO */
+.lve-undo-redo {
+  display: flex;
+  gap: 6px;
+}
+
+.lve-ur-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.lve-ur-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+.lve-ur-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 </style>

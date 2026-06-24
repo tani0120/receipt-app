@@ -82,10 +82,11 @@ export const clientFieldsFlat: FieldDef[] = [
   // ── 決算・税務 ──
   { key: 'heading_fiscal', label: '決算・税務', section: '', component: 'heading', widthPercent: 100, order: 30, headingSize: 13, headingBg: '#7fb0d4', deletable: true },
   { key: 'fiscalDate', label: '決算日', section: '', component: 'dateGroup', widthPercent: 20, order: 31, mfSource: true },
-  { key: 'consumptionTaxInterim', label: '消費税中間申告', section: '', component: 'select', widthPercent: 20, order: 32, options: 'CONSUMPTION_TAX_INTERIM_OPTIONS' },
-  { key: 'isInvoiceRegistered', label: 'インボイス登録', section: '', component: 'checkbox', widthPercent: 20, order: 33 },
-  { key: 'invoiceRegistrationNumber', label: '登録番号', section: '', component: 'text', widthPercent: 20, order: 34, placeholder: 'T1234567890123', visibleWhen: { field: 'isInvoiceRegistered', value: true } },
-  { key: 'establishedDate', label: '設立日', section: '', component: 'date', widthPercent: 20, order: 35, smallWidth: true },
+  { key: 'clientPageUrl', label: '顧問先ページ', section: '', component: 'url', widthPercent: 20, order: 32, alwaysReadonly: true, hint: '※自動生成' },
+  { key: 'consumptionTaxInterim', label: '消費税中間申告', section: '', component: 'select', widthPercent: 20, order: 33, options: 'CONSUMPTION_TAX_INTERIM_OPTIONS' },
+  { key: 'isInvoiceRegistered', label: 'インボイス登録', section: '', component: 'checkbox', widthPercent: 20, order: 34 },
+  { key: 'invoiceRegistrationNumber', label: '登録番号', section: '', component: 'text', widthPercent: 20, order: 35, placeholder: 'T1234567890123', visibleWhen: { field: 'isInvoiceRegistered', value: true } },
+  { key: 'establishedDate', label: '設立日', section: '', component: 'date', widthPercent: 20, order: 36, smallWidth: true },
 
   // ── 備考・URL・その他 ──
   { key: 'heading_memo', label: '備考・URL・その他', section: '', component: 'heading', widthPercent: 100, order: 40, headingSize: 13, headingBg: '#7fb0d4', deletable: true },

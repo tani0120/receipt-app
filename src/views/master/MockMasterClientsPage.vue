@@ -150,6 +150,10 @@
                   <template v-else-if="col.key === 'accountingSoftware'">{{ softwareLabel(row.accountingSoftware) }}</template>
                   <!-- 決算日 -->
                   <template v-else-if="col.key === 'fiscalDate'">{{ row.fiscalMonth }}月/{{ row.fiscalDay === FISCAL_DAY_END_LABEL ? FISCAL_DAY_END_LABEL : row.fiscalDay + '日' }}</template>
+                  <!-- 顧問先ページ -->
+                  <template v-else-if="col.key === 'clientPageUrl'">
+                    <a :href="'#/client-page/' + row.clientId" class="cm-client-page-link" target="_blank" @click.stop>📄 開く</a>
+                  </template>
                   <!-- sharedEmail -->
                   <template v-else-if="col.key === 'sharedEmail'">
                     <span v-if="row.sharedEmail" class="cm-shared-email">🔗 {{ row.sharedEmail }}</span>
@@ -550,6 +554,7 @@ const clDefaultWidths: Record<string, number> = {
   staffId: 90,
   accountingSoftware: 80,
   fiscalDate: 90,
+  clientPageUrl: 100,
   phoneNumber: 110,
   email: 140,
   sharedEmail: 140,
@@ -753,10 +758,12 @@ const allColumns = computed(() => {
     .filter(f => !f.isDeleted)
     .map(f => ({ key: f.key, label: f.label }));
 
-  // fieldRowsの順序でソート（fieldRowsに含まれないフィールドは末尾）
+  // fieldRowsの順序でソート（fieldRowsに含まれないフィールドはfieldDef.orderでフォールバック）
+  // fieldDef.orderを使うことで、新規フィールドが近隣フィールドの位置に自然に挿入される
+  const fieldOrderMap = new Map(fieldLayout.fields.value.map(f => [f.key, f.order]));
   fromLayout.sort((a, b) => {
-    const ia = orderMap.get(a.key) ?? 99999;
-    const ib = orderMap.get(b.key) ?? 99999;
+    const ia = orderMap.get(a.key) ?? (fieldOrderMap.get(a.key) ?? 99999);
+    const ib = orderMap.get(b.key) ?? (fieldOrderMap.get(b.key) ?? 99999);
     return ia - ib;
   });
 
@@ -773,7 +780,7 @@ const allColumns = computed(() => {
 /** 基本情報ビューで表示する列キー（ビジネスロジック上の固定列） */
 const basicViewCols = [
   'clientId', 'threeCode', 'type', 'consumptionTaxMode', 'companyName', 'staffId',
-  'accountingSoftware', 'fiscalDate',
+  'accountingSoftware', 'fiscalDate', 'clientPageUrl',
   'sharedEmail', 'driveUrl', 'mfStatus', 'contact',
 ];
 
@@ -810,21 +817,25 @@ const loadListViews = async () => {
       apiViews = seedViews;
     }
 
-    // 新列追加互換パッチ: mfStatus が各ビューの columns にない場合は driveUrl の直後に挿入
+    // 新列追加互換パッチ: 既存ビューに新列がない場合は指定位置に自動挿入
     let _needsSave = false;
-    apiViews = apiViews.map((view) => {
-      if (!view.columns) return view;
-      if (view.columns.includes('mfStatus')) return view;
-      const cols = [...view.columns];
-      const driveIdx = cols.indexOf('driveUrl');
-      if (driveIdx >= 0) {
-        cols.splice(driveIdx + 1, 0, 'mfStatus');
-      } else {
-        cols.push('mfStatus');
-      }
-      _needsSave = true;
-      return { ...view, columns: cols };
-    });
+    const patchColumn = (views: typeof apiViews, colKey: string, afterKey: string) => {
+      return views.map((view) => {
+        if (!view.columns) return view;
+        if (view.columns.includes(colKey)) return view;
+        const cols = [...view.columns];
+        const idx = cols.indexOf(afterKey);
+        if (idx >= 0) {
+          cols.splice(idx + 1, 0, colKey);
+        } else {
+          cols.push(colKey);
+        }
+        _needsSave = true;
+        return { ...view, columns: cols };
+      });
+    };
+    apiViews = patchColumn(apiViews, 'mfStatus', 'driveUrl');
+    apiViews = patchColumn(apiViews, 'clientPageUrl', 'fiscalDate');
     if (_needsSave) {
       repos.listView.saveViews('client', { views: apiViews.filter((v) => v.key !== 'all') }).catch(() => {});
     }

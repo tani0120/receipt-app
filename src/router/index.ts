@@ -461,6 +461,13 @@ export const routes: RouteRecordRaw[] = [
     name: 'MasterStaff',
     component: () => import('@/views/master/MockMasterStaffPage.vue')
   },
+  // --- 顧問先専用ページ（空白ベースページ） ---
+  {
+    path: '/client-page/:clientId',
+    name: 'ClientPage',
+    component: () => import('@/views/portal/ClientPortalBlankPage.vue'),
+    meta: { guestAllowed: true },
+  },
   // --- 顧問先ゲストポータル（ナビバーなし・顧問先専用UI） ---
   {
     path: '/guest/:clientId',

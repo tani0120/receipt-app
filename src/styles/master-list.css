@@ -239,6 +239,10 @@
 /* Drive表示なし */
 .cm-drive-none { color: #94a3b8; }
 
+/* 顧問先ページリンク */
+.cm-client-page-link { font-size: 11px; font-weight: 600; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; background: #eff6ff; text-decoration: none; transition: background 0.15s; }
+.cm-client-page-link:hover { background: #dbeafe; }
+
 /* MF連携済みバッジ */
 .cm-mf-linked { font-size: 11px; font-weight: 700; color: #166534; padding: 2px 8px; border-radius: 4px; background: #dcfce7; }
 /* MF未連携アイコン */
