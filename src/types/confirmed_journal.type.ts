@@ -16,6 +16,8 @@
  *   U-8: MF CSVインポート（history-import画面）
  */
 
+import type { DeterminationMethod } from './determination-method'
+
 // ============================================================
 // § ConfirmedJournal（確定済み仕訳ヘッダー）
 // ============================================================
@@ -70,6 +72,9 @@ export interface ConfirmedJournal {
 
   /** データソース */
   source: 'mf_import' | 'system'
+
+  /** 科目確定方法（会計ソフト取込 = 'imported'） */
+  determination_method?: DeterminationMethod | null
 
   /** MF仕訳タイプ（簡単入力 / 振替伝票 等。MF CSV 22列目） */
   mf_journal_type: string | null

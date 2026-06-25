@@ -17,6 +17,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 import crypto from 'crypto';
+import { migrateLegacyDeterminationMethod } from './migration/migrateLegacyDeterminationMethod';
 
 const DATA_DIR = join(process.cwd(), 'data');
 
@@ -66,7 +67,13 @@ function save(clientId: string): void {
       mkdirSync(DATA_DIR, { recursive: true });
     }
     const data = journalCache.get(clientId) || [];
-    writeFileSync(getFilePath(clientId), JSON.stringify(data, null, 2), 'utf-8');
+    // warning_details（警告詳細）は導出値（syncWarningLabelsCore が毎回再計算→上書き）。
+    // 永続化しない。読込時は syncWarningLabelsCore が {} で初期化する。
+    const cleaned = data.map(j => {
+      const { warning_details, ...rest } = j as Record<string, unknown>;
+      return rest;
+    });
+    writeFileSync(getFilePath(clientId), JSON.stringify(cleaned, null, 2), 'utf-8');
   } catch (err) {
     console.error(`[journalStore] JSON書き出しエラー (${clientId}):`, err);
   }
@@ -83,6 +90,10 @@ function loadClient(clientId: string): Record<string, unknown>[] {
       const raw = readFileSync(filePath, 'utf-8');
       const data = JSON.parse(raw) as Record<string, unknown>[];
       journalCache.set(clientId, data);
+      // 移行: determination_method 未設定の旧仕訳に 'legacy' を設定
+      if (migrateLegacyDeterminationMethod(data)) {
+        save(clientId);
+      }
       console.log(`[journalStore] ${clientId}: ${data.length}件をJSONから読み込み`);
       return data;
     }

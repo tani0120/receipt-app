@@ -163,7 +163,7 @@ export const WARNING_LABEL_MAP: Record<string, WarningLabelDef> = {
   // NOTE:
   // AI_ESTIMATED は警告ではなく情報ラベル。
   // 将来的に labels を warnings / badges に分離する際の移行対象。
-  // prediction_method === 'ai_fallback' が根拠データ。
+  // determination_method === 'ai_fallback' が根拠データ。
   AI_ESTIMATED: {
     level: 'info',
     label: 'AI推定（確認推奨）',

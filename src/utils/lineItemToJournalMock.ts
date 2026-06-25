@@ -452,7 +452,8 @@ export function lineItemToJournalMock(
       staff_notes_author:   null,
       created_by:           'AI',
       created_at:           new Date().toISOString(),
-      prediction_method:    acctResult?.predictionMethod ?? null,
+      source:               'ai_pipeline',       // データ経路（AI生成仕訳）
+      determination_method:    acctResult?.determinationMethod ?? null,
       prediction_score:     null,
       model_version:        null,
     }

@@ -126,7 +126,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       department: li.department ?? null,
       rule_id: li.rule_id ?? null,
       level: li.level,
-      prediction_method: li.prediction_method ?? null,
+      determination_method: li.determination_method ?? null,
       candidates: li.candidates ?? [],
     }));
 

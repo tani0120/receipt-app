@@ -365,6 +365,7 @@ export async function prepareMfImport(
       debit_entries: debitEntries,
       credit_entries: creditEntries,
       source: 'mf_import',
+      determination_method: 'imported',         // 科目確定方法: 会計ソフト取込（MF上で人間が確定済み）
       mf_journal_type: mfJournal.journal_type ?? null,
       is_closing_entry: mfJournal.journal_type === MF_JOURNAL_TYPE_ADJUSTING,
       memo: mfJournal.memo || null,

@@ -741,6 +741,42 @@ function useServerTable<T>(options: {
 
 ---
 
+## warning_dismissals 別テーブル化
+
+> 追加日: 2026-06-25
+> 出典: [journal_attribute_inventory.md](file:///C:/Users/kazen/.gemini/antigravity-ide/brain/f56ae8e2-86cd-42cd-9b7f-14b3b74c8c8b/journal_attribute_inventory.md)（§8, §14）
+
+**現状:**
+- `JournalPhase5Mock.warning_dismissals: string[]`（配列で仕訳JSONに同居）
+- ユーザーが「この警告は確認済み」と操作した結果を記録
+- 導出不可能な事実 → 永続化必須
+- 現在は誰が・いつ確認したかの監査情報がない
+
+**Supabase移行時の設計:**
+
+```sql
+CREATE TABLE journal_warning_dismissals (
+  id BIGSERIAL PRIMARY KEY,
+  journal_id VARCHAR(20) NOT NULL REFERENCES journals(journal_id) ON DELETE CASCADE,
+  warning_type TEXT NOT NULL,          -- 'ACCOUNT_UNKNOWN', 'CATEGORY_CONFLICT' 等
+  dismissed_by TEXT NOT NULL,          -- スタッフID
+  dismissed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (journal_id, warning_type)    -- 同一仕訳×同一警告は1回のみ
+);
+
+CREATE INDEX idx_warning_dismissals_journal ON journal_warning_dismissals(journal_id);
+```
+
+**移行手順:**
+1. `journals` テーブル作成後に実施
+2. 既存 `warning_dismissals: string[]` から展開（`dismissed_by` / `dismissed_at` は不明のため `'unknown'` / `NOW()` で埋め）
+3. `syncWarningLabelsCore()` の `dismissals` 参照をSupabaseクエリに変更
+4. `JournalPhase5Mock.warning_dismissals` フィールドを廃止
+
+**今はやらない理由:** RDBでないと正規化できない。JSON配列のまま維持。
+
+---
+
 ## 関連ドキュメントリンク
 
 

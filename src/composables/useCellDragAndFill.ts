@@ -63,10 +63,10 @@ export interface UseCellDragAndFillOptions {
 function clearPredictionMark(journal: UiJournal, patch: Record<string, unknown>): void {
   const labels = journal.labels.filter((l: string) => l !== 'AI_ESTIMATED')
   patch.labels = labels
-  patch.prediction_method = null
+  patch.determination_method = null
   journal.labels = labels as typeof journal.labels
-  if ('prediction_method' in journal) {
-    (journal as unknown as Record<string, unknown>).prediction_method = null
+  if ('determination_method' in journal) {
+    (journal as unknown as Record<string, unknown>).determination_method = null
   }
 }
 

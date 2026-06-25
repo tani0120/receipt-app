@@ -111,20 +111,20 @@ describe('determineAccount（科目確定コア関数）', () => {
       description: 'ありえない摘要YYYY',
     }))
     expect(result.level).toBe('insufficient')
-    expect(result.predictionMethod).toBeNull()
+    expect(result.determinationMethod).toBeNull()
     expect(result.determinedAccount).toBeNull()
     expect(result.vendorId).toBeNull()
   })
 
   // ━━ 第三層-①: 学習ルール照合 ━━
-  test('学習ルールヒット → level A, predictionMethod=learning_rule', async () => {
+  test('学習ルールヒット → level A, determinationMethod=learning_rule', async () => {
     const rules = [createRule({ keyword: 'コンビニ' })]
     const result = await determineAccount(createInput({
       description: 'コンビニで文房具購入',
       learningRules: rules,
     }))
     expect(result.level).toBe('A')
-    expect(result.predictionMethod).toBe('learning_rule')
+    expect(result.determinationMethod).toBe('learning_rule')
     expect(result.ruleId).toBe('lr_test001')
     expect(result.determinedAccount).toBe('SUPPLIES')
     expect(result.debitEntries.length).toBeGreaterThan(0)
@@ -137,7 +137,7 @@ describe('determineAccount（科目確定コア関数）', () => {
       description: 'コンビニで文房具購入',
       learningRules: rules,
     }))
-    expect(result.predictionMethod).not.toBe('learning_rule')
+    expect(result.determinationMethod).not.toBe('learning_rule')
   })
 
   test('学習ルール: isActive=false → スキップ', async () => {
@@ -146,7 +146,7 @@ describe('determineAccount（科目確定コア関数）', () => {
       description: 'コンビニで文房具購入',
       learningRules: rules,
     }))
-    expect(result.predictionMethod).not.toBe('learning_rule')
+    expect(result.determinationMethod).not.toBe('learning_rule')
   })
 
   // ━━ 結果型の整合性 ━━
@@ -160,7 +160,7 @@ describe('determineAccount（科目確定コア関数）', () => {
     expect(result).toHaveProperty('department')
     expect(result).toHaveProperty('ruleId')
     expect(result).toHaveProperty('level')
-    expect(result).toHaveProperty('predictionMethod')
+    expect(result).toHaveProperty('determinationMethod')
     expect(result).toHaveProperty('candidates')
     expect(result).toHaveProperty('debitEntries')
     expect(result).toHaveProperty('creditEntries')
@@ -197,7 +197,7 @@ describe('determineAccount（科目確定コア関数）', () => {
       accountMaster: TEST_ACCOUNT_MASTER,
     }))
     expect(result.level).toBe('B')
-    expect(result.predictionMethod).toBe('ai_fallback')
+    expect(result.determinationMethod).toBe('ai_fallback')
     expect(result.determinedAccount).toBe('TRAVEL')
     expect(result.taxCategory).toBe('TAX_10')
     expect(result.confidence).toBe(0.75)
@@ -235,7 +235,7 @@ describe('determineAccount（科目確定コア関数）', () => {
       accountMaster: TEST_ACCOUNT_MASTER,
     }))
     expect(result.level).toBe('A')
-    expect(result.predictionMethod).toBe('learning_rule')
+    expect(result.determinationMethod).toBe('learning_rule')
     expect(mockedEstimate).not.toHaveBeenCalled()
   })
 
@@ -247,6 +247,6 @@ describe('determineAccount（科目確定コア関数）', () => {
       accountMaster: TEST_ACCOUNT_MASTER,
     }))
     expect(result.level).toBe('insufficient')
-    expect(result.predictionMethod).toBeNull()
+    expect(result.determinationMethod).toBeNull()
   })
 })

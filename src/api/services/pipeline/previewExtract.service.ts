@@ -474,7 +474,7 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
       li.department = acctResult.department
       li.rule_id = acctResult.ruleId
       li.level = acctResult.level
-      li.prediction_method = acctResult.predictionMethod
+      li.determination_method = acctResult.determinationMethod
       li.candidates = acctResult.candidates
     }
     const determined = result.line_items.filter(li => li.level === 'A').length

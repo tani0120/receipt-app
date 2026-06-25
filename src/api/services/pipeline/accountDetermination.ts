@@ -13,7 +13,7 @@
  * 設計原則:
  *   - Repository経由でデータ取得（Supabase移行時に差し替え可能）
  *   - ロジック内にデータ直接参照なし（DL-030準拠）
- *   - 結果は prediction_method に推定方法を記録（トレーサビリティ）
+ *   - 結果は determination_method に推定方法を記録（トレーサビリティ）
  *
  * 移動元: src/utils/pipeline/accountDetermination.ts
  * 移動理由: load_context.md L19「すべてのロジックをAPI化せよ」準拠
@@ -26,6 +26,7 @@
 import type { Vendor, IndustryVectorEntry } from '../../../types/pipeline/vendor.type'
 import type { JournalEntryLine } from '../../../types/domain-journal'
 import type { LearningRule, LearningRuleEntryLine } from '../../../types/learning_rule.type'
+import type { DeterminationMethod } from '../../../types/determination-method'
 import { normalizeVendorName } from '../../../utils/pipeline/vendorIdentification'
 import { validateTNumber, extractTNumber } from '../../../utils/pipeline/vendorIdentification'
 import { matchLearningRule } from './matchLearningRule'
@@ -83,7 +84,7 @@ export interface AccountDeterminationResult {
   /** 確定レベル（A=TS確定、B=AI推定、insufficient=未確定） */
   level: 'A' | 'B' | 'insufficient'
   /** 推定方法 */
-  predictionMethod: 't_number' | 'match_key' | 'learning_rule' | 'industry_vector' | 'ai_fallback' | null
+  determinationMethod: DeterminationMethod | null
   /** 科目候補 */
   candidates: string[]
   /** AI推定の確信度（0.0〜1.0。第5層ヒット時のみ設定） */
@@ -181,7 +182,7 @@ export async function determineAccount(input: DetermineAccountInput): Promise<Ac
     department: null,
     ruleId: null,
     level: 'insufficient',
-    predictionMethod: null,
+    determinationMethod: null,
     candidates: [],
     debitEntries: [],
     creditEntries: [],
@@ -248,7 +249,7 @@ export async function determineAccount(input: DetermineAccountInput): Promise<Ac
   )
   if (rule) {
     result.ruleId = rule.ruleId
-    result.predictionMethod = 'learning_rule'
+    result.determinationMethod = 'learning_rule'
     result.level = 'A'
     result.debitEntries = expandRuleEntries(rule, input.amount, 'debit')
     result.creditEntries = expandRuleEntries(rule, input.amount, 'credit')
@@ -277,7 +278,7 @@ export async function determineAccount(input: DetermineAccountInput): Promise<Ac
       result.subAccount = matchedVendor.debit_sub_account
       result.department = matchedVendor.debit_department
       result.level = 'A'
-      result.predictionMethod = 'match_key'
+      result.determinationMethod = 'match_key'
       result.candidates = [account]
       return result
     }
@@ -294,7 +295,7 @@ export async function determineAccount(input: DetermineAccountInput): Promise<Ac
       const candidates = input.direction === 'expense'
         ? entry.expense : entry.income
       result.candidates = candidates
-      result.predictionMethod = 'industry_vector'
+      result.determinationMethod = 'industry_vector'
       if (candidates.length === 1) {
         // 科目候補が1件 → 自動確定（level='A'）
         result.determinedAccount = candidates[0]!
@@ -321,7 +322,7 @@ export async function determineAccount(input: DetermineAccountInput): Promise<Ac
       result.determinedAccount = aiResult.account
       result.taxCategory = aiResult.taxCategory
       result.level = 'B'
-      result.predictionMethod = 'ai_fallback'
+      result.determinationMethod = 'ai_fallback'
       result.confidence = aiResult.confidence
       result.candidates = [aiResult.account]
     }
@@ -346,7 +347,7 @@ function applyVendor(
 ): void {
   result.vendorId = vendor.vendor_id
   result.vendorName = vendor.company_name
-  result.predictionMethod = method
+  result.determinationMethod = method
 
   // 金額閾値チェック
   const account = resolveVendorAccount(vendor, amount)

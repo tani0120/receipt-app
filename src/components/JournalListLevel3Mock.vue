@@ -1156,7 +1156,7 @@
                     ),
                     isDragCompatibleCol(col.key) ? 'bg-blue-50!' : '',
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
-                    (journal.labels.includes('AI_ESTIMATED') || ('prediction_method' in journal && journal.prediction_method)) ? '!bg-blue-50 !border-2 !border-blue-400' : '',
+                    (journal.labels.includes('AI_ESTIMATED') || isPipelineDetermined(journal)) ? '!bg-blue-50 !border-2 !border-blue-400' : '',
                   ]"
                   @dblclick.stop="
                     !isImportedJournal(journal) && hasEntry(row, col.key) &&
@@ -1257,7 +1257,7 @@
                     </div>
                   </template>
                   <template v-else>
-                    <span v-if="journal.labels.includes('AI_ESTIMATED')" class="text-blue-500 mr-0.5" title="AI推定（確認推奨）">☁️</span><span v-else-if="'prediction_method' in journal && journal.prediction_method && journal.prediction_method !== 'ai_fallback'" class="text-green-600 mr-0.5" title="学習ルール適用">🎓</span>{{ resolveAccountName(getRawString(row, col.key)) || "--" }}
+                    <span v-if="journal.labels.includes('AI_ESTIMATED')" class="text-blue-500 mr-0.5" title="AI推定（確認推奨）">☁️</span><span v-else-if="isLearningDetermined(journal)" class="text-green-600 mr-0.5" title="学習ルール適用">🎓</span>{{ resolveAccountName(getRawString(row, col.key)) || "--" }}
                   </template>
                   <span
                     v-if="
@@ -2050,6 +2050,20 @@ function colWidthClass(col: { defaultPx: number; width: string }) {
 /** 列幅スタイル（px列はwidth+flexShrink、flex-1列は空） */
 function colWidthStyle(col: { defaultPx: number; key: string }) {
   return col.defaultPx > 0 ? { width: columnWidths.value[col.key] + "px", flexShrink: 0 } : {};
+}
+
+// ── determination_method（科目確定方法）UI表示判定 ──
+// パイプライン由来の確定方法のみ青背景・アイコンを表示する。
+// legacy（旧データ）/ imported（MF取込）/ manual（手動）は表示対象外。
+const PIPELINE_METHODS = ['t_number', 'match_key', 'learning_rule', 'industry_vector', 'ai_fallback'] as const
+const LEARNING_METHODS = ['t_number', 'match_key', 'learning_rule', 'industry_vector'] as const
+/** パイプラインで科目確定された仕訳か（青背景表示用） */
+function isPipelineDetermined(journal: UiJournal): boolean {
+  return 'determination_method' in journal && PIPELINE_METHODS.includes((journal as Record<string, unknown>).determination_method as typeof PIPELINE_METHODS[number])
+}
+/** 学習/ルールで確定された仕訳か（🎓アイコン表示用） */
+function isLearningDetermined(journal: UiJournal): boolean {
+  return 'determination_method' in journal && LEARNING_METHODS.includes((journal as Record<string, unknown>).determination_method as typeof LEARNING_METHODS[number])
 }
 
 // Phase C: localJournals廃止。全更新はupdateJournalField()経由のPATCH API。

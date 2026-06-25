@@ -23,6 +23,7 @@ import type { Account } from '@/types/shared-account'
 import type { FilterOperator } from '@/api/helpers/applyFilterConditions'
 import type { TaxCategory } from '@/types/shared-tax-category'
 import type { LearningRule } from '@/types/learning_rule.type'
+import type { DeterminationMethod } from '@/types/determination-method'
 export type { LearningRule }
 
 // ============================================================
@@ -894,7 +895,7 @@ export interface DocEntry {
     department?: string | null
     rule_id?: string | null
     level?: 'A' | 'B' | 'insufficient'
-    prediction_method?: string | null
+    determination_method?: DeterminationMethod | null
     candidates?: string[]
   }[] | null
   /** AI行データ件数 */

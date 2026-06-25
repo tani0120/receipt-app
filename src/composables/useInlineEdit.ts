@@ -48,7 +48,6 @@ export interface UseInlineEditOptions {
   journals: ShallowRef<UiJournal[]>
   updateJournalField: (journalId: string, patch: Record<string, unknown>, options?: { silent?: boolean }) => void
   accounts: ComputedRef<Account[]>
-  resolveDefaultTaxForClient: (defaultTaxName: string) => string
   assertEditableJournal: (journal: UiJournal, caller: string) => journal is JournalPhase5Mock
 }
 
@@ -59,7 +58,6 @@ export function useInlineEdit(options: UseInlineEditOptions) {
     journals,
     updateJournalField,
     accounts,
-    resolveDefaultTaxForClient,
     assertEditableJournal,
   } = options
 
@@ -100,6 +98,8 @@ export function useInlineEdit(options: UseInlineEditOptions) {
       voucher_type: restored.voucher_type,
       staff_notes: restored.staff_notes,
       warning_dismissals: restored.warning_dismissals,
+      determination_method: restored.determination_method ?? null,
+      source: restored.source ?? null,
     })
   }
 

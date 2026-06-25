@@ -1,5 +1,6 @@
 
 import type { StaffNotes } from './staff_notes'
+import type { DeterminationMethod } from './determination-method'
 
 // ============================================================
 // domain層からの再export（型の出自はdomain層）
@@ -39,7 +40,8 @@ import type { StaffNoteKey } from './staff_notes'
 export type JournalLabelMock =
   | JournalLabel
 
-  // --- 警告列バリデーション用（warningLabelMapと対応） ---
+  // ── 導出ラベル（毎回再計算。Supabase では保存しない）──
+  // syncWarningLabelsCore() が計算する警告ラベル
   | 'CATEGORY_CONFLICT'       // 貸借科目矛盾（3大グループ）
   | 'TAX_UNKNOWN'             // 税区分不明
   | 'DESCRIPTION_UNKNOWN'     // 摘要不明
@@ -48,21 +50,17 @@ export type JournalLabelMock =
   | 'DATE_OUT_OF_RANGE'       // 日付異常（未来日付・期外日付）
   | 'SAME_ACCOUNT_BOTH_SIDES' // 借方貸方に同一科目
 
-  // --- AI判定補助ラベル ---
+  // ── 導出ラベル（determination_method / level から導出可能）──
+  | 'AI_ESTIMATED'            // AI推定科目（level='B'）→ determination_method === 'ai_fallback' で導出可能
 
-  | 'DIRECTOR_LOAN'           // 役員貸付金検出
-  // NOTE: AI_ESTIMATED は警告ではなく情報ラベル。
-  // 将来的に labels を warnings / badges に分離する際の移行対象。
-  | 'AI_ESTIMATED'            // AI推定科目（level='B'、確認推奨）
+  // ── 事実ラベル（ユーザー操作 or バリデーション結果。永続化必須）──
+  | 'DIRECTOR_LOAN'           // 役員貸付金検出（バリデーション結果）
 
-  // --- 以下はPhase B/Cで除去予定（現在のモックで使用中） ---
+  // ── 移行予定ラベル（staff_notesに移行済み。syncLabelsFromStaffNotes()が書き戻し中）──
+  | StaffNoteKey              // QUESTION / NEEDS_REVIEW / RESOLVED / IMPORTANT
 
-  // 要対応（4個）— staff_notesに移行済み。syncLabelsFromStaffNotes()が書き戻し中（B4で廃止）
-  // StaffNoteKey型を直接unionし、push互換性を保証
-  | StaffNoteKey
-
-  // 出力制御（1個）— Phase Cでexport_excludeカラムに移行予定
-  | 'EXPORT_EXCLUDE';        // 出力対象外
+  // ── 事実ラベル（出力制御。Phase Cでexport_excludeカラムに移行予定）──
+  | 'EXPORT_EXCLUDE';        // 出力対象外（ユーザー操作）
 
 // ============================================================
 // Phase 5 仕訳モック定義
@@ -112,11 +110,10 @@ export interface JournalPhase5Mock {
    */
   voucher_type: string | null;           // 証票意味（売上/経費/給与/立替経費/振替/クレカ/クレカ引落/その他）
 
-  // ── 取込仕訳判定用（⑥-1追加 2026-06-20）──
-  // normalizeJournalForUIがConfirmedJournalから引き継ぐフィールド。
-  // 通常仕訳（AI生成）では未設定（undefined）。
-  // isImportedJournal() ヘルパで判定に使用。
-  source?: 'mf_import' | 'system';     // 取込仕訳のデータソース（未設定=通常仕訳）
+  // ── データ経路（source）──
+  // 全仕訳に設定。AI生成='ai_pipeline'、旧データ='legacy'、MF取込='mf_import'/'system'。
+  // isImportedJournal() は source の値で判定（'mf_import' | 'system' のみ true）。
+  source?: 'mf_import' | 'system' | 'ai_pipeline' | 'legacy' | 'manual'; // 移行完了後にoptionalを外す
   // ─────────────────────────────────────────────────────────────
 
   // ── パイプライン3フィールド（T-00b追加 2026-04-02 / 再設計 2026-04-02）──
@@ -226,7 +223,7 @@ export interface JournalPhase5Mock {
   // AI推定関連（2026-03-11追加）
   // TODO (2026-04) Supabase: ai_completed_at→TIMESTAMPTZ
   ai_completed_at?: string | null;        // AI仕訳生成完了日時
-  prediction_method?: string | null;      // 推定方法（keyword, alias, ai等）
+  determination_method?: DeterminationMethod | null; // 科目確定方法（determination_method）
   prediction_score?: number | null;       // 推定信頼度
   model_version?: string | null;          // 使用モデルバージョン
 }

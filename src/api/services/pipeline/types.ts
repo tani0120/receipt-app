@@ -5,6 +5,8 @@
  * 依存: domain層の型のみ
  */
 
+import type { DeterminationMethod } from '../../../types/determination-method'
+
 // ============================================================
 // source_type（12種: DL-015 + DL-028 + DL-035確定）
 // ============================================================
@@ -152,7 +154,7 @@ export interface PreviewExtractLineItem {
   /** 確定レベル（'A'=TS確定、'B'=AI推定、'insufficient'=未確定） */
   level?: 'A' | 'B' | 'insufficient';
   /** 推定方法 */
-  prediction_method?: 't_number' | 'match_key' | 'learning_rule' | 'industry_vector' | 'ai_fallback' | null;
+  determination_method?: DeterminationMethod | null;
   /** 科目候補 */
   candidates?: string[];
 }
@@ -255,7 +257,7 @@ export interface ReceiptAnalysisResult {
     department?: string | null;
     rule_id?: string | null;
     level?: 'A' | 'B' | 'insufficient';
-    prediction_method?: 't_number' | 'match_key' | 'learning_rule' | 'industry_vector' | 'ai_fallback' | null;
+    determination_method?: DeterminationMethod | null;
     candidates?: string[];
   }[];
   /** テスト用メトリクス（全項目） */
