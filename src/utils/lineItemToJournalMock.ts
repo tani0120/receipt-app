@@ -23,7 +23,7 @@ import type { LineItemDirection } from '@/types/pipeline/line_item.type'
 import type { SourceType } from '@/types/pipeline/source_type.type'
 import type { JournalPhase5Mock } from '@/types/journal_phase5_mock.type'
 import type { JournalEntryLine } from '@/types/domain-journal'
-import type { AccountDeterminationResult } from './pipeline/accountDetermination'
+import type { AccountDeterminationResult } from '../api/services/pipeline/accountDetermination'
 
 // ============================================================
 // § CounterpartEntry — 相手勘定エントリ型

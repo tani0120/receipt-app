@@ -11,11 +11,14 @@
  *   4. isActive: false のルールはスキップ
  *
  * 準拠: 27_account_determination.md §3-3（照合方式）
+ *
+ * 移動元: src/utils/pipeline/matchLearningRule.ts
+ * 移動理由: load_context.md L19「すべてのロジックをAPI化せよ」準拠
+ * 変更点: learningRulesTST00011のハードコード依存を排除。ルールは引数で受け取る（DI）
  */
 
-import type { LearningRule } from '../../types/learning_rule.type'
-import { learningRulesTST00011 } from '../../data/learning_rules_TST00011'
-import { getSourceCategory } from '../../types/pipeline/source_type.type'
+import type { LearningRule } from '../../../types/learning_rule.type'
+import { getSourceCategory } from '../../../types/pipeline/source_type.type'
 
 /**
  * 証票種別 → 学習ルールのsourceCategory への変換
@@ -37,6 +40,7 @@ function toSourceCategory(
  * @param direction - 入出金方向（'expense' | 'income'）
  * @param sourceType - 証票種別（SourceType 11種。sourceCategoryに変換）
  * @param clientId - 顧問先ID（学習ルールは顧問先ごと）
+ * @param rules - 学習ルール配列（呼び出し元がlearningRuleStoreから取得して渡す）
  * @returns マッチした学習ルール。複数ヒット時は最も優先度の高い1件。マッチなしはnull。
  */
 export function matchLearningRule(
@@ -45,18 +49,18 @@ export function matchLearningRule(
   direction: 'expense' | 'income',
   sourceType: string | null,
   clientId: string,
+  rules: LearningRule[],
 ): LearningRule | null {
   const sourceCategory = toSourceCategory(sourceType)
 
   // 顧問先IDでフィルタ + 有効ルールのみ
-  // TODO (2026-04): Supabase移行時はリポジトリ経由でクエリ
-  const rules = learningRulesTST00011.filter(
+  const activeRules = rules.filter(
     r => r.clientId === clientId && r.isActive,
   )
 
   const candidates: Array<{ rule: LearningRule; priority: number }> = []
 
-  for (const rule of rules) {
+  for (const rule of activeRules) {
     // ① 方向チェック（nullは全方向対象）
     if (rule.direction !== null && rule.direction !== direction) continue
 

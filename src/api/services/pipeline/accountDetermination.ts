@@ -14,15 +14,48 @@
  *   - Repository経由でデータ取得（Supabase移行時に差し替え可能）
  *   - ロジック内にデータ直接参照なし（DL-030準拠）
  *   - 結果は prediction_method に推定方法を記録（トレーサビリティ）
+ *
+ * 移動元: src/utils/pipeline/accountDetermination.ts
+ * 移動理由: load_context.md L19「すべてのロジックをAPI化せよ」準拠
+ * 変更点:
+ *   - 引数をオブジェクト化（DetermineAccountInput）
+ *   - learningRules / industryVectors を外部注入（DI）
+ *   - 第四層を業種辞書ストアに接続（TODOを実装に置換）
  */
 
-import type { Vendor } from '../../types/pipeline/vendor.type'
-import type { JournalEntryLine } from '../../types/domain-journal'
-import type { LearningRule, LearningRuleEntryLine } from '../../types/learning_rule.type'
-import { normalizeVendorName } from './vendorIdentification'
-import { validateTNumber, extractTNumber } from './vendorIdentification'
+import type { Vendor, IndustryVectorEntry } from '../../../types/pipeline/vendor.type'
+import type { JournalEntryLine } from '../../../types/domain-journal'
+import type { LearningRule, LearningRuleEntryLine } from '../../../types/learning_rule.type'
+import { normalizeVendorName } from '../../../utils/pipeline/vendorIdentification'
+import { validateTNumber, extractTNumber } from '../../../utils/pipeline/vendorIdentification'
 import { matchLearningRule } from './matchLearningRule'
-import { getAll as getAllVendors, findByTNumber as findVendorByTNumber, findByMatchKey as findVendorByMatchKey } from '../../api/services/vendorStore'
+import { getAll as getAllVendors, findByTNumber as findVendorByTNumber, findByMatchKey as findVendorByMatchKey } from '../vendorStore'
+
+// ============================================================
+// § 入力型（オブジェクト引数）
+// ============================================================
+
+/** 科目確定の入力 */
+export interface DetermineAccountInput {
+  /** AI抽出の取引先名（生テキスト。issuer_name） */
+  vendorNameRaw: string | null
+  /** 摘要テキスト（line_item.description） */
+  description: string
+  /** 取引金額（円・整数） */
+  amount: number
+  /** 入出金方向 */
+  direction: 'expense' | 'income'
+  /** 証票種別（SourceType 11種） */
+  sourceType: string | null
+  /** 顧問先ID */
+  clientId: string
+  /** T番号（生テキスト。invoiceNumber等） */
+  tNumberRaw: string | null
+  /** 学習ルール（learningRuleStoreから取得済み） */
+  learningRules: LearningRule[]
+  /** 業種辞書（industryVectorStoreから取得済み。Client.typeで法人/個人を切り替え） */
+  industryVectors: IndustryVectorEntry[]
+}
 
 // ============================================================
 // § 結果型
@@ -115,7 +148,7 @@ function resolveAmount(
     default: {
       // auto: 他のfixed行の合計を引いた残り
       const fixedSum = allEntries
-        .filter(e => e.id !== entry.id && e.amountType === 'fixed' && e.fixedAmount)
+        .filter(e => e.entryId !== entry.entryId && e.amountType === 'fixed' && e.fixedAmount)
         .reduce((sum, e) => sum + (e.fixedAmount ?? 0), 0)
       return Math.max(0, totalAmount - fixedSum)
     }
@@ -131,28 +164,12 @@ function resolveAmount(
  *
  * 第一層 → 第二層 → 第三層 → 第四層 の順にフォールバック。
  * 最初にヒットした層で確定し、以降の層はスキップする。
- *
- * @param vendorNameRaw - AI抽出の取引先名（生テキスト。issuer_name）
- * @param description - 摘要テキスト（line_item.description）
- * @param amount - 取引金額（円・整数）
- * @param direction - 入出金方向（'expense' | 'income'）
- * @param sourceType - 証票種別（SourceType 11種）
- * @param clientId - 顧問先ID
- * @param tNumberRaw - T番号（生テキスト。invoiceNumber等）
  */
-export function determineAccount(
-  vendorNameRaw: string | null,
-  description: string,
-  amount: number,
-  direction: 'expense' | 'income',
-  sourceType: string | null,
-  clientId: string,
-  tNumberRaw: string | null = null,
-): AccountDeterminationResult {
+export function determineAccount(input: DetermineAccountInput): AccountDeterminationResult {
   // 初期値
   const result: AccountDeterminationResult = {
     vendorId: null,
-    vendorName: vendorNameRaw, // デフォルト: AI抽出名
+    vendorName: input.vendorNameRaw, // デフォルト: AI抽出名
     determinedAccount: null,
     taxCategory: null,
     subAccount: null,
@@ -168,12 +185,12 @@ export function determineAccount(
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 第一層: T番号完全一致
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  if (tNumberRaw) {
-    const tNumber = validateTNumber(tNumberRaw) ?? extractTNumber(tNumberRaw)
+  if (input.tNumberRaw) {
+    const tNumber = validateTNumber(input.tNumberRaw) ?? extractTNumber(input.tNumberRaw)
     if (tNumber) {
       const vendor = findVendorByTNumber(tNumber)
       if (vendor) {
-        applyVendor(result, vendor, 't_number', amount, direction)
+        applyVendor(result, vendor, 't_number', input.amount, input.direction)
         return result
       }
     }
@@ -184,8 +201,8 @@ export function determineAccount(
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   let matchedVendor: Vendor | undefined
 
-  if (vendorNameRaw) {
-    const matchKey = normalizeVendorName(vendorNameRaw)
+  if (input.vendorNameRaw) {
+    const matchKey = normalizeVendorName(input.vendorNameRaw)
     if (matchKey) {
       // match_key完全一致
       matchedVendor = findVendorByMatchKey(matchKey)
@@ -200,8 +217,8 @@ export function determineAccount(
   }
 
   // 摘要テキストからも照合試行（vendorNameRawが取れなかった場合のフォールバック）
-  if (!matchedVendor && description) {
-    const descKey = normalizeVendorName(description)
+  if (!matchedVendor && input.description) {
+    const descKey = normalizeVendorName(input.description)
     if (descKey) {
       matchedVendor = findVendorByMatchKey(descKey)
       if (!matchedVendor) {
@@ -220,13 +237,16 @@ export function determineAccount(
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 第三層-①: 学習ルール照合
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const rule = matchLearningRule(description, amount, direction, sourceType, clientId)
+  const rule = matchLearningRule(
+    input.description, input.amount, input.direction,
+    input.sourceType, input.clientId, input.learningRules,
+  )
   if (rule) {
-    result.ruleId = rule.id
+    result.ruleId = rule.ruleId
     result.predictionMethod = 'learning_rule'
     result.level = 'A'
-    result.debitEntries = expandRuleEntries(rule, amount, 'debit')
-    result.creditEntries = expandRuleEntries(rule, amount, 'credit')
+    result.debitEntries = expandRuleEntries(rule, input.amount, 'debit')
+    result.creditEntries = expandRuleEntries(rule, input.amount, 'credit')
 
     // 借方の最初の行から科目情報を取得
     const firstDebit = result.debitEntries[0]
@@ -245,7 +265,7 @@ export function determineAccount(
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (matchedVendor) {
     // 金額閾値チェック
-    const account = resolveVendorAccount(matchedVendor, amount)
+    const account = resolveVendorAccount(matchedVendor, input.amount)
     if (account) {
       result.determinedAccount = account
       result.taxCategory = matchedVendor.debit_tax_category
@@ -261,12 +281,22 @@ export function determineAccount(
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 第四層: 業種ベクトル → 業種辞書
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  if (matchedVendor?.vendor_vector) {
-    // TODO (2026-04): IndustryVectorRepository.findByVector() でDB照合。Supabase移行時に実装
-    // 現時点ではvendor_vectorのみ設定し、科目候補はUIに任せる
-    result.predictionMethod = 'industry_vector'
-    // candidates は業種辞書から取得するが、現時点ではRepository未実装
-    // → level: 'insufficient' のまま
+  if (matchedVendor?.vendor_vector && input.industryVectors.length > 0) {
+    const entry = input.industryVectors.find(
+      e => e.vector === matchedVendor!.vendor_vector
+    )
+    if (entry) {
+      const candidates = input.direction === 'expense'
+        ? entry.expense : entry.income
+      result.candidates = candidates
+      result.predictionMethod = 'industry_vector'
+      if (candidates.length === 1) {
+        // 科目候補が1件 → 自動確定（level='A'）
+        result.determinedAccount = candidates[0]!
+        result.level = 'A'
+      }
+      // candidates.length >= 2 → level: 'insufficient'のまま（UIで選択）
+    }
   }
 
   return result

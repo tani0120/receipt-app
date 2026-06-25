@@ -43,7 +43,11 @@ import type {
 import { postprocessPreviewExtract } from './postprocess';
 import type { CalculationMethod } from './postprocess';
 import { validatePreviewExtractResult } from './validatePreviewExtractResult';
-import { determineAccount } from '../../../utils/pipeline/accountDetermination';
+import { determineAccount } from './accountDetermination';
+import { getByClientId as getLearningRulesByClientId } from '../learningRuleStore';
+import { getCorporate as getCorporateVectors, getSole as getSoleVectors } from '../industryVectorStore';
+import { getById as getClientById } from '../clientsApi';
+import { isIndividualType } from '../../../constants/clientOptions';
 import {
   DESC_SOURCE_TYPE, DESC_SOURCE_TYPE_CONFIDENCE,
   DESC_DIRECTION, DESC_DIRECTION_CONFIDENCE,
@@ -433,16 +437,27 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
   // ━━ Step4-C: 科目確定（辞書接続）━━━━━━━━━━━━━━━━━━
   // fallback未適用（AI正常応答）の場合のみ、line_items毎に科目確定を実行
   if (!result.fallback_applied && result.line_items.length > 0) {
+    // 学習ルール取得（顧問先ごと。learningRuleStoreから）
+    const learningRules = getLearningRulesByClientId(req.clientId)
+
+    // 業種辞書取得（Client.typeで法人/個人を切り替え）
+    const client = getClientById(req.clientId)
+    const industryVectors = isIndividualType(client?.type)
+      ? getSoleVectors()
+      : getCorporateVectors()
+
     for (const li of result.line_items) {
-      const acctResult = determineAccount(
-        result.issuer_name,    // vendorNameRaw: AI抽出の取引先名
-        li.description,         // 摘要テキスト
-        li.amount,              // 取引金額
-        li.direction,           // 入出金方向
-        result.source_type,     // 証票種別
-        req.clientId,           // 顧問先ID
-        null,                   // tNumberRaw: 現時点ではinvoice_numberは未抽出
-      )
+      const acctResult = determineAccount({
+        vendorNameRaw: result.issuer_name,
+        description: li.description,
+        amount: li.amount,
+        direction: li.direction,
+        sourceType: result.source_type,
+        clientId: req.clientId,
+        tNumberRaw: null,       // 現時点ではinvoice_numberは未抽出
+        learningRules,
+        industryVectors,
+      })
       // 科目確定結果をline_itemに設定
       li.vendor_id = acctResult.vendorId
       li.vendor_name = acctResult.vendorName

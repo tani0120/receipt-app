@@ -170,7 +170,7 @@ export function expandJournalToMfRows(
   // expense（出金）→ 貸方取引先（支払先）、income（入金）→ 借方取引先（入金元）
   // transfer/null → 借方取引先（デフォルト）
   const vendorName = journal.vendor_name ?? '';
-  const isExpenseDirection = (journal as { direction?: string | null }).direction === 'expense';
+  const isExpenseDirection = journal.direction === 'expense';
   const debitVendor = isExpenseDirection ? '' : vendorName;
   const creditVendor = isExpenseDirection ? vendorName : '';
 
