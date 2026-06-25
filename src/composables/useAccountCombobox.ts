@@ -211,10 +211,19 @@ export function useAccountCombobox(options: UseAccountComboboxOptions) {
 
     runAccountValidation(journal)
     if (!isImportedJournal(journal)) {
-      updateJournalField(journal.journalId, {
+      // 科目変更時: AI推定/学習ルールのマークを除去（人間が確認・修正した）
+      const updatedLabels = journal.labels.filter((l: string) => l !== 'AI_ESTIMATED')
+      const patch: Record<string, unknown> = {
         debit_entries: journal.debit_entries,
         credit_entries: journal.credit_entries,
-      })
+        labels: updatedLabels,
+        prediction_method: null,
+      }
+      journal.labels = updatedLabels as typeof journal.labels
+      if ('prediction_method' in journal) {
+        (journal as unknown as Record<string, unknown>).prediction_method = null
+      }
+      updateJournalField(journal.journalId, patch)
     }
     if (beforeSnap) {
       const afterSnap = snapshotJournal(journal.journalId)

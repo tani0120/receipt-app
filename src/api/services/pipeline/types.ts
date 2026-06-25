@@ -149,10 +149,10 @@ export interface PreviewExtractLineItem {
   department?: string | null;
   /** 適用された学習ルールID */
   rule_id?: string | null;
-  /** 確定レベル（'A'=確定、'insufficient'=不十分） */
-  level?: 'A' | 'insufficient';
+  /** 確定レベル（'A'=TS確定、'B'=AI推定、'insufficient'=未確定） */
+  level?: 'A' | 'B' | 'insufficient';
   /** 推定方法 */
-  prediction_method?: 't_number' | 'match_key' | 'learning_rule' | 'industry_vector' | null;
+  prediction_method?: 't_number' | 'match_key' | 'learning_rule' | 'industry_vector' | 'ai_fallback' | null;
   /** 科目候補 */
   candidates?: string[];
 }
@@ -254,8 +254,8 @@ export interface ReceiptAnalysisResult {
     sub_account?: string | null;
     department?: string | null;
     rule_id?: string | null;
-    level?: 'A' | 'insufficient';
-    prediction_method?: 't_number' | 'match_key' | 'learning_rule' | 'industry_vector' | null;
+    level?: 'A' | 'B' | 'insufficient';
+    prediction_method?: 't_number' | 'match_key' | 'learning_rule' | 'industry_vector' | 'ai_fallback' | null;
     candidates?: string[];
   }[];
   /** テスト用メトリクス（全項目） */

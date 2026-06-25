@@ -56,6 +56,20 @@ export interface UseCellDragAndFillOptions {
 
 // ────── composable ──────
 
+/**
+ * 科目変更時にAI推定/学習ルールのマークを除去するヘルパー。
+ * 人間が科目を確認・修正した場合、推定マークは不要。
+ */
+function clearPredictionMark(journal: UiJournal, patch: Record<string, unknown>): void {
+  const labels = journal.labels.filter((l: string) => l !== 'AI_ESTIMATED')
+  patch.labels = labels
+  patch.prediction_method = null
+  journal.labels = labels as typeof journal.labels
+  if ('prediction_method' in journal) {
+    (journal as unknown as Record<string, unknown>).prediction_method = null
+  }
+}
+
 export function useCellDragAndFill(options: UseCellDragAndFillOptions) {
   const {
     journals,
@@ -154,6 +168,10 @@ export function useCellDragAndFill(options: UseCellDragAndFillOptions) {
       } else {
         fillPatch.debit_entries = journal.debit_entries
         fillPatch.credit_entries = journal.credit_entries
+      }
+      // 科目変更時: AI推定/学習ルールのマークを除去（人間が確認・修正した）
+      if (colKey.endsWith('.account')) {
+        clearPredictionMark(journal, fillPatch)
       }
       updateJournalField(journal.journalId, fillPatch)
     }
@@ -350,6 +368,10 @@ export function useCellDragAndFill(options: UseCellDragAndFillOptions) {
           } else {
             dragPatch.debit_entries = journal.debit_entries
             dragPatch.credit_entries = journal.credit_entries
+          }
+          // 科目変更時: AI推定/学習ルールのマークを除去（人間が確認・修正した）
+          if (dColKey.endsWith('.account')) {
+            clearPredictionMark(journal, dragPatch)
           }
           updateJournalField(journal.journalId, dragPatch)
           if (beforeSnap) {

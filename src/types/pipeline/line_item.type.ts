@@ -174,7 +174,7 @@ export interface LineItem {
    * - 'insufficient': candidates.length >= 2（人間がUIで選択）
    * - パイプライン未実行: undefined
    */
-  level?: 'A' | 'insufficient';
+  level?: 'A' | 'B' | 'insufficient';
 
   /**
    * Step 2照合ヒットフラグ（A-5）

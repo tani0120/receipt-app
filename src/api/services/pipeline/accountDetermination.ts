@@ -29,6 +29,7 @@ import type { LearningRule, LearningRuleEntryLine } from '../../../types/learnin
 import { normalizeVendorName } from '../../../utils/pipeline/vendorIdentification'
 import { validateTNumber, extractTNumber } from '../../../utils/pipeline/vendorIdentification'
 import { matchLearningRule } from './matchLearningRule'
+import { estimateAccountByAI } from './estimateAccountByAI'
 import { getAll as getAllVendors, findByTNumber as findVendorByTNumber, findByMatchKey as findVendorByMatchKey } from '../vendorStore'
 
 // ============================================================
@@ -55,6 +56,8 @@ export interface DetermineAccountInput {
   learningRules: LearningRule[]
   /** 業種辞書（industryVectorStoreから取得済み。Client.typeで法人/個人を切り替え） */
   industryVectors: IndustryVectorEntry[]
+  /** 顧問先の使用可能科目リスト（AI推定で選択肢として渡す。省略時は第5層スキップ） */
+  accountMaster?: { accountId: string; name: string; defaultTaxCategoryId?: string | null }[]
 }
 
 // ============================================================
@@ -77,12 +80,14 @@ export interface AccountDeterminationResult {
   department: string | null
   /** 適用された学習ルールID */
   ruleId: string | null
-  /** 確定レベル */
-  level: 'A' | 'insufficient'
+  /** 確定レベル（A=TS確定、B=AI推定、insufficient=未確定） */
+  level: 'A' | 'B' | 'insufficient'
   /** 推定方法 */
-  predictionMethod: 't_number' | 'match_key' | 'learning_rule' | 'industry_vector' | null
+  predictionMethod: 't_number' | 'match_key' | 'learning_rule' | 'industry_vector' | 'ai_fallback' | null
   /** 科目候補 */
   candidates: string[]
+  /** AI推定の確信度（0.0〜1.0。第5層ヒット時のみ設定） */
+  confidence?: number
   /** 借方仕訳行（学習ルール適用時の複合仕訳用） */
   debitEntries: JournalEntryLine[]
   /** 貸方仕訳行（学習ルール適用時の複合仕訳用） */
@@ -165,7 +170,7 @@ function resolveAmount(
  * 第一層 → 第二層 → 第三層 → 第四層 の順にフォールバック。
  * 最初にヒットした層で確定し、以降の層はスキップする。
  */
-export function determineAccount(input: DetermineAccountInput): AccountDeterminationResult {
+export async function determineAccount(input: DetermineAccountInput): Promise<AccountDeterminationResult> {
   // 初期値
   const result: AccountDeterminationResult = {
     vendorId: null,
@@ -296,6 +301,29 @@ export function determineAccount(input: DetermineAccountInput): AccountDetermina
         result.level = 'A'
       }
       // candidates.length >= 2 → level: 'insufficient'のまま（UIで選択）
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 第五層: AI推定（全層ミス時の最終フォールバック）
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // DL-008: 第1〜4層（TS決定論的）が常に優先。AIは最終手段のみ
+  // accountMasterが渡されていない場合はスキップ（段階A: 既存呼出元は渡さない）
+  if (result.level === 'insufficient' && input.accountMaster && input.accountMaster.length > 0) {
+    const aiResult = await estimateAccountByAI({
+      description: input.description,
+      vendorNameRaw: input.vendorNameRaw,
+      direction: input.direction,
+      sourceType: input.sourceType,
+      accountMaster: input.accountMaster,
+    })
+    if (aiResult) {
+      result.determinedAccount = aiResult.account
+      result.taxCategory = aiResult.taxCategory
+      result.level = 'B'
+      result.predictionMethod = 'ai_fallback'
+      result.confidence = aiResult.confidence
+      result.candidates = [aiResult.account]
     }
   }
 

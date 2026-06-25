@@ -360,6 +360,20 @@
                           <span class="text-gray-200 text-[12px]">{{ item.label }}</span>
                         </div>
                       </div>
+                      <div v-if="infoLegend.length > 0">
+                        <div class="flex items-center gap-1 px-1.5 py-0.5">
+                          <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                          <span class="text-blue-400 text-[14px] font-bold">情報（青）</span>
+                        </div>
+                        <div
+                          v-for="[, item] in infoLegend"
+                          :key="item.label"
+                          class="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-800/60 transition-colors"
+                        >
+                          <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></span>
+                          <span class="text-gray-200 text-[12px]">{{ item.label }}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1142,6 +1156,7 @@
                     ),
                     isDragCompatibleCol(col.key) ? 'bg-blue-50!' : '',
                     isDragIncompatibleCol(col.key) ? 'opacity-30' : '',
+                    (journal.labels.includes('AI_ESTIMATED') || ('prediction_method' in journal && journal.prediction_method)) ? '!bg-blue-50 !border-2 !border-blue-400' : '',
                   ]"
                   @dblclick.stop="
                     !isImportedJournal(journal) && hasEntry(row, col.key) &&
@@ -1242,7 +1257,7 @@
                     </div>
                   </template>
                   <template v-else>
-                    {{ resolveAccountName(getRawString(row, col.key)) || "--" }}
+                    <span v-if="journal.labels.includes('AI_ESTIMATED')" class="text-blue-500 mr-0.5" title="AI推定（確認推奨）">☁️</span><span v-else-if="'prediction_method' in journal && journal.prediction_method && journal.prediction_method !== 'ai_fallback'" class="text-green-600 mr-0.5" title="学習ルール適用">🎓</span>{{ resolveAccountName(getRawString(row, col.key)) || "--" }}
                   </template>
                   <span
                     v-if="
@@ -3104,7 +3119,7 @@ function showWarningTooltip(event: MouseEvent, labels: string[], journal?: UiJou
   tooltipHtml.value = warnings
     .map((l) => {
       const w = warningLabelMap[l];
-      const dotColor = w?.level === "error" ? "bg-red-400" : "bg-yellow-400";
+      const dotColor = w?.level === "error" ? "bg-red-400" : w?.level === "info" ? "bg-blue-400" : "bg-yellow-400";
       // D4: on_document（項目存在フラグ）によるホバーメッセージ分岐
       let msg = w?.label ?? l;
       if (journal) {
@@ -3180,6 +3195,7 @@ function openWarningConfirmModal(journal: UiJournal) {
 // ポップオーバー凡例: warningLabelMapから動的生成
 const errorLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level === "error");
 const warnLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level === "warn");
+const infoLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level === "info");
 
 // ────── ヒントモーダル ──────
 // 型定義は types/hintTypes.ts に抽出済み

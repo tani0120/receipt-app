@@ -893,7 +893,7 @@ export interface DocEntry {
     sub_account?: string | null
     department?: string | null
     rule_id?: string | null
-    level?: 'A' | 'insufficient'
+    level?: 'A' | 'B' | 'insufficient'
     prediction_method?: string | null
     candidates?: string[]
   }[] | null

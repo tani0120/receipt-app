@@ -48,6 +48,7 @@ import { getByClientId as getLearningRulesByClientId } from '../learningRuleStor
 import { getCorporate as getCorporateVectors, getSole as getSoleVectors } from '../industryVectorStore';
 import { getById as getClientById } from '../clientsApi';
 import { isIndividualType } from '../../../constants/clientOptions';
+import { getClientAccounts } from '../accountMasterApi';
 import {
   DESC_SOURCE_TYPE, DESC_SOURCE_TYPE_CONFIDENCE,
   DESC_DIRECTION, DESC_DIRECTION_CONFIDENCE,
@@ -447,7 +448,7 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
       : getCorporateVectors()
 
     for (const li of result.line_items) {
-      const acctResult = determineAccount({
+      const acctResult = await determineAccount({
         vendorNameRaw: result.issuer_name,
         description: li.description,
         amount: li.amount,
@@ -457,6 +458,12 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
         tNumberRaw: null,       // 現時点ではinvoice_numberは未抽出
         learningRules,
         industryVectors,
+        // B-1: 科目マスタを渡して第5層AI推定を有効化
+        accountMaster: getClientAccounts(req.clientId).accounts.map(a => ({
+          accountId: a.accountId,
+          name: a.name,
+          defaultTaxCategoryId: a.defaultTaxCategoryId,
+        })),
       })
       // 科目確定結果をline_itemに設定
       li.vendor_id = acctResult.vendorId

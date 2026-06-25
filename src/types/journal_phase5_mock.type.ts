@@ -51,6 +51,9 @@ export type JournalLabelMock =
   // --- AI判定補助ラベル ---
 
   | 'DIRECTOR_LOAN'           // 役員貸付金検出
+  // NOTE: AI_ESTIMATED は警告ではなく情報ラベル。
+  // 将来的に labels を warnings / badges に分離する際の移行対象。
+  | 'AI_ESTIMATED'            // AI推定科目（level='B'、確認推奨）
 
   // --- 以下はPhase B/Cで除去予定（現在のモックで使用中） ---
 

@@ -356,7 +356,7 @@ export interface Vendor {
    * 'A' = 科目自動確定、'insufficient' = 人間判断必要。
    * 取引先 → null（IndustryVector辞書側で管理）。
    */
-  level: 'A' | 'insufficient' | null;
+  level: 'A' | 'B' | 'insufficient' | null;
 
   // ============================================================
   // § 仕訳テンプレート（DL-027 Streamed互換）

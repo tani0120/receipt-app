@@ -406,6 +406,12 @@ export function lineItemToJournalMock(
       ? ['ACCOUNT_UNKNOWN']
       : []
 
+    // NOTE: AI_ESTIMATED は警告ではなく情報ラベル。
+    // 将来的に labels を warnings / badges に分離する際の移行対象。
+    if (item.level === 'B') {
+      labels.push('AI_ESTIMATED')
+    }
+
     // D-6: voucher_type 解決
     const voucherType = resolveVoucherType(sourceType, item.direction, isCreditCardPayment)
 

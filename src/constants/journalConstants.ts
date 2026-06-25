@@ -71,8 +71,8 @@ export const AG_BS_LIABILITY = 'BS_LIABILITY'
 // 警告ラベルマップ (Single Source of Truth)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/** 警告レベル */
-export type WarningLevel = 'error' | 'warn'
+/** 警告レベル（error=赤, warn=黄, info=青） */
+export type WarningLevel = 'error' | 'warn' | 'info'
 
 /** 警告ラベル定義 */
 export interface WarningLabelDef {
@@ -159,6 +159,16 @@ export const WARNING_LABEL_MAP: Record<string, WarningLabelDef> = {
     label: '役員貸付金（税務リスク注意）',
     color: 'text-yellow-600',
     weight: 5,
+  },
+  // NOTE:
+  // AI_ESTIMATED は警告ではなく情報ラベル。
+  // 将来的に labels を warnings / badges に分離する際の移行対象。
+  // prediction_method === 'ai_fallback' が根拠データ。
+  AI_ESTIMATED: {
+    level: 'info',
+    label: 'AI推定（確認推奨）',
+    color: 'text-blue-500',
+    weight: 1,
   },
 }
 
