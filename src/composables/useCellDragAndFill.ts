@@ -8,8 +8,8 @@
 
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { ShallowRef, Ref } from 'vue'
-import type { JournalPhase5Mock, JournalEntryLine } from '@/types/journal_phase5_mock.type'
-import type { UiJournal } from '@/types/journal-ui.types'
+import type { JournalEntryLine } from '@/types/domain-journal'
+import type { Journal } from '@/types/journal.type'
 import { isImportedJournal } from '@/types/journal-list-row'
 import type { UndoSnapshot } from '@/composables/useInlineEdit'
 
@@ -37,14 +37,14 @@ export interface FillHandleState {
 }
 
 export interface UseCellDragAndFillOptions {
-  journals: ShallowRef<UiJournal[]>
+  journals: ShallowRef<Journal[]>
   editingCell: Ref<{ journalId: string; rowIndex: number; colKey: string } | null>
   updateJournalField: (journalId: string, patch: Record<string, unknown>, options?: { silent?: boolean }) => void
   snapshotJournal: (journalId: string) => UndoSnapshot | null
   pushUndo: (before: UndoSnapshot[], after: UndoSnapshot[]) => void
   setEntryField: (entry: JournalEntryLine, field: string, value: unknown) => void
-  isCompoundJournal: (journal: UiJournal) => boolean
-  assertEditableJournal: (journal: UiJournal, caller: string) => journal is JournalPhase5Mock
+  isCompoundJournal: (journal: Journal) => boolean
+  assertEditableJournal: (journal: Journal, caller: string) => journal is Journal
   resolveDefaultTaxForClient: (defaultTaxName: string) => string
   accounts: { value: { accountId: string; name: string; defaultTaxCategoryId?: string }[] }
   subAccounts: { value: Record<string, { name: string }[]> }
@@ -60,7 +60,7 @@ export interface UseCellDragAndFillOptions {
  * 科目変更時にAI推定/学習ルールのマークを除去するヘルパー。
  * 人間が科目を確認・修正した場合、推定マークは不要。
  */
-function clearPredictionMark(journal: UiJournal, patch: Record<string, unknown>): void {
+function clearPredictionMark(journal: Journal, patch: Record<string, unknown>): void {
   const labels = journal.labels.filter((l: string) => l !== 'AI_ESTIMATED')
   patch.labels = labels
   patch.determination_method = null
@@ -153,7 +153,7 @@ export function useCellDragAndFill(options: UseCellDragAndFillOptions) {
     const { colKey, sourceValue, targetJournalIndices } = fillHandle.value
     const beforeSnaps = targetJournalIndices
       .map((idx) => journals.value[idx])
-      .filter((x): x is JournalPhase5Mock => !!x)
+      .filter((x): x is Journal => !!x)
       .map((j) => snapshotJournal(j.journalId))
       .filter((s): s is UndoSnapshot => s !== null)
     for (const idx of targetJournalIndices) {
@@ -185,7 +185,7 @@ export function useCellDragAndFill(options: UseCellDragAndFillOptions) {
   }
 
   function applyFillValue(
-    journal: UiJournal,
+    journal: Journal,
     colKey: string,
     value: unknown,
     targetRowIndex?: number,

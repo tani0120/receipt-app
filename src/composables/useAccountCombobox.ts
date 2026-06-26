@@ -7,7 +7,7 @@
 
 import { computed, ref } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
-import type { UiJournal } from '@/types/journal-ui.types'
+import type { Journal } from '@/types/journal.type'
 import { isImportedJournal } from '@/types/journal-list-row'
 import { getCategoryLabel } from '@/data/master/account-category-rules'
 import {
@@ -49,7 +49,7 @@ export interface UseAccountComboboxOptions {
   pushUndo: (before: UndoSnapshot[], after: UndoSnapshot[]) => void
   updateJournalField: (journalId: string, patch: Record<string, unknown>, options?: { silent?: boolean }) => void
   resolveDefaultTaxForClient: (defaultTaxName: string) => string
-  runAccountValidation: (journal: UiJournal) => void
+  runAccountValidation: (journal: Journal) => void
   /** フィルタ済み勘定科目リスト */
   filteredAccounts: ComputedRef<{ accountId: string; name: string; accountGroup: string; category: string; sortOrder: number; hidden: boolean; defaultTaxCategoryId?: string }[]>
   /** 顧問先設定 */
@@ -178,7 +178,7 @@ export function useAccountCombobox(options: UseAccountComboboxOptions) {
   // ────── 選択関数 ──────
 
   function selectAccountItem(
-    journal: UiJournal,
+    journal: Journal,
     row: CombinedRow,
     colKey: string,
     accountId: string,
@@ -232,7 +232,7 @@ export function useAccountCombobox(options: UseAccountComboboxOptions) {
   }
 
   /** 税区分アイテム選択 */
-  function selectTaxItem(_journal: UiJournal, taxId: string): void {
+  function selectTaxItem(_journal: Journal, taxId: string): void {
     editingValue.value = taxId
     commitCellEdit()
   }
@@ -240,7 +240,7 @@ export function useAccountCombobox(options: UseAccountComboboxOptions) {
   // ────── blur関数 ──────
 
   /** 勘定科目blur */
-  function blurAccountEdit(journal: UiJournal, row: CombinedRow, colKey: string): void {
+  function blurAccountEdit(journal: Journal, row: CombinedRow, colKey: string): void {
     if (!editingCell.value) return
     const val = editingValue.value
     const matched = filteredAccounts.value.find((a) => a.accountId === val || a.name === val)
@@ -252,7 +252,7 @@ export function useAccountCombobox(options: UseAccountComboboxOptions) {
   }
 
   /** 税区分blur */
-  function blurTaxEdit(_journal: UiJournal): void {
+  function blurTaxEdit(_journal: Journal): void {
     if (!editingCell.value) return
     const val = editingValue.value
     const matched = clientSettings.visibleTaxCategories.value.find(
@@ -295,7 +295,7 @@ export function useAccountCombobox(options: UseAccountComboboxOptions) {
   }
 
   /** 補助科目選択 */
-  function selectSubAccountItem(_journal: UiJournal, name: string): void {
+  function selectSubAccountItem(_journal: Journal, name: string): void {
     editingValue.value = name
     commitCellEdit()
   }

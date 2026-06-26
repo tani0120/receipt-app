@@ -333,17 +333,26 @@ import { AMOUNT_CONDITION_OPTIONS, PLACEHOLDER_SELECT } from "@/constants/vendor
 import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { NULL_DISPLAY_UNKNOWN } from "@/shared/field-nullable-spec";
 import type { SelectOption } from "@/constants/clientOptions";
-import type {
-  JournalPhase5Mock,
-  JournalLabelMock,
-} from "@/types/journal_phase5_mock.type";
+import type { Journal, JournalLabelMock } from "@/types/journal.type";
 import type { ConfirmedJournal } from "@/types/confirmed_journal.type";
+
+/** 過去仕訳モーダル表示用（Journal/ConfirmedJournal共通の表示フィールド） */
+interface PastJournalRow {
+  id?: string;
+  voucher_date: string | null;
+  description: string;
+  debit_entries: { account: string | null; sub_account?: string | null; tax_category_id?: string | null; amount?: number | null }[];
+  credit_entries: { account: string | null; sub_account?: string | null; tax_category_id?: string | null; amount?: number | null }[];
+  status: 'exported' | null;
+  labels: JournalLabelMock[];
+  source?: string;
+}
 
 // ── props / emit ──
 const props = defineProps<{
   visible: boolean;
   pinned: boolean;
-  journals: JournalPhase5Mock[];
+  journals: Journal[];
   confirmedJournals: ConfirmedJournal[];
   isConfirmedLoading: boolean;
   accountOptions: SelectOption[];
@@ -467,8 +476,8 @@ const filteredPastJournals = computed(() => {
   if (pastJournalTab.value === "accounting") {
     // 会計ソフトから取り込んだ過去仕訳（confirmed_journals API）
     const cjResults = applySearchFilters(props.confirmedJournals);
-    // JournalPhase5Mock互換オブジェクトに変換して返す
-    return cjResults.map((cj) => ({
+    // Journal互換オブジェクトに変換して返す
+    return cjResults.map((cj): PastJournalRow => ({
       id: cj.journalId,
       voucher_date: cj.voucher_date,
       description: cj.description,
@@ -484,8 +493,8 @@ const filteredPastJournals = computed(() => {
         tax_category_id: e.tax_category_id,
         amount: e.amount,
       })),
-      status: "exported" as const,
-      labels: [] as JournalLabelMock[],
+      status: "exported",
+      labels: [],
       source: cj.source,
     }));
   }

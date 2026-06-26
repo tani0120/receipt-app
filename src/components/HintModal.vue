@@ -6,16 +6,16 @@
  * fetchHintsFromAPI / hintValidations / hintSuggestions は子で管理。
  * applyHintSuggestion は emit('apply-suggestion', s) で親に委譲。
  */
-import { ref, computed, watch } from "vue";
+import { ref, watch } from "vue";
 import { useDraggable } from "@/composables/useDraggable";
 import { modalDrag } from "@/utils/modalDrag";
 import { UI_MSG } from "@/constants/uiMessages";
 import { SIDE_DEBIT, SIDE_CREDIT, LABEL_UNSET } from "@/constants/validationMessages";
 import type { HintValidation, HintSuggestion } from "@/types/hintTypes";
-import type { JournalPhase5Mock } from "@/types/JournalPhase5Mock";
+import type { Journal } from "@/types/journal.type";
 
 const props = defineProps<{
-  journal: JournalPhase5Mock | null;
+  journal: Journal | null;
   journalIndex: number;
   clientId: string;
 }>();

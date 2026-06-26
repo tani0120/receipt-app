@@ -1,3 +1,9 @@
+/**
+ * @deprecated Journal（統一仕訳型。journal.type.ts）導入後は新規利用禁止。
+ * 既存コードの移行完了後（Phase 3）に本ファイルを削除予定。
+ *
+ * 新規コードでは import type { Journal } from '@/types/journal.type' を使用すること。
+ */
 
 import type { StaffNotes } from './staff_notes'
 import type { DeterminationMethod } from './determination-method'
@@ -111,9 +117,9 @@ export interface JournalPhase5Mock {
   voucher_type: string | null;           // 証票意味（売上/経費/給与/立替経費/振替/クレカ/クレカ引落/その他）
 
   // ── データ経路（source）──
-  // 全仕訳に設定。AI生成='ai_pipeline'、旧データ='legacy'、MF取込='mf_import'/'system'。
+  // 全仕訳に設定済み（タスク3完了。全経路で付与確認済み）。
   // isImportedJournal() は source の値で判定（'mf_import' | 'system' のみ true）。
-  source?: 'mf_import' | 'system' | 'ai_pipeline' | 'legacy' | 'manual'; // 移行完了後にoptionalを外す
+  source: 'mf_import' | 'system' | 'ai_pipeline' | 'legacy' | 'manual';
   // ─────────────────────────────────────────────────────────────
 
   // ── パイプライン3フィールド（T-00b追加 2026-04-02 / 再設計 2026-04-02）──

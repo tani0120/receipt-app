@@ -208,4 +208,19 @@ export interface JournalEntryLine {
     amount_on_document: boolean;
     /** 税区分の概念ID（例: PURCHASE_TAXABLE_10）。表示時はマスタからnameを取得 */
     tax_category_id: string | null;
+    /**
+     * 取引先名（MF CSV 借方取引先 or 貸方取引先）
+     * AI仕訳では未使用（null）。MF取込仕訳で設定。
+     */
+    vendor_name?: string | null;
+    /**
+     * インボイス（MF CSV 借方/貸方インボイス）
+     * AI仕訳では未使用（null）。MF取込仕訳で設定。
+     */
+    invoice?: string | null;
+    /**
+     * 税額（円）（MF CSV 借方/貸方税額）
+     * AI仕訳では未使用（null）。MF取込仕訳で設定。
+     */
+    tax_amount?: Yen | null;
 }

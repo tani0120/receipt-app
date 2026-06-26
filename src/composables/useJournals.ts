@@ -11,18 +11,18 @@
  * 準拠: DL-042（#12 useJournals localStorage脱却）
  */
 import { ref, watch, type Ref } from 'vue'
-import type { JournalPhase5Mock } from '../types/journal_phase5_mock.type'
+import type { Journal } from '../types/journal.type'
 
 // ────────────────────────────────────────────
 // API通信ヘルパー
 // ────────────────────────────────────────────
 const API_BASE = '/api/journals'
 
-async function fetchFromServer(clientId: string): Promise<JournalPhase5Mock[] | null> {
+async function fetchFromServer(clientId: string): Promise<Journal[] | null> {
   try {
     const res = await fetch(`${API_BASE}/${encodeURIComponent(clientId)}`)
     if (!res.ok) return null
-    const data = await res.json() as { journals: JournalPhase5Mock[]; count: number }
+    const data = await res.json() as { journals: Journal[]; count: number }
     return data.journals ?? []
   } catch (err) {
     console.error(`[useJournals] サーバー取得失敗 (${clientId}):`, err)
@@ -30,7 +30,7 @@ async function fetchFromServer(clientId: string): Promise<JournalPhase5Mock[] | 
   }
 }
 
-async function saveToServer(clientId: string, journals: JournalPhase5Mock[]): Promise<void> {
+async function saveToServer(clientId: string, journals: Journal[]): Promise<void> {
   try {
     await fetch(`${API_BASE}/${encodeURIComponent(clientId)}`, {
       method: 'PUT',
@@ -45,17 +45,17 @@ async function saveToServer(clientId: string, journals: JournalPhase5Mock[]): Pr
 // ────────────────────────────────────────────
 // モジュールスコープキャッシュ（顧問先別シングルトン）
 // ────────────────────────────────────────────
-const journalCache = new Map<string, Ref<JournalPhase5Mock[]>>()
+const journalCache = new Map<string, Ref<Journal[]>>()
 
 // ────────────────────────────────────────────
 // Composable
 // ────────────────────────────────────────────
 
 export function useJournals(clientId: Ref<string>) {
-  function getOrCreate(cid: string): Ref<JournalPhase5Mock[]> {
+  function getOrCreate(cid: string): Ref<Journal[]> {
     if (!journalCache.has(cid)) {
       // 空配列で初期化（サーバーデータ取得まで空表示）
-      const data = ref<JournalPhase5Mock[]>([])
+      const data = ref<Journal[]>([])
       journalCache.set(cid, data)
 
       // autoSave: データ変更時にサーバーへ自動保存（デバウンス500ms）

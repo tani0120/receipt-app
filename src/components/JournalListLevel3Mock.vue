@@ -1992,16 +1992,12 @@ import { useColumnResize } from "@/composables/useColumnResize";
 // import { useJournals } from "@/composables/useJournals"; // Phase C: 廃止
 import { useRoute } from "vue-router";
 import { getDocumentImageUrl } from "../data/document_mock_data";
-import type {
-  JournalPhase5Mock,
-  JournalLabelMock,
-} from "../types/journal_phase5_mock.type";
+import type { Journal, JournalLabelMock, JournalEntryLine } from "../types/journal.type";
 import { createEmptyStaffNotes, STAFF_NOTE_KEYS, isStaffNoteKey } from "../types/staff_notes";
 import type { StaffNoteKey } from "../types/staff_notes";
-import type { ConfirmedJournal } from "../types/confirmed_journal.type";
+import type { ConfirmedJournal, ConfirmedJournalEntry } from "../types/confirmed_journal.type";
 import { isImportedJournal, isMfJournal } from "../types/journal-list-row";
 import type { JournalListRow } from "../types/journal-list-row";
-import type { UiJournal, NormalizedConfirmedJournal } from "../types/journal-ui.types";
 
 import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { syncWarningLabelsCore, validateByVoucherType, getMegaGroup, validateDebitCreditCombination, isTaxCategoryInvalidForMode, resolveValidTaxCategoryForMode } from "@/utils/journalWarningSync";
@@ -2032,8 +2028,8 @@ const accountOptionsForModal = computed<SelectOption[]>(() =>
 );
 
 /** 過去仕訳検索モーダル用: AI仕訳のみ抽出（取込仕訳はconfirmedJournalsで別送） */
-const aiJournalsForModal = computed<JournalPhase5Mock[]>(() =>
-  journals.value.filter((j): j is JournalPhase5Mock => !isImportedJournal(j)),
+const aiJournalsForModal = computed<Journal[]>(() =>
+  journals.value.filter((j): j is Journal => !isImportedJournal(j)),
 );
 
 // 列幅カスタマイズ
@@ -2058,12 +2054,12 @@ function colWidthStyle(col: { defaultPx: number; key: string }) {
 const PIPELINE_METHODS = ['t_number', 'match_key', 'learning_rule', 'industry_vector', 'ai_fallback'] as const
 const LEARNING_METHODS = ['t_number', 'match_key', 'learning_rule', 'industry_vector'] as const
 /** パイプラインで科目確定された仕訳か（青背景表示用） */
-function isPipelineDetermined(journal: UiJournal): boolean {
-  return 'determination_method' in journal && PIPELINE_METHODS.includes((journal as Record<string, unknown>).determination_method as typeof PIPELINE_METHODS[number])
+function isPipelineDetermined(journal: Journal): boolean {
+  return !!journal.determination_method && PIPELINE_METHODS.includes(journal.determination_method as typeof PIPELINE_METHODS[number])
 }
 /** 学習/ルールで確定された仕訳か（🎓アイコン表示用） */
-function isLearningDetermined(journal: UiJournal): boolean {
-  return 'determination_method' in journal && LEARNING_METHODS.includes((journal as Record<string, unknown>).determination_method as typeof LEARNING_METHODS[number])
+function isLearningDetermined(journal: Journal): boolean {
+  return !!journal.determination_method && LEARNING_METHODS.includes(journal.determination_method as typeof LEARNING_METHODS[number])
 }
 
 // Phase C: localJournals廃止。全更新はupdateJournalField()経由のPATCH API。
@@ -2074,7 +2070,7 @@ const journalClientId = computed(() => {
 });
 // const { journals: localJournals } = useJournals(journalClientId); // ← 廃止
 // Phase C: journalsはshallowRefで管理。API経由で取得。
-const journals = shallowRef<UiJournal[]>([]);
+const journals = shallowRef<Journal[]>([]);
 /** API応答の売上/経費/差額サマリー */
 const journalSummary = ref<{ revenue: number; expense: number; profit: number }>({ revenue: 0, expense: 0, profit: 0 });
 
@@ -2117,7 +2113,6 @@ const {
   journals,
   updateJournalField,
   accounts: computed(() => clientSettings.accounts.value),
-  resolveDefaultTaxForClient,
   assertEditableJournal,
 });
 
@@ -2211,7 +2206,7 @@ const {
 /** ドットパスで生値を取得（税区分名称変換なし）
  * 動的パスアクセスのためkeyof型安全性は保証できない。内部でunknown経由でRecordにキャストする。
  */
-function getRawValue(obj: UiJournal | CombinedRow, path: string): unknown {
+function getRawValue(obj: Journal | CombinedRow, path: string): unknown {
   return path
     .split(".")
     .reduce<unknown>(
@@ -2224,7 +2219,7 @@ function getRawValue(obj: UiJournal | CombinedRow, path: string): unknown {
 }
 
 /** getRawValueのstring特化版（テンプレートで安全に使用） */
-function getRawString(obj: UiJournal | CombinedRow, path: string): string {
+function getRawString(obj: Journal | CombinedRow, path: string): string {
   const v = getRawValue(obj, path);
   return typeof v === 'string' ? v : '';
 }
@@ -2408,7 +2403,7 @@ function megaGroupLabel(group: MegaGroupType): string {
 // validateDebitCreditCombination は shared からimport済み（上記参照）
 
 /** 勘定科目選択後の3大グループバリデーション実行 */
-function runAccountValidation(journal: UiJournal): void {
+function runAccountValidation(journal: Journal): void {
   // まず全警告ラベルを同期（CATEGORY_CONFLICT / VOUCHER_TYPE_CONFLICT含む）
   syncWarningLabels(journal);
 
@@ -2487,7 +2482,7 @@ const voucherTypeConflictMap = new Map<string, { debit: Set<string>; credit: Set
  * shared/validation/journalValidationCore.ts（SSOT）を呼び出し、
  * UI固有のセルハイライトMap更新 + モーダル表示を行う。
  */
-function syncWarningLabels(journal: UiJournal, silent = false): void {
+function syncWarningLabels(journal: Journal, silent = false): void {
   // 取込仕訳は確定済みなので警告ラベル同期不要
   if (isImportedJournal(journal)) return;
   const allAccounts = clientSettings.accounts.value;
@@ -2558,7 +2553,7 @@ function syncWarningLabels(journal: UiJournal, silent = false): void {
  * 警告ラベルと列キーの対応を判定し、赤背景CSSクラスを返す。
  */
 function getWarningCellClass(
-  journal: UiJournal,
+  journal: Journal,
   colKey: string,
   entry?: UiEntryLine | null,
 ): string {
@@ -3126,7 +3121,7 @@ function showTooltip(event: MouseEvent, text: string) {
   tooltipVisible.value = true;
 }
 
-function showWarningTooltip(event: MouseEvent, labels: string[], journal?: UiJournal) {
+function showWarningTooltip(event: MouseEvent, labels: string[], journal?: Journal) {
   if (!(event.currentTarget instanceof HTMLElement)) return;
   const rect = event.currentTarget.getBoundingClientRect();
   const warnings = labels.filter((l) => warningLabelMap[l]);
@@ -3176,7 +3171,7 @@ function hideTooltip() {
 }
 
 /** B2: 警告モーダル — 確認済みとして警告をdismissalに記録 */
-function openWarningConfirmModal(journal: UiJournal) {
+function openWarningConfirmModal(journal: Journal) {
   if (!assertEditableJournal(journal, 'openWarningConfirmModal')) return;
   const warningKeys = Object.keys(warningLabelMap);
   const warnings = journal.labels.filter((l) => warningKeys.includes(l));
@@ -3215,7 +3210,7 @@ const infoLegend = Object.entries(warningLabelMap).filter(([, v]) => v.level ===
 // 型定義は types/hintTypes.ts に抽出済み
 // fetchHintsFromAPI / hintValidations / hintSuggestions / hintLoading / onHintAlternativeChange は HintModal.vue に移動済み
 
-const hintModalJournal = ref<JournalPhase5Mock | null>(null);
+const hintModalJournal = ref<Journal | null>(null);
 
 const hintModalJournalIndex = computed(() => {
   if (!hintModalJournal.value) return -1;
@@ -3223,7 +3218,7 @@ const hintModalJournalIndex = computed(() => {
 });
 
 
-async function openHintModal(journal: UiJournal): Promise<void> {
+async function openHintModal(journal: Journal): Promise<void> {
   if (!canShowHint(journal)) return;
   // canShowHint通過 = AI仕訳確定。isImportedJournalで明示narrow
   if (isImportedJournal(journal)) return;
@@ -3296,7 +3291,17 @@ function closeDropdown() {
 
 // ────── ワークフローハブ操作（レベル②ローカル状態変更） ──────
 
-function setReadStatus(journal: UiJournal, value: boolean) {
+/**
+ * 編集可能な仕訳を検索する（PATCH送信先特定用）
+ * 戻り値はJournal | undefined（取込仕訳は返さない）。
+ */
+function findEditableJournal(journalId: string): Journal | undefined {
+  return journals.value.find(
+    (j): j is Journal => j.journalId === journalId && !isImportedJournal(j)
+  );
+}
+
+function setReadStatus(journal: Journal, value: boolean) {
   if (!assertEditableJournal(journal, 'setReadStatus')) return;
   const target = findEditableJournal(journal.journalId);
   if (!target || target.is_read === value) return; // 同じ状態なら何もしない
@@ -3326,7 +3331,7 @@ function setReadStatus(journal: UiJournal, value: boolean) {
   };
 }
 
-function setExportExclude(journal: UiJournal, exclude: boolean) {
+function setExportExclude(journal: Journal, exclude: boolean) {
   if (!assertEditableJournal(journal, 'setExportExclude')) return;
   const target = findEditableJournal(journal.journalId);
   if (!target) return;
@@ -3357,14 +3362,14 @@ function setExportExclude(journal: UiJournal, exclude: boolean) {
   };
 }
 
-function copyJournal(journal: UiJournal, _index: number) {
+function copyJournal(journal: Journal, _index: number) {
   closeDropdown();
   confirmDialog.value = {
     show: true,
     title: UI_MSG.コピー,
     message: `「${journal.description}」${UI_MSG.を未出力にコピーしますか}`,
     onConfirm: async () => {
-      const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(journal));
+      const clone: Journal = JSON.parse(JSON.stringify(journal));
       clone.journalId = `copy-${crypto.randomUUID().slice(0, 12)}`;
       clone.display_order = journal.display_order + 0.5;
       clone.description = `${UI_MSG.コピー接頭_星}${journal.description}`;
@@ -3398,7 +3403,7 @@ function copyJournal(journal: UiJournal, _index: number) {
   };
 }
 
-function trashJournal(journal: UiJournal) {
+function trashJournal(journal: Journal) {
   if (!assertEditableJournal(journal, 'trashJournal')) return;
   // 制約: 出力済みはゴミ箱不可
   if (journal.status === "exported") {
@@ -3430,7 +3435,7 @@ function trashJournal(journal: UiJournal) {
   };
 }
 
-function restoreJournal(journal: UiJournal) {
+function restoreJournal(journal: Journal) {
   if (!assertEditableJournal(journal, 'restoreJournal')) return;
   const target = findEditableJournal(journal.journalId);
   if (!target || target.deleted_at === null) return;
@@ -3484,7 +3489,7 @@ function clearSelection() {
 // ────── 一括操作関数（冪等 + 0件ガード） ──────
 
 function bulkSetReadStatus(value: boolean) {
-  const all = selectedJournals.value.filter((j): j is JournalPhase5Mock => !isImportedJournal(j));
+  const all = selectedJournals.value.filter((j): j is Journal => !isImportedJournal(j));
   const exportedCount = all.filter((j) => j.status === "exported").length;
   const targets = all.filter((j) => j.status !== "exported" && j.is_read !== value);
   // 0件ガード
@@ -3534,7 +3539,7 @@ function bulkSetReadStatus(value: boolean) {
 }
 
 function bulkSetExportExclude(exclude: boolean) {
-  const all = selectedJournals.value.filter((j): j is JournalPhase5Mock => !isImportedJournal(j));
+  const all = selectedJournals.value.filter((j): j is Journal => !isImportedJournal(j));
   const exportedCount = all.filter((j) => j.status === "exported").length;
   const targets = all.filter((j) => {
     if (j.status === "exported") return false;
@@ -3618,9 +3623,9 @@ function showBulkCopyDialog() {
     title: UI_MSG.コピー,
     message: `${targets.length}${UI_MSG.件を}${UI_MSG.を未出力にコピーしますか}`,
     onConfirm: async () => {
-      const clones: JournalPhase5Mock[] = [];
+      const clones: Journal[] = [];
       targets.forEach((j) => {
-        const clone: JournalPhase5Mock = JSON.parse(JSON.stringify(j));
+        const clone: Journal = JSON.parse(JSON.stringify(j));
         clone.journalId = `copy-${crypto.randomUUID().slice(0, 12)}`;
         clone.display_order = j.display_order + 0.5;
         clone.description = `${UI_MSG.コピー接頭_星}${j.description}`;
@@ -3658,7 +3663,7 @@ function showBulkCopyDialog() {
 }
 
 function showBulkTrashDialog() {
-  const all = selectedJournals.value.filter((j): j is JournalPhase5Mock => !isImportedJournal(j));
+  const all = selectedJournals.value.filter((j): j is Journal => !isImportedJournal(j));
   const exportedCount = all.filter((j) => j.status === "exported").length;
   const targets = all.filter((j) => j.status !== "exported" && j.deleted_at === null);
   // 0件ガード
@@ -3785,7 +3790,7 @@ async function fetchSupportingMatches() {
 }
 
 /** 仕訳に紐づく根拠資料があるか */
-function hasSupportingMatch(journal: UiJournal): boolean {
+function hasSupportingMatch(journal: Journal): boolean {
   return supportingMatchMap.value.has(journal.journalId);
 }
 
@@ -3902,7 +3907,7 @@ function closeModal() {
 // ↑ journals shallowRefはL2800付近に移動済み（setup内の参照順序制約）
 // 全てのデータ変更はこの関数を経由する。
 // 楽観的UI更新 → journalId単位マージ → 500msデバウンスでPATCH送信。
-const _patchQueue = new Map<string, Partial<JournalPhase5Mock>>();
+const _patchQueue = new Map<string, Partial<Journal>>();
 let _patchTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
@@ -3915,7 +3920,7 @@ let _patchTimer: ReturnType<typeof setTimeout> | null = null;
  * 全編集系関数の入口で呼び出す。サイレント失敗を防ぐためログ出力付き。
  * @returns true=編集可能, false=過去仕訳のためブロック
  */
-function assertEditableJournal(journal: UiJournal, caller: string): journal is JournalPhase5Mock {
+function assertEditableJournal(journal: Journal, caller: string): journal is Journal {
   if (isImportedJournal(journal)) {
     console.warn(`[JournalGuard] ${caller}: 過去仕訳への操作をブロック (${journal.journalId})`);
     return false;
@@ -3927,24 +3932,13 @@ function assertEditableJournal(journal: UiJournal, caller: string): journal is J
  * 💡ヒントアイコン表示可否（意味ベースで制御）。
  * 現在はAI仕訳のみヒントあり。将来「仕訳詳細」等に拡張する場合はここを修正。
  */
-function canShowHint(journal: UiJournal): boolean {
+function canShowHint(journal: Journal): boolean {
   return !isImportedJournal(journal);
-}
-
-/**
- * 編集可能な仕訳をjournalIdで検索（型述語付き）。
- * journals.value.find() + isImportedJournalガードを統合。
- * 戻り値はJournalPhase5Mock | undefined（NormalizedConfirmedJournalは返さない）。
- */
-function findEditableJournal(journalId: string): JournalPhase5Mock | undefined {
-  return journals.value.find(
-    (j): j is JournalPhase5Mock => j.journalId === journalId && !isImportedJournal(j)
-  );
 }
 
 function updateJournalField(
   journalId: string,
-  patch: Partial<JournalPhase5Mock>,
+  patch: Partial<Journal>,
   options: { syncWarnings?: boolean; silent?: boolean; autoMeta?: boolean } = {},
 ) {
   const journal = journals.value.find((j) => j.journalId === journalId);
@@ -3999,22 +3993,42 @@ async function flushPendingPatches(): Promise<void> {
   );
 }
 /**
- * 過去仕訳（ConfirmedJournal）にUI互換デフォルト値を付与する正規化関数
+ * Journal Factory（唯一の変換境界）
  *
- * ConfirmedJournalにはlabels/status/is_read等が存在しないため、
- * テンプレートでの安全なアクセスのためにデフォルト値を設定する。
+ * JournalListRow（サーバーAPIレスポンス）→ Journal（統一仕訳型）への変換。
+ * この関数を通過した時点から、下流（composable / Vue）は Journal のみ扱う。
  *
- * confirmedToJournalRow()偽装との違い:
- * - journalId: 実際のUUID（'past-csv-${idx}'ではない）
- * - memo: 実際のメモ（'過去仕訳CSV'で潰さない）
- * - source: ConfirmedJournal由来のsourceをそのまま保持（isImportedJournal()で判定）
+ * ConfirmedJournal（確定仕訳型）にはlabels/status/is_read等が存在しないため、
+ * 全フィールドをここで保証する（asキャストなし）。
+ *
+ * Phase 3で永続化を統合すれば、この関数自体が不要になる。
  */
-function normalizeJournalForUI(row: JournalListRow): UiJournal {
+/**
+ * ConfirmedJournalEntry → JournalEntryLine 変換ヘルパー
+ *
+ * MF取込仕訳は勘定科目・金額が常に存在する（MF仕訳帳CSVの必須列）ため、
+ * account_on_document / amount_on_document は true 固定。
+ *
+ * 将来 JournalEntryLine にフィールドが追加された場合、この関数だけ修正すればよい。
+ */
+function normalizeConfirmedEntry(entry: ConfirmedJournalEntry): JournalEntryLine {
+  return {
+    ...entry,
+    account_on_document: true,   // MF取込: 証憑に勘定科目が常に存在
+    amount_on_document: true,    // MF取込: 証憑に金額が常に存在
+  }
+}
+
+function normalizeJournalForUI(row: JournalListRow): Journal {
   if (isMfJournal(row)) {
-    const normalized: NormalizedConfirmedJournal = {
+    // ConfirmedJournal → Journal: 不足フィールドをデフォルト値で補完
+    const normalized: Journal = {
       ...row,
-      // ⑥-1: _isPastJournal廃止。sourceはrow自体に既存のため追加不要。
-      // UI互換デフォルト値（ConfirmedJournalに存在しないフィールド）
+      // ConfirmedJournalEntry → JournalEntryLine: ヘルパー経由で変換
+      debit_entries: row.debit_entries.map(normalizeConfirmedEntry),
+      credit_entries: row.credit_entries.map(normalizeConfirmedEntry),
+      // source は row 自体に既存（'mf_import' | 'system'）
+      // ConfirmedJournal に存在しないフィールドをデフォルト値で補完
       labels: [],
       status: null,
       is_read: true,
@@ -4023,16 +4037,27 @@ function normalizeJournalForUI(row: JournalListRow): UiJournal {
       warning_details: {},
       is_credit_card_payment: false,
       voucher_type: null,
+      source_type: null,
+      vendor_vector: null,
       document_id: null,
+      line_id: null,
       staff_notes: null,
       display_order: 90000 + (row.mf_transaction_no ?? 0),
       invoice_status: null,
       rule_id: null,
       invoice_number: null,
+      export_batch_id: null,
+      date_on_document: true,  // MF取込仕訳は日付項目あり
+      description: row.description ?? '',
+      memo: row.memo ?? null,
+      memo_author: null,
+      memo_target: null,
+      memo_created_at: null,
     }
     return normalized
   }
-  return { ...row }  // ⑥-1: _isPastJournal廃止。通常仕訳はsource未設定（isImportedJournal()=false）
+  // JournalPhase5Mock → Journal: 全フィールド既存（source必須化済み）
+  return { ...row }
 }
 
 /** 統合一覧APIの呼び出し（POST: 科目名マッピング付き） */
@@ -4139,7 +4164,7 @@ fetchJournalList();
 /** ページネーション適用済み仕訳リスト（APIがページング済みなのでjournalsそのまま） */
 const paginatedJournals = computed(() => journals.value);
 
-const visibleIds = computed(() => journals.value.filter((j: UiJournal) => !isImportedJournal(j)).map((j) => j.journalId));
+const visibleIds = computed(() => journals.value.filter((j: Journal) => !isImportedJournal(j)).map((j) => j.journalId));
 
 const selectedJournals = computed(() =>
   journals.value.filter((j) => selectedIds.value.has(j.journalId)),
@@ -4212,7 +4237,7 @@ function resetToDefaultOrder() {
  * 許可: export_exclude && deleted_at は許可（外部未出力のため）
  * フィルタ: showTrashed=ONは「追加表示型」（通常+ゴミ箱）
  */
-function getRowBackground(journal: UiJournal): string {
+function getRowBackground(journal: Journal): string {
   // 優先度1: ゴミ箱 → 濃グレー+白字（最優先）
   if (journal.deleted_at !== null) {
     return "bg-gray-600 text-white";
@@ -4237,7 +4262,7 @@ function getRowBackground(journal: UiJournal): string {
   return "bg-white";
 }
 
-function hasPastJournal(journal: UiJournal): boolean {
+function hasPastJournal(journal: Journal): boolean {
   return journals.value.findIndex((j) => j.journalId === journal.journalId) < 25;
 }
 
@@ -4245,7 +4270,7 @@ function hasPastJournal(journal: UiJournal): boolean {
  * ドットパスで値を取得（税区分名称・勘定科目名変換付き）
  * 動的パスアクセスのためkeyof型安全性は保証できない。内部でunknown経由でRecordにキャストする。
  */
-function getValue(obj: UiJournal | CombinedRow, path: string): unknown {
+function getValue(obj: Journal | CombinedRow, path: string): unknown {
   const raw = path
     .split(".")
     .reduce<unknown>(
@@ -4369,7 +4394,7 @@ function cancelHideNeedPopup() {
 const commentModalPinned = ref(false);
 let commentHoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
-function hoverOpenCommentModal(journal: UiJournal) {
+function hoverOpenCommentModal(journal: Journal) {
   if (commentModalPinned.value) return;
   if (commentHoverCloseTimer) {
     clearTimeout(commentHoverCloseTimer);
@@ -4402,20 +4427,20 @@ function cancelHoverCloseCommentModal() {
   }
 }
 
-function hasAnyStaffNote(journal: UiJournal): boolean {
+function hasAnyStaffNote(journal: Journal): boolean {
   if (!journal.staff_notes) return false;
   return STAFF_NOTE_KEYS.some((key) => journal.staff_notes?.[key]?.enabled);
 }
 
-function getStaffNoteEnabled(journal: UiJournal, key: StaffNoteKey): boolean {
+function getStaffNoteEnabled(journal: Journal, key: StaffNoteKey): boolean {
   return journal.staff_notes?.[key]?.enabled ?? false;
 }
 
-function getStaffNoteText(journal: UiJournal, key: StaffNoteKey): string {
+function getStaffNoteText(journal: Journal, key: StaffNoteKey): string {
   return journal.staff_notes?.[key]?.text ?? "";
 }
 
-function getStaffNoteChatworkUrl(journal: UiJournal, key: StaffNoteKey): string {
+function getStaffNoteChatworkUrl(journal: Journal, key: StaffNoteKey): string {
   return journal.staff_notes?.[key]?.chatworkUrl ?? "";
 }
 

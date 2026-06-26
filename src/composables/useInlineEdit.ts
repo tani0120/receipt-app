@@ -15,15 +15,14 @@
 
 import { ref, nextTick } from 'vue'
 import type { ShallowRef, ComputedRef } from 'vue'
-import type { JournalPhase5Mock, JournalEntryLine } from '@/types/journal_phase5_mock.type'
-import type { UiJournal } from '@/types/journal-ui.types'
-import type { ConfirmedJournalEntry } from '@/types/confirmed_journal.type'
+import type { JournalEntryLine } from '@/types/domain-journal'
+import type { Journal } from '@/types/journal.type'
 import type { Account } from '@/types/shared-account'
 
 // ────── 型定義 ──────
 
 /** getCombinedRowsの行型 */
-export type UiEntryLine = JournalEntryLine | ConfirmedJournalEntry
+export type UiEntryLine = JournalEntryLine
 export type CombinedRow = { debit: UiEntryLine | null; credit: UiEntryLine | null }
 
 /** Undoスナップショット */
@@ -45,10 +44,10 @@ export interface EditingCellInfo {
 
 /** composable初期化パラメータ */
 export interface UseInlineEditOptions {
-  journals: ShallowRef<UiJournal[]>
+  journals: ShallowRef<Journal[]>
   updateJournalField: (journalId: string, patch: Record<string, unknown>, options?: { silent?: boolean }) => void
   accounts: ComputedRef<Account[]>
-  assertEditableJournal: (journal: UiJournal, caller: string) => journal is JournalPhase5Mock
+  assertEditableJournal: (journal: Journal, caller: string) => journal is Journal
 }
 
 // ────── composable ──────
@@ -82,7 +81,7 @@ export function useInlineEdit(options: UseInlineEditOptions) {
     if (idx < 0) return
     const parsed: unknown = JSON.parse(snap.json)
     if (!parsed || typeof parsed !== 'object' || !('journalId' in parsed)) return
-    const restored: JournalPhase5Mock = parsed as JournalPhase5Mock
+    const restored: Journal = parsed as Journal
     journals.value[idx] = restored
     // 復元後の全フィールドをPATCH送信
     updateJournalField(snap.journalId, {
@@ -201,7 +200,7 @@ export function useInlineEdit(options: UseInlineEditOptions) {
     }
 
     // patch構築（直接変更せずupdateJournalFieldに委譲）
-    const patch: Partial<JournalPhase5Mock> = {}
+    const patch: Partial<Journal> = {}
 
     // journal-level（keyにドットなし）
     if (!e.colKey.includes('.')) {
@@ -222,7 +221,7 @@ export function useInlineEdit(options: UseInlineEditOptions) {
         if (field) {
           const entry = row[sideStr]
           if (entry) {
-            setEntryField(entry as JournalEntryLine, field, val)
+            setEntryField(entry, field, val)
           }
         }
       }
@@ -294,7 +293,7 @@ export function useInlineEdit(options: UseInlineEditOptions) {
   }
 
   /** 借方/貸方行の結合（テーブル行展開） */
-  function getCombinedRows(journal: UiJournal): CombinedRow[] {
+  function getCombinedRows(journal: Journal): CombinedRow[] {
     const maxRows = Math.max(journal.debit_entries.length, journal.credit_entries.length)
     return Array.from({ length: maxRows }, (_, i) => ({
       debit: journal.debit_entries[i] || null,
@@ -303,7 +302,7 @@ export function useInlineEdit(options: UseInlineEditOptions) {
   }
 
   /** 複合仕訳判定（1対N or N対N） */
-  function isCompoundJournal(journal: UiJournal): boolean {
+  function isCompoundJournal(journal: Journal): boolean {
     return journal.debit_entries.length > 1 || journal.credit_entries.length > 1
   }
 

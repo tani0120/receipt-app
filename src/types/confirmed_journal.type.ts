@@ -1,4 +1,9 @@
 /**
+ * @deprecated Journal（統一仕訳型。journal.type.ts）導入後は新規利用禁止。
+ * 既存コードの移行完了後（Phase 3）に本ファイルを削除予定。
+ *
+ * 新規コードでは import type { Journal } from '@/types/journal.type' を使用すること。
+ *
  * 確定済み仕訳型定義（T-03）
  *
  * 設計根拠: docs/genzai/25_past_journal.md §4

@@ -11,11 +11,12 @@ import { ref } from "vue";
 import { useDraggable } from "@/composables/useDraggable";
 import { modalDrag } from "@/utils/modalDrag";
 import { UI_MSG } from "@/constants/uiMessages";
+import type { Journal } from "@/types/journal.type";
+
 import type { StaffNoteKey } from "@/types/staff_notes";
-import type { JournalPhase5Mock } from "@/types/journal_phase5_mock.type";
 
 const props = defineProps<{
-  journal: JournalPhase5Mock | null;
+  journal: Journal | null;
   author: string;
   staffList: string[];
 }>();
@@ -67,7 +68,7 @@ const staffNoteConfig: Record<
   },
 };
 
-function getStaffNoteEnabled(journal: JournalPhase5Mock, key: StaffNoteKey): boolean {
+function getStaffNoteEnabled(journal: Journal, key: StaffNoteKey): boolean {
   return journal.staff_notes?.[key]?.enabled ?? false;
 }
 </script>

@@ -8,11 +8,18 @@
  *   journal-list-row.ts は「表示行の判別共用体」を定義する責務。
  *   本ファイルは「ConfirmedJournalをUI向けに加工した結果」の型を定義する責務。
  *   UI専用アダプタ型はドメイン型（domain-journal.ts）には置かない。
+ *
+ * Phase 1: Journal（統一仕訳型）を追加。
+ *   Phase 2で NormalizedConfirmedJournal / JournalPhase5Mock を廃止予定。
  */
 
 import type { ConfirmedJournal } from './confirmed_journal.type'
 import type { JournalPhase5Mock, JournalLabelMock } from './journal_phase5_mock.type'
+import type { Journal } from './journal.type'
 import type { StaffNotes } from './staff_notes'
+
+// Journal（統一仕訳型）の再export（他ファイルがjournal-ui.types.tsから参照できるようにする）
+export type { Journal }
 
 // ============================================================
 // § NormalizedConfirmedJournal
@@ -20,6 +27,8 @@ import type { StaffNotes } from './staff_notes'
 //   UI互換デフォルト値を付与した結果の型。
 //   ConfirmedJournal固有フィールド（imported_at等）を保持しつつ、
 //   テンプレートが期待するフィールド（labels, status等）も持つ。
+//
+//   @deprecated Phase 2で廃止予定。Journal（統一仕訳型）に統合。
 // ============================================================
 
 export interface NormalizedConfirmedJournal extends ConfirmedJournal {
@@ -57,6 +66,10 @@ export interface NormalizedConfirmedJournal extends ConfirmedJournal {
 // § UiJournal — 仕訳一覧表示用の判別共用体
 //   journals shallowRef の型。
 //   isImportedJournal() で NormalizedConfirmedJournal にnarrow可能。
+//
+//   Phase 1: Journal（統一仕訳型）を追加。
+//   Phase 2完了後: UiJournal = Journal に単純化予定。
 // ============================================================
 
-export type UiJournal = JournalPhase5Mock | NormalizedConfirmedJournal
+export type UiJournal = JournalPhase5Mock | NormalizedConfirmedJournal | Journal
+
