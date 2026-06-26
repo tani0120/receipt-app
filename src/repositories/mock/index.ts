@@ -33,6 +33,7 @@ import { mockTaxMasterRepo } from './taxMaster.repository.mock'
 import { mockLeadRepo } from './lead.repository.mock'
 import { mockLearningRuleRepo } from './learningRule.repository.mock'
 import { mockIndustryVectorRepo } from './industryVector.repository.mock'
+import { mockPipelineRepo } from './pipeline.repository.mock'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /**
@@ -146,5 +147,6 @@ export function createMockRepositories(): Repositories {
     journal: {
       createJournals: async () => { throw new Error('mockJournalRepo.createJournals not implemented') },
     },
+    pipeline: mockPipelineRepo,
   }
 }

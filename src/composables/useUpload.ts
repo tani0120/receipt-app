@@ -3,26 +3,29 @@
  *
  * 責務:
  *   - ファイル追加 / 削除 / 撮り直し
- *   - previewExtract API呼出 + 結果マッピング（重複チェック含む）
+ *   - チャンクアップロード（512KB単位）+ ハッシュ重複検知
  *   - スライディングウィンドウ（同時4件）
  *   - プレビュー選択
  *   - 送付確定 / リセット
  *   - PC/モバイル自動判定
+ *
+ * B-3: AI処理（previewExtract）を廃止。アップロードは「ファイル受け渡し」のみ。
+ *       AI仕訳生成はB-4で確定送信時に実行する。
  */
 
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
-import { analyzeReceipt, type ReceiptAnalysisResult, type AnalyzeOptions } from '@/api/services/receiptService'
 import { errorGuideMessage } from '@/constants/validationMessages'
 import { useDocuments } from '@/composables/useDocuments'
 import { useCurrentUser } from '@/composables/useCurrentUser'
-import type { DocEntry, DocSource, DocStatus } from '@/repositories/types'
+import type { DocEntry } from '@/repositories/types'
 import { SOURCE_TYPE_LABELS } from '@/constants/vendorOptions'
 import { UI_MSG } from '@/constants/uiMessages'
+import { createRepositories } from '@/repositories'
 
 // ===== 型定義（統一） =====
 
-export type UploadStatus = 'queued' | 'uploading' | 'analyzing' | 'ok' | 'error'
+export type UploadStatus = 'queued' | 'uploading' | 'ok' | 'error'
 
 export interface UploadEntry {
   id: string
@@ -39,22 +42,9 @@ export interface UploadEntry {
   // タイムスタンプ（ソート安定化用）
   addedAt: number           // Date.now()。投入時刻
   completedAt: number | null // 処理完了時刻（ok/error確定時）
-  // previewExtract結果
-  date: string | null
-  amount: number | null
-  vendor: string | null
-  supplementary: boolean
-  sourceType: string | null        // 証票種別（例: 'receipt', 'bank_statement'）
-  lineItemsCount: number           // 行データ件数（通帳/クレカ: N行）
-  warning: string | null           // 警告（OK判定だが注意が必要）
-  // メトリクス（PC版バッジ表示用）
-  metrics: ReceiptAnalysisResult['metrics'] | null
-  lineItems: ReceiptAnalysisResult['lineItems'] | null
   // 重複チェック
   isDuplicate: boolean
   hash: string | null
-  documentCount: number            // 証票枚数（previewExtract API出力。2以上は複数証票警告）
-  lite: boolean             // 軽量モード（AI分類スキップ）
   /** サーバー保存先URL（/api/pipeline/file/{clientId}/{savedName}）。リロード後も有効 */
   fileUrl: string | null
 }
@@ -76,22 +66,16 @@ function getMemoryMB(): number | null {
   return performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) : null
 }
 
-/** チェックポイント送信（sendBeacon: クラッシュ直前でも送信される可能性が高い） */
+/** チェックポイント送信（sendBeacon経由: クラッシュ直前でも送信される可能性が高い） */
 function sendCheckpoint(name: string, extra?: Record<string, unknown>) {
-  const data = JSON.stringify({
+  const repos = createRepositories()
+  repos.pipeline.sendMetricsBeacon({
     mode: 'checkpoint',
     fileName: name,
     memMB: getMemoryMB(),
     ts: Date.now(),
     ...extra,
   })
-  if (navigator.sendBeacon) {
-    navigator.sendBeacon('/api/pipeline/metrics', new Blob([data], { type: 'application/json' }))
-  } else {
-    fetch('/api/pipeline/metrics', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: data,
-    }).catch(() => {})
-  }
 }
 
 export const sourceTypeLabel = (v: string) => SOURCE_TYPE_LABELS[v] ?? v
@@ -130,35 +114,18 @@ async function uploadChunked(
   documentId: string,
   clientId: string,
 ): Promise<{ fileHash?: string; thumbnail?: string; isDuplicate?: boolean; fileUrl?: string }> {
+  const repos = createRepositories()
   const totalSize = file.size
 
   // チャンク送信（512KBずつ。メモリに全体を乗せない）
   for (let offset = 0; offset < totalSize; offset += CHUNK_SIZE) {
     const end = Math.min(offset + CHUNK_SIZE, totalSize)
     const chunk = file.slice(offset, end)
-    const res = await fetch('/api/pipeline/upload-chunk', {
-      method: 'POST',
-      headers: {
-        'X-Upload-Id': uploadId,
-        'Content-Type': 'application/octet-stream',
-      },
-      body: chunk,
-    })
-    if (!res.ok) {
-      throw new Error(`${UI_MSG.チャンク送信失敗} ${res.status} (offset=${offset})`)
-    }
+    await repos.pipeline.uploadChunk(chunk, uploadId)
   }
 
   // 全チャンク送信完了 → サーバーに結合+ハッシュ+サムネイル依頼
-  const completeRes = await fetch('/api/pipeline/upload-complete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ uploadId, filename, documentId, clientId }),
-  })
-  if (!completeRes.ok) {
-    throw new Error(`${UI_MSG.アップロード完了失敗} ${completeRes.status}`)
-  }
-  return await completeRes.json()
+  return await repos.pipeline.uploadComplete({ uploadId, filename, documentId, clientId })
 }
 
 // ===== composable本体 =====
@@ -174,20 +141,11 @@ export function useUpload() {
   // route.nameから権限（role）・端末（device）を導出
   const role = String(route.name ?? '').toLowerCase().includes('guest') ? 'guest' : 'staff'
 
-  // アップロード実行者情報（スタッフ時のみ個人特定。ゲスト時はnull）
-  const { currentStaffId, userName: staffName, currentEmail } = useCurrentUser()
 
   // デバイスは画面幅から自動判定
   const isMobile = ref(window.innerWidth < MOBILE_BREAKPOINT)
   const device = computed(() => isMobile.value ? 'mobile' : 'pc')
-  const analyzeOpts = computed<AnalyzeOptions>(() => ({
-    clientId, role, device: device.value,
-    uploadedBy: {
-      staffId: role === 'staff' ? currentStaffId.value : null,
-      staffName: role === 'staff' ? staffName.value : null,
-      email: role === 'staff' ? currentEmail.value : null,
-    },
-  }))
+
 
   // リサイズ監視
   const onResize = () => { isMobile.value = window.innerWidth < MOBILE_BREAKPOINT }
@@ -198,6 +156,8 @@ export function useUpload() {
   const entries = ref<UploadEntry[]>([])
   const showComplete = ref(false)
   const confirmedCount = ref(0)
+  /** 重複スキップ件数 */
+  const skippedCount = ref(0)
 
   // プレビュー用（PC）
   const selectedId = ref<string | null>(null)
@@ -214,7 +174,7 @@ export function useUpload() {
   const counts = computed(() => ({
     ok:         entries.value.filter(e => e.status === 'ok').length,
     error:      entries.value.filter(e => e.status === 'error').length,
-    processing: entries.value.filter(e => e.status === 'uploading' || e.status === 'analyzing').length,
+    processing: entries.value.filter(e => e.status === 'uploading').length,
     queued:     entries.value.filter(e => e.status === 'queued').length,
     pending:    pendingFiles.value.length,  // 内部キュー待ち
   }))
@@ -248,8 +208,8 @@ export function useUpload() {
       const done = counts.value.ok + counts.value.error
       return `${total}${UI_MSG.枚中}${done}${UI_MSG.処理完了ラベル} (${progressPct.value}%)`
     }
-    if (counts.value.error) return `${entries.value.length}${UI_MSG.枚を送付する}（${counts.value.error}${UI_MSG.件エラーあり}`
-    return `${counts.value.ok}${UI_MSG.枚を送付する}`
+    if (counts.value.error) return `${entries.value.length}${UI_MSG.枚を送信する}（${counts.value.error}${UI_MSG.件エラーあり}`
+    return `${counts.value.ok}${UI_MSG.枚を送信する}`
   })
 
   // ===== 画像サムネイル生成 + 圧縮（フラグで切替可能） =====
@@ -270,7 +230,7 @@ export function useUpload() {
     thumbnailHQ: string | null  // PC用高解像度プレビュー（800px、50KB程度。モバイルではnull）
     originalName: string
     originalSize: number
-    lite?: boolean       // 軽量モードフラグ（processCompressQueueで設定）
+
   }
 
   /** ファイル種別に応じたサムネイルSVGを返す */
@@ -436,7 +396,7 @@ export function useUpload() {
   )
 
   // ===== 圧縮キュー（1枚ずつImage()デコード → 元File即解放） =====
-  interface RawQueueItem { file: File; lite: boolean }
+  interface RawQueueItem { file: File }
   const rawQueue: RawQueueItem[] = []    // 未圧縮の元File（一時的に保持）
   let compressing = false
   const pendingFiles = ref<CompressedFile[]>([])  // 圧縮済み（軽量）
@@ -480,7 +440,7 @@ export function useUpload() {
 
     const batchStart = performance.now()
     const batchCount = rawQueue.length
-    const batchMode = rawQueue[0]?.lite ? 'lite' : 'advanced'
+
     const batchEntryIds: string[] = []  // C1: このバッチのentry IDを追跡
 
     if (isMobile.value) {
@@ -505,19 +465,8 @@ export function useUpload() {
           errorReason: null,
           addedAt: Date.now(),
           completedAt: null,
-          date: null,
-          amount: null,
-          vendor: null,
-          supplementary: false,
-          sourceType: null,
-          lineItemsCount: 0,
-          warning: null,
-          metrics: null,
-          lineItems: null,
           isDuplicate: false,
-          documentCount: 1,
           hash: null,
-          lite: item.lite ?? false,
           fileUrl: null,
         }
         batchEntryIds.push(entry.id)
@@ -527,7 +476,7 @@ export function useUpload() {
         await new Promise<void>(resolve => {
           const onComplete = () => {
             const e = entries.value.find(x => x.id === entry.id)
-            if (e && e.status !== 'queued' && e.status !== 'uploading' && e.status !== 'analyzing') {
+            if (e && e.status !== 'queued' && e.status !== 'uploading') {
               resolve()
             } else {
               setTimeout(onComplete, 100)
@@ -551,13 +500,13 @@ export function useUpload() {
           const compStart = performance.now()
           const compressed = await compressAndThumbnail(item.file)
           sendCheckpoint('PC圧縮完了', { file: item.file.name, compMs: Math.round(performance.now() - compStart) })
-          return { ...compressed, lite: item.lite }
+          return compressed
         }))
         pendingFiles.value.push(...results)
         processQueue()
         // C1: PC版ではprocessQueueでentryが作られるので、直後にIDを収集
         entries.value.forEach(e => {
-          if (e.status === 'queued' || e.status === 'uploading' || e.status === 'analyzing') {
+          if (e.status === 'queued' || e.status === 'uploading') {
             if (!batchEntryIds.includes(e.id)) {
               batchEntryIds.push(e.id)
             }
@@ -572,7 +521,7 @@ export function useUpload() {
           const checkDone = () => {
             const processing = entries.value.filter(e =>
               batchEntryIds.includes(e.id)
-              && (e.status === 'queued' || e.status === 'uploading' || e.status === 'analyzing'),
+              && (e.status === 'queued' || e.status === 'uploading'),
             )
             if (processing.length === 0) {
               resolve()
@@ -587,22 +536,18 @@ export function useUpload() {
 
     const batchEnd = performance.now()
     const wallMs = Math.round(batchEnd - batchStart)
-    console.log(`[batch完了] ${batchMode} ${batchCount}枚 壁時計=${wallMs}ms (${(wallMs/1000).toFixed(1)}秒)`)
-    // バッチ壁時計メトリクスをサーバーに送信（UA+メモリ含む）
-    fetch('/api/pipeline/metrics', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: `batch_${batchMode}`, fileName: `${batchCount}枚`, totalMs: wallMs, memMB: getMemoryMB(), ua: navigator.userAgent }),
-    }).catch(() => {})
+    console.log(`[batch完了] ${batchCount}枚 壁時計=${wallMs}ms (${(wallMs/1000).toFixed(1)}秒)`)
+    // メトリクス送信
+    const repos = createRepositories()
+    repos.pipeline.sendMetrics({ mode: 'upload', fileName: `${batchCount}枚`, totalMs: wallMs, memMB: getMemoryMB(), ua: navigator.userAgent })
 
     compressing = false
   }
 
   // ===== ファイル追加（rawQueueに入れて即座に圧縮開始） =====
-  const addFiles = (fileList: File[], opts?: { lite?: boolean }) => {
-    const lite = opts?.lite ?? false
-    sendCheckpoint('addFiles', { count: fileList.length, lite, device: device.value })
-    rawQueue.push(...fileList.map(f => ({ file: f, lite })))
+  const addFiles = (fileList: File[]) => {
+    sendCheckpoint('addFiles', { count: fileList.length, device: device.value })
+    rawQueue.push(...fileList.map(f => ({ file: f })))
     processCompressQueue()
   }
 
@@ -637,19 +582,8 @@ export function useUpload() {
         errorReason: null,
         addedAt: Date.now(),
         completedAt: null,
-        date: null,
-        amount: null,
-        vendor: null,
-        supplementary: false,
-        sourceType: null,
-        lineItemsCount: 0,
-        warning: null,
-        metrics: null,
-        lineItems: null,
         isDuplicate: false,
-        documentCount: 1,
         hash: null,
-        lite: item.lite ?? false,
         fileUrl: null,
       }
       entries.value.push(entry)
@@ -664,104 +598,67 @@ export function useUpload() {
     const t0 = performance.now()
     // デバッグ情報（スマホ実機でも確認可能にする）
     const fileDebug = `[${e.file.name}] mime=${e.file.type || '(空)'} size=${e.file.size}`
-    console.log(`[processOne開始] ${fileDebug} lite=${e.lite}`)
+    console.log(`[processOne開始] ${fileDebug}`)
 
     e.status = 'uploading'
 
-    // 軽量モード: setTimeoutスキップ（不要な待ちを排除）
-    // 通常モードも人工遅延は不要（API呼び出し自体にI/O時間がある）
-
-    // E1対策: 処理中に削除された場合はAPI呼び出しをスキップ（Geminiコスト節約）
+    // E1対策: 処理中に削除された場合はアップロードをスキップ
     if (!entries.value.find(x => x.id === id)) {
-      console.log(`[processOne中断] ${fileDebug} → 削除済み。API呼び出しスキップ`)
+      console.log(`[processOne中断] ${fileDebug} → 削除済み。アップロードスキップ`)
       return
     }
 
-    // 軽量モード: AI分類スキップ。チャンクアップロード（512KB単位）でメモリスパイク防止。
-    if (e.lite) {
-      try {
-        // チャンクアップロード（File.slice 512KB × N回。メモリに全体を乗せない）
-        sendCheckpoint('chunk-upload前', { file: e.fileName, size: e.fileSize, chunks: Math.ceil(e.fileSize / CHUNK_SIZE) })
-        const t1 = performance.now()
-        const data = await uploadChunked(e.file, e.documentId, e.fileName, e.documentId, clientId)
-        const t2 = performance.now()
-        sendCheckpoint('chunk-upload後', { file: e.fileName, uploadMs: Math.round(t2-t1) })
-
-        // サーバーから受信: ハッシュ、サムネイル、重複フラグ
-        if (data.fileHash) {
-          e.hash = data.fileHash
-        }
-        if (data.thumbnail) {
-          e.previewUrl = data.thumbnail  // サーバー生成サムネイルで置換
-        }
-        e.isDuplicate = data.isDuplicate ?? false
-        e.fileUrl = data.fileUrl ?? null
-        // クライアント側でも既存entriesとの重複確認
-        if (e.hash && !e.isDuplicate) {
-          e.isDuplicate = entries.value.some(x => x.id !== e.id && x.hash === e.hash)
-        }
-
-        const tEnd = performance.now()
-        console.log(`[processOne軽量] ${fileDebug} 合計=${(tEnd-t0).toFixed(0)}ms chunk-upload=${(t2-t1).toFixed(0)}ms dup=${e.isDuplicate}`)
-        // メトリクス送信
-        fetch('/api/pipeline/metrics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'lite-chunked', fileName: e.fileName, totalMs: Math.round(tEnd-t0), uploadMs: Math.round(t2-t1), isDuplicate: e.isDuplicate, memMB: getMemoryMB() }) }).catch(() => {})
-      } catch (err) {
-        console.warn(`[processOne軽量] エラー:`, err)
-      }
-      e.status = 'ok'
-      e.completedAt = Date.now()
-      e.file = null
-      // fileUrlはサーバーに保存済みなので維持（送付時に使用）
-      processQueue()
-      return
-    }
-
+    // チャンクアップロード（512KB単位）でメモリスパイク防止
     try {
-      e.status = 'analyzing'
-      const tApi = performance.now()
-      const result = await analyzeReceipt(e.file, { ...analyzeOpts.value, documentId: e.documentId })
-      const tApiEnd = performance.now()
+      sendCheckpoint('chunk-upload前', { file: e.fileName, size: e.fileSize, chunks: Math.ceil(e.fileSize / CHUNK_SIZE) })
+      const t1 = performance.now()
+      const data = await uploadChunked(e.file, e.documentId, e.fileName, e.documentId, clientId)
+      const t2 = performance.now()
+      sendCheckpoint('chunk-upload後', { file: e.fileName, uploadMs: Math.round(t2-t1) })
 
-      console.log(`[processOne高度] ${fileDebug} 合計=${(tApiEnd-t0).toFixed(0)}ms API=${(tApiEnd-tApi).toFixed(0)}ms ok=${result.ok} supplementary=${result.supplementary ?? false}`)
-      // メトリクス送信（メモリ含む）
-      fetch('/api/pipeline/metrics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'advanced', fileName: e.fileName, totalMs: Math.round(tApiEnd-t0), apiMs: Math.round(tApiEnd-tApi), isDuplicate: false, memMB: getMemoryMB() }) }).catch(() => {})
-
-      if (result.ok) {
-        e.status = 'ok'
-        e.date = result.date
-        e.amount = result.amount
-        e.vendor = result.vendor
-        e.supplementary = result.supplementary ?? false
-        e.sourceType = result.metrics?.source_type ?? null
-        e.lineItemsCount = result.lineItems?.length ?? 0
-        e.warning = result.warning ?? null
-        e.metrics = result.metrics ?? null
-        e.lineItems = result.lineItems ?? null
-        e.isDuplicate = result.isDuplicate ?? false
-        e.hash = result.fileHash ?? null
-        e.documentCount = result.documentCount ?? 1
-        e.fileUrl = result.fileUrl ?? null
-
-        // 補助対象の場合、デバッグ用にerrorReasonにファイル情報を保存
-        if (e.supplementary) {
-          e.errorReason = `${UI_MSG.参照資料} ${fileDebug}`
-        }
-      } else {
-        e.status = 'error'
-        e.errorReason = result.errorReason
-        e.sourceType = result.metrics?.source_type ?? null
-        e.warning = result.warning ?? null
-        e.metrics = result.metrics ?? null
-        e.lineItems = null
-        e.hash = result.fileHash ?? null
-        e.fileUrl = result.fileUrl ?? null
+      // サーバーから受信: ハッシュ、サムネイル、重複フラグ
+      if (data.fileHash) {
+        e.hash = data.fileHash
       }
+      if (data.thumbnail) {
+        e.previewUrl = data.thumbnail  // サーバー生成サムネイルで置換
+      }
+      e.isDuplicate = data.isDuplicate ?? false
+      e.fileUrl = data.fileUrl ?? null
+      // クライアント側でも既存entriesとの重複確認
+      if (e.hash && !e.isDuplicate) {
+        e.isDuplicate = entries.value.some(x => x.id !== e.id && x.hash === e.hash)
+      }
+      // doc-storeの既存ファイルとの重複確認（送付前に警告表示）
+      if (e.hash && !e.isDuplicate) {
+        const { allDocuments, loaded, refresh } = useDocuments()
+        // allDocumentsが未ロードならサーバーから取得を待つ
+        if (!loaded.value) {
+          await refresh()
+        }
+        const existingHashes = new Set(
+          allDocuments.value.map(d => d.fileHash).filter(Boolean)
+        )
+        if (existingHashes.has(e.hash)) {
+          e.isDuplicate = true
+          console.log(`[processOne] doc-store既存重複検出: ${e.fileName} hash=${e.hash.slice(0, 12)}...`)
+        }
+      }
+
+      const tEnd = performance.now()
+      console.log(`[processOne完了] ${fileDebug} 合計=${(tEnd-t0).toFixed(0)}ms chunk-upload=${(t2-t1).toFixed(0)}ms dup=${e.isDuplicate}`)
+      // メトリクス送信
+      createRepositories().pipeline.sendMetrics({ mode: 'upload', fileName: e.fileName, totalMs: Math.round(tEnd-t0), uploadMs: Math.round(t2-t1), isDuplicate: e.isDuplicate, memMB: getMemoryMB() })
     } catch (err) {
-      // API通信失敗・例外時（スマホで確認可能）
+      // アップロード失敗・例外時（スマホで確認可能）
       const msg = err instanceof Error ? err.message : String(err)
       console.error(`[processOne例外] ${fileDebug} error=${msg}`)
       e.status = 'error'
       e.errorReason = `${UI_MSG.通信エラーラベル} ${msg} ${fileDebug}`
+    }
+
+    if (e.status !== 'error') {
+      e.status = 'ok'
     }
 
     // ★ 完了タイムスタンプ記録
@@ -851,19 +748,8 @@ export function useUpload() {
         errorReason: null,
         addedAt: Date.now(),
         completedAt: null,
-        date: null,
-        amount: null,
-        vendor: null,
-        supplementary: false,
-        sourceType: null,
-        lineItemsCount: 0,
-        warning: null,
-        metrics: null,
-        lineItems: null,
         isDuplicate: false,
-        documentCount: 1,
         hash: null,
-        lite: old.lite,
         fileUrl: null,
       }
       processQueue()
@@ -889,7 +775,7 @@ export function useUpload() {
       docEntries.push({
         id: e.documentId,
         clientId,
-        source: (role === 'guest' ? 'guest-upload' : 'staff-upload') as DocSource,
+        source: role === 'guest' ? 'guest-upload' : 'staff-upload',
         fileName: e.fileName,
         fileType: e.mimeType,
         fileSize: e.fileSize,
@@ -897,7 +783,7 @@ export function useUpload() {
         driveFileId: null,
         thumbnailUrl: e.fileUrl ? `${e.fileUrl}` : e.previewUrl,
         previewUrl: e.fileUrl || null,
-        status: 'pending' as DocStatus,
+        status: 'pending',
         receivedAt: new Date(e.completedAt ?? Date.now()).toISOString(),
         batchId: null,
         journalId: null,
@@ -906,45 +792,18 @@ export function useUpload() {
         updatedAt: null,
         statusChangedBy: null,
         statusChangedAt: null,
-        // AI分類結果（previewExtract APIで取得済みの場合に保持。軽量モード時はすべてnull）
-        aiDate: e.date ?? null,
-        aiAmount: e.amount ?? null,
-        aiVendor: e.vendor ?? null,
-        aiSourceType: e.sourceType ?? null,
-        aiDirection: e.metrics?.direction ?? null,
-        aiDescription: e.metrics?.description ?? null,
-        aiPreviewExtractReason: e.metrics?.preview_extract_reason ?? null,
-        aiLineItems: e.lineItems ?? null,
-        aiLineItemsCount: e.lineItemsCount,
-        aiSupplementary: e.supplementary,
-        aiDocumentCount: e.documentCount ?? 1,
-        aiWarning: e.warning ?? null,
-        aiProcessingMode: e.metrics?.processing_mode ?? null,
-        aiFallbackApplied: e.metrics?.fallback_applied ?? false,
-        aiMetrics: e.metrics ? {
-          source_type_confidence: e.metrics.source_type_confidence,
-          direction_confidence: e.metrics.direction_confidence,
-          duration_ms: e.metrics.duration_ms,
-          prompt_tokens: e.metrics.prompt_tokens,
-          completion_tokens: e.metrics.completion_tokens,
-          thinking_tokens: e.metrics.thinking_tokens,
-          token_count: e.metrics.token_count,
-          cost_yen: e.metrics.cost_yen,
-          model: e.metrics.model,
-          original_size_kb: e.metrics.original_size_kb,
-          processed_size_kb: e.metrics.processed_size_kb,
-          preprocess_reduction_pct: e.metrics.preprocess_reduction_pct,
-        } : null,
         // 重複検出フラグ（T-AUD-5: UploadEntry→DocEntry変換時にコピー）
         isDuplicate: e.isDuplicate,
       })
     }
 
     // 2. documentStoreにPOST（useDocuments composable経由）
+    let added = 0
     try {
       const { addDocuments } = useDocuments()
-      const added = addDocuments(docEntries)
-      console.log(`[useUpload] handleConfirm: ${added}件保存(role=${role})`)
+      added = addDocuments(docEntries)
+      const skipped = docEntries.length - added
+      console.log(`[useUpload] handleConfirm: ${added}件保存, ${skipped}件重複スキップ (role=${role})`)
     } catch (err) {
       console.error('[useUpload] documentStore保存エラー:', err)
       alert(UI_MSG.データ保存失敗ネットワーク)
@@ -957,15 +816,17 @@ export function useUpload() {
     await refresh()
 
     isConfirming.value = false
-    confirmedCount.value = counts.value.ok + counts.value.error
+
+    // 4. 統合モーダル表示（全件成功/一部重複/全件重複を1つのモーダルで表示）
+    const skipped = docEntries.length - added
+    confirmedCount.value = added
+    skippedCount.value = skipped
     showComplete.value = true
   }
 
   /** サーバー側の重複ハッシュ記録をクリア（DL-038） */
   const clearServerHashes = () => {
-    fetch('/api/pipeline/hashes', { method: 'DELETE' }).catch(() => {
-      // サーバー未起動時は無視（モックモードでは不要）
-    })
+    createRepositories().pipeline.clearHashes()
   }
 
   const resetAll = () => {
@@ -1093,6 +954,8 @@ export function useUpload() {
     sortedEntries,
     showComplete,
     confirmedCount,
+    /** 重複スキップ件数 */
+    skippedCount,
     retakeTargetIdx,
     // プレビュー
     selectedId,

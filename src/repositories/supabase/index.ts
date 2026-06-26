@@ -46,6 +46,7 @@ import { httpAdminRepo } from '../mock/admin.repository.http'
 import { httpClientTaxCategoryRepo } from '../mock/clientTaxCategory.repository.http'
 import { httpLeadExtraRepo } from '../mock/leadExtra.repository.http'
 import { httpJournalRepo } from '../mock/journal.repository.http'
+import { httpPipelineRepo } from '../mock/pipeline.repository.http'
 
 /**
  * Supabase版Repositories生成
@@ -82,5 +83,6 @@ export function createSupabaseRepositories(): Repositories {
     clientTaxCategory: httpClientTaxCategoryRepo,
     leadExtra: httpLeadExtraRepo,
     journal: httpJournalRepo,
+    pipeline: httpPipelineRepo,
   }
 }

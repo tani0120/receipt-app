@@ -109,7 +109,7 @@ export function useDriveDocuments(
 
     isLoading.value = true;
     try {
-      const res = await fetch(`/api/drive/files?folderId=${encodeURIComponent(folderId)}&withThumbnails=true`);
+      const res = await fetch(`/api/drive/files?folderId=${encodeURIComponent(folderId)}&withThumbnails=true&clientId=${encodeURIComponent(clientId.value)}`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: res.statusText }));
         throw new Error(data.error || `HTTP ${res.status}`);
@@ -135,7 +135,7 @@ export function useDriveDocuments(
         fileName: f.name,
         fileType: f.mimeType || 'application/octet-stream',
         fileSize: f.size || 0,
-        fileHash: null,
+        fileHash: (f as unknown as { fileHash: string | null }).fileHash ?? null,
         driveFileId: f.id,
         thumbnailUrl: `/api/drive/preview/${f.id}?clientId=${encodeURIComponent(clientId.value)}`,
         previewUrl: `/api/drive/preview/${f.id}?clientId=${encodeURIComponent(clientId.value)}`,

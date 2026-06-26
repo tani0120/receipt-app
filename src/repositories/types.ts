@@ -990,6 +990,36 @@ export type DocumentRepository = {
 }
 
 // ============================================================
+// § PipelineRepository（アップロード・メトリクス）
+// ============================================================
+
+/** チャンクアップロード完了時のサーバー応答 */
+export interface UploadCompleteResult {
+  fileHash?: string
+  thumbnail?: string
+  isDuplicate?: boolean
+  fileUrl?: string
+}
+
+/**
+ * パイプラインRepository（アップロード・メトリクス・ハッシュ管理）
+ *
+ * useUpload.tsの直接fetchをRepository経由に移行。
+ * Supabase移行時にStorage APIに差し替え可能。
+ */
+export interface PipelineRepository {
+  /** チャンクアップロード（512KB単位のバイナリ送信） */
+  uploadChunk: (chunk: Blob, uploadId: string) => Promise<void>
+  /** アップロード完了通知（サーバーでチャンク結合+ハッシュ+サムネイル生成） */
+  uploadComplete: (params: { uploadId: string; filename: string; documentId: string; clientId: string }) => Promise<UploadCompleteResult>
+  /** メトリクス送信（fire-and-forget） */
+  sendMetrics: (data: Record<string, unknown>) => void
+  /** メトリクスビーコン送信（sendBeacon経由。クラッシュ時にも送信される可能性が高い） */
+  sendMetricsBeacon: (data: Record<string, unknown>) => void
+  /** サーバー側の重複ハッシュ記録をクリア */
+  clearHashes: () => void
+}
+
 // § Repositories集約型（factory関数の戻り値型）
 // ============================================================
 
@@ -1044,6 +1074,8 @@ export type Repositories = {
   leadExtra: LeadExtraRepository
   /** 仕訳（P3-8） */
   journal: JournalRepository
+  /** パイプライン（アップロード・メトリクス・ハッシュ） */
+  pipeline: PipelineRepository
 }
 
 // ============================================================
@@ -1406,7 +1438,7 @@ export type DriveRepository = {
   /** フォルダ内ファイル一覧取得 */
   getFiles(folderId: string, withThumbnails?: boolean): Promise<unknown>
   /** フォルダ作成 */
-  createFolder(data: { clientId: string; parentFolderId?: string }): Promise<unknown>
+  createFolder(data: { clientId: string; parentFolderId?: string; folderName: string; sharedEmail?: string }): Promise<unknown>
   /** フォルダ存在確認 */
   checkFolder(folderId: string): Promise<unknown>
   /** ファイルアップロード */

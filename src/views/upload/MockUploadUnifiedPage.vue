@@ -51,7 +51,7 @@
               :class="[
                 { 'file-item--selected': selectedId === f.id },
                 dupGroupInfo(f)?.colorClass ?? '',
-                { 'dup-child': dupGroupInfo(f) && dupGroupInfo(f)!.pos >= 2 },
+                { 'dup-child': f.isDuplicate },
               ]"
               @click="selectFile(f)"
             >
@@ -59,20 +59,10 @@
               <div class="file-info">
                 <p class="file-name">{{ f.fileName }}</p>
                 <p class="file-size">{{ formatSize(f.fileSize) }}</p>
-                <div class="previewExtract-badges" v-if="previewExtractBadgeVisible(f)">
-                  <span v-if="f.status === 'uploading' || f.status === 'analyzing'" class="badge badge--loading">⏳ アップロード中...</span>
-                  <span v-else-if="f.status === 'error'" class="badge badge--error">⚠️ {{ f.errorReason ?? '失敗' }}</span>
-                  <template v-else-if="f.status === 'ok' && f.supplementary">
-                    <span class="badge badge--supplementary">📎 このまま送付してください（参照資料）</span>
-                  </template>
-                  <template v-else-if="f.status === 'ok'">
-                    <span v-if="f.warning" class="badge badge--warning">⚠ {{ f.warning }}</span>
-                    <span v-if="f.metrics?.source_type" class="badge badge--type" :class="'badge--mode-' + (f.metrics.processing_mode ?? 'auto')">{{ sourceTypeLabel(f.metrics.source_type) }}</span>
-                    <span v-if="f.lineItems?.length" class="badge badge--lines">📊 {{ f.lineItems.length }}行</span>
-                    <span v-if="f.vendor" class="badge badge--issuer">{{ f.vendor }}</span>
-                    <span v-if="f.amount" class="badge badge--amount">¥{{ f.amount.toLocaleString() }}</span>
-                    <span v-if="f.date" class="badge badge--date">{{ f.date }}</span>
-                  </template>
+                <!-- アップロードステータス（B-3: AIバッジ廃止。ステータスのみ表示） -->
+                <div class="upload-status-badges" v-if="f.status === 'uploading' || f.status === 'error'">
+                  <span v-if="f.status === 'uploading'" class="badge badge--loading">⏳ {{ UI_MSG.アップロード中 }}</span>
+                  <span v-else-if="f.status === 'error'" class="badge badge--error">⚠️ {{ f.errorReason ?? UI_MSG.エラー }}</span>
                 </div>
               </div>
               <!-- 重複グループバッジ（ゴミ箱の左横） -->
@@ -182,16 +172,16 @@
             >
               <div class="mobile-card-thumb">
                 <!-- 処理中/待機中のみimg表示。完了後はテキスト化でRenderer負荷ゼロ → クラッシュ防止 -->
-                <img v-if="r.status === 'queued' || r.status === 'uploading' || r.status === 'analyzing'" :src="r.previewUrl" :alt="`領収書 ${idx + 1}`" class="mobile-card-img" loading="lazy" />
+                <img v-if="r.status === 'queued' || r.status === 'uploading'" :src="r.previewUrl" :alt="`領収書 ${idx + 1}`" class="mobile-card-img" loading="lazy" />
                 <div v-else-if="r.status === 'ok'" class="mobile-card-done">✅</div>
                 <div v-else class="mobile-card-done mobile-card-done--error">⚠️</div>
 
                 <!-- オーバーレイ: 待機 -->
-                <div v-if="r.status === 'queued'" class="overlay overlay--queued"><span>待機中</span></div>
+                <div v-if="r.status === 'queued'" class="overlay overlay--queued"><span>{{ UI_MSG.待機中 }}</span></div>
                 <!-- オーバーレイ: 処理中 -->
-                <div v-if="r.status === 'uploading' || r.status === 'analyzing'" class="overlay overlay--processing">
+                <div v-if="r.status === 'uploading'" class="overlay overlay--processing">
                   <div class="spinner"></div>
-                  <span>{{ r.status === 'uploading' ? UI_MSG.送信中 : UI_MSG.アップロード中 }}</span>
+                  <span>{{ UI_MSG.送信中 }}</span>
                 </div>
 
                 <!-- 上部ステータスバー（完了後に表示） -->
@@ -201,9 +191,6 @@
                 <div v-else-if="r.isDuplicate && dupGroupInfo(r)" class="status-bar status-bar--dup">⚠ 重複{{ dupGroupInfo(r)!.groupLabel }} ({{ dupGroupInfo(r)!.pos }}/{{ dupGroupInfo(r)!.size }})</div>
                 <div v-else-if="r.isDuplicate" class="status-bar status-bar--dup">⚠ {{ MSG_DUPLICATE_SHORT }}</div>
                 <!-- 警告 -->
-                <div v-else-if="r.status === 'ok' && r.warning" class="status-bar status-bar--warn">⚠ {{ r.warning }}</div>
-                <!-- OK（参照資料） -->
-                <div v-else-if="r.status === 'ok' && r.supplementary" class="status-bar status-bar--ok">✅ 送信OK（参照資料）</div>
                 <!-- OK -->
                 <div v-else-if="r.status === 'ok'" class="status-bar status-bar--ok">✅ 送信OK</div>
               </div>
@@ -213,12 +200,7 @@
               <!-- カード下部（高さ統一） -->
               <div class="mobile-card-footer">
                 <p class="card-footer-text">
-                  <template v-if="r.status === 'ok' && r.supplementary">{{ r.fileName }}</template>
-                  <template v-else-if="r.status === 'ok'">
-                    <template v-if="r.vendor">{{ r.vendor }}</template>
-                    <template v-else-if="r.lineItemsCount > 0">{{ r.lineItemsCount }}行</template>
-                    <template v-else>{{ r.fileName }}</template>
-                  </template>
+                  <template v-if="r.status === 'ok'">{{ r.fileName }}</template>
                   <template v-else-if="r.status === 'error'">{{ r.errorReason ?? UI_MSG.エラー }}</template>
                   <template v-else>{{ idx + 1 }}</template>
                 </p>
@@ -271,18 +253,42 @@
       </div>
     </footer>
 
-    <!-- ===== 完了モーダル ===== -->
+    <!-- ===== 送信結果モーダル（統合） ===== -->
     <transition name="modal">
-      <div v-if="showComplete" class="modal-overlay" @click.self="showComplete = false">
+      <div v-if="showComplete" class="modal-overlay" @click.self="resetAll">
         <div class="modal-content">
-          <div class="modal-emoji">🎉</div>
-          <h2 class="modal-title">{{ UI_MSG.アップロード完了タイトル }}</h2>
-          <p class="modal-desc">
-            <strong>{{ confirmedCount }}{{ UI_MSG.件ラベル }}</strong>{{ UI_MSG.送付完了メッセージ }}
-          </p>
+          <!-- アイコン: 全件重複なら⚠️、それ以外は🎉 -->
+          <div class="modal-emoji">{{ confirmedCount === 0 ? '⚠️' : '🎉' }}</div>
+          <!-- タイトル -->
+          <h2 class="modal-title">
+            {{ confirmedCount === 0 ? UI_MSG.送信結果タイトル全件重複 : UI_MSG.送信結果タイトル成功 }}
+          </h2>
+          <!-- 本文 -->
+          <div class="modal-result-body">
+            <!-- 全件成功 -->
+            <p v-if="skippedCount === 0" class="modal-desc">
+              {{ UI_MSG.送信結果全件成功(confirmedCount) }}
+            </p>
+            <!-- 全件重複 -->
+            <p v-else-if="confirmedCount === 0" class="modal-desc">
+              {{ UI_MSG.送信結果全件重複(skippedCount) }}
+            </p>
+            <!-- 一部重複 -->
+            <template v-else>
+              <div class="modal-result-row modal-result-row--ok">
+                <span class="modal-result-label">✅ {{ UI_MSG.送信結果送信完了ラベル }}</span>
+                <span class="modal-result-count">{{ confirmedCount }}{{ UI_MSG.件ラベル短 }}</span>
+              </div>
+              <div class="modal-result-row modal-result-row--dup">
+                <span class="modal-result-label">⚠ {{ UI_MSG.送信結果重複スキップラベル }}</span>
+                <span class="modal-result-count">{{ skippedCount }}{{ UI_MSG.件ラベル短 }}</span>
+              </div>
+            </template>
+          </div>
+          <p v-if="role === 'guest' && confirmedCount > 0" class="modal-thanks">{{ UI_MSG.送信ありがとう }}</p>
           <div class="modal-confirm-btns modal-complete-btns">
-            <button class="modal-btn modal-btn--primary" @click="goToJournalList">{{ UI_MSG.仕訳一覧で確認ボタン }}</button>
-            <button class="modal-btn modal-btn--cancel" @click="resetAll">{{ UI_MSG.続けてアップロードボタン }}</button>
+            <button v-if="role !== 'guest' && confirmedCount > 0" class="modal-btn modal-btn--primary" @click="goToJournalList">{{ UI_MSG.仕訳一覧で確認ボタン }}</button>
+            <button class="modal-btn" :class="(role === 'guest' || confirmedCount === 0) ? 'modal-btn--primary' : 'modal-btn--cancel'" @click="resetAll">{{ UI_MSG.続けてアップロードボタン }}</button>
           </div>
         </div>
       </div>
@@ -331,7 +337,7 @@
 
     <!-- 隠しinput -->
     <input ref="fileInputRef" type="file" multiple accept="image/*,.pdf,.csv,.xlsx,.xls" class="hidden-input" @change="handleFileInput" />
-    <input ref="advancedInputRef" type="file" multiple accept="image/*,.pdf,.csv,.xlsx,.xls" class="hidden-input" @change="handleFileInputAdvanced" />
+    <input ref="advancedInputRef" type="file" multiple accept="image/*,.pdf,.csv,.xlsx,.xls" class="hidden-input" @change="handleFileInput" />
     <input ref="cameraInputRef" type="file" accept="image/*" capture="environment" class="hidden-input" @change="handleCameraInput" />
     <input ref="retakeInputRef" type="file" accept="image/*,.pdf" class="hidden-input" @change="handleRetakeInput" />
   </div>
@@ -344,7 +350,6 @@ import PortalHeader from '@/components/PortalHeader.vue'
 import { useClients } from '@/features/client-management/composables/useClients'
 import {
   useUpload,
-  sourceTypeLabel,
   formatSize,
   isImageFile,
   isPdfFile,
@@ -354,6 +359,7 @@ import type { UploadEntry } from '@/composables/useUpload'
 import { MSG_DUPLICATE_SHORT } from '@/constants/validationMessages'
 import { UI_MSG } from '@/constants/uiMessages'
 import { getClientDisplayName } from '@/constants/clientOptions'
+import { useDocuments } from '@/composables/useDocuments'
 
 /** File System Access API（Chrome 86+）の型宣言 */
 interface FilePickerHandle {
@@ -366,11 +372,11 @@ declare global {
 }
 
 const {
-  entries, sortedEntries, showComplete, confirmedCount,
+  entries, sortedEntries, showComplete, confirmedCount, skippedCount,
   selectedId, selectedUrl, selectedEntry, selectFile,
   counts, progressPct, canConfirm, hasErrors, guideMessage, confirmLabel,
   addFiles, removeFile, triggerRetake, handleRetake, handleConfirm, resetAll, cleanup,
-  clientId, isMobile,
+  clientId, role, isMobile,
 } = useUpload()
 
 const { clients } = useClients()
@@ -396,7 +402,7 @@ const MAX_VISIBLE_DONE = 6 // 完了済みの最大表示数（2列×3行）
 const visibleMobileEntries = computed(() => {
   // 処理中/待機中は全表示
   const active = sortedEntries.value.filter(e =>
-    e.status === 'queued' || e.status === 'uploading' || e.status === 'analyzing'
+    e.status === 'queued' || e.status === 'uploading'
   )
   // 完了済み（OK/エラー）は最新N件のみ
   const done = sortedEntries.value.filter(e =>
@@ -428,18 +434,10 @@ const howToItems = [
 ]
 
 // イベントハンドラ（PC/モバイル統合）
-// スマホメインボタン: 軽量モード（AI分類スキップ）
-// PC / スマホ「高度な処理」: 通常モード（AI分類あり）
+// B-3: AI処理廃止。全ファイルをチャンクアップロード + ハッシュ重複検知のみ。
 const handleFileInput = (e: Event) => {
   const files = Array.from((e.target as HTMLInputElement).files ?? [])
-  if (files.length) addFiles(files, { lite: isMobile.value })
-  ;(e.target as HTMLInputElement).value = ''
-}
-
-// 高度な処理（AI分類あり）ボタン用ハンドラ
-const handleFileInputAdvanced = (e: Event) => {
-  const files = Array.from((e.target as HTMLInputElement).files ?? [])
-  if (files.length) addFiles(files, { lite: false })
+  if (files.length) addFiles(files)
   ;(e.target as HTMLInputElement).value = ''
 }
 
@@ -461,7 +459,7 @@ async function pickFiles() {
       for (const handle of handles) {
         files.push(await handle.getFile())
       }
-      if (files.length) addFiles(files, { lite: isMobile.value })
+      if (files.length) addFiles(files)
     } catch (err) {
       // ユーザーがキャンセルした場合は無視
       if ((err as Error).name !== 'AbortError') {
@@ -476,7 +474,7 @@ async function pickFiles() {
     input.type = 'file'
     input.onchange = (e) => {
       const files = Array.from((e.target as HTMLInputElement).files ?? [])
-      if (files.length) addFiles(files, { lite: isMobile.value })
+      if (files.length) addFiles(files)
     }
     input.click()
   }
@@ -484,14 +482,14 @@ async function pickFiles() {
 
 const handleCameraInput = (e: Event) => {
   const files = Array.from((e.target as HTMLInputElement).files ?? [])
-  if (files.length) addFiles(files, { lite: true })
+  if (files.length) addFiles(files)
   ;(e.target as HTMLInputElement).value = ''
 }
 
 const handleDrop = (e: DragEvent) => {
   dragging.value = false
   const files = Array.from(e.dataTransfer?.files ?? [])
-  if (files.length) addFiles(files, { lite: isMobile.value })
+  if (files.length) addFiles(files)
 }
 
 
@@ -500,19 +498,14 @@ const handleRetakeInput = (e: Event) => {
   handleRetake(e)
 }
 
-// previewExtract結果バッジ表示判定（重複子(pos>=2)のみ非表示。親(pos=1)は表示）
-const previewExtractBadgeVisible = (f: UploadEntry) => {
-  if (f.status !== 'uploading' && f.status !== 'analyzing' && f.status !== 'ok' && f.status !== 'error') return false
-  const dg = dupGroupInfo(f)
-  if (dg && dg.pos >= 2) return false
-  return true
-}
+
 
 // PC版ステータスアイコン（OK=✓、エラー=△!、重複=重A/B、処理中=拡張子アイコン）
 const statusIconClass = (f: UploadEntry) => {
   if (f.status === 'error') return 'file-status-icon--error'
   const dg = dupGroupInfo(f)
   if (dg) return `file-status-icon--dup file-status-icon--${dg.colorClass}`
+  if (f.isDuplicate) return 'file-status-icon--dup'
   if (f.status === 'ok') return 'file-status-icon--ok'
   return 'file-status-icon--pending'
 }
@@ -520,6 +513,7 @@ const statusIconText = (f: UploadEntry) => {
   if (f.status === 'error') return '△!'
   const dg = dupGroupInfo(f)
   if (dg) return `${UI_MSG.重複接頭}${dg.groupLabel}`
+  if (f.isDuplicate) return UI_MSG.重複接頭
   if (f.status === 'ok') return '✓'
   return fileIconEmoji(f.fileName)
 }
@@ -600,14 +594,22 @@ const doRemove = () => {
   }
 }
 
-// エラー・重複子の一括削除
+// エラー・重複の一括削除
 const bulkDeleteTargets = computed(() => {
+  // doc-store既存ハッシュSet（登録済みファイルとの照合用）
+  const { allDocuments } = useDocuments()
+  const docStoreHashes = new Set(
+    allDocuments.value.map(d => d.fileHash).filter(Boolean)
+  )
+
   return entries.value.filter(e => {
     // エラーファイル
     if (e.status === 'error') return true
-    // 重複子（pos>=2）
+    // バッチ内重複子（pos>=2）
     const dg = dupGroupInfo(e)
     if (dg && dg.pos >= 2) return true
+    // doc-store既存重複（親含め全件が削除対象。doc-storeにあるなら今回アップ分は不要）
+    if (e.isDuplicate && e.hash && docStoreHashes.has(e.hash)) return true
     return false
   })
 })
@@ -804,9 +806,8 @@ const doBulkDelete = () => {
 }
 .file-remove:hover { background: #fee2e2; color: #ef4444; }
 
-/* ===== previewExtract結果バッジ（コンテナクエリ対応） ===== */
-.badge-container { container-type: inline-size; }
-.previewExtract-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+/* ===== アップロードステータスバッジ ===== */
+.upload-status-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .badge {
   display: inline-flex; align-items: center;
   padding: clamp(1px, 0.5cqi, 2px) clamp(4px, 2cqi, 8px);
@@ -815,23 +816,7 @@ const doBulkDelete = () => {
 }
 .badge--loading { background: #fff3cd; color: #856404; animation: pulse 1.5s infinite; }
 .badge--error { background: #f8d7da; color: #721c24; }
-.badge--supplementary { background: #dbeafe; color: #1d4ed8; font-weight: 700; }
-.badge--type { color: #fff; }
-.badge--mode-auto { background: linear-gradient(135deg, #667eea, #764ba2); }
-.badge--mode-manual { background: linear-gradient(135deg, #f093fb, #f5576c); }
-.badge--mode-excluded { background: #6c757d; }
-.badge--issuer { background: #f0f0f0; color: #333; }
-.badge--amount { background: #e8f5e9; color: #2e7d32; font-weight: 700; }
-.badge--date { background: #e8f5e9; color: #2e7d32; }
-.badge--time { background: #f5f5f5; color: #999; font-size: clamp(8px, 2cqi, 10px); }
-.badge--lines { background: #ede9fe; color: #6d28d9; font-weight: 700; }
-.badge--warning { background: #fff7ed; color: #c2410c; font-weight: 700; border: 1px solid #fed7aa; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-/* コンテナクエリ: 親幅が狭い場合バッジを縮小 */
-@container (max-width: 300px) {
-  .badge { font-size: 9px; padding: 1px 5px; }
-}
 
 /* ===== PC: プレビュー ===== */
 .preview-panel {
@@ -1247,6 +1232,17 @@ const doBulkDelete = () => {
 .modal-title { font-size: clamp(16px, 4vw, 20px); font-weight: 800; color: #1e293b; margin: 0 0 8px; }
 .modal-desc { font-size: clamp(12px, 3vw, 14px); color: #64748b; margin: 0 0 clamp(16px, 4vw, 24px); }
 .modal-desc strong { color: #3b82f6; }
+.modal-thanks { font-size: clamp(13px, 3vw, 15px); color: #059669; font-weight: 600; margin: -8px 0 clamp(16px, 4vw, 24px); }
+/* 統合モーダル結果行 */
+.modal-result-body { margin: 0 0 clamp(16px, 4vw, 24px); width: 100%; }
+.modal-result-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px; border-radius: 8px; margin: 6px 0; font-size: 15px; font-weight: 600;
+}
+.modal-result-row--ok { background: #ecfdf5; color: #059669; }
+.modal-result-row--dup { background: #fef2f2; color: #dc2626; }
+.modal-result-label { display: flex; align-items: center; gap: 4px; }
+.modal-result-count { font-size: 18px; font-weight: 700; }
 .modal-btn {
   width: 100%; padding: clamp(10px, 2.5vw, 14px);
   border-radius: clamp(10px, 2vw, 14px); border: none;

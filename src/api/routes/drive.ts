@@ -18,7 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 
 import { join } from 'path';
 import { apiError, apiCatchError } from '../helpers/apiError';
 import { 必須, 未検出, 環境設定エラー, ファイル必須, 仕訳外ゼロ, 根拠資料ゼロ } from '../../constants/apiMessages';
-import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, revokeFolderPermission } from '../services/drive/driveService';
+import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, revokeFolderPermission, downloadAndProcessDriveFile } from '../services/drive/driveService';
 import { enqueueMigrationJobs, getJobStatus, getExcludedCount, getExcludedHistory, getExcludedJobs, getMigrationJobs, getSupportingJobs, getSupportingCount, getSupportingHistory } from '../services/migration/migrationRepository';
 import { generateExcludedZip } from '../services/migration/excludedZipService';
 import { searchSupporting, saveSupportingMeta, getSupportingMetaCount } from '../services/migration/supportingSearchService';
@@ -47,6 +47,25 @@ app.get('/files', async (c) => {
       // Phase A-2: サムネイルbase64埋め込み付き（Drive借景方式）
       const files = await getFilesWithThumbnails(folderId, sharedDriveId);
       console.log(`[drive/route] GET /files (withThumbnails): ${files.length}件返却`);
+
+      // clientIdがあればファイルDL + SHA-256ハッシュ計算（重複検知用）
+      const clientId = c.req.query('clientId');
+      if (clientId) {
+        const filesWithHash = await Promise.all(
+          files.map(async (f) => {
+            try {
+              const dlResult = await downloadAndProcessDriveFile(
+                f.id, f.name, f.mimeType || 'application/octet-stream', clientId,
+              );
+              return { ...f, fileHash: dlResult.fileHash };
+            } catch {
+              return { ...f, fileHash: null };
+            }
+          }),
+        );
+        return c.json({ files: filesWithHash });
+      }
+
       return c.json({ files });
     } else {
       // 従来動作: メタデータのみ（既存のフロント呼び出しに影響なし）
@@ -667,6 +686,31 @@ app.post('/revoke-permission', async (c) => {
     await revokeFolderPermission(body.folderId, body.email);
     console.log(`[drive/route] POST /revoke-permission: ${body.email} → ${body.folderId.slice(0, 12)}...`);
     return c.json({ ok: true, email: body.email });
+  } catch (err) {
+    return apiCatchError(c, err);
+  }
+});
+
+// ============================================================
+// POST /poll/:clientId — Driveフォルダ手動ポーリング（再取得ボタン用）
+// Drive新規ファイルをdoc-storeに自動登録
+// ============================================================
+
+import { pollSingleClient } from '../services/drive/drivePollingWorker';
+
+app.post('/poll/:clientId', async (c) => {
+  const clientId = c.req.param('clientId');
+  if (!clientId) {
+    return apiError(c, 400, 必須('clientId'));
+  }
+
+  try {
+    const result = await pollSingleClient(clientId);
+    if (result.エラー) {
+      return c.json({ ok: false, error: result.エラー, added: 0 });
+    }
+    console.log(`[drive/route] POST /poll/${clientId}: ${result.新規件数}件新規登録`);
+    return c.json({ ok: true, added: result.新規件数 });
   } catch (err) {
     return apiCatchError(c, err);
   }

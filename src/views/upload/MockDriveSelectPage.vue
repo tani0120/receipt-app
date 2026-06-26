@@ -30,12 +30,15 @@
         <button class="ds-submit-btn" :disabled="allDocsView.length === 0" @click="showCompleteModal = true">
           <i class="fa-solid fa-paper-plane"></i> 確定送信
         </button>
-        <button class="ds-import-btn" @click="handleReload" :disabled="isLoading" style="margin-left: 8px;">
-          <span class="ds-import-icon" :class="{ 'ds-importing': isLoading }">
+        <button class="ds-import-btn" @click="handleReloadFromPoll" :disabled="isLoading || isPolling" style="margin-left: 8px;">
+          <span class="ds-import-icon" :class="{ 'ds-importing': isLoading || isPolling }">
             <i class="fa-solid fa-arrows-rotate"></i>
           </span>
-          <span class="ds-import-label">{{ isLoading ? '取得中...' : '再取得' }}</span>
+          <span class="ds-import-label">{{ isPolling ? 'Drive確認中...' : isLoading ? '取得中...' : '再取得' }}</span>
         </button>
+        <transition name="poll-toast-fade">
+          <span v-if="pollToast" class="ds-poll-toast" :class="pollToastClass">{{ pollToast }}</span>
+        </transition>
       </div>
     </div>
 
@@ -396,8 +399,48 @@ const {
   markDirty,
 );
 
+// --- Driveポーリング + 再取得 ---
+const isPolling = ref(false);
+const pollToast = ref<string | null>(null);
+const pollToastClass = ref('');
+let pollToastTimer: ReturnType<typeof setTimeout> | null = null;
+
+const handleReloadFromPoll = async () => {
+  // 1. サーバー側でDriveフォルダをチェックし、新規ファイルをdoc-storeに登録
+  isPolling.value = true;
+  try {
+    const res = await fetch(`/api/drive/poll/${clientId.value}`, { method: 'POST' });
+    const data = await res.json() as { ok: boolean; added?: number; error?: string };
+
+    if (data.ok && data.added && data.added > 0) {
+      showPollToast(`✅ ${data.added}件の新規ファイルを登録`, 'success');
+    } else if (data.error) {
+      showPollToast(`⚠ ${data.error}`, 'warn');
+    } else {
+      showPollToast('✅ 新規ファイルなし', 'success');
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    showPollToast(`❌ ${msg}`, 'error');
+  } finally {
+    isPolling.value = false;
+  }
+
+  // 2. 画面データを再取得（Drive API + doc-store）
+  await handleReload();
+};
+
+function showPollToast(msg: string, type: 'success' | 'warn' | 'error') {
+  if (pollToastTimer) clearTimeout(pollToastTimer);
+  pollToast.value = msg;
+  pollToastClass.value = `ds-poll-toast--${type}`;
+  pollToastTimer = setTimeout(() => { pollToast.value = null; }, 4000);
+}
+
 // --- onMounted ---
 onMounted(async () => {
+  // 起動時にサーバー側ポーリングも実行（新規ファイルを自動検知）
+  fetch(`/api/drive/poll/${clientId.value}`, { method: 'POST' }).catch(() => {});
   await Promise.all([fetchDriveFiles(), fetchUploadedDocs()]);
   fetchExcludedCount();
   simulateLoad();
@@ -1096,5 +1139,23 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey));
   background: #f9fafb; color: #9ca3af; font-size: 12px; font-weight: 500;
   display: flex; align-items: center; gap: 6px;
   font-style: italic;
+}
+
+/* ポーリング結果トースト */
+.ds-poll-toast {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 12px; border-radius: 8px;
+  font-size: 12px; font-weight: 600;
+  margin-left: 8px; white-space: nowrap;
+}
+.ds-poll-toast--success { background: #dcfce7; color: #166534; }
+.ds-poll-toast--warn { background: #fef9c3; color: #854d0e; }
+.ds-poll-toast--error { background: #fee2e2; color: #991b1b; }
+
+.poll-toast-fade-enter-active, .poll-toast-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.poll-toast-fade-enter-from, .poll-toast-fade-leave-to {
+  opacity: 0;
 }
 </style>

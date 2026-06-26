@@ -210,6 +210,9 @@ import { startMigrationWorker, stopMigrationWorker } from './api/services/migrat
 // MF自動取得スケジューラ
 import { startMfSyncScheduler, stopMfSyncScheduler } from './api/services/mfSyncScheduler'
 
+// Driveポーリングワーカー（1時間バッチ）
+import { startDrivePollingWorker, stopDrivePollingWorker } from './api/services/drive/drivePollingWorker'
+
 // Keep-aliveタイマー（Cloud Runログ確認用）
 const heartbeatTimer = setInterval(() => {
     console.log('💓 Server heartbeat - still running')
@@ -226,6 +229,7 @@ function gracefulShutdown(signal: string) {
     clearInterval(heartbeatTimer)
     stopMigrationWorker()
     stopMfSyncScheduler()
+    stopDrivePollingWorker()
     httpServer.close(() => {
         console.log('✅ HTTP server closed')
         process.exit(0)
@@ -280,6 +284,8 @@ httpServer.on('listening', () => {
     })
     // MF自動取得スケジューラ起動
     startMfSyncScheduler()
+    // Driveポーリングワーカー起動
+    startDrivePollingWorker()
 })
 
 // SIGTERM（docker stop, Cloud Run）+ SIGINT（Ctrl+C, nodemon restart）の両方を処理

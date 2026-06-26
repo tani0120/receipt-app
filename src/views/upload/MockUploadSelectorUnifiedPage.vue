@@ -7,77 +7,100 @@
       <!-- ========== 左カラム: 顧問先招待フロー ========== -->
       <aside class="col-left">
 
-        <!-- ◆共有設定（上段カード） -->
-        <div class="share-card">
-          <div class="share-header">
-            <h2 class="share-title">◆ 共有設定</h2>
-            <transition name="badge-fade" mode="out-in">
-              <span v-if="currentStatus === 'active'" key="active" class="share-badge share-badge--active">
-                <span class="badge-dot badge-dot--green"></span>共有OK
-              </span>
-              <span v-else-if="currentStatus === 'revoked'" key="revoked" class="share-badge share-badge--revoked">
-                <span class="badge-dot badge-dot--red"></span>解除済
-              </span>
-              <span v-else key="none" class="share-badge share-badge--none">
-                <span class="badge-dot badge-dot--gray"></span>未設定
-              </span>
-            </transition>
-          </div>
-          <div class="share-segment">
-            <div class="share-segment-track">
-              <div
-                class="share-segment-indicator"
-                :class="currentStatus === 'active' ? 'indicator--right' : 'indicator--left'"
-              ></div>
-              <button
-                class="share-seg-btn"
-                :class="currentStatus !== 'active' ? 'share-seg--selected' : 'share-seg--dimmed'"
-                @click="setStatus('revoked')"
-              >共有停止</button>
-              <button
-                class="share-seg-btn"
-                :class="currentStatus === 'active' ? 'share-seg--selected' : 'share-seg--dimmed'"
-                @click="setStatus('active')"
-              >共有OKにする</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- ◆顧問先への招待（下段カード） -->
+        <!-- ◆顧問先への招待フロー（統合） -->
         <div class="flow-card">
-          <h2 class="col-title">◆ 顧問先への招待（PC・スマホ統合）</h2>
+          <h2 class="col-title">◆ 顧問先への招待フロー</h2>
 
-          <!-- ===== 招待フロー ===== -->
+          <!-- ===== 初回フロー ===== -->
           <div class="flow-section">
             <h3 class="flow-heading">【初回（はじめての登録）】</h3>
 
-            <!-- ① 招待リンク発行 -->
+            <!-- ① 共有設定 -->
             <div class="step">
               <span class="step-num">①</span>
               <div class="step-body">
-                <p class="step-title">招待リンクの発行</p>
-                <p class="step-note">PC独自システム用 + スマホDrive共有用の両方に対応</p>
-                <button class="invite-btn" @click="generateInvite">
-                  🔗 招待リンクを発行
-                </button>
-                <div class="url-box" v-if="inviteUrl">
-                  <span class="url-label">招待リンクURL：</span>
-                  <p class="url-note">🔀 ランダム生成しています。最新URL以外は無効になります。</p>
-                  <div class="url-row">
-                    <input class="url-input" :value="inviteUrl" readonly @click="selectAll" />
-                    <button class="copy-btn" :class="{ 'copy-btn--copied': copiedKey === 'invite' }" @click="copyText(inviteUrl, 'invite')">
-                      <span class="copy-icon" :class="{ 'copy-icon--pop': copiedKey === 'invite' }">📋</span>
-                      <span v-if="copiedKey === 'invite'" class="copy-toast">コピー済</span>
-                    </button>
+                <p class="step-title">共有設定</p>
+                <p class="step-note">顧問先がアクセスできるように共有を有効にする</p>
+                <div class="share-segment">
+                  <div class="share-segment-track">
+                    <div
+                      class="share-segment-indicator"
+                      :class="currentStatus === 'active' ? 'indicator--right' : 'indicator--left'"
+                    ></div>
+                    <button
+                      class="share-seg-btn"
+                      :class="currentStatus !== 'active' ? 'share-seg--selected' : 'share-seg--dimmed'"
+                      @click="setStatus('revoked')"
+                    >共有停止</button>
+                    <button
+                      class="share-seg-btn"
+                      :class="currentStatus === 'active' ? 'share-seg--selected' : 'share-seg--dimmed'"
+                      @click="setStatus('active')"
+                    >共有OKにする</button>
                   </div>
+                </div>
+                <transition name="badge-fade" mode="out-in">
+                  <span v-if="currentStatus === 'active'" key="active" class="share-badge share-badge--active">
+                    <span class="badge-dot badge-dot--green"></span>共有OK
+                  </span>
+                  <span v-else-if="currentStatus === 'revoked'" key="revoked" class="share-badge share-badge--revoked">
+                    <span class="badge-dot badge-dot--red"></span>解除済
+                  </span>
+                  <span v-else key="none" class="share-badge share-badge--none">
+                    <span class="badge-dot badge-dot--gray"></span>未設定
+                  </span>
+                </transition>
+              </div>
+            </div>
+            <div class="step-arrow">↓</div>
+
+            <!-- ② Googleドライブ発行 -->
+            <div class="step" :class="{ 'step--disabled': currentStatus !== 'active' }">
+              <span class="step-num">②</span>
+              <div class="step-body">
+                <p class="step-title">Googleドライブ発行</p>
+                <p class="step-note">顧問先と共有するGoogle Driveフォルダを作成</p>
+                <div v-if="hasDriveFolder" class="step-status step-status--ok">
+                  <span>🟢 発行済</span>
+                  <button class="drive-open-btn" @click="openDriveFolder">📂 フォルダを開く</button>
+                </div>
+                <div v-else>
+                  <span class="step-status step-status--ng">🔴 未発行</span>
+                  <button
+                    class="drive-create-btn"
+                    :disabled="isCreatingFolder || currentStatus !== 'active'"
+                    @click="createDriveFolder"
+                  >
+                    {{ isCreatingFolder ? UI_MSG.フォルダ作成中 : UI_MSG.フォルダ発行ボタン }}
+                  </button>
+                  <p v-if="currentStatus !== 'active'" class="step-lock-note">※ ①の共有設定を「共有OK」にしてください</p>
                 </div>
               </div>
             </div>
             <div class="step-arrow">↓</div>
 
-            <!-- ② 共有 -->
+            <!-- ③ 招待リンク発行 -->
+            <div class="step" :class="{ 'step--disabled': !canInvite }">
+              <span class="step-num">③</span>
+              <div class="step-body">
+                <p class="step-title">招待リンクの発行</p>
+                <p class="step-note">PC独自システム用 + スマホDrive共有用の両方に対応</p>
+                <button
+                  class="invite-btn"
+                  :disabled="!canInvite"
+                  @click="generateInvite"
+                >
+                  🔗 招待リンクを発行
+                </button>
+                <p v-if="!canInvite" class="step-lock-note">※ ①②を完了してください</p>
+                <p v-if="inviteUrl" class="invite-issued-note">✅ 発行済み <button class="invite-show-btn" @click="showInviteModal = true">リンクを確認</button></p>
+              </div>
+            </div>
+            <div class="step-arrow">↓</div>
+
+            <!-- ④ 送付 -->
             <div class="step">
-              <span class="step-num">②</span>
+              <span class="step-num">④</span>
               <div class="step-body">
                 <p class="step-title">招待リンクをチャットワーク等で送付</p>
                 <p class="step-note">ChatWork・LINE・メール等で顧問先に送る</p>
@@ -85,9 +108,9 @@
             </div>
             <div class="step-arrow">↓</div>
 
-            <!-- ③ 顧問先がGoogleでログイン -->
+            <!-- ⑤ 顧問先がGoogleでログイン -->
             <div class="step">
-              <span class="step-num">③</span>
+              <span class="step-num">⑤</span>
               <div class="step-body">
                 <p class="step-title">顧問先が「Googleでログイン」をタップ</p>
                 <div class="google-login-box">
@@ -117,9 +140,9 @@
             </div>
             <div class="step-arrow">↓</div>
 
-            <!-- ④ 自動で全部完了 -->
+            <!-- ⑥ 自動で全部完了 -->
             <div class="step">
-              <span class="step-num">④</span>
+              <span class="step-num">⑥</span>
               <div class="step-body">
                 <p class="step-title">自動で全部完了！</p>
                 <div class="auto-list">
@@ -133,7 +156,7 @@
                   </div>
                   <div class="auto-item">
                     <span class="auto-check">✅</span>
-                    <span>共有ドライブ: フォルダ作成 + 権限付与</span>
+                    <span>共有ドライブ: 権限付与</span>
                   </div>
                   <div class="auto-item">
                     <span class="auto-check">✅</span>
@@ -145,31 +168,6 @@
                     📬 登録が完了すると<strong>進捗管理画面</strong>に通知されます
                   </p>
                   <p class="notify-sub">（スタッフ側での追加作業は不要です）</p>
-                </div>
-              </div>
-            </div>
-            <div class="step-arrow">↓</div>
-
-            <!-- ⑤ 利用開始 -->
-            <div class="step">
-              <span class="step-num">⑤</span>
-              <div class="step-body">
-                <p class="step-title">利用開始</p>
-                <div class="usage-cards">
-                  <div class="usage-card usage-card--pc">
-                    <span class="usage-icon">💻</span>
-                    <div>
-                      <p class="usage-label">PC</p>
-                      <p class="usage-desc">ブックマーク → D&Dアップロード</p>
-                    </div>
-                  </div>
-                  <div class="usage-card usage-card--mobile">
-                    <span class="usage-icon">📱</span>
-                    <div>
-                      <p class="usage-label">スマホ</p>
-                      <p class="usage-desc">Googleドライブアプリ → 共有フォルダに写真アップロード</p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -210,19 +208,13 @@
               <p class="card-sub">Google Driveから取り込み</p>
               <span class="drive-status drive-status--ok">🟢 発行済</span>
             </button>
-            <!-- フォルダ未発行 → 発行ボタン表示 -->
+            <!-- フォルダ未発行 → 左カラム②で発行を案内 -->
             <div v-else class="sel-card card-drive-upload card-drive-upload--disabled">
               <div class="card-icon-area icon-drive-upload"><span>📱</span></div>
               <h3 class="card-label">スマホ用（ドライブ）</h3>
               <p class="card-sub">Google Driveから取り込み</p>
               <span class="drive-status drive-status--ng">🔴 未発行</span>
-              <button
-                class="drive-create-btn"
-                :disabled="isCreatingFolder"
-                @click.stop="createDriveFolder"
-              >
-                {{ isCreatingFolder ? UI_MSG.フォルダ作成中 : UI_MSG.フォルダ発行ボタン }}
-              </button>
+              <p class="card-lock-note">← 左の②で発行してください</p>
             </div>
           </div>
         </div>
@@ -265,6 +257,61 @@
       </section>
 
     </main>
+
+    <!-- ===== 招待リンクモーダル ===== -->
+    <teleport to="body">
+      <transition name="modal-fade">
+        <div v-if="showInviteModal" class="invite-modal-overlay" @click.self="showInviteModal = false">
+          <div class="invite-modal">
+            <div class="invite-modal-header">
+              <h3 class="invite-modal-title">🔗 招待リンク</h3>
+              <button class="invite-modal-close" @click="showInviteModal = false">✕</button>
+            </div>
+
+            <div class="invite-modal-body">
+              <!-- URL表示 -->
+              <div class="invite-modal-url-section">
+                <label class="invite-modal-label">招待リンクURL</label>
+                <div class="invite-modal-url-row">
+                  <input class="invite-modal-url-input" :value="inviteUrl" readonly @click="selectAll" />
+                  <button
+                    class="invite-modal-copy-btn"
+                    :class="{ 'invite-modal-copy-btn--copied': copiedKey === 'invite' }"
+                    @click="copyText(inviteUrl!, 'invite')"
+                  >
+                    {{ copiedKey === 'invite' ? '✅ コピー済' : '📋 コピー' }}
+                  </button>
+                </div>
+                <p class="invite-modal-url-note">🔀 ランダム生成しています。再発行すると前のURLは無効になります。</p>
+              </div>
+
+              <!-- 送付手順 -->
+              <div class="invite-modal-steps">
+                <p class="invite-modal-steps-title">📨 このリンクを顧問先に送ってください</p>
+                <ul class="invite-modal-steps-list">
+                  <li>ChatWork・LINE・メール等で送付</li>
+                  <li>顧問先が「Googleでログイン」をタップ</li>
+                  <li>PC独自システム + Driveの権限が<strong>自動で付与</strong>されます</li>
+                </ul>
+              </div>
+
+              <!-- 注意事項 -->
+              <div class="invite-modal-caution">
+                <p>⚠ このリンクは<strong>顧問先専用</strong>です。社内メンバーには共有しないでください。</p>
+              </div>
+            </div>
+
+            <div class="invite-modal-footer">
+              <button class="invite-modal-btn-secondary" @click="showInviteModal = false">閉じる</button>
+              <button class="invite-modal-btn-primary" @click="copyText(inviteUrl!, 'invite'); showInviteModal = false">
+                📋 コピーして閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </teleport>
+
   </div>
 </template>
 
@@ -291,6 +338,9 @@ const origin = window.location.origin
 // Drive共有フォルダの有無
 const hasDriveFolder = computed(() => !!clientData.value?.sharedFolderId)
 
+// 招待リンク発行可能条件: 共有OK + ドライブ発行済
+const canInvite = computed(() => currentStatus.value === 'active' && hasDriveFolder.value)
+
 // URL群（統合版: PC・スマホ共通）
 const staffPath       = `/upload/${clientId}/staff`
 const openDriveFolder = () => window.open(driveGuestUrl.value, '_blank')
@@ -314,7 +364,10 @@ const createDriveFolder = async () => {
 
   isCreatingFolder.value = true
   try {
-    const folderName = `${clientId}_${company}`
+    const code = clientData.value?.threeCode || clientId
+    // 法人: 3コード_会社名、個人事業/個人: 3コード_代表者名
+    const displayName = clientData.value?.type === 'corp' ? company : (clientData.value?.repName || company)
+    const folderName = `${code}_${displayName}`
     const sharedEmail = clientData.value?.sharedEmail || ''
     const data = await repos.drive.createFolder({ clientId, parentFolderId: undefined, folderName, sharedEmail: sharedEmail || undefined }) as { folderId: string }
     // useClientsのモジュールスコープrefを更新 → リアクティブに反映
@@ -390,6 +443,7 @@ async function setStatus(status: ShareStatus) {
 
 // 招待リンク（Repository経由で保存）
 const inviteUrl = ref<string | null>(null)
+const showInviteModal = ref(false)
 const generateInvite = async () => {
   try {
     const code = await saveInviteCode(clientId)
@@ -398,6 +452,8 @@ const generateInvite = async () => {
     if (!currentStatus.value) {
       await setStatus('pending')
     }
+    // モーダル表示
+    showInviteModal.value = true
   } catch (err) {
     alert('招待コードの生成に失敗しました')
     console.error('[upload-v2] 招待コード生成エラー:', err)
@@ -498,6 +554,36 @@ void driveGuestUrl.value
 .step-body { flex: 1; min-width: 0; }
 .step-title { font-size: 13px; font-weight: 700; color: #1e293b; margin: 3px 0 4px; }
 .step-note  { font-size: 11px; color: #64748b; margin: 2px 0 6px; }
+
+/* disabledステップ */
+.step--disabled { opacity: 0.5; pointer-events: none; }
+.step--disabled .step-num { color: #94a3b8; }
+.step-lock-note {
+  font-size: 10px; color: #f59e0b; font-weight: 600;
+  margin: 4px 0 0; padding: 3px 8px;
+  background: #fffbeb; border: 1px solid #fde68a;
+  border-radius: 6px; display: inline-block;
+}
+.card-lock-note {
+  font-size: 10px; color: #f59e0b; font-weight: 600;
+  margin: 6px 0 0;
+}
+
+/* ステップ内ステータス */
+.step-status { display: inline-block; font-size: 11px; font-weight: 700; margin: 4px 0; }
+.step-status--ok { color: #166534; }
+.step-status--ng { color: #dc2626; }
+
+/* ドライブ開くボタン */
+.drive-open-btn {
+  display: inline-block; margin-left: 8px;
+  padding: 4px 12px; border-radius: 8px;
+  border: 1px solid #e2e8f0; background: #f8fafc;
+  font-size: 11px; font-weight: 600; color: #334155;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.2s ease;
+}
+.drive-open-btn:hover { background: #e2e8f0; }
 
 .step-arrow {
   text-align: center; color: #cbd5e1;
@@ -923,5 +1009,119 @@ void driveGuestUrl.value
   color: #94a3b8;
   font-weight: 500;
 }
+
+/* ===== 招待リンクモーダル ===== */
+.invite-modal-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+}
+.invite-modal {
+  background: #fff; border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  width: 520px; max-width: 90vw;
+  font-family: 'Noto Sans JP', sans-serif;
+  animation: modal-pop 0.25s ease;
+}
+@keyframes modal-pop {
+  from { transform: scale(0.95); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.invite-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px 14px; border-bottom: 1px solid #e2e8f0;
+}
+.invite-modal-title { font-size: 16px; font-weight: 700; color: #1e293b; margin: 0; }
+.invite-modal-close {
+  background: none; border: none; font-size: 18px; color: #94a3b8;
+  cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  transition: all 0.15s;
+}
+.invite-modal-close:hover { background: #f1f5f9; color: #475569; }
+
+.invite-modal-body { padding: 20px 24px; }
+
+.invite-modal-label {
+  font-size: 11px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 8px; display: block;
+}
+.invite-modal-url-row {
+  display: flex; gap: 8px; align-items: stretch;
+}
+.invite-modal-url-input {
+  flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1;
+  border-radius: 10px; font-size: 13px; font-family: 'JetBrains Mono', monospace;
+  background: #f8fafc; color: #334155;
+  outline: none; transition: border-color 0.2s;
+}
+.invite-modal-url-input:focus { border-color: #3b82f6; }
+.invite-modal-copy-btn {
+  padding: 10px 18px; border-radius: 10px; border: none;
+  background: #2563eb; color: #fff; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+  transition: all 0.2s;
+}
+.invite-modal-copy-btn:hover { background: #1d4ed8; }
+.invite-modal-copy-btn--copied {
+  background: #16a34a;
+}
+.invite-modal-url-note {
+  font-size: 11px; color: #94a3b8; margin: 8px 0 0;
+}
+
+.invite-modal-steps {
+  margin-top: 18px; padding: 14px 16px;
+  background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px;
+}
+.invite-modal-steps-title {
+  font-size: 13px; font-weight: 700; color: #0369a1; margin: 0 0 8px;
+}
+.invite-modal-steps-list {
+  margin: 0; padding-left: 20px;
+  font-size: 12px; color: #334155; line-height: 1.8;
+}
+
+.invite-modal-caution {
+  margin-top: 14px; padding: 10px 14px;
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;
+  font-size: 11px; color: #92400e;
+}
+.invite-modal-caution p { margin: 0; }
+
+.invite-modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 24px 18px; border-top: 1px solid #e2e8f0;
+}
+.invite-modal-btn-secondary {
+  padding: 9px 20px; border-radius: 10px;
+  border: 1px solid #e2e8f0; background: #fff;
+  font-size: 13px; font-weight: 600; color: #475569;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.invite-modal-btn-secondary:hover { background: #f1f5f9; }
+.invite-modal-btn-primary {
+  padding: 9px 20px; border-radius: 10px; border: none;
+  background: #2563eb; color: #fff;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.invite-modal-btn-primary:hover { background: #1d4ed8; }
+
+/* モーダルtransition */
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.2s ease; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+
+/* 発行済みインライン表示 */
+.invite-issued-note {
+  font-size: 12px; color: #166534; font-weight: 600; margin: 6px 0 0;
+}
+.invite-show-btn {
+  background: none; border: none; color: #2563eb;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  text-decoration: underline; font-family: inherit;
+  padding: 0; margin-left: 6px;
+}
+.invite-show-btn:hover { color: #1d4ed8; }
 
 </style>

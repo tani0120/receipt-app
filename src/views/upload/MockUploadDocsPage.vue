@@ -238,10 +238,10 @@
       >
         <div class="bg-white rounded-3xl p-8 w-full max-w-sm text-center shadow-2xl">
           <div class="text-6xl mb-4">📨</div>
-          <h2 class="text-[18px] font-bold text-gray-800 mb-2">送付完了！</h2>
+          <h2 class="text-[18px] font-bold text-gray-800 mb-2">送信完了！</h2>
           <p class="text-[13px] text-gray-500 mb-2">
             <span class="font-bold text-blue-600">{{ confirmedCount }}件</span>
-            の送付が完了しました。
+            の送信が完了しました。
           </p>
           <p class="text-[11px] text-gray-400 mb-6">確認後、担当者よりご連絡します。</p>
           <button

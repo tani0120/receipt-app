@@ -66,9 +66,28 @@ import {
 // SHA-256重複チェック用（メモリ内Set。Supabase移行時はDB照合に差替）
 const knownFileHashes = new Set<string>();
 
-/** 重複ハッシュ記録をクリア（テスト・リセット用） */
+/** doc-storeの既存ファイルハッシュをknownFileHashesにロード */
+export async function loadKnownHashesFromDocStore(): Promise<void> {
+  // 動的importで循環参照回避
+  const { getDocuments } = await import('../documentsApi');
+  const docs = getDocuments();
+  let count = 0;
+  for (const d of docs) {
+    if (d.fileHash) {
+      knownFileHashes.add(d.fileHash);
+      count++;
+    }
+  }
+  console.log(`[pipeline] knownFileHashes: doc-storeから${count}件ロード`);
+}
+
+// 起動時にdoc-store既存ハッシュをロード
+loadKnownHashesFromDocStore();
+
+/** 重複ハッシュ記録をクリア → doc-store既存ハッシュを再ロード */
 export function clearKnownHashes(): void {
   knownFileHashes.clear();
+  loadKnownHashesFromDocStore();
 }
 
 /** 既知ハッシュかどうか確認（重複検出用） */

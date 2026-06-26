@@ -34,6 +34,7 @@ import { httpAdminRepo } from '../mock/admin.repository.http'
 import { httpClientTaxCategoryRepo } from '../mock/clientTaxCategory.repository.http'
 import { httpLeadExtraRepo } from '../mock/leadExtra.repository.http'
 import { httpJournalRepo } from '../mock/journal.repository.http'
+import { httpPipelineRepo } from '../mock/pipeline.repository.http'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /**
@@ -86,5 +87,6 @@ export function createHttpRepositories(): Repositories {
     clientTaxCategory: httpClientTaxCategoryRepo,
     leadExtra: httpLeadExtraRepo,
     journal: httpJournalRepo,
+    pipeline: httpPipelineRepo,
   }
 }
