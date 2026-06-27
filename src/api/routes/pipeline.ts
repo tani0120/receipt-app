@@ -5,14 +5,13 @@
  * 責務: リクエスト受付・バリデーション・レスポンス返却
  *
  * エンドポイント:
- *   POST /api/pipeline/preview-extract  — Step 0-1: source_type + direction判定（FormData受信）
- *   POST /api/pipeline/extract   — 将来用（line_items抽出）
+ *   POST /api/pipeline/first-ai  — 証票AI分類 + 仕訳行抽出（FormData受信）
  */
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
-import { 必須, FormData解析失敗, ファイル必須, ファイルサイズ超過, 非対応形式, 未検出, チャンク未検出, 未実装 } from '../../constants/apiMessages';
-import { previewExtractImage, clearKnownHashes, isKnownHash } from '../services/pipeline/previewExtract.service';
+import { 必須, FormData解析失敗, ファイル必須, ファイルサイズ超過, 非対応形式, 未検出, チャンク未検出 } from '../../constants/apiMessages';
+import { firstAiExtract, clearKnownHashes, isKnownHash } from '../services/pipeline/firstAi.service';
 import { createHash } from 'crypto';
 import { existsSync, mkdirSync, appendFileSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
@@ -65,11 +64,11 @@ async function withSemaphore<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 // ============================================================
-// POST /preview-extract — Step 0-1: 証票種別 + 仕訳方向判定（FormData受信）
+// POST /first-ai — Step 0-1: 証票種別 + 仕訳方向判定（FormData受信）
 // ============================================================
 
-app.post('/preview-extract', async (c) => {
-  console.log('[pipeline/route] POST /preview-extract 受信');
+app.post('/first-ai', async (c) => {
+  console.log('[pipeline/route] POST /first-ai 受信');
 
   // ━━ Phase 3: モックモード分岐（VITE_USE_MOCK=true時、AI呼び出しスキップ）━━
   // フロント側の分岐を廃止し、サーバー側で統一的にモック/本番を切り替える
@@ -132,7 +131,7 @@ app.post('/preview-extract', async (c) => {
       direction: 'expense',
       direction_confidence: 0.95,
       processing_mode: 'auto',
-      preview_extract_reason: UI_MSG.モック理由_AI呼出しスキップ,
+      first_ai_reason: UI_MSG.モック理由_AI呼出しスキップ,
       document_count: 1,
       document_count_reason: UI_MSG.モック理由_モックモード,
       description: `${mockVendor}${UI_MSG.モック購入接尾}`,
@@ -230,14 +229,14 @@ app.post('/preview-extract', async (c) => {
     // base64変換（サーバー側で実施。Gemini APIがbase64を要求するため）
     const base64 = buffer.toString('base64');
 
-    // タイムアウト付きでpreviewExtractImage呼出（30秒）
+    // タイムアウト付きでfirstAiExtract呼出（30秒）
     const timeoutMs = 30_000;
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error(`${UI_MSG.APIタイムアウト接頭}${timeoutMs / 1000}${UI_MSG.APIタイムアウト接尾}`)), timeoutMs)
     );
 
-    const previewExtractResult = await Promise.race([
-      previewExtractImage({
+    const firstAiResult = await Promise.race([
+      firstAiExtract({
         image: base64,
         mimeType,
         clientId,
@@ -247,8 +246,8 @@ app.post('/preview-extract', async (c) => {
       timeoutPromise,
     ]);
 
-    // previewExtractResultにfileUrlを付与して返す
-    return { ...previewExtractResult, fileUrl };
+    // firstAiResultにfileUrlを付与して返す
+    return { ...firstAiResult, fileUrl };
   });
 
   return c.json(result);
@@ -429,13 +428,6 @@ app.post('/upload-complete', async (c) => {
   });
 });
 
-// ============================================================
-// POST /extract — 将来用（line_items抽出）
-// ============================================================
-
-app.post('/extract', async (c) => {
-  return apiError(c, 501, 未実装('extract エンドポイント'));
-});
 
 // ============================================================
 // GET /health — パイプラインヘルスチェック

@@ -103,8 +103,8 @@ app.delete("/client/:clientId", (c) => {
 });
 
 // ============================================================
-// POST /clear-ai/:clientId — previewExtractデータ一括削除（確定送信後）
-// 設計方針: previewExtract.service.ts ヘッダー参照
+// POST /clear-ai/:clientId — firstAiデータ一括削除（確定送信後）
+// 設計方針: firstAi.service.ts ヘッダー参照
 // ============================================================
 app.post("/clear-ai/:clientId", (c) => {
   const clientId = c.req.param("clientId");

@@ -1,5 +1,5 @@
 /**
- * schemaDescriptions.ts — previewExtract用Structured Outputスキーマの
+ * schemaDescriptions.ts — firstAi用Structured Outputスキーマの
  * description文言を一元管理する定数ファイル。
  *
  * 目的:
@@ -8,7 +8,7 @@
  *   - フロント側UI文言（uiMessages.ts）とは責務が異なるため、別ファイルとして管理
  *
  * 対象:
- *   previewExtract.service.ts の PREVIEW_EXTRACT_SCHEMA 内 description フィールド
+ *   firstAi.service.ts の PREVIEW_EXTRACT_SCHEMA 内 description フィールド
  *   + REQUEST_PROMPT
  */
 
@@ -28,7 +28,7 @@ export const DESC_DIRECTION = '仕訳方向（4種から1つ選択）';
 /** direction_confidence: 信頼度 */
 export const DESC_DIRECTION_CONFIDENCE = '仕訳方向の信頼度（0.0〜1.0）';
 
-/** preview_extract_reason: 判定根拠 */
+/** first_ai_reason: 判定根拠 */
 export const DESC_EXTRACT_REASON =
   '判定根拠。なぜそのsource_typeを選んだかの理由を日本語で1、2文で説明';
 

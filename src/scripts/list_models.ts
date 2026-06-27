@@ -39,7 +39,7 @@ const PRICING: Record<string, { input: number; output: number; thinking: number 
 };
 const USD_JPY = 150;
 
-// previewExtract同一のシステムインストラクション
+// firstAi同一のシステムインストラクション
 const SYSTEM_INSTRUCTION_BASE = `あなたは日本の会計事務所向けのAI証票分類エンジンです。
 【最優先タスク】まず画像内に独立した情報源が1つだけか、2つ以上あるかを判定せよ。判定後、主要な1つについて詳細情報を抽出せよ。
 1枚の証票画像から、証票種別（source_type）と仕訳方向（direction）を判定し、行データ（line_items）を抽出してください。

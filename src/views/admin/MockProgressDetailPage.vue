@@ -88,7 +88,7 @@
           <col :style="{ width: pgColWidths['shareStatus'] + 'px' }">
           <col :style="{ width: pgColWidths['receivedDate'] + 'px' }">
           <col :style="{ width: pgColWidths['unexported'] + 'px' }">
-          <col :style="{ width: pgColWidths['jobStatus'] + 'px' }">
+
           <col v-for="m in monthColumns" :key="'col-'+m.key" style="width: 36px;">
           <col :style="{ width: pgColWidths['currentYear'] + 'px' }">
           <col :style="{ width: pgColWidths['lastYear'] + 'px' }">
@@ -119,9 +119,7 @@
             <th class="sortable pg-th-narrow pg-th-num relative" @click="sortBy('unexported')">未仕訳 <i :class="getSortIcon('unexported')"></i>
               <div class="resize-handle-light" @mousedown.stop="onPgResizeStart('unexported', $event)"></div>
             </th>
-            <th class="pg-th-narrow relative">移行ジョブ
-              <div class="resize-handle-light" @mousedown.stop="onPgResizeStart('jobStatus', $event)"></div>
-            </th>
+
             <th
               v-for="m in monthColumns" :key="'th-'+m.key"
               class="sortable pg-th-month"
@@ -154,13 +152,7 @@
             </td>
             <td class="pg-td-narrow">{{ row.receivedDate || '—' }}</td>
             <td class="pg-td-num" :class="{ 'pg-unexported-highlight': row.unexported > 0 }">{{ row.unexported > 0 ? row.unexported + '件' : '—' }}</td>
-            <td class="pg-td-narrow pg-td-job">
-              <span v-if="getLatestJob(row.clientId)" class="pg-job-badge" :class="'pg-job-' + getLatestJob(row.clientId)!.status">
-                {{ getLatestJob(row.clientId)!.status === 'processing' ? '処理中' : getLatestJob(row.clientId)!.status === 'completed' ? '完了' : getLatestJob(row.clientId)!.status === 'failed' ? '失敗' : '待機中' }}
-                <span class="pg-job-count">{{ getLatestJob(row.clientId)!.done }}/{{ getLatestJob(row.clientId)!.total }}</span>
-              </span>
-              <span v-else class="pg-share-none">—</span>
-            </td>
+
             <td
               v-for="m in monthColumns" :key="'td-'+m.key+'-'+row.id"
               class="pg-td-month"
@@ -429,48 +421,7 @@ import { useDocuments } from '@/composables/useDocuments';
 const { refresh: refreshDocs } = useDocuments();
 onMounted(async () => { await refreshDocs(); });
 
-// --- ジョブ一覧（DL-047: 進捗管理画面統合） ---
-interface JobSummary {
-  jobId: string;
-  createdAt: string;
-  total: number;
-  done: number;
-  failed: number;
-  excluded: number;
-  status: string; // 'processing' | 'completed' | 'failed' | 'queued'
-}
-const jobsByClient = ref<Record<string, JobSummary[]>>({});
 
-/** 顧問先の直近ジョブを取得 */
-function getLatestJob(clientId: string): JobSummary | null {
-  const jobs = jobsByClient.value[clientId];
-  if (!jobs || jobs.length === 0) return null;
-  return jobs[0]!;
-}
-
-/** 全顧問先のジョブ一覧を取得 */
-async function fetchAllJobs(): Promise<void> {
-  const clients = progressRows.value;
-  const results: Record<string, JobSummary[]> = {};
-  // 並列取得（最大10件ずつ）
-  const batchSize = 10;
-  for (let i = 0; i < clients.length; i += batchSize) {
-    const batch = clients.slice(i, i + batchSize);
-    await Promise.all(batch.map(async (row) => {
-      try {
-        const data = await repos.drive.getMigrateJobs(row.clientId) as { jobs: Array<{ jobId: string; createdAt: string; total: number; done: number; failed: number; excluded: number }> };
-        results[row.clientId] = data.jobs.map(j => ({
-          ...j,
-          status: j.failed > 0 ? 'failed' : j.done >= j.total ? 'completed' : j.done > 0 ? 'processing' : 'queued',
-        }));
-      } catch {
-        // 個別の取得失敗はスキップ
-      }
-    }));
-  }
-  jobsByClient.value = results;
-}
-onMounted(() => { fetchAllJobs(); });
 
 // ============================================================
 // TableFilterToolbar用 — ビュー/フィルタ/ソート定義
@@ -633,7 +584,7 @@ watch(
 watch([pgFilterConditions, pgFilterLogic], () => { currentPage.value = 1; }, { deep: true });
 
 // KeepAliveからの復帰時にデータを再取得
-onActivated(() => { fetchProgressList(); fetchAllJobs(); });
+onActivated(() => { fetchProgressList(); });
 
 // ────── 全社一括未仕訳取込 ──────
 const isBulkImporting = ref(false);

@@ -7,8 +7,8 @@ import { readFileSync } from 'fs';
 const logPath = process.env['DIFF_LOG_PATH'] ?? '';
 const log = readFileSync(logPath, 'utf-8');
 
-// previewExtract完了行からJSONを抽出
-const jsonPattern = /previewExtract完了: ({.+})/g;
+// firstAi完了行からJSONを抽出
+const jsonPattern = /firstAi完了: ({.+})/g;
 const entries: { model: string; file: string; data: Record<string, unknown> }[] = [];
 
 // モデル順序を追跡

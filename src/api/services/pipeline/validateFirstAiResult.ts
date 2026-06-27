@@ -1,16 +1,16 @@
 /**
- * validatePreviewExtractResult.ts — サーバー側バリデーション（データ駆動）
+ * validateFirstAiResult.ts — サーバー側バリデーション（データ駆動）
  *
- * 責務: PreviewExtractResponseを受け取り、OK / NG / 補助対象 を判定する
+ * 責務: FirstAiResponseを受け取り、OK / NG / 補助対象 を判定する
  * 配置: src/api/services/pipeline/ — サーバー側でのみ使用
- *       previewExtract.service.ts → postprocess → ★validate★ の順で呼ばれる
+ *       firstAi.service.ts → postprocess → ★validate★ の順で呼ばれる
  *
  * 設計原則:
  *   - validate = 判定のみ。計算（税検算等）はpostprocess.tsの責務
  *   - データ駆動: SOURCE_TYPE_VALIDATION_CONFIG テーブルでルール管理
  */
 
-import type { PreviewExtractResponse, SourceType } from './types';
+import type { FirstAiResponse, SourceType } from './types';
 import {
   multiDocumentError,
   MSG_FALLBACK_ERROR,
@@ -77,7 +77,7 @@ export interface ValidationResult {
 // ============================================================
 
 /**
- * PreviewExtractResponseを検証し、OK / NG / 補助対象 を判定する。
+ * FirstAiResponseを検証し、OK / NG / 補助対象 を判定する。
  *
  * ルール評価順序（優先度順。最初にhitしたルールで確定）:
  *   1. document_count >= 2 → OK + 警告（Gemini誤判定があるためNG強制しない）
@@ -88,7 +88,7 @@ export interface ValidationResult {
  *   6. amount = null or <= 0 → NG（同上）
  *   7. 全チェック通過 → OK
  */
-export function validatePreviewExtractResult(data: PreviewExtractResponse): ValidationResult {
+export function validateFirstAiResult(data: FirstAiResponse): ValidationResult {
   // 証票2枚以上 → NG（1枚ずつ撮り直してもらう）
   if (data.document_count >= 2) {
     return {

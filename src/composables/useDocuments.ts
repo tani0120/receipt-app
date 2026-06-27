@@ -163,7 +163,7 @@ export function useDocuments() {
   }
 
   /**
-   * previewExtractデータ（ai*フィールド）を完全削除
+   * firstAiデータ（ai*フィールド）を完全削除
    *
    * サーバーAPIでフィールド削除後、refresh()でrefを再取得する。
    * ローカルrefの直接書き換えは行わない（設計方針: composableにロジック禁止）。
@@ -174,9 +174,9 @@ export function useDocuments() {
       await repo.clearAiFields(clientId)
       // サーバーで削除完了後、refを再取得して反映
       await refresh(clientId)
-      console.log(`[useDocuments] previewExtractデータ削除+再取得完了: ${clientId}`)
+      console.log(`[useDocuments] firstAiデータ削除+再取得完了: ${clientId}`)
     } catch (err) {
-      console.error('[useDocuments] previewExtractデータ削除エラー:', err)
+      console.error('[useDocuments] firstAiデータ削除エラー:', err)
     }
   }
 
@@ -197,7 +197,7 @@ export function useDocuments() {
     assignBatchAndJournalIds,
     /** サーバーから最新データを再取得 */
     refresh,
-    /** previewExtractデータ完全削除（確定送信後） */
+    /** firstAiデータ完全削除（確定送信後） */
     clearAiFields,
   }
 }

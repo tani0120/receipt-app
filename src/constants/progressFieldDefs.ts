@@ -14,7 +14,7 @@ export const PROGRESS_ALL_COLUMNS = [
   { key: 'shareStatus', label: '共有状態' },
   { key: 'receivedDate', label: '受取日' },
   { key: 'unexported', label: '未仕訳' },
-  { key: 'jobStatus', label: '取込' },
+
   { key: 'currentYearJournals', label: '当年' },
   { key: 'lastYearJournals', label: '前年' },
 ] as const;
@@ -58,7 +58,7 @@ export const progressFields: FieldDef[] = [
   { key: 'shareStatus', label: '共有設定', section: '進捗状況', component: 'select', widthPercent: 20, order: 1 },
   { key: 'receivedDate', label: '資料受取日', section: '進捗状況', component: 'date', widthPercent: 20, order: 2 },
   { key: 'unexported', label: '未仕訳', section: '進捗状況', component: 'readonly', widthPercent: 20, order: 3, alwaysReadonly: true },
-  { key: 'jobStatus', label: '移行ジョブ', section: '進捗状況', component: 'readonly', widthPercent: 20, order: 5, alwaysReadonly: true },
+
 
   // ── 月次仕訳 ──
   { key: 'month6', label: '6月', section: '月次仕訳', component: 'readonly', widthPercent: 8, order: 1, alwaysReadonly: true },

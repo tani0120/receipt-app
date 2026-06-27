@@ -4,18 +4,18 @@
  * Vue側は常に同じ ReceiptAnalysisResult 型を受け取る
  *
  * 設計:
- *   - モック/本番の分岐はサーバー側（/api/pipeline/preview-extract）で統一管理
+ *   - モック/本番の分岐はサーバー側（/api/pipeline/first-ai）で統一管理
  *     Phase 3（2026-05-03）でフロント側のVITE_USE_MOCK分岐を廃止
- *   - バリデーションはサーバー側（previewExtract.service.ts → validatePreviewExtractResult.ts）で実行
+ *   - バリデーションはサーバー側（firstAi.service.ts → validateFirstAiResult.ts）で実行
  *   - フロントはAPIレスポンスのvalidation結果を信頼して表示するだけ
  *   - ReceiptAnalysisResult / AnalyzeOptions → types.ts からimport
- *   - any排除: PreviewExtractResponse型でAPIレスポンスを受け取る
+ *   - any排除: FirstAiResponse型でAPIレスポンスを受け取る
  *   - MIME定数: fileTypes.ts からimport
  */
 
 import type {
-  PreviewExtractResponse,
-  PreviewExtractLineItem,
+  FirstAiResponse,
+  FirstAiLineItem,
   ReceiptAnalysisResult,
   AnalyzeOptions,
 } from '@/api/services/pipeline/types';
@@ -32,7 +32,7 @@ export type { ReceiptAnalysisResult, AnalyzeOptions };
 
 
 
-// ===== API実装（/api/pipeline/preview-extract） =====
+// ===== API実装（/api/pipeline/first-ai） =====
 // Phase 3: サーバー側でモック/本番を自動切替するため、常にこのパスを使用
 async function analyzeReceiptReal(file: File, clientId?: string): Promise<ReceiptAnalysisResult> {
   try {
@@ -68,7 +68,7 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
     formData.append('clientId', clientId ?? 'unknown');
     formData.append('filename', file.name);
 
-    const response = await fetch("/api/pipeline/preview-extract", {
+    const response = await fetch("/api/pipeline/first-ai", {
       method: "POST",
       body: formData,  // Content-Typeは自動設定（multipart/form-data）
     });
@@ -84,16 +84,16 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
     }
 
     // ③ 型安全なレスポンス取得（D-1解消: any排除）
-    const data: PreviewExtractResponse & { fileUrl?: string } = await response.json();
+    const data: FirstAiResponse & { fileUrl?: string } = await response.json();
 
-    // ④ メトリクス構築（型安全: PreviewExtractResponseのフィールドを直接参照）
+    // ④ メトリクス構築（型安全: FirstAiResponseのフィールドを直接参照）
     const metrics: ReceiptAnalysisResult['metrics'] = {
       source_type: data.source_type,
       source_type_confidence: data.source_type_confidence,
       direction: data.direction,
       direction_confidence: data.direction_confidence,
       processing_mode: data.processing_mode,
-      preview_extract_reason: data.preview_extract_reason ?? null,
+      first_ai_reason: data.first_ai_reason ?? null,
       description: data.description ?? null,
       fallback_applied: data.fallback_applied,
       duration_ms: data.metadata.duration_ms,
@@ -109,8 +109,8 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
       preprocess_reduction_pct: data.metadata.preprocess_reduction_pct,
     };
 
-    // ⑤ 行データ取得（D-2解消: PreviewExtractLineItem型で型安全）
-    const lineItems = data.line_items.map((li: PreviewExtractLineItem) => ({
+    // ⑤ 行データ取得（D-2解消: FirstAiLineItem型で型安全）
+    const lineItems = data.line_items.map((li: FirstAiLineItem) => ({
       line_index: li.line_index,
       date: li.date,
       description: li.description,
@@ -172,8 +172,8 @@ async function analyzeReceiptReal(file: File, clientId?: string): Promise<Receip
   }
 }
 
-/** テスト用: previewExtract結果をコンソールに全項目構造化出力 */
-function logPreviewExtractResult(file: File, opts: AnalyzeOptions, result: ReceiptAnalysisResult) {
+/** テスト用: firstAi結果をコンソールに全項目構造化出力 */
+function logFirstAiResult(file: File, opts: AnalyzeOptions, result: ReceiptAnalysisResult) {
   const m = result.metrics;
   const DIRECTION_LABELS: Record<string, string> = {
     expense: "支払",
@@ -196,7 +196,7 @@ function logPreviewExtractResult(file: File, opts: AnalyzeOptions, result: Recei
 
   const ub = opts.uploadedBy;
   console.log(
-    `\n═══ previewExtract結果 [${file.name}] ═══\n` +
+    `\n═══ firstAi結果 [${file.name}] ═══\n` +
       `▼ フロント情報\n` +
       `  顧問先ID     : ${opts.clientId ?? "-"}\n` +
       `  証票ID       : ${opts.documentId ?? "-"}\n` +
@@ -217,7 +217,7 @@ function logPreviewExtractResult(file: File, opts: AnalyzeOptions, result: Recei
       `  金額         : ${result.amount != null ? `¥${result.amount.toLocaleString()}` : "null"}\n` +
       `  取引先       : ${result.vendor ?? "null"}\n` +
       `  摘要         : ${m?.description ?? "null"}\n` +
-      `  判定根拠     : ${m?.preview_extract_reason ?? "-"}\n` +
+      `  判定根拠     : ${m?.first_ai_reason ?? "-"}\n` +
       `  fallback     : ${fallbackLabel}\n` +
       `▼ メトリクス\n` +
       `  処理時間     : ${m?.duration_seconds ?? "-"}秒 (${m?.duration_ms ?? "-"}ms)\n` +
@@ -258,6 +258,6 @@ export const analyzeReceipt = async (
 ): Promise<ReceiptAnalysisResult> => {
   const result = await analyzeReceiptReal(file, opts?.clientId);
   // テスト用: ブラウザコンソールに全項目構造化出力
-  logPreviewExtractResult(file, opts ?? {}, result);
+  logFirstAiResult(file, opts ?? {}, result);
   return result;
 };

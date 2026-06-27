@@ -6,7 +6,7 @@
  *
  * 【ロジック禁止】
  * このファイルにはデータ取得のみ記述する。
- * matchVendor() / previewExtractSourceType() 等のビジネスロジックは
+ * matchVendor() / firstAiSourceType() 等のビジネスロジックは
  * パイプラインロジック層（src/mocks/utils/pipeline/等）に配置すること。
  *
  * 【修正履歴】

@@ -13,8 +13,8 @@ dotenv.config({ path: '.env.local' });
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { previewExtractImage, clearKnownHashes } from '../api/services/pipeline/previewExtract.service';
-import type { PreviewExtractResponse } from '../api/services/pipeline/types';
+import { firstAiExtract, clearKnownHashes } from '../api/services/pipeline/firstAi.service';
+import type { FirstAiResponse } from '../api/services/pipeline/types';
 
 const MODELS = [
   'gemini-2.5-flash',
@@ -43,7 +43,7 @@ const TARGET_FILES = [
 
 const uploadsDir = join(process.cwd(), 'data/uploads/c_VdAnGFq3');
 
-function recalcCost(model: string, meta: PreviewExtractResponse['metadata']): number {
+function recalcCost(model: string, meta: FirstAiResponse['metadata']): number {
   const p = PRICING[model]!;
   // thinkingトークンはoutputに含まれる（2.5-flashのusageMetadataで分離されるがコスト上はoutput単価）
   const outTokens = meta.completion_tokens + meta.thinking_tokens;
@@ -54,7 +54,7 @@ interface Run {
   model: string;
   file: string;
   run: number;
-  result: PreviewExtractResponse;
+  result: FirstAiResponse;
   costYen: number;
 }
 
@@ -82,7 +82,7 @@ async function main() {
       for (let run = 1; run <= RUNS; run++) {
         clearKnownHashes();
 
-        const result = await previewExtractImage({
+        const result = await firstAiExtract({
           image: b64,
           mimeType: mime,
           clientId: CLIENT_ID,

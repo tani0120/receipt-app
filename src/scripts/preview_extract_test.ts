@@ -10,8 +10,8 @@
  *   - 料金算定: Gemini 2.5 Flash公式料金に基づく正確なコスト計算
  *
  * 使用法:
- *   npx tsx src/scripts/previewExtract_test.ts                 # Run A: 前処理なし
- *   npx tsx src/scripts/previewExtract_test.ts --preprocess    # Run B: 前処理あり
+ *   npx tsx src/scripts/firstAi_test.ts                 # Run A: 前処理なし
+ *   npx tsx src/scripts/firstAi_test.ts --preprocess    # Run B: 前処理あり
  *
  * 前提:
  *   - gcloud auth application-default login 済み
@@ -21,7 +21,7 @@
 import { GoogleGenAI } from '@google/genai';
 import {
   PREVIEW_EXTRACT_RESPONSE_SCHEMA,
-  type GeminiPreviewExtractResponse,
+  type GeminiFirstAiResponse,
   type PreviewExtractResult,
 } from './preview_extract_schema';
 import { runPostProcess, estimateCost, type TokenUsage } from './preview_extract_postprocess';
@@ -56,8 +56,8 @@ const ENABLE_PREPROCESS = process.argv.includes('--preprocess');
 const labelIndex = process.argv.indexOf('--label');
 if (labelIndex === -1 || !process.argv[labelIndex + 1]) {
   console.error('❌ --label 引数が必要です。');
-  console.error('   使い方: npx tsx src/scripts/previewExtract_test.ts --label <ラベル名>');
-  console.error('   例:     npx tsx src/scripts/previewExtract_test.ts --label B_with_context');
+  console.error('   使い方: npx tsx src/scripts/firstAi_test.ts --label <ラベル名>');
+  console.error('   例:     npx tsx src/scripts/firstAi_test.ts --label B_with_context');
   console.error('');
   console.error('   ラベル名がテスト結果の保存先フォルダ名になります。');
   console.error('   既存フォルダに上書きされるため、ラベル名は慎重に選んでください。');
@@ -268,7 +268,7 @@ async function processOneFile(
   filePath: string,
   index: number,
   total: number
-): Promise<{ file: string; gemini: GeminiPreviewExtractResponse; duration: number; tokens: TokenUsage; preprocessed: boolean }> {
+): Promise<{ file: string; gemini: GeminiFirstAiResponse; duration: number; tokens: TokenUsage; preprocessed: boolean }> {
   const fileName = path.basename(filePath);
   console.log(`\n[${index + 1}/${total}] 処理中: ${fileName} (前処理: ${ENABLE_PREPROCESS ? 'ON' : 'OFF'})`);
 
@@ -309,11 +309,11 @@ async function processOneFile(
     thoughtsTokenCount: (usage as Record<string, unknown>)?.thoughtsTokenCount as number || 0,
   };
 
-  let geminiResult: GeminiPreviewExtractResponse;
+  let geminiResult: GeminiFirstAiResponse;
   const responseText = response.text ?? '';
   if (responseText) {
     try {
-      geminiResult = JSON.parse(responseText) as GeminiPreviewExtractResponse;
+      geminiResult = JSON.parse(responseText) as GeminiFirstAiResponse;
     } catch {
       console.error(`   ⚠️ JSON解析失敗`);
       throw new Error(`JSON解析失敗: ${responseText.substring(0, 200)}`);
@@ -385,7 +385,7 @@ async function main() {
   // 全ファイル処理（Gemini出力を先に全件収集）
   const rawResults: Array<{
     file: string;
-    gemini: GeminiPreviewExtractResponse;
+    gemini: GeminiFirstAiResponse;
     duration: number;
     tokens: TokenUsage;
     preprocessed: boolean;
@@ -431,7 +431,7 @@ async function main() {
 
     const costBreakdown = estimateCost(raw.tokens);
 
-    const previewExtractResult: PreviewExtractResult = {
+    const firstAiResult: PreviewExtractResult = {
       gemini: raw.gemini,
       postprocess,
       metadata: {
@@ -445,12 +445,12 @@ async function main() {
       },
     };
 
-    finalResults.push(previewExtractResult);
+    finalResults.push(firstAiResult);
 
     // 個別結果保存
     const resultFileName = path.parse(raw.file).name + '_result.json';
     const resultPath = path.join(runResultsDir, resultFileName);
-    fs.writeFileSync(resultPath, JSON.stringify(previewExtractResult, null, 2), 'utf-8');
+    fs.writeFileSync(resultPath, JSON.stringify(firstAiResult, null, 2), 'utf-8');
   }
 
   // サマリー

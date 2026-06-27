@@ -4,7 +4,7 @@
     <div class="ds-header">
       <!-- 左: タイトル＋カウント -->
       <div class="ds-header-left">
-        <span class="ds-title">資料選別</span>
+        <span class="ds-title">資料一覧</span>
         <div class="ds-counts">
           <button class="ds-count ds-count-all" :class="{ 'ds-count-active': activeFilter === 'all' }" @click="toggleFilter('all')">全ファイル: {{ allDocsView.length }}件</button>
           <button class="ds-count ds-count-pending" :class="{ 'ds-count-active': activeFilter === 'pending' }" @click="toggleFilter('pending')">未処理: {{ counts.pending }}件</button>
@@ -209,7 +209,7 @@
                     <span class="ds-ai-value ds-ai-warn">{{ selected.aiDocumentCount }}枚</span>
                   </div>
                 </div>
-                <!-- 全項目null（previewExtract通過したが認識不可） -->
+                <!-- 全項目null（firstAi通過したが認識不可） -->
                 <div v-if="!selected.aiDate && selected.aiAmount == null && !selected.aiVendor && !selected.aiSourceType && !selected.aiDirection && !selected.aiDescription && !selected.aiLineItemsCount" class="ds-ai-empty">
                   <i class="fa-solid fa-circle-info"></i> AI認識結果なし（証票として認識できなかった可能性があります）
                 </div>
@@ -577,11 +577,11 @@ const sendToProcess = async () => {
       }
     }
 
-    // ━━━ 1.6. previewExtractデータ完全削除（設計方針: previewExtract.service.ts ヘッダー参照）━━━
-    // 仕訳変換が完了したため、previewExtract起算のai*フィールドは不要。
+    // ━━━ 1.6. firstAiデータ完全削除（設計方針: firstAi.service.ts ヘッダー参照）━━━
+    // 仕訳変換が完了したため、firstAi起算のai*フィールドは不要。
     // Extract API（本番AI）実装後はゼロから仕訳データを再生成する。
     await clearAiFields(clientId.value);
-    console.log(`[sendToProcess] previewExtractデータ完全削除: ${clientId.value}`);
+    console.log(`[sendToProcess] firstAiデータ完全削除: ${clientId.value}`);
 
     // ━━━ 2. 移行ジョブ登録（supporting/excluded 全件。経路を問わない） ━━━
     // Drive経路・独自アップロード経路ともに同じmigration_jobsに登録する。
@@ -681,7 +681,7 @@ const showAiPanel = ref(true);
 const hasAiResult = computed(() => {
   if (!selected.value) return false;
   const s = selected.value;
-  // AIフィールドが1つでもundefined以外（nullも含む）＝previewExtract APIを通過済み
+  // AIフィールドが1つでもundefined以外（nullも含む）＝firstAi APIを通過済み
   return s.aiDate !== undefined
     || s.aiAmount !== undefined
     || s.aiVendor !== undefined

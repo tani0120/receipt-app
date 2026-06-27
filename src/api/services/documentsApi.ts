@@ -22,7 +22,7 @@ import { join } from 'path';
 import crypto from 'crypto';
 import type { DocEntry } from '../../repositories/types';
 import { AI_FIELD_KEYS } from '../../repositories/types';
-import type { PreviewExtractResponse } from '../services/pipeline/types';
+import type { FirstAiResponse } from '../services/pipeline/types';
 
 const DATA_DIR = join(process.cwd(), 'data');
 const DATA_FILE = join(DATA_DIR, 'documents.json');
@@ -238,13 +238,13 @@ export function countByStatus(clientId: string): Record<string, number> {
  * DriveファイルのDocEntryにAI分類結果を書き込む
  *
  * @param driveFileId - DriveファイルID（DocEntry.driveFileIdで検索）
- * @param result - previewExtractImage()の戻り値
+ * @param result - firstAiExtract()の戻り値
  * @param fileHash - SHA-256ハッシュ（processOneJobで計算済み）
  * @returns 更新成功したか
  */
 export function updateAiResults(
   driveFileId: string,
-  result: PreviewExtractResponse,
+  result: FirstAiResponse,
   fileHash: string,
 ): boolean {
   const doc = documents.find(d => d.driveFileId === driveFileId);
@@ -263,7 +263,7 @@ export function updateAiResults(
   doc.aiSourceType = result.source_type ?? null;
   doc.aiDirection = result.direction ?? null;
   doc.aiDescription = result.description ?? null;
-  doc.aiPreviewExtractReason = result.preview_extract_reason ?? null;
+  doc.aiFirstAiReason = result.first_ai_reason ?? null;
   doc.aiLineItems = result.line_items.length > 0 ? result.line_items : null;
   doc.aiLineItemsCount = result.line_items.length;
   doc.aiSupplementary = result.validation.supplementary;
@@ -298,8 +298,8 @@ export function updateAiResults(
 }
 
 // ============================================================
-// previewExtractデータ完全削除（確定送信後に呼び出し）
-// 設計方針: previewExtract.service.ts ヘッダー参照
+// firstAiデータ完全削除（確定送信後に呼び出し）
+// 設計方針: firstAi.service.ts ヘッダー参照
 // ============================================================
 
 
@@ -315,11 +315,11 @@ function nullifyAiFields(doc: DocEntry): void {
 }
 
 /**
- * 指定DocEntryのpreviewExtractデータ（ai*フィールド）を完全削除
+ * 指定DocEntryのfirstAiデータ（ai*フィールド）を完全削除
  *
  * 確定送信後に呼び出す。仕訳変換が完了した後に実行すること。
  * Extract API（本番AI）がゼロから仕訳データを再生成するため、
- * previewExtractの出力は不要になる。
+ * firstAiの出力は不要になる。
  *
  * @param id - DocEntryのID
  * @returns 削除成功したか
@@ -335,7 +335,7 @@ export function clearAiFields(id: string): boolean {
 }
 
 /**
- * 顧問先の全DocEntryのpreviewExtractデータを一括削除
+ * 顧問先の全DocEntryのfirstAiデータを一括削除
  *
  * @param clientId - 顧問先ID
  * @returns 削除したDocEntry件数
@@ -347,7 +347,7 @@ export function clearAiFieldsByClientId(clientId: string): number {
     doc.updatedAt = new Date().toISOString();
   }
   if (targets.length > 0) save();
-  console.log(`[documentsApi] previewExtractデータ削除: ${clientId} → ${targets.length}件`);
+  console.log(`[documentsApi] firstAiデータ削除: ${clientId} → ${targets.length}件`);
   return targets.length;
 }
 

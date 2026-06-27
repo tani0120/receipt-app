@@ -7,7 +7,7 @@
  * 環境変数 VERTEX_MODEL_ID が設定されている場合はそちらを優先。
  *
  * モデル用途別:
- *   - VERTEX_MODEL_ID: previewExtract（証票分類・OCR）用
+ *   - VERTEX_MODEL_ID: firstAi（証票分類・OCR）用
  *   - ACCOUNT_ESTIMATE_MODEL: estimateAccountByAI（科目推定・第5層）用
  *   - AI_COMMAND_MODEL: AIコマンド（チャット）用（aiCommandRoutes.tsで管理）
  */

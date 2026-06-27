@@ -1,8 +1,11 @@
 /**
- * パイプラインAPI型定義（Step 0-1: previewExtract / extract）
+ * パイプラインAPI型定義（firstAi: 証票AI分類・仕訳行抽出）
  *
  * レイヤー: route → service → postprocess で共有される型
  * 依存: domain層の型のみ
+ *
+ * 経緯: 元々previewExtract（事前分類）と本番AI（Extract API）を分離する設計だったが、
+ *       ドライブ・独自アップロードでAI呼び出ししない決定後、previewExtractをfirstAiにリネーム。
  */
 
 import type { DeterminationMethod } from '../../../types/determination-method'
@@ -48,11 +51,11 @@ export type Direction = typeof DIRECTIONS[number];
 export type ProcessingMode = 'auto' | 'manual' | 'excluded';
 
 // ============================================================
-// previewExtract API 入出力
+// firstAi API 入出力
 // ============================================================
 
-/** POST /api/pipeline/preview-extract リクエスト */
-export interface PreviewExtractRequest {
+/** POST /api/pipeline/first-ai リクエスト */
+export interface FirstAiRequest {
   image: string;       // base64エンコード画像
   mimeType: string;    // image/jpeg, image/png, application/pdf 等
   clientId: string;    // 顧問先ID
@@ -60,24 +63,24 @@ export interface PreviewExtractRequest {
   fileHash?: string;   // SHA-256ハッシュ（重複チェック用。フロントで計算）
 }
 
-/** Geminiが返すpreviewExtract生レスポンス */
-export interface PreviewExtractRawResponse {
+/** Geminiが返すfirstAi生レスポンス */
+export interface FirstAiRawResponse {
   source_type: string;
   source_type_confidence: number;
   direction: string;
   direction_confidence: number;
-  preview_extract_reason: string | null;    // 判定根拠（AIがなぜその種別を選んだか）
+  first_ai_reason: string | null;    // 判定根拠（AIがなぜその種別を選んだか）
   document_count: number;             // 画像内の証票枚数（2以上ならエラー）
   document_count_reason: string | null; // 枚数判定の根拠
   description: string | null;        // 摘要（AI推定）
   issuer_name: string | null;        // 発行者名
   date: string | null;               // YYYY-MM-DD
   total_amount: number | null;       // 税込合計
-  line_items?: PreviewExtractRawLineItem[];  // 行データ（通帳・クレカはN行、レシートは1行）
+  line_items?: FirstAiRawLineItem[];  // 行データ（通帳・クレカはN行、レシートは1行）
 }
 
 /** Geminiが返す行データ（生） */
-export interface PreviewExtractRawLineItem {
+export interface FirstAiRawLineItem {
   date: string | null;
   description: string;
   amount: number;
@@ -85,14 +88,14 @@ export interface PreviewExtractRawLineItem {
   balance: number | null;
 }
 
-/** postprocess後のpreviewExtract最終レスポンス */
-export interface PreviewExtractResponse {
+/** postprocess後のfirstAi最終レスポンス */
+export interface FirstAiResponse {
   source_type: SourceType;
   source_type_confidence: number;
   direction: Direction;
   direction_confidence: number;
   processing_mode: ProcessingMode;
-  preview_extract_reason: string | null;    // 判定根拠
+  first_ai_reason: string | null;    // 判定根拠
   document_count: number;             // 画像内の証票枚数（2以上ならエラー）
   document_count_reason: string | null; // 枚数判定の根拠
   description: string | null;
@@ -100,7 +103,7 @@ export interface PreviewExtractResponse {
   date: string | null;
   total_amount: number | null;
   fallback_applied: boolean;         // fallbackが適用されたか
-  line_items: PreviewExtractLineItem[];  // 行データ（空配列 = 行抽出なし）
+  line_items: FirstAiLineItem[];  // 行データ（空配列 = 行抽出なし）
   /** サーバー側バリデーション結果（フロントはこれを信頼して表示するだけ） */
   validation: {
     ok: boolean;                     // バリデーション通過
@@ -129,7 +132,7 @@ export interface PreviewExtractResponse {
 }
 
 /** postprocess後の行データ（line_index付与済み） */
-export interface PreviewExtractLineItem {
+export interface FirstAiLineItem {
   line_index: number;                 // 行番号（1始まり。postprocessで自動付番）
   date: string | null;
   description: string;
@@ -159,40 +162,7 @@ export interface PreviewExtractLineItem {
   candidates?: string[];
 }
 
-// ============================================================
-// extract API 入出力（将来用。previewExtract確定後に実装）
-// ============================================================
-
-/** POST /api/pipeline/extract リクエスト */
-export interface ExtractRequest {
-  image: string;
-  mimeType: string;
-  clientId: string;
-  source_type: SourceType;
-  direction: Direction;
-  filename?: string;
-}
-
-/** line_item（extract結果の1行） */
-export interface ExtractLineItem {
-  date: string | null;
-  description: string;
-  amount: number;
-  direction: 'expense' | 'income';
-  balance: number | null;
-}
-
-/** postprocess後のextract最終レスポンス */
-export interface ExtractResponse {
-  line_items: ExtractLineItem[];
-  metadata: {
-    duration_ms: number;
-    prompt_tokens: number;
-    completion_tokens: number;
-    thinking_tokens: number;
-    model: string;
-  };
-}
+// （旧Extract API型は削除済み。firstAiに統合）
 
 // ============================================================
 // ログ構造
@@ -201,7 +171,7 @@ export interface ExtractResponse {
 /** パイプラインログエントリ */
 export interface PipelineLogEntry {
   timestamp: string;
-  step: 'preview-extract' | 'extract';
+  step: 'first-ai';
   input: {
     filename: string;
     mimeType: string;
@@ -218,7 +188,7 @@ export interface PipelineLogEntry {
 // フロント用型（Vue側が受け取る最終結果）
 // ============================================================
 
-/** previewExtract結果をフロント向けに変換した最終型 */
+/** firstAi結果をフロント向けに変換した最終型 */
 export interface ReceiptAnalysisResult {
   /** バリデーション通過 */
   ok: boolean;
@@ -236,7 +206,7 @@ export interface ReceiptAnalysisResult {
   warning?: string | null;
   /** SHA-256重複検出（サーバー側で照合） */
   isDuplicate?: boolean;
-  /** 証票枚数（previewExtract API出力。2以上は複数証票警告） */
+  /** 証票枚数（firstAi API出力。2以上は複数証票警告） */
   documentCount?: number;
   /** SHA-256ハッシュ値（重複グループ化用。フロントで計算） */
   fileHash?: string;
@@ -267,7 +237,7 @@ export interface ReceiptAnalysisResult {
     direction: string;                // 仕訳方向（支払/入金/振替/混在）
     direction_confidence: number;     // 方向信頼度（0.0〜1.0）
     processing_mode: string;          // 処理モード（自動/手動/除外）
-    preview_extract_reason: string | null;   // 判定根拠
+    first_ai_reason: string | null;   // 判定根拠
     description: string | null;       // 摘要
     fallback_applied: boolean;        // フォールバック適用
     duration_ms: number;              // 処理時間（ミリ秒）

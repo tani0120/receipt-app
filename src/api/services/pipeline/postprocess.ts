@@ -11,9 +11,9 @@ import {
   type SourceType,
   type Direction,
   type ProcessingMode,
-  type PreviewExtractRawResponse,
-  type PreviewExtractResponse,
-  type PreviewExtractLineItem,
+  type FirstAiRawResponse,
+  type FirstAiResponse,
+  type FirstAiLineItem,
 } from './types';
 
 // ============================================================
@@ -62,12 +62,12 @@ function resolveProcessingMode(
 // fallback定数
 // ============================================================
 
-const FALLBACK_PREVIEW_EXTRACT: PreviewExtractRawResponse = {
+const FALLBACK_FIRST_AI: FirstAiRawResponse = {
   source_type: 'other',
   source_type_confidence: 0,
   direction: 'expense',
   direction_confidence: 0,
-  preview_extract_reason: null,
+  first_ai_reason: null,
   document_count: 1,
   document_count_reason: null,
   description: null,
@@ -93,19 +93,19 @@ function isValidDirection(v: unknown): v is Direction {
 // ============================================================
 
 /**
- * AI生出力を検証し、安全なPreviewExtractResponseに変換する。
+ * AI生出力を検証し、安全なFirstAiResponseに変換する。
  * AI失敗時はfallback（source_type: 'other', confidence: 0）を返す。
  * 例外を投げない。
  */
-export function postprocessPreviewExtract(
-  raw: PreviewExtractRawResponse | null,
-  metadata: PreviewExtractResponse['metadata'],
+export function postprocessFirstAi(
+  raw: FirstAiRawResponse | null,
+  metadata: FirstAiResponse['metadata'],
   calculationMethod?: CalculationMethod,
-): PreviewExtractResponse {
+): FirstAiResponse {
   // AI出力がnull（API呼び出し失敗等）→ 全面fallback
   if (!raw) {
     console.warn('[pipeline/postprocess] AI出力がnull → fallback適用');
-    return buildResponse(FALLBACK_PREVIEW_EXTRACT, true, [], metadata, calculationMethod);
+    return buildResponse(FALLBACK_FIRST_AI, true, [], metadata, calculationMethod);
   }
 
   let fallbackApplied = false;
@@ -134,12 +134,12 @@ export function postprocessPreviewExtract(
   const stConf = clampConfidence(raw.source_type_confidence);
   const dirConf = clampConfidence(raw.direction_confidence);
 
-  const validated: PreviewExtractRawResponse = {
+  const validated: FirstAiRawResponse = {
     source_type: sourceType,
     source_type_confidence: stConf,
     direction,
     direction_confidence: dirConf,
-    preview_extract_reason: raw.preview_extract_reason ?? null,
+    first_ai_reason: raw.first_ai_reason ?? null,
     document_count: typeof raw.document_count === 'number' && raw.document_count >= 1 ? Math.round(raw.document_count) : 1,
     document_count_reason: raw.document_count_reason ?? null,
     description: raw.description ?? null,
@@ -149,7 +149,7 @@ export function postprocessPreviewExtract(
   };
 
   // line_itemsバリデーション + line_index付番
-  const lineItems: PreviewExtractLineItem[] = (raw.line_items ?? []).map((item, idx) => ({
+  const lineItems: FirstAiLineItem[] = (raw.line_items ?? []).map((item, idx) => ({
     line_index: idx + 1,
     date: item.date ?? null,
     description: item.description ?? '',
@@ -166,12 +166,12 @@ export function postprocessPreviewExtract(
 // ============================================================
 
 function buildResponse(
-  raw: PreviewExtractRawResponse,
+  raw: FirstAiRawResponse,
   fallbackApplied: boolean,
-  lineItems: PreviewExtractLineItem[],
-  metadata: PreviewExtractResponse['metadata'],
+  lineItems: FirstAiLineItem[],
+  metadata: FirstAiResponse['metadata'],
   calculationMethod?: CalculationMethod,
-): PreviewExtractResponse {
+): FirstAiResponse {
   const sourceType = raw.source_type as SourceType;
   const direction = raw.direction as Direction;
 
@@ -181,7 +181,7 @@ function buildResponse(
     direction,
     direction_confidence: raw.direction_confidence,
     processing_mode: resolveProcessingMode(sourceType, calculationMethod),
-    preview_extract_reason: raw.preview_extract_reason ?? null,
+    first_ai_reason: raw.first_ai_reason ?? null,
     document_count: raw.document_count ?? 1,
     document_count_reason: raw.document_count_reason ?? null,
     description: raw.description,
@@ -190,7 +190,7 @@ function buildResponse(
     total_amount: raw.total_amount,
     fallback_applied: fallbackApplied,
     line_items: lineItems,
-    // validation: previewExtract.service.tsでvalidatePreviewExtractResult()の結果で上書きされる
+    // validation: firstAi.service.tsでvalidateFirstAiResult()の結果で上書きされる
     validation: { ok: false, errorReason: null, warning: null, supplementary: false, isDuplicate: false },
     metadata,
   };

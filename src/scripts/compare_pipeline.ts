@@ -1,7 +1,7 @@
 /**
  * 全モデル比較テスト（本番パイプライン完全同一条件）
  *
- * previewExtractImage() を直接呼び出し、前処理・ログ・コスト計算すべて本番と同一。
+ * firstAiExtract() を直接呼び出し、前処理・ログ・コスト計算すべて本番と同一。
  * モデルだけ process.env['VERTEX_MODEL_ID'] で切り替え。
  *
  * 実行: npx tsx src/scripts/compare_pipeline.ts
@@ -12,8 +12,8 @@ dotenv.config({ path: '.env.local' });
 
 import { readFileSync, readdirSync } from 'fs';
 import { join, extname } from 'path';
-import { previewExtractImage, clearKnownHashes } from '../api/services/pipeline/previewExtract.service';
-import type { PreviewExtractResponse } from '../api/services/pipeline/types';
+import { firstAiExtract, clearKnownHashes } from '../api/services/pipeline/firstAi.service';
+import type { FirstAiResponse } from '../api/services/pipeline/types';
 
 const MODELS = [
   'gemini-2.5-flash',
@@ -40,7 +40,7 @@ const files = readdirSync(uploadsDir)
 const CLIENT_ID = 'c_VdAnGFq3';
 
 /** 正確なコスト再計算 */
-function recalcCost(model: string, meta: PreviewExtractResponse['metadata']): number {
+function recalcCost(model: string, meta: FirstAiResponse['metadata']): number {
   const p = PRICING[model];
   if (!p) return meta.cost_yen;
   return ((meta.prompt_tokens * p.input + meta.completion_tokens * p.output + meta.thinking_tokens * p.thinking) / 1_000_000) * USD_JPY;
@@ -52,7 +52,7 @@ async function main() {
   console.log(`画像: ${files.length}枚 | モデル: ${MODELS.join(', ')}`);
   console.log(`${'='.repeat(100)}\n`);
 
-  const allResults: { model: string; file: string; result: PreviewExtractResponse; costYen: number }[] = [];
+  const allResults: { model: string; file: string; result: FirstAiResponse; costYen: number }[] = [];
 
   for (const model of MODELS) {
     // モデル切替
@@ -69,7 +69,7 @@ async function main() {
       const b64 = buf.toString('base64');
       const mime = file.endsWith('.png') ? 'image/png' : 'image/jpeg';
 
-      const result = await previewExtractImage({
+      const result = await firstAiExtract({
         image: b64,
         mimeType: mime,
         clientId: CLIENT_ID,

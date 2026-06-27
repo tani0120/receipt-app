@@ -1,8 +1,8 @@
 /**
- * モデル比較テストスクリプト（previewExtractと同一プロンプト使用）
+ * モデル比較テストスクリプト（firstAiと同一プロンプト使用）
  *
  * 比較対象: gemini-2.5-flash / gemini-3-flash / gemini-3.1-flash-lite
- * テスト内容: OCR（画像→仕訳データ抽出）— previewExtract.service.tsと完全同一のプロンプト・スキーマ
+ * テスト内容: OCR（画像→仕訳データ抽出）— firstAi.service.tsと完全同一のプロンプト・スキーマ
  *
  * 実行: npx tsx src/scripts/model_comparison_test.ts
  */
@@ -13,7 +13,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import dotenv from 'dotenv';
 
-// previewExtractと同じスキーマ記述・キーワード・プロンプトを参照
+// firstAiと同じスキーマ記述・キーワード・プロンプトを参照
 import {
   DESC_SOURCE_TYPE, DESC_SOURCE_TYPE_CONFIDENCE,
   DESC_DIRECTION, DESC_DIRECTION_CONFIDENCE,
@@ -57,7 +57,7 @@ const PRICING: Record<string, { input: number; output: number; thinking: number 
 const USD_JPY = 150;
 
 // ============================================================
-// previewExtractと完全同一の System Instruction
+// firstAiと完全同一の System Instruction
 // ============================================================
 
 const SYSTEM_INSTRUCTION_BASE = `あなたは日本の会計事務所向けのAI証票分類エンジンです。
@@ -101,11 +101,11 @@ const SYSTEM_INSTRUCTION_RULES = `
 - document_count_reason: 上記document_countの判定根拠。画像の端・背景・重なり部分に他の書類や証票の片鲞が写っていないかを確認し、その結果を日本語で1、2文で説明。例:「主証票の左下に別のレシートの端が見える」「証票以外のものは写っていない」
 - line_items: 行データ配列。各行のamountは必ず正の整数。入出金はdirectionで区別。`;
 
-/** previewExtractと同一のSystem Instruction */
+/** firstAiと同一のSystem Instruction */
 const SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE + buildKeywordsPrompt() + SYSTEM_INSTRUCTION_RULES;
 
 // ============================================================
-// previewExtractと完全同一の Structured Output Schema
+// firstAiと完全同一の Structured Output Schema
 // ============================================================
 
 const PREVIEW_EXTRACT_SCHEMA = {
@@ -300,7 +300,7 @@ async function runTest(ai: GoogleGenAI, model: string, imageBase64: string, mime
 
 async function main() {
   console.log('='.repeat(80));
-  console.log('モデル比較テスト（previewExtract同一プロンプト）');
+  console.log('モデル比較テスト（firstAi同一プロンプト）');
   console.log(`プロジェクト: ${PROJECT_ID}, リージョン: ${LOCATION}`);
   console.log(`対象モデル: ${MODELS.join(', ')}`);
   console.log('='.repeat(80));

@@ -1,30 +1,12 @@
 /**
- * パイプライン previewExtract service（AI呼び出し層）
+ * パイプライン firstAi service（AI呼び出し層）
  *
  * レイヤー: route → ★service★ → postprocess
  * 責務: Vertex AI呼び出し + ログ出力。ビジネスロジックは postprocess に委譲。
  *
- * ━━━ データのライフサイクル方針 ━━━
- *
- * 本サービスの出力データは **暫定的なUI表示専用** である。
- *
- * 用途:
- *   1. 独自アップロード画面: 証票の概要表示（日付・金額・取引先・証票種別）
- *   2. 資料選別画面: 仕訳対象/根拠資料/仕訳外の振り分け判断材料
- *
- * 破棄タイミング:
- *   資料選別画面の「確定送信」ボタン押下時に、本サービスが生成した
- *   全データ（aiLineItems, aiDate, aiAmount, aiVendor, aiSourceType 等）を
- *   **完全に削除** する。
- *
- * 理由:
- *   確定送信後は本番AI（Extract API）が証票画像からゼロで仕訳データを
- *   生成する。previewExtractの中間データを保持すると「どちらが正しいデータか」が
- *   曖昧になり、誤参照バグの温床になるため。
- *
- * 注意:
- *   - previewExtractの出力を本番AIへの入力パラメータとして渡さない
- *   - previewExtractの誤判定が本番AIに伝搬しない設計とする
+ * 経緯: 元々previewExtract（事前分類）と本番AI（Extract API）を分離する設計だったが、
+ *       ドライブ・独自アップロードでAI呼び出ししない決定後、firstAiに統一リネーム。
+ *       本ファイルが唯一のAI呼び出し（証票分類 + 仕訳行抽出）。
  */
 
 import { GoogleGenAI } from '@google/genai';
@@ -35,14 +17,14 @@ import { preprocessImage } from './image_preprocessor';
 import type { MimeType } from './image_preprocessor';
 import { buildKeywordsPrompt } from './source_type_keywords';
 import type {
-  PreviewExtractRequest,
-  PreviewExtractRawResponse,
-  PreviewExtractResponse,
+  FirstAiRequest,
+  FirstAiRawResponse,
+  FirstAiResponse,
   PipelineLogEntry,
 } from './types';
-import { postprocessPreviewExtract } from './postprocess';
+import { postprocessFirstAi } from './postprocess';
 import type { CalculationMethod } from './postprocess';
-import { validatePreviewExtractResult } from './validatePreviewExtractResult';
+import { validateFirstAiResult } from './validateFirstAiResult';
 import { determineAccount } from './accountDetermination';
 import { getByClientId as getLearningRulesByClientId } from '../learningRuleStore';
 import { getCorporate as getCorporateVectors, getSole as getSoleVectors } from '../industryVectorStore';
@@ -121,10 +103,10 @@ function getModelId(): string {
 }
 
 // ============================================================
-// previewExtract用 Structured Output Schema
+// firstAi用 Structured Output Schema
 // ============================================================
 
-const PREVIEW_EXTRACT_SCHEMA = {
+const FIRST_AI_SCHEMA = {
   type: Type.OBJECT,
   properties: {
     source_type: {
@@ -149,7 +131,7 @@ const PREVIEW_EXTRACT_SCHEMA = {
       type: Type.NUMBER,
       description: DESC_DIRECTION_CONFIDENCE,
     },
-    preview_extract_reason: {
+    first_ai_reason: {
       type: Type.STRING,
       nullable: true,
       description: DESC_EXTRACT_REASON,
@@ -264,7 +246,7 @@ const SYSTEM_INSTRUCTION_RULES = `
 - issuer_name: 発行者名・作成者名。全source_typeで必ず読み取りを試みる。読み取れない場合はnull。
 - date: 取引日・契約日・報告対象期間の開始日（YYYY-MM-DD）。全source_typeで必ず読み取りを試みる。読み取れない場合はnull。
 - total_amount: 合計金額・契約金額（税込）。全source_typeで必ず読み取りを試みる。読み取れない場合はnull。
-- preview_extract_reason: 判定根拠。なぜそのsource_typeを選んだかを日本語で1、2文で説明。例:「『領収書』の表記があり、POSレシート形式」
+- first_ai_reason: 判定根拠。なぜそのsource_typeを選んだかを日本語で1、2文で説明。例:「『領収書』の表記があり、POSレシート形式」
 - document_count: 画像内に独立した情報源が何個あるかを数える。純粋に1枚の証票だけが写っている場合のみ1を返す。以下のケースは全て2以上: 複数の証票が並んでいるまたは重なっている / 証票以外のもの（他の書類・画面等）が同時に写っている。必ず整数で返す。
 - document_count_reason: 上記document_countの判定根拠。画像の端・背景・重なり部分に他の書類や証票の片鲞が写っていないかを確認し、その結果を日本語で1、2文で説明。例:「主証票の左下に別のレシートの端が見える」「証票以外のものは写っていない」
 - line_items: 行データ配列。各行のamountは必ず正の整数。入出金はdirectionで区別。`;
@@ -283,10 +265,10 @@ const SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE + buildKeywordsPrompt() + SYS
 // ============================================================
 
 /**
- * 画像1枚のpreviewExtract（Step 0-1）を実行する。
+ * 画像1枚のfirstAi（証票AI分類 + 仕訳行抽出）を実行する。
  * AI呼び出し失敗時もfallbackレスポンスを返す（例外を投げない）。
  */
-export async function previewExtractImage(req: PreviewExtractRequest): Promise<PreviewExtractResponse> {
+export async function firstAiExtract(req: FirstAiRequest): Promise<FirstAiResponse> {
   const startTime = Date.now();
   const filename = req.filename ?? 'unknown';
 
@@ -326,9 +308,9 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
     ppPreprocessed = false;
   }
 
-  console.log(`[pipeline/service] previewExtract開始: ${filename} (${ppMimeType}, ${Math.round(ppSize / 1024)}KB, 前処理=${ppPreprocessed})`);
+  console.log(`[pipeline/service] firstAi開始: ${filename} (${ppMimeType}, ${Math.round(ppSize / 1024)}KB, 前処理=${ppPreprocessed})`);
 
-  let raw: PreviewExtractRawResponse | null = null;
+  let raw: FirstAiRawResponse | null = null;
   let promptTokens = 0;
   let completionTokens = 0;
   let thinkingTokens = 0;
@@ -351,7 +333,7 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: 'application/json',
-        responseSchema: PREVIEW_EXTRACT_SCHEMA,
+        responseSchema: FIRST_AI_SCHEMA,
         temperature: 0,
         // 思考機能: gemini-3.1-flash-liteは思考なし、それ以外は2048トークン
         ...(getModelId().includes('flash-lite') ? {} : { thinkingConfig: { thinkingBudget: 2048 } }),
@@ -367,7 +349,7 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
     // JSON解析
     const responseText = response.text ?? '';
     if (responseText) {
-      raw = JSON.parse(responseText) as PreviewExtractRawResponse;
+      raw = JSON.parse(responseText) as FirstAiRawResponse;
     }
   } catch (err) {
     error = String(err);
@@ -379,7 +361,7 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
   // ログ出力（④ ログ絶対入れる）
   const logEntry: PipelineLogEntry = {
     timestamp: new Date().toISOString(),
-    step: 'preview-extract',
+    step: 'first-ai',
     input: {
       filename,
       mimeType: req.mimeType,
@@ -414,7 +396,7 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
     }
   }
 
-  const result = postprocessPreviewExtract(raw, {
+  const result = postprocessFirstAi(raw, {
     duration_ms: durationMs,
     duration_seconds: Math.round(durationMs / 100) / 10,  // 小数1桁
     prompt_tokens: promptTokens,
@@ -452,7 +434,7 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
   if (result.fallback_applied) console.warn(`[pipeline] ⚠️ フォールバック適用`);
 
   // ━━ 詳細ログ（元のJSON出力を維持）━━
-  console.log(`[pipeline/service] previewExtract完了:`, JSON.stringify(logEntry, null, 0));
+  console.log(`[pipeline/service] firstAi完了:`, JSON.stringify(logEntry, null, 0));
 
   // ━━ Step4-C: 科目確定（辞書接続）━━━━━━━━━━━━━━━━━━
   // fallback未適用（AI正常応答）の場合のみ、line_items毎に科目確定を実行
@@ -501,7 +483,7 @@ export async function previewExtractImage(req: PreviewExtractRequest): Promise<P
   }
 
   // バリデーション（postprocess後に実行）
-  const validation = validatePreviewExtractResult(result);
+  const validation = validateFirstAiResult(result);
   result.validation = {
     ok: validation.ok,
     errorReason: validation.errorReason,

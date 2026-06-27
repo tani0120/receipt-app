@@ -15,7 +15,7 @@
  *       - PostProcessResult に labels[] 追加
  *   v3.2: 旧LineItem型削除・新設計（line_item.type.ts）に一本化（B項目 2026-04-05）
  *       - 旧LineItem（@deprecated）を完全削除
- *       - GeminiPreviewExtractResponse.line_items を Omit<LineItem, 'line_index'>[] | null に変更
+ *       - GeminiFirstAiResponse.line_items を Omit<LineItem, 'line_index'>[] | null に変更
  *       - PREVIEW_EXTRACT_RESPONSE_SCHEMA の line_items スキーマを direction / balance に変更
  *         （旧: debit_account / credit_account → 廃止）
  */
@@ -80,7 +80,7 @@ export interface ReceiptItem {
 // ============================================================
 
 /** Gemini 1 callのレスポンス型（層A） */
-export interface GeminiPreviewExtractResponse {
+export interface GeminiFirstAiResponse {
   // === A1-A2: 証票分類 ===
   voucher_type: VoucherType;
   voucher_type_confidence: number;  // 0.0〜1.0
@@ -161,7 +161,7 @@ export interface PostProcessResult {
 
 /** 最終結果（層A + 層B統合） */
 export interface PreviewExtractResult {
-  gemini: GeminiPreviewExtractResponse;
+  gemini: GeminiFirstAiResponse;
   postprocess: PostProcessResult;
   metadata: {
     file: string;
