@@ -17,6 +17,7 @@
 import { getJournals } from './journalStore'
 import { getByClientId as getConfirmedJournals } from './confirmedJournalsApi'
 import { type JournalListRow, isMfJournal, isAiJournal } from '../../types/journal-list-row'
+import type { Journal } from '../../types/journal.type'
 import type { StaffNotes } from '../../types/staff_notes'
 import { getClientAccounts } from './accountMasterApi'
 import type { AccountGroup } from '../../types/shared-account'
@@ -421,7 +422,7 @@ function filterJournals(
 
 export function getJournalList(clientId: string, query: JournalListQuery): JournalListResponse {
   // 1. 通常仕訳の取得（デフォルト日付ソート）
-  const rawJournals = getJournals<JournalListRow>(clientId)
+  const rawJournals = getJournals<Journal>(clientId)
   let result: JournalListRow[] = [...rawJournals].sort((a, b) => {
     return (
       new Date(a.voucher_date ?? '9999-12-31').getTime() -

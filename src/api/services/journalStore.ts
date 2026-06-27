@@ -18,6 +18,7 @@ import { join } from 'path';
 
 import crypto from 'crypto';
 import { migrateLegacyDeterminationMethod } from './migration/migrateLegacyDeterminationMethod';
+import type { Journal } from '../../types/journal.type';
 
 const DATA_DIR = join(process.cwd(), 'data');
 
@@ -112,11 +113,12 @@ function loadClient(clientId: string): Record<string, unknown>[] {
 /**
  * 顧問先の仕訳データを全件取得
  *
- * ジェネリクスで呼び出し元が期待する型を指定可能。
+ * デフォルト型引数: Journal（統一仕訳型）
+ * 呼び出し元が用途特化型（Pick<Journal, ...>等）を指定することも可能。
  * JSONから読み込んだデータは構造的にTと互換であることが前提。
  * Supabase移行時はDB型バリデーション済みデータが返るため安全。
  */
-export function getJournals<T = Record<string, unknown>>(clientId: string): T[] {
+export function getJournals<T = Journal>(clientId: string): T[] {
   return loadClient(clientId) as T[];
 }
 
