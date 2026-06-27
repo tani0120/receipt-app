@@ -1,10 +1,9 @@
 import type { Journal } from './journal.type'
-import type { UiJournal, NormalizedConfirmedJournal } from './journal-ui.types'
 
 /**
  * 仕訳一覧行
  *
- * Phase 2完了: JournalPhase5Mock / ConfirmedJournal を廃止。
+ * Phase 2完了: JournalPhase5Mock / ConfirmedJournal / UiJournal を廃止。
  * JournalListRow = Journal に単純化。
  *
  * 将来的にこの型エイリアスも不要になるが、後方互換のため当面残す。
@@ -28,16 +27,11 @@ export function isAiJournal(row: JournalListRow): row is Journal {
 }
 
 /**
- * 取込仕訳判定（UI用型ガード）
+ * 取込仕訳判定（型ガード）
  *
- * UiJournal（normalizeJournalForUI通過後）で使用。
- * trueの場合、NormalizedConfirmedJournal にnarrowされる。
- * テンプレートで journal.imported_at 等にアクセス可能になる。
- *
- * JournalListRow / Journal との後方互換あり（オーバーロード）。
+ * source が 'mf_import' or 'system' の仕訳を判定する。
+ * Phase 2: UiJournal/NormalizedConfirmedJournal廃止。引数・返り値ともにJournal。
  */
-export function isImportedJournal(journal: UiJournal): journal is NormalizedConfirmedJournal
-export function isImportedJournal(journal: JournalListRow | Journal): boolean
-export function isImportedJournal(journal: UiJournal | JournalListRow | Journal): boolean {
+export function isImportedJournal(journal: Journal): boolean {
   return 'source' in journal && (journal.source === 'mf_import' || journal.source === 'system')
 }

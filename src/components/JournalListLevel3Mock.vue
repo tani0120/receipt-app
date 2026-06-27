@@ -4126,11 +4126,13 @@ async function flushPendingPatches(): Promise<void> {
 /**
  * Journal Factory（唯一の変換境界）
  *
- * JournalListRow（サーバーAPIレスポンス）→ Journal（統一仕訳型）への変換。
+ * サーバーAPIレスポンス → Journal（統一仕訳型）への変換。
  * この関数を通過した時点から、下流（composable / Vue）は Journal のみ扱う。
  *
- * ConfirmedJournal（確定仕訳型）にはlabels/status/is_read等が存在しないため、
- * 全フィールドをここで保証する（asキャストなし）。
+ * レガシーJSON互換:
+ *   data/confirmed_journals.json に保存されている旧データには
+ *   labels/status/is_read等が存在しない場合がある。
+ *   ここで全フィールドのデフォルト値を保証する。
  *
  * Phase 3で永続化を統合すれば、この関数自体が不要になる。
  */
@@ -4152,44 +4154,42 @@ function normalizeConfirmedEntry(entry: JournalEntryLine): JournalEntryLine {
 
 function normalizeJournalForUI(row: JournalListRow): Journal {
   if (isMfJournal(row)) {
-    // ConfirmedJournal → Journal: 不足フィールドをデフォルト値で補完
+    // MF取込仕訳: 不足フィールドをデフォルト値で補完（レガシーJSON互換）
     const normalized: Journal = {
       ...row,
-      // ConfirmedJournalEntry → JournalEntryLine: ヘルパー経由で変換
       debit_entries: row.debit_entries.map(normalizeConfirmedEntry),
       credit_entries: row.credit_entries.map(normalizeConfirmedEntry),
-      // source は row 自体に既存（'mf_import' | 'system'）
-      // ConfirmedJournal に存在しないフィールドをデフォルト値で補完
-      labels: [],
-      status: null,
-      is_read: true,
-      deleted_at: null,
-      warning_dismissals: [],
-      warning_details: {},
-      is_credit_card_payment: false,
-      voucher_type: null,
-      source_type: null,
-      vendor_vector: null,
-      document_id: null,
-      line_id: null,
-      staff_notes: null,
-      display_order: 90000 + (row.mf_transaction_no ?? 0),
-      invoice_status: null,
-      rule_id: null,
-      invoice_number: null,
-      export_batch_id: null,
-      date_on_document: true,  // MF取込仕訳は日付項目あり
+      labels: row.labels ?? [],
+      status: row.status ?? null,
+      is_read: row.is_read ?? true,
+      deleted_at: row.deleted_at ?? null,
+      warning_dismissals: row.warning_dismissals ?? [],
+      warning_details: row.warning_details ?? {},
+      is_credit_card_payment: row.is_credit_card_payment ?? false,
+      voucher_type: row.voucher_type ?? null,
+      source_type: row.source_type ?? null,
+      vendor_vector: row.vendor_vector ?? null,
+      document_id: row.document_id ?? null,
+      line_id: row.line_id ?? null,
+      staff_notes: row.staff_notes ?? null,
+      display_order: row.display_order ?? 90000 + (row.mf_transaction_no ?? 0),
+      invoice_status: row.invoice_status ?? null,
+      rule_id: row.rule_id ?? null,
+      invoice_number: row.invoice_number ?? null,
+      export_batch_id: row.export_batch_id ?? null,
+      date_on_document: row.date_on_document ?? true,
       description: row.description ?? '',
       memo: row.memo ?? null,
-      memo_author: null,
-      memo_target: null,
-      memo_created_at: null,
+      memo_author: row.memo_author ?? null,
+      memo_target: row.memo_target ?? null,
+      memo_created_at: row.memo_created_at ?? null,
     }
     return normalized
   }
-  // Journal: 全フィールド既存（source必須化済み）
+  // 通常仕訳: 全フィールド既存
   return { ...row }
 }
+
 
 /** 統合一覧APIの呼び出し（POST: 科目名マッピング付き） */
 let _fetchVersion = 0;
