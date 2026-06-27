@@ -2,7 +2,7 @@
  * MF仕訳帳CSVパーサー
  *
  * MFクラウド会計「仕訳帳」→「エクスポート」で取得したCSVを
- * ConfirmedJournal[] に変換する。
+ * Journal[] に変換する。
  *
  * 設計根拠: docs/genzai/25_past_journal.md §3, §5
  *
@@ -15,13 +15,14 @@
  *   1. テキスト読み込み（UTF-8、BOM除去）
  *   2. 行分割 → ヘッダー解析 → 列名マップ構築
  *   3. 取引Noでグループ化
- *   4. グループ毎にConfirmedJournal生成
+ *   4. グループ毎にJournal生成
  *      - 1行目: voucher_date, description, memo, tags, mf_journal_type, direction推定
  *      - 全行: debit_entries[], credit_entries[] に展開
  *      - match_key: normalizeVendorName(description) で生成
  */
 
-import type { ConfirmedJournal, ConfirmedJournalEntry } from '../../types/confirmed_journal.type'
+import type { Journal } from '../../types/journal.type'
+import type { JournalEntryLine } from '../../types/domain-journal'
 import { normalizeVendorName } from './vendorIdentification'
 import crypto from 'crypto'
 
@@ -73,7 +74,7 @@ type HeaderMap = Map<string, number>
 /** パース結果 */
 export interface MfCsvParseResult {
   /** 正常にパースされた仕訳 */
-  journals: ConfirmedJournal[]
+  journals: Journal[]
   /** パース時の警告（スキップされた行等） */
   warnings: string[]
   /** 元CSVの総行数（ヘッダー除く） */
@@ -85,7 +86,7 @@ export interface MfCsvParseResult {
 // ============================================================
 
 /**
- * MF仕訳帳CSVテキストをConfirmedJournal[]に変換
+ * MF仕訳帳CSVテキストをJournal[]に変換
  *
  * @param csv_text - CSVファイルの全テキスト（UTF-8）
  * @param client_id - 顧問先ID（例: LDI-00008）
@@ -142,8 +143,8 @@ export function parseMfCsv(
     groups.get(transaction_no)!.push(fields)
   }
 
-  // ── グループ毎にConfirmedJournal生成 ──
-  const journals: ConfirmedJournal[] = []
+  // ── グループ毎にJournal生成 ──
+  const journals: Journal[] = []
   const now = new Date().toISOString()
 
   for (const [transaction_no, rows] of groups) {
@@ -175,7 +176,7 @@ function buildJournal(
   imported_at: string,
   header_map: HeaderMap,
   warnings: string[],
-): ConfirmedJournal | null {
+): Journal | null {
   const first_row = rows[0]!
 
   // 取引日（YYYY/MM/DD → YYYY-MM-DD、ゼロパディング）
@@ -208,8 +209,8 @@ function buildJournal(
   const is_closing_entry = col(first_row, header_map, '決算整理仕訳') !== ''
 
   // 仕訳行を展開
-  const debit_entries: ConfirmedJournalEntry[] = []
-  const credit_entries: ConfirmedJournalEntry[] = []
+  const debit_entries: JournalEntryLine[] = []
+  const credit_entries: JournalEntryLine[] = []
 
   for (const row of rows) {
     // 借方
@@ -218,12 +219,14 @@ function buildJournal(
       debit_entries.push({
         entryId: generateId('cje_'),
         account: debit_account,
+        account_on_document: true,
         sub_account: col(row, header_map, '借方補助科目') || null,
         department: col(row, header_map, '借方部門') || null,
         vendor_name: col(row, header_map, '借方取引先') || null,
         tax_category_id: col(row, header_map, '借方税区分') || null,
         invoice: col(row, header_map, '借方インボイス') || null,
         amount: parseInt(col(row, header_map, '借方金額(円)') || '0', 10) || 0,
+        amount_on_document: true,
         tax_amount: col(row, header_map, '借方税額') ? parseInt(col(row, header_map, '借方税額'), 10) : null,
       })
     }
@@ -234,12 +237,14 @@ function buildJournal(
       credit_entries.push({
         entryId: generateId('cje_'),
         account: credit_account,
+        account_on_document: true,
         sub_account: col(row, header_map, '貸方補助科目') || null,
         department: col(row, header_map, '貸方部門') || null,
         vendor_name: col(row, header_map, '貸方取引先') || null,
         tax_category_id: col(row, header_map, '貸方税区分') || null,
         invoice: col(row, header_map, '貸方インボイス') || null,
         amount: parseInt(col(row, header_map, '貸方金額(円)') || '0', 10) || 0,
+        amount_on_document: true,
         tax_amount: col(row, header_map, '貸方税額') ? parseInt(col(row, header_map, '貸方税額'), 10) : null,
       })
     }
@@ -251,18 +256,39 @@ function buildJournal(
   return {
     journalId: generateId('cj_'),
     client_id,
+    display_order: transaction_no,
     voucher_date,
+    date_on_document: true,
     description,
+    voucher_type: null,
     match_key,
     vendor_id: null,  // パース時は未照合。後続処理で設定
     vendor_name,
+    source: 'mf_import',
+    source_type: null,
     direction,
+    vendor_vector: null,
+    document_id: null,
+    line_id: null,
     debit_entries,
     credit_entries,
-    source: 'mf_import',
+    status: 'historical' as const,
+    is_read: true,
+    deleted_at: null,
+    labels: [],
+    warning_dismissals: [],
+    warning_details: {},
+    export_batch_id: null,
+    is_credit_card_payment: false,
+    rule_id: null,
+    invoice_status: null,
+    invoice_number: null,
+    memo,
+    memo_author: null,
+    memo_target: null,
+    memo_created_at: null,
     mf_journal_type,
     is_closing_entry,
-    memo,
     tags,
     import_batch_id,
     imported_at,
@@ -357,8 +383,8 @@ function parseCsvLine(line: string): string[] {
 const ASSET_ACCOUNTS = ['現金', '普通預金', '当座預金', '定期預金', '小口現金']
 
 function estimateDirection(
-  debit_entries: ConfirmedJournalEntry[],
-  credit_entries: ConfirmedJournalEntry[],
+  debit_entries: JournalEntryLine[],
+  credit_entries: JournalEntryLine[],
 ): 'expense' | 'income' | 'transfer' {
   const debit_is_asset = debit_entries.some(e => ASSET_ACCOUNTS.includes(e.account))
   const credit_is_asset = credit_entries.some(e => ASSET_ACCOUNTS.includes(e.account))

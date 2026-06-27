@@ -1,5 +1,5 @@
 /**
- * mfJournalImporter.ts — MF API仕訳 → ConfirmedJournal変換 + 承認付き取込
+ * mfJournalImporter.ts — MF API仕訳 → Journal変換 + 承認付き取込
  *
  * 2段階フロー:
  *   1. prepareMfImport(): 変換 + バリデーション（保存しない）
@@ -15,7 +15,8 @@
  */
 
 import crypto from 'crypto'
-import type { ConfirmedJournal, ConfirmedJournalEntry } from '../../types/confirmed_journal.type'
+import type { Journal } from '../../types/journal.type'
+import type { JournalEntryLine } from '../../types/domain-journal'
 import type { MfMcpJournal, MfMcpJournalSide } from './mfMcpClient'
 import type { MfMappingTables } from './mfMappingService'
 import { buildAllMaps } from './mfMappingService'
@@ -59,7 +60,7 @@ export interface ImportIssue {
 /** 準備結果（保存前） */
 export interface PrepareResult {
   /** 変換成功した仕訳 */
-  converted: ConfirmedJournal[]
+  converted: Journal[]
   /** エラーでスキップされた仕訳 */
   skippedErrors: ImportIssue[]
   /** 警告（人間承認が必要） */
@@ -102,11 +103,11 @@ function reverseInvoiceKind(mfKind: string | null | undefined): string | null {
 }
 
 // ────────────────────────────────────────────
-// MfMcpJournalSide → ConfirmedJournalEntry
+// MfMcpJournalSide → JournalEntryLine
 // ────────────────────────────────────────────
 
 /**
- * MfMcpJournalSide → ConfirmedJournalEntry変換
+ * MfMcpJournalSide → JournalEntryLine変換
  *
  * A-3: async化（generateMasterIdがGemini API呼び出しのため）
  * A-4: MISS時自動発番（科目: generateMasterId, 税区分: generateTaxMasterId）
@@ -125,7 +126,7 @@ async function convertSide(
   isExempt: boolean = false,
   /** 免税デフォルト税区分ID（マスタからisExemptDefault=trueで取得済み） */
   exemptDefaultTaxId: string | null = null,
-): Promise<ConfirmedJournalEntry> {
+): Promise<JournalEntryLine> {
   // 科目: MF名前 → Sugusru概念ID（逆マッピング）
   let account = side.account_name
   const conceptId = maps.reverseAccountMap.get(side.account_name)
@@ -194,6 +195,8 @@ async function convertSide(
     tax_category_id: taxCategoryId,
     invoice: reverseInvoiceKind(side.invoice_kind),
     amount,
+    account_on_document: true,
+    amount_on_document: true,
     tax_amount: side.tax_value ?? null,
   }
 }
@@ -314,7 +317,7 @@ export async function prepareMfImport(
   // A-6: 自動発番した科目を蓄積（バッチ完了後に一括保存）
   const newAccounts: Account[] = []
 
-  const converted: ConfirmedJournal[] = []
+  const converted: Journal[] = []
   const skippedErrors: ImportIssue[] = []
   const warnings: ImportIssue[] = []
   const infos: ImportIssue[] = []
@@ -329,8 +332,8 @@ export async function prepareMfImport(
 
     // 変換
     // MF複合仕訳(N:M): debitor/creditorの一方がnullのbranchはパディング。非null側のみ取り込む。
-    const debitEntries: ConfirmedJournalEntry[] = []
-    const creditEntries: ConfirmedJournalEntry[] = []
+    const debitEntries: JournalEntryLine[] = []
+    const creditEntries: JournalEntryLine[] = []
     for (const branch of mfJournal.branches) {
       if (branch.debitor) {
         debitEntries.push(await convertSide(branch.debitor, maps, unmatchedAccounts, unmatchedTaxes, isTaxExclusive, suffix, existingAccountIds, existingTaxIds, newAccounts, isExempt, exemptDefaultTaxId))
@@ -356,19 +359,40 @@ export async function prepareMfImport(
     converted.push({
       journalId: crypto.randomUUID(),
       client_id: clientId,
+      display_order: mfJournal.number ?? 90000,
       voucher_date: mfJournal.transaction_date,
+      date_on_document: true,
       description,
+      voucher_type: null,
       match_key: matchKey,
       vendor_id: null,
       vendor_name: vendorName,
+      source: 'mf_import',
+      source_type: null,
       direction,
+      vendor_vector: null,
+      document_id: null,
+      line_id: null,
       debit_entries: debitEntries,
       credit_entries: creditEntries,
-      source: 'mf_import',
-      determination_method: 'imported',         // 科目確定方法: 会計ソフト取込（MF上で人間が確定済み）
+      status: 'historical' as const,
+      is_read: true,
+      deleted_at: null,
+      labels: [],
+      warning_dismissals: [],
+      warning_details: {},
+      export_batch_id: null,
+      is_credit_card_payment: false,
+      rule_id: null,
+      invoice_status: null,
+      invoice_number: null,
+      memo: mfJournal.memo || null,
+      memo_author: null,
+      memo_target: null,
+      memo_created_at: null,
+      determination_method: 'imported',
       mf_journal_type: mfJournal.journal_type ?? null,
       is_closing_entry: mfJournal.journal_type === MF_JOURNAL_TYPE_ADJUSTING,
-      memo: mfJournal.memo || null,
       tags: mfJournal.tags?.join(',') || null,
       import_batch_id: batchId,
       imported_at: new Date().toISOString(),

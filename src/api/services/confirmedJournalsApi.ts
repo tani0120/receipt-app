@@ -18,13 +18,13 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
-import type { ConfirmedJournal } from '../../types/confirmed_journal.type';
+import type { Journal } from '../../types/journal.type';
 
 const DATA_DIR = join(process.cwd(), 'data');
 const DATA_FILE = join(DATA_DIR, 'confirmed_journals.json');
 
 // インメモリストア
-let journals: ConfirmedJournal[] = [];
+let journals: Journal[] = [];
 
 // ============================================================
 // § 読み込み・書き出し
@@ -37,7 +37,7 @@ export function loadConfirmedJournals(): void {
   try {
     if (existsSync(DATA_FILE)) {
       const raw = readFileSync(DATA_FILE, 'utf-8');
-      journals = JSON.parse(raw) as ConfirmedJournal[];
+      journals = JSON.parse(raw) as Journal[];
       console.log(`[confirmedJournalsApi] ${journals.length}件をJSONから読み込み`);
     } else {
       journals = [];
@@ -70,14 +70,14 @@ function save(): void {
 /**
  * 全件取得（顧問先問わず）
  */
-export function getAll(): ConfirmedJournal[] {
+export function getAll(): Journal[] {
   return journals;
 }
 
 /**
  * 全件書き戻し（正規化後のデータで上書き）
  */
-export function replaceAll(newJournals: ConfirmedJournal[]): void {
+export function replaceAll(newJournals: Journal[]): void {
   journals = newJournals;
   save();
 }
@@ -89,21 +89,21 @@ export function replaceAll(newJournals: ConfirmedJournal[]): void {
 /**
  * 顧問先の確定済み仕訳全件取得
  */
-export function getByClientId(client_id: string): ConfirmedJournal[] {
+export function getByClientId(client_id: string): Journal[] {
   return journals.filter(j => j.client_id === client_id);
 }
 
 /**
  * match_keyで絞り込み（過去仕訳照合 Step 2）
  */
-export function findByMatchKey(client_id: string, match_key: string): ConfirmedJournal[] {
+export function findByMatchKey(client_id: string, match_key: string): Journal[] {
   return journals.filter(j => j.client_id === client_id && j.match_key === match_key);
 }
 
 /**
  * 一括インポート（重複排除: client_id + mf_transaction_no + voucher_date）
  */
-export function importJournals(new_journals: ConfirmedJournal[]): { added: number; skipped: number } {
+export function importJournals(new_journals: Journal[]): { added: number; skipped: number } {
   // 既存の重複キーセット
   const existing_keys = new Set(
     journals
@@ -160,7 +160,7 @@ export function countByClientId(client_id: string): number {
  * MF送信結果を確定済み仕訳に書き戻す
  *
  * mfJournalSender.sendBatchToMf() の結果を受け取り、
- * 対応する ConfirmedJournal に MF-ID / 送信日時 / ステータスを設定する。
+ * 対応する Journal に MF-ID / 送信日時 / ステータスを設定する。
  *
  * @returns 更新件数
  */
@@ -189,7 +189,7 @@ export function applyMfIds(
 /**
  * バッチIDで仕訳取得（CSVダウンロード用）
  */
-export function getByBatchId(import_batch_id: string): ConfirmedJournal[] {
+export function getByBatchId(import_batch_id: string): Journal[] {
   return journals.filter(j => j.import_batch_id === import_batch_id);
 }
 

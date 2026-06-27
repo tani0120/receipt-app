@@ -1,23 +1,23 @@
 /**
  * confirmedJournal.repository.http.ts — ConfirmedJournalRepository HTTP実装（フロントエンド用）
  *
- * 準拠: DL-030, DL-042
+ * 返却型はJournal（統一仕訳型）。
  */
 
 import { createApiClient } from '@/utils/apiClient'
 import type { ConfirmedJournalRepository } from '../types'
-import type { ConfirmedJournal } from '@/types/confirmed_journal.type'
+import type { Journal } from '@/types/journal.type'
 
 const api = createApiClient('/api/confirmed-journals')
 
 export const httpConfirmedJournalRepo: ConfirmedJournalRepository = {
   getByClientId: async (clientId) => {
-    const res = await api.get<{ journals: ConfirmedJournal[] }>(`?clientId=${clientId}`)
+    const res = await api.get<{ journals: Journal[] }>(`?clientId=${clientId}`)
     return res.journals
   },
 
   findByMatchKey: async (clientId, matchKey) => {
-    const res = await api.get<{ journals: ConfirmedJournal[] }>(
+    const res = await api.get<{ journals: Journal[] }>(
       `?clientId=${clientId}&matchKey=${encodeURIComponent(matchKey)}`
     )
     return res.journals

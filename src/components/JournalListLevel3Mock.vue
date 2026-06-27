@@ -2057,7 +2057,7 @@ import { getDocumentImageUrl } from "../data/document_mock_data";
 import type { Journal, JournalLabelMock, JournalEntryLine } from "../types/journal.type";
 import { createEmptyStaffNotes, STAFF_NOTE_KEYS, isStaffNoteKey } from "../types/staff_notes";
 import type { StaffNoteKey } from "../types/staff_notes";
-import type { ConfirmedJournal, ConfirmedJournalEntry } from "../types/confirmed_journal.type";
+// confirmed_journal.type.ts は Phase 2 で廃止済み。Journal（統一仕訳型）に統一。
 import { isImportedJournal, isMfJournal } from "../types/journal-list-row";
 import type { JournalListRow } from "../types/journal-list-row";
 
@@ -3944,7 +3944,7 @@ const showPastJournalModal = ref<boolean>(false);
 const isPastJournalModalPinned = ref<boolean>(false);
 
 // ── 会計ソフトから取り込んだ過去仕訳（confirmed_journals API） ──
-const confirmedJournals = ref<ConfirmedJournal[]>([]);
+const confirmedJournals = ref<Journal[]>([]);
 const isConfirmedLoading = ref(false);
 const confirmedLoaded = ref(false);
 
@@ -3954,7 +3954,7 @@ async function fetchConfirmedJournals() {
   try {
     const res = await fetch(`/api/confirmed-journals/${encodeURIComponent(journalClientId.value)}`);
     if (res.ok) {
-      const data = (await res.json()) as { journals: ConfirmedJournal[]; count: number };
+      const data = (await res.json()) as { journals: Journal[]; count: number };
       confirmedJournals.value = data.journals;
       console.log(`[過去仕訳] confirmed_journals ${data.count}件取得 (${journalClientId.value})`);
     }
@@ -4135,14 +4135,14 @@ async function flushPendingPatches(): Promise<void> {
  * Phase 3で永続化を統合すれば、この関数自体が不要になる。
  */
 /**
- * ConfirmedJournalEntry → JournalEntryLine 変換ヘルパー
+ * JournalEntryLine 変換ヘルパー（レガシーJSON互換）
  *
  * MF取込仕訳は勘定科目・金額が常に存在する（MF仕訳帳CSVの必須列）ため、
  * account_on_document / amount_on_document は true 固定。
  *
  * 将来 JournalEntryLine にフィールドが追加された場合、この関数だけ修正すればよい。
  */
-function normalizeConfirmedEntry(entry: ConfirmedJournalEntry): JournalEntryLine {
+function normalizeConfirmedEntry(entry: JournalEntryLine): JournalEntryLine {
   return {
     ...entry,
     account_on_document: true,   // MF取込: 証憑に勘定科目が常に存在

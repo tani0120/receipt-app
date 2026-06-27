@@ -334,7 +334,7 @@ import { toMfCsvDate } from "@/utils/mf-csv-date";
 import { NULL_DISPLAY_UNKNOWN } from "@/shared/field-nullable-spec";
 import type { SelectOption } from "@/constants/clientOptions";
 import type { Journal, JournalLabelMock } from "@/types/journal.type";
-import type { ConfirmedJournal } from "@/types/confirmed_journal.type";
+// confirmed_journal.type.ts は Phase 2 で廃止済み。Journal（統一仕訳型）に統一。
 
 /** 過去仕訳モーダル表示用（Journal/ConfirmedJournal共通の表示フィールド） */
 interface PastJournalRow {
@@ -353,7 +353,7 @@ const props = defineProps<{
   visible: boolean;
   pinned: boolean;
   journals: Journal[];
-  confirmedJournals: ConfirmedJournal[];
+  confirmedJournals: Journal[];
   isConfirmedLoading: boolean;
   accountOptions: SelectOption[];
   resolveAccountName: (id: string | null | undefined) => string;

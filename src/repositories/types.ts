@@ -57,9 +57,9 @@ import type { Account } from '@/types/shared-account'
 import type { FilterOperator } from '@/api/helpers/applyFilterConditions'
 import type { TaxCategory } from '@/types/shared-tax-category'
 import type { LearningRule } from '@/types/learning_rule.type'
-import type { ConfirmedJournal } from '@/types/confirmed_journal.type'
+import type { Journal } from '@/types/journal.type'
 export type { LearningRule }
-export type { ConfirmedJournal }
+export type { Journal }
 
 
 // ============================================================
@@ -299,13 +299,13 @@ export type LeadRepository = {
  */
 export type ConfirmedJournalRepository = {
   /** 顧問先の確定済み仕訳全件取得 */
-  getByClientId(clientId: string): Promise<ConfirmedJournal[]>
+  getByClientId(clientId: string): Promise<Journal[]>
 
   /**
    * 顧問先の確定済み仕訳をmatch_key（照合キー）で絞り込み
    * 過去仕訳照合（Step 2）のコアメソッド
    */
-  findByMatchKey(clientId: string, matchKey: string): Promise<ConfirmedJournal[]>
+  findByMatchKey(clientId: string, matchKey: string): Promise<Journal[]>
 
   /** 顧問先のインポートバッチ一覧を取得 */
   listBatches(clientId: string): Promise<{
@@ -333,7 +333,7 @@ export type ConfirmedJournalRepository = {
   deleteBatch(batchId: string): Promise<{ removed: number }>
 
   /** バッチ内の仕訳一覧を取得 */
-  getJournalsByBatch(batchId: string): Promise<{ journals: ConfirmedJournal[] }>
+  getJournalsByBatch(batchId: string): Promise<{ journals: Journal[] }>
 }
 
 // ============================================================
