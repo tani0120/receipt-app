@@ -19,6 +19,7 @@ import { join } from 'path';
 import crypto from 'crypto';
 import { migrateLegacyDeterminationMethod } from './migration/migrateLegacyDeterminationMethod';
 import type { Journal } from '../../types/journal.type';
+import { journalSchema, journalPatchSchema } from '../../types/journal.schema';
 
 const DATA_DIR = join(process.cwd(), 'data');
 
@@ -96,6 +97,21 @@ function loadClient(clientId: string): Record<string, unknown>[] {
         save(clientId);
       }
       console.log(`[journalStore] ${clientId}: ${data.length}件をJSONから読み込み`);
+      // zodバリデーション（構造検証。Phase 2.5 #32対応）
+      let invalidCount = 0;
+      for (const item of data) {
+        const result = journalSchema.safeParse(item);
+        if (!result.success) {
+          invalidCount++;
+          if (invalidCount <= 3) {
+            const jid = (item as Record<string, unknown>).journalId ?? '不明';
+            console.warn(`[journalStore] zodバリデーション警告 (${jid}):`, result.error.issues.slice(0, 3));
+          }
+        }
+      }
+      if (invalidCount > 0) {
+        console.warn(`[journalStore] ${clientId}: ${invalidCount}/${data.length}件がzodスキーマ不適合（データは維持。修正推奨）`);
+      }
       return data;
     }
   } catch (err) {
@@ -188,6 +204,13 @@ export function updateJournal(clientId: string, journalId: string, patch: Record
   const journals = loadClient(clientId);
   const journal = journals.find((j) => j.journalId === journalId);
   if (!journal) return null;
+
+  // zodバリデーション（PATCH入口。Phase 2.5 #12対応）
+  const zodResult = journalPatchSchema.safeParse(patch);
+  if (!zodResult.success) {
+    console.warn(`[journalStore] updateJournal zodバリデーション警告 (${journalId}):`, zodResult.error.issues.slice(0, 5));
+    // 警告のみ。既存動作（ホワイトリスト方式）は維持
+  }
 
   // ホワイトリスト外のフィールドを除外（断絶#31修正）
   const rejected: string[] = [];
