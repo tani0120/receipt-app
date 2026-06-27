@@ -13,8 +13,7 @@ export const PROGRESS_ALL_COLUMNS = [
   { key: 'fiscalMonth', label: '決算月' },
   { key: 'shareStatus', label: '共有状態' },
   { key: 'receivedDate', label: '受取日' },
-  { key: 'unsorted', label: '未選別' },
-  { key: 'unexported', label: '未出力' },
+  { key: 'unexported', label: '未仕訳' },
   { key: 'jobStatus', label: '取込' },
   { key: 'currentYearJournals', label: '当年' },
   { key: 'lastYearJournals', label: '前年' },
@@ -30,8 +29,7 @@ export const PROGRESS_FILTER_COLUMN_DEFS = [
   { key: 'staffId', label: '担当者', filterType: 'select' as const, optionsKey: 'dynamic_staff' },
   { key: 'fiscalMonth', label: '決算月', filterType: 'select' as const, optionsKey: 'dynamic_month' },
   { key: 'receivedDate', label: '資料受取日', filterType: 'date' as const },
-  { key: 'unsorted', label: '未選別', filterType: 'number' as const },
-  { key: 'unexported', label: '未出力', filterType: 'number' as const },
+  { key: 'unexported', label: '未仕訳', filterType: 'number' as const },
   { key: 'currentYearJournals', label: '今期累計', filterType: 'number' as const },
   { key: 'lastYearJournals', label: '前期合計', filterType: 'number' as const },
 ] as const;
@@ -59,8 +57,7 @@ export const progressFields: FieldDef[] = [
   // ── 進捗状況 ──
   { key: 'shareStatus', label: '共有設定', section: '進捗状況', component: 'select', widthPercent: 20, order: 1 },
   { key: 'receivedDate', label: '資料受取日', section: '進捗状況', component: 'date', widthPercent: 20, order: 2 },
-  { key: 'unsorted', label: '未選別', section: '進捗状況', component: 'readonly', widthPercent: 20, order: 3, alwaysReadonly: true },
-  { key: 'unexported', label: '未出力', section: '進捗状況', component: 'readonly', widthPercent: 20, order: 4, alwaysReadonly: true },
+  { key: 'unexported', label: '未仕訳', section: '進捗状況', component: 'readonly', widthPercent: 20, order: 3, alwaysReadonly: true },
   { key: 'jobStatus', label: '移行ジョブ', section: '進捗状況', component: 'readonly', widthPercent: 20, order: 5, alwaysReadonly: true },
 
   // ── 月次仕訳 ──

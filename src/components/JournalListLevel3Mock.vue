@@ -36,6 +36,20 @@
           :class="monthTabClass(m)"
         >{{ m }}</button>
       </div>
+      <!-- 未仕訳取込ボタン -->
+      <button
+        class="ml-2 px-3 py-[3px] rounded text-[11px] font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm"
+        :class="isDriveImporting
+          ? 'bg-gray-300 text-gray-500 cursor-wait'
+          : 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 cursor-pointer'"
+        :disabled="isDriveImporting"
+        @mousedown.stop
+        @click.stop="showDriveImportModal"
+        title="Driveから未仕訳ファイルを取り込み"
+      >
+        <i :class="isDriveImporting ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-download'" class="text-[10px]"></i>
+        未仕訳取込
+      </button>
       <!-- 売上/経費/差額サマリー -->
       <div class="ml-auto flex items-center gap-4 text-[14px] font-mono whitespace-nowrap pr-1">
         <span class="text-blue-600 font-semibold">売上 <span class="font-bold text-[15px]">{{ formatSummaryAmount(journalSummary.revenue) }}</span></span>
@@ -1905,6 +1919,54 @@
     </div>
   </div>
 
+  <!-- Drive未仕訳取込モーダル -->
+  <div
+    v-if="driveImportModal.show"
+    class="fixed inset-0 z-100 flex items-center justify-center bg-black/30"
+    @click.self="!isDriveImporting && (driveImportModal.show = false)"
+  >
+    <div class="bg-white rounded-lg shadow-xl w-80 overflow-hidden" @click.stop>
+      <!-- ヘッダー -->
+      <div class="bg-emerald-600 px-4 py-2.5 flex items-center gap-2">
+        <i class="fa-solid fa-download text-white text-[13px]"></i>
+        <span class="text-white font-bold text-[13px]">未仕訳取込</span>
+      </div>
+      <!-- コンテンツ -->
+      <div class="p-4">
+        <!-- 取込前 -->
+        <template v-if="driveImportModal.phase === 'confirm'">
+          <p class="text-[12px] text-gray-700 mb-1">Google Driveから新着ファイルを確認し、仕訳パイプラインに取り込みます。</p>
+          <p class="text-[11px] text-gray-400 mb-3">顧問先: {{ activeClientFull?.companyName ?? journalClientId }}</p>
+          <div class="flex justify-end gap-2">
+            <button @click="driveImportModal.show = false" class="px-3 py-1.5 text-[11px] border border-gray-300 rounded hover:bg-gray-100 text-gray-600">キャンセル</button>
+            <button @click="executeDriveImport" class="px-3 py-1.5 text-[11px] bg-emerald-600 text-white rounded hover:bg-emerald-700 font-bold flex items-center gap-1">
+              <i class="fa-solid fa-download text-[10px]"></i> 取込開始
+            </button>
+          </div>
+        </template>
+        <!-- 取込中 -->
+        <template v-else-if="driveImportModal.phase === 'loading'">
+          <div class="flex flex-col items-center py-3">
+            <i class="fa-solid fa-spinner fa-spin text-emerald-600 text-[24px] mb-2"></i>
+            <p class="text-[12px] text-gray-600 font-bold">Driveを確認中...</p>
+            <p class="text-[10px] text-gray-400 mt-1">新着ファイルを検索しています</p>
+          </div>
+        </template>
+        <!-- 取込完了 -->
+        <template v-else-if="driveImportModal.phase === 'done'">
+          <div class="flex flex-col items-center py-2">
+            <i :class="driveImportModal.icon" class="text-[28px] mb-2"></i>
+            <p class="text-[13px] font-bold" :class="driveImportModal.resultColor">{{ driveImportModal.resultTitle }}</p>
+            <p class="text-[11px] text-gray-500 mt-1">{{ driveImportModal.resultDetail }}</p>
+          </div>
+          <div class="flex justify-center mt-3">
+            <button @click="driveImportModal.show = false" class="w-full px-4 py-2 text-[12px] bg-emerald-600 text-white rounded hover:bg-emerald-700 font-bold">OK</button>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
   <!-- 確認ダイアログ（モーダル） -->
   <div
     v-if="confirmDialog.show"
@@ -2019,6 +2081,9 @@ import { useInlineEdit } from '@/composables/useInlineEdit';
 import type { CombinedRow, UndoSnapshot, UiEntryLine } from '@/composables/useInlineEdit';
 import { useCellDragAndFill } from '@/composables/useCellDragAndFill';
 import { useAccountCombobox } from '@/composables/useAccountCombobox';
+import { useRepositories } from '@/composables/useRepositories';
+
+const { repos } = useRepositories();
 
 // 過去仕訳検索モーダル用の科目選択肢（顧問先科目から生成）
 const accountOptionsForModal = computed<SelectOption[]>(() =>
@@ -2073,6 +2138,72 @@ const journalClientId = computed(() => {
 const journals = shallowRef<Journal[]>([]);
 /** API応答の売上/経費/差額サマリー */
 const journalSummary = ref<{ revenue: number; expense: number; profit: number }>({ revenue: 0, expense: 0, profit: 0 });
+
+// ────── 未仕訳取込（Drive API経由 + モーダル） ──────
+const isDriveImporting = ref(false);
+const driveImportModal = ref<{
+  show: boolean;
+  phase: 'confirm' | 'loading' | 'done';
+  icon: string;
+  resultTitle: string;
+  resultDetail: string;
+  resultColor: string;
+}>({
+  show: false,
+  phase: 'confirm',
+  icon: '',
+  resultTitle: '',
+  resultDetail: '',
+  resultColor: '',
+});
+
+function showDriveImportModal() {
+  if (isDriveImporting.value) return;
+  driveImportModal.value = {
+    show: true,
+    phase: 'confirm',
+    icon: '',
+    resultTitle: '',
+    resultDetail: '',
+    resultColor: '',
+  };
+}
+
+async function executeDriveImport() {
+  isDriveImporting.value = true;
+  driveImportModal.value.phase = 'loading';
+
+  try {
+    const data = await repos.drive.pollClient(journalClientId.value);
+
+    if (data.ok && data.added && data.added > 0) {
+      driveImportModal.value.icon = 'fa-solid fa-circle-check text-emerald-500';
+      driveImportModal.value.resultTitle = `${data.added}件 取り込み完了`;
+      driveImportModal.value.resultDetail = '仕訳一覧に反映しました';
+      driveImportModal.value.resultColor = 'text-emerald-700';
+      await fetchJournalList();
+    } else if (data.error) {
+      driveImportModal.value.icon = 'fa-solid fa-triangle-exclamation text-amber-500';
+      driveImportModal.value.resultTitle = '取込できませんでした';
+      driveImportModal.value.resultDetail = data.error;
+      driveImportModal.value.resultColor = 'text-amber-700';
+    } else {
+      driveImportModal.value.icon = 'fa-solid fa-circle-info text-blue-500';
+      driveImportModal.value.resultTitle = '新着ファイルなし';
+      driveImportModal.value.resultDetail = '未取込のファイルはありません';
+      driveImportModal.value.resultColor = 'text-gray-600';
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    driveImportModal.value.icon = 'fa-solid fa-circle-xmark text-red-500';
+    driveImportModal.value.resultTitle = 'エラー';
+    driveImportModal.value.resultDetail = msg;
+    driveImportModal.value.resultColor = 'text-red-700';
+  } finally {
+    isDriveImporting.value = false;
+    driveImportModal.value.phase = 'done';
+  }
+}
 
 // ────── 顧問先連動（勘定科目・税区分フィルタ） ──────
 const { clients, currentClient } = useClients();

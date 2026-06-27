@@ -230,6 +230,77 @@ export async function pollSingleClient(
   return { 新規件数: result.新規件数, エラー: result.エラー };
 }
 
+/**
+ * 全社一括Driveポーリング（APIエンドポイント用）
+ *
+ * 対象選別条件:
+ *   1. status === 'active'（契約中）
+ *   2. sharedFolderIdが設定済み（Driveフォルダ連携済み）
+ *
+ * 1社ずつ逐次処理（Drive APIレート制限対策）
+ */
+export async function pollAllClients(): Promise<{
+  対象社数: number;
+  合計新規: number;
+  合計エラー: number;
+  結果: Array<{ clientId: string; companyName: string; 新規件数: number; エラー: string | null }>;
+}> {
+  const sharedDriveId = process.env.VITE_SHARED_DRIVE_ID;
+  if (!sharedDriveId) {
+    return { 対象社数: 0, 合計新規: 0, 合計エラー: 1, 結果: [{ clientId: '', companyName: '', 新規件数: 0, エラー: 'VITE_SHARED_DRIVE_ID未設定' }] };
+  }
+
+  // 対象選別: status=active + sharedFolderId設定済み
+  const allClients = getAllClients();
+  const targets = allClients.filter(c => c.status === 'active' && c.sharedFolderId);
+
+  if (targets.length === 0) {
+    return { 対象社数: 0, 合計新規: 0, 合計エラー: 0, 結果: [] };
+  }
+
+  console.log(`[drivePollingWorker] 全社一括ポーリング開始: ${targets.length}社`);
+  const t0 = Date.now();
+
+  let 合計新規 = 0;
+  let 合計エラー = 0;
+  const 結果: Array<{ clientId: string; companyName: string; 新規件数: number; エラー: string | null }> = [];
+
+  // チャンク分割で処理
+  for (let i = 0; i < targets.length; i += チャンクサイズ) {
+    const chunk = targets.slice(i, i + チャンクサイズ);
+
+    for (const client of chunk) {
+      const r = await pollOneClient(
+        client.clientId,
+        client.companyName,
+        client.sharedFolderId,
+        sharedDriveId,
+      );
+
+      結果.push({ clientId: r.clientId, companyName: r.companyName, 新規件数: r.新規件数, エラー: r.エラー });
+
+      if (r.エラー) {
+        合計エラー++;
+      } else {
+        合計新規 += r.新規件数;
+      }
+    }
+
+    // チャンク間待機
+    if (i + チャンクサイズ < targets.length) {
+      await new Promise(r => setTimeout(r, チャンク間待機));
+    }
+  }
+
+  const elapsed = Date.now() - t0;
+  console.log(
+    `[drivePollingWorker] 全社一括ポーリング完了: ${targets.length}社`
+    + ` (新規${合計新規}件, エラー${合計エラー}件, ${elapsed}ms)`,
+  );
+
+  return { 対象社数: targets.length, 合計新規, 合計エラー, 結果 };
+}
+
 // ===== 公開API =====
 
 /**

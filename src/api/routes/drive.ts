@@ -696,7 +696,7 @@ app.post('/revoke-permission', async (c) => {
 // Drive新規ファイルをdoc-storeに自動登録
 // ============================================================
 
-import { pollSingleClient } from '../services/drive/drivePollingWorker';
+import { pollSingleClient, pollAllClients } from '../services/drive/drivePollingWorker';
 
 app.post('/poll/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
@@ -711,6 +711,32 @@ app.post('/poll/:clientId', async (c) => {
     }
     console.log(`[drive/route] POST /poll/${clientId}: ${result.新規件数}件新規登録`);
     return c.json({ ok: true, added: result.新規件数 });
+  } catch (err) {
+    return apiCatchError(c, err);
+  }
+});
+
+// ============================================================
+// POST /poll-all — 全社一括Driveポーリング
+// 対象: status=active + sharedFolderId設定済みの顧問先
+// ============================================================
+
+app.post('/poll-all', async (c) => {
+  try {
+    const result = await pollAllClients();
+    console.log(`[drive/route] POST /poll-all: ${result.対象社数}社, 新規${result.合計新規}件, エラー${result.合計エラー}件`);
+    return c.json({
+      ok: true,
+      targetCount: result.対象社数,
+      totalAdded: result.合計新規,
+      totalErrors: result.合計エラー,
+      details: result.結果.map(r => ({
+        clientId: r.clientId,
+        companyName: r.companyName,
+        added: r.新規件数,
+        error: r.エラー,
+      })),
+    });
   } catch (err) {
     return apiCatchError(c, err);
   }

@@ -105,7 +105,7 @@
                    <i class="fa-solid fa-file-export"></i> <span class="text-sm">CSV出力</span>
                 </div>
                 <div class="text-3xl font-extrabold text-gray-900 mt-2">{{ widgets.exportCount }} <span class="text-sm font-normal text-gray-500 ml-1">件</span></div>
-                <div class="text-[10px] font-medium text-gray-500 mt-1 whitespace-nowrap overflow-hidden text-ellipsis">未出力: 4件</div>
+                <div class="text-[10px] font-medium text-gray-500 mt-1 whitespace-nowrap overflow-hidden text-ellipsis">未仕訳: 4件</div>
              </div>
              <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center relative z-10">
                 <span class="text-xs font-semibold text-green-600 flex items-center gap-1">CSV出力待ち一覧へ <i class="fa-solid fa-filter text-[10px]"></i></span>

@@ -55,7 +55,6 @@
           <template #fiscalMonth="{ field }"><div class="ce-field"><label>{{ field.label }}</label><span class="ce-readonly-val">—</span></div></template>
           <template #shareStatus="{ field }"><div class="ce-field"><label>{{ field.label }}</label><span class="ce-readonly-val">—</span></div></template>
           <template #receivedDate="{ field }"><div class="ce-field"><label>{{ field.label }}</label><span class="ce-readonly-val">—</span></div></template>
-          <template #unsorted="{ field }"><div class="ce-field"><label>{{ field.label }}</label><span class="ce-readonly-val">—</span></div></template>
           <template #unexported="{ field }"><div class="ce-field"><label>{{ field.label }}</label><span class="ce-readonly-val">—</span></div></template>
           <template #jobStatus="{ field }"><div class="ce-field"><label>{{ field.label }}</label><span class="ce-readonly-val">—</span></div></template>
         </DraggableFieldGrid>

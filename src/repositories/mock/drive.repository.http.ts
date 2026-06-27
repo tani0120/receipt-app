@@ -81,4 +81,12 @@ export const httpDriveRepo: DriveRepository = {
   getExcludedCount: async (clientId) => {
     return api.get(`/excluded-count/${encodeURIComponent(clientId)}`)
   },
+
+  pollClient: async (clientId) => {
+    return api.post(`/poll/${encodeURIComponent(clientId)}`, {}) as Promise<{ ok: boolean; added?: number; error?: string }>
+  },
+
+  pollAll: async () => {
+    return api.post('/poll-all', {}) as Promise<{ ok: boolean; targetCount: number; totalAdded: number; totalErrors: number; details: Array<{ clientId: string; companyName: string; added: number; error: string | null }> }>
+  },
 }

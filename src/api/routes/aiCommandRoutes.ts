@@ -28,7 +28,7 @@ import { executeWithFunctionCalling } from '../services/aiFunctionCallService'
 import { getAuthStatus } from '../services/mfAuthService'
 import { getCurrentStaffUuid } from './authRoutes'
 import { addCommandLog, getMonthlyTotalCost, getAllMonthlyCosts, getStaffMonthlyCosts, getClientMonthlyCosts, getCrossMonthlyCosts, getModelMonthlyCosts, getAnnualTotalCost } from '../services/aiLogStore'
-import { calculateCost, MODEL_PRICING, USD_JPY_RATE } from '../ai/modelConfig'
+import { calculateCost, MODEL_PRICING, USD_JPY_RATE, getAccountEstimateModelId } from '../ai/modelConfig'
 import { getByThreeCode, getAll as getAllClients } from '../services/clientsApi'
 import { isBqConfigured, getMonthlySummaries, getCurrentMonthCost } from '../services/bigqueryCostService'
 
@@ -340,6 +340,7 @@ app.get('/cost/config', (c) => {
   return c.json({
     currentModel: process.env['AI_COMMAND_MODEL'] ?? 'gemini-3.5-flash',
     ocrModel: process.env['VERTEX_MODEL_ID'] ?? 'gemini-3.1-flash-lite',
+    accountEstimateModel: getAccountEstimateModelId(),
     pricing: MODEL_PRICING,
     usdJpyRate: USD_JPY_RATE,
     annualTotalCostYen: Math.round(getAnnualTotalCost() * 100) / 100,

@@ -1465,6 +1465,10 @@ export type DriveRepository = {
   revokePermission(data: { email: string; folderId: string }): Promise<unknown>
   /** 仕訳外件数取得 */
   getExcludedCount(clientId: string): Promise<unknown>
+  /** 単社Driveポーリング（新着ファイル取込） */
+  pollClient(clientId: string): Promise<{ ok: boolean; added?: number; error?: string }>
+  /** 全社一括Driveポーリング */
+  pollAll(): Promise<{ ok: boolean; targetCount: number; totalAdded: number; totalErrors: number; details: Array<{ clientId: string; companyName: string; added: number; error: string | null }> }>
 }
 
 // ============================================================

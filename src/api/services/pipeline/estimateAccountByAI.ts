@@ -16,6 +16,7 @@
  */
 
 import { GoogleGenAI } from '@google/genai'
+import { getAccountEstimateModelId } from '../../ai/modelConfig'
 
 // ============================================================
 // § 入力型
@@ -59,14 +60,14 @@ interface AiResponseSchema {
   confidence: number
 }
 
-/** 確信度しきい値。これ未満はinsufficient維持 */
+/** 確信度しきい値。これ未満はinsufficient（不十分）維持 */
 const CONFIDENCE_THRESHOLD = 0.3
 
 /**
  * AI科目推定メイン関数
  *
  * @param input - 推定に必要なテキスト情報 + 科目マスタ
- * @returns 推定成功時: EstimateAccountResult。失敗 or confidence < 0.3: null
+ * @returns 推定成功時: EstimateAccountResult。失敗 or confidence（確信度） < 0.3: null
  */
 export async function estimateAccountByAI(
   input: EstimateAccountInput
@@ -85,9 +86,10 @@ export async function estimateAccountByAI(
 
     const prompt = buildPrompt(input, accountChoices)
 
+    const modelId = getAccountEstimateModelId()
     const genai = new GoogleGenAI({ apiKey })
     const response = await genai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: modelId,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
