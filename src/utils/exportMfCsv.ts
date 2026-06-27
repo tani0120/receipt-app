@@ -4,13 +4,13 @@
  * 準拠: docs/genzai/09_streamed/streamed_mf_csv_spec.md
  *
  * 設計方針:
- *   - 内部IDベースのJournalPhase5Mock → MF CSV 21列に変換
+ *   - 内部IDベースのJournal → MF CSV 21列に変換
  *   - ID→MF名称変換はコールバックで受け取る（UIの名前解決関数を再利用）
  *   - UTF-8 BOM付き出力（MFはUTF-8 BOMを受け付ける）
  *   - 複合仕訳（N対N）はmax(debit, credit)行に展開
  */
 
-import type { JournalPhase5Mock, JournalLabelMock } from '@/types/journal_phase5_mock.type';
+import type { Journal, JournalLabelMock } from '@/types/journal.type';
 import type { JournalEntryLine } from '@/types/domain-journal';
 import { toMfCsvDate } from '@/utils/mf-csv-date';
 
@@ -54,8 +54,8 @@ export type NameResolver = (id: string | null | undefined) => string;
 
 /** CSV出力前バリデーション結果 */
 export interface CsvValidationResult {
-  valid: JournalPhase5Mock[];
-  excluded: { journal: JournalPhase5Mock; reasons: string[] }[];
+  valid: Journal[];
+  excluded: { journal: Journal; reasons: string[] }[];
 }
 
 // ============================================================
@@ -99,10 +99,10 @@ export const EXCLUDE_LABELS = [
  * 警告ラベル付き仕訳を除外し、出力可能な仕訳のみ返す
  */
 export function validateForCsvExport(
-  journals: JournalPhase5Mock[],
+  journals: Journal[],
 ): CsvValidationResult {
-  const valid: JournalPhase5Mock[] = [];
-  const excluded: { journal: JournalPhase5Mock; reasons: string[] }[] = [];
+  const valid: Journal[] = [];
+  const excluded: { journal: Journal; reasons: string[] }[] = [];
 
   for (const j of journals) {
     const reasons: string[] = [];
@@ -145,7 +145,7 @@ export function validateForCsvExport(
  *   N:M  → max(N,M)行（短い側をパディング）
  */
 export function expandJournalToMfRows(
-  journal: JournalPhase5Mock,
+  journal: Journal,
   resolveAccountName: NameResolver,
   resolveTaxCategoryName: NameResolver,
   txNoOverride?: number,
@@ -232,7 +232,7 @@ const MF_CSV_HEADERS: (keyof MfCsvRow)[] = [
  * 全仕訳をMF CSV文字列に変換
  */
 export function buildMfCsvContent(
-  journals: JournalPhase5Mock[],
+  journals: Journal[],
   resolveAccountName: NameResolver,
   resolveTaxCategoryName: NameResolver,
 ): string {
@@ -305,7 +305,7 @@ function truncateDescription(desc: string, maxLength: number): string {
  * invoice_status: 'qualified' → '適格', 'not_qualified' → '区分記載', null → ''
  */
 function resolveInvoiceCategory(
-  journal: JournalPhase5Mock,
+  journal: Journal,
   _side: 'debit' | 'credit',
 ): string {
   if (journal.invoice_status === 'qualified') return '適格';

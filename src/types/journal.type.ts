@@ -6,11 +6,11 @@
  *
  * 準拠: docs/genzai/60_journal_domain_model.md
  *
- * 統合元:
- *   - JournalPhase5Mock（フェーズ5仕訳モック型）: src/types/journal_phase5_mock.type.ts
- *   - ConfirmedJournal（確定仕訳型）: src/types/confirmed_journal.type.ts
+ * 統合元（廃止済み）:
+ *   - JournalPhase5Mock: src/types/journal_phase5_mock.type.ts → Phase 2で廃止
+ *   - ConfirmedJournal: src/types/confirmed_journal.type.ts → Phase 2で廃止
  *
- * Phase 1: 型定義のみ。実装は変更しない。既存コードはそのまま動く。
+ * Phase 2: JournalPhase5Mock / ConfirmedJournal → Journal に統一完了。
  */
 
 import type { StaffNotes } from './staff_notes'

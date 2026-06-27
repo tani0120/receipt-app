@@ -10,12 +10,11 @@
  *   UI専用アダプタ型はドメイン型（domain-journal.ts）には置かない。
  *
  * Phase 1: Journal（統一仕訳型）を追加。
- *   Phase 2で NormalizedConfirmedJournal / JournalPhase5Mock を廃止予定。
+ *   Phase 2: JournalPhase5Mock 廃止済み。NormalizedConfirmedJournal は後続で廃止予定。
  */
 
 import type { ConfirmedJournal } from './confirmed_journal.type'
-import type { JournalPhase5Mock, JournalLabelMock } from './journal_phase5_mock.type'
-import type { Journal } from './journal.type'
+import type { Journal, JournalLabelMock } from './journal.type'
 import type { StaffNotes } from './staff_notes'
 
 // Journal（統一仕訳型）の再export（他ファイルがjournal-ui.types.tsから参照できるようにする）
@@ -71,5 +70,5 @@ export interface NormalizedConfirmedJournal extends ConfirmedJournal {
 //   Phase 2完了後: UiJournal = Journal に単純化予定。
 // ============================================================
 
-export type UiJournal = JournalPhase5Mock | NormalizedConfirmedJournal | Journal
+export type UiJournal = NormalizedConfirmedJournal | Journal
 

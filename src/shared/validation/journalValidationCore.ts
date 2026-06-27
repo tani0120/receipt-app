@@ -5,7 +5,7 @@
  * C（JournalListLevel3Mock.vue内ローカル）の3系統を統合。
  *
  * 設計方針:
- *   - 最小インターフェースで型を定義（JournalPhase5Mockの全フィールドは不要）
+ *   - 最小インターフェースで型を定義（Journalの全フィールドは不要）
  *   - labels を直接 mutate する破壊的方式（フロントのリアクティブ性に必要）
  *   - API側は呼び出し前に labels をコピーすれば非破壊にできる
  *   - セルハイライト情報を SyncWarningResult に含めて返す
@@ -61,7 +61,7 @@ export interface JournalEntryForValidation {
 /**
  * バリデーション用の仕訳（最小インターフェース）
  *
- * JournalPhase5Mock はこのインターフェースの全フィールドを持つため、
+ * Journal はこのインターフェースの全フィールドを持つため、
  * TypeScriptの構造的型付けによりキャストなしで渡せる。
  */
 export interface JournalForValidation {

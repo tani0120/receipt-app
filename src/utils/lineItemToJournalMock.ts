@@ -1,8 +1,8 @@
 /**
- * lineItemToJournalMock.ts — LineItem[] → JournalPhase5Mock[] 変換ユーティリティ
+ * lineItemToJournalMock.ts — LineItem[] → Journal[] 変換ユーティリティ
  *
- * 目的: パイプライン穴②「LineItem[] → JournalPhase5Mock[]」を埋める変換関数群
- * 効果: 「テスト→Gemini→LineItem→JournalPhase5Mock→MfCsvRow→CSV」が初めてつながる
+ * 目的: パイプライン穴②「LineItem[] → Journal[]」を埋める変換関数群
+ * 効果: 「テスト→Gemini→LineItem→Journal→MfCsvRow→CSV」が初めてつながる
  *
  * 【ファイル構成】
  *   C-1: COUNTERPART_ACCOUNT_MAP（相手勘定マップ）定数
@@ -21,7 +21,7 @@
 import type { LineItem } from '@/types/pipeline/line_item.type'
 import type { LineItemDirection } from '@/types/pipeline/line_item.type'
 import type { SourceType } from '@/types/pipeline/source_type.type'
-import type { JournalPhase5Mock } from '@/types/journal_phase5_mock.type'
+import type { Journal } from '@/types/journal.type'
 import type { JournalEntryLine } from '@/types/domain-journal'
 import type { AccountDeterminationResult } from '../api/services/pipeline/accountDetermination'
 import type { Vendor } from '@/types/pipeline/vendor.type'
@@ -319,7 +319,7 @@ function generateJournalEntryId(): string {
 }
 
 /**
- * D-1: LineItem[] → JournalPhase5Mock[] 変換関数
+ * D-1: LineItem[] → Journal[] 変換関数
  *
  * 【D-2: debit/credit変換ロジック】
  *   expense: debit = determined_account（確定科目）, credit = counterpart_account（相手勘定）
@@ -329,7 +329,7 @@ function generateJournalEntryId(): string {
  * 【D-5: insufficient処理】
  *   level = 'insufficient' または determined_account = null の場合:
  *   → debit/credit entries = []（空）かつ labels に 'ACCOUNT_UNKNOWN' を付与
- *   ※ JournalPhase5Mock.status は 'exported' | null のみ（classification_status フィールドなし）
+ *   ※ Journal.status は 'exported' | null のみ（classification_status フィールドなし）
  *   ※ task.md の「classification_status: 'needs_review'」はフィールド不存在のため
  *      labels: ['ACCOUNT_UNKNOWN'] で代替実装（スコープ外問題として報告済み）
  *
@@ -342,7 +342,7 @@ function generateJournalEntryId(): string {
  * @param accountMaster       - 科目マスタ（相手勘定の税区分をdefaultTaxCategoryIdから動的解決。省略時はnull）
  * @param vendor              - 取引先マスタ（Vendorマスタのcredit_*フィールドで相手勘定を上書き。任意）
  * @param defaultPaymentMethod - 顧問先のデフォルト支払方法（client.defaultPaymentMethod。任意）
- * @returns JournalPhase5Mock[]
+ * @returns Journal[]
  */
 export function lineItemToJournalMock(
   items: LineItem[],
@@ -354,7 +354,7 @@ export function lineItemToJournalMock(
   accountMaster: { accountId: string; defaultTaxCategoryId?: string | null }[] | null = null,
   vendor: Vendor | null = null,
   defaultPaymentMethod: 'cash' | 'owner_loan' | 'accounts_payable' | null = null,
-): JournalPhase5Mock[] {
+): Journal[] {
   return items.map((item, index) => {
     // Step4-C: 科目確定結果がある場合はそちらを使用
     const acctResult = accountResults?.[index] ?? null
@@ -455,7 +455,7 @@ export function lineItemToJournalMock(
     }
 
     // D-5: insufficient の場合は ACCOUNT_UNKNOWN ラベルを付与
-    const labels: JournalPhase5Mock['labels'] = isInsufficient
+    const labels: Journal['labels'] = isInsufficient
       ? ['ACCOUNT_UNKNOWN']
       : []
 
@@ -468,7 +468,7 @@ export function lineItemToJournalMock(
     // D-6: voucher_type 解決
     const voucherType = resolveVoucherType(sourceType, item.direction, isCreditCardPayment)
 
-    const journal: JournalPhase5Mock = {
+    const journal: Journal = {
       journalId:              generateJournalId(),
       client_id:            clientId,
       display_order:        index + 1,

@@ -10,7 +10,7 @@
  *   - セクションD: `aiMetrics.xxx`（DocEntry.aiMetrics の子プロパティ）
  *   - セクションG: `job.xxx`（MigrationJob型。DocEntry外の独立エンティティ）
  *   - セクションH: マスタ型名をそのまま使用（Staff, Client等）
- *   - セクションI〜O: `journal.xxx`（JournalPhase5Mock型のプロパティ）
+ *   - セクションI〜O: `journal.xxx`（Journal型のプロパティ）
  */
 
 export type CellValue = '✅' | '→' | '✏️' | '🔧' | '⛔' | '—'

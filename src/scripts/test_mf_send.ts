@@ -5,7 +5,7 @@
  *   1. マッピングテーブル生成（Sugusru概念ID → MF-ID）
  *   2. テスト用Sugusru仕訳（正しい概念ID使用）を作成
  *   3. 金額を1円に置換（テスト安全策）
- *   4. 変換（JournalPhase5Mock → postJournals形式）
+ *   4. 変換（Journal → postJournals形式）
  *   5. 送信（MCP経由でMFに登録）
  *   6. 結果表示
  *

@@ -525,7 +525,7 @@ const sendToProcess = async () => {
       const lineItems = docLineItemsToLineItems(docEntry.aiLineItems);
       const sourceType = (docEntry.aiSourceType as SourceType) || 'receipt';
 
-      // lineItemToJournalMock() で JournalPhase5Mock[] に変換
+      // lineItemToJournalMock() で Journal[] に変換
       const newJournals = lineItemToJournalMock(
         lineItems,
         sourceType,

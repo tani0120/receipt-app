@@ -4187,7 +4187,7 @@ function normalizeJournalForUI(row: JournalListRow): Journal {
     }
     return normalized
   }
-  // JournalPhase5Mock → Journal: 全フィールド既存（source必須化済み）
+  // Journal: 全フィールド既存（source必須化済み）
   return { ...row }
 }
 

@@ -8,7 +8,7 @@
  *
  * 設計根拠: docs/genzai/25_past_journal.md §4
  * 命名規則: snake_case統一（DL-054）
- * 互換性: JournalPhase5Mock / JournalEntryLine と同じプロパティ名
+ * 互換性: Journal / JournalEntryLine と同じプロパティ名
  *
  * 利用用途（全8件。25_past_journal.md §2参照）:
  *   U-1: accountDetermination.ts Step 2（過去仕訳照合）
@@ -33,7 +33,7 @@ import type { DeterminationMethod } from './determination-method'
  * MF仕訳帳CSVの取引Noでグループ化した1仕訳単位。
  * debit_entries / credit_entries で複合仕訳に対応。
  *
- * JournalPhase5Mockと互換性があり、UIで直接使用可能:
+ * Journalと互換性があり、UIで直接使用可能:
  *   - voucher_date, description, debit_entries[].account 等
  */
 export interface ConfirmedJournal {

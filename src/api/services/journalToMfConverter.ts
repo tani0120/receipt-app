@@ -1,7 +1,7 @@
 /**
  * journalToMfConverter.ts - Sugusru仕訳 -> MF postJournals形式 変換
  *
- * JournalPhase5Mock（debit_entries[] + credit_entries[]）を
+ * Journal（debit_entries[] + credit_entries[]）を
  * MF APIのpostJournals形式（branches[{debitor, creditor, remark}]）に変換する。
  *
  * N:N仕訳のbranches変換ルール（検証済み 2026-05-23）:
@@ -15,7 +15,7 @@ import type { MfMappingTables } from './mfMappingService'
 import { toMfInvoiceKind, MF_JOURNAL_TYPE_ENTRY, MF_SUGUSURU_TAG } from '../../constants/mfApiConstants'
 
 // ────────────────────────────────────────────
-// 入力型（JournalPhase5Mockの必要フィールドのみ）
+// 入力型（Journalの必要フィールドのみ）
 // ────────────────────────────────────────────
 
 /** 変換元の仕訳行 */

@@ -358,7 +358,7 @@
       </div>
 
       <div class="prompt-meta">
-        <div class="prompt-meta-item"><span class="prompt-meta-label">処理</span> firstAi API出力 → lineItemToJournalMock() → JournalPhase5Mock[]</div>
+        <div class="prompt-meta-item"><span class="prompt-meta-label">処理</span> firstAi API出力 → lineItemToJournalMock() → Journal[]</div>
         <div class="prompt-meta-item"><span class="prompt-meta-label">実行タイミング</span> 資料選別画面で「確定送信」時（AIは不使用。純粋なデータ変換）</div>
         <div class="prompt-meta-item"><span class="prompt-meta-label">ソース</span> <code>lineItemToJournalMock.ts</code></div>
       </div>
@@ -369,10 +369,10 @@
           <i class="fa-solid fa-arrows-left-right"></i> フィールドマッピング（firstAi → 仕訳）
         </summary>
         <div class="prompt-block-content">
-          <h4>firstAi出力 → JournalPhase5Mock</h4>
+          <h4>firstAi出力 → Journal</h4>
           <table class="prompt-table">
             <thead>
-              <tr><th>firstAi出力</th><th>→</th><th>JournalPhase5Mock</th><th>変換方法</th></tr>
+              <tr><th>firstAi出力</th><th>→</th><th>Journal</th><th>変換方法</th></tr>
             </thead>
             <tbody>
               <tr><td><code>source_type</code></td><td>→</td><td><code>source_type</code></td><td>そのまま転写</td></tr>
@@ -468,7 +468,7 @@
               <div class="flow-step-icon"><i class="fa-solid fa-book"></i></div>
               <div class="flow-step-body">
                 <strong>⑥ 仕訳保存</strong>
-                <span>JournalPhase5Mock[] → PUT /api/journals/:clientId → journals-{clientId}.json</span>
+                <span>Journal[] → PUT /api/journals/:clientId → journals-{clientId}.json</span>
                 <span class="flow-trigger">🔥 発火: ⑤の変換完了直後に自動。useJournals.pushで注入→watchで自動保存</span>
               </div>
             </div>
