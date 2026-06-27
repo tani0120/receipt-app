@@ -14,6 +14,7 @@
 import { buildAllMaps, type MfMappingTables } from './mfMappingService'
 import { convertToMfJournal, type SourceJournal, type ConversionError } from './journalToMfConverter'
 import { mcpCreateJournal } from './mfMcpClient'
+import { updateJournal } from './journalStore'
 
 // ────────────────────────────────────────────
 // 結果型
@@ -53,6 +54,16 @@ export interface BatchSendResult {
   results: SendResult[]
   /** 処理時間（ミリ秒） */
   elapsedMs: number
+  /**
+   * MFにマッチしない科目一覧（断絶#18修正: UI警告表示用）
+   * 空配列の場合は全科目マッチ済み。
+   */
+  unmatchedAccounts: { sugusruId: string; sugusruName: string }[]
+  /**
+   * MFにマッチしない税区分一覧（断絶#18修正: UI警告表示用）
+   * 空配列の場合は全税区分マッチ済み。
+   */
+  unmatchedTaxes: { sugusruId: string; sugusruName: string }[]
 }
 
 /** 進捗コールバック */
@@ -237,6 +248,9 @@ export async function sendBatchToMf(
     failureCount,
     results,
     elapsedMs,
+    // 断絶#18修正: 未マッチ科目/税区分をレスポンスに含める（UI警告表示用）
+    unmatchedAccounts: maps.unmatchedAccounts.map(a => ({ sugusruId: a.sugusruId, sugusruName: a.sugusruName })),
+    unmatchedTaxes: maps.unmatchedTaxes.map(t => ({ sugusruId: t.sugusruId, sugusruName: t.sugusruName })),
   }
 }
 
@@ -245,7 +259,7 @@ export async function sendBatchToMf(
 // ────────────────────────────────────────────
 
 /**
- * 送信結果をJournalPhase5Mockに書き戻す
+ * 送信結果をjournalStoreに書き戻す（断絶#39修正: updateJournal経由に統一）
  *
  * 送信成功した仕訳に対して以下を設定する:
  * - mf_journal_id: MF内部ID
@@ -253,18 +267,14 @@ export async function sendBatchToMf(
  * - mf_sent_at: 送信日時（ISO 8601）
  * - status: 'exported'（送信済み）
  *
- * @param journals 元の仕訳配列（JournalPhase5Mock）
+ * updateJournal()経由で永続化するため、ホワイトリストの恩恵を受ける。
+ *
+ * @param clientId 顧問先ID（updateJournalに必要）
  * @param results 送信結果配列（SendResult）
  * @returns 更新された仕訳数
  */
 export function applyMfSendResults(
-  journals: Array<{
-    journalId: string
-    mf_journal_id?: string | null
-    mf_journal_number?: number | null
-    mf_sent_at?: string | null
-    status?: string | null
-  }>,
+  clientId: string,
   results: SendResult[],
 ): number {
   let updatedCount = 0
@@ -273,14 +283,17 @@ export function applyMfSendResults(
   for (const result of results) {
     if (!result.success || !result.mfId) continue
 
-    const journal = journals.find(j => j.journalId === result.sugusruId)
-    if (!journal) continue
+    const patch: Record<string, unknown> = {
+      mf_journal_id: result.mfId,
+      mf_journal_number: result.mfNumber ?? null,
+      mf_sent_at: now,
+      status: 'exported',
+    }
 
-    journal.mf_journal_id = result.mfId
-    journal.mf_journal_number = result.mfNumber ?? null
-    journal.mf_sent_at = now
-    journal.status = 'exported'
-    updatedCount++
+    const updated = updateJournal(clientId, result.sugusruId, patch)
+    if (updated) {
+      updatedCount++
+    }
   }
 
   if (updatedCount > 0) {

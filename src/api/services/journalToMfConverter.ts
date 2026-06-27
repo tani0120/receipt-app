@@ -353,10 +353,14 @@ function convertSide(
     if (mfTaxId) side.tax_id = mfTaxId
   }
 
-  // 補助科目（名前→MF-ID）
+  // 補助科目（名前→MF-ID）（断絶#10修正: 未マッチ時に警告）
   if (entry.sub_account) {
     const mfSubId = maps.subAccountMap.get(entry.sub_account)
-    if (mfSubId) side.sub_account_id = mfSubId
+    if (mfSubId) {
+      side.sub_account_id = mfSubId
+    } else {
+      console.warn(`[convertSide] 補助科目「${entry.sub_account}」がMF subAccountMapにマッチしません（消失します）`)
+    }
   }
 
   // 部門（名前→MF-ID）

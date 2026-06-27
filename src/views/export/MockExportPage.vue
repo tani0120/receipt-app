@@ -206,12 +206,14 @@
             </td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.debitAccount }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.debitSub }}</td>
+            <td class="p-1 text-center border-r border-gray-200">{{ row.debitDept }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.debitTax }}</td>
             <td class="p-1 text-right border-r border-gray-200">
               {{ row.debitAmount != null ? "¥" + row.debitAmount.toLocaleString() : "" }}
             </td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.creditAccount }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.creditSub }}</td>
+            <td class="p-1 text-center border-r border-gray-200">{{ row.creditDept }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.creditTax }}</td>
             <td class="p-1 text-right border-r border-gray-200">
               {{ row.creditAmount != null ? "¥" + row.creditAmount.toLocaleString() : "" }}
@@ -354,10 +356,12 @@ const exDefaultWidths: Record<string, number> = {
   description: 180,
   debitAccount: 100,
   debitSub: 80,
+  debitDept: 80,
   debitTax: 80,
   debitAmount: 80,
   creditAccount: 100,
   creditSub: 80,
+  creditDept: 80,
   creditTax: 80,
   creditAmount: 80,
   importDate: 70,

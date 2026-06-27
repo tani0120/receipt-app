@@ -24,6 +24,7 @@ import type { SourceType } from '@/types/pipeline/source_type.type'
 import type { JournalPhase5Mock } from '@/types/journal_phase5_mock.type'
 import type { JournalEntryLine } from '@/types/domain-journal'
 import type { AccountDeterminationResult } from '../api/services/pipeline/accountDetermination'
+import type { Vendor } from '@/types/pipeline/vendor.type'
 
 // ============================================================
 // § CounterpartEntry — 相手勘定エントリ型
@@ -43,6 +44,12 @@ import type { AccountDeterminationResult } from '../api/services/pipeline/accoun
 export interface CounterpartEntry {
   /** 相手勘定科目（ACCOUNT_MASTER ID）。null = insufficient */
   account: string | null
+  /** 相手勘定の補助科目（Vendorマスタのcredit_sub_account / debit_sub_account） */
+  sub_account?: string | null
+  /** 相手勘定の税区分（Vendorマスタのcredit_tax_category / debit_tax_category） */
+  tax_category_id?: string | null
+  /** 相手勘定の部門（Vendorマスタのcredit_department / debit_department） */
+  department?: string | null
 }
 
 // ============================================================
@@ -155,25 +162,65 @@ export const COUNTERPART_RECEIPT_CREDIT_CARD: CounterpartEntry = {
 /**
  * source_type × direction → 相手勘定を解決する関数
  *
- * COUNTERPART_ACCOUNT_MAP のラッパー。
- * receipt の is_credit_card_payment フラグによる分岐を吸収する。
+ * 優先順位:
+ *   1. Vendorマスタのcredit_*（顧問先固有設定。最優先）
+ *   2. client.defaultPaymentMethod（レシートの相手勘定をcash/owner_loan/accounts_payableで分岐）
+ *   3. COUNTERPART_ACCOUNT_MAP（source_type × direction のデフォルトマップ）
+ *   4. レシート × クレカ払い → ACCRUED_EXPENSES（未払金）
  *
- * @param sourceType      - 証票種別
- * @param direction       - 入出金方向（'expense' | 'income'）
- * @param isCreditCardPayment - レシートのクレカ払いフラグ（receipt のみ有効）
+ * @param sourceType              - 証票種別
+ * @param direction               - 入出金方向（'expense' | 'income'）
+ * @param isCreditCardPayment     - レシートのクレカ払いフラグ（receipt のみ有効）
+ * @param vendor                  - 取引先マスタ（Vendorマスタのcredit_*フィールド参照用。任意）
+ * @param defaultPaymentMethod    - 顧問先のデフォルト支払方法（client.defaultPaymentMethod。任意）
  * @returns CounterpartEntry（account=null の場合は insufficient）
  */
 export function resolveCounterpartAccount(
   sourceType: SourceType,
   direction: LineItemDirection,
   isCreditCardPayment = false,
+  vendor?: Vendor | null,
+  defaultPaymentMethod?: 'cash' | 'owner_loan' | 'accounts_payable' | null,
 ): CounterpartEntry {
-  // レシート × クレカ払い → 上書き
+  // ── 優先度1: Vendorマスタのcredit_*/debit_*（顧問先固有設定）──
+  if (vendor) {
+    if (direction === 'expense' && vendor.credit_account) {
+      // expense: 相手勘定（貸方）= Vendor.credit_*
+      return {
+        account: vendor.credit_account,
+        sub_account: vendor.credit_sub_account ?? null,
+        tax_category_id: vendor.credit_tax_category ?? null,
+        department: vendor.credit_department ?? null,
+      }
+    }
+    if (direction === 'income' && vendor.debit_account) {
+      // income: 相手勘定（借方）= Vendor.debit_*
+      return {
+        account: vendor.debit_account,
+        sub_account: vendor.debit_sub_account ?? null,
+        tax_category_id: vendor.debit_tax_category ?? null,
+        department: vendor.debit_department ?? null,
+      }
+    }
+  }
+
+  // ── 優先度2: レシート × クレカ払い → 上書き ──
   if (sourceType === 'receipt' && direction === 'expense' && isCreditCardPayment) {
     return COUNTERPART_RECEIPT_CREDIT_CARD
   }
 
-  // 通常マップ参照
+  // ── 優先度3: レシート × defaultPaymentMethod分岐 ──
+  if (sourceType === 'receipt' && direction === 'expense' && defaultPaymentMethod) {
+    if (defaultPaymentMethod === 'accounts_payable') {
+      return { account: 'ACCOUNTS_PAYABLE' }    // 買掛金
+    }
+    if (defaultPaymentMethod === 'owner_loan') {
+      return { account: 'OWNERS_CAPITAL' }        // 事業主借
+    }
+    // 'cash' → デフォルトのCASHを使用（下のマップ参照）
+  }
+
+  // ── 優先度4: 通常マップ参照 ──
   const entry = COUNTERPART_ACCOUNT_MAP[sourceType]?.[direction]
   if (entry !== undefined) return entry
 
@@ -293,6 +340,8 @@ function generateJournalEntryId(): string {
  * @param documentId          - 証票ID（crypto.randomUUID()でアップロード時に生成済み。未指定時はnull）
  * @param accountResults      - 科目確定結果の配列（Step4-C辞書接続。items[i]に対応。未指定時は従来ロジック）
  * @param accountMaster       - 科目マスタ（相手勘定の税区分をdefaultTaxCategoryIdから動的解決。省略時はnull）
+ * @param vendor              - 取引先マスタ（Vendorマスタのcredit_*フィールドで相手勘定を上書き。任意）
+ * @param defaultPaymentMethod - 顧問先のデフォルト支払方法（client.defaultPaymentMethod。任意）
  * @returns JournalPhase5Mock[]
  */
 export function lineItemToJournalMock(
@@ -303,6 +352,8 @@ export function lineItemToJournalMock(
   documentId: string | null = null,
   accountResults: AccountDeterminationResult[] | null = null,
   accountMaster: { accountId: string; defaultTaxCategoryId?: string | null }[] | null = null,
+  vendor: Vendor | null = null,
+  defaultPaymentMethod: 'cash' | 'owner_loan' | 'accounts_payable' | null = null,
 ): JournalPhase5Mock[] {
   return items.map((item, index) => {
     // Step4-C: 科目確定結果がある場合はそちらを使用
@@ -312,8 +363,8 @@ export function lineItemToJournalMock(
       item.determined_account === null ||
       item.determined_account === undefined
 
-    // D-2: 相手勘定を解決
-    const counterpart = resolveCounterpartAccount(sourceType, item.direction, isCreditCardPayment)
+    // D-2: 相手勘定を解決（Vendorマスタ・defaultPaymentMethodを考慮。断絶#4,#17修正）
+    const counterpart = resolveCounterpartAccount(sourceType, item.direction, isCreditCardPayment, vendor, defaultPaymentMethod)
 
     // D-2: debit/credit エントリ生成
     // insufficient または determined_account が未確定の場合は空配列（人間判断待ち）
@@ -333,7 +384,8 @@ export function lineItemToJournalMock(
       //   主科目側: LineItem.tax_category（実際の税区分）
       //   相手勘定側: 科目マスタのdefaultTaxCategoryIdから動的解決（データ駆動）
       const mainTaxCategoryId = acctResult?.taxCategory ?? item.tax_category ?? null
-      const counterpartTaxCategoryId = resolveAccountDefaultTaxCategory(counterpart.account, accountMaster)
+      // 相手勘定の税区分: CounterpartEntry（Vendorマスタ由来）を優先、なければ科目マスタから動的解決
+      const counterpartTaxCategoryId = counterpart.tax_category_id ?? resolveAccountDefaultTaxCategory(counterpart.account, accountMaster)
 
       // 主科目エントリ（主科目は account_on_document: true で扱う）
       const mainEntry: JournalEntryLine = {
@@ -348,12 +400,13 @@ export function lineItemToJournalMock(
       }
 
       // 相手勘定エントリ（相手勘定は account_on_document: false で扱う）
+      // 相手勘定エントリ（Vendorマスタのcredit_*/debit_*を反映。断絶#2,#3修正）
       const counterpartEntry: JournalEntryLine = {
         entryId:            generateJournalEntryId(),
         account:            counterpart.account,
         account_on_document: false,
-        sub_account:        null,
-        department:         null,
+        sub_account:        counterpart.sub_account ?? null,
+        department:         counterpart.department ?? null,
         amount:             item.amount,
         amount_on_document: true,
         tax_category_id:    counterpartTaxCategoryId,
@@ -371,7 +424,7 @@ export function lineItemToJournalMock(
     } else {
       // D-5改: insufficient でもプレースホルダーエントリを生成（テーブル表示用）
       // account=null だが金額は保持。仕訳一覧で行として表示し、担当者が科目を手入力できる
-      const counterpartInsuf = resolveCounterpartAccount(sourceType, item.direction, isCreditCardPayment)
+      const counterpartInsuf = resolveCounterpartAccount(sourceType, item.direction, isCreditCardPayment, vendor, defaultPaymentMethod)
       const placeholderMain: JournalEntryLine = {
         entryId:            generateJournalEntryId(),
         account:            null,
@@ -386,11 +439,11 @@ export function lineItemToJournalMock(
         entryId:            generateJournalEntryId(),
         account:            counterpartInsuf.account,  // 相手勘定は source_type から確定可能
         account_on_document: false,
-        sub_account:        null,
-        department:         null,
+        sub_account:        counterpartInsuf.sub_account ?? null,
+        department:         counterpartInsuf.department ?? null,
         amount:             item.amount,
         amount_on_document: true,
-        tax_category_id:    resolveAccountDefaultTaxCategory(counterpartInsuf.account, accountMaster),
+        tax_category_id:    counterpartInsuf.tax_category_id ?? resolveAccountDefaultTaxCategory(counterpartInsuf.account, accountMaster),
       }
       if (item.direction === 'expense') {
         debitEntries  = [placeholderMain]
@@ -421,7 +474,7 @@ export function lineItemToJournalMock(
       display_order:        index + 1,
       voucher_date:         item.date,
       date_on_document:     item.date !== null,
-      description:          item.description,
+      description:          acctResult?.ruleDescription ?? item.description,
       voucher_type:         voucherType,       // @deprecated だが後方互換性のため維持
       source_type:          sourceType,
       direction:            item.direction,

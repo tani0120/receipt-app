@@ -93,6 +93,14 @@ export interface AccountDeterminationResult {
   debitEntries: JournalEntryLine[]
   /** 貸方仕訳行（学習ルール適用時の複合仕訳用） */
   creditEntries: JournalEntryLine[]
+  /**
+   * 学習ルール由来の摘要（てきよう）
+   *
+   * ルールのentries[0]の displayName / description / targetMonth から構成。
+   * 例: 「ミニストップ 事務用品購入 4月分」
+   * nullの場合はLineItem.descriptionをそのまま使用。
+   */
+  ruleDescription: string | null
 }
 
 // ============================================================
@@ -186,6 +194,7 @@ export async function determineAccount(input: DetermineAccountInput): Promise<Ac
     candidates: [],
     debitEntries: [],
     creditEntries: [],
+    ruleDescription: null,
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -263,6 +272,20 @@ export async function determineAccount(input: DetermineAccountInput): Promise<Ac
       result.department = firstDebit.department
     }
     result.candidates = [result.determinedAccount!].filter(Boolean)
+
+    // 学習ルールの摘要（てきよう）を構成（断絶#15修正）
+    // entries[0]のdisplayName / description / targetMonthから組み立て
+    const firstEntry = rule.entries.sort((a, b) => a.displayOrder - b.displayOrder)[0]
+    if (firstEntry) {
+      const parts: string[] = []
+      if (firstEntry.displayName) parts.push(firstEntry.displayName)
+      if (firstEntry.description) parts.push(firstEntry.description)
+      if (firstEntry.targetMonth) parts.push(firstEntry.targetMonth)
+      if (parts.length > 0) {
+        result.ruleDescription = parts.join(' ')
+      }
+    }
+
     return result
   }
 
@@ -270,13 +293,19 @@ export async function determineAccount(input: DetermineAccountInput): Promise<Ac
   // 第三層-②: 全社マスタの debit_account
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (matchedVendor) {
-    // 金額閾値チェック
-    const account = resolveVendorAccount(matchedVendor, input.amount)
+    // 金額閾値チェック（断絶#36修正: direction分岐追加）
+    const account = resolveVendorAccount(matchedVendor, input.amount, input.direction)
     if (account) {
       result.determinedAccount = account
-      result.taxCategory = matchedVendor.debit_tax_category
-      result.subAccount = matchedVendor.debit_sub_account
-      result.department = matchedVendor.debit_department
+      if (input.direction === 'expense') {
+        result.taxCategory = matchedVendor.debit_tax_category
+        result.subAccount = matchedVendor.debit_sub_account
+        result.department = matchedVendor.debit_department
+      } else {
+        result.taxCategory = matchedVendor.credit_tax_category
+        result.subAccount = matchedVendor.credit_sub_account
+        result.department = matchedVendor.credit_department
+      }
       result.level = 'A'
       result.determinationMethod = 'match_key'
       result.candidates = [account]
@@ -343,19 +372,25 @@ function applyVendor(
   vendor: Vendor,
   method: 't_number' | 'match_key',
   amount: number,
-  _direction: 'expense' | 'income',
+  direction: 'expense' | 'income',
 ): void {
   result.vendorId = vendor.vendor_id
   result.vendorName = vendor.company_name
   result.determinationMethod = method
 
-  // 金額閾値チェック
-  const account = resolveVendorAccount(vendor, amount)
+  // 金額閾値チェック（断絶#36修正: direction分岐追加）
+  const account = resolveVendorAccount(vendor, amount, direction)
   if (account) {
     result.determinedAccount = account
-    result.taxCategory = vendor.debit_tax_category
-    result.subAccount = vendor.debit_sub_account
-    result.department = vendor.debit_department
+    if (direction === 'expense') {
+      result.taxCategory = vendor.debit_tax_category
+      result.subAccount = vendor.debit_sub_account
+      result.department = vendor.debit_department
+    } else {
+      result.taxCategory = vendor.credit_tax_category
+      result.subAccount = vendor.credit_sub_account
+      result.department = vendor.credit_department
+    }
     result.level = 'A'
     result.candidates = [account]
   }
@@ -364,10 +399,16 @@ function applyVendor(
 /**
  * 取引先マスタの金額閾値を考慮して科目を解決する
  *
- * amount_threshold 以下 → debit_account
- * amount_threshold 超  → debit_account_over（設定時）
+ * expense: debit_account / debit_account_over
+ * income:  credit_account（閾値分岐なし）
  */
-function resolveVendorAccount(vendor: Vendor, amount: number): string | null {
+function resolveVendorAccount(vendor: Vendor, amount: number, direction: 'expense' | 'income'): string | null {
+  if (direction === 'income') {
+    // income: credit_accountを参照（断絶#36修正）
+    return vendor.credit_account ?? null
+  }
+
+  // expense: debit_accountを参照
   if (vendor.debit_account === null) return null
 
   // 金額閾値なし → debit_account

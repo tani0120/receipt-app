@@ -55,10 +55,12 @@
             <td class="p-1 border-r border-gray-200 truncate max-w-[200px]">{{ row.description }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.debitAccount }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.debitSub }}</td>
+            <td class="p-1 text-center border-r border-gray-200">{{ row.debitDept }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.debitTax }}</td>
             <td class="p-1 text-right border-r border-gray-200">{{ row.debitAmount != null ? '¥' + row.debitAmount.toLocaleString() : '' }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.creditAccount }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.creditSub }}</td>
+            <td class="p-1 text-center border-r border-gray-200">{{ row.creditDept }}</td>
             <td class="p-1 text-center border-r border-gray-200">{{ row.creditTax }}</td>
             <td class="p-1 text-right border-r border-gray-200">{{ row.creditAmount != null ? '¥' + row.creditAmount.toLocaleString() : '' }}</td>
             <td class="p-1 text-center">{{ row.importDate }}</td>
@@ -115,8 +117,8 @@ const handleSort = (key: string) => {
 // --- データ型 ---
 interface DetailRow {
   id: string; qualified: string; date: string; description: string;
-  debitAccount: string; debitSub: string; debitTax: string; debitAmount: number | null;
-  creditAccount: string; creditSub: string; creditTax: string; creditAmount: number | null;
+  debitAccount: string; debitSub: string; debitDept: string; debitTax: string; debitAmount: number | null;
+  creditAccount: string; creditSub: string; creditDept: string; creditTax: string; creditAmount: number | null;
   importDate: string;
 }
 

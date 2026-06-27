@@ -1400,7 +1400,7 @@ app.post('/normalize-journals', (c) => {
 // ────────────────────────────────────────────
 import { sendBatchToMf, applyMfSendResults } from '../services/mfJournalSender'
 import type { SourceJournal, MfJournalPayload } from '../services/journalToMfConverter'
-import { getJournals, saveJournals } from '../services/journalStore'
+import { getJournals } from '../services/journalStore'
 
 /** send-journalsエンドポイント用: getJournalsから取得する仕訳の最低限の型 */
 interface SendableJournal {
@@ -1494,10 +1494,8 @@ app.post('/send-journals/:clientId', async (c) => {
   const batchResult = await sendBatchToMf(sourceJournals, tokenKey)
 
   // 送信成功した仕訳にMF-IDを書き戻し、status='exported'に変更
-  const updatedCount = applyMfSendResults(allJournals, batchResult.results)
-  if (updatedCount > 0) {
-    saveJournals(clientId, allJournals as unknown as Record<string, unknown>[])
-  }
+  // 断絶#39修正: updateJournal経由で永続化（saveJournals手動呼び出し不要）
+  applyMfSendResults(clientId, batchResult.results)
 
   return c.json(batchResult)
 })

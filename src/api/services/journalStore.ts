@@ -150,14 +150,80 @@ export function addJournals(clientId: string, newJournals: Record<string, unknow
   return newJournals.length;
 }
 
-/** 1件の仕訳を部分更新（PATCH用） */
+/**
+ * PATCH可能フィールドのホワイトリスト（断絶#31修正）
+ *
+ * journalId / client_id / created_at / created_by / source 等の
+ * 構造的に重要なフィールドは上書き禁止。
+ * 新しいフィールドをPATCH可能にするにはここに追加する。
+ */
+const PATCHABLE_FIELDS = new Set([
+  // 仕訳データ
+  'voucher_date', 'date_on_document', 'description', 'voucher_type',
+  'direction', 'debit_entries', 'credit_entries',
+  // ステータス
+  'status', 'deleted_at', 'is_read',
+  // ラベル・警告
+  'labels', 'warning_dismissals', 'warning_details',
+  // 取引先
+  'vendor_id', 'vendor_name', 'vendor_vector',
+  // MF連携
+  'mf_journal_id', 'mf_journal_number', 'mf_sent_at',
+  // 出力
+  'export_batch_id', 'exported_at', 'exported_by',
+  // 科目確定
+  'rule_id', 'determination_method', 'prediction_score', 'model_version',
+  // 証票
+  'invoice_status', 'invoice_number', 'is_credit_card_payment',
+  // メモ
+  'memo', 'memo_author', 'memo_target', 'memo_created_at',
+  'staff_notes', 'staff_notes_author',
+  // 補助科目・部門（entries内のsub_account/departmentはdebit_entries/credit_entriesの全置換で対応）
+]);
+
+/** 1件の仕訳を部分更新（PATCH用。ホワイトリスト外のフィールドは無視） */
 export function updateJournal(clientId: string, journalId: string, patch: Record<string, unknown>): Record<string, unknown> | null {
   const journals = loadClient(clientId);
   const journal = journals.find((j) => j.journalId === journalId);
   if (!journal) return null;
-  // パッチ適用（トップレベルフィールドのみ。ネストは全置換）
-  Object.assign(journal, patch);
+
+  // ホワイトリスト外のフィールドを除外（断絶#31修正）
+  const rejected: string[] = [];
+  for (const key of Object.keys(patch)) {
+    if (PATCHABLE_FIELDS.has(key)) {
+      journal[key] = patch[key];
+    } else {
+      rejected.push(key);
+    }
+  }
+  if (rejected.length > 0) {
+    console.warn(`[journalStore] updateJournal: ホワイトリスト外フィールドを無視: ${rejected.join(', ')} (${journalId})`);
+  }
+
   save(clientId);
+  return journal;
+}
+
+/**
+ * 1件の仕訳をソフトデリート（deleted_at設定）
+ *
+ * 物理削除はしない。deleted_at に現在日時（ISO 8601）を設定する。
+ * フロント側は deleted_at !== null の仕訳を一覧から除外する。
+ * 復元時は deleted_at = null にPATCHする。
+ *
+ * Supabase移行時: UPDATE journals SET deleted_at = now() WHERE journal_id = ?
+ *
+ * @param clientId - 顧問先ID
+ * @param journalId - 仕訳ID
+ * @returns 削除された仕訳、または見つからない場合null
+ */
+export function deleteJournal(clientId: string, journalId: string): Record<string, unknown> | null {
+  const journals = loadClient(clientId);
+  const journal = journals.find((j) => j.journalId === journalId);
+  if (!journal) return null;
+  journal.deleted_at = new Date().toISOString();
+  save(clientId);
+  console.log(`[journalStore] ソフトデリート: ${journalId} (${clientId})`);
   return journal;
 }
 

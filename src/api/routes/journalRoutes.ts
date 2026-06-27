@@ -19,6 +19,7 @@ import {
   saveJournals,
   addJournals,
   updateJournal,
+  deleteJournal,
 } from '../services/journalStore';
 import {
   validateJournal,
@@ -181,6 +182,21 @@ app.patch('/:clientId/:journalId', async (c) => {
   delete patch.journalId;
   const updated = updateJournal(clientId, journalId, patch);
   if (!updated) {
+    return apiError(c, 404, `仕訳ID '${journalId}' が見つかりません`);
+  }
+  return c.json({ ok: true, journalId });
+});
+
+// ============================================================
+// DELETE /:clientId/:journalId — 1件の仕訳をソフトデリート
+// 断絶#27修正（deleteJournal APIなし）
+// deleted_atに現在日時を設定。物理削除はしない。
+// ============================================================
+app.delete('/:clientId/:journalId', (c) => {
+  const clientId = c.req.param('clientId');
+  const journalId = c.req.param('journalId');
+  const deleted = deleteJournal(clientId, journalId);
+  if (!deleted) {
     return apiError(c, 404, `仕訳ID '${journalId}' が見つかりません`);
   }
   return c.json({ ok: true, journalId });
