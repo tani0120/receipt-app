@@ -38,10 +38,10 @@ accounts.find(a => a.accountId === entry.account)
 
 ```ts
 // ❌ 危険: as でエラーを消しただけ
-const j = parsed as JournalPhase5Mock  // 本当にそうか？
+const j = parsed as Journal  // 本当にそうか？
 
 // ✅ 正解: 型ガードで判別
-if (assertEditableJournal(parsed)) { /* JournalPhase5Mock確定 */ }
+if (assertEditableJournal(parsed)) { /* 編集可能仕訳確定 */ }
 ```
 
 ---
@@ -51,29 +51,34 @@ if (assertEditableJournal(parsed)) { /* JournalPhase5Mock確定 */ }
 ### □ anyを消した場合、その型は本当に入るデータ全体を表現しているか
 
 ```ts
-// ❌ 失敗例: any → 単一型に決め打ち
-// 実際は JournalPhase5Mock | NormalizedConfirmedJournal だった
-const journals: JournalPhase5Mock[] = ...
+// ❌ 失敗例: any → 不適切な型に決め打ち
+const journals: unknown[] = ...
 
-// ✅ 正解: 判別共用体で全パターンを表現
-const journals: UiJournal[] = ...
-// UiJournal = JournalPhase5Mock | NormalizedConfirmedJournal
+// ✅ 正解: Journal（統一仕訳型）を使用
+const journals: Journal[] = ...
+// Phase 2完了: JournalPhase5Mock / ConfirmedJournal / UiJournal は全廃止済み
+// 仕訳型は Journal のみ
 ```
 
-### □ 判別共用体を使うべき箇所で単一型にしていないか
+### □ 廃止済み型を使っていないか
 
 ```ts
-// ❌ 悪い例: 取込仕訳を無視
-journals: JournalPhase5Mock[]
+// ❌ 禁止: 廃止済み型（Phase 2で全廃止済み）
+journals: JournalPhase5Mock[]        // 廃止
+journals: ConfirmedJournal[]         // 廃止
+journals: UiJournal[]                // 廃止
+journals: NormalizedConfirmedJournal[] // 廃止
 
-// ✅ 良い例: 全パターンを包含
-journals: UiJournal[]
+// ✅ 正解: Journal（統一仕訳型）のみ使用
+journals: Journal[]
 ```
 
 ### □ 型ガードで解決できるのに as を増やしていないか
 
 先に以下で解決できないか確認：
-- `isImportedJournal(j)` — 取込仕訳判定
+- `isImportedJournal(j)` — 取込仕訳判定（source が 'mf_import' | 'system' か判定）
+- `isMfJournal(j)` — MF取込仕訳判定（isImportedJournalと同等）
+- `isAiJournal(j)` — 通常仕訳判定（MF取込以外）
 - `assertEditableJournal(j)` — 編集可能仕訳の型ナロウイング
 
 ### □ as を追加した場合、理由を説明できるか
@@ -158,9 +163,10 @@ journals.value[idx] = updated  // ← localJournalsは古いまま
 
 ```
 確認: 以下のどれを更新しているか明確にせよ
-  - journals（編集用）
+  - journals（編集用、全仕訳。型: Journal[]）
   - localJournals（表示用キャッシュ）
-  - confirmedJournals（取込仕訳、読み取り専用）
+  - confirmedJournals（MF取込仕訳、読み取り専用。型: Journal[]）
+  ※ Phase 2完了: 全て Journal[] 型に統一済み
 ```
 
 ---
@@ -176,8 +182,10 @@ journals.value[idx] = updated  // ← localJournalsは古いまま
 ### □ source判定を使っているか
 
 ```ts
-// ✅ 推奨: 判別共用体の型ガード
-isImportedJournal(j)
+// ✅ 推奨: sourceフィールドベースの型ガード
+isImportedJournal(j)  // source === 'mf_import' || source === 'system'
+isMfJournal(j)        // 同上（journal-list-row.ts）
+isAiJournal(j)        // MF取込以外の通常仕訳
 ```
 
 ### □ 書き込み系は `assertEditableJournal` を通るか
