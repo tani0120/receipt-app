@@ -204,7 +204,7 @@ async function matchInternalCommand(text: string, clientId: string): Promise<Pat
     const batchId = parts[2] ?? '';
 
     if (action === 'approve') {
-      const result = commitMfImport(batchId);
+      const result = await commitMfImport(batchId);
       if (!result) {
         return {
           type: 'text',

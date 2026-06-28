@@ -16,7 +16,9 @@
  * Supabase移行時: getJournals → supabase.from('journals').select()
  */
 
-import { getJournals } from './journalStore'
+import { createMockRepositories } from '../../repositories/mock'
+import type { Journal } from '../../types/journal.type'
+const journalRepo = createMockRepositories().journal
 import { getClientAccounts, getClientTaxCategories } from './accountMasterApi'
 import { getExportHistory as getExportHistoryEntries } from './exportHistoryStore'
 
@@ -122,7 +124,7 @@ function toDisplayDate(dateStr: string | null | undefined): string {
 
 // ━━━ メインロジック ━━━
 
-export function getExportList(query: ExportListQuery): ExportListResult {
+export async function getExportList(query: ExportListQuery): Promise<ExportListResult> {
   const {
     clientId,
     showTargetOnly = true,
@@ -139,24 +141,8 @@ export function getExportList(query: ExportListQuery): ExportListResult {
   const resolveAccount = buildAccountNameResolver(clientId)
   const resolveTax = buildTaxNameResolver(clientId)
 
-  // 1. 仕訳取得（unknown[] → 型アサーション）
-  type JournalRaw = {
-    journalId: string
-    deleted_at: string | null
-    status: string
-    labels: string[]
-    warning_dismissals?: string[]
-    invoice_status?: string
-    voucher_date?: string
-    description: string
-    vendor_name?: string | null
-    direction?: string | null
-    memo?: string | null
-    debit_entries: { account: string; sub_account?: string; department?: string; tax_category_id?: string; amount?: number }[]
-    credit_entries: { account: string; sub_account?: string; department?: string; tax_category_id?: string; amount?: number }[]
-    created_at?: string
-  }
-  const journals = getJournals<JournalRaw>(clientId)
+  // 1. 仕訳取得（Repository経由）
+  const journals = await journalRepo.list(clientId)
 
   // 2. 全行展開（未出力・非削除のみ）
   const allRows: ExportRow[] = []
@@ -312,7 +298,7 @@ function resolveHistoryFileName(clientId: string, historyId: string): string {
   return entry?.fileName ?? historyId
 }
 
-export function getExportDetail(query: ExportDetailQuery): ExportDetailResult {
+export async function getExportDetail(query: ExportDetailQuery): Promise<ExportDetailResult> {
   const {
     clientId,
     historyId,
@@ -325,21 +311,8 @@ export function getExportDetail(query: ExportDetailQuery): ExportDetailResult {
   const resolveAccount = buildAccountNameResolver(clientId)
   const resolveTax = buildTaxNameResolver(clientId)
 
-  type JournalRaw = {
-    journalId: string
-    deleted_at: string | null
-    status: string
-    export_batch_id?: string
-    invoice_status?: string
-    voucher_date?: string
-    description: string
-    vendor_name?: string | null
-    memo?: string | null
-    debit_entries: { account: string; sub_account?: string; department?: string; tax_category_id?: string; amount?: number }[]
-    credit_entries: { account: string; sub_account?: string; department?: string; tax_category_id?: string; amount?: number }[]
-    created_at?: string
-  }
-  const journals = getJournals<JournalRaw>(clientId)
+  // 仕訳取得（Repository経由）
+  const journals = await journalRepo.list(clientId)
 
   // export_batch_idで絞り込み（historyIdに一致する仕訳のみ）
   const allRows: ExportDetailRow[] = []

@@ -14,7 +14,9 @@
 import { buildAllMaps, type MfMappingTables } from './mfMappingService'
 import { convertToMfJournal, type SourceJournal, type ConversionError } from './journalToMfConverter'
 import { mcpCreateJournal } from './mfMcpClient'
-import { updateJournal } from './journalStore'
+import { createMockRepositories } from '../../repositories/mock'
+import type { Journal } from '../../types/journal.type'
+const journalRepo = createMockRepositories().journal
 
 // ────────────────────────────────────────────
 // 結果型
@@ -273,24 +275,24 @@ export async function sendBatchToMf(
  * @param results 送信結果配列（SendResult）
  * @returns 更新された仕訳数
  */
-export function applyMfSendResults(
+export async function applyMfSendResults(
   clientId: string,
   results: SendResult[],
-): number {
+): Promise<number> {
   let updatedCount = 0
   const now = new Date().toISOString()
 
   for (const result of results) {
     if (!result.success || !result.mfId) continue
 
-    const patch: Record<string, unknown> = {
+    const patch: Partial<Journal> = {
       mf_journal_id: result.mfId,
       mf_journal_number: result.mfNumber ?? null,
       mf_sent_at: now,
       status: 'exported',
     }
 
-    const updated = updateJournal(clientId, result.sugusruId, patch)
+    const updated = await journalRepo.update(clientId, result.sugusruId, patch)
     if (updated) {
       updatedCount++
     }

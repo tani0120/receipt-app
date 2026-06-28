@@ -14,7 +14,8 @@
 import { getAll as getAllClients } from './clientsApi'
 import { getAll as getAllStaff } from './staffsApi'
 import { getDocuments } from './documentsApi'
-import { getJournals } from './journalStore'
+import { createMockRepositories } from '../../repositories/mock'
+const journalRepo = createMockRepositories().journal
 import { countUnsorted, latestReceivedDate } from '../../utils/documentUtils'
 import type { ProgressRow } from '../../features/progress-management/types'
 import { applyFilterConditions } from '../helpers/applyFilterConditions'
@@ -36,16 +37,9 @@ interface JournalSummary {
   lastYearJournals: number
 }
 
-/** 仕訳のうち進捗集計に必要なフィールドのみの型 */
-interface ProgressJournalRecord {
-  voucher_date?: string | null
-  status?: string | null
-  deleted_at?: string | null
-}
-
 /** journalStoreから仕訳サマリを集計 */
-function buildJournalSummary(clientId: string, monthKeys: string[]): JournalSummary {
-  const journals = getJournals<ProgressJournalRecord>(clientId)
+async function buildJournalSummary(clientId: string, monthKeys: string[]): Promise<JournalSummary> {
+  const journals = await journalRepo.list(clientId)
 
   // 月別仕訳数を集計
   const monthlyJournals: Record<string, number> = {}
@@ -99,13 +93,13 @@ function generateMonthKeys(count: number): string[] {
 }
 
 /** 全顧問先のprogressRowsを生成（store直接取得） */
-function buildProgressRows(): ProgressRow[] {
+async function buildProgressRows(): Promise<ProgressRow[]> {
   const clientList = getAllClients()
   const docs = getDocuments() // 全件取得
   const monthKeys = generateMonthKeys(12)
 
-  return clientList.map(c => {
-    const summary = buildJournalSummary(c.clientId, monthKeys)
+  return Promise.all(clientList.map(async c => {
+    const summary = await buildJournalSummary(c.clientId, monthKeys)
     const clientDocs = docs.filter(d => d.clientId === c.clientId)
     return {
       clientId: c.clientId,
@@ -122,7 +116,7 @@ function buildProgressRows(): ProgressRow[] {
       currentYearJournals: summary.currentYearJournals,
       lastYearJournals: summary.lastYearJournals,
     }
-  })
+  }))
 }
 
 
@@ -219,9 +213,9 @@ function getStaffNameForClient(clientId: string): string {
 // 統合一覧API（filter → sort → paginate）
 // ────────────────────────────────────────────
 
-export function getProgressList(query: ProgressListQuery): ProgressListResponse {
+export async function getProgressList(query: ProgressListQuery): Promise<ProgressListResponse> {
   // 1. 全progressRows生成
-  let rows = buildProgressRows()
+  let rows = await buildProgressRows()
 
   // 2. フィルタ適用
   if (query.filters && query.filters.length > 0) {

@@ -50,7 +50,8 @@ import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
 import { isIndividualType } from '../../constants/clientOptions'
 import { readdirSync, existsSync as fsExists, readFileSync as fsRead } from 'fs'
 import { join as pathJoin } from 'path'
-import { getAll as getAllJournals, replaceAll as replaceAllJournals, deleteByClientId as deleteConfirmedByClientId } from '../services/confirmedJournalsApi'
+import { createMockRepositories } from '../../repositories/mock'
+const { journal: journalRepo, confirmedJournal: confirmedJournalRepo } = createMockRepositories()
 
 const app = new Hono()
 
@@ -1191,9 +1192,9 @@ app.post('/import-journals', async (c) => {
 
     // 強制取込: 既存のconfirmed仕訳を全削除してから再挿入
     // MF連携先ではCSV無効（グレーアウト済み）なので全削除で安全
-    const deletedCount = deleteConfirmedByClientId(clientId)
-    if (deletedCount > 0) {
-      results.push(`🗑️ 既存データ${deletedCount}件を削除（最新データで再取込）`)
+    const deleteResult = await confirmedJournalRepo.deleteByClientId(clientId)
+    if (deleteResult.removed > 0) {
+      results.push(`🗑️ 既存データ${deleteResult.removed}件を削除（最新データで再取込）`)
     }
 
     for (let i = 0; i < periodCount; i++) {
@@ -1217,7 +1218,7 @@ app.post('/import-journals', async (c) => {
         // 暫定: skippedErrors/warningsがあっても変換成功分（converted）は保存する
         // skippedErrorsは変換前にスキップ済み→convertedに含まれない→保存して安全
         // 将来UIで承認フローを実装した場合はこのブロックを削除
-        const forceResult = commitMfImport(importResult.batchId)
+        const forceResult = await commitMfImport(importResult.batchId)
         if (forceResult) {
           results.push(
             `✅ 仕訳（${selected.fiscal_year}期: ${selected.start_date}〜${selected.end_date}）: ` +
@@ -1285,8 +1286,8 @@ app.post('/import-journals', async (c) => {
  * リクエスト:
  *   { dryRun?: boolean }  // trueなら書き込まず結果のみ返す
  */
-app.post('/normalize-journals', (c) => {
-  const body = c.req.query('dryRun') === 'true' || false
+app.post('/normalize-journals', async (c) => {
+  const dryRun = c.req.query('dryRun') === 'true' || false
 
   // 全社マスタ + 顧問先MFデータから名前→IDマップ構築
   const accountNameToId = new Map<string, string>()
@@ -1322,8 +1323,10 @@ app.post('/normalize-journals', (c) => {
   // 正規化判定（大文字英字+アンダースコアのみならaccountId済み）
   const isNormalized = (v: string) => /^[A-Z][A-Z0-9_]+$/.test(v)
 
-  // confirmed_journalsを全件取得して変換
-  const journals = getAllJournals()
+  // clientIdループで処理（Repository経由）
+  const { getAll: getAllClients } = await import('../services/clientsApi')
+  const allClients = getAllClients()
+  const clientIds = [...new Set(allClients.map(cl => cl.clientId))]
 
   let accountConverted = 0
   let accountAlready = 0
@@ -1334,53 +1337,60 @@ app.post('/normalize-journals', (c) => {
   let taxNull = 0
   const missedAccounts = new Set<string>()
   const missedTaxes = new Set<string>()
+  let totalJournals = 0
 
-  for (const j of journals) {
-    const entries = [...j.debit_entries, ...j.credit_entries]
-    for (const entry of entries) {
-      // 科目
-      const acct = entry.account
-      if (!acct) {
-        accountMiss++
-      } else if (isNormalized(acct)) {
-        accountAlready++
-      } else {
-        const id = accountNameToId.get(acct)
-        if (id) {
-          if (!body) entry.account = id
-          accountConverted++
-        } else {
-          missedAccounts.add(acct)
+  for (const clientId of clientIds) {
+    const journals = await confirmedJournalRepo.getByClientId(clientId)
+    if (journals.length === 0) continue
+    totalJournals += journals.length
+
+    for (const j of journals) {
+      const entries = [...j.debit_entries, ...j.credit_entries]
+      for (const entry of entries) {
+        // 科目
+        const acct = entry.account
+        if (!acct) {
           accountMiss++
-        }
-      }
-
-      // 税区分
-      if (entry.tax_category_id === null) {
-        taxNull++
-      } else if (isNormalized(entry.tax_category_id)) {
-        taxAlready++
-      } else {
-        const id = taxNameToId.get(entry.tax_category_id)
-        if (id) {
-          if (!body) entry.tax_category_id = id
-          taxConverted++
+        } else if (isNormalized(acct)) {
+          accountAlready++
         } else {
-          missedTaxes.add(entry.tax_category_id)
-          taxMiss++
+          const id = accountNameToId.get(acct)
+          if (id) {
+            if (!dryRun) entry.account = id
+            accountConverted++
+          } else {
+            missedAccounts.add(acct)
+            accountMiss++
+          }
+        }
+
+        // 税区分
+        if (entry.tax_category_id === null) {
+          taxNull++
+        } else if (isNormalized(entry.tax_category_id)) {
+          taxAlready++
+        } else {
+          const id = taxNameToId.get(entry.tax_category_id)
+          if (id) {
+            if (!dryRun) entry.tax_category_id = id
+            taxConverted++
+          } else {
+            missedTaxes.add(entry.tax_category_id)
+            taxMiss++
+          }
         }
       }
     }
-  }
 
-  // 書き戻し
-  if (!body) {
-    replaceAllJournals(journals)
+    // 書き戻し
+    if (!dryRun) {
+      await confirmedJournalRepo.replaceByClientId(clientId, journals)
+    }
   }
 
   return c.json({
     success: true,
-    dryRun: body,
+    dryRun,
     account: {
       converted: accountConverted,
       alreadyNormalized: accountAlready,
@@ -1394,7 +1404,7 @@ app.post('/normalize-journals', (c) => {
       missed: taxMiss,
       missedNames: [...missedTaxes],
     },
-    totalJournals: journals.length,
+    totalJournals,
   })
 })
 
@@ -1403,35 +1413,8 @@ app.post('/normalize-journals', (c) => {
 // ────────────────────────────────────────────
 import { sendBatchToMf, applyMfSendResults } from '../services/mfJournalSender'
 import type { SourceJournal, MfJournalPayload } from '../services/journalToMfConverter'
-import { getJournals } from '../services/journalStore'
 
-/** send-journalsエンドポイント用: getJournalsから取得する仕訳の最低限の型 */
-interface SendableJournal {
-  journalId: string
-  status: string | null
-  deleted_at: string | null
-  labels: string[]
-  voucher_date: string | null
-  description: string
-  debit_entries: SourceJournal['debit_entries']
-  credit_entries: SourceJournal['credit_entries']
-  mf_journal_id?: string | null
-  mf_journal_number?: number | null
-  mf_sent_at?: string | null
-  // フィールド断絶修正: 以下フィールドがSourceJournalに伝達されていなかった
-  invoice_status?: 'qualified' | 'not_qualified' | null
-  vendor_name?: string | null
-  direction?: string | null
-  memo?: string | null
-  /**
-   * 顧問先の課税方式（Client.consumptionTaxModeから注入）
-   *
-   * Journal型のフィールドではない。MF送信時にclient設定から取得して注入する。
-   * journalToMfConverter.ts の SourceJournal.consumption_tax_mode に対応。
-   * 注入元: repositories/types/client.types.ts の Client.consumptionTaxMode
-   */
-  consumption_tax_mode?: 'general' | 'general_proportional' | 'general_individual' | 'simplified' | 'exempt'
-}
+
 
 /**
  * POST /send-journals/:clientId — 未出力仕訳をMFにMCP送信
@@ -1453,7 +1436,7 @@ app.post('/send-journals/:clientId', async (c) => {
   }
 
   // 送信対象の取得（未出力仕訳）
-  const allJournals = getJournals<SendableJournal>(clientId)
+  const allJournals = await journalRepo.list(clientId)
   let targets = allJournals.filter(j =>
     j.status === null &&
     j.deleted_at === null &&
@@ -1470,6 +1453,19 @@ app.post('/send-journals/:clientId', async (c) => {
   if (targets.length === 0) {
     return c.json({ total: 0, successCount: 0, failureCount: 0, results: [], elapsedMs: 0, message: '送信対象の仕訳がありません' })
   }
+
+  // 顧問先の課税方式を取得し、SourceJournal用の値域にマッピング
+  // Client: individual/proportional/simplified/exempt
+  // SourceJournal: general_individual/general_proportional/simplified/exempt
+  const client = getById(clientId)
+  const clientTaxMode = client?.consumptionTaxMode
+  const TAX_MODE_MAP: Record<string, SourceJournal['consumption_tax_mode']> = {
+    individual: 'general_individual',
+    proportional: 'general_proportional',
+    simplified: 'simplified',
+    exempt: 'exempt',
+  }
+  const consumptionTaxMode = clientTaxMode ? TAX_MODE_MAP[clientTaxMode] : undefined
 
   // SourceJournal形式に変換
   // vendor_name→directionに応じてdebit/creditの適切な側にtrade_partner_name注入
@@ -1492,8 +1488,8 @@ app.post('/send-journals/:clientId', async (c) => {
       description: j.description || '',
       memo: j.memo,
       invoice_status: j.invoice_status,
-      is_tax_exempt: j.consumption_tax_mode === 'exempt',
-      consumption_tax_mode: j.consumption_tax_mode,
+      is_tax_exempt: consumptionTaxMode === 'exempt',
+      consumption_tax_mode: consumptionTaxMode,
       debit_entries: debitEntries,
       credit_entries: creditEntries,
     }
@@ -1505,7 +1501,7 @@ app.post('/send-journals/:clientId', async (c) => {
 
   // 送信成功した仕訳にMF-IDを書き戻し、status='exported'に変更
   // 断絶#39修正: updateJournal経由で永続化（saveJournals手動呼び出し不要）
-  applyMfSendResults(clientId, batchResult.results)
+  await applyMfSendResults(clientId, batchResult.results)
 
   return c.json(batchResult)
 })

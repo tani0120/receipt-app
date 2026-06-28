@@ -8,7 +8,8 @@ import { getDocuments } from '../services/documentsApi'
 import { summarizeCsvLines as summarizeCsvLinesImport } from '../services/exportHistoryStore'
 import { getAll as getAllClients } from '../services/clientsApi'
 import { getAll as getAllStaff } from '../services/staffsApi'
-import { getJournals } from '../services/journalStore'
+import { createMockRepositories } from '../../repositories/mock'
+const journalRepo = createMockRepositories().journal
 import type { DocEntry } from '../../repositories/types'
 import { getMonthlyTotalCost, getStaffMonthlyCosts, getClientMonthlyCosts, getStaffAnnualCost } from '../services/aiLogStore'
 
@@ -114,7 +115,7 @@ function aggregateMetrics(docs: DocEntry[], groupBy: 'clientId' | 'createdBy'): 
 
 // --- Routes ---
 const route = app
-    .get('/dashboard', (c) => {
+    .get('/dashboard', async (c) => {
         // ストアから実データを集計（MOCK_ADMIN_DATA削除: 2026-05-05 R5）
         const clients = getAllClients()
         const staff = getAllStaff()
@@ -153,7 +154,7 @@ const route = app
             let totalBacklog = 0
             let draftCount = 0
             for (const cl of assignedClients) {
-              const journals = getJournals(cl.clientId)
+              const journals = await journalRepo.list(cl.clientId)
               const active = journals.filter(j => !j.deleted_at)
               totalBacklog += active.length
               draftCount += active.filter(j => j.status === 'draft').length
@@ -474,7 +475,7 @@ const route = app
       return c.json(summary);
     })
     // ━━━ 仕訳数集計API（全顧問先の仕訳データから実数をインポート） ━━━
-    .get('/journal-summary', (c) => {
+    .get('/journal-summary', async (c) => {
       const allClients = getAllClients();
       const now = new Date();
       const thisMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; // 'YYYY-MM'
@@ -484,16 +485,8 @@ const route = app
       const byClient: { clientId: string; companyName: string; journalCount: number; lineCount: number }[] = [];
       const byStaff = new Map<string, { journalCount: number; lineCount: number }>();
 
-      /** 仕訳1件のレコード型 */
-      type JournalRecord = Record<string, unknown> & {
-        deleted_at?: string | null;
-        created_at?: string | null;
-        debit_entries?: unknown[];
-        credit_entries?: unknown[];
-      };
-
       for (const client of allClients) {
-        const journals = getJournals<JournalRecord>(client.clientId);
+        const journals = await journalRepo.list(client.clientId);
         // deleted_atがnullかつ今月作成分のみカウント
         const active = journals.filter(j =>
           (j.deleted_at === null || j.deleted_at === undefined) &&

@@ -20,7 +20,8 @@ import type { JournalEntryLine } from '../../types/domain-journal'
 import type { MfMcpJournal, MfMcpJournalSide } from './mfMcpClient'
 import type { MfMappingTables } from './mfMappingService'
 import { buildAllMaps } from './mfMappingService'
-import { importJournals, getByClientId as getExistingJournals } from './confirmedJournalsApi'
+import { createMockRepositories } from '../../repositories/mock'
+const confirmedJournalRepo = createMockRepositories().confirmedJournal
 import { normalizeVendorName } from '../../utils/pipeline/vendorIdentification'
 import { fromMfInvoiceKind, MF_JOURNAL_TYPE_ADJUSTING, DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
 import { generateMasterId } from './generateMasterId'
@@ -451,7 +452,7 @@ export async function prepareMfImport(
   // 既存の確定済み仕訳のmf_transaction_noと今回のMFレスポンスを突合。
   // MFレスポンスに含まれない既存仕訳 = MF側で削除された可能性。
   const mfTransactionNos = new Set(journals.map(j => j.number).filter((n): n is number => n != null))
-  const existingJournals = getExistingJournals(clientId)
+  const existingJournals = await confirmedJournalRepo.getByClientId(clientId)
   const deletedDetected: PrepareResult['deletedDetected'] = []
   const now = new Date().toISOString()
 
@@ -516,15 +517,15 @@ export async function prepareMfImport(
  * @param batchId prepareMfImportで返されたbatchId
  * @returns 追加件数とスキップ件数。batchIdが見つからない場合はnull
  */
-export function commitMfImport(batchId: string): { added: number; skipped: number } | null {
+export async function commitMfImport(batchId: string): Promise<{ added: number; skipped: number } | null> {
   const pending = pendingImports.get(batchId)
   if (!pending) {
     console.error(`[mfJournalImporter] batchId=${batchId} が見つかりません（期限切れ or 未準備）`)
     return null
   }
 
-  // confirmedJournalStoreに保存（重複排除付き）
-  const result = importJournals(pending.converted)
+  // confirmedJournalRepoに保存（重複排除付き）
+  const result = await confirmedJournalRepo.importBatch(pending.converted)
 
   // キャッシュから削除
   pendingImports.delete(batchId)
@@ -567,7 +568,7 @@ export async function importMfJournals(
 
   // 警告もエラーもなければ即保存
   if (result.warnings.length === 0 && result.skippedErrors.length === 0) {
-    const commitResult = commitMfImport(result.batchId)
+    const commitResult = await commitMfImport(result.batchId)
     return {
       ...result,
       committed: true,

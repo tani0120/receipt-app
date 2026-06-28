@@ -334,6 +334,21 @@ export type ConfirmedJournalRepository = {
 
   /** バッチ内の仕訳一覧を取得 */
   getJournalsByBatch(batchId: string): Promise<{ journals: Journal[] }>
+
+  /** 仕訳を重複排除付きで一括追加（CSVパース後/MF API変換後の生仕訳を受け取る） */
+  importBatch(journals: Journal[]): Promise<{ added: number; skipped: number }>
+
+  /** 顧問先の全件削除 */
+  deleteByClientId(clientId: string): Promise<{ removed: number }>
+
+  /** 顧問先の件数取得 */
+  countByClientId(clientId: string): Promise<number>
+
+  /** 顧問先の確定済み仕訳を全件置換（正規化後の書き戻し用） */
+  replaceByClientId(clientId: string, journals: Journal[]): Promise<void>
+
+  /** インメモリキャッシュをJSONから再読み込み（管理用。Supabase移行後は空実装） */
+  reload(): Promise<void>
 }
 
 // ============================================================

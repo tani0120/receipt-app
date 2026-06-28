@@ -14,8 +14,9 @@
  * Phase 2完了（2026-05-03）: accountMap/taxMap をサーバー側 accountMasterStore から自動生成可能。
  */
 
-import { getJournals } from './journalStore'
-import { getByClientId as getConfirmedJournals } from './confirmedJournalsApi'
+import { createMockRepositories } from '../../repositories/mock'
+const journalRepo = createMockRepositories().journal
+const confirmedJournalRepo = createMockRepositories().confirmedJournal
 import { type JournalListRow, isMfJournal, isAiJournal } from '../../types/journal-list-row'
 import type { Journal } from '../../types/journal.type'
 import type { StaffNotes } from '../../types/staff_notes'
@@ -420,9 +421,9 @@ function filterJournals(
 // 統合一覧API
 // ────────────────────────────────────────────
 
-export function getJournalList(clientId: string, query: JournalListQuery): JournalListResponse {
+export async function getJournalList(clientId: string, query: JournalListQuery): Promise<JournalListResponse> {
   // 1. 通常仕訳の取得（デフォルト日付ソート）
-  const rawJournals = getJournals<Journal>(clientId)
+  const rawJournals = await journalRepo.list(clientId)
   let result: JournalListRow[] = [...rawJournals].sort((a, b) => {
     return (
       new Date(a.voucher_date ?? '9999-12-31').getTime() -
@@ -435,7 +436,7 @@ export function getJournalList(clientId: string, query: JournalListQuery): Journ
 
   // 2. 過去仕訳（MFインポート/CSV）の結合（偽装なし、そのまま追加）
   if (query.showImported) {
-    const confirmed = getConfirmedJournals(clientId)
+    const confirmed = await confirmedJournalRepo.getByClientId(clientId)
     result.push(...confirmed)
   }
 

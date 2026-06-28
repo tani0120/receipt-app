@@ -83,7 +83,7 @@ app.get('/:clientId', async (c) => {
   };
 
   // view=list を統合一覧モード判定に使用（将来用のフラグ）
-  const result = getJournalList(clientId, query);
+  const result = await getJournalList(clientId, query);
   return c.json(result);
 });
 
@@ -139,7 +139,7 @@ app.post('/:clientId/list', async (c) => {
     taxMap: body.taxMap ?? getTaxCategoryNameMap(),
   };
 
-  const result = getJournalList(clientId, query);
+  const result = await getJournalList(clientId, query);
   return c.json(result);
 });
 

@@ -11,6 +11,11 @@ import {
   importJournals,
   deleteByBatchId,
   getByBatchId,
+  deleteByClientId,
+  countByClientId,
+  getAll,
+  replaceAll,
+  loadConfirmedJournals,
 } from '../../api/services/confirmedJournalsApi'
 import { parseMfCsv } from '../../utils/pipeline/mfCsvParser'
 import type { ConfirmedJournalRepository } from '../types'
@@ -65,4 +70,29 @@ export const mockConfirmedJournalRepo: ConfirmedJournalRepository = {
     const journals = getByBatchId(batchId)
     return { journals }
   },
+
+  importBatch: async (journals) => {
+    return importJournals(journals)
+  },
+
+  deleteByClientId: async (clientId) => {
+    const removed = deleteByClientId(clientId)
+    return { removed }
+  },
+
+  countByClientId: async (clientId) => {
+    return countByClientId(clientId)
+  },
+
+  replaceByClientId: async (clientId, newJournals) => {
+    // 全件取得 → clientId以外をfilter → 新データ追加 → replaceAll()
+    const all = getAll()
+    const others = all.filter(j => j.client_id !== clientId)
+    replaceAll([...others, ...newJournals])
+  },
+
+  reload: async () => {
+    loadConfirmedJournals()
+  },
 }
+

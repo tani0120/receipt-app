@@ -17,12 +17,8 @@
 
 import crypto from 'crypto'
 import { parseMfCsv } from '../../utils/pipeline/mfCsvParser'
-import {
-  importJournals,
-  deleteByBatchId,
-  deleteByClientId,
-  countByClientId,
-} from './confirmedJournalsApi'
+import { createMockRepositories } from '../../repositories/mock'
+const confirmedJournalRepo = createMockRepositories().confirmedJournal
 
 // ────────────────────────────────────────────
 // 型定義
@@ -78,12 +74,12 @@ function generateBatchId(): string {
  *
  * - バッチIDの生成
  * - CSVパース（parseMfCsv）
- * - 重複排除付き永続化（importJournals → confirmedJournalsApi）
+ * - 重複排除付き永続化（confirmedJournalRepo.importBatch()）
  *
  * @param clientId 顧問先ID
  * @param csvText CSVテキスト
  */
-export function importFromCsv(clientId: string, csvText: string): CsvImportResult {
+export async function importFromCsv(clientId: string, csvText: string): Promise<CsvImportResult> {
   const importBatchId = generateBatchId()
 
   // CSVパース
@@ -97,12 +93,12 @@ export function importFromCsv(clientId: string, csvText: string): CsvImportResul
       skipped: 0,
       totalRows: parseResult.total_rows,
       warnings: parseResult.warnings,
-      totalInDb: countByClientId(clientId),
+      totalInDb: await confirmedJournalRepo.countByClientId(clientId),
     }
   }
 
-  // 永続化（重複排除付き）— confirmedJournalsApi経由
-  const importResult = importJournals(parseResult.journals)
+  // 永続化（重複排除付き）— Repository経由
+  const importResult = await confirmedJournalRepo.importBatch(parseResult.journals)
 
   return {
     ok: true,
@@ -111,7 +107,7 @@ export function importFromCsv(clientId: string, csvText: string): CsvImportResul
     skipped: importResult.skipped,
     totalRows: parseResult.total_rows,
     warnings: parseResult.warnings,
-    totalInDb: countByClientId(clientId),
+    totalInDb: await confirmedJournalRepo.countByClientId(clientId),
   }
 }
 
@@ -120,9 +116,9 @@ export function importFromCsv(clientId: string, csvText: string): CsvImportResul
  *
  * @param batchId バッチID
  */
-export function deleteBatch(batchId: string): BatchDeleteResult {
-  const removed = deleteByBatchId(batchId)
-  return { removed }
+export async function deleteBatch(batchId: string): Promise<BatchDeleteResult> {
+  const result = await confirmedJournalRepo.deleteBatch(batchId)
+  return { removed: result.removed }
 }
 
 /**
@@ -130,7 +126,8 @@ export function deleteBatch(batchId: string): BatchDeleteResult {
  *
  * @param clientId 顧問先ID
  */
-export function deleteByClient(clientId: string): ClientDeleteResult {
-  const removed = deleteByClientId(clientId)
-  return { removed }
+export async function deleteByClient(clientId: string): Promise<ClientDeleteResult> {
+  const result = await confirmedJournalRepo.deleteByClientId(clientId)
+  return { removed: result.removed }
 }
+

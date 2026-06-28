@@ -29,7 +29,7 @@ app.post('/list', async (c) => {
   if (!body.clientId) {
     return c.json({ error: 'clientIdは必須です' }, 400)
   }
-  const result = getExportList(body)
+  const result = await getExportList(body)
   return c.json(result)
 })
 
@@ -44,6 +44,6 @@ app.post('/detail', async (c) => {
   if (!body.clientId || !body.historyId) {
     return c.json({ error: 'clientIdとhistoryIdは必須です' }, 400)
   }
-  const result = getExportDetail(body)
+  const result = await getExportDetail(body)
   return c.json(result)
 })

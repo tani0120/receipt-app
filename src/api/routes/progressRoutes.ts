@@ -22,7 +22,7 @@ const app = new Hono()
 app.post('/list', async (c) => {
   try {
     const body = await c.req.json<ProgressListQuery>()
-    const result = getProgressList(body)
+    const result = await getProgressList(body)
     return c.json(result)
   } catch (err) {
     console.error('[progressRoutes] /list エラー:', err)
