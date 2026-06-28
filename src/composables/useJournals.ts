@@ -1,16 +1,18 @@
 /**
- * useJournals — 仕訳データのデータアクセスcomposable（API接続版）
+ * useJournals — 仕訳データのデータアクセスcomposable（読み取り専用）
  *
  * 【設計原則】
- * - サーバーAPIを通じてデータを永続化（JSON永続化ストア）
+ * - サーバーAPIを通じてデータを取得（JSON永続化ストア）
  * - モジュールスコープのキャッシュMapでフロント側のキャッシュを保持
- * - deep watchでデータ変更時にサーバーに自動保存（デバウンス500ms）
  * - 初回アクセス時にサーバーから読み込み。データがなければ空配列のまま。
- * - 顧問先登録時にサーバー側でjournals-{clientId}.jsonが自動生成される
+ * - データ変更はPATCH API経由（JournalListLevel3MockのupdateJournalField経由）
+ *
+ * Phase 3-3: PUT全件上書き（autoSave）を廃止。
+ *   Phase Cで全更新がPATCH API移行済みのため、deep watch autoSaveは冗長だった。
  *
  * 準拠: DL-042（#12 useJournals localStorage脱却）
  */
-import { ref, watch, type Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import type { Journal } from '../types/journal.type'
 
 // ────────────────────────────────────────────
@@ -30,18 +32,6 @@ async function fetchFromServer(clientId: string): Promise<Journal[] | null> {
   }
 }
 
-async function saveToServer(clientId: string, journals: Journal[]): Promise<void> {
-  try {
-    await fetch(`${API_BASE}/${encodeURIComponent(clientId)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ journals }),
-    })
-  } catch (err) {
-    console.error(`[useJournals] サーバー保存失敗 (${clientId}):`, err)
-  }
-}
-
 // ────────────────────────────────────────────
 // モジュールスコープキャッシュ（顧問先別シングルトン）
 // ────────────────────────────────────────────
@@ -58,17 +48,6 @@ export function useJournals(clientId: Ref<string>) {
       const data = ref<Journal[]>([])
       journalCache.set(cid, data)
 
-      // autoSave: データ変更時にサーバーへ自動保存（デバウンス500ms）
-      // initialized フラグで初回ロード中の誤保存を防止
-      let timer: ReturnType<typeof setTimeout> | null = null
-      let initialized = false
-
-      watch(data, () => {
-        if (!initialized) return
-        if (timer) clearTimeout(timer)
-        timer = setTimeout(() => saveToServer(cid, data.value), 500)
-      }, { deep: true })
-
       // 非同期でサーバーからデータを取得
       fetchFromServer(cid).then(serverData => {
         if (serverData && serverData.length > 0) {
@@ -77,8 +56,6 @@ export function useJournals(clientId: Ref<string>) {
         } else {
           console.log(`[useJournals] ${cid}: データなし（空配列）`)
         }
-        // ロード完了後にautoSaveを有効化
-        initialized = true
       })
     }
     return journalCache.get(cid)!

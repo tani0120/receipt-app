@@ -3,25 +3,21 @@
  *
  * エンドポイント:
  *   GET  /api/journals/:clientId                    — 顧問先の仕訳データ取得
- *   PUT  /api/journals/:clientId                    — 顧問先の仕訳データを全件上書き
  *   POST /api/journals/:clientId                    — 顧問先の仕訳データに追加
  *   POST /api/journals/:clientId/:journalId/validate — 1件バリデーション（Phase 1 Step 2）
  *   POST /api/journals/:clientId/validate-all        — 全件バリデーション（Phase 1 Step 3）
  *
  * 準拠: DL-042（#12 useJournals localStorage脱却）
+ * Phase 3-3: PUT /:clientId（全件上書き）廃止。journalStore直接import全廃。
+ *   全操作をJournalRepository経由に統一。
  */
 
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
 import { 配列必須 } from '../../constants/apiMessages';
 import type { Journal } from '../../types/journal.type';
-import {
-  getJournals,
-  saveJournals,
-  addJournals,
-} from '../services/journalStore';
-import { mockJournalRepo } from '../../repositories/mock/journal.repository.mock';
-const journalRepo = mockJournalRepo;
+import { createMockRepositories } from '../../repositories/mock';
+const journalRepo = createMockRepositories().journal;
 import {
   validateJournal,
   type JournalForValidation,
@@ -144,17 +140,11 @@ app.post('/:clientId/list', async (c) => {
 });
 
 // ============================================================
-// PUT /:clientId — 顧問先の仕訳データを全件上書き保存
+// PUT /:clientId — 廃止（Phase 3-3）
+// 理由: フロントエンド（JournalListLevel3Mock）はPhase Cで
+//       PATCH API移行済み。useJournals.tsのautoSaveは冗長な二重保存だった。
+//       全更新はPATCH /:clientId/:journalId 経由で行う。
 // ============================================================
-app.put('/:clientId', async (c) => {
-  const clientId = c.req.param('clientId');
-  const body = await c.req.json<{ journals: Record<string, unknown>[] }>();
-  if (!body.journals || !Array.isArray(body.journals)) {
-    return apiError(c, 400, 配列必須('journals'));
-  }
-  saveJournals(clientId, body.journals);
-  return c.json({ ok: true, count: body.journals.length });
-});
 
 // ============================================================
 // POST /:clientId — 顧問先の仕訳データに追加
@@ -216,8 +206,8 @@ app.post('/:clientId/:journalId/validate', async (c) => {
   const accounts = getClientAccountsForValidation(clientId);
   const taxCategories = getClientTaxCategoriesForValidation(clientId);
 
-  // サーバー側ストアから仕訳データ取得
-  const journals = getJournals<JournalForValidation>(clientId);
+  // Repository経由で仕訳データ取得
+  const journals = await journalRepo.list(clientId) as unknown as JournalForValidation[];
   const journal = journals.find(j => j.journalId === journalId);
   if (!journal) {
     return apiError(c, 404, `仕訳ID '${journalId}' が見つかりません`);
@@ -239,7 +229,7 @@ app.post('/:clientId/validate-all', async (c) => {
   const accounts = getClientAccountsForValidation(clientId);
   const taxCategories = getClientTaxCategoriesForValidation(clientId);
 
-  const journals = getJournals<JournalForValidation>(clientId);
+  const journals = await journalRepo.list(clientId) as unknown as JournalForValidation[];
   const results = journals.map(journal =>
     validateJournal(journal, accounts, taxCategories)
   );
@@ -261,8 +251,8 @@ app.post('/:clientId/:journalId/hints', async (c) => {
   const accounts = getClientAccountsForValidation(clientId);
   const taxCategories = getClientTaxCategories(clientId);
 
-  // サーバー側ストアから仕訳データ取得
-  const journals = getJournals<JournalForHint>(clientId);
+  // Repository経由で仕訳データ取得
+  const journals = await journalRepo.list(clientId) as unknown as JournalForHint[];
   const journal = journals.find(j => j.journalId === journalId);
   if (!journal) {
     return apiError(c, 404, `仕訳ID '${journalId}' が見つかりません`);
@@ -287,8 +277,8 @@ app.post('/:clientId/:journalId/hints', async (c) => {
 app.get('/:clientId/supporting-match', async (c) => {
   const clientId = c.req.param('clientId');
 
-  // 仕訳データ取得
-  const journals = getJournals<JournalForMatching>(clientId);
+  // Repository経由で仕訳データ取得
+  const journals = await journalRepo.list(clientId) as unknown as JournalForMatching[];
 
   // 根拠資料メタデータ取得（search-supportingと同じサービスを使用）
   const supportingMeta = searchSupporting(clientId, '') as SupportingMetaItem[];
@@ -368,8 +358,8 @@ app.post('/:clientId/generate', async (c) => {
       accountMaster,
     );
 
-    addJournals(clientId, newJournals as unknown as Record<string, unknown>[]);
-    generatedCount += newJournals.length;
+    const result = await journalRepo.createMany(clientId, newJournals);
+    generatedCount += result.added;
     console.log(`[journals/generate] ${docEntry.fileName}: ${newJournals.length}件生成 (source_type=${sourceType}, isCreditCardPayment=${isCreditCardPayment})`);
   }
 
