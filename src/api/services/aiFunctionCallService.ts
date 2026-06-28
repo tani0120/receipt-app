@@ -25,8 +25,10 @@ import { callMcpTool, listMcpTools } from './mfMcpClient'
 import type { McpToolInfo } from './mfMcpClient'
 import { getLayer2SystemPrompt } from './aiContextProvider'
 import { VALID_COMMAND_IDS } from './commandCatalog'
-import { getAll as getAllClients } from './clientsApi'
-import { getAll as getAllStaff } from './staffsApi'
+import { createMockRepositories } from '../../repositories/mock'
+const repos = createMockRepositories()
+const clientRepo = repos.client
+const staffRepo = repos.staff
 import { getAuthStatus } from './mfAuthService'
 
 /** AIコマンドで使用するモデル（環境変数 > デフォルト: gemini-3.5-flash） */
@@ -117,9 +119,9 @@ export interface AiFunctionCallResponse {
  * 顧問先マスタ・スタッフマスタをプロンプト用テキストに整形する。
  * 毎回最新のマスタデータを動的取得（起動後の変更も反映）。
  */
-function buildMasterContext(): string {
-  const clients = getAllClients()
-  const staff = getAllStaff()
+async function buildMasterContext(): Promise<string> {
+  const clients = await clientRepo.getAll()
+  const staff = await staffRepo.getAll()
 
   const clientLines = clients.map(c => {
     const mfStatus = getAuthStatus(c.clientId).authenticated ? 'MF連携済' : 'MF未連携'
@@ -226,7 +228,7 @@ export async function executeWithFunctionCalling(
   const client = new GoogleGenAI({ apiKey })
 
   // 顧問先マスタ・スタッフマスタを動的取得してプロンプトに含める
-  const masterContext = buildMasterContext()
+  const masterContext = await buildMasterContext()
 
   // 層3固有のシステムプロンプト（層2プロンプト + マスタ情報 + 層3ツール使用ルール）
   const systemPrompt = getLayer2SystemPrompt() + masterContext + LAYER3_SYSTEM_PROMPT_SUFFIX

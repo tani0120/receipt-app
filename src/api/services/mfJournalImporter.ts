@@ -21,13 +21,15 @@ import type { MfMcpJournal, MfMcpJournalSide } from './mfMcpClient'
 import type { MfMappingTables } from './mfMappingService'
 import { buildAllMaps } from './mfMappingService'
 import { createMockRepositories } from '../../repositories/mock'
-const confirmedJournalRepo = createMockRepositories().confirmedJournal
+const repos = createMockRepositories()
+const confirmedJournalRepo = repos.confirmedJournal
+const clientRepo = repos.client
 import { normalizeVendorName } from '../../utils/pipeline/vendorIdentification'
 import { fromMfInvoiceKind, MF_JOURNAL_TYPE_ADJUSTING, DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
 import { generateMasterId } from './generateMasterId'
 import { generateTaxMasterId, ensureUniqueTaxId } from './taxIdGenerator'
 import { getClientAccounts, saveMfAccounts, getAllAccounts, getAllTaxCategories } from './accountMasterApi'
-import { getById as getClientById } from './clientsApi'
+
 import { isIndividualType } from '../../constants/clientOptions'
 import type { Account } from '../../types/shared-account'
 import { inferAccountGroupFromName } from '../../utils/inferAccountGroupFromName'
@@ -297,7 +299,7 @@ export async function prepareMfImport(
   const isTaxExclusive = taxMethod.startsWith('tax_excluded')
 
   // A-5: clientType判定（SUFFIX決定）
-  const client = getClientById(clientId)
+  const client = await clientRepo.getById(clientId)
   const suffix = (client && isIndividualType(client.type)) ? 'IND' : 'CORP'
 
   // 免税事業者判定: マスタからisExemptDefault=trueの税区分IDを取得（データ駆動）

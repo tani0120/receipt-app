@@ -17,7 +17,8 @@
  */
 
 import { COMMAND_CATALOG } from "./commandCatalog";
-import { getById as getClientById } from "./clientsApi";
+import { createMockRepositories } from '../../repositories/mock'
+const clientRepo = createMockRepositories().client
 import type { AiSuggestion } from "./aiSuggestService";
 import { commitMfImport, discardMfImport } from "./mfJournalImporter";
 
@@ -168,14 +169,14 @@ export async function matchPattern(
   // 完全一致
   for (const cmd of withKeywords) {
     if (cmd.keywords!.includes(normalized) || cmd.name === normalized) {
-      return buildResult(cmd.id, cmd.name, clientId);
+      return await buildResult(cmd.id, cmd.name, clientId);
     }
   }
 
   // 部分一致
   for (const cmd of withKeywords) {
     if (cmd.keywords!.some((kw) => normalized.includes(kw))) {
-      return buildResult(cmd.id, cmd.name, clientId);
+      return await buildResult(cmd.id, cmd.name, clientId);
     }
   }
 
@@ -192,7 +193,7 @@ async function matchInternalCommand(text: string, clientId: string): Promise<Pat
   if (clientId === 'all') {
     clientLabel = '📊 全社一括';
   } else if (clientId && clientId !== 'default') {
-    const client = getClientById(clientId);
+    const client = await clientRepo.getById(clientId);
     clientLabel = client?.companyName ?? clientId;
   }
   const targetLine = clientLabel ? `**対象:** ${clientLabel}\n\n` : '';
@@ -339,7 +340,7 @@ async function executeMfSyncAll(
 }
 
 /** コマンド別に結果を組み立て（クライアント名を先頭に表示） */
-function buildResult(cmdId: string, cmdName: string, clientId: string): PatternMatchResult {
+async function buildResult(cmdId: string, cmdName: string, clientId: string): Promise<PatternMatchResult> {
   /** 顧問先ラベル解決（全社一括 / 個別会社名 / 未選択） */
   let clientLabel: string;
   if (clientId === "all") {
@@ -347,7 +348,7 @@ function buildResult(cmdId: string, cmdName: string, clientId: string): PatternM
   } else if (clientId === "default" || !clientId) {
     clientLabel = "⚠️ 未選択（ヘッダーで顧問先を選択または入力してください）";
   } else {
-    const client = getClientById(clientId);
+    const client = await clientRepo.getById(clientId);
     clientLabel = client?.companyName ?? clientId;
   }
 

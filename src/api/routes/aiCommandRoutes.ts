@@ -29,7 +29,10 @@ import { getAuthStatus } from '../services/mfAuthService'
 import { getCurrentStaffUuid } from './authRoutes'
 import { addCommandLog, getMonthlyTotalCost, getAllMonthlyCosts, getStaffMonthlyCosts, getClientMonthlyCosts, getCrossMonthlyCosts, getModelMonthlyCosts, getAnnualTotalCost } from '../services/aiLogStore'
 import { calculateCost, MODEL_PRICING, USD_JPY_RATE, getAccountEstimateModelId } from '../ai/modelConfig'
-import { getByThreeCode, getAll as getAllClients } from '../services/clientsApi'
+// TODO: Phase 3.6 — getByThreeCodeはClientRepositoryに未定義。Interface拡張後に解消
+import { getByThreeCode } from '../services/clientsApi'
+import { createMockRepositories } from '../../repositories/mock'
+const clientRepo = createMockRepositories().client
 import { isBqConfigured, getMonthlySummaries, getCurrentMonthCost } from '../services/bigqueryCostService'
 
 const app = new Hono()
@@ -70,10 +73,10 @@ function resolveClientFromText(text: string, fallbackClientId: string): {
  * 指定clientIdが認証済みならそれを使用。
  * 未認証なら認証済みの任意のclientIdを返す（MCPツール一覧取得用）。
  */
-function findAuthenticatedClientId(preferredId: string): string | null {
+async function findAuthenticatedClientId(preferredId: string): Promise<string | null> {
   if (getAuthStatus(preferredId).authenticated) return preferredId
   // 全顧問先を走査して認証済みのものを探す
-  const allClients = getAllClients()
+  const allClients = await clientRepo.getAll()
   for (const cl of allClients) {
     if (getAuthStatus(cl.clientId).authenticated) return cl.clientId
   }
@@ -117,7 +120,7 @@ app.post('/', async (c) => {
 
     // ===== Layer 2-3: AI =====
     // MF連携済みのclientIdを探して層3を起動
-    const tokenKey = findAuthenticatedClientId(clientId)
+    const tokenKey = await findAuthenticatedClientId(clientId)
     const isMfConnected = tokenKey !== null
 
     if (isMfConnected) {

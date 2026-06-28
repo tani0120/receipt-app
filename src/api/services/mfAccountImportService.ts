@@ -21,7 +21,8 @@
 import { mcpFetchAccounts } from './mfMcpClient'
 import { getAllAccounts, saveAllAccounts, getAllTaxCategories, enrichAccountRow, loadTaxCategories } from './accountMasterApi'
 import { saveMfRawData } from './mfRawDataStore'
-import { getById } from './clientsApi'
+import { createMockRepositories } from '../../repositories/mock'
+const clientRepo = createMockRepositories().client
 import { generateMasterId } from './generateMasterId'
 import { isIndividualType } from '../../constants/clientOptions'
 import {
@@ -122,7 +123,7 @@ export async function importMasterAccounts(
   // 3. マスタのディープコピーを作成（元データ非破壊）
   //    顧問先の事業形態（法人/個人）でフィルタし、同名科目の誤マッチを防止
   const masterItems: Account[] = JSON.parse(JSON.stringify(getAllAccounts()))
-  const client = getById(clientId)
+  const client = await clientRepo.getById(clientId)
   const clientType = isIndividualType(client?.type) ? 'individual' : 'corp'
   const nameToRow = new Map<string, Account>()
   for (const row of masterItems) {

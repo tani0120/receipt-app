@@ -9,8 +9,10 @@
  * Supabase移行時: getAll() を JOIN ... WHERE ... ORDER BY に差し替えるだけ。
  */
 
-import { getAll } from './clientsApi'
-import { getAll as getAllStaff } from './staffsApi'
+import { createMockRepositories } from '../../repositories/mock'
+const repos = createMockRepositories()
+const clientRepo = repos.client
+const staffRepo = repos.staff
 import type { Client } from '../../repositories/types'
 import { applyFilterConditions } from '../helpers/applyFilterConditions'
 import type { FilterCondition } from '../helpers/applyFilterConditions'
@@ -84,9 +86,9 @@ function resolveFilterFields(conditions: FilterCondition[]): FilterCondition[] {
 // 統合一覧API
 // ────────────────────────────────────────────
 
-export function getClientList(query: ClientListQuery): ClientListResponse {
+export async function getClientList(query: ClientListQuery): Promise<ClientListResponse> {
   // 1. 全件取得
-  let rows = [...getAll()]
+  let rows = [...await clientRepo.getAll()]
 
   // 2. フィルタ適用（汎用フィルタエンジン）
   if (query.filters && query.filters.length > 0) {
@@ -116,7 +118,7 @@ export function getClientList(query: ClientListQuery): ClientListResponse {
   // staffName用のスタッフマップ（必要時のみ生成）
   let staffMap: Map<string, string> | null = null
   if (sortDefs.some(s => s.key === 'staffId')) {
-    const staffAll = getAllStaff()
+    const staffAll = await staffRepo.getAll()
     staffMap = new Map(staffAll.map(s => [s.uuid, s.name]))
   }
 

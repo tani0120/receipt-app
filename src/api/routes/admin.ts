@@ -6,10 +6,11 @@ import { zValidator } from '@hono/zod-validator'
 import { zodHook } from '../helpers/zodHook'
 import { getDocuments } from '../services/documentsApi'
 import { summarizeCsvLines as summarizeCsvLinesImport } from '../services/exportHistoryStore'
-import { getAll as getAllClients } from '../services/clientsApi'
-import { getAll as getAllStaff } from '../services/staffsApi'
 import { createMockRepositories } from '../../repositories/mock'
-const journalRepo = createMockRepositories().journal
+const repos = createMockRepositories()
+const clientRepo = repos.client
+const staffRepo = repos.staff
+const journalRepo = repos.journal
 import type { DocEntry } from '../../repositories/types'
 import { getMonthlyTotalCost, getStaffMonthlyCosts, getClientMonthlyCosts, getStaffAnnualCost } from '../services/aiLogStore'
 
@@ -117,8 +118,8 @@ function aggregateMetrics(docs: DocEntry[], groupBy: 'clientId' | 'createdBy'): 
 const route = app
     .get('/dashboard', async (c) => {
         // ストアから実データを集計（MOCK_ADMIN_DATA削除: 2026-05-05 R5）
-        const clients = getAllClients()
-        const staff = getAllStaff()
+        const clients = await clientRepo.getAll()
+        const staff = await staffRepo.getAll()
         const docs = getDocuments()
 
         // KPI: 月間仕訳数（今月の処理済みドキュメント数をカウント）
@@ -177,9 +178,9 @@ const route = app
         })
     })
     // ━━━ T-31-3: ダッシュボードサマリAPI（顧問先数・スタッフ数・分析データ集計） ━━━
-    .get('/dashboard/summary', (c) => {
-      const clients = getAllClients()
-      const staff = getAllStaff()
+    .get('/dashboard/summary', async (c) => {
+      const clients = await clientRepo.getAll()
+      const staff = await staffRepo.getAll()
 
       // 顧問先集計
       const activeClients = clients.filter(c => c.status === 'active').length
@@ -476,7 +477,7 @@ const route = app
     })
     // ━━━ 仕訳数集計API（全顧問先の仕訳データから実数をインポート） ━━━
     .get('/journal-summary', async (c) => {
-      const allClients = getAllClients();
+      const allClients = await clientRepo.getAll();
       const now = new Date();
       const thisMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; // 'YYYY-MM'
 

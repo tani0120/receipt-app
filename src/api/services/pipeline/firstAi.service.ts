@@ -27,9 +27,10 @@ import type { CalculationMethod } from './postprocess';
 import { validateFirstAiResult } from './validateFirstAiResult';
 import { determineAccount } from './accountDetermination';
 import { createMockRepositories } from '../../../repositories/mock'
-const learningRuleRepo = createMockRepositories().learningRule
-const industryVectorRepo = createMockRepositories().industryVector
-import { getById as getClientById } from '../clientsApi';
+const repos = createMockRepositories()
+const learningRuleRepo = repos.learningRule
+const industryVectorRepo = repos.industryVector
+const clientRepo = repos.client
 import { isIndividualType } from '../../../constants/clientOptions';
 import { getClientAccounts } from '../accountMasterApi';
 import {
@@ -395,8 +396,7 @@ export async function firstAiExtract(req: FirstAiRequest): Promise<FirstAiRespon
   // 顧問先のcalculationMethodを取得（ProcessingMode動的分岐用）
   let calculationMethod: CalculationMethod | undefined;
   if (req.clientId) {
-    const { getById: getClientById } = await import('../clientsApi');
-    const client = getClientById(req.clientId);
+    const client = await clientRepo.getById(req.clientId);
     if (client?.calculationMethod) {
       calculationMethod = client.calculationMethod as CalculationMethod;
     }
@@ -449,7 +449,7 @@ export async function firstAiExtract(req: FirstAiRequest): Promise<FirstAiRespon
     const { rules: learningRules } = await learningRuleRepo.getByClientId(req.clientId)
 
     // 業種辞書取得（Client.typeで法人/個人を切り替え。IndustryVectorRepository経由）
-    const client = getClientById(req.clientId)
+    const client = await clientRepo.getById(req.clientId)
     const businessType = isIndividualType(client?.type) ? 'sole' as const : 'corporate' as const
     const industryVectors = await industryVectorRepo.getAll(businessType)
 

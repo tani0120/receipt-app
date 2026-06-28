@@ -22,8 +22,9 @@
  */
 
 import { createMockRepositories } from '../../repositories/mock'
-const confirmedJournalRepo = createMockRepositories().confirmedJournal
-import { getAll as getAllClients } from './clientsApi'
+const repos = createMockRepositories()
+const confirmedJournalRepo = repos.confirmedJournal
+const clientRepo = repos.client
 import {
   getAllAccounts,
   getClientAccounts,
@@ -31,7 +32,6 @@ import {
   saveMfAccounts,
   getAllTaxCategories,
 } from './accountMasterApi'
-import { getById as getClientById } from './clientsApi'
 import { isIndividualType } from '../../constants/clientOptions'
 import { generateMasterId } from './generateMasterId'
 import type { Account } from '../../types/shared-account'
@@ -96,9 +96,9 @@ function isAlreadyNormalized(value: string): boolean {
 }
 
 /** 顧問先のサフィックスを判定（CORP or IND） */
-function getSuffix(clientId: string): string {
+async function getSuffix(clientId: string): Promise<string> {
   try {
-    const client = getClientById(clientId)
+    const client = await clientRepo.getById(clientId)
     if (client && isIndividualType(client.type)) return 'IND'
   } catch { /* clientServiceが動かない場合はCORP */ }
   return 'CORP'
@@ -108,7 +108,7 @@ function getSuffix(clientId: string): string {
  * 全社マスタ + 顧問先別MFデータから名前→accountIdの逆マップを構築
  * accountMasterApi 経由で取得（ファイル直接読みしない）
  */
-function buildAccountNameToIdMap(): { map: Map<string, string>; existingIds: Set<string> } {
+async function buildAccountNameToIdMap(): Promise<{ map: Map<string, string>; existingIds: Set<string> }> {
   const map = new Map<string, string>()
   const existingIds = new Set<string>()
 
@@ -124,7 +124,7 @@ function buildAccountNameToIdMap(): { map: Map<string, string>; existingIds: Set
   }
 
   // 顧問先別MFデータ（clientsApi経由でclientId一覧を取得）
-  const allClientsList = getAllClients()
+  const allClientsList = await clientRepo.getAll()
   const clientIds = new Set(allClientsList.map(c => c.clientId))
 
   for (const clientId of clientIds) {
@@ -176,11 +176,11 @@ export async function normalizeConfirmedJournals(
   const dryRun = options.dryRun ?? false
 
   // 1. マップ構築（accountMasterApi経由）
-  const { map: accountMap, existingIds } = buildAccountNameToIdMap()
+  const { map: accountMap, existingIds } = await buildAccountNameToIdMap()
   const taxMap = buildTaxNameToIdMap()
 
   // 2. データ取得（clientIdループでRepository経由）
-  const allClientsList = getAllClients()
+  const allClientsList = await clientRepo.getAll()
   const clientIds = [...new Set(allClientsList.map(c => c.clientId))]
 
   // 3. 変換統計
@@ -217,7 +217,7 @@ export async function normalizeConfirmedJournals(
       // 顧問先ごとの免税判定
       let isExempt = false
       try {
-        const client = getClientById(journal.client_id)
+        const client = await clientRepo.getById(journal.client_id)
         isExempt = client?.consumptionTaxMode === 'exempt'
       } catch { /* clientService未起動時はfalse */ }
 
@@ -233,7 +233,7 @@ export async function normalizeConfirmedJournals(
           const lookupName = aliasName ?? entry.account
 
           // suffix付きキーで優先検索（CORP/IND選び分け）
-          const suffix = getSuffix(journal.client_id)
+          const suffix = await getSuffix(journal.client_id)
           const id = accountMap.get(`${lookupName}__${suffix}`) ?? accountMap.get(lookupName)
 
           if (id) {

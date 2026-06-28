@@ -31,7 +31,6 @@ import {
   mcpFetchDepartments,
   mcpCreateJournal,
 } from '../services/mfMcpClient'
-import { getById, updateClient } from '../services/clientsApi'
 import { mapOfficeToClient, mapTermSettingsToClient, type MfMappingResult } from '../../constants/mfFieldMapping'
 import { importMfJournals, commitMfImport } from '../services/mfJournalImporter'
 import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services/mfTaxImportService'
@@ -51,7 +50,10 @@ import { isIndividualType } from '../../constants/clientOptions'
 import { readdirSync, existsSync as fsExists, readFileSync as fsRead } from 'fs'
 import { join as pathJoin } from 'path'
 import { createMockRepositories } from '../../repositories/mock'
-const { journal: journalRepo, confirmedJournal: confirmedJournalRepo } = createMockRepositories()
+const repos = createMockRepositories()
+const clientRepo = repos.client
+const journalRepo = repos.journal
+const confirmedJournalRepo = repos.confirmedJournal
 
 const app = new Hono()
 
@@ -220,7 +222,7 @@ app.get('/fiscal-check', async (c) => {
   }
 
   // 1. sugu-sru上の顧問先データ取得
-  const client = getById(clientId)
+  const client = await clientRepo.getById(clientId)
   if (!client) {
     return c.json({ error: `顧問先が見つかりません: ${clientId}` }, 404)
   }
@@ -312,7 +314,7 @@ app.post('/import-offices', async (c) => {
   } = { updated: 0, skipped: 0, errors: [], details: [] }
 
   for (const clientId of clientIds) {
-    const client = getById(clientId)
+    const client = await clientRepo.getById(clientId)
     if (!client) {
       results.errors.push(`${clientId}: 顧問先が見つかりません`)
       continue
@@ -341,7 +343,7 @@ app.post('/import-offices', async (c) => {
       const allChanges = [...officeResult.changes, ...termResult.changes]
 
       if (Object.keys(allUpdates).length > 0) {
-        updateClient(clientId, allUpdates)
+        await clientRepo.update(clientId, allUpdates)
         results.updated++
       } else {
         results.skipped++
@@ -873,7 +875,7 @@ app.post('/import-client-accounts', async (c) => {
 
   try {
     // 0. 顧問先のtype（corp/individual）を取得 → 科目のtargetに使用
-    const clientData = getById(clientId)
+    const clientData = await clientRepo.getById(clientId)
     const clientType = isIndividualType(clientData?.type) ? 'individual' : 'corp'
 
     // 1. MFから勘定科目取得
@@ -1108,8 +1110,8 @@ app.post('/import-journals', async (c) => {
       : getAllAccounts()
     const existingByName = new Map(existingAccounts.map(a => [a.name, a]))
 
-    const suffix = (() => {
-      const client = getById(clientId)
+    const suffix = await (async () => {
+      const client = await clientRepo.getById(clientId)
       return (client && isIndividualType(client.type)) ? 'IND' : 'CORP'
     })()
     const existingIds = new Set(existingAccounts.map(a => a.accountId))
@@ -1457,7 +1459,7 @@ app.post('/send-journals/:clientId', async (c) => {
   // 顧問先の課税方式を取得し、SourceJournal用の値域にマッピング
   // Client: individual/proportional/simplified/exempt
   // SourceJournal: general_individual/general_proportional/simplified/exempt
-  const client = getById(clientId)
+  const client = await clientRepo.getById(clientId)
   const clientTaxMode = client?.consumptionTaxMode
   const TAX_MODE_MAP: Record<string, SourceJournal['consumption_tax_mode']> = {
     individual: 'general_individual',

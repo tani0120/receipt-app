@@ -22,7 +22,8 @@ import { mcpFetchTaxes, mcpFetchTermSettings, type MfMcpTax } from './mfMcpClien
 import { getAllTaxCategories, saveAllTaxCategories } from './accountMasterApi'
 import { getAllTaxAvailable, saveTaxAvailable, type TaxMethodKey } from './mfTaxAvailableStore'
 import { saveMfRawData } from './mfRawDataStore'
-import { getById } from './clientsApi'
+import { createMockRepositories } from '../../repositories/mock'
+const clientRepo = createMockRepositories().client
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { generateTaxMasterId, ensureUniqueTaxId } from './taxIdGenerator'
@@ -347,7 +348,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
   saveAllTaxCategories(masterItems)
 
   // --- MF生データを保存 ---
-  const client = getById(clientId)
+  const client = await clientRepo.getById(clientId)
   const patternName = `taxes-${pattern}`
   saveMfRawData({
     clientId,
@@ -414,7 +415,6 @@ export interface ClientTaxImportResult {
  * 6. available（利用可否）データを更新
  */
 export async function importClientTaxes(clientId: string): Promise<ClientTaxImportResult> {
-  const { updateClient } = await import('./clientsApi')
   const { saveClientTaxCategories } = await import('./accountMasterApi')
 
   // 1. consumptionTaxMode自動更新
@@ -426,7 +426,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
       const mapped = MF_TAX_METHOD_TO_CONSUMPTION_MODE[currentTerm.tax_method]
       if (mapped) {
         consumptionTaxMode = mapped
-        updateClient(clientId, { consumptionTaxMode: mapped })
+        await clientRepo.update(clientId, { consumptionTaxMode: mapped })
         console.log(`[mfTaxImportService] consumptionTaxMode更新: ${currentTerm.tax_method} → ${mapped}`)
       }
     }
@@ -538,7 +538,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
   }
 
   // 6. MF生データを保存
-  const client = getById(clientId)
+  const client = await clientRepo.getById(clientId)
   saveMfRawData({
     clientId,
     clientName: client?.companyName ?? client?.repName ?? '',

@@ -33,7 +33,8 @@ import {
   generateLeadId,
 } from '../services/leadStore';
 import { getLeadList } from '../services/leadListService';
-import { create as createClient, generateClientId } from '../services/clientsApi';
+import { createMockRepositories } from '../../repositories/mock'
+const clientRepo = createMockRepositories().client
 import { getClientAccounts, getClientTaxCategories } from '../services/accountMasterApi';
 
 const app = new Hono();
@@ -214,6 +215,8 @@ app.post('/:leadId/convert', async (c) => {
   }
 
   // 見込先の共通フィールドを顧問先にコピー（見込先固有フィールド除外）
+  // TODO: Phase 3.6 — generateClientIdはClientRepositoryに未定義。Interface拡張後に解消
+  const { generateClientId } = await import('../services/clientsApi');
   const clientId = generateClientId();
   // Lead と Client は構造的に同一フィールドを持つ（repositories/types.ts 参照）
   // leadId/status のみ Lead 固有なので除外し、Client 固有の clientId/status/sourceLeadId を付与
@@ -226,7 +229,7 @@ app.post('/:leadId/convert', async (c) => {
   };
 
   // 顧問先として登録
-  const saved = createClient(clientData);
+  const saved = await clientRepo.create(clientData);
 
   // 勘定科目マスタ・税区分マスタを即時コピー
   getClientAccounts(saved.clientId);

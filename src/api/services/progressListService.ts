@@ -11,11 +11,12 @@
  * Supabase移行時: store呼び出しを SELECT ... JOIN ... WHERE ... ORDER BY に差し替えるだけ。
  */
 
-import { getAll as getAllClients } from './clientsApi'
-import { getAll as getAllStaff } from './staffsApi'
 import { getDocuments } from './documentsApi'
 import { createMockRepositories } from '../../repositories/mock'
-const journalRepo = createMockRepositories().journal
+const repos = createMockRepositories()
+const clientRepo = repos.client
+const staffRepo = repos.staff
+const journalRepo = repos.journal
 import { countUnsorted, latestReceivedDate } from '../../utils/documentUtils'
 import type { ProgressRow } from '../../features/progress-management/types'
 import { applyFilterConditions } from '../helpers/applyFilterConditions'
@@ -94,7 +95,7 @@ function generateMonthKeys(count: number): string[] {
 
 /** 全顧問先のprogressRowsを生成（store直接取得） */
 async function buildProgressRows(): Promise<ProgressRow[]> {
-  const clientList = getAllClients()
+  const clientList = await clientRepo.getAll()
   const docs = getDocuments() // 全件取得
   const monthKeys = generateMonthKeys(12)
 
@@ -200,11 +201,11 @@ function getSortValue(row: ProgressRow, key: string): string | number {
 // 担当者名取得（store直接版）
 // ────────────────────────────────────────────
 
-function getStaffNameForClient(clientId: string): string {
-  const clients = getAllClients()
+async function getStaffNameForClient(clientId: string): Promise<string> {
+  const clients = await clientRepo.getAll()
   const client = clients.find(c => c.clientId === clientId)
   if (!client?.staffId) return ''
-  const staffAll = getAllStaff()
+  const staffAll = await staffRepo.getAll()
   const staff = staffAll.find(s => s.uuid === client.staffId)
   return staff?.name || ''
 }
@@ -230,7 +231,7 @@ export async function getProgressList(query: ProgressListQuery): Promise<Progres
     const staffFilter = query.filters.find(f => f.field === 'staffId')
     if (staffFilter) {
       const staffIds = Array.isArray(staffFilter.value) ? staffFilter.value : [staffFilter.value]
-      const clients = getAllClients()
+      const clients = await clientRepo.getAll()
       const clientIdSet = new Set(
         clients.filter(c => c.staffId && staffIds.includes(c.staffId)).map(c => c.clientId)
       )
@@ -250,7 +251,13 @@ export async function getProgressList(query: ProgressListQuery): Promise<Progres
       )
     }
     if (query.filterStaff) {
-      rows = rows.filter(r => getStaffNameForClient(r.clientId) === query.filterStaff)
+      // async関数をfilter内で使えないため、事前にスタッフ名を解決
+      const filtered: typeof rows = []
+      for (const r of rows) {
+        const name = await getStaffNameForClient(r.clientId)
+        if (name === query.filterStaff) filtered.push(r)
+      }
+      rows = filtered
     }
     if (query.filterUnexported) {
       rows = rows.filter(r => r.unexported > 0)

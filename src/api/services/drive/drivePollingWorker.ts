@@ -13,7 +13,8 @@
  *   「本番: 1時間に1回バッチでDrive/独自を確認 → 新規資料を取り込み」
  */
 
-import { getAll as getAllClients } from '../clientsApi';
+import { createMockRepositories } from '../../../repositories/mock'
+const clientRepo = createMockRepositories().client
 import { listDriveFiles, downloadAndProcessDriveFile } from './driveService';
 import { addDocuments, getDocuments } from '../documentsApi';
 import type { DocEntry, DocSource, DocStatus } from '../../../repositories/types';
@@ -138,7 +139,7 @@ async function tick(): Promise<void> {
     }
 
     // sharedFolderIdがある顧問先を抽出
-    const allClients = getAllClients();
+    const allClients = await clientRepo.getAll();
     const targets = allClients.filter(c => c.sharedFolderId);
 
     if (targets.length === 0) {
@@ -211,7 +212,7 @@ export async function pollSingleClient(
     return { 新規件数: 0, エラー: 'VITE_SHARED_DRIVE_ID未設定' };
   }
 
-  const allClients = getAllClients();
+  const allClients = await clientRepo.getAll();
   const client = allClients.find(c => c.clientId === clientId);
   if (!client) {
     return { 新規件数: 0, エラー: `顧問先が見つかりません: ${clientId}` };
@@ -251,7 +252,7 @@ export async function pollAllClients(): Promise<{
   }
 
   // 対象選別: status=active + sharedFolderId設定済み
-  const allClients = getAllClients();
+  const allClients = await clientRepo.getAll();
   const targets = allClients.filter(c => c.status === 'active' && c.sharedFolderId);
 
   if (targets.length === 0) {

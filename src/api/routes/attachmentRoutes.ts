@@ -20,7 +20,8 @@ import { join, extname } from 'path';
 import crypto from 'crypto';
 import { apiError, apiCatchError } from '../helpers/apiError';
 import { ファイル必須, 未検出, リソース_顧問先 } from '../../constants/apiMessages';
-import { getById } from '../services/clientsApi';
+import { createMockRepositories } from '../../repositories/mock'
+const clientRepo = createMockRepositories().client
 import type { AttachmentFile } from '../../repositories/types';
 
 const ATTACHMENTS_DIR = join(process.cwd(), 'data', 'attachments');
@@ -61,7 +62,7 @@ const app = new Hono();
 // ============================================================
 app.post('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
-  const client = getById(clientId);
+  const client = await clientRepo.getById(clientId);
   if (!client) {
     return apiError(c, 404, 未検出(`${リソース_顧問先} ${clientId}`));
   }
@@ -104,9 +105,9 @@ app.post('/:clientId', async (c) => {
 // ============================================================
 // GET /:clientId — 添付ファイル一覧（ディスクのメタJSONから生成）
 // ============================================================
-app.get('/:clientId', (c) => {
+app.get('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
-  const client = getById(clientId);
+  const client = await clientRepo.getById(clientId);
   if (!client) {
     return apiError(c, 404, 未検出(`${リソース_顧問先} ${clientId}`));
   }
@@ -131,10 +132,10 @@ app.get('/:clientId', (c) => {
 // ============================================================
 // DELETE /:clientId/:fileId — ファイル削除
 // ============================================================
-app.delete('/:clientId/:fileId', (c) => {
+app.delete('/:clientId/:fileId', async (c) => {
   const clientId = c.req.param('clientId');
   const fileId = c.req.param('fileId');
-  const client = getById(clientId);
+  const client = await clientRepo.getById(clientId);
   if (!client) {
     return apiError(c, 404, 未検出(`${リソース_顧問先} ${clientId}`));
   }
@@ -166,10 +167,10 @@ app.delete('/:clientId/:fileId', (c) => {
 // ============================================================
 // GET /:clientId/:fileId/download — ファイルダウンロード
 // ============================================================
-app.get('/:clientId/:fileId/download', (c) => {
+app.get('/:clientId/:fileId/download', async (c) => {
   const clientId = c.req.param('clientId');
   const fileId = c.req.param('fileId');
-  const client = getById(clientId);
+  const client = await clientRepo.getById(clientId);
   if (!client) {
     return apiError(c, 404, 未検出(`${リソース_顧問先} ${clientId}`));
   }

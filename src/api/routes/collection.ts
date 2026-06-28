@@ -5,7 +5,8 @@ import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { zodHook } from '../helpers/zodHook'
 import moment from 'moment'
-import * as clientStore from '../services/clientsApi'
+import { createMockRepositories } from '../../repositories/mock'
+const clientRepo = createMockRepositories().client
 import { isIndividualType, getEffectiveFiscalMonth, getFilingOffsetMonths, INDIVIDUAL_DEFAULT_FISCAL_MONTH, CORP_DEFAULT_FISCAL_MONTH } from '../../constants/clientOptions'
 
 const app = new Hono()
@@ -54,8 +55,8 @@ let mockConfig = {
 }
 
 /** clientStoreから回収状況用クライアント一覧を取得 */
-function getCollectionClients() {
-    const allClients = clientStore.getAll();
+async function getCollectionClients() {
+    const allClients = await clientRepo.getAll();
     return allClients.map(c => ({
         clientCode: c.clientId.split('-')[0] || c.clientId,
         companyName: c.companyName,
@@ -72,11 +73,19 @@ function getCollectionClients() {
 // Actually, I can just remove CollectionGridResponseSchema if it's not used.
 
 export { CollectionConfigSchema, CollectionClientSchema, CollectionDetailSchema, CollectionGridResponseSchema };
+/** 回収状況用クライアント型 */
+interface CollectionClient {
+    clientCode: string;
+    companyName: string;
+    fiscalMonth: number;
+    type: 'corp' | 'individual' | 'sole_proprietor';
+    jobId: string;
+}
 
 // Logic Helpers (Server-Side Calculation)
 const currentDateMock = moment('2025-12-28'); // Fixed Date for Consistency
 
-const getFiscalTermEnd = (client: ReturnType<typeof getCollectionClients>[0], targetDate: moment.Moment) => {
+const getFiscalTermEnd = (client: CollectionClient, targetDate: moment.Moment) => {
     const fiscalMonth = getEffectiveFiscalMonth(client.type, client.fiscalMonth);
     const month = targetDate.month() + 1;
     let year = targetDate.year();
@@ -86,7 +95,7 @@ const getFiscalTermEnd = (client: ReturnType<typeof getCollectionClients>[0], ta
     return moment(`${year}-${String(fiscalMonth).padStart(2, '0')}-01`).endOf('month');
 };
 
-const getActiveTerm1End = (client: ReturnType<typeof getCollectionClients>[0]) => {
+const getActiveTerm1End = (client: CollectionClient) => {
     const checkDate = currentDateMock.clone().subtract(2, 'years');
     const today = currentDateMock;
 
@@ -103,7 +112,7 @@ const getActiveTerm1End = (client: ReturnType<typeof getCollectionClients>[0]) =
     return getFiscalTermEnd(client, today);
 };
 
-const calculateCellData = (client: ReturnType<typeof getCollectionClients>[0], viewYearStart: number) => {
+const calculateCellData = (client: CollectionClient, viewYearStart: number) => {
     const term1End = getActiveTerm1End(client);
     const term1Start = term1End.clone().subtract(1, 'year').add(1, 'day');
     const term2End = term1End.clone().add(1, 'year');
@@ -232,11 +241,11 @@ const generateMockHistory = (viewYearStart: number) => {
 
 const route = app
     // GET / - Get Grid Data
-    .get('/', (c) => {
+    .get('/', async (c) => {
         const yearParam = c.req.query('year');
         const viewYearStart = yearParam ? parseInt(yearParam) : 2025;
 
-        const clients = getCollectionClients();
+        const clients = await getCollectionClients();
         const clientData = clients.map(c => ({
             jobId: c.jobId,
             code: c.clientCode,
@@ -254,11 +263,11 @@ const route = app
     })
 
     // GET /:code - Get Detail Data
-    .get('/:code', (c) => {
+    .get('/:code', async (c) => {
         const code = c.req.param('code');
         const viewYearStart = 2025; // Default or pass via Query if needed
 
-        const clients = getCollectionClients();
+        const clients = await getCollectionClients();
         const client = clients.find(cl => cl.clientCode === code);
 
         if (!client) {

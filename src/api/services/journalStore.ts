@@ -19,7 +19,8 @@ import { join } from 'path';
 import crypto from 'crypto';
 import { migrateLegacyDeterminationMethod } from './migration/migrateLegacyDeterminationMethod';
 import { migrateConceptIdToMasterId } from './migration/migrateConceptIdToMasterId';
-import { getById as getClientById } from './clientsApi';
+import { createMockRepositories } from '../../repositories/mock'
+const clientRepo = createMockRepositories().client
 import type { Journal } from '../../types/journal.type';
 import { journalSchema, journalPatchSchema } from '../../types/journal.schema';
 
@@ -84,7 +85,7 @@ function save(clientId: string): void {
 }
 
 /** clientIdの仕訳データをJSONから読み込み */
-function loadClient(clientId: string): Record<string, unknown>[] {
+async function loadClient(clientId: string): Promise<Record<string, unknown>[]> {
   if (journalCache.has(clientId)) {
     return journalCache.get(clientId)!;
   }
@@ -99,7 +100,7 @@ function loadClient(clientId: string): Record<string, unknown>[] {
         save(clientId);
       }
       // 移行: 英語概念ID（cash, consumables等）→ 正規マスタIDに置換
-      const client = getClientById(clientId);
+      const client = await clientRepo.getById(clientId);
       if (migrateConceptIdToMasterId(data, client?.type)) {
         save(clientId);
       }
@@ -141,8 +142,8 @@ function loadClient(clientId: string): Record<string, unknown>[] {
  * JSONから読み込んだデータは構造的にTと互換であることが前提。
  * Supabase移行時はDB型バリデーション済みデータが返るため安全。
  */
-export function getJournals<T = Journal>(clientId: string): T[] {
-  return loadClient(clientId) as T[];
+export async function getJournals<T = Journal>(clientId: string): Promise<T[]> {
+  return (await loadClient(clientId)) as T[];
 }
 
 /** 顧問先の仕訳データを全件上書き保存 */
@@ -153,8 +154,8 @@ export function saveJournals(clientId: string, journals: Record<string, unknown>
 }
 
 /** 顧問先の仕訳データに追加（サーバーがIDを上書き発番） */
-export function addJournals(clientId: string, newJournals: Record<string, unknown>[]): number {
-  const existing = loadClient(clientId);
+export async function addJournals(clientId: string, newJournals: Record<string, unknown>[]): Promise<number> {
+  const existing = await loadClient(clientId);
   // サーバーがID上書き発番（フロントが送ったIDは信頼しない）
   for (const journal of newJournals) {
     journal.journalId = generateJournalId();
@@ -230,8 +231,8 @@ const PATCHABLE_FIELDS = new Set([
 ]);
 
 /** 1件の仕訳を部分更新（PATCH用。ホワイトリスト外のフィールドは無視） */
-export function updateJournal(clientId: string, journalId: string, patch: Record<string, unknown>): Record<string, unknown> | null {
-  const journals = loadClient(clientId);
+export async function updateJournal(clientId: string, journalId: string, patch: Record<string, unknown>): Promise<Record<string, unknown> | null> {
+  const journals = await loadClient(clientId);
   const journal = journals.find((j) => j.journalId === journalId);
   if (!journal) return null;
 
@@ -277,8 +278,8 @@ export function updateJournal(clientId: string, journalId: string, patch: Record
  * @param journalId - 仕訳ID
  * @returns 削除された仕訳、または見つからない場合null
  */
-export function deleteJournal(clientId: string, journalId: string): Record<string, unknown> | null {
-  const journals = loadClient(clientId);
+export async function deleteJournal(clientId: string, journalId: string): Promise<Record<string, unknown> | null> {
+  const journals = await loadClient(clientId);
   const journal = journals.find((j) => j.journalId === journalId);
   if (!journal) return null;
   journal.deleted_at = new Date().toISOString();
@@ -288,6 +289,6 @@ export function deleteJournal(clientId: string, journalId: string): Record<strin
 }
 
 /** 件数取得 */
-export function countJournals(clientId: string): number {
-  return loadClient(clientId).length;
+export async function countJournals(clientId: string): Promise<number> {
+  return (await loadClient(clientId)).length;
 }
