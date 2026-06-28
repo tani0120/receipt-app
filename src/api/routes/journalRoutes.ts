@@ -298,4 +298,83 @@ app.get('/:clientId/supporting-match', async (c) => {
   return c.json(result);
 });
 
+// ============================================================
+// POST /:clientId/generate — 仕訳生成（サーバーサイド実行）
+// #28: lineItemToJournalMockをフロントからサーバーに移動（2026-06-28）
+//
+// リクエスト: { documentIds: string[] }
+// 処理:
+//   1. documentIdsからDocEntryを取得（doc-store）
+//   2. 各DocEntryのaiLineItemsをLineItem[]に変換
+//   3. lineItemToJournalMock()をサーバー側で実行
+//   4. addJournals()で永続化
+//   5. 生成件数をレスポンスで返却
+// ============================================================
+app.post('/:clientId/generate', async (c) => {
+  const clientId = c.req.param('clientId');
+  const body = await c.req.json<{ documentIds: string[] }>();
+
+  if (!body.documentIds || !Array.isArray(body.documentIds) || body.documentIds.length === 0) {
+    return apiError(c, 400, 配列必須('documentIds'));
+  }
+
+  // 動的importで循環参照を回避
+  const { getDocuments } = await import('../services/documentsApi');
+  const { lineItemToJournalMock } = await import('../../utils/lineItemToJournalMock');
+  const { getClientAccounts } = await import('../services/accountMasterApi');
+
+  const allDocs = getDocuments(clientId);
+  const accountMaster = getClientAccounts(clientId).accounts.map(a => ({
+    accountId: a.accountId,
+    defaultTaxCategoryId: a.defaultTaxCategoryId,
+  }));
+
+  let generatedCount = 0;
+
+  for (const docId of body.documentIds) {
+    const docEntry = allDocs.find(d => d.id === docId);
+    if (!docEntry?.aiLineItems || docEntry.aiLineItems.length === 0) {
+      console.log(`[journals/generate] ${docId}: aiLineItemsなし（スキップ）`);
+      continue;
+    }
+
+    // DocEntry.aiLineItems → LineItem[] に変換
+    const lineItems = docEntry.aiLineItems.map(li => ({
+      date: li.date,
+      description: li.description,
+      amount: li.amount,
+      direction: li.direction,
+      balance: li.balance,
+      line_index: li.line_index,
+      determined_account: li.determined_account ?? null,
+      tax_category: li.tax_category ?? null,
+      sub_account: li.sub_account ?? null,
+      vendor_name: li.vendor_name ?? null,
+      level: li.level,
+      candidates: li.candidates,
+    }));
+
+    const sourceType = (docEntry.aiSourceType as import('../../types/pipeline/source_type.type').SourceType) || 'receipt';
+    // クレカ払い判定: DocEntryのaiIsCreditCardPaymentを使用（#28: AI判定結果）
+    const isCreditCardPayment = docEntry.aiIsCreditCardPayment ?? false;
+
+    const newJournals = lineItemToJournalMock(
+      lineItems,
+      sourceType,
+      clientId,
+      isCreditCardPayment,
+      docEntry.id,
+      null,           // accountResults（学習ルールは既にfirstAiで適用済み）
+      accountMaster,
+    );
+
+    addJournals(clientId, newJournals);
+    generatedCount += newJournals.length;
+    console.log(`[journals/generate] ${docEntry.fileName}: ${newJournals.length}件生成 (source_type=${sourceType}, isCreditCardPayment=${isCreditCardPayment})`);
+  }
+
+  console.log(`[journals/generate] 合計${generatedCount}件の仕訳を生成・永続化`);
+  return c.json({ ok: true, generated: generatedCount });
+});
+
 export default app;

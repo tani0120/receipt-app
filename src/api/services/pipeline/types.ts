@@ -77,6 +77,8 @@ export interface FirstAiRawResponse {
   date: string | null;               // YYYY-MM-DD
   total_amount: number | null;       // 税込合計
   line_items?: FirstAiRawLineItem[];  // 行データ（通帳・クレカはN行、レシートは1行）
+  /** クレカ払い判定（receipt/receipt_issuedの場合のみ有効。AIが証票画像から判定） */
+  is_credit_card_payment?: boolean;
 }
 
 /** Geminiが返す行データ（生） */
@@ -103,6 +105,8 @@ export interface FirstAiResponse {
   date: string | null;
   total_amount: number | null;
   fallback_applied: boolean;         // fallbackが適用されたか
+  /** クレカ払い判定（receipt/receipt_issuedの場合のみ有効。AIが証票画像から判定） */
+  is_credit_card_payment: boolean;
   line_items: FirstAiLineItem[];  // 行データ（空配列 = 行抽出なし）
   /** サーバー側バリデーション結果（フロントはこれを信頼して表示するだけ） */
   validation: {

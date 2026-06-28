@@ -313,7 +313,6 @@ import { useMigrationPoller } from '@/composables/useMigrationPoller';
 import { useDriveDocuments } from '@/composables/useDriveDocuments';
 import { useDocSelection } from '@/composables/useDocSelection';
 import { usePreviewZoom } from '@/composables/usePreviewZoom';
-import type { DocEntry } from '@/repositories/types';
 import { DOC_STATUS_LABELS, SOURCE_TYPE_LABELS, DIRECTION_LABELS } from '@/constants/vendorOptions';
 import { UI_MSG } from '@/constants/uiMessages';
 import { useRepositories } from '@/composables/useRepositories';
@@ -458,40 +457,14 @@ const { showToast } = useGlobalToast();
 const { startPolling } = useMigrationPoller();
 const isSending = ref(false);
 
-// --- 仕訳変換（パイプライン接続: 選別→仕訳一覧） ---
-import { lineItemToJournalMock } from '@/utils/lineItemToJournalMock';
-import type { LineItem } from '@/types/pipeline/line_item.type';
-import type { SourceType } from '@/types/pipeline/source_type.type';
-// import { useJournals } from '@/composables/useJournals'; // Phase C: 廃止
+// --- 仕訳生成（#28: サーバーサイド実行。POST /api/journals/:clientId/generate）---
+// lineItemToJournalMock()はサーバー側で実行される。フロントからはdocumentIdsのみ送信。
 import { useDocuments } from '@/composables/useDocuments';
-import { useAccountMasterStore } from '@/stores/accountMasterStore';
 
 // const { journals } = useJournals(clientId); // Phase C: 廃止
-const { allDocuments, clearAiFields } = useDocuments();
-const accountMasterStore = useAccountMasterStore();
+const { clearAiFields } = useDocuments();
 
-/**
- * DocEntry.aiLineItems → LineItem[] に変換するヘルパー
- * DocEntry型は基本フィールド+科目確定結果を持つが、LineItem型にマッピングする
- */
-function docLineItemsToLineItems(
-  aiLineItems: NonNullable<DocEntry['aiLineItems']>,
-): LineItem[] {
-  return aiLineItems.map(li => ({
-    date: li.date,
-    description: li.description,
-    amount: li.amount,
-    direction: li.direction,
-    balance: li.balance,
-    line_index: li.line_index,
-    determined_account: li.determined_account ?? null,
-    tax_category: li.tax_category ?? null,
-    sub_account: li.sub_account ?? null,
-    vendor_name: li.vendor_name ?? null,
-    level: li.level,
-    candidates: li.candidates,
-  }));
-}
+// docLineItemsToLineItems() は #28 でサーバー側に移動（journalRoutes.ts POST /:clientId/generate）
 
 // --- 仕訳処理に送る（Phase D + パイプライン接続） ---
 const sendToProcess = async () => {
@@ -507,51 +480,28 @@ const sendToProcess = async () => {
   isSending.value = true;
 
   try {
-    // ━━━ 1. 仕訳変換: target の DocEntry から仕訳レコードを生成 ━━━
+    // ━━━ 1. 仕訳生成: サーバー側で実行（#28: lineItemToJournalMockのサーバー移動）━━━
     const targetDocViews = documents.value.filter(d => d.status === 'target');
+    const documentIds = targetDocViews.map(d => d.id);
     let generatedCount = 0;
 
-    for (const docView of targetDocViews) {
-      // DocView.id で元の DocEntry を検索（aiLineItemsを持つ完全データ）
-      const docEntry = allDocuments.value.find(d => d.id === docView.id)
-        || uploadedDocs.value.find(d => d.id === docView.id);
-
-      if (!docEntry?.aiLineItems || docEntry.aiLineItems.length === 0) {
-        console.log(`[sendToProcess] ${docView.id}: aiLineItemsなし（スキップ）`);
-        continue;
-      }
-
-      // 科目確定結果を含むLineItem[]に変換
-      const lineItems = docLineItemsToLineItems(docEntry.aiLineItems);
-      const sourceType = (docEntry.aiSourceType as SourceType) || 'receipt';
-
-      // lineItemToJournalMock() で Journal[] に変換
-      const newJournals = lineItemToJournalMock(
-        lineItems,
-        sourceType,
-        clientId.value,
-        false,               // isCreditCardPayment（将来: DocEntryに追加予定）
-        docEntry.id,         // documentId
-        null,                // accountResults
-        accountMasterStore.allAccounts, // accountMaster（相手勘定税区分のデータ駆動解決）
-      );
-
-      // Phase C: POST APIでサーバーに追加（useJournals廃止）
+    if (documentIds.length > 0) {
       try {
-        await repos.journal.createJournals(clientId.value, { journals: newJournals });
+        const res = await fetch(`/api/journals/${clientId.value}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documentIds }),
+        });
+        const data = await res.json() as { ok: boolean; generated: number; error?: string };
+        if (!data.ok) {
+          throw new Error(data.error || '仕訳生成に失敗しました');
+        }
+        generatedCount = data.generated;
+        console.log(`[sendToProcess] サーバー側仕訳生成: ${generatedCount}件`);
       } catch (err) {
-        console.error('[sendToProcess] POST失敗:', err);
+        console.error('[sendToProcess] 仕訳生成API失敗:', err);
+        throw err;
       }
-      generatedCount += newJournals.length;
-
-      console.log(
-        `[sendToProcess] ${docView.fileName}: ${newJournals.length}${UI_MSG.仕訳生成件数}`
-        + ` (source_type=${sourceType}, lineItems=${lineItems.length})`
-      );
-    }
-
-    if (generatedCount > 0) {
-      console.log(`[sendToProcess] 合計${generatedCount}件の仕訳をPOST APIで追加`);
     }
 
     // ━━━ 1.5. 根拠資料メタデータ保存（clearAiFieldsの前に実行。AI抽出値を検索用に保存する） ━━━

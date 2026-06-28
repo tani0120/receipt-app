@@ -507,33 +507,25 @@ export function getJournalList(clientId: string, query: JournalListQuery): Journ
  * - 差額: 売上 − 経費
  *
  * 仕訳データのentry.accountは2種類のID体系が混在する:
- *   1. マスタID（SHOUMOUHINHI_IND等） → groupMapで直接解決
- *   2. 英語概念ID（consumables等） → accountMap経由で名前取得 → 名前逆引き
+ * ID体系マイグレーション完了済み（英語概念IDは全てマスタIDに自動置換済み）。
+ * マスタIDでgroupMapを直接解決する1系統のみ。
  */
 function calcSummary(
   journals: JournalListRow[],
   clientId: string,
-  accountMap?: Record<string, string>,
+  _accountMap?: Record<string, string>,
 ): JournalListSummary {
   // 科目ID → accountGroupマップを構築
   const clientData = getClientAccounts(clientId)
   const groupMap = new Map<string, AccountGroup>()
-  const nameToGroup = new Map<string, AccountGroup>()
   for (const a of clientData.accounts) {
     groupMap.set(a.accountId, a.accountGroup as AccountGroup)
-    nameToGroup.set(a.name, a.accountGroup as AccountGroup)
   }
 
-  // accountIDからaccountGroupを解決する（フォールバック付き）
+  // accountIDからaccountGroupを解決する
   const resolveGroup = (accountId: string | null | undefined): AccountGroup | undefined => {
     if (!accountId) return undefined
-    // 1. マスタIDで直接検索
-    const direct = groupMap.get(accountId)
-    if (direct) return direct
-    // 2. accountMap経由で名前取得 → 名前からaccountGroup逆引き
-    const name = accountMap?.[accountId]
-    if (name) return nameToGroup.get(name)
-    return undefined
+    return groupMap.get(accountId)
   }
 
   let revenue = 0

@@ -57,7 +57,11 @@ export interface SourceJournal {
   /** 免税事業者フラグ（trueならinvoice_kindを設定しない） */
   is_tax_exempt?: boolean
   /**
-   * 課税方式（顧問先の設定から取得）
+   * 課税方式（顧問先の設定から注入。Journal型のフィールドではない）
+   *
+   * 注入元: Client.consumptionTaxMode（repositories/types/client.types.ts）
+   * 注入箇所: mfRoutes.ts の send-journals エンドポイント内で
+   *           getJournals() + client設定から組み立てる。
    *
    * バリデーションで使用:
    *   - exempt: 免税事業者。課税税区分の使用をエラー

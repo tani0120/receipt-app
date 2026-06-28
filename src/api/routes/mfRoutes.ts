@@ -1339,15 +1339,18 @@ app.post('/normalize-journals', (c) => {
     const entries = [...j.debit_entries, ...j.credit_entries]
     for (const entry of entries) {
       // 科目
-      if (isNormalized(entry.account)) {
+      const acct = entry.account
+      if (!acct) {
+        accountMiss++
+      } else if (isNormalized(acct)) {
         accountAlready++
       } else {
-        const id = accountNameToId.get(entry.account)
+        const id = accountNameToId.get(acct)
         if (id) {
           if (!body) entry.account = id
           accountConverted++
         } else {
-          missedAccounts.add(entry.account)
+          missedAccounts.add(acct)
           accountMiss++
         }
       }
@@ -1420,6 +1423,13 @@ interface SendableJournal {
   vendor_name?: string | null
   direction?: string | null
   memo?: string | null
+  /**
+   * 顧問先の課税方式（Client.consumptionTaxModeから注入）
+   *
+   * Journal型のフィールドではない。MF送信時にclient設定から取得して注入する。
+   * journalToMfConverter.ts の SourceJournal.consumption_tax_mode に対応。
+   * 注入元: repositories/types/client.types.ts の Client.consumptionTaxMode
+   */
   consumption_tax_mode?: 'general' | 'general_proportional' | 'general_individual' | 'simplified' | 'exempt'
 }
 

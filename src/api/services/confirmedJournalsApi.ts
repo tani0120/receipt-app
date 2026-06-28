@@ -176,7 +176,7 @@ export function applyMfIds(
     j.mf_journal_id = r.mfId;
     j.mf_journal_number = r.mfNumber ?? null;
     j.mf_sent_at = now;
-    j.export_status = 'exported';
+    j.status = 'exported';
     count++;
   }
   if (count > 0) {
@@ -213,17 +213,19 @@ export function getImportBatches(client_id: string): {
 
   for (const j of journals) {
     if (j.client_id !== client_id) continue;
-    const existing = batches.get(j.import_batch_id);
+    const batchId = j.import_batch_id ?? '';
+    const vDate = j.voucher_date ?? '';
+    const existing = batches.get(batchId);
     if (existing) {
       existing.count++;
-      if (j.voucher_date < existing.min_voucher_date) existing.min_voucher_date = j.voucher_date;
-      if (j.voucher_date > existing.max_voucher_date) existing.max_voucher_date = j.voucher_date;
+      if (vDate < existing.min_voucher_date) existing.min_voucher_date = vDate;
+      if (vDate > existing.max_voucher_date) existing.max_voucher_date = vDate;
     } else {
-      batches.set(j.import_batch_id, {
-        imported_at: j.imported_at,
+      batches.set(batchId, {
+        imported_at: j.imported_at ?? '',
         count: 1,
-        min_voucher_date: j.voucher_date,
-        max_voucher_date: j.voucher_date,
+        min_voucher_date: vDate,
+        max_voucher_date: vDate,
       });
     }
   }

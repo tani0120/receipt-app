@@ -198,6 +198,10 @@ const FIRST_AI_SCHEMA = {
         required: ['description', 'amount', 'direction'],
       },
     },
+    is_credit_card_payment: {
+      type: Type.BOOLEAN,
+      description: 'source_typeが receipt または receipt_issued の場合のみ判定。証票に「クレジット」「カード」「VISA」「Mastercard」「JCB」「AMEX」「デビット」「電子マネー」「iD」「QUICPay」「PayPay」等の記載がある場合はtrue。現金払いまたは支払方法不明の場合はfalse。receipt/receipt_issued以外の場合はfalse。',
+    },
   },
   required: [
     'source_type', 'source_type_confidence',
@@ -249,7 +253,8 @@ const SYSTEM_INSTRUCTION_RULES = `
 - first_ai_reason: 判定根拠。なぜそのsource_typeを選んだかを日本語で1、2文で説明。例:「『領収書』の表記があり、POSレシート形式」
 - document_count: 画像内に独立した情報源が何個あるかを数える。純粋に1枚の証票だけが写っている場合のみ1を返す。以下のケースは全て2以上: 複数の証票が並んでいるまたは重なっている / 証票以外のもの（他の書類・画面等）が同時に写っている。必ず整数で返す。
 - document_count_reason: 上記document_countの判定根拠。画像の端・背景・重なり部分に他の書類や証票の片鲞が写っていないかを確認し、その結果を日本語で1、2文で説明。例:「主証票の左下に別のレシートの端が見える」「証票以外のものは写っていない」
-- line_items: 行データ配列。各行のamountは必ず正の整数。入出金はdirectionで区別。`;
+- line_items: 行データ配列。各行のamountは必ず正の整数。入出金はdirectionで区別。
+- is_credit_card_payment: source_typeがreceiptまたはreceipt_issuedの場合のみ判定。証票画像内に「クレジット」「カード」「VISA」「Mastercard」「JCB」「AMEX」「デビット」「電子マネー」「iD」「QUICPay」「PayPay」等の記載があればtrue。現金払い・支払方法不明・receipt/receipt_issued以外はfalse。`;
 
 /** プロンプト生成: ベース + キーワード集（外部） + ルール */
 const SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_BASE + buildKeywordsPrompt() + SYSTEM_INSTRUCTION_RULES;

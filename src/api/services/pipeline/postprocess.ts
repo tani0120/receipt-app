@@ -74,6 +74,7 @@ const FALLBACK_FIRST_AI: FirstAiRawResponse = {
   issuer_name: null,
   date: null,
   total_amount: null,
+  is_credit_card_payment: false,
 };
 
 // ============================================================
@@ -146,6 +147,7 @@ export function postprocessFirstAi(
     issuer_name: raw.issuer_name ?? null,
     date: raw.date ?? null,
     total_amount: raw.total_amount ?? null,
+    is_credit_card_payment: raw.is_credit_card_payment ?? false,
   };
 
   // line_itemsバリデーション + line_index付番
@@ -189,6 +191,10 @@ function buildResponse(
     date: raw.date,
     total_amount: raw.total_amount,
     fallback_applied: fallbackApplied,
+    // クレカ払い判定: receipt/receipt_issuedの場合のみAI出力を伝搬。それ以外は強制false
+    is_credit_card_payment: (sourceType === 'receipt' || sourceType === 'receipt_issued')
+      ? (raw.is_credit_card_payment ?? false)
+      : false,
     line_items: lineItems,
     // validation: firstAi.service.tsでvalidateFirstAiResult()の結果で上書きされる
     validation: { ok: false, errorReason: null, warning: null, supplementary: false, isDuplicate: false },

@@ -18,6 +18,8 @@ import { join } from 'path';
 
 import crypto from 'crypto';
 import { migrateLegacyDeterminationMethod } from './migration/migrateLegacyDeterminationMethod';
+import { migrateConceptIdToMasterId } from './migration/migrateConceptIdToMasterId';
+import { getById as getClientById } from './clientsApi';
 import type { Journal } from '../../types/journal.type';
 import { journalSchema, journalPatchSchema } from '../../types/journal.schema';
 
@@ -94,6 +96,11 @@ function loadClient(clientId: string): Record<string, unknown>[] {
       journalCache.set(clientId, data);
       // 移行: determination_method 未設定の旧仕訳に 'legacy' を設定
       if (migrateLegacyDeterminationMethod(data)) {
+        save(clientId);
+      }
+      // 移行: 英語概念ID（cash, consumables等）→ 正規マスタIDに置換
+      const client = getClientById(clientId);
+      if (migrateConceptIdToMasterId(data, client?.type)) {
         save(clientId);
       }
       console.log(`[journalStore] ${clientId}: ${data.length}件をJSONから読み込み`);

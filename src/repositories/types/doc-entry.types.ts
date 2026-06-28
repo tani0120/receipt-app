@@ -104,6 +104,8 @@ export interface DocEntry {
   aiDocumentCount?: number
   /** AI警告メッセージ（OK判定だが注意が必要） */
   aiWarning?: string | null
+  /** クレカ払い判定（receipt/receipt_issuedのみ。AIが証票画像から判定。2026-06-28 #28追加） */
+  aiIsCreditCardPayment?: boolean
   /** AI処理モード（auto/manual/excluded） */
   aiProcessingMode?: string | null
   /** AIフォールバック適用フラグ */

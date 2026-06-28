@@ -269,6 +269,7 @@ export function updateAiResults(
   doc.aiSupplementary = result.validation.supplementary;
   doc.aiDocumentCount = result.document_count;
   doc.aiWarning = result.validation.warning ?? null;
+  doc.aiIsCreditCardPayment = result.is_credit_card_payment ?? false;
   doc.aiProcessingMode = result.processing_mode ?? null;
   doc.aiFallbackApplied = result.fallback_applied;
 
