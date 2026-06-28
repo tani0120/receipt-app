@@ -35,6 +35,9 @@ import { mockLearningRuleRepo } from './learningRule.repository.mock'
 import { mockIndustryVectorRepo } from './industryVector.repository.mock'
 import { mockPipelineRepo } from './pipeline.repository.mock'
 import { mockJournalRepo } from './journal.repository.mock'
+import { mockCommentRepo } from './comment.repository.mock'
+import { mockExportHistoryRepo } from './exportHistory.repository.mock'
+import { mockNotificationRepo } from './notification.repository.mock'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /**
@@ -126,12 +129,7 @@ export function createMockRepositories(): Repositories {
       upload: async () => { throw new Error('mockAttachmentRepo.upload not implemented') },
       deleteFile: async () => { throw new Error('mockAttachmentRepo.deleteFile not implemented') },
     },
-    comment: {
-      getByEntity: async () => { throw new Error('mockCommentRepo.getByEntity not implemented') },
-      create: async () => { throw new Error('mockCommentRepo.create not implemented') },
-      deleteById: async () => { throw new Error('mockCommentRepo.deleteById not implemented') },
-      update: async () => { throw new Error('mockCommentRepo.update not implemented') },
-    },
+    comment: mockCommentRepo,
     admin: {
       getAiCostConfig: async () => { throw new Error('mockAdminRepo.getAiCostConfig not implemented') },
       getActivitySummary: async () => { throw new Error('mockAdminRepo.getActivitySummary not implemented') },
@@ -149,5 +147,7 @@ export function createMockRepositories(): Repositories {
     },
     journal: mockJournalRepo,
     pipeline: mockPipelineRepo,
+    exportHistory: mockExportHistoryRepo,
+    notification: mockNotificationRepo,
   }
 }

@@ -570,6 +570,10 @@ export type Repositories = {
   journal: JournalRepository
   /** パイプライン（アップロード・メトリクス・ハッシュ） */
   pipeline: PipelineRepository
+  /** 出力履歴 + CSVスナップショット */
+  exportHistory: ExportHistoryRepository
+  /** 通知 */
+  notification: NotificationRepository
 }
 
 // ============================================================
@@ -775,14 +779,14 @@ export type AttachmentRepository = {
 // ============================================================
 
 export type CommentRepository = {
-  /** コメント一覧取得 */
-  getByEntity(entityType: string, entityId: string): Promise<unknown>
-  /** コメント追加（id/author/body/date + entityType/entityIdを含むオブジェクト） */
-  create(data: unknown): Promise<unknown>
+  /** エンティティのコメントを取得（新しい順） */
+  getByEntity(entityType: string, entityId: string): Promise<Comment[]>
+  /** コメント追加 */
+  create(comment: Comment): Promise<Comment>
   /** コメント削除 */
-  deleteById(commentId: string): Promise<void>
-  /** コメント更新 */
-  update(commentId: string, data: { body: string; mentions?: string[] }): Promise<unknown>
+  deleteById(commentId: string): Promise<boolean>
+  /** エンティティの全コメントを削除。削除件数を返す */
+  deleteAllByEntity(entityType: string, entityId: string): Promise<number>
 }
 
 // ============================================================
@@ -845,4 +849,100 @@ export type JournalRepository = {
   delete(clientId: string, journalId: string): Promise<Journal | null>
   /** 複数件ソフトデリート。削除件数を返す */
   deleteMany(clientId: string, journalIds: string[]): Promise<{ deleted: number }>
+}
+
+// ============================================================
+// § ExportHistoryRepository（出力履歴 + CSVスナップショット）
+// ============================================================
+
+/** 出力履歴エントリ */
+export interface ExportHistoryEntry {
+  id: string
+  exportDate: string
+  fileName: string
+  /** 仕訳件数（証票数） */
+  count: number
+  /** CSV行数（複合仕訳展開後） */
+  csvLineCount?: number
+  /** 出力者スタッフID */
+  staffId?: string
+  status: string
+}
+
+/** CSVスナップショット */
+export interface CsvSnapshot {
+  historyId: string
+  fileName: string
+  exportDate: string
+  journalCount: number
+  csvContent: string
+}
+
+/** 期間別集計バケット */
+export interface PeriodBucket {
+  csvLineCount: number
+  journalCount: number
+  exportCount: number
+}
+
+export type ExportHistoryRepository = {
+  /** 顧問先の出力履歴を取得 */
+  getByClientId(clientId: string): Promise<ExportHistoryEntry[]>
+  /** 出力履歴を追加（サーバーでID発番） */
+  add(clientId: string, entry: Omit<ExportHistoryEntry, 'id'>): Promise<ExportHistoryEntry>
+  /** CSVスナップショット取得 */
+  getCsvSnapshot(clientId: string, historyId: string): Promise<CsvSnapshot | null>
+  /** CSVスナップショット保存 */
+  saveCsvSnapshot(clientId: string, snapshot: CsvSnapshot): Promise<void>
+  /** 全顧問先のCSV出力実績集計 */
+  summarizeCsvLines(): Promise<{
+    thisMonth: PeriodBucket
+    monthlyAvg: PeriodBucket
+    lastYearSameMonth: PeriodBucket
+    thisYear: PeriodBucket
+    lastYear: PeriodBucket
+    byClient: { clientId: string; thisMonth: PeriodBucket; thisYear: PeriodBucket; lastYear: PeriodBucket }[]
+    byStaff: { staffId: string; thisMonth: PeriodBucket; thisYear: PeriodBucket; lastYear: PeriodBucket }[]
+  }>
+}
+
+// ============================================================
+// § NotificationRepository（通知）
+// ============================================================
+
+export type NotificationRepository = {
+  /** 全通知を取得（新しい順） */
+  getAll(): Promise<AppNotification[]>
+  /** 指定スタッフ宛の通知を取得 */
+  getForStaff(staffId: string): Promise<AppNotification[]>
+  /** 通知を追加 */
+  add(notification: AppNotification): Promise<void>
+  /** 指定スタッフが通知を既読にする */
+  markAsRead(id: string, staffId: string): Promise<boolean>
+  /** 指定スタッフが全通知を既読にする */
+  markAllAsRead(staffId: string): Promise<void>
+  /** 通知を削除 */
+  deleteById(id: string): Promise<boolean>
+  /** 全通知を削除 */
+  clearAll(): Promise<void>
+}
+
+// ============================================================
+// § Comment型（commentStore.ts由来）
+// ============================================================
+
+/** コメント1件の型 */
+export interface Comment {
+  /** コメントID（cmt-xxxxxxxx） */
+  id: string
+  /** エンティティ種別（client / lead） */
+  entityType: 'client' | 'lead'
+  /** エンティティID（clientId / leadId） */
+  entityId: string
+  /** 投稿者名 */
+  author: string
+  /** 本文 */
+  body: string
+  /** 日時文字列 */
+  date: string
 }
