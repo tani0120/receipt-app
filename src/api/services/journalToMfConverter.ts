@@ -367,10 +367,14 @@ function convertSide(
     }
   }
 
-  // 部門（名前→MF-ID）
+  // 部門（名前→MF-ID）（B-12修正: 未マッチ時に警告）
   if (entry.department) {
     const mfDeptId = maps.departmentMap.get(entry.department)
-    if (mfDeptId) side.department_id = mfDeptId
+    if (mfDeptId) {
+      side.department_id = mfDeptId
+    } else {
+      console.warn(`[convertSide] 部門「${entry.department}」がMF departmentMapにマッチしません（消失します）`)
+    }
   }
 
   // 取引先（名前→MF取引先コード）

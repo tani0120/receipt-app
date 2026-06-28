@@ -288,4 +288,11 @@ export interface Journal {
    * CSVインポート時はnull。
    */
   mf_raw?: Record<string, unknown> | null;
+
+  /**
+   * MF側削除検出日時（ISO 8601）
+   * MF取込時に、以前取り込んだ仕訳がMFレスポンスに含まれていない場合に設定。
+   * MF側で仕訳が削除された可能性を示す。nullなら未検出。
+   */
+  mf_deleted_detected_at?: string | null;
 }

@@ -34,6 +34,7 @@ import { mockLeadRepo } from './lead.repository.mock'
 import { mockLearningRuleRepo } from './learningRule.repository.mock'
 import { mockIndustryVectorRepo } from './industryVector.repository.mock'
 import { mockPipelineRepo } from './pipeline.repository.mock'
+import { mockJournalRepo } from './journal.repository.mock'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /**
@@ -97,6 +98,8 @@ export function createMockRepositories(): Repositories {
       grantPermission: async () => { throw new Error('mockDriveRepo.grantPermission not implemented') },
       revokePermission: async () => { throw new Error('mockDriveRepo.revokePermission not implemented') },
       getExcludedCount: async () => { throw new Error('mockDriveRepo.getExcludedCount not implemented') },
+      pollClient: async () => { throw new Error('mockDriveRepo.pollClient not implemented') },
+      pollAll: async () => { throw new Error('mockDriveRepo.pollAll not implemented') },
     },
     export: {
       getExportList: async () => { throw new Error('mockExportRepo.getExportList not implemented') },
@@ -144,9 +147,7 @@ export function createMockRepositories(): Repositories {
       bulkCreate: async () => { throw new Error('mockLeadExtraRepo.bulkCreate not implemented') },
       convert: async () => { throw new Error('mockLeadExtraRepo.convert not implemented') },
     },
-    journal: {
-      createJournals: async () => { throw new Error('mockJournalRepo.createJournals not implemented') },
-    },
+    journal: mockJournalRepo,
     pipeline: mockPipelineRepo,
   }
 }

@@ -42,7 +42,7 @@ async function fetchJournalSummary(clientId: string, cols: MonthColumn[]): Promi
   try {
     const res = await fetch(`${API_BASE}/${encodeURIComponent(clientId)}`)
     if (!res.ok) return emptyJournalSummary(cols)
-    const data = await res.json() as { journals: Array<{ voucher_date?: string | null; exported?: boolean; export_batch_id?: string | null }> }
+    const data = await res.json() as { journals: Array<{ voucher_date?: string | null; status?: string | null; deleted_at?: string | null }> }
     const journals = data.journals ?? []
 
     // 月別仕訳数を集計
@@ -65,8 +65,8 @@ async function fetchJournalSummary(clientId: string, cols: MonthColumn[]): Promi
       else if (year === currentYear - 1) lastYearCount++
     }
 
-    // 未出力（exported=false または export_batch_id=null）
-    const unexported = journals.filter(j => !j.exported && !j.export_batch_id).length
+    // 未出力（A-4修正: status=null かつ deleted_at=null で判定。exportedブーリアン廃止）
+    const unexported = journals.filter(j => j.status === null && j.deleted_at === null).length
 
     return {
       unexported,

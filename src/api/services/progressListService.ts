@@ -39,8 +39,8 @@ interface JournalSummary {
 /** 仕訳のうち進捗集計に必要なフィールドのみの型 */
 interface ProgressJournalRecord {
   voucher_date?: string | null
-  exported?: boolean
-  export_batch_id?: string | null
+  status?: string | null
+  deleted_at?: string | null
 }
 
 /** journalStoreから仕訳サマリを集計 */
@@ -68,9 +68,9 @@ function buildJournalSummary(clientId: string, monthKeys: string[]): JournalSumm
     else if (year === currentYear - 1) lastYearCount++
   }
 
-  // 未出力（exported=false かつ export_batch_id=null）
+  // 未出力（A-4修正: status=null かつ deleted_at=null で判定。exportedブーリアン廃止）
   const unexported = journals.filter(j => {
-    return !j.exported && !j.export_batch_id
+    return j.status === null && j.deleted_at === null
   }).length
 
   return {

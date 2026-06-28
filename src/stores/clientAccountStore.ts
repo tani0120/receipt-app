@@ -30,7 +30,7 @@ export const useClientAccountStore = defineStore('clientAccounts', () => {
   const accountsMap = ref<Record<string, EnrichedAccount[]>>({})
   /** clientId → キャッシュ取得時刻 */
   const cachedAtMap = ref<Record<string, number>>({})
-  /** clientId → 補助科目マップ（sugusru科目ID → MF補助科目配列）バックエンドから取得したキャッシュ */
+  /** clientId → 補助科目マップ（スグスル科目ID → MF補助科目配列）バックエンドから取得したキャッシュ */
   const subAccountsMap = ref<Record<string, Record<string, Array<{ mfSubId: string; name: string; mfTaxId: string }>>>>({})
   /** clientId → 部門配列。バックエンドから取得したキャッシュ */
   const departmentsMap = ref<Record<string, Array<{ mfDeptId: string; name: string; parentId: string | null }>>>({})

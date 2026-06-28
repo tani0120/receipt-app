@@ -13,7 +13,7 @@ import {
   saveAllTaxCategories,
   getClientTaxCategories,
   saveClientTaxCategories,
-} from '../../api/services/accountMasterApi'
+} from '../../api/services/taxCategoryMasterApi'
 import type { TaxMasterRepository } from '../types'
 
 export const mockTaxMasterRepo: TaxMasterRepository = {

@@ -169,10 +169,33 @@ export function addJournals(clientId: string, newJournals: Record<string, unknow
         entry.entryId = generateJournalEntryId();
       }
     }
+    // A-6: 借方貸方合計チェック（警告のみ。保存は止めない）
+    validateDebitCreditBalance(journal);
   }
   existing.push(...newJournals);
   save(clientId);
   return newJournals.length;
+}
+
+/**
+ * 借方貸方の合計金額チェック（A-6修正）
+ * 不一致の場合はconsole.warnで警告。保存は止めない（UI側で修正できるようにする）。
+ * Supabase移行時にはDBレベルCHECK制約で補完。
+ */
+function validateDebitCreditBalance(journal: Record<string, unknown>): void {
+  const debitEntries = journal.debit_entries as Array<{ amount?: number }> | undefined;
+  const creditEntries = journal.credit_entries as Array<{ amount?: number }> | undefined;
+  if (!debitEntries || !creditEntries) return;
+  const debitTotal = debitEntries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+  const creditTotal = creditEntries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+  // 浮動小数点誤差を考慮（1円未満の差は許容）
+  if (Math.abs(debitTotal - creditTotal) >= 1) {
+    const jid = journal.journalId ?? '不明';
+    console.warn(
+      `[journalStore] 借方貸方合計不一致 (${jid}): ` +
+      `借方=${debitTotal}, 貸方=${creditTotal}, 差額=${Math.abs(debitTotal - creditTotal)}`
+    );
+  }
 }
 
 /**
@@ -230,6 +253,11 @@ export function updateJournal(clientId: string, journalId: string, patch: Record
   }
   if (rejected.length > 0) {
     console.warn(`[journalStore] updateJournal: ホワイトリスト外フィールドを無視: ${rejected.join(', ')} (${journalId})`);
+  }
+
+  // A-6: debit_entries/credit_entriesが更新された場合、借方貸方合計チェック
+  if ('debit_entries' in patch || 'credit_entries' in patch) {
+    validateDebitCreditBalance(journal);
   }
 
   save(clientId);

@@ -33,16 +33,25 @@ import { getById as getClientById } from './clientsApi'
 import { isIndividualType } from '../../constants/clientOptions'
 import { generateMasterId } from './generateMasterId'
 import type { Account } from '../../types/shared-account'
+import { inferAccountGroupFromName } from '../../utils/inferAccountGroupFromName'
 
-// ────────────────────────────────────────────
-// 定数
-// ────────────────────────────────────────────
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 
-/** 名前違いの吸収マップ（MFマスタと異なる名称でCSVに入った科目） */
-const ALIAS_MAP: Record<string, string> = {
-  '消耗品': '消耗品費',
-  '給料手当': '給料賃金',
+/**
+ * 名前違いの吸収マップ（MFマスタと異なる名称でCSVに入った科目）
+ * #37修正: ハードコードからJSON外部化。data/account-alias-map.jsonから読み込み。
+ */
+function loadAliasMap(): Record<string, string> {
+  try {
+    const filePath = resolve(process.cwd(), 'data', 'account-alias-map.json')
+    return JSON.parse(readFileSync(filePath, 'utf-8'))
+  } catch (e) {
+    console.warn('[normalizeConfirmedJournals] account-alias-map.json読み込み失敗。空マップで継続:', e)
+    return {}
+  }
 }
+const ALIAS_MAP: Record<string, string> = loadAliasMap()
 
 // ────────────────────────────────────────────
 // 型定義
@@ -206,7 +215,9 @@ export async function normalizeConfirmedJournals(
 
     for (const entry of entries) {
       // ── 科目変換 ──
-      if (isAlreadyNormalized(entry.account)) {
+      if (entry.account === null) {
+        // 科目が未設定（null）の場合は科目変換をスキップ
+      } else if (isAlreadyNormalized(entry.account)) {
         accountAlreadyNormalized++
       } else {
         // 名前違い吸収（消耗品→消耗品費 等）
@@ -239,7 +250,7 @@ export async function normalizeConfirmedJournals(
               accountId: generatedId,
               name: entry.account,
               target: suffix === 'IND' ? 'individual' : 'corp',
-              accountGroup: 'PL_EXPENSE',
+              accountGroup: inferAccountGroupFromName(entry.account), // #55修正: 科目名からルールベース推定
               category: '',
               hidden: false,
               effectiveFrom: null,

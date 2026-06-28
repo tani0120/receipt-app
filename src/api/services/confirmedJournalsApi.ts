@@ -19,6 +19,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import type { Journal } from '../../types/journal.type';
+import { journalSchema } from '../../types/journal.schema';
+import { migrateLegacyDeterminationMethod } from './migration/migrateLegacyDeterminationMethod';
 
 const DATA_DIR = join(process.cwd(), 'data');
 const DATA_FILE = join(DATA_DIR, 'confirmed_journals.json');
@@ -39,6 +41,27 @@ export function loadConfirmedJournals(): void {
       const raw = readFileSync(DATA_FILE, 'utf-8');
       journals = JSON.parse(raw) as Journal[];
       console.log(`[confirmedJournalsApi] ${journals.length}件をJSONから読み込み`);
+
+      // 移行: determination_method 未設定の旧仕訳に 'legacy' を設定
+      const rawData = journals as unknown as Record<string, unknown>[];
+      if (migrateLegacyDeterminationMethod(rawData)) {
+        save();
+      }
+
+      // zodバリデーション（構造検証。journalStoreと同等）
+      let invalidCount = 0;
+      for (const item of journals) {
+        const result = journalSchema.safeParse(item);
+        if (!result.success) {
+          invalidCount++;
+          if (invalidCount <= 3) {
+            console.warn(`[confirmedJournalsApi] zodバリデーション警告 (${item.journalId ?? '不明'}):`, result.error.issues.slice(0, 3));
+          }
+        }
+      }
+      if (invalidCount > 0) {
+        console.warn(`[confirmedJournalsApi] ${invalidCount}/${journals.length}件がzodスキーマ不適合（データは維持。修正推奨）`);
+      }
     } else {
       journals = [];
       console.log('[confirmedJournalsApi] JSONファイルなし。空で起動');
@@ -57,7 +80,9 @@ function save(): void {
     if (!existsSync(DATA_DIR)) {
       mkdirSync(DATA_DIR, { recursive: true });
     }
-    writeFileSync(DATA_FILE, JSON.stringify(journals, null, 2), 'utf-8');
+    // warning_details（導出値）は永続化しない（journalStoreと同等）
+    const cleaned = journals.map(({ warning_details, ...rest }) => rest);
+    writeFileSync(DATA_FILE, JSON.stringify(cleaned, null, 2), 'utf-8');
   } catch (err) {
     console.error('[confirmedJournalsApi] JSON書き出しエラー:', err);
   }

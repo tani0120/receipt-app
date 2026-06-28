@@ -29,7 +29,9 @@ export function deriveMfAccountGroup(mfAccountGroup: string, _mfCategory?: strin
     case 'EXPENSE': return 'PL_EXPENSE'
     case 'LIABILITY': return 'BS_LIABILITY'
     case 'REVENUE': return 'PL_REVENUE'
-    default: return 'PL_EXPENSE' // フォールバック
+    default:
+      console.warn(`[deriveMfAccountGroup] 未知のMF account_group: "${mfAccountGroup}"。PL_EXPENSEをデフォルト設定。`)
+      return 'PL_EXPENSE' // フォールバック（警告付き）
   }
 }
 

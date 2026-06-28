@@ -14,13 +14,14 @@
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
 import { 配列必須 } from '../../constants/apiMessages';
+import type { Journal } from '../../types/journal.type';
 import {
   getJournals,
   saveJournals,
   addJournals,
-  updateJournal,
-  deleteJournal,
 } from '../services/journalStore';
+import { mockJournalRepo } from '../../repositories/mock/journal.repository.mock';
+const journalRepo = mockJournalRepo;
 import {
   validateJournal,
   type JournalForValidation,
@@ -53,7 +54,7 @@ const app = new Hono();
 // パラメータなし: 後方互換（raw全件返却。autoSave用）
 // パラメータあり: 統合一覧（ソート・フィルタ・検索・過去仕訳CSV統合・ページング）
 // ============================================================
-app.get('/:clientId', (c) => {
+app.get('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
   const url = new URL(c.req.url);
   const hasQueryParams = url.searchParams.has('sort') || url.searchParams.has('search')
@@ -62,7 +63,7 @@ app.get('/:clientId', (c) => {
 
   // パラメータなし → 後方互換（既存のautoSave等で使用）
   if (!hasQueryParams) {
-    const journals = getJournals(clientId);
+    const journals = await journalRepo.list(clientId);
     return c.json({ journals, count: journals.length });
   }
 
@@ -164,10 +165,10 @@ app.post('/:clientId', async (c) => {
   if (!body.journals || !Array.isArray(body.journals)) {
     return apiError(c, 400, 配列必須('journals'));
   }
-  const added = addJournals(clientId, body.journals);
+  await journalRepo.createMany(clientId, body.journals as unknown as Journal[]);
   // サーバーが上書き発番したIDリストを返す
   const serverIds = body.journals.map((j) => String(j.journalId ?? ''));
-  return c.json({ ok: true, added, serverIds });
+  return c.json({ ok: true, added: body.journals.length, serverIds });
 });
 
 // ============================================================
@@ -180,10 +181,7 @@ app.patch('/:clientId/:journalId', async (c) => {
   const patch = await c.req.json<Record<string, unknown>>();
   // journalIdの上書きは禁止
   delete patch.journalId;
-  const updated = updateJournal(clientId, journalId, patch);
-  if (!updated) {
-    return apiError(c, 404, `仕訳ID '${journalId}' が見つかりません`);
-  }
+  await journalRepo.update(clientId, journalId, patch as Partial<Journal>);
   return c.json({ ok: true, journalId });
 });
 
@@ -192,13 +190,10 @@ app.patch('/:clientId/:journalId', async (c) => {
 // 断絶#27修正（deleteJournal APIなし）
 // deleted_atに現在日時を設定。物理削除はしない。
 // ============================================================
-app.delete('/:clientId/:journalId', (c) => {
+app.delete('/:clientId/:journalId', async (c) => {
   const clientId = c.req.param('clientId');
   const journalId = c.req.param('journalId');
-  const deleted = deleteJournal(clientId, journalId);
-  if (!deleted) {
-    return apiError(c, 404, `仕訳ID '${journalId}' が見つかりません`);
-  }
+  await journalRepo.delete(clientId, journalId);
   return c.json({ ok: true, journalId });
 });
 
@@ -368,7 +363,7 @@ app.post('/:clientId/generate', async (c) => {
       accountMaster,
     );
 
-    addJournals(clientId, newJournals);
+    addJournals(clientId, newJournals as unknown as Record<string, unknown>[]);
     generatedCount += newJournals.length;
     console.log(`[journals/generate] ${docEntry.fileName}: ${newJournals.length}件生成 (source_type=${sourceType}, isCreditCardPayment=${isCreditCardPayment})`);
   }

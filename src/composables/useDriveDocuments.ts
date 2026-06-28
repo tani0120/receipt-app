@@ -31,10 +31,15 @@ export interface DocView {
   aiSourceType?: string | null;
   aiDirection?: string | null;
   aiDescription?: string | null;
+  aiFirstAiReason?: string | null;      // #7修正: 判定根拠
+  aiLineItems?: DocEntry['aiLineItems']; // #8修正: 行データ本体
   aiLineItemsCount?: number;
   aiSupplementary?: boolean;
   aiDocumentCount?: number;
+  aiDocumentCountReason?: string | null; // #5修正: 枚数判定根拠
   aiWarning?: string | null;
+  aiValidationIsDuplicate?: boolean;     // #6修正: AI重複検出
+  aiIsCreditCardPayment?: boolean;       // #28: クレカ払い判定
   aiProcessingMode?: string | null;
   aiFallbackApplied?: boolean;
 }
@@ -219,10 +224,15 @@ export function useDriveDocuments(
         aiSourceType: docEntry?.aiSourceType,
         aiDirection: docEntry?.aiDirection,
         aiDescription: docEntry?.aiDescription,
+        aiFirstAiReason: docEntry?.aiFirstAiReason,
+        aiLineItems: docEntry?.aiLineItems,
         aiLineItemsCount: docEntry?.aiLineItemsCount,
         aiSupplementary: docEntry?.aiSupplementary,
         aiDocumentCount: docEntry?.aiDocumentCount,
+        aiDocumentCountReason: docEntry?.aiDocumentCountReason,
         aiWarning: docEntry?.aiWarning,
+        aiValidationIsDuplicate: docEntry?.aiValidationIsDuplicate,
+        aiIsCreditCardPayment: docEntry?.aiIsCreditCardPayment,
         aiProcessingMode: docEntry?.aiProcessingMode,
         aiFallbackApplied: docEntry?.aiFallbackApplied,
       };
@@ -248,10 +258,15 @@ export function useDriveDocuments(
       aiSourceType: d.aiSourceType,
       aiDirection: d.aiDirection,
       aiDescription: d.aiDescription,
+      aiFirstAiReason: d.aiFirstAiReason,
+      aiLineItems: d.aiLineItems,
       aiLineItemsCount: d.aiLineItemsCount,
       aiSupplementary: d.aiSupplementary,
       aiDocumentCount: d.aiDocumentCount,
+      aiDocumentCountReason: d.aiDocumentCountReason,
       aiWarning: d.aiWarning,
+      aiValidationIsDuplicate: d.aiValidationIsDuplicate,
+      aiIsCreditCardPayment: d.aiIsCreditCardPayment,
       aiProcessingMode: d.aiProcessingMode,
       aiFallbackApplied: d.aiFallbackApplied,
     }));

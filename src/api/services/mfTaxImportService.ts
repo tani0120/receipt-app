@@ -26,6 +26,7 @@ import { getById } from './clientsApi'
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { generateTaxMasterId, ensureUniqueTaxId } from './taxIdGenerator'
+import { buildNameMap } from '../../utils/matchByName'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ルールベース自動判定（simplifiedOnly / individualOnly / baseId）
@@ -139,10 +140,7 @@ async function detectDiff(clientId: string, _dryRun: boolean = false): Promise<D
 
   // 3. サーバーのマスタデータから照合用Mapを構築（★フロント状態に依存しない）
   const masterItems: TaxCategory[] = JSON.parse(JSON.stringify(getAllTaxCategories()))
-  const nameToRow = new Map<string, TaxCategory>()
-  for (const row of masterItems) {
-    nameToRow.set(row.name, row)
-  }
+  const nameToRow = buildNameMap(masterItems, row => row.name)
   const mfNameSet = new Set(mfTaxes.map(t => t.name))
 
   // 4. availableデータを取得（MCP実機のavailableをそのまま使用。自動ルール廃止済み）
@@ -441,10 +439,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
 
   // 3. 全社マスタと名前で突合（MF IDは事業者固有のため名前照合が正しい）
   const masterItems = getAllTaxCategories()
-  const masterByName = new Map<string, TaxCategory>()
-  for (const m of masterItems) {
-    masterByName.set(m.name, m)
-  }
+  const masterByName = buildNameMap(masterItems, m => m.name)
 
   const today = new Date().toISOString().slice(0, 10)
   const isExempt = consumptionTaxMode === 'exempt'

@@ -86,8 +86,13 @@ export const journalSchema = z.object({
   source: journalSourceSchema,
 
   // ── パイプライン3フィールド ──
-  source_type: z.string().nullable(),
-  direction: z.string().nullable(),
+  source_type: z.enum([
+    'receipt', 'invoice_received', 'tax_payment',
+    'journal_voucher', 'bank_statement', 'credit_card', 'cash_ledger',
+    'invoice_issued', 'receipt_issued',
+    'non_journal', 'supplementary_doc', 'other',
+  ]).nullable(),
+  direction: z.enum(['expense', 'income', 'transfer', 'mixed']).nullable(),
   vendor_vector: z.string().nullable(),
 
   // ── 取引先特定結果 ──
@@ -164,7 +169,11 @@ export const journalSchema = z.object({
 
   // ── AI推定関連 ──
   ai_completed_at: z.string().nullable().optional(),
-  determination_method: z.string().nullable().optional(),
+  determination_method: z.enum([
+    't_number', 'match_key', 'learning_rule',
+    'industry_vector', 'ai_fallback',
+    'manual', 'imported', 'legacy',
+  ]).nullable().optional(),
   prediction_score: z.number().nullable().optional(),
   model_version: z.string().nullable().optional(),
 
@@ -176,6 +185,7 @@ export const journalSchema = z.object({
   import_batch_id: z.string().nullable().optional(),
   imported_at: z.string().nullable().optional(),
   mf_raw: z.record(z.string(), z.unknown()).nullable().optional(),
+  mf_deleted_detected_at: z.string().nullable().optional(),
 }).passthrough()
 
 /**

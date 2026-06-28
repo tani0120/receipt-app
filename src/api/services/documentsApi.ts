@@ -268,7 +268,9 @@ export function updateAiResults(
   doc.aiLineItemsCount = result.line_items.length;
   doc.aiSupplementary = result.validation.supplementary;
   doc.aiDocumentCount = result.document_count;
+  doc.aiDocumentCountReason = result.document_count_reason ?? null; // #5修正: 枚数判定根拠を転写
   doc.aiWarning = result.validation.warning ?? null;
+  doc.aiValidationIsDuplicate = result.validation.isDuplicate ?? false; // #6修正: 重複検出結果を転写
   doc.aiIsCreditCardPayment = result.is_credit_card_payment ?? false;
   doc.aiProcessingMode = result.processing_mode ?? null;
   doc.aiFallbackApplied = result.fallback_applied;

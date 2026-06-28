@@ -102,8 +102,12 @@ export interface DocEntry {
   aiSupplementary?: boolean
   /** AI判定証票枚数（2以上は複数証票警告） */
   aiDocumentCount?: number
+  /** AI判定枚数根拠（#5修正: firstAi.document_count_reasonを転写） */
+  aiDocumentCountReason?: string | null
   /** AI警告メッセージ（OK判定だが注意が必要） */
   aiWarning?: string | null
+  /** AI重複検出結果（#6修正: firstAi.validation.isDuplicateを転写） */
+  aiValidationIsDuplicate?: boolean
   /** クレカ払い判定（receipt/receipt_issuedのみ。AIが証票画像から判定。2026-06-28 #28追加） */
   aiIsCreditCardPayment?: boolean
   /** AI処理モード（auto/manual/excluded） */
@@ -150,6 +154,7 @@ export interface DocEntry {
 export const AI_FIELD_KEYS: (keyof DocEntry)[] = [
   'aiDate', 'aiAmount', 'aiVendor', 'aiSourceType', 'aiDirection',
   'aiDescription', 'aiFirstAiReason', 'aiLineItems', 'aiLineItemsCount',
-  'aiSupplementary', 'aiDocumentCount', 'aiWarning', 'aiProcessingMode',
+  'aiSupplementary', 'aiDocumentCount', 'aiDocumentCountReason',
+  'aiWarning', 'aiValidationIsDuplicate', 'aiProcessingMode',
   'aiFallbackApplied',
 ]

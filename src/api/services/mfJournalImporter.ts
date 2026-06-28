@@ -20,7 +20,7 @@ import type { JournalEntryLine } from '../../types/domain-journal'
 import type { MfMcpJournal, MfMcpJournalSide } from './mfMcpClient'
 import type { MfMappingTables } from './mfMappingService'
 import { buildAllMaps } from './mfMappingService'
-import { importJournals } from './confirmedJournalsApi'
+import { importJournals, getByClientId as getExistingJournals } from './confirmedJournalsApi'
 import { normalizeVendorName } from '../../utils/pipeline/vendorIdentification'
 import { fromMfInvoiceKind, MF_JOURNAL_TYPE_ADJUSTING, DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
 import { generateMasterId } from './generateMasterId'
@@ -29,6 +29,7 @@ import { getClientAccounts, saveMfAccounts, getAllAccounts, getAllTaxCategories 
 import { getById as getClientById } from './clientsApi'
 import { isIndividualType } from '../../constants/clientOptions'
 import type { Account } from '../../types/shared-account'
+import { inferAccountGroupFromName } from '../../utils/inferAccountGroupFromName'
 
 // ────────────────────────────────────────────
 // バリデーション結果型
@@ -51,6 +52,7 @@ export interface ImportIssue {
     | 'IMPORT_TAX_UNMATCHED'
     | 'IMPORT_CLOSING_ENTRY'
     | 'IMPORT_DUPLICATE'
+    | 'IMPORT_MF_DELETED'
   /** 対象MF仕訳番号 */
   mfNumber: number
   /** 詳細メッセージ */
@@ -73,6 +75,8 @@ export interface PrepareResult {
   unmatchedAccounts: string[]
   /** 未マッチ税区分一覧 */
   unmatchedTaxes: string[]
+  /** MF側で削除されたと推定される仕訳（既存のmf_transaction_noが今回のMFレスポンスに含まれない） */
+  deletedDetected: Array<{ journalId: string; mfTransactionNo: number; voucherDate: string }>
 }
 
 // ────────────────────────────────────────────
@@ -127,7 +131,7 @@ async function convertSide(
   /** 免税デフォルト税区分ID（マスタからisExemptDefault=trueで取得済み） */
   exemptDefaultTaxId: string | null = null,
 ): Promise<JournalEntryLine> {
-  // 科目: MF名前 → Sugusru概念ID（逆マッピング）
+  // 科目: MF名前 → スグスル概念ID（逆マッピング）
   let account = side.account_name
   const conceptId = maps.reverseAccountMap.get(side.account_name)
   if (conceptId) {
@@ -144,7 +148,7 @@ async function convertSide(
       accountId: newId,
       name: side.account_name,
       target: suffix === 'IND' ? 'individual' : 'corp',
-      accountGroup: 'PL_EXPENSE', // MCP外科目は分類不明。経費をデフォルト
+      accountGroup: inferAccountGroupFromName(side.account_name), // #55修正: 科目名からルールベース推定
       category: '',
       defaultTaxCategoryId: undefined,
       hidden: false,
@@ -154,7 +158,7 @@ async function convertSide(
     })
   }
 
-  // 税区分: MF名前 → Sugusru概念ID（逆マッピング）
+  // 税区分: MF名前 → スグスル概念ID（逆マッピング）
   let taxCategoryId: string | null = null
   if (side.tax_name) {
     const taxConceptId = maps.reverseTaxMap.get(side.tax_name)
@@ -397,7 +401,7 @@ export async function prepareMfImport(
       import_batch_id: batchId,
       imported_at: new Date().toISOString(),
       mf_transaction_no: mfJournal.number ?? null,
-      mf_raw: mfJournal as unknown as Record<string, unknown>,
+      mf_raw: { ...mfJournal } as Record<string, unknown>, // #54修正: スプレッドで安全にコピー
     })
 
     // 決算整理仕訳の警告
@@ -443,6 +447,43 @@ export async function prepareMfImport(
     })
   }
 
+  // ── B-13: MF側削除検出 ──
+  // 既存の確定済み仕訳のmf_transaction_noと今回のMFレスポンスを突合。
+  // MFレスポンスに含まれない既存仕訳 = MF側で削除された可能性。
+  const mfTransactionNos = new Set(journals.map(j => j.number).filter((n): n is number => n != null))
+  const existingJournals = getExistingJournals(clientId)
+  const deletedDetected: PrepareResult['deletedDetected'] = []
+  const now = new Date().toISOString()
+
+  for (const existing of existingJournals) {
+    // MFインポート済み（mf_transaction_noあり）かつ削除済みでない仕訳のみ対象
+    if (
+      existing.mf_transaction_no != null &&
+      existing.source === 'mf_import' &&
+      existing.deleted_at === null &&
+      !existing.mf_deleted_detected_at &&
+      !mfTransactionNos.has(existing.mf_transaction_no)
+    ) {
+      // MF側で削除されたと推定 → フラグ付与
+      existing.mf_deleted_detected_at = now
+      deletedDetected.push({
+        journalId: existing.journalId,
+        mfTransactionNo: existing.mf_transaction_no,
+        voucherDate: existing.voucher_date ?? '',
+      })
+      warnings.push({
+        severity: 'warning',
+        type: 'IMPORT_MF_DELETED',
+        mfNumber: existing.mf_transaction_no,
+        message: `MF#${existing.mf_transaction_no}（${existing.voucher_date}）: MF側で削除された可能性`,
+      })
+    }
+  }
+
+  if (deletedDetected.length > 0) {
+    console.log(`[mfJournalImporter] MF側削除検出: ${deletedDetected.length}件`)
+  }
+
   const result: PrepareResult = {
     converted,
     skippedErrors,
@@ -451,6 +492,7 @@ export async function prepareMfImport(
     batchId,
     unmatchedAccounts: [...unmatchedAccounts],
     unmatchedTaxes: [...unmatchedTaxes],
+    deletedDetected,
   }
 
   // 一時キャッシュに保持（人間承認待ち）

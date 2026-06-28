@@ -10,6 +10,7 @@
 import type { Vendor } from '@/types/pipeline/vendor.type'
 import type { Account } from '@/types/shared-account'
 import { DEFAULT_EFFECTIVE_FROM } from '@/constants/mfApiConstants'
+import { inferAccountGroupFromName } from '@/utils/inferAccountGroupFromName'
 
 /** DB行 → Vendor型への変換 */
 export function toVendor(row: Record<string, unknown>): Vendor {
@@ -82,7 +83,7 @@ export function toAccount(row: Record<string, unknown>): Account {
     name: row.name as string,
     sub: (row.sub as string) ?? undefined,
     target: (row.target as Account['target']) ?? 'corp',
-    accountGroup: (row.account_group as Account['accountGroup']) ?? 'PL_EXPENSE',
+    accountGroup: (row.account_group as Account['accountGroup']) ?? inferAccountGroupFromName(row.name as string),
     category: (row.category as string) ?? '',
     defaultTaxCategoryId: (row.default_tax_category_id as string) ?? undefined,
     hidden: (row.hidden as boolean) ?? false,

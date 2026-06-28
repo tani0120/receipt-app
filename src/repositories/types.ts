@@ -789,6 +789,20 @@ export type LeadExtraRepository = {
 // ============================================================
 
 export type JournalRepository = {
-  /** 仕訳一括作成 */
-  createJournals(clientId: string, data: { journals: unknown[] }): Promise<unknown>
+  /** 1件取得 */
+  get(clientId: string, journalId: string): Promise<Journal | null>
+  /** 顧問先の全件取得 */
+  list(clientId: string): Promise<Journal[]>
+  /** 1件追加（IDは呼び出し側で発番済み） */
+  create(clientId: string, journal: Journal): Promise<void>
+  /** 複数件追加 */
+  createMany(clientId: string, journals: Journal[]): Promise<void>
+  /** 1件部分更新 */
+  update(clientId: string, journalId: string, patch: Partial<Journal>): Promise<void>
+  /** 複数件部分更新 */
+  updateMany(clientId: string, patches: { journalId: string; patch: Partial<Journal> }[]): Promise<void>
+  /** 1件ソフトデリート（deleted_atを設定。物理削除はしない） */
+  delete(clientId: string, journalId: string): Promise<void>
+  /** 複数件ソフトデリート */
+  deleteMany(clientId: string, journalIds: string[]): Promise<void>
 }

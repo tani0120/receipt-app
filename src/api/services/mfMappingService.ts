@@ -1,9 +1,9 @@
 /**
- * mfMappingService.ts — Sugusru概念ID → MF-ID 変換マップ生成
+ * mfMappingService.ts — スグスル概念ID → MF-ID 変換マップ生成
  *
  * 顧問先別の科目データ（マスタ+Override合成結果）の名前と
  * MF API（MCP経由getAccounts/getTaxes等）の名前を突合し、
- * { sugusru概念ID: mf固有ID } のマッピングテーブルを生成する。
+ * { スグスル概念ID: mf固有ID } のマッピングテーブルを生成する。
  *
  * 準拠: mf_sugusru_field_mapping.md §5、§53 §11
  */
@@ -11,6 +11,7 @@
 import { join } from 'path'
 import { getAccountGroupDirection } from '../../data/master/account-category-rules'
 import { getClientAccounts } from './accountMasterApi'
+import { buildNameMap } from '../../utils/matchByName'
 import {
   mcpFetchAccounts,
   mcpFetchTaxes,
@@ -18,8 +19,6 @@ import {
   mcpFetchDepartments,
   mcpFetchTradePartners,
   mcpFetchTermSettings,
-  type MfMcpAccount,
-  type MfMcpTax,
   type MfMcpSubAccount,
   type MfMcpDepartment,
 } from './mfMcpClient'
@@ -28,19 +27,19 @@ import {
 // 型定義
 // ────────────────────────────────────────────
 
-/** 科目マッピング（Sugusru概念ID → MF科目ID） */
+/** 科目マッピング（スグスル概念ID → MF科目ID） */
 export interface AccountMapping {
-  /** Sugusru概念ID（例: 'CASH'） */
+  /** スグスル概念ID（例: 'CASH'） */
   sugusruId: string
-  /** Sugusru科目名（例: '現金'） */
+  /** スグスル科目名（例: '現金'） */
   sugusruName: string
   /** MF科目ID（例: 'cqFKUwCs6dvrA8AitD0DzA%3D%3D'）。未マッチならnull */
   mfId: string | null
-  /** MF科目名（マッチした場合。通常sugusruNameと同一） */
+  /** MF科目名（マッチした場合。通常スグスル科目名と同一） */
   mfName: string | null
 }
 
-/** 税区分マッピング（Sugusru概念ID → MF税区分ID） */
+/** 税区分マッピング（スグスル概念ID → MF税区分ID） */
 export interface TaxMapping {
   sugusruId: string
   sugusruName: string
@@ -50,9 +49,9 @@ export interface TaxMapping {
 
 /** 全マッピングテーブル */
 export interface MfMappingTables {
-  /** 科目: { [sugusru概念ID]: mf科目ID } */
+  /** 科目: { [スグスル概念ID]: mf科目ID } */
   accountMap: Map<string, string>
-  /** 税区分: { [sugusru概念ID]: mf税区分ID } */
+  /** 税区分: { [スグスル概念ID]: mf税区分ID } */
   taxMap: Map<string, string>
   /** 補助科目: { [名前]: mf補助科目ID } */
   subAccountMap: Map<string, string>
@@ -60,17 +59,17 @@ export interface MfMappingTables {
   departmentMap: Map<string, string>
   /** 取引先: { [名前]: mf取引先コード } */
   tradePartnerMap: Map<string, string>
-  /** 科目方向: { [sugusru概念ID]: 'sales' | 'purchase' | 'common' } */
+  /** 科目方向: { [スグスル概念ID]: 'sales' | 'purchase' | 'common' } */
   accountDirectionMap: Map<string, 'sales' | 'purchase' | 'common'>
-  /** 税区分方向: { [sugusru概念ID]: 'sales' | 'purchase' | 'common' } */
+  /** 税区分方向: { [スグスル概念ID]: 'sales' | 'purchase' | 'common' } */
   taxDirectionMap: Map<string, 'sales' | 'purchase' | 'common'>
   /** 簡易課税専用税区分IDのSet（データ駆動。IDパターンマッチ代替） */
   taxSimplifiedOnlySet: Set<string>
   /** 個別対応方式専用税区分IDのSet（データ駆動。_COMMON_/_NT_パターン代替） */
   taxIndividualOnlySet: Set<string>
-  /** 逆マップ: MF科目名 → Sugusru概念ID（MF→Sugusru取込用） */
+  /** 逆マップ: MF科目名 → スグスル概念ID（MF→スグスル取込用） */
   reverseAccountMap: Map<string, string>
-  /** 逆マップ: MF税区分名 → Sugusru概念ID（MF→Sugusru取込用） */
+  /** 逆マップ: MF税区分名 → スグスル概念ID（MF→スグスル取込用） */
   reverseTaxMap: Map<string, string>
   /** マッチ失敗の科目（送信前警告用） */
   unmatchedAccounts: AccountMapping[]
@@ -87,7 +86,7 @@ export interface MfMappingTables {
 }
 
 // ────────────────────────────────────────────
-// Sugusruマスタ読み込み
+// スグスルマスタ読み込み
 // ────────────────────────────────────────────
 
 import { readFile } from 'fs/promises'
@@ -109,7 +108,7 @@ interface SugusruTax {
 
 /**
  * 顧問先別の科目データを取得（マスタ+Override合成結果）
- * §53 §11: loadSugusruAccounts() → clientId対応
+ * §53 §11: loadSugusruAccounts() → clientId対応（スグスルマスタ取得）
  */
 function loadClientAccountsForMapping(clientId: string): SugusruAccount[] {
   const data = getClientAccounts(clientId)
@@ -140,7 +139,7 @@ const cache = new Map<string, CacheEntry>()
 
 /**
  * 科目マッピングを生成する
- * Sugusruマスタの名前 → MFマスタの名前で突合 → MFのaccount_idを返す
+ * スグスルマスタの名前 → MFマスタの名前で突合 → MFのaccount_idを返す
  */
 export async function buildAccountMap(tokenKey: string): Promise<{
   map: Map<string, string>
@@ -149,13 +148,8 @@ export async function buildAccountMap(tokenKey: string): Promise<{
   const sugusruAccounts = loadClientAccountsForMapping(tokenKey)
   const mfAccounts = await mcpFetchAccounts(tokenKey)
 
-  // MF科目を名前→IDのマップに変換（available=trueのみ）
-  const mfByName = new Map<string, MfMcpAccount>()
-  for (const mf of mfAccounts) {
-    if (mf.available !== false) {
-      mfByName.set(mf.name, mf)
-    }
-  }
+  // MF科目を名前→オブジェクトのマップに変換（available=trueのみ）
+  const mfByName = buildNameMap(mfAccounts, mf => mf.name, mf => mf.available !== false)
 
   const map = new Map<string, string>()
   const details: AccountMapping[] = []
@@ -179,7 +173,7 @@ export async function buildAccountMap(tokenKey: string): Promise<{
 
 /**
  * 税区分マッピングを生成する
- * Sugusruマスタの名前 → MFマスタの名前で突合 → MFのtax_idを返す
+ * スグスルマスタの名前 → MFマスタの名前で突合 → MFのtax_idを返す
  */
 export async function buildTaxMap(tokenKey: string): Promise<{
   map: Map<string, string>
@@ -188,11 +182,8 @@ export async function buildTaxMap(tokenKey: string): Promise<{
   const sugusruTaxes = await loadSugusruTaxes()
   const mfTaxes = await mcpFetchTaxes(tokenKey)
 
-  // MF税区分を名前→IDのマップに変換
-  const mfByName = new Map<string, MfMcpTax>()
-  for (const mf of mfTaxes) {
-    mfByName.set(mf.name, mf)
-  }
+  // MF税区分を名前→オブジェクトのマップに変換
+  const mfByName = buildNameMap(mfTaxes, mf => mf.name)
 
   const map = new Map<string, string>()
   const details: TaxMapping[] = []
@@ -308,7 +299,7 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
     accountDirectionMap.set(acct.accountId, getAccountGroupDirection(acct.accountGroup ?? ''))
   }
 
-  // 税区分方向マップ生成（Sugusruマスタのdirectionから）
+  // 税区分方向マップ生成（スグスルマスタのdirectionから）
   const sugusruTaxes = await loadSugusruTaxes()
   const taxDirectionMap = new Map<string, 'sales' | 'purchase' | 'common'>()
   const taxSimplifiedOnlySet = new Set<string>()
@@ -319,7 +310,7 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
     if (tax.individualOnly) taxIndividualOnlySet.add(tax.taxCategoryId)
   }
 
-  // 逆マップ生成（MF科目名 → Sugusru概念ID）
+  // 逆マップ生成（MF科目名 → スグスル概念ID）
   // MCP経由のbuildAccountMap()結果から構築。MF連携先ではMCPが正（SSOT）。
   // ※ MCPが返さない過去科目（ケース2）はconvertSide()側でgenerateMasterId()自動発番（§17）
   const reverseAccountMap = new Map<string, string>()
@@ -329,7 +320,7 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
     }
   }
 
-  // 逆マップ生成（MF税区分名 → Sugusru概念ID）
+  // 逆マップ生成（MF税区分名 → スグスル概念ID）
   // MCP経由のbuildTaxMap()結果から構築
   const reverseTaxMap = new Map<string, string>()
   for (const d of taxResult.details) {
