@@ -19,23 +19,12 @@ import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
 import { 未検出, 必須, コード重複, リソース_見込先 } from '../../constants/apiMessages';
 import type { LeadStatus, Lead, Client } from '../../repositories/types';
-import {
-  getAll,
-  getById,
-  create,
-  updateLead,
-  getByStaffId,
-  getActiveLeads,
-  getByStatus,
-  updateStaffAssignment,
-  updateSharedFolderId,
-  updateSharedEmail,
-  generateLeadId,
-} from '../services/leadStore';
-import { getLeadList } from '../services/leadListService';
 import { createMockRepositories } from '../../repositories/mock'
-const clientRepo = createMockRepositories().client
 import { getClientAccounts, getClientTaxCategories } from '../services/accountMasterApi';
+
+const repos = createMockRepositories()
+const leadRepo = repos.lead
+const clientRepo = repos.client
 
 const app = new Hono();
 
@@ -44,35 +33,35 @@ const app = new Hono();
 // ============================================================
 app.post('/list', async (c) => {
   const body = await c.req.json();
-  const result = await getLeadList(body);
+  const result = await leadRepo.list(body);
   return c.json(result);
 });
 
 // GET / — 全見込先取得
-app.get('/', (c) => {
+app.get('/', async (c) => {
   const status = c.req.query('status');
   const staffId = c.req.query('staffId');
 
   if (status === 'active') {
-    const list = getActiveLeads();
+    const list = await leadRepo.getActiveLeads();
     return c.json({ leads: list, count: list.length });
   }
   if (status) {
-    const list = getByStatus(status as LeadStatus);
+    const list = await leadRepo.getByStatus(status as LeadStatus);
     return c.json({ leads: list, count: list.length });
   }
   if (staffId) {
-    const list = getByStaffId(staffId);
+    const list = await leadRepo.getByStaffId(staffId);
     return c.json({ leads: list, count: list.length });
   }
-  const list = getAll();
+  const list = await leadRepo.getAll();
   return c.json({ leads: list, count: list.length });
 });
 
 // GET /:leadId — 1件取得
-app.get('/:leadId', (c) => {
+app.get('/:leadId', async (c) => {
   const leadId = c.req.param('leadId');
-  const lead = getById(leadId);
+  const lead = await leadRepo.getById(leadId);
   if (!lead) {
     return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
@@ -89,14 +78,14 @@ app.post('/', async (c) => {
     return apiError(c, 400, 必須('companyName または repName'));
   }
   // threeCode重複チェック
-  const existing = getAll();
+  const existing = await leadRepo.getAll();
   const dup = existing.find(l => l.threeCode === body.threeCode && l.leadId !== body.leadId);
   if (dup) {
     return apiError(c, 409, コード重複(body.threeCode, dup.companyName, dup.leadId));
   }
   // サーバーが常にIDを発番。フロントからのIDは無視。
-  body.leadId = generateLeadId();
-  const lead = create(body);
+  body.leadId = await leadRepo.generateLeadId();
+  const lead = await leadRepo.create(body);
   return c.json({ ok: true, lead });
 });
 
@@ -106,7 +95,7 @@ app.post('/bulk', async (c) => {
   if (!Array.isArray(items)) {
     return apiError(c, 400, 必須('items（配列）'));
   }
-  const existing = getAll();
+  const existing = await leadRepo.getAll();
   const existingCodes = new Set(existing.map(l => l.threeCode?.toUpperCase()).filter(Boolean));
   const existingNames = new Set(existing.map(l => l.companyName).filter(Boolean));
   const results: { index: number; ok: boolean; leadId?: string; threeCode?: string; companyName?: string; error?: string }[] = [];
@@ -129,8 +118,8 @@ app.post('/bulk', async (c) => {
         results.push({ index: i, ok: false, error: `会社名「${name}」が重複` });
         continue;
       }
-      item.leadId = generateLeadId();
-      const saved = create(item as unknown as Lead);
+      item.leadId = await leadRepo.generateLeadId();
+      const saved = await leadRepo.create(item as unknown as Lead);
       if (code) existingCodes.add(code);
       if (name) existingNames.add(name);
       results.push({ index: i, ok: true, leadId: saved.leadId, threeCode: saved.threeCode, companyName: saved.companyName });
@@ -154,16 +143,13 @@ app.put('/:leadId', async (c) => {
   }
   // threeCode重複チェック（変更時のみ）
   if (body.threeCode) {
-    const existing = getAll();
+    const existing = await leadRepo.getAll();
     const dup = existing.find(l => l.threeCode === body.threeCode && l.leadId !== leadId);
     if (dup) {
       return apiError(c, 409, コード重複(body.threeCode, dup.companyName, dup.leadId));
     }
   }
-  const ok = updateLead(leadId, body);
-  if (!ok) {
-    return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
-  }
+  await leadRepo.update(leadId, body);
   return c.json({ ok: true });
 });
 
@@ -171,7 +157,7 @@ app.put('/:leadId', async (c) => {
 app.put('/:leadId/staff', async (c) => {
   const leadId = c.req.param('leadId');
   const body = await c.req.json<{ staffId: string | null }>();
-  const ok = updateStaffAssignment(leadId, body.staffId);
+  const ok = await leadRepo.updateStaffAssignment(leadId, body.staffId as string);
   if (!ok) {
     return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
@@ -182,7 +168,7 @@ app.put('/:leadId/staff', async (c) => {
 app.put('/:leadId/shared-folder', async (c) => {
   const leadId = c.req.param('leadId');
   const body = await c.req.json<{ folderId: string }>();
-  const ok = updateSharedFolderId(leadId, body.folderId);
+  const ok = await leadRepo.updateSharedFolderId(leadId, body.folderId);
   if (!ok) {
     return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
@@ -193,7 +179,7 @@ app.put('/:leadId/shared-folder', async (c) => {
 app.put('/:leadId/shared-email', async (c) => {
   const leadId = c.req.param('leadId');
   const body = await c.req.json<{ email: string }>();
-  const ok = updateSharedEmail(leadId, body.email);
+  const ok = await leadRepo.updateSharedEmail(leadId, body.email);
   if (!ok) {
     return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
@@ -205,7 +191,7 @@ app.put('/:leadId/shared-email', async (c) => {
 // ============================================================
 app.post('/:leadId/convert', async (c) => {
   const leadId = c.req.param('leadId');
-  const lead = getById(leadId);
+  const lead = await leadRepo.getById(leadId);
   if (!lead) {
     return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
@@ -234,7 +220,7 @@ app.post('/:leadId/convert', async (c) => {
   getClientTaxCategories(saved.clientId);
 
   // 元見込先のstatusを'converted'に変更
-  updateLead(leadId, { status: 'converted' });
+  await leadRepo.update(leadId, { status: 'converted' });
 
   console.log(`[leads] 昇格完了: ${lead.companyName} (${leadId} → ${clientId})`);
   return c.json({ ok: true, client: saved, sourceLeadId: leadId });

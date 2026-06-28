@@ -17,10 +17,11 @@
  */
 
 import { createMockRepositories } from '../../repositories/mock'
-import type { Journal } from '../../types/journal.type'
-const journalRepo = createMockRepositories().journal
+import type { Journal as _Journal } from '../../types/journal.type'
+const repos = createMockRepositories()
+const journalRepo = repos.journal
+const exportHistoryRepo = repos.exportHistory
 import { getClientAccounts, getClientTaxCategories } from './accountMasterApi'
-import { getExportHistory as getExportHistoryEntries } from './exportHistoryStore'
 
 // ━━━ 除外ラベル定義（exportMfCsv.ts と同一） ━━━
 const EXCLUDE_LABELS = [
@@ -148,7 +149,7 @@ export async function getExportList(query: ExportListQuery): Promise<ExportListR
   const allRows: ExportRow[] = []
   for (const j of journals) {
     if (j.deleted_at !== null) continue
-    if (j.status === 'exported') continue
+    if ((j.status as string) === 'exported') continue
 
     const dismissals = j.warning_dismissals ?? []
     const isWarning = j.labels.some(
@@ -292,8 +293,8 @@ export interface ExportDetailResult {
 }
 
 /** 履歴IDからファイル名を解決（exportHistoryStoreから取得） */
-function resolveHistoryFileName(clientId: string, historyId: string): string {
-  const history = getExportHistoryEntries(clientId)
+async function resolveHistoryFileName(clientId: string, historyId: string): Promise<string> {
+  const history = await exportHistoryRepo.getByClientId(clientId)
   const entry = history.find(h => h.id === historyId)
   return entry?.fileName ?? historyId
 }
@@ -376,6 +377,6 @@ export async function getExportDetail(query: ExportDetailQuery): Promise<ExportD
     totalPages,
     page: safePage,
     pageSize,
-    historyFileName: resolveHistoryFileName(clientId, historyId),
+    historyFileName: await resolveHistoryFileName(clientId, historyId),
   }
 }

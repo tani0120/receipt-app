@@ -19,26 +19,21 @@
 import { Hono } from "hono";
 import { apiError } from "../helpers/apiError";
 import { 未検出, 必須, 配列必須 } from "../../constants/apiMessages";
-import {
-  getDocuments,
-  addDocuments,
-  updateDocumentStatus,
-  assignBatchAndJournalIds,
-  removeByClientId,
-  getById,
-  deleteById,
-  countDocuments,
-  clearAiFieldsByClientId,
-} from "../services/documentsApi";
+import { createMockRepositories } from "../../repositories/mock";
+import type { DocEntry } from "../../repositories/types";
+
+const documentRepo = createMockRepositories().document;
 
 const app = new Hono();
 
 // ============================================================
 // GET / — ドキュメント一覧取得
 // ============================================================
-app.get("/", (c) => {
+app.get("/", async (c) => {
   const clientId = c.req.query("clientId");
-  const docs = getDocuments(clientId);
+  const docs = clientId
+    ? await documentRepo.getByClientId(clientId)
+    : await documentRepo.getAll();
   return c.json({ documents: docs, count: docs.length });
 });
 
@@ -50,7 +45,7 @@ app.post("/", async (c) => {
   if (!body.documents || !Array.isArray(body.documents)) {
     return apiError(c, 400, 配列必須("documents"));
   }
-  const result = addDocuments(body.documents as import("../../repositories/types").DocEntry[]);
+  const result = await documentRepo.saveBatch(body.documents as DocEntry[]);
   return c.json({ ok: true, ...result });
 });
 
@@ -69,15 +64,7 @@ app.put("/:id", async (c) => {
   if (!body.status) {
     return apiError(c, 400, 必須("status"));
   }
-  const ok = updateDocumentStatus(id, body.status as import("../../repositories/types").DocStatus, {
-    statusChangedBy: body.statusChangedBy,
-    statusChangedAt: body.statusChangedAt,
-    updatedBy: body.updatedBy,
-    updatedAt: body.updatedAt,
-  });
-  if (!ok) {
-    return apiError(c, 404, 未検出(`ドキュメント ${id}`));
-  }
+  await documentRepo.updateStatus(id, body as Partial<DocEntry>);
   return c.json({ ok: true });
 });
 
@@ -89,44 +76,44 @@ app.post("/batch", async (c) => {
   if (!body.clientId) {
     return apiError(c, 400, 必須("clientId"));
   }
-  const result = assignBatchAndJournalIds(body.clientId);
+  const result = await documentRepo.assignBatch(body.clientId);
   return c.json({ ok: true, ...result });
 });
 
 // ============================================================
 // DELETE /client/:clientId — 顧問先の全資料削除
 // ============================================================
-app.delete("/client/:clientId", (c) => {
+app.delete("/client/:clientId", async (c) => {
   const clientId = c.req.param("clientId");
-  const removed = removeByClientId(clientId);
-  return c.json({ ok: true, removed });
+  await documentRepo.removeByClientId(clientId);
+  return c.json({ ok: true });
 });
 
 // ============================================================
 // POST /clear-ai/:clientId — firstAiデータ一括削除（確定送信後）
 // 設計方針: firstAi.service.ts ヘッダー参照
 // ============================================================
-app.post("/clear-ai/:clientId", (c) => {
+app.post("/clear-ai/:clientId", async (c) => {
   const clientId = c.req.param("clientId");
-  const cleared = clearAiFieldsByClientId(clientId);
-  return c.json({ ok: true, cleared });
+  await documentRepo.clearAiFields(clientId);
+  return c.json({ ok: true });
 });
 
 // ============================================================
 // GET /count — 件数取得（DL-042追加）※ /:id より前に配置必須
 // ============================================================
-app.get("/count", (c) => {
+app.get("/count", async (c) => {
   const clientId = c.req.query("clientId");
-  const cnt = countDocuments(clientId);
+  const cnt = await documentRepo.countDocuments(clientId);
   return c.json({ count: cnt });
 });
 
 // ============================================================
 // GET /:id — 1件取得（DL-042追加）
 // ============================================================
-app.get("/:id", (c) => {
+app.get("/:id", async (c) => {
   const id = c.req.param("id");
-  const doc = getById(id);
+  const doc = await documentRepo.getById(id);
   if (!doc) {
     return apiError(c, 404, 未検出(`ドキュメント ${id}`));
   }
@@ -136,9 +123,9 @@ app.get("/:id", (c) => {
 // ============================================================
 // DELETE /:id — 個別削除（DL-042追加）
 // ============================================================
-app.delete("/:id", (c) => {
+app.delete("/:id", async (c) => {
   const id = c.req.param("id");
-  const ok = deleteById(id);
+  const ok = await documentRepo.deleteById(id);
   if (!ok) {
     return apiError(c, 404, 未検出(`ドキュメント ${id}`));
   }

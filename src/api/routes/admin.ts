@@ -4,13 +4,13 @@ import { z } from 'zod'
 
 import { zValidator } from '@hono/zod-validator'
 import { zodHook } from '../helpers/zodHook'
-import { getDocuments } from '../services/documentsApi'
-import { summarizeCsvLines as summarizeCsvLinesImport } from '../services/exportHistoryStore'
 import { createMockRepositories } from '../../repositories/mock'
 const repos = createMockRepositories()
 const clientRepo = repos.client
 const staffRepo = repos.staff
 const journalRepo = repos.journal
+const exportHistoryRepo = repos.exportHistory
+const documentRepo = repos.document
 import type { DocEntry } from '../../repositories/types'
 import { getMonthlyTotalCost, getStaffMonthlyCosts, getClientMonthlyCosts, getStaffAnnualCost } from '../services/aiLogStore'
 
@@ -120,7 +120,7 @@ const route = app
         // ストアから実データを集計（MOCK_ADMIN_DATA削除: 2026-05-05 R5）
         const clients = await clientRepo.getAll()
         const staff = await staffRepo.getAll()
-        const docs = getDocuments()
+        const docs = await documentRepo.getAll()
 
         // KPI: 月間仕訳数（今月の処理済みドキュメント数をカウント）
         const now = new Date()
@@ -147,9 +147,9 @@ const route = app
         const exported = docs.filter(d => d.status === 'exported').length
 
         // スタッフパフォーマンス
-        const staffPerformance = staff
-          .filter(s => s.status === 'active')
-          .map(s => {
+        const activeStaff = staff.filter(s => s.status === 'active')
+        const staffPerformance: { name: string; backlogs: { total: number; draft: number }; velocity: { draftAvg: number } }[] = []
+        for (const s of activeStaff) {
             // 各スタッフの担当顧問先の仕訳をカウント
             const assignedClients = clients.filter(cl => cl.staffId === s.uuid)
             let totalBacklog = 0
@@ -158,14 +158,14 @@ const route = app
               const journals = await journalRepo.list(cl.clientId)
               const active = journals.filter(j => !j.deleted_at)
               totalBacklog += active.length
-              draftCount += active.filter(j => j.status === 'draft').length
+              draftCount += active.filter(j => (j.status as string) === 'draft').length
             }
-            return {
+            staffPerformance.push({
               name: s.name,
               backlogs: { total: totalBacklog, draft: draftCount },
               velocity: { draftAvg: 0 } // TODO: 実際の処理速度はactivityLogから算出
-            }
-          })
+            })
+        }
 
         return c.json({
           kpi: {
@@ -327,8 +327,8 @@ const route = app
         }
     )
     // ━━━ AI利用統計API（管理ダッシュボード用） ━━━
-    .get('/ai-metrics/summary', (c) => {
-      const docs = getDocuments();
+    .get('/ai-metrics/summary', async (c) => {
+      const docs = await documentRepo.getAll();
       const withMetrics = docs.filter(d => d.aiMetrics);
       const byClient = aggregateMetrics(docs, 'clientId');
       const byStaff = aggregateMetrics(docs, 'createdBy');
@@ -420,19 +420,19 @@ const route = app
       });
     })
     /** 顧問先別AI利用統計 */
-    .get('/ai-metrics/by-client', (c) => {
-      const docs = getDocuments();
+    .get('/ai-metrics/by-client', async (c) => {
+      const docs = await documentRepo.getAll();
       return c.json({ results: aggregateMetrics(docs, 'clientId') });
     })
     /** スタッフ別AI利用統計 */
-    .get('/ai-metrics/by-staff', (c) => {
-      const docs = getDocuments();
+    .get('/ai-metrics/by-staff', async (c) => {
+      const docs = await documentRepo.getAll();
       return c.json({ results: aggregateMetrics(docs, 'createdBy') });
     })
     /** 特定顧問先のAI利用統計（詳細） */
-    .get('/ai-metrics/client/:clientId', (c) => {
+    .get('/ai-metrics/client/:clientId', async (c) => {
       const clientId = c.req.param('clientId');
-      const docs = getDocuments(clientId);
+      const docs = await documentRepo.getByClientId(clientId);
       const withMetrics = docs.filter(d => d.aiMetrics);
 
       const details = withMetrics.map(d => ({
@@ -471,8 +471,8 @@ const route = app
       });
     })
     // ━━━ CSV行数集計API（管理ダッシュボード用） ━━━
-    .get('/csv-summary', (c) => {
-      const summary = summarizeCsvLinesImport();
+    .get('/csv-summary', async (c) => {
+      const summary = await exportHistoryRepo.summarizeCsvLines();
       return c.json(summary);
     })
     // ━━━ 仕訳数集計API（全顧問先の仕訳データから実数をインポート） ━━━

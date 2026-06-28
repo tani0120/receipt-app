@@ -13,6 +13,7 @@ import {
   saveAllTaxCategories,
   getClientTaxCategories,
   saveClientTaxCategories,
+  getFilteredClientTaxCategories,
 } from '../../api/services/taxCategoryMasterApi'
 import type { TaxMasterRepository } from '../types'
 
@@ -22,13 +23,19 @@ export const mockTaxMasterRepo: TaxMasterRepository = {
     return result.pagedItems
   },
   saveMaster: async (taxCategories) => {
-    saveAllTaxCategories(taxCategories)
+    return saveAllTaxCategories(taxCategories)
   },
   getClient: async (clientId) => {
     const taxCategories = getClientTaxCategories(clientId)
     return { taxCategories }
   },
   saveClient: async (clientId, taxCategories) => {
-    saveClientTaxCategories(clientId, taxCategories)
+    return saveClientTaxCategories(clientId, taxCategories)
+  },
+  getFilteredMaster: async (params) => {
+    return getFilteredTaxCategories(params)
+  },
+  getFilteredClient: async (clientId, params) => {
+    return getFilteredClientTaxCategories(clientId, params)
   },
 }

@@ -12,34 +12,32 @@
 import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
 import { CSV未検出 } from '../../constants/apiMessages';
-import {
-  getExportHistory,
-  addExportHistory,
-  getCsvSnapshot,
-  saveCsvSnapshot,
-} from '../services/exportHistoryStore';
+import { createMockRepositories } from '../../repositories/mock';
+
+const exportHistoryRepo = createMockRepositories().exportHistory;
 
 const app = new Hono();
 
 /** 履歴一覧取得 */
-app.get('/:clientId', (c) => {
+app.get('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
-  return c.json(getExportHistory(clientId));
+  const history = await exportHistoryRepo.getByClientId(clientId);
+  return c.json(history);
 });
 
 /** 履歴追加（サーバーがIDを発番して返す） */
 app.post('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
   const body = await c.req.json();
-  const saved = addExportHistory(clientId, body);
+  const saved = await exportHistoryRepo.add(clientId, body);
   return c.json({ ok: true, id: saved.id });
 });
 
 /** CSVスナップショット取得 */
-app.get('/:clientId/csv/:historyId', (c) => {
+app.get('/:clientId/csv/:historyId', async (c) => {
   const clientId = c.req.param('clientId');
   const historyId = c.req.param('historyId');
-  const snapshot = getCsvSnapshot(clientId, historyId);
+  const snapshot = await exportHistoryRepo.getCsvSnapshot(clientId, historyId);
   if (!snapshot) return apiError(c, 404, CSV未検出);
   return c.json(snapshot);
 });
@@ -48,7 +46,7 @@ app.get('/:clientId/csv/:historyId', (c) => {
 app.post('/:clientId/csv', async (c) => {
   const clientId = c.req.param('clientId');
   const body = await c.req.json();
-  saveCsvSnapshot(clientId, body);
+  await exportHistoryRepo.saveCsvSnapshot(clientId, body);
   return c.json({ ok: true });
 });
 

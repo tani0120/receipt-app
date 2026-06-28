@@ -40,6 +40,7 @@ export type { Lead, LeadForm, LeadStatus } from './types/lead.types'
 export type { DocEntry, DocSource, DocStatus } from './types/doc-entry.types'
 export { AI_FIELD_KEYS } from './types/doc-entry.types'
 export type { AppNotification, NotificationType } from './types/notification.types'
+import type { AppNotification } from './types/notification.types'
 export type { ActivityLog, StaffActivitySummary, ClientActivitySummary, TrackablePage } from './types/activity.types'
 export type { ShareStatus, ShareStatusRecord } from './types/share-status.types'
 export type {
@@ -260,13 +261,29 @@ export type TaxMasterRepository = {
   getMaster(): Promise<TaxCategory[]>
 
   /** マスタ税区分全件上書き保存 */
-  saveMaster(taxCategories: TaxCategory[]): Promise<void>
+  saveMaster(taxCategories: TaxCategory[]): Promise<{ ok: true; count: number }>
 
   /** 顧問先税区分全件取得 */
   getClient(clientId: string): Promise<{ taxCategories: TaxCategory[] }>
 
   /** 顧問先税区分全件上書き保存 */
-  saveClient(clientId: string, taxCategories: TaxCategory[]): Promise<void>
+  saveClient(clientId: string, taxCategories: TaxCategory[]): Promise<{ ok: true; count: number }>
+
+  /** マスタ税区分フィルタ+ページネーション取得 */
+  getFilteredMaster(params: { taxMethod: 'general' | 'individual' | 'proportional' | 'simplified' | 'exempt' | 'all'; page: number; pageSize: number }): Promise<{
+    pagedItems: TaxCategory[]
+    totalCount: number
+    page: number
+    totalPages: number
+  }>
+
+  /** 顧問先税区分フィルタ+ページネーション取得 */
+  getFilteredClient(clientId: string, params: { taxMethod: 'general' | 'individual' | 'proportional' | 'simplified' | 'exempt' | 'all'; page: number; pageSize: number }): Promise<{
+    pagedItems: TaxCategory[]
+    totalCount: number
+    page: number
+    totalPages: number
+  }>
 }
 
 // ============================================================
@@ -292,7 +309,7 @@ export type LeadRepository = {
   /** 見込先更新（部分更新） */
   update(leadId: string, partial: Partial<Lead>): Promise<void>
   /** Drive共有フォルダ設定 */
-  updateSharedFolderId(leadId: string, folderId: string): Promise<void>
+  updateSharedFolderId(leadId: string, folderId: string): Promise<boolean>
   /** 見込先一覧（フィルタ+ソート+ページネーション） */
   list(query: {
     filters?: { field: string; operator: FilterOperator; value: string | string[] }[]
@@ -301,6 +318,18 @@ export type LeadRepository = {
     page?: number
     pageSize?: number
   }): Promise<{ rows: Lead[]; totalCount: number; page: number; pageSize: number; totalPages: number }>
+  /** アクティブ見込先取得（status != converted && status != lost） */
+  getActiveLeads(): Promise<Lead[]>
+  /** ステータスで絞り込み */
+  getByStatus(status: string): Promise<Lead[]>
+  /** 担当スタッフ更新 */
+  updateStaffAssignment(leadId: string, staffId: string): Promise<boolean>
+  /** 共有メール更新 */
+  updateSharedEmail(leadId: string, email: string): Promise<boolean>
+  /** leadId発番 */
+  generateLeadId(): Promise<string>
+  /** 担当スタッフで絞り込み */
+  getByStaffId(staffId: string): Promise<Lead[]>
 }
 
 // ============================================================
@@ -477,6 +506,18 @@ export type DocumentRepository = {
 
   /** firstAiデータ（ai*フィールド）を完全削除 */
   clearAiFields(clientId: string): Promise<void>
+
+  /** IDで1件取得 */
+  getById(id: string): Promise<DocEntry | undefined>
+
+  /** IDで1件削除 */
+  deleteById(id: string): Promise<boolean>
+
+  /** 件数取得（clientIdフィルタ任意） */
+  countDocuments(clientId?: string): Promise<number>
+
+  /** AI解析結果を更新 */
+  updateAiResults(docId: string, aiResults: Partial<DocEntry>): Promise<boolean>
 }
 
 // ============================================================

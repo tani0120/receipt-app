@@ -11,12 +11,12 @@
  * Supabase移行時: store呼び出しを SELECT ... JOIN ... WHERE ... ORDER BY に差し替えるだけ。
  */
 
-import { getDocuments } from './documentsApi'
 import { createMockRepositories } from '../../repositories/mock'
 const repos = createMockRepositories()
 const clientRepo = repos.client
 const staffRepo = repos.staff
 const journalRepo = repos.journal
+const documentRepo = repos.document
 import { countUnsorted, latestReceivedDate } from '../../utils/documentUtils'
 import type { ProgressRow } from '../../features/progress-management/types'
 import { applyFilterConditions } from '../helpers/applyFilterConditions'
@@ -96,7 +96,7 @@ function generateMonthKeys(count: number): string[] {
 /** 全顧問先のprogressRowsを生成（store直接取得） */
 async function buildProgressRows(): Promise<ProgressRow[]> {
   const clientList = await clientRepo.getAll()
-  const docs = getDocuments() // 全件取得
+  const docs = await documentRepo.getAll() // 全件取得
   const monthKeys = generateMonthKeys(12)
 
   return Promise.all(clientList.map(async c => {

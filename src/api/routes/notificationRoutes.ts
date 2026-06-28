@@ -13,20 +13,12 @@
  */
 
 import { Hono } from 'hono';
-import {
-  getAllNotifications,
-  getNotificationsForStaff,
-  addNotification,
-  markAsRead,
-  markAllAsRead,
-  deleteNotification,
-  clearAllNotifications,
-} from '../services/notificationStore';
 import type { AppNotification } from '../../repositories/types';
 import { randomBytes } from 'crypto';
 import { createMockRepositories } from '../../repositories/mock';
 
 const staffRepo = createMockRepositories().staff;
+const notificationRepo = createMockRepositories().notification;
 const app = new Hono();
 
 /** ランダム通知IDを生成 */
@@ -43,14 +35,14 @@ function generateNotifId(): string {
 // ============================================================
 // GET / — 通知取得（staffIdフィルタ対応）
 // ============================================================
-app.get('/', (c) => {
+app.get('/', async (c) => {
   const staffId = c.req.query('staffId');
   if (staffId) {
-    const notifications = getNotificationsForStaff(staffId);
+    const notifications = await notificationRepo.getForStaff(staffId);
     return c.json({ notifications });
   }
   // staffId未指定は全件返却（管理用）
-  const notifications = getAllNotifications();
+  const notifications = await notificationRepo.getAll();
   return c.json({ notifications });
 });
 
@@ -62,7 +54,7 @@ app.post('/', async (c) => {
   if (!body.readBy) body.readBy = [];
   // サーバーが常にIDを発番
   body.id = generateNotifId();
-  addNotification(body);
+  await notificationRepo.add(body);
   return c.json({ ok: true, id: body.id });
 });
 
@@ -90,7 +82,7 @@ app.post('/mention', async (c) => {
     for (const s of allStaff) {
       if (s.status === 'active') {
         const id = generateNotifId();
-        addNotification({
+        await notificationRepo.add({
           id,
           type: 'mention',
           title: `@${authorName} から全員メンション`,
@@ -108,7 +100,7 @@ app.post('/mention', async (c) => {
     for (const s of allStaff) {
       if (commentBody.includes(`@${s.name}`) && s.status === 'active') {
         const id = generateNotifId();
-        addNotification({
+        await notificationRepo.add({
           id,
           type: 'mention',
           title: `@${authorName} からメンション`,
@@ -136,7 +128,7 @@ app.put('/:id/read', async (c) => {
   if (!body.staffId) {
     return c.json({ error: 'staffIdが必要です' }, 400);
   }
-  const found = markAsRead(id, body.staffId);
+  const found = await notificationRepo.markAsRead(id, body.staffId);
   if (!found) return c.json({ error: '通知が見つかりません' }, 404);
   return c.json({ ok: true });
 });
@@ -149,16 +141,16 @@ app.put('/read-all', async (c) => {
   if (!body.staffId) {
     return c.json({ error: 'staffIdが必要です' }, 400);
   }
-  markAllAsRead(body.staffId);
+  await notificationRepo.markAllAsRead(body.staffId);
   return c.json({ ok: true });
 });
 
 // ============================================================
 // DELETE /:id — 通知削除
 // ============================================================
-app.delete('/:id', (c) => {
+app.delete('/:id', async (c) => {
   const id = c.req.param('id');
-  const found = deleteNotification(id);
+  const found = await notificationRepo.deleteById(id);
   if (!found) return c.json({ error: '通知が見つかりません' }, 404);
   return c.json({ ok: true });
 });
@@ -166,8 +158,8 @@ app.delete('/:id', (c) => {
 // ============================================================
 // DELETE / — 全削除
 // ============================================================
-app.delete('/', (_c) => {
-  clearAllNotifications();
+app.delete('/', async (_c) => {
+  await notificationRepo.clearAll();
   return _c.json({ ok: true });
 });
 

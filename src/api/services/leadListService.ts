@@ -8,13 +8,14 @@
  * Supabase移行時: getAll() を JOIN ... WHERE ... ORDER BY に差し替えるだけ。
  */
 
-import { getAll } from './leadStore'
 import { createMockRepositories } from '../../repositories/mock'
 import type { Lead } from '../../repositories/types'
 import { applyFilterConditions } from '../helpers/applyFilterConditions'
 import type { FilterCondition } from '../helpers/applyFilterConditions'
 
-const staffRepo = createMockRepositories().staff
+const repos = createMockRepositories()
+const staffRepo = repos.staff
+const leadRepo = repos.lead
 
 // ────────────────────────────────────────────
 // クエリパラメータ
@@ -86,7 +87,7 @@ function resolveFilterFields(conditions: FilterCondition[]): FilterCondition[] {
 
 export async function getLeadList(query: LeadListQuery): Promise<LeadListResponse> {
   // 1. 全件取得
-  let rows = [...getAll()]
+  let rows = [...await leadRepo.getAll()]
 
   // 2. フィルタ適用（汎用フィルタエンジン）
   if (query.filters && query.filters.length > 0) {

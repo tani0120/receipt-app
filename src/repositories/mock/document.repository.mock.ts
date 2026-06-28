@@ -14,6 +14,10 @@ import {
   removeByClientId,
   assignBatchAndJournalIds,
   clearAiFieldsByClientId,
+  getById,
+  deleteById,
+  countDocuments,
+  updateAiResults,
 } from '../../api/services/documentsApi'
 import type { DocumentRepository } from '../types'
 
@@ -48,4 +52,12 @@ export const mockDocumentRepo: DocumentRepository = {
   clearAiFields: async (clientId) => {
     clearAiFieldsByClientId(clientId)
   },
+
+  getById: async (id) => getById(id),
+
+  deleteById: async (id) => deleteById(id),
+
+  countDocuments: async (clientId) => countDocuments(clientId),
+
+  updateAiResults: async (docId, aiResults) => updateAiResults(docId, aiResults),
 }

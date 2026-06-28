@@ -19,30 +19,27 @@ import { Hono } from 'hono';
 import crypto from 'crypto';
 import { apiError } from '../helpers/apiError';
 import { 未検出, 必須 } from '../../constants/apiMessages';
-import {
-  getAllShareStatus,
-  getByClientId,
-  getClientIdByInviteCode,
-  updateStatus,
-  saveInviteCode,
-} from '../services/shareStatusStore';
+import { createMockRepositories } from '../../repositories/mock';
+import type { ShareStatus } from '../../repositories/types';
+
+const shareStatusRepo = createMockRepositories().shareStatus;
 
 const app = new Hono();
 
 // ============================================================
 // GET / — 全件取得
 // ============================================================
-app.get('/', (c) => {
-  const records = getAllShareStatus();
+app.get('/', async (c) => {
+  const records = await shareStatusRepo.getAll();
   return c.json({ records, count: records.length });
 });
 
 // ============================================================
 // GET /invite/:code — 招待コード→clientId逆引き
 // ============================================================
-app.get('/invite/:code', (c) => {
+app.get('/invite/:code', async (c) => {
   const code = c.req.param('code');
-  const clientId = getClientIdByInviteCode(code);
+  const clientId = await shareStatusRepo.resolveInviteCode(code);
   if (!clientId) {
     return apiError(c, 404, 未検出(`招待コード「${code}」の顧問先`));
   }
@@ -52,9 +49,9 @@ app.get('/invite/:code', (c) => {
 // ============================================================
 // GET /:clientId — clientIdで1件取得
 // ============================================================
-app.get('/:clientId', (c) => {
+app.get('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
-  const record = getByClientId(clientId);
+  const record = await shareStatusRepo.getByClientId(clientId);
   if (!record) {
     return apiError(c, 404, 未検出(`顧問先 ${clientId} の共有設定`));
   }
@@ -70,7 +67,7 @@ app.put('/:clientId', async (c) => {
   if (!body.status) {
     return apiError(c, 400, 必須('status'));
   }
-  updateStatus(clientId, body.status as import('../../repositories/types').ShareStatus);
+  await shareStatusRepo.updateStatus(clientId, body.status as ShareStatus);
   return c.json({ ok: true });
 });
 
@@ -89,7 +86,7 @@ app.post('/invite', async (c) => {
   for (let i = 0; i < 8; i++) {
     code += chars[bytes[i]! % chars.length];
   }
-  saveInviteCode(body.clientId, code);
+  await shareStatusRepo.saveInviteCode(body.clientId, code);
   return c.json({ ok: true, code });
 });
 

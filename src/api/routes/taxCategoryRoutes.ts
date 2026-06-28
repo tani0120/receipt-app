@@ -16,15 +16,11 @@
 import { Hono } from 'hono'
 import { apiError } from '../helpers/apiError'
 import { 必須 } from '../../constants/apiMessages'
-import {
-  getFilteredTaxCategories,
-  saveAllTaxCategories,
-  getFilteredClientTaxCategories,
-  saveClientTaxCategories,
-} from '../services/taxCategoryMasterApi'
+import { createMockRepositories } from '../../repositories/mock'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { getAuthStatus } from '../services/mfAuthService'
 
+const taxMasterRepo = createMockRepositories().taxMaster
 const app = new Hono()
 
 // ============================================================
@@ -66,12 +62,12 @@ function validateTaxCategoriesBody(body: { taxCategories?: TaxCategory[] }): str
 // ============================================================
 // GET /master — マスタ税区分一覧取得
 // ============================================================
-app.get('/master', (c) => {
+app.get('/master', async (c) => {
   const params = parseTaxFilterParams(c)
   const err = validateTaxFilterParams(params)
   if (err) return apiError(c, 400, err)
 
-  const result = getFilteredTaxCategories(params)
+  const result = await taxMasterRepo.getFilteredMaster(params)
   return c.json({
     items: result.pagedItems,
     totalCount: result.totalCount,
@@ -88,14 +84,14 @@ app.put('/master', async (c) => {
   const err = validateTaxCategoriesBody(body)
   if (err) return apiError(c, 400, err)
 
-  const result = saveAllTaxCategories(body.taxCategories!)
+  const result = await taxMasterRepo.saveMaster(body.taxCategories!)
   return c.json(result)
 })
 
 // ============================================================
 // GET /client/:clientId — 顧問先税区分一覧取得
 // ============================================================
-app.get('/client/:clientId', (c) => {
+app.get('/client/:clientId', async (c) => {
   const clientId = c.req.param('clientId')
   if (!clientId) return apiError(c, 400, 必須('clientId'))
 
@@ -103,7 +99,7 @@ app.get('/client/:clientId', (c) => {
   const err = validateTaxFilterParams(params)
   if (err) return apiError(c, 400, err)
 
-  const result = getFilteredClientTaxCategories(clientId, params)
+  const result = await taxMasterRepo.getFilteredClient(clientId, params)
   // データ駆動: MF連携状態を既存のgetAuthStatusから取得してレスポンスに含める
   const mfStatus = getAuthStatus(clientId)
   return c.json({
@@ -126,7 +122,7 @@ app.put('/client/:clientId', async (c) => {
   const err = validateTaxCategoriesBody(body)
   if (err) return apiError(c, 400, err)
 
-  const result = saveClientTaxCategories(clientId, body.taxCategories!)
+  const result = await taxMasterRepo.saveClient(clientId, body.taxCategories!)
   return c.json(result)
 })
 

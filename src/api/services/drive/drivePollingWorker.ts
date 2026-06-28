@@ -14,9 +14,10 @@
  */
 
 import { createMockRepositories } from '../../../repositories/mock'
-const clientRepo = createMockRepositories().client
+const repos = createMockRepositories()
+const clientRepo = repos.client
+const documentRepo = repos.document
 import { listDriveFiles, downloadAndProcessDriveFile } from './driveService';
-import { addDocuments, getDocuments } from '../documentsApi';
 import type { DocEntry, DocSource, DocStatus } from '../../../repositories/types';
 
 /** ポーリング間隔（ミリ秒）: 1時間 */
@@ -59,7 +60,7 @@ async function pollOneClient(
     }
 
     // 既存doc-storeのdriveFileIdを取得（重複チェック用）
-    const existingDocs = getDocuments(clientId);
+    const existingDocs = await documentRepo.getByClientId(clientId);
     const existingDriveIds = new Set(
       existingDocs.map(d => d.driveFileId).filter(Boolean),
     );
@@ -110,7 +111,7 @@ async function pollOneClient(
     }
 
     // doc-storeに登録（addDocumentsが内部で重複排除）
-    const result = addDocuments(newDocs);
+    const result = await documentRepo.saveBatch(newDocs);
 
     return {
       clientId,
