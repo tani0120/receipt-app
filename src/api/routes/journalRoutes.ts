@@ -165,10 +165,9 @@ app.post('/:clientId', async (c) => {
   if (!body.journals || !Array.isArray(body.journals)) {
     return apiError(c, 400, 配列必須('journals'));
   }
-  await journalRepo.createMany(clientId, body.journals as unknown as Journal[]);
-  // サーバーが上書き発番したIDリストを返す
-  const serverIds = body.journals.map((j) => String(j.journalId ?? ''));
-  return c.json({ ok: true, added: body.journals.length, serverIds });
+  const result = await journalRepo.createMany(clientId, body.journals as unknown as Journal[]);
+  // Repository が上書き発番後のIDリストと追加件数を返す
+  return c.json({ ok: true, added: result.added, serverIds: result.ids });
 });
 
 // ============================================================
@@ -181,7 +180,10 @@ app.patch('/:clientId/:journalId', async (c) => {
   const patch = await c.req.json<Record<string, unknown>>();
   // journalIdの上書きは禁止
   delete patch.journalId;
-  await journalRepo.update(clientId, journalId, patch as Partial<Journal>);
+  const updated = await journalRepo.update(clientId, journalId, patch as Partial<Journal>);
+  if (!updated) {
+    return apiError(c, 404, `仕訳が見つかりません: ${journalId}`);
+  }
   return c.json({ ok: true, journalId });
 });
 
@@ -193,7 +195,10 @@ app.patch('/:clientId/:journalId', async (c) => {
 app.delete('/:clientId/:journalId', async (c) => {
   const clientId = c.req.param('clientId');
   const journalId = c.req.param('journalId');
-  await journalRepo.delete(clientId, journalId);
+  const deleted = await journalRepo.delete(clientId, journalId);
+  if (!deleted) {
+    return apiError(c, 404, `仕訳が見つかりません: ${journalId}`);
+  }
   return c.json({ ok: true, journalId });
 });
 

@@ -793,16 +793,16 @@ export type JournalRepository = {
   get(clientId: string, journalId: string): Promise<Journal | null>
   /** 顧問先の全件取得 */
   list(clientId: string): Promise<Journal[]>
-  /** 1件追加（IDは呼び出し側で発番済み） */
-  create(clientId: string, journal: Journal): Promise<void>
-  /** 複数件追加 */
-  createMany(clientId: string, journals: Journal[]): Promise<void>
-  /** 1件部分更新 */
-  update(clientId: string, journalId: string, patch: Partial<Journal>): Promise<void>
-  /** 複数件部分更新 */
-  updateMany(clientId: string, patches: { journalId: string; patch: Partial<Journal> }[]): Promise<void>
-  /** 1件ソフトデリート（deleted_atを設定。物理削除はしない） */
-  delete(clientId: string, journalId: string): Promise<void>
-  /** 複数件ソフトデリート */
-  deleteMany(clientId: string, journalIds: string[]): Promise<void>
+  /** 1件追加。発番後のJournalを返す */
+  create(clientId: string, journal: Journal): Promise<Journal>
+  /** 複数件追加。追加件数とID一覧を返す */
+  createMany(clientId: string, journals: Journal[]): Promise<{ added: number; ids: string[] }>
+  /** 1件部分更新。見つからなければnull */
+  update(clientId: string, journalId: string, patch: Partial<Journal>): Promise<Journal | null>
+  /** 複数件部分更新。更新件数を返す */
+  updateMany(clientId: string, patches: { journalId: string; patch: Partial<Journal> }[]): Promise<{ updated: number }>
+  /** 1件ソフトデリート（deleted_atを設定）。見つからなければnull */
+  delete(clientId: string, journalId: string): Promise<Journal | null>
+  /** 複数件ソフトデリート。削除件数を返す */
+  deleteMany(clientId: string, journalIds: string[]): Promise<{ deleted: number }>
 }

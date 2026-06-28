@@ -35,55 +35,64 @@ export const mockJournalRepo: JournalRepository = {
     return getJournals<Journal>(clientId)
   },
 
-  // ── create: 1件追加（IDは呼び出し側で発番済み） ──
-  // addJournals() はサーバーがID上書き発番するが、
-  // Repository は「IDが発番済み」の前提。
-  // → addJournals() を使い、IDの上書きは journalStore 側の既存挙動に委ねる。
-  // Supabase 移行時は INSERT ... で置換。
+  // ── create: 1件追加。発番後のJournalを返す ──
+  // addJournals() はサーバーがID上書き発番する（副作用で引数配列を変更）。
+  // 発番後のjournalを返す。
   async create(clientId, journal) {
-    addJournals(clientId, [journal as unknown as Record<string, unknown>])
+    const wrapped = [journal as unknown as Record<string, unknown>]
+    addJournals(clientId, wrapped)
+    return wrapped[0] as unknown as Journal
   },
 
-  // ── createMany: 複数件追加 ──
+  // ── createMany: 複数件追加。追加件数とID一覧を返す ──
   async createMany(clientId, journals) {
-    addJournals(clientId, journals as unknown as Record<string, unknown>[])
+    const records = journals as unknown as Record<string, unknown>[]
+    const added = addJournals(clientId, records)
+    const ids = records.map(j => String(j.journalId ?? ''))
+    return { added, ids }
   },
 
-  // ── update: 1件部分更新 ──
+  // ── update: 1件部分更新。見つからなければnull ──
   async update(clientId, journalId, patch) {
-    updateJournal(clientId, journalId, patch as Record<string, unknown>)
+    const result = updateJournal(clientId, journalId, patch as Record<string, unknown>)
+    return result as Journal | null
   },
 
   // ── updateMany: 複数件部分更新（メモリ更新→最後に1回save()） ──
-  // 現在の updateJournal() は毎回 save() が走る（N回I/O）。
-  // Many版では getJournals → メモリ上でpatch → 1回 saveJournals で対策。
   async updateMany(clientId, patches) {
     const all = getJournals<Record<string, unknown>>(clientId)
+    let updated = 0
     for (const { journalId, patch } of patches) {
       const journal = all.find(j => j.journalId === journalId)
       if (!journal) continue
       for (const [key, value] of Object.entries(patch)) {
         journal[key] = value
       }
+      updated++
     }
     saveJournals(clientId, all)
+    return { updated }
   },
 
-  // ── delete: 1件ソフトデリート ──
+  // ── delete: 1件ソフトデリート。見つからなければnull ──
   async delete(clientId, journalId) {
-    deleteJournal(clientId, journalId)
+    const result = deleteJournal(clientId, journalId)
+    return result as Journal | null
   },
 
-  // ── deleteMany: 複数件ソフトデリート（メモリ更新→最後に1回save()） ──
+  // ── deleteMany: 複数件ソフトデリート。削除件数を返す ──
   async deleteMany(clientId, journalIds) {
     const all = getJournals<Record<string, unknown>>(clientId)
     const idSet = new Set(journalIds)
     const now = new Date().toISOString()
+    let deleted = 0
     for (const journal of all) {
       if (idSet.has(journal.journalId as string)) {
         journal.deleted_at = now
+        deleted++
       }
     }
     saveJournals(clientId, all)
+    return { deleted }
   },
 }
