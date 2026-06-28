@@ -16,7 +16,7 @@
  */
 
 import type { VendorRepository } from '@/repositories/types'
-import { getAll as getAllVendors, findByMatchKey, findByTNumber, create as createVendor, remove as removeVendor } from '@/api/services/vendorStore'
+import { getAll as getAllVendors, findByMatchKey, findByTNumber, create as createVendor, remove as removeVendor, update as updateVendor, getById as getVendorById } from '@/api/services/vendorStore'
 import { getVendorList } from '@/api/services/vendorListService'
 
 /**
@@ -40,6 +40,10 @@ export const mockVendorRepo: VendorRepository = {
     getAllVendors().find((v) => v.phone_numbers?.includes(phone)),
 
   create: async (vendor) => createVendor(vendor),
+
+  update: async (vendorId, partial) => updateVendor(vendorId, partial),
+
+  getById: async (vendorId) => getVendorById(vendorId),
 
   deleteById: async (vendorId) => { removeVendor(vendorId) },
 

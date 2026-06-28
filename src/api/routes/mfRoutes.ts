@@ -1326,8 +1326,7 @@ app.post('/normalize-journals', async (c) => {
   const isNormalized = (v: string) => /^[A-Z][A-Z0-9_]+$/.test(v)
 
   // clientIdループで処理（Repository経由）
-  const { getAll: getAllClients } = await import('../services/clientsApi')
-  const allClients = getAllClients()
+  const allClients = await clientRepo.getAll()
   const clientIds = [...new Set(allClients.map(cl => cl.clientId))]
 
   let accountConverted = 0

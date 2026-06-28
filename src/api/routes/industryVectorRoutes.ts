@@ -54,11 +54,8 @@ app.put('/', async (c) => {
     if (!Array.isArray(body.entries)) {
       return apiError(c, 400, 'リクエストボディに entries 配列が必要です')
     }
-    // TODO: IndustryVectorRepositoryにsaveAllメソッドを追加し、Store直接呼び出しを廃止する
-    const { saveCorporateAll, saveSoleAll } = await import('../services/industryVectorStore')
-    const result = type === 'corporate'
-      ? saveCorporateAll(body.entries)
-      : saveSoleAll(body.entries)
+    // IndustryVectorRepository.saveAll経由で保存
+    const result = await industryVectorRepo.saveAll(type, body.entries)
     return c.json(result)
   } catch (err) {
     return apiCatchError(c, err)

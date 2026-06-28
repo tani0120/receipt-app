@@ -7,6 +7,8 @@
 import {
   getCorporate,
   getSole,
+  saveCorporateAll,
+  saveSoleAll,
 } from '../../api/services/industryVectorStore'
 import type { IndustryVectorRepository } from '../types'
 
@@ -18,5 +20,11 @@ export const mockIndustryVectorRepo: IndustryVectorRepository = {
   findByVector: async (businessType, vector) => {
     const entries = businessType === 'corporate' ? getCorporate() : getSole()
     return entries.find(e => e.vector === vector)
+  },
+
+  saveAll: async (businessType, entries) => {
+    return businessType === 'corporate'
+      ? saveCorporateAll(entries)
+      : saveSoleAll(entries)
   },
 }

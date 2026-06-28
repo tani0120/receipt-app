@@ -29,8 +29,6 @@ import { getAuthStatus } from '../services/mfAuthService'
 import { getCurrentStaffUuid } from './authRoutes'
 import { addCommandLog, getMonthlyTotalCost, getAllMonthlyCosts, getStaffMonthlyCosts, getClientMonthlyCosts, getCrossMonthlyCosts, getModelMonthlyCosts, getAnnualTotalCost } from '../services/aiLogStore'
 import { calculateCost, MODEL_PRICING, USD_JPY_RATE, getAccountEstimateModelId } from '../ai/modelConfig'
-// TODO: Phase 3.6 — getByThreeCodeはClientRepositoryに未定義。Interface拡張後に解消
-import { getByThreeCode } from '../services/clientsApi'
 import { createMockRepositories } from '../../repositories/mock'
 const clientRepo = createMockRepositories().client
 import { isBqConfigured, getMonthlySummaries, getCurrentMonthCost } from '../services/bigqueryCostService'
@@ -46,16 +44,16 @@ function getAiCommandModel(): string {
  * テキストから3コード（英大文字3文字）を推定し、clientIdに解決する。
  * 複数見つかった場合は最初にヒットしたものを採用。
  */
-function resolveClientFromText(text: string, fallbackClientId: string): {
+async function resolveClientFromText(text: string, fallbackClientId: string): Promise<{
   clientId: string
   resolvedThreeCode: string | null
   resolvedName: string | null
-} {
+}> {
   // テキスト内の英字3文字パターンを全て抽出
   const matches = text.toUpperCase().match(/\b[A-Z]{3}\b/g)
   if (matches) {
     for (const code of matches) {
-      const client = getByThreeCode(code)
+      const client = await clientRepo.getByThreeCode(code)
       if (client) {
         return {
           clientId: client.clientId,
@@ -112,7 +110,7 @@ app.post('/', async (c) => {
     }
 
     // ===== テキストから顧問先を自動推定 =====
-    const resolved = resolveClientFromText(text, clientId)
+    const resolved = await resolveClientFromText(text, clientId)
     if (resolved.resolvedThreeCode) {
       clientId = resolved.clientId
       console.log(`[aiCommandRoutes] 3コード自動推定: ${resolved.resolvedThreeCode} → ${clientId} (${resolved.resolvedName})`)

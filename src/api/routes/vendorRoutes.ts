@@ -79,13 +79,11 @@ app.put('/:vendorId', async (c) => {
   const vendorId = c.req.param('vendorId')
   try {
     const body = await c.req.json()
-    // TODO: VendorRepositoryにupdateメソッドを追加し、vendorStore直接呼び出しを廃止する
-    const { update, getById } = await import('../services/vendorStore')
-    const ok = update(vendorId, body)
+    const ok = await vendorRepo.update(vendorId, body)
     if (!ok) {
       return apiError(c, 404, 未検出('取引先'))
     }
-    const updated = getById(vendorId)
+    const updated = await vendorRepo.getById(vendorId)
     return c.json(updated)
   } catch (err) {
     return apiCatchError(c, err)

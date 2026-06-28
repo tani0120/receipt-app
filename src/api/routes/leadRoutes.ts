@@ -215,9 +215,7 @@ app.post('/:leadId/convert', async (c) => {
   }
 
   // 見込先の共通フィールドを顧問先にコピー（見込先固有フィールド除外）
-  // TODO: Phase 3.6 — generateClientIdはClientRepositoryに未定義。Interface拡張後に解消
-  const { generateClientId } = await import('../services/clientsApi');
-  const clientId = generateClientId();
+  const clientId = await clientRepo.generateClientId();
   // Lead と Client は構造的に同一フィールドを持つ（repositories/types.ts 参照）
   // leadId/status のみ Lead 固有なので除外し、Client 固有の clientId/status/sourceLeadId を付与
   const { leadId: _lid, status: _status, ...commonFields } = lead;

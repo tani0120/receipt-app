@@ -48,9 +48,7 @@ app.get('/', async (c) => {
     return c.json({ clients: list, count: list.length });
   }
   if (status) {
-    // TODO: Phase 3.6 — getByStatusはClientRepositoryに未定義。Interface拡張後に解消
-    const { getByStatus } = await import('../services/clientsApi');
-    const list = getByStatus(status as ClientStatus);
+    const list = await clientRepo.getByStatus(status as ClientStatus);
     return c.json({ clients: list, count: list.length });
   }
   if (staffId) {
@@ -90,9 +88,7 @@ app.post('/', async (c) => {
   if (dup) {
     return apiError(c, 409, コード重複(body.threeCode, dup.companyName, dup.clientId));
   }
-  // TODO: Phase 3.6 — generateClientIdはClientRepositoryに未定義。Interface拡張後に解消
-  const { generateClientId } = await import('../services/clientsApi');
-  body.clientId = generateClientId();
+  body.clientId = await clientRepo.generateClientId();
   const client = await clientRepo.create(body);
   // 勘定科目マスタ・税区分マスタを即時コピー（遅延初期化を廃止）
   getClientAccounts(client.clientId);

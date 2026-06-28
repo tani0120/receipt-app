@@ -100,6 +100,12 @@ export type VendorRepository = {
   /** 取引先を新規作成（サーバーでvendor_id発番） */
   create(vendor: Omit<Vendor, 'vendor_id'> & { vendor_id?: string }): Promise<Vendor>
 
+  /** 取引先を部分更新 */
+  update(vendorId: string, partial: Partial<Vendor>): Promise<boolean>
+
+  /** vendor_idで1件取得 */
+  getById(vendorId: string): Promise<Vendor | undefined>
+
   /** 取引先を削除 */
   deleteById(vendorId: string): Promise<void>
 
@@ -170,6 +176,15 @@ export type IndustryVectorRepository = {
     businessType: 'corporate' | 'sole',
     vector: VendorVector
   ): Promise<IndustryVectorEntry | undefined>
+
+  /**
+   * 業種辞書を全件上書き保存
+   * フロントからの一括更新用
+   */
+  saveAll(
+    businessType: 'corporate' | 'sole',
+    entries: IndustryVectorEntry[]
+  ): Promise<{ ok: true; count: number }>
 }
 
 // ============================================================
@@ -632,6 +647,15 @@ export type ClientRepository = {
     results: { index: number; ok: boolean; clientId?: string; threeCode?: string; companyName?: string; error?: string }[]
     total: number
   }>
+
+  /** threeCode（3文字コード）で1件取得 */
+  getByThreeCode(code: string): Promise<Client | undefined>
+
+  /** ステータス別取得 */
+  getByStatus(status: ClientStatus): Promise<Client[]>
+
+  /** 新しいclientIdを生成 */
+  generateClientId(): Promise<string>
 }
 
 // ============================================================
