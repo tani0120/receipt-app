@@ -26,7 +26,7 @@ export const mockStaffRepo: StaffRepository = {
   create: async (staff) => create(staff),
   update: async (uuid, partial) => { update(uuid, partial) },
   list: async (query) => {
-    const result = getStaffList(query)
+    const result = await getStaffList(query)
     return { rows: result.rows, totalCount: result.totalCount, totalPages: result.totalPages }
   },
   bulkCreate: async (items) => {

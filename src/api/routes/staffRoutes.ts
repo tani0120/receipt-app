@@ -18,16 +18,9 @@ import { Hono } from 'hono';
 import { apiError } from '../helpers/apiError';
 import { 未検出, 必須, リソース_スタッフ } from '../../constants/apiMessages';
 import type { Staff } from '../../repositories/types';
-import {
-  getAll,
-  getById,
-  create,
-  update,
-  getByEmail,
-  getActiveStaff,
-} from '../services/staffsApi';
-import { getStaffList } from '../services/staffListService';
+import { createMockRepositories } from '../../repositories/mock';
 
+const staffRepo = createMockRepositories().staff;
 const app = new Hono();
 
 // ============================================================
@@ -35,29 +28,29 @@ const app = new Hono();
 // ============================================================
 app.post('/list', async (c) => {
   const body = await c.req.json();
-  const result = getStaffList(body);
+  const result = await staffRepo.list(body);
   return c.json(result);
 });
 
 // ============================================================
 // GET / — 全スタッフ取得
 // ============================================================
-app.get('/', (c) => {
+app.get('/', async (c) => {
   const status = c.req.query('status');
   if (status === 'active') {
-    const list = getActiveStaff();
+    const list = await staffRepo.getActiveStaff();
     return c.json({ staff: list, count: list.length });
   }
-  const list = getAll();
+  const list = await staffRepo.getAll();
   return c.json({ staff: list, count: list.length });
 });
 
 // ============================================================
 // GET /email/:email — メールでスタッフ検索
 // ============================================================
-app.get('/email/:email', (c) => {
+app.get('/email/:email', async (c) => {
   const email = decodeURIComponent(c.req.param('email'));
-  const staff = getByEmail(email);
+  const staff = await staffRepo.getByEmail(email);
   if (!staff) {
     return apiError(c, 404, 未検出(`${リソース_スタッフ}(メール: ${email})`));
   }
@@ -67,9 +60,9 @@ app.get('/email/:email', (c) => {
 // ============================================================
 // GET /:uuid — 1件取得
 // ============================================================
-app.get('/:uuid', (c) => {
+app.get('/:uuid', async (c) => {
   const uuid = c.req.param('uuid');
-  const staff = getById(uuid);
+  const staff = await staffRepo.getById(uuid);
   if (!staff) {
     return apiError(c, 404, 未検出(`${リソース_スタッフ} ${uuid}`));
   }
@@ -84,7 +77,7 @@ app.post('/', async (c) => {
   if (!body.name || !body.email) {
     return apiError(c, 400, 必須('name と email'));
   }
-  const staff = create(body);
+  const staff = await staffRepo.create(body);
   return c.json({ ok: true, staff });
 });
 
@@ -96,7 +89,7 @@ app.post('/bulk', async (c) => {
   if (!Array.isArray(items)) {
     return apiError(c, 400, 必須('items（配列）'));
   }
-  const existing = getAll();
+  const existing = await staffRepo.getAll();
   const existingEmails = new Set(existing.map(s => s.email?.toLowerCase()).filter(Boolean));
   const results: { index: number; ok: boolean; error?: string }[] = [];
   for (let i = 0; i < items.length; i++) {
@@ -112,7 +105,7 @@ app.post('/bulk', async (c) => {
         results.push({ index: i, ok: false, error: `メール「${item.email}」が重複` });
         continue;
       }
-      create(item as Omit<Staff, 'uuid'> & { uuid?: string });
+      await staffRepo.create(item as Omit<Staff, 'uuid'> & { uuid?: string });
       existingEmails.add(email);
       results.push({ index: i, ok: true });
     } catch (err) {
@@ -128,10 +121,7 @@ app.post('/bulk', async (c) => {
 app.put('/:uuid', async (c) => {
   const uuid = c.req.param('uuid');
   const body = await c.req.json();
-  const ok = update(uuid, body);
-  if (!ok) {
-    return apiError(c, 404, 未検出(`${リソース_スタッフ} ${uuid}`));
-  }
+  await staffRepo.update(uuid, body);
   return c.json({ ok: true });
 });
 

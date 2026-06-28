@@ -22,10 +22,11 @@ import {
   deleteNotification,
   clearAllNotifications,
 } from '../services/notificationStore';
-import { getAll as getAllStaff } from '../services/staffsApi';
 import type { AppNotification } from '../../repositories/types';
 import { randomBytes } from 'crypto';
+import { createMockRepositories } from '../../repositories/mock';
 
+const staffRepo = createMockRepositories().staff;
 const app = new Hono();
 
 /** ランダム通知IDを生成 */
@@ -78,7 +79,7 @@ app.post('/mention', async (c) => {
   }>();
 
   const { commentBody, authorName, authorStaffId, clientId, clientName } = body;
-  const allStaff = getAllStaff();
+  const allStaff = await staffRepo.getAll();
   const createdNotifications: string[] = [];
 
   console.log(`[通知API/mention] commentBody="${commentBody}", authorStaffId="${authorStaffId}"`);

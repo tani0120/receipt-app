@@ -35,6 +35,7 @@
 
 export type { Staff, StaffForm, StaffRole, StaffStatus } from './types/staff.types'
 export type { Client, ClientForm, ClientStatus, ClientContact, PastStaffEntry, AttachmentFile } from './types/client.types'
+import type { ClientStatus } from './types/client.types'
 export type { Lead, LeadForm, LeadStatus } from './types/lead.types'
 export type { DocEntry, DocSource, DocStatus } from './types/doc-entry.types'
 export { AI_FIELD_KEYS } from './types/doc-entry.types'
@@ -591,7 +592,7 @@ export type StaffRepository = {
   /** 有効スタッフのみ取得（担当者選択ドロップダウン用） */
   getActiveStaff(): Promise<Staff[]>
   /** スタッフ追加（サーバーでuuid発番。作成されたStaffを返す） */
-  create(staff: Staff): Promise<Staff>
+  create(staff: Omit<Staff, 'uuid'> & { uuid?: string }): Promise<Staff>
   /** スタッフ更新（部分更新） */
   update(uuid: string, partial: Partial<Staff>): Promise<void>
   /** スタッフ一覧（フィルタ+ソート+ページネーション） */

@@ -44,7 +44,7 @@ const app = new Hono();
 // ============================================================
 app.post('/list', async (c) => {
   const body = await c.req.json();
-  const result = getLeadList(body);
+  const result = await getLeadList(body);
   return c.json(result);
 });
 

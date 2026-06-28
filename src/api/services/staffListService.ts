@@ -7,8 +7,10 @@
  * Supabase移行時: getAll() を SELECT ... WHERE ... ORDER BY に差し替えるだけ。
  */
 
-import { getAll } from './staffsApi'
+import { createMockRepositories } from '../../repositories/mock'
 import type { Staff } from '../../repositories/types'
+
+const staffRepo = createMockRepositories().staff
 
 // ────────────────────────────────────────────
 // クエリパラメータ（フロントからPOSTで送信）
@@ -43,9 +45,9 @@ export interface StaffListResponse {
 // 統合一覧API
 // ────────────────────────────────────────────
 
-export function getStaffList(query: StaffListQuery): StaffListResponse {
+export async function getStaffList(query: StaffListQuery): Promise<StaffListResponse> {
   // 1. 全件取得
-  let rows = [...getAll()]
+  let rows = [...await staffRepo.getAll()]
 
   // 2. ステータスフィルタ
   const statusFilter = query.statusFilter ?? 'active'

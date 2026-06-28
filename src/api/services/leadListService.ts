@@ -9,10 +9,12 @@
  */
 
 import { getAll } from './leadStore'
-import { getAll as getAllStaff } from './staffsApi'
+import { createMockRepositories } from '../../repositories/mock'
 import type { Lead } from '../../repositories/types'
 import { applyFilterConditions } from '../helpers/applyFilterConditions'
 import type { FilterCondition } from '../helpers/applyFilterConditions'
+
+const staffRepo = createMockRepositories().staff
 
 // ────────────────────────────────────────────
 // クエリパラメータ
@@ -82,7 +84,7 @@ function resolveFilterFields(conditions: FilterCondition[]): FilterCondition[] {
 // 統合一覧API
 // ────────────────────────────────────────────
 
-export function getLeadList(query: LeadListQuery): LeadListResponse {
+export async function getLeadList(query: LeadListQuery): Promise<LeadListResponse> {
   // 1. 全件取得
   let rows = [...getAll()]
 
@@ -114,7 +116,7 @@ export function getLeadList(query: LeadListQuery): LeadListResponse {
   // staffName用のスタッフマップ（必要時のみ生成）
   let staffMap: Map<string, string> | null = null
   if (sortDefs.some(s => s.key === 'staffId')) {
-    const staffAll = getAllStaff()
+    const staffAll = await staffRepo.getAll()
     staffMap = new Map(staffAll.map(s => [s.uuid, s.name]))
   }
 

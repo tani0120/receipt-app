@@ -23,5 +23,5 @@ export const mockLeadRepo: LeadRepository = {
   create: async (lead) => create(lead),
   update: async (leadId, partial) => { updateLead(leadId, partial) },
   updateSharedFolderId: async (leadId, folderId) => { updateSharedFolderId(leadId, folderId) },
-  list: async (query) => getLeadList(query),
+  list: async (query) => await getLeadList(query),
 }

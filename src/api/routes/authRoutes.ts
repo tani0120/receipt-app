@@ -13,8 +13,9 @@
  */
 
 import { Hono } from 'hono';
-import { getAll } from '../services/staffsApi';
+import { createMockRepositories } from '../../repositories/mock';
 
+const staffRepo = createMockRepositories().staff;
 const app = new Hono();
 
 /** メモリ上の現在スタッフUUID（サーバー再起動でリセット） */
@@ -26,8 +27,8 @@ export function getCurrentStaffUuid(): string | null {
 }
 
 /** GET /current — 現在のログインスタッフ取得 */
-app.get('/current', (c) => {
-  const staffList = getAll();
+app.get('/current', async (c) => {
+  const staffList = await staffRepo.getAll();
   // 現在のUUIDが有効か確認
   let staff = currentStaffUuid
     ? staffList.find(s => s.uuid === currentStaffUuid && s.status === 'active')
@@ -46,7 +47,7 @@ app.put('/switch', async (c) => {
   if (!body.staffId) {
     return c.json({ error: 'staffIdは必須です' }, 400);
   }
-  const staffList = getAll();
+  const staffList = await staffRepo.getAll();
   const staff = staffList.find(s => s.uuid === body.staffId && s.status === 'active');
   if (!staff) {
     return c.json({ error: 'スタッフが見つかりません' }, 404);
