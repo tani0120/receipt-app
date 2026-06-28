@@ -1,7 +1,7 @@
 /**
  * learningRuleRoutes.ts — 学習ルールAPIルート（Hono）
  *
- * レイヤー: ★route★ → learningRuleStore
+ * レイヤー: ★route★ → LearningRuleRepository
  * 責務: リクエスト受付・バリデーション・レスポンス返却
  *
  * エンドポイント:
@@ -17,16 +17,17 @@
 import { Hono } from 'hono'
 import { apiError, apiCatchError } from '../helpers/apiError'
 import { 未検出, 必須 } from '../../constants/apiMessages'
-import * as store from '../services/learningRuleStore'
+import { createMockRepositories } from '../../repositories/mock'
 
+const learningRuleRepo = createMockRepositories().learningRule
 const app = new Hono()
 
 // ============================================================
 // GET /:clientId — 顧問先の学習ルール一覧
 // ============================================================
-app.get('/:clientId', (c) => {
+app.get('/:clientId', async (c) => {
   const clientId = c.req.param('clientId')
-  const rules = store.getByClientId(clientId)
+  const { rules } = await learningRuleRepo.getByClientId(clientId)
   return c.json({ rules, count: rules.length })
 })
 
@@ -38,7 +39,7 @@ app.post('/:clientId/list', async (c) => {
   try {
     const body = await c.req.json() as {
       sourceFilter?: string
-      filterMode?: 'all' | 'active' | 'inactive'
+      filterMode?: string
       searchText?: string
     }
     const {
@@ -47,56 +48,18 @@ app.post('/:clientId/list', async (c) => {
       searchText = '',
     } = body
 
-    const allRules = store.getByClientId(clientId)
-
-    // カテゴリ別カウント（全ルール対象）
-    const sourceCounts = {
-      all: allRules.length,
-      receipt: allRules.filter(r => r.sourceCategory === 'receipt').length,
-      bank: allRules.filter(r => r.sourceCategory === 'bank').length,
-      credit: allRules.filter(r => r.sourceCategory === 'credit').length,
-    }
-
-    // ソースカテゴリフィルタ
-    let filtered = sourceFilter === 'all'
-      ? allRules
-      : allRules.filter(r => r.sourceCategory === sourceFilter)
-
-    // ステータス別カウント（ソースフィルタ後）
-    const statusCounts = {
-      all: filtered.length,
-      active: filtered.filter(r => r.isActive).length,
-      inactive: filtered.filter(r => !r.isActive).length,
-    }
-
-    // 生成元別カウント（全ルール対象）
-    const generatedByCounts = {
-      ai: allRules.filter(r => r.generatedBy === 'ai').length,
-      human: allRules.filter(r => r.generatedBy === 'human').length,
-    }
-
-    // 有効/無効フィルタ
-    if (filterMode === 'active') filtered = filtered.filter(r => r.isActive)
-    if (filterMode === 'inactive') filtered = filtered.filter(r => !r.isActive)
-
-    // キーワード検索
-    if (searchText.trim()) {
-      const q = searchText.trim().toLowerCase()
-      filtered = filtered.filter(r =>
-        r.keyword.toLowerCase().includes(q) ||
-        r.entries.some((e: { account: string; subAccount?: string | null }) =>
-          e.account.toLowerCase().includes(q) ||
-          (e.subAccount && e.subAccount.toLowerCase().includes(q))
-        )
-      )
-    }
+    const result = await learningRuleRepo.list(clientId, {
+      sourceFilter,
+      filterMode,
+      searchText,
+    })
 
     return c.json({
-      rules: filtered,
-      count: filtered.length,
-      sourceCounts,
-      statusCounts,
-      generatedByCounts,
+      rules: result.rules,
+      count: result.rules.length,
+      sourceCounts: result.sourceCounts,
+      statusCounts: result.statusCounts,
+      generatedByCounts: result.generatedByCounts,
     })
   } catch (err) {
     return apiCatchError(c, err)
@@ -106,10 +69,11 @@ app.post('/:clientId/list', async (c) => {
 // ============================================================
 // GET /:clientId/:ruleId — 1件取得
 // ============================================================
-app.get('/:clientId/:ruleId', (c) => {
+app.get('/:clientId/:ruleId', async (c) => {
   const clientId = c.req.param('clientId')
   const ruleId = c.req.param('ruleId')
-  const rule = store.getById(clientId, ruleId)
+  const { rules } = await learningRuleRepo.getByClientId(clientId)
+  const rule = rules.find(r => r.ruleId === ruleId)
   if (!rule) {
     return apiError(c, 404, 未検出(`学習ルール ${ruleId}`))
   }
@@ -127,7 +91,7 @@ app.post('/:clientId', async (c) => {
       return apiError(c, 400, 必須('keyword'))
     }
     body.clientId = clientId
-    const rule = store.create(clientId, body)
+    const { rule } = await learningRuleRepo.create(clientId, body)
     return c.json({ ok: true, rule })
   } catch (err) {
     return apiCatchError(c, err)
@@ -142,10 +106,7 @@ app.put('/:clientId/:ruleId', async (c) => {
   const ruleId = c.req.param('ruleId')
   try {
     const body = await c.req.json()
-    const ok = store.update(clientId, ruleId, body)
-    if (!ok) {
-      return apiError(c, 404, 未検出(`学習ルール ${ruleId}`))
-    }
+    await learningRuleRepo.update(clientId, ruleId, body)
     return c.json({ ok: true })
   } catch (err) {
     return apiCatchError(c, err)
@@ -155,14 +116,15 @@ app.put('/:clientId/:ruleId', async (c) => {
 // ============================================================
 // DELETE /:clientId/:ruleId — ルール削除
 // ============================================================
-app.delete('/:clientId/:ruleId', (c) => {
+app.delete('/:clientId/:ruleId', async (c) => {
   const clientId = c.req.param('clientId')
   const ruleId = c.req.param('ruleId')
-  const ok = store.remove(clientId, ruleId)
-  if (!ok) {
-    return apiError(c, 404, 未検出(`学習ルール ${ruleId}`))
+  try {
+    await learningRuleRepo.deleteById(clientId, ruleId)
+    return c.json({ ok: true })
+  } catch (err) {
+    return apiCatchError(c, err)
   }
-  return c.json({ ok: true })
 })
 
 export default app

@@ -26,8 +26,9 @@ import { postprocessFirstAi } from './postprocess';
 import type { CalculationMethod } from './postprocess';
 import { validateFirstAiResult } from './validateFirstAiResult';
 import { determineAccount } from './accountDetermination';
-import { getByClientId as getLearningRulesByClientId } from '../learningRuleStore';
-import { getCorporate as getCorporateVectors, getSole as getSoleVectors } from '../industryVectorStore';
+import { createMockRepositories } from '../../../repositories/mock'
+const learningRuleRepo = createMockRepositories().learningRule
+const industryVectorRepo = createMockRepositories().industryVector
 import { getById as getClientById } from '../clientsApi';
 import { isIndividualType } from '../../../constants/clientOptions';
 import { getClientAccounts } from '../accountMasterApi';
@@ -444,14 +445,13 @@ export async function firstAiExtract(req: FirstAiRequest): Promise<FirstAiRespon
   // ━━ Step4-C: 科目確定（辞書接続）━━━━━━━━━━━━━━━━━━
   // fallback未適用（AI正常応答）の場合のみ、line_items毎に科目確定を実行
   if (!result.fallback_applied && result.line_items.length > 0) {
-    // 学習ルール取得（顧問先ごと。learningRuleStoreから）
-    const learningRules = getLearningRulesByClientId(req.clientId)
+    // 学習ルール取得（顧問先ごと。LearningRuleRepository経由）
+    const { rules: learningRules } = await learningRuleRepo.getByClientId(req.clientId)
 
-    // 業種辞書取得（Client.typeで法人/個人を切り替え）
+    // 業種辞書取得（Client.typeで法人/個人を切り替え。IndustryVectorRepository経由）
     const client = getClientById(req.clientId)
-    const industryVectors = isIndividualType(client?.type)
-      ? getSoleVectors()
-      : getCorporateVectors()
+    const businessType = isIndividualType(client?.type) ? 'sole' as const : 'corporate' as const
+    const industryVectors = await industryVectorRepo.getAll(businessType)
 
     for (const li of result.line_items) {
       const acctResult = await determineAccount({

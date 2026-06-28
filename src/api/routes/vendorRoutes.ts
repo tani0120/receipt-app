@@ -1,7 +1,7 @@
 /**
  * vendorRoutes.ts — 取引先JSON永続化APIルート（Hono）
  *
- * レイヤー: ★route★ → vendorStore
+ * レイヤー: ★route★ → VendorRepository
  * 責務: リクエスト受付・バリデーション・レスポンス返却
  *
  * エンドポイント:
@@ -17,9 +17,10 @@
 import { Hono } from 'hono'
 import { apiError, apiCatchError } from '../helpers/apiError'
 import { 未検出 } from '../../constants/apiMessages'
-import * as vendorStore from '../services/vendorStore'
+import { createMockRepositories } from '../../repositories/mock'
 import { getVendorList } from '../services/vendorListService'
 
+const vendorRepo = createMockRepositories().vendor
 const app = new Hono()
 
 // ============================================================
@@ -27,22 +28,20 @@ const app = new Hono()
 // ============================================================
 app.post('/list', async (c) => {
   const body = await c.req.json()
-  const result = getVendorList(body)
+  const result = await getVendorList(body)
   return c.json(result)
 })
 
 // ============================================================
 // GET / — 全件取得
 // ============================================================
-app.get('/', (c) => {
+app.get('/', async (c) => {
   const type = c.req.query('type') // 'vendor' | 'non-vendor' | undefined（全件）
   let vendors
-  if (type === 'vendor') {
-    vendors = vendorStore.getAll({ vendorOnly: true })
-  } else if (type === 'non-vendor') {
-    vendors = vendorStore.getAll({ nonVendorOnly: true })
+  if (type === 'vendor' || type === 'non-vendor') {
+    vendors = await vendorRepo.getByType(type)
   } else {
-    vendors = vendorStore.getAll()
+    vendors = await vendorRepo.getAll()
   }
   return c.json({ vendors, count: vendors.length })
 })
@@ -50,9 +49,10 @@ app.get('/', (c) => {
 // ============================================================
 // GET /:vendorId — 1件取得
 // ============================================================
-app.get('/:vendorId', (c) => {
+app.get('/:vendorId', async (c) => {
   const vendorId = c.req.param('vendorId')
-  const vendor = vendorStore.getById(vendorId)
+  const allVendors = await vendorRepo.getAll()
+  const vendor = allVendors.find(v => v.vendor_id === vendorId)
   if (!vendor) {
     return apiError(c, 404, 未検出('取引先'))
   }
@@ -65,7 +65,7 @@ app.get('/:vendorId', (c) => {
 app.post('/', async (c) => {
   try {
     const body = await c.req.json()
-    const vendor = vendorStore.create(body)
+    const vendor = await vendorRepo.create(body)
     return c.json(vendor, 201)
   } catch (err) {
     return apiCatchError(c, err)
@@ -79,11 +79,13 @@ app.put('/:vendorId', async (c) => {
   const vendorId = c.req.param('vendorId')
   try {
     const body = await c.req.json()
-    const ok = vendorStore.update(vendorId, body)
+    // TODO: VendorRepositoryにupdateメソッドを追加し、vendorStore直接呼び出しを廃止する
+    const { update, getById } = await import('../services/vendorStore')
+    const ok = update(vendorId, body)
     if (!ok) {
       return apiError(c, 404, 未検出('取引先'))
     }
-    const updated = vendorStore.getById(vendorId)
+    const updated = getById(vendorId)
     return c.json(updated)
   } catch (err) {
     return apiCatchError(c, err)
@@ -93,13 +95,14 @@ app.put('/:vendorId', async (c) => {
 // ============================================================
 // DELETE /:vendorId — 削除
 // ============================================================
-app.delete('/:vendorId', (c) => {
+app.delete('/:vendorId', async (c) => {
   const vendorId = c.req.param('vendorId')
-  const ok = vendorStore.remove(vendorId)
-  if (!ok) {
-    return apiError(c, 404, 未検出('取引先'))
+  try {
+    await vendorRepo.deleteById(vendorId)
+    return c.json({ success: true, vendorId })
+  } catch (err) {
+    return apiCatchError(c, err)
   }
-  return c.json({ success: true, vendorId })
 })
 
 export default app

@@ -102,8 +102,6 @@ import exportHistoryRoutes from './api/routes/exportHistoryRoutes'
 app.route('/api/export-history', exportHistoryRoutes)
 
 // Vendor API: 取引先JSON永続化（DL-042）
-import { loadVendors } from './api/services/vendorStore'
-await loadVendors()
 import vendorRoutes from './api/routes/vendorRoutes'
 app.route('/api/vendors', vendorRoutes)
 

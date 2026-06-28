@@ -7,8 +7,10 @@
  * Supabase移行時: getAll() を SELECT ... WHERE ... ORDER BY に差し替えるだけ。
  */
 
-import { getAll } from './vendorStore'
+import { createMockRepositories } from '../../repositories/mock'
 import type { Vendor } from '../../types/pipeline/vendor.type'
+
+const vendorRepo = createMockRepositories().vendor
 
 // ────────────────────────────────────────────
 // クエリパラメータ
@@ -67,9 +69,9 @@ function normalizeForSearch(name: string): string {
 // 統合一覧API
 // ────────────────────────────────────────────
 
-export function getVendorList(query: VendorListQuery): VendorListResponse {
+export async function getVendorList(query: VendorListQuery): Promise<VendorListResponse> {
   // 1. 全件取得（タイプフィルタ）
-  const allVendors = getAll()
+  const allVendors = await vendorRepo.getAll()
   let rows: Vendor[]
   if (query.type === 'non_vendor') {
     rows = allVendors.filter(v => v.non_vendor_type !== null)

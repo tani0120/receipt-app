@@ -31,7 +31,9 @@ import { normalizeVendorName } from '../../../utils/pipeline/vendorIdentificatio
 import { validateTNumber, extractTNumber } from '../../../utils/pipeline/vendorIdentification'
 import { matchLearningRule } from './matchLearningRule'
 import { estimateAccountByAI } from './estimateAccountByAI'
-import { getAll as getAllVendors, findByTNumber as findVendorByTNumber, findByMatchKey as findVendorByMatchKey } from '../vendorStore'
+import { createMockRepositories } from '../../../repositories/mock'
+
+const vendorRepo = createMockRepositories().vendor
 
 // ============================================================
 // § 入力型（オブジェクト引数）
@@ -203,7 +205,7 @@ export async function determineAccount(input: DetermineAccountInput): Promise<Ac
   if (input.tNumberRaw) {
     const tNumber = validateTNumber(input.tNumberRaw) ?? extractTNumber(input.tNumberRaw)
     if (tNumber) {
-      const vendor = findVendorByTNumber(tNumber)
+      const vendor = await vendorRepo.findByTNumber(tNumber)
       if (vendor) {
         applyVendor(result, vendor, 't_number', input.amount, input.direction)
         return result
@@ -220,11 +222,12 @@ export async function determineAccount(input: DetermineAccountInput): Promise<Ac
     const matchKey = normalizeVendorName(input.vendorNameRaw)
     if (matchKey) {
       // match_key完全一致
-      matchedVendor = findVendorByMatchKey(matchKey)
+      matchedVendor = await vendorRepo.findByMatchKey(matchKey)
 
       // aliases照合（match_key不一致の場合、aliasesの中に一致するものがあるか）
       if (!matchedVendor) {
-        matchedVendor = getAllVendors().find(v =>
+        const allVendors = await vendorRepo.getAll()
+        matchedVendor = allVendors.find(v =>
           v.aliases.includes(matchKey),
         )
       }
@@ -235,9 +238,10 @@ export async function determineAccount(input: DetermineAccountInput): Promise<Ac
   if (!matchedVendor && input.description) {
     const descKey = normalizeVendorName(input.description)
     if (descKey) {
-      matchedVendor = findVendorByMatchKey(descKey)
+      matchedVendor = await vendorRepo.findByMatchKey(descKey)
       if (!matchedVendor) {
-        matchedVendor = getAllVendors().find(v =>
+        const allVendorsDesc = await vendorRepo.getAll()
+        matchedVendor = allVendorsDesc.find(v =>
           v.aliases.includes(descKey),
         )
       }

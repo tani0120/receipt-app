@@ -1,7 +1,7 @@
 /**
  * industryVectorRoutes.ts — 業種ベクトルAPIルート（Hono）
  *
- * レイヤー: ★route★ → industryVectorStore
+ * レイヤー: ★route★ → IndustryVectorRepository
  * 責務: リクエスト受付・バリデーション・レスポンス返却
  *
  * エンドポイント:
@@ -13,8 +13,9 @@
 
 import { Hono } from 'hono'
 import { apiError, apiCatchError } from '../helpers/apiError'
-import * as ivStore from '../services/industryVectorStore'
+import { createMockRepositories } from '../../repositories/mock'
 
+const industryVectorRepo = createMockRepositories().industryVector
 const app = new Hono()
 
 // ============================================================
@@ -31,12 +32,12 @@ function parseType(raw: string | undefined): BusinessType | null {
 // ============================================================
 // GET / — 業種ベクトル一覧
 // ============================================================
-app.get('/', (c) => {
+app.get('/', async (c) => {
   const type = parseType(c.req.query('type'))
   if (!type) {
     return apiError(c, 400, 'クエリパラメータ type=corporate|sole は必須です')
   }
-  const entries = type === 'corporate' ? ivStore.getCorporate() : ivStore.getSole()
+  const entries = await industryVectorRepo.getAll(type)
   return c.json({ entries, count: entries.length, type })
 })
 
@@ -53,9 +54,11 @@ app.put('/', async (c) => {
     if (!Array.isArray(body.entries)) {
       return apiError(c, 400, 'リクエストボディに entries 配列が必要です')
     }
+    // TODO: IndustryVectorRepositoryにsaveAllメソッドを追加し、Store直接呼び出しを廃止する
+    const { saveCorporateAll, saveSoleAll } = await import('../services/industryVectorStore')
     const result = type === 'corporate'
-      ? ivStore.saveCorporateAll(body.entries)
-      : ivStore.saveSoleAll(body.entries)
+      ? saveCorporateAll(body.entries)
+      : saveSoleAll(body.entries)
     return c.json(result)
   } catch (err) {
     return apiCatchError(c, err)
