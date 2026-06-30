@@ -584,8 +584,11 @@ ConfirmedJournalRepository → journals テーブル（WHERE source IN ('mf_impo
 - ~~`receipt_status` ENUM~~ → ✅ **廃止（J-5で確定）**: receiptsテーブルがアプリ未使用のため不要
 - ~~`update_receipt_status` SQL function~~ → ✅ **廃止（J-5で確定）**: 同上
 - ~~`confirmed_requires_journal` CHECK制約~~ → ✅ **廃止（J-5で確定）**: 同上
-- **新規**: journalsテーブルの`source` CHECK制約, `status` CHECK制約
-- **修正対象**: clientsのCHECK値不一致3件（C-1, C-2, C-3）
+- ~~**新規**: journalsテーブルの`source` CHECK制約, `status` CHECK制約~~ → ✅ **006_journals.sqlで作成済み**
+- ~~**修正対象**: clientsのCHECK値不一致3件（C-1, C-2, C-3）~~ → ✅ **修正済み（2026-07-01）**:
+  - C-1: `type` CHECK に `'sole_proprietor'` 追加（2値→3値）
+  - C-2: `consumption_tax_mode` CHECK を `'individual','proportional','simplified','exempt'` に変更。DEFAULT `'general'`→`'proportional'`
+  - C-3: `tax_method` CHECK を `'tax_included','tax_excluded_included','tax_excluded_separate'` に変更。DEFAULT `'inclusive'`→`'tax_included'`
 
 > [!NOTE]
 > **schema.sql統合問題 → ✅ 解決済み（2026-07-01 J-5確定）**:
@@ -593,19 +596,24 @@ ConfirmedJournalRepository → journals テーブル（WHERE source IN ('mf_impo
 > アプリコードで未使用（grep 0件）。KI（2026-02）の設計検討段階の遺物。
 > **方針**: schema.sqlはreceipts/audit_logs部分を廃止。audit_logsが必要な場合は別のmigrationで再作成。
 
-### A-4: seed スクリプト
+### A-4: seed スクリプト → ✅ 完了（2026-07-01）
 
 > 対応: migration_tasks.md §5-1 R-S4
 
-| データ | 件数 | 方式 |
-|---|---|---|
-| vendors_global | 224件 | INSERT文 |
-| account-master | 全件 | INSERT文 |
-| tax-categories-master | 151件 | INSERT文 |
-| industry_vector_corporate / sole | 68種 | INSERT文 |
-| staff | 7名 | INSERT文 |
+| データ | 件数 | 方式 | 状態 |
+|---|---|---|---|
+| staff | 7件 | INSERT文 | ✅ |
+| vendors（scope=global） | 250件 | INSERT文 | ✅ |
+| accounts | 241件 | INSERT文 | ✅ |
+| tax_categories | 151件 | INSERT文 + CREATE TABLE IF NOT EXISTS | ✅ |
+| industry_vectors | 68(法人)+68(個人) ベクトル | INSERT文（vector×account展開） | ✅ |
 
-### A-5: clientId発番方式の移行
+**成果物**:
+- [seed.cjs](file:///c:/dev/receipt-app/supabase/seed.cjs): JSONデータからseed.sqlを自動生成するスクリプト
+- [seed.sql](file:///c:/dev/receipt-app/supabase/seed.sql): 生成済みSQL（10,427行 / 410KB）
+- ON CONFLICT DO NOTHING で冪等性保証
+
+### A-5: clientId発番方式の移行 → ⏸️ Phase Bに延期
 
 > 対応: migration_tasks.md §4-6
 
@@ -613,10 +621,20 @@ ConfirmedJournalRepository → journals テーブル（WHERE source IN ('mf_impo
 - three_codeはUNIQUEカラムとして独立
 - 全リレーションのFK参照先をUUIDに変更
 
+> [!IMPORTANT]
+> **Phase A段階ではTEXTのまま維持する。理由:**
+> 1. 現在のmock開発ではclient_id=TEXTで全コードが動作中（JSON: `LDI-00008`形式）
+> 2. UUID化はフロント+API+DB全層の同時変更が必要（16ファイルのSQL + 全composable + 全Route）
+> 3. SQL定義だけUUIDにしてもseedや開発時にclient_idの不整合が起きる
+> 4. Phase BでSupabase版Repository作成時にUUID型に一括切替する方が安全
+
 ### 完了条件
-- `supabase db reset` でエラー0件
-- `supabase gen types typescript --local > src/types/database.types.ts` が生成できる
-- 全テーブルのCREATE + INDEX + RLS（暫定USING(true)）が揃う
+- ✅ 全テーブルのCREATE + INDEX + RLS が揃う（14テーブル / 12 SQL）
+- ✅ CHECK制約の不一致修正済み（C-1, C-2, C-3）
+- ✅ seedスクリプト完成（5種マスタデータ / 700件超）
+- ⏸️ `supabase db reset` でエラー0件 → Phase B開始時に検証
+- ⏸️ `supabase gen types` → Phase B開始時に検証
+- ⏸️ clientId UUID移行 → Phase Bで実施
 
 ---
 

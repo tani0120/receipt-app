@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS clients (
   company_name                TEXT NOT NULL,
   company_name_kana           TEXT NOT NULL DEFAULT '',
   type                        TEXT NOT NULL DEFAULT 'corp'
-                              CHECK (type IN ('corp', 'individual')),
+                              CHECK (type IN ('corp', 'individual', 'sole_proprietor')),
   rep_name                    TEXT NOT NULL DEFAULT '',
   rep_name_kana               TEXT NOT NULL DEFAULT '',
   phone_number                TEXT NOT NULL DEFAULT '',
@@ -39,11 +39,11 @@ CREATE TABLE IF NOT EXISTS clients (
                               CHECK (accounting_software IN ('mf', 'freee', 'yayoi', 'tkc', 'other')),
   tax_filing_type             TEXT NOT NULL DEFAULT 'blue'
                               CHECK (tax_filing_type IN ('blue', 'white')),
-  consumption_tax_mode        TEXT NOT NULL DEFAULT 'general'
-                              CHECK (consumption_tax_mode IN ('general', 'simplified', 'exempt')),
+  consumption_tax_mode        TEXT NOT NULL DEFAULT 'proportional'
+                              CHECK (consumption_tax_mode IN ('individual', 'proportional', 'simplified', 'exempt')),
   simplified_tax_category     INTEGER,
-  tax_method                  TEXT NOT NULL DEFAULT 'inclusive'
-                              CHECK (tax_method IN ('inclusive', 'exclusive')),
+  tax_method                  TEXT NOT NULL DEFAULT 'tax_included'
+                              CHECK (tax_method IN ('tax_included', 'tax_excluded_included', 'tax_excluded_separate')),
   calculation_method          TEXT NOT NULL DEFAULT 'accrual'
                               CHECK (calculation_method IN ('accrual', 'cash', 'interim_cash')),
   default_payment_method      TEXT NOT NULL DEFAULT 'cash'
