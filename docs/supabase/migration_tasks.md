@@ -1,5 +1,9 @@
 # Supabase移行タスク一覧
 
+> [!NOTE]
+> **Phase A（SQL設計）の詳細実行計画は [supabase_migration_plan.md](file:///c:/dev/receipt-app/docs/supabase/supabase_migration_plan.md) に移行済み。**
+> 本ファイルはPhase B以降のタスク一覧（認証, Drive, Edge Functions, データ移行, 後回し項目等）として維持する。
+
 > 作成日: 2026-04-23
 > 最終更新: 2026-05-19 v15（v14 + useServerTable composable統合タスク追加。全7ページのfilteredRows/pagedRows個別実装→楽観的更新一元化）
 > ソース:
