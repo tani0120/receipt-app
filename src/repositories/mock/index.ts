@@ -40,6 +40,10 @@ import { mockExportHistoryRepo } from './exportHistory.repository.mock'
 import { mockNotificationRepo } from './notification.repository.mock'
 import { mockActivityLogRepo } from './activityLog.repository.mock'
 import { mockConversionLogRepo } from './conversionLog.repository.mock'
+import { mockAiLogRepo } from './aiLog.repository.mock'
+import { mockSupportingSearchRepo } from './supportingSearch.repository.mock'
+import { mockMfRawDataRepo } from './mfRawData.repository.mock'
+import { mockMfTaxAvailableRepo } from './mfTaxAvailable.repository.mock'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /**
@@ -153,5 +157,9 @@ export function createMockRepositories(): Repositories {
     notification: mockNotificationRepo,
     activityLog: mockActivityLogRepo,
     conversionLog: mockConversionLogRepo,
+    aiLog: mockAiLogRepo,
+    supportingSearch: mockSupportingSearchRepo,
+    mfRawData: mockMfRawDataRepo,
+    mfTaxAvailable: mockMfTaxAvailableRepo,
   }
 }

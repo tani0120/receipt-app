@@ -32,12 +32,13 @@ import {
   type SupportingMetaItem,
   type JournalForMatching,
 } from '../services/journalSupportingService';
-import { searchSupporting } from '../services/migration/supportingSearchService';
+
 const repos = createMockRepositories();
 const journalRepo = repos.journal;
 const accountMasterRepo = repos.accountMaster;
 const taxMasterRepo = repos.taxMaster;
 const documentRepo = repos.document;
+const supportingSearchRepo = repos.supportingSearch;
 
 const app = new Hono();
 
@@ -278,8 +279,8 @@ app.get('/:clientId/supporting-match', async (c) => {
   // Repository経由で仕訳データ取得
   const journals = await journalRepo.list(clientId) as unknown as JournalForMatching[];
 
-  // 根拠資料メタデータ取得（search-supportingと同じサービスを使用）
-  const supportingMeta = searchSupporting(clientId, '') as SupportingMetaItem[];
+  // 根拠資料メタデータ取得（Repository経由）
+  const supportingMeta = await supportingSearchRepo.searchSupporting(clientId, '') as SupportingMetaItem[];
 
   const result = getSupportingMatches(journals, supportingMeta);
 

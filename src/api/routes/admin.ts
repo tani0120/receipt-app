@@ -11,8 +11,8 @@ const staffRepo = repos.staff
 const journalRepo = repos.journal
 const exportHistoryRepo = repos.exportHistory
 const documentRepo = repos.document
+const aiLogRepo = repos.aiLog
 import type { DocEntry } from '../../repositories/types'
-import { getMonthlyTotalCost, getStaffMonthlyCosts, getClientMonthlyCosts, getStaffAnnualCost } from '../services/aiLogStore'
 
 const app = new Hono()
 
@@ -200,9 +200,9 @@ const route = app
       // スタッフ集計
       const activeStaffCount = staff.filter(s => s.status === 'active').length
 
-      // スタッフ分析データ生成（annualApiCostはaiLogStoreから実データ取得）
-      const staffAnalysis = staff.map(s => {
-        const annualCost = getStaffAnnualCost(s.uuid);
+      // スタッフ分析データ生成（annualApiCostはaiLogRepoから実データ取得）
+      const staffAnalysis = await Promise.all(staff.map(async s => {
+        const annualCost = await aiLogRepo.getStaffAnnualCost(s.uuid);
         return {
           staffId: s.uuid,
           name: s.name,
@@ -218,7 +218,7 @@ const route = app
           backlogs: { total: 0, draft: 0 },
           backlog: {}
         };
-      })
+      }))
 
       // ステータス別カウント（T-31-6: ページ側のfilterカウントをサーバー移植）
       const staffStatusCounts = {
@@ -345,10 +345,10 @@ const route = app
         totalLatency += m.duration_ms;
       }
 
-      // AIコマンドコストを統合（aiLogStoreから）
-      const aiCmdTotal = getMonthlyTotalCost();
-      const aiCmdByStaff = getStaffMonthlyCosts();
-      const aiCmdByClient = getClientMonthlyCosts();
+      // AIコマンドコストを統合（aiLogRepoから）
+      const aiCmdTotal = await aiLogRepo.getMonthlyTotalCost();
+      const aiCmdByStaff = await aiLogRepo.getStaffMonthlyCosts();
+      const aiCmdByClient = await aiLogRepo.getClientMonthlyCosts();
 
       // 全体にAIコマンドコストを加算
       const mergedTotal = {

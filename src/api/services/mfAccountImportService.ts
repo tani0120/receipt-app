@@ -20,12 +20,12 @@
 
 import { mcpFetchAccounts } from './mfMcpClient'
 import { enrichAccountRow } from '../../shared/enrichAccount'
-import { saveMfRawData } from './mfRawDataStore'
 import { createMockRepositories } from '../../repositories/mock'
 const repos = createMockRepositories()
 const clientRepo = repos.client
 const accountMasterRepo = repos.accountMaster
 const taxMasterRepo = repos.taxMaster
+const mfRawDataRepo = repos.mfRawData
 import { generateMasterId } from './generateMasterId'
 import { isIndividualType } from '../../constants/clientOptions'
 import {
@@ -215,7 +215,7 @@ export async function importMasterAccounts(
   await accountMasterRepo.saveMaster(masterItems)
 
   // 7. MF生データを保存
-  saveMfRawData({
+  await mfRawDataRepo.saveMfRawData({
     clientId,
     clientName: client?.companyName ?? client?.repName ?? '',
     pattern: 'master-accounts',

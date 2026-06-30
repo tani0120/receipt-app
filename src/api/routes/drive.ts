@@ -21,7 +21,8 @@ import { 必須, 未検出, 環境設定エラー, ファイル必須, 仕訳外
 import { listDriveFiles, getFilesWithThumbnails, getFilePreview, uploadToDrive, createDriveFolder, renameDriveFolder, checkFolderExists, shareFolderWithEmail, revokeFolderPermission, downloadAndProcessDriveFile } from '../services/drive/driveService';
 import { enqueueMigrationJobs, getJobStatus, getExcludedCount, getExcludedHistory, getExcludedJobs, getMigrationJobs, getSupportingJobs, getSupportingCount, getSupportingHistory } from '../services/migration/migrationRepository';
 import { generateExcludedZip } from '../services/migration/excludedZipService';
-import { searchSupporting, saveSupportingMeta, getSupportingMetaCount } from '../services/migration/supportingSearchService';
+import { createMockRepositories } from '../../repositories/mock';
+const supportingSearchRepo = createMockRepositories().supportingSearch;
 
 const app = new Hono();
 
@@ -516,7 +517,7 @@ app.get('/search-supporting/:clientId', async (c) => {
     }
 
     const query = c.req.query('q') || '';
-    const results = searchSupporting(clientId, query);
+    const results = await supportingSearchRepo.searchSupporting(clientId, query);
     return c.json({ results, total: results.length });
   } catch (err) {
     return apiCatchError(c, err);
@@ -550,8 +551,8 @@ app.post('/save-supporting-meta/:clientId', async (c) => {
       return apiError(c, 400, 必須('items'));
     }
 
-    const count = saveSupportingMeta(clientId, body.items);
-    return c.json({ saved: count, total: getSupportingMetaCount(clientId) });
+    const count = await supportingSearchRepo.saveSupportingMeta(clientId, body.items);
+    return c.json({ saved: count, total: await supportingSearchRepo.getSupportingMetaCount(clientId) });
   } catch (err) {
     return apiCatchError(c, err);
   }
@@ -564,7 +565,7 @@ app.post('/save-supporting-meta/:clientId', async (c) => {
 app.get('/supporting-meta-count/:clientId', async (c) => {
   try {
     const clientId = c.req.param('clientId');
-    const count = getSupportingMetaCount(clientId);
+    const count = await supportingSearchRepo.getSupportingMetaCount(clientId);
     return c.json({ count });
   } catch (err) {
     return apiCatchError(c, err);

@@ -20,11 +20,12 @@
 
 import { mcpFetchTaxes, mcpFetchTermSettings, type MfMcpTax } from './mfMcpClient'
 import { createMockRepositories } from '../../repositories/mock'
-import { getAllTaxAvailable, saveTaxAvailable, type TaxMethodKey } from './mfTaxAvailableStore'
-import { saveMfRawData } from './mfRawDataStore'
+import type { TaxMethodKey } from '../../repositories/types'
 const repos = createMockRepositories()
 const clientRepo = repos.client
 const taxMasterRepo = repos.taxMaster
+const mfRawDataRepo = repos.mfRawData
+const mfTaxAvailableRepo = repos.mfTaxAvailable
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { generateTaxMasterId, ensureUniqueTaxId } from './taxIdGenerator'
@@ -146,7 +147,7 @@ async function detectDiff(clientId: string, _dryRun: boolean = false): Promise<D
   const mfNameSet = new Set(mfTaxes.map(t => t.name))
 
   // 4. availableデータを取得（MCP実機のavailableをそのまま使用。自動ルール廃止済み）
-  const availData: Record<string, Record<string, boolean>> = JSON.parse(JSON.stringify(getAllTaxAvailable()))
+  const availData: Record<string, Record<string, boolean>> = JSON.parse(JSON.stringify(await mfTaxAvailableRepo.getAllTaxAvailable()))
   // ゴミデータ清掃: 有効なキー以外を除去
   for (const key of Object.keys(availData)) {
     if (!VALID_METHODS.includes(key as TaxMethodKey)) {
@@ -313,7 +314,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
       const key = masterRow?.taxCategoryId ?? generateTaxMasterId(t.name) ?? `UNKNOWN_${t.name}`
       availMap[key] = t.available
     }
-    saveTaxAvailable(pattern as TaxMethodKey, availMap)
+    await mfTaxAvailableRepo.saveTaxAvailable(pattern as TaxMethodKey, availMap)
     console.log(`[mfTaxImportService] available更新: ${pattern}, true=${Object.values(availMap).filter(v => v).length}件`)
   }
 
@@ -340,7 +341,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
     for (const method of VALID_METHODS) {
       if (method === pattern) continue
       if (availData[method]) {
-        saveTaxAvailable(method as TaxMethodKey, availData[method])
+        await mfTaxAvailableRepo.saveTaxAvailable(method as TaxMethodKey, availData[method])
       }
     }
   }
@@ -351,7 +352,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
   // --- MF生データを保存 ---
   const client = await clientRepo.getById(clientId)
   const patternName = `taxes-${pattern}`
-  saveMfRawData({
+  await mfRawDataRepo.saveMfRawData({
     clientId,
     clientName: client?.companyName ?? client?.repName ?? '',
     pattern: patternName,
@@ -530,7 +531,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
         const key = master?.taxCategoryId ?? generateTaxMasterId(t.name) ?? `UNKNOWN_${t.name}`
         availMap[key] = t.available
       }
-      saveTaxAvailable(patternKey, availMap)
+      await mfTaxAvailableRepo.saveTaxAvailable(patternKey, availMap)
       availableUpdated = true
       console.log(`[mfTaxImportService] available更新: ${patternKey}, ${mfTaxes.length}件`)
     }
@@ -538,7 +539,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
 
   // 6. MF生データを保存
   const client = await clientRepo.getById(clientId)
-  saveMfRawData({
+  await mfRawDataRepo.saveMfRawData({
     clientId,
     clientName: client?.companyName ?? client?.repName ?? '',
     pattern: `client-taxes-${consumptionTaxMode ?? 'unknown'}`,

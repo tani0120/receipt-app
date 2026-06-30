@@ -21,7 +21,7 @@
 import { Hono } from 'hono'
 import { fetchTenant } from '../services/mfApiClient'
 import { getAuthStatus, setOfficeInfo } from '../services/mfAuthService'
-import { saveMfRawData, loadMfRawData, listMfRawPatterns } from '../services/mfRawDataStore'
+
 import {
   mcpFetchCurrentOffice,
   mcpFetchAccounts,
@@ -42,6 +42,8 @@ const taxMasterRepo = repos.taxMaster
 const clientRepo = repos.client
 const journalRepo = repos.journal
 const confirmedJournalRepo = repos.confirmedJournal
+const mfRawDataRepo = repos.mfRawData
+const mfTaxAvailableRepo = repos.mfTaxAvailable
 import type { MfSubAccountEntry, MfDepartmentEntry } from '../../types/shared-sub-account'
 import { clearMappingCache, buildAllMaps } from '../services/mfMappingService'
 import type { Account } from '../../types/shared-account'
@@ -50,7 +52,7 @@ import { generateMasterId } from '../services/generateMasterId'
 import { generateTaxMasterId, ensureUniqueTaxId } from '../services/taxIdGenerator'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
-import { getAllTaxAvailable, saveTaxAvailable, invalidateCache, type TaxMethodKey } from '../services/mfTaxAvailableStore'
+import type { TaxMethodKey } from '../../repositories/types'
 import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
 import { isIndividualType } from '../../constants/clientOptions'
 import { readdirSync, existsSync as fsExists, readFileSync as fsRead } from 'fs'
@@ -695,9 +697,9 @@ app.post('/sync-all', async (c) => {
 // ===== MF課税方式別available管理 =====
 
 /** GET /tax-available — 4方式分のavailableデータを返す */
-app.get('/tax-available', (c) => {
-  invalidateCache()
-  return c.json(getAllTaxAvailable())
+app.get('/tax-available', async (c) => {
+  await mfTaxAvailableRepo.invalidateCache()
+  return c.json(await mfTaxAvailableRepo.getAllTaxAvailable())
 })
 
 /** PUT /tax-available/:method — 特定方式のavailableを更新 */
@@ -709,7 +711,7 @@ app.put('/tax-available/:method', async (c) => {
   }
   const method: TaxMethodKey = methodRaw as TaxMethodKey
   const body = await c.req.json<{ available: Record<string, boolean> }>()
-  saveTaxAvailable(method, body.available)
+  await mfTaxAvailableRepo.saveTaxAvailable(method, body.available)
   return c.json({ ok: true, method, count: Object.values(body.available).filter(v => v).length })
 })
 
@@ -723,16 +725,16 @@ app.put('/tax-available/:method', async (c) => {
 app.put('/raw-data/:pattern', async (c) => {
   const pattern = c.req.param('pattern')
   const body = await c.req.json()
-  saveMfRawData({ ...body, pattern })
+  await mfRawDataRepo.saveMfRawData({ ...body, pattern })
   return c.json({ ok: true, pattern })
 })
 
 /**
  * GET /raw-data/:pattern — MF生データを取得（前回データ）
  */
-app.get('/raw-data/:pattern', (c) => {
+app.get('/raw-data/:pattern', async (c) => {
   const pattern = c.req.param('pattern')
-  const data = loadMfRawData(pattern)
+  const data = await mfRawDataRepo.loadMfRawData(pattern)
   if (!data) return c.json({ exists: false })
   return c.json({ exists: true, data })
 })
@@ -740,8 +742,8 @@ app.get('/raw-data/:pattern', (c) => {
 /**
  * GET /raw-data — 全パターンのインポート履歴一覧
  */
-app.get('/raw-data', (_c) => {
-  const patterns = listMfRawPatterns()
+app.get('/raw-data', async (_c) => {
+  const patterns = await mfRawDataRepo.listMfRawPatterns()
   return _c.json({ patterns })
 })
 

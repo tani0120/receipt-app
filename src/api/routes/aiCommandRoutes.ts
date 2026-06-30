@@ -27,10 +27,11 @@ import { suggestCommandsLayer2, getCommandCatalog } from '../services/aiSuggestS
 import { executeWithFunctionCalling } from '../services/aiFunctionCallService'
 import { getAuthStatus } from '../services/mfAuthService'
 import { getCurrentStaffUuid } from './authRoutes'
-import { addCommandLog, getMonthlyTotalCost, getAllMonthlyCosts, getStaffMonthlyCosts, getClientMonthlyCosts, getCrossMonthlyCosts, getModelMonthlyCosts, getAnnualTotalCost } from '../services/aiLogStore'
-import { calculateCost, MODEL_PRICING, USD_JPY_RATE, getAccountEstimateModelId } from '../ai/modelConfig'
 import { createMockRepositories } from '../../repositories/mock'
-const clientRepo = createMockRepositories().client
+const repos = createMockRepositories()
+const aiLogRepo = repos.aiLog
+const clientRepo = repos.client
+import { calculateCost, MODEL_PRICING, USD_JPY_RATE, getAccountEstimateModelId } from '../ai/modelConfig'
 import { isBqConfigured, getMonthlySummaries, getCurrentMonthCost } from '../services/bigqueryCostService'
 
 const app = new Hono()
@@ -142,8 +143,8 @@ app.post('/', async (c) => {
             `コスト: ¥${cost.costYen.toFixed(4)}`
           )
 
-          // aiLogStoreに永続化
-          addCommandLog({
+          // aiLogRepoに永続化
+          await aiLogRepo.addCommandLog({
             staffId,
             clientId,
             inputText: text,
@@ -207,7 +208,7 @@ app.post('/', async (c) => {
     const l2Usage = (aiResult as Record<string, unknown>).usage as { inputTokens: number; outputTokens: number; totalTokens: number } | undefined
     if (l2Usage) {
       const cost = calculateCost(getAiCommandModel(), l2Usage.inputTokens, l2Usage.outputTokens)
-      addCommandLog({
+      await aiLogRepo.addCommandLog({
         staffId,
         clientId,
         inputText: text,
@@ -284,20 +285,20 @@ app.get('/catalog', (c) => {
 // ============================================================
 
 /** GET /cost/monthly — 今月の全体コスト集計（自前計測） */
-app.get('/cost/monthly', (c) => {
-  const total = getMonthlyTotalCost()
-  const byCategory = getAllMonthlyCosts()
+app.get('/cost/monthly', async (c) => {
+  const total = await aiLogRepo.getMonthlyTotalCost()
+  const byCategory = await aiLogRepo.getAllMonthlyCosts()
   return c.json({ total, byCategory })
 })
 
 /** GET /cost/by-staff — スタッフ別コスト集計（自前計測） */
-app.get('/cost/by-staff', (c) => {
-  return c.json({ staffCosts: getStaffMonthlyCosts() })
+app.get('/cost/by-staff', async (c) => {
+  return c.json({ staffCosts: await aiLogRepo.getStaffMonthlyCosts() })
 })
 
 /** GET /cost/by-client — 顧問先別コスト集計（自前計測） */
-app.get('/cost/by-client', (c) => {
-  return c.json({ clientCosts: getClientMonthlyCosts() })
+app.get('/cost/by-client', async (c) => {
+  return c.json({ clientCosts: await aiLogRepo.getClientMonthlyCosts() })
 })
 
 /** GET /cost/bigquery — BigQuery Billing Exportからのコスト（確定値。costタブ用） */
@@ -327,24 +328,24 @@ app.get('/cost/bigquery', async (c) => {
 })
 
 /** GET /cost/cross — スタッフ×顧問先クロス集計（今月） */
-app.get('/cost/cross', (c) => {
-  return c.json({ crossCosts: getCrossMonthlyCosts() })
+app.get('/cost/cross', async (c) => {
+  return c.json({ crossCosts: await aiLogRepo.getCrossMonthlyCosts() })
 })
 
 /** GET /cost/by-model — モデル別コスト集計（今月） */
-app.get('/cost/by-model', (c) => {
-  return c.json({ modelCosts: getModelMonthlyCosts() })
+app.get('/cost/by-model', async (c) => {
+  return c.json({ modelCosts: await aiLogRepo.getModelMonthlyCosts() })
 })
 
 /** GET /cost/config — 現在のモデル設定・単価・為替レート（動的取得用） */
-app.get('/cost/config', (c) => {
+app.get('/cost/config', async (c) => {
   return c.json({
     currentModel: process.env['AI_COMMAND_MODEL'] ?? 'gemini-3.5-flash',
     ocrModel: process.env['VERTEX_MODEL_ID'] ?? 'gemini-3.1-flash-lite',
     accountEstimateModel: getAccountEstimateModelId(),
     pricing: MODEL_PRICING,
     usdJpyRate: USD_JPY_RATE,
-    annualTotalCostYen: Math.round(getAnnualTotalCost() * 100) / 100,
+    annualTotalCostYen: Math.round(await aiLogRepo.getAnnualTotalCost() * 100) / 100,
   })
 })
 

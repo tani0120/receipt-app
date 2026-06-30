@@ -718,6 +718,14 @@ export type Repositories = {
   activityLog: ActivityLogRepository
   /** CSV変換ログ（Phase 3.7） */
   conversionLog: ConversionLogRepository
+  /** AIコマンドログ（Phase 3.7） */
+  aiLog: AiLogRepository
+  /** 根拠資料メタデータ（Phase 3.7） */
+  supportingSearch: SupportingSearchRepository
+  /** MF生データ永続化（Phase 3.7） */
+  mfRawData: MfRawDataRepository
+  /** MF課税方式別available管理（Phase 3.7） */
+  mfTaxAvailable: MfTaxAvailableRepository
 }
 
 // ============================================================
@@ -1154,4 +1162,193 @@ export type ConversionLogRepository = {
   deleteLog(id: string): Promise<boolean>
   /** CSVファイルのフルパスを取得 */
   getCsvFilePath(id: string): Promise<string | null>
+}
+
+// ============================================================
+// § AiLogRepository（AIコマンドログ）— Phase 3.7で追加
+// ============================================================
+
+import type {
+  AiCommandLog, AiCommandContext,
+  AiChatSession, AiChatMessage,
+  AiCostRecord, AiCostLimit, AiCostCategory,
+} from './types/ai-command.types'
+
+/** スタッフ別コスト集計結果 */
+export interface StaffCostSummary {
+  staffId: string
+  requestCount: number
+  promptTokens: number
+  completionTokens: number
+  thinkingTokens: number
+  totalTokens: number
+  estimatedCostYen: number
+}
+
+/** 顧問先別コスト集計結果 */
+export interface ClientCostSummary {
+  clientId: string
+  requestCount: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  estimatedCostYen: number
+}
+
+/** スタッフ×顧問先クロス集計結果 */
+export interface CrossCostSummary {
+  staffId: string
+  clientId: string
+  requestCount: number
+  totalTokens: number
+  estimatedCostYen: number
+}
+
+/** モデル別集計結果 */
+export interface ModelCostSummary {
+  model: string
+  requestCount: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  estimatedCostYen: number
+  inputPricePerM: number
+  outputPricePerM: number
+}
+
+/**
+ * AIコマンドログへのデータアクセス
+ *
+ * 対象データ: data/ai-command-logs.json, data/ai-chat-sessions.json, data/ai-cost-limits.json
+ * 用途: AI操作ログ・会話履歴・コスト管理
+ */
+export type AiLogRepository = {
+  // ── 操作ログ ──
+  addCommandLog(entry: Omit<AiCommandLog, 'id' | 'executedAt'>): Promise<AiCommandLog>
+  getAllCommandLogs(): Promise<AiCommandLog[]>
+  getCommandLogById(id: string): Promise<AiCommandLog | undefined>
+  getCommandLogsByStaff(staffId: string): Promise<AiCommandLog[]>
+  getWriteCommandLogs(): Promise<AiCommandLog[]>
+
+  // ── 会話履歴 ──
+  createChatSession(staffId: string): Promise<AiChatSession>
+  addMessageToSession(sessionId: string, message: Omit<AiChatMessage, 'id' | 'timestamp'>): Promise<AiChatMessage | null>
+  getChatSession(sessionId: string): Promise<AiChatSession | undefined>
+  getAllChatSessions(): Promise<AiChatSession[]>
+
+  // ── コスト管理 ──
+  getMonthlyCost(category: AiCostCategory): Promise<AiCostRecord>
+  getMonthlyTotalCost(): Promise<AiCostRecord>
+  getAllMonthlyCosts(): Promise<AiCostRecord[]>
+  getStaffMonthlyCosts(): Promise<StaffCostSummary[]>
+  getStaffAnnualCost(staffId: string): Promise<number>
+  getClientMonthlyCosts(): Promise<ClientCostSummary[]>
+  getCrossMonthlyCosts(): Promise<CrossCostSummary[]>
+  getModelMonthlyCosts(): Promise<ModelCostSummary[]>
+  getAnnualTotalCost(): Promise<number>
+  getCostLimits(): Promise<AiCostLimit[]>
+  updateCostLimit(category: AiCostCategory, limit: Partial<AiCostLimit>): Promise<AiCostLimit>
+  isOverLimit(category: AiCostCategory): Promise<boolean>
+}
+
+// ============================================================
+// § SupportingSearchRepository（根拠資料メタデータ）— Phase 3.7で追加
+// ============================================================
+
+/** 根拠資料メタデータ（検索用） */
+export interface SupportingMeta {
+  id: string
+  clientId: string
+  fileName: string
+  previewUrl: string
+  date: string | null
+  amount: number | null
+  vendor: string | null
+  description: string | null
+  sourceType: string | null
+  searchText: string
+  savedAt: string
+}
+
+/**
+ * 根拠資料メタデータへのデータアクセス
+ *
+ * 対象データ: data/supporting_meta_{clientId}.json
+ * 用途: 確定送信時のメタ保存・自由キーワード検索
+ */
+export type SupportingSearchRepository = {
+  /** 根拠資料メタデータを一括保存 */
+  saveSupportingMeta(clientId: string, items: Omit<SupportingMeta, 'searchText' | 'savedAt'>[]): Promise<number>
+  /** 自由キーワードで検索 */
+  searchSupporting(clientId: string, query: string): Promise<SupportingMeta[]>
+  /** 件数取得 */
+  getSupportingMetaCount(clientId: string): Promise<number>
+}
+
+// ============================================================
+// § MfRawDataRepository（MFインポート生データ）— Phase 3.7で追加
+// ============================================================
+
+/** MF生データの共通エンベロープ */
+export interface MfRawDataEnvelope<T = unknown> {
+  /** インポート元のclientId（顧問先ID） */
+  clientId: string
+  /** 顧問先名（表示用） */
+  clientName: string
+  /** パターン識別子（例: 'taxes-proportional', 'accounts-corp-proportional'） */
+  pattern: string
+  /** インポート日時（ISO 8601） */
+  importedAt: string
+  /** 件数 */
+  itemCount: number
+  /** MF生レスポンス */
+  items: T[]
+}
+
+/**
+ * MFインポート生データへのデータアクセス
+ *
+ * 対象データ: data/mf-raw/*.json
+ * 用途: MFから取得した生データの永続化（次回インポート時の差分検知ベースデータ）
+ */
+export type MfRawDataRepository = {
+  /** MF生データを保存 */
+  saveMfRawData<T = unknown>(envelope: MfRawDataEnvelope<T>): Promise<void>
+  /** MF生データを読み込み（前回データ） */
+  loadMfRawData<T = unknown>(pattern: string): Promise<MfRawDataEnvelope<T> | null>
+  /** 全パターンのインポート履歴を取得 */
+  listMfRawPatterns(): Promise<Array<{
+    pattern: string
+    clientId: string
+    clientName: string
+    importedAt: string
+    itemCount: number
+  }>>
+}
+
+// ============================================================
+// § MfTaxAvailableRepository（MF課税方式別available管理）— Phase 3.7で追加
+// ============================================================
+
+/** 課税方式キー */
+export type TaxMethodKey = 'proportional' | 'individual' | 'simplified' | 'exempt'
+
+/** 4方式分のavailableマップ: { 方式キー: { マスタID: boolean } } */
+export type TaxAvailableMap = Record<string, Record<string, boolean>>
+
+/**
+ * MF課税方式別available管理へのデータアクセス
+ *
+ * 対象データ: data/mf-tax-available.json
+ * 用途: MFから取得した4方式分のavailableデータの永続化・参照
+ */
+export type MfTaxAvailableRepository = {
+  /** 全4方式分のavailableデータを取得 */
+  getAllTaxAvailable(): Promise<TaxAvailableMap>
+  /** 特定方式のavailableを取得 */
+  getTaxAvailableForMethod(method: TaxMethodKey): Promise<Record<string, boolean> | null>
+  /** 特定方式のavailableを更新・永続化 */
+  saveTaxAvailable(method: TaxMethodKey, available: Record<string, boolean>): Promise<void>
+  /** キャッシュを無効化して再読み込み */
+  invalidateCache(): Promise<void>
 }
