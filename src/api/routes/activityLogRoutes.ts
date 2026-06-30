@@ -27,7 +27,7 @@ const app = new Hono();
 const ActivityLogSchema = z.object({
   /** ログインスタッフID（例: staff-0000） */
   staffId: z.string().min(1, 'staffIdは必須'),
-  /** 顧問先ID（例: TST-00011） */
+  /** 顧問先ID（例: c_rODnkCDN） */
   clientId: z.string().min(1, 'clientIdは必須'),
   /** ページ種別 */
   page: z.enum(['journal-list', 'drive-select', 'output', 'export', 'export-history']),

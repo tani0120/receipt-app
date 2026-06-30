@@ -335,7 +335,7 @@ function generateJournalEntryId(): string {
  *
  * @param items               - 変換元の LineItem 配列
  * @param sourceType          - 証票種別（SourceType 11種）
- * @param clientId            - 顧問先ID（例: LDI-00008）
+ * @param clientId            - 顧問先ID（例: c_VdAnGFq3）
  * @param isCreditCardPayment - クレカ払いフラグ（receipt の相手勘定・voucher_type 分岐に使用）
  * @param documentId          - 証票ID（crypto.randomUUID()でアップロード時に生成済み。未指定時はnull）
  * @param accountResults      - 科目確定結果の配列（Step4-C辞書接続。items[i]に対応。未指定時は従来ロジック）

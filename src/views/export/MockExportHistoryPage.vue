@@ -106,7 +106,7 @@ const { repos } = useRepositories();
 
 const route = useRoute();
 const router = useRouter();
-const clientId = computed(() => (route.params.clientId as string) ?? 'ABC-00001');
+const clientId = computed(() => (route.params.clientId as string) ?? 'c_I9YZIpVE');
 
 // --- ダウンロード履歴（サーバーAPIから読み込み） ---
 interface HistoryRow {

@@ -68,7 +68,7 @@ export interface AiCommandLog {
 export interface AiCommandContext {
   /** 現在のページパス（Vue Router route.path） */
   pagePath: string | null
-  /** ページパラメータ（route.params。例: { clientId: 'TST-00011' }） */
+  /** ページパラメータ（route.params。例: { clientId: 'c_rODnkCDN' }） */
   pageParams: Record<string, string> | null
   /** ユーザーが選択したテキスト（window.getSelection()） */
   selectedText: string | null

@@ -452,7 +452,7 @@ export interface Vendor {
 
   /** スコープ */
   scope: 'global' | 'client';
-  /** 顧問先ID（scope='client' の場合のみ。例: "LDI-00008"） */
+  /** 顧問先ID（scope='client' の場合のみ。例: "c_VdAnGFq3"） */
   client_id: string | null;
 }
 

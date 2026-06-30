@@ -90,7 +90,7 @@ export interface Journal {
 
   /** 仕訳ID（jrn-00000001形式。接頭辞+連番、一意ID） */
   journalId: string;
-  /** 顧問先ID（例: LDI-00008、接頭辞+連番） */
+  /** 顧問先ID（例: c_wTdnMKDO） */
   client_id: string;
   /** 表示順（MF取込仕訳には存在しない。AI仕訳専用） */
   display_order?: number;

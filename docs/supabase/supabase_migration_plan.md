@@ -613,28 +613,91 @@ ConfirmedJournalRepository → journals テーブル（WHERE source IN ('mf_impo
 - [seed.sql](file:///c:/dev/receipt-app/supabase/seed.sql): 生成済みSQL（10,427行 / 410KB）
 - ON CONFLICT DO NOTHING で冪等性保証
 
-### A-5: clientId発番方式の移行 → ⏸️ Phase Bに延期
+### A-5: clientId発番方式の移行 → ❌ 不要（取り下げ）
 
 > 対応: migration_tasks.md §4-6
 
-- `{3コード}-{連番}` → `gen_random_uuid()`
-- three_codeはUNIQUEカラムとして独立
-- 全リレーションのFK参照先をUUIDに変更
+> [!NOTE]
+> **取り下げ理由（2026-07-01 実データ調査で判明）:**
+>
+> migration_tasks.md §4-6は「clientIdが `ABC-00001` 形式の連番で推測可能」という前提だったが、
+> **実際のコードでは既に `c_` + ランダム8文字（nanoid風）で発番されている。**
+>
+> ```
+> 実データ:
+> c_I9YZIpVE （株式会社ABC商事）
+> c_wTdnMKDO （あああ）
+> c_rODnkCDN （株式会社すぐする）
+> ```
+>
+> - clientId: `c_XXXXXXXX`（ランダム。推測不可能）← **既に安全**
+> - threeCode: `TSK`, `ABC` 等（別カラムで独立済み）
+> - 3コード+5桁連番（`TSK-00001`）: **使われていない。§4-6の想定が間違い**
+>
+> **UUID化の動機5件の検証:**
+> | 懸念 | 実態 |
+> |---|---|
+> | 推測可能 | ❌ 既にランダムID。推測不可能 |
+> | レースコンディション | ❌ サーバー側でnanoid発番済み。フロント発番ではない |
+> | 3コード変更時の不整合 | ❌ clientIdに3コードは含まれない。独立済み |
+> | 3コード重複 | ⚠️ DB側UNIQUE制約は未設定 → **three_code UNIQUE追加のみで解決** |
+> | フロント発番 | ❌ サーバー側発番済み |
+>
+> **結論**: UUID型への変更は不要。必要なのは`three_code UNIQUE`制約の追加のみ（A-3またはPhase Bで対応）。
 
-> [!IMPORTANT]
-> **Phase A段階ではTEXTのまま維持する。理由:**
-> 1. 現在のmock開発ではclient_id=TEXTで全コードが動作中（JSON: `LDI-00008`形式）
-> 2. UUID化はフロント+API+DB全層の同時変更が必要（16ファイルのSQL + 全composable + 全Route）
-> 3. SQL定義だけUUIDにしてもseedや開発時にclient_idの不整合が起きる
-> 4. Phase BでSupabase版Repository作成時にUUID型に一括切替する方が安全
+#### 旧形式clientId残存の修正（2026-07-01）
+
+A-5取り下げに伴い、コード内に残存していた旧形式clientId（`ABC-00001`, `LDI-00008`, `TST-00011`）を
+実際の形式（`c_I9YZIpVE`, `c_VdAnGFq3`, `c_rODnkCDN`）に修正。
+
+**✅ 修正済み（コメント / JSDoc: 10箇所）:**
+
+| ファイル | 修正内容 |
+|---|---|
+| client.types.ts L18 | `{3コード}-{5桁連番}（例: ABC-00001）` → `c_ + ランダム8文字（例: c_I9YZIpVE）` |
+| journal.type.ts L93 | `LDI-00008` → `c_wTdnMKDO` |
+| doc-entry.types.ts L27 | `LDI-00008` → `c_VdAnGFq3` |
+| activity.types.ts L27 | `TST-00011` → `c_rODnkCDN` |
+| ai-command.types.ts L71 | `TST-00011` → `c_rODnkCDN` |
+| vendor.type.ts L455 | `LDI-00008` → `c_VdAnGFq3` |
+| notification.types.ts L28, L42 | `TST-00011` → `c_rODnkCDN`（2箇所） |
+| lineItemToJournalMock.ts L338 | `LDI-00008` → `c_VdAnGFq3` |
+| mfCsvParser.ts L92 | `LDI-00008` → `c_VdAnGFq3` |
+| activityLogRoutes.ts L30 | `TST-00011` → `c_rODnkCDN` |
+
+**✅ 修正済み（フォールバック値 / redirect: 16箇所）:**
+
+| ファイル | 箇所数 | 修正内容 |
+|---|---|---|
+| router/index.ts | 9箇所 | `ABC-00001` → `c_I9YZIpVE` |
+| MockNavBar.vue | 1箇所 | `ABC-00001` → `c_I9YZIpVE` |
+| ScreenS_Settings.vue | 1箇所 | `ABC-00001` → `c_I9YZIpVE` |
+| MockExportPage.vue | 2箇所 | `ABC-00001`/`LDI-00008` → `c_I9YZIpVE`/`c_VdAnGFq3` |
+| MockExportHistoryPage.vue | 1箇所 | `ABC-00001` → `c_I9YZIpVE` |
+| MockExportDetailPage.vue | 1箇所 | `ABC-00001` → `c_I9YZIpVE` |
+| MockLearningPage.vue | 1箇所 | `TST-00011` → `c_rODnkCDN` |
+
+**⏸️ 未修正（廃止予定のため修正しない）:**
+
+| ファイル | 旧形式 | 理由 | 解消時期 |
+|---|---|---|---|
+| learning_rules_TST00011.ts（16箇所） | `TST-00011` | 旧テストシードデータ。Phase E（LearningRule二重管理廃止 DL-051）でファイルごと削除 | Phase E |
+| document_mock_data.ts（1箇所） | `client-001` | モックデータ。Phase D（localStorage廃止）で不要になる | Phase D |
+| accountDetermination.test.ts（2箇所） | `TST-00011` | テスト内ハードコード値。テストのclientIdは任意文字列で動作に影響なし | ─ |
+| matchLearningRule.test.ts（1箇所） | `TST-00011` | 同上 | ─ |
+| learningRuleStore.ts L72（1箇所） | `TST-00011` | 旧Store。Phase BでSupabase版に差し替え時に自然消滅 | Phase B |
+| TestOCRPage.vue（2箇所） | `CL-001` | OCRテスト画面。テスト用値で動作に影響なし | ─ |
+| DocumentDetail.vue（1箇所） | `client-001` | モックデータ。Phase Dで不要 | Phase D |
+| ocr_service_vertex.ts（1箇所） | `CL-001` | デフォルト引数。テスト用値 | ─ |
 
 ### 完了条件
 - ✅ 全テーブルのCREATE + INDEX + RLS が揃う（14テーブル / 12 SQL）
 - ✅ CHECK制約の不一致修正済み（C-1, C-2, C-3）
 - ✅ seedスクリプト完成（5種マスタデータ / 700件超）
+- ❌ A-5 clientId UUID移行: 不要（取り下げ）
+- ✅ 旧形式clientId残存修正（コメント10箇所 + フォールバック16箇所）
 - ⏸️ `supabase db reset` でエラー0件 → Phase B開始時に検証
 - ⏸️ `supabase gen types` → Phase B開始時に検証
-- ⏸️ clientId UUID移行 → Phase Bで実施
 
 ---
 

@@ -20,7 +20,7 @@
         MCPで直接インポート
       </button>
       <router-link
-        :to="'/export-history/' + ($route.params.clientId ?? 'ABC-00001')"
+        :to="'/export-history/' + ($route.params.clientId ?? 'c_I9YZIpVE')"
         class="px-4 py-1 border border-gray-300 rounded text-[10px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 no-underline"
         >ダウンロード履歴</router-link
       >
@@ -343,7 +343,7 @@ const { repos } = useRepositories();
 
 const route = useRoute();
 const { currentStaffId } = useCurrentUser();
-const clientId = computed(() => (route.params.clientId as string) ?? "LDI-00008");
+const clientId = computed(() => (route.params.clientId as string) ?? "c_VdAnGFq3");
 /** MCPモード判定（クエリパラメータ ?mode=mcp） */
 const isMcpMode = computed(() => route.query.mode === 'mcp');
 const { journals } = useJournals(clientId);

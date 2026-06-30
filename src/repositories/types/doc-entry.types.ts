@@ -24,7 +24,7 @@ export type DocStatus = 'pending' | 'target' | 'supporting' | 'excluded' | 'comp
 export interface DocEntry {
   /** UUID（一意識別子） */
   id: string
-  /** 顧問先ID（例: 'LDI-00008'） */
+  /** 顧問先ID（例: 'c_VdAnGFq3'） */
   clientId: string
   /** データソース（'drive' | 'upload'） */
   source: DocSource

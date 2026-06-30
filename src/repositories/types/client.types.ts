@@ -15,7 +15,7 @@ export type ClientStatus = 'active' | 'inactive' | 'suspension'
  * 用途: 顧問先管理、仕訳対象の選択、Drive共有フォルダ管理、進捗管理
  */
 export interface Client {
-  clientId: string;   // 不変。DB primary key。形式: {3コード}-{5桁連番}（例: ABC-00001）
+  clientId: string;   // 不変。DB primary key。形式: c_ + ランダム8文字（例: c_I9YZIpVE）
   threeCode: string;  // 可変。人間用の識別コード。大文字3文字（例: ABC）
   companyName: string;
   companyNameKana: string;

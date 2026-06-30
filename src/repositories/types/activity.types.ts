@@ -24,7 +24,7 @@ export interface ActivityLog {
   id: string
   /** ログインスタッフID（例: staff-0000） */
   staffId: string
-  /** 顧問先ID（URLパラメータから取得。例: TST-00011） */
+  /** 顧問先ID（URLパラメータから取得。例: c_rODnkCDN） */
   clientId: string
   /** ページ種別 */
   page: TrackablePage

@@ -68,7 +68,7 @@ export interface JournalForValidation {
   journalId: string
   voucher_date: string | null
   description: string | null
-  voucher_type: string | null
+  voucher_type?: string | null
   debit_entries: JournalEntryForValidation[]
   credit_entries: JournalEntryForValidation[]
   labels: string[]

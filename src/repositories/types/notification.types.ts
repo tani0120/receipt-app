@@ -25,7 +25,7 @@ export interface AppNotification {
   id: string
   /** 通知種別 */
   type: NotificationType
-  /** 通知タイトル（例: 「TST-00011 移行完了」） */
+  /** 通知タイトル（例: 「c_rODnkCDN 移行完了」） */
   title: string
   /** 通知本文（例: 「5件移行完了。1件失敗。」） */
   body: string
@@ -39,7 +39,7 @@ export interface AppNotification {
   jobId?: string
   /**
    * アクション（任意。通知に紐づく操作）
-   * 例: { label: '仕訳外ZIP DL', url: '/api/drive/download-excluded/TST-00011' }
+   * 例: { label: '仕訳外ZIP DL', url: '/api/drive/download-excluded/c_rODnkCDN' }
    */
   action?: {
     /** アクションボタンのラベル */

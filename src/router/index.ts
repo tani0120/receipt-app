@@ -34,8 +34,8 @@ export const routes: RouteRecordRaw[] = [
   { path: '/data-conversion', redirect: '/old/data-conversion/demo' },
   { path: '/task-dashboard', redirect: '/old/tasks/demo' },
 
-  { path: '/settings', redirect: '/client-settings/ABC-00001' },
-  { path: '/settings/accounts', redirect: '/client-settings/accounts/ABC-00001' },
+  { path: '/settings', redirect: '/client-settings/c_I9YZIpVE' },
+  { path: '/settings/accounts', redirect: '/client-settings/accounts/c_I9YZIpVE' },
   { path: '/journal-list', redirect: '/' },
   // 旧Screen Aは廃止。新構造: /master/clients（一覧）および /settings/:clientId（個別）に統合。
   {
@@ -71,8 +71,8 @@ export const routes: RouteRecordRaw[] = [
 
 
 
-  // 旧パス互換: /old/settings-accounts → /client/settings/accounts/ABC-00001
-  { path: '/old/settings-accounts', redirect: '/client/settings/accounts/ABC-00001' },
+  // 旧パス互換: /old/settings-accounts → /client/settings/accounts/c_I9YZIpVE
+  { path: '/old/settings-accounts', redirect: '/client/settings/accounts/c_I9YZIpVE' },
 
   // --- CSV変換 ---
   {
@@ -179,10 +179,10 @@ export const routes: RouteRecordRaw[] = [
 
   { path: '/client/workbench/:clientId', redirect: (to) => `/workbench/${to.params.clientId}` },
   // --- 旧URL互換リダイレクト ---
-  { path: '/mock/journal-list', redirect: '/journal-list/ABC-00001' },
-  { path: '/mock/drive-select', redirect: '/drive-select/ABC-00001' },
-  { path: '/mock/export', redirect: '/export/ABC-00001' },
-  { path: '/mock/export-history', redirect: '/export-history/ABC-00001' },
+  { path: '/mock/journal-list', redirect: '/journal-list/c_I9YZIpVE' },
+  { path: '/mock/drive-select', redirect: '/drive-select/c_I9YZIpVE' },
+  { path: '/mock/export', redirect: '/export/c_I9YZIpVE' },
+  { path: '/mock/export-history', redirect: '/export-history/c_I9YZIpVE' },
   // --- 顧問先別設定（独立コンポーネント） ---
   {
     path: '/client-settings/accounts/:clientId',
@@ -317,7 +317,7 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/master/MockMasterNonVendorPage.vue')
   },
   // 旧パスリダイレクト
-  { path: '/settings/accounts', redirect: '/client-settings/accounts/ABC-00001' },
+  { path: '/settings/accounts', redirect: '/client-settings/accounts/c_I9YZIpVE' },
   { path: '/master/tax-categories', redirect: '/master/tax' },
   { path: '/accounts/:clientId', redirect: (to) => `/client-settings/accounts/${to.params.clientId}` },
   { path: '/tax/:clientId', redirect: (to) => `/client-settings/tax/${to.params.clientId}` },

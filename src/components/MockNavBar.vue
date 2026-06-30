@@ -238,7 +238,7 @@ const isNavActive = (item: NavItem): boolean => {
 
 const handleNavClick = (item: NavItem): void => {
   if (item.path) {
-    const cid = currentClient.value?.clientId ?? 'ABC-00001';
+    const cid = currentClient.value?.clientId ?? 'c_I9YZIpVE';
     // 全て /xxx/:clientId 形式に統一
     router.push(`${item.path}/${cid}`);
   } else {

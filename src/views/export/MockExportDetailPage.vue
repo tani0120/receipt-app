@@ -96,7 +96,7 @@ import { useRepositories } from '@/composables/useRepositories';
 const { repos } = useRepositories();
 
 const route = useRoute();
-const clientId = computed(() => (route.params.clientId as string) ?? 'ABC-00001');
+const clientId = computed(() => (route.params.clientId as string) ?? 'c_I9YZIpVE');
 const historyId = computed(() => route.params.historyId as string);
 
 // --- カラム定義（journalColumns.tsから集約） ---

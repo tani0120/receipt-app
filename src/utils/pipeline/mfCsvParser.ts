@@ -89,7 +89,7 @@ export interface MfCsvParseResult {
  * MF仕訳帳CSVテキストをJournal[]に変換
  *
  * @param csv_text - CSVファイルの全テキスト（UTF-8）
- * @param client_id - 顧問先ID（例: LDI-00008）
+ * @param client_id - 顧問先ID（例: c_VdAnGFq3）
  * @param import_batch_id - インポートバッチID（UUID。呼び出し元で生成）
  */
 export function parseMfCsv(
@@ -386,8 +386,8 @@ function estimateDirection(
   debit_entries: JournalEntryLine[],
   credit_entries: JournalEntryLine[],
 ): 'expense' | 'income' | 'transfer' {
-  const debit_is_asset = debit_entries.some(e => ASSET_ACCOUNTS.includes(e.account))
-  const credit_is_asset = credit_entries.some(e => ASSET_ACCOUNTS.includes(e.account))
+  const debit_is_asset = debit_entries.some(e => e.account != null && ASSET_ACCOUNTS.includes(e.account))
+  const credit_is_asset = credit_entries.some(e => e.account != null && ASSET_ACCOUNTS.includes(e.account))
 
   if (credit_is_asset && !debit_is_asset) return 'expense'
   if (debit_is_asset && !credit_is_asset) return 'income'

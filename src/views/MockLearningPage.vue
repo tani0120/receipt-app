@@ -304,7 +304,7 @@ import {
 import { UI_MSG } from '@/constants/uiMessages'
 
 const route = useRoute()
-const clientId = computed(() => (route.params.clientId as string) || 'TST-00011')
+const clientId = computed(() => (route.params.clientId as string) || 'c_rODnkCDN')
 
 // --- データ（API経由で取得） ---
 const rules = ref<LearningRule[]>([])
