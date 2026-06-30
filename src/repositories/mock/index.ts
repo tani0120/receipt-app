@@ -38,6 +38,8 @@ import { mockJournalRepo } from './journal.repository.mock'
 import { mockCommentRepo } from './comment.repository.mock'
 import { mockExportHistoryRepo } from './exportHistory.repository.mock'
 import { mockNotificationRepo } from './notification.repository.mock'
+import { mockActivityLogRepo } from './activityLog.repository.mock'
+import { mockConversionLogRepo } from './conversionLog.repository.mock'
 import { UI_MSG } from '@/constants/uiMessages'
 
 /**
@@ -149,5 +151,7 @@ export function createMockRepositories(): Repositories {
     pipeline: mockPipelineRepo,
     exportHistory: mockExportHistoryRepo,
     notification: mockNotificationRepo,
+    activityLog: mockActivityLogRepo,
+    conversionLog: mockConversionLogRepo,
   }
 }

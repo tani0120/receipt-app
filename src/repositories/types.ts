@@ -714,6 +714,10 @@ export type Repositories = {
   exportHistory: ExportHistoryRepository
   /** 通知 */
   notification: NotificationRepository
+  /** 活動ログ（Phase 3.7） */
+  activityLog: ActivityLogRepository
+  /** CSV変換ログ（Phase 3.7） */
+  conversionLog: ConversionLogRepository
 }
 
 // ============================================================
@@ -1085,4 +1089,69 @@ export interface Comment {
   body: string
   /** 日時文字列 */
   date: string
+}
+
+// ============================================================
+// § ActivityLogRepository（活動ログ）— Phase 3.7で追加
+// ============================================================
+
+import type { ActivityLog, StaffActivitySummary, ClientActivitySummary } from './types/activity.types'
+
+/**
+ * 活動ログへのデータアクセス
+ *
+ * 対象データ: data/activity-log.json
+ * 用途: スタッフ別・顧問先別の稼働時間計測・集計
+ */
+export type ActivityLogRepository = {
+  /** ログ1件追加 */
+  addLog(entry: Omit<ActivityLog, 'id'>): Promise<ActivityLog>
+  /** 全件取得 */
+  getAll(): Promise<ActivityLog[]>
+  /** スタッフID指定で取得 */
+  getByStaff(staffId: string): Promise<ActivityLog[]>
+  /** 顧問先ID指定で取得 */
+  getByClient(clientId: string): Promise<ActivityLog[]>
+  /** スタッフ別集計（今月） */
+  summarizeByStaff(): Promise<StaffActivitySummary[]>
+  /** 顧問先別集計（今月） */
+  summarizeByClient(): Promise<ClientActivitySummary[]>
+  /** スタッフ×顧問先クロス集計（今月） */
+  summarizeCross(): Promise<{ staffId: string; clientId: string; totalActiveMs: number }[]>
+}
+
+// ============================================================
+// § ConversionLogRepository（CSV変換ログ）— Phase 3.7で追加
+// ============================================================
+
+/** CSV変換ログ1件の型 */
+export interface ConversionLog {
+  id: string
+  timestamp: string
+  clientName: string
+  sourceSoftware: string
+  targetSoftware: string
+  fileName: string
+  size: number
+  csvPath: string
+  isDownloaded: boolean
+}
+
+/**
+ * CSV変換ログへのデータアクセス
+ *
+ * 対象データ: data/conversion-logs.json + data/conversions/
+ * 用途: CSVファイル変換履歴のCRUD
+ */
+export type ConversionLogRepository = {
+  /** 全ログ取得 */
+  getAllLogs(): Promise<ConversionLog[]>
+  /** 変換ログ+CSVファイルを追加 */
+  addLog(clientName: string, sourceSoftware: string, targetSoftware: string, csvContent: string, fileName: string): Promise<ConversionLog>
+  /** ダウンロード済みマーク */
+  markAsDownloaded(id: string): Promise<boolean>
+  /** ログ削除（CSVファイルも削除） */
+  deleteLog(id: string): Promise<boolean>
+  /** CSVファイルのフルパスを取得 */
+  getCsvFilePath(id: string): Promise<string | null>
 }

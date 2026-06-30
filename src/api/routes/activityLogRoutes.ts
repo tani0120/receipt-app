@@ -14,14 +14,9 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { zodHook } from '../helpers/zodHook';
-import {
-  addLog,
-  getByStaff,
-  getByClient,
-  summarizeByStaff,
-  summarizeByClient,
-  summarizeCross
-} from '../services/activityLogStore';
+import { createMockRepositories } from '../../repositories/mock';
+
+const activityLogRepo = createMockRepositories().activityLog;
 
 const app = new Hono();
 
@@ -54,33 +49,33 @@ const ActivityLogSchema = z.object({
 app.post(
   '/',
   zValidator('json', ActivityLogSchema, zodHook),
-  (c) => {
+  async (c) => {
     const body = c.req.valid('json');
-    const saved = addLog(body);
+    const saved = await activityLogRepo.addLog(body);
     return c.json({ success: true, log: saved }, 201);
   }
 );
 
 /** 全体集計（スタッフ別 + 顧問先別 + クロス） */
-app.get('/summary', (c) => {
+app.get('/summary', async (c) => {
   return c.json({
-    byStaff: summarizeByStaff(),
-    byClient: summarizeByClient(),
-    cross: summarizeCross()
+    byStaff: await activityLogRepo.summarizeByStaff(),
+    byClient: await activityLogRepo.summarizeByClient(),
+    cross: await activityLogRepo.summarizeCross()
   });
 });
 
 /** スタッフ別詳細ログ */
-app.get('/staff/:staffId', (c) => {
+app.get('/staff/:staffId', async (c) => {
   const staffId = c.req.param('staffId');
-  const logs = getByStaff(staffId);
+  const logs = await activityLogRepo.getByStaff(staffId);
   return c.json({ staffId, logs, count: logs.length });
 });
 
 /** 顧問先別詳細ログ */
-app.get('/client/:clientId', (c) => {
+app.get('/client/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
-  const logs = getByClient(clientId);
+  const logs = await activityLogRepo.getByClient(clientId);
   return c.json({ clientId, logs, count: logs.length });
 });
 

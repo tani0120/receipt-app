@@ -76,11 +76,11 @@ export const journalSchema = z.object({
   // ── 基本情報 ──
   journalId: z.string(),
   client_id: z.string(),
-  display_order: z.number(),
+  display_order: z.number().optional(),
   voucher_date: z.string().nullable(),
-  date_on_document: z.boolean(),
+  date_on_document: z.boolean().optional(),
   description: z.string(),
-  voucher_type: z.string().nullable(),
+  voucher_type: z.string().nullable().optional(),
 
   // ── データ経路 ──
   source: journalSourceSchema,

@@ -15,8 +15,11 @@
 import { Hono } from 'hono';
 import { apiError, apiCatchError } from '../helpers/apiError';
 import { 必須, 未検出 } from '../../constants/apiMessages';
-import * as conversionStore from '../services/conversionStore';
+import { createMockRepositories } from '../../repositories/mock';
+import type { ConversionLog } from '../../repositories/types';
 import { readFileSync } from 'fs';
+
+const conversionLogRepo = createMockRepositories().conversionLog;
 
 const app = new Hono();
 
@@ -34,7 +37,7 @@ function formatFileSize(bytes: number): string {
 }
 
 /** 変換ログ → UI用レスポンス形式 */
-function toUiLog(log: conversionStore.ConversionLog) {
+function toUiLog(log: ConversionLog) {
   return {
     id: log.id,
     timestamp: log.timestamp,
@@ -54,9 +57,9 @@ function toUiLog(log: conversionStore.ConversionLog) {
 // GET / — 変換ログ一覧（ソート・集計済み）
 // ============================================================
 
-app.get('/', (c) => {
+app.get('/', async (c) => {
   try {
-    const all = conversionStore.getAllLogs();
+    const all = await conversionLogRepo.getAllLogs();
     const uiData = all.map(toUiLog);
 
     // ソート: 未DLが先、同グループ内は日付新しい順
@@ -142,7 +145,7 @@ app.post('/convert', async (c) => {
     const outputFileName = `${clientName}_${sourceSoftware ?? 'CSV明細'}_変換後${targetSoftware ?? 'MF'}_${today}.csv`;
 
     // ストアに保存
-    const log = conversionStore.addLog(
+    const log = await conversionLogRepo.addLog(
       clientName,
       sourceSoftware ?? 'CSV明細',
       targetSoftware ?? 'MF',
@@ -166,9 +169,9 @@ app.post('/convert', async (c) => {
 // PUT /:id/downloaded — ダウンロード済みマーク
 // ============================================================
 
-app.put('/:id/downloaded', (c) => {
+app.put('/:id/downloaded', async (c) => {
   const id = c.req.param('id');
-  const ok = conversionStore.markAsDownloaded(id);
+  const ok = await conversionLogRepo.markAsDownloaded(id);
   if (!ok) return apiError(c, 404, 未検出('変換ログ'));
   return c.json({ success: true });
 });
@@ -177,14 +180,14 @@ app.put('/:id/downloaded', (c) => {
 // GET /:id/download — 変換後CSVダウンロード
 // ============================================================
 
-app.get('/:id/download', (c) => {
+app.get('/:id/download', async (c) => {
   const id = c.req.param('id');
-  const filePath = conversionStore.getCsvFilePath(id);
+  const filePath = await conversionLogRepo.getCsvFilePath(id);
   if (!filePath) return apiError(c, 404, 未検出('変換ファイル'));
 
   const buffer = readFileSync(filePath);
   // ダウンロード済みマーク
-  conversionStore.markAsDownloaded(id);
+  await conversionLogRepo.markAsDownloaded(id);
 
   return new Response(buffer, {
     headers: {
@@ -198,9 +201,9 @@ app.get('/:id/download', (c) => {
 // DELETE /:id — ログ+CSVファイル削除
 // ============================================================
 
-app.delete('/:id', (c) => {
+app.delete('/:id', async (c) => {
   const id = c.req.param('id');
-  const ok = conversionStore.deleteLog(id);
+  const ok = await conversionLogRepo.deleteLog(id);
   if (!ok) return apiError(c, 404, 未検出('変換ログ'));
   console.log(`[conversion] ログ削除: ${id}`);
   return c.json({ success: true });

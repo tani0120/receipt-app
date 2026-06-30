@@ -92,8 +92,8 @@ export interface Journal {
   journalId: string;
   /** 顧問先ID（例: LDI-00008、接頭辞+連番） */
   client_id: string;
-  /** 表示順 */
-  display_order: number;
+  /** 表示順（MF取込仕訳には存在しない。AI仕訳専用） */
+  display_order?: number;
   /**
    * 取引日（voucher_date）
    *
@@ -109,7 +109,7 @@ export interface Journal {
    * true（項目あり）+ null → DATE_UNKNOWN（日付不明）
    * MF取込仕訳はtrue固定。
    */
-  date_on_document: boolean;
+  date_on_document?: boolean;
   /** 摘要（空文字許容。NOT NULL） */
   description: string;
   /**
@@ -118,7 +118,7 @@ export interface Journal {
    * 現在のUI表示・CSVエクスポートとの後方互換性のため残存。
    * UIでユーザーが手動編集可能なため、JSONに保存を維持（§4.4参照）。
    */
-  voucher_type: string | null;
+  voucher_type?: string | null;
 
   // ── データ経路（source）（§2.1 #1-#2）──
 

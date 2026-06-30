@@ -8,10 +8,9 @@
  * 準拠: mf_sugusru_field_mapping.md §5、§53 §11
  */
 
-import { join } from 'path'
 import { getAccountGroupDirection } from '../../data/master/account-category-rules'
 import { createMockRepositories } from '../../repositories/mock'
-const accountMasterRepo = createMockRepositories().accountMaster
+const { accountMaster: accountMasterRepo, taxMaster: taxMasterRepo } = createMockRepositories()
 import { buildNameMap } from '../../utils/matchByName'
 import {
   mcpFetchAccounts,
@@ -90,7 +89,6 @@ export interface MfMappingTables {
 // スグスルマスタ読み込み
 // ────────────────────────────────────────────
 
-import { readFile } from 'fs/promises'
 
 interface SugusruAccount {
   accountId: string
@@ -117,8 +115,8 @@ async function loadClientAccountsForMapping(clientId: string): Promise<SugusruAc
 }
 
 async function loadSugusruTaxes(): Promise<SugusruTax[]> {
-  const raw = await readFile(join(process.cwd(), 'data/tax-category-master.json'), 'utf8')
-  return JSON.parse(raw)
+  const taxes = await taxMasterRepo.getMaster()
+  return taxes as unknown as SugusruTax[]
 }
 
 // ────────────────────────────────────────────
