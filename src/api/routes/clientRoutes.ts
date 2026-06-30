@@ -21,17 +21,55 @@ import { apiError } from '../helpers/apiError';
 import { 未検出, 必須, コード重複, リソース_顧問先 } from '../../constants/apiMessages';
 import type { ClientStatus } from '../../repositories/types';
 import { createMockRepositories } from '../../repositories/mock';
-import { getClientAccounts, getClientTaxCategories } from '../services/accountMasterApi';
 
-const clientRepo = createMockRepositories().client
+const repos = createMockRepositories()
+const clientRepo = repos.client
+const staffRepo = repos.staff
+const accountMasterRepo = repos.accountMaster
+const taxMasterRepo = repos.taxMaster
 
 const app = new Hono();
 
 // ============================================================
 // POST /list — 顧問先一覧（フィルタ+ソート+ページネーション）
+// staffNameソートが必要な場合はRoute層で結合（Repositoryは単一ドメイン）
 // ============================================================
 app.post('/list', async (c) => {
   const body = await c.req.json();
+  const sorts = body.sorts as { key: string; order: 'asc' | 'desc' }[] | undefined
+  const hasStaffSort = sorts?.some(s => s.key === 'staffId')
+
+  if (hasStaffSort) {
+    // staffNameソート: 全件取得→staffMapで結合ソート→自前ページネーション
+    const allResult = await clientRepo.list({
+      ...body,
+      sorts: sorts!.filter(s => s.key !== 'staffId'), // staffId以外のソートはRepoで
+      page: undefined,
+      pageSize: undefined,
+    })
+    const staffAll = await staffRepo.getAll()
+    const staffMap = new Map(staffAll.map(s => [s.uuid, s.name]))
+
+    // staffNameソート適用
+    const staffSortDef = sorts!.find(s => s.key === 'staffId')!
+    allResult.rows.sort((a, b) => {
+      const sa = (a.staffId ? staffMap.get(a.staffId) : '') ?? ''
+      const sb = (b.staffId ? staffMap.get(b.staffId) : '') ?? ''
+      const cmp = sa.localeCompare(sb, 'ja')
+      return staffSortDef.order === 'asc' ? cmp : -cmp
+    })
+
+    // 自前ページネーション
+    const page = body.page ?? 1
+    const pageSize = body.pageSize ?? 50
+    const totalCount = allResult.rows.length
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+    const start = (page - 1) * pageSize
+    const paged = allResult.rows.slice(start, start + pageSize)
+
+    return c.json({ rows: paged, totalCount, page, pageSize, totalPages })
+  }
+
   const result = await clientRepo.list(body);
   return c.json(result);
 });
@@ -91,8 +129,8 @@ app.post('/', async (c) => {
   body.clientId = await clientRepo.generateClientId();
   const client = await clientRepo.create(body);
   // 勘定科目マスタ・税区分マスタを即時コピー（遅延初期化を廃止）
-  getClientAccounts(client.clientId);
-  getClientTaxCategories(client.clientId);
+  await accountMasterRepo.getClientAccountsFull(client.clientId);
+  await taxMasterRepo.getClient(client.clientId);
   return c.json({ ok: true, client });
 });
 

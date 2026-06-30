@@ -19,8 +19,7 @@ import { join } from 'path';
 import crypto from 'crypto';
 import { migrateLegacyDeterminationMethod } from './migration/migrateLegacyDeterminationMethod';
 import { migrateConceptIdToMasterId } from './migration/migrateConceptIdToMasterId';
-import { createMockRepositories } from '../../repositories/mock'
-const clientRepo = createMockRepositories().client
+import { getById as getClientById } from './clientsApi'
 import type { Journal } from '../../types/journal.type';
 import { journalSchema, journalPatchSchema } from '../../types/journal.schema';
 
@@ -100,7 +99,7 @@ async function loadClient(clientId: string): Promise<Record<string, unknown>[]> 
         save(clientId);
       }
       // 移行: 英語概念ID（cash, consumables等）→ 正規マスタIDに置換
-      const client = await clientRepo.getById(clientId);
+      const client = getClientById(clientId);
       if (migrateConceptIdToMasterId(data, client?.type)) {
         save(clientId);
       }

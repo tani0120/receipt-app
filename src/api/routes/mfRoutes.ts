@@ -35,9 +35,15 @@ import { mapOfficeToClient, mapTermSettingsToClient, type MfMappingResult } from
 import { importMfJournals, commitMfImport } from '../services/mfJournalImporter'
 import { previewTaxImport, applyTaxImport, importClientTaxes } from '../services/mfTaxImportService'
 import { importMasterAccounts } from '../services/mfAccountImportService'
-import { saveMfAccounts, saveClientTaxCategories, getAllAccounts, getAllTaxCategories, getClientAccounts, hasClientAccounts, persistSubAccounts, persistDepartments } from '../services/accountMasterApi'
+import { createMockRepositories } from '../../repositories/mock'
+const repos = createMockRepositories()
+const accountMasterRepo = repos.accountMaster
+const taxMasterRepo = repos.taxMaster
+const clientRepo = repos.client
+const journalRepo = repos.journal
+const confirmedJournalRepo = repos.confirmedJournal
+import type { MfSubAccountEntry, MfDepartmentEntry } from '../../types/shared-sub-account'
 import { clearMappingCache, buildAllMaps } from '../services/mfMappingService'
-import type { MfSubAccountEntry, MfDepartmentEntry } from '../services/accountMasterApi'
 import type { Account } from '../../types/shared-account'
 import { deriveMfAccountGroup, deriveTarget } from '../../data/master/mf-account-category-mapping'
 import { generateMasterId } from '../services/generateMasterId'
@@ -49,11 +55,6 @@ import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
 import { isIndividualType } from '../../constants/clientOptions'
 import { readdirSync, existsSync as fsExists, readFileSync as fsRead } from 'fs'
 import { join as pathJoin } from 'path'
-import { createMockRepositories } from '../../repositories/mock'
-const repos = createMockRepositories()
-const clientRepo = repos.client
-const journalRepo = repos.journal
-const confirmedJournalRepo = repos.confirmedJournal
 
 const app = new Hono()
 
@@ -413,16 +414,16 @@ app.post('/sync-all', async (c) => {
     // 名前照合用: 全社マスタ + 現在の顧問先マスタの名前→科目マップ
     // 全社マスタを先に登録し、顧問先マスタで追加（顧問先の既存IDを優先）
     // → sync-all再実行時に前回生成したIDを継承し、AIの非決定性によるID不一致を防止
-    const masterAccountsList = getAllAccounts()
+    const masterAccountsList = await accountMasterRepo.getMaster()
     const nameToMaster = new Map<string, Account>()
     for (const ma of masterAccountsList) {
       nameToMaster.set(ma.name, ma)
     }
     // 顧問先マスタが保存済みの場合のみ、独自科目の既存IDを継承
     // 初回sync-allでは未保存なのでスキップ（全社マスタクローンの2重登録を防止）
-    const hasExistingClientData = hasClientAccounts(clientId)
+    const hasExistingClientData = await accountMasterRepo.hasClientAccounts(clientId)
     if (hasExistingClientData) {
-      const clientAccountData = getClientAccounts(clientId)
+      const clientAccountData = await accountMasterRepo.getClientAccountsFull(clientId)
       for (const ca of clientAccountData.accounts) {
         if (!nameToMaster.has(ca.name)) {
           nameToMaster.set(ca.name, ca)
@@ -432,7 +433,7 @@ app.post('/sync-all', async (c) => {
 
     // 税区分紐づけ用: MFのtax_id→マスタ税区分IDの二段階変換
     // （B系統 mfAccountImportService.ts L88-110 と同じロジック）
-    const masterTaxesForAccounts = getAllTaxCategories()
+    const masterTaxesForAccounts = await taxMasterRepo.getMaster()
     const taxNameToMasterId = new Map<string, string>()
     for (const t of masterTaxesForAccounts) {
       taxNameToMasterId.set(t.name, t.taxCategoryId)
@@ -448,7 +449,7 @@ app.post('/sync-all', async (c) => {
     // 既存IDセット（重複チェック用）: 全社 + 顧問先（保存済みの場合）両方のIDを含む
     const existingIds = new Set(masterAccountsList.map(a => a.accountId))
     if (hasExistingClientData) {
-      const clientAccounts = getClientAccounts(clientId)
+      const clientAccounts = await accountMasterRepo.getClientAccountsFull(clientId)
       for (const ca of clientAccounts.accounts) {
         existingIds.add(ca.accountId)
       }
@@ -501,12 +502,12 @@ app.post('/sync-all', async (c) => {
         mfFinancialStatementType: a.financial_statement_type,
       })
     }
-    saveMfAccounts(clientId, mapped)
+    await accountMasterRepo.saveMfAccounts(clientId, mapped)
 
     // 5b. 前回の顧問先マスタにあって今回MFにない科目 → hidden=trueで保持
     let hiddenCount = 0
     if (hasExistingClientData) {
-      const prevAccounts = getClientAccounts(clientId).accounts
+      const prevAccounts = (await accountMasterRepo.getClientAccountsFull(clientId)).accounts
       const currentNames = new Set(mapped.map(a => a.name))
       for (const prev of prevAccounts) {
         if (!currentNames.has(prev.name) && !prev.hidden) {
@@ -516,7 +517,7 @@ app.post('/sync-all', async (c) => {
       }
       if (hiddenCount > 0) {
         // hidden行を含めて再保存
-        saveMfAccounts(clientId, mapped)
+        await accountMasterRepo.saveMfAccounts(clientId, mapped)
       }
     }
 
@@ -546,7 +547,7 @@ app.post('/sync-all', async (c) => {
         searchKey: s.search_key,
       }))
     }
-    persistSubAccounts(clientId, subAccountsMap)
+    await accountMasterRepo.persistSubAccounts(clientId, subAccountsMap)
     const subTotal = Object.values(subAccountsMap).reduce((s, arr) => s + arr.length, 0)
     results.push(`✅ 補助科目: ${subTotal}件（${Object.keys(subAccountsMap).length}科目）`)
 
@@ -559,7 +560,7 @@ app.post('/sync-all', async (c) => {
         parentId: d.parent_id,
         searchKey: d.search_key,
       }))
-      persistDepartments(clientId, deptEntries)
+      await accountMasterRepo.persistDepartments(clientId, deptEntries)
       results.push(`✅ 部門: ${deptEntries.length}件`)
     } catch (deptErr) {
       console.warn(`[mfRoutes] sync-all: 部門取得失敗（続行）:`, deptErr instanceof Error ? deptErr.message : deptErr)
@@ -570,7 +571,7 @@ app.post('/sync-all', async (c) => {
     // ===== 2d. 税区分マスタ（名前照合でマスタ属性を引き継ぐ） =====
     const allTaxes = await mcpFetchTaxes(clientId)
     // マスタの全社税区分を名前でインデックス化（MF IDは事業者固有のため名前照合が正しい）
-    const masterTaxList = getAllTaxCategories()
+    const masterTaxList = await taxMasterRepo.getMaster()
     const nameToMasterTax = new Map<string, TaxCategory>()
     for (const mt of masterTaxList) {
       nameToMasterTax.set(mt.name, mt)
@@ -619,7 +620,7 @@ app.post('/sync-all', async (c) => {
         mfTaxId: t.id, // MF事業者固有ID（仕訳送信時に使用）
       }
     })
-    saveClientTaxCategories(clientId, taxMapped)
+    await taxMasterRepo.saveClient(clientId, taxMapped)
     results.push(`✅ 税区分: ${allTaxes.length}件取得 → マスタ照合${matchedTaxCount}件, カスタム${unmatchedTaxCount}件（available=${allTaxes.filter(t => t.available).length}件）`)
 
     // ===== 3. マッピングキャッシュクリア＋再構築（マスタ保存完了 → 仕訳インポート前） =====
@@ -883,14 +884,14 @@ app.post('/import-client-accounts', async (c) => {
     const available = allAccounts.filter((a) => a.available)
 
     // 2. 名前照合マップ構築（全社マスタ + 顧問先マスタ）
-    const masterAccountsList = getAllAccounts()
+    const masterAccountsList = await accountMasterRepo.getMaster()
     const nameToMaster = new Map<string, Account>()
     for (const ma of masterAccountsList) {
       nameToMaster.set(ma.name, ma)
     }
-    const hasExisting = hasClientAccounts(clientId)
+    const hasExisting = await accountMasterRepo.hasClientAccounts(clientId)
     if (hasExisting) {
-      const clientData = getClientAccounts(clientId)
+      const clientData = await accountMasterRepo.getClientAccountsFull(clientId)
       for (const ca of clientData.accounts) {
         if (!nameToMaster.has(ca.name)) {
           nameToMaster.set(ca.name, ca)
@@ -899,7 +900,7 @@ app.post('/import-client-accounts', async (c) => {
     }
 
     // 3. 税区分紐づけ（二段階変換）
-    const masterTaxes = getAllTaxCategories()
+    const masterTaxes = await taxMasterRepo.getMaster()
     const taxNameToId = new Map<string, string>()
     for (const t of masterTaxes) {
       taxNameToId.set(t.name, t.taxCategoryId)
@@ -915,7 +916,7 @@ app.post('/import-client-accounts', async (c) => {
     const unmatchedNames: string[] = []
     const existingIds = new Set(masterAccountsList.map(a => a.accountId))
     if (hasExisting) {
-      const clientAccounts = getClientAccounts(clientId)
+      const clientAccounts = await accountMasterRepo.getClientAccountsFull(clientId)
       for (const ca of clientAccounts.accounts) {
         existingIds.add(ca.accountId)
       }
@@ -965,7 +966,7 @@ app.post('/import-client-accounts', async (c) => {
     }
 
     // 5. 科目保存
-    saveMfAccounts(clientId, mapped)
+    await accountMasterRepo.saveMfAccounts(clientId, mapped)
 
     // 6. 補助科目（科目データからsub_accounts抽出）
     const subAccountsMap: Record<string, MfSubAccountEntry[]> = {}
@@ -981,7 +982,7 @@ app.post('/import-client-accounts', async (c) => {
         searchKey: s.search_key,
       }))
     }
-    persistSubAccounts(clientId, subAccountsMap)
+    await accountMasterRepo.persistSubAccounts(clientId, subAccountsMap)
     const subTotal = Object.values(subAccountsMap).reduce((s, arr) => s + arr.length, 0)
 
     // 7. 部門（MCPから独立取得）
@@ -994,14 +995,14 @@ app.post('/import-client-accounts', async (c) => {
         parentId: d.parent_id,
         searchKey: d.search_key,
       }))
-      persistDepartments(clientId, deptEntries)
+      await accountMasterRepo.persistDepartments(clientId, deptEntries)
       deptCount = deptEntries.length
     } catch (deptErr) {
       console.warn(`[mfRoutes] import-client-accounts: 部門取得失敗（続行）:`, deptErr instanceof Error ? deptErr.message : deptErr)
     }
 
     // 8. 税区分（名前照合でマスタ属性を引き継ぐ）
-    const masterTaxList = getAllTaxCategories()
+    const masterTaxList = await taxMasterRepo.getMaster()
     const nameToMasterTax = new Map<string, TaxCategory>()
     for (const mt of masterTaxList) {
       nameToMasterTax.set(mt.name, mt)
@@ -1045,7 +1046,7 @@ app.post('/import-client-accounts', async (c) => {
         mfTaxId: t.id,
       }
     })
-    saveClientTaxCategories(clientId, taxMapped)
+    await taxMasterRepo.saveClient(clientId, taxMapped)
 
     const matchedCount = available.length - unmatchedNames.length
     return c.json({
@@ -1105,9 +1106,9 @@ app.post('/import-journals', async (c) => {
 
     // 1a. 科目
     const allAccounts = await mcpFetchAccounts(clientId)
-    const existingAccounts = hasClientAccounts(clientId)
-      ? getClientAccounts(clientId).accounts
-      : getAllAccounts()
+    const existingAccounts = await accountMasterRepo.hasClientAccounts(clientId)
+      ? (await accountMasterRepo.getClientAccountsFull(clientId)).accounts
+      : await accountMasterRepo.getMaster()
     const existingByName = new Map(existingAccounts.map(a => [a.name, a]))
 
     const suffix = await (async () => {
@@ -1144,12 +1145,12 @@ app.post('/import-journals', async (c) => {
       const mf = allAccounts.find(m => m.name === a.name)
       return mf?.available !== false
     })
-    saveMfAccounts(clientId, available)
+    await accountMasterRepo.saveMfAccounts(clientId, available)
     results.push(`✅ 科目: ${available.length}件保存`)
 
     // 1b. 税区分
     const mfTaxes = await mcpFetchTaxes(clientId)
-    const existingTaxes = getAllTaxCategories()
+    const existingTaxes = await taxMasterRepo.getMaster()
     const existingTaxByName = new Map(existingTaxes.map(t => [t.name, t]))
     const existingTaxIds = new Set(existingTaxes.map(t => t.taxCategoryId))
 
@@ -1181,7 +1182,7 @@ app.post('/import-journals', async (c) => {
         mfTaxId: t.id,
       }
     })
-    saveClientTaxCategories(clientId, taxMapped)
+    await taxMasterRepo.saveClient(clientId, taxMapped)
     results.push(`✅ 税区分: ${mfTaxes.length}件保存`)
 
     // ===== 2. マッピングキャッシュクリア＋再構築 =====
@@ -1293,7 +1294,7 @@ app.post('/normalize-journals', async (c) => {
 
   // 全社マスタ + 顧問先MFデータから名前→IDマップ構築
   const accountNameToId = new Map<string, string>()
-  const allAccountsMaster = getAllAccounts()
+  const allAccountsMaster = await accountMasterRepo.getMaster()
   for (const a of allAccountsMaster) {
     accountNameToId.set(a.name, a.accountId)
   }
@@ -1317,7 +1318,7 @@ app.post('/normalize-journals', async (c) => {
 
   // 税区分マスタから名前→IDマップ構築
   const taxNameToId = new Map<string, string>()
-  const allTaxesMaster = getAllTaxCategories()
+  const allTaxesMaster = await taxMasterRepo.getMaster()
   for (const t of allTaxesMaster) {
     taxNameToId.set(t.name, t.taxCategoryId)
   }

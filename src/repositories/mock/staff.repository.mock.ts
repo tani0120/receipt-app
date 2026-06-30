@@ -4,6 +4,10 @@
  * 【依存方向】
  * StaffRepository → staffsApi（正しい方向）
  *
+ * 【list()のフィルタ・ソート・ページネーション】
+ * staffListService.tsから統合（2026-06-30 循環参照解消）
+ * Supabase移行時: SELECT ... WHERE ... ORDER BY ... LIMIT に差し替え
+ *
  * 準拠: DL-030, DL-042
  */
 
@@ -15,7 +19,6 @@ import {
   create,
   update,
 } from '../../api/services/staffsApi'
-import { getStaffList } from '../../api/services/staffListService'
 import type { StaffRepository, Staff } from '../types'
 
 export const mockStaffRepo: StaffRepository = {
@@ -25,10 +28,44 @@ export const mockStaffRepo: StaffRepository = {
   getActiveStaff: async () => getActiveStaff(),
   create: async (staff) => create(staff),
   update: async (uuid, partial) => { update(uuid, partial) },
+
+  /**
+   * フィルタ+ソート+ページネーション付き一覧取得
+   * staffListService.tsから統合（2026-06-30）
+   * Supabase移行時: SELECT ... WHERE status = ? ORDER BY ... LIMIT に差し替え
+   */
   list: async (query) => {
-    const result = await getStaffList(query)
-    return { rows: result.rows, totalCount: result.totalCount, totalPages: result.totalPages }
+    // 1. 全件取得
+    let rows = [...getAll()]
+
+    // 2. ステータスフィルタ
+    const statusFilter = query.statusFilter ?? 'active'
+    if (statusFilter !== 'all') {
+      rows = rows.filter(r => r.status === statusFilter)
+    }
+
+    // 3. ソート
+    const sortKey = (query.sortKey ?? 'uuid') as keyof Staff
+    const sortOrder = query.sortOrder ?? 'asc'
+    rows.sort((a, b) => {
+      const va = String(a[sortKey] ?? '')
+      const vb = String(b[sortKey] ?? '')
+      if (va < vb) return sortOrder === 'asc' ? -1 : 1
+      if (va > vb) return sortOrder === 'asc' ? 1 : -1
+      return 0
+    })
+
+    // 4. ページネーション
+    const totalCount = rows.length
+    const page = query.page ?? 1
+    const pageSize = query.pageSize ?? 20
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+    const start = (page - 1) * pageSize
+    const paged = rows.slice(start, start + pageSize)
+
+    return { rows: paged, totalCount, totalPages }
   },
+
   bulkCreate: async (items) => {
     const results: { index: number; ok: boolean; uuid?: string; error?: string }[] = []
     for (let i = 0; i < items.length; i++) {

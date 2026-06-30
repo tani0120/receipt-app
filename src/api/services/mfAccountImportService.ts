@@ -19,10 +19,13 @@
  */
 
 import { mcpFetchAccounts } from './mfMcpClient'
-import { getAllAccounts, saveAllAccounts, getAllTaxCategories, enrichAccountRow, loadTaxCategories } from './accountMasterApi'
+import { enrichAccountRow } from '../../shared/enrichAccount'
 import { saveMfRawData } from './mfRawDataStore'
 import { createMockRepositories } from '../../repositories/mock'
-const clientRepo = createMockRepositories().client
+const repos = createMockRepositories()
+const clientRepo = repos.client
+const accountMasterRepo = repos.accountMaster
+const taxMasterRepo = repos.taxMaster
 import { generateMasterId } from './generateMasterId'
 import { isIndividualType } from '../../constants/clientOptions'
 import {
@@ -91,7 +94,7 @@ export async function importMasterAccounts(
   // 2. 税区分マスタ読み込み + MFから税区分取得して名前照合
   //    MFのtax_idは事業者固有IDなので直接照合不可。
   //    MFの税区分リストから「tax_id→名前」を取得し、「名前→マスタID」で変換する。
-  const taxCategories = getAllTaxCategories()
+  const taxCategories = await taxMasterRepo.getMaster()
   const taxNameToMasterId = new Map<string, string>()
   // 簡易課税の種別付き税区分（一種～六種）→ 基本形への正規化マップ
   // 例: SALES_TAXABLE_10_T3（三種）→ SALES_TAXABLE_10（基本形）
@@ -122,7 +125,7 @@ export async function importMasterAccounts(
 
   // 3. マスタのディープコピーを作成（元データ非破壊）
   //    顧問先の事業形態（法人/個人）でフィルタし、同名科目の誤マッチを防止
-  const masterItems: Account[] = JSON.parse(JSON.stringify(getAllAccounts()))
+  const masterItems: Account[] = JSON.parse(JSON.stringify(await accountMasterRepo.getMaster()))
   const client = await clientRepo.getById(clientId)
   const clientType = isIndividualType(client?.type) ? 'individual' : 'corp'
   const nameToRow = new Map<string, Account>()
@@ -209,7 +212,7 @@ export async function importMasterAccounts(
   }
 
   // 6. マスタを保存
-  saveAllAccounts(masterItems)
+  await accountMasterRepo.saveMaster(masterItems)
 
   // 7. MF生データを保存
   saveMfRawData({
@@ -243,13 +246,14 @@ export async function importMasterAccounts(
 
   console.log(`[mfAccountImportService] マスタインポート完了: clientId=${clientId}, ${summaryParts || '差分なし'}`)
 
+  const latestTaxes = await taxMasterRepo.getMaster()
   return {
     success: true,
     mfCount: mfAccounts.length,
     diff,
     summary: summaryParts || '差分なし',
     reportLines,
-    updatedAccounts: masterItems.map(row => enrichAccountRow(row, loadTaxCategories())),
+    updatedAccounts: masterItems.map(row => enrichAccountRow(row, latestTaxes)),
     hasDiff,
   }
 }

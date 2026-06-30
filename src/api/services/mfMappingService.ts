@@ -10,7 +10,8 @@
 
 import { join } from 'path'
 import { getAccountGroupDirection } from '../../data/master/account-category-rules'
-import { getClientAccounts } from './accountMasterApi'
+import { createMockRepositories } from '../../repositories/mock'
+const accountMasterRepo = createMockRepositories().accountMaster
 import { buildNameMap } from '../../utils/matchByName'
 import {
   mcpFetchAccounts,
@@ -110,8 +111,8 @@ interface SugusruTax {
  * 顧問先別の科目データを取得（マスタ+Override合成結果）
  * §53 §11: loadSugusruAccounts() → clientId対応（スグスルマスタ取得）
  */
-function loadClientAccountsForMapping(clientId: string): SugusruAccount[] {
-  const data = getClientAccounts(clientId)
+async function loadClientAccountsForMapping(clientId: string): Promise<SugusruAccount[]> {
+  const data = await accountMasterRepo.getClientAccountsFull(clientId)
   return data.accounts
 }
 
@@ -145,7 +146,7 @@ export async function buildAccountMap(tokenKey: string): Promise<{
   map: Map<string, string>
   details: AccountMapping[]
 }> {
-  const sugusruAccounts = loadClientAccountsForMapping(tokenKey)
+  const sugusruAccounts = await loadClientAccountsForMapping(tokenKey)
   const mfAccounts = await mcpFetchAccounts(tokenKey)
 
   // MF科目を名前→オブジェクトのマップに変換（available=trueのみ）
@@ -293,7 +294,7 @@ export async function buildAllMaps(tokenKey: string, forceRefresh = false): Prom
   const unmatchedTaxes = taxResult.details.filter(d => d.mfId === null)
 
   // 科目方向マップ生成（accountGroupから直接判定。データ駆動）
-  const sugusruAccounts = loadClientAccountsForMapping(tokenKey)
+  const sugusruAccounts = await loadClientAccountsForMapping(tokenKey)
   const accountDirectionMap = new Map<string, 'sales' | 'purchase' | 'common'>()
   for (const acct of sugusruAccounts) {
     accountDirectionMap.set(acct.accountId, getAccountGroupDirection(acct.accountGroup ?? ''))

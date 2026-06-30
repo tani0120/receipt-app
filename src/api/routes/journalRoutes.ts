@@ -17,7 +17,6 @@ import { apiError } from '../helpers/apiError';
 import { 配列必須 } from '../../constants/apiMessages';
 import type { Journal } from '../../types/journal.type';
 import { createMockRepositories } from '../../repositories/mock';
-const journalRepo = createMockRepositories().journal;
 import {
   validateJournal,
   type JournalForValidation,
@@ -34,13 +33,11 @@ import {
   type JournalForMatching,
 } from '../services/journalSupportingService';
 import { searchSupporting } from '../services/migration/supportingSearchService';
-import {
-  getClientAccountsForValidation,
-  getClientTaxCategoriesForValidation,
-  getClientTaxCategories,
-  getAccountNameMap,
-  getTaxCategoryNameMap,
-} from '../services/accountMasterApi';
+const repos = createMockRepositories();
+const journalRepo = repos.journal;
+const accountMasterRepo = repos.accountMaster;
+const taxMasterRepo = repos.taxMaster;
+const documentRepo = repos.document;
 
 const app = new Hono();
 
@@ -131,8 +128,8 @@ app.post('/:clientId/list', async (c) => {
     page: body.page,
     pageSize: body.pageSize,
     // Phase 2: フロントからのマップがなければサーバー側マスタから自動生成
-    accountMap: body.accountMap ?? getAccountNameMap(),
-    taxMap: body.taxMap ?? getTaxCategoryNameMap(),
+    accountMap: body.accountMap ?? await accountMasterRepo.getAccountNameMap(),
+    taxMap: body.taxMap ?? await taxMasterRepo.getNameMap(),
   };
 
   const result = await getJournalList(clientId, query);
@@ -203,8 +200,8 @@ app.post('/:clientId/:journalId/validate', async (c) => {
   const journalId = c.req.param('journalId');
 
   // 顧問先別の科目・税区分を取得（データ駆動）
-  const accounts = getClientAccountsForValidation(clientId);
-  const taxCategories = getClientTaxCategoriesForValidation(clientId);
+  const accounts = await accountMasterRepo.getClientAccountsForValidation(clientId);
+  const taxCategories = await taxMasterRepo.getClientTaxCategoriesForValidation(clientId);
 
   // Repository経由で仕訳データ取得
   const journals = await journalRepo.list(clientId) as unknown as JournalForValidation[];
@@ -226,8 +223,8 @@ app.post('/:clientId/validate-all', async (c) => {
   const clientId = c.req.param('clientId');
 
   // 顧問先別の科目・税区分を取得（データ駆動）
-  const accounts = getClientAccountsForValidation(clientId);
-  const taxCategories = getClientTaxCategoriesForValidation(clientId);
+  const accounts = await accountMasterRepo.getClientAccountsForValidation(clientId);
+  const taxCategories = await taxMasterRepo.getClientTaxCategoriesForValidation(clientId);
 
   const journals = await journalRepo.list(clientId) as unknown as JournalForValidation[];
   const results = journals.map(journal =>
@@ -248,8 +245,9 @@ app.post('/:clientId/:journalId/hints', async (c) => {
   const journalId = c.req.param('journalId');
 
   // 顧問先別の科目・税区分を取得（データ駆動）
-  const accounts = getClientAccountsForValidation(clientId);
-  const taxCategories = getClientTaxCategories(clientId);
+  const accounts = await accountMasterRepo.getClientAccountsForValidation(clientId);
+  const taxCategoriesData = await taxMasterRepo.getClient(clientId);
+  const taxCategories = taxCategoriesData.taxCategories;
 
   // Repository経由で仕訳データ取得
   const journals = await journalRepo.list(clientId) as unknown as JournalForHint[];
@@ -309,12 +307,11 @@ app.post('/:clientId/generate', async (c) => {
   }
 
   // 動的importで循環参照を回避
-  const { getDocuments } = await import('../services/documentsApi');
   const { lineItemToJournalMock } = await import('../../utils/lineItemToJournalMock');
-  const { getClientAccounts } = await import('../services/accountMasterApi');
 
-  const allDocs = getDocuments(clientId);
-  const accountMaster = getClientAccounts(clientId).accounts.map(a => ({
+  const allDocs = await documentRepo.getByClientId(clientId);
+  const accountData = await accountMasterRepo.getClientAccountsFull(clientId);
+  const accountMaster = accountData.accounts.map(a => ({
     accountId: a.accountId,
     defaultTaxCategoryId: a.defaultTaxCategoryId,
   }));

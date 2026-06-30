@@ -242,10 +242,62 @@ export function countByStatus(clientId: string): Record<string, number> {
  * @param fileHash - SHA-256ハッシュ（processOneJobで計算済み）
  * @returns 更新成功したか
  */
-export function updateAiResults(
-  driveFileId: string,
+/**
+ * FirstAiResponse → DocEntryフィールドへの変換関数
+ *
+ * この関数はService/Worker層で呼び出す。
+ * Repositoryは変換済みのPartial<DocEntry>を受け取るだけ。
+ */
+export function convertFirstAiToDocFields(
   result: FirstAiResponse,
   fileHash: string,
+): Partial<DocEntry> {
+  return {
+    fileHash,
+    // AI分類結果
+    aiDate: result.date ?? null,
+    aiAmount: result.total_amount ?? null,
+    aiVendor: result.issuer_name ?? null,
+    aiSourceType: result.source_type ?? null,
+    aiDirection: result.direction ?? null,
+    aiDescription: result.description ?? null,
+    aiFirstAiReason: result.first_ai_reason ?? null,
+    aiLineItems: result.line_items.length > 0 ? result.line_items : null,
+    aiLineItemsCount: result.line_items.length,
+    aiSupplementary: result.validation.supplementary,
+    aiDocumentCount: result.document_count,
+    aiDocumentCountReason: result.document_count_reason ?? null,
+    aiWarning: result.validation.warning ?? null,
+    aiValidationIsDuplicate: result.validation.isDuplicate ?? false,
+    aiIsCreditCardPayment: result.is_credit_card_payment ?? false,
+    aiProcessingMode: result.processing_mode ?? null,
+    aiFallbackApplied: result.fallback_applied,
+    // メトリクス
+    aiMetrics: {
+      source_type_confidence: result.source_type_confidence,
+      direction_confidence: result.direction_confidence,
+      duration_ms: result.metadata.duration_ms,
+      prompt_tokens: result.metadata.prompt_tokens,
+      completion_tokens: result.metadata.completion_tokens,
+      thinking_tokens: result.metadata.thinking_tokens,
+      token_count: result.metadata.token_count,
+      cost_yen: result.metadata.cost_yen,
+      model: result.metadata.model,
+      original_size_kb: result.metadata.original_size_kb,
+      processed_size_kb: result.metadata.processed_size_kb,
+      preprocess_reduction_pct: result.metadata.preprocess_reduction_pct,
+    },
+  } as Partial<DocEntry>
+}
+
+/**
+ * AI解析結果を更新（Repositoryから呼ばれる）
+ *
+ * 変換済みのPartial<DocEntry>を受け取り、ドキュメントに適用して保存する。
+ */
+export function updateAiResults(
+  driveFileId: string,
+  fields: Partial<DocEntry>,
 ): boolean {
   const doc = documents.find(d => d.driveFileId === driveFileId);
   if (!doc) {
@@ -253,49 +305,13 @@ export function updateAiResults(
     return false;
   }
 
-  // ファイルハッシュ
-  doc.fileHash = fileHash;
-
-  // AI分類結果
-  doc.aiDate = result.date ?? null;
-  doc.aiAmount = result.total_amount ?? null;
-  doc.aiVendor = result.issuer_name ?? null;
-  doc.aiSourceType = result.source_type ?? null;
-  doc.aiDirection = result.direction ?? null;
-  doc.aiDescription = result.description ?? null;
-  doc.aiFirstAiReason = result.first_ai_reason ?? null;
-  doc.aiLineItems = result.line_items.length > 0 ? result.line_items : null;
-  doc.aiLineItemsCount = result.line_items.length;
-  doc.aiSupplementary = result.validation.supplementary;
-  doc.aiDocumentCount = result.document_count;
-  doc.aiDocumentCountReason = result.document_count_reason ?? null; // #5修正: 枚数判定根拠を転写
-  doc.aiWarning = result.validation.warning ?? null;
-  doc.aiValidationIsDuplicate = result.validation.isDuplicate ?? false; // #6修正: 重複検出結果を転写
-  doc.aiIsCreditCardPayment = result.is_credit_card_payment ?? false;
-  doc.aiProcessingMode = result.processing_mode ?? null;
-  doc.aiFallbackApplied = result.fallback_applied;
-
-  // メトリクス
-  doc.aiMetrics = {
-    source_type_confidence: result.source_type_confidence,
-    direction_confidence: result.direction_confidence,
-    duration_ms: result.metadata.duration_ms,
-    prompt_tokens: result.metadata.prompt_tokens,
-    completion_tokens: result.metadata.completion_tokens,
-    thinking_tokens: result.metadata.thinking_tokens,
-    token_count: result.metadata.token_count,
-    cost_yen: result.metadata.cost_yen,
-    model: result.metadata.model,
-    original_size_kb: result.metadata.original_size_kb,
-    processed_size_kb: result.metadata.processed_size_kb,
-    preprocess_reduction_pct: result.metadata.preprocess_reduction_pct,
-  };
+  // 変換済みフィールドをドキュメントに適用
+  Object.assign(doc, fields);
 
   save();
   console.log(
     `[documentsApi] AI分類結果書き込み: ${driveFileId}`
-    + ` → ${result.source_type} (${result.source_type_confidence})`
-    + ` ${result.line_items.length}行`,
+    + ` → ${fields.aiSourceType ?? '不明'}`,
   );
   return true;
 }

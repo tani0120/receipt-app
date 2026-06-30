@@ -20,19 +20,54 @@ import { apiError } from '../helpers/apiError';
 import { 未検出, 必須, コード重複, リソース_見込先 } from '../../constants/apiMessages';
 import type { LeadStatus, Lead, Client } from '../../repositories/types';
 import { createMockRepositories } from '../../repositories/mock'
-import { getClientAccounts, getClientTaxCategories } from '../services/accountMasterApi';
 
 const repos = createMockRepositories()
 const leadRepo = repos.lead
+const staffRepo = repos.staff
 const clientRepo = repos.client
+const accountMasterRepo = repos.accountMaster
+const taxMasterRepo = repos.taxMaster
 
 const app = new Hono();
 
 // ============================================================
 // POST /list — 見込先一覧（フィルタ+ソート+ページネーション）
+// staffNameソートが必要な場合はRoute層で結合（Repositoryは単一ドメイン）
 // ============================================================
 app.post('/list', async (c) => {
   const body = await c.req.json();
+  const sorts = body.sorts as { key: string; order: 'asc' | 'desc' }[] | undefined
+  const hasStaffSort = sorts?.some(s => s.key === 'staffId')
+
+  if (hasStaffSort) {
+    // staffNameソート: 全件取得→staffMapで結合ソート→自前ページネーション
+    const allResult = await leadRepo.list({
+      ...body,
+      sorts: sorts!.filter(s => s.key !== 'staffId'),
+      page: undefined,
+      pageSize: undefined,
+    })
+    const staffAll = await staffRepo.getAll()
+    const staffMap = new Map(staffAll.map(s => [s.uuid, s.name]))
+
+    const staffSortDef = sorts!.find(s => s.key === 'staffId')!
+    allResult.rows.sort((a, b) => {
+      const sa = (a.staffId ? staffMap.get(a.staffId) : '') ?? ''
+      const sb = (b.staffId ? staffMap.get(b.staffId) : '') ?? ''
+      const cmp = sa.localeCompare(sb, 'ja')
+      return staffSortDef.order === 'asc' ? cmp : -cmp
+    })
+
+    const page = body.page ?? 1
+    const pageSize = body.pageSize ?? 50
+    const totalCount = allResult.rows.length
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+    const start = (page - 1) * pageSize
+    const paged = allResult.rows.slice(start, start + pageSize)
+
+    return c.json({ rows: paged, totalCount, page, pageSize, totalPages })
+  }
+
   const result = await leadRepo.list(body);
   return c.json(result);
 });
@@ -216,8 +251,8 @@ app.post('/:leadId/convert', async (c) => {
   const saved = await clientRepo.create(clientData);
 
   // 勘定科目マスタ・税区分マスタを即時コピー
-  getClientAccounts(saved.clientId);
-  getClientTaxCategories(saved.clientId);
+  await accountMasterRepo.getClientAccountsFull(saved.clientId);
+  await taxMasterRepo.getClient(saved.clientId);
 
   // 元見込先のstatusを'converted'に変更
   await leadRepo.update(leadId, { status: 'converted' });

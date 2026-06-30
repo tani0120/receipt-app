@@ -21,7 +21,8 @@ import type { Journal as _Journal } from '../../types/journal.type'
 const repos = createMockRepositories()
 const journalRepo = repos.journal
 const exportHistoryRepo = repos.exportHistory
-import { getClientAccounts, getClientTaxCategories } from './accountMasterApi'
+const accountMasterRepo = repos.accountMaster
+const taxMasterRepo = repos.taxMaster
 
 // ━━━ 除外ラベル定義（exportMfCsv.ts と同一） ━━━
 const EXCLUDE_LABELS = [
@@ -89,8 +90,8 @@ export interface ExportListResult {
 
 // ━━━ 名前解決ヘルパー ━━━
 
-function buildAccountNameResolver(clientId: string): (id: string | null | undefined) => string {
-  const data = getClientAccounts(clientId)
+async function buildAccountNameResolver(clientId: string): Promise<(id: string | null | undefined) => string> {
+  const data = await accountMasterRepo.getClientAccountsFull(clientId)
   const map = new Map<string, string>()
   for (const a of data.accounts) {
     map.set(a.accountId, a.name)
@@ -101,8 +102,9 @@ function buildAccountNameResolver(clientId: string): (id: string | null | undefi
   }
 }
 
-function buildTaxNameResolver(clientId: string): (id: string | null | undefined) => string {
-  const cats = getClientTaxCategories(clientId)
+async function buildTaxNameResolver(clientId: string): Promise<(id: string | null | undefined) => string> {
+  const catsData = await taxMasterRepo.getClient(clientId)
+  const cats = catsData.taxCategories
   const map = new Map<string, string>()
   for (const t of cats) {
     map.set(t.taxCategoryId, t.name)
@@ -139,8 +141,8 @@ export async function getExportList(query: ExportListQuery): Promise<ExportListR
     pageSize = 25,
   } = query
 
-  const resolveAccount = buildAccountNameResolver(clientId)
-  const resolveTax = buildTaxNameResolver(clientId)
+  const resolveAccount = await buildAccountNameResolver(clientId)
+  const resolveTax = await buildTaxNameResolver(clientId)
 
   // 1. 仕訳取得（Repository経由）
   const journals = await journalRepo.list(clientId)
@@ -232,7 +234,7 @@ export async function getExportList(query: ExportListQuery): Promise<ExportListR
   const rows = sorted.slice(start, start + pageSize)
 
   // 8. 科目名リスト（フィルタセレクトボックス用）
-  const clientAccounts = getClientAccounts(clientId)
+  const clientAccounts = await accountMasterRepo.getClientAccountsFull(clientId)
   const accountNames = [...new Set(
     clientAccounts.accounts.filter(a => !a.hidden).map(a => a.name)
   )]
@@ -309,8 +311,8 @@ export async function getExportDetail(query: ExportDetailQuery): Promise<ExportD
     pageSize = 25,
   } = query
 
-  const resolveAccount = buildAccountNameResolver(clientId)
-  const resolveTax = buildTaxNameResolver(clientId)
+  const resolveAccount = await buildAccountNameResolver(clientId)
+  const resolveTax = await buildTaxNameResolver(clientId)
 
   // 仕訳取得（Repository経由）
   const journals = await journalRepo.list(clientId)

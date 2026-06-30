@@ -19,11 +19,12 @@
  */
 
 import { mcpFetchTaxes, mcpFetchTermSettings, type MfMcpTax } from './mfMcpClient'
-import { getAllTaxCategories, saveAllTaxCategories } from './accountMasterApi'
+import { createMockRepositories } from '../../repositories/mock'
 import { getAllTaxAvailable, saveTaxAvailable, type TaxMethodKey } from './mfTaxAvailableStore'
 import { saveMfRawData } from './mfRawDataStore'
-import { createMockRepositories } from '../../repositories/mock'
-const clientRepo = createMockRepositories().client
+const repos = createMockRepositories()
+const clientRepo = repos.client
+const taxMasterRepo = repos.taxMaster
 import { guessDirectionFromName, guessQualifiedFromName } from '../../types/shared-tax-category'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import { generateTaxMasterId, ensureUniqueTaxId } from './taxIdGenerator'
@@ -140,7 +141,7 @@ async function detectDiff(clientId: string, _dryRun: boolean = false): Promise<D
   const mfTaxes: MfMcpTax[] = await mcpFetchTaxes(clientId)
 
   // 3. サーバーのマスタデータから照合用Mapを構築（★フロント状態に依存しない）
-  const masterItems: TaxCategory[] = JSON.parse(JSON.stringify(getAllTaxCategories()))
+  const masterItems: TaxCategory[] = JSON.parse(JSON.stringify(await taxMasterRepo.getMaster()))
   const nameToRow = buildNameMap(masterItems, row => row.name)
   const mfNameSet = new Set(mfTaxes.map(t => t.name))
 
@@ -345,7 +346,7 @@ export async function applyTaxImport(clientId: string): Promise<TaxImportApplyRe
   }
 
   // --- マスタを保存 ---
-  saveAllTaxCategories(masterItems)
+  await taxMasterRepo.saveMaster(masterItems)
 
   // --- MF生データを保存 ---
   const client = await clientRepo.getById(clientId)
@@ -415,8 +416,6 @@ export interface ClientTaxImportResult {
  * 6. available（利用可否）データを更新
  */
 export async function importClientTaxes(clientId: string): Promise<ClientTaxImportResult> {
-  const { saveClientTaxCategories } = await import('./accountMasterApi')
-
   // 1. consumptionTaxMode自動更新
   let consumptionTaxMode: string | null = null
   try {
@@ -438,7 +437,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
   const mfTaxes: MfMcpTax[] = await mcpFetchTaxes(clientId)
 
   // 3. 全社マスタと名前で突合（MF IDは事業者固有のため名前照合が正しい）
-  const masterItems = getAllTaxCategories()
+  const masterItems = await taxMasterRepo.getMaster()
   const masterByName = buildNameMap(masterItems, m => m.name)
 
   const today = new Date().toISOString().slice(0, 10)
@@ -500,10 +499,10 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
 
   // 4a. 前回の顧問先税区分にあって今回MFにない税区分 → hidden=trueで保持
   // 過去仕訳の参照先を保護（TAX_UNKNOWNにしない）
-  const { getClientTaxCategories } = await import('./accountMasterApi')
   let hiddenCount = 0
   try {
-    const prevTaxCategories = getClientTaxCategories(clientId)
+    const prevTaxCategoriesData = await taxMasterRepo.getClient(clientId)
+    const prevTaxCategories = prevTaxCategoriesData.taxCategories
     if (prevTaxCategories.length > 0) {
       const currentNames = new Set(imported.map(t => t.name))
       for (const prev of prevTaxCategories) {
@@ -518,7 +517,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
   }
 
   // 4b. 顧問先ストアに保存
-  saveClientTaxCategories(clientId, imported)
+  await taxMasterRepo.saveClient(clientId, imported)
 
   // 5. available（利用可否）データを更新
   let availableUpdated = false
@@ -552,7 +551,7 @@ export async function importClientTaxes(clientId: string): Promise<ClientTaxImpo
 
   // 7. レスポンスにvisibleIn（方式別表示可否）/displayRate（表示用税率）を付与
   //    L549でavailable更新済みなので、enrichRowは最新のavailableデータを参照する
-  const { enrichRow } = await import('./accountMasterApi')
+  const { enrichRow } = await import('./taxCategoryMasterApi')
   const enrichedImported: TaxCategory[] = imported.map(row => enrichRow(row))
 
   return {

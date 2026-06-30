@@ -18,3 +18,18 @@ export interface SubAccountEntry {
   /** 検索キー */
   searchKey?: string | null
 }
+
+/** バックエンド互換エイリアス（MfSubAccountEntry = SubAccountEntry） */
+export type MfSubAccountEntry = SubAccountEntry
+
+/** MFから取得した部門（事業者ごと、木構造） */
+export interface MfDepartmentEntry {
+  /** MF部門ID（URLエンコード済みBase64） */
+  mfDeptId: string
+  /** 部門名 */
+  name: string
+  /** 親部門ID（null=ルート部門） */
+  parentId: string | null
+  /** 検索キー */
+  searchKey?: string | null
+}

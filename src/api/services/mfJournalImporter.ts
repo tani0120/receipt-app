@@ -24,11 +24,12 @@ import { createMockRepositories } from '../../repositories/mock'
 const repos = createMockRepositories()
 const confirmedJournalRepo = repos.confirmedJournal
 const clientRepo = repos.client
+const accountMasterRepo = repos.accountMaster
+const taxMasterRepo = repos.taxMaster
 import { normalizeVendorName } from '../../utils/pipeline/vendorIdentification'
 import { fromMfInvoiceKind, MF_JOURNAL_TYPE_ADJUSTING, DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
 import { generateMasterId } from './generateMasterId'
 import { generateTaxMasterId, ensureUniqueTaxId } from './taxIdGenerator'
-import { getClientAccounts, saveMfAccounts, getAllAccounts, getAllTaxCategories } from './accountMasterApi'
 
 import { isIndividualType } from '../../constants/clientOptions'
 import type { Account } from '../../types/shared-account'
@@ -305,20 +306,20 @@ export async function prepareMfImport(
   // 免税事業者判定: マスタからisExemptDefault=trueの税区分IDを取得（データ駆動）
   const isExempt = client?.consumptionTaxMode === 'exempt'
   const exemptDefaultTaxId = isExempt
-    ? (getAllTaxCategories().find(t => t.isExemptDefault)?.taxCategoryId ?? null)
+    ? ((await taxMasterRepo.getMaster()).find(t => t.isExemptDefault)?.taxCategoryId ?? null)
     : null
 
   // A-4: 既存IDセット（重複チェック用）
   const existingAccountIds = new Set<string>()
-  const allAccounts = getAllAccounts()
+  const allAccounts = await accountMasterRepo.getMaster()
   for (const a of allAccounts) existingAccountIds.add(a.accountId)
   try {
-    const clientAcctData = getClientAccounts(clientId)
+    const clientAcctData = await accountMasterRepo.getClientAccountsFull(clientId)
     for (const a of clientAcctData.accounts) existingAccountIds.add(a.accountId)
   } catch { /* 未保存の場合はスキップ */ }
 
   const existingTaxIds = new Set<string>()
-  const allTaxes = getAllTaxCategories()
+  const allTaxes = await taxMasterRepo.getMaster()
   for (const t of allTaxes) existingTaxIds.add(t.taxCategoryId)
 
   // A-6: 自動発番した科目を蓄積（バッチ完了後に一括保存）
@@ -419,17 +420,17 @@ export async function prepareMfImport(
   // A-6: 自動発番した科目をclient_mf_accountsに差分追加保存
   if (newAccounts.length > 0) {
     try {
-      const clientAcctData = getClientAccounts(clientId)
+      const clientAcctData = await accountMasterRepo.getClientAccountsFull(clientId)
       const existingList = [...clientAcctData.accounts]
       const existingNameSet = new Set(existingList.map(a => a.name))
       const toAdd = newAccounts.filter(a => !existingNameSet.has(a.name))
       if (toAdd.length > 0) {
-        saveMfAccounts(clientId, [...existingList, ...toAdd])
+        await accountMasterRepo.saveMfAccounts(clientId, [...existingList, ...toAdd])
         console.log(`[mfJournalImporter] 自動発番科目${toAdd.length}件をclient_mf_accountsに追加保存: ${toAdd.map(a => `${a.name}→${a.accountId}`).join(', ')}`)
       }
     } catch {
       // 未保存の場合は新規保存
-      saveMfAccounts(clientId, newAccounts)
+      await accountMasterRepo.saveMfAccounts(clientId, newAccounts)
       console.log(`[mfJournalImporter] 自動発番科目${newAccounts.length}件をclient_mf_accountsに新規保存`)
     }
   }

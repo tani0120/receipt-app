@@ -14,7 +14,9 @@ import {
   getClientTaxCategories,
   saveClientTaxCategories,
   getFilteredClientTaxCategories,
+  getTaxCategoryNameMap,
 } from '../../api/services/taxCategoryMasterApi'
+import { getClientTaxCategoriesForValidation } from '../../api/services/accountMasterApi'
 import type { TaxMasterRepository } from '../types'
 
 export const mockTaxMasterRepo: TaxMasterRepository = {
@@ -38,4 +40,8 @@ export const mockTaxMasterRepo: TaxMasterRepository = {
   getFilteredClient: async (clientId, params) => {
     return getFilteredClientTaxCategories(clientId, params)
   },
+  getNameMap: async () => {
+    return getTaxCategoryNameMap()
+  },
+  getClientTaxCategoriesForValidation: async (clientId) => getClientTaxCategoriesForValidation(clientId),
 }

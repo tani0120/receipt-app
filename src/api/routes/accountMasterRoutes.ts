@@ -16,15 +16,10 @@
 import { Hono } from 'hono'
 import { apiError } from '../helpers/apiError'
 import { 必須 } from '../../constants/apiMessages'
-import {
-  getFilteredAccounts,
-  saveAllAccounts,
-  getFilteredClientAccounts,
-  saveClientAccounts,
-  getClientSubAccounts,
-  getClientDepartments,
-} from '../services/accountMasterApi'
+import { createMockRepositories } from '../../repositories/mock'
 import type { Account } from '../../types/shared-account'
+
+const accountMasterRepo = createMockRepositories().accountMaster
 
 const app = new Hono()
 
@@ -69,12 +64,12 @@ function validateAccountsBody(body: { accounts?: Account[] }): string | null {
 // ============================================================
 // GET /master — マスタ科目一覧取得（フィルタ・ソート・ページネーション）
 // ============================================================
-app.get('/master', (c) => {
+app.get('/master', async (c) => {
   const params = parseFilterParams(c)
   const err = validateFilterParams(params)
   if (err) return apiError(c, 400, err)
 
-  const result = getFilteredAccounts(params)
+  const result = await accountMasterRepo.getFilteredMaster(params)
   return c.json({
     items: result.pagedItems,
     totalCount: result.totalCount,
@@ -91,14 +86,14 @@ app.put('/master', async (c) => {
   const err = validateAccountsBody(body)
   if (err) return apiError(c, 400, err)
 
-  const result = saveAllAccounts(body.accounts!)
+  const result = await accountMasterRepo.saveMaster(body.accounts!)
   return c.json(result)
 })
 
 // ============================================================
 // GET /client/:clientId — 顧問先科目一覧取得
 // ============================================================
-app.get('/client/:clientId', (c) => {
+app.get('/client/:clientId', async (c) => {
   const clientId = c.req.param('clientId')
   if (!clientId) return apiError(c, 400, 必須('clientId'))
 
@@ -106,14 +101,16 @@ app.get('/client/:clientId', (c) => {
   const err = validateFilterParams(params)
   if (err) return apiError(c, 400, err)
 
-  const result = getFilteredClientAccounts(clientId, params)
+  const result = await accountMasterRepo.getFilteredClient(clientId, params)
+  const subAccountsMap = await accountMasterRepo.getClientSubAccounts(clientId)
+  const departments = await accountMasterRepo.getClientDepartments(clientId)
   return c.json({
     items: result.pagedItems,
     totalCount: result.totalCount,
     page: result.page,
     totalPages: result.totalPages,
-    subAccountsMap: getClientSubAccounts(clientId),
-    departments: getClientDepartments(clientId),
+    subAccountsMap,
+    departments,
   })
 })
 
@@ -130,7 +127,7 @@ app.put('/client/:clientId', async (c) => {
   const err = validateAccountsBody(body)
   if (err) return apiError(c, 400, err)
 
-  const result = saveClientAccounts(clientId, body.accounts!)
+  const result = await accountMasterRepo.saveClient(clientId, { accounts: body.accounts! })
   return c.json(result)
 })
 

@@ -18,7 +18,6 @@ import { Hono } from 'hono'
 import { apiError, apiCatchError } from '../helpers/apiError'
 import { 未検出 } from '../../constants/apiMessages'
 import { createMockRepositories } from '../../repositories/mock'
-import { getVendorList } from '../services/vendorListService'
 
 const vendorRepo = createMockRepositories().vendor
 const app = new Hono()
@@ -28,7 +27,7 @@ const app = new Hono()
 // ============================================================
 app.post('/list', async (c) => {
   const body = await c.req.json()
-  const result = await getVendorList(body)
+  const result = await vendorRepo.list(body)
   return c.json(result)
 })
 

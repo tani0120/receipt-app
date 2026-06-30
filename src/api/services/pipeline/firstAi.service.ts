@@ -31,8 +31,8 @@ const repos = createMockRepositories()
 const learningRuleRepo = repos.learningRule
 const industryVectorRepo = repos.industryVector
 const clientRepo = repos.client
+const accountMasterRepo = repos.accountMaster
 import { isIndividualType } from '../../../constants/clientOptions';
-import { getClientAccounts } from '../accountMasterApi';
 import {
   DESC_SOURCE_TYPE, DESC_SOURCE_TYPE_CONFIDENCE,
   DESC_DIRECTION, DESC_DIRECTION_CONFIDENCE,
@@ -465,7 +465,7 @@ export async function firstAiExtract(req: FirstAiRequest): Promise<FirstAiRespon
         learningRules,
         industryVectors,
         // B-1: 科目マスタを渡して第5層AI推定を有効化
-        accountMaster: getClientAccounts(req.clientId).accounts.map(a => ({
+        accountMaster: (await accountMasterRepo.getClientAccountsFull(req.clientId)).accounts.map(a => ({
           accountId: a.accountId,
           name: a.name,
           defaultTaxCategoryId: a.defaultTaxCategoryId,

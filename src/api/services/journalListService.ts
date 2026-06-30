@@ -15,12 +15,12 @@
  */
 
 import { createMockRepositories } from '../../repositories/mock'
-const journalRepo = createMockRepositories().journal
-const confirmedJournalRepo = createMockRepositories().confirmedJournal
+const repos = createMockRepositories()
+const journalRepo = repos.journal
+const confirmedJournalRepo = repos.confirmedJournal
+const accountMasterRepo = repos.accountMaster
 import { type JournalListRow, isMfJournal, isAiJournal } from '../../types/journal-list-row'
-import type { Journal } from '../../types/journal.type'
 import type { StaffNotes } from '../../types/staff_notes'
-import { getClientAccounts } from './accountMasterApi'
 import type { AccountGroup } from '../../types/shared-account'
 
 /** クエリパラメータ */
@@ -477,7 +477,7 @@ export async function getJournalList(clientId: string, query: JournalListQuery):
   })
 
   // 7. 売上/経費/差額の集計（ページネーション前の全件対象）
-  const summary = calcSummary(result, clientId, query.accountMap)
+  const summary = await calcSummary(result, clientId, query.accountMap)
 
   // 8. ページネーション
   const totalCount = result.length
@@ -511,13 +511,13 @@ export async function getJournalList(clientId: string, query: JournalListQuery):
  * ID体系マイグレーション完了済み（英語概念IDは全てマスタIDに自動置換済み）。
  * マスタIDでgroupMapを直接解決する1系統のみ。
  */
-function calcSummary(
+async function calcSummary(
   journals: JournalListRow[],
   clientId: string,
   _accountMap?: Record<string, string>,
-): JournalListSummary {
+): Promise<JournalListSummary> {
   // 科目ID → accountGroupマップを構築
-  const clientData = getClientAccounts(clientId)
+  const clientData = await accountMasterRepo.getClientAccountsFull(clientId)
   const groupMap = new Map<string, AccountGroup>()
   for (const a of clientData.accounts) {
     groupMap.set(a.accountId, a.accountGroup as AccountGroup)

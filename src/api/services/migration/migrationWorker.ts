@@ -16,7 +16,8 @@ import { trashDriveFile } from '../drive/driveService';
 import { StorageService } from '../../ai/storage';
 import { firstAiExtract } from '../pipeline/firstAi.service';
 import type { FirstAiResponse } from '../pipeline/types';
-import { updateAiResults } from '../documentsApi';
+import { convertFirstAiToDocFields } from '../documentsApi';
+import { createMockRepositories } from '../../../repositories/mock';
 import {
   dequeueJobs,
   markJobDone,
@@ -114,7 +115,9 @@ async function processOneJob(job: MigrationJob): Promise<void> {
 
     // 6. AI分類結果をdoc-storeに書き戻し（firstAiが成功した場合のみ）
     if (firstAiResult) {
-      updateAiResults(job.driveFileId, firstAiResult, hash);
+      const docFields = convertFirstAiToDocFields(firstAiResult, hash);
+      const documentRepo = createMockRepositories().document;
+      await documentRepo.updateAiResults(job.driveFileId, docFields);
     }
 
     // 7. Driveゴミ箱移動（全3種別。Supabase移動完了後にDriveを空にする）

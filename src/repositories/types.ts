@@ -55,7 +55,7 @@ export type {
 // ============================================================
 
 import type { Vendor, IndustryVectorEntry, VendorVector } from '@/types/pipeline/vendor.type'
-import type { Account } from '@/types/shared-account'
+import type { Account, AccountGroup } from '@/types/shared-account'
 import type { FilterOperator } from '@/api/helpers/applyFilterConditions'
 import type { TaxCategory } from '@/types/shared-tax-category'
 import type { LearningRule } from '@/types/learning_rule.type'
@@ -113,10 +113,14 @@ export type VendorRepository = {
 
   /** 一覧取得（フィルタ+ソート+ページネーション） */
   list(query: {
-    type?: 'vendor' | 'non-vendor'
+    type?: string
     search?: string
     vectorFilter?: string
     directionFilter?: string
+    /** 証票種類フィルタ（NonVendor用） */
+    sourceFilter?: string
+    /** 確定レベルフィルタ（NonVendor用） */
+    levelFilter?: string
     sortKey?: string
     sortOrder?: 'asc' | 'desc'
     page?: number
@@ -124,8 +128,10 @@ export type VendorRepository = {
   }): Promise<{
     rows: Vendor[]
     totalCount: number
+    page: number
+    pageSize: number
     totalPages: number
-    uniqueVectors?: string[]
+    uniqueVectors: string[]
   }>
 }
 
@@ -230,19 +236,99 @@ export type AccountRepository = {
  * - AccountRepository: 仕訳処理・バリデーション用の参照系
  * - AccountMasterRepository: マスタメンテナンス・管理画面編集用
  */
+import type { MfSubAccountEntry, MfDepartmentEntry } from '../types/shared-sub-account'
+import type { TaxDirection } from '../types/shared-tax-category'
+
 export type AccountMasterRepository = {
   /** マスタ科目全件取得（管理画面用） */
   getMaster(): Promise<Account[]>
 
   /** マスタ科目全件上書き保存 */
-  saveMaster(accounts: Account[]): Promise<void>
+  saveMaster(accounts: Account[]): Promise<{ ok: true; count: number }>
 
   /** 顧問先科目全件取得 */
   getClient(clientId: string): Promise<{ accounts: Account[] }>
 
   /** 顧問先科目全件上書き保存 */
-  saveClient(clientId: string, data: { accounts: Account[]; subAccounts?: Record<string, string> }): Promise<void>
+  saveClient(clientId: string, data: { accounts: Account[]; subAccounts?: Record<string, string> }): Promise<{ ok: true; count: number }>
+
+  /** 顧問先科目フル取得（subAccountsMap/departments含む） */
+  getClientAccountsFull(clientId: string): Promise<{
+    accounts: Account[]
+    subAccountsMap: Record<string, MfSubAccountEntry[]>
+    departments: MfDepartmentEntry[]
+  }>
+
+  /** マスタ科目フィルタ取得（ページネーション付き） */
+  getFilteredMaster(params: {
+    businessType?: 'corp' | 'individual'
+    search?: string
+    page?: number
+    pageSize?: number
+  }): Promise<{
+    items: Account[]
+    totalCount: number
+    pagedItems: Account[]
+    page: number
+    totalPages: number
+  }>
+
+  /** 顧問先科目フィルタ取得（ページネーション付き） */
+  getFilteredClient(clientId: string, params: {
+    businessType?: 'corp' | 'individual'
+    search?: string
+    page?: number
+    pageSize?: number
+  }): Promise<{
+    items: Account[]
+    totalCount: number
+    pagedItems: Account[]
+    page: number
+    totalPages: number
+  }>
+
+  /** 顧問先の補助科目を取得 */
+  getClientSubAccounts(clientId: string): Promise<Record<string, MfSubAccountEntry[]>>
+
+  /** 顧問先の部門を取得 */
+  getClientDepartments(clientId: string): Promise<MfDepartmentEntry[]>
+
+  /** 顧問先のOverride/MFデータが存在するか */
+  hasClientAccounts(clientId: string): Promise<boolean>
+
+  /** MFインポートデータを保存 */
+  saveMfAccounts(clientId: string, accounts: Account[]): Promise<{ ok: true; count: number }>
+
+  /** 補助科目を永続化 */
+  persistSubAccounts(clientId: string, data: Record<string, MfSubAccountEntry[]>): Promise<void>
+
+  /** 部門を永続化 */
+  persistDepartments(clientId: string, data: MfDepartmentEntry[]): Promise<void>
+
+  /** 顧問先別科目をバリデーション用最小形式で返す */
+  getClientAccountsForValidation(clientId: string): Promise<{
+    accountId: string
+    name: string
+    accountGroup: AccountGroup
+    category: string
+    defaultTaxCategoryId?: string
+    isContraRevenue?: boolean
+    isContraExpense?: boolean
+  }[]>
+
+
+  /** 科目名マップ（ID→名前）を返す */
+  getAccountNameMap(clientId?: string): Promise<Record<string, string>>
+
+  /** 孤立Overrideを検出 */
+  detectOrphanedOverrides(clientId: string): Promise<string[]>
+
+  /** accountIdをリネーム（マイグレーション用） */
+  renameAccountId(oldId: string, newId: string): Promise<{
+    updated: { master: boolean; overrides: string[]; mfAccounts: string[] }
+  }>
 }
+
 
 // ============================================================
 // § 4c. TaxMasterRepository（税区分マスタ編集）
@@ -284,6 +370,19 @@ export type TaxMasterRepository = {
     page: number
     totalPages: number
   }>
+
+  /** 税区分名マップ（ID→名前）を返す */
+  getNameMap(): Promise<Record<string, string>>
+
+  /** 顧問先別税区分をバリデーション用最小形式で返す */
+  getClientTaxCategoriesForValidation(clientId: string): Promise<{
+    taxCategoryId: string
+    direction: TaxDirection
+    simplifiedOnly?: boolean
+    baseId?: string
+    isExemptDefault?: boolean
+    isUnknownDefault?: boolean
+  }[]>
 }
 
 // ============================================================
@@ -516,7 +615,7 @@ export type DocumentRepository = {
   /** 件数取得（clientIdフィルタ任意） */
   countDocuments(clientId?: string): Promise<number>
 
-  /** AI解析結果を更新 */
+  /** AI解析結果を更新（変換済みのPartial<DocEntry>を受け取る） */
   updateAiResults(docId: string, aiResults: Partial<DocEntry>): Promise<boolean>
 }
 
