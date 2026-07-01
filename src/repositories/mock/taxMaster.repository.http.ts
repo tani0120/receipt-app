@@ -8,8 +8,8 @@
  * 準拠: DL-030, DL-042
  */
 
-import { createApiClient } from '@/utils/apiClient'
-import type { TaxCategory } from '@/types/shared-tax-category'
+import { createApiClient } from '../../utils/apiClient'
+import type { TaxCategory } from '../../types/shared-tax-category'
 import type { TaxMasterRepository } from '../types'
 
 const api = createApiClient('/api/tax-categories')

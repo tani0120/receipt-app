@@ -7449,8 +7449,8 @@ INSERT INTO accounts (
 ) VALUES (
   'KURINOBEZEIKINSHISAN_CORP', '繰延税金資産(流)', 'corp', 'BS_ASSET', 'OTHER_CURRENT_ASSETS',
   'COMMON_EXEMPT', NULL, NULL,
-  362, undefined, false, false,
-  undefined, undefined, 'mcp'
+  362, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7461,8 +7461,8 @@ INSERT INTO accounts (
 ) VALUES (
   'SHUSSHIKIN_CORP', '出資金', 'corp', 'BS_ASSET', 'INVESTMENTS_AND_OTHER_ASSETS',
   'COMMON_EXEMPT', NULL, NULL,
-  363, undefined, false, false,
-  undefined, undefined, 'mcp'
+  363, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7473,8 +7473,8 @@ INSERT INTO accounts (
 ) VALUES (
   'KURINOBEZEIKINSHISAN_CORP_2', '繰延税金資産(固)', 'corp', 'BS_ASSET', 'INVESTMENTS_AND_OTHER_ASSETS',
   'COMMON_EXEMPT', NULL, NULL,
-  364, undefined, false, false,
-  undefined, undefined, 'mcp'
+  364, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7485,8 +7485,8 @@ INSERT INTO accounts (
 ) VALUES (
   'SOURITSUHI_CORP', '創立費', 'corp', 'BS_ASSET', 'DEFERRED_ASSETS',
   'PURCHASE_TAXABLE_10', NULL, NULL,
-  365, undefined, false, false,
-  undefined, undefined, 'mcp'
+  365, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7497,8 +7497,8 @@ INSERT INTO accounts (
 ) VALUES (
   'KURINOBEZEIKINFUSAI_CORP', '繰延税金負債(流)', 'corp', 'BS_LIABILITY', 'OTHER_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  366, undefined, false, false,
-  undefined, undefined, 'mcp'
+  366, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7509,8 +7509,8 @@ INSERT INTO accounts (
 ) VALUES (
   'AZUKARIHOSHOUKIN_CORP', '預り保証金', 'corp', 'BS_LIABILITY', 'OTHER_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  367, undefined, false, false,
-  undefined, undefined, 'mcp'
+  367, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7521,8 +7521,8 @@ INSERT INTO accounts (
 ) VALUES (
   'MIHARAISHOUHIZEI_CORP', '未払消費税', 'corp', 'BS_LIABILITY', 'OTHER_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  368, undefined, false, false,
-  undefined, undefined, 'mcp'
+  368, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7533,8 +7533,8 @@ INSERT INTO accounts (
 ) VALUES (
   'MIHARAIHOUJINZEITOU_CORP', '未払法人税等', 'corp', 'BS_LIABILITY', 'OTHER_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  369, undefined, false, false,
-  undefined, undefined, 'mcp'
+  369, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7545,8 +7545,8 @@ INSERT INTO accounts (
 ) VALUES (
   'HOSHOUKINSHIKIKIN_CORP', '保証金・敷金', 'corp', 'BS_LIABILITY', 'OTHER_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  370, undefined, false, false,
-  undefined, undefined, 'mcp'
+  370, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7557,8 +7557,8 @@ INSERT INTO accounts (
 ) VALUES (
   'SHOUHINKEN_CORP', '商品券', 'corp', 'BS_LIABILITY', 'OTHER_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  371, undefined, false, false,
-  undefined, undefined, 'mcp'
+  371, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7569,8 +7569,8 @@ INSERT INTO accounts (
 ) VALUES (
   'KARIUKESHOUHIZEI_CORP', '仮受消費税', 'corp', 'BS_LIABILITY', 'OTHER_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  372, undefined, false, false,
-  undefined, undefined, 'mcp'
+  372, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7581,8 +7581,8 @@ INSERT INTO accounts (
 ) VALUES (
   'KURINOBEZEIKINFUSAI_CORP_2', '繰延税金負債(固)', 'corp', 'BS_LIABILITY', 'NON_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  373, undefined, false, false,
-  undefined, undefined, 'mcp'
+  373, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7593,8 +7593,8 @@ INSERT INTO accounts (
 ) VALUES (
   'SHINKABUSHIKIMOUSHIKOMISHOUKOKIN_CORP', '新株式申込証拠金', 'corp', 'BS_EQUITY', 'STOCK_SUBSCRIPTION_DEPOSITS',
   'COMMON_EXEMPT', NULL, NULL,
-  374, undefined, false, false,
-  undefined, undefined, 'mcp'
+  374, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7605,8 +7605,8 @@ INSERT INTO accounts (
 ) VALUES (
   'SONOTASHIHONJOUYOKIN_CORP', 'その他資本剰余金', 'corp', 'BS_EQUITY', 'OTHER_CAPITAL_SURPLUS',
   'COMMON_EXEMPT', NULL, NULL,
-  375, undefined, false, false,
-  undefined, undefined, 'mcp'
+  375, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7617,8 +7617,8 @@ INSERT INTO accounts (
 ) VALUES (
   'RIEKIJUNBIKIN_CORP', '利益準備金', 'corp', 'BS_EQUITY', 'LEGAL_RETAINED_EARNINGS',
   'COMMON_EXEMPT', NULL, NULL,
-  376, undefined, false, false,
-  undefined, undefined, 'mcp'
+  376, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7629,8 +7629,8 @@ INSERT INTO accounts (
 ) VALUES (
   'BETTOTSUMITATEKIN_CORP', '別途積立金', 'corp', 'BS_EQUITY', 'APPROPRIATED_RETAINED_EARNINGS',
   'COMMON_EXEMPT', NULL, NULL,
-  377, undefined, false, false,
-  undefined, undefined, 'mcp'
+  377, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7641,8 +7641,8 @@ INSERT INTO accounts (
 ) VALUES (
   'JIKOKABUSHIKI_CORP', '自己株式', 'corp', 'BS_EQUITY', 'TREASURY_STOCK',
   'COMMON_EXEMPT', NULL, NULL,
-  378, undefined, false, false,
-  undefined, undefined, 'mcp'
+  378, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7653,8 +7653,8 @@ INSERT INTO accounts (
 ) VALUES (
   'JIKOKABUSHIKIMOUSHIKOMISHOUKOKIN_CORP', '自己株式申込証拠金', 'corp', 'BS_EQUITY', 'TREASURY_STOCK_SUBSCRIPTION_DEPOSITS',
   'COMMON_EXEMPT', NULL, NULL,
-  379, undefined, false, false,
-  undefined, undefined, 'mcp'
+  379, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7665,8 +7665,8 @@ INSERT INTO accounts (
 ) VALUES (
   'SONOTAYUUKASHOUKENHYOUKASAGAKUKIN_CORP', 'その他有価証券評価差額金', 'corp', 'BS_EQUITY', 'VALUATION_AND_TRANSLATION_ADJUSTMENTS',
   'COMMON_EXEMPT', NULL, NULL,
-  380, undefined, false, false,
-  undefined, undefined, 'mcp'
+  380, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7677,8 +7677,8 @@ INSERT INTO accounts (
 ) VALUES (
   'TOCHISAIHYOUKASAGAKUKIN_CORP', '土地再評価差額金', 'corp', 'BS_EQUITY', 'VALUATION_AND_TRANSLATION_ADJUSTMENTS',
   'COMMON_EXEMPT', NULL, NULL,
-  381, undefined, false, false,
-  undefined, undefined, 'mcp'
+  381, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7689,8 +7689,8 @@ INSERT INTO accounts (
 ) VALUES (
   'SHINKABUYOYAKUKEN_CORP', '新株予約権', 'corp', 'BS_EQUITY', 'SUBSCRIPTION_RIGHTS_TO_SHARES',
   'COMMON_EXEMPT', NULL, NULL,
-  382, undefined, false, false,
-  undefined, undefined, 'mcp'
+  382, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7701,8 +7701,8 @@ INSERT INTO accounts (
 ) VALUES (
   'TAKANJOUFURIKAEDAKA_CORP', '他勘定振替高', 'corp', 'PL_EXPENSE', 'TRANSFERS_TO_OTHER_ACCOUNTS',
   'COMMON_EXEMPT', NULL, NULL,
-  383, undefined, false, false,
-  undefined, undefined, 'mcp'
+  383, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7713,8 +7713,8 @@ INSERT INTO accounts (
 ) VALUES (
   'ZAKKYUU_CORP', '雑給', 'corp', 'PL_EXPENSE', 'SELLING_GENERAL_AND_ADMINISTRATIVE_EXPENSES',
   'PURCHASE_EXEMPT', NULL, NULL,
-  384, undefined, false, false,
-  undefined, undefined, 'mcp'
+  384, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7725,8 +7725,8 @@ INSERT INTO accounts (
 ) VALUES (
   'GYOUMUITAKURYOU_CORP', '業務委託料', 'corp', 'PL_EXPENSE', 'SELLING_GENERAL_AND_ADMINISTRATIVE_EXPENSES',
   'PURCHASE_TAXABLE_10', NULL, NULL,
-  385, undefined, false, false,
-  undefined, undefined, 'mcp'
+  385, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7737,8 +7737,8 @@ INSERT INTO accounts (
 ) VALUES (
   'BIHINSHOUMOUHINHI_CORP', '備品・消耗品費', 'corp', 'PL_EXPENSE', 'SELLING_GENERAL_AND_ADMINISTRATIVE_EXPENSES',
   'PURCHASE_TAXABLE_10', NULL, NULL,
-  386, undefined, false, false,
-  undefined, undefined, 'mcp'
+  386, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7749,8 +7749,8 @@ INSERT INTO accounts (
 ) VALUES (
   'SHIHARAIHOUSHUU_CORP', '支払報酬', 'corp', 'PL_EXPENSE', 'SELLING_GENERAL_AND_ADMINISTRATIVE_EXPENSES',
   'PURCHASE_TAXABLE_10', NULL, NULL,
-  387, undefined, false, false,
-  undefined, undefined, 'mcp'
+  387, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7761,8 +7761,8 @@ INSERT INTO accounts (
 ) VALUES (
   'KASHIDAOREHIKIATEKINREINYUUGAKU_CORP', '貸倒引当金戻入額', 'corp', 'PL_REVENUE', 'NON_OPERATING_INCOME',
   'COMMON_EXEMPT', NULL, NULL,
-  388, undefined, false, false,
-  undefined, undefined, 'mcp'
+  388, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7773,8 +7773,8 @@ INSERT INTO accounts (
 ) VALUES (
   'YUUKASHOUKENBAIKYAKUEKI_CORP', '有価証券売却益', 'corp', 'PL_REVENUE', 'NON_OPERATING_INCOME',
   'SALES_NON_TAXABLE_SECURITIES', NULL, NULL,
-  389, undefined, false, false,
-  undefined, undefined, 'mcp'
+  389, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7785,8 +7785,8 @@ INSERT INTO accounts (
 ) VALUES (
   'SHIIREWARIBIKI_CORP', '仕入割引', 'corp', 'PL_REVENUE', 'NON_OPERATING_INCOME',
   'PURCHASE_RETURN_10', NULL, NULL,
-  390, undefined, false, false,
-  undefined, undefined, 'mcp'
+  390, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7797,8 +7797,8 @@ INSERT INTO accounts (
 ) VALUES (
   'YUUKASHOUKENBAIKYAKUSON_CORP', '有価証券売却損', 'corp', 'PL_EXPENSE', 'NON_OPERATING_EXPENSES',
   'COMMON_EXEMPT', NULL, NULL,
-  391, undefined, false, false,
-  undefined, undefined, 'mcp'
+  391, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7809,8 +7809,8 @@ INSERT INTO accounts (
 ) VALUES (
   'URIAGEWARIBIKI_CORP', '売上割引', 'corp', 'PL_EXPENSE', 'NON_OPERATING_EXPENSES',
   'SALES_RETURN_10', NULL, NULL,
-  392, undefined, false, false,
-  undefined, undefined, 'mcp'
+  392, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7821,8 +7821,8 @@ INSERT INTO accounts (
 ) VALUES (
   'ZENKISONEKISHUUSEIEKI_CORP', '前期損益修正益', 'corp', 'PL_REVENUE', 'EXTRAORDINARY_INCOME',
   'COMMON_EXEMPT', NULL, NULL,
-  393, undefined, false, false,
-  undefined, undefined, 'mcp'
+  393, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7833,8 +7833,8 @@ INSERT INTO accounts (
 ) VALUES (
   'TOUSHIYUUKASHOUKENBAIKYAKUEKI_CORP', '投資有価証券売却益', 'corp', 'PL_REVENUE', 'EXTRAORDINARY_INCOME',
   'COMMON_EXEMPT', NULL, NULL,
-  394, undefined, false, false,
-  undefined, undefined, 'mcp'
+  394, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7845,8 +7845,8 @@ INSERT INTO accounts (
 ) VALUES (
   'ZENKISONEKISHUUSEISON_CORP', '前期損益修正損', 'corp', 'PL_EXPENSE', 'EXTRAORDINARY_LOSSES',
   'COMMON_EXEMPT', NULL, NULL,
-  395, undefined, false, false,
-  undefined, undefined, 'mcp'
+  395, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7857,8 +7857,8 @@ INSERT INTO accounts (
 ) VALUES (
   'TOUSHIYUUKASHOUKENBAIKYAKUSON_CORP', '投資有価証券売却損', 'corp', 'PL_EXPENSE', 'EXTRAORDINARY_LOSSES',
   'COMMON_EXEMPT', NULL, NULL,
-  396, undefined, false, false,
-  undefined, undefined, 'mcp'
+  396, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7869,8 +7869,8 @@ INSERT INTO accounts (
 ) VALUES (
   'HOUJINZEITOU_CORP', '法人税等', 'corp', 'PL_EXPENSE', 'CORPORATE_INCOME_TAXES_CURRENT',
   'COMMON_EXEMPT', NULL, NULL,
-  397, undefined, false, false,
-  undefined, undefined, 'mcp'
+  397, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7881,8 +7881,8 @@ INSERT INTO accounts (
 ) VALUES (
   'HOUJINZEITOUCHOUSEIGAKU_CORP', '法人税等調整額', 'corp', 'PL_EXPENSE', 'CORPORATE_INCOME_TAXES_DEFERRED',
   'COMMON_EXEMPT', NULL, NULL,
-  398, undefined, false, false,
-  undefined, undefined, 'mcp'
+  398, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7893,8 +7893,8 @@ INSERT INTO accounts (
 ) VALUES (
   'MIHARAISHOUHIZEI_IND', '未払消費税', 'individual', 'BS_LIABILITY', 'OTHER_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  399, undefined, false, false,
-  undefined, undefined, 'mcp'
+  399, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7905,8 +7905,8 @@ INSERT INTO accounts (
 ) VALUES (
   'HOSHOUKINSHIKIKIN_IND', '保証金・敷金', 'individual', 'BS_LIABILITY', 'OTHER_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  400, undefined, false, false,
-  undefined, undefined, 'mcp'
+  400, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7917,8 +7917,8 @@ INSERT INTO accounts (
 ) VALUES (
   'SHOUHINKEN_IND', '商品券', 'individual', 'BS_LIABILITY', 'OTHER_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  401, undefined, false, false,
-  undefined, undefined, 'mcp'
+  401, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO accounts (
@@ -7929,36 +7929,13 @@ INSERT INTO accounts (
 ) VALUES (
   'KARIUKESHOUHIZEI_IND', '仮受消費税', 'individual', 'BS_LIABILITY', 'OTHER_CURRENT_LIABILITIES',
   'COMMON_EXEMPT', NULL, NULL,
-  402, undefined, false, false,
-  undefined, undefined, 'mcp'
+  402, NULL, false, false,
+  NULL, NULL, 'mcp'
 ) ON CONFLICT (id) DO NOTHING;
 
 -- § 4. tax_categories（151件）
 -- 元データ: data/tax-category-master.json
--- 注: テーブルが002_core_tables.sqlに未定義の場合は先にCREATE TABLEが必要
-
-CREATE TABLE IF NOT EXISTS tax_categories (
-  tax_category_id  TEXT PRIMARY KEY,
-  name             TEXT NOT NULL,
-  short_name       TEXT NOT NULL DEFAULT '',
-  direction        TEXT NOT NULL DEFAULT 'common',
-  qualified        BOOLEAN NOT NULL DEFAULT false,
-  ai_selectable    BOOLEAN NOT NULL DEFAULT true,
-  active           BOOLEAN NOT NULL DEFAULT true,
-  deprecated       BOOLEAN NOT NULL DEFAULT false,
-  effective_from   TEXT,
-  effective_to     TEXT,
-  default_visible  BOOLEAN NOT NULL DEFAULT true,
-  display_order    INTEGER NOT NULL DEFAULT 0,
-  is_custom        BOOLEAN NOT NULL DEFAULT false,
-  tax_rate         NUMERIC NOT NULL DEFAULT 0,
-  source           TEXT NOT NULL DEFAULT 'mcp',
-  is_unknown_default BOOLEAN NOT NULL DEFAULT false,
-  enabled_from     TEXT,
-  enabled_to       TEXT,
-  visible_in       JSONB,
-  display_rate     TEXT
-);
+-- テーブル定義: 018_tax_categories.sql（マイグレーション）
 
 INSERT INTO tax_categories (
   tax_category_id, name, short_name, direction, qualified,
@@ -7981,7 +7958,7 @@ INSERT INTO tax_categories (
   'COMMON_EXEMPT', '対象外', '対象外', 'common', false,
   true, true, false, '1989-04-01', NULL,
   true, 2, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":true}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":true}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -7993,7 +7970,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_10', '課税売上 10%', '課売 10%', 'sales', false,
   true, true, false, '2019-10-01', NULL,
   true, 3, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8005,7 +7982,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_10_T1', '課税売上 10% 一種', '課売 10% 一種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 4, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8017,7 +7994,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_10_T2', '課税売上 10% 二種', '課売 10% 二種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 5, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8029,7 +8006,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_10_T3', '課税売上 10% 三種', '課売 10% 三種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 6, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8041,7 +8018,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_10_T4', '課税売上 10% 四種', '課売 10% 四種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 7, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8053,7 +8030,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_10_T5', '課税売上 10% 五種', '課売 10% 五種', 'sales', false,
   true, true, false, '2019-10-01', NULL,
   false, 8, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8065,7 +8042,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_10_T6', '課税売上 10% 六種', '課売 10% 六種', 'sales', false,
   false, false, false, '2015-04-01', NULL,
   false, 9, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8077,7 +8054,7 @@ INSERT INTO tax_categories (
   'SALES_REDUCED_8', '課税売上 (軽)8%', '課売 (軽)8%', 'sales', false,
   true, true, false, '2019-10-01', NULL,
   true, 10, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8089,7 +8066,7 @@ INSERT INTO tax_categories (
   'SALES_REDUCED_8_T1', '課税売上 (軽)8% 一種', '課売 (軽)8% 一種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 11, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8101,7 +8078,7 @@ INSERT INTO tax_categories (
   'SALES_REDUCED_8_T2', '課税売上 (軽)8% 二種', '課売 (軽)8% 二種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 12, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8113,7 +8090,7 @@ INSERT INTO tax_categories (
   'SALES_REDUCED_8_T3', '課税売上 (軽)8% 三種', '課売 (軽)8% 三種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 13, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8125,7 +8102,7 @@ INSERT INTO tax_categories (
   'SALES_REDUCED_8_T4', '課税売上 (軽)8% 四種', '課売 (軽)8% 四種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 14, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8137,7 +8114,7 @@ INSERT INTO tax_categories (
   'SALES_REDUCED_8_T5', '課税売上 (軽)8% 五種', '課売 (軽)8% 五種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 15, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8149,7 +8126,7 @@ INSERT INTO tax_categories (
   'SALES_REDUCED_8_T6', '課税売上 (軽)8% 六種', '課売 (軽)8% 六種', 'sales', false,
   false, false, false, '2015-04-01', NULL,
   false, 16, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8161,7 +8138,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_8', '課税売上 8%', '課売 8%', 'sales', false,
   true, true, false, '2014-04-01', NULL,
   true, 17, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8173,7 +8150,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_8_T1', '課税売上 8% 一種', '課売 8% 一種', 'sales', false,
   false, false, true, '2014-04-01', '2019-09-30',
   false, 18, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8185,7 +8162,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_8_T2', '課税売上 8% 二種', '課売 8% 二種', 'sales', false,
   false, false, true, '2014-04-01', '2019-09-30',
   false, 19, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8197,7 +8174,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_8_T3', '課税売上 8% 三種', '課売 8% 三種', 'sales', false,
   false, false, true, '2014-04-01', '2019-09-30',
   false, 20, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8209,7 +8186,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_8_T4', '課税売上 8% 四種', '課売 8% 四種', 'sales', false,
   false, false, true, '2014-04-01', '2019-09-30',
   false, 21, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8221,7 +8198,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_8_T5', '課税売上 8% 五種', '課売 8% 五種', 'sales', false,
   false, false, true, '2014-04-01', '2019-09-30',
   false, 22, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8233,7 +8210,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_8_T6', '課税売上 8% 六種', '課売 8% 六種', 'sales', false,
   false, false, true, '2015-04-01', '2019-09-30',
   false, 23, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8245,7 +8222,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_5', '課税売上 5%', '課売 5%', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 24, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8257,7 +8234,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_5_T1', '課税売上 5% 一種', '課売 5% 一種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 25, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8269,7 +8246,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_5_T2', '課税売上 5% 二種', '課売 5% 二種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 26, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8281,7 +8258,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_5_T3', '課税売上 5% 三種', '課売 5% 三種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 27, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8293,7 +8270,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_5_T4', '課税売上 5% 四種', '課売 5% 四種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 28, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8305,7 +8282,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_5_T5', '課税売上 5% 五種', '課売 5% 五種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 29, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8317,7 +8294,7 @@ INSERT INTO tax_categories (
   'SALES_TAXABLE_5_T6', '課税売上 5% 六種', '課売 5% 六種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 30, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8329,7 +8306,7 @@ INSERT INTO tax_categories (
   'SALES_EXPORT_0', '輸出売上 0%', '輸売 0%', 'sales', false,
   true, true, false, '1989-04-01', NULL,
   true, 31, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8341,7 +8318,7 @@ INSERT INTO tax_categories (
   'SALES_NON_TAXABLE', '非課税売上', '非売', 'sales', false,
   true, true, false, '1989-04-01', NULL,
   true, 32, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8353,7 +8330,7 @@ INSERT INTO tax_categories (
   'SALES_NON_TAXABLE_SECURITIES', '非課税売上-有価証券譲渡', '非売-有証', 'sales', false,
   true, true, false, '1989-04-01', NULL,
   true, 33, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8365,7 +8342,7 @@ INSERT INTO tax_categories (
   'SALES_NON_TAXABLE_EXPORT', '非課税資産輸出', '非輸', 'sales', false,
   true, true, false, '1989-04-01', NULL,
   true, 34, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8377,7 +8354,7 @@ INSERT INTO tax_categories (
   'SALES_EXEMPT', '対象外売上', '対象外売', 'sales', false,
   true, true, false, '1989-04-01', NULL,
   true, 35, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8389,7 +8366,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_10', '課税売上-返還等 10%', '課売-返還 10%', 'sales', false,
   true, true, false, '2019-10-01', NULL,
   true, 36, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8401,7 +8378,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_10_T1', '課税売上-返還等 10% 一種', '課売-返還 10% 一種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 37, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8413,7 +8390,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_10_T2', '課税売上-返還等 10% 二種', '課売-返還 10% 二種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 38, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8425,7 +8402,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_10_T3', '課税売上-返還等 10% 三種', '課売-返還 10% 三種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 39, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8437,7 +8414,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_10_T4', '課税売上-返還等 10% 四種', '課売-返還 10% 四種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 40, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8449,7 +8426,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_10_T5', '課税売上-返還等 10% 五種', '課売-返還 10% 五種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 41, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8461,7 +8438,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_10_T6', '課税売上-返還等 10% 六種', '課売-返還 10% 六種', 'sales', false,
   false, false, false, '2015-04-01', NULL,
   false, 42, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8473,7 +8450,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_REDUCED_8', '課税売上-返還等 (軽)8%', '課売-返還 (軽)8%', 'sales', false,
   true, true, false, '2019-10-01', NULL,
   true, 43, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8485,7 +8462,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_REDUCED_8_T1', '課税売上-返還等 (軽)8% 一種', '課売-返還 (軽)8% 一種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 44, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8497,7 +8474,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_REDUCED_8_T2', '課税売上-返還等 (軽)8% 二種', '課売-返還 (軽)8% 二種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 45, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8509,7 +8486,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_REDUCED_8_T3', '課税売上-返還等 (軽)8% 三種', '課売-返還 (軽)8% 三種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 46, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8521,7 +8498,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_REDUCED_8_T4', '課税売上-返還等 (軽)8% 四種', '課売-返還 (軽)8% 四種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 47, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8533,7 +8510,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_REDUCED_8_T5', '課税売上-返還等 (軽)8% 五種', '課売-返還 (軽)8% 五種', 'sales', false,
   false, false, false, '2019-10-01', NULL,
   false, 48, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8545,7 +8522,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_REDUCED_8_T6', '課税売上-返還等 (軽)8% 六種', '課売-返還 (軽)8% 六種', 'sales', false,
   false, false, false, '2015-04-01', NULL,
   false, 49, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8557,7 +8534,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_8', '課税売上-返還等 8%', '課売-返還 8%', 'sales', false,
   true, true, false, '2014-04-01', NULL,
   true, 50, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8569,7 +8546,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_8_T1', '課税売上-返還等 8% 一種', '課売-返還 8% 一種', 'sales', false,
   false, false, false, '2014-04-01', NULL,
   false, 51, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8581,7 +8558,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_8_T2', '課税売上-返還等 8% 二種', '課売-返還 8% 二種', 'sales', false,
   false, false, false, '2014-04-01', NULL,
   false, 52, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8593,7 +8570,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_8_T3', '課税売上-返還等 8% 三種', '課売-返還 8% 三種', 'sales', false,
   false, false, false, '2014-04-01', NULL,
   false, 53, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8605,7 +8582,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_8_T4', '課税売上-返還等 8% 四種', '課売-返還 8% 四種', 'sales', false,
   false, false, false, '2014-04-01', NULL,
   false, 54, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8617,7 +8594,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_8_T5', '課税売上-返還等 8% 五種', '課売-返還 8% 五種', 'sales', false,
   false, false, false, '2014-04-01', NULL,
   false, 55, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8629,7 +8606,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_8_T6', '課税売上-返還等 8% 六種', '課売-返還 8% 六種', 'sales', false,
   false, false, false, '2015-04-01', NULL,
   false, 56, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8641,7 +8618,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_5', '課税売上-返還等 5%', '課売-返還 5%', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 57, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8653,7 +8630,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_5_T1', '課税売上-返還等 5% 一種', '課売-返還 5% 一種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 58, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8665,7 +8642,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_5_T2', '課税売上-返還等 5% 二種', '課売-返還 5% 二種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 59, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8677,7 +8654,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_5_T3', '課税売上-返還等 5% 三種', '課売-返還 5% 三種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 60, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8689,7 +8666,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_5_T4', '課税売上-返還等 5% 四種', '課売-返還 5% 四種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 61, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8701,7 +8678,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_5_T5', '課税売上-返還等 5% 五種', '課売-返還 5% 五種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 62, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8713,7 +8690,7 @@ INSERT INTO tax_categories (
   'SALES_RETURN_5_T6', '課税売上-返還等 5% 六種', '課売-返還 5% 六種', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 63, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8725,7 +8702,7 @@ INSERT INTO tax_categories (
   'SALES_EXPORT_RETURN_0', '輸出売上-返還等 0%', '輸売-返還 0%', 'sales', false,
   true, true, false, '1989-04-01', NULL,
   true, 64, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8737,7 +8714,7 @@ INSERT INTO tax_categories (
   'SALES_NON_TAXABLE_RETURN', '非課税売上-返還等', '非売-返還', 'sales', false,
   true, true, false, '1989-04-01', NULL,
   true, 65, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8749,7 +8726,7 @@ INSERT INTO tax_categories (
   'SALES_NON_TAXABLE_EXPORT_RETURN', '非課税資産輸出-返還等', '非輸-返還', 'sales', false,
   true, true, false, '1989-04-01', NULL,
   true, 66, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8761,7 +8738,7 @@ INSERT INTO tax_categories (
   'SALES_BAD_DEBT_10', '課税売上-貸倒 10%', '課売-貸倒 10%', 'sales', false,
   true, true, false, '2019-10-01', NULL,
   true, 67, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8773,7 +8750,7 @@ INSERT INTO tax_categories (
   'SALES_BAD_DEBT_REDUCED_8', '課税売上-貸倒 (軽)8%', '課売-貸倒 (軽)8%', 'sales', false,
   true, true, false, '2019-10-01', NULL,
   true, 68, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8785,7 +8762,7 @@ INSERT INTO tax_categories (
   'SALES_BAD_DEBT_8', '課税売上-貸倒 8%', '課売-貸倒 8%', 'sales', false,
   true, true, false, '2014-04-01', NULL,
   true, 69, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8797,7 +8774,7 @@ INSERT INTO tax_categories (
   'SALES_BAD_DEBT_5', '課税売上-貸倒 5%', '課売-貸倒 5%', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 70, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8809,7 +8786,7 @@ INSERT INTO tax_categories (
   'SALES_EXPORT_BAD_DEBT_0', '輸出売上-貸倒 0%', '輸売-貸倒 0%', 'sales', false,
   true, true, false, '1989-04-01', NULL,
   true, 71, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8821,7 +8798,7 @@ INSERT INTO tax_categories (
   'SALES_NON_TAXABLE_BAD_DEBT', '非課税売上-貸倒', '非売-貸倒', 'sales', false,
   true, true, false, '1989-04-01', NULL,
   true, 72, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8833,7 +8810,7 @@ INSERT INTO tax_categories (
   'SALES_NON_TAXABLE_EXPORT_BAD_DEBT', '非課税資産輸出-貸倒', '非輸-貸倒', 'sales', false,
   true, true, false, '1989-04-01', NULL,
   true, 73, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8845,7 +8822,7 @@ INSERT INTO tax_categories (
   'SALES_RECOVERY_10', '課税売上-貸倒回収 10%', '課売-回収 10%', 'sales', false,
   true, true, false, '2019-10-01', NULL,
   true, 74, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8857,7 +8834,7 @@ INSERT INTO tax_categories (
   'SALES_RECOVERY_REDUCED_8', '課税売上-貸倒回収 (軽)8%', '課売-回収 (軽)8%', 'sales', false,
   true, true, false, '2019-10-01', NULL,
   true, 75, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8869,7 +8846,7 @@ INSERT INTO tax_categories (
   'SALES_RECOVERY_8', '課税売上-貸倒回収 8%', '課売-回収 8%', 'sales', false,
   true, true, false, '2014-04-01', NULL,
   true, 76, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8881,7 +8858,7 @@ INSERT INTO tax_categories (
   'SALES_RECOVERY_5', '課税売上-貸倒回収 5%', '課売-回収 5%', 'sales', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 77, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8893,7 +8870,7 @@ INSERT INTO tax_categories (
   'PURCHASE_TAXABLE_10', '課税仕入 10%', '課仕 10%', 'purchase', true,
   true, true, false, '2019-10-01', NULL,
   true, 78, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8905,7 +8882,7 @@ INSERT INTO tax_categories (
   'PURCHASE_COMMON_10', '共通課税仕入 10%', '共-課仕 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   true, 79, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8917,7 +8894,7 @@ INSERT INTO tax_categories (
   'PURCHASE_NT_10', '非課税対応仕入 10%', '非-課仕 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   true, 80, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8929,7 +8906,7 @@ INSERT INTO tax_categories (
   'PURCHASE_REDUCED_8', '課税仕入 (軽)8%', '課仕 (軽)8%', 'purchase', true,
   true, true, false, '2019-10-01', NULL,
   true, 81, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8941,7 +8918,7 @@ INSERT INTO tax_categories (
   'PURCHASE_COMMON_REDUCED_8', '共通課税仕入 (軽)8%', '共-課仕 (軽)8%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   true, 82, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8953,7 +8930,7 @@ INSERT INTO tax_categories (
   'PURCHASE_NT_REDUCED_8', '非課税対応仕入 (軽)8%', '非-課仕 (軽)8%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   true, 83, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8965,7 +8942,7 @@ INSERT INTO tax_categories (
   'PURCHASE_TAXABLE_8', '課税仕入 8%', '課仕 8%', 'purchase', true,
   true, true, false, '2014-04-01', NULL,
   true, 84, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8977,7 +8954,7 @@ INSERT INTO tax_categories (
   'PURCHASE_COMMON_8', '共通課税仕入 8%', '共-課仕 8%', 'purchase', false,
   false, false, false, '2014-04-01', NULL,
   true, 85, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -8989,7 +8966,7 @@ INSERT INTO tax_categories (
   'PURCHASE_NT_8', '非課税対応仕入 8%', '非-課仕 8%', 'purchase', false,
   false, false, false, '2014-04-01', NULL,
   true, 86, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9001,7 +8978,7 @@ INSERT INTO tax_categories (
   'PURCHASE_TAXABLE_5', '課税仕入 5%', '課仕 5%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 87, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9013,7 +8990,7 @@ INSERT INTO tax_categories (
   'PURCHASE_COMMON_5', '共通課税仕入 5%', '共-課仕 5%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 88, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9025,7 +9002,7 @@ INSERT INTO tax_categories (
   'PURCHASE_NT_5', '非課税対応仕入 5%', '非-課仕 5%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 89, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9037,7 +9014,7 @@ INSERT INTO tax_categories (
   'IMPORT_BODY_10', '輸入仕入-本体 10%', '輸仕-本体 10%', 'purchase', false,
   true, true, false, '2019-10-01', NULL,
   true, 90, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9049,7 +9026,7 @@ INSERT INTO tax_categories (
   'IMPORT_TAX_7_8', '輸入仕入-消費税額 7.8%', '輸仕-消税 7.8%', 'purchase', false,
   true, true, false, '2019-10-01', NULL,
   true, 91, false, 0.078, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9061,7 +9038,7 @@ INSERT INTO tax_categories (
   'IMPORT_LOCAL_2_2', '輸入仕入-地方消費税額 2.2%', '輸仕-地税 2.2%', 'purchase', false,
   true, true, false, '2019-10-01', NULL,
   true, 92, false, 0.022, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '2%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '2%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9073,7 +9050,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_BODY_10', '共通輸入仕入-本体 10%', '共-輸仕 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 93, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9085,7 +9062,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_TAX_7_8', '共通輸入仕入-消費税額 7.8%', '共-輸仕-消税 7.8%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 94, false, 0.078, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9097,7 +9074,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_LOCAL_2_2', '共通輸入仕入-地方消費税額 2.2%', '共-輸仕-地税 2.2%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 95, false, 0.022, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9109,7 +9086,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_BODY_10', '非課税対応輸入-本体 10%', '非-輸仕 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 96, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9121,7 +9098,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_TAX_7_8', '非課税対応輸入-消費税額 7.8%', '非-輸仕-消税 7.8%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 97, false, 0.078, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9133,7 +9110,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_LOCAL_2_2', '非課税対応輸入-地方消費税額 2.2%', '非-輸仕-地税 2.2%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 98, false, 0.022, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9145,7 +9122,7 @@ INSERT INTO tax_categories (
   'IMPORT_BODY_REDUCED_8', '輸入仕入-本体 (軽)8%', '輸仕-本体 (軽)8%', 'purchase', false,
   true, true, false, '2019-10-01', NULL,
   false, 99, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9157,7 +9134,7 @@ INSERT INTO tax_categories (
   'IMPORT_TAX_REDUCED_6_24', '輸入仕入-消費税額 (軽)6.24%', '輸仕-消税 (軽)6.24%', 'purchase', false,
   true, true, false, '2019-10-01', NULL,
   false, 100, false, 0.0624, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '6%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '6%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9169,7 +9146,7 @@ INSERT INTO tax_categories (
   'IMPORT_LOCAL_REDUCED_1_76', '輸入仕入-地方消費税額 (軽)1.76%', '輸仕-地税 (軽)1.76%', 'purchase', false,
   true, true, false, '2019-10-01', NULL,
   false, 101, false, 0.0176, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '2%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '2%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9181,7 +9158,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_BODY_REDUCED_8', '共通輸入仕入-本体 (軽)8%', '共-輸仕 (軽)8%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 102, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9193,7 +9170,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_TAX_REDUCED_6_24', '共通輸入仕入-消費税額 (軽)6.24%', '共-輸仕-消税 (軽)6.24%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 103, false, 0.0624, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '6%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '6%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9205,7 +9182,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_LOCAL_REDUCED_1_76', '共通輸入仕入-地方消費税額 (軽)1.76%', '共-輸仕-地税 (軽)1.76%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 104, false, 0.0176, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9217,7 +9194,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_BODY_REDUCED_8', '非課税対応輸入-本体 (軽)8%', '非-輸仕 (軽)8%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 105, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9229,7 +9206,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_TAX_REDUCED_6_24', '非課税対応輸入-消費税額 (軽)6.24%', '非-輸仕-消税 (軽)6.24%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 106, false, 0.0624, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '6%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '6%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9241,7 +9218,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_LOCAL_REDUCED_1_76', '非課税対応輸入-地方消費税額 (軽)1.76%', '非-輸仕-地税 (軽)1.76%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 107, false, 0.0176, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9253,7 +9230,7 @@ INSERT INTO tax_categories (
   'IMPORT_BODY_8', '輸入仕入-本体 8%', '輸仕-本体 8%', 'purchase', false,
   true, true, false, '2014-04-01', NULL,
   false, 108, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9265,7 +9242,7 @@ INSERT INTO tax_categories (
   'IMPORT_TAX_6_3', '輸入仕入-消費税額 6.3%', '輸仕-消税 6.3%', 'purchase', false,
   true, true, false, '2014-04-01', NULL,
   false, 109, false, 0.063, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '6%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '6%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9277,7 +9254,7 @@ INSERT INTO tax_categories (
   'IMPORT_LOCAL_1_7', '輸入仕入-地方消費税額 1.7%', '輸仕-地税 1.7%', 'purchase', false,
   true, true, false, '2014-04-01', NULL,
   false, 110, false, 0.017, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '2%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '2%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9289,7 +9266,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_BODY_8', '共通輸入仕入-本体 8%', '共-輸仕 8%', 'purchase', false,
   false, false, false, '2014-04-01', NULL,
   false, 111, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9301,7 +9278,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_TAX_6_3', '共通輸入仕入-消費税額 6.3%', '共-輸仕-消税 6.3%', 'purchase', false,
   false, false, false, '2014-04-01', NULL,
   false, 112, false, 0.063, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '6%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '6%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9313,7 +9290,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_LOCAL_1_7', '共通輸入仕入-地方消費税額 1.7%', '共-輸仕-地税 1.7%', 'purchase', false,
   false, false, false, '2014-04-01', NULL,
   false, 113, false, 0.017, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9325,7 +9302,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_BODY_8', '非課税対応輸入-本体 8%', '非-輸仕 8%', 'purchase', false,
   false, false, false, '2014-04-01', NULL,
   false, 114, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9337,7 +9314,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_TAX_6_3', '非課税対応輸入-消費税額 6.3%', '非-輸仕-消税 6.3%', 'purchase', false,
   false, false, false, '2014-04-01', NULL,
   false, 115, false, 0.063, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '6%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '6%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9349,7 +9326,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_LOCAL_1_7', '非課税対応輸入-地方消費税額 1.7%', '非-輸仕-地税 1.7%', 'purchase', false,
   false, false, false, '2014-04-01', NULL,
   false, 116, false, 0.017, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '2%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9361,7 +9338,7 @@ INSERT INTO tax_categories (
   'IMPORT_BODY_5', '輸入仕入-本体 5%', '輸仕-本体 5%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 117, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9373,7 +9350,7 @@ INSERT INTO tax_categories (
   'IMPORT_TAX_4', '輸入仕入-消費税額 4%', '輸仕-消税 4%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 118, false, 0.04, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '4%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '4%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9385,7 +9362,7 @@ INSERT INTO tax_categories (
   'IMPORT_LOCAL_1', '輸入仕入-地方消費税額 1%', '輸仕-地税 1%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 119, false, 0.01, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '1%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '1%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9397,7 +9374,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_BODY_5', '共通輸入仕入-本体 5%', '共-輸仕 5%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 120, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9409,7 +9386,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_TAX_4', '共通輸入仕入-消費税額 4%', '共-輸仕-消税 4%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 121, false, 0.04, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '4%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '4%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9421,7 +9398,7 @@ INSERT INTO tax_categories (
   'IMPORT_COMMON_LOCAL_1', '共通輸入仕入-地方消費税額 1%', '共-輸仕-地税 1%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 122, false, 0.01, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '1%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '1%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9433,7 +9410,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_BODY_5', '非課税対応輸入-本体 5%', '非-輸仕 5%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 123, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9445,7 +9422,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_TAX_4', '非課税対応輸入-消費税額 4%', '非-輸仕-消税 4%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 124, false, 0.04, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '4%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '4%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9457,7 +9434,7 @@ INSERT INTO tax_categories (
   'IMPORT_NT_LOCAL_1', '非課税対応輸入-地方消費税額 1%', '非-輸仕-地税 1%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 125, false, 0.01, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '1%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '1%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9469,7 +9446,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_10', '特定課税仕入 10%', '特定課仕 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 126, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9481,7 +9458,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_COMMON_10', '共通特定課税仕入 10%', '共-特定課仕 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 127, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9493,7 +9470,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_NT_10', '非課税対応特定課税仕入 10%', '非-特定課仕 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 128, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9505,7 +9482,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_8', '特定課税仕入 8%', '特定課仕 8%', 'purchase', false,
   false, false, true, '2014-04-01', '2019-09-30',
   false, 129, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9517,7 +9494,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_COMMON_8', '共通特定課税仕入 8%', '共-特定課仕 8%', 'purchase', false,
   false, false, true, '2014-04-01', '2019-09-30',
   false, 130, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9529,7 +9506,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_NT_8', '非課税対応特定課税仕入 8%', '非-特定課仕 8%', 'purchase', false,
   false, false, true, '2014-04-01', '2019-09-30',
   false, 131, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9541,7 +9518,7 @@ INSERT INTO tax_categories (
   'PURCHASE_NON_TAXABLE', '非課税仕入', '非仕', 'purchase', false,
   true, true, false, '1989-04-01', NULL,
   true, 132, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9553,7 +9530,7 @@ INSERT INTO tax_categories (
   'PURCHASE_EXEMPT', '対象外仕入', '対象外仕', 'purchase', false,
   true, true, false, '1989-04-01', NULL,
   true, 133, false, 0, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '-'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9565,7 +9542,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_10', '課税仕入-返還等 10%', '課仕-返還 10%', 'purchase', false,
   true, true, false, '2019-10-01', NULL,
   true, 134, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9577,7 +9554,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_COMMON_10', '共通課税仕入-返還等 10%', '共-課仕-返還 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 135, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9589,7 +9566,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_NT_10', '非課税対応仕入-返還等 10%', '非-課仕-返還 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 136, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9601,7 +9578,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_REDUCED_8', '課税仕入-返還等 (軽)8%', '課仕-返還 (軽)8%', 'purchase', false,
   true, true, false, '2019-10-01', NULL,
   true, 137, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9613,7 +9590,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_COMMON_REDUCED_8', '共通課税仕入-返還等 (軽)8%', '共-課仕-返還 (軽)8%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 138, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9625,7 +9602,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_NT_REDUCED_8', '非課税対応仕入-返還等 (軽)8%', '非-課仕-返還 (軽)8%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 139, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9637,7 +9614,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_8', '課税仕入-返還等 8%', '課仕-返還 8%', 'purchase', false,
   true, true, false, '2014-04-01', NULL,
   true, 140, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":true,"individual":true,"simplified":true,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9649,7 +9626,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_COMMON_8', '共通課税仕入-返還等 8%', '共-課仕-返還 8%', 'purchase', false,
   false, false, false, '2014-04-01', NULL,
   false, 141, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9661,7 +9638,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_NT_8', '非課税対応仕入-返還等 8%', '非-課仕-返還 8%', 'purchase', false,
   false, false, false, '2014-04-01', NULL,
   false, 142, false, 0.08, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":true,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9673,7 +9650,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_5', '課税仕入-返還等 5%', '課仕-返還 5%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 143, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9685,7 +9662,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_COMMON_5', '共通課税仕入-返還等 5%', '共-課仕-返還 5%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 144, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9697,7 +9674,7 @@ INSERT INTO tax_categories (
   'PURCHASE_RETURN_NT_5', '非課税対応仕入-返還等 5%', '非-課仕-返還 5%', 'purchase', false,
   false, false, true, '1997-04-01', '2014-03-31',
   false, 145, false, 0.05, 'mcp',
-  undefined, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
+  NULL, '2026-06-14', '2014-03-31', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '5%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9709,7 +9686,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_RETURN_10', '特定課税仕入-返還等 10%', '特定課仕-返還 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 146, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9721,7 +9698,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_RETURN_COMMON_10', '共通特定課税仕入-返還等 10%', '共-特定課仕-返還 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 147, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9733,7 +9710,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_RETURN_NT_10', '非課税対応特定課税仕入-返還等 10%', '非-特定課仕-返還 10%', 'purchase', false,
   false, false, false, '2019-10-01', NULL,
   false, 148, false, 0.1, 'mcp',
-  undefined, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
+  NULL, '2026-06-14', NULL, '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '10%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9745,7 +9722,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_RETURN_8', '特定課税仕入-返還等 8%', '特定課仕-返還 8%', 'purchase', false,
   false, false, true, '2014-04-01', '2019-09-30',
   false, 149, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9757,7 +9734,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_RETURN_COMMON_8', '共通特定課税仕入-返還等 8%', '共-特定課仕-返還 8%', 'purchase', false,
   false, false, true, '2014-04-01', '2019-09-30',
   false, 150, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 INSERT INTO tax_categories (
@@ -9769,7 +9746,7 @@ INSERT INTO tax_categories (
   'PURCHASE_SPECIFIC_RETURN_NT_8', '非課税対応特定課税仕入-返還等 8%', '非-特定課仕-返還 8%', 'purchase', false,
   false, false, true, '2014-04-01', '2019-09-30',
   false, 151, false, 0.08, 'mcp',
-  undefined, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
+  NULL, '2026-06-14', '2019-09-30', '{"proportional":false,"individual":false,"simplified":false,"exempt":false}'::jsonb, '8%'
 ) ON CONFLICT (tax_category_id) DO NOTHING;
 
 -- § 5. industry_vectors（法人68件 + 個人68件）

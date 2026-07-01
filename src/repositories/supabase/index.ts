@@ -20,7 +20,7 @@
  * - DocumentRepository:         🔄 HTTP版フォールバック
  */
 
-import type { Repositories } from '@/repositories/types'
+import type { Repositories } from '../types'
 import { supabaseShareStatusRepo } from './shareStatus.repository.supabase'
 import { supabaseVendorRepo } from './vendor.repository.supabase'
 import { supabaseClientVendorRepo } from './clientVendor.repository.supabase'

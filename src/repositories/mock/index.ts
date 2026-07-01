@@ -20,7 +20,7 @@
  * - LearningRuleRepository:     ✅ 実装済み（learningRule.repository.mock.ts）
  */
 
-import type { Repositories } from '@/repositories/types'
+import type { Repositories } from '../types'
 import { mockVendorRepo } from './vendor.repository.mock'
 import { mockShareStatusRepo } from './shareStatus.repository.mock'
 import { mockClientRepo } from './client.repository.mock'
@@ -44,7 +44,7 @@ import { mockAiLogRepo } from './aiLog.repository.mock'
 import { mockSupportingSearchRepo } from './supportingSearch.repository.mock'
 import { mockMfRawDataRepo } from './mfRawData.repository.mock'
 import { mockMfTaxAvailableRepo } from './mfTaxAvailable.repository.mock'
-import { UI_MSG } from '@/constants/uiMessages'
+import { UI_MSG } from '../../constants/uiMessages'
 
 /**
  * モック版Repositories生成

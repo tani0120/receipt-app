@@ -2,7 +2,7 @@
  * 進捗管理画面のカラム＆フィルタ定義
  * MockProgressDetailPage で使用
  */
-import type { FieldDef, SectionDef } from '@/types/fieldLayout';
+import type { FieldDef, SectionDef } from '../types/fieldLayout';
 
 /** 進捗管理の全列定義 */
 export const PROGRESS_ALL_COLUMNS = [

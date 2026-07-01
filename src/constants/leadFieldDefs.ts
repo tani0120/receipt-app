@@ -3,7 +3,7 @@
  * 顧問先管理（clientFieldDefs.ts）と完全統一。
  * clientId→leadId、progressLink削除 以外は同一構造。
  */
-import type { FieldDef, SectionDef } from '@/types/fieldLayout';
+import type { FieldDef, SectionDef } from '../types/fieldLayout';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // セクション名キー定数（LeadEditPage / useFieldLayout で参照）

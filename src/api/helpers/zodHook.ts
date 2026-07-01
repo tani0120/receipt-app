@@ -5,7 +5,7 @@
  * Zodバリデーションエラーを apiError() 経由で統一フォーマットに変換する。
  *
  * 使い方:
- *   import { zodHook } from '@/api/helpers/zodHook'
+ *   import { zodHook } from './zodHook'
  *   app.post('/', zValidator('json', schema, zodHook), async (c) => { ... })
  *
  * 効果:

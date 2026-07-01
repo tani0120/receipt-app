@@ -15,7 +15,7 @@
 
 import type { StaffNotes } from './staff_notes'
 import type { DeterminationMethod } from './determination-method'
-import type { JournalLabel, JournalEntryLine } from '@/types/domain-journal'
+import type { JournalLabel, JournalEntryLine } from './domain-journal'
 import type { SourceType, Direction } from './pipeline/source_type.type'
 import type { VendorVector } from './pipeline/vendor.type'
 

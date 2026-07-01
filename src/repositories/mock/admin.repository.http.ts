@@ -4,7 +4,7 @@
  * 準拠: DL-030, P3-6
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { AdminRepository } from '../types'
 
 const api = createApiClient('/api')

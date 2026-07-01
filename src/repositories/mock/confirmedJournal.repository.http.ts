@@ -4,9 +4,9 @@
  * 返却型はJournal（統一仕訳型）。
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { ConfirmedJournalRepository } from '../types'
-import type { Journal } from '@/types/journal.type'
+import type { Journal } from '../../types/journal.type'
 
 const api = createApiClient('/api/confirmed-journals')
 

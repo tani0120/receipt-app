@@ -12,7 +12,7 @@
  *   - api/services/accountMasterApi.ts
  *   - shared/validation/journalValidationCore.ts（間接）
  */
-import type { AccountGroup } from '@/types/shared-account'
+import type { AccountGroup } from '../../types/shared-account'
 
 
 // ========================================

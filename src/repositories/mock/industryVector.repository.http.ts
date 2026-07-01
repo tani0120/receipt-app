@@ -4,9 +4,9 @@
  * 準拠: DL-030, DL-042
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { IndustryVectorRepository } from '../types'
-import type { IndustryVectorEntry } from '@/types/pipeline/vendor.type'
+import type { IndustryVectorEntry } from '../../types/pipeline/vendor.type'
 
 const api = createApiClient('/api/industry-vectors')
 

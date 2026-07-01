@@ -4,7 +4,7 @@
  * 準拠: DL-030, P3-7a
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { ClientTaxCategoryRepository } from '../types'
 
 const api = createApiClient('/api/tax-categories/client')

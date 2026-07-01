@@ -9,8 +9,8 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
-import { OCR_DETAILED_PROMPT } from '@/constants/aiPrompts';
-import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
+import { OCR_DETAILED_PROMPT } from '../../../constants/aiPrompts';
+import type { AIIntermediateOutput } from '../../../types/GeminiOCR.types';
 
 /**
  * ブラウザ版: API経由でプロンプト本文を取得（フォールバック: 定数）

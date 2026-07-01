@@ -7,9 +7,9 @@
  * 準拠: DL-030, P3-8, Phase 2.5
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { JournalRepository } from '../types'
-import type { Journal } from '@/types/journal.type'
+import type { Journal } from '../../types/journal.type'
 
 const api = createApiClient('/api/journals')
 

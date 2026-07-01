@@ -17,6 +17,9 @@
 --   - supabase_migration_plan.md Phase A-2
 -- ============================================================
 
+-- § 0. 必要な拡張の有効化
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- § 1. supporting_meta（根拠資料メタデータ）
 CREATE TABLE IF NOT EXISTS supporting_meta (
 

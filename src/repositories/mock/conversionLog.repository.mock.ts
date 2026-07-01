@@ -7,8 +7,8 @@
  * 準拠: DL-030, DL-050
  */
 
-import type { ConversionLogRepository } from '@/repositories/types'
-import * as store from '@/api/services/conversionStore'
+import type { ConversionLogRepository } from '../types'
+import * as store from '../../api/services/conversionStore'
 
 export const mockConversionLogRepo: ConversionLogRepository = {
   async getAllLogs() {

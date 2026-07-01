@@ -7,8 +7,8 @@
  * 準拠: DL-030, DL-050
  */
 
-import type { SupportingSearchRepository } from '@/repositories/types'
-import * as service from '@/api/services/migration/supportingSearchService'
+import type { SupportingSearchRepository } from '../types'
+import * as service from '../../api/services/migration/supportingSearchService'
 
 export const mockSupportingSearchRepo: SupportingSearchRepository = {
   async saveSupportingMeta(clientId, items) {

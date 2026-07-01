@@ -10,21 +10,21 @@
  *
  * 【使い方（フロント）】
  * ```ts
- * import { createRepositories } from '@/repositories'
+ * import { createRepositories } from './'
  * const repos = createRepositories()
  * const client = await repos.client.getById('c_abc12345')
  * ```
  *
  * 【使い方（サーバー）】
  * ```ts
- * import { createMockRepositories } from '@/repositories/mock'
+ * import { createMockRepositories } from './mock'
  * const repos = createMockRepositories()
  * ```
  *
  * 準拠: DL-030, DL-042
  */
 
-import type { Repositories } from '@/repositories/types'
+import type { Repositories } from './types'
 import { createHttpRepositories } from './http'
 import { createSupabaseRepositories } from './supabase'
 

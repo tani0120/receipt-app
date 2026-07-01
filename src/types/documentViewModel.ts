@@ -1,4 +1,4 @@
-import type { DocumentStatus } from '@/shared/documentStatus'
+import type { DocumentStatus } from '../shared/documentStatus'
 
 export interface DocumentViewModel {
     documentId: string

@@ -4,7 +4,7 @@
  * 準拠: DL-030, P3-4
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { MfAuthRepository } from '../types'
 
 const api = createApiClient('/api/mf')

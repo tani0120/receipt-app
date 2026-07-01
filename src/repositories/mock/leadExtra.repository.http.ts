@@ -4,7 +4,7 @@
  * 準拠: DL-030, P3-7b
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { LeadExtraRepository } from '../types'
 
 const api = createApiClient('/api/leads')

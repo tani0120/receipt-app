@@ -7,10 +7,10 @@
  * 【注意】変換関数はロジックではない（データマッピングのみ）。
  */
 
-import type { Vendor } from '@/types/pipeline/vendor.type'
-import type { Account } from '@/types/shared-account'
-import { DEFAULT_EFFECTIVE_FROM } from '@/constants/mfApiConstants'
-import { inferAccountGroupFromName } from '@/utils/inferAccountGroupFromName'
+import type { Vendor } from '../../types/pipeline/vendor.type'
+import type { Account } from '../../types/shared-account'
+import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
+import { inferAccountGroupFromName } from '../../utils/inferAccountGroupFromName'
 
 /** DB行 → Vendor型への変換 */
 export function toVendor(row: Record<string, unknown>): Vendor {

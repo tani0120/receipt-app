@@ -7,8 +7,8 @@
  * 準拠: DL-030, DL-050
  */
 
-import type { AiLogRepository } from '@/repositories/types'
-import * as store from '@/api/services/aiLogStore'
+import type { AiLogRepository } from '../types'
+import * as store from '../../api/services/aiLogStore'
 
 export const mockAiLogRepo: AiLogRepository = {
   // ── 操作ログ ──

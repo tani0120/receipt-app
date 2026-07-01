@@ -9,7 +9,7 @@
  * 移行先: Supabase移行時にマスタテーブルへ投入するデータソース
  */
 
-import type { AccountGroup } from '@/types/shared-account'
+import type { AccountGroup } from '../types/shared-account'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 3大グループ定義（科目選択ドロップダウン用）
@@ -50,7 +50,7 @@ export const TAX_GROUP_COMMON = '共通'
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /** 勘定科目の5分類グループ（shared/validation/journalValidationCore.ts からre-export） */
-export type { MegaGroupType } from '@/shared/validation/journalValidationCore'
+export type { MegaGroupType } from '../shared/validation/journalValidationCore'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // accountGroupキー定数

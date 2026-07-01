@@ -4,8 +4,8 @@
  * 準拠: DL-030, DL-042
  */
 
-import { createApiClient } from '@/utils/apiClient'
-import type { ShareStatusRecord } from '@/repositories/types'
+import { createApiClient } from '../../utils/apiClient'
+import type { ShareStatusRecord } from '../types'
 import type { ShareStatusRepository } from '../types'
 
 const api = createApiClient('/api/share-status')

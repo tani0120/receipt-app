@@ -12,9 +12,9 @@
  * 2026-06-30: vendorListService.tsからロジック統合（循環参照解消）
  */
 
-import type { VendorRepository } from '@/repositories/types'
-import type { Vendor } from '@/types/pipeline/vendor.type'
-import { getAll as getAllVendors, findByMatchKey, findByTNumber, create as createVendor, remove as removeVendor, update as updateVendor, getById as getVendorById } from '@/api/services/vendorStore'
+import type { VendorRepository } from '../types'
+import type { Vendor } from '../../types/pipeline/vendor.type'
+import { getAll as getAllVendors, findByMatchKey, findByTNumber, create as createVendor, remove as removeVendor, update as updateVendor, getById as getVendorById } from '../../api/services/vendorStore'
 
 // ────────────────────────────────────────────
 // 検索用正規化（vendorListServiceから移植）

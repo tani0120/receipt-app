@@ -4,9 +4,9 @@
  * 準拠: DL-030, DL-042
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { LearningRuleRepository } from '../types'
-import type { LearningRule } from '@/types/learning_rule.type'
+import type { LearningRule } from '../../types/learning_rule.type'
 
 const api = createApiClient('/api/learning-rules')
 

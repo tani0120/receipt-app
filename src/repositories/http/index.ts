@@ -11,7 +11,7 @@
  * 準拠: DL-030, DL-042
  */
 
-import type { Repositories } from '@/repositories/types'
+import type { Repositories } from '../types'
 import { httpVendorRepo } from '../mock/vendor.repository.http'
 import { httpShareStatusRepo } from '../mock/shareStatus.repository.http'
 import { httpClientRepo } from '../mock/client.repository.http'
@@ -35,7 +35,7 @@ import { httpClientTaxCategoryRepo } from '../mock/clientTaxCategory.repository.
 import { httpLeadExtraRepo } from '../mock/leadExtra.repository.http'
 import { httpJournalRepo } from '../mock/journal.repository.http'
 import { httpPipelineRepo } from '../mock/pipeline.repository.http'
-import { UI_MSG } from '@/constants/uiMessages'
+import { UI_MSG } from '../../constants/uiMessages'
 
 /**
  * HTTP版Repositories生成（フロントエンド用）

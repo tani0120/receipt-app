@@ -7,8 +7,8 @@
  * 準拠: DL-030, DL-042
  */
 
-import { createApiClient } from '@/utils/apiClient'
-import type { Staff } from '@/repositories/types'
+import { createApiClient } from '../../utils/apiClient'
+import type { Staff } from '../types'
 import type { StaffRepository } from '../types'
 
 const api = createApiClient('/api/staff')

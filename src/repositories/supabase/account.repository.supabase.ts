@@ -7,9 +7,9 @@
  * 準拠: pipeline_design_master.md DL-030, DL-032
  */
 
-import { getSupabase } from '@/repositories/supabase/supabase'
-import type { AccountRepository } from '@/repositories/types'
-import type { Account } from '@/types/shared-account'
+import { getSupabase } from './supabase'
+import type { AccountRepository } from '../types'
+import type { Account } from '../../types/shared-account'
 import { toAccount } from './helpers'
 
 export const supabaseAccountRepo: AccountRepository = {

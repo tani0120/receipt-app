@@ -6,8 +6,8 @@
  * 準拠: DL-030, DL-042
  */
 
-import { createApiClient } from '@/utils/apiClient'
-import type { Account } from '@/types/shared-account'
+import { createApiClient } from '../../utils/apiClient'
+import type { Account } from '../../types/shared-account'
 import type { AccountMasterRepository } from '../types'
 
 const api = createApiClient('/api/accounts')

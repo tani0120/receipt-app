@@ -146,7 +146,12 @@ CREATE TABLE IF NOT EXISTS accounts (
   effective_from          TEXT NOT NULL DEFAULT '2019-10-01',
   effective_to            TEXT,
   sort_order              INTEGER NOT NULL DEFAULT 0,
+  hidden_in_master        BOOLEAN NOT NULL DEFAULT false,  -- マスタ一覧で非表示
   is_custom               BOOLEAN NOT NULL DEFAULT false,
+  hidden                  BOOLEAN NOT NULL DEFAULT false,  -- 全般的に非表示
+  is_master_custom        BOOLEAN,                         -- マスタカスタム科目フラグ
+  is_client_custom        BOOLEAN,                         -- 顧問先カスタム科目フラグ
+  source                  TEXT NOT NULL DEFAULT 'mcp',     -- データソース
   insert_after            TEXT,
   created_at              TIMESTAMPTZ DEFAULT now(),
   updated_at              TIMESTAMPTZ DEFAULT now()

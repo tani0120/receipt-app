@@ -7,8 +7,8 @@
  * 準拠: DL-030, DL-042
  */
 
-import { createApiClient } from '@/utils/apiClient'
-import type { Vendor } from '@/types/pipeline/vendor.type'
+import { createApiClient } from '../../utils/apiClient'
+import type { Vendor } from '../../types/pipeline/vendor.type'
 import type { VendorRepository } from '../types'
 
 const api = createApiClient('/api/vendors')

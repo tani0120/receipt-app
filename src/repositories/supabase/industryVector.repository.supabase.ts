@@ -7,9 +7,9 @@
  * 準拠: pipeline_design_master.md DL-030, DL-032
  */
 
-import { getSupabase } from '@/repositories/supabase/supabase'
-import type { IndustryVectorRepository } from '@/repositories/types'
-import type { IndustryVectorEntry, VendorVector } from '@/types/pipeline/vendor.type'
+import { getSupabase } from './supabase'
+import type { IndustryVectorRepository } from '../types'
+import type { IndustryVectorEntry, VendorVector } from '../../types/pipeline/vendor.type'
 
 /**
  * DB行（フラット形式）→ IndustryVectorEntry（プロパティ方式）に集約

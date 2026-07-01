@@ -18,14 +18,14 @@ import type {
   FirstAiLineItem,
   ReceiptAnalysisResult,
   AnalyzeOptions,
-} from '@/api/services/pipeline/types';
-import { validateFileType } from '@/shared/fileTypes';
+} from './pipeline/types';
+import { validateFileType } from '../../shared/fileTypes';
 import {
   serverErrorMessage,
   networkErrorMessage,
   warnFileSizeTooLarge,
   WARN_AI_ANALYSIS_FAILED,
-} from '@/constants/validationMessages';
+} from '../../constants/validationMessages';
 
 // 型の再export（Vue側のimportパスを変更しないための互換性維持）
 export type { ReceiptAnalysisResult, AnalyzeOptions };

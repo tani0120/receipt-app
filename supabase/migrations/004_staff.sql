@@ -14,15 +14,16 @@
 
 -- § 1. staff（スタッフマスタ）
 CREATE TABLE IF NOT EXISTS staff (
-  uuid        TEXT PRIMARY KEY,
-  name        TEXT NOT NULL,
-  email       TEXT NOT NULL UNIQUE,
-  role        TEXT NOT NULL DEFAULT 'general'
-              CHECK (role IN ('admin', 'general')),
-  status      TEXT NOT NULL DEFAULT 'active'
-              CHECK (status IN ('active', 'inactive')),
-  created_at  TIMESTAMPTZ DEFAULT now(),
-  updated_at  TIMESTAMPTZ DEFAULT now()
+  uuid          TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  email         TEXT NOT NULL UNIQUE,
+  role          TEXT NOT NULL DEFAULT 'general'
+                CHECK (role IN ('admin', 'general')),
+  status        TEXT NOT NULL DEFAULT 'active'
+                CHECK (status IN ('active', 'inactive')),
+  name_romaji   TEXT NOT NULL DEFAULT '',   -- ローマ字名（ソート・検索用）
+  created_at    TIMESTAMPTZ DEFAULT now(),
+  updated_at    TIMESTAMPTZ DEFAULT now()
 );
 
 ALTER TABLE staff ENABLE ROW LEVEL SECURITY;

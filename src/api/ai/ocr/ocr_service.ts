@@ -6,7 +6,7 @@
  */
 
 import { executeOCRBrowser } from '../gemini/ocr_service_browser';
-import type { AIIntermediateOutput } from '@/types/GeminiOCR.types';
+import type { AIIntermediateOutput } from '../../../types/GeminiOCR.types';
 
 /**
  * OCR実行（唯一の呼び出し口）

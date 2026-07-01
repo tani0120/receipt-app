@@ -4,7 +4,7 @@
  * 準拠: DL-030, P3-1
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { ListViewRepository } from '../types'
 
 const api = createApiClient('/api/list-views')

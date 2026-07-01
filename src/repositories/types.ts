@@ -31,7 +31,7 @@
 // § ドメイン型の再公開（re-export）
 // ============================================================
 // 分割ファイルから全ドメイン型を再公開。
-// 既存の `import ... from '@/repositories/types'` を壊さない。
+// 既存の `import ... from './types'` を壊さない。
 
 export type { Staff, StaffForm, StaffRole, StaffStatus } from './types/staff.types'
 export type { Client, ClientForm, ClientStatus, ClientContact, PastStaffEntry, AttachmentFile } from './types/client.types'
@@ -54,12 +54,12 @@ export type {
 // § 外部型のre-export（既存互換）
 // ============================================================
 
-import type { Vendor, IndustryVectorEntry, VendorVector } from '@/types/pipeline/vendor.type'
-import type { Account, AccountGroup } from '@/types/shared-account'
-import type { FilterOperator } from '@/api/helpers/applyFilterConditions'
-import type { TaxCategory } from '@/types/shared-tax-category'
-import type { LearningRule } from '@/types/learning_rule.type'
-import type { Journal } from '@/types/journal.type'
+import type { Vendor, IndustryVectorEntry, VendorVector } from '../types/pipeline/vendor.type'
+import type { Account, AccountGroup } from '../types/shared-account'
+import type { FilterOperator } from '../api/helpers/applyFilterConditions'
+import type { TaxCategory } from '../types/shared-tax-category'
+import type { LearningRule } from '../types/learning_rule.type'
+import type { Journal } from '../types/journal.type'
 export type { LearningRule }
 export type { Journal }
 

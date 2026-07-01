@@ -9,7 +9,7 @@
  * 【注意】ロジックなし。データの読み書きのみ。
  */
 
-import type { ShareStatusRecord, ShareStatusRepository } from '@/repositories/types'
+import type { ShareStatusRecord, ShareStatusRepository } from '../types'
 import {
   getAllShareStatus,
   getByClientId as getByClientIdFromStore,

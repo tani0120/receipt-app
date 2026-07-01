@@ -4,7 +4,7 @@
  * 準拠: DL-030, P3-5b
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { CommentRepository } from '../types'
 
 const api = createApiClient('/api/comments')

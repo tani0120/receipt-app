@@ -11,8 +11,8 @@
  * 準拠: DL-030, DL-042
  */
 
-import { createApiClient } from '@/utils/apiClient'
-import type { Client } from '@/repositories/types'
+import { createApiClient } from '../../utils/apiClient'
+import type { Client } from '../types'
 import type { ClientRepository } from '../types'
 
 const api = createApiClient('/api/clients')

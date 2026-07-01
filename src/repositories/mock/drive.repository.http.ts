@@ -4,7 +4,7 @@
  * 準拠: DL-030, P3-2
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { DriveRepository } from '../types'
 
 const api = createApiClient('/api/drive')

@@ -7,8 +7,8 @@
  * 準拠: DL-030, DL-050
  */
 
-import type { ActivityLogRepository } from '@/repositories/types'
-import * as store from '@/api/services/activityLogStore'
+import type { ActivityLogRepository } from '../types'
+import * as store from '../../api/services/activityLogStore'
 
 export const mockActivityLogRepo: ActivityLogRepository = {
   async addLog(entry) {

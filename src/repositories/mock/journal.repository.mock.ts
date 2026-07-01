@@ -13,15 +13,15 @@
  * 準拠: Phase 2.5 実装計画 §確定Interface
  */
 
-import type { JournalRepository } from '@/repositories/types'
-import type { Journal } from '@/types/journal.type'
+import type { JournalRepository } from '../types'
+import type { Journal } from '../../types/journal.type'
 import {
   getJournals,
   addJournals,
   updateJournal,
   deleteJournal,
   saveJournals,
-} from '@/api/services/journalStore'
+} from '../../api/services/journalStore'
 
 export const mockJournalRepo: JournalRepository = {
   // ── get: 全件取得 → find ──

@@ -7,9 +7,9 @@
  * 準拠: pipeline_design_master.md DL-030, DL-032
  */
 
-import { getSupabase } from '@/repositories/supabase/supabase'
-import type { VendorRepository } from '@/repositories/types'
-import type { Vendor } from '@/types/pipeline/vendor.type'
+import { getSupabase } from './supabase'
+import type { VendorRepository } from '../types'
+import type { Vendor } from '../../types/pipeline/vendor.type'
 import { toVendor } from './helpers'
 
 export const supabaseVendorRepo: VendorRepository = {

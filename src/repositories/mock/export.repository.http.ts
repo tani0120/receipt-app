@@ -4,7 +4,7 @@
  * 準拠: DL-030, P3-3
  */
 
-import { createApiClient } from '@/utils/apiClient'
+import { createApiClient } from '../../utils/apiClient'
 import type { ExportRepository } from '../types'
 
 const exportApi = createApiClient('/api/export')

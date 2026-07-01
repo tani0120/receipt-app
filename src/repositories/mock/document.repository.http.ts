@@ -7,8 +7,8 @@
  * 準拠: DL-030, DL-042
  */
 
-import { createApiClient } from '@/utils/apiClient'
-import type { DocEntry } from '@/repositories/types'
+import { createApiClient } from '../../utils/apiClient'
+import type { DocEntry } from '../types'
 import type { DocumentRepository } from '../types'
 
 const api = createApiClient('/api/doc-store')

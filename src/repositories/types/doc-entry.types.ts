@@ -5,7 +5,7 @@
  * 用途: 資料選別画面、進捗管理の未選別/資料受取日算出
  */
 
-import type { DeterminationMethod } from '@/types/determination-method'
+import type { DeterminationMethod } from '../../types/determination-method'
 
 /** 資料のデータソース */
 export type DocSource = 'drive' | 'upload' | 'staff-upload' | 'guest-upload'

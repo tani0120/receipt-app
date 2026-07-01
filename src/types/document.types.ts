@@ -3,8 +3,8 @@
  * Streamed互換設計
  */
 
-import type { DocumentStatus } from '@/shared/documentStatus'
-export type { DocumentStatus } from '@/shared/documentStatus'
+import type { DocumentStatus } from '../shared/documentStatus'
+export type { DocumentStatus } from '../shared/documentStatus'
 
 
 export interface Document {
