@@ -17,6 +17,8 @@
  */
 
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { z } from 'zod'
 import crypto from 'node:crypto'
 import {
   buildAuthorizationUrl,
@@ -27,8 +29,6 @@ import {
 
 /** フロントエンドのOrigin。本番環境では環境変数 FRONTEND_URL で上書き可能 */
 const FRONTEND_ORIGIN = process.env.FRONTEND_URL ?? 'http://localhost:5173'
-
-const app = new Hono()
 
 // CSRF防止用stateの一時保存（メモリ。有効期限10分）
 // TODO: Phase 2（Supabase移行）完了時にセッションストアに差し替え (2026-05-17)
@@ -48,16 +48,19 @@ function cleanExpiredStates(): void {
 
 // ---------- エンドポイント ----------
 
+const route = new Hono()
 /**
  * GET /auth/url — 認可画面URLを取得
  *
  * フロント側: このURLにリダイレクトしてユーザーにMFログイン・認可を促す
  * レスポンス: { url: string }
  */
-app.get('/auth/url', (c) => {
+.get('/auth/url',
+  zValidator('query', z.object({ clientId: z.string().optional() })),
+  (c) => {
   cleanExpiredStates()
 
-  const clientId = c.req.query('clientId') ?? 'unknown'
+  const clientId = c.req.valid('query').clientId ?? 'unknown'
   const state = crypto.randomBytes(32).toString('hex')
   // clientIdはMapのvalueに保存（URLエンコード問題を回避）
   pendingStates.set(state, { createdAt: Date.now(), clientId })
@@ -75,7 +78,7 @@ app.get('/auth/url', (c) => {
  * 成功時: フロントのトップページにリダイレクト（トークンはサーバー側に保存済み）
  * 失敗時: エラーページにリダイレクト
  */
-app.get('/auth/callback', async (c) => {
+.get('/auth/callback', async (c) => {
   const code = c.req.query('code')
   const state = c.req.query('state')
   const error = c.req.query('error')
@@ -121,8 +124,10 @@ app.get('/auth/callback', async (c) => {
  * クエリ: clientId（省略時は 'default'）
  * レスポンス: { authenticated: boolean, expiresAt: string|null, officeId: string|null, officeName: string|null }
  */
-app.get('/auth/status', (c) => {
-  const clientId = c.req.query('clientId') ?? 'default'
+.get('/auth/status',
+  zValidator('query', z.object({ clientId: z.string().optional() })),
+  (c) => {
+  const clientId = c.req.valid('query').clientId ?? 'default'
   const status = getAuthStatus(clientId)
   return c.json(status)
 })
@@ -135,10 +140,12 @@ app.get('/auth/status', (c) => {
  *
  * Supabase移行後: WHERE client_id = ANY($1) の1クエリで高速化予定
  */
-app.post('/auth/status/bulk', async (c) => {
-  const body = await c.req.json<{ clientIds: string[] }>()
+.post('/auth/status/bulk',
+  zValidator('json', z.object({ clientIds: z.array(z.string()) })),
+  async (c) => {
+  const { clientIds } = c.req.valid('json')
   const result: Record<string, { authenticated: boolean }> = {}
-  for (const id of body.clientIds ?? []) {
+  for (const id of clientIds) {
     const s = getAuthStatus(id)
     result[id] = { authenticated: s.authenticated }
   }
@@ -150,9 +157,9 @@ app.post('/auth/status/bulk', async (c) => {
  *
  * レスポンス: { ok: true }
  */
-app.post('/auth/logout', (c) => {
+.post('/auth/logout', (c) => {
   clearToken()
   return c.json({ ok: true })
 })
 
-export default app
+export default route

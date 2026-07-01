@@ -1,21 +1,17 @@
-// src/server.ts — API + 静的ファイル提供
+// src/server.ts — API + 静的ファイル提供（本番起動用）
 import { config } from 'dotenv'
 config({ path: '.env.local' })  // .env.localを明示的に読み込む（VERTEX_PROJECT_ID等）
 
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
-import conversionRoute from './api/routes/conversion'
-
-// 旧ai-rulesは廃止・削除済み。学習ページに移行
-import adminRoute from './api/routes/admin'
-import aiModelsRoute from './api/routes/ai-models'
-import documentsRoute from './api/routes/documents'
-import pipelineRoute from './api/routes/pipeline'
+// ルート定義はrouteTree.tsに一元化（SSOT）
+import routeTree from './api/routeTree'
 
 import crypto from 'node:crypto'
 
 const app = new Hono<{ Variables: { requestId: string } }>()
+
 const port = parseInt(process.env.PORT || '8080')
 
 // リクエストIDミドルウェア: 全リクエストにUUID短縮8桁を付与
@@ -35,153 +31,15 @@ console.log('PORT:', port)
 console.log('ENV:', process.env.NODE_ENV)
 console.log('='.repeat(50))
 
-// Phase 1: Health check
+// Health check（server.ts固有 — routeTreeには含めない）
 app.get('/health', (c) => {
     console.log('Health check received')
     return c.text('OK')
 })
 
-// Simple API endpoint (Phase 1)
-app.get('/api/hello', (c) => {
-    console.log('API hello endpoint called')
-    return c.json({ message: 'Hello from Hono API!', status: 'running' })
-})
+// 全APIルートをrouteTreeから一括マウント
+app.route('', routeTree)
 
-// Phase 4 Step 1: Conversion Route
-app.route('/api/conversion', conversionRoute)
-
-
-
-// Phase 4 Step 7-8: Admin Route（旧ai-rulesは廃止・削除済み）
-app.route('/api/admin', adminRoute)
-
-// Phase 4 Step 9-10: AI Routes
-app.route('/api/ai-models', aiModelsRoute)
-
-// Phase 6.3: OCR Route (Vertex AI) - 遅延import
-if (process.env.ENABLE_OCR === 'true') {
-    const { default: ocrRoute } = await import('./api/routes/ocr')
-    app.route('/api/ocr', ocrRoute)
-    console.log('✅ OCR Route enabled')
-} else {
-    console.log('⚠️ OCR Route disabled (ENABLE_OCR not set to true)')
-}
-
-// Phase 1 Step 1.4: Documents Route (PostgreSQL統合)
-app.route('/api/documents', documentsRoute)
-
-// Pipeline API: パイプライン結合テスト（Step 0-1: firstAi / extract）
-app.route('/api/pipeline', pipelineRoute)
-
-// Drive API: Google Drive連携（ファイル一覧取得・処理）
-import driveRoute from './api/routes/drive'
-app.route('/api/drive', driveRoute)
-
-// Doc Store API: ドキュメントJSON永続化
-import docStoreRoute from './api/routes/docStore'
-app.route('/api/doc-store', docStoreRoute)
-
-// Staff API: スタッフJSON永続化（DL-042）
-import staffRoutes from './api/routes/staffRoutes'
-app.route('/api/staff', staffRoutes)
-
-// Auth API: ログインスタッフ管理（DL-042）
-import authRoutes from './api/routes/authRoutes'
-app.route('/api/auth', authRoutes)
-
-// Client API: 顧問先JSON永続化（DL-042）
-import clientRoutes from './api/routes/clientRoutes'
-app.route('/api/clients', clientRoutes)
-
-// Journal API: 仕訳JSON永続化（DL-042 #12）
-import journalRoutes from './api/routes/journalRoutes'
-app.route('/api/journals', journalRoutes)
-
-// ExportHistory API: 出力履歴+CSVスナップショットJSON永続化（DL-042 S1）
-import exportHistoryRoutes from './api/routes/exportHistoryRoutes'
-app.route('/api/export-history', exportHistoryRoutes)
-
-// Vendor API: 取引先JSON永続化（DL-042）
-import vendorRoutes from './api/routes/vendorRoutes'
-app.route('/api/vendors', vendorRoutes)
-
-// ShareStatus API: 共有設定JSON永続化（DL-043）
-import shareStatusRoutes from './api/routes/shareStatusRoutes'
-app.route('/api/share-status', shareStatusRoutes)
-
-// GuestAuth API: ゲスト認証JSON永続化（DL-043）
-import guestAuthRoutes from './api/routes/guestAuthRoutes'
-app.route('/api/guest', guestAuthRoutes)
-
-// Notification API: 通知JSON永続化（DL-047）
-import notificationRoutes from './api/routes/notificationRoutes'
-app.route('/api/notifications', notificationRoutes)
-
-// Lead API: 見込先JSON永続化
-import leadRoutes from './api/routes/leadRoutes'
-app.route('/api/leads', leadRoutes)
-
-// ConfirmedJournal API: 確定済み仕訳JSON永続化（T-03 / DL-053）
-import confirmedJournalRoutes from './api/routes/confirmedJournalRoutes'
-app.route('/api/confirmed-journals', confirmedJournalRoutes)
-
-// ActivityLog API: 活動ログJSON永続化（DL-042）
-import activityLogRoutes from './api/routes/activityLogRoutes'
-app.route('/api/activity-log', activityLogRoutes)
-
-// IndustryVector API: 業種ベクトルJSON永続化（DL-042）
-import industryVectorRoutes from './api/routes/industryVectorRoutes'
-app.route('/api/industry-vectors', industryVectorRoutes)
-
-// AccountMaster API: 勘定科目マスタ（DL-042）
-import accountMasterRoutes from './api/routes/accountMasterRoutes'
-app.route('/api/accounts', accountMasterRoutes)
-
-// TaxCategory API: 税区分マスタ（DL-042）
-import taxCategoryRoutes from './api/routes/taxCategoryRoutes'
-app.route('/api/tax-categories', taxCategoryRoutes)
-
-// LearningRule API: 学習ルール（DL-042）
-import learningRuleRoutes from './api/routes/learningRuleRoutes'
-app.route('/api/learning-rules', learningRuleRoutes)
-
-// Progress API: 進捗管理一覧（T-31-1）
-import progressRoutes from './api/routes/progressRoutes'
-app.route('/api/progress', progressRoutes)
-
-// Export API: 仕訳出力一覧（T-31-7）
-import { exportRoutes } from './api/routes/exportRoutes'
-app.route('/api/export', exportRoutes)
-
-// FieldLayout API: フィールドレイアウト保存/取得
-import fieldLayoutRoutes from './api/routes/fieldLayoutRoutes'
-app.route('/api/field-layout', fieldLayoutRoutes)
-
-// ListView API: 一覧ビュー管理（kintone風ビュー設定）
-import listViewRoutes from './api/routes/listViewRoutes'
-app.route('/api/list-views', listViewRoutes)
-
-// Comment API: コメント管理
-import commentRoutes from './api/routes/commentRoutes'
-app.route('/api/comments', commentRoutes)
-
-// Attachment API: 添付ファイル管理
-import attachmentRoutes from './api/routes/attachmentRoutes'
-app.route('/api/attachments', attachmentRoutes)
-
-// MF（マネーフォワード）API: OAuth認証 + データ取得
-import mfAuthRoutes from './api/routes/mfAuthRoutes'
-import mfRoutes from './api/routes/mfRoutes'
-app.route('/api/mf', mfAuthRoutes)
-app.route('/api/mf', mfRoutes)
-
-// AIPrompt API: AIプロンプト管理（GET/PUT）
-import aiPromptRoutes from './api/routes/aiPromptRoutes'
-app.route('/api/ai-prompts', aiPromptRoutes)
-
-// AICommand API: チャットUIからのコマンド実行
-import aiCommandRoutes from './api/routes/aiCommandRoutes'
-app.route('/api/ai-command', aiCommandRoutes)
 
 // Phase 2: 静的ファイル提供（フロントエンドUI）
 // 開発時はVite開発サーバーが配信するため、dist/clientが存在する本番時のみ有効化

@@ -343,7 +343,7 @@ async function executeImport() {
   mfImporting.value = true;
   try {
     // バックエンドAPIで差分検知 + マスタ保存を一括実行
-    const result = await repos.mfAuth.importMasterAccounts() as {
+    const result = await repos.mfAuth.importMasterAccounts(clientId) as {
       success: boolean;
       mfCount: number;
       diff: { matched: unknown[]; added: unknown[] };

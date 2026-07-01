@@ -2,51 +2,91 @@
  * mfAuth.repository.http.ts — MfAuthRepository HTTP実装（フロントエンド用）
  *
  * 準拠: DL-030, P3-4
+ * Hono RPC (hc) 経由で型安全なAPI呼び出しを実現
  */
 
-import { createApiClient } from '../../utils/apiClient'
+import { honoClient } from '../../utils/honoClient'
 import type { MfAuthRepository } from '../types'
-
-const api = createApiClient('/api/mf')
 
 export const httpMfAuthRepo: MfAuthRepository = {
   getAuthStatus: async (clientId) => {
-    return api.get(`/auth/status?clientId=${encodeURIComponent(clientId)}`)
+    const res = await honoClient.api.mf.auth.status.$get({
+      query: { clientId }
+    })
+    if (!res.ok) throw new Error(`API GET /api/mf/auth/status failed: ${res.status}`)
+    return await res.json()
   },
 
   getAuthStatusBulk: async (clientIds) => {
-    return api.post('/auth/status/bulk', { clientIds })
+    const res = await honoClient.api.mf.auth.status.bulk.$post({
+      json: { clientIds }
+    })
+    if (!res.ok) throw new Error(`API POST /api/mf/auth/status/bulk failed: ${res.status}`)
+    return await res.json()
   },
 
   getAuthUrl: async (clientId) => {
-    return api.get(`/auth/url?clientId=${encodeURIComponent(clientId)}`)
+    const res = await honoClient.api.mf.auth.url.$get({
+      query: { clientId }
+    })
+    if (!res.ok) throw new Error(`API GET /api/mf/auth/url failed: ${res.status}`)
+    return await res.json()
   },
 
-  importMasterAccounts: async () => {
-    return api.post('/import-master-accounts', {})
+  importMasterAccounts: async (clientId) => {
+    const res = await honoClient.api.mf['import-master-accounts'].$post({
+      json: { clientId }
+    })
+    if (!res.ok) throw new Error(`API POST /api/mf/import-master-accounts failed: ${res.status}`)
+    return await res.json()
   },
 
   importClientAccounts: async (clientId) => {
-    return api.post(`/import-client-accounts?clientId=${encodeURIComponent(clientId)}`, {})
+    const res = await honoClient.api.mf['import-client-accounts'].$post({
+      query: { clientId }
+    })
+    if (!res.ok) throw new Error(`API POST /api/mf/import-client-accounts failed: ${res.status}`)
+    return await res.json()
   },
 
   fiscalCheck: async (clientId) => {
-    return api.get(`/fiscal-check?clientId=${encodeURIComponent(clientId)}`)
+    const res = await honoClient.api.mf['fiscal-check'].$get({
+      query: { clientId }
+    })
+    if (!res.ok) throw new Error(`API GET /api/mf/fiscal-check failed: ${res.status}`)
+    return await res.json()
   },
 
   importOffices: async (data) => {
-    return api.post('/import-offices', data)
+    const res = await honoClient.api.mf['import-offices'].$post({
+      json: data as { clientIds: string[] }
+    })
+    if (!res.ok) throw new Error(`API POST /api/mf/import-offices failed: ${res.status}`)
+    return await res.json()
   },
 
   sendJournals: async (clientId, data) => {
-    return api.post(`/send-journals/${encodeURIComponent(clientId)}`, data)
+    const res = await honoClient.api.mf['send-journals'][':clientId'].$post({
+      param: { clientId },
+      json: data
+    })
+    if (!res.ok) throw new Error(`API POST /api/mf/send-journals/${clientId} failed: ${res.status}`)
+    return await res.json()
   },
 
   getTermSettings: async (clientId) => {
-    return api.get(`/term-settings?clientId=${encodeURIComponent(clientId)}`)
+    const res = await honoClient.api.mf['term-settings'].$get({
+      query: { clientId }
+    })
+    if (!res.ok) throw new Error(`API GET /api/mf/term-settings failed: ${res.status}`)
+    return await res.json()
   },
 
   importJournals: async (data) => {
-    return api.post('/import-journals', data)
+    const res = await honoClient.api.mf['import-journals'].$post({
+      json: data as { clientId: string; periodCount?: number }
+    })
+    if (!res.ok) throw new Error(`API POST /api/mf/import-journals failed: ${res.status}`)
+    return await res.json()
   },
 }

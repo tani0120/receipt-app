@@ -19,6 +19,8 @@
  */
 
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { z } from 'zod'
 import { fetchTenant } from '../services/mfApiClient'
 import { getAuthStatus, setOfficeInfo } from '../services/mfAuthService'
 
@@ -57,8 +59,8 @@ import { DEFAULT_EFFECTIVE_FROM } from '../../constants/mfApiConstants'
 import { isIndividualType } from '../../constants/clientOptions'
 import { readdirSync, existsSync as fsExists, readFileSync as fsRead } from 'fs'
 import { join as pathJoin } from 'path'
-
-const app = new Hono()
+import { sendBatchToMf, applyMfSendResults } from '../services/mfJournalSender'
+import type { SourceJournal, MfJournalPayload } from '../services/journalToMfConverter'
 
 // ---------- 認可サーバーAPI経由 ----------
 
@@ -66,7 +68,8 @@ const app = new Hono()
  * GET /tenant — MF認可サーバーAPIから事業者情報を取得
  * ※ 認可サーバーAPI（api.biz.moneyforward.com）はWAFブロック対象外
  */
-app.get('/tenant', async (c) => {
+const route = new Hono()
+.get('/tenant', async (c) => {
   const clientId = c.req.query('clientId') ?? 'default'
   const status = getAuthStatus(clientId)
   if (!status.authenticated) {
@@ -90,7 +93,7 @@ app.get('/tenant', async (c) => {
  * クエリ: clientId（顧問先ID。省略時は 'default'）
  * 個人/法人判定（type）、会計期間、従業員数等の業務データが取れる
  */
-app.get('/office', async (c) => {
+.get('/office', async (c) => {
   const clientId = c.req.query('clientId') ?? 'default'
   const status = getAuthStatus(clientId)
   if (!status.authenticated) {
@@ -113,7 +116,7 @@ app.get('/office', async (c) => {
  * GET /accounts — MCPサーバー経由で勘定科目一覧を取得
  * クエリ: clientId（顧問先ID。省略時は 'default'）
  */
-app.get('/accounts', async (c) => {
+.get('/accounts', async (c) => {
   const clientId = c.req.query('clientId') ?? 'default'
   const status = getAuthStatus(clientId)
   if (!status.authenticated) {
@@ -134,7 +137,7 @@ app.get('/accounts', async (c) => {
  * GET /taxes — MCPサーバー経由で税区分一覧を取得
  * クエリ: clientId（顧問先ID。省略時は 'default'）
  */
-app.get('/taxes', async (c) => {
+.get('/taxes', async (c) => {
   const clientId = c.req.query('clientId') ?? 'default'
   const status = getAuthStatus(clientId)
   if (!status.authenticated) {
@@ -155,7 +158,7 @@ app.get('/taxes', async (c) => {
  * GET /journals — MCPサーバー経由で仕訳一覧を取得
  * クエリ: clientId, start_date, end_date, account_id, page, per_page
  */
-app.get('/journals', async (c) => {
+.get('/journals', async (c) => {
   const clientId = c.req.query('clientId') ?? 'default'
   const status = getAuthStatus(clientId)
   if (!status.authenticated) {
@@ -189,8 +192,10 @@ app.get('/journals', async (c) => {
  * GET /term-settings — MCPサーバー経由で会計年度設定を取得
  * クエリ: clientId, fiscal_year（省略時: 最新年度）
  */
-app.get('/term-settings', async (c) => {
-  const clientId = c.req.query('clientId') ?? 'default'
+.get('/term-settings',
+  zValidator('query', z.object({ clientId: z.string().optional() })),
+  async (c) => {
+  const clientId = c.req.valid('query').clientId ?? 'default'
   const status = getAuthStatus(clientId)
   if (!status.authenticated) {
     return c.json({ error: 'MF未認証です。先にOAuth認可を完了してください' }, 401)
@@ -218,11 +223,10 @@ app.get('/term-settings', async (c) => {
  *   mismatch: true の場合 → フロントで修正モーダルを表示する想定
  *   mismatch: false の場合 → 一致。修正不要
  */
-app.get('/fiscal-check', async (c) => {
-  const clientId = c.req.query('clientId')
-  if (!clientId) {
-    return c.json({ error: 'clientIdは必須です' }, 400)
-  }
+.get('/fiscal-check',
+  zValidator('query', z.object({ clientId: z.string() })),
+  async (c) => {
+  const { clientId } = c.req.valid('query')
 
   // 1. sugu-sru上の顧問先データ取得
   const client = await clientRepo.getById(clientId)
@@ -273,7 +277,7 @@ app.get('/fiscal-check', async (c) => {
  * 準拠: 34a_command_journal.md 仕訳投入コマンド / 35_parts_catalog.md postJournals出力部品
  * body: { clientId: string, journal: { transaction_date, journal_type, branches[], memo?, tags? } }
  */
-app.post('/journals', async (c) => {
+.post('/journals', async (c) => {
   try {
     const body = await c.req.json<{ clientId?: string; journal?: MfJournalPayload }>()
     const clientId = body.clientId
@@ -302,10 +306,11 @@ app.post('/journals', async (c) => {
  *   1. currentOffice → 会社名, 種別, 不動産所得, 従業員数, 決算月日
  *   2. getTermSettings → 課税方式, 経理方式, 業種
  */
-app.post('/import-offices', async (c) => {
-  const body = await c.req.json<{ clientIds?: string[] }>()
-  const clientIds = body.clientIds
-  if (!clientIds?.length) {
+.post('/import-offices',
+  zValidator('json', z.object({ clientIds: z.array(z.string()) })),
+  async (c) => {
+  const { clientIds } = c.req.valid('json')
+  if (!clientIds.length) {
     return c.json({ error: 'clientIds必須' }, 400)
   }
 
@@ -384,7 +389,7 @@ app.post('/import-offices', async (c) => {
  * actionType: direct_api
  * costPerCall: 0
  */
-app.post('/sync-all', async (c) => {
+.post('/sync-all', async (c) => {
   const body = await c.req.json<{ clientId?: string }>().catch((): { clientId?: string } => ({}))
   const clientId = c.req.query('clientId') ?? body.clientId ?? 'default'
 
@@ -697,13 +702,13 @@ app.post('/sync-all', async (c) => {
 // ===== MF課税方式別available管理 =====
 
 /** GET /tax-available — 4方式分のavailableデータを返す */
-app.get('/tax-available', async (c) => {
+.get('/tax-available', async (c) => {
   await mfTaxAvailableRepo.invalidateCache()
   return c.json(await mfTaxAvailableRepo.getAllTaxAvailable())
 })
 
 /** PUT /tax-available/:method — 特定方式のavailableを更新 */
-app.put('/tax-available/:method', async (c) => {
+.put('/tax-available/:method', async (c) => {
   const methodRaw = c.req.param('method')
   const validMethods: TaxMethodKey[] = ['proportional', 'individual', 'simplified', 'exempt']
   if (!validMethods.includes(methodRaw as TaxMethodKey)) {
@@ -722,7 +727,7 @@ app.put('/tax-available/:method', async (c) => {
  *
  * ボディ: MfRawDataEnvelope（clientId, clientName, pattern, items等）
  */
-app.put('/raw-data/:pattern', async (c) => {
+.put('/raw-data/:pattern', async (c) => {
   const pattern = c.req.param('pattern')
   const body = await c.req.json()
   await mfRawDataRepo.saveMfRawData({ ...body, pattern })
@@ -732,7 +737,7 @@ app.put('/raw-data/:pattern', async (c) => {
 /**
  * GET /raw-data/:pattern — MF生データを取得（前回データ）
  */
-app.get('/raw-data/:pattern', async (c) => {
+.get('/raw-data/:pattern', async (c) => {
   const pattern = c.req.param('pattern')
   const data = await mfRawDataRepo.loadMfRawData(pattern)
   if (!data) return c.json({ exists: false })
@@ -742,7 +747,7 @@ app.get('/raw-data/:pattern', async (c) => {
 /**
  * GET /raw-data — 全パターンのインポート履歴一覧
  */
-app.get('/raw-data', async (_c) => {
+.get('/raw-data', async (_c) => {
   const patterns = await mfRawDataRepo.listMfRawPatterns()
   return _c.json({ patterns })
 })
@@ -756,7 +761,7 @@ app.get('/raw-data', async (_c) => {
  * MFから税区分を取得し、マスタと照合して差分レポートを返す。
  * データの変更は行わない（自動ルールのavailable更新は行う）。
  */
-app.post('/import-taxes/preview', async (c) => {
+.post('/import-taxes/preview', async (c) => {
   const body = await c.req.json<{ clientId?: string }>()
   const clientId = body.clientId
   if (!clientId) return c.json({ error: 'clientId必須' }, 400)
@@ -782,7 +787,7 @@ app.post('/import-taxes/preview', async (c) => {
  *
  * 差分検知を再実行し（冪等性保証）、マスタに適用して保存する。
  */
-app.post('/import-taxes/apply', async (c) => {
+.post('/import-taxes/apply', async (c) => {
   const body = await c.req.json<{ clientId?: string }>()
   const clientId = body.clientId
   if (!clientId) return c.json({ error: 'clientId必須' }, 400)
@@ -808,7 +813,7 @@ app.post('/import-taxes/apply', async (c) => {
  *
  * consumptionTaxMode自動更新 + 税区分取得 + マスタ突合 + 保存 + available更新を一括実行。
  */
-app.post('/import-client-taxes', async (c) => {
+.post('/import-client-taxes', async (c) => {
   const body = await c.req.json<{ clientId?: string }>()
   const clientId = body.clientId
   if (!clientId) return c.json({ error: 'clientId必須' }, 400)
@@ -837,10 +842,10 @@ app.post('/import-client-taxes', async (c) => {
  * 名前変更検知は全社マスタにmfAccountIdがないため実施不可。
  * 顧問先データのmfAccountIdで検知する設計に移行予定。
  */
-app.post('/import-master-accounts', async (c) => {
-  const body = await c.req.json<{ clientId?: string }>()
-  const clientId = body.clientId
-  if (!clientId) return c.json({ error: 'clientId必須' }, 400)
+.post('/import-master-accounts',
+  zValidator('json', z.object({ clientId: z.string() })),
+  async (c) => {
+  const { clientId } = c.req.valid('json')
 
   const status = getAuthStatus(clientId)
   if (!status.authenticated) {
@@ -869,8 +874,10 @@ app.post('/import-master-accounts', async (c) => {
  *
  * フロント: MockClientAccountsPage.vue のMFインポートボタンから呼ばれる
  */
-app.post('/import-client-accounts', async (c) => {
-  const clientId = c.req.query('clientId') ?? 'default'
+.post('/import-client-accounts',
+  zValidator('query', z.object({ clientId: z.string().optional() })),
+  async (c) => {
+  const clientId = c.req.valid('query').clientId ?? 'default'
   const status = getAuthStatus(clientId)
   if (!status.authenticated) {
     return c.json({ error: 'MF未認証です。先にOAuth認可を完了してください' }, 401)
@@ -1091,14 +1098,12 @@ app.post('/import-client-accounts', async (c) => {
  *   { clientId: string, periodCount?: number }
  *   periodCount省略時は3期分
  */
-app.post('/import-journals', async (c) => {
-  const body = await c.req.json<{ clientId?: string; periodCount?: number }>()
-  const clientId = body.clientId
-  if (!clientId) {
-    return c.json({ error: 'clientIdは必須です' }, 400)
-  }
+.post('/import-journals',
+  zValidator('json', z.object({ clientId: z.string(), periodCount: z.number().optional() })),
+  async (c) => {
+  const { clientId, periodCount: rawPeriodCount } = c.req.valid('json')
 
-  const periodCount = body.periodCount ?? 3
+  const periodCount = rawPeriodCount ?? 3
   const results: string[] = []
   const batchIds: string[] = []
 
@@ -1291,7 +1296,7 @@ app.post('/import-journals', async (c) => {
  * リクエスト:
  *   { dryRun?: boolean }  // trueなら書き込まず結果のみ返す
  */
-app.post('/normalize-journals', async (c) => {
+.post('/normalize-journals', async (c) => {
   const dryRun = c.req.query('dryRun') === 'true' || false
 
   // 全社マスタ + 顧問先MFデータから名前→IDマップ構築
@@ -1415,9 +1420,6 @@ app.post('/normalize-journals', async (c) => {
 // ────────────────────────────────────────────
 // MCP仕訳送信（sugusuru → MF）
 // ────────────────────────────────────────────
-import { sendBatchToMf, applyMfSendResults } from '../services/mfJournalSender'
-import type { SourceJournal, MfJournalPayload } from '../services/journalToMfConverter'
-
 
 
 /**
@@ -1429,7 +1431,9 @@ import type { SourceJournal, MfJournalPayload } from '../services/journalToMfCon
  * レスポンス:
  *   { total, successCount, failureCount, results, elapsedMs }
  */
-app.post('/send-journals/:clientId', async (c) => {
+.post('/send-journals/:clientId',
+  zValidator('json', z.object({ journalIds: z.array(z.string()).optional() })),
+  async (c) => {
   const clientId = c.req.param('clientId')
   if (!clientId) return c.json({ error: '顧問先IDが未指定です' }, 400)
 
@@ -1448,8 +1452,7 @@ app.post('/send-journals/:clientId', async (c) => {
   )
 
   // journalIds指定時は絞り込み
-  const body = await c.req.json<{ journalIds?: string[] }>().catch((): { journalIds?: string[] } => ({}))
-  const requestedIds = body.journalIds
+  const { journalIds: requestedIds } = c.req.valid('json')
   if (requestedIds && Array.isArray(requestedIds) && requestedIds.length > 0) {
     targets = targets.filter(j => requestedIds.includes(j.journalId))
   }
@@ -1510,4 +1513,4 @@ app.post('/send-journals/:clientId', async (c) => {
   return c.json(batchResult)
 })
 
-export default app
+export default route

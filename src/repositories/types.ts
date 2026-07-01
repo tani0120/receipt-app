@@ -899,8 +899,8 @@ export type MfAuthRepository = {
   getAuthStatusBulk(clientIds: string[]): Promise<unknown>
   /** 認証URL取得 */
   getAuthUrl(clientId: string): Promise<unknown>
-  /** MFマスター科目インポート */
-  importMasterAccounts(): Promise<unknown>
+  /** MFマスター科目インポート（clientId: MCPトークン特定用） */
+  importMasterAccounts(clientId: string): Promise<unknown>
   /** MF顧問先科目インポート */
   importClientAccounts(clientId: string): Promise<unknown>
   /** MF決算期チェック */
@@ -1169,7 +1169,7 @@ export type ConversionLogRepository = {
 // ============================================================
 
 import type {
-  AiCommandLog, AiCommandContext,
+  AiCommandLog,
   AiChatSession, AiChatMessage,
   AiCostRecord, AiCostLimit, AiCostCategory,
 } from './types/ai-command.types'

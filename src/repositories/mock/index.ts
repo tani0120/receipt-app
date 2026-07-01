@@ -123,7 +123,7 @@ export function createMockRepositories(): Repositories {
       getAuthStatus: async () => { throw new Error('mockMfAuthRepo.getAuthStatus not implemented') },
       getAuthStatusBulk: async () => { throw new Error('mockMfAuthRepo.getAuthStatusBulk not implemented') },
       getAuthUrl: async () => { throw new Error('mockMfAuthRepo.getAuthUrl not implemented') },
-      importMasterAccounts: async () => { throw new Error('mockMfAuthRepo.importMasterAccounts not implemented') },
+      importMasterAccounts: async (_clientId) => { throw new Error('mockMfAuthRepo.importMasterAccounts not implemented') },
       importClientAccounts: async () => { throw new Error('mockMfAuthRepo.importClientAccounts not implemented') },
       fiscalCheck: async () => { throw new Error('mockMfAuthRepo.fiscalCheck not implemented') },
       importOffices: async () => { throw new Error('mockMfAuthRepo.importOffices not implemented') },
