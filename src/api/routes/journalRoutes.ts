@@ -13,6 +13,8 @@
  */
 
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { apiError } from '../helpers/apiError';
 import { 配列必須 } from '../../constants/apiMessages';
 import type { Journal } from '../../types/journal.type';
@@ -40,15 +42,8 @@ const taxMasterRepo = repos.taxMaster;
 const documentRepo = repos.document;
 const supportingSearchRepo = repos.supportingSearch;
 
-const app = new Hono();
-
-// ============================================================
-// GET /:clientId — 顧問先の仕訳データ取得
-// Phase 1 Step 4 拡張（2026-05-02）
-// パラメータなし: 後方互換（raw全件返却。autoSave用）
-// パラメータあり: 統合一覧（ソート・フィルタ・検索・過去仕訳CSV統合・ページング）
-// ============================================================
-app.get('/:clientId', async (c) => {
+const route = new Hono()
+.get('/:clientId', async (c) => {
   const clientId = c.req.param('clientId');
   const url = new URL(c.req.url);
   const hasQueryParams = url.searchParams.has('sort') || url.searchParams.has('search')
@@ -79,39 +74,30 @@ app.get('/:clientId', async (c) => {
   // view=list を統合一覧モード判定に使用（将来用のフラグ）
   const result = await getJournalList(clientId, query);
   return c.json(result);
-});
-
-// ============================================================
-// POST /:clientId/list — 統合一覧API（科目名ソート対応版）
-// Phase 1 Step 5 追加（2026-05-02）
-// Phase 2 改修（2026-05-03）: accountMap/taxMapがPOSTボディにない場合、
-// サーバー側マスタから自動生成する。
-// ============================================================
-interface ListRequestBody {
-  sort?: string
-  order?: 'asc' | 'desc'
-  search?: string
-  showImported?: boolean
-  showUnexported?: boolean
-  showExported?: boolean
-  showExcluded?: boolean
-  showTrashed?: boolean
-  voucherFilter?: string
-  /** 期間フィルタ: 開始日（YYYY-MM-DD） */
-  dateFrom?: string
-  /** 期間フィルタ: 終了日（YYYY-MM-DD） */
-  dateTo?: string
-  /** 月フィルタ: 表示対象の月番号配列（1-12） */
-  filterMonths?: number[]
-  page?: number
-  pageSize?: number
-  accountMap?: Record<string, string>
-  taxMap?: Record<string, string>
-}
-
-app.post('/:clientId/list', async (c) => {
+})
+// POST /:clientId/list
+.post('/:clientId/list',
+  zValidator('json', z.object({
+    sort: z.string().optional(),
+    order: z.enum(['asc', 'desc']).optional(),
+    search: z.string().optional(),
+    showImported: z.boolean().optional(),
+    showUnexported: z.boolean().optional(),
+    showExported: z.boolean().optional(),
+    showExcluded: z.boolean().optional(),
+    showTrashed: z.boolean().optional(),
+    voucherFilter: z.string().optional(),
+    dateFrom: z.string().optional(),
+    dateTo: z.string().optional(),
+    filterMonths: z.array(z.number()).optional(),
+    page: z.number().optional(),
+    pageSize: z.number().optional(),
+    accountMap: z.record(z.string(), z.string()).optional(),
+    taxMap: z.record(z.string(), z.string()).optional(),
+  })),
+  async (c) => {
   const clientId = c.req.param('clientId');
-  const body = await c.req.json<ListRequestBody>();
+  const body = c.req.valid('json');
 
   const query: JournalListQuery = {
     sort: body.sort || undefined,
@@ -135,34 +121,21 @@ app.post('/:clientId/list', async (c) => {
 
   const result = await getJournalList(clientId, query);
   return c.json(result);
-});
-
-// ============================================================
-// PUT /:clientId — 廃止（Phase 3-3）
-// 理由: フロントエンド（JournalListLevel3Mock）はPhase Cで
-//       PATCH API移行済み。useJournals.tsのautoSaveは冗長な二重保存だった。
-//       全更新はPATCH /:clientId/:journalId 経由で行う。
-// ============================================================
-
-// ============================================================
-// POST /:clientId — 顧問先の仕訳データに追加
-// ============================================================
-app.post('/:clientId', async (c) => {
+})
+.post('/:clientId',
+  zValidator('json', z.object({ journals: z.array(z.record(z.string(), z.unknown())) })),
+  async (c) => {
   const clientId = c.req.param('clientId');
-  const body = await c.req.json<{ journals: Record<string, unknown>[] }>();
-  if (!body.journals || !Array.isArray(body.journals)) {
+  const { journals } = c.req.valid('json');
+  if (!journals || !Array.isArray(journals)) {
     return apiError(c, 400, 配列必須('journals'));
   }
-  const result = await journalRepo.createMany(clientId, body.journals as unknown as Journal[]);
+  const result = await journalRepo.createMany(clientId, journals as unknown as Journal[]);
   // Repository が上書き発番後のIDリストと追加件数を返す
-  return c.json({ ok: true, added: result.added, serverIds: result.ids });
-});
-
-// ============================================================
-// PATCH /:clientId/:journalId — 1件の仕訳を部分更新
-// Phase C（2026-06-19）: セル編集消失バグ修正の一環
-// ============================================================
-app.patch('/:clientId/:journalId', async (c) => {
+  return c.json({ ok: true, added: result.added, serverIds: result.ids })
+})
+// PATCH /:clientId/:journalId
+.patch('/:clientId/:journalId', async (c) => {
   const clientId = c.req.param('clientId');
   const journalId = c.req.param('journalId');
   const patch = await c.req.json<Record<string, unknown>>();
@@ -172,31 +145,20 @@ app.patch('/:clientId/:journalId', async (c) => {
   if (!updated) {
     return apiError(c, 404, `仕訳が見つかりません: ${journalId}`);
   }
-  return c.json({ ok: true, journalId });
-});
-
-// ============================================================
-// DELETE /:clientId/:journalId — 1件の仕訳をソフトデリート
-// 断絶#27修正（deleteJournal APIなし）
-// deleted_atに現在日時を設定。物理削除はしない。
-// ============================================================
-app.delete('/:clientId/:journalId', async (c) => {
+  return c.json({ ok: true, journalId })
+})
+// DELETE /:clientId/:journalId
+.delete('/:clientId/:journalId', async (c) => {
   const clientId = c.req.param('clientId');
   const journalId = c.req.param('journalId');
   const deleted = await journalRepo.delete(clientId, journalId);
   if (!deleted) {
     return apiError(c, 404, `仕訳が見つかりません: ${journalId}`);
   }
-  return c.json({ ok: true, journalId });
-});
-
-// ============================================================
-// POST /:clientId/:journalId/validate — 1件バリデーション
-// Phase 1 Step 2（2026-05-02）
-// Phase 2 改修（2026-05-03）: accounts/taxCategories をサーバー側マスタから取得。
-//   POSTボディの科目・税区分は不要。後方互換のためPOSTを維持。
-// ============================================================
-app.post('/:clientId/:journalId/validate', async (c) => {
+  return c.json({ ok: true, journalId })
+})
+// POST /:clientId/:journalId/validate
+.post('/:clientId/:journalId/validate', async (c) => {
   const clientId = c.req.param('clientId');
   const journalId = c.req.param('journalId');
 
@@ -213,14 +175,9 @@ app.post('/:clientId/:journalId/validate', async (c) => {
 
   const result = validateJournal(journal, accounts, taxCategories);
   return c.json(result);
-});
-
-// ============================================================
-// POST /:clientId/validate-all — 全件バリデーション
-// Phase 1 Step 3（2026-05-02）
-// Phase 2 改修（2026-05-03）: accounts/taxCategories をサーバー側マスタから取得。
-// ============================================================
-app.post('/:clientId/validate-all', async (c) => {
+})
+// POST /:clientId/validate-all
+.post('/:clientId/validate-all', async (c) => {
   const clientId = c.req.param('clientId');
 
   // 顧問先別の科目・税区分を取得（データ駆動）
@@ -232,16 +189,10 @@ app.post('/:clientId/validate-all', async (c) => {
     validateJournal(journal, accounts, taxCategories)
   );
 
-  return c.json({ results, count: results.length });
-});
-
-// ============================================================
-// POST /:clientId/:journalId/hints — ヒント・修正候補生成
-// Phase 1 Step 6-A2（2026-05-03）
-// Phase 2 改修（2026-05-03）: accounts/taxCategories をサーバー側マスタから取得。
-//   POSTボディの科目・税区分は不要。
-// ============================================================
-app.post('/:clientId/:journalId/hints', async (c) => {
+  return c.json({ results, count: results.length })
+})
+// POST /:clientId/:journalId/hints
+.post('/:clientId/:journalId/hints', async (c) => {
   const clientId = c.req.param('clientId');
   const journalId = c.req.param('journalId');
 
@@ -264,16 +215,10 @@ app.post('/:clientId/:journalId/hints', async (c) => {
     journalId,
     validations,
     suggestions,
-  });
-});
-
-// ============================================================
-// GET /:clientId/supporting-match — 証票マッチング（全件一括）
-// Phase 1 Step 6-B2（2026-05-03）
-// サーバー側で仕訳ストア + 根拠メタデータを取得し、
-// N×Mマッチングを実行して紐づけ結果を返す。
-// ============================================================
-app.get('/:clientId/supporting-match', async (c) => {
+  })
+})
+// GET /:clientId/supporting-match
+.get('/:clientId/supporting-match', async (c) => {
   const clientId = c.req.param('clientId');
 
   // Repository経由で仕訳データ取得
@@ -285,25 +230,15 @@ app.get('/:clientId/supporting-match', async (c) => {
   const result = getSupportingMatches(journals, supportingMeta);
 
   return c.json(result);
-});
-
-// ============================================================
-// POST /:clientId/generate — 仕訳生成（サーバーサイド実行）
-// #28: lineItemToJournalMockをフロントからサーバーに移動（2026-06-28）
-//
-// リクエスト: { documentIds: string[] }
-// 処理:
-//   1. documentIdsからDocEntryを取得（doc-store）
-//   2. 各DocEntryのaiLineItemsをLineItem[]に変換
-//   3. lineItemToJournalMock()をサーバー側で実行
-//   4. addJournals()で永続化
-//   5. 生成件数をレスポンスで返却
-// ============================================================
-app.post('/:clientId/generate', async (c) => {
+})
+// POST /:clientId/generate
+.post('/:clientId/generate',
+  zValidator('json', z.object({ documentIds: z.array(z.string()) })),
+  async (c) => {
   const clientId = c.req.param('clientId');
-  const body = await c.req.json<{ documentIds: string[] }>();
+  const { documentIds } = c.req.valid('json');
 
-  if (!body.documentIds || !Array.isArray(body.documentIds) || body.documentIds.length === 0) {
+  if (!documentIds || documentIds.length === 0) {
     return apiError(c, 400, 配列必須('documentIds'));
   }
 
@@ -319,7 +254,7 @@ app.post('/:clientId/generate', async (c) => {
 
   let generatedCount = 0;
 
-  for (const docId of body.documentIds) {
+  for (const docId of documentIds) {
     const docEntry = allDocs.find(d => d.id === docId);
     if (!docEntry?.aiLineItems || docEntry.aiLineItems.length === 0) {
       console.log(`[journals/generate] ${docId}: aiLineItemsなし（スキップ）`);
@@ -365,4 +300,4 @@ app.post('/:clientId/generate', async (c) => {
   return c.json({ ok: true, generated: generatedCount });
 });
 
-export default app;
+export default route;

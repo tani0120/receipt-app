@@ -5,45 +5,59 @@
  * Supabase移行時はSupabase JS Client版に差し替え。
  *
  * 準拠: DL-030, P3-8, Phase 2.5
+ * Hono RPC (hc) 経由で型安全なAPI呼び出しを実現
  */
 
-import { createApiClient } from '../../utils/apiClient'
+import { honoClient } from '../../utils/honoClient'
 import type { JournalRepository } from '../types'
 import type { Journal } from '../../types/journal.type'
 
-const api = createApiClient('/api/journals')
-
 export const httpJournalRepo: JournalRepository = {
   async get(clientId, journalId) {
-    const res = await api.get<{ journals: Journal[] }>(`/${encodeURIComponent(clientId)}`)
-    return res.journals.find(j => j.journalId === journalId) ?? null
+    const res = await honoClient.api.journals[':clientId'].$get({
+      param: { clientId }
+    })
+    if (!res.ok) throw new Error(`API GET /api/journals/${clientId} failed: ${res.status}`)
+    const data = await res.json()
+    return (data as { journals: Journal[] }).journals.find(j => j.journalId === journalId) ?? null
   },
 
   async list(clientId) {
-    const res = await api.get<{ journals: Journal[] }>(`/${encodeURIComponent(clientId)}`)
-    return res.journals
+    const res = await honoClient.api.journals[':clientId'].$get({
+      param: { clientId }
+    })
+    if (!res.ok) throw new Error(`API GET /api/journals/${clientId} failed: ${res.status}`)
+    const data = await res.json()
+    return (data as { journals: Journal[] }).journals
   },
 
   async create(clientId, journal) {
-    const res = await api.post<{ ok: boolean; serverIds: string[] }>(
-      `/${encodeURIComponent(clientId)}`, { journals: [journal] }
-    )
-    // サーバーがID上書き発番。発番後のIDでjournalを更新して返す
-    return { ...journal, journalId: res.serverIds[0] ?? journal.journalId }
+    const res = await honoClient.api.journals[':clientId'].$post({
+      param: { clientId },
+      json: { journals: [journal as unknown as Record<string, unknown>] }
+    })
+    if (!res.ok) throw new Error(`API POST /api/journals/${clientId} failed: ${res.status}`)
+    const data = await res.json()
+    const serverIds = (data as { serverIds: string[] }).serverIds
+    return { ...journal, journalId: serverIds[0] ?? journal.journalId }
   },
 
   async createMany(clientId, journals) {
-    const res = await api.post<{ ok: boolean; added: number; serverIds: string[] }>(
-      `/${encodeURIComponent(clientId)}`, { journals }
-    )
-    return { added: res.added, ids: res.serverIds }
+    const res = await honoClient.api.journals[':clientId'].$post({
+      param: { clientId },
+      json: { journals: journals as unknown as Record<string, unknown>[] }
+    })
+    if (!res.ok) throw new Error(`API POST /api/journals/${clientId} failed: ${res.status}`)
+    const data = await res.json()
+    const result = data as { added: number; serverIds: string[] }
+    return { added: result.added, ids: result.serverIds }
   },
 
   async update(clientId, journalId, patch) {
-    const res = await api.patch<{ ok: boolean; journalId: string }>(
-      `/${encodeURIComponent(clientId)}/${encodeURIComponent(journalId)}`, patch
-    )
-    // HTTP実装では更新後のJournalを取得できない。nullでない（成功）を伝えるためgetで取得
+    const res = await honoClient.api.journals[':clientId'][':journalId'].$patch({
+      param: { clientId, journalId },
+      json: patch as Record<string, unknown>
+    })
     if (!res.ok) return null
     return this.get(clientId, journalId)
   },
@@ -51,24 +65,31 @@ export const httpJournalRepo: JournalRepository = {
   async updateMany(clientId, patches) {
     let updated = 0
     for (const { journalId, patch } of patches) {
-      await api.patch(`/${encodeURIComponent(clientId)}/${encodeURIComponent(journalId)}`, patch)
+      await honoClient.api.journals[':clientId'][':journalId'].$patch({
+        param: { clientId, journalId },
+        json: patch as Record<string, unknown>
+      })
       updated++
     }
     return { updated }
   },
 
   async delete(clientId, journalId) {
-    // 削除前にデータを取得（削除後は取得できないため）
     const journal = await this.get(clientId, journalId)
     if (!journal) return null
-    await api.del(`/${encodeURIComponent(clientId)}/${encodeURIComponent(journalId)}`)
+    const res = await honoClient.api.journals[':clientId'][':journalId'].$delete({
+      param: { clientId, journalId }
+    })
+    if (!res.ok) throw new Error(`API DELETE /api/journals/${clientId}/${journalId} failed: ${res.status}`)
     return journal
   },
 
   async deleteMany(clientId, journalIds) {
     let deleted = 0
     for (const journalId of journalIds) {
-      await api.del(`/${encodeURIComponent(clientId)}/${encodeURIComponent(journalId)}`)
+      await honoClient.api.journals[':clientId'][':journalId'].$delete({
+        param: { clientId, journalId }
+      })
       deleted++
     }
     return { deleted }
