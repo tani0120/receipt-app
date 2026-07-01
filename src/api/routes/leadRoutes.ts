@@ -16,6 +16,8 @@
  */
 
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { apiError } from '../helpers/apiError';
 import { 未検出, 必須, コード重複, リソース_見込先 } from '../../constants/apiMessages';
 import type { LeadStatus, Lead, Client } from '../../repositories/types';
@@ -28,14 +30,66 @@ const clientRepo = repos.client
 const accountMasterRepo = repos.accountMaster
 const taxMasterRepo = repos.taxMaster
 
-const app = new Hono();
+/** Lead部分更新用zodスキーマ（全フィールドoptional。Client型と同一構造） */
+const leadPartialSchema = z.object({
+  threeCode: z.string().optional(),
+  companyName: z.string().optional(),
+  companyNameKana: z.string().optional(),
+  type: z.enum(['corp', 'individual', 'sole_proprietor']).optional(),
+  repName: z.string().optional(),
+  repNameKana: z.string().optional(),
+  contact: z.object({
+    type: z.enum(['email', 'chatwork', 'none']),
+    value: z.string(),
+  }).optional(),
+  fiscalMonth: z.number().optional(),
+  fiscalDay: z.union([z.string(), z.number()]).optional(),
+  industry: z.string().optional(),
+  establishedDate: z.string().optional(),
+  status: z.enum(['active', 'inactive', 'converted', 'suspension']).optional(),
+  accountingSoftware: z.enum(['mf', 'freee', 'yayoi', 'tkc', 'other']).optional(),
+  taxFilingType: z.enum(['blue', 'white']).optional(),
+  consumptionTaxMode: z.enum(['individual', 'proportional', 'simplified', 'exempt']).optional(),
+  simplifiedTaxCategory: z.number().optional(),
+  taxMethod: z.enum(['tax_included', 'tax_excluded_included', 'tax_excluded_separate']).optional(),
+  calculationMethod: z.enum(['accrual', 'cash', 'interim_cash']).optional(),
+  defaultPaymentMethod: z.enum(['cash', 'owner_loan', 'accounts_payable']).optional(),
+  isInvoiceRegistered: z.boolean().optional(),
+  invoiceRegistrationNumber: z.string().optional(),
+  hasDepartmentManagement: z.boolean().optional(),
+  hasRentalIncome: z.boolean().optional(),
+  staffId: z.string().nullable().optional(),
+  sharedFolderId: z.string().optional(),
+  sharedEmail: z.string().optional(),
+  advisoryFee: z.number().optional(),
+  bookkeepingFee: z.number().optional(),
+  settlementFee: z.number().optional(),
+  taxFilingFee: z.number().optional(),
+}).passthrough()  // Kintone拡張フィールド・ニーズ・報酬拡張等を許容
 
-// ============================================================
+/** POST /list のリクエストbody */
+const listQuerySchema = z.object({
+  filters: z.array(z.object({
+    field: z.string(),
+    operator: z.string(),
+    value: z.union([z.string(), z.array(z.string())]),
+  })).optional(),
+  logic: z.enum(['and', 'or']).optional(),
+  sorts: z.array(z.object({
+    key: z.string(),
+    order: z.enum(['asc', 'desc']),
+  })).optional(),
+  page: z.number().optional(),
+  pageSize: z.number().optional(),
+}).passthrough()
+
+const route = new Hono()
 // POST /list — 見込先一覧（フィルタ+ソート+ページネーション）
 // staffNameソートが必要な場合はRoute層で結合（Repositoryは単一ドメイン）
-// ============================================================
-app.post('/list', async (c) => {
-  const body = await c.req.json();
+.post('/list',
+  zValidator('json', listQuerySchema),
+  async (c) => {
+  const body = c.req.valid('json');
   const sorts = body.sorts as { key: string; order: 'asc' | 'desc' }[] | undefined
   const hasStaffSort = sorts?.some(s => s.key === 'staffId')
 
@@ -70,10 +124,9 @@ app.post('/list', async (c) => {
 
   const result = await leadRepo.list(body);
   return c.json(result);
-});
-
+})
 // GET / — 全見込先取得
-app.get('/', async (c) => {
+.get('/', async (c) => {
   const status = c.req.query('status');
   const staffId = c.req.query('staffId');
 
@@ -91,21 +144,21 @@ app.get('/', async (c) => {
   }
   const list = await leadRepo.getAll();
   return c.json({ leads: list, count: list.length });
-});
-
+})
 // GET /:leadId — 1件取得
-app.get('/:leadId', async (c) => {
+.get('/:leadId', async (c) => {
   const leadId = c.req.param('leadId');
   const lead = await leadRepo.getById(leadId);
   if (!lead) {
     return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
   return c.json({ lead });
-});
-
+})
 // POST / — 見込先追加（サーバーが常にID発番）
-app.post('/', async (c) => {
-  const body = await c.req.json();
+.post('/',
+  zValidator('json', leadPartialSchema),
+  async (c) => {
+  const body = c.req.valid('json') as Record<string, unknown>;
   if (!body.threeCode) {
     return apiError(c, 400, 必須('threeCode'));
   }
@@ -116,26 +169,24 @@ app.post('/', async (c) => {
   const existing = await leadRepo.getAll();
   const dup = existing.find(l => l.threeCode === body.threeCode && l.leadId !== body.leadId);
   if (dup) {
-    return apiError(c, 409, コード重複(body.threeCode, dup.companyName, dup.leadId));
+    return apiError(c, 409, コード重複(body.threeCode as string, dup.companyName, dup.leadId));
   }
   // サーバーが常にIDを発番。フロントからのIDは無視。
   body.leadId = await leadRepo.generateLeadId();
-  const lead = await leadRepo.create(body);
+  const lead = await leadRepo.create(body as unknown as Lead);
   return c.json({ ok: true, lead });
-});
-
+})
 // POST /bulk — 見込先一括追加（インポート用）
-app.post('/bulk', async (c) => {
-  const { items } = await c.req.json<{ items: Record<string, unknown>[] }>();
-  if (!Array.isArray(items)) {
-    return apiError(c, 400, 必須('items（配列）'));
-  }
+.post('/bulk',
+  zValidator('json', z.object({ items: z.array(leadPartialSchema) })),
+  async (c) => {
+  const { items } = c.req.valid('json');
   const existing = await leadRepo.getAll();
   const existingCodes = new Set(existing.map(l => l.threeCode?.toUpperCase()).filter(Boolean));
   const existingNames = new Set(existing.map(l => l.companyName).filter(Boolean));
   const results: { index: number; ok: boolean; leadId?: string; threeCode?: string; companyName?: string; error?: string }[] = [];
   for (let i = 0; i < items.length; i++) {
-    const item = items[i]!;
+    const item = items[i]! as Record<string, unknown>;
     try {
       if (!item.companyName && !item.repName) {
         results.push({ index: i, ok: false, error: 'companyNameまたはrepNameが必須' });
@@ -163,12 +214,13 @@ app.post('/bulk', async (c) => {
     }
   }
   return c.json({ ok: true, results, total: items.length });
-});
-
+})
 // PUT /:leadId — 見込先更新
-app.put('/:leadId', async (c) => {
+.put('/:leadId',
+  zValidator('json', leadPartialSchema),
+  async (c) => {
   const leadId = c.req.param('leadId');
-  const body = await c.req.json();
+  const body = c.req.valid('json');
   // バリデーション（顧問先と統一）
   if (body.threeCode !== undefined && !body.threeCode) {
     return apiError(c, 400, 必須('threeCode'));
@@ -186,45 +238,45 @@ app.put('/:leadId', async (c) => {
   }
   await leadRepo.update(leadId, body);
   return c.json({ ok: true });
-});
-
+})
 // PUT /:leadId/staff — 担当者変更
-app.put('/:leadId/staff', async (c) => {
+.put('/:leadId/staff',
+  zValidator('json', z.object({ staffId: z.string().nullable() })),
+  async (c) => {
   const leadId = c.req.param('leadId');
-  const body = await c.req.json<{ staffId: string | null }>();
+  const body = c.req.valid('json');
   const ok = await leadRepo.updateStaffAssignment(leadId, body.staffId as string);
   if (!ok) {
     return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
   return c.json({ ok: true });
-});
-
+})
 // PUT /:leadId/shared-folder — Drive共有フォルダ設定
-app.put('/:leadId/shared-folder', async (c) => {
+.put('/:leadId/shared-folder',
+  zValidator('json', z.object({ folderId: z.string() })),
+  async (c) => {
   const leadId = c.req.param('leadId');
-  const body = await c.req.json<{ folderId: string }>();
+  const body = c.req.valid('json');
   const ok = await leadRepo.updateSharedFolderId(leadId, body.folderId);
   if (!ok) {
     return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
   return c.json({ ok: true });
-});
-
+})
 // PUT /:leadId/shared-email — メール設定
-app.put('/:leadId/shared-email', async (c) => {
+.put('/:leadId/shared-email',
+  zValidator('json', z.object({ email: z.string() })),
+  async (c) => {
   const leadId = c.req.param('leadId');
-  const body = await c.req.json<{ email: string }>();
+  const body = c.req.valid('json');
   const ok = await leadRepo.updateSharedEmail(leadId, body.email);
   if (!ok) {
     return apiError(c, 404, 未検出(`${リソース_見込先} ${leadId}`));
   }
   return c.json({ ok: true });
-});
-
-// ============================================================
+})
 // POST /:leadId/convert — 見込先→顧問先昇格（コピー方式）
-// ============================================================
-app.post('/:leadId/convert', async (c) => {
+.post('/:leadId/convert', async (c) => {
   const leadId = c.req.param('leadId');
   const lead = await leadRepo.getById(leadId);
   if (!lead) {
@@ -261,4 +313,4 @@ app.post('/:leadId/convert', async (c) => {
   return c.json({ ok: true, client: saved, sourceLeadId: leadId });
 });
 
-export default app;
+export default route;

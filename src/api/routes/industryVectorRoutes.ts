@@ -12,15 +12,12 @@
  */
 
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { z } from 'zod'
 import { apiError, apiCatchError } from '../helpers/apiError'
 import { createMockRepositories } from '../../repositories/mock'
 
 const industryVectorRepo = createMockRepositories().industryVector
-const app = new Hono()
-
-// ============================================================
-// バリデーションヘルパー
-// ============================================================
 
 type BusinessType = 'corporate' | 'sole'
 
@@ -29,10 +26,15 @@ function parseType(raw: string | undefined): BusinessType | null {
   return null
 }
 
-// ============================================================
+const industryVectorEntrySchema = z.object({
+  vector: z.string(),
+  expense: z.array(z.string()),
+  income: z.array(z.string()),
+})
+
+const route = new Hono()
 // GET / — 業種ベクトル一覧
-// ============================================================
-app.get('/', async (c) => {
+.get('/', async (c) => {
   const type = parseType(c.req.query('type'))
   if (!type) {
     return apiError(c, 400, 'クエリパラメータ type=corporate|sole は必須です')
@@ -40,26 +42,23 @@ app.get('/', async (c) => {
   const entries = await industryVectorRepo.getAll(type)
   return c.json({ entries, count: entries.length, type })
 })
-
-// ============================================================
 // PUT / — 全件上書き保存
-// ============================================================
-app.put('/', async (c) => {
+.put('/',
+  zValidator('json', z.object({ entries: z.array(industryVectorEntrySchema) })),
+  async (c) => {
   const type = parseType(c.req.query('type'))
   if (!type) {
     return apiError(c, 400, 'クエリパラメータ type=corporate|sole は必須です')
   }
   try {
-    const body = await c.req.json()
-    if (!Array.isArray(body.entries)) {
-      return apiError(c, 400, 'リクエストボディに entries 配列が必要です')
-    }
+    const body = c.req.valid('json')
     // IndustryVectorRepository.saveAll経由で保存
-    const result = await industryVectorRepo.saveAll(type, body.entries)
+    const result = await industryVectorRepo.saveAll(type, body.entries as Parameters<typeof industryVectorRepo.saveAll>[1])
     return c.json(result)
   } catch (err) {
     return apiCatchError(c, err)
   }
-})
+});
 
-export default app
+export default route
+

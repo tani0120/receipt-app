@@ -18,6 +18,8 @@
  */
 
 import { Hono } from "hono";
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { apiError } from "../helpers/apiError";
 import { 必須 } from "../../constants/apiMessages";
 import { createMockRepositories } from "../../repositories/mock";
@@ -29,27 +31,19 @@ import {
   deleteByClient,
 } from "../services/confirmedJournalService";
 
-const app = new Hono();
-
-// ============================================================
+const route = new Hono()
 // GET /:clientId — 顧問先の確定済み仕訳全件取得
-// ============================================================
-app.get("/:clientId", async (c) => {
+.get("/:clientId", async (c) => {
   const client_id = c.req.param("clientId");
   const journals = await confirmedJournalRepo.getByClientId(client_id);
   return c.json({ journals, count: journals.length });
-});
-
-// ============================================================
+})
 // POST /:clientId/import — MF CSVインポート
-// ============================================================
-app.post("/:clientId/import", async (c) => {
+.post("/:clientId/import",
+  zValidator('json', z.object({ csv_text: z.string() })),
+  async (c) => {
   const client_id = c.req.param("clientId");
-  const body = await c.req.json<{ csv_text: string }>();
-
-  if (!body.csv_text || typeof body.csv_text !== "string") {
-    return apiError(c, 400, 必須("csv_text"));
-  }
+  const body = c.req.valid('json');
 
   // Service経由でCSVインポート（DL-050）
   const result = await importFromCsv(client_id, body.csv_text);
@@ -63,21 +57,15 @@ app.post("/:clientId/import", async (c) => {
     warnings: result.warnings,
     total_in_db: result.totalInDb,
   });
-});
-
-// ============================================================
+})
 // GET /:clientId/batches — インポートバッチ一覧
-// ============================================================
-app.get("/:clientId/batches", async (c) => {
+.get("/:clientId/batches", async (c) => {
   const client_id = c.req.param("clientId");
   const { batches } = await confirmedJournalRepo.listBatches(client_id);
   return c.json({ batches });
-});
-
-// ============================================================
+})
 // GET /:clientId/search — match_keyで検索（過去仕訳照合）
-// ============================================================
-app.get("/:clientId/search", async (c) => {
+.get("/:clientId/search", async (c) => {
   const client_id = c.req.param("clientId");
   const match_key = c.req.query("match_key");
 
@@ -87,51 +75,38 @@ app.get("/:clientId/search", async (c) => {
 
   const journals = await confirmedJournalRepo.findByMatchKey(client_id, match_key);
   return c.json({ journals, count: journals.length });
-});
-
-// ============================================================
+})
 // DELETE /batch/:batchId — インポートバッチ削除
-// ============================================================
-app.delete("/batch/:batchId", async (c) => {
+.delete("/batch/:batchId", async (c) => {
   const batch_id = c.req.param("batchId");
   // Service経由（DL-050）
   const result = await deleteBatch(batch_id);
   return c.json({ ok: true, removed: result.removed });
-});
-
-// ============================================================
+})
 // GET /batch/:batchId/journals — バッチの仕訳取得（CSVダウンロード用）
-// ============================================================
-app.get("/batch/:batchId/journals", async (c) => {
+.get("/batch/:batchId/journals", async (c) => {
   const batch_id = c.req.param("batchId");
   const { journals } = await confirmedJournalRepo.getJournalsByBatch(batch_id);
   return c.json({ journals, count: journals.length });
-});
-
-// ============================================================
+})
 // DELETE /:clientId — 顧問先の全件削除
-// ============================================================
-app.delete("/:clientId", async (c) => {
+.delete("/:clientId", async (c) => {
   const client_id = c.req.param("clientId");
   // Service経由（DL-050）
   const result = await deleteByClient(client_id);
   return c.json({ ok: true, removed: result.removed });
-});
-
-// ============================================================
+})
 // POST /reload — インメモリキャッシュをJSONから再読み込み
-// ============================================================
-app.post("/reload", async (c) => {
+.post("/reload", async (c) => {
   await confirmedJournalRepo.reload();
   return c.json({ ok: true, message: 'JSONから再読み込み完了' });
-});
-
-// ============================================================
+})
 // POST /normalize — 確定済み仕訳の一括正規化（DL-050: Service経由）
-// ============================================================
-app.post("/normalize", async (c) => {
+.post("/normalize",
+  zValidator('json', z.object({ dryRun: z.boolean().optional() }).optional()),
+  async (c) => {
   try {
-    const body = await c.req.json<{ dryRun?: boolean }>().catch(() => ({} as { dryRun?: boolean }));
+    const body = c.req.valid('json') ?? {};
     const result = await normalizeConfirmedJournals({ dryRun: body.dryRun });
     return c.json({
       ok: true,
@@ -147,5 +122,4 @@ app.post("/normalize", async (c) => {
   }
 });
 
-export default app;
-
+export default route;

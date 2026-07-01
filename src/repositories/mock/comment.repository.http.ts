@@ -4,25 +4,32 @@
  * 準拠: DL-030, P3-5b
  */
 
-import { createApiClient } from '../../utils/apiClient'
-import type { CommentRepository } from '../types'
-
-const api = createApiClient('/api/comments')
+import { honoClient } from '../../utils/honoClient'
+import type { CommentRepository, Comment } from '../types'
 
 export const httpCommentRepo: CommentRepository = {
   getByEntity: async (entityType, entityId) => {
-    return api.get(`?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`)
+    const res = await honoClient.api.comments.$get({ query: { entityType, entityId } })
+    const data = await res.json() as { comments: Comment[] }
+    return data.comments
   },
 
   create: async (data) => {
-    return api.post('', data)
+    const res = await honoClient.api.comments.$post({ json: data })
+    const result = await res.json() as { ok: boolean; comment: Comment }
+    return result.comment
   },
 
   deleteById: async (commentId) => {
-    await api.del(`/${commentId}`)
+    const res = await honoClient.api.comments[':commentId'].$delete({ param: { commentId } })
+    const data = await res.json() as { ok: boolean }
+    return data.ok
   },
 
-  update: async (commentId, data) => {
-    await api.put(`/${commentId}`, data)
+  // deleteAllByEntity: ルートに未実装。呼び出し元0件（フロントからは使わない）
+  // TODO(Supabase): Phase B でSupabase版に統合時に実装
+  deleteAllByEntity: async () => {
+    throw new Error('CommentRepository.deleteAllByEntity: HTTP版では未実装（サーバー側はmock版を使用）')
   },
 }
+

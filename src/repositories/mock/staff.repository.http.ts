@@ -7,22 +7,22 @@
  * 準拠: DL-030, DL-042
  */
 
-import { createApiClient } from '../../utils/apiClient'
+import { honoClient } from '../../utils/honoClient'
 import type { Staff } from '../types'
 import type { StaffRepository } from '../types'
 
-const api = createApiClient('/api/staff')
-
 export const httpStaffRepo: StaffRepository = {
   getAll: async () => {
-    const data = await api.get<{ staff: Staff[] }>('')
+    const res = await honoClient.api.staff.$get()
+    const data = await res.json() as { staff: Staff[] }
     return data.staff
   },
 
   getById: async (uuid) => {
     try {
-      const res = await api.get<{ staff: Staff }>(`/${uuid}`)
-      return res.staff
+      const res = await honoClient.api.staff[':uuid'].$get({ param: { uuid } })
+      const data = await res.json() as { staff: Staff }
+      return data.staff
     } catch {
       return undefined
     }
@@ -30,36 +30,44 @@ export const httpStaffRepo: StaffRepository = {
 
   getByEmail: async (email) => {
     try {
-      const res = await api.get<{ staff: Staff }>(`?email=${encodeURIComponent(email)}`)
-      return res.staff
+      const res = await honoClient.api.staff.email[':email'].$get({ param: { email: encodeURIComponent(email) } })
+      const data = await res.json() as { staff: Staff }
+      return data.staff
     } catch {
       return undefined
     }
   },
 
   getActiveStaff: async () => {
-    const data = await api.get<{ staff: Staff[] }>('?status=active')
+    const res = await honoClient.api.staff.$get({ query: { status: 'active' } })
+    const data = await res.json() as { staff: Staff[] }
     return data.staff
   },
 
   create: async (staff) => {
-    const res = await api.post<{ ok: boolean; staff: Staff }>('', staff)
-    return res.staff
+    const res = await honoClient.api.staff.$post({ json: staff as Record<string, unknown> })
+    const data = await res.json() as { ok: boolean; staff: Staff }
+    return data.staff
   },
 
   update: async (uuid, partial) => {
-    await api.put(`/${uuid}`, partial)
+    await honoClient.api.staff[':uuid'].$put({
+      param: { uuid },
+      json: partial as Record<string, unknown>,
+    })
   },
 
   list: async (query) => {
-    return api.post<{ rows: Staff[]; totalCount: number; totalPages: number }>('/list', query)
+    const res = await honoClient.api.staff.list.$post({ json: query as Record<string, unknown> })
+    return await res.json() as { rows: Staff[]; totalCount: number; totalPages: number }
   },
 
   bulkCreate: async (items) => {
-    return api.post<{
+    const res = await honoClient.api.staff.bulk.$post({ json: { items } as Record<string, unknown> })
+    return await res.json() as {
       ok: boolean
       results: { index: number; ok: boolean; uuid?: string; error?: string }[]
       total: number
-    }>('/bulk', { items })
+    }
   },
 }

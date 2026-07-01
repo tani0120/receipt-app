@@ -17,113 +17,110 @@
  */
 
 import { Hono } from "hono";
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { apiError } from "../helpers/apiError";
-import { 未検出, 必須, 配列必須 } from "../../constants/apiMessages";
+import { 未検出, 必須 } from "../../constants/apiMessages";
 import { createMockRepositories } from "../../repositories/mock";
 import type { DocEntry } from "../../repositories/types";
 
 const documentRepo = createMockRepositories().document;
 
-const app = new Hono();
+/** DocEntry専用zodスキーマ（必須フィールド + オプショナルフィールド） */
+const docEntrySchema = z.object({
+  id: z.string(),
+  clientId: z.string(),
+  source: z.enum(['drive', 'upload', 'staff-upload', 'guest-upload']),
+  fileName: z.string(),
+  fileType: z.string(),
+  fileSize: z.number(),
+  fileHash: z.string().nullable(),
+  driveFileId: z.string().nullable(),
+  thumbnailUrl: z.string().nullable(),
+  previewUrl: z.string().nullable(),
+  status: z.enum(['pending', 'target', 'supporting', 'excluded', 'completed', 'exported']),
+  receivedAt: z.string(),
+  batchId: z.string().nullable(),
+  journalId: z.string().nullable(),
+  createdBy: z.string().nullable().optional(),
+  updatedBy: z.string().nullable().optional(),
+  updatedAt: z.string().nullable().optional(),
+  statusChangedBy: z.string().nullable().optional(),
+  statusChangedAt: z.string().nullable().optional(),
+}).passthrough()  // AI関連フィールド（aiDate, aiAmount等）を許可
 
-// ============================================================
+const route = new Hono()
 // GET / — ドキュメント一覧取得
-// ============================================================
-app.get("/", async (c) => {
+.get("/", async (c) => {
   const clientId = c.req.query("clientId");
   const docs = clientId
     ? await documentRepo.getByClientId(clientId)
     : await documentRepo.getAll();
   return c.json({ documents: docs, count: docs.length });
-});
-
-// ============================================================
+})
 // POST / — ドキュメント一括追加
-// ============================================================
-app.post("/", async (c) => {
-  const body = await c.req.json<{ documents: unknown[] }>();
-  if (!body.documents || !Array.isArray(body.documents)) {
-    return apiError(c, 400, 配列必須("documents"));
-  }
+.post("/",
+  zValidator('json', z.object({ documents: z.array(docEntrySchema) })),
+  async (c) => {
+  const body = c.req.valid('json');
   const result = await documentRepo.saveBatch(body.documents as DocEntry[]);
   return c.json({ ok: true, ...result });
-});
-
-// ============================================================
+})
 // PUT /:id — ステータス更新
-// ============================================================
-app.put("/:id", async (c) => {
+.put("/:id",
+  zValidator('json', z.object({
+    status: z.string(),
+    statusChangedBy: z.string().nullable().optional(),
+    statusChangedAt: z.string().nullable().optional(),
+    updatedBy: z.string().nullable().optional(),
+    updatedAt: z.string().nullable().optional(),
+  })),
+  async (c) => {
   const id = c.req.param("id");
-  const body = await c.req.json<{
-    status: string;
-    statusChangedBy?: string | null;
-    statusChangedAt?: string | null;
-    updatedBy?: string | null;
-    updatedAt?: string | null;
-  }>();
+  const body = c.req.valid('json');
   if (!body.status) {
     return apiError(c, 400, 必須("status"));
   }
   await documentRepo.updateStatus(id, body as Partial<DocEntry>);
   return c.json({ ok: true });
-});
-
-// ============================================================
+})
 // POST /batch — 選別完了→batchId/journalId付与
-// ============================================================
-app.post("/batch", async (c) => {
-  const body = await c.req.json<{ clientId: string }>();
-  if (!body.clientId) {
-    return apiError(c, 400, 必須("clientId"));
-  }
+.post("/batch",
+  zValidator('json', z.object({ clientId: z.string() })),
+  async (c) => {
+  const body = c.req.valid('json');
   const result = await documentRepo.assignBatch(body.clientId);
   return c.json({ ok: true, ...result });
-});
-
-// ============================================================
+})
 // DELETE /client/:clientId — 顧問先の全資料削除
-// ============================================================
-app.delete("/client/:clientId", async (c) => {
+.delete("/client/:clientId", async (c) => {
   const clientId = c.req.param("clientId");
   await documentRepo.removeByClientId(clientId);
   return c.json({ ok: true });
-});
-
-// ============================================================
+})
 // POST /clear-ai/:clientId — firstAiデータ一括削除（確定送信後）
-// 設計方針: firstAi.service.ts ヘッダー参照
-// ============================================================
-app.post("/clear-ai/:clientId", async (c) => {
+.post("/clear-ai/:clientId", async (c) => {
   const clientId = c.req.param("clientId");
   await documentRepo.clearAiFields(clientId);
   return c.json({ ok: true });
-});
-
-// ============================================================
-// GET /count — 件数取得（DL-042追加）※ /:id より前に配置必須
-// ============================================================
-app.get("/count", async (c) => {
+})
+// GET /count — 件数取得（DL-042追加）
+.get("/count", async (c) => {
   const clientId = c.req.query("clientId");
   const cnt = await documentRepo.countDocuments(clientId);
   return c.json({ count: cnt });
-});
-
-// ============================================================
+})
 // GET /:id — 1件取得（DL-042追加）
-// ============================================================
-app.get("/:id", async (c) => {
+.get("/:id", async (c) => {
   const id = c.req.param("id");
   const doc = await documentRepo.getById(id);
   if (!doc) {
     return apiError(c, 404, 未検出(`ドキュメント ${id}`));
   }
   return c.json({ document: doc });
-});
-
-// ============================================================
+})
 // DELETE /:id — 個別削除（DL-042追加）
-// ============================================================
-app.delete("/:id", async (c) => {
+.delete("/:id", async (c) => {
   const id = c.req.param("id");
   const ok = await documentRepo.deleteById(id);
   if (!ok) {
@@ -132,4 +129,5 @@ app.delete("/:id", async (c) => {
   return c.json({ ok: true });
 });
 
-export default app;
+export default route;
+

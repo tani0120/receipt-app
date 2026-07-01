@@ -4,17 +4,17 @@
  * 準拠: DL-030, P3-7b
  */
 
-import { createApiClient } from '../../utils/apiClient'
+import { honoClient } from '../../utils/honoClient'
 import type { LeadExtraRepository } from '../types'
-
-const api = createApiClient('/api/leads')
 
 export const httpLeadExtraRepo: LeadExtraRepository = {
   bulkCreate: async (data) => {
-    return api.post('/bulk', data)
+    const res = await honoClient.api.leads.bulk.$post({ json: data as { items: Record<string, unknown>[] } })
+    return await res.json()
   },
 
   convert: async (leadId) => {
-    return api.post(`/${encodeURIComponent(leadId)}/convert`, {})
+    const res = await honoClient.api.leads[':leadId'].convert.$post({ param: { leadId } })
+    return await res.json()
   },
 }

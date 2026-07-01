@@ -17,6 +17,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { apiError } from '../helpers/apiError';
 import { 配列必須 } from '../../constants/apiMessages';
+import { journalSchema } from '../../types/journal.schema';
 import type { Journal } from '../../types/journal.type';
 import { createMockRepositories } from '../../repositories/mock';
 import {
@@ -123,7 +124,7 @@ const route = new Hono()
   return c.json(result);
 })
 .post('/:clientId',
-  zValidator('json', z.object({ journals: z.array(z.record(z.string(), z.unknown())) })),
+  zValidator('json', z.object({ journals: z.array(journalSchema) })),
   async (c) => {
   const clientId = c.req.param('clientId');
   const { journals } = c.req.valid('json');

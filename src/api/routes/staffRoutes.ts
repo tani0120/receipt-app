@@ -15,27 +15,56 @@
  */
 
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { apiError } from '../helpers/apiError';
 import { 未検出, 必須, リソース_スタッフ } from '../../constants/apiMessages';
 import type { Staff } from '../../repositories/types';
 import { createMockRepositories } from '../../repositories/mock';
 
 const staffRepo = createMockRepositories().staff;
-const app = new Hono();
 
-// ============================================================
+/** Staff専用zodスキーマ（staff.types.ts Staff型に準拠） */
+const staffSchema = z.object({
+  uuid: z.string().optional(),
+  name: z.string(),
+  nameRomaji: z.string().optional(),
+  email: z.string(),
+  password: z.string().optional(),
+  role: z.enum(['admin', 'general']),
+  status: z.enum(['active', 'inactive', 'suspension']),
+}).passthrough()
+
+/** Staff部分更新用スキーマ */
+const staffPartialSchema = staffSchema.partial()
+
+/** POST /list のリクエストbody */
+const listQuerySchema = z.object({
+  filters: z.array(z.object({
+    field: z.string(),
+    operator: z.string(),
+    value: z.union([z.string(), z.array(z.string())]),
+  })).optional(),
+  logic: z.enum(['and', 'or']).optional(),
+  sorts: z.array(z.object({
+    key: z.string(),
+    order: z.enum(['asc', 'desc']),
+  })).optional(),
+  page: z.number().optional(),
+  pageSize: z.number().optional(),
+}).passthrough()
+
+const route = new Hono()
 // POST /list — スタッフ一覧（フィルタ+ソート+ページネーション）
-// ============================================================
-app.post('/list', async (c) => {
-  const body = await c.req.json();
+.post('/list',
+  zValidator('json', listQuerySchema),
+  async (c) => {
+  const body = c.req.valid('json');
   const result = await staffRepo.list(body);
   return c.json(result);
-});
-
-// ============================================================
+})
 // GET / — 全スタッフ取得
-// ============================================================
-app.get('/', async (c) => {
+.get('/', async (c) => {
   const status = c.req.query('status');
   if (status === 'active') {
     const list = await staffRepo.getActiveStaff();
@@ -43,52 +72,41 @@ app.get('/', async (c) => {
   }
   const list = await staffRepo.getAll();
   return c.json({ staff: list, count: list.length });
-});
-
-// ============================================================
+})
 // GET /email/:email — メールでスタッフ検索
-// ============================================================
-app.get('/email/:email', async (c) => {
+.get('/email/:email', async (c) => {
   const email = decodeURIComponent(c.req.param('email'));
   const staff = await staffRepo.getByEmail(email);
   if (!staff) {
     return apiError(c, 404, 未検出(`${リソース_スタッフ}(メール: ${email})`));
   }
   return c.json({ staff });
-});
-
-// ============================================================
+})
 // GET /:uuid — 1件取得
-// ============================================================
-app.get('/:uuid', async (c) => {
+.get('/:uuid', async (c) => {
   const uuid = c.req.param('uuid');
   const staff = await staffRepo.getById(uuid);
   if (!staff) {
     return apiError(c, 404, 未検出(`${リソース_スタッフ} ${uuid}`));
   }
   return c.json({ staff });
-});
-
-// ============================================================
+})
 // POST / — スタッフ追加
-// ============================================================
-app.post('/', async (c) => {
-  const body = await c.req.json();
+.post('/',
+  zValidator('json', staffSchema),
+  async (c) => {
+  const body = c.req.valid('json');
   if (!body.name || !body.email) {
     return apiError(c, 400, 必須('name と email'));
   }
-  const staff = await staffRepo.create(body);
+  const staff = await staffRepo.create(body as Omit<Staff, 'uuid'> & { uuid?: string });
   return c.json({ ok: true, staff });
-});
-
-// ============================================================
+})
 // POST /bulk — スタッフ一括追加（インポート用）
-// ============================================================
-app.post('/bulk', async (c) => {
-  const { items } = await c.req.json<{ items: Record<string, unknown>[] }>();
-  if (!Array.isArray(items)) {
-    return apiError(c, 400, 必須('items（配列）'));
-  }
+.post('/bulk',
+  zValidator('json', z.object({ items: z.array(staffSchema) })),
+  async (c) => {
+  const { items } = c.req.valid('json');
   const existing = await staffRepo.getAll();
   const existingEmails = new Set(existing.map(s => s.email?.toLowerCase()).filter(Boolean));
   const results: { index: number; ok: boolean; error?: string }[] = [];
@@ -113,16 +131,15 @@ app.post('/bulk', async (c) => {
     }
   }
   return c.json({ ok: true, results, total: items.length });
-});
-
-// ============================================================
+})
 // PUT /:uuid — スタッフ更新
-// ============================================================
-app.put('/:uuid', async (c) => {
+.put('/:uuid',
+  zValidator('json', staffPartialSchema),
+  async (c) => {
   const uuid = c.req.param('uuid');
-  const body = await c.req.json();
-  await staffRepo.update(uuid, body);
+  const body = c.req.valid('json');
+  await staffRepo.update(uuid, body as Partial<Staff>);
   return c.json({ ok: true });
 });
 
-export default app;
+export default route;

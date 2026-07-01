@@ -15,33 +15,73 @@
  */
 
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { z } from 'zod'
 import { apiError, apiCatchError } from '../helpers/apiError'
 import { 未検出, 必須 } from '../../constants/apiMessages'
 import { createMockRepositories } from '../../repositories/mock'
 
 const learningRuleRepo = createMockRepositories().learningRule
-const app = new Hono()
 
-// ============================================================
+/** LearningRuleEntryLine専用zodスキーマ */
+const entryLineSchema = z.object({
+  entryId: z.string(),
+  ruleId: z.string(),
+  side: z.enum(['debit', 'credit']),
+  account: z.string(),
+  subAccount: z.string().nullable(),
+  taxCategory: z.string().nullable(),
+  department: z.string().nullable(),
+  amountType: z.enum(['auto', 'total', 'fixed']),
+  fixedAmount: z.number().nullable(),
+  displayName: z.string().nullable(),
+  description: z.string().nullable(),
+  targetMonth: z.string().nullable(),
+  displayOrder: z.number(),
+}).passthrough()
+
+/** LearningRule専用zodスキーマ（learning_rule.type.ts LearningRule型に準拠） */
+const learningRuleSchema = z.object({
+  ruleId: z.string().optional(),
+  clientId: z.string().optional(),
+  keyword: z.string(),
+  matchType: z.enum(['exact', 'contains']),
+  direction: z.enum(['expense', 'income']).nullable(),
+  sourceCategory: z.enum(['receipt', 'bank', 'credit', 'all']).nullable(),
+  amountMin: z.number().nullable(),
+  amountMax: z.number().nullable(),
+  entries: z.array(entryLineSchema),
+  isActive: z.boolean(),
+  hitCount: z.number().optional(),
+  generatedBy: z.enum(['ai', 'human']),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+}).passthrough()
+
+/** LearningRule部分更新用スキーマ */
+const learningRulePartialSchema = learningRuleSchema.partial()
+
+/** POST /:clientId/list のリクエストbody */
+const listFilterSchema = z.object({
+  sourceFilter: z.string().optional(),
+  filterMode: z.string().optional(),
+  searchText: z.string().optional(),
+}).passthrough()
+
+const route = new Hono()
 // GET /:clientId — 顧問先の学習ルール一覧
-// ============================================================
-app.get('/:clientId', async (c) => {
+.get('/:clientId', async (c) => {
   const clientId = c.req.param('clientId')
   const { rules } = await learningRuleRepo.getByClientId(clientId)
   return c.json({ rules, count: rules.length })
 })
-
-// ============================================================
 // POST /:clientId/list — T-31-8: フィルタ/カウント/検索付き一覧
-// ============================================================
-app.post('/:clientId/list', async (c) => {
+.post('/:clientId/list',
+  zValidator('json', listFilterSchema),
+  async (c) => {
   const clientId = c.req.param('clientId')
   try {
-    const body = await c.req.json() as {
-      sourceFilter?: string
-      filterMode?: string
-      searchText?: string
-    }
+    const body = c.req.valid('json')
     const {
       sourceFilter = 'all',
       filterMode = 'all',
@@ -65,11 +105,8 @@ app.post('/:clientId/list', async (c) => {
     return apiCatchError(c, err)
   }
 })
-
-// ============================================================
 // GET /:clientId/:ruleId — 1件取得
-// ============================================================
-app.get('/:clientId/:ruleId', async (c) => {
+.get('/:clientId/:ruleId', async (c) => {
   const clientId = c.req.param('clientId')
   const ruleId = c.req.param('ruleId')
   const { rules } = await learningRuleRepo.getByClientId(clientId)
@@ -79,44 +116,39 @@ app.get('/:clientId/:ruleId', async (c) => {
   }
   return c.json({ rule })
 })
-
-// ============================================================
 // POST /:clientId — ルール追加
-// ============================================================
-app.post('/:clientId', async (c) => {
+.post('/:clientId',
+  zValidator('json', learningRuleSchema),
+  async (c) => {
   const clientId = c.req.param('clientId')
   try {
-    const body = await c.req.json()
+    const body = c.req.valid('json') as Record<string, unknown>
     if (!body.keyword) {
       return apiError(c, 400, 必須('keyword'))
     }
     body.clientId = clientId
-    const { rule } = await learningRuleRepo.create(clientId, body)
+    const { rule } = await learningRuleRepo.create(clientId, body as Parameters<typeof learningRuleRepo.create>[1])
     return c.json({ ok: true, rule })
   } catch (err) {
     return apiCatchError(c, err)
   }
 })
-
-// ============================================================
 // PUT /:clientId/:ruleId — ルール更新
-// ============================================================
-app.put('/:clientId/:ruleId', async (c) => {
+.put('/:clientId/:ruleId',
+  zValidator('json', learningRulePartialSchema),
+  async (c) => {
   const clientId = c.req.param('clientId')
   const ruleId = c.req.param('ruleId')
   try {
-    const body = await c.req.json()
+    const body = c.req.valid('json')
     await learningRuleRepo.update(clientId, ruleId, body)
     return c.json({ ok: true })
   } catch (err) {
     return apiCatchError(c, err)
   }
 })
-
-// ============================================================
 // DELETE /:clientId/:ruleId — ルール削除
-// ============================================================
-app.delete('/:clientId/:ruleId', async (c) => {
+.delete('/:clientId/:ruleId', async (c) => {
   const clientId = c.req.param('clientId')
   const ruleId = c.req.param('ruleId')
   try {
@@ -125,6 +157,6 @@ app.delete('/:clientId/:ruleId', async (c) => {
   } catch (err) {
     return apiCatchError(c, err)
   }
-})
+});
 
-export default app
+export default route

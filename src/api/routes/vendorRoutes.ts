@@ -15,26 +15,72 @@
  */
 
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { z } from 'zod'
 import { apiError, apiCatchError } from '../helpers/apiError'
 import { 未検出 } from '../../constants/apiMessages'
 import { createMockRepositories } from '../../repositories/mock'
 
 const vendorRepo = createMockRepositories().vendor
-const app = new Hono()
 
-// ============================================================
+/** Vendor専用zodスキーマ（vendor.type.ts Vendor型の主要フィールドに準拠） */
+const vendorSchema = z.object({
+  vendor_id: z.string().optional(),
+  company_name: z.string(),
+  match_key: z.string(),
+  display_name: z.string().nullable().optional(),
+  aliases: z.array(z.string()).optional(),
+  t_numbers: z.array(z.string()).optional(),
+  phone_numbers: z.array(z.string()).optional(),
+  brand_id: z.string().optional(),
+  address: z.string().nullable().optional(),
+  vendor_vector: z.string().nullable().optional(),
+  non_vendor_type: z.string().nullable().optional(),
+  source_category: z.enum(['bank', 'credit', 'all']).nullable().optional(),
+  level: z.enum(['A', 'B', 'insufficient']).nullable().optional(),
+  direction: z.enum(['expense', 'income']).nullable().optional(),
+  amount_threshold: z.number().nullable().optional(),
+  debit_account: z.string().nullable().optional(),
+  debit_account_over: z.string().nullable().optional(),
+  debit_sub_account: z.string().nullable().optional(),
+  debit_tax_category: z.string().nullable().optional(),
+  credit_account: z.string().nullable().optional(),
+  credit_sub_account: z.string().nullable().optional(),
+  credit_tax_category: z.string().nullable().optional(),
+}).passthrough()  // 残りの仕訳テンプレートフィールド等を許容
+
+/** Vendor部分更新用スキーマ */
+const vendorPartialSchema = vendorSchema.partial()
+
+/** POST /list のリクエストbody */
+const listQuerySchema = z.object({
+  filters: z.array(z.object({
+    field: z.string(),
+    operator: z.string(),
+    value: z.union([z.string(), z.array(z.string())]),
+  })).optional(),
+  logic: z.enum(['and', 'or']).optional(),
+  sorts: z.array(z.object({
+    key: z.string(),
+    order: z.enum(['asc', 'desc']),
+  })).optional(),
+  page: z.number().optional(),
+  pageSize: z.number().optional(),
+  searchText: z.string().optional(),
+  typeFilter: z.string().optional(),
+}).passthrough()
+
+const route = new Hono()
 // POST /list — 取引先一覧（フィルタ+ソート+ページネーション）
-// ============================================================
-app.post('/list', async (c) => {
-  const body = await c.req.json()
+.post('/list',
+  zValidator('json', listQuerySchema),
+  async (c) => {
+  const body = c.req.valid('json')
   const result = await vendorRepo.list(body)
   return c.json(result)
 })
-
-// ============================================================
 // GET / — 全件取得
-// ============================================================
-app.get('/', async (c) => {
+.get('/', async (c) => {
   const type = c.req.query('type') // 'vendor' | 'non-vendor' | undefined（全件）
   let vendors
   if (type === 'vendor' || type === 'non-vendor') {
@@ -44,11 +90,8 @@ app.get('/', async (c) => {
   }
   return c.json({ vendors, count: vendors.length })
 })
-
-// ============================================================
 // GET /:vendorId — 1件取得
-// ============================================================
-app.get('/:vendorId', async (c) => {
+.get('/:vendorId', async (c) => {
   const vendorId = c.req.param('vendorId')
   const allVendors = await vendorRepo.getAll()
   const vendor = allVendors.find(v => v.vendor_id === vendorId)
@@ -57,28 +100,26 @@ app.get('/:vendorId', async (c) => {
   }
   return c.json(vendor)
 })
-
-// ============================================================
 // POST / — 新規追加
-// ============================================================
-app.post('/', async (c) => {
+.post('/',
+  zValidator('json', vendorSchema),
+  async (c) => {
   try {
-    const body = await c.req.json()
-    const vendor = await vendorRepo.create(body)
+    const body = c.req.valid('json')
+    const vendor = await vendorRepo.create(body as Parameters<typeof vendorRepo.create>[0])
     return c.json(vendor, 201)
   } catch (err) {
     return apiCatchError(c, err)
   }
 })
-
-// ============================================================
 // PUT /:vendorId — 更新
-// ============================================================
-app.put('/:vendorId', async (c) => {
+.put('/:vendorId',
+  zValidator('json', vendorPartialSchema),
+  async (c) => {
   const vendorId = c.req.param('vendorId')
   try {
-    const body = await c.req.json()
-    const ok = await vendorRepo.update(vendorId, body)
+    const body = c.req.valid('json')
+    const ok = await vendorRepo.update(vendorId, body as Parameters<typeof vendorRepo.update>[1])
     if (!ok) {
       return apiError(c, 404, 未検出('取引先'))
     }
@@ -88,11 +129,8 @@ app.put('/:vendorId', async (c) => {
     return apiCatchError(c, err)
   }
 })
-
-// ============================================================
 // DELETE /:vendorId — 削除
-// ============================================================
-app.delete('/:vendorId', async (c) => {
+.delete('/:vendorId', async (c) => {
   const vendorId = c.req.param('vendorId')
   try {
     await vendorRepo.deleteById(vendorId)
@@ -100,6 +138,6 @@ app.delete('/:vendorId', async (c) => {
   } catch (err) {
     return apiCatchError(c, err)
   }
-})
+});
 
-export default app
+export default route

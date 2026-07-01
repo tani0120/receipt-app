@@ -8,25 +8,86 @@
  * 準拠: DL-030, DL-042
  */
 
-import { createApiClient } from '../../utils/apiClient'
+import { honoClient } from '../../utils/honoClient'
 import type { TaxCategory } from '../../types/shared-tax-category'
 import type { TaxMasterRepository } from '../types'
 
-const api = createApiClient('/api/tax-categories')
-
 export const httpTaxMasterRepo: TaxMasterRepository = {
   getMaster: async () => {
-    const data = await api.get<{ items: TaxCategory[] }>('/master?pageSize=200&taxMethod=all')
+    const res = await honoClient.api['tax-categories'].master.$get({
+      query: { pageSize: '200', taxMethod: 'all' },
+    })
+    const data = await res.json() as { items: TaxCategory[] }
     return data.items
   },
+
   saveMaster: async (taxCategories) => {
-    await api.put('/master', { taxCategories })
+    const res = await honoClient.api['tax-categories'].master.$put({
+      json: { taxCategories },
+    })
+    return await res.json() as { ok: true; count: number }
   },
+
   getClient: async (clientId) => {
-    const data = await api.get<{ items: TaxCategory[] }>(`/client/${clientId}?pageSize=200&taxMethod=all`)
+    const res = await honoClient.api['tax-categories'].client[':clientId'].$get({
+      param: { clientId },
+      query: { pageSize: '200', taxMethod: 'all' },
+    })
+    const data = await res.json() as { items: TaxCategory[] }
     return { taxCategories: data.items }
   },
+
   saveClient: async (clientId, taxCategories) => {
-    await api.put(`/client/${clientId}`, { taxCategories })
+    const res = await honoClient.api['tax-categories'].client[':clientId'].$put({
+      param: { clientId },
+      json: { taxCategories },
+    })
+    return await res.json() as { ok: true; count: number }
+  },
+
+  getFilteredMaster: async (params) => {
+    const res = await honoClient.api['tax-categories'].master.$get({
+      query: {
+        taxMethod: params.taxMethod,
+        page: String(params.page),
+        pageSize: String(params.pageSize),
+      },
+    })
+    return await res.json() as {
+      pagedItems: TaxCategory[]
+      totalCount: number
+      page: number
+      totalPages: number
+    }
+  },
+
+  getFilteredClient: async (clientId, params) => {
+    const res = await honoClient.api['tax-categories'].client[':clientId'].$get({
+      param: { clientId },
+      query: {
+        taxMethod: params.taxMethod,
+        page: String(params.page),
+        pageSize: String(params.pageSize),
+      },
+    })
+    return await res.json() as {
+      pagedItems: TaxCategory[]
+      totalCount: number
+      page: number
+      totalPages: number
+    }
+  },
+
+  // --- 以下はサーバー専用メソッド ---
+  // 呼び出し元: getNameMap → journalValidation.ts（サーバー側のみ）
+  // 呼び出し元: getClientTaxCategoriesForValidation → journalValidation.ts（サーバー側のみ）
+  // TODO(Supabase): Phase B でSupabase版に統合時に実装
+
+  getNameMap: async () => {
+    throw new Error('TaxMasterRepository.getNameMap: HTTP版では未実装（サーバー側はmock版を使用）')
+  },
+
+  getClientTaxCategoriesForValidation: async () => {
+    throw new Error('TaxMasterRepository.getClientTaxCategoriesForValidation: HTTP版では未実装（サーバー側はmock版を使用）')
   },
 }

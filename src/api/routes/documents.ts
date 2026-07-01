@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { apiError, apiCatchError } from '../helpers/apiError'
 import { 仕訳必須 } from '../../constants/apiMessages'
 import { z } from 'zod'
+import { journalSchema } from '../../types/journal.schema'
 import { documentRepository } from '../../repositories/supabase/document.repository.supabase'
 
 const app = new Hono()
@@ -10,7 +11,7 @@ const app = new Hono()
 const UpdateStatusSchema = z.object({
     newStatus: z.enum(['uploaded', 'preprocessed', 'ocr_done', 'suggested', 'reviewing', 'confirmed', 'rejected']),
     actor: z.string().email().optional().default('system@receipt-app.com'),
-    journal: z.record(z.string(), z.unknown()).optional() // confirmed時は必須（Repository層でチェック）
+    journal: journalSchema.optional() // confirmed時は必須（Repository層でチェック）
 })
 
 // POST /api/documents/:id/status

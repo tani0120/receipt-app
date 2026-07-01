@@ -14,6 +14,8 @@
  */
 
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { z } from 'zod'
 import { apiError } from '../helpers/apiError'
 import { 必須 } from '../../constants/apiMessages'
 import { createMockRepositories } from '../../repositories/mock'
@@ -21,11 +23,8 @@ import type { TaxCategory } from '../../types/shared-tax-category'
 import { getAuthStatus } from '../services/mfAuthService'
 
 const taxMasterRepo = createMockRepositories().taxMaster
-const app = new Hono()
 
-// ============================================================
 // 共通バリデーションヘルパー
-// ============================================================
 
 function parseTaxFilterParams(c: { req: { query: (key: string) => string | undefined } }) {
   const taxMethod = (c.req.query('taxMethod') ?? 'general') as 'general' | 'individual' | 'proportional' | 'simplified' | 'exempt' | 'all'
@@ -47,22 +46,45 @@ function validateTaxFilterParams(params: { taxMethod: string; page: number; page
   return null
 }
 
-function validateTaxCategoriesBody(body: { taxCategories?: TaxCategory[] }): string | null {
-  if (!body.taxCategories || !Array.isArray(body.taxCategories)) {
-    return 'taxCategories 配列が必要です'
-  }
-  for (const tc of body.taxCategories) {
-    if (!tc.taxCategoryId || !tc.name) {
-      return `税区分にtaxCategoryId/nameが必要です: ${JSON.stringify(tc).slice(0, 100)}`
-    }
-  }
-  return null
-}
+/** TaxCategory専用zodスキーマ（shared-tax-category.ts TaxCategory型に準拠） */
+const taxCategorySchema = z.object({
+  taxCategoryId: z.string(),
+  name: z.string(),
+  shortName: z.string(),
+  direction: z.enum(['sales', 'purchase', 'common']),
+  qualified: z.boolean(),
+  aiSelectable: z.boolean(),
+  hidden: z.boolean(),
+  effectiveFrom: z.string().nullable(),
+  effectiveTo: z.string().nullable(),
+  enabledFrom: z.string().nullable().optional(),
+  enabledTo: z.string().nullable().optional(),
+  defaultVisible: z.boolean(),
+  displayOrder: z.number(),
+  isCustom: z.boolean().optional(),
+  source: z.enum(['mcp', 'client-custom']).optional(),
+  mfTaxId: z.string().optional(),
+  taxRate: z.number().optional(),
+  simplifiedOnly: z.boolean().optional(),
+  baseId: z.string().optional(),
+  individualOnly: z.boolean().optional(),
+  isExemptDefault: z.boolean().optional(),
+  isUnknownDefault: z.boolean().optional(),
+  isSalesDefault: z.boolean().optional(),
+  isPurchaseDefault: z.boolean().optional(),
+  insertAfter: z.string().optional(),
+  visibleIn: z.object({
+    proportional: z.boolean(),
+    individual: z.boolean(),
+    simplified: z.boolean(),
+    exempt: z.boolean(),
+  }).optional(),
+  displayRate: z.string().optional(),
+}).passthrough()
 
-// ============================================================
+const route = new Hono()
 // GET /master — マスタ税区分一覧取得
-// ============================================================
-app.get('/master', async (c) => {
+.get('/master', async (c) => {
   const params = parseTaxFilterParams(c)
   const err = validateTaxFilterParams(params)
   if (err) return apiError(c, 400, err)
@@ -75,23 +97,16 @@ app.get('/master', async (c) => {
     totalPages: result.totalPages,
   })
 })
-
-// ============================================================
 // PUT /master — マスタ税区分全件上書き保存
-// ============================================================
-app.put('/master', async (c) => {
-  const body = await c.req.json<{ taxCategories?: TaxCategory[] }>()
-  const err = validateTaxCategoriesBody(body)
-  if (err) return apiError(c, 400, err)
-
-  const result = await taxMasterRepo.saveMaster(body.taxCategories!)
+.put('/master',
+  zValidator('json', z.object({ taxCategories: z.array(taxCategorySchema) })),
+  async (c) => {
+  const body = c.req.valid('json')
+  const result = await taxMasterRepo.saveMaster(body.taxCategories as TaxCategory[])
   return c.json(result)
 })
-
-// ============================================================
 // GET /client/:clientId — 顧問先税区分一覧取得
-// ============================================================
-app.get('/client/:clientId', async (c) => {
+.get('/client/:clientId', async (c) => {
   const clientId = c.req.param('clientId')
   if (!clientId) return apiError(c, 400, 必須('clientId'))
 
@@ -110,20 +125,16 @@ app.get('/client/:clientId', async (c) => {
     mfLinked: mfStatus.authenticated,
   })
 })
-
-// ============================================================
 // PUT /client/:clientId — 顧問先税区分全件上書き保存
-// ============================================================
-app.put('/client/:clientId', async (c) => {
+.put('/client/:clientId',
+  zValidator('json', z.object({ taxCategories: z.array(taxCategorySchema) })),
+  async (c) => {
   const clientId = c.req.param('clientId')
   if (!clientId) return apiError(c, 400, 必須('clientId'))
 
-  const body = await c.req.json<{ taxCategories?: TaxCategory[] }>()
-  const err = validateTaxCategoriesBody(body)
-  if (err) return apiError(c, 400, err)
-
-  const result = await taxMasterRepo.saveClient(clientId, body.taxCategories!)
+  const body = c.req.valid('json')
+  const result = await taxMasterRepo.saveClient(clientId, body.taxCategories as TaxCategory[])
   return c.json(result)
-})
+});
 
-export default app
+export default route
